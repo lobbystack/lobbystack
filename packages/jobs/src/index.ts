@@ -29,6 +29,9 @@ const DEFAULT_REDIS_URL = "redis://127.0.0.1:6379";
 export function createRedisConnection(options: RedisClientOptions = {}): Redis {
   const connectionName = `${options.prefix ?? process.env.REDIS_PREFIX ?? "lobbystack"}:client`;
   return logRedisErrors(new Redis(options.url ?? process.env.REDIS_URL ?? DEFAULT_REDIS_URL, {
+    // ioredis 6 defaults to RESP3. BullMQ 6 still runs its own tests on
+    // ioredis 5 over RESP2, so keep the protocol production already uses.
+    protocol: 2,
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
     lazyConnect: true,

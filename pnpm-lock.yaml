@@ -202,8 +202,8 @@ importers:
         specifier: ^1.5.0
         version: 1.5.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       ioredis:
-        specifier: ^5.8.2
-        version: 5.11.1
+        specifier: ^6.0.0
+        version: 6.0.0
       libphonenumber-js:
         specifier: ^1.13.14
         version: 1.13.14
@@ -348,7 +348,7 @@ importers:
         version: 1.8.0(@date-fns/tz@1.4.1)(@types/react@19.3.0)(date-fns@4.4.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@jdevalk/astro-seo-graph':
         specifier: ^2.2.0
-        version: 2.2.0(astro@7.3.5(@types/node@26.6.4)(idb-keyval@6.2.2)(ioredis@5.11.1)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.0))
+        version: 2.2.0(astro@7.3.5(@types/node@26.6.4)(idb-keyval@6.2.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.0))
       '@jdevalk/seo-graph-core':
         specifier: ^0.6.2
         version: 0.6.2(typescript@5.9.3)
@@ -363,10 +363,10 @@ importers:
         version: 4.3.3(vite@7.3.6(@types/node@26.6.4)(jiti@2.7.0)(lightningcss@1.33.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.0))
       astro:
         specifier: ^7.3.5
-        version: 7.3.5(@types/node@26.6.4)(idb-keyval@6.2.2)(ioredis@5.11.1)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.0)
+        version: 7.3.5(@types/node@26.6.4)(idb-keyval@6.2.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.0)
       astro-pagefind:
         specifier: ^2.0.1
-        version: 2.0.1(astro@7.3.5(@types/node@26.6.4)(idb-keyval@6.2.2)(ioredis@5.11.1)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.0))
+        version: 2.0.1(astro@7.3.5(@types/node@26.6.4)(idb-keyval@6.2.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.0))
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -483,14 +483,14 @@ importers:
         specifier: workspace:*
         version: link:../../packages/telemetry
       bullmq:
-        specifier: ^5.71.0
-        version: 5.81.3
+        specifier: ^6.3.11
+        version: 6.3.11(ioredis@6.0.0)(pg@8.23.1)
       drizzle-orm:
         specifier: ^0.45.3
         version: 0.45.3(@opentelemetry/api@1.9.1)(@types/pg@8.23.1)(kysely@0.29.6)(pg@8.23.1)
       ioredis:
-        specifier: ^5.8.2
-        version: 5.11.1
+        specifier: ^6.0.0
+        version: 6.0.0
       mammoth:
         specifier: ^1.13.0
         version: 1.13.0
@@ -662,11 +662,11 @@ importers:
         specifier: workspace:*
         version: link:../contracts
       bullmq:
-        specifier: ^5.71.0
-        version: 5.81.3
+        specifier: ^6.3.11
+        version: 6.3.11(ioredis@6.0.0)(pg@8.23.1)
       ioredis:
-        specifier: ^5.8.2
-        version: 5.11.1
+        specifier: ^6.0.0
+        version: 6.0.0
     devDependencies:
       vitest:
         specifier: ^4.1.11
@@ -2165,8 +2165,8 @@ packages:
       '@types/node':
         optional: true
 
-  '@ioredis/commands@1.10.0':
-    resolution: {integrity: sha512-UmeW7z4LfctwoQ5wkhVzgq8tXkreED2xZGpX+Bg+zA+WJFZCT6c062AfCK/Dfk81xZnnwdhJCUMkitihRaoC2Q==}
+  '@ioredis/commands@2.0.0':
+    resolution: {integrity: sha512-vrx0AE/T0h7cRZwfo1M39Cr+ZhZrkf0V8mQN75wucKCxCLD9l/VX6no3gFvrLqD1IlG/1LtzWovqEw3t0Vr9zg==}
 
   '@isaacs/fs-minipass@4.0.1':
     resolution: {integrity: sha512-wgm9Ehl2jpeqP3zw/7mo3kRHFp5MEDhqAdwy1fTGkHAwnkGOVsgpvQhL8B5n1qlb01jV3n/bI0ZfZp5lWA1k4w==}
@@ -4354,12 +4354,21 @@ packages:
   buffer@5.7.1:
     resolution: {integrity: sha512-EHcyIPBQ4BSGlvjB16k5KgAJ27CIsHY/2JBmCRReo48y9rQ3MaUzWX3KVlBa4U7MyX02HdVj0K7C3WaB3ju7FQ==}
 
-  bullmq@5.81.3:
-    resolution: {integrity: sha512-Q7uEH2G92rVjX3Yl2qw3+6VEO15uxehC6DfeTHQBQTehddcRDSDuquD9zuvDjxiCffXsPUaBwrRlvlbVcgKs7g==}
-    engines: {node: '>=12.22.0'}
+  bullmq@6.3.11:
+    resolution: {integrity: sha512-ylSY3FYil6E9IjqVtT+WHcZvS1rgTZ0L3Aev62u45NXQFe+H37a1AuC3WDATR7ScNDet1Ah8MnP3lf8XaUbPUw==}
+    engines: {node: '>=14.17.0'}
     peerDependencies:
+      bullmq-otel: '>=2.0.0'
+      ioredis: '>=5.0.0'
+      pg: '>=8.0.0'
       redis: '>=5.0.0'
     peerDependenciesMeta:
+      bullmq-otel:
+        optional: true
+      ioredis:
+        optional: true
+      pg:
+        optional: true
       redis:
         optional: true
 
@@ -4689,10 +4698,9 @@ packages:
   country-flag-icons@1.6.20:
     resolution: {integrity: sha512-py8JiEKzjhYw6HPJ0L7SxLgCYim36UPRTZX43/kqGueUCZLSvnrqAiwW8HtQibur7mdkFQUkjOgdK+o/9FBtaw==}
 
-  cron-parser@4.9.0:
-    resolution: {integrity: sha512-p0SaNjrHOnQeR8/VnfGbmg9te2kfyYSQ7Sc/j/6DtPL3JQvKxmjO9TSjNFpujqV3vEYYBvNNvXSxzyksBWAx1Q==}
-    engines: {node: '>=12.0.0'}
-    deprecated: v4 is no longer maintained, upgrade to v5
+  cron-parser@5.10.1:
+    resolution: {integrity: sha512-pKRrRagItwk9rGIStcUyMxFX34x56zoX3KDf9HJ4ttwkXIK1qxK63EvXvEDmlxI9AdPJ+Y7TEKRftRlW5eSS7A==}
+    engines: {node: '>=18'}
 
   cross-spawn@7.0.6:
     resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
@@ -6023,9 +6031,9 @@ packages:
     resolution: {integrity: sha512-5Hh7Y1wQbvY5ooGgPbDaL5iYLAPzMTUrjMulskHLH6wnv/A+1q5rgEaiuqEjB+oxGXIVZs1FF+R/KPN3ZSQYYg==}
     engines: {node: '>=12'}
 
-  ioredis@5.11.1:
-    resolution: {integrity: sha512-ehuGcf94bQXhfagULNXrJdfnWO38v070jxSx/qE87Kjzmu2fU7ro5EFAb+OPituLqgfyuQaym5DlrNydW2sJ9A==}
-    engines: {node: '>=12.22.0'}
+  ioredis@6.0.0:
+    resolution: {integrity: sha512-f+Dtubxfpf6KYFq7WVXJoOLn0bk4TJrMrN9SzeE+jrWrCWj7XX3fA6vkryafhADX+GMymRxgDJDOI33COkJc0w==}
+    engines: {node: '>=20.0.0'}
 
   ip-address@10.7.1:
     resolution: {integrity: sha512-4OUAqU9Z1i3vCnS05hzGiFnEMDpQ+62pAD/MVQOp83fYyNC8GleCqaS0QikQBmcWCrKFiUs/B8ztRRiYOAXuCA==}
@@ -7090,8 +7098,8 @@ packages:
     resolution: {integrity: sha512-4kmO/MdyUIkLIvTPr8VHLil4AtoKIoniWPIEk5+CDy0xnWC84azhSFmuJ7PxZdsYtiP5kEeQsORAVIeMgxT+Hw==}
     hasBin: true
 
-  msgpackr@2.0.5:
-    resolution: {integrity: sha512-cef05H/dSYpLpqp3sj/qyZh5vhUYCalnaLO7j1yOmpsR0y/XwLVtK7r5gn+U/F7CTEfMowcGhlUQJDLcLf7jcA==}
+  msgpackr@2.1.0:
+    resolution: {integrity: sha512-p/pBCVO63CsvvpkomUnNNag6+n38rULuDA6HHe70o2gtC8ODI52foF/4ko2qQcp6OiErJXTmrZeXmsGGHsIQNQ==}
 
   msw@2.12.10:
     resolution: {integrity: sha512-G3VUymSE0/iegFnuipujpwyTM2GuZAKXNeerUSrG2+Eg391wW63xFs5ixWsK9MWzr1AGoSkYGmyAzNgbR3+urw==}
@@ -8046,10 +8054,6 @@ packages:
 
   redis-errors@1.2.0:
     resolution: {integrity: sha512-1qny3OExCf0UvUV/5wpYKf2YwPcOqXzkwKKSmKHiE6ZMQs5heeE/c8eXK+PNllPvmjgAbfnsbpkGZWy8cBpn9w==}
-    engines: {node: '>=4'}
-
-  redis-parser@3.0.0:
-    resolution: {integrity: sha512-DJnGAeenTdpMEH6uAJRK/uiyEIH9WVsUmoLwzudwGJUwZPp80PDBWPHXSAGNPwNvIXAbe7MSUB1zQFugFml66A==}
     engines: {node: '>=4'}
 
   redux-thunk@3.1.0:
@@ -11155,16 +11159,16 @@ snapshots:
     optionalDependencies:
       '@types/node': 26.6.4
 
-  '@ioredis/commands@1.10.0': {}
+  '@ioredis/commands@2.0.0': {}
 
   '@isaacs/fs-minipass@4.0.1':
     dependencies:
       minipass: 7.1.3
 
-  '@jdevalk/astro-seo-graph@2.2.0(astro@7.3.5(@types/node@26.6.4)(idb-keyval@6.2.2)(ioredis@5.11.1)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.0))':
+  '@jdevalk/astro-seo-graph@2.2.0(astro@7.3.5(@types/node@26.6.4)(idb-keyval@6.2.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.0))':
     dependencies:
       '@jdevalk/seo-graph-core': 0.7.0
-      astro: 7.3.5(@types/node@26.6.4)(idb-keyval@6.2.2)(ioredis@5.11.1)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.0)
+      astro: 7.3.5(@types/node@26.6.4)(idb-keyval@6.2.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.0)
       schema-dts: 2.1.0
       zod: 4.6.5
 
@@ -13533,14 +13537,14 @@ snapshots:
 
   astring@1.9.0: {}
 
-  astro-pagefind@2.0.1(astro@7.3.5(@types/node@26.6.4)(idb-keyval@6.2.2)(ioredis@5.11.1)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.0)):
+  astro-pagefind@2.0.1(astro@7.3.5(@types/node@26.6.4)(idb-keyval@6.2.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.0)):
     dependencies:
       '@pagefind/component-ui': 1.5.2
-      astro: 7.3.5(@types/node@26.6.4)(idb-keyval@6.2.2)(ioredis@5.11.1)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.0)
+      astro: 7.3.5(@types/node@26.6.4)(idb-keyval@6.2.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.0)
       pagefind: 1.5.2
       sirv: 3.0.2
 
-  astro@7.3.5(@types/node@26.6.4)(idb-keyval@6.2.2)(ioredis@5.11.1)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.0):
+  astro@7.3.5(@types/node@26.6.4)(idb-keyval@6.2.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.0):
     dependencies:
       '@astrojs/compiler-rs': 0.5.1
       '@astrojs/internal-helpers': 0.11.0
@@ -13588,7 +13592,7 @@ snapshots:
       tinyglobby: 0.2.17
       ultrahtml: 1.7.0
       unifont: 0.7.5
-      unstorage: 1.17.5(idb-keyval@6.2.2)(ioredis@5.11.1)
+      unstorage: 1.17.5(idb-keyval@6.2.2)
       verkit: 0.4.1
       vite: 8.3.2(@types/node@26.6.4)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.0)
       vitefu: 1.1.3(vite@8.3.2(@types/node@26.6.4)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15)(yaml@2.9.0))
@@ -13815,16 +13819,16 @@ snapshots:
       ieee754: 1.2.1
     optional: true
 
-  bullmq@5.81.3:
+  bullmq@6.3.11(ioredis@6.0.0)(pg@8.23.1):
     dependencies:
-      cron-parser: 4.9.0
-      ioredis: 5.11.1
-      msgpackr: 2.0.5
+      cron-parser: 5.10.1
+      msgpackr: 2.1.0
       node-abort-controller: 3.1.1
       semver: 7.8.5
       tslib: 2.8.1
-    transitivePeerDependencies:
-      - supports-color
+    optionalDependencies:
+      ioredis: 6.0.0
+      pg: 8.23.1
 
   bundle-name@4.1.1:
     dependencies:
@@ -14112,7 +14116,7 @@ snapshots:
 
   country-flag-icons@1.6.20: {}
 
-  cron-parser@4.9.0:
+  cron-parser@5.10.1:
     dependencies:
       luxon: 3.7.2
 
@@ -15690,14 +15694,13 @@ snapshots:
 
   internmap@2.0.3: {}
 
-  ioredis@5.11.1:
+  ioredis@6.0.0:
     dependencies:
-      '@ioredis/commands': 1.10.0
+      '@ioredis/commands': 2.0.0
       cluster-key-slot: 1.1.1
       debug: 4.4.3
       denque: 2.1.0
       redis-errors: 1.2.0
-      redis-parser: 3.0.0
       standard-as-callback: 2.1.0
     transitivePeerDependencies:
       - supports-color
@@ -16955,7 +16958,7 @@ snapshots:
       '@msgpackr-extract/msgpackr-extract-win32-x64': 3.0.4
     optional: true
 
-  msgpackr@2.0.5:
+  msgpackr@2.1.0:
     optionalDependencies:
       msgpackr-extract: 3.0.4
 
@@ -17909,10 +17912,6 @@ snapshots:
       vfile: 6.0.3
 
   redis-errors@1.2.0: {}
-
-  redis-parser@3.0.0:
-    dependencies:
-      redis-errors: 1.2.0
 
   redux-thunk@3.1.0(redux@5.0.1):
     dependencies:
@@ -19349,7 +19348,7 @@ snapshots:
 
   unpipe@1.0.0: {}
 
-  unstorage@1.17.5(idb-keyval@6.2.2)(ioredis@5.11.1):
+  unstorage@1.17.5(idb-keyval@6.2.2):
     dependencies:
       anymatch: 3.1.3
       chokidar: 5.0.0
@@ -19361,7 +19360,6 @@ snapshots:
       ufo: 1.6.4
     optionalDependencies:
       idb-keyval: 6.2.2
-      ioredis: 5.11.1
 
   until-async@3.0.2:
     optional: true

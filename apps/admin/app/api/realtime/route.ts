@@ -24,6 +24,7 @@ export async function GET(request: Request): Promise<Response> {
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
         const subscriber = new Redis(redisUrl, {
+          protocol: 2,
           maxRetriesPerRequest: 1,
           lazyConnect: true,
           connectionName: `lobbystack:sse:${businessId}`,
