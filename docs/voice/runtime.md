@@ -77,7 +77,7 @@ Once attached, the worker owns the call until OpenAI closes the session. It:
 - queues a copy of OpenAI's stored recording into LobbyStack storage, where the copy follows the plan's retention (see [Recordings](#recordings))
 - reports the call to the dashboard's live-call count
 
-When the caller is done, GPT-Live says one short goodbye and hands the call to the backend. The caller is done when they have no more requests, say "that's it" or "nothing else", or say goodbye. Only the backend can hang up, so GPT-Live hands it every ending, even one it could answer itself. The agent then calls `endCall` with the reason `caller_finished` and writes no reply.
+When the caller is done, GPT-Live hands the call to the backend and says one short goodbye as its waiting line, in place of "One moment." The caller is done when they say goodbye, "that's it" or "nothing else". Only the backend can hang up, so GPT-Live hands it every ending, even one it could answer itself. The agent then calls `endCall` with the reason `caller_finished` and writes no reply. Instructions that told GPT-Live to say goodbye first and then hand the call over failed on 3 staging calls out of 3: GPT-Live said goodbye and kept the call.
 
 GPT-Live reads delegated answers aloud, so an answer after its goodbye would be a second goodbye. Once the agent has ended the call, the worker sends that request's answer with `session.thinking.append`, as it does for a superseded request, and sends no "still checking" update. GPT-Live's instructions tell it to say nothing more after a result that says the call is ending.
 

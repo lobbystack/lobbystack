@@ -42,24 +42,27 @@ describe("buildLiveInstructions", () => {
   });
 
   // Only the backend can hang up. GPT-Live rarely delegated a goodbye while
-  // another rule said not to delegate what it could answer itself.
-  it("sends every ending to the backend after one short goodbye, with no rule saying otherwise", () => {
+  // another rule said not to delegate what it could answer itself, and never
+  // when told to say goodbye first and then delegate.
+  it("sends every ending to the backend with a goodbye as the waiting line, with no rule saying otherwise", () => {
     const instructions = buildLiveInstructions(demoSnapshot, callStart);
     const [delegate, rest] = instructions.split("Do not delegate to the backend when:\n");
     const doNotDelegate = rest!.split("\n").filter((line, index, lines) => lines.slice(0, index + 1).every((item) => item.startsWith("- ")));
     expect(doNotDelegate).toHaveLength(3);
     expect(doNotDelegate.join("\n")).not.toMatch(/goodbye|done|end the call|ends on its own/i);
     expect(rest).toContain(`${doNotDelegate.at(-1)}\nEnding the call always goes to the backend, even though you could answer a goodbye yourself.`);
-    expect(delegate).toContain("- The caller is done: they have no more requests, say \"that's it\" or \"nothing else\", or say goodbye. Say one short goodbye, then delegate so the backend can end the call. Say nothing else while you wait, not even \"One moment.\"");
+    expect(delegate).toContain("- The caller is done: they say goodbye, \"that's it\" or \"nothing else\", so the backend can end the call.");
+    expect(rest).toContain("While you wait, say one short neutral line such as \"One moment.\" When the caller is done, that line is one short goodbye instead.");
+    expect(instructions).not.toMatch(/goodbye, then delegate/);
     expect(delegate).toContain("- The call is spam or the caller is abusive, so the backend can end the call.");
     expect(delegate).toContain("- Ending the call: hang up when the caller is done, or on a spam or abusive call.");
   });
 
-  // The goodbye came before the delegation, so anything said after the result is a second one.
+  // GPT-Live said goodbye while it waited, so anything said after the result is a second one.
   it("says nothing more once a backend result says the call is ending", () => {
     const instructions = buildLiveInstructions(demoSnapshot, callStart);
     expect(instructions).toContain("When one arrives, answer the caller from it, then offer the next step, unless it says the call is ending.");
-    expect(instructions).toContain("When a backend result says the call is ending, say nothing more: you already said goodbye. If the caller speaks again before the call ends, the call goes on. Reply as usual, and when they're done, say one short goodbye and delegate again.");
+    expect(instructions).toContain("When a backend result says the call is ending, say nothing more: you already said goodbye. If the caller speaks again before the call ends, the call goes on. Reply as usual, and when they're done, delegate again.");
     expect(instructions).not.toContain("say a short goodbye.");
   });
 
