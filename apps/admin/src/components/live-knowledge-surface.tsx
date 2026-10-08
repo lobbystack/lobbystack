@@ -1,6 +1,6 @@
 "use client";
 
-import { getCoreRowModel, getPaginationRowModel, useReactTable, type PaginationState } from "@tanstack/react-table";
+import { useTable, type PaginationState } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, FileText, Globe, MoreHorizontal, Pause, Play, Plus, Search, Text, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
@@ -17,7 +17,7 @@ import { AddKnowledgeSheet } from "./add-knowledge-sheet";
 import { ImportWebsiteKnowledgeSheet } from "./import-website-knowledge-sheet";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { DataTableRowActions, DATA_TABLE_ROW_ACTIONS_COLGROUP_CLASS, DATA_TABLE_ROW_ACTIONS_CELL_CLASS, DATA_TABLE_ROW_TRAILING_VALUE_OFFSET_CLASS } from "./data-table/row-controls";
-import { DataTablePagination } from "./data-table/pagination";
+import { DataTablePagination, paginationFeatures } from "./data-table/pagination";
 import { TableCardSkeleton } from "./loading-skeletons";
 import { PageSurface } from "./page-surface";
 import { Badge } from "./ui/badge";
@@ -118,7 +118,7 @@ export function LiveKnowledgeSurface() {
     ...(snippets.data?.snippets ?? []).map((snippet) => ({ ...snippet, entryType: "snippet" as const })),
   ].sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()), [documents.data, snippets.data]);
   const filteredRows = useMemo(() => { const query = search.trim().toLowerCase(); return query ? rows.filter((row) => `${row.title} ${row.entryType === "snippet" ? row.content : row.sourceUrl ?? row.sourceType}`.toLowerCase().includes(query)) : rows; }, [rows, search]);
-  const table = useReactTable({ data: filteredRows, columns: [], getCoreRowModel: getCoreRowModel(), getPaginationRowModel: getPaginationRowModel(), onPaginationChange: setPagination, state: { pagination } });
+  const table = useTable({ features: paginationFeatures, data: filteredRows, columns: [], onPaginationChange: setPagination, state: { pagination } });
   const pageRows = table.getRowModel().rows.map((row) => row.original);
 
   if (businesses.isLoading) return <p className="text-sm text-muted-foreground">{t("loading.workspace")}</p>;

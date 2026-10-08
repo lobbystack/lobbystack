@@ -1,6 +1,6 @@
 "use client";
 
-import { getCoreRowModel, getPaginationRowModel, useReactTable, type PaginationState } from "@tanstack/react-table";
+import { useTable, type PaginationState } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, MoreHorizontal, Pause, Play, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -11,7 +11,7 @@ import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useSetupAction } from "@/lib/use-setup-action";
 import { requestJson } from "@/lib/request-json";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
-import { DataTablePagination } from "./data-table/pagination";
+import { DataTablePagination, paginationFeatures } from "./data-table/pagination";
 import { TableCardSkeleton } from "./loading-skeletons";
 import { PageSurface } from "./page-surface";
 import { Badge } from "./ui/badge";
@@ -54,7 +54,7 @@ export function RulesSurface() {
     const query = search.trim().toLowerCase();
     return query ? orderedRules.filter((rule) => `${rule.title} ${rule.content}`.toLowerCase().includes(query)) : orderedRules;
   }, [orderedRules, search]);
-  const table = useReactTable({ data: filteredRules, columns: [], getCoreRowModel: getCoreRowModel(), getPaginationRowModel: getPaginationRowModel(), onPaginationChange: setPagination, state: { pagination } });
+  const table = useTable({ features: paginationFeatures, data: filteredRules, columns: [], onPaginationChange: setPagination, state: { pagination } });
   const pageRows = table.getRowModel().rows.map((row) => row.original);
 
   useEffect(() => {

@@ -4,15 +4,13 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   flexRender,
-  getCoreRowModel,
-  getPaginationRowModel,
-  useReactTable,
+  useTable,
   type ColumnDef,
   type PaginationState,
 } from "@tanstack/react-table";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { DataTablePagination } from "@/components/data-table/pagination";
+import { DataTablePagination, paginationFeatures } from "@/components/data-table/pagination";
 import {
   Table,
   TableBody,
@@ -26,7 +24,7 @@ type Row = {
   value: string;
 };
 
-const columns: Array<ColumnDef<Row>> = [
+const columns: Array<ColumnDef<typeof paginationFeatures, Row>> = [
   {
     accessorKey: "value",
     header: () => "Value",
@@ -48,11 +46,10 @@ function PaginationHarnessWithRowCount({ rowCount }: { rowCount: number }) {
     [rowCount],
   );
 
-  const table = useReactTable({
+  const table = useTable({
+    features: paginationFeatures,
     columns,
     data,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     onPaginationChange: setPagination,
     state: {
       pagination,
@@ -78,7 +75,7 @@ function PaginationHarnessWithRowCount({ rowCount }: { rowCount: number }) {
         <TableBody>
           {table.getRowModel().rows.map((row) => (
             <TableRow key={row.id}>
-              {row.getVisibleCells().map((cell) => (
+              {row.getAllCells().map((cell) => (
                 <TableCell key={cell.id}>
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </TableCell>

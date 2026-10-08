@@ -6,10 +6,8 @@ import { useMutation } from "@tanstack/react-query";
 import {
   Bot,
   Briefcase,
-  Facebook,
+  createLucideIcon,
   GraduationCap,
-  Instagram,
-  Linkedin,
   LoaderCircle,
   MessageCircleQuestion,
   Mic,
@@ -17,7 +15,6 @@ import {
   Newspaper,
   Rss,
   Search,
-  Youtube,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -39,6 +36,23 @@ function XLogo(props: SVGProps<SVGSVGElement>) {
 function RedditLogo(props: SVGProps<SVGSVGElement>) {
   return <svg fill="currentColor" viewBox="0 0 24 24" {...props}><path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.587.545a1.25 1.25 0 0 1 1.249-1.25zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.232-.095z" /></svg>;
 }
+
+// lucide-react 1.0 dropped brand icons. These are the 0.577 shapes, kept so the options look the same.
+const Facebook = createLucideIcon("facebook", [["path", { d: "M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z", key: "1jg4f8" }]]);
+const Instagram = createLucideIcon("instagram", [
+  ["rect", { width: "20", height: "20", x: "2", y: "2", rx: "5", ry: "5", key: "2e1cvw" }],
+  ["path", { d: "M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z", key: "9exkf1" }],
+  ["line", { x1: "17.5", x2: "17.51", y1: "6.5", y2: "6.5", key: "r4j83e" }],
+]);
+const Linkedin = createLucideIcon("linkedin", [
+  ["path", { d: "M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z", key: "c2jq9f" }],
+  ["rect", { width: "4", height: "12", x: "2", y: "9", key: "mk3on5" }],
+  ["circle", { cx: "4", cy: "4", r: "2", key: "bt5ra8" }],
+]);
+const Youtube = createLucideIcon("youtube", [
+  ["path", { d: "M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17", key: "1q2vi4" }],
+  ["path", { d: "m10 15 5-3-5-3z", key: "1jp15x" }],
+]);
 
 const options: Array<{ key: AttributionSource; Icon: Icon }> = [
   { key: "google", Icon: Search },
