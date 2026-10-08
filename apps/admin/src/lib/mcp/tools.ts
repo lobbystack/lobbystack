@@ -352,7 +352,7 @@ export const mcpTools: McpTool[] = [
       contact_phone: z.string().optional().describe("Customer phone in E.164 format. A new contact is created if none has this number."),
       contact_name: z.string().optional().describe("Customer name, used when a new contact is created."),
       staff_id: z.uuid().optional().describe("Preferred staff member, if the customer asked for one."),
-      sms_consent: z.boolean().optional().describe("True only if the customer agreed to confirmation and reminder texts. Never assume it."),
+      sms_consent: z.boolean().optional().describe("True only if the customer agreed to confirmation and reminder texts. Never assume it. Has no effect on LobbyStack Cloud, where only the receptionist collects text consent, on a call."),
       idempotency_key: idempotencyKeyInput,
     }),
     outputSchema: contractSchema(apiAppointmentSchema),

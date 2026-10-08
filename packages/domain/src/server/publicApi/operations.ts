@@ -30,6 +30,7 @@ import { replaceBusinessHoursInTransaction } from "../catalog";
 import type { DomainContext } from "../context";
 import { createKnowledgeSnippetInTransaction } from "../knowledge";
 import { bookingFailureReason, candidateStartTimes, unavailableReasonOf } from "../receptionistActions";
+import { isSharedSmsSender, resolveSmsSender } from "../smsSender";
 import { updateBusinessInTransaction } from "../tenancy";
 import { conflict, invalidRequest, notFound, PublicApiError } from "./errors";
 import {
@@ -325,7 +326,11 @@ export async function createAppointmentForApi(context: DomainContext, caller: Ap
       contactPhone = contact.phone;
     }
     if (input.staff_id) await assertBookableStaff(tx, caller.businessId, input.staff_id, input.service_id);
-    return { timezone, contactPhone: contactPhone! };
+    // The shared number's toll-free verification covers consent the receptionist
+    // collects on a call, not consent a business asserts through the API or MCP.
+    // A business that texts from the shared number (cloud) can't opt customers in here.
+    const consentCounts = !isSharedSmsSender(await resolveSmsSender(tx, caller.businessId));
+    return { timezone, contactPhone: contactPhone!, consentCounts };
   });
   let appointmentId: string;
   try {
@@ -339,7 +344,7 @@ export async function createAppointmentForApi(context: DomainContext, caller: Ap
       apiAudit: callerAudit(caller),
       ...(input.contact_name ? { contactName: input.contact_name } : {}),
       ...(input.staff_id ? { preferredStaffId: input.staff_id } : {}),
-      ...(input.sms_consent ? { smsConsent: "agreed" as const } : {}),
+      ...(input.sms_consent && prepared.consentCounts ? { smsConsent: "agreed" as const } : {}),
     }));
   } catch (error) {
     bookingError(error);

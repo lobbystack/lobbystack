@@ -4241,7 +4241,7 @@
             "format": "uuid"
           },
           "sms_consent": {
-            "description": "True only if the customer agreed to receive confirmation and reminder texts.",
+            "description": "True only if the customer agreed to receive confirmation and reminder texts. Self-hosted instances only: on LobbyStack Cloud, texts come from LobbyStack's shared number, and only the receptionist can collect that consent, on a call.",
             "type": "boolean"
           }
         },

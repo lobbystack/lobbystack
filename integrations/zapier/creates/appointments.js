@@ -61,7 +61,7 @@ const bookAppointment = {
         type: 'boolean',
         required: false,
         default: 'false',
-        helpText: 'Set to true only if the customer agreed to receive confirmation and reminder text messages.',
+        helpText: 'Set to true only if the customer agreed to receive confirmation and reminder text messages. Self-hosted LobbyStack only: on LobbyStack Cloud, only the receptionist collects text consent, on a call.',
       },
     ],
     perform: async (z, bundle) => {

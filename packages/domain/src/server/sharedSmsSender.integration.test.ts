@@ -11,6 +11,7 @@ import { bookAppointment, cancelAppointment } from "./booking";
 import type { SmsConsentAnswer } from "./contactSmsConsent";
 import { refreshBusinessSnapshot } from "./knowledge";
 import { CANCELLATION_CONFIRMATION, defaultOperatorNotificationEventPreferences, queueOperatorAlert, resolveNotificationDelivery } from "./notifications";
+import { createAppointmentForApi } from "./publicApi/operations";
 import { bookForCaller, type ReceptionistChannel } from "./receptionistActions";
 import { receiveSharedSenderSms, SHARED_SENDER_HELP_REPLY, SHARED_SENDER_START_REPLY } from "./sms";
 
@@ -120,6 +121,11 @@ async function seed(tx: DatabaseTransaction, options: { selfHosted: boolean }) {
     const [row] = await tx.select({ snapshot: businessContextSnapshots.snapshot }).from(businessContextSnapshots).where(eq(businessContextSnapshots.businessId, businessId));
     return (row?.snapshot as { contactChannels?: { smsNumber?: string } } | undefined)?.contactChannels?.smsNumber;
   };
+  // A booking through the public API, as a Zapier zap or the MCP sends it, saying the customer agreed to texts.
+  const bookByApi = async (contactPhone: string) => {
+    await asWorker(tx);
+    return await createAppointmentForApi({ db }, { businessId, apiKeyId: randomUUID() }, { service_id: service!.id, starts_at: nextStart(), contact_phone: contactPhone, sms_consent: true });
+  };
   const consent = async (contactPhone: string) => {
     await asOwner(tx);
     const [row] = await tx.select({ status: contacts.smsConsentStatus, source: contacts.smsConsentSource }).from(contacts).where(and(eq(contacts.businessId, businessId), eq(contacts.phone, contactPhone)));
@@ -127,7 +133,7 @@ async function seed(tx: DatabaseTransaction, options: { selfHosted: boolean }) {
     // Every event in the test's one transaction has the same timestamp, so compare them as a set.
     return { status: row?.status ?? null, source: row?.source ?? null, events: events.map((event) => `${event.action} ${event.source}`).sort() };
   };
-  return { businessId, ownNumber, book, bookByAgent, addContact, deliver, operatorCancel, operatorAlertSender, changeCode, snapshotSmsNumber, consent };
+  return { businessId, ownNumber, book, bookByAgent, bookByApi, addContact, deliver, operatorCancel, operatorAlertSender, changeCode, snapshotSmsNumber, consent };
 }
 
 /** A text from this phone to the shared sender, applied as the webhook applies it. */
@@ -274,6 +280,22 @@ describe.skipIf(!client)("STOP and START to the shared sender", () => {
       await asApp(tx);
       await expect(tx.transaction(async (inner) => await inner.execute(sql`select app.list_businesses_by_contact_phone(${customer})`))).rejects.toThrow();
       await asOwner(tx);
+    });
+  });
+});
+
+describe.skipIf(!client)("text consent a business sends through the API or MCP", () => {
+  // The shared number's toll-free verification covers consent the receptionist collects on a call only.
+  it("doesn't count on cloud, where texts come from the shared number, and counts when self-hosted", async () => {
+    vi.stubEnv("TWILIO_ALERT_SMS_FROM", SHARED);
+    await rollbackTest(async (tx) => {
+      const cloud = await seed(tx, { selfHosted: false });
+      const customer = phone();
+      await cloud.bookByApi(customer);
+      expect(await cloud.consent(customer)).toEqual({ status: null, source: null, events: [] });
+      const selfHosted = await seed(tx, { selfHosted: true });
+      await selfHosted.bookByApi(customer);
+      expect(await selfHosted.consent(customer)).toMatchObject({ status: "subscribed", events: ["reminder_consent_granted appointment_booking"] });
     });
   });
 });
