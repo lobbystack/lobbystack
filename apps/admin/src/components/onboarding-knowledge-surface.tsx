@@ -5,6 +5,7 @@ import type { DragEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, FileText, LoaderCircle, Upload, X } from "lucide-react";
 import { requestJson } from "@/lib/request-json";
+import { uploadErrorMessage, uploadKnowledgeDocument } from "@/lib/storage-upload";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useStepNavigation } from "@/lib/use-step-navigation";
 import { useTranslation } from "react-i18next";
@@ -20,8 +21,6 @@ import { currentWebsiteImport, isWebsiteImportRunning, WebsiteImportProgress, ty
 
 type Document = { id: string; title: string; sourceType: string; status: string; processingProgress: number; error?: string | null; createdAt?: string; websiteImport?: WebsiteImportSummary | null };
 type UploadEntry = { id: string; fileName: string; status: "uploading" | "completed" | "error"; errorMessage?: string };
-
-async function checksum(file: File): Promise<string> { const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer()); return btoa(String.fromCharCode(...new Uint8Array(digest))); }
 
 export function OnboardingKnowledgeSurface() {
   const { t } = useTranslation("onboarding");
@@ -40,7 +39,7 @@ export function OnboardingKnowledgeSurface() {
   const invalidate = async () => { await queryClient.invalidateQueries({ queryKey: ["onboarding-knowledge", business?.businessId] }); };
   const addSnippet = useMutation({ mutationFn: (content: string) => requestJson(`/api/knowledge/snippets?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ title: t("knowledge.paste.defaultTitle"), content }) }) });
   const stage = useMutation({ mutationFn: () => requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: "greeting" }) }), onSuccess: () => navigate("/onboarding/greeting") });
-  const upload = useMutation({ mutationFn: async (file: File) => { const digest = await checksum(file); const created = await requestJson<{ objectId: string; url: string; headers?: Record<string, string> }>("/api/uploads", { method: "POST", body: JSON.stringify({ businessId: business!.businessId, purpose: "knowledge", fileName: file.name, contentType: file.type || "application/octet-stream", length: file.size, checksum: digest }) }); const uploaded = await fetch(created.url, { method: "PUT", ...(created.headers ? { headers: created.headers } : {}), body: file }); if (!uploaded.ok) throw new Error(t("knowledge.upload.failed")); await requestJson("/api/uploads", { method: "PUT", body: JSON.stringify({ businessId: business!.businessId, objectId: created.objectId, length: file.size, contentType: file.type || "application/octet-stream", checksum: digest }) }); } });
+  const upload = useMutation({ mutationFn: (file: File) => uploadKnowledgeDocument({ businessId: business!.businessId, file, contentType: file.type || "application/octet-stream" }, t("knowledge.upload.failed")) });
   const working = upload.isPending || addSnippet.isPending || stage.isPending || navigating;
   const stored = documents.data?.documents?.filter((document) => document.sourceType === "upload") ?? [];
   const websiteImport = currentWebsiteImport(documents.data?.documents, business?.websiteUrl);
@@ -52,7 +51,7 @@ export function OnboardingKnowledgeSurface() {
       if (file.size > 10 * 1024 * 1024) { setUploads((items) => [...items, { id, fileName: file.name, status: "error", errorMessage: t("knowledge.upload.tooLarge") }]); continue; }
       setUploads((items) => [...items, { id, fileName: file.name, status: "uploading" }]);
       try { await upload.mutateAsync(file); if (business) telemetry.track("web.onboarding.knowledge_uploaded", { businessId: business.businessId }); setUploads((items) => items.map((item) => item.id === id ? { ...item, status: "completed" } : item)); await invalidate(); setUploads((items) => items.filter((item) => item.id !== id)); }
-      catch (cause) { setUploads((items) => items.map((item) => item.id === id ? { ...item, status: "error", errorMessage: cause instanceof Error ? cause.message : t("knowledge.upload.failed") } : item)); }
+      catch (cause) { setUploads((items) => items.map((item) => item.id === id ? { ...item, status: "error", errorMessage: uploadErrorMessage(cause, t("knowledge.upload.failed")) } : item)); }
     }
   }
 

@@ -12,7 +12,7 @@ The admin reaches the worker's private hostname through `WORKER_INTERNAL_URL` to
 - Redis: `REDIS_URL` and an environment-specific `REDIS_PREFIX`.
 - Security: `BETTER_AUTH_SECRET`, `INTERNAL_SERVICE_SECRET`, `INTERNAL_SERVICE_TOKEN`, `ENCRYPTION_KEY`, and `OTP_HASH_SECRET`. Admin and worker both need `INTERNAL_SERVICE_TOKEN` for call handoff.
 - GPT-Live: `LIVE_PROTOTYPE_ENABLED=true` and `OPENAI_API_KEY` on admin and worker, `OPENAI_WEBHOOK_SECRET` and `WORKER_INTERNAL_URL` on admin, and `TWILIO_SIP_TRUNK_SID` on worker. See [the voice runtime](../voice/runtime.md).
-- Storage: set `STORAGE_PROVIDER=s3`, add Railway bucket references for `S3_ENDPOINT`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, and `S3_BUCKET`, and set `S3_FORCE_PATH_STYLE=false`.
+- Storage: set `STORAGE_PROVIDER=s3`, add Railway bucket references for `S3_ENDPOINT`, `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, and `S3_BUCKET`, and set `S3_FORCE_PATH_STYLE=false`. Browsers upload documents straight to the bucket, so the admin adds a CORS rule that lets `APP_BASE_URL` and `AUTH_TRUSTED_ORIGINS` send `PUT` requests and keeps any rules already there. If the bucket key can't change CORS settings, add that rule yourself.
 - Telemetry: set `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_HEADERS` on each application service, and set `SERVICE_VERSION` to the release SHA.
 
 Provider credentials belong only on the services that use them. Follow `.env.example` for the complete variable names without copying development placeholder values.

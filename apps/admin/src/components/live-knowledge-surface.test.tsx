@@ -7,6 +7,8 @@ import { LiveKnowledgeSurface, websiteImportProgress, type WebsiteImport } from 
 import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
 const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof createRecordedBrowserTelemetry> | null }));
 vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetryRef.current!.telemetry }));
+const captureBrowserError = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/browser-error-reporting", () => ({ captureBrowserError }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn() }), usePathname: () => "/agent/knowledge", useSearchParams: () => new URLSearchParams() }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en", resolvedLanguage: "en" }, t: (key: string) => key }) }));
 const clients: QueryClient[] = [];
@@ -151,5 +153,22 @@ describe("original knowledge row interactions", () => {
     const expected = { businessId: "business", section: "knowledge", contentType: "text/plain" };
     telemetryRef.current!.expectEvent("web.knowledge.upload_started", expected);
     telemetryRef.current!.expectEvent("web.knowledge.upload_completed", expected);
+  });
+  it("shows the translated message and reports it when storage blocks the upload", async () => {
+    vi.stubGlobal("crypto", { subtle: { digest: async () => new ArrayBuffer(32) } });
+    const fetchMock = setup();
+    const defaultFetch = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url === "/api/uploads" && init?.method === "POST") return Response.json({ objectId: "object", url: "https://uploads.example.invalid/object" });
+      if (url === "https://uploads.example.invalid/object") throw new TypeError("Failed to fetch");
+      return await defaultFetch(url, init);
+    });
+    await userEvent.click(screen.getByRole("button", { name: "sections.knowledge.addKnowledge" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "sections.knowledge.addKnowledgeOptions.upload" }));
+    fireEvent.change(document.getElementById("knowledge-document-file")!, { target: { files: [new File(["hours"], "hours.txt", { type: "text/plain" })] } });
+    await userEvent.click(screen.getByRole("button", { name: "actions.save" }));
+    expect(await screen.findByText("sections.knowledge.uploadValidation.uploadFailed")).toBeTruthy();
+    expect(captureBrowserError).toHaveBeenCalledWith(expect.objectContaining({ message: "Storage upload to uploads.example.invalid failed without a response: Failed to fetch" }));
+    expect(() => telemetryRef.current!.expectEvent("web.knowledge.upload_completed", { businessId: "business" })).toThrow();
   });
 });

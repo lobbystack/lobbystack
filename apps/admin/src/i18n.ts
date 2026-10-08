@@ -63,7 +63,7 @@ export function createI18nInstance(input: {
     returnNull: false,
     // Bundled resources make initialization synchronous, which keeps the server
     // render and hydration output identical.
-    initImmediate: false,
+    initAsync: false,
   });
 
   return instance;
