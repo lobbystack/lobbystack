@@ -65,6 +65,14 @@ describe("bookAppointment", () => {
     expect(vi.mocked(bookForCaller).mock.lastCall?.[1]).toMatchObject({ contactPhone: callerPhone, smsConsent });
   });
 
+  it.each(["web_chat", "web_voice"] as const)("records no answer from a %s, even one the visitor gave", async (channel) => {
+    for (const smsConsent of ["agreed", "declined"] as const) {
+      const result = await tools({ channel, callerPhone: undefined }).run("bookAppointment", { ...booking, contactPhone: callerPhone, smsConsent });
+      expect(vi.mocked(bookForCaller).mock.lastCall?.[1]).toMatchObject({ channel, contactPhone: callerPhone, smsConsent: "not_asked" });
+      if (smsConsent === "agreed") expect(result).toMatchObject({ textConfirmation: expect.stringContaining("only be set up on a phone call") });
+    }
+  });
+
   it("drops an answer when the business can't text the number", async () => {
     await tools({ callerPhone: "+381695021111", snapshot: tollFree }).run("bookAppointment", { ...booking, smsConsent: "declined" });
     expect(vi.mocked(bookForCaller).mock.lastCall?.[1]).toMatchObject({ smsConsent: "not_asked" });

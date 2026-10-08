@@ -37,14 +37,15 @@ async function rollbackTest(run: (tx: DatabaseTransaction) => Promise<void>) {
 const sender = "+14165550000";
 
 /**
- * A business open all day that texts from a local number and lets callers
- * cancel by their number and the service. Bookings and the caller's cancel
- * run as the worker, an operator's cancel as the app role, both under RLS.
+ * A self-hosted business open all day that texts from its own local number
+ * and lets callers cancel by their number and the service. Bookings and the
+ * caller's cancel run as the worker, an operator's cancel as the app role,
+ * both under RLS.
  */
 async function seed(tx: DatabaseTransaction) {
   const businessId = randomUUID();
   const userId = randomUUID();
-  await tx.insert(businesses).values({ id: businessId, slug: businessId, name: "Javor", timezone: "UTC", businessType: "test", telemetryEnabled: false });
+  await tx.insert(businesses).values({ id: businessId, slug: businessId, name: "Javor", timezone: "UTC", businessType: "test", telemetryEnabled: false, deploymentMode: "self_hosted_standard" });
   await tx.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid` });
   await tx.insert(businessMemberships).values({ businessId, userId, role: "scheduler" });
   await tx.insert(receptionistProfiles).values({ businessId, greeting: "Hi", tone: "warm", summary: "Test", bookingPolicy: "Book", transferMode: "never", bookingMode: "instant", appointmentChangePolicy: { enabled: true, verificationMode: "phone_match_and_facts", allowCancel: true, allowReschedule: true } });
@@ -181,7 +182,7 @@ describe.skipIf(!client)("the cancellation text", () => {
       await operatorCancel(appointmentId);
       const delivery = await deliver(appointmentId);
       expect(delivery).toMatchObject({ kind: "ready", delivery: { channel: "sms", kind: CANCELLATION_CONFIRMATION, to: "+14165550101", from: sender, subject: "Appointment cancelled" } });
-      expect(delivery?.kind === "ready" && delivery.delivery.body).toMatch(/^Javor: your Cut appointment on .+ is cancelled\.$/);
+      expect(delivery?.kind === "ready" && delivery.delivery.body).toMatch(/^Javor: your Cut appointment on .+ is cancelled\. Msg & data rates may apply\. Reply STOP to opt out or HELP for help\.$/);
       expect(await deliver(appointmentId, "booking_confirmation")).toMatchObject({ kind: "skipped" });
     });
   });

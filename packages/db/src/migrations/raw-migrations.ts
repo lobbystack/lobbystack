@@ -83,6 +83,7 @@ export const SCHEMA_MIGRATIONS = [
   "0075_operator_phone_verification_code.sql",
   "0076_business_hours_source.sql",
   "0077_service_deletion.sql",
+  "0078_shared_sms_sender_opt_out.sql",
 ] as const;
 
 const CONCURRENT_INDEX_DIRECTIVE = /^-- lobbystack:concurrent-index ([a-z][a-z0-9_]*)$/m;

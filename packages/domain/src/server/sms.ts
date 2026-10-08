@@ -1,6 +1,6 @@
-import { and, eq, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, lt, ne, or, sql } from "drizzle-orm";
 
-import { contacts, conversationSessions, conversations, enqueueOutbox, messages, phoneNumbers, providerEvents, smsConsentEvents, withBusinessTransaction, type Database } from "@lobbystack/db";
+import { contacts, conversationSessions, conversations, enqueueOutbox, messages, phoneNumbers, providerEvents, smsConsentEvents, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { isTerminalTwilioMessageStatus, mapTwilioStatusToMessageStatus, normalizeTwilioMessageStatus, shouldApplyMessageStatusTransition } from "@lobbystack/shared";
 
 import type { DomainContext } from "./context";
@@ -42,6 +42,69 @@ export function classifySmsKeywordReply(input: { body: string; optOutType?: stri
   if (SMS_HELP_KEYWORDS.has(keyword)) return { body: SMS_HELP_REPLY, kind: "help" };
   if (SMS_START_KEYWORDS.has(keyword)) return { body: SMS_START_REPLY, kind: "start" };
   return null;
+}
+
+/** Marks a contact's consent status as set by a text to the shared sender: "shared_sender:STOP". */
+const SHARED_SENDER_SOURCE = "shared_sender";
+export const SHARED_SENDER_HELP_REPLY = "LobbyStack: For help with an appointment, call the business you booked with. For anything else, email hello@lobbystack.com. Reply STOP to opt out.";
+export const SHARED_SENDER_START_REPLY = "LobbyStack: You can get texts from this number again. Reply HELP for help or STOP to opt out.";
+
+/**
+ * Handles a text a phone sent to the shared sender, the number that texts for
+ * every cloud business (see resolveSmsSender). No business owns it and it
+ * holds no conversations, so it answers only STOP, START and HELP; anything
+ * else gets no reply and isn't stored.
+ *
+ * Twilio blocks every text from the shared number to a phone that sent STOP,
+ * so STOP opts the phone out at every business that has it as a contact,
+ * keeping the status each contact had. START undoes exactly that: a contact
+ * the STOP opted out gets its earlier status back (subscribed, declined, or
+ * never asked). A contact that opted out some other way, such as STOP to a
+ * self-hosted business's own number, stays opted out. Returns the reply to
+ * send back for HELP and START.
+ */
+export async function receiveSharedSenderSms(
+  context: DomainContext,
+  input: { from: string; body: string; optOutType?: string },
+): Promise<{ reply: string | null; contactsChanged: number }> {
+  const consentUpdate = classifySmsConsentUpdate(input);
+  const keywordReply = classifySmsKeywordReply(input);
+  const reply = keywordReply?.kind === "help" ? SHARED_SENDER_HELP_REPLY : keywordReply?.kind === "start" ? SHARED_SENDER_START_REPLY : null;
+  if (!consentUpdate) return { reply, contactsChanged: 0 };
+  // "keyword:STOP" or "twilio_opt_out:STOP" becomes "shared_sender:STOP".
+  const source = `${SHARED_SENDER_SOURCE}:${consentUpdate.source.slice(consentUpdate.source.indexOf(":") + 1)}`;
+  const listed = await withBusinessTransaction(context.db, { actorType: "worker" }, async (tx) => await tx.execute<{ business_id: string }>(sql`select app.list_businesses_by_contact_phone(${input.from}) as business_id`));
+  let contactsChanged = 0;
+  // One transaction per business, so each change runs under that business's
+  // RLS context. Both changes are idempotent, so a retried webhook finishes
+  // any business a failure skipped.
+  for (const { business_id: businessId } of listed.rows) {
+    contactsChanged += await withBusinessTransaction(context.db, { businessId, actorType: "worker" }, async (tx) => consentUpdate.status === "opted_out"
+      ? await optOutForSharedSender(tx, { businessId, phone: input.from, source })
+      : await restoreAfterSharedSenderOptOut(tx, { businessId, phone: input.from, source }));
+  }
+  return { reply, contactsChanged };
+}
+
+async function optOutForSharedSender(tx: DatabaseTransaction, input: { businessId: string; phone: string; source: string }): Promise<number> {
+  const now = new Date();
+  // SET reads the row as it was, so the old status is what gets kept.
+  const changed = await tx.update(contacts)
+    .set({ smsConsentStatusBeforeOptOut: sql`${contacts.smsConsentStatus}`, smsConsentStatus: "opted_out", smsConsentSource: input.source, smsConsentUpdatedAt: now, updatedAt: now })
+    .where(and(eq(contacts.businessId, input.businessId), eq(contacts.phone, input.phone), or(isNull(contacts.smsConsentStatus), ne(contacts.smsConsentStatus, "opted_out"))))
+    .returning({ id: contacts.id });
+  for (const contact of changed) await tx.insert(smsConsentEvents).values({ businessId: input.businessId, contactId: contact.id, phone: input.phone, recipientType: "contact", action: "opted_out", source: input.source });
+  return changed.length;
+}
+
+async function restoreAfterSharedSenderOptOut(tx: DatabaseTransaction, input: { businessId: string; phone: string; source: string }): Promise<number> {
+  const now = new Date();
+  const restored = await tx.update(contacts)
+    .set({ smsConsentStatus: sql`${contacts.smsConsentStatusBeforeOptOut}`, smsConsentStatusBeforeOptOut: null, smsConsentSource: input.source, smsConsentUpdatedAt: now, updatedAt: now })
+    .where(and(eq(contacts.businessId, input.businessId), eq(contacts.phone, input.phone), eq(contacts.smsConsentStatus, "opted_out"), sql`starts_with(${contacts.smsConsentSource}, ${`${SHARED_SENDER_SOURCE}:`})`))
+    .returning({ id: contacts.id, status: contacts.smsConsentStatus });
+  for (const contact of restored) await tx.insert(smsConsentEvents).values({ businessId: input.businessId, contactId: contact.id, phone: input.phone, recipientType: "contact", action: contact.status === "subscribed" ? "resubscribed" : "opt_out_cleared", source: input.source });
+  return restored.length;
 }
 
 export async function receiveInboundSms(

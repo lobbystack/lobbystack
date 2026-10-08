@@ -1,28 +1,37 @@
 ---
 title: "Configure SMS alerts and consent"
-description: "How LobbyStack collects consent for outbound appointment and workspace alert SMS."
+description: "Which number sends LobbyStack texts, how customers and operators consent, and what STOP does."
 sidebarTitle: "SMS alerts and consent"
 contentType: "Reference"
 ---
 
-LobbyStack uses one toll-free SMS number for outbound, non-marketing account notifications.
+LobbyStack sends outbound, non-marketing account notifications by SMS.
 
-This number sends:
+LobbyStack texts:
 
-- A booking confirmation and one reminder 24 hours before the appointment, to customers who agree.
+- A booking confirmation, a reminder 24 hours before the appointment, and a cancellation confirmation, to customers who agree.
+- A one-time code when a caller changes an appointment by phone and your business asks for one.
 - Workspace alerts to verified operators.
 
-This number does not send marketing, promotions, age-gated content, AI SMS replies, or manual SMS conversations.
+LobbyStack doesn't send marketing, promotions, age-gated content, AI SMS replies, or manual SMS conversations from its notification number.
 
 The Free plan has no phone number and doesn't send SMS.
 
-When a customer texts your business number, LobbyStack saves the message in **Messages** and alerts your team. The AI doesn't reply. `STOP` and `HELP` get fixed replies.
+## Which number sends your texts
+
+On LobbyStack cloud, every business's texts come from one toll-free number that LobbyStack owns: +1 844 656 2290. Twilio verified it for account notifications. LobbyStack collects each customer's consent and writes every message, so this one number can text for all businesses. You don't register a number for texting.
+
+A toll-free number can text only numbers in the United States and Canada. The AI receptionist doesn't offer texts to callers with other numbers.
+
+On a self-hosted LobbyStack, texts come from your business's own SMS-enabled Twilio number. Register that number before you text customers. A local US number needs a 10DLC (10-digit long code) brand and campaign, and a toll-free number needs toll-free verification. US carriers block texts from numbers that aren't registered.
+
+When a customer texts your business number, LobbyStack saves the message in **Messages** and alerts your team. The AI doesn't reply. `STOP` and `HELP` get fixed replies. The shared toll-free number takes no conversations and answers only `STOP`, `START`, and `HELP`.
 
 ## Consent model
 
 LobbyStack collects SMS consent before sending alerts.
 
-Appointment customers and operators use the same toll-free number, but they consent in different places.
+Appointment customers and operators get texts from the same number, but they consent in different places.
 
 ### Appointment customers
 
@@ -35,6 +44,8 @@ The disclosure is:
 If the caller says yes, LobbyStack records the opt-in and sends appointment SMS for that phone number.
 
 If the caller says no, the appointment is still booked and no appointment SMS is sent.
+
+LobbyStack records consent only on phone calls, for the number the customer calls from. Website chat and browser calls don't offer texts, and an answer given there isn't recorded.
 
 ### Operators
 
@@ -50,6 +61,8 @@ Operators can disable SMS alerts later in notification settings.
 
 ## Example messages
 
+Every appointment text ends with the rates notice and the `STOP` and `HELP` instructions, in the customer's language.
+
 Appointment confirmation:
 
 > Example Business: Your haircut appointment is confirmed for May 24 at 2:00 PM. Msg & data rates may apply. Reply STOP to opt out or HELP for help.
@@ -60,9 +73,11 @@ Operator alert:
 
 ## Opt-out and help
 
-Recipients can reply `STOP` to opt out of future SMS from the toll-free alert number.
+A customer who replies `STOP` to the shared toll-free number gets no more texts from it, from any business. Twilio blocks the number from texting that phone. LobbyStack marks the phone as opted out at every business that has it as a contact, so no business queues texts to it.
 
-Recipients can reply `START` or `SUBSCRIBE` to resubscribe where supported.
+A customer who replies `START` or `SUBSCRIBE` can get texts again. Each business goes back to the customer's earlier answer. A customer who agreed to a business's texts gets them again, and a customer who declined stays declined.
+
+A customer who replies `STOP` to your business number opts out of your business's texts only. `START` to that number subscribes them again.
 
 Recipients can reply `HELP` for support information.
 

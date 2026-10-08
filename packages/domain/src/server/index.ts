@@ -33,6 +33,7 @@ export * from "./receptionistActions";
 export * from "./productEvents";
 export * from "./rules";
 export * from "./sms";
+export * from "./smsSender";
 export * from "./snapshotCache";
 export * from "./storage";
 export * from "./tenancy";

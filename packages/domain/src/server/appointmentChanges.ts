@@ -2,11 +2,12 @@ import { createHash, timingSafeEqual } from "node:crypto";
 
 import { and, eq, gt, inArray, lt, or } from "drizzle-orm";
 
-import { appointmentChangeVerifications, appointments, auditLogs, contacts, enqueueOutbox, phoneNumbers, receptionistProfiles, services, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { normalizeAppointmentChangePolicy } from "@lobbystack/shared";
+import { appointmentChangeVerifications, appointments, auditLogs, contacts, enqueueOutbox, receptionistProfiles, services, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { canTextNumber, normalizeAppointmentChangePolicy } from "@lobbystack/shared";
 
 import { appointmentTimesMatch, serviceNamesMatch, substantiveServiceNameFactMatches } from "./appointmentFacts";
 import { smsConsentOnFile, type SmsConsentOnFile } from "./contactSmsConsent";
+import { resolveSmsSender } from "./smsSender";
 
 import type { DomainContext } from "./context";
 import { VERIFICATION_CODE_TTL_MS, newVerificationCode, verificationCodeSecret } from "./verificationCode";
@@ -77,11 +78,16 @@ export async function issueAppointmentChangeOtp(
       return { ok: false, status: "expired", reason: "The verification session has expired." };
     }
     if (current.attemptCount >= OTP_MAX_ATTEMPTS) return { ok: false, status: "failed", reason: "Too many verification attempts." };
-    const sender = (await tx.select({ e164: phoneNumbers.e164 }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"), eq(phoneNumbers.smsEnabled, true))).limit(1))[0];
+    // The code comes from the number that sends the business's other texts.
+    // A toll-free sender can't reach a number outside North America, and a
+    // caller who texted STOP to it gets nothing from it.
+    const sender = await resolveSmsSender(tx, input.businessId);
     if (!sender) return { ok: false, status: "unavailable", reason: "SMS delivery is not configured for this business." };
+    const contact = (await tx.select({ smsConsentStatus: contacts.smsConsentStatus }).from(appointmentChangeVerifications).innerJoin(contacts, and(eq(contacts.id, appointmentChangeVerifications.contactId), eq(contacts.businessId, input.businessId))).where(eq(appointmentChangeVerifications.id, current.id)).limit(1))[0];
+    if (!canTextNumber(sender, current.callerPhone) || contact?.smsConsentStatus === "opted_out") return { ok: false, status: "unavailable", reason: "The business can't text this caller's number." };
     const code = newVerificationCode();
     await tx.update(appointmentChangeVerifications).set({ codeHash: hashOtp(code), status: "otp_queued", expiresAt: new Date(now.getTime() + OTP_TTL_MS), updatedAt: now }).where(and(eq(appointmentChangeVerifications.id, current.id), inArray(appointmentChangeVerifications.status, ["otp_pending", "otp_sent"])));
-    await enqueueOutbox(tx, { topic: "appointment.sendChangeOtp", businessId: input.businessId, aggregateType: "appointment_change_verification", aggregateId: current.id, dedupeKey: `appointment-change-otp:${current.id}:${now.getTime()}`, payload: { verificationId: current.id, code, to: current.callerPhone, from: sender.e164 } });
+    await enqueueOutbox(tx, { topic: "appointment.sendChangeOtp", businessId: input.businessId, aggregateType: "appointment_change_verification", aggregateId: current.id, dedupeKey: `appointment-change-otp:${current.id}:${now.getTime()}`, payload: { verificationId: current.id, code, to: current.callerPhone, from: sender } });
     await auditAppointmentChange(tx, { businessId: input.businessId, appointmentId: current.appointmentId, verificationId: current.id, eventType: "appointment_change.otp_queued" });
     return { ok: true, status: "otp_queued", verificationId: current.id, otpPhone: current.callerPhone };
   });

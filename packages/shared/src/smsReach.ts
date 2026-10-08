@@ -1,7 +1,7 @@
 // Twilio toll-free numbers can only text numbers in the US and Canada.
 const TOLL_FREE = /^\+18(?:00|33|44|55|66|77|88)\d{7}$/;
 
-/** Whether the business's SMS number can text this number. False when the business has no SMS number. */
+/** Whether a sender can text this number. False without a sender. */
 export function canTextNumber(from: string | null | undefined, to: string | null | undefined): boolean {
   if (!from || !to) return false;
   return !TOLL_FREE.test(from) || to.startsWith("+1");

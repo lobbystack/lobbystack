@@ -705,6 +705,48 @@ describe("worker handlers", () => {
     expect(markNotificationSent).toHaveBeenCalledWith(domain, { businessId, notificationId, providerMessageId: "SM123" });
   });
 
+  it("sends a customer's appointment text from the shared sender through the alert account that owns it", async () => {
+    const businessId = randomUUID();
+    const notificationId = randomUUID();
+    const delivery = { notificationId, businessId, channel: "sms" as const, kind: "appointment_reminder", relatedId: "appointment_1", to: "+15555550123", from: "+18446562290", subject: "Appointment reminder", body: "Reminder." };
+    vi.mocked(resolveNotificationDelivery).mockResolvedValue({ kind: "ready", delivery });
+    vi.mocked(claimNotificationDelivery).mockResolvedValue(true);
+    vi.mocked(markNotificationSent).mockResolvedValue(true);
+    const mainSend = vi.fn().mockResolvedValue({ providerMessageId: "SMmain" });
+    const defaultSend = vi.fn().mockResolvedValue({ providerMessageId: "SMdefault" });
+    const domain = { db: undefined as never };
+    const job = { ...notificationJob({ notificationId }), businessId };
+
+    await expect(handleJob(job, { domain, twilio: { sendSms: defaultSend }, twilioAlerts: { from: "+18446562290", sendSms: mainSend } })).resolves.toEqual({ status: "completed", entityId: notificationId });
+    expect(mainSend).toHaveBeenCalledWith(expect.objectContaining({ to: "+15555550123", from: "+18446562290", body: "Reminder." }));
+    expect(defaultSend).not.toHaveBeenCalled();
+    expect(markNotificationSent).toHaveBeenCalledWith(domain, { businessId, notificationId, providerMessageId: "SMmain" });
+    // Without a default account, the shared sender still goes out.
+    await expect(handleJob(job, { domain, twilioAlerts: { from: "+18446562290", sendSms: mainSend } })).resolves.toEqual({ status: "completed", entityId: notificationId });
+    expect(mainSend).toHaveBeenCalledTimes(2);
+    // A self-hosted business's own number uses the default account.
+    vi.mocked(resolveNotificationDelivery).mockResolvedValue({ kind: "ready", delivery: { ...delivery, from: "+14165550124" } });
+    await handleJob(job, { domain, twilio: { sendSms: defaultSend }, twilioAlerts: { from: "+18446562290", sendSms: mainSend } });
+    expect(defaultSend).toHaveBeenCalledWith(expect.objectContaining({ from: "+14165550124" }));
+    expect(mainSend).toHaveBeenCalledTimes(2);
+  });
+
+  it("sends an appointment change code from the shared sender through the alert account", async () => {
+    const businessId = randomUUID();
+    const verificationId = randomUUID();
+    const domain = { db: undefined as never };
+    vi.mocked(claimAppointmentChangeOtp).mockResolvedValue(true);
+    vi.mocked(loadAppointmentChangeOtpTarget).mockResolvedValue({ to: "+15555550123", from: "+18446562290", code: "123456" });
+    vi.mocked(markAppointmentChangeOtpSent).mockResolvedValue(true);
+    const mainSend = vi.fn().mockResolvedValue({ providerMessageId: "SMmain" });
+    const defaultSend = vi.fn();
+    const job: JobEnvelope = { jobId: randomUUID(), type: "appointment.sendChangeOtp", queue: "critical", businessId, payload: { verificationId, code: "123456", to: "+15555550123", from: "+18446562290" }, trace: {}, idempotencyKey: `test:${randomUUID()}`, scheduled: false };
+
+    await expect(handleJob(job, { domain, twilio: { sendSms: defaultSend }, twilioAlerts: { from: "+18446562290", sendSms: mainSend } })).resolves.toEqual({ status: "completed", entityId: verificationId });
+    expect(mainSend).toHaveBeenCalledWith({ to: "+15555550123", from: "+18446562290", body: "LobbyStack verification code: 123456. It expires in 10 minutes." });
+    expect(defaultSend).not.toHaveBeenCalled();
+  });
+
   it("delivers a durable operator email and records completion", async () => {
     const businessId = randomUUID();
     const deliveryId = randomUUID();

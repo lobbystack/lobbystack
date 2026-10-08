@@ -217,6 +217,16 @@ function twilioStatusCallback(input: { messageId?: string; notificationId?: stri
   }
 }
 
+/**
+ * The Twilio account that sends from this number. The shared sender, which
+ * texts operator alerts and cloud customers' appointment texts and codes,
+ * goes through the alert account that owns it; any other number through the
+ * default account.
+ */
+function smsProviderFor(dependencies: WorkerDependencies, from: string | null | undefined): Pick<TwilioProvider, "sendSms"> | undefined {
+  return from && dependencies.twilioAlerts?.from === from ? dependencies.twilioAlerts : dependencies.twilio;
+}
+
 function twilioStatusCallbackOption(input: { messageId?: string; notificationId?: string; operatorDeliveryId?: string }): { statusCallback: string } | Record<string, never> {
   const statusCallback = twilioStatusCallback(input);
   return statusCallback ? { statusCallback } : {};
@@ -259,7 +269,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         await markOperatorPhoneVerificationCodeSent(dependencies.domain, { businessId, attemptId });
         return { status: "skipped", entityId: attemptId };
       }
-      const sender = dependencies.twilioAlerts?.from === target.from ? dependencies.twilioAlerts : dependencies.twilio;
+      const sender = smsProviderFor(dependencies, target.from);
       if (!sender) {
         await releaseOperatorPhoneVerificationCodeSend(dependencies.domain, { businessId, attemptId, retry: false, error: "Alert SMS delivery is not configured." });
         return { status: "skipped", entityId: attemptId };
@@ -518,7 +528,8 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       const code = String(job.payload.code ?? "");
       const to = String(job.payload.to ?? "");
       const from = String(job.payload.from ?? "");
-      if (!dependencies.twilio || !verificationId || !code || !to || !from) return { status: "skipped", entityId: verificationId };
+      const sender = smsProviderFor(dependencies, from);
+      if (!sender || !verificationId || !code || !to || !from) return { status: "skipped", entityId: verificationId };
       if (!await claimAppointmentChangeOtp(dependencies.domain, { businessId, verificationId })) return { status: "skipped", entityId: verificationId };
       const target = await loadAppointmentChangeOtpTarget(dependencies.domain, { businessId, verificationId, to, from, code });
       if (!target) {
@@ -526,7 +537,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         return { status: "skipped", entityId: verificationId };
       }
       try {
-        await dependencies.twilio.sendSms({ to: target.to, from: target.from, body: verificationCodeSmsBody(target.code) });
+        await sender.sendSms({ to: target.to, from: target.from, body: verificationCodeSmsBody(target.code) });
         await markAppointmentChangeOtpSent(dependencies.domain, { businessId, verificationId });
         return { status: "completed", entityId: verificationId };
       } catch (error) {
@@ -718,7 +729,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
           let providerMessageId: string;
           let usageEventId: string | undefined;
           if (delivery.channel === "sms") {
-            const sender = dependencies.twilioAlerts?.from === delivery.sender ? dependencies.twilioAlerts : dependencies.twilio;
+            const sender = smsProviderFor(dependencies, delivery.sender);
             if (!sender || !delivery.sender) throw new Error("Operator SMS delivery is not configured.");
             if (dependencies.domain.db) {
               const reservation = await reserveAlertSmsUsage(dependencies.domain, { businessId, sourceKey: `alert_sms:operator_notification:${delivery.id}`, estimatedSegments: estimateSmsSegments(delivery.body) });
@@ -749,7 +760,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
           throw error;
         }
       }
-      if (!dependencies.twilio && !dependencies.email) return { status: "skipped", entityId: String(job.payload.notificationId ?? "") };
+      if (!dependencies.twilio && !dependencies.twilioAlerts && !dependencies.email) return { status: "skipped", entityId: String(job.payload.notificationId ?? "") };
       const notificationId = String(job.payload.notificationId ?? "");
       if (!notificationId) return { status: "skipped" };
       const businessId = businessIdOrThrow(job);
@@ -770,7 +781,8 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         let providerMessageId: string;
         let usageEventId: string | undefined;
         if (delivery.channel === "sms") {
-          if (!dependencies.twilio || !delivery.from) {
+          const sender = smsProviderFor(dependencies, delivery.from);
+          if (!sender || !delivery.from) {
             await transitionProcessingNotification(dependencies.domain, { businessId, notificationId: delivery.notificationId }, "skipped");
             return { status: "skipped", entityId: delivery.notificationId };
           }
@@ -782,7 +794,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
             }
             usageEventId = reservation.usageEventId;
           }
-          const sent = await dependencies.twilio.sendSms({ to: delivery.to, from: delivery.from, body: delivery.body, ...twilioStatusCallbackOption({ notificationId: delivery.notificationId }) });
+          const sent = await sender.sendSms({ to: delivery.to, from: delivery.from, body: delivery.body, ...twilioStatusCallbackOption({ notificationId: delivery.notificationId }) });
           providerMessageId = sent.providerMessageId;
         } else {
           if (!dependencies.email) {

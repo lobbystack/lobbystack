@@ -5,6 +5,7 @@ import { demoSnapshot, type BusinessContextSnapshot } from "@lobbystack/shared";
 const mocks = vi.hoisted(() => ({
   withBusinessTransaction: vi.fn(),
   enqueueOutbox: vi.fn(),
+  resolveSmsSender: vi.fn(),
 }));
 
 vi.mock("@lobbystack/db", async (importOriginal) => ({
@@ -12,6 +13,7 @@ vi.mock("@lobbystack/db", async (importOriginal) => ({
   withBusinessTransaction: mocks.withBusinessTransaction,
   enqueueOutbox: mocks.enqueueOutbox,
 }));
+vi.mock("./smsSender", () => ({ resolveSmsSender: mocks.resolveSmsSender }));
 
 import type { SnapshotCacheClient } from "./snapshotCache";
 import { refreshBusinessSnapshot } from "./knowledge";
@@ -78,6 +80,7 @@ beforeEach(() => {
   vi.stubEnv("REDIS_PREFIX", "lobbystack");
   mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => await callback(makeTx({ businesses: [businessRow], receptionist_profiles: [profileRow] })));
   mocks.enqueueOutbox.mockResolvedValue(undefined);
+  mocks.resolveSmsSender.mockResolvedValue(null);
 });
 
 afterEach(() => {
@@ -86,6 +89,8 @@ afterEach(() => {
 
 describe("refreshBusinessSnapshot write-through", () => {
   it("preserves business identity, active contact numbers, locale labels, and opt-out", async () => {
+    // The number customer texts come from, which the business's plan decides.
+    mocks.resolveSmsSender.mockResolvedValue("+14165550003");
     mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => callback(makeTx({
       businesses: [{ ...businessRow, legalName: "Maple Clinic Inc.", businessType: "clinic", telemetryEnabled: false }],
       receptionist_profiles: [profileRow],
@@ -99,6 +104,7 @@ describe("refreshBusinessSnapshot write-through", () => {
     const cache = memoryCache();
     await refreshBusinessSnapshot({ db: {} as never, snapshotCache: cache }, { businessId });
     expect(await cache.get(businessId)).toMatchObject({ legalName: "Maple Clinic Inc.", businessType: "clinic", telemetryEnabled: false, contactChannels: { phoneNumber: "+14165550002", smsNumber: "+14165550003" }, services: [{ localizedNames: { fr: "Consultation française" } }] });
+    expect(mocks.resolveSmsSender).toHaveBeenCalledWith(expect.anything(), businessId);
   });
   it("pushes the regenerated snapshot into the shared cache", async () => {
     const cache = memoryCache();

@@ -363,6 +363,8 @@ export const contacts = pgTable(
     smsConsentStatus: varchar("sms_consent_status", { length: 32 }),
     smsConsentUpdatedAt: timestamp("sms_consent_updated_at", { withTimezone: true }),
     smsConsentSource: varchar("sms_consent_source", { length: 64 }),
+    // The status a STOP to the shared sender replaced, which START restores.
+    smsConsentStatusBeforeOptOut: varchar("sms_consent_status_before_opt_out", { length: 32 }),
     operatorBlockedAt: timestamp("operator_blocked_at", { withTimezone: true }),
     ...legacyId,
     ...timestamps,

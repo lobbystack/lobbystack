@@ -4,7 +4,7 @@ const mocks = vi.hoisted(() => ({
   withBusinessTransaction: vi.fn(),
   enqueueOutbox: vi.fn(),
   requireBusinessMembership: vi.fn(),
-  resolveOperatorSmsSender: vi.fn(),
+  resolveSmsSender: vi.fn(),
   enableOperatorSmsAlertsWithConsent: vi.fn(),
 }));
 
@@ -14,7 +14,8 @@ vi.mock("@lobbystack/db", async (original) => ({
   enqueueOutbox: mocks.enqueueOutbox,
 }));
 vi.mock("../authz", () => ({ requireBusinessMembership: mocks.requireBusinessMembership }));
-vi.mock("./notifications", () => ({ resolveOperatorSmsSender: mocks.resolveOperatorSmsSender, enableOperatorSmsAlertsWithConsent: mocks.enableOperatorSmsAlertsWithConsent }));
+vi.mock("./notifications", () => ({ enableOperatorSmsAlertsWithConsent: mocks.enableOperatorSmsAlertsWithConsent }));
+vi.mock("./smsSender", () => ({ resolveSmsSender: mocks.resolveSmsSender }));
 
 import {
   PHONE_VERIFICATION_CODE_TTL_MS,
@@ -61,7 +62,7 @@ function setup(config: { selects?: unknown[][]; updates?: unknown[][]; execute?:
 beforeEach(() => {
   vi.stubEnv("OTP_HASH_SECRET", secret);
   mocks.requireBusinessMembership.mockResolvedValue({ role: "viewer" });
-  mocks.resolveOperatorSmsSender.mockResolvedValue("+14165550100");
+  mocks.resolveSmsSender.mockResolvedValue("+14165550100");
 });
 
 afterEach(() => {
@@ -140,14 +141,14 @@ describe("startOperatorPhoneVerification", () => {
 
   it("needs an alert SMS sender", async () => {
     const { executed } = setup();
-    mocks.resolveOperatorSmsSender.mockResolvedValue(null);
+    mocks.resolveSmsSender.mockResolvedValue(null);
     await expect(startOperatorPhoneVerification(context, input)).rejects.toMatchObject({ status: 409, code: "sms_sender_missing" });
     expect(executed).toEqual([]);
   });
 
   it("refuses numbers a toll-free sender can't text", async () => {
     const { executed } = setup();
-    mocks.resolveOperatorSmsSender.mockResolvedValue("+18885550100");
+    mocks.resolveSmsSender.mockResolvedValue("+18885550100");
     await expect(startOperatorPhoneVerification(context, { ...input, phoneE164: "+447700900123", countryCode: "GB" })).rejects.toMatchObject({ status: 422, code: "phone_unreachable" });
     expect(executed).toEqual([]);
     expect(mocks.enqueueOutbox).not.toHaveBeenCalled();
@@ -238,11 +239,11 @@ describe("issueOperatorPhoneVerificationCode", () => {
   it("skips an attempt that was replaced or already sent", async () => {
     setup({ updates: [[]] });
     await expect(issueOperatorPhoneVerificationCode(context, { businessId: "business-1", attemptId: "attempt-1", now })).resolves.toBeNull();
-    expect(mocks.resolveOperatorSmsSender).not.toHaveBeenCalled();
+    expect(mocks.resolveSmsSender).not.toHaveBeenCalled();
   });
 
   it("fails the attempt when the sender can no longer reach the number", async () => {
-    mocks.resolveOperatorSmsSender.mockResolvedValue("+18885550100");
+    mocks.resolveSmsSender.mockResolvedValue("+18885550100");
     const { sets } = setup({ updates: [[{ phoneE164: "+447700900123" }]] });
     await expect(issueOperatorPhoneVerificationCode(context, { businessId: "business-1", attemptId: "attempt-1", now })).resolves.toBeNull();
     expect(sets[1]).toMatchObject({ status: "failed", codeHash: null });
