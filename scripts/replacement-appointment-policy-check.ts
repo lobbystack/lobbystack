@@ -17,9 +17,10 @@ try {
     await tx.insert(receptionistProfiles).values({ businessId, greeting: "Hello", tone: "warm", summary: "Clinic", bookingPolicy: "Confirm bookings", transferMode: "on_request", appointmentChangePolicy: policy });
     await tx.insert(appointments).values({ id: appointmentId, businessId, contactId, serviceId, staffId, startsAt: new Date("2027-01-01T10:00:00Z"), endsAt: new Date("2027-01-01T10:30:00Z"), timezone: "UTC", status: "confirmed", sourceChannel: "voice" });
   });
-  const input = { businessId, appointmentId, callerPhone, action: "cancel" as const, callerName: "Alex Morgan", serviceName: "Examen dentaire" };
+  // The caller's number and one appointment fact verify a change; speech recognition misspells names, so the name doesn't take part.
+  const input = { businessId, appointmentId, callerPhone, action: "cancel" as const, serviceName: "Examen dentaire" };
   assert(await createAppointmentChangeVerification({ db: worker.db }, { businessId, appointmentId, callerPhone, action: "cancel" }) === null, "Missing appointment facts were accepted.");
-  assert(await createAppointmentChangeVerification({ db: worker.db }, { ...input, callerName: "Someone else" }) === null, "Wrong caller name was accepted.");
+  assert(await createAppointmentChangeVerification({ db: worker.db }, { ...input, callerPhone: "+14165550100" }) === null, "A call from another number was accepted.");
   assert(await createAppointmentChangeVerification({ db: worker.db }, { ...input, serviceName: "Haircut" }) === null, "Wrong appointment fact was accepted.");
   const verified = await createAppointmentChangeVerification({ db: worker.db }, input);
   assert(verified?.status === "facts_verified", "Facts were not distinguished from OTP verification.");
@@ -34,7 +35,7 @@ try {
   assert(resolved?.appointmentId === appointmentId, "Caller facts could not resolve the appointment without an internal ID.");
   assert(await cancelAppointmentForCaller({ db: worker.db }, { ...input, verificationId: resolved.verificationId }), "Verified cancellation did not commit.");
   assert(await cancelAppointmentForCaller({ db: worker.db }, { ...input, verificationId: resolved.verificationId }) === null, "Verification replay succeeded.");
-  console.log(JSON.stringify({ missingFactsDenied: true, nameChecked: true, localizedFactsChecked: true, otpEscalationEnforced: true, policyRevocationEnforced: true, factsResolveAppointment: true, cancellationCommitted: true, replayDenied: true }));
+  console.log(JSON.stringify({ missingFactsDenied: true, otherNumberDenied: true, localizedFactsChecked: true, otpEscalationEnforced: true, policyRevocationEnforced: true, factsResolveAppointment: true, cancellationCommitted: true, replayDenied: true }));
 } finally {
   await scoped(async (tx) => tx.delete(businesses).where(eq(businesses.id, businessId)));
   await worker.pool.end();
