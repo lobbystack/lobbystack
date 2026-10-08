@@ -11,6 +11,7 @@ import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useSetupAction } from "@/lib/use-setup-action";
 import { useTelemetry } from "@/components/product-analytics";
 import { requestJson } from "@/lib/request-json";
+import { uploadKnowledgeDocument } from "@/lib/storage-upload";
 import { UploadKnowledgeDocumentSheet } from "./upload-knowledge-document-sheet";
 import { AddKnowledgeSheet } from "./add-knowledge-sheet";
 import { ImportWebsiteKnowledgeSheet } from "./import-website-knowledge-sheet";
@@ -72,11 +73,6 @@ export function websiteImportProgress(job: WebsiteImport): number {
   return Math.max(job.status === "indexing" ? 72 : 8, Math.min(99, progress));
 }
 
-async function checksum(file: File): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
-  return btoa(String.fromCharCode(...new Uint8Array(digest)));
-}
-
 export function LiveKnowledgeSurface() {
   const { i18n, t } = useTranslation("agent");
   const telemetry = useTelemetry();
@@ -112,7 +108,7 @@ export function LiveKnowledgeSurface() {
   const documentAction = useMutation({ mutationFn: ({ id, method, action, active }: { id: string; method: "PATCH" | "DELETE"; action?: "retry" | "cancel"; active?: boolean }) => requestJson(`/api/knowledge/${encodeURIComponent(id)}?businessId=${encodeURIComponent(business!.businessId)}`, { method, ...(active !== undefined ? { body: JSON.stringify({ active }) } : action ? { body: JSON.stringify({ action }) } : {}) }), onSuccess: invalidate });
   const currentDocument = documents.data?.documents.find(document => document.id === viewingDocument?.id) ?? viewingDocument;
   const documentContent = useQuery({ queryKey: ["knowledge-content", business?.businessId, viewingDocument?.id, currentDocument?.updatedAt], enabled: Boolean(business && viewingDocument), queryFn: () => requestJson<{ document: Document & { fileName?: string | null; contentLength?: number | null }; content: string }>(`/api/knowledge/${encodeURIComponent(viewingDocument!.id)}?businessId=${encodeURIComponent(business!.businessId)}`) });
-  const uploadDocument = useMutation({ mutationFn: async ({ file, contentType, title, tags }: { file: File; contentType: string; title: string; tags: string[] }) => { const fileChecksum = await checksum(file); const created = await requestJson<{ objectId: string; url: string; headers?: Record<string, string> }>("/api/uploads", { method: "POST", body: JSON.stringify({ businessId: business!.businessId, purpose: "knowledge", fileName: file.name, contentType, length: file.size, checksum: fileChecksum }) }); const result = await fetch(created.url, { method: "PUT", ...(created.headers ? { headers: created.headers } : {}), body: file }); if (!result.ok) throw new Error(t("sections.knowledge.uploadValidation.uploadFailed")); await requestJson("/api/uploads", { method: "PUT", body: JSON.stringify({ businessId: business!.businessId, objectId: created.objectId, length: file.size, contentType, checksum: fileChecksum, title, tags }) }); }, onMutate: (variables) => { if (business) telemetry.track("web.knowledge.upload_started", { businessId: business.businessId, section: "knowledge", contentType: variables.contentType }); }, onSuccess: async (_data, variables) => { if (business) telemetry.track("web.knowledge.upload_completed", { businessId: business.businessId, section: "knowledge", contentType: variables.contentType }); await invalidate(); } });
+  const uploadDocument = useMutation({ mutationFn: ({ file, contentType, title, tags }: { file: File; contentType: string; title: string; tags: string[] }) => uploadKnowledgeDocument({ businessId: business!.businessId, file, contentType, title, tags }, t("sections.knowledge.uploadValidation.uploadFailed")), onMutate: (variables) => { if (business) telemetry.track("web.knowledge.upload_started", { businessId: business.businessId, section: "knowledge", contentType: variables.contentType }); }, onSuccess: async (_data, variables) => { if (business) telemetry.track("web.knowledge.upload_completed", { businessId: business.businessId, section: "knowledge", contentType: variables.contentType }); await invalidate(); } });
 
   const rows = useMemo<Row[]>(() => [
     ...(documents.data?.documents ?? []).filter(document => !(document.websiteImport && ["completed", "cancelled"].includes(document.websiteImport.status) && !document.textContent?.trim())).map((document) => {
