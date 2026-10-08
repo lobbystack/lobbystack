@@ -126,8 +126,12 @@
       "kinds": {
         "voice_message": "Callback",
         "human_handoff": "Handoff",
-        "other": "Open"
-      }
+        "other": "Open",
+        "cancellation": "Cancellation"
+      },
+      "appointment": "Appointment: {{appointment}}",
+      "noAppointment": "No upcoming appointment matches this request. Check the Appointments page.",
+      "alreadyCancelled": "This appointment is already cancelled."
     },
     "upcoming": {
       "title": "Upcoming",

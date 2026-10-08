@@ -14,7 +14,7 @@ vi.mock("next/dynamic", () => ({ default: () => () => null }));
 vi.mock("./dashboard-activation-card", () => ({ DashboardActivationCard: () => null }));
 const clients: QueryClient[] = [];
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); });
-type Overrides = { upcoming?: Array<Record<string, unknown>>; recentCalls?: Array<Record<string, unknown>> };
+type Overrides = { upcoming?: Array<Record<string, unknown>>; recentCalls?: Array<Record<string, unknown>>; actionRequired?: Array<Record<string, unknown>>; role?: string };
 async function setup(locale: "en" | "fr", callId: string | null, overrides: Overrides = {}) {
   vi.stubGlobal("localStorage", { getItem: () => null, setItem: vi.fn(), removeItem: vi.fn() });
   vi.stubGlobal("EventSource", class { addEventListener() {} removeEventListener() {} close() {} });
@@ -23,9 +23,10 @@ async function setup(locale: "en" | "fr", callId: string | null, overrides: Over
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
   client.setQueryData(["dashboard"], {
     businessId: "business", kpis: { calls: { total: 1, deltaPercent: 0 }, appointments: { total: 1, deltaPercent: 0 }, averageDuration: { totalSeconds: 20, deltaSeconds: 0 } }, monthlyCalls: [], recentCalls: overrides.recentCalls ?? [],
-    actionRequired: [{ id: "follow-up", kind: "voice_message", title: "Voice message from Alex", body: "Please call back.\nCallback: +14165550199\nUrgency: high", callId, createdAt: "2026-09-04T14:30:00Z" }],
+    actionRequired: overrides.actionRequired ?? [{ id: "follow-up", kind: "voice_message", title: "Voice message from Alex", body: "Please call back.\nCallback: +14165550199\nUrgency: high", callId, createdAt: "2026-09-04T14:30:00Z" }],
     upcoming: overrides.upcoming ?? [{ id: "appointment", startsAt: "2026-09-07T14:30:00Z", timezone: "UTC", status: "confirmed", sourceChannel: "voice", contactName: "Alex", serviceName: "Consultation" }],
   });
+  if (overrides.role) client.setQueryData(["businesses"], { businesses: [{ businessId: "business", name: "Clinic", role: overrides.role, active: true }] });
   render(<I18nextProvider i18n={i18n}><QueryClientProvider client={client}><LiveOverviewSurface /></QueryClientProvider></I18nextProvider>);
   return i18n;
 }
@@ -72,5 +73,38 @@ describe("dashboard contact and channel labels", () => {
     expect(screen.getByText("(415) 555-0123")).toBeTruthy();
     expect(screen.getByText("Web caller")).toBeTruthy();
     expect(screen.queryByText(/Unknown/)).toBeNull();
+  });
+});
+describe("appointment cancellations on Home", () => {
+  const request = { id: "request-1", kind: "voice_message", title: "Voice message from Milan", body: "Cancellation request: Consultation, Monday, September 7 at 2:30 PM", callId: "call-1", createdAt: "2026-09-04T14:30:00Z", request: "appointment_cancellation" };
+  const linked = { id: "appointment", startsAt: "2026-09-07T14:30:00Z", timezone: "UTC", status: "confirmed", serviceName: "Consultation", contactName: "Milan" };
+
+  it("names the matched appointment and lets a scheduler approve the cancellation", async () => {
+    await setup("en", null, { role: "scheduler", actionRequired: [{ ...request, appointment: linked }] });
+    expect(screen.getAllByText(en.home.actionRequired.kinds.cancellation)).toHaveLength(2);
+    expect(screen.getByText("Appointment: Consultation for Milan on Mon, Sep 7, 2:30 PM")).toBeTruthy();
+    expect(screen.getByRole("button", { name: enCommon.appointments.cancel.approve })).toBeTruthy();
+    // The Upcoming appointment has its own cancel action.
+    expect(screen.getByRole("button", { name: "Cancel appointment: Sep 7, 2026, 2:30 PM" })).toBeTruthy();
+  });
+
+  it("says when no appointment matched, and offers nothing to approve", async () => {
+    await setup("en", null, { role: "scheduler", actionRequired: [{ ...request, appointment: null }] });
+    expect(screen.getByText(en.home.actionRequired.noAppointment)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: enCommon.appointments.cancel.approve })).toBeNull();
+  });
+
+  it("says the appointment is already cancelled when it was, and offers nothing to approve", async () => {
+    await setup("en", null, { role: "scheduler", actionRequired: [{ ...request, appointment: { ...linked, status: "canceled" } }] });
+    expect(screen.getByText(en.home.actionRequired.alreadyCancelled)).toBeTruthy();
+    expect(screen.queryByText(en.home.actionRequired.noAppointment)).toBeNull();
+    expect(screen.queryByRole("button", { name: enCommon.appointments.cancel.approve })).toBeNull();
+  });
+
+  it("hides cancel and approve from viewers", async () => {
+    await setup("en", null, { role: "viewer", actionRequired: [{ ...request, appointment: linked }] });
+    expect(screen.getByText("Appointment: Consultation for Milan on Mon, Sep 7, 2:30 PM")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: enCommon.appointments.cancel.approve })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Cancel appointment/ })).toBeNull();
   });
 });

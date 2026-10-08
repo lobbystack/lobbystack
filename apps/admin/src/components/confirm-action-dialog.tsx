@@ -18,6 +18,8 @@ type ConfirmActionDialogProps = {
   confirmLabel: string;
   confirmVariant?: "default" | "destructive";
   description: string;
+  /** For example "ph-mask" when the description names a customer. */
+  descriptionClassName?: string;
   onConfirm: () => Promise<void> | void;
   onOpenChange: (open: boolean) => void;
   open: boolean;
@@ -30,6 +32,7 @@ export function ConfirmActionDialog({
   confirmLabel,
   confirmVariant = "default",
   description,
+  descriptionClassName,
   onConfirm,
   onOpenChange,
   open,
@@ -50,7 +53,7 @@ export function ConfirmActionDialog({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription>{description}</AlertDialogDescription>
+          <AlertDialogDescription className={descriptionClassName}>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogClose

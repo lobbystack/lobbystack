@@ -126,8 +126,12 @@
       "kinds": {
         "voice_message": "Povratni poziv",
         "human_handoff": "Predaja čoveku",
-        "other": "Otvoreno"
-      }
+        "other": "Otvoreno",
+        "cancellation": "Otkazivanje"
+      },
+      "appointment": "Termin: {{appointment}}",
+      "noAppointment": "Nijedan predstojeći termin ne odgovara ovom zahtevu. Proverite stranicu Termini.",
+      "alreadyCancelled": "Ovaj termin je već otkazan."
     },
     "upcoming": {
       "title": "Predstojeće",

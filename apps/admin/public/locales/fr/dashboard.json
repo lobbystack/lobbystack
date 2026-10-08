@@ -126,8 +126,12 @@
       "kinds": {
         "voice_message": "Rappel",
         "human_handoff": "Transfert",
-        "other": "Ouvert"
-      }
+        "other": "Ouvert",
+        "cancellation": "Annulation"
+      },
+      "appointment": "Rendez-vous : {{appointment}}",
+      "noAppointment": "Aucun rendez-vous à venir ne correspond à cette demande. Consultez la page Rendez-vous.",
+      "alreadyCancelled": "Ce rendez-vous est déjà annulé."
     },
     "upcoming": {
       "title": "À venir",

@@ -126,8 +126,12 @@
       "kinds": {
         "voice_message": "Devolver llamada",
         "human_handoff": "Traspaso",
-        "other": "Abierto"
-      }
+        "other": "Abierto",
+        "cancellation": "Cancelación"
+      },
+      "appointment": "Cita: {{appointment}}",
+      "noAppointment": "Ninguna cita próxima coincide con esta solicitud. Revise la página Citas.",
+      "alreadyCancelled": "Esta cita ya está cancelada."
     },
     "upcoming": {
       "title": "Próximas",

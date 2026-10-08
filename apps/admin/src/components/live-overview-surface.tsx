@@ -13,13 +13,14 @@ import { useEffect, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, ChevronRight, PhoneCall, UserRound } from "lucide-react";
+import { AlertCircle, CalendarX2, ChevronRight, PhoneCall, UserRound } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
 import { DashboardActivationCard } from "@/components/dashboard-activation-card";
+import { appointmentSummary, CancelAppointmentButton } from "@/components/cancel-appointment-button";
 import { ChartBlockSkeleton, MetricCardGridSkeleton } from "@/components/loading-skeletons";
 import { Item, ItemActions, ItemHeader, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemMedia, ItemTitle } from "@/components/ui/item";
 import { Separator } from "@/components/ui/separator";
@@ -42,9 +43,12 @@ type DashboardSummary = {
   };
   monthlyCalls: Array<{ monthStart: string; total: number }>;
   recentCalls: Array<{ id: string; startedAt: string; status: string; transport?: string | null; durationSeconds: number; contactName: string | null; contactPhone: string | null; contactEmail?: string | null }>;
-  actionRequired: Array<{ id: string; kind: string; title: string; body: string; createdAt: string; conversationId?: string; callId?: string | null }>;
+  actionRequired: Array<{ id: string; kind: string; title: string; body: string; createdAt: string; conversationId?: string; callId?: string | null; request?: string | null; appointment?: { id: string; startsAt: string; timezone: string; status: string; serviceName: string | null; contactName: string | null } | null }>;
   upcoming: Array<{ id: string; startsAt: string; timezone: string; status: string; sourceChannel: string; contactName: string | null; contactPhone?: string | null; contactEmail?: string | null; serviceName: string | null; staffName: string | null }>;
 };
+
+// A caller asked to cancel on a call where the agent couldn't (see the domain's CANCELLATION_REQUEST).
+const CANCELLATION_REQUEST = "appointment_cancellation";
 
 async function getSummary(): Promise<DashboardSummary> {
   const response = await fetch("/api/dashboard", { credentials: "include" });
@@ -105,6 +109,10 @@ export function LiveOverviewSurface() {
                           {(() => {
                             const details = parseFollowUpTaskBody(item.body);
                             const displayTitle = getActionDisplayTitle(item, t);
+                            const cancellation = item.request === CANCELLATION_REQUEST;
+                            // A request can outlive its appointment, cancelled before the request was saved.
+                            const cancelled = item.appointment?.status === "canceled";
+                            const appointment = item.appointment && !cancelled ? { ...item.appointment, contactName: getContactDisplayName({ name: item.appointment.contactName }, i18n.language, t) } : null;
                             const destination =
                               item.kind === "voice_message" && item.callId
                                 ? {
@@ -115,7 +123,7 @@ export function LiveOverviewSurface() {
                             return (
                               <Item className="px-1 py-1" size="sm" variant="default">
                                 <ItemMedia className="size-9 rounded-full bg-muted/70" variant="icon">
-                                  {getActionKindIcon(item.kind)}
+                                  {cancellation ? <CalendarX2 className="size-4 text-muted-foreground" /> : getActionKindIcon(item.kind)}
                                 </ItemMedia>
                                 <ItemContent className="min-w-0">
                                   <ItemHeader className="flex-col items-start gap-2 sm:grid sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start sm:gap-x-3 sm:gap-y-2">
@@ -140,7 +148,7 @@ export function LiveOverviewSurface() {
                                     </div>
                                     <ItemActions className="hidden w-auto shrink-0 justify-end self-start sm:flex">
                                       <Badge variant="secondary">
-                                        {getActionKindLabel(item.kind, t)}
+                                        {cancellation ? t("home.actionRequired.kinds.cancellation") : getActionKindLabel(item.kind, t)}
                                       </Badge>
                                       {isUrgentFollowUpValue(details.urgency) ? (
                                         <Badge variant="destructive">
@@ -152,6 +160,9 @@ export function LiveOverviewSurface() {
                                   {details.callbackPhone ? (
                                     <ItemDescription>{details.callbackPhone}</ItemDescription>
                                   ) : null}
+                                  {cancellation ? (
+                                    <ItemDescription>{appointment ? t("home.actionRequired.appointment", { appointment: appointmentSummary(appointment, i18n.language, t) }) : t(cancelled ? "home.actionRequired.alreadyCancelled" : "home.actionRequired.noAppointment")}</ItemDescription>
+                                  ) : null}
                                   <ItemFooter className="flex-wrap gap-2 text-xs text-muted-foreground">
                                     <span>
                                       {formatDateTime(item.createdAt, i18n.language, {
@@ -161,7 +172,7 @@ export function LiveOverviewSurface() {
                                     </span>
                                     <span className="flex items-center gap-2 sm:hidden">
                                       <Badge variant="secondary">
-                                        {getActionKindLabel(item.kind, t)}
+                                        {cancellation ? t("home.actionRequired.kinds.cancellation") : getActionKindLabel(item.kind, t)}
                                       </Badge>
                                       {isUrgentFollowUpValue(details.urgency) ? (
                                         <Badge variant="destructive">
@@ -169,6 +180,7 @@ export function LiveOverviewSurface() {
                                         </Badge>
                                       ) : null}
                                     </span>
+                                    {appointment ? <CancelAppointmentButton appointment={appointment} approve /> : null}
                                   </ItemFooter>
                                 </ItemContent>
                               </Item>
@@ -188,7 +200,7 @@ export function LiveOverviewSurface() {
                 {summary.data.upcoming.map((appointment, index) => <div key={appointment.id}>
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="type-item-title">{getContactDisplayName({ name: appointment.contactName, phone: appointment.contactPhone, email: appointment.contactEmail, channels: [appointment.sourceChannel] }, i18n.language, t)}</p><Badge variant="outline">{getAppointmentStatusLabel(appointment.status, t)}</Badge><Badge variant="secondary">{getChannelLabel(appointment.sourceChannel, t)}</Badge></div><p className="type-body-muted mt-1">{appointment.serviceName ?? t("home.upcoming.unknownService")}</p></div>
-                    <div className="shrink-0 text-left sm:text-right"><p className="type-item-title">{formatDateTime(appointment.startsAt, i18n.language, { weekday: "short", month: "short", day: "numeric", timeZone: appointment.timezone })}</p><p className="type-body-muted mt-1">{formatDateTime(appointment.startsAt, i18n.language, { hour: "numeric", minute: "2-digit", timeZone: appointment.timezone })}</p></div>
+                    <div className="shrink-0 text-left sm:text-right"><p className="type-item-title">{formatDateTime(appointment.startsAt, i18n.language, { weekday: "short", month: "short", day: "numeric", timeZone: appointment.timezone })}</p><p className="type-body-muted mt-1">{formatDateTime(appointment.startsAt, i18n.language, { hour: "numeric", minute: "2-digit", timeZone: appointment.timezone })}</p><CancelAppointmentButton appointment={{ ...appointment, contactName: getContactDisplayName({ name: appointment.contactName, phone: appointment.contactPhone, email: appointment.contactEmail, channels: [appointment.sourceChannel] }, i18n.language, t) }} className="mt-2" /></div>
                   </div>
                   {index < summary.data.upcoming.length - 1 ? <Separator className="mt-4" /> : null}
                 </div>)}

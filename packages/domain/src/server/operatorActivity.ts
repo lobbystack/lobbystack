@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ne } from "drizzle-orm";
 
 import { appointments, calls, contacts, services, staff, type DatabaseTransaction } from "@lobbystack/db";
 
@@ -23,7 +23,7 @@ export async function listRecentCalls(tx: DatabaseTransaction, businessId: strin
   }).from(calls).leftJoin(contacts, eq(calls.contactId, contacts.id)).where(eq(calls.businessId, businessId)).orderBy(desc(calls.startedAt)).limit(limit);
 }
 
-/** The next appointments that start at or after `from`, for the home page. */
+/** The next appointments that start at or after `from` and aren't cancelled, for the home page. */
 export async function listUpcomingAppointments(tx: DatabaseTransaction, businessId: string, from: Date, limit = 5) {
   return await tx.select({
     id: appointments.id,
@@ -36,10 +36,10 @@ export async function listUpcomingAppointments(tx: DatabaseTransaction, business
     contactEmail: contacts.email,
     serviceName: services.name,
     staffName: staff.name,
-  }).from(appointments).leftJoin(contacts, eq(appointments.contactId, contacts.id)).leftJoin(services, eq(appointments.serviceId, services.id)).leftJoin(staff, eq(appointments.staffId, staff.id)).where(and(eq(appointments.businessId, businessId), gte(appointments.startsAt, from))).orderBy(appointments.startsAt).limit(limit);
+  }).from(appointments).leftJoin(contacts, eq(appointments.contactId, contacts.id)).leftJoin(services, eq(appointments.serviceId, services.id)).leftJoin(staff, eq(appointments.staffId, staff.id)).where(and(eq(appointments.businessId, businessId), ne(appointments.status, "canceled"), gte(appointments.startsAt, from))).orderBy(appointments.startsAt).limit(limit);
 }
 
-/** Appointments that have not ended by `now`, for the appointments page. */
+/** Appointments that have not ended by `now` and aren't cancelled, for the appointments page. */
 export async function listCurrentAppointments(tx: DatabaseTransaction, businessId: string, now: Date, limit = 100) {
   return await tx.select({
     id: appointments.id,
@@ -59,7 +59,7 @@ export async function listCurrentAppointments(tx: DatabaseTransaction, businessI
     .innerJoin(contacts, eq(contacts.id, appointments.contactId))
     .innerJoin(services, eq(services.id, appointments.serviceId))
     .innerJoin(staff, eq(staff.id, appointments.staffId))
-    .where(and(eq(appointments.businessId, businessId), gte(appointments.endsAt, now)))
+    .where(and(eq(appointments.businessId, businessId), ne(appointments.status, "canceled"), gte(appointments.endsAt, now)))
     .orderBy(asc(appointments.startsAt))
     .limit(limit);
 }

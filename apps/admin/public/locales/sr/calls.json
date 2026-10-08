@@ -155,7 +155,9 @@
     },
     "details": {
       "outcomeTitle": "Ishod",
-      "followUpTitle": "Zadatak praćenja",
+      "followUpTitle_one": "Zadatak praćenja",
+      "followUpTitle_few": "Zadaci praćenja",
+      "followUpTitle_other": "Zadaci praćenja",
       "callInfoTitle": "Informacije o pozivu",
       "twilioCallSid": "Twilio Call SID",
       "gatewaySession": "Sesija gatewaya",

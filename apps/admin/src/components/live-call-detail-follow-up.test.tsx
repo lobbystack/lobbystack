@@ -18,7 +18,10 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); clients.forEach((client) => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
 
-function setup() {
+type FollowUp = { id: string; title: string; body: string; status: string; request?: string | null; createdAt: string; updatedAt: string };
+const followUp = (id: string, overrides: Partial<FollowUp> = {}): FollowUp => ({ id, title: "Call back", body: "Please call back", status: "open", createdAt: "2026-09-01T12:06:00Z", updatedAt: "2026-09-01T12:06:00Z", ...overrides });
+
+function setup(followUpTasks: FollowUp[] = [followUp("inbox-1")]) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true }] });
@@ -32,7 +35,7 @@ function setup() {
       transcript: [],
       recording: { state: "missing" },
       appointments: [],
-      followUpTasks: [{ id: "inbox-1", title: "Call back", body: "Please call back", status: "open", createdAt: "2026-09-01T12:06:00Z", updatedAt: "2026-09-01T12:06:00Z" }],
+      followUpTasks,
     });
   });
   vi.stubGlobal("fetch", fetchMock);
@@ -46,6 +49,27 @@ describe("voice follow-up telemetry", () => {
     await userEvent.click(await screen.findByRole("tab", { name: "detail.tabs.details" }));
     await userEvent.click(await screen.findByRole("button", { name: "detail.details.markDone" }));
     await waitFor(() => telemetryRef.current!.expectEvent("web.voice.follow_up_completed", { businessId: "business", callId: "call-1", inboxItemId: "inbox-1" }));
-    expect(fetchMock).toHaveBeenCalledWith("/api/calls/call-1?businessId=business", expect.objectContaining({ method: "PATCH" }));
+    expect(fetchMock).toHaveBeenCalledWith("/api/calls/call-1?businessId=business", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ action: "complete_follow_up", inboxItemId: "inbox-1" }) }));
+  });
+});
+
+describe("several follow-ups on one call", () => {
+  it("lists the message and each cancellation request, and marks only the chosen one done", async () => {
+    const fetchMock = setup([
+      followUp("request-2", { body: "Cancellation request: Cleaning", request: "appointment_cancellation" }),
+      followUp("message", { body: "Please call back about parking" }),
+      // An imported duplicate of the message shows once.
+      followUp("message-duplicate", { body: "Please call back (imported)" }),
+      followUp("request-1", { body: "Cancellation request: Consultation", request: "appointment_cancellation" }),
+      followUp("closed", { body: "Already handled", status: "done" }),
+    ]);
+    await userEvent.click(await screen.findByRole("tab", { name: "detail.tabs.details" }));
+    for (const body of ["Cancellation request: Cleaning", "Please call back about parking", "Cancellation request: Consultation"]) expect(screen.getByText(body)).toBeTruthy();
+    expect(screen.queryByText("Please call back (imported)")).toBeNull();
+    expect(screen.queryByText("Already handled")).toBeNull();
+    const buttons = screen.getAllByRole("button", { name: "detail.details.markDone" });
+    expect(buttons).toHaveLength(3);
+    await userEvent.click(buttons[2]!);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/calls/call-1?businessId=business", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ action: "complete_follow_up", inboxItemId: "request-1" }) })));
   });
 });

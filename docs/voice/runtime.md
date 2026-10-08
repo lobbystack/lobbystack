@@ -71,11 +71,21 @@ Once attached, the worker owns the call until OpenAI closes the session. It:
 - speaks the business greeting as soon as the session starts
 - saves each caller and receptionist turn to the transcript
 - transfers phone calls with a SIP REFER to the destination number, once GPT-Live has told the caller
-- hangs up after the receptionist's goodbye has played, when the agent ends the call
+- hangs up after the receptionist's goodbye has played, when the agent ends the call or both sides have said goodbye
 - ends the call after 75 seconds without speech or keypad presses from either side, or at the duration limit. The limit is the minutes the call has reserved, and at most 30 minutes. When the admin sends no limit, as on an unlimited plan, the call stops at 30 minutes. A request still being answered pauses the silence timer.
 - records the final call state, billed seconds, and estimated cost
 - queues a copy of OpenAI's stored recording into LobbyStack storage, where the copy follows the plan's retention (see [Recordings](#recordings))
 - reports the call to the dashboard's live-call count
+
+GPT-Live's instructions tell it to hand the caller's goodbye to the backend, whose `endCall` tool ends the call. In production calls, GPT-Live answered most goodbyes itself, so `endCall` never ran. To catch those, the worker also hangs up after a mutual goodbye: a caller turn with a farewell, then a receptionist turn with one. It hangs up 2 seconds after the receptionist's goodbye has finished playing and 2 seconds after the caller last spoke, whichever is later. While the receptionist keeps talking, the worker keeps waiting, for up to 30 seconds after the goodbye.
+
+The caller can still stop that hangup by saying something else first, such as "oh, one more thing". A reply made only of goodbyes, thanks and words like "okay" or "yes", such as "Okay, thanks, bye now", doesn't stop it, but the worker waits 2 seconds after it too. A call the agent ends with `endCall` hangs up once its goodbye has played, as the timeout wrap-up below does, whatever the caller says. The worker doesn't look for a mutual goodbye:
+
+- in the opening exchange, before the caller's first request has an answer
+- while the agent answers a request, or during a transfer
+- when the receptionist's goodbye ends with a question
+
+`packages/agent-core/src/live/goodbye.ts` lists the farewells in English, French, Spanish, Serbian (Latin or Cyrillic) and Russian. Words that also mean hello, such as "ciao" and "salut", don't count, and neither does a bare "thanks". A goodbye the worker misses still ends at the silence timeout. After a mutual goodbye, the call record gets the disposition `caller_finished`, and `live.closed` logs `autoHangup: true`.
 
 Before a timeout ends the call, the worker tells GPT-Live why and asks it for a short goodbye, then hangs up once the goodbye has played. It listens for the goodbye from the moment OpenAI acknowledges the command, so a sentence GPT-Live was already saying doesn't pass for it. Without an acknowledgment within 2 seconds, it listens from the request. GPT-Live can ignore a command appended mid-call, so the worker hangs up anyway after 4 seconds of silence, or 15 seconds in all. The duration limit's goodbye starts 30 seconds early, so it fits inside the reserved minutes. A call that reserved less than a minute gets half its length to talk instead, so a 30-second reservation still gets 15 seconds of conversation.
 

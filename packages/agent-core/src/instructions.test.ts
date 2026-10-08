@@ -38,7 +38,7 @@ describe("buildLiveInstructions", () => {
   it("keeps GPT-Live's waiting line neutral until the backend confirms an action", () => {
     const instructions = buildLiveInstructions(demoSnapshot, callStart);
     expect(instructions).toContain("say one short neutral line such as \"One moment.\"");
-    expect(instructions).toContain("Don't say you've booked, saved, sent or confirmed anything until the backend's result says it's done.");
+    expect(instructions).toContain("Don't say you've booked, cancelled, saved, sent or confirmed anything until the backend's result says it's done.");
   });
 
   it("has the lines OpenAI's template requires, names the call's language, and the greeting to open with once told to start", () => {
@@ -149,6 +149,33 @@ describe("buildAgentInstructions", () => {
     const abroad = buildAgentInstructions(tollFree, "voice", { callerPhone: "+381695021111" });
     expect(abroad).toContain("This business can't text the caller's number");
     expect(abroad).not.toContain("Can I text this number");
+  });
+});
+
+describe("cancellations without a trusted caller number", () => {
+  it("tells the agent to say it can't cancel here and to pass the request to the team", () => {
+    const browser = buildAgentInstructions(demoSnapshot, "web_voice");
+    expect(browser).toContain("You can't cancel appointments on this call. When the caller asks to cancel one, tell them that plainly and that the team will take care of the cancellation.");
+    expect(browser).toContain("save the request with requestAppointmentCancellation");
+    expect(browser).toContain("Never say or suggest the appointment is already cancelled.");
+    expect(buildAgentInstructions(demoSnapshot, "web_chat")).toContain("You can't cancel appointments in this chat.");
+  });
+
+  it("keeps direct cancellation on phone calls from a trusted number, with a request when it can't find or verify the appointment", () => {
+    const phone = buildAgentInstructions(demoSnapshot, "voice", { callerPhone: "+14165550134" });
+    expect(phone).not.toContain("You can't cancel appointments");
+    expect(phone).toContain("When you can't find or verify the appointment a caller wants to cancel, for example because they aren't calling from the number it was booked with, don't take a message.");
+    expect(phone).toContain("save the request with requestAppointmentCancellation");
+    for (const instructions of [buildAgentInstructions({ ...demoSnapshot, bookingMode: "off" }, "web_voice"), buildAgentInstructions(demoSnapshot, "voice", { callerPhone: "+14165550134", intakeOnly: true })]) {
+      expect(instructions).not.toContain("requestAppointmentCancellation");
+    }
+  });
+
+  it("tells GPT-Live a cancellation the backend can't make goes to the team and stays booked", () => {
+    expect(buildLiveInstructions(demoSnapshot, callStart)).toContain("When it can't find or verify the appointment, as on a call from another number, the backend passes a cancellation request to the team, and the appointment stays booked until the team cancels it.");
+    const operatorOnly = buildLiveInstructions({ ...demoSnapshot, appointmentChangePolicy: { enabled: true, allowCancel: true, allowReschedule: true, verificationMode: "operator_only" } }, callStart);
+    expect(operatorOnly).toContain("- Appointment cancellations: the backend passes a cancellation request to the team.");
+    expect(operatorOnly).not.toContain("reschedule or cancel an appointment");
   });
 });
 

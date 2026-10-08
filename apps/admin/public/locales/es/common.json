@@ -139,6 +139,21 @@
       "failed": "Fallido",
       "error": "Error",
       "cancelled": "Cancelado"
+    },
+    "actions": "Acciones",
+    "cancel": {
+      "action": "Cancelar",
+      "actionLabel": "Cancelar la cita: {{time}}",
+      "approve": "Aprobar la cancelación",
+      "title": "¿Cancelar esta cita?",
+      "description": "{{appointment}}. La quitaremos de su calendario conectado y no enviaremos su recordatorio.",
+      "requestDescription": "{{appointment}}. La quitaremos de su calendario conectado, no enviaremos su recordatorio y cerraremos la solicitud.",
+      "confirm": "Cancelar la cita",
+      "keep": "Mantener la cita",
+      "done": "Cita cancelada",
+      "failed": "No pudimos cancelar la cita. Inténtelo de nuevo.",
+      "summary": "{{service}} para {{name}} el {{time}}",
+      "summaryNoService": "Cita para {{name}} el {{time}}"
     }
   },
   "abandonIntent": {

@@ -101,6 +101,12 @@ const FORMATTERS: Record<string, Formatter> = {
     const details = [text(input.serviceName), text(input.preferredTime)].filter(Boolean).join(", ");
     return `The appointment request is saved for the team${details ? ` (${details})` : ""}. The team will contact the caller to confirm the time.`;
   },
+  // The appointment stays booked until the team acts, so the answer says so.
+  requestAppointmentCancellation: (input, output) => {
+    if (output.ok !== true) return undefined;
+    const details = [text(input.serviceName), text(input.appointmentStartsAt)].filter(Boolean).join(", ");
+    return `The cancellation request is saved for the team${details ? ` (${details})` : ""}. The appointment is still booked until the team cancels it, and the team will confirm with the caller.`;
+  },
   endCall: (_input, output) => (output.ok === true ? "The call is ending." : undefined),
   // The REFER waits until GPT-Live has said this, so it goes out at once.
   transferCall: (_input, output) => (output.ok === true && output.transferring === true ? "The call is being transferred to a person at the business now." : undefined),

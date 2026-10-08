@@ -9,12 +9,13 @@ vi.mock("@lobbystack/domain", async () => ({
   checkOpening: vi.fn(async () => ({ ok: true, available: true })),
   findCallerBooking: vi.fn(async () => undefined),
   bookForCaller: vi.fn(async () => ({ ok: true })),
+  requestCancellationForCaller: vi.fn(async () => ({ ok: true, inboxItemId: "inbox_1" })),
 }));
 
-import { bookForCaller, checkOpening, findCallerBooking, searchKnowledgeEvidence } from "@lobbystack/domain";
+import { bookForCaller, checkOpening, findCallerBooking, requestCancellationForCaller, searchKnowledgeEvidence } from "@lobbystack/domain";
 import { createReceptionistTools, type AgentToolContext } from "./tools";
 
-function toolNames(overrides: Partial<AgentToolContext> & { bookingMode?: BookingMode; snapshot?: Partial<BusinessContextSnapshot> } = {}): string[] {
+function toolNames(overrides: Omit<Partial<AgentToolContext>, "snapshot"> & { bookingMode?: BookingMode; snapshot?: Partial<BusinessContextSnapshot> } = {}): string[] {
   const { bookingMode, snapshot, ...context } = overrides;
   return Object.keys(createReceptionistTools({
     domain: { db: {} as never },
@@ -28,7 +29,7 @@ const callControl = { transfer: vi.fn(async () => true), hangup: vi.fn(async () 
 
 describe("createReceptionistTools", () => {
   it("books directly by default", () => {
-    expect(toolNames()).toEqual(["bookAppointment", "findAvailability", "getBusinessHours", "getBusinessServices", "searchKnowledge", "takeMessage"]);
+    expect(toolNames()).toEqual(["bookAppointment", "findAvailability", "getBusinessHours", "getBusinessServices", "requestAppointmentCancellation", "searchKnowledge", "takeMessage"]);
   });
 
   it("takes requests instead of booking in request mode", () => {
@@ -75,6 +76,45 @@ describe("createReceptionistTools", () => {
     expect(callControl.transfer).not.toHaveBeenCalled();
     await expect(execute({ callerRequested: true, urgent: false }, { toolCallId: "2", messages: [] })).resolves.toMatchObject({ ok: true });
     expect(callControl.transfer).toHaveBeenCalledWith("+14165550199");
+  });
+});
+
+describe("requestAppointmentCancellation", () => {
+  const operatorOnly = { appointmentChangePolicy: { enabled: true, allowCancel: true, allowReschedule: true, verificationMode: "operator_only" as const } };
+
+  it("passes cancellations to the team wherever the business takes bookings", () => {
+    expect(toolNames({ channel: "web_voice" })).toContain("requestAppointmentCancellation");
+    expect(toolNames({ channel: "web_chat", bookingMode: "request" })).toContain("requestAppointmentCancellation");
+    expect(toolNames({ channel: "voice", callerPhone: "+14165550100", snapshot: operatorOnly })).toContain("requestAppointmentCancellation");
+    // Next to self-service, for an appointment the caller's number doesn't find or verify.
+    expect(toolNames({ channel: "voice", callerPhone: "+14165550100" })).toEqual(expect.arrayContaining(["cancelAppointment", "lookupAppointmentForChange", "requestAppointmentCancellation"]));
+  });
+
+  it("isn't offered where the business takes no bookings, or in a demo", () => {
+    expect(toolNames({ channel: "web_voice", bookingMode: "off" })).not.toContain("requestAppointmentCancellation");
+    expect(toolNames({ channel: "voice", callerPhone: "+14165550100", bookingMode: "off" })).not.toContain("requestAppointmentCancellation");
+    expect(toolNames({ channel: "web_voice", intakeOnly: true })).not.toContain("requestAppointmentCancellation");
+  });
+
+  it("saves the caller's details as a request and says the appointment isn't cancelled", async () => {
+    const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "web_voice", callId: "call_1", conversationId: "conversation_1", snapshot: { ...demoSnapshot, timezone: "America/Toronto" } });
+    const execute = tools.requestAppointmentCancellation!.execute! as (input: object, options: object) => Promise<unknown>;
+    await expect(execute({ callerName: "Milan", appointmentStartsAt: "2026-10-14T15:00", serviceName: "General Checkup", callbackPhone: "+14165550100" }, { toolCallId: "1", messages: [] }))
+      .resolves.toMatchObject({ ok: true, inboxItemId: "inbox_1", cancelled: false, status: expect.stringContaining("still booked") });
+    expect(vi.mocked(requestCancellationForCaller).mock.lastCall?.[1]).toEqual({
+      businessId: demoSnapshot.businessId, channel: "web_voice", timezone: "America/Toronto", callerName: "Milan",
+      appointmentStartsAt: "2026-10-14T15:00", serviceName: "General Checkup", callbackPhone: "+14165550100", callId: "call_1", conversationId: "conversation_1",
+    });
+  });
+
+  it("uses the trusted caller number and asks for a name before saving", async () => {
+    vi.mocked(requestCancellationForCaller).mockClear();
+    const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "voice", callerPhone: "+14165550100", snapshot: { ...demoSnapshot, ...operatorOnly } });
+    const execute = tools.requestAppointmentCancellation!.execute! as (input: object, options: object) => Promise<unknown>;
+    await expect(execute({ callerName: " " }, { toolCallId: "1", messages: [] })).resolves.toMatchObject({ ok: false });
+    expect(requestCancellationForCaller).not.toHaveBeenCalled();
+    await execute({ callerName: "Milan", callbackPhone: "" }, { toolCallId: "2", messages: [] });
+    expect(vi.mocked(requestCancellationForCaller).mock.lastCall?.[1]).toMatchObject({ callerName: "Milan", callbackPhone: "+14165550100", channel: "voice" });
   });
 });
 

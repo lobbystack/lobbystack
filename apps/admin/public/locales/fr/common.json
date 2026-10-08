@@ -145,6 +145,21 @@
       "failed": "Échec",
       "error": "Erreur",
       "cancelled": "Annulé"
+    },
+    "actions": "Actions",
+    "cancel": {
+      "action": "Annuler",
+      "actionLabel": "Annuler le rendez-vous : {{time}}",
+      "approve": "Approuver l’annulation",
+      "title": "Annuler ce rendez-vous ?",
+      "description": "{{appointment}}. Nous le retirerons de votre calendrier connecté et n’enverrons pas son rappel.",
+      "requestDescription": "{{appointment}}. Nous le retirerons de votre calendrier connecté, n’enverrons pas son rappel et fermerons la demande.",
+      "confirm": "Annuler le rendez-vous",
+      "keep": "Garder le rendez-vous",
+      "done": "Rendez-vous annulé",
+      "failed": "Nous n’avons pas pu annuler le rendez-vous. Réessayez.",
+      "summary": "{{service}} pour {{name}} le {{time}}",
+      "summaryNoService": "Rendez-vous pour {{name}} le {{time}}"
     }
   },
   "abandonIntent": {

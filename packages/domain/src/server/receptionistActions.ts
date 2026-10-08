@@ -1,4 +1,4 @@
-import { and, asc, eq, ilike, or } from "drizzle-orm";
+import { and, asc, eq, gte, ilike, lt, ne, or, sql } from "drizzle-orm";
 import { DateTime } from "luxon";
 
 import { appointments, contacts, receptionistProfiles, services, withBusinessTransaction } from "@lobbystack/db";
@@ -13,7 +13,7 @@ import type { DomainContext } from "./context";
 import { appendMessage, getOrCreateConversation } from "./conversations";
 import { queueOperatorAlert } from "./notifications";
 import { recordProductEventBestEffort } from "./productEvents";
-import { createVoiceFollowUpTask } from "./voice";
+import { CANCELLATION_REQUEST, createVoiceFollowUpTask, type FollowUpRequest } from "./voice";
 
 // Actions the receptionist agent takes on a business's behalf, whatever the
 // channel. Each one opens its own tenant-scoped transaction.
@@ -264,7 +264,7 @@ export async function rescheduleForCaller(
 
 export async function takeMessageForStaff(
   context: DomainContext,
-  input: { businessId: string; message: string; channel: ReceptionistChannel; callerName?: string; callbackPhone?: string; urgency?: string; callbackWindow?: string; callId?: string; conversationId?: string },
+  input: { businessId: string; message: string; channel: ReceptionistChannel; callerName?: string; callbackPhone?: string; urgency?: string; callbackWindow?: string; callId?: string; conversationId?: string; request?: FollowUpRequest },
 ) {
   const alert = { eventKind: "voiceMessage" as const, subject: "New voice message", body: "A caller left a voice message. Open the inbox to review it." };
   // A website chat's conversation is the visitor's own thread: a staff note
@@ -290,7 +290,63 @@ export async function takeMessageForStaff(
     ...(input.callbackPhone ? { callbackPhone: input.callbackPhone } : {}),
     ...(input.urgency ? { urgency: input.urgency } : {}),
     ...(input.callbackWindow ? { callbackWindow: input.callbackWindow } : {}),
+    ...(input.request ? { request: input.request } : {}),
   });
   if (inVisitorThread) await queueOperatorAlert(context, { businessId: input.businessId, eventKey: `${alert.eventKind}:${task.inboxItemId}`, ...alert });
   return { ok: true as const, inboxItemId: task.inboxItemId };
+}
+
+// Whole and case-insensitive, without LIKE wildcards, so a vague or partial
+// name can't link someone else's booking.
+const sameText = (column: typeof contacts.name | typeof services.name, value: string) => sql`lower(trim(${column})) = lower(${value.trim()})`;
+
+/**
+ * Passes a caller's request to cancel an appointment to the team, when the
+ * agent can't cancel on this call. When exactly one upcoming appointment
+ * matches the caller's name, their number when they gave one, and the details
+ * they gave, the request links to it so an operator can approve it in one
+ * click. A date or time that doesn't parse could be any appointment, so the
+ * request stays unlinked. The caller is never told whether anything matched.
+ */
+export async function requestCancellationForCaller(
+  context: DomainContext,
+  input: { businessId: string; channel: ReceptionistChannel; timezone: string; callerName: string; appointmentStartsAt?: string; serviceName?: string; callbackPhone?: string; notes?: string; callId?: string; conversationId?: string },
+) {
+  const callerName = input.callerName.trim();
+  const serviceName = input.serviceName?.trim();
+  const described = input.appointmentStartsAt?.trim();
+  const when = described ? DateTime.fromISO(described, { zone: input.timezone }) : undefined;
+  const hasTime = Boolean(described?.includes("T"));
+  const dayStart = when?.startOf("day");
+  const matches = when && !when.isValid ? [] : await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) =>
+    await tx.select({ id: appointments.id }).from(appointments)
+      .innerJoin(contacts, and(eq(contacts.id, appointments.contactId), eq(contacts.businessId, input.businessId)))
+      .innerJoin(services, and(eq(services.id, appointments.serviceId), eq(services.businessId, input.businessId)))
+      .where(and(
+        eq(appointments.businessId, input.businessId),
+        ne(appointments.status, "canceled"),
+        gte(appointments.startsAt, new Date()),
+        sameText(contacts.name, callerName),
+        input.callbackPhone ? eq(contacts.phone, input.callbackPhone) : undefined,
+        dayStart ? and(gte(appointments.startsAt, dayStart.toJSDate()), lt(appointments.startsAt, dayStart.plus({ days: 1 }).toJSDate())) : undefined,
+        hasTime && when ? eq(appointments.startsAt, when.toJSDate()) : undefined,
+        serviceName ? sameText(services.name, serviceName) : undefined,
+      ))
+      .limit(2));
+  const appointmentId = matches.length === 1 ? matches[0]!.id : undefined;
+  const time = when?.isValid ? when.toFormat(hasTime ? "cccc, LLLL d 'at' h:mm a" : "cccc, LLLL d") : described;
+  const message = [
+    `Cancellation request: ${[serviceName, time].filter(Boolean).join(", ") || "appointment"}`,
+    input.notes?.trim() ? `Notes: ${input.notes.trim()}` : "",
+  ].filter(Boolean).join("\n");
+  return await takeMessageForStaff(context, {
+    businessId: input.businessId,
+    message,
+    channel: input.channel,
+    callerName,
+    ...(input.callbackPhone ? { callbackPhone: input.callbackPhone } : {}),
+    ...(input.callId ? { callId: input.callId } : {}),
+    ...(input.conversationId ? { conversationId: input.conversationId } : {}),
+    request: { request: CANCELLATION_REQUEST, ...(appointmentId ? { appointmentId } : {}) },
+  });
 }

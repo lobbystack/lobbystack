@@ -175,6 +175,24 @@ describe("createLiveCallHandler", () => {
     await expect((controller.options.setup as Promise<{ language: string }>)).resolves.toMatchObject({ greeting: "Hi" });
   });
 
+  it("records a hangup after a mutual goodbye as the caller finishing, and logs it as automatic", async () => {
+    vi.stubEnv("LIVE_PROTOTYPE_ENABLED", "true");
+    vi.stubEnv("INTERNAL_SERVICE_TOKEN", "token");
+    vi.stubEnv("OPENAI_API_KEY", "sk-test");
+    const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    mocks.snapshot.mockResolvedValue({ businessId: "biz_1", greeting: "Hi" });
+    const handler = createLiveCallHandler({ domain: { db: {} as never } });
+    await handler.handle(attachRequest({ sessionId: "live_auto_bye", businessId: "biz_1", callId: "call_auto_bye", channel: "voice" }), response());
+    const controller = mocks.controllers_.at(-1)!;
+    (controller.options.onAutoHangup as () => void)();
+    // No session.closed before the finalization timeout, so the close reason alone would say connection_lost.
+    (controller.options.onClose as (summary: unknown) => void)({ sessionId: "live_auto_bye", durationMs: 40_000, delegations: [], usageConfirmed: false, closeReason: "finalize_timeout" });
+    await vi.waitFor(() => expect(mocks.finishLiveCall).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ callId: "call_auto_bye", end: "caller_finished" })));
+    const closed = JSON.parse(String(info.mock.calls.find((call) => String(call[0]).includes("\"live.closed\""))![0]));
+    expect(closed).toMatchObject({ event: "live.closed", sessionId: "live_auto_bye", end: "caller_finished", autoHangup: true });
+    info.mockRestore();
+  });
+
   it("ends a call within its reserved minutes, and never past 30 minutes", async () => {
     vi.stubEnv("LIVE_PROTOTYPE_ENABLED", "true");
     vi.stubEnv("INTERNAL_SERVICE_TOKEN", "token");

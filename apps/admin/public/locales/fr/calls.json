@@ -155,7 +155,9 @@
     },
     "details": {
       "outcomeTitle": "Résultat",
-      "followUpTitle": "Tâche de suivi",
+      "followUpTitle_one": "Tâche de suivi",
+      "followUpTitle_other": "Tâches de suivi",
+      "followUpTitle_many": "Tâches de suivi",
       "callInfoTitle": "Informations sur l'appel",
       "twilioCallSid": "SID de l'appel Twilio",
       "gatewaySession": "Session passerelle",

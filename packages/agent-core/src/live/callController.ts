@@ -5,6 +5,7 @@ import { SidebandWS } from "openai/resources/live/sideband/ws";
 
 import type { ReceptionistAgent } from "../agent";
 import { DIRECT_ANSWER_TOOLS, directToolAnswer, fitToAppend, type DirectAnswerStep } from "./directAnswer";
+import { onlyGoodbye, saysGoodbye } from "./goodbye";
 import { greetingCommand } from "./greeting";
 import { LiveLatencyTracker, type LiveCallLatency } from "./latency";
 
@@ -124,6 +125,11 @@ export type LiveCallControllerOptions = {
   onGreeting?: (event: GreetingEvent) => void;
   onTurn?: (turn: LiveCallTurn) => void;
   onTimeout?: (reason: LiveCallTimeout) => void;
+  /**
+   * The controller is hanging up on its own after a mutual goodbye: the caller
+   * said one and the receptionist answered with one, which has now played.
+   */
+  onAutoHangup?: () => void;
   /** Each step of a transfer started with transferAfterAnnouncement(). */
   onTransfer?: (state: LiveCallTransferState) => void;
   onDelegation?: (timing: DelegationTiming) => void;
@@ -173,6 +179,11 @@ const GOODBYE_START_MS = 4_000;
 const GOODBYE_MAX_MS = 15_000;
 const GOODBYE_QUIET_MS = 1_000;
 const GOODBYE_POLL_MS = 200;
+// A mutual goodbye hangs up once both sides have been quiet this long after
+// the receptionist's goodbye played, so the caller can still say "oh, wait".
+// Speech still coming holds it, up to the second bound.
+const AUTO_HANGUP_QUIET_MS = 2_000;
+const AUTO_HANGUP_MAX_MS = 30_000;
 // A wrap-up's goodbye counts from OpenAI's acknowledgment of the command, or
 // from the request when no acknowledgment arrives by this long.
 const WRAP_UP_ACK_WAIT_MS = 2_000;
@@ -205,13 +216,14 @@ const TRANSFER_FAILED = "The transfer to a person didn't go through. In the lang
 
 // Tools that change something. The next request on the call sees their results,
 // so a changed request reschedules instead of booking twice.
-const ACTION_TOOLS = new Set(["bookAppointment", "requestAppointment", "cancelAppointment", "rescheduleAppointment", "takeMessage", "transferCall", "endCall"]);
+const ACTION_TOOLS = new Set(["bookAppointment", "requestAppointment", "requestAppointmentCancellation", "cancelAppointment", "rescheduleAppointment", "takeMessage", "transferCall", "endCall"]);
 // Lookups the next request can reuse instead of repeating.
 const REUSABLE_LOOKUPS = new Set(["findAvailability"]);
 const PROGRESS: Record<string, string> = {
   findAvailability: "looked up open times",
   bookAppointment: "tried to book the appointment",
   requestAppointment: "tried to save the appointment request",
+  requestAppointmentCancellation: "tried to save the cancellation request",
   lookupAppointmentForChange: "looked up the caller's appointment",
   verifyAppointmentForChange: "checked the caller's identity",
   sendAppointmentChangeOtp: "sent a verification code",
@@ -298,6 +310,10 @@ export class LiveCallController {
   private lastSpeechAt = Number.NEGATIVE_INFINITY;
   private readonly outputAudio: LiveCallSummary["outputAudio"] = { deltas: 0, coveredMs: 0, payloadBytes: 0 };
   private lastAnswerSentAt: number | undefined;
+  // The receptionist's goodbye turn while a mutual goodbye waits to hang up,
+  // and when the caller last spoke, in performance.now() time.
+  private goodbyeTurn: Turn | undefined;
+  private lastCallerAt = Number.NEGATIVE_INFINITY;
   private ending = false;
   // A transfer in progress: waiting for the announcement to play, waiting for
   // OpenAI to accept the REFER, or referred and waiting for the outcome.
@@ -605,11 +621,56 @@ export class LiveCallController {
     setTimeout(check, GOODBYE_POLL_MS);
   }
 
-  /** Ends the call once the receptionist has said goodbye. */
+  /** Ends the call once the receptionist has said goodbye. Nothing the caller says stops it. */
   endAfterGoodbye(): void {
     if (this.ending || this.finished) return;
     this.ending = true;
     this.afterSpeech(() => this.endSession());
+  }
+
+  // GPT-Live is told to delegate the caller's goodbye so endCall hangs up, but
+  // it often says goodbye itself. So a caller turn with a farewell, answered by
+  // a receptionist turn with one, ends the call once that goodbye has played.
+  // Unlike endAfterGoodbye, the caller can still stop it by saying more.
+  private watchGoodbye(role: Turn["role"]): void {
+    const last = this.turns.at(-1)!;
+    if (role === "caller") {
+      this.lastCallerAt = performance.now();
+      // "Oh, one more thing" keeps the call going; a "Bye!" or a "Thanks, you too!" said back doesn't.
+      if (this.goodbyeTurn && !onlyGoodbye(last.text)) this.goodbyeTurn = undefined;
+      return;
+    }
+    if (this.goodbyeTurn || this.ending || this.finished || this.transfer || this.runningDelegations > 0) return;
+    const callerIndex = this.turns.length - 2;
+    const caller = this.turns[callerIndex];
+    // Not in the opening exchange: an earlier caller turn must have had an answer.
+    const firstCaller = this.turns.findIndex((turn) => turn.role === "caller" && turn.text.trim());
+    if (!caller || firstCaller < 0 || firstCaller >= callerIndex || !saysGoodbye(caller.text) || !saysGoodbye(last.text)) return;
+    this.goodbyeTurn = last;
+    const since = performance.now();
+    setTimeout(() => this.hangUpAfterGoodbye(last, since), GOODBYE_POLL_MS);
+  }
+
+  // Waits until the receptionist's goodbye has played and both sides have
+  // been quiet for AUTO_HANGUP_QUIET_MS, so the caller has time to say more.
+  // A "Bye!" said back restarts the wait; the receptionist still speaking
+  // holds it, up to AUTO_HANGUP_MAX_MS after the goodbye.
+  private hangUpAfterGoodbye(turn: Turn, since: number): void {
+    if (this.goodbyeTurn !== turn || this.finished) return;
+    const now = performance.now();
+    const quietSince = Math.max(this.playbackEndsAt(), this.lastSpeechAt, this.lastCallerAt);
+    if (now - quietSince < AUTO_HANGUP_QUIET_MS && now - since < AUTO_HANGUP_MAX_MS) {
+      setTimeout(() => this.hangUpAfterGoodbye(turn, since), GOODBYE_POLL_MS);
+      return;
+    }
+    this.goodbyeTurn = undefined;
+    const said = [...this.turns].reverse().find((item) => item.role === "receptionist")?.text.trim() ?? "";
+    // An explicit end or a transfer owns the call, and a question or a request
+    // still being answered means it isn't over.
+    if (this.ending || this.finished || this.transfer || this.runningDelegations > 0 || said.endsWith("?")) return;
+    this.ending = true;
+    this.options.onAutoHangup?.();
+    this.endSession();
   }
 
   /**
@@ -730,6 +791,7 @@ export class LiveCallController {
       this.turns.push({ role, text: delta, endMs });
       this.emitFinishedTurns(false);
     }
+    if (delta.trim()) this.watchGoodbye(role);
     if (role !== "caller") return;
     this.transcriptWaiters = this.transcriptWaiters.filter((waiter) => {
       if (endMs < waiter.offsetMs) return true;

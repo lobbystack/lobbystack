@@ -61,9 +61,9 @@ describe("booking appointment change telemetry", () => {
   });
 
   it("records an operator cancellation with the operator source", async () => {
-    mocks.withBusinessTransaction.mockResolvedValue(true);
+    mocks.withBusinessTransaction.mockResolvedValue("cancelled");
 
-    await cancelAppointment(context, { userId: "user_1", businessId: "biz_1", appointmentId: "apt_3" });
+    await expect(cancelAppointment(context, { userId: "user_1", businessId: "biz_1", appointmentId: "apt_3" })).resolves.toBe("cancelled");
 
     expect(mocks.recordProductEvent).toHaveBeenCalledWith(context, expect.objectContaining({
       name: "appointment.cancelled",
@@ -73,8 +73,8 @@ describe("booking appointment change telemetry", () => {
   });
 
   it("does not repeat telemetry for an already canceled appointment", async () => {
-    mocks.withBusinessTransaction.mockResolvedValue(false);
-    await cancelAppointment(context, { userId: "user_1", businessId: "biz_1", appointmentId: "apt_3" });
+    mocks.withBusinessTransaction.mockResolvedValue("already");
+    await expect(cancelAppointment(context, { userId: "user_1", businessId: "biz_1", appointmentId: "apt_3" })).resolves.toBe("already");
     expect(mocks.recordProductEvent).not.toHaveBeenCalled();
   });
 

@@ -547,7 +547,7 @@ export async function getCallDetail(
       row.contactId
         ? tx.select({ id: appointments.id, startsAt: appointments.startsAt, endsAt: appointments.endsAt, timezone: appointments.timezone, status: appointments.status, serviceName: services.name, staffName: staff.name }).from(appointments).innerJoin(services, eq(appointments.serviceId, services.id)).innerJoin(staff, eq(appointments.staffId, staff.id)).where(and(eq(appointments.businessId, input.businessId), eq(appointments.contactId, row.contactId))).orderBy(asc(appointments.startsAt))
         : Promise.resolve([]),
-      tx.select({ id: inboxItems.id, title: visibleFollowUpTitle, body: visibleFollowUpBody, status: inboxItems.status, createdAt: inboxItems.createdAt, updatedAt: inboxItems.updatedAt })
+      tx.select({ id: inboxItems.id, title: visibleFollowUpTitle, body: visibleFollowUpBody, status: inboxItems.status, request: followUpRequest, createdAt: inboxItems.createdAt, updatedAt: inboxItems.updatedAt })
         .from(inboxItems)
         .where(and(eq(inboxItems.businessId, input.businessId), eq(inboxItems.relatedCallId, input.callId), eq(inboxItems.kind, "voice_message")))
         .orderBy(desc(inboxItems.createdAt)),
@@ -585,9 +585,19 @@ export async function getCallDetail(
   });
 }
 
+/** Marks a follow-up as a caller's request to cancel, linked to the appointment when one matched. */
+export const CANCELLATION_REQUEST = "appointment_cancellation";
+export type FollowUpRequest = { request: typeof CANCELLATION_REQUEST; appointmentId?: string };
+
+const followUpRequest = sql<string | null>`${inboxItems.metadata}->>'request'`;
+// One follow-up each: a call's messages are one, since a later message
+// replaces the open one and imported duplicates show once, and each request,
+// such as a cancellation, is its own.
+const followUpGroup = sql`case when ${followUpRequest} is null then coalesce(${inboxItems.relatedCallId}, ${inboxItems.id}) else ${inboxItems.id} end`;
+
 export async function createVoiceFollowUpTask(
   context: DomainContext,
-  input: { businessId: string; callId?: string; callerName?: string; callbackPhone?: string; urgency?: string; callbackWindow?: string; message: string; channel?: string },
+  input: { businessId: string; callId?: string; callerName?: string; callbackPhone?: string; urgency?: string; callbackWindow?: string; message: string; channel?: string; request?: FollowUpRequest },
 ): Promise<{ inboxItemId: string }> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     if (input.callId) {
@@ -605,9 +615,19 @@ export async function createVoiceFollowUpTask(
       input.message.trim(),
     ].filter((line): line is string => line !== null).join("\n");
     const retentionPlan = isContentRetentionEnabled() ? await resolveBusinessBillingPlan(tx, input.businessId) : null;
-    const metadata = Object.fromEntries(Object.entries({ callerName: input.callerName?.trim(), callbackPhone: input.callbackPhone?.trim(), urgency: input.urgency?.trim(), callbackWindow: input.callbackWindow?.trim(), channel: input.channel }).filter(([, value]) => value));
+    const metadata = Object.fromEntries(Object.entries({ callerName: input.callerName?.trim(), callbackPhone: input.callbackPhone?.trim(), urgency: input.urgency?.trim(), callbackWindow: input.callbackWindow?.trim(), channel: input.channel, ...input.request }).filter(([, value]) => value));
     const values = { businessId: input.businessId, kind: "voice_message", title, body, metadata, contentExpiresAt: retentionPlan ? contentExpiryForPlan(retentionPlan, "follow_ups") : null, ...(input.callId ? { relatedCallId: input.callId } : {}) };
-    const existing = input.callId ? (await tx.select({ id: inboxItems.id }).from(inboxItems).where(and(eq(inboxItems.businessId, input.businessId), eq(inboxItems.relatedCallId, input.callId), eq(inboxItems.kind, "voice_message"), eq(inboxItems.status, "open"))).orderBy(desc(inboxItems.createdAt)).limit(1))[0] : null;
+    // A retry replaces the open follow-up it repeats: the call's message, or
+    // its request of the same kind for the same appointment. An unlinked
+    // request repeats only with the same details. Anything else is a new item,
+    // so a later message can't overwrite a cancellation request.
+    const sameRequest = !input.request
+      ? sql`${followUpRequest} is null`
+      : and(
+        sql`${followUpRequest} = ${input.request.request}`,
+        input.request.appointmentId ? sql`${inboxItems.metadata}->>'appointmentId' = ${input.request.appointmentId}` : and(sql`${inboxItems.metadata}->>'appointmentId' is null`, eq(inboxItems.title, title), eq(inboxItems.body, body)),
+      );
+    const existing = input.callId ? (await tx.select({ id: inboxItems.id }).from(inboxItems).where(and(eq(inboxItems.businessId, input.businessId), eq(inboxItems.relatedCallId, input.callId), eq(inboxItems.kind, "voice_message"), eq(inboxItems.status, "open"), sameRequest)).orderBy(desc(inboxItems.createdAt)).limit(1))[0] : null;
     const [item] = existing
       ? await tx.update(inboxItems).set({ title, body, metadata, contentRetentionStatus: "active", contentExpiresAt: values.contentExpiresAt, updatedAt: new Date() }).where(eq(inboxItems.id, existing.id)).returning({ id: inboxItems.id })
       : await tx.insert(inboxItems).values(values).returning({ id: inboxItems.id });
@@ -618,29 +638,54 @@ export async function createVoiceFollowUpTask(
   });
 }
 
+/**
+ * Closes a call's open follow-ups. With `inboxItemId`, only that one: a
+ * request alone, or a message with the call's other open messages, which the
+ * dashboard shows as one.
+ */
 export async function completeVoiceFollowUpTasks(
   context: DomainContext,
-  input: { userId: string; businessId: string; callId: string },
+  input: { userId: string; businessId: string; callId: string; inboxItemId?: string },
 ): Promise<{ completed: number }> {
-  return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
+  return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
     await requireBusinessMembership(tx, input);
+    const ofCall = and(eq(inboxItems.businessId, input.businessId), eq(inboxItems.relatedCallId, input.callId), eq(inboxItems.kind, "voice_message"));
+    const [item] = input.inboxItemId ? await tx.select({ request: followUpRequest }).from(inboxItems).where(and(ofCall, eq(inboxItems.id, input.inboxItemId))).limit(1) : [];
+    if (input.inboxItemId && !item) return { completed: 0 };
     const rows = await tx.update(inboxItems).set({ status: "done", updatedAt: new Date() }).where(and(
-      eq(inboxItems.businessId, input.businessId),
-      eq(inboxItems.relatedCallId, input.callId),
-      eq(inboxItems.kind, "voice_message"),
+      ofCall,
       eq(inboxItems.status, "open"),
+      item ? (item.request ? eq(inboxItems.id, input.inboxItemId!) : sql`${followUpRequest} is null`) : undefined,
     )).returning({ id: inboxItems.id });
     return { completed: rows.length };
   });
 }
 
-/** Imported duplicate tasks represent one action per call; keep the newest. */
+/**
+ * Every open follow-up, newest first. Imported duplicate messages represent
+ * one action per call, so only the newest shows. A cancellation request comes
+ * with its linked appointment and that appointment's status, so the operator
+ * can approve it or see it's already cancelled.
+ */
 export async function listOpenVoiceFollowUps(tx: DatabaseTransaction, businessId: string) {
-  const group = sql`coalesce(${inboxItems.relatedCallId}, ${inboxItems.id})`;
-  const latest = tx.selectDistinctOn([group], {
+  const latest = tx.selectDistinctOn([followUpGroup], {
     id: inboxItems.id, title: visibleFollowUpTitle, body: visibleFollowUpBody,
     relatedCallId: inboxItems.relatedCallId, createdAt: inboxItems.createdAt,
+    request: followUpRequest.as("request"),
+    appointmentId: sql<string | null>`${inboxItems.metadata}->>'appointmentId'`.as("appointment_id"),
   }).from(inboxItems).where(and(eq(inboxItems.businessId, businessId), eq(inboxItems.kind, "voice_message"), eq(inboxItems.status, "open")))
-    .orderBy(group, desc(inboxItems.createdAt), desc(inboxItems.id)).as("latest_voice_follow_ups");
-  return await tx.select().from(latest).orderBy(desc(latest.createdAt)).limit(6);
+    .orderBy(followUpGroup, desc(inboxItems.createdAt), desc(inboxItems.id)).as("latest_voice_follow_ups");
+  const rows = await tx.select({
+    id: latest.id, title: latest.title, body: latest.body, relatedCallId: latest.relatedCallId, createdAt: latest.createdAt, request: latest.request,
+    appointmentId: appointments.id, appointmentStartsAt: appointments.startsAt, appointmentTimezone: appointments.timezone, appointmentStatus: appointments.status, appointmentServiceName: services.name, appointmentContactName: contacts.name,
+  }).from(latest)
+    // Compared as text: metadata is free-form JSON, and a bad id must not break the dashboard.
+    .leftJoin(appointments, and(eq(latest.request, CANCELLATION_REQUEST), eq(sql`${appointments.id}::text`, latest.appointmentId), eq(appointments.businessId, businessId)))
+    .leftJoin(services, eq(services.id, appointments.serviceId))
+    .leftJoin(contacts, eq(contacts.id, appointments.contactId))
+    .orderBy(desc(latest.createdAt)).limit(6);
+  return rows.map(({ appointmentId, appointmentStartsAt, appointmentTimezone, appointmentStatus, appointmentServiceName, appointmentContactName, ...item }) => ({
+    ...item,
+    appointment: appointmentId && appointmentStartsAt && appointmentTimezone && appointmentStatus ? { id: appointmentId, startsAt: appointmentStartsAt, timezone: appointmentTimezone, status: appointmentStatus, serviceName: appointmentServiceName, contactName: appointmentContactName } : null,
+  }));
 }

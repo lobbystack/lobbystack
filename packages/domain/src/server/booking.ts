@@ -1,6 +1,6 @@
 import { and, asc, eq, gt, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
 
-import { appointments, auditLogs, businesses, businessHours, calendarBusyBlocks, calendarConnections, closures, contacts, enqueueOutbox, notifications, services, smsConsentEvents, staff, staffServiceAssignments, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { appointments, auditLogs, businesses, businessHours, calendarBusyBlocks, calendarConnections, closures, contacts, enqueueOutbox, inboxItems, notifications, services, smsConsentEvents, staff, staffServiceAssignments, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
 import { BookingUnavailableError, computeAvailability, scheduleUnavailableReason, type UnavailableReason } from "../availability";
@@ -11,6 +11,7 @@ import { consumeAppointmentChangeVerificationInTransaction } from "./appointment
 import { recordProductEventBestEffort } from "./productEvents";
 import { rescheduleAppointmentReminderInTransaction } from "./notifications";
 import { emitWebhookEventInTransaction } from "./publicApi/webhooks";
+import { CANCELLATION_REQUEST } from "./voice";
 
 type BookingInput = {
   callId?: string;
@@ -333,11 +334,21 @@ function changeAudit(change: AppointmentChangeSource): { actorUserId: string | n
  * Cancels inside the caller's transaction: skips pending reminders, queues the
  * calendar removal, and emits appointment.cancelled. Returns "already" when the
  * appointment was cancelled before and "missing" when it does not exist.
+ * Either way, callers' requests to cancel it are done.
  */
 export async function cancelAppointmentInTransaction(
   tx: DatabaseTransaction,
   input: { businessId: string; appointmentId: string; change: AppointmentChangeSource },
 ): Promise<"cancelled" | "already" | "missing"> {
+  // Whatever cancels it: an operator, the caller, the public API or MCP, or
+  // approving one of several requests for it.
+  await tx.update(inboxItems).set({ status: "done", updatedAt: new Date() }).where(and(
+    eq(inboxItems.businessId, input.businessId),
+    eq(inboxItems.kind, "voice_message"),
+    eq(inboxItems.status, "open"),
+    sql`${inboxItems.metadata}->>'request' = ${CANCELLATION_REQUEST}`,
+    sql`${inboxItems.metadata}->>'appointmentId' = ${input.appointmentId}`,
+  ));
   const [appointment] = await tx.update(appointments).set({ status: "canceled", calendarSyncState: "pending", revision: sql`${appointments.revision} + 1`, updatedAt: new Date() }).where(and(eq(appointments.id, input.appointmentId), eq(appointments.businessId, input.businessId), ne(appointments.status, "canceled"))).returning({ id: appointments.id, revision: appointments.revision });
   if (!appointment) {
     const [existing] = await tx.select({ id: appointments.id }).from(appointments).where(and(eq(appointments.id, input.appointmentId), eq(appointments.businessId, input.businessId))).limit(1);
@@ -373,17 +384,22 @@ export async function cancelAppointmentInTransaction(
   return "cancelled";
 }
 
+/**
+ * An operator cancels an appointment, which also closes callers' requests to
+ * cancel it. Returns "already" for an appointment cancelled before.
+ */
 export async function cancelAppointment(
   context: DomainContext,
   input: { userId: string; businessId: string; appointmentId: string },
-): Promise<void> {
-  const changed = await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
+): Promise<"cancelled" | "already"> {
+  const result = await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessMembership(tx, { userId: input.userId, businessId: input.businessId, minimumRole: "scheduler" });
     const result = await cancelAppointmentInTransaction(tx, { businessId: input.businessId, appointmentId: input.appointmentId, change: { source: "operator", userId: input.userId } });
-    if (result === "missing") throw new Error("Appointment not found.");
-    return result === "cancelled";
+    if (result === "missing") throw Object.assign(new Error("Appointment not found."), { status: 404, code: "not_found" });
+    return result;
   });
-  if (changed) await recordAppointmentChange(context, { name: "appointment.cancelled", businessId: input.businessId, appointmentId: input.appointmentId, source: "operator" });
+  if (result === "cancelled") await recordAppointmentChange(context, { name: "appointment.cancelled", businessId: input.businessId, appointmentId: input.appointmentId, source: "operator" });
+  return result;
 }
 
 /**

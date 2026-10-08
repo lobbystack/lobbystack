@@ -52,7 +52,7 @@ type Detail = {
   transcript: Array<{ id: string; sequence: number; speaker: string; text: string; confidence: number | null; final: boolean; createdAt: string }>;
   recording: { state: "available" | "pending" | "expired" | "missing"; objectId?: string; contentType?: string };
   appointments: Array<{ id: string; startsAt: string; endsAt: string; timezone: string; status: string; serviceName: string; staffName: string }>;
-  followUpTasks: Array<{ id: string; title: string; body: string; status: string; createdAt: string; updatedAt: string }>;
+  followUpTasks: Array<{ id: string; title: string; body: string; status: string; request?: string | null; createdAt: string; updatedAt: string }>;
 };
 
 function formatDate(value: string, locale: string): string {
@@ -103,7 +103,7 @@ export function LiveCallDetailSurface({ callId }: { callId: string }) {
     queryFn: () => requestJson<{ url: string }>(`/api/calls/${encodeURIComponent(callId)}/recording`),
     enabled: detail.data?.recording.state === "available",
   });
-  const completeFollowUp = useMutation({ mutationFn: (_inboxItemId: string) => requestJson<{ completed: number }>(`/api/calls/${encodeURIComponent(callId)}?businessId=${encodeURIComponent(business!.businessId)}`, { method: "PATCH", body: JSON.stringify({ action: "complete_follow_up" }) }), onSuccess: async (_, inboxItemId) => { if (business) telemetry.track("web.voice.follow_up_completed", { businessId: business.businessId, callId, inboxItemId }); await Promise.all([queryClient.invalidateQueries({ queryKey: ["call", business?.businessId, callId] }), queryClient.invalidateQueries({ queryKey: ["dashboard"] })]); } });
+  const completeFollowUp = useMutation({ mutationFn: (inboxItemId: string) => requestJson<{ completed: number }>(`/api/calls/${encodeURIComponent(callId)}?businessId=${encodeURIComponent(business!.businessId)}`, { method: "PATCH", body: JSON.stringify({ action: "complete_follow_up", inboxItemId }) }), onSuccess: async (_, inboxItemId) => { if (business) telemetry.track("web.voice.follow_up_completed", { businessId: business.businessId, callId, inboxItemId }); await Promise.all([queryClient.invalidateQueries({ queryKey: ["call", business?.businessId, callId] }), queryClient.invalidateQueries({ queryKey: ["dashboard"] })]); } });
 
   if (businesses.isLoading || detail.isLoading) return <DetailPageSkeleton />;
   if (businesses.isError || detail.isError || !detail.data) {
@@ -167,7 +167,7 @@ export function LiveCallDetailSurface({ callId }: { callId: string }) {
           <RecordingTab detail={detail.data} src={recording.data?.url ?? null} />
         </TabsContent>
         <TabsContent value="details">
-          <DetailsTab detail={detail.data} markingDone={completeFollowUp.isPending} onCompleteFollowUp={(inboxItemId) => completeFollowUp.mutate(inboxItemId)} />
+          <DetailsTab detail={detail.data} marking={completeFollowUp.isPending ? completeFollowUp.variables : undefined} onCompleteFollowUp={(inboxItemId) => completeFollowUp.mutate(inboxItemId)} />
         </TabsContent>
       </Tabs>
     </div>
@@ -205,13 +205,16 @@ function RecordingTab({ detail, src }: { detail: Detail; src: string | null }) {
     return <div className="py-4"><Card className="ph-no-capture" size="sm"><CallRecordingPlayer className="px-4 py-0" downloadLabel={t("actions.download")} initialDurationSeconds={detail.call.providerDurationSeconds ?? 0} pauseLabel={t("actions.pause")} playLabel={t("actions.play")} src={src} /></Card></div>;
 }
 
-function DetailsTab({ detail, markingDone, onCompleteFollowUp }: { detail: Detail; markingDone: boolean; onCompleteFollowUp: (inboxItemId: string) => void }) {
+function DetailsTab({ detail, marking, onCompleteFollowUp }: { detail: Detail; marking: string | undefined; onCompleteFollowUp: (inboxItemId: string) => void }) {
   const { t } = useTranslation("calls");
-  const openFollowUp = detail.followUpTasks.find((item) => item.status === "open");
+  // Grouped like Home: the call's messages are one follow-up, the newest
+  // standing for imported duplicates, and each request is its own.
+  const open = detail.followUpTasks.filter((item) => item.status === "open");
+  const followUps = open.filter((item) => item.request || item === open.find((other) => !other.request));
   return (
     <div className="py-4">
       <Surface className="flex flex-col">
-        <DetailSection title={t("detail.details.followUpTitle")}>{openFollowUp ? <div className="flex flex-col gap-3"><p className="type-item-title">{openFollowUp.title}</p><p className="type-body-muted whitespace-pre-line">{openFollowUp.body}</p><div className="flex items-center gap-2 pt-1"><Button disabled={markingDone} onClick={() => onCompleteFollowUp(openFollowUp.id)} size="sm" variant="outline">{markingDone ? t("detail.details.markingDone") : t("detail.details.markDone")}</Button></div></div> : <p className="type-body-muted">{t("detail.details.noFollowUp")}</p>}</DetailSection>
+        <DetailSection title={t("detail.details.followUpTitle", { count: Math.max(1, followUps.length) })}>{followUps.length ? <div className="flex flex-col gap-6">{followUps.map((followUp) => <div className="flex flex-col gap-3" key={followUp.id}><p className="type-item-title">{followUp.title}</p><p className="type-body-muted whitespace-pre-line">{followUp.body}</p><div className="flex items-center gap-2 pt-1"><Button disabled={marking !== undefined} onClick={() => onCompleteFollowUp(followUp.id)} size="sm" variant="outline">{marking === followUp.id ? t("detail.details.markingDone") : t("detail.details.markDone")}</Button></div></div>)}</div> : <p className="type-body-muted">{t("detail.details.noFollowUp")}</p>}</DetailSection>
         <DetailSection className="border-t border-border" title={t("detail.details.callInfoTitle")}>
           <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-6 gap-y-3">
             <dt className="type-meta">{t("detail.details.twilioCallSid")}</dt><dd className="type-technical-value truncate">{detail.call.providerCallId}</dd>

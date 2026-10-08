@@ -400,6 +400,8 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
       : request.resume ? lastLiveCallSequence(input.domain, call).catch((error: unknown) => { logError(request.sessionId, "saved transcript not read")(error); return 0; })
       : Promise.resolve(0);
     let end: LiveCallEnd | undefined;
+    // The controller hung up on its own after a mutual goodbye, not through endCall.
+    let autoHangup = false;
     let controller: LiveCallController | undefined;
     let sessionAlive = false;
     // A goodbye already under way keeps its own reason.
@@ -485,6 +487,10 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
       onGreeting: (greeting) => console.info(JSON.stringify({ event: "live.greeting", sessionId: request.sessionId, ...greeting })),
       onTurn: (turn) => void savedTurns.then((saved) => saveLiveCallTurn(input.domain, { ...call, ...turn, sequence: turn.sequence + saved })).catch(logError(request.sessionId, "transcript save failed")),
       onTimeout: (reason) => void wrapUp(reason),
+      onAutoHangup: () => {
+        end ??= "caller_finished";
+        autoHangup = true;
+      },
       onTransfer: (state) => {
         // The call counts as transferred from the moment the REFER goes out,
         // so a session.closed that beats OpenAI's answer still records it. A
@@ -508,7 +514,7 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
           return;
         }
         setPresence(request, false);
-        console.info(JSON.stringify({ event: "live.closed", sessionId: summary.sessionId, channel: request.channel, durationMs: summary.durationMs, billedSeconds: summary.billedSeconds, usageConfirmed: summary.usageConfirmed, closeReason: summary.closeReason, end, delegations: summary.delegations.length, outputAudio: summary.outputAudio, lateAttach: summary.lateAttach, firstEventMs: summary.firstEventMs }));
+        console.info(JSON.stringify({ event: "live.closed", sessionId: summary.sessionId, channel: request.channel, durationMs: summary.durationMs, billedSeconds: summary.billedSeconds, usageConfirmed: summary.usageConfirmed, closeReason: summary.closeReason, end, autoHangup, delegations: summary.delegations.length, outputAudio: summary.outputAudio, lateAttach: summary.lateAttach, firstEventMs: summary.firstEventMs }));
         const pending = finish(summary).catch(logError(request.sessionId, "finish failed"));
         finishing.add(pending);
         // The lock outlives the finish, so a recovery job can't take an

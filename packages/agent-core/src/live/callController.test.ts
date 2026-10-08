@@ -36,6 +36,7 @@ function setup(options: { phone?: boolean; silenceTimeoutMs?: number; maxDuratio
   const delegations: DelegationTiming[] = [];
   const transfers: LiveCallTransferState[] = [];
   const onTimeout = vi.fn();
+  const onAutoHangup = vi.fn();
   const hangup = vi.fn(async () => undefined);
   const refer = options.refer ?? vi.fn(async () => undefined);
   const controller = new LiveCallController({
@@ -50,12 +51,13 @@ function setup(options: { phone?: boolean; silenceTimeoutMs?: number; maxDuratio
     ...(options.onGreeting ? { onGreeting: options.onGreeting } : {}),
     onTurn: (turn) => turns.push(turn),
     onTimeout,
+    onAutoHangup,
     onTransfer: (state) => transfers.push(state),
     onDelegation: (timing) => delegations.push(timing),
     onClose: (summary) => closed.push(summary),
   });
   controller.start();
-  return { controller, socket: sockets.at(-1)!, generate, turns, closed, delegations, transfers, onTimeout, hangup, refer };
+  return { controller, socket: sockets.at(-1)!, generate, turns, closed, delegations, transfers, onTimeout, onAutoHangup, hangup, refer };
 }
 
 const sentOfType = (socket: FakeSocket, type: string) => socket.sent.filter((event) => event.type === type) as Array<{ event_id: string; content: string; delegation_id: string | null }>;
@@ -420,6 +422,159 @@ describe("LiveCallController ending", () => {
     socket.emit("session.closed", { reason: "remote_hangup" });
     socket.emit("close");
     expect(hangup).not.toHaveBeenCalled();
+  });
+});
+
+describe("LiveCallController mutual goodbye", () => {
+  type Line = [speaker: "caller" | "receptionist", text: string];
+  // The greeting and an answered question, so a goodbye after them isn't in the opening exchange.
+  const OPENING: Line[] = [["receptionist", "Thanks for calling Northside Plumbing."], ["caller", "Are you open on Saturday?"], ["receptionist", "Yes, from 9 to noon."]];
+  const say = (socket: FakeSocket, [speaker, text]: Line, startMs: number, endMs: number) => socket.emit(speaker === "caller" ? "session.input_transcript.delta" : "session.output_transcript.delta", { delta: text, start_ms: startMs, end_ms: endMs });
+  // Sends the lines at once, a second apart on the session timeline. The
+  // caller's last line ends now. A receptionist line after it runs 3 seconds,
+  // so it finishes playing 3.1 seconds from now.
+  const converse = (socket: FakeSocket, lines: Line[]) => lines.forEach((line, index) => say(socket, line, index * 1_000, index * 1_000 + (index === lines.length - 1 && line[0] === "receptionist" ? 3_000 : 900)));
+  const ended = (socket: FakeSocket, hangup: ReturnType<typeof vi.fn>) => hangup.mock.calls.length > 0 || socket.sent.some((event) => event.type === "session.close");
+
+  // The calls from production where GPT-Live said goodbye itself and the caller had to hang up.
+  it.each([
+    { phone: false, caller: "Goodbye", receptionist: "You're welcome. Take care." },
+    { phone: true, caller: "Bye", receptionist: "Okay. Take care." },
+    { phone: false, caller: "Всё, спасибо", receptionist: "Всего доброго!" },
+    { phone: false, caller: "Take care", receptionist: "Bye. Take care." },
+    // Goodbyes said with fillers, and Serbian typed without "đ".
+    { phone: true, caller: "Okay, thank you, bye now", receptionist: "Alright, bye!" },
+    { phone: false, caller: "Hvala, dovidjenja", receptionist: "Hvala vama, doviđenja!" },
+  ])("hangs up 2 seconds after the receptionist's goodbye has played: $caller, then $receptionist", async ({ phone, caller, receptionist }) => {
+    fakeTimers();
+    const { socket, hangup, onAutoHangup } = setup({ phone });
+    converse(socket, [...OPENING, ["caller", caller], ["receptionist", receptionist]]);
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(ended(socket, hangup)).toBe(false);
+    await vi.advanceTimersByTimeAsync(400);
+    if (phone) expect(hangup).toHaveBeenCalledWith("live_1");
+    else expect(socket.sent).toContainEqual({ type: "session.close" });
+    expect(onAutoHangup).toHaveBeenCalledOnce();
+  });
+
+  it("doesn't take a bare thanks for a goodbye, nor hang up on a goodbye that asks a question", async () => {
+    fakeTimers();
+    for (const lines of [
+      [["caller", "Thanks."], ["receptionist", "You're welcome! Have a great day."]],
+      [["caller", "Merci."], ["receptionist", "Avec plaisir, bonne journée !"]],
+      [["caller", "Okay, bye."], ["receptionist", "Goodbye! Oh, would you like a reminder text?"]],
+    ] as Line[][]) {
+      const { socket, hangup, onAutoHangup } = setup();
+      converse(socket, [...OPENING, ...lines]);
+      await vi.advanceTimersByTimeAsync(20_000);
+      expect(ended(socket, hangup)).toBe(false);
+      expect(onAutoHangup).not.toHaveBeenCalled();
+    }
+  });
+
+  it("doesn't hang up in the opening exchange, where Ćao means hello", async () => {
+    fakeTimers();
+    for (const lines of [
+      [["receptionist", "Dobar dan, Northside Plumbing."], ["caller", "Ćao!"], ["receptionist", "Ćao! Kako mogu da pomognem?"]],
+      // A goodbye before the caller's first request was answered.
+      [["receptionist", "Thanks for calling Northside Plumbing."], ["caller", "Sorry, wrong number. Bye."], ["receptionist", "No problem, goodbye!"]],
+    ] as Line[][]) {
+      const { socket, hangup } = setup();
+      converse(socket, lines);
+      await vi.advanceTimersByTimeAsync(20_000);
+      expect(ended(socket, hangup)).toBe(false);
+    }
+  });
+
+  it.each(["Oh, one more thing.", "Thanks, but can I also ask about parking?"])("carries on when the caller says %j after the receptionist's goodbye, and hangs up after a later one", async (more) => {
+    fakeTimers();
+    const { socket, hangup } = setup();
+    converse(socket, [...OPENING, ["caller", "Great, thanks. Bye."], ["receptionist", "Bye, take care!"]]);
+    await vi.advanceTimersByTimeAsync(500);
+    say(socket, ["caller", more], 4_200, 4_400);
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(hangup).not.toHaveBeenCalled();
+    // The caller asks, hears the answer and says goodbye again.
+    say(socket, ["receptionist", "Sure, what is it?"], 24_500, 25_000);
+    say(socket, ["caller", "Do you take cards? Thanks, bye."], 25_500, 26_000);
+    say(socket, ["receptionist", "Yes, we do. Goodbye!"], 26_500, 27_000);
+    await vi.advanceTimersByTimeAsync(3_200);
+    expect(hangup).toHaveBeenCalledWith("live_1");
+  });
+
+  it("carries on when the caller says \"Oh wait\" 1.5 seconds after the goodbye has played", async () => {
+    fakeTimers();
+    const { socket, hangup, onAutoHangup } = setup();
+    converse(socket, [...OPENING, ["caller", "Thanks, bye."], ["receptionist", "Goodbye, have a nice day!"]]);
+    // The goodbye finishes playing 3.1 seconds from now.
+    await vi.advanceTimersByTimeAsync(4_600);
+    expect(hangup).not.toHaveBeenCalled();
+    say(socket, ["caller", "Oh wait—"], 8_100, 8_500);
+    await vi.advanceTimersByTimeAsync(40_000);
+    expect(hangup).not.toHaveBeenCalled();
+    expect(onAutoHangup).not.toHaveBeenCalled();
+  });
+
+  it.each(["Bye-bye!", "Thanks, you too!", "Okay, bye now."])("keeps the hangup when the caller only says %j back, 2 seconds after the caller is quiet too", async (back) => {
+    fakeTimers();
+    const { socket, hangup } = setup();
+    converse(socket, [...OPENING, ["caller", "Thanks, bye."], ["receptionist", "Goodbye, have a nice day!"]]);
+    await vi.advanceTimersByTimeAsync(4_500);
+    say(socket, ["caller", back], 8_000, 8_400);
+    // The goodbye played 1.4 seconds ago, but the caller spoke just now.
+    await vi.advanceTimersByTimeAsync(1_800);
+    expect(hangup).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(400);
+    expect(hangup).toHaveBeenCalledWith("live_1");
+  });
+
+  it("doesn't cut off a receptionist still speaking at 15 seconds, and stops waiting at 30", async () => {
+    fakeTimers();
+    for (const speakingMs of [17_000, 40_000]) {
+      const { socket, hangup } = setup();
+      converse(socket, [...OPENING, ["caller", "Thanks, bye."], ["receptionist", "Goodbye! Before you go, a word about parking."]]);
+      // A long goodbye: a second more of it every second, always 3.1 seconds ahead of playback.
+      for (let at = 1_000; at <= speakingMs; at += 1_000) {
+        await vi.advanceTimersByTimeAsync(1_000);
+        expect(ended(socket, hangup), `${at} ms`).toBe(at >= 30_000);
+        if (at < 30_000) say(socket, ["receptionist", " The lot is behind the building."], 4_000 + at, 7_000 + at);
+      }
+      if (speakingMs > 30_000) continue;
+      // It stopped at 17 seconds and finishes playing at 20.1.
+      await vi.advanceTimersByTimeAsync(4_900);
+      expect(hangup).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(400);
+      expect(ended(socket, hangup)).toBe(true);
+    }
+  });
+
+  it("doesn't hang up while a request is being answered", async () => {
+    fakeTimers();
+    let finish!: () => void;
+    const { socket, hangup } = setup({ generate: async () => { await new Promise<void>((resolve) => { finish = resolve; }); return reply("Booked for Tuesday at 2."); } });
+    converse(socket, OPENING);
+    delegate(socket, "item_1", "Book me Tuesday at 2. Thanks, bye.", 3_900);
+    say(socket, ["receptionist", "I'm booking that now. Bye!"], 4_000, 5_000);
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(hangup).not.toHaveBeenCalled();
+    finish();
+    await vi.advanceTimersByTimeAsync(20_000);
+    expect(hangup).not.toHaveBeenCalled();
+  });
+
+  it("still ends the call through endCall, which the caller can't cancel", async () => {
+    fakeTimers();
+    const holder: { controller?: LiveCallController } = {};
+    const { socket, controller, hangup, onAutoHangup } = setup({ generate: async () => { holder.controller!.endAfterGoodbye(); return reply("The call is ending."); } });
+    holder.controller = controller;
+    delegate(socket, "item_1", "That's all, bye.", 1_000);
+    await vi.advanceTimersByTimeAsync(0);
+    say(socket, ["receptionist", "Thanks for calling, goodbye!"], 1_500, 4_000);
+    await vi.advanceTimersByTimeAsync(500);
+    say(socket, ["caller", "Oh wait, one more thing."], 1_300, 1_500);
+    await vi.advanceTimersByTimeAsync(3_000);
+    expect(hangup).toHaveBeenCalledWith("live_1");
+    expect(onAutoHangup).not.toHaveBeenCalled();
   });
 });
 

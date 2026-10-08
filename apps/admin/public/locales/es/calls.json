@@ -155,7 +155,9 @@
     },
     "details": {
       "outcomeTitle": "Resultado",
-      "followUpTitle": "Tarea de seguimiento",
+      "followUpTitle_one": "Tarea de seguimiento",
+      "followUpTitle_other": "Tareas de seguimiento",
+      "followUpTitle_many": "Tareas de seguimiento",
       "callInfoTitle": "Información de la llamada",
       "twilioCallSid": "Call SID de Twilio",
       "gatewaySession": "Sesión del gateway",

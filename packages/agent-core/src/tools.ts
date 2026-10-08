@@ -9,6 +9,7 @@ import {
   KNOWLEDGE_SEARCH_TOKEN_BUDGET,
   knowledgeQueryTerms,
   lookupCallerAppointments,
+  requestCancellationForCaller,
   rescheduleForCaller,
   searchKnowledgeEvidence,
   takeMessageForStaff,
@@ -121,6 +122,19 @@ const DAY_UNAVAILABLE: Partial<Record<NoOpeningsReason, string>> = {
 const isReason = (value: unknown): value is NoOpeningsReason => typeof value === "string" && value in UNAVAILABLE_TOOL_MESSAGES;
 
 const OFFERINGS_QUERY = "What does the business do and offer: services, products and prices";
+
+/**
+ * Whether the agent can cancel on this conversation itself. Cancelling
+ * identifies the caller by a trusted phone number, which browser calls and
+ * website chats don't have, and the business can turn it off. Otherwise, and
+ * when it can't find or verify the appointment, the agent passes the request
+ * to the team with requestAppointmentCancellation.
+ */
+export function cancelsDirectly(snapshot: BusinessContextSnapshot, context: { callerPhone?: string; intakeOnly?: boolean }): boolean {
+  if (context.intakeOnly || normalizeBookingMode(snapshot.bookingMode) === "off") return false;
+  const policy = normalizeAppointmentChangePolicy(snapshot.appointmentChangePolicy);
+  return Boolean(context.callerPhone && policy.enabled && policy.allowCancel && policy.verificationMode !== "operator_only");
+}
 
 export function createReceptionistTools(context: AgentToolContext): ToolSet {
   const { domain, snapshot } = context;
@@ -358,6 +372,38 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
         },
       });
     }
+  }
+
+  // Offered next to cancelAppointment too, for an appointment the caller's
+  // number doesn't find or verify.
+  if (bookingMode !== "off") {
+    tools.requestAppointmentCancellation = tool({
+      description: "Pass the caller's request to cancel an appointment to the team, when you can't cancel it yourself. It doesn't cancel anything: the team does. Get the caller's name and what they know of the appointment (date, time, service) first.",
+      inputSchema: z.object({
+        callerName: z.string().describe("The name the appointment was booked under."),
+        appointmentStartsAt: z.string().optional().describe("The appointment's date as YYYY-MM-DD, or date and time as YYYY-MM-DDTHH:mm, in the business's timezone."),
+        serviceName: z.string().optional(),
+        callbackPhone: phone.optional().describe("The number the appointment was booked with, if the caller gives it."),
+        notes: z.string().optional(),
+      }),
+      execute: async (input) => {
+        if (!input.callerName.trim()) return { ok: false, reason: "Ask for the name the appointment was booked under." };
+        const callbackPhone = input.callbackPhone?.trim() || context.callerPhone;
+        const saved = await requestCancellationForCaller(domain, {
+          businessId,
+          channel,
+          timezone,
+          callerName: input.callerName,
+          ...(input.appointmentStartsAt ? { appointmentStartsAt: input.appointmentStartsAt } : {}),
+          ...(input.serviceName ? { serviceName: input.serviceName } : {}),
+          ...(input.notes ? { notes: input.notes } : {}),
+          ...(callbackPhone ? { callbackPhone } : {}),
+          ...(context.callId ? { callId: context.callId } : {}),
+          ...(context.conversationId ? { conversationId: context.conversationId } : {}),
+        });
+        return { ...saved, cancelled: false, status: "The request is saved for the team. The appointment is still booked until the team cancels it." };
+      },
+    });
   }
 
   const callControl = context.callControl;

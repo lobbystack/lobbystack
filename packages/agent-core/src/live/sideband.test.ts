@@ -158,6 +158,35 @@ describe("LiveCallController sideband", () => {
     expect(transfers).toEqual(["referring", "referred", "completed"]);
   });
 
+  // GPT-Live often says goodbye itself instead of delegating it, so endCall never runs.
+  it.each([{ phone: true, ends: "SIP hangup" }, { phone: false, ends: "session.close" }])("ends a call with a $ends once both sides have said goodbye", async ({ phone }) => {
+    let peer!: WebSocket;
+    const commands: string[] = [];
+    const onAutoHangup = vi.fn();
+    const { controller, hangup, closed } = await sideband([(socket) => {
+      peer = socket;
+      send(socket, { type: "session.started" });
+      for (const [type, delta, start, end] of [
+        ["session.output_transcript.delta", "Thanks for calling Northside Plumbing.", 0, 500],
+        ["session.input_transcript.delta", "Are you open on Saturday?", 600, 1_000],
+        ["session.output_transcript.delta", "Yes, from 9 to noon.", 1_100, 1_500],
+        ["session.input_transcript.delta", "Great, thanks. Bye.", 1_600, 2_000],
+        ["session.output_transcript.delta", "Bye, take care!", 2_100, 2_400],
+      ] as const) send(socket, { type, delta, start_ms: start, end_ms: end });
+      onCommand(socket, (event) => {
+        commands.push(event.type);
+        if (event.type === "session.close") send(socket, { type: "session.closed", reason: "close_requested", usage: { seconds: 3 } });
+      });
+    }], { phone, onAutoHangup });
+    hangup.mockImplementation((async () => send(peer, { type: "session.closed", reason: "close_requested", usage: { seconds: 3 } })) as never);
+    controller.start();
+    await vi.waitFor(() => expect(closed).toHaveLength(1), { timeout: 5_000 });
+    expect(onAutoHangup).toHaveBeenCalledOnce();
+    expect(hangup).toHaveBeenCalledTimes(phone ? 1 : 0);
+    expect(commands).toEqual(phone ? [] : ["session.close"]);
+    expect(closed[0]).toMatchObject({ closeReason: "close_requested", usageConfirmed: true });
+  });
+
   it("passes a keypad press to the agent as caller input", async () => {
     const generate = vi.fn(async (_options: { prompt: string }) => ({ text: "Confirmed.", steps: [{ toolCalls: [], toolResults: [] }] }));
     const { controller, closed } = await sideband([(socket) => {

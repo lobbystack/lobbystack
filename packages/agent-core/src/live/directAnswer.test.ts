@@ -49,6 +49,12 @@ describe("directToolAnswer", () => {
     expect(directToolAnswer(step({ toolName: "endCall", output: { ok: true } }))).toBe("The call is ending.");
   });
 
+  it("says a cancellation request leaves the appointment booked until the team acts", () => {
+    expect(directToolAnswer(step({ toolName: "requestAppointmentCancellation", input: { callerName: "Alex", serviceName: "General Checkup", appointmentStartsAt: "2026-10-12T15:00" }, output: { ok: true, cancelled: false } })))
+      .toBe("The cancellation request is saved for the team (General Checkup, 2026-10-12T15:00). The appointment is still booked until the team cancels it, and the team will confirm with the caller.");
+    expect(directToolAnswer(step({ toolName: "requestAppointmentCancellation", output: { ok: false, reason: "Ask for the name the appointment was booked under." } }))).toBeUndefined();
+  });
+
   // The REFER waits for GPT-Live to announce the transfer, so the answer can't wait for a model step.
   it("announces a transfer at once, and leaves a refused one to the model", () => {
     expect(directToolAnswer(step({ toolName: "transferCall", input: { callerRequested: true, urgent: false }, output: { ok: true, transferring: true } }))).toBe("The call is being transferred to a person at the business now.");

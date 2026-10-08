@@ -145,6 +145,21 @@
       "failed": "Neuspešno",
       "error": "Greška",
       "cancelled": "Otkazano"
+    },
+    "actions": "Radnje",
+    "cancel": {
+      "action": "Otkaži",
+      "actionLabel": "Otkaži termin: {{time}}",
+      "approve": "Odobri otkazivanje",
+      "title": "Otkazati ovaj termin?",
+      "description": "{{appointment}}. Uklonićemo ga iz povezanog kalendara i nećemo poslati podsetnik.",
+      "requestDescription": "{{appointment}}. Uklonićemo ga iz povezanog kalendara, nećemo poslati podsetnik i zatvorićemo zahtev.",
+      "confirm": "Otkaži termin",
+      "keep": "Zadrži termin",
+      "done": "Termin je otkazan",
+      "failed": "Nismo uspeli da otkažemo termin. Pokušajte ponovo.",
+      "summary": "{{service}} za {{name}}, {{time}}",
+      "summaryNoService": "Termin za {{name}}, {{time}}"
     }
   },
   "abandonIntent": {

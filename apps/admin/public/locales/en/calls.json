@@ -155,7 +155,8 @@
     },
     "details": {
       "outcomeTitle": "Outcome",
-      "followUpTitle": "Follow-up task",
+      "followUpTitle_one": "Follow-up task",
+      "followUpTitle_other": "Follow-up tasks",
       "callInfoTitle": "Call information",
       "twilioCallSid": "Twilio Call SID",
       "gatewaySession": "Gateway session",
