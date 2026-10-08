@@ -4,6 +4,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { closeLiveSession, createAgentModel, createReceptionistAgent, LiveCallController, liveDelegationEnvironment, WRAP_UP_MAX_MS, type AgentChannel, type CallControl, type LiveCallSetup, type LiveCallSummary, type LiveCallWrapUp } from "@lobbystack/agent-core";
 import {
   blockLiveCaller,
+  extendLiveCallReservation,
   finishLiveCall,
   getCachedBusinessSnapshot,
   lastLiveCallSequence,
@@ -39,8 +40,9 @@ type AttachRequest = {
   conversationId?: string;
   callerPhone?: string;
   /**
-   * The minutes the call reserved, absent on an unlimited plan. The call ends
-   * by then, and never runs past MAX_PHONE_CALL_MS.
+   * The minutes the call reserved so far, absent on an unlimited plan. The
+   * call ends by then unless a phone call's top-up grows them, and never runs
+   * past MAX_PHONE_CALL_MS.
    */
   maxDurationMs?: number;
   /** Prospect demos only answer questions and take messages. */
@@ -291,8 +293,9 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
    * Takes over a call whose worker died. Only the worker that takes the attach
    * lock acts, so a call whose owner still renews its lock, or that another
    * worker is recovering, is left alone, and so is one that saved a turn in
-   * the last 45 seconds. A call past its reserved length is hung up; any
-   * other is re-attached. A re-attach finishes the call with its best known
+   * the last 45 seconds. A phone call past its reservation asks for one more
+   * slice; a call still past its reserved length is hung up, and any other
+   * is re-attached. A re-attach finishes the call with its best known
    * length when the session answers the connection with silence and a hangup
    * goes through; when it can't connect at all, the next run tries again.
    */
@@ -311,7 +314,11 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
         releaseAttachLock(orphan.sessionId);
         return "skipped";
       }
-      const remainingMs = orphan.reservedSeconds * 1_000 - (Date.now() - orphan.startedAt.getTime());
+      // Nobody tops the reservation up once its owner died, so a call that ran
+      // past it asks for one more slice before it's hung up.
+      const elapsedMs = Date.now() - orphan.startedAt.getTime();
+      if (orphan.slicedReservation && orphan.reservedSeconds * 1_000 <= elapsedMs) orphan = { ...orphan, reservedSeconds: orphan.reservedSeconds + await extendLiveCallReservation(input.domain, { businessId: orphan.businessId, callId: orphan.callId }) };
+      const remainingMs = orphan.reservedSeconds * 1_000 - elapsedMs;
       if (remainingMs <= 0) {
         await hangUpOrphan(client, orphan);
         await finishOrphan(orphan, "past_reservation");
@@ -381,6 +388,11 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
     const call = { businessId: request.businessId, callId: request.callId };
     const telemetryCall = { ...call, channel: request.channel, ...(request.conversationId ? { conversationId: request.conversationId } : {}) };
     const recovery = request.recovery;
+    // A phone call with a reservation grows it a slice at a time while it
+    // runs. The domain stops it at the plan's minutes and at MAX_PHONE_CALL_MS.
+    const topUp = phone && (recovery ? recovery.slicedReservation : request.maxDurationMs !== undefined)
+      ? async () => (await extendLiveCallReservation(input.domain, call)) * 1_000
+      : undefined;
     // A recovered call, or a retried delivery's re-attach, numbers its turns
     // after the ones already saved. Only a resume reads them here, so a first
     // attach makes no extra query. A failed read numbers from 1, as before.
@@ -468,6 +480,7 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
       setup,
       silenceTimeoutMs: SILENCE_TIMEOUT_MS,
       maxDurationMs: Math.min(request.maxDurationMs ?? MAX_PHONE_CALL_MS, MAX_PHONE_CALL_MS),
+      ...(topUp ? { topUp } : {}),
       onStarted: () => void markLiveCallMediaStarted(input.domain, call).catch(logError(request.sessionId, "media start not recorded")),
       onGreeting: (greeting) => console.info(JSON.stringify({ event: "live.greeting", sessionId: request.sessionId, ...greeting })),
       onTurn: (turn) => void savedTurns.then((saved) => saveLiveCallTurn(input.domain, { ...call, ...turn, sequence: turn.sequence + saved })).catch(logError(request.sessionId, "transcript save failed")),

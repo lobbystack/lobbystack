@@ -94,7 +94,7 @@ export async function startCall(
     const existing = await tx.select({ id: calls.id, conversationId: calls.conversationId, contactId: calls.contactId, webCallMaxDurationMs: calls.webCallMaxDurationMs }).from(calls).where(and(eq(calls.provider, input.provider), eq(calls.providerCallId, input.providerCallId))).limit(1);
     if (existing[0]?.conversationId && existing[0]?.contactId) {
       const contact = (await tx.select({ operatorBlockedAt: contacts.operatorBlockedAt }).from(contacts).where(and(eq(contacts.id, existing[0].contactId), eq(contacts.businessId, input.businessId))).limit(1))[0];
-      // A retried phone call gets the length its first delivery reserved.
+      // A retried phone call gets what it has reserved so far, top-ups included.
       const reservation = input.transport === "web_voice" ? undefined : (await tx.select({ quantity: billingUsageEvents.quantity }).from(billingUsageEvents).where(and(eq(billingUsageEvents.businessId, input.businessId), eq(billingUsageEvents.sourceKey, `voice:${existing[0].id}`))).limit(1))[0];
       return { callId: existing[0].id, conversationId: existing[0].conversationId, contactId: existing[0].contactId, duplicate: true, blocked: Boolean(contact?.operatorBlockedAt), ...(existing[0].webCallMaxDurationMs !== null ? { webCallMaxDurationMs: existing[0].webCallMaxDurationMs } : {}), ...(reservation ? { reservedSeconds: reservation.quantity } : {}) };
     }

@@ -7,6 +7,7 @@ import { reserveOutboundCallAttempt } from "./billing";
 import type { DomainContext } from "./context";
 import { recordProspectDemoCallOutcome } from "./demos";
 import { recordUnitEconomicsEvent } from "./unitEconomics";
+import { extendPhoneReservationInTransaction } from "./usage";
 import { completeCall, setTransferState, startCall, upsertTranscript } from "./voice";
 import { boundedReconciledVoiceSeconds } from "./voiceRecovery";
 
@@ -56,8 +57,10 @@ const DISPOSITIONS: Record<LiveCallEnd, string> = {
  * Creates the call record and reserves voice minutes before the call is
  * accepted. Throws a 402 `voice_limit_reached` error when the plan is out of
  * minutes. `blocked` means the operator blocked this caller. `maxDurationMs` is
- * how long the call may run, from its reservation, and undefined when the plan
- * is unlimited. Omit `from` when the caller withheld their number.
+ * how long the call may run on what it reserved so far, and undefined when the
+ * plan is unlimited: one slice at first, which the worker tops up with
+ * extendLiveCallReservation, and the current total on a retried delivery.
+ * Omit `from` when the caller withheld their number.
  */
 export async function startLivePhoneCall(context: DomainContext, input: { businessId: string; sessionId: string; from?: string | undefined; to: string }) {
   const call = await startCall(context, {
@@ -71,6 +74,15 @@ export async function startLivePhoneCall(context: DomainContext, input: { busine
   });
   const maxDurationMs = call.reservedSeconds === undefined ? undefined : Math.min(MAX_PHONE_CALL_MS, Math.floor(call.reservedSeconds * 1_000));
   return { callId: call.callId, conversationId: call.conversationId, blocked: call.blocked, duplicate: call.duplicate, maxDurationMs };
+}
+
+/**
+ * Grows a phone call's minute reservation by up to one slice while it runs.
+ * Returns the seconds granted, 0 when the plan has nothing left, the call
+ * already holds MAX_PHONE_CALL_MS, it ended, or it has no reservation.
+ */
+export async function extendLiveCallReservation(context: DomainContext, input: { businessId: string; callId: string }): Promise<number> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => await extendPhoneReservationInTransaction(tx, input));
 }
 
 /**
@@ -244,8 +256,14 @@ export type OpenLiveCall = {
   /** Prospect demos only answer questions and take messages, as when the admin attached. */
   intakeOnly: boolean;
   startedAt: Date;
-  /** How long the call may run in all: its minute reservation, at most MAX_PHONE_CALL_MS. */
+  /**
+   * How long the call may run in all: its minute reservation, at most
+   * MAX_PHONE_CALL_MS. A phone call's reservation grows while it runs, so
+   * this is the total when the call was listed.
+   */
   reservedSeconds: number;
+  /** A phone call whose reservation the worker tops up. Not on an unlimited plan, nor for a browser call, which reserves its whole length up front. */
+  slicedReservation: boolean;
   /** The latest sign the call was running: its last saved turn, its media start, or its start. */
   lastActivityAt: Date;
   /** The highest transcript sequence saved, so a new owner numbers its turns after it. */
@@ -300,6 +318,7 @@ export async function listOpenLiveCalls(context: DomainContext, input: { busines
         intakeOnly: row.sessionPurpose === "prospect_demo" || row.prospectDemoId !== null,
         startedAt: row.startedAt,
         reservedSeconds: Math.min(reservedMs, MAX_PHONE_CALL_MS) / 1_000,
+        slicedReservation: channel === "voice" && row.reservedSeconds !== null,
         lastActivityAt: row.lastActivityAt,
         lastSequence: row.lastSequence,
       };

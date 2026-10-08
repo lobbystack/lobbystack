@@ -112,6 +112,12 @@ export type LiveCallControllerOptions = {
   silenceTimeoutMs?: number;
   /** The call ends by this long: the goodbye starts a little before it. */
   maxDurationMs?: number;
+  /**
+   * Asks for more minutes about a minute before the duration limit's goodbye,
+   * and resolves to the milliseconds granted, which extend the limit. 0 ends
+   * the asking, so the call ends at its limit.
+   */
+  topUp?: () => Promise<number>;
   /** Audio is flowing: the session started. */
   onStarted?: () => void;
   /** Each step of the greeting, for logs: sent, acknowledged, spoken or failed. */
@@ -176,6 +182,10 @@ export const WRAP_UP_MAX_MS = GOODBYE_MAX_MS + FINALIZE_TIMEOUT_MS;
 // inside the minutes the call reserved. A call that reserved under a minute
 // gets half its length to talk instead.
 const DURATION_WRAP_UP_LEAD_MS = 30_000;
+// A call that can top up its minutes asks this long before the limit's
+// goodbye, and asks again this often after a failure until the goodbye starts.
+const TOP_UP_LEAD_MS = 60_000;
+const TOP_UP_RETRY_MS = 10_000;
 // An accepted REFER ends OpenAI's leg, so session.closed follows. A caller
 // still on the session this long after it means the transfer didn't happen.
 const TRANSFER_OUTCOME_MS = 30_000;
@@ -256,6 +266,11 @@ export class LiveCallController {
   private finalizeTimer: ReturnType<typeof setTimeout> | undefined;
   private firstEventTimer: ReturnType<typeof setTimeout> | undefined;
   private transferTimer: ReturnType<typeof setTimeout> | undefined;
+  private topUpTimer: ReturnType<typeof setTimeout> | undefined;
+  // Milliseconds top-ups added to the duration limit, and when, in Date.now()
+  // time, the limit's goodbye starts.
+  private grantedMs = 0;
+  private durationWrapUpAt = 0;
   // When OpenAI acknowledged the wrap-up command, in performance.now() time.
   private wrapUpAckedAt: number | undefined;
   private started = false;
@@ -400,7 +415,36 @@ export class LiveCallController {
     // A retried attach opens on a new connection.
     socket.on("reconnected", opened);
     this.resetSilenceTimer();
-    if (this.options.maxDurationMs) this.durationTimer = setTimeout(() => this.options.onTimeout?.("duration_limit"), this.options.maxDurationMs - Math.min(DURATION_WRAP_UP_LEAD_MS, this.options.maxDurationMs / 2));
+    this.scheduleDurationLimit();
+  }
+
+  // The duration limit's goodbye starts a little before the limit, and a call
+  // that can top up asks for more minutes a minute before that.
+  private scheduleDurationLimit(): void {
+    if (!this.options.maxDurationMs) return;
+    const limitMs = this.options.maxDurationMs + this.grantedMs;
+    this.durationWrapUpAt = this.startedAt + limitMs - Math.min(DURATION_WRAP_UP_LEAD_MS, limitMs / 2);
+    clearTimeout(this.durationTimer);
+    clearTimeout(this.topUpTimer);
+    this.durationTimer = setTimeout(() => this.options.onTimeout?.("duration_limit"), this.durationWrapUpAt - Date.now());
+    if (this.options.topUp) this.topUpTimer = setTimeout(() => void this.askForTopUp(), Math.max(0, this.durationWrapUpAt - TOP_UP_LEAD_MS - Date.now()));
+  }
+
+  // A grant moves the goodbye and the next ask. None leaves the goodbye where
+  // it is. A failed ask is tried again until the goodbye starts.
+  private async askForTopUp(): Promise<void> {
+    if (this.ending || this.finished) return;
+    let grantedMs: number;
+    try {
+      grantedMs = await this.options.topUp!();
+    } catch (error) {
+      console.error(`[live] ${this.options.sessionId} minute top-up failed`, error instanceof Error ? error.message : error);
+      if (!this.ending && !this.finished && Date.now() + TOP_UP_RETRY_MS < this.durationWrapUpAt) this.topUpTimer = setTimeout(() => void this.askForTopUp(), TOP_UP_RETRY_MS);
+      return;
+    }
+    if (!(grantedMs > 0) || this.ending || this.finished) return;
+    this.grantedMs += grantedMs;
+    this.scheduleDurationLimit();
   }
 
   // The sideband replays only the last 3 seconds. Without session.started, a
@@ -878,7 +922,7 @@ export class LiveCallController {
     // never heard from the session leaves the decision to its worker.
     const leaveSession = detached || (this.options.firstEventTimeoutMs !== undefined && !this.sessionAlive);
     if (!sessionClosed && !this.finalizeTimer && !leaveSession) this.endWithoutSideband();
-    for (const timer of [this.silenceTimer, this.durationTimer, this.greetingFallbackTimer, this.finalizeTimer, this.firstEventTimer, this.transferTimer]) clearTimeout(timer);
+    for (const timer of [this.silenceTimer, this.durationTimer, this.topUpTimer, this.greetingFallbackTimer, this.finalizeTimer, this.firstEventTimer, this.transferTimer]) clearTimeout(timer);
     this.abort.abort();
     this.socket?.close({ code: 1000, reason: "session finished" });
     // The new owner saves the transcript from here, under its own numbering.

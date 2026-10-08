@@ -147,8 +147,8 @@ async function answerCall(client: LiveClient, input: { sessionId: string; busine
     await finishLiveCall(domain, { businessId: input.businessId, callId: call.callId, seconds: 0, end: "setup_failed" });
     return new NextResponse(null, { status: 200 });
   }
-  // A retried delivery gets the same length limit, read back from the first
-  // one's reservation. Its call may be under way, so it attaches as a resume:
+  // A retried delivery's limit is read back from the call's reservation, which
+  // top-ups may have grown. Its call may be under way, so it attaches as a resume:
   // the worker numbers turns after the saved ones and skips the greeting.
   const attach = (resume = false) => attachWorkerToLiveSession({ sessionId: input.sessionId, businessId: input.businessId, callId: call.callId, conversationId: call.conversationId, channel: "voice", ...(input.from ? { callerPhone: input.from } : {}), ...(call.maxDurationMs !== undefined ? { maxDurationMs: call.maxDurationMs } : {}), ...(resume ? { resume } : {}) });
   // A retried delivery. The first one may have died before accepting or before

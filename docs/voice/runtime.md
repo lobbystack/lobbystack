@@ -43,11 +43,11 @@ A Twilio Elastic SIP trunk sends calls for its numbers to your OpenAI project's 
 
 1. OpenAI sends a `live.transport.incoming` webhook to `/api/webhooks/openai/live` on the admin app.
 2. The admin finds the business from the dialled number. It tries each number in the SIP `Diversion` headers in order, then `To` and `P-Called-Party-ID`, and uses the first one that belongs to a business. On a forwarded call, the first `Diversion` can hold the business's old line.
-3. The admin records the call and reserves minutes for it while it loads the business snapshot. A call reserves 30 minutes, or what the plan has left when that's less. Two calls fit at once when the plan has more than 30 minutes left. The admin rejects the call with SIP 486 (busy) when the plan is out of minutes, and 603 when the caller is blocked.
+3. The admin records the call and reserves minutes for it while it loads the business snapshot. A call reserves 5 minutes, or what the plan has left when that's less, and the worker adds more as the call runs. Calls share what's left, so the free plan's 30 minutes let six calls start at once. An unlimited plan reserves nothing. The admin rejects the call with SIP 486 (busy) when the plan is out of minutes, and 603 when the caller is blocked.
 4. The admin accepts the call with the business's instructions, then asks the worker to attach. It passes the reserved length as the call's limit, or no limit on an unlimited plan.
 5. The worker opens the sideband, then loads the business, speaks the greeting, and handles the call until it ends.
 
-OpenAI delivers the webhook again when the admin doesn't answer it, for example after a crash. A repeated delivery keeps the first one's call record and limit. It accepts the session again, which fails harmlessly if the first delivery did it, and asks the worker to attach as a resume. If no worker holds the session yet, the one that takes it reads the call's saved transcript before it saves a turn. New turns follow the saved ones, and a call that already has a transcript gets no greeting fallback. A first delivery's attach skips that read.
+OpenAI delivers the webhook again when the admin doesn't answer it, for example after a crash. A repeated delivery keeps the first one's call record, and its limit is what the call has reserved by then. It accepts the session again, which fails harmlessly if the first delivery did it, and asks the worker to attach as a resume. If no worker holds the session yet, the one that takes it reads the call's saved transcript before it saves a turn. New turns follow the saved ones, and a call that already has a transcript gets no greeting fallback. A first delivery's attach skips that read.
 
 The caller hears ringing until step 4. The admin logs `live.incoming` with the milliseconds from the webhook's arrival to each step (`lookupMs`, `recordMs`, `acceptMs`, `attachMs`) and `eventAgeMs`, a rough delivery delay with one-second precision. `routedBy` names the header whose number picked the business.
 
@@ -72,12 +72,16 @@ Once attached, the worker owns the call until OpenAI closes the session. It:
 - saves each caller and receptionist turn to the transcript
 - transfers phone calls with a SIP REFER to the destination number, once GPT-Live has told the caller
 - hangs up after the receptionist's goodbye has played, when the agent ends the call
-- ends the call after 75 seconds without speech or keypad presses from either side, or at the duration limit. The limit is the minutes the call reserved, and at most 30 minutes. When the admin sends no limit, as on an unlimited plan, the call stops at 30 minutes. A request still being answered pauses the silence timer.
+- ends the call after 75 seconds without speech or keypad presses from either side, or at the duration limit. The limit is the minutes the call has reserved, and at most 30 minutes. When the admin sends no limit, as on an unlimited plan, the call stops at 30 minutes. A request still being answered pauses the silence timer.
 - records the final call state, billed seconds, and estimated cost
 - queues a copy of OpenAI's stored recording into LobbyStack storage, where the copy follows the plan's retention (see [Recordings](#recordings))
 - reports the call to the dashboard's live-call count
 
 Before a timeout ends the call, the worker tells GPT-Live why and asks it for a short goodbye, then hangs up once the goodbye has played. It listens for the goodbye from the moment OpenAI acknowledges the command, so a sentence GPT-Live was already saying doesn't pass for it. Without an acknowledgment within 2 seconds, it listens from the request. GPT-Live can ignore a command appended mid-call, so the worker hangs up anyway after 4 seconds of silence, or 15 seconds in all. The duration limit's goodbye starts 30 seconds early, so it fits inside the reserved minutes. A call that reserved less than a minute gets half its length to talk instead, so a 30-second reservation still gets 15 seconds of conversation.
+
+A phone call on a plan with a minute limit asks for more minutes 60 seconds before the duration limit's goodbye would start. Each top-up adds 5 minutes, or what the plan has left when that's less, and no call goes past 30 minutes. The worker moves the goodbye back by what it got, then asks again a minute before the new goodbye.
+
+When the plan has nothing left, the goodbye starts on time. When the request fails, the worker tries again every 10 seconds until the goodbye starts. A top-up queues no Polar usage sync: the call's finish replaces the reservation with the seconds the call used and syncs those.
 
 When a transfer is already under way or the call is ending, the transfer tool reports that the transfer couldn't start, so GPT-Live doesn't announce one, and no transfer attempt is used. Otherwise the tool reserves one of the plan's transfer attempts, then answers at once so GPT-Live can announce the transfer. The worker sends the REFER after the announcement has played, unless the call started ending in the meantime. From the moment the REFER goes out, the worker counts the call as transferred, so a `session.closed` that arrives before OpenAI answers the REFER still records the transfer. The call record's transfer state shows how far the transfer got:
 
@@ -121,8 +125,8 @@ If the worker process dies mid-call, nobody answers the call's delegations, and 
 1. It lists the business's open GPT-Live calls, phone and browser, that started between 60 seconds and 2 hours ago.
 2. It leaves alone a call that saved a transcript turn in the last 45 seconds, because a worker is still running it.
 3. For each other call, it tries to take the attach lock. A missing lock means the call has no worker. When another worker holds the lock, the job leaves the call alone, and two workers running the job at once can't both take it.
-4. It hangs up a call that has run past its reserved length and finishes its record. It stops waiting for the hangup after 5 seconds, so a slow OpenAI can't hold up the job or a drain.
-5. It attaches to any other call from this worker, with a request rebuilt from the call record: the channel, the conversation, the caller's number, intake-only mode for prospect demos, and what's left of the reserved length. New transcript turns follow the ones already saved, and the worker doesn't send the greeting again.
+4. A dead worker stops topping up its calls, so a phone call that has run past its reservation asks for one more top-up first. The job hangs up a call still past its reserved length and finishes its record. It stops waiting for the hangup after 5 seconds, so a slow OpenAI can't hold up the job or a drain.
+5. It attaches to any other call from this worker, with a request rebuilt from the call record: the channel, the conversation, the caller's number, intake-only mode for prospect demos, and what's left of the reserved length. New transcript turns follow the ones already saved, and the worker doesn't send the greeting again. It tops up a phone call's reservation as the first worker did.
 
 No call runs longer than 30 minutes, so an open record older than 2 hours belongs to no running call. The job leaves those for an operator to close, which keeps old records out of the current period's usage and Polar sync. `scripts/operations/voice-recovery.ts` closes old browser calls. It doesn't cover phone calls.
 

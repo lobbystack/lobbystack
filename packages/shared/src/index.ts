@@ -18,6 +18,11 @@ export const DEFAULT_WEB_CALL_MAX_DURATION_MS = 5 * 60 * 1000;
 export const MAX_WEB_CALL_MAX_DURATION_MS = 30 * 60 * 1000;
 /** The longest a GPT-Live phone call runs, and the most minutes one call reserves. */
 export const MAX_PHONE_CALL_MS = 30 * 60 * 1000;
+/**
+ * A phone call reserves this many seconds at a time and the worker tops it up
+ * while the call runs, so one call never holds a small plan's every minute.
+ */
+export const PHONE_RESERVATION_SLICE_SECONDS = 300;
 
 /** Latency, tokens and cost of one AI model call, as AI generation events record them. */
 export type AiUsage = {

@@ -1,7 +1,7 @@
 import { and, asc, eq, sql } from "drizzle-orm";
 
-import { billingAccounts, billingUsageEvents, billingUsageMonths, businesses, enqueueOutbox, type DatabaseTransaction } from "@lobbystack/db";
-import { billingErrorCodes, billingPlanCatalog, isBillingPlanSlug, liveSubscriptionStates, MAX_PHONE_CALL_MS, type BillingPlanSlug } from "@lobbystack/shared";
+import { billingAccounts, billingUsageEvents, billingUsageMonths, businesses, calls, enqueueOutbox, type DatabaseTransaction } from "@lobbystack/db";
+import { billingErrorCodes, billingPlanCatalog, isBillingPlanSlug, liveSubscriptionStates, MAX_PHONE_CALL_MS, PHONE_RESERVATION_SLICE_SECONDS, type BillingPlanSlug } from "@lobbystack/shared";
 
 export type NonAiBillingUsageKind = "voice_seconds" | "alert_sms_segments" | "outbound_call_attempts" | "chat_ai_tokens";
 
@@ -118,7 +118,29 @@ function replayEvents(events: ReplayEvent[], fallbackPlan: BillingPlanSlug): { u
   return { usage, rawSpendCents: Math.max(0, rawSpendCents) };
 }
 
-async function loadBillingContext(tx: DatabaseTransaction, businessId: string): Promise<{ plan: BillingPlanSlug; capCents: number | null; billingInterval: string | null }> {
+type BillingContext = { plan: BillingPlanSlug; capCents: number | null; billingInterval: string | null };
+
+// Reservations, top-ups and corrections in a business's billing period run one at a time.
+async function lockUsagePeriod(tx: DatabaseTransaction, businessId: string, periodKey: string): Promise<void> {
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`billing-usage:${businessId}:${periodKey}`}, 0))`);
+}
+
+// Self-host, and a paid plan with no overage cap, never run out of voice, so calls reserve nothing.
+function hasUnlimitedVoice(billing: Pick<BillingContext, "plan" | "capCents">): boolean {
+  return billing.plan === "self_host" || (billingPlanCatalog[billing.plan].overagesBillable && billing.capCents === null);
+}
+
+// The voice seconds a limited plan can still reserve: its included seconds
+// left, plus what the overage cap still pays for. 0 on an unlimited plan.
+function reservableVoiceSeconds(billing: Pick<BillingContext, "plan" | "capCents">, current: { usage: UsageCounts; rawSpendCents: number }): number {
+  const included = includedQuantity(billing.plan, "voice_seconds");
+  const remainingIncluded = included === null ? 0 : Math.max(0, included - current.usage.voice_seconds);
+  const remainingCap = billing.capCents === null ? 0 : Math.max(0, billing.capCents - current.rawSpendCents);
+  const capSeconds = rateCents(billing.plan, "voice_seconds") > 0 ? Math.floor(remainingCap / rateCents(billing.plan, "voice_seconds")) : 0;
+  return billingPlanCatalog[billing.plan].overagesBillable ? (billing.capCents === null ? 0 : remainingIncluded + capSeconds) : remainingIncluded;
+}
+
+async function loadBillingContext(tx: DatabaseTransaction, businessId: string): Promise<BillingContext> {
   const [business, account] = await Promise.all([
     tx.select({ deploymentMode: businesses.deploymentMode }).from(businesses).where(eq(businesses.id, businessId)).limit(1).then((rows) => rows[0]),
     tx.select({ plan: billingAccounts.plan, subscriptionState: billingAccounts.subscriptionState, overageSpendingCapCents: billingAccounts.overageSpendingCapCents, billingInterval: billingAccounts.billingInterval }).from(billingAccounts).where(eq(billingAccounts.businessId, businessId)).limit(1).then((rows) => rows[0]),
@@ -212,26 +234,19 @@ export async function getUsageStatusInTransaction(tx: DatabaseTransaction, input
 export async function reserveUsageInTransaction(tx: DatabaseTransaction, input: { businessId: string; usageKind: NonAiBillingUsageKind; sourceKey: string; quantity?: number | undefined; recordedAt?: Date | undefined }): Promise<UsageReservationResult> {
   const recordedAt = input.recordedAt ?? new Date();
   const periodKey = periodKeyFor(recordedAt);
-  await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`billing-usage:${input.businessId}:${periodKey}`}, 0))`);
+  await lockUsagePeriod(tx, input.businessId, periodKey);
   const billing = await loadBillingContext(tx, input.businessId);
   const existing = (await tx.select({ id: billingUsageEvents.id, quantity: billingUsageEvents.quantity, syncStatus: billingUsageEvents.syncStatus }).from(billingUsageEvents).where(and(eq(billingUsageEvents.businessId, input.businessId), eq(billingUsageEvents.sourceKey, input.sourceKey))).limit(1))[0];
   if (existing && existing.quantity > 0) return { allowed: true, errorCode: null, usageEventId: existing.id, syncNeeded: existing.syncStatus === "pending", periodKey, plan: billing.plan, quantity: existing.quantity };
   const events = await loadEvents(tx, input.businessId, periodKey);
   const current = replayEvents(events, billing.plan);
   let quantity = input.quantity;
-  if (quantity === undefined && input.usageKind === "voice_seconds") {
-    const included = includedQuantity(billing.plan, input.usageKind);
-    const remainingIncluded = included === null ? 0 : Math.max(0, included - current.usage.voice_seconds);
-    const remainingCap = billing.capCents === null ? 0 : Math.max(0, billing.capCents - current.rawSpendCents);
-    const capSeconds = rateCents(billing.plan, input.usageKind) > 0 ? Math.floor(remainingCap / rateCents(billing.plan, input.usageKind)) : 0;
-    const remaining = billingPlanCatalog[billing.plan].overagesBillable ? (billing.capCents === null ? 0 : remainingIncluded + capSeconds) : remainingIncluded;
-    // One call holds at most its longest possible length, so concurrent calls share what remains.
-    quantity = Math.min(MAX_PHONE_CALL_MS / 1_000, remaining);
-  }
+  // A phone call reserves one slice and the worker tops it up as the call
+  // runs, so concurrent calls share what remains.
+  if (quantity === undefined && input.usageKind === "voice_seconds") quantity = Math.min(PHONE_RESERVATION_SLICE_SECONDS, reservableVoiceSeconds(billing, current));
   quantity = Math.max(0, quantity ?? 0);
   if (quantity <= 0) {
-    const unlimitedVoice = input.usageKind === "voice_seconds" && (billing.plan === "self_host" || (billingPlanCatalog[billing.plan].overagesBillable && billing.capCents === null));
-    if (unlimitedVoice) return { allowed: true, errorCode: null, syncNeeded: false, periodKey, plan: billing.plan };
+    if (input.usageKind === "voice_seconds" && hasUnlimitedVoice(billing)) return { allowed: true, errorCode: null, syncNeeded: false, periodKey, plan: billing.plan };
     const errorCode = input.usageKind === "voice_seconds" ? billingErrorCodes.voiceLimitReached : input.usageKind === "alert_sms_segments" ? billingErrorCodes.alertSmsLimitReached : input.usageKind === "chat_ai_tokens" ? billingErrorCodes.chatAiLimitReached : billingErrorCodes.outboundCallAttemptLimitReached;
     return { allowed: false, errorCode, syncNeeded: false, periodKey, plan: billing.plan };
   }
@@ -256,11 +271,45 @@ export async function reserveUsageInTransaction(tx: DatabaseTransaction, input: 
   return { allowed: true, errorCode: null, usageEventId: event.id, syncNeeded, periodKey, plan: billing.plan, quantity };
 }
 
+/**
+ * Grows a phone call's reservation while the call runs: by one slice, or by
+ * what the plan has left, and never past MAX_PHONE_CALL_MS for the call.
+ * Returns the seconds granted, 0 when the call has ended, is a browser call,
+ * holds no reservation (an unlimited plan), or has nothing left to grow by.
+ * Like the first reservation it queues no Polar sync: the call's finish
+ * corrects the event to the real seconds and syncs those.
+ */
+export async function extendPhoneReservationInTransaction(tx: DatabaseTransaction, input: { businessId: string; callId: string }): Promise<number> {
+  const sourceKey = `voice:${input.callId}`;
+  const reservation = (await tx.select({ id: billingUsageEvents.id, periodKey: billingUsageEvents.periodKey }).from(billingUsageEvents).where(and(eq(billingUsageEvents.businessId, input.businessId), eq(billingUsageEvents.sourceKey, sourceKey))).limit(1))[0];
+  if (!reservation) return 0;
+  await lockUsagePeriod(tx, input.businessId, reservation.periodKey);
+  // Read under the lock, so a finish that took it first wins. Browser calls
+  // reserve their whole length up front.
+  const call = (await tx.select({ endedAt: calls.endedAt, transport: calls.transport }).from(calls).where(and(eq(calls.id, input.callId), eq(calls.businessId, input.businessId))).limit(1))[0];
+  if (!call || call.endedAt !== null || call.transport === "web_voice") return 0;
+  const billing = await loadBillingContext(tx, input.businessId);
+  const events = await loadEvents(tx, input.businessId, reservation.periodKey);
+  const event = events.find((row) => row.sourceKey === sourceKey);
+  if (!event) return 0;
+  // The replay already counts this call's reservation. A plan upgraded to
+  // unlimited mid-call still grows it, up to the longest call.
+  const free = hasUnlimitedVoice(billing) ? Number.POSITIVE_INFINITY : reservableVoiceSeconds(billing, replayEvents(events, billing.plan));
+  const granted = Math.min(PHONE_RESERVATION_SLICE_SECONDS, free, MAX_PHONE_CALL_MS / 1_000 - event.quantity);
+  if (granted <= 0) return 0;
+  const replayed = events.map((row) => (row === event ? { ...row, quantity: row.quantity + granted } : row));
+  if (billing.capCents !== null && replayEvents(replayed, billing.plan).rawSpendCents > billing.capCents) return 0;
+  const billableQuantity = billableQuantityForEvent(replayed, sourceKey, billing.plan);
+  await tx.update(billingUsageEvents).set({ quantity: event.quantity + granted, billableQuantity, updatedAt: new Date() }).where(eq(billingUsageEvents.id, reservation.id));
+  await refreshUsageMonth(tx, { businessId: input.businessId, periodKey: reservation.periodKey, plan: billing.plan, capCents: billing.capCents, events: replayed });
+  return granted;
+}
+
 export async function correctUsageInTransaction(tx: DatabaseTransaction, input: { businessId: string; sourceKey: string; usageKind: NonAiBillingUsageKind; quantity: number; recordedAt?: Date | undefined }): Promise<string> {
   const recordedAt = input.recordedAt ?? new Date();
   const existingBeforeLock = (await tx.select({ id: billingUsageEvents.id, periodKey: billingUsageEvents.periodKey }).from(billingUsageEvents).where(and(eq(billingUsageEvents.businessId, input.businessId), eq(billingUsageEvents.sourceKey, input.sourceKey))).limit(1))[0];
   const periodKey = existingBeforeLock?.periodKey ?? periodKeyFor(recordedAt);
-  await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`billing-usage:${input.businessId}:${periodKey}`}, 0))`);
+  await lockUsagePeriod(tx, input.businessId, periodKey);
   const billing = await loadBillingContext(tx, input.businessId);
   const existing = (await tx.select({ id: billingUsageEvents.id, periodKey: billingUsageEvents.periodKey, planAtRecordTime: billingUsageEvents.planAtRecordTime, billingIntervalAtRecordTime: billingUsageEvents.billingIntervalAtRecordTime, createdAt: billingUsageEvents.createdAt }).from(billingUsageEvents).where(and(eq(billingUsageEvents.businessId, input.businessId), eq(billingUsageEvents.sourceKey, input.sourceKey))).limit(1))[0];
   let eventId: string;

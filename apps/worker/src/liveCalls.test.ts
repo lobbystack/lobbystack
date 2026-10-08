@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   saveLiveCallTurn: vi.fn(async (..._args: unknown[]) => undefined),
   hangup: vi.fn(async (..._args: unknown[]) => undefined),
   lastLiveCallSequence: vi.fn(async (..._args: unknown[]) => 0),
+  extendLiveCallReservation: vi.fn(async (..._args: unknown[]) => 300),
 }));
 
 vi.mock("@lobbystack/agent-core", () => ({
@@ -49,6 +50,7 @@ vi.mock("@lobbystack/domain", async (importOriginal) => ({
   orphanedLiveCallSeconds: (await importOriginal<typeof import("@lobbystack/domain")>()).orphanedLiveCallSeconds,
   saveLiveCallTurn: mocks.saveLiveCallTurn,
   lastLiveCallSequence: mocks.lastLiveCallSequence,
+  extendLiveCallReservation: mocks.extendLiveCallReservation,
   blockLiveCaller: vi.fn(async () => undefined),
   getCachedBusinessSnapshot: mocks.snapshot,
   finishLiveCall: mocks.finishLiveCall,
@@ -185,6 +187,31 @@ describe("createLiveCallHandler", () => {
       limits.push(mocks.controllers_.at(-1)!.options.maxDurationMs);
     }
     expect(limits).toEqual([120_000, 30 * 60_000, 30 * 60_000]);
+  });
+
+  it("tops up a phone call's reservation, including a resumed one, but not on an unlimited plan or for a browser call", async () => {
+    vi.stubEnv("LIVE_PROTOTYPE_ENABLED", "true");
+    vi.stubEnv("INTERNAL_SERVICE_TOKEN", "token");
+    vi.stubEnv("OPENAI_API_KEY", "sk-test");
+    mocks.snapshot.mockResolvedValue({ businessId: "biz_1", greeting: "Hi" });
+    const handler = createLiveCallHandler({ domain: { db: {} as never } });
+    const topUps: unknown[] = [];
+    for (const body of [
+      { sessionId: "live_reserved", channel: "voice", maxDurationMs: 300_000 },
+      { sessionId: "live_resumed", channel: "voice", maxDurationMs: 600_000, resume: true },
+      { sessionId: "live_unlimited_plan", channel: "voice" },
+      { sessionId: "live_browser", channel: "web_voice", maxDurationMs: 300_000 },
+    ]) {
+      await handler.handle(attachRequest({ businessId: "biz_1", callId: `call_${body.sessionId}`, ...body }), response());
+      topUps.push(mocks.controllers_.at(-1)!.options.topUp);
+    }
+    expect(topUps.map((topUp) => typeof topUp)).toEqual(["function", "function", "undefined", "undefined"]);
+    // The domain grants seconds; the controller extends the limit in milliseconds.
+    mocks.extendLiveCallReservation.mockClear();
+    await expect((topUps[0] as () => Promise<number>)()).resolves.toBe(300_000);
+    expect(mocks.extendLiveCallReservation).toHaveBeenCalledWith(expect.anything(), { businessId: "biz_1", callId: "call_live_reserved" });
+    mocks.extendLiveCallReservation.mockResolvedValueOnce(0);
+    await expect((topUps[1] as () => Promise<number>)()).resolves.toBe(0);
   });
 
   it("refers a transfer after the announcement, and records it as referred until the destination answers", async () => {
@@ -440,7 +467,7 @@ describe("worker shutdown drain", () => {
     const handler = createLiveCallHandler({ domain: { db: {} as never }, attachLock: slowLock });
     const before = mocks.controllers;
     const now = Date.now();
-    const recovered = handler.recover({ businessId: "biz_1", callId: "call_drain_recover", sessionId: "live_drain_recover", channel: "voice", intakeOnly: false, startedAt: new Date(now - 120_000), reservedSeconds: 600, lastActivityAt: new Date(now - 60_000), lastSequence: 0 });
+    const recovered = handler.recover({ businessId: "biz_1", callId: "call_drain_recover", sessionId: "live_drain_recover", channel: "voice", intakeOnly: false, startedAt: new Date(now - 120_000), reservedSeconds: 600, slicedReservation: true, lastActivityAt: new Date(now - 60_000), lastSequence: 0 });
     await handler.drain(0);
     await expect(recovered).resolves.toBe("skipped");
     expect(mocks.controllers - before).toBe(0);
@@ -453,7 +480,7 @@ describe("recovering a call whose worker died", () => {
   // Started two minutes ago with ten minutes reserved; its last turn was saved a minute ago.
   const orphan = (sessionId: string, overrides: Record<string, unknown> = {}) => ({
     businessId: "biz_1", callId: `call_${sessionId}`, sessionId, channel: "voice" as const, conversationId: "conv_1", callerPhone: "+14165550100", intakeOnly: false,
-    startedAt: new Date(now - 120_000), reservedSeconds: 600, lastActivityAt: new Date(now - 60_000), lastSequence: 7,
+    startedAt: new Date(now - 120_000), reservedSeconds: 600, slicedReservation: true, lastActivityAt: new Date(now - 60_000), lastSequence: 7,
     ...overrides,
   });
 
@@ -621,7 +648,11 @@ describe("recovering a call whose worker died", () => {
     mocks.hangup.mockClear();
     // Ten minutes reserved, started almost twelve minutes ago, a turn saved eleven minutes in.
     const late = orphan("live_late", { startedAt: new Date(now - 700_000), lastActivityAt: new Date(now - 60_000) });
+    // The plan has no minutes left for another slice.
+    mocks.extendLiveCallReservation.mockClear();
+    mocks.extendLiveCallReservation.mockResolvedValueOnce(0);
     await expect(recoveringWorker(lock).recover(late)).resolves.toBe("finished");
+    expect(mocks.extendLiveCallReservation).toHaveBeenCalledWith(expect.anything(), { businessId: "biz_1", callId: "call_live_late" });
     expect(mocks.controllers - before).toBe(0);
     // A hanging OpenAI can't hold up the job.
     expect(mocks.hangup).toHaveBeenCalledWith("live_late", { timeout: 5_000 });
@@ -634,9 +665,39 @@ describe("recovering a call whose worker died", () => {
   it("closes a browser orphan past its reserved length over a new sideband", async () => {
     mocks.closeLiveSession.mockClear();
     vi.spyOn(console, "info").mockImplementation(() => undefined);
-    await expect(recoveringWorker().recover(orphan("live_late_web", { channel: "web_voice", startedAt: new Date(now - 700_000) }))).resolves.toBe("finished");
+    await expect(recoveringWorker().recover(orphan("live_late_web", { channel: "web_voice", slicedReservation: false, startedAt: new Date(now - 700_000) }))).resolves.toBe("finished");
     expect(mocks.closeLiveSession).toHaveBeenCalledWith(expect.anything(), "live_late_web", 5_000);
     vi.mocked(console.info).mockRestore();
+  });
+
+  it("re-attaches an orphan that ran past its reservation when one more slice covers the gap", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => undefined);
+    const before = mocks.controllers;
+    mocks.extendLiveCallReservation.mockClear();
+    mocks.extendLiveCallReservation.mockResolvedValueOnce(300);
+    // Ten minutes reserved, almost twelve gone: the slice leaves about three.
+    await expect(recoveringWorker().recover(orphan("live_late_topped_up", { startedAt: new Date(now - 700_000) }))).resolves.toBe("attached");
+    expect(mocks.extendLiveCallReservation).toHaveBeenCalledOnce();
+    expect(mocks.controllers - before).toBe(1);
+    const controller = mocks.controllers_.at(-1)!;
+    expect(controller.options.maxDurationMs as number).toBeGreaterThan(200_000 - (Date.now() - now) - 1_000);
+    expect(controller.options.maxDurationMs as number).toBeLessThanOrEqual(200_000);
+    vi.mocked(console.info).mockRestore();
+  });
+
+  it("tops up a recovered phone call's reservation, but not on an unlimited plan or for a browser call", async () => {
+    mocks.extendLiveCallReservation.mockClear();
+    const handler = recoveringWorker();
+    const topUps: unknown[] = [];
+    for (const [sessionId, overrides] of [["live_recovered_reserved", {}], ["live_recovered_unlimited", { slicedReservation: false }], ["live_recovered_web", { channel: "web_voice", slicedReservation: false }]] as const) {
+      await expect(handler.recover(orphan(sessionId, overrides))).resolves.toBe("attached");
+      topUps.push(mocks.controllers_.at(-1)!.options.topUp);
+    }
+    expect(topUps.map((topUp) => typeof topUp)).toEqual(["function", "undefined", "undefined"]);
+    // None of them was past its reservation, so recovery itself asked for nothing.
+    expect(mocks.extendLiveCallReservation).not.toHaveBeenCalled();
+    await expect((topUps[0] as () => Promise<number>)()).resolves.toBe(300_000);
+    expect(mocks.extendLiveCallReservation).toHaveBeenCalledWith(expect.anything(), { businessId: "biz_1", callId: "call_live_recovered_reserved" });
   });
 
   it("attaches once when two workers recover the same call at once", async () => {

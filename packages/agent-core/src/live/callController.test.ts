@@ -29,7 +29,7 @@ type Generate = (options: { prompt: string; onStepEnd?: (step: unknown) => void 
 
 const reply = (text: string) => ({ text, steps: [{ toolCalls: [], toolResults: [] }] });
 
-function setup(options: { phone?: boolean; silenceTimeoutMs?: number; maxDurationMs?: number; firstEventTimeoutMs?: number; generate?: Generate; setup?: Promise<LiveCallSetup>; onGreeting?: (event: GreetingEvent) => void; refer?: ReturnType<typeof vi.fn> } = {}) {
+function setup(options: { phone?: boolean; silenceTimeoutMs?: number; maxDurationMs?: number; topUp?: () => Promise<number>; firstEventTimeoutMs?: number; generate?: Generate; setup?: Promise<LiveCallSetup>; onGreeting?: (event: GreetingEvent) => void; refer?: ReturnType<typeof vi.fn> } = {}) {
   const generate = vi.fn(options.generate ?? (async () => ({ text: "We're open until 5.", steps: [{ toolCalls: [{ toolCallId: "call_1", toolName: "getBusinessHours" }], toolResults: [] }, { toolCalls: [], toolResults: [] }] })));
   const turns: LiveCallTurn[] = [];
   const closed: LiveCallSummary[] = [];
@@ -45,6 +45,7 @@ function setup(options: { phone?: boolean; silenceTimeoutMs?: number; maxDuratio
     setup: options.setup ?? { agent: { generate } as never, greeting: "Thanks for calling Northside Plumbing." },
     ...(options.silenceTimeoutMs ? { silenceTimeoutMs: options.silenceTimeoutMs } : {}),
     ...(options.maxDurationMs ? { maxDurationMs: options.maxDurationMs } : {}),
+    ...(options.topUp ? { topUp: options.topUp } : {}),
     ...(options.firstEventTimeoutMs ? { firstEventTimeoutMs: options.firstEventTimeoutMs } : {}),
     ...(options.onGreeting ? { onGreeting: options.onGreeting } : {}),
     onTurn: (turn) => turns.push(turn),
@@ -552,6 +553,89 @@ describe("LiveCallController wrap-up", () => {
     expect(hangup).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(400);
     expect(hangup).toHaveBeenCalledWith("live_1");
+  });
+});
+
+describe("LiveCallController minute top-ups", () => {
+  // Five minutes reserved: the goodbye starts at 270 seconds, and the call asks for more at 210.
+  it("asks for more minutes a minute before the goodbye, and moves the goodbye by what it gets", async () => {
+    fakeTimers();
+    const topUp = vi.fn<() => Promise<number>>().mockResolvedValueOnce(300_000).mockResolvedValueOnce(0);
+    const { onTimeout } = setup({ maxDurationMs: 300_000, topUp });
+    await vi.advanceTimersByTimeAsync(209_999);
+    expect(topUp).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(topUp).toHaveBeenCalledOnce();
+    // Ten minutes now: the goodbye moved to 570 seconds, and the next ask to 510.
+    await vi.advanceTimersByTimeAsync(300_000);
+    expect(onTimeout).not.toHaveBeenCalled();
+    expect(topUp).toHaveBeenCalledTimes(2);
+    // Nothing more was granted, so the call says goodbye at 570 seconds and asks no more.
+    await vi.advanceTimersByTimeAsync(59_999);
+    expect(onTimeout).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(onTimeout).toHaveBeenCalledWith("duration_limit");
+    expect(topUp).toHaveBeenCalledTimes(2);
+  });
+
+  it("says goodbye at the original time when the plan has no minutes left", async () => {
+    fakeTimers();
+    const topUp = vi.fn(async () => 0);
+    const { onTimeout } = setup({ maxDurationMs: 300_000, topUp });
+    await vi.advanceTimersByTimeAsync(269_999);
+    expect(topUp).toHaveBeenCalledOnce();
+    expect(onTimeout).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(onTimeout).toHaveBeenCalledWith("duration_limit");
+    await vi.advanceTimersByTimeAsync(600_000);
+    expect(topUp).toHaveBeenCalledOnce();
+  });
+
+  it("asks again every 10 seconds after a failure, until the goodbye starts on time", async () => {
+    fakeTimers();
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const topUp = vi.fn(async (): Promise<number> => { throw new Error("database unavailable"); });
+    const { onTimeout } = setup({ maxDurationMs: 300_000, topUp });
+    await vi.advanceTimersByTimeAsync(269_999);
+    // At 210, 220, 230, 240, 250 and 260 seconds.
+    expect(topUp).toHaveBeenCalledTimes(6);
+    expect(onTimeout).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(onTimeout).toHaveBeenCalledWith("duration_limit");
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(topUp).toHaveBeenCalledTimes(6);
+    expect(error).toHaveBeenCalledWith("[live] live_1 minute top-up failed", "database unavailable");
+    error.mockRestore();
+  });
+
+  it("asks nothing once the call is ending, and ignores minutes granted after it ended", async () => {
+    fakeTimers();
+    const endingTopUp = vi.fn(async () => 300_000);
+    void setup({ maxDurationMs: 300_000, topUp: endingTopUp }).controller.wrapUp("silence_timeout");
+    await vi.advanceTimersByTimeAsync(210_000);
+    expect(endingTopUp).not.toHaveBeenCalled();
+
+    let grant!: (ms: number) => void;
+    const topUp = vi.fn(() => new Promise<number>((resolve) => { grant = resolve; }));
+    const { socket, onTimeout } = setup({ maxDurationMs: 300_000, topUp });
+    await vi.advanceTimersByTimeAsync(210_000);
+    expect(topUp).toHaveBeenCalledOnce();
+    socket.emit("session.closed", { reason: "remote_hangup", usage: { seconds: 210 } });
+    grant(300_000);
+    await vi.advanceTimersByTimeAsync(600_000);
+    expect(topUp).toHaveBeenCalledOnce();
+    expect(onTimeout).not.toHaveBeenCalled();
+  });
+
+  it("asks at once when the reservation is already inside the last minute and a half", async () => {
+    fakeTimers();
+    const topUp = vi.fn(async () => 300_000);
+    const { onTimeout } = setup({ maxDurationMs: 30_000, topUp });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(topUp).toHaveBeenCalledOnce();
+    // 330 seconds in all, so the goodbye starts at 300 instead of 15.
+    await vi.advanceTimersByTimeAsync(15_000);
+    expect(onTimeout).not.toHaveBeenCalled();
   });
 });
 
