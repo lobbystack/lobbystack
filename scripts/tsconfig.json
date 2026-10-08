@@ -8,6 +8,7 @@
     ]
   },
   "include": [
+    "./server-only.d.ts",
     "./release-readiness*.ts",
     "./seed-release-e2e.ts",
     "./seed-zapier-local.ts",
