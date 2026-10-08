@@ -26,7 +26,7 @@ Change these values only when you mean to. The setting applies on the next deplo
 
 The production `admin` and `worker` services deploy from the `production` branch of `lobbystack/lobbystack`. Railway builds each affected service from its Dockerfile and watch patterns as soon as that branch moves, without waiting on GitHub checks.
 
-Only CI moves `production`. On every push to `main`, the `migrate-production` job starts after every other CI check passes. It uploads that exact checkout to the `migrator`, which has no GitHub source, and waits for the run-once migration to succeed. Its last step points `production` at the same commit, which releases admin and worker. If `main` moved on in the meantime, the job stops and the newer commit's run releases both. Dependabot's jobs play no part, so a failed one can't block a release.
+Only CI moves `production`. On every push to `main`, the `migrate-production` job starts after every other CI job passes, including the Replacement Platform checks that CI calls. It uploads that exact checkout to the `migrator`, which has no GitHub source, and waits for the run-once migration to succeed. Its last step points `production` at the same commit, which releases admin and worker. If `main` moved on in the meantime, the job stops and the newer commit's run releases both. Dependabot's jobs play no part, so a failed one can't block a release.
 
 Store a production project token in the GitHub `production` environment as `RAILWAY_PRODUCTION_TOKEN`. Restrict that environment to the `main` branch. Do not store database credentials in GitHub; the migrator reads its preserved variables from Railway.
 

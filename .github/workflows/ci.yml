@@ -147,6 +147,12 @@ jobs:
   images:
     uses: ./.github/workflows/runtime-images.yml
 
+  # Post-merge certification. Releases wait for it, so production only moves
+  # once every check on the commit has passed.
+  replacement:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/replacement-platform.yml
+
   validate:
     if: always()
     needs: [checks, database, e2e, images]
@@ -161,7 +167,7 @@ jobs:
 
   migrate-production:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: validate
+    needs: [validate, replacement]
     runs-on: ubuntu-latest
     timeout-minutes: 45
     environment: production
