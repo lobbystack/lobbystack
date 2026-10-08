@@ -173,7 +173,10 @@ describe("cancellations without a trusted caller number", () => {
   it("keeps direct cancellation on phone calls from a trusted number, with a request when it can't find or verify the appointment", () => {
     const phone = buildAgentInstructions(demoSnapshot, "voice", { callerPhone: "+14165550134" });
     expect(phone).not.toContain("You can't cancel appointments");
-    expect(phone).toContain("When you can't find or verify the appointment a caller wants to cancel, for example because they aren't calling from the number it was booked with, don't take a message.");
+    // The name isn't part of verification, and a missing time or service gets asked for and retried before the fallback.
+    expect(phone).toContain("To verify an appointment the caller wants to change, you need its time or its service, not their name.");
+    expect(phone).toContain("When verification fails because the caller hasn't said either yet, ask for it and verify again.");
+    expect(phone).toContain("or the caller isn't calling from the number it was booked with, don't take a message");
     expect(phone).toContain("save the request with requestAppointmentCancellation");
     for (const instructions of [buildAgentInstructions({ ...demoSnapshot, bookingMode: "off" }, "web_voice"), buildAgentInstructions(demoSnapshot, "voice", { callerPhone: "+14165550134", intakeOnly: true })]) {
       expect(instructions).not.toContain("requestAppointmentCancellation");

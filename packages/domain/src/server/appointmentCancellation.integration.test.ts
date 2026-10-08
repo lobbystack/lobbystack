@@ -5,6 +5,7 @@ import { DateTime } from "luxon";
 import { afterAll, describe, expect, it } from "vitest";
 import { appointments, businessMemberships, businesses, calls, contacts, conversations, createDatabaseClient, inboxItems, services, staff, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
+import { createAppointmentChangeVerification } from "./appointmentChanges";
 import { cancelAppointment, cancelAppointmentInTransaction } from "./booking";
 import { listCurrentAppointments, listUpcomingAppointments } from "./operatorActivity";
 import { requestCancellationForCaller, takeMessageForStaff } from "./receptionistActions";
@@ -115,8 +116,34 @@ async function seed(tx: DatabaseTransaction) {
     await tx.execute(sql`reset role`);
     return (await tx.select({ status: appointments.status }).from(appointments).where(eq(appointments.id, appointmentId)))[0]?.status;
   };
-  return { ids, userIds, request, message, openRequest, complete, detail, item, dashboard, cancel, cancelAsWorker, status };
+  // The self-service check a phone call from the booking number runs before a change.
+  const verify = async (input: { callerPhone: string; appointmentStartsAt?: string; serviceName?: string }) => {
+    await as("lobbystack_worker");
+    return await createAppointmentChangeVerification({ db }, { businessId, action: "cancel", ...input });
+  };
+  return { ids, userIds, request, message, openRequest, complete, detail, item, dashboard, cancel, cancelAsWorker, status, verify };
 }
+
+describe.skipIf(!client)("self-service changes from the booking number", () => {
+  // On staging the booking saved "Rafael Morenzi" and the cancel calls heard "Raphael Morency" and "Rafael Marancy",
+  // so the name no longer takes part.
+  it("verifies by the caller's number and the appointment's time or service, without a name", async () => {
+    await rollbackTest(async (tx) => {
+      const { ids, verify } = await seed(tx);
+      expect((await verify({ callerPhone: "+14165550100", appointmentStartsAt: asked(local(1, 15)) }))?.appointmentId).toBe(ids.consultation);
+      expect(await verify({ callerPhone: "+14165550100", serviceName: "Cleaning" })).toMatchObject({ appointmentId: ids.cleaning, status: "facts_verified" });
+    });
+  });
+
+  it("still needs the number the appointment was booked with, and the time or service", async () => {
+    await rollbackTest(async (tx) => {
+      const { verify } = await seed(tx);
+      expect(await verify({ callerPhone: "+14165550199", appointmentStartsAt: asked(local(1, 15)) })).toBeNull();
+      expect(await verify({ callerPhone: "+14165550100" })).toBeNull();
+      expect(await verify({ callerPhone: "+14165550100", appointmentStartsAt: asked(local(1, 17)) })).toBeNull();
+    });
+  });
+});
 
 describe.skipIf(!client)("cancellation requests from calls without a trusted number", () => {
   it("links the one upcoming appointment that matches the caller's name and time", async () => {
@@ -131,13 +158,14 @@ describe.skipIf(!client)("cancellation requests from calls without a trusted num
     });
   });
 
-  it("matches a date without a time, and both the name and the number when the caller gives a number", async () => {
+  it("matches a date without a time, a name by sound, and the number when the caller gives one", async () => {
     await rollbackTest(async (tx) => {
       const { ids, request, item } = await seed(tx);
       const link = async (input: Parameters<typeof request>[0]) => ((await item((await request(input)).inboxItemId)).metadata as { appointmentId?: string }).appointmentId;
       expect(await link({ callerName: "Milan Obrenovic", appointmentStartsAt: local(3, 10).toISODate()!, callbackPhone: "+14165550100" })).toBe(ids.cleaning);
-      // The number with part of the name, or the name with another number, links nothing.
-      expect(await link({ callerName: "Milan", appointmentStartsAt: local(3, 10).toISODate()!, callbackPhone: "+14165550100" })).toBeUndefined();
+      // A name part or a misheard spelling with the right number links; any name with another number doesn't.
+      expect(await link({ callerName: "Milan", appointmentStartsAt: local(3, 10).toISODate()!, callbackPhone: "+14165550100" })).toBe(ids.cleaning);
+      expect(await link({ callerName: "Mylan Obrenowitz", appointmentStartsAt: local(3, 10).toISODate()!, callbackPhone: "+14165550100" })).toBe(ids.cleaning);
       expect(await link({ callerName: "Ana", appointmentStartsAt: asked(local(1, 15)), callbackPhone: "+14165550199" })).toBeUndefined();
       expect(await link({ callerName: "Ana", appointmentStartsAt: asked(local(1, 15)), callbackPhone: "+14165550101" })).toBe(ids.anas);
     });

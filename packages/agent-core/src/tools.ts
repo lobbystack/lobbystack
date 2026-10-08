@@ -329,10 +329,9 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
       execute: async () => await lookupCallerAppointments(domain, { businessId, callerPhone }),
     });
     tools.verifyAppointmentForChange = tool({
-      description: "Verify the caller's name and one fact about their appointment (date/time or service) before any change.",
+      description: "Verify the appointment before any change, with one fact the caller gives: its date and time, or its service. The call's number already identifies the caller, so their name isn't needed.",
       inputSchema: z.object({
         action: z.enum(["cancel", "reschedule"]),
-        callerName: z.string().optional(),
         appointmentStartsAt: z.string().optional().describe("The appointment time as the caller described it."),
         serviceName: z.string().optional(),
       }),
@@ -340,7 +339,6 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
         businessId,
         callerPhone,
         action: input.action,
-        ...(input.callerName ? { callerName: input.callerName } : {}),
         ...(input.appointmentStartsAt ? { appointmentStartsAt: input.appointmentStartsAt } : {}),
         ...(input.serviceName ? { serviceName: input.serviceName } : {}),
       }),

@@ -5,7 +5,7 @@ import { and, eq, gt, inArray, lt, or } from "drizzle-orm";
 import { appointmentChangeVerifications, appointments, auditLogs, contacts, enqueueOutbox, phoneNumbers, receptionistProfiles, services, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { normalizeAppointmentChangePolicy } from "@lobbystack/shared";
 
-import { appointmentTimesMatch, serviceNamesMatch, storedContactNameMatchesIfPresent, substantiveServiceNameFactMatches } from "./appointmentFacts";
+import { appointmentTimesMatch, serviceNamesMatch, substantiveServiceNameFactMatches } from "./appointmentFacts";
 
 import type { DomainContext } from "./context";
 import { VERIFICATION_CODE_TTL_MS, newVerificationCode, verificationCodeSecret } from "./verificationCode";
@@ -30,21 +30,23 @@ async function auditAppointmentChange(tx: DatabaseTransaction, input: { business
 
 export async function createAppointmentChangeVerification(
   context: DomainContext,
-  input: { businessId: string; appointmentId?: string; callerPhone: string; action: "cancel" | "reschedule"; callerName?: string; appointmentStartsAt?: string; serviceName?: string },
+  input: { businessId: string; appointmentId?: string; callerPhone: string; action: "cancel" | "reschedule"; appointmentStartsAt?: string; serviceName?: string },
 ): Promise<{ verificationId: string; appointmentId: string; contactId: string; status: string; expiresAt: string } | null> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const profile = (await tx.select({ policy: receptionistProfiles.appointmentChangePolicy }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, input.businessId)).limit(1))[0];
     const policy = normalizeAppointmentChangePolicy(profile?.policy);
     if (!policy.enabled || policy.verificationMode === "operator_only" || (input.action === "cancel" ? !policy.allowCancel : !policy.allowReschedule)) return null;
     if (!input.appointmentStartsAt?.trim() && !input.serviceName?.trim()) return null;
-    const candidates = await tx.select({ id: appointments.id, contactId: appointments.contactId, startsAt: appointments.startsAt, timezone: appointments.timezone, name: contacts.name, serviceName: services.name, serviceSlug: services.slug, localizedNames: services.localizedNames }).from(appointments)
+    // The caller's number and the appointment's time or service identify the
+    // appointment. The name doesn't: speech recognition spells the same name
+    // differently from call to call, so it can't block a change.
+    const candidates = await tx.select({ id: appointments.id, contactId: appointments.contactId, startsAt: appointments.startsAt, timezone: appointments.timezone, serviceName: services.name, serviceSlug: services.slug, localizedNames: services.localizedNames }).from(appointments)
       .innerJoin(contacts, and(eq(contacts.id, appointments.contactId), eq(contacts.businessId, input.businessId)))
       .innerJoin(services, and(eq(services.id, appointments.serviceId), eq(services.businessId, input.businessId)))
       .where(and(input.appointmentId ? eq(appointments.id, input.appointmentId) : undefined, eq(appointments.businessId, input.businessId), eq(contacts.phone, input.callerPhone), eq(appointments.status, "confirmed")));
     const matches = candidates.filter((row) => {
       const service = { name: row.serviceName, slug: row.serviceSlug, localizedNames: row.localizedNames };
-      return storedContactNameMatchesIfPresent(row.name ?? undefined, input.callerName)
-        && (!input.appointmentStartsAt?.trim() || appointmentTimesMatch({ startsAt: row.startsAt.toISOString(), timezone: row.timezone }, input.appointmentStartsAt))
+      return (!input.appointmentStartsAt?.trim() || appointmentTimesMatch({ startsAt: row.startsAt.toISOString(), timezone: row.timezone }, input.appointmentStartsAt))
         && (!input.serviceName?.trim() || (input.appointmentId ? serviceNamesMatch : substantiveServiceNameFactMatches)(service, input.serviceName));
     });
     if (matches.length !== 1) return null;

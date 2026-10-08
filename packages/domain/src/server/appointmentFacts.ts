@@ -8,7 +8,7 @@ function getServiceNameCandidates(service: ServiceFact): string[] {
 
 // Lowercase ASCII without accents, so "Émilie" compares as "emilie". NFD leaves đ alone.
 function normalizeComparable(value: string): string {
-  return value.normalize("NFD").replace(/\p{M}/gu, "").replace(/[đĐ]/g, "dj").trim().toLowerCase().replace(/[^a-z0-9]+/g, " ");
+  return value.normalize("NFD").replace(/\p{M}/gu, "").replace(/[đĐ]/g, "dj").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
 // Spellings a transcript swaps for the same sound, so a caller saying
@@ -40,7 +40,13 @@ function tokenizeComparable(value: string): Array<string> {
     .filter((token) => token.length >= 2);
 }
 
-function personNamesMatch(storedName: string | undefined, providedName: string | undefined): boolean {
+/**
+ * Whether a name a caller gave fits the stored one: one part of it is enough,
+ * matched by sound-alike spelling. Speech recognition spells the same surname
+ * differently from call to call ("Morenzi", "Morency", "Marancy"), so this
+ * only links a cancellation request to an appointment the team then approves.
+ */
+export function personNamesMatch(storedName: string | undefined, providedName: string | undefined): boolean {
   if (!storedName?.trim() || !providedName?.trim()) {
     return false;
   }
@@ -56,14 +62,7 @@ function personNamesMatch(storedName: string | undefined, providedName: string |
 
   const storedTokens = tokenizeComparable(storedName);
   const providedTokens = tokenizeComparable(providedName);
-  return storedTokens.length > 0 && storedTokens.every((token) => providedTokens.some((provided) => nameTokensMatch(token, provided)));
-}
-
-export function storedContactNameMatchesIfPresent(
-  storedName: string | undefined,
-  providedName: string | undefined,
-): boolean {
-  return !storedName?.trim() || personNamesMatch(storedName, providedName);
+  return storedTokens.some((token) => providedTokens.some((provided) => nameTokensMatch(token, provided)));
 }
 
 export function serviceNamesMatch(service: ServiceFact, providedServiceName: string): boolean {

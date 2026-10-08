@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, ilike, lt, ne, or, sql } from "drizzle-orm";
+import { and, asc, eq, gte, ilike, lt, ne, or } from "drizzle-orm";
 import { DateTime } from "luxon";
 
 import { appointments, contacts, receptionistProfiles, services, withBusinessTransaction } from "@lobbystack/db";
@@ -7,6 +7,7 @@ import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
 import { BookingUnavailableError, type UnavailableReason } from "../availability";
 import { createAppointmentChangeVerification } from "./appointmentChanges";
+import { personNamesMatch, serviceNamesMatch } from "./appointmentFacts";
 import { bookAppointment, cancelAppointmentForCaller, checkAvailability, findAvailability, rescheduleAppointmentForCaller } from "./booking";
 import { recordCallSchedulingProgress } from "./callOutcome";
 import type { DomainContext } from "./context";
@@ -224,7 +225,7 @@ export async function lookupCallerAppointments(context: DomainContext, input: { 
 
 export async function verifyCallerForChange(
   context: DomainContext,
-  input: { businessId: string; callerPhone: string; action: "cancel" | "reschedule"; appointmentId?: string; callerName?: string; appointmentStartsAt?: string; serviceName?: string },
+  input: { businessId: string; callerPhone: string; action: "cancel" | "reschedule"; appointmentId?: string; appointmentStartsAt?: string; serviceName?: string },
 ) {
   const verification = await createAppointmentChangeVerification(context, input);
   if (!verification) return { ok: false as const, verified: false, reason: "The appointment could not be verified." };
@@ -296,9 +297,6 @@ export async function takeMessageForStaff(
   return { ok: true as const, inboxItemId: task.inboxItemId };
 }
 
-// Whole and case-insensitive, without LIKE wildcards, so a vague or partial
-// name can't link someone else's booking.
-const sameText = (column: typeof contacts.name | typeof services.name, value: string) => sql`lower(trim(${column})) = lower(${value.trim()})`;
 
 /**
  * Passes a caller's request to cancel an appointment to the team, when the
@@ -318,21 +316,22 @@ export async function requestCancellationForCaller(
   const when = described ? DateTime.fromISO(described, { zone: input.timezone }) : undefined;
   const hasTime = Boolean(described?.includes("T"));
   const dayStart = when?.startOf("day");
-  const matches = when && !when.isValid ? [] : await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) =>
-    await tx.select({ id: appointments.id }).from(appointments)
+  const candidates = when && !when.isValid ? [] : await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) =>
+    await tx.select({ id: appointments.id, contactName: contacts.name, serviceName: services.name, serviceSlug: services.slug, localizedNames: services.localizedNames }).from(appointments)
       .innerJoin(contacts, and(eq(contacts.id, appointments.contactId), eq(contacts.businessId, input.businessId)))
       .innerJoin(services, and(eq(services.id, appointments.serviceId), eq(services.businessId, input.businessId)))
       .where(and(
         eq(appointments.businessId, input.businessId),
         ne(appointments.status, "canceled"),
         gte(appointments.startsAt, new Date()),
-        sameText(contacts.name, callerName),
         input.callbackPhone ? eq(contacts.phone, input.callbackPhone) : undefined,
         dayStart ? and(gte(appointments.startsAt, dayStart.toJSDate()), lt(appointments.startsAt, dayStart.plus({ days: 1 }).toJSDate())) : undefined,
         hasTime && when ? eq(appointments.startsAt, when.toJSDate()) : undefined,
-        serviceName ? sameText(services.name, serviceName) : undefined,
       ))
-      .limit(2));
+      .orderBy(asc(appointments.startsAt))
+      .limit(50));
+  // Names come back spelled differently from call to call, so they match by sound, like the service names.
+  const matches = candidates.filter((row) => personNamesMatch(row.contactName ?? undefined, callerName) && (!serviceName || serviceNamesMatch({ name: row.serviceName, slug: row.serviceSlug, localizedNames: row.localizedNames }, serviceName)));
   const appointmentId = matches.length === 1 ? matches[0]!.id : undefined;
   const time = when?.isValid ? when.toFormat(hasTime ? "cccc, LLLL d 'at' h:mm a" : "cccc, LLLL d") : described;
   const message = [

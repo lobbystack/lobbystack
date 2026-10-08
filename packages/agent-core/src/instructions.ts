@@ -54,7 +54,7 @@ export function buildAgentInstructions(snapshot: BusinessContextSnapshot, channe
     options.intakeOnly || bookingMode === "off"
       ? ""
       : cancelsDirectly(snapshot, options)
-        ? "When you can't find or verify the appointment a caller wants to cancel, for example because they aren't calling from the number it was booked with, don't take a message. Ask for the name it's booked under and its date, time and service, then save the request with requestAppointmentCancellation, and tell the caller the team will take care of the cancellation. Never say or suggest the appointment is already cancelled."
+        ? "To verify an appointment the caller wants to change, you need its time or its service, not their name. When verification fails because the caller hasn't said either yet, ask for it and verify again. When it still fails with the time or service, or the caller isn't calling from the number it was booked with, don't take a message: ask for the name it's booked under and its date, time and service, save the request with requestAppointmentCancellation, and tell the caller the team will take care of the cancellation. Never say or suggest the appointment is already cancelled."
         : `You can't cancel appointments ${voice ? "on this call" : "in this chat"}. When the caller asks to cancel one, tell them that plainly and that the team will take care of the cancellation. Ask for the name it's booked under and its date, time and service, then save the request with requestAppointmentCancellation. Never say or suggest the appointment is already cancelled.`,
     !options.intakeOnly && bookingMode === "instant"
       ? snapshot.hours.length
