@@ -11,16 +11,16 @@ import {
 } from "@lobbystack/shared";
 
 const days = z.number().int().positive().max(365_000);
-const policySchema = z.object({
+const policySchema = z.strictObject({
   approvalId: z.string().trim().min(1).max(200).optional(),
-  categories: z.object({
+  categories: z.strictObject({
     messages: days.optional(),
     transcripts: days.optional(),
     recordings: days.optional(),
     follow_ups: days.optional(),
-  }).strict(),
+  }),
   messageMedia: z.literal("scrub_with_body").optional(),
-}).strict();
+});
 
 export type ContentRetentionPolicy = z.infer<typeof policySchema>;
 export type { ContentRetentionCategory };

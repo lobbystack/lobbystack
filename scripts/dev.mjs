@@ -12,7 +12,7 @@ for (const file of [".env.local", ".env"]) {
 }
 
 const child = spawn(process.execPath, [
-  `${root}/node_modules/concurrently/dist/bin/concurrently.js`,
+  `${root}/node_modules/concurrently/dist/bin/index.js`,
   "-n",
   "admin,worker,landing",
   "pnpm dev:admin",

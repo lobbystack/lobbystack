@@ -6,7 +6,10 @@ export default defineRailway((ctx) => {
     throw new Error("This infrastructure definition manages only the lobbystack staging or production environment.");
   }
   const production = ctx.environment === "production";
-  const productionSource = production ? github("lobbystack/lobbystack", { branch: "main", checkSuites: true }) : undefined;
+  // CI moves `production` to each main commit after its checks and migrations
+  // pass. Waiting on GitHub checks here also waited on Dependabot's jobs, and a
+  // failed one made Railway skip the release.
+  const productionSource = production ? github("lobbystack/lobbystack", { branch: "production", checkSuites: false }) : undefined;
   const stagingAdminUrl = "https://admin-staging-7e92.up.railway.app";
   // Watch paths (gitignore-style, anchored at the repo root) so a service only
   // redeploys when its app, shared workspace packages, or build inputs change.
@@ -20,6 +23,15 @@ export default defineRailway((ctx) => {
     OTEL_EXPORTER_OTLP_HEADERS: preserve(),
     SERVICE_VERSION: preserve(),
   };
+  // AI cost-reporting rates read by packages/agent-core; set only in production.
+  const aiChatPricing = production ? {
+    AI_CHAT_CACHED_INPUT_COST_PER_MILLION_TOKENS: preserve(),
+    AI_CHAT_INPUT_COST_PER_MILLION_TOKENS: preserve(),
+    AI_CHAT_OUTPUT_COST_PER_MILLION_TOKENS: preserve(),
+    AI_CHAT_PRICING_EFFECTIVE_DATE: preserve(),
+    AI_CHAT_PRICING_SOURCE: preserve(),
+    AI_CHAT_PRICING_VERSION: preserve(),
+  } : {};
   const Redis = database(production ? "Redis-production" : "Redis", "redis", { image: "redis:7-alpine", region: "us-east4-eqdc4a", defaultMountPath: "/data" });
   Redis.deploy = { startCommand: "sh -c 'exec redis-server --bind :: 0.0.0.0 --appendonly yes --maxmemory-policy noeviction --requirepass \"$REDIS_PASSWORD\"'", ...(production ? {} : { sleepApplication: true }) };
   Redis.networking = { privateNetworkEndpoint: "redis" };
@@ -45,6 +57,7 @@ export default defineRailway((ctx) => {
     deploy: { restartPolicyMaxRetries: 3, ...(production ? {} : { sleepApplication: true }) },
     env: {
       ...observability,
+      ...aiChatPricing,
       APP_BASE_URL: preserve(),
       DATABASE_URL: preserve(),
       DEPLOYMENT_MODE: preserve(),
@@ -117,6 +130,7 @@ export default defineRailway((ctx) => {
     deploy: { restartPolicyMaxRetries: 3, ...(production ? {} : { sleepApplication: true }) },
     env: {
       ...observability,
+      ...aiChatPricing,
       APP_BASE_URL: preserve(),
       AUTH_TRUSTED_ORIGINS: preserve(),
       BETTER_AUTH_SECRET: preserve(),
@@ -188,6 +202,8 @@ export default defineRailway((ctx) => {
       LOBBYSTACK_FINANCE_EXPORT_DATABASE_URL: preserve(),
       NEXT_PUBLIC_POSTHOG_KEY: preserve(),
       POSTHOG_SOURCEMAP_API_KEY: preserve(),
+      NEXT_PUBLIC_WEB_CALL_ENDPOINT: preserve(),
+      SEND_VERIFICATION_EMAIL_ON_SIGNUP: preserve(),
       // GPT-Live answers browser and phone calls. OpenAI signs its incoming-call
       // webhook with OPENAI_WEBHOOK_SECRET. See docs/voice/runtime.md.
       LIVE_PROTOTYPE_ENABLED: "true",

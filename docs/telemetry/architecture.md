@@ -42,7 +42,7 @@ Client analytics posts to the PostHog managed reverse proxy (`NEXT_PUBLIC_POSTHO
 
 ## Collection
 
-Server runtimes send traces, metrics, and logs to the OTLP base URL configured through `OTEL_EXPORTER_OTLP_ENDPOINT`. They attach headers from `OTEL_EXPORTER_OTLP_HEADERS` and sanitize telemetry before export. An empty endpoint disables server export. Browser events use the public PostHog key and host configured through `NEXT_PUBLIC_POSTHOG_*`.
+Server runtimes send traces, metrics, and logs to the OTLP base URL configured through `OTEL_EXPORTER_OTLP_ENDPOINT`. The logs carry each runtime's `console.warn` and `console.error` output with the active trace ID. Runtimes also keep printing them to stdout. They attach headers from `OTEL_EXPORTER_OTLP_HEADERS` and sanitize telemetry before export. An empty endpoint disables server export. Browser events use the public PostHog key and host configured through `NEXT_PUBLIC_POSTHOG_*`.
 
 ## Validation
 

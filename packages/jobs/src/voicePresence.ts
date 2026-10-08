@@ -31,6 +31,7 @@ function store(): Redis {
   const url = process.env.REDIS_URL;
   if (!url) throw new Error("Voice presence requires REDIS_URL.");
   redis ??= logRedisErrors(new Redis(url, {
+    protocol: 2,
     lazyConnect: true,
     maxRetriesPerRequest: 1,
     enableReadyCheck: true,
@@ -120,5 +121,5 @@ export async function countActiveVoiceCalls(businessId: string): Promise<number>
 }
 
 export async function getVoicePresenceCallIds(businessId: string): Promise<string[]> {
-  return store().zrange(key(businessId), 0, -1);
+  return store().zrange(key(businessId), 0, "-1");
 }

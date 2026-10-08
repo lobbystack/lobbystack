@@ -19,7 +19,8 @@
     "@lobbystack/shared": "workspace:*",
     "@lobbystack/telemetry": "workspace:*",
     "drizzle-orm": "^0.45.3",
-    "luxon": "^3.7.2"
+    "luxon": "^3.7.2",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/luxon": "^3.7.6"

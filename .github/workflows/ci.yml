@@ -147,6 +147,12 @@ jobs:
   images:
     uses: ./.github/workflows/runtime-images.yml
 
+  # Post-merge certification. Releases wait for it, so production only moves
+  # once every check on the commit has passed.
+  replacement:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/replacement-platform.yml
+
   validate:
     if: always()
     needs: [checks, database, e2e, images]
@@ -161,7 +167,7 @@ jobs:
 
   migrate-production:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: validate
+    needs: [validate, replacement]
     runs-on: ubuntu-latest
     timeout-minutes: 45
     environment: production
@@ -169,7 +175,8 @@ jobs:
       group: production-migrations
       cancel-in-progress: false
     permissions:
-      contents: read
+      # Write moves the production branch in the last step.
+      contents: write
     env:
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_PRODUCTION_TOKEN }}
       RAILWAY_PROJECT_ID: af0a130e-7b02-4fc0-94ef-b0ac45a0a0a6
@@ -201,3 +208,11 @@ jobs:
             echo "::error::Blocking superseded release ${GITHUB_SHA}; main is ${remote_sha}."
             exit 1
           fi
+      # Railway deploys admin and worker from the production branch. Moving it
+      # here releases this commit only after every check and migration passed.
+      - name: Release admin and worker
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh api --method PATCH "repos/${GITHUB_REPOSITORY}/git/refs/heads/production"
+          -f sha="$GITHUB_SHA" -F force=true

@@ -31,10 +31,10 @@
     "luxon": "^3.7.2",
     "nodemailer": "^10.0.15",
     "standardwebhooks": "^1.1.1",
-    "twilio": "^5.12.2"
+    "twilio": "^6.1.2"
   },
   "devDependencies": {
     "@types/luxon": "^3.7.6",
-    "@types/nodemailer": "^7.0.4"
+    "@types/nodemailer": "^8.0.2"
   }
 }

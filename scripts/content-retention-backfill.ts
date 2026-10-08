@@ -6,10 +6,10 @@ import { z } from "zod";
 import { contentExpiryForPlan, contentRetentionDays, isContentRetentionEnabled, resolveBusinessBillingPlan } from "../packages/domain/src/server/contentRetentionPolicy";
 
 const optionsSchema = z.object({
-  businessId: z.string().uuid(),
+  businessId: z.guid(),
   category: z.enum(["messages", "transcripts", "recordings"]),
-  before: z.string().datetime({ offset: true }).transform((value) => new Date(value)),
-  after: z.string().uuid().optional(),
+  before: z.iso.datetime({ offset: true }).transform((value) => new Date(value)),
+  after: z.guid().optional(),
   limit: z.coerce.number().int().min(1).max(500).default(100),
   apply: z.boolean().default(false),
   historicalApprovalId: z.string().trim().min(1).max(200).optional(),

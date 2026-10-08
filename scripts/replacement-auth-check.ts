@@ -39,7 +39,7 @@ async function main(): Promise<void> {
     await new Promise((resolve) => setTimeout(resolve, 300));
     const stored = (await auth.db.select({ accountPassword: accounts.password, userHash: users.passwordHash, algorithm: users.passwordAlgorithm }).from(accounts).innerJoin(users, eq(users.id, accounts.userId)).where(eq(users.id, userId)).limit(1))[0];
     assert(stored?.accountPassword?.startsWith("lobbystack-scrypt-v1:"), "Legacy password was not rehashed after sign-in.");
-    assert(stored?.userHash === stored.accountPassword, "User password hash was not synchronized after rehash.");
+    assert(stored?.userHash === stored?.accountPassword, "User password hash was not synchronized after rehash.");
     assert(stored?.algorithm === "lobbystack-scrypt-v1", "Password algorithm was not recorded after rehash.");
 
     const session = await fetch(`${adminBaseUrl}/api/auth/get-session`, { headers: { cookie } });

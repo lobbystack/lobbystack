@@ -19,10 +19,10 @@
   },
   "dependencies": {
     "@lobbystack/contracts": "workspace:*",
-    "bullmq": "^5.71.0",
-    "ioredis": "^5.8.2"
+    "bullmq": "^6.3.11",
+    "ioredis": "^6.0.0"
   },
   "devDependencies": {
-    "vitest": "^4.1.11"
+    "vitest": "^5.0.3"
   }
 }
