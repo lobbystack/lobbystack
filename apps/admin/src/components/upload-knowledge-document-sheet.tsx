@@ -23,6 +23,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { uploadErrorMessage } from "@/lib/storage-upload";
 const ACCEPTED_FILE_TYPES = ".pdf,.docx,.txt,.md,text/plain,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 const MAX_DOCUMENT_UPLOAD_BYTES = 10 * 1024 * 1024;
 
@@ -70,25 +71,6 @@ function resolveFileContentType(file: File): string {
   }
 
   return inferContentTypeFromFileName(file.name);
-}
-
-function getUploadErrorMessage(
-  error: unknown,
-  fallbackMessage: string,
-): string {
-  if (!(error instanceof Error) || !error.message) {
-    return fallbackMessage;
-  }
-
-  if (
-    error.message === "Documents must be 10 MB or smaller." ||
-    error.message === "Supported document types are PDF, DOCX, TXT, and Markdown." ||
-    error.message.startsWith("Knowledge storage limit reached.")
-  ) {
-    return error.message;
-  }
-
-  return fallbackMessage;
 }
 
 export function UploadKnowledgeDocumentSheet({
@@ -169,7 +151,7 @@ export function UploadKnowledgeDocumentSheet({
       resetState();
     } catch (error) {
       setErrorMessage(
-        getUploadErrorMessage(
+        uploadErrorMessage(
           error,
           t("sections.knowledge.uploadValidation.uploadFailed"),
         ),

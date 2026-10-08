@@ -2,10 +2,12 @@ import {
   CopyObjectCommand,
   CreateBucketCommand,
   DeleteObjectCommand,
+  GetBucketCorsCommand,
   GetObjectCommand,
   HeadObjectCommand,
   HeadBucketCommand,
   ListObjectsV2Command,
+  PutBucketCorsCommand,
   PutObjectCommand,
   S3Client,
   type BucketLocationConstraint,
@@ -20,6 +22,8 @@ export type S3StorageConfig = {
   accessKeyId?: string;
   secretAccessKey?: string;
   forcePathStyle?: boolean;
+  /** Origins whose browsers upload straight to presigned URLs. */
+  corsOrigins?: string[];
 };
 
 export class S3StorageProvider {
@@ -27,10 +31,13 @@ export class S3StorageProvider {
   private readonly bucket: string;
   private bucketReady: Promise<void> | undefined;
   private readonly region: string;
+  private readonly corsOrigins: string[];
+  private corsReady: Promise<void> | undefined;
 
   constructor(config: S3StorageConfig) {
     this.region = config.region;
     this.bucket = config.bucket;
+    this.corsOrigins = config.corsOrigins ?? [];
     registerStorageHttpEndpoint(config.endpoint);
     this.client = new S3Client({
       region: config.region,
@@ -67,6 +74,36 @@ export class S3StorageProvider {
       this.bucketReady = undefined;
       throw error;
     }
+    // Only browser uploads need CORS, so server-side operations never wait on it.
+    this.corsReady ??= this.allowBrowserUploads();
+  }
+
+  // Browsers PUT uploads straight to presigned URLs. Without a CORS rule for the
+  // app origin, the preflight fails and the upload shows "Failed to fetch".
+  private async allowBrowserUploads(): Promise<void> {
+    if (!this.corsOrigins.length) return;
+    try {
+      await this.run("configure_cors", async () => {
+        const rules = await this.client.send(new GetBucketCorsCommand({ Bucket: this.bucket })).then((result) => result.CORSRules ?? [], (error: unknown) => {
+          if (error instanceof Error && error.name === "NoSuchCORSConfiguration") return [];
+          throw error;
+        });
+        const missing = this.corsOrigins.filter((origin) => !rules.some((rule) => rule.AllowedMethods?.includes("PUT") && rule.AllowedOrigins?.some((allowed) => allowed === origin || allowed === "*")));
+        if (!missing.length) return;
+        // Keep every existing rule: other origins and tools may rely on them.
+        await this.client.send(new PutBucketCorsCommand({
+          Bucket: this.bucket,
+          // Tigris returns an empty ID on each rule; drop it rather than send it back.
+          CORSConfiguration: { CORSRules: [...rules.map(({ ID, ...rule }) => ID ? { ID, ...rule } : rule), { AllowedOrigins: missing, AllowedMethods: ["PUT"], AllowedHeaders: ["*"], ExposeHeaders: ["ETag"], MaxAgeSeconds: 3600 }] },
+        }));
+      });
+    } catch (error) {
+      // MinIO has no bucket CORS API, and a key without the permission still
+      // serves every server-side operation. Anything else may be transient, so
+      // the next storage operation tries again. The span records each failure.
+      const name = error instanceof Error ? error.name : "";
+      if (name !== "NotImplemented" && name !== "AccessDenied") this.corsReady = undefined;
+    }
   }
 
   async ensureReady(): Promise<void> {
@@ -76,6 +113,7 @@ export class S3StorageProvider {
 
   async createUpload(input: { key: string; contentType: string; length: number; checksum?: string; ifNoneMatch?: boolean }): Promise<{ url: string; headers: Record<string, string> }> {
     await this.ensureBucket();
+    await this.corsReady;
     const command = new PutObjectCommand({
       Bucket: this.bucket,
       Key: input.key,

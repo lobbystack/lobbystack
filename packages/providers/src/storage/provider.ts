@@ -23,7 +23,8 @@ function localStorageRoot(configuredPath: string): string {
   }
 }
 
-export function createStorageProvider(source: NodeJS.ProcessEnv = process.env): RuntimeStorageProvider {
+/** `corsOrigins` lets browsers on those origins upload to the S3 bucket. Only the admin presigns browser uploads. */
+export function createStorageProvider(source: NodeJS.ProcessEnv = process.env, options: { corsOrigins?: string[] } = {}): RuntimeStorageProvider {
   const provider = configuredStorageProvider(source);
   if (provider === "local") {
     return new LocalStorageProvider({
@@ -44,6 +45,7 @@ export function createStorageProvider(source: NodeJS.ProcessEnv = process.env): 
       ...(source.S3_ENDPOINT ? { endpoint: source.S3_ENDPOINT } : {}),
       ...(accessKeyId && secretAccessKey ? { accessKeyId, secretAccessKey } : {}),
       forcePathStyle: source.S3_FORCE_PATH_STYLE === "true",
+      ...(options.corsOrigins ? { corsOrigins: options.corsOrigins } : {}),
     });
   }
   throw new Error(`Unsupported STORAGE_PROVIDER: ${provider}. Expected local or s3.`);
