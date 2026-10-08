@@ -107,4 +107,43 @@ describe("OTel exception redaction", () => {
       await new Promise<void>((resolve, reject) => receiver.close((error) => error ? reject(error) : resolve()));
     }
   });
+
+  it("exports console warnings and errors as redacted logs", async () => {
+    const logBodies: string[] = [];
+    const receiver = createServer(async (request, response) => {
+      let body = "";
+      for await (const chunk of request) body += String(chunk);
+      if (request.url === "/v1/logs") logBodies.push(body);
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end("{}");
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      receiver.once("error", reject);
+      receiver.listen(0, "127.0.0.1", resolve);
+    });
+    const address = receiver.address();
+    if (!address || typeof address === "string") throw new Error("OTLP test receiver did not start.");
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    try {
+      await initializeTelemetry({ endpoint: `http://127.0.0.1:${address.port}`, serviceName: "lobbystack-test" });
+      console.error("[worker] job failed for %s", "person@example.com");
+      console.warn("[admin] slow query");
+
+      await forceFlushTelemetryLogs();
+
+      const exported = logBodies.join("\n");
+      expect(exported).toContain("[worker] job failed for [redacted-email]");
+      expect(exported).toContain("[admin] slow query");
+      expect(exported).not.toContain("person@example.com");
+      expect(consoleError).toHaveBeenCalledWith("[worker] job failed for %s", "person@example.com");
+    } finally {
+      await shutdownTelemetry();
+      consoleError.mockRestore();
+      consoleWarn.mockRestore();
+      await new Promise<void>((resolve, reject) => receiver.close((error) => error ? reject(error) : resolve()));
+    }
+  });
 });

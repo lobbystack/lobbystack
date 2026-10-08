@@ -1,6 +1,12 @@
 "use client"
 
-import type { Table } from "@tanstack/react-table"
+import {
+  createPaginatedRowModel,
+  rowPaginationFeature,
+  tableFeatures,
+  type ReactTable,
+  type RowData,
+} from "@tanstack/react-table"
 import { ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -13,8 +19,14 @@ import {
 } from "@/components/ui/select"
 import { cn, getPageNumbers } from "@/lib/utils"
 
-type DataTablePaginationProps<TData> = {
-  table: Table<TData>
+// Every admin data table only paginates. Manual-pagination tables skip the paginated row model.
+export const paginationFeatures = tableFeatures({
+  rowPaginationFeature,
+  paginatedRowModel: createPaginatedRowModel(),
+})
+
+type DataTablePaginationProps<TData extends RowData> = {
+  table: ReactTable<typeof paginationFeatures, TData>
   className?: string
   labels: {
     rowsPerPage: string
@@ -27,13 +39,13 @@ type DataTablePaginationProps<TData> = {
   }
 }
 
-export function DataTablePagination<TData>({
+export function DataTablePagination<TData extends RowData>({
   table,
   className,
   labels,
 }: DataTablePaginationProps<TData>) {
-  const totalRows = table.options.rowCount ?? table.getPrePaginationRowModel().rows.length
-  const currentPage = table.getState().pagination.pageIndex + 1
+  const totalRows = table.getRowCount()
+  const currentPage = table.state.pagination.pageIndex + 1
   const totalPages = table.getPageCount()
   const pageNumbers = getPageNumbers(currentPage, totalPages)
 
@@ -59,10 +71,10 @@ export function DataTablePagination<TData>({
             onValueChange={(value) => {
               table.setPageSize(Number(value))
             }}
-            value={`${table.getState().pagination.pageSize}`}
+            value={`${table.state.pagination.pageSize}`}
           >
             <SelectTrigger className="h-8 w-[70px]">
-              <SelectValue placeholder={table.getState().pagination.pageSize} />
+              <SelectValue placeholder={table.state.pagination.pageSize} />
             </SelectTrigger>
             <SelectContent side="top">
               {[10, 20, 30, 40, 50].map((pageSize) => (

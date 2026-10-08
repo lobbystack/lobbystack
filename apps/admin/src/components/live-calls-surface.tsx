@@ -7,9 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   flexRender,
-  getCoreRowModel,
-  getPaginationRowModel,
-  useReactTable,
+  useTable,
   type ColumnDef,
   type PaginationState,
 } from "@tanstack/react-table";
@@ -18,7 +16,7 @@ import { useTranslation } from "react-i18next";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { CallRecordingPlayer } from "@/components/audio/call-recording-player";
-import { DataTablePagination } from "@/components/data-table/pagination";
+import { DataTablePagination, paginationFeatures } from "@/components/data-table/pagination";
 import { TableCardSkeleton } from "@/components/loading-skeletons";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
@@ -133,7 +131,7 @@ export function LiveCallsSurface() {
     });
   }, [filteredRows.length]);
 
-  const columns = useMemo<Array<ColumnDef<Call>>>(() => [
+  const columns = useMemo<Array<ColumnDef<typeof paginationFeatures, Call>>>(() => [
     {
       id: "caller",
       accessorFn: (call) => callerName(call, i18n.language, t),
@@ -185,11 +183,10 @@ export function LiveCallsSurface() {
     },
   ], [activeRecordingId, i18n.language, t]);
 
-  const table = useReactTable({
+  const table = useTable({
+    features: paginationFeatures,
     columns,
     data: filteredRows,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     onPaginationChange: setPagination,
     state: { pagination },
   });
@@ -256,7 +253,7 @@ export function LiveCallsSurface() {
                     key={row.id}
                     onClick={() => router.push(`/calls/${row.original.id}`)}
                   >
-                    {row.getVisibleCells().map((cell) => (
+                    {row.getAllCells().map((cell) => (
                       <TableCell className={cell.column.id === "purpose" ? "max-w-0 whitespace-normal" : cell.column.id === "play" ? "w-12 text-right" : undefined} key={cell.id}>
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>

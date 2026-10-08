@@ -8,6 +8,8 @@ export function getRedis(): Redis | undefined {
   if (!url) return undefined;
   if (!redis) {
     redis = new Redis(url, {
+      // ioredis 6 defaults to RESP3. Stay on RESP2, like the worker's connections.
+      protocol: 2,
       connectionName: `${process.env.REDIS_PREFIX ?? "lobbystack"}:admin`,
       connectTimeout: 2_000,
       enableOfflineQueue: false,

@@ -15,7 +15,7 @@ export const twilioSmsInboundSchema = z.object({
   SmsSid: z.string().min(1).max(255).optional(),
   NumMedia: z.coerce.number().int().nonnegative().optional(),
   OptOutType: z.string().max(64).optional(),
-}).refine((value) => Boolean(value.MessageSid ?? value.SmsSid), { message: "A Twilio message SID is required.", path: ["MessageSid"] });
+}).refine((value) => Boolean(value.MessageSid ?? value.SmsSid), { error: "A Twilio message SID is required.", path: ["MessageSid"] });
 
 export const twilioSmsStatusSchema = z.object({
   MessageSid: z.string().min(1).max(255).optional(),
@@ -26,20 +26,20 @@ export const twilioSmsStatusSchema = z.object({
   PriceUnit: z.string().max(16).optional(),
   NumSegments: z.coerce.number().int().nonnegative().optional(),
   RawDlrDoneDate: z.string().max(128).optional(),
-}).refine((value) => Boolean(value.MessageSid ?? value.SmsSid), { message: "A Twilio message SID is required.", path: ["MessageSid"] });
+}).refine((value) => Boolean(value.MessageSid ?? value.SmsSid), { error: "A Twilio message SID is required.", path: ["MessageSid"] });
 
 export const polarWebhookSchema = z.object({
   id: z.string().min(1),
   type: z.string().min(1),
-  timestamp: z.string().datetime().optional(),
+  timestamp: z.iso.datetime().optional(),
   data: z.record(z.string(), z.unknown()),
 });
 
-export const resendWebhookSchema = z.object({
+export const resendWebhookSchema = z.looseObject({
   type: z.string().min(1).max(160),
-  created_at: z.string().datetime().optional(),
+  created_at: z.iso.datetime().optional(),
   data: z.record(z.string(), z.unknown()),
-}).passthrough();
+});
 
 const uploadContentTypes = {
   knowledge: new Set(["text/plain", "text/markdown", "text/x-markdown", "application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "image/jpeg", "image/png", "image/webp", "image/tiff"]),
@@ -57,7 +57,7 @@ export function isAllowedUploadContentType(purpose: string, contentType: string)
 }
 
 export const uploadCreateRequestSchema = z.object({
-  businessId: z.string().uuid(),
+  businessId: z.guid(),
   purpose: z.enum(["knowledge", "attachment", "recording", "export"]),
   fileName: z.string().min(1).max(255),
   contentType: z.string().min(1).max(255),
@@ -71,16 +71,16 @@ export const uploadCreateRequestSchema = z.object({
 export const uploadFinalizeRequestSchema = z.object({
   title: z.string().max(1000).optional(),
   tags: z.array(z.string().max(255)).max(100).optional(),
-  businessId: z.string().uuid(),
-  objectId: z.string().uuid(),
+  businessId: z.guid(),
+  objectId: z.guid(),
   length: z.number().int().positive(),
   checksum: z.string().max(255).optional(),
   contentType: z.string().min(1).max(255),
 });
 
 export const uploadDownloadRequestSchema = z.object({
-  businessId: z.string().uuid(),
-  objectId: z.string().uuid(),
+  businessId: z.guid(),
+  objectId: z.guid(),
   range: z.string().regex(/^bytes=(?:\d+-\d*|-\d+)$/).optional(),
 });
 
@@ -102,12 +102,12 @@ export const realtimeEventTypes = [
 const realtimePayloadSchema = z.record(z.string(), z.unknown());
 
 export const realtimeEventSchema = z.object({
-  id: z.string().uuid(),
+  id: z.guid(),
   type: z.enum(realtimeEventTypes),
-  businessId: z.string().uuid(),
-  entityId: z.string().uuid().optional(),
+  businessId: z.guid(),
+  entityId: z.guid().optional(),
   revision: z.number().int().nonnegative().optional(),
-  occurredAt: z.string().datetime(),
+  occurredAt: z.iso.datetime(),
   payload: realtimePayloadSchema,
   trace: traceContextSchema,
 });
@@ -115,9 +115,9 @@ export const realtimeEventSchema = z.object({
 export type RealtimeEvent = z.infer<typeof realtimeEventSchema>;
 
 export const snapshotSchema = z.object({
-  businessId: z.string().uuid(),
+  businessId: z.guid(),
   version: z.string().min(1),
-  generatedAt: z.string().datetime(),
+  generatedAt: z.iso.datetime(),
   displayName: z.string().min(1),
   legalName: z.string().optional(),
   timezone: z.string().min(1),
@@ -160,12 +160,12 @@ export const snapshotSchema = z.object({
     closeMinutes: z.number().int().min(0).max(1440),
   })),
   closures: z.array(z.object({
-    startsAt: z.string().datetime(),
-    endsAt: z.string().datetime(),
+    startsAt: z.iso.datetime(),
+    endsAt: z.iso.datetime(),
     reason: z.string(),
   })),
   services: z.array(z.object({
-    id: z.string().uuid(),
+    id: z.guid(),
     name: z.string(),
     localizedNames: z.object({ en: z.string().optional(), fr: z.string().optional() }).optional(),
     durationMinutes: z.number().int().positive(),
@@ -174,16 +174,16 @@ export const snapshotSchema = z.object({
   contactChannels: z.object({
     phoneNumber: z.string().optional(),
     smsNumber: z.string().optional(),
-    email: z.string().email().optional(),
+    email: z.email().optional(),
   }),
 });
 
 export const outboxMessageSchema = z.object({
-  id: z.string().uuid(),
+  id: z.guid(),
   topic: z.string().min(1).max(160),
-  businessId: z.string().uuid().nullable(),
+  businessId: z.guid().nullable(),
   aggregateType: z.string().min(1).max(120),
-  aggregateId: z.string().uuid().nullable(),
+  aggregateId: z.guid().nullable(),
   dedupeKey: z.string().min(1).max(255),
   payload: z.record(z.string(), z.unknown()),
   trace: traceContextSchema,
@@ -239,10 +239,10 @@ export type JobType = keyof typeof queueForJobType;
 export const jobTypes = Object.keys(queueForJobType) as [JobType, ...JobType[]];
 
 export const jobEnvelopeSchema = z.object({
-  jobId: z.string().uuid(),
+  jobId: z.guid(),
   type: z.enum(jobTypes),
   queue: z.enum(jobQueues),
-  businessId: z.string().uuid().nullable(),
+  businessId: z.guid().nullable(),
   payload: z.record(z.string(), z.unknown()),
   trace: traceContextSchema,
   idempotencyKey: z.string().min(1).max(255),

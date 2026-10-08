@@ -11,12 +11,14 @@ export default defineConfig({
     },
     outDir: "dist",
     emptyOutDir: true,
-    minify: "esbuild",
     target: "es2018",
     sourcemap: false,
-    rollupOptions: {
+    rolldownOptions: {
       output: {
         extend: true,
+        // Rollup put "use strict" inside the IIFE; Rolldown omits it unless the
+        // source has one, so add it back at the same spot.
+        intro: '"use strict";',
       },
     },
   },

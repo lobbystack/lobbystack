@@ -368,7 +368,7 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
         const registration = registrationWithApplicationType(ctx.path, ctx.body);
         if (registration) return { context: { body: registration } };
         const recoveryPaths = ["/email-otp/request-password-reset", "/email-otp/reset-password"];
-        if (recoveryPaths.includes(ctx.path) && !z.string().email().safeParse(ctx.body?.email).success) {
+        if (recoveryPaths.includes(ctx.path) && !z.email().safeParse(ctx.body?.email).success) {
           throw new APIError("BAD_REQUEST", { message: "Invalid email address." });
         }
         if (["/sign-up/email", "/email-otp/reset-password", "/reset-password", "/change-password"].includes(ctx.path)) {

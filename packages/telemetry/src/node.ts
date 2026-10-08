@@ -8,7 +8,7 @@ import {
   type Span,
   type SpanOptions,
 } from "@opentelemetry/api";
-import { logs, type AnyValue, type AnyValueMap, type Logger } from "@opentelemetry/api-logs";
+import { logs, SeverityNumber, type AnyValue, type AnyValueMap, type Logger } from "@opentelemetry/api-logs";
 import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";
 import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
@@ -20,6 +20,7 @@ import { BatchSpanProcessor, type ReadableSpan, type SpanProcessor } from "@open
 import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
 import { UndiciInstrumentation } from "@opentelemetry/instrumentation-undici";
 import { monitorEventLoopDelay } from "node:perf_hooks";
+import { format } from "node:util";
 
 import { maskString, redactOtelAttributes, redactSignedStorageUrls, shouldRedactKey } from "./redaction.js";
 
@@ -36,6 +37,7 @@ let sdk: NodeSDK | undefined;
 let activeLogRecordProcessors: LogRecordProcessor[] = [];
 let initialized = false;
 let stopRuntimeMetrics: (() => void) | undefined;
+let restoreConsole: (() => void) | undefined;
 const storageHttpOrigins = new Set<string>();
 const forcedExportRedactionKeys = new Set([
   "db.statement",
@@ -159,7 +161,7 @@ export async function initializeTelemetry(
       forceFlush: () => Promise.resolve(),
       shutdown: () => Promise.resolve(),
     },
-    new BatchLogRecordProcessor(new OTLPLogExporter({ url: `${endpoint}/v1/logs` })),
+    new BatchLogRecordProcessor({ exporter: new OTLPLogExporter({ url: `${endpoint}/v1/logs` }) }),
   ];
   activeLogRecordProcessors = logRecordProcessors;
 
@@ -196,13 +198,31 @@ export async function initializeTelemetry(
     const runtimeMetrics = [heap, rss, external, arrayBuffers, eventLoop];
     meter.addBatchObservableCallback(callback, runtimeMetrics);
     stopRuntimeMetrics = () => { delay.disable(); meter.removeBatchObservableCallback(callback, runtimeMetrics); };
+    restoreConsole = forwardConsoleToLogs();
   } catch (error) {
     // Telemetry is deliberately best effort and must never block startup.
     console.warn("[otel] exporter initialization failed", error instanceof Error ? error.message : String(error));
   }
 }
 
+// Console warnings and errors also go out as OTel logs, tied to the active
+// trace. The redacting processor scrubs them like any other log.
+function forwardConsoleToLogs(): () => void {
+  const logger = getLogger("lobbystack.console");
+  const originals = { warn: console.warn, error: console.error };
+  const severities = { warn: SeverityNumber.WARN, error: SeverityNumber.ERROR };
+  for (const level of ["warn", "error"] as const) {
+    console[level] = (...args: unknown[]) => {
+      originals[level].apply(console, args);
+      logger.emit({ severityNumber: severities[level], severityText: level.toUpperCase(), body: format(...args) });
+    };
+  }
+  return () => { Object.assign(console, originals); };
+}
+
 export async function shutdownTelemetry(): Promise<void> {
+  restoreConsole?.();
+  restoreConsole = undefined;
   stopRuntimeMetrics?.();
   stopRuntimeMetrics = undefined;
   const activeSdk = sdk;

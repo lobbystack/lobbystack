@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { jobEnvelopeSchema, jobQueues, jobTypes } from "@lobbystack/contracts";
 
-import { enqueueJob, createWorkerOptions, isKnownJobType, jobEnvelopeSchema as reexportedEnvelopeSchema, jobQueues as reexportedQueues, jobTypes as reexportedTypes, queueForJobType } from "./index";
+import { enqueueJob, createRedisConnection, createWorkerOptions, isKnownJobType, jobEnvelopeSchema as reexportedEnvelopeSchema, jobQueues as reexportedQueues, jobTypes as reexportedTypes, queueForJobType } from "./index";
 
 const UUID_V5_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
@@ -38,6 +38,12 @@ describe("job queue contracts", () => {
       expect(options.prefix).toBe("test-prefix");
       (options.connection as unknown as { disconnect: () => void }).disconnect();
     }
+  });
+
+  it("keeps BullMQ connections on RESP2 with unlimited command retries", () => {
+    const connection = createRedisConnection({ prefix: "test-prefix" });
+    expect(connection.options).toMatchObject({ protocol: 2, maxRetriesPerRequest: null, connectionName: "test-prefix:client" });
+    connection.disconnect();
   });
 });
 

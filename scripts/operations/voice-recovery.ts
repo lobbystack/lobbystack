@@ -23,11 +23,11 @@ import {
  */
 
 const optionsSchema = z.object({
-  businessId: z.string().uuid(),
+  businessId: z.guid(),
   olderThanMinutes: z.coerce.number().int().min(1).max(1_440).default(15),
   limit: z.coerce.number().int().min(1).max(200).default(100),
   apply: z.boolean().default(false),
-  callId: z.string().uuid().optional(),
+  callId: z.guid().optional(),
   evidence: z.enum(["provider-terminal", "operator-attestation"]).optional(),
   providerCallId: z.string().trim().min(1).max(255).optional(),
   providerDurationSeconds: z.coerce.number().int().min(0).max(86_400).optional(),

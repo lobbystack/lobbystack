@@ -1,6 +1,6 @@
 "use client";
 
-import { getCoreRowModel, getPaginationRowModel, useReactTable, type PaginationState } from "@tanstack/react-table";
+import { useTable, type PaginationState } from "@tanstack/react-table";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MoreHorizontal, Pause, Pencil, Play, Plus, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -12,7 +12,7 @@ import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useSetupAction } from "@/lib/use-setup-action";
 import { formatDateTime } from "@/lib/locale";
 import { requestJson } from "@/lib/request-json";
-import { DataTablePagination } from "./data-table/pagination";
+import { DataTablePagination, paginationFeatures } from "./data-table/pagination";
 import { TableCardSkeleton } from "./loading-skeletons";
 import { PageSurface } from "./page-surface";
 import { Badge } from "./ui/badge";
@@ -69,7 +69,7 @@ export function LiveServicesSurface() {
     const rows = catalog.data?.services ?? [];
     return query ? rows.filter((service) => `${service.name} ${service.description ?? ""} ${service.durationMinutes}`.toLowerCase().includes(query)) : rows;
   }, [catalog.data, search]);
-  const table = useReactTable({ data: services, columns: [], getCoreRowModel: getCoreRowModel(), getPaginationRowModel: getPaginationRowModel(), onPaginationChange: setPagination, state: { pagination } });
+  const table = useTable({ features: paginationFeatures, data: services, columns: [], onPaginationChange: setPagination, state: { pagination } });
   const pageRows = table.getRowModel().rows.map((row) => row.original);
 
   useEffect(() => { setPagination((current) => ({ ...current, pageIndex: 0 })); }, [search]);

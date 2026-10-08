@@ -14,7 +14,7 @@ import { z } from "zod";
  */
 
 const optionsSchema = z.object({
-  businessId: z.string().uuid(),
+  businessId: z.guid(),
   number: z.string().regex(/^\+\d{8,15}$/, "Use E.164, for example +15815020392."),
   apply: z.boolean().default(false),
 });

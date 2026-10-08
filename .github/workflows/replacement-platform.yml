@@ -1,13 +1,9 @@
 name: Replacement Platform
 
 on:
-  # PRs use CI's required gate; this workflow adds post-merge certification.
-  push:
-    branches: [main]
-    paths-ignore:
-      - "docs/**"
-      - "*.md"
-      - "mintlify/**"
+  # PRs use CI's required gate. On pushes to main, CI calls this workflow and
+  # releases only after it passes.
+  workflow_call:
   workflow_dispatch:
     inputs:
       target:
