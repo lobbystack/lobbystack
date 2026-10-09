@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
@@ -19,6 +20,7 @@ import {
 } from "@lobbystack/domain";
 import { renewVoicePresenceGateway, updateVoicePresence } from "@lobbystack/jobs";
 import { MAX_PHONE_CALL_MS } from "@lobbystack/shared";
+import { logEvent, recordException, reportError, setSpanAttributes, withCallContext, withOpenSpan, type CallContext, type Span } from "@lobbystack/telemetry/node";
 import OpenAI from "openai";
 
 import { recordLiveCallLatency, recordLiveDelegation, recordLiveDelegationGeneration } from "./liveCallTelemetry";
@@ -194,8 +196,24 @@ function reply(response: ServerResponse, status: number, body: Record<string, un
   response.end(JSON.stringify(body));
 }
 
-function logError(sessionId: string, what: string) {
-  return (error: unknown) => console.error(`[live] ${sessionId} ${what}`, error instanceof Error ? error.message : error);
+// A failure the call gets past. During a call the line carries the call's
+// IDs from its context; outside one, pass them.
+function logFailure(message: string, ids: CallContext = {}) {
+  return (error: unknown) => logEvent("error", message, { ...ids, error });
+}
+
+// A failure that loses part of the call's record: it also goes to error tracking.
+function reportFailure(operation: string, ids: CallContext = {}) {
+  return (error: unknown) => void reportError(error, { operation, ...ids });
+}
+
+const callIds = (call: { sessionId: string; callId: string; businessId: string }): CallContext => ({ sessionId: call.sessionId, callId: call.callId, businessId: call.businessId });
+
+type InCall = ReturnType<typeof AsyncLocalStorage.snapshot>;
+
+// Makes every function in `options` run in the call's context, whatever calls it.
+function inCallContext<T extends object>(inCall: InCall, options: T): T {
+  return Object.fromEntries(Object.entries(options).map(([key, value]) => [key, typeof value === "function" ? (...args: unknown[]) => inCall(value as (...args: unknown[]) => unknown, ...args) : value])) as T;
 }
 
 /**
@@ -204,7 +222,9 @@ function logError(sessionId: string, what: string) {
  * worker holds the sideband for the rest of the call.
  */
 export function createLiveCallHandler(input: { domain: DomainContext; attachLock?: AttachLock }) {
-  const active = new Map<string, { request: AttachRequest; controller: LiveCallController; wrapUp: (reason: LiveCallWrapUp) => Promise<void> }>();
+  // `inCall` runs code from outside a call, such as a shutdown's wrap-up, in
+  // the call's context, so the timers and callbacks it starts keep its IDs.
+  const active = new Map<string, { request: AttachRequest; controller: LiveCallController; wrapUp: (reason: LiveCallWrapUp) => Promise<void>; inCall: InCall }>();
   // Sessions whose attach is still loading, so an overlapping duplicate attach
   // doesn't open a second sideband that would answer the same delegations.
   const starting = new Set<string>();
@@ -225,14 +245,14 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
   let presenceTimer: ReturnType<typeof setInterval> | undefined;
 
   function setPresence(request: AttachRequest, isActive: boolean): void {
-    void updateVoicePresence({ businessId: request.businessId, callId: request.callId, active: isActive, gatewayId: presenceOwner }).catch(logError(request.sessionId, "presence update failed"));
+    void updateVoicePresence({ businessId: request.businessId, callId: request.callId, active: isActive, gatewayId: presenceOwner }).catch(logFailure("live.presence_update_failed", callIds(request)));
   }
 
   // The dashboard shows "unavailable" rather than 0 unless some owner has a
   // fresh heartbeat, so renew it even with no calls running.
   function renewPresence(): void {
-    void renewVoicePresenceGateway(presenceOwner).catch(logError("-", "presence renewal failed"));
-    for (const { request, controller } of active.values()) {
+    void renewVoicePresenceGateway(presenceOwner).catch(logFailure("live.presence_renewal_failed"));
+    for (const { request, controller, inCall } of active.values()) {
       setPresence(request, true);
       // A lock that expired, for example while Redis was down, is taken back
       // before the recovery job reads it as a dead owner. If a recovery got
@@ -240,9 +260,11 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
       // lets the call go and the new owner finishes it.
       void input.attachLock?.eval(RENEW_ATTACH_LOCK, 1, attachLockKey(request.sessionId), presenceOwner, ATTACH_LOCK_MS).then((held) => {
         if (held) return;
-        console.warn(JSON.stringify({ event: "live.detached", sessionId: request.sessionId, callId: request.callId, channel: request.channel, note: "Another worker took the call over, so this one closed its sideband without hanging up." }));
-        controller.detach();
-      }).catch(logError(request.sessionId, "attach lock renewal failed"));
+        inCall(() => {
+          logEvent("warn", "live.detached", { channel: request.channel, note: "Another worker took the call over, so this one closed its sideband without hanging up." });
+          controller.detach();
+        });
+      }).catch(logFailure("live.attach_lock_renewal_failed", callIds(request)));
     }
   }
 
@@ -257,7 +279,7 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
       input.attachLock.set(attachLockKey(sessionId), presenceOwner, "PX", ATTACH_LOCK_MS, "NX").then((result) => result === "OK"),
       new Promise<never>((_resolve, reject) => { waitTimer = setTimeout(() => reject(new Error("Redis didn't answer in time.")), ATTACH_LOCK_WAIT_MS); }),
     ]).catch((error: unknown) => {
-      logError(sessionId, "attach lock unavailable")(error);
+      logFailure("live.attach_lock_unavailable", { sessionId })(error);
       return undefined;
     }).finally(() => clearTimeout(waitTimer));
   }
@@ -358,7 +380,7 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
       return true;
     }
     return await client.live.sessions.hangup(orphan.sessionId, { timeout: RECOVERY_HANGUP_TIMEOUT_MS }).then(() => true, (error: unknown) => {
-      logError(orphan.sessionId, "recovery hangup failed")(error);
+      logFailure("live.recovery_hangup_failed", callIds(orphan))(error);
       return false;
     });
   }
@@ -377,10 +399,26 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
       // OpenAI may still have the session stored, ended or not.
       recording: { sessionId: orphan.sessionId, durationMs: measuredSeconds * 1_000 },
     });
-    console.info(JSON.stringify({ event: "live.orphan_finished", sessionId: orphan.sessionId, callId: orphan.callId, channel: orphan.channel, reason, measuredSeconds, completed }));
+    logEvent("info", "live.orphan_finished", { ...callIds(orphan), channel: orphan.channel, reason, measuredSeconds, completed });
   }
 
+  // The whole call runs in its context, under a `live.call` span that ends
+  // with the call, so its logs, errors, spans and jobs all carry its IDs.
   async function startCall(request: AttachRequest, client: OpenAI, model: NonNullable<ReturnType<typeof createAgentModel>>): Promise<void> {
+    const attributes = { "lobbystack.channel": request.channel, ...(request.resume ? { "lobbystack.resume": true } : {}), ...(request.recovery ? { "lobbystack.recovery": true } : {}) };
+    await withCallContext(callIds(request), async () => await withOpenSpan("live.call", { attributes }, async (span) => {
+      try {
+        await runCall(request, client, model, span);
+      } catch (error) {
+        // The call's close still ends the span.
+        recordException(error, {}, span);
+        throw error;
+      }
+    }));
+  }
+
+  async function runCall(request: AttachRequest, client: OpenAI, model: NonNullable<ReturnType<typeof createAgentModel>>, span: Span): Promise<void> {
+    const inCall = AsyncLocalStorage.snapshot();
     // OpenAI replays only the last 3 seconds to a new sideband, so it connects
     // first and the business loads alongside.
     const snapshotLoad = getCachedBusinessSnapshot(input.domain, { businessId: request.businessId });
@@ -397,7 +435,7 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
     // after the ones already saved. Only a resume reads them here, so a first
     // attach makes no extra query. A failed read numbers from 1, as before.
     const savedTurns: Promise<number> = recovery ? Promise.resolve(recovery.lastSequence)
-      : request.resume ? lastLiveCallSequence(input.domain, call).catch((error: unknown) => { logError(request.sessionId, "saved transcript not read")(error); return 0; })
+      : request.resume ? lastLiveCallSequence(input.domain, call).catch((error: unknown) => { logFailure("live.saved_transcript_unread")(error); return 0; })
       : Promise.resolve(0);
     let end: LiveCallEnd | undefined;
     let controller: LiveCallController | undefined;
@@ -457,12 +495,12 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
       const callerDone = async (conversation: string, abortSignal: AbortSignal) => {
         const startedAt = performance.now();
         const done = await callerIsDone(model, conversation, abortSignal);
-        console.info(JSON.stringify({ event: "live.caller_done_check", sessionId: request.sessionId, done, ms: Math.round(performance.now() - startedAt) }));
+        logEvent("info", "live.caller_done_check", { done, ms: Math.round(performance.now() - startedAt) });
         return done;
       };
       // A recovered call, or one with a saved transcript, is already under
       // way, so the greeting fallback must not fire.
-      return { agent, callerDone, ...(recovery || saved > 0 ? {} : { greeting: snapshot.greeting }) };
+      return { agent, callerDone: (conversation: string, abortSignal: AbortSignal) => inCall(callerDone, conversation, abortSignal), ...(recovery || saved > 0 ? {} : { greeting: snapshot.greeting }) };
     });
 
     const finish = async (summary: LiveCallSummary) => {
@@ -472,7 +510,7 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
         // hangup, leaves the call to the next recovery run. The reserved
         // length bounds those retries: past it, recover() hangs up and finishes.
         if (summary.closeReason === "no_session_events" && (await hangUpOrphan(client, recovery))) return await finishOrphan(recovery, "session_gone");
-        console.warn(JSON.stringify({ event: "live.recovery_deferred", sessionId: request.sessionId, callId: request.callId, closeReason: summary.closeReason, note: "The next recovery run tries again." }));
+        logEvent("warn", "live.recovery_deferred", { closeReason: summary.closeReason, note: "The next recovery run tries again." });
         return;
       }
       // A recovered call ran from its original start. OpenAI's usage in
@@ -486,7 +524,7 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
       if (completed && !recovery) recordLiveCallLatency(input.domain, telemetryCall, summary);
     };
 
-    controller = new LiveCallController({
+    controller = new LiveCallController(inCallContext(inCall, {
       client,
       sessionId: request.sessionId,
       phone,
@@ -494,9 +532,9 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
       silenceTimeoutMs: SILENCE_TIMEOUT_MS,
       maxDurationMs: Math.min(request.maxDurationMs ?? MAX_PHONE_CALL_MS, MAX_PHONE_CALL_MS),
       ...(topUp ? { topUp } : {}),
-      onStarted: () => void markLiveCallMediaStarted(input.domain, call).catch(logError(request.sessionId, "media start not recorded")),
-      onGreeting: (greeting) => console.info(JSON.stringify({ event: "live.greeting", sessionId: request.sessionId, ...greeting })),
-      onTurn: (turn) => void savedTurns.then((saved) => saveLiveCallTurn(input.domain, { ...call, ...turn, sequence: turn.sequence + saved })).catch(logError(request.sessionId, "transcript save failed")),
+      onStarted: () => void markLiveCallMediaStarted(input.domain, call).catch(logFailure("live.media_start_unrecorded")),
+      onGreeting: (greeting) => logEvent("info", "live.greeting", { ...greeting }),
+      onTurn: (turn) => void savedTurns.then((saved) => saveLiveCallTurn(input.domain, { ...call, ...turn, sequence: turn.sequence + saved })).catch(reportFailure("live.transcript_save")),
       onTimeout: (reason) => void wrapUp(reason),
       onTransfer: (state) => {
         // The call counts as transferred from the moment the REFER goes out,
@@ -505,30 +543,33 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
         if (state !== "failed") end = "transferred";
         else if (end === "transferred") end = undefined;
         if (state === "referring") return;
-        transferWrites = transferWrites.then(() => recordLiveCallTransferResult(input.domain, { ...call, state })).catch(logError(request.sessionId, "transfer state not recorded"));
+        transferWrites = transferWrites.then(() => recordLiveCallTransferResult(input.domain, { ...call, state })).catch(logFailure("live.transfer_state_unrecorded"));
       },
       onDelegation: (timing) => {
-        console.info(JSON.stringify({ event: "live.delegation", sessionId: request.sessionId, agentMs: timing.agentMs, totalMs: timing.totalMs, queueMs: timing.queueMs, tools: timing.tools, modelSteps: timing.modelSteps, directAnswer: timing.directAnswer, stepMs: timing.stepMs, toolMs: timing.toolMs, failed: timing.failed, superseded: timing.superseded }));
+        logEvent("info", "live.delegation", { delegationId: timing.delegationId, agentMs: timing.agentMs, totalMs: timing.totalMs, queueMs: timing.queueMs, tools: timing.tools, modelSteps: timing.modelSteps, directAnswer: timing.directAnswer, stepMs: timing.stepMs, toolMs: timing.toolMs, failed: timing.failed, superseded: timing.superseded });
         recordLiveDelegation(input.domain, telemetryCall, timing);
         recordLiveDelegationGeneration(input.domain, telemetryCall, timing);
       },
       onClose: (summary) => {
         active.delete(request.sessionId);
+        setSpanAttributes(span, { "lobbystack.close_reason": summary.closeReason, "lobbystack.end": end, "lobbystack.delegations": summary.delegations.length });
         // A detached call belongs to the worker that took it over, with its
         // presence, attach lock and call record.
         if (summary.closeReason === "detached") {
+          span.end();
           checkIdle();
           return;
         }
         setPresence(request, false);
-        console.info(JSON.stringify({ event: "live.closed", sessionId: summary.sessionId, channel: request.channel, durationMs: summary.durationMs, billedSeconds: summary.billedSeconds, usageConfirmed: summary.usageConfirmed, closeReason: summary.closeReason, end, delegations: summary.delegations.length, outputAudio: summary.outputAudio, inputAudio: summary.inputAudio, lateAttach: summary.lateAttach, firstEventMs: summary.firstEventMs }));
-        const pending = finish(summary).catch(logError(request.sessionId, "finish failed"));
+        logEvent("info", "live.closed", { channel: request.channel, durationMs: summary.durationMs, billedSeconds: summary.billedSeconds, usageConfirmed: summary.usageConfirmed, closeReason: summary.closeReason, end, delegations: summary.delegations.length, outputAudio: summary.outputAudio, inputAudio: summary.inputAudio, lateAttach: summary.lateAttach, firstEventMs: summary.firstEventMs });
+        const pending = finish(summary).catch(reportFailure("live.finish"));
         finishing.add(pending);
         // The lock outlives the finish, so a recovery job can't take an
         // ending call and finalize it with estimated seconds.
         void pending.finally(() => {
           finishing.delete(pending);
           releaseAttachLock(request.sessionId);
+          span.end();
         });
         // After `finishing` has the record, so a drain waits for it.
         checkIdle();
@@ -537,11 +578,11 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
         firstEventTimeoutMs: RECOVERY_EVENT_WAIT_MS,
         onFirstEvent: () => {
           sessionAlive = true;
-          console.info(JSON.stringify({ event: "live.recovered", sessionId: request.sessionId, callId: request.callId, channel: request.channel, gapMs: Date.now() - recovery.lastActivityAt.getTime(), remainingMs: request.maxDurationMs, note: "Delegations during the gap went unanswered." }));
+          logEvent("info", "live.recovered", { channel: request.channel, gapMs: Date.now() - recovery.lastActivityAt.getTime(), remainingMs: request.maxDurationMs, note: "Delegations during the gap went unanswered." });
         },
       } : {}),
-    });
-    active.set(request.sessionId, { request, controller, wrapUp });
+    }));
+    active.set(request.sessionId, { request, controller, wrapUp, inCall });
     setPresence(request, true);
     controller.start();
     // Without the business the call can't go on; the controller ends the
@@ -553,7 +594,7 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
   async function endSession(sessionId: string): Promise<void> {
     const call = active.get(sessionId);
     if (call) {
-      call.controller.endSession();
+      call.inCall(() => call.controller.endSession());
       return;
     }
     if (client) await closeLiveSession(client, sessionId);
@@ -580,11 +621,12 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
         await endSession(sessionId);
         reply(response, 202, { ok: true });
       } catch (error) {
-        logError("-", "end failed")(error);
+        logFailure("live.end_failed")(error);
         reply(response, 500, { error: "End failed." });
       }
       return true;
     }
+    let ids: CallContext = {};
     try {
       const body = parseAttachRequest(await readBody(request));
       // Checked after the body is read, so an attach that passes is in
@@ -598,10 +640,11 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
         reply(response, 400, { error: "sessionId, businessId, callId and channel are required." });
         return true;
       }
+      ids = callIds(body);
       await attach(body);
       reply(response, 202, { ok: true });
     } catch (error) {
-      logError("-", "attach failed")(error);
+      reportFailure("live.attach", ids)(error);
       reply(response, 500, { error: "Attach failed." });
     }
     return true;
@@ -630,7 +673,7 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
       // `active`. New attaches get 503 and recovery skips while draining, so
       // this ends once the last call has said goodbye.
       while (active.size || starting.size) {
-        for (const call of active.values()) void call.wrapUp("service_restart");
+        for (const call of active.values()) call.inCall(() => void call.wrapUp("service_restart"));
         await new Promise((resolve) => setTimeout(resolve, DRAIN_POLL_MS));
       }
       // Calls still running need their presence and attach lock renewed until here.

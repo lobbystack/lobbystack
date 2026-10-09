@@ -1,8 +1,10 @@
 import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import type { LiveTransportIncomingWebhookEvent } from "openai/resources/webhooks";
 
 import { buildPhoneSessionConfig } from "@lobbystack/agent-core/live/session";
 import { finishLiveCall, getCachedBusinessSnapshot, startLivePhoneCall } from "@lobbystack/domain";
+import { addToCallContext, logEvent, reportError, withCallContext } from "@lobbystack/telemetry/node";
 import { getAppDatabase } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
 import { attachWorkerToLiveSession, getLiveClient } from "@/lib/live-prototype";
@@ -15,6 +17,14 @@ export const dynamic = "force-dynamic";
 // sometimes drop the "+", so restore it.
 function phonesFromSipHeader(value: string | undefined): string[] {
   return [...(value ?? "").matchAll(/(?:sip|tel):(\+?\d{6,15})\b/g)].map(([, digits = ""]) => digits.startsWith("+") ? digits : `+${digits.length === 10 ? `1${digits}` : digits}`);
+}
+
+// Twilio's trunk names the call in an X-Twilio-CallSid header on the INVITE.
+// It's saved with the call, so the call can be found in Twilio's console and
+// logs.
+function twilioCallSidFromSipHeaders(headers: Array<{ name: string; value: string }>): string | undefined {
+  const value = headers.find((item) => item.name.toLowerCase() === "x-twilio-callsid")?.value.trim();
+  return value && /^CA[0-9a-f]{32}$/i.test(value) ? value : undefined;
 }
 
 // OpenAI calls this when Twilio routes a call to our project's SIP endpoint.
@@ -33,7 +43,12 @@ export async function POST(request: Request) {
   if (event.type !== "live.transport.incoming") return new NextResponse(null, { status: 200 });
   // created_at has second precision, so this is only a rough delivery delay.
   timing.eventAgeMs = Math.max(0, Date.now() - event.created_at * 1000);
+  const twilioCallSid = twilioCallSidFromSipHeaders(event.data.sip_headers);
+  // Every log line, error report and span from here on carries the call's IDs.
+  return await withCallContext({ sessionId: event.data.session_id, ...(twilioCallSid ? { twilioCallSid } : {}) }, async () => await routeIncomingCall(client, event, timing, twilioCallSid));
+}
 
+async function routeIncomingCall(client: LiveClient, event: LiveTransportIncomingWebhookEvent, timing: Timing, twilioCallSid: string | undefined) {
   const sessionId = event.data.session_id;
   // Twilio trunks rewrite "To" to our OpenAI SIP URI and keep the dialled
   // number in "Diversion". A forwarded call can carry several Diversions, the
@@ -47,7 +62,7 @@ export async function POST(request: Request) {
   const routing = event.data.sip_headers.filter((item) => dialledHeaders.includes(item.name.toLowerCase()));
   if (!candidates.length) {
     // No deployment can route a call without a dialled number.
-    console.warn("[live] incoming call without a dialled number", JSON.stringify({ sessionId, routing }));
+    logEvent("warn", "live.incoming_without_dialled_number", { routing });
     await client.live.sessions.reject(sessionId, { status_code: 404 }).catch(() => undefined);
     return new NextResponse(null, { status: 200 });
   }
@@ -67,23 +82,25 @@ export async function POST(request: Request) {
   } catch (error) {
     // Ownership is unknown: don't reject a call that may belong to the other
     // deployment. A 503 makes OpenAI deliver the event again.
-    console.error("[live] couldn't look up the dialled number", error instanceof Error ? error.message : error);
+    void reportError(error, { operation: "live.incoming.lookup" });
     return new NextResponse(null, { status: 503 });
   }
   if (!businessId || !routed) {
-    console.info("[live] incoming call for a number this deployment doesn't serve", JSON.stringify({ sessionId, routing }));
+    logEvent("info", "live.incoming_not_served", { routing });
     return new NextResponse(null, { status: 200 });
   }
   timing.routedBy = routed.header;
+  addToCallContext({ businessId });
 
   try {
-    return await answerCall(client, { sessionId, businessId, from, to: routed.phone, timing });
+    return await answerCall(client, { sessionId, businessId, from, to: routed.phone, timing, ...(twilioCallSid ? { twilioCallSid } : {}) });
   } catch (error) {
-    console.error("[live] incoming call failed", error instanceof Error ? error.message : error);
+    // Reported in the background: the caller is still waiting.
+    void reportError(error, { operation: "live.incoming" });
     await client.live.sessions.reject(sessionId, { status_code: 503 }).catch(() => undefined);
     return new NextResponse(null, { status: 200 });
   } finally {
-    timing.log(sessionId);
+    timing.log();
   }
 }
 
@@ -99,8 +116,8 @@ function createTiming() {
     mark(step: string) {
       steps[`${step}Ms`] = Math.round(performance.now() - receivedAt);
     },
-    log(sessionId: string) {
-      console.info(JSON.stringify({ event: "live.incoming", sessionId, ...(this.eventAgeMs !== undefined ? { eventAgeMs: this.eventAgeMs } : {}), ...(this.routedBy ? { routedBy: this.routedBy } : {}), ...steps }));
+    log() {
+      logEvent("info", "live.incoming", { eventAgeMs: this.eventAgeMs, routedBy: this.routedBy, ...steps });
     },
   };
 }
@@ -112,11 +129,11 @@ type LiveClient = ReturnType<typeof getLiveClient>;
 // Reserves minutes and records the call before accepting it, the same way the
 // Twilio media path does, so billing and limits behave identically. The
 // snapshot loads at the same time, since the caller is still hearing it ring.
-async function answerCall(client: LiveClient, input: { sessionId: string; businessId: string; from: string | undefined; to: string; timing: Timing }) {
+async function answerCall(client: LiveClient, input: { sessionId: string; businessId: string; from: string | undefined; to: string; timing: Timing; twilioCallSid?: string }) {
   const domain = createWorkerDomainContext();
   const [loaded, started] = await Promise.allSettled([
     getCachedBusinessSnapshot(domain, { businessId: input.businessId }),
-    startLivePhoneCall(domain, { businessId: input.businessId, sessionId: input.sessionId, from: input.from, to: input.to }),
+    startLivePhoneCall(domain, { businessId: input.businessId, sessionId: input.sessionId, from: input.from, to: input.to, ...(input.twilioCallSid ? { twilioCallSid: input.twilioCallSid } : {}) }),
   ]);
   input.timing.mark("record");
   if (started.status === "rejected") {
@@ -130,6 +147,7 @@ async function answerCall(client: LiveClient, input: { sessionId: string; busine
     throw error;
   }
   const call = started.value;
+  addToCallContext({ callId: call.callId });
   if (call.blocked) {
     await client.live.sessions.reject(input.sessionId, { status_code: 603 });
     // Closes the record so the minute reservation doesn't stay open.
@@ -138,8 +156,8 @@ async function answerCall(client: LiveClient, input: { sessionId: string; busine
   }
   const snapshot = loaded.status === "fulfilled" ? loaded.value : null;
   if (!snapshot) {
-    if (loaded.status === "rejected") console.error("[live] couldn't load the snapshot for an incoming call", loaded.reason instanceof Error ? loaded.reason.message : loaded.reason);
-    else console.warn("[live] no published snapshot for incoming call", JSON.stringify({ sessionId: input.sessionId, businessId: input.businessId }));
+    if (loaded.status === "rejected") void reportError(loaded.reason, { operation: "live.incoming.snapshot" });
+    else logEvent("warn", "live.incoming_without_snapshot");
     // A retried delivery may belong to a call the first delivery already
     // answered, so only a first delivery rejects.
     if (call.duplicate) return new NextResponse(null, { status: 503 });

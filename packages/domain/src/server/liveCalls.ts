@@ -61,9 +61,10 @@ const DISPOSITIONS: Record<LiveCallEnd, string> = {
  * how long the call may run on what it reserved so far, and undefined when the
  * plan is unlimited: one slice at first, which the worker tops up with
  * extendLiveCallReservation, and the current total on a retried delivery.
- * Omit `from` when the caller withheld their number.
+ * Omit `from` when the caller withheld their number. `twilioCallSid` is
+ * Twilio's ID for the same call, when its trunk sent one.
  */
-export async function startLivePhoneCall(context: DomainContext, input: { businessId: string; sessionId: string; from?: string | undefined; to: string }) {
+export async function startLivePhoneCall(context: DomainContext, input: { businessId: string; sessionId: string; from?: string | undefined; to: string; twilioCallSid?: string }) {
   const call = await startCall(context, {
     businessId: input.businessId,
     provider: LIVE_CALL_PROVIDER,
@@ -72,6 +73,7 @@ export async function startLivePhoneCall(context: DomainContext, input: { busine
     to: input.to,
     transport: "voice",
     gatewaySessionId: input.sessionId,
+    ...(input.twilioCallSid ? { twilioCallSid: input.twilioCallSid } : {}),
   });
   const maxDurationMs = call.reservedSeconds === undefined ? undefined : Math.min(MAX_PHONE_CALL_MS, Math.floor(call.reservedSeconds * 1_000));
   return { callId: call.callId, conversationId: call.conversationId, blocked: call.blocked, duplicate: call.duplicate, maxDurationMs };

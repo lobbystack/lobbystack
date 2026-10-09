@@ -88,7 +88,7 @@ The script places one call per scenario, one after another, and prints the call'
 PASS trailing-goodbye  CA9f964def1626388da1a76203fefa95e5 completed 28 s, the receptionist hung up
 ```
 
-To see why a call failed, read its transcript on the call's page in the dashboard, and the worker's `live.delegation`, `live.caller_done_check` and `live.closed` log lines for its session.
+To see why a call failed, read its transcript on the call's page in the dashboard, and the worker's `live.delegation`, `live.caller_done_check` and `live.closed` log lines for its session. The call's page shows the session as its gateway session, and `@sessionId:<id>` in Railway's log explorer finds every line about the call.
 
 Twilio bills each call on both accounts, and the business's plan counts its minutes. The receptionist also saves the calling number as a contact on that business.
 

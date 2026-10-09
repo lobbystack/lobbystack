@@ -99,6 +99,19 @@ describe("POST /api/voice/live/session", () => {
     expect(mocks.recordProspectDemoCallError).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ prospectDemoId: "demo_1", callId: "call_1", reason: "web_call_start_failed" }));
   });
 
+  it("reports a failed start with the call's IDs", async () => {
+    for (const key of ["POSTHOG_KEY", "NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN", "POSTHOG_API_KEY"]) vi.stubEnv(key, undefined);
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://admin.lobbystack.test", widgetId: "lobbystack-dashboard-test-call", dashboardTestCall: true });
+    mocks.attach.mockRejectedValue(new Error("Worker attach failed with status 500."));
+    const response = await start("lobbystack-dashboard-test-call");
+    expect(response.status).toBe(500);
+    const lines = () => error.mock.calls.map(([line]) => JSON.parse(String(line)) as Record<string, unknown>);
+    await vi.waitFor(() => expect(lines()).toContainEqual(expect.objectContaining({ message: "exception", operation: "api_response", errorId: response.headers.get("x-error-id"), businessId: "biz_1", sessionId: "live_1", callId: "call_1" })));
+    error.mockRestore();
+    vi.unstubAllEnvs();
+  });
+
   it("falls back to OpenAI's hangup when the worker can't close the session either", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://admin.lobbystack.test", widgetId: "lobbystack-prospect-demo", prospectDemoId: "demo_1", dashboardTestCall: false });

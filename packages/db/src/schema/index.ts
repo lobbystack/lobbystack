@@ -516,6 +516,8 @@ export const calls = pgTable(
     provider: varchar("provider", { length: 32 }).default("twilio").notNull(),
     providerCallId: varchar("provider_call_id", { length: 255 }).notNull(),
     gatewaySessionId: varchar("gateway_session_id", { length: 255 }),
+    // Twilio's SID for the phone leg of a GPT-Live call, when the trunk sent it.
+    twilioCallSid: varchar("twilio_call_sid", { length: 64 }),
     transport: varchar("transport", { length: 32 }).notNull(),
     originUrl: text("origin_url"),
     userAgent: text("user_agent"),

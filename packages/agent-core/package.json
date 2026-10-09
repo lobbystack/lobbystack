@@ -16,6 +16,7 @@
     "@ai-sdk/openai-compatible": "^3.0.62",
     "@lobbystack/domain": "workspace:*",
     "@lobbystack/shared": "workspace:*",
+    "@lobbystack/telemetry": "workspace:*",
     "ai": "^7.0.127",
     "luxon": "^3.7.2",
     "openai": "^7.28.0",

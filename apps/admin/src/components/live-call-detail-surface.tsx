@@ -45,6 +45,7 @@ type Detail = {
     endedAt: string | null;
     providerDurationSeconds: number | null;
     gatewaySessionId: string | null;
+    twilioCallSid?: string | null;
   };
   contact: { id: string; name: string | null; phone: string | null; email: string | null; blockedAt: string | null } | null;
   outcome: string | null;
@@ -217,8 +218,10 @@ function DetailsTab({ detail, marking, onCompleteFollowUp }: { detail: Detail; m
         <DetailSection title={t("detail.details.followUpTitle", { count: Math.max(1, followUps.length) })}>{followUps.length ? <div className="flex flex-col gap-6">{followUps.map((followUp) => <div className="flex flex-col gap-3" key={followUp.id}><p className="type-item-title">{followUp.title}</p><p className="type-body-muted whitespace-pre-line">{followUp.body}</p><div className="flex items-center gap-2 pt-1"><Button disabled={marking !== undefined} onClick={() => onCompleteFollowUp(followUp.id)} size="sm" variant="outline">{marking === followUp.id ? t("detail.details.markingDone") : t("detail.details.markDone")}</Button></div></div>)}</div> : <p className="type-body-muted">{t("detail.details.noFollowUp")}</p>}</DetailSection>
         <DetailSection className="border-t border-border" title={t("detail.details.callInfoTitle")}>
           <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-6 gap-y-3">
-            <dt className="type-meta">{t("detail.details.twilioCallSid")}</dt><dd className="type-technical-value truncate">{detail.call.providerCallId}</dd>
+            {detail.call.twilioCallSid ? <><dt className="type-meta">{t("detail.details.twilioCallSid")}</dt><dd className="type-technical-value truncate">{detail.call.twilioCallSid}</dd></> : null}
             {detail.call.gatewaySessionId ? <><dt className="type-meta">{t("detail.details.gatewaySession")}</dt><dd className="type-technical-value truncate">{detail.call.gatewaySessionId}</dd></> : null}
+            {/* A GPT-Live call's provider ID is its session, and a Twilio call's is its SID: each shows once. */}
+            {detail.call.providerCallId !== detail.call.twilioCallSid && detail.call.providerCallId !== detail.call.gatewaySessionId ? <><dt className="type-meta">{t("detail.details.providerCallId")}</dt><dd className="type-technical-value truncate">{detail.call.providerCallId}</dd></> : null}
             {detail.call.providerDurationSeconds !== null ? <><dt className="type-meta">{t("detail.metadata.duration")}</dt><dd className="type-body">{formatDuration(detail.call.providerDurationSeconds)}</dd></> : null}
           </dl>
         </DetailSection>

@@ -1,6 +1,7 @@
 import {
   type Attributes,
   context,
+  isSpanContextValid,
   propagation,
   SpanStatusCode,
   trace,
@@ -16,15 +17,18 @@ import { resourceFromAttributes } from "@opentelemetry/resources";
 import { BatchLogRecordProcessor, type LogRecordProcessor } from "@opentelemetry/sdk-logs";
 import { PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics";
 import { NodeSDK } from "@opentelemetry/sdk-node";
-import { BatchSpanProcessor, type ReadableSpan, type SpanProcessor } from "@opentelemetry/sdk-trace-base";
+import { BatchSpanProcessor, type ReadableSpan, type Span as SdkSpan, type SpanProcessor } from "@opentelemetry/sdk-trace-base";
 import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
 import { UndiciInstrumentation } from "@opentelemetry/instrumentation-undici";
 import { monitorEventLoopDelay } from "node:perf_hooks";
 import { format } from "node:util";
 
+import { addIdsToCallContext, callContextSpanAttributes, CALL_CONTEXT_SPAN_ATTRIBUTES, currentCallContext, type CallContext } from "./callContext.js";
 import { maskString, redactOtelAttributes, redactSignedStorageUrls, shouldRedactKey } from "./redaction.js";
 
 export { redactOtelAttributes } from "./redaction.js";
+export { currentCallContext, withCallContext, type CallContext } from "./callContext.js";
+export type { Span } from "@opentelemetry/api";
 
 export type TelemetryInitializationOptions = {
   serviceName?: string;
@@ -38,6 +42,9 @@ let activeLogRecordProcessors: LogRecordProcessor[] = [];
 let initialized = false;
 let stopRuntimeMetrics: (() => void) | undefined;
 let restoreConsole: (() => void) | undefined;
+let serviceName = process.env.OTEL_SERVICE_NAME ?? "lobbystack-service";
+// logEvent() exports its own record, so the console forwarder skips its line.
+let writingEventLog = false;
 const storageHttpOrigins = new Set<string>();
 const forcedExportRedactionKeys = new Set([
   "db.statement",
@@ -52,8 +59,30 @@ const forcedExportRedactionKeys = new Set([
   "url.query",
 ]);
 
+// Values under these keys tie telemetry to a call or a job. Phone-number
+// redaction would cut the digit runs out of UUIDs and provider IDs, so a value
+// shaped like one (a UUID, or letters and digits with no spaces, @ or +) is
+// kept whole.
+const identifierKeys = new Set<string>([
+  ...Object.keys(CALL_CONTEXT_SPAN_ATTRIBUTES),
+  ...Object.values(CALL_CONTEXT_SPAN_ATTRIBUTES),
+  "delegationId",
+  "jobId",
+  "lobbystack.delegation_id",
+  "lobbystack.job_id",
+  "outboxId",
+  "traceId",
+]);
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const IDENTIFIER = /^(?=.*[A-Za-z])[A-Za-z0-9_.:-]{1,128}$/;
+
+function isIdentifier(key: string | undefined, value: unknown): value is string {
+  return key !== undefined && identifierKeys.has(key) && typeof value === "string" && (UUID.test(value) || IDENTIFIER.test(value));
+}
+
 export function redactExportAttributes(attributes: Attributes): Attributes {
   return Object.fromEntries(Object.entries(attributes).map(([key, value]) => {
+    if (isIdentifier(key, value)) return [key, value];
     if (forcedExportRedactionKeys.has(key) || shouldRedactKey(key)) {
       return [key, typeof value === "string" && key.toLowerCase().includes("phone") ? maskString(value) : "[redacted]"];
     }
@@ -62,6 +91,7 @@ export function redactExportAttributes(attributes: Attributes): Attributes {
 }
 
 export function redactExportLogValue(value: AnyValue, key?: string): AnyValue {
+  if (isIdentifier(key, value)) return value;
   if (key && (forcedExportRedactionKeys.has(key) || shouldRedactKey(key))) {
     return typeof value === "string" && key.toLowerCase().includes("phone") ? maskString(value) : "[redacted]";
   }
@@ -103,6 +133,18 @@ class RedactingSpanProcessor implements SpanProcessor {
   shutdown(): Promise<void> { return Promise.resolve(); }
 }
 
+// Every span started during a call, from database transactions to provider
+// requests and jobs, carries the call's IDs.
+class CallContextSpanProcessor implements SpanProcessor {
+  onStart(span: SdkSpan): void {
+    span.setAttributes(callContextSpanAttributes(currentCallContext()));
+  }
+
+  onEnd(): void {}
+  forceFlush(): Promise<void> { return Promise.resolve(); }
+  shutdown(): Promise<void> { return Promise.resolve(); }
+}
+
 export function registerStorageHttpEndpoint(endpoint: string | undefined): void {
   if (!endpoint) return;
   try { storageHttpOrigins.add(new URL(endpoint).host.toLowerCase()); } catch { /* Invalid provider configuration is handled by the provider. */ }
@@ -137,6 +179,7 @@ export async function initializeTelemetry(
     return;
   }
   initialized = true;
+  serviceName = options.serviceName ?? process.env.OTEL_SERVICE_NAME ?? "lobbystack-service";
 
   const endpoint = (options.endpoint ?? process.env.OTEL_EXPORTER_OTLP_ENDPOINT)?.replace(/\/$/, "");
   if (!endpoint) {
@@ -145,9 +188,8 @@ export async function initializeTelemetry(
 
   const resource = resourceFromAttributes({
     "service.namespace": "lobbystack",
-    "service.name": options.serviceName ?? process.env.OTEL_SERVICE_NAME ?? "lobbystack-service",
-    // Match the admin's releaseVersion(): SERVICE_VERSION can go stale on Railway.
-    "service.version": process.env.RAILWAY_GIT_COMMIT_SHA || process.env.RAILWAY_DEPLOYMENT_ID || process.env.SERVICE_VERSION || "development",
+    "service.name": serviceName,
+    "service.version": serviceVersion(),
     "deployment.environment": process.env.NODE_ENV ?? "development",
   });
   // The OTLP exporters read OTEL_EXPORTER_OTLP_HEADERS from the environment.
@@ -167,7 +209,7 @@ export async function initializeTelemetry(
 
   sdk = new NodeSDK({
     resource,
-    spanProcessors: [new RedactingSpanProcessor(), new BatchSpanProcessor(new OTLPTraceExporter({ url: `${endpoint}/v1/traces` }))],
+    spanProcessors: [new CallContextSpanProcessor(), new RedactingSpanProcessor(), new BatchSpanProcessor(new OTLPTraceExporter({ url: `${endpoint}/v1/traces` }))],
     logRecordProcessors,
     instrumentations: [new HttpInstrumentation({ ignoreOutgoingRequestHook: isStorageHttpRequest }), new UndiciInstrumentation({ ignoreRequestHook: isStorageHttpRequest })],
     metricReader: new PeriodicExportingMetricReader({
@@ -205,16 +247,24 @@ export async function initializeTelemetry(
   }
 }
 
+// Match the admin's releaseVersion(): SERVICE_VERSION can go stale on Railway.
+function serviceVersion(): string {
+  return process.env.RAILWAY_GIT_COMMIT_SHA || process.env.RAILWAY_DEPLOYMENT_ID || process.env.SERVICE_VERSION || "development";
+}
+
+const SEVERITY = { info: SeverityNumber.INFO, warn: SeverityNumber.WARN, error: SeverityNumber.ERROR } as const;
+
 // Console warnings and errors also go out as OTel logs, tied to the active
-// trace. The redacting processor scrubs them like any other log.
+// trace and the current call. The redacting processor scrubs them like any
+// other log.
 function forwardConsoleToLogs(): () => void {
   const logger = getLogger("lobbystack.console");
   const originals = { warn: console.warn, error: console.error };
-  const severities = { warn: SeverityNumber.WARN, error: SeverityNumber.ERROR };
   for (const level of ["warn", "error"] as const) {
     console[level] = (...args: unknown[]) => {
       originals[level].apply(console, args);
-      logger.emit({ severityNumber: severities[level], severityText: level.toUpperCase(), body: format(...args) });
+      if (writingEventLog) return;
+      logger.emit({ severityNumber: SEVERITY[level], severityText: level.toUpperCase(), body: format(...args), attributes: { ...currentCallContext() } });
     };
   }
   return () => { Object.assign(console, originals); };
@@ -249,6 +299,123 @@ export function getMeter(name = "lobbystack"): ReturnType<typeof metrics.getMete
 
 export function getLogger(name = "lobbystack"): Logger {
   return logs.getLogger(name);
+}
+
+export type LogLevel = keyof typeof SEVERITY;
+
+/** An error's message, redacted, for a log line or an attribute. */
+export function errorText(error: unknown): string {
+  return redactOtelExceptionText(error instanceof Error ? error.message : String(error));
+}
+
+/**
+ * Prints one JSON line with the current call's IDs and the active trace, and
+ * exports the same record as an OTel log. Railway reads `level` and `message`
+ * and makes every other field filterable, such as `@callId:<id>`. A value
+ * under `error` is reduced to its redacted message. Never pass transcript
+ * text, phone numbers or other customer content.
+ */
+export function logEvent(level: LogLevel, message: string, fields: Record<string, unknown> = {}): void {
+  const record: Record<string, unknown> = { ...currentCallContext() };
+  for (const [key, value] of Object.entries(fields)) {
+    if (value !== undefined) record[key] = key === "error" || value instanceof Error ? errorText(value) : value;
+  }
+  const spanContext = trace.getActiveSpan()?.spanContext();
+  if (spanContext && isSpanContextValid(spanContext)) record.traceId = spanContext.traceId;
+  let line: string;
+  try {
+    line = JSON.stringify({ level, message, ...record });
+  } catch {
+    line = JSON.stringify({ level, message, ...currentCallContext() });
+  }
+  writingEventLog = true;
+  try {
+    console[level](line);
+  } finally {
+    writingEventLog = false;
+  }
+  const { level: _level, message: _message, ...attributes } = JSON.parse(line) as AnyValueMap;
+  getLogger("lobbystack.events").emit({ severityNumber: SEVERITY[level], severityText: level.toUpperCase(), body: message, attributes });
+}
+
+/** Adds IDs learned during a call, such as the call ID once the call is saved, to its context and the active span. */
+export function addToCallContext(ids: CallContext): void {
+  addIdsToCallContext(ids);
+  trace.getActiveSpan()?.setAttributes(callContextSpanAttributes(ids));
+}
+
+type ErrorReportClient = { captureExceptionImmediate(error: unknown, distinctId?: string, properties?: Record<string, unknown>): Promise<void> };
+
+let errorReportClient: ErrorReportClient | undefined;
+const reportedErrors = new WeakSet<object>();
+
+// Keep the database diagnosis (SQLSTATE, constraint, table) that Drizzle wraps
+// in `cause`; skip `detail`, which echoes row values, and mask quoted literals
+// in `message` (e.g. `invalid input syntax for type uuid: "<value>"`).
+function databaseCause(error: Error): Record<string, string> | undefined {
+  const cause: unknown = error.cause;
+  if (!cause || typeof cause !== "object") return undefined;
+  const fields: Record<string, string> = {};
+  for (const key of ["name", "message", "code", "severity", "constraint", "table", "column", "routine"] as const) {
+    const value = (cause as Record<string, unknown>)[key];
+    if (typeof value === "string" && value) fields[key] = redactOtelExceptionText(key === "message" ? value.replace(/"[^"]*"/g, '"[value]"') : value);
+  }
+  return Object.keys(fields).length ? fields : undefined;
+}
+
+async function loadErrorReportClient(): Promise<ErrorReportClient | undefined> {
+  const key = process.env.POSTHOG_KEY ?? process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN ?? process.env.POSTHOG_API_KEY;
+  if (!key) return undefined;
+  if (!errorReportClient) {
+    const { PostHog } = await import("posthog-node");
+    errorReportClient = new PostHog(key, { host: process.env.POSTHOG_HOST ?? process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://us.i.posthog.com", flushAt: 1, flushInterval: 0 });
+  }
+  return errorReportClient;
+}
+
+/**
+ * Reports an exception to PostHog error tracking with the current call's IDs,
+ * logs it as an `exception` line, and records it on the active span. The
+ * message, stack and database cause are redacted first. Each error object is
+ * reported once, and reporting never throws.
+ */
+export async function reportError(error: unknown, properties: { operation: string } & Record<string, string | number | boolean | undefined>): Promise<void> {
+  if (error && typeof error === "object") {
+    if (reportedErrors.has(error)) return;
+    reportedErrors.add(error);
+  }
+  const original = error instanceof Error ? error : new Error("Non-Error exception");
+  const safe = new Error(redactOtelExceptionText(original.message));
+  safe.name = original.name;
+  if (original.stack) safe.stack = original.stack.split("\n").slice(0, 30).map(redactOtelExceptionText).join("\n");
+  const cause = databaseCause(original);
+  const report = {
+    ...properties,
+    ...currentCallContext(),
+    service: serviceName,
+    environment: process.env.RAILWAY_ENVIRONMENT_NAME ?? process.env.NODE_ENV,
+    release: serviceVersion(),
+    alertable: true,
+    ...(cause ? { cause } : {}),
+  };
+  logEvent("error", "exception", { ...report, exceptionType: safe.name, error: safe.message, stack: safe.stack });
+  recordException(safe);
+  try {
+    const client = await loadErrorReportClient();
+    await client?.captureExceptionImmediate(safe, `system:${serviceName}`, report);
+  } catch {
+    logEvent("warn", "exception.delivery_failed", { operation: properties.operation });
+  }
+}
+
+/**
+ * Starts a span that outlives the callback, such as a call's, and runs the
+ * callback with it active, so the work the callback starts nests under it.
+ * The caller ends the span.
+ */
+export function withOpenSpan<T>(name: string, options: SpanOptions, callback: (span: Span) => T): T {
+  const span = getTracer().startSpan(name, options);
+  return context.with(trace.setSpan(context.active(), span), callback, undefined, span);
 }
 
 export function injectTraceContext(carrier: TraceContextCarrier): TraceContextCarrier {

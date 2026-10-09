@@ -47,6 +47,25 @@ describe("OTel exception redaction", () => {
     });
   });
 
+  it("keeps call IDs whole on export but still redacts a phone number under an ID key", () => {
+    expect(redactExportAttributes({
+      "lobbystack.call_id": "12345678-1234-4234-8234-123456789012",
+      "lobbystack.session_id": "rtc_u1_20261009123456789",
+      "lobbystack.twilio_call_sid": "CA1234567890abcdef1234567890abcdef",
+      "lobbystack.business_id": "+14165551234",
+    })).toEqual({
+      "lobbystack.call_id": "12345678-1234-4234-8234-123456789012",
+      "lobbystack.session_id": "rtc_u1_20261009123456789",
+      "lobbystack.twilio_call_sid": "CA1234567890abcdef1234567890abcdef",
+      "lobbystack.business_id": "[redacted-phone]",
+    });
+    expect(redactExportLogValue({ callId: "12345678-1234-4234-8234-123456789012", jobId: "4165551234", detail: "rtc_u1_20261009123456789" })).toEqual({
+      callId: "12345678-1234-4234-8234-123456789012",
+      jobId: "[redacted-phone]",
+      detail: "rtc_u1_[redacted-phone]",
+    });
+  });
+
   it("redacts nested structured log bodies before direct export", () => {
     expect(redactExportLogValue({
       event: "upload_failed",

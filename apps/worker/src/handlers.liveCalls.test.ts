@@ -47,8 +47,9 @@ describe("call.saveRecording", () => {
   it("gives up after the last attempt, or at once on any other error", async () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
     await expect(handleJob(recordingJob(LIVE_RECORDING_ATTEMPTS), dependencies(vi.fn(async () => { throw notReady(404); })))).resolves.toEqual({ status: "skipped", entityId: "call_1" });
-    expect(error).toHaveBeenCalledWith("[live] live_1 recording never became available");
+    expect(error).toHaveBeenCalledWith(JSON.stringify({ level: "error", message: "live.recording_never_available", callId: "call_1", sessionId: "live_1", attempt: LIVE_RECORDING_ATTEMPTS }));
     await expect(handleJob(recordingJob(1), dependencies(vi.fn(async () => { throw notReady(401); })))).resolves.toEqual({ status: "skipped", entityId: "call_1" });
+    expect(error).toHaveBeenLastCalledWith(JSON.stringify({ level: "error", message: "live.recording_unavailable", callId: "call_1", sessionId: "live_1", status: 401, error: "401" }));
     expect(retryLiveCallRecording).not.toHaveBeenCalled();
     expect(persistCallRecording).not.toHaveBeenCalled();
   });

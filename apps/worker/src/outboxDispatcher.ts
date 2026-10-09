@@ -4,7 +4,9 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { claimOutboxBatch, markOutboxFailed, markOutboxPublished, type Database } from "@lobbystack/db";
 import { createQueue, enqueueJob, isKnownJobType, queueForJobType, type JobType } from "@lobbystack/jobs";
 import { outboxMessageSchema } from "@lobbystack/contracts";
-import { getMeter, redactOtelExceptionText } from "@lobbystack/telemetry/node";
+import { getMeter, logEvent, redactOtelExceptionText, reportError, withCallContext } from "@lobbystack/telemetry/node";
+
+import { jobCallContext } from "./jobCallContext";
 
 // Resolves early, without throwing, when the signal aborts.
 const waitForNextPoll = (signal: AbortSignal, delayMs: number) => sleep(delayMs, undefined, { signal }).catch(() => undefined);
@@ -22,7 +24,8 @@ export class OutboxDispatcher {
 
   async dispatchOnce(): Promise<number> {
     // The dispatched failures below intentionally emit only OpenTelemetry
-    // counters, never the durable `ops.outbox.flush_failed` product event.
+    // counters, a log line and, for a dead letter, an error report, never the
+    // durable `ops.outbox.flush_failed` product event.
     // This dispatcher connects as `lobbystack_dispatcher`, which has no INSERT
     // grant on `product_events`, and a poll failure has no tenant to associate
     // with. Writing the event here would require an unsafe grant or a
@@ -58,6 +61,12 @@ export class OutboxDispatcher {
         if (deadLettered) {
           this.deadLettered.add(1, attributes);
         }
+        // Logged with the call the message is about. A dead letter's job never
+        // runs, so it's reported too.
+        await withCallContext(jobCallContext(row), async () => {
+          logEvent(deadLettered ? "error" : "warn", "outbox.dispatch_failed", { topic: row.topic, outboxId: row.id, attempt: row.attempts, deadLettered, error });
+          if (deadLettered) await reportError(error, { operation: "outbox.dispatch", topic: row.topic, outboxId: row.id });
+        });
       } finally {
         this.publishDuration.record(performance.now() - started, { topic, outcome });
       }

@@ -160,6 +160,7 @@
       "callInfoTitle": "Call information",
       "twilioCallSid": "Twilio Call SID",
       "gatewaySession": "Gateway session",
+      "providerCallId": "Provider call ID",
       "disposition": "Disposition",
       "providerStatus": "Provider status",
       "noDisposition": "None",

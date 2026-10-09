@@ -29,6 +29,15 @@ describe("POST /api/voice/live/session/end", () => {
     expect(hangup).toHaveBeenCalledWith("live_1");
   });
 
+  it("logs a failed end with the session, and still answers the browser", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    hangup.mockRejectedValue(new Error("Worker end failed with status 500."));
+    const response = await end({ sessionId: "live_1", endToken: liveSessionEndToken("live_1") });
+    expect(response.status).toBe(204);
+    expect(error).toHaveBeenCalledWith(JSON.stringify({ level: "error", message: "live.browser_end_failed", sessionId: "live_1", error: "Worker end failed with status 500." }));
+    error.mockRestore();
+  });
+
   it("refuses a session ID without its token", async () => {
     expect((await end({ sessionId: "live_1" })).status).toBe(400);
     expect(hangup).not.toHaveBeenCalled();

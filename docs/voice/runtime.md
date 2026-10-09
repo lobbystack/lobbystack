@@ -31,7 +31,9 @@ The sideband also receives copies of the call's audio, as OpenAI's [server-side 
 
 Keypad presses on phone calls reach the sideband as `transport.dtmf.received`, an event OpenAI sends only to sidebands. The worker adds each press to the caller's turn as `[pressed 1]`. The saved transcript and the next delegated request both show it, and a press resets the silence timeout.
 
-The worker logs each answer as `live.delegation` with `agentMs`, `totalMs`, `queueMs` (time waiting for an earlier request), `tools`, `modelSteps`, `directAnswer`, `stepMs` (each model step with the tools it called), `toolMs` (time in tools), `failed` and `superseded`. It also records each answer's tokens and cost as an AI generation with the operation `voice.delegation`.
+The worker logs each answer as `live.delegation` with `delegationId`, `agentMs`, `totalMs`, `queueMs` (time waiting for an earlier request), `tools`, `modelSteps`, `directAnswer`, `stepMs` (each model step with the tools it called), `toolMs` (time in tools), `failed` and `superseded`. A request the agent couldn't answer also logs `live.delegation_failed` and goes to error tracking. Each answer is a `live.delegation` span in the call's trace, with a `tool.<name>` span for each tool it called. The worker also records each answer's tokens and cost as an AI generation with the operation `voice.delegation`.
+
+The admin and the worker print each of these events as one JSON line, with its name in `message` and the call's `callId`, `sessionId` and `businessId`, so `@sessionId:<id>` in Railway's log explorer finds every line about a call. See [Follow one call](../telemetry/architecture.md#follow-one-call).
 
 ## Greet the caller before they speak
 
@@ -77,7 +79,7 @@ A Twilio Elastic SIP trunk sends calls for its numbers to your OpenAI project's 
 
 OpenAI delivers the webhook again when the admin doesn't answer it, for example after a crash. A repeated delivery keeps the first one's call record, and its limit is what the call has reserved by then. It accepts the session again, which fails harmlessly if the first delivery did it, and asks the worker to attach as a resume. If no worker holds the session yet, the one that takes it reads the call's saved transcript before it saves a turn. New turns follow the saved ones, and a call that already has a transcript gets no greeting fallback. A first delivery's attach skips that read.
 
-The caller hears ringing until step 4. The admin logs `live.incoming` with the milliseconds from the webhook's arrival to each step (`lookupMs`, `recordMs`, `acceptMs`, `attachMs`) and `eventAgeMs`, a rough delivery delay with one-second precision. `routedBy` names the header whose number picked the business.
+The caller hears ringing until step 4. The admin logs `live.incoming` with the milliseconds from the webhook's arrival to each step (`lookupMs`, `recordMs`, `acceptMs`, `attachMs`) and `eventAgeMs`, a rough delivery delay with one-second precision. `routedBy` names the header whose number picked the business. When the INVITE carries Twilio's `X-Twilio-CallSid` header, the admin saves that call SID on the call and adds it to the call's log lines as `twilioCallSid`, so a call in Twilio's console leads to its logs.
 
 A caller who withholds their number gets a new contact with no number, the same as a browser caller. The agent can't block that contact. The worker also skips the call's Twilio price lookup. The trunk carries every business's calls, so a match on start time alone could pick another business's call.
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { logEvent } from "@lobbystack/telemetry/node";
 import { asApiResponse, readJson } from "@/lib/api-helpers";
 import { endLiveBrowserSession, requireLivePrototype } from "@/lib/live-prototype";
 import { publicCallCorsHeaders, verifyLiveSessionEndToken } from "@/lib/live-web-call";
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
     const endToken = field("endToken");
     if (!sessionId || !endToken) return NextResponse.json({ code: "invalid_request", error: "A sessionId and endToken are required." }, { status: 400, headers: cors });
     if (!verifyLiveSessionEndToken(sessionId, endToken)) return NextResponse.json({ code: "forbidden", error: "That call can't be ended from here." }, { status: 403, headers: cors });
-    await endLiveBrowserSession(sessionId).catch((error: unknown) => console.error("[live] couldn't end a browser session", error instanceof Error ? error.message : error));
+    await endLiveBrowserSession(sessionId).catch((error: unknown) => logEvent("error", "live.browser_end_failed", { sessionId, error }));
     return new NextResponse(null, { status: 204, headers: cors });
   } catch (error) {
     const response = asApiResponse(error);

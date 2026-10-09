@@ -1,6 +1,8 @@
 import { EventEmitter } from "node:events";
+import { createServer } from "node:http";
 
 import { countKnowledgeTokens } from "@lobbystack/domain";
+import { initializeTelemetry, injectTraceContext, shutdownTelemetry } from "@lobbystack/telemetry/node";
 import type { SidebandWSClientOptions } from "openai/resources/live/sideband/ws";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -59,6 +61,14 @@ function setup(options: { phone?: boolean; silenceTimeoutMs?: number; maxDuratio
 }
 
 const sentOfType = (socket: FakeSocket, type: string) => socket.sent.filter((event) => event.type === type) as Array<{ event_id: string; content: string; delegation_id: string | null }>;
+// The JSON lines logEvent() printed through a console spy.
+const logLines = (spy: { mock: { calls: unknown[][] } }) => spy.mock.calls.flatMap(([line]) => {
+  try {
+    return [JSON.parse(String(line)) as Record<string, unknown>];
+  } catch {
+    return [];
+  }
+});
 const greetings = (socket: FakeSocket) => socket.sent.filter((event) => String(event.event_id).startsWith("greeting_")) as Array<{ event_id: string; content: string }>;
 // performance.now() drives the goodbye and attach timing, so it's faked too.
 const fakeTimers = () => vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "Date", "performance"] });
@@ -81,8 +91,15 @@ function startSession(socket: FakeSocket) {
 // What the SDK asks before it retries a dropped sideband connection.
 const retryAttach = (socket: FakeSocket) => socket.options.reconnect!.onReconnecting({ attempt: 1, maxAttempts: 3, delay: 250, closeCode: 1006, parameters: undefined });
 
-beforeEach(() => { sockets.length = 0; });
-afterEach(() => { vi.useRealTimers(); });
+beforeEach(() => {
+  sockets.length = 0;
+  // Error reports go no further than the log.
+  for (const key of ["POSTHOG_KEY", "NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN", "POSTHOG_API_KEY"]) vi.stubEnv(key, undefined);
+});
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllEnvs();
+});
 
 describe("LiveCallController greeting", () => {
   // GPT-Live greets from the command in the session's starting history; the
@@ -306,6 +323,52 @@ describe("LiveCallController delegation", () => {
     expect(sentOfType(socket, "session.commentary.append")).toHaveLength(2);
   });
 
+  it("logs and reports a request the agent fails, with the session and the request's ID", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const { socket, delegations } = setup({ generate: async () => { throw new Error("Model provider refused the request for caller@example.com"); } });
+    delegate(socket, "item_1", "Are you open today?", 1_000);
+    await vi.waitFor(() => expect(delegations).toHaveLength(1));
+    expect(delegations[0]).toMatchObject({ failed: true, answer: "The backend couldn't complete this request." });
+    expect(logLines(error).filter((line) => line.delegationId === "item_1")).toEqual([
+      { level: "error", message: "live.delegation_failed", sessionId: "live_1", delegationId: "item_1", error: "Model provider refused the request for [redacted-email]" },
+      expect.objectContaining({ level: "error", message: "exception", operation: "live.delegation", sessionId: "live_1", delegationId: "item_1", error: "Model provider refused the request for [redacted-email]" }),
+    ]);
+    error.mockRestore();
+  });
+
+  it("runs each request in its own span, with its timing", async () => {
+    const traces: string[] = [];
+    const receiver = createServer(async (request, response) => {
+      let body = "";
+      for await (const chunk of request) body += String(chunk);
+      if (request.url === "/v1/traces") traces.push(body);
+      response.end("{}");
+    });
+    await new Promise<void>((resolve) => receiver.listen(0, "127.0.0.1", resolve));
+    const address = receiver.address();
+    if (!address || typeof address === "string") throw new Error("OTLP test receiver did not start.");
+    try {
+      await initializeTelemetry({ endpoint: `http://127.0.0.1:${address.port}`, serviceName: "lobbystack-test" });
+      let traceparent: string | undefined;
+      const { socket, delegations } = setup({
+        generate: async () => {
+          // The agent's model requests and tools run in the request's span.
+          traceparent = injectTraceContext({}).traceparent;
+          return { text: "We're open until 5.", steps: [{ toolCalls: [{ toolCallId: "call_1", toolName: "getBusinessHours" }], toolResults: [] }, { toolCalls: [], toolResults: [] }] };
+        },
+      });
+      delegate(socket, "item_1", "Are you open today?", 1_000);
+      await vi.waitFor(() => expect(delegations).toHaveLength(1));
+      expect(traceparent).toMatch(/^00-[0-9a-f]{32}-[0-9a-f]{16}-01$/);
+      await shutdownTelemetry();
+      const exported = traces.join("\n");
+      for (const expected of ["live.delegation", "lobbystack.delegation_id", "item_1", "lobbystack.delegation.tools", "getBusinessHours", "lobbystack.delegation.model_steps", "lobbystack.delegation.agent_ms"]) expect(exported).toContain(expected);
+    } finally {
+      await shutdownTelemetry();
+      await new Promise<void>((resolve) => receiver.close(() => resolve()));
+    }
+  });
+
   it("marks an empty reply as failed and answers with the failure", async () => {
     const { socket, delegations } = setup({ generate: async () => reply("  ") });
     delegate(socket, "item_1", "Hello?", 1_000);
@@ -416,11 +479,11 @@ describe("LiveCallController delegation", () => {
 describe("LiveCallController attach", () => {
   // OpenAI's edge sometimes answers the attach with a 504 while the session is fine.
   it("retries an attach that fails before the session sends anything", () => {
-    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const { socket } = setup();
     expect(socket.options.reconnect).toMatchObject({ maxRetries: 3, initialDelay: 250, maxDelay: 1_000 });
     expect(retryAttach(socket)).toBeUndefined();
-    expect(console.warn).toHaveBeenCalledWith("[live] live_1 sideband attach failed with close code 1006, retry 1 of 3");
+    expect(logLines(warn)).toContainEqual({ level: "warn", message: "live.attach_retry", sessionId: "live_1", closeCode: 1006, attempt: 1, maxAttempts: 3 });
   });
 
   // A new connection replays the last 3 seconds, which could repeat a request.
@@ -1057,6 +1120,7 @@ describe("LiveCallController minute top-ups", () => {
 
   it("asks again every 10 seconds after a failure, until the goodbye starts on time", async () => {
     fakeTimers();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const topUp = vi.fn(async (): Promise<number> => { throw new Error("database unavailable"); });
     const { onTimeout } = setup({ maxDurationMs: 300_000, topUp });
@@ -1068,7 +1132,13 @@ describe("LiveCallController minute top-ups", () => {
     expect(onTimeout).toHaveBeenCalledWith("duration_limit");
     await vi.advanceTimersByTimeAsync(60_000);
     expect(topUp).toHaveBeenCalledTimes(6);
-    expect(error).toHaveBeenCalledWith("[live] live_1 minute top-up failed", "database unavailable");
+    // Each failure is logged. The last one leaves the call to end at its limit, so it's reported.
+    expect(logLines(warn).filter((line) => line.message === "live.top_up_failed")).toEqual(Array(5).fill({ level: "warn", message: "live.top_up_failed", sessionId: "live_1", retry: true, error: "database unavailable" }));
+    expect(logLines(error)).toEqual([
+      { level: "error", message: "live.top_up_failed", sessionId: "live_1", retry: false, error: "database unavailable" },
+      expect.objectContaining({ level: "error", message: "exception", operation: "live.top_up", sessionId: "live_1", exceptionType: "Error", error: "database unavailable" }),
+    ]);
+    warn.mockRestore();
     error.mockRestore();
   });
 

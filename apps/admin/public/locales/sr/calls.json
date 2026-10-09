@@ -161,6 +161,7 @@
       "callInfoTitle": "Informacije o pozivu",
       "twilioCallSid": "Twilio Call SID",
       "gatewaySession": "Sesija gatewaya",
+      "providerCallId": "ID poziva kod provajdera",
       "disposition": "Ishod",
       "providerStatus": "Status provajdera",
       "noDisposition": "Nema",

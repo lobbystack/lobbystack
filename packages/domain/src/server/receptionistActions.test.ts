@@ -107,4 +107,13 @@ describe("bookForCaller telemetry", () => {
     expect(mocks.bookAppointment).not.toHaveBeenCalled();
     expect(mocks.recordProductEvent).toHaveBeenCalledWith(context, expect.objectContaining({ name: "appointment.booking_failed", properties: expect.objectContaining({ reason: "service_unavailable" }) }));
   });
+
+  it("tags a call's booking events with the call", async () => {
+    mocks.bookAppointment.mockRejectedValueOnce(new Error("That time is no longer available."));
+    await bookForCaller(context, { ...input, callId: "call_1" });
+    mocks.bookAppointment.mockResolvedValueOnce({ appointmentId: "apt_1", contactId: "contact_1", staffId: "staff_1" });
+    await bookForCaller(context, { ...input, callId: "call_1" });
+    expect(mocks.recordProductEvent).toHaveBeenCalledWith(context, expect.objectContaining({ name: "appointment.booking_failed", properties: expect.objectContaining({ callId: "call_1" }) }));
+    expect(mocks.recordProductEvent).toHaveBeenCalledWith(context, expect.objectContaining({ name: "appointment.booked", properties: expect.objectContaining({ callId: "call_1" }) }));
+  });
 });

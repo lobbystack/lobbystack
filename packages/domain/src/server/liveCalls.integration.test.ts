@@ -299,6 +299,19 @@ describe.skipIf(!testUrl)("GPT-Live phone calls against PostgreSQL", () => {
     });
   });
 
+  it("saves Twilio's call SID when the trunk sent one", async () => {
+    await rollbackTest(async (tx) => {
+      const businessId = await business(tx, { plan: "pro" });
+      const twilioCallSid = "CA0123456789abcdef0123456789abcdef";
+      const [withSid, without] = await asWorker(tx, async (context) => [
+        await startLivePhoneCall(context, { ...call(businessId, "+14165550134"), twilioCallSid }),
+        await startLivePhoneCall(context, call(businessId, "+14165550135")),
+      ]);
+      const rows = await tx.select({ id: calls.id, twilioCallSid: calls.twilioCallSid }).from(calls).where(inArray(calls.id, [withSid!.callId, without!.callId]));
+      expect(Object.fromEntries(rows.map((row) => [row.id, row.twilioCallSid]))).toEqual({ [withSid!.callId]: twilioCallSid, [without!.callId]: null });
+    });
+  });
+
   it("gives a phone call on an unlimited plan the longest call length, and keeps a withheld number out", async () => {
     await rollbackTest(async (tx) => {
       const businessId = await business(tx, { plan: "pro" });

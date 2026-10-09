@@ -68,6 +68,11 @@ vi.mock("openai", () => ({ default: class { live = { sessions: { hangup: mocks.h
 
 import { createLiveCallHandler, liveDrainTimeoutMs, parseAttachRequest, providerSeconds, RELEASE_ATTACH_LOCK, RENEW_ATTACH_LOCK } from "./liveCalls";
 
+/** The JSON lines a console spy received. */
+function logLines(spy: { mock: { calls: unknown[][] } }): Array<Record<string, unknown>> {
+  return spy.mock.calls.map(([line]) => JSON.parse(String(line)) as Record<string, unknown>);
+}
+
 function attachRequest(body: Record<string, unknown>, url = "/internal/live/attach"): IncomingMessage {
   return Object.assign(Readable.from([Buffer.from(JSON.stringify(body))]), { url, method: "POST", headers: { "x-internal-service-token": "token" } }) as unknown as IncomingMessage;
 }
@@ -203,7 +208,7 @@ describe("createLiveCallHandler", () => {
     close();
     await vi.waitFor(() => expect(mocks.finishLiveCall).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ callId: "call_live_done", end: "caller_finished" })));
     const closed = JSON.parse(String(info.mock.calls.find((call) => String(call[0]).includes("\"live.closed\""))![0]));
-    expect(closed).toMatchObject({ event: "live.closed", sessionId: "live_done", end: "caller_finished" });
+    expect(closed).toMatchObject({ level: "info", message: "live.closed", sessionId: "live_done", callId: "call_live_done", end: "caller_finished" });
     expect(closed).not.toHaveProperty("autoHangup");
     info.mockRestore();
   });
@@ -568,7 +573,7 @@ describe("recovering a call whose worker died", () => {
 
     (controller.options.onFirstEvent as () => void)();
     const recovered = JSON.parse(String(info.mock.calls.find((call) => String(call[0]).includes("live.recovered"))![0]));
-    expect(recovered).toMatchObject({ event: "live.recovered", sessionId: "live_orphan", callId: "call_live_orphan", channel: "voice", note: "Delegations during the gap went unanswered." });
+    expect(recovered).toMatchObject({ level: "info", message: "live.recovered", sessionId: "live_orphan", callId: "call_live_orphan", channel: "voice", note: "Delegations during the gap went unanswered." });
     expect(recovered.gapMs).toBeGreaterThanOrEqual(60_000);
 
     // OpenAI's usage covers the whole session; our own measurement runs from the call's original start.
@@ -610,7 +615,7 @@ describe("recovering a call whose worker died", () => {
     await vi.waitFor(() => expect(lock.keys.has("live-attach:live_unreachable")).toBe(false));
     expect(mocks.hangup).not.toHaveBeenCalled();
     expect(mocks.finishLiveCall).not.toHaveBeenCalled();
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining("\"event\":\"live.recovery_deferred\""));
+    expect(logLines(warn)).toContainEqual(expect.objectContaining({ level: "warn", message: "live.recovery_deferred", sessionId: "live_unreachable", callId: "call_live_unreachable", businessId: "biz_1" }));
     // The next run takes it again.
     await expect(handler.recover(orphan("live_unreachable"))).resolves.toBe("attached");
     warn.mockRestore();
@@ -647,7 +652,8 @@ describe("recovering a call whose worker died", () => {
       lock.keys.set("live-attach:live_taken", "worker:recovering");
       await vi.advanceTimersByTimeAsync(10_000);
       expect(controller.detach).toHaveBeenCalledOnce();
-      expect(warn).toHaveBeenCalledWith(expect.stringContaining("\"event\":\"live.detached\""));
+      // Logged in the call's context, though the lock renewal runs outside it.
+      expect(logLines(warn)).toContainEqual(expect.objectContaining({ level: "warn", message: "live.detached", sessionId: "live_taken", callId: "call_taken", businessId: "biz_1" }));
       // The controller closes its sideband and reports the detach.
       mocks.finishLiveCall.mockClear();
       (controller.options.onClose as (summary: unknown) => void)({ sessionId: "live_taken", durationMs: 50_000, delegations: [], usageConfirmed: false, closeReason: "detached" });
@@ -690,7 +696,7 @@ describe("recovering a call whose worker died", () => {
       businessId: "biz_1", callId: "call_live_gone", seconds: 60, measuredSeconds: 60, end: "connection_lost", endedAt: new Date(now - 60_000), channel: "voice",
       recording: { sessionId: "live_gone", durationMs: 60_000 },
     });
-    await vi.waitFor(() => expect(info).toHaveBeenCalledWith(JSON.stringify({ event: "live.orphan_finished", sessionId: "live_gone", callId: "call_live_gone", channel: "voice", reason: "session_gone", measuredSeconds: 60, completed: true })));
+    await vi.waitFor(() => expect(logLines(info)).toContainEqual({ level: "info", message: "live.orphan_finished", sessionId: "live_gone", callId: "call_live_gone", businessId: "biz_1", channel: "voice", reason: "session_gone", measuredSeconds: 60, completed: true }));
     info.mockRestore();
   });
 
@@ -832,7 +838,7 @@ describe("live call latency telemetry", () => {
     const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
     const options = await startCall();
     options.onDelegation!(delegation as never);
-    expect(info).toHaveBeenCalledWith(JSON.stringify({ event: "live.delegation", sessionId: "live_2", agentMs: 1_800, totalMs: 1_812, queueMs: 0, tools: ["getBusinessHours", "getBusinessHours"], modelSteps: 1, directAnswer: true, stepMs: [1_800], toolMs: 40, failed: false, superseded: false }));
+    expect(logLines(info)).toContainEqual({ level: "info", message: "live.delegation", sessionId: "live_2", callId: "call_2", businessId: "biz_1", delegationId: "del_1", agentMs: 1_800, totalMs: 1_812, queueMs: 0, tools: ["getBusinessHours", "getBusinessHours"], modelSteps: 1, directAnswer: true, stepMs: [1_800], toolMs: 40, failed: false, superseded: false });
     info.mockRestore();
   });
 
@@ -931,7 +937,7 @@ describe("live call latency telemetry", () => {
     const signal = new AbortController().signal;
     await expect(setup.callerDone("Caller: Bye!", signal)).resolves.toBe(true);
     expect(mocks.callerIsDone).toHaveBeenCalledWith(mocks.createAgentModel.mock.results.at(-1)!.value, "Caller: Bye!", signal);
-    expect(info).toHaveBeenCalledWith(expect.stringMatching(/^\{"event":"live\.caller_done_check","sessionId":"live_2","done":true,"ms":\d+\}$/));
+    expect(logLines(info)).toContainEqual({ level: "info", message: "live.caller_done_check", sessionId: "live_2", callId: "call_2", businessId: "biz_1", done: true, ms: expect.any(Number) });
     info.mockRestore();
   });
 
@@ -939,7 +945,7 @@ describe("live call latency telemetry", () => {
     const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
     const options = await startCall();
     options.onGreeting!({ step: "sent", attempt: 2, trigger: "retry", sinceAttachMs: 9_200, inputAudioMs: 8_100 } as never);
-    expect(info).toHaveBeenCalledWith(JSON.stringify({ event: "live.greeting", sessionId: "live_2", step: "sent", attempt: 2, trigger: "retry", sinceAttachMs: 9_200, inputAudioMs: 8_100 }));
+    expect(logLines(info)).toContainEqual({ level: "info", message: "live.greeting", sessionId: "live_2", callId: "call_2", businessId: "biz_1", step: "sent", attempt: 2, trigger: "retry", sinceAttachMs: 9_200, inputAudioMs: 8_100 });
     info.mockRestore();
   });
 

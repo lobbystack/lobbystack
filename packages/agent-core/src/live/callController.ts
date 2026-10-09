@@ -3,6 +3,8 @@ import type OpenAI from "openai";
 import type { DelegationCreatedEvent } from "openai/resources/live/live";
 import { SidebandWS } from "openai/resources/live/sideband/ws";
 
+import { logEvent, reportError, setSpanAttributes, withSpan, type Span } from "@lobbystack/telemetry/node";
+
 import type { ReceptionistAgent } from "../agent";
 import { CALL_ENDING, DIRECT_ANSWER_TOOLS, directToolAnswer, fitToAppend, type DirectAnswerStep } from "./directAnswer";
 import { greetingCommand } from "./greeting";
@@ -531,8 +533,11 @@ export class LiveCallController {
     try {
       grantedMs = await this.options.topUp!();
     } catch (error) {
-      console.error(`[live] ${this.options.sessionId} minute top-up failed`, error instanceof Error ? error.message : error);
-      if (!this.ending && !this.finished && Date.now() + TOP_UP_RETRY_MS < this.durationWrapUpAt) this.topUpTimer = setTimeout(() => void this.askForTopUp(), TOP_UP_RETRY_MS);
+      const retry = !this.ending && !this.finished && Date.now() + TOP_UP_RETRY_MS < this.durationWrapUpAt;
+      logEvent(retry ? "warn" : "error", "live.top_up_failed", { sessionId: this.options.sessionId, retry, error });
+      if (retry) this.topUpTimer = setTimeout(() => void this.askForTopUp(), TOP_UP_RETRY_MS);
+      // The last try failed, so the call ends at its limit whatever minutes are left.
+      else if (!this.ending && !this.finished) void reportError(error, { operation: "live.top_up", sessionId: this.options.sessionId });
       return;
     }
     if (!(grantedMs > 0) || this.ending || this.finished) return;
@@ -555,7 +560,7 @@ export class LiveCallController {
   // that, a dropped sideband ends the call.
   private retryAttach(event: { attempt: number; maxAttempts: number; closeCode: number }): { abort: true } | undefined {
     if (this.sessionEventSeen) return { abort: true };
-    console.warn(`[live] ${this.options.sessionId} sideband attach failed with close code ${event.closeCode}, retry ${event.attempt} of ${event.maxAttempts}`);
+    logEvent("warn", "live.attach_retry", { sessionId: this.options.sessionId, closeCode: event.closeCode, attempt: event.attempt, maxAttempts: event.maxAttempts });
     return undefined;
   }
 
@@ -589,7 +594,7 @@ export class LiveCallController {
     const clientEventId = failed?.client_event_id ?? failed?.error?.client_event_id;
     const pending = clientEventId ? this.pendingAppends.get(clientEventId) : undefined;
     if (clientEventId) this.pendingAppends.delete(clientEventId);
-    console.error(`[live] ${this.options.sessionId} sideband error${clientEventId ? ` for ${clientEventId}` : ""}`, error.message);
+    logEvent("error", "live.sideband_error", { sessionId: this.options.sessionId, clientEventId, error });
     if (!pending) return;
     if (pending.kind === "greeting") {
       this.reportGreeting("failed", undefined, error.message);
@@ -889,7 +894,7 @@ export class LiveCallController {
     if (this.transfer !== "referring" && this.transfer !== "referred") return;
     this.transfer = undefined;
     clearTimeout(this.transferTimer);
-    console.error(`[live] ${this.options.sessionId} transfer failed`, message);
+    logEvent("error", "live.transfer_failed", { sessionId: this.options.sessionId, error: message });
     this.send({ type: "session.instructions.append", delegation_id: null, content: TRANSFER_FAILED, event_id: `transfer_failed_${Date.now()}` });
     this.options.onTransfer?.("failed");
   }
@@ -1017,7 +1022,12 @@ export class LiveCallController {
     this.send({ type: "session.thinking.append", delegation_id: delegationId, content: fitToAppend(content), event_id: `progress_${delegationId}_${steps.length}` }, { kind: "update", delegationId });
   }
 
+  // The agent's model requests and tool calls nest under the request's span.
   private async handleDelegation(event: DelegationCreatedEvent): Promise<void> {
+    await withSpan("live.delegation", { attributes: { "lobbystack.delegation_id": event.delegation.id } }, async (span) => await this.answerDelegation(event, span));
+  }
+
+  private async answerDelegation(event: DelegationCreatedEvent, span: Span): Promise<void> {
     const delegationId = event.delegation.id;
     const revision = ++this.latestRevision;
     const receivedAt = performance.now();
@@ -1094,7 +1104,8 @@ export class LiveCallController {
         failed = true;
         ended = endsCall(steps);
         if (this.abort.signal.aborted) return;
-        console.error(`[live] ${this.options.sessionId} delegation ${delegationId} failed`, error instanceof Error ? error.message : error);
+        logEvent("error", "live.delegation_failed", { sessionId: this.options.sessionId, delegationId, error });
+        void reportError(error, { operation: "live.delegation", sessionId: this.options.sessionId, delegationId });
       } finally {
         this.answering = undefined;
         clearTimeout(stillWorking);
@@ -1139,6 +1150,20 @@ export class LiveCallController {
         ...(usage ? { usage } : {}),
       };
       this.delegations.push(timing);
+      setSpanAttributes(span, {
+        "lobbystack.delegation.tools": tools.join(","),
+        "lobbystack.delegation.model_steps": modelSteps,
+        "lobbystack.delegation.direct_answer": directAnswer,
+        "lobbystack.delegation.failed": failed,
+        "lobbystack.delegation.superseded": superseded,
+        "lobbystack.delegation.ended_call": ended,
+        "lobbystack.delegation.transcript_wait_ms": timing.transcriptWaitMs,
+        "lobbystack.delegation.queue_ms": timing.queueMs,
+        "lobbystack.delegation.agent_ms": timing.agentMs,
+        "lobbystack.delegation.tool_ms": timing.toolMs,
+        "gen_ai.usage.input_tokens": usage?.inputTokens,
+        "gen_ai.usage.output_tokens": usage?.outputTokens,
+      });
       this.options.onDelegation?.(timing);
     } finally {
       this.runningDelegations -= 1;

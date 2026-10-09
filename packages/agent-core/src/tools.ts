@@ -22,6 +22,7 @@ import {
   type UnavailableReason,
 } from "@lobbystack/domain";
 import { canTextNumber, isTransferPermitted, normalizeAppointmentChangePolicy, normalizeBookingMode, type BusinessContextSnapshot } from "@lobbystack/shared";
+import { logEvent } from "@lobbystack/telemetry/node";
 import { tool, type ToolSet } from "ai";
 import { DateTime } from "luxon";
 import { z } from "zod";
@@ -160,7 +161,8 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
       // Evidence first. Snippets only fill the slots and tokens it leaves.
       const matches = withSnippetsInBudget(evidence.matches.map((match) => ({ title: match.title, text: match.content })), fallback);
       return { outcome: matches.length ? "found" : evidence.outcome, matches };
-    } catch {
+    } catch (error) {
+      logEvent("warn", "knowledge.search_failed", { businessId, error });
       const matches = withSnippetsInBudget([], fallback);
       return { outcome: matches.length ? "found" : "unavailable", matches };
     }

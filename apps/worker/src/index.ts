@@ -2,7 +2,7 @@ import { assertDatabaseRole, businesses, createDatabaseClient, databaseHealthChe
 import { createBusinessHoursExtractor, createBusinessSummarizer, createCallSummarizer } from "@lobbystack/agent-core";
 import { assertProductionSecrets, isMaintenanceMode } from "@lobbystack/shared";
 import type { OnboardingFollowupSender } from "@lobbystack/domain";
-import { createQueue, createRedisConnection, createWorkerOptions, enqueueJob, isKnownJobType, jobQueues, type JobEnvelope, type JobQueue } from "@lobbystack/jobs";
+import { createQueue, createRedisConnection, createWorkerOptions, enqueueJob, jobQueues, type JobEnvelope, type JobQueue } from "@lobbystack/jobs";
 import { createEmbeddingProvider } from "@lobbystack/providers/ai/embeddingProvider";
 import { FirecrawlProvider } from "@lobbystack/providers/crawling/firecrawl";
 import { SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
@@ -10,14 +10,14 @@ import { GoogleCalendarProvider } from "@lobbystack/providers/google/calendar";
 import { PolarBillingProvider } from "@lobbystack/providers/polar/polarBilling";
 import { createStorageProvider } from "@lobbystack/providers/storage/provider";
 import { TwilioProvider } from "@lobbystack/providers/twilio/twilioProvider";
-import { getMeter, initializeTelemetry, redactOtelExceptionText, shutdownTelemetry, withSpan } from "@lobbystack/telemetry/node";
-import { redactJobError } from "./redactJobError";
+import { getMeter, initializeTelemetry, redactOtelExceptionText, shutdownTelemetry } from "@lobbystack/telemetry/node";
 import { Worker } from "bullmq";
 import { and, eq, isNull } from "drizzle-orm";
 import OpenAI from "openai";
 
-import { handleJob, type WorkerDependencies } from "./handlers";
+import type { WorkerDependencies } from "./handlers";
 import { startHealthServer } from "./health";
+import { createJobProcessor } from "./jobProcessor";
 import { createLiveCallHandler, liveDrainTimeoutMs } from "./liveCalls";
 import { OutboxDispatcher } from "./outboxDispatcher";
 import { configureSchedulers } from "./scheduler";
@@ -238,34 +238,11 @@ async function main(): Promise<void> {
     },
   };
   const workers = jobQueues.map((queueName) => {
-    const meter = getMeter("lobbystack-worker");
-    const duration = meter.createHistogram("lobbystack.worker.job_duration_ms", { unit: "ms" });
-    const wait = meter.createHistogram("lobbystack.worker.job_wait_ms", { unit: "ms" });
     const queue = queues.get(queueName);
     if (!queue) {
       throw new Error(`Queue ${queueName} is not configured.`);
     }
-    const worker = new Worker<JobEnvelope>(queueName, async (job) => await withSpan(`job.${job.data.type}`, { attributes: { "messaging.system": "bullmq", "messaging.destination.name": queueName, "lobbystack.job_type": job.data.type } }, async () => {
-      state.activeJobs += 1;
-      const started = performance.now();
-      let outcome = "success";
-      const type = isKnownJobType(job.data.type) ? job.data.type : "unknown";
-      wait.record(Math.max(0, Date.now() - job.timestamp - (job.delay ?? 0)), { queue: queueName, type });
-      try {
-        const maxAttempts = job.opts.attempts ?? 1;
-        return await handleJob(job.data, dependencies, {
-          isFinalAttempt: job.attemptsMade + 1 >= maxAttempts,
-          ...(job.id ? { queueJobId: job.id } : {}),
-          queuedAtMs: job.timestamp,
-        });
-      } catch (error) {
-        outcome = "error";
-        throw redactJobError(error);
-      } finally {
-        duration.record(performance.now() - started, { queue: queueName, type, outcome });
-        state.activeJobs -= 1;
-      }
-    }), createWorkerOptions(queueName));
+    const worker = new Worker<JobEnvelope>(queueName, createJobProcessor(queueName, dependencies, state), createWorkerOptions(queueName));
     // BullMQ emits connection problems as "error" events; without a listener
     // Node treats one as fatal.
     worker.on("error", (error) => console.error(JSON.stringify({ event: "worker.error", queue: queueName, message: redactOtelExceptionText(error.message) })));

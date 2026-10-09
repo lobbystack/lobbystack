@@ -26,7 +26,25 @@ Both transports validate required properties. Development and self-hosted runtim
 
 ## Propagate traces
 
-Admin and worker requests propagate W3C trace context. Queue jobs retain correlation identifiers without storing customer content in telemetry fields.
+Admin and worker requests propagate W3C trace context. Queue jobs retain correlation identifiers without storing customer content in telemetry fields. The outbox stores the trace that queued each job, and the worker runs the job as a child span in that trace.
+
+## Follow one call
+
+Log lines, error reports, spans and jobs about a call carry its IDs:
+
+- `callId`: the call's row in `calls`
+- `sessionId`: the GPT-Live session, which is also the call's provider ID
+- `businessId`
+- `twilioCallSid`: Twilio's call SID, on the admin's lines for a phone call whose SIP INVITE carries `X-Twilio-CallSid`. The call's record and its details page keep it too.
+
+The admin sets them when the phone webhook or a browser call starts, and the worker sets them for each call it runs and for each job whose payload names a call (`withCallContext()` in `packages/telemetry`). Work started inside, timers and sockets included, keeps them.
+
+- **Log lines**: `logEvent()` prints one JSON line with `level`, `message`, the IDs, `traceId` and the event's own fields, and exports the same record as an OTel log. Railway's log explorer reads `level` and `message`, and filters on any other field, for example `@callId:<id>` or `@sessionId:<id> @level:error`.
+- **Spans**: every span started during a call carries `lobbystack.call_id`, `lobbystack.session_id`, `lobbystack.business_id` and `lobbystack.twilio_call_sid`. A worker call is one trace: `live.call`, a `live.delegation` span for each request the agent answers, a `tool.<name>` span for each tool call, and the database and provider spans under them.
+- **Errors**: `reportError()` sends an exception to PostHog Error Tracking with the IDs, logs it as an `exception` line, and records it on the active span. See [Configure error tracking alerts](provider-failure-error-tracking.md).
+- **Jobs**: each failed attempt logs `job.failed` with `jobType`, `attempt`, `maxAttempts` and `final`. The last attempt is also reported. An outbox message the dispatcher can't queue logs `outbox.dispatch_failed`, and one it gives up on is reported.
+
+Export keeps these ID values whole, while it still redacts phone numbers and email addresses everywhere else.
 
 ## Privacy
 
@@ -42,7 +60,7 @@ Client analytics posts to the PostHog managed reverse proxy (`NEXT_PUBLIC_POSTHO
 
 ## Collection
 
-Server runtimes send traces, metrics, and logs to the OTLP base URL configured through `OTEL_EXPORTER_OTLP_ENDPOINT`. The logs carry each runtime's `console.warn` and `console.error` output with the active trace ID. Runtimes also keep printing them to stdout. They attach headers from `OTEL_EXPORTER_OTLP_HEADERS` and sanitize telemetry before export. An empty endpoint disables server export. Browser events use the public PostHog key and host configured through `NEXT_PUBLIC_POSTHOG_*`.
+Server runtimes send traces, metrics, and logs to the OTLP base URL configured through `OTEL_EXPORTER_OTLP_ENDPOINT`. The logs carry each runtime's `logEvent()` records, and its `console.warn` and `console.error` output with the active trace ID and the current call's IDs. Runtimes also keep printing them to stdout. They attach headers from `OTEL_EXPORTER_OTLP_HEADERS` and sanitize telemetry before export. An empty endpoint disables server export. Browser events use the public PostHog key and host configured through `NEXT_PUBLIC_POSTHOG_*`.
 
 ## Validation
 

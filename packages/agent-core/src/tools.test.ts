@@ -215,9 +215,11 @@ describe("searchKnowledge", () => {
   });
 
   it("returns no snippets for a query of only common words", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const snippets = ["Welcome", "Team", "History"].map(chatter);
     await expect(search("what are the", snippets, evidence([]))).resolves.toEqual({ outcome: "empty", titles: [] });
     await expect(search("what are the", snippets, new Error("search down"))).resolves.toEqual({ outcome: "unavailable", titles: [] });
+    warn.mockRestore();
   });
 
   it("adds relevant snippets after the evidence, strongest first, within six matches", async () => {
@@ -232,10 +234,14 @@ describe("searchKnowledge", () => {
     await expect(search("Parking fees at the downtown clinic", snippets, evidence(["Garage", "Rates", "Map", "Lot", "Street"]))).resolves.toEqual({ outcome: "found", titles: ["Garage", "Rates", "Map", "Lot", "Street", "Getting here"] });
   });
 
-  it("falls back to relevant snippets when knowledge search fails", async () => {
+  it("falls back to relevant snippets when knowledge search fails, and logs the failure", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const snippets = [chatter("Welcome"), snippet("Parking", "Parking is available behind the building.")];
     await expect(search("Where can I park? Is parking free?", snippets, new Error("search down"))).resolves.toEqual({ outcome: "found", titles: ["Parking"] });
     await expect(search("Do you take insurance cards?", [snippet("Parking", "Parking is available behind the building.")], new Error("search down"))).resolves.toEqual({ outcome: "unavailable", titles: [] });
+    const failed = { level: "warn", message: "knowledge.search_failed", businessId: demoSnapshot.businessId, error: "search down" };
+    expect(warn.mock.calls.map(([line]) => JSON.parse(String(line)))).toEqual([failed, failed]);
+    warn.mockRestore();
   });
 
   it("counts plurals and longer endings, but not unrelated words that share a short prefix", async () => {

@@ -182,9 +182,11 @@ export async function bookForCaller(
   input: { businessId: string; serviceName: string; startsAt: string; timezone: string; contactPhone: string; contactName?: string; channel: ReceptionistChannel; callId?: string },
 ) {
   const distinctId = getPostHogDistinctIdForBusinessSystem(input.businessId);
+  // The call the booking was made on, so its events show with the call's.
+  const call = input.callId ? { callId: input.callId } : {};
   const service = await resolveActiveService(context, input.businessId, input.serviceName);
   if (!service) {
-    await recordProductEventBestEffort(context, { name: "appointment.booking_failed", businessId: input.businessId, distinctId, properties: { reason: "service_unavailable", requestedServiceName: input.serviceName, channel: input.channel, sourceChannel: input.channel } });
+    await recordProductEventBestEffort(context, { name: "appointment.booking_failed", businessId: input.businessId, distinctId, properties: { reason: "service_unavailable", requestedServiceName: input.serviceName, channel: input.channel, sourceChannel: input.channel, ...call } });
     return { ok: false as const, reason: "Service is not available." };
   }
   try {
@@ -198,11 +200,11 @@ export async function bookForCaller(
       ...(input.callId ? { callId: input.callId } : {}),
       ...(input.contactName ? { contactName: input.contactName } : {}),
     });
-    await recordProductEventBestEffort(context, { name: "appointment.booked", businessId: input.businessId, distinctId, properties: { appointmentId: appointment.appointmentId, channel: input.channel, serviceId: service.id, sourceChannel: input.channel } });
+    await recordProductEventBestEffort(context, { name: "appointment.booked", businessId: input.businessId, distinctId, properties: { appointmentId: appointment.appointmentId, channel: input.channel, serviceId: service.id, sourceChannel: input.channel, ...call } });
     return { ok: true as const, appointmentId: appointment.appointmentId, serviceName: service.name, startsAt: input.startsAt };
   } catch (error) {
     const reason = bookingFailureReason(error);
-    await recordProductEventBestEffort(context, { name: "appointment.booking_failed", businessId: input.businessId, distinctId, properties: { reason, serviceId: service.id, requestedServiceName: input.serviceName, channel: input.channel, sourceChannel: input.channel } });
+    await recordProductEventBestEffort(context, { name: "appointment.booking_failed", businessId: input.businessId, distinctId, properties: { reason, serviceId: service.id, requestedServiceName: input.serviceName, channel: input.channel, sourceChannel: input.channel, ...call } });
     const unavailable = unavailableReasonOf(error);
     return unavailable
       ? { ok: false as const, reason: UNAVAILABLE_REASON_TEXT[unavailable], unavailableReason: unavailable }

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { buildBrowserSessionConfig } from "@lobbystack/agent-core/live/session";
 import { finishLiveCall, getWebVoiceBillingAllowance, recordProspectDemoCallError, recordProspectDemoCallStarted, recordVoiceSnapshotLoaded, startLiveWebCall } from "@lobbystack/domain";
 import type { BusinessContextSnapshot } from "@lobbystack/shared";
+import { addToCallContext, logEvent, withCallContext } from "@lobbystack/telemetry/node";
 import { asApiResponse, readJson } from "@/lib/api-helpers";
 import { loadValidBusinessSnapshot } from "@/lib/business-snapshot";
 import { createWorkerDomainContext } from "@/lib/domain-context";
@@ -64,6 +65,11 @@ export async function OPTIONS(request: Request) {
  * OpenAI's answer.
  */
 export async function POST(request: Request) {
+  // Logs and the error report carry the call's IDs as they become known.
+  return await withCallContext({}, () => startBrowserCall(request));
+}
+
+async function startBrowserCall(request: Request) {
   const cors = publicCallCorsHeaders(request.headers.get("origin"));
   try {
     requireLivePrototype();
@@ -73,6 +79,7 @@ export async function POST(request: Request) {
     const access = await resolveLiveWebCallAccess(request, body);
     timing.mark("access");
     if (!("businessId" in access)) return denied(access.status, access.code, cors);
+    addToCallContext({ businessId: access.businessId });
 
     const domain = createWorkerDomainContext();
     const ipHash = requestIpHash(request);
@@ -104,6 +111,7 @@ export async function POST(request: Request) {
     const live = await client.live.create({ session: buildBrowserSessionConfig(snapshot), transport: { type: "webrtc", sdp: body.sdp } });
     timing.mark("openai");
     const sessionId = live.session.id;
+    addToCallContext({ sessionId });
     let callId: string | undefined;
     try {
       const call = await startLiveWebCall(domain, {
@@ -118,6 +126,7 @@ export async function POST(request: Request) {
         ...(request.headers.get("user-agent") ? { userAgent: request.headers.get("user-agent")!.slice(0, 512) } : {}),
       });
       callId = call.callId;
+      addToCallContext({ callId });
       timing.mark("record");
       await Promise.all([
         access.prospectDemoId ? recordProspectDemoCallStarted(domain, { businessId: access.businessId, prospectDemoId: access.prospectDemoId, callId, channel: "web_voice", provider: "openai_live" }) : undefined,
@@ -139,7 +148,7 @@ export async function POST(request: Request) {
       // is the fallback.
       await endLiveBrowserSession(sessionId)
         .catch(() => client.live.sessions.hangup(sessionId))
-        .catch((endError: unknown) => console.error("[live] couldn't end a browser session after a failed start", endError instanceof Error ? endError.message : endError));
+        .catch((endError: unknown) => logEvent("error", "live.browser_start_cleanup_failed", { error: endError }));
       // OpenAI bills 15 seconds for creating a WebRTC session, even one that never starts.
       if (callId) await finishLiveCall(domain, { businessId: access.businessId, callId, seconds: WEBRTC_CREATION_SECONDS, measuredSeconds: 0, end: "setup_failed", channel: "web_voice" }).catch(() => undefined);
       if (access.prospectDemoId) await recordProspectDemoCallError(domain, { businessId: access.businessId, prospectDemoId: access.prospectDemoId, ...(callId ? { callId } : {}), reason: "web_call_start_failed" }).catch(() => undefined);

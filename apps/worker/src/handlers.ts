@@ -21,7 +21,7 @@ import type OpenAI from "openai";
 import { extractDocumentText } from "./documentExtraction";
 import { isLivePrototypeEnabled, type LiveRecoveryOutcome } from "./liveCalls";
 import { reconcileBusinessCalendar, syncAppointmentCalendar, type CalendarOperations } from "./calendarJobs";
-import { getMeter } from "@lobbystack/telemetry/node";
+import { getMeter, logEvent, reportError, withCallContext } from "@lobbystack/telemetry/node";
 import { bucketOutboxBacklog, getPostHogDistinctIdForBusinessSystem, redactTelemetryProperties, type TelemetryProperties } from "@lobbystack/telemetry";
 
 const ragMeter = getMeter("lobbystack-rag");
@@ -607,9 +607,9 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
             await retryLiveCallRecording(dependencies.domain, { businessId, callId, sessionId, durationMs, attempt: attempt + 1 });
             return { status: "skipped", entityId: `${callId}:retry:${attempt + 1}` };
           }
-          console.error(`[live] ${sessionId} recording never became available`);
+          logEvent("error", "live.recording_never_available", { callId, sessionId, attempt });
         } else {
-          console.error(`[live] ${sessionId} recording unavailable`, error instanceof Error ? error.message : error);
+          logEvent("error", "live.recording_unavailable", { callId, sessionId, status, error });
         }
         return { status: "skipped", entityId: callId };
       }
@@ -625,8 +625,10 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       const open = await listOpenLiveCalls(dependencies.domain, { businessId, startedBefore: new Date(Date.now() - ORPHANED_LIVE_CALL_MIN_AGE_MS) });
       const outcomes: string[] = [];
       for (const call of open) {
-        outcomes.push(await dependencies.recoverLiveCall(call).catch((error: unknown) => {
-          console.error(`[live] ${call.sessionId} recovery failed`, error instanceof Error ? error.message : error);
+        // Each recovery runs in its call's context, so a re-attached call keeps its IDs.
+        const ids = { sessionId: call.sessionId, callId: call.callId, businessId: call.businessId };
+        outcomes.push(await withCallContext(ids, async () => await dependencies.recoverLiveCall!(call)).catch(async (error: unknown) => {
+          await reportError(error, { operation: "live.recover", ...ids });
           return "failed";
         }));
       }

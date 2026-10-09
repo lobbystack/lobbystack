@@ -1,10 +1,39 @@
-import { stepCountIs, ToolLoopAgent, type LanguageModel, type StopCondition, type ToolSet } from "ai";
+import { stepCountIs, ToolLoopAgent, type LanguageModel, type StopCondition, type ToolExecutionOptions, type ToolSet } from "ai";
+
+import { reportError, withOpenSpan } from "@lobbystack/telemetry/node";
 
 import { buildAgentInstructions } from "./instructions";
 import { directToolAnswer } from "./live/directAnswer";
 import { createReceptionistTools, type AgentToolContext } from "./tools";
 
 export type ReceptionistAgent = ToolLoopAgent<never, ToolSet>;
+
+/**
+ * Runs each tool call in its own span, so the database work and provider
+ * requests it makes nest under it, inside the call or chat request that asked
+ * for it. A tool that throws is reported: the model only sees the failure.
+ */
+export function withToolSpans(tools: ToolSet): ToolSet {
+  return Object.fromEntries(Object.entries(tools).map(([name, definition]) => {
+    const execute = definition.execute as ((input: unknown, options: ToolExecutionOptions<unknown>) => unknown) | undefined;
+    if (!execute) return [name, definition];
+    const traced = async (input: unknown, options: ToolExecutionOptions<unknown>) => await withOpenSpan(`tool.${name}`, { attributes: { "gen_ai.tool.name": name } }, async (span) => {
+      try {
+        const output = await execute(input, options);
+        const ok = (output as { ok?: unknown } | null | undefined)?.ok;
+        if (typeof ok === "boolean") span.setAttribute("lobbystack.tool.ok", ok);
+        return output;
+      } catch (error) {
+        // A call that ended aborts its tools, which is no failure.
+        if (!options.abortSignal?.aborted) void reportError(error, { operation: `tool.${name}` });
+        throw error;
+      } finally {
+        span.end();
+      }
+    });
+    return [name, { ...definition, execute: traced }];
+  })) as ToolSet;
+}
 
 export function createReceptionistAgent(input: {
   model: LanguageModel;
@@ -23,7 +52,7 @@ export function createReceptionistAgent(input: {
   return new ToolLoopAgent({
     model: input.model,
     instructions: [buildAgentInstructions(input.context.snapshot, input.context.channel, { intakeOnly: input.context.intakeOnly ?? false, endsCalls: input.context.callControl !== undefined, ...(input.context.callerPhone ? { callerPhone: input.context.callerPhone } : {}) }), input.extraInstructions].filter(Boolean).join("\n\n"),
-    tools: createReceptionistTools(input.context),
+    tools: withToolSpans(createReceptionistTools(input.context)),
     stopWhen,
   });
 }

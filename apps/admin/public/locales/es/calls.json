@@ -161,6 +161,7 @@
       "callInfoTitle": "Información de la llamada",
       "twilioCallSid": "Call SID de Twilio",
       "gatewaySession": "Sesión del gateway",
+      "providerCallId": "ID de la llamada en el proveedor",
       "disposition": "Clasificación",
       "providerStatus": "Estado del proveedor",
       "noDisposition": "Ninguna",

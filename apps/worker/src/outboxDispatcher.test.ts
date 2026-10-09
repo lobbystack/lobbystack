@@ -9,6 +9,9 @@ const mocks = vi.hoisted(() => ({
   enqueueJob: vi.fn(),
   histogramRecords: [] as Array<{ name: string; attributes: Record<string, unknown> }>,
   counterAdds: [] as Array<{ name: string; attributes: Record<string, unknown> }>,
+  logEvent: vi.fn(),
+  reportError: vi.fn(),
+  callContexts: [] as unknown[],
 }));
 
 vi.mock("@lobbystack/telemetry/node", () => ({
@@ -17,6 +20,12 @@ vi.mock("@lobbystack/telemetry/node", () => ({
     createHistogram: (name: string) => ({ record: (_value: number, attributes: Record<string, unknown>) => mocks.histogramRecords.push({ name, attributes }) }),
   }),
   redactOtelExceptionText: (value: string) => value,
+  logEvent: mocks.logEvent,
+  reportError: mocks.reportError,
+  withCallContext: (ids: unknown, callback: () => unknown) => {
+    mocks.callContexts.push(ids);
+    return callback();
+  },
 }));
 
 vi.mock("@lobbystack/db", async (importOriginal) => ({
@@ -38,6 +47,7 @@ describe("OutboxDispatcher", () => {
     vi.resetAllMocks();
     mocks.histogramRecords.length = 0;
     mocks.counterAdds.length = 0;
+    mocks.callContexts.length = 0;
   });
   afterEach(() => {
     vi.restoreAllMocks();
@@ -66,6 +76,30 @@ describe("OutboxDispatcher", () => {
     await new OutboxDispatcher(db, queues).dispatchOnce();
     expect(mocks.markOutboxFailed).toHaveBeenCalledWith(db, row, error, expect.any(Date));
     expect(mocks.markOutboxPublished).not.toHaveBeenCalled();
+  });
+
+  it("logs a failed dispatch with the call it's about, and reports a dead letter", async () => {
+    const recording = { ...row, topic: "call.saveRecording", businessId: "00000000-0000-4000-8000-000000000002", payload: { callId: "call_1", sessionId: "rtc_1" }, attempts: 10 };
+    mocks.claimOutboxBatch.mockResolvedValue([recording]);
+    const error = new Error("queue unavailable");
+    mocks.enqueueJob.mockRejectedValue(error);
+    mocks.markOutboxFailed.mockResolvedValue(true);
+    const queues = new Map(["critical", "default", "bulk", "maintenance"].map((name) => [name, {} as never]));
+    await new OutboxDispatcher({} as Database, queues).dispatchOnce();
+    expect(mocks.callContexts).toEqual([{ businessId: "00000000-0000-4000-8000-000000000002", callId: "call_1", sessionId: "rtc_1" }]);
+    expect(mocks.logEvent).toHaveBeenCalledWith("error", "outbox.dispatch_failed", { topic: "call.saveRecording", outboxId: row.id, attempt: 10, deadLettered: true, error });
+    expect(mocks.reportError).toHaveBeenCalledWith(error, { operation: "outbox.dispatch", topic: "call.saveRecording", outboxId: row.id });
+  });
+
+  it("logs a failed dispatch that will be retried as a warning, without a report", async () => {
+    mocks.claimOutboxBatch.mockResolvedValue([row]);
+    mocks.enqueueJob.mockRejectedValue(new Error("queue unavailable"));
+    mocks.markOutboxFailed.mockResolvedValue(false);
+    const queues = new Map(["critical", "default", "bulk", "maintenance"].map((name) => [name, {} as never]));
+    await new OutboxDispatcher({} as Database, queues).dispatchOnce();
+    expect(mocks.callContexts).toEqual([{}]);
+    expect(mocks.logEvent).toHaveBeenCalledWith("warn", "outbox.dispatch_failed", expect.objectContaining({ topic: "notification.dispatch", attempt: 1, deadLettered: false }));
+    expect(mocks.reportError).not.toHaveBeenCalled();
   });
 
   it("does not report a fenced claim as published", async () => {

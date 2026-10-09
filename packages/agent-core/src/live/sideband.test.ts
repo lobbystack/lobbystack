@@ -74,7 +74,7 @@ describe("LiveCallController sideband", () => {
     expect(onStarted).toHaveBeenCalledOnce();
     expect(closed[0]).toMatchObject({ closeReason: "remote_hangup", billedSeconds: 3, usageConfirmed: true });
     expect(hangup).not.toHaveBeenCalled();
-    expect(console.warn).toHaveBeenCalledWith("[live] live_1 sideband attach failed with close code 1006, retry 1 of 3");
+    expect(console.warn).toHaveBeenCalledWith(JSON.stringify({ level: "warn", message: "live.attach_retry", sessionId: "live_1", closeCode: 1006, attempt: 1, maxAttempts: 3 }));
   });
 
   it("hangs up when every attach fails", async () => {
