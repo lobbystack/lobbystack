@@ -20,7 +20,7 @@ import { handleJob, type WorkerDependencies } from "./handlers";
 import { startHealthServer } from "./health";
 import { createLiveCallHandler, liveDrainTimeoutMs } from "./liveCalls";
 import { OutboxDispatcher } from "./outboxDispatcher";
-import { configureSchedulers } from "./scheduler";
+import { configureSchedulers, type Schedule } from "./scheduler";
 import { getWorkerSnapshotCache } from "./snapshot-cache";
 import { logUnhandledRejections } from "./processGuards";
 
@@ -129,9 +129,10 @@ async function main(): Promise<void> {
     queue.on("error", (error) => console.error(JSON.stringify({ event: "queue.error", queue: queueName, message: redactOtelExceptionText(error.message) })));
     queues.set(queueName, queue);
   }
+  const appliedSchedulers = new Map<string, Schedule>();
   const refreshSchedulers = async () => {
     const businessRows = await listSchedulerBusinesses(dispatcherDatabase.db);
-    await configureSchedulers(queues, businessRows);
+    await configureSchedulers(queues, businessRows, appliedSchedulers);
     return businessRows.map((business) => business.id);
   };
   const state = { ready: false, redis: false, database: false, storage: false, activeJobs: 0, draining: false };

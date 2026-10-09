@@ -28,7 +28,7 @@ type Billing = {
   effectivePlan: BillingPlanSlug;
   account: { plan: string | null; billingKey: string; billingInterval: string | null; subscriptionState: string | null; currentPeriodStart: string | null; currentPeriodEnd: string | null; overageSpendingCapCents: number | null } | null;
   usage: Array<{ periodKey: string; usageKind: string; quantity: number; syncStatus: string }>;
-  transactions: Array<{ kind: string; sourceId: string; status: string; amountCents: number; currency: string; description: string | null; invoiceUrl: string | null; occurredAt: string }>;
+  transactions: Array<{ kind: string; sourceId: string; status: string; amountCents: number; refundedAmountCents: number; currency: string; description: string | null; invoiceUrl: string | null; occurredAt: string }>;
   usageStatus: { usageComplete: boolean; voiceBlocked: boolean; alertSmsBlocked: boolean; outboundCallAttemptsBlocked: boolean; overageSpendingCapReached: boolean; overageSpendCents: number; overageSpendingCapCents: number | null } | null;
 };
 
@@ -208,6 +208,11 @@ function Transactions({ transactions, t, locale }: { transactions: Billing["tran
                   <TableCell className="text-right text-sm tabular-nums font-medium text-foreground">
                     {isRefund ? "−" : ""}
                     {formatMoney(tx.amountCents, tx.currency, locale)}
+                    {tx.refundedAmountCents > 0 ? (
+                      <div className="text-xs font-normal text-muted-foreground">
+                        {t("billing.transactions.refundedAmount", { amount: formatMoney(tx.refundedAmountCents, tx.currency, locale) })}
+                      </div>
+                    ) : null}
                   </TableCell>
                   <TableCell>
                     <span className="text-sm text-muted-foreground capitalize">

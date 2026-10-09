@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, eq, exists, inArray, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
 
 import type { TraceContextCarrier } from "@lobbystack/contracts";
 import { redactOtelExceptionText } from "@lobbystack/telemetry/node";
 
 import { withDispatcherTransaction, type DatabaseTransaction, type Database } from "./client";
-import { businessMemberships, businesses, outboxMessages } from "./schema";
+import { outboxMessages } from "./schema";
 
 export const OUTBOX_MAX_ATTEMPTS = 10;
 
@@ -157,14 +157,11 @@ export async function prunePublishedOutbox(
 }
 
 /**
- * Lists every business for the worker's scheduler, with whether it still has
- * an active member. Runs as the dispatcher, the one role that reads businesses
- * across tenants.
+ * Lists every business for the worker's scheduler, with whether it is active:
+ * it has an active member, and it finished onboarding or had a call, a
+ * message or a member sign-in in the last 30 days. Runs as the dispatcher.
  */
-export async function listSchedulerBusinesses(db: Database): Promise<Array<{ id: string; hasMembers: boolean }>> {
-  return await withDispatcherTransaction(db, async (tx) => await tx.select({
-    id: businesses.id,
-    // Select a constant: the dispatcher may read only business_id and status of a membership.
-    hasMembers: sql<boolean>`${exists(tx.select({ one: sql`1` }).from(businessMemberships).where(and(eq(businessMemberships.businessId, businesses.id), eq(businessMemberships.status, "active"))))}`,
-  }).from(businesses));
+export async function listSchedulerBusinesses(db: Database): Promise<Array<{ id: string; active: boolean }>> {
+  const result = await withDispatcherTransaction(db, async (tx) => await tx.execute<{ id: string; active: boolean }>(sql`select business_id as id, active from app.list_scheduler_businesses()`));
+  return result.rows;
 }

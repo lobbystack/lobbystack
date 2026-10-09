@@ -318,6 +318,7 @@
         "invoice": "Invoice"
       },
       "invoice": "Invoice",
+      "refundedAmount": "Refunded {{amount}}",
       "statusLabels": {
         "paid": "Paid",
         "pending": "Pending",

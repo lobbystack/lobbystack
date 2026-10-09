@@ -318,6 +318,7 @@
         "invoice": "Račun"
       },
       "invoice": "Račun",
+      "refundedAmount": "Vraćeno: {{amount}}",
       "statusLabels": {
         "paid": "Plaćeno",
         "pending": "Na čekanju",

@@ -281,6 +281,12 @@ const OPEN_LIVE_CALL_MAX_AGE_MS = 2 * 60 * 60_000;
 // The highest transcript sequence a call has saved.
 const lastSequenceOf = (callId: typeof calls.id | string) => sql<number>`coalesce((select max(${transcripts.sequence}) from ${transcripts} where ${transcripts.callId} = ${callId}), 0)`.mapWith(Number);
 
+/** The businesses with a call `listOpenLiveCalls` would return, across all tenants. */
+export async function listBusinessesWithOpenLiveCalls(context: DomainContext, input: { startedBefore: Date }): Promise<string[]> {
+  const result = await withBusinessTransaction(context.db, { actorType: "worker" }, async (tx) => await tx.execute<{ business_id: string }>(sql`select app.list_open_live_call_businesses(${new Date(Date.now() - OPEN_LIVE_CALL_MAX_AGE_MS).toISOString()}::timestamptz, ${input.startedBefore.toISOString()}::timestamptz) as business_id`));
+  return result.rows.map((row) => row.business_id);
+}
+
 /**
  * GPT-Live calls, phone and browser, that started before `startedBefore`,
  * within the last two hours, and haven't ended.

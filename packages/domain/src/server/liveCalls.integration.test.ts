@@ -4,7 +4,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 import { billingAccounts, billingUsageEvents, billingUsageMonths, businesses, calls, contacts, createDatabaseClient, enqueueOutbox, outboxMessages, transcripts, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
-import { blockLiveCaller, extendLiveCallReservation, finishLiveCall, lastLiveCallSequence, listOpenLiveCalls, liveCallHasRecording, markLiveCallMediaStarted, retryLiveCallRecording, saveLiveCallTurn, startLivePhoneCall, startLiveWebCall } from "./liveCalls";
+import { blockLiveCaller, extendLiveCallReservation, finishLiveCall, lastLiveCallSequence, listBusinessesWithOpenLiveCalls, listOpenLiveCalls, liveCallHasRecording, markLiveCallMediaStarted, retryLiveCallRecording, saveLiveCallTurn, startLivePhoneCall, startLiveWebCall } from "./liveCalls";
 import { heldForCall } from "./notifications";
 import { periodKeyFor } from "./usage";
 import { loadLiveCallForPricing } from "./voice";
@@ -280,6 +280,34 @@ describe.skipIf(!testUrl)("GPT-Live phone calls against PostgreSQL", () => {
       await tx.update(calls).set({ startedAt: new Date(Date.now() - 2 * 365 * 24 * 60 * 60_000) }).where(eq(calls.id, historical!.callId));
       const open = await asWorker(tx, (context) => listOpenLiveCalls(context, { businessId, startedBefore: new Date(Date.now() - 60_000) }));
       expect(open.map((row) => row.callId)).toEqual([recent!.callId]);
+    });
+  });
+
+  it("lists the businesses with an open GPT-Live call for the recovery job, across tenants", async () => {
+    await rollbackTest(async (tx) => {
+      const minutesAgo = (count: number) => new Date(Date.now() - count * 60_000);
+      const withCall = async (fields: Partial<typeof calls.$inferInsert> & { startedAt: Date }) => {
+        const businessId = await business(tx, { plan: "pro" });
+        await tx.insert(calls).values({ businessId, provider: "openai_live", providerCallId: `live_${randomUUID()}`, transport: "web_voice", ...fields });
+        return businessId;
+      };
+      const orphaned = await withCall({ startedAt: minutesAgo(5) });
+      const orphanedPhone = await withCall({ startedAt: minutesAgo(90), transport: "pstn" });
+      const tooRecent = await withCall({ startedAt: minutesAgo(0.5) });
+      const ended = await withCall({ startedAt: minutesAgo(5), endedAt: minutesAgo(1) });
+      const tooOld = await withCall({ startedAt: minutesAgo(3 * 60) });
+      const notLive = await withCall({ startedAt: minutesAgo(5), provider: "twilio" });
+      const ours = new Set<string>([orphaned, orphanedPhone, tooRecent, ended, tooOld, notLive]);
+
+      // The function trusts only the worker's login identity.
+      await tx.execute(sql`set local session authorization lobbystack_worker`);
+      const listed = await listBusinessesWithOpenLiveCalls({ db: tx as unknown as Database }, { startedBefore: minutesAgo(1) });
+      expect(listed.filter((id) => ours.has(id)).sort()).toEqual([orphaned, orphanedPhone].sort());
+      await tx.execute(sql`reset session authorization`);
+      // The app role can't call it. A savepoint keeps the fixture transaction usable.
+      await tx.execute(sql`set local session authorization lobbystack_app`);
+      await expect(tx.transaction((inner) => inner.execute(sql`select app.list_open_live_call_businesses(now() - interval '2 hours', now())`))).rejects.toMatchObject({ cause: { message: expect.stringMatching(/permission denied/) } });
+      await tx.execute(sql`reset session authorization`);
     });
   });
 

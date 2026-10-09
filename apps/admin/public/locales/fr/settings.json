@@ -318,6 +318,7 @@
         "invoice": "Facture"
       },
       "invoice": "Facture",
+      "refundedAmount": "Remboursé : {{amount}}",
       "statusLabels": {
         "paid": "Payé",
         "pending": "En attente",

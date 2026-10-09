@@ -6,15 +6,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LivePlanSurface } from "./live-plan-surface";
 import { UpgradePlanDialogProvider } from "./upgrade-plan-dialog-context";
 const route = vi.hoisted(() => ({ router: { replace: vi.fn() }, search: new URLSearchParams() }));
+const translate = vi.hoisted(() => vi.fn((key: string) => key));
 vi.mock("next/navigation", () => ({ useRouter: () => route.router, useSearchParams: () => route.search }));
-vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en" }, t: (key: string) => key }) }));
+vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en" }, t: translate }) }));
 const clients: QueryClient[] = [];
 beforeEach(() => { route.search = new URLSearchParams(); vi.stubGlobal("localStorage", { getItem: () => null, setItem: vi.fn() }); });
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
 function setup({ synced = false, checkoutFails = false, billingFails = false, plan = "pro", admin = true, configured = false, transactions = false, accountMissing = false } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true }] });
-  const billing = { permissions: { hasBillingManagementAccess: admin, hasCheckoutAccess: admin, hasCustomerPortalAccess: admin }, effectivePlan: accountMissing ? "free_cloud" : plan, account: accountMissing ? null : { plan, billingInterval: "monthly", subscriptionState: "active", overageSpendingCapCents: null }, availableCheckoutPlans: configured ? ["pro"] : [], availableCheckoutIntervals: { starter: [], pro: configured ? ["monthly"] : [] }, transactions: transactions ? [{ kind: "refund", sourceId: "refund", status: "succeeded", amountCents: 1250, currency: "usd", description: "Usage credit", invoiceUrl: "https://example.invalid/invoice", occurredAt: "2026-09-04T12:00:00Z" }] : [] };
+  const billing = { permissions: { hasBillingManagementAccess: admin, hasCheckoutAccess: admin, hasCustomerPortalAccess: admin }, effectivePlan: accountMissing ? "free_cloud" : plan, account: accountMissing ? null : { plan, billingInterval: "monthly", subscriptionState: "active", overageSpendingCapCents: null }, availableCheckoutPlans: configured ? ["pro"] : [], availableCheckoutIntervals: { starter: [], pro: configured ? ["monthly"] : [] }, transactions: transactions ? [{ kind: "refund", sourceId: "refund", status: "succeeded", amountCents: 1250, currency: "usd", description: "Usage credit", invoiceUrl: "https://example.invalid/invoice", occurredAt: "2026-09-04T12:00:00Z" }, { kind: "order", sourceId: "order", status: "partially_refunded", amountCents: 105_600, refundedAmountCents: 52_800, currency: "usd", description: "Pro annual", invoiceUrl: null, occurredAt: "2026-09-05T12:00:00Z" }] : [] };
   if (!billingFails) client.setQueryData(["billing", "business"], billing);
   const fetchMock = vi.fn(async (url: string) => url.includes("/checkout?") ? checkoutFails ? Response.json({ error: "Provider unavailable" }, { status: 503 }) : Response.json({ synced }) : Response.json(billing));
   if (billingFails) fetchMock.mockResolvedValueOnce(Response.json({ error: "Unavailable" }, { status: 503 }));
@@ -54,6 +55,12 @@ describe("original billing overview behavior", () => {
     expect(screen.getByRole("link", { name: "billing.transactions.invoice" }).getAttribute("href")).toBe("https://example.invalid/invoice");
     expect(screen.getByRole("link", { name: "billing.transactions.invoice" }).getAttribute("target")).toBe("_blank");
     expect(screen.getByRole("link", { name: "billing.transactions.invoice" }).getAttribute("rel")).toContain("noopener");
+  });
+  it("shows how much of a refunded order went back, in the active locale", () => {
+    setup({ transactions: true });
+    expect(screen.getByText("$1,056")).toBeTruthy();
+    expect(screen.getAllByText("billing.transactions.refundedAmount")).toHaveLength(1);
+    expect(translate).toHaveBeenCalledWith("billing.transactions.refundedAmount", { amount: "$528" });
   });
   it("does not offer upgrades without a configured checkout interval", () => {
     setup({ plan: "starter" });

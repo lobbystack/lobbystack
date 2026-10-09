@@ -384,6 +384,15 @@ function numberField(source: Record<string, unknown>, ...keys: string[]): number
   return undefined;
 }
 
+/**
+ * What Polar refunded on an order. The order total includes tax, and Polar
+ * reports refunded tax apart from the refunded amount.
+ */
+export function orderRefundedCents(order: Record<string, unknown>, payload: Record<string, unknown>): number {
+  return (numberField(order, "refundedAmount", "refunded_amount") ?? numberField(payload, "refundedAmount", "refunded_amount") ?? 0)
+    + (numberField(order, "refundedTaxAmount", "refunded_tax_amount") ?? numberField(payload, "refundedTaxAmount", "refunded_tax_amount") ?? 0);
+}
+
 function dateField(source: Record<string, unknown>, ...keys: string[]): Date | undefined {
   const value = stringField(source, ...keys);
   if (!value) return undefined;
@@ -444,7 +453,9 @@ export async function reconcileBillingProviderEvent(
       // An unmapped product (a retired or legacy product id) keeps the stored plan rather than a display name.
       const plan = stringField(transactionPayload, "plan") ?? stringField(payload, "plan");
       const billingInterval = stringField(transactionPayload, "billingInterval", "billing_interval", "interval") ?? stringField(payload, "billingInterval", "billing_interval", "interval") ?? stringField(subscription, "billingInterval", "billing_interval", "interval");
-      const subscriptionState = stringField(transactionPayload, "subscriptionState", "status") ?? stringField(payload, "subscriptionState", "status") ?? (event.eventType.startsWith("subscription.") ? event.eventType.slice("subscription.".length) : undefined);
+      // Only a subscription's own status is a subscription state. An order's status
+      // (paid, refunded) is not, and an order without a nested subscription has none.
+      const subscriptionState = stringField(transactionPayload, "subscriptionState") ?? stringField(payload, "subscriptionState") ?? (event.eventType.startsWith("subscription.") ? stringField(payload, "status") ?? event.eventType.slice("subscription.".length) : undefined);
       const currentPeriodStart = dateField(transactionPayload, "currentPeriodStart", "current_period_start") ?? dateField(payload, "currentPeriodStart", "current_period_start") ?? dateField(subscription, "currentPeriodStart", "current_period_start");
       const currentPeriodEnd = dateField(transactionPayload, "currentPeriodEnd", "current_period_end") ?? dateField(payload, "currentPeriodEnd", "current_period_end") ?? dateField(subscription, "currentPeriodEnd", "current_period_end");
       // A Polar retry or replay can arrive after a newer snapshot of the subscription was applied.
@@ -491,9 +502,7 @@ export async function reconcileBillingProviderEvent(
       const status = stringField(transactionPayload, "status") ?? stringField(payload, "status") ?? event.eventType.split(".").at(-1) ?? "received";
       const occurredAt = dateField(transactionPayload, "createdAt", "created_at", "occurredAt", "occurred_at") ?? dateField(payload, "createdAt", "created_at", "occurredAt", "occurred_at") ?? event.createdAt;
       const orderId = stringField(transactionPayload, "orderId", "order_id") ?? stringField(payload, "orderId", "order_id") ?? sourceId;
-      // The total includes tax, and Polar reports refunded tax apart from the refunded amount.
-      const refundedCents = (numberField(transactionPayload, "refundedAmount", "refunded_amount") ?? numberField(payload, "refundedAmount", "refunded_amount") ?? 0)
-        + (numberField(transactionPayload, "refundedTaxAmount", "refunded_tax_amount") ?? numberField(payload, "refundedTaxAmount", "refunded_tax_amount") ?? 0);
+      const refundedCents = orderRefundedCents(transactionPayload, payload);
       const subscriptionId = stringField(transactionPayload, "subscriptionId", "subscription_id") ?? stringField(payload, "subscriptionId", "subscription_id");
       const polarCustomerId = stringField(transactionPayload, "customerId", "customer_id") ?? stringField(payload, "customerId", "customer_id");
       const description = stringField(transactionPayload, "description", "reason") ?? stringField(payload, "description", "reason");
@@ -504,6 +513,7 @@ export async function reconcileBillingProviderEvent(
         sourceId,
         status,
         amountCents,
+        refundedAmountCents: refundedCents,
         currency: currency.toLowerCase(),
         ...(description ? { description } : {}),
         ...(invoiceUrl ? { invoiceUrl } : {}),
@@ -518,6 +528,8 @@ export async function reconcileBillingProviderEvent(
           businessId: input.businessId,
           status,
           amountCents,
+          // Refunds only add up, so a paid event retried after a refund cannot erase it.
+          refundedAmountCents: sql`greatest(${billingTransactions.refundedAmountCents}, excluded.refunded_amount_cents)`,
           currency: currency.toLowerCase(),
           ...(description ? { description } : {}),
           ...(invoiceUrl ? { invoiceUrl } : {}),

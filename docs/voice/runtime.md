@@ -162,9 +162,9 @@ On other platforms, set `LIVE_DRAIN_TIMEOUT_MS` to the drain timeout. With neith
 
 ## Recover calls after a worker crash
 
-If the worker process dies mid-call, nobody answers the call's delegations, and its call record stays open with its minutes reserved. A scheduled job, `live.recoverOrphans`, runs every minute for each business with an active member. An expired prospect demo has no members and takes no calls, so it doesn't get one. Each run takes those calls over:
+If the worker process dies mid-call, nobody answers the call's delegations, and its call record stays open with its minutes reserved. One scheduled job, `live.recoverOrphans`, runs every minute on the critical queue and covers every business. Each run takes those calls over:
 
-1. It lists the business's open GPT-Live calls, phone and browser, that started between 60 seconds and 2 hours ago.
+1. It lists the open GPT-Live calls, phone and browser, that started between 60 seconds and 2 hours ago. It first finds the businesses with such a call, then reads each one's calls under that business's own access rules, one business at a time. If it can't read a business's calls, it logs the error and moves on to the next business.
 2. It leaves alone a call that saved a transcript turn in the last 45 seconds, because a worker is still running it.
 3. For each other call, it tries to take the attach lock. A missing lock means the call has no worker. When another worker holds the lock, the job leaves the call alone, and two workers running the job at once can't both take it.
 4. A dead worker stops topping up its calls, so a phone call that has run past its reservation asks for one more top-up first. The job hangs up a call still past its reserved length and finishes its record. It stops waiting for the hangup after 5 seconds, so a slow OpenAI can't hold up the job or a drain.

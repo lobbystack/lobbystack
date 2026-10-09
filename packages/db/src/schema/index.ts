@@ -545,6 +545,7 @@ export const calls = pgTable(
     uniqueIndex("calls_gateway_session_unique").on(table.gatewaySessionId),
     index("calls_business_started_idx").on(table.businessId, table.startedAt),
     index("calls_business_recording_idx").on(table.businessId, table.recordingObjectId).where(sql`${table.recordingObjectId} is not null`),
+    index("calls_open_live_started_idx").on(table.startedAt).where(sql`${table.endedAt} is null and ${table.provider} = 'openai_live'`),
   ],
 );
 
@@ -909,6 +910,7 @@ export const billingTransactions = pgTable(
     sourceId: text("source_id").notNull(),
     status: varchar("status", { length: 32 }).notNull(),
     amountCents: integer("amount_cents").notNull(),
+    refundedAmountCents: integer("refunded_amount_cents").default(0).notNull(),
     currency: varchar("currency", { length: 8 }).notNull(),
     description: text("description"),
     invoiceUrl: text("invoice_url"),

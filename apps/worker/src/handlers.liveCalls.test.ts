@@ -3,10 +3,11 @@ import { randomUUID } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { JobEnvelope, JobType } from "@lobbystack/contracts";
-import { LIVE_RECORDING_ATTEMPTS, listOpenLiveCalls, liveCallHasRecording, persistCallRecording, retryLiveCallRecording, type OpenLiveCall } from "@lobbystack/domain";
+import { LIVE_RECORDING_ATTEMPTS, listBusinessesWithOpenLiveCalls, listOpenLiveCalls, liveCallHasRecording, persistCallRecording, retryLiveCallRecording, type OpenLiveCall } from "@lobbystack/domain";
 
 vi.mock("@lobbystack/domain", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@lobbystack/domain")>()),
+  listBusinessesWithOpenLiveCalls: vi.fn(),
   listOpenLiveCalls: vi.fn(),
   liveCallHasRecording: vi.fn(async () => false),
   persistCallRecording: vi.fn(async () => "object_1"),
@@ -62,31 +63,43 @@ describe("call.saveRecording", () => {
 });
 
 describe("live.recoverOrphans", () => {
-  const open = (sessionId: string) => ({ businessId, callId: `call_${sessionId}`, sessionId, channel: "voice", intakeOnly: false, startedAt: new Date(Date.now() - 120_000), reservedSeconds: 600, lastActivityAt: new Date(), lastSequence: 0 }) as OpenLiveCall;
+  const otherBusinessId = randomUUID();
+  const open = (sessionId: string, owner = businessId) => ({ businessId: owner, callId: `call_${sessionId}`, sessionId, channel: "voice", intakeOnly: false, startedAt: new Date(Date.now() - 120_000), reservedSeconds: 600, lastActivityAt: new Date(), lastSequence: 0 }) as OpenLiveCall;
   const redis = (status: string) => ({ status }) as never;
+  const recoveryJob = (): JobEnvelope => ({ ...job("live.recoverOrphans"), queue: "critical", businessId: null });
 
-  it("hands every open call older than a minute to the live call handler", async () => {
+  it("hands every open call older than a minute, in every business, to the live call handler", async () => {
     vi.stubEnv("LIVE_PROTOTYPE_ENABLED", "true");
     vi.spyOn(console, "error").mockImplementation(() => undefined);
-    vi.mocked(listOpenLiveCalls).mockResolvedValue([open("live_a"), open("live_b"), open("live_c")]);
+    const failingBusinessId = randomUUID();
+    vi.mocked(listBusinessesWithOpenLiveCalls).mockResolvedValue([businessId, failingBusinessId, otherBusinessId]);
+    vi.mocked(listOpenLiveCalls).mockImplementation(async (_context, input) => {
+      if (input.businessId === failingBusinessId) throw new Error("connection reset");
+      return input.businessId === businessId ? [open("live_a"), open("live_b"), open("live_c")] : [open("live_d", otherBusinessId)];
+    });
     const recoverLiveCall = vi.fn(async (call: OpenLiveCall) => {
       if (call.sessionId === "live_b") throw new Error("snapshot missing");
-      return call.sessionId === "live_a" ? "attached" as const : "owned" as const;
+      return call.sessionId === "live_a" || call.sessionId === "live_d" ? "attached" as const : "owned" as const;
     });
-    await expect(handleJob(job("live.recoverOrphans"), { domain: { db: {} as never }, realtime: redis("ready"), recoverLiveCall })).resolves.toEqual({ status: "completed", entityId: `${businessId}:1` });
-    expect(recoverLiveCall).toHaveBeenCalledTimes(3);
-    const { startedBefore } = vi.mocked(listOpenLiveCalls).mock.calls[0]![1];
+    await expect(handleJob(recoveryJob(), { domain: { db: {} as never }, realtime: redis("ready"), recoverLiveCall })).resolves.toEqual({ status: "completed", entityId: "2" });
+    // A business whose listing fails doesn't stop the one after it.
+    expect(recoverLiveCall.mock.calls.map(([call]) => call.sessionId)).toEqual(["live_a", "live_b", "live_c", "live_d"]);
+    expect(vi.mocked(listOpenLiveCalls).mock.calls.map(([, input]) => input.businessId)).toEqual([businessId, failingBusinessId, otherBusinessId]);
+    const { startedBefore } = vi.mocked(listBusinessesWithOpenLiveCalls).mock.calls[0]![1];
     expect(Date.now() - startedBefore.getTime()).toBeGreaterThanOrEqual(60_000);
     expect(Date.now() - startedBefore.getTime()).toBeLessThan(65_000);
+    expect(vi.mocked(listOpenLiveCalls).mock.calls.every(([, input]) => input.startedBefore === startedBefore)).toBe(true);
   });
 
   it("does nothing when GPT-Live is off or Redis is down", async () => {
     const recoverLiveCall = vi.fn();
-    await expect(handleJob(job("live.recoverOrphans"), { domain: { db: {} as never }, realtime: redis("ready"), recoverLiveCall })).resolves.toEqual({ status: "skipped", entityId: businessId });
+    await expect(handleJob(recoveryJob(), { domain: { db: {} as never }, realtime: redis("ready"), recoverLiveCall })).resolves.toEqual({ status: "skipped" });
     vi.stubEnv("LIVE_PROTOTYPE_ENABLED", "true");
-    await expect(handleJob(job("live.recoverOrphans"), { domain: { db: {} as never }, realtime: redis("reconnecting"), recoverLiveCall })).resolves.toEqual({ status: "skipped", entityId: businessId });
-    await expect(handleJob(job("live.recoverOrphans"), { domain: { db: {} as never }, recoverLiveCall })).resolves.toEqual({ status: "skipped", entityId: businessId });
-    expect(listOpenLiveCalls).not.toHaveBeenCalled();
+    await expect(handleJob(recoveryJob(), { domain: { db: {} as never }, realtime: redis("reconnecting"), recoverLiveCall })).resolves.toEqual({ status: "skipped" });
+    await expect(handleJob(recoveryJob(), { domain: { db: {} as never }, recoverLiveCall })).resolves.toEqual({ status: "skipped" });
+    // A job queued by an old per-business scheduler would run the whole sweep again.
+    await expect(handleJob({ ...recoveryJob(), businessId }, { domain: { db: {} as never }, realtime: redis("ready"), recoverLiveCall })).resolves.toEqual({ status: "skipped" });
+    expect(listBusinessesWithOpenLiveCalls).not.toHaveBeenCalled();
     expect(recoverLiveCall).not.toHaveBeenCalled();
   });
 });

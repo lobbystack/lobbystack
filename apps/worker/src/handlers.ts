@@ -12,7 +12,7 @@ import { claimOperatorNotificationDelivery, notificationLeaseEndsAt, operatorNot
 import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning, numberProvisioningLeaseEndsAt } from "@lobbystack/domain";
 import { issueOperatorPhoneVerificationCode, markOperatorPhoneVerificationCodeSent, releaseOperatorPhoneVerificationCodeSend, verificationCodeSmsBody } from "@lobbystack/domain";
 import { createWebhookSender, processWebhookDelivery, pruneApiHistory, type WebhookSender } from "@lobbystack/domain";
-import { LIVE_RECORDING_ATTEMPTS, listOpenLiveCalls, liveCallHasRecording, persistCallRecording, retryLiveCallRecording, type OpenLiveCall } from "@lobbystack/domain";
+import { LIVE_RECORDING_ATTEMPTS, listBusinessesWithOpenLiveCalls, listOpenLiveCalls, liveCallHasRecording, persistCallRecording, retryLiveCallRecording, type OpenLiveCall } from "@lobbystack/domain";
 import type { DomainContext } from "@lobbystack/domain";
 import type { SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
 import type { RuntimeStorageProvider } from "@lobbystack/providers/storage/provider";
@@ -603,20 +603,28 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       return { status: "completed", entityId: callId };
     }
     case "live.recoverOrphans": {
-      const businessId = businessIdOrThrow(job);
-      // Without GPT-Live there are no calls, and without Redis no attach lock
-      // to tell a dead owner from a live one.
-      if (!isLivePrototypeEnabled() || !dependencies.recoverLiveCall || dependencies.realtime?.status !== "ready") return { status: "skipped", entityId: businessId };
-      const open = await listOpenLiveCalls(dependencies.domain, { businessId, startedBefore: new Date(Date.now() - ORPHANED_LIVE_CALL_MIN_AGE_MS) });
+      // One job for all businesses. A job with a business comes from a
+      // per-business scheduler of an older release, so it would repeat that
+      // sweep once per business. Without GPT-Live there are no calls, and
+      // without Redis no attach lock to tell a dead owner from a live one.
+      if (job.businessId || !isLivePrototypeEnabled() || !dependencies.recoverLiveCall || dependencies.realtime?.status !== "ready") return { status: "skipped" };
+      const startedBefore = new Date(Date.now() - ORPHANED_LIVE_CALL_MIN_AGE_MS);
       const outcomes: string[] = [];
-      for (const call of open) {
-        outcomes.push(await dependencies.recoverLiveCall(call).catch((error: unknown) => {
-          console.error(`[live] ${call.sessionId} recovery failed`, error instanceof Error ? error.message : error);
-          return "failed";
-        }));
+      for (const businessId of await listBusinessesWithOpenLiveCalls(dependencies.domain, { startedBefore })) {
+        // One business that fails to list doesn't hold up recovery for the rest.
+        const open = await listOpenLiveCalls(dependencies.domain, { businessId, startedBefore }).catch((error: unknown) => {
+          console.error(`[live] ${businessId} open call listing failed`, error instanceof Error ? error.message : error);
+          return [];
+        });
+        for (const call of open) {
+          outcomes.push(await dependencies.recoverLiveCall(call).catch((error: unknown) => {
+            console.error(`[live] ${call.sessionId} recovery failed`, error instanceof Error ? error.message : error);
+            return "failed";
+          }));
+        }
       }
       const acted = outcomes.filter((outcome) => outcome === "attached" || outcome === "finished").length;
-      return { status: acted > 0 ? "completed" : "skipped", entityId: `${businessId}:${acted}` };
+      return { status: acted > 0 ? "completed" : "skipped", entityId: String(acted) };
     }
     case "billing.syncUsage": {
       if (!dependencies.polar) {

@@ -125,7 +125,7 @@ The answer gap skips caller speech that ended while the receptionist was still t
 
 ### Operations events
 
-Outbox health is reported durably from the worker. A tenant-scoped `outbox.backlogSample` job runs every 60 seconds, counts that business's publishable outbox rows, and records `ops.outbox.backlog_sample` with `deploymentMode` and `backlogBucket`. A zero backlog is not emitted, so the event tracks real backlog without idle-workspace noise.
+Outbox health is reported durably from the worker. A tenant-scoped `outbox.backlogSample` job runs every 60 seconds for each active business, counts that business's publishable outbox rows, and records `ops.outbox.backlog_sample` with `deploymentMode` and `backlogBucket`. A zero backlog is not emitted, so the event tracks real backlog without idle-workspace noise.
 
 `ops.outbox.flush_failed` remains a registered but undelivered contract. The dispatcher runs as `lobbystack_dispatcher`, which has no write grant on `product_events`, and a global poll failure has no tenant to scope an RLS-safe row to. Until a worker-role consumer exists, dispatcher failures are tracked by OpenTelemetry counters (`lobbystack.outbox.dispatch_failures`, `lobbystack.outbox.dead_lettered`, `lobbystack.outbox.poll_failures`).
 

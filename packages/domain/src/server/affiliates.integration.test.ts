@@ -276,6 +276,8 @@ describe.skipIf(!testUrl)("affiliate program against dedicated PostgreSQL roles"
       expect(commission).toMatchObject({ amountCents: 52_800, commissionCents: 10_560, status: "pending" });
       const [stats] = await tx.select().from(affiliateProfileStats).where(eq(affiliateProfileStats.affiliateProfileId, profileId));
       expect(stats).toMatchObject({ conversionCount: 1, pendingCommissionCents: 10_560 });
+      const [transaction] = await tx.select().from(billingTransactions).where(eq(billingTransactions.sourceId, order.id));
+      expect(transaction).toMatchObject({ status: "partially_refunded", amountCents: 105_600, refundedAmountCents: 52_800 });
     });
   });
 
@@ -286,6 +288,9 @@ describe.skipIf(!testUrl)("affiliate program against dedicated PostgreSQL roles"
       await reconcileOrder(tx, businessId, "order.refunded", { ...refunded, status: "refunded", refunded_amount: 60_000 });
       await reconcileOrder(tx, businessId, "order.paid", { ...refunded, status: "paid", refunded_amount: 0 });
       expect(await tx.select().from(affiliateCommissions).where(eq(affiliateCommissions.sourceKey, `order:${refunded.id}`))).toHaveLength(0);
+      // The late paid event cannot erase the refund already stored on the order.
+      const [transaction] = await tx.select().from(billingTransactions).where(eq(billingTransactions.sourceId, refunded.id));
+      expect(transaction?.refundedAmountCents).toBe(60_000);
 
       const partial = { id: `order-${randomUUID()}`, total_amount: 60_000, created_at: new Date(Date.now() + 60_000).toISOString() };
       await reconcileOrder(tx, businessId, "order.refunded", { ...partial, status: "partially_refunded", refunded_amount: 30_000 });

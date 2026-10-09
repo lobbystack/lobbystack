@@ -92,6 +92,9 @@ export const SCHEMA_MIGRATIONS = [
   "0086_drop_unused_definer_functions.sql",
   "0087_drop_unused_indexes.sql",
   "0088_orphaned_recording_expiry.sql",
+  "0089_billing_transaction_refunded_amount.sql",
+  "0090_scheduler_activity_listing.sql",
+  "0091_calls_open_live_started_index.sql",
 ] as const;
 
 const CONCURRENT_INDEX_DIRECTIVE = /^-- lobbystack:concurrent-index ([a-z][a-z0-9_]*)$/m;

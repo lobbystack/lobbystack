@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { and, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it, vi } from "vitest";
 import { businessHours, calls, conversations, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, messages, receptionistProfiles, storageObjects, transcripts, websiteIngestionJobs } from "@lobbystack/db";
-import { affiliateCommissions, affiliatePayoutItems, affiliateProfiles, billingAccounts, billingTransactions, appointments, auditLogs, businessMemberships, contacts, productEvents, providerEvents, services, staff, users, businesses, notifications, outboxMessages, withBusinessTransaction, claimOutboxBatch, createDatabaseClient, enqueueOutbox, markOutboxFailed, listSchedulerBusinesses, markOutboxPublished, prunePublishedOutbox, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { affiliateCommissions, affiliatePayoutItems, affiliateProfiles, billingAccounts, billingTransactions, appointments, auditLogs, businessMemberships, contacts, productEvents, providerEvents, services, staff, users, businesses, notifications, outboxMessages, withBusinessTransaction, claimOutboxBatch, createDatabaseClient, enqueueOutbox, markOutboxFailed, listSchedulerBusinesses, markOutboxPublished, prunePublishedOutbox, sessions, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { generateAffiliatePayoutRun } from "./affiliates";
 import { getBillingUsageStatus, reconcileBillingProviderEvent } from "./billing";
 import { DASHBOARD_TEST_CALL_WIDGET_ID } from "@lobbystack/shared";
@@ -509,18 +509,59 @@ describe.skipIf(!testUrl)("reliability against dedicated PostgreSQL roles", () =
     });
   });
 
-  it("lists businesses for the scheduler with whether each still has an active member", async () => {
+  it("lists businesses for the scheduler as active or dormant", async () => {
     await rollbackTest(async (tx) => {
-      const [activeId, expiredId, userId] = [randomUUID(), randomUUID(), randomUUID()];
-      await tx.insert(businesses).values([activeId, expiredId].map((id) => ({ id, slug: id, name: "Scheduler listing", timezone: "UTC", businessType: "test" })));
-      await tx.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid` });
-      await tx.insert(businessMemberships).values([{ businessId: activeId, userId, role: "business_owner" }, { businessId: expiredId, userId, role: "business_owner", status: "removed" }]);
-      await tx.execute(sql`set local role lobbystack_dispatcher`);
+      const days = (count: number) => new Date(Date.now() - count * 24 * 60 * 60_000);
+      // Each business gets its own owner, so one owner's sign-in counts for one business.
+      const business = async (input: { onboarded: boolean; member?: "active" | "removed" }) => {
+        const [businessId, userId] = [randomUUID(), randomUUID()];
+        await tx.insert(businesses).values({ id: businessId, slug: businessId, name: "Scheduler listing", timezone: "UTC", businessType: "test", onboardingStage: input.onboarded ? "complete" : "website" });
+        await tx.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid` });
+        await tx.insert(businessMemberships).values({ businessId, userId, role: "business_owner", status: input.member ?? "active" });
+        return { businessId, userId };
+      };
+      const signIn = (userId: string, at: Date) => tx.insert(sessions).values({ token: randomUUID(), userId, expiresAt: new Date(Date.now() + 86_400_000), createdAt: at, updatedAt: at });
+      const call = (businessId: string, at: Date) => tx.insert(calls).values({ businessId, providerCallId: randomUUID(), transport: "pstn", startedAt: at });
+
+      const onboarded = await business({ onboarded: true });
+      const memberless = await business({ onboarded: true, member: "removed" });
+      const abandoned = await business({ onboarded: false });
+      const called = await business({ onboarded: false });
+      await call(called.businessId, days(2));
+      const messaged = await business({ onboarded: false });
+      const [conversation] = await tx.insert(conversations).values({ businessId: messaged.businessId, channel: "web_chat" }).returning({ id: conversations.id });
+      await tx.insert(messages).values({ businessId: messaged.businessId, conversationId: conversation!.id, direction: "inbound", channel: "web_chat", body: "Hello" });
+      const signedIn = await business({ onboarded: false });
+      await signIn(signedIn.userId, days(1));
+      const lapsed = await business({ onboarded: false });
+      await call(lapsed.businessId, days(40));
+      await signIn(lapsed.userId, days(40));
+      // A removed member's sign-in doesn't count.
+      const removedMember = await business({ onboarded: false, member: "removed" });
+      await signIn(removedMember.userId, days(1));
+      const expected = new Map<string, boolean>([
+        [onboarded.businessId, true],
+        [memberless.businessId, false],
+        [abandoned.businessId, false],
+        [called.businessId, true],
+        [messaged.businessId, true],
+        [signedIn.businessId, true],
+        [lapsed.businessId, false],
+        [removedMember.businessId, false],
+      ]);
+
+      // The function trusts only the dispatcher's login identity.
+      await tx.execute(sql`set local session authorization lobbystack_dispatcher`);
       const listed = await listSchedulerBusinesses(tx as unknown as Database);
-      expect(listed.filter((business) => business.id === activeId || business.id === expiredId).sort((a, b) => Number(b.hasMembers) - Number(a.hasMembers))).toEqual([{ id: activeId, hasMembers: true }, { id: expiredId, hasMembers: false }]);
-      // The dispatcher reads only the two membership columns it needs.
+      expect(new Map(listed.filter((row) => expected.has(row.id)).map((row) => [row.id, row.active]))).toEqual(expected);
+      // The dispatcher no longer reads memberships itself. Each denied query
+      // runs in a savepoint, so the fixture transaction carries on.
       // Drizzle wraps the driver error; the PostgreSQL message is on the cause.
-      await expect(tx.execute(sql`select user_id from public.business_memberships limit 1`)).rejects.toMatchObject({ cause: { message: expect.stringMatching(/permission denied/) } });
+      await expect(tx.transaction((inner) => inner.execute(sql`select business_id from public.business_memberships limit 1`))).rejects.toMatchObject({ cause: { message: expect.stringMatching(/permission denied/) } });
+      await tx.execute(sql`reset session authorization`);
+      await tx.execute(sql`set local session authorization lobbystack_worker`);
+      await expect(withBusinessTransaction(tx as unknown as Database, { actorType: "worker" }, (inner) => inner.execute(sql`select * from app.list_scheduler_businesses()`))).rejects.toMatchObject({ cause: { message: expect.stringMatching(/permission denied/) } });
+      await tx.execute(sql`reset session authorization`);
     });
   });
 
