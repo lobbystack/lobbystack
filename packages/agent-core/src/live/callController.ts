@@ -728,21 +728,27 @@ export class LiveCallController {
    * agent, which ended it. The hangup waits until the request is answered,
    * GPT-Live's goodbye after that answer has played (or it stayed silent for
    * GOODBYE_START_MS), and both sides have been quiet for
-   * CALLER_DONE_QUIET_MS, or CALLER_DONE_MAX_MS at most. The caller speaking
-   * after that request, or another request, cancels it, and the call goes on.
-   * `onCancelled` runs then, or at once when the call can't end this way.
+   * CALLER_DONE_QUIET_MS, or CALLER_DONE_MAX_MS at most. When the caller
+   * speaks after that request, even before the agent ended the call, the
+   * caller check decides; without one, or when they want more, or on another
+   * request, it's cancelled and the call goes on. `onCancelled` runs then, or
+   * at once when the call can't end this way.
    */
   endWhenCallerDone(onCancelled?: () => void): void {
     if (this.ending || this.finished || this.pendingHangup) return;
     const answering = this.answering;
     const afterMs = answering?.offsetMs ?? this.timelineNow();
-    // A newer request, a transfer, or the caller already speaking again means the call isn't over.
-    this.hangupCancelled = (answering !== undefined && answering.revision !== this.latestRevision) || this.transfer !== undefined || this.lastCallerStartMs > afterMs;
+    // GPT-Live can hand the call over mid-sentence, so the caller may already
+    // have said more. Those words get the same check as words after the
+    // hangup was requested; without a check, the call goes on.
+    const callerSpoke = this.lastCallerStartMs > afterMs;
+    // A newer request or a transfer means the call isn't over.
+    this.hangupCancelled = (answering !== undefined && answering.revision !== this.latestRevision) || this.transfer !== undefined || (callerSpoke && !this.callerDone);
     if (this.hangupCancelled) {
       onCancelled?.();
       return;
     }
-    const hangup: PendingHangup = { afterMs, requestedAt: performance.now(), ...(onCancelled ? { onCancelled } : {}) };
+    const hangup: PendingHangup = { afterMs, requestedAt: performance.now(), ...(callerSpoke ? { callerSpoke } : {}), ...(onCancelled ? { onCancelled } : {}) };
     this.pendingHangup = hangup;
     setTimeout(() => this.hangUpWhenQuiet(hangup), GOODBYE_POLL_MS);
   }

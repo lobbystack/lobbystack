@@ -747,6 +747,32 @@ describe("LiveCallController ending when the caller is done", () => {
     expect(sentOfType(socket, "session.thinking.append")).toEqual([expect.objectContaining({ delegation_id: "item_1", content: "The caller spoke again before the call ended, so reply to what they said." })]);
   });
 
+  // On staging, the transcriber split "Great, thank you so much. Have a good day, bye bye."
+  // GPT-Live handed the call over mid-sentence, and the rest came in before endCall ran.
+  it.each([
+    { outcome: "hangs up when they only said goodbye", words: " much. Have a good day. Bye-bye.", done: true },
+    { outcome: "carries on when they want more", words: " much. Oh, one more thing.", done: false },
+  ])("checks what the caller said while the agent was ending the call, and $outcome", async ({ words, done }) => {
+    fakeTimers();
+    const holder: { controller?: LiveCallController } = {};
+    const onCancelled = vi.fn();
+    const callerDone = vi.fn(async (_conversation: string, _abortSignal: AbortSignal) => done);
+    let finish!: () => void;
+    const ending = endingAgent(holder, "caller_finished", onCancelled);
+    const { socket, controller, hangup } = setup({ generate: async (options) => { await new Promise<void>((resolve) => { finish = resolve; }); return ending(options); }, callerDone });
+    holder.controller = controller;
+    delegate(socket, "item_1", "Great. Thank you so", 1_000);
+    await vi.advanceTimersByTimeAsync(500);
+    socket.emit("session.input_transcript.delta", { delta: words, start_ms: 1_200, end_ms: 2_400 });
+    finish();
+    socket.emit("session.output_transcript.delta", { delta: "You too! Take care!", start_ms: 2_600, end_ms: 3_400 });
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(callerDone).toHaveBeenCalledOnce();
+    expect(callerDone.mock.calls[0]![0]).toContain(words.trim());
+    expect(hangup).toHaveBeenCalledTimes(done ? 1 : 0);
+    expect(onCancelled).toHaveBeenCalledTimes(done ? 0 : 1);
+  });
+
   // GPT-Live replies to what the caller said, and hands the call over again when they're done.
   it("tells GPT-Live the call goes on when the caller speaks while the agent is ending it", async () => {
     fakeTimers();
