@@ -251,6 +251,9 @@ const TRANSFER_FAILED = "The transfer to a person didn't go through. In the lang
 // so a changed request reschedules instead of booking twice. endCall isn't one:
 // a call that goes on after it was cancelled, and the next request may end it again.
 const ACTION_TOOLS = new Set(["bookAppointment", "requestAppointment", "requestAppointmentCancellation", "cancelAppointment", "rescheduleAppointment", "takeMessage", "transferCall"]);
+// The caller's answer about texts. The next request sees only the latest one,
+// in one slot, and saving it doesn't count as booking or changing anything.
+const ANSWER_TOOLS = new Set(["recordTextPreference"]);
 // Lookups the next request can reuse instead of repeating.
 const REUSABLE_LOOKUPS = new Set(["findAvailability"]);
 const PROGRESS: Record<string, string> = {
@@ -264,6 +267,7 @@ const PROGRESS: Record<string, string> = {
   verifyAppointmentChangeOtp: "checked the verification code",
   cancelAppointment: "tried to cancel the appointment",
   rescheduleAppointment: "tried to reschedule the appointment",
+  recordTextPreference: "tried to save the caller's answer about texts",
   takeMessage: "tried to save the message",
   transferCall: "tried to transfer the call",
   searchKnowledge: "searched the business's documents",
@@ -990,7 +994,11 @@ export class LiveCallController {
     for (const step of steps) {
       for (const result of step.toolResults) {
         const output = fitToAppend(JSON.stringify(result.output ?? null));
-        if (ACTION_TOOLS.has(result.toolName)) this.completedActions.push(`- ${result.toolName}: ${output}`);
+        if (ANSWER_TOOLS.has(result.toolName)) {
+          const previous = this.completedActions.findIndex((line) => line.startsWith(`- ${result.toolName}:`));
+          if (previous >= 0) this.completedActions.splice(previous, 1);
+        }
+        if (ACTION_TOOLS.has(result.toolName) || ANSWER_TOOLS.has(result.toolName)) this.completedActions.push(`- ${result.toolName}: ${output}`);
         if (REUSABLE_LOOKUPS.has(result.toolName)) this.latestLookup = `${result.toolName}: ${output}`;
       }
     }

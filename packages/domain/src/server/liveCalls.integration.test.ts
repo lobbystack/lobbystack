@@ -2,9 +2,10 @@ import { randomUUID } from "node:crypto";
 
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { billingAccounts, billingUsageEvents, billingUsageMonths, businesses, calls, contacts, createDatabaseClient, outboxMessages, transcripts, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { billingAccounts, billingUsageEvents, billingUsageMonths, businesses, calls, contacts, createDatabaseClient, enqueueOutbox, outboxMessages, transcripts, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
 import { blockLiveCaller, extendLiveCallReservation, finishLiveCall, lastLiveCallSequence, listOpenLiveCalls, liveCallHasRecording, markLiveCallMediaStarted, retryLiveCallRecording, saveLiveCallTurn, startLivePhoneCall, startLiveWebCall } from "./liveCalls";
+import { heldForCall } from "./notifications";
 import { periodKeyFor } from "./usage";
 import { loadLiveCallForPricing } from "./voice";
 
@@ -306,6 +307,18 @@ describe.skipIf(!testUrl)("GPT-Live phone calls against PostgreSQL", () => {
       const [open] = await asWorker(tx, (context) => listOpenLiveCalls(context, { businessId, startedBefore: new Date(Date.now() - 60_000) }));
       expect(open).toMatchObject({ callId: started.callId, reservedSeconds: 1_800, slicedReservation: false });
       expect(open).not.toHaveProperty("callerPhone");
+    });
+  });
+
+  it("sends the texts held during the call when it finishes, and only that call's", async () => {
+    await rollbackTest(async (tx) => {
+      const businessId = await business(tx, { plan: "pro" });
+      const started = await asWorker(tx, (context) => startLivePhoneCall(context, call(businessId, "+14165550134")));
+      const held = (callId: string) => enqueueOutbox(tx, { topic: "notification.dispatch", businessId, aggregateType: "appointment", aggregateId: randomUUID(), dedupeKey: `notification:${randomUUID()}:dispatch`, ...heldForCall(callId, { notificationId: randomUUID() }) });
+      const [ours, other] = [await held(started.callId), await held(randomUUID())];
+      await asWorker(tx, (context) => finishLiveCall(context, { businessId, callId: started.callId, seconds: 42, end: "caller_hung_up" }));
+      const due = async (id: string) => (await tx.select({ availableAt: outboxMessages.availableAt }).from(outboxMessages).where(eq(outboxMessages.id, id)))[0]!.availableAt.getTime() <= Date.now();
+      expect([await due(ours), await due(other)]).toEqual([true, false]);
     });
   });
 

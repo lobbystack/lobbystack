@@ -14,9 +14,10 @@ vi.mock("@lobbystack/domain", async () => ({
   verifyCallerForChange: vi.fn(),
   verifyCallerChangeCode: vi.fn(),
   cancelForCaller: vi.fn(),
+  recordTextConsentForCaller: vi.fn(async () => "subscribed"),
 }));
 
-import { bookForCaller, cancelForCaller, getSmsConsentOnFile, verifyCallerChangeCode, verifyCallerForChange } from "@lobbystack/domain";
+import { cancelForCaller, getSmsConsentOnFile, recordTextConsentForCaller, verifyCallerChangeCode, verifyCallerForChange } from "@lobbystack/domain";
 import { createReceptionistTools, type AgentChannel } from "./tools";
 
 type Execute = (input: object, options: object) => Promise<Record<string, unknown>>;
@@ -25,10 +26,11 @@ const callerPhone = "+14165550100";
 // A toll-free number can't text a number outside North America.
 const tollFree = { contactChannels: { smsNumber: "+18445550100" } };
 
-function tools(options: { channel?: AgentChannel; callerPhone?: string | undefined; snapshot?: Partial<BusinessContextSnapshot> } = {}) {
+function tools(options: { channel?: AgentChannel; callerPhone?: string | undefined; callId?: string | undefined; snapshot?: Partial<BusinessContextSnapshot> } = {}) {
   const set = createReceptionistTools({
     domain: { db: {} as never },
     channel: options.channel ?? "voice",
+    ...("callId" in options ? (options.callId ? { callId: options.callId } : {}) : { callId: "call_1" }),
     ...("callerPhone" in options ? (options.callerPhone ? { callerPhone: options.callerPhone } : {}) : { callerPhone }),
     snapshot: { ...demoSnapshot, timezone: "America/Toronto", appointmentChangePolicy: { enabled: true, allowCancel: true, allowReschedule: true, verificationMode: "phone_match_and_facts" }, ...options.snapshot },
   });
@@ -37,45 +39,37 @@ function tools(options: { channel?: AgentChannel; callerPhone?: string | undefin
   return { set, run, schema };
 }
 
-const booking = { serviceName: "General Checkup", startsAt: "2026-10-06T10:00", contactName: "Milan" };
 const verified = { ok: true, verified: true, requiresOtp: false, verificationId: "ver_1", appointmentId: "apt_1", status: "facts_verified" };
 
 beforeEach(() => { vi.clearAllMocks(); });
 
-describe("tool schemas for texts", () => {
-  it("makes bookAppointment take an explicit answer, not a yes or no", () => {
-    const schema = tools().schema("bookAppointment");
-    for (const smsConsent of ["agreed", "declined", "not_asked"]) expect(schema.safeParse({ ...booking, smsConsent }).success).toBe(true);
-    expect(schema.safeParse({ ...booking, smsConsent: true }).success).toBe(false);
-    expect(schema.safeParse(booking).success).toBe(false);
+describe("recordTextPreference", () => {
+  it("saves the caller's answer for the call's own number and says what it means", async () => {
+    await expect(tools().run("recordTextPreference", { answer: "agreed" })).resolves.toEqual({ ok: true, smsConsentOnFile: "subscribed", result: "Saved: the number calling will get texts about appointments booked under it." });
+    expect(recordTextConsentForCaller).toHaveBeenCalledWith(expect.anything(), { businessId: demoSnapshot.businessId, callId: "call_1", callerPhone, answer: "agreed" });
+    vi.mocked(recordTextConsentForCaller).mockResolvedValueOnce("opted_out");
+    await expect(tools().run("recordTextPreference", { answer: "agreed" })).resolves.toMatchObject({ ok: true, smsConsentOnFile: "opted_out", result: expect.stringContaining("opted out") });
+    vi.mocked(recordTextConsentForCaller).mockResolvedValueOnce(null);
+    await expect(tools().run("recordTextPreference", { answer: "declined" })).resolves.toMatchObject({ ok: false });
   });
 
-  it("lets cancelAppointment take the caller's answer, or nothing when the agent didn't ask", () => {
-    const schema = tools().schema("cancelAppointment");
-    const cancel = { appointmentId: "apt_1", verificationId: "ver_1", finalConfirmation: true };
-    expect(schema.safeParse(cancel).success).toBe(true);
-    for (const smsConsent of ["agreed", "declined"]) expect(schema.safeParse({ ...cancel, smsConsent }).success).toBe(true);
-    expect(schema.safeParse({ ...cancel, smsConsent: "not_asked" }).success).toBe(false);
-  });
-});
-
-describe("bookAppointment", () => {
-  it.each(["agreed", "declined", "not_asked"] as const)("passes the caller's answer (%s) to the booking", async (smsConsent) => {
-    await tools().run("bookAppointment", { ...booking, smsConsent });
-    expect(vi.mocked(bookForCaller).mock.lastCall?.[1]).toMatchObject({ contactPhone: callerPhone, smsConsent });
-  });
-
-  it.each(["web_chat", "web_voice"] as const)("records no answer from a %s, even one the visitor gave", async (channel) => {
-    for (const smsConsent of ["agreed", "declined"] as const) {
-      const result = await tools({ channel, callerPhone: undefined }).run("bookAppointment", { ...booking, contactPhone: callerPhone, smsConsent });
-      expect(vi.mocked(bookForCaller).mock.lastCall?.[1]).toMatchObject({ channel, contactPhone: callerPhone, smsConsent: "not_asked" });
-      if (smsConsent === "agreed") expect(result).toMatchObject({ textConfirmation: expect.stringContaining("only be set up on a phone call") });
+  it("is only offered on a phone call the business can text back", async () => {
+    for (const set of [tools({ channel: "web_chat", callerPhone: undefined }), tools({ channel: "web_voice", callerPhone: undefined }), tools({ callerPhone: "+381695021111", snapshot: tollFree }), tools({ snapshot: { contactChannels: {} } }), tools({ callId: undefined })]) {
+      expect(set.set).not.toHaveProperty("recordTextPreference");
     }
+    // A prospect demo only takes messages, and a business that doesn't book has nothing to text about.
+    const context = { domain: { db: {} as never }, channel: "voice" as const, callerPhone, callId: "call_1" };
+    expect(createReceptionistTools({ ...context, snapshot: demoSnapshot, intakeOnly: true })).not.toHaveProperty("recordTextPreference");
+    expect(createReceptionistTools({ ...context, snapshot: { ...demoSnapshot, bookingMode: "off" } })).not.toHaveProperty("recordTextPreference");
+    expect(tools().set).toHaveProperty("recordTextPreference");
+    expect(tools().schema("bookAppointment").safeParse({ serviceName: "General Checkup", startsAt: "2026-10-06T10:00" }).success).toBe(true);
   });
 
-  it("drops an answer when the business can't text the number", async () => {
-    await tools({ callerPhone: "+381695021111", snapshot: tollFree }).run("bookAppointment", { ...booking, smsConsent: "declined" });
-    expect(vi.mocked(bookForCaller).mock.lastCall?.[1]).toMatchObject({ smsConsent: "not_asked" });
+  it("warns that a booking under another number isn't covered by the caller's answer", async () => {
+    const booking = { serviceName: "General Checkup", startsAt: "2026-10-06T10:00", contactName: "Milan" };
+    await expect(tools().run("bookAppointment", { ...booking, contactPhone: "+14165550199" })).resolves.toMatchObject({ ok: true, textConfirmation: expect.stringContaining("doesn't cover it") });
+    expect(await tools().run("bookAppointment", booking)).not.toHaveProperty("textConfirmation");
+    expect(await tools({ snapshot: { contactChannels: {} } }).run("bookAppointment", { ...booking, contactPhone: "+14165550199" })).not.toHaveProperty("textConfirmation");
   });
 });
 
@@ -118,22 +112,19 @@ describe("cancelAppointment", () => {
   const cancel = { appointmentId: "apt_1", verificationId: "ver_1", finalConfirmation: true };
   const cancelled = { ok: true, appointmentId: "apt_1", startsAt: "2026-10-06T14:00:00.000Z", status: "canceled" };
 
-  it("records the caller's answer with the cancellation and says a text is coming when they agreed", async () => {
+  it("says a text is coming when the caller gets texts", async () => {
     vi.mocked(cancelForCaller).mockResolvedValueOnce({ ...cancelled, smsConsentOnFile: "subscribed" } as never);
-    await expect(tools().run("cancelAppointment", { ...cancel, smsConsent: "agreed" })).resolves.toEqual({ ...cancelled, smsConsentOnFile: "subscribed", textConfirmation: "The caller will get a text confirming the cancellation." });
-    expect(cancelForCaller).toHaveBeenCalledWith(expect.anything(), { businessId: demoSnapshot.businessId, callerPhone, ...cancel, smsConsent: "agreed" });
+    await expect(tools().run("cancelAppointment", cancel)).resolves.toEqual({ ...cancelled, smsConsentOnFile: "subscribed", textConfirmation: "The caller will get a text confirming the cancellation." });
+    expect(cancelForCaller).toHaveBeenCalledWith(expect.anything(), { businessId: demoSnapshot.businessId, callerPhone, ...cancel, callId: "call_1" });
   });
 
-  it.each(["declined", "opted_out"] as const)("promises no text when the answer on file is %s", async (smsConsentOnFile) => {
+  it.each(["declined", "opted_out", "not_asked"] as const)("promises no text when the answer on file is %s", async (smsConsentOnFile) => {
     vi.mocked(cancelForCaller).mockResolvedValueOnce({ ...cancelled, smsConsentOnFile } as never);
-    const result = await tools().run("cancelAppointment", cancel);
-    expect(result).toEqual({ ...cancelled, smsConsentOnFile });
-    expect(vi.mocked(cancelForCaller).mock.lastCall?.[1]).not.toHaveProperty("smsConsent");
+    await expect(tools().run("cancelAppointment", cancel)).resolves.toEqual({ ...cancelled, smsConsentOnFile });
   });
 
-  it("ignores an answer and promises nothing when the business can't text the caller", async () => {
+  it("promises nothing when the business can't text the caller", async () => {
     vi.mocked(cancelForCaller).mockResolvedValueOnce({ ...cancelled, smsConsentOnFile: "subscribed" } as never);
-    await expect(tools({ snapshot: { contactChannels: {} } }).run("cancelAppointment", { ...cancel, smsConsent: "agreed" })).resolves.toEqual(cancelled);
-    expect(vi.mocked(cancelForCaller).mock.lastCall?.[1]).not.toHaveProperty("smsConsent");
+    await expect(tools({ snapshot: { contactChannels: {} } }).run("cancelAppointment", cancel)).resolves.toEqual(cancelled);
   });
 });

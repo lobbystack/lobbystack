@@ -11,6 +11,7 @@ import {
   knowledgeQueryTerms,
   lookupCallerAppointments,
   requestCancellationForCaller,
+  recordTextConsentForCaller,
   rescheduleForCaller,
   searchKnowledgeEvidence,
   takeMessageForStaff,
@@ -260,13 +261,12 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
       },
     });
     tools.bookAppointment = tool({
-      description: "Book an appointment once the caller accepts a time you offered. It checks the time is still open, so don't call findAvailability again first. Pass the caller's answer about a confirmation and reminder text as smsConsent.",
+      description: "Book an appointment once the caller accepts a time you offered. It checks the time is still open, so don't call findAvailability again first.",
       inputSchema: z.object({
         serviceName: z.string(),
         startsAt: z.string().describe("A startsAt value from findAvailability, or the accepted time as YYYY-MM-DDTHH:mm in the business's timezone."),
         contactName: z.string().optional().describe("The caller's name. Required to book."),
         contactPhone: phone.optional().describe("Required when the caller's number isn't already known."),
-        smsConsent: z.enum(["agreed", "declined", "not_asked"]).describe("The caller's answer on this call to a confirmation and reminder text: agreed, declined, or not_asked when you didn't ask."),
       }),
       execute: async (input) => {
         const contactPhone = input.contactPhone?.trim() || context.callerPhone;
@@ -285,9 +285,6 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
         const opening = await checkOpening(domain, { businessId, serviceName: input.serviceName, startsAt, timezone, ...(context.callId ? { callId: context.callId } : {}) });
         if (!opening.ok) return { ok: false, reason: `${opening.reason} Check the service name with getBusinessServices.` };
         if (!opening.available) return { ok: false, reason: UNAVAILABLE_TOOL_MESSAGES[isReason(opening.reason) ? opening.reason : "taken"] };
-        // Only a phone call records an answer about texts. A website chat or
-        // browser call books without one, whatever the agent passes.
-        const textable = channel === "voice" && canTextNumber(snapshot.contactChannels?.smsNumber, contactPhone);
         const booked = await bookForCaller(domain, {
           businessId,
           serviceName: input.serviceName,
@@ -295,17 +292,31 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
           timezone,
           contactPhone,
           channel,
-          // An answer to a question the agent shouldn't have asked counts for nothing.
-          smsConsent: textable ? input.smsConsent : "not_asked",
           ...(input.contactName ? { contactName: input.contactName } : {}),
           ...(context.callId ? { callId: context.callId } : {}),
         });
         // Another booking can take the time between the check and the booking.
         if (!booked.ok) return "unavailableReason" in booked && isReason(booked.unavailableReason) ? { ok: false, reason: UNAVAILABLE_TOOL_MESSAGES[booked.unavailableReason] } : booked;
-        // The caller agreed to a text this business can't send them.
-        return input.smsConsent === "agreed" && !textable
-          ? { ...booked, textConfirmation: channel === "voice" ? "This business can't text that number. Tell the caller they won't get a text confirmation." : "Texts can only be set up on a phone call. Tell the caller they won't get a text confirmation." }
+        // An answer about texts on this call covers only the number calling.
+        return callerTextable && contactPhone !== context.callerPhone
+          ? { ...booked, textConfirmation: "This booking is under another number than the one calling. The caller's answer about texts doesn't cover it, so don't say texts will come for it." }
           : booked;
+      },
+    });
+  }
+
+  // Its own tool, so the answer counts whenever the caller gives it: GPT-Live
+  // often asks about texts only after the booking or cancellation is done.
+  const callId = context.callId;
+  if (callerTextable && callId && bookingMode !== "off") {
+    tools.recordTextPreference = tool({
+      description: "Save the caller's answer as soon as they say whether they want texts about their appointments, before or after booking or cancelling. A yes to a time or to booking isn't a yes to texts.",
+      inputSchema: z.object({ answer: z.enum(["agreed", "declined"]) }),
+      execute: async ({ answer }) => {
+        const onFile = await recordTextConsentForCaller(domain, { businessId, callId, callerPhone: context.callerPhone!, answer });
+        if (!onFile) return { ok: false, reason: "The answer could not be saved." };
+        const result = onFile === "subscribed" ? "Saved: the number calling will get texts about appointments booked under it." : onFile === "declined" ? "Saved: the number calling won't get texts about its appointments." : "This number opted out of texts, so it won't get any.";
+        return { ok: true, smsConsentOnFile: onFile, result };
       },
     });
   }
@@ -379,10 +390,9 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
           appointmentId: z.string(),
           verificationId: z.string(),
           finalConfirmation: z.boolean(),
-          smsConsent: z.enum(["agreed", "declined"]).optional().describe("The caller's answer when you asked whether they want a text confirming the cancellation. Leave it out when you didn't ask."),
         }),
-        execute: async ({ smsConsent, ...input }) => {
-          const result = withConsentOnFile(await cancelForCaller(domain, { businessId, callerPhone, ...input, ...(smsConsent && callerTextable ? { smsConsent } : {}) }));
+        execute: async (input) => {
+          const result = withConsentOnFile(await cancelForCaller(domain, { businessId, callerPhone, ...input, ...(context.callId ? { callId: context.callId } : {}) }));
           return "smsConsentOnFile" in result && result.smsConsentOnFile === "subscribed" ? { ...result, textConfirmation: "The caller will get a text confirming the cancellation." } : result;
         },
       });

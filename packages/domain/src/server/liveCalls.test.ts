@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   reserveOutboundCallAttempt: vi.fn(),
   recordUnitEconomicsEvent: vi.fn(),
   enqueueOutbox: vi.fn(),
+  releaseCallTexts: vi.fn(),
 }));
 
 vi.mock("@lobbystack/db", async (original) => ({
@@ -20,6 +21,7 @@ vi.mock("./voice", () => ({ completeCall: mocks.completeCall, setTransferState: 
 vi.mock("./billing", () => ({ reserveOutboundCallAttempt: mocks.reserveOutboundCallAttempt }));
 vi.mock("./unitEconomics", () => ({ recordUnitEconomicsEvent: mocks.recordUnitEconomicsEvent }));
 vi.mock("./demos", () => ({ recordProspectDemoCallOutcome: vi.fn() }));
+vi.mock("./notifications", () => ({ releaseCallTexts: mocks.releaseCallTexts }));
 
 import { finishLiveCall, LIVE_CALL_PROVIDER, liveCallRecordingJob, orphanedLiveCallSeconds, prepareLiveCallTransfer, recordLiveCallTransferResult, saveLiveCallTurn, startLivePhoneCall } from "./liveCalls";
 
@@ -54,6 +56,8 @@ describe("finishLiveCall", () => {
     await finishLiveCall(context, { ...call, seconds: 90, end: "caller_hung_up" });
     expect(mocks.completeCall).toHaveBeenCalledWith(context, expect.objectContaining({ callId: "call_1", status: "completed", disposition: "caller_hung_up", providerDurationSeconds: 90, mediaDurationSeconds: 90, providerCostUsd: expect.closeTo(0.075, 6) }));
     expect(mocks.recordUnitEconomicsEvent).toHaveBeenCalledWith(context, expect.objectContaining({ eventKey: "voice_ai:live_session:call_1", model: "gpt-live-1", costUsd: expect.closeTo(0.075, 6) }));
+    // Texts held while the call ran go out once it's over.
+    expect(mocks.releaseCallTexts).toHaveBeenCalledWith(context, { businessId: call.businessId, callId: "call_1" });
   });
 
   it("passes the measured length so an abandoned call isn't billed OpenAI's minimum", async () => {

@@ -87,9 +87,9 @@ describe("the answer on file during a self-service cancellation", () => {
     await expect(verifyCallerChangeCode(context, { businessId: "biz_1", verificationId: "ver_1", code: "000000" })).resolves.toEqual({ ok: false, status: "otp_sent", verificationId: "ver_1", reason: "The verification code is invalid." });
   });
 
-  it("passes the caller's answer to the cancellation and returns the answer on file after it", async () => {
+  it("comes back with the cancellation", async () => {
     mocks.cancelForCaller.mockResolvedValueOnce({ appointmentId: "apt_1", serviceId: "svc_1", startsAt: new Date("2030-01-08T15:00:00Z"), endsAt: new Date("2030-01-08T15:30:00Z"), smsConsentOnFile: "subscribed" });
-    await expect(cancelForCaller(context, { businessId: "biz_1", callerPhone: "+14165550100", appointmentId: "apt_1", verificationId: "ver_1", finalConfirmation: true, smsConsent: "agreed" })).resolves.toEqual({ ok: true, appointmentId: "apt_1", startsAt: "2030-01-08T15:00:00.000Z", status: "canceled", smsConsentOnFile: "subscribed" });
-    expect(mocks.cancelForCaller).toHaveBeenCalledWith(context, { businessId: "biz_1", appointmentId: "apt_1", callerPhone: "+14165550100", verificationId: "ver_1", smsConsent: "agreed" });
+    await expect(cancelForCaller(context, { businessId: "biz_1", callerPhone: "+14165550100", appointmentId: "apt_1", verificationId: "ver_1", finalConfirmation: true })).resolves.toEqual({ ok: true, appointmentId: "apt_1", startsAt: "2030-01-08T15:00:00.000Z", status: "canceled", smsConsentOnFile: "subscribed" });
+    expect(mocks.cancelForCaller).toHaveBeenCalledWith(context, { businessId: "biz_1", appointmentId: "apt_1", callerPhone: "+14165550100", verificationId: "ver_1" });
   });
 });
