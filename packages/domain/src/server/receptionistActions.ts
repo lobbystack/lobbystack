@@ -1,7 +1,7 @@
-import { and, asc, eq, gte, ilike, lt, ne, or } from "drizzle-orm";
+import { and, asc, eq, gte, ilike, inArray, lt, ne, or } from "drizzle-orm";
 import { DateTime } from "luxon";
 
-import { appointments, contacts, receptionistProfiles, services, withBusinessTransaction } from "@lobbystack/db";
+import { appointments, calls, contacts, enqueueOutbox, notifications, receptionistProfiles, services, withBusinessTransaction } from "@lobbystack/db";
 import { normalizeAppointmentChangePolicy, type HoursWindow } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
@@ -10,10 +10,10 @@ import { createAppointmentChangeVerification, verifyAppointmentChangeOtp } from 
 import { personNamesMatch, serviceNamesMatch } from "./appointmentFacts";
 import { bookAppointment, cancelAppointmentForCaller, checkAvailability, findAvailability, rescheduleAppointmentForCaller } from "./booking";
 import { recordCallSchedulingProgress } from "./callOutcome";
-import { receptionistSmsConsentAnswer, type SmsConsentAnswer } from "./contactSmsConsent";
+import { recordSmsConsentAnswerInTransaction, type SmsConsentOnFile } from "./contactSmsConsent";
 import type { DomainContext } from "./context";
 import { appendMessage, getOrCreateConversation } from "./conversations";
-import { queueOperatorAlert } from "./notifications";
+import { CANCELLATION_CONFIRMATION, queueOperatorAlert } from "./notifications";
 import { recordProductEventBestEffort } from "./productEvents";
 import { CANCELLATION_REQUEST, createVoiceFollowUpTask, type FollowUpRequest } from "./voice";
 
@@ -179,7 +179,7 @@ export async function findCallerBooking(context: DomainContext, input: { busines
 
 export async function bookForCaller(
   context: DomainContext,
-  input: { businessId: string; serviceName: string; startsAt: string; timezone: string; contactPhone: string; contactName?: string; smsConsent?: SmsConsentAnswer; channel: ReceptionistChannel; callId?: string },
+  input: { businessId: string; serviceName: string; startsAt: string; timezone: string; contactPhone: string; contactName?: string; channel: ReceptionistChannel; callId?: string },
 ) {
   const distinctId = getPostHogDistinctIdForBusinessSystem(input.businessId);
   const service = await resolveActiveService(context, input.businessId, input.serviceName);
@@ -187,7 +187,6 @@ export async function bookForCaller(
     await recordProductEventBestEffort(context, { name: "appointment.booking_failed", businessId: input.businessId, distinctId, properties: { reason: "service_unavailable", requestedServiceName: input.serviceName, channel: input.channel, sourceChannel: input.channel } });
     return { ok: false as const, reason: "Service is not available." };
   }
-  const smsConsent = receptionistSmsConsentAnswer(input.channel, input.smsConsent);
   try {
     const appointment = await bookAppointment(context, {
       businessId: input.businessId,
@@ -197,7 +196,6 @@ export async function bookForCaller(
       contactPhone: input.contactPhone,
       sourceChannel: input.channel,
       ...(input.callId ? { callId: input.callId } : {}),
-      ...(smsConsent ? { smsConsent } : {}),
       ...(input.contactName ? { contactName: input.contactName } : {}),
     });
     await recordProductEventBestEffort(context, { name: "appointment.booked", businessId: input.businessId, distinctId, properties: { appointmentId: appointment.appointmentId, channel: input.channel, serviceId: service.id, sourceChannel: input.channel } });
@@ -249,13 +247,51 @@ export async function verifyCallerChangeCode(context: DomainContext, input: { bu
 
 export async function cancelForCaller(
   context: DomainContext,
-  input: { businessId: string; callerPhone: string; appointmentId: string; verificationId?: string; finalConfirmation: boolean; smsConsent?: SmsConsentAnswer },
+  input: { businessId: string; callerPhone: string; appointmentId: string; verificationId?: string; finalConfirmation: boolean },
 ) {
   if (!input.finalConfirmation) return { ok: false as const, reason: "Final confirmation is required." };
   if (!input.verificationId) return { ok: false as const, reason: "The appointment change verification is required." };
-  const result = await cancelAppointmentForCaller(context, { businessId: input.businessId, appointmentId: input.appointmentId, callerPhone: input.callerPhone, verificationId: input.verificationId, ...(input.smsConsent ? { smsConsent: input.smsConsent } : {}) });
+  const result = await cancelAppointmentForCaller(context, { businessId: input.businessId, appointmentId: input.appointmentId, callerPhone: input.callerPhone, verificationId: input.verificationId });
   if (!result) return { ok: false as const, reason: "The appointment could not be verified." };
   return { ok: true as const, appointmentId: input.appointmentId, startsAt: result.startsAt.toISOString(), status: "canceled", smsConsentOnFile: result.smsConsentOnFile };
+}
+
+/**
+ * Records the caller's answer to "Can I text this number?", given at any point
+ * of a phone call, for the call's own number. A yes that comes after this call
+ * booked or cancelled an appointment re-queues the confirmation text skipped
+ * for want of it. Returns the answer on file afterwards, or null when the call
+ * isn't this caller's.
+ */
+export async function recordTextConsentForCaller(
+  context: DomainContext,
+  input: { businessId: string; callId: string; callerPhone: string; answer: "agreed" | "declined" },
+): Promise<SmsConsentOnFile | null> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const [call] = await tx.select({ startedAt: calls.startedAt, contactId: contacts.id, smsConsentStatus: contacts.smsConsentStatus, operatorBlockedAt: contacts.operatorBlockedAt })
+      .from(calls)
+      .innerJoin(contacts, and(eq(contacts.id, calls.contactId), eq(contacts.businessId, input.businessId)))
+      .where(and(eq(calls.id, input.callId), eq(calls.businessId, input.businessId), eq(contacts.phone, input.callerPhone)))
+      .limit(1);
+    if (!call) return null;
+    const onFile = await recordSmsConsentAnswerInTransaction(tx, { businessId: input.businessId, contactId: call.contactId, phone: input.callerPhone, contact: call, answer: input.answer, source: "voice_call" });
+    if (onFile !== "subscribed" || call.smsConsentStatus === "subscribed") return onFile;
+    const now = new Date();
+    const requeued = await tx.update(notifications)
+      .set({ status: "pending", scheduledFor: now, updatedAt: now })
+      .where(and(
+        eq(notifications.businessId, input.businessId),
+        eq(notifications.channel, "sms"),
+        eq(notifications.status, "skipped"),
+        inArray(notifications.kind, ["booking_confirmation", CANCELLATION_CONFIRMATION]),
+        gte(notifications.createdAt, call.startedAt),
+        inArray(notifications.relatedId, tx.select({ id: appointments.id }).from(appointments).where(and(eq(appointments.businessId, input.businessId), eq(appointments.contactId, call.contactId)))),
+      ))
+      .returning({ id: notifications.id, appointmentId: notifications.relatedId });
+    // The first dispatch job already used the plain key, and a later yes may re-queue it again.
+    for (const row of requeued) await enqueueOutbox(tx, { topic: "notification.dispatch", businessId: input.businessId, aggregateType: "appointment", aggregateId: row.appointmentId!, dedupeKey: `notification:${row.id}:dispatch:consent:${now.getTime()}`, payload: { notificationId: row.id } });
+    return onFile;
+  });
 }
 
 export async function rescheduleForCaller(

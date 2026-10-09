@@ -9,19 +9,8 @@ import type { DomainContext } from "./context";
 // (never asked). Only "subscribed" gets texts. STOP always wins: no answer
 // given to the agent, the API or MCP changes an opted-out contact.
 
-/** The caller's answer to "Can I text you?", as the agent or the API passes it. */
+/** The answer to "Can I text you?" that a booking through the API or MCP passes. */
 export type SmsConsentAnswer = "agreed" | "declined" | "not_asked";
-
-/**
- * The receptionist's answer to record for a conversation on this channel.
- * Only a phone call counts: the caller hears the question and answers for
- * the call's own number, which is the verbal consent the shared sender's
- * toll-free verification covers. A website chat or a browser call records
- * nothing, whatever the agent passes.
- */
-export function receptionistSmsConsentAnswer(channel: string, answer: SmsConsentAnswer | undefined): SmsConsentAnswer | undefined {
-  return channel === "voice" ? answer : undefined;
-}
 
 /**
  * The answer on file, as the agent sees it. A contact the business blocked

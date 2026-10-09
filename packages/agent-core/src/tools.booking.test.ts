@@ -24,7 +24,7 @@ function tools(snapshot: Partial<BusinessContextSnapshot> = {}) {
   return { set, run };
 }
 
-const booking = { serviceName: "General Checkup", startsAt: "2026-10-06T10:00", contactName: "Milan", smsConsent: "not_asked" };
+const booking = { serviceName: "General Checkup", startsAt: "2026-10-06T10:00", contactName: "Milan" };
 
 beforeEach(() => { vi.clearAllMocks(); });
 

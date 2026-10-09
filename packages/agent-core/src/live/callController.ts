@@ -250,7 +250,7 @@ const TRANSFER_FAILED = "The transfer to a person didn't go through. In the lang
 // Tools that change something. The next request on the call sees their results,
 // so a changed request reschedules instead of booking twice. endCall isn't one:
 // a call that goes on after it was cancelled, and the next request may end it again.
-const ACTION_TOOLS = new Set(["bookAppointment", "requestAppointment", "requestAppointmentCancellation", "cancelAppointment", "rescheduleAppointment", "takeMessage", "transferCall"]);
+const ACTION_TOOLS = new Set(["bookAppointment", "requestAppointment", "requestAppointmentCancellation", "cancelAppointment", "rescheduleAppointment", "recordTextPreference", "takeMessage", "transferCall"]);
 // Lookups the next request can reuse instead of repeating.
 const REUSABLE_LOOKUPS = new Set(["findAvailability"]);
 const PROGRESS: Record<string, string> = {
@@ -264,6 +264,7 @@ const PROGRESS: Record<string, string> = {
   verifyAppointmentChangeOtp: "checked the verification code",
   cancelAppointment: "tried to cancel the appointment",
   rescheduleAppointment: "tried to reschedule the appointment",
+  recordTextPreference: "tried to save the caller's answer about texts",
   takeMessage: "tried to save the message",
   transferCall: "tried to transfer the call",
   searchKnowledge: "searched the business's documents",

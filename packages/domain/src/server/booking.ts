@@ -8,7 +8,7 @@ import { requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
 import { recordCallOutcomeInTransaction } from "./callOutcome";
 import { consumeAppointmentChangeVerificationInTransaction } from "./appointmentChanges";
-import { recordSmsConsentAnswerInTransaction, type SmsConsentAnswer, type SmsConsentOnFile } from "./contactSmsConsent";
+import { recordSmsConsentAnswerInTransaction, smsConsentOnFile, type SmsConsentAnswer, type SmsConsentOnFile } from "./contactSmsConsent";
 import { recordProductEventBestEffort } from "./productEvents";
 import { CANCELLATION_CONFIRMATION, rescheduleAppointmentReminderInTransaction } from "./notifications";
 import { emitWebhookEventInTransaction } from "./publicApi/webhooks";
@@ -462,23 +462,20 @@ export async function rescheduleAppointmentForCaller(
 }
 
 /**
- * The verified caller cancels. Their answer to a text confirming the
- * cancellation, when the agent asked, becomes their preference before the
- * cancellation text is queued, so delivery follows it. Returns the answer on
- * file afterwards with the cancelled appointment.
+ * The verified caller cancels. Returns the cancelled appointment with the
+ * caller's answer on file about texts, which the cancellation text follows.
  */
 export async function cancelAppointmentForCaller(
   context: DomainContext,
-  input: { businessId: string; appointmentId: string; callerPhone: string; verificationId: string; smsConsent?: SmsConsentAnswer },
+  input: { businessId: string; appointmentId: string; callerPhone: string; verificationId: string },
 ): Promise<{ appointmentId: string; serviceId: string; startsAt: Date; endsAt: Date; smsConsentOnFile: SmsConsentOnFile } | null> {
   const result = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const row = (await tx.select({ id: appointments.id, serviceId: appointments.serviceId, startsAt: appointments.startsAt, endsAt: appointments.endsAt, contactId: contacts.id, smsConsentStatus: contacts.smsConsentStatus, operatorBlockedAt: contacts.operatorBlockedAt }).from(appointments).innerJoin(contacts, and(eq(appointments.contactId, contacts.id), eq(contacts.businessId, input.businessId))).where(and(eq(appointments.id, input.appointmentId), eq(appointments.businessId, input.businessId), eq(contacts.phone, input.callerPhone), ne(appointments.status, "canceled"))).limit(1))[0];
     if (!row) return null;
     const consumed = await consumeAppointmentChangeVerificationInTransaction(tx, { businessId: input.businessId, verificationId: input.verificationId, appointmentId: input.appointmentId, callerPhone: input.callerPhone, action: "cancel" });
     if (!consumed) return null;
-    const onFile = await recordSmsConsentAnswerInTransaction(tx, { businessId: input.businessId, contactId: row.contactId, phone: input.callerPhone, contact: row, answer: input.smsConsent, source: "appointment_cancellation" });
     if (await cancelAppointmentInTransaction(tx, { businessId: input.businessId, appointmentId: row.id, change: { source: "caller" } }) !== "cancelled") return null;
-    return { appointmentId: row.id, serviceId: row.serviceId, startsAt: row.startsAt, endsAt: row.endsAt, smsConsentOnFile: onFile };
+    return { appointmentId: row.id, serviceId: row.serviceId, startsAt: row.startsAt, endsAt: row.endsAt, smsConsentOnFile: smsConsentOnFile(row) };
   });
   if (result) {
     await recordAppointmentChange(context, { name: "appointment.cancelled", businessId: input.businessId, appointmentId: result.appointmentId, source: "caller" });

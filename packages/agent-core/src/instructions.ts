@@ -29,9 +29,11 @@ const BOOKING_GUIDANCE: Record<BookingMode, string> = {
 const NO_HOURS_GUIDANCE = "The business hasn't set its opening hours yet, so you can't book appointments. Don't offer times or say a time is taken. When a caller wants an appointment, take a message with their name, number, the service and their preferred time so the team can book it.";
 
 // The caller's answer on file about texts (smsConsentOnFile) decides whether
-// the agent asks. A caller answers once; after that the agent follows it.
-const BOOKING_TEXT_GUIDANCE = "On a phone call, findAvailability returns smsConsentOnFile, the caller's earlier answer about texts from this business. When it's not_asked, or missing, ask together with the time you offer, in the language of the call: \"Can I text this number with your appointment confirmation and reminder? Message and data rates may apply. Reply STOP to opt out or HELP for help.\" Pass their answer to bookAppointment as smsConsent. When it's subscribed, don't ask: tell the caller they'll get a confirmation text. When it's declined or opted_out, don't ask and don't mention texts. Pass smsConsent as not_asked whenever you didn't ask.";
-const CANCELLATION_TEXT_GUIDANCE = "Once verifyAppointmentForChange or verifyAppointmentChangeOtp verifies a cancellation, its result has smsConsentOnFile. When it's not_asked, ask once, together with the final confirmation and in the language of the call: \"Can I text this number to confirm the cancellation? Message and data rates may apply. Reply STOP to opt out or HELP for help.\" Pass their answer to cancelAppointment as smsConsent. When it's subscribed, don't ask: tell the caller they'll get a text confirming the cancellation. When it's declined or opted_out, don't ask and don't mention texts.";
+// the agent asks. A caller answers once; after that the agent follows it. The
+// answer has its own tool because GPT-Live may ask only after the booking.
+const SAVE_TEXT_ANSWER = "Whenever the caller says whether they want texts, save their answer with recordTextPreference, even after the booking or cancellation is done. Their answer on this call replaces smsConsentOnFile: a no means no texts, even when it was subscribed. Only an answer about texts counts: a yes to a time or to booking isn't a yes to texts, and a no to texts isn't a no to the appointment. Once the caller answers, tell them whether they'll get texts only after recordTextPreference has saved it.";
+const BOOKING_TEXT_GUIDANCE = `On a phone call, findAvailability returns smsConsentOnFile, the caller's earlier answer about texts from this business. When it's not_asked, or missing, ask together with the time you offer, in the language of the call: "Can I text this number with your appointment confirmation and reminder? Message and data rates may apply. Reply STOP to opt out or HELP for help." When it's subscribed, don't ask: tell the caller they'll get a confirmation text. When it's declined or opted_out, don't ask and don't mention texts. ${SAVE_TEXT_ANSWER}`;
+const CANCELLATION_TEXT_GUIDANCE = `Once verifyAppointmentForChange or verifyAppointmentChangeOtp verifies a cancellation, its result has smsConsentOnFile. When it's not_asked, ask once, together with the final confirmation and in the language of the call: "Can I text this number to confirm the cancellation? Message and data rates may apply. Reply STOP to opt out or HELP for help." When it's subscribed, don't ask: tell the caller they'll get a text confirming the cancellation. When it's declined or opted_out, don't ask and don't mention texts. ${SAVE_TEXT_ANSWER}`;
 
 // Instructions for the text agent that does the work. On voice it runs behind
 // GPT-Live, so its reply is spoken to the caller by the live model.
@@ -74,7 +76,7 @@ export function buildAgentInstructions(snapshot: BusinessContextSnapshot, channe
     channel === "voice" && bookingMode === "instant" && !options.intakeOnly
       ? textable
         ? BOOKING_TEXT_GUIDANCE
-        : "This business can't text the caller's number, so don't offer a text confirmation or reminder. Pass smsConsent as not_asked."
+        : "This business can't text the caller's number, so don't offer a text confirmation or reminder."
       : "",
     "Work out relative dates yourself (\"tomorrow\", \"next Tuesday\") from the current date below; never ask the caller for a calendar date they already described. Treat \"morning\" as 09:00 and \"afternoon\" as 13:00.",
     options.callerPhone
