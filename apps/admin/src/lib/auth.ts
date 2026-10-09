@@ -367,9 +367,25 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
         if (needsMcpResource(ctx.path)) await ensureMcpResource(database.db);
         const registration = registrationWithApplicationType(ctx.path, ctx.body);
         if (registration) return { context: { body: registration } };
-        const recoveryPaths = ["/email-otp/request-password-reset", "/email-otp/reset-password"];
+        const resetRequestPaths = ["/request-password-reset", "/email-otp/request-password-reset"];
+        const recoveryPaths = [...resetRequestPaths, "/email-otp/reset-password"];
         if (recoveryPaths.includes(ctx.path) && !z.email().safeParse(ctx.body?.email).success) {
           throw new APIError("BAD_REQUEST", { message: "Invalid email address." });
+        }
+        if (resetRequestPaths.includes(ctx.path)) {
+          // Better Auth limits only per IP; each new code also resets the guess
+          // budget, so cap sends per recipient as well.
+          const { assertEmailVerificationSendAllowed, EmailVerificationRateLimitError } = await import("./email-verification-policy");
+          const remoteIp = ctx.headers ? trustedClientIpFromHeaders(ctx.headers) : undefined;
+          try {
+            await assertEmailVerificationSendAllowed({ email: ctx.body.email, scope: "password-reset", ...(remoteIp ? { remoteIp } : {}) });
+          } catch (error) {
+            if (!(error instanceof EmailVerificationRateLimitError)) throw error;
+            // Answer as if sent, matching each endpoint's own success body.
+            return ctx.json(ctx.path === "/request-password-reset"
+              ? { status: true, message: "If this email exists in our system, check your email for the reset link" }
+              : { success: true });
+          }
         }
         if (["/sign-up/email", "/email-otp/reset-password", "/reset-password", "/change-password"].includes(ctx.path)) {
           const password = ctx.body?.newPassword ?? ctx.body?.password;
@@ -412,7 +428,7 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
   });
 }
 
-export type Session = { user: { id: string; name?: string | null; email?: string | null }; session: { id: string; userId: string; expiresAt: Date } } | null;
+export type Session = { user: { id: string; name?: string | null; email?: string | null; emailVerified?: boolean }; session: { id: string; userId: string; expiresAt: Date } } | null;
 
 export async function getSession(headers: Headers): Promise<Session> {
   return (await getAuth().api.getSession({ headers })) as Session;

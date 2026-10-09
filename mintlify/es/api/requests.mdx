@@ -55,7 +55,8 @@ Un error de red puede dejarle sin saber si una solicitud funcionó. Envíe un en
 - `POST /contacts`
 - `POST /appointments`
 - `POST /knowledge`
-- `POST /webhooks`
+
+`POST /webhooks` ignora este encabezado para que LobbyStack nunca guarde una copia del secreto de firma. Si una creación falla por un error de red, consulte `GET /webhooks` antes de reintentar.
 
 ```bash
 curl https://app.lobbystack.com/api/v1/appointments \

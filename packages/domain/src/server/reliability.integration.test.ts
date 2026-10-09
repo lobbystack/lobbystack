@@ -1,15 +1,17 @@
 import { randomUUID } from "node:crypto";
-import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
+import { readFileSync } from "node:fs";
+import { and, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it, vi } from "vitest";
 import { businessHours, calls, conversations, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, messages, receptionistProfiles, storageObjects, transcripts, websiteIngestionJobs } from "@lobbystack/db";
-import { affiliateCommissions, affiliatePayoutItems, affiliateProfiles, billingAccounts, billingTransactions, appointments, auditLogs, businessMemberships, contacts, productEvents, providerEvents, services, staff, users, businesses, notifications, outboxMessages, withBusinessTransaction, claimOutboxBatch, createDatabaseClient, enqueueOutbox, markOutboxFailed, markOutboxPublished, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { affiliateCommissions, affiliatePayoutItems, affiliateProfiles, billingAccounts, billingTransactions, appointments, auditLogs, businessMemberships, contacts, productEvents, providerEvents, services, staff, users, businesses, notifications, outboxMessages, withBusinessTransaction, claimOutboxBatch, createDatabaseClient, enqueueOutbox, markOutboxFailed, listSchedulerBusinesses, markOutboxPublished, prunePublishedOutbox, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { generateAffiliatePayoutRun } from "./affiliates";
-import { reconcileBillingProviderEvent } from "./billing";
+import { getBillingUsageStatus, reconcileBillingProviderEvent } from "./billing";
 import { DASHBOARD_TEST_CALL_WIDGET_ID } from "@lobbystack/shared";
 import { currentWebsiteIngestion } from "./activation";
 import { createBusiness } from "./tenancy";
 import { bookAppointment, cancelAppointment } from "./booking";
 import { appendMessage } from "./conversations";
+import { receiveInboundSms } from "./sms";
 import { runPrivacyRetentionSweep } from "./privacy";
 import { EXPIRED_UPLOAD_STATUS, deleteExpiredObjectsForBusiness, persistCallRecording } from "./storage";
 import { completeCall, upsertTranscript } from "./voice";
@@ -110,7 +112,8 @@ describe.skipIf(!testUrl)("reliability against dedicated PostgreSQL roles", () =
       })));
       // Both requests must actually reach PostgreSQL before releasing the barrier.
       await vi.waitFor(async () => {
-        const result = await blocker.query("select count(*)::int as waiting from pg_locks where locktype = 'advisory' and not granted and database = (select oid from pg_database where datname = current_database())");
+        // Count only this blocker's waiters: other test files run their own lock races in parallel.
+        const result = await blocker.query("select count(*)::int as waiting from pg_locks where not granted and pg_backend_pid() = any(pg_blocking_pids(pid))");
         expect(result.rows[0].waiting).toBe(2);
       }, { timeout: 3000 });
       await blocker.query("rollback");
@@ -125,6 +128,38 @@ describe.skipIf(!testUrl)("reliability against dedicated PostgreSQL roles", () =
       await blocker.query("rollback");
       blocker.release();
       await pending;
+      await client!.db.delete(businesses).where(eq(businesses.id, businessId));
+    }
+  });
+
+  it("keeps a text from a new number while another webhook is still creating its contact", async () => {
+    // Two texts from a new number arrive together. The second webhook's contact
+    // insert waits on the first one's uncommitted row, then must reuse it
+    // instead of failing on the unique phone index and losing the text.
+    const businessId = randomUUID();
+    const phone = "+15555550142";
+    const blocker = await client!.pool.connect();
+    let pending: Promise<unknown> | undefined;
+    try {
+      await client!.db.insert(businesses).values({ id: businessId, slug: businessId, name: "Inbound SMS race test", timezone: "UTC", businessType: "test", telemetryEnabled: false });
+      await blocker.query("begin");
+      const firstContact = (await blocker.query<{ id: string; pid: number }>("insert into contacts (business_id, phone) values ($1, $2) returning id, pg_backend_pid() as pid", [businessId, phone])).rows[0]!;
+      pending = client!.db.transaction(async (tx) => {
+        await tx.execute(sql`set local role lobbystack_worker`);
+        return await receiveInboundSms({ db: tx as unknown as Database }, { businessId, providerMessageId: `SM${randomUUID()}`, from: phone, to: "+15555550100", body: "Can I book Friday at 3?", payload: {} });
+      });
+      await vi.waitFor(async () => {
+        const result = await client!.pool.query("select count(*)::int as waiting from pg_stat_activity where $1 = any(pg_blocking_pids(pid))", [firstContact.pid]);
+        expect(result.rows[0].waiting).toBe(1);
+      }, { timeout: 3000 });
+      await blocker.query("commit");
+      await expect(pending).resolves.toMatchObject({ duplicate: false, messageId: expect.any(String) });
+      const saved = await client!.db.select({ contactId: conversations.contactId }).from(messages).innerJoin(conversations, eq(conversations.id, messages.conversationId)).where(eq(messages.businessId, businessId));
+      expect(saved).toEqual([{ contactId: firstContact.id }]);
+    } finally {
+      await blocker.query("rollback");
+      blocker.release();
+      await pending?.catch(() => undefined);
       await client!.db.delete(businesses).where(eq(businesses.id, businessId));
     }
   });
@@ -176,7 +211,7 @@ describe.skipIf(!testUrl)("reliability against dedicated PostgreSQL roles", () =
         { id: freeBusinessId, slug: freeBusinessId, name: "Free retention", timezone: "UTC", businessType: "test", deploymentMode: "cloud" },
         { id: paidBusinessId, slug: paidBusinessId, name: "Paid retention", timezone: "UTC", businessType: "test", deploymentMode: "cloud" },
       ]);
-      await tx.insert(billingAccounts).values({ businessId: paidBusinessId, billingKey: `business:${paidBusinessId}`, plan: "starter" });
+      await tx.insert(billingAccounts).values({ businessId: paidBusinessId, billingKey: `business:${paidBusinessId}`, plan: "starter", subscriptionState: "active" });
       await tx.insert(conversations).values([
         { id: freeConversationId, businessId: freeBusinessId, channel: "voice" },
         { id: paidConversationId, businessId: paidBusinessId, channel: "voice" },
@@ -222,7 +257,7 @@ describe.skipIf(!testUrl)("reliability against dedicated PostgreSQL roles", () =
         { id: freeBusinessId, slug: freeBusinessId, name: "Free knowledge", timezone: "UTC", businessType: "test", deploymentMode: "cloud" },
         { id: starterBusinessId, slug: starterBusinessId, name: "Starter knowledge", timezone: "UTC", businessType: "test", deploymentMode: "cloud" },
       ]);
-      await tx.insert(billingAccounts).values({ businessId: starterBusinessId, billingKey: `business:${starterBusinessId}`, plan: "starter" });
+      await tx.insert(billingAccounts).values({ businessId: starterBusinessId, billingKey: `business:${starterBusinessId}`, plan: "starter", subscriptionState: "active" });
       // Each business already holds 1,040,000 bytes of indexed text, just under Free's 1 MB.
       const existing = { [freeBusinessId]: randomUUID(), [starterBusinessId]: randomUUID() };
       const incoming = { [freeBusinessId]: randomUUID(), [starterBusinessId]: randomUUID() };
@@ -454,6 +489,41 @@ describe.skipIf(!testUrl)("reliability against dedicated PostgreSQL roles", () =
     });
   });
 
+  it("prunes old published outbox rows but keeps pending, dead-lettered, recent and onboarding rows", async () => {
+    await rollbackTest(async (tx) => {
+      await tx.execute(sql`set local role lobbystack_dispatcher`);
+      await tx.execute(sql`select set_config('app.actor_type', 'dispatcher', true)`);
+      const old = new Date("2000-01-01");
+      const row = (topic: string, fields: Partial<typeof outboxMessages.$inferInsert>) => ({ topic, aggregateType: "test", dedupeKey: randomUUID(), payload: {}, ...fields });
+      const inserted = await tx.insert(outboxMessages).values([
+        row("realtime.publish", { publishedAt: old }),
+        row("realtime.publish", { publishedAt: new Date() }),
+        row("realtime.publish", { availableAt: old }),
+        row("realtime.publish", { deadLetteredAt: old }),
+        row("onboarding.sendFollowup", { publishedAt: old }),
+      ]).returning({ id: outboxMessages.id });
+      const ids = inserted.map((message) => message.id);
+      expect(await prunePublishedOutbox(tx as unknown as Database, { publishedBefore: new Date("2001-01-01"), limit: 1_000_000 })).toBeGreaterThanOrEqual(1);
+      const left = new Set((await tx.select({ id: outboxMessages.id }).from(outboxMessages).where(inArray(outboxMessages.id, ids))).map((message) => message.id));
+      expect(ids.map((id) => left.has(id))).toEqual([false, true, true, true, true]);
+    });
+  });
+
+  it("lists businesses for the scheduler with whether each still has an active member", async () => {
+    await rollbackTest(async (tx) => {
+      const [activeId, expiredId, userId] = [randomUUID(), randomUUID(), randomUUID()];
+      await tx.insert(businesses).values([activeId, expiredId].map((id) => ({ id, slug: id, name: "Scheduler listing", timezone: "UTC", businessType: "test" })));
+      await tx.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid` });
+      await tx.insert(businessMemberships).values([{ businessId: activeId, userId, role: "business_owner" }, { businessId: expiredId, userId, role: "business_owner", status: "removed" }]);
+      await tx.execute(sql`set local role lobbystack_dispatcher`);
+      const listed = await listSchedulerBusinesses(tx as unknown as Database);
+      expect(listed.filter((business) => business.id === activeId || business.id === expiredId).sort((a, b) => Number(b.hasMembers) - Number(a.hasMembers))).toEqual([{ id: activeId, hasMembers: true }, { id: expiredId, hasMembers: false }]);
+      // The dispatcher reads only the two membership columns it needs.
+      // Drizzle wraps the driver error; the PostgreSQL message is on the cause.
+      await expect(tx.execute(sql`select user_id from public.business_memberships limit 1`)).rejects.toMatchObject({ cause: { message: expect.stringMatching(/permission denied/) } });
+    });
+  });
+
   it("runs payout generation with the worker role and worker RLS actor", async () => {
     await rollbackTest(async (tx) => {
       const businessId = randomUUID();
@@ -553,6 +623,62 @@ describe.skipIf(!testUrl)("reliability against dedicated PostgreSQL roles", () =
     }
   });
 
+  it("keeps a canceled subscription canceled when an older Polar event arrives late", async () => {
+    // Polar retries a delivery that failed before the revoke with its original, older snapshot.
+    const businessId = randomUUID();
+    const subscription = { billingKey: `business:${businessId}`, plan: "pro", billingInterval: "monthly", subscriptionId: "sub_1" };
+    await client!.db.insert(businesses).values({ id: businessId, slug: businessId, name: "Billing order test", timezone: "UTC", businessType: "test" });
+    const events = await client!.db.insert(providerEvents).values([
+      { provider: "polar", providerEventId: `evt-${randomUUID()}`, eventType: "subscription.revoked", businessId, payload: { ...subscription, subscriptionState: "canceled", subscriptionModifiedAt: "2026-09-02T00:00:00.000Z" } },
+      { provider: "polar", providerEventId: `evt-${randomUUID()}`, eventType: "subscription.updated", businessId, payload: { ...subscription, subscriptionState: "active", subscriptionModifiedAt: "2026-09-01T00:00:00.000Z" } },
+    ]).returning({ id: providerEvents.id });
+    try {
+      for (const event of events) await reconcileBillingProviderEvent({ db: client!.db as unknown as Database }, { businessId, providerEventId: event.id });
+      const [account] = await client!.db.select({ plan: billingAccounts.plan, state: billingAccounts.subscriptionState }).from(billingAccounts).where(eq(billingAccounts.businessId, businessId));
+      expect(account).toMatchObject({ plan: "pro", state: "canceled" });
+    } finally {
+      await client!.db.delete(businesses).where(eq(businesses.id, businessId));
+    }
+  });
+
+  it("keeps the stored plan when a Polar event names a product no plan maps to", async () => {
+    const businessId = randomUUID();
+    await client!.db.insert(businesses).values({ id: businessId, slug: businessId, name: "Billing product test", timezone: "UTC", businessType: "test" });
+    await client!.db.insert(billingAccounts).values({ businessId, billingKey: `business:${businessId}`, plan: "pro", subscriptionState: "active" });
+    const [event] = await client!.db.insert(providerEvents).values({ provider: "polar", providerEventId: `evt-${randomUUID()}`, eventType: "subscription.updated", businessId, payload: { billingKey: `business:${businessId}`, subscriptionState: "active", product: { name: "Pro Monthly + AI SMS" } } }).returning({ id: providerEvents.id });
+    try {
+      await reconcileBillingProviderEvent({ db: client!.db as unknown as Database }, { businessId, providerEventId: event!.id });
+      const [account] = await client!.db.select({ plan: billingAccounts.plan }).from(billingAccounts).where(eq(billingAccounts.businessId, businessId));
+      expect(account?.plan).toBe("pro");
+    } finally {
+      await client!.db.delete(businesses).where(eq(businesses.id, businessId));
+    }
+  });
+
+  it("takes the usage lock before a status read writes the month row", async () => {
+    // Browser calls read the usage status and then reserve; phone calls take
+    // the usage lock first and write the month row last. A status read that
+    // wrote the row before taking the lock deadlocked against a phone call.
+    const businessId = randomUUID();
+    let blocked: unknown;
+    await rollbackTest(async (tx) => {
+      await tx.insert(businesses).values({ id: businessId, slug: businessId, name: "Usage lock test", timezone: "UTC", businessType: "test" });
+      await tx.execute(sql`set local role lobbystack_worker`);
+      const status = await getBillingUsageStatus({ db: tx as unknown as Database }, { businessId });
+      try {
+        await client!.db.transaction(async (other) => {
+          await other.execute(sql`set local lock_timeout = '250ms'`);
+          await other.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`billing-usage:${businessId}:${status.periodKey}`}, 0))`);
+        });
+      } catch (error) {
+        blocked = error;
+      }
+    });
+    const lockError = blocked as { code?: string; cause?: { code?: string } } | undefined;
+    // 55P03 is lock_not_available.
+    expect(lockError?.cause?.code ?? lockError?.code).toBe("55P03");
+  });
+
   it("counts only the operator's own test call, not a customer reaching the website widget", async () => {
     // A visitor calling the business through the embedded widget is web_voice
     // with media and an end, exactly like the operator's test call. Counting it
@@ -646,6 +772,27 @@ describe.skipIf(!testUrl)("reliability against dedicated PostgreSQL roles", () =
     } finally {
       await client!.db.delete(businesses).where(eq(businesses.id, businessId));
     }
+  });
+
+  it("hands recording copies no call points at to the expired-upload sweep (0088)", async () => {
+    await rollbackTest(async (tx) => {
+      const businessId = randomUUID();
+      const callId = randomUUID();
+      const createdAt = new Date(Date.now() - 3 * 24 * 60 * 60_000);
+      const [linked, replaced, abandoned] = [randomUUID(), randomUUID(), randomUUID()];
+      await tx.insert(businesses).values({ id: businessId, slug: businessId, name: "Orphaned recording test", timezone: "UTC", businessType: "test" });
+      await tx.insert(storageObjects).values([linked, replaced, abandoned].map((id) => ({ id, businessId, objectKey: `${businessId}/recording/${callId}/${id}.wav`, purpose: "recording", fileName: `${callId}.wav`, contentType: "audio/wav", contentLength: 1, status: id === abandoned ? "pending" : "ready", createdAt })));
+      await tx.insert(calls).values({ id: callId, businessId, providerCallId: `rtc_${callId}`, transport: "phone", status: "completed", startedAt: createdAt, recordingObjectId: linked });
+
+      await tx.execute(sql.raw(readFileSync(new URL("../../../db/migrations/0088_orphaned_recording_expiry.sql", import.meta.url), "utf8")));
+
+      const rows = await tx.select({ id: storageObjects.id, status: storageObjects.status, expiresAt: storageObjects.expiresAt }).from(storageObjects).where(eq(storageObjects.businessId, businessId));
+      const byId = new Map(rows.map((row) => [row.id, row]));
+      expect(byId.get(linked)).toMatchObject({ status: "ready", expiresAt: null });
+      for (const orphan of [replaced, abandoned]) {
+        expect(byId.get(orphan)).toMatchObject({ status: "pending", expiresAt: new Date(createdAt.getTime() + 24 * 60 * 60_000) });
+      }
+    });
   });
 
   it("skips expired rows another sweep already locked", async () => {

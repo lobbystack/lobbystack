@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { and, desc, eq, sql } from "drizzle-orm";
 
 import { billingAccounts, billingTransactions, billingUsageEvents, billingUsageMonths } from "@lobbystack/db";
-import { billingAccess, getKnowledgeStorageUsageBytes, requireBusinessMembership, setOverageSpendingCap } from "@lobbystack/domain";
+import { billingAccess, getKnowledgeStorageUsageBytes, loadBillingContext, requireBusinessMembership, setOverageSpendingCap } from "@lobbystack/domain";
 import { asApiResponse, jsonError, readJson, requireOperatorBusiness, withOperatorTransaction } from "@/lib/api-helpers";
 import { createDomainContext } from "@/lib/domain-context";
 
@@ -20,17 +20,19 @@ export async function GET(request: Request) {
       const transactions = await tx.select({ kind: billingTransactions.kind, sourceId: billingTransactions.sourceId, status: billingTransactions.status, amountCents: billingTransactions.amountCents, currency: billingTransactions.currency, description: billingTransactions.description, invoiceUrl: billingTransactions.invoiceUrl, occurredAt: billingTransactions.occurredAt }).from(billingTransactions).where(eq(billingTransactions.businessId, businessId)).orderBy(desc(billingTransactions.occurredAt)).limit(20);
       const incompleteUsage = await tx.select({ count: sql<number>`count(*)` }).from(billingUsageEvents).where(and(eq(billingUsageEvents.businessId, businessId), eq(billingUsageEvents.periodKey, periodKey), eq(billingUsageEvents.isFinal, false)));
       const knowledgeStorageBytesUsed = await getKnowledgeStorageUsageBytes(tx, businessId);
+      // The plan the server enforces: a canceled Pro subscription still stores plan "pro".
+      const { plan: effectivePlan } = await loadBillingContext(tx, businessId);
       const month = usageMonth[0];
       const cap = account[0]?.overageSpendingCapCents ?? null;
       const permissions = billingAccess(membership.role, account[0] ?? null, Boolean(process.env.POLAR_ACCESS_TOKEN && process.env.POLAR_ORGANIZATION_ID));
       const availableCheckoutIntervals: HostedCheckoutPlanIntervals = { starter: [], pro: [] };
       if (permissions.hasCheckoutAccess) for (const plan of ["starter", "pro"] as const) {
         for (const interval of ["monthly", "annual"] as const) {
-          if (process.env[`POLAR_${plan.toUpperCase()}_${interval.toUpperCase()}_PRODUCT_ID`] || (plan === "pro" && interval === "monthly" && process.env.POLAR_PRO_PRODUCT_ID)) availableCheckoutIntervals[plan].push(interval);
+          if (process.env[`POLAR_${plan.toUpperCase()}_${interval.toUpperCase()}_PRODUCT_ID`]) availableCheckoutIntervals[plan].push(interval);
         }
       }
       const availableCheckoutPlans = (["starter", "pro"] as const).filter(plan => availableCheckoutIntervals[plan].length > 0);
-      return { availableCheckoutPlans, availableCheckoutIntervals, account: account[0] ?? null, knowledgeStorageBytesUsed, permissions, checkoutAvailable: permissions.hasCheckoutAccess, widgetIssuanceEnabled: isWidgetKeyIssuanceEnabled(process.env), usage, usageStatus: month ? { ...month, usageComplete: Number(incompleteUsage[0]?.count ?? 0) === 0, overageSpendingCapCents: cap, overageSpendingCapReached: cap !== null && month.overageSpendCents > 0 && month.overageSpendCents >= cap } : null, transactions: permissions.hasBillingManagementAccess ? transactions : [] };
+      return { availableCheckoutPlans, availableCheckoutIntervals, account: account[0] ?? null, effectivePlan, knowledgeStorageBytesUsed, permissions, checkoutAvailable: permissions.hasCheckoutAccess, widgetIssuanceEnabled: isWidgetKeyIssuanceEnabled(process.env), usage, usageStatus: month ? { ...month, usageComplete: Number(incompleteUsage[0]?.count ?? 0) === 0, overageSpendingCapCents: cap, overageSpendingCapReached: cap !== null && month.overageSpendCents > 0 && month.overageSpendCents >= cap } : null, transactions: permissions.hasBillingManagementAccess ? transactions : [] };
     }));
   } catch (error) {
     return asApiResponse(error);

@@ -48,7 +48,12 @@ export function readStoredLocale(): SupportedLocale | null {
     return null;
   }
 
-  return normalizeInterfaceLocale(window.localStorage.getItem(LOCALE_STORAGE_KEY));
+  // Browsers that block third-party storage throw here inside the widget iframe.
+  try {
+    return normalizeInterfaceLocale(window.localStorage.getItem(LOCALE_STORAGE_KEY));
+  } catch {
+    return null;
+  }
 }
 
 export function writeStoredLocale(locale: SupportedLocale): void {
@@ -56,7 +61,11 @@ export function writeStoredLocale(locale: SupportedLocale): void {
     return;
   }
 
-  window.localStorage.setItem(LOCALE_STORAGE_KEY, locale);
+  try {
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, locale);
+  } catch {
+    // Storage is blocked; the locale cookie still carries the choice.
+  }
 }
 
 /**
@@ -103,7 +112,11 @@ export function writeStoredTimeFormatPreference(
     return;
   }
 
-  window.localStorage.setItem(TIME_FORMAT_STORAGE_KEY, value);
+  try {
+    window.localStorage.setItem(TIME_FORMAT_STORAGE_KEY, value);
+  } catch {
+    // Storage is blocked; the preference lasts for this page only.
+  }
 }
 
 export function resolveTimeFormatPreference(input: {

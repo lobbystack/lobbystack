@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { deleteContact, getContactDetail, setContactSmsManualBlock } from "@lobbystack/domain";
-import { asApiResponse, jsonError, readJson, requireOperatorBusiness, withOperatorTransaction } from "@/lib/api-helpers";
+import { asApiResponse, jsonError, readJson, requireOperatorBusiness } from "@/lib/api-helpers";
 import { createDomainContext } from "@/lib/domain-context";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +9,8 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request, context: { params: Promise<{ contactId: string }> }) {
   try {
     const { contactId } = await context.params;
-    return NextResponse.json(await withOperatorTransaction(request, async ({ session, businessId }) => await getContactDetail(createDomainContext(), { userId: session.user.id, businessId, contactId })));
+    const { session, businessId } = await requireOperatorBusiness(request);
+    return NextResponse.json(await getContactDetail(createDomainContext(), { userId: session.user.id, businessId, contactId }));
   } catch (error) {
     return asApiResponse(error);
   }

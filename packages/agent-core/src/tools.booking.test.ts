@@ -7,6 +7,7 @@ vi.mock("@lobbystack/domain", async () => ({
   knowledgeQueryTerms: (await import("../../domain/src/knowledgeRanking")).knowledgeQueryTerms,
   checkOpening: vi.fn(),
   findCallerBooking: vi.fn(async () => undefined),
+  findCallBooking: vi.fn(async () => undefined),
   bookForCaller: vi.fn(async () => ({ ok: true })),
   findOpenings: vi.fn(),
   getSmsConsentOnFile: vi.fn(async () => "not_asked"),
@@ -26,6 +27,8 @@ function tools(snapshot: Partial<BusinessContextSnapshot> = {}) {
 
 const booking = { serviceName: "General Checkup", startsAt: "2026-10-06T10:00", contactName: "Milan", smsConsent: "not_asked" };
 
+// The fixtures use early October 2026: keep those times in the future.
+vi.setSystemTime(new Date("2026-10-01T12:00:00Z"));
 beforeEach(() => { vi.clearAllMocks(); });
 
 describe("bookAppointment refusals", () => {
@@ -62,6 +65,12 @@ describe("bookAppointment refusals", () => {
     await expect(tools().run("bookAppointment", booking)).resolves.toEqual({ ok: false, reason: UNAVAILABLE_TOOL_MESSAGES.taken });
   });
 
+  it("refuses a time that has already passed", async () => {
+    await expect(tools().run("bookAppointment", { ...booking, startsAt: "2026-09-30T10:00" })).resolves.toEqual({ ok: false, reason: expect.stringContaining("already passed") });
+    expect(checkOpening).not.toHaveBeenCalled();
+    expect(bookForCaller).not.toHaveBeenCalled();
+  });
+
   it("doesn't call an unknown service a taken time", async () => {
     vi.mocked(checkOpening).mockResolvedValueOnce({ ok: false, reason: "Service is not available." } as never);
     const result = await tools().run("bookAppointment", booking);
@@ -95,5 +104,17 @@ describe("rescheduleAppointment", () => {
     vi.mocked(rescheduleForCaller).mockResolvedValueOnce({ ok: false, reason: "That time is outside the business's opening hours.", unavailableReason: "outside_hours" } as never);
     await expect(tools().run("rescheduleAppointment", { appointmentId: "apt_1", verificationId: "ver_1", startsAt: "2026-10-06T22:00:00.000Z", finalConfirmation: true }))
       .resolves.toEqual({ ok: false, reason: UNAVAILABLE_TOOL_MESSAGES.outside_hours });
+  });
+
+  it("reads a time without an offset in the business's timezone", async () => {
+    vi.mocked(rescheduleForCaller).mockResolvedValueOnce({ ok: true } as never);
+    await tools().run("rescheduleAppointment", { appointmentId: "apt_1", verificationId: "ver_1", startsAt: "2026-10-06T10:00", finalConfirmation: true });
+    expect(vi.mocked(rescheduleForCaller).mock.lastCall?.[1]).toMatchObject({ startsAt: "2026-10-06T10:00:00.000-04:00" });
+  });
+
+  it("refuses a time that has already passed, keeping the verification", async () => {
+    await expect(tools().run("rescheduleAppointment", { appointmentId: "apt_1", verificationId: "ver_1", startsAt: "2026-09-30T10:00", finalConfirmation: true }))
+      .resolves.toEqual({ ok: false, reason: expect.stringContaining("already passed") });
+    expect(rescheduleForCaller).not.toHaveBeenCalled();
   });
 });

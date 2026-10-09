@@ -34,8 +34,9 @@ function originsFromText(value: string): string[] {
   return value.split(/\s*[\n,]\s*/).map((item) => item.trim()).filter(Boolean);
 }
 
+// The origins field is a single-line input, which strips newlines, so join with commas.
 function originsToText(origins: string[]): string {
-  return origins.join("\n");
+  return origins.join(", ");
 }
 
 function embedSnippet(origin: string, key: string, config: WidgetKeyRecord["config"]): string {
@@ -75,11 +76,13 @@ export function LiveWidgetSettingsSurface() {
       setLabel(""); setOrigins(""); setCopied(false);
       await queryClient.invalidateQueries({ queryKey: ["widget-keys", business?.businessId] });
     },
+    meta: { inlineError: true },
   });
 
   const patch = useMutation({
     mutationFn: async (input: { id: string; label: string; allowedOrigins: string[]; config: WidgetKeyConfig }) => await requestJson(`/api/widget-keys?businessId=${encodeURIComponent(business!.businessId)}&id=${encodeURIComponent(input.id)}`, { method: "PATCH", body: JSON.stringify({ label: input.label, allowedOrigins: input.allowedOrigins, config: input.config }) }),
     onSuccess: async () => await queryClient.invalidateQueries({ queryKey: ["widget-keys", business?.businessId] }),
+    meta: { inlineError: true },
   });
 
   const setStatus = useMutation({

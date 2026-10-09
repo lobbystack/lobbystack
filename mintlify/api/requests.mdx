@@ -55,7 +55,8 @@ Network errors can leave you unsure whether a request worked. Send an `Idempoten
 - `POST /contacts`
 - `POST /appointments`
 - `POST /knowledge`
-- `POST /webhooks`
+
+`POST /webhooks` ignores the header, so LobbyStack never stores a copy of the signing secret. If a create request fails with a network error, check `GET /webhooks` before you retry.
 
 ```bash
 curl https://app.lobbystack.com/api/v1/appointments \

@@ -11,7 +11,6 @@ const mocks = vi.hoisted(() => ({
   getOrCreateWidgetConversation: vi.fn(),
   appendMessage: vi.fn(),
   queueOperatorAlert: vi.fn(),
-  loadAutomationState: vi.fn(),
   getCachedBusinessSnapshot: vi.fn(),
   loadWidgetChatHistory: vi.fn(),
   recordAiGenerationEvent: vi.fn(),
@@ -33,11 +32,8 @@ vi.mock("@lobbystack/domain", () => ({
   queueOperatorAlert: mocks.queueOperatorAlert,
 }));
 
-vi.mock("drizzle-orm", () => ({ eq: vi.fn(() => ({})) }));
-
 vi.mock("@lobbystack/db", () => ({
   withBusinessTransaction: mocks.withBusinessTransaction,
-  conversations: {},
 }));
 
 vi.mock("@lobbystack/agent-core/model", () => ({
@@ -95,16 +91,6 @@ const session = {
   visitorId,
 };
 
-function automationTx(rows: unknown) {
-  return {
-    select: () => ({
-      from: () => ({
-        where: () => ({ limit: () => Promise.resolve(rows) }),
-      }),
-    }),
-  };
-}
-
 function widgetRequest(overrides: Record<string, unknown> = {}): Request {
   mocks.readJson.mockResolvedValue({
     visitorId,
@@ -128,13 +114,13 @@ beforeEach(() => {
   mocks.resolveWidgetSessionAccess.mockResolvedValue({ ok: true, session });
   mocks.enforceWidgetRateLimits.mockResolvedValue({ allowed: true });
   mocks.requestIpHash.mockReturnValue("ip-hash");
-  mocks.getOrCreateWidgetConversation.mockResolvedValue({ conversationId });
+  mocks.getOrCreateWidgetConversation.mockResolvedValue({ conversationId, automationState: "ai_active" });
   mocks.appendMessage.mockResolvedValue(inboundMessageId);
   mocks.queueOperatorAlert.mockResolvedValue(undefined);
   mocks.recordAiGenerationEvent.mockResolvedValue("event-id");
   mocks.registerWidgetVisitor.mockResolvedValue({ visitorId, contactId: null });
   mocks.getWorkerDatabase.mockReturnValue({ db: {} });
-  mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => await callback(automationTx([])));
+  mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => await callback({}));
   mocks.reserveWidgetChatUsageInTransaction.mockResolvedValue({ allowed: true, plan: "scale" });
   mocks.createAgentModel.mockReturnValue({ modelId: "test" });
   mocks.createReceptionistAgent.mockReturnValue(agentStreaming((async function* () { yield "Thanks"; })()));
@@ -162,7 +148,7 @@ describe("POST /api/widget/chat", () => {
   });
 
   it("suppresses the AI reply and alerts when the conversation is on human handoff", async () => {
-    mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => await callback(automationTx([{ automationState: "human_handoff" }])));
+    mocks.getOrCreateWidgetConversation.mockResolvedValue({ conversationId, automationState: "human_handoff" });
     const response = await POST(widgetRequest());
     const body = await readSse(response);
     expect(response.status).toBe(200);
@@ -171,6 +157,17 @@ describe("POST /api/widget/chat", () => {
     expect(mocks.queueOperatorAlert).toHaveBeenCalled();
     expect(mocks.createAgentModel).not.toHaveBeenCalled();
     expect(body).toContain("human_handoff");
+  });
+
+  it("queues one operator alert per conversation and day, not one per message", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-09T15:00:00Z"));
+    mocks.getOrCreateWidgetConversation.mockResolvedValue({ conversationId, automationState: "human_handoff" });
+    await POST(widgetRequest());
+    await POST(widgetRequest({ content: "Can someone call me?" }));
+    vi.useRealTimers();
+    const keys = mocks.queueOperatorAlert.mock.calls.map(([, input]) => (input as { eventKey: string }).eventKey);
+    expect(keys).toEqual([`widget-chat:${conversationId}:2026-10-09`, `widget-chat:${conversationId}:2026-10-09`]);
   });
 
   it("returns HTTP 402 without calling the model when chat allowance is spent", async () => {

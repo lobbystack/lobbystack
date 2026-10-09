@@ -16,7 +16,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ se
       else await unassignStaffFromService(createDomainContext(), { userId: session.user.id, businessId, serviceId, staffId: body.staffId });
     } else {
       const { staffId: _staffId, assigned: _assigned, ...serviceUpdate } = body;
-      await updateService(createDomainContext(), { userId: session.user.id, businessId, serviceId, ...serviceUpdate });
+      await updateService(createDomainContext(), { ...serviceUpdate, userId: session.user.id, businessId, serviceId });
     }
     return NextResponse.json({ ok: true });
   } catch (error) { return asApiResponse(error); }

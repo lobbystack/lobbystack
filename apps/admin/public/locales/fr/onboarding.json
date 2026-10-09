@@ -5,7 +5,7 @@
     "privacy": "Confidentialité"
   },
   "errors": {
-    "tooManyBusinesses": "Trop de tentatives de configuration. Attendez un peu, puis réessayez."
+    "tooManyBusinesses": "Vous possédez déjà 10 espaces de travail, la limite pour un compte."
   },
   "adminRequired": {
     "eyebrow": "Configuration de l'espace de travail",

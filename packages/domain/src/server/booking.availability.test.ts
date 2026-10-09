@@ -120,8 +120,8 @@ describe("booking availability reference locking", () => {
     expect(recording.executeCalls).toHaveLength(1);
     expect(recording.fromCounts.get(services)).toBe(2);
     expect(recording.fromCounts.get(staff)).toBe(2);
-    // One availability read plus the post-lock conflict recheck for the winner.
-    expect(recording.fromCounts.get(appointments)).toBe(2);
+    // The availability read under the lock is the only conflict check.
+    expect(recording.fromCounts.get(appointments)).toBe(1);
     expect(recording.fromCounts.get(contacts)).toBe(1);
     expect(recording.insertCounts.get(notifications)).toBe(2);
   });

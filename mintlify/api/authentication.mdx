@@ -70,6 +70,8 @@ Each endpoint except `GET /me` requires one scope. A key without it gets `403` w
 | `knowledge:write` | `POST /knowledge` |
 | `webhooks:manage` | `GET`, `POST`, `PATCH` and `DELETE` on `/webhooks`, and `POST /webhooks/{webhook_id}/test` |
 
+To subscribe an endpoint to an event or change its URL, your key also needs the event's read scope. For example, `call.completed` needs `calls:read`, and the [events table](/api/webhooks#events) lists the rest.
+
 ## Revoke a key
 
 On **Settings** > **API keys**, click **Revoke** next to the key. Requests with it fail right away, and you can't undo it. Create a new key if you still need access.

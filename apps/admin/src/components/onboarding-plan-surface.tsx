@@ -73,10 +73,12 @@ export function OnboardingPlanSurface() {
   const selectFree = useMutation({
     mutationFn: () => requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: "attribution" }) }),
     onSuccess: () => navigate("/onboarding/attribution"),
+    meta: { inlineError: true },
   });
   const startCheckout = useMutation({
     mutationFn: (target: "starter" | "pro") => requestJson<{ requestId: string }>("/api/billing/checkout", { method: "POST", body: JSON.stringify({ businessId: business!.businessId, target, billingInterval: interval }) }),
     onSuccess: ({ requestId }) => setCheckoutRequestId(requestId),
+    meta: { inlineError: true },
   });
 
   const returnRequestId = searchParams.get("checkout") === "success" ? searchParams.get("requestId") : null;
@@ -111,6 +113,13 @@ export function OnboardingPlanSurface() {
   useEffect(() => {
     if (checkout.data?.status === "ready" && checkout.data.checkoutUrl) window.location.assign(checkout.data.checkoutUrl);
   }, [checkout.data]);
+  useEffect(() => {
+    // The back button from checkout can restore this page from the browser's cache, still
+    // waiting on a checkout that already opened. Let them pick a plan again.
+    const onPageShow = (event: PageTransitionEvent) => { if (event.persisted) setCheckoutRequestId(null); };
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, []);
 
   const configuredIntervals = billing.data?.availableCheckoutIntervals;
   const availableIntervals = (["monthly", "annual"] as const).filter(value => !configuredIntervals || configuredIntervals.starter.includes(value) || configuredIntervals.pro.includes(value));

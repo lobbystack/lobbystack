@@ -26,7 +26,7 @@ module.exports = {
       type: 'password',
       required: true,
       helpText:
-        'In LobbyStack, go to **Settings > API keys** and create a key for Zapier. It starts with `lsk_`. Any key connects; give it the scopes for the steps you plan to use, and `webhooks:manage` for triggers. [Learn more](https://docs.lobbystack.com/api/authentication).',
+        'In LobbyStack, go to **Settings > API keys** and create a key for Zapier. It starts with `lsk_`. Any key connects; give it the scopes for the steps you plan to use. Triggers need `webhooks:manage` plus the read scope for their data, such as `calls:read` for new calls. [Learn more](https://docs.lobbystack.com/api/authentication).',
     },
     {
       key: 'baseUrl',

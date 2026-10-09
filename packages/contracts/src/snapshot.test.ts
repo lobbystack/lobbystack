@@ -10,6 +10,9 @@ describe("voice policy snapshot contract", () => {
     expect(parsed.appointmentChangePolicy).toEqual(policy);
     expect(parsed.transferPolicy.mode).toBe("on_urgent");
   });
+  it("keeps the booking mode so browser calls don't offer bookings the backend won't make", () => {
+    expect(snapshotSchema.parse({ ...snapshot, bookingMode: "request" }).bookingMode).toBe("request");
+  });
   it("rejects unknown transfer and appointment verification modes", () => {
     expect(snapshotSchema.safeParse({ ...snapshot, transferPolicy: { mode: "unknown" } }).success).toBe(false);
     expect(snapshotSchema.safeParse({ ...snapshot, appointmentChangePolicy: { enabled: true, allowCancel: true, allowReschedule: true, verificationMode: "skip" } }).success).toBe(false);

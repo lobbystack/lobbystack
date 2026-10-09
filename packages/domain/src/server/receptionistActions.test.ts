@@ -21,7 +21,7 @@ vi.mock("./booking", () => ({ bookAppointment: mocks.bookAppointment, findAvaila
 vi.mock("./productEvents", () => ({ recordProductEvent: mocks.recordProductEvent, recordProductEventBestEffort: mocks.recordProductEvent }));
 vi.mock("./callOutcome", () => ({ recordCallSchedulingProgress: vi.fn() }));
 
-import { bookForCaller, candidateStartTimes, findCallerBooking, findOpenings } from "./receptionistActions";
+import { bookForCaller, candidateStartTimes, findCallBooking, findCallerBooking, findOpenings } from "./receptionistActions";
 
 const context = { db: {} as never };
 const weekdayHours = [1, 2, 3, 4, 5].map((dayOfWeek) => ({ dayOfWeek, openMinutes: 8 * 60, closeMinutes: 17 * 60 }));
@@ -44,6 +44,19 @@ describe("findCallerBooking", () => {
     await expect(findCallerBooking(context, input)).resolves.toBeUndefined();
     mocks.bookingRows = [{ id: "appt_1", serviceName: "Drain cleaning" }];
     await expect(findCallerBooking(context, { ...input, startsAt: "next Tuesday" })).resolves.toBeUndefined();
+  });
+});
+
+describe("findCallBooking", () => {
+  const input = { businessId: "biz_1", callId: "call_1", serviceName: "drain cleaning", startsAt: "2030-01-08T10:00:00.000-05:00" };
+
+  it("matches only the booking this call made, at the same instant and service", async () => {
+    mocks.serviceRows = [{ summary: { serviceName: "Drain cleaning", startsAt: "2030-01-08T15:00:00.000Z" } }] as never;
+    await expect(findCallBooking(context, input)).resolves.toEqual({ ok: true, serviceName: "Drain cleaning", startsAt: input.startsAt, alreadyBooked: true });
+    await expect(findCallBooking(context, { ...input, startsAt: "2030-01-08T11:00:00.000-05:00" })).resolves.toBeUndefined();
+    await expect(findCallBooking(context, { ...input, serviceName: "Water heater repair" })).resolves.toBeUndefined();
+    mocks.serviceRows = [];
+    await expect(findCallBooking(context, input)).resolves.toBeUndefined();
   });
 });
 

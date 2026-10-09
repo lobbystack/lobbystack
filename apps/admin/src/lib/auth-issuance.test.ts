@@ -214,3 +214,20 @@ it("declares explicit per-path recovery rules that preserve plugin semantics", a
   });
   expect(Object.keys(mocks.config.rateLimit.customRules)).not.toContain("/email-otp/send-verification-otp");
 });
+
+it("caps reset sends per recipient and answers a capped request as if it were sent", async () => {
+  const { getAuth } = await import("./auth"); getAuth();
+  const { EmailVerificationRateLimitError } = await import("./email-verification-policy");
+  mocks.allowed.mockResolvedValueOnce(undefined).mockResolvedValueOnce(undefined).mockResolvedValueOnce(undefined)
+    .mockRejectedValue(new EmailVerificationRateLimitError());
+  const request = (path: string) => mocks.config.hooks.before({
+    path, body: { email: "owner@example.invalid" }, headers: new Headers({ "x-real-ip": "203.0.113.10" }), json: (body: unknown) => body,
+  });
+  for (let n = 0; n < 3; n++) await expect(request("/email-otp/request-password-reset")).resolves.toBeUndefined();
+  // A returned body short-circuits Better Auth, so the 4th request creates no code.
+  await expect(request("/email-otp/request-password-reset")).resolves.toEqual({ success: true });
+  await expect(request("/request-password-reset")).resolves.toMatchObject({ status: true });
+  expect(mocks.allowed).toHaveBeenCalledWith({ email: "owner@example.invalid", remoteIp: "203.0.113.10", scope: "password-reset" });
+  mocks.allowed.mockRejectedValueOnce(new Error("offline"));
+  await expect(request("/email-otp/request-password-reset")).rejects.toThrow("offline");
+});

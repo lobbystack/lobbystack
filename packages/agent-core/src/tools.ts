@@ -2,6 +2,7 @@ import {
   bookForCaller,
   cancelForCaller,
   checkOpening,
+  findCallBooking,
   findCallerBooking,
   countKnowledgeTokens,
   findOpenings,
@@ -152,6 +153,15 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
     const { smsConsentOnFile, ...rest } = result;
     return callerTextable && smsConsentOnFile ? { ...rest, smsConsentOnFile } : rest;
   };
+  // Each delegation starts fresh, so the agent often books or moves to a time
+  // it only saw in the conversation. Read a time without an offset in the
+  // business's timezone; the server's own timezone would shift it.
+  const startTime = (value: string) => {
+    const start = DateTime.fromISO(value, { zone: timezone });
+    if (!start.isValid) return { ok: false as const, reason: "Give startsAt as YYYY-MM-DDTHH:mm in the business's timezone." };
+    if (start <= DateTime.now()) return { ok: false as const, reason: "That time has already passed. Offer a later time." };
+    return { ok: true as const, startsAt: start.toISO()! };
+  };
   async function searchKnowledge(query: string): Promise<{ outcome: string; matches: KnowledgeMatch[] }> {
     const fallback = snapshotKnowledgeMatches(snapshot, query);
     try {
@@ -272,15 +282,17 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
         const contactPhone = input.contactPhone?.trim() || context.callerPhone;
         if (!input.contactName?.trim()) return { ok: false, reason: "Ask for the caller's name before booking." };
         if (!contactPhone) return { ok: false, reason: "Ask for a phone number before booking." };
-        // Each delegation starts fresh, so the agent often books a time it only
-        // saw in the conversation. Read a time without an offset in the
-        // business's timezone; the server's own timezone would shift it.
-        const start = DateTime.fromISO(input.startsAt, { zone: timezone });
-        if (!start.isValid) return { ok: false, reason: "Give startsAt as YYYY-MM-DDTHH:mm in the business's timezone." };
-        const startsAt = start.toISO()!;
+        const start = startTime(input.startsAt);
+        if (!start.ok) return start;
+        const { startsAt } = start;
         // Already booked for this caller, by an earlier or repeated request:
         // report that booking rather than call the caller's own slot taken.
-        const existing = await findCallerBooking(domain, { businessId, serviceName: input.serviceName, startsAt, contactPhone });
+        // Only the call's own number counts: a typed or spoken one would let
+        // anyone learn whose appointment a time holds. Without it, only this
+        // call's own booking counts.
+        const existing = context.callerPhone && contactPhone === context.callerPhone
+          ? await findCallerBooking(domain, { businessId, serviceName: input.serviceName, startsAt, contactPhone })
+          : context.callId ? await findCallBooking(domain, { businessId, callId: context.callId, serviceName: input.serviceName, startsAt }) : undefined;
         if (existing) return existing;
         const opening = await checkOpening(domain, { businessId, serviceName: input.serviceName, startsAt, timezone, ...(context.callId ? { callId: context.callId } : {}) });
         if (!opening.ok) return { ok: false, reason: `${opening.reason} Check the service name with getBusinessServices.` };
@@ -392,7 +404,9 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
         description: "Move the verified appointment to a new time that findAvailability returned. Only after the caller explicitly confirms the new time.",
         inputSchema: z.object({ appointmentId: z.string(), verificationId: z.string(), startsAt: z.string(), finalConfirmation: z.boolean() }),
         execute: async (input) => {
-          const result = await rescheduleForCaller(domain, { businessId, callerPhone, ...input });
+          const start = startTime(input.startsAt);
+          if (!start.ok) return start;
+          const result = await rescheduleForCaller(domain, { businessId, callerPhone, ...input, startsAt: start.startsAt });
           return !result.ok && "unavailableReason" in result && isReason(result.unavailableReason) ? { ok: false, reason: UNAVAILABLE_TOOL_MESSAGES[result.unavailableReason] } : result;
         },
       });

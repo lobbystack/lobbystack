@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { billingPlanCatalog, type BillingPlanSlug } from "@lobbystack/shared";
+import { billingPlanCatalog } from "@lobbystack/shared";
 
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import type { BillingUsageViewModel } from "@/lib/page-view-models";
@@ -13,14 +13,11 @@ import { Surface } from "@/components/ui/surface";
 import { Button } from "@/components/ui/button";
 import { intlLocale } from "@/lib/locale";
 
-function isPlan(value: string | null | undefined): value is BillingPlanSlug { return value != null && value in billingPlanCatalog; }
-
 export function LiveUsageSurface() {
   const { i18n, t } = useTranslation("settings");
   const { businesses, business } = useActiveBusiness();
   const billing = useQuery({ queryKey: ["billing", business?.businessId], queryFn: () => requestJson<BillingUsageViewModel>(`/api/billing?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business?.businessId) });
-  const accountPlan = billing.data?.account?.plan;
-  const plan = isPlan(accountPlan) ? accountPlan : "free_cloud";
+  const plan = billing.data?.effectivePlan ?? "free_cloud";
   const catalog = billingPlanCatalog[plan];
   const status = billing.data?.usageStatus ?? {
     voiceSecondsUsed: 0,

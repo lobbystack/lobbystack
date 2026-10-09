@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   claimOutboxBatch: vi.fn(),
   markOutboxPublished: vi.fn(),
   markOutboxFailed: vi.fn(),
+  prunePublishedOutbox: vi.fn(),
   enqueueJob: vi.fn(),
   histogramRecords: [] as Array<{ name: string; attributes: Record<string, unknown> }>,
   counterAdds: [] as Array<{ name: string; attributes: Record<string, unknown> }>,
@@ -24,6 +25,7 @@ vi.mock("@lobbystack/db", async (importOriginal) => ({
   claimOutboxBatch: mocks.claimOutboxBatch,
   markOutboxPublished: mocks.markOutboxPublished,
   markOutboxFailed: mocks.markOutboxFailed,
+  prunePublishedOutbox: mocks.prunePublishedOutbox,
 }));
 
 vi.mock("@lobbystack/jobs", async (importOriginal) => ({
@@ -94,5 +96,21 @@ describe("OutboxDispatcher", () => {
 
     expect(mocks.claimOutboxBatch).toHaveBeenCalledTimes(2);
     expect(console.error).toHaveBeenCalledWith("outbox dispatcher poll failed; retrying", "database unavailable");
+  });
+
+  it("prunes published rows older than two weeks in batches while idle, then waits an hour", async () => {
+    vi.useFakeTimers({ now: new Date("2026-03-01T00:00:00Z"), toFake: ["Date"] });
+    const abort = new AbortController();
+    let polls = 0;
+    mocks.claimOutboxBatch.mockImplementation(async () => {
+      polls += 1;
+      if (polls === 3) abort.abort();
+      return [];
+    });
+    mocks.prunePublishedOutbox.mockResolvedValueOnce(5_000).mockResolvedValueOnce(12);
+    const db = {} as Database;
+    await new OutboxDispatcher(db, new Map()).run(abort.signal);
+    expect(mocks.prunePublishedOutbox).toHaveBeenCalledTimes(2);
+    expect(mocks.prunePublishedOutbox).toHaveBeenCalledWith(db, { publishedBefore: new Date("2026-02-15T00:00:00Z"), limit: 5_000 });
   });
 });

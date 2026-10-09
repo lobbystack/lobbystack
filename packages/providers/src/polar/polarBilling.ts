@@ -11,7 +11,7 @@ export class PolarBillingProvider {
 
   private async request<T>(path: string, init: RequestInit = {}): Promise<T> {
     assertCertificationBillingSandbox(this.config.baseUrl ?? "https://api.polar.sh");
-    const response = await fetch(`${this.config.baseUrl ?? "https://api.polar.sh"}${path}`, { ...init, headers: { authorization: `Bearer ${this.config.accessToken}`, "content-type": "application/json", ...(init.headers ?? {}) } });
+    const response = await fetch(`${this.config.baseUrl ?? "https://api.polar.sh"}${path}`, { ...init, signal: AbortSignal.timeout(15_000), headers: { authorization: `Bearer ${this.config.accessToken}`, "content-type": "application/json", ...(init.headers ?? {}) } });
     if (!response.ok) {
       throw new Error(`Polar request failed with status ${response.status}.`);
     }

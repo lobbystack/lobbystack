@@ -14,7 +14,7 @@ describe("worker schedulers", () => {
       ["critical", queue as never],
     ]);
 
-    await configureSchedulers(queues as never, ["business-a", "business-b"]);
+    await configureSchedulers(queues as never, [{ id: "business-a", hasMembers: true }, { id: "business-b", hasMembers: true }]);
 
     expect(upsertJobScheduler).toHaveBeenCalledTimes(22);
     const tenantCalls = upsertJobScheduler.mock.calls.filter((call) => call[2].data.businessId !== null);
@@ -32,6 +32,25 @@ describe("worker schedulers", () => {
     }
     expect(upsertJobScheduler.mock.calls.find((call) => call[2].data.type === "affiliate.generatePayoutRun")?.[2].data).toEqual(expect.objectContaining({ businessId: null, recurring: true }));
     expect(upsertJobScheduler.mock.calls.find((call) => call[2].data.type === "prospectDemo.expire")?.[2].data).toEqual(expect.objectContaining({ businessId: null, recurring: true }));
+  });
+
+  it("drops the per-minute jobs of a business with no active member, keeps its cleanup jobs and flushes its telemetry hourly", async () => {
+    const upsertJobScheduler = vi.fn().mockResolvedValue(undefined);
+    const removeJobScheduler = vi.fn().mockResolvedValue(true);
+    const queue = { upsertJobScheduler, removeJobScheduler };
+    const queues = new Map<JobQueue, never>([["maintenance", queue as never], ["default", queue as never], ["critical", queue as never]]);
+
+    await configureSchedulers(queues as never, [{ id: "expired-demo", hasMembers: false }]);
+
+    expect(removeJobScheduler.mock.calls.map((call) => call[0]).sort()).toEqual([
+      "live-orphan-recovery:expired-demo",
+      "operator-daily-summary:expired-demo",
+      "outbox-backlog-sample:expired-demo",
+    ]);
+    const tenantTypes = upsertJobScheduler.mock.calls.filter((call) => call[2].data.businessId === "expired-demo").map((call) => call[2].data.type);
+    expect(tenantTypes).toHaveLength(7);
+    expect(tenantTypes).toContain("privacy.scrubMessage");
+    expect(upsertJobScheduler).toHaveBeenCalledWith("telemetry-flush:expired-demo", { every: 60 * 60_000 }, expect.anything());
   });
 
   it("does not register tenant jobs when no businesses are available", async () => {

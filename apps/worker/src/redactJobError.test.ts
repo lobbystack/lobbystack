@@ -13,6 +13,15 @@ describe("redactJobError", () => {
     expect(error.stack).toContain("redactJobError.test.ts");
   });
 
+  it("drops every line of a multi-line Drizzle parameter from the stack", () => {
+    const error = new Error("Failed query: insert into \"messages\" values ($1, $2)\nparams: biz-1,Hi Jane\nconfirming 12 Main St\ncard ending 4242");
+    redactJobError(error);
+    expect(error.stack).toMatch(/^Error: Failed query: .*\nparams: \[omitted\]\n {4}at /);
+    expect(error.stack).toContain("redactJobError.test.ts");
+    expect(error.stack).not.toContain("12 Main St");
+    expect(error.stack).not.toContain("4242");
+  });
+
   it("keeps the error class so BullMQ still treats it as unrecoverable", () => {
     const error = new UnrecoverableError("Contact owner@example.com is invalid.");
     const redacted = redactJobError(error);

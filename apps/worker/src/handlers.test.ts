@@ -5,10 +5,10 @@ import { vi } from "vitest";
 
 import type { JobEnvelope } from "@lobbystack/contracts";
 import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, countPublishableOutboxMessages, deleteCallRecording, deleteCallRecordingForRetention, deleteSentProductEventsBefore, expireProspectDemos, generateAffiliatePayoutRun, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markNotificationSent, loadLiveCallForPricing, recordCallProviderPricing, recordProductEvent, recordSmsProviderPricing, reconcileBillingProviderEvent, resolveNotificationDelivery, runPrivacyRetentionSweep, transitionProcessingNotification } from "@lobbystack/domain";
-import { claimOperatorNotificationDelivery, loadOperatorNotificationDelivery, markOperatorNotificationSent, queueDailyOperatorSummaries } from "@lobbystack/domain";
+import { claimOperatorNotificationDelivery, loadOperatorNotificationDelivery, markOperatorNotificationSent, notificationLeaseEndsAt, operatorNotificationLeaseEndsAt, queueDailyOperatorSummaries } from "@lobbystack/domain";
 import { cancelRetiredPhoneVerificationSend, queueOnboardingFollowupEmail } from "@lobbystack/domain";
 import { correctAlertSmsUsage, enqueueBillingUsageSync, issueOperatorPhoneVerificationCode, markOperatorPhoneVerificationCodeSent, releaseOperatorPhoneVerificationCodeSend, reserveAlertSmsUsage } from "@lobbystack/domain";
-import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning } from "@lobbystack/domain";
+import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning, numberProvisioningLeaseEndsAt } from "@lobbystack/domain";
 
 vi.mock("@lobbystack/domain", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@lobbystack/domain")>();
@@ -28,6 +28,8 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
     markAppointmentChangeOtpSent: vi.fn(),
     claimNotificationDelivery: vi.fn(),
     claimOperatorNotificationDelivery: vi.fn(),
+    notificationLeaseEndsAt: vi.fn(),
+    operatorNotificationLeaseEndsAt: vi.fn(),
     cancelRetiredPhoneVerificationSend: vi.fn(),
     issueOperatorPhoneVerificationCode: vi.fn(),
     markOperatorPhoneVerificationCodeSent: vi.fn(),
@@ -37,6 +39,7 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
     enqueueBillingUsageSync: vi.fn(),
     queueOnboardingFollowupEmail: vi.fn(),
     claimNumberProvisioning: vi.fn(),
+    numberProvisioningLeaseEndsAt: vi.fn(),
     countPublishableOutboxMessages: vi.fn(),
     deleteCallRecording: vi.fn(),
     deleteCallRecordingForRetention: vi.fn(),
@@ -285,6 +288,17 @@ describe("worker handlers", () => {
     await expect(handleJob({ jobId: randomUUID(), type: "phoneNumber.provision", queue: "critical", businessId, payload: { claimId }, trace: {}, idempotencyKey: `claim:${claimId}`, scheduled: false }, { domain, twilio: { sendSms: vi.fn(), findOwnedPhoneNumber: vi.fn().mockResolvedValue(null), purchasePhoneNumber, addNumberToSipTrunk, releasePhoneNumber } })).rejects.toThrow("trunk unavailable");
     expect(releasePhoneNumber).toHaveBeenCalledWith({ providerPhoneId: "PN789" });
     expect(failNumberProvisioning).toHaveBeenCalledWith(domain, expect.objectContaining({ businessId, claimId }));
+  });
+
+  it("retries a claim another attempt still holds once its lease ends", async () => {
+    const businessId = randomUUID(); const claimId = randomUUID(); const domain = { db: undefined as never }; const retryAt = new Date(Date.now() + 60_000);
+    vi.stubEnv("TWILIO_SIP_TRUNK_SID", "TK123");
+    vi.mocked(claimNumberProvisioning).mockResolvedValue(null);
+    vi.mocked(numberProvisioningLeaseEndsAt).mockResolvedValue(retryAt);
+    const purchasePhoneNumber = vi.fn();
+
+    await expect(handleJob({ jobId: randomUUID(), type: "phoneNumber.provision", queue: "critical", businessId, payload: { claimId }, trace: {}, idempotencyKey: `claim:${claimId}`, scheduled: false }, { domain, twilio: { sendSms: vi.fn(), findOwnedPhoneNumber: vi.fn(), purchasePhoneNumber, addNumberToSipTrunk: vi.fn() } })).resolves.toEqual({ status: "deferred", entityId: claimId, retryAt });
+    expect(purchasePhoneNumber).not.toHaveBeenCalled();
   });
 
   it("refuses to provision a number when no SIP trunk is configured", async () => {
@@ -801,6 +815,25 @@ describe("worker handlers", () => {
     expect(result).toEqual({ status: "skipped", entityId: notificationId });
     expect(sendSms).not.toHaveBeenCalled();
     expect(resolveNotificationDelivery).not.toHaveBeenCalled();
+  });
+
+  it("runs a notification again when the lease of a crashed send ends", async () => {
+    const businessId = randomUUID();
+    const notificationId = randomUUID();
+    const deliveryId = randomUUID();
+    const retryAt = new Date(Date.now() + 240_000);
+    const domain = { db: undefined as never };
+    vi.mocked(claimNotificationDelivery).mockResolvedValue(false);
+    vi.mocked(notificationLeaseEndsAt).mockResolvedValue(retryAt);
+    vi.mocked(claimOperatorNotificationDelivery).mockResolvedValue(false);
+    vi.mocked(operatorNotificationLeaseEndsAt).mockResolvedValue(retryAt);
+    const sendSms = vi.fn();
+
+    await expect(handleJob({ ...notificationJob({ notificationId }), businessId }, { domain, twilio: { sendSms } })).resolves.toEqual({ status: "deferred", entityId: notificationId, retryAt });
+    await expect(handleJob({ ...notificationJob({ operatorDeliveryId: deliveryId }), businessId }, { domain, twilio: { sendSms } })).resolves.toEqual({ status: "deferred", entityId: deliveryId, retryAt });
+    expect(notificationLeaseEndsAt).toHaveBeenCalledWith(domain, { businessId, notificationId });
+    expect(operatorNotificationLeaseEndsAt).toHaveBeenCalledWith(domain, { businessId, deliveryId });
+    expect(sendSms).not.toHaveBeenCalled();
   });
 
   it("releases the notification lease when provider delivery fails", async () => {

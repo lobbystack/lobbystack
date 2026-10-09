@@ -9,14 +9,14 @@ Les webhooks envoient une requête HTTPS `POST` à votre URL quand quelque chose
 
 ## Événements
 
-| Événement | Envoyé quand | `data` |
-| --- | --- | --- |
-| `call.completed` | Un appel s'est terminé et LobbyStack a enregistré son résumé et son résultat. | Appel |
-| `appointment.booked` | Quelqu'un réserve un rendez-vous : la réceptionniste, le tableau de bord ou l'API. | Rendez-vous |
-| `appointment.rescheduled` | Un rendez-vous est déplacé à une nouvelle heure. | Rendez-vous |
-| `appointment.cancelled` | Un rendez-vous est annulé. | Rendez-vous |
-| `message.taken` | La réceptionniste prend un message pour votre équipe. | Message |
-| `contact.created` | Un nouveau contact apparaît, à partir d'un appel, d'un texto, d'une réservation, du widget du site Web ou de l'API. | Contact |
+| Événement | Envoyé quand | `data` | Portée |
+| --- | --- | --- | --- |
+| `call.completed` | Un appel s'est terminé et LobbyStack a enregistré son résumé et son résultat. | Appel | `calls:read` |
+| `appointment.booked` | Quelqu'un réserve un rendez-vous : la réceptionniste, le tableau de bord ou l'API. | Rendez-vous | `appointments:read` |
+| `appointment.rescheduled` | Un rendez-vous est déplacé à une nouvelle heure. | Rendez-vous | `appointments:read` |
+| `appointment.cancelled` | Un rendez-vous est annulé. | Rendez-vous | `appointments:read` |
+| `message.taken` | La réceptionniste prend un message pour votre équipe. | Message | `messages:read` |
+| `contact.created` | Un nouveau contact apparaît, à partir d'un appel, d'un texto, d'une réservation, du widget du site Web ou de l'API. | Contact | `contacts:read` |
 
 `data` a la même forme que la ressource API correspondante. Par exemple, `GET /appointments` renvoie les objets que transporte un événement `appointment.booked`. Un point de terminaison de liste sert donc aussi de données d'exemple.
 
@@ -42,7 +42,7 @@ Vous pouvez ajouter des points de terminaison dans le tableau de bord ou avec l'
     </Steps>
   </Tab>
   <Tab title="API">
-    Appelez `POST /webhooks` avec une clé qui a `webhooks:manage` :
+    Appelez `POST /webhooks` avec une clé qui a `webhooks:manage` et la portée de chaque événement choisi :
 
     ```bash
     curl https://app.lobbystack.com/api/v1/webhooks \

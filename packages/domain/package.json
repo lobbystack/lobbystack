@@ -14,7 +14,6 @@
   "dependencies": {
     "@lobbystack/contracts": "workspace:*",
     "@lobbystack/db": "workspace:*",
-    "@lobbystack/jobs": "workspace:*",
     "@lobbystack/providers": "workspace:*",
     "@lobbystack/shared": "workspace:*",
     "@lobbystack/telemetry": "workspace:*",

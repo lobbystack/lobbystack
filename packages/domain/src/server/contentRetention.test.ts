@@ -13,7 +13,7 @@ import { inboxItems, messages, transcripts } from "@lobbystack/db";
 import { appendMessage } from "./conversations";
 import { receiveInboundSms } from "./sms";
 import { upsertTranscript } from "./voice";
-import { deleteTranscriptForRetention, runPrivacyRetentionSweep } from "./privacy";
+import { runPrivacyRetentionSweep } from "./privacy";
 import { getContentRetentionPolicy, isContentRetentionEnabled } from "./contentRetentionPolicy";
 
 const context = { db: {} as never };
@@ -112,7 +112,6 @@ describe("approved content retention", () => {
   });
   it("keeps automatic content deletion disabled while follow-up and notification sweeps still run", async () => {
     vi.stubEnv("CONTENT_RETENTION_ENABLED", "false");
-    expect(await deleteTranscriptForRetention(context, { businessId: "business", callId: "call" })).toBe(0);
     const result = await runPrivacyRetentionSweep(context, { businessId: "business", now });
     expect(result).toMatchObject({ scrubbedMessages: 0, deletedTranscripts: 0, queuedRecordings: 0, scrubbedFollowUps: 0, scrubbedOperatorDeliveries: 1 });
     expect(updates.some((entry) => entry.table === messages)).toBe(false);
@@ -120,12 +119,6 @@ describe("approved content retention", () => {
     expect(deletes).toHaveLength(0);
     expect(selectCalls).toBe(0);
     expect(mocks.enqueue).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ topic: "privacy.deleteRecording" }));
-  });
-  it("requires an expired timestamp for queued transcript retention jobs", async () => {
-    await deleteTranscriptForRetention(context, { businessId: "business", callId: "call" });
-    const query = new PgDialect().sqlToQuery(deletes[0]!.where!);
-    expect(query.sql).toContain('"transcripts"."expires_at" is not null');
-    expect(query.sql).toContain('"transcripts"."expires_at" <');
   });
   it("queues expired recordings when automatic content retention is enabled", async () => {
     directlySelected = [{ callId: "call", objectId: "recording" }];

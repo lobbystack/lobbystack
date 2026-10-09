@@ -2,9 +2,10 @@ import { randomUUID } from "node:crypto";
 import { createConnection } from "node:net";
 
 import { eq } from "drizzle-orm";
-import { Scrypt } from "lucia";
 
 import { accounts, businesses, businessMemberships, createDatabaseClient, users } from "@lobbystack/db";
+
+import { hashReplacementPassword } from "../apps/admin/src/lib/password";
 
 const postgresPort = process.env.POSTGRES_PORT ?? "15433";
 const postgresPassword = process.env.POSTGRES_PASSWORD ?? "replace-with-a-long-local-password";
@@ -107,7 +108,7 @@ async function main(): Promise<void> {
     // is exercised by the separate browser authentication journey.
     const userId = randomUUID();
     const password = `Realtime-${suffix}!`;
-    const passwordHash = await new Scrypt().hash(password);
+    const passwordHash = await hashReplacementPassword(password);
     await migrator.db.insert(users).values({ id: userId, email, normalizedEmail: email, emailVerified: true, passwordHash });
     await migrator.db.insert(accounts).values({ userId, providerId: "credential", accountId: userId, password: passwordHash });
     const signin = await fetch(`${adminBaseUrl}/api/auth/sign-in/email`, {

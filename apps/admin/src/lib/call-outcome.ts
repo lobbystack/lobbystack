@@ -8,7 +8,7 @@ export function formatCallDispositionSummary(
 ): string {
   const normalized = disposition.trim().toLowerCase();
 
-  if (normalized.includes("contact_blocked")) {
+  if (normalized.includes("blocked_contact")) {
     return t("outcome.contactBlocked");
   }
   if (normalized.includes("abuse")) {

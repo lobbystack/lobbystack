@@ -13,6 +13,8 @@ describe("GoogleCalendarProvider", () => {
     await expect(provider.upsertEvent({ accessToken: "access", calendarId: "primary", clientEventId: "a1234567890abcdef", title: "Appointment", startsAt: "2026-08-12T10:00:00.000Z", endsAt: "2026-08-12T10:30:00.000Z" })).resolves.toEqual({ externalEventId: "event-1" });
     const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
     expect(JSON.parse(String(request.body))).toMatchObject({ id: "a1234567890abcdef", summary: "Appointment" });
+    // The sync job holds a DB transaction across this call, so it must not wait on undici's 300 s default.
+    expect(request.signal).toBeInstanceOf(AbortSignal);
   });
 
   it("treats a deterministic insert conflict as an already-created event", async () => {
@@ -55,7 +57,7 @@ describe("GoogleCalendarProvider", () => {
         { start: { dateTime: "2026-11-01T09:00:00-05:00" }, end: { dateTime: "2026-11-01T10:00:00-05:00" }, transparency: "transparent" },
       ] }))
       .mockResolvedValueOnce(Response.json({ timeZone: "America/Toronto", items: [
-        { start: { dateTime: "2026-11-02T09:00:00-05:00" }, end: { dateTime: "2026-11-02T10:00:00-05:00" } },
+        { id: "event-2", start: { dateTime: "2026-11-02T09:00:00-05:00" }, end: { dateTime: "2026-11-02T10:00:00-05:00" } },
         { start: { dateTime: "2026-11-02T10:00:00-05:00" }, end: { dateTime: "2026-11-02T11:00:00-05:00" }, status: "cancelled" },
       ] }));
     vi.stubGlobal("fetch", request);
@@ -63,14 +65,16 @@ describe("GoogleCalendarProvider", () => {
 
     await expect(provider.getBusyBlocks({ accessToken: "access", calendarId: "selected", startsAt: "2026-10-31T00:00:00Z", endsAt: "2026-11-04T00:00:00Z" })).resolves.toEqual([
       { startsAt: "2026-11-01T04:00:00.000Z", endsAt: "2026-11-02T05:00:00.000Z" },
-      { startsAt: "2026-11-02T14:00:00.000Z", endsAt: "2026-11-02T15:00:00.000Z" },
+      { startsAt: "2026-11-02T14:00:00.000Z", endsAt: "2026-11-02T15:00:00.000Z", externalEventId: "event-2" },
     ]);
     const first = new URL(String(request.mock.calls[0]?.[0]));
     const second = new URL(String(request.mock.calls[1]?.[0]));
     expect(first.pathname).toBe("/calendar/v3/calendars/selected/events");
     expect(first.searchParams.get("singleEvents")).toBe("true");
     expect(first.searchParams.get("fields")).toContain("nextPageToken");
+    expect(first.searchParams.get("fields")).toContain("items(id,");
     expect(second.searchParams.get("pageToken")).toBe("page-2");
+    expect(request.mock.calls[0]?.[1].signal).toBeInstanceOf(AbortSignal);
   });
 
   it("fails closed on incomplete event data or repeated pagination tokens", async () => {

@@ -84,6 +84,8 @@ function rateCents(plan: BillingPlanSlug, kind: NonAiBillingUsageKind): number {
   const config = billingPlanCatalog[plan];
   if (kind === "voice_seconds") return (config.voiceOverageRatePerMinuteCents ?? 0) / 60;
   if (kind === "alert_sms_segments") return config.alertSmsOverageRatePerSegmentCents ?? 0;
+  // Polar never bills website chats, so they never use the overage cap.
+  if (kind === "chat_ai_tokens") return 0;
   return config.outboundCallAttemptOverageRateCents ?? 0;
 }
 
@@ -103,7 +105,7 @@ type ReplayEvent = {
   isFinal: boolean;
 };
 
-function replayEvents(events: ReplayEvent[], fallbackPlan: BillingPlanSlug): { usage: UsageCounts; rawSpendCents: number } {
+export function replayEvents(events: ReplayEvent[], fallbackPlan: BillingPlanSlug): { usage: UsageCounts; rawSpendCents: number } {
   const usage = { ...emptyUsage };
   let rawSpendCents = 0;
   for (const event of [...events].sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime())) {
@@ -140,7 +142,7 @@ function reservableVoiceSeconds(billing: Pick<BillingContext, "plan" | "capCents
   return billingPlanCatalog[billing.plan].overagesBillable ? (billing.capCents === null ? 0 : remainingIncluded + capSeconds) : remainingIncluded;
 }
 
-async function loadBillingContext(tx: DatabaseTransaction, businessId: string): Promise<BillingContext> {
+export async function loadBillingContext(tx: DatabaseTransaction, businessId: string): Promise<BillingContext> {
   const [business, account] = await Promise.all([
     tx.select({ deploymentMode: businesses.deploymentMode }).from(businesses).where(eq(businesses.id, businessId)).limit(1).then((rows) => rows[0]),
     tx.select({ plan: billingAccounts.plan, subscriptionState: billingAccounts.subscriptionState, overageSpendingCapCents: billingAccounts.overageSpendingCapCents, billingInterval: billingAccounts.billingInterval }).from(billingAccounts).where(eq(billingAccounts.businessId, businessId)).limit(1).then((rows) => rows[0]),
@@ -159,22 +161,17 @@ async function loadEvents(tx: DatabaseTransaction, businessId: string, periodKey
     .orderBy(asc(billingUsageEvents.createdAt));
 }
 
-function billableQuantityForEvent(events: ReplayEvent[], sourceKey: string, fallbackPlan: BillingPlanSlug): number {
-  const ordered = [...events].sort((left, right) => left.createdAt.getTime() - right.createdAt.getTime());
-  const running: UsageCounts = { ...emptyUsage };
-  for (const event of ordered) {
-    if (!(event.usageKind in running)) continue;
-    const kind = event.usageKind as NonAiBillingUsageKind;
-    const plan = isBillingPlanSlug(event.planAtRecordTime) ? event.planAtRecordTime : fallbackPlan;
-    const included = includedQuantity(plan, kind);
-    const before = running[kind];
-    const after = before + Math.max(0, event.quantity);
-    running[kind] = after;
-    if (event.sourceKey !== sourceKey) continue;
-    if (event.billingIntervalAtRecordTime !== "annual" || (plan !== "starter" && plan !== "pro") || included === null) return Math.max(0, event.quantity);
-    return Math.max(0, after - included) - Math.max(0, before - included);
-  }
-  return 0;
+// Annual plans send Polar each event's share of the month's overage once it is
+// final. Only the other final events have been billed, so open reservations
+// never count against this one. An event that was already final keeps what it
+// billed and moves only by its own change.
+export function billableQuantityForEvent(others: ReplayEvent[], event: ReplayEvent, fallbackPlan: BillingPlanSlug, billed?: { quantity: number; billableQuantity: number }): number {
+  const plan = isBillingPlanSlug(event.planAtRecordTime) ? event.planAtRecordTime : fallbackPlan;
+  const included = includedQuantity(plan, event.usageKind as NonAiBillingUsageKind);
+  if (event.billingIntervalAtRecordTime !== "annual" || (plan !== "starter" && plan !== "pro") || included === null) return Math.max(0, event.quantity);
+  const before = others.reduce((sum, row) => (row.isFinal && row.usageKind === event.usageKind ? sum + Math.max(0, row.quantity) : sum), 0);
+  const overage = (quantity: number) => Math.max(0, before + Math.max(0, quantity) - included);
+  return billed ? Math.max(0, billed.billableQuantity + overage(event.quantity) - overage(billed.quantity)) : overage(event.quantity) - overage(0);
 }
 
 async function ensureUsageMonth(tx: DatabaseTransaction, businessId: string, periodKey: string, plan: BillingPlanSlug): Promise<void> {
@@ -227,6 +224,9 @@ async function refreshUsageMonth(tx: DatabaseTransaction, input: { businessId: s
 
 export async function getUsageStatusInTransaction(tx: DatabaseTransaction, input: { businessId: string; periodKey?: string }): Promise<UsageStatus> {
   const periodKey = input.periodKey ?? periodKeyFor();
+  // Every writer takes this lock before the month row, so a status read
+  // followed by a reservation cannot deadlock with a call reserving first.
+  await lockUsagePeriod(tx, input.businessId, periodKey);
   const billing = await loadBillingContext(tx, input.businessId);
   return await refreshUsageMonth(tx, { businessId: input.businessId, periodKey, plan: billing.plan, capCents: billing.capCents });
 }
@@ -255,19 +255,20 @@ export async function reserveUsageInTransaction(tx: DatabaseTransaction, input: 
     const errorCode = input.usageKind === "voice_seconds" ? billingErrorCodes.voiceLimitReached : input.usageKind === "alert_sms_segments" ? billingErrorCodes.alertSmsLimitReached : input.usageKind === "chat_ai_tokens" ? billingErrorCodes.chatAiLimitReached : billingErrorCodes.outboundCallAttemptLimitReached;
     return { allowed: false, errorCode, syncNeeded: false, periodKey, plan: billing.plan };
   }
-  const eventPayload = { sourceKey: input.sourceKey, quantity, usageKind: input.usageKind, planAtRecordTime: billing.plan, billingIntervalAtRecordTime: billing.billingInterval, createdAt: recordedAt, isFinal: input.usageKind === "outbound_call_attempts" };
+  const eventPayload = { sourceKey: input.sourceKey, quantity, usageKind: input.usageKind, planAtRecordTime: billing.plan, billingIntervalAtRecordTime: billing.billingInterval, createdAt: recordedAt, isFinal: input.usageKind === "outbound_call_attempts" || input.usageKind === "chat_ai_tokens" };
   const simulated = replayEvents([...events, eventPayload], billing.plan);
   if (billing.capCents !== null && simulated.rawSpendCents > billing.capCents) {
     const errorCode = input.usageKind === "voice_seconds" ? billingErrorCodes.voiceLimitReached : input.usageKind === "alert_sms_segments" ? billingErrorCodes.alertSmsLimitReached : input.usageKind === "chat_ai_tokens" ? billingErrorCodes.chatAiLimitReached : billingErrorCodes.outboundCallAttemptLimitReached;
     return { allowed: false, errorCode, syncNeeded: false, periodKey, plan: billing.plan };
   }
   const syncNeeded = billing.plan === "starter" || billing.plan === "pro";
-  const billableQuantity = billableQuantityForEvent([...events.filter((row) => row.sourceKey !== input.sourceKey), eventPayload], input.sourceKey, billing.plan);
+  const others = events.filter((row) => row.sourceKey !== input.sourceKey);
+  const billableQuantity = billableQuantityForEvent(others, eventPayload, billing.plan);
   const [event] = existing
     ? await tx.update(billingUsageEvents).set({ quantity, billableQuantity, planAtRecordTime: billing.plan, billingIntervalAtRecordTime: billing.billingInterval, isFinal: eventPayload.isFinal, syncStatus: syncNeeded ? "pending" : "skipped", updatedAt: new Date() }).where(eq(billingUsageEvents.id, existing.id)).returning({ id: billingUsageEvents.id })
     : await tx.insert(billingUsageEvents).values({ businessId: input.businessId, periodKey, sourceKey: input.sourceKey, usageKind: input.usageKind, quantity, billableQuantity, planAtRecordTime: billing.plan, billingIntervalAtRecordTime: billing.billingInterval, isFinal: eventPayload.isFinal, syncStatus: syncNeeded ? "pending" : "skipped", createdAt: recordedAt, updatedAt: new Date() }).returning({ id: billingUsageEvents.id });
   if (!event) throw new Error("Billing usage event could not be recorded.");
-  await refreshUsageMonth(tx, { businessId: input.businessId, periodKey, plan: billing.plan, capCents: billing.capCents, events: [...events.filter((row) => row.sourceKey !== input.sourceKey), eventPayload] });
+  await refreshUsageMonth(tx, { businessId: input.businessId, periodKey, plan: billing.plan, capCents: billing.capCents, events: [...others, eventPayload] });
   return { allowed: true, errorCode: null, usageEventId: event.id, syncNeeded, periodKey, plan: billing.plan, quantity };
 }
 
@@ -299,7 +300,7 @@ export async function extendPhoneReservationInTransaction(tx: DatabaseTransactio
   if (granted <= 0) return 0;
   const replayed = events.map((row) => (row === event ? { ...row, quantity: row.quantity + granted } : row));
   if (billing.capCents !== null && replayEvents(replayed, billing.plan).rawSpendCents > billing.capCents) return 0;
-  const billableQuantity = billableQuantityForEvent(replayed, sourceKey, billing.plan);
+  const billableQuantity = billableQuantityForEvent(events.filter((row) => row !== event), { ...event, quantity: event.quantity + granted }, billing.plan);
   await tx.update(billingUsageEvents).set({ quantity: event.quantity + granted, billableQuantity, updatedAt: new Date() }).where(eq(billingUsageEvents.id, reservation.id));
   await refreshUsageMonth(tx, { businessId: input.businessId, periodKey: reservation.periodKey, plan: billing.plan, capCents: billing.capCents, events: replayed });
   return granted;
@@ -311,18 +312,19 @@ export async function correctUsageInTransaction(tx: DatabaseTransaction, input: 
   const periodKey = existingBeforeLock?.periodKey ?? periodKeyFor(recordedAt);
   await lockUsagePeriod(tx, input.businessId, periodKey);
   const billing = await loadBillingContext(tx, input.businessId);
-  const existing = (await tx.select({ id: billingUsageEvents.id, periodKey: billingUsageEvents.periodKey, planAtRecordTime: billingUsageEvents.planAtRecordTime, billingIntervalAtRecordTime: billingUsageEvents.billingIntervalAtRecordTime, createdAt: billingUsageEvents.createdAt }).from(billingUsageEvents).where(and(eq(billingUsageEvents.businessId, input.businessId), eq(billingUsageEvents.sourceKey, input.sourceKey))).limit(1))[0];
+  const existing = (await tx.select({ id: billingUsageEvents.id, periodKey: billingUsageEvents.periodKey, planAtRecordTime: billingUsageEvents.planAtRecordTime, billingIntervalAtRecordTime: billingUsageEvents.billingIntervalAtRecordTime, createdAt: billingUsageEvents.createdAt, quantity: billingUsageEvents.quantity, billableQuantity: billingUsageEvents.billableQuantity, isFinal: billingUsageEvents.isFinal }).from(billingUsageEvents).where(and(eq(billingUsageEvents.businessId, input.businessId), eq(billingUsageEvents.sourceKey, input.sourceKey))).limit(1))[0];
   let eventId: string;
   if (existing) {
     const events = await loadEvents(tx, input.businessId, periodKey);
     const replacement: ReplayEvent = { sourceKey: input.sourceKey, quantity: Math.max(0, input.quantity), usageKind: input.usageKind, planAtRecordTime: existing.planAtRecordTime ?? billing.plan, billingIntervalAtRecordTime: existing.billingIntervalAtRecordTime ?? billing.billingInterval, createdAt: existing.createdAt, isFinal: true };
-    const billableQuantity = billableQuantityForEvent([...events.filter((row) => row.sourceKey !== input.sourceKey), replacement], input.sourceKey, billing.plan);
+    const billed = existing.isFinal ? { quantity: existing.quantity, billableQuantity: existing.billableQuantity ?? existing.quantity } : undefined;
+    const billableQuantity = billableQuantityForEvent(events.filter((row) => row.sourceKey !== input.sourceKey), replacement, billing.plan, billed);
     await tx.update(billingUsageEvents).set({ quantity: Math.max(0, input.quantity), billableQuantity, isFinal: true, syncStatus: billing.plan === "starter" || billing.plan === "pro" ? "pending" : "skipped", updatedAt: new Date() }).where(eq(billingUsageEvents.id, existing.id));
     eventId = existing.id;
   } else {
     const replacement: ReplayEvent = { sourceKey: input.sourceKey, quantity: Math.max(0, input.quantity), usageKind: input.usageKind, planAtRecordTime: billing.plan, billingIntervalAtRecordTime: billing.billingInterval, createdAt: recordedAt, isFinal: true };
     const events = await loadEvents(tx, input.businessId, periodKey);
-    const billableQuantity = billableQuantityForEvent([...events, replacement], input.sourceKey, billing.plan);
+    const billableQuantity = billableQuantityForEvent(events, replacement, billing.plan);
     const [event] = await tx.insert(billingUsageEvents).values({ businessId: input.businessId, periodKey, sourceKey: input.sourceKey, usageKind: input.usageKind, quantity: Math.max(0, input.quantity), billableQuantity, planAtRecordTime: billing.plan, billingIntervalAtRecordTime: billing.billingInterval, isFinal: true, syncStatus: billing.plan === "starter" || billing.plan === "pro" ? "pending" : "skipped", createdAt: recordedAt, updatedAt: new Date() }).returning({ id: billingUsageEvents.id });
     if (!event) throw new Error("Billing usage correction could not be recorded.");
     eventId = event.id;

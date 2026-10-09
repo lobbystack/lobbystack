@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
-import { calls, unitEconomicsRollups } from "@lobbystack/db";
+import { calls } from "@lobbystack/db";
 
-import { analyticsBucketExpression, analyticsBucketStarts, analyticsCallChannel, analyticsMessageChannel, analyticsMonthStartExpression } from "./analytics";
+import { analyticsBucketExpression, analyticsBucketStarts, analyticsCallChannel, analyticsMessageChannel } from "./analytics";
 
 const dialect = new PgDialect();
 
@@ -15,13 +15,6 @@ describe("analytics SQL", () => {
 
     expect(query.sql.match(/date_trunc\('week'/g)).toHaveLength(3);
     expect(query.sql.match(/\+ interval '1 day'\) - interval '1 day'/g)).toHaveLength(3);
-    expect(query.params).toEqual([]);
-  });
-
-  it("converts YYYY-MM rollup keys to the first day of the month", () => {
-    const query = dialect.sqlToQuery(analyticsMonthStartExpression(unitEconomicsRollups.monthKey));
-
-    expect(query.sql).toContain(`to_date("unit_economics_rollups"."month_key" || '-01', 'YYYY-MM-DD')`);
     expect(query.params).toEqual([]);
   });
 
@@ -45,6 +38,14 @@ describe("analytics SQL", () => {
       new Date("2026-01-01T00:00:00.000Z"),
       "hour",
     )).toHaveLength(500);
+  });
+
+  it("fits the longest hourly range the analytics route allows (20 days) without dropping the newest hour", () => {
+    const from = new Date("2026-01-03T00:30:00.000Z");
+    const to = new Date(from.getTime() + 20 * 86_400_000);
+    const buckets = analyticsBucketStarts(from, to, "hour");
+    expect(buckets.length).toBeLessThan(500);
+    expect(new Date(buckets.at(-1)!).getTime() + 3_600_000).toBeGreaterThan(to.getTime());
   });
 
   it("fits the longest weekly range the analytics route allows (3493 days) without dropping the newest week", () => {

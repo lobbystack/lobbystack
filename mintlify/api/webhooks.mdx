@@ -9,14 +9,14 @@ Webhooks send an HTTPS `POST` to your URL when something happens in a business, 
 
 ## Events
 
-| Event | Sent when | `data` |
-| --- | --- | --- |
-| `call.completed` | A call ended and LobbyStack saved its summary and outcome. | Call |
-| `appointment.booked` | Anyone books an appointment: the receptionist, the dashboard or the API. | Appointment |
-| `appointment.rescheduled` | An appointment moves to a new time. | Appointment |
-| `appointment.cancelled` | An appointment is cancelled. | Appointment |
-| `message.taken` | The receptionist takes a message for your team. | Message |
-| `contact.created` | A new contact appears, from a call, a text, a booking, the website widget or the API. | Contact |
+| Event | Sent when | `data` | Scope |
+| --- | --- | --- | --- |
+| `call.completed` | A call ended and LobbyStack saved its summary and outcome. | Call | `calls:read` |
+| `appointment.booked` | Anyone books an appointment: the receptionist, the dashboard or the API. | Appointment | `appointments:read` |
+| `appointment.rescheduled` | An appointment moves to a new time. | Appointment | `appointments:read` |
+| `appointment.cancelled` | An appointment is cancelled. | Appointment | `appointments:read` |
+| `message.taken` | The receptionist takes a message for your team. | Message | `messages:read` |
+| `contact.created` | A new contact appears, from a call, a text, a booking, the website widget or the API. | Contact | `contacts:read` |
 
 `data` has the same shape as the matching API resource. For example, `GET /appointments` returns the objects an `appointment.booked` event carries, so a list endpoint doubles as sample data.
 
@@ -42,7 +42,7 @@ You can add endpoints in the dashboard or with the API.
     </Steps>
   </Tab>
   <Tab title="API">
-    Call `POST /webhooks` with a key that has `webhooks:manage`:
+    Call `POST /webhooks` with a key that has `webhooks:manage` and the scope of each event you subscribe to:
 
     ```bash
     curl https://app.lobbystack.com/api/v1/webhooks \

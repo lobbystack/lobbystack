@@ -7,7 +7,9 @@ vi.mock("@lobbystack/db", async (original) => ({
   withBusinessTransaction: mocks.withBusinessTransaction,
 }));
 
-import { deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness } from "./storage";
+import { calls, storageObjects } from "@lobbystack/db";
+
+import { deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, persistCallRecording } from "./storage";
 
 function thenable(resolve: () => unknown[]) {
   const node: Record<string, unknown> = {};
@@ -139,5 +141,42 @@ describe("deleteExpiredObjectsForBusiness", () => {
     await expect(deleteExpiredObjectsForBusiness(context, { businessId: "biz-1" }, recording.storage as never)).resolves.toBe(1);
     expect(recording.deleteObjectKeys).toEqual(["key-p", "key-p"]);
     expect(recording.deleteObjectInsideTransaction).toEqual([false, false]);
+  });
+});
+
+describe("persistCallRecording", () => {
+  function recordingTx(linkedCalls: unknown[]) {
+    const inserts: { table: unknown; values: Record<string, unknown> }[] = [];
+    const updates: { table: unknown; values: Record<string, unknown> }[] = [];
+    const tx = {
+      select: () => thenable(() => [{ id: "call-1" }]),
+      insert: (table: unknown) => ({ values: (values: Record<string, unknown>) => { inserts.push({ table, values }); return thenable(() => [{ id: "outbox-1" }]); } }),
+      update: (table: unknown) => ({ set: (values: Record<string, unknown>) => { updates.push({ table, values }); return thenable(() => table === calls ? linkedCalls : []); } }),
+    };
+    mocks.withBusinessTransaction.mockImplementation(async (_db: unknown, _scope: unknown, callback: (tx: unknown) => unknown) => await callback(tx));
+    vi.stubEnv("CONTENT_RETENTION_ENABLED", "false");
+    return { inserts, updates, storage: { putObject: vi.fn(async () => undefined) } };
+  }
+  const input = { businessId: "biz-1", callId: "call-1", durationMs: 1_000, contentType: "audio/wav", body: new Uint8Array([1]) };
+
+  it("links the copy, marks it ready and clears its upload expiry", async () => {
+    const { inserts, updates, storage } = recordingTx([{ id: "call-1" }]);
+
+    const objectId = await persistCallRecording(context, input, storage as never);
+
+    expect(objectId).toEqual(inserts[0]!.values.id);
+    expect(updates.map((update) => update.table)).toEqual([calls, storageObjects]);
+    expect(updates[1]!.values).toMatchObject({ status: "ready", expiresAt: null });
+    expect(inserts).toHaveLength(2);
+  });
+
+  it("leaves a copy pending with an expiry when the call already has a recording", async () => {
+    const { inserts, updates, storage } = recordingTx([]);
+
+    await expect(persistCallRecording(context, input, storage as never)).resolves.toBeNull();
+
+    expect(storage.putObject).toHaveBeenCalledOnce();
+    expect(inserts).toEqual([{ table: storageObjects, values: expect.objectContaining({ status: "pending", expiresAt: expect.any(Date) }) }]);
+    expect(updates.map((update) => update.table)).toEqual([calls]);
   });
 });

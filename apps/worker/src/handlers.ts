@@ -7,9 +7,9 @@ import { realtimeEventSchema, type JobEnvelope } from "@lobbystack/contracts";
 import { getPolarMeteredUsagePayload, normalizeInterfaceLocale, permanentSmsErrorCode, type BillingUsageKind } from "@lobbystack/shared";
 import { appointments, calls, contacts, enqueueOutbox, knowledgeChunks, knowledgeDocuments, messages, notifications, phoneNumbers, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database } from "@lobbystack/db";
 import { enqueueKnowledgeDerivedRefresh, loadBusinessHoursInput, loadBusinessSummaryInput, markBusinessHoursChecked, resetGeneratedBusinessSummary, saveGeneratedBusinessHours, saveGeneratedBusinessSummary } from "@lobbystack/domain";
-import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, claimSmsDelivery, countPublishableOutboxMessages, deleteCallRecording, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteSentProductEventsBefore, deleteTranscriptForRetention, enqueueBillingUsageSync, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, loadSmsDeliveryTarget, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markCalendarConnectionSync, markKnowledgeDocumentFailed, markNotificationSent, cancelRetiredPhoneVerificationSend, markProductEventsSent, reconcileBillingProviderEvent, reconcileResendProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, releaseAppointmentChangeOtp, releaseSmsDelivery, resolveNotificationDelivery, runPrivacyRetentionSweep, setTransferState, transitionProcessingNotification, updateAppointmentSyncState, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, upsertBusyBlocks, markSmsSent, chunkText, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type GeneratedCallSummary, type OnboardingFollowupSender } from "@lobbystack/domain";
-import { claimOperatorNotificationDelivery, correctAlertSmsUsage, estimateSmsSegments, loadOperatorNotificationDelivery, markFeedbackEmailFailed, markFeedbackEmailSent, markOperatorNotificationSent, markOperatorNotificationSkipped, queueDailyOperatorSummaries, refreshUnitEconomicsMonth, releaseOperatorNotificationDelivery, reserveAlertSmsUsage } from "@lobbystack/domain";
-import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning } from "@lobbystack/domain";
+import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, claimSmsDelivery, countPublishableOutboxMessages, deleteCallRecording, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteSentProductEventsBefore, enqueueBillingUsageSync, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, loadSmsDeliveryTarget, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markCalendarConnectionSync, markKnowledgeDocumentFailed, markNotificationSent, cancelRetiredPhoneVerificationSend, markProductEventsSent, reconcileBillingProviderEvent, reconcileResendProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, releaseAppointmentChangeOtp, releaseSmsDelivery, resolveNotificationDelivery, runPrivacyRetentionSweep, setTransferState, transitionProcessingNotification, updateAppointmentSyncState, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, upsertBusyBlocks, markSmsSent, chunkText, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type GeneratedCallSummary, type OnboardingFollowupSender } from "@lobbystack/domain";
+import { claimOperatorNotificationDelivery, notificationLeaseEndsAt, operatorNotificationLeaseEndsAt, smsDeliveryLeaseEndsAt, correctAlertSmsUsage, estimateSmsSegments, loadOperatorNotificationDelivery, markFeedbackEmailFailed, markFeedbackEmailSent, markOperatorNotificationSent, markOperatorNotificationSkipped, queueDailyOperatorSummaries, refreshUnitEconomicsMonth, releaseOperatorNotificationDelivery, reserveAlertSmsUsage } from "@lobbystack/domain";
+import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning, numberProvisioningLeaseEndsAt } from "@lobbystack/domain";
 import { issueOperatorPhoneVerificationCode, markOperatorPhoneVerificationCodeSent, releaseOperatorPhoneVerificationCodeSend, verificationCodeSmsBody } from "@lobbystack/domain";
 import { createWebhookSender, processWebhookDelivery, pruneApiHistory, type WebhookSender } from "@lobbystack/domain";
 import { LIVE_RECORDING_ATTEMPTS, listOpenLiveCalls, liveCallHasRecording, persistCallRecording, retryLiveCallRecording, type OpenLiveCall } from "@lobbystack/domain";
@@ -18,7 +18,7 @@ import type { SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
 import type { RuntimeStorageProvider } from "@lobbystack/providers/storage/provider";
 import type { TwilioProvider } from "@lobbystack/providers/twilio/twilioProvider";
 import type OpenAI from "openai";
-import { extractDocumentText } from "./documentExtraction";
+import { extractDocumentTextInThread, type OcrRecorder } from "./documentExtraction";
 import { isLivePrototypeEnabled, type LiveRecoveryOutcome } from "./liveCalls";
 import { reconcileBusinessCalendar, syncAppointmentCalendar, type CalendarOperations } from "./calendarJobs";
 import { getMeter } from "@lobbystack/telemetry/node";
@@ -26,6 +26,8 @@ import { bucketOutboxBacklog, getPostHogDistinctIdForBusinessSystem, redactTelem
 
 const ragMeter = getMeter("lobbystack-rag");
 const extractionDuration = ragMeter.createHistogram("rag.extraction.duration_ms", { unit: "ms" });
+const ocrDuration = ragMeter.createHistogram("rag.ocr.duration_ms", { unit: "ms" });
+const recordOcr: OcrRecorder = (durationMs, attributes) => ocrDuration.record(durationMs, attributes);
 const chunkCount = ragMeter.createHistogram("rag.chunk.count", { unit: "{chunk}" });
 const embeddingDuration = ragMeter.createHistogram("rag.embedding.duration_ms", { unit: "ms" });
 const embeddingFailures = ragMeter.createCounter("rag.embedding.failures", { unit: "{failure}" });
@@ -83,7 +85,13 @@ export type WorkerDependencies = {
   }) => Promise<void>;
 };
 
-export type JobResult = { status: "completed" | "skipped"; entityId?: string };
+export type JobResult = { status: "completed" | "skipped"; entityId?: string } | { status: "deferred"; entityId: string; retryAt: Date };
+
+// A worker killed mid-send leaves the row leased, and BullMQ re-runs the job
+// before the lease ends. Run it again once the lease ends instead of dropping it.
+function retryAfterLease(leaseEndsAt: Date | null, entityId: string): JobResult {
+  return leaseEndsAt ? { status: "deferred", entityId, retryAt: leaseEndsAt } : { status: "skipped", entityId };
+}
 
 function businessIdOrThrow(job: JobEnvelope): string {
   if (!job.businessId) {
@@ -307,29 +315,29 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       return await generateBusinessSummary(dependencies, { businessId: businessIdOrThrow(job), force: job.payload.force === true });
     case "business.extractHours":
       return await extractBusinessHours(dependencies, { businessId: businessIdOrThrow(job) });
-    case "knowledge.indexDocument": {
-      const id = String(job.payload.documentId);
-      const text = String(job.payload.text ?? "");
-      const result = await indexKnowledgeText(dependencies, { businessId: businessIdOrThrow(job), documentId: id, text });
-      return { status: "completed", entityId: `${id}:${result.chunkCount}` };
-    }
     case "knowledge.extractDocument": {
       const businessId = businessIdOrThrow(job);
       const documentId = String(job.payload.documentId);
       const source = await loadKnowledgeSource(dependencies.domain.db, { businessId, documentId });
-       if (!source || !dependencies.storage) return { status: "skipped", entityId: documentId };
-       let body: Uint8Array;
-       try {
-         body = await dependencies.storage.getObject({ key: source.objectKey });
-       } catch (error) {
-         await markKnowledgeDocumentFailed(dependencies.domain, { businessId, documentId });
-         throw error;
-       }
-         const extractionStartedAt = performance.now();
-         const text = await extractDocumentText({ body, contentType: source.contentType });
-         extractionDuration.record(performance.now() - extractionStartedAt, { content_type: source.contentType.split(";", 1)[0] ?? "unknown" });
-       const result = await indexKnowledgeText(dependencies, { businessId, documentId, text });
-       return { status: "completed", entityId: `${documentId}:${result.chunkCount}` };
+      if (!source || !dependencies.storage) return { status: "skipped", entityId: documentId };
+      let body: Uint8Array;
+      try {
+        body = await dependencies.storage.getObject({ key: source.objectKey });
+      } catch (error) {
+        await markKnowledgeDocumentFailed(dependencies.domain, { businessId, documentId });
+        throw error;
+      }
+      let text: string;
+      try {
+        const extractionStartedAt = performance.now();
+        text = await extractDocumentTextInThread({ body, contentType: source.contentType }, recordOcr);
+        extractionDuration.record(performance.now() - extractionStartedAt, { content_type: source.contentType.split(";", 1)[0] ?? "unknown" });
+      } catch (error) {
+        if (execution.isFinalAttempt !== false) await markKnowledgeDocumentFailed(dependencies.domain, { businessId, documentId, error: "We couldn't read the text in this document." });
+        throw error;
+      }
+      const result = await indexKnowledgeText(dependencies, { businessId, documentId, text });
+      return { status: "completed", entityId: `${documentId}:${result.chunkCount}` };
     }
     case "knowledge.crawlWebsite": {
       const url = String(job.payload.url ?? job.payload.websiteUrl ?? "").trim();
@@ -393,29 +401,6 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         await updateWebsiteIngestion(dependencies.domain.db, { businessId: businessIdOrThrow(job), websiteIngestionJobId, status: "failed", error: "Website crawl returned no readable content." });
       }
       return { status: "completed", entityId: `${String(job.payload.jobId ?? job.jobId)}:${indexedChunks}` };
-    }
-    case "knowledge.reindexBusiness": {
-      const businessId = businessIdOrThrow(job);
-      const documents = await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) =>
-        await tx.select({ id: knowledgeDocuments.id, sourceUrl: knowledgeDocuments.sourceUrl, storageObjectId: knowledgeDocuments.storageObjectId }).from(knowledgeDocuments).where(eq(knowledgeDocuments.businessId, businessId)),
-      );
-      let indexedDocuments = 0;
-      for (const document of documents) {
-        if (document.storageObjectId && dependencies.storage) {
-          const source = await loadKnowledgeSource(dependencies.domain.db, { businessId, documentId: document.id });
-          if (source) {
-             const text = await extractDocumentText({ body: await dependencies.storage.getObject({ key: source.objectKey }), contentType: source.contentType });
-             await indexKnowledgeText(dependencies, { businessId, documentId: document.id, text });
-            indexedDocuments += 1;
-          }
-        } else if (document.sourceUrl && dependencies.crawler) {
-          const pages = await dependencies.crawler.crawl({ url: document.sourceUrl, limit: 1 });
-          for (const page of pages) {
-            indexedDocuments += (await indexWebsitePage(dependencies, businessId, page)) > 0 ? 1 : 0;
-          }
-        }
-      }
-      return { status: indexedDocuments > 0 ? "completed" : "skipped", entityId: `${businessId}:${indexedDocuments}` };
     }
     case "knowledge.reembedBusiness": {
       const businessId = businessIdOrThrow(job);
@@ -507,7 +492,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       {
         const businessId = businessIdOrThrow(job);
         const messageId = String(job.payload.messageId);
-        if (!await claimSmsDelivery(dependencies.domain, { businessId, messageId })) return { status: "skipped", entityId: messageId };
+        if (!await claimSmsDelivery(dependencies.domain, { businessId, messageId })) return retryAfterLease(await smsDeliveryLeaseEndsAt(dependencies.domain, { businessId, messageId }), messageId);
         const target = await loadSmsDeliveryTarget(dependencies.domain.db, { businessId, messageId });
         if (!target) {
           await releaseSmsDelivery(dependencies.domain, { businessId, messageId });
@@ -719,7 +704,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       const operatorDeliveryId = String(job.payload.operatorDeliveryId ?? "");
       if (operatorDeliveryId) {
         const businessId = businessIdOrThrow(job);
-        if (!await claimOperatorNotificationDelivery(dependencies.domain, { businessId, deliveryId: operatorDeliveryId })) return { status: "skipped", entityId: operatorDeliveryId };
+        if (!await claimOperatorNotificationDelivery(dependencies.domain, { businessId, deliveryId: operatorDeliveryId })) return retryAfterLease(await operatorNotificationLeaseEndsAt(dependencies.domain, { businessId, deliveryId: operatorDeliveryId }), operatorDeliveryId);
         const delivery = await loadOperatorNotificationDelivery(dependencies.domain, { businessId, deliveryId: operatorDeliveryId });
         if (!delivery) {
           await markOperatorNotificationSkipped(dependencies.domain, { businessId, deliveryId: operatorDeliveryId, error: "SMS consent or destination changed before delivery." });
@@ -765,7 +750,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       if (!notificationId) return { status: "skipped" };
       const businessId = businessIdOrThrow(job);
       if (!await claimNotificationDelivery(dependencies.domain, { businessId, notificationId })) {
-        return { status: "skipped", entityId: notificationId };
+        return retryAfterLease(await notificationLeaseEndsAt(dependencies.domain, { businessId, notificationId }), notificationId);
       }
       const resolution = await resolveNotificationDelivery(dependencies.domain, { businessId, notificationId });
       if (!resolution) {
@@ -872,12 +857,6 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         entityId: result ? JSON.stringify(result) : `${businessId}:${deleted}`,
       };
     }
-    case "privacy.deleteTranscript": {
-      const callId = String(job.payload.callId ?? "");
-      if (!callId) return { status: "skipped" };
-      const deleted = await deleteTranscriptForRetention(dependencies.domain, { businessId: businessIdOrThrow(job), callId });
-      return { status: deleted > 0 ? "completed" : "skipped", entityId: callId };
-    }
     case "privacy.deleteRecording": {
       if (!dependencies.storage) return { status: "skipped", entityId: String(job.payload.callId ?? "") };
       const callId = String(job.payload.callId ?? "");
@@ -904,7 +883,9 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       if (!sipTrunkSid) throw new Error("TWILIO_SIP_TRUNK_SID is required to provision a phone number. See docs/voice/runtime.md.");
       if (!dependencies.twilio.addNumberToSipTrunk) throw new Error("The Twilio provider can't assign numbers to a SIP trunk.");
       const addNumberToSipTrunk = dependencies.twilio.addNumberToSipTrunk.bind(dependencies.twilio);
-      const claim = await claimNumberProvisioning(dependencies.domain, { businessId, claimId }); if (!claim) return { status: "skipped", entityId: claimId };
+      const claim = await claimNumberProvisioning(dependencies.domain, { businessId, claimId });
+      // A worker killed mid-purchase leaves the claim provisioning. Retry once its lease ends instead of leaving it stuck.
+      if (!claim) return retryAfterLease(await numberProvisioningLeaseEndsAt(dependencies.domain, { businessId, claimId }), claimId);
       const baseUrl = (process.env.APP_BASE_URL ?? "http://localhost:3000").replace(/\/$/, "");
       const smsUrl = `${baseUrl}/api/webhooks/twilio/sms`; const statusCallbackUrl = `${baseUrl}/api/webhooks/twilio/status`;
       let purchased = false; let providerPhoneId: string | undefined;
@@ -929,7 +910,8 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         const queued = await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => {
           const due = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"), lte(phoneNumbers.reclaimScheduledAt, new Date())));
           for (const number of due) {
-            await enqueueOutbox(tx, { topic: "phoneNumber.reclaim", businessId, aggregateType: "phone_number", aggregateId: number.id, dedupeKey: `phone-number:${number.id}:reclaim`, payload: { phoneNumberId: number.id } });
+            // One key per hour, so a release that failed is tried again by the next sweep.
+            await enqueueOutbox(tx, { topic: "phoneNumber.reclaim", businessId, aggregateType: "phone_number", aggregateId: number.id, dedupeKey: `phone-number:${number.id}:reclaim:${new Date().toISOString().slice(0, 13)}`, payload: { phoneNumberId: number.id } });
           }
           return due.length;
         });
@@ -1245,7 +1227,7 @@ async function indexKnowledgeText(
 
 function polarCheckoutProductId(target: "starter" | "pro", billingInterval: "monthly" | "annual"): string {
   const key = `POLAR_${target.toUpperCase()}_${billingInterval.toUpperCase()}_PRODUCT_ID`;
-  const productId = process.env[key] ?? (target === "pro" && billingInterval === "monthly" ? process.env.POLAR_PRO_PRODUCT_ID : undefined);
+  const productId = process.env[key];
   if (!productId) throw new Error(`${key} is required for checkout.`);
   return productId;
 }

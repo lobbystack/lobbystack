@@ -14,6 +14,7 @@ function setup(locale: string, blocked = false) {
   clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true }] });
   client.setQueryData(["billing", "business"], {
+    effectivePlan: "pro",
     account: { plan: "pro", currentPeriodEnd: "2026-10-01T12:00:00Z" },
     usageStatus: { voiceSecondsUsed: 750, outboundCallAttemptsUsed: 4, alertSmsSegmentsUsed: 2, voiceBlocked: blocked },
     knowledgeStorageBytesUsed: 1024 * 1024,

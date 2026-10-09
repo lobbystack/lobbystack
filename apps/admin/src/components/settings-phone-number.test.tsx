@@ -17,7 +17,7 @@ function setup(plan: string, role = "business_owner", usedAt: string | null = nu
   clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role }] });
   client.setQueryData(["phone-numbers", "business"], { phoneNumbers: primary ? [{ id: "phone", e164: "+14165550100", status: "active", reclaimScheduledAt }] : [], replacement: { usedAt, activeClaim: pending ? { id: "claim", status: "provisioning" } : null } });
-  client.setQueryData(["billing", "business"], { account: { plan } });
+  client.setQueryData(["billing", "business"], { effectivePlan: plan, account: { plan } });
   const fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
     if (input.includes("/claim/claim?")) return Response.json({ claim: { status: "claimed", phoneNumberId: "claimed-phone", requestedE164: "+14165550200" } });
     if (input.includes("/claim?")) return Response.json({ claimId: "claim" });

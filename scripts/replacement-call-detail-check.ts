@@ -57,6 +57,7 @@ async function main(): Promise<void> {
     await upsertTranscript({ db: worker.db }, { businessId, callId: created.callId, sequence: 1, speaker: "caller", text: "I need an appointment.", final: true });
     await completeCall({ db: worker.db }, { businessId, callId: created.callId, status: "completed", endedAt: new Date().toISOString(), disposition: "appointment_request", providerDurationSeconds: 42 });
     const recordingId = await persistCallRecording({ db: worker.db }, { businessId, callId: created.callId, durationMs: 42_000, contentType: "audio/wav", body: new TextEncoder().encode("recording") }, storage);
+    assert(recordingId, "The recording was not linked to the call.");
     const available = await getCallDetail({ db: app.db }, { userId, businessId, callId: created.callId });
     assert(available?.recording.state === "available" && available.recording.objectId === recordingId && available.transcript.length === 1, "Available recording or transcript detail was not returned.");
 

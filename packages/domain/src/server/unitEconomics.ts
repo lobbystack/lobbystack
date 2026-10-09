@@ -28,6 +28,12 @@ export type UnitEconomicsEventInput = {
   operatorNotificationDeliveryId?: string | undefined;
 };
 
+// Every AI reply, call and SMS records a cost event, and each refresh re-reads
+// the whole month. Events recorded in the same five minutes share one refresh,
+// run 30 seconds after the window closes.
+const REFRESH_WINDOW_MS = 5 * 60_000;
+const REFRESH_DELAY_MS = 30_000;
+
 function monthKey(value: Date): string {
   return value.toISOString().slice(0, 7);
 }
@@ -84,7 +90,8 @@ export async function recordUnitEconomicsEventInTransaction(tx: DatabaseTransact
   };
   const [event] = await tx.insert(unitEconomicsEvents).values(values).onConflictDoUpdate({ target: [unitEconomicsEvents.businessId, unitEconomicsEvents.eventKey], set: { monthKey: values.monthKey, occurredAt, eventKind: input.eventKind, channel: input.channel, costUsd: values.costUsd, ...details, updatedAt: new Date() } }).returning({ id: unitEconomicsEvents.id });
   if (!event) throw new Error("Unit economics event could not be recorded.");
-  await enqueueOutbox(tx, { topic: "billing.refreshUnitEconomics", businessId: input.businessId, aggregateType: "unit_economics_event", aggregateId: event.id, dedupeKey: `unit-economics:${event.id}:${values.monthKey}:${values.costUsd}`, payload: { monthKey: values.monthKey } });
+  const window = Math.floor(Date.now() / REFRESH_WINDOW_MS);
+  await enqueueOutbox(tx, { topic: "billing.refreshUnitEconomics", businessId: input.businessId, aggregateType: "business", aggregateId: input.businessId, dedupeKey: `unit-economics:${input.businessId}:${values.monthKey}:${window}`, availableAt: new Date((window + 1) * REFRESH_WINDOW_MS + REFRESH_DELAY_MS), payload: { monthKey: values.monthKey } });
   return event.id;
 }
 

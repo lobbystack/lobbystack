@@ -1,3 +1,4 @@
+import { rename, rmdir } from "node:fs/promises"
 import react from "@astrojs/react"
 import sitemap from "@astrojs/sitemap"
 import seoGraph from "@jdevalk/astro-seo-graph/integration"
@@ -132,16 +133,19 @@ export default defineConfig({
       scriptDirective: {
         resources: [
           "'self'",
-          "https://app.cal.com",
           "https://static.cloudflareinsights.com",
           "https://ts.lobbystack.com",
         ],
       },
+      // Base UI's Slider and Select render inline style attributes for thumb
+      // position and hidden inputs, and hydration does not reapply them.
+      styleDirective: {
+        resources: [{ resource: "'unsafe-inline'", kind: "attribute" }],
+      },
       directives: [
         "default-src 'self'",
-        `connect-src 'self' https://app.cal.com https://app.lobbystack.com http://localhost:3000 http://127.0.0.1:3000 ${LIVE_CALL_ORIGIN} https://cloudflareinsights.com https://ts.lobbystack.com https://us.i.posthog.com`,
-        "frame-src 'self' https://app.cal.com",
-        "img-src 'self' data: https://app.cal.com https://images.unsplash.com https://i.pravatar.cc https://ts.lobbystack.com https://us.i.posthog.com",
+        `connect-src 'self' https://app.lobbystack.com ${LIVE_CALL_ORIGIN} https://cloudflareinsights.com https://ts.lobbystack.com https://us.i.posthog.com`,
+        "img-src 'self' data: https://ts.lobbystack.com https://us.i.posthog.com",
       ],
     },
   },
@@ -205,5 +209,24 @@ export default defineConfig({
     }),
     pagefind(),
     react(),
+    // Cloudflare Pages serves the nearest <dir>/404.html for a missing path and
+    // never looks at <locale>/404/index.html. Runs last so earlier build:done
+    // hooks still find the files where Astro wrote them.
+    {
+      name: "lobbystack-localized-404",
+      hooks: {
+        "astro:build:done": async ({ dir }) => {
+          await Promise.all(
+            PREFIXED_LOCALES.map(async (locale) => {
+              await rename(
+                new URL(`${locale}/404/index.html`, dir),
+                new URL(`${locale}/404.html`, dir)
+              )
+              await rmdir(new URL(`${locale}/404/`, dir))
+            })
+          )
+        },
+      },
+    },
   ],
 })

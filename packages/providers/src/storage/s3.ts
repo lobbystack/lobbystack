@@ -1,12 +1,10 @@
 import {
-  CopyObjectCommand,
   CreateBucketCommand,
   DeleteObjectCommand,
   GetBucketCorsCommand,
   GetObjectCommand,
   HeadObjectCommand,
   HeadBucketCommand,
-  ListObjectsV2Command,
   PutBucketCorsCommand,
   PutObjectCommand,
   S3Client,
@@ -111,7 +109,7 @@ export class S3StorageProvider {
     await this.run("health_check", async () => { await this.client.send(new HeadBucketCommand({ Bucket: this.bucket })); });
   }
 
-  async createUpload(input: { key: string; contentType: string; length: number; checksum?: string; ifNoneMatch?: boolean }): Promise<{ url: string; headers: Record<string, string> }> {
+  async createUpload(input: { key: string; contentType: string; length: number; checksum?: string }): Promise<{ url: string; headers: Record<string, string> }> {
     await this.ensureBucket();
     await this.corsReady;
     const command = new PutObjectCommand({
@@ -120,7 +118,6 @@ export class S3StorageProvider {
       ContentType: input.contentType,
       ContentLength: input.length,
       ...(input.checksum ? { ChecksumSHA256: input.checksum } : {}),
-      ...(input.ifNoneMatch ? { IfNoneMatch: "*" } : {}),
     });
     const url = await this.run("create_upload", async () => await getSignedUrl(this.client, command, { expiresIn: 900 }));
     return {
@@ -129,7 +126,6 @@ export class S3StorageProvider {
         "content-type": input.contentType,
         "content-length": String(input.length),
         ...(input.checksum ? { "x-amz-checksum-sha256": input.checksum } : {}),
-        ...(input.ifNoneMatch ? { "if-none-match": "*" } : {}),
       },
     };
   }
@@ -142,7 +138,7 @@ export class S3StorageProvider {
   async headObject(input: { key: string }): Promise<{ length: number; contentType: string; checksum?: string } | null> {
     await this.ensureBucket();
     try {
-      const result = await this.run("head", async () => await this.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: input.key })));
+      const result = await this.run("head", async () => await this.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: input.key, ChecksumMode: "ENABLED" })));
       return {
         length: result.ContentLength ?? 0,
         contentType: result.ContentType ?? "application/octet-stream",
@@ -173,23 +169,5 @@ export class S3StorageProvider {
   async deleteObject(input: { key: string }): Promise<void> {
     await this.ensureBucket();
     await this.run("delete", async () => { await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: input.key })); });
-  }
-
-  async copyObject(input: { sourceKey: string; destinationKey: string }): Promise<void> {
-    await this.ensureBucket();
-    await this.run("copy", async () => { await this.client.send(new CopyObjectCommand({ Bucket: this.bucket, Key: input.destinationKey, CopySource: `${this.bucket}/${input.sourceKey}` })); });
-  }
-
-  async listObjectKeys(prefix = ""): Promise<string[]> {
-    await this.ensureBucket();
-    const keys: string[] = [];
-    let continuation: string | undefined;
-    do {
-      const page = await this.run("list", async () => await this.client.send(new ListObjectsV2Command({ Bucket: this.bucket, Prefix: prefix, ...(continuation ? { ContinuationToken: continuation } : {}) })));
-      for (const item of page.Contents ?? []) if (item.Key !== undefined) keys.push(item.Key);
-      continuation = page.IsTruncated ? page.NextContinuationToken : undefined;
-      if (page.IsTruncated && !continuation) throw new Error("Incomplete storage listing");
-    } while (continuation);
-    return keys;
   }
 }

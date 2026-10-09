@@ -20,6 +20,13 @@ it("rejects cross-origin API mutations even when a dynamic identifier has an ext
   expect(response.headers.get("cache-control")).toBe("private, no-store");
 });
 
+it("guards the widget-keys admin route while leaving the public widget API open to other origins", () => {
+  const adminRoute = proxy(new NextRequest("http://localhost:3210/api/widget-keys", { method: "POST", headers: { origin: "https://untrusted.invalid" } }));
+  expect(adminRoute.status).toBe(403);
+  const publicRoute = proxy(new NextRequest("http://localhost:3210/api/widget/session", { method: "POST", headers: { origin: "https://customer.example" } }));
+  expect(publicRoute.status).toBe(200);
+});
+
 it("overwrites supplied locale headers and tolerates malformed cookies", () => {
   const response = proxy(new NextRequest("http://localhost:3210/fr/login", { headers: { cookie: "lobbystack.locale=%E0%A4%A", "accept-language": "en", "x-lobbystack-locale": "en", "x-lobbystack-pathname": "/settings" } }));
   expect(response.headers.get("x-middleware-request-x-lobbystack-locale")).toBe("fr");

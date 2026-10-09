@@ -1,12 +1,10 @@
 import { createHmac } from "node:crypto";
 import { PgDialect } from "drizzle-orm/pg-core";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi, type MockInstance } from "vitest";
 
-const mocks = vi.hoisted(() => ({ lookup: vi.fn(), insert: vi.fn(), enqueue: vi.fn(), scope: vi.fn(), where: vi.fn(), recordProductEvent: vi.fn() }));
+const mocks = vi.hoisted(() => ({ lookup: vi.fn(), insert: vi.fn(), enqueue: vi.fn(), scope: vi.fn(), where: vi.fn() }));
 vi.mock("@lobbystack/providers", () => import("../../../../../../packages/providers/src/polar/webhook"));
 vi.mock("@/lib/api-helpers", () => ({ getDispatcherDatabase: () => ({ db: {} }), getWorkerDatabase: () => ({ db: {} }) }));
-vi.mock("@/lib/domain-context", () => ({ createWorkerDomainContext: () => ({ db: {} }) }));
-vi.mock("@lobbystack/domain", () => ({ recordProductEvent: mocks.recordProductEvent }));
 vi.mock("@lobbystack/db", async importOriginal => ({
   ...await importOriginal<typeof import("@lobbystack/db")>(),
   withDispatcherTransaction: async (_db: unknown, callback: (tx: unknown) => unknown) => callback({ select: () => ({ from: () => ({ where: (condition: unknown) => { mocks.where(condition); return { limit: mocks.lookup }; } }) }) }),
@@ -20,6 +18,8 @@ vi.mock("@lobbystack/db", async importOriginal => ({
 import { POST } from "./route";
 const businessId = "ed4f1b6f-a237-4c09-8e26-68c3b976b110";
 const secret = Buffer.from("polar-route-test-secret").toString("base64");
+let logged: MockInstance<typeof console.error>;
+const unresolvedLogs = () => logged.mock.calls.map(([line]) => JSON.parse(String(line)) as Record<string, unknown>);
 
 function request(reference = businessId, options: { id?: string; timestamp?: number; body?: string; signature?: string } = {}) {
   const body = options.body ?? JSON.stringify({ type: "subscription.active", data: { customer: { external_id: `business:${reference}` }, id: "sub-1", status: "active" } });
@@ -34,8 +34,9 @@ beforeEach(() => {
   vi.stubEnv("POLAR_WEBHOOK_SECRET", secret);
   vi.stubEnv("POLAR_ACCEPT_LEGACY_BUSINESS_IDS", "false");
   mocks.lookup.mockResolvedValue([{ id: businessId }]);
+  logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
 });
-afterEach(() => vi.unstubAllEnvs());
+afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); });
 
 it("routes a signed UUID delivery and deduplicates retries before enqueueing", async () => {
   expect(await (await POST(request())).json()).toEqual({ accepted: true, duplicate: false, eventId: "delivery-1" });
@@ -61,26 +62,15 @@ it("ignores unknown businesses without persisting or enqueueing", async () => {
   expect(await (await POST(request())).json()).toEqual({ accepted: true, ignored: true });
   expect(mocks.insert).not.toHaveBeenCalled();
   expect(mocks.enqueue).not.toHaveBeenCalled();
-  expect(mocks.recordProductEvent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
-    name: "ops.billing.webhook_unresolved",
-    properties: expect.objectContaining({ provider: "polar", reason: "unknown_business", businessReference: businessId }),
-  }));
+  expect(unresolvedLogs()).toEqual([{ event: "ops.billing.webhook_unresolved", provider: "polar", eventType: "subscription.active", reason: "unknown_business", businessReference: businessId }]);
 });
 
-it("emits ops.billing.webhook_unresolved when no field identifies a business", async () => {
+it("logs ops.billing.webhook_unresolved when no field identifies a business", async () => {
   // A subscription that cannot be attributed is dropped with a 200, so this
-  // event is the only trace that money moved and nothing applied.
+  // log line is the only trace that money moved and nothing applied.
   expect(await (await POST(request("kh797h57jgpq83314s4fj8ptmn866hbk"))).json()).toEqual({ accepted: true, ignored: true });
   expect(mocks.lookup).not.toHaveBeenCalled();
-  expect(mocks.recordProductEvent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
-    name: "ops.billing.webhook_unresolved",
-    properties: expect.objectContaining({
-      provider: "polar",
-      reason: "no_reference",
-      eventType: "subscription.active",
-      businessReference: "kh797h57jgpq83314s4fj8ptmn866hbk",
-    }),
-  }));
+  expect(unresolvedLogs()).toEqual([{ event: "ops.billing.webhook_unresolved", provider: "polar", eventType: "subscription.active", reason: "no_reference", businessReference: "kh797h57jgpq83314s4fj8ptmn866hbk" }]);
 });
 
 it("resolves a migrated customer from metadata instead of dropping it", async () => {
@@ -99,7 +89,7 @@ it("resolves a migrated customer from metadata instead of dropping it", async ()
   });
   expect(await (await POST(request(businessId, { body }))).json()).toEqual({ accepted: true, duplicate: false, eventId: "delivery-1" });
   expect(mocks.enqueue).toHaveBeenCalledTimes(1);
-  expect(mocks.recordProductEvent).not.toHaveBeenCalled();
+  expect(logged).not.toHaveBeenCalled();
 });
 
 it("rejects invalid, stale, missing, and unconfigured signatures before DB access", async () => {

@@ -13,6 +13,8 @@ const domain = vi.hoisted(() => ({
   updateContactForApi: vi.fn(),
   cancelAppointmentForApi: vi.fn(),
   getWebhookEndpoint: vi.fn(),
+  createWebhookEndpoint: vi.fn(),
+  updateWebhookEndpoint: vi.fn(),
   listCallsForApi: vi.fn(async () => ({ data: [], next_cursor: null, has_more: false })),
   listContactsForApi: vi.fn(async () => ({ data: [], next_cursor: null, has_more: false })),
   listStaffForApi: vi.fn(),
@@ -206,5 +208,45 @@ describe("GET /appointments?contact_id", () => {
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({ error: { code: "invalid_request", message: "contact_id must be a UUID." } });
     expect(domain.listAppointmentsForApi).not.toHaveBeenCalled();
+  });
+});
+
+describe("webhook event scopes", () => {
+  const businessId = "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5f";
+  const apiKeyId = "0b7c1d2e-3f40-4a51-8b62-7c83d94ea5b6";
+  const endpointId = "06d9c0dc-f18a-4cc6-a987-ac4963c87113";
+  const endpoint = { id: endpointId, url: "https://hooks.example.com/a", description: null, events: ["call.completed"], status: "enabled", disabled_reason: null, created_at: "2026-09-27T12:00:00.000Z", updated_at: "2026-09-27T12:00:00.000Z" };
+  const post = (events: string[]) => v1.createWebhook(call("/webhooks", { method: "POST", body: JSON.stringify({ url: "https://vendor.example.com/h", events }) }));
+  const patch = (body: Record<string, unknown>) => v1.updateWebhook(call("/webhooks/x", { method: "PATCH", body: JSON.stringify(body) }), { params: Promise.resolve({ webhook_id: endpointId }) });
+
+  it("rejects a webhooks:manage-only key subscribing to events it cannot read", async () => {
+    domain.resolveApiKey.mockResolvedValue({ businessId, apiKeyId, scopes: ["webhooks:manage"] });
+    const response = await post(["call.completed", "message.taken"]);
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({ error: { code: "insufficient_scope", message: expect.stringContaining("calls:read, messages:read") } });
+    expect(domain.createWebhookEndpoint).not.toHaveBeenCalled();
+  });
+
+  it("creates the endpoint when the key has the read scope", async () => {
+    domain.resolveApiKey.mockResolvedValue({ businessId, apiKeyId, scopes: ["webhooks:manage", "calls:read"] });
+    domain.createWebhookEndpoint.mockResolvedValue({ endpoint, secret: "whsec_x" });
+    const response = await post(["call.completed"]);
+    expect(response.status).toBe(201);
+  });
+
+  it("rejects moving an endpoint's url when the key cannot read its events", async () => {
+    domain.resolveApiKey.mockResolvedValue({ businessId, apiKeyId, scopes: ["webhooks:manage"] });
+    domain.getWebhookEndpoint.mockResolvedValue(endpoint);
+    const response = await patch({ url: "https://vendor.example.com/h" });
+    expect(response.status).toBe(403);
+    expect(domain.updateWebhookEndpoint).not.toHaveBeenCalled();
+  });
+
+  it("lets the key change only the description without the read scope", async () => {
+    domain.resolveApiKey.mockResolvedValue({ businessId, apiKeyId, scopes: ["webhooks:manage"] });
+    domain.updateWebhookEndpoint.mockResolvedValue(endpoint);
+    const response = await patch({ description: "Renamed" });
+    expect(response.status).toBe(200);
+    expect(domain.getWebhookEndpoint).not.toHaveBeenCalled();
   });
 });

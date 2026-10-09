@@ -1,6 +1,7 @@
-import { and, eq, gte, lt, sql, type SQL, type SQLWrapper } from "drizzle-orm";
+import { sql, type SQL, type SQLWrapper } from "drizzle-orm";
 
-import { appointments, calls, conversations, messages, unitEconomicsRollups, withBusinessTransaction } from "@lobbystack/db";
+import { appointments, calls, conversations, messages, withBusinessTransaction } from "@lobbystack/db";
+import { MAX_PHONE_CALL_MS } from "@lobbystack/shared";
 
 import { requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
@@ -22,11 +23,6 @@ export function analyticsBucketExpression(column: SQLWrapper, granularity: Analy
     return sql<Date>`date_trunc('week', ${column} + interval '1 day') - interval '1 day'`;
   }
   return sql<Date>`date_trunc(${analyticsGranularitySql[granularity]}, ${column})`;
-}
-
-/** @internal Exported for focused SQL regression coverage. */
-export function analyticsMonthStartExpression(column: SQLWrapper): SQL<Date> {
-  return sql<Date>`to_date(${column} || '-01', 'YYYY-MM-DD')`;
 }
 
 /** Channel buckets for the Analytics channels card, in display order. */
@@ -146,10 +142,10 @@ export async function getAnalytics(context: DomainContext, input: AnalyticsInput
     const callBucket = analyticsBucketExpression(calls.startedAt, input.granularity);
     const appointmentBucket = analyticsBucketExpression(appointments.startsAt, input.granularity);
     const messageBucket = analyticsBucketExpression(messages.createdAt, input.granularity);
-    const economicsMonth = analyticsMonthStartExpression(unitEconomicsRollups.monthKey);
+    // A call still open a minute past its max duration lost its worker or gateway, so it counts as missed, not live.
     const outcomeKey = sql<string>`case
       when ${calls.transferState} is not null and ${calls.transferState} <> 'idle' then 'transferred'
-      when ${calls.status} in ('in_progress', 'open') and (${calls.transport} <> 'webrtc' or ${calls.startedAt} >= current_timestamp - (coalesce(${calls.webCallMaxDurationMs}, 300000) + 60000) * interval '1 millisecond') then 'live'
+      when ${calls.endedAt} is null and ${calls.status} in ('started', 'in_progress') and ${calls.startedAt} >= current_timestamp - (case when ${calls.transport} = 'web_voice' then coalesce(${calls.webCallMaxDurationMs}, 300000) else ${sql.raw(String(MAX_PHONE_CALL_MS))} end + 60000) * interval '1 millisecond' then 'live'
       when lower(coalesce(${calls.disposition}, '')) similar to '%(miss|voicemail|busy|no_answer)%' or lower(${calls.status}) like '%failed%' then 'missed'
       when ${calls.providerDurationSeconds} > 0 or ${calls.status} = 'completed' then 'completed'
       else 'missed' end`;
@@ -186,8 +182,6 @@ export async function getAnalytics(context: DomainContext, input: AnalyticsInput
     const channels = Object.fromEntries(analyticsChannels.map((channel) => [channel, 0])) as Record<AnalyticsChannel, number>;
     for (const row of channelRows(callRows)) channels[analyticsCallChannel(row.channel)] += Number(row.count);
     for (const row of channelRows(messageRows)) channels[analyticsMessageChannel(row.channel)] += Number(row.count);
-
-    const economics = await tx.select({ totalCostUsd: unitEconomicsRollups.totalCostUsd, costPerVoiceCallUsd: unitEconomicsRollups.costPerVoiceCallUsd, costPerActiveUserUsd: unitEconomicsRollups.costPerActiveUserUsd }).from(unitEconomicsRollups).where(and(eq(unitEconomicsRollups.businessId, input.businessId), gte(economicsMonth, input.from), lt(economicsMonth, input.to))).orderBy(unitEconomicsRollups.monthKey).limit(1);
 
     const responseRows = (await tx.execute<{ bucket: Date | string | null; seconds: string; count: string }>(analyticsResponseQuery(input))).rows;
     const responseBuckets = new Map<string, number>();
@@ -232,7 +226,6 @@ export async function getAnalytics(context: DomainContext, input: AnalyticsInput
       series: [...buckets.values()].map((point) => ({ ...point, agentResponseSeconds: (responseBuckets.get(point.bucket) ?? 0) })).sort((left, right) => left.bucket.localeCompare(right.bucket)),
       outcomes: ["completed", "transferred", "live", "missed"].map((outcome) => ({ outcome, count: Number(outcomes.find((row) => row.outcome === outcome)?.count ?? 0) })),
       channels,
-      unitEconomics: economics[0] ?? null,
     };
   });
 }

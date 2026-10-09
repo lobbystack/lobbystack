@@ -37,9 +37,9 @@ export function OnboardingKnowledgeSurface() {
   useEffect(() => { prefetch("/onboarding/greeting"); }, [prefetch]);
   const documents = useQuery({ queryKey: ["onboarding-knowledge", business?.businessId], queryFn: () => requestJson<{ documents: Document[] }>(`/api/knowledge?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business), refetchInterval: query => query.state.data?.documents?.some(document => isWebsiteImportRunning(document.websiteImport)) ? 2000 : false });
   const invalidate = async () => { await queryClient.invalidateQueries({ queryKey: ["onboarding-knowledge", business?.businessId] }); };
-  const addSnippet = useMutation({ mutationFn: (content: string) => requestJson(`/api/knowledge/snippets?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ title: t("knowledge.paste.defaultTitle"), content }) }) });
-  const stage = useMutation({ mutationFn: () => requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: "greeting" }) }), onSuccess: () => navigate("/onboarding/greeting") });
-  const upload = useMutation({ mutationFn: (file: File) => uploadKnowledgeDocument({ businessId: business!.businessId, file, contentType: file.type || "application/octet-stream" }, t("knowledge.upload.failed")) });
+  const addSnippet = useMutation({ mutationFn: (content: string) => requestJson(`/api/knowledge/snippets?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ title: t("knowledge.paste.defaultTitle"), content }) }), meta: { inlineError: true } });
+  const stage = useMutation({ mutationFn: () => requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: "greeting" }) }), onSuccess: () => navigate("/onboarding/greeting"), meta: { inlineError: true } });
+  const upload = useMutation({ mutationFn: (file: File) => uploadKnowledgeDocument({ businessId: business!.businessId, file, contentType: file.type || "application/octet-stream" }, t("knowledge.upload.failed")), meta: { inlineError: true } });
   const working = upload.isPending || addSnippet.isPending || stage.isPending || navigating;
   const stored = documents.data?.documents?.filter((document) => document.sourceType === "upload") ?? [];
   const websiteImport = currentWebsiteImport(documents.data?.documents, business?.websiteUrl);

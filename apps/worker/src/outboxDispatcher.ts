@@ -1,13 +1,19 @@
 import { randomUUID } from "node:crypto";
 import { setTimeout as sleep } from "node:timers/promises";
 
-import { claimOutboxBatch, markOutboxFailed, markOutboxPublished, type Database } from "@lobbystack/db";
+import { claimOutboxBatch, markOutboxFailed, markOutboxPublished, prunePublishedOutbox, type Database } from "@lobbystack/db";
 import { createQueue, enqueueJob, isKnownJobType, queueForJobType, type JobType } from "@lobbystack/jobs";
 import { outboxMessageSchema } from "@lobbystack/contracts";
 import { getMeter, redactOtelExceptionText } from "@lobbystack/telemetry/node";
 
 // Resolves early, without throwing, when the signal aborts.
 const waitForNextPoll = (signal: AbortSignal, delayMs: number) => sleep(delayMs, undefined, { signal }).catch(() => undefined);
+
+// A published row only guards against a producer enqueueing the same work twice,
+// and producers retry within minutes, so two weeks is plenty.
+const OUTBOX_RETENTION_MS = 14 * 86_400_000;
+const PRUNE_BATCH = 5_000;
+const PRUNE_INTERVAL_MS = 60 * 60_000;
 
 export class OutboxDispatcher {
   private readonly dispatcherId = randomUUID();
@@ -17,6 +23,7 @@ export class OutboxDispatcher {
   private readonly publishDuration = getMeter("lobbystack-worker").createHistogram("lobbystack.outbox.publish_duration_ms", { unit: "ms" });
   private readonly published = getMeter("lobbystack-worker").createCounter("lobbystack.outbox.published");
   private readonly publishAge = getMeter("lobbystack-worker").createHistogram("lobbystack.outbox.publish_age_ms", { unit: "ms" });
+  private nextPruneAt = 0;
 
   constructor(private readonly db: Database, private readonly queues: Map<string, ReturnType<typeof createQueue>>) {}
 
@@ -65,6 +72,16 @@ export class OutboxDispatcher {
     return rows.length;
   }
 
+  // Runs only when the queue is idle, one batch at a time, so pruning never delays dispatch by more than one batch.
+  private async pruneWhenDue(): Promise<void> {
+    if (Date.now() < this.nextPruneAt) return;
+    // Set first so a failing prune waits for the next interval instead of failing every poll.
+    this.nextPruneAt = Date.now() + PRUNE_INTERVAL_MS;
+    const pruned = await prunePublishedOutbox(this.db, { publishedBefore: new Date(Date.now() - OUTBOX_RETENTION_MS), limit: PRUNE_BATCH });
+    // A full batch means more rows are due, so take the next batch on the next idle poll.
+    if (pruned === PRUNE_BATCH) this.nextPruneAt = 0;
+  }
+
   async run(signal: AbortSignal): Promise<void> {
     let consecutiveFailures = 0;
     while (!signal.aborted) {
@@ -72,6 +89,7 @@ export class OutboxDispatcher {
         const count = await this.dispatchOnce();
         consecutiveFailures = 0;
         if (count === 0) {
+          await this.pruneWhenDue();
           await waitForNextPoll(signal, 500);
         }
       } catch (error) {

@@ -1,14 +1,14 @@
-import { eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { billingAccounts, businesses, type DatabaseTransaction } from "@lobbystack/db";
+import type { DatabaseTransaction } from "@lobbystack/db";
 import {
   contentRetentionDaysForPlan,
-  isBillingPlanSlug,
   type BillingPlanSlug,
   type ContentRetentionCategory,
   type ContentRetentionOverrides,
 } from "@lobbystack/shared";
+
+import { loadBillingContext } from "./usage";
 
 const days = z.number().int().positive().max(365_000);
 const policySchema = z.strictObject({
@@ -43,22 +43,12 @@ export function getContentRetentionPolicy(env: NodeJS.ProcessEnv = process.env):
   }
 }
 
-export function billingPlanForAccount(
-  accountPlan: string | null | undefined,
-  deploymentMode: string | null | undefined,
-): BillingPlanSlug {
-  if (isBillingPlanSlug(accountPlan)) return accountPlan;
-  return deploymentMode === "self_hosted_standard" ? "self_host" : "free_cloud";
-}
-
+// The plan usage limits enforce, so a canceled subscription also loses paid storage and retention.
 export async function resolveBusinessBillingPlan(
   tx: DatabaseTransaction,
   businessId: string,
 ): Promise<BillingPlanSlug> {
-  const [account] = await tx.select({ plan: billingAccounts.plan }).from(billingAccounts).where(eq(billingAccounts.businessId, businessId)).limit(1);
-  if (isBillingPlanSlug(account?.plan)) return account.plan;
-  const [business] = await tx.select({ deploymentMode: businesses.deploymentMode }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
-  return billingPlanForAccount(null, business?.deploymentMode);
+  return (await loadBillingContext(tx, businessId)).plan;
 }
 
 export function contentRetentionDays(

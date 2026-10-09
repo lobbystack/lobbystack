@@ -87,6 +87,7 @@ export function OnboardingAttributionSurface() {
       router.push("/");
       router.refresh();
     },
+    meta: { inlineError: true },
   });
 
   async function submit(source: AttributionSource | null) {

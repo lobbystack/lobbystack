@@ -5,7 +5,7 @@
     "privacy": "Privacy"
   },
   "errors": {
-    "tooManyBusinesses": "Too many setup attempts. Please wait a bit and try again."
+    "tooManyBusinesses": "You already own 10 workspaces, the limit for one account."
   },
   "adminRequired": {
     "eyebrow": "Workspace setup",

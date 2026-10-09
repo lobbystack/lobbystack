@@ -164,13 +164,22 @@ describe("registerWidgetVisitor", () => {
 
 describe("getOrCreateWidgetConversation", () => {
   it("reuses an open web_chat conversation keyed on the widget visitor", async () => {
-    const { tx, state } = makeTx({ conversations: [{ id: conversationId }] });
+    const { tx, state } = makeTx({ conversations: [{ id: conversationId, automationState: "ai_active" }] });
     mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => await callback(tx));
 
     const result = await getOrCreateWidgetConversation(context, { businessId, widgetVisitorId: visitorId });
 
-    expect(result).toEqual({ conversationId });
+    expect(result).toEqual({ conversationId, automationState: "ai_active" });
     expect(state.insertedConversation).toBeNull();
+  });
+
+  it("reports when a team member has taken over the open conversation", async () => {
+    const { tx } = makeTx({ conversations: [{ id: conversationId, automationState: "human_handoff" }] });
+    mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => await callback(tx));
+
+    const result = await getOrCreateWidgetConversation(context, { businessId, widgetVisitorId: visitorId });
+
+    expect(result).toEqual({ conversationId, automationState: "human_handoff" });
   });
 
   it("creates a new open web_chat conversation when none exists", async () => {
@@ -180,6 +189,7 @@ describe("getOrCreateWidgetConversation", () => {
     const result = await getOrCreateWidgetConversation(context, { businessId, widgetVisitorId: visitorId });
 
     expect(typeof result.conversationId).toBe("string");
+    expect(result.automationState).toBe("ai_active");
     expect(state.insertedConversation).toMatchObject({ businessId, widgetVisitorId: visitorId, channel: "web_chat", status: "open", automationState: "ai_active" });
   });
 

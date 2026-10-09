@@ -3,7 +3,6 @@ import { and, eq, isNotNull, lt } from "drizzle-orm";
 import { calls, enqueueOutbox, inboxItems, messages, operatorNotificationDeliveries, storageObjects, transcripts, withBusinessTransaction } from "@lobbystack/db";
 
 import { EXPIRED_FOLLOW_UP_BODY, EXPIRED_FOLLOW_UP_TITLE } from "./followUpRetention";
-import { requireBusinessAdmin } from "../authz";
 import type { DomainContext } from "./context";
 import { isContentRetentionEnabled } from "./contentRetentionPolicy";
 
@@ -71,40 +70,5 @@ export async function runPrivacyRetentionSweep(
       deletedTranscripts: deletedTranscripts.length,
       queuedRecordings: expiredRecordings.length,
     };
-  });
-}
-
-export async function deleteTranscript(
-  context: DomainContext,
-  input: { userId: string; businessId: string; callId: string },
-): Promise<number> {
-  return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
-    await requireBusinessAdmin(tx, input);
-    const rows = await tx.delete(transcripts).where(and(eq(transcripts.businessId, input.businessId), eq(transcripts.callId, input.callId))).returning({ id: transcripts.id });
-    await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "call", aggregateId: input.callId, dedupeKey: `privacy:transcript:${input.callId}:${Date.now()}`, payload: { type: "transcript.upserted", entityId: input.callId, deleted: true } });
-    return rows.length;
-  });
-}
-
-export async function deleteTranscriptForRetention(
-  context: DomainContext,
-  input: { businessId: string; callId: string },
-): Promise<number> {
-  if (!isContentRetentionEnabled()) return 0;
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const rows = await tx.delete(transcripts)
-      .where(and(eq(transcripts.businessId, input.businessId), eq(transcripts.callId, input.callId), isNotNull(transcripts.expiresAt), lt(transcripts.expiresAt, new Date())))
-      .returning({ id: transcripts.id });
-    if (rows.length > 0) {
-      await enqueueOutbox(tx, {
-        topic: "realtime.publish",
-        businessId: input.businessId,
-        aggregateType: "call",
-        aggregateId: input.callId,
-        dedupeKey: `privacy:transcript:${input.callId}:deleted`,
-        payload: { type: "transcript.upserted", entityId: input.callId, deleted: true },
-      });
-    }
-    return rows.length;
   });
 }

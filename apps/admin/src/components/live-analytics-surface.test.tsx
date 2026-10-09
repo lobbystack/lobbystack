@@ -18,7 +18,7 @@ function renderAnalytics(channels: AnalyticsViewModel["channels"]) {
   clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business", name: "Test", active: true, role: "business_owner" }] });
   const metric = { current: 0, previous: 0 };
-  const analytics: AnalyticsViewModel = { periodDays: 30, from: "2026-09-01T00:00:00Z", to: "2026-10-01T00:00:00Z", granularity: "week", calls: metric, appointments: metric, messages: metric, averageCallDurationSeconds: 0, agentResponseSeconds: metric, series: [], channels, outcomes: [], unitEconomics: null };
+  const analytics: AnalyticsViewModel = { periodDays: 30, from: "2026-09-01T00:00:00Z", to: "2026-10-01T00:00:00Z", granularity: "week", calls: metric, appointments: metric, messages: metric, averageCallDurationSeconds: 0, agentResponseSeconds: metric, series: [], channels, outcomes: [] };
   vi.stubGlobal("fetch", vi.fn(async () => Response.json(analytics)));
   render(<QueryClientProvider client={client}><LiveAnalyticsSurface /></QueryClientProvider>);
 }

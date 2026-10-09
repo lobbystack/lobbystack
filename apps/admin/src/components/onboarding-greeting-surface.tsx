@@ -51,6 +51,7 @@ export function OnboardingGreetingSurface() {
       await queryClient.invalidateQueries({ queryKey: ["businesses"] });
       navigate("/onboarding/plan");
     },
+    meta: { inlineError: true },
   });
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {

@@ -20,7 +20,7 @@ The package stays outside the pnpm workspace. Zapier builds it with npm and runs
 | Action | Cancel Appointment | `POST /appointments/{id}/cancel` |
 | Action | Reschedule Appointment | `POST /appointments/{id}/reschedule` |
 | Action | Add Knowledge | `POST /knowledge` |
-| Search | Find Contact (with Find or Create Contact) | `GET /contacts?phone=&email=` |
+| Search | Find Contact (with Find or Create Contact) | `GET /contacts?phone=`, or `GET /contacts?email=` when no phone is given |
 | Search | Find Appointment | `GET /appointments?contact_id=` |
 | Search | Check Availability | `GET /availability` |
 

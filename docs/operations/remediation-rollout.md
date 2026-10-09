@@ -28,7 +28,7 @@ pnpm test:build-config
 docker compose --env-file .env.example config --quiet
 ```
 
-Require the CI `validate` job before release. It depends on workspace checks, a PostgreSQL role suite, a browser end-to-end job, and four production-image builds. The database job migrates and bootstraps twice, verifies row-level security (RLS), and runs `pnpm test:reliability` against a test database. The browser job runs `bash scripts/e2e-local.sh`, which builds the admin standalone server and exercises the supported EN/FR journeys against disposable PostgreSQL, Redis, and Mailpit containers.
+Require the CI `validate` job before release. It depends on workspace checks, the Zapier integration tests, a PostgreSQL role suite, a browser end-to-end job, and four production-image builds. The database job migrates and bootstraps twice, verifies row-level security (RLS), and runs `pnpm test:reliability` against a test database. The browser job runs `bash scripts/e2e-local.sh`, which builds the admin standalone server and exercises the supported EN/FR journeys against disposable PostgreSQL, Redis, and Mailpit containers.
 
 The local reliability suite requires `LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL`, a loopback host, and a test-named database. Set explicit role URLs for the application, authentication, worker, and dispatcher. Set `LOBBYSTACK_SKIP_ENV_FILES=true` to prevent the database CLI from loading local environment files. Run the browser gate with `pnpm e2e:local`; it needs Docker Compose and a Playwright Chromium install.
 

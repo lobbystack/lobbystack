@@ -99,7 +99,6 @@ export default defineRailway((ctx) => {
       SMTP_PASSWORD: preserve(),
       TWILIO_ACCOUNT_SID: preserve(),
       TWILIO_AUTH_TOKEN: preserve(),
-      TWILIO_VERIFY_SERVICE_SID: preserve(),
       TWILIO_ALERT_ACCOUNT_SID: preserve(),
       TWILIO_ALERT_SMS_FROM: preserve(),
       TWILIO_ALERT_API_KEY_SID: preserve(),
@@ -172,7 +171,6 @@ export default defineRailway((ctx) => {
       SITE_URL: preserve(),
       TWILIO_ACCOUNT_SID: preserve(),
       TWILIO_AUTH_TOKEN: preserve(),
-      TWILIO_VERIFY_SERVICE_SID: preserve(),
       TWILIO_SMS_WEBHOOK_URL: production ? preserve() : `${stagingAdminUrl}/api/webhooks/twilio/sms`,
       TWILIO_ALERT_ACCOUNT_SID: preserve(),
       TWILIO_ALERT_SMS_FROM: preserve(),
@@ -228,9 +226,13 @@ export default defineRailway((ctx) => {
   });
   const migrator = service("migrator", {
     build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile.migrator", watchPatterns: migratorWatchPatterns },
-    start: production
+    // Without a health check Railway marks a deployment successful as soon as
+    // its container starts. A failed pre-deploy command fails the deployment,
+    // so `railway up --ci` in CI and scripts/staging-start.sh see the result.
+    preDeploy: production
       ? "sh -c 'node_modules/.bin/tsx dist/cli.js migrate && node_modules/.bin/tsx dist/cli.js bootstrap && node_modules/.bin/tsx dist/cli.js check && VERIFY_RLS_BEHAVIOR=true node_modules/.bin/tsx dist/cli.js verify-rls'"
       : "sh -c 'node_modules/.bin/tsx dist/cli.js migrate && node_modules/.bin/tsx dist/cli.js migrate && node_modules/.bin/tsx dist/cli.js check && VERIFY_RLS_BEHAVIOR=true node_modules/.bin/tsx dist/cli.js verify-rls'",
+    start: "true",
     replicas: { "us-east4-eqdc4a": 1 },
     deploy: { restartPolicyType: "NEVER" },
     env: {

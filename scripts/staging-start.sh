@@ -6,7 +6,8 @@
 set -euo pipefail
 
 PROJECT_ID="${RAILWAY_PROJECT_ID:-af0a130e-7b02-4fc0-94ef-b0ac45a0a0a6}"
-ENVIRONMENT="${RAILWAY_ENVIRONMENT:-staging}"
+# Never read RAILWAY_ENVIRONMENT here: CI exports it as production.
+ENVIRONMENT=staging
 # The migrator applies migrations twice and runs consistency and RLS checks,
 # so give it room. Override for a slow build or a large migration.
 DEPLOY_TIMEOUT_SECONDS="${DEPLOY_TIMEOUT_SECONDS:-900}"

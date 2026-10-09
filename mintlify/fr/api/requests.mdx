@@ -55,7 +55,8 @@ Une erreur réseau peut vous laisser dans le doute : la requête a-t-elle foncti
 - `POST /contacts`
 - `POST /appointments`
 - `POST /knowledge`
-- `POST /webhooks`
+
+`POST /webhooks` ignore cet en-tête, pour que LobbyStack ne garde jamais de copie du secret de signature. Si une création échoue à cause d'une erreur réseau, vérifiez `GET /webhooks` avant de relancer.
 
 ```bash
 curl https://app.lobbystack.com/api/v1/appointments \

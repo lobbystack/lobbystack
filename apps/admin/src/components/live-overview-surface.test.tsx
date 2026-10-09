@@ -75,6 +75,16 @@ describe("dashboard contact and channel labels", () => {
     expect(screen.queryByText(/Unknown/)).toBeNull();
   });
 });
+describe("session replay masking on Home", () => {
+  it("masks caller names and numbers in every card that lists them", async () => {
+    await setup("en", "call-123", { upcoming: [{ id: "appointment", startsAt: "2026-09-07T14:30:00Z", timezone: "UTC", status: "confirmed", sourceChannel: "voice", contactName: "Rosa Booker", serviceName: "Consultation" }], recentCalls: [
+      { id: "phone", startedAt: "2026-09-04T14:30:00Z", status: "completed", transport: "voice", durationSeconds: 30, contactName: "Ada Caller", contactPhone: "+14155550123", contactEmail: null },
+    ] });
+    for (const text of ["+14165550199", "Rosa Booker", "Ada Caller", "(415) 555-0123", "AC"]) {
+      expect(screen.getByText(text).closest(".ph-mask"), text).toBeTruthy();
+    }
+  });
+});
 describe("appointment cancellations on Home", () => {
   const request = { id: "request-1", kind: "voice_message", title: "Voice message from Milan", body: "Cancellation request: Consultation, Monday, September 7 at 2:30 PM", callId: "call-1", createdAt: "2026-09-04T14:30:00Z", request: "appointment_cancellation" };
   const linked = { id: "appointment", startsAt: "2026-09-07T14:30:00Z", timezone: "UTC", status: "confirmed", serviceName: "Consultation", contactName: "Milan" };

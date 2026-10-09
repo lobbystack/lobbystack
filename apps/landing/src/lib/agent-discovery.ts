@@ -10,21 +10,6 @@ import { seoLandingPageByPath } from "@/lib/seo-landing-pages"
 
 export const CONTENT_SIGNAL = "ai-train=yes, search=yes, ai-input=yes"
 
-export const AGENT_LINKS = [
-  '</.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json"',
-  '</openapi.json>; rel="service-desc"; type="application/vnd.oai.openapi+json"',
-  '</docs/api/>; rel="service-doc"; type="text/html"',
-  '</llms.txt>; rel="describedby"; type="text/plain"',
-  '</feed.xml>; rel="alternate"; type="application/rss+xml"; title="LobbyStack RSS feed"',
-  '</schemamap.xml>; rel="describedby"; type="application/xml"; title="LobbyStack schema map"',
-  '</schema/page.json>; rel="describedby"; type="application/ld+json"; title="LobbyStack page schema graph"',
-  '</schema/post.json>; rel="describedby"; type="application/ld+json"; title="LobbyStack blog schema graph"',
-  '</.well-known/agent-skills/index.json>; rel="describedby"; type="application/json"; title="Agent skills discovery index"',
-  '</.well-known/mcp/server-card.json>; rel="describedby"; type="application/json"; title="MCP server card"',
-]
-
-export const AGENT_LINK_HEADER = AGENT_LINKS.join(", ")
-
 export const DISCOVERY_API_ANCHOR = absoluteUrl("/api")
 
 export const markdownAlternatePath = (pathname: string) => {
@@ -471,11 +456,6 @@ export const mcpServerCard = {
         name: "get-agent-discovery",
         description:
           "Return machine-readable discovery resources exposed by lobbystack.com.",
-      },
-      {
-        name: "get-missed-call-calculator",
-        description:
-          "Return the Missed Call Revenue Calculator tool for contractors and home services.",
       },
     ],
     resources: [

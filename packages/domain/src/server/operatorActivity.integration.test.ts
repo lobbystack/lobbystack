@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { appointments, businessMemberships, businesses, calls, contacts, conversations, createDatabaseClient, messages, services, staff, users, widgetVisitors, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { appointments, businessMemberships, businesses, calls, contacts, conversations, createDatabaseClient, messages, services, staff, transcripts, users, widgetVisitors, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
 import { getAnalytics } from "./analytics";
 import { deleteContact, getContactDetail, listContacts } from "./contacts";
@@ -130,6 +130,33 @@ describe.skipIf(!client)("operator contact and channel data under operator RLS",
       // The staff reply in the website chat counts as website chat, not Other.
       expect(result.channels).toEqual({ phone_call: 2, web_call: 1, sms: 2, web_chat: 4, other: 0 });
       expect(Object.values(result.channels).reduce((sum, count) => sum + count, 0)).toBe(result.calls.current + result.messages.current);
+    });
+  });
+
+  it("counts open calls as live and a call open past its max duration as missed", async () => {
+    await rollbackTest(async (tx) => {
+      const { db, businessId, userId } = await seed(tx);
+      await tx.execute(sql`reset role`);
+      const open = (transport: string, minutesAgo: number) => ({ businessId, provider: "openai_live", providerCallId: `rtc_${randomUUID()}`, transport, startedAt: new Date(Date.now() - minutesAgo * 60_000), ...(transport === "web_voice" ? { webCallMaxDurationMs: 300_000 } : {}) });
+      await tx.insert(calls).values([open("voice", 2), open("web_voice", 1), open("web_voice", 60), open("voice", 3 * 60)]);
+      await tx.execute(sql`set local role lobbystack_app`);
+      const to = new Date(Date.now() + 60_000);
+      const from = new Date(to.getTime() - 86_400_000);
+      const result = await getAnalytics({ db }, { userId, businessId, from, to, previousFrom: new Date(from.getTime() - 86_400_000), granularity: "day" });
+      expect(result.outcomes).toEqual([{ outcome: "completed", count: 3 }, { outcome: "transferred", count: 0 }, { outcome: "live", count: 2 }, { outcome: "missed", count: 2 }]);
+    });
+  });
+
+  it("finds a call by the transcript text the call list shows", async () => {
+    await rollbackTest(async (tx) => {
+      const { db, businessId, userId } = await seed(tx);
+      await tx.execute(sql`reset role`);
+      const [webCall] = await tx.select({ id: calls.id }).from(calls).where(and(eq(calls.businessId, businessId), eq(calls.transport, "web_voice")));
+      await tx.insert(transcripts).values({ businessId, callId: webCall!.id, sequence: 1, speaker: "caller", text: "Do you fix leaky faucets?" });
+      await tx.execute(sql`set local role lobbystack_app`);
+      const found = await listCalls({ db }, { userId, businessId, search: "faucet" });
+      expect(found.calls.map((call) => call.id)).toEqual([webCall!.id]);
+      expect(found.pagination.total).toBe(1);
     });
   });
 

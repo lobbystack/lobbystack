@@ -5,7 +5,7 @@
     "privacy": "Privatnost"
   },
   "errors": {
-    "tooManyBusinesses": "Previše pokušaja podešavanja. Sačekajte malo i pokušajte ponovo."
+    "tooManyBusinesses": "Već posedujete 10 radnih prostora, što je ograničenje za jedan nalog."
   },
   "adminRequired": {
     "eyebrow": "Podešavanje radnog prostora",

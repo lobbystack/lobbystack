@@ -4,9 +4,7 @@ import { eq } from "drizzle-orm";
 import { polarWebhookSchema } from "@lobbystack/contracts";
 import { businesses, enqueueOutbox, providerEvents, withBusinessTransaction, withDispatcherTransaction } from "@lobbystack/db";
 import { verifyPolarWebhookSignature } from "@lobbystack/providers";
-import { recordProductEvent } from "@lobbystack/domain";
 import { getDispatcherDatabase, getWorkerDatabase } from "@/lib/api-helpers";
-import { createWorkerDomainContext } from "@/lib/domain-context";
 import { normalizePolarEvent } from "@/lib/polar-event";
 
 export const runtime = "nodejs";
@@ -28,25 +26,18 @@ function validSignature(body: string, headers: Headers): boolean {
 
 // A webhook we cannot attribute to a business is dropped with a 200, which is
 // correct for Polar but leaves no trace of a subscription that never applied.
-// This is the only signal that a billing event went missing.
-async function recordUnresolvedWebhook(
+// This log line is the only signal that a billing event went missing. It is not
+// a product event: product_events rows need a business, and this has none.
+function recordUnresolvedWebhook(
   input: { eventType: string; reason: "no_reference" | "unknown_business"; reference?: string },
-): Promise<void> {
-  try {
-    await recordProductEvent(createWorkerDomainContext(), {
-      name: "ops.billing.webhook_unresolved",
-      distinctId: `system:billing:${input.reason}`,
-      actorType: "worker",
-      properties: {
-        provider: "polar",
-        eventType: input.eventType,
-        reason: input.reason,
-        ...(input.reference ? { businessReference: input.reference } : {}),
-      },
-    });
-  } catch {
-    // Telemetry about a dropped webhook must not itself fail the webhook.
-  }
+): void {
+  console.error(JSON.stringify({
+    event: "ops.billing.webhook_unresolved",
+    provider: "polar",
+    eventType: input.eventType,
+    reason: input.reason,
+    ...(input.reference ? { businessReference: input.reference } : {}),
+  }));
 }
 
 export async function POST(request: Request) {
@@ -74,7 +65,7 @@ export async function POST(request: Request) {
         ? eq(businesses.legacyConvexId, normalized.businessReference)
         : undefined;
     if (!condition) {
-      await recordUnresolvedWebhook({
+      recordUnresolvedWebhook({
         eventType: event.data.type,
         reason: "no_reference",
         ...(normalized.businessReference ? { reference: normalized.businessReference } : {}),
@@ -85,7 +76,7 @@ export async function POST(request: Request) {
       return (await tx.select({ id: businesses.id }).from(businesses).where(condition).limit(1))[0]?.id;
     });
     if (!businessId) {
-      await recordUnresolvedWebhook({
+      recordUnresolvedWebhook({
         eventType: event.data.type,
         reason: "unknown_business",
         ...(normalized.businessReference ? { reference: normalized.businessReference } : {}),

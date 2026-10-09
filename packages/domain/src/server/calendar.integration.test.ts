@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { appointments, auditLogs, businessMemberships, businesses, calendarConnections, contacts, createDatabaseClient, outboxMessages, services, staff, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
-import { disconnectCalendar, queueUnsyncedAppointmentSyncs } from "./calendar";
+import { appointments, auditLogs, businessHours, businessMemberships, businesses, calendarBusyBlocks, calendarConnections, contacts, createDatabaseClient, outboxMessages, services, staff, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { checkAvailability, rescheduleAppointmentInTransaction } from "./booking";
+import { connectCalendar, disconnectCalendar, queueUnsyncedAppointmentSyncs } from "./calendar";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
 const testUrl = process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL;
@@ -42,7 +43,7 @@ async function workspace(tx: DatabaseTransaction) {
     const startsAt = new Date(Date.UTC(2030, 0, 1, 9 + slot++));
     return (await tx.insert(appointments).values({ businessId, contactId: contact!.id, staffId: first!.id, serviceId: service!.id, startsAt, endsAt: new Date(startsAt.getTime() + 30 * 60_000), timezone: "UTC", sourceChannel: "voice", calendarSyncState: "not_required", ...values }).returning())[0]!;
   };
-  return { businessId, userId, firstStaffId: first!.id, secondStaffId: second!.id, book };
+  return { businessId, userId, serviceId: service!.id, firstStaffId: first!.id, secondStaffId: second!.id, book };
 }
 
 async function asWorker<T>(tx: DatabaseTransaction, run: (db: Database) => Promise<T>): Promise<T> {
@@ -84,6 +85,63 @@ describe.skipIf(!testUrl)("calendar backfill against dedicated PostgreSQL roles"
 
       expect(await asWorker(tx, (db) => queueUnsyncedAppointmentSyncs({ db }, { businessId, connectionId: connection!.id }))).toBe(0);
       expect(await queuedSyncs(tx, businessId)).toEqual([]);
+    });
+  });
+
+  it("does not let LobbyStack's own event on a shared calendar block other staff or its reschedule", async () => {
+    await rollbackTest(async (tx) => {
+      const { businessId, userId, serviceId, secondStaffId, book } = await workspace(tx);
+      await tx.insert(businessHours).values(Array.from({ length: 7 }, (_, dayOfWeek) => ({ businessId, dayOfWeek, openMinutes: 0, closeMinutes: 1440 })));
+      // Inside the freshness horizon of a calendar synced now.
+      const startsAt = new Date(Math.ceil(Date.now() / 86_400_000) * 86_400_000 + 12 * 3_600_000);
+      const endsAt = new Date(startsAt.getTime() + 30 * 60_000);
+      const booked = await book({ startsAt, endsAt, calendarSyncState: "synced", calendarExternalId: "lobbystack-event" });
+      const [connection] = await tx.insert(calendarConnections).values({ businessId, ownerUserId: userId, provider: "google", externalAccountId: "owner@example.invalid", selectedCalendarId: "shared@group.calendar.google.com", status: "connected", lastSyncedAt: new Date() }).returning();
+      await tx.insert(calendarBusyBlocks).values({ businessId, connectionId: connection!.id, startsAt, endsAt, externalEventId: "lobbystack-event" });
+
+      await asWorker(tx, async (db) => {
+        const { slots } = await checkAvailability({ db }, { businessId, serviceId, startsAt: startsAt.toISOString(), timezone: "UTC" });
+        expect(slots.map((slot) => slot.staffId)).toEqual([secondStaffId]);
+        const moved = await withBusinessTransaction(db, { businessId, actorType: "worker" }, (workerTx) => rescheduleAppointmentInTransaction(workerTx, { businessId, appointmentId: booked.id, startsAt: new Date(startsAt.getTime() + 15 * 60_000).toISOString(), change: { source: "caller" } }));
+        expect(moved?.appointmentId).toBe(booked.id);
+      });
+    });
+  });
+
+  it("keeps blocking a LobbyStack event someone moved in the calendar", async () => {
+    await rollbackTest(async (tx) => {
+      const { businessId, userId, serviceId, book } = await workspace(tx);
+      await tx.insert(businessHours).values(Array.from({ length: 7 }, (_, dayOfWeek) => ({ businessId, dayOfWeek, openMinutes: 0, closeMinutes: 1440 })));
+      const startsAt = new Date(Math.ceil(Date.now() / 86_400_000) * 86_400_000 + 12 * 3_600_000);
+      await book({ startsAt, endsAt: new Date(startsAt.getTime() + 30 * 60_000), calendarSyncState: "synced", calendarExternalId: "lobbystack-event" });
+      const [connection] = await tx.insert(calendarConnections).values({ businessId, ownerUserId: userId, provider: "google", externalAccountId: "owner@example.invalid", selectedCalendarId: "shared@group.calendar.google.com", status: "connected", lastSyncedAt: new Date() }).returning();
+      // The owner dragged the event to 4 PM in Google; the appointment row still says noon.
+      const movedTo = new Date(startsAt.getTime() + 4 * 3_600_000);
+      await tx.insert(calendarBusyBlocks).values({ businessId, connectionId: connection!.id, startsAt: movedTo, endsAt: new Date(movedTo.getTime() + 30 * 60_000), externalEventId: "lobbystack-event" });
+
+      const { slots } = await asWorker(tx, (db) => checkAvailability({ db }, { businessId, serviceId, startsAt: movedTo.toISOString(), timezone: "UTC" }));
+      expect(slots).toEqual([]);
+    });
+  });
+
+  it("retires the old business-wide connection when the owner reconnects with another Google account", async () => {
+    await rollbackTest(async (tx) => {
+      const { businessId, userId } = await workspace(tx);
+      await tx.execute(sql`set local role lobbystack_app`);
+      const db = tx as unknown as Database;
+      const oldId = await connectCalendar({ db }, { userId, businessId, provider: "google", externalAccountId: "acct_1", encryptedAccessToken: "enc:old", encryptedRefreshToken: "enc:old-refresh" });
+      await tx.execute(sql`reset role`);
+      await tx.insert(calendarBusyBlocks).values({ businessId, connectionId: oldId, startsAt: new Date("2030-01-01T09:00:00Z"), endsAt: new Date("2030-01-01T10:00:00Z") });
+      await tx.execute(sql`set local role lobbystack_app`);
+      const newId = await connectCalendar({ db }, { userId, businessId, provider: "google", externalAccountId: "acct_2", encryptedAccessToken: "enc:new" });
+      await tx.execute(sql`reset role`);
+
+      const rows = await tx.select().from(calendarConnections).where(eq(calendarConnections.businessId, businessId));
+      expect(rows.find((row) => row.id === oldId)).toMatchObject({ status: "disconnected", encryptedAccessToken: null, encryptedRefreshToken: null });
+      expect(rows.find((row) => row.id === newId)).toMatchObject({ status: "connected", encryptedAccessToken: "enc:new" });
+      expect(await tx.select().from(calendarBusyBlocks).where(eq(calendarBusyBlocks.connectionId, oldId))).toEqual([]);
+      const entries = await tx.select().from(auditLogs).where(and(eq(auditLogs.businessId, businessId), eq(auditLogs.eventType, "calendar_connection.disconnected")));
+      expect(entries).toEqual([expect.objectContaining({ actorUserId: userId, entityId: oldId, payload: { provider: "google", replacedBy: newId } })]);
     });
   });
 

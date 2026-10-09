@@ -5,6 +5,7 @@ import { billableVoiceSeconds, isNonBillableCallDisposition } from "@lobbystack/
 import { getPostHogDistinctIdForBusinessSystem, type TelemetryEventName, type TelemetryProperties } from "@lobbystack/telemetry";
 
 import { requireBusinessMembership } from "../authz";
+import { findOrCreateContactByPhone } from "./contacts";
 import type { DomainContext } from "./context";
 import { contentExpiryForPlan, isContentRetentionEnabled, resolveBusinessBillingPlan } from "./contentRetentionPolicy";
 import { queueOperatorAlertInTransaction } from "./notifications";
@@ -100,13 +101,13 @@ export async function startCall(
     }
     // Callers without a number each get their own contact, so blocking one never blocks the rest.
     const callerPhone = input.from && input.from !== "web" ? input.from : undefined;
-    const existingContacts = callerPhone ? await tx.select({ id: contacts.id, operatorBlockedAt: contacts.operatorBlockedAt }).from(contacts).where(and(eq(contacts.businessId, input.businessId), eq(contacts.phone, callerPhone))).limit(1) : [];
-    const contactId = existing[0]?.contactId ?? existingContacts[0]?.id ?? (await tx.insert(contacts).values({ businessId: input.businessId, ...(callerPhone ? { phone: callerPhone } : {}) }).returning({ id: contacts.id }))[0]?.id;
+    const caller = callerPhone && !existing[0]?.contactId ? await findOrCreateContactByPhone(tx, { businessId: input.businessId, phone: callerPhone }) : undefined;
+    const contactId = existing[0]?.contactId ?? caller?.contact.id ?? (await tx.insert(contacts).values({ businessId: input.businessId }).returning({ id: contacts.id }))[0]?.id;
     if (!contactId) {
       throw new Error("Call contact could not be created.");
     }
-    if (!existing[0]?.contactId && !existingContacts[0] && callerPhone) await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "contact.created", resourceId: contactId });
-    const blocked = Boolean(existingContacts[0]?.operatorBlockedAt);
+    if (caller?.created) await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "contact.created", resourceId: contactId });
+    const blocked = Boolean(caller?.contact.operatorBlockedAt);
     const conversationId = existing[0]?.conversationId ?? (await tx.insert(conversations).values({ businessId: input.businessId, contactId, channel: "voice", status: "open", automationState: "ai_active" }).returning({ id: conversations.id }))[0]?.id;
     if (!conversationId) {
       throw new Error("Call conversation could not be created.");
@@ -442,7 +443,8 @@ export async function listCalls(
     const limit = Math.min(Math.max(Math.trunc(input.limit ?? 50), 1), 100);
     const offset = Math.max(Math.trunc(input.offset ?? 0), 0);
     const search = input.search?.trim();
-    const filter = and(eq(calls.businessId, input.businessId), ...(search ? [or(ilike(contacts.name, `%${search}%`), ilike(contacts.phone, `%${search}%`), ilike(conversations.summary, `%${search}%`), ilike(calls.disposition, `%${search}%`), ilike(calls.providerCallId, `%${search}%`))!] : []));
+    const transcriptPreview = sql<string | null>`(select ${transcripts.text} from ${transcripts} where ${transcripts.callId} = ${calls.id} order by ${transcripts.sequence} desc limit 1)`;
+    const filter = and(eq(calls.businessId, input.businessId), ...(search ? [or(ilike(contacts.name, `%${search}%`), ilike(contacts.phone, `%${search}%`), ilike(conversations.summary, `%${search}%`), ilike(calls.disposition, `%${search}%`), ilike(calls.providerCallId, `%${search}%`), ilike(transcriptPreview, `%${search}%`))!] : []));
     const rows = await tx.select({
        id: calls.id,
       providerCallId: calls.providerCallId,
@@ -461,7 +463,7 @@ export async function listCalls(
       recordingObjectId: calls.recordingObjectId,
       recordingStatus: storageObjects.status,
        recordingRetentionUntil: storageObjects.retentionUntil,
-       transcriptPreview: sql<string | null>`(select ${transcripts.text} from ${transcripts} where ${transcripts.callId} = ${calls.id} order by ${transcripts.sequence} desc limit 1)`,
+       transcriptPreview,
     }).from(calls)
       .leftJoin(contacts, eq(calls.contactId, contacts.id))
       .leftJoin(conversations, eq(calls.conversationId, conversations.id))
@@ -648,7 +650,7 @@ export async function completeVoiceFollowUpTasks(
   input: { userId: string; businessId: string; callId: string; inboxItemId?: string },
 ): Promise<{ completed: number }> {
   return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
-    await requireBusinessMembership(tx, input);
+    await requireBusinessMembership(tx, { ...input, minimumRole: "scheduler" });
     const ofCall = and(eq(inboxItems.businessId, input.businessId), eq(inboxItems.relatedCallId, input.callId), eq(inboxItems.kind, "voice_message"));
     const [item] = input.inboxItemId ? await tx.select({ request: followUpRequest }).from(inboxItems).where(and(ofCall, eq(inboxItems.id, input.inboxItemId))).limit(1) : [];
     if (input.inboxItemId && !item) return { completed: 0 };

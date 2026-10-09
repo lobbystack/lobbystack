@@ -134,7 +134,7 @@ On other platforms, set `LIVE_DRAIN_TIMEOUT_MS` to the drain timeout. With neith
 
 ## Recover calls after a worker crash
 
-If the worker process dies mid-call, nobody answers the call's delegations, and its call record stays open with its minutes reserved. A scheduled job, `live.recoverOrphans`, runs every minute for each business and takes those calls over:
+If the worker process dies mid-call, nobody answers the call's delegations, and its call record stays open with its minutes reserved. A scheduled job, `live.recoverOrphans`, runs every minute for each business with an active member. An expired prospect demo has no members and takes no calls, so it doesn't get one. Each run takes those calls over:
 
 1. It lists the business's open GPT-Live calls, phone and browser, that started between 60 seconds and 2 hours ago.
 2. It leaves alone a call that saved a transcript turn in the last 45 seconds, because a worker is still running it.

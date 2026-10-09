@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull, ne, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull, ne, sql } from "drizzle-orm";
 import { assertCertificationCalendar } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
@@ -64,9 +64,18 @@ export async function connectCalendar(
         status: "connected",
         updatedAt: new Date(),
       },
-    }).returning({ id: calendarConnections.id });
+    }).returning({ id: calendarConnections.id, staffId: calendarConnections.staffId });
     if (!connection) {
       throw new Error("Calendar connection could not be created.");
+    }
+    // Reconnecting with another Google account inserts a new row; retire the old business-wide one
+    // so its dead token cannot block every booking.
+    if (!connection.staffId) {
+      const replaced = await tx.update(calendarConnections).set({ status: "disconnected", encryptedAccessToken: null, encryptedRefreshToken: null, updatedAt: new Date() }).where(and(eq(calendarConnections.businessId, input.businessId), eq(calendarConnections.provider, input.provider), isNull(calendarConnections.staffId), ne(calendarConnections.id, connection.id), ne(calendarConnections.status, "disconnected"))).returning({ id: calendarConnections.id });
+      if (replaced.length) {
+        await tx.insert(auditLogs).values(replaced.map(({ id }) => ({ businessId: input.businessId, actorUserId: input.userId, eventType: "calendar_connection.disconnected", entityType: "calendar_connection", entityId: id, payload: { provider: input.provider, replacedBy: connection.id } })));
+        await tx.delete(calendarBusyBlocks).where(and(eq(calendarBusyBlocks.businessId, input.businessId), inArray(calendarBusyBlocks.connectionId, replaced.map(({ id }) => id))));
+      }
     }
     await enqueueOutbox(tx, {
       topic: "calendar.reconcileBusiness",
@@ -167,7 +176,7 @@ export async function updateAppointmentSyncStateInTransaction(
       calendarExternalId: input.externalEventId,
       revision: sql`${appointments.revision} + 1`,
       updatedAt: new Date(),
-    }).where(and(eq(appointments.id, input.appointmentId), eq(appointments.businessId, input.businessId))).returning({ id: appointments.id, revision: appointments.revision });
+    }).where(and(eq(appointments.id, input.appointmentId), eq(appointments.businessId, input.businessId))).returning({ id: appointments.id, revision: appointments.revision, startsAt: appointments.startsAt, status: appointments.status });
     if (appointment) {
       await enqueueOutbox(tx, {
         topic: "realtime.publish",
@@ -177,7 +186,9 @@ export async function updateAppointmentSyncStateInTransaction(
         dedupeKey: `appointment:${appointment.id}:updated:${appointment.revision}`,
         payload: { type: "appointment.updated", entityId: appointment.id, revision: appointment.revision },
       });
-      if (input.error || input.state === "failed") await queueOperatorAlertInTransaction(tx, { businessId: input.businessId, eventKind: "calendarSync", eventKey: `calendarSync:appointment:${appointment.id}:${appointment.revision}`, subject: "Calendar sync failed", body: "An appointment could not be synced to the connected calendar. Open integrations to review the connection." });
+      // Every attempt bumps the revision, so keying on it would alert once per job retry. Key on the
+      // time and status instead: a rescheduled or canceled appointment can alert again.
+      if (input.error || input.state === "failed") await queueOperatorAlertInTransaction(tx, { businessId: input.businessId, eventKind: "calendarSync", eventKey: `calendarSync:appointment:${appointment.id}:${appointment.startsAt.toISOString()}:${appointment.status}`, subject: "Calendar sync failed", body: "An appointment could not be synced to the connected calendar. Open integrations to review the connection." });
     }
 }
 

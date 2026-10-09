@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, expect, it, vi } from "vitest";
 
@@ -48,7 +48,7 @@ it("shows confirmed live sessions and updates via SSE instead of counting stale 
       id: crypto.randomUUID(), status: "started", startedAt: "2026-09-21T12:00:00.000Z",
       contactName: `Caller ${i}`, contactPhone: null, reason: null, disposition: null,
       transcriptPreview: null, outcome: { kind: "none" }, recordingState: "missing", providerDurationSeconds: null,
-    })) });
+    })), pagination: { total: 7 } });
     return Response.json({ businesses: [{ businessId, active: true }] });
   });
   vi.stubGlobal("fetch", fetchMock);
@@ -81,4 +81,33 @@ it("shows confirmed live sessions and updates via SSE instead of counting stale 
     expect(indicator.querySelector(".animate-ping")).toBeNull();
   }
   for (const client of clients) client.clear();
+});
+
+it("searches and pages calls on the server so calls older than the first page stay reachable", async () => {
+  vi.stubGlobal("EventSource", FakeEventSource);
+  const fetchMock = vi.fn(async (url: string) => {
+    if (url.startsWith("/api/calls/active")) return Response.json({ active: 0 });
+    if (url.startsWith("/api/calls?")) return Response.json({ calls: Array.from({ length: 10 }, (_, i) => ({
+      id: crypto.randomUUID(), status: "completed", startedAt: "2026-09-21T12:00:00.000Z",
+      contactName: `Caller ${i}`, contactPhone: null, reason: null, disposition: null,
+      transcriptPreview: null, outcome: { kind: "none" }, recordingState: "missing", providerDurationSeconds: null,
+    })), pagination: { total: 120 } });
+    return Response.json({ businesses: [{ businessId, active: true }] });
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(<QueryClientProvider client={client}><LiveCallsSurface /></QueryClientProvider>);
+  const callUrls = () => fetchMock.mock.calls.map(([url]) => url).filter((url) => url.startsWith("/api/calls?"));
+
+  await waitFor(() => expect(screen.getByText("pagination.nextPage")).toBeTruthy());
+  expect(callUrls()[0]).toBe("/api/calls?limit=10&offset=0&search=");
+  fireEvent.click(screen.getByText("pagination.nextPage").closest("button")!);
+  await waitFor(() => expect(callUrls()).toContain("/api/calls?limit=10&offset=10&search="));
+
+  // Typing a name sends one search, and the table stays on screen while it loads.
+  for (const value of ["J", "Ja", "Jan", "Jane"]) fireEvent.change(screen.getByPlaceholderText("filters.searchPlaceholder"), { target: { value } });
+  expect(screen.getByText("pagination.nextPage")).toBeTruthy();
+  await waitFor(() => expect(callUrls()).toContain("/api/calls?limit=10&offset=0&search=Jane"));
+  expect(callUrls().filter((url) => /search=J/.test(url))).toEqual(["/api/calls?limit=10&offset=0&search=Jane"]);
+  client.clear();
 });

@@ -2,14 +2,14 @@ import { randomUUID } from "node:crypto";
 
 import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, ne, notInArray, or, type SQL } from "drizzle-orm";
 
-import { billingAccounts, businesses, calls, enqueueOutbox, knowledgeDocuments, storageObjects, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { businesses, calls, enqueueOutbox, knowledgeDocuments, storageObjects, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { getKnowledgeStorageLimitBytes } from "@lobbystack/shared";
 import { getKnowledgeStorageUsageBytes, knowledgeStorageLimitMessage } from "./knowledge";
 import { isAllowedUploadContentType } from "@lobbystack/contracts";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
-import { billingPlanForAccount, contentExpiryForPlan, isContentRetentionEnabled, resolveBusinessBillingPlan } from "./contentRetentionPolicy";
+import { contentExpiryForPlan, isContentRetentionEnabled, resolveBusinessBillingPlan } from "./contentRetentionPolicy";
 
 export type StorageProvider = {
   createUpload(input: { key: string; contentType: string; length: number; checksum?: string }): Promise<{ url: string; headers?: Record<string, string> }>;
@@ -63,10 +63,9 @@ export async function finalizeUpload(
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
     if (object.purpose === "knowledge") {
-      const [business] = await tx.select({ deploymentMode: businesses.deploymentMode }).from(businesses).where(eq(businesses.id, input.businessId)).for("update");
-      const [account] = await tx.select({ plan: billingAccounts.plan }).from(billingAccounts).where(eq(billingAccounts.businessId, input.businessId));
-      const plan = billingPlanForAccount(account?.plan, business?.deploymentMode);
-      const limit = getKnowledgeStorageLimitBytes(plan);
+      // Locks the business so concurrent uploads check the limit one at a time.
+      await tx.select({ id: businesses.id }).from(businesses).where(eq(businesses.id, input.businessId)).for("update");
+      const limit = getKnowledgeStorageLimitBytes(await resolveBusinessBillingPlan(tx, input.businessId));
       // The limit counts indexed text, which indexing checks once it's extracted.
       // Refuse here only when the plan is already full.
       if (limit !== null && await getKnowledgeStorageUsageBytes(tx, input.businessId) >= limit) throw new Error(knowledgeStorageLimitMessage(limit));
@@ -274,7 +273,7 @@ export async function persistCallRecording(
   context: DomainContext,
   input: { businessId: string; callId: string; durationMs: number; contentType: string; body: Uint8Array },
   storage: BinaryStorageProvider,
-): Promise<string> {
+): Promise<string | null> {
   const objectId = randomUUID();
   const key = `${input.businessId}/recording/${input.callId}/${objectId}.wav`;
   await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
@@ -283,16 +282,20 @@ export async function persistCallRecording(
       throw new Error("Call not found.");
     }
     const retentionPlan = isContentRetentionEnabled() ? await resolveBusinessBillingPlan(tx, input.businessId) : null;
-    await tx.insert(storageObjects).values({ id: objectId, businessId: input.businessId, objectKey: key, purpose: "recording", fileName: `${input.callId}.wav`, contentType: input.contentType, contentLength: input.body.byteLength, status: "pending", retentionUntil: retentionPlan ? contentExpiryForPlan(retentionPlan, "recordings") : null });
+    // The upload expiry lets the expired-upload sweep delete this copy if it is never linked to the call.
+    await tx.insert(storageObjects).values({ id: objectId, businessId: input.businessId, objectKey: key, purpose: "recording", fileName: `${input.callId}.wav`, contentType: input.contentType, contentLength: input.body.byteLength, status: "pending", retentionUntil: retentionPlan ? contentExpiryForPlan(retentionPlan, "recordings") : null, expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) });
   });
   await storage.putObject({ key, body: input.body, contentType: input.contentType });
-  await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    await tx.update(storageObjects).set({ status: "ready", updatedAt: new Date() }).where(and(eq(storageObjects.id, objectId), eq(storageObjects.businessId, input.businessId)));
-    await tx.update(calls).set({ recordingObjectId: objectId, updatedAt: new Date() }).where(and(eq(calls.id, input.callId), eq(calls.businessId, input.businessId)));
+  const linked = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    // A retry after a lost commit, or a concurrent job, may have linked another copy already; this one stays pending and expires.
+    const [call] = await tx.update(calls).set({ recordingObjectId: objectId, updatedAt: new Date() }).where(and(eq(calls.id, input.callId), eq(calls.businessId, input.businessId), isNull(calls.recordingObjectId))).returning({ id: calls.id });
+    if (!call) return false;
+    await tx.update(storageObjects).set({ status: "ready", expiresAt: null, updatedAt: new Date() }).where(and(eq(storageObjects.id, objectId), eq(storageObjects.businessId, input.businessId)));
     await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "recording", aggregateId: input.callId, dedupeKey: `recording:${input.callId}:${objectId}:ready`, payload: { type: "recording.available", entityId: input.callId } });
+    return true;
   });
   void input.durationMs;
-  return objectId;
+  return linked ? objectId : null;
 }
 
 export async function deleteCallRecording(

@@ -5,7 +5,8 @@
 set -euo pipefail
 
 PROJECT_ID="${RAILWAY_PROJECT_ID:-af0a130e-7b02-4fc0-94ef-b0ac45a0a0a6}"
-ENVIRONMENT="${RAILWAY_ENVIRONMENT:-staging}"
+# Never read RAILWAY_ENVIRONMENT here: CI exports it as production.
+ENVIRONMENT=staging
 export RAILWAY_CALLER="script:staging-stop"
 
 # Apps first, then the datastores they depend on.

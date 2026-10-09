@@ -19,7 +19,7 @@ const findContact = {
         required: false,
         helpText: 'Use international format, for example `+14165550134`. Ten-digit numbers without a country code are treated as North American.',
       },
-      { key: 'email', label: 'Email', type: 'string', required: false, helpText: 'Used when no phone is given, or together with the phone to narrow the match.' },
+      { key: 'email', label: 'Email', type: 'string', required: false, helpText: 'Used only when no phone is given.' },
     ],
     perform: async (z, bundle) => {
       const phone = normalizePhone(bundle.inputData.phone);
@@ -27,7 +27,9 @@ const findContact = {
       if (!phone && !email) {
         throw new z.errors.Error('Enter a phone number or an email address to search for.', 'invalid_input', 400);
       }
-      const body = await listPage(z, bundle, '/contacts', { phone, email, limit: 25 });
+      // Phone alone: contacts from calls and texts have no email, so phone AND email
+      // would miss them and Find or Create would then hit the unique phone index.
+      const body = await listPage(z, bundle, '/contacts', phone ? { phone, limit: 25 } : { email, limit: 25 });
       return Array.isArray(body.data) ? body.data : [];
     },
     sample: samples.contact,

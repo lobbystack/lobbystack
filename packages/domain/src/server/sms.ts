@@ -3,6 +3,7 @@ import { and, eq, inArray, isNotNull, isNull, lt, ne, or, sql } from "drizzle-or
 import { contacts, conversationSessions, conversations, enqueueOutbox, messages, phoneNumbers, providerEvents, smsConsentEvents, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { isTerminalTwilioMessageStatus, mapTwilioStatusToMessageStatus, normalizeTwilioMessageStatus, shouldApplyMessageStatusTransition } from "@lobbystack/shared";
 
+import { findOrCreateContactByPhone } from "./contacts";
 import type { DomainContext } from "./context";
 import { contentExpiryForPlan, isContentRetentionEnabled, resolveBusinessBillingPlan } from "./contentRetentionPolicy";
 import { queueOperatorAlertInTransaction } from "./notifications";
@@ -121,10 +122,8 @@ export async function receiveInboundSms(
     }).onConflictDoNothing({ target: [providerEvents.provider, providerEvents.providerEventId] }).returning({ id: providerEvents.id });
     if (!providerEvent) return { duplicate: true };
 
-    const existingContact = (await tx.select({ id: contacts.id, smsConsentStatus: contacts.smsConsentStatus, operatorBlockedAt: contacts.operatorBlockedAt }).from(contacts).where(and(eq(contacts.businessId, input.businessId), eq(contacts.phone, input.from))).limit(1))[0];
-    const contact = existingContact ?? (await tx.insert(contacts).values({ businessId: input.businessId, phone: input.from }).returning({ id: contacts.id, smsConsentStatus: contacts.smsConsentStatus, operatorBlockedAt: contacts.operatorBlockedAt }))[0];
-    if (!contact) throw new Error("Inbound SMS contact could not be created.");
-    if (!existingContact) await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "contact.created", resourceId: contact.id });
+    const { contact, created: contactCreated } = await findOrCreateContactByPhone(tx, { businessId: input.businessId, phone: input.from });
+    if (contactCreated) await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "contact.created", resourceId: contact.id });
     const conversation = (await tx.select({ id: conversations.id, automationState: conversations.automationState }).from(conversations).where(and(eq(conversations.businessId, input.businessId), eq(conversations.contactId, contact.id), eq(conversations.channel, "sms"), eq(conversations.status, "open"))).orderBy(sql`${conversations.updatedAt} desc`).limit(1))[0] ?? (await tx.insert(conversations).values({ businessId: input.businessId, contactId: contact.id, channel: "sms", status: "open", automationState: "ai_active" }).returning({ id: conversations.id, automationState: conversations.automationState }))[0];
     if (!conversation) throw new Error("Inbound SMS conversation could not be created.");
     const session = (await tx.select({ id: conversationSessions.id }).from(conversationSessions).where(and(eq(conversationSessions.businessId, input.businessId), eq(conversationSessions.conversationId, conversation.id), eq(conversationSessions.status, "open"))).orderBy(sql`${conversationSessions.startedAt} desc`).limit(1))[0] ?? (await tx.insert(conversationSessions).values({ businessId: input.businessId, conversationId: conversation.id, channel: "sms", status: "open" }).returning({ id: conversationSessions.id }))[0];
@@ -162,9 +161,11 @@ export async function receiveInboundSms(
   });
 }
 
+const smsDeliveryLeaseMs = 10 * 60_000;
+
 export async function claimSmsDelivery(context: DomainContext, input: { businessId: string; messageId: string }): Promise<boolean> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const staleBefore = new Date(Date.now() - 10 * 60_000);
+    const staleBefore = new Date(Date.now() - smsDeliveryLeaseMs);
     const rows = await tx.update(messages)
       .set({ status: "sending", revision: sql`${messages.revision} + 1`, updatedAt: new Date() })
       .where(and(
@@ -176,6 +177,14 @@ export async function claimSmsDelivery(context: DomainContext, input: { business
       ))
       .returning({ id: messages.id });
     return rows.length > 0;
+  });
+}
+
+/** When a send holds this message, the time its lease ends and another run may claim it. */
+export async function smsDeliveryLeaseEndsAt(context: DomainContext, input: { businessId: string; messageId: string }): Promise<Date | null> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const row = (await tx.select({ updatedAt: messages.updatedAt }).from(messages).where(and(eq(messages.id, input.messageId), eq(messages.businessId, input.businessId), eq(messages.direction, "outbound"), eq(messages.channel, "sms"), eq(messages.status, "sending"))).limit(1))[0];
+    return row ? new Date(row.updatedAt.getTime() + smsDeliveryLeaseMs) : null;
   });
 }
 

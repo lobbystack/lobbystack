@@ -113,7 +113,7 @@
     {
       "referenceTest": "apps/web/src/features/agent/AgentBasicSettingsPage.test.ts",
       "adapterTests": [
-        "apps/admin/src/components/live-agent-basic-settings-surface.test.ts"
+        "apps/admin/src/components/live-agent-basic-settings-surface.test.tsx"
       ],
       "status": "mapped; see test and gate evidence",
       "notes": "File mapping is traceability, not a rendered-parity or release certificate."

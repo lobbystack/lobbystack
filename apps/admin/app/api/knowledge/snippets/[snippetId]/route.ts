@@ -11,7 +11,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sn
     const { session, businessId } = await requireOperatorBusiness(request);
     const body = await readJson(request) as { title?: string; content?: string; tags?: string[]; priority?: number; active?: boolean };
     const { snippetId } = await params;
-    await updateKnowledgeSnippet(createDomainContext(), { userId: session.user.id, businessId, snippetId, ...body });
+    await updateKnowledgeSnippet(createDomainContext(), { ...body, userId: session.user.id, businessId, snippetId });
     return NextResponse.json({ ok: true });
   } catch (error) { return asApiResponse(error); }
 }

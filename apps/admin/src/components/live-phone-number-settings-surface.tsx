@@ -1,27 +1,23 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { billingPlanCatalog, type BillingPlanSlug } from "@lobbystack/shared";
+import { billingPlanCatalog } from "@lobbystack/shared";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemTitle } from "@/components/ui/item";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PhoneNumberChooser, type AvailableNumberSummary, type ClaimResult, type InitialSuggestionResult, type SearchResult, type NumberSelectionContext } from "./phone-number-chooser";
+import { PhoneNumberChooser, phoneNumberChooserApi, type ClaimResult } from "./phone-number-chooser";
 import { useOpenUpgradePlanDialog } from "./upgrade-plan-dialog-context";
-import { formatPhoneNumberDisplay, normalizeOnboardingPhoneCountry } from "@/lib/phone";
+import { formatPhoneNumberDisplay } from "@/lib/phone";
 import { requestJson } from "@/lib/request-json";
 import type { BillingUsageViewModel, PhoneNumberViewModel } from "@/lib/page-view-models";
 import { formatDateTime } from "@/lib/locale";
 
-type Offer = { phoneE164: string; locality?: string; region?: string; countryCode: string; claimToken: string; capabilities: { voice: boolean; sms: boolean } };
 type NumbersResponse = { phoneNumbers: PhoneNumberViewModel[]; activeClaim?: { id: string; status: string } | null; replacement: { usedAt: string | null; activeClaim?: { id: string; status: string } | null } };
-function toSummary(offer: Offer, selectionContext: NumberSelectionContext): AvailableNumberSummary {
-  return { ...offer, e164: offer.phoneE164, display: formatPhoneNumberDisplay(offer.phoneE164), kind: "local", selectionContext };
-}
 function getSettingsPhoneNumberErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message.trim().length > 0) {
     return error.message;
@@ -50,40 +46,9 @@ export function LivePhoneNumberSettingsSurface() {
   const billing = useQuery({ queryKey: ["billing", businessId], enabled: Boolean(businessId), queryFn: () => requestJson<BillingUsageViewModel>(`/api/billing?businessId=${encodeURIComponent(businessId)}`) });
   const primaryPhoneNumber = numbers.data ? numbers.data.phoneNumbers.find(number => number.status === "active" && !number.reclaimScheduledAt) ?? numbers.data.phoneNumbers[0] ?? null : undefined;
   const phoneNumberReplacementUsedAt = numbers.data?.replacement.usedAt;
-  const rawPlan = billing.data?.account?.plan;
-  const plan: BillingPlanSlug = rawPlan === "self_hosted_standard" || rawPlan === "self_host" ? "self_host" : rawPlan === "starter" || rawPlan === "pro" || rawPlan === "enterprise" ? rawPlan : "free_cloud";
-  const billingStatus = billing.data ? { includedBusinessNumbers: billingPlanCatalog[plan].includedBusinessNumbers, phoneNumberReclaimScheduledAt: null } : null;
+  const billingStatus = billing.data ? { includedBusinessNumbers: billingPlanCatalog[billing.data.effectivePlan].includedBusinessNumbers, phoneNumberReclaimScheduledAt: null } : null;
   const isReplacement = Boolean(primaryPhoneNumber);
-  const getInitialReplacementNumberSuggestion = useCallback(async ({ businessId }: { businessId: string }): Promise<InitialSuggestionResult> => {
-    const result = await requestJson<{ numbers: Offer[]; market?: { countryCode: string; areaCode?: string } }>(isReplacement ? `/api/phone-numbers/replacement/search?businessId=${encodeURIComponent(businessId)}` : `/api/onboarding/phone-numbers/suggestion?businessId=${encodeURIComponent(businessId)}`, isReplacement ? { method: "POST", body: JSON.stringify({ limit: 10 }) } : undefined);
-    const countryCode = normalizeOnboardingPhoneCountry(result.market?.countryCode ?? result.numbers[0]?.countryCode);
-    const numbers = result.numbers.map(offer => toSummary(offer, { mode: "suggested", countryCode }));
-    return { market: { ...result.market, countryCode }, suggestion: numbers[0] ?? null, alternatives: numbers.slice(1) };
-  }, [isReplacement]);
-  const searchReplacementNumbers = useCallback(async ({ businessId, mode, countryCode, areaCode, limit }: { businessId: string; mode: "suggested" | "area_code"; countryCode: string; areaCode?: string; limit: number }): Promise<SearchResult> => {
-    const selectionContext = { mode, countryCode, ...(areaCode ? { areaCode } : {}) };
-    const result = await requestJson<{ numbers: Offer[]; market?: { countryCode: string; areaCode?: string } }>(`/api/${isReplacement ? "phone-numbers/replacement" : "onboarding/phone-numbers"}/search?businessId=${encodeURIComponent(businessId)}`, { method: "POST", body: JSON.stringify({ selection: { countryCode, kind: "local", ...(areaCode ? { areaCode } : {}) }, limit }) });
-    return { market: { countryCode }, selectionContext, numbers: result.numbers.map(offer => toSummary(offer, selectionContext)) };
-  }, [isReplacement]);
-  const claimReplacementNumber = useCallback(async ({ businessId, claimToken, selectionContext }: { businessId: string; claimToken: string; selectionContext?: NumberSelectionContext }): Promise<ClaimResult> => {
-    const prefix = `/api/${isReplacement ? "phone-numbers/replacement" : "onboarding/phone-numbers"}`;
-    const { claimId } = await requestJson<{ claimId: string }>(`${prefix}/claim?businessId=${encodeURIComponent(businessId)}`, { method: "POST", body: JSON.stringify({ claimToken, idempotencyKey: crypto.randomUUID() }) });
-    const deadline = Date.now() + 120_000;
-    while (Date.now() < deadline) {
-      const { claim } = await requestJson<{ claim: { status: string; phoneNumberId: string | null; requestedE164: string } | null }>(`${prefix}/claim/${encodeURIComponent(claimId)}?businessId=${encodeURIComponent(businessId)}`);
-      if (claim?.status === "claimed" && claim.phoneNumberId) return { status: "claimed", phoneNumberId: claim.phoneNumberId, e164: claim.requestedE164 };
-      if (claim?.status === "unavailable") {
-        const refreshed = selectionContext
-          ? await searchReplacementNumbers({ businessId, mode: selectionContext.mode === "area_code" ? "area_code" : "suggested", countryCode: normalizeOnboardingPhoneCountry(selectionContext.countryCode), ...(selectionContext.areaCode ? { areaCode: selectionContext.areaCode } : {}), limit: 10 })
-          : await getInitialReplacementNumberSuggestion({ businessId });
-        const alternatives = "numbers" in refreshed ? refreshed.numbers : [...(refreshed.suggestion ? [refreshed.suggestion] : []), ...refreshed.alternatives];
-        return { status: "unavailable", message: t("phoneNumber.picker.unavailable"), alternatives };
-      }
-      if (!claim || claim.status === "failed") return { status: "failed", message: t("phoneNumber.picker.claimFailed") };
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-    return { status: "failed", message: t("phoneNumber.picker.claimFailed") };
-  }, [isReplacement, t, searchReplacementNumbers, getInitialReplacementNumberSuggestion]);
+  const numberApi = useMemo(() => phoneNumberChooserApi(isReplacement), [isReplacement]);
   const displayPhoneNumber = primaryPhoneNumber
     ? formatPhoneNumberDisplay(primaryPhoneNumber.e164, i18n.language)
     : null;
@@ -200,18 +165,9 @@ export function LivePhoneNumberSettingsSurface() {
                       {isDialogOpen ? (
                         <PhoneNumberChooser
                           businessId={businessId}
-                          claimNumber={claimReplacementNumber as (args: {
-                            businessId: string;
-                            e164: string;
-                            selectionContext: AvailableNumberSummary["selectionContext"];
-                            claimToken: string;
-                          }) => Promise<ClaimResult>}
+                          claimNumber={numberApi.claimNumber}
                           getErrorMessage={getSettingsPhoneNumberErrorMessage}
-                          getInitialNumberSuggestion={
-                            getInitialReplacementNumberSuggestion as (args: {
-                              businessId: string;
-                            }) => Promise<InitialSuggestionResult>
-                          }
+                          getInitialNumberSuggestion={numberApi.getInitialNumberSuggestion}
                           labels={{
                             countryLabel: t("phoneNumber.picker.countryLabel"),
                             areaCodeLabel: t("phoneNumber.picker.areaCodeLabel"),
@@ -227,15 +183,7 @@ export function LivePhoneNumberSettingsSurface() {
                             unavailable: t("phoneNumber.picker.unavailable"),
                           }}
                           onClaimed={handleClaimed}
-                          searchAvailableNumbers={
-                            searchReplacementNumbers as (args: {
-                              businessId: string;
-                              mode: "suggested" | "area_code";
-                              countryCode: AvailableNumberSummary["countryCode"];
-                              areaCode?: string;
-                              limit: number;
-                            }) => Promise<SearchResult>
-                          }
+                          searchAvailableNumbers={numberApi.searchAvailableNumbers}
                         />
                       ) : null}
                     </DialogContent>

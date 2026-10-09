@@ -4,7 +4,7 @@ The recovery unit combines a PostgreSQL custom dump with a snapshot of the confi
 
 Run `REPLACEMENT_COMPOSE_PROJECT=<approved-compose-project> pnpm replacement:backup -- <backup-directory>` to stop writers, copy the database and files, record checksums and a manifest, and restart services. You must supply the project name so the script cannot target another Compose stack. Store encrypted backups outside the deployment environment and define a retention policy with your hosting provider.
 
-Restore is destructive. Verify the target environment and artifact checksums, then run `REPLACEMENT_COMPOSE_PROJECT=<approved-compose-project> CONFIRM_REPLACEMENT_RESTORE=1 pnpm replacement:restore -- <backup-directory>`. On a new PostgreSQL cluster, bootstrap roles with `docker/postgres/init/roles.sh` before restoring.
+Restore is destructive. Verify the target environment and artifact checksums, then run `REPLACEMENT_COMPOSE_PROJECT=<approved-compose-project> CONFIRM_REPLACEMENT_RESTORE=1 pnpm replacement:restore -- <backup-directory>`. On a new PostgreSQL cluster, bootstrap roles with `docker/postgres/init/roles.sh` before restoring. If the restore fails after it drops the database, the script leaves admin and worker stopped so they cannot write to a partial database. Fix the error and run the restore again.
 
 After restore, run `pnpm db:check`, `VERIFY_RLS_BEHAVIOR=true pnpm db:verify-rls`, `pnpm replacement:smoke`, and storage reconciliation. Confirm pending outbox messages publish and sample database object checksums match stored objects.
 

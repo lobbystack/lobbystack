@@ -1,8 +1,6 @@
 import path from "node:path"
 import type { APIRoute } from "astro"
 import { getCollection } from "astro:content"
-import React from "react"
-import satori from "satori"
 import sharp from "sharp"
 import { ogEntries } from "@/lib/pages"
 import { DEFAULT_DESCRIPTION, OG_IMAGE_HEIGHT, OG_IMAGE_WIDTH } from "@/lib/seo"
@@ -13,8 +11,6 @@ type OgEntry = {
   description: string
   coverImage?: string
 }
-
-const h = React.createElement
 
 const entryMap = async () => {
   const posts = await getCollection("blog")
@@ -42,32 +38,6 @@ export const getStaticPaths = async () => {
     params: { slug },
   }))
 }
-
-const renderFrame = async (entry: OgEntry) =>
-  satori(
-    h(
-      "div",
-      {
-        style: {
-          width: `${OG_IMAGE_WIDTH}px`,
-          height: `${OG_IMAGE_HEIGHT}px`,
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-          padding: "70px",
-          background: entry.coverImage ? "rgba(5,10,20,0.78)" : "#f1f5f9",
-          color: entry.coverImage ? "#fafafa" : "#111827",
-        },
-      },
-      h("div", { style: { width: "46px", height: "46px" } }),
-      h("div", { style: { width: "760px", height: "360px" } })
-    ),
-    {
-      width: OG_IMAGE_WIDTH,
-      height: OG_IMAGE_HEIGHT,
-      fonts: [],
-    }
-  )
 
 const escapeXml = (value: string) =>
   value
@@ -108,6 +78,7 @@ const textOverlay = (entry: OgEntry) => {
   ).slice(0, 2)
 
   return Buffer.from(`<svg width="${OG_IMAGE_WIDTH}" height="${OG_IMAGE_HEIGHT}" viewBox="0 0 ${OG_IMAGE_WIDTH} ${OG_IMAGE_HEIGHT}" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="${light ? "#050a14" : "#f1f5f9"}" fill-opacity="${light ? 0.78 : 1}"/>
   <rect x="70" y="70" width="46" height="46" rx="12" fill="${light ? "#fafafa" : "#111827"}"/>
   <text x="134" y="103" fill="${light ? "#fafafa" : "#111827"}" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700">LobbyStack</text>
   <text x="70" y="382" fill="${light ? "#fafafa" : "#111827"}" font-family="Arial, Helvetica, sans-serif" font-size="${titleSize}" font-weight="700">
@@ -136,7 +107,6 @@ export const GET: APIRoute = async ({ params }) => {
 
   if (!entry) return new Response("Not found", { status: 404 })
 
-  const frame = Buffer.from(await renderFrame(entry))
   const text = textOverlay(entry)
   const base =
     entry.coverImage && entry.coverImage.startsWith("/")
@@ -153,10 +123,7 @@ export const GET: APIRoute = async ({ params }) => {
         }).jpeg({ quality: 90 })
 
   const image = await base
-    .composite([
-      { input: frame, top: 0, left: 0 },
-      { input: text, top: 0, left: 0 },
-    ])
+    .composite([{ input: text, top: 0, left: 0 }])
     .jpeg({ quality: 90 })
     .toBuffer()
 

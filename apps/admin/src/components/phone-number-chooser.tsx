@@ -17,10 +17,12 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 import {
+  formatPhoneNumberDisplay,
   normalizeOnboardingPhoneCountry,
   supportsOnboardingAreaCodeSearch,
   type SupportedOnboardingPhoneCountry,
 } from "@/lib/phone";
+import { requestJson } from "@/lib/request-json";
 
 export type NumberSelectionContext = {
   mode: "suggested" | "city" | "area_code" | "toll_free";
@@ -64,8 +66,8 @@ export type SearchResult = {
 
 export type ClaimResult =
   | { status: "claimed"; phoneNumberId: string; e164: string }
-  | { status: "unavailable"; message: string; alternatives: Array<AvailableNumberSummary> }
-  | { status: "failed"; message: string };
+  | { status: "unavailable"; alternatives: Array<AvailableNumberSummary> }
+  | { status: "failed" };
 
 type PhoneNumberChooserLabels = {
   countryLabel: string;
@@ -106,6 +108,49 @@ type PhoneNumberChooserProps = {
   onClaimStarted?: (number: AvailableNumberSummary) => void;
   onClaimCompleted?: (number: AvailableNumberSummary) => void;
 };
+
+type NumberOffer = { phoneE164: string; locality?: string; region?: string; countryCode: string; claimToken: string; capabilities: { sms: boolean; voice: boolean } };
+type OffersResponse = { numbers: NumberOffer[]; market?: { countryCode: string; areaCode?: string } };
+
+function toSummary(offer: NumberOffer, selectionContext: NumberSelectionContext): AvailableNumberSummary {
+  return { ...offer, e164: offer.phoneE164, display: formatPhoneNumberDisplay(offer.phoneE164), kind: "local", selectionContext };
+}
+
+/** The chooser's search and claim calls. A business replacing its number uses the replacement endpoints; a first number uses the onboarding ones. */
+export function phoneNumberChooserApi(replacement: boolean): Pick<PhoneNumberChooserProps, "getInitialNumberSuggestion" | "searchAvailableNumbers" | "claimNumber"> {
+  const prefix = replacement ? "/api/phone-numbers/replacement" : "/api/onboarding/phone-numbers";
+  const searchAvailableNumbers: PhoneNumberChooserProps["searchAvailableNumbers"] = async ({ businessId, mode, countryCode, areaCode, limit }) => {
+    const selectionContext = { mode, countryCode, ...(areaCode ? { areaCode } : {}) };
+    const result = await requestJson<OffersResponse>(`${prefix}/search?businessId=${encodeURIComponent(businessId)}`, { method: "POST", body: JSON.stringify({ selection: { countryCode, kind: "local", ...(areaCode ? { areaCode } : {}) }, limit }) });
+    return { market: { countryCode }, selectionContext, numbers: result.numbers.map(offer => toSummary(offer, selectionContext)) };
+  };
+  return {
+    searchAvailableNumbers,
+    async getInitialNumberSuggestion({ businessId }) {
+      const result = replacement
+        ? await requestJson<OffersResponse>(`${prefix}/search?businessId=${encodeURIComponent(businessId)}`, { method: "POST", body: JSON.stringify({ limit: 10 }) })
+        : await requestJson<OffersResponse>(`${prefix}/suggestion?businessId=${encodeURIComponent(businessId)}`);
+      const countryCode = normalizeOnboardingPhoneCountry(result.market?.countryCode ?? result.numbers[0]?.countryCode);
+      const numbers = result.numbers.map(offer => toSummary(offer, { mode: "suggested", countryCode }));
+      return { market: { ...result.market, countryCode }, suggestion: numbers[0] ?? null, alternatives: numbers.slice(1) };
+    },
+    async claimNumber({ businessId, claimToken, selectionContext }) {
+      const { claimId } = await requestJson<{ claimId: string }>(`${prefix}/claim?businessId=${encodeURIComponent(businessId)}`, { method: "POST", body: JSON.stringify({ claimToken, idempotencyKey: crypto.randomUUID() }) });
+      const deadline = Date.now() + 120_000;
+      while (Date.now() < deadline) {
+        const { claim } = await requestJson<{ claim: { status: string; requestedE164: string; phoneNumberId: string | null } | null }>(`${prefix}/claim/${encodeURIComponent(claimId)}?businessId=${encodeURIComponent(businessId)}`);
+        if (claim?.status === "claimed" && claim.phoneNumberId) return { status: "claimed", phoneNumberId: claim.phoneNumberId, e164: claim.requestedE164 };
+        if (claim?.status === "unavailable") {
+          const refreshed = await searchAvailableNumbers({ businessId, mode: selectionContext.mode === "area_code" ? "area_code" : "suggested", countryCode: normalizeOnboardingPhoneCountry(selectionContext.countryCode), ...(selectionContext.areaCode ? { areaCode: selectionContext.areaCode } : {}), limit: 10 });
+          return { status: "unavailable", alternatives: refreshed.numbers };
+        }
+        if (!claim || claim.status === "failed") return { status: "failed" };
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      return { status: "failed" };
+    },
+  };
+}
 
 const COUNTRY_OPTIONS: Array<{
   code: SupportedOnboardingPhoneCountry;
@@ -271,7 +316,7 @@ export function PhoneNumberChooser({
         return;
       }
 
-      setError(getErrorMessage(result.message, labels.claimFailed));
+      setError(getErrorMessage(null, labels.claimFailed));
       setSelectedE164(null);
     } catch (claimError) {
       setError(getErrorMessage(claimError, labels.claimFailed));

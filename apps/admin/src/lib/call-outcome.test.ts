@@ -10,7 +10,7 @@ const t = ((key: string) => key) as Parameters<
 
 describe("formatCallDispositionSummary", () => {
   it("renders blocked contact call dispositions as blocked outcomes", () => {
-    expect(formatCallDispositionSummary("contact_blocked", t)).toBe(
+    expect(formatCallDispositionSummary("blocked_contact", t)).toBe(
       "outcome.contactBlocked",
     );
   });

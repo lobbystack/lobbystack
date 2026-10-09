@@ -112,7 +112,7 @@ Inspect these columns and the worker’s job logs:
 - `is_final`
 - `updated_at`
 
-The queue allows five attempts per job, with exponential backoff between attempts. Inspect worker logs for provider failures before retrying.
+The worker tries each `billing.syncUsage` job 12 times. It waits 5 seconds before the first retry and doubles the wait each time, so it gives up about 3 hours after the first failure. Inspect worker logs for provider failures before you requeue a job.
 
 Fix the provider error before you requeue `billing.syncUsage`. Keep the usage row and source key to prevent duplicate ingestion.
 

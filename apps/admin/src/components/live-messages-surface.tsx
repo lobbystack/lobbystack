@@ -7,7 +7,8 @@ import { subscribeRealtimeQuery } from "@/lib/realtime-query";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { ArrowLeft, Bot, SearchIcon, Send, User } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { PageHeader } from "@/components/page-header";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -18,6 +19,8 @@ import { cn } from "@/lib/utils";
 import { getContactDisplayName } from "@/lib/contact-display";
 import { formatDateTime } from "@/lib/locale";
 import { useTelemetry } from "@/components/product-analytics";
+
+const PAGE_SIZE = 50;
 
 type Message = { id: string; conversationId: string; contactName: string | null; contactPhone: string | null; visitorName: string | null; visitorEmail: string | null; channel: string | null; automationState: string | null; body: string; direction: string; status: string; createdAt: string };
 
@@ -46,7 +49,22 @@ export function LiveMessagesSurface() {
   const [draft, setDraft] = useState("");
   const [channelFilter, setChannelFilter] = useState<"all" | "web_chat" | "sms">("all");
   const { business } = useActiveBusiness();
-  const messages = useQuery({ queryKey: ["messages", business?.businessId], queryFn: () => requestJson<{ messages: Message[] }>("/api/messages"), enabled: Boolean(business) });
+  const query = search.trim();
+  // Both keys sit under ["messages", businessId], so realtime and mutation invalidations refresh the list and the open thread.
+  const latestMessages = useInfiniteQuery({
+    queryKey: ["messages", business?.businessId, "list", channelFilter, query],
+    queryFn: ({ pageParam }) => requestJson<{ messages: Message[]; hasNext: boolean }>(`/api/messages?limit=${PAGE_SIZE}&offset=${pageParam}&channel=${channelFilter}&search=${encodeURIComponent(query)}`),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, pages) => lastPage.hasNext ? pages.length * PAGE_SIZE : undefined,
+    // Keeps the open thread visible while a new search or filter loads.
+    placeholderData: keepPreviousData,
+    enabled: Boolean(business),
+  });
+  const thread = useQuery({
+    queryKey: ["messages", business?.businessId, "thread", selectedId],
+    queryFn: () => requestJson<{ messages: Message[] }>(`/api/messages?conversationId=${encodeURIComponent(selectedId!)}`),
+    enabled: Boolean(business && selectedId),
+  });
   const send = useMutation({
     mutationFn: async () => {
       if (!business || !selected) return;
@@ -58,6 +76,7 @@ export function LiveMessagesSurface() {
       setDraft("");
       await queryClient.invalidateQueries({ queryKey: ["messages", business?.businessId] });
     },
+    onError: () => toast.error(t("page.sendFailed")),
   });
   const toggleAutomation = useMutation({
     mutationFn: async (state: "ai_active" | "human_handoff") => {
@@ -66,6 +85,7 @@ export function LiveMessagesSurface() {
       if (!response.ok) throw new Error(t("page.automationUpdateFailed"));
     },
     onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["messages", business?.businessId] }); },
+    onError: () => toast.error(t("page.automationUpdateFailed")),
   });
 
   useEffect(() => {
@@ -74,16 +94,13 @@ export function LiveMessagesSurface() {
   }, [business?.businessId, queryClient]);
 
   const conversations = useMemo(() => {
-    const grouped = new Map<string, Message[]>();
-    for (const message of messages.data?.messages ?? []) grouped.set(message.conversationId, [...(grouped.get(message.conversationId) ?? []), message]);
-    return [...grouped.entries()].map(([id, items]) => {
-      const sorted = items.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-      const latest = sorted.at(-1) ?? sorted[0]!;
-      return { id, messages: sorted, latest, displayName: conversationName(latest, i18n.language, t), channel: latest.channel === "web_chat" ? "web_chat" : "sms" };
-    })
-      .filter((conversation) => (channelFilter === "all" || conversation.channel === channelFilter) && [conversation.latest.contactName, conversation.latest.visitorName, conversation.latest.contactPhone, conversation.latest.visitorEmail, conversation.latest.body].filter(Boolean).join(" ").toLowerCase().includes(search.trim().toLowerCase()));
-  }, [messages.data, search, channelFilter, i18n.language, t]);
+    // Offset pages can overlap when a new message moves a conversation up between page loads; keep the newer, earlier row.
+    const latestByConversation = new Map<string, Message>();
+    for (const latest of (latestMessages.data?.pages ?? []).flatMap((page) => page.messages)) if (!latestByConversation.has(latest.conversationId)) latestByConversation.set(latest.conversationId, latest);
+    return [...latestByConversation.values()].map((latest) => ({ id: latest.conversationId, latest, displayName: conversationName(latest, i18n.language, t), channel: latest.channel === "web_chat" ? "web_chat" : "sms" }));
+  }, [latestMessages.data, i18n.language, t]);
   const selected = conversations.find((conversation) => conversation.id === selectedId) ?? null;
+  const selectedMessages = thread.data?.messages ?? [];
   const selectedAutomation = selected?.latest.automationState === "human_handoff" ? "human_handoff" : "ai_active";
 
   function submit(event: FormEvent) {
@@ -103,10 +120,11 @@ export function LiveMessagesSurface() {
         </div>
         <div className="-mx-3 no-scrollbar h-full overflow-y-auto p-3">
           {conversations.map((conversation) => <div key={conversation.id}><button className={cn("group flex w-full rounded-md px-2 py-2 text-start text-sm hover:bg-accent hover:text-accent-foreground", selectedId === conversation.id && "bg-muted")} onClick={() => { if (business) telemetry.track("web.messages.thread_opened", { businessId: business.businessId, conversationId: conversation.id, channel: conversation.channel }); setSelectedId(conversation.id); }} type="button"><div className="flex w-full gap-2"><Avatar><AvatarFallback className="ph-mask">{initials(conversation.latest.visitorName ?? conversation.latest.contactName, conversation.displayName)}</AvatarFallback></Avatar><div className="min-w-0 flex-1"><div className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-2"><span className="ph-mask truncate font-semibold">{conversation.displayName}</span><span className="text-[11px] text-muted-foreground">{formatDateTime(conversation.latest.createdAt, i18n.language, { hour: "numeric", minute: "2-digit" })}</span></div><span className="ph-mask line-clamp-2 text-muted-foreground">{conversation.latest.body || t("page.emptyPreview")}</span></div>{conversation.channel === "web_chat" ? <span className="mt-0.5 flex size-4 items-center justify-center rounded-full bg-primary/10 text-primary" title="Web chat"><Bot className="size-3" /></span> : null}</div></button><Separator className="my-1" /></div>)}
+          {latestMessages.hasNextPage ? <Button className="w-full" loading={latestMessages.isFetchingNextPage} onClick={() => void latestMessages.fetchNextPage()} size="sm" variant="ghost">{t("page.loadMore")}</Button> : null}
         </div>
       </div>
       <div className={cn("hidden min-w-0 w-full flex-1 flex-col border bg-background sm:flex sm:rounded-md", selected && "flex")}>
-        {selected ? <><div className="flex items-center gap-3 border-b p-4"><Button className="sm:hidden" onClick={() => setSelectedId(null)} size="icon-sm" variant="ghost"><ArrowLeft /></Button><Avatar><AvatarFallback className="ph-mask">{initials(selected.latest.visitorName ?? selected.latest.contactName, selected.displayName)}</AvatarFallback></Avatar><div className="min-w-0"><p className="ph-mask truncate font-semibold">{selected.displayName}</p><p className="ph-mask truncate text-sm text-muted-foreground">{conversationSubtitle(selected.latest, t)}</p></div>{selected.channel === "web_chat" ? <div className="ml-auto flex items-center gap-2"><span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium", selectedAutomation === "ai_active" ? "bg-teal-50 text-teal-700" : "bg-amber-50 text-amber-700")}>{selectedAutomation === "ai_active" ? <Bot className="size-3.5" /> : <User className="size-3.5" />}{selectedAutomation === "ai_active" ? t("page.automationAiActive") : t("page.automationHumanHandoff")}</span><Button size="sm" variant="outline" onClick={() => toggleAutomation.mutate(selectedAutomation === "ai_active" ? "human_handoff" : "ai_active")} disabled={toggleAutomation.isPending}>{selectedAutomation === "ai_active" ? t("page.takeOver") : t("page.automationResumeAi")}</Button></div> : null}</div><div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">{selected.messages.map((message) => <div className={cn("flex", message.direction === "outbound" ? "justify-end" : "justify-start")} key={message.id}><div className={cn("max-w-[80%] rounded-2xl px-4 py-3 text-sm", message.direction === "outbound" ? "rounded-br-sm bg-primary text-primary-foreground" : "rounded-bl-sm bg-muted text-foreground")}><p className="ph-mask whitespace-pre-wrap">{message.body}</p><p className="mt-1 text-[11px] opacity-70">{formatDateTime(message.createdAt, i18n.language, { hour: "numeric", minute: "2-digit" })}</p></div></div>)}</div><form className="flex gap-2 border-t p-4" onSubmit={submit}><Input className="h-11" onChange={(event) => setDraft(event.target.value)} placeholder={selected.channel === "web_chat" ? t("page.composerPlaceholderWeb") : t("page.composerPlaceholderSms")} value={draft} /><Button aria-label={t("page.send")} disabled={!draft.trim()} loading={send.isPending} size="icon-lg" type="submit"><Send /></Button></form></> : <div className="m-auto p-8 text-center text-sm text-muted-foreground">{t("page.selectConversation")}</div>}
+        {selected ? <><div className="flex items-center gap-3 border-b p-4"><Button className="sm:hidden" onClick={() => setSelectedId(null)} size="icon-sm" variant="ghost"><ArrowLeft /></Button><Avatar><AvatarFallback className="ph-mask">{initials(selected.latest.visitorName ?? selected.latest.contactName, selected.displayName)}</AvatarFallback></Avatar><div className="min-w-0"><p className="ph-mask truncate font-semibold">{selected.displayName}</p><p className="ph-mask truncate text-sm text-muted-foreground">{conversationSubtitle(selected.latest, t)}</p></div>{selected.channel === "web_chat" ? <div className="ml-auto flex items-center gap-2"><span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium", selectedAutomation === "ai_active" ? "bg-teal-50 text-teal-700" : "bg-amber-50 text-amber-700")}>{selectedAutomation === "ai_active" ? <Bot className="size-3.5" /> : <User className="size-3.5" />}{selectedAutomation === "ai_active" ? t("page.automationAiActive") : t("page.automationHumanHandoff")}</span><Button size="sm" variant="outline" onClick={() => toggleAutomation.mutate(selectedAutomation === "ai_active" ? "human_handoff" : "ai_active")} disabled={toggleAutomation.isPending}>{selectedAutomation === "ai_active" ? t("page.takeOver") : t("page.automationResumeAi")}</Button></div> : null}</div><div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">{selectedMessages.map((message) => <div className={cn("flex", message.direction === "outbound" ? "justify-end" : "justify-start")} key={message.id}><div className={cn("max-w-[80%] rounded-2xl px-4 py-3 text-sm", message.direction === "outbound" ? "rounded-br-sm bg-primary text-primary-foreground" : "rounded-bl-sm bg-muted text-foreground")}><p className="ph-mask whitespace-pre-wrap">{message.body}</p><p className="mt-1 text-[11px] opacity-70">{formatDateTime(message.createdAt, i18n.language, { hour: "numeric", minute: "2-digit" })}</p></div></div>)}</div><form className="flex gap-2 border-t p-4" onSubmit={submit}><Input className="h-11" onChange={(event) => setDraft(event.target.value)} placeholder={selected.channel === "web_chat" ? t("page.composerPlaceholderWeb") : t("page.composerPlaceholderSms")} value={draft} /><Button aria-label={t("page.send")} disabled={!draft.trim()} loading={send.isPending} size="icon-lg" type="submit"><Send /></Button></form></> : <div className="m-auto p-8 text-center text-sm text-muted-foreground">{t("page.selectConversation")}</div>}
       </div>
     </section>
   );

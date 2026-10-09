@@ -8,12 +8,13 @@ vi.mock("@lobbystack/domain", async () => ({
   searchKnowledgeEvidence: vi.fn(),
   checkOpening: vi.fn(async () => ({ ok: true, available: true })),
   findCallerBooking: vi.fn(async () => undefined),
+  findCallBooking: vi.fn(async () => undefined),
   bookForCaller: vi.fn(async () => ({ ok: true })),
   requestCancellationForCaller: vi.fn(async () => ({ ok: true, inboxItemId: "inbox_1" })),
 }));
 
-import { bookForCaller, checkOpening, findCallerBooking, requestCancellationForCaller, searchKnowledgeEvidence } from "@lobbystack/domain";
-import { createReceptionistTools, type AgentToolContext } from "./tools";
+import { bookForCaller, checkOpening, findCallBooking, findCallerBooking, requestCancellationForCaller, searchKnowledgeEvidence } from "@lobbystack/domain";
+import { createReceptionistTools, type AgentChannel, type AgentToolContext } from "./tools";
 
 function toolNames(overrides: Omit<Partial<AgentToolContext>, "snapshot"> & { bookingMode?: BookingMode; snapshot?: Partial<BusinessContextSnapshot> } = {}): string[] {
   const { bookingMode, snapshot, ...context } = overrides;
@@ -26,6 +27,9 @@ function toolNames(overrides: Omit<Partial<AgentToolContext>, "snapshot"> & { bo
 }
 
 const callControl = { transfer: vi.fn(async () => true), hangup: vi.fn(async () => undefined) };
+
+// The booking fixtures use early October 2026: keep those times in the future.
+vi.setSystemTime(new Date("2026-10-01T12:00:00Z"));
 
 describe("createReceptionistTools", () => {
   it("books directly by default", () => {
@@ -144,6 +148,31 @@ describe("bookAppointment", () => {
     await expect(book("2026-10-06T10:00")).resolves.toMatchObject({ ok: true, appointmentId: "appt_1", alreadyBooked: true });
     expect(vi.mocked(findCallerBooking).mock.lastCall?.[1]).toMatchObject({ serviceName: "General Checkup", startsAt: "2026-10-06T10:00:00.000-04:00", contactPhone: "+14165550100" });
     expect(checkOpening).not.toHaveBeenCalled();
+    expect(bookForCaller).not.toHaveBeenCalled();
+  });
+
+  it("never says whose booking a typed or spoken number holds", async () => {
+    const run = (channel: AgentChannel, callerPhone?: string) => {
+      const tools = createReceptionistTools({ domain: { db: {} as never }, channel, ...(callerPhone ? { callerPhone } : {}), snapshot: demoSnapshot });
+      return (tools.bookAppointment!.execute! as (input: object, options: object) => Promise<unknown>)({ serviceName: "General Checkup", startsAt: "2026-10-06T10:00", contactName: "Milan", contactPhone: "+14165550199", smsConsent: "not_asked" }, { toolCallId: "1", messages: [] });
+    };
+    vi.mocked(findCallerBooking).mockClear();
+    vi.mocked(checkOpening).mockClear();
+    await run("web_chat");
+    await run("voice", "+14165550100");
+    expect(findCallerBooking).not.toHaveBeenCalled();
+    expect(checkOpening).toHaveBeenCalledTimes(2);
+  });
+
+  it("reports a browser call's own booking for a repeated request", async () => {
+    vi.mocked(findCallBooking).mockResolvedValueOnce({ ok: true, serviceName: "General Checkup", startsAt: "2026-10-06T10:00:00.000-04:00", alreadyBooked: true });
+    vi.mocked(findCallerBooking).mockClear();
+    vi.mocked(bookForCaller).mockClear();
+    const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "web_voice", callId: "call_1", snapshot: { ...demoSnapshot, timezone: "America/Toronto" } });
+    const execute = tools.bookAppointment!.execute! as (input: object, options: object) => Promise<unknown>;
+    await expect(execute({ serviceName: "General Checkup", startsAt: "2026-10-06T10:00", contactName: "Milan", contactPhone: "+14165550199", smsConsent: "not_asked" }, { toolCallId: "1", messages: [] })).resolves.toMatchObject({ ok: true, alreadyBooked: true });
+    expect(vi.mocked(findCallBooking).mock.lastCall?.[1]).toEqual({ businessId: demoSnapshot.businessId, callId: "call_1", serviceName: "General Checkup", startsAt: "2026-10-06T10:00:00.000-04:00" });
+    expect(findCallerBooking).not.toHaveBeenCalled();
     expect(bookForCaller).not.toHaveBeenCalled();
   });
 

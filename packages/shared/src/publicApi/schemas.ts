@@ -288,8 +288,6 @@ export const apiWebhookEventSchemas = {
 
 export const apiWebhookTestEventSchema = eventEnvelope(WEBHOOK_TEST_EVENT_TYPE, z.object({ endpoint_id: id, message: z.string() }));
 
-export const apiKeyScopeSchema = z.enum(apiKeyScopes);
-
 export type ApiMe = z.infer<typeof apiMeSchema>;
 export type ApiBusiness = z.infer<typeof apiBusinessSchema>;
 export type ApiBusinessUpdate = z.infer<typeof apiBusinessUpdateSchema>;

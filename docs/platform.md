@@ -59,7 +59,7 @@ The certification scripts remove their temporary database rows and storage objec
 
 `pnpm replacement:backup` stops the admin and worker while it creates a PostgreSQL custom dump and copies the active storage backend under `.replacement-backups/`. It snapshots the shared volume for local storage and mirrors the MinIO bucket for S3 storage. Pass a destination after `--` to store the artifact elsewhere. Every artifact includes database and file checksums.
 
-Restore is destructive. Verify that the destination stack and `REPLACEMENT_ENV_FILE` are correct, set `REPLACEMENT_COMPOSE_PROJECT` explicitly, then run `CONFIRM_REPLACEMENT_RESTORE=1 pnpm replacement:restore -- <backup-directory>`. The restore recreates the `lobbystack` database, replaces the configured file storage contents, and flushes Redis so queued work from the newer state cannot replay against restored durable data. The script restarts the runtime services that were running before the restore.
+Restore is destructive. Verify that the destination stack and `REPLACEMENT_ENV_FILE` are correct, set `REPLACEMENT_COMPOSE_PROJECT` explicitly, then run `CONFIRM_REPLACEMENT_RESTORE=1 pnpm replacement:restore -- <backup-directory>`. The restore recreates the `lobbystack` database, replaces the configured file storage contents, and flushes Redis so queued work from the newer state cannot replay against restored durable data. After a successful restore, the script restarts the admin and worker services that were running before it. If the restore fails after it drops the database, the script leaves them stopped so they cannot write to a partial database. Fix the error and run the restore again.
 
 Run `REPLACEMENT_COMPOSE_PROJECT=lobbystack_restore_drill CONFIRM_REPLACEMENT_RESTORE_DRILL=1 pnpm replacement:restore-drill` against a disposable local stack to prove database-row and object integrity through deletion and full restore. The drill is intentionally destructive to changes made after its snapshot and retains its backup under `.tmp/` for inspection.
 
@@ -71,6 +71,6 @@ Build runtime images with `SERVICE_VERSION` set to the deployed Git SHA. Configu
 
 The replacement stack implements non-AI usage metering for voice seconds, alert/reminder SMS segments, and outbound transfer attempts, including shared overage caps for Starter and Pro. Dashboard feedback delivery and appointment-change audit events are persisted through PostgreSQL and the transactional outbox.
 
-Configure separate Polar meter IDs with `POLAR_VOICE_USAGE_METER_ID`, `POLAR_ALERT_SMS_USAGE_METER_ID`, and `POLAR_OUTBOUND_ATTEMPTS_USAGE_METER_ID`. `POLAR_USAGE_METER_ID` remains a fallback for existing deployments.
+The worker reports usage to Polar as events and puts the amount in `metadata.quantity`. In Polar, create one meter per event name that sums `quantity`: `billing.voice_minutes`, `billing.alert_sms_segments`, and `billing.outbound_call_attempts`. LobbyStack reads no meter ID variables.
 
 Use `docs/deployment/railway.md` for Railway service configuration, `docs/operations/backup-restore.md` for recovery, `docs/operations/alerts.md` for critical alert response, `docs/validation/certification-runbook.md` for the staging exit gate, `docs/validation/readiness-implementation-2026-09-12.md` for current implementation scope, and `docs/validation/production-readiness.md` for the blocked production plan.

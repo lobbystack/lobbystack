@@ -75,11 +75,12 @@ export function LiveAnalyticsSurface() {
   const [customRange, setCustomRange] = useState<{ from: Date; to: Date } | null>(null);
   const { businesses, business } = useActiveBusiness();
   const range = useMemo(() => preset === "custom" && customRange ? customRange : presetRange(preset === "custom" ? "last30" : preset, business?.createdAt), [business?.createdAt, customRange, preset]);
-  // The API caps hourly and daily views at a year and weekly ones at 3493 days, so longer ranges show monthly.
+  // The API caps hourly views at 20 days, daily at a year and weekly at 3493 days, so longer ranges fall back to a coarser view.
+  // The request adds the last picked day to this span, and the extra half day absorbs a DST hour.
   const spanDays = (range.to.getTime() - range.from.getTime()) / 86_400_000;
   const longRange = spanDays > 365;
-  const tooLongFor = (option: Granularity) => (longRange && (option === "hour" || option === "day")) || (spanDays > 3492 && option === "week");
-  const effectiveGranularity: Granularity = tooLongFor(granularity) ? "month" : granularity;
+  const tooLongFor = (option: Granularity) => (option === "hour" && spanDays > 19.5) || (longRange && option === "day") || (spanDays > 3492 && option === "week");
+  const effectiveGranularity: Granularity = !tooLongFor(granularity) ? granularity : granularity === "hour" && !longRange ? "day" : "month";
   const analytics = useQuery({
     queryKey: ["analytics", business?.businessId, preset, effectiveGranularity, range.from.toISOString(), range.to.toISOString()],
     queryFn: () => {

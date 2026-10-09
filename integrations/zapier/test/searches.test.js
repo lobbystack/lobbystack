@@ -22,6 +22,13 @@ describe('find_contact', () => {
     scope.done();
   });
 
+  it('ignores the email when a phone is given, so callers without an email still match', async () => {
+    const scope = api().get('/contacts').query({ phone: '+14165550134', limit: '25' }).reply(200, page([samples.contact]));
+    const results = await appTester(perform, bundleWith({ inputData: { phone: '416-555-0134', email: 'jo@example.com' } }));
+    expect(results).toEqual([samples.contact]);
+    scope.done();
+  });
+
   it('returns nothing when there is no match', async () => {
     api().get('/contacts').query(true).reply(200, page([]));
     expect(await appTester(perform, bundleWith({ inputData: { email: 'nobody@example.com' } }))).toEqual([]);

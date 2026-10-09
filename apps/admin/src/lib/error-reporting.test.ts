@@ -37,6 +37,18 @@ describe("server exception reporting", () => {
     expect(JSON.stringify(logged.mock.calls)).not.toContain("secret-row-value");
     expect(JSON.stringify(logged.mock.calls)).toContain("42501");
   });
+  it("drops every line of a multi-line Drizzle parameter from the stack", async () => {
+    vi.stubEnv("NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN", "fixture");
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    await reportServerError(new Error("Failed query: insert into \"messages\" values ($1, $2)\nparams: biz-1,Hi Jane\nconfirming 12 Main St\ncard ending 4242"), { operation: "fixture" });
+    const [safe] = mocks.capture.mock.calls[0]!;
+    expect(safe.stack).toMatch(/^Error: Failed query: .*\nparams: \[omitted\]\n {4}at /);
+    expect(safe.stack).toContain("error-reporting.test.ts");
+    for (const text of [safe.stack, JSON.stringify(logged.mock.calls)]) {
+      expect(text).not.toContain("12 Main St");
+      expect(text).not.toContain("4242");
+    }
+  });
   it("masks values PostgreSQL quotes in the cause message", async () => {
     vi.stubEnv("NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN", "fixture");
     vi.spyOn(console, "error").mockImplementation(() => {});

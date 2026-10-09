@@ -785,7 +785,7 @@
       },
       "widgetChat": {
         "title": "Nova poruka u ćaskanju na sajtu",
-        "description": "Kada posetilac pošalje poruku preko vidžeta na Vašem sajtu."
+        "description": "Kada posetilac pošalje poruku preko vidžeta na Vašem sajtu. Dobijate najviše jedno upozorenje po razgovoru dnevno."
       },
       "webhookDisabled": {
         "title": "Webhook endpoint je isključen",

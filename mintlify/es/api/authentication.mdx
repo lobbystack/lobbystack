@@ -70,6 +70,8 @@ Cada endpoint, salvo `GET /me`, requiere un permiso (scope). Una clave sin ese p
 | `knowledge:write` | `POST /knowledge` |
 | `webhooks:manage` | `GET`, `POST`, `PATCH` y `DELETE` en `/webhooks`, y `POST /webhooks/{webhook_id}/test` |
 
+Para suscribir un endpoint a un evento o cambiar su URL, su clave también necesita el permiso de lectura de ese evento. Por ejemplo, `call.completed` requiere `calls:read`, y la tabla de eventos de la página [Webhooks](/es/api/webhooks) indica los demás.
+
 ## Revoque una clave
 
 En **Configuración** > **Claves de API**, haga clic en **Revocar** junto a la clave. Las solicitudes que la usen fallan de inmediato, y no se puede deshacer. Cree una nueva clave si todavía necesita acceso.

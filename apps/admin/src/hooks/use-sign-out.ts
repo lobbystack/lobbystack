@@ -8,12 +8,12 @@ import { createBrowserTelemetry } from "@lobbystack/telemetry/browser";
 import { resolveLocale } from "@/lib/locale";
 import { localizePublicPath } from "@/lib/locale-path";
 
-/** Signs the operator out, clears analytics identity, and returns to the localized login page. */
+/** Signs the operator out, clears analytics identity, and goes to `next` or the localized login page. */
 export function useSignOut() {
   const router = useRouter();
   const { i18n } = useTranslation();
   const signingOut = useRef(false);
-  return async function signOut() {
+  return async function signOut(next?: string) {
     if (signingOut.current) return;
     signingOut.current = true;
     try {
@@ -32,7 +32,7 @@ export function useSignOut() {
           // Analytics must never block sign-out.
         }
       }
-      router.replace(localizePublicPath("/login", resolveLocale(i18n.resolvedLanguage, i18n.language)));
+      router.replace(next ?? localizePublicPath("/login", resolveLocale(i18n.resolvedLanguage, i18n.language)));
       router.refresh();
     } finally {
       signingOut.current = false;

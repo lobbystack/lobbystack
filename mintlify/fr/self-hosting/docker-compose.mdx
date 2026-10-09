@@ -40,7 +40,7 @@ docker compose ps
 
 Le migrator applique les migrations PostgreSQL avant le démarrage des services admin et worker. Les vérifications d'état retiennent les services dépendants jusqu'à ce que leurs prérequis soient prêts.
 
-La réponse de disponibilité de l'admin inclut des vérifications de la base de données et du stockage. La réponse de disponibilité du worker inclut l'état de PostgreSQL, de Redis et du stockage.
+La réponse de disponibilité de l'admin inclut des vérifications de PostgreSQL, de Redis et du stockage. La réponse de disponibilité du worker inclut l'état de PostgreSQL, de Redis et du stockage.
 
 LobbyStack n'exécute pas de conteneurs de surveillance. Les journaux de l'application restent accessibles avec `docker compose logs`, et les points de terminaison de santé continuent de fonctionner.
 

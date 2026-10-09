@@ -127,6 +127,16 @@ export function getDefaultPhoneCountry(locale?: string | null): CountryCode {
   return DEFAULT_PHONE_COUNTRY;
 }
 
+/** The country a language tag points to (es-MX → MX, bare sr → RS), when libphonenumber knows it. */
+export function getLocalePhoneCountry(locale?: string | null): CountryCode | undefined {
+  try {
+    const region = new Intl.Locale(normalizePhoneText(locale)).maximize().region;
+    return region && isSupportedCountry(region) ? region : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export function getPhoneLabels(locale?: string | null): Labels {
   const supported = normalizeInterfaceLocale(locale) ?? "en";
   if (supported === "sr") {

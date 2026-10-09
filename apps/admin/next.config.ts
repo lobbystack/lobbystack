@@ -69,15 +69,6 @@ const nextConfig: NextConfig = {
       "@lobbystack/telemetry/browser": "../../packages/telemetry/dist/browser.js",
     },
   },
-  webpack(config, { isServer }) {
-    if (isServer) {
-      config.externals = [
-        ...(Array.isArray(config.externals) ? config.externals : []),
-        { "@lobbystack/telemetry/node": "commonjs @lobbystack/telemetry/node" },
-      ];
-    }
-    return config;
-  },
   poweredByHeader: false,
   async headers() {
     // The iframe document routes own their own framing policy: the global DENY

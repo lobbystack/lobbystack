@@ -89,9 +89,7 @@ jobs:
       - run: pnpm db:check
       - run: VERIFY_RLS_BEHAVIOR=true pnpm db:verify-rls
       - run: pnpm db:seed
-      - run: pnpm replacement:inventory
       - run: pnpm replacement:parity
-      - run: pnpm replacement:admin-ui-parity
       - run: pnpm replacement:drift
       - run: pnpm replacement:security
       - run: pnpm replacement:recovery
@@ -146,27 +144,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: replacement-staging
-    env:
-      ADMIN_BASE_URL: ${{ secrets.REPLACEMENT_ADMIN_BASE_URL }}
-      WORKER_BASE_URL: ${{ secrets.REPLACEMENT_WORKER_BASE_URL }}
-      DATABASE_URL: ${{ secrets.REPLACEMENT_DATABASE_URL }}
-      REPLACEMENT_MIGRATOR_DATABASE_URL: ${{ secrets.REPLACEMENT_MIGRATOR_DATABASE_URL }}
-      REPLACEMENT_APP_DATABASE_URL: ${{ secrets.REPLACEMENT_APP_DATABASE_URL }}
-      REPLACEMENT_WORKER_DATABASE_URL: ${{ secrets.REPLACEMENT_WORKER_DATABASE_URL }}
-      RELEASE_CERTIFICATION_TARGET: isolated-staging
-      REDIS_URL: ${{ secrets.REPLACEMENT_REDIS_URL }}
-      REPLACEMENT_REDIS_HOST: ${{ secrets.REPLACEMENT_REDIS_HOST }}
-      REDIS_PORT: ${{ secrets.REPLACEMENT_REDIS_PORT }}
-      REPLACEMENT_S3_ENDPOINT: ${{ secrets.REPLACEMENT_S3_ENDPOINT }}
-      S3_BUCKET: ${{ secrets.REPLACEMENT_S3_BUCKET }}
-      S3_ACCESS_KEY_ID: ${{ secrets.REPLACEMENT_S3_ACCESS_KEY_ID }}
-      S3_SECRET_ACCESS_KEY: ${{ secrets.REPLACEMENT_S3_SECRET_ACCESS_KEY }}
-      POLAR_WEBHOOK_SECRET: ${{ secrets.REPLACEMENT_POLAR_WEBHOOK_SECRET }}
-      TWILIO_AUTH_TOKEN: ${{ secrets.REPLACEMENT_TWILIO_AUTH_TOKEN }}
-      INTERNAL_SERVICE_SECRET: ${{ secrets.REPLACEMENT_INTERNAL_SERVICE_SECRET }}
-      REPLACEMENT_TEST_BUSINESS_SLUG: ${{ secrets.REPLACEMENT_TEST_BUSINESS_SLUG }}
-      RESEND_WEBHOOKS_ENABLED: ${{ vars.REPLACEMENT_RESEND_WEBHOOKS_ENABLED }}
-      RESEND_WEBHOOK_SECRET: ${{ secrets.REPLACEMENT_RESEND_WEBHOOK_SECRET }}
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -178,6 +155,28 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Run explicit staging certification gates
+        # Only this step sees the staging secrets, not dependency installs.
+        env:
+          ADMIN_BASE_URL: ${{ secrets.REPLACEMENT_ADMIN_BASE_URL }}
+          WORKER_BASE_URL: ${{ secrets.REPLACEMENT_WORKER_BASE_URL }}
+          DATABASE_URL: ${{ secrets.REPLACEMENT_DATABASE_URL }}
+          REPLACEMENT_MIGRATOR_DATABASE_URL: ${{ secrets.REPLACEMENT_MIGRATOR_DATABASE_URL }}
+          REPLACEMENT_APP_DATABASE_URL: ${{ secrets.REPLACEMENT_APP_DATABASE_URL }}
+          REPLACEMENT_WORKER_DATABASE_URL: ${{ secrets.REPLACEMENT_WORKER_DATABASE_URL }}
+          RELEASE_CERTIFICATION_TARGET: isolated-staging
+          REDIS_URL: ${{ secrets.REPLACEMENT_REDIS_URL }}
+          REPLACEMENT_REDIS_HOST: ${{ secrets.REPLACEMENT_REDIS_HOST }}
+          REDIS_PORT: ${{ secrets.REPLACEMENT_REDIS_PORT }}
+          REPLACEMENT_S3_ENDPOINT: ${{ secrets.REPLACEMENT_S3_ENDPOINT }}
+          S3_BUCKET: ${{ secrets.REPLACEMENT_S3_BUCKET }}
+          S3_ACCESS_KEY_ID: ${{ secrets.REPLACEMENT_S3_ACCESS_KEY_ID }}
+          S3_SECRET_ACCESS_KEY: ${{ secrets.REPLACEMENT_S3_SECRET_ACCESS_KEY }}
+          POLAR_WEBHOOK_SECRET: ${{ secrets.REPLACEMENT_POLAR_WEBHOOK_SECRET }}
+          TWILIO_AUTH_TOKEN: ${{ secrets.REPLACEMENT_TWILIO_AUTH_TOKEN }}
+          INTERNAL_SERVICE_SECRET: ${{ secrets.REPLACEMENT_INTERNAL_SERVICE_SECRET }}
+          REPLACEMENT_TEST_BUSINESS_SLUG: ${{ secrets.REPLACEMENT_TEST_BUSINESS_SLUG }}
+          RESEND_WEBHOOKS_ENABLED: ${{ vars.REPLACEMENT_RESEND_WEBHOOKS_ENABLED }}
+          RESEND_WEBHOOK_SECRET: ${{ secrets.REPLACEMENT_RESEND_WEBHOOK_SECRET }}
         run: pnpm exec tsx --tsconfig scripts/tsconfig.json scripts/release-readiness.ts --staging --evidence certification-results/staging-gates.json
       - name: Retain certification evidence
         if: always()

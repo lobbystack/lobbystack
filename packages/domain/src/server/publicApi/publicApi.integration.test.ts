@@ -4,7 +4,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { DateTime } from "luxon";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { apiKeys, appointments, auditLogs, businessHours, businesses, calendarConnections, calls, contacts, conversations, createDatabaseClient, inboxItems, operatorNotificationDeliveries, outboxMessages, receptionistProfiles, services, staff, staffServiceAssignments, users, businessMemberships, webhookDeliveries, webhookDeliveryAttempts, webhookEndpoints, webhookEvents } from "@lobbystack/db";
+import { apiKeys, appointments, auditLogs, businessHours, businesses, calendarConnections, calls, contacts, conversations, createDatabaseClient, idempotencyKeys, inboxItems, operatorNotificationDeliveries, outboxMessages, receptionistProfiles, services, staff, staffServiceAssignments, users, businessMemberships, webhookDeliveries, webhookDeliveryAttempts, webhookEndpoints, webhookEvents } from "@lobbystack/db";
 import { apiAppointmentSchema, apiCallSchema, apiStaffSchema, WEBHOOK_MAX_ATTEMPTS } from "@lobbystack/shared";
 
 import { finalizeConversationSession } from "../conversations";
@@ -13,7 +13,7 @@ import { generateApiKey, resolveApiKey } from "./apiKeys";
 import { runIdempotent } from "./idempotency";
 import { cancelAppointmentForApi, createAppointmentForApi, createContactForApi, getAvailabilityForApi, getContactForApi, getMeForApi, listAppointmentsForApi, listContactsForApi, listStaffForApi, rescheduleAppointmentForApi, updateBusinessForApi, type ApiKeyCaller } from "./operations";
 import { PublicApiError } from "./errors";
-import { createWebhookEndpoint, processWebhookDelivery } from "./webhooks";
+import { createWebhookEndpoint, processWebhookDelivery, pruneApiHistory } from "./webhooks";
 import { encryptWebhookSecret } from "./webhookTransport";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
@@ -367,5 +367,32 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
     expect(business).toMatchObject({ name: "API a renamed", hours: [{ day: "monday", open: "09:00", close: "17:30" }] });
     await expectApiError(updateBusinessForApi({ db: worker!.db }, a.caller, { hours: [{ day: "monday", open: "10:00", close: "09:00" }] }), 400, "invalid_request");
     await expectApiError(updateBusinessForApi({ db: worker!.db }, a.caller, { timezone: "Mars/Olympus" }), 400, "invalid_request");
+  });
+
+  it("prunes old webhook events and API idempotency keys, keeping events that are still being retried", async () => {
+    const daysAgo = (days: number) => new Date(Date.now() - days * 86_400_000);
+    const [endpoint] = await admin!.db.insert(webhookEndpoints).values({ businessId: b.businessId, url: "https://prune.example.com/hook", events: ["contact.created"], encryptedSecret: encryptWebhookSecret("whsec_dGVzdHNlY3JldHRlc3RzZWNyZXR0ZXN0c2VjcmV0MTI=") }).returning({ id: webhookEndpoints.id });
+    const event = async (businessId: string, createdAt: Date, deliveryStatus?: string) => {
+      const [row] = await admin!.db.insert(webhookEvents).values({ businessId, type: "contact.created", payload: { data: { id: randomUUID() } }, createdAt }).returning({ id: webhookEvents.id });
+      if (deliveryStatus) await admin!.db.insert(webhookDeliveries).values({ businessId, endpointId: endpoint!.id, eventId: row!.id, status: deliveryStatus });
+      return row!.id;
+    };
+    const oldDelivered = await event(b.businessId, daysAgo(40), "succeeded");
+    const oldFailed = await event(b.businessId, daysAgo(40), "failed");
+    const oldRetrying = await event(b.businessId, daysAgo(40), "retrying");
+    const oldPending = await event(b.businessId, daysAgo(40), "pending");
+    const recent = await event(b.businessId, daysAgo(29), "succeeded");
+    const otherBusiness = await event(a.businessId, daysAgo(40));
+    const key = async (scope: string, createdAt: Date) => (await admin!.db.insert(idempotencyKeys).values({ scope, key: randomUUID(), businessId: b.businessId, createdAt }).returning({ id: idempotencyKeys.id }))[0]!.id;
+    const oldApiKey = await key(`api:${b.caller.apiKeyId}:createContact`, daysAgo(2));
+    const freshApiKey = await key(`api:${b.caller.apiKeyId}:createContact`, new Date());
+    const oldOtherKey = await key("billing:checkout", daysAgo(2));
+
+    expect(await pruneApiHistory({ db: worker!.db }, { businessId: b.businessId })).toEqual({ events: 2, idempotencyKeys: 1 });
+    const events = await admin!.db.select({ id: webhookEvents.id }).from(webhookEvents).where(inArray(webhookEvents.id, [oldDelivered, oldFailed, oldRetrying, oldPending, recent, otherBusiness]));
+    expect(events.map((row) => row.id).sort()).toEqual([oldRetrying, oldPending, recent, otherBusiness].sort());
+    expect(await admin!.db.select({ id: webhookDeliveries.id }).from(webhookDeliveries).where(inArray(webhookDeliveries.eventId, [oldDelivered, oldFailed]))).toEqual([]);
+    const keys = await admin!.db.select({ id: idempotencyKeys.id }).from(idempotencyKeys).where(inArray(idempotencyKeys.id, [oldApiKey, freshApiKey, oldOtherKey]));
+    expect(keys.map((row) => row.id).sort()).toEqual([freshApiKey, oldOtherKey].sort());
   });
 });

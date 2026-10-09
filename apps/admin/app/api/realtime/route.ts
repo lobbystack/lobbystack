@@ -23,6 +23,7 @@ export async function GET(request: Request): Promise<Response> {
     let cleanup: (closeController?: boolean) => Promise<void> = async () => undefined;
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
+        // shortcut: one Redis connection per open stream (per tab and business); share one subscriber per process before open tabs near Redis maxclients (10,000).
         const subscriber = new Redis(redisUrl, {
           protocol: 2,
           maxRetriesPerRequest: 1,
@@ -59,6 +60,9 @@ export async function GET(request: Request): Promise<Response> {
           if (closed) return;
           await subscriber.subscribe(channel);
           if (closed) return;
+          // Pub/Sub keeps no backlog and ioredis resubscribes silently, so end the
+          // stream on a Redis drop: the browser reconnects and refetches on "ready".
+          subscriber.once("close", () => void cleanup());
           controller.enqueue(encoder.encode(`event: ready\ndata: ${JSON.stringify({ businessId })}\n\n`));
           heartbeat = setInterval(() => {
             try {

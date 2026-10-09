@@ -29,7 +29,8 @@ function injectStyles(): void {
 }
 
 function resolveOrigin(): string {
-  const baseUrl = currentScriptAttribute("data-base-url");
+  // The admin app serves this loader, so its own src names the API origin when data-base-url is absent.
+  const baseUrl = currentScriptAttribute("data-base-url") || (document.currentScript as HTMLScriptElement | null)?.src;
   if (baseUrl) {
     try {
       return new URL(baseUrl, window.location.href).origin;
@@ -60,15 +61,27 @@ function currentScriptAttribute(name: string): string | null {
   return script?.getAttribute(name) ?? null;
 }
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// crypto.randomUUID only exists on https pages; getRandomValues also works on http ones.
+function randomUuid(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  bytes[6] = (bytes[6]! & 0x0f) | 0x40;
+  bytes[8] = (bytes[8]! & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
 function makeVisitorId(widgetKey: string): string {
   const storageKey = `lobbystack.visitorId.${widgetKey}`;
   try {
+    // Older loaders stored non-UUID ids on http pages, which the session API rejects.
     const existing = window.localStorage.getItem(storageKey);
-    if (existing) return existing;
+    if (existing && UUID_PATTERN.test(existing)) return existing;
   } catch {
     /* storage unavailable */
   }
-  const id = typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `v-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const id = randomUuid();
   try {
     window.localStorage.setItem(storageKey, id);
   } catch {

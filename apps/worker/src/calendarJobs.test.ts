@@ -67,6 +67,18 @@ it("records integration.calendar_sync_failed with the appointment and provider",
     businessId: "business",
     properties: { appointmentId: "appointment", provider: "google" },
   }));
+  // One failed event write must not mark the whole connection stale and block every booking.
+  expect(mocks.mark).not.toHaveBeenCalled();
+});
+
+it("marks the connection when its credentials cannot be resolved", async () => {
+  mocks.token.mockRejectedValue(new Error("Google Calendar authorization requires reconnection."));
+
+  await expect(syncAppointmentCalendar(dependencies, { businessId: "business", appointmentId: "appointment" })).rejects.toThrow("requires reconnection");
+
+  expect(provider.upsertEvent).not.toHaveBeenCalled();
+  expect(mocks.update).toHaveBeenCalledWith(dependencies.domain, expect.objectContaining({ appointmentId: "appointment", state: "failed" }));
+  expect(mocks.mark).toHaveBeenCalledWith(dependencies.domain, { businessId: "business", connectionId: "connection", error: "Google Calendar authorization requires reconnection." });
 });
 
 it("does not record a sync failure when the calendar selection changed mid-sync", async () => {

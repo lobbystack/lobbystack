@@ -21,15 +21,13 @@ afterEach(async () => {
 });
 
 describe("LocalStorageProvider", () => {
-  it("stores, reads, ranges, copies, and deletes objects", async () => {
+  it("stores, reads, ranges, and deletes objects", async () => {
     const storage = await provider();
     const body = new TextEncoder().encode("stored bytes");
     await storage.putObject({ key: "business/knowledge/object/file.txt", body, contentType: "text/plain" });
 
     await expect(storage.headObject({ key: "business/knowledge/object/file.txt" })).resolves.toMatchObject({ length: body.byteLength, contentType: "text/plain" });
     expect(Array.from(await storage.getObject({ key: "business/knowledge/object/file.txt", range: "bytes=0-5" }))).toEqual(Array.from(new TextEncoder().encode("stored")));
-    await storage.copyObject({ sourceKey: "business/knowledge/object/file.txt", destinationKey: "business/knowledge/copy/file.txt" });
-    expect(Array.from(await storage.getObject({ key: "business/knowledge/copy/file.txt" }))).toEqual(Array.from(body));
     await storage.deleteObject({ key: "business/knowledge/object/file.txt" });
     await expect(storage.headObject({ key: "business/knowledge/object/file.txt" })).resolves.toBeNull();
   });

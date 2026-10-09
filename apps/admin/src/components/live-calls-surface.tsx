@@ -13,7 +13,7 @@ import {
 } from "@tanstack/react-table";
 import { Pause, Play, Search } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { CallRecordingPlayer } from "@/components/audio/call-recording-player";
 import { DataTablePagination, paginationFeatures } from "@/components/data-table/pagination";
@@ -75,6 +75,12 @@ export function LiveCallsSurface() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  // Search once typing pauses rather than on every keystroke.
+  const [searchQuery, setSearchQuery] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => setSearchQuery(search.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
   const [now, setNow] = useState(Date.now);
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1_000);
@@ -84,9 +90,11 @@ export function LiveCallsSurface() {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const { businesses, business } = useActiveBusiness();
   const calls = useQuery({
-    queryKey: ["calls", business?.businessId],
-    queryFn: () => getJson<{ calls: Call[] }>("/api/calls?limit=50"),
+    queryKey: ["calls", business?.businessId, searchQuery, pagination.pageIndex, pagination.pageSize],
+    queryFn: () => getJson<{ calls: Call[]; pagination: { total: number } }>(`/api/calls?limit=${pagination.pageSize}&offset=${pagination.pageIndex * pagination.pageSize}&search=${encodeURIComponent(searchQuery)}`),
     enabled: Boolean(business),
+    // Keep the current rows on screen while the next page or search loads.
+    placeholderData: keepPreviousData,
   });
   const activeCalls = useQuery({
     queryKey: ["active-calls", business?.businessId],
@@ -112,24 +120,15 @@ export function LiveCallsSurface() {
   }, [business?.businessId, queryClient]);
 
   const rows = calls.data?.calls ?? [];
-  const filteredRows = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return rows;
-    return rows.filter((call) => (
-      [call.contactName, call.contactPhone, call.reason, call.disposition, call.transcriptPreview]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase()
-        .includes(query)
-    ));
-  }, [rows, search]);
+  const total = calls.data?.pagination.total ?? 0;
 
   useEffect(() => {
+    if (!calls.data) return;
     setPagination((current) => {
-      const finalPage = Math.max(0, Math.ceil(filteredRows.length / current.pageSize) - 1);
+      const finalPage = Math.max(0, Math.ceil(total / current.pageSize) - 1);
       return current.pageIndex > finalPage ? { ...current, pageIndex: finalPage } : current;
     });
-  }, [filteredRows.length]);
+  }, [total, calls.data]);
 
   const columns = useMemo<Array<ColumnDef<typeof paginationFeatures, Call>>>(() => [
     {
@@ -186,7 +185,9 @@ export function LiveCallsSurface() {
   const table = useTable({
     features: paginationFeatures,
     columns,
-    data: filteredRows,
+    data: rows,
+    manualPagination: true,
+    rowCount: total,
     onPaginationChange: setPagination,
     state: { pagination },
   });

@@ -75,11 +75,14 @@ async function main(): Promise<void> {
     const sourceDeliveries = await withBusinessTransaction(worker.db, { businessId, actorType: "worker" }, async (tx) => await tx.select({ eventKind: operatorNotificationDeliveries.eventKind, eventKey: operatorNotificationDeliveries.eventKey }).from(operatorNotificationDeliveries).where(eq(operatorNotificationDeliveries.businessId, businessId)));
     for (const eventKind of ["voiceMessage", "pausedSms", "smsFailed", "calendarSync", "transferFailed"]) assert(sourceDeliveries.some((delivery) => delivery.eventKind === eventKind), `${eventKind} source did not create an operator delivery.`);
     assert(sourceDeliveries.every((delivery) => !delivery.eventKey.includes("Certification message") && !delivery.eventKey.includes("Paused SMS certification")), "Operator event keys contained customer content.");
-    const summaryNow = new Date(Date.now() + 24 * 60 * 60_000);
-    summaryNow.setUTCHours(9, 30, 0, 0);
-    const summary = await queueDailyOperatorSummaries({ db: worker.db }, { businessId, now: summaryNow });
-    assert(summary.queued === 1, "Daily operator summary was not queued at the configured local time.");
-    const duplicateSummary = await queueDailyOperatorSummaries({ db: worker.db }, { businessId, now: summaryNow });
+    const summaryDay = new Date(Date.now() + 24 * 60 * 60_000);
+    const at = (hours: number, minutes: number) => new Date(new Date(summaryDay).setUTCHours(hours, minutes, 0, 0));
+    const early = await queueDailyOperatorSummaries({ db: worker.db }, { businessId, now: at(9, 29) });
+    assert(early.queued === 0, "Daily operator summary was queued before the configured local time.");
+    // The 09:30 tick ran late, so the next run still has to send.
+    const summary = await queueDailyOperatorSummaries({ db: worker.db }, { businessId, now: at(9, 31) });
+    assert(summary.queued === 1, "Daily operator summary was not queued by a run after the configured local time.");
+    const duplicateSummary = await queueDailyOperatorSummaries({ db: worker.db }, { businessId, now: at(9, 45) });
     assert(duplicateSummary.queued === 0, "Daily operator summary was not idempotent.");
     const digest = await withBusinessTransaction(worker.db, { businessId, actorType: "worker" }, async (tx) => (await tx.select().from(operatorNotificationDeliveries).where(and(eq(operatorNotificationDeliveries.businessId, businessId), eq(operatorNotificationDeliveries.eventKind, "dailyDigest"))))[0]);
     assert(digest?.body.includes("operational summary") && !digest.body.includes("Paused SMS certification") && !digest.body.includes("Certification message"), "Daily summary contained customer content.");

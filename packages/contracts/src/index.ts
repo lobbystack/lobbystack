@@ -58,7 +58,8 @@ export function isAllowedUploadContentType(purpose: string, contentType: string)
 
 export const uploadCreateRequestSchema = z.object({
   businessId: z.guid(),
-  purpose: z.enum(["knowledge", "attachment", "recording", "export"]),
+  // Browsers only upload knowledge documents; other purposes are written server side.
+  purpose: z.enum(["knowledge"]),
   fileName: z.string().min(1).max(255),
   contentType: z.string().min(1).max(255),
   length: z.number().int().positive().max(500_000_000),
@@ -130,6 +131,7 @@ export const snapshotSchema = z.object({
   chatInstructions: z.string(),
   summary: z.string(),
   bookingPolicy: z.string(),
+  bookingMode: z.enum(["off", "request", "instant"]).optional(),
   knowledgeDigest: z.string(),
   knowledgeSnippets: z.array(z.object({
     id: z.string(),
@@ -189,7 +191,9 @@ export const outboxMessageSchema = z.object({
   trace: traceContextSchema,
 });
 
-export const jobQueues = ["critical", "default", "bulk", "maintenance"] as const;
+// Webhook deliveries get their own queue: a tenant's slow endpoint holds a slot
+// for up to 10 s per attempt and must not hold up other tenants' bookings.
+export const jobQueues = ["critical", "default", "bulk", "maintenance", "webhooks"] as const;
 export type JobQueue = (typeof jobQueues)[number];
 
 export const queueForJobType = {
@@ -209,8 +213,6 @@ export const queueForJobType = {
   "calendar.reconcileBusiness": "default",
   "knowledge.extractDocument": "bulk",
   "knowledge.crawlWebsite": "bulk",
-  "knowledge.indexDocument": "bulk",
-  "knowledge.reindexBusiness": "bulk",
   "knowledge.reembedBusiness": "bulk",
   "business.generateSummary": "bulk",
   "business.extractHours": "bulk",
@@ -219,7 +221,6 @@ export const queueForJobType = {
   "notification.dailySummary": "maintenance",
   "conversation.finalizeSession": "default",
   "privacy.scrubMessage": "maintenance",
-  "privacy.deleteTranscript": "maintenance",
   "privacy.deleteRecording": "maintenance",
   "privacy.cleanupPendingUpload": "maintenance",
   "phoneVerification.send": "critical",
@@ -232,7 +233,7 @@ export const queueForJobType = {
   "telemetry.flush": "maintenance",
   "outbox.backlogSample": "maintenance",
   "realtime.publish": "default",
-  "webhook.deliver": "default",
+  "webhook.deliver": "webhooks",
   "api.retention": "maintenance",
 } as const satisfies Record<string, JobQueue>;
 export type JobType = keyof typeof queueForJobType;

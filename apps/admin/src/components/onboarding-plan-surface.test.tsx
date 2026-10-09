@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { StrictMode } from "react";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -85,6 +85,24 @@ describe("original onboarding plan behavior with asynchronous checkout", () => {
     telemetryRef.current!.expectEvent("web.onboarding.plan_checkout_started", { businessId: "business", plan: "pro" });
     expect(await screen.findByText("Checkout failed")).toBeTruthy();
     await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
+  });
+  it("lets them pick again when the back button restores the page from cache", async () => {
+    const assign = vi.fn();
+    vi.stubGlobal("location", { ...window.location, assign });
+    setup();
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => init?.method === "POST"
+      ? Response.json({ requestId: "new-checkout" })
+      : Response.json({ status: "ready", checkoutUrl: "https://checkout.example/session", error: null })));
+    const button = screen.getByRole("button", { name: "plan.tiers.pro.cta.annual" });
+    await userEvent.click(button);
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("https://checkout.example/session"));
+    expect(button.hasAttribute("disabled")).toBe(true);
+    const restored = new Event("pageshow");
+    Object.defineProperty(restored, "persisted", { value: true });
+    act(() => { window.dispatchEvent(restored); });
+    await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
+    expect(screen.getByRole("button", { name: "plan.tiers.free_cloud.cta" }).hasAttribute("disabled")).toBe(false);
+    expect(assign).toHaveBeenCalledTimes(1);
   });
   it("records plan_selected when the free plan is chosen", async () => {
     setup();

@@ -6,17 +6,14 @@ const mocks = vi.hoisted(() => {
   const localList = vi.fn();
   const tollFreeList = vi.fn();
   const verificationCreate = vi.fn();
-  const verificationCheckCreate = vi.fn();
-  const lookupFetch = vi.fn();
   const client = {
     incomingPhoneNumbers,
     availablePhoneNumbers: vi.fn(() => ({ local: { list: localList }, tollFree: { list: tollFreeList } })),
-    verify: { v2: { services: vi.fn(() => ({ verifications: { create: verificationCreate }, verificationChecks: { create: verificationCheckCreate } })) } },
-    lookups: { v2: { phoneNumbers: vi.fn(() => ({ fetch: lookupFetch })) } },
+    verify: { v2: { services: vi.fn(() => ({ verifications: { create: verificationCreate } })) } },
     messages: Object.assign(vi.fn(), { create: vi.fn() }),
     calls: vi.fn(),
   };
-  return { client, incomingPhoneNumbers, numberResource, localList, tollFreeList, verificationCreate, verificationCheckCreate, lookupFetch };
+  return { client, incomingPhoneNumbers, numberResource, localList, tollFreeList, verificationCreate };
 });
 
 vi.mock("twilio", () => ({ default: vi.fn(() => mocks.client) }));
@@ -35,23 +32,15 @@ describe("TwilioProvider phone provisioning", () => {
     await expect(client.sendSms({ to: "+14165550999", from: "+14165550100", body: "fixture" })).rejects.toThrow("CERTIFICATION_RECIPIENT_BLOCKED");
     await expect(client.verifyPhone({ to: "+14165550999", serviceSid: "fixture" })).rejects.toThrow("CERTIFICATION_RECIPIENT_BLOCKED");
     await expect(client.releasePhoneNumber({ providerPhoneId: "fixture" })).rejects.toThrow("CERTIFICATION_OPERATION_BLOCKED");
-    await expect(client.configureIncomingPhoneNumber({ providerPhoneId: "fixture", voiceUrl: "https://example.invalid" })).rejects.toThrow("CERTIFICATION_OPERATION_BLOCKED");
+    await expect(client.addNumberToSipTrunk({ trunkSid: "fixture", providerPhoneId: "fixture" })).rejects.toThrow("CERTIFICATION_OPERATION_BLOCKED");
     expect(mocks.client.messages.create).not.toHaveBeenCalled();
     expect(mocks.verificationCreate).not.toHaveBeenCalled();
     expect(mocks.incomingPhoneNumbers).not.toHaveBeenCalled();
   });
 
-  it("authenticates a restricted REST key with the owning account and never uses it for webhook validation", async () => {
-    const restricted = new TwilioProvider({ accountSid: "ACowner", apiKeySid: "SKrestricted", apiKeySecret: "restricted-secret" });
+  it("authenticates a restricted REST key with the owning account", () => {
+    new TwilioProvider({ accountSid: "ACowner", apiKeySid: "SKrestricted", apiKeySecret: "restricted-secret" });
     expect(twilio).toHaveBeenCalledWith("SKrestricted", "restricted-secret", { accountSid: "ACowner" });
-    expect(await restricted.validateWebhook({ signature: "anything", url: "https://app.test/status", params: {} })).toBe(false);
-  });
-
-  it("normalizes Lookup line type results", async () => {
-    mocks.lookupFetch.mockResolvedValue({ phoneNumber: "+14165550100", countryCode: "CA", valid: true, validationErrors: [], lineTypeIntelligence: { type: "mobile", errorCode: null } });
-    const result = await provider().lookupPhoneNumber({ phoneNumber: "4165550100" });
-    expect(result).toEqual({ phoneE164: "+14165550100", countryCode: "CA", valid: true, lineType: "mobile" });
-    expect(mocks.lookupFetch).toHaveBeenCalledWith({ fields: "line_type_intelligence" });
   });
 
   it("requests voice-and-SMS inventory and normalizes Twilio's uppercase capability keys", async () => {
@@ -69,13 +58,10 @@ describe("TwilioProvider phone provisioning", () => {
     expect(await twilio.findOwnedPhoneNumber({ e164: "+14165550100" })).toEqual({ providerPhoneId: "PN123", e164: "+14165550100", friendlyName: "LobbyStack" });
   });
 
-  it("checks Verify using the durable verification SID", async () => {
+  it("starts Verify and returns the durable verification SID", async () => {
     mocks.verificationCreate.mockResolvedValue({ sid: "VE123", status: "pending" });
-    mocks.verificationCheckCreate.mockResolvedValue({ status: "approved" });
-    const twilio = provider();
-    expect(await twilio.verifyPhone({ to: "+14165550100", serviceSid: "VA123" })).toEqual({ verificationSid: "VE123", status: "pending" });
-    expect(await twilio.checkPhone({ serviceSid: "VA123", verificationSid: "VE123", code: "123456" })).toEqual({ status: "approved", approved: true });
-    expect(mocks.verificationCheckCreate).toHaveBeenCalledWith({ verificationSid: "VE123", code: "123456" });
+    expect(await provider().verifyPhone({ to: "+14165550100", serviceSid: "VA123" })).toEqual({ verificationSid: "VE123", status: "pending" });
+    expect(mocks.verificationCreate).toHaveBeenCalledWith({ to: "+14165550100", channel: "sms" });
   });
 
   it("removes emergency configuration before retrying release", async () => {

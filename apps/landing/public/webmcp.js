@@ -107,7 +107,7 @@
             includedUsage: {
               voiceMinutes: 30,
               phoneNumbers: 0,
-              knowledgeStorageMb: 25,
+              knowledgeStorageMb: 1,
             },
             description:
               "Free includes 30 voice minutes for browser test calls and a 1 MB knowledge base. It has no phone number, so it sends no texts and cannot transfer calls.",
@@ -122,7 +122,7 @@
               voiceMinutes: 150,
               transferAttempts: 20,
               alertSmsSegments: 50,
-              knowledgeStorageMb: 100,
+              knowledgeStorageMb: 5,
             },
             overageRatesUsd: {
               voiceMinute: 0.2,
@@ -142,7 +142,7 @@
               voiceMinutes: 500,
               transferAttempts: 100,
               alertSmsSegments: 200,
-              knowledgeStorageMb: 500,
+              knowledgeStorageMb: 20,
             },
             overageRatesUsd: {
               voiceMinute: 0.18,

@@ -249,7 +249,7 @@ for (const routeCase of routes) for (const viewport of viewports) for (const loc
         await context.route("**/api/billing?*", async route => {
           const response = await route.fetch();
           const original = await response.json();
-          await route.fulfill({ json: { ...original, permissions, availableCheckoutPlans: [], availableCheckoutIntervals: { starter: [], pro: [] },
+          await route.fulfill({ json: { ...original, permissions, availableCheckoutPlans: [], availableCheckoutIntervals: { starter: [], pro: [] }, effectivePlan: "pro",
             account: { ...original.account, plan: "pro", subscriptionState: "active", billingInterval: "monthly", overageSpendingCapCents: 1250 },
             usageStatus: { ...original.usageStatus, overageSpendCents: 250, usageComplete: complete, overageSpendingCapReached: false }, transactions,
           } });

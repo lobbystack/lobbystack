@@ -76,6 +76,8 @@ const DRAIN_POLL_MS = 100;
 // A drain leaves time after its timeout for the goodbye, finalization and
 // closing the database pools before the platform kills the process.
 const DRAIN_MARGIN_MS = WRAP_UP_MAX_MS + 5_000;
+// A failed transcript or finish write waits this long, then tries once more.
+const WRITE_RETRY_DELAY_MS = 1_000;
 const PRESENCE_INTERVAL_MS = 10_000;
 // A live session sends events as soon as a sideband connects, so a re-attach
 // that hears nothing for this long has found the session gone.
@@ -215,6 +217,17 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
   let draining = false;
   let onIdle: (() => void) | undefined;
   const checkIdle = () => { if (!active.size && !starting.size) onIdle?.(); };
+  // A pool timeout or a dropped connection under load passes quickly, and both
+  // call writes are safe to repeat. A drain has no time left for a second try.
+  const retryWrite = async <T>(write: () => Promise<T>): Promise<T> => {
+    try {
+      return await write();
+    } catch (error) {
+      if (draining) throw error;
+      await new Promise((resolve) => setTimeout(resolve, WRITE_RETRY_DELAY_MS));
+      return await write();
+    }
+  };
   const client = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, maxRetries: 0 }) : undefined;
   // The caller waits in silence while the agent works, so delegation runs on
   // its own reasoning effort (low unless AI_DELEGATION_* says otherwise).
@@ -496,7 +509,7 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
       ...(topUp ? { topUp } : {}),
       onStarted: () => void markLiveCallMediaStarted(input.domain, call).catch(logError(request.sessionId, "media start not recorded")),
       onGreeting: (greeting) => console.info(JSON.stringify({ event: "live.greeting", sessionId: request.sessionId, ...greeting })),
-      onTurn: (turn) => void savedTurns.then((saved) => saveLiveCallTurn(input.domain, { ...call, ...turn, sequence: turn.sequence + saved })).catch(logError(request.sessionId, "transcript save failed")),
+      onTurn: (turn) => void savedTurns.then((saved) => retryWrite(() => saveLiveCallTurn(input.domain, { ...call, ...turn, sequence: turn.sequence + saved }))).catch(logError(request.sessionId, "transcript save failed")),
       onTimeout: (reason) => void wrapUp(reason),
       onTransfer: (state) => {
         // The call counts as transferred from the moment the REFER goes out,
@@ -522,7 +535,7 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
         }
         setPresence(request, false);
         console.info(JSON.stringify({ event: "live.closed", sessionId: summary.sessionId, channel: request.channel, durationMs: summary.durationMs, billedSeconds: summary.billedSeconds, usageConfirmed: summary.usageConfirmed, closeReason: summary.closeReason, end, delegations: summary.delegations.length, outputAudio: summary.outputAudio, lateAttach: summary.lateAttach, firstEventMs: summary.firstEventMs }));
-        const pending = finish(summary).catch(logError(request.sessionId, "finish failed"));
+        const pending = retryWrite(() => finish(summary)).catch(logError(request.sessionId, "finish failed"));
         finishing.add(pending);
         // The lock outlives the finish, so a recovery job can't take an
         // ending call and finalize it with estimated seconds.

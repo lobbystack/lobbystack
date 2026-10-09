@@ -33,7 +33,7 @@ beforeEach(() => {
   limit = vi.fn().mockResolvedValue([{ id: rowId, createdAt: new Date("2019-01-01T00:00:00Z") }]);
   select = vi.fn(() => ({ from: (table: unknown) => ({ where: (predicate: SQL) => {
     predicates.push({ table, predicate });
-    return { orderBy: () => ({ limit }), limit: async () => (table === billingAccounts ? [{ plan: accountPlan }] : []) };
+    return { orderBy: () => ({ limit }), limit: async () => (table === billingAccounts ? [{ plan: accountPlan, subscriptionState: "active" }] : []) };
   } }) }));
   update = vi.fn((table: unknown) => ({ set: (value: unknown) => {
     values.push(value);

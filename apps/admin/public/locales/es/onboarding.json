@@ -5,7 +5,7 @@
     "privacy": "Privacidad"
   },
   "errors": {
-    "tooManyBusinesses": "Demasiados intentos de configuración. Espere un momento e inténtelo de nuevo."
+    "tooManyBusinesses": "Ya es propietario de 10 espacios de trabajo, el límite para una cuenta."
   },
   "adminRequired": {
     "eyebrow": "Configuración del espacio de trabajo",

@@ -42,7 +42,7 @@ export async function PATCH(request: Request) {
   try {
     const { session, businessId } = await requireOperatorBusiness(request);
     const body = await readJson(request) as { name?: string; timezone?: string; businessType?: string; defaultLocale?: string; websiteUrl?: string | null };
-    await updateBusiness(createDomainContext(), { userId: session.user.id, businessId, ...body });
+    await updateBusiness(createDomainContext(), { ...body, userId: session.user.id, businessId });
     return NextResponse.json({ ok: true });
   } catch (error) { return asApiResponse(error); }
 }

@@ -4,7 +4,7 @@ import { Pool, type PoolConfig } from "pg";
 
 import { getMeter, getTracer, recordException } from "@lobbystack/telemetry/node";
 
-import { rlsContextStatements, type RlsContext } from "./rls/context";
+import { rlsContextStatement, type RlsContext } from "./rls/context";
 import { schema } from "./schema";
 import { instrumentPool } from "./instrumentation";
 
@@ -109,9 +109,7 @@ export async function withBusinessTransaction<T>(
 
     try {
       const result = await db.transaction(async (tx) => {
-        for (const statement of rlsContextStatements(context)) {
-          await tx.execute(statement);
-        }
+        await tx.execute(rlsContextStatement(context));
         return await callback(tx);
       });
       span.end();

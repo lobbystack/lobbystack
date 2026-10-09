@@ -35,6 +35,7 @@ export function OnboardingWebsiteSurface() {
       await queryClient.invalidateQueries({ queryKey: ["businesses"] });
       navigate("/onboarding/knowledge");
     },
+    meta: { inlineError: true },
   });
   const skip = useMutation({
     mutationFn: () => requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Phone, PhoneOff, Send } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useChat } from "@ai-sdk/react";
@@ -88,6 +88,7 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
   const threadRef = useRef<HTMLDivElement | null>(null);
   const [lead, setLead] = useState({ name: "", email: "", phone: "" });
   const [leadSubmitting, setLeadSubmitting] = useState(false);
+  const [handoff, setHandoff] = useState(false);
 
   const visitorId = useMemo(() => (parentVisitorId ?? visitorIdRef.current) || "", [parentVisitorId]);
 
@@ -124,10 +125,12 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
     generateId: () => crypto.randomUUID(),
     transport,
     onError: (error) => setSubmitError(chatErrorKey(error)),
+    onFinish: ({ message }) => {
+      if (message.metadata?.automationState) setHandoff(message.metadata.automationState === "human_handoff");
+    },
   });
 
   const sending = status === "submitted" || status === "streaming";
-  const handoff = messages.some((message) => message.metadata?.automationState === "human_handoff");
   const lastMessage = messages.at(-1);
   const streamingMessageId = status === "streaming" && lastMessage?.role === "assistant" ? lastMessage.id : null;
 
@@ -188,29 +191,46 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
     }
   }, [parentVisitorId, widgetKey]);
 
+  const loadHistory = useCallback(async (signal?: AbortSignal) => {
+    const url = new URL("/api/widget/history", window.location.origin);
+    try {
+      const response = await fetch(url, { headers: { authorization: `Bearer ${sessionToken}`, "x-widget-parent-origin": parentOrigin ?? "" }, credentials: "include", signal: signal ?? null });
+      if (!response.ok) return;
+      const data = await response.json() as { automationState?: string; messages?: Array<{ id: string; role: "user" | "assistant"; content: string }> };
+      if (signal?.aborted) return;
+      setHandoff(data.automationState === "human_handoff");
+      if (Array.isArray(data.messages)) {
+        setMessages(data.messages.map((message) => ({
+          id: message.id,
+          role: message.role === "assistant" ? "assistant" : "user",
+          parts: [{ type: "text", text: message.content }],
+        })));
+      }
+    } catch {
+      /* transcript resume is best effort */
+    }
+  }, [parentOrigin, sessionToken, setMessages]);
+
   useEffect(() => {
     if (!configState) return;
     const id = visitorIdRef.current || parentVisitorId || localVisitorId(widgetKey);
     visitorIdRef.current = id;
-    const loadHistory = async () => {
-      const url = new URL("/api/widget/history", window.location.origin);
-      try {
-        const response = await fetch(url, { headers: { authorization: `Bearer ${sessionToken}`, "x-widget-parent-origin": parentOrigin ?? "" }, credentials: "include" });
-        if (!response.ok) return;
-        const data = await response.json() as { messages?: Array<{ id: string; role: "user" | "assistant"; content: string }> };
-        if (Array.isArray(data.messages)) {
-          setMessages(data.messages.map((message) => ({
-            id: message.id,
-            role: message.role === "assistant" ? "assistant" : "user",
-            parts: [{ type: "text", text: message.content }],
-          })));
-        }
-      } catch {
-        /* transcript resume is best effort */
-      }
-    };
     void loadHistory();
-  }, [configState, parentOrigin, parentVisitorId, sessionToken, widgetKey]);
+  }, [configState, loadHistory, parentVisitorId, widgetKey]);
+
+  // Team replies reach the database only, so poll for them while a person has the chat.
+  useEffect(() => {
+    if (!handoff || sending) return;
+    // Aborting on send stops an older poll from overwriting the visitor's new message.
+    const controller = new AbortController();
+    const timer = window.setInterval(() => {
+      if (!document.hidden) void loadHistory(controller.signal);
+    }, 45_000);
+    return () => {
+      window.clearInterval(timer);
+      controller.abort();
+    };
+  }, [handoff, loadHistory, sending]);
 
   useEffect(() => {
     threadRef.current?.scrollTo({ top: threadRef.current.scrollHeight });
@@ -267,7 +287,8 @@ export function WidgetChatClient({ widgetKey }: { widgetKey: string }) {
         body: JSON.stringify({ visitorId: visitorIdRef.current, ...(lead.name.trim() ? { name: lead.name.trim() } : {}), ...(email ? { email } : {}), ...(phone ? { phone } : {}) }),
       });
       if (!response.ok) {
-        setSubmitError("chat.sendingFailed");
+        const code = await response.json().then((data: { code?: unknown }) => data.code, () => null);
+        setSubmitError(code === "invalid_phone" ? "lead.invalidPhone" : code === "invalid_email" ? "lead.invalidEmail" : "chat.sendingFailed");
         return;
       }
       setLeadDone(true);

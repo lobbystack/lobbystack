@@ -1,7 +1,7 @@
 import { and, asc, eq, gte, ilike, lt, ne, or } from "drizzle-orm";
 import { DateTime } from "luxon";
 
-import { appointments, contacts, receptionistProfiles, services, withBusinessTransaction } from "@lobbystack/db";
+import { appointments, contacts, conversationSessions, receptionistProfiles, services, withBusinessTransaction } from "@lobbystack/db";
 import { normalizeAppointmentChangePolicy, type HoursWindow } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
@@ -175,6 +175,20 @@ export async function findCallerBooking(context: DomainContext, input: { busines
       )).limit(1))[0];
   });
   return existing ? { ok: true as const, appointmentId: existing.id, serviceName: existing.serviceName, startsAt: input.startsAt, alreadyBooked: true as const } : undefined;
+}
+
+/**
+ * The booking this call already made at that time, for a call with no caller ID
+ * to match on. It reads only the call's own outcome, so it reveals nothing about
+ * anyone else's bookings.
+ */
+export async function findCallBooking(context: DomainContext, input: { businessId: string; callId: string; serviceName: string; startsAt: string }) {
+  const startsAt = Date.parse(input.startsAt);
+  const outcome = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) =>
+    (await tx.select({ summary: conversationSessions.summary }).from(conversationSessions).where(and(eq(conversationSessions.businessId, input.businessId), eq(conversationSessions.callId, input.callId), eq(conversationSessions.summaryKind, "booked"))).limit(1))[0]?.summary);
+  const serviceName = typeof outcome?.serviceName === "string" ? outcome.serviceName : "";
+  if (!serviceName || typeof outcome?.startsAt !== "string" || Date.parse(outcome.startsAt) !== startsAt || !serviceNamesMatch({ name: serviceName, slug: "" }, input.serviceName)) return undefined;
+  return { ok: true as const, serviceName, startsAt: input.startsAt, alreadyBooked: true as const };
 }
 
 export async function bookForCaller(

@@ -74,10 +74,13 @@ export async function enqueueJob(
     idempotencyKey: input.idempotencyKey,
     scheduled: (input.delayMs ?? 0) > 0,
   });
-  // Attempts and backoff come from the queue's defaultJobOptions.
+  // Attempts and backoff come from the queue's defaultJobOptions, which give up
+  // after about 15 seconds. Usage billing and customer notifications have no
+  // other retry, so they ride out a provider outage for about 3 hours.
   const options: JobsOptions = {
     jobId,
     ...(input.delayMs !== undefined ? { delay: input.delayMs } : {}),
+    ...(input.type === "billing.syncUsage" || input.type === "notification.dispatch" ? { attempts: 12, backoff: { type: "exponential", delay: 5_000 } } : {}),
   };
   await queue.add(input.type, envelope, options);
   return jobId;

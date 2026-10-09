@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
 
 import { eq } from "drizzle-orm";
-import { Scrypt } from "lucia";
 
 import { accounts, createDatabaseClient, users } from "@lobbystack/db";
+
+import { hashReplacementPassword, replacementPasswordPrefix } from "../apps/admin/src/lib/password";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -23,8 +24,8 @@ async function main(): Promise<void> {
   const email = `${userId}@auth-check.invalid`;
   const password = `Legacy-Pass-${randomUUID()}!`;
   try {
-    const legacyHash = await new Scrypt().hash(password);
-    assert(!legacyHash.startsWith("lobbystack-scrypt-v1:"), "Test fixture is not a legacy Scrypt hash.");
+    const legacyHash = (await hashReplacementPassword(password)).slice(replacementPasswordPrefix.length);
+    assert(!legacyHash.startsWith(replacementPasswordPrefix), "Test fixture is not a legacy Scrypt hash.");
     await auth.db.insert(users).values({ id: userId, email, normalizedEmail: email, emailVerified: true, passwordHash: legacyHash });
     await auth.db.insert(accounts).values({ userId, providerId: "credential", accountId: userId, password: legacyHash });
 

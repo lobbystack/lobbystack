@@ -107,6 +107,13 @@ describe("v1 request pipeline", () => {
     expect(await response.json()).toEqual({ error: { code: "conflict", message: "Duplicate." } });
   });
 
+  it("never stores the createWebhook response, which holds the plain signing secret", async () => {
+    const webhookKey: ResolvedApiKey = { ...key, scopes: ["webhooks:manage"] };
+    const response = await handleApiRequest(request("/webhooks", { method: "POST", body: "{}", headers: { authorization: "Bearer lsk_x", "idempotency-key": "k" } }), "createWebhook", async () => ({ body: { data: { secret: "whsec_x" } } }), { resolveKey: async () => webhookKey, rateLimit: allow });
+    expect(response.status).toBe(201);
+    expect(domain.runIdempotent).not.toHaveBeenCalled();
+  });
+
   it("ignores Idempotency-Key on operations that do not create things", async () => {
     const response = await handleApiRequest(request("/appointments/x/cancel", { method: "POST", headers: { authorization: "Bearer lsk_x", "idempotency-key": "k" } }), "listContacts", async () => ({ body: { ok: true } }), { resolveKey: async () => key, rateLimit: allow });
     expect(response.status).toBe(200);

@@ -40,7 +40,7 @@ docker compose ps
 
 The migrator applies PostgreSQL migrations before the admin and worker services start. Health checks hold dependent services until their prerequisites are ready.
 
-The admin readiness response includes database and storage checks. The worker readiness response includes PostgreSQL, Redis, and storage status.
+The admin readiness response includes PostgreSQL, Redis, and storage checks. The worker readiness response includes PostgreSQL, Redis, and storage status.
 
 LobbyStack does not run monitoring containers. Application logs remain available through `docker compose logs`, and the health endpoints continue to work.
 

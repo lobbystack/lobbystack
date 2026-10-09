@@ -87,8 +87,13 @@ describe("startup mode", () => {
     expect(config).toMatchObject({
       persistence: "memory",
       autocapture: false,
+      capture_dead_clicks: false,
+      capture_exceptions: false,
+      capture_heatmaps: false,
       capture_pageview: true,
+      capture_performance: false,
       disable_session_recording: true,
+      disable_surveys: true,
       person_profiles: "identified_only",
     })
   })

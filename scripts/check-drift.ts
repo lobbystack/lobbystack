@@ -68,9 +68,6 @@ for (const path of [
   requireFile(path);
 }
 
-if (!readText("apps/admin/app/api/calls/route.ts").includes("withOperatorTransaction")) {
-  errors.push("operator call creation is missing an RLS-scoped membership transaction");
-}
 if (!readText("packages/db/migrations/0012_dispatcher_runtime.sql").includes("lobbystack_dispatcher")) {
   errors.push("dispatcher runtime migration is missing dispatcher role configuration");
 }

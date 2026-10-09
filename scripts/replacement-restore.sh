@@ -90,6 +90,9 @@ fi
 
 "${COMPOSE[@]}" exec -T postgres psql --username postgres --dbname postgres --set ON_ERROR_STOP=1 \
   --command "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'lobbystack' AND pid <> pg_backend_pid();" >/dev/null
+# From here a failure leaves a dropped or partial restore, so keep the writers
+# stopped: a restarted app would take writes that the next restore attempt drops.
+trap 'echo "Restore failed partway. admin and worker stay stopped. Fix the error above and run the restore again." >&2' EXIT
 "${COMPOSE[@]}" exec -T postgres dropdb --username postgres --if-exists lobbystack
 "${COMPOSE[@]}" exec -T postgres createdb --username postgres lobbystack
 "${COMPOSE[@]}" exec -T postgres pg_restore \
@@ -120,4 +123,6 @@ else
     '
 fi
 
+trap - EXIT
+restart_writers
 echo "Replacement backup restored: $BACKUP_DIR"

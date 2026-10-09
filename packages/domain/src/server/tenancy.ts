@@ -1,6 +1,6 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, ne, or, sql } from "drizzle-orm";
 
 import { enqueueOutbox, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { businessInvitations, businessMemberships, businesses, receptionistProfiles, staff, users } from "@lobbystack/db";
@@ -28,6 +28,9 @@ function cleanSlug(slug: string): string {
   return result;
 }
 
+// Each business adds recurring worker jobs, so one account cannot create them without bound.
+const maxOwnedBusinesses = 10;
+
 export async function createBusiness(
   context: DomainContext,
   input: CreateBusinessInput,
@@ -40,6 +43,12 @@ export async function createBusiness(
     businessId,
     actorType: "system",
   }, async (tx) => {
+    // Lock the user row so concurrent creates by the same account count each other.
+    await tx.select({ id: users.id }).from(users).where(eq(users.id, input.userId)).for("update");
+    const owned = await tx.execute<{ count: number }>(sql`select count(*)::int as count from app.list_user_businesses(${input.userId}) where role = 'business_owner'`);
+    if ((owned.rows[0]?.count ?? 0) >= maxOwnedBusinesses) {
+      throw Object.assign(new Error(`Too many workspaces. One account can own up to ${maxOwnedBusinesses}.`), { status: 403 });
+    }
     let business: { id: string } | undefined;
     for (let attempt = 0; attempt < 5; attempt++) {
       const insert = tx.insert(businesses).values({
@@ -98,28 +107,12 @@ export async function createBusiness(
 export async function listUserBusinesses(
   db: Database,
   userId: string,
-): Promise<Array<{ businessId: string; name: string; slug: string; role: string; active: boolean; onboardingStage?: string; createdAt?: string }>> {
-  const result = await withBusinessTransaction(db, { userId, actorType: "operator" }, async (tx) => {
+): Promise<Array<{ businessId: string; name: string; slug: string; role: string; active: boolean; timezone: string; businessType: string; defaultLocale: string; websiteUrl: string | null; onboardingStage: string; createdAt: string }>> {
+  return await withBusinessTransaction(db, { userId, actorType: "operator" }, async (tx) => {
     const [user] = await tx.select({ activeBusinessId: users.activeBusinessId }).from(users).where(eq(users.id, userId)).limit(1);
-    const rows = await tx.execute(sql`select business_id, name, slug, role from app.list_user_businesses(${userId})`);
-    const details = [];
-    for (const row of rows.rows) {
-      const businessId = String(row.business_id);
-      await tx.execute(sql`select set_config('app.business_id', ${businessId}, true)`);
-      const [detail] = await tx.select({
-        id: businesses.id,
-        timezone: businesses.timezone,
-        businessType: businesses.businessType,
-        defaultLocale: businesses.defaultLocale,
-        websiteUrl: businesses.websiteUrl,
-        onboardingStage: businesses.onboardingStage,
-        createdAt: businesses.createdAt,
-      }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
-      if (detail) details.push(detail);
-    }
-    return { activeBusinessId: user?.activeBusinessId ?? null, rows: rows.rows, details };
+    const rows = await tx.execute<{ businessId: string; name: string; slug: string; role: string; timezone: string; businessType: string; defaultLocale: string; websiteUrl: string | null; onboardingStage: string; createdAt: Date }>(sql`select business_id as "businessId", name, slug, role, timezone, business_type as "businessType", default_locale as "defaultLocale", website_url as "websiteUrl", onboarding_stage as "onboardingStage", created_at as "createdAt" from app.list_user_businesses(${userId})`);
+    return rows.rows.map((row) => ({ ...row, active: row.businessId === user?.activeBusinessId, createdAt: new Date(row.createdAt).toISOString() }));
   });
-  return result.rows.map((row) => { const detail = result.details.find((item) => item.id === String(row.business_id)); return { businessId: String(row.business_id), name: String(row.name), slug: String(row.slug), role: String(row.role), active: String(row.business_id) === result.activeBusinessId, ...(detail ? { timezone: detail.timezone, businessType: detail.businessType, defaultLocale: detail.defaultLocale, websiteUrl: detail.websiteUrl, onboardingStage: detail.onboardingStage, createdAt: detail.createdAt.toISOString() } : {}) }; });
 }
 
 export async function updateBusiness(
@@ -164,6 +157,10 @@ export async function inviteMember(
   const token = randomBytes(32).toString("base64url");
   const tokenHash = createHash("sha256").update(token).digest("hex");
   const normalizedEmail = normalizeAuthEmail(input.email);
+  // Exactly one plain address: mail transports send a comma or semicolon list to every recipient.
+  if (!/^[^\s@,;:<>()"]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+$/.test(normalizedEmail)) {
+    throw Object.assign(new Error("Enter one valid email address."), { status: 400 });
+  }
   const invitationId = randomUUID();
   await withBusinessTransaction(context.db, {
     userId: input.userId,
@@ -175,7 +172,7 @@ export async function inviteMember(
       id: invitationId,
       businessId: input.businessId,
       invitedByUserId: input.userId,
-      email: input.email,
+      email: normalizedEmail,
       normalizedEmail,
       role: input.role,
       tokenHash,
@@ -189,7 +186,7 @@ export async function inviteMember(
       dedupeKey: `invitation:${invitationId}:send`,
       payload: {
         invitationId,
-        email: input.email,
+        email: normalizedEmail,
         token,
         template: "invitation",
         // Invitations may go to someone without an account preference. Let the
@@ -203,7 +200,7 @@ export async function inviteMember(
 
 export async function acceptInvitation(
   context: DomainContext,
-  input: { userId: string; tokenHash: string },
+  input: { userId: string; tokenHash: string; email: string | null | undefined; emailVerified: boolean | null | undefined },
 ): Promise<{ businessId: string; role: string }> {
   const resolved = await context.db.execute<{ business_id: string }>(sql`select app.resolve_business_by_invitation(${input.tokenHash}) as business_id`);
   const businessId = resolved.rows[0]?.business_id;
@@ -216,7 +213,17 @@ export async function acceptInvitation(
     if (!invitation || invitation.expiresAt <= new Date()) {
       throw new Error("Invitation is invalid or expired.");
     }
-    await tx.insert(businessMemberships).values({
+    // A forwarded or leaked link must not let a different account join.
+    if (!input.emailVerified || !input.email || normalizeAuthEmail(input.email) !== invitation.normalizedEmail) {
+      throw Object.assign(new Error("Sign in with the verified email address this invitation was sent to."), { status: 403 });
+    }
+    // Claim the invitation before joining, so a second accept of the same token fails.
+    const [claimed] = await tx.update(businessInvitations).set({ status: "accepted", acceptedByUserId: input.userId, acceptedAt: new Date(), updatedAt: new Date() }).where(and(eq(businessInvitations.id, invitation.id), eq(businessInvitations.status, "pending"))).returning({ id: businessInvitations.id });
+    if (!claimed) {
+      throw new Error("Invitation is invalid or expired.");
+    }
+    // An active member keeps their role, so an owner who accepts a viewer invite stays owner.
+    const [joined] = await tx.insert(businessMemberships).values({
       businessId: invitation.businessId,
       userId: input.userId,
       role: invitation.role,
@@ -224,9 +231,10 @@ export async function acceptInvitation(
     }).onConflictDoUpdate({
       target: [businessMemberships.businessId, businessMemberships.userId],
       set: { role: invitation.role, status: "active", updatedAt: new Date() },
-    });
-    await tx.update(businessInvitations).set({ status: "accepted", acceptedByUserId: input.userId, acceptedAt: new Date(), updatedAt: new Date() }).where(eq(businessInvitations.id, invitation.id));
-    return { businessId: invitation.businessId, role: invitation.role };
+      setWhere: ne(businessMemberships.status, "active"),
+    }).returning({ role: businessMemberships.role });
+    const role = joined?.role ?? (await tx.select({ role: businessMemberships.role }).from(businessMemberships).where(and(eq(businessMemberships.businessId, invitation.businessId), eq(businessMemberships.userId, input.userId))).limit(1))[0]!.role;
+    return { businessId: invitation.businessId, role };
   });
 }
 
@@ -271,13 +279,17 @@ export async function removeMember(
 ): Promise<void> {
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    const membership = (await tx.select({ role: businessMemberships.role }).from(businessMemberships).where(and(eq(businessMemberships.id, input.membershipId), eq(businessMemberships.businessId, input.businessId), eq(businessMemberships.status, "active"))).limit(1))[0];
+    const membership = (await tx.select({ role: businessMemberships.role, userId: businessMemberships.userId }).from(businessMemberships).where(and(eq(businessMemberships.id, input.membershipId), eq(businessMemberships.businessId, input.businessId), eq(businessMemberships.status, "active"))).limit(1))[0];
     if (!membership) throw new Error("Membership not found.");
     if (membership.role === "business_owner") {
       const owners = await tx.select({ id: businessMemberships.id }).from(businessMemberships).where(and(eq(businessMemberships.businessId, input.businessId), eq(businessMemberships.role, "business_owner"), eq(businessMemberships.status, "active")));
       if (owners.length <= 1) throw new Error("The final owner cannot be removed.");
     }
+    // RLS hides the member's users row from the app role; this function returns their email.
+    const email = (await tx.execute<{ email: string }>(sql`select email from app.list_business_members(${input.businessId}::uuid) where membership_id = ${input.membershipId}::uuid`)).rows[0]?.email;
     await tx.update(businessMemberships).set({ status: "removed", updatedAt: new Date() }).where(and(eq(businessMemberships.id, input.membershipId), eq(businessMemberships.businessId, input.businessId), eq(businessMemberships.status, "active")));
+    // Pending invitations the member sent (the inviter gets the token) or received would let them back in.
+    await tx.update(businessInvitations).set({ status: "revoked", updatedAt: new Date() }).where(and(eq(businessInvitations.businessId, input.businessId), eq(businessInvitations.status, "pending"), or(eq(businessInvitations.invitedByUserId, membership.userId), email ? eq(businessInvitations.normalizedEmail, normalizeAuthEmail(email)) : undefined)));
   });
 }
 

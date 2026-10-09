@@ -19,7 +19,7 @@ function request(days: number, granularity: string) {
 }
 
 describe("analytics route range limits", () => {
-  it.each<[string, number]>([["hour", 366], ["day", 366], ["week", 3493], ["month", 3660], ["year", 3660]])("allows %s ranges up to %i days", async (granularity, days) => {
+  it.each<[string, number]>([["hour", 20], ["day", 366], ["week", 3493], ["month", 3660], ["year", 3660]])("allows %s ranges up to %i days", async (granularity, days) => {
     expect((await request(days, granularity)).status).toBe(200);
     expect((await request(days + 1, granularity)).status).toBe(400);
   });

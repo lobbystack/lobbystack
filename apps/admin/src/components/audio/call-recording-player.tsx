@@ -59,6 +59,8 @@ export function CallRecordingPlayer({
   const preparingPlaybackSrcRef = useRef<Promise<string | null> | null>(null);
   const preparedForSrcRef = useRef<string | null>(null);
   const playOnLoadRef = useRef(false);
+  // Bumped on every src change so a download still running for an older src never sets state.
+  const generationRef = useRef(0);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(normalizeDurationSeconds(initialDurationSeconds));
   const [isPlaying, setIsPlaying] = useState(false);
@@ -73,6 +75,7 @@ export function CallRecordingPlayer({
       URL.revokeObjectURL(processedUrlRef.current);
       processedUrlRef.current = null;
     }
+    generationRef.current += 1;
     preparingPlaybackSrcRef.current = null;
     preparedForSrcRef.current = null;
     playOnLoadRef.current = false;
@@ -92,6 +95,8 @@ export function CallRecordingPlayer({
       return await preparingPlaybackSrcRef.current;
     }
 
+    const generation = generationRef.current;
+    const stale = () => generation !== generationRef.current;
     const promise = (async () => {
       const AudioContextCtor =
         window.AudioContext ||
@@ -114,6 +119,9 @@ export function CallRecordingPlayer({
 
         try {
           const audioBuffer = await decodeContext.decodeAudioData(inputBuffer.slice(0));
+          if (stale()) {
+            return null;
+          }
 
           if (audioBuffer.numberOfChannels < 2) {
             preparedForSrcRef.current = src;
@@ -151,11 +159,16 @@ export function CallRecordingPlayer({
           void decodeContext.close();
         }
       } catch {
+        if (stale()) {
+          return null;
+        }
         preparedForSrcRef.current = src;
         setPlaybackSrc(src);
         return src;
       } finally {
-        preparingPlaybackSrcRef.current = null;
+        if (!stale()) {
+          preparingPlaybackSrcRef.current = null;
+        }
       }
     })();
 

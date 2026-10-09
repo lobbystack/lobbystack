@@ -73,6 +73,14 @@ export async function claimNotificationDelivery(
   });
 }
 
+/** When a send holds this notification, the time its lease ends and another run may claim it. */
+export async function notificationLeaseEndsAt(context: DomainContext, input: { businessId: string; notificationId: string }): Promise<Date | null> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const row = (await tx.select({ updatedAt: notifications.updatedAt }).from(notifications).where(and(eq(notifications.id, input.notificationId), eq(notifications.businessId, input.businessId), eq(notifications.status, "processing"))).limit(1))[0];
+    return row ? new Date(row.updatedAt.getTime() + notificationLeaseMs) : null;
+  });
+}
+
 function localeFor(value: string | null | undefined): InterfaceLocale {
   return normalizeInterfaceLocale(value) ?? "en";
 }
@@ -428,11 +436,15 @@ export async function queueDailyOperatorSummaries(context: DomainContext, input:
     const sendTime = local.toFormat("HH:mm");
     const recipientResult = await tx.execute(sql`SELECT user_id AS "userId", email, phone, email_enabled AS "emailEnabled", sms_enabled AS "smsEnabled", daily_summary_enabled AS "dailySummaryEnabled", daily_summary_send_time AS "dailySummarySendTime", sms_consent_granted_at AS "smsConsentGrantedAt", sms_consent_revoked_at AS "smsConsentRevokedAt", sms_consent_disclosure_version AS "smsConsentDisclosureVersion", sms_consent_phone AS "smsConsentPhone" FROM app.resolve_operator_notification_recipients(${input.businessId}::uuid)`);
     type SummaryRecipient = { userId: string; email: string; phone: string | null; emailEnabled: boolean; smsEnabled: boolean; dailySummaryEnabled: boolean; dailySummarySendTime: string | null; smsConsentGrantedAt: Date | null; smsConsentRevokedAt: Date | null; smsConsentDisclosureVersion: string | null; smsConsentPhone: string | null };
-    const preferences = (recipientResult.rows as SummaryRecipient[]).filter((preference) => preference.dailySummaryEnabled && preference.dailySummarySendTime === sendTime);
+    // Any run from the send time until midnight sends, so a late tick, a restart or a DST jump can't skip a day.
+    const preferences = (recipientResult.rows as SummaryRecipient[]).filter((preference) => preference.dailySummaryEnabled && preference.dailySummarySendTime !== null && preference.dailySummarySendTime <= sendTime);
     if (preferences.length === 0) return { eligible: 0, queued: 0 };
     const sender = await resolveSmsSender(tx, input.businessId);
     let queued = 0;
     for (const preference of preferences) {
+      const eventKey = `dailyDigest:${input.businessId}:${localDate}:${preference.userId}`;
+      // The per-day event key already blocks a second digest; this skips rebuilding it on every later tick.
+      if ((await tx.select({ id: operatorNotificationDeliveries.id }).from(operatorNotificationDeliveries).where(and(eq(operatorNotificationDeliveries.eventKey, eventKey), eq(operatorNotificationDeliveries.userId, preference.userId))).limit(1)).length > 0) continue;
       const alerts = await tx.select({ eventKind: operatorNotificationDeliveries.eventKind, eventKey: operatorNotificationDeliveries.eventKey })
         .from(operatorNotificationDeliveries)
         .where(and(
@@ -450,7 +462,6 @@ export async function queueDailyOperatorSummaries(context: DomainContext, input:
       const counts = Object.fromEntries(operatorNotificationEventKeys.map((key) => [key, 0])) as Record<OperatorNotificationEventKey, number>;
       for (const eventKind of uniqueAlerts.values()) counts[eventKind] += 1;
       const message = buildDailySummary({ businessName: business.name, date: previousDayStart.toISODate() ?? "previous day", counts, total: uniqueAlerts.size });
-      const eventKey = `dailyDigest:${input.businessId}:${localDate}:${preference.userId}`;
       const smsConsent = hasOperatorSmsConsent(preference, preference.phone);
       const channels = [
         preference.emailEnabled ? { channel: "email", destination: preference.email } : null,
@@ -505,6 +516,14 @@ export async function queueOperatorAlertInTransaction(tx: DatabaseTransaction, i
 
 export async function claimOperatorNotificationDelivery(context: DomainContext, input: { businessId: string; deliveryId: string }): Promise<boolean> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => (await tx.update(operatorNotificationDeliveries).set({ status: "processing", updatedAt: new Date() }).where(and(eq(operatorNotificationDeliveries.id, input.deliveryId), eq(operatorNotificationDeliveries.businessId, input.businessId), or(eq(operatorNotificationDeliveries.status, "pending"), and(eq(operatorNotificationDeliveries.status, "processing"), lt(operatorNotificationDeliveries.updatedAt, new Date(Date.now() - notificationLeaseMs)))))).returning({ id: operatorNotificationDeliveries.id })).length > 0);
+}
+
+/** When a send holds this delivery, the time its lease ends and another run may claim it. */
+export async function operatorNotificationLeaseEndsAt(context: DomainContext, input: { businessId: string; deliveryId: string }): Promise<Date | null> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const row = (await tx.select({ updatedAt: operatorNotificationDeliveries.updatedAt }).from(operatorNotificationDeliveries).where(and(eq(operatorNotificationDeliveries.id, input.deliveryId), eq(operatorNotificationDeliveries.businessId, input.businessId), eq(operatorNotificationDeliveries.status, "processing"))).limit(1))[0];
+    return row ? new Date(row.updatedAt.getTime() + notificationLeaseMs) : null;
+  });
 }
 
 export async function loadOperatorNotificationDelivery(context: DomainContext, input: { businessId: string; deliveryId: string }) {

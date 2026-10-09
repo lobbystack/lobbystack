@@ -9,7 +9,7 @@ describe("call recording availability", () => {
     expect(recordingListState(phoneCall)).toBe("pending");
   });
 
-  it.each(["busy", "no_answer", "missed", "canceled", "cancelled", "contact_blocked"])("does not promise a recording for %s", (disposition) => {
+  it.each(["busy", "no_answer", "missed", "canceled", "cancelled", "blocked_contact"])("does not promise a recording for %s", (disposition) => {
     expect(recordingState({ ...phoneCall, disposition })).toBe("missing");
     expect(recordingListState({ ...phoneCall, disposition })).toBe("missing");
   });

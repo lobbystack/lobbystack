@@ -231,12 +231,7 @@ export function AgentBasicSettingsPage({
     setIsTransferSaving(true);
     setTransferStatus(null);
     try {
-      await saveProfile({
-        businessId,
-        defaultLocale,
-        greeting,
-        transferNumber: transferNumberResolution.value,
-      });
+      await saveProfile({ businessId, transferNumber: transferNumberResolution.value });
       telemetry.track("web.agent.settings_saved", { businessId, setting: "transfer_number" });
       setTransferStatus(t("agent:actions.saved"));
       setTransferStatusTone("success");
@@ -260,24 +255,11 @@ export function AgentBasicSettingsPage({
       return;
     }
 
-    const transferNumberResolution = resolveTransferNumberForSave({
-      rawInputValue: transferNumberInputValue,
-      validTransferNumber: transferNumber,
-    });
-    if (!transferNumberResolution.ok) {
-      setTransferStatus(t(transferNumberResolution.errorKey));
-      setTransferStatusTone("error");
-      return;
-    }
-
     setIsAppointmentChangeSaving(true);
     setAppointmentChangeStatus(null);
     try {
       await saveProfile({
         businessId,
-        defaultLocale,
-        greeting,
-        transferNumber: transferNumberResolution.value,
         appointmentChangePolicy: buildAppointmentChangePolicyForSave({
           allowCancel,
           allowReschedule,
@@ -450,24 +432,9 @@ export function AgentBasicSettingsPage({
                           return;
                         }
 
-                        const transferNumberResolution = resolveTransferNumberForSave({
-                          rawInputValue: transferNumberInputValue,
-                          validTransferNumber: transferNumber,
-                        });
-                        if (!transferNumberResolution.ok) {
-                          setTransferStatus(t(transferNumberResolution.errorKey));
-                          setTransferStatusTone("error");
-                          return;
-                        }
-
                         setIsLocaleSaving(true);
                         try {
-                          await saveProfile({
-                            businessId,
-                            defaultLocale: nextLocale,
-                            greeting,
-                            transferNumber: transferNumberResolution.value,
-                          });
+                          await saveProfile({ businessId, defaultLocale: nextLocale });
                           telemetry.track("web.agent.settings_saved", { businessId, setting: "default_locale" });
                           setLocaleStatus(t("agent:actions.saved"));
                         } catch {

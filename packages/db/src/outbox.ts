@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { and, asc, eq, inArray, isNull, lte, or, sql } from "drizzle-orm";
+import { and, asc, eq, exists, inArray, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
 
 import type { TraceContextCarrier } from "@lobbystack/contracts";
 import { redactOtelExceptionText } from "@lobbystack/telemetry/node";
 
 import { withDispatcherTransaction, type DatabaseTransaction, type Database } from "./client";
-import { outboxMessages } from "./schema";
+import { businessMemberships, businesses, outboxMessages } from "./schema";
 
 export const OUTBOX_MAX_ATTEMPTS = 10;
 
@@ -132,4 +132,39 @@ export async function markOutboxFailed(
       .where(fence);
     return deadLettered;
   });
+}
+
+/**
+ * Deletes up to `limit` messages published before `publishedBefore` and returns
+ * how many it removed. Unpublished and dead-lettered rows are never published,
+ * so they stay. Onboarding follow-ups stay too: their dedupe key is what stops
+ * a resubmitted attribution form from scheduling a second check-in.
+ */
+export async function prunePublishedOutbox(
+  db: Database,
+  options: { publishedBefore: Date; limit: number },
+): Promise<number> {
+  return await withDispatcherTransaction(db, async (tx) => {
+    const batch = tx
+      .select({ id: outboxMessages.id })
+      .from(outboxMessages)
+      .where(and(lt(outboxMessages.publishedAt, options.publishedBefore), ne(outboxMessages.topic, "onboarding.sendFollowup")))
+      .limit(options.limit)
+      .for("update", { skipLocked: true });
+    const deleted = await tx.delete(outboxMessages).where(inArray(outboxMessages.id, batch)).returning({ id: outboxMessages.id });
+    return deleted.length;
+  });
+}
+
+/**
+ * Lists every business for the worker's scheduler, with whether it still has
+ * an active member. Runs as the dispatcher, the one role that reads businesses
+ * across tenants.
+ */
+export async function listSchedulerBusinesses(db: Database): Promise<Array<{ id: string; hasMembers: boolean }>> {
+  return await withDispatcherTransaction(db, async (tx) => await tx.select({
+    id: businesses.id,
+    // Select a constant: the dispatcher may read only business_id and status of a membership.
+    hasMembers: sql<boolean>`${exists(tx.select({ one: sql`1` }).from(businessMemberships).where(and(eq(businessMemberships.businessId, businesses.id), eq(businessMemberships.status, "active"))))}`,
+  }).from(businesses));
 }

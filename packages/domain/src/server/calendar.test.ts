@@ -1,7 +1,8 @@
 import { beforeEach, expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({ transaction: vi.fn() }));
-vi.mock("@lobbystack/db", async (original) => ({ ...await original<typeof import("@lobbystack/db")>(), withBusinessTransaction: mocks.transaction }));
-import { resolveCalendarAccessToken } from "./calendar";
+const mocks = vi.hoisted(() => ({ transaction: vi.fn(), enqueue: vi.fn(), alert: vi.fn() }));
+vi.mock("@lobbystack/db", async (original) => ({ ...await original<typeof import("@lobbystack/db")>(), withBusinessTransaction: mocks.transaction, enqueueOutbox: mocks.enqueue }));
+vi.mock("./notifications", () => ({ queueOperatorAlertInTransaction: mocks.alert }));
+import { resolveCalendarAccessToken, updateAppointmentSyncStateInTransaction } from "./calendar";
 
 const now = new Date("2026-09-13T12:00:00Z");
 const row = { id: "connection", businessId: "business", status: "connected", encryptedAccessToken: "enc:old", encryptedRefreshToken: "enc:refresh", tokenExpiresAt: new Date(now.getTime() - 1000) };
@@ -46,4 +47,22 @@ it("requires reconnection when credentials are missing or disconnected", async (
   useConnection({ ...row, status: "disconnected" });
   await expect(resolveCalendarAccessToken(context, input)).rejects.toThrow("unavailable");
   expect(refresh).not.toHaveBeenCalled();
+});
+
+it("alerts operators once per appointment time, not once per sync retry", async () => {
+  // Each failed attempt bumps the appointment revision.
+  let revision = 1;
+  let startsAt = new Date("2026-09-20T14:00:00Z");
+  const tx = { update: () => ({ set: () => ({ where: () => ({ returning: async () => [{ id: "appointment", revision: ++revision, startsAt, status: "confirmed" }] }) }) }) };
+  const fail = () => updateAppointmentSyncStateInTransaction(tx as never, { businessId: "business", appointmentId: "appointment", state: "failed", error: "status 503" });
+  await fail();
+  await fail();
+  // A week later the operator moves it, and that sync fails too.
+  startsAt = new Date("2026-09-21T15:00:00Z");
+  await fail();
+  expect(mocks.alert.mock.calls.map(([, alert]) => alert.eventKey)).toEqual([
+    "calendarSync:appointment:appointment:2026-09-20T14:00:00.000Z:confirmed",
+    "calendarSync:appointment:appointment:2026-09-20T14:00:00.000Z:confirmed",
+    "calendarSync:appointment:appointment:2026-09-21T15:00:00.000Z:confirmed",
+  ]);
 });

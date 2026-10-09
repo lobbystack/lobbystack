@@ -31,7 +31,7 @@
     {
       "id": "unit_economics.non_sms_ai",
       "status": "required",
-      "implementation": ["packages/domain/src/server/unitEconomics.ts", "apps/admin/app/api/analytics/route.ts"],
+      "implementation": ["packages/domain/src/server/unitEconomics.ts"],
       "tests": ["scripts/replacement-unit-economics-check.ts"],
       "certification": ["scripts/replacement-unit-economics-check.ts"]
     },

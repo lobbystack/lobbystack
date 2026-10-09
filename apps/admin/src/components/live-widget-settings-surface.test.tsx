@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "fr", resolvedLanguage: "fr" }, t: (key: string, options?: { date?: string }) => options?.date ? `${key}:${options.date}` : key }) }));
@@ -48,5 +48,16 @@ describe("website widget issuance restriction", () => {
     setup(true, [{ id: "widget", label: "Website", status: "active", allowedOrigins: ["https://example.com"], config: {}, lastUsedAt, createdAt: lastUsedAt }]);
     const expected = new Intl.DateTimeFormat("fr", { dateStyle: "medium" }).format(new Date(lastUsedAt));
     expect(await screen.findByText(`widget.keys.lastUsed:${expected}`)).toBeTruthy();
+  });
+
+  it("keeps every saved origin separate when the operator adds another and saves", async () => {
+    setup(true, [{ id: "widget", label: "Website", status: "active", allowedOrigins: ["https://a.com", "https://b.com"], config: {}, lastUsedAt: null, createdAt: "2026-09-23T12:00:00.000Z" }]);
+    const field = await screen.findByDisplayValue(/a\.com/);
+    fireEvent.change(field, { target: { value: `${(field as HTMLInputElement).value}, https://c.com` } });
+    fireEvent.click(screen.getByText("widget.keys.save"));
+    const fetchMock = vi.mocked(fetch);
+    await waitFor(() => expect(fetchMock.mock.calls.some(([, init]) => init?.method === "PATCH")).toBe(true));
+    const [, init] = fetchMock.mock.calls.find(([, init]) => init?.method === "PATCH")!;
+    expect(JSON.parse(init!.body as string).allowedOrigins).toEqual(["https://a.com", "https://b.com", "https://c.com"]);
   });
 });

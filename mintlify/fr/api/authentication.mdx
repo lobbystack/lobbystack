@@ -70,6 +70,8 @@ Chaque point de terminaison, sauf `GET /me`, exige une portée. Une clé qui ne 
 | `knowledge:write` | `POST /knowledge` |
 | `webhooks:manage` | `GET`, `POST`, `PATCH` et `DELETE` sur `/webhooks`, et `POST /webhooks/{webhook_id}/test` |
 
+Pour abonner un point de terminaison à un événement ou changer son URL, votre clé a aussi besoin de la portée de lecture de cet événement. Par exemple, `call.completed` exige `calls:read`, et le tableau des événements de la page [Webhooks](/fr/api/webhooks) donne les autres.
+
 ## Révoquer une clé
 
 Dans **Réglages** > **Clés API**, cliquez sur **Révoquer** à côté de la clé. Les requêtes qui l'utilisent échouent immédiatement, et vous ne pouvez pas annuler cette action. Créez une nouvelle clé si vous avez encore besoin d'accès.

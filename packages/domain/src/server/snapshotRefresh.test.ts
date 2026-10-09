@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { SQL } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
 import { demoSnapshot, type BusinessContextSnapshot } from "@lobbystack/shared";
 
 const mocks = vi.hoisted(() => ({
@@ -51,6 +53,7 @@ function makeTx(selectRows: Record<string, unknown>) {
   const tx = {
     select: vi.fn(() => fromChain(rowsFor)),
     insert: vi.fn(() => ({ values: () => Promise.resolve([{ id: "saved" }]) })),
+    delete: vi.fn((table: unknown) => ({ where: (condition: SQL) => { deleted.push({ table: tableName(table), where: new PgDialect().sqlToQuery(condition) }); return Promise.resolve(); } })),
   };
   return tx;
 
@@ -74,9 +77,11 @@ function makeTx(selectRows: Record<string, unknown>) {
 }
 
 const businessRow = { id: businessId, name: "Maple Family Clinic", timezone: "America/Toronto", defaultLocale: "en" };
+let deleted: { table: string; where: { sql: string; params: unknown[] } }[] = [];
 
 beforeEach(() => {
   vi.clearAllMocks();
+  deleted = [];
   vi.stubEnv("REDIS_PREFIX", "lobbystack");
   mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => await callback(makeTx({ businesses: [businessRow], receptionist_profiles: [profileRow] })));
   mocks.enqueueOutbox.mockResolvedValue(undefined);
@@ -128,6 +133,12 @@ describe("refreshBusinessSnapshot write-through", () => {
     const context = { db: {} as never, snapshotCache: failing };
 
     await expect(refreshBusinessSnapshot(context, { businessId })).resolves.toBeTypeOf("string");
+  });
+
+  it("deletes the business's older snapshot rows, keeping any from a newer refresh", async () => {
+    await refreshBusinessSnapshot({ db: {} as never }, { businessId });
+
+    expect(deleted).toMatchObject([{ table: "business_context_snapshots", where: { sql: '("business_context_snapshots"."business_id" = $1 and "business_context_snapshots"."generated_at" < now())', params: [businessId] } }]);
   });
 
   it("skips the cache push when no snapshot cache is configured", async () => {

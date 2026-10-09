@@ -24,7 +24,7 @@ export function getSafeOnboardingErrorMessage(
     return t("website.invalidUrl");
   }
 
-  if (includesAny(message, ["Too many workspace creation attempts"])) {
+  if (includesAny(message, ["Too many workspaces"])) {
     return t("errors.tooManyBusinesses");
   }
 

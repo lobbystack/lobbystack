@@ -2326,7 +2326,7 @@
       "post": {
         "operationId": "createWebhook",
         "summary": "Create a webhook endpoint",
-        "description": "Subscribes a URL to events. The response includes the signing secret once.",
+        "description": "Subscribes a URL to events. The key also needs the read scope for each event, such as calls:read for call.completed. The response includes the signing secret once. This endpoint ignores Idempotency-Key, so after a network error, check GET /webhooks before you retry.",
         "tags": [
           "Webhooks"
         ],
@@ -2336,17 +2336,6 @@
           }
         ],
         "x-required-scope": "webhooks:manage",
-        "parameters": [
-          {
-            "name": "Idempotency-Key",
-            "in": "header",
-            "description": "A unique value, up to 255 characters, that makes retries of this request safe for 24 hours.",
-            "schema": {
-              "type": "string",
-              "maxLength": 255
-            }
-          }
-        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -2544,7 +2533,7 @@
       "patch": {
         "operationId": "updateWebhook",
         "summary": "Update a webhook endpoint",
-        "description": "Setting status to enabled re-enables an endpoint that was disabled after repeated failures.",
+        "description": "Setting status to enabled re-enables an endpoint that was disabled after repeated failures. Changing url or events needs the read scope for each of the endpoint's events.",
         "tags": [
           "Webhooks"
         ],

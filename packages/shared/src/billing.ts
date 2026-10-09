@@ -220,54 +220,6 @@ export function contentRetentionDaysForPlan(
   return overrides?.[category] ?? base;
 }
 
-export const billingAddonCatalog = {
-  ai_sms: {
-    recurringMonthlyChargeCents: 500,
-    oneTimeSetupChargeCents: 1_900,
-    usageRatePerSegmentCents: 3,
-  },
-} as const satisfies Record<
-  BillingAddonSlug,
-  {
-    recurringMonthlyChargeCents: number;
-    oneTimeSetupChargeCents: number;
-    usageRatePerSegmentCents: number;
-  }
->;
-
-export function getBillingMonthlyChargeCents(input: {
-  plan: BillingPlanSlug;
-  billingInterval?: BillingInterval | null;
-  activeAddons?: Array<BillingAddonSlug>;
-}): number | null {
-  const planConfig = billingPlanCatalog[input.plan];
-  const baseMonthlyChargeCents =
-    input.billingInterval === "annual"
-      ? planConfig.annualEffectiveMonthlyChargeCents
-      : planConfig.monthlyChargeCents;
-  if (baseMonthlyChargeCents === null) {
-    return null;
-  }
-
-  const recurringAddonChargeCents = (input.activeAddons ?? []).reduce<number>(
-    (total, addon) => total + billingAddonCatalog[addon].recurringMonthlyChargeCents,
-    0,
-  );
-
-  return baseMonthlyChargeCents + recurringAddonChargeCents;
-}
-
-export function getBillingPeriodChargeCents(input: {
-  plan: BillingPlanSlug;
-  billingInterval?: BillingInterval | null;
-}): number | null {
-  const planConfig = billingPlanCatalog[input.plan];
-  if (input.billingInterval === "annual") {
-    return planConfig.annualChargeCents;
-  }
-  return planConfig.monthlyChargeCents;
-}
-
 export type PolarMeteredUsagePayload = {
   eventName:
     (typeof billingMeterEventNames)[keyof typeof billingMeterEventNames];

@@ -36,3 +36,22 @@ it("settles a failed preview into the original invalid-link state", async () => 
   await screen.findByText("acceptInvite.invalidLink");
   expect((await screen.findByRole("button", { name: "acceptInvite.submit" })).hasAttribute("disabled")).toBe(true);
 });
+
+it("explains a 403 and lets the user sign in with the invited account", async () => {
+  window.history.replaceState({}, "", "/accept-invite?token=fixture-token");
+  const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+    if (url.includes("get-session")) return Response.json({ user: { id: "fixture" } });
+    if (url.includes("sign-out")) return Response.json({ success: true });
+    if (init?.method === "POST") return Response.json({ error: "Sign in with the verified email address this invitation was sent to." }, { status: 403 });
+    return Response.json({ invitation: { businessName: "Clinic", email: "invitee@example.invalid", expired: false, status: "pending" } });
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  render(<AcceptInviteSurface />);
+  const submit = await screen.findByRole("button", { name: "acceptInvite.submit" });
+  await waitFor(() => expect(submit.hasAttribute("disabled")).toBe(false));
+  await userEvent.click(submit);
+  await screen.findByText("acceptInvite.wrongAccount");
+  await userEvent.click(screen.getByRole("button", { name: "acceptInvite.switchAccount" }));
+  await waitFor(() => expect(spies.replace).toHaveBeenCalledWith(expect.stringContaining("/login?returnTo=")));
+  expect(fetchMock).toHaveBeenCalledWith("/api/auth/sign-out", expect.objectContaining({ method: "POST" }));
+});

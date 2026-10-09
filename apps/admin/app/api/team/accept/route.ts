@@ -27,7 +27,7 @@ export async function POST(request: Request) {
       throw new Error("An invitation token is required.");
     }
     const tokenHash = createHash("sha256").update((body as { token: string }).token).digest("hex");
-    return NextResponse.json(await acceptInvitation(createDomainContext(), { userId: session.user.id, tokenHash }));
+    return NextResponse.json(await acceptInvitation(createDomainContext(), { userId: session.user.id, tokenHash, email: session.user.email, emailVerified: session.user.emailVerified }));
   } catch (error) {
     return asApiResponse(error);
   }

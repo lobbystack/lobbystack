@@ -66,7 +66,7 @@ function dateTime(value: string, locale: string, dateOnly = false): string {
 }
 
 function resolveCallStatus(status: string, disposition: string | null): "blocked" | "completed" | "failed" | "in_progress" {
-  if (status === "in_progress" || status === "open") return "in_progress";
+  if (status === "started" || status === "in_progress" || status === "open") return "in_progress";
   const value = disposition?.trim().toLowerCase() ?? "";
   if (value.includes("blocked")) return "blocked";
   if (["failed", "busy", "canceled", "cancelled", "no_answer", "missed"].some((part) => value.includes(part))) return "failed";

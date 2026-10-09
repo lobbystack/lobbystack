@@ -2,6 +2,8 @@ import "server-only";
 
 import { createHash } from "node:crypto";
 
+import { normalizeIP } from "@better-auth/core/utils/ip";
+
 import { getRedis, waitForRedis } from "./redis";
 
 const COOLDOWN_SECONDS = 60;
@@ -36,22 +38,25 @@ function recipientDigest(email: string): string {
   return createHash("sha256").update(email.trim().toLowerCase()).digest("hex");
 }
 
+type EmailSendLimitInput = { email: string; remoteIp?: string | null; scope?: "email-verification" | "password-reset" };
+
 export async function enforceEmailVerificationSendLimit(
   store: EmailVerificationLimitStore,
-  input: { email: string; remoteIp?: string | null },
+  input: EmailSendLimitInput,
   hour = Math.floor(Date.now() / 3_600_000),
 ): Promise<void> {
-  const prefix = process.env.REDIS_PREFIX ?? "lobbystack";
+  const prefix = `${process.env.REDIS_PREFIX ?? "lobbystack"}:${input.scope ?? "email-verification"}`;
   const digest = recipientDigest(input.email);
-  const cooldownKey = `${prefix}:email-verification:recipient:${digest}:cooldown`;
-  const hourlyKey = `${prefix}:email-verification:recipient:${digest}:hour:${hour}`;
+  const cooldownKey = `${prefix}:recipient:${digest}:cooldown`;
+  const hourlyKey = `${prefix}:recipient:${digest}:hour:${hour}`;
   const keys = [cooldownKey, hourlyKey];
-  if (input.remoteIp) keys.push(`${prefix}:email-verification:ip:${recipientDigest(input.remoteIp)}:hour:${hour}`);
+  // One host usually owns a whole IPv6 /64, so count the subnet as one client.
+  if (input.remoteIp) keys.push(`${prefix}:ip:${recipientDigest(normalizeIP(input.remoteIp, { ipv6Subnet: 64 }))}:hour:${hour}`);
   const accepted = await store.eval(reserveScript, keys.length, ...keys, COOLDOWN_SECONDS, HOURLY_TTL_SECONDS, HOURLY_LIMIT, IP_HOURLY_LIMIT);
   if (Number(accepted) !== 1) throw new EmailVerificationRateLimitError();
 }
 
-export async function assertEmailVerificationSendAllowed(input: { email: string; remoteIp?: string | null }): Promise<void> {
+export async function assertEmailVerificationSendAllowed(input: EmailSendLimitInput): Promise<void> {
   const redis = getRedis();
   if (!redis) {
     if (process.env.NODE_ENV === "production") throw new Error("Email verification abuse protection is unavailable.");

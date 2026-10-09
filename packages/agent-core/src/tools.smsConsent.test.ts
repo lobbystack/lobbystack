@@ -8,6 +8,7 @@ vi.mock("@lobbystack/domain", async () => ({
   knowledgeQueryTerms: (await import("../../domain/src/knowledgeRanking")).knowledgeQueryTerms,
   checkOpening: vi.fn(async () => ({ ok: true, serviceName: "General Checkup", available: true })),
   findCallerBooking: vi.fn(async () => undefined),
+  findCallBooking: vi.fn(async () => undefined),
   bookForCaller: vi.fn(async () => ({ ok: true, appointmentId: "apt_1" })),
   findOpenings: vi.fn(async () => ({ ok: true, serviceName: "General Checkup", date: "2026-10-06", timezone: "America/Toronto", openings: [{ startsAt: "2026-10-06T14:00:00.000Z", displayTime: "Tuesday Oct 6, 10:00 AM" }] })),
   getSmsConsentOnFile: vi.fn(async () => "subscribed"),
@@ -40,6 +41,8 @@ function tools(options: { channel?: AgentChannel; callerPhone?: string | undefin
 const booking = { serviceName: "General Checkup", startsAt: "2026-10-06T10:00", contactName: "Milan" };
 const verified = { ok: true, verified: true, requiresOtp: false, verificationId: "ver_1", appointmentId: "apt_1", status: "facts_verified" };
 
+// The fixtures use early October 2026: keep those times in the future.
+vi.setSystemTime(new Date("2026-10-01T12:00:00Z"));
 beforeEach(() => { vi.clearAllMocks(); });
 
 describe("tool schemas for texts", () => {

@@ -1,21 +1,27 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { billingPlanForAccount, contentExpiryForPlan, getContentRetentionPolicy, isContentRetentionEnabled } from "./contentRetentionPolicy";
+import { billingAccounts, type DatabaseTransaction } from "@lobbystack/db";
+
+import { contentExpiryForPlan, getContentRetentionPolicy, isContentRetentionEnabled, resolveBusinessBillingPlan } from "./contentRetentionPolicy";
 
 afterEach(() => { vi.unstubAllEnvs(); });
 
+function planTx(account: { plan: string; subscriptionState: string } | null, deploymentMode = "cloud") {
+  const rows = (table: unknown) => (table === billingAccounts ? (account ? [account] : []) : [{ deploymentMode }]);
+  return { select: () => ({ from: (table: unknown) => ({ where: () => ({ limit: async () => rows(table) }) }) }) } as unknown as DatabaseTransaction;
+}
+
 describe("business billing plan resolution", () => {
-  it("trusts a recognized account plan", () => {
-    expect(billingPlanForAccount("starter", "cloud")).toBe("starter");
-    expect(billingPlanForAccount("pro", "self_hosted_standard")).toBe("pro");
-    expect(billingPlanForAccount("self_host", "cloud")).toBe("self_host");
+  const businessId = "00000000-0000-4000-8000-000000000001";
+
+  it("uses a paid plan only while its subscription is live", async () => {
+    expect(await resolveBusinessBillingPlan(planTx({ plan: "pro", subscriptionState: "active" }), businessId)).toBe("pro");
+    expect(await resolveBusinessBillingPlan(planTx({ plan: "pro", subscriptionState: "canceled" }), businessId)).toBe("free_cloud");
   });
 
-  it("falls back to the deployment mode and then free_cloud", () => {
-    expect(billingPlanForAccount(null, "self_hosted_standard")).toBe("self_host");
-    expect(billingPlanForAccount("unknown", "self_hosted_standard")).toBe("self_host");
-    expect(billingPlanForAccount(null, "cloud")).toBe("free_cloud");
-    expect(billingPlanForAccount(undefined, "development")).toBe("free_cloud");
+  it("falls back to the deployment mode", async () => {
+    expect(await resolveBusinessBillingPlan(planTx(null), businessId)).toBe("free_cloud");
+    expect(await resolveBusinessBillingPlan(planTx(null, "self_hosted_standard"), businessId)).toBe("self_host");
   });
 });
 

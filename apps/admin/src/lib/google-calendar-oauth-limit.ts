@@ -1,3 +1,5 @@
+import { normalizeIP } from "@better-auth/core/utils/ip";
+
 import { enforceFixedWindow, fixedWindowLimit, type FixedWindowLimit } from "./fixed-window-limit";
 
 const hour = 60 * 60;
@@ -34,7 +36,8 @@ export function buildCalendarOAuthRateLimits(input: {
   const limits: FixedWindowLimit[] = [];
   const unauthenticated = input.operation === "callback" && !input.userId && !input.businessId;
   if (input.ip) {
-    limits.push(limit("ip-hour", `${input.operation}:${input.ip}`, unauthenticated ? 120 : 30, hour, "rate_limit_ip_hour"));
+    // One host usually owns a whole IPv6 /64, so count the subnet as one client.
+    limits.push(limit("ip-hour", `${input.operation}:${normalizeIP(input.ip, { ipv6Subnet: 64 })}`, unauthenticated ? 120 : 30, hour, "rate_limit_ip_hour"));
   } else if (unauthenticated) {
     limits.push(limit("ip-unattributed-hour", "unattributed", 600, hour, "rate_limit_ip_unattributed"));
   }

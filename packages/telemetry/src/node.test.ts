@@ -24,6 +24,11 @@ describe("OTel exception redaction", () => {
     expect(redactOtelExceptionText("params: biz-1,encrypted-access-token")).toBe("params: [omitted]");
   });
 
+  it("drops a multi-line parameter whose line starts with 'at'", () => {
+    expect(redactOtelExceptionText("Failed query: x\nparams: biz-1,Hi Jane,\n\nat 3pm we confirm 12 Main St")).toBe("Failed query: x\nparams: [omitted]");
+    expect(redactOtelExceptionText("Failed query: x\nparams: Hi\n at 12 Main St\n    at query (chunk.js:8:1)")).toBe("Failed query: x\nparams: [omitted]\n    at query (chunk.js:8:1)");
+  });
+
   it("removes signed storage URLs from exception text", () => {
     const value = redactOtelExceptionText("Upload failed at https://storage.example.test/business/private.pdf?X-Amz-Credential=credential-marker&X-Amz-Signature=signature-marker");
     expect(value).toBe("Upload failed at [redacted-signed-url]");

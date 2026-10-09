@@ -18,7 +18,7 @@ export function recordingListState(input: Parameters<typeof recordingState>[0]):
   if (input.recordingObjectId || storedState === "expired") return storedState;
   if (input.transport === "webrtc") return "missing";
   const disposition = input.disposition?.trim().toLowerCase() ?? "";
-  if (["contact_blocked", "busy", "no_answer", "missed", "canceled", "cancelled"].some(value => disposition.includes(value))) return "missing";
+  if (["blocked_contact", "busy", "no_answer", "missed", "canceled", "cancelled"].some(value => disposition.includes(value))) return "missing";
   // Main's list anticipates asynchronous phone recordings; its detail tab does not.
   return "pending";
 }

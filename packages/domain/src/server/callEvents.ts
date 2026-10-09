@@ -3,7 +3,8 @@ type CallRow = { status: string; disposition?: string | null; startedAt: string;
 export function resolveCallStatus(
   call: CallRow,
 ): "in_progress" | "completed" | "failed" {
-  if (call.status === "in_progress" || call.status === "open") {
+  // New call rows default to "started" and keep it until the call ends.
+  if (call.status === "started" || call.status === "in_progress" || call.status === "open") {
     return "in_progress";
   }
 
@@ -25,7 +26,7 @@ export function resolveCallStatus(
 }
 
 export function isContactBlockedCall(call: { disposition?: string | null }): boolean {
-  return call.disposition?.trim().toLowerCase().includes("contact_blocked") ?? false;
+  return call.disposition?.trim().toLowerCase().includes("blocked_contact") ?? false;
 }
 
 export function callReachedConnectedStep(call: CallRow): boolean {

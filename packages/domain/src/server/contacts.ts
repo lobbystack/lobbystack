@@ -1,9 +1,27 @@
 import { and, asc, count, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 
-import { appointments, calls, contacts, conversations, enqueueOutbox, messages, services, staff, withBusinessTransaction } from "@lobbystack/db";
+import { appointments, calls, contacts, conversations, enqueueOutbox, messages, services, staff, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
+
+/**
+ * The business's contact for this phone, created when missing. A text and a
+ * call (or two texts) from a new number can race here: the second insert waits
+ * on the unique (business_id, phone) index, does nothing, and reads the row the
+ * first one committed instead of failing the whole request.
+ */
+export async function findOrCreateContactByPhone(tx: DatabaseTransaction, input: { businessId: string; phone: string; name?: string | undefined }) {
+  const columns = { id: contacts.id, smsConsentStatus: contacts.smsConsentStatus, operatorBlockedAt: contacts.operatorBlockedAt };
+  const find = async () => (await tx.select(columns).from(contacts).where(and(eq(contacts.businessId, input.businessId), eq(contacts.phone, input.phone))).limit(1))[0];
+  const found = await find();
+  if (found) return { contact: found, created: false };
+  const [inserted] = await tx.insert(contacts).values({ businessId: input.businessId, phone: input.phone, name: input.name }).onConflictDoNothing().returning(columns);
+  if (inserted) return { contact: inserted, created: true };
+  const raced = await find();
+  if (!raced) throw new Error("Contact could not be created.");
+  return { contact: raced, created: false };
+}
 
 /**
  * The stored channel values a contact used: call transports and conversation

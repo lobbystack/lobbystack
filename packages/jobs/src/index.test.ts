@@ -24,6 +24,8 @@ describe("job queue contracts", () => {
       const queue = queueForJobType[type];
       expect(jobQueues).toContain(queue);
     }
+    // A slow customer endpoint must not take slots from bookings and reminders.
+    expect(queueForJobType["webhook.deliver"]).toBe("webhooks");
   });
 
   it("recognizes only declared job types", () => {
@@ -32,7 +34,7 @@ describe("job queue contracts", () => {
   });
 
   it("uses queue-aware worker concurrency without opening a connection", () => {
-    for (const [queue, expected] of [["bulk", 2], ["default", 8], ["critical", 8], ["maintenance", 8]] as const) {
+    for (const [queue, expected] of [["bulk", 2], ["default", 8], ["critical", 8], ["maintenance", 8], ["webhooks", 8]] as const) {
       const options = createWorkerOptions(queue, { prefix: "test-prefix" });
       expect(options.concurrency).toBe(expected);
       expect(options.prefix).toBe("test-prefix");
@@ -98,5 +100,16 @@ describe("enqueueJob job ids", () => {
     const [, envelope, options] = add.mock.calls[0] as unknown as [string, unknown, { delay?: number }];
     expect(jobEnvelopeSchema.parse(envelope)).toMatchObject({ businessId: null, scheduled: false });
     expect(options).not.toHaveProperty("delay");
+  });
+
+  it("retries usage billing and notifications for hours instead of the queue's 15 seconds", async () => {
+    const { queue, add } = createQueueStub("critical");
+
+    for (const type of ["billing.syncUsage", "notification.dispatch", "sms.send"] as const) await enqueueJob(queue, { type, payload: {}, idempotencyKey: type });
+
+    const options = add.mock.calls.map((call) => (call as unknown as [string, unknown, Record<string, unknown>])[2]);
+    expect(options[0]).toMatchObject({ attempts: 12, backoff: { type: "exponential", delay: 5_000 } });
+    expect(options[1]).toMatchObject({ attempts: 12, backoff: { type: "exponential", delay: 5_000 } });
+    expect(options[2]).not.toHaveProperty("attempts");
   });
 });

@@ -28,9 +28,8 @@ export function buildWidgetRateLimits(input: {
     limits.push(limit(`${input.operation}-visitor-hour`, `${input.businessId}:${input.visitorId}`, input.operation === "chat" ? 60 : 120, hour, "rate_limit_visitor_hour"));
     limits.push(limit(`${input.operation}-visitor-day`, `${input.businessId}:${input.visitorId}`, input.operation === "chat" ? 300 : 600, day, "rate_limit_visitor_day"));
   }
-  limits.push(limit("widget-key-minute", `${input.businessId}:${input.widgetKeyId}`, input.operation === "chat" ? 60 : 180, minute, "rate_limit_key_minute"));
-  limits.push(limit("widget-key-hour", `${input.businessId}:${input.widgetKeyId}`, input.operation === "chat" ? 600 : 1_000, hour, "rate_limit_key_hour"));
-  limits.push(limit("global-minute", "global", 240, minute, "rate_limit_global"));
+  limits.push(limit(`${input.operation}-key-minute`, `${input.businessId}:${input.widgetKeyId}`, input.operation === "chat" ? 60 : 180, minute, "rate_limit_key_minute"));
+  limits.push(limit(`${input.operation}-key-hour`, `${input.businessId}:${input.widgetKeyId}`, input.operation === "chat" ? 600 : 1_000, hour, "rate_limit_key_hour"));
   if (input.operation === "session") limits.push(limit("session-business-minute", input.businessId, 60, minute, "rate_limit_business"));
   return limits;
 }

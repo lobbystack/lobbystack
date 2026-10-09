@@ -36,7 +36,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>("light");
 
   useEffect(() => {
-    const storedTheme = window.localStorage.getItem(STORAGE_KEY);
+    let storedTheme: string | null = null;
+    try {
+      storedTheme = window.localStorage.getItem(STORAGE_KEY);
+    } catch {
+      // Browsers that block third-party storage throw here inside the widget iframe.
+    }
     if (isTheme(storedTheme)) setThemeState(storedTheme);
   }, []);
 
@@ -54,7 +59,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const setTheme = useCallback((nextTheme: Theme) => {
     setThemeState(nextTheme);
-    window.localStorage.setItem(STORAGE_KEY, nextTheme);
+    try {
+      window.localStorage.setItem(STORAGE_KEY, nextTheme);
+    } catch {
+      // Storage is blocked; the theme lasts for this page only.
+    }
   }, []);
 
   const value = useMemo(() => ({ theme, resolvedTheme, setTheme }), [theme, resolvedTheme, setTheme]);

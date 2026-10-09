@@ -9,14 +9,14 @@ Los webhooks envían un `POST` HTTPS a su URL cuando ocurre algo en un negocio, 
 
 ## Eventos
 
-| Evento | Se envía cuando | `data` |
-| --- | --- | --- |
-| `call.completed` | Una llamada terminó y LobbyStack guardó su resumen y su resultado. | Llamada |
-| `appointment.booked` | Alguien reserva una cita: la recepcionista, el panel o la API. | Cita |
-| `appointment.rescheduled` | Una cita se cambia a otra hora. | Cita |
-| `appointment.cancelled` | Se cancela una cita. | Cita |
-| `message.taken` | La recepcionista toma un mensaje para su equipo. | Mensaje |
-| `contact.created` | Aparece un nuevo contacto, desde una llamada, un SMS, una reserva, el widget del sitio web o la API. | Contacto |
+| Evento | Se envía cuando | `data` | Permiso |
+| --- | --- | --- | --- |
+| `call.completed` | Una llamada terminó y LobbyStack guardó su resumen y su resultado. | Llamada | `calls:read` |
+| `appointment.booked` | Alguien reserva una cita: la recepcionista, el panel o la API. | Cita | `appointments:read` |
+| `appointment.rescheduled` | Una cita se cambia a otra hora. | Cita | `appointments:read` |
+| `appointment.cancelled` | Se cancela una cita. | Cita | `appointments:read` |
+| `message.taken` | La recepcionista toma un mensaje para su equipo. | Mensaje | `messages:read` |
+| `contact.created` | Aparece un nuevo contacto, desde una llamada, un SMS, una reserva, el widget del sitio web o la API. | Contacto | `contacts:read` |
 
 `data` tiene la misma forma que el recurso de la API correspondiente. Por ejemplo, `GET /appointments` devuelve los objetos que incluye un evento `appointment.booked`, así que un endpoint de lista también sirve como datos de ejemplo.
 
@@ -42,7 +42,7 @@ Puede agregar endpoints en el panel o con la API.
     </Steps>
   </Tab>
   <Tab title="API">
-    Llame a `POST /webhooks` con una clave que tenga `webhooks:manage`:
+    Llame a `POST /webhooks` con una clave que tenga `webhooks:manage` y el permiso de cada evento que elija:
 
     ```bash
     curl https://app.lobbystack.com/api/v1/webhooks \

@@ -12,6 +12,10 @@ describe("resolveCallStatus", () => {
     expect(resolveCallStatus({ status: "open", disposition: undefined } as never)).toBe("in_progress");
   });
 
+  it("treats a call still in the default started status as live", () => {
+    expect(resolveCallStatus({ status: "started", disposition: null } as never)).toBe("in_progress");
+  });
+
   it("treats busy, canceled, and no-answer dispositions as failed terminal outcomes", () => {
     expect(resolveCallStatus({ status: "completed", disposition: "call_busy" } as never)).toBe("failed");
     expect(resolveCallStatus({ status: "completed", disposition: "call_canceled" } as never)).toBe("failed");
@@ -27,7 +31,7 @@ describe("resolveCallStatus", () => {
   });
 
   it("keeps blocked calls as terminal completed outcomes", () => {
-    expect(resolveCallStatus({ status: "completed", disposition: "contact_blocked" } as never)).toBe("completed");
+    expect(resolveCallStatus({ status: "completed", disposition: "blocked_contact" } as never)).toBe("completed");
   });
 });
 
@@ -43,7 +47,7 @@ describe("callReachedConnectedStep", () => {
   });
 
   it("does not mark blocked calls as connected", () => {
-    expect(callReachedConnectedStep({ status: "completed", disposition: "contact_blocked" } as never)).toBe(false);
+    expect(callReachedConnectedStep({ status: "completed", disposition: "blocked_contact" } as never)).toBe(false);
   });
 
   it("keeps answered or active calls connected", () => {
@@ -54,16 +58,17 @@ describe("callReachedConnectedStep", () => {
 
 describe("isContactBlockedCall", () => {
   it("detects blocked contact call dispositions", () => {
-    expect(isContactBlockedCall({ disposition: "contact_blocked" })).toBe(true);
+    expect(isContactBlockedCall({ disposition: "blocked_contact" })).toBe(true);
     expect(isContactBlockedCall({ disposition: "call_completed" })).toBe(false);
+    expect(isContactBlockedCall({ disposition: "content_blocked" })).toBe(false);
   });
 });
 
 describe("buildCallEvents", () => {
   it("renders blocked calls as received then blocked without a connected step", () => {
     const events = buildCallEvents({
-      status: "completed",
-      disposition: "contact_blocked",
+      status: "blocked",
+      disposition: "blocked_contact",
       startedAt: "2026-05-03T19:56:59.264Z",
       endedAt: "2026-05-03T19:56:59.000Z",
     } as never);
@@ -73,5 +78,11 @@ describe("buildCallEvents", () => {
       key: "blocked",
       failed: true,
     });
+  });
+
+  it("leaves the completed step unreached while a started call is running", () => {
+    const events = buildCallEvents({ status: "started", disposition: null, startedAt: "2026-05-03T19:56:59.264Z", endedAt: null });
+
+    expect(events.map((event) => [event.key, event.reached])).toEqual([["received", true], ["connected", true], ["completed", false]]);
   });
 });

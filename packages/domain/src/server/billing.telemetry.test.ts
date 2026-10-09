@@ -70,10 +70,11 @@ describe("detectSubscriptionStart", () => {
  * Stubbing the whole billing body would prove nothing about where the event is
  * written, and where it is written is the entire point.
  */
-function transactionDouble(order: string[]) {
-  const rows: Record<string, unknown>[][] = [
-    [{ id: "evt_1", providerEventId: "polar_1", eventType: "subscription.active", status: "pending", payload: { billingKey: "business:biz_1", plan: "starter", status: "active", billingInterval: "monthly" }, createdAt: new Date() }],
-  ];
+const startPayload = { billingKey: "business:biz_1", plan: "starter", status: "active", billingInterval: "monthly" };
+
+function transactionDouble(order: string[], rows: Record<string, unknown>[][] = [
+  [{ id: "evt_1", providerEventId: "polar_1", eventType: "subscription.active", status: "pending", payload: startPayload, createdAt: new Date() }],
+]) {
   let selects = 0;
   const chain = (resolved: unknown[]): unknown => new Proxy(function () {} as unknown as Record<string | symbol, unknown>, {
     get(_target, property) {
@@ -90,8 +91,8 @@ function transactionDouble(order: string[]) {
   };
 }
 
-async function reconcileThroughTransaction(order: string[]) {
-  const tx = transactionDouble(order);
+async function reconcileThroughTransaction(order: string[], rows?: Record<string, unknown>[][]) {
+  const tx = transactionDouble(order, rows);
   mocks.withBusinessTransaction.mockImplementation(async (_db: unknown, _input: unknown, run: (tx: unknown) => Promise<unknown>) => await run(tx));
   return { tx, result: reconcileBillingProviderEvent(context, { businessId: "biz_1", providerEventId: "evt_1" }) };
 }
@@ -129,6 +130,15 @@ describe("subscription start telemetry", () => {
     // no later pass detects the same free-to-paid edge twice.
     await expect(result).rejects.toThrow("product_events unavailable");
     expect(order).not.toContain("update");
+  });
+
+  it("ignores a late Polar snapshot older than one already applied", async () => {
+    // Selects in order: the event, the existing account (none), then a processed event with a newer snapshot.
+    const late = { id: "evt_1", providerEventId: "polar_1", eventType: "subscription.updated", status: "pending", payload: { ...startPayload, subscriptionModifiedAt: "2026-09-01T00:00:00.000Z" }, createdAt: new Date() };
+    const { result } = await reconcileThroughTransaction([], [[late], [], [{ id: "evt_newer" }]]);
+
+    await expect(result).resolves.toBe(true);
+    expect(mocks.recordProductEventInTransaction).not.toHaveBeenCalled();
   });
 
   it("records nothing when the event reconciles without starting a subscription", async () => {

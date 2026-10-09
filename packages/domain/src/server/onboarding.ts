@@ -181,6 +181,22 @@ export async function submitOnboardingAttribution(
   context: DomainContext,
   input: { userId: string; businessId: string; source?: string | null; referralCode?: string | null },
 ): Promise<void> {
+  if (input.referralCode) {
+    // Attribute before the stage moves to complete, so a retry after a failed
+    // attribution still finds the "attribution" stage. Only that onboarding step
+    // attributes, so a finished business cannot be credited to a new referrer.
+    const stage = await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
+      await requireBusinessAdmin(tx, input);
+      return (await tx.select({ onboardingStage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1))[0]?.onboardingStage;
+    });
+    // The operator transaction above proved business administration. Attribution
+    // runs separately as the system actor because the referrer's profile is not
+    // visible under the referred operator's RLS context. It is idempotent, so a
+    // retried submission cannot double count.
+    if (stage === "attribution") {
+      await attributeBusiness(context, { businessId: input.businessId, referredUserId: input.userId, referralCode: input.referralCode, source: "referral_link" });
+    }
+  }
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
     const changed = await tx.update(businesses)
@@ -205,13 +221,6 @@ export async function submitOnboardingAttribution(
       payload: { completedAt: completedAt.toISOString() },
     });
   });
-  // The operator transaction above proved business administration. Attribution
-  // runs separately as the system actor because the referrer's profile is not
-  // visible under the referred operator's RLS context. It is idempotent, so a
-  // retried submission cannot double count.
-  if (input.referralCode) {
-    await attributeBusiness(context, { businessId: input.businessId, referredUserId: input.userId, referralCode: input.referralCode, source: "referral_link" });
-  }
 }
 
 export const ONBOARDING_FOLLOWUP_DELAY_MS = 24 * 60 * 60_000;

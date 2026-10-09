@@ -154,3 +154,12 @@ it("restores the previous locale and reports a failed save", async () => {
   expect(mocks.changeLanguage).toHaveBeenLastCalledWith("en");
   expect(window.localStorage.getItem("lobbystack.locale")).toBe("en");
 });
+
+it("renders the widget when the browser blocks storage in the iframe", () => {
+  mocks.pathname = "/embed/key";
+  // beforeEach stubbed localStorage, so unstubAllGlobals restores it after this getter.
+  Object.defineProperty(globalThis, "localStorage", { configurable: true, get: () => { throw new DOMException("The operation is insecure.", "SecurityError"); } });
+  render(<QueryClientProvider client={new QueryClient()}><LocaleProvider initialLocale="fr" initialLocaleSource="path"><Controls /></LocaleProvider></QueryClientProvider>);
+  expect(screen.getByText("en")).toBeTruthy();
+  expect(document.cookie).toContain("lobbystack.locale=fr");
+});

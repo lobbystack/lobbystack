@@ -69,6 +69,15 @@ export async function reorderAgentRules(context: DomainContext, input: { userId:
 }
 
 async function publishRulesChanged(tx: DatabaseTransaction, businessId: string, entityId: string | undefined, dedupeKey: string): Promise<void> {
+  // The receptionist reads rules only from the business snapshot.
+  await enqueueOutbox(tx, {
+    topic: "snapshot.refresh",
+    businessId,
+    aggregateType: "agent_rule",
+    ...(entityId ? { aggregateId: entityId } : {}),
+    dedupeKey: `${dedupeKey}:snapshot`,
+    payload: { businessId, reason: "rules_changed" },
+  });
   await enqueueOutbox(tx, {
     topic: "realtime.publish",
     businessId,

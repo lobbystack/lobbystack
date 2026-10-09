@@ -42,10 +42,12 @@ export async function syncAppointmentCalendar(dependencies: Dependencies, input:
     await updateAppointmentSyncState(dependencies.domain, { businessId, appointmentId, state: "not_required" });
     return { status: "skipped", entityId: appointmentId };
   }
+  let tokenResolved = false;
   try {
     // Commit refreshed credentials independently before external event writes.
     // No nested pool acquisition while the appointment sync lock is held.
     const token = await accessToken(dependencies, businessId, initial.connectionId, initial.connectionStatus === "error");
+    tokenResolved = true;
     return await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => {
       await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`calendar:appointment:${appointmentId}`}, 0))`);
       const current = await load(tx);
@@ -66,7 +68,8 @@ export async function syncAppointmentCalendar(dependencies: Dependencies, input:
     const message = error instanceof Error ? redactOtelExceptionText(error.message) : "Calendar synchronization failed.";
     await updateAppointmentSyncState(dependencies.domain, { businessId, appointmentId, state: "failed", error: message });
     if (message !== "Calendar selection changed during synchronization.") {
-      await markCalendarConnectionSync(dependencies.domain, { businessId, connectionId: initial.connectionId, error: message });
+      // Booking treats a connection in error as stale, so a failed event write fails only this appointment.
+      if (!tokenResolved) await markCalendarConnectionSync(dependencies.domain, { businessId, connectionId: initial.connectionId, error: message });
       try {
         await recordProductEvent(dependencies.domain, {
           name: "integration.calendar_sync_failed",

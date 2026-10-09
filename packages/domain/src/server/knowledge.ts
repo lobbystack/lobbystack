@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { and, asc, desc, eq, ilike, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, lt, ne, sql } from "drizzle-orm";
 
 import { agentRules, businessContextSnapshots, businessHours, businesses, closures, enqueueOutbox, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, phoneNumbers, receptionistProfiles, services, storageObjects, websiteIngestionJobs, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { getKnowledgeStorageLimitBytes, normalizeAppointmentChangePolicy, normalizeBookingMode, normalizeTransferMode, type BusinessContextSnapshot } from "@lobbystack/shared";
@@ -563,6 +563,9 @@ export async function refreshBusinessSnapshot(
       transferPolicy: { mode: normalizeTransferMode(currentProfile?.transferMode), ...(currentProfile?.transferNumber ? { transferNumber: currentProfile.transferNumber } : {}) },
     });
     await tx.insert(businessContextSnapshots).values({ businessId: input.businessId, version, snapshot: builtSnapshot as unknown as Record<string, unknown> });
+    // Readers only use the newest row. now() is this transaction's start, the
+    // generated_at just stored, so a newer refresh committed meanwhile is kept.
+    await tx.delete(businessContextSnapshots).where(and(eq(businessContextSnapshots.businessId, input.businessId), lt(businessContextSnapshots.generatedAt, sql`now()`)));
     await enqueueOutbox(tx, {
       topic: "realtime.publish",
       businessId: input.businessId,

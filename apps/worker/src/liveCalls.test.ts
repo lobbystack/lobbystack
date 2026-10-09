@@ -382,6 +382,34 @@ describe("createLiveCallHandler", () => {
     await vi.waitFor(() => expect(lock.eval).toHaveBeenCalledWith(RELEASE_ATTACH_LOCK, 1, "live-attach:live_taken_over", expect.any(String)));
     expect(lock.keys.get("live-attach:live_taken_over")).toBe("worker:other");
   });
+
+  it("tries a failed transcript save or call finish once more", async () => {
+    vi.stubEnv("LIVE_PROTOTYPE_ENABLED", "true");
+    vi.stubEnv("INTERNAL_SERVICE_TOKEN", "token");
+    vi.stubEnv("OPENAI_API_KEY", "sk-test");
+    vi.spyOn(console, "info").mockImplementation(() => undefined);
+    mocks.snapshot.mockResolvedValue({ businessId: "biz_1", greeting: "Hi" });
+    const handler = createLiveCallHandler({ domain: { db: {} as never } });
+    await handler.handle(attachRequest({ sessionId: "live_retry", businessId: "biz_1", callId: "call_retry", channel: "voice" }), response());
+    const controller = mocks.controllers_.at(-1)!;
+    mocks.saveLiveCallTurn.mockClear();
+    mocks.finishLiveCall.mockClear();
+    // A pool timeout under load, or a brief database failover.
+    mocks.saveLiveCallTurn.mockRejectedValueOnce(new Error("timeout exceeded when trying to connect"));
+    mocks.finishLiveCall.mockRejectedValueOnce(new Error("Connection terminated unexpectedly"));
+    vi.useFakeTimers();
+    try {
+      (controller.options.onTurn as (turn: unknown) => void)({ sequence: 1, speaker: "caller", text: "Bye!" });
+      (controller.options.onClose as (summary: unknown) => void)({ sessionId: "live_retry", durationMs: 20_000, delegations: [], usageConfirmed: true, billedSeconds: 20, closeReason: "remote_hangup" });
+      await vi.advanceTimersByTimeAsync(1_000);
+    } finally {
+      vi.useRealTimers();
+      vi.mocked(console.info).mockRestore();
+    }
+    expect(mocks.saveLiveCallTurn).toHaveBeenCalledTimes(2);
+    expect(mocks.finishLiveCall).toHaveBeenCalledTimes(2);
+    expect(mocks.finishLiveCall).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ callId: "call_retry", seconds: 20, end: "caller_hung_up" }));
+  });
 });
 
 describe("re-attaching after a retried webhook delivery", () => {

@@ -30,14 +30,21 @@ export function readConsentState(): ConsentState {
 
 /**
  * Before the visitor answers the banner we keep everything in page memory, so
- * nothing is written to their device and no person profile is created. Session
- * recording and autocapture stay off: counting a visit is the only purpose.
+ * nothing is written to their device and no person profile is created. Counting
+ * a visit is the only purpose, so every add-on the project's remote config could
+ * switch on (recording, heatmaps, dead clicks, exceptions, web vitals, surveys)
+ * is turned off here.
  */
 const anonymousConfig = {
   autocapture: false,
+  capture_dead_clicks: false,
+  capture_exceptions: false,
+  capture_heatmaps: false,
   capture_pageview: true,
   capture_pageleave: "if_capture_pageview",
+  capture_performance: false,
   disable_session_recording: true,
+  disable_surveys: true,
   person_profiles: "identified_only",
   persistence: "memory",
 } as const
@@ -148,7 +155,8 @@ export function initializePostHog() {
   }
 
   // Documented path for moving off memory persistence without reinitializing.
-  // Autocapture only binds at init, so it starts on the next page load.
+  // Autocapture only binds at init, and set_config cannot unset the add-ons
+  // the anonymous config turned off, so those start on the next page load.
   posthog.set_config({ ...consentedConfig })
   startRecording()
 

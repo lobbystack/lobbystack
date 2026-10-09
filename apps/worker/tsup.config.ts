@@ -1,7 +1,8 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: ["src/index.ts"],
+  // documentExtraction runs as its own worker thread entry; see extractDocumentTextInThread.
+  entry: ["src/index.ts", "src/documentExtraction.ts"],
   outDir: "dist/runtime",
   format: ["esm"],
   platform: "node",

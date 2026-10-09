@@ -1,5 +1,6 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
+import { normalizeIP } from "@better-auth/core/utils/ip";
 import { and, eq, sql } from "drizzle-orm";
 
 import { widgetKeys as widgetKeysTable, withBusinessTransaction } from "@lobbystack/db";
@@ -156,8 +157,9 @@ export async function touchWidgetKeyLastUsed(input: { businessId: string; widget
 export function requestIpHash(request: Request): string | undefined {
   // Shared trusted-IP derivation: opt in only when ingress overwrites the
   // configured single-value header. No trusted header means no IP dimension,
-  // and the widget key/global limits still apply.
+  // and the widget key limits still apply.
   const ip = trustedClientIp(request);
   if (!ip) return undefined;
-  return createHash("sha256").update(ip).digest("hex");
+  // One host usually owns a whole IPv6 /64, so count the subnet as one client.
+  return createHash("sha256").update(normalizeIP(ip, { ipv6Subnet: 64 })).digest("hex");
 }

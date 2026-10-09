@@ -115,7 +115,6 @@ export const OPERATIONS_EVENT_NAMES = [
   "ops.billing.usage_sync_failed",
   "ops.billing.usage_sync_recovered",
   "ops.billing.unit_economics_rollup_recorded",
-  "ops.billing.webhook_unresolved",
   "ops.outbox.backlog_sample",
   "ops.outbox.flush_failed",
   "ops.service.health_check",
@@ -520,7 +519,6 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
     "deploymentMode",
     "monthKey",
   ],
-  "ops.billing.webhook_unresolved": ["deploymentMode", "provider"],
   "ops.outbox.backlog_sample": ["deploymentMode", "backlogBucket"],
   "ops.outbox.flush_failed": ["deploymentMode"],
   "ops.service.health_check": [

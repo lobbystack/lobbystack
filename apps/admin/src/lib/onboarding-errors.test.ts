@@ -5,10 +5,10 @@ import { getSafeOnboardingErrorMessage } from "./onboarding-errors";
 const t = (key: string): string => key;
 
 describe("getSafeOnboardingErrorMessage", () => {
-  it("maps workspace creation rate limits", () => {
+  it("maps the owned workspace limit", () => {
     expect(
       getSafeOnboardingErrorMessage(
-        new Error("Too many workspace creation attempts."),
+        new Error("Too many workspaces. One account can own up to 10."),
         t,
         "businessName.submitFailed",
       ),

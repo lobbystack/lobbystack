@@ -1,3 +1,4 @@
+import type { BillingPlanSlug } from "@lobbystack/shared";
 import type { AnalyticsChannelCounts } from "./analytics-channels";
 
 export type WorkspaceViewModel = {
@@ -34,11 +35,6 @@ export type AnalyticsViewModel = {
   }>;
   channels: AnalyticsChannelCounts;
   outcomes: Array<{ outcome: string; count: number }>;
-  unitEconomics: {
-    totalCostUsd: number;
-    costPerVoiceCallUsd: number;
-    costPerActiveUserUsd: number;
-  } | null;
 };
 
 export type CalendarOptionViewModel = {
@@ -99,6 +95,7 @@ export type PhoneNumberViewModel = {
 
 export type BillingUsageViewModel = {
   knowledgeStorageBytesUsed: number;
+  effectivePlan: BillingPlanSlug;
   account: {
     plan: string | null;
     billingInterval: string | null;

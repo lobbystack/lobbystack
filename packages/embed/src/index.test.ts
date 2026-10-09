@@ -4,11 +4,12 @@ import { initWidget, loaderLabels } from "./index";
 
 afterEach(() => { vi.clearAllTimers(); vi.useRealTimers(); vi.restoreAllMocks(); vi.unstubAllGlobals(); document.body.innerHTML = ""; });
 
-function mountWidget(): HTMLIFrameElement {
+function mountWidget(baseUrl: string | null = "https://admin.example.test"): HTMLIFrameElement {
   vi.useFakeTimers();
   const script = document.createElement("script");
   script.setAttribute("data-widget-key", "fixture-key");
-  script.setAttribute("data-base-url", "https://admin.example.test");
+  if (baseUrl) script.setAttribute("data-base-url", baseUrl);
+  else script.src = "https://admin.example.test/embed.js";
   vi.spyOn(document, "currentScript", "get").mockReturnValue(script);
   expect(initWidget()).toBe(true);
   return document.querySelector("iframe")!;
@@ -124,4 +125,27 @@ it("keeps the sandbox and supports external links without exposing unsupported A
   expect(Object.keys(window.LobbyStack!)).toEqual(["open", "close", "toggle"]);
   window.LobbyStack!.close();
   expect((frame.parentElement as HTMLElement).inert).toBe(true);
+});
+
+it("loads the chat from the loader's own origin when the snippet has no data-base-url", async () => {
+  const fetchMock = vi.fn().mockResolvedValue(Response.json({ token: "fixture-session" }));
+  vi.stubGlobal("fetch", fetchMock);
+  const frame = mountWidget(null);
+  window.LobbyStack!.open();
+  expect(frame.getAttribute("src")).toBe("https://admin.example.test/embed/fixture-key");
+  expect(fetchMock).toHaveBeenCalledWith("https://admin.example.test/api/widget/session", expect.anything());
+});
+
+it("sends a UUID visitor id on http pages without crypto.randomUUID and replaces a stored non-UUID id", async () => {
+  const fetchMock = vi.fn().mockResolvedValue(Response.json({ token: "fixture-session" }));
+  vi.stubGlobal("fetch", fetchMock);
+  const realCrypto = globalThis.crypto;
+  // http pages expose getRandomValues but not randomUUID.
+  vi.stubGlobal("crypto", { getRandomValues: realCrypto.getRandomValues.bind(realCrypto) });
+  window.localStorage.setItem("lobbystack.visitorId.fixture-key", "v-1760000000000-abc");
+  mountWidget();
+  window.LobbyStack!.open();
+  const { visitorId } = JSON.parse(fetchMock.mock.calls[0]![1].body as string) as { visitorId: string };
+  expect(visitorId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  expect(window.localStorage.getItem("lobbystack.visitorId.fixture-key")).toBe(visitorId);
 });

@@ -121,7 +121,8 @@ export function isStorageHttpRequest(request: unknown): boolean {
 export function redactOtelExceptionText(value: string): string {
   return redactSignedStorageUrls(value)
     // Drizzle appends every bound parameter (tokens, ids, emails) to query errors.
-    .replace(/(^|\n)params: [\s\S]*?(?=\n\s+at |$)/, "$1params: [omitted]")
+    // Stop only at a V8 frame ("\n    at "): a parameter may hold "\n\nat 3pm ...".
+    .replace(/(^|\n)params: [\s\S]*?(?=\n {4}at |$)/, "$1params: [omitted]")
     .replace(/Bearer\s+[^\s]+/gi, "Bearer [redacted]")
     .replace(/\b(?:sk|rk|pk)-[A-Za-z0-9_-]+\b/g, "[redacted-key]")
     .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, "[redacted-email]")

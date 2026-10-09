@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { defaultWidgetConfig, widgetConfigSchema } from "@lobbystack/shared";
 
-import { createWidgetSessionToken, hashWidgetKey, isAllowedWidgetOrigin, normalizeOrigin, normalizeAllowedOrigins, serializeWidgetKeyConfig, verifyWidgetSessionToken } from "./widget-keys";
+import { createWidgetSessionToken, hashWidgetKey, isAllowedWidgetOrigin, normalizeOrigin, normalizeAllowedOrigins, requestIpHash, serializeWidgetKeyConfig, verifyWidgetSessionToken } from "./widget-keys";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -12,6 +12,14 @@ describe("widget key hashing and origin policy", () => {
   it("hashes widget keys deterministically", () => {
     expect(hashWidgetKey("wk_live_abc")).toBe(hashWidgetKey("  wk_live_abc  "));
     expect(hashWidgetKey("wk_live_abc")).not.toBe(hashWidgetKey("wk_live_abd"));
+  });
+
+  it("hashes every address in one IPv6 /64 as one client", () => {
+    vi.stubEnv("TRUSTED_CLIENT_IP_HEADER", "x-real-ip");
+    const hash = (ip: string) => requestIpHash(new Request("https://app.example.test", { headers: { "x-real-ip": ip } }));
+    expect(hash("2001:db8::1")).toBe(hash("2001:db8::abcd:2"));
+    expect(hash("2001:db8::1")).not.toBe(hash("2001:db8:0:1::1"));
+    expect(hash("203.0.113.10")).not.toBe(hash("203.0.113.11"));
   });
 
   it("normalizes origins, stripping trailing slashes", () => {

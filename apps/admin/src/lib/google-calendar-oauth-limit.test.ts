@@ -33,6 +33,9 @@ describe("Google Calendar OAuth rate limits", () => {
   it("always bounds the unauthenticated callback by IP, falling back to one shared bucket", () => {
     const withIp = buildCalendarOAuthRateLimits({ operation: "callback", ip: "203.0.113.10" });
     expect(withIp.map((entry) => [entry.name, entry.limit])).toEqual([["ip-hour", 120]]);
+    const ipKey = (ip: string) => buildCalendarOAuthRateLimits({ operation: "callback", ip })[0]!.key;
+    expect(ipKey("2001:db8::1")).toBe(ipKey("2001:db8::abcd:2"));
+    expect(ipKey("2001:db8::1")).not.toBe(ipKey("2001:db8:0:1::1"));
     const unattributed = buildCalendarOAuthRateLimits({ operation: "callback" });
     expect(unattributed.map((entry) => [entry.name, entry.limit])).toEqual([["ip-unattributed-hour", 600]]);
   });

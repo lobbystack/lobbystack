@@ -1,4 +1,4 @@
-import { GetBucketCorsCommand, PutBucketCorsCommand, S3Client, type CORSRule } from "@aws-sdk/client-s3";
+import { GetBucketCorsCommand, HeadObjectCommand, PutBucketCorsCommand, S3Client, type CORSRule } from "@aws-sdk/client-s3";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createStorageProvider } from "./provider";
@@ -79,5 +79,16 @@ describe("S3StorageProvider browser uploads", () => {
     await (createStorageProvider({ STORAGE_PROVIDER: "s3", S3_BUCKET: "uploads", APP_BASE_URL: origin, S3_ACCESS_KEY_ID: "test", S3_SECRET_ACCESS_KEY: "test" }) as S3StorageProvider).createUpload(upload);
 
     expect(send.mock.calls.some(([command]) => command instanceof GetBucketCorsCommand || command instanceof PutBucketCorsCommand)).toBe(false);
+  });
+});
+
+describe("S3StorageProvider headObject", () => {
+  it("asks for the stored checksum, which S3 and MinIO only return on request", async () => {
+    vi.spyOn(S3Client.prototype, "send").mockImplementation(async (command) => {
+      if (command instanceof HeadObjectCommand) return (command.input.ChecksumMode === "ENABLED" ? { ContentLength: 4, ContentType: "application/pdf", ChecksumSHA256: "abc=" } : { ContentLength: 4, ContentType: "application/pdf" }) as never;
+      return {} as never;
+    });
+
+    await expect(storage().headObject({ key: upload.key })).resolves.toEqual({ length: 4, contentType: "application/pdf", checksum: "abc=" });
   });
 });

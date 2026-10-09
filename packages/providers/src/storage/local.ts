@@ -262,13 +262,6 @@ export class LocalStorageProvider {
     });
   }
 
-  async copyObject(input: { sourceKey: string; destinationKey: string }): Promise<void> {
-    const source = await this.getObject({ key: input.sourceKey });
-    const metadata = await this.headObject({ key: input.sourceKey });
-    if (!metadata) throw new Error("Source object not found.");
-    await this.putObject({ key: input.destinationKey, body: source, contentType: metadata.contentType, ...(metadata.checksum ? { checksum: metadata.checksum } : {}) });
-  }
-
   verifyToken(token: string, operation: LocalStorageOperation): LocalStorageToken {
     return verifyLocalStorageToken(token, this.signingSecret, operation);
   }

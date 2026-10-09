@@ -2,8 +2,6 @@ import twilio from "twilio";
 
 import { assertCertificationRecipient, assertCertificationOperationAllowed } from "@lobbystack/shared";
 
-import { validateTwilioSignature } from "./webhookSecurity";
-
 export type TwilioProviderConfig = {
   accountSid: string;
 } & ({ authToken: string; apiKeySid?: never; apiKeySecret?: never } | { authToken?: never; apiKeySid: string; apiKeySecret: string });
@@ -58,19 +56,11 @@ function normalizedUnit(value: string | null | undefined): string | undefined {
 
 export class TwilioProvider {
   private readonly client: ReturnType<typeof twilio>;
-  private readonly config: TwilioProviderConfig;
 
   constructor(config: TwilioProviderConfig) {
-    this.config = config;
     this.client = config.apiKeySid
       ? twilio(config.apiKeySid, config.apiKeySecret, { accountSid: config.accountSid })
       : twilio(config.accountSid, config.authToken);
-  }
-
-  async validateWebhook(input: { signature: string | null; url: string; params: Record<string, string> }): Promise<boolean> {
-    // API key secrets authenticate REST requests, not Twilio webhook signatures.
-    if (!this.config.authToken) return false;
-    return validateTwilioSignature({ authToken: this.config.authToken, signatureHeader: input.signature, url: input.url, params: input.params });
   }
 
   async sendSms(input: { to: string; from: string; body: string; statusCallback?: string }): Promise<{ providerMessageId: string }> {
@@ -156,19 +146,6 @@ export class TwilioProvider {
     return { verificationSid: verification.sid, status: verification.status };
   }
 
-  async checkPhone(input: { serviceSid: string; verificationSid: string; code: string }): Promise<{ status: string; approved: boolean }> {
-    const check = await this.client.verify.v2.services(input.serviceSid).verificationChecks.create({ verificationSid: input.verificationSid, code: input.code });
-    return { status: check.status, approved: check.status === "approved" };
-  }
-
-  async lookupPhoneNumber(input: { phoneNumber: string; includeLineType?: boolean }): Promise<{ phoneE164: string; countryCode: string; valid: boolean; validationErrors?: string[]; lineType?: string; lineTypeErrorCode?: number }> {
-    assertCertificationRecipient("phone", input.phoneNumber);
-    const result = await this.client.lookups.v2.phoneNumbers(input.phoneNumber).fetch(input.includeLineType === false ? {} : { fields: "line_type_intelligence" });
-    const lineType = result.lineTypeIntelligence?.type ?? undefined;
-    const lineTypeErrorCode = result.lineTypeIntelligence?.errorCode ?? undefined;
-    return { phoneE164: result.phoneNumber, countryCode: result.countryCode, valid: result.valid, ...(result.validationErrors?.length ? { validationErrors: result.validationErrors } : {}), ...(lineType ? { lineType } : {}), ...(lineTypeErrorCode !== null && lineTypeErrorCode !== undefined ? { lineTypeErrorCode } : {}) };
-  }
-
   async listAvailablePhoneNumbers(input: { countryCode: string; kind: "local" | "toll_free"; areaCode?: string; city?: string; regionCode?: string; postalCode?: string; limit: number }): Promise<AvailablePhoneNumber[]> {
     const collection = this.client.availablePhoneNumbers(input.countryCode);
     const filters = { smsEnabled: true, voiceEnabled: true, limit: Math.max(1, Math.min(20, Math.trunc(input.limit))), ...(input.areaCode && /^\d+$/.test(input.areaCode) ? { areaCode: Number(input.areaCode) } : {}), ...(input.city ? { inLocality: input.city } : {}), ...(input.regionCode ? { inRegion: input.regionCode } : {}), ...(input.postalCode ? { inPostalCode: input.postalCode } : {}) };
@@ -194,11 +171,6 @@ export class TwilioProvider {
   async findOwnedPhoneNumber(input: { e164: string }): Promise<{ providerPhoneId: string; e164: string; friendlyName?: string } | null> {
     const number = (await this.client.incomingPhoneNumbers.list({ phoneNumber: input.e164, limit: 1 }))[0];
     return number ? { providerPhoneId: number.sid, e164: number.phoneNumber, ...(number.friendlyName ? { friendlyName: number.friendlyName } : {}) } : null;
-  }
-
-  async configureIncomingPhoneNumber(input: { providerPhoneId: string; smsUrl?: string | null; voiceUrl?: string | null; statusCallbackUrl?: string | null }): Promise<void> {
-    assertCertificationOperationAllowed();
-    await this.client.incomingPhoneNumbers(input.providerPhoneId).update({ ...(input.smsUrl !== undefined ? { smsUrl: input.smsUrl ?? "", smsMethod: "POST" } : {}), ...(input.voiceUrl !== undefined ? { voiceUrl: input.voiceUrl ?? "", voiceMethod: "POST" } : {}), ...(input.statusCallbackUrl !== undefined ? { statusCallback: input.statusCallbackUrl ?? "", statusCallbackMethod: "POST" } : {}) });
   }
 
   /** Routes the number's calls through an Elastic SIP trunk (to GPT-Live) instead of its voice URL. */

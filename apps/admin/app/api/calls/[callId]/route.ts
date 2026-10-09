@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { completeVoiceFollowUpTasks, getCallDetail } from "@lobbystack/domain";
 import { isUuid } from "@lobbystack/shared";
-import { asApiResponse, jsonError, readJson, requireOperatorBusiness, withOperatorTransaction } from "@/lib/api-helpers";
+import { asApiResponse, jsonError, readJson, requireOperatorBusiness } from "@/lib/api-helpers";
 import { createDomainContext } from "@/lib/domain-context";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +10,9 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request, { params }: { params: Promise<{ callId: string }> }) {
   try {
     const { callId } = await params;
-    const detail = await withOperatorTransaction(request, async ({ session, businessId }) => await getCallDetail(createDomainContext(), { userId: session.user.id, businessId, callId }));
+    const { session, businessId } = await requireOperatorBusiness(request);
+    // A malformed id would make Postgres throw on the uuid comparison.
+    const detail = isUuid(callId) ? await getCallDetail(createDomainContext(), { userId: session.user.id, businessId, callId }) : null;
     if (!detail) return NextResponse.json({ error: "Call not found.", code: "not_found" }, { status: 404 });
     return NextResponse.json(detail);
   } catch (error) {
@@ -27,6 +29,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ca
     const { inboxItemId } = body;
     if (inboxItemId !== undefined && !isUuid(inboxItemId)) return jsonError("inboxItemId must be a UUID.", 400, "invalid_request");
     const { callId } = await params;
+    if (!isUuid(callId)) return jsonError("Call not found.", 404, "not_found");
     return NextResponse.json(await completeVoiceFollowUpTasks(createDomainContext(), { userId: session.user.id, businessId, callId, ...(inboxItemId ? { inboxItemId } : {}) }));
   } catch (error) {
     return asApiResponse(error);

@@ -2,16 +2,11 @@ name: CI
 
 on:
   pull_request:
+  # Every push to main runs, docs-only ones included: a run releases only when
+  # main has not moved past it, so a skipped run would strand the release before it.
   push:
     branches:
       - main
-    # Documentation-only merges skip the code pipeline. Keep PRs unfiltered so
-    # required checks always report. Do not ignore app content markdown, which
-    # is a build input for the landing site.
-    paths-ignore:
-      - "docs/**"
-      - "*.md"
-      - "mintlify/**"
 
 permissions:
   contents: read
@@ -155,7 +150,7 @@ jobs:
 
   validate:
     if: always()
-    needs: [checks, database, e2e, images]
+    needs: [checks, zapier, database, e2e, images]
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
@@ -178,14 +173,18 @@ jobs:
       # Write moves the production branch in the last step.
       contents: write
     env:
-      RAILWAY_TOKEN: ${{ secrets.RAILWAY_PRODUCTION_TOKEN }}
       RAILWAY_PROJECT_ID: af0a130e-7b02-4fc0-94ef-b0ac45a0a0a6
       RAILWAY_ENVIRONMENT: production
       RAILWAY_SERVICE: migrator
     steps:
+      # Keep the write-scoped token off disk; only the release step gets it.
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      # No lockfile pins the CLI's own dependencies, so apply the same 3-day
+      # cooldown as pnpm's minimumReleaseAge.
       - name: Install Railway CLI
-        run: npm install --global @railway/cli@5.57.9
+        run: npm install --global @railway/cli@5.57.9 --before="$(date -u -d '3 days ago' +%F)"
       - name: Verify release is current
         run: |
           remote_sha="$(git ls-remote origin refs/heads/main | cut -f1)"
@@ -194,6 +193,8 @@ jobs:
             exit 1
           fi
       - name: Run production migrations
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_PRODUCTION_TOKEN }}
         run: >-
           railway up
           --ci

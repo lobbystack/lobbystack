@@ -6,6 +6,7 @@ import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 import { requireBusinessMembership } from "../authz";
 import { contentExpiryForPlan, isContentRetentionEnabled, resolveBusinessBillingPlan } from "./contentRetentionPolicy";
 import { resolveCallOutcome } from "./callOutcome";
+import { findOrCreateContactByPhone } from "./contacts";
 import { buildConversationSessionSummary, extractCallerContext, normalizeCallSummaryLocale, sanitizeGeneratedCallerName, type CallSummaryLocale, type ConversationTranscriptTurn, type GeneratedCallSummary } from "./conversationSummary";
 import type { DomainContext } from "./context";
 import { queueOperatorAlertInTransaction, type OperatorNotificationEventKey } from "./notifications";
@@ -108,12 +109,8 @@ export async function getOrCreateConversation(
     if (input.userId) {
       await requireBusinessMembership(tx, { userId: input.userId, businessId: input.businessId });
     }
-    const found = (await tx.select({ id: contacts.id }).from(contacts).where(and(eq(contacts.businessId, input.businessId), eq(contacts.phone, input.contactPhone))).limit(1))[0];
-    const contact = found ?? (await tx.insert(contacts).values({ businessId: input.businessId, phone: input.contactPhone }).returning({ id: contacts.id }))[0];
-    if (!contact) {
-      throw new Error("Contact could not be created.");
-    }
-    if (!found) await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "contact.created", resourceId: contact.id });
+    const { contact, created } = await findOrCreateContactByPhone(tx, { businessId: input.businessId, phone: input.contactPhone });
+    if (created) await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "contact.created", resourceId: contact.id });
     const current = await tx.select({ id: conversations.id }).from(conversations).where(and(eq(conversations.businessId, input.businessId), eq(conversations.contactId, contact.id), eq(conversations.channel, input.channel), eq(conversations.status, "open"))).orderBy(desc(conversations.updatedAt)).limit(1);
     const conversationId = current[0]?.id ?? (await tx.insert(conversations).values({ businessId: input.businessId, contactId: contact.id, channel: input.channel, status: "open", automationState: "ai_active" }).returning({ id: conversations.id }))[0]?.id;
     if (!conversationId) {
@@ -129,7 +126,7 @@ export async function appendMessage(
 ): Promise<string> {
   return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: input.userId ? "operator" : "worker" }, async (tx) => {
     if (input.userId) {
-      await requireBusinessMembership(tx, { userId: input.userId, businessId: input.businessId });
+      await requireBusinessMembership(tx, { userId: input.userId, businessId: input.businessId, minimumRole: "scheduler" });
     }
     const session = (await tx.select({ id: conversationSessions.id }).from(conversationSessions).where(and(eq(conversationSessions.businessId, input.businessId), eq(conversationSessions.conversationId, input.conversationId), eq(conversationSessions.status, "open"))).orderBy(desc(conversationSessions.startedAt)).limit(1))[0] ?? (await tx.insert(conversationSessions).values({ businessId: input.businessId, conversationId: input.conversationId, channel: input.channel, status: "open" }).returning({ id: conversationSessions.id }))[0];
     const retentionPlan = isContentRetentionEnabled() ? await resolveBusinessBillingPlan(tx, input.businessId) : null;
@@ -181,7 +178,7 @@ export async function setAutomationState(
   input: { userId: string; businessId: string; conversationId: string; state: "ai_active" | "human_handoff" },
 ): Promise<void> {
   const channel = await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
-    await requireBusinessMembership(tx, input);
+    await requireBusinessMembership(tx, { ...input, minimumRole: "scheduler" });
     const [updated] = await tx.update(conversations).set({ automationState: input.state, automationPausedAt: input.state === "human_handoff" ? new Date() : null, automationPausedByUserId: input.state === "human_handoff" ? input.userId : null, updatedAt: new Date() }).where(and(eq(conversations.id, input.conversationId), eq(conversations.businessId, input.businessId))).returning({ channel: conversations.channel });
     await enqueueOutbox(tx, {
       topic: "realtime.publish",
@@ -276,18 +273,18 @@ export async function registerWidgetVisitor(
 export async function getOrCreateWidgetConversation(
   context: DomainContext,
   input: { businessId: string; widgetVisitorId: string },
-): Promise<{ conversationId: string }> {
+): Promise<{ conversationId: string; automationState: "ai_active" | "human_handoff" }> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     // The share lock makes a concurrent link wait, so a new chat either sees the contact or is claimed by the link.
     const visitor = (await tx.select({ id: widgetVisitors.id, contactId: widgetVisitors.contactId }).from(widgetVisitors).where(and(eq(widgetVisitors.id, input.widgetVisitorId), eq(widgetVisitors.businessId, input.businessId))).limit(1).for("share"))[0];
     if (!visitor) throw new Error("Widget visitor not found.");
-    const current = await tx.select({ id: conversations.id }).from(conversations).where(and(eq(conversations.businessId, input.businessId), eq(conversations.widgetVisitorId, input.widgetVisitorId), eq(conversations.channel, "web_chat"), eq(conversations.status, "open"))).orderBy(desc(conversations.updatedAt)).limit(1);
+    const current = await tx.select({ id: conversations.id, automationState: conversations.automationState }).from(conversations).where(and(eq(conversations.businessId, input.businessId), eq(conversations.widgetVisitorId, input.widgetVisitorId), eq(conversations.channel, "web_chat"), eq(conversations.status, "open"))).orderBy(desc(conversations.updatedAt)).limit(1);
     const conversationId = current[0]?.id ?? (await tx.insert(conversations).values({ businessId: input.businessId, widgetVisitorId: input.widgetVisitorId, ...(visitor.contactId ? { contactId: visitor.contactId } : {}), channel: "web_chat", status: "open", automationState: "ai_active" }).onConflictDoNothing().returning({ id: conversations.id }))[0]?.id;
     if (!conversationId) {
       const existing = await tx.select({ id: conversations.id }).from(conversations).where(and(eq(conversations.businessId, input.businessId), eq(conversations.widgetVisitorId, input.widgetVisitorId), eq(conversations.channel, "web_chat"))).orderBy(desc(conversations.updatedAt)).limit(1);
       throw new Error(existing[0] ? "Widget conversation already exists and is closed." : "Conversation could not be created.");
     }
-    return { conversationId };
+    return { conversationId, automationState: current[0]?.automationState === "human_handoff" ? "human_handoff" : "ai_active" };
   });
 }
 
