@@ -271,6 +271,22 @@
       "placeholder": "Seleccione un idioma predeterminado",
       "hint": "Elija el idioma que su recepcionista debe usar cuando no se conoce la preferencia de la persona que llama."
     },
+    "timezone": {
+      "label": "Zona horaria del negocio",
+      "hint": "Su recepcionista usa esta zona horaria para su horario de atención y los horarios de citas que ofrece a los clientes.",
+      "regions": {
+        "africa": "África",
+        "america": "América",
+        "antarctica": "Antártida",
+        "arctic": "Ártico",
+        "asia": "Asia",
+        "atlantic": "Atlántico",
+        "australia": "Australia",
+        "europe": "Europa",
+        "indian": "Océano Índico",
+        "pacific": "Pacífico"
+      }
+    },
     "transferNumber": {
       "label": "Número de transferencia predeterminado",
       "placeholder": "+1 555-123-4567",

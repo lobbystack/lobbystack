@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ createBusiness: vi.fn() }));
-vi.mock("@lobbystack/domain", () => ({ createBusiness: mocks.createBusiness }));
+vi.mock("@lobbystack/domain", async (original) => ({ ...await original<typeof import("@lobbystack/domain")>(), createBusiness: mocks.createBusiness }));
 vi.mock("@/lib/api-helpers", () => ({
   requireApiSession: async () => ({ user: { id: "user-1" } }),
   readJson: (request: Request) => request.json(),
@@ -31,4 +31,9 @@ it("allows an omitted slug for server-side generation", async () => {
 it("preserves a supplied nonempty slug", async () => {
   expect((await POST(request({ slug: "test" }))).status).toBe(201);
   expect(mocks.createBusiness).toHaveBeenCalledWith({}, expect.objectContaining({ slug: "test" }));
+});
+
+it.each([["Etc/Unknown", "UTC"], ["america/toronto", "America/Toronto"]])("creates the business in a zone the server knows when the browser sends %s", async (timezone, saved) => {
+  expect((await POST(request({ timezone }))).status).toBe(201);
+  expect(mocks.createBusiness).toHaveBeenCalledWith({}, expect.objectContaining({ timezone: saved }));
 });

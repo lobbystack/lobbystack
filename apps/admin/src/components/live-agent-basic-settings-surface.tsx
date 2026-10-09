@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { requestJson } from "@/lib/request-json";
-import { normalizeBookingMode, type AppointmentChangePolicy, type BookingMode, type RuntimeLocale } from "@lobbystack/shared";
+import { intlLocale, normalizeBookingMode, type AppointmentChangePolicy, type BookingMode, type RuntimeLocale } from "@lobbystack/shared";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
@@ -17,7 +17,7 @@ import {
   ItemDescription,
   ItemTitle,
 } from "@/components/ui/item";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { NativeSelect, NativeSelectOptGroup, NativeSelectOption } from "@/components/ui/native-select";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -25,6 +25,7 @@ import { Surface } from "@/components/ui/surface";
 import { Switch } from "@/components/ui/switch";
 import { useTelemetry } from "@/components/product-analytics";
 import { BookingWithoutHoursAlert, BusinessHoursSection, needsHoursForBooking, useBusinessHours } from "@/components/business-hours-section";
+import { availableTimeZones, groupTimeZones, isTimeZoneRegion, type TimeZoneOption } from "@/lib/time-zones";
 
 type AgentBasicSettingsPageProps = {
   businessId: string;
@@ -82,19 +83,23 @@ export function AgentBasicSettingsPage({
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: ["agent-settings", businessId],
-    queryFn: () => requestJson<{ business: { defaultLocale: RuntimeLocale } | null; profile: { greeting: string; summary: string; summarySource: "placeholder" | "generated" | "operator"; transferNumber: string | null; transferMode: string; appointmentChangePolicy: AppointmentChangePolicy | null; bookingMode: BookingMode } | null }>(`/api/agent?businessId=${encodeURIComponent(businessId)}`),
+    queryFn: () => requestJson<{ business: { defaultLocale: RuntimeLocale; timezone: string } | null; profile: { greeting: string; summary: string; summarySource: "placeholder" | "generated" | "operator"; transferNumber: string | null; transferMode: string; appointmentChangePolicy: AppointmentChangePolicy | null; bookingMode: BookingMode } | null }>(`/api/agent?businessId=${encodeURIComponent(businessId)}`),
     enabled: Boolean(businessId),
   });
   const configuration = query.data;
   const hours = useBusinessHours(businessId);
   const isLoadingConfiguration = !businessId || query.isLoading;
-  async function saveProfile({ defaultLocale: locale, ...patch }: { businessId: string; defaultLocale?: RuntimeLocale; greeting?: string; summary?: string; regenerateSummary?: true; transferNumber?: string | null; transferMode?: string; appointmentChangePolicy?: AppointmentChangePolicy; bookingMode?: BookingMode }) {
+  async function saveProfile({ defaultLocale: locale, ...patch }: { businessId: string; defaultLocale?: RuntimeLocale; timezone?: string; greeting?: string; summary?: string; regenerateSummary?: true; transferNumber?: string | null; transferMode?: string; appointmentChangePolicy?: AppointmentChangePolicy; bookingMode?: BookingMode }, refetchType: "active" | "none" = "active") {
     await requestJson(`/api/agent?businessId=${encodeURIComponent(businessId)}`, { method: "PATCH", body: JSON.stringify({ ...patch, ...(locale ? { locale } : {}) }) });
-    await queryClient.invalidateQueries({ queryKey: ["agent-settings", businessId] });
+    await queryClient.invalidateQueries({ queryKey: ["agent-settings", businessId], refetchType });
   }
   const persistedProfile = configuration?.profile;
   // The sign-up placeholder isn't a summary, so it shows as empty.
   const savedSummary = persistedProfile && persistedProfile.summarySource !== "placeholder" ? persistedProfile.summary : "";
+  const savedTimezone = configuration?.business?.timezone ?? "";
+  // Built once the business's zone loads, so the server render and hydration agree.
+  const timeZoneGroups = useMemo(() => savedTimezone ? groupTimeZones(availableTimeZones(savedTimezone), intlLocale(i18n.language)) : [], [savedTimezone, i18n.language]);
+  const timeZoneOptions = (zones: TimeZoneOption[]) => zones.map((zone) => <NativeSelectOption key={zone.id} value={zone.id}>{zone.label}</NativeSelectOption>);
 
   const [greeting, setGreeting] = useState("");
   const [summary, setSummary] = useState("");
@@ -102,6 +107,9 @@ export function AgentBasicSettingsPage({
   const [isSummarySaving, setIsSummarySaving] = useState(false);
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
   const [defaultLocale, setDefaultLocale] = useState<RuntimeLocale>("en");
+  const [timezone, setTimezone] = useState("");
+  const [timezoneStatus, setTimezoneStatus] = useState<string | null>(null);
+  const [isTimezoneSaving, setIsTimezoneSaving] = useState(false);
   const [transferNumber, setTransferNumber] = useState("");
   const [transferNumberInputValue, setTransferNumberInputValue] = useState("");
   const [allowAppointmentCancel, setAllowAppointmentCancel] = useState(true);
@@ -121,6 +129,7 @@ export function AgentBasicSettingsPage({
   const [isAppointmentChangeSaving, setIsAppointmentChangeSaving] = useState(false);
   const [transferStatusTone, setTransferStatusTone] = useState<"success" | "error">("success");
   useEffect(() => {
+    setTimezone(configuration?.business?.timezone ?? "");
     const profile = configuration?.profile;
     if (!profile) {
       return;
@@ -272,6 +281,25 @@ export function AgentBasicSettingsPage({
       toast.error(t("agent:actions.saveFailed"));
     } finally {
       setIsAppointmentChangeSaving(false);
+    }
+  }
+
+  async function saveTimezone(nextTimezone: string): Promise<void> {
+    if (!canManageTenant) return;
+    const previous = timezone;
+    setTimezone(nextTimezone);
+    setIsTimezoneSaving(true);
+    setTimezoneStatus(null);
+    try {
+      // A refetch resets every unsaved draft on this page, so the saved settings only go stale.
+      await saveProfile({ businessId, timezone: nextTimezone }, "none");
+      telemetry.track("web.agent.settings_saved", { businessId, setting: "timezone" });
+      setTimezoneStatus(t("agent:actions.saved"));
+    } catch {
+      setTimezone(previous);
+      toast.error(t("agent:actions.saveFailed"));
+    } finally {
+      setIsTimezoneSaving(false);
     }
   }
 
@@ -457,6 +485,33 @@ export function AgentBasicSettingsPage({
               </ItemActions>
             </Item>
 
+            <Item
+              className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0"
+              variant="default"
+            >
+              <ItemContent>
+                <ItemTitle>{t("agent:fields.timezone.label")}</ItemTitle>
+                <ItemDescription>{t("agent:fields.timezone.hint")}</ItemDescription>
+                {isTimezoneSaving ? <ItemDescription>{t("agent:actions.saving")}</ItemDescription> : null}
+                {!isTimezoneSaving && timezoneStatus ? <ItemDescription>{timezoneStatus}</ItemDescription> : null}
+              </ItemContent>
+              <ItemActions className="w-full sm:w-auto">
+                {isLoadingConfiguration ? (
+                  <Skeleton className="h-10 w-full rounded-md sm:w-72" />
+                ) : (
+                  <NativeSelect
+                    aria-label={t("agent:fields.timezone.label")}
+                    className="w-full sm:w-72"
+                    disabled={isTimezoneSaving || !timezone || !canManageTenant}
+                    id="agent-timezone"
+                    onChange={(event) => void saveTimezone(event.target.value)}
+                    value={timezone}
+                  >
+                    {timeZoneGroups.flatMap((group) => group.region === null ? timeZoneOptions(group.zones) : [<NativeSelectOptGroup key={group.region} label={isTimeZoneRegion(group.region) ? t(`agent:fields.timezone.regions.${group.region.toLowerCase()}`) : group.region}>{timeZoneOptions(group.zones)}</NativeSelectOptGroup>])}
+                  </NativeSelect>
+                )}
+              </ItemActions>
+            </Item>
 
             <Item
               className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0"

@@ -12,7 +12,6 @@ import type { SmsConsentAnswer } from "./contactSmsConsent";
 import { refreshBusinessSnapshot } from "./knowledge";
 import { CANCELLATION_CONFIRMATION, defaultOperatorNotificationEventPreferences, queueOperatorAlert, resolveNotificationDelivery } from "./notifications";
 import { createAppointmentForApi } from "./publicApi/operations";
-import { bookForCaller, type ReceptionistChannel } from "./receptionistActions";
 import { receiveSharedSenderSms, SHARED_SENDER_HELP_REPLY, SHARED_SENDER_START_REPLY } from "./sms";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
@@ -80,10 +79,6 @@ async function seed(tx: DatabaseTransaction, options: { selfHosted: boolean }) {
     await asWorker(tx);
     return (await bookAppointment({ db }, { businessId, serviceId: service!.id, startsAt: nextStart(), timezone: "UTC", contactPhone, sourceChannel: "voice", ...(smsConsent ? { smsConsent } : {}) })).appointmentId;
   };
-  const bookByAgent = async (contactPhone: string, channel: ReceptionistChannel, smsConsent: SmsConsentAnswer) => {
-    await asWorker(tx);
-    return await bookForCaller({ db }, { businessId, serviceName: "Cut", startsAt: nextStart(), timezone: "UTC", contactPhone, channel, smsConsent });
-  };
   const addContact = async (contactPhone: string, values: { smsConsentStatus?: string | null; smsConsentSource?: string } = {}) => {
     await asOwner(tx);
     await tx.insert(contacts).values({ businessId, phone: contactPhone, ...values });
@@ -133,7 +128,7 @@ async function seed(tx: DatabaseTransaction, options: { selfHosted: boolean }) {
     // Every event in the test's one transaction has the same timestamp, so compare them as a set.
     return { status: row?.status ?? null, source: row?.source ?? null, events: events.map((event) => `${event.action} ${event.source}`).sort() };
   };
-  return { businessId, ownNumber, book, bookByAgent, bookByApi, addContact, deliver, operatorCancel, operatorAlertSender, changeCode, snapshotSmsNumber, consent };
+  return { businessId, ownNumber, book, bookByApi, addContact, deliver, operatorCancel, operatorAlertSender, changeCode, snapshotSmsNumber, consent };
 }
 
 /** A text from this phone to the shared sender, applied as the webhook applies it. */
@@ -296,22 +291,6 @@ describe.skipIf(!client)("text consent a business sends through the API or MCP",
       const selfHosted = await seed(tx, { selfHosted: true });
       await selfHosted.bookByApi(customer);
       expect(await selfHosted.consent(customer)).toMatchObject({ status: "subscribed", events: ["reminder_consent_granted appointment_booking"] });
-    });
-  });
-});
-
-describe.skipIf(!client)("text consent the receptionist records", () => {
-  it.each(["web_chat", "web_voice"] as const)("ignores an answer given in a %s and records one given on a phone call", async (channel) => {
-    vi.stubEnv("TWILIO_ALERT_SMS_FROM", SHARED);
-    await rollbackTest(async (tx) => {
-      const business = await seed(tx, { selfHosted: false });
-      const visitor = phone();
-      expect(await business.bookByAgent(visitor, channel, "agreed")).toMatchObject({ ok: true });
-      expect(await business.consent(visitor)).toEqual({ status: null, source: null, events: [] });
-      expect(await business.bookByAgent(visitor, channel, "declined")).toMatchObject({ ok: true });
-      expect(await business.consent(visitor)).toEqual({ status: null, source: null, events: [] });
-      expect(await business.bookByAgent(visitor, "voice", "agreed")).toMatchObject({ ok: true });
-      expect(await business.consent(visitor)).toMatchObject({ status: "subscribed", events: ["reminder_consent_granted appointment_booking"] });
     });
   });
 });

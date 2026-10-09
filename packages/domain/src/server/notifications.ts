@@ -1,9 +1,9 @@
-import { OPERATOR_SMS_ACCEPTED_DISCLOSURE_VERSIONS, OPERATOR_SMS_DISCLOSURE_VERSION, canTextNumber, intlLocale, normalizeInterfaceLocale, type InterfaceLocale } from "@lobbystack/shared";
-import { and, eq, gte, inArray, lte, lt, or, sql } from "drizzle-orm";
+import { MAX_PHONE_CALL_MS, OPERATOR_SMS_ACCEPTED_DISCLOSURE_VERSIONS, OPERATOR_SMS_DISCLOSURE_VERSION, canTextNumber, intlLocale, normalizeInterfaceLocale, type InterfaceLocale } from "@lobbystack/shared";
+import { and, eq, gte, inArray, isNull, lte, lt, or, sql } from "drizzle-orm";
 import { DateTime } from "luxon";
 import { isTerminalTwilioMessageStatus, mapTwilioStatusToNotificationStatus, shouldApplyNotificationStatusTransition } from "@lobbystack/shared";
 
-import { appointments, businesses, contacts, enqueueOutbox, notifications, operatorNotificationDeliveries, operatorNotificationPreferences, services, smsConsentEvents, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { appointments, businesses, contacts, enqueueOutbox, notifications, operatorNotificationDeliveries, outboxMessages, operatorNotificationPreferences, services, smsConsentEvents, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 
 import { requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
@@ -13,6 +13,28 @@ import { recordUnitEconomicsEventInTransaction } from "./unitEconomics";
 
 // Caller must hold the appointment row lock, and commit the schedule change in
 // this same transaction. A new delivery ID fences even legacy queued jobs.
+/**
+ * The dispatch job for a customer text queued during a call. It waits until
+ * the call ends (releaseCallTexts), so delivery follows every answer about
+ * texts the caller gave on the call, whatever order the agent saved them in.
+ * A call can't outlast MAX_PHONE_CALL_MS, so the job goes out then at the latest.
+ */
+export function heldForCall(callId: string | undefined, payload: { notificationId: string }): { payload: Record<string, unknown>; availableAt?: Date } {
+  return callId ? { payload: { ...payload, callId }, availableAt: new Date(Date.now() + MAX_PHONE_CALL_MS) } : { payload };
+}
+
+/** Sends the texts a call held back, once the call has ended. */
+export async function releaseCallTexts(context: DomainContext, input: { businessId: string; callId: string }): Promise<void> {
+  await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    await tx.update(outboxMessages).set({ availableAt: new Date() }).where(and(
+      eq(outboxMessages.businessId, input.businessId),
+      eq(outboxMessages.topic, "notification.dispatch"),
+      isNull(outboxMessages.publishedAt),
+      sql`${outboxMessages.payload}->>'callId' = ${input.callId}`,
+    ));
+  });
+}
+
 export async function rescheduleAppointmentReminderInTransaction(
   tx: DatabaseTransaction,
   input: { businessId: string; appointmentId: string; startsAt: Date; revision: number },

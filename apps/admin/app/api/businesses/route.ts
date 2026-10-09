@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { attributeBusiness, createBusiness, listUserBusinesses, updateBusiness } from "@lobbystack/domain";
+import { attributeBusiness, createBusiness, ianaTimeZone, listUserBusinesses, updateBusiness } from "@lobbystack/domain";
 import { asApiResponse, getAppDatabase, jsonError, readJson, requireApiSession, requireOperatorBusiness } from "@/lib/api-helpers";
 import { createDomainContext } from "@/lib/domain-context";
 
@@ -26,7 +26,8 @@ export async function POST(request: Request) {
       return jsonError("slug must be a nonempty string when supplied.", 400);
     }
     const context = createDomainContext();
-    const created = await createBusiness(context, { userId: session.user.id, name: body.name, ...(body.slug !== undefined ? { slug: body.slug } : {}), timezone: body.timezone, businessType: body.businessType });
+    // The browser names the zone and the server's time zone data may not know it; owners can change it in AI settings.
+    const created = await createBusiness(context, { userId: session.user.id, name: body.name, ...(body.slug !== undefined ? { slug: body.slug } : {}), timezone: ianaTimeZone(body.timezone) ?? "UTC", businessType: body.businessType });
     // Attribute at creation, before the plan step can take a payment, so the
     // referrer earns commission on the first order too.
     if (typeof body.referralCode === "string" && body.referralCode) {

@@ -22,7 +22,8 @@ export function OnboardingBusinessSurface({ createNew = false }: { createNew?: b
   const { navigate, navigating, prefetch } = useStepNavigation();
   const telemetry = useTelemetry();
   const queryClient = useQueryClient();
-  const [name, setName] = useState("");
+  // Hydration resets the field, so keep what someone typed before the page finished loading.
+  const [name, setName] = useState(() => typeof document === "undefined" ? "" : (document.getElementById("onboarding-business-name") as HTMLInputElement | null)?.value ?? "");
   const [error, setError] = useState<string | null>(null);
   const { businesses, business: existing } = useActiveBusiness();
   const create = useMutation({

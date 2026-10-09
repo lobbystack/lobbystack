@@ -100,7 +100,7 @@ describe("LiveCallController greeting", () => {
     expect(greetingEvents).toEqual([expect.objectContaining({ step: "spoken", attempt: 0 })]);
   });
 
-  it("sends one fallback greeting command when no voice follows, in production's wording", async () => {
+  it("sends a fallback greeting command when no voice follows, in production's wording", async () => {
     fakeTimers();
     const greetingEvents: GreetingEvent[] = [];
     const { socket } = setup({ onGreeting: (event) => greetingEvents.push(event) });
@@ -110,12 +110,113 @@ describe("LiveCallController greeting", () => {
     await vi.advanceTimersByTimeAsync(3_999);
     expect(greetings(socket)).toHaveLength(0);
     await vi.advanceTimersByTimeAsync(1);
-    expect(greetings(socket)).toEqual([expect.objectContaining({ event_id: "greeting_1", content: 'Start the conversation now: say exactly "Thanks for calling Northside Plumbing." in the language of that greeting, then stop and listen to the caller.' })]);
+    expect(greetings(socket)).toEqual([expect.objectContaining({ type: "session.instructions.append", delegation_id: null, event_id: "greeting_1", content: 'Start the conversation now: say exactly "Thanks for calling Northside Plumbing." in the language of that greeting, then stop and listen to the caller.' })]);
+    expect(greetingEvents[0]).toMatchObject({ step: "sent", trigger: "fallback", attempt: 1 });
+  });
+
+  // On calls from October 3 to 8, GPT-Live acknowledged greeting commands it
+  // never spoke. One it did follow was spoken within 4 seconds of the acknowledgment.
+  it("sends the command again after each acknowledged one goes unspoken, up to three commands", async () => {
+    fakeTimers();
+    const greetingEvents: GreetingEvent[] = [];
+    const { socket } = setup({ onGreeting: (event) => greetingEvents.push(event) });
+    socket.socket.emit("open");
+    startSession(socket);
+    await vi.advanceTimersByTimeAsync(4_000);
     socket.emit("session.instructions.appended", { client_event_id: "greeting_1" });
-    await vi.advanceTimersByTimeAsync(20_000);
+    await vi.advanceTimersByTimeAsync(4_499);
     expect(greetings(socket)).toHaveLength(1);
-    expect(greetingEvents.map((event) => event.step)).toEqual(["sent", "acknowledged"]);
-    expect(greetingEvents[0]).toMatchObject({ trigger: "fallback", attempt: 1 });
+    await vi.advanceTimersByTimeAsync(1);
+    expect(greetings(socket).map((event) => event.event_id)).toEqual(["greeting_1", "greeting_2"]);
+    expect(greetings(socket)[1]?.content).toBe(greetings(socket)[0]?.content);
+    socket.emit("session.instructions.appended", { client_event_id: "greeting_2" });
+    await vi.advanceTimersByTimeAsync(4_500);
+    socket.emit("session.instructions.appended", { client_event_id: "greeting_3" });
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(greetings(socket).map((event) => event.event_id)).toEqual(["greeting_1", "greeting_2", "greeting_3"]);
+    expect(greetingEvents.map((event) => `${event.step}${event.attempt}${event.trigger ? ` ${event.trigger}` : ""}`)).toEqual(["sent1 fallback", "acknowledged1", "sent2 retry", "acknowledged2", "sent3 retry", "acknowledged3"]);
+  });
+
+  it("stops sending the command once the receptionist speaks", async () => {
+    fakeTimers();
+    const greetingEvents: GreetingEvent[] = [];
+    const { socket } = setup({ onGreeting: (event) => greetingEvents.push(event) });
+    socket.socket.emit("open");
+    startSession(socket);
+    await vi.advanceTimersByTimeAsync(4_000);
+    socket.emit("session.instructions.appended", { client_event_id: "greeting_1" });
+    await vi.advanceTimersByTimeAsync(2_000);
+    socket.emit("session.output_audio.delta", { delta: pcm(3_000), start_ms: 6_000, end_ms: 6_100 });
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(greetings(socket)).toHaveLength(1);
+    expect(greetingEvents.at(-1)).toMatchObject({ step: "spoken", attempt: 1 });
+  });
+
+  it("stops sending the command once the caller speaks", async () => {
+    fakeTimers();
+    const { socket } = setup();
+    socket.socket.emit("open");
+    startSession(socket);
+    await vi.advanceTimersByTimeAsync(4_000);
+    socket.emit("session.instructions.appended", { client_event_id: "greeting_1" });
+    await vi.advanceTimersByTimeAsync(3_000);
+    socket.emit("session.input_transcript.delta", { delta: "Hello?", start_ms: 6_500, end_ms: 7_000 });
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(greetings(socket)).toHaveLength(1);
+  });
+
+  // OpenAI's guide: an acknowledgment stays pending while the session timeline
+  // is stopped, as on a call whose audio never connected.
+  it("doesn't send the command again when OpenAI never acknowledges it", async () => {
+    fakeTimers();
+    const { socket } = setup();
+    socket.socket.emit("open");
+    startSession(socket);
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(greetings(socket)).toHaveLength(1);
+  });
+
+  it("doesn't send the command again once the call is ending", async () => {
+    fakeTimers();
+    const { socket, controller } = setup();
+    socket.socket.emit("open");
+    startSession(socket);
+    await vi.advanceTimersByTimeAsync(4_000);
+    socket.emit("session.instructions.appended", { client_event_id: "greeting_1" });
+    void controller.wrapUp("duration_limit");
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(greetings(socket)).toHaveLength(1);
+  });
+
+  // OpenAI reflects the caller's audio to the sideband. Its length against
+  // the time since the attach shows whether audio flows during silence.
+  it("reports the caller audio the sideband reflected, on each greeting step and on close", async () => {
+    fakeTimers();
+    const greetingEvents: GreetingEvent[] = [];
+    const { socket, closed } = setup({ onGreeting: (event) => greetingEvents.push(event) });
+    socket.socket.emit("open");
+    startSession(socket);
+    for (let tick = 0; tick < 40; tick += 1) {
+      socket.emit("session.input_audio.append", { audio: pcm(20) });
+      await vi.advanceTimersByTimeAsync(100);
+    }
+    expect(greetingEvents[0]).toMatchObject({ step: "sent", inputAudioMs: 4_000 });
+    socket.emit("session.input_audio.append", { audio: pcm(3_000) });
+    socket.emit("session.input_audio.append", { audio: pcm(3_000) });
+    socket.emit("session.input_audio.append", {});
+    socket.emit("session.closed", { reason: "remote_hangup", usage: { seconds: 5 } });
+    expect(closed[0]?.inputAudio).toEqual({ chunks: 42, coveredMs: 4_200, loudMs: 200, payloadBytes: 42 * pcm(20).length });
+  });
+
+  it("doesn't take loud caller audio for the receptionist's greeting", async () => {
+    fakeTimers();
+    const greetingEvents: GreetingEvent[] = [];
+    const { socket } = setup({ onGreeting: (event) => greetingEvents.push(event) });
+    socket.socket.emit("open");
+    startSession(socket);
+    socket.emit("session.input_audio.append", { audio: pcm(3_000) });
+    await vi.advanceTimersByTimeAsync(4_000);
+    expect(greetingEvents.map((event) => event.step)).toEqual(["sent"]);
   });
 
   it("counts the fallback wait from session.started, so a slow browser connection doesn't trigger it", async () => {
@@ -276,6 +377,39 @@ describe("LiveCallController delegation", () => {
     delegate(socket, "item_1", "Anything Thursday?", 1_000);
     await vi.waitFor(() => expect(sentOfType(socket, "session.commentary.append")).toHaveLength(1));
     expect(sentOfType(socket, "session.thinking.append")).toEqual([expect.objectContaining({ delegation_id: "item_1", content: "Progress on the caller's request: looked up open times. Nothing has been booked, changed or saved yet." })]);
+  });
+
+  it("doesn't count a saved answer about texts as booking anything", async () => {
+    const { socket } = setup({
+      generate: async ({ onStepEnd }) => {
+        onStepEnd?.({ toolCalls: [{ toolCallId: "c1", toolName: "recordTextPreference" }, { toolCallId: "c2", toolName: "bookAppointment" }], toolResults: [{ toolCallId: "c1", toolName: "recordTextPreference", input: {}, output: { ok: true } }, { toolCallId: "c2", toolName: "bookAppointment", input: {}, output: { ok: false, reason: "taken" } }] });
+        return reply("That time was just taken. Is 3 okay?");
+      },
+    });
+    delegate(socket, "item_1", "Book 2 o'clock, and no texts.", 1_000);
+    await vi.waitFor(() => expect(sentOfType(socket, "session.commentary.append")).toHaveLength(1));
+    expect(sentOfType(socket, "session.thinking.append").at(-1)?.content).toContain("Nothing has been booked, changed or saved yet.");
+  });
+
+  it("shows the next request only the caller's latest answer about texts", async () => {
+    const answer = (value: string) => ({ toolCallId: value, toolName: "recordTextPreference", input: { answer: value }, output: { ok: true, smsConsentOnFile: value } });
+    const prompts: string[] = [];
+    let call = 0;
+    const { socket } = setup({
+      generate: async ({ prompt }) => {
+        prompts.push(JSON.stringify(prompt));
+        call += 1;
+        const step = call === 1 ? answer("subscribed") : answer("declined");
+        return { text: "Saved.", steps: [{ toolCalls: [{ toolCallId: step.toolCallId, toolName: step.toolName }], toolResults: [step] }] } as never;
+      },
+    });
+    for (const [index, text] of ["Yes, text me.", "Actually, no texts.", "Anything else?"].entries()) {
+      delegate(socket, `item_${index + 1}`, text, 1_000 + index * 3_000);
+      await vi.waitFor(() => expect(prompts).toHaveLength(index + 1));
+      await vi.waitFor(() => expect(sentOfType(socket, "session.commentary.append")).toHaveLength(index + 1));
+    }
+    expect(prompts[2]!.match(/- recordTextPreference:/g)).toHaveLength(1);
+    expect(prompts[2]).toContain("declined");
   });
 });
 
@@ -646,26 +780,30 @@ describe("LiveCallController ending when the caller is done", () => {
     expect(sentOfType(socket, "session.thinking.append")).toEqual([expect.objectContaining({ delegation_id: "item_1", content: "The caller spoke again before the call ended, so reply to what they said." })]);
   });
 
-  it("asks whether a caller who said bye before the agent ended the call is done, and ends the call when they are", async () => {
+  // On staging, the transcriber split "Great, thank you so much. Have a good day, bye bye."
+  // GPT-Live handed the call over mid-sentence, and the rest came in before endCall ran.
+  it.each([
+    { outcome: "hangs up when they only said goodbye", words: " much. Have a good day. Bye-bye.", done: true },
+    { outcome: "carries on when they want more", words: " much. Oh, one more thing.", done: false },
+  ])("checks what the caller said while the agent was ending the call, and $outcome", async ({ words, done }) => {
     fakeTimers();
     const holder: { controller?: LiveCallController } = {};
     const onCancelled = vi.fn();
-    const callerDone = vi.fn(async (_conversation: string, _abortSignal: AbortSignal) => true);
+    const callerDone = vi.fn(async (_conversation: string, _abortSignal: AbortSignal) => done);
     let finish!: () => void;
     const ending = endingAgent(holder, "caller_finished", onCancelled);
     const { socket, controller, hangup } = setup({ generate: async (options) => { await new Promise<void>((resolve) => { finish = resolve; }); return ending(options); }, callerDone });
     holder.controller = controller;
-    delegate(socket, "item_1", "No, that's all, thanks.", 1_000);
+    delegate(socket, "item_1", "Great. Thank you so", 1_000);
     await vi.advanceTimersByTimeAsync(500);
-    socket.emit("session.input_transcript.delta", { delta: "Bye!", start_ms: 1_600, end_ms: 1_800 });
+    socket.emit("session.input_transcript.delta", { delta: words, start_ms: 1_200, end_ms: 2_400 });
     finish();
-    await vi.advanceTimersByTimeAsync(0);
-    expect(sentOfType(socket, "session.thinking.append")).toEqual([expect.objectContaining({ delegation_id: "item_1", content: "The caller spoke again before the call ended, so reply to what they said." })]);
-    socket.emit("session.output_transcript.delta", { delta: "Goodbye!", start_ms: 2_000, end_ms: 2_400 });
+    socket.emit("session.output_transcript.delta", { delta: "You too! Take care!", start_ms: 2_600, end_ms: 3_400 });
     await vi.advanceTimersByTimeAsync(10_000);
     expect(callerDone).toHaveBeenCalledOnce();
-    expect(onCancelled).not.toHaveBeenCalled();
-    expect(hangup).toHaveBeenCalledWith("live_1");
+    expect(callerDone.mock.calls[0]![0]).toContain(words.trim());
+    expect(hangup).toHaveBeenCalledTimes(done ? 1 : 0);
+    expect(onCancelled).toHaveBeenCalledTimes(done ? 0 : 1);
   });
 
   // GPT-Live replies to what the caller said, and hands the call over again when they're done.
@@ -1106,8 +1244,8 @@ describe("LiveCallController keypad input", () => {
   });
 });
 
-// OpenAI doesn't document session.output_audio.delta for sidebands. If it
-// stops arriving, the transcript alone keeps the timing working.
+// The SDK's sideband types leave session.output_audio.delta out. If it stops
+// arriving, the transcript alone keeps the timing working.
 describe("LiveCallController without reflected output audio", () => {
   it("hears the greeting in the transcript, so it sends no fallback", async () => {
     fakeTimers();

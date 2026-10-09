@@ -271,6 +271,22 @@
       "placeholder": "Select a default language",
       "hint": "Choose the fallback language your receptionist should use when a caller's preference is unknown."
     },
+    "timezone": {
+      "label": "Business timezone",
+      "hint": "Your receptionist uses this timezone for your opening hours and the appointment times it offers customers.",
+      "regions": {
+        "africa": "Africa",
+        "america": "Americas",
+        "antarctica": "Antarctica",
+        "arctic": "Arctic",
+        "asia": "Asia",
+        "atlantic": "Atlantic",
+        "australia": "Australia",
+        "europe": "Europe",
+        "indian": "Indian Ocean",
+        "pacific": "Pacific"
+      }
+    },
     "transferNumber": {
       "label": "Default transfer number",
       "placeholder": "+1 555-123-4567",

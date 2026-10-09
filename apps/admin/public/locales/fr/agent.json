@@ -271,6 +271,22 @@
       "placeholder": "Choisir une langue par défaut",
       "hint": "Choisissez la langue de repli que votre réceptionniste doit utiliser quand la préférence du client est inconnue."
     },
+    "timezone": {
+      "label": "Fuseau horaire de l’entreprise",
+      "hint": "Votre réceptionniste utilise ce fuseau horaire pour vos heures d’ouverture et les créneaux qu’il propose aux clients.",
+      "regions": {
+        "africa": "Afrique",
+        "america": "Amériques",
+        "antarctica": "Antarctique",
+        "arctic": "Arctique",
+        "asia": "Asie",
+        "atlantic": "Atlantique",
+        "australia": "Australie",
+        "europe": "Europe",
+        "indian": "Océan Indien",
+        "pacific": "Pacifique"
+      }
+    },
     "transferNumber": {
       "label": "Numéro de transfert par défaut",
       "placeholder": "+1 555-123-4567",

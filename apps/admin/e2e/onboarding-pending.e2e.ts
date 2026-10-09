@@ -51,6 +51,26 @@ async function signUp(page: Page, identity: string, testInfo: TestInfo): Promise
   await expect(page).toHaveURL(/\/onboarding\/business$/);
 }
 
+test("a business name typed before the step finishes loading is kept", async ({ page }, testInfo) => {
+  test.setTimeout(120_000);
+  await signUp(page, "early", testInfo);
+
+  // Hold the page's scripts so the name goes in before React takes over the field.
+  let release = (): void => undefined;
+  const held = new Promise<void>((resolve) => { release = resolve; });
+  await page.route("**/_next/static/chunks/**", async route => {
+    await held;
+    await route.continue();
+  });
+  await page.reload({ waitUntil: "commit" });
+  const field = page.getByLabel("Business name");
+  await field.fill(`${prefix} early`);
+  release();
+
+  await expect(page.getByRole("button", { name: "Continue", exact: true })).toBeEnabled({ timeout: 30_000 });
+  await expect(field).toHaveValue(`${prefix} early`);
+});
+
 test("the continue button stays pending until the next onboarding step is on screen", async ({ page }, testInfo) => {
   // Signup runs a full email round trip, and the gate runs these files in
   // parallel, so the default per-test budget is not enough.

@@ -9,9 +9,9 @@ import type { DomainContext } from "./context";
 import { recordCallOutcomeInTransaction } from "./callOutcome";
 import { consumeAppointmentChangeVerificationInTransaction } from "./appointmentChanges";
 import { findOrCreateContactByPhone } from "./contacts";
-import { recordSmsConsentAnswerInTransaction, type SmsConsentAnswer, type SmsConsentOnFile } from "./contactSmsConsent";
+import { recordSmsConsentAnswerInTransaction, smsConsentOnFile, type SmsConsentAnswer, type SmsConsentOnFile } from "./contactSmsConsent";
 import { recordProductEventBestEffort } from "./productEvents";
-import { CANCELLATION_CONFIRMATION, rescheduleAppointmentReminderInTransaction } from "./notifications";
+import { CANCELLATION_CONFIRMATION, heldForCall, rescheduleAppointmentReminderInTransaction } from "./notifications";
 import { emitWebhookEventInTransaction } from "./publicApi/webhooks";
 import { CANCELLATION_REQUEST } from "./voice";
 
@@ -268,7 +268,7 @@ export async function bookAppointment(
       aggregateType: "appointment",
       aggregateId: appointment.id,
       dedupeKey: `notification:${confirmation.id}:dispatch`,
-      payload: { notificationId: confirmation.id },
+      ...heldForCall(input.callId, { notificationId: confirmation.id }),
     });
     const reminderAt = new Date(startsAt.getTime() - 24 * 60 * 60 * 1000);
     if (reminderAt > new Date()) {
@@ -312,7 +312,7 @@ async function recordAppointmentChange(
   });
 }
 
-type AppointmentChangeSource = { source: "operator"; userId: string } | { source: "caller" } | { source: "api"; audit: ApiAudit };
+type AppointmentChangeSource = { source: "operator"; userId: string } | { source: "caller"; callId?: string } | { source: "api"; audit: ApiAudit };
 
 function changeAudit(change: AppointmentChangeSource): { actorUserId: string | null; payload: Record<string, unknown> } {
   if (change.source === "operator") return { actorUserId: change.userId, payload: { source: "operator" } };
@@ -360,7 +360,7 @@ export async function cancelAppointmentInTransaction(
   // up a past one shouldn't text the customer.
   if (appointment.startsAt > new Date()) {
     const [cancellation] = await tx.insert(notifications).values({ businessId: input.businessId, channel: "sms", kind: CANCELLATION_CONFIRMATION, relatedId: appointment.id, scheduledFor: new Date(), status: "pending" }).onConflictDoNothing().returning({ id: notifications.id });
-    if (cancellation) await enqueueOutbox(tx, { topic: "notification.dispatch", businessId: input.businessId, aggregateType: "appointment", aggregateId: appointment.id, dedupeKey: `notification:${cancellation.id}:dispatch`, payload: { notificationId: cancellation.id } });
+    if (cancellation) await enqueueOutbox(tx, { topic: "notification.dispatch", businessId: input.businessId, aggregateType: "appointment", aggregateId: appointment.id, dedupeKey: `notification:${cancellation.id}:dispatch`, ...heldForCall(input.change.source === "caller" ? input.change.callId : undefined, { notificationId: cancellation.id }) });
   }
   await enqueueOutbox(tx, {
     topic: "calendar.syncAppointment",
@@ -453,23 +453,20 @@ export async function rescheduleAppointmentForCaller(
 }
 
 /**
- * The verified caller cancels. Their answer to a text confirming the
- * cancellation, when the agent asked, becomes their preference before the
- * cancellation text is queued, so delivery follows it. Returns the answer on
- * file afterwards with the cancelled appointment.
+ * The verified caller cancels. Returns the cancelled appointment with the
+ * caller's answer on file about texts, which the cancellation text follows.
  */
 export async function cancelAppointmentForCaller(
   context: DomainContext,
-  input: { businessId: string; appointmentId: string; callerPhone: string; verificationId: string; smsConsent?: SmsConsentAnswer },
+  input: { businessId: string; appointmentId: string; callerPhone: string; verificationId: string; callId?: string },
 ): Promise<{ appointmentId: string; serviceId: string; startsAt: Date; endsAt: Date; smsConsentOnFile: SmsConsentOnFile } | null> {
   const result = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const row = (await tx.select({ id: appointments.id, serviceId: appointments.serviceId, startsAt: appointments.startsAt, endsAt: appointments.endsAt, contactId: contacts.id, smsConsentStatus: contacts.smsConsentStatus, operatorBlockedAt: contacts.operatorBlockedAt }).from(appointments).innerJoin(contacts, and(eq(appointments.contactId, contacts.id), eq(contacts.businessId, input.businessId))).where(and(eq(appointments.id, input.appointmentId), eq(appointments.businessId, input.businessId), eq(contacts.phone, input.callerPhone), ne(appointments.status, "canceled"))).limit(1))[0];
     if (!row) return null;
     const consumed = await consumeAppointmentChangeVerificationInTransaction(tx, { businessId: input.businessId, verificationId: input.verificationId, appointmentId: input.appointmentId, callerPhone: input.callerPhone, action: "cancel" });
     if (!consumed) return null;
-    const onFile = await recordSmsConsentAnswerInTransaction(tx, { businessId: input.businessId, contactId: row.contactId, phone: input.callerPhone, contact: row, answer: input.smsConsent, source: "appointment_cancellation" });
-    if (await cancelAppointmentInTransaction(tx, { businessId: input.businessId, appointmentId: row.id, change: { source: "caller" } }) !== "cancelled") return null;
-    return { appointmentId: row.id, serviceId: row.serviceId, startsAt: row.startsAt, endsAt: row.endsAt, smsConsentOnFile: onFile };
+    if (await cancelAppointmentInTransaction(tx, { businessId: input.businessId, appointmentId: row.id, change: { source: "caller", ...(input.callId ? { callId: input.callId } : {}) } }) !== "cancelled") return null;
+    return { appointmentId: row.id, serviceId: row.serviceId, startsAt: row.startsAt, endsAt: row.endsAt, smsConsentOnFile: smsConsentOnFile(row) };
   });
   if (result) {
     await recordAppointmentChange(context, { name: "appointment.cancelled", businessId: input.businessId, appointmentId: result.appointmentId, source: "caller" });

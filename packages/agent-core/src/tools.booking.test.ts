@@ -25,7 +25,7 @@ function tools(snapshot: Partial<BusinessContextSnapshot> = {}) {
   return { set, run };
 }
 
-const booking = { serviceName: "General Checkup", startsAt: "2026-10-06T10:00", contactName: "Milan", smsConsent: "not_asked" };
+const booking = { serviceName: "General Checkup", startsAt: "2026-10-06T10:00", contactName: "Milan" };
 
 // The fixtures use early October 2026: keep those times in the future.
 vi.setSystemTime(new Date("2026-10-01T12:00:00Z"));

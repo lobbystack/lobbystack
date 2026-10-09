@@ -31,10 +31,35 @@ function cleanSlug(slug: string): string {
 // Each business adds recurring worker jobs, so one account cannot create them without bound.
 const maxOwnedBusinesses = 10;
 
+/**
+ * The IANA time zone a value names, spelled the way Intl lists it, such as
+ * America/Vancouver for " america/vancouver", or undefined when it names none.
+ * UTC offsets such as +05:00 don't name a zone.
+ */
+export function ianaTimeZone(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const zone = value.trim();
+  if (zone.length > 80 || !/^[A-Za-z][\w+-]*(?:\/[\w+-]+)*$/.test(zone)) return undefined;
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: zone });
+  } catch {
+    return undefined;
+  }
+  // Intl accepts any letter case. resolvedOptions() would also swap in legacy names such as Asia/Calcutta, so only the case is fixed.
+  return Intl.supportedValuesOf("timeZone").find((known) => known.toLowerCase() === zone.toLowerCase()) ?? zone;
+}
+
+function requireIanaTimeZone(value: unknown): string {
+  const zone = ianaTimeZone(value);
+  if (!zone) throw Object.assign(new Error("timezone must be an IANA time zone, such as America/Toronto."), { status: 400, code: "invalid_timezone" });
+  return zone;
+}
+
 export async function createBusiness(
   context: DomainContext,
   input: CreateBusinessInput,
 ): Promise<{ businessId: string; membershipId: string }> {
+  const timezone = requireIanaTimeZone(input.timezone);
   const businessId = randomUUID();
   const generatedSlug = input.name.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 96).replace(/-$/, "") || "business";
   const baseSlug = input.slug === undefined ? generatedSlug : cleanSlug(input.slug);
@@ -55,7 +80,7 @@ export async function createBusiness(
         id: businessId,
         name: input.name.trim(),
         slug: attempt === 0 ? baseSlug : `${baseSlug}-${randomBytes(6).toString("hex")}`,
-        timezone: input.timezone,
+        timezone,
         businessType: input.businessType,
         deploymentMode: input.deploymentMode ?? "cloud",
         onboardingStage: "website",
@@ -79,7 +104,7 @@ export async function createBusiness(
     }
     // Booking assigns every appointment to a staff member. Businesses that don't
     // manage a team get one hidden member that stands for the business itself.
-    await tx.insert(staff).values({ businessId, name: input.name.trim(), timezone: input.timezone });
+    await tx.insert(staff).values({ businessId, name: input.name.trim(), timezone });
     await tx.insert(receptionistProfiles).values({
       businessId,
       greeting: `Thanks for calling ${input.name.trim()}.`,
@@ -125,15 +150,19 @@ export async function updateBusiness(
   });
 }
 
-/** Updates basic business fields. Callers authorize first. */
+/** Updates basic business fields and refreshes the receptionist's snapshot. Callers authorize first. */
 export async function updateBusinessInTransaction(
   tx: DatabaseTransaction,
   input: { businessId: string; name?: string; timezone?: string; businessType?: string; defaultLocale?: string; websiteUrl?: string | null },
 ): Promise<void> {
-  const values = { ...(input.name !== undefined ? { name: input.name.trim() } : {}), ...(input.timezone !== undefined ? { timezone: input.timezone.trim() } : {}), ...(input.businessType !== undefined ? { businessType: input.businessType.trim() } : {}), ...(input.defaultLocale !== undefined ? { defaultLocale: input.defaultLocale.trim() } : {}), ...(input.websiteUrl !== undefined ? { websiteUrl: input.websiteUrl } : {}), updatedAt: new Date() };
+  const timezone = input.timezone === undefined ? undefined : requireIanaTimeZone(input.timezone);
+  const values = { ...(input.name !== undefined ? { name: input.name.trim() } : {}), ...(timezone !== undefined ? { timezone } : {}), ...(input.businessType !== undefined ? { businessType: input.businessType.trim() } : {}), ...(input.defaultLocale !== undefined ? { defaultLocale: input.defaultLocale.trim() } : {}), ...(input.websiteUrl !== undefined ? { websiteUrl: input.websiteUrl } : {}), updatedAt: new Date() };
   if (Object.keys(values).length === 1) throw new Error("At least one business field is required.");
   const [business] = await tx.update(businesses).set(values).where(eq(businesses.id, input.businessId)).returning({ id: businesses.id });
   if (!business) throw new Error("Business not found.");
+  // shortcut: every staff row today is the default member that stands for the business; once staff set their own zones, update only that member.
+  if (timezone !== undefined) await tx.update(staff).set({ timezone, updatedAt: new Date() }).where(eq(staff.businessId, input.businessId));
+  await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "business", aggregateId: input.businessId, dedupeKey: `business:${input.businessId}:snapshot:${Date.now()}`, payload: { businessId: input.businessId, reason: "business_updated" } });
 }
 
 export async function switchWorkspace(

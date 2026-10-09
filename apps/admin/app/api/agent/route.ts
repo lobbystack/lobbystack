@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
+import { updateBusinessInTransaction } from "@lobbystack/domain";
 import { businesses, enqueueOutbox, receptionistProfiles } from "@lobbystack/db";
 import { defaultAppointmentChangePolicy, type AppointmentChangePolicy, type BookingMode } from "@lobbystack/shared";
 import { asApiResponse, jsonError, readJson, withOperatorTransaction } from "@/lib/api-helpers";
@@ -86,19 +87,22 @@ export async function PATCH(request: Request) {
       const patch = readProfilePatch(body as Record<string, unknown>);
       const locale = (body as Record<string, unknown>).locale;
       if (locale !== undefined && locale !== "en" && locale !== "fr") throw jsonError("locale is invalid.");
+      const timezone = (body as Record<string, unknown>).timezone;
+      if (timezone !== undefined && typeof timezone !== "string") throw jsonError("timezone must be a string.");
       // Hands the summary back to AI, which rewrites it from the knowledge sources.
       const regenerateSummary = (body as Record<string, unknown>).regenerateSummary;
       if (regenerateSummary !== undefined && regenerateSummary !== true) throw jsonError("regenerateSummary must be true.");
       if (regenerateSummary && patch.summary !== undefined) throw jsonError("Send summary or regenerateSummary, not both.");
-      if (Object.keys(patch).length === 0 && locale === undefined && !regenerateSummary) {
+      if (Object.keys(patch).length === 0 && locale === undefined && timezone === undefined && !regenerateSummary) {
         throw jsonError("At least one profile field is required.");
       }
 
       const business = (await tx.select({ name: businesses.name }).from(businesses).where(eq(businesses.id, businessId)).limit(1))[0];
       if (!business) throw jsonError("Business not found.", 404);
 
-      if (locale !== undefined) {
-        await tx.update(businesses).set({ defaultLocale: locale, updatedAt: new Date() }).where(eq(businesses.id, businessId));
+      // Opening hours keep their clock times in a new zone; booked appointments keep theirs.
+      if (locale !== undefined || timezone !== undefined) {
+        await updateBusinessInTransaction(tx, { businessId, ...(locale !== undefined ? { defaultLocale: locale } : {}), ...(timezone !== undefined ? { timezone } : {}) });
       }
 
       const [profile] = await tx.insert(receptionistProfiles).values({

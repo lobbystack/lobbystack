@@ -156,6 +156,17 @@ export function PhoneInput({
   const resolvedPlaceholder = props.placeholder ?? getPhonePlaceholder(locale, {
     defaultCountry: resolvedDefaultCountry,
   });
+  // The library reports changes from an effect, so a parent that passes them
+  // back arrives a render late, and the library resets its digits to that stale
+  // value mid-typing. Report each keystroke directly, and hand the library only
+  // values the parent sets itself.
+  const lastEmittedRef = React.useRef(value || undefined);
+  const [libraryValue, setLibraryValue] = React.useState(value || undefined);
+  React.useEffect(() => {
+    if ((value || undefined) === lastEmittedRef.current) return;
+    lastEmittedRef.current = value || undefined;
+    setLibraryValue(value || undefined);
+  }, [value]);
 
   if (limitNationalDigits) {
     return (
@@ -180,14 +191,19 @@ export function PhoneInput({
         disabled={disabled}
         inputMode={props.inputMode ?? "tel"}
         inputComponent={PhoneNumberTextInput}
-        onChange={(nextValue) => onChange?.(nextValue)}
-        onRawValueChange={onRawValueChange}
+        onChange={() => undefined}
+        onRawValueChange={(rawValue: string) => {
+          onRawValueChange?.(rawValue);
+          const nextValue = normalizePhoneNumber(rawValue, { defaultCountry: resolvedDefaultCountry as Country });
+          lastEmittedRef.current = nextValue;
+          onChange?.(nextValue);
+        }}
         placeholder={resolvedPlaceholder}
         smartCaret={false}
         type={props.type ?? "tel"}
         {...(country !== undefined ? { country } : {})}
         {...(country === undefined ? { defaultCountry: resolvedDefaultCountry as Country } : {})}
-        {...(value !== undefined ? { value } : {})}
+        {...(libraryValue !== undefined ? { value: libraryValue } : {})}
       />
     </div>
   );

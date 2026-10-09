@@ -24,6 +24,8 @@ const CHUNK_BYTES = (RATE * 2 * CHUNK_MS) / 1000;
 const END_WINDOW_MS = 15_000;
 // The receptionist has answered once it has been quiet this long after speaking.
 const REPLY_QUIET_MS = 1_500;
+// How long the caller waits for a greeting before speaking: long enough for the worker's fallback and both retries.
+const GREETING_WAIT_MS = 15_000;
 // For the report only: the product never matches words to end a call.
 const GOODBYE = /\b(bye|goodbye|take care|have a (good|great|nice|wonderful)|thanks for calling)\b/i;
 
@@ -76,7 +78,7 @@ async function speak(text: string): Promise<Buffer> {
   return phoneLine(Buffer.from(await response.arrayBuffer()));
 }
 
-type RunResult = { scenario: CallScenario; passed: boolean; ended: boolean; endedAfterMs?: number; handOvers: string[]; checks: boolean[]; goodbyes: number; replies: string[]; error?: string };
+type RunResult = { scenario: CallScenario; passed: boolean; greetedAfterMs?: number; greetingCommands: number; ended: boolean; endedAfterMs?: number; handOvers: string[]; checks: boolean[]; goodbyes: number; replies: string[]; error?: string };
 
 async function run(scenario: CallScenario, audio: Map<string, Buffer>, agentModel: NonNullable<typeof model>): Promise<RunResult> {
   const ws = new LiveWS(client);
@@ -85,6 +87,10 @@ async function run(scenario: CallScenario, audio: Map<string, Buffer>, agentMode
   let lastReplyEndMs = -1;
   let replied = false;
   let scenarioStartMs = Number.POSITIVE_INFINITY;
+  // When the receptionist first spoke, if it did before the caller.
+  let greetedAfterMs: number | undefined;
+  let greetingCommands = 0;
+  let callerSpoke = false;
   let reply = "";
   let replyEndMs = -1;
   const replies: string[] = [];
@@ -99,6 +105,7 @@ async function run(scenario: CallScenario, audio: Map<string, Buffer>, agentMode
   ws.on("session.output_transcript.delta", (event) => {
     lastReplyEndMs = Math.max(lastReplyEndMs, event.end_ms);
     replied = true;
+    if (!callerSpoke && greetedAfterMs === undefined && event.delta.trim()) greetedAfterMs = sessionMs;
     if (event.start_ms < scenarioStartMs) return;
     if (replyEndMs >= 0 && event.start_ms - replyEndMs > 700) flushReply();
     reply += event.delta;
@@ -123,9 +130,10 @@ async function run(scenario: CallScenario, audio: Map<string, Buffer>, agentMode
       client,
       sessionId: `eval_${scenario.name}`,
       phone: false,
-      setup: { agent, callerDone: async (conversation, abortSignal) => { const done = await callerIsDone(agentModel, conversation, abortSignal); checks.push(done); return done; } },
+      setup: { agent, greeting: snapshot.greeting, callerDone: async (conversation, abortSignal) => { const done = await callerIsDone(agentModel, conversation, abortSignal); checks.push(done); return done; } },
       connect: () => ws as unknown as SidebandWS,
       onDelegation: (timing) => { if (timing.offsetMs >= scenarioStartMs) handOvers.push(timing.tools.join("+") || "reply"); },
+      onGreeting: (event) => { if (event.step === "sent") greetingCommands += 1; },
       onClose: resolve,
     });
   });
@@ -162,7 +170,8 @@ async function run(scenario: CallScenario, audio: Map<string, Buffer>, agentMode
       ws.send({ type: "session.input_audio.append", audio: chunk.toString("base64") });
       sessionMs += CHUNK_MS;
     }, CHUNK_MS);
-    await waitForReply(10_000);
+    await waitForReply(GREETING_WAIT_MS);
+    callerSpoke = true;
     await play(OPENING);
     await waitForReply(20_000);
     scenarioStartMs = sessionMs;
@@ -180,9 +189,9 @@ async function run(scenario: CallScenario, audio: Map<string, Buffer>, agentMode
     const goodbyes = replies.filter((line) => GOODBYE.test(line)).length;
     const endedAfterMs = ended === undefined ? undefined : Math.max(0, ended - lastLineAt);
     const passed = scenario.expect === "ends" ? ended !== undefined : ended === undefined;
-    return { scenario, passed, ended: ended !== undefined, ...(endedAfterMs !== undefined ? { endedAfterMs } : {}), handOvers, checks, goodbyes, replies };
+    return { scenario, passed, ...(greetedAfterMs !== undefined ? { greetedAfterMs } : {}), greetingCommands, ended: ended !== undefined, ...(endedAfterMs !== undefined ? { endedAfterMs } : {}), handOvers, checks, goodbyes, replies };
   } catch (error) {
-    return { scenario, passed: false, ended: false, handOvers, checks, goodbyes: 0, replies, error: error instanceof Error ? error.message : String(error) };
+    return { scenario, passed: false, ...(greetedAfterMs !== undefined ? { greetedAfterMs } : {}), greetingCommands, ended: false, handOvers, checks, goodbyes: 0, replies, error: error instanceof Error ? error.message : String(error) };
   } finally {
     clearInterval(pump);
     setTimeout(() => ws.close(), 1_000);
@@ -199,14 +208,15 @@ await Promise.all(Array.from({ length: Math.min(Number(values.concurrency), jobs
   while (next < jobs.length) {
     const result = await run(jobs[next++]!, audio, model);
     results.push(result);
+    const greeting = `${result.greetedAfterMs === undefined ? "no greeting in 15 s" : `greeted at ${(result.greetedAfterMs / 1000).toFixed(1)} s`}${result.greetingCommands ? ` after ${result.greetingCommands} command${result.greetingCommands > 1 ? "s" : ""}` : ""}`;
     const outcome = result.error ? `error: ${result.error}` : result.ended ? `ended ${((result.endedAfterMs ?? 0) / 1000).toFixed(1)} s after the caller` : "still open";
-    console.log(`${result.passed ? "PASS" : "FAIL"} ${result.scenario.name.padEnd(17)} ${outcome} | hand-overs: ${result.handOvers.join(", ") || "none"} | checks: ${result.checks.map((done) => (done ? "done" : "continue")).join(", ") || "none"} | goodbyes: ${result.goodbyes} | receptionist: ${result.replies.map((line) => `"${line}"`).join(" / ")}`);
+    console.log(`${result.passed ? "PASS" : "FAIL"} ${result.scenario.name.padEnd(17)} ${greeting} | ${outcome} | hand-overs: ${result.handOvers.join(", ") || "none"} | checks: ${result.checks.map((done) => (done ? "done" : "continue")).join(", ") || "none"} | goodbyes: ${result.goodbyes} | receptionist: ${result.replies.map((line) => `"${line}"`).join(" / ")}`);
   }
 }));
 
 console.log("");
 for (const scenario of scenarios) {
   const rows = results.filter((row) => row.scenario === scenario);
-  console.log(`${scenario.name.padEnd(17)} expect ${scenario.expect.padEnd(9)} passed ${rows.filter((row) => row.passed).length}/${rows.length}, one goodbye ${rows.filter((row) => row.goodbyes === 1).length}/${rows.length}`);
+  console.log(`${scenario.name.padEnd(17)} expect ${scenario.expect.padEnd(9)} passed ${rows.filter((row) => row.passed).length}/${rows.length}, greeted ${rows.filter((row) => row.greetedAfterMs !== undefined).length}/${rows.length}, one goodbye ${rows.filter((row) => row.goodbyes === 1).length}/${rows.length}`);
 }
 process.exit(results.every((row) => row.passed) ? 0 : 1);

@@ -27,15 +27,43 @@ The caller hears silence while the agent works, so calls keep it short:
 - If OpenAI rejects an answer, the worker sends a short failure in its place, so the caller doesn't wait in silence.
 - A booking repeated for the same caller, service and time returns the existing appointment instead of reporting the slot as taken.
 
-GPT-Live waits for the caller by default. To make it greet first, the admin starts every session with the greeting command in its starting history (`input`), as OpenAI's guide suggests for context the model needs from the start. GPT-Live then says the greeting about 2 seconds into the session. In tests against the API, a greeting command appended after `session.started` was often ignored, and on phone calls the worker can only connect after the session has started.
-
-If the worker hears no voice 4 seconds after its connection opens and the caller hasn't spoken, it sends the greeting command once more. It logs each step as `live.greeting` with `step`, `attempt`, `trigger` and `sinceAttachMs`. A `spoken` step with `attempt` 0 means the starting history did it.
-
-The sideband also reflects `session.output_audio.delta` events, which OpenAI doesn't document for sidebands. They carry the receptionist's audio as 16-bit PCM at 24 kHz, silence included, because GPT-Live is full duplex. The worker counts a chunk as speech only when it's loud, for the greeting, the goodbye and the silence timeout. Words in the output transcript count as speech too, so all three keep working if OpenAI stops sending the audio events. `live.closed` logs the events in `outputAudio`. Latency telemetry measures the receptionist's speech from the output transcript.
+The sideband also receives copies of the call's audio, as OpenAI's [server-side controls guide](https://developers.openai.com/api/docs/guides/voice-server-controls?api=live) describes: the receptionist's as `session.output_audio.delta` and the caller's as `session.input_audio.append`. Both carry 16-bit PCM at 24 kHz. The receptionist's audio includes silence, because GPT-Live is full duplex, so the worker counts a chunk as speech only when it's loud, for the greeting, the goodbye and the silence timeout. Words in the output transcript count as speech too, so all three keep working if OpenAI stops sending the audio events. The worker only measures the caller's audio. `live.closed` logs both in `outputAudio` and `inputAudio`. Latency telemetry measures the receptionist's speech from the output transcript.
 
 Keypad presses on phone calls reach the sideband as `transport.dtmf.received`, an event OpenAI sends only to sidebands. The worker adds each press to the caller's turn as `[pressed 1]`. The saved transcript and the next delegated request both show it, and a press resets the silence timeout.
 
 The worker logs each answer as `live.delegation` with `agentMs`, `totalMs`, `queueMs` (time waiting for an earlier request), `tools`, `modelSteps`, `directAnswer`, `stepMs` (each model step with the tools it called), `toolMs` (time in tools), `failed` and `superseded`. It also records each answer's tokens and cost as an AI generation with the operation `voice.delegation`.
+
+## Greet the caller before they speak
+
+GPT-Live waits for the caller by default. To make it greet first, the admin starts every session with the greeting command in its starting history (`input`), as OpenAI's guide suggests for context the model needs from the start. In tests against the API, GPT-Live ignored a command appended after `session.started` more often, and on phone calls the worker can only connect after the session has started.
+
+GPT-Live doesn't always follow the command. From October 3 to 8, it greeted from the starting history on 24 of 40 calls that connected audio: 8 of 15 phone calls and 16 of 25 browser calls. When it did, it spoke 1.9 to 4.2 seconds after the worker attached.
+
+If the worker hears no voice 4 seconds after the session starts and the caller hasn't spoken, it sends the command with `session.instructions.append`. GPT-Live can acknowledge that command and still wait: it ignored 8 of 16 acknowledged commands until the caller spoke, or for the rest of the call. When it followed one, it spoke within 4 seconds of the acknowledgment. So after 4.5 seconds without voice from either side, the worker sends the command again, up to 3 commands in all.
+
+The worker stops sending the command once the receptionist or the caller speaks, or the call starts ending. It doesn't resend a command that OpenAI rejected or never acknowledged. OpenAI's guide says an acknowledgment waits until the session timeline reaches the end of the command, so it stays pending on a call whose audio never connected.
+
+The worker logs each step as `live.greeting` with these fields:
+
+- `step`: `sent`, `acknowledged`, `spoken` or `failed`
+- `attempt`: the number of commands sent so far. A `spoken` step with `attempt` 0 means the starting history worked, and with `attempt` 2 that the second command did.
+- `trigger`: `fallback` for the first command and `retry` for the others
+- `sinceAttachMs`: milliseconds since the worker attached
+- `inputAudioMs`: milliseconds of caller audio OpenAI has reflected to the sideband so far
+
+### Why a call goes without a greeting
+
+GPT-Live skips the command on phone and browser calls at similar rates. On the October calls, the session also kept running through the silence before the caller spoke:
+
+- On every phone call that connected audio, the receptionist's reflected audio started 200 ms into the session and ran until 1.3 to 3.9 seconds before the call ended, whether or not anyone spoke. On a call where nobody spoke for 75 seconds, it covered 73.0 of 75.5 seconds.
+- OpenAI acknowledged each greeting command on those calls within 0.7 seconds of the send, so the session timeline was moving.
+- Twilio's Elastic SIP trunks offer G.711 (PCMU and PCMA) by default. Twilio's [codec page](https://www.twilio.com/docs/sip-trunking/codecs) lists voice activity detection and discontinuous transmission only for AMR-NB, a codec Twilio enables only on request. The trunk API has no silence settings.
+
+The two calls whose greeting command was never acknowledged had no audio at all: the reflected output audio never arrived, and OpenAI closed the command with "The session closed before the estimated context injection completed." No greeting change fixes those calls.
+
+To check whether audio reaches GPT-Live while a phone caller is silent, compare `inputAudioMs` on the call's `live.greeting` steps with `sinceAttachMs`, and `inputAudio.coveredMs` on `live.closed` with `durationMs`. Coverage close to the elapsed time means audio flowed through the silence. Coverage that grows only while the caller talks means the trunk or the carrier stops sending audio in silence. Zero on browser calls too means OpenAI isn't reflecting the caller's audio.
+
+OpenAI's [Live conversations guide](https://developers.openai.com/api/docs/guides/live-conversations) recommends a recorded or rendered clip for exact wording and a known end. On phone calls, Twilio sends the audio straight to OpenAI, so LobbyStack has no way to play one. Twilio would have to play the clip before it connects the call to OpenAI, or LobbyStack would have to relay the call's audio itself. The browser controls its own playback, so a browser call could play a clip while it holds back GPT-Live's audio.
 
 ## Follow a phone call
 

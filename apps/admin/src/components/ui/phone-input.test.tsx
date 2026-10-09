@@ -36,6 +36,13 @@ function PhoneInputHarness({
 }
 
 describe("PhoneInput", () => {
+  it("shows a number the parent sets after it mounts", () => {
+    const { rerender } = render(<PhoneInput aria-label="Phone" defaultCountry="US" onChange={() => undefined} />);
+    rerender(<PhoneInput aria-label="Phone" defaultCountry="US" onChange={() => undefined} value="+14165550199" />);
+
+    expect((screen.getByRole("textbox", { name: "Phone" }) as HTMLInputElement).value).toMatch(/0199$/);
+  });
+
   it("emits E.164 values as the user types a valid number", async () => {
     const user = userEvent.setup();
 

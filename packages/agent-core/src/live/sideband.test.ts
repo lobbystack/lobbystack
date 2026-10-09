@@ -211,6 +211,22 @@ describe("LiveCallController sideband", () => {
     expect(closed[0]).toMatchObject({ closeReason: "close_requested", usageConfirmed: true, delegations: [expect.objectContaining({ tools: ["endCall"], endedCall: true, directAnswer: true })] });
   }, 10_000);
 
+  // The SDK's sideband types leave the reflected caller audio out, so this
+  // checks that the real connection still delivers it to the controller.
+  it("measures the caller audio OpenAI reflects to the sideband", async () => {
+    const silence = Buffer.alloc(960).toString("base64");
+    const voice = Buffer.from(new Int16Array(480).map((_, index) => (index % 2 ? 3_000 : -3_000)).buffer).toString("base64");
+    const { controller, closed } = await sideband([(socket) => {
+      send(socket, { type: "session.started" });
+      for (let chunk = 0; chunk < 50; chunk += 1) send(socket, { type: "session.input_audio.append", audio: silence });
+      send(socket, { type: "session.input_audio.append", audio: voice });
+      send(socket, { type: "session.closed", reason: "remote_hangup", usage: { seconds: 2 } });
+    }]);
+    controller.start();
+    await vi.waitFor(() => expect(closed).toHaveLength(1));
+    expect(closed[0]?.inputAudio).toEqual({ chunks: 51, coveredMs: 1_020, loudMs: 20, payloadBytes: 51 * silence.length });
+  });
+
   it("passes a keypad press to the agent as caller input", async () => {
     const generate = vi.fn(async (_options: { prompt: string }) => ({ text: "Confirmed.", steps: [{ toolCalls: [], toolResults: [] }] }));
     const { controller, closed } = await sideband([(socket) => {

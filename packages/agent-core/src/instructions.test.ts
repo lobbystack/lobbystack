@@ -8,6 +8,10 @@ import { buildAgentInstructions, buildLiveInstructions } from "./instructions";
 const callStart = DateTime.fromISO("2026-10-01T18:30:00.000Z");
 
 describe("buildLiveInstructions", () => {
+  it("hands the caller's answer about texts to the backend, which saves it", () => {
+    expect(buildLiveInstructions(demoSnapshot)).toContain("- The caller says whether they want texts about their appointments, so the backend can save their answer.");
+  });
+
   it("gives GPT-Live the snapshot's hours, services and call start time so it answers them without delegating", () => {
     const instructions = buildLiveInstructions({
       ...demoSnapshot,
@@ -194,16 +198,18 @@ describe("texts about the caller's appointments", () => {
   it("has the agent follow the answer on file when booking and ask only when it's not_asked", () => {
     const instructions = buildAgentInstructions(demoSnapshot, "voice", phone);
     expect(instructions).toContain("findAvailability returns smsConsentOnFile");
-    expect(instructions).toContain("When it's not_asked, or missing, ask together with the time you offer, in the language of the call: \"Can I text this number with your appointment confirmation and reminder? Message and data rates may apply. Reply STOP to opt out or HELP for help.\" Pass their answer to bookAppointment as smsConsent.");
-    expect(instructions).toContain("When it's subscribed, don't ask: tell the caller they'll get a confirmation text.");
-    expect(instructions).toContain("When it's declined or opted_out, don't ask and don't mention texts. Pass smsConsent as not_asked whenever you didn't ask.");
+    expect(instructions).toContain("When it's not_asked, or missing, ask together with the time you offer, in the language of the call: \"Can I text this number with your appointment confirmation and reminder? Message and data rates may apply. Reply STOP to opt out or HELP for help.\" When it's subscribed, don't ask: tell the caller they'll get a confirmation text.");
+    expect(instructions).toContain("When it's declined or opted_out, don't ask and don't mention texts.");
+    // Once, although both the booking and the cancellation question lead to it.
+    expect(instructions.split("Whenever the caller says whether they want texts, save their answer with recordTextPreference, even after the booking or cancellation is done. Their answer on this call replaces smsConsentOnFile: a no means no texts, even when it was subscribed. Only an answer about texts counts: a yes to a time or to booking isn't a yes to texts, and a no to texts isn't a no to the appointment.")).toHaveLength(2);
+    expect(instructions).not.toContain("smsConsent as");
   });
 
   it("has the agent ask about a cancellation text only when the caller hasn't answered before", () => {
     const instructions = buildAgentInstructions(demoSnapshot, "voice", phone);
     expect(instructions).toContain("Once verifyAppointmentForChange or verifyAppointmentChangeOtp verifies a cancellation, its result has smsConsentOnFile.");
     // The same disclosure as the booking question, as the consent proof page documents it.
-    expect(instructions).toContain("When it's not_asked, ask once, together with the final confirmation and in the language of the call: \"Can I text this number to confirm the cancellation? Message and data rates may apply. Reply STOP to opt out or HELP for help.\" Pass their answer to cancelAppointment as smsConsent.");
+    expect(instructions).toContain("When it's not_asked, ask once, together with the final confirmation and in the language of the call: \"Can I text this number to confirm the cancellation? Message and data rates may apply. Reply STOP to opt out or HELP for help.\" When it's subscribed, don't ask: tell the caller they'll get a text confirming the cancellation.");
     expect(instructions).toContain("When it's subscribed, don't ask: tell the caller they'll get a text confirming the cancellation.");
     // Request-only booking still cancels directly, so it gets the same rule.
     expect(buildAgentInstructions({ ...demoSnapshot, bookingMode: "request" }, "voice", phone)).toContain("Can I text this number to confirm the cancellation?");
@@ -212,7 +218,8 @@ describe("texts about the caller's appointments", () => {
   it("never offers a text when the business can't text the caller", () => {
     for (const instructions of [buildAgentInstructions(noSms, "voice", phone), buildAgentInstructions({ ...demoSnapshot, contactChannels: { smsNumber: "+18445550100" } }, "voice", { callerPhone: "+381695021111" })]) {
       expect(instructions).not.toContain("smsConsentOnFile");
-      expect(instructions).toContain("This business can't text the caller's number, so don't offer a text confirmation or reminder. Pass smsConsent as not_asked.");
+      expect(instructions).toContain("This business can't text the caller's number, so don't offer a text confirmation or reminder.");
+      expect(instructions).not.toContain("recordTextPreference");
       expect(instructions).toContain("This business can't text the caller's number, so don't offer or mention a text about a cancellation.");
     }
   });
@@ -221,6 +228,13 @@ describe("texts about the caller's appointments", () => {
     for (const instructions of [buildAgentInstructions(demoSnapshot, "web_voice"), buildAgentInstructions(demoSnapshot, "web_chat"), buildAgentInstructions(demoSnapshot, "voice", { ...phone, intakeOnly: true })]) {
       expect(instructions).not.toContain("smsConsentOnFile");
       expect(instructions).not.toContain("text about a cancellation");
+      expect(instructions).not.toContain("recordTextPreference");
+    }
+  });
+
+  it("has a website chat or browser call promise no texts", () => {
+    for (const channel of ["web_chat", "web_voice"] as const) {
+      expect(buildAgentInstructions(demoSnapshot, channel)).toContain("Texts can only be set up on a phone call, so don't offer or promise a text confirmation or reminder.");
     }
   });
 });

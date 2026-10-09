@@ -1,7 +1,7 @@
 import { and, eq, inArray, ne } from "drizzle-orm";
 import { DateTime } from "luxon";
 
-import { apiKeys, appointments, auditLogs, businessHours, businesses, calendarConnections, contacts, enqueueOutbox, receptionistProfiles, services, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { apiKeys, appointments, auditLogs, businessHours, businesses, calendarConnections, contacts, receptionistProfiles, services, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import {
   PUBLIC_API_AVAILABILITY_MAX_DAYS,
   isApiKeyScope,
@@ -31,7 +31,7 @@ import type { DomainContext } from "../context";
 import { createKnowledgeSnippetInTransaction } from "../knowledge";
 import { bookingFailureReason, candidateStartTimes, unavailableReasonOf } from "../receptionistActions";
 import { isSharedSmsSender, resolveSmsSender } from "../smsSender";
-import { updateBusinessInTransaction } from "../tenancy";
+import { ianaTimeZone, updateBusinessInTransaction } from "../tenancy";
 import { conflict, invalidRequest, notFound, PublicApiError } from "./errors";
 import {
   clockToMinutes,
@@ -101,9 +101,7 @@ function isUniqueViolation(error: unknown): boolean {
 }
 
 function assertTimeZone(value: string, field: string): void {
-  try {
-    new Intl.DateTimeFormat("en-US", { timeZone: value });
-  } catch {
+  if (!ianaTimeZone(value)) {
     throw invalidRequest(`${field} is not a valid IANA time zone.`, [{ path: field, message: "Use an IANA time zone such as America/Toronto." }]);
   }
 }
@@ -140,9 +138,6 @@ export async function updateBusinessForApi(context: DomainContext, caller: ApiCa
       } catch (error) {
         throw invalidRequest(error instanceof Error ? error.message : "hours are invalid.", [{ path: "hours", message: error instanceof Error ? error.message : "Invalid hours." }]);
       }
-    }
-    if (Object.keys(fields).length && input.hours === undefined) {
-      await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: caller.businessId, aggregateType: "business", aggregateId: caller.businessId, dedupeKey: `snapshot:${caller.businessId}:api-business:${Date.now()}`, payload: { businessId: caller.businessId, reason: "business_updated" } });
     }
     await audit(tx, caller, { eventType: "api.business.updated", entityType: "business", entityId: caller.businessId, payload: { fields: Object.keys(input) } });
     const business = await loadBusinessResource(tx, caller.businessId);

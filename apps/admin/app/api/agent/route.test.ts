@@ -9,7 +9,7 @@ vi.mock("@/lib/api-helpers", async (original) => ({
     return callback({ businessId: "business", tx: {
       select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ name: "Clinic" }] }) }) }),
       insert: () => ({ values: (value: unknown) => { fixture.insert(value); return { onConflictDoUpdate: (config: { set: unknown }) => { fixture.conflict(config.set); return { returning: async () => [{ id: "profile", updatedAt: new Date(0) }] }; } }; } }),
-      update: () => ({ set: (value: unknown) => { fixture.update(value); return { where: async () => undefined }; } }),
+      update: () => ({ set: (value: unknown) => { fixture.update(value); return { where: () => ({ returning: async () => [{ id: "business" }] }) }; } }),
     } });
   },
 }));
@@ -19,7 +19,7 @@ const patch = (body: unknown) => PATCH(new Request("http://localhost:3000/api/ag
 beforeEach(() => { vi.clearAllMocks(); fixture.denied = false; });
 
 describe("agent settings validation", () => {
-  it.each([{}, [], null, { locale: "xx" }, { greeting: "" }, { transferMode: "invalid" }, { appointmentChangePolicy: {} }])("rejects invalid input %j before writing", async (body) => {
+  it.each([{}, [], null, { locale: "xx" }, { timezone: "Eastern" }, { timezone: "+05:00" }, { timezone: 5 }, { greeting: "" }, { transferMode: "invalid" }, { appointmentChangePolicy: {} }])("rejects invalid input %j before writing", async (body) => {
     expect((await patch(body)).status).toBe(400);
     expect(fixture.insert).not.toHaveBeenCalled();
     expect(fixture.enqueue).not.toHaveBeenCalled();
@@ -27,6 +27,11 @@ describe("agent settings validation", () => {
   it("persists locale-only changes and refreshes the live-call snapshot", async () => {
     expect((await patch({ locale: "fr" })).status).toBe(200);
     expect(fixture.update).toHaveBeenCalledWith(expect.objectContaining({ defaultLocale: "fr" }));
+    expect(fixture.enqueue).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ topic: "snapshot.refresh", businessId: "business" }));
+  });
+  it("persists the business timezone and refreshes the live-call snapshot", async () => {
+    expect((await patch({ timezone: "Europe/Belgrade" })).status).toBe(200);
+    expect(fixture.update).toHaveBeenCalledWith(expect.objectContaining({ timezone: "Europe/Belgrade" }));
     expect(fixture.enqueue).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ topic: "snapshot.refresh", businessId: "business" }));
   });
   it("persists the typed appointment policy without unrecognized properties", async () => {
