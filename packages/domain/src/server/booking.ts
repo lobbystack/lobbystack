@@ -10,7 +10,7 @@ import { recordCallOutcomeInTransaction } from "./callOutcome";
 import { consumeAppointmentChangeVerificationInTransaction } from "./appointmentChanges";
 import { recordSmsConsentAnswerInTransaction, smsConsentOnFile, type SmsConsentAnswer, type SmsConsentOnFile } from "./contactSmsConsent";
 import { recordProductEventBestEffort } from "./productEvents";
-import { CANCELLATION_CONFIRMATION, rescheduleAppointmentReminderInTransaction } from "./notifications";
+import { CANCELLATION_CONFIRMATION, heldForCall, rescheduleAppointmentReminderInTransaction } from "./notifications";
 import { emitWebhookEventInTransaction } from "./publicApi/webhooks";
 import { CANCELLATION_REQUEST } from "./voice";
 
@@ -275,7 +275,7 @@ export async function bookAppointment(
       aggregateType: "appointment",
       aggregateId: appointment.id,
       dedupeKey: `notification:${confirmation.id}:dispatch`,
-      payload: { notificationId: confirmation.id },
+      ...heldForCall(input.callId, { notificationId: confirmation.id }),
     });
     const reminderAt = new Date(startsAt.getTime() - 24 * 60 * 60 * 1000);
     if (reminderAt > new Date()) {
@@ -319,7 +319,7 @@ async function recordAppointmentChange(
   });
 }
 
-type AppointmentChangeSource = { source: "operator"; userId: string } | { source: "caller" } | { source: "api"; audit: ApiAudit };
+type AppointmentChangeSource = { source: "operator"; userId: string } | { source: "caller"; callId?: string } | { source: "api"; audit: ApiAudit };
 
 function changeAudit(change: AppointmentChangeSource): { actorUserId: string | null; payload: Record<string, unknown> } {
   if (change.source === "operator") return { actorUserId: change.userId, payload: { source: "operator" } };
@@ -367,7 +367,7 @@ export async function cancelAppointmentInTransaction(
   // up a past one shouldn't text the customer.
   if (appointment.startsAt > new Date()) {
     const [cancellation] = await tx.insert(notifications).values({ businessId: input.businessId, channel: "sms", kind: CANCELLATION_CONFIRMATION, relatedId: appointment.id, scheduledFor: new Date(), status: "pending" }).onConflictDoNothing().returning({ id: notifications.id });
-    if (cancellation) await enqueueOutbox(tx, { topic: "notification.dispatch", businessId: input.businessId, aggregateType: "appointment", aggregateId: appointment.id, dedupeKey: `notification:${cancellation.id}:dispatch`, payload: { notificationId: cancellation.id } });
+    if (cancellation) await enqueueOutbox(tx, { topic: "notification.dispatch", businessId: input.businessId, aggregateType: "appointment", aggregateId: appointment.id, dedupeKey: `notification:${cancellation.id}:dispatch`, ...heldForCall(input.change.source === "caller" ? input.change.callId : undefined, { notificationId: cancellation.id }) });
   }
   await enqueueOutbox(tx, {
     topic: "calendar.syncAppointment",
@@ -467,14 +467,14 @@ export async function rescheduleAppointmentForCaller(
  */
 export async function cancelAppointmentForCaller(
   context: DomainContext,
-  input: { businessId: string; appointmentId: string; callerPhone: string; verificationId: string },
+  input: { businessId: string; appointmentId: string; callerPhone: string; verificationId: string; callId?: string },
 ): Promise<{ appointmentId: string; serviceId: string; startsAt: Date; endsAt: Date; smsConsentOnFile: SmsConsentOnFile } | null> {
   const result = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const row = (await tx.select({ id: appointments.id, serviceId: appointments.serviceId, startsAt: appointments.startsAt, endsAt: appointments.endsAt, contactId: contacts.id, smsConsentStatus: contacts.smsConsentStatus, operatorBlockedAt: contacts.operatorBlockedAt }).from(appointments).innerJoin(contacts, and(eq(appointments.contactId, contacts.id), eq(contacts.businessId, input.businessId))).where(and(eq(appointments.id, input.appointmentId), eq(appointments.businessId, input.businessId), eq(contacts.phone, input.callerPhone), ne(appointments.status, "canceled"))).limit(1))[0];
     if (!row) return null;
     const consumed = await consumeAppointmentChangeVerificationInTransaction(tx, { businessId: input.businessId, verificationId: input.verificationId, appointmentId: input.appointmentId, callerPhone: input.callerPhone, action: "cancel" });
     if (!consumed) return null;
-    if (await cancelAppointmentInTransaction(tx, { businessId: input.businessId, appointmentId: row.id, change: { source: "caller" } }) !== "cancelled") return null;
+    if (await cancelAppointmentInTransaction(tx, { businessId: input.businessId, appointmentId: row.id, change: { source: "caller", ...(input.callId ? { callId: input.callId } : {}) } }) !== "cancelled") return null;
     return { appointmentId: row.id, serviceId: row.serviceId, startsAt: row.startsAt, endsAt: row.endsAt, smsConsentOnFile: smsConsentOnFile(row) };
   });
   if (result) {

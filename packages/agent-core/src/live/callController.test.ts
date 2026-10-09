@@ -378,6 +378,39 @@ describe("LiveCallController delegation", () => {
     await vi.waitFor(() => expect(sentOfType(socket, "session.commentary.append")).toHaveLength(1));
     expect(sentOfType(socket, "session.thinking.append")).toEqual([expect.objectContaining({ delegation_id: "item_1", content: "Progress on the caller's request: looked up open times. Nothing has been booked, changed or saved yet." })]);
   });
+
+  it("doesn't count a saved answer about texts as booking anything", async () => {
+    const { socket } = setup({
+      generate: async ({ onStepEnd }) => {
+        onStepEnd?.({ toolCalls: [{ toolCallId: "c1", toolName: "recordTextPreference" }, { toolCallId: "c2", toolName: "bookAppointment" }], toolResults: [{ toolCallId: "c1", toolName: "recordTextPreference", input: {}, output: { ok: true } }, { toolCallId: "c2", toolName: "bookAppointment", input: {}, output: { ok: false, reason: "taken" } }] });
+        return reply("That time was just taken. Is 3 okay?");
+      },
+    });
+    delegate(socket, "item_1", "Book 2 o'clock, and no texts.", 1_000);
+    await vi.waitFor(() => expect(sentOfType(socket, "session.commentary.append")).toHaveLength(1));
+    expect(sentOfType(socket, "session.thinking.append").at(-1)?.content).toContain("Nothing has been booked, changed or saved yet.");
+  });
+
+  it("shows the next request only the caller's latest answer about texts", async () => {
+    const answer = (value: string) => ({ toolCallId: value, toolName: "recordTextPreference", input: { answer: value }, output: { ok: true, smsConsentOnFile: value } });
+    const prompts: string[] = [];
+    let call = 0;
+    const { socket } = setup({
+      generate: async ({ prompt }) => {
+        prompts.push(JSON.stringify(prompt));
+        call += 1;
+        const step = call === 1 ? answer("subscribed") : answer("declined");
+        return { text: "Saved.", steps: [{ toolCalls: [{ toolCallId: step.toolCallId, toolName: step.toolName }], toolResults: [step] }] } as never;
+      },
+    });
+    for (const [index, text] of ["Yes, text me.", "Actually, no texts.", "Anything else?"].entries()) {
+      delegate(socket, `item_${index + 1}`, text, 1_000 + index * 3_000);
+      await vi.waitFor(() => expect(prompts).toHaveLength(index + 1));
+      await vi.waitFor(() => expect(sentOfType(socket, "session.commentary.append")).toHaveLength(index + 1));
+    }
+    expect(prompts[2]!.match(/- recordTextPreference:/g)).toHaveLength(1);
+    expect(prompts[2]).toContain("declined");
+  });
 });
 
 describe("LiveCallController attach", () => {

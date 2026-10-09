@@ -23,17 +23,23 @@ export const SCENARIOS: CallScenario[] = [
   { name: "trailing-goodbye", expect: "ends", lines: [{ text: "No, that's everything." }, { text: "Goodbye!", pauseMs: 1_500 }] },
   // The caller pauses before the question, so the receptionist mustn't hang up meanwhile.
   { name: "one-more-thing", expect: "continues", lines: [{ text: "No, that's everything." }, { text: "Oh wait, one more thing.", pauseMs: 3_000 }, { text: "Do you have parking?", pauseMs: 3_000 }] },
+];
+
+// Scenarios that book a real appointment, so they run only by name.
+const BOOKING_SCENARIOS: CallScenario[] = [
   // The caller turns down texts only after accepting the time, so the booking
-  // can come before the answer. No confirmation text may follow. The eval
-  // can't book; on a real line, check the contact's answer and the texts.
+  // can come before the answer. No confirmation text may follow. It asks for
+  // staging's "Initial consultation"; check the contact's answer and the
+  // texts, then cancel the appointment.
   { name: "book-no-texts", expect: "continues", lines: [{ text: "Okay. Can I book an initial consultation on Tuesday at 10 AM? My name is Sam Lee." }, { text: "Yes, please book it.", pauseMs: 15_000 }, { text: "And no text messages, please.", pauseMs: 12_000 }] },
 ];
 
 export function findScenarios(names: string[]): CallScenario[] {
   if (!names.length) return SCENARIOS;
+  const all = [...SCENARIOS, ...BOOKING_SCENARIOS];
   return names.map((name) => {
-    const scenario = SCENARIOS.find((item) => item.name === name);
-    if (!scenario) throw new Error(`Unknown scenario "${name}". Scenarios: ${SCENARIOS.map((item) => item.name).join(", ")}.`);
+    const scenario = all.find((item) => item.name === name);
+    if (!scenario) throw new Error(`Unknown scenario "${name}". Scenarios: ${all.map((item) => item.name).join(", ")}.`);
     return scenario;
   });
 }

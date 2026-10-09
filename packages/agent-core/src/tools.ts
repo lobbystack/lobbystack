@@ -296,7 +296,11 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
           ...(context.callId ? { callId: context.callId } : {}),
         });
         // Another booking can take the time between the check and the booking.
-        return !booked.ok && "unavailableReason" in booked && isReason(booked.unavailableReason) ? { ok: false, reason: UNAVAILABLE_TOOL_MESSAGES[booked.unavailableReason] } : booked;
+        if (!booked.ok) return "unavailableReason" in booked && isReason(booked.unavailableReason) ? { ok: false, reason: UNAVAILABLE_TOOL_MESSAGES[booked.unavailableReason] } : booked;
+        // An answer about texts on this call covers only the number calling.
+        return callerTextable && contactPhone !== context.callerPhone
+          ? { ...booked, textConfirmation: "This booking is under another number than the one calling. The caller's answer about texts doesn't cover it, so don't say texts will come for it." }
+          : booked;
       },
     });
   }
@@ -311,7 +315,7 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
       execute: async ({ answer }) => {
         const onFile = await recordTextConsentForCaller(domain, { businessId, callId, callerPhone: context.callerPhone!, answer });
         if (!onFile) return { ok: false, reason: "The answer could not be saved." };
-        const result = onFile === "subscribed" ? "Saved: the caller will get texts about their appointments." : onFile === "declined" ? "Saved: the caller won't get texts about their appointments." : "This number opted out of texts, so the caller won't get any.";
+        const result = onFile === "subscribed" ? "Saved: the number calling will get texts about appointments booked under it." : onFile === "declined" ? "Saved: the number calling won't get texts about its appointments." : "This number opted out of texts, so it won't get any.";
         return { ok: true, smsConsentOnFile: onFile, result };
       },
     });
@@ -388,7 +392,7 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
           finalConfirmation: z.boolean(),
         }),
         execute: async (input) => {
-          const result = withConsentOnFile(await cancelForCaller(domain, { businessId, callerPhone, ...input }));
+          const result = withConsentOnFile(await cancelForCaller(domain, { businessId, callerPhone, ...input, ...(context.callId ? { callId: context.callId } : {}) }));
           return "smsConsentOnFile" in result && result.smsConsentOnFile === "subscribed" ? { ...result, textConfirmation: "The caller will get a text confirming the cancellation." } : result;
         },
       });

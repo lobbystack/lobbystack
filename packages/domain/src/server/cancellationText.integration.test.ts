@@ -8,7 +8,7 @@ import { appointments, businessHours, businessMemberships, businesses, calls, co
 import { createAppointmentChangeVerification } from "./appointmentChanges";
 import { bookAppointment, cancelAppointment, cancelAppointmentForCaller } from "./booking";
 import type { SmsConsentAnswer } from "./contactSmsConsent";
-import { CANCELLATION_CONFIRMATION, resolveNotificationDelivery } from "./notifications";
+import { CANCELLATION_CONFIRMATION, releaseCallTexts, resolveNotificationDelivery } from "./notifications";
 import { cancelAppointmentForApi } from "./publicApi/operations";
 import { recordTextConsentForCaller } from "./receptionistActions";
 
@@ -58,10 +58,10 @@ async function seed(tx: DatabaseTransaction) {
   const as = async (role: "lobbystack_worker" | "lobbystack_app") => { await tx.execute(sql.raw(`set local role ${role}`)); };
   const asOwner = async () => { await tx.execute(sql`reset role`); };
   let slots = 0;
-  const book = async (phone: string, smsConsent?: SmsConsentAnswer) => {
+  const book = async (phone: string, smsConsent?: SmsConsentAnswer, callId?: string) => {
     await as("lobbystack_worker");
     const startsAt = DateTime.utc().plus({ days: 2 + slots++ }).set({ hour: 12, minute: 0, second: 0, millisecond: 0 }).toISO()!;
-    return (await bookAppointment({ db }, { businessId, serviceId: service!.id, startsAt, timezone: "UTC", contactPhone: phone, sourceChannel: "voice", ...(smsConsent ? { smsConsent } : {}) })).appointmentId;
+    return (await bookAppointment({ db }, { businessId, serviceId: service!.id, startsAt, timezone: "UTC", contactPhone: phone, sourceChannel: "voice", ...(smsConsent ? { smsConsent } : {}), ...(callId ? { callId } : {}) })).appointmentId;
   };
   const addContact = async (phone: string, values: { smsConsentStatus?: string; operatorBlockedAt?: Date } = {}) => {
     await asOwner();
@@ -90,11 +90,11 @@ async function seed(tx: DatabaseTransaction) {
     await as("lobbystack_app");
     return await cancelAppointment({ db }, { userId, businessId, appointmentId });
   };
-  const callerCancel = async (appointmentId: string, phone: string) => {
+  const callerCancel = async (appointmentId: string, phone: string, callId?: string) => {
     await as("lobbystack_worker");
     const verification = await createAppointmentChangeVerification({ db }, { businessId, callerPhone: phone, action: "cancel", appointmentId, serviceName: "Cut" });
     if (!verification) return { verification, cancelled: null };
-    return { verification, cancelled: await cancelAppointmentForCaller({ db }, { businessId, appointmentId, callerPhone: phone, verificationId: verification.verificationId }) };
+    return { verification, cancelled: await cancelAppointmentForCaller({ db }, { businessId, appointmentId, callerPhone: phone, verificationId: verification.verificationId, ...(callId ? { callId } : {}) }) };
   };
   const apiCancel = async (appointmentId: string, actor: "api_key" | "mcp") => {
     await as("lobbystack_worker");
@@ -118,18 +118,18 @@ async function seed(tx: DatabaseTransaction) {
     await as("lobbystack_worker");
     return await recordTextConsentForCaller({ db }, { businessId, callId, callerPhone: phone, answer });
   };
-  /** Marks the text skipped, as the worker does when the contact hadn't agreed yet. */
-  const skip = async (appointmentId: string, kind: string) => {
+  /** The text's dispatch job: whether it waits for a call to end, and for which call. */
+  const job = async (appointmentId: string, kind: string) => {
     await asOwner();
-    await tx.update(notifications).set({ status: "skipped" }).where(and(eq(notifications.relatedId, appointmentId), eq(notifications.kind, kind)));
+    const [row] = await tx.select({ id: notifications.id }).from(notifications).where(and(eq(notifications.relatedId, appointmentId), eq(notifications.kind, kind)));
+    const jobs = (await tx.select({ payload: outboxMessages.payload, availableAt: outboxMessages.availableAt }).from(outboxMessages).where(eq(outboxMessages.topic, "notification.dispatch"))).filter((item) => item.payload.notificationId === row!.id);
+    return jobs.map((item) => ({ held: item.availableAt.getTime() > Date.now(), callId: item.payload.callId }));
   };
-  const text = async (appointmentId: string, kind: string) => {
-    await asOwner();
-    const [row] = await tx.select({ id: notifications.id, status: notifications.status }).from(notifications).where(and(eq(notifications.relatedId, appointmentId), eq(notifications.kind, kind)));
-    const jobs = await tx.select({ payload: outboxMessages.payload }).from(outboxMessages).where(eq(outboxMessages.topic, "notification.dispatch"));
-    return { status: row!.status, dispatches: jobs.filter((job) => job.payload.notificationId === row!.id).length };
+  const endCall = async (callId: string) => {
+    await as("lobbystack_worker");
+    await releaseCallTexts({ db }, { businessId, callId });
   };
-  return { book, addContact, consent, cancellationTexts, deliver, operatorCancel, callerCancel, apiCancel, pastAppointment, startCall, answerTexts, skip, text };
+  return { book, addContact, consent, cancellationTexts, deliver, operatorCancel, callerCancel, apiCancel, pastAppointment, startCall, answerTexts, job, endCall };
 }
 
 describe.skipIf(!client)("the answer to texts given while booking", () => {
@@ -265,52 +265,60 @@ describe.skipIf(!client)("a caller cancelling on the phone", () => {
 });
 
 describe.skipIf(!client)("the caller's answer about texts on a phone call", () => {
-  it("re-queues this call's skipped confirmation after a late yes, and a later no stops the reminder", async () => {
+  it("holds the confirmation of a booking made on the call until the call ends, so a later no wins", async () => {
     await rollbackTest(async (tx) => {
-      const { book, consent, deliver, startCall, answerTexts, skip, text } = await seed(tx);
+      const { book, addContact, consent, deliver, startCall, answerTexts, job, endCall } = await seed(tx);
       const phone = "+14165550101";
+      await addContact(phone, { smsConsentStatus: "subscribed" });
       const callId = await startCall(phone);
-      const appointmentId = await book(phone);
-      await skip(appointmentId, "booking_confirmation");
-      expect(await answerTexts(callId, phone, "agreed")).toBe("subscribed");
-      expect(await consent(phone)).toEqual({ status: "subscribed", source: "voice_call", events: [{ action: "reminder_consent_granted", source: "voice_call" }] });
-      expect(await text(appointmentId, "booking_confirmation")).toEqual({ status: "pending", dispatches: 2 });
-      expect(await deliver(appointmentId, "booking_confirmation")).toMatchObject({ kind: "ready", delivery: { to: phone } });
-
+      const appointmentId = await book(phone, undefined, callId);
+      expect(await job(appointmentId, "booking_confirmation")).toEqual([{ held: true, callId }]);
       expect(await answerTexts(callId, phone, "declined")).toBe("declined");
+      expect(await consent(phone)).toEqual({ status: "declined", source: "voice_call", events: [{ action: "reminder_consent_declined", source: "voice_call" }] });
+      await endCall(callId);
+      expect(await job(appointmentId, "booking_confirmation")).toEqual([{ held: false, callId }]);
+      expect(await deliver(appointmentId, "booking_confirmation")).toMatchObject({ kind: "skipped" });
       expect(await deliver(appointmentId, "appointment_reminder")).toMatchObject({ kind: "skipped" });
+
+      // A booking made off a call goes out at once.
+      const offCall = await book("+14165550102", "agreed");
+      expect(await job(offCall, "booking_confirmation")).toEqual([{ held: false, callId: undefined }]);
     });
   });
 
-  it("re-queues the cancellation text the caller agreed to after cancelling", async () => {
+  it("sends the confirmation when the caller says yes after the booking", async () => {
     await rollbackTest(async (tx) => {
-      const { book, deliver, callerCancel, startCall, answerTexts, skip, text } = await seed(tx);
+      const { book, deliver, startCall, answerTexts, endCall } = await seed(tx);
+      const phone = "+14165550101";
+      const callId = await startCall(phone);
+      const appointmentId = await book(phone, undefined, callId);
+      expect(await answerTexts(callId, phone, "agreed")).toBe("subscribed");
+      await endCall(callId);
+      expect(await deliver(appointmentId, "booking_confirmation")).toMatchObject({ kind: "ready", delivery: { to: phone } });
+    });
+  });
+
+  it("holds a caller's cancellation text until the call ends, so a yes after cancelling counts", async () => {
+    await rollbackTest(async (tx) => {
+      const { book, deliver, callerCancel, startCall, answerTexts, job, endCall } = await seed(tx);
       const phone = "+14165550102";
       const appointmentId = await book(phone);
       const callId = await startCall(phone);
-      expect((await callerCancel(appointmentId, phone)).cancelled?.smsConsentOnFile).toBe("not_asked");
-      await skip(appointmentId, CANCELLATION_CONFIRMATION);
+      expect((await callerCancel(appointmentId, phone, callId)).cancelled?.smsConsentOnFile).toBe("not_asked");
+      expect(await job(appointmentId, CANCELLATION_CONFIRMATION)).toEqual([{ held: true, callId }]);
       await answerTexts(callId, phone, "agreed");
-      expect(await text(appointmentId, CANCELLATION_CONFIRMATION)).toEqual({ status: "pending", dispatches: 2 });
+      await endCall(callId);
+      expect(await job(appointmentId, CANCELLATION_CONFIRMATION)).toEqual([{ held: false, callId }]);
       expect(await deliver(appointmentId)).toMatchObject({ kind: "ready", delivery: { kind: CANCELLATION_CONFIRMATION } });
     });
   });
 
-  it("leaves texts from before the call alone, and never undoes STOP or answers for another number", async () => {
+  it("never undoes STOP or answers for another number", async () => {
     await rollbackTest(async (tx) => {
-      const { book, addContact, consent, startCall, answerTexts, skip, text } = await seed(tx);
-      const earlier = await book("+14165550101");
-      await skip(earlier, "booking_confirmation");
-      const later = await startCall("+14165550101", new Date(Date.now() + 60_000));
-      expect(await answerTexts(later, "+14165550101", "agreed")).toBe("subscribed");
-      expect(await text(earlier, "booking_confirmation")).toEqual({ status: "skipped", dispatches: 1 });
-
+      const { addContact, consent, startCall, answerTexts } = await seed(tx);
       await addContact("+14165550103", { smsConsentStatus: "opted_out" });
-      const optedOut = await book("+14165550103");
-      await skip(optedOut, "booking_confirmation");
       expect(await answerTexts(await startCall("+14165550103"), "+14165550103", "agreed")).toBe("opted_out");
       expect(await consent("+14165550103")).toMatchObject({ status: "opted_out", events: [] });
-      expect(await text(optedOut, "booking_confirmation")).toEqual({ status: "skipped", dispatches: 1 });
 
       expect(await answerTexts(await startCall("+14165550104"), "+14165550199", "agreed")).toBeNull();
       expect(await consent("+14165550199")).toEqual({ status: null, source: null, events: [] });

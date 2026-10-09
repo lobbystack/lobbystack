@@ -45,7 +45,7 @@ beforeEach(() => { vi.clearAllMocks(); });
 
 describe("recordTextPreference", () => {
   it("saves the caller's answer for the call's own number and says what it means", async () => {
-    await expect(tools().run("recordTextPreference", { answer: "agreed" })).resolves.toEqual({ ok: true, smsConsentOnFile: "subscribed", result: "Saved: the caller will get texts about their appointments." });
+    await expect(tools().run("recordTextPreference", { answer: "agreed" })).resolves.toEqual({ ok: true, smsConsentOnFile: "subscribed", result: "Saved: the number calling will get texts about appointments booked under it." });
     expect(recordTextConsentForCaller).toHaveBeenCalledWith(expect.anything(), { businessId: demoSnapshot.businessId, callId: "call_1", callerPhone, answer: "agreed" });
     vi.mocked(recordTextConsentForCaller).mockResolvedValueOnce("opted_out");
     await expect(tools().run("recordTextPreference", { answer: "agreed" })).resolves.toMatchObject({ ok: true, smsConsentOnFile: "opted_out", result: expect.stringContaining("opted out") });
@@ -57,8 +57,19 @@ describe("recordTextPreference", () => {
     for (const set of [tools({ channel: "web_chat", callerPhone: undefined }), tools({ channel: "web_voice", callerPhone: undefined }), tools({ callerPhone: "+381695021111", snapshot: tollFree }), tools({ snapshot: { contactChannels: {} } }), tools({ callId: undefined })]) {
       expect(set.set).not.toHaveProperty("recordTextPreference");
     }
+    // A prospect demo only takes messages, and a business that doesn't book has nothing to text about.
+    const context = { domain: { db: {} as never }, channel: "voice" as const, callerPhone, callId: "call_1" };
+    expect(createReceptionistTools({ ...context, snapshot: demoSnapshot, intakeOnly: true })).not.toHaveProperty("recordTextPreference");
+    expect(createReceptionistTools({ ...context, snapshot: { ...demoSnapshot, bookingMode: "off" } })).not.toHaveProperty("recordTextPreference");
     expect(tools().set).toHaveProperty("recordTextPreference");
     expect(tools().schema("bookAppointment").safeParse({ serviceName: "General Checkup", startsAt: "2026-10-06T10:00" }).success).toBe(true);
+  });
+
+  it("warns that a booking under another number isn't covered by the caller's answer", async () => {
+    const booking = { serviceName: "General Checkup", startsAt: "2026-10-06T10:00", contactName: "Milan" };
+    await expect(tools().run("bookAppointment", { ...booking, contactPhone: "+14165550199" })).resolves.toMatchObject({ ok: true, textConfirmation: expect.stringContaining("doesn't cover it") });
+    expect(await tools().run("bookAppointment", booking)).not.toHaveProperty("textConfirmation");
+    expect(await tools({ snapshot: { contactChannels: {} } }).run("bookAppointment", { ...booking, contactPhone: "+14165550199" })).not.toHaveProperty("textConfirmation");
   });
 });
 
@@ -104,7 +115,7 @@ describe("cancelAppointment", () => {
   it("says a text is coming when the caller gets texts", async () => {
     vi.mocked(cancelForCaller).mockResolvedValueOnce({ ...cancelled, smsConsentOnFile: "subscribed" } as never);
     await expect(tools().run("cancelAppointment", cancel)).resolves.toEqual({ ...cancelled, smsConsentOnFile: "subscribed", textConfirmation: "The caller will get a text confirming the cancellation." });
-    expect(cancelForCaller).toHaveBeenCalledWith(expect.anything(), { businessId: demoSnapshot.businessId, callerPhone, ...cancel });
+    expect(cancelForCaller).toHaveBeenCalledWith(expect.anything(), { businessId: demoSnapshot.businessId, callerPhone, ...cancel, callId: "call_1" });
   });
 
   it.each(["declined", "opted_out", "not_asked"] as const)("promises no text when the answer on file is %s", async (smsConsentOnFile) => {

@@ -6,6 +6,7 @@ import { MAX_PHONE_CALL_MS } from "@lobbystack/shared";
 import { reserveOutboundCallAttempt } from "./billing";
 import type { DomainContext } from "./context";
 import { recordProspectDemoCallOutcome } from "./demos";
+import { releaseCallTexts } from "./notifications";
 import { recordUnitEconomicsEvent } from "./unitEconomics";
 import { extendPhoneReservationInTransaction } from "./usage";
 import { completeCall, setTransferState, startCall, upsertTranscript } from "./voice";
@@ -213,6 +214,8 @@ export async function finishLiveCall(context: DomainContext, input: { businessId
     providerCostUsd: costUsd,
     ...(input.recording ? { outbox: [liveCallRecordingJob({ businessId: input.businessId, callId: input.callId, ...input.recording, attempt: 1 })] } : {}),
   });
+  // Texts held during the call go out now, after every answer the caller gave.
+  await releaseCallTexts(context, { businessId: input.businessId, callId: input.callId });
   if (!completed) return completed;
   // No-op unless the call belongs to a prospect demo.
   await recordProspectDemoCallOutcome(context, { businessId: input.businessId, callId: input.callId, status, disposition: DISPOSITIONS[input.end], providerDurationSeconds: Math.ceil(seconds) });
