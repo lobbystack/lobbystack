@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 
 import { billingAccounts, businessMemberships, businesses, createDatabaseClient, onboardingPhoneVerifications, onboardingNumberClaimEvents, phoneNumbers, users, withBusinessTransaction } from "@lobbystack/db";
-import { claimNumberProvisioning, completeNumberProvisioning, reserveOnboardingNumberClaim, reserveReplacementNumberClaim, searchAvailableBusinessNumbers, searchBusinessNumberInventory, skipOnboardingNumber, type NumberSelection } from "@lobbystack/domain";
+import { claimNumberProvisioning, completeNumberProvisioning, reserveOnboardingNumberClaim, reserveReplacementNumberClaim, searchBusinessNumberInventory, skipOnboardingNumber, type NumberSelection } from "@lobbystack/domain";
 import { handleJob } from "../apps/worker/src/handlers";
 
 function assert(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(message); }
@@ -37,7 +37,7 @@ async function main(): Promise<void> {
     assert(unsupportedCountry, "An unsupported country was accepted for number search.");
 
     const areaCodeSearches: Array<{ areaCode?: string }> = [];
-    const offers = await searchAvailableBusinessNumbers({ db: app.db }, { userId, businessId, selection: { countryCode: "CA", areaCode: "416" }, claimTokenSecret: secret }, { listAvailablePhoneNumbers: async (selection) => { areaCodeSearches.push(selection); return [{ phoneE164: "+14165550199", locality: "Toronto", region: "ON", countryCode: selection.countryCode, capabilities: { sms: true, voice: true } }]; } });
+    const offers = (await searchBusinessNumberInventory({ db: app.db }, { userId, businessId, selection: { countryCode: "CA", areaCode: "416" }, claimTokenSecret: secret }, { listAvailablePhoneNumbers: async (selection) => { areaCodeSearches.push(selection); return [{ phoneE164: "+14165550199", locality: "Toronto", region: "ON", countryCode: selection.countryCode, capabilities: { sms: true, voice: true } }]; } })).numbers;
     assert(offers.length === 1 && offers[0]?.claimToken && areaCodeSearches[0]?.areaCode === "416", "Signed number offer was not issued for the explicit area code.");
     const claimId = await reserveOnboardingNumberClaim({ db: app.db }, { userId, businessId, claimToken: offers[0]!.claimToken, claimTokenSecret: secret, idempotencyKey: "certification-claim" });
     const duplicateClaimId = await reserveOnboardingNumberClaim({ db: app.db }, { userId, businessId, claimToken: offers[0]!.claimToken, claimTokenSecret: secret, idempotencyKey: "certification-claim" });
@@ -48,7 +48,7 @@ async function main(): Promise<void> {
     const persistedNumber = await withBusinessTransaction(worker.db, { businessId, actorType: "worker" }, async (tx) => (await tx.select().from(phoneNumbers).where(eq(phoneNumbers.id, phoneNumberId)))[0]);
     assert(persistedNumber?.status === "active" && persistedNumber.providerPhoneId === "PN_certification", "Provisioned phone number was not persisted.");
 
-    const replacementOffers = await searchAvailableBusinessNumbers({ db: app.db }, { userId, businessId, purpose: "replacement", claimTokenSecret: secret }, { listAvailablePhoneNumbers: async (selection) => [{ phoneE164: "+14165550200", locality: "Toronto", region: "ON", countryCode: selection.countryCode, capabilities: { sms: true, voice: true } }] });
+    const replacementOffers = (await searchBusinessNumberInventory({ db: app.db }, { userId, businessId, purpose: "replacement", claimTokenSecret: secret }, { listAvailablePhoneNumbers: async (selection) => [{ phoneE164: "+14165550200", locality: "Toronto", region: "ON", countryCode: selection.countryCode, capabilities: { sms: true, voice: true } }] })).numbers;
     const replacementClaimId = await reserveReplacementNumberClaim({ db: app.db }, { userId, businessId, claimToken: replacementOffers[0]!.claimToken, claimTokenSecret: secret, idempotencyKey: "certification-replacement" });
     const duplicateReplacementClaimId = await reserveReplacementNumberClaim({ db: app.db }, { userId, businessId, claimToken: replacementOffers[0]!.claimToken, claimTokenSecret: secret, idempotencyKey: "certification-replacement" });
     assert(replacementClaimId === duplicateReplacementClaimId, "Replacement reservation was not idempotent.");
@@ -60,7 +60,7 @@ async function main(): Promise<void> {
     assert(replacementState.business?.phoneNumberReplacementUsedAt && !replacementState.business.phoneNumberReplacementReservedAt, "Replacement entitlement was not consumed atomically.");
     assert(replacementState.oldNumber?.status === "active" && replacementState.oldNumber.reclaimReason === "replacement" && retirementDelay > 29 * 24 * 60 * 60_000, "Previous number did not receive a 30-day retirement window.");
     assert(replacementState.newNumber?.status === "active" && replacementState.newNumber.providerPhoneId === "PN_replacement", "Replacement number was not activated before retirement.");
-    let secondReplacementDenied = false; try { await searchAvailableBusinessNumbers({ db: app.db }, { userId, businessId, purpose: "replacement", claimTokenSecret: secret }, { listAvailablePhoneNumbers: async () => [] }); } catch { secondReplacementDenied = true; }
+    let secondReplacementDenied = false; try { await searchBusinessNumberInventory({ db: app.db }, { userId, businessId, purpose: "replacement", claimTokenSecret: secret }, { listAvailablePhoneNumbers: async () => [] }); } catch { secondReplacementDenied = true; }
     assert(secondReplacementDenied, "A second replacement was not denied.");
     await withBusinessTransaction(worker.db, { businessId, actorType: "worker" }, async (tx) => { await tx.update(phoneNumbers).set({ reclaimScheduledAt: new Date() }).where(and(eq(phoneNumbers.id, phoneNumberId), eq(phoneNumbers.businessId, businessId))); });
     const releasedProviderIds: string[] = [];
@@ -76,7 +76,7 @@ async function main(): Promise<void> {
       await tx.insert(billingAccounts).values({ businessId: foreignBusinessId, billingKey: `business:${foreignBusinessId}`, plan: "starter", subscriptionState: "active" });
     });
     await skipOnboardingNumber({ db: app.db }, { userId, businessId: foreignBusinessId });
-    const revisitOffers = await searchAvailableBusinessNumbers({ db: app.db }, { userId, businessId: foreignBusinessId, claimTokenSecret: secret }, { listAvailablePhoneNumbers: async selection => [{ phoneE164: "+14165550201", countryCode: selection.countryCode, capabilities: { sms: true, voice: true } }] });
+    const revisitOffers = (await searchBusinessNumberInventory({ db: app.db }, { userId, businessId: foreignBusinessId, claimTokenSecret: secret }, { listAvailablePhoneNumbers: async selection => [{ phoneE164: "+14165550201", countryCode: selection.countryCode, capabilities: { sms: true, voice: true } }] })).numbers;
     let quotaBlocked = false;
     try { await reserveOnboardingNumberClaim({ db: app.db }, { userId, businessId: foreignBusinessId, claimToken: revisitOffers[0]!.claimToken, claimTokenSecret: secret, idempotencyKey: "revisit-quota" }); } catch { quotaBlocked = true; }
     assert(quotaBlocked, "Revisiting onboarding bypassed the daily phone purchase quota.");
@@ -84,7 +84,7 @@ async function main(): Promise<void> {
     const revisitClaimId = await reserveOnboardingNumberClaim({ db: app.db }, { userId, businessId: foreignBusinessId, claimToken: revisitOffers[0]!.claimToken, claimTokenSecret: secret, idempotencyKey: "revisit-complete" });
     // A completed workspace has no stage gate, so only the claim itself stops a second purchase.
     let secondClaimError = "";
-    try { await reserveOnboardingNumberClaim({ db: app.db }, { userId, businessId: foreignBusinessId, claimToken: revisitOffers[0]!.claimToken, claimTokenSecret: secret, idempotencyKey: "revisit-second" }); } catch (error) { secondClaimError = String((error as { cause?: unknown }).cause ?? error); }
+    try { await reserveOnboardingNumberClaim({ db: app.db }, { userId, businessId: foreignBusinessId, claimToken: revisitOffers[0]!.claimToken, claimTokenSecret: secret, idempotencyKey: "revisit-second" }); } catch (error) { secondClaimError = String((error as { code?: unknown }).code); }
     assert(secondClaimError.includes("number_claim_in_progress"), "A second number claim was reserved while the first was still in progress.");
     const getRevisitStage = async () => await withBusinessTransaction(worker.db, { businessId: foreignBusinessId, actorType: "worker" }, async tx => (await tx.select({ stage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, foreignBusinessId)))[0]?.stage);
     assert(await getRevisitStage() === "complete", "Revisiting number selection regressed completed onboarding.");

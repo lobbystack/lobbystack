@@ -21,6 +21,6 @@ describe("feedback rate limiting", () => {
 
   it("rejects a submission over the limit", async () => {
     enforce.mockResolvedValue({ allowed: false, status: 429, reason: "rate_limit_user_hour" });
-    await expect(assertFeedbackSubmissionAllowed({ userId: "user-a" })).rejects.toThrow("Too many feedback submissions");
+    await expect(assertFeedbackSubmissionAllowed({ userId: "user-a" })).rejects.toMatchObject({ status: 429, message: expect.stringContaining("Too many feedback submissions") });
   });
 });

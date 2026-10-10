@@ -127,6 +127,7 @@
     "searchFailed": "We couldn't search numbers right now.",
     "claimFailed": "We couldn't provision that number. Please try again.",
     "claimRateLimited": "You've tried several numbers. Please wait a bit before trying again.",
+    "offerExpired": "That offer expired. Search again and pick a number.",
     "trialAccountPurchaseLimit": "This Twilio account can't buy that number yet. Trial accounts can only buy eligible trial numbers; release an existing number or upgrade the account, then try again.",
     "skipFailed": "We couldn't skip this step right now. Please try again.",
     "tooManySearches": "Too many searches. Please wait a bit and try again.",

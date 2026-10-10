@@ -6,5 +6,5 @@ export async function assertPhoneNumberSearchAllowed(input: { userId: string; in
   const name = input.initial ? "initial-10m" : "search-10m";
   const result = await enforceFixedWindow([fixedWindowLimit("phone-number-search", name, input.userId, input.initial ? 10 : 20, 600, "rate_limit_user")]);
   if (result.allowed) return;
-  throw new Error(result.status === 429 ? "Too many number searches. Try again later." : "Phone number search protection is unavailable.");
+  throw Object.assign(new Error(result.status === 429 ? "Too many number searches. Try again later." : "Phone number search protection is unavailable."), { status: result.status });
 }
