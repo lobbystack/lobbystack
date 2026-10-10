@@ -26,6 +26,7 @@ export async function syncAppointmentCalendar(dependencies: Dependencies, input:
   const { businessId, appointmentId } = input;
   if (!dependencies.calendar || !appointmentId) return { status: "skipped", entityId: appointmentId };
   const provider = dependencies.calendar;
+  // FOR SHARE makes a calendar switch wait for an event write already running, so its release comes after it.
   const load = async (tx: DatabaseTransaction) => (await tx.select({
     id: appointments.id, status: appointments.status, startsAt: appointments.startsAt, endsAt: appointments.endsAt,
     externalEventId: appointments.calendarExternalId, serviceName: services.name, contactName: contacts.name,
@@ -36,7 +37,7 @@ export async function syncAppointmentCalendar(dependencies: Dependencies, input:
     .leftJoin(contacts, and(eq(contacts.id, appointments.contactId), eq(contacts.businessId, businessId)))
     .innerJoin(calendarConnections, and(eq(calendarConnections.businessId, businessId), ne(calendarConnections.status, "disconnected"), or(isNull(calendarConnections.staffId), eq(calendarConnections.staffId, appointments.staffId))))
     .where(and(eq(appointments.id, appointmentId), eq(appointments.businessId, businessId)))
-    .orderBy(sql`(${calendarConnections.staffId} is not null) desc`, asc(calendarConnections.id)).limit(1))[0];
+    .orderBy(sql`(${calendarConnections.staffId} is not null) desc`, asc(calendarConnections.id)).limit(1).for("share", { of: calendarConnections }))[0];
   const initial = await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, load);
   if (!initial?.calendarId) {
     await updateAppointmentSyncState(dependencies.domain, { businessId, appointmentId, state: "not_required" });

@@ -2,12 +2,14 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ transaction: vi.fn(), token: vi.fn(), update: vi.fn(), updateTx: vi.fn(), mark: vi.fn(), busy: vi.fn(), backfill: vi.fn(), record: vi.fn() }));
 vi.mock("@lobbystack/db", async (original) => ({ ...await original<typeof import("@lobbystack/db")>(), withBusinessTransaction: mocks.transaction }));
 vi.mock("@lobbystack/domain", () => ({ CALENDAR_SYNC_HORIZON_MS: 90 * 86400_000, resolveCalendarAccessToken: mocks.token, updateAppointmentSyncState: mocks.update, updateAppointmentSyncStateInTransaction: mocks.updateTx, markCalendarConnectionSync: mocks.mark, queueUnsyncedAppointmentSyncs: mocks.backfill, upsertBusyBlocks: mocks.busy, recordProductEvent: mocks.record }));
+import { calendarConnections } from "@lobbystack/db";
 import { reconcileBusinessCalendar, syncAppointmentCalendar } from "./calendarJobs";
 
-type Chain = Promise<unknown[]> & { from: () => Chain; innerJoin: () => Chain; leftJoin: () => Chain; where: () => Chain; orderBy: () => Chain; limit: () => Chain };
+type Chain = Promise<unknown[]> & { from: () => Chain; innerJoin: () => Chain; leftJoin: () => Chain; where: () => Chain; orderBy: () => Chain; limit: () => Chain; for: (...args: unknown[]) => Chain };
 let batches: unknown[][];
 const execute = vi.fn();
-function query() { const chain = Promise.resolve(batches.shift() ?? []) as Chain; for (const method of ["from", "innerJoin", "leftJoin", "where", "orderBy", "limit"] as const) chain[method] = () => chain; return chain; }
+const lock = vi.fn();
+function query() { const chain = Promise.resolve(batches.shift() ?? []) as Chain; for (const method of ["from", "innerJoin", "leftJoin", "where", "orderBy", "limit"] as const) chain[method] = () => chain; chain.for = (...args) => { lock(...args); return chain; }; return chain; }
 const provider = { getBusyBlocks: vi.fn(), upsertEvent: vi.fn(), deleteEvent: vi.fn(), refreshAccessToken: vi.fn() };
 const dependencies = { domain: { db: {} as never }, calendar: provider };
 const appointment = { id: "appointment", status: "confirmed", startsAt: new Date("2026-09-14T10:00:00Z"), endsAt: new Date("2026-09-14T10:30:00Z"), externalEventId: "event", serviceName: "Service", contactName: null, connectionId: "connection", calendarId: "selected", connectionStatus: "connected", provider: "google" };
@@ -30,6 +32,12 @@ it("rereads durable cancellation state and deletes instead of rewriting the even
   expect(provider.upsertEvent).not.toHaveBeenCalled();
   expect(execute).toHaveBeenCalledOnce();
   expect(mocks.updateTx).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ state: "synced" }));
+});
+
+it("holds the connection row while it writes the event, so a calendar switch waits for it", async () => {
+  await syncAppointmentCalendar(dependencies, { businessId: "business", appointmentId: "appointment" });
+  expect(lock).toHaveBeenLastCalledWith("share", { of: calendarConnections });
+  expect(lock.mock.invocationCallOrder.at(-1)).toBeLessThan(provider.upsertEvent.mock.invocationCallOrder[0]!);
 });
 
 it("uses deterministic event identity for creates and reschedules", async () => {
