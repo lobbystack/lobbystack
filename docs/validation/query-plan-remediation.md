@@ -66,7 +66,7 @@ We built and measured every other candidate on the same fixture, then removed it
 | Candidate | Predicate | Measured with index | Verdict |
 | --- | --- | --- | --- |
 | `messages (business_id, content_expires_at)` | message content sweep | scan buffers 1257 to 3950, root and median unchanged | Rejected: matched rows are scattered, so the heap reads more pages than the existing bitmap scan on `business_id` |
-| `transcripts (business_id, expires_at)` | transcript retention delete | Seq Scan 878 to bitmap 710 buffers, 21.02 to 19.81 ms | Deferred: 19% scan-buffer and 6% time change is below the 25%/20% bar and the root is unchanged |
+| `transcripts (business_id, expires_at)` | transcript retention delete | Seq Scan 878 to bitmap 710 buffers, 21.02 to 19.81 ms | Added later as a partial index in `0095_transcripts_business_expiry_index.sql`. This fixture gave one tenant 80% of the rows. The sweep runs once per business every hour, so with many tenants each run scans the whole table |
 | `inbox_items (business_id, content_expires_at)` | follow-up content sweep | 753 to 695 buffers, 44.99 to 43.13 ms | Deferred: 8% and 4%, below the bar |
 | `operator_notification_deliveries (business_id, content_expires_at)` | operator delivery sweep | 1088 to 1030 scan buffers, root 70869 to 78814, 85.33 to 84.51 ms | Rejected: root buffers rose and time did not improve |
 | `storage_objects (business_id, expires_at)` for pending uploads | expired upload sweep | 939 to 933 buffers, 4.22 to 4.50 ms | Rejected: no change |

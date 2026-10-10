@@ -156,7 +156,6 @@ export const businessMemberships = pgTable(
   },
   (table) => [
     uniqueIndex("business_memberships_business_user_unique").on(table.businessId, table.userId),
-    index("business_memberships_business_idx").on(table.businessId),
     index("business_memberships_user_idx").on(table.userId),
   ],
 );
@@ -309,7 +308,7 @@ export const phoneNumbers = pgTable(
     ...timestamps,
   },
   (table) => [
-    uniqueIndex("phone_numbers_e164_unique").on(table.e164),
+    uniqueIndex("phone_numbers_e164_unreclaimed_unique").on(table.e164).where(sql`${table.status} <> 'reclaimed'`),
     uniqueIndex("phone_numbers_provider_id_unique").on(table.providerPhoneId),
     index("phone_numbers_business_idx").on(table.businessId),
   ],
@@ -588,7 +587,10 @@ export const transcripts = pgTable(
     expiresAt: timestamp("expires_at", { withTimezone: true }),
     ...timestamps,
   },
-  (table) => [uniqueIndex("transcripts_call_sequence_unique").on(table.callId, table.sequence)],
+  (table) => [
+    uniqueIndex("transcripts_call_sequence_unique").on(table.callId, table.sequence),
+    index("transcripts_business_expires_idx").on(table.businessId, table.expiresAt).where(sql`${table.expiresAt} is not null`),
+  ],
 );
 
 export const appointments = pgTable(
