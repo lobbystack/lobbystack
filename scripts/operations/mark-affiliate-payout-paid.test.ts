@@ -26,23 +26,30 @@ beforeEach(() => {
 
 describe("mark affiliate payout paid", () => {
   it("changes nothing without --apply", async () => {
-    await main(["--payout-item-id", payoutItemId, "--reference", "paypal-123"]);
+    await main(["--payout-item-id", payoutItemId, "--amount-cents", "12000", "--reference", "paypal-123"]);
     expect(mocks.markAffiliatePayoutItemPaid).not.toHaveBeenCalled();
   });
 
   it("marks the item paid with the reference on --apply", async () => {
     mocks.markAffiliatePayoutItemPaid.mockResolvedValue(true);
-    await main(["--payout-item-id", payoutItemId, "--reference", "paypal-123", "--apply"]);
-    expect(mocks.markAffiliatePayoutItemPaid).toHaveBeenCalledWith({ db: {} }, { payoutItemId, externalReference: "paypal-123" });
+    await main(["--payout-item-id", payoutItemId, "--amount-cents", "12000", "--reference", "paypal-123", "--apply"]);
+    expect(mocks.markAffiliatePayoutItemPaid).toHaveBeenCalledWith({ db: {} }, { payoutItemId, expectedAmountCents: 12_000, externalReference: "paypal-123" });
+  });
+
+  it("refuses when the item no longer holds the amount that was sent", async () => {
+    // The daily run added $30 of newly cleared commission after the operator sent $90.
+    await expect(main(["--payout-item-id", payoutItemId, "--amount-cents", "9000", "--reference", "paypal-123", "--apply"])).rejects.toThrow("holds 12000 cents and you sent 9000");
+    expect(mocks.markAffiliatePayoutItemPaid).not.toHaveBeenCalled();
   });
 
   it("fails when the item is not ready", async () => {
     mocks.markAffiliatePayoutItemPaid.mockResolvedValue(false);
-    await expect(main(["--payout-item-id", payoutItemId, "--reference", "paypal-123", "--apply"])).rejects.toThrow("nothing changed");
+    await expect(main(["--payout-item-id", payoutItemId, "--amount-cents", "12000", "--reference", "paypal-123", "--apply"])).rejects.toThrow("nothing changed");
   });
 
-  it("requires a reference", async () => {
-    await expect(main(["--payout-item-id", payoutItemId, "--apply"])).rejects.toThrow();
+  it("requires a reference and the amount sent", async () => {
+    await expect(main(["--payout-item-id", payoutItemId, "--amount-cents", "12000", "--apply"])).rejects.toThrow();
+    await expect(main(["--payout-item-id", payoutItemId, "--reference", "paypal-123", "--apply"])).rejects.toThrow();
     expect(mocks.markAffiliatePayoutItemPaid).not.toHaveBeenCalled();
   });
 });
