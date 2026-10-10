@@ -1,7 +1,8 @@
-import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
 import http from "node:http";
 import https from "node:https";
 
+import { SecretBox } from "@lobbystack/providers/crypto/secretBox";
 import { WEBHOOK_TIMEOUT_MS } from "@lobbystack/shared";
 
 import { assertWebhookUrlAllowed, createGuardedLookup, webhookUrlPolicy, type WebhookUrlPolicy } from "./webhookNetwork";
@@ -36,26 +37,19 @@ export function webhookHeaders(input: { secret: string; id: string; timestamp: n
   };
 }
 
-// Signing secrets must be readable to sign, so they are encrypted rather than
-// hashed. Same format as the providers SecretBox: AES-256-GCM, key = SHA-256(ENCRYPTION_KEY).
-function encryptionKey(environment: Readonly<Record<string, string | undefined>> = process.env): Buffer {
+// Signing secrets must be readable to sign, so they are encrypted rather than hashed.
+function secretBox(environment: Readonly<Record<string, string | undefined>> = process.env): SecretBox {
   const secret = environment.ENCRYPTION_KEY?.trim();
   if (!secret && environment.NODE_ENV === "production") throw new Error("ENCRYPTION_KEY is required to store webhook signing secrets.");
-  return createHash("sha256").update(secret || "development-only-webhook-secret-key").digest();
+  return new SecretBox(secret || "development-only-webhook-secret-key");
 }
 
 export function encryptWebhookSecret(secret: string): string {
-  const iv = randomBytes(12);
-  const cipher = createCipheriv("aes-256-gcm", encryptionKey(), iv);
-  const ciphertext = Buffer.concat([cipher.update(secret, "utf8"), cipher.final()]);
-  return Buffer.concat([iv, cipher.getAuthTag(), ciphertext]).toString("base64url");
+  return secretBox().encrypt(secret);
 }
 
 export function decryptWebhookSecret(value: string): string {
-  const encoded = Buffer.from(value, "base64url");
-  const decipher = createDecipheriv("aes-256-gcm", encryptionKey(), encoded.subarray(0, 12));
-  decipher.setAuthTag(encoded.subarray(12, 28));
-  return Buffer.concat([decipher.update(encoded.subarray(28)), decipher.final()]).toString("utf8");
+  return secretBox().decrypt(value);
 }
 
 export type WebhookSendResult = { ok: boolean; status: number | null; error: string | null; durationMs: number };

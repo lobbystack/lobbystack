@@ -9,6 +9,7 @@ export default defineConfig({
       "@lobbystack/contracts": `${root}/packages/contracts/src/index.ts`,
       "@lobbystack/db": `${root}/packages/db/src/index.ts`,
       "@lobbystack/providers/crawling/urlSafety": `${root}/packages/providers/src/crawling/urlSafety.ts`,
+      "@lobbystack/providers/crypto/secretBox": `${root}/packages/providers/src/crypto/secretBox.ts`,
       "@lobbystack/shared": `${root}/packages/shared/src/index.ts`,
       "@lobbystack/telemetry/node": `${root}/packages/telemetry/src/node.ts`,
       "@lobbystack/telemetry": `${root}/packages/telemetry/src/index.ts`,
