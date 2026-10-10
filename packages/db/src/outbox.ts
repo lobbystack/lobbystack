@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, asc, eq, inArray, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
 
 import type { TraceContextCarrier } from "@lobbystack/contracts";
-import { redactOtelExceptionText } from "@lobbystack/telemetry/node";
+import { injectTraceContext, redactOtelExceptionText } from "@lobbystack/telemetry/node";
 
 import { withDispatcherTransaction, type DatabaseTransaction, type Database } from "./client";
 import { outboxMessages } from "./schema";
@@ -28,6 +28,8 @@ export async function enqueueOutbox(
   tx: DatabaseTransaction,
   input: NewOutboxMessage,
 ): Promise<string> {
+  // The worker continues this trace when it runs the job.
+  const trace = input.trace ?? injectTraceContext({});
   const [message] = await tx
     .insert(outboxMessages)
     .values({
@@ -38,8 +40,8 @@ export async function enqueueOutbox(
       aggregateId: input.aggregateId,
       dedupeKey: input.dedupeKey,
       availableAt: input.availableAt,
-      traceparent: input.trace?.traceparent,
-      tracestate: input.trace?.tracestate,
+      traceparent: trace.traceparent,
+      tracestate: trace.tracestate,
     })
     .onConflictDoNothing({ target: outboxMessages.dedupeKey })
     .returning({ id: outboxMessages.id });

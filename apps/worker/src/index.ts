@@ -10,7 +10,7 @@ import { GoogleCalendarProvider } from "@lobbystack/providers/google/calendar";
 import { PolarBillingProvider } from "@lobbystack/providers/polar/polarBilling";
 import { createStorageProvider } from "@lobbystack/providers/storage/provider";
 import { TwilioProvider } from "@lobbystack/providers/twilio/twilioProvider";
-import { getMeter, initializeTelemetry, redactOtelExceptionText, shutdownTelemetry, withSpan } from "@lobbystack/telemetry/node";
+import { getMeter, initializeTelemetry, redactOtelExceptionText, shutdownTelemetry, withExtractedTraceContext, withSpan } from "@lobbystack/telemetry/node";
 import { redactJobError } from "./redactJobError";
 import { DelayedError, Worker } from "bullmq";
 import { and, eq, isNull } from "drizzle-orm";
@@ -198,7 +198,8 @@ async function main(): Promise<void> {
       throw new Error(`Queue ${queueName} is not configured.`);
     }
     const worker = new Worker<JobEnvelope>(queueName, async (job, token) => {
-      const result = await withSpan(`job.${job.data.type}`, { attributes: { "messaging.system": "bullmq", "messaging.destination.name": queueName, "lobbystack.job_type": job.data.type } }, async () => {
+      // The job span joins the trace of the request that queued the job.
+      const result = await withExtractedTraceContext(job.data.trace, async () => await withSpan(`job.${job.data.type}`, { attributes: { "messaging.system": "bullmq", "messaging.destination.name": queueName, "lobbystack.job_type": job.data.type } }, async () => {
         state.activeJobs += 1;
         const started = performance.now();
         let outcome = "success";
@@ -218,7 +219,7 @@ async function main(): Promise<void> {
           duration.record(performance.now() - started, { queue: queueName, type, outcome });
           state.activeJobs -= 1;
         }
-      });
+      }));
       if (result.status !== "deferred") return result;
       // Run again once the lease ends, without spending one of the job's attempts.
       await job.moveToDelayed(result.retryAt.getTime(), token);

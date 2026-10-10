@@ -31,7 +31,7 @@ export type TelemetryInitializationOptions = {
   endpoint?: string;
 };
 
-export type TraceContextCarrier = Record<string, string>;
+export type TraceContextCarrier = Record<string, string | undefined>;
 
 let sdk: NodeSDK | undefined;
 let activeLogRecordProcessors: LogRecordProcessor[] = [];
