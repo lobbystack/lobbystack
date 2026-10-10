@@ -379,7 +379,7 @@ describe.skipIf(!testUrl)("reliability against dedicated PostgreSQL roles", () =
         createDownloadUrl: async () => "https://example.invalid",
         putObject: async () => undefined,
       };
-      await persistCallRecording({ db }, { businessId, callId, durationMs: 1_000, contentType: "audio/wav", body: new Uint8Array([1, 2, 3]) }, storage);
+      await persistCallRecording({ db }, { businessId, callId, contentType: "audio/wav", body: new Uint8Array([1, 2, 3]) }, storage);
       await withBusinessTransaction(db, { businessId, actorType: "worker" }, async (workerTx) => {
         const [object] = await workerTx.select({ createdAt: storageObjects.createdAt, retentionUntil: storageObjects.retentionUntil, purpose: storageObjects.purpose }).from(storageObjects).where(and(eq(storageObjects.businessId, businessId), eq(storageObjects.purpose, "recording")));
         expect(object).toMatchObject({ purpose: "recording" });

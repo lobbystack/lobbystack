@@ -11,7 +11,7 @@ import { contentExpiryForPlan, isContentRetentionEnabled, resolveBusinessBilling
 import { queueOperatorAlertInTransaction } from "./notifications";
 import { finalizeWebVoiceUsageInTransaction, normalizeWebCallMaxDurationMs, reserveWebVoiceUsageInTransaction } from "./billing";
 import { correctUsageInTransaction, enqueueUsageSyncInTransaction, reserveUsageInTransaction } from "./usage";
-import { recordUnitEconomicsEventInTransaction } from "./unitEconomics";
+import { recordUnitEconomicsEventInTransaction, type UnitEconomicsEventInput } from "./unitEconomics";
 import { visibleFollowUpBody, visibleFollowUpTitle } from "./followUpRetention";
 import { recordCallOutcomeInTransaction, resolveCallOutcome } from "./callOutcome";
 import { buildCallEvents } from "./callEvents";
@@ -239,6 +239,8 @@ export async function completeCall(
     businessId: string; callId: string; status: string; endedAt: string; disposition?: string; providerDurationSeconds?: number; mediaDurationSeconds?: number; providerCostUsd?: number; expectedProviderCallId?: string;
     /** Follow-up jobs written with the completion, so only the write that finalizes the call queues them. */
     outbox?: NewOutboxMessage[];
+    /** A cost row written with the completion, for the same reason. */
+    costEvent?: UnitEconomicsEventInput;
   },
 ): Promise<boolean> {
   const completion = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
@@ -292,6 +294,7 @@ export async function completeCall(
       payload: { callId: call.id },
     });
     for (const message of input.outbox ?? []) await enqueueOutbox(tx, message);
+    if (input.costEvent) await recordUnitEconomicsEventInTransaction(tx, input.costEvent);
     // The short-call exemption, as opposed to spam or a non-billable call: the
     // business pays nothing, but the provider may still bill us.
     const shortCallWaived = durationSeconds === 0 && !isNonBillableCallDisposition(call.disposition) && ((input.providerDurationSeconds ?? 0) > 0 || measuredSeconds > 0);

@@ -100,10 +100,10 @@ export function buildCallEvents(call: CallRow): CallEvent[] {
     failed: false,
   });
 
+  // A transfer that was only requested, or never started, didn't happen.
   if (
     call.transferState &&
-    call.transferState !== "none" &&
-    call.transferState !== "idle"
+    !["none", "idle", "requested", "preparing", "released"].includes(call.transferState)
   ) {
     events.push({
       key: "transferred",

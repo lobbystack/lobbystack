@@ -178,7 +178,7 @@ describe("LiveCallController sideband", () => {
     });
     const agent = createReceptionistAgent({
       model,
-      context: { domain: { db: {} as never }, snapshot: demoSnapshot, channel: phone ? "voice" : "web_voice", callId: "call_1", callControl: { hangup: async () => holder.controller!.endWhenCallerDone() } },
+      context: { domain: { db: {} as never }, snapshot: demoSnapshot, channel: phone ? "voice" : "web_voice", callId: "call_1", callControl: { hangup: async (reason) => holder.controller!.end(reason) } },
       directToolAnswers: true,
     });
     const { controller, hangup, closed } = await sideband([(socket) => {
@@ -208,7 +208,7 @@ describe("LiveCallController sideband", () => {
     expect(commands.filter((event) => event.type === "session.thinking.append")).toEqual([]);
     expect(hangup).toHaveBeenCalledTimes(phone ? 1 : 0);
     expect(commands.map((event) => event.type).filter((type) => type === "session.close")).toEqual(phone ? [] : ["session.close"]);
-    expect(closed[0]).toMatchObject({ closeReason: "close_requested", usageConfirmed: true, delegations: [expect.objectContaining({ tools: ["endCall"], endedCall: true, directAnswer: true })] });
+    expect(closed[0]).toMatchObject({ closeReason: "close_requested", end: "caller_finished", usageConfirmed: true, delegations: [expect.objectContaining({ tools: ["endCall"], endedCall: true, directAnswer: true })] });
   }, 10_000);
 
   // The SDK's sideband types leave the reflected caller audio out, so this

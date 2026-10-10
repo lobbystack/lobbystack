@@ -6,20 +6,11 @@ const mocks = vi.hoisted(() => ({
   startCall: vi.fn(),
   upsertTranscript: vi.fn(),
   reserveOutboundCallAttempt: vi.fn(),
-  recordUnitEconomicsEvent: vi.fn(),
-  enqueueOutbox: vi.fn(),
   releaseCallTexts: vi.fn(),
-}));
-
-vi.mock("@lobbystack/db", async (original) => ({
-  ...(await original<typeof import("@lobbystack/db")>()),
-  withBusinessTransaction: vi.fn(async (_db: unknown, _context: unknown, callback: (tx: unknown) => unknown) => await callback({})),
-  enqueueOutbox: mocks.enqueueOutbox,
 }));
 
 vi.mock("./voice", () => ({ completeCall: mocks.completeCall, setTransferState: mocks.setTransferState, startCall: mocks.startCall, upsertTranscript: mocks.upsertTranscript }));
 vi.mock("./billing", () => ({ reserveOutboundCallAttempt: mocks.reserveOutboundCallAttempt }));
-vi.mock("./unitEconomics", () => ({ recordUnitEconomicsEvent: mocks.recordUnitEconomicsEvent }));
 vi.mock("./demos", () => ({ recordProspectDemoCallOutcome: vi.fn() }));
 vi.mock("./notifications", () => ({ releaseCallTexts: mocks.releaseCallTexts }));
 
@@ -52,10 +43,13 @@ describe("startLivePhoneCall", () => {
 });
 
 describe("finishLiveCall", () => {
-  it("completes the call with the billed seconds and records the GPT-Live cost", async () => {
+  // What the write that finalizes the call is asked to write with it.
+  const finalizing = () => mocks.completeCall.mock.lastCall![1] as { outbox: Array<{ topic: string; dedupeKey: string; payload: unknown; availableAt?: Date }>; costEvent?: Record<string, unknown> };
+
+  it("completes the call with the billed seconds and records the GPT-Live cost in the same write", async () => {
     await finishLiveCall(context, { ...call, seconds: 90, end: "caller_hung_up" });
     expect(mocks.completeCall).toHaveBeenCalledWith(context, expect.objectContaining({ callId: "call_1", status: "completed", disposition: "caller_hung_up", providerDurationSeconds: 90, mediaDurationSeconds: 90, providerCostUsd: expect.closeTo(0.075, 6) }));
-    expect(mocks.recordUnitEconomicsEvent).toHaveBeenCalledWith(context, expect.objectContaining({ eventKey: "voice_ai:live_session:call_1", model: "gpt-live-1", costUsd: expect.closeTo(0.075, 6) }));
+    expect(finalizing().costEvent).toMatchObject({ eventKey: "voice_ai:live_session:call_1", channel: "voice", model: "gpt-live-1", operation: "live_session", quantity: 90, costUsd: expect.closeTo(0.075, 6) });
     // Texts held while the call ran go out once it's over.
     expect(mocks.releaseCallTexts).toHaveBeenCalledWith(context, { businessId: call.businessId, callId: "call_1" });
   });
@@ -67,12 +61,30 @@ describe("finishLiveCall", () => {
 
   it("queues Twilio pricing for a finished phone call", async () => {
     await finishLiveCall(context, { ...call, seconds: 60, end: "caller_finished", channel: "voice" });
-    expect(mocks.enqueueOutbox).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ topic: "call.syncPrice", payload: { callId: "call_1", providerCallStatus: "completed" } }));
+    expect(finalizing().outbox).toEqual([expect.objectContaining({ topic: "call.syncPrice", dedupeKey: "call:call_1:live-price", payload: { callId: "call_1", providerCallStatus: "completed" } })]);
   });
 
   it("doesn't queue Twilio pricing for a browser call", async () => {
     await finishLiveCall(context, { ...call, seconds: 60, end: "caller_finished", channel: "web_voice" });
-    expect(mocks.enqueueOutbox).not.toHaveBeenCalled();
+    expect(finalizing().outbox).toEqual([]);
+    expect(finalizing().costEvent).toMatchObject({ channel: "web_voice" });
+  });
+
+  it("writes the cost and the price job once when the finish fails after the call was finalized and is retried", async () => {
+    // Like Postgres: only the write that finalizes the call commits what it carries.
+    const committed: unknown[] = [];
+    let finalized = false;
+    mocks.completeCall.mockImplementation(async (_context: unknown, input: { outbox?: unknown[]; costEvent?: unknown }) => {
+      if (finalized) return false;
+      finalized = true;
+      committed.push(...(input.outbox ?? []), ...(input.costEvent ? [input.costEvent] : []));
+      return true;
+    });
+    mocks.releaseCallTexts.mockRejectedValueOnce(new Error("timeout exceeded when trying to connect"));
+    const finish = () => finishLiveCall(context, { ...call, seconds: 60, end: "caller_finished", channel: "voice" });
+    await expect(finish()).rejects.toThrow("timeout exceeded");
+    await expect(finish()).resolves.toBe(false);
+    expect(committed).toEqual([expect.objectContaining({ topic: "call.syncPrice" }), expect.objectContaining({ eventKey: "voice_ai:live_session:call_1" })]);
   });
 
   it("uses the spam disposition billing already excludes", async () => {
@@ -91,18 +103,16 @@ describe("finishLiveCall", () => {
   });
 
   it("queues the recording copy in the write that finalizes the call", async () => {
-    await finishLiveCall(context, { ...call, seconds: 90, end: "caller_hung_up", recording: { sessionId: "live_1", durationMs: 90_400 } });
-    const { outbox } = mocks.completeCall.mock.calls[0]![1] as { outbox: Array<{ topic: string; dedupeKey: string; payload: unknown; availableAt: Date }> };
-    expect(outbox).toEqual([expect.objectContaining({ topic: "call.saveRecording", dedupeKey: "call:call_1:recording:1", payload: { callId: "call_1", sessionId: "live_1", durationMs: 90_400, attempt: 1 } })]);
-    expect(outbox[0]!.availableAt.getTime() - Date.now()).toBeGreaterThan(4_000);
-    await finishLiveCall(context, { ...call, seconds: 90, end: "caller_hung_up" });
-    expect(mocks.completeCall.mock.calls[1]![1]).not.toHaveProperty("outbox");
+    await finishLiveCall(context, { ...call, seconds: 90, end: "caller_hung_up", channel: "web_voice", recording: { sessionId: "live_1" } });
+    const { outbox } = finalizing();
+    expect(outbox).toEqual([expect.objectContaining({ topic: "call.saveRecording", dedupeKey: "call:call_1:recording:1", payload: { callId: "call_1", sessionId: "live_1", attempt: 1 } })]);
+    expect(outbox[0]!.availableAt!.getTime() - Date.now()).toBeGreaterThan(4_000);
   });
 
-  it("records no cost for a call that never connected", async () => {
+  it("records no cost and queues no price for a call that never connected", async () => {
     await finishLiveCall(context, { ...call, seconds: 0, end: "setup_failed" });
-    expect(mocks.completeCall).toHaveBeenCalled();
-    expect(mocks.recordUnitEconomicsEvent).not.toHaveBeenCalled();
+    expect(finalizing().outbox).toEqual([]);
+    expect(finalizing()).not.toHaveProperty("costEvent");
   });
 });
 
@@ -139,7 +149,7 @@ describe("saveLiveCallTurn", () => {
 
 describe("liveCallRecordingJob", () => {
   it("waits twice as long before each later attempt", () => {
-    const delays = [1, 2, 6].map((attempt) => Math.round((liveCallRecordingJob({ ...call, sessionId: "live_1", durationMs: 1_000, attempt }).availableAt!.getTime() - Date.now()) / 1_000));
+    const delays = [1, 2, 6].map((attempt) => Math.round((liveCallRecordingJob({ ...call, sessionId: "live_1", attempt }).availableAt!.getTime() - Date.now()) / 1_000));
     expect(delays).toEqual([5, 10, 160]);
   });
 });

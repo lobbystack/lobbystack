@@ -157,7 +157,7 @@ describe("persistCallRecording", () => {
     vi.stubEnv("CONTENT_RETENTION_ENABLED", "false");
     return { inserts, updates, storage: { putObject: vi.fn(async () => undefined) } };
   }
-  const input = { businessId: "biz-1", callId: "call-1", durationMs: 1_000, contentType: "audio/wav", body: new Uint8Array([1]) };
+  const input = { businessId: "biz-1", callId: "call-1", contentType: "audio/wav", body: new Uint8Array([1]) };
 
   it("links the copy, marks it ready and clears its upload expiry", async () => {
     const { inserts, updates, storage } = recordingTx([{ id: "call-1" }]);

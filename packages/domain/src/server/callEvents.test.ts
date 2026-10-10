@@ -80,6 +80,19 @@ describe("buildCallEvents", () => {
     });
   });
 
+  it.each([
+    ["requested", null],
+    ["preparing", null],
+    ["released", null],
+    ["referred", false],
+    ["completed", false],
+    ["failed", true],
+  ])("shows a %s transfer as transferred only once it went out, and a failed one in red", (transferState, failed) => {
+    const events = buildCallEvents({ status: "completed", disposition: "caller_hung_up", startedAt: "2026-05-03T19:56:59.264Z", endedAt: "2026-05-03T19:58:00.000Z", transferState });
+    const transferred = events.find((event) => event.key === "transferred");
+    expect(transferred ? transferred.failed : null).toBe(failed);
+  });
+
   it("leaves the completed step unreached while a started call is running", () => {
     const events = buildCallEvents({ status: "started", disposition: null, startedAt: "2026-05-03T19:56:59.264Z", endedAt: null });
 

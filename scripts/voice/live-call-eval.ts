@@ -115,10 +115,7 @@ async function run(scenario: CallScenario, audio: Map<string, Buffer>, agentMode
   let controller!: LiveCallController;
   // As the worker's call control does: a caller who is done can still say more first.
   const callControl: CallControl = {
-    hangup: async (reason) => {
-      if (reason === "caller_finished") controller.endWhenCallerDone();
-      else controller.endAfterGoodbye();
-    },
+    hangup: async (reason) => controller.end(reason),
   };
   const agent = createReceptionistAgent({
     model: agentModel,

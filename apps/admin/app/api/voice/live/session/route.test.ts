@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   rateLimit: vi.fn(),
   allowance: vi.fn(),
   snapshot: vi.fn(),
+  refreshSnapshot: vi.fn(),
   startLiveWebCall: vi.fn(),
   finishLiveCall: vi.fn(),
   recordProspectDemoCallStarted: vi.fn(),
@@ -18,15 +19,16 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@lobbystack/domain", () => ({
   finishLiveCall: mocks.finishLiveCall,
+  getCachedBusinessSnapshot: mocks.snapshot,
   getWebVoiceBillingAllowance: mocks.allowance,
   recordProspectDemoCallError: mocks.recordProspectDemoCallError,
   recordProspectDemoCallStarted: mocks.recordProspectDemoCallStarted,
   recordVoiceSnapshotLoaded: mocks.recordVoiceSnapshotLoaded,
+  refreshBusinessSnapshot: mocks.refreshSnapshot,
   startLiveWebCall: mocks.startLiveWebCall,
 }));
 vi.mock("@/lib/live-web-call", async (original) => ({ ...(await original<typeof import("@/lib/live-web-call")>()), resolveLiveWebCallAccess: mocks.access, liveSessionEndToken: (sessionId: string) => `token-for-${sessionId}` }));
 vi.mock("@/lib/web-voice-policy", () => ({ enforceWebVoiceRateLimits: mocks.rateLimit }));
-vi.mock("@/lib/business-snapshot", () => ({ loadValidBusinessSnapshot: mocks.snapshot }));
 vi.mock("@/lib/domain-context", () => ({ createWorkerDomainContext: () => ({ db: {} }) }));
 vi.mock("@/lib/live-prototype", () => ({
   requireLivePrototype: vi.fn(),
@@ -107,6 +109,16 @@ describe("POST /api/voice/live/session", () => {
     const response = await start("lobbystack-prospect-demo", { businessSlug: "acme", prospectDemoToken: "secret" });
     expect(response.status).toBe(500);
     expect(mocks.openaiHangup).toHaveBeenCalledWith("live_1");
+  });
+
+  it("builds the snapshot of a business that has none yet, and refuses the call when that fails", async () => {
+    mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://admin.lobbystack.test", widgetId: "lobbystack-dashboard-test-call", dashboardTestCall: true });
+    mocks.snapshot.mockResolvedValueOnce(null).mockResolvedValueOnce(snapshot);
+    expect((await start("lobbystack-dashboard-test-call")).status).toBe(201);
+    expect(mocks.refreshSnapshot).toHaveBeenCalledWith(expect.anything(), { businessId: "biz_1" });
+    mocks.snapshot.mockResolvedValueOnce(null).mockResolvedValueOnce(null);
+    expect((await start("lobbystack-dashboard-test-call")).status).toBe(409);
+    expect(mocks.create).toHaveBeenCalledOnce();
   });
 
   it("refuses widget voice for a business without a phone number", async () => {

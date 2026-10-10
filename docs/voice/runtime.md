@@ -119,6 +119,8 @@ To test a change to this flow against GPT-Live, see [Test a voice change before 
 
 A call that ends this way, or that the caller hangs up while the worker waits, gets the disposition `caller_finished`, and `live.closed` logs `end: "caller_finished"`. The worker ends a spam or abusive call the way it ends a timeout, described below: once GPT-Live has finished speaking, or after 4 seconds of silence, whatever the caller says. If GPT-Live answers a goodbye without handing it over, the call still ends at the 75-second silence timeout, with a goodbye.
 
+The worker records the first reason the call started ending. If a caller says goodbye during a deploy's wrap-up and the agent calls `endCall`, the call keeps `service_restart`. A `caller_finished` end no longer counts once the caller keeps the call going, so a later timeout records its own reason. A REFER that went out outranks every other reason until the transfer fails. When nothing ended the call on purpose, OpenAI's close reason decides: `remote_hangup` becomes `caller_hung_up`, and a dropped connection becomes `connection_lost`.
+
 Before a timeout ends the call, the worker tells GPT-Live why and asks it for a short goodbye, then hangs up once the goodbye has played. It listens for the goodbye from the moment OpenAI acknowledges the command, so a sentence GPT-Live was already saying doesn't pass for it. Without an acknowledgment within 2 seconds, it listens from the request. GPT-Live can ignore a command appended mid-call, so the worker hangs up anyway after 4 seconds of silence, or 15 seconds in all. The duration limit's goodbye starts 30 seconds early, so it fits inside the reserved minutes. A call that reserved less than a minute gets half its length to talk instead, so a 30-second reservation still gets 15 seconds of conversation.
 
 A phone call on a plan with a minute limit asks for more minutes 60 seconds before the duration limit's goodbye would start. Each top-up adds 5 minutes, or what the plan has left when that's less, and no call goes past 30 minutes. The worker moves the goodbye back by what it got, then asks again a minute before the new goodbye.
@@ -185,6 +187,8 @@ The worker logs `live.recovered` when a session answers, with `gapMs`, the time 
 Sessions run with `store: true` (see `packages/agent-core/src/live/session.ts`), so OpenAI keeps each call's recording and the worker can download it. The database write that finishes a call also queues a `call.saveRecording` outbox job. The job downloads the stereo WAV from OpenAI and saves it in LobbyStack storage, where it follows the plan's retention. As an outbox job, the copy survives a worker restart.
 
 OpenAI finishes the recording after the session closes and answers 404 or 409 until it's ready. The job first runs 5 seconds after the call ends. After each 404 or 409 it queues another attempt with twice the delay: 10, 20, 40, 80 and 160 seconds, about 5 minutes over 6 attempts. Any other error from OpenAI ends the copy. A storage or database error fails the job, and the queue retries it.
+
+The calls list shows "Recording pending" while a call runs and for 10 minutes after it ends. After that, a call without a copy shows "No recording", as it does after a failed setup or under Zero Data Retention.
 
 OpenAI's copy follows OpenAI's rules, not the plan's retention. Its [GPT-Live data controls](https://developers.openai.com/api/docs/guides/your-data) say:
 

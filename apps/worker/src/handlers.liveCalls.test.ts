@@ -26,21 +26,21 @@ const job = (type: JobType, payload: Record<string, unknown> = {}): JobEnvelope 
 const notReady = (status: number) => Object.assign(new Error(`${status}`), { status });
 
 describe("call.saveRecording", () => {
-  const recordingJob = (attempt: number) => job("call.saveRecording", { callId: "call_1", sessionId: "live_1", durationMs: 90_000, attempt });
+  const recordingJob = (attempt: number) => job("call.saveRecording", { callId: "call_1", sessionId: "live_1", attempt });
   const dependencies = (downloadRecording: ReturnType<typeof vi.fn>) => ({ domain: { db: {} as never }, storage: {} as never, liveSessions: { downloadRecording } as never });
 
   it("copies the recording once OpenAI has it", async () => {
     const download = vi.fn(async () => new Response(new Uint8Array([82, 73, 70, 70])));
     await expect(handleJob(recordingJob(1), dependencies(download))).resolves.toEqual({ status: "completed", entityId: "call_1" });
     expect(download).toHaveBeenCalledWith("live_1");
-    expect(persistCallRecording).toHaveBeenCalledWith(expect.anything(), { businessId, callId: "call_1", durationMs: 90_000, contentType: "audio/wav", body: new Uint8Array([82, 73, 70, 70]) }, expect.anything());
+    expect(persistCallRecording).toHaveBeenCalledWith(expect.anything(), { businessId, callId: "call_1", contentType: "audio/wav", body: new Uint8Array([82, 73, 70, 70]) }, expect.anything());
   });
 
   it("queues another attempt while OpenAI says the recording isn't ready", async () => {
     for (const status of [404, 409]) {
       vi.mocked(retryLiveCallRecording).mockClear();
       await expect(handleJob(recordingJob(2), dependencies(vi.fn(async () => { throw notReady(status); })))).resolves.toEqual({ status: "skipped", entityId: "call_1:retry:3" });
-      expect(retryLiveCallRecording).toHaveBeenCalledWith(expect.anything(), { businessId, callId: "call_1", sessionId: "live_1", durationMs: 90_000, attempt: 3 });
+      expect(retryLiveCallRecording).toHaveBeenCalledWith(expect.anything(), { businessId, callId: "call_1", sessionId: "live_1", attempt: 3 });
     }
     expect(persistCallRecording).not.toHaveBeenCalled();
   });
