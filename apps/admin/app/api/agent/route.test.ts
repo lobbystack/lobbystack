@@ -10,7 +10,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   resetFakeOperator();
   fakeOperator.tx = {
-    select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ name: "Clinic" }] }) }) }),
+    select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ name: "Clinic" }], for: async () => [{ timezone: "America/Toronto" }] }) }) }),
     insert: () => ({ values: (value: unknown) => { fixture.insert(value); return { onConflictDoUpdate: (config: { set: unknown }) => { fixture.conflict(config.set); return { returning: async () => [{ id: "profile", updatedAt: new Date(0) }] }; } }; } }),
     update: () => ({ set: (value: unknown) => { fixture.update(value); return { where: () => ({ returning: async () => [{ id: "business" }] }) }; } }),
   };
