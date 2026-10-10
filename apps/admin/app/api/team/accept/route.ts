@@ -3,8 +3,9 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 
 import { acceptInvitation, previewInvitation } from "@lobbystack/domain";
-import { asApiResponse, jsonError, readJson, requireApiSession } from "@/lib/api-helpers";
+import { asApiResponse, jsonError } from "@/lib/api-helpers";
 import { createDomainContext } from "@/lib/domain-context";
+import { signedInRoute } from "@/lib/operator-request";
 
 export const dynamic = "force-dynamic";
 
@@ -19,16 +20,8 @@ export async function GET(request: Request) {
   }
 }
 
-export async function POST(request: Request) {
-  try {
-    const session = await requireApiSession(request);
-    const body = await readJson(request);
-    if (typeof body !== "object" || body === null || Array.isArray(body) || typeof (body as { token?: unknown }).token !== "string") {
-      return jsonError("An invitation token is required.", 400);
-    }
-    const tokenHash = createHash("sha256").update((body as { token: string }).token).digest("hex");
-    return NextResponse.json(await acceptInvitation(createDomainContext(), { userId: session.user.id, tokenHash, email: session.user.email, emailVerified: session.user.emailVerified }));
-  } catch (error) {
-    return asApiResponse(error);
-  }
-}
+export const POST = signedInRoute(async ({ session, userId, body, domain }) => {
+  if (typeof body.token !== "string") return jsonError("An invitation token is required.", 400);
+  const tokenHash = createHash("sha256").update(body.token).digest("hex");
+  return NextResponse.json(await acceptInvitation(domain, { userId, tokenHash, email: session.user.email, emailVerified: session.user.emailVerified }));
+});

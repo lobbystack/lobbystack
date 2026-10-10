@@ -1,15 +1,17 @@
 import { beforeEach, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ count: vi.fn(), ids: vi.fn(), update: vi.fn(), withOperatorTransaction: vi.fn(), asApiResponse: vi.fn(), completed: vi.fn() }));
+const mocks = vi.hoisted(() => ({ count: vi.fn(), ids: vi.fn(), update: vi.fn(), completed: vi.fn() }));
 vi.mock("@/lib/voice-presence", () => ({ countActiveVoiceCalls: mocks.count, getVoicePresenceCallIds: mocks.ids, removeCompletedVoicePresence: mocks.update }));
-vi.mock("@/lib/api-helpers", () => ({ withOperatorTransaction: mocks.withOperatorTransaction, asApiResponse: mocks.asApiResponse }));
+vi.mock("@/lib/operator-request", () => import("@/lib/operator-request.fake"));
 
+import { fakeOperator, resetFakeOperator } from "@/lib/operator-request.fake";
 import { GET } from "./route";
 
 beforeEach(() => {
   vi.resetAllMocks();
   mocks.ids.mockResolvedValue([]);
-  mocks.withOperatorTransaction.mockImplementation(async (_request, callback) => callback({ businessId: "authorized-business", tx: { select: () => ({ from: () => ({ where: mocks.completed }) }) } }));
+  resetFakeOperator();
+  Object.assign(fakeOperator, { businessId: "authorized-business", tx: { select: () => ({ from: () => ({ where: mocks.completed }) }) } });
 });
 
 it("returns an independent live count for the authorized business", async () => {
@@ -23,9 +25,8 @@ it("returns an independent live count for the authorized business", async () => 
 
 it("does not return a false zero when live presence is unavailable", async () => {
   mocks.count.mockRejectedValue(new Error("Redis unavailable"));
-  mocks.asApiResponse.mockReturnValue(Response.json({ error: "Request failed." }, { status: 503 }));
   const response = await GET(new Request("https://app.example/api/calls/active"));
-  expect(response.status).toBe(503);
+  expect(response.status).toBe(500);
   expect(await response.json()).not.toEqual({ active: 0 });
 });
 

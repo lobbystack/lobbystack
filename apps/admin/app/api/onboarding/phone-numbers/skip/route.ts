@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 
 import { skipOnboardingNumber } from "@lobbystack/domain";
-import { asApiResponse, requireOperatorBusiness } from "@/lib/api-helpers";
-import { createDomainContext } from "@/lib/domain-context";
+import { operatorRoute } from "@/lib/operator-request";
 
-export async function POST(request: Request) {
-  try { const { session, businessId } = await requireOperatorBusiness(request); await skipOnboardingNumber(createDomainContext(), { userId: session.user.id, businessId }); return NextResponse.json({ ok: true }); } catch (error) { return asApiResponse(error); }
-}
+export const POST = operatorRoute(async ({ userId, businessId, domain }) => {
+  await skipOnboardingNumber(domain, { userId, businessId });
+  return NextResponse.json({ ok: true });
+});

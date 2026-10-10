@@ -6,8 +6,9 @@ import { widgetKeys, withBusinessTransaction } from "@lobbystack/db";
 import { bearerToken } from "@lobbystack/domain";
 import { DASHBOARD_TEST_CALL_WIDGET_ID, PROSPECT_DEMO_WIDGET_ID } from "@lobbystack/shared";
 
-import { getWorkerDatabase, withOperatorTransaction } from "./api-helpers";
+import { getWorkerDatabase } from "./api-helpers";
 import { configuredAppOrigins } from "./app-origins";
+import { requireOperator } from "./operator-request";
 import { resolveWebVoiceAccess } from "./prospect-demo";
 import { isAllowedWidgetOrigin, normalizeOrigin, verifyWidgetSessionToken } from "./widget-keys";
 
@@ -93,7 +94,8 @@ export async function resolveLiveWebCallAccess(request: Request, body: LiveWebCa
     const origin = request.headers.get("origin");
     const callerOrigin = origin ? normalizeOrigin(origin) : undefined;
     if (!callerOrigin || !trusted.includes(callerOrigin)) return { status: 403, code: "origin_denied" };
-    const businessId = await withOperatorTransaction(request, async ({ businessId }) => businessId, { minimumRole: "business_admin" });
+    const { businessId, transaction } = await requireOperator(request);
+    await transaction(async () => undefined, { minimumRole: "business_admin" });
     // Rate limits count per origin, so record the trusted origin the call came from.
     return { businessId, origin: callerOrigin, widgetId: body.widgetId, dashboardTestCall: true, ...(body.visitorId ? { visitorId: body.visitorId } : {}) };
   }

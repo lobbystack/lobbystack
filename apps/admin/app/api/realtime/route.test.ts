@@ -13,7 +13,7 @@ vi.mock("ioredis", async () => {
     },
   };
 });
-vi.mock("@/lib/api-helpers", () => ({ withOperatorTransaction: async () => undefined, asApiResponse: (error: unknown) => { throw error; } }));
+vi.mock("@/lib/operator-request", () => import("@/lib/operator-request.fake"));
 import { GET } from "./route";
 
 describe("realtime stream", () => {

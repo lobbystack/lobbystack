@@ -2,11 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 const getAnalytics = vi.hoisted(() => vi.fn(async () => ({ series: [] })));
 vi.mock("@lobbystack/domain", () => ({ analyticsGranularities: ["hour", "day", "week", "month", "year"], getAnalytics }));
-vi.mock("@/lib/api-helpers", () => ({
-  requireOperatorBusiness: async () => ({ session: { user: { id: "user" } }, businessId: "business" }),
-  asApiResponse: () => Response.json({ error: "Request failed" }, { status: 400 }),
-}));
-vi.mock("@/lib/domain-context", () => ({ createDomainContext: () => ({}) }));
+vi.mock("@/lib/operator-request", () => import("@/lib/operator-request.fake"));
 
 import { GET } from "./route";
 

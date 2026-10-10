@@ -2,16 +2,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ insert: vi.fn(), select: vi.fn(), update: vi.fn() }));
 
-vi.mock("@/lib/api-helpers", () => ({
-  readJson: (request: Request) => request.json(),
-  withOperatorTransaction: (_request: Request, callback: (input: unknown) => Promise<unknown>) => callback({ businessId: "business", tx: { insert: mocks.insert, select: mocks.select, update: mocks.update } }),
-  jsonError: (message: string, status = 400, code?: string) => new Response(JSON.stringify({ error: message, ...(code ? { code } : {}) }), { status }),
-  asApiResponse: (error: unknown) => (error instanceof Response ? error : new Response(JSON.stringify({ error: "Request failed." }), { status: 500 })),
-}));
+vi.mock("@/lib/operator-request", () => import("@/lib/operator-request.fake"));
 
-vi.mock("@lobbystack/db", () => ({ widgetKeys: {} }));
-
+import { fakeOperator, resetFakeOperator } from "@/lib/operator-request.fake";
 import { PATCH, POST } from "./route";
+
+beforeEach(() => {
+  resetFakeOperator();
+  fakeOperator.tx = { insert: mocks.insert, select: mocks.select, update: mocks.update };
+});
 
 const request = (body: Record<string, unknown> = {}) => new Request("https://admin.test/api/widget-keys", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
 
