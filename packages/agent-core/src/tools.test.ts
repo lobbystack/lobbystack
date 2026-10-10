@@ -141,6 +141,17 @@ describe("bookAppointment", () => {
   });
 });
 
+describe("getBusinessHours", () => {
+  it("gives closures in the business's local time, like its hours", async () => {
+    const closures = [{ startsAt: "2026-12-24T23:00:00.000Z", endsAt: "2026-12-25T23:00:00.000Z", reason: "Christmas Day" }];
+    const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "web_chat", snapshot: { ...demoSnapshot, timezone: "Europe/Belgrade", closures } });
+    const execute = tools.getBusinessHours!.execute! as (input: object, options: object) => Promise<unknown>;
+    await expect(execute({}, { toolCallId: "1", messages: [] })).resolves.toMatchObject({
+      upcomingClosures: [{ from: "2026-12-25T00:00:00.000+01:00", to: "2026-12-26T00:00:00.000+01:00", reason: "Christmas Day" }],
+    });
+  });
+});
+
 describe("getBusinessServices", () => {
   it("returns what the knowledge base says the business offers when it lists no services", async () => {
     vi.mocked(searchKnowledgeEvidence).mockResolvedValueOnce({ outcome: "found", matches: [{ title: "About", content: "An AI receptionist for small businesses." }] } as never);
