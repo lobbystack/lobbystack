@@ -4,7 +4,7 @@ import { enqueueOutbox, withBusinessTransaction, type DatabaseTransaction } from
 import { agentRules, businesses, businessHours, closures, phoneNumbers, receptionistProfiles, services, staff, staffServiceAssignments } from "@lobbystack/db";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
-import { normalizeClosures, normalizeHoursWindows } from "../hours";
+import { normalizeClosures, normalizeHoursWindows, sameHoursWindows } from "../hours";
 import { writeBusinessHoursInTransaction } from "./businessHours";
 import type { DomainContext } from "./context";
 
@@ -151,10 +151,10 @@ export async function unassignStaffFromService(
 /**
  * Replaces the weekly hours a person set, in the dashboard or the API: the
  * listed windows, other days closed. A day can have several windows. Marks
- * the hours as the operator's, so AI never replaces them, and refreshes the
- * receptionist snapshot. Given closures replace every closure, including
- * ones that already ended; without them, closures stay as they are. Callers
- * authorize first.
+ * the hours as the operator's, so AI never replaces them, unless only the
+ * closures changed. Refreshes the receptionist snapshot. Given closures
+ * replace every closure, including ones that already ended; without them,
+ * closures stay as they are. Callers authorize first.
  */
 export async function replaceBusinessHoursInTransaction(
   tx: DatabaseTransaction,
@@ -167,14 +167,19 @@ export async function replaceBusinessHoursInTransaction(
 ): Promise<void> {
   const hours = normalizeHoursWindows(input.hours);
   let closureRows: ReturnType<typeof normalizeClosures> | undefined;
+  let sameHours = false;
+  // Lock the business row before reading anything, so this write and the
+  // worker's generated hours (which lock the same row) can't interleave.
   if (input.closures) {
-    const [business] = await tx.select({ timezone: businesses.timezone }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1);
+    const [business] = await tx.select({ timezone: businesses.timezone }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1).for("update");
     if (!business) throw Object.assign(new Error("Business not found."), { status: 404 });
     closureRows = normalizeClosures(input.closures, business.timezone, new Date());
+    const current = await tx.select({ dayOfWeek: businessHours.dayOfWeek, openMinutes: businessHours.openMinutes, closeMinutes: businessHours.closeMinutes }).from(businessHours)
+      .where(eq(businessHours.businessId, input.businessId)).orderBy(asc(businessHours.dayOfWeek), asc(businessHours.openMinutes));
+    sameHours = sameHoursWindows(hours, current);
   }
-  // Updating the business row first locks it, so this write and the worker's
-  // generated hours (which lock the same row) can't interleave.
-  await tx.update(businesses).set({ hoursSource: "operator", updatedAt: new Date() }).where(eq(businesses.id, input.businessId));
+  // Saving only closures leaves the hours to whoever set them, so AI can still fill an empty week.
+  await tx.update(businesses).set({ ...(sameHours ? {} : { hoursSource: "operator" as const }), updatedAt: new Date() }).where(eq(businesses.id, input.businessId));
   if (closureRows) {
     await tx.delete(closures).where(eq(closures.businessId, input.businessId));
     if (closureRows.length) await tx.insert(closures).values(closureRows.map((closure) => ({ businessId: input.businessId, ...closure })));
