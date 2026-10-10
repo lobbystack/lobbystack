@@ -127,19 +127,23 @@ async function lockUsagePeriod(tx: DatabaseTransaction, businessId: string, peri
   await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`billing-usage:${businessId}:${periodKey}`}, 0))`);
 }
 
-// Self-host, and a paid plan with no overage cap, never run out of voice, so calls reserve nothing.
-function hasUnlimitedVoice(billing: Pick<BillingContext, "plan" | "capCents">): boolean {
-  return billing.plan === "self_host" || (billingPlanCatalog[billing.plan].overagesBillable && billing.capCents === null);
-}
-
-// The voice seconds a limited plan can still reserve: its included seconds
-// left, plus what the overage cap still pays for. 0 on an unlimited plan.
-function reservableVoiceSeconds(billing: Pick<BillingContext, "plan" | "capCents">, current: { usage: UsageCounts; rawSpendCents: number }): number {
+/**
+ * The voice seconds a business can still use this period: its included
+ * seconds left, plus what the overage cap still pays for at the exact spend.
+ * Infinity for a plan with no voice limit (self-host, enterprise) or a paid
+ * plan with no cap; those calls reserve nothing. Phone reservations and
+ * browser call limits both use this rule.
+ */
+export function voiceSecondsLeft(billing: Pick<BillingContext, "plan" | "capCents">, current: { usage: UsageCounts; rawSpendCents: number }): number {
   const included = includedQuantity(billing.plan, "voice_seconds");
-  const remainingIncluded = included === null ? 0 : Math.max(0, included - current.usage.voice_seconds);
-  const remainingCap = billing.capCents === null ? 0 : Math.max(0, billing.capCents - current.rawSpendCents);
-  const capSeconds = rateCents(billing.plan, "voice_seconds") > 0 ? Math.floor(remainingCap / rateCents(billing.plan, "voice_seconds")) : 0;
-  return billingPlanCatalog[billing.plan].overagesBillable ? (billing.capCents === null ? 0 : remainingIncluded + capSeconds) : remainingIncluded;
+  const overagesBillable = billingPlanCatalog[billing.plan].overagesBillable;
+  if (included === null || (overagesBillable && billing.capCents === null)) return Number.POSITIVE_INFINITY;
+  const remainingIncluded = Math.max(0, included - current.usage.voice_seconds);
+  if (!overagesBillable || billing.capCents === null) return remainingIncluded;
+  // Past the cap a reservation is refused even for included seconds.
+  if (current.rawSpendCents > billing.capCents) return 0;
+  const rate = rateCents(billing.plan, "voice_seconds");
+  return remainingIncluded + (rate > 0 ? Math.floor((billing.capCents - current.rawSpendCents) / rate) : 0);
 }
 
 export async function loadBillingContext(tx: DatabaseTransaction, businessId: string): Promise<BillingContext> {
@@ -198,7 +202,7 @@ async function refreshUsageMonth(tx: DatabaseTransaction, input: { businessId: s
     voiceBlocked: (!config.overagesBillable && config.voiceSecondsIncluded !== null && replay.usage.voice_seconds >= config.voiceSecondsIncluded) || capReached,
     alertSmsBlocked: (!config.overagesBillable && config.alertSmsSegmentsIncluded !== null && replay.usage.alert_sms_segments >= config.alertSmsSegmentsIncluded) || capReached,
     outboundCallAttemptsBlocked: (!config.overagesBillable && config.outboundCallAttemptsIncluded !== null && replay.usage.outbound_call_attempts >= config.outboundCallAttemptsIncluded) || capReached,
-    chatAiBlocked: (!config.overagesBillable && config.chatAiTokensIncluded !== null && replay.usage.chat_ai_tokens >= config.chatAiTokensIncluded) || capReached,
+    chatAiBlocked: !config.overagesBillable && config.chatAiTokensIncluded !== null && replay.usage.chat_ai_tokens >= config.chatAiTokensIncluded,
     overageSpendCents,
     overageSpendingCapCents: input.capCents,
     overageSpendingCapReached: capReached,
@@ -222,6 +226,14 @@ async function refreshUsageMonth(tx: DatabaseTransaction, input: { businessId: s
   return status;
 }
 
+/** The plan and voice seconds left now, read under the period lock so a reservation in the same transaction agrees. */
+export async function getVoiceSecondsLeftInTransaction(tx: DatabaseTransaction, input: { businessId: string }): Promise<{ plan: BillingPlanSlug; seconds: number }> {
+  const periodKey = periodKeyFor();
+  await lockUsagePeriod(tx, input.businessId, periodKey);
+  const billing = await loadBillingContext(tx, input.businessId);
+  return { plan: billing.plan, seconds: voiceSecondsLeft(billing, replayEvents(await loadEvents(tx, input.businessId, periodKey), billing.plan)) };
+}
+
 export async function getUsageStatusInTransaction(tx: DatabaseTransaction, input: { businessId: string; periodKey?: string }): Promise<UsageStatus> {
   const periodKey = input.periodKey ?? periodKeyFor();
   // Every writer takes this lock before the month row, so a status read
@@ -243,10 +255,13 @@ export async function reserveUsageInTransaction(tx: DatabaseTransaction, input: 
   let quantity = input.quantity;
   // A phone call reserves one slice and the worker tops it up as the call
   // runs, so concurrent calls share what remains.
-  if (quantity === undefined && input.usageKind === "voice_seconds") quantity = Math.min(PHONE_RESERVATION_SLICE_SECONDS, reservableVoiceSeconds(billing, current));
+  if (quantity === undefined && input.usageKind === "voice_seconds") {
+    const left = voiceSecondsLeft(billing, current);
+    if (left === Number.POSITIVE_INFINITY) return { allowed: true, errorCode: null, syncNeeded: false, periodKey, plan: billing.plan };
+    quantity = Math.min(PHONE_RESERVATION_SLICE_SECONDS, left);
+  }
   quantity = Math.max(0, quantity ?? 0);
   if (quantity <= 0) {
-    if (input.usageKind === "voice_seconds" && hasUnlimitedVoice(billing)) return { allowed: true, errorCode: null, syncNeeded: false, periodKey, plan: billing.plan };
     const errorCode = input.usageKind === "voice_seconds" ? billingErrorCodes.voiceLimitReached : input.usageKind === "alert_sms_segments" ? billingErrorCodes.alertSmsLimitReached : input.usageKind === "chat_ai_tokens" ? billingErrorCodes.chatAiLimitReached : billingErrorCodes.outboundCallAttemptLimitReached;
     return { allowed: false, errorCode, syncNeeded: false, periodKey, plan: billing.plan };
   }
@@ -257,8 +272,9 @@ export async function reserveUsageInTransaction(tx: DatabaseTransaction, input: 
   }
   const eventPayload = { sourceKey: input.sourceKey, quantity, usageKind: input.usageKind, planAtRecordTime: billing.plan, billingIntervalAtRecordTime: billing.billingInterval, createdAt: recordedAt, isFinal: input.usageKind === "outbound_call_attempts" || input.usageKind === "chat_ai_tokens" };
   const simulated = replayEvents([...events, eventPayload], billing.plan);
-  if (billing.capCents !== null && simulated.rawSpendCents > billing.capCents) {
-    const errorCode = input.usageKind === "voice_seconds" ? billingErrorCodes.voiceLimitReached : input.usageKind === "alert_sms_segments" ? billingErrorCodes.alertSmsLimitReached : input.usageKind === "chat_ai_tokens" ? billingErrorCodes.chatAiLimitReached : billingErrorCodes.outboundCallAttemptLimitReached;
+  // A website chat adds no spend, so spend already past the cap must not block it.
+  if (input.usageKind !== "chat_ai_tokens" && billing.capCents !== null && simulated.rawSpendCents > billing.capCents) {
+    const errorCode = input.usageKind === "voice_seconds" ? billingErrorCodes.voiceLimitReached : input.usageKind === "alert_sms_segments" ? billingErrorCodes.alertSmsLimitReached : billingErrorCodes.outboundCallAttemptLimitReached;
     return { allowed: false, errorCode, syncNeeded: false, periodKey, plan: billing.plan };
   }
   const syncNeeded = billing.plan === "starter" || billing.plan === "pro";
@@ -295,7 +311,7 @@ export async function extendPhoneReservationInTransaction(tx: DatabaseTransactio
   if (!event) return 0;
   // The replay already counts this call's reservation. A plan upgraded to
   // unlimited mid-call still grows it, up to the longest call.
-  const free = hasUnlimitedVoice(billing) ? Number.POSITIVE_INFINITY : reservableVoiceSeconds(billing, replayEvents(events, billing.plan));
+  const free = voiceSecondsLeft(billing, replayEvents(events, billing.plan));
   const granted = Math.min(PHONE_RESERVATION_SLICE_SECONDS, free, MAX_PHONE_CALL_MS / 1_000 - event.quantity);
   if (granted <= 0) return 0;
   const replayed = events.map((row) => (row === event ? { ...row, quantity: row.quantity + granted } : row));
