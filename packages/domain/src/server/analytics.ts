@@ -143,8 +143,9 @@ export async function getAnalytics(context: DomainContext, input: AnalyticsInput
     const appointmentBucket = analyticsBucketExpression(appointments.startsAt, input.granularity);
     const messageBucket = analyticsBucketExpression(messages.createdAt, input.granularity);
     // A call still open a minute past its max duration lost its worker or gateway, so it counts as missed, not live.
+    // A transfer counts once the call went out: one only requested, never started or failed stayed with the receptionist.
     const outcomeKey = sql<string>`case
-      when ${calls.transferState} is not null and ${calls.transferState} <> 'idle' then 'transferred'
+      when ${calls.status} = 'transferred' or ${calls.transferState} in ('referred', 'completed') then 'transferred'
       when ${calls.endedAt} is null and ${calls.status} in ('started', 'in_progress') and ${calls.startedAt} >= current_timestamp - (case when ${calls.transport} = 'web_voice' then coalesce(${calls.webCallMaxDurationMs}, 300000) else ${sql.raw(String(MAX_PHONE_CALL_MS))} end + 60000) * interval '1 millisecond' then 'live'
       when lower(coalesce(${calls.disposition}, '')) similar to '%(miss|voicemail|busy|no_answer)%' or lower(${calls.status}) like '%failed%' then 'missed'
       when ${calls.providerDurationSeconds} > 0 or ${calls.status} = 'completed' then 'completed'

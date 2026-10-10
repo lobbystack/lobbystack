@@ -147,6 +147,24 @@ describe.skipIf(!client)("operator contact and channel data under operator RLS",
     });
   });
 
+  it("counts a call as transferred only once its transfer went out", async () => {
+    await rollbackTest(async (tx) => {
+      const { db, businessId, userId } = await seed(tx);
+      await tx.execute(sql`reset role`);
+      const ended = (status: string, transferState: string) => ({ businessId, provider: "openai_live", providerCallId: `rtc_${randomUUID()}`, transport: "voice", status, transferState, startedAt: new Date(Date.now() - 10 * 60_000), endedAt: new Date(Date.now() - 9 * 60_000) });
+      await tx.insert(calls).values([
+        ended("completed", "requested"), ended("completed", "preparing"), ended("completed", "released"), ended("completed", "failed"),
+        // A session that closed before OpenAI answered the REFER keeps "preparing".
+        ended("completed", "referred"), ended("transferred", "completed"), ended("transferred", "preparing"),
+      ]);
+      await tx.execute(sql`set local role lobbystack_app`);
+      const to = new Date(Date.now() + 60_000);
+      const from = new Date(to.getTime() - 86_400_000);
+      const result = await getAnalytics({ db }, { userId, businessId, from, to, previousFrom: new Date(from.getTime() - 86_400_000), granularity: "day" });
+      expect(result.outcomes).toEqual([{ outcome: "completed", count: 7 }, { outcome: "transferred", count: 3 }, { outcome: "live", count: 0 }, { outcome: "missed", count: 0 }]);
+    });
+  });
+
   it("finds a call by the transcript text the call list shows", async () => {
     await rollbackTest(async (tx) => {
       const { db, businessId, userId } = await seed(tx);
