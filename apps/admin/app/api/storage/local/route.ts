@@ -70,6 +70,8 @@ export async function GET(request: Request) {
       "cache-control": "private, no-store",
       "content-length": String(object.length),
       "content-type": metadata.contentType,
+      // The file is served from the app's own origin, so it must never render as a page there.
+      "content-disposition": "attachment",
     });
     if (range) {
       headers.set("content-range", `bytes ${object.start}-${object.end}/${object.totalLength}`);
