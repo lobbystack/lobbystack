@@ -53,8 +53,6 @@ try {
   assert.equal((await post("/sign-in/email", { email, password: newPassword })).status, 200, "New password must work");
   const session = await getAuth().handler(new Request(`${origin}/api/auth/get-session`, { headers: { cookie } }));
   assert.equal(await session.json(), null, "Pre-reset session must be revoked");
-  const synced = (await database.db.select({ password: accounts.password, legacy: users.passwordHash }).from(accounts).innerJoin(users, eq(users.id, accounts.userId)).where(eq(users.id, userId)))[0];
-  assert.equal(synced?.password, synced?.legacy, "Password lineage must remain synchronized");
   const expiredCode = await requestCode();
   await database.db.update(verifications).set({ expiresAt: new Date(0) }).where(eq(verifications.identifier, `forget-password-otp-${email}`));
   assert.equal((await post("/email-otp/reset-password", { email, otp: expiredCode, password: oldPassword })).status, 400, "Expired code must fail");
@@ -64,7 +62,7 @@ try {
   for (const path of ["/sign-in/email-otp", "/email-otp/send-verification-otp", "/forget-password/email-otp"]) {
     assert.equal((await post(path, { email, otp: limitedCode, type: "sign-in" })).status, 404, "Unrequested passwordless endpoints must remain disabled");
   }
-  console.log(JSON.stringify({ resetCodes: true, hashedStorage: true, enumerationSafeResponse: true, singleUse: true, expiredCodesRejected: true, attemptLimit: true, oldSessionsRevoked: true, credentialSynced: true, passwordlessDisabled: true }));
+  console.log(JSON.stringify({ resetCodes: true, hashedStorage: true, enumerationSafeResponse: true, singleUse: true, expiredCodesRejected: true, attemptLimit: true, oldSessionsRevoked: true, passwordlessDisabled: true }));
 } finally {
   await database.db.delete(outboxMessages).where(eq(outboxMessages.aggregateId, userId));
   await database.db.delete(verifications).where(and(like(verifications.identifier, "%password-recovery.invalid"), like(verifications.identifier, `%${userId}%`)));

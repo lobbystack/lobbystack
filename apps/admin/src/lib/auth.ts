@@ -178,18 +178,9 @@ async function rehashLegacyPassword(userId: string, password: string): Promise<v
   }
 
   const replacementHash = await hashReplacementPassword(password);
-  await database.db.transaction(async (tx) => {
-    const updated = await tx.update(accounts)
-      .set({ password: replacementHash, updatedAt: new Date() })
-      .where(and(eq(accounts.id, account.id), eq(accounts.password, legacyHash)))
-      .returning({ id: accounts.id });
-    if (!updated[0]) {
-      return;
-    }
-    await tx.update(users)
-      .set({ passwordHash: replacementHash, passwordAlgorithm: "lobbystack-scrypt-v1", updatedAt: new Date() })
-      .where(eq(users.id, userId));
-  });
+  await database.db.update(accounts)
+    .set({ password: replacementHash, updatedAt: new Date() })
+    .where(and(eq(accounts.id, account.id), eq(accounts.password, legacyHash)));
 }
 
 export function getAuth() {
@@ -276,11 +267,6 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
         verify: async ({ hash, password }: { hash: string; password: string }) => await verifyLegacyPassword(hash, password),
       },
       revokeSessionsOnPasswordReset: true,
-      onPasswordReset: async ({ user }: { user: { id: string } }) => {
-        const account = (await database.db.select({ password: accounts.password }).from(accounts)
-          .where(and(eq(accounts.userId, user.id), eq(accounts.providerId, "credential"))).limit(1))[0];
-        if (account?.password) await database.db.update(users).set({ passwordHash: account.password, passwordAlgorithm: "lobbystack-scrypt-v1", updatedAt: new Date() }).where(eq(users.id, user.id));
-      },
       sendResetPassword: async ({ user, url }: { user: { id: string; email: string }; url: string }) => {
         await enqueueAuthEmail({ purpose: "password_reset", userId: user.id, email: user.email, url });
       },
@@ -288,9 +274,6 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
     emailVerification: {
       sendOnSignUp: true,
       sendOnSignIn: true,
-      afterEmailVerification: async (user: { id: string; email: string }) => {
-        await database.db.update(users).set({ normalizedEmail: user.email.trim().toLowerCase(), updatedAt: new Date() }).where(eq(users.id, user.id));
-      },
       sendVerificationEmail: async ({ user, url }: { user: { id: string; email: string }; url: string }, request?: Request) => {
         const storedUser = (await database.db.select({ email: users.email, preferredLocale: users.preferredLocale }).from(users).where(eq(users.id, user.id)).limit(1))[0];
         if (!storedUser) return;
