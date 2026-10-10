@@ -14,7 +14,6 @@ Run `pnpm typecheck`, `pnpm lint`, `pnpm build`, `pnpm test`, two consecutive `p
 - Non-local `ADMIN_BASE_URL`, `WORKER_BASE_URL`, `VOICE_BASE_URL`, `REDIS_URL`, and `REPLACEMENT_S3_ENDPOINT`, plus a non-local `REPLACEMENT_REDIS_HOST`.
 - `DATABASE_URL`, `REPLACEMENT_MIGRATOR_DATABASE_URL`, `REPLACEMENT_APP_DATABASE_URL`, and `REPLACEMENT_WORKER_DATABASE_URL` resolving to the same disposable database named exactly `certification` or `certification_<suffix>`, using the `lobbystack_migrator`, `lobbystack_app`, and `lobbystack_worker` roles respectively.
 - `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `POLAR_WEBHOOK_SECRET`, `TWILIO_AUTH_TOKEN`, `INTERNAL_SERVICE_SECRET`, `REDIS_PORT`, and `REPLACEMENT_TEST_BUSINESS_SLUG` (must start with `certification-`).
-- `RESEND_WEBHOOKS_ENABLED` set to exactly `true` or `false`; when `true`, `RESEND_WEBHOOK_SECRET` is required.
 
 Every gate script has been verified against a local isolated stack; the remaining requirement is the isolated-staging environment itself (non-local endpoints and a `certification` database reachable by the runner).
 

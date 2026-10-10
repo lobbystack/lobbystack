@@ -11,7 +11,6 @@ Response status is the status returned to the provider.
 | Route | Provider | Signature verification | Idempotency / dedupe store | Enqueues | Response on failure |
 | --- | --- | --- | --- | --- | --- |
 | `POST /api/webhooks/polar` | Polar | Standard Webhooks HMAC, legacy + base64 keys (`apps/admin/app/api/webhooks/polar/route.ts:13`; `packages/providers/src/polar/webhook.ts:9`) | `provider_events` unique `(provider, provider_event_id)` with `onConflictDoNothing` (`route.ts:44`; `packages/db/src/schema/index.ts:1151`); outbox `dedupe_key` `provider-event:<webhook-id>:billing` (`route.ts:46`) | `billing.reconcile` outbox | `401` bad signature (`route.ts:30`), `400` malformed (`route.ts:34`), `500` unhandled (`route.ts:55`) |
-| `POST /api/webhooks/resend` | Resend (Svix) | Svix HMAC-SHA256 with 5-minute timestamp tolerance (`route.ts:18-22`; `packages/providers/src/email/webhook.ts:5-18`) | `provider_events` unique `(provider='resend', provider_event_id=svix-id)` (`route.ts:30`; schema `index.ts:1151`); outbox `dedupe_key` `provider-event:<svix-id>:email` (`route.ts:31`) | `email.reconcileDelivery` outbox | `503` unconfigured (`route.ts:19`), `401` bad signature (`route.ts:22`), `400` malformed (`route.ts:24`), `500` unhandled (`route.ts:37`) |
 | `POST /api/webhooks/twilio/sms` | Twilio Messaging | HMAC-SHA1 over sorted params (`route.ts:21`; `packages/shared/src/twilioSecurity.ts:74`) | `provider_events` `(provider='twilio', provider_event_id=MessageSid)` in the same transaction (`packages/domain/src/server/sms.ts:50-57`); `messages.provider_message_id` unique (`sms.ts:66`) | `realtime.publish`, `sms.send`, operator alerts (`sms.ts:74-91`) | `401` bad signature (`route.ts:22`), `500` unhandled (`route.ts:39`) |
 | `POST /api/webhooks/twilio/status` | Twilio Messaging | HMAC-SHA1, optional key SID (`route.ts:18`) | No `provider_events` row. Dedupe by message-status transition guard `shouldApplyMessageStatusTransition` (`sms.ts:181`) and `messages.provider_message_id`; business resolved by provider/message/notification/operator-delivery ID (`route.ts:29-39`) | `realtime.publish`, `sms.syncPrice` (`sms.ts:192-209`) | `401` bad signature (`route.ts:19`), `503` + `Retry-After: 60` on durable write failure (`route.ts:50`) |
 | `POST /twilio/voice/inbound` | Twilio Voice | HMAC-SHA1 (`apps/voice-gateway/src/telephony/routes.ts:120-125`; `twilioRequest.ts:52`) | `calls` keyed by Twilio `CallSid` via backend `/voice/call/start` (`routes.ts:51`); snapshot cached in process memory (`server.ts:33`) | Backend call initialization; no outbox | `403` bad signature (`routes.ts:128`, non-retryable) |
@@ -20,7 +19,7 @@ Response status is the status returned to the provider.
 | `POST /twilio/voice/transfer-action` | Twilio Voice | HMAC-SHA1 (`routes.ts:330-335`) | `calls` update by `callId` via `setTransferState`/`completeCall` (`voice.ts:201,156`). Outbox `dedupe_key` includes `revision`, so a replay creates a new key (see §4) | `realtime.publish`, `conversation.finalizeSession` (`voice.ts:182-197,208-215`) | `403` bad signature (`routes.ts:337`), `400` missing `callId` (`routes.ts:345`); backend failure raises an uncaught `500` (`routes.ts:362-371`) |
 | `UPGRADE /media-stream` | Twilio Media Streams | HMAC-SHA1 over `wss`/`https` URL (`server.ts:100-105`; `twilioRequest.ts:82`) | In-memory WebSocket session only (`server.ts:129-134`); nothing durable | Live OpenAI Realtime session | `503` maintenance (`server.ts:85-88`), `404` wrong path (`server.ts:95`), `401` bad signature (`server.ts:117`), `503` missing `OPENAI_API_KEY` (`server.ts:124`) |
 
-Ignored-but-accepted paths: Polar unknown/missing business (`route.ts:39,42`), Twilio SMS with no resolved business (`apps/admin/app/api/webhooks/twilio/sms/route.ts:26`), and Twilio status with no resolved business (`route.ts:40`) return `2xx` and are permanently dropped. They are not retried by the provider. Resend always persists a `provider_events` row even when no business resolves (`route.ts:30`), so it is not dropped.
+Ignored-but-accepted paths: Polar unknown/missing business (`route.ts:39,42`), Twilio SMS with no resolved business (`apps/admin/app/api/webhooks/twilio/sms/route.ts:26`), and Twilio status with no resolved business (`route.ts:40`) return `2xx` and are permanently dropped. They are not retried by the provider.
 
 ## 2. Provider retry behavior and retryability
 
@@ -29,7 +28,6 @@ Retry schedules below are the providers' documented behavior and must be confirm
 | Provider | Retry on non-2xx | Current handler retryable? |
 | --- | --- | --- |
 | Polar (Standard Webhooks) | Yes — failed deliveries are retried with backoff for a limited retention period (confirm schedule). | `500` is retryable and appropriate. `401`/`400` are correctly non-retryable (retry cannot fix signature or payload). |
-| Resend (Svix) | Yes — Svix retries non-2xx with exponential backoff for up to 24 hours by default (confirm schedule). | `500`/`503` are retryable. `401`/`400` are correctly non-retryable. `503` signals a configuration fault the owner must resolve, not just retry. |
 | Twilio Messaging (inbound SMS) | Yes — Twilio retries non-2xx message webhooks with backoff (confirm window). | `500` is retryable. `401` is correctly non-retryable. The `500` carries no `Retry-After`; owner should confirm Twilio's default cadence is acceptable. |
 | Twilio Messaging (status callback) | Yes — Twilio retries non-2xx status callbacks. | Confirmed retryable: `503` + `Retry-After: 60` on durable write failure (`route.ts:50`; test `apps/admin/app/api/webhooks/twilio/status/route.test.ts:19-25`). |
 | Twilio Voice (status/action callbacks) | Yes in class — Twilio retries non-2xx Voice callbacks (confirm count and ordering guarantees). | **Flag (two issues).** (1) The gateway's retry branch tests `reason === "unknown_call"` (`routes.ts:295`) but the admin backend returns `reason: "call_not_found"` (`apps/admin/app/voice/[...segments]/route.ts:353`). The mismatch means a status callback that arrives before call-record initialization receives `204` (success) and is silently dropped; Twilio will not retry. The unit test mocks `"unknown_call"`, so it does not catch this (`routes.test.ts:234`). (2) Backend failures in `call-status` and `transfer-action` fall through to an uncaught `500` with **no `Retry-After`**. Retry is desired because the call record or transfer outcome is not durable until the backend succeeds. The provider owner must confirm Twilio retries these callbacks, the acceptable window, and the fix for the reason-string mismatch. |
@@ -49,7 +47,6 @@ Recommended ordering relative to replacement maintenance mode:
 Per provider:
 
 - **Polar** — pause the endpoint in Polar (disable delivery) rather than relying on retries, because Polar's retention window is finite. Accepted events remain in `provider_events` and can be replayed from the Polar dashboard after return. Observe `provider_events` for `provider='polar'`.
-- **Resend** — pause the endpoint in Svix; retries can also be triggered from the Svix dashboard. Observe `provider_events` for `provider='resend'`. If `RESEND_WEBHOOKS_ENABLED` is `false`, the harness removes the secret and the route returns `503` ([production readiness](../validation/production-readiness.md)).
 - **Twilio Messaging** — inbound SMS cannot be paused without changing the number's webhook URL. Either accept Twilio retries during maintenance (non-2xx) or temporarily point the messaging webhook at a controlled endpoint that records deliveries for replay. Confirm the retry window with the Twilio owner.
 - **Twilio Voice** — inbound calls cannot be paused by the application. Route the number to legacy or to a controlled greeting before maintenance if calls must be preserved; otherwise calls during maintenance fail. Voice status/action callbacks are accepted only after maintenance ends.
 - **Twilio Media Streams** — drain only: allow active calls to finish and stop admitting new inbound calls. Upgrades are not replayable.
@@ -58,7 +55,7 @@ Per provider:
 
 There is no durable inbound buffer. What is and is not preserved:
 
-- **Preserved on acceptance:** a `provider_events` row for Polar, Resend, and inbound SMS only; the corresponding outbox row(s); domain state updates (messages, calls, subscriptions) in the same transaction. See `providerEvents` unique index (`packages/db/src/schema/index.ts:1151`) and outbox unique `dedupe_key` (`index.ts:1176`).
+- **Preserved on acceptance:** a `provider_events` row for Polar and inbound SMS only; the corresponding outbox row(s); domain state updates (messages, calls, subscriptions) in the same transaction. See `providerEvents` unique index (`packages/db/src/schema/index.ts:1151`) and outbox unique `dedupe_key` (`index.ts:1176`).
 - **Not preserved:** rejected requests (bad signature, malformed payload, maintenance `503`, unhandled `500`) and accepted-but-ignored events (unknown/unresolved business). Only provider retry or owner-driven replay can recover these.
 - **Voice `call-status`/`transfer-action`:** no `provider_events` row. Reconciliation must use `calls.provider_call_id` plus `providerUpdatedAt`/`SequenceNumber` ordering. `reconcileCallStatus` sets `updatedAt` from `providerUpdatedAt` but does not reject older deliveries, so out-of-order replays can regress status (`packages/domain/src/server/voice.ts:226`). A callback whose reason string does not match `"unknown_call"` returns `204` and is not recorded at all, so it cannot be reconciled later. The owner must define ordering rules and resolve the reason-string mismatch.
 - **`transfer-action`:** `setTransferState`/`completeCall` bump `revision`, and the outbox key embeds `revision` (`voice.ts:182-197,208-215`), so replay emits new outbox rows rather than being deduplicated. Treat transfer replays as at-least-once.
@@ -68,7 +65,6 @@ Replay-safe idempotency keys:
 | Provider | Event key | Downstream dedupe |
 | --- | --- | --- |
 | Polar | `(provider='polar', webhook-id)` | outbox `provider-event:<webhook-id>:billing` |
-| Resend | `(provider='resend', svix-id)` | outbox `provider-event:<svix-id>:email` |
 | Twilio SMS | `(provider='twilio', MessageSid)` | `messages.provider_message_id`; outbox message keys |
 | Twilio status | message/notification/operator-delivery ID + status transition guard | outbox `message:<id>:delivery:<status>` / `:price:<status>` |
 | Twilio voice | `calls.provider_call_id` (no event key) | outbox key includes `revision` (not replay-stable) |
@@ -93,7 +89,6 @@ All owners are `UNASSIGNED` until named in the restricted release record. Missin
 | Role | Owner | Required approval |
 | --- | --- | --- |
 | Polar provider owner | UNASSIGNED | Approve pause/retry window, endpoint replay, and retry schedule |
-| Resend provider owner | UNASSIGNED | Approve pause/Svix replay and 24-hour retry window |
 | Twilio provider owner | UNASSIGNED | Approve SMS and Voice pause/retry handling, `call-status`/`transfer-action` retry window, and media-stream drain |
 | Replacement owner | UNASSIGNED | Approve maintenance entry/exit, endpoint routing, and observation window |
 | Reconciliation owner | UNASSIGNED | Approve replay rules, ordering for voice callbacks, and accounting results |
@@ -107,7 +102,7 @@ Run in an isolated, disposable environment with non-customer fixtures. Do not ru
 2. Confirm signature rejection: send a payload with an invalid signature to each route and record `401`/`403`, with no `provider_events` row created.
 3. Confirm the retryable statuses in §2 match the deployed code by inspecting responses for each failure path.
 4. Record provider retry schedules from each provider's dashboard/webhook log and attach to the restricted evidence.
-5. **Duplicate-delivery proof (one provider event):** send the same signed Polar (or Resend) payload twice; query `select count(*) from provider_events where provider=... and provider_event_id=...` and confirm `1`; confirm exactly one matching `outbox_messages` row.
+5. **Duplicate-delivery proof (one provider event):** send the same signed Polar payload twice; query `select count(*) from provider_events where provider=... and provider_event_id=...` and confirm `1`; confirm exactly one matching `outbox_messages` row.
 6. **Twilio SMS duplicate proof:** deliver the same `MessageSid` twice and confirm one `provider_events` row and one inbound `messages` row (`packages/domain/src/server/sms.ts:50-66`).
 7. **Status replay proof:** resend an older Twilio status callback and confirm the transition guard prevents a backward status change (`sms.ts:181`); record the observed result and any regression for voice, where no such guard exists.
 8. **Voice early-callback proof:** send a signed `call-status` for an uninitialized `CallSid` and record the status. Expected from the code is `204` (dropped) because `"call_not_found"` does not match the `"unknown_call"` branch; record this as an open defect, not a pass.

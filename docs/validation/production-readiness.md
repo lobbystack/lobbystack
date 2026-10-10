@@ -56,7 +56,7 @@ The `--e2e` profile requires all of the following before it executes:
 | Fixture flags | `WIDGET_E2E=1`, `PASSWORD_RECOVERY_E2E=1`, `WEBSITE_IMPORT_E2E=1`, and `DEMO_OPERATOR_E2E=1` |
 | Operator fixtures | `PARITY_PORT_OPERATOR_STORAGE_STATE_FR`, `PARITY_PORT_OPERATOR_STORAGE_STATE_EN`, and `PARITY_OPERATOR_USER_ID` are present |
 
-The staging command is separate from these local fixtures. `pnpm release:check --staging` accepts only an `isolated-staging` certification deployment, non-local service endpoints, one disposable database target named exactly `certification` or `certification_<suffix>`, and the required role URLs. It requires `RESEND_WEBHOOKS_ENABLED` to be exactly `true` or `false`; when `true`, `RESEND_WEBHOOK_SECRET` is required, and when `false`, the release harness removes that secret from child gate environments. It must never point at a production snapshot database.
+The staging command is separate from these local fixtures. `pnpm release:check --staging` accepts only an `isolated-staging` certification deployment, non-local service endpoints, one disposable database target named exactly `certification` or `certification_<suffix>`, and the required role URLs. It must never point at a production snapshot database.
 
 ## Customer journey acceptance
 

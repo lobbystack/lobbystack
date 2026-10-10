@@ -42,7 +42,6 @@ export type ReleaseEvidence = {
   scope: {
     releaseCertified: false;
     targetIdentity: string;
-    resendWebhooks: "not-applicable" | "unverified" | "enabled" | "disabled";
     outstandingExternalGates: string[];
   };
   gates: GateEvidence[];
@@ -93,7 +92,7 @@ const stagingRequired = [
   "REPLACEMENT_MIGRATOR_DATABASE_URL", "REPLACEMENT_APP_DATABASE_URL", "REPLACEMENT_WORKER_DATABASE_URL",
   "REDIS_URL", "REPLACEMENT_REDIS_HOST", "REDIS_PORT", "REPLACEMENT_S3_ENDPOINT", "S3_BUCKET",
   "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY", "POLAR_WEBHOOK_SECRET", "TWILIO_AUTH_TOKEN",
-  "INTERNAL_SERVICE_SECRET", "REPLACEMENT_TEST_BUSINESS_SLUG", "RESEND_WEBHOOKS_ENABLED",
+  "INTERNAL_SERVICE_SECRET", "REPLACEMENT_TEST_BUSINESS_SLUG",
 ] as const;
 
 const e2eRequired = [
@@ -169,8 +168,6 @@ export function stagingConfigurationProblems(environment: NodeJS.ProcessEnv): st
   if (environment.REPLACEMENT_TEST_BUSINESS_SLUG && !environment.REPLACEMENT_TEST_BUSINESS_SLUG.startsWith("certification-")) {
     problems.push("REPLACEMENT_TEST_BUSINESS_SLUG (must use the certification- prefix)");
   }
-  if (environment.RESEND_WEBHOOKS_ENABLED && !["true", "false"].includes(environment.RESEND_WEBHOOKS_ENABLED)) problems.push("RESEND_WEBHOOKS_ENABLED (must be true or false)");
-  if (environment.RESEND_WEBHOOKS_ENABLED === "true" && !environment.RESEND_WEBHOOK_SECRET?.trim()) problems.push("RESEND_WEBHOOK_SECRET (required when Resend webhooks are enabled)");
   return [...new Set(problems)];
 }
 
@@ -254,7 +251,6 @@ function evidence(mode: ReleaseMode, e2e: boolean, runId: string, gitSha: string
     scope: {
       releaseCertified: false,
       targetIdentity: targetIdentity(mode, environment, e2e),
-      resendWebhooks: mode === "staging" ? environment.RESEND_WEBHOOKS_ENABLED === "true" ? "enabled" : environment.RESEND_WEBHOOKS_ENABLED === "false" ? "disabled" : "unverified" : "not-applicable",
       outstandingExternalGates: [
         "provider-specific durable ingress handling",
         "isolated database and object-storage restore and traffic rollback drill",
@@ -300,7 +296,6 @@ export async function runReleaseReadiness(options: ReleaseReadinessOptions = {})
       // tsx sets this for its own process. A relative parent config is invalid
       // after pnpm changes into a workspace; child commands choose their own.
       delete gateEnvironment.TSX_TSCONFIG_PATH;
-      if (mode === "staging" && environment.RESEND_WEBHOOKS_ENABLED === "false") delete gateEnvironment.RESEND_WEBHOOK_SECRET;
       const gateResult = gateEvidence(gate);
       gateResult.status = "failed";
       gateResult.startedAt = new Date().toISOString();

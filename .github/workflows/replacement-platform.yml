@@ -175,8 +175,6 @@ jobs:
           TWILIO_AUTH_TOKEN: ${{ secrets.REPLACEMENT_TWILIO_AUTH_TOKEN }}
           INTERNAL_SERVICE_SECRET: ${{ secrets.REPLACEMENT_INTERNAL_SERVICE_SECRET }}
           REPLACEMENT_TEST_BUSINESS_SLUG: ${{ secrets.REPLACEMENT_TEST_BUSINESS_SLUG }}
-          RESEND_WEBHOOKS_ENABLED: ${{ vars.REPLACEMENT_RESEND_WEBHOOKS_ENABLED }}
-          RESEND_WEBHOOK_SECRET: ${{ secrets.REPLACEMENT_RESEND_WEBHOOK_SECRET }}
         run: pnpm exec tsx --tsconfig scripts/tsconfig.json scripts/release-readiness.ts --staging --evidence certification-results/staging-gates.json
       - name: Retain certification evidence
         if: always()

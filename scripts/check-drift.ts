@@ -156,7 +156,7 @@ for (const removed of ["otel-collector", "otel-certifier", "prometheus", "Docker
     errors.push(`Removed bundled observability infrastructure is still referenced: ${removed}`);
   }
 }
-for (const variable of ["POLAR_WEBHOOK_SECRET", "RESEND_WEBHOOK_SECRET", "TWILIO_AUTH_TOKEN", "TWILIO_SMS_WEBHOOK_URL", "TWILIO_STATUS_CALLBACK_URL"]) {
+for (const variable of ["POLAR_WEBHOOK_SECRET", "TWILIO_AUTH_TOKEN", "TWILIO_SMS_WEBHOOK_URL", "TWILIO_STATUS_CALLBACK_URL"]) {
   if (!compose.includes(`${variable}:`)) {
     errors.push(`Admin webhook configuration is missing ${variable}`);
   }

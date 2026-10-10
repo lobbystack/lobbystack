@@ -29,7 +29,6 @@ const stagingEnvironment = {
   TWILIO_AUTH_TOKEN: "secret",
   INTERNAL_SERVICE_SECRET: "secret",
   REPLACEMENT_TEST_BUSINESS_SLUG: "certification-internal",
-  RESEND_WEBHOOKS_ENABLED: "false",
 };
 
 describe("release readiness", () => {
@@ -45,7 +44,6 @@ describe("release readiness", () => {
     const result = await runReleaseReadiness({ mode: "staging", plan: true, environment: {}, runId: "run-1", gitSha: "sha-1", execute });
     expect(result.status).toBe("planned");
     expect(result.scope.releaseCertified).toBe(false);
-    expect(result.scope.resendWebhooks).toBe("unverified");
     expect(result.gates).toHaveLength(6);
     expect(execute).not.toHaveBeenCalled();
   });
@@ -63,7 +61,6 @@ describe("release readiness", () => {
     expect(stagingConfigurationProblems({ ...stagingEnvironment, ADMIN_BASE_URL: "http://127.0.0.1:13000" })).toContain("ADMIN_BASE_URL (must not be local)");
     expect(stagingConfigurationProblems({ ...stagingEnvironment, REPLACEMENT_WORKER_DATABASE_URL: "postgres://lobbystack_app:secret@db.example/production" }))
       .toEqual(expect.arrayContaining(["REPLACEMENT_WORKER_DATABASE_URL (must target a non-local certification database)", "REPLACEMENT_WORKER_DATABASE_URL (must use lobbystack_worker)"]));
-    expect(stagingConfigurationProblems({ ...stagingEnvironment, RESEND_WEBHOOKS_ENABLED: "true" })).toContain("RESEND_WEBHOOK_SECRET (required when Resend webhooks are enabled)");
     expect(stagingConfigurationProblems({ ...stagingEnvironment, ADMIN_BASE_URL: "http://[::1]:13000" })).toContain("ADMIN_BASE_URL (must not be local)");
     expect(stagingConfigurationProblems({ ...stagingEnvironment, DATABASE_URL: "postgres://user:secret@db.example/production_certification" })).not.toEqual([]);
     expect(stagingConfigurationProblems({ ...stagingEnvironment, REPLACEMENT_WORKER_DATABASE_URL: "postgres://lobbystack_worker:secret@other.example/certification" })).toContain("Staging role databases (must target the same disposable database)");
@@ -72,14 +69,12 @@ describe("release readiness", () => {
   it("passes the supplied environment to executors and redacts it from evidence", async () => {
     const execute = vi.fn(async (_gate, environment) => {
       expect(environment.INTERNAL_SERVICE_SECRET).toBe("super-secret-value");
-      expect(environment.RESEND_WEBHOOK_SECRET).toBeUndefined();
       expect(environment.TSX_TSCONFIG_PATH).toBeUndefined();
       return { exitCode: 0, output: "ok" };
     });
-    const result = await runReleaseReadiness({ mode: "staging", environment: { ...stagingEnvironment, INTERNAL_SERVICE_SECRET: "super-secret-value", RESEND_WEBHOOK_SECRET: "must-not-run", TSX_TSCONFIG_PATH: "scripts/tsconfig.json" }, runId: "run-1", gitSha: "sha-1", execute });
+    const result = await runReleaseReadiness({ mode: "staging", environment: { ...stagingEnvironment, INTERNAL_SERVICE_SECRET: "super-secret-value", TSX_TSCONFIG_PATH: "scripts/tsconfig.json" }, runId: "run-1", gitSha: "sha-1", execute });
     expect(result.status).toBe("passed");
     expect(JSON.stringify(result)).not.toContain("super-secret-value");
-    expect(result.scope.resendWebhooks).toBe("disabled");
     expect(result.gates.every((gate) => gate.startedAt && gate.finishedAt && gate.durationMs !== null && gate.outputDigest)).toBe(true);
   });
 
