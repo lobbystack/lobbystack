@@ -141,13 +141,13 @@ export async function queueUnsyncedAppointmentSyncs(
     if (!connection?.selectedCalendarId || connection.status === "disconnected") return 0;
     // Calendar ids run to 255 characters; a hash keeps the key inside its 255-character column.
     const calendarKey = createHash("sha256").update(connection.selectedCalendarId).digest("hex").slice(0, 16);
-    const pending = await tx.select({ id: appointments.id }).from(appointments).where(and(
+    const pending = await tx.select({ id: appointments.id, revision: appointments.revision }).from(appointments).where(and(
       eq(appointments.businessId, input.businessId),
       eq(appointments.status, "confirmed"),
       eq(appointments.calendarSyncState, "not_required"),
       isNull(appointments.calendarExternalId),
       gt(appointments.endsAt, input.now ?? new Date()),
-      ...(connection.staffId ? [eq(appointments.staffId, connection.staffId)] : []),
+      connection.staffId ? eq(appointments.staffId, connection.staffId) : notOwnedByStaffCalendar(tx, input.businessId),
     ));
     for (const appointment of pending) {
       await enqueueOutbox(tx, {
@@ -155,9 +155,9 @@ export async function queueUnsyncedAppointmentSyncs(
         businessId: input.businessId,
         aggregateType: "appointment",
         aggregateId: appointment.id,
-        // One backfill per connection and calendar: a booking the sync job still skips is not requeued
-        // every reconcile, and a newly selected calendar still gets its own.
-        dedupeKey: `appointment:${appointment.id}:calendar:backfill:${input.connectionId}:${calendarKey}`,
+        // One backfill per connection, calendar and revision: a calendar switch bumps the revision, so returning to an
+        // earlier calendar writes released bookings again. The staff filter keeps a booking the job skips from requeueing.
+        dedupeKey: `appointment:${appointment.id}:calendar:backfill:${input.connectionId}:${calendarKey}:${appointment.revision}`,
         payload: { appointmentId: appointment.id, action: "backfill" },
       });
     }
@@ -277,14 +277,17 @@ export async function selectCalendar(
 // calendar is replaced, clear it so the reconcile backfill writes them to the new calendar instead of
 // updating an event that is not there. A staff member's own calendar takes precedence over a business-wide one.
 async function releaseCalendarAppointments(tx: DatabaseTransaction, businessId: string, staffId: string | null): Promise<void> {
-  await tx.update(appointments).set({ calendarExternalId: null, calendarSyncState: "not_required", updatedAt: new Date() }).where(and(
+  await tx.update(appointments).set({ calendarExternalId: null, calendarSyncState: "not_required", revision: sql`${appointments.revision} + 1`, updatedAt: new Date() }).where(and(
     eq(appointments.businessId, businessId),
     eq(appointments.status, "confirmed"),
     gt(appointments.endsAt, new Date()),
-    staffId
-      ? eq(appointments.staffId, staffId)
-      : notExists(tx.select({ id: calendarConnections.id }).from(calendarConnections).where(and(eq(calendarConnections.businessId, businessId), eq(calendarConnections.staffId, appointments.staffId), ne(calendarConnections.status, "disconnected")))),
+    staffId ? eq(appointments.staffId, staffId) : notOwnedByStaffCalendar(tx, businessId),
   ));
+}
+
+// The sync job writes a booking to its staff member's connection whenever one exists, even one with no calendar.
+function notOwnedByStaffCalendar(tx: DatabaseTransaction, businessId: string) {
+  return notExists(tx.select({ id: calendarConnections.id }).from(calendarConnections).where(and(eq(calendarConnections.businessId, businessId), eq(calendarConnections.staffId, appointments.staffId), ne(calendarConnections.status, "disconnected"))));
 }
 
 export async function refreshCalendar(

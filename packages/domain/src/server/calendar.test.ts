@@ -1,4 +1,6 @@
 import { beforeEach, expect, it, vi } from "vitest";
+import type { SQL } from "drizzle-orm";
+import { PgDialect, QueryBuilder } from "drizzle-orm/pg-core";
 const mocks = vi.hoisted(() => ({ transaction: vi.fn(), enqueue: vi.fn(), alert: vi.fn() }));
 vi.mock("@lobbystack/db", async (original) => ({ ...await original<typeof import("@lobbystack/db")>(), withBusinessTransaction: mocks.transaction, enqueueOutbox: mocks.enqueue }));
 vi.mock("./notifications", () => ({ queueOperatorAlertInTransaction: mocks.alert }));
@@ -83,7 +85,7 @@ it("clears upcoming bookings' event ids only when the selected calendar changes"
   const select = () => selectCalendar(context, { userId: "user", businessId: "business", connectionId: "connection", calendarId: "new@group.calendar.google.com" });
   let written = recordWrites([[{ staffId: "staff", selectedCalendarId: "old@group.calendar.google.com" }]]);
   await select();
-  expect(written(appointments)).toEqual([expect.objectContaining({ calendarExternalId: null, calendarSyncState: "not_required" })]);
+  expect(written(appointments)).toEqual([expect.objectContaining({ calendarExternalId: null, calendarSyncState: "not_required", revision: expect.anything() })]);
   written = recordWrites([[{ staffId: "staff", selectedCalendarId: "new@group.calendar.google.com" }]]);
   await select();
   expect(written(appointments)).toEqual([]);
@@ -98,6 +100,29 @@ it("backfills a booking again once its connection switches calendars", async () 
   const first = await backfillKey("old@group.calendar.google.com");
   expect(await backfillKey("old@group.calendar.google.com")).toBe(first);
   expect(await backfillKey("new@group.calendar.google.com")).not.toBe(first);
+});
+
+it("backfills a released booking again when its connection returns to an earlier calendar", async () => {
+  const backfillKey = async (revision: number) => {
+    recordWrites([[{ staffId: null, selectedCalendarId: "first@group.calendar.google.com", status: "connected" }], [{ id: "appointment", revision }]]);
+    await queueUnsyncedAppointmentSyncs(context, { businessId: "business", connectionId: "connection" });
+    return mocks.enqueue.mock.calls.at(-1)?.[1].dedupeKey;
+  };
+  // Switching away and back released the booking twice, from revision 3 to 5.
+  expect(await backfillKey(5)).not.toBe(await backfillKey(3));
+});
+
+it("leaves bookings a staff connection owns out of a business-wide backfill", async () => {
+  const conditions: SQL[] = [];
+  const reads: unknown[][] = [[{ staffId: null, selectedCalendarId: "shared@group.calendar.google.com", status: "connected" }], []];
+  // Real query builders, so the subquery renders; awaiting one answers the next read.
+  const tx = { select: (fields: never) => ({ from: (table: never) => ({ where: (condition: SQL) => {
+    conditions.push(condition);
+    return Object.assign(new QueryBuilder().select(fields).from(table).where(condition), { limit: async () => reads.shift(), then: (resolve: (rows: unknown) => void) => resolve(reads.shift()) });
+  } }) }) };
+  mocks.transaction.mockImplementation(async (_db, _scope, callback) => callback(tx));
+  await queueUnsyncedAppointmentSyncs(context, { businessId: "business", connectionId: "connection" });
+  expect(new PgDialect().sqlToQuery(conditions.at(-1)!).sql).toContain('not exists (select "id" from "calendar_connections" where ("calendar_connections"."business_id" = $5 and "calendar_connections"."staff_id" = "appointments"."staff_id" and "calendar_connections"."status" <> $6))');
 });
 
 it("writes a busy calendar in bounded inserts inside one transaction and marks it synced", async () => {
