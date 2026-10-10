@@ -77,6 +77,8 @@ describe("finance export", () => {
     expect(query).not.toContain("event_kind in");
     expect(query).toContain("knowledge.%");
     expect(query).toContain("%_provider");
+    // GPT-Live's session cost is voice spend on its own channel, not AI.
+    expect(query).toContain("when u.operation = 'live_session' then u.channel");
     expect(query).toContain(`bu.quantity as "billedSeconds"`);
   });
 

@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { buildBrowserSessionConfig } from "@lobbystack/agent-core/live/session";
-import { finishLiveCall, getWebVoiceBillingAllowance, recordProspectDemoCallError, recordProspectDemoCallStarted, recordVoiceSnapshotLoaded, startLiveWebCall } from "@lobbystack/domain";
-import type { BusinessContextSnapshot } from "@lobbystack/shared";
+import { finishLiveCall, getCachedBusinessSnapshot, getWebVoiceBillingAllowance, recordProspectDemoCallError, recordProspectDemoCallStarted, recordVoiceSnapshotLoaded, refreshBusinessSnapshot, startLiveWebCall, type DomainContext } from "@lobbystack/domain";
 import { asApiResponse, readJson } from "@/lib/api-helpers";
-import { loadValidBusinessSnapshot } from "@/lib/business-snapshot";
 import { createWorkerDomainContext } from "@/lib/domain-context";
 import { attachWorkerToLiveSession, endLiveBrowserSession, getLiveClient, requireLivePrototype } from "@/lib/live-prototype";
 import { LIVE_WEB_CALL_WIDGET_IDS, liveSessionEndToken, publicCallCorsHeaders, resolveLiveWebCallAccess, type LiveWebCallRequest } from "@/lib/live-web-call";
@@ -46,6 +44,14 @@ function createServerTiming() {
     },
     header: () => entries.join(", "),
   };
+}
+
+// The same loader as phone calls. A business that was never published has no snapshot until one is built.
+async function loadSnapshot(domain: DomainContext, businessId: string) {
+  const snapshot = await getCachedBusinessSnapshot(domain, { businessId });
+  if (snapshot) return snapshot;
+  await refreshBusinessSnapshot(domain, { businessId });
+  return await getCachedBusinessSnapshot(domain, { businessId });
 }
 
 function denied(status: number, code: string, headers: Record<string, string>) {
@@ -90,7 +96,7 @@ export async function POST(request: Request) {
     // independent reads run together.
     const [billing, snapshot] = await Promise.all([
       access.prospectDemoId ? undefined : getWebVoiceBillingAllowance(domain, { businessId: access.businessId, ...(maxDurationMs ? { maxDurationMs } : {}) }),
-      loadValidBusinessSnapshot(access.businessId) as Promise<BusinessContextSnapshot | null>,
+      loadSnapshot(domain, access.businessId),
     ]);
     timing.mark("checks");
     if (billing && !billing.allowed) return denied(402, billing.errorCode ?? "voice_limit_reached", cors);

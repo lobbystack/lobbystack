@@ -1,5 +1,9 @@
 export type RecordingState = "available" | "pending" | "expired" | "missing";
 
+// The recording copy gives up about 5 minutes after the call ends
+// (LIVE_RECORDING_ATTEMPTS), so a call with none by this long won't get one.
+const RECORDING_WAIT_MS = 10 * 60_000;
+
 export function recordingState(input: {
   recordingObjectId: string | null;
   recordingStatus: string | null;
@@ -13,12 +17,11 @@ export function recordingState(input: {
   return "missing";
 }
 
-export function recordingListState(input: Parameters<typeof recordingState>[0]): RecordingState {
+export function recordingListState(input: Parameters<typeof recordingState>[0] & { endedAt: Date | null }): RecordingState {
   const storedState = recordingState(input);
   if (input.recordingObjectId || storedState === "expired") return storedState;
-  if (input.transport === "webrtc") return "missing";
   const disposition = input.disposition?.trim().toLowerCase() ?? "";
   if (["blocked_contact", "busy", "no_answer", "missed", "canceled", "cancelled"].some(value => disposition.includes(value))) return "missing";
   // Main's list anticipates asynchronous phone recordings; its detail tab does not.
-  return "pending";
+  return input.endedAt === null || Date.now() - input.endedAt.getTime() < RECORDING_WAIT_MS ? "pending" : "missing";
 }
