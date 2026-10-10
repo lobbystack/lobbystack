@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { vi } from "vitest";
 
 import type { JobEnvelope } from "@lobbystack/contracts";
-import { claimBillingCheckoutRequest, countPublishableOutboxMessages, deleteCallRecording, deleteCallRecordingForRetention, deleteSentProductEventsBefore, deliverOutbound, expireProspectDemos, generateAffiliatePayoutRun, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, loadLiveCallForPricing, recordCallProviderPricing, recordProductEvent, recordSmsProviderPricing, reconcileBillingProviderEvent, runPrivacyRetentionSweep } from "@lobbystack/domain";
+import { claimBillingCheckoutRequest, countPublishableOutboxMessages, deleteCallRecordingForRetention, deleteSentProductEventsBefore, deliverOutbound, expireProspectDemos, generateAffiliatePayoutRun, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, loadLiveCallForPricing, recordCallProviderPricing, recordProductEvent, recordSmsProviderPricing, reconcileBillingProviderEvent, runPrivacyRetentionSweep } from "@lobbystack/domain";
 import { queueDailyOperatorSummaries, queueOnboardingFollowupEmail } from "@lobbystack/domain";
 import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning, numberProvisioningLeaseEndsAt } from "@lobbystack/domain";
 
@@ -26,7 +26,6 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
     claimNumberProvisioning: vi.fn(),
     numberProvisioningLeaseEndsAt: vi.fn(),
     countPublishableOutboxMessages: vi.fn(),
-    deleteCallRecording: vi.fn(),
     deleteCallRecordingForRetention: vi.fn(),
     deleteSentProductEventsBefore: vi.fn(),
     queueDailyOperatorSummaries: vi.fn(),
@@ -216,19 +215,7 @@ describe("worker handlers", () => {
     expect(deleteSentProductEventsBefore).toHaveBeenCalledTimes(2);
   });
 
-  it("routes manual recording deletion around the automatic retention switch", async () => {
-    const businessId = randomUUID(); const callId = randomUUID(); const objectId = randomUUID();
-    const domain = { db: undefined as never }; const storage = { deleteObject: vi.fn() } as never;
-    vi.mocked(deleteCallRecording).mockResolvedValue(true);
-
-    const result = await handleJob({ jobId: randomUUID(), type: "privacy.deleteRecording", queue: "maintenance", businessId, payload: { callId, objectId, source: "manual" }, trace: {}, idempotencyKey: `manual:${objectId}`, scheduled: false }, { domain, storage });
-
-    expect(result).toEqual({ status: "completed", entityId: callId });
-    expect(deleteCallRecording).toHaveBeenCalledWith(domain, { businessId, callId, objectId }, storage);
-    expect(deleteCallRecordingForRetention).not.toHaveBeenCalled();
-  });
-
-  it("treats legacy recording deletion jobs as gated retention work", async () => {
+  it("deletes recordings only through the retention switch", async () => {
     const businessId = randomUUID(); const callId = randomUUID(); const objectId = randomUUID();
     const domain = { db: undefined as never }; const storage = { deleteObject: vi.fn() } as never;
     vi.mocked(deleteCallRecordingForRetention).mockResolvedValue(false);
@@ -237,7 +224,6 @@ describe("worker handlers", () => {
 
     expect(result).toEqual({ status: "skipped", entityId: callId });
     expect(deleteCallRecordingForRetention).toHaveBeenCalledWith(domain, { businessId, callId, objectId }, storage);
-    expect(deleteCallRecording).not.toHaveBeenCalled();
   });
 
   it("queues a bounded continuation when expired product events remain", async () => {

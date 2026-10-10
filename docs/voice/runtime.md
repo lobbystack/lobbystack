@@ -199,7 +199,7 @@ OpenAI's copy follows OpenAI's rules, not the plan's retention. Its [GPT-Live da
 
 The [Live conversations guide](https://developers.openai.com/api/docs/guides/live-conversations) adds that storage must be enabled for the OpenAI project and needs a data policy that permits persistence.
 
-When a business deletes a recording, or its plan's retention runs out, OpenAI's copy stays until its 30 days are up. Tell businesses that OpenAI keeps each call's recording for 30 days and that we can't delete it sooner. OpenAI doesn't say whether the 30 days start when the session starts or when it ends.
+After a recording's retention runs out, OpenAI keeps its copy until its 30 days are up. Tell businesses that OpenAI keeps each call's recording for 30 days and that we can't delete it sooner. OpenAI doesn't say whether the 30 days start when the session starts or when it ends.
 
 ## Interruptions and background noise
 

@@ -14,6 +14,10 @@ describe("upload content policy", () => {
     expect(uploadCreateRequestSchema.safeParse({ ...base, purpose: "knowledge", contentType: "application/pdf" }).success).toBe(false);
   });
 
+  it("rejects an allowed type with parameters that a browser reads as HTML", () => {
+    expect(uploadCreateRequestSchema.safeParse({ ...base, purpose: "knowledge", contentType: "text/plain;x,text/html", checksum: "checksum" }).success).toBe(false);
+  });
+
   it("rejects purposes the browser never uploads", () => {
     for (const [purpose, contentType] of [["attachment", "text/plain"], ["recording", "audio/wav"], ["export", "text/csv"]]) {
       expect(uploadCreateRequestSchema.safeParse({ ...base, purpose, contentType, checksum: "checksum" }).success).toBe(false);

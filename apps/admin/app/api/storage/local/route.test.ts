@@ -51,6 +51,7 @@ describe("local storage HTTP route", { concurrent: false }, () => {
     const downloadResponse = await GET(new Request(downloadUrl, { headers: { range: "bytes=6-12" } }));
     expect(downloadResponse.status).toBe(206);
     expect(downloadResponse.headers.get("content-range")).toBe(`bytes 6-12/${body.byteLength}`);
+    expect(downloadResponse.headers.get("content-disposition")).toBe("attachment");
     expect(await downloadResponse.text()).toBe("storage");
 
     const pinnedUrl = await storage.createDownloadUrl({ key: "business/knowledge/object/file.txt", expiresInSeconds: 60, range: "bytes=0-4" });

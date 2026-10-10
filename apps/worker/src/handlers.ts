@@ -7,7 +7,7 @@ import { realtimeEventSchema, type JobEnvelope } from "@lobbystack/contracts";
 import { getPolarMeteredUsagePayload, type BillingUsageKind } from "@lobbystack/shared";
 import { appointments, calls, contacts, enqueueOutbox, knowledgeChunks, knowledgeDocuments, messages, notifications, phoneNumbers, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database } from "@lobbystack/db";
 import { enqueueKnowledgeDerivedRefresh, loadBusinessHoursInput, loadBusinessSummaryInput, markBusinessHoursChecked, resetGeneratedBusinessSummary, saveGeneratedBusinessHours, saveGeneratedBusinessSummary } from "@lobbystack/domain";
-import { claimBillingCheckoutRequest, countPublishableOutboxMessages, deleteCallRecording, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteSentProductEventsBefore, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markKnowledgeDocumentFailed, markProductEventsSent, reconcileBillingProviderEvent, reconcileResendProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, runPrivacyRetentionSweep, setTransferState, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, chunkText, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type GeneratedCallSummary, type OnboardingFollowupSender } from "@lobbystack/domain";
+import { checkKnowledgeStorageLimit, claimBillingCheckoutRequest, countPublishableOutboxMessages, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteSentProductEventsBefore, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markKnowledgeDocumentFailed, markProductEventsSent, reconcileBillingProviderEvent, reconcileResendProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, runPrivacyRetentionSweep, setTransferState, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, chunkText, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type GeneratedCallSummary, type OnboardingFollowupSender } from "@lobbystack/domain";
 import { deliverOutbound, markFeedbackEmailFailed, markFeedbackEmailSent, queueDailyOperatorSummaries, refreshUnitEconomicsMonth } from "@lobbystack/domain";
 import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning, numberProvisioningLeaseEndsAt } from "@lobbystack/domain";
 import { createWebhookSender, processWebhookDelivery, pruneApiHistory, type WebhookSender } from "@lobbystack/domain";
@@ -277,14 +277,22 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       }
       let indexedChunks = 0;
       let indexedPages = 0;
+      let failedPages = 0;
       if (!await progress("indexing", pages.length)) return { status: "skipped", entityId: documentId ?? websiteIngestionJobId ?? "" };
       for (const page of pages) {
-        indexedChunks += await indexWebsitePage(dependencies, businessIdOrThrow(job), page, importGuard, execution.isFinalAttempt === false);
-        indexedPages += 1;
+        try {
+          indexedChunks += await indexWebsitePage(dependencies, businessIdOrThrow(job), page, importGuard);
+          indexedPages += 1;
+        } catch (error) {
+          // Skip the page: a job retry would pay for the whole crawl and every embedding again.
+          failedPages += 1;
+          // Only the name: provider errors can echo page text.
+          console.error(`[knowledge] ${documentId ?? websiteIngestionJobId} page failed`, error instanceof Error ? error.name : "unknown");
+        }
         if (!await progress("indexing", pages.length, indexedPages)) return { status: "skipped", entityId: documentId ?? websiteIngestionJobId ?? "" };
       }
       if (indexedChunks === 0 && documentId) {
-        await markKnowledgeDocumentFailed(dependencies.domain, { businessId: businessIdOrThrow(job), documentId, ...(source ? { expectedRevision: source.revision } : {}), error: "Website crawl returned no readable content." });
+        await markKnowledgeDocumentFailed(dependencies.domain, { businessId: businessIdOrThrow(job), documentId, ...(source ? { expectedRevision: source.revision } : {}), error: failedPages ? "We couldn't index any page of this website." : "Website crawl returned no readable content." });
       }
       if (indexedChunks > 0) {
         await withBusinessTransaction(dependencies.domain.db, { businessId: businessIdOrThrow(job), actorType: "worker" }, async tx => {
@@ -293,7 +301,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
             if (!changed.length) return;
           }
           if (websiteIngestionJobId) {
-            await tx.update(websiteIngestionJobs).set({ status: "completed", importedCount: pages.length, indexedCount: indexedPages, errorCount: 0, lastError: null, updatedAt: new Date() }).where(and(eq(websiteIngestionJobs.id, websiteIngestionJobId), eq(websiteIngestionJobs.businessId, businessIdOrThrow(job)), ne(websiteIngestionJobs.status, "cancelled")));
+            await tx.update(websiteIngestionJobs).set({ status: "completed", importedCount: pages.length, indexedCount: indexedPages, errorCount: failedPages, lastError: failedPages ? `We couldn't index ${failedPages} of ${pages.length} pages.` : null, updatedAt: new Date() }).where(and(eq(websiteIngestionJobs.id, websiteIngestionJobId), eq(websiteIngestionJobs.businessId, businessIdOrThrow(job)), ne(websiteIngestionJobs.status, "cancelled")));
             await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: businessIdOrThrow(job), aggregateType: "website_ingestion_job", aggregateId: websiteIngestionJobId, dedupeKey: `website-ingestion:${websiteIngestionJobId}:snapshot:${source?.revision ?? 0}`, payload: { businessId: businessIdOrThrow(job), reason: "website_ingestion_completed" } });
             await enqueueKnowledgeDerivedRefresh(tx, { businessId: businessIdOrThrow(job), reason: "website_ingestion_completed" });
           }
@@ -630,11 +638,8 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       const callId = String(job.payload.callId ?? "");
       const objectId = typeof job.payload.objectId === "string" ? job.payload.objectId : undefined;
       const input = { businessId: businessIdOrThrow(job), callId, ...(objectId ? { objectId } : {}) };
-      // Legacy jobs predate the source discriminator and are treated as
-      // automatic retention work so the kill switch remains fail-safe.
-      const deleted = job.payload.source === "manual"
-        ? await deleteCallRecording(dependencies.domain, input, dependencies.storage)
-        : await deleteCallRecordingForRetention(dependencies.domain, input, dependencies.storage);
+      // Only the retention sweep queues this job, so the retention switch always applies.
+      const deleted = await deleteCallRecordingForRetention(dependencies.domain, input, dependencies.storage);
       return { status: deleted ? "completed" : "skipped", entityId: callId };
     }
     case "privacy.cleanupPendingUpload": {
@@ -919,14 +924,14 @@ async function indexWebsitePage(
   businessId: string,
   page: { url: string; title?: string; markdown?: string },
   importGuard?: { documentId: string; revision: number },
-  deferFailure = false,
 ): Promise<number> {
   const text = page.markdown?.trim() ?? "";
   if (!text || !page.url) return 0;
   if (importGuard) {
     const active = await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => (await tx.select({ id: knowledgeDocuments.id }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, importGuard.documentId), eq(knowledgeDocuments.businessId, businessId), eq(knowledgeDocuments.revision, importGuard.revision), eq(knowledgeDocuments.status, "processing"))).limit(1)).length > 0);
     if (!active) return 0;
-    const result = await indexKnowledgeText(dependencies, { businessId, documentId: importGuard.documentId, text, websitePage: { sourceUrl: page.url, title: page.title ?? page.url, sourceRevision: importGuard.revision }, deferFailure });
+    // One page failing must not fail the whole import; the crawl loop counts it.
+    const result = await indexKnowledgeText(dependencies, { businessId, documentId: importGuard.documentId, text, websitePage: { sourceUrl: page.url, title: page.title ?? page.url, sourceRevision: importGuard.revision }, deferFailure: true });
     return result.chunkCount;
   }
   const documentId = await upsertWebsiteDocument(dependencies.domain, { businessId, sourceUrl: page.url, title: page.title ?? page.url });
@@ -948,6 +953,12 @@ async function indexKnowledgeText(
       error: "Knowledge embedding provider is not configured.",
     });
     throw new Error("Knowledge embedding provider is not configured.");
+  }
+  // A crawled page is small, so only a whole document is worth checking before paying to embed it.
+  const limitError = input.websitePage ? undefined : await checkKnowledgeStorageLimit(dependencies.domain, { businessId: input.businessId, documentId: input.documentId, text: input.text });
+  if (limitError) {
+    await markKnowledgeDocumentFailed(dependencies.domain, { businessId: input.businessId, documentId: input.documentId, error: limitError });
+    return { chunkCount: 0 };
   }
 
   let embeddings: number[][];

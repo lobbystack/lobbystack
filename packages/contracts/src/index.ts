@@ -52,8 +52,8 @@ export type UploadPurpose = keyof typeof uploadContentTypes;
 
 export function isAllowedUploadContentType(purpose: string, contentType: string): boolean {
   const allowed = uploadContentTypes[purpose as UploadPurpose];
-  const normalized = contentType.split(";", 1)[0]?.trim().toLowerCase() ?? "";
-  return Boolean(allowed?.has(normalized as never));
+  // The whole value, parameters included: browsers read `text/plain;x,text/html` as HTML. File.type never has parameters.
+  return Boolean(allowed?.has(contentType.toLowerCase() as never));
 }
 
 export const uploadCreateRequestSchema = z.object({

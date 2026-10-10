@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { JobEnvelope } from "@lobbystack/contracts";
-import { markKnowledgeDocumentFailed } from "@lobbystack/domain";
+import { checkKnowledgeStorageLimit, markKnowledgeDocumentFailed } from "@lobbystack/domain";
 
 const mocks = vi.hoisted(() => {
   const query = { from: () => query, innerJoin: () => query, where: () => query, limit: async () => [{ objectKey: "business/knowledge/scan.pdf", contentType: "application/pdf" }] };
@@ -14,7 +14,7 @@ vi.mock("@lobbystack/db", async (importOriginal) => ({
   ...await importOriginal<typeof import("@lobbystack/db")>(),
   withBusinessTransaction: async (_db: unknown, _scope: unknown, callback: (tx: unknown) => unknown) => await callback({ select: mocks.select }),
 }));
-vi.mock("@lobbystack/domain", async (importOriginal) => ({ ...await importOriginal<typeof import("@lobbystack/domain")>(), markKnowledgeDocumentFailed: vi.fn(async () => true) }));
+vi.mock("@lobbystack/domain", async (importOriginal) => ({ ...await importOriginal<typeof import("@lobbystack/domain")>(), markKnowledgeDocumentFailed: vi.fn(async () => true), checkKnowledgeStorageLimit: vi.fn() }));
 vi.mock("./documentExtraction", () => ({ extractDocumentTextInThread: mocks.extract }));
 
 import { handleJob } from "./handlers";
@@ -37,5 +37,18 @@ describe("knowledge.extractDocument", () => {
 
     await expect(handleJob(job(businessId, documentId), dependencies, { isFinalAttempt: true })).rejects.toThrow("Invalid PDF structure.");
     expect(markKnowledgeDocumentFailed).toHaveBeenCalledWith(dependencies.domain, { businessId, documentId, error: "We couldn't read the text in this document." });
+  });
+
+  it("fails a document over the plan's text limit before paying to embed it", async () => {
+    const businessId = randomUUID();
+    const documentId = randomUUID();
+    const embeddings = { embed: vi.fn(), fingerprint: "fingerprint" };
+    const dependencies = { domain: { db: {} as never }, storage: { getObject: vi.fn(async () => new Uint8Array([1])) } as never, embeddings };
+    mocks.extract.mockResolvedValue("Staff list");
+    vi.mocked(checkKnowledgeStorageLimit).mockResolvedValue("Knowledge storage limit reached. 5 MB of text is included on this plan.");
+
+    await expect(handleJob(job(businessId, documentId), dependencies, { isFinalAttempt: false })).resolves.toEqual({ status: "completed", entityId: `${documentId}:0` });
+    expect(embeddings.embed).not.toHaveBeenCalled();
+    expect(markKnowledgeDocumentFailed).toHaveBeenCalledWith(dependencies.domain, { businessId, documentId, error: "Knowledge storage limit reached. 5 MB of text is included on this plan." });
   });
 });

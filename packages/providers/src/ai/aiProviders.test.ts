@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   embedMany: vi.fn(),
+  wrapEmbeddingModel: vi.fn(({ model }: { model: unknown }) => model),
   createOpenAICompatible: vi.fn(),
 }));
 
@@ -79,14 +80,13 @@ describe("provider-agnostic AI providers", () => {
     expect(first.fingerprint).not.toBe(second.fingerprint);
   });
 
-  it("limits embedding concurrency and composes caller cancellation with a timeout", async () => {
+  it("limits embedding concurrency and passes caller cancellation to every request", async () => {
     mocks.embedMany.mockResolvedValue({ embeddings: [new Array(1536).fill(0.5)], usage: { tokens: 1 } });
     const controller = new AbortController();
     const provider = new OpenAiCompatibleEmbeddingProvider({ apiKey: "test", timeoutMs: 1234, maxParallelCalls: 3 });
     await provider.embed(["Greeting"], undefined, { abortSignal: controller.signal });
     const options = mocks.embedMany.mock.calls.at(-1)?.[0] as Record<string, unknown>;
     expect(options.maxParallelCalls).toBe(3);
-    expect(options.abortSignal).toBeInstanceOf(AbortSignal);
-    expect(options.abortSignal).not.toBe(controller.signal);
+    expect(options.abortSignal).toBe(controller.signal);
   });
 });
