@@ -4,39 +4,24 @@ import { afterEach, describe, expect, it } from "vitest";
 import { vi } from "vitest";
 
 import type { JobEnvelope } from "@lobbystack/contracts";
-import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, countPublishableOutboxMessages, deleteCallRecording, deleteCallRecordingForRetention, deleteSentProductEventsBefore, expireProspectDemos, generateAffiliatePayoutRun, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markNotificationSent, loadLiveCallForPricing, recordCallProviderPricing, recordProductEvent, recordSmsProviderPricing, reconcileBillingProviderEvent, resolveNotificationDelivery, runPrivacyRetentionSweep, transitionProcessingNotification } from "@lobbystack/domain";
-import { claimOperatorNotificationDelivery, loadOperatorNotificationDelivery, markOperatorNotificationSent, notificationLeaseEndsAt, operatorNotificationLeaseEndsAt, queueDailyOperatorSummaries } from "@lobbystack/domain";
-import { cancelRetiredPhoneVerificationSend, queueOnboardingFollowupEmail } from "@lobbystack/domain";
-import { correctAlertSmsUsage, enqueueBillingUsageSync, issueOperatorPhoneVerificationCode, markOperatorPhoneVerificationCodeSent, releaseOperatorPhoneVerificationCodeSend, reserveAlertSmsUsage } from "@lobbystack/domain";
+import { claimBillingCheckoutRequest, countPublishableOutboxMessages, deleteCallRecording, deleteCallRecordingForRetention, deleteSentProductEventsBefore, deliverOutbound, expireProspectDemos, generateAffiliatePayoutRun, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, loadLiveCallForPricing, recordCallProviderPricing, recordProductEvent, recordSmsProviderPricing, reconcileBillingProviderEvent, runPrivacyRetentionSweep } from "@lobbystack/domain";
+import { queueDailyOperatorSummaries, queueOnboardingFollowupEmail } from "@lobbystack/domain";
 import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning, numberProvisioningLeaseEndsAt } from "@lobbystack/domain";
 
 vi.mock("@lobbystack/domain", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@lobbystack/domain")>();
   return {
     ...actual,
-    claimAppointmentChangeOtp: vi.fn(),
     claimBillingCheckoutRequest: vi.fn(),
+    deliverOutbound: vi.fn(),
     expireProspectDemos: vi.fn(),
     generateAffiliatePayoutRun: vi.fn(),
-    loadAppointmentChangeOtpTarget: vi.fn(),
     loadBillingCheckoutRequest: vi.fn(),
     loadBillingUsageEvent: vi.fn(),
     loadPendingProductEvents: vi.fn(),
     markBillingUsageSynced: vi.fn(),
     markBillingCheckoutCreated: vi.fn(),
     markBillingCheckoutFailed: vi.fn(),
-    markAppointmentChangeOtpSent: vi.fn(),
-    claimNotificationDelivery: vi.fn(),
-    claimOperatorNotificationDelivery: vi.fn(),
-    notificationLeaseEndsAt: vi.fn(),
-    operatorNotificationLeaseEndsAt: vi.fn(),
-    cancelRetiredPhoneVerificationSend: vi.fn(),
-    issueOperatorPhoneVerificationCode: vi.fn(),
-    markOperatorPhoneVerificationCodeSent: vi.fn(),
-    releaseOperatorPhoneVerificationCodeSend: vi.fn(),
-    reserveAlertSmsUsage: vi.fn(),
-    correctAlertSmsUsage: vi.fn(),
-    enqueueBillingUsageSync: vi.fn(),
     queueOnboardingFollowupEmail: vi.fn(),
     claimNumberProvisioning: vi.fn(),
     numberProvisioningLeaseEndsAt: vi.fn(),
@@ -44,20 +29,14 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
     deleteCallRecording: vi.fn(),
     deleteCallRecordingForRetention: vi.fn(),
     deleteSentProductEventsBefore: vi.fn(),
-    loadOperatorNotificationDelivery: vi.fn(),
-    markOperatorNotificationSent: vi.fn(),
     queueDailyOperatorSummaries: vi.fn(),
     completeNumberProvisioning: vi.fn(),
     failNumberProvisioning: vi.fn(),
-    releaseOperatorNotificationDelivery: vi.fn(),
-    markNotificationSent: vi.fn(),
     recordCallProviderPricing: vi.fn(),
     loadLiveCallForPricing: vi.fn(),
     recordProductEvent: vi.fn(),
     recordSmsProviderPricing: vi.fn(),
     reconcileBillingProviderEvent: vi.fn(),
-    transitionProcessingNotification: vi.fn(),
-    resolveNotificationDelivery: vi.fn(),
     runPrivacyRetentionSweep: vi.fn(),
   };
 });
@@ -135,111 +114,6 @@ describe("worker handlers", () => {
     await handleJob({ jobId: randomUUID(), businessId: randomUUID(), type: "email.send", queue: "default", payload, trace: {}, idempotencyKey: "onboarding-followup:x:email", scheduled: false }, { domain: { db: undefined as never }, email: { sendTemplate } });
     expect(sendTemplate).toHaveBeenCalledWith(expect.objectContaining({ template: "onboarding_followup", to: "owner@example.test", from: "Raphael <raphael@lobbystack.com>" }));
   });
-  it("drains a retired phone verification send without contacting the provider", async () => {
-    const businessId = randomUUID(); const attemptId = randomUUID(); const domain = { db: undefined as never };
-    const verifyPhone = vi.fn();
-    const result = await handleJob({ jobId: randomUUID(), type: "phoneVerification.send", queue: "critical", businessId, payload: { attemptId }, trace: {}, idempotencyKey: `phone:${attemptId}`, scheduled: false }, { domain, twilio: { sendSms: vi.fn(), verifyPhone } });
-    expect(result).toEqual({ status: "skipped", entityId: attemptId });
-    expect(cancelRetiredPhoneVerificationSend).toHaveBeenCalledWith(domain, { businessId, attemptId });
-    expect(verifyPhone).not.toHaveBeenCalled();
-  });
-
-  describe("operator phone verification codes", () => {
-    const codeJob = (businessId: string, attemptId: string, locale?: string): JobEnvelope => ({ jobId: randomUUID(), type: "phoneVerification.sendCode", queue: "critical", businessId, payload: { attemptId, ...(locale ? { locale } : {}) }, trace: {}, idempotencyKey: `phone-code:${attemptId}`, scheduled: false });
-
-    it("texts the code from the restricted alert sender and marks it sent", async () => {
-      const businessId = randomUUID(); const attemptId = randomUUID(); const domain = { db: undefined as never };
-      vi.mocked(issueOperatorPhoneVerificationCode).mockResolvedValue({ to: "+14165550123", from: "+14165550100", code: "482913" });
-      const alertSms = vi.fn().mockResolvedValue({ providerMessageId: "SMalert" }); const mainSms = vi.fn();
-      const result = await handleJob(codeJob(businessId, attemptId), { domain, twilio: { sendSms: mainSms }, twilioAlerts: { from: "+14165550100", sendSms: alertSms } });
-      expect(result).toEqual({ status: "completed", entityId: attemptId });
-      expect(issueOperatorPhoneVerificationCode).toHaveBeenCalledWith(domain, { businessId, attemptId });
-      expect(alertSms).toHaveBeenCalledWith({ to: "+14165550123", from: "+14165550100", body: "LobbyStack verification code: 482913. It expires in 10 minutes." });
-      expect(mainSms).not.toHaveBeenCalled();
-      expect(markOperatorPhoneVerificationCodeSent).toHaveBeenCalledWith(domain, { businessId, attemptId });
-    });
-
-    it("texts the code in the operator's language", async () => {
-      const businessId = randomUUID(); const attemptId = randomUUID(); const sendSms = vi.fn().mockResolvedValue({ providerMessageId: "SM1" });
-      vi.mocked(issueOperatorPhoneVerificationCode).mockResolvedValue({ to: "+14165550123", from: "+14165550100", code: "482913" });
-      await handleJob(codeJob(businessId, attemptId, "fr"), { domain: { db: undefined as never }, twilio: { sendSms } });
-      expect(sendSms).toHaveBeenCalledWith(expect.objectContaining({ body: "Code de vérification LobbyStack : 482913. Il expire dans 10 minutes." }));
-    });
-
-    it("meters the code against the alert SMS quota", async () => {
-      const businessId = randomUUID(); const attemptId = randomUUID(); const domain = { db: {} as never };
-      vi.mocked(issueOperatorPhoneVerificationCode).mockResolvedValue({ to: "+14165550123", from: "+14165550100", code: "482913" });
-      vi.mocked(reserveAlertSmsUsage).mockResolvedValue({ allowed: true, usageEventId: "usage-1" } as never);
-      const sendSms = vi.fn().mockResolvedValue({ providerMessageId: "SM1" });
-      await expect(handleJob(codeJob(businessId, attemptId), { domain, twilio: { sendSms } })).resolves.toEqual({ status: "completed", entityId: attemptId });
-      expect(reserveAlertSmsUsage).toHaveBeenCalledWith(domain, { businessId, sourceKey: `alert_sms:phone_verification:${attemptId}`, estimatedSegments: 1 });
-      expect(enqueueBillingUsageSync).toHaveBeenCalledWith(domain, { businessId, usageEventId: "usage-1" });
-    });
-
-    it("fails the attempt without texting when the alert SMS quota is used up", async () => {
-      const businessId = randomUUID(); const attemptId = randomUUID(); const domain = { db: {} as never };
-      vi.mocked(issueOperatorPhoneVerificationCode).mockResolvedValue({ to: "+14165550123", from: "+14165550100", code: "482913" });
-      vi.mocked(reserveAlertSmsUsage).mockResolvedValue({ allowed: false, errorCode: "alert_sms_quota_reached" } as never);
-      const sendSms = vi.fn();
-      await expect(handleJob(codeJob(businessId, attemptId), { domain, twilio: { sendSms } })).resolves.toEqual({ status: "skipped", entityId: attemptId });
-      expect(sendSms).not.toHaveBeenCalled();
-      expect(releaseOperatorPhoneVerificationCodeSend).toHaveBeenCalledWith(domain, { businessId, attemptId, retry: false, error: "alert_sms_quota_reached" });
-    });
-
-    it("gives back the reserved usage when the send fails", async () => {
-      const businessId = randomUUID(); const attemptId = randomUUID(); const domain = { db: {} as never };
-      vi.mocked(issueOperatorPhoneVerificationCode).mockResolvedValue({ to: "+14165550123", from: "+14165550100", code: "482913" });
-      vi.mocked(reserveAlertSmsUsage).mockResolvedValue({ allowed: true, usageEventId: "usage-1" } as never);
-      vi.mocked(correctAlertSmsUsage).mockResolvedValue("usage-1");
-      const sendSms = vi.fn().mockRejectedValue(new Error("timeout"));
-      await expect(handleJob(codeJob(businessId, attemptId), { domain, twilio: { sendSms } }, { isFinalAttempt: false })).rejects.toThrow("timeout");
-      expect(correctAlertSmsUsage).toHaveBeenCalledWith(domain, { businessId, sourceKey: `alert_sms:phone_verification:${attemptId}`, segments: 0 });
-    });
-
-    it("uses the business's own number when it is the alert sender", async () => {
-      const businessId = randomUUID(); const attemptId = randomUUID(); const domain = { db: undefined as never };
-      vi.mocked(issueOperatorPhoneVerificationCode).mockResolvedValue({ to: "+14165550123", from: "+14165550199", code: "482913" });
-      const alertSms = vi.fn(); const mainSms = vi.fn().mockResolvedValue({ providerMessageId: "SMmain" });
-      await handleJob(codeJob(businessId, attemptId), { domain, twilio: { sendSms: mainSms }, twilioAlerts: { from: "+14165550100", sendSms: alertSms } });
-      expect(mainSms).toHaveBeenCalledWith(expect.objectContaining({ from: "+14165550199" }));
-      expect(alertSms).not.toHaveBeenCalled();
-    });
-
-    it("skips an attempt that was replaced before the send", async () => {
-      const attemptId = randomUUID(); const sendSms = vi.fn();
-      vi.mocked(issueOperatorPhoneVerificationCode).mockResolvedValue(null);
-      await expect(handleJob(codeJob(randomUUID(), attemptId), { domain: { db: undefined as never }, twilio: { sendSms } })).resolves.toEqual({ status: "skipped", entityId: attemptId });
-      expect(sendSms).not.toHaveBeenCalled();
-    });
-
-    it("marks a code sent when a retry finds the text already went out", async () => {
-      const businessId = randomUUID(); const attemptId = randomUUID(); const domain = { db: undefined as never }; const sendSms = vi.fn();
-      vi.mocked(issueOperatorPhoneVerificationCode).mockResolvedValue(null);
-      await expect(handleJob(codeJob(businessId, attemptId), { domain, twilio: { sendSms } })).resolves.toEqual({ status: "skipped", entityId: attemptId });
-      expect(sendSms).not.toHaveBeenCalled();
-      expect(markOperatorPhoneVerificationCodeSent).toHaveBeenCalledWith(domain, { businessId, attemptId });
-    });
-
-    it("fails the attempt without a retry when Twilio rejects the number", async () => {
-      const businessId = randomUUID(); const attemptId = randomUUID(); const domain = { db: undefined as never };
-      vi.mocked(issueOperatorPhoneVerificationCode).mockResolvedValue({ to: "+14165550123", from: "+14165550100", code: "482913" });
-      const sendSms = vi.fn().mockRejectedValue(Object.assign(new Error("unreachable"), { code: 21614 }));
-      await expect(handleJob(codeJob(businessId, attemptId), { domain, twilio: { sendSms } }, { isFinalAttempt: false })).resolves.toEqual({ status: "skipped", entityId: attemptId });
-      expect(releaseOperatorPhoneVerificationCodeSend).toHaveBeenCalledWith(domain, { businessId, attemptId, retry: false, error: "Twilio error 21614." });
-      expect(markOperatorPhoneVerificationCodeSent).not.toHaveBeenCalled();
-    });
-
-    it("requeues a transient failure until the final attempt", async () => {
-      const businessId = randomUUID(); const attemptId = randomUUID(); const domain = { db: undefined as never };
-      vi.mocked(issueOperatorPhoneVerificationCode).mockResolvedValue({ to: "+14165550123", from: "+14165550100", code: "482913" });
-      const sendSms = vi.fn().mockRejectedValue(new Error("timeout"));
-      await expect(handleJob(codeJob(businessId, attemptId), { domain, twilio: { sendSms } }, { isFinalAttempt: false })).rejects.toThrow("timeout");
-      expect(releaseOperatorPhoneVerificationCodeSend).toHaveBeenLastCalledWith(domain, { businessId, attemptId, retry: true, error: "Verification delivery failed." });
-      await expect(handleJob(codeJob(businessId, attemptId), { domain, twilio: { sendSms } }, { isFinalAttempt: true })).rejects.toThrow("timeout");
-      expect(releaseOperatorPhoneVerificationCodeSend).toHaveBeenLastCalledWith(domain, { businessId, attemptId, retry: false, error: "Verification delivery failed." });
-    });
-  });
-
   it("reconciles an owned Twilio number and puts it on the SIP trunk", async () => {
     const businessId = randomUUID(); const claimId = randomUUID(); const phoneNumberId = randomUUID(); const domain = { db: undefined as never };
     vi.stubEnv("APP_BASE_URL", "https://app.example.test");
@@ -562,29 +436,22 @@ describe("worker handlers", () => {
     expect(expireProspectDemos).toHaveBeenCalledWith(domain);
   });
 
-  it("sends an appointment change OTP through the Twilio dependency", async () => {
-    const businessId = randomUUID();
-    const verificationId = randomUUID();
-    const domain = { db: undefined as never };
-    vi.mocked(claimAppointmentChangeOtp).mockResolvedValue(true);
-    vi.mocked(loadAppointmentChangeOtpTarget).mockResolvedValue({ to: "+15555550123", from: "+15555550124", code: "123456" });
-    vi.mocked(markAppointmentChangeOtpSent).mockResolvedValue(true);
-    const sendSms = vi.fn().mockResolvedValue({ providerMessageId: "SMOTP" });
-
-    const result = await handleJob({
-      jobId: randomUUID(),
-      type: "appointment.sendChangeOtp",
-      queue: "critical",
-      businessId,
-      payload: { verificationId, code: "123456", to: "+15555550123", from: "+15555550124" },
-      trace: {},
-      idempotencyKey: `test:${randomUUID()}`,
-      scheduled: false,
-    }, { domain, twilio: { sendSms } });
-
-    expect(result).toEqual({ status: "completed", entityId: verificationId });
-    expect(sendSms).toHaveBeenCalledWith({ to: "+15555550123", from: "+15555550124", body: "LobbyStack verification code: 123456. It expires in 10 minutes." });
-    expect(markAppointmentChangeOtpSent).toHaveBeenCalledWith(domain, { businessId, verificationId });
+  it("hands each delivery job to the outbound delivery module", async () => {
+    const businessId = randomUUID(); const domain = { db: undefined as never }; const dependencies = { domain, twilio: { sendSms: vi.fn() } };
+    const job = (type: JobEnvelope["type"], payload: Record<string, unknown>): JobEnvelope => ({ jobId: randomUUID(), type, queue: "critical", businessId, payload, trace: {}, idempotencyKey: `test:${randomUUID()}`, scheduled: false });
+    const retryAt = new Date(Date.now() + 60_000);
+    vi.mocked(deliverOutbound).mockResolvedValue({ status: "deferred", entityId: "row", retryAt });
+    const cases: Array<[JobEnvelope, Parameters<typeof deliverOutbound>[2]]> = [
+      [job("sms.send", { messageId: "message-1" }), { kind: "message", businessId, messageId: "message-1" }],
+      [job("appointment.sendChangeOtp", { verificationId: "verification-1", code: "123456", to: "+15555550123", from: "+15555550124" }), { kind: "changeCode", businessId, verificationId: "verification-1", code: "123456", to: "+15555550123", from: "+15555550124" }],
+      [job("phoneVerification.sendCode", { attemptId: "attempt-1", locale: "fr" }), { kind: "verificationCode", businessId, attemptId: "attempt-1", locale: "fr" }],
+      [job("notification.dispatch", { notificationId: "notification-1" }), { kind: "notification", businessId, notificationId: "notification-1" }],
+      [job("notification.dispatch", { operatorDeliveryId: "delivery-1" }), { kind: "operatorNotification", businessId, deliveryId: "delivery-1" }],
+    ];
+    for (const [envelope, delivery] of cases) {
+      await expect(handleJob(envelope, dependencies, { isFinalAttempt: false })).resolves.toEqual({ status: "deferred", entityId: "row", retryAt });
+      expect(deliverOutbound).toHaveBeenLastCalledWith(domain, dependencies, delivery, { isFinalAttempt: false });
+    }
   });
 
   it("syncs the existing usage event with a stable Polar idempotency key", async () => {
@@ -687,109 +554,6 @@ describe("worker handlers", () => {
     expect(recordCallProviderPricing).toHaveBeenCalledWith({ db: undefined as never }, expect.objectContaining({ providerCallId: "CA777", callId: "call_1", providerCostUsd: 0.02 }));
   });
 
-  it("delivers a resolved SMS notification and records the provider id", async () => {
-    const businessId = randomUUID();
-    const notificationId = randomUUID();
-    vi.mocked(resolveNotificationDelivery).mockResolvedValue({
-      kind: "ready",
-      delivery: {
-        notificationId,
-        businessId,
-        channel: "sms",
-        kind: "appointment_confirmation",
-        relatedId: "appointment_1",
-        to: "+15555550123",
-        from: "+15555550124",
-        subject: "Appointment confirmed",
-        body: "Your appointment is confirmed.",
-      },
-    });
-    vi.mocked(markNotificationSent).mockResolvedValue(true);
-    vi.mocked(claimNotificationDelivery).mockResolvedValue(true);
-    const sendSms = vi.fn().mockResolvedValue({ providerMessageId: "SM123" });
-    const domain = { db: undefined as never };
-
-    const result = await handleJob({ ...notificationJob({ notificationId }), businessId }, {
-      domain,
-      twilio: { sendSms },
-    });
-
-    expect(result).toEqual({ status: "completed", entityId: notificationId });
-    expect(sendSms).toHaveBeenCalledWith({ to: "+15555550123", from: "+15555550124", body: "Your appointment is confirmed." });
-    expect(markNotificationSent).toHaveBeenCalledWith(domain, { businessId, notificationId, providerMessageId: "SM123" });
-  });
-
-  it("sends a customer's appointment text from the shared sender through the alert account that owns it", async () => {
-    const businessId = randomUUID();
-    const notificationId = randomUUID();
-    const delivery = { notificationId, businessId, channel: "sms" as const, kind: "appointment_reminder", relatedId: "appointment_1", to: "+15555550123", from: "+18446562290", subject: "Appointment reminder", body: "Reminder." };
-    vi.mocked(resolveNotificationDelivery).mockResolvedValue({ kind: "ready", delivery });
-    vi.mocked(claimNotificationDelivery).mockResolvedValue(true);
-    vi.mocked(markNotificationSent).mockResolvedValue(true);
-    const mainSend = vi.fn().mockResolvedValue({ providerMessageId: "SMmain" });
-    const defaultSend = vi.fn().mockResolvedValue({ providerMessageId: "SMdefault" });
-    const domain = { db: undefined as never };
-    const job = { ...notificationJob({ notificationId }), businessId };
-
-    await expect(handleJob(job, { domain, twilio: { sendSms: defaultSend }, twilioAlerts: { from: "+18446562290", sendSms: mainSend } })).resolves.toEqual({ status: "completed", entityId: notificationId });
-    expect(mainSend).toHaveBeenCalledWith(expect.objectContaining({ to: "+15555550123", from: "+18446562290", body: "Reminder." }));
-    expect(defaultSend).not.toHaveBeenCalled();
-    expect(markNotificationSent).toHaveBeenCalledWith(domain, { businessId, notificationId, providerMessageId: "SMmain" });
-    // Without a default account, the shared sender still goes out.
-    await expect(handleJob(job, { domain, twilioAlerts: { from: "+18446562290", sendSms: mainSend } })).resolves.toEqual({ status: "completed", entityId: notificationId });
-    expect(mainSend).toHaveBeenCalledTimes(2);
-    // A self-hosted business's own number uses the default account.
-    vi.mocked(resolveNotificationDelivery).mockResolvedValue({ kind: "ready", delivery: { ...delivery, from: "+14165550124" } });
-    await handleJob(job, { domain, twilio: { sendSms: defaultSend }, twilioAlerts: { from: "+18446562290", sendSms: mainSend } });
-    expect(defaultSend).toHaveBeenCalledWith(expect.objectContaining({ from: "+14165550124" }));
-    expect(mainSend).toHaveBeenCalledTimes(2);
-  });
-
-  it("sends an appointment change code from the shared sender through the alert account", async () => {
-    const businessId = randomUUID();
-    const verificationId = randomUUID();
-    const domain = { db: undefined as never };
-    vi.mocked(claimAppointmentChangeOtp).mockResolvedValue(true);
-    vi.mocked(loadAppointmentChangeOtpTarget).mockResolvedValue({ to: "+15555550123", from: "+18446562290", code: "123456" });
-    vi.mocked(markAppointmentChangeOtpSent).mockResolvedValue(true);
-    const mainSend = vi.fn().mockResolvedValue({ providerMessageId: "SMmain" });
-    const defaultSend = vi.fn();
-    const job: JobEnvelope = { jobId: randomUUID(), type: "appointment.sendChangeOtp", queue: "critical", businessId, payload: { verificationId, code: "123456", to: "+15555550123", from: "+18446562290" }, trace: {}, idempotencyKey: `test:${randomUUID()}`, scheduled: false };
-
-    await expect(handleJob(job, { domain, twilio: { sendSms: defaultSend }, twilioAlerts: { from: "+18446562290", sendSms: mainSend } })).resolves.toEqual({ status: "completed", entityId: verificationId });
-    expect(mainSend).toHaveBeenCalledWith({ to: "+15555550123", from: "+18446562290", body: "LobbyStack verification code: 123456. It expires in 10 minutes." });
-    expect(defaultSend).not.toHaveBeenCalled();
-  });
-
-  it("delivers a durable operator email and records completion", async () => {
-    const businessId = randomUUID();
-    const deliveryId = randomUUID();
-    const domain = { db: undefined as never };
-    vi.mocked(claimOperatorNotificationDelivery).mockResolvedValue(true);
-    vi.mocked(loadOperatorNotificationDelivery).mockResolvedValue({ id: deliveryId, businessId, userId: randomUUID(), eventKind: "voiceMessage", eventKey: "voice:1", channel: "email", status: "processing", destination: "operator@example.test", sender: null, subject: "New message", body: "A caller left a message.", providerMessageId: null, scheduledFor: new Date(), sentAt: null, contentExpiresAt: new Date(), lastError: null, createdAt: new Date(), updatedAt: new Date() });
-    const sendTemplate = vi.fn().mockResolvedValue({ messageId: "email-123" });
-
-    const result = await handleJob({ ...notificationJob({ operatorDeliveryId: deliveryId }), businessId }, { domain, email: { sendTemplate } });
-
-    expect(result).toEqual({ status: "completed", entityId: deliveryId });
-    expect(sendTemplate).toHaveBeenCalledWith(expect.objectContaining({ to: "operator@example.test", idempotencyKey: `operator-notification:${deliveryId}` }));
-    expect(markOperatorNotificationSent).toHaveBeenCalledWith(domain, { businessId, deliveryId, providerMessageId: "email-123" });
-  });
-
-  it("uses separate main-account credentials only for the configured operator alert sender", async () => {
-    const businessId = randomUUID(); const deliveryId = randomUUID(); const domain = { db: undefined as never };
-    vi.mocked(claimOperatorNotificationDelivery).mockResolvedValue(true);
-    vi.mocked(loadOperatorNotificationDelivery).mockResolvedValue({ id: deliveryId, businessId, userId: randomUUID(), eventKind: "voiceMessage", eventKey: "voice:1", channel: "sms", status: "processing", destination: "+14165550100", sender: "+14165550101", subject: "New message", body: "A caller left a message.", providerMessageId: null, scheduledFor: new Date(), sentAt: null, contentExpiresAt: new Date(), lastError: null, createdAt: new Date(), updatedAt: new Date() });
-    const mainSend = vi.fn().mockResolvedValue({ providerMessageId: "SMmain" });
-    const stagingSend = vi.fn().mockResolvedValue({ providerMessageId: "SMstaging" });
-    const job = { ...notificationJob({ operatorDeliveryId: deliveryId }), businessId };
-    await handleJob(job, { domain, twilio: { sendSms: stagingSend }, twilioAlerts: { from: "+14165550101", sendSms: mainSend } });
-    expect(mainSend).toHaveBeenCalledOnce();
-    expect(stagingSend).not.toHaveBeenCalled();
-    await handleJob(job, { domain, twilio: { sendSms: stagingSend }, twilioAlerts: { from: "+14165550999", sendSms: mainSend } });
-    expect(stagingSend).toHaveBeenCalledOnce();
-  });
-
   it("runs the tenant-scoped daily operator summary job", async () => {
     const businessId = randomUUID();
     const domain = { db: undefined as never };
@@ -801,89 +565,9 @@ describe("worker handlers", () => {
     expect(queueDailyOperatorSummaries).toHaveBeenCalledWith(domain, { businessId });
   });
 
-  it("does not call a provider when another worker owns the notification lease", async () => {
-    const businessId = randomUUID();
-    const notificationId = randomUUID();
-    vi.mocked(claimNotificationDelivery).mockResolvedValue(false);
-    const sendSms = vi.fn();
-
-    const result = await handleJob({ ...notificationJob({ notificationId }), businessId }, {
-      domain: { db: undefined as never },
-      twilio: { sendSms },
-    });
-
-    expect(result).toEqual({ status: "skipped", entityId: notificationId });
-    expect(sendSms).not.toHaveBeenCalled();
-    expect(resolveNotificationDelivery).not.toHaveBeenCalled();
-  });
-
-  it("runs a notification again when the lease of a crashed send ends", async () => {
-    const businessId = randomUUID();
-    const notificationId = randomUUID();
-    const deliveryId = randomUUID();
-    const retryAt = new Date(Date.now() + 240_000);
-    const domain = { db: undefined as never };
-    vi.mocked(claimNotificationDelivery).mockResolvedValue(false);
-    vi.mocked(notificationLeaseEndsAt).mockResolvedValue(retryAt);
-    vi.mocked(claimOperatorNotificationDelivery).mockResolvedValue(false);
-    vi.mocked(operatorNotificationLeaseEndsAt).mockResolvedValue(retryAt);
-    const sendSms = vi.fn();
-
-    await expect(handleJob({ ...notificationJob({ notificationId }), businessId }, { domain, twilio: { sendSms } })).resolves.toEqual({ status: "deferred", entityId: notificationId, retryAt });
-    await expect(handleJob({ ...notificationJob({ operatorDeliveryId: deliveryId }), businessId }, { domain, twilio: { sendSms } })).resolves.toEqual({ status: "deferred", entityId: deliveryId, retryAt });
-    expect(notificationLeaseEndsAt).toHaveBeenCalledWith(domain, { businessId, notificationId });
-    expect(operatorNotificationLeaseEndsAt).toHaveBeenCalledWith(domain, { businessId, deliveryId });
-    expect(sendSms).not.toHaveBeenCalled();
-  });
-
-  it("releases the notification lease when provider delivery fails", async () => {
-    const businessId = randomUUID();
-    const notificationId = randomUUID();
-    vi.mocked(claimNotificationDelivery).mockResolvedValue(true);
-    vi.mocked(resolveNotificationDelivery).mockResolvedValue({
-      kind: "ready",
-      delivery: {
-        notificationId,
-        businessId,
-        channel: "sms",
-        kind: "appointment_confirmation",
-        relatedId: "appointment_1",
-        to: "+15555550123",
-        from: "+15555550124",
-        subject: "Appointment confirmed",
-        body: "Your appointment is confirmed.",
-      },
-    });
-    const error = new Error("provider unavailable");
-    const sendSms = vi.fn().mockRejectedValue(error);
-
-    await expect(handleJob({ ...notificationJob({ notificationId }), businessId }, {
-      domain: { db: undefined as never },
-      twilio: { sendSms },
-    })).rejects.toThrow(error);
-    expect(transitionProcessingNotification).toHaveBeenCalledWith({ db: undefined as never }, { businessId, notificationId }, "pending");
-  });
-
-  it("stops retrying a text Twilio rejects for good, such as a country the account can't text", async () => {
-    const businessId = randomUUID();
-    const notificationId = randomUUID();
-    vi.mocked(claimNotificationDelivery).mockResolvedValue(true);
-    vi.mocked(resolveNotificationDelivery).mockResolvedValue({
-      kind: "ready",
-      delivery: { notificationId, businessId, channel: "sms", kind: "booking_confirmation", relatedId: "appointment_1", to: "+381695021111", from: "+14165550124", subject: "Appointment confirmed", body: "Your appointment is confirmed." },
-    });
-    const sendSms = vi.fn().mockRejectedValue(Object.assign(new Error("Permission to send an SMS has not been enabled for the region"), { code: 21408, status: 400 }));
-
-    await expect(handleJob({ ...notificationJob({ notificationId }), businessId }, { domain: { db: undefined as never }, twilio: { sendSms } })).resolves.toEqual({ status: "skipped", entityId: notificationId });
-    expect(transitionProcessingNotification).toHaveBeenCalledWith({ db: undefined as never }, { businessId, notificationId }, "failed");
-    expect(transitionProcessingNotification).not.toHaveBeenCalledWith(expect.anything(), expect.anything(), "pending");
-    expect(recordProductEvent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ name: "notification.delivery_failed", businessId }));
-  });
-
   it("emits workflow.started for an event-driven business-scoped job", async () => {
     const businessId = randomUUID();
     const domain = { db: undefined as never };
-    vi.mocked(claimNotificationDelivery).mockResolvedValue(false);
 
     await handleJob({ ...notificationJob({}), businessId }, { domain });
 
@@ -976,44 +660,19 @@ describe("worker handlers", () => {
     }));
   });
 
-  it("emits workflow.failed and notification.delivery_failed when a notification provider fails", async () => {
+  it("emits workflow.failed when a delivery job fails", async () => {
     const businessId = randomUUID();
     const notificationId = randomUUID();
     const domain = { db: undefined as never };
-    vi.mocked(claimNotificationDelivery).mockResolvedValue(true);
-    vi.mocked(resolveNotificationDelivery).mockResolvedValue({
-      kind: "ready",
-      delivery: {
-        notificationId,
-        businessId,
-        channel: "sms",
-        kind: "appointment_reminder",
-        relatedId: "appointment_9",
-        to: "+15555550123",
-        from: "+15555550124",
-        subject: "Appointment reminder",
-        body: "Reminder.",
-      },
-    });
     const error = new Error("provider unavailable");
-    const sendSms = vi.fn().mockRejectedValue(error);
+    vi.mocked(deliverOutbound).mockRejectedValueOnce(error);
 
-    await expect(handleJob({ ...notificationJob({ notificationId }), businessId }, { domain, twilio: { sendSms } })).rejects.toThrow(error);
+    await expect(handleJob({ ...notificationJob({ notificationId }), businessId }, { domain })).rejects.toThrow(error);
 
-    expect(recordProductEvent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
-      name: "workflow.started",
-      businessId,
-      properties: { workflowName: "notification.dispatch", scope: "business" },
-    }));
     expect(recordProductEvent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
       name: "workflow.failed",
       businessId,
       properties: { workflowName: "notification.dispatch", scope: "business" },
-    }));
-    expect(recordProductEvent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
-      name: "notification.delivery_failed",
-      businessId,
-      properties: { kind: "appointment_reminder", appointmentId: "appointment_9" },
     }));
   });
 
@@ -1033,24 +692,6 @@ describe("worker handlers", () => {
     }, { domain });
 
     expect(recordProductEvent).not.toHaveBeenCalled();
-  });
-
-  it("emits notification.delivery_failed with the operator event kind", async () => {
-    const businessId = randomUUID();
-    const deliveryId = randomUUID();
-    const domain = { db: undefined as never };
-    vi.mocked(claimOperatorNotificationDelivery).mockResolvedValue(true);
-    vi.mocked(loadOperatorNotificationDelivery).mockResolvedValue({ id: deliveryId, businessId, userId: randomUUID(), eventKind: "voiceMessage", eventKey: "voice:1", channel: "email", status: "processing", destination: "operator@example.test", sender: null, subject: "New message", body: "A caller left a message.", providerMessageId: null, scheduledFor: new Date(), sentAt: null, contentExpiresAt: new Date(), lastError: null, createdAt: new Date(), updatedAt: new Date() });
-    const error = new Error("smtp down");
-    const sendTemplate = vi.fn().mockRejectedValue(error);
-
-    await expect(handleJob({ ...notificationJob({ operatorDeliveryId: deliveryId }), businessId }, { domain, email: { sendTemplate } })).rejects.toThrow(error);
-
-    expect(recordProductEvent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
-      name: "notification.delivery_failed",
-      businessId,
-      properties: { kind: "voiceMessage" },
-    }));
   });
 
   it("emits ops.billing.usage_sync_failed without fabricating a recovery event", async () => {

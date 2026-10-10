@@ -10,6 +10,8 @@ const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof crea
 vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetryRef.current!.telemetry }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en" }, t: (key: string) => key }) }));
 vi.mock("@/lib/realtime-query", () => ({ subscribeRealtimeQuery: () => () => {} }));
+const toastError = vi.hoisted(() => vi.fn());
+vi.mock("sonner", () => ({ toast: { error: toastError } }));
 
 const clients: QueryClient[] = [];
 beforeEach(() => {
@@ -47,6 +49,17 @@ describe("messages telemetry", () => {
     await userEvent.click(screen.getByRole("button", { name: "page.send" }));
     await waitFor(() => telemetryRef.current!.expectEvent("web.messages.reply_sent", { businessId: "business", conversationId: "conversation-1", channel: "sms" }));
     expect(fetchMock).toHaveBeenCalledWith("/api/messages?businessId=business", expect.objectContaining({ method: "POST" }));
+  });
+
+  it("says why when the contact can't receive an SMS reply", async () => {
+    const fetchMock = setup();
+    const listAndThread = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (url, init) => init?.method === "POST" ? Response.json({ error: "You can't text this contact.", code: "sms_consent" }, { status: 409 }) : listAndThread(url, init));
+    await userEvent.click(await screen.findByRole("button", { name: /Ada Caller/ }));
+    await userEvent.type(screen.getByPlaceholderText("page.composerPlaceholderSms"), "On my way");
+    await userEvent.click(screen.getByRole("button", { name: "page.send" }));
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith("page.smsReplyBlocked"));
+    expect(screen.getByDisplayValue("On my way")).toBeTruthy();
   });
 });
 

@@ -4,13 +4,12 @@ import { and, eq, inArray, isNull, lte, ne, or } from "drizzle-orm";
 
 import { hasSummarizableTranscript, type BusinessHoursExtractor, type BusinessSummarizer, type CallSummarizer } from "@lobbystack/agent-core";
 import { realtimeEventSchema, type JobEnvelope } from "@lobbystack/contracts";
-import { getPolarMeteredUsagePayload, normalizeInterfaceLocale, permanentSmsErrorCode, type BillingUsageKind } from "@lobbystack/shared";
+import { getPolarMeteredUsagePayload, type BillingUsageKind } from "@lobbystack/shared";
 import { appointments, calls, contacts, enqueueOutbox, knowledgeChunks, knowledgeDocuments, messages, notifications, phoneNumbers, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database } from "@lobbystack/db";
 import { enqueueKnowledgeDerivedRefresh, loadBusinessHoursInput, loadBusinessSummaryInput, markBusinessHoursChecked, resetGeneratedBusinessSummary, saveGeneratedBusinessHours, saveGeneratedBusinessSummary } from "@lobbystack/domain";
-import { claimAppointmentChangeOtp, claimBillingCheckoutRequest, claimNotificationDelivery, claimSmsDelivery, countPublishableOutboxMessages, deleteCallRecording, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteSentProductEventsBefore, enqueueBillingUsageSync, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadAppointmentChangeOtpTarget, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, loadSmsDeliveryTarget, markAppointmentChangeOtpSent, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markCalendarConnectionSync, markKnowledgeDocumentFailed, markNotificationSent, cancelRetiredPhoneVerificationSend, markProductEventsSent, reconcileBillingProviderEvent, reconcileResendProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, releaseAppointmentChangeOtp, releaseSmsDelivery, resolveNotificationDelivery, runPrivacyRetentionSweep, setTransferState, transitionProcessingNotification, updateAppointmentSyncState, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, upsertBusyBlocks, markSmsSent, chunkText, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type GeneratedCallSummary, type OnboardingFollowupSender } from "@lobbystack/domain";
-import { claimOperatorNotificationDelivery, notificationLeaseEndsAt, operatorNotificationLeaseEndsAt, smsDeliveryLeaseEndsAt, correctAlertSmsUsage, estimateSmsSegments, loadOperatorNotificationDelivery, markFeedbackEmailFailed, markFeedbackEmailSent, markOperatorNotificationSent, markOperatorNotificationSkipped, queueDailyOperatorSummaries, refreshUnitEconomicsMonth, releaseOperatorNotificationDelivery, reserveAlertSmsUsage } from "@lobbystack/domain";
+import { claimBillingCheckoutRequest, countPublishableOutboxMessages, deleteCallRecording, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteSentProductEventsBefore, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markCalendarConnectionSync, markKnowledgeDocumentFailed, markProductEventsSent, reconcileBillingProviderEvent, reconcileResendProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, runPrivacyRetentionSweep, setTransferState, updateAppointmentSyncState, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, upsertBusyBlocks, chunkText, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type GeneratedCallSummary, type OnboardingFollowupSender } from "@lobbystack/domain";
+import { deliverOutbound, markFeedbackEmailFailed, markFeedbackEmailSent, queueDailyOperatorSummaries, refreshUnitEconomicsMonth } from "@lobbystack/domain";
 import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning, numberProvisioningLeaseEndsAt } from "@lobbystack/domain";
-import { issueOperatorPhoneVerificationCode, markOperatorPhoneVerificationCodeSent, releaseOperatorPhoneVerificationCodeSend, verificationCodeSmsBody } from "@lobbystack/domain";
 import { createWebhookSender, processWebhookDelivery, pruneApiHistory, type WebhookSender } from "@lobbystack/domain";
 import { LIVE_RECORDING_ATTEMPTS, listBusinessesWithOpenLiveCalls, listOpenLiveCalls, liveCallHasRecording, persistCallRecording, retryLiveCallRecording, type OpenLiveCall } from "@lobbystack/domain";
 import type { DomainContext } from "@lobbystack/domain";
@@ -155,23 +154,6 @@ async function recordWorkflowEvent(
   }
 }
 
-async function recordNotificationDeliveryFailed(
-  dependencies: WorkerDependencies,
-  input: { businessId: string; kind: string; appointmentId?: string },
-): Promise<void> {
-  try {
-    await recordProductEvent(dependencies.domain, {
-      name: "notification.delivery_failed",
-      businessId: input.businessId,
-      distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
-      actorType: "worker",
-      properties: { kind: input.kind, ...(input.appointmentId ? { appointmentId: input.appointmentId } : {}) },
-    });
-  } catch {
-    // Notification failure telemetry is best-effort and must not mask the provider error.
-  }
-}
-
 async function recordBillingUsageSyncFailed(
   dependencies: WorkerDependencies,
   input: { businessId: string },
@@ -211,35 +193,6 @@ async function recordOutboxBacklogSample(
   }
 }
 
-function twilioStatusCallback(input: { messageId?: string; notificationId?: string; operatorDeliveryId?: string }): string | undefined {
-  const configured = process.env.TWILIO_STATUS_CALLBACK_URL;
-  if (!configured) return undefined;
-  try {
-    const url = new URL(configured);
-    if (input.messageId) url.searchParams.set("messageId", input.messageId);
-    if (input.notificationId) url.searchParams.set("notificationId", input.notificationId);
-    if (input.operatorDeliveryId) url.searchParams.set("operatorDeliveryId", input.operatorDeliveryId);
-    return url.toString();
-  } catch {
-    return configured;
-  }
-}
-
-/**
- * The Twilio account that sends from this number. The shared sender, which
- * texts operator alerts and cloud customers' appointment texts and codes,
- * goes through the alert account that owns it; any other number through the
- * default account.
- */
-function smsProviderFor(dependencies: WorkerDependencies, from: string | null | undefined): Pick<TwilioProvider, "sendSms"> | undefined {
-  return from && dependencies.twilioAlerts?.from === from ? dependencies.twilioAlerts : dependencies.twilio;
-}
-
-function twilioStatusCallbackOption(input: { messageId?: string; notificationId?: string; operatorDeliveryId?: string }): { statusCallback: string } | Record<string, never> {
-  const statusCallback = twilioStatusCallback(input);
-  return statusCallback ? { statusCallback } : {};
-}
-
 export async function handleJob(job: JobEnvelope, dependencies: WorkerDependencies, execution: JobExecution = {}): Promise<JobResult> {
   const scope = jobWorkflowScope(job);
   await recordWorkflowEvent(dependencies, job, "workflow.started", scope);
@@ -254,61 +207,9 @@ export async function handleJob(job: JobEnvelope, dependencies: WorkerDependenci
 async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, execution: JobExecution = {}): Promise<JobResult> {
   const businessId = job.businessId;
   switch (job.type) {
-    case "phoneVerification.send": {
-      // Retired onboarding step. Drain a queued send without contacting a
-      // personal phone or re-entering the removed verification stages.
-      const businessId = businessIdOrThrow(job);
-      const attemptId = String(job.payload.attemptId ?? "");
-      if (!attemptId) return { status: "skipped", entityId: attemptId };
-      await cancelRetiredPhoneVerificationSend(dependencies.domain, { businessId, attemptId });
-      return { status: "skipped", entityId: attemptId };
-    }
-    case "phoneVerification.sendCode": {
-      // Texts the code an operator requested to verify the phone for SMS
-      // alerts. The code exists only in memory here; the attempt keeps its hash.
-      const businessId = businessIdOrThrow(job);
-      const attemptId = String(job.payload.attemptId ?? "");
-      if (!attemptId) return { status: "skipped", entityId: attemptId };
-      const target = await issueOperatorPhoneVerificationCode(dependencies.domain, { businessId, attemptId });
-      if (!target) {
-        // A retry after the text went out but before the attempt was marked
-        // sent finds it still processing with a code. Finish the mark rather
-        // than leave the code screen waiting.
-        await markOperatorPhoneVerificationCodeSent(dependencies.domain, { businessId, attemptId });
-        return { status: "skipped", entityId: attemptId };
-      }
-      const sender = smsProviderFor(dependencies, target.from);
-      if (!sender) {
-        await releaseOperatorPhoneVerificationCodeSend(dependencies.domain, { businessId, attemptId, retry: false, error: "Alert SMS delivery is not configured." });
-        return { status: "skipped", entityId: attemptId };
-      }
-      const body = verificationCodeSmsBody(target.code, normalizeInterfaceLocale(String(job.payload.locale ?? "")) ?? "en");
-      // The code goes out from the alert sender, so it counts against the alert SMS quota.
-      const usageSourceKey = `alert_sms:phone_verification:${attemptId}`;
-      let usageEventId: string | undefined;
-      if (dependencies.domain.db) {
-        const reservation = await reserveAlertSmsUsage(dependencies.domain, { businessId, sourceKey: usageSourceKey, estimatedSegments: estimateSmsSegments(body) });
-        if (!reservation.allowed) {
-          await releaseOperatorPhoneVerificationCodeSend(dependencies.domain, { businessId, attemptId, retry: false, error: reservation.errorCode ?? "Alert SMS quota reached." });
-          return { status: "skipped", entityId: attemptId };
-        }
-        usageEventId = reservation.usageEventId;
-      }
-      try {
-        await sender.sendSms({ to: target.to, from: target.from, body });
-      } catch (error) {
-        if (dependencies.domain.db) await correctAlertSmsUsage(dependencies.domain, { businessId, sourceKey: usageSourceKey, segments: 0 }).catch(() => undefined);
-        const permanentCode = permanentSmsErrorCode(error);
-        const retry = !permanentCode && execution.isFinalAttempt === false;
-        await releaseOperatorPhoneVerificationCodeSend(dependencies.domain, { businessId, attemptId, retry, error: permanentCode ? `Twilio error ${permanentCode}.` : "Verification delivery failed." });
-        // Twilio rejects this number on every attempt, so don't retry.
-        if (permanentCode) return { status: "skipped", entityId: attemptId };
-        throw error;
-      }
-      await markOperatorPhoneVerificationCodeSent(dependencies.domain, { businessId, attemptId });
-      if (usageEventId) await enqueueBillingUsageSync(dependencies.domain, { businessId, usageEventId });
-      return { status: "completed", entityId: attemptId };
-    }
+    case "phoneVerification.sendCode":
+      // Texts the code an operator requested to verify the phone for SMS alerts.
+      return await deliverOutbound(dependencies.domain, dependencies, { kind: "verificationCode", businessId: businessIdOrThrow(job), attemptId: String(job.payload.attemptId ?? ""), locale: String(job.payload.locale ?? "") }, execution);
     case "snapshot.refresh":
       return { status: "completed", entityId: await refreshBusinessSnapshot(dependencies.domain, { businessId: businessIdOrThrow(job) }) };
     case "business.generateSummary":
@@ -486,50 +387,9 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       return { status: reconciled ? "completed" : "skipped", entityId: providerEventId };
     }
     case "sms.send":
-      if (!dependencies.twilio) {
-        return { status: "skipped" };
-      }
-      {
-        const businessId = businessIdOrThrow(job);
-        const messageId = String(job.payload.messageId);
-        if (!await claimSmsDelivery(dependencies.domain, { businessId, messageId })) return retryAfterLease(await smsDeliveryLeaseEndsAt(dependencies.domain, { businessId, messageId }), messageId);
-        const target = await loadSmsDeliveryTarget(dependencies.domain.db, { businessId, messageId });
-        if (!target) {
-          await releaseSmsDelivery(dependencies.domain, { businessId, messageId });
-          return { status: "skipped", entityId: messageId };
-        }
-        try {
-          const result = await dependencies.twilio.sendSms({ to: target.to, from: target.from, body: target.body, ...twilioStatusCallbackOption({ messageId }) });
-          await markSmsSent(dependencies.domain, { businessId, messageId, providerMessageId: result.providerMessageId });
-          return { status: "completed", entityId: messageId };
-        } catch (error) {
-          await releaseSmsDelivery(dependencies.domain, { businessId, messageId });
-          throw error;
-        }
-      }
-    case "appointment.sendChangeOtp": {
-      const businessId = businessIdOrThrow(job);
-      const verificationId = String(job.payload.verificationId ?? "");
-      const code = String(job.payload.code ?? "");
-      const to = String(job.payload.to ?? "");
-      const from = String(job.payload.from ?? "");
-      const sender = smsProviderFor(dependencies, from);
-      if (!sender || !verificationId || !code || !to || !from) return { status: "skipped", entityId: verificationId };
-      if (!await claimAppointmentChangeOtp(dependencies.domain, { businessId, verificationId })) return { status: "skipped", entityId: verificationId };
-      const target = await loadAppointmentChangeOtpTarget(dependencies.domain, { businessId, verificationId, to, from, code });
-      if (!target) {
-        await releaseAppointmentChangeOtp(dependencies.domain, { businessId, verificationId });
-        return { status: "skipped", entityId: verificationId };
-      }
-      try {
-        await sender.sendSms({ to: target.to, from: target.from, body: verificationCodeSmsBody(target.code) });
-        await markAppointmentChangeOtpSent(dependencies.domain, { businessId, verificationId });
-        return { status: "completed", entityId: verificationId };
-      } catch (error) {
-        await releaseAppointmentChangeOtp(dependencies.domain, { businessId, verificationId });
-        throw error;
-      }
-    }
+      return await deliverOutbound(dependencies.domain, dependencies, { kind: "message", businessId: businessIdOrThrow(job), messageId: String(job.payload.messageId ?? "") }, execution);
+    case "appointment.sendChangeOtp":
+      return await deliverOutbound(dependencies.domain, dependencies, { kind: "changeCode", businessId: businessIdOrThrow(job), verificationId: String(job.payload.verificationId ?? ""), code: String(job.payload.code ?? ""), to: String(job.payload.to ?? ""), from: String(job.payload.from ?? "") }, execution);
     case "sms.syncPrice": {
       const providerMessageId = String(job.payload.providerMessageId ?? "").trim();
       const providerStatus = String(job.payload.providerStatus ?? "").trim();
@@ -708,109 +568,10 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       }
     }
     case "notification.dispatch": {
-      const operatorDeliveryId = String(job.payload.operatorDeliveryId ?? "");
-      if (operatorDeliveryId) {
-        const businessId = businessIdOrThrow(job);
-        if (!await claimOperatorNotificationDelivery(dependencies.domain, { businessId, deliveryId: operatorDeliveryId })) return retryAfterLease(await operatorNotificationLeaseEndsAt(dependencies.domain, { businessId, deliveryId: operatorDeliveryId }), operatorDeliveryId);
-        const delivery = await loadOperatorNotificationDelivery(dependencies.domain, { businessId, deliveryId: operatorDeliveryId });
-        if (!delivery) {
-          await markOperatorNotificationSkipped(dependencies.domain, { businessId, deliveryId: operatorDeliveryId, error: "SMS consent or destination changed before delivery." });
-          return { status: "skipped", entityId: operatorDeliveryId };
-        }
-        try {
-          let providerMessageId: string;
-          let usageEventId: string | undefined;
-          if (delivery.channel === "sms") {
-            const sender = smsProviderFor(dependencies, delivery.sender);
-            if (!sender || !delivery.sender) throw new Error("Operator SMS delivery is not configured.");
-            if (dependencies.domain.db) {
-              const reservation = await reserveAlertSmsUsage(dependencies.domain, { businessId, sourceKey: `alert_sms:operator_notification:${delivery.id}`, estimatedSegments: estimateSmsSegments(delivery.body) });
-              if (!reservation.allowed) {
-                await markOperatorNotificationSkipped(dependencies.domain, { businessId, deliveryId: delivery.id, error: reservation.errorCode ?? "Alert SMS quota reached." });
-                return { status: "skipped", entityId: delivery.id };
-              }
-              usageEventId = reservation.usageEventId;
-            }
-            providerMessageId = (await sender.sendSms({ to: delivery.destination, from: delivery.sender, body: delivery.body, ...twilioStatusCallbackOption({ operatorDeliveryId: delivery.id }) })).providerMessageId;
-          } else {
-            if (!dependencies.email) throw new Error("Operator email delivery is not configured.");
-            providerMessageId = (await dependencies.email.sendTemplate({ template: "operator_alert", to: delivery.destination, subject: delivery.subject, variables: { message: delivery.body }, idempotencyKey: `operator-notification:${delivery.id}` })).messageId;
-          }
-          await markOperatorNotificationSent(dependencies.domain, { businessId, deliveryId: delivery.id, providerMessageId });
-          if (usageEventId) await enqueueBillingUsageSync(dependencies.domain, { businessId, usageEventId });
-          return { status: "completed", entityId: delivery.id };
-        } catch (error) {
-          await recordNotificationDeliveryFailed(dependencies, { businessId, kind: delivery.eventKind });
-          if (delivery.channel === "sms" && dependencies.domain.db) await correctAlertSmsUsage(dependencies.domain, { businessId, sourceKey: `alert_sms:operator_notification:${delivery.id}`, segments: 0 }).catch(() => undefined);
-          const permanentCode = delivery.channel === "sms" ? permanentSmsErrorCode(error) : undefined;
-          if (permanentCode) {
-            // Twilio rejects this destination on every attempt, so don't retry.
-            await markOperatorNotificationSkipped(dependencies.domain, { businessId, deliveryId: delivery.id, error: `Twilio error ${permanentCode}.` });
-            return { status: "skipped", entityId: delivery.id };
-          }
-          await releaseOperatorNotificationDelivery(dependencies.domain, { businessId, deliveryId: delivery.id, error: "Provider delivery failed." });
-          throw error;
-        }
-      }
-      if (!dependencies.twilio && !dependencies.twilioAlerts && !dependencies.email) return { status: "skipped", entityId: String(job.payload.notificationId ?? "") };
-      const notificationId = String(job.payload.notificationId ?? "");
-      if (!notificationId) return { status: "skipped" };
       const businessId = businessIdOrThrow(job);
-      if (!await claimNotificationDelivery(dependencies.domain, { businessId, notificationId })) {
-        return retryAfterLease(await notificationLeaseEndsAt(dependencies.domain, { businessId, notificationId }), notificationId);
-      }
-      const resolution = await resolveNotificationDelivery(dependencies.domain, { businessId, notificationId });
-      if (!resolution) {
-        await transitionProcessingNotification(dependencies.domain, { businessId, notificationId }, "pending");
-        return { status: "skipped", entityId: notificationId };
-      }
-      if (resolution.kind === "skipped") {
-        await transitionProcessingNotification(dependencies.domain, { businessId, notificationId: resolution.notificationId }, "skipped");
-        return { status: "skipped", entityId: resolution.notificationId };
-      }
-      const delivery = resolution.delivery;
-      try {
-        let providerMessageId: string;
-        let usageEventId: string | undefined;
-        if (delivery.channel === "sms") {
-          const sender = smsProviderFor(dependencies, delivery.from);
-          if (!sender || !delivery.from) {
-            await transitionProcessingNotification(dependencies.domain, { businessId, notificationId: delivery.notificationId }, "skipped");
-            return { status: "skipped", entityId: delivery.notificationId };
-          }
-          if (dependencies.domain.db) {
-            const reservation = await reserveAlertSmsUsage(dependencies.domain, { businessId, sourceKey: `alert_sms:notification:${delivery.notificationId}`, estimatedSegments: estimateSmsSegments(delivery.body) });
-            if (!reservation.allowed) {
-              await transitionProcessingNotification(dependencies.domain, { businessId, notificationId: delivery.notificationId }, "skipped");
-              return { status: "skipped", entityId: delivery.notificationId };
-            }
-            usageEventId = reservation.usageEventId;
-          }
-          const sent = await sender.sendSms({ to: delivery.to, from: delivery.from, body: delivery.body, ...twilioStatusCallbackOption({ notificationId: delivery.notificationId }) });
-          providerMessageId = sent.providerMessageId;
-        } else {
-          if (!dependencies.email) {
-            await transitionProcessingNotification(dependencies.domain, { businessId, notificationId: delivery.notificationId }, "skipped");
-            return { status: "skipped", entityId: delivery.notificationId };
-          }
-          const sent = await dependencies.email.sendTemplate({ template: "operator_alert", to: delivery.to, subject: delivery.subject, variables: { message: delivery.body }, idempotencyKey: `notification:${delivery.notificationId}` });
-          providerMessageId = sent.messageId;
-        }
-        await markNotificationSent(dependencies.domain, { businessId: delivery.businessId, notificationId: delivery.notificationId, providerMessageId });
-        if (usageEventId) await enqueueBillingUsageSync(dependencies.domain, { businessId, usageEventId });
-        return { status: "completed", entityId: delivery.notificationId };
-      } catch (error) {
-        await recordNotificationDeliveryFailed(dependencies, { businessId, kind: delivery.kind, ...(delivery.relatedId ? { appointmentId: delivery.relatedId } : {}) });
-        if (delivery.channel === "sms" && dependencies.domain.db) await correctAlertSmsUsage(dependencies.domain, { businessId, sourceKey: `alert_sms:notification:${delivery.notificationId}`, segments: 0 }).catch(() => undefined);
-        if (delivery.channel === "sms" && permanentSmsErrorCode(error)) {
-          // Twilio rejects this destination on every attempt, so don't retry.
-          await transitionProcessingNotification(dependencies.domain, { businessId, notificationId: delivery.notificationId }, "failed");
-          return { status: "skipped", entityId: delivery.notificationId };
-        }
-        await transitionProcessingNotification(dependencies.domain, { businessId, notificationId: delivery.notificationId }, "pending");
-        throw error;
-      }
-      }
+      const operatorDeliveryId = String(job.payload.operatorDeliveryId ?? "");
+      return await deliverOutbound(dependencies.domain, dependencies, operatorDeliveryId ? { kind: "operatorNotification", businessId, deliveryId: operatorDeliveryId } : { kind: "notification", businessId, notificationId: String(job.payload.notificationId ?? "") }, execution);
+    }
     case "notification.dailySummary": {
       const businessId = businessIdOrThrow(job);
       const result = await queueDailyOperatorSummaries(dependencies.domain, { businessId });

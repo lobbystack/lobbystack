@@ -53,7 +53,8 @@ async function main(): Promise<void> {
     assert(blockedState.conversation, "SMS conversation was not persisted.");
     const queuedMessageId = await appendMessage({ db: worker.db }, { businessId, conversationId: blockedState.conversation.id, direction: "outbound", channel: "sms", body: "Queued before consent recheck", aiGenerated: false });
     assert(await claimSmsDelivery({ db: worker.db }, { businessId, messageId: queuedMessageId }), "Queued SMS could not be claimed.");
-    assert(await loadSmsDeliveryTarget(worker.db, { businessId, messageId: queuedMessageId }) === null, "Queued SMS bypassed a manual block applied before delivery.");
+    const blockedTarget = await loadSmsDeliveryTarget(worker.db, { businessId, messageId: queuedMessageId });
+    assert(blockedTarget && "blocked" in blockedTarget && blockedTarget.blocked === "sms_blocked", "Queued SMS bypassed a manual block applied before delivery.");
     assert(await setContactSmsManualBlock({ db: app.db }, { userId, businessId, contactId, blocked: false }), "Manual unblock was not applied.");
     const helpProviderId = `SM-${randomUUID()}`;
     await receiveInboundSms({ db: worker.db }, { businessId, providerMessageId: helpProviderId, from: phone, to: "+14165550779", body: "HELP", payload: {} });

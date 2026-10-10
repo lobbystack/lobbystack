@@ -223,7 +223,6 @@ export const queueForJobType = {
   "privacy.scrubMessage": "maintenance",
   "privacy.deleteRecording": "maintenance",
   "privacy.cleanupPendingUpload": "maintenance",
-  "phoneVerification.send": "critical",
   "phoneVerification.sendCode": "critical",
   "phoneNumber.provision": "critical",
   "phoneNumber.reclaim": "maintenance",

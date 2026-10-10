@@ -33,6 +33,7 @@
     "automationUpdateFailed": "Impossible de mettre à jour l'état du relais.",
     "send": "Envoyer",
     "sendFailed": "Impossible d'envoyer votre message.",
+    "smsReplyBlocked": "Vous ne pouvez pas envoyer de SMS à ce contact. Il s'est désabonné, il est bloqué, ou il ne vous a pas écrit et n'a pas accepté les SMS.",
     "filterAll": "Tous",
     "filterWeb": "Web",
     "filterSms": "SMS",

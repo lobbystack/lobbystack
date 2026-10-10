@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 
 import { billingAccounts, businesses, phoneNumbers, type DatabaseTransaction } from "@lobbystack/db";
 
@@ -30,5 +30,17 @@ export async function resolveSmsSender(tx: DatabaseTransaction, businessId: stri
   const business = (await tx.select({ deploymentMode: businesses.deploymentMode }).from(businesses).where(eq(businesses.id, businessId)).limit(1))[0];
   const selfHosted = account?.plan ? account.plan === "self_hosted_standard" : business?.deploymentMode !== "cloud";
   if (!selfHosted) return sharedSmsSender();
-  return (await tx.select({ e164: phoneNumbers.e164 }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"), eq(phoneNumbers.smsEnabled, true))).limit(1))[0]?.e164 ?? null;
+  return await businessSmsNumber(tx, businessId);
+}
+
+/**
+ * The business's own active SMS number. A replaced number stays active for 30
+ * days with a reclaim date, so prefer a number that isn't being retired, then
+ * the newest.
+ */
+export async function businessSmsNumber(tx: DatabaseTransaction, businessId: string): Promise<string | null> {
+  return (await tx.select({ e164: phoneNumbers.e164 }).from(phoneNumbers)
+    .where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"), eq(phoneNumbers.smsEnabled, true)))
+    .orderBy(sql`${phoneNumbers.reclaimScheduledAt} is not null`, desc(phoneNumbers.createdAt))
+    .limit(1))[0]?.e164 ?? null;
 }
