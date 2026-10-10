@@ -102,14 +102,15 @@ describe("enqueueJob job ids", () => {
     expect(options).not.toHaveProperty("delay");
   });
 
-  it("retries usage billing and notifications for hours instead of the queue's 15 seconds", async () => {
+  it("retries usage billing, notifications and webhook deliveries for hours instead of the queue's 15 seconds", async () => {
     const { queue, add } = createQueueStub("critical");
 
-    for (const type of ["billing.syncUsage", "notification.dispatch", "sms.send"] as const) await enqueueJob(queue, { type, payload: {}, idempotencyKey: type });
+    for (const type of ["billing.syncUsage", "notification.dispatch", "webhook.deliver", "sms.send"] as const) await enqueueJob(queue, { type, payload: {}, idempotencyKey: type });
 
     const options = add.mock.calls.map((call) => (call as unknown as [string, unknown, Record<string, unknown>])[2]);
     expect(options[0]).toMatchObject({ attempts: 12, backoff: { type: "exponential", delay: 5_000 } });
     expect(options[1]).toMatchObject({ attempts: 12, backoff: { type: "exponential", delay: 5_000 } });
-    expect(options[2]).not.toHaveProperty("attempts");
+    expect(options[2]).toMatchObject({ attempts: 12, backoff: { type: "exponential", delay: 5_000 } });
+    expect(options[3]).not.toHaveProperty("attempts");
   });
 });

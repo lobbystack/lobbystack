@@ -881,7 +881,7 @@
     "revoke": {
       "action": "Révoquer",
       "title": "Révoquer cette clé API?",
-      "description": "Tout ce qui utilise {{name}} cesse de fonctionner immédiatement. Cette action est définitive.",
+      "description": "Tout ce qui utilise {{name}} cesse de fonctionner immédiatement. Cette action est définitive. LobbyStack désactive aussi les webhooks créés par cette clé.",
       "confirm": "Révoquer la clé",
       "cancel": "Annuler",
       "done": "Clé API révoquée",

@@ -9,9 +9,9 @@ import { apiAppointmentSchema, apiCallSchema, apiStaffSchema, WEBHOOK_MAX_ATTEMP
 
 import { finalizeConversationSession } from "../conversations";
 import { createVoiceFollowUpTask } from "../voice";
-import { generateApiKey, resolveApiKey } from "./apiKeys";
+import { generateApiKey, resolveApiKey, revokeApiKey } from "./apiKeys";
 import { runIdempotent } from "./idempotency";
-import { cancelAppointmentForApi, createAppointmentForApi, createContactForApi, getAvailabilityForApi, getContactForApi, getMeForApi, listAppointmentsForApi, listContactsForApi, listStaffForApi, rescheduleAppointmentForApi, updateBusinessForApi, type ApiKeyCaller } from "./operations";
+import { cancelAppointmentForApi, createAppointmentForApi, createContactForApi, getAvailabilityForApi, getContactForApi, getMeForApi, listAppointmentsForApi, listContactsForApi, listStaffForApi, rescheduleAppointmentForApi, updateBusinessForApi, updateContactForApi, type ApiKeyCaller } from "./operations";
 import { PublicApiError } from "./errors";
 import { createWebhookEndpoint, processWebhookDelivery, pruneApiHistory } from "./webhooks";
 import { encryptWebhookSecret } from "./webhookTransport";
@@ -130,6 +130,22 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
     const context = { db: worker!.db };
     await createContactForApi(context, a.caller, { phone: "+14165552222" });
     await expectApiError(createContactForApi(context, a.caller, { phone: "+14165552222" }), 409, "conflict");
+  });
+
+  it("drops text consent when the API changes a contact's phone, but keeps an opt-out", async () => {
+    const context = { db: worker!.db };
+    const consentOf = async (id: string) => (await admin!.db.select({ status: contacts.smsConsentStatus }).from(contacts).where(eq(contacts.id, id)))[0]?.status;
+    const subscribed = await createContactForApi(context, a.caller, { phone: "+14165552300" });
+    const optedOut = await createContactForApi(context, a.caller, { phone: "+14165552301" });
+    await admin!.db.update(contacts).set({ smsConsentStatus: "subscribed" }).where(eq(contacts.id, subscribed.id));
+    await admin!.db.update(contacts).set({ smsConsentStatus: "opted_out" }).where(eq(contacts.id, optedOut.id));
+    // Same number or other fields: consent stays.
+    await updateContactForApi(context, a.caller, subscribed.id, { name: "Kept", phone: "+14165552300" });
+    expect(await consentOf(subscribed.id)).toBe("subscribed");
+    await updateContactForApi(context, a.caller, subscribed.id, { phone: "+14165552302" });
+    expect(await consentOf(subscribed.id)).toBeNull();
+    await updateContactForApi(context, a.caller, optedOut.id, { phone: "+14165552303" });
+    expect(await consentOf(optedOut.id)).toBe("opted_out");
   });
 
   it("replays idempotent requests and rejects a reused key with a different body", async () => {
@@ -394,5 +410,16 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
     expect(await admin!.db.select({ id: webhookDeliveries.id }).from(webhookDeliveries).where(inArray(webhookDeliveries.eventId, [oldDelivered, oldFailed]))).toEqual([]);
     const keys = await admin!.db.select({ id: idempotencyKeys.id }).from(idempotencyKeys).where(inArray(idempotencyKeys.id, [oldApiKey, freshApiKey, oldOtherKey]));
     expect(keys.map((row) => row.id).sort()).toEqual([freshApiKey, oldOtherKey].sort());
+  });
+
+  it("turns off the webhooks a key created when the owner revokes the key", async () => {
+    const generated = generateApiKey();
+    const [key] = await admin!.db.insert(apiKeys).values({ businessId: a.businessId, name: "leaked", prefix: generated.prefix, keyHash: generated.keyHash, scopes: ["webhooks:manage", "calls:read"] }).returning({ id: apiKeys.id });
+    const byKey = await createWebhookEndpoint({ db: worker!.db }, { businessId: a.businessId, manager: { kind: "api_key", apiKeyId: key!.id }, url: "https://leak.example.com/hook", events: ["call.completed"] });
+    const byOwner = await createWebhookEndpoint({ db: app!.db }, { businessId: a.businessId, manager: { kind: "operator", userId: ownerId }, url: "https://owner.example.com/hook", events: ["call.completed"] });
+    expect(await revokeApiKey({ db: app!.db }, { userId: ownerId, businessId: a.businessId, apiKeyId: key!.id })).toBe(true);
+    const rows = await admin!.db.select({ id: webhookEndpoints.id, status: webhookEndpoints.status, disabledReason: webhookEndpoints.disabledReason }).from(webhookEndpoints).where(inArray(webhookEndpoints.id, [byKey.endpoint.id, byOwner.endpoint.id]));
+    expect(rows.find((row) => row.id === byKey.endpoint.id)).toMatchObject({ status: "disabled", disabledReason: "manual" });
+    expect(rows.find((row) => row.id === byOwner.endpoint.id)).toMatchObject({ status: "enabled", disabledReason: null });
   });
 });

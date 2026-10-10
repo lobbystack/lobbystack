@@ -2,7 +2,7 @@ import { createHmac, randomBytes } from "node:crypto";
 
 import { and, desc, eq, isNull, lt, or, sql } from "drizzle-orm";
 
-import { apiKeys, auditLogs, users, withBusinessTransaction } from "@lobbystack/db";
+import { apiKeys, auditLogs, users, webhookEndpoints, withBusinessTransaction } from "@lobbystack/db";
 import { API_KEY_PREFIX, apiKeyScopes, isApiKeyScope, type ApiKeyScope } from "@lobbystack/shared";
 
 import { requireBusinessAdmin } from "../../authz";
@@ -131,15 +131,18 @@ export async function listApiKeys(context: DomainContext, input: { userId: strin
   });
 }
 
-/** Revoking is permanent. Revoking a revoked key is a no-op that still succeeds. */
+/** Revoking is permanent and turns off the webhook endpoints the key created. Revoking a revoked key is a no-op that still succeeds. */
 export async function revokeApiKey(context: DomainContext, input: { userId: string; businessId: string; apiKeyId: string }): Promise<boolean> {
   return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
     const [existing] = await tx.select({ id: apiKeys.id, revokedAt: apiKeys.revokedAt, prefix: apiKeys.prefix }).from(apiKeys).where(and(eq(apiKeys.id, input.apiKeyId), eq(apiKeys.businessId, input.businessId))).limit(1).for("update");
     if (!existing) return false;
     if (existing.revokedAt) return true;
-    await tx.update(apiKeys).set({ revokedAt: new Date(), revokedByUserId: input.userId, updatedAt: new Date() }).where(eq(apiKeys.id, existing.id));
-    await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: input.userId, eventType: "api_key.revoked", entityType: "api_key", entityId: existing.id, payload: { prefix: existing.prefix } });
+    const now = new Date();
+    await tx.update(apiKeys).set({ revokedAt: now, revokedByUserId: input.userId, updatedAt: now }).where(eq(apiKeys.id, existing.id));
+    // Webhooks the key registered stop too, so a leaked key can't keep receiving data.
+    const disabled = await tx.update(webhookEndpoints).set({ status: "disabled", disabledReason: "manual", disabledAt: now, updatedAt: now }).where(and(eq(webhookEndpoints.businessId, input.businessId), eq(webhookEndpoints.createdByApiKeyId, existing.id), eq(webhookEndpoints.status, "enabled"))).returning({ id: webhookEndpoints.id });
+    await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: input.userId, eventType: "api_key.revoked", entityType: "api_key", entityId: existing.id, payload: { prefix: existing.prefix, disabledWebhookEndpointIds: disabled.map((row) => row.id) } });
     return true;
   });
 }
