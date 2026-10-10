@@ -75,59 +75,48 @@ export const FULL_CRAWL_PAGE_LIMIT = 50;
 
 export async function createKnowledgeDocument(
   context: DomainContext,
-  input: { userId: string; businessId: string; title: string; sourceType: string; sourceUrl?: string; storageObjectId?: string; onboarding?: boolean },
+  input: { userId: string; businessId: string; title: string; sourceType: string; sourceUrl?: string; onboarding?: boolean },
 ): Promise<string> {
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    const isWebsite = input.sourceType === "website";
-    if (isWebsite && !input.sourceUrl) {
-      throw new Error("A website source URL is required.");
-    }
-    if (!isWebsite && !input.storageObjectId) {
-      throw new Error("A storage object is required for uploaded knowledge.");
-    }
-    const sourceUrl = isWebsite ? normalizeWebsiteSourceUrl(input.sourceUrl!) : input.sourceUrl;
+    // finalizeUpload creates the document for an uploaded file.
+    if (input.sourceType !== "website") throw Object.assign(new Error('sourceType must be "website". Upload files with /api/uploads.'), { status: 400 });
+    if (!input.sourceUrl) throw Object.assign(new Error("A website source URL is required."), { status: 400 });
+    const sourceUrl = normalizeWebsiteSourceUrl(input.sourceUrl);
     // Serialize website submissions so retries/revisited forms reuse the same import.
-    const business = isWebsite
-      ? (await tx.select({ onboardingStage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1).for("update"))[0]
-      : undefined;
-    if (isWebsite && (input.onboarding || business?.onboardingStage === "website")) {
-      await tx.update(businesses).set({ websiteUrl: sourceUrl!, updatedAt: new Date() }).where(eq(businesses.id, input.businessId));
+    const business = (await tx.select({ onboardingStage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1).for("update"))[0];
+    if (input.onboarding || business?.onboardingStage === "website") {
+      await tx.update(businesses).set({ websiteUrl: sourceUrl, updatedAt: new Date() }).where(eq(businesses.id, input.businessId));
       if (business?.onboardingStage === "website") {
         await advanceOnboardingStageInTransaction(tx, { userId: input.userId, businessId: input.businessId, from: "website", to: "knowledge" });
       }
     }
-    if (isWebsite) {
-      const existing = (await tx.select().from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, input.businessId), eq(knowledgeDocuments.sourceUrl, sourceUrl!))).limit(1).for("update"))[0];
-      if (existing) {
-        // A retry of an onboarding submission is still onboarding: without the
-        // limit it would fall back to the full crawl this sampling exists to defer.
-        if (["cancelled", "error"].includes(existing.status)) await queueKnowledgeDocumentRetry(tx, { businessId: input.businessId, documentId: existing.id, crawlLimit: input.onboarding ? ONBOARDING_CRAWL_PAGE_LIMIT : FULL_CRAWL_PAGE_LIMIT }, existing);
-        return existing.id;
-      }
+    const existing = (await tx.select().from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, input.businessId), eq(knowledgeDocuments.sourceUrl, sourceUrl))).limit(1).for("update"))[0];
+    if (existing) {
+      // A retry of an onboarding submission is still onboarding: without the
+      // limit it would fall back to the full crawl this sampling exists to defer.
+      if (["cancelled", "error"].includes(existing.status)) await queueKnowledgeDocumentRetry(tx, { businessId: input.businessId, documentId: existing.id, crawlLimit: input.onboarding ? ONBOARDING_CRAWL_PAGE_LIMIT : FULL_CRAWL_PAGE_LIMIT }, existing);
+      return existing.id;
     }
     const [document] = await tx.insert(knowledgeDocuments).values({
       businessId: input.businessId,
       title: input.title.trim(),
-      sourceType: input.sourceType,
+      sourceType: "website",
       sourceUrl,
-      storageObjectId: input.storageObjectId,
-      status: isWebsite ? "processing" : "pending",
+      status: "processing",
     }).returning({ id: knowledgeDocuments.id });
     if (!document) {
       throw new Error("Knowledge document could not be created.");
     }
     const crawlLimit = input.onboarding ? ONBOARDING_CRAWL_PAGE_LIMIT : FULL_CRAWL_PAGE_LIMIT;
-    const ingestion = isWebsite ? (await tx.insert(websiteIngestionJobs).values({ businessId: input.businessId, rootDocumentId: document.id, websiteUrl: sourceUrl!, provider: "firecrawl", status: "queued", pageLimit: crawlLimit }).returning({ id: websiteIngestionJobs.id }))[0] : undefined;
+    const [ingestion] = await tx.insert(websiteIngestionJobs).values({ businessId: input.businessId, rootDocumentId: document.id, websiteUrl: sourceUrl, provider: "firecrawl", status: "queued", pageLimit: crawlLimit }).returning({ id: websiteIngestionJobs.id });
     await enqueueOutbox(tx, {
-      topic: isWebsite ? "knowledge.crawlWebsite" : "knowledge.extractDocument",
+      topic: "knowledge.crawlWebsite",
       businessId: input.businessId,
       aggregateType: "knowledge_document",
       aggregateId: document.id,
-      dedupeKey: isWebsite ? `knowledge:${document.id}:crawl` : `knowledge:${document.id}:extract`,
-      payload: isWebsite
-        ? { url: sourceUrl, documentId: document.id, revision: 0, websiteIngestionJobId: ingestion!.id, limit: crawlLimit }
-        : { documentId: document.id, revision: 0 },
+      dedupeKey: `knowledge:${document.id}:crawl`,
+      payload: { url: sourceUrl, documentId: document.id, revision: 0, websiteIngestionJobId: ingestion!.id, limit: crawlLimit },
     });
     return document.id;
   });
@@ -203,8 +192,10 @@ export async function deleteKnowledgeDocument(context: DomainContext, input: { u
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
     await tx.delete(knowledgeChunks).where(and(eq(knowledgeChunks.documentId, input.documentId), eq(knowledgeChunks.businessId, input.businessId)));
-    const [document] = await tx.delete(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).returning({ id: knowledgeDocuments.id });
+    const [document] = await tx.delete(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).returning({ id: knowledgeDocuments.id, storageObjectId: knowledgeDocuments.storageObjectId });
     if (!document) throw new Error("Knowledge document not found.");
+    // Downloads stop now; the retained-object sweep deletes the file within 15 minutes.
+    if (document.storageObjectId) await tx.update(storageObjects).set({ retentionUntil: new Date(), updatedAt: new Date() }).where(and(eq(storageObjects.id, document.storageObjectId), eq(storageObjects.businessId, input.businessId)));
     await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "knowledge_document", aggregateId: document.id, dedupeKey: `knowledge:${document.id}:deleted:${Date.now()}`, payload: { businessId: input.businessId, reason: "document_deleted" } });
     await enqueueKnowledgeDerivedRefresh(tx, { businessId: input.businessId, reason: "document_deleted" });
   });
@@ -269,8 +260,36 @@ async function recordKnowledgeDocumentIndexed(context: DomainContext, input: { b
   });
 }
 
+/**
+ * Makes indexing jobs for one business take turns, so each one's plan-limit
+ * check sees the others' text. Take it before any document lock, in the order
+ * createKnowledgeDocument and finalizeUpload use. NO KEY UPDATE leaves inserts
+ * that reference the business, like transcripts, free to run.
+ */
+async function lockKnowledgeStorage(tx: DatabaseTransaction, businessId: string): Promise<void> {
+  await tx.select({ id: businesses.id }).from(businesses).where(eq(businesses.id, businessId)).for("no key update");
+}
+
+async function knowledgeStorageLimitError(tx: DatabaseTransaction, input: { businessId: string; documentId: string; chunks: string[] }): Promise<string | undefined> {
+  const limit = getKnowledgeStorageLimitBytes(await resolveBusinessBillingPlan(tx, input.businessId));
+  if (limit === null) return undefined;
+  const newBytes = input.chunks.reduce((total, chunk) => total + Buffer.byteLength(chunk, "utf8"), 0);
+  return await getKnowledgeStorageUsageBytes(tx, input.businessId, { excludeDocumentId: input.documentId }) + newBytes > limit ? knowledgeStorageLimitMessage(limit) : undefined;
+}
+
+/**
+ * The plan-limit message when a document's text can't fit, so the worker can
+ * fail it before paying to embed it. Indexing checks again under the lock.
+ */
+export async function checkKnowledgeStorageLimit(context: DomainContext, input: { businessId: string; documentId: string; text: string }): Promise<string | undefined> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, (tx) => knowledgeStorageLimitError(tx, { ...input, chunks: chunkText(input.text) }));
+}
+
 export async function indexDocumentText(context: DomainContext, input: IndexDocumentInput): Promise<{ chunkCount: number }> {
-  const result = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, (tx) => indexDocumentTextInTransaction(tx, input));
+  const result = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    await lockKnowledgeStorage(tx, input.businessId);
+    return await indexDocumentTextInTransaction(tx, input);
+  });
   if (result.indexed) await recordKnowledgeDocumentIndexed(context, { businessId: input.businessId, documentId: result.documentId });
   return { chunkCount: result.chunkCount };
 }
@@ -291,14 +310,11 @@ async function indexDocumentTextInTransaction(tx: DatabaseTransaction, input: In
       await markKnowledgeDocumentFailedInTransaction(tx, input, document.revision, "Knowledge embeddings are unavailable or incomplete.");
       throw new Error("Knowledge embeddings are unavailable or incomplete.");
     }
-    const limit = getKnowledgeStorageLimitBytes(await resolveBusinessBillingPlan(tx, input.businessId));
-    if (limit !== null) {
-      const newBytes = chunks.reduce((total, chunk) => total + Buffer.byteLength(chunk, "utf8"), 0);
-      if (await getKnowledgeStorageUsageBytes(tx, input.businessId, { excludeDocumentId: input.documentId }) + newBytes > limit) {
-        // Retrying can't fit the text, so fail the document instead of throwing.
-        await markKnowledgeDocumentFailedInTransaction(tx, input, document.revision, knowledgeStorageLimitMessage(limit));
-        return { chunkCount: 0, indexed: false, documentId: input.documentId };
-      }
+    const limitError = await knowledgeStorageLimitError(tx, { ...input, chunks });
+    if (limitError) {
+      // Retrying can't fit the text, so fail the document instead of throwing.
+      await markKnowledgeDocumentFailedInTransaction(tx, input, document.revision, limitError);
+      return { chunkCount: 0, indexed: false, documentId: input.documentId };
     }
     await tx.delete(knowledgeChunks).where(and(eq(knowledgeChunks.documentId, input.documentId), eq(knowledgeChunks.businessId, input.businessId)));
     if (chunks.length > 0) {
@@ -331,9 +347,10 @@ async function indexDocumentTextInTransaction(tx: DatabaseTransaction, input: In
 /** Commit a crawled page only while its originating import is still current. */
 export async function indexCrawledWebsitePage(context: DomainContext, input: IndexDocumentInput & { sourceRevision: number; sourceUrl: string; title: string }): Promise<{ chunkCount: number }> {
   const result = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx): Promise<IndexDocumentResult> => {
+    await lockKnowledgeStorage(tx, input.businessId);
     const [source] = await tx.select().from(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).limit(1).for("update");
     if (!source || source.status !== "processing" || source.revision !== input.sourceRevision) return { chunkCount: 0, indexed: false, documentId: input.documentId };
-    const sourceUrl = normalizeWebsiteSourceUrl(input.sourceUrl);
+    const sourceUrl = normalizeWebsiteSourceUrl(input.sourceUrl, { keepQuery: true });
     const [page] = await tx.insert(knowledgeDocuments).values({ businessId: input.businessId, sourceType: "website", title: input.title, sourceUrl, status: "processing" }).onConflictDoUpdate({ target: [knowledgeDocuments.businessId, knowledgeDocuments.sourceUrl], set: { title: input.title, status: "processing", error: null, updatedAt: new Date() } }).returning({ id: knowledgeDocuments.id });
     if (!page) throw new Error("Website page could not be saved.");
     return await indexDocumentTextInTransaction(tx, { ...input, documentId: page.id }, page.id === source.id);
