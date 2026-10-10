@@ -140,8 +140,10 @@ export function mcpOAuthPlugins(): BetterAuthPlugin[] {
       prefix: { opaqueAccessToken: OAUTH_ACCESS_TOKEN_PREFIX, refreshToken: OAUTH_REFRESH_TOKEN_PREFIX },
       accessTokenExpiresIn: ACCESS_TOKEN_SECONDS,
       refreshTokenExpiresIn: REFRESH_TOKEN_SECONDS,
-      // A rotated refresh token used again is treated as theft and ends the token family.
-      refreshTokenReuseInterval: 0,
+      // A client that retries a refresh, or sends two at once, gets the first answer
+      // again for a few seconds. Later reuse counts as theft and ends the token
+      // family, which covers every business the client is connected to.
+      refreshTokenReuseInterval: 10,
       grantTypes: ["authorization_code", "refresh_token"],
       allowDynamicClientRegistration: true,
       allowUnauthenticatedClientRegistration: true,

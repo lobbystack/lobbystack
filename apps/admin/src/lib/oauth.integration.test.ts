@@ -1,7 +1,7 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 // The whole OAuth flow in process against PostgreSQL with RLS: Better Auth's
@@ -37,7 +37,7 @@ vi.mock("./domain-context", async () => {
   return { createDomainContext: () => ({ db: getDatabase("lobbystack_app").db }), createWorkerDomainContext: () => ({ db: getDatabase("lobbystack_worker").db }) };
 });
 
-import { auditLogs, businessMemberships, businesses, createDatabaseClient, oauthAccessTokens, oauthConsents, receptionistProfiles, users, accounts } from "@lobbystack/db";
+import { auditLogs, businessMemberships, businesses, createDatabaseClient, oauthAccessTokens, oauthConsents, oauthRefreshTokens, receptionistProfiles, users, accounts } from "@lobbystack/db";
 import { listOAuthGrants, revokeOAuthGrant } from "@lobbystack/domain";
 
 import { getAuth } from "./auth";
@@ -256,6 +256,13 @@ describe.skipIf(!setup.testUrl)("OAuth for MCP against PostgreSQL with RLS", () 
     expect(rotated.status).toBe(200);
     expect(rotated.body.refresh_token).not.toBe(refresh);
     expect(await mcpStatus(String(rotated.body.access_token))).toBe(200);
+    // A retry right away gets the same answer instead of ending every connection.
+    const retry = await token({ grant_type: "refresh_token", refresh_token: refresh, client_id: clientId, resource });
+    expect(retry.status).toBe(200);
+    expect(retry.body.refresh_token).toBe(rotated.body.refresh_token);
+    expect(await mcpStatus(String(rotated.body.access_token))).toBe(200);
+    // Move the rotation past the retry window.
+    await admin!.db.update(oauthRefreshTokens).set({ rotationReplayExpiresAt: new Date(Date.now() - 1000) }).where(and(eq(oauthRefreshTokens.clientId, clientId), eq(oauthRefreshTokens.userId, owner.userId), isNotNull(oauthRefreshTokens.rotatedAt)));
     const replay = await token({ grant_type: "refresh_token", refresh_token: refresh, client_id: clientId, resource });
     expect(replay.body.error).toBe("invalid_grant");
     expect(await mcpStatus(String(rotated.body.access_token))).toBe(401);
