@@ -121,7 +121,8 @@ export async function recordAffiliateCommissionInTransaction(
   }
 
   async function adjustPayoutItem(payoutItemId: string, deltaCents: number): Promise<void> {
-    const item = (await tx.select({ amountCents: affiliatePayoutItems.amountCents, status: affiliatePayoutItems.status }).from(affiliatePayoutItems).where(eq(affiliatePayoutItems.id, payoutItemId)).limit(1))[0];
+    // Locked so a concurrent refund or payout run waits and rereads the amount.
+    const item = (await tx.select({ amountCents: affiliatePayoutItems.amountCents, status: affiliatePayoutItems.status }).from(affiliatePayoutItems).where(eq(affiliatePayoutItems.id, payoutItemId)).limit(1).for("update"))[0];
     if (!item || item.status === "paid") return;
     const amountCents = Math.max(0, item.amountCents + deltaCents);
     await tx.update(affiliatePayoutItems).set({ amountCents, status: amountCents >= MIN_PAYOUT_CENTS ? "ready" : "draft", updatedAt: now }).where(eq(affiliatePayoutItems.id, payoutItemId));
@@ -225,7 +226,9 @@ export async function generateAffiliatePayoutRun(
     for (const [profileId, group] of groups) {
       const amountCents = group.reduce((total, commission) => total + commission.commissionCents, 0);
       if (amountCents < MIN_PAYOUT_CENTS) continue;
-      const current = (await tx.select().from(affiliatePayoutItems).where(and(eq(affiliatePayoutItems.payoutRunId, run.id), eq(affiliatePayoutItems.affiliateProfileId, profileId))).limit(1))[0];
+      const current = (await tx.select().from(affiliatePayoutItems).where(and(eq(affiliatePayoutItems.payoutRunId, run.id), eq(affiliatePayoutItems.affiliateProfileId, profileId))).limit(1).for("update"))[0];
+      // A paid item is closed: reopening it would pay its old amount again. These commissions wait for next month's run.
+      if (current?.status === "paid") continue;
       const nextAmount = (current?.amountCents ?? 0) + amountCents;
       const nextStatus = nextAmount >= MIN_PAYOUT_CENTS ? "ready" : "draft";
       const item = current
