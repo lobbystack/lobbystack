@@ -1,5 +1,5 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { embedMany, type EmbeddingModel } from "ai";
+import { embedMany, wrapEmbeddingModel, type EmbeddingModel } from "ai";
 import { createHash } from "node:crypto";
 
 import { trimTrailingSlashes, type AiUsage } from "@lobbystack/shared";
@@ -9,6 +9,9 @@ export const DEFAULT_EMBEDDING_AI_MODEL = "text-embedding-3-small";
 export const EMBEDDING_DIMENSIONS = 1536;
 export const DEFAULT_EMBEDDING_TIMEOUT_MS = 30_000;
 export const DEFAULT_EMBEDDING_MAX_PARALLEL_CALLS = 4;
+// OpenAI rejects a request over 300,000 tokens, and the SDK only splits at 2,048 inputs.
+// 128 chunks of up to 1,800 characters stay under that even for Cyrillic text.
+const EMBEDDING_INPUTS_PER_CALL = 128;
 
 export type EmbeddingAiConfig = {
   apiKey?: string;
@@ -37,7 +40,6 @@ export class OpenAiCompatibleEmbeddingProvider {
   private readonly pricingSource: string | undefined;
   private readonly pricingEffectiveDate: string | undefined;
   private readonly embeddingFingerprint: string;
-  private readonly timeoutMs: number;
   private readonly maxParallelCalls: number;
 
   constructor(config: EmbeddingAiConfig) {
@@ -49,17 +51,24 @@ export class OpenAiCompatibleEmbeddingProvider {
       baseURL,
       ...(config.apiKey ? { apiKey: config.apiKey } : {}),
     });
-    this.api = factory.embeddingModel(this.model);
     // Do not attach an unauditable price to financial usage records.
     this.inputCostPerMillionTokens = hasVersionedPricing(config) ? config.inputCostPerMillionTokens : undefined;
     this.pricingVersion = config.pricingVersion;
     this.pricingSource = config.pricingSource;
     this.pricingEffectiveDate = config.pricingEffectiveDate;
-    this.timeoutMs = config.timeoutMs ?? DEFAULT_EMBEDDING_TIMEOUT_MS;
+    const timeoutMs = config.timeoutMs ?? DEFAULT_EMBEDDING_TIMEOUT_MS;
     this.maxParallelCalls = config.maxParallelCalls ?? DEFAULT_EMBEDDING_MAX_PARALLEL_CALLS;
     if (!Number.isInteger(this.maxParallelCalls) || this.maxParallelCalls < 1) {
       throw new Error("Embedding max parallel calls must be a positive integer.");
     }
+    this.api = wrapEmbeddingModel({
+      model: factory.embeddingModel(this.model),
+      middleware: {
+        overrideMaxEmbeddingsPerCall: () => EMBEDDING_INPUTS_PER_CALL,
+        // Each request gets its own timeout, so a large document has time for all its requests.
+        transformParams: async ({ params }) => ({ ...params, abortSignal: params.abortSignal ? AbortSignal.any([params.abortSignal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs) }),
+      },
+    });
     this.embeddingFingerprint = createEmbeddingFingerprint({
       baseURL,
       model: this.model,
@@ -74,12 +83,10 @@ export class OpenAiCompatibleEmbeddingProvider {
 
   async embed(values: string[], onUsage?: (usage: AiUsage) => Promise<void> | void, options?: EmbeddingOptions): Promise<number[][]> {
     const startedAt = performance.now();
-    const timeoutSignal = AbortSignal.timeout(this.timeoutMs);
-    const abortSignal = options?.abortSignal ? AbortSignal.any([options.abortSignal, timeoutSignal]) : timeoutSignal;
     const result = await embedMany({
       model: this.api,
       values,
-      abortSignal,
+      ...(options?.abortSignal ? { abortSignal: options.abortSignal } : {}),
       maxParallelCalls: this.maxParallelCalls,
       telemetry: {
         isEnabled: true,
