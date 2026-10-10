@@ -1,4 +1,4 @@
-import { demoSnapshot, type BookingMode, type BusinessContextSnapshot, type KnowledgeSnippet } from "@lobbystack/shared";
+import { demoSnapshot, type BusinessContextSnapshot, type KnowledgeSnippet } from "@lobbystack/shared";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@lobbystack/domain", async () => ({
@@ -11,17 +11,8 @@ vi.mock("@lobbystack/domain", async () => ({
 }));
 
 import { bookForCaller, requestCancellationForCaller, searchKnowledgeEvidence } from "@lobbystack/domain";
-import { createReceptionistTools, type AgentChannel, type AgentToolContext } from "./tools";
-
-function toolNames(overrides: Omit<Partial<AgentToolContext>, "snapshot"> & { bookingMode?: BookingMode; snapshot?: Partial<BusinessContextSnapshot> } = {}): string[] {
-  const { bookingMode, snapshot, ...context } = overrides;
-  return Object.keys(createReceptionistTools({
-    domain: { db: {} as never },
-    channel: "web_chat",
-    ...context,
-    snapshot: { ...demoSnapshot, ...snapshot, ...(bookingMode ? { bookingMode } : {}) },
-  })).sort();
-}
+import { receptionistCapabilities, type Conversation } from "./capabilities";
+import { createReceptionistTools, type AgentChannel } from "./tools";
 
 const callControl = { transfer: vi.fn(async () => true), hangup: vi.fn(async () => undefined) };
 
@@ -29,40 +20,16 @@ const callControl = { transfer: vi.fn(async () => true), hangup: vi.fn(async () 
 vi.setSystemTime(new Date("2026-10-01T12:00:00Z"));
 
 describe("createReceptionistTools", () => {
-  it("books directly by default", () => {
-    expect(toolNames()).toEqual(["bookAppointment", "findAvailability", "getBusinessHours", "getBusinessServices", "requestAppointmentCancellation", "searchKnowledge", "takeMessage"]);
-  });
-
-  it("takes requests instead of booking in request mode", () => {
-    const names = toolNames({ bookingMode: "request" });
-    expect(names).toContain("requestAppointment");
-    expect(names).not.toContain("bookAppointment");
-    expect(names).not.toContain("findAvailability");
-  });
-
-  it("offers no booking actions when booking is off", () => {
-    const names = toolNames({ bookingMode: "off", channel: "voice", callerPhone: "+14165550100" });
-    expect(names).toEqual(["getBusinessHours", "getBusinessServices", "searchKnowledge", "takeMessage"]);
-  });
-
-  it("offers appointment changes only when the call carries the caller's number", () => {
-    expect(toolNames({ channel: "web_voice" })).not.toContain("cancelAppointment");
-    expect(toolNames({ channel: "voice", callerPhone: "+14165550100" })).toEqual(expect.arrayContaining(["lookupAppointmentForChange", "verifyAppointmentForChange", "cancelAppointment", "rescheduleAppointment"]));
-  });
-
-  it("offers transfer and hang-up only on calls it can control", () => {
-    expect(toolNames({ channel: "web_voice" })).not.toContain("transferCall");
-    expect(toolNames({ channel: "voice", callControl })).toEqual(expect.arrayContaining(["transferCall", "endCall"]));
-  });
-
-  it("limits prospect demos to answering questions and taking messages", () => {
-    expect(toolNames({ channel: "web_voice", intakeOnly: true, callControl })).toEqual(["endCall", "getBusinessHours", "getBusinessServices", "searchKnowledge", "takeMessage"]);
-  });
-
-  it("offers hang-up but not transfer on browser calls", () => {
-    const names = toolNames({ channel: "web_voice", callControl: { hangup: vi.fn() } });
-    expect(names).toContain("endCall");
-    expect(names).not.toContain("transferCall");
+  it("creates exactly the tools capabilities.ts offers", () => {
+    const phoneCall: Conversation = { channel: "voice", callerPhone: "+14165550100", callId: "call_1", callControl };
+    for (const [snapshot, conversation] of [
+      [demoSnapshot, { channel: "web_chat" }],
+      [demoSnapshot, phoneCall],
+      [{ ...demoSnapshot, bookingMode: "request" }, phoneCall],
+      [demoSnapshot, { channel: "web_voice", intakeOnly: true, callControl }],
+    ] as Array<[BusinessContextSnapshot, Conversation]>) {
+      expect(Object.keys(createReceptionistTools({ domain: { db: {} as never }, snapshot, ...conversation }))).toEqual(receptionistCapabilities(snapshot, conversation).tools);
+    }
   });
 
   // GPT-Live said goodbye before it handed the call over, so a reply would be a second one.
@@ -88,20 +55,6 @@ describe("createReceptionistTools", () => {
 
 describe("requestAppointmentCancellation", () => {
   const operatorOnly = { appointmentChangePolicy: { enabled: true, allowCancel: true, allowReschedule: true, verificationMode: "operator_only" as const } };
-
-  it("passes cancellations to the team wherever the business takes bookings", () => {
-    expect(toolNames({ channel: "web_voice" })).toContain("requestAppointmentCancellation");
-    expect(toolNames({ channel: "web_chat", bookingMode: "request" })).toContain("requestAppointmentCancellation");
-    expect(toolNames({ channel: "voice", callerPhone: "+14165550100", snapshot: operatorOnly })).toContain("requestAppointmentCancellation");
-    // Next to self-service, for an appointment the caller's number doesn't find or verify.
-    expect(toolNames({ channel: "voice", callerPhone: "+14165550100" })).toEqual(expect.arrayContaining(["cancelAppointment", "lookupAppointmentForChange", "requestAppointmentCancellation"]));
-  });
-
-  it("isn't offered where the business takes no bookings, or in a demo", () => {
-    expect(toolNames({ channel: "web_voice", bookingMode: "off" })).not.toContain("requestAppointmentCancellation");
-    expect(toolNames({ channel: "voice", callerPhone: "+14165550100", bookingMode: "off" })).not.toContain("requestAppointmentCancellation");
-    expect(toolNames({ channel: "web_voice", intakeOnly: true })).not.toContain("requestAppointmentCancellation");
-  });
 
   it("saves the caller's details as a request and says the appointment isn't cancelled", async () => {
     const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "web_voice", callId: "call_1", conversationId: "conversation_1", snapshot: { ...demoSnapshot, timezone: "America/Toronto" } });

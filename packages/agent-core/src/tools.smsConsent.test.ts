@@ -53,15 +53,7 @@ describe("recordTextPreference", () => {
     await expect(tools().run("recordTextPreference", { answer: "declined" })).resolves.toMatchObject({ ok: false });
   });
 
-  it("is only offered on a phone call the business can text back", async () => {
-    for (const set of [tools({ channel: "web_chat", callerPhone: undefined }), tools({ channel: "web_voice", callerPhone: undefined }), tools({ callerPhone: "+381695021111", snapshot: tollFree }), tools({ snapshot: { contactChannels: {} } }), tools({ callId: undefined })]) {
-      expect(set.set).not.toHaveProperty("recordTextPreference");
-    }
-    // A prospect demo only takes messages, and a business that doesn't book has nothing to text about.
-    const context = { domain: { db: {} as never }, channel: "voice" as const, callerPhone, callId: "call_1" };
-    expect(createReceptionistTools({ ...context, snapshot: demoSnapshot, intakeOnly: true })).not.toHaveProperty("recordTextPreference");
-    expect(createReceptionistTools({ ...context, snapshot: { ...demoSnapshot, bookingMode: "off" } })).not.toHaveProperty("recordTextPreference");
-    expect(tools().set).toHaveProperty("recordTextPreference");
+  it("leaves the answer out of booking, so bookAppointment doesn't ask for it", () => {
     expect(tools().schema("bookAppointment").safeParse({ serviceName: "General Checkup", startsAt: "2026-10-06T10:00" }).success).toBe(true);
   });
 

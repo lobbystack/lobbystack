@@ -5,6 +5,7 @@ import type { DelegationCreatedEvent } from "openai/resources/live/live";
 import { SidebandWS } from "openai/resources/live/sideband/ws";
 
 import type { ReceptionistAgent } from "../agent";
+import { toolUse } from "../capabilities";
 import { CALL_ENDING, DIRECT_ANSWER_TOOLS, directToolAnswer, fitToAppend, type DirectAnswerStep } from "./directAnswer";
 import { greetingCommand } from "./greeting";
 import { LiveLatencyTracker, type LiveCallLatency } from "./latency";
@@ -254,32 +255,6 @@ const WRAP_UP: Record<LiveCallWrapUp, string> = {
   service_restart: "The phone service is restarting, so the call has to end now. In the language of the conversation, apologize briefly, ask the caller to call back in a minute, and say goodbye.",
 };
 const TRANSFER_FAILED = "The transfer to a person didn't go through. In the language of the conversation, tell the caller briefly and offer to take a message so the team can call them back.";
-
-// Tools that change something. The next request on the call sees their results,
-// so a changed request reschedules instead of booking twice. endCall isn't one:
-// a call that goes on after it was cancelled, and the next request may end it again.
-const ACTION_TOOLS = new Set(["bookAppointment", "requestAppointment", "requestAppointmentCancellation", "cancelAppointment", "rescheduleAppointment", "takeMessage", "transferCall"]);
-// The caller's answer about texts. The next request sees only the latest one,
-// in one slot, and saving it doesn't count as booking or changing anything.
-const ANSWER_TOOLS = new Set(["recordTextPreference"]);
-// Lookups the next request can reuse instead of repeating.
-const REUSABLE_LOOKUPS = new Set(["findAvailability"]);
-const PROGRESS: Record<string, string> = {
-  findAvailability: "looked up open times",
-  bookAppointment: "tried to book the appointment",
-  requestAppointment: "tried to save the appointment request",
-  requestAppointmentCancellation: "tried to save the cancellation request",
-  lookupAppointmentForChange: "looked up the caller's appointment",
-  verifyAppointmentForChange: "checked the caller's identity",
-  sendAppointmentChangeOtp: "sent a verification code",
-  verifyAppointmentChangeOtp: "checked the verification code",
-  cancelAppointment: "tried to cancel the appointment",
-  rescheduleAppointment: "tried to reschedule the appointment",
-  recordTextPreference: "tried to save the caller's answer about texts",
-  takeMessage: "tried to save the message",
-  transferCall: "tried to transfer the call",
-  searchKnowledge: "searched the business's documents",
-};
 
 type PendingAppend = { kind: "greeting" | "answer" | "update" | "wrap_up"; delegationId?: string };
 // A hangup waiting for the caller to be done. afterMs is where the request
@@ -1026,17 +1001,18 @@ export class LiveCallController {
     ].filter(Boolean).join("\n\n");
   }
 
-  // Keeps what the next request needs from this one's tool calls.
+  // Keeps what the next request needs from this one's tool calls. See ToolKind.
   private rememberResults(steps: StepLike[]): void {
     for (const step of steps) {
       for (const result of step.toolResults) {
         const output = fitToAppend(JSON.stringify(result.output ?? null));
-        if (ANSWER_TOOLS.has(result.toolName)) {
+        const { kind } = toolUse(result.toolName);
+        if (kind === "answer") {
           const previous = this.completedActions.findIndex((line) => line.startsWith(`- ${result.toolName}:`));
           if (previous >= 0) this.completedActions.splice(previous, 1);
         }
-        if (ACTION_TOOLS.has(result.toolName) || ANSWER_TOOLS.has(result.toolName)) this.completedActions.push(`- ${result.toolName}: ${output}`);
-        if (REUSABLE_LOOKUPS.has(result.toolName)) this.latestLookup = `${result.toolName}: ${output}`;
+        if (kind === "action" || kind === "answer") this.completedActions.push(`- ${result.toolName}: ${output}`);
+        if (kind === "reusable_lookup") this.latestLookup = `${result.toolName}: ${output}`;
       }
     }
     this.completedActions.splice(0, Math.max(0, this.completedActions.length - MAX_REMEMBERED_ACTIONS));
@@ -1048,8 +1024,8 @@ export class LiveCallController {
     if (revision !== this.latestRevision || !step.toolCalls.length) return;
     // A step that only called direct-answer tools is the last one; its result follows at once.
     if (step.toolCalls.every((call) => DIRECT_ANSWER_TOOLS.includes(call.toolName))) return;
-    const done = step.toolResults.map((result) => `${PROGRESS[result.toolName] ?? `ran ${result.toolName}`}${succeeded(result.output) ? "" : " (it didn't go through)"}`);
-    const changed = steps.some((item) => item.toolResults.some((result) => ACTION_TOOLS.has(result.toolName) && succeeded(result.output)));
+    const done = step.toolResults.map((result) => `${toolUse(result.toolName).progress}${succeeded(result.output) ? "" : " (it didn't go through)"}`);
+    const changed = steps.some((item) => item.toolResults.some((result) => toolUse(result.toolName).kind === "action" && succeeded(result.output)));
     const content = `Progress on the caller's request: ${done.join("; ") || "working on it"}. ${changed ? "" : "Nothing has been booked, changed or saved yet."}`.trim();
     this.send({ type: "session.thinking.append", delegation_id: delegationId, content: fitToAppend(content), event_id: `progress_${delegationId}_${steps.length}` }, { kind: "update", delegationId });
   }

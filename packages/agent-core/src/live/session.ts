@@ -30,7 +30,7 @@ function openingHistory(snapshot: BusinessContextSnapshot): { input?: Array<{ ro
 export function buildBrowserSessionConfig(snapshot: BusinessContextSnapshot, voice = DEFAULT_VOICE): MediaSessionConfig {
   return {
     model: LIVE_MODEL,
-    instructions: buildLiveInstructions(snapshot),
+    instructions: buildLiveInstructions(snapshot, "web_voice"),
     ...openingHistory(snapshot),
     audio: { output: { voice } },
     delegation: { type: "client" },
@@ -44,7 +44,7 @@ export function buildPhoneSessionConfig(snapshot: BusinessContextSnapshot, voice
   return {
     type: "live",
     model: LIVE_MODEL,
-    instructions: buildLiveInstructions(snapshot),
+    instructions: buildLiveInstructions(snapshot, "voice"),
     ...openingHistory(snapshot),
     audio: { output: { voice } },
     delegation: { type: "client" },

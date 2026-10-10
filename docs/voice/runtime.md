@@ -14,9 +14,11 @@ The agent core (`packages/agent-core`) is an AI SDK `ToolLoopAgent`. Its tools c
 - taking a message for the team
 - transferring the call (phone only) and ending it
 
+`packages/agent-core/src/capabilities.ts` decides which of these tools a call or chat gets. The agent's instructions and GPT-Live's list of backend tools both read that decision, so GPT-Live only offers what the agent can do.
+
 The caller hears silence while the agent works, so calls keep it short:
 
-- GPT-Live's instructions follow the structure in OpenAI's GPT-Live prompting guide: personality, backchannel and interruption policies, then a delegation policy that lists the backend's capabilities for this business.
+- GPT-Live's instructions follow the structure in OpenAI's GPT-Live prompting guide: personality, backchannel and interruption policies, then a delegation policy that lists what the backend can do for this business on a phone or browser call.
 - GPT-Live gets the business summary, opening hours, upcoming closures, services, the answers the business wrote for common questions, its rules, and the titles of its knowledge sources when the call starts. It answers from those facts and doesn't delegate them. The worker writes the business summary with AI from the knowledge sources (`business.generateSummary`) a few minutes after they change, unless an operator wrote it. A sibling job (`business.extractHours`) fills the opening hours from the passages that state them, unless an operator set the hours. `businesses.hours_source` records who set them: `none`, `generated` or `operator`.
 - Booking tools say why a time isn't bookable: no opening hours, closed that day, outside opening hours, a planned closure, no staff for the service, a calendar that hasn't synced, or taken. Only a taken time is reported as booked. With instant booking and no opening hours, the agent and GPT-Live take the caller's request as a message instead of offering times.
 - The agent runs on the `AI_CHAT_*` endpoint and model, with `low` reasoning and OpenAI's `priority` processing tier. Set `AI_DELEGATION_MODEL`, `AI_DELEGATION_REASONING_EFFORT` and `AI_DELEGATION_SERVICE_TIER` to change that.

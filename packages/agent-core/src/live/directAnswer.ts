@@ -1,6 +1,7 @@
 import { countKnowledgeTokens } from "@lobbystack/domain";
 
 import { describeClosure, describeServices, type ServiceFact, type UpcomingClosure } from "../businessFacts";
+import type { ToolName } from "../capabilities";
 
 // On a call, GPT-Live phrases whatever the agent hands back, so some tool
 // results need no second model step to put them into words: a list read from
@@ -74,7 +75,7 @@ function trimToTokens(value: string, tokens: number): string {
   return `${sentence > cut.length / 2 ? cut.slice(0, sentence + 1) : cut}…`;
 }
 
-const FORMATTERS: Record<string, Formatter> = {
+const FORMATTERS: Partial<Record<ToolName, Formatter>> = {
   getBusinessServices: (_input, output) => {
     const services = Array.isArray(output.services) ? output.services as ServiceFact[] : [];
     if (!services.length) {
@@ -128,7 +129,7 @@ export function directToolAnswer(step: DirectAnswerStep | undefined): string | u
   if (!step?.toolCalls.length) return undefined;
   const answers: string[] = [];
   for (const call of step.toolCalls) {
-    const formatter = FORMATTERS[call.toolName];
+    const formatter = FORMATTERS[call.toolName as ToolName];
     const result = step.toolResults.find((item) => item.toolCallId === call.toolCallId);
     if (!formatter || !result || typeof result.output !== "object" || result.output === null) return undefined;
     const input = typeof result.input === "object" && result.input !== null ? result.input as Record<string, unknown> : {};

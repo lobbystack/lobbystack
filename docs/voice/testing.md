@@ -6,7 +6,7 @@ Unit tests replace GPT-Live with a fake, so they can't tell you how the model re
 
 Run `pnpm voice:eval` after any change that can alter what GPT-Live says or when it hands a request to the backend:
 
-- The GPT-Live instructions in `packages/agent-core/src/instructions.ts` (`buildLiveInstructions`)
+- The GPT-Live instructions in `packages/agent-core/src/instructions.ts` (`buildLiveInstructions`), or the backend tools they list, which come from `packages/agent-core/src/capabilities.ts`
 - The call controller in `packages/agent-core/src/live/callController.ts`
 - The end-call flow: the `endCall` tool, the caller check in `packages/agent-core/src/live/callerDone.ts`, or the backend prompt
 - What the worker sends GPT-Live as delegation results
