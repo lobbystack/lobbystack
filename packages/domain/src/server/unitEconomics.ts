@@ -1,6 +1,6 @@
 import { and, asc, eq, sql } from "drizzle-orm";
 
-import { businessMemberships, businesses, enqueueOutbox, unitEconomicsEvents, unitEconomicsRollups, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { businessMemberships, enqueueOutbox, unitEconomicsEvents, unitEconomicsRollups, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 
 import type { DomainContext } from "./context";
 
@@ -48,13 +48,6 @@ function roundUsd(value: number): number {
 
 function roundUnitCost(total: number, denominator: number): number {
   return denominator > 0 ? roundUsd(total / denominator) : 0;
-}
-
-function configuredMonthlyInfraCostUsd(): number {
-  const databaseCost = Number(process.env.UNIT_ECONOMICS_MONTHLY_DATABASE_COST_USD ?? "0");
-  const hostingCost = Number(process.env.UNIT_ECONOMICS_MONTHLY_HOSTING_COST_USD ?? "0");
-  const storageCost = Number(process.env.UNIT_ECONOMICS_MONTHLY_STORAGE_COST_USD ?? "0");
-  return roundUsd([databaseCost, hostingCost, storageCost].reduce((sum, value) => sum + (Number.isFinite(value) ? Math.max(0, value) : 0), 0));
 }
 
 export async function recordUnitEconomicsEventInTransaction(tx: DatabaseTransaction, input: UnitEconomicsEventInput): Promise<string> {
@@ -117,9 +110,9 @@ export async function refreshUnitEconomicsMonth(context: DomainContext, input: {
     const alertSmsCostUsd = roundUsd(alertSmsEvents.reduce((sum, event) => sum + (event.costUsd ?? 0), 0));
     const activeUsers = await tx.select({ count: sql<string>`count(distinct ${businessMemberships.userId})` }).from(businessMemberships).where(and(eq(businessMemberships.businessId, input.businessId), eq(businessMemberships.status, "active")));
     const activeUserCount = Number(activeUsers[0]?.count ?? 0);
-    const activeBusinesses = await tx.select({ count: sql<string>`count(*)` }).from(businesses).where(eq(businesses.status, "active"));
-    const infraCostUsd = events.length > 0 ? roundUnitCost(configuredMonthlyInfraCostUsd(), Math.max(1, Number(activeBusinesses[0]?.count ?? 0))) : 0;
-    const totalCostUsd = roundUsd(providerCostUsd + aiCostUsd + infraCostUsd);
+    // No infrastructure share: this business-scoped transaction cannot count the other businesses to split it across.
+    const infraCostUsd = 0;
+    const totalCostUsd = roundUsd(providerCostUsd + aiCostUsd);
     const rollupValues = { businessId: input.businessId, monthKey: targetMonth, totalCostUsd, providerCostUsd, aiCostUsd, infraCostUsd, voiceCostUsd, smsCostUsd, alertSmsCostUsd, voiceCallCount, voiceMinutes, outboundSmsCount, smsThreadCount, activeUserCount, costPerVoiceCallUsd: roundUnitCost(totalCostUsd, voiceCallCount), costPerVoiceMinuteUsd: roundUnitCost(totalCostUsd, voiceMinutes), costPerOutboundSmsUsd: roundUnitCost(totalCostUsd, outboundSmsCount), costPerSmsThreadUsd: roundUnitCost(totalCostUsd, smsThreadCount), costPerActiveUserUsd: roundUnitCost(totalCostUsd, activeUserCount), costPerBusinessUsd: totalCostUsd, recomputedAt: new Date(), updatedAt: new Date() };
     const [rollup] = await tx.insert(unitEconomicsRollups).values(rollupValues).onConflictDoUpdate({ target: [unitEconomicsRollups.businessId, unitEconomicsRollups.monthKey], set: rollupValues }).returning({ id: unitEconomicsRollups.id });
     if (!rollup) throw new Error("Unit economics rollup could not be refreshed.");

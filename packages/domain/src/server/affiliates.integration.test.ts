@@ -319,4 +319,30 @@ describe.skipIf(!testUrl)("affiliate program against dedicated PostgreSQL roles"
       expect(item).toMatchObject({ payoutRunId: run.payoutRunId, amountCents: 12_000, status: "ready" });
     });
   });
+
+  it("keeps a paid item closed when its affiliate clears more commission before the run ends", async () => {
+    await rollbackTest(async (tx) => {
+      const businessId = randomUUID();
+      await tx.insert(businesses).values({ id: businessId, slug: businessId, name: "Paid payout", timezone: "UTC", businessType: "test" });
+      const [payment] = await tx.insert(billingTransactions).values({ businessId, kind: "order", sourceId: randomUUID(), status: "paid", amountCents: 100_000, currency: "usd", occurredAt: new Date("1999-01-01") }).returning();
+      const [paidFirst] = await tx.insert(affiliateProfiles).values({ userId: await createUser(tx, "paid-first"), referralCode: `paid-first-${randomUUID().slice(0, 8)}`, payoutEmail: "first@example.invalid" }).returning();
+      const [stillOpen] = await tx.insert(affiliateProfiles).values({ userId: await createUser(tx, "still-open"), referralCode: `still-open-${randomUUID().slice(0, 8)}`, payoutEmail: "open@example.invalid" }).returning();
+      const commission = (profileId: string, commissionCents: number, clearsAt: Date) => ({ affiliateProfileId: profileId, referredBusinessId: businessId, sourceKey: randomUUID(), billingTransactionId: payment!.id, amountCents: commissionCents * 5, commissionCents, currency: "usd", occurredAt: new Date("1999-01-01"), clearsAt });
+      await tx.insert(affiliateCommissions).values([commission(paidFirst!.id, 50_000, new Date("1999-02-01")), commission(stillOpen!.id, 12_000, new Date("1999-02-01"))]);
+      const periodKey = `test-${randomUUID().slice(0, 8)}`;
+      const first = await asRole(tx, "lobbystack_worker", (db) => generateAffiliatePayoutRun({ db }, { periodKey, createdAt: "2000-01-01T00:00:00Z" }));
+      const [item] = await tx.select().from(affiliatePayoutItems).where(eq(affiliatePayoutItems.affiliateProfileId, paidFirst!.id));
+      expect(await asRole(tx, "lobbystack_dispatcher", (db) => markAffiliatePayoutItemPaid({ db }, { payoutItemId: item!.id, externalReference: "paypal-test" }))).toBe(true);
+
+      // The other affiliate's unpaid item keeps the run open, so the next daily run sees the new commission.
+      const [late] = await tx.insert(affiliateCommissions).values(commission(paidFirst!.id, 15_000, new Date("1999-12-15"))).returning();
+      const rerun = await asRole(tx, "lobbystack_worker", (db) => generateAffiliatePayoutRun({ db }, { periodKey, createdAt: "2000-01-02T00:00:00Z" }));
+
+      expect(rerun).toMatchObject({ payoutRunId: first.payoutRunId, status: "draft", assignedCommissions: 0 });
+      const [after] = await tx.select().from(affiliatePayoutItems).where(eq(affiliatePayoutItems.id, item!.id));
+      expect(after).toMatchObject({ amountCents: 50_000, status: "paid" });
+      const [waiting] = await tx.select().from(affiliateCommissions).where(eq(affiliateCommissions.id, late!.id));
+      expect(waiting).toMatchObject({ status: "pending", payoutState: "unassigned", payoutItemId: null });
+    });
+  });
 });

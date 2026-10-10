@@ -8,7 +8,7 @@ import type { DomainContext } from "./context";
 import { recordAffiliateCommissionInTransaction } from "./affiliates";
 import { recordProductEventInTransaction } from "./productEvents";
 import { requireBusinessAdmin } from "../authz";
-import { correctUsageInTransaction, enqueueUsageSyncInTransaction, getUsageStatusInTransaction, loadBillingContext, reserveUsageInTransaction } from "./usage";
+import { correctUsageInTransaction, enqueueUsageSyncInTransaction, getUsageStatusInTransaction, getVoiceSecondsLeftInTransaction, loadBillingContext, reserveUsageInTransaction } from "./usage";
 
 export type BillingCheckoutTarget = "starter" | "pro";
 export type BillingInterval = "monthly" | "annual";
@@ -29,26 +29,13 @@ async function loadWebVoiceBillingAllowance(
   tx: DatabaseTransaction,
   input: { businessId: string; maxDurationMs?: number },
 ): Promise<WebVoiceBillingAllowance> {
-  const status = await getUsageStatusInTransaction(tx, { businessId: input.businessId });
-  const requested = normalizeWebCallMaxDurationMs(input.maxDurationMs);
-  const entitlement = billingPlanCatalog[status.plan];
-  const includedRemaining = status.voiceSecondsIncluded === null
-    ? Number.POSITIVE_INFINITY
-    : Math.max(0, status.voiceSecondsIncluded - status.voiceSecondsUsed);
-  const overageRemaining = !entitlement.overagesBillable || status.overageSpendingCapCents === null
-    ? entitlement.overagesBillable ? Number.POSITIVE_INFINITY : 0
-    : (() => {
-      const ratePerSecond = (entitlement.voiceOverageRatePerMinuteCents ?? 0) / 60;
-      return ratePerSecond > 0
-        ? Math.floor((Math.max(0, status.overageSpendingCapCents - status.overageSpendCents) + 1e-9) / ratePerSecond)
-        : 0;
-    })();
-  const remaining = Math.min(requested / 1_000, includedRemaining + overageRemaining) * 1_000;
+  const { plan, seconds } = await getVoiceSecondsLeftInTransaction(tx, { businessId: input.businessId });
+  const maxDurationMs = Math.floor(Math.min(normalizeWebCallMaxDurationMs(input.maxDurationMs), seconds * 1_000));
   return {
-    allowed: !status.voiceBlocked && remaining >= 1,
-    errorCode: status.voiceBlocked || remaining < 1 ? billingErrorCodes.voiceLimitReached : null,
-    maxDurationMs: Math.min(requested, Math.floor(remaining)),
-    plan: status.plan,
+    allowed: maxDurationMs >= 1,
+    errorCode: maxDurationMs >= 1 ? null : billingErrorCodes.voiceLimitReached,
+    maxDurationMs,
+    plan,
   };
 }
 
