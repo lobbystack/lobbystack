@@ -1,4 +1,4 @@
-import { assertDatabaseRole, businesses, createDatabaseClient, databaseHealthCheck, enqueueOutbox, listSchedulerBusinesses, withBusinessTransaction, withDispatcherTransaction } from "@lobbystack/db";
+import { assertDatabaseRole, businesses, createDatabaseClient, databaseHealthCheck, enqueueOutbox, listReembedBusinesses, listSchedulerBusinesses, listSummaryBackfillBusinesses, withBusinessTransaction, withDispatcherTransaction } from "@lobbystack/db";
 import { createBusinessHoursExtractor, createBusinessSummarizer, createCallSummarizer } from "@lobbystack/agent-core";
 import { assertProductionSecrets, isMaintenanceMode } from "@lobbystack/shared";
 import type { OnboardingFollowupSender } from "@lobbystack/domain";
@@ -133,7 +133,6 @@ async function main(): Promise<void> {
   const refreshSchedulers = async () => {
     const businessRows = await listSchedulerBusinesses(dispatcherDatabase.db);
     await configureSchedulers(queues, businessRows, appliedSchedulers);
-    return businessRows.map((business) => business.id);
   };
   const state = { ready: false, redis: false, database: false, storage: false, activeJobs: 0, draining: false };
   const embeddings = createEmbeddingProvider();
@@ -241,15 +240,13 @@ async function main(): Promise<void> {
   // Workers already take jobs here, so a long pass over every business at boot
   // holds up neither jobs nor the health check.
   void (async () => {
-    const businessIds = await refreshSchedulers();
-    // Existing businesses got summaries before AI wrote them, so write one from
-    // each business's knowledge. BullMQ keeps the job id for a day; a later
-    // restart queues it again, and the job skips summaries an operator wrote,
-    // businesses with no knowledge, and knowledge that hasn't changed, so only
-    // the first run calls the model.
+    await refreshSchedulers();
+    // Existing businesses got summaries before AI wrote them, so write one for
+    // each business that still has the sign-up placeholder and has knowledge.
+    // Knowledge changes queue their own refresh, so other businesses need none.
     const summaryQueue = queues.get("bulk");
     if (businessSummarizer && summaryQueue) {
-      for (const businessId of businessIds) {
+      for (const businessId of await listSummaryBackfillBusinesses(dispatcherDatabase.db)) {
         await enqueueJob(summaryQueue, {
           type: "business.generateSummary",
           businessId,
@@ -276,7 +273,7 @@ async function main(): Promise<void> {
     if (embeddings) {
       const embeddingQueue = queues.get("bulk");
       if (embeddingQueue) {
-        for (const businessId of businessIds) {
+        for (const businessId of await listReembedBusinesses(dispatcherDatabase.db, embeddings.fingerprint)) {
           await enqueueJob(embeddingQueue, {
             type: "knowledge.reembedBusiness",
             businessId,

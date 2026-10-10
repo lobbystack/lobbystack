@@ -165,3 +165,15 @@ export async function listSchedulerBusinesses(db: Database): Promise<Array<{ id:
   const result = await withDispatcherTransaction(db, async (tx) => await tx.execute<{ id: string; active: boolean }>(sql`select business_id as id, active from app.list_scheduler_businesses()`));
   return result.rows;
 }
+
+/** Businesses with the sign-up placeholder summary and knowledge to write one from. Runs as the dispatcher. */
+export async function listSummaryBackfillBusinesses(db: Database): Promise<string[]> {
+  const result = await withDispatcherTransaction(db, async (tx) => await tx.execute<{ business_id: string }>(sql`select app.list_summary_backfill_businesses() as business_id`));
+  return result.rows.map((row) => row.business_id);
+}
+
+/** Businesses with knowledge chunks not yet embedded with this fingerprint. Runs as the dispatcher. */
+export async function listReembedBusinesses(db: Database, fingerprint: string): Promise<string[]> {
+  const result = await withDispatcherTransaction(db, async (tx) => await tx.execute<{ business_id: string }>(sql`select app.list_reembed_businesses(${fingerprint}) as business_id`));
+  return result.rows.map((row) => row.business_id);
+}

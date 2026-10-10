@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { and, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it, vi } from "vitest";
 import { businessHours, calls, conversations, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, messages, receptionistProfiles, storageObjects, transcripts, websiteIngestionJobs } from "@lobbystack/db";
-import { affiliateCommissions, affiliatePayoutItems, affiliateProfiles, billingAccounts, billingTransactions, appointments, auditLogs, businessMemberships, contacts, productEvents, providerEvents, services, staff, users, businesses, notifications, outboxMessages, withBusinessTransaction, claimOutboxBatch, createDatabaseClient, enqueueOutbox, markOutboxFailed, listSchedulerBusinesses, markOutboxPublished, prunePublishedOutbox, sessions, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { affiliateCommissions, affiliatePayoutItems, affiliateProfiles, billingAccounts, billingTransactions, appointments, auditLogs, businessMemberships, contacts, productEvents, providerEvents, services, staff, users, businesses, notifications, outboxMessages, withBusinessTransaction, claimOutboxBatch, createDatabaseClient, enqueueOutbox, markOutboxFailed, listReembedBusinesses, listSchedulerBusinesses, listSummaryBackfillBusinesses, markOutboxPublished, prunePublishedOutbox, sessions, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { generateAffiliatePayoutRun } from "./affiliates";
 import { getBillingUsageStatus, reconcileBillingProviderEvent } from "./billing";
 import { DASHBOARD_TEST_CALL_WIDGET_ID } from "@lobbystack/shared";
@@ -561,6 +561,41 @@ describe.skipIf(!testUrl)("reliability against dedicated PostgreSQL roles", () =
       await tx.execute(sql`reset session authorization`);
       await tx.execute(sql`set local session authorization lobbystack_worker`);
       await expect(withBusinessTransaction(tx as unknown as Database, { actorType: "worker" }, (inner) => inner.execute(sql`select * from app.list_scheduler_businesses()`))).rejects.toMatchObject({ cause: { message: expect.stringMatching(/permission denied/) } });
+      await tx.execute(sql`reset session authorization`);
+    });
+  });
+
+  it("lists for the boot backfills only the businesses their jobs would change", async () => {
+    await rollbackTest(async (tx) => {
+      const embedding = Array.from({ length: 1536 }, () => 0.01);
+      const business = async (summarySource: "placeholder" | "generated" | "operator", knowledge: { snippet?: boolean; document?: "indexed" | "processing"; chunk?: { embeddingFingerprint: string | null; embeddingStatus: string; embedded: boolean } }) => {
+        const businessId = randomUUID();
+        await tx.insert(businesses).values({ id: businessId, slug: businessId, name: "Backfill listing", timezone: "UTC", businessType: "test" });
+        await tx.insert(receptionistProfiles).values({ businessId, greeting: "Hi", tone: "warm", summary: "Placeholder.", summarySource, bookingPolicy: "Confirm first.", transferMode: "never" });
+        if (knowledge.snippet) await tx.insert(knowledgeSnippets).values({ businessId, title: "Services", content: "Checkups." });
+        if (knowledge.document) {
+          const documentId = randomUUID();
+          await tx.insert(knowledgeDocuments).values({ id: documentId, businessId, sourceType: "upload", title: "Menu", status: knowledge.document });
+          if (knowledge.chunk) await tx.insert(knowledgeChunks).values({ businessId, documentId, sequence: 0, content: "Menu.", contentHash: "a", embeddingFingerprint: knowledge.chunk.embeddingFingerprint, embeddingStatus: knowledge.chunk.embeddingStatus, ...(knowledge.chunk.embedded ? { embedding } : {}) });
+        }
+        return businessId;
+      };
+      const current = { embeddingFingerprint: "current", embeddingStatus: "completed", embedded: true };
+      const empty = await business("placeholder", {});
+      const withSnippet = await business("placeholder", { snippet: true });
+      const withDocument = await business("placeholder", { document: "indexed", chunk: current });
+      const unindexed = await business("placeholder", { document: "processing" });
+      const generated = await business("generated", { snippet: true });
+      const written = await business("operator", { document: "indexed", chunk: current });
+      const otherModel = await business("generated", { document: "indexed", chunk: { ...current, embeddingFingerprint: "previous" } });
+      const neverEmbedded = await business("generated", { document: "indexed", chunk: { embeddingFingerprint: null, embeddingStatus: "pending", embedded: false } });
+      const failed = await business("generated", { document: "indexed", chunk: { ...current, embeddingStatus: "failed" } });
+      const all = new Set<string>([empty, withSnippet, withDocument, unindexed, generated, written, otherModel, neverEmbedded, failed]);
+
+      await tx.execute(sql`set local session authorization lobbystack_dispatcher`);
+      const db = tx as unknown as Database;
+      expect((await listSummaryBackfillBusinesses(db)).filter((id) => all.has(id)).sort()).toEqual([withSnippet, withDocument].sort());
+      expect((await listReembedBusinesses(db, "current")).filter((id) => all.has(id)).sort()).toEqual([otherModel, neverEmbedded, failed].sort());
       await tx.execute(sql`reset session authorization`);
     });
   });
