@@ -386,6 +386,20 @@
     },
     "edit": "Editar",
     "cancel": "Cancelar",
-    "notSet": "Sin definir"
+    "notSet": "Sin definir",
+    "closures": {
+      "title": "Cierres",
+      "description": "Agregue los días festivos y otros períodos en que su negocio cierra. El agente no reserva citas durante esos períodos. Las horas están en la zona horaria {{timezone}}.",
+      "startsAt": "Cerrado desde",
+      "endsAt": "Cerrado hasta",
+      "reason": "Motivo",
+      "reasonPlaceholder": "Motivo (opcional)",
+      "add": "Agregar cierre",
+      "remove": "Quitar este cierre",
+      "summary": "Cierres: {{list}}",
+      "order": "Indique un inicio y un fin posterior para el cierre resaltado.",
+      "ended": "El cierre resaltado termina en el pasado. Cambie sus fechas o quítelo.",
+      "overlap": "El cierre resaltado se superpone con otro. Cambie sus fechas."
+    }
   }
 }
