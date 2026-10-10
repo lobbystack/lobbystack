@@ -62,10 +62,10 @@ exits non-zero.
 ## Alert-firing smoke
 
 `scripts/operations/alert-firing-smoke.ts` drives the three critical conditions in
-[alerts](alerts.md). Default mode is `--dry-run`: it prints the exact operator steps,
-required external configuration, and heartbeat absence guidance, and performs no
-writes. It never calls providers, interrupts services, or deletes data; where a
-condition needs a deliberate fault it prints the operator command for a human.
+[alerts](alerts.md). Default mode is `--dry-run`: it prints the exact operator steps
+and required external configuration, and performs no writes. It never calls
+providers, interrupts services, or deletes data; where a condition needs a
+deliberate fault it prints the operator command for a human.
 
 Executing requires all of the following. Without them the evidence is `incomplete`
 and the process exits non-zero:
@@ -86,10 +86,6 @@ pnpm exec tsx --tsconfig tsconfig.base.json scripts/operations/alert-firing-smok
   --confirmed-firing=ReplacementOutboxDeadLettered,ReplacementWorkerJobFailures,ReplacementOutboxDispatcherUnavailable \
   --confirmed-recovery=ReplacementOutboxDeadLettered,ReplacementWorkerJobFailures,ReplacementOutboxDispatcherUnavailable
 ```
-
-Liveness absence checks (`ops.service.health_check`) belong in Product Analytics absence alerts, because Error
-Tracking cannot notify on an event that never arrived. See
-[provider-failure error tracking](../telemetry/provider-failure-error-tracking.md).
 
 ## Interpreting evidence
 

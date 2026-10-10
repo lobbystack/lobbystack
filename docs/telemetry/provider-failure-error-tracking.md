@@ -15,4 +15,4 @@ Create an Error Tracking notification for alertable admin errors:
 
 Keep Product Analytics alert slots for absence checks, such as missing worker heartbeats. Error Tracking can't notify on an event that never arrived, so those checks need Product Analytics.
 
-Skip paid or destructive synthetic provider probes. Real application traffic shows whether providers respond, and `ops.service.health_check` and `ops.voice.heartbeat` cover application and voice liveness.
+Skip paid or destructive synthetic provider probes. Real application traffic shows whether providers respond.

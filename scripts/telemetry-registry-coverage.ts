@@ -14,13 +14,11 @@ export const KNOWN_UNPRODUCED: Partial<Record<TelemetryEventName, string>> = {
   "ops.billing.unit_economics_rollup_recorded": "Rollup producer is pending billing reconciliation work.",
   "ops.billing.usage_sync_recovered": "The billing schema has no durable failed state from which to detect recovery.",
   "ops.outbox.flush_failed": "The dispatcher connects as lobbystack_dispatcher, which has no INSERT grant on product_events, and global poll failures have no tenant to scope an RLS-safe row to. Tracked by OTel counters (lobbystack.outbox.dispatch_failures, lobbystack.outbox.dead_lettered, lobbystack.outbox.poll_failures) until a worker-role consumer exists.",
-  "ops.service.health_check": "Retired Convex prober must be decommissioned before this contract is removed.",
-  "ops.service.health_check_failed": "Retired Convex prober must be decommissioned before this contract is removed.",
   "prospect_demo.signup_clicked": "No privacy-safe server touchpoint exists for this intent yet.",
-  "sms.delivery_accepted": "SMS is not in use; schema is retained for future activation.",
-  "sms.delivery_failed": "SMS is not in use; schema is retained for future activation.",
-  "sms.inbound_received": "SMS is not in use; schema is retained for future activation.",
-  "sms.provider_cost_recorded": "SMS is not in use; schema is retained for future activation.",
+  "sms.delivery_accepted": "SMS is live, but updateSmsDeliveryStatus doesn't record this analytics event yet.",
+  "sms.delivery_failed": "SMS is live, but updateSmsDeliveryStatus doesn't record this analytics event yet. Operators still get the smsFailed alert for a failed text.",
+  "sms.inbound_received": "SMS is live, but receiveInboundSms doesn't record this analytics event yet.",
+  "sms.provider_cost_recorded": "SMS is live, but recordSmsProviderPricing doesn't record this analytics event yet.",
 };
 
 const ROOTS = ["apps", "packages"];

@@ -117,8 +117,6 @@ export const OPERATIONS_EVENT_NAMES = [
   "ops.billing.unit_economics_rollup_recorded",
   "ops.outbox.backlog_sample",
   "ops.outbox.flush_failed",
-  "ops.service.health_check",
-  "ops.service.health_check_failed",
 ] as const;
 
 export const TELEMETRY_EVENT_NAMES = [
@@ -218,33 +216,6 @@ export type TelemetryContext = {
   provider?: string;
   model?: string;
 };
-
-export type TelemetryRequirementKey =
-  | keyof TelemetryContext
-  | "deploymentMode"
-  | "pathname"
-  | "countryCode"
-  | "selectionMode"
-  | "numberKind"
-  | "section"
-  | "contentType"
-  | "providerStatus"
-  | "setting"
-  | "contactId"
-  | "inboxItemId"
-  | "hasMedia"
-  | "serviceId"
-  | "sourceChannel"
-  | "staffId"
-  | "workflowName"
-  | "latencyBucket"
-  | "toolName"
-  | "backlogBucket"
-  | "monthKey"
-  | "plan"
-  | "prospectDemoId"
-  | "campaignId"
-  | "endedBy";
 
 export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "web.auth.login_succeeded": ["deploymentMode", "pathname"],
@@ -521,18 +492,6 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   ],
   "ops.outbox.backlog_sample": ["deploymentMode", "backlogBucket"],
   "ops.outbox.flush_failed": ["deploymentMode"],
-  "ops.service.health_check": [
-    "deploymentMode",
-    "service",
-    "status",
-    "latencyMs",
-  ],
-  "ops.service.health_check_failed": [
-    "deploymentMode",
-    "service",
-    "status",
-    "latencyMs",
-  ],
 } satisfies Record<TelemetryEventName, ReadonlyArray<string>>;
 
 export type TelemetryValidationInput = Partial<TelemetryContext> & {
