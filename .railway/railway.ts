@@ -72,7 +72,8 @@ export default defineRailway((ctx) => {
       // Railway sends SIGKILL this long after SIGTERM, and the worker drains its
       // calls for this long minus a margin, so a 30-minute call finishes during
       // a deploy. See "Deploy the worker during calls" in docs/voice/runtime.md.
-      ...(production ? { RAILWAY_DEPLOYMENT_DRAINING_SECONDS: "1860" } : {}),
+      // Staging keeps its own shorter drain, set in the dashboard.
+      RAILWAY_DEPLOYMENT_DRAINING_SECONDS: production ? "1860" : preserve(),
       // New phone numbers join this Twilio Elastic SIP trunk, which sends their
       // calls to GPT-Live. Provisioning fails without it.
       TWILIO_SIP_TRUNK_SID: preserve(),
@@ -155,7 +156,7 @@ export default defineRailway((ctx) => {
       // The landing page's demo call starts at /api/voice/live/session with no
       // signed token; the admin only accepts it for this business, from these sites.
       WEB_CALL_PUBLIC_BUSINESS_SLUG: production ? "lobbystack-mp35s9y1" : "lobbystack",
-      ...(production ? { WEB_CALL_ALLOWED_ORIGINS: "https://lobbystack.com,https://www.lobbystack.com" } : {}),
+      WEB_CALL_ALLOWED_ORIGINS: production ? "https://lobbystack.com,https://www.lobbystack.com" : preserve(),
       OPENAI_API_KEY: preserve(),
       NUMBER_CLAIM_TOKEN_SECRET: preserve(),
       POLAR_ACCESS_TOKEN: preserve(),
