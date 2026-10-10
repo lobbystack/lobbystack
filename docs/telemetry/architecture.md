@@ -28,6 +28,8 @@ Both transports validate required properties. Development and self-hosted runtim
 
 Admin and worker requests propagate W3C trace context. Queue jobs retain correlation identifiers without storing customer content in telemetry fields.
 
+`enqueueOutbox` saves the active `traceparent` and `tracestate` on the outbox row. The dispatcher copies both onto the job, and the worker starts the job span inside that trace. You can then follow a request into each job it queued.
+
 ## Privacy
 
 Telemetry must not contain transcripts, message bodies, phone numbers, email addresses, uploaded filenames, signed URLs, access tokens, or provider credentials. Use the redaction helpers in `packages/telemetry` and stable internal identifiers for correlation.

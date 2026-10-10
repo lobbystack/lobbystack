@@ -131,8 +131,6 @@ Outbox health is reported durably from the worker. A tenant-scoped `outbox.backl
 
 - `ops.outbox.backlog_sample`
 - `ops.outbox.flush_failed`
-- `ops.service.health_check`
-- `ops.service.health_check_failed`
 
 ## Shared defaults
 

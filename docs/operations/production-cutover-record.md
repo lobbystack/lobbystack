@@ -52,5 +52,4 @@ Legacy Convex production remains **paused** (frozen). Before the no-return point
 ## Outstanding
 
 - Observe the replacement for the agreed window, then retire the legacy Convex deployment and close the rollback window.
-- Confirm whether any Resend/Svix delivery webhook exists for production; if so, add `https://app.lobbystack.com/api/webhooks/resend`.
 

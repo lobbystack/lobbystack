@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, asc, eq, inArray, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
 
 import type { TraceContextCarrier } from "@lobbystack/contracts";
-import { redactOtelExceptionText } from "@lobbystack/telemetry/node";
+import { injectTraceContext, redactOtelExceptionText } from "@lobbystack/telemetry/node";
 
 import { withDispatcherTransaction, type DatabaseTransaction, type Database } from "./client";
 import { outboxMessages } from "./schema";
@@ -28,6 +28,8 @@ export async function enqueueOutbox(
   tx: DatabaseTransaction,
   input: NewOutboxMessage,
 ): Promise<string> {
+  // The worker continues this trace when it runs the job.
+  const trace = input.trace ?? injectTraceContext({});
   const [message] = await tx
     .insert(outboxMessages)
     .values({
@@ -38,8 +40,8 @@ export async function enqueueOutbox(
       aggregateId: input.aggregateId,
       dedupeKey: input.dedupeKey,
       availableAt: input.availableAt,
-      traceparent: input.trace?.traceparent,
-      tracestate: input.trace?.tracestate,
+      traceparent: trace.traceparent,
+      tracestate: trace.tracestate,
     })
     .onConflictDoNothing({ target: outboxMessages.dedupeKey })
     .returning({ id: outboxMessages.id });
@@ -164,4 +166,16 @@ export async function prunePublishedOutbox(
 export async function listSchedulerBusinesses(db: Database): Promise<Array<{ id: string; active: boolean }>> {
   const result = await withDispatcherTransaction(db, async (tx) => await tx.execute<{ id: string; active: boolean }>(sql`select business_id as id, active from app.list_scheduler_businesses()`));
   return result.rows;
+}
+
+/** Businesses with the sign-up placeholder summary and knowledge to write one from. Runs as the dispatcher. */
+export async function listSummaryBackfillBusinesses(db: Database): Promise<string[]> {
+  const result = await withDispatcherTransaction(db, async (tx) => await tx.execute<{ business_id: string }>(sql`select app.list_summary_backfill_businesses() as business_id`));
+  return result.rows.map((row) => row.business_id);
+}
+
+/** Businesses with knowledge chunks not yet embedded with this fingerprint. Runs as the dispatcher. */
+export async function listReembedBusinesses(db: Database, fingerprint: string): Promise<string[]> {
+  const result = await withDispatcherTransaction(db, async (tx) => await tx.execute<{ business_id: string }>(sql`select app.list_reembed_businesses(${fingerprint}) as business_id`));
+  return result.rows.map((row) => row.business_id);
 }

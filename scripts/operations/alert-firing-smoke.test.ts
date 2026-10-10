@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   ALERT_CONDITION_IDS,
-  HEARTBEAT_ABSENCE_CHECKS,
   alertSmokeGuardProblems,
   parseAlertSmokeArgs,
   renderAlertSmokePlan,
@@ -84,10 +83,9 @@ describe("alert-firing smoke evidence", () => {
     expect(partial.status).toBe("incomplete");
   });
 
-  it("renders operator commands and heartbeat absence guidance", () => {
+  it("renders operator commands", () => {
     const plan = renderAlertSmokePlan();
     for (const id of ALERT_CONDITION_IDS) expect(plan).toContain(id);
-    for (const check of HEARTBEAT_ABSENCE_CHECKS) expect(plan).toContain(check.signal);
     expect(plan).not.toContain("PERFORMANCE_SESSION_COOKIE");
   });
 });

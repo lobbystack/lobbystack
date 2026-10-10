@@ -77,18 +77,6 @@ export const ALERT_CONDITIONS: AlertCondition[] = [
   },
 ];
 
-export type AbsenceCheck = { id: string; signal: string; guidance: string };
-
-// Error Tracking cannot notify on an event that never arrived; these belong in
-// Product Analytics absence alerts per docs/telemetry/provider-failure-error-tracking.md.
-export const HEARTBEAT_ABSENCE_CHECKS: AbsenceCheck[] = [
-  {
-    id: "service-health",
-    signal: "ops.service.health_check",
-    guidance: "Alert on absent ops.service.health_check or sustained ops.service.health_check_failed for each runtime.",
-  },
-];
-
 export type AlertSmokeMode = "dry-run" | "execute";
 
 export type AlertSmokeCliOptions = {
@@ -123,7 +111,6 @@ export type AlertSmokeEvidence = {
   status: "planned" | "passed" | "incomplete";
   allowAlertSmoke: boolean;
   conditions: AlertSmokeConditionResult[];
-  absenceChecks: AbsenceCheck[];
   notes: string[];
 };
 
@@ -238,7 +225,6 @@ export function runAlertFiringSmoke(
     status,
     allowAlertSmoke: environment.ALLOW_ALERT_SMOKE === "true",
     conditions,
-    absenceChecks: HEARTBEAT_ABSENCE_CHECKS.map((check) => ({ ...check })),
     notes,
   };
 }
@@ -265,9 +251,7 @@ export function renderAlertSmokePlan(): string {
       "",
     );
   }
-  lines.push("Absence checks (configure in Product Analytics, not Error Tracking):");
-  for (const check of HEARTBEAT_ABSENCE_CHECKS) lines.push(`- ${check.id} (${check.signal}): ${check.guidance}`);
-  lines.push("", "Confirm outcomes with --confirmed-firing=<condition> and --confirmed-recovery=<condition>.");
+  lines.push("Confirm outcomes with --confirmed-firing=<condition> and --confirmed-recovery=<condition>.");
   return lines.join("\n");
 }
 

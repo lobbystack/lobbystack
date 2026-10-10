@@ -37,7 +37,7 @@ Run these checks against the healthy Compose stack:
 - `pnpm replacement:smoke` verifies core service liveness and readiness.
 - `pnpm replacement:storage` verifies the S3 upload/finalize/download lifecycle, byte ranges, and cross-tenant denial against PostgreSQL and MinIO. Start the MinIO profile before running it.
 - `pnpm replacement:realtime` creates an isolated Better Auth fixture, rejects unauthenticated and cross-tenant SSE access, validates every realtime event type, checks reconnect delivery, and enforces the 500 ms local p95 target.
-- `pnpm replacement:webhooks` verifies Polar Standard Webhooks, optional Resend/Svix webhooks, and Twilio signatures, rejects tampered requests, and confirms duplicate provider delivery remains idempotent.
+- `pnpm replacement:webhooks` verifies Polar Standard Webhooks and Twilio signatures, rejects tampered requests, and confirms duplicate provider delivery remains idempotent.
 - `pnpm replacement:telemetry` runs an in-process OTLP receiver, verifies correlated cross-service traces plus metrics and logs, and rejects customer identifiers, credentials, prompts, transcripts, object keys, customer filenames, or signed storage URLs.
 - `pnpm replacement:security` checks admin/browser import boundaries, CSP directives, SSRF rejection, upload validation, and storage telemetry redaction without external credentials.
 - `pnpm replacement:recovery` proves deterministic duplicate job IDs, transactional outbox publication, Redis client reconnect, and, when `RECOVERY_COMPOSE_PROJECT` is supplied, post-restart dispatcher recovery. Set `RECOVERY_CHECK_WORKER=1` with the production queue prefix to also restart the worker and prove a post-restart global job completes.

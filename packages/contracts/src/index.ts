@@ -35,12 +35,6 @@ export const polarWebhookSchema = z.object({
   data: z.record(z.string(), z.unknown()),
 });
 
-export const resendWebhookSchema = z.looseObject({
-  type: z.string().min(1).max(160),
-  created_at: z.iso.datetime().optional(),
-  data: z.record(z.string(), z.unknown()),
-});
-
 const uploadContentTypes = {
   knowledge: new Set(["text/plain", "text/markdown", "text/x-markdown", "application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "image/jpeg", "image/png", "image/webp", "image/tiff"]),
   attachment: new Set(["text/plain", "application/pdf", "image/jpeg", "image/png", "image/webp", "image/gif", "audio/mpeg", "audio/ogg", "audio/wav", "audio/webm"]),
@@ -198,7 +192,6 @@ export type JobQueue = (typeof jobQueues)[number];
 
 export const queueForJobType = {
   "email.send": "default",
-  "email.reconcileDelivery": "default",
   "sms.send": "critical",
   "appointment.sendChangeOtp": "critical",
   "sms.syncPrice": "critical",

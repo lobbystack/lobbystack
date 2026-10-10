@@ -1,4 +1,4 @@
-import { assertDatabaseRole, businesses, createDatabaseClient, databaseHealthCheck, enqueueOutbox, listSchedulerBusinesses, withBusinessTransaction, withDispatcherTransaction } from "@lobbystack/db";
+import { assertDatabaseRole, businesses, createDatabaseClient, databaseHealthCheck, enqueueOutbox, listReembedBusinesses, listSchedulerBusinesses, listSummaryBackfillBusinesses, withBusinessTransaction, withDispatcherTransaction } from "@lobbystack/db";
 import { createBusinessHoursExtractor, createBusinessSummarizer, createCallSummarizer } from "@lobbystack/agent-core";
 import { assertProductionSecrets, isMaintenanceMode } from "@lobbystack/shared";
 import type { OnboardingFollowupSender } from "@lobbystack/domain";
@@ -10,7 +10,7 @@ import { GoogleCalendarProvider } from "@lobbystack/providers/google/calendar";
 import { PolarBillingProvider } from "@lobbystack/providers/polar/polarBilling";
 import { createStorageProvider } from "@lobbystack/providers/storage/provider";
 import { TwilioProvider } from "@lobbystack/providers/twilio/twilioProvider";
-import { getMeter, initializeTelemetry, redactOtelExceptionText, shutdownTelemetry, withSpan } from "@lobbystack/telemetry/node";
+import { getMeter, initializeTelemetry, redactOtelExceptionText, shutdownTelemetry, withExtractedTraceContext, withSpan } from "@lobbystack/telemetry/node";
 import { redactJobError } from "./redactJobError";
 import { DelayedError, Worker } from "bullmq";
 import { and, eq, isNull } from "drizzle-orm";
@@ -133,7 +133,6 @@ async function main(): Promise<void> {
   const refreshSchedulers = async () => {
     const businessRows = await listSchedulerBusinesses(dispatcherDatabase.db);
     await configureSchedulers(queues, businessRows, appliedSchedulers);
-    return businessRows.map((business) => business.id);
   };
   const state = { ready: false, redis: false, database: false, storage: false, activeJobs: 0, draining: false };
   const embeddings = createEmbeddingProvider();
@@ -199,7 +198,8 @@ async function main(): Promise<void> {
       throw new Error(`Queue ${queueName} is not configured.`);
     }
     const worker = new Worker<JobEnvelope>(queueName, async (job, token) => {
-      const result = await withSpan(`job.${job.data.type}`, { attributes: { "messaging.system": "bullmq", "messaging.destination.name": queueName, "lobbystack.job_type": job.data.type } }, async () => {
+      // The job span joins the trace of the request that queued the job.
+      const result = await withExtractedTraceContext(job.data.trace, async () => await withSpan(`job.${job.data.type}`, { attributes: { "messaging.system": "bullmq", "messaging.destination.name": queueName, "lobbystack.job_type": job.data.type } }, async () => {
         state.activeJobs += 1;
         const started = performance.now();
         let outcome = "success";
@@ -219,7 +219,7 @@ async function main(): Promise<void> {
           duration.record(performance.now() - started, { queue: queueName, type, outcome });
           state.activeJobs -= 1;
         }
-      });
+      }));
       if (result.status !== "deferred") return result;
       // Run again once the lease ends, without spending one of the job's attempts.
       await job.moveToDelayed(result.retryAt.getTime(), token);
@@ -241,15 +241,13 @@ async function main(): Promise<void> {
   // Workers already take jobs here, so a long pass over every business at boot
   // holds up neither jobs nor the health check.
   void (async () => {
-    const businessIds = await refreshSchedulers();
-    // Existing businesses got summaries before AI wrote them, so write one from
-    // each business's knowledge. BullMQ keeps the job id for a day; a later
-    // restart queues it again, and the job skips summaries an operator wrote,
-    // businesses with no knowledge, and knowledge that hasn't changed, so only
-    // the first run calls the model.
+    await refreshSchedulers();
+    // Existing businesses got summaries before AI wrote them, so write one for
+    // each business that still has the sign-up placeholder and has knowledge.
+    // Knowledge changes queue their own refresh, so other businesses need none.
     const summaryQueue = queues.get("bulk");
     if (businessSummarizer && summaryQueue) {
-      for (const businessId of businessIds) {
+      for (const businessId of await listSummaryBackfillBusinesses(dispatcherDatabase.db)) {
         await enqueueJob(summaryQueue, {
           type: "business.generateSummary",
           businessId,
@@ -276,7 +274,7 @@ async function main(): Promise<void> {
     if (embeddings) {
       const embeddingQueue = queues.get("bulk");
       if (embeddingQueue) {
-        for (const businessId of businessIds) {
+        for (const businessId of await listReembedBusinesses(dispatcherDatabase.db, embeddings.fingerprint)) {
           await enqueueJob(embeddingQueue, {
             type: "knowledge.reembedBusiness",
             businessId,

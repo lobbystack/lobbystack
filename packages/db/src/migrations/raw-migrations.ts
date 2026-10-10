@@ -100,6 +100,8 @@ export const SCHEMA_MIGRATIONS = [
   "0094_drop_business_memberships_business_index.sql",
   "0095_transcripts_business_expiry_index.sql",
   "0096_phone_numbers_e164_unreclaimed_unique.sql",
+  "0097_backfill_business_listings.sql",
+  "0098_drop_email_provider_resolver.sql",
 ] as const;
 
 const CONCURRENT_INDEX_DIRECTIVE = /^-- lobbystack:concurrent-index ([a-z][a-z0-9_]*)$/m;

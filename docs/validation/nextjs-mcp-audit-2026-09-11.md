@@ -140,6 +140,6 @@ The production check found and fixed an additional regression in the saved patch
 
 The development app was tested on port 3210, separately from the existing Docker app on port 3000. Request insights are enabled only in development. The local standalone production check used the same SWC-helper and static/public asset copies already present in `Dockerfile.admin`, loaded the local environment, and supplied an ephemeral internal token because the development placeholder is intentionally rejected in production. No production deployment or existing account credentials were modified.
 
-Run the new database check with the local role-specific environment loaded and TypeScript mappings enabled: `tsx --tsconfig tsconfig.base.json scripts/replacement-dashboard-aggregates-check.ts`. Set `DASHBOARD_CHECK_BASE_URL` to a local running admin server to also exercise the temporary authenticated HTTP fixture. It creates uniquely named test records and cleans them up.
+This audit added a database check, `scripts/replacement-dashboard-aggregates-check.ts`. A later cleanup deleted it; git history keeps it.
 
 The root layout now reads request headers, so formerly static public admin pages render dynamically to supply localized HTML. This is a deliberate trade-off; production field performance and bundle-size budgets were not measured. Twenty lint advisories remain visible. A real paid voice/chat conversation was not initiated; the iframe check used an invalid key to verify document rendering and framing without external provider activity. No PR or deployment was created.

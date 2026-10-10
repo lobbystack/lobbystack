@@ -135,7 +135,6 @@ export default defineRailway((ctx) => {
       AUTH_TRUSTED_ORIGINS: preserve(),
       BETTER_AUTH_SECRET: preserve(),
       BETTER_AUTH_USE_SECURE_COOKIES: preserve(),
-      DASHBOARD_TEST_CALL_TOKEN: preserve(),
       DATABASE_URL: preserve(),
       DEPLOYMENT_MODE: preserve(),
       ENCRYPTION_KEY: preserve(),
@@ -199,10 +198,7 @@ export default defineRailway((ctx) => {
       FINANCE_EXPORT_ENABLED: preserve(),
       FINANCE_EXPORT_TOKEN: preserve(),
       LOBBYSTACK_FINANCE_EXPORT_DATABASE_URL: preserve(),
-      NEXT_PUBLIC_POSTHOG_KEY: preserve(),
       POSTHOG_SOURCEMAP_API_KEY: preserve(),
-      NEXT_PUBLIC_WEB_CALL_ENDPOINT: preserve(),
-      SEND_VERIFICATION_EMAIL_ON_SIGNUP: preserve(),
       // GPT-Live answers browser and phone calls. OpenAI signs its incoming-call
       // webhook with OPENAI_WEBHOOK_SECRET. See docs/voice/runtime.md.
       LIVE_PROTOTYPE_ENABLED: "true",

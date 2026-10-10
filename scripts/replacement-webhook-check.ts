@@ -1,4 +1,4 @@
-import { createHmac, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import twilio from "twilio";
 import { Webhook } from "standardwebhooks";
 
@@ -14,7 +14,6 @@ const migrator = createDatabaseClient("lobbystack_migrator", {
 const adminBaseUrl = process.env.ADMIN_BASE_URL ?? "http://127.0.0.1:13000";
 const polarSecret = process.env.POLAR_WEBHOOK_SECRET ?? "replace-with-polar-webhook-secret";
 const twilioToken = process.env.TWILIO_AUTH_TOKEN ?? "replace-with-twilio-auth-token";
-const resendSecret = process.env.RESEND_WEBHOOK_SECRET;
 
 function polarHeaders(body: string, eventId: string): Record<string, string> {
   const signedAt = new Date();
@@ -26,14 +25,6 @@ function polarHeaders(body: string, eventId: string): Record<string, string> {
     "webhook-timestamp": timestamp,
     "webhook-signature": signature,
   };
-}
-
-function resendHeaders(body: string, eventId: string): Record<string, string> {
-  if (!resendSecret) throw new Error("Resend webhook secret is not configured.");
-  const timestamp = String(Math.floor(Date.now() / 1_000));
-  const rawSecret = resendSecret.startsWith("whsec_") ? resendSecret.slice("whsec_".length) : resendSecret;
-  const signature = createHmac("sha256", Buffer.from(rawSecret, "base64")).update(`${eventId}.${timestamp}.${body}`).digest("base64");
-  return { "content-type": "application/json", "svix-id": eventId, "svix-timestamp": timestamp, "svix-signature": `v1,${signature}` };
 }
 
 async function postTwilio(url: string, params: Record<string, string>): Promise<Response> {
@@ -49,7 +40,6 @@ async function main(): Promise<void> {
   const suffix = randomUUID();
   const businessId = randomUUID();
   const polarEventId = `polar-${suffix}`;
-  const resendEventId = `resend-${suffix}`;
   const messageSid = `SM${suffix.replaceAll("-", "")}`;
   const businessPhone = "+15555550101";
 
@@ -69,18 +59,6 @@ async function main(): Promise<void> {
       throw new Error("Polar duplicate delivery was not handled idempotently.");
     }
 
-    if (resendSecret) {
-      const resendUrl = `${adminBaseUrl}/api/webhooks/resend`;
-      const resendBody = JSON.stringify({ type: "email.delivered", created_at: new Date().toISOString(), data: { email_id: `email-${suffix}` } });
-      const invalidResend = await fetch(resendUrl, { method: "POST", headers: { ...resendHeaders(resendBody, resendEventId), "svix-signature": "v1,invalid" }, body: resendBody });
-      if (invalidResend.status !== 401) throw new Error(`Tampered Resend webhook returned ${invalidResend.status} instead of 401.`);
-      const firstResend = await fetch(resendUrl, { method: "POST", headers: resendHeaders(resendBody, resendEventId), body: resendBody });
-      const secondResend = await fetch(resendUrl, { method: "POST", headers: resendHeaders(resendBody, resendEventId), body: resendBody });
-      const firstResendResult = await firstResend.json() as { duplicate?: boolean };
-      const secondResendResult = await secondResend.json() as { duplicate?: boolean };
-      if (!firstResend.ok || firstResendResult.duplicate !== false || !secondResend.ok || secondResendResult.duplicate !== true) throw new Error("Resend duplicate delivery was not handled idempotently.");
-    }
-
     const smsUrl = process.env.TWILIO_SMS_WEBHOOK_URL ?? `${adminBaseUrl}/api/webhooks/twilio/sms`;
     const smsParams = { MessageSid: messageSid, From: "+15555550199", To: businessPhone, Body: "Webhook certification message", NumMedia: "0" };
     const invalidSms = await fetch(smsUrl, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded", "x-twilio-signature": "invalid" }, body: new URLSearchParams(smsParams) });
@@ -95,7 +73,7 @@ async function main(): Promise<void> {
     const secondStatus = await postTwilio(statusUrl, statusParams);
     if (!firstStatus.ok || !secondStatus.ok) throw new Error(`Twilio status delivery failed with statuses ${firstStatus.status}/${secondStatus.status}.`);
 
-    const eventIds = [polarEventId, messageSid, ...(resendSecret ? [resendEventId] : [])];
+    const eventIds = [polarEventId, messageSid];
     const storedEvents = await migrator.db.select({ provider: providerEvents.provider, providerEventId: providerEvents.providerEventId })
       .from(providerEvents)
       .where(inArray(providerEvents.providerEventId, eventIds));
@@ -108,11 +86,10 @@ async function main(): Promise<void> {
 
     console.log("webhook-signatures: ok");
     console.log("webhook-polar-idempotency: ok");
-    if (resendSecret) console.log("webhook-resend-idempotency: ok");
     console.log("webhook-twilio-idempotency: ok");
   } finally {
     await migrator.db.delete(outboxMessages).where(eq(outboxMessages.businessId, businessId)).catch(() => undefined);
-    await migrator.db.delete(providerEvents).where(inArray(providerEvents.providerEventId, [polarEventId, messageSid, ...(resendSecret ? [resendEventId] : [])])).catch(() => undefined);
+    await migrator.db.delete(providerEvents).where(inArray(providerEvents.providerEventId, [polarEventId, messageSid])).catch(() => undefined);
     await migrator.db.delete(businesses).where(eq(businesses.id, businessId)).catch(() => undefined);
     await migrator.pool.end();
   }
