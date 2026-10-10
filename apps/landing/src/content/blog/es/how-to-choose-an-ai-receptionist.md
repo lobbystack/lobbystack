@@ -97,7 +97,7 @@ Puede encajar bien cuando:
 - Quiere respaldo humano en horario de atención o fuera de él.
 - Necesita una experiencia de servicio más sólida de la que puede ofrecer la automatización pura.
 
-Como referencia, el precio de una recepcionista virtual en vivo puede subir con el uso. La [página pública de precios de Ruby](https://www.ruby.com/plans-and-pricing/) indica 50 minutos de recepcionista por $250/mes y 100 minutos por $395/mes, con planes más grandes por encima. Puede valer la pena cuando cada llamada necesita a una persona formada. Puede ser excesivo cuando la mayoría de quienes llaman necesitan respuestas rutinarias, reservas, recogida de datos o una transferencia clara.
+Como referencia, el precio de una recepcionista virtual en vivo puede subir con el uso. La [página pública de precios de Ruby](https://www.ruby.com/plans-and-pricing/) indica 50 minutos de recepcionista por $250/mes y 100 minutos por $395/mes, con planes más grandes por encima. Puede valer la pena cuando cada llamada necesita a una persona formada. Puede ser excesivo cuando la mayoría de quienes llaman necesitan respuestas rutinarias, reservas, recogida de datos o una transferencia clara. Nuestra comparativa de la [mejor recepcionista virtual para pequeñas empresas](/es/blog/best-answering-service-for-small-business/) pone lado a lado la atención humana, híbrida y con IA.
 
 ## Compare las funciones que cambian el resultado
 
@@ -207,7 +207,7 @@ llamadas reales por mes x duración media de la llamada
 
 Si el plan se basa en clientes únicos, estime también esa cifra. Si su negocio tiene picos de temporada, calcule el mes de más trabajo, no solo el mes tranquilo.
 
-La mejor pregunta de retorno de la inversión no es "¿Sale más barato que una recepcionista?". El [Bureau of Labor Statistics](https://www.bls.gov/ooh/Office-and-Administrative-Support/Receptionists.htm) informó de un salario mediano de recepcionista de $17.90/hora en mayo de 2024, antes de impuestos sobre la nómina, beneficios, formación y huecos de cobertura. Esa comparación puede ser útil, pero es demasiado amplia.
+La mejor pregunta de retorno de la inversión no es "¿Sale más barato que una recepcionista?". El [Bureau of Labor Statistics](https://www.bls.gov/ooh/Office-and-Administrative-Support/Receptionists.htm) informó de un salario mediano de recepcionista de $17.90/hora en mayo de 2024, antes de impuestos sobre la nómina, beneficios, formación y huecos de cobertura. Esa comparación puede ser útil, pero es demasiado amplia. Si su alternativa real es un servicio humano, compare con [lo que cuesta un servicio de atención telefónica](/es/blog/how-much-does-an-answering-service-cost/).
 
 La pregunta más precisa es:
 

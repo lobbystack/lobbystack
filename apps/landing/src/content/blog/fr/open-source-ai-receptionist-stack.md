@@ -25,7 +25,7 @@ Beaucoup de projets de réceptionniste IA commencent avec les mêmes briques :
 - Google Calendar pour les réservations ;
 - une base de données pour les appels, contacts, transcriptions, enregistrements et rendez-vous ;
 - de la logique de prompt pour les règles métier, les escalades et les transferts ;
-- des notifications SMS et courriel ;
+- des notifications SMS et e-mail ;
 - un tableau de bord d'administration ;
 - le suivi d'usage, la facturation, les journaux et les alertes fournisseur.
 
@@ -45,12 +45,12 @@ La plateforme couvre :
 - la prise, le déplacement et l'annulation de rendez-vous ;
 - les transcriptions, enregistrements, résumés et résultats d'appel ;
 - le contexte métier, les FAQ, les services, les prix, les politiques et les règles ;
-- les textos de confirmation et de rappel de rendez-vous, plus les alertes courriel ou SMS pour l'équipe ;
+- les SMS de confirmation et de rappel de rendez-vous, plus les alertes e-mail ou SMS pour l'équipe ;
 - le transfert humain et les messages ;
 - la collecte des coordonnées de l'appelant et de la raison de l'appel ;
 - les contacts, rendez-vous, historiques d'appel, analytics, usage et surfaces de facturation.
 
-L'objectif n'est pas de remplacer tous les outils que vous utilisez déjà. Twilio, les calendriers, les fournisseurs courriel, les outils d'analyse et la facturation restent importants. LobbyStack fournit le produit de réception qui se place au-dessus.
+L'objectif n'est pas de remplacer tous les outils que vous utilisez déjà. Twilio, les calendriers, les fournisseurs d'e-mail, les outils d'analyse et la facturation restent importants. LobbyStack fournit le produit de réception qui se place au-dessus.
 
 Au lieu de construire des chaînes de workflows fragiles pour les comportements de base, vous décrivez ce que le réceptionniste doit faire en langage naturel.
 
@@ -70,7 +70,7 @@ Certaines équipes veulent un produit géré. [LobbyStack Cloud](/pricing/) sert
 
 D'autres équipes veulent la pile sur leur propre infrastructure. LobbyStack le permet aussi.
 
-Le parcours [réceptionniste IA auto-hébergé](/solutions/self-hosted-ai-receptionist/) utilise Docker Compose comme base mono-serveur. La configuration documentée lance PostgreSQL, Redis, l'application Next.js, le worker, la passerelle vocale et Caddy pour acheminer le trafic. Vous placez HTTPS devant Caddy. Vous apportez les comptes fournisseurs que vous voulez contrôler, comme Twilio, une IA compatible avec OpenAI, Google Calendar, le courriel, les analytics et la facturation.
+Le parcours [réceptionniste IA auto-hébergé](/solutions/self-hosted-ai-receptionist/) utilise Docker Compose comme base mono-serveur. La configuration documentée lance PostgreSQL, Redis, l'application Next.js, le worker, la passerelle vocale et Caddy pour acheminer le trafic. Vous placez HTTPS devant Caddy. Vous apportez les comptes fournisseurs que vous voulez contrôler, comme Twilio, une IA compatible avec OpenAI, Google Calendar, l'e-mail, les analytics et la facturation.
 
 Cela donne aux agences et aux opérateurs techniques une histoire plus claire pour les clients. Si une clinique, un spa médical, une entreprise de services ou un cabinet juridique veut que le système tourne sur ses propres serveurs ou son propre compte cloud, vous pouvez le déployer là-bas au lieu d'imposer une application fermée.
 
@@ -105,7 +105,7 @@ C'est particulièrement utile si vous avez besoin de :
 - comptes fournisseurs apportés par vous pour les déploiements auto-hébergés ;
 - prise et modification de rendez-vous ;
 - transcriptions, enregistrements, résumés et résultats d'appel ;
-- les alertes courriel et SMS pour l'équipe ;
+- les alertes e-mail et SMS pour l'équipe ;
 - infrastructure contrôlée par le client pour les agences ou les déploiements réglementés.
 
 Ce n'est pas une façon d'éviter l'exploitation. Les systèmes téléphoniques doivent être testés. Le comportement IA doit être relu. Les comptes fournisseurs doivent être gérés.

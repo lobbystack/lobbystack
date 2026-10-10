@@ -24,7 +24,7 @@ LobbyStack consacre le budget à la réception : rendez-vous, modifications, rel
 | Forfait gratuit durable | Non annoncé | 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone |
 | Prix d'entrée | 99 $ pour 100 interactions | 30 $ pour 150 minutes |
 | Dépassement | 0,99 $ par interaction | À la minute selon le forfait |
-| Canaux | Voix, SMS, chat web | Voix, textos de réservation et alertes SMS |
+| Canaux | Voix, SMS, chat web | Voix, SMS de réservation et alertes SMS |
 | Réservation | Réservation et déplacement annoncés | Réservation et modifications |
 | Plateforme de base | Ajout à un forfait Nextiva | Produit indépendant |
 | Code source | Non annoncé | Dépôt public sous licence MIT |

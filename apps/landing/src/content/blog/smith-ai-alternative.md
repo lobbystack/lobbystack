@@ -35,7 +35,7 @@ Pricing and features were checked on July 30, 2026.
 
 Smith.ai's live-agent network creates real value for a company with nobody available to take a difficult call. Buyers should confirm which escalations the plan includes and which live-agent verification or scheduling tasks add a per-call charge.
 
-Many small businesses already have an owner, dispatcher, or on-call employee for urgent work. LobbyStack handles routine questions and bookings, then transfers the calls that need judgment to that person with context. The Free plan lets the team test 30 minutes of those conversations in the browser before paying.
+Many small businesses already have an owner, dispatcher, or on-call employee for urgent work. LobbyStack handles routine questions and bookings, then transfers the calls that need judgment to that person's number. The Free plan lets the team test 30 minutes of those conversations in the browser before paying.
 
 LobbyStack also keeps the workflow inspectable. Teams can control providers, retention, prompts, and infrastructure instead of waiting for an enterprise tier to unlock deeper customization.
 
@@ -45,7 +45,7 @@ Smith.ai has spent years building receptionist operations. Its AI product advert
 
 That service model fits law firms, consultancies, and other businesses where a difficult call may need a trained person outside the customer's own staff. It can also reduce the work of building an escalation roster.
 
-LobbyStack transfers a call to the people you configure. It provides context through transcripts, summaries, caller details, and notifications, but it does not include a third-party receptionist workforce. Your staff or chosen answering partner owns the human conversation.
+LobbyStack transfers a call to the one number you set, and the person who answers gets no briefing first. Your team can read the transcript and summary in the dashboard. LobbyStack does not include a third-party receptionist workforce. Your staff or chosen answering partner owns the human conversation.
 
 ## The price includes different labor models
 
@@ -61,7 +61,7 @@ Estimate three numbers:
 2. the share of calls that need a person
 3. the staff cost of taking those transfers
 
-Those figures show whether a managed hybrid service or an AI system connected to your team costs less.
+Those figures show whether a managed hybrid service or an AI system connected to your team costs less. To benchmark the human side, see [what live answering services charge per call and per minute](/blog/how-much-does-an-answering-service-cost/).
 
 ## Customization and ownership separate the products
 

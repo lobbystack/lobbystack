@@ -34,7 +34,7 @@ Prix et fonctions vérifiés le 30 juillet 2026.
 
 Le réseau Smith.ai apporte une vraie valeur quand personne dans l'entreprise ne peut reprendre un appel difficile. L'acheteur doit confirmer les relais inclus et les tâches humaines de vérification ou réservation facturées par appel.
 
-Beaucoup de petites entreprises ont déjà un propriétaire, un répartiteur ou un employé de garde. LobbyStack traite les questions et rendez-vous courants, puis transfère les cas sensibles à cette personne avec le contexte. Gratuit permet de tester 30 minutes de conversation dans le navigateur avant tout paiement.
+Beaucoup de petites entreprises ont déjà un propriétaire, un répartiteur ou un employé de garde. LobbyStack traite les questions et rendez-vous courants, puis transfère les cas sensibles au numéro de cette personne. Gratuit permet de tester 30 minutes de conversation dans le navigateur avant tout paiement.
 
 LobbyStack garde aussi le workflow vérifiable. L'équipe contrôle fournisseurs, conservation, consignes et infrastructure sans attendre un niveau Enterprise.
 
@@ -44,7 +44,7 @@ Smith.ai annonce l'admission, la qualification, la réservation, le routage assi
 
 Ce modèle convient à un cabinet juridique ou à une société de conseil qui veut une personne externe pour les appels délicats. Il réduit aussi le travail nécessaire pour organiser une permanence.
 
-LobbyStack transfère vers les personnes configurées par l'entreprise. Il apporte le contexte avec le résumé, la transcription et les coordonnées, sans fournir une équipe externe.
+LobbyStack transfère l'appel vers le seul numéro que vous avez défini, sans présenter l'appelant à la personne qui décroche. Votre équipe retrouve la transcription et le résumé dans le tableau de bord. LobbyStack ne fournit pas d'équipe externe.
 
 ## Les prix couvrent des services différents
 
@@ -52,7 +52,7 @@ Smith.ai inclut 25 appels sur Gratuit. Pro commence à 150 $ pour 75 appels. Ent
 
 LobbyStack inclut 30 minutes gratuites, 150 minutes pour 30 $ et 500 minutes pour 100 $. Smith.ai coûte plus cher aux niveaux publiés, mais son service humain représente une partie du prix.
 
-Calculez trois valeurs : le nombre et la durée des appels, la part qui nécessite une personne, puis le coût interne des transferts. Ces chiffres permettent de comparer un service hybride à une IA reliée à votre personnel.
+Calculez trois valeurs : le nombre et la durée des appels, la part qui nécessite une personne, puis le coût interne des transferts. Ces chiffres permettent de comparer un service hybride à une IA reliée à votre personnel. Pour situer la part humaine, voyez [ce que facturent les permanences téléphoniques à l'appel et à la minute](/fr/blog/how-much-does-an-answering-service-cost/).
 
 ## La personnalisation sépare les offres
 

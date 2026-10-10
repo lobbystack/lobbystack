@@ -60,7 +60,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
       },
       {
         title: "Gardez les humains pour les conversations qui comptent",
-        body: "Les appels courants peuvent être traités automatiquement, tandis que les urgences, clients sensibles ou prospects importants reviennent à votre équipe avec le contexte.",
+        body: "Les appels courants peuvent être traités automatiquement, tandis que les urgences, clients sensibles ou prospects importants reviennent à votre équipe par un transfert ou un message.",
         points: [
           "Règles de transfert configurables",
           "Messages pour l’équipe sur les demandes non urgentes",
@@ -96,7 +96,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
     proofPoints: [
       "Réserve pendant l’appel au lieu d’attendre un rappel",
       "Respecte vos horaires, types de rendez‑vous et consignes",
-      "Envoie confirmations et résumés à votre équipe",
+      "Envoie une confirmation par SMS au client et enregistre un résumé pour votre équipe",
     ],
     sections: [
       {
@@ -110,7 +110,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
       },
       {
         title: "Gardez le contrôle des cas particuliers",
-        body: "Si une demande sort de vos règles, LobbyStack prend les préférences, explique la suite et transmet le contexte à votre équipe.",
+        body: "Si une demande sort de vos règles, LobbyStack prend les préférences, explique la suite et laisse un message à votre équipe.",
         points: [
           "Règles par service, zone ou type de rendez‑vous",
           "Message pour l’équipe si besoin",
@@ -146,7 +146,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
     proofPoints: [
       "Qualifie urgence, zone de service et type de travail",
       "Aide les appelants à réserver ou à laisser un message",
-      "Transfère les situations critiques à la bonne personne",
+      "Transfère les situations critiques à votre numéro de garde",
     ],
     sections: [
       {
@@ -160,7 +160,7 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
       },
       {
         title: "Priorisez les bons appels plus vite",
-        body: "Les urgences, gros projets et demandes sensibles peuvent être escaladés avec contexte, tandis que les appels courants avancent vers un rendez‑vous ou un message.",
+        body: "Les urgences, gros projets et demandes sensibles peuvent être transférés à votre équipe, tandis que les appels courants avancent vers un rendez‑vous ou un message.",
         points: [
           "Transfert par urgence ou type de demande",
           "Réservation et confirmations selon vos règles",

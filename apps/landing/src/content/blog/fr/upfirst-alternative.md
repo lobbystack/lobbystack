@@ -25,7 +25,7 @@ Upfirst facture chaque appel traité. LobbyStack facture les minutes et ajoute l
 | Forfait d'entrée | 24,95 $ pour 30 appels | Gratuit pour 30 minutes vocales |
 | Usage payant | Quotas et dépassements par appel | Quotas et dépassements par minute |
 | Réservation | Calendrier pendant l'appel | Réservation, modifications et règles métier |
-| Transferts | Transferts assistés et en cascade | Relais humain avec le contexte |
+| Transferts | Transferts assistés et en cascade | Transfert à l'aveugle vers un seul numéro |
 | Langues | Plus de 35 annoncées | Répond dans la langue de l'appelant |
 | Déploiement | Service hébergé | Cloud géré ou auto-hébergement |
 | Code source | Non annoncé sur les pages consultées | Dépôt public sous licence MIT |
@@ -46,7 +46,7 @@ Upfirst suit un parcours de configuration direct. Vous renseignez l'entreprise, 
 
 - la réservation pendant l'appel ;
 - les transferts assistés et en cascade ;
-- l'envoi de textos ;
+- l'envoi de SMS ;
 - les enregistrements, transcriptions et résumés ;
 - le filtrage du spam et la mémoire de l'appelant ;
 - plus de 35 langues.

@@ -126,27 +126,27 @@ export const solutionPages: SeoLandingPage[] = [
     path: "/solutions/after-hours-answering-service/",
     title: "After-Hours Answering Service with AI | LobbyStack",
     description:
-      "LobbyStack answers your business calls after hours, books appointments into your calendar, and transfers emergencies to whoever is on call. Free plan, then $30 a month.",
+      "LobbyStack answers your business calls after hours, books appointments into your calendar, and transfers emergencies to your on-call number. Free plan, then $30 a month.",
     eyebrow: "After-hours answering",
     h1: "AI after-hours answering service for small businesses",
     intro:
-      "LobbyStack answers your business phone at night, on weekends, and on holidays. It books routine jobs into your calendar and transfers emergencies to whoever is on call. In the morning, you'll find a summary of every call in the dashboard.",
+      "LobbyStack answers your business phone at night, on weekends, and on holidays. It books routine jobs into your calendar and transfers emergencies to your on-call number. In the morning, you'll find a summary of every call in the dashboard.",
     image: "/illustrations/calls-need-person.webp",
     imageAlt:
       "LobbyStack handling after-hours calls and routing urgent requests",
     proofPoints: [
       "Answers nights, weekends, and holidays on your current number",
-      "Transfers emergencies to your on-call phone with the caller's details",
+      "Transfers emergencies to your on-call phone",
       "Free plan with 30 minutes, then $30 a month for 150",
     ],
     sections: [
       {
-        title: "Emergencies reach whoever is on call",
-        body: "You write what counts as urgent: no heat below a set temperature, water that won't stop, a tenant locked out. LobbyStack asks the questions your rule needs, then transfers the call with the address and problem collected. Anything that can wait goes into the morning summary.",
+        title: "Emergencies reach your on-call phone",
+        body: "You write what counts as urgent: no heat below a set temperature, water that won't stop, a tenant locked out. LobbyStack asks the questions your rule needs, then transfers the call to your on-call number. The address and problem it collected stay in the call's transcript. Anything that can wait gets a summary in your dashboard for the morning.",
         points: [
           "Transfers to the on-call number you set",
           "Reads your safety steps first, like where to shut off the water",
-          "Sends your team an alert text for urgent calls",
+          "If a transfer doesn't connect, offers to take a message and can alert your team",
         ],
       },
       {
@@ -172,6 +172,10 @@ export const solutionPages: SeoLandingPage[] = [
     faqHeading: "Questions about AI after-hours answering",
     relatedLinks: [
       { label: "AI phone answering", href: "/solutions/ai-phone-answering/" },
+      {
+        label: "What an answering service costs",
+        href: "/blog/how-much-does-an-answering-service-cost/",
+      },
       { label: "Pricing", href: "/pricing/" },
       {
         label: "Missed-call calculator",
@@ -188,53 +192,84 @@ export const solutionPages: SeoLandingPage[] = [
     group: "solution",
     slug: "ai-receptionist-for-dental-offices",
     path: "/solutions/ai-receptionist-for-dental-offices/",
-    title: "AI Dental Answering Service for Dental Offices | LobbyStack",
+    title: "Dental AI Receptionist and Answering Service | LobbyStack",
     description:
-      "LobbyStack answers your dental office's calls when the front desk is busy or closed. It books new patients, answers insurance questions, and transfers emergencies.",
+      "LobbyStack, a dental AI receptionist, answers when the front desk is busy or closed, books into Google Calendar, and transfers emergencies. From $30 a month.",
     eyebrow: "Dental offices",
-    h1: "AI answering service for dental offices",
+    h1: "AI dental receptionist and dental answering service",
     intro:
-      "LobbyStack answers your practice's phone when the front desk is busy, at lunch, and after hours. It books new patients and cleanings into your calendar, answers insurance questions, and sends emergencies to your on-call dentist.",
+      "A dental AI receptionist answers your practice's phone when the front desk is busy, at lunch, or closed. LobbyStack books new patients and cleanings into Google Calendar, answers questions about accepted insurance and office policies from what you enter, and transfers emergencies to your on-call number. Paid plans start at $30 a month, with no setup fee.",
     image: "/illustrations/call-booking-summary.webp",
     imageAlt:
       "LobbyStack booking a patient appointment and summarizing the call",
     proofPoints: [
-      "Answers new-patient, insurance, and scheduling calls",
-      "Books into Google Calendar and can text a reminder the day before",
-      "Transfers after-hours emergencies to your on-call dentist",
+      "Books into Google Calendar and can text a confirmation and a reminder the day before",
+      "Transfers after-hours emergencies to your on-call number",
+      "Opens in English or French, then talks with patients in 70+ languages, including Spanish and Serbian",
     ],
     sections: [
       {
         title: "Your front desk stays with the patient in front of them",
-        body: "When the phone rings during check-in, LobbyStack answers it. It books routine visits, answers questions about insurance and parking from what you've entered, and writes up everything else for your team to handle between patients.",
+        body: "The phone rings during check-in, and LobbyStack picks up the new-patient, insurance, and scheduling calls. It books routine visits and answers questions about accepted plans and parking from what you've entered. It writes up anything else for your team to handle between patients.",
         points: [
-          "Picks up when your line is busy, or answers every call",
+          "Answers when your line is busy, after you close, or on every call, depending on how you forward your number",
           "Answers questions about hours, parking, forms, and accepted plans",
-          "Saves a summary, transcript, and recording of each call",
+          "Saves a recording, transcript, and one-line summary of each call",
         ],
       },
       {
         title: "New patients book on the first call",
-        body: "New patients often call at lunch or after work. LobbyStack collects their insurance and reason for the visit, offers open times from your Google Calendar, and books the exam. The patient gets a text confirmation and, if they agree, a reminder text the day before.",
+        body: "New patients call at lunch and after work too. LobbyStack collects their insurance and reason for the visit, offers times that are free in your Google Calendar during your opening hours, then books the exam. If you'd rather confirm each visit yourself, set it to save the patient's preferred time as a request for your team, or to take a message. Patients who agree get a confirmation text and a reminder the day before. On LobbyStack Cloud, texts go to US and Canadian numbers only.",
         points: [
-          "Books into Google Calendar during the call",
-          "Texts a reminder 24 hours before the visit if the patient agrees",
-          "Moves or cancels appointments after checking who's calling",
+          "Books into Google Calendar during the call, for the practice or for each dentist and hygienist",
+          "Texts a confirmation and a reminder 24 hours before, if the patient agrees",
+          "If you turn on appointment changes, patients can move or cancel from the number they booked with",
         ],
       },
       {
         title: "Dental emergencies follow your rules",
-        body: "You decide what counts as an emergency: swelling, fever, a knocked-out tooth, or bleeding that won't stop. LobbyStack asks those questions, books a same-day slot during office hours, and transfers the call to your on-call dentist after hours.",
+        body: "You decide what counts as an emergency: swelling, fever, a knocked-out tooth, or bleeding that won't stop. LobbyStack asks those questions, then books the soonest open slot or transfers the call to your on-call number, depending on the rules you set. Put the care instructions you want patients to hear in your rules, in your own words. Transfers go to one number per practice, so when the on-call dentist changes, update that number or forward it to whoever is covering.",
         points: [
           "Asks the triage questions you approve",
-          "Transfers after-hours emergencies to your on-call number",
-          "Reads only the care instructions you write",
+          "Transfers urgent calls to your on-call number under the transfer rule you choose",
+          "If a transfer doesn't connect, offers to take a message and can alert your team",
+        ],
+      },
+      {
+        title: "Patients talk in their own language",
+        body: "Each call opens in your practice's default language, English or French. From there, the receptionist answers in the patient's language. It runs on OpenAI GPT-Live, which handles 70+ languages, including Spanish and Serbian. A patient who starts in Spanish, or asks for Serbian, hears the rest of the call in that language. Your dashboard and emails come in English, French, Spanish, or Serbian. Confirmation and reminder texts go out in your default language, or in Spanish or Serbian for a patient whose language you save through the API.",
+        points: [
+          "Opens each call in your default language, English or French",
+          "Switches when a patient asks or starts speaking another language",
+          "Sends confirmation and reminder texts in your default language",
+        ],
+      },
+      {
+        title: "What a dental AI receptionist costs",
+        body: "LobbyStack has no setup fee on any plan, and prices are in US dollars. Annual billing costs 20% less, so Starter comes to $24 a month and Pro to $80. LobbyStack counts usage by the second. Calls under 10 seconds and calls the receptionist ends as spam don't count. Overage has no cap until an owner or admin sets one. For comparison, we checked dental-specific receptionists on their own websites on October 9, 2026. Those that publish prices ran from $299 to $1,199 a month. Dentina starts at $299 a month per location, billed annually, with unlimited calls. Viva AI runs from $349 to $1,199 a month, with usage counted in credits. Peerlogic Premium costs $699 a month and includes its phone system.",
+        points: [
+          "Starter: $30 a month for 150 minutes and one phone number, then $0.20 a minute",
+          "Pro: $100 a month for 500 minutes, then $0.18 a minute. At 1,000 minutes a month, you pay $190 ($100 plus 500 extra minutes at $0.18)",
+          "Free: 30 browser voice minutes a month for testing, without a card or a phone number",
+        ],
+      },
+      {
+        title: "When a dental-specific receptionist fits better",
+        body: "LobbyStack books into Google Calendar only, so your team copies new bookings into Dentrix, Open Dental, or Eaglesoft. The REST API and signed webhooks for six events, such as appointment booked and message taken, can send call data to Zapier and other tools. LobbyStack makes no HIPAA claim, doesn't verify insurance eligibility, and runs no recall campaigns. It suits practices that book in Google Calendar or don't mind re-keying, and that want calls answered when the front desk is busy, at lunch, and after close. It transfers emergencies and talks with patients in their own language. If you need PMS write-back or recall campaigns, a dental vendor is the better pick. We read each claim below on the vendor's own site on October 9, 2026.",
+        points: [
+          "You need bookings written into Dentrix, Open Dental, or Eaglesoft: Dentina names 11 practice systems it writes bookings back to",
+          "You want a receptionist tied to your practice software: Peerlogic names 8 systems it integrates with",
+          "You need automated recalls: Dentina sells outbound recall campaigns (price on request), and Viva AI includes recall outreach from its $899 Platinum plan",
         ],
       },
     ],
     faqs: dentalOfficesFaqs,
-    faqHeading: "Questions about AI receptionists for dental offices",
+    faqHeading: "Questions about AI dental receptionists",
     relatedLinks: [
+      {
+        label: "After-hours answering service",
+        href: "/solutions/after-hours-answering-service/",
+      },
       {
         label: "AI appointment scheduler",
         href: "/solutions/ai-appointment-scheduler/",
@@ -242,6 +277,14 @@ export const solutionPages: SeoLandingPage[] = [
       {
         label: "Self-hosted AI receptionist",
         href: "/solutions/self-hosted-ai-receptionist/",
+      },
+      {
+        label: "What an answering service costs",
+        href: "/blog/how-much-does-an-answering-service-cost/",
+      },
+      {
+        label: "AI receptionist vs. virtual receptionist",
+        href: "/blog/ai-receptionist-vs-virtual-receptionist/",
       },
       { label: "Pricing", href: "/pricing/" },
     ],
@@ -302,7 +345,7 @@ export const solutionPages: SeoLandingPage[] = [
         points: [
           "Collects service type, preferred provider, timing, and client contact details",
           "Confirms appointment windows before the caller hangs up",
-          "Routes nuanced service questions to the right team member",
+          "Takes a message for your team on nuanced service questions",
         ],
       },
       {
@@ -311,7 +354,7 @@ export const solutionPages: SeoLandingPage[] = [
         points: [
           "Explains cancellation and no-show policies before confirming changes",
           "Uses your service menu, durations, provider rules, and booking limits",
-          "Sends summaries so your team knows what was promised",
+          "Saves a summary of each call so your team knows what was promised",
         ],
       },
     ],
@@ -419,10 +462,10 @@ export const solutionPages: SeoLandingPage[] = [
     sections: [
       {
         title: "Give panicked callers something to do while help is coming",
-        body: "You load your own instructions into LobbyStack: where to find the main shutoff, when to turn off the water heater, and what to do if they smell gas. The assistant reads those steps to the caller, collects the address, and transfers the call to whoever is on call tonight.",
+        body: "You load your own instructions into LobbyStack: where to find the main shutoff, when to turn off the water heater, and what to do if they smell gas. The assistant reads those steps to the caller, collects the address, and transfers the call to your on-call number.",
         points: [
           "Reads the safety steps you approve",
-          "Transfers the call with the address and problem already collected",
+          "Saves the address and problem in the call's transcript, then transfers the call",
         ],
       },
       {
@@ -475,73 +518,102 @@ export const solutionPages: SeoLandingPage[] = [
     group: "solution",
     slug: "ai-receptionist-for-hvac",
     path: "/solutions/ai-receptionist-for-hvac/",
-    title: "24/7 HVAC Answering Service with AI | LobbyStack",
+    title: "HVAC AI Receptionist & 24/7 Answering Service | LobbyStack",
     description:
-      "LobbyStack is an AI HVAC answering service. It picks up overflow during heat waves and cold snaps, flags urgent no-heat and no-AC calls, and books tune-ups and estimates.",
+      "An HVAC AI receptionist from $30 a month, with no setup fee. LobbyStack transfers no-heat emergencies to your on-call tech and books tune-ups during the call.",
     eyebrow: "HVAC",
-    h1: "HVAC answering service built for peak-season call spikes",
+    h1: "HVAC AI receptionist and 24/7 answering service",
     intro:
-      "Your phones go quiet in April, then ring nonstop the first hot week of June. LobbyStack takes the overflow, sorts real emergencies from thermostat questions, and books replacement estimates your office has no time to return.",
+      "An HVAC AI receptionist answers the calls your office misses. LobbyStack transfers no-heat and no-AC emergencies to your on-call tech under rules you write, and books tune-ups and estimate visits into Google Calendar during the call. Starter costs $30 a month for 150 voice minutes. No plan has a setup fee.",
     image: "/illustrations/human-handoff.webp",
     imageAlt:
-      "An urgent HVAC call marked as needing a person and transferred to a technician",
+      "An urgent no-heat call routed to an HVAC company's on-call technician",
     proofPoints: [
-      "Answers only when your office is busy, closed, or on another line",
-      "Flags no-heat and no-AC calls based on the rules you write",
-      "Transfers emergencies to your on-call technician",
+      "Answers the calls your carrier forwards: busy, unanswered, after hours, or all of them",
+      "Transfers no-heat, no-AC, and gas-smell calls to your on-call tech under your rules",
+      "Answers callers in their own language, with 70+ languages on GPT-Live",
     ],
     sections: [
       {
-        title: "Handle the first-heat-wave surge",
-        body: "A small office can't keep up when every AC in town fails in the same week. Set LobbyStack to answer only when your team is busy. It takes as many calls at once as come in, collects the system type, symptoms, and address, then books the next open slot or adds the caller to your dispatch list.",
+        title: "What does an HVAC AI receptionist do during a heat wave?",
+        body: "Your phones go quiet in April, then ring nonstop the first hot week of June, when every AC in town fails at once. Tell your carrier to forward calls when your line is busy or nobody picks up, or forward all of them. LobbyStack answers whatever reaches its number. Plans set no limit on how many calls it answers at once, and those calls share one pool of minutes. It asks each caller for the system type, symptoms, and address, then books the next open slot or takes a message for your office.",
         points: [
-          "Overflow mode answers when your lines are full",
-          "Handles simultaneous calls without a busy signal",
-          "Books the next open slot or queues the caller for dispatch",
+          "Answers the calls your forwarding rule sends: busy, unanswered, or all",
+          "Plans set no limit on how many calls it answers at once",
+          "Books the next open slot or leaves your office a message with the caller's details",
         ],
       },
       {
-        title: "Sort true emergencies from thermostat questions",
-        body: "A dead furnace in January with an infant in the house needs your on-call tech. A thermostat set to cool needs a quick answer. You write the rules in plain language: which symptoms, indoor temperatures, or occupants count as urgent. LobbyStack transfers those callers and answers the rest from the troubleshooting steps you approve, like checking the breaker or the filter.",
+        title:
+          "How does it tell a no-heat emergency from a thermostat question?",
+        body: "You write the urgency rules in plain language, based on symptoms, indoor temperature, and who lives in the home. A caller with a dead furnace in January and an infant in the house gets your on-call tech. A caller whose thermostat is set to cool gets a quick answer from troubleshooting steps you approve, like checking the breaker or the filter. For a gas smell or a CO alarm, you write the safety steps, such as leaving the house and calling the gas utility's emergency line or 911. The receptionist reads them to the caller before it transfers. Transfers go to one number. If you haven't set a transfer number, the receptionist takes a message. If the transfer can't go through, it tells the caller and offers to take a message, and your team can get a \"Live call transfer failed\" alert. Once your tech's phone starts ringing, the receptionist leaves the call. If your tech doesn't pick up, the caller reaches that phone's voicemail, if it has one.",
         points: [
           "Escalates on symptoms, indoor temperature, and who lives in the home",
-          "Transfers urgent calls with system details attached",
-          "Answers common troubleshooting questions from your script",
+          "Treats gas smells and CO alarms as urgent and transfers right away",
+          "Offers to take a message if the transfer can't go through",
         ],
       },
       {
-        title: "Keep replacement quotes from going cold",
-        body: "A homeowner pricing a new system will wait a day for a callback. Two weeks into peak season, they've signed with someone else. LobbyStack captures the home size, system age, and fuel type, and books the estimate visit during the call.",
+        title: "Can it book replacement estimates before the lead goes cold?",
+        body: "Yes. A homeowner pricing a new system will wait a day for your callback. Two weeks into peak season, your callbacks run later than that, and they sign with someone else. LobbyStack asks for the home size, system age, and fuel type, then books the estimate visit from your opening hours while the caller is on the phone. Connect Google Calendar and it skips your busy times and adds the visit as an event. If the caller agrees, LobbyStack texts a confirmation and a reminder 24 hours before the visit, to US and Canadian numbers only. If you'd rather approve each visit, switch to request mode: the receptionist takes the caller's preferred time, and your team confirms it.",
         points: [
           "Collects home size, system age, and fuel type",
-          "Books estimate visits while the caller is on the line",
+          "Books estimate visits into Google Calendar while the caller is on the line",
+          "Texts a confirmation and a 24-hour reminder when the caller agrees",
         ],
       },
       {
-        title: "What a peak month costs",
-        body: "Say your average HVAC call runs 3 minutes. Starter's 150 voice minutes cover about 50 calls for $30 a month. Pro's 500 minutes cover about 165 calls for $100, and each extra minute costs $0.18.",
+        title: "How much does an HVAC AI receptionist cost?",
+        body: "Prices as of October 2026: Starter costs $30 a month for 150 voice minutes, and Pro costs $100 a month for 500. If your average call runs 3 minutes (our assumption), Starter covers about 50 calls and Pro about 165. Now take a busy July with 300 calls, also our assumption. That's 900 minutes. Pro costs $100 plus 400 extra minutes at $0.18, or $172. Starter costs $30 plus 750 extra minutes at $0.20, or $180. The two plans cost the same at 500 minutes, and Pro costs less above that. LobbyStack counts usage by the second, so a 90-second call uses 1.5 minutes. Billed annually, Starter costs $288 a year ($24 a month) and Pro $960 ($80 a month).",
         points: [
-          "The Free plan includes 30 voice minutes for testing",
-          "Spam calls and calls under 10 seconds don't count toward usage",
+          "No setup fee on any plan",
+          "Calls under 10 seconds and calls the receptionist ends as spam don't count toward your minutes",
+          "Owners and admins can set a monthly overage cap under Settings > Plan. There's none by default, and new calls get a busy signal once you reach it",
+        ],
+      },
+      {
+        title: "Can it answer callers who speak Spanish or another language?",
+        body: "Yes. Each call opens in your default language, English or French. If the caller asks to switch or speaks another language, the receptionist answers in that language. It runs on OpenAI GPT-Live, which handles 70+ languages, including Spanish and Serbian. LobbyStack sends confirmation and reminder texts in your default language. If you save a contact's language as Spanish or Serbian through the API, that contact gets them in that language. The pricing page lists no language add-on.",
+        points: [
+          "Opens in English or French, then follows the caller's language",
+          "70+ languages on GPT-Live, including Spanish",
+          "Your urgency rules and booking settings stay the same in every language",
+        ],
+      },
+      {
+        title: "Does it work with ServiceTitan, Housecall Pro, or Jobber?",
+        body: "Not directly. LobbyStack has no integration with ServiceTitan, Housecall Pro, or Jobber, and Google Calendar is the only calendar it connects to. It sends signed webhooks for six events: call completed, appointment booked, appointment rescheduled, appointment cancelled, message taken, and contact created. It also has a REST API with scoped keys, and Zapier connects through the webhooks and the API. An MCP server lets Claude or ChatGPT read your calls and book appointments. If you already run your shop in Jobber or Housecall Pro, their built-in receptionists book jobs into that software. LobbyStack can't. Jobber Receptionist costs $29 a month for 30 conversations ($0.79 each after) on top of a Jobber plan. Housecall Pro sells CSR AI as a paid add-on with no published price. We checked both on October 9, 2026.",
+        points: [
+          "Books into Google Calendar",
+          "Sends call and booking data out through webhooks and the REST API",
+          "Connects Zapier through webhooks and the API",
         ],
       },
     ],
     faqs: hvacFaqs,
-    faqHeading: "Questions about AI receptionists for HVAC companies",
+    faqHeading: "Questions about HVAC AI receptionists",
     relatedLinks: [
+      {
+        label: "Compare HVAC answering services",
+        href: "/blog/best-hvac-answering-services/",
+      },
       {
         label: "After-hours answering for contractors",
         href: "/solutions/after-hours-answering-service-for-contractors/",
       },
       {
+        label: "Missed-call revenue calculator",
+        href: "/missed-call-revenue-calculator/",
+      },
+      { label: "Pricing", href: "/pricing/" },
+      {
         label: "Home services",
         href: "/solutions/ai-receptionist-for-home-services/",
       },
-      { label: "Pricing", href: "/pricing/" },
     ],
-    ctaHeading: "Get ready for the next heat wave",
+    ctaHeading: "Be ready for the first cold snap",
     ctaBody:
-      "Set up LobbyStack on your overflow line now and test it on real calls before peak season starts.",
+      "Start on the Free plan, write your no-heat rules, and forward your overflow line when you're ready.",
     ctaPrimaryLabel: "Try for free",
     ctaSecondaryLabel: "View pricing",
   },
@@ -559,7 +631,7 @@ export const solutionPages: SeoLandingPage[] = [
       "Your calls come in two kinds. One caller has a sparking outlet and needs safety instructions right now. The next wants a panel upgrade, an EV charger, or a standby generator and needs an estimate visit. LobbyStack handles both while you're on a job.",
     image: "/illustrations/call-routing-team.webp",
     imageAlt:
-      "An incoming electrical call routed to the right person on the team",
+      "An incoming electrical call next to three team members",
     proofPoints: [
       "Reads your safety script for sparks, smoke, and burning smells",
       "Books estimate visits for panel upgrades, EV chargers, and generators",
@@ -568,7 +640,7 @@ export const solutionPages: SeoLandingPage[] = [
     sections: [
       {
         title: "Put your safety instructions first",
-        body: "When someone reports smoke or a burning smell, LobbyStack reads the instructions you wrote: shut off the breaker if it's safe to reach, leave the house, call 911 if there's fire. Then it transfers the call to your on-call electrician with the address and what the caller saw.",
+        body: "When someone reports smoke or a burning smell, LobbyStack reads the instructions you wrote: shut off the breaker if it's safe to reach, leave the house, call 911 if there's fire. Then it asks for the address and what the caller saw, and transfers the call to your on-call electrician.",
         points: [
           "Uses your wording for hazard calls",
           "Transfers hazards to your on-call electrician",
@@ -630,7 +702,7 @@ export const solutionPages: SeoLandingPage[] = [
     eyebrow: "Garage door repair",
     h1: "AI receptionist for garage door repair that captures every call",
     intro:
-      "LobbyStack answers garage door calls while you are replacing springs, installing openers, or off the clock. It collects issue details, books appointments, and routes emergencies with full context.",
+      "LobbyStack answers garage door calls while you are replacing springs, installing openers, or off the clock. It collects issue details, books appointments, and transfers emergencies to your on-call number.",
     image: "/illustrations/missed-calls.webp",
     imageAlt:
       "LobbyStack answering a garage door repair call and booking a visit",
@@ -642,10 +714,10 @@ export const solutionPages: SeoLandingPage[] = [
     sections: [
       {
         title: "Never miss a stuck-door emergency",
-        body: "When a homeowner calls because their car is trapped inside or the door is stuck open at night, they need help now. LobbyStack answers on the first ring, follows your escalation rules, and transfers the caller to your on-call tech with the details already collected.",
+        body: "When a homeowner calls because their car is trapped inside or the door is stuck open at night, they need help now. LobbyStack answers on the first ring, follows your escalation rules, and transfers the caller to your on-call tech.",
         points: [
           "Identifies emergency calls versus routine service requests",
-          "Transfers urgent calls with door type and safety details",
+          "Asks about door type and safety, then transfers urgent calls",
           "Sends routine requests to the morning review queue",
         ],
       },
@@ -655,7 +727,7 @@ export const solutionPages: SeoLandingPage[] = [
         points: [
           "Checks real-time calendar availability",
           "Books repair and installation appointments directly",
-          "Sends confirmation and next steps to the caller and your team",
+          "Texts the caller a confirmation and adds the visit to your calendar",
         ],
       },
       {
@@ -663,8 +735,8 @@ export const solutionPages: SeoLandingPage[] = [
         body: "Garage door calls need context: door type, opener brand, spring type, and issue description. LobbyStack asks the questions you choose so your team arrives with the right parts.",
         points: [
           "Asks your custom intake questions on every call",
-          "Attaches answers to the booking summary",
-          "Sends transcript and recording alongside the appointment details",
+          "Saves the answers in the call's transcript",
+          "Saves the transcript and recording in your dashboard",
         ],
       },
     ],
@@ -683,7 +755,7 @@ export const solutionPages: SeoLandingPage[] = [
     ],
     ctaHeading: "Stop losing garage door repair calls to voicemail",
     ctaBody:
-      "LobbyStack answers emergency and routine garage door calls, books appointments, and routes stuck-door emergencies with full context.",
+      "LobbyStack answers emergency and routine garage door calls, books appointments, and transfers stuck-door emergencies to your on-call tech.",
     ctaPrimaryLabel: "Try for free",
     ctaSecondaryLabel: "View pricing",
   },
@@ -698,7 +770,7 @@ export const solutionPages: SeoLandingPage[] = [
     eyebrow: "Appliance repair",
     h1: "AI receptionist for appliance repair that captures every call",
     intro:
-      "LobbyStack answers appliance repair calls while you are diagnosing a dishwasher or replacing a compressor. It collects brand and model details, books appointments, and routes emergencies with full context.",
+      "LobbyStack answers appliance repair calls while you are diagnosing a dishwasher or replacing a compressor. It collects brand and model details, books appointments, and transfers emergencies to your on-call number.",
     image: "/illustrations/missed-calls.webp",
     imageAlt:
       "LobbyStack answering an appliance repair call and booking a visit",
@@ -710,10 +782,10 @@ export const solutionPages: SeoLandingPage[] = [
     sections: [
       {
         title: "Never miss an urgent appliance failure",
-        body: "When a homeowner calls because their refrigerator stopped working or their washing machine is flooding, they will not wait for voicemail. LobbyStack answers on the first ring, follows your escalation rules, and transfers the caller to your on-call tech with the details already collected.",
+        body: "When a homeowner calls because their refrigerator stopped working or their washing machine is flooding, they will not wait for voicemail. LobbyStack answers on the first ring, follows your escalation rules, and transfers the caller to your on-call tech.",
         points: [
           "Identifies emergency calls versus routine service requests",
-          "Transfers urgent calls with appliance brand and model details",
+          "Asks for the brand and model, then transfers urgent calls",
           "Sends routine requests to the morning review queue",
         ],
       },
@@ -723,7 +795,7 @@ export const solutionPages: SeoLandingPage[] = [
         points: [
           "Checks real-time calendar availability",
           "Books repair and maintenance appointments directly",
-          "Sends confirmation and next steps to the caller and your team",
+          "Texts the caller a confirmation and adds the visit to your calendar",
         ],
       },
       {
@@ -731,8 +803,8 @@ export const solutionPages: SeoLandingPage[] = [
         body: "Appliance repair calls need specific information: appliance type, brand, model number, purchase age, and issue description. LobbyStack asks the questions you choose so your team arrives with the right parts.",
         points: [
           "Asks your custom intake questions on every call",
-          "Attaches answers to the booking summary",
-          "Sends transcript and recording alongside the appointment details",
+          "Saves the answers in the call's transcript",
+          "Saves the transcript and recording in your dashboard",
         ],
       },
     ],
@@ -751,7 +823,7 @@ export const solutionPages: SeoLandingPage[] = [
     ],
     ctaHeading: "Stop losing appliance repair calls to voicemail",
     ctaBody:
-      "LobbyStack answers emergency and routine appliance calls, books appointments, and routes urgent failures with full context.",
+      "LobbyStack answers emergency and routine appliance calls, books appointments, and transfers urgent failures to your on-call tech.",
     ctaPrimaryLabel: "Try for free",
     ctaSecondaryLabel: "View pricing",
   },
@@ -766,7 +838,7 @@ export const solutionPages: SeoLandingPage[] = [
     eyebrow: "Restoration",
     h1: "AI receptionist for restoration companies that captures every emergency",
     intro:
-      "LobbyStack answers restoration calls while your crew is on site or off the clock. It collects damage details, books estimates, and routes emergencies with full context.",
+      "LobbyStack answers restoration calls while your crew is on site or off the clock. It collects damage details, books estimates, and transfers emergencies to your on-call number.",
     image: "/illustrations/calls-need-person.webp",
     imageAlt:
       "LobbyStack answering a restoration emergency call and routing it",
@@ -778,10 +850,10 @@ export const solutionPages: SeoLandingPage[] = [
     sections: [
       {
         title: "Never miss a water or fire damage emergency",
-        body: "When a property owner calls at 3 AM about flooding or smoke damage, they need mitigation now. LobbyStack answers on the first ring, follows your escalation rules, and transfers the caller to your on-call team with the details already collected.",
+        body: "When a property owner calls at 3 AM about flooding or smoke damage, they need mitigation now. LobbyStack answers on the first ring, follows your escalation rules, and transfers the caller to your on-call team.",
         points: [
           "Identifies emergency mitigation calls versus routine estimate requests",
-          "Transfers urgent calls with damage type, area, and source",
+          "Asks about damage type, area, and source, then transfers urgent calls",
           "Sends routine requests to the morning review queue",
         ],
       },
@@ -791,7 +863,7 @@ export const solutionPages: SeoLandingPage[] = [
         points: [
           "Checks real-time calendar availability",
           "Books estimate and consultation appointments directly",
-          "Sends confirmation and next steps to the caller and your team",
+          "Texts the caller a confirmation and adds the visit to your calendar",
         ],
       },
       {
@@ -799,8 +871,8 @@ export const solutionPages: SeoLandingPage[] = [
         body: "Restoration calls need context: damage type, affected area size, water source, timeline, and insurance status. LobbyStack asks the questions you choose so your team arrives prepared with the right equipment.",
         points: [
           "Asks your custom intake questions on every call",
-          "Attaches answers to the booking summary",
-          "Sends transcript and recording alongside the appointment details",
+          "Saves the answers in the call's transcript",
+          "Saves the transcript and recording in your dashboard",
         ],
       },
     ],
@@ -819,7 +891,7 @@ export const solutionPages: SeoLandingPage[] = [
     ],
     ctaHeading: "Stop losing restoration emergency calls to voicemail",
     ctaBody:
-      "LobbyStack answers emergency and routine restoration calls, books estimates, and routes urgent mitigation requests with full context.",
+      "LobbyStack answers emergency and routine restoration calls, books estimates, and transfers urgent mitigation requests to your on-call team.",
     ctaPrimaryLabel: "Try for free",
     ctaSecondaryLabel: "View pricing",
   },
@@ -834,7 +906,7 @@ export const solutionPages: SeoLandingPage[] = [
     eyebrow: "Locksmiths",
     h1: "AI receptionist for locksmiths that captures every emergency call",
     intro:
-      "LobbyStack answers locksmith calls while you are on a rekey job, installing hardware, or off the clock. It collects lockout details, books appointments, and routes emergencies with full context.",
+      "LobbyStack answers locksmith calls while you are on a rekey job, installing hardware, or off the clock. It collects lockout details, books appointments, and transfers emergencies to your on-call number.",
     image: "/illustrations/missed-calls.webp",
     imageAlt:
       "LobbyStack answering a locksmith call and booking a service visit",
@@ -846,10 +918,10 @@ export const solutionPages: SeoLandingPage[] = [
     sections: [
       {
         title: "Never miss an emergency lockout call",
-        body: "When someone is locked out of their home or car, they need help now. They will not leave a voicemail and wait. LobbyStack answers on the first ring, follows your escalation rules, and transfers the caller to your on-call locksmith with the location and details already collected.",
+        body: "When someone is locked out of their home or car, they need help now. They will not leave a voicemail and wait. LobbyStack answers on the first ring, follows your escalation rules, and transfers the caller to your on-call locksmith.",
         points: [
           "Identifies emergency lockout calls versus routine service requests",
-          "Transfers urgent calls with location and lockout type",
+          "Asks for the location and lockout type, then transfers urgent calls",
           "Sends routine requests to the morning review queue",
         ],
       },
@@ -859,7 +931,7 @@ export const solutionPages: SeoLandingPage[] = [
         points: [
           "Checks real-time calendar availability",
           "Books rekey, installation, and service appointments directly",
-          "Sends confirmation and next steps to the caller and your team",
+          "Texts the caller a confirmation and adds the visit to your calendar",
         ],
       },
       {
@@ -867,8 +939,8 @@ export const solutionPages: SeoLandingPage[] = [
         body: "Locksmith calls need context: lockout type, location, vehicle or property type, key situation, and urgency. LobbyStack asks the questions you choose so your team arrives prepared.",
         points: [
           "Asks your custom intake questions on every call",
-          "Attaches answers to the booking summary",
-          "Sends transcript and recording alongside the appointment details",
+          "Saves the answers in the call's transcript",
+          "Saves the transcript and recording in your dashboard",
         ],
       },
     ],
@@ -887,7 +959,7 @@ export const solutionPages: SeoLandingPage[] = [
     ],
     ctaHeading: "Stop losing lockout calls to voicemail",
     ctaBody:
-      "LobbyStack answers emergency and routine locksmith calls, books appointments, and routes urgent lockouts with full context.",
+      "LobbyStack answers emergency and routine locksmith calls, books appointments, and transfers urgent lockouts to your on-call locksmith.",
     ctaPrimaryLabel: "Try for free",
     ctaSecondaryLabel: "View pricing",
   },
@@ -900,26 +972,26 @@ export const solutionPages: SeoLandingPage[] = [
     path: "/solutions/after-hours-answering-service-for-contractors/",
     title: "Contractor Answering Service for After-Hours Calls | LobbyStack",
     description:
-      "LobbyStack is an after-hours contractor answering service. It screens emergencies, books next-day visits, and routes urgent jobs to your on-call staff with context.",
+      "LobbyStack is an after-hours contractor answering service. It screens emergencies, books next-day visits, and transfers urgent jobs to your on-call number.",
     eyebrow: "Contractor after-hours",
     h1: "Contractor answering service for after-hours emergency jobs",
     intro:
-      "LobbyStack answers contractor calls at night, on weekends, and during holidays. It screens for emergencies, books next-day appointments, and routes urgent requests to your on-call staff with full context.",
+      "LobbyStack answers contractor calls at night, on weekends, and during holidays. It screens for emergencies, books next-day appointments, and transfers urgent requests to your on-call number.",
     image: "/illustrations/calls-need-person.webp",
     imageAlt:
       "LobbyStack handling after-hours contractor calls and routing emergencies",
     proofPoints: [
       "Answers after-hours calls and screens for emergencies",
       "Books next-day appointments directly into your calendar",
-      "Routes urgent calls to your on-call staff with context",
+      "Transfers urgent calls to your on-call number",
     ],
     sections: [
       {
         title: "Stop losing emergency jobs to voicemail",
-        body: "When a homeowner calls at 10 PM with an urgent problem, they will not leave a message. They call the next contractor on the list. LobbyStack answers on the first ring, follows your escalation rules, and transfers the caller to your on-call person with the details already collected.",
+        body: "When a homeowner calls at 10 PM with an urgent problem, they will not leave a message. They call the next contractor on the list. LobbyStack answers on the first ring, follows your escalation rules, and transfers the caller to your on-call person.",
         points: [
           "Differentiates emergency calls from routine quote requests",
-          "Transfers urgent calls with issue, location, and contact details",
+          "Collects the issue, location, and contact details, then transfers urgent calls",
           "Sends routine requests to the morning review queue",
         ],
       },
@@ -929,7 +1001,7 @@ export const solutionPages: SeoLandingPage[] = [
         points: [
           "Checks real-time calendar availability for next-day slots",
           "Books appointments directly into your calendar",
-          "Sends confirmation and next steps to the caller and your team",
+          "Texts the caller a confirmation and adds the visit to your calendar",
         ],
       },
       {
@@ -937,13 +1009,13 @@ export const solutionPages: SeoLandingPage[] = [
         body: "Not every after-hours call is worth interrupting your evening. LobbyStack screens out robocalls, telemarketers, and spam. Only genuine emergencies reach your on-call staff.",
         points: [
           "Automatically filters non-human callers",
-          "Sends organized summaries for morning review",
+          "Saves a summary of each call for morning review",
           "Protects your personal time while covering the phone line",
         ],
       },
       {
         title: "Follow your real on-call process",
-        body: "Every contractor defines urgent differently. LobbyStack asks the qualifying questions you choose: active water damage, safety hazard, heating failure, structural risk. It only interrupts the right person when the call matches your rules.",
+        body: "Every contractor defines urgent differently. LobbyStack asks the qualifying questions you choose: active water damage, safety hazard, heating failure, structural risk. It only rings your on-call number when the call matches your rules.",
         points: [
           "Uses your custom escalation rules on every call",
           "Collects symptoms, location, and timing before transferring",
@@ -960,11 +1032,15 @@ export const solutionPages: SeoLandingPage[] = [
       },
       { label: "Plumbers", href: "/solutions/ai-receptionist-for-plumbers/" },
       { label: "HVAC", href: "/solutions/ai-receptionist-for-hvac/" },
+      {
+        label: "Compare HVAC answering services",
+        href: "/blog/best-hvac-answering-services/",
+      },
       { label: "Pricing", href: "/pricing/" },
     ],
     ctaHeading: "Stop losing after-hours contractor calls to voicemail",
     ctaBody:
-      "LobbyStack answers after-hours calls, screens for emergencies, books next-day appointments, and routes urgent jobs to your on-call staff with full context.",
+      "LobbyStack answers after-hours calls, screens for emergencies, books next-day appointments, and transfers urgent jobs to your on-call number.",
     ctaPrimaryLabel: "Try for free",
     ctaSecondaryLabel: "View pricing",
   },
@@ -1060,14 +1136,14 @@ export const solutionPages: SeoLandingPage[] = [
     imageAlt:
       "Call routing that rings your team first and hands the call to LobbyStack when nobody is available",
     proofPoints: [
-      "Takes simultaneous calls after a storm without a busy signal",
+      "Plans set no limit on how many storm calls it answers at once",
       "Books inspections and estimates into your calendar",
       "Transfers active leaks to your on-call crew",
     ],
     sections: [
       {
         title: "Handle the week after a storm",
-        body: "Hail and wind can bring a month of calls in two days. LobbyStack takes as many calls at once as come in, collects the address, the roof's age, and the damage the homeowner sees, and books the first open inspection slot. Your office starts the day with a list of booked inspections.",
+        body: "Hail and wind can bring a month of calls in two days. Plans set no limit on how many calls LobbyStack answers at once, and new calls get a busy signal only if you set a monthly overage cap and reach it. It collects the address, the roof's age, and the damage the homeowner sees, and books the first open inspection slot. Your office starts the day with a list of booked inspections.",
         points: [
           "Answers simultaneous calls",
           "Collects the address, roof age, and visible damage",
@@ -1076,9 +1152,9 @@ export const solutionPages: SeoLandingPage[] = [
       },
       {
         title: "Send active leaks to your crew",
-        body: "Water coming through a ceiling needs a tarp tonight. You define what counts as urgent, and LobbyStack transfers those calls to your on-call crew with the address and what the homeowner described. A few missing shingles with no leak get an inspection booking.",
+        body: "Water coming through a ceiling needs a tarp tonight. You define what counts as urgent, and LobbyStack asks for the address and what the homeowner sees, then transfers those calls to your on-call crew. A few missing shingles with no leak get an inspection booking.",
         points: [
-          "Transfers active leaks with the address and description",
+          "Asks for the address, then transfers active leaks to your crew",
           "Books non-urgent damage for inspection",
         ],
       },

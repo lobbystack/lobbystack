@@ -36,7 +36,7 @@ Une équipe commerciale peut donc explorer plusieurs modèles. Vous pouvez chang
 
 ## Quatre façons de bâtir une entreprise avec LobbyStack
 
-LobbyStack contient déjà la couche produit autour du modèle vocal : appels, rendez-vous, textos de réservation, alertes courriel et SMS, connaissances, transcriptions, enregistrements, transfert humain, consommation, facturation et tableau de bord. Vous pouvez consacrer votre travail aux clients et au marché que vous connaissez.
+LobbyStack contient déjà la couche produit autour du modèle vocal : appels, rendez-vous, SMS de réservation, alertes e-mail et SMS, connaissances, transcriptions, enregistrements, transfert humain, consommation, facturation et tableau de bord. Vous pouvez consacrer votre travail aux clients et au marché que vous connaissez.
 
 ### Construire un réceptionniste IA vertical
 
@@ -46,7 +46,7 @@ Une équipe qui sert des cliniques dentaires peut ajouter les règles d'accueil,
 
 Une agence peut déployer LobbyStack dans son environnement ou dans l'infrastructure contrôlée par le client. Elle peut facturer la configuration, les fournisseurs, les consignes et les connaissances, les intégrations, la surveillance, les mises à jour et le soutien.
 
-La pile auto-hébergée repose sur des outils connus des équipes d'infrastructure : Next.js, PostgreSQL, Drizzle, Redis, BullMQ, Fastify et Docker Compose. Votre équipe peut utiliser ses propres comptes Twilio, IA compatible OpenAI, calendrier, courriel, analytique, facturation et stockage.
+La pile auto-hébergée repose sur des outils connus des équipes d'infrastructure : Next.js, PostgreSQL, Drizzle, Redis, BullMQ, Fastify et Docker Compose. Votre équipe peut utiliser ses propres comptes Twilio, IA compatible OpenAI, calendrier, e-mail, analytique, facturation et stockage.
 
 ### Vendre des intégrations et la conception des workflows
 

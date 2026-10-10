@@ -29,7 +29,7 @@ export const contractorAfterHoursFaqs: FaqItem[] = [
   {
     question: "Will I see what was discussed on every after-hours call?",
     answer:
-      "Yes. After every call, LobbyStack sends a summary with the caller details, issue description, appointment time, transcript, and recording. You review it from the dashboard or via email and SMS alerts.",
+      "Yes. LobbyStack saves a summary, transcript, and recording of every call in your dashboard. When it takes a message, your team gets an email alert, or a text alert if you turn those on.",
   },
   {
     question: "How much does it cost for a contractor business?",

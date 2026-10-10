@@ -24,7 +24,7 @@ export const aiPhoneAnsweringFaqs: FaqItem[] = [
   {
     question: "What happens if a caller needs a real person?",
     answer:
-      "You define the handoff rules. LobbyStack can transfer urgent calls, high-value leads, upset customers, or special cases to the right person with the call context attached.",
+      "You define the handoff rules. LobbyStack can transfer urgent calls, high-value leads, upset customers, or special cases to the number you set, or take a message.",
   },
   {
     question: "Can I control what the AI says?",

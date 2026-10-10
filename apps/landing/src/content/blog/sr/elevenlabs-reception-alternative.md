@@ -58,7 +58,7 @@ Reception računa telefonske pozive i veb čet iz istog fonda kredita. Minut tel
 
 Basic takođe dozvoljava samo jedan poziv u isto vreme. Ako dva klijenta pozovu istovremeno, samo jedan dolazi do recepcionera. Plus podiže ograničenje na 3, a Premium na 10.
 
-LobbyStack posebno računa minute razgovora. Nijedan paket ne ograničava koliko poziva može da teče istovremeno, pa na Starter paketu oba pozivaoca dolaze do recepcionera. Jedan izuzetak: ako podesite mesečni limit potrošnje, aktivni poziv rezerviše preostali iznos, a drugi pozivalac čuje poruku o limitu dok se prvi poziv ne završi.
+LobbyStack posebno računa minute razgovora. Nijedan paket ne ograničava koliko poziva može da teče istovremeno, pa na Starter paketu oba pozivaoca dolaze do recepcionera. Jedan izuzetak: ako podesite mesečni limit potrošnje, aktivni poziv rezerviše preostali iznos, a drugi pozivalac čuje signal zauzeća dok se prvi poziv ne završi.
 
 ## Da li je ElevenLabs Reception usklađen sa HIPAA?
 

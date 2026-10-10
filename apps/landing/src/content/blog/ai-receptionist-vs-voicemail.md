@@ -29,6 +29,8 @@ Voicemail still has a place. It costs little, works with almost any phone system
 | Cost | Subscription and usage | Often included with the phone system |
 | Staff work | Review outcomes and exceptions | Listen, interpret, call back, and complete the work |
 
+If you're also weighing a phone tree or voicemail-to-text, our [automated answering service guide](/blog/automated-answering-service/) compares both with an AI receptionist.
+
 ## Voicemail works when waiting carries little risk
 
 Voicemail remains adequate for low-urgency calls from people who already know the business:

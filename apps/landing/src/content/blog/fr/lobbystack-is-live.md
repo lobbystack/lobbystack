@@ -29,9 +29,9 @@ Quand un appelant atteint LobbyStack, il peut :
 - répondre aux questions à partir de vos connaissances d'entreprise ;
 - collecter le nom, le numéro, le besoin, la zone et l'urgence ;
 - prendre des rendez‑vous selon votre disponibilité ;
-- envoyer une confirmation de rendez‑vous par texto sur les forfaits payants ;
-- alerter votre équipe avec un résumé d'appel par courriel ou SMS ;
-- transférer les appels urgents avec contexte ;
+- envoyer une confirmation de rendez‑vous par SMS sur les forfaits payants ;
+- alerter votre équipe avec un résumé d'appel par e-mail ou SMS ;
+- transférer les appels urgents vers le numéro de votre choix ;
 - conserver les transcriptions, enregistrements, résumés et résultats dans un tableau de bord.
 
 ## Pourquoi nous l'avons construit

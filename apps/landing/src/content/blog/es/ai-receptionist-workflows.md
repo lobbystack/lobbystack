@@ -131,16 +131,16 @@ La recepcionista puede convertir las palabras de quien llama en un mensaje listo
 
 ### Traspaso
 
-Las transferencias necesitan algo más que una rama por intención. La recepcionista debe saber qué llamadas necesitan a una persona, qué decir antes de transferir y qué hacer cuando nadie contesta.
+Las transferencias necesitan algo más que una rama por intención. La recepcionista debe saber qué llamadas necesitan a una persona, qué decir antes de transferir y qué hacer cuando la transferencia falla.
 
 Puede escribir:
 
 ```text
 Transfiera las llamadas urgentes, los clientes molestos, los clientes
 potenciales de alto valor y las preguntas que la IA no tiene permitido
-responder. Antes de transferir, resuma lo que necesita la persona. Si nadie
-contesta, tome un mensaje, anote el motivo del traspaso y diga a la persona
-cuándo responderá el equipo.
+responder. Antes de transferir, avise a la persona de que la va a transferir.
+Si la transferencia falla, tome un mensaje, anote el motivo del traspaso y
+diga a la persona cuándo responderá el equipo.
 ```
 
 El negocio obtiene un traspaso más seguro porque la IA tiene una política, la capa de voz ejecuta la transferencia y el backend registra el resultado.
@@ -153,7 +153,7 @@ Si su recepcionista con IA depende de una cadena de ramas para decidir qué deci
 
 LobbyStack sustituye esa capa. Se encarga del comportamiento de la llamada en vivo, el estado de la llamada, los resultados de las herramientas, el contexto de la transcripción, el motivo del traspaso y el resultado final.
 
-Puede seguir usando n8n, Zapier o Make para automatizaciones fuera de la llamada. LobbyStack no se conecta a ellas ni envía webhooks salientes, así que se quedan fuera de la llamada en vivo. La recepcionista con IA debe poder decidir la siguiente acción responsable durante la llamada y luego registrar un resultado limpio en el que el equipo pueda confiar.
+Puede seguir usando n8n, Zapier o Make para automatizaciones fuera de la llamada. Los webhooks firmados de LobbyStack pueden activarlas después de la llamada, así que se quedan fuera de la llamada en vivo. La recepcionista con IA debe poder decidir la siguiente acción responsable durante la llamada y luego registrar un resultado limpio en el que el equipo pueda confiar.
 
 ## Dónde encaja LobbyStack
 

@@ -1,236 +1,330 @@
 ---
-title: "Koliko možete uštedeti uz AI recepcionera?"
-description: "Procenite uštede od AI recepcionera: niži troškovi odgovaranja na pozive i manje propuštenih poziva. Izračunajte brojke pomoću kalkulatora propuštenih poziva."
+title: "Koliko košta AI recepcioner u 2026?"
+seoTitle: "Cena AI recepcionera u 2026: poređenje 17 ponuđača"
+description: "Koliko košta AI recepcioner u 2026: ulazne cene, uključena potrošnja i prekoračenja kod 17 ponuđača, uključujući nas, provereno 9. oktobra, i računi za 40 i 100 poziva."
 pubDate: 2026-06-03T12:00:00-04:00
+updatedDate: 2026-10-09T09:00:00-04:00
 author: "LobbyStack tim"
 category: "Vodiči"
 featured: true
 coverImage: "/illustrations/ai-receptionist-savings-hero.webp"
+coverImageAlt: "Bež kartica sa sitnim uzorkom tačaka, oznakom Pricing i crnim naslovom na engleskom: How much does an AI receptionist cost in 2026?"
 locale: "sr"
 canonicalSlug: "ai-receptionist-savings"
 ---
 
-Ako novi klijenti obično počinju telefonskim pozivom, propušteni pozivi tiho odnose deo prihoda. Trošak se vidi kasnije: u praznim terminima, sporijim nedeljama i klijentima koji su zakazali kod nekog drugog pre nego što ste stigli da im uzvratite poziv.
+AI recepcioner košta od $14 do $150 mesečno na većini ulaznih paketa, prema stranicama sa cenama 17 ponuđača, uključujući i naš, na dan 9. oktobra 2026. Ti paketi uključuju od 25 do 250 poziva, minuta ili pozivalaca, a većina naplaćuje svaki dodatni. Smith.ai paket Free se javlja na 25 stvarnih poziva mesečno, a LobbyStack paket Free Vam daje 30 minuta razgovora u pregledaču za testiranje.
 
-**AI recepcioner** može da Vam uštedi novac na dva načina: smanjuje ono što trošite na odgovaranje na pozive i čuva prihod koji bi inače nestao u govornoj pošti, sporim povratnim pozivima ili pozivima van radnog vremena. Tačan iznos manje zavisi od same veštačke inteligencije, a više od broja poziva, prosečne vrednosti klijenta i toga koliko dobrih poziva Vam trenutno izmiče.
+**Cene smo proverili 9. oktobra 2026.** na stranici sa cenama svakog ponuđača, u američkim dolarima bez poreza. Mi smo napisali ovaj vodič i prodajemo AI recepcionera, pa naš red nosi oznaku „(naš)“.
 
-Evo jednostavnog načina da to procenite, uz oprezne proračune.
+## Koliko AI recepcioner košta mesečno?
 
-## Prvo pogledajte mesečni trošak
+Većina ulaznih paketa košta od $14 do $150 mesečno, od AI-Receptionist.com paketa od $14 za 75 minuta do Smith.ai Pro paketa od $150 za 75 poziva. Smith.ai i LobbyStack nude besplatne pakete. Ako kupujete recepcionera kao dodatak, plaćate i telefonski paket ili licencu koju on zahteva.
 
-Najočiglednije uštede su troškovi koje možete smanjiti ili izbeći.
+### Ulazne cene 17 ponuđača, proverene 9. oktobra 2026.
 
-Recepcioner sa punim radnim vremenom je koristan, ali i skromna satnica brzo postaje ozbiljan mesečni trošak. [Bureau of Labor Statistics](https://www.bls.gov/ooh/Office-and-Administrative-Support/Receptionists.htm) je za maj 2024. objavio medijalnu zaradu recepcionera od $17.90 po satu. Uz 40 sati nedeljno, to je otprilike $3,100 mesečno, pre poreza i doprinosa na zarade, beneficija, zapošljavanja, obuke, bolovanja i zamene kada je ta osoba već na drugom pozivu.
+| Ponuđač | Ulazni paket | Uključeno | Dodatna potrošnja | Jedinica naplate | Naknada za aktivaciju | Besplatan paket ili proba |
+| --- | --- | --- | --- | --- | --- | --- |
+| [Smith.ai AI Receptionist](https://smith.ai/pricing/ai-receptionist) | Free $0; Pro $150 | 25 stvarnih poziva; 75 na Pro | $3 po pozivu na Free, $2.50 na Pro | Poziv | Navodi da je nema | Besplatan paket |
+| [AI-Receptionist.com](https://ai-receptionist.com/pricing) | Essential $14 ($140 godišnje) | 75 min | $0.25/min u Booster minutima | Minut | Navodi da je nema | 7 dana, 30 minuta uživo, bez kartice |
+| [Upfirst](https://upfirst.ai/pricing) | Starter $24.95 ($20 uz godišnju naplatu) | 30 poziva | $1.50 po pozivu | Poziv | Nije navedeno | 14 dana, bez kartice |
+| [Aira](https://www.getaira.io/agents/receptionist/pricing) | Starter $24.95 | 30 poziva | $1.50 po pozivu | Završen poziv | Nije navedeno | Nije navedena |
+| [Quo Sona](https://support.quo.com/core-concepts/ai-automations/sona/sona-pricing) | $25, plus Quo paket ($19 po korisniku mesečno) | Oko 40 poziva | $0.75 po pozivu, podrazumevano isključeno | Poziv (100 kredita) | Nije navedeno | 7 dana |
+| [Dialzara](https://dialzara.com/pricing) | Business Lite $29 | 60 min | $0.48/min | Minut | Navodi da je nema | 7 dana |
+| [ElevenLabs Reception](https://elevenlabs.io/docs/reception-ai/billing/plans-and-pricing) | Basic $29 ($24 uz godišnju naplatu) | 75 kredita | $0.45 po kreditu | Kredit (1 min telefonom) | Nije navedeno | 14 dana, 30 kredita, bez kartice |
+| [Zoom AI Receptionist](https://zoom.us/pricing/virtual-agent) | $29.99 | 100 min | Nije objavljeno | Minut | Nije navedeno | „Try for free“, trajanje nije navedeno |
+| [LobbyStack](/sr/pricing/) (naš) | Starter $30 ($24 uz godišnju naplatu) | 150 min | $0.20/min | Sekunda, cena po minutu | Nema | Besplatan paket: 30 minuta razgovora u pregledaču, bez broja telefona |
+| [RingCentral AIR](https://www.ringcentral.com/pricing/ai-receptionist.html) | $49 samostalno | 100 min | $0.50/min | Minut, koraci od 30 sekundi | Nije navedeno | 14 dana |
+| [Rosie](https://heyrosie.com/pricing) | Professional $49 ($41 uz godišnju naplatu) | 250 min | Prebacuje Vas na Scale ($149) | Minut | Nije navedeno | 7 dana |
+| [Allo](https://www.withallo.com/pricing) | $32 recepcioner + $32 licenca, godišnja naplata | Nije navedeno | Nije navedeno | Fiksno po agentu | Navodi da je nema | Nije navedena |
+| [Moneypenny AI](https://moneypenny.com/us/plans-pricing-ai/) | $69 | 25 poziva | $2.49 po pozivu | Poziv | Nije navedeno | Nije navedena |
+| [Goodcall](https://www.goodcall.com/pricing) | Starter $79 | 100 jedinstvenih pozivalaca | $0.79 po pozivaocu | Jedinstveni pozivalac mesečno | Nije navedeno | Besplatan demo agent |
+| [CloudTalk](https://www.cloudtalk.io/ai-receptionist/) | $99 | 200 min | Nije objavljeno | Minut | Navodi da je nema | 50 besplatnih min u prvom mesecu; 14 dana, bez kartice |
+| [My AI Front Desk](https://www.myaifrontdesk.com/pricing) | $99 ($79 uz godišnju naplatu) | 200 min | $0.25/min posle mesečnog fonda kredita (oko 40 min) | Minut (krediti) | Nije navedeno | 7 dana |
+| [Nextiva XBert](https://www.nextiva.com/products/xbert) | $99 | 100 interakcija | $0.99 po interakciji | Interakcija | Besplatna asistirana aktivacija | 14 dana, 30 dana garancije povraćaja novca |
 
-Za većinu firmi pitanje nije samo da li zameniti recepcionera. Dobra osoba na recepciji radi mnogo više od odgovaranja na telefon. Ipak, mnogim malim firmama ne treba novi zaposleni sa punim radnim vremenom samo za pozive kada su svi zauzeti, pauze za ručak, vikende, pozive van radnog vremena ili trenutke kada vlasnik radi sam posao.
+„Navodi da je nema“ znači da ponuđač izričito kaže da ne naplaćuje aktivaciju, a „Nije navedeno“ da nismo našli izjavu ni u jednom smeru. Moneypenny na AI stranici piše da paketi počinju od $99, ali njegova stranica sa paketima navodi $69 za 25 poziva. Aira i Upfirst imaju iste nivoe, ali su to odvojene kompanije, Aira Inc. i Upfirst, Inc. Synthflow nije na spisku jer prodaje samo enterprise ugovore, od [$30,000 godišnje](https://synthflow.ai/pricing).
 
-Usluge odgovaranja na pozive uživo mogu da popune tu prazninu, ali se obično naplaćuju po minutu rada recepcionera. Na primer, [javni cenovnik usluge Ruby](https://www.ruby.com/plans-and-pricing/) navodi 50 minuta recepcionera za $250 mesečno i 100 minuta za $395 mesečno. To se može isplatiti ako Vam za svaki poziv treba ljudski glas. Može postati i skupo ako pozivaocima uglavnom trebaju rutinski odgovori, pomoć pri zakazivanju, prikupljanje podataka ili brzo preusmeravanje.
+### Paketi koji prvo traže drugu pretplatu
 
-Tu uštede od AI recepcionera obično počinju: rutinski posao na recepciji pokriven je uz manji trošak, a neuobičajeni pozivi se i dalje preusmeravaju čoveku.
+Tri ponuđača bar za jednu opciju traže još jedan proizvod, a četvrti to ne kaže:
 
-Većina firmi ga koristi da pokrije praznine oko recepcije:
+- **Quo Sona** traži plaćeni Quo paket. [Quo Starter](https://www.quo.com/pricing) košta $19 po korisniku mesečno, ili $15 uz godišnju naplatu, pa Sona nivo od $25 izlazi $44 mesečno.
+- **Allo** dodaje recepcionera ($32 po agentu uz godišnju naplatu) na plaćeni Allo paket (Business, $32 po licenci uz godišnju naplatu), ukupno $64 mesečno. Allo ne kaže da li i zaposlenom treba posebna licenca.
+- **RingCentral AIR** košta $49 samostalno, ili $39 plus licencu RingEX Core od $30. Ostale opcije pokriva naš pregled [cena za RingCentral AI Receptionist](/sr/blog/ringcentral-ai-receptionist-alternative/).
+- **CloudTalk** navodi AI recepcionera kao dodatak uz pakete sa licencama i ne kaže da li licencu mora da plati i kupac kome treba samo AI.
 
-- Poziv koji stigne dok su svi već zauzeti.
-- Pozivalac van radnog vremena koji je želeo da zakaže pre jutra.
-- Poziv tokom pauze za ručak koji bi inače završio u govornoj pošti.
-- Rutinsko pitanje koje ne bi trebalo da vlasniku oduzme pet minuta.
-- Prvi poziv novog klijenta, gde je najvažnije tačno zabeležiti ime, potrebu, vreme i podatke za povratni poziv.
+Nextiva u odeljku čestih pitanja piše da XBert prodaje samostalno ili kao dodatak Nextiva paketu.
 
-Za neke firme uštede su uglavnom u radnom vremenu zaposlenih. Za druge su uglavnom u povraćenom prihodu. Najbolji slučajevi obično imaju oboje.
+AI odgovori u pretrazi i drugi uporedni članci i dalje navode tri cene koje stranice ponuđača 9. oktobra nisu prikazivale: Allo paket od $18, RingCentral AIR za $59 i My AI Front Desk paket od $20. Proverite stranicu samog ponuđača pre nego što budžet napravite na osnovu tuđeg sažetka.
 
-## Zatim prebrojte pozive koje gubite
+## Kako AI recepcioneri naplaćuju?
 
-Ušteda na troškovima je samo pola priče. Veći iznos je često prihod koji nikada ne vidite jer je pozivalac odustao.
+AI recepcioneri naplaćuju po minutu, po pozivu, po jedinstvenom pozivaocu ili po interakciji. Paketi po minutu odgovaraju kratkim pozivima, paketi po pozivu dugim, a paketi po pozivaocu firmama čiji klijenti često zovu ponovo. Pre nego što uporedite dve cene, proverite šta svaki ponuđač računa kao naplativo.
 
-Setite se poslednjih nekoliko nedelja:
+### Po minutu
 
-- Koliko poziva je završilo u govornoj pošti?
-- Koliko ih je stiglo van radnog vremena?
-- Koliko ih je zvonilo dok je neko već pomagao drugom klijentu?
-- Koliko njih je dobilo povratni poziv tek posle nekoliko sati, kada je pozivalac već našao nekog drugog?
+LobbyStack, RingCentral AIR, Dialzara, Zoom, Rosie, CloudTalk i AI-Receptionist.com prodaju pakete minuta. ElevenLabs Reception prodaje kredite, jedan po minutu telefonskog razgovora. My AI Front Desk prodaje 200 minuta, a dodatne minute zatim uzima iz fonda kredita, po 25 kredita za minut.
 
-Mnogi propušteni pozivi ne donose nikakav prihod: spam, pogrešni brojevi, dobavljači ili postojeći klijenti sa pitanjima koja mogu da sačekaju. Greška je otpisati sve propuštene pozive zato što su neki od njih šum.
+### Po pozivu
 
-Bolje pitanje je: koliko propuštenih poziva su bile stvarne prilike?
+Upfirst, Aira, Smith.ai, Moneypenny AI i Quo Sona naplaćuju po pozivu, pa poziv od 10 minuta košta isto kao poziv od 1 minuta. Aira naplaćuje završene pozive, a Quo Sona na svaki poziv troši 100 kredita.
 
-U ovom delu vredi biti strog. Ako mesečno propustite 40 poziva, nemojte svih 40 nazvati „izgubljenim klijentima“. Prvo izbacite smeće. Spam, dobavljači, pogrešni brojevi, podsetnici za termine i postojeći klijenti sa pitanjima koja nisu hitna ne treba da se računaju kao novi prihod koji je u riziku.
+### Po pozivaocu ili po interakciji
 
-Ono što tražite je manji, iskreniji broj: propušteni pozivi ljudi koji bi realno zakazali, naručili, tražili ponudu ili napravili sledeći korak da im se neko javio.
+Goodcall računa svaki broj telefona jednom mesečno, koliko god puta zvao, i ne meri minute. Nextiva XBert kao jednu interakciju računa poziv duži od 30 sekundi, ili SMS ili čet razgovor sa 3 ili više poruka. Allo naplaćuje fiksnu cenu po recepcioneru i ne kaže koliko korišćenja ona uključuje.
 
-Taj broj je obično dovoljno neprijatan i sam po sebi.
+### Šta se računa kao naplativ poziv
 
-## Koristite kalkulator propuštenih poziva
+- Upfirst ne naplaćuje spam, pozive kraće od 15 sekundi ni pozivaoce koji ne progovore. Quo Sona preskače pozive kraće od 15 sekundi, a Nextiva XBert pozive kraće od 30 sekundi.
+- Smith.ai filtrira poznate spamere i dozvoljava Vam da do 10% poziva u jednom ciklusu uklonite kao spam. Goodcall ne računa spam ni pogrešne brojeve.
+- RingCentral AIR zaokružuje svaki poziv naviše, na sledećih 30 sekundi.
+- LobbyStack računa sekunde bez zaokruživanja, pa poziv od 90 sekundi troši 1.5 minuta. Pozive kraće od 10 sekundi i pozive koje recepcioner završi kao spam ne računa.
 
-LobbyStack ima [kalkulator prihoda od propuštenih poziva](/sr/missed-call-revenue-calculator/) upravo iz tog razloga. Koristi formulu:
+Ostali ponuđači na stranicama koje smo pročitali ne navode nikakvo pravilo, pa pitajte pre nego što pretpostavite da je spam besplatan.
+
+## Koliko ćete platiti za 40 ili 100 poziva mesečno?
+
+Za 40 poziva od po tri minuta mesečno, 15 potpuno izračunatih paketa iz ovog vodiča košta od $25.25 do $99. Za 100 poziva cena ide od $60 do $212.50. AI-Receptionist.com je najjeftiniji za 40 poziva, a redosled se menja kada pozivi traju duže ili kada isti klijenti zovu ponovo.
+
+Pretpostavili smo da svaki poziv traje 3 minuta, da je svaki pozivalac druga osoba, da nijedan poziv nije spam i da je naplata mesečna. Za svakog ponuđača uzeli smo najjeftiniji paket, ili paket uz objavljeno prekoračenje, koji pokriva taj obim. Gde prekoračenje nije objavljeno, uzeli smo najjeftiniji paket koji pokriva ceo obim.
+
+### Mesečni računi za dva obima poziva
+
+| Ponuđač | 40 poziva (120 min) | 100 poziva (300 min) | Kako smo računali |
+| --- | --- | --- | --- |
+| AI-Receptionist.com | $25.25 | $70.25 | Essential $14 + 45 ili 225 Booster minuta po $0.25 |
+| LobbyStack (naš) | $30 | $60 | Starter $30; za 100 poziva + 150 min po $0.20 |
+| Upfirst | $39.95 | $69.95 | Starter + 10 poziva po $1.50; Premium + 10 po $1 |
+| Aira | $39.95 | $69.95 | Isti nivoi kao Upfirst |
+| Quo Sona | $44 | $68 | Sona nivo od $25 ili $49 + Quo Starter od $19 |
+| Smith.ai AI Receptionist | $45 | $212.50 | Free + 15 poziva po $3; Pro $150 + 25 po $2.50 |
+| Rosie | $49 | $149 | Professional; 300 min Vas prebacuje na Scale |
+| ElevenLabs Reception | $49.25 | $88.50 | Basic + 45 min po $0.45; Plus $79 + 25 po $0.38 |
+| Dialzara | $57.80 | $135 | Lite + 60 min po $0.48; Pro $99 + 80 po $0.45 |
+| RingCentral AIR | $59 | $149 | $49 + 20 ili 200 min po $0.50 |
+| Goodcall | $79 | $79 | Starter pokriva 100 jedinstvenih pozivalaca |
+| CloudTalk | $99 | $199 | Paket od 200 min; paket od 500 min, jer prekoračenje nije objavljeno |
+| My AI Front Desk | $99 | $114 | 200 min; zatim oko 40 min iz fonda + 60 po $0.25 |
+| Moneypenny AI | $99 | $199 | Paket od 50 poziva; paket od 100 poziva |
+| Nextiva XBert | $99 | $99 | 100 interakcija |
+| Zoom AI Receptionist | Nije potpuno izračunato | Nije potpuno izračunato | $29.99 pokriva 100 min; dodatni minuti nemaju objavljenu cenu |
+
+Allo nema red jer ne objavljuje koliko korišćenja recepcioner uključuje. Iznosi za AI-Receptionist.com pretpostavljaju da ste Booster minute kupili unapred, a iznosi za RingCentral da se svaki poziv završava tačno na granici od 30 sekundi. Rosie paket od $49 šalje SMS sa linkom za zakazivanje, ali ne može da upiše termin u Vaš kalendar niti da preusmeri poziv.
+
+### Kada su paketi po pozivu jeftiniji
+
+Sa pozivima od 6 minuta, 100 poziva troši 600 minuta. LobbyStack tada košta $118 (Pro $100 + 100 minuta po $0.18), dok Upfirst i Aira Premium ostaju na $69.95, a Quo Sona na $68. Dodatni minut na LobbyStack Starter paketu košta $0.20, a dodatni poziv na Upfirst Premium paketu $1.00. Zato LobbyStack naplaćuje manje po dodatnom pozivu samo kada pozivi traju kraće od 5 minuta: dodatni poziv od 6 minuta košta $1.20 na Starter paketu i $1.00 na Upfirst Premium paketu.
+
+Goodcall pozivaoca koji se vraća naplaćuje jednom mesečno, pa radnja sa stalnim klijentima plaća manje nego što tabela pokazuje.
+
+### Ograničenja koja menjaju račun
+
+- **Rosie** nema prekoračenje po minutu. Kada pređete kvotu, prebacuje Vas na sledeći paket po punoj ceni dok ne pređete nazad na niži, pa Vas 251 minut na paketu Professional tog meseca košta $149, oko tri puta više od planiranih $49. Zakazivanje i preusmeravanje takođe traže Scale paket od $149. Pogledajte [kako rade Rosie nadogradnje paketa](/sr/blog/rosie-ai-alternative/).
+- **AI-Receptionist.com** Essential se javlja na 2 poziva istovremeno, a SMS poruke dobijate tek od paketa od $39. U odeljku čestih pitanja piše da recepcioner prestaje da prima nove pozive kada potrošite minute, osim ako imate Booster minute.
+- **ElevenLabs Reception** Basic se javlja na 1 poziv istovremeno.
+- **Zoom** i **CloudTalk** ne objavljuju cenu dodatnih minuta, pa trošak meseca sa mnogo poziva ne možete da izračunate unapred.
+- **LobbyStack** paketi ne ograničavaju broj poziva na koje recepcioner odgovara istovremeno. Pozivi koji se preklapaju troše isti fond minuta.
+
+## Možete li dobiti AI recepcionera besplatno?
+
+Da, uz ograničenja. Smith.ai paket Free se javlja na 25 stvarnih poziva mesečno i naplaćuje $3 za svaki dodatni poziv. LobbyStack paket Free Vam daje 30 minuta razgovora u pregledaču mesečno za testiranje recepcionera, bez kartice i broja telefona. Većina ostalih ponuđača nudi probu od 7 ili 14 dana.
+
+### Besplatni paketi
+
+- **Smith.ai Free** radi na 25 stvarnih poziva mesečno, a zatim naplaćuje $3 po pozivu.
+- **LobbyStack Free** Vam daje 30 minuta razgovora u pregledaču mesečno za testiranje iz kontrolne table, bez kartice i broja telefona, i ne ističe. Bez broja ne može da prima telefonske pozive, da šalje SMS poruke ni da preusmerava pozive.
+- **CloudTalk** novim korisnicima daje 50 besplatnih minuta u prvom mesecu.
+- **ServiceAgent** ima Launch paket od $0 sa kreditima koje plaćate po korišćenju, unutar svog softvera za terenske usluge.
+- **Quo Sona** Tier 1 uključuje oko 10 poziva mesečno, uz plaćeni Quo paket.
+- **Goodcall** Vam dozvoljava da besplatno testirate demo agenta, a naplatu počinje kada povežete broj.
+
+### Besplatne probe
+
+- **14 dana:** Upfirst (bez kartice), ElevenLabs Reception (30 kredita, bez kartice), CloudTalk (bez kartice), RingCentral AIR i Nextiva XBert, koji dodaje garanciju povraćaja novca od 30 dana.
+- **7 dana:** AI-Receptionist.com (30 minuta uživo, bez kartice), Rosie, Dialzara, My AI Front Desk i Quo Sona.
+- **Zoom** nudi „Try for free“ bez navedenog trajanja.
+
+## Koliko koštaju AI recepcioneri za određene delatnosti?
+
+Plaćeni ulazni paketi AI recepcionera ugrađenih u softver za terenske usluge ili stomatološke ordinacije koštaju od $29 do $699 mesečno. ServiceAgent ima paket od $0, a Housecall Pro i Avoca ne objavljuju cenu. Nekoliko njih prvo traži drugu pretplatu. Njihova prednost je upis podataka: poslove, pacijente i termine unose pravo u softver koji već koristite.
+
+| Alat | Ulazna cena | Uključeno | Prvo traži | Zakazuje u |
+| --- | --- | --- | --- | --- |
+| [Jobber Receptionist](https://help.getjobber.com/en/articles/receptionistpowered-by-jobber-ai/) | Dodatak od $29 mesečno | 30 razgovora, zatim $0.79 po razgovoru | Jobber paket (Core od $29 mesečno uz godišnju naplatu) | Jobber |
+| [Housecall Pro CSR AI](https://www.housecallpro.com/features/ai-team/csr-ai/) | Plaćeni dodatak, cena nije objavljena | Nije objavljeno | Housecall Pro paket (Basic od $59 mesečno uz godišnju naplatu) | Housecall Pro |
+| [Sameday AI](https://sameday.ai/pricing) | Od $449 mesečno | 500 min | Ništa nije navedeno | ServiceTitan, Housecall Pro, FieldRoutes i drugi |
+| [Avoca](https://www.avoca.ai/) | Cena na upit | Nije objavljeno | Nije objavljeno | ServiceTitan, Housecall Pro, FieldRoutes |
+| [ServiceAgent](https://serviceagent.ai/pricing) | Launch $0; Core $49 mesečno | Core: 2,000 kredita, oko 133 min razgovora ako ih trošite samo na pozive | Njegov softver za terenske usluge | Njegov ugrađeni CRM |
+| [Dentina](https://dentina.ai/) | Od $299 po lokaciji mesečno uz godišnju naplatu | Neograničeni pozivi i minuti | Ništa nije navedeno | Dentrix, Open Dental, Eaglesoft i još 8 sistema |
+| [Viva AI](https://www.getviva.ai/#pricing) | Gold $349 mesečno | 4,000 kredita, 10 po minutu AI poziva | Ništa nije navedeno | Softver za ordinacije koji ne imenuje |
+| [Peerlogic](https://www.peerlogic.com/pricing-page) | Premium $699 mesečno | AI recepcioner uz njegov telefonski sistem | Prelazak na Peerlogic telefoniju | Dentrix, Eaglesoft, Open Dental, Curve, CareStack i drugi |
+
+### Terenske usluge: Jobber, Housecall Pro i Sameday
+
+Ako već koristite Jobber, 40 razgovora mesečno na Jobber Receptionist košta $36.90 ($29 + 10 po $0.79), plus Jobber paket. Jobber Plus uključuje neograničeno korišćenje od $399 mesečno uz godišnju naplatu. Sameday AI zakazuje u ServiceTitan tokom samog poziva. Naše [poređenje usluga odgovaranja na pozive za HVAC firme](/sr/blog/best-hvac-answering-services/) pokriva raspoređivanje tehničara i usluge koje se sinhronizuju sa ServiceTitan, Housecall Pro ili Jobber sistemom.
+
+LobbyStack zakazuje u Google Calendar, a do drugog softvera stiže samo preko webhookova i REST API-ja. Ako Vam poslovi moraju da se upisuju u Jobber, Housecall Pro ili ServiceTitan, počnite od alata iznad.
+
+### Stomatologija: Dentina, Viva i Peerlogic
+
+Dentina imenuje 11 sistema za ordinacije u koje zakazuje i ne naplaćuje aktivaciju. Njen Premium paket košta $399 po lokaciji mesečno uz godišnju naplatu. Vivinih 4,000 Gold kredita pokriva oko 400 minuta AI poziva ako ih trošite samo na pozive. Peerlogic Premium paket od $699 spaja AI recepcionera sa stomatološkim telefonskim sistemom.
+
+LobbyStack ne tvrdi da je usklađen sa HIPAA i zakazuje samo u Google Calendar. Ordinacija kojoj treba zakazivanje pravo u Dentrix neka počne od Dentine ili Peerlogica. Naša stranica o [AI recepcioneru za stomatološke ordinacije](/sr/solutions/ai-receptionist-for-dental-offices/) objašnjava gde se LobbyStack uklapa.
+
+## Da li AI recepcioner naplaćuje aktivaciju ili skrivene naknade?
+
+Nijedan od 17 ponuđača iz ovog vodiča ne objavljuje naknadu za aktivaciju. CloudTalk, Allo, AI-Receptionist.com, Dialzara i Smith.ai izričito navode da je ne naplaćuju, a LobbyStack nema naknadu za aktivaciju ni na jednom paketu. U budžet zato uračunajte naknade za registraciju, dodatne agente, dodatke i cene prekoračenja koje neki ponuđači ne objavljuju.
+
+- **Quo:** jednokratna provera kod operatera od $19.50 za SMS poruke, plus Quo licenca.
+- **Allo:** jednokratna A2P registracija od $24 za SMS poruke.
+- **Upfirst:** $9.95 mesečno za svakog dodatnog agenta.
+- **Rosie:** $50 mesečno za SMS razgovore sa sajta, sa 25 razgovora i $1 za svaki sledeći.
+- **RingCentral AIR:** napomena u cenovniku da se mogu primeniti dodatni troškovi („Additional charges may apply“).
+- **CloudTalk i Zoom:** nema objavljene cene za dodatne minute.
+
+LobbyStack naplaćuje $0.02 za svako dodatno SMS obaveštenje ili pokušaj preusmeravanja i nema naknadu za otkazivanje. Na Starter i Pro paketima vlasnici i administratori mogu da podese mesečni limit prekoračenja u odeljku Podešavanja > Paket. LobbyStack podrazumevano nema limit, pa se prekoračenje sabira dok ga ne podesite. Kada potrošnja dostigne limit, novi pozivaoci čuju signal zauzeća do sledećeg meseca ili dok ne povećate limit.
+
+Usluge odgovaranja uživo naplaćuju aktivaciju od $0 do $95, a najviše traži Davinci Virtual. Te naknade navodi naš vodič o tome [koliko košta usluga odgovaranja na pozive](/sr/blog/how-much-does-an-answering-service-cost/).
+
+## Da li je AI recepcioner jeftiniji od usluge odgovaranja ili zaposlenog?
+
+Jeste, za obim koji smo računali. Za 40 poziva od po tri minuta mesečno, AI paketi iz ovog vodiča koštaju od $25.25 do $99, a usluge odgovaranja uživo od $127 do $720. Recepcioner sa punim radnim vremenom uz medijalnu zaradu u SAD košta oko $3,170 mesečno, pre poreza na zarade i beneficija. Usluge uživo opravdavaju cenu kada pozivaocima treba ljudska procena.
+
+| Opcija | Mesečni trošak | Najbolje za | Na šta treba paziti |
+| --- | --- | --- | --- |
+| AI recepcioner | Od $14 do $150 za ulazni paket; od $25.25 do $99 za 40 poziva | Rutinska pitanja, prijem podataka, zakazivanje, pozivi van radnog vremena i pozivi kada su svi zauzeti | Nekim pozivima i dalje treba osoba |
+| Usluga odgovaranja uživo | Od $127 (AnswerNet) do $720 (Ruby) za 120 minuta | Pozivi kojima treba živa osoba koja nije Vaš zaposleni | Cene po minutu i po pozivu rastu sa obimom |
+| Recepcioner u firmi | Oko $3,170 uz medijalnu zaradu, pre poreza i beneficija | Recepcije koje primaju posetioce, vode papirologiju i javljaju se na pozive | Pokriva jednu smenu, uz pauze za ručak i bolovanja |
+
+Usluge uživo smo računali za 120 minuta (40 poziva od po 3 minuta) 9. oktobra 2026: [AnswerNet](https://answeringservicesus.com/pricing/) $127, [Specialty Answering Service](https://www.specialtyansweringservice.net/pricing/) $187.80, [PATLive](https://www.patlive.com/pricing/) $230.80 i [Ruby](https://www.ruby.com/plans-and-pricing/) $720. Ruby i dalje navodi $250 za 50 minuta i $395 za 100, ali ne objavljuje cenu prekoračenja, pa je njegov paket od 200 minuta najjeftiniji koji pokriva svih 120 minuta. [Smith.ai recepcioneri uživo](https://smith.ai/pricing/receptionists) koštaju $415 za 40 poziva.
+
+Prednost usluga uživo je ljudska procena. Živa osoba može da smiri nezadovoljnog pozivaoca ili da reši zahtev koji nijedan scenario ne pokriva, a Ruby, PATLive i Abby Connect uključuju španski u cenu paketa. Njihove kompletne cenovnike naći ćete u tekstu [koliko košta usluga odgovaranja na pozive](/sr/blog/how-much-does-an-answering-service-cost/), a razliku između te dve vrste usluga u tekstu [AI ili virtuelni recepcioner](/sr/blog/ai-receptionist-vs-virtual-receptionist/).
+
+[Bureau of Labor Statistics](https://www.bls.gov/ooh/office-and-administrative-support/receptionists.htm) navodi medijalnu zaradu recepcionera od $18.27 po satu, odnosno $38,010 godišnje, za maj 2025. To je oko $3,170 mesečno uz 40 sati nedeljno, pre poreza na zarade, beneficija i zamene tokom pauza i odsustva.
+
+## Koliko AI recepcioner može da Vam uštedi?
+
+AI recepcioner Vam štedi novac kada pozivi na koje se javi postanu posao koji biste inače izgubili. Firma koja propusti 8 poziva nedeljno, uz prosečan posao od $300, prema pretpostavkama ispod ima oko $1,238 mesečno u riziku. Ako povratite od 25% do 50% tog iznosa, to vredi od $310 do $619 mesečno pre cene paketa.
+
+### Računajte samo pozive koji su mogli da donesu zakazivanje
+
+Izbacite spam, pogrešne brojeve, dobavljače i postojeće klijente sa pitanjima koja mogu da sačekaju. Ako ste prošlog meseca propustili 40 poziva, nemojte računati 40 izgubljenih klijenata. Računajte pozivaoce koji bi možda zakazali, naručili ili tražili ponudu da se neko javio. Svaki takav poziv Vam oduzima i vreme: govornu poštu, povratni poziv i drugi povratni poziv.
+
+### Primenite formulu za propuštene pozive
+
+LobbyStack [kalkulator prihoda od propuštenih poziva](/sr/missed-call-revenue-calculator/) koristi ovu formulu:
 
 ```text
 mesečni prihod u riziku =
 propušteni pozivi nedeljno x 4.3 x stopa prilika x stopa zakazivanja x prosečna vrednost posla ili porudžbine
 ```
 
-Evo opreznog primera za malu firmu:
+Uzmimo 8 propuštenih poziva nedeljno. Od njih je 40% stvarnih prilika, 30% tih prilika zakaže, a prosečan posao vredi $300. To daje 8 x 4.3 x 0.40 x 0.30 x $300, odnosno oko **$1,238 mesečno u riziku**. Neki od tih pozivalaca bi ionako zvali ponovo ili ne bi bili pravi klijenti za Vas. Ako bolje odgovaranje povrati od 25% do 50%, zadržavate oko **$310 do $619 mesečno** pre cene paketa.
 
-- 8 propuštenih poziva nedeljno
-- 40% su stvarne prilike
-- 30% od njih bi zakazalo ili kupilo
-- $300 prosečna vrednost termina ili porudžbine
+### Primer sa proračunom
 
-To iznosi oko **$1,238 mesečno prihoda u riziku**.
-
-Tih $1,238 je prihod u riziku, a ne zagarantovan prihod. Neki pozivaoci i dalje neće biti pravi klijenti za Vas. Neki će se predomisliti. Neki bi ionako ponovo pozvali.
-
-Ali ako bolje odgovaranje povrati makar 25% do 50% tog gubitka, firma sačuva otprilike **$310 do $619 mesečno prihoda**, pre nego što oduzmete trošak softvera.
-
-Na taj broj vredi obratiti pažnju.
-
-## Realističniji primer sa proračunom
-
-Recimo da lokalna uslužna firma propusti oko 35 poziva mesečno. Posle pregleda broja pozivaoca, govorne pošte i beleški o pozivima, vlasnik zaključuje da je samo 15 od njih verovatno bila prilika za novog klijenta. Ostalo su bili spam, dobavljači, postojeći klijenti ili pozivi sa malim izgledima da postanu plaćen posao.
-
-Od tih 15 dobrih propuštenih poziva, možda bi pet inače postalo zakazan posao. Prosečan posao vredi $275.
-
-Prilika iz propuštenih poziva onda iznosi:
+Lokalna uslužna firma propusti 35 poziva u mesecu. Posle provere broja pozivaoca i govorne pošte, vlasnik izbroji 15 verovatnih novih klijenata. U uobičajenom mesecu petoro od njih bi zakazalo, a prosečan posao vredi $275.
 
 ```text
 5 verovatnih zakazivanja x $275 prosečna vrednost posla = $1,375 mesečno
 ```
 
-Sada namerno budite dosadni u proceni povraćaja. Pretpostavite da bolje odgovaranje spase samo 30% tog iznosa. To je oko $413 mesečno povraćenog prihoda.
+Ako bolje odgovaranje spase samo 30% tog iznosa, povraćate oko $413 mesečno.
 
-Ako AI recepcioner košta $30 do $100 mesečno, isplativost i dalje može imati smisla. Jedno ili dva dodatna dobra zakazivanja mogu da pokriju mesec.
-
-Zato je prosečna vrednost klijenta toliko važna. Porudžbina od $45, hitna intervencija od $900, projekat od $2,500 i stalni klijent daju potpuno različit povraćaj ulaganja.
-
-## Oduzmite trošak AI recepcionera
-
-Kada znate koliki je prihod u riziku, uporedite ga sa mesečnim troškom pokrivenosti.
-
-Uz [LobbyStack cene](/sr/pricing/), možete početi besplatno sa 30 minuta razgovora mesečno. Starter košta $30 mesečno, odnosno $24 mesečno uz godišnje plaćanje, i uključuje 150 minuta razgovora. Pro košta $100 mesečno, odnosno $80 mesečno uz godišnje plaćanje, i uključuje 500 minuta razgovora.
-
-U primeru iznad, firma koja iz propuštenih poziva povrati makar jednog klijenta od $300 verovatno je već pokrila mesec. Sa dva povraćena klijenta računica postaje očigledna.
-
-Jasnija formula povraćaja ulaganja je:
+### Oduzmite cenu paketa
 
 ```text
 neto mesečni efekat =
-povraćeni prihod + izbegnut trošak odgovaranja na pozive - trošak AI recepcionera
+povraćeni prihod + izbegnut trošak odgovaranja na pozive - cena paketa AI recepcionera
 ```
 
-Dakle, ako sačuvate $450 mesečno prihoda, izbegnete $150 mesečno za spoljnu pomoć pri odgovaranju na pozive i plaćate $30 mesečno za softver, neto efekat je oko $570 mesečno.
+Recimo da povratite $450 prihoda mesečno, prestanete da plaćate $150 mesečno za spoljnu pomoć pri odgovaranju na pozive i plaćate $30 za LobbyStack Starter. Neto efekat je oko $570 mesečno.
 
-Koristite svoje brojke. Ako je Vaša prosečna prodaja $40 i većina propuštenih poziva nije hitna, uštede mogu biti skromne. Ako je Vaš prosečan posao $500, $1,000 ili više, i nekoliko povraćenih poziva može da napravi razliku.
+Pre odluke isprobajte tri stope povraćaja: 10%, 25% i 50%. Na primeru od $1,238 one daju $124, $310 i $619 mesečno. Ako se paket isplati tek uz povraćaj od 80%, Vaša procena je previše optimistična. Ako se isplati već na 10%, rizikujete malo.
 
-## Gde se uštede zaista vide
+## Kada se AI recepcioner isplati?
 
-Odgovaranje na više poziva je samo deo vrednosti. Mnogo vremena nestaje u administraciji oko propuštenih poziva.
+AI recepcioner se isplati kada posao koji povrati vredi više od paketa. Ako jedan zakazan posao vredi $300, jedno povraćeno zakazivanje pokriva LobbyStack Starter ($30) ili Pro ($100) za taj mesec. Malo poziva, niske vrednosti posla ili pozivi kojima treba licencirani stručnjak smanjuju uštedu.
 
-Svaki propušten poziv stvara malu gomilu naknadnog posla: preslušate govornu poštu, zapišete broj, uzvratite poziv, ostavite svoju poruku, pokušate ponovo kasnije, setite se šta je pozivaocu trebalo i nadate se da nije već otišao drugde. Ništa od toga ne deluje dramatično u tom trenutku. Za mesec dana, to postane pravo administrativno vreme.
-
-AI recepcioner može da pomogne tako što:
-
-- Odgovara pre nego što pozivaoci završe u govornoj pošti.
-- Postavlja ista početna pitanja svakom pozivaocu.
-- Beleži imena, brojeve, željeno vreme i razlog poziva.
-- Zakazuje rutinske termine kada Vaša pravila to dozvoljavaju.
-- Šalje rezime poziva, pa predaja posla ne zavisi od nečijeg pamćenja.
-- Hitne pozive usmerava drugačije od rutinskih.
-
-Brzina je ovde važna. Povratni poziv dva sata kasnije često gubi od odgovora u tom trenutku. Mnogi klijenti su zauzeti, a sledeća firma koja se javi skida im još jednu obavezu sa spiska.
-
-## AI recepcioner, usluga odgovaranja na pozive ili zapošljavanje
-
-Najbolja opcija zavisi od toga šta pozivaocima treba u prvom razgovoru.
-
-| Opcija | Najbolje za | Na šta treba paziti |
-| --- | --- | --- |
-| AI recepcioner | Rutinska pitanja, prikupljanje podataka, zakazivanje, pokrivenost van radnog vremena, pozivi kada su svi zauzeti | Ne treba svaku situaciju automatizovati |
-| Usluga odgovaranja na pozive | Pozivi kojima treba živ čovek, ali ne nužno neko iz Vaše firme | Naplata po minutu može da raste sa brojem poziva |
-| Recepcioner u firmi | Okruženja sa mnogo ličnog kontakta, gde recepcija obavlja razne poslove | Zarade, praznine u pokrivenosti, obuka i zamena |
-
-Za mnoge male firme praktično pitanje je kojim pozivima treba ljudska procena, a kojima brz i tačan prvi odgovor.
-
-Ako pozivaocu treba procena, eskalacija ili osetljiv razgovor, preusmerite ga. Ako mu trebaju radno vreme, osnovne cene, slobodni termini, prikupljanje podataka ili povratni poziv, automatizacija može biti dovoljna da prilika ostane živa.
-
-## Kada se verovatno isplati
-
-AI recepcioner obično ima finansijskog smisla kada važi nekoliko od ovih stavki:
+### Znaci da će se isplatiti
 
 - Vaš tim propušta pozive tokom radnog vremena.
-- Dobijate pozive van radnog vremena ili vikendom.
-- Klijentima pre zakazivanja često trebaju isti odgovori.
-- Brzina je važna jer pozivaoci upoređuju opcije.
-- Trošite vreme na preslušavanje govorne pošte i uzvraćanje poziva.
-- Jedan zakazan posao, termin ili porudžbina vredi više od mesečnog paketa.
+- Klijenti zovu van radnog vremena ili vikendom.
+- Jedan zakazan posao vredi više od mesečnog paketa.
+- Pozivaoci postavljaju ista pitanja pre nego što zakažu.
+- Večeri provodite uz govornu poštu i povratne pozive.
 
-Posebno je koristan za pozive gde je sledeći korak jasan: odgovoriti na pitanje, prikupiti podatke, zakazati termin, poslati rezime ili preusmeriti hitan poziv.
+### Znaci da nećete mnogo uštedeti
 
-Što su tokovi poziva ponovljiviji, AI recepcioner ima više prilika da uštedi novac. Ako već znate pet pitanja koja Vaše osoblje postavlja svakom novom pozivaocu, imate dobru polaznu tačku.
+- Dobijate nekoliko poziva mesečno i javljate se na skoro sve.
+- Vaša prosečna prodaja je oko $40, a većina propuštenih poziva može da sačeka.
+- Za većinu poziva treba licencirani stručnjak, ponuda po meri ili osetljiv razgovor.
+- Većina propuštenih poziva su spam, dobavljači ili postojeći klijenti.
+- Vaša računica radi samo uz povraćaj od 80%.
 
-## Kada ušteda možda neće biti velika
+## Koliko košta LobbyStack i gde zaostaje
 
-Vredi biti iskren i o slučajevima kada uštede mogu biti male.
+Mi smo napisali ovaj vodič, pa naše pakete ocenjujemo po istim merilima kao ostalih 16.
 
-Ako dobijate samo nekoliko poziva mesečno, odgovorite na skoro sve i prosečna vrednost klijenta je niska, finansijski povraćaj možda neće biti značajan. I dalje možete želeti bolju pokrivenost, ali tada je odluka više pitanje udobnosti nego uštede.
+| Paket | Cena | Uključeno mesečno | Posle toga |
+| --- | --- | --- | --- |
+| Free | $0 | 30 minuta razgovora u pregledaču, bez kartice i broja telefona | Probni pozivi staju do sledećeg meseca |
+| Starter | $30 mesečno, ili $288 godišnje ($24 mesečno) | 150 minuta razgovora, 50 SMS obaveštenja, 20 pokušaja preusmeravanja, jedan poslovni broj, podrška e-poštom | $0.20/min; $0.02 po dodatnom SMS-u ili pokušaju preusmeravanja |
+| Pro | $100 mesečno, ili $960 godišnje ($80 mesečno) | 500 minuta razgovora, 200 SMS obaveštenja, 100 pokušaja preusmeravanja, jedan poslovni broj, prioritetna podrška e-poštom | $0.18/min; $0.02 po dodatnom SMS-u ili pokušaju preusmeravanja |
+| Enterprise | Po dogovoru | Više brojeva, namenska podrška pri uvođenju | Po dogovoru |
 
-Ako za većinu poziva treba licencirani stručnjak, ponuda po meri ili osetljiv razgovor sa čovekom, AI recepcioner treba da prikupi kontekst, jasno kaže šta pozivalac može da očekuje i uredno preda poziv.
+LobbyStack računa minute po sekundi, neiskorišćeni minuti se ne prenose, a paketi ne ograničavaju broj poziva na koje recepcioner odgovara istovremeno. Nijedan paket nema naknadu za aktivaciju, a pretplatu otkazujete u podešavanjima naplate, bez naknade za otkazivanje.
 
-Korisni deo je pokrivenost. Dobri pozivaoci dobiju odgovor pre nego što nestanu.
+Svaki poziv počinje na podrazumevanom jeziku firme, engleskom ili francuskom. Recepcioner zatim odgovara na jeziku pozivaoca: 70+ jezika na OpenAI GPT-Live modelu, uključujući španski i srpski. LobbyStack cenovnik ne navodi doplatu za jezike.
 
-Tu je i pitanje poverenja. Ako pozivaoci od prve sekunde očekuju veoma lični razgovor, automatizaciju treba koristiti pažljivo. Loša primena može delovati kao zid. Dobra treba da deluje kao koristan prvi korak: kratak, jasan i iskren o tome kada će se javiti čovek.
+Ograničenja LobbyStack-a:
 
-Cilj je da prilike do kojih možete doći ne umru u govornoj pošti.
+- Free služi samo za testove u pregledaču. Pravi pozivi, SMS poruke i preusmeravanja počinju od paketa Starter.
+- Zakazuje samo u Google Calendar. CRM sistemi i softver za terenske usluge i ordinacije povezuju se samo preko webhookova i REST API-ja.
+- AI ne odgovara na SMS poruke. Na njih odgovara Vaš tim iz kontrolne table.
+- Preusmeravanje ide na jedan broj po firmi, a telefonski poziv se prekida posle 30 minuta.
+- SMS potvrde i podsetnici za termine stižu samo na brojeve u SAD i Kanadi.
 
-## Procenite svoje uštede
+Izaberite drugog ponuđača u ovim slučajevima:
 
-Iskoristite ovaj obrazac od pet minuta:
+- **AI-Receptionist.com** za najnižu plaćenu ulaznu cenu i najjeftiniji račun za 40 kratkih poziva.
+- **Upfirst, Aira ili Quo Sona** kada pozivi traju dugo.
+- **Goodcall** kada isti klijenti zovu nekoliko puta mesečno.
+- **Smith.ai** za besplatan paket koji prima stvarne pozive, od kompanije koja prodaje i recepcionere uživo.
+- **Nextiva XBert** za jednu kvotu koja pokriva pozive, SMS poruke i čet na sajtu.
+- **Jobber Receptionist** za radnje koje rade u Jobberu, a **Dentina** ili **Viva AI** za zakazivanje u softver stomatoloških ordinacija.
 
-1. Prebrojte propuštene pozive nedeljno.
-2. Izbacite spam, dobavljače i pozive koji nikada nisu bili stvarne prilike.
-3. Procenite koliko stvarnih prilika obično zakaže ili kupi.
-4. Pomnožite sa prosečnom vrednošću posla, termina, porudžbine ili klijenta.
-5. Procenite koji procenat bi bolje odgovaranje realno moglo da povrati.
-6. Oduzmite cenu paketa AI recepcionera.
+Ostali odgovaraju užim potrebama. Rosie daje 250 minuta za $49 ako Vam ne trebaju zakazivanje u kalendar ni preusmeravanje. ElevenLabs Reception spaja telefon, čet i stranicu za zakazivanje u jednom agentu. My AI Front Desk u jednom paketu nudi čet-bota i slanje podataka u HubSpot ili Salesforce. Moneypenny AI može da prebaci poziv svojim recepcionerima uživo, a CloudTalk pokreće AI unutar telefonskog sistema koji Vaši agenti dele.
 
-Ili preskočite tabelu i koristite [kalkulator propuštenih poziva](/sr/missed-call-revenue-calculator/).
-
-Ako niste sigurni koji procenat povraćaja da uzmete, počnite nisko. Probajte 10%, 25% i 50% i pogledajte gde se odluka menja. Ako se brojke uklapaju samo uz povraćaj od 80%, procena je verovatno previše optimistična. Ako se uklapaju već na 10% ili 25%, rizik je jasan.
-
-Pomaže i da razdvojite tri broja:
-
-- **Administrativne uštede:** vreme koje više ne trošite na rutinske pozive ili jurenje poruka iz govorne pošte.
-- **Povraćeni prihod:** dobre prilike koje se obrade pre nego što nestanu.
-- **Izbegnuti trošak:** novac ušteđen na dodatnoj pokrivenosti poziva, uzvraćanju propuštenih poziva ili pomoći kada su svi zauzeti.
-
-Saberite ih i odluka postaje jasnija. Proizvod pokriva jedan konkretan gubitak u poslovanju.
+Da čujete recepcionera pre nego što platite, [otvorite besplatan LobbyStack nalog](https://app.lobbystack.com/sr/signup) i pozovite ga iz pregledača. Kartica nije potrebna. Za poslovni broj uporedite Starter i Pro na stranici [LobbyStack cene](/sr/pricing/).
 
 ## Česta pitanja
 
 ### Da li je AI recepcioner jeftiniji od usluge odgovaranja na pozive?
 
-Obično jeste, posebno za rutinsko odgovaranje na pozive, prikupljanje podataka i zakazivanje termina. Usluga sa ljudima i dalje može biti bolji izbor kada za svaki poziv treba živa osoba. Pravo pitanje je da li Vam treba ljudska procena za svaki poziv ili pouzdana pokrivenost za ponovljive pozive koji stižu ceo dan.
+Za većinu malih firmi jeste. Za 40 poziva od po tri minuta mesečno, AI paketi koje smo izračunali 9. oktobra 2026. koštaju od $25.25 do $99, a usluge odgovaranja uživo od $127 do $720. Usluga uživo košta više jer se na svaki poziv javlja osoba. To vredi platiti kada pozivaocima treba ljudska procena.
 
-### Kako da izračunam povraćaj ulaganja u AI recepcionera?
+### Da li se spam pozivi računaju u moje minute?
 
-Saberite prihod koji očekujete da povratite od propuštenih poziva i troškove odgovaranja na pozive koje smanjujete, pa oduzmite trošak AI recepcionera. Neka prva procena bude oprezna. Bolje je biti prijatno iznenađen nego graditi poslovnu računicu na izmišljenim brojkama.
+Zavisi od ponuđača. Upfirst ne naplaćuje spam ni pozive kraće od 15 sekundi, Goodcall ne računa spam ni pogrešne brojeve, a Smith.ai Vam dozvoljava da do 10% poziva uklonite kao spam. LobbyStack ne računa pozive kraće od 10 sekundi i pozive koje recepcioner završi kao spam, a ostale pozive računa.
 
-### Da li AI recepcioner vraća svaki propušten poziv?
+### Da li se neiskorišćeni minuti prenose?
 
-Ne. Neki pozivaoci nisu spremni da zakažu, ne ispunjavaju uslove, nalaze se van područja koje pokrivate ili nisu pravi klijenti za Vas. Poenta je da povratite realan deo dobrih poziva tako što ćete brže odgovarati, prikupljati prave podatke i jasno reći koji je sledeći korak.
+Na LobbyStack-u ne. Uključeni minuti se resetuju svakog meseca, i uz mesečnu i uz godišnju naplatu. Quo Sona krediti se obnavljaju mesečno bez prenosa, a ni RingCentral AIR minuti se ne prenose. Smith.ai pominje šestomesečni paket sa prenosom neiskorišćenih poziva, ali ne objavljuje njegovu cenu, pa pitajte njihov prodajni tim.
 
-### Šta ako je većina mojih propuštenih poziva spam?
+### Može li AI recepcioner da se javlja na španskom?
 
-Onda će uštede biti manje. Filtrirajte propuštene pozive pre računanja i zasnujte procenu na verovatnim klijentima.
+Mnogi mogu. Smith.ai, Rosie i Dialzara navode engleski i španski. Upfirst navodi 35+ jezika, My AI Front Desk 20+, Zoom 23, a CloudTalk i ElevenLabs Reception 70+. LobbyStack svaki poziv počinje na engleskom ili francuskom, a zatim odgovara na jeziku pozivaoca: 70+ jezika na OpenAI GPT-Live modelu, uključujući španski i srpski.
 
-### Koliko propuštenih poziva mi treba da bi se AI recepcioner isplatio?
+### Posle koliko propuštenih poziva se isplati?
 
-Zavisi od prosečne vrednosti klijenta. Ako jedan zakazan posao vredi $300, a paket košta $30 do $100 mesečno, i jedan dodatni klijent može da pokrije mesec. Ako svaki klijent vredi mnogo manje, trebaće Vam više povraćenih poziva ili značajna administrativna ušteda.
+Zavisi od toga koliko vredi jedan klijent. Ako jedan zakazan posao donosi $300, jedno povraćeno zakazivanje pokriva LobbyStack Starter ($30) ili Pro ($100). Ako svaka prodaja vredi $40, treba Vam jedna povraćena prodaja mesečno za Starter i tri za Pro, pre nego što uračunate vreme koje štedite na povratnim pozivima.
 
-### Da li će klijentima smetati što je u pitanju AI?
+### Da li će pozivaocima smetati što je u pitanju AI?
 
-Nekima hoće, posebno ako poziv deluje izbegavajuće ili kao da su zarobljeni. Većini je važnije da brzo dobiju pomoć. Budite jasni, neka tok razgovora bude kratak i prebacite poziv čoveku kada pozivaocu treba procena, hitna pomoć ili pravi razgovor.
+Nekima hoće, ako poziv deluje izbegavajuće ili ne mogu da dođu do osobe. Pozivaocu koji želi termin ili brz odgovor treba jasan sledeći korak. Neka pozdrav bude kratak, recite šta recepcioner može da uradi i prebacite poziv ili primite poruku kada pozivaocu treba osoba.
 
 ## Ukratko
 
-Za mnoge male firme AI recepcioner može da uštedi od nekoliko desetina dolara mesečno u administrativnom vremenu do stotina ili hiljada dolara u sačuvanom prihodu. Najjasniji povraćaj obično vide firme sa vrednim pozivima, zauzetim osobljem i stvarnom prazninom u pokrivenosti.
-
-Najbolji način da nađete svoj broj je da svoje pozive provučete kroz [kalkulator prihoda od propuštenih poziva](/sr/missed-call-revenue-calculator/), uporedite rezultat sa [cenama](/sr/pricing/) i odlučite da li sledeći propušten poziv vredi pokriti. Za procenu ponuđača, pročitajte i [kako izabrati AI recepcionera](/sr/blog/how-to-choose-an-ai-receptionist/) i [da li napraviti ili kupiti AI recepcionera](/sr/blog/build-or-buy-ai-receptionist/).
+Većina AI recepcionera košta od $14 do $150 mesečno za ulazni paket. Za 40 poziva od po tri minuta, potpuno izračunati paketi iz ovog vodiča koštaju od $25.25 do $99, a za 100 poziva od $60 do $212.50. Da li se račun isplati odlučuju Vaši propušteni pozivi i vrednost svakog od njih, pa ih provucite kroz [kalkulator prihoda od propuštenih poziva](/sr/missed-call-revenue-calculator/). Zatim uporedite pakete na stranici [LobbyStack cene](/sr/pricing/) ili počnite besplatno i poslušajte recepcionera u pregledaču.

@@ -25,7 +25,7 @@ Upfirst naplaćuje po obrađenom pozivu, a LobbyStack po minutu razgovora. Lobby
 | Ulazni paket | $24.95 za 30 poziva | Besplatno za 30 minuta razgovora |
 | Plaćeno korišćenje | Paketi poziva i prekoračenja po pozivu | Paketi minuta i prekoračenja po minutu |
 | Zakazivanje | Direktno zakazivanje u kalendaru | Zakazivanje, izmene i pravila firme |
-| Preusmeravanje | Najavljeno i kaskadno preusmeravanje | Prebacivanje na čoveka uz kontekst poziva |
+| Preusmeravanje | Najavljeno i kaskadno preusmeravanje | Slepo preusmeravanje na jedan broj |
 | Jezici | Navedeno više od 35 | Odgovara na jeziku pozivaoca |
 | Primena | Hostovana usluga | Upravljani cloud ili samostalno hostovanje |
 | Izvorni kod | Javne stranice ne navode pristup izvornom kodu | Javni repozitorijum pod MIT licencom |

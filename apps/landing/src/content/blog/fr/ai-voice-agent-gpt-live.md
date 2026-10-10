@@ -44,7 +44,7 @@ Dans LobbyStack, ces tâches vont à un seul agent, doté d'outils pour :
 
 Un modèle de raisonnement choisit le bon outil et respecte vos règles : votre mode de réservation, votre numéro de transfert et les cas où le client doit être vérifié. Le modèle vocal, lui, s'occupe de parler.
 
-Le clavardage de votre site web utilise le même agent. Un visiteur qui écrit sur votre site obtient les mêmes réponses, les mêmes disponibilités et les mêmes règles de réservation qu'une personne qui appelle.
+Le chat de votre site web utilise le même agent. Un visiteur qui écrit sur votre site obtient les mêmes réponses, les mêmes disponibilités et les mêmes règles de réservation qu'une personne qui appelle.
 
 ## Ce qui a changé dans notre architecture
 
@@ -60,7 +60,7 @@ Nous avons testé GPT-Live en préproduction, puis sur de vrais appels dans le n
 
 **Les appels paraissent plus rapides.** Sans notre relais et avec un modèle conçu pour la prise de parole, la réceptionniste répond plus tôt et coupe moins la parole. Nous l'avons remarqué dès le premier appel de test.
 
-**Les réponses se sont améliorées quand parler et réfléchir ont été séparés.** Notre ancienne configuration demandait à un seul modèle de tenir la conversation et d'appliquer la logique d'affaires en même temps. Maintenant, le modèle vocal accompagne le client pendant qu'un modèle de raisonnement, avec de vrais outils, trouve la réponse. Dans nos tests, il choisissait plus souvent le bon outil et la bonne heure, et il vérifie chaque réponse avec ce que l'entreprise nous a dit.
+**Les réponses se sont améliorées quand parler et réfléchir ont été séparés.** Notre ancienne configuration demandait à un seul modèle de tenir la conversation et d'appliquer la logique métier en même temps. Maintenant, le modèle vocal accompagne le client pendant qu'un modèle de raisonnement, avec de vrais outils, trouve la réponse. Dans nos tests, il choisissait plus souvent le bon outil et la bonne heure, et il vérifie chaque réponse avec ce que l'entreprise nous a dit.
 
 **La réceptionniste doit parler en premier.** Par défaut, GPT-Live attend que le client parle. Une réception accueille le client, alors nous envoyons le message d'accueil dès que la session démarre : vos clients entendent le nom de votre entreprise tout de suite. Si vous développez avec GPT-Live, testez les trois premières secondes de chaque appel.
 
@@ -68,7 +68,7 @@ Nous avons testé GPT-Live en préproduction, puis sur de vrais appels dans le n
 
 **Les appels courts ont quand même un coût.** OpenAI facture un court minimum à la création d'une session dans le navigateur. Nous avons gardé notre règle : les appels de moins de 10 secondes sont gratuits pour nos clients, et nous suivons maintenant ce qu'ils nous coûtent, pour que les faux numéros n'apparaissent jamais sur une facture.
 
-**Un seul agent, c'est payant.** Comme le clavardage et les appels partagent les mêmes outils, chaque correction et chaque nouvelle capacité profitent aux deux en même temps.
+**Un seul agent, c'est payant.** Comme le chat et les appels partagent les mêmes outils, chaque correction et chaque nouvelle capacité profitent aux deux en même temps.
 
 ## Ce que cela change pour votre entreprise
 

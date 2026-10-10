@@ -1,7 +1,7 @@
 ---
 title: "Alternative à ElevenLabs Reception : minutes et contrôle"
 seoTitle: "Alternative à ElevenLabs Reception : LobbyStack"
-description: "Comparez ElevenLabs Reception (Reception.ai) et LobbyStack : 29 $ pour 75 minutes ou 30 $ pour 150, dépassements, clavardage web, HIPAA et auto-hébergement."
+description: "Comparez ElevenLabs Reception (Reception.ai) et LobbyStack : 29 $ pour 75 minutes ou 30 $ pour 150, dépassements, chat web, HIPAA et auto-hébergement."
 pubDate: 2026-09-19T10:00:00-04:00
 updatedDate: 2026-09-19T10:00:00-04:00
 author: "Équipe LobbyStack"
@@ -24,7 +24,7 @@ Reception offre d'excellentes voix et parle plus de 70 langues. LobbyStack vous 
 | Option gratuite | Essai de 14 jours avec 30 crédits, sans carte | 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone |
 | Entrée payante | 29 $ pour 75 crédits (24 $ par mois à l'année) | 30 $ pour 150 minutes (24 $ par mois à l'année) |
 | Dépassement d'entrée | 0,45 $ par crédit | 0,20 $ par minute |
-| Faux numéros et pourriels | Comptés comme crédits utilisés | Appels de moins de 10 secondes et pourriels non facturés |
+| Faux numéros et spams | Comptés comme crédits utilisés | Appels de moins de 10 secondes et spams non facturés |
 | Niveau intermédiaire | 79 $ pour 275 crédits (66 $ par mois à l'année) | 100 $ pour 500 minutes (80 $ par mois à l'année) |
 | Dépassement intermédiaire | 0,38 $ par crédit | 0,18 $ par minute |
 | Appels simultanés au premier niveau | 1 | Aucune limite sur Starter et Pro sans plafond de dépenses |
@@ -42,7 +42,7 @@ Le forfait Basic de Reception coûte 29 $ par mois pour 75 crédits. Un crédit 
 
 Le forfait Starter de LobbyStack coûte 30 $ par mois pour 150 minutes, puis 0,20 $ par minute supplémentaire. Pro coûte 100 $ pour 500 minutes à 0,18 $ la minute de plus. En facturation annuelle, Starter revient à 24 $ par mois, le même prix que Reception Basic à l'année.
 
-Une entreprise qui reçoit 150 minutes d'appels par mois paie 30 $ avec LobbyStack Starter. Avec Reception Basic, le même mois coûte 29 $ plus 75 minutes à 0,45 $, soit 62,75 $. LobbyStack exclut aussi de l'usage les appels de moins de 10 secondes et ceux que la réceptionniste termine comme pourriel, donc un robot ou un faux numéro ne vous coûte rien.
+Une entreprise qui reçoit 150 minutes d'appels par mois paie 30 $ avec LobbyStack Starter. Avec Reception Basic, le même mois coûte 29 $ plus 75 minutes à 0,45 $, soit 62,75 $. LobbyStack exclut aussi de l'usage les appels de moins de 10 secondes et ceux que la réceptionniste termine comme spam, donc un robot ou un faux numéro ne vous coûte rien.
 
 ## Les forces d'ElevenLabs Reception
 
@@ -52,13 +52,13 @@ Le mode personnel en premier convient aux entreprises avec une réception. Votre
 
 Reception inclut aussi Zapier, les webhooks et MCP dans chaque forfait, y compris Basic. Une entreprise qui gère déjà ses opérations avec Zapier peut brancher Reception dès le premier jour.
 
-## Crédits, appels simultanés et clavardage web
+## Crédits, appels simultanés et chat web
 
-Reception décompte les appels et le clavardage web dans une seule réserve de crédits. Une minute d'appel utilise 1 crédit et une minute de clavardage en utilise la moitié. Un widget de clavardage populaire réduit les minutes prévues pour les appels, alors estimez les deux avant de choisir un forfait.
+Reception décompte les appels et le chat web dans une seule réserve de crédits. Une minute d'appel utilise 1 crédit et une minute de chat en utilise la moitié. Un widget de chat populaire réduit les minutes prévues pour les appels, alors estimez les deux avant de choisir un forfait.
 
 Basic ne permet aussi qu'un appel à la fois. Si deux clients appellent en même temps, un seul joint la réceptionniste. Plus monte la limite à 3 et Premium à 10.
 
-LobbyStack compte les minutes d'appel à part. Aucun forfait ne limite le nombre d'appels simultanés, donc deux appelants sur Starter joignent tous deux la réceptionniste. Une exception : si vous fixez un plafond de dépenses mensuel, l'appel en cours réserve le solde restant et un deuxième appelant entend le message de limite jusqu'à la fin du premier appel.
+LobbyStack compte les minutes d'appel à part. Aucun forfait ne limite le nombre d'appels simultanés, donc deux appelants sur Starter joignent tous deux la réceptionniste. Une exception : si vous fixez un plafond de dépenses mensuel, l'appel en cours réserve le solde restant et un deuxième appelant tombe sur une tonalité occupée jusqu'à la fin du premier appel.
 
 ## ElevenLabs Reception est-il conforme HIPAA?
 
@@ -74,11 +74,11 @@ LobbyStack publie son code sous licence MIT. Vous pouvez utiliser le cloud gér�
 
 ## Exemple : une entreprise de plomberie
 
-Une entreprise de plomberie reçoit 120 appels par mois d'environ 2 minutes chacun, soit 240 minutes. Elle utilise aussi un widget de clavardage sur son site.
+Une entreprise de plomberie reçoit 120 appels par mois d'environ 2 minutes chacun, soit 240 minutes. Elle utilise aussi un widget de chat sur son site.
 
-Avec Reception, 240 minutes dépassent les 75 de Basic, donc l'entreprise a besoin de Plus à 79 $ pour 275 crédits. Le clavardage puise dans la même réserve : 100 minutes de clavardage utilisent 50 crédits de plus, soit 290 au total. Les 15 crédits excédentaires coûtent 0,38 $ chacun, donc le mois revient à 84,70 $.
+Avec Reception, 240 minutes dépassent les 75 de Basic, donc l'entreprise a besoin de Plus à 79 $ pour 275 crédits. Le chat puise dans la même réserve : 100 minutes de chat utilisent 50 crédits de plus, soit 290 au total. Les 15 crédits excédentaires coûtent 0,38 $ chacun, donc le mois revient à 84,70 $.
 
-Avec LobbyStack, 240 minutes coûtent 30 $ pour Starter plus 90 minutes à 0,20 $, soit 48 $. LobbyStack couvre seulement les appels, donc le widget de clavardage reste sur l'outil actuel de l'entreprise. Deux appels d'urgence qui arrivent ensemble joignent tous deux la réceptionniste.
+Avec LobbyStack, 240 minutes coûtent 30 $ pour Starter plus 90 minutes à 0,20 $, soit 48 $. LobbyStack couvre seulement les appels, donc le widget de chat reste sur l'outil actuel de l'entreprise. Deux appels d'urgence qui arrivent ensemble joignent tous deux la réceptionniste.
 
 ## Choisissez ElevenLabs Reception si
 
@@ -103,4 +103,4 @@ Pour d'autres comparaisons, lisez nos guides [Alternative à Rosie](/fr/blog/ros
 
 LobbyStack vous en donne plus pour votre argent. Au même prix annuel de 24 $, vous obtenez deux fois plus de minutes, un dépassement deux fois moins cher, et le premier niveau répond à deux appels à la fois. Reception l'emporte sur les voix, les langues et son mode personnel en premier, et reste un bon choix pour une entreprise qui préfère ces atouts aux minutes et à la propriété du logiciel.
 
-[Essayez LobbyStack avec 30 minutes gratuites](/fr/pricing/), puis comparez le forfait Reception complet avec votre vrai volume d'appels et de clavardage.
+[Essayez LobbyStack avec 30 minutes gratuites](/fr/pricing/), puis comparez le forfait Reception complet avec votre vrai volume d'appels et de chat.

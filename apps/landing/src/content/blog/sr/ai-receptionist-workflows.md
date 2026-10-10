@@ -128,14 +128,14 @@ Recepcioner može da pretvori reči pozivaoca u poruku spremnu za osoblje. Lobby
 
 ### Predaja poziva
 
-Za preusmeravanje nije dovoljna jedna grana za nameru. Recepcioner treba da zna kojim pozivima treba čovek, šta da kaže pre preusmeravanja i šta da uradi kada se niko ne javi.
+Za preusmeravanje nije dovoljna jedna grana za nameru. Recepcioner treba da zna kojim pozivima treba čovek, šta da kaže pre preusmeravanja i šta da uradi kada preusmeravanje ne uspe.
 
 Možete napisati:
 
 ```text
 Preusmeri hitne pozive, nezadovoljne klijente, vredne potencijalne klijente
-i pitanja na koja AI ne sme da odgovara. Pre preusmeravanja ukratko opiši
-šta pozivaocu treba. Ako se niko ne javi, primi poruku, označi razlog
+i pitanja na koja AI ne sme da odgovara. Pre preusmeravanja reci pozivaocu
+da ga preusmeravaš. Ako preusmeravanje ne uspe, primi poruku, označi razlog
 predaje i reci pozivaocu kada će se tim javiti.
 ```
 
@@ -149,7 +149,7 @@ Ako Vaš AI recepcioner zavisi od lanca grana da bi odlučio šta da kaže, kada
 
 LobbyStack zamenjuje taj sloj. On upravlja ponašanjem tokom poziva uživo, stanjem poziva, rezultatima alata, kontekstom transkripta, razlogom predaje i konačnim ishodom.
 
-I dalje možete koristiti n8n, Zapier ili Make za automatizacije van poziva. LobbyStack se ne povezuje sa njima i ne šalje odlazne webhookove, pa oni ostaju van poziva uživo. AI recepcioner treba tokom poziva da odluči koji je sledeći odgovoran korak, a zatim da zabeleži jasan ishod kome osoblje može da veruje.
+I dalje možete koristiti n8n, Zapier ili Make za automatizacije van poziva. Potpisani webhookovi iz LobbyStacka mogu da ih pokrenu posle poziva, pa oni ostaju van poziva uživo. AI recepcioner treba tokom poziva da odluči koji je sledeći odgovoran korak, a zatim da zabeleži jasan ishod kome osoblje može da veruje.
 
 ## Gde se LobbyStack uklapa
 

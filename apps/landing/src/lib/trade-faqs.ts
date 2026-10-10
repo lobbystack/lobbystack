@@ -9,7 +9,7 @@ export const plumberFaqs: FaqItem[] = [
   {
     question: "What happens if a caller smells gas?",
     answer:
-      "You write the policy. A common one tells callers to leave the building and call the gas utility's emergency line. LobbyStack follows your script and notifies your team.",
+      "You write the policy. A common one tells callers to leave the building and call the gas utility's emergency line. LobbyStack reads your script to the caller, then transfers the call or takes a message under your rules.",
   },
   {
     question: "Can it quote drain cleaning or a service call fee?",
@@ -43,7 +43,7 @@ export const hvacFaqs: FaqItem[] = [
   {
     question: "Can it answer only when my office is overwhelmed?",
     answer:
-      "Yes. You can set LobbyStack to answer every call, or only when your team is busy, closed, or unavailable. You might run overflow mode in peak season and full coverage after hours.",
+      "Yes, through your carrier's call forwarding. Forward calls when your line is busy or nobody answers to cover overflow, forward them after you close for after-hours, or forward every call. LobbyStack answers whatever reaches its number. You might forward overflow in peak season and every call at night.",
   },
   {
     question: "How does it decide which no-heat or no-AC call is urgent?",
@@ -51,9 +51,14 @@ export const hvacFaqs: FaqItem[] = [
       "You describe the rule in plain language, for example: no heat and the house is below 55°F, or an elderly person or infant lives there. LobbyStack asks the questions it needs to apply your rule and transfers matching calls to your on-call tech.",
   },
   {
+    question: "What happens if my on-call tech doesn't pick up?",
+    answer:
+      "Transfers are blind: the receptionist hands the call to your on-call number without briefing your tech, then leaves the line. If your tech doesn't pick up, the caller reaches that phone's voicemail, if it has one. If the transfer can't go through, the receptionist tells the caller and offers to take a message, which reaches your inbox with an email alert. Your team can also get a \"Live call transfer failed\" alert. If your plan can't cover another transfer attempt, the receptionist takes a message instead.",
+  },
+  {
     question: "What system details can it collect?",
     answer:
-      "Whatever your techs ask for: system type, brand, approximate age, fuel type, thermostat reading, and the symptoms the caller describes. The details appear in the call summary and on the booking.",
+      "Whatever your techs ask for: system type, brand, approximate age, fuel type, thermostat reading, and the symptoms the caller describes. LobbyStack saves the answers in the call's transcript and recording. When the receptionist takes a message, your inbox gets it with the caller's name, callback number, and urgency. The Google Calendar event shows only the service and the caller's name.",
   },
   {
     question: "Can it quote a tune-up or diagnostic fee?",
@@ -63,17 +68,27 @@ export const hvacFaqs: FaqItem[] = [
   {
     question: "Does it work with my existing business number?",
     answer:
-      "Yes. Forward your current number to LobbyStack, or point only your overflow and after-hours calls at it.",
+      "Yes. Set your carrier to forward your current number to LobbyStack, either every call or only overflow and after-hours calls. To port the number instead, contact the LobbyStack team. You can replace your LobbyStack number once from Settings > Phone number.",
   },
   {
-    question: "Should I use an AI or a live HVAC answering service?",
+    question: "Should I use an AI receptionist or a live answering service?",
     answer:
-      "It depends on which calls you want a person to take. LobbyStack fits when you want calls booked into your calendar during the call and overflow handled without a busy signal. You can run it on overflow only and keep your office on the calls you want to answer yourself.",
+      "People handle unusual calls better. At MAP Communications, a live answering service, agents follow the on-call roster you send and can schedule appointments. Its Pay As You Go plan costs $49 a month plus $1.37 a minute (checked October 9, 2026). LobbyStack's extra minutes cost $0.20 on Starter and $0.18 on Pro. It transfers to one number, though. Choose a live service if you want a person on every call or a rotating on-call list.",
+  },
+  {
+    question: "Is an AI receptionist worth it for an HVAC company?",
+    answer:
+      "It's worth testing if peak season or nights send callers to voicemail. Enter your missed calls per week and average job value in LobbyStack's missed-call revenue calculator to estimate the revenue at risk. Then try the receptionist on the Free plan before you forward a line.",
+  },
+  {
+    question: "Can I try it before I forward my line?",
+    answer:
+      "Yes. The Free plan gives you 30 browser voice minutes a month to test the receptionist from the dashboard. It needs no credit card, includes no telephone number, and doesn't expire. Phone calls, transfers, and texts start on Starter.",
   },
   {
     question: "How much does it cost for an HVAC company?",
     answer:
-      "The Free plan includes 30 voice minutes. Starter is $30 a month for 150 minutes, and Pro is $100 a month for 500 minutes, with extra minutes at $0.20 and $0.18. Spam calls and calls under 10 seconds don't count toward usage.",
+      "Prices as of October 2026: the Free plan includes 30 browser voice minutes. Starter is $30 a month for 150 minutes, and Pro is $100 a month for 500 minutes, with extra minutes at $0.20 and $0.18. No plan has a setup fee. Calls under 10 seconds and calls the receptionist ends as spam don't count toward usage.",
   },
 ]
 
@@ -91,12 +106,12 @@ export const electricianFaqs: FaqItem[] = [
   {
     question: "What does it ask about panel upgrades and EV chargers?",
     answer:
-      "You choose the questions. Common ones cover panel amperage, the home's age, the charger or generator the caller wants, and whether they own the home. LobbyStack attaches the answers to the estimate booking.",
+      "You choose the questions. Common ones cover panel amperage, the home's age, the charger or generator the caller wants, and whether they own the home. LobbyStack saves the answers in the call's transcript.",
   },
   {
     question: "Can it route commercial and residential calls differently?",
     answer:
-      "Yes. LobbyStack can ask whether the property is commercial or residential and send commercial calls to your estimator or office line.",
+      "Partly. LobbyStack can ask whether the property is commercial or residential, then book one kind and take a message for the other. Transfers go to one number, so it can't send commercial calls to a separate line.",
   },
   {
     question: "Does it work with my existing business number?",
@@ -124,7 +139,7 @@ export const garageDoorFaqs: FaqItem[] = [
   {
     question: "Can it handle emergency garage door calls after hours?",
     answer:
-      "Yes. LobbyStack answers after-hours calls and follows your escalation rules. If a caller reports a car trapped inside or a door stuck open at night, it transfers them to your on-call tech with the details already collected.",
+      "Yes. LobbyStack answers after-hours calls and follows your escalation rules. If a caller reports a car trapped inside or a door stuck open at night, it transfers them to your on-call tech. The answers it collected stay in the call's transcript.",
   },
   {
     question: "Will it book appointments while I am on a job?",
@@ -134,7 +149,7 @@ export const garageDoorFaqs: FaqItem[] = [
   {
     question: "What intake questions can it ask garage door callers?",
     answer:
-      "You choose the questions: door type, opener brand, issue symptoms, door size, spring type, and anything else your team needs before dispatching. Answers are attached to the booking summary.",
+      "You choose the questions: door type, opener brand, issue symptoms, door size, spring type, and anything else your team needs before dispatching. LobbyStack saves the answers in the call's transcript.",
   },
   {
     question: "Does it work with my existing business number?",
@@ -144,7 +159,7 @@ export const garageDoorFaqs: FaqItem[] = [
   {
     question: "Will I see what was discussed on every call?",
     answer:
-      "Yes. After every call, LobbyStack sends a summary with the caller details, issue description, appointment time, transcript, and recording. You review it from the dashboard or via email and SMS alerts.",
+      "Yes. LobbyStack saves a summary, transcript, and recording of every call in your dashboard. When it takes a message, your team gets an email alert, or a text alert if you turn those on.",
   },
   {
     question: "How much does it cost for a garage door repair business?",
@@ -162,7 +177,7 @@ export const applianceRepairFaqs: FaqItem[] = [
   {
     question: "Can it handle urgent appliance calls after hours?",
     answer:
-      "Yes. LobbyStack answers after-hours calls and follows your escalation rules. If a caller reports a refrigerator that stopped working or a washing machine flooding, it transfers them to your on-call tech with the details already collected.",
+      "Yes. LobbyStack answers after-hours calls and follows your escalation rules. If a caller reports a refrigerator that stopped working or a washing machine flooding, it transfers them to your on-call tech. The answers it collected stay in the call's transcript.",
   },
   {
     question: "Will it book appointments while I am on a repair?",
@@ -172,7 +187,7 @@ export const applianceRepairFaqs: FaqItem[] = [
   {
     question: "What intake questions can it ask appliance callers?",
     answer:
-      "You choose the questions: appliance type, brand, model number, issue symptoms, purchase age, and anything else your team needs before scheduling a visit. Answers are attached to the booking summary.",
+      "You choose the questions: appliance type, brand, model number, issue symptoms, purchase age, and anything else your team needs before scheduling a visit. LobbyStack saves the answers in the call's transcript.",
   },
   {
     question: "Does it work with my existing business number?",
@@ -182,7 +197,7 @@ export const applianceRepairFaqs: FaqItem[] = [
   {
     question: "Will I see what was discussed on every call?",
     answer:
-      "Yes. After every call, LobbyStack sends a summary with the caller details, appliance description, appointment time, transcript, and recording. You review it from the dashboard or via email and SMS alerts.",
+      "Yes. LobbyStack saves a summary, transcript, and recording of every call in your dashboard. When it takes a message, your team gets an email alert, or a text alert if you turn those on.",
   },
   {
     question: "How much does it cost for an appliance repair business?",
@@ -200,7 +215,7 @@ export const restorationFaqs: FaqItem[] = [
   {
     question: "Can it handle emergency restoration calls after hours?",
     answer:
-      "Yes. LobbyStack answers after-hours calls and follows your escalation rules. If a caller reports water damage, smoke damage, or mold, it transfers them to your on-call team with the details already collected. Routine estimate requests go to the morning queue.",
+      "Yes. LobbyStack answers after-hours calls and follows your escalation rules. If a caller reports water damage, smoke damage, or mold, it transfers them to your on-call team. The answers it collected stay in the call's transcript. Routine estimate requests go to the morning queue.",
   },
   {
     question: "Will it book estimate visits while my team is on site?",
@@ -210,7 +225,7 @@ export const restorationFaqs: FaqItem[] = [
   {
     question: "What intake questions can it ask restoration callers?",
     answer:
-      "You choose the questions: damage type, affected area size, water source, timeline, insurance status, and anything else your team needs before dispatching. Answers are attached to the booking summary.",
+      "You choose the questions: damage type, affected area size, water source, timeline, insurance status, and anything else your team needs before dispatching. LobbyStack saves the answers in the call's transcript.",
   },
   {
     question: "Does it work with my existing business number?",
@@ -220,7 +235,7 @@ export const restorationFaqs: FaqItem[] = [
   {
     question: "Will I see what was discussed on every call?",
     answer:
-      "Yes. After every call, LobbyStack sends a summary with the caller details, damage description, appointment time, transcript, and recording. You review it from the dashboard or via email and SMS alerts.",
+      "Yes. LobbyStack saves a summary, transcript, and recording of every call in your dashboard. When it takes a message, your team gets an email alert, or a text alert if you turn those on.",
   },
   {
     question: "How much does it cost for a restoration business?",
@@ -238,7 +253,7 @@ export const locksmithFaqs: FaqItem[] = [
   {
     question: "Can it handle emergency lockout calls after hours?",
     answer:
-      "Yes. LobbyStack answers after-hours calls and follows your escalation rules. If a caller is locked out of their home or car, it transfers them to your on-call locksmith with the location and details already collected.",
+      "Yes. LobbyStack answers after-hours calls and follows your escalation rules. If a caller is locked out of their home or car, it transfers them to your on-call locksmith. The location and answers it collected stay in the call's transcript.",
   },
   {
     question: "Will it book appointments while I am on a job?",
@@ -248,7 +263,7 @@ export const locksmithFaqs: FaqItem[] = [
   {
     question: "What intake questions can it ask locksmith callers?",
     answer:
-      "You choose the questions: lockout type, location, vehicle or property type, key situation, urgency, and anything else your team needs before dispatching. Answers are attached to the booking summary.",
+      "You choose the questions: lockout type, location, vehicle or property type, key situation, urgency, and anything else your team needs before dispatching. LobbyStack saves the answers in the call's transcript.",
   },
   {
     question: "Does it work with my existing business number?",
@@ -258,7 +273,7 @@ export const locksmithFaqs: FaqItem[] = [
   {
     question: "Will I see what was discussed on every call?",
     answer:
-      "Yes. After every call, LobbyStack sends a summary with the caller details, lockout description, appointment time, transcript, and recording. You review it from the dashboard or via email and SMS alerts.",
+      "Yes. LobbyStack saves a summary, transcript, and recording of every call in your dashboard. When it takes a message, your team gets an email alert, or a text alert if you turn those on.",
   },
   {
     question: "How much does it cost for a locksmith business?",
@@ -299,12 +314,12 @@ export const roofingFaqs: FaqItem[] = [
   {
     question: "Can it handle a surge of calls after a storm?",
     answer:
-      "Yes. LobbyStack answers simultaneous calls, so homeowners don't hit a busy signal or voicemail. It books inspections into your open slots and queues the rest for your office.",
+      "Yes. Plans don't limit how many calls LobbyStack answers at once. New calls get a busy signal only if an owner or admin sets a monthly overage cap and you reach it. It books inspections into your open slots and queues the rest for your office.",
   },
   {
     question: "What does it do with an active leak?",
     answer:
-      "It follows your rules. A common setup transfers active leaks to your on-call crew with the address and description, and books everything else for inspection.",
+      "It follows your rules. A common setup asks for the address and what's leaking, transfers active leaks to your on-call crew, and books everything else for inspection.",
   },
   {
     question: "Can it answer insurance claim questions?",

@@ -4,7 +4,7 @@ export const afterHoursFaqs: FaqItem[] = [
   {
     question: "What is an AI after-hours answering service?",
     answer:
-      "An AI after-hours answering service picks up business calls outside your normal operating hours, answers questions, books appointments, captures caller details, and routes urgent calls to the right person. It works nights, weekends, holidays, and any time your team is unavailable.",
+      "An AI after-hours answering service picks up business calls outside your normal operating hours, answers questions, books appointments, captures caller details, and transfers urgent calls to your on-call number. It works nights, weekends, holidays, and any time your team is unavailable.",
   },
   {
     question: "Can it actually book appointments after hours?",
@@ -19,7 +19,7 @@ export const afterHoursFaqs: FaqItem[] = [
   {
     question: "Will it wake up my on-call staff?",
     answer:
-      "Only when you want it to. You set the criteria for transfers and alerts. Routine messages, quote requests, and appointment bookings are summarized for morning. True emergencies get routed immediately with full context.",
+      "Only when you want it to. You set the criteria for transfers and alerts. Routine messages, quote requests, and appointment bookings are summarized for morning. Calls that match your emergency rules get transferred during the call.",
   },
   {
     question: "Can it work with my existing business phone number?",
@@ -34,7 +34,7 @@ export const afterHoursFaqs: FaqItem[] = [
   {
     question: "How is this different from a voicemail?",
     answer:
-      "Voicemail asks callers to leave a message and wait. Most people hang up. LobbyStack answers the call, asks questions, captures details, and books appointments. The caller gets help immediately, and your team gets a complete summary.",
+      "Voicemail asks callers to leave a message and wait. Most people hang up. LobbyStack answers the call, asks questions, captures details, and books appointments. The caller gets help immediately, and your team finds a summary and transcript in the dashboard.",
   },
   {
     question: "Is it cheaper than a human answering service?",
@@ -44,7 +44,7 @@ export const afterHoursFaqs: FaqItem[] = [
   {
     question: "Can I review what happened on after-hours calls?",
     answer:
-      "Yes. Every call generates a summary, transcript, recording, and booking details. You review them in the LobbyStack dashboard or receive email and SMS alerts. Nothing gets lost overnight.",
+      "Yes. Every call generates a summary, transcript, recording, and booking details. You review them in the LobbyStack dashboard, and your team gets an email or text alert when the receptionist takes a message. Nothing gets lost overnight.",
   },
   {
     question: "How much does after-hours answering cost?",

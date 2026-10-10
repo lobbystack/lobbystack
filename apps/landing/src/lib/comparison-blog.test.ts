@@ -24,6 +24,11 @@ const comparisonSlugs = [
   ...competitorSlugs,
   "ai-receptionist-vs-virtual-receptionist",
   "ai-receptionist-vs-voicemail",
+  "ai-receptionist-savings",
+  "how-much-does-an-answering-service-cost",
+  "best-answering-service-for-small-business",
+  "best-hvac-answering-services",
+  "automated-answering-service",
 ] as const
 
 const rootPath = (path: string) =>
