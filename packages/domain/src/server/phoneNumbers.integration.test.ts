@@ -61,7 +61,7 @@ describe.skipIf(!testUrl)("onboarding number claims against dedicated PostgreSQL
   it("refuses a second claim while a worker still holds the first", async () => {
     await rollbackTest(async (tx) => {
       const { userId, businessId } = await workspaceWithProvisioningClaim(tx, 1);
-      await expect(reserveAsApp(tx, { userId, businessId })).rejects.toMatchObject({ cause: { message: "number_claim_in_progress" } });
+      await expect(reserveAsApp(tx, { userId, businessId })).rejects.toMatchObject({ status: 409, code: "number_claim_in_progress" });
     });
   });
 

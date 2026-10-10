@@ -127,6 +127,7 @@
     "searchFailed": "Trenutno ne možemo da pretražimo brojeve.",
     "claimFailed": "Nismo mogli da aktiviramo taj broj. Pokušajte ponovo.",
     "claimRateLimited": "Probali ste nekoliko brojeva. Sačekajte malo pre nego što pokušate ponovo.",
+    "offerExpired": "Ova ponuda je istekla. Ponovo pretražite i izaberite broj.",
     "trialAccountPurchaseLimit": "Ovaj Twilio nalog još ne može da kupi taj broj. Probni nalozi mogu da kupe samo odgovarajuće probne brojeve. Oslobodite postojeći broj ili nadogradite nalog, pa pokušajte ponovo.",
     "skipFailed": "Trenutno ne možemo da preskočimo ovaj korak. Pokušajte ponovo.",
     "tooManySearches": "Previše pretraga. Sačekajte malo i pokušajte ponovo.",

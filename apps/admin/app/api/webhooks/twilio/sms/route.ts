@@ -6,6 +6,7 @@ import { isSharedSmsSender, receiveInboundSms, receiveSharedSenderSms } from "@l
 import { resolveTwilioWebhookUrl, validateTwilioSignature } from "@lobbystack/providers/twilio/webhookSecurity";
 import { getAppDatabase } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
+import { twilioSmsAuthToken } from "@/lib/twilio-status-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
   try {
     const rawBody = await request.text();
     const params = Object.fromEntries(new URLSearchParams(rawBody));
-    const valid = validateTwilioSignature({ authToken: process.env.TWILIO_AUTH_TOKEN, signatureHeader: request.headers.get("x-twilio-signature"), url: resolveTwilioWebhookUrl(request.url, process.env.TWILIO_SMS_WEBHOOK_URL), params });
+    const valid = validateTwilioSignature({ authToken: twilioSmsAuthToken(params, process.env, request.headers.get("x-twilio-signature-key-sid")), signatureHeader: request.headers.get("x-twilio-signature"), url: resolveTwilioWebhookUrl(request.url, process.env.TWILIO_SMS_WEBHOOK_URL), params });
     if (!valid) return new NextResponse("Unauthorized", { status: 401 });
     const body = twilioSmsInboundSchema.parse(params);
     const resolved = await getAppDatabase().db.execute<{ business_id: string }>(sql`select app.resolve_business_by_phone(${body.To}) as business_id`);
