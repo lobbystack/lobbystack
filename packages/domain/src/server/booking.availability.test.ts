@@ -21,6 +21,8 @@ type TransactionConfig = {
   assignmentsAfterLock?: unknown[];
   connections?: unknown[];
   hours?: unknown[];
+  appointments?: unknown[];
+  contacts?: unknown[];
 };
 
 function createRecordingTransaction(config: TransactionConfig = {}) {
@@ -29,6 +31,7 @@ function createRecordingTransaction(config: TransactionConfig = {}) {
   let selectCount = 0;
   let notificationSeq = 0;
   const executeCalls: unknown[] = [];
+  const updates: Array<{ table: unknown; values: unknown }> = [];
 
   const rowsFor = (table: unknown): unknown[] => {
     if (table === services) return [{ id: "svc-1", name: "General Checkup", durationMinutes: 30 }];
@@ -39,6 +42,8 @@ function createRecordingTransaction(config: TransactionConfig = {}) {
       : config.assignments ?? [];
     if (table === calendarConnections) return config.connections ?? [];
     if (table === businessHours) return config.hours ?? [{ dayOfWeek: 1, openMinutes: 0, closeMinutes: 1440 }];
+    if (table === appointments) return config.appointments ?? [];
+    if (table === contacts) return config.contacts ?? [];
     return [];
   };
 
@@ -63,12 +68,16 @@ function createRecordingTransaction(config: TransactionConfig = {}) {
       if (table === notifications) { notificationSeq += 1; return thenable(() => [{ id: `notif-${notificationSeq}` }]); }
       return thenable(() => [{ id: "row-1" }]);
     },
-    update: () => thenable(() => [{ id: "row-1" }]),
+    update: (table: unknown) => {
+      const node = thenable(() => [{ id: "row-1" }]);
+      node.set = (values: unknown) => { updates.push({ table, values }); return node; };
+      return node;
+    },
     delete: () => thenable(() => [{ id: "row-1" }]),
     execute: (query: unknown) => { executeCalls.push(query); return Promise.resolve([{ pg_advisory_xact_lock: null }]); },
   };
 
-  return { tx, fromCounts, insertCounts, selectCount: () => selectCount, executeCalls };
+  return { tx, fromCounts, insertCounts, selectCount: () => selectCount, executeCalls, updates };
 }
 
 const context = { db: {} as never };
@@ -107,8 +116,9 @@ describe("booking availability reference locking", () => {
     expect(recording.fromCounts.get(calendarConnections)).toBe(4);
     expect(recording.fromCounts.get(businessHours)).toBe(4);
     expect(recording.fromCounts.get(closures)).toBe(4);
-    expect(recording.fromCounts.get(appointments)).toBe(3);
-    expect(recording.selectCount()).toBe(31);
+    // Without opening hours no candidate can take the time, so no bookings are read.
+    expect(recording.fromCounts.get(appointments)).toBeUndefined();
+    expect(recording.selectCount()).toBe(28);
   });
 
   it("rechecks conflicts after the lock and stops at the first available candidate", async () => {
@@ -134,13 +144,24 @@ describe("booking availability reference locking", () => {
   });
 
   it("skips the availability read for staff that are not assigned to the service", async () => {
-    const recording = useTransaction({ hours: [], assignments: [{ staffId: "staff-2" }] });
+    const recording = useTransaction({ assignments: [{ staffId: "staff-2" }], appointments: [{ staffId: "staff-2", startsAt: new Date(input.startsAt), endsAt: new Date("2027-06-07T15:30:00.000Z") }] });
 
     await expect(bookAppointment(context, input)).rejects.toThrow("No staff member is available for this service.");
     // The lock set is unchanged: every active candidate is still locked.
     expect(recording.executeCalls).toHaveLength(3);
     // Only the assigned candidate reaches the staff-specific conflict read.
     expect(recording.fromCounts.get(appointments)).toBe(1);
+  });
+
+  it("keeps the caller's name on a contact made before anyone knew it", async () => {
+    const recording = useTransaction({ contacts: [{ id: "contact-1", smsConsentStatus: "not_asked", operatorBlockedAt: null }] });
+    await bookAppointment(context, { ...input, contactName: "Milan" });
+    expect(recording.updates).toContainEqual({ table: contacts, values: expect.objectContaining({ name: "Milan" }) });
+
+    // A new contact gets the name when it is created.
+    const created = useTransaction({});
+    await bookAppointment(context, { ...input, contactName: "Milan" });
+    expect(created.updates.filter((update) => update.table === contacts)).toEqual([]);
   });
 
   it("honors assignment changes committed while waiting for the staff lock", async () => {

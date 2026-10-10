@@ -1,16 +1,16 @@
-import { and, asc, eq, gte, ilike, lt, ne, or } from "drizzle-orm";
+import { and, asc, eq, gt, gte, lt, ne } from "drizzle-orm";
 import { DateTime } from "luxon";
 
-import { appointments, calls, contacts, conversationSessions, receptionistProfiles, services, withBusinessTransaction } from "@lobbystack/db";
-import { normalizeAppointmentChangePolicy, type HoursWindow } from "@lobbystack/shared";
+import { appointments, calls, contacts, conversationSessions, receptionistProfiles, services, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { normalizeAppointmentChangePolicy } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
 import { BookingUnavailableError, type UnavailableReason } from "../availability";
 import { createAppointmentChangeVerification, verifyAppointmentChangeOtp } from "./appointmentChanges";
-import { personNamesMatch, serviceNamesMatch } from "./appointmentFacts";
-import { bookAppointment, cancelAppointmentForCaller, checkAvailability, findAvailability, rescheduleAppointmentForCaller } from "./booking";
-import { recordCallSchedulingProgress } from "./callOutcome";
-import { recordSmsConsentAnswerInTransaction, type SmsConsentOnFile } from "./contactSmsConsent";
+import { matchServiceName, personNamesMatch, serviceNamesMatch } from "./appointmentFacts";
+import { bookAppointment, cancelAppointmentForCaller, findOpeningsInTransaction, rescheduleAppointmentForCaller, type ApiAudit } from "./booking";
+import { recordCallOutcomeInTransaction } from "./callOutcome";
+import { recordSmsConsentAnswerInTransaction, type SmsConsentAnswer, type SmsConsentOnFile } from "./contactSmsConsent";
 import type { DomainContext } from "./context";
 import { appendMessage, getOrCreateConversation } from "./conversations";
 import { queueOperatorAlert } from "./notifications";
@@ -22,187 +22,97 @@ import { CANCELLATION_REQUEST, createVoiceFollowUpTask, type FollowUpRequest } f
 
 export type ReceptionistChannel = "voice" | "web_voice" | "web_chat" | "sms";
 
-async function resolveActiveService(context: DomainContext, businessId: string, serviceName: string) {
-  return await withBusinessTransaction(context.db, { businessId, actorType: "worker" }, async (tx) => {
-    const normalized = serviceName.trim().toLowerCase();
-    return (await tx.select({ id: services.id, name: services.name, durationMinutes: services.durationMinutes }).from(services).where(and(eq(services.businessId, businessId), eq(services.active, true), or(eq(services.slug, normalized), ilike(services.name, serviceName.trim())))).limit(1))[0];
-  });
+/** The active service with this id, or the one a caller's words name. */
+async function activeService(tx: DatabaseTransaction, businessId: string, service: { id: string } | { name: string }) {
+  const rows = await tx.select({ id: services.id, name: services.name, slug: services.slug, localizedNames: services.localizedNames }).from(services).where(and(eq(services.businessId, businessId), eq(services.active, true), "id" in service ? eq(services.id, service.id) : undefined));
+  return "id" in service ? rows[0] : matchServiceName(rows, service.name);
 }
 
-/** The reason a refused booking or reschedule wasn't bookable, when it was refused for that. */
-export function unavailableReasonOf(error: unknown): UnavailableReason | undefined {
-  if (error instanceof BookingUnavailableError) return error.reason;
-  const message = error instanceof Error ? error.message : "";
-  return message.includes("no longer available") ? "taken" : undefined;
-}
+/** Why there's nothing to book: the business offers no such service, or the time can't be booked. */
+export type BookingRefusal = UnavailableReason | "unknown_service";
 
 /**
- * Plain facts for the agent: why a time can't be booked. The agent tools add
- * what to do next.
+ * Open times for the service a caller names on one local date, nearest the
+ * preferred time first, or why there are none.
  */
-export const UNAVAILABLE_REASON_TEXT: Record<UnavailableReason, string> = {
-  no_hours: "The business hasn't set its opening hours, so no time can be booked.",
-  closed_day: "The business is closed that day.",
-  outside_hours: "That time is outside the business's opening hours.",
-  closure: "The business is closed then for a planned closure.",
-  no_staff: "No staff member offers this service.",
-  calendar_not_synced: "The business's calendar hasn't synced recently, so the time can't be confirmed.",
-  taken: "That time is no longer available.",
-};
-
-export function bookingFailureReason(error: unknown): string {
-  // Telemetry keeps its earlier names for taken and no-staff refusals.
-  const unavailable = error instanceof BookingUnavailableError ? error.reason : undefined;
-  if (unavailable) return unavailable === "taken" ? "slot_unavailable" : unavailable === "no_staff" ? "no_staff_available" : unavailable;
-  const message = error instanceof Error ? error.message : "";
-  if (message.includes("Service is not available")) return "service_unavailable";
-  if (message.includes("No staff member is available")) return "no_staff_available";
-  if (message.includes("no longer available")) return "slot_unavailable";
-  if (message.includes("required")) return "invalid_request";
-  if (message.includes("Contact could not be created")) return "contact_create_failed";
-  if (message.includes("Appointment could not be created")) return "appointment_create_failed";
-  if (message.includes("Booking confirmation notification")) return "notification_create_failed";
-  return "unknown";
-}
-
-const OPENING_STEP_MINUTES = 30;
-// Availability checks run this many at a time, so a busy day is scanned in
-// full without one slow query per start time.
-const OPENING_CHECK_BATCH = 6;
-
-// Start times to try on a local date, inside business hours, nearest to the
-// caller's preferred time first.
-export function candidateStartTimes(input: { date: string; timezone: string; hours: HoursWindow[]; durationMinutes: number; preferredMinutes?: number; now?: Date }): string[] {
-  const day = DateTime.fromISO(`${input.date}T00:00:00`, { zone: input.timezone });
-  if (!day.isValid) return [];
-  const weekday = day.weekday % 7;
-  const now = input.now ?? new Date();
-  const minutes: number[] = [];
-  for (const window of input.hours.filter((item) => item.dayOfWeek === weekday)) {
-    for (let start = window.openMinutes; start + input.durationMinutes <= window.closeMinutes; start += OPENING_STEP_MINUTES) minutes.push(start);
-  }
-  const preferred = input.preferredMinutes;
-  return minutes
-    .sort((left, right) => preferred === undefined ? left - right : Math.abs(left - preferred) - Math.abs(right - preferred) || left - right)
-    // Set the wall-clock time; adding minutes to midnight drifts an hour on DST days.
-    .map((value) => day.set({ hour: Math.floor(value / 60), minute: value % 60 }))
-    .filter((start) => start.toJSDate() > now)
-    .map((start) => start.toUTC().toISO()!);
-}
-
 export async function findOpenings(
   context: DomainContext,
-  input: { businessId: string; serviceName: string; date: string; timezone: string; hours: HoursWindow[]; preferredHour24?: number; preferredMinute?: number; limit?: number; callId?: string },
+  input: { businessId: string; serviceName: string; date: string; preferredHour24?: number; preferredMinute?: number; limit?: number; callId?: string },
 ) {
-  const service = await resolveActiveService(context, input.businessId, input.serviceName);
-  if (!service) return { ok: false as const, reason: "Service is not available." };
-  const candidates = candidateStartTimes({
-    date: input.date,
-    timezone: input.timezone,
-    hours: input.hours,
-    durationMinutes: service.durationMinutes,
-    ...(input.preferredHour24 !== undefined ? { preferredMinutes: input.preferredHour24 * 60 + (input.preferredMinute ?? 0) } : {}),
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const service = await activeService(tx, input.businessId, { name: input.serviceName });
+    if (!service) return { ok: false as const, reason: "unknown_service" as const };
+    const found = await findOpeningsInTransaction(tx, {
+      businessId: input.businessId,
+      serviceId: service.id,
+      dates: [input.date],
+      limit: input.limit ?? 3,
+      ...(input.preferredHour24 !== undefined ? { preferredMinutes: input.preferredHour24 * 60 + (input.preferredMinute ?? 0) } : {}),
+    });
+    if (input.callId) await recordCallOutcomeInTransaction(tx, { businessId: input.businessId, callId: input.callId, outcome: { kind: "booking_in_progress", serviceName: service.name, startsAt: null } });
+    return {
+      ok: true as const,
+      serviceName: service.name,
+      date: input.date,
+      timezone: found.timezone,
+      openings: found.openings.map((startsAt) => ({ startsAt, displayTime: DateTime.fromISO(startsAt).setZone(found.timezone).toFormat("cccc LLL d, h:mm a") })),
+      ...(found.reason ? { reason: found.reason } : {}),
+    };
   });
-  const limit = input.limit ?? 3;
-  const openings: string[] = [];
-  // Scan the whole day, nearest first, and stop once there are enough openings.
-  for (let index = 0; index < candidates.length && openings.length < limit; index += OPENING_CHECK_BATCH) {
-    const batch = candidates.slice(index, index + OPENING_CHECK_BATCH);
-    const available = await Promise.all(batch.map(async (startsAt) => (await findAvailability(context, { businessId: input.businessId, serviceId: service.id, startsAt, timezone: input.timezone })).length > 0));
-    for (const [position, startsAt] of batch.entries()) if (available[position] && openings.length < limit) openings.push(startsAt);
-  }
-  const reason = openings.length ? undefined : await noOpeningsReason(context, { businessId: input.businessId, serviceId: service.id, date: input.date, timezone: input.timezone, hours: input.hours, firstCandidate: candidates[0] });
-  if (input.callId) await recordCallSchedulingProgress(context, { businessId: input.businessId, callId: input.callId, serviceName: service.name });
-  return {
-    ok: true as const,
-    serviceName: service.name,
-    date: input.date,
-    timezone: input.timezone,
-    openings: openings.sort().map((startsAt) => ({ startsAt, displayTime: DateTime.fromISO(startsAt).setZone(input.timezone).toFormat("cccc LLL d, h:mm a") })),
-    ...(reason ? { reason } : {}),
-  };
-}
-
-/** Why a day has no openings. "no_times_left" means every start time that day has passed. */
-export type NoOpeningsReason = UnavailableReason | "no_times_left";
-
-async function noOpeningsReason(context: DomainContext, input: { businessId: string; serviceId: string; date: string; timezone: string; hours: HoursWindow[]; firstCandidate: string | undefined }): Promise<NoOpeningsReason> {
-  if (!input.hours.length) return "no_hours";
-  const day = DateTime.fromISO(`${input.date}T00:00:00`, { zone: input.timezone });
-  if (day.isValid && !input.hours.some((window) => window.dayOfWeek === day.weekday % 7)) return "closed_day";
-  if (!input.firstCandidate) return "no_times_left";
-  // The time nearest the caller's preference explains the day. Later times can
-  // fail for another reason, such as a closure, so a taken first time doesn't
-  // mean the whole day is booked.
-  return (await checkAvailability(context, { businessId: input.businessId, serviceId: input.serviceId, startsAt: input.firstCandidate, timezone: input.timezone })).reason ?? "taken";
-}
-
-export async function checkOpening(
-  context: DomainContext,
-  input: { businessId: string; serviceName: string; startsAt: string; timezone: string; callId?: string },
-) {
-  const service = await resolveActiveService(context, input.businessId, input.serviceName);
-  if (!service) return { ok: false as const, reason: "Service is not available." };
-  const { slots, reason } = await checkAvailability(context, { businessId: input.businessId, serviceId: service.id, startsAt: input.startsAt, timezone: input.timezone });
-  if (input.callId) await recordCallSchedulingProgress(context, { businessId: input.businessId, callId: input.callId, serviceName: service.name, startsAt: input.startsAt });
-  return slots.length
-    ? { ok: true as const, serviceName: service.name, available: true as const }
-    : { ok: true as const, serviceName: service.name, available: false as const, reason: reason ?? "taken" };
 }
 
 /**
- * The caller's confirmed booking for this service and start time, if they
- * already have it. A booking request repeated after a lost or superseded
- * answer then returns that booking instead of failing as taken.
+ * The booking a repeated request already made, so a request repeated after a
+ * lost answer doesn't fail as taken. Only the call's own number finds the
+ * caller's booking: a typed or spoken one would let anyone learn whose
+ * appointment a time holds. Without it, only this call's own booking counts.
  */
-export async function findCallerBooking(context: DomainContext, input: { businessId: string; serviceName: string; startsAt: string; contactPhone: string }) {
+async function earlierBooking(tx: DatabaseTransaction, input: { businessId: string; startsAt: string; contactPhone: string; callerPhone?: string; callId?: string }, service: { id: string; name: string }): Promise<{ appointmentId?: string } | undefined> {
   const startsAt = new Date(input.startsAt);
   if (Number.isNaN(startsAt.getTime())) return undefined;
-  // One query, matching the service the way resolveActiveService does, so a
-  // booking doesn't pay an extra round trip for the lookup.
-  const normalized = input.serviceName.trim().toLowerCase();
-  const existing = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    return (await tx.select({ id: appointments.id, serviceName: services.name }).from(appointments)
-      .innerJoin(contacts, eq(appointments.contactId, contacts.id))
-      .innerJoin(services, eq(appointments.serviceId, services.id))
-      .where(and(
-        eq(appointments.businessId, input.businessId),
-        eq(services.active, true),
-        or(eq(services.slug, normalized), ilike(services.name, input.serviceName.trim())),
-        eq(appointments.startsAt, startsAt),
-        eq(appointments.status, "confirmed"),
-        eq(contacts.phone, input.contactPhone),
-      )).limit(1))[0];
-  });
-  return existing ? { ok: true as const, appointmentId: existing.id, serviceName: existing.serviceName, startsAt: input.startsAt, alreadyBooked: true as const } : undefined;
+  if (input.callerPhone && input.contactPhone === input.callerPhone) {
+    const [row] = await tx.select({ id: appointments.id }).from(appointments).innerJoin(contacts, eq(appointments.contactId, contacts.id))
+      .where(and(eq(appointments.businessId, input.businessId), eq(appointments.serviceId, service.id), eq(appointments.startsAt, startsAt), eq(appointments.status, "confirmed"), eq(contacts.phone, input.contactPhone))).limit(1);
+    return row ? { appointmentId: row.id } : undefined;
+  }
+  if (!input.callId) return undefined;
+  const [session] = await tx.select({ summary: conversationSessions.summary }).from(conversationSessions).where(and(eq(conversationSessions.businessId, input.businessId), eq(conversationSessions.callId, input.callId), eq(conversationSessions.summaryKind, "booked"))).limit(1);
+  const outcome = session?.summary;
+  return outcome?.serviceName === service.name && typeof outcome.startsAt === "string" && Date.parse(outcome.startsAt) === startsAt.getTime() ? {} : undefined;
 }
 
 /**
- * The booking this call already made at that time, for a call with no caller ID
- * to match on. It reads only the call's own outcome, so it reveals nothing about
- * anyone else's bookings.
+ * Books for a caller, or for the public API or MCP: the active service with
+ * that id, or the one the caller's words name. A repeated request returns the
+ * booking it already made (see earlierBooking). Refusals come back as a
+ * reason; other errors are thrown.
  */
-export async function findCallBooking(context: DomainContext, input: { businessId: string; callId: string; serviceName: string; startsAt: string }) {
-  const startsAt = Date.parse(input.startsAt);
-  const outcome = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) =>
-    (await tx.select({ summary: conversationSessions.summary }).from(conversationSessions).where(and(eq(conversationSessions.businessId, input.businessId), eq(conversationSessions.callId, input.callId), eq(conversationSessions.summaryKind, "booked"))).limit(1))[0]?.summary);
-  const serviceName = typeof outcome?.serviceName === "string" ? outcome.serviceName : "";
-  if (!serviceName || typeof outcome?.startsAt !== "string" || Date.parse(outcome.startsAt) !== startsAt || !serviceNamesMatch({ name: serviceName, slug: "" }, input.serviceName)) return undefined;
-  return { ok: true as const, serviceName, startsAt: input.startsAt, alreadyBooked: true as const };
-}
-
 export async function bookForCaller(
   context: DomainContext,
-  input: { businessId: string; serviceName: string; startsAt: string; timezone: string; contactPhone: string; contactName?: string; channel: ReceptionistChannel; callId?: string },
-) {
+  input: { businessId: string; service: { id: string } | { name: string }; startsAt: string; timezone: string; contactPhone: string; contactName?: string; channel: ReceptionistChannel | "api"; callerPhone?: string; callId?: string; preferredStaffId?: string; smsConsent?: SmsConsentAnswer; apiAudit?: ApiAudit },
+): Promise<{ ok: true; appointmentId?: string; serviceName: string; startsAt: string; alreadyBooked?: true } | { ok: false; reason: BookingRefusal }> {
   const distinctId = getPostHogDistinctIdForBusinessSystem(input.businessId);
-  const service = await resolveActiveService(context, input.businessId, input.serviceName);
-  if (!service) {
-    await recordProductEventBestEffort(context, { name: "appointment.booking_failed", businessId: input.businessId, distinctId, properties: { reason: "service_unavailable", requestedServiceName: input.serviceName, channel: input.channel, sourceChannel: input.channel } });
-    return { ok: false as const, reason: "Service is not available." };
+  const failed = async (reason: BookingRefusal | "unknown", serviceId?: string) => {
+    // Telemetry keeps its earlier names for these refusals.
+    const name = reason === "unknown_service" ? "service_unavailable" : reason === "taken" ? "slot_unavailable" : reason === "no_staff" ? "no_staff_available" : reason;
+    await recordProductEventBestEffort(context, { name: "appointment.booking_failed", businessId: input.businessId, distinctId, properties: { reason: name, ...(serviceId ? { serviceId } : {}), ...("name" in input.service ? { requestedServiceName: input.service.name } : {}), channel: input.channel, sourceChannel: input.channel } });
+  };
+  const found = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const service = await activeService(tx, input.businessId, input.service);
+    if (!service) return undefined;
+    const existing = await earlierBooking(tx, input, service);
+    // Kept even when the booking fails, so the call shows what the caller tried to book.
+    if (!existing && input.callId) await recordCallOutcomeInTransaction(tx, { businessId: input.businessId, callId: input.callId, outcome: { kind: "booking_in_progress", serviceName: service.name, startsAt: input.startsAt } });
+    return { service, existing };
+  });
+  if (!found) {
+    await failed("unknown_service");
+    return { ok: false, reason: "unknown_service" };
   }
+  const { service, existing } = found;
+  if (existing) return { ok: true, ...existing, serviceName: service.name, startsAt: input.startsAt, alreadyBooked: true };
   try {
-    const appointment = await bookAppointment(context, {
+    const { appointmentId } = await bookAppointment(context, {
       businessId: input.businessId,
       serviceId: service.id,
       startsAt: input.startsAt,
@@ -211,23 +121,25 @@ export async function bookForCaller(
       sourceChannel: input.channel,
       ...(input.callId ? { callId: input.callId } : {}),
       ...(input.contactName ? { contactName: input.contactName } : {}),
+      ...(input.preferredStaffId ? { preferredStaffId: input.preferredStaffId } : {}),
+      ...(input.smsConsent ? { smsConsent: input.smsConsent } : {}),
+      ...(input.apiAudit ? { apiAudit: input.apiAudit } : {}),
     });
-    await recordProductEventBestEffort(context, { name: "appointment.booked", businessId: input.businessId, distinctId, properties: { appointmentId: appointment.appointmentId, channel: input.channel, serviceId: service.id, sourceChannel: input.channel } });
-    return { ok: true as const, appointmentId: appointment.appointmentId, serviceName: service.name, startsAt: input.startsAt };
+    await recordProductEventBestEffort(context, { name: "appointment.booked", businessId: input.businessId, distinctId, properties: { appointmentId, channel: input.channel, serviceId: service.id, sourceChannel: input.channel } });
+    return { ok: true, appointmentId, serviceName: service.name, startsAt: input.startsAt };
   } catch (error) {
-    const reason = bookingFailureReason(error);
-    await recordProductEventBestEffort(context, { name: "appointment.booking_failed", businessId: input.businessId, distinctId, properties: { reason, serviceId: service.id, requestedServiceName: input.serviceName, channel: input.channel, sourceChannel: input.channel } });
-    const unavailable = unavailableReasonOf(error);
-    return unavailable
-      ? { ok: false as const, reason: UNAVAILABLE_REASON_TEXT[unavailable], unavailableReason: unavailable }
-      : { ok: false as const, reason: "The booking could not be completed." };
+    const reason = error instanceof BookingUnavailableError ? error.reason : undefined;
+    await failed(reason ?? "unknown", service.id);
+    if (!reason) throw error;
+    return { ok: false, reason };
   }
 }
 
 export async function lookupCallerAppointments(context: DomainContext, input: { businessId: string; callerPhone: string }) {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const [rows, profile] = await Promise.all([
-      tx.select({ id: appointments.id }).from(appointments).innerJoin(contacts, eq(appointments.contactId, contacts.id)).where(and(eq(appointments.businessId, input.businessId), eq(contacts.phone, input.callerPhone), eq(appointments.status, "confirmed"))).orderBy(asc(appointments.startsAt)),
+      // A past appointment can't be cancelled or moved, so it doesn't count.
+      tx.select({ id: appointments.id }).from(appointments).innerJoin(contacts, eq(appointments.contactId, contacts.id)).where(and(eq(appointments.businessId, input.businessId), eq(contacts.phone, input.callerPhone), eq(appointments.status, "confirmed"), gt(appointments.startsAt, new Date()))).orderBy(asc(appointments.startsAt)),
       tx.select({ appointmentChangePolicy: receptionistProfiles.appointmentChangePolicy }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, input.businessId)).limit(1),
     ]);
     const policy = normalizeAppointmentChangePolicy(profile[0]?.appointmentChangePolicy);
@@ -302,9 +214,8 @@ export async function rescheduleForCaller(
     result = await rescheduleAppointmentForCaller(context, { businessId: input.businessId, appointmentId: input.appointmentId, callerPhone: input.callerPhone, startsAt: input.startsAt, verificationId: input.verificationId });
   } catch (error) {
     // The new time isn't bookable: say why, and keep the verification for another try.
-    const unavailable = unavailableReasonOf(error);
-    if (!unavailable) throw error;
-    return { ok: false as const, reason: UNAVAILABLE_REASON_TEXT[unavailable], unavailableReason: unavailable };
+    if (!(error instanceof BookingUnavailableError)) throw error;
+    return { ok: false as const, reason: "That time can't be booked.", unavailableReason: error.reason };
   }
   if (!result) return { ok: false as const, reason: "The appointment could not be verified." };
   return { ok: true as const, appointmentId: input.appointmentId, startsAt: result.startsAt.toISOString(), status: "confirmed" };

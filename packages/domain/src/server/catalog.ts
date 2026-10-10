@@ -33,10 +33,26 @@ export async function listCatalog(
   });
 }
 
+/**
+ * The rules a service's fields follow, on create and on update: a name and a
+ * slug of up to 160 characters, a whole number of minutes up to a day, and a
+ * description of up to 2,000 characters. Fields left out aren't checked.
+ */
+function assertServiceFields(input: { name?: string | undefined; slug?: string | undefined; durationMinutes?: number | undefined; description?: string | null | undefined; active?: boolean | undefined }): void {
+  const invalid = (field: string) => Object.assign(new Error(`${field} is invalid.`), { status: 400 });
+  const text = (value: unknown, maxLength: number) => typeof value === "string" && value.trim().length > 0 && value.trim().length <= maxLength;
+  if (input.name !== undefined && !text(input.name, 160)) throw invalid("name");
+  if (input.slug !== undefined && !text(input.slug, 160)) throw invalid("slug");
+  if (input.durationMinutes !== undefined && !(Number.isInteger(input.durationMinutes) && input.durationMinutes >= 1 && input.durationMinutes <= 1_440)) throw invalid("durationMinutes");
+  if (input.description != null && !text(input.description, 2_000)) throw invalid("description");
+  if (input.active !== undefined && typeof input.active !== "boolean") throw invalid("active");
+}
+
 export async function createService(
   context: DomainContext,
   input: { userId: string; businessId: string; name: string; slug: string; durationMinutes: number; description?: string; active?: boolean },
 ): Promise<string> {
+  assertServiceFields(input);
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
     const [service] = await tx.insert(services).values({
@@ -44,7 +60,7 @@ export async function createService(
       name: input.name.trim(),
       slug: input.slug.trim().toLowerCase(),
       durationMinutes: input.durationMinutes,
-      description: input.description,
+      description: input.description?.trim(),
       active: input.active ?? true,
     }).returning({ id: services.id });
     if (!service) {
@@ -66,13 +82,14 @@ export async function updateService(
   context: DomainContext,
   input: { userId: string; businessId: string; serviceId: string; name?: string; slug?: string; durationMinutes?: number; description?: string | null; active?: boolean },
 ): Promise<void> {
+  assertServiceFields(input);
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
     const [service] = await tx.update(services).set({
       ...(input.name !== undefined ? { name: input.name.trim() } : {}),
       ...(input.slug !== undefined ? { slug: input.slug.trim().toLowerCase() } : {}),
       durationMinutes: input.durationMinutes,
-      description: input.description,
+      description: typeof input.description === "string" ? input.description.trim() : input.description,
       active: input.active,
       updatedAt: new Date(),
     }).where(and(eq(services.id, input.serviceId), eq(services.businessId, input.businessId), isNull(services.deletedAt))).returning({ id: services.id });

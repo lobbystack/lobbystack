@@ -1,9 +1,11 @@
 import { and, asc, eq, gt, inArray, isNull, lt, ne, notExists, or, sql } from "drizzle-orm";
 
 import { appointments, auditLogs, businesses, businessHours, calendarBusyBlocks, calendarConnections, closures, contacts, enqueueOutbox, inboxItems, notifications, services, staff, staffServiceAssignments, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import type { AvailabilitySlot } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
+import { DateTime } from "luxon";
 
-import { BookingUnavailableError, computeAvailability, scheduleUnavailableReason, type UnavailableReason } from "../availability";
+import { BookingUnavailableError, candidateStartTimes, computeAvailability, scheduleUnavailableReason, type NoOpeningsReason, type UnavailableReason } from "../availability";
 import { requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
 import { recordCallOutcomeInTransaction } from "./callOutcome";
@@ -18,7 +20,6 @@ import { CANCELLATION_REQUEST } from "./voice";
 type BookingInput = {
   callId?: string;
   businessId: string;
-  userId?: string;
   serviceId: string;
   startsAt: string;
   timezone: string;
@@ -41,14 +42,12 @@ async function lockStaff(tx: DatabaseTransaction, staffId: string): Promise<void
 export const MAX_CALENDAR_SYNC_AGE_MS = 20 * 60_000;
 export const CALENDAR_SYNC_HORIZON_MS = 90 * 24 * 60 * 60_000;
 
-type AvailabilityReference = {
+type Schedule = {
   businessId: string;
   serviceId: string;
   serviceName: string;
   serviceDurationMinutes: number;
   timezone: string;
-  startsAt: Date;
-  endsAt: Date;
   activeStaffIds: string[];
   assignedStaffIds: Set<string>;
   connections: Array<typeof calendarConnections.$inferSelect>;
@@ -57,16 +56,16 @@ type AvailabilityReference = {
 };
 
 /**
- * Reads an availability reference snapshot. Booking callers reload it after
- * waiting for an advisory lock so they do not validate against stale rules.
+ * Reads the rules for booking a service: the service, the business's
+ * timezone, staff, assignments, calendars, hours, and the closures that end
+ * after `from`. Booking reloads it after each staff lock so it never validates
+ * against stale rules.
  */
-async function loadAvailabilityReference(tx: DatabaseTransaction, input: { businessId: string; serviceId: string; startsAt: string }): Promise<AvailabilityReference> {
+async function loadSchedule(tx: DatabaseTransaction, input: { businessId: string; serviceId: string; from: Date }): Promise<Schedule> {
   const [service] = await tx.select({ id: services.id, name: services.name, durationMinutes: services.durationMinutes }).from(services).where(and(eq(services.id, input.serviceId), eq(services.businessId, input.businessId), eq(services.active, true))).limit(1);
   const [business] = await tx.select({ timezone: businesses.timezone }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1);
   if (!service || !business) throw new Error("Service is not available.");
-  const startsAt = new Date(input.startsAt);
-  if (!Number.isFinite(startsAt.getTime()) || !Number.isSafeInteger(service.durationMinutes) || service.durationMinutes <= 0) throw new Error("A valid appointment time and duration are required.");
-  const endsAt = new Date(startsAt.getTime() + service.durationMinutes * 60_000);
+  if (!Number.isFinite(input.from.getTime()) || !Number.isSafeInteger(service.durationMinutes) || service.durationMinutes <= 0) throw new Error("A valid appointment time and duration are required.");
   const activeStaff = await tx.select({ id: staff.id }).from(staff).where(and(eq(staff.businessId, input.businessId), eq(staff.active, true))).orderBy(asc(staff.id));
   const activeStaffIds = activeStaff.map((row) => row.id);
   const assignments = await tx.select({ staffId: staffServiceAssignments.staffId }).from(staffServiceAssignments).where(and(eq(staffServiceAssignments.businessId, input.businessId), eq(staffServiceAssignments.serviceId, input.serviceId)));
@@ -74,15 +73,13 @@ async function loadAvailabilityReference(tx: DatabaseTransaction, input: { busin
     ? await tx.select().from(calendarConnections).where(and(eq(calendarConnections.businessId, input.businessId), ne(calendarConnections.status, "disconnected"), or(isNull(calendarConnections.staffId), inArray(calendarConnections.staffId, activeStaffIds))))
     : [];
   const hours = await tx.select().from(businessHours).where(eq(businessHours.businessId, input.businessId));
-  const closed = await tx.select().from(closures).where(and(eq(closures.businessId, input.businessId), lt(closures.startsAt, endsAt), gt(closures.endsAt, startsAt)));
+  const closed = await tx.select().from(closures).where(and(eq(closures.businessId, input.businessId), gt(closures.endsAt, input.from)));
   return {
     businessId: input.businessId,
     serviceId: input.serviceId,
     serviceName: service.name,
     serviceDurationMinutes: service.durationMinutes,
     timezone: business.timezone,
-    startsAt,
-    endsAt,
     activeStaffIds,
     assignedStaffIds: new Set(assignments.map((row) => row.staffId)),
     connections,
@@ -91,107 +88,151 @@ async function loadAvailabilityReference(tx: DatabaseTransaction, input: { busin
   };
 }
 
-// Unassigned services retain the existing all-active-staff default. Explicit
-// assignments constrain eligibility instead of being silently ignored.
-function eligibleStaffIds(reference: AvailabilityReference, requestedStaffIds?: string[]): string[] {
-  return reference.activeStaffIds.filter((id) => (!requestedStaffIds || requestedStaffIds.includes(id)) && (!reference.assignedStaffIds.size || reference.assignedStaffIds.has(id)));
+type AvailabilityReference = Schedule & { startsAt: Date; endsAt: Date };
+
+/** The schedule for one start time. */
+async function loadAvailabilityReference(tx: DatabaseTransaction, input: { businessId: string; serviceId: string; startsAt: string }): Promise<AvailabilityReference> {
+  const startsAt = new Date(input.startsAt);
+  const schedule = await loadSchedule(tx, { businessId: input.businessId, serviceId: input.serviceId, from: startsAt });
+  return { ...schedule, startsAt, endsAt: new Date(startsAt.getTime() + schedule.serviceDurationMinutes * 60_000) };
 }
 
-function isCalendarFresh(reference: AvailabilityReference, staffId: string, now: number): boolean {
-  return !reference.connections.some((connection) => connection.selectedCalendarId && (!connection.staffId || connection.staffId === staffId) && (
+// Unassigned services retain the existing all-active-staff default. Explicit
+// assignments constrain eligibility instead of being silently ignored.
+function eligibleStaffIds(schedule: Schedule, requestedStaffIds?: string[]): string[] {
+  return schedule.activeStaffIds.filter((id) => (!requestedStaffIds || requestedStaffIds.includes(id)) && (!schedule.assignedStaffIds.size || schedule.assignedStaffIds.has(id)));
+}
+
+function isCalendarFresh(schedule: Schedule, staffId: string, startsAt: Date, now: number): boolean {
+  const endsAt = startsAt.getTime() + schedule.serviceDurationMinutes * 60_000;
+  return !schedule.connections.some((connection) => connection.selectedCalendarId && (!connection.staffId || connection.staffId === staffId) && (
     connection.status !== "connected" || !connection.lastSyncedAt || now - connection.lastSyncedAt.getTime() > MAX_CALENDAR_SYNC_AGE_MS
-    || reference.startsAt.getTime() < connection.lastSyncedAt.getTime() || reference.endsAt.getTime() > connection.lastSyncedAt.getTime() + CALENDAR_SYNC_HORIZON_MS
+    || startsAt.getTime() < connection.lastSyncedAt.getTime() || endsAt > connection.lastSyncedAt.getTime() + CALENDAR_SYNC_HORIZON_MS
   ));
 }
 
 /**
- * Reads only staff-specific conflicts. Call after taking the staff advisory
- * lock so the conflict check reflects the holder of the lock.
+ * The staff who could take the service at a time, judged from the schedule
+ * alone, or why no one can: the opening hours and closures first, then staff
+ * and calendar freshness. Their bookings decide the rest.
  */
-async function staffAvailabilityInTransaction(tx: DatabaseTransaction, reference: AvailabilityReference, input: { staffIds: string[]; ignoreAppointmentId?: string }) {
+function staffForTime(schedule: Schedule, startsAt: Date, requestedStaffIds: string[] | undefined, now: number): string[] | UnavailableReason {
+  const closed = scheduleUnavailableReason({ startsAt: startsAt.toISOString(), timezone: schedule.timezone, serviceDurationMinutes: schedule.serviceDurationMinutes, hours: schedule.hours, closures: schedule.closures });
+  if (closed) return closed;
+  const eligible = eligibleStaffIds(schedule, requestedStaffIds);
+  if (!eligible.length) return "no_staff";
+  const fresh = eligible.filter((id) => isCalendarFresh(schedule, id, startsAt, now));
+  return fresh.length ? fresh : "calendar_not_synced";
+}
+
+type BusyTime = { staffId: string; startsAt: string; endsAt: string };
+
+/**
+ * The booked and calendar-busy times of these staff between two instants.
+ * Booking reads them after taking the staff lock, so they include the lock
+ * holder's booking.
+ */
+async function loadBusyTimes(tx: DatabaseTransaction, schedule: Schedule, input: { staffIds: string[]; from: Date; to: Date; ignoreAppointmentId?: string | undefined }): Promise<BusyTime[]> {
   if (!input.staffIds.length) return [];
-  const existing = await tx.select({ staffId: appointments.staffId, startsAt: appointments.startsAt, endsAt: appointments.endsAt }).from(appointments).where(and(eq(appointments.businessId, reference.businessId), ne(appointments.status, "canceled"), input.ignoreAppointmentId ? ne(appointments.id, input.ignoreAppointmentId) : undefined, inArray(appointments.staffId, input.staffIds), lt(appointments.startsAt, reference.endsAt), gt(appointments.endsAt, reference.startsAt)));
-  const configured = reference.connections.filter((connection) => connection.selectedCalendarId && input.staffIds.some((id) => !connection.staffId || connection.staffId === id));
+  const existing = await tx.select({ staffId: appointments.staffId, startsAt: appointments.startsAt, endsAt: appointments.endsAt }).from(appointments).where(and(eq(appointments.businessId, schedule.businessId), ne(appointments.status, "canceled"), input.ignoreAppointmentId ? ne(appointments.id, input.ignoreAppointmentId) : undefined, inArray(appointments.staffId, input.staffIds), lt(appointments.startsAt, input.to), gt(appointments.endsAt, input.from)));
+  const configured = schedule.connections.filter((connection) => connection.selectedCalendarId && input.staffIds.some((id) => !connection.staffId || connection.staffId === id));
   const connectionIds = configured.filter((connection) => connection.status === "connected").map((connection) => connection.id);
   // Events LobbyStack wrote for its own appointments come back as busy blocks. Skip them:
   // the appointment rows above already hold that time for the right staff member. An event
   // someone moved or stretched in the calendar no longer matches its row, so it still blocks.
-  const busy = connectionIds.length ? await tx.select().from(calendarBusyBlocks).where(and(eq(calendarBusyBlocks.businessId, reference.businessId), inArray(calendarBusyBlocks.connectionId, connectionIds), lt(calendarBusyBlocks.startsAt, reference.endsAt), gt(calendarBusyBlocks.endsAt, reference.startsAt),
+  const busy = connectionIds.length ? await tx.select().from(calendarBusyBlocks).where(and(eq(calendarBusyBlocks.businessId, schedule.businessId), inArray(calendarBusyBlocks.connectionId, connectionIds), lt(calendarBusyBlocks.startsAt, input.to), gt(calendarBusyBlocks.endsAt, input.from),
     notExists(tx.select({ id: appointments.id }).from(appointments).where(and(eq(appointments.businessId, calendarBusyBlocks.businessId), eq(appointments.calendarExternalId, calendarBusyBlocks.externalEventId), eq(appointments.startsAt, calendarBusyBlocks.startsAt), eq(appointments.endsAt, calendarBusyBlocks.endsAt)))))) : [];
-  const staffByConnection = new Map(reference.connections.map((connection) => [connection.id, connection.staffId]));
+  const staffByConnection = new Map(schedule.connections.map((connection) => [connection.id, connection.staffId]));
+  return [
+    ...existing.map((row) => ({ staffId: row.staffId, startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString() })),
+    ...busy.flatMap((row) => { const owner = row.staffId ?? staffByConnection.get(row.connectionId); return (owner ? [owner] : input.staffIds).map((staffId) => ({ staffId, startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString() })); }),
+  ];
+}
+
+/** The slots at a time: the staff who could take it and aren't busy then. */
+function openSlots(schedule: Schedule, startsAt: Date, staffIds: string[], busy: BusyTime[]): AvailabilitySlot[] {
   return computeAvailability({
-    request: { serviceId: reference.serviceId, startsAt: reference.startsAt.toISOString(), timezone: reference.timezone },
-    serviceDurationMinutes: reference.serviceDurationMinutes,
-    staffIds: input.staffIds,
-    hours: reference.hours,
-    closures: reference.closures,
-    existingAppointments: [
-      ...existing.map((row) => ({ staffId: row.staffId, startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString() })),
-      ...busy.flatMap((row) => { const owner = row.staffId ?? staffByConnection.get(row.connectionId); return (owner ? [owner] : input.staffIds).map((staffId) => ({ staffId, startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString() })); }),
-    ],
+    request: { serviceId: schedule.serviceId, startsAt: startsAt.toISOString(), timezone: schedule.timezone },
+    serviceDurationMinutes: schedule.serviceDurationMinutes,
+    staffIds,
+    hours: schedule.hours,
+    closures: schedule.closures,
+    existingAppointments: busy,
   });
 }
 
-function scheduleReason(reference: AvailabilityReference) {
-  return scheduleUnavailableReason({ startsAt: reference.startsAt.toISOString(), timezone: reference.timezone, serviceDurationMinutes: reference.serviceDurationMinutes, hours: reference.hours, closures: reference.closures });
-}
-
-/**
- * Why no staff member could take the time, from reference data alone: the
- * opening hours and closures first, then staff and calendar freshness. When
- * none of those apply, the time is taken.
- */
-function unavailableReason(reference: AvailabilityReference, requestedStaffIds: string[] | undefined, now: number): UnavailableReason {
-  const schedule = scheduleReason(reference);
-  if (schedule) return schedule;
-  const eligible = eligibleStaffIds(reference, requestedStaffIds);
-  if (!eligible.length) return "no_staff";
-  if (!eligible.some((id) => isCalendarFresh(reference, id, now))) return "calendar_not_synced";
-  return "taken";
-}
-
-type AvailabilityCheck = { slots: Awaited<ReturnType<typeof staffAvailabilityInTransaction>>; reason?: UnavailableReason };
+type AvailabilityCheck = { slots: AvailabilitySlot[]; reason?: UnavailableReason };
 
 async function availabilityInTransaction(tx: DatabaseTransaction, input: { businessId: string; serviceId: string; startsAt: string; staffIds?: string[]; ignoreAppointmentId?: string }): Promise<AvailabilityCheck> {
   const reference = await loadAvailabilityReference(tx, input);
-  const now = Date.now();
-  // Hours and closures rule the time out for every staff member, so skip their reads.
-  const schedule = scheduleReason(reference);
-  if (schedule) return { slots: [], reason: schedule };
-  const selected = eligibleStaffIds(reference, input.staffIds).filter((id) => isCalendarFresh(reference, id, now));
-  if (!selected.length) return { slots: [], reason: unavailableReason(reference, input.staffIds, now) };
-  const slots = await staffAvailabilityInTransaction(tx, reference, input.ignoreAppointmentId ? { staffIds: selected, ignoreAppointmentId: input.ignoreAppointmentId } : { staffIds: selected });
+  // The schedule alone can rule the time out; then no bookings are read.
+  const staffIds = staffForTime(reference, reference.startsAt, input.staffIds, Date.now());
+  if (typeof staffIds === "string") return { slots: [], reason: staffIds };
+  const slots = openSlots(reference, reference.startsAt, staffIds, await loadBusyTimes(tx, reference, { staffIds, from: reference.startsAt, to: reference.endsAt, ignoreAppointmentId: input.ignoreAppointmentId }));
   return slots.length ? { slots } : { slots, reason: "taken" };
 }
 
 /** The open slots for a time, and when there are none, why. */
 export async function checkAvailability(
   context: DomainContext,
-  input: { userId?: string; businessId: string; serviceId: string; startsAt: string; timezone: string; staffIds?: string[] },
+  input: { businessId: string; serviceId: string; startsAt: string; staffIds?: string[] },
 ): Promise<AvailabilityCheck> {
-  return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: input.userId ? "operator" : "worker" }, async (tx) => {
-    if (input.userId) {
-      await requireBusinessMembership(tx, { userId: input.userId, businessId: input.businessId });
-    }
-    return await availabilityInTransaction(tx, input);
-  });
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => await availabilityInTransaction(tx, input));
 }
 
 export async function findAvailability(
   context: DomainContext,
-  input: { userId?: string; businessId: string; serviceId: string; startsAt: string; timezone: string; staffIds?: string[] },
+  input: { businessId: string; serviceId: string; startsAt: string; staffIds?: string[] },
 ) {
   return (await checkAvailability(context, input)).slots;
+}
+
+/**
+ * Open start times for a service on whole local days, from one read of the
+ * schedule and of the staff's bookings. It tries every half hour inside the
+ * opening hours, nearest the preferred time first, and returns up to `limit`
+ * of them in time order. With none, the reason is why the nearest time can't
+ * be booked: later times can fail for another reason, such as a closure.
+ */
+export async function findOpeningsInTransaction(
+  tx: DatabaseTransaction,
+  input: { businessId: string; serviceId: string; dates: string[]; staffId?: string; preferredMinutes?: number; limit?: number },
+): Promise<{ timezone: string; durationMinutes: number; openings: string[]; reason?: NoOpeningsReason }> {
+  const now = new Date();
+  const schedule = await loadSchedule(tx, { businessId: input.businessId, serviceId: input.serviceId, from: now });
+  const found = { timezone: schedule.timezone, durationMinutes: schedule.serviceDurationMinutes };
+  const candidates = input.dates.flatMap((date) => candidateStartTimes({ date, timezone: schedule.timezone, hours: schedule.hours, durationMinutes: schedule.serviceDurationMinutes, now, ...(input.preferredMinutes !== undefined ? { preferredMinutes: input.preferredMinutes } : {}) }));
+  if (!candidates.length) {
+    const closedDays = input.dates.every((date) => {
+      const day = DateTime.fromISO(`${date}T00:00:00`, { zone: schedule.timezone });
+      return day.isValid && !schedule.hours.some((window) => window.dayOfWeek === day.weekday % 7);
+    });
+    return { ...found, openings: [], reason: !schedule.hours.length ? "no_hours" : closedDays ? "closed_day" : "no_times_left" };
+  }
+  const starts = candidates.map((value) => new Date(value));
+  const requested = input.staffId ? [input.staffId] : undefined;
+  const busy = await loadBusyTimes(tx, schedule, {
+    staffIds: eligibleStaffIds(schedule, requested),
+    from: new Date(Math.min(...starts.map(Number))),
+    to: new Date(Math.max(...starts.map(Number)) + schedule.serviceDurationMinutes * 60_000),
+  });
+  const limit = input.limit ?? Infinity;
+  const openings: string[] = [];
+  let reason: UnavailableReason | undefined;
+  for (const [index, startsAt] of starts.entries()) {
+    if (openings.length >= limit) break;
+    const staffIds = staffForTime(schedule, startsAt, requested, now.getTime());
+    if (typeof staffIds !== "string" && openSlots(schedule, startsAt, staffIds, busy).length) openings.push(candidates[index]!);
+    else reason ??= typeof staffIds === "string" ? staffIds : "taken";
+  }
+  return openings.length ? { ...found, openings: openings.sort() } : { ...found, openings, reason: reason ?? "taken" };
 }
 
 export async function bookAppointment(
   context: DomainContext,
   input: BookingInput,
 ): Promise<{ appointmentId: string; contactId: string; staffId: string }> {
-  return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: input.userId ? "operator" : "worker" }, async (tx) => {
-    if (input.userId) {
-      await requireBusinessMembership(tx, { userId: input.userId, businessId: input.businessId, minimumRole: "scheduler" });
-    }
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     // The first read discovers a stable, sorted lock set. Reference data is
     // reloaded after each candidate lock because it may change while we wait.
     const initialReference = await loadAvailabilityReference(tx, { businessId: input.businessId, serviceId: input.serviceId, startsAt: input.startsAt });
@@ -201,24 +242,25 @@ export async function bookAppointment(
     for (const candidateId of candidates) {
       await lockStaff(tx, candidateId);
       const reference = await loadAvailabilityReference(tx, { businessId: input.businessId, serviceId: input.serviceId, startsAt: input.startsAt });
-      if (!reference.activeStaffIds.includes(candidateId)) continue;
-      if (reference.assignedStaffIds.size && !reference.assignedStaffIds.has(candidateId)) continue;
-      if (!isCalendarFresh(reference, candidateId, Date.now())) continue;
-      const slots = await staffAvailabilityInTransaction(tx, reference, { staffIds: [candidateId] });
-      if (slots.length) {
+      const staffIds = staffForTime(reference, reference.startsAt, [candidateId], Date.now());
+      if (typeof staffIds === "string") continue;
+      if (openSlots(reference, reference.startsAt, staffIds, await loadBusyTimes(tx, reference, { staffIds, from: reference.startsAt, to: reference.endsAt })).length) {
         selectedStaff = { id: candidateId };
         selectedReference = reference;
         break;
       }
     }
     if (!selectedStaff || !selectedReference) {
-      throw new BookingUnavailableError(unavailableReason(initialReference, input.preferredStaffId ? [input.preferredStaffId] : undefined, Date.now()), "No staff member is available for this service.");
+      const staffIds = staffForTime(initialReference, initialReference.startsAt, input.preferredStaffId ? [input.preferredStaffId] : undefined, Date.now());
+      throw new BookingUnavailableError(typeof staffIds === "string" ? staffIds : "taken", "No staff member is available for this service.");
     }
     const reference = selectedReference;
     const startsAt = reference.startsAt;
     const endsAt = reference.endsAt;
     const { contact, created: contactCreated } = await findOrCreateContactByPhone(tx, { businessId: input.businessId, phone: input.contactPhone, name: input.contactName });
     const contactId = contact.id;
+    // A caller's contact is made when the call starts, before anyone knows their name.
+    if (input.contactName && !contactCreated) await tx.update(contacts).set({ name: input.contactName, updatedAt: new Date() }).where(and(eq(contacts.id, contactId), eq(contacts.businessId, input.businessId), isNull(contacts.name)));
     await recordSmsConsentAnswerInTransaction(tx, { businessId: input.businessId, contactId, phone: input.contactPhone, contact, answer: input.smsConsent, source: "appointment_booking" });
     const [appointment] = await tx.insert(appointments).values({
       businessId: input.businessId,

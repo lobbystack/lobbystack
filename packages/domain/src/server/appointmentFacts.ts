@@ -81,6 +81,21 @@ export function serviceNamesMatch(service: ServiceFact, providedServiceName: str
     );
 }
 
+/**
+ * The one service a caller's words name: a service whose name, slug or
+ * localized name is those words, otherwise the only one serviceNamesMatch
+ * accepts. Several partial matches name none.
+ */
+export function matchServiceName<T extends ServiceFact>(services: T[], providedServiceName: string): T | undefined {
+  const provided = normalizeComparable(providedServiceName);
+  if (!provided) {
+    return undefined;
+  }
+  const exact = services.filter((service) => getServiceNameCandidates(service).some((candidate) => normalizeComparable(candidate) === provided));
+  const matches = exact.length ? exact : services.filter((service) => serviceNamesMatch(service, providedServiceName));
+  return matches.length === 1 ? matches[0] : undefined;
+}
+
 export function substantiveServiceNameFactMatches(
   service: ServiceFact,
   providedServiceName: string,

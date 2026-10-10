@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { computeAvailability } from "./availability";
+import { candidateStartTimes, computeAvailability } from "./availability";
 
 describe("computeAvailability", () => {
   it("returns an available slot inside business hours", () => {
@@ -133,5 +133,27 @@ describe("computeAvailability", () => {
     });
 
     expect(result).toEqual([]);
+  });
+});
+
+describe("candidateStartTimes", () => {
+  const weekdayHours = [1, 2, 3, 4, 5].map((dayOfWeek) => ({ dayOfWeek, openMinutes: 8 * 60, closeMinutes: 17 * 60 }));
+
+  it("offers times inside business hours, nearest to the preferred time first", () => {
+    const times = candidateStartTimes({ date: "2030-01-08", timezone: "America/Toronto", hours: weekdayHours, durationMinutes: 60, preferredMinutes: 10 * 60, now: new Date("2030-01-01T00:00:00Z") });
+    expect(times.slice(0, 3)).toEqual(["2030-01-08T15:00:00.000Z", "2030-01-08T14:30:00.000Z", "2030-01-08T15:30:00.000Z"]);
+    expect(times.every((time) => time >= "2030-01-08T13:00:00.000Z" && time <= "2030-01-08T21:00:00.000Z")).toBe(true);
+  });
+
+  it("returns nothing on a closed day or for times already past", () => {
+    expect(candidateStartTimes({ date: "2030-01-06", timezone: "America/Toronto", hours: weekdayHours, durationMinutes: 60 })).toEqual([]);
+    expect(candidateStartTimes({ date: "2030-01-08", timezone: "America/Toronto", hours: weekdayHours, durationMinutes: 60, now: new Date("2030-01-09T00:00:00Z") })).toEqual([]);
+  });
+
+  it("keeps opening times on the wall clock when daylight saving starts", () => {
+    // 2030-03-10 is the Sunday Toronto moves to EDT (UTC-4).
+    const sundayHours = [{ dayOfWeek: 0, openMinutes: 9 * 60, closeMinutes: 11 * 60 }];
+    const times = candidateStartTimes({ date: "2030-03-10", timezone: "America/Toronto", hours: sundayHours, durationMinutes: 60, now: new Date("2030-03-01T00:00:00Z") });
+    expect(times).toEqual(["2030-03-10T13:00:00.000Z", "2030-03-10T13:30:00.000Z", "2030-03-10T14:00:00.000Z"]);
   });
 });

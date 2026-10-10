@@ -5,16 +5,13 @@ vi.mock("@lobbystack/domain", async () => ({
   countKnowledgeTokens: (await import("../../domain/src/knowledgeRanking")).countKnowledgeTokens,
   KNOWLEDGE_SEARCH_TOKEN_BUDGET: 3000,
   knowledgeQueryTerms: (await import("../../domain/src/knowledgeRanking")).knowledgeQueryTerms,
-  checkOpening: vi.fn(),
-  findCallerBooking: vi.fn(async () => undefined),
-  findCallBooking: vi.fn(async () => undefined),
   bookForCaller: vi.fn(async () => ({ ok: true })),
   findOpenings: vi.fn(),
   getSmsConsentOnFile: vi.fn(async () => "not_asked"),
   rescheduleForCaller: vi.fn(),
 }));
 
-import { bookForCaller, checkOpening, findOpenings, rescheduleForCaller } from "@lobbystack/domain";
+import { bookForCaller, findOpenings, rescheduleForCaller } from "@lobbystack/domain";
 import { createReceptionistTools, UNAVAILABLE_TOOL_MESSAGES } from "./tools";
 
 type Execute = (input: object, options: object) => Promise<Record<string, unknown>>;
@@ -41,10 +38,9 @@ describe("bookAppointment refusals", () => {
     ["calendar_not_synced", "calendar hasn't synced"],
     ["taken", "already booked"],
   ])("tells the agent the real reason for %s", async (reason, text) => {
-    vi.mocked(checkOpening).mockResolvedValueOnce({ ok: true, serviceName: "General Checkup", available: false, reason } as never);
+    vi.mocked(bookForCaller).mockResolvedValueOnce({ ok: false, reason } as never);
     const result = await tools().run("bookAppointment", booking);
     expect(result).toEqual({ ok: false, reason: expect.stringContaining(text) });
-    expect(bookForCaller).not.toHaveBeenCalled();
   });
 
   it("calls a time taken only when it is", () => {
@@ -59,23 +55,16 @@ describe("bookAppointment refusals", () => {
     expect(UNAVAILABLE_TOOL_MESSAGES.no_hours).toContain("Don't offer times");
   });
 
-  it("reports the reason when the booking itself is refused after the check", async () => {
-    vi.mocked(checkOpening).mockResolvedValueOnce({ ok: true, serviceName: "General Checkup", available: true } as never);
-    vi.mocked(bookForCaller).mockResolvedValueOnce({ ok: false, reason: "That time is no longer available.", unavailableReason: "taken" } as never);
-    await expect(tools().run("bookAppointment", booking)).resolves.toEqual({ ok: false, reason: UNAVAILABLE_TOOL_MESSAGES.taken });
-  });
-
   it("refuses a time that has already passed", async () => {
     await expect(tools().run("bookAppointment", { ...booking, startsAt: "2026-09-30T10:00" })).resolves.toEqual({ ok: false, reason: expect.stringContaining("already passed") });
-    expect(checkOpening).not.toHaveBeenCalled();
     expect(bookForCaller).not.toHaveBeenCalled();
   });
 
   it("doesn't call an unknown service a taken time", async () => {
-    vi.mocked(checkOpening).mockResolvedValueOnce({ ok: false, reason: "Service is not available." } as never);
+    vi.mocked(bookForCaller).mockResolvedValueOnce({ ok: false, reason: "unknown_service" } as never);
     const result = await tools().run("bookAppointment", booking);
     expect(result.reason).toContain("Service is not available.");
-    expect(result.reason).not.toContain("no longer available");
+    expect(result.reason).not.toContain("already booked");
   });
 });
 
@@ -84,7 +73,11 @@ describe("findAvailability", () => {
     vi.mocked(findOpenings).mockResolvedValueOnce({ ok: true, serviceName: "General Checkup", date: "2026-10-06", timezone: "America/Toronto", openings: [], reason: "no_hours" } as never);
     const result = await tools({ hours: [] }).run("findAvailability", { serviceName: "General Checkup", date: "2026-10-06" });
     expect(result).toMatchObject({ openings: [], reason: UNAVAILABLE_TOOL_MESSAGES.no_hours });
-    expect(vi.mocked(findOpenings).mock.lastCall?.[1]).toMatchObject({ hours: [] });
+  });
+
+  it("asks the agent to check the service name when the business has no such service", async () => {
+    vi.mocked(findOpenings).mockResolvedValueOnce({ ok: false, reason: "unknown_service" } as never);
+    await expect(tools().run("findAvailability", { serviceName: "Oil change", date: "2026-10-06" })).resolves.toEqual({ ok: false, reason: expect.stringContaining("getBusinessServices") });
   });
 
   it("says a day is fully booked only when every time is taken", async () => {

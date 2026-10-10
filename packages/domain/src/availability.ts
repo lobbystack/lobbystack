@@ -69,6 +69,9 @@ function overlaps(
  */
 export type UnavailableReason = "no_hours" | "closed_day" | "outside_hours" | "closure" | "no_staff" | "calendar_not_synced" | "taken";
 
+/** Why a search found no openings. "no_times_left" means every start time those days has passed. */
+export type NoOpeningsReason = UnavailableReason | "no_times_left";
+
 /**
  * A booking or reschedule refused because the time isn't bookable. The
  * message is the one these refusals always had; `reason` says why.
@@ -85,7 +88,7 @@ export class BookingUnavailableError extends Error {
 
 /**
  * The opening-hours or closure reason a time can't be booked, or undefined
- * when hours and closures allow it. Uses the same rules as computeAvailability.
+ * when hours and closures allow it. computeAvailability checks the same rule.
  */
 export function scheduleUnavailableReason(input: {
   startsAt: string;
@@ -108,39 +111,13 @@ export function scheduleUnavailableReason(input: {
 }
 
 export function computeAvailability(input: AvailabilityInput): Array<AvailabilitySlot> {
+  if (scheduleUnavailableReason({ startsAt: input.request.startsAt, timezone: input.request.timezone, serviceDurationMinutes: input.serviceDurationMinutes, hours: input.hours, closures: input.closures })) {
+    return [];
+  }
   const requestedStartUtc = isoToDateTime(input.request.startsAt);
   const requestedEndUtc = requestedStartUtc.plus({
     minutes: input.serviceDurationMinutes,
   });
-  const requestedStartLocal = requestedStartUtc.setZone(input.request.timezone);
-  const requestedEndLocal = requestedEndUtc.setZone(input.request.timezone);
-  const weekday = weekdayToSnapshotDay(requestedStartLocal.weekday);
-  const { startMinutes, endMinutes, endsSameLocalDay } = localSpan(requestedStartLocal, requestedEndLocal);
-
-  const openWindow = input.hours.find(
-    (window) =>
-      window.dayOfWeek === weekday &&
-      startMinutes >= window.openMinutes &&
-      endsSameLocalDay &&
-      endMinutes <= window.closeMinutes,
-  );
-
-  if (!openWindow) {
-    return [];
-  }
-
-  const blockedByClosure = input.closures.some((closure) =>
-    overlaps(
-      requestedStartUtc.toJSDate(),
-      requestedEndUtc.toJSDate(),
-      isoToDate(closure.startsAt),
-      isoToDate(closure.endsAt),
-    ),
-  );
-
-  if (blockedByClosure) {
-    return [];
-  }
 
   const staffIds =
     input.request.preferredStaffId === undefined
@@ -167,4 +144,26 @@ export function computeAvailability(input: AvailabilityInput): Array<Availabilit
         requestedEndUtc.toUTC().toISO() ??
         requestedEndUtc.toJSDate().toISOString(),
     }));
+}
+
+const OPENING_STEP_MINUTES = 30;
+
+// Start times to try on a local date, inside business hours, nearest to the
+// caller's preferred time first.
+export function candidateStartTimes(input: { date: string; timezone: string; hours: HoursWindow[]; durationMinutes: number; preferredMinutes?: number; now?: Date }): string[] {
+  const day = DateTime.fromISO(`${input.date}T00:00:00`, { zone: input.timezone });
+  if (!day.isValid) return [];
+  const weekday = day.weekday % 7;
+  const now = input.now ?? new Date();
+  const minutes: number[] = [];
+  for (const window of input.hours.filter((item) => item.dayOfWeek === weekday)) {
+    for (let start = window.openMinutes; start + input.durationMinutes <= window.closeMinutes; start += OPENING_STEP_MINUTES) minutes.push(start);
+  }
+  const preferred = input.preferredMinutes;
+  return minutes
+    .sort((left, right) => preferred === undefined ? left - right : Math.abs(left - preferred) - Math.abs(right - preferred) || left - right)
+    // Set the wall-clock time; adding minutes to midnight drifts an hour on DST days.
+    .map((value) => day.set({ hour: Math.floor(value / 60), minute: value % 60 }))
+    .filter((start) => start.toJSDate() > now)
+    .map((start) => start.toUTC().toISO()!);
 }

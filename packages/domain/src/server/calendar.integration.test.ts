@@ -100,7 +100,7 @@ describe.skipIf(!testUrl)("calendar backfill against dedicated PostgreSQL roles"
       await tx.insert(calendarBusyBlocks).values({ businessId, connectionId: connection!.id, startsAt, endsAt, externalEventId: "lobbystack-event" });
 
       await asWorker(tx, async (db) => {
-        const { slots } = await checkAvailability({ db }, { businessId, serviceId, startsAt: startsAt.toISOString(), timezone: "UTC" });
+        const { slots } = await checkAvailability({ db }, { businessId, serviceId, startsAt: startsAt.toISOString() });
         expect(slots.map((slot) => slot.staffId)).toEqual([secondStaffId]);
         const moved = await withBusinessTransaction(db, { businessId, actorType: "worker" }, (workerTx) => rescheduleAppointmentInTransaction(workerTx, { businessId, appointmentId: booked.id, startsAt: new Date(startsAt.getTime() + 15 * 60_000).toISOString(), change: { source: "caller" } }));
         expect(moved?.appointmentId).toBe(booked.id);
@@ -119,7 +119,7 @@ describe.skipIf(!testUrl)("calendar backfill against dedicated PostgreSQL roles"
       const movedTo = new Date(startsAt.getTime() + 4 * 3_600_000);
       await tx.insert(calendarBusyBlocks).values({ businessId, connectionId: connection!.id, startsAt: movedTo, endsAt: new Date(movedTo.getTime() + 30 * 60_000), externalEventId: "lobbystack-event" });
 
-      const { slots } = await asWorker(tx, (db) => checkAvailability({ db }, { businessId, serviceId, startsAt: movedTo.toISOString(), timezone: "UTC" }));
+      const { slots } = await asWorker(tx, (db) => checkAvailability({ db }, { businessId, serviceId, startsAt: movedTo.toISOString() }));
       expect(slots).toEqual([]);
     });
   });

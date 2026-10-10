@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { appointmentTimesMatch, personNamesMatch, serviceNamesMatch, substantiveServiceNameFactMatches } from "./appointmentFacts";
+import { appointmentTimesMatch, matchServiceName, personNamesMatch, serviceNamesMatch, substantiveServiceNameFactMatches } from "./appointmentFacts";
 describe("appointment fact verification", () => {
   it("matches a name only when both sides have one", () => {
     expect(personNamesMatch("Alex Morgan", undefined)).toBe(false);
@@ -47,5 +47,22 @@ describe("appointment fact verification", () => {
     expect(appointmentTimesMatch(appointment, "Friday at 15:30")).toBe(false);
     expect(appointmentTimesMatch(appointment, "Thursday at 10:30 am")).toBe(false);
     expect(appointmentTimesMatch(appointment, "morning")).toBe(false);
+  });
+
+  it("picks the one service a caller's words name", () => {
+    const services = [
+      { id: "cut", name: "Haircut", slug: "haircut", localizedNames: { fr: "Coupe" } },
+      { id: "kids", name: "Kids haircut", slug: "kids-haircut" },
+      { id: "beard", name: "Beard trim", slug: "beard-trim" },
+    ];
+    // An exact name, slug or localized name wins over a longer name that contains it.
+    expect(matchServiceName(services, "haircut")?.id).toBe("cut");
+    expect(matchServiceName(services, "COUPE")?.id).toBe("cut");
+    expect(matchServiceName(services, "beard-trim")?.id).toBe("beard");
+    expect(matchServiceName(services, "kids")?.id).toBe("kids");
+    // Words that fit several services, or none, name nothing. SQL wildcards are plain text.
+    expect(matchServiceName(services, "haircut and beard trim")).toBeUndefined();
+    expect(matchServiceName(services, "%")).toBeUndefined();
+    expect(matchServiceName(services, "h_ircut")).toBeUndefined();
   });
 });
