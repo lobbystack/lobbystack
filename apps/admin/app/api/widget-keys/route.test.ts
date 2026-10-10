@@ -1,17 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ insert: vi.fn() }));
+const mocks = vi.hoisted(() => ({ insert: vi.fn(), select: vi.fn(), update: vi.fn() }));
 
 vi.mock("@/lib/api-helpers", () => ({
   readJson: (request: Request) => request.json(),
-  withOperatorTransaction: (_request: Request, callback: (input: unknown) => Promise<unknown>) => callback({ businessId: "business", tx: { insert: mocks.insert } }),
+  withOperatorTransaction: (_request: Request, callback: (input: unknown) => Promise<unknown>) => callback({ businessId: "business", tx: { insert: mocks.insert, select: mocks.select, update: mocks.update } }),
   jsonError: (message: string, status = 400, code?: string) => new Response(JSON.stringify({ error: message, ...(code ? { code } : {}) }), { status }),
   asApiResponse: (error: unknown) => (error instanceof Response ? error : new Response(JSON.stringify({ error: "Request failed." }), { status: 500 })),
 }));
 
 vi.mock("@lobbystack/db", () => ({ widgetKeys: {} }));
 
-import { POST } from "./route";
+import { PATCH, POST } from "./route";
 
 const request = (body: Record<string, unknown> = {}) => new Request("https://admin.test/api/widget-keys", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
 
@@ -50,5 +50,35 @@ describe("widget key issuance gate", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ ok: true });
     expect(mocks.insert).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses an origin without https:// instead of saving one no browser sends", async () => {
+    vi.stubEnv("WIDGET_KEY_ISSUANCE_ENABLED", "true");
+    const response = await POST(request({ allowedOrigins: ["https://business.test", "business.test"] }));
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ code: "invalid_origin" });
+    expect(mocks.insert).not.toHaveBeenCalled();
+  });
+});
+
+describe("widget key updates", () => {
+  const keyId = "00000000-0000-4000-8000-000000000001";
+  const patch = (body: Record<string, unknown>, id = keyId) => PATCH(new Request(`https://admin.test/api/widget-keys?id=${id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }));
+  const existing = (status: string) => mocks.select.mockReturnValue({ from: () => ({ where: () => ({ limit: async () => [{ id: keyId, status }] }) }) });
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it("answers user mistakes with 400, 404 or 409 and saves nothing", async () => {
+    existing("active");
+    const typo = await patch({ status: "paused", label: "Site" });
+    expect(typo.status).toBe(400);
+    expect((await patch({}, "not-a-key")).status).toBe(404);
+    existing("revoked");
+    const revive = await patch({ status: "active" });
+    expect(revive.status).toBe(409);
+    expect(await revive.json()).toMatchObject({ code: "widget_key_revoked" });
+    expect(mocks.update).not.toHaveBeenCalled();
   });
 });
