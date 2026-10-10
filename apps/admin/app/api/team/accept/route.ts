@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 
 import { acceptInvitation, previewInvitation } from "@lobbystack/domain";
-import { asApiResponse, readJson, requireApiSession } from "@/lib/api-helpers";
+import { asApiResponse, jsonError, readJson, requireApiSession } from "@/lib/api-helpers";
 import { createDomainContext } from "@/lib/domain-context";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     const session = await requireApiSession(request);
     const body = await readJson(request);
     if (typeof body !== "object" || body === null || Array.isArray(body) || typeof (body as { token?: unknown }).token !== "string") {
-      throw new Error("An invitation token is required.");
+      return jsonError("An invitation token is required.", 400);
     }
     const tokenHash = createHash("sha256").update((body as { token: string }).token).digest("hex");
     return NextResponse.json(await acceptInvitation(createDomainContext(), { userId: session.user.id, tokenHash, email: session.user.email, emailVerified: session.user.emailVerified }));

@@ -3,7 +3,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 import { businessHours, businessInvitations, businessMemberships, createDatabaseClient, services, staff, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { findAvailability } from "./booking";
-import { acceptInvitation, createBusiness, inviteMember, listUserBusinesses, removeMember } from "./tenancy";
+import { acceptInvitation, createBusiness, inviteMember, listUserBusinesses, previewInvitation, removeMember, revokeInvitation } from "./tenancy";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
 const testUrl = process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL;
@@ -115,11 +115,38 @@ describe.skipIf(!client)("team membership", () => {
       await removeMember(context, { userId: owner!.id, businessId, membershipId: goneMembership.membership_id });
 
       expect((await listMembers(owner!.id)).map((row) => row.user_id).sort()).toEqual([owner!.id, admin!.id].sort());
-      await expect(accept(gone!, spareForGone)).rejects.toThrow("Invitation is invalid or expired.");
-      await expect(accept(alt!, sentByGone)).rejects.toThrow("Invitation is invalid or expired.");
+      await expect(accept(gone!, spareForGone)).rejects.toMatchObject({ status: 409, message: "Invitation is invalid or expired." });
+      await expect(accept(alt!, sentByGone)).rejects.toMatchObject({ status: 409, message: "Invitation is invalid or expired." });
       await tx.execute(sql`reset role`);
       const revoked = await tx.select({ status: businessInvitations.status }).from(businessInvitations).where(and(eq(businessInvitations.businessId, businessId), eq(businessInvitations.status, "revoked")));
       expect(revoked).toHaveLength(2);
+    });
+  });
+
+  it("refuses a viewer who invites, removes a member or revokes an invitation", async () => {
+    await rollbackTest(async (tx) => {
+      const { context, businessId, people: [owner, viewer, admin], invite, accept, listMembers } = await seedTeam(tx, ["Ana", "Vic", "Ben"]);
+      await accept(viewer!, await invite(owner!.id, viewer!.email, "viewer"));
+      await accept(admin!, await invite(owner!.id, admin!.email, "business_admin"));
+      const pending = await inviteMember(context, { userId: owner!.id, businessId, email: "later@example.invalid", role: "viewer" });
+      const adminMembership = (await listMembers(owner!.id)).find((row) => row.user_id === admin!.id)!;
+
+      await expect(inviteMember(context, { userId: viewer!.id, businessId, email: "friend@example.invalid", role: "business_admin" })).rejects.toMatchObject({ status: 403 });
+      await expect(removeMember(context, { userId: viewer!.id, businessId, membershipId: adminMembership.membership_id })).rejects.toMatchObject({ status: 403 });
+      await expect(revokeInvitation(context, { userId: viewer!.id, businessId, invitationId: pending.invitationId })).rejects.toMatchObject({ status: 403 });
+    });
+  });
+
+  it("previews an expired invitation as expired and refuses to accept it", async () => {
+    await rollbackTest(async (tx) => {
+      const { context, people: [owner, invitee], invite, accept } = await seedTeam(tx, ["Ana", "Ivy"]);
+      const token = await invite(owner!.id, invitee!.email, "viewer");
+      await tx.execute(sql`reset role`);
+      await tx.update(businessInvitations).set({ expiresAt: new Date(Date.now() - 60_000) }).where(eq(businessInvitations.tokenHash, hash(token)));
+      await tx.execute(sql`set local role lobbystack_app`);
+
+      await expect(previewInvitation(context, { tokenHash: hash(token) })).resolves.toMatchObject({ expired: true, status: "pending" });
+      await expect(accept(invitee!, token)).rejects.toMatchObject({ status: 409 });
     });
   });
 

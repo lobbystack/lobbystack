@@ -157,9 +157,9 @@ export async function updateBusinessInTransaction(
 ): Promise<void> {
   const timezone = input.timezone === undefined ? undefined : requireIanaTimeZone(input.timezone);
   const values = { ...(input.name !== undefined ? { name: input.name.trim() } : {}), ...(timezone !== undefined ? { timezone } : {}), ...(input.businessType !== undefined ? { businessType: input.businessType.trim() } : {}), ...(input.defaultLocale !== undefined ? { defaultLocale: input.defaultLocale.trim() } : {}), ...(input.websiteUrl !== undefined ? { websiteUrl: input.websiteUrl } : {}), updatedAt: new Date() };
-  if (Object.keys(values).length === 1) throw new Error("At least one business field is required.");
+  if (Object.keys(values).length === 1) throw Object.assign(new Error("At least one business field is required."), { status: 400 });
   const [business] = await tx.update(businesses).set(values).where(eq(businesses.id, input.businessId)).returning({ id: businesses.id });
-  if (!business) throw new Error("Business not found.");
+  if (!business) throw Object.assign(new Error("Business not found."), { status: 404 });
   // shortcut: every staff row today is the default member that stands for the business; once staff set their own zones, update only that member.
   if (timezone !== undefined) await tx.update(staff).set({ timezone, updatedAt: new Date() }).where(eq(staff.businessId, input.businessId));
   await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "business", aggregateId: input.businessId, dedupeKey: `business:${input.businessId}:snapshot:${Date.now()}`, payload: { businessId: input.businessId, reason: "business_updated" } });
@@ -234,13 +234,14 @@ export async function acceptInvitation(
   const resolved = await context.db.execute<{ business_id: string }>(sql`select app.resolve_business_by_invitation(${input.tokenHash}) as business_id`);
   const businessId = resolved.rows[0]?.business_id;
   if (!businessId) {
-    throw new Error("Invitation is invalid or expired.");
+    throw Object.assign(new Error("Invitation is invalid or expired."), { status: 404 });
   }
   return await withBusinessTransaction(context.db, { userId: input.userId, actorType: "system", businessId }, async (tx) => {
     const rows = await tx.select().from(businessInvitations).where(and(eq(businessInvitations.tokenHash, input.tokenHash), eq(businessInvitations.status, "pending"))).limit(1);
     const invitation = rows[0];
+    // The resolver also finds accepted, revoked and expired invitations, so the preview can say which.
     if (!invitation || invitation.expiresAt <= new Date()) {
-      throw new Error("Invitation is invalid or expired.");
+      throw Object.assign(new Error("Invitation is invalid or expired."), { status: 409 });
     }
     // A forwarded or leaked link must not let a different account join.
     if (!input.emailVerified || !input.email || normalizeAuthEmail(input.email) !== invitation.normalizedEmail) {
@@ -249,7 +250,7 @@ export async function acceptInvitation(
     // Claim the invitation before joining, so a second accept of the same token fails.
     const [claimed] = await tx.update(businessInvitations).set({ status: "accepted", acceptedByUserId: input.userId, acceptedAt: new Date(), updatedAt: new Date() }).where(and(eq(businessInvitations.id, invitation.id), eq(businessInvitations.status, "pending"))).returning({ id: businessInvitations.id });
     if (!claimed) {
-      throw new Error("Invitation is invalid or expired.");
+      throw Object.assign(new Error("Invitation is invalid or expired."), { status: 409 });
     }
     // An active member keeps their role, so an owner who accepts a viewer invite stays owner.
     const [joined] = await tx.insert(businessMemberships).values({
@@ -286,22 +287,6 @@ export async function previewInvitation(
   });
 }
 
-export async function updateMemberRole(
-  context: DomainContext,
-  input: { userId: string; businessId: string; membershipId: string; role: Exclude<BusinessRole, "business_owner"> },
-): Promise<void> {
-  await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
-    await requireBusinessAdmin(tx, input);
-    const membership = (await tx.select({ userId: businessMemberships.userId, role: businessMemberships.role }).from(businessMemberships).where(and(eq(businessMemberships.id, input.membershipId), eq(businessMemberships.businessId, input.businessId), eq(businessMemberships.status, "active"))).limit(1))[0];
-    if (!membership) throw new Error("Membership not found.");
-    if (membership.role === "business_owner") {
-      const owners = await tx.select({ id: businessMemberships.id }).from(businessMemberships).where(and(eq(businessMemberships.businessId, input.businessId), eq(businessMemberships.role, "business_owner"), eq(businessMemberships.status, "active")));
-      if (owners.length <= 1) throw new Error("The final owner cannot be changed.");
-    }
-    await tx.update(businessMemberships).set({ role: input.role, updatedAt: new Date() }).where(and(eq(businessMemberships.id, input.membershipId), eq(businessMemberships.businessId, input.businessId), eq(businessMemberships.status, "active")));
-  });
-}
-
 export async function removeMember(
   context: DomainContext,
   input: { userId: string; businessId: string; membershipId: string },
@@ -309,10 +294,10 @@ export async function removeMember(
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
     const membership = (await tx.select({ role: businessMemberships.role, userId: businessMemberships.userId }).from(businessMemberships).where(and(eq(businessMemberships.id, input.membershipId), eq(businessMemberships.businessId, input.businessId), eq(businessMemberships.status, "active"))).limit(1))[0];
-    if (!membership) throw new Error("Membership not found.");
+    if (!membership) throw Object.assign(new Error("Membership not found."), { status: 404 });
     if (membership.role === "business_owner") {
       const owners = await tx.select({ id: businessMemberships.id }).from(businessMemberships).where(and(eq(businessMemberships.businessId, input.businessId), eq(businessMemberships.role, "business_owner"), eq(businessMemberships.status, "active")));
-      if (owners.length <= 1) throw new Error("The final owner cannot be removed.");
+      if (owners.length <= 1) throw Object.assign(new Error("The final owner cannot be removed."), { status: 409 });
     }
     // RLS hides the member's users row from the app role; this function returns their email.
     const email = (await tx.execute<{ email: string }>(sql`select email from app.list_business_members(${input.businessId}::uuid) where membership_id = ${input.membershipId}::uuid`)).rows[0]?.email;
@@ -329,6 +314,6 @@ export async function revokeInvitation(
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
     const changed = await tx.update(businessInvitations).set({ status: "revoked", updatedAt: new Date() }).where(and(eq(businessInvitations.id, input.invitationId), eq(businessInvitations.businessId, input.businessId), eq(businessInvitations.status, "pending"))).returning({ id: businessInvitations.id });
-    if (!changed.length) throw new Error("Invitation not found or already resolved.");
+    if (!changed.length) throw Object.assign(new Error("Invitation not found or already resolved."), { status: 409 });
   });
 }
