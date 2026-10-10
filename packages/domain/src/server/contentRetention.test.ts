@@ -9,7 +9,7 @@ vi.mock("@lobbystack/db", async (original) => ({
 }));
 vi.mock("./notifications", () => ({ queueOperatorAlertInTransaction: vi.fn() }));
 
-import { inboxItems, messages, transcripts } from "@lobbystack/db";
+import { conversations, conversationSessions, inboxItems, messages, transcripts } from "@lobbystack/db";
 import { appendMessage } from "./conversations";
 import { receiveInboundSms } from "./sms";
 import { upsertTranscript } from "./voice";
@@ -128,6 +128,23 @@ describe("approved content retention", () => {
       topic: "privacy.deleteRecording",
       payload: { callId: "call", objectId: "recording", source: "retention" },
     }));
+  });
+  it("clears summary text that quotes an expired transcript, and the conversation's copy only while it matches", async () => {
+    const quote = "Hi, this is Jane, calling about my test results";
+    directlySelected = [
+      { id: "summary-session", conversationId: "conversation", summary: { kind: "summary", summary: quote } },
+      { id: "message-session", conversationId: "conversation", summary: { kind: "message_taking", summary: quote } },
+    ];
+    await runPrivacyRetentionSweep(context, { businessId: "business", now });
+    expect(updates.filter((entry) => entry.table === conversationSessions).map((entry) => entry.values)).toEqual([
+      { summary: null, summaryKind: null, updatedAt: now },
+      { summary: { kind: "message_taking" }, updatedAt: now },
+    ]);
+    const conversation = updates.find((entry) => entry.table === conversations)!;
+    expect(conversation.values).toEqual({ summary: null, updatedAt: now });
+    const query = new PgDialect().sqlToQuery(conversation.where!);
+    expect(query.sql).toContain('"conversations"."summary" = $');
+    expect(query.params).toContain(quote);
   });
   it("uses the same media scrub in the scheduled sweep", async () => {
     const result = await runPrivacyRetentionSweep(context, { businessId: "business", now });

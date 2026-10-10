@@ -1,6 +1,6 @@
-import { and, eq, isNotNull, lt } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, lt } from "drizzle-orm";
 
-import { calls, enqueueOutbox, inboxItems, messages, operatorNotificationDeliveries, storageObjects, transcripts, withBusinessTransaction } from "@lobbystack/db";
+import { calls, conversations, conversationSessions, enqueueOutbox, inboxItems, messages, operatorNotificationDeliveries, storageObjects, transcripts, withBusinessTransaction } from "@lobbystack/db";
 
 import { EXPIRED_FOLLOW_UP_BODY, EXPIRED_FOLLOW_UP_TITLE } from "./followUpRetention";
 import type { DomainContext } from "./context";
@@ -24,6 +24,22 @@ export async function runPrivacyRetentionSweep(
     const deletedTranscripts = !contentRetentionEnabled ? [] : await tx.delete(transcripts)
       .where(and(eq(transcripts.businessId, input.businessId), isNotNull(transcripts.expiresAt), lt(transcripts.expiresAt, now)))
       .returning({ callId: transcripts.callId });
+    const expiredCallIds = [...new Set(deletedTranscripts.map((row) => row.callId))];
+    // A call's summary often quotes the caller, so its text expires with the transcript.
+    const quotingSessions = !expiredCallIds.length ? [] : await tx.select({ id: conversationSessions.id, conversationId: conversationSessions.conversationId, summary: conversationSessions.summary })
+      .from(conversationSessions)
+      .where(and(eq(conversationSessions.businessId, input.businessId), inArray(conversationSessions.callId, expiredCallIds), inArray(conversationSessions.summaryKind, ["summary", "message_taking"])));
+    for (const session of quotingSessions) {
+      const text = session.summary?.summary;
+      if (typeof text !== "string") continue;
+      await tx.update(conversationSessions)
+        .set(session.summary?.kind === "message_taking" ? { summary: { kind: "message_taking" }, updatedAt: now } : { summary: null, summaryKind: null, updatedAt: now })
+        .where(and(eq(conversationSessions.id, session.id), eq(conversationSessions.businessId, input.businessId)));
+      // A conversation spans many calls: clear its summary only while it still holds this call's text.
+      await tx.update(conversations)
+        .set({ summary: null, updatedAt: now })
+        .where(and(eq(conversations.id, session.conversationId), eq(conversations.businessId, input.businessId), eq(conversations.summary, text)));
+    }
     const scrubbedOperatorDeliveries = await tx.update(operatorNotificationDeliveries)
       .set({ subject: "[content expired]", body: "[content expired]", destination: "[expired]", sender: null, contentExpiresAt: new Date("9999-12-31T00:00:00.000Z"), updatedAt: now })
       .where(and(eq(operatorNotificationDeliveries.businessId, input.businessId), lt(operatorNotificationDeliveries.contentExpiresAt, now)))
@@ -41,7 +57,7 @@ export async function runPrivacyRetentionSweep(
       ));
 
     const dateKey = now.toISOString().slice(0, 10);
-    for (const callId of new Set(deletedTranscripts.map((row) => row.callId))) {
+    for (const callId of expiredCallIds) {
       await enqueueOutbox(tx, {
         topic: "realtime.publish",
         businessId: input.businessId,
