@@ -913,6 +913,17 @@ describe("LiveCallController ending when the caller is done", () => {
     expect(endOnClose(socket, closed)).toBe("service_restart");
   });
 
+  // spam_ended is the one disposition that isn't billed, so spam outranks the wrap-up.
+  it("records spam when the agent ends a call for spam during a wrap-up", async () => {
+    fakeTimers();
+    const holder: { controller?: LiveCallController } = {};
+    const { socket, controller, closed } = setup({ generate: endingAgent(holder, "spam") });
+    holder.controller = controller;
+    void controller.wrapUp("duration_limit");
+    await sayGoodbye(socket);
+    expect(endOnClose(socket, closed)).toBe("spam");
+  });
+
   it("records a timeout after the caller kept the call going with the timeout's reason", async () => {
     fakeTimers();
     const holder: { controller?: LiveCallController } = {};

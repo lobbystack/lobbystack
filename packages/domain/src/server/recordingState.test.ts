@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { recordingListState, recordingState } from "./recordingState";
 
-const phoneCall = { recordingObjectId: null, recordingStatus: null, retentionUntil: null, transport: "voice", disposition: "completed", endedAt: new Date() };
+const phoneCall = { recordingObjectId: null, recordingStatus: null, retentionUntil: null, transport: "voice", disposition: "completed", startedAt: new Date(), endedAt: new Date() };
 
 describe("call recording availability", () => {
   it("matches main's unavailable state until a recording object exists", () => {
@@ -25,6 +25,13 @@ describe("call recording availability", () => {
 
   it("does not promise a recording for an unrecorded browser call", () => {
     expect(recordingState({ ...phoneCall, transport: "webrtc" })).toBe("missing");
+  });
+
+  it("stops listing a call left open as pending once it's past the longest call and the recording wait", () => {
+    const startedAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000);
+    expect(recordingListState({ ...phoneCall, transport: "webrtc", endedAt: null })).toBe("missing");
+    expect(recordingListState({ ...phoneCall, startedAt: startedAgo(39), endedAt: null })).toBe("pending");
+    expect(recordingListState({ ...phoneCall, startedAt: startedAgo(41), endedAt: null })).toBe("missing");
   });
 
   it("exposes only ready stored recordings and respects retention", () => {

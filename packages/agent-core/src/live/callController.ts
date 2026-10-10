@@ -724,7 +724,9 @@ export class LiveCallController {
   /**
    * Ends the call for the agent's endCall. A caller who is done can still say
    * more first, and the call goes on; spam and abuse end once the goodbye has
-   * played, whatever the caller says. A call already ending keeps its reason.
+   * played, whatever the caller says. A call already ending keeps its reason,
+   * except that spam and abuse replace it, so a spam call that ends during a
+   * wrap-up is still recorded as spam and isn't billed.
    */
   end(reason: AgentEnd): void {
     if (reason === "caller_finished") this.endWhenCallerDone();
@@ -733,9 +735,10 @@ export class LiveCallController {
 
   /** Ends the call once the receptionist has said goodbye. Nothing the caller says stops it. */
   private endAfterGoodbye(reason: AgentEnd): void {
-    if (this.ending || this.finished) return;
+    if (this.finished) return;
+    this.endReason = reason;
+    if (this.ending) return;
     this.ending = true;
-    this.endReason ??= reason;
     this.afterSpeech(() => this.endSession());
   }
 
