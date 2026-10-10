@@ -118,7 +118,6 @@ export default defineRailway((ctx) => {
       AUTH_TRUSTED_ORIGINS: "${{APP_BASE_URL}}",
       BETTER_AUTH_USE_SECURE_COOKIES: "true",
       REQUIRE_EMAIL_VERIFICATION: "false",
-      SEND_VERIFICATION_EMAIL_ON_SIGNUP: "false",
       WIDGET_KEY_ISSUANCE_ENABLED: "false",
       // GPT-Live answers browser and phone calls; the worker runs each call.
       LIVE_PROTOTYPE_ENABLED: "true",
