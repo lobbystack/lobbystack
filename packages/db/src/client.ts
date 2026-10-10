@@ -93,52 +93,40 @@ export async function withBusinessTransaction<T>(
   context: RlsContext,
   callback: (tx: DatabaseTransaction) => Promise<T>,
 ): Promise<T> {
-  const maxRetries = 3;
-  const tracer = getTracer("lobbystack-db");
+  const startedAt = Date.now();
+  const span = getTracer("lobbystack-db").startSpan("db.transaction", {
+    attributes: {
+      "db.system": "postgresql",
+      "db.operation.name": "transaction",
+      "lobbystack.actor_type": context.actorType,
+    },
+  });
 
-  for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
-    const startedAt = Date.now();
-    const span = tracer.startSpan("db.transaction", {
-      attributes: {
-        "db.system": "postgresql",
-        "db.operation.name": "transaction",
-        "lobbystack.actor_type": context.actorType,
-        "lobbystack.retry_attempt": attempt,
-      },
+  try {
+    const result = await db.transaction(async (tx) => {
+      await tx.execute(rlsContextStatement(context));
+      return await callback(tx);
     });
-
-    try {
-      const result = await db.transaction(async (tx) => {
-        await tx.execute(rlsContextStatement(context));
-        return await callback(tx);
-      });
-      span.end();
-      transactionDurationHistogram.record(Date.now() - startedAt, {
-        actor_type: context.actorType,
-        outcome: "success",
-      });
-      return result;
-    } catch (error) {
-      recordException(error, {
-        service: "database",
-        operation: "transaction",
-        actorType: context.actorType,
-      });
-      span.recordException(error instanceof Error ? error : new Error(String(error)));
-      span.end();
-      const code = typeof error === "object" && error !== null && "code" in error ? error.code : undefined;
-      if (code !== "40001" || attempt >= maxRetries) {
-        transactionDurationHistogram.record(Date.now() - startedAt, {
-          actor_type: context.actorType,
-          outcome: "error",
-        });
-        throw error;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 10 * 2 ** attempt));
-    }
+    span.end();
+    transactionDurationHistogram.record(Date.now() - startedAt, {
+      actor_type: context.actorType,
+      outcome: "success",
+    });
+    return result;
+  } catch (error) {
+    recordException(error, {
+      service: "database",
+      operation: "transaction",
+      actorType: context.actorType,
+    });
+    span.recordException(error instanceof Error ? error : new Error(String(error)));
+    span.end();
+    transactionDurationHistogram.record(Date.now() - startedAt, {
+      actor_type: context.actorType,
+      outcome: "error",
+    });
+    throw error;
   }
-
-  throw new Error("PostgreSQL transaction retry loop exhausted.");
 }
 
 export async function withDispatcherTransaction<T>(
