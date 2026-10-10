@@ -46,3 +46,25 @@ it("fails so Twilio can retry when the opt-out can't be saved", async () => {
   mocks.shared.mockRejectedValue(new Error("database unavailable"));
   expect((await POST(request({ To: SHARED, Body: "STOP" }))).status).toBe(500);
 });
+
+it("checks a text to the shared sender from its separate Twilio account with the alert signing key", async () => {
+  vi.stubEnv("TWILIO_ACCOUNT_SID", "ACmain");
+  vi.stubEnv("TWILIO_AUTH_TOKEN", "main-token");
+  vi.stubEnv("TWILIO_ALERT_ACCOUNT_SID", "ACalert");
+  vi.stubEnv("TWILIO_ALERT_SMS_FROM", SHARED);
+  vi.stubEnv("TWILIO_ALERT_WEBHOOK_KEY_ID", "webhooks_alert");
+  vi.stubEnv("TWILIO_ALERT_WEBHOOK_SECRET", "alert-signing-secret");
+  const signed = (fields: Record<string, string>, keySid?: string) => new Request("https://admin.example.invalid/api/webhooks/twilio/sms", { method: "POST", headers: keySid ? { "x-twilio-signature-key-sid": keySid } : {}, body: new URLSearchParams({ MessageSid: "SMfixture", From: "+14165550100", ...fields }) });
+  try {
+    expect((await POST(signed({ AccountSid: "ACalert", To: SHARED, Body: "STOP" }, "webhooks_alert"))).status).toBe(200);
+    expect(mocks.valid).toHaveBeenLastCalledWith(expect.objectContaining({ authToken: "alert-signing-secret" }));
+    expect(mocks.shared).toHaveBeenCalledWith({}, { from: "+14165550100", body: "STOP" });
+    // The alert account can't sign for a business's own number, and the main account keeps its auth token.
+    await POST(signed({ AccountSid: "ACalert", To: "+14165550123", Body: "Hi" }, "webhooks_alert"));
+    expect(mocks.valid).toHaveBeenLastCalledWith(expect.objectContaining({ authToken: undefined }));
+    await POST(signed({ AccountSid: "ACmain", To: "+14165550123", Body: "Hi" }));
+    expect(mocks.valid).toHaveBeenLastCalledWith(expect.objectContaining({ authToken: "main-token" }));
+  } finally {
+    vi.unstubAllEnvs();
+  }
+});
