@@ -43,7 +43,7 @@ it("preserves busy data on one calendar failure and still reconciles other conne
   provider.getBusyBlocks.mockRejectedValueOnce(new Error("permission denied")).mockResolvedValueOnce([]);
   await expect(reconcileBusinessCalendar(dependencies, "business")).rejects.toThrow("1 connection");
   expect(mocks.busy).toHaveBeenCalledOnce();
-  expect(mocks.busy).toHaveBeenCalledWith(dependencies.domain, expect.objectContaining({ connectionId: "second", calendarId: "two", markSynced: true }));
+  expect(mocks.busy).toHaveBeenCalledWith(dependencies.domain, expect.objectContaining({ connectionId: "second", calendarId: "two" }));
   expect(mocks.mark).toHaveBeenCalledWith(dependencies.domain, expect.objectContaining({ connectionId: "first", error: "permission denied" }));
 });
 

@@ -1,4 +1,5 @@
-import { and, eq, gt, inArray, isNull, ne, sql } from "drizzle-orm";
+import { createHash } from "node:crypto";
+import { and, eq, gt, inArray, isNull, ne, notExists, sql } from "drizzle-orm";
 import { assertCertificationCalendar } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
@@ -75,6 +76,7 @@ export async function connectCalendar(
       if (replaced.length) {
         await tx.insert(auditLogs).values(replaced.map(({ id }) => ({ businessId: input.businessId, actorUserId: input.userId, eventType: "calendar_connection.disconnected", entityType: "calendar_connection", entityId: id, payload: { provider: input.provider, replacedBy: connection.id } })));
         await tx.delete(calendarBusyBlocks).where(and(eq(calendarBusyBlocks.businessId, input.businessId), inArray(calendarBusyBlocks.connectionId, replaced.map(({ id }) => id))));
+        await releaseCalendarAppointments(tx, input.businessId, null);
       }
     }
     await enqueueOutbox(tx, {
@@ -96,25 +98,27 @@ export async function connectCalendar(
   return connectionId;
 }
 
+// Postgres caps one statement at 65,535 bound values and a busy-block row binds up to six.
+const BUSY_BLOCK_INSERT_CHUNK = 5_000;
+
 export async function upsertBusyBlocks(
   context: DomainContext,
-  input: { businessId: string; connectionId: string; calendarId?: string; markSynced?: boolean; syncStartedAt?: Date; blocks: Array<{ startsAt: string; endsAt: string; externalEventId?: string; staffId?: string }> },
+  input: { businessId: string; connectionId: string; calendarId: string; syncStartedAt?: Date; blocks: Array<{ startsAt: string; endsAt: string; externalEventId?: string; staffId?: string }> },
 ): Promise<void> {
   await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const [connection] = await tx.select().from(calendarConnections).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId))).limit(1).for("update");
-    if (!connection || connection.status === "disconnected" || (input.calendarId !== undefined && connection.selectedCalendarId !== input.calendarId)) throw new Error("Calendar selection changed during synchronization.");
+    if (!connection || connection.status === "disconnected" || connection.selectedCalendarId !== input.calendarId) throw new Error("Calendar selection changed during synchronization.");
     await tx.delete(calendarBusyBlocks).where(and(eq(calendarBusyBlocks.businessId, input.businessId), eq(calendarBusyBlocks.connectionId, input.connectionId)));
-    if (input.blocks.length > 0) {
-      await tx.insert(calendarBusyBlocks).values(input.blocks.map((block) => ({
-        businessId: input.businessId,
-        connectionId: input.connectionId,
-        startsAt: new Date(block.startsAt),
-        endsAt: new Date(block.endsAt),
-        externalEventId: block.externalEventId,
-        staffId: block.staffId,
-      })));
-    }
-    if (input.markSynced) await tx.update(calendarConnections).set({ status: "connected", lastSyncError: null, lastSyncedAt: input.syncStartedAt ?? new Date(), updatedAt: new Date() }).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId)));
+    const rows = input.blocks.map((block) => ({
+      businessId: input.businessId,
+      connectionId: input.connectionId,
+      startsAt: new Date(block.startsAt),
+      endsAt: new Date(block.endsAt),
+      externalEventId: block.externalEventId,
+      staffId: block.staffId,
+    }));
+    for (let index = 0; index < rows.length; index += BUSY_BLOCK_INSERT_CHUNK) await tx.insert(calendarBusyBlocks).values(rows.slice(index, index + BUSY_BLOCK_INSERT_CHUNK));
+    await tx.update(calendarConnections).set({ status: "connected", lastSyncError: null, lastSyncedAt: input.syncStartedAt ?? new Date(), updatedAt: new Date() }).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId)));
     await enqueueOutbox(tx, {
       topic: "realtime.publish",
       businessId: input.businessId,
@@ -135,6 +139,8 @@ export async function queueUnsyncedAppointmentSyncs(
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const [connection] = await tx.select({ staffId: calendarConnections.staffId, selectedCalendarId: calendarConnections.selectedCalendarId, status: calendarConnections.status }).from(calendarConnections).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId))).limit(1);
     if (!connection?.selectedCalendarId || connection.status === "disconnected") return 0;
+    // Calendar ids run to 255 characters; a hash keeps the key inside its 255-character column.
+    const calendarKey = createHash("sha256").update(connection.selectedCalendarId).digest("hex").slice(0, 16);
     const pending = await tx.select({ id: appointments.id }).from(appointments).where(and(
       eq(appointments.businessId, input.businessId),
       eq(appointments.status, "confirmed"),
@@ -149,8 +155,9 @@ export async function queueUnsyncedAppointmentSyncs(
         businessId: input.businessId,
         aggregateType: "appointment",
         aggregateId: appointment.id,
-        // One backfill per connection, so a booking the sync job still skips is not requeued every reconcile.
-        dedupeKey: `appointment:${appointment.id}:calendar:backfill:${input.connectionId}`,
+        // One backfill per connection and calendar: a booking the sync job still skips is not requeued
+        // every reconcile, and a newly selected calendar still gets its own.
+        dedupeKey: `appointment:${appointment.id}:calendar:backfill:${input.connectionId}:${calendarKey}`,
         payload: { appointmentId: appointment.id, action: "backfill" },
       });
     }
@@ -194,16 +201,11 @@ export async function updateAppointmentSyncStateInTransaction(
 
 export async function markCalendarConnectionSync(
   context: DomainContext,
-  input: { businessId: string; connectionId: string; error?: string },
+  input: { businessId: string; connectionId: string; error: string },
 ): Promise<void> {
   await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const connection = await tx.update(calendarConnections).set({
-      status: input.error ? "error" : "connected",
-      ...(input.error ? { lastSyncError: input.error.slice(0, 2000) } : { lastSyncError: null }),
-      ...(!input.error ? { lastSyncedAt: new Date() } : {}),
-      updatedAt: new Date(),
-    }).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId), ne(calendarConnections.status, "disconnected"))).returning({ id: calendarConnections.id });
-    if (connection.length && input.error) await queueOperatorAlertInTransaction(tx, { businessId: input.businessId, eventKind: "calendarSync", eventKey: `calendarSync:connection:${input.connectionId}`, subject: "Calendar connection needs attention", body: "LobbyStack could not sync the connected calendar. Open integrations to reconnect it." });
+    const connection = await tx.update(calendarConnections).set({ status: "error", lastSyncError: input.error.slice(0, 2000), updatedAt: new Date() }).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId), ne(calendarConnections.status, "disconnected"))).returning({ id: calendarConnections.id });
+    if (connection.length) await queueOperatorAlertInTransaction(tx, { businessId: input.businessId, eventKind: "calendarSync", eventKey: `calendarSync:connection:${input.connectionId}`, subject: "Calendar connection needs attention", body: "LobbyStack could not sync the connected calendar. Open integrations to reconnect it." });
   });
 }
 
@@ -263,10 +265,26 @@ export async function selectCalendar(
     await requireBusinessAdmin(tx, input);
     assertCertificationCalendar(input.calendarId);
     if (!input.calendarId.trim() || input.calendarId.length > 255) throw new Error("A valid calendar selection is required.");
-    const changed = await tx.update(calendarConnections).set({ selectedCalendarId: input.calendarId.trim(), status: "syncing", lastSyncedAt: null, lastSyncError: null, updatedAt: new Date() }).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId))).returning({ id: calendarConnections.id });
-    if (!changed.length) throw new Error("Calendar connection not found.");
+    const [current] = await tx.select({ staffId: calendarConnections.staffId, selectedCalendarId: calendarConnections.selectedCalendarId }).from(calendarConnections).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId))).limit(1).for("update");
+    if (!current) throw new Error("Calendar connection not found.");
+    await tx.update(calendarConnections).set({ selectedCalendarId: input.calendarId.trim(), status: "syncing", lastSyncedAt: null, lastSyncError: null, updatedAt: new Date() }).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId)));
+    if (current.selectedCalendarId !== input.calendarId.trim()) await releaseCalendarAppointments(tx, input.businessId, current.staffId);
     await enqueueOutbox(tx, { topic: "calendar.reconcileBusiness", businessId: input.businessId, aggregateType: "calendar_connection", aggregateId: input.connectionId, dedupeKey: `calendar:${input.connectionId}:select:${Date.now()}`, payload: { connectionId: input.connectionId } });
   });
+}
+
+// Upcoming appointments keep the event id of the calendar they were written to. Once a connection's
+// calendar is replaced, clear it so the reconcile backfill writes them to the new calendar instead of
+// updating an event that is not there. A staff member's own calendar takes precedence over a business-wide one.
+async function releaseCalendarAppointments(tx: DatabaseTransaction, businessId: string, staffId: string | null): Promise<void> {
+  await tx.update(appointments).set({ calendarExternalId: null, calendarSyncState: "not_required", updatedAt: new Date() }).where(and(
+    eq(appointments.businessId, businessId),
+    eq(appointments.status, "confirmed"),
+    gt(appointments.endsAt, new Date()),
+    staffId
+      ? eq(appointments.staffId, staffId)
+      : notExists(tx.select({ id: calendarConnections.id }).from(calendarConnections).where(and(eq(calendarConnections.businessId, businessId), eq(calendarConnections.staffId, appointments.staffId), ne(calendarConnections.status, "disconnected")))),
+  ));
 }
 
 export async function refreshCalendar(
