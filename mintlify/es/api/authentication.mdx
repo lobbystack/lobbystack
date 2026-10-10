@@ -76,6 +76,8 @@ Para suscribir un endpoint a un evento o cambiar su URL, su clave también neces
 
 En **Configuración** > **Claves de API**, haga clic en **Revocar** junto a la clave. Las solicitudes que la usen fallan de inmediato, y no se puede deshacer. Cree una nueva clave si todavía necesita acceso.
 
+LobbyStack también desactiva los endpoints de webhook que creó la clave. Para conservar uno, vuelva a activarlo desde la tarjeta **Webhooks** en **Integraciones**.
+
 ## Límites de frecuencia
 
 Cada clave puede hacer 120 solicitudes por minuto. Las implementaciones autoalojadas pueden cambiar este valor con `PUBLIC_API_RATE_LIMIT_PER_MINUTE`. La ventana se reinicia al comienzo de cada minuto.

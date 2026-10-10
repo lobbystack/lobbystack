@@ -76,6 +76,8 @@ To subscribe an endpoint to an event or change its URL, your key also needs the 
 
 On **Settings** > **API keys**, click **Revoke** next to the key. Requests with it fail right away, and you can't undo it. Create a new key if you still need access.
 
+LobbyStack also turns off the webhook endpoints the key created. To keep one, turn it back on from the **Webhooks** card in **Integrations**.
+
 ## Rate limits
 
 Each key can make 120 requests per minute. Self-hosted deployments can change this with `PUBLIC_API_RATE_LIMIT_PER_MINUTE`. The window resets at the start of each minute.

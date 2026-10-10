@@ -37,6 +37,7 @@ function makeTx(overrides: { visitor?: Row | null; conversations?: Row[]; messag
     insertedConversation: null as Row | null,
     insertedVisitor: null as Row | null,
     insertedContact: null as Row | null,
+    lockModes: [] as string[],
   };
 
   const resultsFor = (name: string): Row[] => {
@@ -80,7 +81,7 @@ function makeTx(overrides: { visitor?: Row | null; conversations?: Row[]; messag
         const hasOrderByLimit = name === "conversations" || name === "messages";
         const terminal = Object.assign(Promise.resolve(rows), {
           // Locking reads (`.for("update")`, `.for("share")`) return the same rows.
-          limit: () => Object.assign(Promise.resolve(rows), { for: () => Promise.resolve(rows) }),
+          limit: () => Object.assign(Promise.resolve(rows), { for: (mode: string) => { state.lockModes.push(`${name}:${mode}`); return Promise.resolve(rows); } }),
           orderBy: () => (hasOrderByLimit ? Object.assign(Promise.resolve(rows), { limit: () => Promise.resolve(rows) }) : Promise.resolve(rows)),
           innerJoin: (joinTable: unknown) => ({
             where: () => {
@@ -191,6 +192,8 @@ describe("getOrCreateWidgetConversation", () => {
     expect(typeof result.conversationId).toBe("string");
     expect(result.automationState).toBe("ai_active");
     expect(state.insertedConversation).toMatchObject({ businessId, widgetVisitorId: visitorId, channel: "web_chat", status: "open", automationState: "ai_active" });
+    // A share lock would let two first requests from one visitor both insert a chat.
+    expect(state.lockModes).toEqual(["widget_visitors:update"]);
   });
 
   it("throws when the visitor has not been registered", async () => {

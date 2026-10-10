@@ -76,6 +76,8 @@ Pour abonner un point de terminaison à un événement ou changer son URL, votre
 
 Dans **Réglages** > **Clés API**, cliquez sur **Révoquer** à côté de la clé. Les requêtes qui l'utilisent échouent immédiatement, et vous ne pouvez pas annuler cette action. Créez une nouvelle clé si vous avez encore besoin d'accès.
 
+LobbyStack désactive aussi les points de terminaison webhook que la clé a créés. Pour en garder un, réactivez-le depuis la carte **Webhooks** dans **Intégrations**.
+
 ## Limites de débit
 
 Chaque clé peut faire 120 requêtes par minute. Les déploiements auto-hébergés peuvent modifier cette valeur avec `PUBLIC_API_RATE_LIMIT_PER_MINUTE`. La fenêtre se réinitialise au début de chaque minute.

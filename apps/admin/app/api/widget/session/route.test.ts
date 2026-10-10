@@ -22,6 +22,13 @@ describe("widget session admission", () => {
     expect((await POST(request())).status).toBe(status);
     expect(mocks.mint).not.toHaveBeenCalled();
   });
+  it("lets the loader read why an origin was refused", async () => {
+    mocks.access.mockResolvedValue({ ok: false, response: Response.json({ error: "This website is not authorized to load this widget.", code: "widget_origin_denied" }, { status: 403 }) });
+    const response = await POST(request());
+    expect(response.status).toBe(403);
+    expect(response.headers.get("access-control-allow-origin")).toBe("https://business.test");
+    expect(await response.json()).toMatchObject({ code: "widget_origin_denied" });
+  });
   it("consumes the tenant, visitor and trusted IP budget before signing", async () => {
     mocks.limit.mockResolvedValue({ allowed: true });
     expect((await POST(request())).status).toBe(200);

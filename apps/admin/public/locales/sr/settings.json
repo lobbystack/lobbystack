@@ -881,7 +881,7 @@
     "revoke": {
       "action": "Opozovi",
       "title": "Opozvati ovaj API ključ?",
-      "description": "Sve što koristi {{name}} odmah prestaje da radi. Ovo ne može da se poništi.",
+      "description": "Sve što koristi {{name}} odmah prestaje da radi. Ovo ne može da se poništi. LobbyStack isključuje i webhookove koje je ovaj ključ napravio.",
       "confirm": "Opozovi ključ",
       "cancel": "Otkaži",
       "done": "API ključ je opozvan",

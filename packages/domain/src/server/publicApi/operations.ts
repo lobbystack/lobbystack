@@ -1,4 +1,4 @@
-import { and, eq, inArray, ne } from "drizzle-orm";
+import { and, eq, inArray, ne, sql } from "drizzle-orm";
 import { DateTime } from "luxon";
 
 import { apiKeys, appointments, auditLogs, businesses, calendarConnections, contacts, receptionistProfiles, services, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
@@ -232,7 +232,9 @@ export async function updateContactForApi(context: DomainContext, caller: ApiCal
   if (!Object.keys(patch).length) throw invalidRequest("Send at least one field to update.");
   try {
     return await inBusiness(context, caller, async (tx) => {
-      const [row] = await tx.update(contacts).set({ ...patch, updatedAt: new Date() }).where(and(eq(contacts.businessId, caller.businessId), eq(contacts.id, contactId))).returning();
+      // Consent belongs to the number that gave it: a new number starts without it. An opt-out stays.
+      const consent = input.phone !== undefined ? { smsConsentStatus: sql<string | null>`case when ${contacts.phone} is distinct from ${input.phone} and ${contacts.smsConsentStatus} = 'subscribed' then null else ${contacts.smsConsentStatus} end` } : {};
+      const [row] = await tx.update(contacts).set({ ...patch, ...consent, updatedAt: new Date() }).where(and(eq(contacts.businessId, caller.businessId), eq(contacts.id, contactId))).returning();
       if (!row) throw notFound("Contact");
       await audit(tx, caller, { eventType: "api.contact.updated", entityType: "contact", entityId: row.id, payload: { fields: Object.keys(patch) } });
       return serializeContact(row);

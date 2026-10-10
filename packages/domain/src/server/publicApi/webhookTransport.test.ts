@@ -2,7 +2,7 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 
 import { Webhook } from "standardwebhooks";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { isBlockedAddress } from "@lobbystack/providers/crawling/urlSafety";
 
@@ -39,6 +39,14 @@ describe("Standard Webhooks signing", () => {
     const encrypted = encryptWebhookSecret(secret);
     expect(encrypted).not.toContain(secret.slice(6));
     expect(decryptWebhookSecret(encrypted)).toBe(secret);
+  });
+
+  it("still reads secrets stored before the move to SecretBox", () => {
+    vi.stubEnv("ENCRYPTION_KEY", "test-encryption-key");
+    // Written by the previous inline AES-256-GCM code under the same ENCRYPTION_KEY.
+    const stored = "XvEX0rWpmVpoFIdXzFdV-AW01XVBzvNwH2ifWTEBHeB5JiYlDMMjZi-nasr87-A3_hO5WstRi8DPGtyO8agOhFL3sysh9p0czCUjvYiX";
+    expect(decryptWebhookSecret(stored)).toBe("whsec_dGVzdHNlY3JldHRlc3RzZWNyZXR0ZXN0c2VjcmV0MTI=");
+    vi.unstubAllEnvs();
   });
 });
 

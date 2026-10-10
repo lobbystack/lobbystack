@@ -279,15 +279,13 @@ export async function getOrCreateWidgetConversation(
   input: { businessId: string; widgetVisitorId: string },
 ): Promise<{ conversationId: string; automationState: "ai_active" | "human_handoff" }> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    // The share lock makes a concurrent link wait, so a new chat either sees the contact or is claimed by the link.
-    const visitor = (await tx.select({ id: widgetVisitors.id, contactId: widgetVisitors.contactId }).from(widgetVisitors).where(and(eq(widgetVisitors.id, input.widgetVisitorId), eq(widgetVisitors.businessId, input.businessId))).limit(1).for("share"))[0];
+    // The update lock serializes requests for one visitor, so two first requests open one chat,
+    // and a concurrent link waits, so a new chat either sees the contact or is claimed by the link.
+    const visitor = (await tx.select({ id: widgetVisitors.id, contactId: widgetVisitors.contactId }).from(widgetVisitors).where(and(eq(widgetVisitors.id, input.widgetVisitorId), eq(widgetVisitors.businessId, input.businessId))).limit(1).for("update"))[0];
     if (!visitor) throw new Error("Widget visitor not found.");
     const current = await tx.select({ id: conversations.id, automationState: conversations.automationState }).from(conversations).where(and(eq(conversations.businessId, input.businessId), eq(conversations.widgetVisitorId, input.widgetVisitorId), eq(conversations.channel, "web_chat"), eq(conversations.status, "open"))).orderBy(desc(conversations.updatedAt)).limit(1);
-    const conversationId = current[0]?.id ?? (await tx.insert(conversations).values({ businessId: input.businessId, widgetVisitorId: input.widgetVisitorId, ...(visitor.contactId ? { contactId: visitor.contactId } : {}), channel: "web_chat", status: "open", automationState: "ai_active" }).onConflictDoNothing().returning({ id: conversations.id }))[0]?.id;
-    if (!conversationId) {
-      const existing = await tx.select({ id: conversations.id }).from(conversations).where(and(eq(conversations.businessId, input.businessId), eq(conversations.widgetVisitorId, input.widgetVisitorId), eq(conversations.channel, "web_chat"))).orderBy(desc(conversations.updatedAt)).limit(1);
-      throw new Error(existing[0] ? "Widget conversation already exists and is closed." : "Conversation could not be created.");
-    }
+    const conversationId = current[0]?.id ?? (await tx.insert(conversations).values({ businessId: input.businessId, widgetVisitorId: input.widgetVisitorId, ...(visitor.contactId ? { contactId: visitor.contactId } : {}), channel: "web_chat", status: "open", automationState: "ai_active" }).returning({ id: conversations.id }))[0]?.id;
+    if (!conversationId) throw new Error("Conversation could not be created.");
     return { conversationId, automationState: current[0]?.automationState === "human_handoff" ? "human_handoff" : "ai_active" };
   });
 }

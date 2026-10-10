@@ -9,7 +9,7 @@ import { resolveWidgetAccess } from "@/lib/widget-access";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function corsHeaders(request: Request): HeadersInit {
+function corsHeaders(request: Request): Record<string, string> {
   const origin = request.headers.get("origin");
   return origin ? { "access-control-allow-origin": origin, "access-control-allow-headers": "content-type", "access-control-allow-methods": "POST, OPTIONS", "cache-control": "no-store", vary: "Origin" } : { "cache-control": "no-store" };
 }
@@ -25,7 +25,11 @@ export async function POST(request: Request) {
     if (!request.headers.get("origin")) return NextResponse.json({ error: "A browser origin is required to create a widget session.", code: "widget_origin_required" }, { status: 403 });
     const { widgetKey, visitorId } = parsed.data;
     const access = await resolveWidgetAccess(request, widgetKey, { requireOrigin: true, strictOrigin: true });
-    if (!access.ok) return access.response;
+    if (!access.ok) {
+      // The loader reads the code (such as widget_origin_denied) to show the right message.
+      for (const [name, value] of Object.entries(corsHeaders(request))) access.response.headers.set(name, value);
+      return access.response;
+    }
     const allowance = await enforceWidgetRateLimits({ businessId: access.session.businessId, widgetKeyId: access.session.widgetKeyId, visitorId, ipHash: requestIpHash(request), operation: "session" });
     if (!allowance.allowed) return NextResponse.json({ error: "Widget session limit reached.", code: allowance.code }, { status: allowance.status, headers: corsHeaders(request) });
     const token = createWidgetSessionToken({ widgetKeyId: access.session.widgetKeyId, businessId: access.session.businessId, visitorId, origin: access.session.origin! });
