@@ -34,6 +34,10 @@ export type DeliveryOutcome =
   | { status: "completed" | "skipped"; entityId: string }
   | { status: "deferred"; entityId: string; retryAt: Date };
 
+/** Tries to record a send before the job fails with the row still held. Each mark repeats safely. */
+const MARK_SENT_ATTEMPTS = 3;
+const MARK_SENT_RETRY_DELAY_MS = 500;
+
 type StatusCallbackIds = { messageId?: string; notificationId?: string; operatorDeliveryId?: string };
 type FailureEvent = { kind: string; appointmentId?: string };
 
@@ -62,8 +66,8 @@ type Lease = {
  * Sends one leased delivery and records its outcome. A run that finds the row
  * held waits until the lease ends, since the holder may have died mid-send.
  * Once the provider accepts the message nothing hands the row back or gives
- * back its usage, even when recording the send fails: the lease and Twilio's
- * status callback keep the retry from sending it again.
+ * back its usage. Recording the send is retried, because a row left unmarked
+ * goes out again once its lease ends.
  */
 export async function deliverOutbound(context: DomainContext, providers: OutboundProviders, delivery: OutboundDelivery, execution: { isFinalAttempt?: boolean } = {}): Promise<DeliveryOutcome> {
   const lease = leaseFor(context, delivery);
@@ -109,7 +113,15 @@ export async function deliverOutbound(context: DomainContext, providers: Outboun
     else await lease.close("failed", "Provider delivery failed.");
     throw error;
   }
-  await lease.markSent(providerMessageId);
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      await lease.markSent(providerMessageId);
+      break;
+    } catch (error) {
+      if (attempt === MARK_SENT_ATTEMPTS) throw error;
+      await new Promise((resolve) => setTimeout(resolve, MARK_SENT_RETRY_DELAY_MS));
+    }
+  }
   // A status callback brings Twilio's segment count and syncs it. Without one
   // the estimate is final, so bill it now.
   if (usageSourceKey && usageEventId && !statusCallback) {

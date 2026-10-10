@@ -91,7 +91,16 @@ beforeEach(() => {
   usage.reserveAlertSmsUsage.mockResolvedValue({ allowed: true, usageEventId: "usage-1" });
   usage.correctAlertSmsUsage.mockResolvedValue("usage-1");
 });
-afterEach(() => vi.unstubAllEnvs());
+afterEach(() => { vi.useRealTimers(); vi.unstubAllEnvs(); });
+
+/** Runs a delivery, letting the waits between mark attempts pass. */
+async function deliverWithRetries(...args: Parameters<typeof deliverOutbound>) {
+  vi.useFakeTimers();
+  const run = deliverOutbound(...args);
+  run.catch(() => undefined);
+  await vi.runAllTimersAsync();
+  return run;
+}
 
 describe("rules every delivery follows", () => {
   it.each(leasedKinds)("%s: a run that finds the row held waits until the lease ends", async (kind) => {
@@ -106,11 +115,21 @@ describe("rules every delivery follows", () => {
     const { delivery, ready, mark, released, closed } = kinds[kind];
     ready(); mark.mockRejectedValue(new Error("pool timeout"));
     const sender = providers();
-    await expect(deliverOutbound(context, sender, delivery, { isFinalAttempt: false })).rejects.toThrow("pool timeout");
+    await expect(deliverWithRetries(context, sender, delivery, { isFinalAttempt: false })).rejects.toThrow("pool timeout");
+    expect(mark).toHaveBeenCalledTimes(3);
     expect(sender.twilio.sendSms).toHaveBeenCalledOnce();
     expect(released()).toBe(false);
     expect(closed()).toBe(false);
     expect(usage.correctAlertSmsUsage).not.toHaveBeenCalledWith(context, expect.objectContaining({ segments: 0 }));
+  });
+
+  it.each(allKinds)("%s: tries the mark again, so a passing database error doesn't leave the send to go out twice", async (kind) => {
+    const { delivery, ready, mark } = kinds[kind];
+    ready(); mark.mockRejectedValueOnce(new Error("pool timeout"));
+    const sender = providers();
+    await expect(deliverWithRetries(context, sender, delivery, { isFinalAttempt: false })).resolves.toMatchObject({ status: "completed" });
+    expect(mark).toHaveBeenCalledTimes(2);
+    expect(sender.twilio.sendSms).toHaveBeenCalledOnce();
   });
 
   it.each(allKinds)("%s: a permanent Twilio error closes the row without a retry", async (kind) => {
@@ -157,9 +176,9 @@ describe("inbox replies", () => {
   it("texts a reply once when the database fails after Twilio accepted it", async () => {
     // Twilio took the text, then the mark failed. The job's retry finds the
     // reply still leased and waits for the lease instead of texting again.
-    kinds.message.ready(); sms.markSmsSent.mockRejectedValueOnce(new Error("pool timeout"));
+    kinds.message.ready(); sms.markSmsSent.mockRejectedValue(new Error("pool timeout"));
     const sender = providers();
-    await expect(deliverOutbound(context, sender, kinds.message.delivery, { isFinalAttempt: false })).rejects.toThrow("pool timeout");
+    await expect(deliverWithRetries(context, sender, kinds.message.delivery, { isFinalAttempt: false })).rejects.toThrow("pool timeout");
     kinds.message.held(); sms.smsDeliveryLeaseEndsAt.mockResolvedValue(leaseEnds);
     await expect(deliverOutbound(context, sender, kinds.message.delivery, { isFinalAttempt: false })).resolves.toEqual({ status: "deferred", entityId: "message-1", retryAt: leaseEnds });
     expect(sender.twilio.sendSms).toHaveBeenCalledOnce();

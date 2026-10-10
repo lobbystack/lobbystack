@@ -233,7 +233,11 @@ export async function updateContactForApi(context: DomainContext, caller: ApiCal
   try {
     return await inBusiness(context, caller, async (tx) => {
       // Consent belongs to the number that gave it: a new number starts without it. An opt-out stays.
-      const consent = input.phone !== undefined ? { smsConsentStatus: sql<string | null>`case when ${contacts.phone} is distinct from ${input.phone} and ${contacts.smsConsentStatus} = 'subscribed' then null else ${contacts.smsConsentStatus} end` } : {};
+      // The database clock dates the change, so texts the old number sent stop counting as consent (see loadSmsReach).
+      const consent = input.phone !== undefined ? {
+        smsConsentStatus: sql<string | null>`case when ${contacts.phone} is distinct from ${input.phone} and ${contacts.smsConsentStatus} = 'subscribed' then null else ${contacts.smsConsentStatus} end`,
+        smsConsentUpdatedAt: sql<Date | null>`case when ${contacts.phone} is distinct from ${input.phone} then now() else ${contacts.smsConsentUpdatedAt} end`,
+      } : {};
       const [row] = await tx.update(contacts).set({ ...patch, ...consent, updatedAt: new Date() }).where(and(eq(contacts.businessId, caller.businessId), eq(contacts.id, contactId))).returning();
       if (!row) throw notFound("Contact");
       await audit(tx, caller, { eventType: "api.contact.updated", entityType: "contact", entityId: row.id, payload: { fields: Object.keys(patch) } });

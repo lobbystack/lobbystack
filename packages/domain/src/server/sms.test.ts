@@ -17,12 +17,13 @@ const businessId = "business-1";
 /** Rows the fake transaction hands out, one list per `.limit()` call, in order. */
 let selects: unknown[][];
 let orderBys: SQL[][];
+let wheres: SQL[];
 
 beforeEach(() => {
   vi.stubEnv("CONTENT_RETENTION_ENABLED", "false");
-  selects = []; orderBys = [];
+  selects = []; orderBys = []; wheres = [];
   const chain = {
-    from: () => chain, innerJoin: () => chain, where: () => chain,
+    from: () => chain, innerJoin: () => chain, where: (condition: SQL) => { wheres.push(condition); return chain; },
     orderBy: (...columns: SQL[]) => { orderBys.push(columns); return chain; },
     limit: async () => selects.shift() ?? [],
   };
@@ -100,6 +101,16 @@ describe("SMS replies", () => {
     selects = [[{ phone: "+14165550123", operatorBlockedAt: null, smsConsentStatus: null }], [{ id: "inbound-1" }], [{ e164: "+14165550100" }], [{ id: "session-1" }]];
     await expect(appendMessage(context, reply)).resolves.toBe("created-1");
     expect(mocks.enqueue).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ topic: "sms.send", payload: { messageId: "created-1" } }));
+  });
+
+  it("counts only texts sent after the contact's number or consent last changed", async () => {
+    const changedAt = new Date("2030-01-01T10:00:00Z");
+    // The contact whose number an API call changed, no inbound text since then, the business number.
+    selects = [[{ phone: "+14165550199", operatorBlockedAt: null, smsConsentStatus: null, smsConsentUpdatedAt: changedAt }], [], [{ e164: "+14165550100" }]];
+    await expect(appendMessage(context, reply)).rejects.toMatchObject({ status: 409, code: "sms_consent" });
+    const inbound = new PgDialect().sqlToQuery(wheres[1]!);
+    expect(inbound.sql).toMatch(/"messages"\."created_at" > \$\d+\)$/);
+    expect(inbound.params.at(-1)).toBe(changedAt.toISOString());
   });
 });
 

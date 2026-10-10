@@ -135,6 +135,7 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
   it("drops text consent when the API changes a contact's phone, but keeps an opt-out", async () => {
     const context = { db: worker!.db };
     const consentOf = async (id: string) => (await admin!.db.select({ status: contacts.smsConsentStatus }).from(contacts).where(eq(contacts.id, id)))[0]?.status;
+    const consentDateOf = async (id: string) => (await admin!.db.select({ at: contacts.smsConsentUpdatedAt }).from(contacts).where(eq(contacts.id, id)))[0]?.at;
     const subscribed = await createContactForApi(context, a.caller, { phone: "+14165552300" });
     const optedOut = await createContactForApi(context, a.caller, { phone: "+14165552301" });
     await admin!.db.update(contacts).set({ smsConsentStatus: "subscribed" }).where(eq(contacts.id, subscribed.id));
@@ -142,8 +143,11 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
     // Same number or other fields: consent stays.
     await updateContactForApi(context, a.caller, subscribed.id, { name: "Kept", phone: "+14165552300" });
     expect(await consentOf(subscribed.id)).toBe("subscribed");
+    expect(await consentDateOf(subscribed.id)).toBeNull();
     await updateContactForApi(context, a.caller, subscribed.id, { phone: "+14165552302" });
     expect(await consentOf(subscribed.id)).toBeNull();
+    // Dated, so a reply can't count a text the old number sent.
+    expect(await consentDateOf(subscribed.id)).toBeInstanceOf(Date);
     await updateContactForApi(context, a.caller, optedOut.id, { phone: "+14165552303" });
     expect(await consentOf(optedOut.id)).toBe("opted_out");
   });

@@ -10,6 +10,7 @@ export type SmsMessageStatus =
 export type NotificationDeliveryStatus =
   | "scheduled"
   | "pending"
+  | "processing"
   | "sent"
   | "delivered"
   | "failed";
@@ -46,6 +47,8 @@ const messageStatusRank: Record<SmsMessageStatus, number> = {
 const notificationStatusRank: Record<NotificationDeliveryStatus, number> = {
   scheduled: 0,
   pending: 1,
+  // A worker holds the row. A "sent" callback means the send went out, so it closes the row.
+  processing: 1,
   sent: 2,
   delivered: 3,
   failed: 3,

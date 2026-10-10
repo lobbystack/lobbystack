@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
 
 import { contacts, conversationSessions, conversations, enqueueOutbox, messages, providerEvents, smsConsentEvents, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { isTerminalTwilioMessageStatus, mapTwilioStatusToMessageStatus, normalizeTwilioMessageStatus, shouldApplyMessageStatusTransition } from "@lobbystack/shared";
@@ -210,12 +210,14 @@ export function smsReplyBlockedReason(reach: SmsReach, complianceReply = false):
 }
 
 async function loadSmsReach(tx: DatabaseTransaction, input: { businessId: string; conversationId: string }): Promise<SmsReach> {
-  const contact = (await tx.select({ phone: contacts.phone, operatorBlockedAt: contacts.operatorBlockedAt, smsConsentStatus: contacts.smsConsentStatus })
+  const contact = (await tx.select({ phone: contacts.phone, operatorBlockedAt: contacts.operatorBlockedAt, smsConsentStatus: contacts.smsConsentStatus, smsConsentUpdatedAt: contacts.smsConsentUpdatedAt })
     .from(conversations)
     .innerJoin(contacts, and(eq(contacts.id, conversations.contactId), eq(contacts.businessId, input.businessId)))
     .where(and(eq(conversations.id, input.conversationId), eq(conversations.businessId, input.businessId)))
     .limit(1))[0];
-  const inbound = await tx.select({ id: messages.id }).from(messages).where(and(eq(messages.businessId, input.businessId), eq(messages.conversationId, input.conversationId), eq(messages.direction, "inbound"), eq(messages.channel, "sms"))).limit(1);
+  // Only a text since the number or consent last changed counts: an earlier one may have come from the old number.
+  const since = contact?.smsConsentUpdatedAt ? gt(messages.createdAt, contact.smsConsentUpdatedAt) : undefined;
+  const inbound = await tx.select({ id: messages.id }).from(messages).where(and(eq(messages.businessId, input.businessId), eq(messages.conversationId, input.conversationId), eq(messages.direction, "inbound"), eq(messages.channel, "sms"), since)).limit(1);
   return { phone: contact?.phone ?? null, operatorBlockedAt: contact?.operatorBlockedAt ?? null, smsConsentStatus: contact?.smsConsentStatus ?? null, customerTexted: inbound.length > 0, from: await businessSmsNumber(tx, input.businessId) };
 }
 

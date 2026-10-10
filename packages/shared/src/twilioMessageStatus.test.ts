@@ -50,4 +50,9 @@ describe("twilio message status helpers", () => {
     expect(shouldApplyNotificationStatusTransition("delivered", "sent")).toBe(false);
     expect(shouldApplyNotificationStatusTransition("failed", "delivered")).toBe(false);
   });
+
+  it("lets a sent callback close a notification a worker still holds", () => {
+    expect(shouldApplyNotificationStatusTransition("processing", "sent")).toBe(true);
+    expect(shouldApplyNotificationStatusTransition("processing", "delivered")).toBe(true);
+  });
 });
