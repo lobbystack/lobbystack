@@ -64,7 +64,8 @@ type Schedule = {
 async function loadSchedule(tx: DatabaseTransaction, input: { businessId: string; serviceId: string; from: Date }): Promise<Schedule> {
   const [service] = await tx.select({ id: services.id, name: services.name, durationMinutes: services.durationMinutes }).from(services).where(and(eq(services.id, input.serviceId), eq(services.businessId, input.businessId), eq(services.active, true))).limit(1);
   const [business] = await tx.select({ timezone: businesses.timezone }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1);
-  if (!service || !business) throw new Error("Service is not available.");
+  // 409: the API and MCP answer a turned-off service as a client error, not a 500.
+  if (!service || !business) throw Object.assign(new Error("Service is not available."), { status: 409 });
   if (!Number.isFinite(input.from.getTime()) || !Number.isSafeInteger(service.durationMinutes) || service.durationMinutes <= 0) throw new Error("A valid appointment time and duration are required.");
   const activeStaff = await tx.select({ id: staff.id }).from(staff).where(and(eq(staff.businessId, input.businessId), eq(staff.active, true))).orderBy(asc(staff.id));
   const activeStaffIds = activeStaff.map((row) => row.id);
@@ -233,10 +234,13 @@ export async function bookAppointment(
   input: BookingInput,
 ): Promise<{ appointmentId: string; contactId: string; staffId: string }> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    // The first read discovers a stable, sorted lock set. Reference data is
-    // reloaded after each candidate lock because it may change while we wait.
+    // The first read refuses a time the schedule rules out without taking any
+    // lock, and otherwise gives a stable, sorted lock set: the staff who could
+    // take the time. Reference data is reloaded after each candidate lock
+    // because it may change while we wait.
     const initialReference = await loadAvailabilityReference(tx, { businessId: input.businessId, serviceId: input.serviceId, startsAt: input.startsAt });
-    const candidates = initialReference.activeStaffIds.filter((id) => !input.preferredStaffId || id === input.preferredStaffId);
+    const candidates = staffForTime(initialReference, initialReference.startsAt, input.preferredStaffId ? [input.preferredStaffId] : undefined, Date.now());
+    if (typeof candidates === "string") throw new BookingUnavailableError(candidates, "No staff member is available for this service.");
     let selectedStaff: { id: string } | undefined;
     let selectedReference: AvailabilityReference | undefined;
     for (const candidateId of candidates) {
@@ -250,10 +254,7 @@ export async function bookAppointment(
         break;
       }
     }
-    if (!selectedStaff || !selectedReference) {
-      const staffIds = staffForTime(initialReference, initialReference.startsAt, input.preferredStaffId ? [input.preferredStaffId] : undefined, Date.now());
-      throw new BookingUnavailableError(typeof staffIds === "string" ? staffIds : "taken", "No staff member is available for this service.");
-    }
+    if (!selectedStaff || !selectedReference) throw new BookingUnavailableError("taken", "No staff member is available for this service.");
     const reference = selectedReference;
     const startsAt = reference.startsAt;
     const endsAt = reference.endsAt;
