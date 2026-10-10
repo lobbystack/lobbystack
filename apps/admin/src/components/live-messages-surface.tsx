@@ -68,15 +68,16 @@ export function LiveMessagesSurface() {
   const send = useMutation({
     mutationFn: async () => {
       if (!business || !selected) return;
-      const response = await fetch(`/api/messages?businessId=${encodeURIComponent(business.businessId)}`, { method: "POST", credentials: "include", headers: { "content-type": "application/json" }, body: JSON.stringify({ conversationId: selectedId, body: draft.trim(), channel: selected.channel }) });
-      if (!response.ok) throw new Error(t("page.sendFailed"));
+      const response = await fetch(`/api/messages?businessId=${encodeURIComponent(business.businessId)}`, { method: "POST", credentials: "include", headers: { "content-type": "application/json" }, body: JSON.stringify({ conversationId: selectedId, body: draft.trim(), channel: selected.channel }) }).catch(() => null);
+      // 409: the contact can't receive an SMS reply.
+      if (!response?.ok) throw new Error(t(response?.status === 409 ? "page.smsReplyBlocked" : "page.sendFailed"));
     },
     onSuccess: async () => {
       if (business && selectedId && selected) telemetry.track("web.messages.reply_sent", { businessId: business.businessId, conversationId: selectedId, channel: selected.channel });
       setDraft("");
       await queryClient.invalidateQueries({ queryKey: ["messages", business?.businessId] });
     },
-    onError: () => toast.error(t("page.sendFailed")),
+    onError: (error) => toast.error(error.message),
   });
   const toggleAutomation = useMutation({
     mutationFn: async (state: "ai_active" | "human_handoff") => {

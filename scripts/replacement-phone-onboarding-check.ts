@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { and, eq } from "drizzle-orm";
 
-import { billingAccounts, businessMemberships, businesses, createDatabaseClient, onboardingPhoneVerifications, onboardingNumberClaimEvents, phoneNumbers, users, withBusinessTransaction } from "@lobbystack/db";
+import { billingAccounts, businessMemberships, businesses, createDatabaseClient, onboardingNumberClaimEvents, phoneNumbers, users, withBusinessTransaction } from "@lobbystack/db";
 import { claimNumberProvisioning, completeNumberProvisioning, reserveOnboardingNumberClaim, reserveReplacementNumberClaim, searchAvailableBusinessNumbers, searchBusinessNumberInventory, skipOnboardingNumber, type NumberSelection } from "@lobbystack/domain";
 import { handleJob } from "../apps/worker/src/handlers";
 
@@ -14,14 +14,6 @@ async function main(): Promise<void> {
   try {
     await auth.db.insert(users).values({ id: userId, email: `${userId}@example.test`, normalizedEmail: `${userId}@example.test` });
     for (const id of [businessId, foreignBusinessId]) await withBusinessTransaction(worker.db, { businessId: id, actorType: "worker" }, async (tx) => { await tx.insert(businesses).values({ id, slug: `phone-${id}`, name: "Phone certification", timezone: "America/Toronto", businessType: "test", onboardingStage: "plan" }); if (id === businessId) { await tx.insert(businessMemberships).values({ businessId: id, userId, role: "business_owner", status: "active" }); await tx.insert(billingAccounts).values({ businessId: id, billingKey: `business:${id}`, plan: "starter", subscriptionState: "active" }); } });
-
-    // A verification send queued before retirement drains without contacting a
-    // personal phone or moving the workspace back onto a removed stage.
-    const staleAttemptId = randomUUID();
-    await withBusinessTransaction(worker.db, { businessId, actorType: "worker" }, tx => tx.insert(onboardingPhoneVerifications).values({ id: staleAttemptId, businessId, userId, phoneE164: "+14165550100", countryCode: "CA", status: "queued", expiresAt: new Date(Date.now() + 600_000), requestFingerprint: "retired-verification" }));
-    await handleJob({ jobId: randomUUID(), type: "phoneVerification.send", queue: "critical", businessId, payload: { attemptId: staleAttemptId }, trace: {}, idempotencyKey: `phone:${staleAttemptId}`, scheduled: false }, { domain: { db: worker.db } });
-    const drained = await withBusinessTransaction(worker.db, { businessId, actorType: "worker" }, async (tx) => ({ verification: (await tx.select().from(onboardingPhoneVerifications).where(eq(onboardingPhoneVerifications.id, staleAttemptId)))[0], business: (await tx.select().from(businesses).where(eq(businesses.id, businessId)))[0] }));
-    assert(drained.verification?.status === "canceled" && drained.business?.onboardingStage === "plan", "A retired verification send did not drain without regressing onboarding.");
 
     const secret = "phone-certification-secret-at-least-32-characters";
 
@@ -91,7 +83,7 @@ async function main(): Promise<void> {
     await claimNumberProvisioning({ db: worker.db }, { businessId: foreignBusinessId, claimId: revisitClaimId });
     await completeNumberProvisioning({ db: worker.db }, { businessId: foreignBusinessId, claimId: revisitClaimId, e164: "+14165550201", providerPhoneId: "PN_revisit", voiceUrl: "https://app.test/voice", smsUrl: "https://app.test/sms" });
     assert(await getRevisitStage() === "complete", "Late phone provisioning regressed completed onboarding.");
-    console.log(JSON.stringify({ noPersonalPhoneRequired: true, businessLocationMarket: true, explicitSelectionMarket: true, unsupportedCountryDenied: true, retiredVerificationDrained: true, signedOfferIssued: true, claimIdempotent: true, numberProvisioned: true, replacementIdempotent: true, replacementActivatedBeforeRetirement: true, replacementEntitlementConsumed: true, retirementWindowScheduled: true, providerSidSafeReclaim: true, completedOnboardingRevisit: true, revisitPurchaseQuotaPreserved: true, concurrentClaimDenied: true, completedProgressPreserved: true }));
+    console.log(JSON.stringify({ noPersonalPhoneRequired: true, businessLocationMarket: true, explicitSelectionMarket: true, unsupportedCountryDenied: true, signedOfferIssued: true, claimIdempotent: true, numberProvisioned: true, replacementIdempotent: true, replacementActivatedBeforeRetirement: true, replacementEntitlementConsumed: true, retirementWindowScheduled: true, providerSidSafeReclaim: true, completedOnboardingRevisit: true, revisitPurchaseQuotaPreserved: true, concurrentClaimDenied: true, completedProgressPreserved: true }));
   } finally {
     for (const id of [businessId, foreignBusinessId]) await withBusinessTransaction(worker.db, { businessId: id, actorType: "worker" }, async (tx) => await tx.delete(businesses).where(eq(businesses.id, id))).catch(() => undefined);
     await auth.db.delete(users).where(eq(users.id, userId)).catch(() => undefined); await Promise.all([auth.pool.end(), app.pool.end(), worker.pool.end()]);

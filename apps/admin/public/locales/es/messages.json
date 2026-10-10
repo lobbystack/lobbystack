@@ -37,6 +37,7 @@
     "takeOver": "Tomar el control",
     "send": "Enviar",
     "sendFailed": "No se pudo enviar su mensaje.",
+    "smsReplyBlocked": "No puede enviar SMS a este contacto. Se dio de baja, está bloqueado o no le ha escrito ni aceptado recibir SMS.",
     "uploadFailed": "No se pudo subir ese archivo adjunto.",
     "maxAttachments": "Puede enviar hasta {{count}} archivos adjuntos a la vez.",
     "partialAttachmentsAdded": "Solo se añadieron los primeros {{count}} archivos adjuntos.",

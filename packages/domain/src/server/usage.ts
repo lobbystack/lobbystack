@@ -334,8 +334,9 @@ export async function correctUsageInTransaction(tx: DatabaseTransaction, input: 
 }
 
 export async function enqueueUsageSyncInTransaction(tx: DatabaseTransaction, input: { businessId: string; usageEventId: string }): Promise<void> {
-  const event = (await tx.select({ quantity: billingUsageEvents.quantity, syncStatus: billingUsageEvents.syncStatus }).from(billingUsageEvents).where(and(eq(billingUsageEvents.id, input.usageEventId), eq(billingUsageEvents.businessId, input.businessId))).limit(1))[0];
-  if (!event || event.syncStatus !== "pending") return;
+  const event = (await tx.select({ quantity: billingUsageEvents.quantity, syncStatus: billingUsageEvents.syncStatus, isFinal: billingUsageEvents.isFinal }).from(billingUsageEvents).where(and(eq(billingUsageEvents.id, input.usageEventId), eq(billingUsageEvents.businessId, input.businessId))).limit(1))[0];
+  // A draft can't be billed yet, and its key would block the final count's sync when the quantity doesn't change.
+  if (!event || event.syncStatus !== "pending" || !event.isFinal) return;
   await enqueueOutbox(tx, {
     topic: "billing.syncUsage",
     businessId: input.businessId,
