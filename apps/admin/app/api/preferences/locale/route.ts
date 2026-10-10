@@ -3,30 +3,21 @@ import { NextResponse } from "next/server";
 
 import { users } from "@lobbystack/db";
 import { isInterfaceLocale } from "@lobbystack/shared";
-import { asApiResponse, jsonError, readJson, requireApiSession } from "@/lib/api-helpers";
+import { jsonError } from "@/lib/api-helpers";
 import { getAuthDatabase } from "@/lib/auth";
 import { SUPPORTED_LOCALES } from "@/lib/locale";
+import { signedInRoute } from "@/lib/operator-request";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: Request) {
-  try {
-    const session = await requireApiSession(request);
-    const [user] = await getAuthDatabase().db.select({ locale: users.preferredLocale }).from(users).where(eq(users.id, session.user.id)).limit(1);
-    return NextResponse.json({ locale: user?.locale ?? "en" });
-  } catch (error) {
-    return asApiResponse(error);
-  }
-}
+export const GET = signedInRoute(async ({ userId }) => {
+  const [user] = await getAuthDatabase().db.select({ locale: users.preferredLocale }).from(users).where(eq(users.id, userId)).limit(1);
+  return NextResponse.json({ locale: user?.locale ?? "en" });
+});
 
-export async function PATCH(request: Request) {
-  try {
-    const session = await requireApiSession(request);
-    const body = await readJson(request) as { locale?: string };
-    if (!isInterfaceLocale(body.locale)) return jsonError(`locale must be one of ${SUPPORTED_LOCALES.join(", ")}.`, 400);
-    await getAuthDatabase().db.update(users).set({ preferredLocale: body.locale, updatedAt: new Date() }).where(eq(users.id, session.user.id));
-    return NextResponse.json({ locale: body.locale });
-  } catch (error) {
-    return asApiResponse(error);
-  }
-}
+export const PATCH = signedInRoute(async ({ userId, body }) => {
+  const { locale } = body;
+  if (!isInterfaceLocale(locale)) return jsonError(`locale must be one of ${SUPPORTED_LOCALES.join(", ")}.`, 400);
+  await getAuthDatabase().db.update(users).set({ preferredLocale: locale, updatedAt: new Date() }).where(eq(users.id, userId));
+  return NextResponse.json({ locale });
+});

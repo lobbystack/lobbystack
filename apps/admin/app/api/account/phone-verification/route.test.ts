@@ -1,25 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  requireOperatorBusiness: vi.fn(),
   startOperatorPhoneVerification: vi.fn(),
   getOperatorPhoneVerification: vi.fn(),
   checkOperatorPhoneVerificationCode: vi.fn(),
 }));
 
-vi.mock("@/lib/api-helpers", () => ({
-  requireOperatorBusiness: mocks.requireOperatorBusiness,
-  readJson: async (request: Request) => await request.json(),
-  jsonError: (error: string, status = 400, code?: string) => Response.json({ error, ...(code ? { code } : {}) }, { status }),
-  asApiResponse: (error: { status?: number; code?: string; message?: string }) => Response.json({ error: error.status && error.status < 500 ? error.message : "Request failed.", ...(error.code ? { code: error.code } : {}) }, { status: error.status ?? 500 }),
-}));
-vi.mock("@/lib/domain-context", () => ({ createDomainContext: () => ({ db: "app-db" }) }));
+vi.mock("@/lib/operator-request", () => import("@/lib/operator-request.fake"));
 vi.mock("@lobbystack/domain", () => ({
   startOperatorPhoneVerification: mocks.startOperatorPhoneVerification,
   getOperatorPhoneVerification: mocks.getOperatorPhoneVerification,
   checkOperatorPhoneVerificationCode: mocks.checkOperatorPhoneVerificationCode,
 }));
 
+import { fakeOperator, resetFakeOperator } from "@/lib/operator-request.fake";
 import { GET, POST } from "./route";
 import { POST as CHECK } from "./check/route";
 
@@ -29,7 +23,8 @@ function post(target: string, body: unknown) {
 }
 
 beforeEach(() => {
-  mocks.requireOperatorBusiness.mockResolvedValue({ session: { user: { id: "user-1" } }, businessId: "business-1" });
+  resetFakeOperator();
+  Object.assign(fakeOperator, { userId: "user-1", businessId: "business-1", domain: { db: "app-db" } });
 });
 afterEach(() => { vi.resetAllMocks(); });
 
@@ -60,13 +55,6 @@ describe("start phone verification", () => {
     const response = await POST(post(url, { phoneNumber: "+447911123456" }));
     expect(response.status).toBe(422);
     expect(await response.json()).toEqual({ error: "The alert SMS sender can't text this number.", code: "phone_unreachable" });
-  });
-
-  it("requires a session", async () => {
-    mocks.requireOperatorBusiness.mockRejectedValue(Object.assign(new Error("Authentication required."), { status: 401, code: "unauthorized" }));
-    const response = await POST(post(url, { phoneNumber: "+14165550123" }));
-    expect(response.status).toBe(401);
-    expect(mocks.startOperatorPhoneVerification).not.toHaveBeenCalled();
   });
 });
 

@@ -27,8 +27,8 @@ describe("normalizeHoursWindows", () => {
     [[{ dayOfWeek: 1, openMinutes: 540.5, closeMinutes: 600 }], "Closing time must be after opening time."],
     [[{ dayOfWeek: 1, openMinutes: 540, closeMinutes: 780 }, { dayOfWeek: 1, openMinutes: 720, closeMinutes: 1020 }], "Opening windows on the same day can't overlap."],
     [Array.from({ length: 5 }, (_, index) => ({ dayOfWeek: 1, openMinutes: index * 120, closeMinutes: index * 120 + 60 })), "Each day can have up to 4 opening windows."],
-  ])("rejects %j", (windows, message) => {
-    expect(() => normalizeHoursWindows(windows)).toThrow(message);
+  ])("rejects %j as bad input", (windows, message) => {
+    expect(() => normalizeHoursWindows(windows)).toThrow(expect.objectContaining({ message, status: 400 }));
   });
 
   it("compares two normalized weeks", () => {
@@ -65,7 +65,7 @@ describe("normalizeClosures", () => {
     [[{ startsAt: "2026-12-24T00:00", endsAt: "2026-12-26T00:00" }, { startsAt: "2026-12-25T00:00", endsAt: "2026-12-27T00:00" }], "Closures can't overlap."],
     [[{ startsAt: "2026-12-25T00:00", endsAt: "2026-12-26T00:00", reason: "x".repeat(101) }], "A closure reason can be up to 100 characters."],
     [Array.from({ length: 51 }, (_, index) => ({ startsAt: `2027-01-${String(index % 28 + 1).padStart(2, "0")}T00:00`, endsAt: `2027-01-${String(index % 28 + 1).padStart(2, "0")}T01:00` })), "A business can have up to 50 closures."],
-  ])("rejects %j", (closures, message) => {
-    expect(() => normalizeClosures(closures, "UTC", now)).toThrow(message);
+  ])("rejects %j as bad input", (closures, message) => {
+    expect(() => normalizeClosures(closures, "UTC", now)).toThrow(expect.objectContaining({ message: expect.stringContaining(message), status: 400 }));
   });
 });

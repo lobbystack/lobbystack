@@ -5,7 +5,8 @@ import { NextResponse } from "next/server";
 import { businesses, businessHours, closures, receptionistProfiles, type DatabaseTransaction } from "@lobbystack/db";
 import { replaceBusinessHoursInTransaction } from "@lobbystack/domain";
 import { normalizeBookingMode } from "@lobbystack/shared";
-import { asApiResponse, jsonError, readJson, withOperatorTransaction } from "@/lib/api-helpers";
+import { jsonError } from "@/lib/api-helpers";
+import { operatorRoute } from "@/lib/operator-request";
 
 export const dynamic = "force-dynamic";
 
@@ -35,8 +36,7 @@ async function loadHours(tx: DatabaseTransaction, businessId: string) {
   };
 }
 
-function readBody(body: unknown) {
-  const fields = typeof body === "object" && body !== null && !Array.isArray(body) ? body as Record<string, unknown> : {};
+function readHours(fields: Record<string, unknown>) {
   if (!Array.isArray(fields.hours) || fields.hours.length > 28) throw jsonError("hours must be a list of up to 28 opening windows.");
   const hours = fields.hours.map((window) => {
     const value = typeof window === "object" && window !== null ? window as Record<string, unknown> : {};
@@ -53,26 +53,13 @@ function readBody(body: unknown) {
   return { hours, closures: closureList };
 }
 
-export async function GET(request: Request) {
-  try {
-    return NextResponse.json(await withOperatorTransaction(request, async ({ businessId, tx }) => await loadHours(tx, businessId)));
-  } catch (error) {
-    return asApiResponse(error);
-  }
-}
+export const GET = operatorRoute(async ({ businessId, transaction }) => NextResponse.json(await transaction(async (tx) => await loadHours(tx, businessId))));
 
-export async function PUT(request: Request) {
-  try {
-    return NextResponse.json(await withOperatorTransaction(request, async ({ businessId, tx }) => {
-      const body = readBody(await readJson(request));
-      try {
-        await replaceBusinessHoursInTransaction(tx, { businessId, ...body });
-      } catch (error) {
-        throw jsonError(error instanceof Error ? error.message : "The opening hours are invalid.");
-      }
-      return await loadHours(tx, businessId);
-    }, { minimumRole: "business_admin" }));
-  } catch (error) {
-    return asApiResponse(error);
-  }
-}
+// The domain answers hours it can't save, such as overlapping windows, with a 400.
+export const PUT = operatorRoute(async ({ businessId, body, transaction }) => {
+  const input = readHours(body);
+  return NextResponse.json(await transaction(async (tx) => {
+    await replaceBusinessHoursInTransaction(tx, { businessId, ...input });
+    return await loadHours(tx, businessId);
+  }, { minimumRole: "business_admin" }));
+});

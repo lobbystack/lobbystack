@@ -1,18 +1,13 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  membership: vi.fn(),
   state: vi.fn(),
   store: vi.fn(),
   rate: vi.fn(),
   ip: vi.fn(),
 }));
 
-vi.mock("@/lib/api-helpers", () => ({
-  withOperatorTransaction: mocks.membership,
-  asApiResponse: (error: unknown) => error instanceof Response ? error : Response.json({ error: "Request failed." }, { status: 500 }),
-  jsonError: (message: string, status = 400, code?: string) => Response.json({ error: message, ...(code ? { code } : {}) }, { status }),
-}));
+vi.mock("@/lib/operator-request", () => import("@/lib/operator-request.fake"));
 vi.mock("@/lib/google-calendar-oauth", () => ({ createCalendarOAuthState: mocks.state }));
 vi.mock("@/lib/google-calendar-provider", () => ({
   googleCalendarProvider: () => ({ buildAuthorizationUrl: () => "https://accounts.google.test/o/oauth2/v2/auth?state=signed-state" }),
@@ -21,6 +16,7 @@ vi.mock("@/lib/google-calendar-oauth-store", () => ({ storeCalendarOAuthState: m
 vi.mock("@/lib/google-calendar-oauth-limit", () => ({ enforceCalendarOAuthRateLimits: mocks.rate }));
 vi.mock("@/lib/trusted-client-ip", () => ({ trustedClientIp: mocks.ip }));
 
+import { fakeOperator, resetFakeOperator } from "@/lib/operator-request.fake";
 import { GET } from "./route";
 
 beforeEach(() => {
@@ -28,7 +24,8 @@ beforeEach(() => {
   vi.stubEnv("GOOGLE_CLIENT_ID", "client");
   vi.stubEnv("GOOGLE_CLIENT_SECRET", "secret");
   vi.stubEnv("GOOGLE_REDIRECT_URI", "https://app.example.test/callback");
-  mocks.membership.mockImplementation(async (_request: Request, callback: (input: unknown) => unknown) => await callback({ session: { user: { id: "user-1" } }, businessId: "business-1", tx: {} }));
+  resetFakeOperator();
+  Object.assign(fakeOperator, { userId: "user-1", businessId: "business-1" });
   mocks.state.mockReturnValue("signed-state");
   mocks.store.mockResolvedValue(undefined);
   mocks.rate.mockResolvedValue({ allowed: true });
@@ -38,10 +35,10 @@ afterEach(() => vi.unstubAllEnvs());
 
 const startRequest = () => new Request("https://app.example.test/api/calendar/google/start?businessId=business-1");
 
-it("requires a business before any rate-limit or state work", async () => {
-  mocks.membership.mockRejectedValueOnce(Response.json({ error: "A businessId is required.", code: "business_required" }, { status: 400 }));
-  const response = await GET(new Request("https://app.example.test/api/calendar/google/start"));
-  expect(response.status).toBe(400);
+it("refuses an operator below admin before any rate-limit or state work", async () => {
+  fakeOperator.denied = Object.assign(new Error("You do not have access to this business."), { status: 403 });
+  const response = await GET(startRequest());
+  expect(response.status).toBe(403);
   expect(mocks.rate).not.toHaveBeenCalled();
   expect(mocks.state).not.toHaveBeenCalled();
 });
@@ -51,7 +48,7 @@ it("confirms membership before consuming quota and creating OAuth state", async 
   expect(response.status).toBe(200);
   await expect(response.json()).resolves.toEqual({ url: expect.stringContaining("accounts.google.test") });
   expect(mocks.rate).toHaveBeenCalledWith({ operation: "start", userId: "user-1", businessId: "business-1", ip: "203.0.113.10" });
-  expect(mocks.membership.mock.invocationCallOrder[0]).toBeLessThan(mocks.rate.mock.invocationCallOrder[0]!);
+  expect(fakeOperator.transactions).toEqual([{ minimumRole: "business_admin" }]);
   expect(mocks.state).toHaveBeenCalledWith({ userId: "user-1", businessId: "business-1" });
   expect(mocks.store).toHaveBeenCalledWith("signed-state");
 });

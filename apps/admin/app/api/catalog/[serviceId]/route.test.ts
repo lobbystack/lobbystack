@@ -1,16 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const fixture = vi.hoisted(() => ({ update: vi.fn() }));
-vi.mock("@/lib/api-helpers", async (original) => ({
-  ...await original<typeof import("@/lib/api-helpers")>(),
-  requireOperatorBusiness: async () => ({ session: { user: { id: "user_1" } }, businessId: "business_1" }),
-}));
-vi.mock("@/lib/domain-context", () => ({ createDomainContext: () => ({ db: "app" }) }));
+vi.mock("@/lib/operator-request", () => import("@/lib/operator-request.fake"));
 vi.mock("@lobbystack/domain", () => ({ updateService: fixture.update }));
 
+import { fakeOperator, resetFakeOperator } from "@/lib/operator-request.fake";
 import { PATCH } from "./route";
 
-beforeEach(() => { vi.clearAllMocks(); });
+beforeEach(() => {
+  vi.clearAllMocks();
+  resetFakeOperator();
+  Object.assign(fakeOperator, { userId: "user_1", businessId: "business_1" });
+});
 
 describe("service update API", () => {
   it("acts as the signed-in operator even when the body names another user, business or service", async () => {

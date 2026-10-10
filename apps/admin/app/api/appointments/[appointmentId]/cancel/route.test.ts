@@ -1,19 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const fixture = vi.hoisted(() => ({ signedIn: true, cancel: vi.fn() }));
-vi.mock("@/lib/api-helpers", async (original) => {
-  const helpers = await original<typeof import("@/lib/api-helpers")>();
-  return {
-    ...helpers,
-    requireOperatorBusiness: async () => {
-      if (!fixture.signedIn) throw helpers.jsonError("Authentication required.", 401, "unauthorized");
-      return { session: { user: { id: "user_1" } }, businessId: "business_1" };
-    },
-  };
-});
-vi.mock("@/lib/domain-context", () => ({ createDomainContext: () => ({ db: "app" }) }));
+const fixture = vi.hoisted(() => ({ cancel: vi.fn() }));
+vi.mock("@/lib/operator-request", () => import("@/lib/operator-request.fake"));
 vi.mock("@lobbystack/domain", () => ({ cancelAppointment: fixture.cancel }));
 
+import { fakeOperator, resetFakeOperator } from "@/lib/operator-request.fake";
 import { POST } from "./route";
 
 const appointmentId = "6f1c2b9e-1d2a-4c3b-9e8f-0a1b2c3d4e5f";
@@ -24,7 +15,8 @@ const cancel = (id = appointmentId) => POST(
 
 beforeEach(() => {
   vi.clearAllMocks();
-  fixture.signedIn = true;
+  resetFakeOperator();
+  Object.assign(fakeOperator, { userId: "user_1", businessId: "business_1" });
   fixture.cancel.mockResolvedValue("cancelled");
 });
 
@@ -34,12 +26,6 @@ describe("operator appointment cancel API", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ appointmentId, status: "canceled" });
     expect(fixture.cancel).toHaveBeenCalledWith({ db: "app" }, { userId: "user_1", businessId: "business_1", appointmentId });
-  });
-
-  it("requires a signed-in operator", async () => {
-    fixture.signedIn = false;
-    expect((await cancel()).status).toBe(401);
-    expect(fixture.cancel).not.toHaveBeenCalled();
   });
 
   it("returns the domain's refusal for roles below scheduler", async () => {

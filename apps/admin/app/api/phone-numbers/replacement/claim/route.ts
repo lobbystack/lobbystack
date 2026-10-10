@@ -2,17 +2,12 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 
 import { reserveReplacementNumberClaim } from "@lobbystack/domain";
-import { asApiResponse, businessIdFromRequest, jsonError, readJson, requireApiSession } from "@/lib/api-helpers";
-import { createDomainContext } from "@/lib/domain-context";
+import { jsonError } from "@/lib/api-helpers";
+import { operatorRoute } from "@/lib/operator-request";
 import { getNumberClaimTokenSecret } from "@/lib/twilio-provider";
 
-export async function POST(request: Request) {
-  try {
-    const session = await requireApiSession(request);
-    const businessId = businessIdFromRequest(request);
-    const body = await readJson(request) as { claimToken?: string; idempotencyKey?: string };
-    if (!businessId || !body.claimToken) return jsonError("businessId and claimToken are required.", 400);
-    const claimId = await reserveReplacementNumberClaim(createDomainContext(), { userId: session.user.id, businessId, claimToken: body.claimToken, claimTokenSecret: getNumberClaimTokenSecret(), idempotencyKey: body.idempotencyKey ?? randomUUID() });
-    return NextResponse.json({ claimId }, { status: 202 });
-  } catch (error) { return asApiResponse(error); }
-}
+export const POST = operatorRoute(async ({ userId, businessId, body, domain }) => {
+  if (typeof body.claimToken !== "string" || !body.claimToken) return jsonError("claimToken is required.", 400);
+  const claimId = await reserveReplacementNumberClaim(domain, { userId, businessId, claimToken: body.claimToken, claimTokenSecret: getNumberClaimTokenSecret(), idempotencyKey: typeof body.idempotencyKey === "string" ? body.idempotencyKey : randomUUID() });
+  return NextResponse.json({ claimId }, { status: 202 });
+});

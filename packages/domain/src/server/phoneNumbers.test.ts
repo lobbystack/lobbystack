@@ -22,8 +22,8 @@ function chain(rows: unknown[]) {
   return node;
 }
 
-function setup(execute: () => unknown = () => ({ rows: [{ id: "claim-1" }] })) {
-  const selects = [[{ stage: "complete", timezone: "America/Toronto", deploymentMode: "self_hosted_standard", replacementUsedAt: null }], [], [{ id: "number-1" }]];
+function setup(execute: () => unknown = () => ({ rows: [{ id: "claim-1" }] }), business: Record<string, unknown> = {}) {
+  const selects = [[{ stage: "complete", timezone: "America/Toronto", deploymentMode: "self_hosted_standard", replacementUsedAt: null, ...business }], [], [{ id: "number-1" }]];
   const tx = { select: () => chain(selects.shift() ?? []), execute: vi.fn(async () => await execute()) };
   mocks.withBusinessTransaction.mockImplementation(async (_db: unknown, _scope: unknown, callback: (tx: unknown) => unknown) => await callback(tx));
   return tx;
@@ -49,6 +49,20 @@ describe("searchBusinessNumberInventory", () => {
     expect(result.numbers.map(number => number.phoneE164)).toEqual(["+14165550102", "+14165550103"]);
     expect(result.numbers.every(number => typeof number.claimToken === "string")).toBe(true);
   });
+
+  it.each([
+    ["a cloud workspace without a paid plan", { deploymentMode: "cloud" }, "onboarding", 409, "dedicated_number_requires_paid_plan"],
+    ["a workspace that already replaced its number", { replacementUsedAt: new Date() }, "replacement", 409, "replacement_already_used"],
+    ["a workspace still creating its business", { stage: "create_business" }, "onboarding", 409, "invalid_onboarding_stage"],
+  ] as const)("answers a search from %s with %i", async (_case, business, purpose, status, code) => {
+    setup(undefined, business);
+    await expect(offer(purpose)).rejects.toMatchObject({ status, code });
+  });
+
+  it("answers an unsupported country with 400", async () => {
+    setup();
+    await expect(searchBusinessNumberInventory(context, { ...scope, selection: { countryCode: "FR" as never } }, { listAvailablePhoneNumbers: async () => [] })).rejects.toMatchObject({ status: 400, code: "unsupported_country" });
+  });
 });
 
 describe("number claims", () => {
@@ -64,6 +78,14 @@ describe("number claims", () => {
     setup();
     const claimToken = await offer();
     await expect(reserveOnboardingNumberClaim(context, { ...scope, claimToken: `${claimToken}x`, idempotencyKey: "key" })).rejects.toMatchObject({ status: 400, code: "number_offer_invalid" });
+  });
+
+  it("refuses an offer made to another business or for the other flow with 400", async () => {
+    const tx = setup();
+    const claimToken = await offer();
+    await expect(reserveOnboardingNumberClaim(context, { ...scope, businessId: "business-2", claimToken, idempotencyKey: "key" })).rejects.toMatchObject({ status: 400, code: "number_offer_invalid" });
+    await expect(reserveReplacementNumberClaim(context, { ...scope, claimToken, idempotencyKey: "key" })).rejects.toMatchObject({ status: 400, code: "number_offer_invalid" });
+    expect(tx.execute).not.toHaveBeenCalled();
   });
 
   it.each([

@@ -2,11 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 const domain = vi.hoisted(() => ({ resendWebhookDelivery: vi.fn(), revokeApiKey: vi.fn(), listWebhookDeliveries: vi.fn() }));
 
-vi.mock("@/lib/api-helpers", () => ({
-  requireOperatorBusiness: async () => ({ session: { user: { id: "u1" } }, businessId: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5f" }),
-  asApiResponse: (error: unknown) => { throw error; },
-}));
-vi.mock("@/lib/domain-context", () => ({ createDomainContext: () => ({ db: {} }) }));
+vi.mock("@/lib/operator-request", () => import("@/lib/operator-request.fake"));
 vi.mock("@lobbystack/domain", () => domain);
 
 describe("dashboard API key and webhook routes", () => {

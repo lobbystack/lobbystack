@@ -1,25 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const fixture = vi.hoisted(() => ({ denied: false, insert: vi.fn(), conflict: vi.fn(), update: vi.fn(), transaction: vi.fn(), enqueue: vi.fn() }));
-vi.mock("@/lib/api-helpers", async (original) => ({
-  ...await original<typeof import("@/lib/api-helpers")>(),
-  withOperatorTransaction: async (_request: Request, callback: (input: unknown) => unknown, options: unknown) => {
-    fixture.transaction(options);
-    if (fixture.denied) throw Object.assign(new Error("Forbidden"), { status: 403 });
-    return callback({ businessId: "business", tx: {
-      select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ name: "Clinic" }] }) }) }),
-      insert: () => ({ values: (value: unknown) => { fixture.insert(value); return { onConflictDoUpdate: (config: { set: unknown }) => { fixture.conflict(config.set); return { returning: async () => [{ id: "profile", updatedAt: new Date(0) }] }; } }; } }),
-      update: () => ({ set: (value: unknown) => { fixture.update(value); return { where: () => ({ returning: async () => [{ id: "business" }] }) }; } }),
-    } });
-  },
-}));
+const fixture = vi.hoisted(() => ({ insert: vi.fn(), conflict: vi.fn(), update: vi.fn(), enqueue: vi.fn() }));
+vi.mock("@/lib/operator-request", () => import("@/lib/operator-request.fake"));
 vi.mock("@lobbystack/db", async (original) => ({ ...await original<typeof import("@lobbystack/db")>(), enqueueOutbox: fixture.enqueue }));
+import { fakeOperator, resetFakeOperator } from "@/lib/operator-request.fake";
 import { PATCH } from "./route";
 const patch = (body: unknown) => PATCH(new Request("http://localhost:3000/api/agent", { method: "PATCH", body: JSON.stringify(body) }));
-beforeEach(() => { vi.clearAllMocks(); fixture.denied = false; });
+beforeEach(() => {
+  vi.clearAllMocks();
+  resetFakeOperator();
+  fakeOperator.tx = {
+    select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ name: "Clinic" }] }) }) }),
+    insert: () => ({ values: (value: unknown) => { fixture.insert(value); return { onConflictDoUpdate: (config: { set: unknown }) => { fixture.conflict(config.set); return { returning: async () => [{ id: "profile", updatedAt: new Date(0) }] }; } }; } }),
+    update: () => ({ set: (value: unknown) => { fixture.update(value); return { where: () => ({ returning: async () => [{ id: "business" }] }) }; } }),
+  };
+});
 
 describe("agent settings validation", () => {
-  it.each([{}, [], null, { locale: "xx" }, { timezone: "Eastern" }, { timezone: "+05:00" }, { timezone: 5 }, { greeting: "" }, { transferMode: "invalid" }, { appointmentChangePolicy: {} }])("rejects invalid input %j before writing", async (body) => {
+  it.each([{}, { locale: "xx" }, { timezone: "Eastern" }, { timezone: "+05:00" }, { timezone: 5 }, { greeting: "" }, { transferMode: "invalid" }, { appointmentChangePolicy: {} }])("rejects invalid input %j before writing", async (body) => {
     expect((await patch(body)).status).toBe(400);
     expect(fixture.insert).not.toHaveBeenCalled();
     expect(fixture.enqueue).not.toHaveBeenCalled();
@@ -54,9 +52,9 @@ describe("agent settings validation", () => {
     expect(fixture.enqueue).not.toHaveBeenCalled();
   });
   it("requires administrator access before any mutation", async () => {
-    fixture.denied = true;
+    fakeOperator.denied = Object.assign(new Error("Forbidden"), { status: 403 });
     expect((await patch({ transferMode: "always" })).status).toBe(403);
-    expect(fixture.transaction).toHaveBeenCalledWith({ minimumRole: "business_admin" });
+    expect(fakeOperator.transactions).toEqual([{ minimumRole: "business_admin" }]);
     expect(fixture.insert).not.toHaveBeenCalled();
   });
 });

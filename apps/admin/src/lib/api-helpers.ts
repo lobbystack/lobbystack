@@ -1,8 +1,5 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
-
-import { users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { requireBusinessMembership } from "@lobbystack/domain";
+import { z } from "zod";
 
 import { runAfterResponse } from "./after-response";
 import { getSession, type Session } from "./auth";
@@ -64,49 +61,16 @@ export async function requireProspectDemoOperator(request: Request): Promise<Non
   return session;
 }
 
-export function businessIdFromRequest(request: Request): string | null {
-  return new URL(request.url).searchParams.get("businessId") ?? request.headers.get("x-business-id");
-}
-
-async function activeBusinessIdForUser(userId: string): Promise<string | null> {
-  return await withBusinessTransaction(getAppDatabase().db, { userId, actorType: "operator" }, async (tx) => {
-    const [user] = await tx
-      .select({ activeBusinessId: users.activeBusinessId })
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1);
-    return user?.activeBusinessId ?? null;
-  });
-}
-
-/** The signed-in user and the business the request targets, for domain calls that open their own transaction. */
-export async function requireOperatorBusiness(request: Request): Promise<{ session: NonNullable<Session>; businessId: string }> {
-  const session = await requireApiSession(request);
-  const businessId = businessIdFromRequest(request) ?? await activeBusinessIdForUser(session.user.id);
-  if (!businessId) {
-    throw jsonError("A businessId is required.", 400, "business_required");
-  }
-  return { session, businessId };
-}
-
-export async function withOperatorTransaction<T>(
-  request: Request,
-  callback: (input: { session: NonNullable<Session>; businessId: string; tx: DatabaseTransaction }) => Promise<T>,
-  options: { minimumRole?: "viewer" | "scheduler" | "business_admin" | "business_owner" } = {},
-): Promise<T> {
-  const { session, businessId } = await requireOperatorBusiness(request);
-  return await withBusinessTransaction(getAppDatabase().db, { userId: session.user.id, businessId, actorType: "operator" }, async (tx) => {
-    await requireBusinessMembership(tx, { userId: session.user.id, businessId, ...(options.minimumRole ? { minimumRole: options.minimumRole } : {}) });
-    return await callback({ session, businessId, tx });
-  });
-}
-
 export function asApiResponse(error: unknown): NextResponse {
   if (error instanceof NextResponse) {
     return error;
   }
   if (error instanceof Response) {
     return NextResponse.json({ error: "Request failed." }, { status: error.status });
+  }
+  if (error instanceof z.ZodError) {
+    const issue = error.issues[0];
+    return jsonError(issue ? `${issue.path.length ? `${issue.path.join(".")}: ` : ""}${issue.message}` : "The request is invalid.", 400, "invalid_request");
   }
   const status = typeof error === "object" && error !== null && "status" in error && typeof error.status === "number" ? error.status : 500;
   const code = typeof error === "object" && error !== null && "code" in error && typeof error.code === "string" ? error.code : undefined;
