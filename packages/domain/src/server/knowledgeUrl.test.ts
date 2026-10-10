@@ -12,6 +12,12 @@ describe("knowledge website URLs", () => {
     expect(normalizeWebsiteSourceUrl("https://example.com/docs///?utm_source=test#section")).toBe("https://example.com/docs");
   });
 
+  it("keeps a crawled page's query without tracking or reply parameters, in a fixed order", () => {
+    expect(normalizeWebsiteSourceUrl("https://example.com/post/?replytocom=12&utm_source=news&gclid=abc", { keepQuery: true })).toBe("https://example.com/post");
+    expect(normalizeWebsiteSourceUrl("https://example.com/?page_id=2&fbclid=x&lang=fr", { keepQuery: true })).toBe("https://example.com/?lang=fr&page_id=2");
+    expect(normalizeWebsiteSourceUrl("https://example.com/?lang=fr&page_id=2", { keepQuery: true })).toBe("https://example.com/?lang=fr&page_id=2");
+  });
+
   it("reads a host with a port as a website, not a scheme", () => {
     expect(normalizeWebsiteSourceUrl("example.com:8080/docs")).toBe("https://example.com:8080/docs");
   });

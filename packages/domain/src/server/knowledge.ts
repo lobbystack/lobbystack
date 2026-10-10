@@ -317,18 +317,20 @@ async function indexDocumentTextInTransaction(tx: DatabaseTransaction, input: In
       return { chunkCount: 0, indexed: false, documentId: input.documentId };
     }
     await tx.delete(knowledgeChunks).where(and(eq(knowledgeChunks.documentId, input.documentId), eq(knowledgeChunks.businessId, input.businessId)));
-    if (chunks.length > 0) {
-      await tx.insert(knowledgeChunks).values(chunks.map((content, sequence) => ({
-        businessId: input.businessId,
-        documentId: input.documentId,
-        sequence,
-        content,
-        contentHash: hashContent(content),
-        embedding: input.embeddings[sequence]!,
-        ...(input.embeddingFingerprint ? { embeddingFingerprint: input.embeddingFingerprint } : {}),
-        embeddingStatus: input.embeddingFingerprint ? "completed" : "pending",
-        embeddingError: null,
-      })));
+    const rows = chunks.map((content, sequence) => ({
+      businessId: input.businessId,
+      documentId: input.documentId,
+      sequence,
+      content,
+      contentHash: hashContent(content),
+      embedding: input.embeddings[sequence]!,
+      ...(input.embeddingFingerprint ? { embeddingFingerprint: input.embeddingFingerprint } : {}),
+      embeddingStatus: input.embeddingFingerprint ? "completed" : "pending",
+      embeddingError: null,
+    }));
+    // A statement can bind at most 65,535 values, and each row binds 9.
+    for (let start = 0; start < rows.length; start += 1000) {
+      await tx.insert(knowledgeChunks).values(rows.slice(start, start + 1000));
     }
     await tx.update(knowledgeDocuments).set({ status: preserveImport ? "processing" : "indexed", processingProgress: 100, contentHash: hashContent(input.text), revision: document.revision + (preserveImport ? 0 : 1), updatedAt: new Date() }).where(eq(knowledgeDocuments.id, input.documentId));
     if (!preserveImport) await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "knowledge_document", aggregateId: input.documentId, dedupeKey: `knowledge:${input.documentId}:snapshot:${document.revision + 1}`, payload: { businessId: input.businessId, reason: "document_indexed" } });

@@ -1,4 +1,4 @@
-import { readdirSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
@@ -35,6 +35,12 @@ describe("raw migration manifest", () => {
     expect(LEGACY_BASELINE_MIGRATIONS).not.toContain(
       "0053_legacy_email_verified_backfill.sql",
     );
+  });
+
+  it("clears expired call summaries only for calls without transcripts, and a conversation's only while it holds that text", () => {
+    const backfill = readFileSync(`${migrationsDirectory}/0099_clear_expired_call_summaries.sql`, "utf8");
+    expect(backfill).toContain("NOT EXISTS (SELECT 1 FROM public.transcripts t WHERE t.call_id = s.call_id)");
+    expect(backfill).toContain("AND conv.summary = e.summary_text");
   });
 
   it("recognizes only validated concurrent-index migration directives", () => {

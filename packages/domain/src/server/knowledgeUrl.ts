@@ -21,5 +21,9 @@ export function normalizeWebsiteSourceUrl(value: string, options: { keepQuery?: 
   const hostname = url.hostname.toLowerCase().replace(/\.$/, "");
   if (hostname === "localhost" || [".localhost", ".local", ".localdomain", ".home.arpa"].some((suffix) => hostname.endsWith(suffix)) || isIP(hostname.replace(/^\[|\]$/g, ""))) throw invalidWebsiteUrl("Website URL must use a public hostname.");
   const path = url.pathname === "/" ? "/" : trimTrailingSlashes(url.pathname);
-  return `${url.origin}${path}${options.keepQuery ? url.search : ""}`;
+  if (!options.keepQuery) return `${url.origin}${path}`;
+  // Tracking and comment-reply links show the same page, so they must not become separate documents.
+  for (const key of [...url.searchParams.keys()]) if (/^(utm_.*|gclid|fbclid|msclkid|replytocom)$/i.test(key)) url.searchParams.delete(key);
+  url.searchParams.sort();
+  return `${url.origin}${path}${url.search}`;
 }

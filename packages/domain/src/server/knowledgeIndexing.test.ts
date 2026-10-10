@@ -82,6 +82,18 @@ describe("indexing crawled website pages", () => {
   });
 });
 
+describe("indexing a large document", () => {
+  it("writes its chunks in slices that stay under Postgres's bind limit", async () => {
+    useTransaction(() => [{ id: "upload", status: "processing", revision: 1 }]);
+    const sections = Array.from({ length: 2_500 }, (_, index) => `## Question ${index}\nAnswer ${index}.`);
+    await indexDocumentText(context, { businessId: "biz_1", documentId: "upload", text: sections.join("\n\n"), embeddings: sections.map(() => [0.1]) });
+
+    const inserts = queries.filter((query) => query.kind === "insert" && query.table === knowledgeChunks).map((query) => query.values as unknown as Array<{ sequence: number }>);
+    expect(inserts.map((rows) => rows.length)).toEqual([1_000, 1_000, 500]);
+    expect(inserts.flat().map((row) => row.sequence)).toEqual(sections.map((_, index) => index));
+  });
+});
+
 describe("knowledge storage limit before embedding", () => {
   it("returns the plan's message when the text can't fit next to what is stored", async () => {
     mocks.plan.mockResolvedValue("free_cloud");
