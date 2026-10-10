@@ -5,6 +5,9 @@ import { DateTime } from "luxon";
 // from midnight. A day with a lunch break has two windows, such as 9:00 to
 // 12:00 and 13:00 to 17:00. A day with no window is closed.
 
+// Every check here is about the input, so its error is a 400.
+const invalidHours = (message: string) => Object.assign(new Error(message), { status: 400 });
+
 /** Enough for a lunch break and an evening shift. */
 export const MAX_HOURS_WINDOWS_PER_DAY = 4;
 
@@ -15,8 +18,8 @@ export const MAX_HOURS_WINDOWS_PER_DAY = 4;
  */
 export function normalizeHoursWindows(windows: ReadonlyArray<HoursWindow>): HoursWindow[] {
   for (const window of windows) {
-    if (!Number.isInteger(window.dayOfWeek) || window.dayOfWeek < 0 || window.dayOfWeek > 6) throw new Error("Each day must be a weekday.");
-    if (!Number.isInteger(window.openMinutes) || !Number.isInteger(window.closeMinutes) || window.openMinutes < 0 || window.closeMinutes > 1440 || window.closeMinutes <= window.openMinutes) throw new Error("Closing time must be after opening time.");
+    if (!Number.isInteger(window.dayOfWeek) || window.dayOfWeek < 0 || window.dayOfWeek > 6) throw invalidHours("Each day must be a weekday.");
+    if (!Number.isInteger(window.openMinutes) || !Number.isInteger(window.closeMinutes) || window.openMinutes < 0 || window.closeMinutes > 1440 || window.closeMinutes <= window.openMinutes) throw invalidHours("Closing time must be after opening time.");
   }
   const sorted = windows
     .map((window) => ({ dayOfWeek: window.dayOfWeek, openMinutes: window.openMinutes, closeMinutes: window.closeMinutes }))
@@ -24,10 +27,10 @@ export function normalizeHoursWindows(windows: ReadonlyArray<HoursWindow>): Hour
   for (let index = 1; index < sorted.length; index += 1) {
     const previous = sorted[index - 1]!;
     const current = sorted[index]!;
-    if (previous.dayOfWeek === current.dayOfWeek && current.openMinutes < previous.closeMinutes) throw new Error("Opening windows on the same day can't overlap.");
+    if (previous.dayOfWeek === current.dayOfWeek && current.openMinutes < previous.closeMinutes) throw invalidHours("Opening windows on the same day can't overlap.");
   }
   for (let day = 0; day < 7; day += 1) {
-    if (sorted.filter((window) => window.dayOfWeek === day).length > MAX_HOURS_WINDOWS_PER_DAY) throw new Error(`Each day can have up to ${MAX_HOURS_WINDOWS_PER_DAY} opening windows.`);
+    if (sorted.filter((window) => window.dayOfWeek === day).length > MAX_HOURS_WINDOWS_PER_DAY) throw invalidHours(`Each day can have up to ${MAX_HOURS_WINDOWS_PER_DAY} opening windows.`);
   }
   return sorted;
 }
@@ -58,21 +61,21 @@ export function normalizeClosures(
   timezone: string,
   now: Date,
 ): Array<{ startsAt: Date; endsAt: Date; reason: string }> {
-  if (closures.length > MAX_CLOSURES) throw new Error(`A business can have up to ${MAX_CLOSURES} closures.`);
+  if (closures.length > MAX_CLOSURES) throw invalidHours(`A business can have up to ${MAX_CLOSURES} closures.`);
   const latestEnd = DateTime.fromJSDate(now).plus({ years: 2 }).toJSDate();
   const sorted = closures.map((closure) => {
     const [startsAt, endsAt] = [closure.startsAt, closure.endsAt].map((value) => LOCAL_DATE_TIME.test(value) ? DateTime.fromISO(value, { zone: timezone }) : undefined);
-    if (!startsAt?.isValid || !endsAt?.isValid) throw new Error("Each closure needs a start and an end like 2026-12-25T09:00.");
+    if (!startsAt?.isValid || !endsAt?.isValid) throw invalidHours("Each closure needs a start and an end like 2026-12-25T09:00.");
     const reason = closure.reason?.trim() ?? "";
-    if (reason.length > MAX_CLOSURE_REASON_LENGTH) throw new Error(`A closure reason can be up to ${MAX_CLOSURE_REASON_LENGTH} characters.`);
+    if (reason.length > MAX_CLOSURE_REASON_LENGTH) throw invalidHours(`A closure reason can be up to ${MAX_CLOSURE_REASON_LENGTH} characters.`);
     const checked = { startsAt: startsAt.toJSDate(), endsAt: endsAt.toJSDate(), reason };
-    if (checked.endsAt <= checked.startsAt) throw new Error("A closure must end after it starts.");
-    if (checked.endsAt <= now) throw new Error("A closure can't end in the past.");
-    if (checked.endsAt > latestEnd) throw new Error("A closure must end within two years.");
+    if (checked.endsAt <= checked.startsAt) throw invalidHours("A closure must end after it starts.");
+    if (checked.endsAt <= now) throw invalidHours("A closure can't end in the past.");
+    if (checked.endsAt > latestEnd) throw invalidHours("A closure must end within two years.");
     return checked;
   }).sort((left, right) => left.startsAt.getTime() - right.startsAt.getTime());
   for (let index = 1; index < sorted.length; index += 1) {
-    if (sorted[index]!.startsAt < sorted[index - 1]!.endsAt) throw new Error("Closures can't overlap.");
+    if (sorted[index]!.startsAt < sorted[index - 1]!.endsAt) throw invalidHours("Closures can't overlap.");
   }
   return sorted;
 }

@@ -47,12 +47,17 @@ const claimRefusals: Record<string, [status: number, message: string]> = {
   monthly_claim_quota_reached: [429, "You've reached the 30-day limit for new numbers. Try again later."],
 };
 
+function refused(reason: string): Error {
+  const [status, text] = claimRefusals[reason]!;
+  return numberClaimError(status, reason, text);
+}
+
 // Drizzle wraps the PostgreSQL error, and its message lists the query
 // parameters. Return only the raised reason.
 function claimRefusal(error: unknown): Error | undefined {
   for (let current: unknown = error, depth = 0; current && typeof current === "object" && depth < 4; current = (current as { cause?: unknown }).cause, depth += 1) {
     const message = (current as { message?: unknown }).message;
-    if (typeof message === "string" && Object.hasOwn(claimRefusals, message)) { const [status, text] = claimRefusals[message]!; return numberClaimError(status, message, text); }
+    if (typeof message === "string" && Object.hasOwn(claimRefusals, message)) return refused(message);
   }
   return undefined;
 }
@@ -63,21 +68,21 @@ export async function searchBusinessNumberInventory(context: DomainContext, inpu
     await requireBusinessAdmin(tx, input);
     const business = (await tx.select({ stage: businesses.onboardingStage, timezone: businesses.timezone, deploymentMode: businesses.deploymentMode, replacementUsedAt: businesses.phoneNumberReplacementUsedAt }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1))[0];
     const billing = (await tx.select({ plan: billingAccounts.plan, state: billingAccounts.subscriptionState }).from(billingAccounts).where(eq(billingAccounts.businessId, input.businessId)).limit(1))[0];
-    if (!business) throw new Error("Workspace not found.");
+    if (!business) throw numberClaimError(404, "not_found", "Workspace not found.");
     const onboardingStage = normalizeOnboardingStage(business.stage);
-    if (purpose === "onboarding" && !["plan", "phone_number", "attribution", "complete"].includes(onboardingStage)) throw new Error("Business number selection is not available at this onboarding stage.");
+    if (purpose === "onboarding" && !["plan", "phone_number", "attribution", "complete"].includes(onboardingStage)) throw refused("invalid_onboarding_stage");
     if (purpose === "replacement") {
-      if (business.replacementUsedAt) throw new Error("This workspace has already used its number replacement.");
+      if (business.replacementUsedAt) throw refused("replacement_already_used");
       const active = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"), isNull(phoneNumbers.reclaimScheduledAt))).limit(1);
-      if (!active.length) throw new Error("An active phone number is required before choosing a replacement.");
+      if (!active.length) throw refused("active_number_required");
     }
-    if (business.deploymentMode === "cloud" && (!billing || !isPaidSubscription(billing.plan, billing.state))) throw new Error("A paid plan is required for a dedicated business number.");
+    if (business.deploymentMode === "cloud" && (!billing || !isPaidSubscription(billing.plan, billing.state))) throw refused("dedicated_number_requires_paid_plan");
     const requestedCountry = input.selection?.countryCode?.trim().toUpperCase();
-    if (requestedCountry && !["US", "CA", "GB", "AU"].includes(requestedCountry)) throw new Error("Unsupported country.");
+    if (requestedCountry && !["US", "CA", "GB", "AU"].includes(requestedCountry)) throw numberClaimError(400, "unsupported_country", "Unsupported country.");
     return resolveBusinessNumberMarket({ selection: input.selection, timezone: business.timezone });
   });
   const countryCode = market.countryCode;
-  if (!["US", "CA", "GB", "AU"].includes(countryCode)) throw new Error("Unsupported country.");
+  if (!["US", "CA", "GB", "AU"].includes(countryCode)) throw numberClaimError(400, "unsupported_country", "Unsupported country.");
   const selection: NumberSelection = { countryCode, kind: input.selection?.kind ?? "local", ...(input.selection?.areaCode ? { areaCode: input.selection.areaCode.replace(/\D/g, "") } : {}), ...(input.selection?.city ? { city: input.selection.city.trim() } : {}), ...(input.selection?.regionCode ? { regionCode: input.selection.regionCode.trim() } : {}), ...(input.selection?.postalCode ? { postalCode: input.selection.postalCode.trim() } : {}) };
   const limit = Math.max(1, Math.min(20, Math.trunc(input.limit ?? 10)));
   const numbers = (await provider.listAvailablePhoneNumbers({ ...selection, limit })).filter(number => number.capabilities.sms && number.capabilities.voice).slice(0, limit).map(number => ({ ...number, claimToken: issueOffer({ v: 1, purpose, businessId: input.businessId, userId: input.userId, e164: number.phoneE164, countryCode: number.countryCode, kind: selection.kind, capabilities: { sms: true, voice: true }, selection, exp: Date.now() + 5 * 60_000 }, input.claimTokenSecret) }));
@@ -86,7 +91,7 @@ export async function searchBusinessNumberInventory(context: DomainContext, inpu
 
 export async function reserveOnboardingNumberClaim(context: DomainContext, input: { userId: string; businessId: string; claimToken: string; claimTokenSecret: string; idempotencyKey: string }): Promise<string> {
   const offer = verifyOffer(input.claimToken, input.claimTokenSecret);
-  if (offer.purpose !== "onboarding" || offer.businessId !== input.businessId || offer.userId !== input.userId) throw new Error("Number claim token does not belong to this onboarding flow.");
+  if (offer.purpose !== "onboarding" || offer.businessId !== input.businessId || offer.userId !== input.userId) throw numberClaimError(400, "number_offer_invalid", "Number claim token does not belong to this onboarding flow.");
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
     const tokenHash = createHash("sha256").update(input.claimToken).digest("hex");
@@ -99,7 +104,7 @@ export async function reserveOnboardingNumberClaim(context: DomainContext, input
 
 export async function reserveReplacementNumberClaim(context: DomainContext, input: { userId: string; businessId: string; claimToken: string; claimTokenSecret: string; idempotencyKey: string }): Promise<string> {
   const offer = verifyOffer(input.claimToken, input.claimTokenSecret);
-  if (offer.purpose !== "replacement" || offer.businessId !== input.businessId || offer.userId !== input.userId) throw new Error("Number claim token does not belong to this replacement flow.");
+  if (offer.purpose !== "replacement" || offer.businessId !== input.businessId || offer.userId !== input.userId) throw numberClaimError(400, "number_offer_invalid", "Number claim token does not belong to this replacement flow.");
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
     const tokenHash = createHash("sha256").update(input.claimToken).digest("hex");
@@ -157,5 +162,5 @@ export async function failNumberProvisioning(context: DomainContext, input: { bu
 }
 
 export async function skipOnboardingNumber(context: DomainContext, input: { userId: string; businessId: string }): Promise<void> {
-  await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => { await requireBusinessAdmin(tx, input); const changed = await tx.update(businesses).set({ onboardingStage: "attribution", updatedAt: new Date() }).where(and(eq(businesses.id, input.businessId), or(eq(businesses.onboardingStage, "plan"), eq(businesses.onboardingStage, "phone_number")))).returning({ id: businesses.id }); if (!changed.length) { const [business] = await tx.select({ stage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, input.businessId)); if (!["attribution", "complete"].includes(business?.stage ?? "")) throw new Error("Number selection cannot be skipped at this onboarding stage."); } });
+  await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => { await requireBusinessAdmin(tx, input); const changed = await tx.update(businesses).set({ onboardingStage: "attribution", updatedAt: new Date() }).where(and(eq(businesses.id, input.businessId), or(eq(businesses.onboardingStage, "plan"), eq(businesses.onboardingStage, "phone_number")))).returning({ id: businesses.id }); if (!changed.length) { const [business] = await tx.select({ stage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, input.businessId)); if (!["attribution", "complete"].includes(business?.stage ?? "")) throw numberClaimError(409, "invalid_onboarding_stage", "Number selection cannot be skipped at this onboarding stage."); } });
 }
