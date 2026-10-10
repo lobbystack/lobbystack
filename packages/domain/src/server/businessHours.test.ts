@@ -147,6 +147,18 @@ describe("operator hours", () => {
     expect(kept.recorded.deletes).toEqual([businessHours]);
   });
 
+  it("keeps the hours open to AI when only the closures changed", async () => {
+    const year = new Date().getUTCFullYear() + 1;
+    const christmas = [{ startsAt: `${year}-12-25T00:00`, endsAt: `${year}-12-26T00:00` }];
+    const empty = useBusiness({ hoursSource: "none" });
+    await replaceBusinessHoursInTransaction(empty.tx as never, { businessId, hours: [], closures: christmas });
+    expect(empty.recorded.updates).toEqual([{ table: businesses, values: { updatedAt: expect.any(Date) } }]);
+
+    const changed = useBusiness({ hoursSource: "generated", hours: weekdays });
+    await replaceBusinessHoursInTransaction(changed.tx as never, { businessId, hours: weekdays.slice(1), closures: christmas });
+    expect(changed.recorded.updates[0]).toEqual({ table: businesses, values: expect.objectContaining({ hoursSource: "operator" }) });
+  });
+
   it("rejects overlapping closures without writing", async () => {
     const { recorded, tx } = useBusiness({ hoursSource: "operator" });
     const year = new Date().getUTCFullYear() + 1;

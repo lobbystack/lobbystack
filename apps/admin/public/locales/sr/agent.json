@@ -390,15 +390,16 @@
     "closures": {
       "title": "Neradni periodi",
       "description": "Dodajte praznike i druge periode kada ne radite. Agent tada ne zakazuje termine. Vreme je prema vremenskoj zoni {{timezone}}.",
-      "startsAt": "Zatvoreno od",
-      "endsAt": "Zatvoreno do",
-      "reason": "Razlog",
+      "startsAt": "Neradni period {{number}}: zatvoreno od",
+      "endsAt": "Neradni period {{number}}: zatvoreno do",
+      "reason": "Neradni period {{number}}: razlog",
       "reasonPlaceholder": "Razlog (opciono)",
       "add": "Dodaj neradni period",
-      "remove": "Ukloni ovaj neradni period",
+      "remove": "Ukloni neradni period {{number}}",
       "summary": "Neradni periodi: {{list}}",
       "order": "Unesite početak i kasniji kraj za označeni neradni period.",
       "ended": "Označeni neradni period se završava u prošlosti. Izmenite datume ili ga uklonite.",
+      "far": "Označeni neradni period se završava za više od dve godine. Izmenite datume.",
       "overlap": "Označeni neradni period se preklapa sa drugim. Izmenite datume."
     }
   }

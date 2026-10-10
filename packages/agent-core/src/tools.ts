@@ -176,7 +176,12 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
           openNow,
           configured: snapshot.hours.length > 0,
           weekly: weeklyHours(snapshot),
-          upcomingClosures: upcomingClosures(snapshot, now),
+          // Local times with an offset, like `now` and `weekly`; the snapshot stores UTC.
+          upcomingClosures: upcomingClosures(snapshot, now).map((closure) => ({
+            ...closure,
+            from: DateTime.fromISO(closure.from, { zone: timezone }).toISO()!,
+            to: DateTime.fromISO(closure.to, { zone: timezone }).toISO()!,
+          })),
         };
       },
     }),
