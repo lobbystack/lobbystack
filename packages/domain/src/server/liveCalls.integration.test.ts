@@ -355,7 +355,7 @@ describe.skipIf(!testUrl)("GPT-Live phone calls against PostgreSQL", () => {
       const businessId = await business(tx, { plan: "pro" });
       const phone = call(businessId, "+14165550134");
       const started = await asWorker(tx, (context) => startLivePhoneCall(context, phone));
-      const recording = { sessionId: phone.sessionId, durationMs: 42_000 };
+      const recording = { sessionId: phone.sessionId };
       const finished = await asWorker(tx, async (context) => [
         await finishLiveCall(context, { businessId, callId: started.callId, seconds: 42, end: "caller_hung_up", recording }),
         // A late re-attach finishing the same call again queues nothing.
@@ -365,7 +365,7 @@ describe.skipIf(!testUrl)("GPT-Live phone calls against PostgreSQL", () => {
       const jobs = () => tx.select({ dedupeKey: outboxMessages.dedupeKey, payload: outboxMessages.payload, availableAt: outboxMessages.availableAt }).from(outboxMessages).where(and(eq(outboxMessages.aggregateId, started.callId), eq(outboxMessages.topic, "call.saveRecording")));
       const [first, ...rest] = await jobs();
       expect(rest).toHaveLength(0);
-      expect(first).toMatchObject({ dedupeKey: `call:${started.callId}:recording:1`, payload: { callId: started.callId, sessionId: phone.sessionId, durationMs: 42_000, attempt: 1 } });
+      expect(first).toMatchObject({ dedupeKey: `call:${started.callId}:recording:1`, payload: { callId: started.callId, sessionId: phone.sessionId, attempt: 1 } });
       expect(first!.availableAt.getTime()).toBeGreaterThan(Date.now() + 3_000);
 
       // OpenAI answered 404: the next attempt is its own outbox row, ten seconds out.

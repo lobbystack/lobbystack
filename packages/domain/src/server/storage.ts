@@ -271,7 +271,7 @@ export async function deleteExpiredObjectsForBusiness(
 
 export async function persistCallRecording(
   context: DomainContext,
-  input: { businessId: string; callId: string; durationMs: number; contentType: string; body: Uint8Array },
+  input: { businessId: string; callId: string; contentType: string; body: Uint8Array },
   storage: BinaryStorageProvider,
 ): Promise<string | null> {
   const objectId = randomUUID();
@@ -294,7 +294,6 @@ export async function persistCallRecording(
     await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "recording", aggregateId: input.callId, dedupeKey: `recording:${input.callId}:${objectId}:ready`, payload: { type: "recording.available", entityId: input.callId } });
     return true;
   });
-  void input.durationMs;
   return linked ? objectId : null;
 }
 

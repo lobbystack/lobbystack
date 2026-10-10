@@ -1,3 +1,4 @@
+import type { LiveCallEnd } from "@lobbystack/domain";
 import type { LanguageModelUsage } from "ai";
 import type OpenAI from "openai";
 import type { DelegationCreatedEvent } from "openai/resources/live/live";
@@ -49,6 +50,13 @@ export type LiveCallSummary = {
   usageConfirmed: boolean;
   delegations: DelegationTiming[];
   closeReason?: string;
+  /**
+   * Why the call ended: the first end the agent or a wrap-up asked for, less
+   * a caller_finished the caller called off by talking on. A transfer whose
+   * REFER went out outranks it until the transfer fails. Without either, the
+   * session's close reason decides.
+   */
+  end: LiveCallEnd;
   /** What the caller heard: when the receptionist first spoke and the gap before each answer. */
   latency?: LiveCallLatency;
   /**
@@ -278,9 +286,11 @@ type PendingAppend = { kind: "greeting" | "answer" | "update" | "wrap_up"; deleg
 // that ended the call was made on the session timeline: the caller speaking
 // after it holds the hangup until a check says whether they're only saying
 // goodbye, or cancels it when there's no check.
-type PendingHangup = { afterMs: number; requestedAt: number; onCancelled?: () => void; callerSpoke?: boolean; checking?: boolean };
+type PendingHangup = { afterMs: number; requestedAt: number; callerSpoke?: boolean; checking?: boolean };
 // The close reason when another worker took the call over.
 const DETACHED = "detached";
+/** The ends the agent can ask for with its endCall tool. */
+type AgentEnd = Extract<LiveCallEnd, "caller_finished" | "spam" | "abuse">;
 type StepLike = DirectAnswerStep & { toolResults: Array<{ toolName: string; output: unknown }> };
 
 /** How many samples a base64 chunk of 16-bit PCM holds, and whether it's loud enough to be speech. */
@@ -307,6 +317,17 @@ function succeeded(output: unknown): boolean {
 
 function endsCall(steps: StepLike[]): boolean {
   return steps.some((step) => step.toolResults.some((result) => result.toolName === "endCall" && succeeded(result.output)));
+}
+
+// Why a call nobody ended on purpose ended, from the session's close reason.
+function endFromCloseReason(reason: string | undefined): LiveCallEnd {
+  switch (reason) {
+    case "close_requested": return "caller_finished";
+    case "remote_hangup": return "caller_hung_up";
+    case "expired": return "session_expired";
+    case "content": return "content_blocked";
+    default: return "connection_lost";
+  }
 }
 
 /**
@@ -375,9 +396,14 @@ export class LiveCallController {
   private hangupCancelled = false;
   private callerDone: LiveCallSetup["callerDone"];
   private ending = false;
+  // Why the call is ending, from the first end that was asked for. See LiveCallSummary.end.
+  private endReason: LiveCallEnd | undefined;
   // A transfer in progress: waiting for the announcement to play, waiting for
   // OpenAI to accept the REFER, or referred and waiting for the outcome.
   private transfer: "announcing" | "referring" | "referred" | undefined;
+  // The REFER went out and the transfer hasn't failed, so the call counts as
+  // transferred even when session.closed beats OpenAI's answer.
+  private transferred = false;
   private lateAttach = false;
   private firstEventMs: number | undefined;
   private latestUsageSeconds: number | undefined;
@@ -720,10 +746,21 @@ export class LiveCallController {
     setTimeout(check, GOODBYE_POLL_MS);
   }
 
+  /**
+   * Ends the call for the agent's endCall. A caller who is done can still say
+   * more first, and the call goes on; spam and abuse end once the goodbye has
+   * played, whatever the caller says. A call already ending keeps its reason.
+   */
+  end(reason: AgentEnd): void {
+    if (reason === "caller_finished") this.endWhenCallerDone();
+    else this.endAfterGoodbye(reason);
+  }
+
   /** Ends the call once the receptionist has said goodbye. Nothing the caller says stops it. */
-  endAfterGoodbye(): void {
+  private endAfterGoodbye(reason: AgentEnd): void {
     if (this.ending || this.finished) return;
     this.ending = true;
+    this.endReason ??= reason;
     this.afterSpeech(() => this.endSession());
   }
 
@@ -735,10 +772,9 @@ export class LiveCallController {
    * CALLER_DONE_QUIET_MS, or CALLER_DONE_MAX_MS at most. When the caller
    * speaks after that request, even before the agent ended the call, the
    * caller check decides; without one, or when they want more, or on another
-   * request, it's cancelled and the call goes on. `onCancelled` runs then, or
-   * at once when the call can't end this way.
+   * request, it's cancelled and the call goes on.
    */
-  endWhenCallerDone(onCancelled?: () => void): void {
+  private endWhenCallerDone(): void {
     if (this.ending || this.finished || this.pendingHangup) return;
     const answering = this.answering;
     const afterMs = answering?.offsetMs ?? this.timelineNow();
@@ -748,11 +784,9 @@ export class LiveCallController {
     const callerSpoke = this.lastCallerStartMs > afterMs;
     // A newer request or a transfer means the call isn't over.
     this.hangupCancelled = (answering !== undefined && answering.revision !== this.latestRevision) || this.transfer !== undefined || (callerSpoke && !this.callerDone);
-    if (this.hangupCancelled) {
-      onCancelled?.();
-      return;
-    }
-    const hangup: PendingHangup = { afterMs, requestedAt: performance.now(), ...(callerSpoke ? { callerSpoke } : {}), ...(onCancelled ? { onCancelled } : {}) };
+    if (this.hangupCancelled) return;
+    this.endReason ??= "caller_finished";
+    const hangup: PendingHangup = { afterMs, requestedAt: performance.now(), ...(callerSpoke ? { callerSpoke } : {}) };
     this.pendingHangup = hangup;
     setTimeout(() => this.hangUpWhenQuiet(hangup), GOODBYE_POLL_MS);
   }
@@ -790,11 +824,11 @@ export class LiveCallController {
 
   // The caller kept the call going, so the pending hangup is off.
   private cancelHangup(): void {
-    const hangup = this.pendingHangup;
-    if (!hangup) return;
+    if (!this.pendingHangup) return;
     this.pendingHangup = undefined;
     this.hangupCancelled = true;
-    hangup.onCancelled?.();
+    // The caller wasn't done after all. A wrap-up that took the call over meanwhile keeps the first reason.
+    if (!this.ending) this.endReason = undefined;
   }
 
   // The caller said something. Words after the request that ended the call
@@ -836,6 +870,7 @@ export class LiveCallController {
   wrapUp(reason: LiveCallWrapUp): Promise<void> {
     if (!this.ending && !this.finished) {
       this.ending = true;
+      this.endReason ??= reason;
       this.send({ type: "session.instructions.append", delegation_id: null, content: WRAP_UP[reason], event_id: `wrap_up_${reason}` }, { kind: "wrap_up" });
       this.afterSpeech(() => this.endSession(), () => this.wrapUpAckedAt);
     }
@@ -864,6 +899,7 @@ export class LiveCallController {
         return;
       }
       this.transfer = "referring";
+      this.transferred = true;
       this.options.onTransfer?.("referring");
       this.options.client.live.sessions.refer(this.options.sessionId, { target_uri: targetUri }).then(() => {
         // transport.answered can beat the REFER's own response.
@@ -888,6 +924,7 @@ export class LiveCallController {
   private transferFailed(message: string): void {
     if (this.transfer !== "referring" && this.transfer !== "referred") return;
     this.transfer = undefined;
+    this.transferred = false;
     clearTimeout(this.transferTimer);
     console.error(`[live] ${this.options.sessionId} transfer failed`, message);
     this.send({ type: "session.instructions.append", delegation_id: null, content: TRANSFER_FAILED, event_id: `transfer_failed_${Date.now()}` });
@@ -1093,6 +1130,8 @@ export class LiveCallController {
       } catch (error) {
         failed = true;
         ended = endsCall(steps);
+        // A step before the failure may have booked or saved something, so the next request must know.
+        this.rememberResults(steps);
         if (this.abort.signal.aborted) return;
         console.error(`[live] ${this.options.sessionId} delegation ${delegationId} failed`, error instanceof Error ? error.message : error);
       } finally {
@@ -1174,6 +1213,7 @@ export class LiveCallController {
       delegations: this.delegations,
       ...(seconds !== undefined ? { billedSeconds: seconds } : {}),
       ...(closeReason ? { closeReason } : {}),
+      end: this.transferred ? "transferred" : this.endReason ?? endFromCloseReason(closeReason),
       ...(latency ? { latency } : {}),
       outputAudio: this.outputAudio,
       inputAudio: {

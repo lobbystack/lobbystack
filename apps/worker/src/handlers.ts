@@ -576,7 +576,6 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       const businessId = businessIdOrThrow(job);
       const callId = String(job.payload.callId ?? "");
       const sessionId = String(job.payload.sessionId ?? "");
-      const durationMs = Number(job.payload.durationMs) || 0;
       const attempt = Number(job.payload.attempt) || 1;
       if (!dependencies.storage || !dependencies.liveSessions || !callId || !sessionId) return { status: "skipped", entityId: callId };
       // Delivery is at least once, so a repeated job finds the copy made.
@@ -589,7 +588,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         // 404 and 409 mean OpenAI hasn't finished the recording; anything else won't get better.
         if (status === 404 || status === 409) {
           if (attempt < LIVE_RECORDING_ATTEMPTS) {
-            await retryLiveCallRecording(dependencies.domain, { businessId, callId, sessionId, durationMs, attempt: attempt + 1 });
+            await retryLiveCallRecording(dependencies.domain, { businessId, callId, sessionId, attempt: attempt + 1 });
             return { status: "skipped", entityId: `${callId}:retry:${attempt + 1}` };
           }
           console.error(`[live] ${sessionId} recording never became available`);
@@ -599,7 +598,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         return { status: "skipped", entityId: callId };
       }
       // A storage or database failure throws, so the queue retries the job.
-      await persistCallRecording(dependencies.domain, { businessId, callId, durationMs, contentType: "audio/wav", body }, dependencies.storage);
+      await persistCallRecording(dependencies.domain, { businessId, callId, contentType: "audio/wav", body }, dependencies.storage);
       return { status: "completed", entityId: callId };
     }
     case "live.recoverOrphans": {

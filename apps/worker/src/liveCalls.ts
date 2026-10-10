@@ -1,7 +1,7 @@
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-import { callerIsDone, closeLiveSession, createAgentModel, createReceptionistAgent, LiveCallController, liveDelegationEnvironment, WRAP_UP_MAX_MS, type AgentChannel, type CallControl, type LiveCallSetup, type LiveCallSummary, type LiveCallWrapUp } from "@lobbystack/agent-core";
+import { callerIsDone, closeLiveSession, createAgentModel, createReceptionistAgent, LiveCallController, liveDelegationEnvironment, WRAP_UP_MAX_MS, type AgentChannel, type CallControl, type LiveCallSetup, type LiveCallSummary } from "@lobbystack/agent-core";
 import {
   blockLiveCaller,
   extendLiveCallReservation,
@@ -14,7 +14,6 @@ import {
   recordLiveCallTransferResult,
   saveLiveCallTurn,
   type DomainContext,
-  type LiveCallEnd,
   type OpenLiveCall,
 } from "@lobbystack/domain";
 import { renewVoicePresenceGateway, updateVoicePresence } from "@lobbystack/jobs";
@@ -127,16 +126,6 @@ export const RELEASE_ATTACH_LOCK = `
 if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) end
 return 0`;
 
-function endFromCloseReason(reason: string | undefined): LiveCallEnd {
-  switch (reason) {
-    case "close_requested": return "caller_finished";
-    case "remote_hangup": return "caller_hung_up";
-    case "expired": return "session_expired";
-    case "content": return "content_blocked";
-    default: return "connection_lost";
-  }
-}
-
 /**
  * How long a shutdown lets calls finish on their own before it wraps them up.
  * Railway sends SIGKILL RAILWAY_DEPLOYMENT_DRAINING_SECONDS after SIGTERM (0 by
@@ -206,7 +195,7 @@ function logError(sessionId: string, what: string) {
  * worker holds the sideband for the rest of the call.
  */
 export function createLiveCallHandler(input: { domain: DomainContext; attachLock?: AttachLock }) {
-  const active = new Map<string, { request: AttachRequest; controller: LiveCallController; wrapUp: (reason: LiveCallWrapUp) => Promise<void> }>();
+  const active = new Map<string, { request: AttachRequest; controller: LiveCallController }>();
   // Sessions whose attach is still loading, so an overlapping duplicate attach
   // doesn't open a second sideband that would answer the same delegations.
   const starting = new Set<string>();
@@ -388,7 +377,7 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
       endedAt: new Date(orphan.startedAt.getTime() + measuredSeconds * 1_000),
       channel: orphan.channel,
       // OpenAI may still have the session stored, ended or not.
-      recording: { sessionId: orphan.sessionId, durationMs: measuredSeconds * 1_000 },
+      recording: { sessionId: orphan.sessionId },
     });
     console.info(JSON.stringify({ event: "live.orphan_finished", sessionId: orphan.sessionId, callId: orphan.callId, channel: orphan.channel, reason, measuredSeconds, completed }));
   }
@@ -412,29 +401,16 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
     const savedTurns: Promise<number> = recovery ? Promise.resolve(recovery.lastSequence)
       : request.resume ? lastLiveCallSequence(input.domain, call).catch((error: unknown) => { logError(request.sessionId, "saved transcript not read")(error); return 0; })
       : Promise.resolve(0);
-    let end: LiveCallEnd | undefined;
     let controller: LiveCallController | undefined;
     let sessionAlive = false;
-    // A goodbye already under way keeps its own reason.
-    const wrapUp = (reason: LiveCallWrapUp) => {
-      end ??= reason;
-      return controller!.wrapUp(reason);
-    };
 
     const callControl: CallControl = {
       // The tool returns at once, so its answer reaches GPT-Live; the call
       // ends after the receptionist has said goodbye. A caller who is done can
       // still say more first, and the call goes on. Spam and abuse end anyway.
       hangup: async (reason) => {
-        end = reason;
-        if (reason === "caller_finished") {
-          controller?.endWhenCallerDone(() => {
-            if (end === "caller_finished") end = undefined;
-          });
-          return;
-        }
         if (reason === "abuse" && phone) await blockLiveCaller(input.domain, call);
-        controller?.endAfterGoodbye();
+        controller?.end(reason);
       },
       // The tool returns at once with an answer GPT-Live announces; the REFER
       // goes out once the announcement has played, and onTransfer records how it went.
@@ -494,7 +470,7 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
       const seconds = providerSeconds({ ...summary, durationMs }, request.channel);
       // Only the write that finishes the call queues the recording copy, so a
       // late retry that re-attaches to an ended call doesn't copy it twice.
-      const completed = await finishLiveCall(input.domain, { ...call, seconds, measuredSeconds: durationMs / 1000, end: end ?? endFromCloseReason(summary.closeReason), channel: request.channel, recording: { sessionId: request.sessionId, durationMs } });
+      const completed = await finishLiveCall(input.domain, { ...call, seconds, measuredSeconds: durationMs / 1000, end: summary.end, channel: request.channel, recording: { sessionId: request.sessionId } });
       // A recovered call missed its start, so its latency would mislead.
       if (completed && !recovery) recordLiveCallLatency(input.domain, telemetryCall, summary);
     };
@@ -510,13 +486,8 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
       onStarted: () => void markLiveCallMediaStarted(input.domain, call).catch(logError(request.sessionId, "media start not recorded")),
       onGreeting: (greeting) => console.info(JSON.stringify({ event: "live.greeting", sessionId: request.sessionId, ...greeting })),
       onTurn: (turn) => void savedTurns.then((saved) => retryWrite(() => saveLiveCallTurn(input.domain, { ...call, ...turn, sequence: turn.sequence + saved }))).catch(logError(request.sessionId, "transcript save failed")),
-      onTimeout: (reason) => void wrapUp(reason),
+      onTimeout: (reason) => void controller!.wrapUp(reason),
       onTransfer: (state) => {
-        // The call counts as transferred from the moment the REFER goes out,
-        // so a session.closed that beats OpenAI's answer still records it. A
-        // failed transfer leaves the call with the receptionist.
-        if (state !== "failed") end = "transferred";
-        else if (end === "transferred") end = undefined;
         if (state === "referring") return;
         transferWrites = transferWrites.then(() => recordLiveCallTransferResult(input.domain, { ...call, state })).catch(logError(request.sessionId, "transfer state not recorded"));
       },
@@ -534,7 +505,7 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
           return;
         }
         setPresence(request, false);
-        console.info(JSON.stringify({ event: "live.closed", sessionId: summary.sessionId, channel: request.channel, durationMs: summary.durationMs, billedSeconds: summary.billedSeconds, usageConfirmed: summary.usageConfirmed, closeReason: summary.closeReason, end, delegations: summary.delegations.length, outputAudio: summary.outputAudio, inputAudio: summary.inputAudio, lateAttach: summary.lateAttach, firstEventMs: summary.firstEventMs }));
+        console.info(JSON.stringify({ event: "live.closed", sessionId: summary.sessionId, channel: request.channel, durationMs: summary.durationMs, billedSeconds: summary.billedSeconds, usageConfirmed: summary.usageConfirmed, closeReason: summary.closeReason, end: summary.end, delegations: summary.delegations.length, outputAudio: summary.outputAudio, inputAudio: summary.inputAudio, lateAttach: summary.lateAttach, firstEventMs: summary.firstEventMs }));
         const pending = retryWrite(() => finish(summary)).catch(logError(request.sessionId, "finish failed"));
         finishing.add(pending);
         // The lock outlives the finish, so a recovery job can't take an
@@ -554,7 +525,7 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
         },
       } : {}),
     });
-    active.set(request.sessionId, { request, controller, wrapUp });
+    active.set(request.sessionId, { request, controller });
     setPresence(request, true);
     controller.start();
     // Without the business the call can't go on; the controller ends the
@@ -643,7 +614,7 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
       // `active`. New attaches get 503 and recovery skips while draining, so
       // this ends once the last call has said goodbye.
       while (active.size || starting.size) {
-        for (const call of active.values()) void call.wrapUp("service_restart");
+        for (const call of active.values()) void call.controller.wrapUp("service_restart");
         await new Promise((resolve) => setTimeout(resolve, DRAIN_POLL_MS));
       }
       // Calls still running need their presence and attach lock renewed until here.

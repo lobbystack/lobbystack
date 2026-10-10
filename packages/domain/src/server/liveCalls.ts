@@ -7,7 +7,6 @@ import { reserveOutboundCallAttempt } from "./billing";
 import type { DomainContext } from "./context";
 import { recordProspectDemoCallOutcome } from "./demos";
 import { releaseCallTexts } from "./notifications";
-import { recordUnitEconomicsEvent } from "./unitEconomics";
 import { extendPhoneReservationInTransaction } from "./usage";
 import { completeCall, setTransferState, startCall, upsertTranscript } from "./voice";
 import { boundedReconciledVoiceSeconds } from "./voiceRecovery";
@@ -164,20 +163,20 @@ export const LIVE_RECORDING_ATTEMPTS = 6;
 const LIVE_RECORDING_FIRST_DELAY_MS = 5_000;
 
 /** The outbox job that copies OpenAI's stored recording of a call into our storage. */
-export function liveCallRecordingJob(input: { businessId: string; callId: string; sessionId: string; durationMs: number; attempt: number }): NewOutboxMessage {
+export function liveCallRecordingJob(input: { businessId: string; callId: string; sessionId: string; attempt: number }): NewOutboxMessage {
   return {
     topic: "call.saveRecording",
     businessId: input.businessId,
     aggregateType: "call",
     aggregateId: input.callId,
     dedupeKey: `call:${input.callId}:recording:${input.attempt}`,
-    payload: { callId: input.callId, sessionId: input.sessionId, durationMs: Math.round(input.durationMs), attempt: input.attempt },
+    payload: { callId: input.callId, sessionId: input.sessionId, attempt: input.attempt },
     availableAt: new Date(Date.now() + LIVE_RECORDING_FIRST_DELAY_MS * 2 ** (input.attempt - 1)),
   };
 }
 
 /** Tries the recording copy again later, when OpenAI hasn't finished the recording yet. */
-export async function retryLiveCallRecording(context: DomainContext, input: { businessId: string; callId: string; sessionId: string; durationMs: number; attempt: number }) {
+export async function retryLiveCallRecording(context: DomainContext, input: { businessId: string; callId: string; sessionId: string; attempt: number }) {
   await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     await enqueueOutbox(tx, liveCallRecordingJob(input));
   });
@@ -196,13 +195,21 @@ export async function liveCallHasRecording(context: DomainContext, input: { busi
  * seconds and spam aren't billed) and the GPT-Live cost. `seconds` is what
  * OpenAI bills, which can include a minimum. `measuredSeconds` is how long the
  * call ran; the short-call exemption uses the shorter of the two, so an
- * abandoned call isn't charged OpenAI's minimum. With `recording`, the write
- * that finalizes the call also queues the copy of OpenAI's stored recording.
+ * abandoned call isn't charged OpenAI's minimum. The write that finalizes the
+ * call also records the GPT-Live cost and queues Twilio's price and, with
+ * `recording`, the copy of OpenAI's stored recording, so a repeated finish
+ * writes none of them twice and a retry after a failure loses none of them.
  */
-export async function finishLiveCall(context: DomainContext, input: { businessId: string; callId: string; seconds: number; measuredSeconds?: number; end: LiveCallEnd; endedAt?: Date; channel?: "voice" | "web_voice"; recording?: { sessionId: string; durationMs: number } }) {
+export async function finishLiveCall(context: DomainContext, input: { businessId: string; callId: string; seconds: number; measuredSeconds?: number; end: LiveCallEnd; endedAt?: Date; channel?: "voice" | "web_voice"; recording?: { sessionId: string } }) {
   const seconds = Math.max(0, input.seconds);
+  const channel = input.channel ?? "voice";
   const status = input.end === "transferred" ? "transferred" : input.end === "blocked_contact" ? "blocked" : "completed";
   const costUsd = (seconds / 60) * LIVE_PRICING.usdPerMinute;
+  const outbox: NewOutboxMessage[] = [];
+  if (input.recording) outbox.push(liveCallRecordingJob({ businessId: input.businessId, callId: input.callId, sessionId: input.recording.sessionId, attempt: 1 }));
+  // Twilio bills the SIP leg separately. Ask the worker to find that call and
+  // record Twilio's price, the way the Media Streams path did.
+  if (seconds > 0 && channel === "voice") outbox.push({ topic: "call.syncPrice", businessId: input.businessId, aggregateType: "call", aggregateId: input.callId, dedupeKey: `call:${input.callId}:live-price`, payload: { callId: input.callId, providerCallStatus: "completed" } });
   const completed = await completeCall(context, {
     businessId: input.businessId,
     callId: input.callId,
@@ -212,38 +219,32 @@ export async function finishLiveCall(context: DomainContext, input: { businessId
     providerDurationSeconds: Math.ceil(seconds),
     mediaDurationSeconds: Math.max(0, input.measuredSeconds ?? seconds),
     providerCostUsd: costUsd,
-    ...(input.recording ? { outbox: [liveCallRecordingJob({ businessId: input.businessId, callId: input.callId, ...input.recording, attempt: 1 })] } : {}),
+    outbox,
+    ...(seconds > 0 ? {
+      costEvent: {
+        businessId: input.businessId,
+        eventKey: `voice_ai:live_session:${input.callId}`,
+        eventKind: "voice_ai",
+        channel,
+        costUsd,
+        quantity: seconds,
+        quantityUnit: "second",
+        provider: "openai",
+        model: "gpt-live-1",
+        operation: "live_session",
+        pricingVersion: LIVE_PRICING.version,
+        pricingSource: LIVE_PRICING.source,
+        pricingEffectiveDate: LIVE_PRICING.effectiveDate,
+        pricingRates: { usdPerMinute: LIVE_PRICING.usdPerMinute },
+        callId: input.callId,
+      },
+    } : {}),
   });
   // Texts held during the call go out now, after every answer the caller gave.
   await releaseCallTexts(context, { businessId: input.businessId, callId: input.callId });
   if (!completed) return completed;
   // No-op unless the call belongs to a prospect demo.
   await recordProspectDemoCallOutcome(context, { businessId: input.businessId, callId: input.callId, status, disposition: DISPOSITIONS[input.end], providerDurationSeconds: Math.ceil(seconds) });
-  if (seconds === 0) return completed;
-  // Twilio bills the SIP leg separately. Ask the worker to find that call and
-  // record Twilio's price, the way the Media Streams path did.
-  if ((input.channel ?? "voice") === "voice") {
-    await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-      await enqueueOutbox(tx, { topic: "call.syncPrice", businessId: input.businessId, aggregateType: "call", aggregateId: input.callId, dedupeKey: `call:${input.callId}:live-price`, payload: { callId: input.callId, providerCallStatus: "completed" } });
-    });
-  }
-  await recordUnitEconomicsEvent(context, {
-    businessId: input.businessId,
-    eventKey: `voice_ai:live_session:${input.callId}`,
-    eventKind: "voice_ai",
-    channel: input.channel ?? "voice",
-    costUsd,
-    quantity: seconds,
-    quantityUnit: "second",
-    provider: "openai",
-    model: "gpt-live-1",
-    operation: "live_session",
-    pricingVersion: LIVE_PRICING.version,
-    pricingSource: LIVE_PRICING.source,
-    pricingEffectiveDate: LIVE_PRICING.effectiveDate,
-    pricingRates: { usdPerMinute: LIVE_PRICING.usdPerMinute },
-    callId: input.callId,
-  });
   return completed;
 }
 
