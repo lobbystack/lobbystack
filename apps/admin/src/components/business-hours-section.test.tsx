@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BusinessHoursSection, closuresForSave, HOURS_EDITOR_HREF, windowsForSave } from "./business-hours-section";
@@ -11,7 +12,7 @@ import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
 
 const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof createRecordedBrowserTelemetry> | null }));
 vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetryRef.current!.telemetry }));
-vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en" }, t: (key: string, options?: { day?: string; list?: string }) => (options?.day ? `${key}:${options.day}` : options?.list ? `${key}:${options.list}` : key) }) }));
+vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en" }, t: (key: string, options?: { day?: string; list?: string; number?: number }) => (options?.day ? `${key}:${options.day}` : options?.list ? `${key}:${options.list}` : options?.number ? `${key}:${options.number}` : key) }) }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
 vi.mock("@/lib/test-call-launcher", () => ({ startTestCall: vi.fn(), subscribeTestCallEnded: () => () => undefined }));
@@ -99,9 +100,9 @@ describe("opening hours editor", () => {
     render(<QueryClientProvider client={client()}><BusinessHoursSection businessId="business" canManage /></QueryClientProvider>);
     await userEvent.click(await screen.findByRole("button", { name: "hours.edit" }));
     await userEvent.click(screen.getByRole("button", { name: "hours.closures.add" }));
-    fireEvent.change(screen.getByLabelText("hours.closures.startsAt"), { target: { value: `${year}-12-25T00:00` } });
-    fireEvent.change(screen.getByLabelText("hours.closures.endsAt"), { target: { value: `${year}-12-26T00:00` } });
-    await userEvent.type(screen.getByLabelText("hours.closures.reason"), "Christmas Day");
+    fireEvent.change(screen.getByLabelText("hours.closures.startsAt:1"), { target: { value: `${year}-12-25T00:00` } });
+    fireEvent.change(screen.getByLabelText("hours.closures.endsAt:1"), { target: { value: `${year}-12-26T00:00` } });
+    await userEvent.type(screen.getByLabelText("hours.closures.reason:1"), "Christmas Day");
     await userEvent.click(screen.getByRole("button", { name: "hours.save" }));
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/hours?businessId=business", expect.objectContaining({ method: "PUT" })));
@@ -117,8 +118,34 @@ describe("opening hours editor", () => {
     await userEvent.click(screen.getByRole("button", { name: "hours.closures.add" }));
     await userEvent.click(screen.getByRole("button", { name: "hours.save" }));
     expect(screen.getByRole("alert").textContent).toBe("hours.closures.order");
-    expect(screen.getByLabelText("hours.closures.startsAt").getAttribute("aria-invalid")).toBe("true");
+    expect(screen.getByLabelText("hours.closures.startsAt:1").getAttribute("aria-invalid")).toBe("true");
     expect(fetchMock).not.toHaveBeenCalledWith("/api/hours?businessId=business", expect.objectContaining({ method: "PUT" }));
+  });
+
+  it("names each closure row and points the invalid row at the error", async () => {
+    const year = new Date().getFullYear() + 1;
+    stubFetch({ hoursSource: "operator", hours: weekdays, closures: [{ startsAt: `${year}-12-25T00:00`, endsAt: `${year}-12-26T00:00`, reason: "" }] });
+    render(<QueryClientProvider client={client()}><BusinessHoursSection businessId="business" canManage /></QueryClientProvider>);
+    await userEvent.click(await screen.findByRole("button", { name: "hours.edit" }));
+    await userEvent.click(screen.getByRole("button", { name: "hours.closures.add" }));
+    expect(screen.getByRole("button", { name: "hours.closures.remove:1" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "hours.closures.remove:2" })).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "hours.save" }));
+    const errorId = screen.getByRole("alert").id;
+    expect(errorId).toBeTruthy();
+    expect(screen.getByLabelText("hours.closures.startsAt:2").getAttribute("aria-describedby")).toBe(errorId);
+    expect(screen.getByLabelText("hours.closures.endsAt:2").getAttribute("aria-describedby")).toBe(errorId);
+    expect(screen.getByLabelText("hours.closures.startsAt:1").getAttribute("aria-describedby")).toBeNull();
+  });
+
+  it("shows the server's reason when it refuses the save", async () => {
+    const fetchMock = stubFetch({ hoursSource: "operator", hours: weekdays });
+    const base = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (url, init) => (init?.method === "PUT" ? Response.json({ error: "A closure must end within two years." }, { status: 400 }) : await base(url, init)));
+    render(<QueryClientProvider client={client()}><BusinessHoursSection businessId="business" canManage /></QueryClientProvider>);
+    await userEvent.click(await screen.findByRole("button", { name: "hours.edit" }));
+    await userEvent.click(screen.getByRole("button", { name: "hours.save" }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("A closure must end within two years."));
   });
 
   it("checks closures before saving", () => {
@@ -128,6 +155,8 @@ describe("opening hours editor", () => {
     expect(closuresForSave([christmas, { startsAt: "2026-10-01T00:00", endsAt: "2026-10-09T12:00", reason: "" }], now)).toEqual({ ok: false, index: 1, problem: "ended" });
     expect(closuresForSave([{ startsAt: "2026-12-25T12:00", endsAt: "2026-12-27T00:00", reason: "" }, christmas], now)).toEqual({ ok: false, index: 0, problem: "overlap" });
     expect(closuresForSave([christmas, { ...christmas, startsAt: "" }], now)).toEqual({ ok: false, index: 1, problem: "order" });
+    expect(closuresForSave([{ startsAt: "2028-10-09T00:00", endsAt: "2028-10-09T12:00", reason: "" }], now)).toEqual({ ok: true });
+    expect(closuresForSave([christmas, { startsAt: "2028-12-25T00:00", endsAt: "2028-12-26T00:00", reason: "" }], now)).toEqual({ ok: false, index: 1, problem: "far" });
   });
 
   it("checks windows before saving", () => {

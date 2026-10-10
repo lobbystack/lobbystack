@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import Link from "next/link";
 import { CalendarClock, Plus, X } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -107,11 +107,13 @@ function localNow(timezone: string): string {
   return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
 }
 
-/** The first closure, by position, that doesn't end after it starts, has ended by `now`, or overlaps another. Local times compare as text. */
-export function closuresForSave(closures: Closure[], now: string): { ok: true } | { ok: false; index: number; problem: "order" | "ended" | "overlap" } {
+/** The first closure, by position, that doesn't end after it starts, has ended by `now`, ends more than two years later, or overlaps another. Local times compare as text. */
+export function closuresForSave(closures: Closure[], now: string): { ok: true } | { ok: false; index: number; problem: "order" | "ended" | "far" | "overlap" } {
+  const latestEnd = `${Number(now.slice(0, 4)) + 2}${now.slice(4)}`;
   for (const [index, closure] of closures.entries()) {
     if (!closure.startsAt || !closure.endsAt || closure.endsAt <= closure.startsAt) return { ok: false, index, problem: "order" };
     if (closure.endsAt <= now) return { ok: false, index, problem: "ended" };
+    if (closure.endsAt > latestEnd) return { ok: false, index, problem: "far" };
   }
   const byStart = closures.map((_, index) => index).sort((left, right) => closures[left]!.startsAt.localeCompare(closures[right]!.startsAt));
   for (let position = 1; position < byStart.length; position += 1) {
@@ -145,6 +147,7 @@ export function BusinessHoursSection({ businessId, canManage }: { businessId: st
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [invalidClosure, setInvalidClosure] = useState<number | null>(null);
+  const errorId = useId();
   const [saving, setSaving] = useState(false);
   // Collapsed to a one-line summary unless a link points here, such as the no-hours warning.
   const [editing, setEditing] = useState(false);
@@ -201,8 +204,9 @@ export function BusinessHoursSection({ businessId, canManage }: { businessId: st
       telemetry.track("web.agent.settings_saved", { businessId, setting: "hours" });
       setStatus(t("actions.saved"));
       setEditing(false);
-    } catch {
-      toast.error(t("actions.saveFailed"));
+    } catch (error) {
+      // A 400 says what the server refused, such as a malformed closure; anything else gets the generic message.
+      toast.error(error instanceof Error && error.message !== "Request failed." ? error.message : t("actions.saveFailed"));
     } finally {
       setSaving(false);
     }
@@ -274,14 +278,16 @@ export function BusinessHoursSection({ businessId, canManage }: { businessId: st
               {closures.map((closure, index) => {
                 const edit = (change: Partial<Closure>) => updateClosures(closures.map((item, position) => (position === index ? { ...item, ...change } : item)));
                 const invalid = invalidClosure === index || undefined;
+                const describedBy = invalid && error ? errorId : undefined;
+                const number = index + 1;
                 return (
                   <div className="flex items-start gap-2" key={index}>
                     <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-2">
-                      <Input aria-invalid={invalid} aria-label={t("hours.closures.startsAt")} disabled={disabled} onChange={(event) => edit({ startsAt: event.target.value })} type="datetime-local" value={closure.startsAt} />
-                      <Input aria-invalid={invalid} aria-label={t("hours.closures.endsAt")} disabled={disabled} onChange={(event) => edit({ endsAt: event.target.value })} type="datetime-local" value={closure.endsAt} />
-                      <Input aria-label={t("hours.closures.reason")} className="sm:col-span-2" disabled={disabled} maxLength={MAX_CLOSURE_REASON_LENGTH} onChange={(event) => edit({ reason: event.target.value })} placeholder={t("hours.closures.reasonPlaceholder")} value={closure.reason} />
+                      <Input aria-describedby={describedBy} aria-invalid={invalid} aria-label={t("hours.closures.startsAt", { number })} disabled={disabled} onChange={(event) => edit({ startsAt: event.target.value })} type="datetime-local" value={closure.startsAt} />
+                      <Input aria-describedby={describedBy} aria-invalid={invalid} aria-label={t("hours.closures.endsAt", { number })} disabled={disabled} onChange={(event) => edit({ endsAt: event.target.value })} type="datetime-local" value={closure.endsAt} />
+                      <Input aria-label={t("hours.closures.reason", { number })} className="sm:col-span-2" disabled={disabled} maxLength={MAX_CLOSURE_REASON_LENGTH} onChange={(event) => edit({ reason: event.target.value })} placeholder={t("hours.closures.reasonPlaceholder")} value={closure.reason} />
                     </div>
-                    <Button aria-label={t("hours.closures.remove")} disabled={disabled} onClick={() => updateClosures(closures.filter((_, position) => position !== index))} size="icon-sm" type="button" variant="ghost"><X /></Button>
+                    <Button aria-label={t("hours.closures.remove", { number })} disabled={disabled} onClick={() => updateClosures(closures.filter((_, position) => position !== index))} size="icon-sm" type="button" variant="ghost"><X /></Button>
                   </div>
                 );
               })}
@@ -290,7 +296,7 @@ export function BusinessHoursSection({ businessId, canManage }: { businessId: st
               ) : null}
             </div>
           </div>
-          {error ? <p className="text-sm text-destructive" role="alert">{error}</p> : null}
+          {error ? <p className="text-sm text-destructive" id={errorId} role="alert">{error}</p> : null}
           <DialogFooter>
             <Button disabled={saving} onClick={close} type="button" variant="outline">{t("hours.cancel")}</Button>
             <Button disabled={disabled || loading} onClick={() => void save()} type="button">{saving ? t("actions.saving") : t("hours.save")}</Button>
