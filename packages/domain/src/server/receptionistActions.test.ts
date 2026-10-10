@@ -2,122 +2,111 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   bookAppointment: vi.fn(),
-  findAvailability: vi.fn(),
+  findOpeningsInTransaction: vi.fn(),
+  recordCallOutcomeInTransaction: vi.fn(),
   recordProductEvent: vi.fn(),
-  serviceRows: [] as Array<{ id: string; name: string; durationMinutes: number }>,
-  bookingRows: [] as Array<{ id: string; serviceName: string }>,
+  rows: { services: [] as unknown[], appointments: [] as unknown[], sessions: [] as unknown[] },
 }));
 
-vi.mock("@lobbystack/db", async (original) => ({
-  ...(await original<typeof import("@lobbystack/db")>()),
-  withBusinessTransaction: vi.fn(async (_db, _actor, callback) => callback({
-    select: () => ({ from: () => ({
-      where: () => ({ limit: async () => mocks.serviceRows }),
-      innerJoin: () => ({ innerJoin: () => ({ where: () => ({ limit: async () => mocks.bookingRows }) }) }),
-    }) }),
-  })),
-}));
-vi.mock("./booking", () => ({ bookAppointment: mocks.bookAppointment, findAvailability: mocks.findAvailability, cancelAppointmentForCaller: vi.fn(), rescheduleAppointmentForCaller: vi.fn() }));
+vi.mock("@lobbystack/db", async (original) => {
+  const db = await original<typeof import("@lobbystack/db")>();
+  const rowsFor = (table: unknown) => table === db.services ? mocks.rows.services : table === db.appointments ? mocks.rows.appointments : table === db.conversationSessions ? mocks.rows.sessions : [];
+  const node = (resolve: () => unknown[]): Record<string, unknown> => {
+    const self: Record<string, unknown> = {};
+    self.from = (table: unknown) => node(() => rowsFor(table));
+    for (const method of ["where", "limit", "innerJoin", "orderBy"]) self[method] = () => self;
+    self.then = (onFulfilled: (value: unknown[]) => unknown, onRejected?: (reason: unknown) => unknown) => Promise.resolve().then(resolve).then(onFulfilled, onRejected);
+    return self;
+  };
+  return { ...db, withBusinessTransaction: vi.fn(async (_db, _actor, callback: (tx: unknown) => unknown) => callback({ select: () => node(() => []) })) };
+});
+vi.mock("./booking", () => ({ bookAppointment: mocks.bookAppointment, findOpeningsInTransaction: mocks.findOpeningsInTransaction, cancelAppointmentForCaller: vi.fn(), rescheduleAppointmentForCaller: vi.fn() }));
 vi.mock("./productEvents", () => ({ recordProductEvent: mocks.recordProductEvent, recordProductEventBestEffort: mocks.recordProductEvent }));
-vi.mock("./callOutcome", () => ({ recordCallSchedulingProgress: vi.fn() }));
+vi.mock("./callOutcome", () => ({ recordCallOutcomeInTransaction: mocks.recordCallOutcomeInTransaction }));
 
-import { bookForCaller, candidateStartTimes, findCallBooking, findCallerBooking, findOpenings } from "./receptionistActions";
+import { BookingUnavailableError } from "../availability";
+import { bookForCaller, findOpenings } from "./receptionistActions";
 
 const context = { db: {} as never };
-const weekdayHours = [1, 2, 3, 4, 5].map((dayOfWeek) => ({ dayOfWeek, openMinutes: 8 * 60, closeMinutes: 17 * 60 }));
+const haircut = { id: "svc_1", name: "Haircut", slug: "haircut", localizedNames: { fr: "Coupe de cheveux" } };
+const beardTrim = { id: "svc_2", name: "Beard trim", slug: "beard-trim", localizedNames: null };
+const failedWith = (reason: string) => expect.objectContaining({ name: "appointment.booking_failed", properties: expect.objectContaining({ reason }) });
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.serviceRows = [{ id: "svc_1", name: "Drain cleaning", durationMinutes: 60 }];
-  mocks.bookingRows = [];
+  mocks.rows = { services: [haircut, beardTrim], appointments: [], sessions: [] };
+  mocks.bookAppointment.mockResolvedValue({ appointmentId: "apt_1", contactId: "contact_1", staffId: "staff_1" });
 });
 
-describe("findCallerBooking", () => {
-  const input = { businessId: "biz_1", serviceName: "drain cleaning", startsAt: "2030-01-08T10:00:00.000-05:00", contactPhone: "+14165550100" };
+describe("bookForCaller", () => {
+  const startsAt = "2030-01-08T10:00:00.000-05:00";
+  const input = { businessId: "biz_1", service: { name: "Haircut" }, startsAt, timezone: "America/Toronto", contactPhone: "+14165550100", contactName: "Milan", channel: "voice" as const };
 
-  it("returns the caller's confirmed booking for the same service and time, in one query", async () => {
-    mocks.bookingRows = [{ id: "appt_1", serviceName: "Drain cleaning" }];
-    await expect(findCallerBooking(context, input)).resolves.toEqual({ ok: true, appointmentId: "appt_1", serviceName: "Drain cleaning", startsAt: input.startsAt, alreadyBooked: true });
+  it("books the service the caller names by any of its names", async () => {
+    await expect(bookForCaller(context, { ...input, service: { name: "coupe de cheveux" } })).resolves.toEqual({ ok: true, appointmentId: "apt_1", serviceName: "Haircut", startsAt });
+    expect(mocks.bookAppointment.mock.lastCall?.[1]).toMatchObject({ serviceId: "svc_1", contactName: "Milan", sourceChannel: "voice" });
+    expect(mocks.recordProductEvent).toHaveBeenCalledWith(context, expect.objectContaining({ name: "appointment.booked", properties: expect.objectContaining({ appointmentId: "apt_1", serviceId: "svc_1" }) }));
   });
 
-  it("finds nothing when the caller has no such booking, or for a start time that isn't a date", async () => {
-    await expect(findCallerBooking(context, input)).resolves.toBeUndefined();
-    mocks.bookingRows = [{ id: "appt_1", serviceName: "Drain cleaning" }];
-    await expect(findCallerBooking(context, { ...input, startsAt: "next Tuesday" })).resolves.toBeUndefined();
-  });
-});
-
-describe("findCallBooking", () => {
-  const input = { businessId: "biz_1", callId: "call_1", serviceName: "drain cleaning", startsAt: "2030-01-08T10:00:00.000-05:00" };
-
-  it("matches only the booking this call made, at the same instant and service", async () => {
-    mocks.serviceRows = [{ summary: { serviceName: "Drain cleaning", startsAt: "2030-01-08T15:00:00.000Z" } }] as never;
-    await expect(findCallBooking(context, input)).resolves.toEqual({ ok: true, serviceName: "Drain cleaning", startsAt: input.startsAt, alreadyBooked: true });
-    await expect(findCallBooking(context, { ...input, startsAt: "2030-01-08T11:00:00.000-05:00" })).resolves.toBeUndefined();
-    await expect(findCallBooking(context, { ...input, serviceName: "Water heater repair" })).resolves.toBeUndefined();
-    mocks.serviceRows = [];
-    await expect(findCallBooking(context, input)).resolves.toBeUndefined();
-  });
-});
-
-describe("candidateStartTimes", () => {
-  it("offers times inside business hours, nearest to the preferred time first", () => {
-    const times = candidateStartTimes({ date: "2030-01-08", timezone: "America/Toronto", hours: weekdayHours, durationMinutes: 60, preferredMinutes: 10 * 60, now: new Date("2030-01-01T00:00:00Z") });
-    expect(times.slice(0, 3)).toEqual(["2030-01-08T15:00:00.000Z", "2030-01-08T14:30:00.000Z", "2030-01-08T15:30:00.000Z"]);
-    expect(times.every((time) => time >= "2030-01-08T13:00:00.000Z" && time <= "2030-01-08T21:00:00.000Z")).toBe(true);
+  it("books nothing for words that name no single service", async () => {
+    for (const name of ["%", "h_ircut", "haircut and beard trim"]) {
+      await expect(bookForCaller(context, { ...input, service: { name } })).resolves.toEqual({ ok: false, reason: "unknown_service" });
+    }
+    expect(mocks.bookAppointment).not.toHaveBeenCalled();
+    expect(mocks.recordProductEvent).toHaveBeenCalledWith(context, failedWith("service_unavailable"));
   });
 
-  it("returns nothing on a closed day or for times already past", () => {
-    expect(candidateStartTimes({ date: "2030-01-06", timezone: "America/Toronto", hours: weekdayHours, durationMinutes: 60 })).toEqual([]);
-    expect(candidateStartTimes({ date: "2030-01-08", timezone: "America/Toronto", hours: weekdayHours, durationMinutes: 60, now: new Date("2030-01-09T00:00:00Z") })).toEqual([]);
+  it("returns the caller's earlier booking only under the call's own number", async () => {
+    mocks.rows.appointments = [{ id: "apt_9" }];
+    await expect(bookForCaller(context, { ...input, callerPhone: "+14165550100" })).resolves.toEqual({ ok: true, appointmentId: "apt_9", serviceName: "Haircut", startsAt, alreadyBooked: true });
+    expect(mocks.bookAppointment).not.toHaveBeenCalled();
+    // A number the caller said isn't the call's own: it books instead of saying whose time it is.
+    await expect(bookForCaller(context, { ...input, callerPhone: "+14165550199" })).resolves.toMatchObject({ ok: true, appointmentId: "apt_1" });
   });
 
-  it("keeps opening times on the wall clock when daylight saving starts", () => {
-    // 2030-03-10 is the Sunday Toronto moves to EDT (UTC-4).
-    const sundayHours = [{ dayOfWeek: 0, openMinutes: 9 * 60, closeMinutes: 11 * 60 }];
-    const times = candidateStartTimes({ date: "2030-03-10", timezone: "America/Toronto", hours: sundayHours, durationMinutes: 60, now: new Date("2030-03-01T00:00:00Z") });
-    expect(times).toEqual(["2030-03-10T13:00:00.000Z", "2030-03-10T13:30:00.000Z", "2030-03-10T14:00:00.000Z"]);
+  it("returns this call's own booking when the call has no number to match", async () => {
+    mocks.rows.sessions = [{ summary: { kind: "booked", serviceName: "Haircut", startsAt: "2030-01-08T15:00:00.000Z" } }];
+    await expect(bookForCaller(context, { ...input, callId: "call_1" })).resolves.toEqual({ ok: true, serviceName: "Haircut", startsAt, alreadyBooked: true });
+    expect(mocks.recordCallOutcomeInTransaction).not.toHaveBeenCalled();
+    await expect(bookForCaller(context, { ...input, callId: "call_1", startsAt: "2030-01-08T11:00:00.000-05:00" })).resolves.toMatchObject({ ok: true, appointmentId: "apt_1" });
+    expect(mocks.recordCallOutcomeInTransaction.mock.lastCall?.[1]).toMatchObject({ callId: "call_1", outcome: { kind: "booking_in_progress", serviceName: "Haircut", startsAt: "2030-01-08T11:00:00.000-05:00" } });
+  });
+
+  it("returns why a booking was refused, and records it", async () => {
+    mocks.bookAppointment.mockRejectedValueOnce(new BookingUnavailableError("no_hours"));
+    await expect(bookForCaller(context, input)).resolves.toEqual({ ok: false, reason: "no_hours" });
+    expect(mocks.recordProductEvent).toHaveBeenCalledWith(context, failedWith("no_hours"));
+    // Telemetry keeps its earlier name for a taken time.
+    mocks.bookAppointment.mockRejectedValueOnce(new BookingUnavailableError("taken"));
+    await expect(bookForCaller(context, input)).resolves.toEqual({ ok: false, reason: "taken" });
+    expect(mocks.recordProductEvent).toHaveBeenCalledWith(context, failedWith("slot_unavailable"));
+  });
+
+  it("records and throws any other error", async () => {
+    mocks.bookAppointment.mockRejectedValueOnce(new Error("database is down"));
+    await expect(bookForCaller(context, input)).rejects.toThrow("database is down");
+    expect(mocks.recordProductEvent).toHaveBeenCalledWith(context, failedWith("unknown"));
   });
 });
 
 describe("findOpenings", () => {
-  it("returns the first open times it finds on the requested day", async () => {
-    mocks.findAvailability.mockImplementation(async (_context, input: { startsAt: string }) => (input.startsAt.endsWith("14:00:00.000Z") ? [] : [{ startsAt: input.startsAt }]));
-    const result = await findOpenings(context, { businessId: "biz_1", serviceName: "drain cleaning", date: "2030-01-08", timezone: "America/Toronto", hours: weekdayHours, preferredHour24: 9, limit: 2 });
-    expect(result).toMatchObject({ ok: true, serviceName: "Drain cleaning" });
-    expect(result.ok && result.openings.map((opening) => opening.startsAt)).toEqual(["2030-01-08T13:30:00.000Z", "2030-01-08T14:30:00.000Z"]);
+  const input = { businessId: "biz_1", serviceName: "coupe de cheveux", date: "2030-01-08", preferredHour24: 10, callId: "call_1" };
+
+  it("searches the named service's day and records what the call is booking", async () => {
+    mocks.findOpeningsInTransaction.mockResolvedValueOnce({ timezone: "America/Toronto", durationMinutes: 60, openings: ["2030-01-08T15:00:00.000Z"] });
+    await expect(findOpenings(context, input)).resolves.toEqual({ ok: true, serviceName: "Haircut", date: "2030-01-08", timezone: "America/Toronto", openings: [{ startsAt: "2030-01-08T15:00:00.000Z", displayTime: "Tuesday Jan 8, 10:00 AM" }] });
+    expect(mocks.findOpeningsInTransaction.mock.lastCall?.[1]).toEqual({ businessId: "biz_1", serviceId: "svc_1", dates: ["2030-01-08"], limit: 3, preferredMinutes: 600 });
+    expect(mocks.recordCallOutcomeInTransaction.mock.lastCall?.[1]).toMatchObject({ callId: "call_1", outcome: { kind: "booking_in_progress", serviceName: "Haircut", startsAt: null } });
   });
 
-  it("scans the whole day when only the last start time is free", async () => {
-    // 7 a.m. to 7 p.m. gives 23 start times for a one-hour service.
-    const longDay = [{ dayOfWeek: 2, openMinutes: 7 * 60, closeMinutes: 19 * 60 }];
-    const lastStart = "2030-01-08T23:00:00.000Z";
-    mocks.findAvailability.mockImplementation(async (_context, input: { startsAt: string }) => (input.startsAt === lastStart ? [{ startsAt: input.startsAt }] : []));
-    const result = await findOpenings(context, { businessId: "biz_1", serviceName: "drain cleaning", date: "2030-01-08", timezone: "America/Toronto", hours: longDay });
-    expect(result.ok && result.openings.map((opening) => opening.startsAt)).toEqual([lastStart]);
-    expect(mocks.findAvailability).toHaveBeenCalledTimes(23);
-  });
-});
-
-describe("bookForCaller telemetry", () => {
-  const input = { businessId: "biz_1", serviceName: "Drain cleaning", startsAt: "2030-01-08T14:00:00.000Z", timezone: "America/Toronto", contactPhone: "+14165550100", channel: "voice" as const };
-
-  it("records appointment.booked after a successful booking", async () => {
-    mocks.bookAppointment.mockResolvedValue({ appointmentId: "apt_1", contactId: "contact_1", staffId: "staff_1" });
-    await expect(bookForCaller(context, input)).resolves.toMatchObject({ ok: true, appointmentId: "apt_1" });
-    expect(mocks.recordProductEvent).toHaveBeenCalledWith(context, expect.objectContaining({ name: "appointment.booked", businessId: "biz_1", properties: expect.objectContaining({ appointmentId: "apt_1", channel: "voice" }) }));
+  it("passes on why a day has no openings", async () => {
+    mocks.findOpeningsInTransaction.mockResolvedValueOnce({ timezone: "America/Toronto", durationMinutes: 60, openings: [], reason: "closure" });
+    await expect(findOpenings(context, input)).resolves.toMatchObject({ ok: true, openings: [], reason: "closure" });
   });
 
-  it("records appointment.booking_failed with the reason when booking fails", async () => {
-    mocks.bookAppointment.mockRejectedValue(new Error("That time is no longer available."));
-    await expect(bookForCaller(context, input)).resolves.toMatchObject({ ok: false });
-    expect(mocks.recordProductEvent).toHaveBeenCalledWith(context, expect.objectContaining({ name: "appointment.booking_failed", properties: expect.objectContaining({ reason: "slot_unavailable" }) }));
-  });
-
-  it("records appointment.booking_failed when the service doesn't exist", async () => {
-    mocks.serviceRows = [];
-    await expect(bookForCaller(context, input)).resolves.toMatchObject({ ok: false, reason: "Service is not available." });
-    expect(mocks.bookAppointment).not.toHaveBeenCalled();
-    expect(mocks.recordProductEvent).toHaveBeenCalledWith(context, expect.objectContaining({ name: "appointment.booking_failed", properties: expect.objectContaining({ reason: "service_unavailable" }) }));
+  it("says when the business offers no such service", async () => {
+    await expect(findOpenings(context, { ...input, serviceName: "oil change" })).resolves.toEqual({ ok: false, reason: "unknown_service" });
+    expect(mocks.findOpeningsInTransaction).not.toHaveBeenCalled();
+    expect(mocks.recordCallOutcomeInTransaction).not.toHaveBeenCalled();
   });
 });

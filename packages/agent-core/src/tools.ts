@@ -1,9 +1,6 @@
 import {
   bookForCaller,
   cancelForCaller,
-  checkOpening,
-  findCallBooking,
-  findCallerBooking,
   countKnowledgeTokens,
   findOpenings,
   getSmsConsentOnFile,
@@ -100,6 +97,7 @@ const phone = z.string().describe("Phone number in E.164 format, for example +14
 type NoOpeningsReason = UnavailableReason | "no_times_left";
 
 const TAKE_REQUEST = "Offer to take a message with the caller's name, number and preferred time so the team can book it.";
+const UNKNOWN_SERVICE = "Service is not available. Check the service name with getBusinessServices.";
 
 /**
  * Why a time or a day can't be booked, in plain facts, then the next step.
@@ -256,17 +254,16 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
             businessId,
             serviceName,
             date,
-            timezone,
-            hours: snapshot.hours,
             ...(Number.isFinite(hour) ? { preferredHour24: hour, preferredMinute: Number.isFinite(minute) ? minute : 0 } : {}),
             ...(context.callId ? { callId: context.callId } : {}),
           }),
           // The caller's answer on file, so the agent asks about texts only once.
           callerPhone ? getSmsConsentOnFile(domain, { businessId, phone: callerPhone }).catch(() => undefined) : undefined,
         ]);
-        const answer = result.ok && smsConsentOnFile ? { ...result, smsConsentOnFile } : result;
+        if (!result.ok) return { ok: false, reason: UNKNOWN_SERVICE };
+        const answer = smsConsentOnFile ? { ...result, smsConsentOnFile } : result;
         // An empty day says why, so the agent doesn't call it fully booked when it isn't.
-        if (!answer.ok || answer.openings.length || !isReason(answer.reason)) return answer;
+        if (answer.openings.length || !answer.reason) return answer;
         return { ...answer, reason: DAY_UNAVAILABLE[answer.reason] ?? UNAVAILABLE_TOOL_MESSAGES[answer.reason] };
       },
     });
@@ -280,35 +277,30 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
       }),
       execute: async (input) => {
         const contactPhone = input.contactPhone?.trim() || context.callerPhone;
-        if (!input.contactName?.trim()) return { ok: false, reason: "Ask for the caller's name before booking." };
+        const contactName = input.contactName?.trim();
+        if (!contactName) return { ok: false, reason: "Ask for the caller's name before booking." };
         if (!contactPhone) return { ok: false, reason: "Ask for a phone number before booking." };
         const start = startTime(input.startsAt);
         if (!start.ok) return start;
-        const { startsAt } = start;
-        // Already booked for this caller, by an earlier or repeated request:
-        // report that booking rather than call the caller's own slot taken.
-        // Only the call's own number counts: a typed or spoken one would let
-        // anyone learn whose appointment a time holds. Without it, only this
-        // call's own booking counts.
-        const existing = context.callerPhone && contactPhone === context.callerPhone
-          ? await findCallerBooking(domain, { businessId, serviceName: input.serviceName, startsAt, contactPhone })
-          : context.callId ? await findCallBooking(domain, { businessId, callId: context.callId, serviceName: input.serviceName, startsAt }) : undefined;
-        if (existing) return existing;
-        const opening = await checkOpening(domain, { businessId, serviceName: input.serviceName, startsAt, timezone, ...(context.callId ? { callId: context.callId } : {}) });
-        if (!opening.ok) return { ok: false, reason: `${opening.reason} Check the service name with getBusinessServices.` };
-        if (!opening.available) return { ok: false, reason: UNAVAILABLE_TOOL_MESSAGES[isReason(opening.reason) ? opening.reason : "taken"] };
-        const booked = await bookForCaller(domain, {
-          businessId,
-          serviceName: input.serviceName,
-          startsAt,
-          timezone,
-          contactPhone,
-          channel,
-          ...(input.contactName ? { contactName: input.contactName } : {}),
-          ...(context.callId ? { callId: context.callId } : {}),
-        });
-        // Another booking can take the time between the check and the booking.
-        if (!booked.ok) return "unavailableReason" in booked && isReason(booked.unavailableReason) ? { ok: false, reason: UNAVAILABLE_TOOL_MESSAGES[booked.unavailableReason] } : booked;
+        // A repeated request returns the booking it already made, found only
+        // by the call's own number or the call itself.
+        let booked: Awaited<ReturnType<typeof bookForCaller>>;
+        try {
+          booked = await bookForCaller(domain, {
+            businessId,
+            service: { name: input.serviceName },
+            startsAt: start.startsAt,
+            timezone,
+            contactPhone,
+            contactName,
+            channel,
+            ...(context.callerPhone ? { callerPhone: context.callerPhone } : {}),
+            ...(context.callId ? { callId: context.callId } : {}),
+          });
+        } catch {
+          return { ok: false, reason: "The booking could not be completed." };
+        }
+        if (!booked.ok) return { ok: false, reason: booked.reason === "unknown_service" ? UNKNOWN_SERVICE : UNAVAILABLE_TOOL_MESSAGES[booked.reason] };
         // An answer about texts on this call covers only the number calling.
         return callerTextable && contactPhone !== context.callerPhone
           ? { ...booked, textConfirmation: "This booking is under another number than the one calling. The caller's answer about texts doesn't cover it, so don't say texts will come for it." }

@@ -44,7 +44,7 @@ describe.skipIf(!client)("createBusiness", () => {
       await tx.insert(businessHours).values({ businessId, dayOfWeek: 2, openMinutes: 8 * 60, closeMinutes: 17 * 60 });
       const [service] = await tx.insert(services).values({ businessId, name: "Drain cleaning", slug: "drain-cleaning", durationMinutes: 60 }).returning({ id: services.id });
       // Tuesday 2030-01-08 at 09:00 in Toronto.
-      const slots = await findAvailability({ db: tx as unknown as Database }, { businessId, serviceId: service!.id, startsAt: "2030-01-08T14:00:00.000Z", timezone: "America/Toronto" });
+      const slots = await findAvailability({ db: tx as unknown as Database }, { businessId, serviceId: service!.id, startsAt: "2030-01-08T14:00:00.000Z" });
       expect(slots.length).toBeGreaterThan(0);
     });
   });

@@ -8,7 +8,7 @@ import { appointments, businessMemberships, businesses, calls, contacts, convers
 import { createAppointmentChangeVerification } from "./appointmentChanges";
 import { cancelAppointment, cancelAppointmentInTransaction } from "./booking";
 import { listCurrentAppointments, listUpcomingAppointments } from "./operatorActivity";
-import { requestCancellationForCaller, takeMessageForStaff } from "./receptionistActions";
+import { lookupCallerAppointments, requestCancellationForCaller, takeMessageForStaff } from "./receptionistActions";
 import { CANCELLATION_REQUEST, completeVoiceFollowUpTasks, getCallDetail, listOpenVoiceFollowUps } from "./voice";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
@@ -121,7 +121,11 @@ async function seed(tx: DatabaseTransaction) {
     await as("lobbystack_worker");
     return await createAppointmentChangeVerification({ db }, { businessId, action: "cancel", ...input });
   };
-  return { ids, userIds, request, message, openRequest, complete, detail, item, dashboard, cancel, cancelAsWorker, status, verify };
+  const lookup = async (callerPhone: string) => {
+    await as("lobbystack_worker");
+    return await lookupCallerAppointments({ db }, { businessId, callerPhone });
+  };
+  return { ids, userIds, request, message, openRequest, complete, detail, item, dashboard, cancel, cancelAsWorker, status, verify, lookup };
 }
 
 describe.skipIf(!client)("self-service changes from the booking number", () => {
@@ -141,6 +145,19 @@ describe.skipIf(!client)("self-service changes from the booking number", () => {
       expect(await verify({ callerPhone: "+14165550199", appointmentStartsAt: asked(local(1, 15)) })).toBeNull();
       expect(await verify({ callerPhone: "+14165550100" })).toBeNull();
       expect(await verify({ callerPhone: "+14165550100", appointmentStartsAt: asked(local(1, 17)) })).toBeNull();
+    });
+  });
+
+  it("leaves past appointments out, so a repeat customer can still name the service", async () => {
+    await rollbackTest(async (tx) => {
+      const { ids, verify, lookup } = await seed(tx);
+      // Last month's consultation, the same service as tomorrow's, still says confirmed.
+      const [upcoming] = await tx.select().from(appointments).where(eq(appointments.id, ids.consultation));
+      const lastMonth = local(-30, 15);
+      await tx.insert(appointments).values({ ...upcoming!, id: randomUUID(), startsAt: lastMonth.toJSDate(), endsAt: lastMonth.plus({ minutes: 30 }).toJSDate() });
+      expect(await verify({ callerPhone: "+14165550100", serviceName: "Consultation" })).toMatchObject({ appointmentId: ids.consultation });
+      expect(await verify({ callerPhone: "+14165550100", appointmentStartsAt: asked(lastMonth) })).toBeNull();
+      expect(await lookup("+14165550100")).toMatchObject({ phoneMatched: true, appointmentCount: 2 });
     });
   });
 });

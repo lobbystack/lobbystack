@@ -6,14 +6,11 @@ vi.mock("@lobbystack/domain", async () => ({
   KNOWLEDGE_SEARCH_TOKEN_BUDGET: 3000,
   knowledgeQueryTerms: (await import("../../domain/src/knowledgeRanking")).knowledgeQueryTerms,
   searchKnowledgeEvidence: vi.fn(),
-  checkOpening: vi.fn(async () => ({ ok: true, available: true })),
-  findCallerBooking: vi.fn(async () => undefined),
-  findCallBooking: vi.fn(async () => undefined),
   bookForCaller: vi.fn(async () => ({ ok: true })),
   requestCancellationForCaller: vi.fn(async () => ({ ok: true, inboxItemId: "inbox_1" })),
 }));
 
-import { bookForCaller, checkOpening, findCallBooking, findCallerBooking, requestCancellationForCaller, searchKnowledgeEvidence } from "@lobbystack/domain";
+import { bookForCaller, requestCancellationForCaller, searchKnowledgeEvidence } from "@lobbystack/domain";
 import { createReceptionistTools, type AgentChannel, type AgentToolContext } from "./tools";
 
 function toolNames(overrides: Omit<Partial<AgentToolContext>, "snapshot"> & { bookingMode?: BookingMode; snapshot?: Partial<BusinessContextSnapshot> } = {}): string[] {
@@ -137,43 +134,31 @@ describe("bookAppointment", () => {
 
   it("books a time the caller accepted from the conversation, in the business's timezone", async () => {
     await expect(book("2026-10-06T10:00")).resolves.toMatchObject({ ok: true });
-    expect(vi.mocked(checkOpening).mock.lastCall?.[1]).toMatchObject({ startsAt: "2026-10-06T10:00:00.000-04:00" });
-    expect(vi.mocked(bookForCaller).mock.lastCall?.[1]).toMatchObject({ startsAt: "2026-10-06T10:00:00.000-04:00" });
+    expect(vi.mocked(bookForCaller).mock.lastCall?.[1]).toMatchObject({ service: { name: "General Checkup" }, startsAt: "2026-10-06T10:00:00.000-04:00", contactName: "Milan", channel: "voice" });
   });
 
-  it("returns the caller's existing booking for a repeated request instead of calling the slot taken", async () => {
-    vi.mocked(findCallerBooking).mockResolvedValueOnce({ ok: true, appointmentId: "appt_1", serviceName: "General Checkup", startsAt: "2026-10-06T10:00:00.000-04:00", alreadyBooked: true });
-    vi.mocked(checkOpening).mockClear();
-    vi.mocked(bookForCaller).mockClear();
+  it("returns the caller's existing booking for a repeated request, found by the call's own number", async () => {
+    vi.mocked(bookForCaller).mockResolvedValueOnce({ ok: true, appointmentId: "appt_1", serviceName: "General Checkup", startsAt: "2026-10-06T10:00:00.000-04:00", alreadyBooked: true });
     await expect(book("2026-10-06T10:00")).resolves.toMatchObject({ ok: true, appointmentId: "appt_1", alreadyBooked: true });
-    expect(vi.mocked(findCallerBooking).mock.lastCall?.[1]).toMatchObject({ serviceName: "General Checkup", startsAt: "2026-10-06T10:00:00.000-04:00", contactPhone: "+14165550100" });
-    expect(checkOpening).not.toHaveBeenCalled();
-    expect(bookForCaller).not.toHaveBeenCalled();
+    expect(vi.mocked(bookForCaller).mock.lastCall?.[1]).toMatchObject({ contactPhone: "+14165550100", callerPhone: "+14165550100" });
   });
 
-  it("never says whose booking a typed or spoken number holds", async () => {
-    const run = (channel: AgentChannel, callerPhone?: string) => {
-      const tools = createReceptionistTools({ domain: { db: {} as never }, channel, ...(callerPhone ? { callerPhone } : {}), snapshot: demoSnapshot });
+  it("never treats a typed or spoken number as the call's own", async () => {
+    const run = (channel: AgentChannel, callId?: string) => {
+      const tools = createReceptionistTools({ domain: { db: {} as never }, channel, ...(callId ? { callId } : {}), snapshot: demoSnapshot });
       return (tools.bookAppointment!.execute! as (input: object, options: object) => Promise<unknown>)({ serviceName: "General Checkup", startsAt: "2026-10-06T10:00", contactName: "Milan", contactPhone: "+14165550199", smsConsent: "not_asked" }, { toolCallId: "1", messages: [] });
     };
-    vi.mocked(findCallerBooking).mockClear();
-    vi.mocked(checkOpening).mockClear();
     await run("web_chat");
-    await run("voice", "+14165550100");
-    expect(findCallerBooking).not.toHaveBeenCalled();
-    expect(checkOpening).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(bookForCaller).mock.lastCall?.[1]).not.toHaveProperty("callerPhone");
+    // A browser call finds only its own booking.
+    await run("web_voice", "call_1");
+    expect(vi.mocked(bookForCaller).mock.lastCall?.[1]).toMatchObject({ callId: "call_1", contactPhone: "+14165550199" });
+    expect(vi.mocked(bookForCaller).mock.lastCall?.[1]).not.toHaveProperty("callerPhone");
   });
 
-  it("reports a browser call's own booking for a repeated request", async () => {
-    vi.mocked(findCallBooking).mockResolvedValueOnce({ ok: true, serviceName: "General Checkup", startsAt: "2026-10-06T10:00:00.000-04:00", alreadyBooked: true });
-    vi.mocked(findCallerBooking).mockClear();
-    vi.mocked(bookForCaller).mockClear();
-    const tools = createReceptionistTools({ domain: { db: {} as never }, channel: "web_voice", callId: "call_1", snapshot: { ...demoSnapshot, timezone: "America/Toronto" } });
-    const execute = tools.bookAppointment!.execute! as (input: object, options: object) => Promise<unknown>;
-    await expect(execute({ serviceName: "General Checkup", startsAt: "2026-10-06T10:00", contactName: "Milan", contactPhone: "+14165550199", smsConsent: "not_asked" }, { toolCallId: "1", messages: [] })).resolves.toMatchObject({ ok: true, alreadyBooked: true });
-    expect(vi.mocked(findCallBooking).mock.lastCall?.[1]).toEqual({ businessId: demoSnapshot.businessId, callId: "call_1", serviceName: "General Checkup", startsAt: "2026-10-06T10:00:00.000-04:00" });
-    expect(findCallerBooking).not.toHaveBeenCalled();
-    expect(bookForCaller).not.toHaveBeenCalled();
+  it("says the booking couldn't be completed when it fails unexpectedly", async () => {
+    vi.mocked(bookForCaller).mockRejectedValueOnce(new Error("database is down"));
+    await expect(book("2026-10-06T10:00")).resolves.toEqual({ ok: false, reason: "The booking could not be completed." });
   });
 
   it("keeps the instant of a findAvailability startsAt", async () => {
