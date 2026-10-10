@@ -93,7 +93,7 @@ async function main(): Promise<void> {
     assert.equal([...events.values()][0]?.startsAt, at(14));
 
     phase = "failure-and-freshness";
-    await assert.rejects(upsertBusyBlocks(context, { businessId, connectionId, calendarId: "stale-selection", markSynced: true, blocks: [] }));
+    await assert.rejects(upsertBusyBlocks(context, { businessId, connectionId, calendarId: "stale-selection", blocks: [] }));
     assert.equal((await admin.db.select().from(calendarBusyBlocks).where(eq(calendarBusyBlocks.businessId, businessId))).length, 1);
     await admin.db.update(calendarConnections).set({ lastSyncedAt: new Date(Date.now() - MAX_CALENDAR_SYNC_AGE_MS - 1000) }).where(eq(calendarConnections.id, connectionId));
     assert.equal((await find(12)).length, 0, "Stale calendar mirrors must fail closed");

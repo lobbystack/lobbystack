@@ -2,7 +2,9 @@ import { beforeEach, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ transaction: vi.fn(), enqueue: vi.fn(), alert: vi.fn() }));
 vi.mock("@lobbystack/db", async (original) => ({ ...await original<typeof import("@lobbystack/db")>(), withBusinessTransaction: mocks.transaction, enqueueOutbox: mocks.enqueue }));
 vi.mock("./notifications", () => ({ queueOperatorAlertInTransaction: mocks.alert }));
-import { resolveCalendarAccessToken, updateAppointmentSyncStateInTransaction } from "./calendar";
+vi.mock("../authz", () => ({ requireBusinessAdmin: vi.fn(), requireBusinessMembership: vi.fn() }));
+import { appointments, calendarBusyBlocks, calendarConnections } from "@lobbystack/db";
+import { queueUnsyncedAppointmentSyncs, resolveCalendarAccessToken, selectCalendar, updateAppointmentSyncStateInTransaction, upsertBusyBlocks } from "./calendar";
 
 const now = new Date("2026-09-13T12:00:00Z");
 const row = { id: "connection", businessId: "business", status: "connected", encryptedAccessToken: "enc:old", encryptedRefreshToken: "enc:refresh", tokenExpiresAt: new Date(now.getTime() - 1000) };
@@ -65,4 +67,44 @@ it("alerts operators once per appointment time, not once per sync retry", async 
     "calendarSync:appointment:appointment:2026-09-20T14:00:00.000Z:confirmed",
     "calendarSync:appointment:appointment:2026-09-21T15:00:00.000Z:confirmed",
   ]);
+});
+
+// Answers selects in order and records each insert and update.
+function recordWrites(reads: unknown[][]) {
+  const writes: Array<{ table: unknown; values: unknown }> = [];
+  const chain = (result: unknown): Promise<unknown> => Object.assign(Promise.resolve(result), { from: () => chain(result), where: () => chain(result), limit: () => chain(result), for: () => chain(result), returning: () => chain(result) });
+  const write = (table: unknown) => (values: unknown) => { writes.push({ table, values }); return chain([]); };
+  const tx = { select: () => chain(reads.shift() ?? []), delete: () => chain([]), insert: (table: unknown) => ({ values: write(table) }), update: (table: unknown) => ({ set: write(table) }) };
+  mocks.transaction.mockImplementation(async (_db, _scope, callback) => callback(tx));
+  return (table: unknown) => writes.filter((entry) => entry.table === table).map((entry) => entry.values);
+}
+
+it("clears upcoming bookings' event ids only when the selected calendar changes", async () => {
+  const select = () => selectCalendar(context, { userId: "user", businessId: "business", connectionId: "connection", calendarId: "new@group.calendar.google.com" });
+  let written = recordWrites([[{ staffId: "staff", selectedCalendarId: "old@group.calendar.google.com" }]]);
+  await select();
+  expect(written(appointments)).toEqual([expect.objectContaining({ calendarExternalId: null, calendarSyncState: "not_required" })]);
+  written = recordWrites([[{ staffId: "staff", selectedCalendarId: "new@group.calendar.google.com" }]]);
+  await select();
+  expect(written(appointments)).toEqual([]);
+});
+
+it("backfills a booking again once its connection switches calendars", async () => {
+  const backfillKey = async (calendarId: string) => {
+    recordWrites([[{ staffId: null, selectedCalendarId: calendarId, status: "connected" }], [{ id: "appointment" }]]);
+    await queueUnsyncedAppointmentSyncs(context, { businessId: "business", connectionId: "connection" });
+    return mocks.enqueue.mock.calls.at(-1)?.[1].dedupeKey;
+  };
+  const first = await backfillKey("old@group.calendar.google.com");
+  expect(await backfillKey("old@group.calendar.google.com")).toBe(first);
+  expect(await backfillKey("new@group.calendar.google.com")).not.toBe(first);
+});
+
+it("writes a busy calendar in bounded inserts inside one transaction and marks it synced", async () => {
+  const written = recordWrites([[{ status: "connected", selectedCalendarId: "calendar" }]]);
+  const blocks = Array.from({ length: 12_001 }, (_, index) => ({ startsAt: new Date(now.getTime() + index * 60_000).toISOString(), endsAt: new Date(now.getTime() + (index + 1) * 60_000).toISOString(), externalEventId: `event-${index}` }));
+  await upsertBusyBlocks(context, { businessId: "business", connectionId: "connection", calendarId: "calendar", syncStartedAt: now, blocks });
+  expect(mocks.transaction).toHaveBeenCalledOnce();
+  expect(written(calendarBusyBlocks).map((rows) => (rows as unknown[]).length)).toEqual([5_000, 5_000, 2_001]);
+  expect(written(calendarConnections)).toEqual([expect.objectContaining({ status: "connected", lastSyncError: null, lastSyncedAt: now })]);
 });

@@ -145,6 +145,26 @@ describe.skipIf(!testUrl)("calendar backfill against dedicated PostgreSQL roles"
     });
   });
 
+  it("clears the old calendar's event ids from upcoming bookings it covered when the owner reconnects", async () => {
+    await rollbackTest(async (tx) => {
+      const { businessId, userId, secondStaffId, book } = await workspace(tx);
+      const covered = await book({ calendarSyncState: "synced", calendarExternalId: "business-event" });
+      const past = await book({ startsAt: new Date("2020-01-01T12:00:00Z"), endsAt: new Date("2020-01-01T12:30:00Z"), calendarSyncState: "synced", calendarExternalId: "past-event" });
+      const ownCalendar = await book({ staffId: secondStaffId, calendarSyncState: "synced", calendarExternalId: "staff-event" });
+      await tx.insert(calendarConnections).values({ businessId, ownerUserId: userId, provider: "google", externalAccountId: "staff@example.invalid", staffId: secondStaffId, selectedCalendarId: "staff@group.calendar.google.com" });
+      await tx.execute(sql`set local role lobbystack_app`);
+      const db = tx as unknown as Database;
+      await connectCalendar({ db }, { userId, businessId, provider: "google", externalAccountId: "acct_1" });
+      await connectCalendar({ db }, { userId, businessId, provider: "google", externalAccountId: "acct_2" });
+      await tx.execute(sql`reset role`);
+
+      const rows = await tx.select().from(appointments).where(eq(appointments.businessId, businessId));
+      expect(rows.find((row) => row.id === covered.id)).toMatchObject({ calendarSyncState: "not_required", calendarExternalId: null });
+      expect(rows.find((row) => row.id === past.id)).toMatchObject({ calendarSyncState: "synced", calendarExternalId: "past-event" });
+      expect(rows.find((row) => row.id === ownCalendar.id)).toMatchObject({ calendarSyncState: "synced", calendarExternalId: "staff-event" });
+    });
+  });
+
   it("records who disconnected a calendar, once", async () => {
     await rollbackTest(async (tx) => {
       const { businessId, userId } = await workspace(tx);
