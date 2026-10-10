@@ -386,6 +386,20 @@
     },
     "edit": "Modifier",
     "cancel": "Annuler",
-    "notSet": "Non définies"
+    "notSet": "Non définies",
+    "closures": {
+      "title": "Fermetures",
+      "description": "Ajoutez les jours fériés et les autres périodes où vous êtes fermé. L'agent ne réserve pas de rendez-vous pendant ces périodes. Les heures suivent le fuseau {{timezone}}.",
+      "startsAt": "Fermé à partir du",
+      "endsAt": "Fermé jusqu'au",
+      "reason": "Motif",
+      "reasonPlaceholder": "Motif (facultatif)",
+      "add": "Ajouter une fermeture",
+      "remove": "Retirer cette fermeture",
+      "summary": "Fermetures : {{list}}",
+      "order": "Indiquez un début et une fin plus tardive pour la fermeture en surbrillance.",
+      "ended": "La fermeture en surbrillance se termine dans le passé. Modifiez ses dates ou retirez-la.",
+      "overlap": "La fermeture en surbrillance chevauche une autre fermeture. Modifiez ses dates."
+    }
   }
 }

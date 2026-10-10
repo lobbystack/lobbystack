@@ -1,4 +1,5 @@
 import type { HoursWindow } from "@lobbystack/shared";
+import { DateTime } from "luxon";
 
 // Weekly opening hours: zero or more windows per weekday, in local minutes
 // from midnight. A day with a lunch break has two windows, such as 9:00 to
@@ -37,4 +38,41 @@ export function sameHoursWindows(left: ReadonlyArray<HoursWindow>, right: Readon
     const other = right[index]!;
     return window.dayOfWeek === other.dayOfWeek && window.openMinutes === other.openMinutes && window.closeMinutes === other.closeMinutes;
   });
+}
+
+/** Enough for every public holiday over two years. */
+export const MAX_CLOSURES = 50;
+export const MAX_CLOSURE_REASON_LENGTH = 100;
+// A datetime-local input's value, such as 2026-12-25T09:00.
+const LOCAL_DATE_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+
+/**
+ * Checks dated closures, such as Christmas Day or a half day, entered as
+ * local times in the business's timezone, and returns them as instants sorted
+ * by start. Throws when a time is malformed, a closure doesn't end after it
+ * starts, has already ended or ends more than two years ahead, closures
+ * overlap, a reason is too long, or there are too many.
+ */
+export function normalizeClosures(
+  closures: ReadonlyArray<{ startsAt: string; endsAt: string; reason?: string | undefined }>,
+  timezone: string,
+  now: Date,
+): Array<{ startsAt: Date; endsAt: Date; reason: string }> {
+  if (closures.length > MAX_CLOSURES) throw new Error(`A business can have up to ${MAX_CLOSURES} closures.`);
+  const latestEnd = DateTime.fromJSDate(now).plus({ years: 2 }).toJSDate();
+  const sorted = closures.map((closure) => {
+    const [startsAt, endsAt] = [closure.startsAt, closure.endsAt].map((value) => LOCAL_DATE_TIME.test(value) ? DateTime.fromISO(value, { zone: timezone }) : undefined);
+    if (!startsAt?.isValid || !endsAt?.isValid) throw new Error("Each closure needs a start and an end like 2026-12-25T09:00.");
+    const reason = closure.reason?.trim() ?? "";
+    if (reason.length > MAX_CLOSURE_REASON_LENGTH) throw new Error(`A closure reason can be up to ${MAX_CLOSURE_REASON_LENGTH} characters.`);
+    const checked = { startsAt: startsAt.toJSDate(), endsAt: endsAt.toJSDate(), reason };
+    if (checked.endsAt <= checked.startsAt) throw new Error("A closure must end after it starts.");
+    if (checked.endsAt <= now) throw new Error("A closure can't end in the past.");
+    if (checked.endsAt > latestEnd) throw new Error("A closure must end within two years.");
+    return checked;
+  }).sort((left, right) => left.startsAt.getTime() - right.startsAt.getTime());
+  for (let index = 1; index < sorted.length; index += 1) {
+    if (sorted[index]!.startsAt < sorted[index - 1]!.endsAt) throw new Error("Closures can't overlap.");
+  }
+  return sorted;
 }

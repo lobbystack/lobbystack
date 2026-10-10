@@ -1,23 +1,24 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { BusinessHoursSection, HOURS_EDITOR_HREF, windowsForSave } from "./business-hours-section";
+import { BusinessHoursSection, closuresForSave, HOURS_EDITOR_HREF, windowsForSave } from "./business-hours-section";
 import { AgentBasicSettingsPage } from "./live-agent-basic-settings-surface";
 import { LiveSetupGuideSurface } from "./live-setup-guide-surface";
 import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
 
 const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof createRecordedBrowserTelemetry> | null }));
 vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetryRef.current!.telemetry }));
-vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en" }, t: (key: string, options?: { day?: string }) => (options?.day ? `${key}:${options.day}` : key) }) }));
+vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en" }, t: (key: string, options?: { day?: string; list?: string }) => (options?.day ? `${key}:${options.day}` : options?.list ? `${key}:${options.list}` : key) }) }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
 vi.mock("@/lib/test-call-launcher", () => ({ startTestCall: vi.fn(), subscribeTestCallEnded: () => () => undefined }));
 vi.mock("./upgrade-plan-dialog-context", () => ({ useOpenUpgradePlanDialog: () => vi.fn() }));
 
-type Hours = { hoursSource: string; bookingMode?: string; hours: Array<{ dayOfWeek: number; openMinutes: number; closeMinutes: number }> };
+type Closure = { startsAt: string; endsAt: string; reason: string };
+type Hours = { hoursSource: string; bookingMode?: string; hours: Array<{ dayOfWeek: number; openMinutes: number; closeMinutes: number }>; closures?: Closure[] };
 
 const clients: QueryClient[] = [];
 beforeEach(() => {
@@ -33,10 +34,10 @@ function client() {
 }
 
 function stubFetch(initial: Hours, profile: Record<string, unknown> = {}) {
-  let state = { timezone: "Europe/Belgrade", bookingMode: "instant", ...initial };
+  let state = { timezone: "Europe/Belgrade", bookingMode: "instant", closures: [] as Closure[], ...initial };
   const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     if (url.startsWith("/api/hours")) {
-      if (init?.method === "PUT") state = { ...state, hoursSource: "operator", hours: (JSON.parse(String(init.body)) as Hours).hours };
+      if (init?.method === "PUT") state = { ...state, hoursSource: "operator", ...(JSON.parse(String(init.body)) as Pick<Hours, "hours" | "closures">) };
       return Response.json(state);
     }
     if (url.startsWith("/api/setup")) return Response.json({ steps: [] });
@@ -90,6 +91,43 @@ describe("opening hours editor", () => {
     await waitFor(() => expect(screen.getByTestId("hours-summary").textContent).toBe("hours.notSet"));
     await userEvent.click(screen.getByRole("button", { name: "hours.edit" }));
     expect(screen.getAllByText("hours.closed")).toHaveLength(7);
+  });
+
+  it("saves a closure with the hours and lists it in the summary", async () => {
+    const fetchMock = stubFetch({ hoursSource: "operator", hours: weekdays });
+    const year = new Date().getFullYear() + 1;
+    render(<QueryClientProvider client={client()}><BusinessHoursSection businessId="business" canManage /></QueryClientProvider>);
+    await userEvent.click(await screen.findByRole("button", { name: "hours.edit" }));
+    await userEvent.click(screen.getByRole("button", { name: "hours.closures.add" }));
+    fireEvent.change(screen.getByLabelText("hours.closures.startsAt"), { target: { value: `${year}-12-25T00:00` } });
+    fireEvent.change(screen.getByLabelText("hours.closures.endsAt"), { target: { value: `${year}-12-26T00:00` } });
+    await userEvent.type(screen.getByLabelText("hours.closures.reason"), "Christmas Day");
+    await userEvent.click(screen.getByRole("button", { name: "hours.save" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/hours?businessId=business", expect.objectContaining({ method: "PUT" })));
+    const body = JSON.parse(String(fetchMock.mock.calls.find(([, init]) => init?.method === "PUT")?.[1]?.body)) as Hours;
+    expect(body).toEqual({ hours: weekdays, closures: [{ startsAt: `${year}-12-25T00:00`, endsAt: `${year}-12-26T00:00`, reason: "Christmas Day" }] });
+    await waitFor(() => expect(screen.getByTestId("closures-summary").textContent).toContain("(Christmas Day)"));
+  });
+
+  it("flags a closure that doesn't end after it starts without saving", async () => {
+    const fetchMock = stubFetch({ hoursSource: "operator", hours: weekdays });
+    render(<QueryClientProvider client={client()}><BusinessHoursSection businessId="business" canManage /></QueryClientProvider>);
+    await userEvent.click(await screen.findByRole("button", { name: "hours.edit" }));
+    await userEvent.click(screen.getByRole("button", { name: "hours.closures.add" }));
+    await userEvent.click(screen.getByRole("button", { name: "hours.save" }));
+    expect(screen.getByRole("alert").textContent).toBe("hours.closures.order");
+    expect(screen.getByLabelText("hours.closures.startsAt").getAttribute("aria-invalid")).toBe("true");
+    expect(fetchMock).not.toHaveBeenCalledWith("/api/hours?businessId=business", expect.objectContaining({ method: "PUT" }));
+  });
+
+  it("checks closures before saving", () => {
+    const now = "2026-10-09T12:00";
+    const christmas = { startsAt: "2026-12-25T00:00", endsAt: "2026-12-26T00:00", reason: "" };
+    expect(closuresForSave([christmas, { startsAt: "2026-10-09T00:00", endsAt: "2026-10-10T00:00", reason: "" }], now)).toEqual({ ok: true });
+    expect(closuresForSave([christmas, { startsAt: "2026-10-01T00:00", endsAt: "2026-10-09T12:00", reason: "" }], now)).toEqual({ ok: false, index: 1, problem: "ended" });
+    expect(closuresForSave([{ startsAt: "2026-12-25T12:00", endsAt: "2026-12-27T00:00", reason: "" }, christmas], now)).toEqual({ ok: false, index: 0, problem: "overlap" });
+    expect(closuresForSave([christmas, { ...christmas, startsAt: "" }], now)).toEqual({ ok: false, index: 1, problem: "order" });
   });
 
   it("checks windows before saving", () => {

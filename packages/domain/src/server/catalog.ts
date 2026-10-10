@@ -4,7 +4,7 @@ import { enqueueOutbox, withBusinessTransaction, type DatabaseTransaction } from
 import { agentRules, businesses, businessHours, closures, phoneNumbers, receptionistProfiles, services, staff, staffServiceAssignments } from "@lobbystack/db";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
-import { normalizeHoursWindows } from "../hours";
+import { normalizeClosures, normalizeHoursWindows } from "../hours";
 import { writeBusinessHoursInTransaction } from "./businessHours";
 import type { DomainContext } from "./context";
 
@@ -135,15 +135,33 @@ export async function unassignStaffFromService(
  * Replaces the weekly hours a person set, in the dashboard or the API: the
  * listed windows, other days closed. A day can have several windows. Marks
  * the hours as the operator's, so AI never replaces them, and refreshes the
- * receptionist snapshot. Callers authorize first.
+ * receptionist snapshot. Given closures replace every closure, including
+ * ones that already ended; without them, closures stay as they are. Callers
+ * authorize first.
  */
 export async function replaceBusinessHoursInTransaction(
   tx: DatabaseTransaction,
-  input: { businessId: string; hours: Array<{ dayOfWeek: number; openMinutes: number; closeMinutes: number }> },
+  input: {
+    businessId: string;
+    hours: Array<{ dayOfWeek: number; openMinutes: number; closeMinutes: number }>;
+    /** Local times in the business's timezone, such as 2026-12-25T00:00. */
+    closures?: Array<{ startsAt: string; endsAt: string; reason?: string | undefined }> | undefined;
+  },
 ): Promise<void> {
   const hours = normalizeHoursWindows(input.hours);
+  let closureRows: ReturnType<typeof normalizeClosures> | undefined;
+  if (input.closures) {
+    const [business] = await tx.select({ timezone: businesses.timezone }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1);
+    if (!business) throw Object.assign(new Error("Business not found."), { status: 404 });
+    closureRows = normalizeClosures(input.closures, business.timezone, new Date());
+  }
   // Updating the business row first locks it, so this write and the worker's
   // generated hours (which lock the same row) can't interleave.
   await tx.update(businesses).set({ hoursSource: "operator", updatedAt: new Date() }).where(eq(businesses.id, input.businessId));
+  if (closureRows) {
+    await tx.delete(closures).where(eq(closures.businessId, input.businessId));
+    if (closureRows.length) await tx.insert(closures).values(closureRows.map((closure) => ({ businessId: input.businessId, ...closure })));
+  }
+  // Its snapshot refresh picks up the closures too.
   await writeBusinessHoursInTransaction(tx, { businessId: input.businessId, hours, reason: "hours_updated" });
 }

@@ -386,6 +386,20 @@
     },
     "edit": "Edit",
     "cancel": "Cancel",
-    "notSet": "Not set"
+    "notSet": "Not set",
+    "closures": {
+      "title": "Closures",
+      "description": "Add holidays and other times you're closed. The agent won't book appointments during them. Times are in {{timezone}}.",
+      "startsAt": "Closed from",
+      "endsAt": "Closed until",
+      "reason": "Reason",
+      "reasonPlaceholder": "Reason (optional)",
+      "add": "Add closure",
+      "remove": "Remove this closure",
+      "summary": "Closures: {{list}}",
+      "order": "Enter a start and a later end for the highlighted closure.",
+      "ended": "The highlighted closure ends in the past. Change its dates or remove it.",
+      "overlap": "The highlighted closure overlaps another one. Change its dates."
+    }
   }
 }

@@ -21,13 +21,17 @@ import { intlLocale } from "@/lib/locale";
 import { requestJson } from "@/lib/request-json";
 
 export type HoursSource = "none" | "generated" | "operator";
-export type BusinessHoursState = { timezone: string; hoursSource: HoursSource; bookingMode: BookingMode; hours: HoursWindow[] };
+/** A dated closure, such as Christmas Day, in local times like 2026-12-25T00:00 in the business's timezone. */
+export type Closure = { startsAt: string; endsAt: string; reason: string };
+export type BusinessHoursState = { timezone: string; hoursSource: HoursSource; bookingMode: BookingMode; hours: HoursWindow[]; closures: Closure[] };
 
 /** Where the dashboard edits opening hours. */
 export const HOURS_EDITOR_HREF = "/agent/basic-settings#opening-hours";
 // Opens the editor when the link is followed on the page that already shows it, where nothing remounts.
 const OPEN_HOURS_EDITOR_EVENT = "lobbystack:open-hours-editor";
 const MAX_WINDOWS_PER_DAY = 4;
+const MAX_CLOSURES = 50;
+const MAX_CLOSURE_REASON_LENGTH = 100;
 // Monday first; dayOfWeek counts from Sunday.
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 // A Sunday, so 2024-01-07 plus dayOfWeek days falls on that weekday.
@@ -97,6 +101,26 @@ export function summarizeHours(days: Window[][], shortDayNames: string[]): strin
   return groups.filter((group) => group.hours).map((group) => `${shortDayNames[group.first]}${group.first === group.last ? "" : `–${shortDayNames[group.last]}`} ${group.hours}`).join(", ");
 }
 
+/** The time now in the business's timezone, in a datetime-local input's format. */
+function localNow(timezone: string): string {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: timezone, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }).formatToParts(new Date()).map((part) => [part.type, part.value]));
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
+}
+
+/** The first closure, by position, that doesn't end after it starts, has ended by `now`, or overlaps another. Local times compare as text. */
+export function closuresForSave(closures: Closure[], now: string): { ok: true } | { ok: false; index: number; problem: "order" | "ended" | "overlap" } {
+  for (const [index, closure] of closures.entries()) {
+    if (!closure.startsAt || !closure.endsAt || closure.endsAt <= closure.startsAt) return { ok: false, index, problem: "order" };
+    if (closure.endsAt <= now) return { ok: false, index, problem: "ended" };
+  }
+  const byStart = closures.map((_, index) => index).sort((left, right) => closures[left]!.startsAt.localeCompare(closures[right]!.startsAt));
+  for (let position = 1; position < byStart.length; position += 1) {
+    const index = byStart[position]!;
+    if (closures[index]!.startsAt < closures[byStart[position - 1]!]!.endsAt) return { ok: false, index, problem: "overlap" };
+  }
+  return { ok: true };
+}
+
 export function BookingWithoutHoursAlert({ className }: { className?: string }) {
   const { t } = useTranslation("agent");
   return (
@@ -117,8 +141,10 @@ export function BusinessHoursSection({ businessId, canManage }: { businessId: st
   const query = useBusinessHours(businessId);
   const state = query.data;
   const [days, setDays] = useState<Window[][]>(() => toDays([]));
+  const [closures, setClosures] = useState<Closure[]>([]);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [invalidClosure, setInvalidClosure] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   // Collapsed to a one-line summary unless a link points here, such as the no-hours warning.
   const [editing, setEditing] = useState(false);
@@ -129,11 +155,14 @@ export function BusinessHoursSection({ businessId, canManage }: { businessId: st
     window.addEventListener(OPEN_HOURS_EDITOR_EVENT, open);
     return () => window.removeEventListener(OPEN_HOURS_EDITOR_EVENT, open);
   }, [canManage]);
-  useEffect(() => { if (state) setDays(toDays(state.hours)); }, [state]);
+  useEffect(() => { if (state) { setDays(toDays(state.hours)); setClosures(state.closures); } }, [state]);
   const [dayNames, shortDayNames] = useMemo(() => (["long", "short"] as const).map((weekday) => {
     const format = new Intl.DateTimeFormat(intlLocale(i18n.language), { weekday, timeZone: "UTC" });
     return Array.from({ length: 7 }, (_, day) => format.format(new Date(SUNDAY + day * 86_400_000)));
   }), [i18n.language]) as [string[], string[]];
+  // Local times read as UTC, so the format shows them as entered.
+  const closureFormat = useMemo(() => new Intl.DateTimeFormat(intlLocale(i18n.language), { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }), [i18n.language]);
+  const describeClosure = (closure: Closure) => `${closureFormat.formatRange(new Date(`${closure.startsAt}:00Z`), new Date(`${closure.endsAt}:00Z`))}${closure.reason ? ` (${closure.reason})` : ""}`;
   const loading = !businessId || query.isLoading;
   const disabled = !canManage || saving || !state;
 
@@ -141,18 +170,33 @@ export function BusinessHoursSection({ businessId, canManage }: { businessId: st
     setDays((current) => current.map((day, index) => (index === dayOfWeek ? windows : day)));
     setStatus(null);
     setError(null);
+    setInvalidClosure(null);
+  }
+
+  function updateClosures(next: Closure[]) {
+    setClosures(next);
+    setStatus(null);
+    setError(null);
+    setInvalidClosure(null);
   }
 
   async function save() {
+    if (!state) return;
     const result = windowsForSave(days);
     if (!result.ok) {
       setError(t("hours.invalid", { day: dayNames[result.dayOfWeek] }));
       return;
     }
+    const checked = closuresForSave(closures, localNow(state.timezone));
+    if (!checked.ok) {
+      setError(t(`hours.closures.${checked.problem}`));
+      setInvalidClosure(checked.index);
+      return;
+    }
     setSaving(true);
     setStatus(null);
     try {
-      const saved = await requestJson<BusinessHoursState>(`/api/hours?businessId=${encodeURIComponent(businessId)}`, { method: "PUT", body: JSON.stringify({ hours: result.hours }) });
+      const saved = await requestJson<BusinessHoursState>(`/api/hours?businessId=${encodeURIComponent(businessId)}`, { method: "PUT", body: JSON.stringify({ hours: result.hours, closures }) });
       queryClient.setQueryData(businessHoursQueryKey(businessId), saved);
       telemetry.track("web.agent.settings_saved", { businessId, setting: "hours" });
       setStatus(t("actions.saved"));
@@ -169,7 +213,8 @@ export function BusinessHoursSection({ businessId, canManage }: { businessId: st
   function close() {
     setEditing(false);
     setError(null);
-    if (state) setDays(toDays(state.hours));
+    setInvalidClosure(null);
+    if (state) { setDays(toDays(state.hours)); setClosures(state.closures); }
   }
   return (
     <section className="flex scroll-mt-6 flex-col gap-3" id="opening-hours">
@@ -182,6 +227,7 @@ export function BusinessHoursSection({ businessId, canManage }: { businessId: st
         <Item variant="default">
           <ItemContent>
             {loading ? <Skeleton className="h-5 w-64 rounded-md" /> : <ItemDescription data-testid="hours-summary">{summarizeHours(savedDays, shortDayNames) || t("hours.notSet")}</ItemDescription>}
+            {state?.closures.length ? <ItemDescription data-testid="closures-summary">{t("hours.closures.summary", { list: state.closures.map(describeClosure).join("; ") })}</ItemDescription> : null}
           </ItemContent>
           <ItemActions>
             {status ? <span className="text-sm text-muted-foreground">{status}</span> : null}
@@ -220,6 +266,29 @@ export function BusinessHoursSection({ businessId, canManage }: { businessId: st
                 </div>
               );
             })}
+            <div className="flex flex-col gap-4 py-3">
+              <div className="flex flex-col gap-1">
+                <span className="text-sm font-medium">{t("hours.closures.title")}</span>
+                <p className="text-sm text-muted-foreground">{t("hours.closures.description", { timezone: state?.timezone })}</p>
+              </div>
+              {closures.map((closure, index) => {
+                const edit = (change: Partial<Closure>) => updateClosures(closures.map((item, position) => (position === index ? { ...item, ...change } : item)));
+                const invalid = invalidClosure === index || undefined;
+                return (
+                  <div className="flex items-start gap-2" key={index}>
+                    <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-2">
+                      <Input aria-invalid={invalid} aria-label={t("hours.closures.startsAt")} disabled={disabled} onChange={(event) => edit({ startsAt: event.target.value })} type="datetime-local" value={closure.startsAt} />
+                      <Input aria-invalid={invalid} aria-label={t("hours.closures.endsAt")} disabled={disabled} onChange={(event) => edit({ endsAt: event.target.value })} type="datetime-local" value={closure.endsAt} />
+                      <Input aria-label={t("hours.closures.reason")} className="sm:col-span-2" disabled={disabled} maxLength={MAX_CLOSURE_REASON_LENGTH} onChange={(event) => edit({ reason: event.target.value })} placeholder={t("hours.closures.reasonPlaceholder")} value={closure.reason} />
+                    </div>
+                    <Button aria-label={t("hours.closures.remove")} disabled={disabled} onClick={() => updateClosures(closures.filter((_, position) => position !== index))} size="icon-sm" type="button" variant="ghost"><X /></Button>
+                  </div>
+                );
+              })}
+              {closures.length < MAX_CLOSURES ? (
+                <Button className="w-fit" disabled={disabled} onClick={() => updateClosures([...closures, { startsAt: "", endsAt: "", reason: "" }])} size="sm" type="button" variant="ghost"><Plus />{t("hours.closures.add")}</Button>
+              ) : null}
+            </div>
           </div>
           {error ? <p className="text-sm text-destructive" role="alert">{error}</p> : null}
           <DialogFooter>

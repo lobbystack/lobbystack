@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { businesses, businessHours } from "@lobbystack/db";
+import { businesses, businessHours, closures } from "@lobbystack/db";
 
 const mocks = vi.hoisted(() => ({ withBusinessTransaction: vi.fn(), enqueueOutbox: vi.fn() }));
 vi.mock("@lobbystack/db", async (original) => ({ ...(await original<typeof import("@lobbystack/db")>()), withBusinessTransaction: mocks.withBusinessTransaction, enqueueOutbox: mocks.enqueueOutbox }));
@@ -19,7 +19,7 @@ function useBusiness(state: { hoursSource: string; hours?: unknown[] }) {
     return node;
   };
   const tx = {
-    select: () => ({ from: (table: unknown) => query(table === businesses ? [{ hoursSource: state.hoursSource }] : table === businessHours ? state.hours ?? [] : []) }),
+    select: () => ({ from: (table: unknown) => query(table === businesses ? [{ hoursSource: state.hoursSource, timezone: "Europe/Belgrade" }] : table === businessHours ? state.hours ?? [] : []) }),
     update: (table: unknown) => ({ set: (values: Record<string, unknown>) => { recorded.updates.push({ table, values }); return query([]); } }),
     delete: (table: unknown) => { recorded.deletes.push(table); return query([]); },
     insert: () => ({ values: (rows: unknown[]) => { recorded.inserts.push(rows); return query([]); } }),
@@ -124,6 +124,35 @@ describe("operator hours", () => {
     const { recorded, tx } = useBusiness({ hoursSource: "none" });
     await expect(replaceBusinessHoursInTransaction(tx as never, { businessId, hours: [{ dayOfWeek: 1, openMinutes: 540, closeMinutes: 780 }, { dayOfWeek: 1, openMinutes: 720, closeMinutes: 1020 }] })).rejects.toThrow("can't overlap");
     expect(recorded.updates).toEqual([]);
+  });
+
+  it("replaces the closures with the hours, read in the business's timezone", async () => {
+    const { recorded, tx } = useBusiness({ hoursSource: "operator" });
+    const year = new Date().getUTCFullYear() + 1;
+    await replaceBusinessHoursInTransaction(tx as never, { businessId, hours: weekdays, closures: [{ startsAt: `${year}-12-25T00:00`, endsAt: `${year}-12-26T00:00`, reason: "Christmas Day" }] });
+    expect(recorded.deletes).toEqual([closures, businessHours]);
+    expect(recorded.inserts[0]).toEqual([{ businessId, startsAt: new Date(`${year}-12-24T23:00:00Z`), endsAt: new Date(`${year}-12-25T23:00:00Z`), reason: "Christmas Day" }]);
+    expect(recorded.inserts[1]).toHaveLength(5);
+    expect(mocks.enqueueOutbox).toHaveBeenCalledOnce();
+  });
+
+  it("clears the closures for an empty list and keeps them when the list is left out", async () => {
+    const cleared = useBusiness({ hoursSource: "operator" });
+    await replaceBusinessHoursInTransaction(cleared.tx as never, { businessId, hours: weekdays, closures: [] });
+    expect(cleared.recorded.deletes).toEqual([closures, businessHours]);
+    expect(cleared.recorded.inserts).toHaveLength(1);
+
+    const kept = useBusiness({ hoursSource: "operator" });
+    await replaceBusinessHoursInTransaction(kept.tx as never, { businessId, hours: weekdays });
+    expect(kept.recorded.deletes).toEqual([businessHours]);
+  });
+
+  it("rejects overlapping closures without writing", async () => {
+    const { recorded, tx } = useBusiness({ hoursSource: "operator" });
+    const year = new Date().getUTCFullYear() + 1;
+    await expect(replaceBusinessHoursInTransaction(tx as never, { businessId, hours: weekdays, closures: [{ startsAt: `${year}-12-24T00:00`, endsAt: `${year}-12-26T00:00` }, { startsAt: `${year}-12-25T12:00`, endsAt: `${year}-12-27T00:00` }] })).rejects.toThrow("Closures can't overlap.");
+    expect(recorded.updates).toEqual([]);
+    expect(recorded.deletes).toEqual([]);
   });
 });
 
