@@ -223,10 +223,15 @@ export const staff = pgTable(
     timezone: varchar("timezone", { length: 80 }).notNull(),
     active: boolean("active").default(true).notNull(),
     transferNumber: text("transfer_number"),
+    // Listed on the Employees page. The default staff member that stands for the business is not one.
+    isEmployee: boolean("is_employee").default(false).notNull(),
     ...legacyId,
     ...timestamps,
   },
-  (table) => [index("staff_business_active_idx").on(table.businessId, table.active)],
+  (table) => [
+    index("staff_business_active_idx").on(table.businessId, table.active),
+    uniqueIndex("staff_employee_phone_unique").on(table.businessId, table.transferNumber).where(sql`${table.isEmployee} and ${table.active} and ${table.transferNumber} is not null`),
+  ],
 );
 
 export const services = pgTable(

@@ -1,0 +1,63 @@
+{
+  "page": {
+    "title": "Empleados",
+    "searchPlaceholder": "Buscar empleados..."
+  },
+  "table": {
+    "name": "Nombre",
+    "phone": "Número de teléfono",
+    "added": "Añadido",
+    "empty": "Ningún empleado coincide con la búsqueda.",
+    "emptyState": "Todavía no hay empleados.",
+    "actions": {
+      "moreOptions": "Más opciones",
+      "editEmployee": "Editar empleado",
+      "deleteEmployee": "Eliminar empleado",
+      "deleteTitle": "¿Eliminar empleado?",
+      "deleteDescription": "El empleado se eliminará de forma permanente de tu panel.",
+      "deleteConfirm": "Eliminar empleado",
+      "deleteCancel": "Cancelar",
+      "deleted": "Empleado eliminado.",
+      "deleteFailed": "No se pudo eliminar el empleado."
+    }
+  },
+  "add": {
+    "button": "Añadir empleado",
+    "title": "Añadir empleado",
+    "description": "Guarda el nombre y el número de teléfono de un empleado.",
+    "fields": {
+      "name": {
+        "label": "Nombre",
+        "placeholder": "Ana García",
+        "required": "Introduce el nombre del empleado."
+      },
+      "phone": {
+        "label": "Número de teléfono",
+        "country": "País",
+        "hint": "Opcional. Quien pida hablar con este empleado se transfiere aquí; si no hay número, se transfiere al número de transferencia del negocio.",
+        "invalid": "Introduce un número de teléfono válido.",
+        "exists": "Ya existe un empleado con este número de teléfono."
+      }
+    },
+    "save": "Guardar",
+    "saving": "Guardando...",
+    "created": "Empleado añadido.",
+    "failed": "No se pudo añadir el empleado."
+  },
+  "edit": {
+    "title": "Editar empleado",
+    "description": "Actualiza el nombre y el número de teléfono de este empleado.",
+    "save": "Guardar cambios",
+    "updated": "Empleado actualizado.",
+    "failed": "No se pudo actualizar el empleado."
+  },
+  "pagination": {
+    "rowsPerPage": "Filas por página",
+    "pageOf": "Página {{page}} de {{total}}",
+    "firstPage": "Ir a la primera página",
+    "previousPage": "Ir a la página anterior",
+    "nextPage": "Ir a la página siguiente",
+    "lastPage": "Ir a la última página",
+    "goToPage": "Ir a la página {{page}}"
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "page": {
+    "title": "Employés",
+    "searchPlaceholder": "Rechercher des employés..."
+  },
+  "table": {
+    "name": "Nom",
+    "phone": "Numéro de téléphone",
+    "added": "Ajouté",
+    "empty": "Aucun employé ne correspond à la recherche.",
+    "emptyState": "Aucun employé pour le moment.",
+    "actions": {
+      "moreOptions": "Plus d'options",
+      "editEmployee": "Modifier l'employé",
+      "deleteEmployee": "Supprimer l'employé",
+      "deleteTitle": "Supprimer l'employé ?",
+      "deleteDescription": "L'employé sera définitivement retiré de votre tableau de bord.",
+      "deleteConfirm": "Supprimer l'employé",
+      "deleteCancel": "Annuler",
+      "deleted": "Employé supprimé.",
+      "deleteFailed": "Impossible de supprimer l'employé."
+    }
+  },
+  "add": {
+    "button": "Ajouter un employé",
+    "title": "Ajouter un employé",
+    "description": "Enregistrez le nom et le numéro de téléphone d'un employé.",
+    "fields": {
+      "name": {
+        "label": "Nom",
+        "placeholder": "Marie Tremblay",
+        "required": "Saisissez le nom de l'employé."
+      },
+      "phone": {
+        "label": "Numéro de téléphone",
+        "country": "Pays",
+        "hint": "Facultatif. Les appelants qui demandent cet employé sont transférés ici ; sinon, ils joignent le numéro de transfert de l'entreprise.",
+        "invalid": "Saisissez un numéro de téléphone valide.",
+        "exists": "Un employé avec ce numéro de téléphone existe déjà."
+      }
+    },
+    "save": "Enregistrer",
+    "saving": "Enregistrement...",
+    "created": "Employé ajouté.",
+    "failed": "Impossible d'ajouter l'employé."
+  },
+  "edit": {
+    "title": "Modifier l'employé",
+    "description": "Mettez à jour le nom et le numéro de téléphone de cet employé.",
+    "save": "Enregistrer les modifications",
+    "updated": "Employé mis à jour.",
+    "failed": "Impossible de mettre à jour l'employé."
+  },
+  "pagination": {
+    "rowsPerPage": "Lignes par page",
+    "pageOf": "Page {{page}} sur {{total}}",
+    "firstPage": "Aller a la premiere page",
+    "previousPage": "Aller a la page precedente",
+    "nextPage": "Aller a la page suivante",
+    "lastPage": "Aller a la derniere page",
+    "goToPage": "Aller a la page {{page}}"
+  }
+}

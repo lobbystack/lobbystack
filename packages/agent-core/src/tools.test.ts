@@ -11,9 +11,10 @@ vi.mock("@lobbystack/domain", async () => ({
   findCallBooking: vi.fn(async () => undefined),
   bookForCaller: vi.fn(async () => ({ ok: true })),
   requestCancellationForCaller: vi.fn(async () => ({ ok: true, inboxItemId: "inbox_1" })),
+  resolveEmployee: vi.fn(),
 }));
 
-import { bookForCaller, checkOpening, findCallBooking, findCallerBooking, requestCancellationForCaller, searchKnowledgeEvidence } from "@lobbystack/domain";
+import { bookForCaller, checkOpening, findCallBooking, findCallerBooking, requestCancellationForCaller, resolveEmployee, searchKnowledgeEvidence } from "@lobbystack/domain";
 import { createReceptionistTools, type AgentChannel, type AgentToolContext } from "./tools";
 
 function toolNames(overrides: Omit<Partial<AgentToolContext>, "snapshot"> & { bookingMode?: BookingMode; snapshot?: Partial<BusinessContextSnapshot> } = {}): string[] {
@@ -86,6 +87,49 @@ describe("createReceptionistTools", () => {
     expect(callControl.transfer).not.toHaveBeenCalled();
     await expect(execute({ callerRequested: true, urgent: false }, { toolCallId: "2", messages: [] })).resolves.toMatchObject({ ok: true });
     expect(callControl.transfer).toHaveBeenCalledWith("+14165550199");
+  });
+});
+
+describe("transferCall to an employee", () => {
+  const transferTo = (snapshot: Partial<BusinessContextSnapshot> = {}) => {
+    callControl.transfer.mockClear();
+    const tools = createReceptionistTools({
+      domain: { db: {} as never },
+      channel: "voice",
+      callControl,
+      snapshot: { ...demoSnapshot, transferPolicy: { mode: "on_request", transferNumber: "+14165550199" }, ...snapshot },
+    });
+    return tools.transferCall!.execute! as (input: object, options: object) => Promise<Record<string, unknown>>;
+  };
+  const ask = (employeeName: string) => ({ callerRequested: true, urgent: false, employeeName });
+
+  it("transfers to the employee's own number", async () => {
+    vi.mocked(resolveEmployee).mockResolvedValueOnce({ ok: true, staffId: "staff-ana", name: "Ana Petrović", phone: "+381641234567" });
+    await expect(transferTo()(ask("Ana"), { toolCallId: "1", messages: [] })).resolves.toEqual({ ok: true, transferring: true, employeeName: "Ana Petrović" });
+    expect(callControl.transfer).toHaveBeenCalledWith("+381641234567");
+  });
+
+  it("falls back to the business's transfer number when the employee has none", async () => {
+    vi.mocked(resolveEmployee).mockResolvedValueOnce({ ok: true, staffId: "staff-marko", name: "Marko", phone: null });
+    await expect(transferTo()(ask("Marko"), { toolCallId: "1", messages: [] })).resolves.toMatchObject({ ok: true, employeeName: "Marko" });
+    expect(callControl.transfer).toHaveBeenCalledWith("+14165550199");
+  });
+
+  it("follows the business's transfer rules, even for an employee with a number", async () => {
+    vi.mocked(resolveEmployee).mockResolvedValue({ ok: true, staffId: "staff-ana", name: "Ana Petrović", phone: "+381641234567" });
+    for (const transferPolicy of [{ mode: "on_request" as const }, { mode: "never" as const, transferNumber: "+14165550199" }]) {
+      await expect(transferTo({ transferPolicy })(ask("Ana"), { toolCallId: "1", messages: [] })).resolves.toMatchObject({ ok: false });
+    }
+    await expect(transferTo()({ callerRequested: false, urgent: false, employeeName: "Ana" }, { toolCallId: "1", messages: [] })).resolves.toMatchObject({ ok: false });
+    expect(callControl.transfer).not.toHaveBeenCalled();
+    vi.mocked(resolveEmployee).mockReset();
+  });
+
+  it("asks which employee the caller means when the name matches none or several", async () => {
+    vi.mocked(resolveEmployee).mockResolvedValueOnce({ ok: false, employees: ["Ana Petrović", "Ana Ilić"] });
+    const result = await transferTo()(ask("Ana"), { toolCallId: "1", messages: [] });
+    expect(result).toEqual({ ok: false, reason: expect.stringContaining("The employees are: Ana Petrović, Ana Ilić") });
+    expect(callControl.transfer).not.toHaveBeenCalled();
   });
 });
 

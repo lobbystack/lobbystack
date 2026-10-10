@@ -30,6 +30,7 @@ type SnapshotBuilderInput = {
   hours: Array<HoursWindow>;
   closures: Array<ClosureWindow>;
   services: Array<ServiceSummary>;
+  employees?: Array<{ name: string }>;
   rules?: Array<AgentRuleSummary>;
   snippets: Array<KnowledgeSnippet>;
   knowledgeDigest?: string;
@@ -84,6 +85,7 @@ export function buildBusinessContextSnapshot(
     hours: input.hours,
     closures: input.closures,
     services: input.services,
+    ...(input.employees?.length ? { employees: input.employees } : {}),
     rules: (input.rules ?? [])
       .slice()
       .sort((left, right) => left.order - right.order)

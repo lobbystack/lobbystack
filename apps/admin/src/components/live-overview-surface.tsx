@@ -44,7 +44,7 @@ type DashboardSummary = {
   monthlyCalls: Array<{ monthStart: string; total: number }>;
   recentCalls: Array<{ id: string; startedAt: string; status: string; transport?: string | null; durationSeconds: number; contactName: string | null; contactPhone: string | null; contactEmail?: string | null }>;
   actionRequired: Array<{ id: string; kind: string; title: string; body: string; createdAt: string; conversationId?: string; callId?: string | null; request?: string | null; appointment?: { id: string; startsAt: string; timezone: string; status: string; serviceName: string | null; contactName: string | null } | null }>;
-  upcoming: Array<{ id: string; startsAt: string; timezone: string; status: string; sourceChannel: string; contactName: string | null; contactPhone?: string | null; contactEmail?: string | null; serviceName: string | null; staffName: string | null }>;
+  upcoming: Array<{ id: string; startsAt: string; timezone: string; status: string; sourceChannel: string; contactName: string | null; contactPhone?: string | null; contactEmail?: string | null; serviceName: string | null; staffName: string | null; employeeName?: string | null }>;
 };
 
 // A caller asked to cancel on a call where the agent couldn't (see the domain's CANCELLATION_REQUEST).
@@ -197,13 +197,20 @@ export function LiveOverviewSurface() {
             <div className="flex items-center justify-between gap-4 px-1"><h2 className="type-section-title">{t("home.upcoming.title")}</h2>{summary.isLoading ? <Skeleton className="h-6 w-12 rounded-full" /> : <Badge variant="outline">{(summary.data?.upcoming.length ?? 0).toLocaleString(intlLocale(i18n.language))}</Badge>}</div>
             {summary.isLoading ? <UpcomingSkeleton /> : summary.data?.upcoming.length ? (
               <Card className="ph-mask border-border/70"><CardContent className="flex flex-col gap-4">
-                {summary.data.upcoming.map((appointment, index) => <div key={appointment.id}>
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="type-item-title">{getContactDisplayName({ name: appointment.contactName, phone: appointment.contactPhone, email: appointment.contactEmail, channels: [appointment.sourceChannel] }, i18n.language, t)}</p><Badge variant="outline">{getAppointmentStatusLabel(appointment.status, t)}</Badge><Badge variant="secondary">{getChannelLabel(appointment.sourceChannel, t)}</Badge></div><p className="type-body-muted mt-1">{appointment.serviceName ?? t("home.upcoming.unknownService")}</p></div>
-                    <div className="shrink-0 text-left sm:text-right"><p className="type-item-title">{formatDateTime(appointment.startsAt, i18n.language, { weekday: "short", month: "short", day: "numeric", timeZone: appointment.timezone })}</p><p className="type-body-muted mt-1">{formatDateTime(appointment.startsAt, i18n.language, { hour: "numeric", minute: "2-digit", timeZone: appointment.timezone })}</p><CancelAppointmentButton appointment={{ ...appointment, contactName: getContactDisplayName({ name: appointment.contactName, phone: appointment.contactPhone, email: appointment.contactEmail, channels: [appointment.sourceChannel] }, i18n.language, t) }} className="mt-2" /></div>
-                  </div>
-                  {index < summary.data.upcoming.length - 1 ? <Separator className="mt-4" /> : null}
-                </div>)}
+                {summary.data.upcoming.map((appointment, index) => {
+                  const contactName = getContactDisplayName({ name: appointment.contactName, phone: appointment.contactPhone, email: appointment.contactEmail, channels: [appointment.sourceChannel] }, i18n.language, t);
+                  return <div key={appointment.id}>
+                    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5">
+                      <div className="flex min-w-0 flex-wrap items-center gap-2"><p className="type-item-title">{contactName}</p><Badge variant="outline">{getAppointmentStatusLabel(appointment.status, t)}</Badge><Badge variant="secondary">{getChannelLabel(appointment.sourceChannel, t)}</Badge></div>
+                      <p className="type-item-title text-right">{formatDateTime(appointment.startsAt, i18n.language, { weekday: "short", month: "short", day: "numeric", timeZone: appointment.timezone })}</p>
+                      <p className="type-body-muted min-w-0 truncate">{appointment.serviceName ?? t("home.upcoming.unknownService")}</p>
+                      <p className="type-body-muted text-right">{formatDateTime(appointment.startsAt, i18n.language, { hour: "numeric", minute: "2-digit", timeZone: appointment.timezone })}</p>
+                      <p className="type-body-muted min-w-0 truncate">{appointment.employeeName ? t("home.upcoming.employee", { name: appointment.employeeName }) : null}</p>
+                      <div className="flex justify-end"><CancelAppointmentButton appointment={{ ...appointment, contactName }} /></div>
+                    </div>
+                    {index < summary.data.upcoming.length - 1 ? <Separator className="mt-4" /> : null}
+                  </div>;
+                })}
               </CardContent></Card>
             ) : <div className="rounded-xl border border-dashed p-12 text-center xl:flex xl:flex-1 xl:flex-col xl:items-center xl:justify-center"><p className="type-empty-title">{t("home.upcoming.emptyTitle")}</p><p className="type-empty-description mt-2">{t("home.upcoming.emptyDescription")}</p></div>}
           </section>

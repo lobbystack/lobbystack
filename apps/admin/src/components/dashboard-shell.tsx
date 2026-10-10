@@ -16,6 +16,7 @@ import {
   Phone,
   Settings,
   Users,
+  IdCard,
   Workflow,
   type LucideIcon,
 } from "lucide-react";
@@ -126,6 +127,7 @@ function ReplacementSidebar({ user }: Pick<DashboardShellProps, "user">) {
     { label: t("nav:items.calls"), href: "/calls", icon: Phone },
     ...(["/messages", "/settings/widget"].some(route => pathname === route || pathname.startsWith(`${route}/`)) ? [{ label: t("nav:items.messages"), href: "/messages", icon: MessageSquareMore }] : []),
     { label: t("nav:items.contacts"), href: "/contacts", icon: Users },
+    { label: t("nav:items.employees"), href: "/employees", icon: IdCard },
   ];
   const receptionist: NavigationItem[] = [
     { label: t("agent:sections.basicSettings.title"), href: "/agent", icon: ClipboardCheck },

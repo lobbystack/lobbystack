@@ -137,6 +137,7 @@
       "title": "Predstojeće",
       "description": "Sledeći termini u kalendaru.",
       "unknownService": "Nepoznata usluga",
+      "employee": "Zaposleni: {{name}}",
       "emptyTitle": "Nema predstojećih termina",
       "emptyDescription": "Buduća zakazivanja pojaviće se ovde čim budu kreirana.",
       "status": {

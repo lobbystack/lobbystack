@@ -137,6 +137,7 @@
       "title": "Upcoming",
       "description": "The next appointments on the calendar.",
       "unknownService": "Unknown service",
+      "employee": "Employee: {{name}}",
       "emptyTitle": "No upcoming appointments",
       "emptyDescription": "Future bookings will appear here as soon as they are created.",
       "status": {

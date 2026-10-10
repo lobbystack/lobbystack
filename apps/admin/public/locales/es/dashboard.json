@@ -137,6 +137,7 @@
       "title": "Próximas",
       "description": "Las próximas citas del calendario.",
       "unknownService": "Servicio desconocido",
+      "employee": "Empleado: {{name}}",
       "emptyTitle": "No hay citas próximas",
       "emptyDescription": "Las nuevas reservas aparecerán aquí en cuanto se creen.",
       "status": {

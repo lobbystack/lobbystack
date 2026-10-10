@@ -14,6 +14,7 @@ import {
   requestCancellationForCaller,
   recordTextConsentForCaller,
   rescheduleForCaller,
+  resolveEmployee,
   searchKnowledgeEvidence,
   takeMessageForStaff,
   verifyCallerChangeCode,
@@ -241,14 +242,30 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
   };
 
   if (bookingMode === "instant") {
+    const employeeName = z.string().optional().describe("Only when the caller asked for a specific employee: that employee's name. Leave it out to book whoever is available first.");
+    // The staff member a requested employee books under, or why no single employee matched.
+    const employeeFor = async (name: string | undefined) => {
+      if (!name?.trim()) return { ok: true as const };
+      const match = await resolveEmployee(domain, { businessId, name });
+      if (match.ok) return { ok: true as const, staffId: match.staffId, employeeName: match.name };
+      return {
+        ok: false as const,
+        reason: match.employees.length
+          ? `No single employee matches "${name}". The employees are: ${match.employees.join(", ")}. Ask the caller which one they mean.`
+          : "This business doesn't book with specific employees. Leave employeeName out.",
+      };
+    };
     tools.findAvailability = tool({
       description: "Find open appointment times for one service on one date. Never state availability without calling this. Don't use it to recheck a time the caller already accepted; bookAppointment checks that.",
       inputSchema: z.object({
         serviceName: z.string().describe("One of the business's services."),
         date: z.string().describe("Date as YYYY-MM-DD in the business's timezone."),
         preferredTime: z.string().optional().describe("Preferred start time as HH:mm (24-hour)."),
+        employeeName,
       }),
-      execute: async ({ serviceName, date, preferredTime }) => {
+      execute: async ({ serviceName, date, preferredTime, employeeName: requested }) => {
+        const employee = await employeeFor(requested);
+        if (!employee.ok) return employee;
         const [hour, minute] = (preferredTime ?? "").split(":").map(Number);
         const callerPhone = callerTextable ? context.callerPhone : undefined;
         const [result, smsConsentOnFile] = await Promise.all([
@@ -260,11 +277,13 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
             hours: snapshot.hours,
             ...(Number.isFinite(hour) ? { preferredHour24: hour, preferredMinute: Number.isFinite(minute) ? minute : 0 } : {}),
             ...(context.callId ? { callId: context.callId } : {}),
+            ...(employee.staffId ? { staffId: employee.staffId } : {}),
           }),
           // The caller's answer on file, so the agent asks about texts only once.
           callerPhone ? getSmsConsentOnFile(domain, { businessId, phone: callerPhone }).catch(() => undefined) : undefined,
         ]);
-        const answer = result.ok && smsConsentOnFile ? { ...result, smsConsentOnFile } : result;
+        const withEmployee = employee.employeeName && result.ok ? { ...result, employeeName: employee.employeeName } : result;
+        const answer = withEmployee.ok && smsConsentOnFile ? { ...withEmployee, smsConsentOnFile } : withEmployee;
         // An empty day says why, so the agent doesn't call it fully booked when it isn't.
         if (!answer.ok || answer.openings.length || !isReason(answer.reason)) return answer;
         return { ...answer, reason: DAY_UNAVAILABLE[answer.reason] ?? UNAVAILABLE_TOOL_MESSAGES[answer.reason] };
@@ -277,11 +296,15 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
         startsAt: z.string().describe("A startsAt value from findAvailability, or the accepted time as YYYY-MM-DDTHH:mm in the business's timezone."),
         contactName: z.string().optional().describe("The caller's name. Required to book."),
         contactPhone: phone.optional().describe("Required when the caller's number isn't already known."),
+        employeeName,
       }),
       execute: async (input) => {
         const contactPhone = input.contactPhone?.trim() || context.callerPhone;
         if (!input.contactName?.trim()) return { ok: false, reason: "Ask for the caller's name before booking." };
         if (!contactPhone) return { ok: false, reason: "Ask for a phone number before booking." };
+        const employee = await employeeFor(input.employeeName);
+        if (!employee.ok) return employee;
+        const staff = employee.staffId ? { staffId: employee.staffId } : {};
         const start = startTime(input.startsAt);
         if (!start.ok) return start;
         const { startsAt } = start;
@@ -294,7 +317,7 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
           ? await findCallerBooking(domain, { businessId, serviceName: input.serviceName, startsAt, contactPhone })
           : context.callId ? await findCallBooking(domain, { businessId, callId: context.callId, serviceName: input.serviceName, startsAt }) : undefined;
         if (existing) return existing;
-        const opening = await checkOpening(domain, { businessId, serviceName: input.serviceName, startsAt, timezone, ...(context.callId ? { callId: context.callId } : {}) });
+        const opening = await checkOpening(domain, { businessId, serviceName: input.serviceName, startsAt, timezone, ...(context.callId ? { callId: context.callId } : {}), ...staff });
         if (!opening.ok) return { ok: false, reason: `${opening.reason} Check the service name with getBusinessServices.` };
         if (!opening.available) return { ok: false, reason: UNAVAILABLE_TOOL_MESSAGES[isReason(opening.reason) ? opening.reason : "taken"] };
         const booked = await bookForCaller(domain, {
@@ -306,6 +329,7 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
           channel,
           ...(input.contactName ? { contactName: input.contactName } : {}),
           ...(context.callId ? { callId: context.callId } : {}),
+          ...staff,
         });
         // Another booking can take the time between the check and the booking.
         if (!booked.ok) return "unavailableReason" in booked && isReason(booked.unavailableReason) ? { ok: false, reason: UNAVAILABLE_TOOL_MESSAGES[booked.unavailableReason] } : booked;
@@ -464,12 +488,31 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
         callerRequested: z.boolean().describe("True only if the caller explicitly asked for a person."),
         urgent: z.boolean().describe("True only if the caller described an urgent situation."),
         reason: z.string().optional(),
+        employeeName: z.string().optional().describe("Only when the caller asked for a specific employee: that employee's name."),
       }),
       execute: async (input) => {
-        const destination = snapshot.transferPolicy.transferNumber;
-        if (!destination || !isTransferPermitted(snapshot, input)) return { ok: false, reason: "Transfers aren't allowed right now. Offer to take a message." };
+        const businessNumber = snapshot.transferPolicy.transferNumber;
+        // The business's transfer rules decide whether anyone can be reached, an employee included.
+        if (!businessNumber || !isTransferPermitted(snapshot, input)) return { ok: false, reason: "Transfers aren't allowed right now. Offer to take a message." };
+        let destination = businessNumber;
+        let employeeName: string | undefined;
+        if (input.employeeName?.trim()) {
+          const match = await resolveEmployee(domain, { businessId, name: input.employeeName });
+          if (!match.ok) {
+            return {
+              ok: false,
+              reason: match.employees.length
+                ? `No single employee matches "${input.employeeName}". The employees are: ${match.employees.join(", ")}. Ask the caller which one they mean.`
+                : "This business has no employees to transfer to by name. Leave employeeName out to reach the business.",
+            };
+          }
+          // An employee without a number of their own is reached through the business.
+          destination = match.phone ?? businessNumber;
+          employeeName = match.name;
+        }
         const started = await transfer(destination);
-        return started ? { ok: true, transferring: true } : { ok: false, reason: "The transfer couldn't be started. Offer to take a message." };
+        if (!started) return { ok: false, reason: "The transfer couldn't be started. Offer to take a message." };
+        return employeeName ? { ok: true, transferring: true, employeeName } : { ok: true, transferring: true };
       },
     });
   }

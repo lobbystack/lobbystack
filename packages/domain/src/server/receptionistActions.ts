@@ -1,7 +1,7 @@
 import { and, asc, eq, gte, ilike, lt, ne, or } from "drizzle-orm";
 import { DateTime } from "luxon";
 
-import { appointments, calls, contacts, conversationSessions, receptionistProfiles, services, withBusinessTransaction } from "@lobbystack/db";
+import { appointments, calls, contacts, conversationSessions, receptionistProfiles, services, staff, withBusinessTransaction } from "@lobbystack/db";
 import { normalizeAppointmentChangePolicy, type HoursWindow } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
@@ -92,10 +92,11 @@ export function candidateStartTimes(input: { date: string; timezone: string; hou
 
 export async function findOpenings(
   context: DomainContext,
-  input: { businessId: string; serviceName: string; date: string; timezone: string; hours: HoursWindow[]; preferredHour24?: number; preferredMinute?: number; limit?: number; callId?: string },
+  input: { businessId: string; serviceName: string; date: string; timezone: string; hours: HoursWindow[]; preferredHour24?: number; preferredMinute?: number; limit?: number; callId?: string; staffId?: string },
 ) {
   const service = await resolveActiveService(context, input.businessId, input.serviceName);
   if (!service) return { ok: false as const, reason: "Service is not available." };
+  const staffIds = input.staffId ? { staffIds: [input.staffId] } : {};
   const candidates = candidateStartTimes({
     date: input.date,
     timezone: input.timezone,
@@ -108,10 +109,10 @@ export async function findOpenings(
   // Scan the whole day, nearest first, and stop once there are enough openings.
   for (let index = 0; index < candidates.length && openings.length < limit; index += OPENING_CHECK_BATCH) {
     const batch = candidates.slice(index, index + OPENING_CHECK_BATCH);
-    const available = await Promise.all(batch.map(async (startsAt) => (await findAvailability(context, { businessId: input.businessId, serviceId: service.id, startsAt, timezone: input.timezone })).length > 0));
+    const available = await Promise.all(batch.map(async (startsAt) => (await findAvailability(context, { businessId: input.businessId, serviceId: service.id, startsAt, timezone: input.timezone, ...staffIds })).length > 0));
     for (const [position, startsAt] of batch.entries()) if (available[position] && openings.length < limit) openings.push(startsAt);
   }
-  const reason = openings.length ? undefined : await noOpeningsReason(context, { businessId: input.businessId, serviceId: service.id, date: input.date, timezone: input.timezone, hours: input.hours, firstCandidate: candidates[0] });
+  const reason = openings.length ? undefined : await noOpeningsReason(context, { businessId: input.businessId, serviceId: service.id, date: input.date, timezone: input.timezone, hours: input.hours, firstCandidate: candidates[0], ...staffIds });
   if (input.callId) await recordCallSchedulingProgress(context, { businessId: input.businessId, callId: input.callId, serviceName: service.name });
   return {
     ok: true as const,
@@ -126,7 +127,7 @@ export async function findOpenings(
 /** Why a day has no openings. "no_times_left" means every start time that day has passed. */
 export type NoOpeningsReason = UnavailableReason | "no_times_left";
 
-async function noOpeningsReason(context: DomainContext, input: { businessId: string; serviceId: string; date: string; timezone: string; hours: HoursWindow[]; firstCandidate: string | undefined }): Promise<NoOpeningsReason> {
+async function noOpeningsReason(context: DomainContext, input: { businessId: string; serviceId: string; date: string; timezone: string; hours: HoursWindow[]; firstCandidate: string | undefined; staffIds?: string[] }): Promise<NoOpeningsReason> {
   if (!input.hours.length) return "no_hours";
   const day = DateTime.fromISO(`${input.date}T00:00:00`, { zone: input.timezone });
   if (day.isValid && !input.hours.some((window) => window.dayOfWeek === day.weekday % 7)) return "closed_day";
@@ -134,16 +135,16 @@ async function noOpeningsReason(context: DomainContext, input: { businessId: str
   // The time nearest the caller's preference explains the day. Later times can
   // fail for another reason, such as a closure, so a taken first time doesn't
   // mean the whole day is booked.
-  return (await checkAvailability(context, { businessId: input.businessId, serviceId: input.serviceId, startsAt: input.firstCandidate, timezone: input.timezone })).reason ?? "taken";
+  return (await checkAvailability(context, { businessId: input.businessId, serviceId: input.serviceId, startsAt: input.firstCandidate, timezone: input.timezone, ...(input.staffIds ? { staffIds: input.staffIds } : {}) })).reason ?? "taken";
 }
 
 export async function checkOpening(
   context: DomainContext,
-  input: { businessId: string; serviceName: string; startsAt: string; timezone: string; callId?: string },
+  input: { businessId: string; serviceName: string; startsAt: string; timezone: string; callId?: string; staffId?: string },
 ) {
   const service = await resolveActiveService(context, input.businessId, input.serviceName);
   if (!service) return { ok: false as const, reason: "Service is not available." };
-  const { slots, reason } = await checkAvailability(context, { businessId: input.businessId, serviceId: service.id, startsAt: input.startsAt, timezone: input.timezone });
+  const { slots, reason } = await checkAvailability(context, { businessId: input.businessId, serviceId: service.id, startsAt: input.startsAt, timezone: input.timezone, ...(input.staffId ? { staffIds: [input.staffId] } : {}) });
   if (input.callId) await recordCallSchedulingProgress(context, { businessId: input.businessId, callId: input.callId, serviceName: service.name, startsAt: input.startsAt });
   return slots.length
     ? { ok: true as const, serviceName: service.name, available: true as const }
@@ -193,7 +194,7 @@ export async function findCallBooking(context: DomainContext, input: { businessI
 
 export async function bookForCaller(
   context: DomainContext,
-  input: { businessId: string; serviceName: string; startsAt: string; timezone: string; contactPhone: string; contactName?: string; channel: ReceptionistChannel; callId?: string },
+  input: { businessId: string; serviceName: string; startsAt: string; timezone: string; contactPhone: string; contactName?: string; channel: ReceptionistChannel; callId?: string; staffId?: string },
 ) {
   const distinctId = getPostHogDistinctIdForBusinessSystem(input.businessId);
   const service = await resolveActiveService(context, input.businessId, input.serviceName);
@@ -211,9 +212,12 @@ export async function bookForCaller(
       sourceChannel: input.channel,
       ...(input.callId ? { callId: input.callId } : {}),
       ...(input.contactName ? { contactName: input.contactName } : {}),
+      ...(input.staffId ? { preferredStaffId: input.staffId } : {}),
     });
     await recordProductEventBestEffort(context, { name: "appointment.booked", businessId: input.businessId, distinctId, properties: { appointmentId: appointment.appointmentId, channel: input.channel, serviceId: service.id, sourceChannel: input.channel } });
-    return { ok: true as const, appointmentId: appointment.appointmentId, serviceName: service.name, startsAt: input.startsAt };
+    const employeeName = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) =>
+      (await tx.select({ name: staff.name }).from(staff).where(and(eq(staff.businessId, input.businessId), eq(staff.id, appointment.staffId), eq(staff.isEmployee, true))).limit(1))[0]?.name);
+    return { ok: true as const, appointmentId: appointment.appointmentId, serviceName: service.name, startsAt: input.startsAt, ...(employeeName ? { employeeName } : {}) };
   } catch (error) {
     const reason = bookingFailureReason(error);
     await recordProductEventBestEffort(context, { name: "appointment.booking_failed", businessId: input.businessId, distinctId, properties: { reason, serviceId: service.id, requestedServiceName: input.serviceName, channel: input.channel, sourceChannel: input.channel } });

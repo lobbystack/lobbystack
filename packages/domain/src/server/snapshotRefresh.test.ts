@@ -111,6 +111,17 @@ describe("refreshBusinessSnapshot write-through", () => {
     expect(await cache.get(businessId)).toMatchObject({ legalName: "Maple Clinic Inc.", businessType: "clinic", telemetryEnabled: false, contactChannels: { phoneNumber: "+14165550002", smsNumber: "+14165550003" }, services: [{ localizedNames: { fr: "Consultation française" } }] });
     expect(mocks.resolveSmsSender).toHaveBeenCalledWith(expect.anything(), businessId);
   });
+  it("lists the business's bookable employees so the agent can offer them", async () => {
+    mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => callback(makeTx({
+      businesses: [businessRow],
+      receptionist_profiles: [profileRow],
+      staff: [{ name: "Ana Petrović", staffId: "staff-ana" }, { name: "Marko Jovanović", staffId: "staff-marko" }],
+    })));
+    const cache = memoryCache();
+    await refreshBusinessSnapshot({ db: {} as never, snapshotCache: cache }, { businessId });
+    expect((await cache.get(businessId))?.employees).toEqual([{ name: "Ana Petrović" }, { name: "Marko Jovanović" }]);
+  });
+
   it("pushes the regenerated snapshot into the shared cache", async () => {
     const cache = memoryCache();
     const context = { db: {} as never, snapshotCache: cache };

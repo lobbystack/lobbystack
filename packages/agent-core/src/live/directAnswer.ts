@@ -112,7 +112,11 @@ const FORMATTERS: Record<string, Formatter> = {
   },
   endCall: (_input, output) => (output.ok === true ? CALL_ENDING : undefined),
   // The REFER waits until GPT-Live has said this, so it goes out at once.
-  transferCall: (_input, output) => (output.ok === true && output.transferring === true ? "The call is being transferred to a person at the business now." : undefined),
+  transferCall: (_input, output) => {
+    if (output.ok !== true || output.transferring !== true) return undefined;
+    const employee = text(output.employeeName);
+    return employee ? `The call is being transferred to ${employee} now.` : "The call is being transferred to a person at the business now.";
+  },
   searchKnowledge: (_input, output) => knowledgeAnswer(output),
 };
 

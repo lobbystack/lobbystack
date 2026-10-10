@@ -47,6 +47,16 @@ describe("dashboard voice follow-up parity", () => {
     expect(screen.getByText(/Please call back.*Alex/)).toBeTruthy();
   });
 });
+describe("dashboard upcoming appointments", () => {
+  it("shows the employee an appointment is booked with, and nothing for the business's default staff member", async () => {
+    const i18n = await setup("en", null, { upcoming: [
+      { id: "with-employee", startsAt: "2026-09-07T14:30:00Z", timezone: "UTC", status: "confirmed", sourceChannel: "voice", contactName: "Alex", serviceName: "Consultation", staffName: "Ana", employeeName: "Ana" },
+      { id: "default-staff", startsAt: "2026-09-08T14:30:00Z", timezone: "UTC", status: "confirmed", sourceChannel: "voice", contactName: "Sam", serviceName: "Consultation", staffName: "MStudio", employeeName: null },
+    ] });
+    expect(screen.getByText(i18n.t("home.upcoming.employee", { name: "Ana" }))).toBeTruthy();
+    expect(screen.queryByText(i18n.t("home.upcoming.employee", { name: "MStudio" }))).toBeNull();
+  });
+});
 describe("dashboard contact and channel labels", () => {
   const appointment = { startsAt: "2026-09-07T14:30:00Z", timezone: "UTC", status: "confirmed", serviceName: "Consultation" };
   it("labels every booking channel in the upcoming card instead of showing raw slugs", async () => {

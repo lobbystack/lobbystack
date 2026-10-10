@@ -309,10 +309,10 @@ export async function removeMember(
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
     const membership = (await tx.select({ role: businessMemberships.role, userId: businessMemberships.userId }).from(businessMemberships).where(and(eq(businessMemberships.id, input.membershipId), eq(businessMemberships.businessId, input.businessId), eq(businessMemberships.status, "active"))).limit(1))[0];
-    if (!membership) throw new Error("Membership not found.");
+    if (!membership) throw Object.assign(new Error("Membership not found."), { status: 404, code: "not_found" });
     if (membership.role === "business_owner") {
       const owners = await tx.select({ id: businessMemberships.id }).from(businessMemberships).where(and(eq(businessMemberships.businessId, input.businessId), eq(businessMemberships.role, "business_owner"), eq(businessMemberships.status, "active")));
-      if (owners.length <= 1) throw new Error("The final owner cannot be removed.");
+      if (owners.length <= 1) throw Object.assign(new Error("The final owner cannot be removed."), { status: 409, code: "final_owner" });
     }
     // RLS hides the member's users row from the app role; this function returns their email.
     const email = (await tx.execute<{ email: string }>(sql`select email from app.list_business_members(${input.businessId}::uuid) where membership_id = ${input.membershipId}::uuid`)).rows[0]?.email;

@@ -12,9 +12,10 @@ vi.mock("@lobbystack/domain", async () => ({
   findOpenings: vi.fn(),
   getSmsConsentOnFile: vi.fn(async () => "not_asked"),
   rescheduleForCaller: vi.fn(),
+  resolveEmployee: vi.fn(),
 }));
 
-import { bookForCaller, checkOpening, findOpenings, rescheduleForCaller } from "@lobbystack/domain";
+import { bookForCaller, checkOpening, findOpenings, rescheduleForCaller, resolveEmployee } from "@lobbystack/domain";
 import { createReceptionistTools, UNAVAILABLE_TOOL_MESSAGES } from "./tools";
 
 type Execute = (input: object, options: object) => Promise<Record<string, unknown>>;
@@ -30,6 +31,34 @@ const booking = { serviceName: "General Checkup", startsAt: "2026-10-06T10:00", 
 // The fixtures use early October 2026: keep those times in the future.
 vi.setSystemTime(new Date("2026-10-01T12:00:00Z"));
 beforeEach(() => { vi.clearAllMocks(); });
+
+describe("booking with an employee", () => {
+  it("looks up and books only the employee the caller asked for", async () => {
+    vi.mocked(resolveEmployee).mockResolvedValue({ ok: true, staffId: "staff-ana", name: "Ana Petrović", phone: null });
+    vi.mocked(findOpenings).mockResolvedValueOnce({ ok: true, serviceName: "General Checkup", date: "2026-10-06", timezone: "America/Toronto", openings: [{ startsAt: "2026-10-06T14:00:00.000Z", displayTime: "Tuesday Oct 6, 10:00 AM" }] } as never);
+    const { run } = tools();
+    await expect(run("findAvailability", { serviceName: "General Checkup", date: "2026-10-06", employeeName: "ana" })).resolves.toMatchObject({ employeeName: "Ana Petrović" });
+    expect(vi.mocked(findOpenings).mock.lastCall?.[1]).toMatchObject({ staffId: "staff-ana" });
+    vi.mocked(checkOpening).mockResolvedValueOnce({ ok: true, serviceName: "General Checkup", available: true } as never);
+    await run("bookAppointment", { ...booking, employeeName: "ana" });
+    expect(vi.mocked(checkOpening).mock.lastCall?.[1]).toMatchObject({ staffId: "staff-ana" });
+    expect(vi.mocked(bookForCaller).mock.lastCall?.[1]).toMatchObject({ staffId: "staff-ana" });
+  });
+
+  it("books whoever is available first when the caller has no preference", async () => {
+    vi.mocked(checkOpening).mockResolvedValueOnce({ ok: true, serviceName: "General Checkup", available: true } as never);
+    await tools().run("bookAppointment", booking);
+    expect(resolveEmployee).not.toHaveBeenCalled();
+    expect(vi.mocked(bookForCaller).mock.lastCall?.[1]).not.toHaveProperty("staffId");
+  });
+
+  it("asks the agent to clarify a name that matches no single employee", async () => {
+    vi.mocked(resolveEmployee).mockResolvedValueOnce({ ok: false, employees: ["Ana Petrović", "Ana Ilić"] });
+    const result = await tools().run("bookAppointment", { ...booking, employeeName: "Ana" });
+    expect(result).toEqual({ ok: false, reason: expect.stringContaining("The employees are: Ana Petrović, Ana Ilić") });
+    expect(bookForCaller).not.toHaveBeenCalled();
+  });
+});
 
 describe("bookAppointment refusals", () => {
   it.each([

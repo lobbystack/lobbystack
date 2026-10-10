@@ -9,6 +9,7 @@ import enCommon from "../../public/locales/en/common.json";
 import enContacts from "../../public/locales/en/contacts.json";
 import enDashboard from "../../public/locales/en/dashboard.json";
 import enDemos from "../../public/locales/en/demos.json";
+import enEmployees from "../../public/locales/en/employees.json";
 import enInbox from "../../public/locales/en/inbox.json";
 import enKnowledge from "../../public/locales/en/knowledge.json";
 import enMessages from "../../public/locales/en/messages.json";
@@ -25,6 +26,7 @@ import frCommon from "../../public/locales/fr/common.json";
 import frContacts from "../../public/locales/fr/contacts.json";
 import frDashboard from "../../public/locales/fr/dashboard.json";
 import frDemos from "../../public/locales/fr/demos.json";
+import frEmployees from "../../public/locales/fr/employees.json";
 import frInbox from "../../public/locales/fr/inbox.json";
 import frKnowledge from "../../public/locales/fr/knowledge.json";
 import frMessages from "../../public/locales/fr/messages.json";
@@ -41,6 +43,7 @@ import esCommon from "../../public/locales/es/common.json";
 import esContacts from "../../public/locales/es/contacts.json";
 import esDashboard from "../../public/locales/es/dashboard.json";
 import esDemos from "../../public/locales/es/demos.json";
+import esEmployees from "../../public/locales/es/employees.json";
 import esInbox from "../../public/locales/es/inbox.json";
 import esKnowledge from "../../public/locales/es/knowledge.json";
 import esMessages from "../../public/locales/es/messages.json";
@@ -57,6 +60,7 @@ import srCommon from "../../public/locales/sr/common.json";
 import srContacts from "../../public/locales/sr/contacts.json";
 import srDashboard from "../../public/locales/sr/dashboard.json";
 import srDemos from "../../public/locales/sr/demos.json";
+import srEmployees from "../../public/locales/sr/employees.json";
 import srInbox from "../../public/locales/sr/inbox.json";
 import srKnowledge from "../../public/locales/sr/knowledge.json";
 import srMessages from "../../public/locales/sr/messages.json";
@@ -80,6 +84,7 @@ export const localeResources: Record<SupportedLocale, Record<string, Record<stri
     contacts: enContacts,
     dashboard: enDashboard,
     demos: enDemos,
+    employees: enEmployees,
     inbox: enInbox,
     knowledge: enKnowledge,
     messages: enMessages,
@@ -98,6 +103,7 @@ export const localeResources: Record<SupportedLocale, Record<string, Record<stri
     contacts: frContacts,
     dashboard: frDashboard,
     demos: frDemos,
+    employees: frEmployees,
     inbox: frInbox,
     knowledge: frKnowledge,
     messages: frMessages,
@@ -116,6 +122,7 @@ export const localeResources: Record<SupportedLocale, Record<string, Record<stri
     contacts: esContacts,
     dashboard: esDashboard,
     demos: esDemos,
+    employees: esEmployees,
     inbox: esInbox,
     knowledge: esKnowledge,
     messages: esMessages,
@@ -134,6 +141,7 @@ export const localeResources: Record<SupportedLocale, Record<string, Record<stri
     contacts: srContacts,
     dashboard: srDashboard,
     demos: srDemos,
+    employees: srEmployees,
     inbox: srInbox,
     knowledge: srKnowledge,
     messages: srMessages,

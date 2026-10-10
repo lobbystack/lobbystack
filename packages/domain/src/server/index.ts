@@ -17,6 +17,7 @@ export * from "./conversations";
 export * from "./demos";
 export * from "./feedback";
 export * from "./email";
+export * from "./employees";
 export * from "./knowledge";
 export * from "./liveCalls";
 export * from "./notifications";

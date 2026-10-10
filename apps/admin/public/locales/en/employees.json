@@ -1,0 +1,63 @@
+{
+  "page": {
+    "title": "Employees",
+    "searchPlaceholder": "Search employees..."
+  },
+  "table": {
+    "name": "Name",
+    "phone": "Phone number",
+    "added": "Added",
+    "empty": "No employees match the current search.",
+    "emptyState": "No employees yet.",
+    "actions": {
+      "moreOptions": "More options",
+      "editEmployee": "Edit employee",
+      "deleteEmployee": "Delete employee",
+      "deleteTitle": "Delete employee?",
+      "deleteDescription": "This will permanently remove the employee from your dashboard.",
+      "deleteConfirm": "Delete employee",
+      "deleteCancel": "Cancel",
+      "deleted": "Employee deleted.",
+      "deleteFailed": "Couldn't delete the employee."
+    }
+  },
+  "add": {
+    "button": "Add employee",
+    "title": "Add employee",
+    "description": "Save an employee's name and phone number.",
+    "fields": {
+      "name": {
+        "label": "Name",
+        "placeholder": "Jane Smith",
+        "required": "Enter the employee's name."
+      },
+      "phone": {
+        "label": "Phone number",
+        "country": "Country",
+        "hint": "Optional. Callers who ask for this employee are transferred here; without it, they reach the business's transfer number.",
+        "invalid": "Enter a valid phone number.",
+        "exists": "An employee with this phone number already exists."
+      }
+    },
+    "save": "Save",
+    "saving": "Saving...",
+    "created": "Employee added.",
+    "failed": "Couldn't add the employee."
+  },
+  "edit": {
+    "title": "Edit employee",
+    "description": "Update this employee's name and phone number.",
+    "save": "Save changes",
+    "updated": "Employee updated.",
+    "failed": "Couldn't update the employee."
+  },
+  "pagination": {
+    "rowsPerPage": "Rows per page",
+    "pageOf": "Page {{page}} of {{total}}",
+    "firstPage": "Go to first page",
+    "previousPage": "Go to previous page",
+    "nextPage": "Go to next page",
+    "lastPage": "Go to last page",
+    "goToPage": "Go to page {{page}}"
+  }
+}

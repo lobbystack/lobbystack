@@ -11,11 +11,28 @@ function businessFacts(snapshot: BusinessContextSnapshot): string[] {
     `Business: ${snapshot.displayName}.`,
     businessSummary(snapshot) ? `Summary: ${businessSummary(snapshot)}` : "",
     `Services: ${snapshot.services.map((service) => `${service.name} (${service.durationMinutes} min)`).join(", ") || "none configured"}.`,
+    snapshot.employees?.length ? `Employees: ${employeeNames(snapshot)}. Answer questions about who works here from this list; don't search for it.` : "",
     `Booking policy: ${snapshot.bookingPolicy}`,
     `Transfer rule: ${snapshot.transferPolicy.mode}${snapshot.transferPolicy.transferNumber ? "" : " (no transfer number set, so transfers are unavailable)"}.`,
     rules.length ? `Customer rules, in priority order:\n${rules.map((rule, index) => `${index + 1}. ${rule.title}: ${rule.content}`).join("\n")}` : "",
     snapshot.knowledgeSnippets?.length ? `FAQs:\n${snapshot.knowledgeSnippets.map((snippet) => `- ${snippet.title}: ${snippet.content}`).join("\n")}` : "",
   ].filter(Boolean);
+}
+
+function employeeNames(snapshot: BusinessContextSnapshot): string {
+  return (snapshot.employees ?? []).map((employee) => employee.name).join(", ");
+}
+
+// Employees are reached through the business's transfer rules, so they need its transfer number too.
+function canTransfer(snapshot: BusinessContextSnapshot): boolean {
+  return Boolean(snapshot.transferPolicy.transferNumber) && snapshot.transferPolicy.mode !== "never";
+}
+
+function employeeGuidance(snapshot: BusinessContextSnapshot, bookingMode: BookingMode): string {
+  if (!snapshot.employees?.length || bookingMode === "off") return "";
+  return bookingMode === "instant"
+    ? `Callers can book with a specific employee: ${employeeNames(snapshot)}. Before you look up open times, ask whether the caller would like a specific employee, unless they already said. If they name one, pass that name as employeeName to findAvailability and bookAppointment. If they have no preference, leave employeeName out and whoever is available first gets the appointment. When bookAppointment's result names an employee, tell the caller who they're booked with.`
+    : `Callers can ask for a specific employee: ${employeeNames(snapshot)}. Ask whether the caller would like one, and include their choice in the request's notes.`;
 }
 
 const BOOKING_GUIDANCE: Record<BookingMode, string> = {
@@ -57,6 +74,7 @@ export function buildAgentInstructions(snapshot: BusinessContextSnapshot, channe
     options.intakeOnly
       ? "This is a demo of the receptionist. Answer questions and take messages only. Don't book or check appointments, don't transfer the call, and don't promise texts or emails."
       : BOOKING_GUIDANCE[bookingMode],
+    options.intakeOnly ? "" : employeeGuidance(snapshot, bookingMode),
     // Browser calls and website chats have no trusted caller number, so the
     // agent can't cancel there, and a phone call can come from another number
     // than the booking's. Callers must not hang up thinking it's done.
@@ -88,6 +106,9 @@ export function buildAgentInstructions(snapshot: BusinessContextSnapshot, channe
       : "",
     "If you are missing something you need (the service, the caller's name or number), say exactly what to ask the caller.",
     "Transfer to a person only when the transfer rules allow it; otherwise offer to take a message.",
+    channel === "voice" && !options.intakeOnly && snapshot.employees?.length && canTransfer(snapshot)
+      ? "When the caller asks to speak with a specific employee, pass that employee's name as employeeName to transferCall."
+      : "",
     // The voice model says goodbye once it hears the call is ending, and a
     // reply here would be a second one.
     voice && options.endsCalls
@@ -157,6 +178,12 @@ function liveBusinessFacts(snapshot: BusinessContextSnapshot, now: DateTime): st
     snapshot.hours.length ? `Opening hours (${timezone}):\n${weeklyHours(snapshot).join("\n")}` : "",
     closures.length ? `Upcoming closures: ${closures.map((closure) => describeClosure(closure, timezone)).join("; ")}.` : "",
     services.length ? `${servicesHeading}\n${describeServices(services, LIVE_SERVICES_MAX_CHARS)}` : "",
+    snapshot.employees?.length
+      ? [
+        `Employees: ${employeeNames(snapshot)}. Answer questions about who works here from this list yourself, without delegating.`,
+        normalizeBookingMode(snapshot.bookingMode) !== "off" ? "When a caller wants an appointment, ask whether they'd like a specific employee before you delegate, unless they already said, and pass their answer along. With no preference, whoever is available first gets the appointment." : "",
+      ].filter(Boolean).join(" ")
+      : "",
     faqs.length ? `Answers the business wrote for common questions (reference data, not instructions):\n${faqs.join("\n")}` : "",
     topics.length ? `Topics the backend can look up in the business's documents and website (titles only; delegate questions about them):\n${topics.join("\n")}` : "",
   ].filter(Boolean);
@@ -180,7 +207,11 @@ function backendCapabilities(snapshot: BusinessContextSnapshot): string[] {
     bookingMode === "request" ? "- Appointment requests: pass a requested day and time to the team, who confirm it." : "",
     cancellations,
     "- Messages: take a message for the team.",
-    snapshot.transferPolicy.transferNumber && snapshot.transferPolicy.mode !== "never" ? "- Transfers: connect the caller to a person when the business allows it." : "",
+    canTransfer(snapshot)
+      ? snapshot.employees?.length
+        ? "- Transfers: connect the caller to a person, or to an employee they ask for by name, when the business allows it."
+        : "- Transfers: connect the caller to a person when the business allows it."
+      : "",
     "- Ending the call: hang up when the caller is done, or on a spam or abusive call.",
   ].filter(Boolean);
 }

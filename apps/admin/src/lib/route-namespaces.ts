@@ -9,7 +9,7 @@ export const PUBLIC_ROUTE_NAMESPACES = ["common", "auth", "onboarding", "demos",
  * moving between sections never waits on a translation request. Some browsers
  * kept failing that request for /affiliate even after a retry.
  */
-export const DASHBOARD_NAMESPACES = ["common", "nav", "settings", "agent", "dashboard", "calls", "contacts", "messages", "inbox", "knowledge", "affiliate", "demos", "widget"];
+export const DASHBOARD_NAMESPACES = ["common", "nav", "settings", "agent", "dashboard", "calls", "contacts", "employees", "messages", "inbox", "knowledge", "affiliate", "demos", "widget"];
 
 export function routeNamespaces(pathname: string): string[] {
   const section = stripLocalePrefix(pathname).split("/")[1] ?? "";

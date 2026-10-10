@@ -190,6 +190,58 @@ describe("buildAgentInstructions", () => {
   });
 });
 
+describe("employees", () => {
+  const withEmployees = { ...demoSnapshot, bookingMode: "instant" as const, employees: [{ name: "Ana Petrović" }, { name: "Marko Jovanović" }] };
+
+  it("asks the caller for an employee preference before looking up times, and books whoever is available first otherwise", () => {
+    const instructions = buildAgentInstructions(withEmployees, "web_chat");
+    expect(instructions).toContain("Employees: Ana Petrović, Marko Jovanović.");
+    expect(instructions).toContain("Before you look up open times, ask whether the caller would like a specific employee");
+    expect(instructions).toContain("pass that name as employeeName to findAvailability and bookAppointment");
+    expect(instructions).toContain("leave employeeName out and whoever is available first gets the appointment");
+    // The default staff member can take the booking, so the agent names someone only when the result does.
+    expect(instructions).toContain("When bookAppointment's result names an employee, tell the caller who they're booked with.");
+    expect(instructions).not.toContain("first available employee");
+  });
+
+  it("tells GPT-Live to ask for an employee preference before delegating a booking", () => {
+    const instructions = buildLiveInstructions(withEmployees, callStart);
+    expect(instructions).toContain("Employees: Ana Petrović, Marko Jovanović.");
+    expect(instructions).toContain("ask whether they'd like a specific employee before you delegate");
+  });
+
+  it("answers who works here from the employee list instead of searching or delegating, even when the business takes no bookings", () => {
+    for (const bookingMode of ["instant", "off"] as const) {
+      expect(buildAgentInstructions({ ...withEmployees, bookingMode }, "web_chat")).toContain("Employees: Ana Petrović, Marko Jovanović. Answer questions about who works here from this list; don't search for it.");
+      expect(buildLiveInstructions({ ...withEmployees, bookingMode }, callStart)).toContain("Employees: Ana Petrović, Marko Jovanović. Answer questions about who works here from this list yourself, without delegating.");
+    }
+    expect(buildAgentInstructions(demoSnapshot, "web_chat")).not.toContain("who works here");
+    expect(buildLiveInstructions(demoSnapshot, callStart)).not.toContain("who works here");
+  });
+
+  it("leaves employee guidance out when the business has none, books nothing, or runs a demo", () => {
+    expect(buildAgentInstructions(demoSnapshot, "web_chat")).not.toContain("specific employee");
+    expect(buildAgentInstructions({ ...withEmployees, bookingMode: "off" }, "web_chat")).not.toContain("specific employee");
+    expect(buildLiveInstructions({ ...withEmployees, bookingMode: "off" }, callStart)).not.toContain("specific employee");
+    expect(buildAgentInstructions(withEmployees, "web_chat", { intakeOnly: true })).not.toContain("specific employee");
+  });
+
+  it("asks for a preferred employee in request mode and notes it on the request", () => {
+    expect(buildAgentInstructions({ ...withEmployees, bookingMode: "request" }, "web_chat")).toContain("include their choice in the request's notes");
+  });
+
+  it("transfers to an employee by name only on phone calls where the business allows transfers", () => {
+    const transfers = { ...withEmployees, transferPolicy: { mode: "on_request" as const, transferNumber: "+14165550199" } };
+    expect(buildAgentInstructions(transfers, "voice", { callerPhone: "+14165550134" })).toContain("pass that employee's name as employeeName to transferCall");
+    expect(buildLiveInstructions(transfers, callStart)).toContain("- Transfers: connect the caller to a person, or to an employee they ask for by name, when the business allows it.");
+    for (const transferPolicy of [{ mode: "on_request" as const }, { mode: "never" as const, transferNumber: "+14165550199" }]) {
+      expect(buildAgentInstructions({ ...withEmployees, transferPolicy }, "voice", { callerPhone: "+14165550134" })).not.toContain("employeeName to transferCall");
+      expect(buildLiveInstructions({ ...withEmployees, transferPolicy }, callStart)).not.toContain("- Transfers:");
+    }
+    expect(buildAgentInstructions(transfers, "web_chat")).not.toContain("employeeName to transferCall");
+  });
+});
+
 describe("texts about the caller's appointments", () => {
   const phone = { callerPhone: "+14165550134" };
   // A business without an SMS number can't text anyone.

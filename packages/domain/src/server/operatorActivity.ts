@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, ne } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ne, sql } from "drizzle-orm";
 
 import { appointments, calls, contacts, services, staff, type DatabaseTransaction } from "@lobbystack/db";
 
@@ -36,6 +36,8 @@ export async function listUpcomingAppointments(tx: DatabaseTransaction, business
     contactEmail: contacts.email,
     serviceName: services.name,
     staffName: staff.name,
+    // Null for the default staff member that stands for the business itself.
+    employeeName: sql<string | null>`case when ${staff.isEmployee} then ${staff.name} end`,
   }).from(appointments).leftJoin(contacts, eq(appointments.contactId, contacts.id)).leftJoin(services, eq(appointments.serviceId, services.id)).leftJoin(staff, eq(appointments.staffId, staff.id)).where(and(eq(appointments.businessId, businessId), ne(appointments.status, "canceled"), gte(appointments.startsAt, from))).orderBy(appointments.startsAt).limit(limit);
 }
 

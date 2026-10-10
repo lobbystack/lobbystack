@@ -143,4 +143,17 @@ describe.skipIf(!client)("team membership", () => {
       expect(membership).toEqual({ role: "business_owner", status: "active" });
     });
   });
+
+  it("refuses to remove a member twice or to remove the last owner", async () => {
+    await rollbackTest(async (tx) => {
+      const { context, businessId, people: [owner, viewer], invite, accept, listMembers } = await seedTeam(tx, ["Ana", "Ben"]);
+      await accept(viewer!, await invite(owner!.id, viewer!.email, "viewer"));
+      const members = await listMembers(owner!.id);
+      const viewerMembership = members.find((row) => row.user_id === viewer!.id)!.membership_id;
+      const ownerMembership = members.find((row) => row.user_id === owner!.id)!.membership_id;
+      await removeMember(context, { userId: owner!.id, businessId, membershipId: viewerMembership });
+      await expect(removeMember(context, { userId: owner!.id, businessId, membershipId: viewerMembership })).rejects.toMatchObject({ status: 404 });
+      await expect(removeMember(context, { userId: owner!.id, businessId, membershipId: ownerMembership })).rejects.toMatchObject({ status: 409, code: "final_owner" });
+    });
+  });
 });

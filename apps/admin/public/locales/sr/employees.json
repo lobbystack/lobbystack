@@ -1,0 +1,63 @@
+{
+  "page": {
+    "title": "Zaposleni",
+    "searchPlaceholder": "Pretraži zaposlene..."
+  },
+  "table": {
+    "name": "Ime",
+    "phone": "Broj telefona",
+    "added": "Dodato",
+    "empty": "Nijedan zaposleni ne odgovara pretrazi.",
+    "emptyState": "Još nema zaposlenih.",
+    "actions": {
+      "moreOptions": "Više opcija",
+      "editEmployee": "Izmeni zaposlenog",
+      "deleteEmployee": "Obriši zaposlenog",
+      "deleteTitle": "Obrisati zaposlenog?",
+      "deleteDescription": "Zaposleni će biti trajno uklonjen sa vaše kontrolne table.",
+      "deleteConfirm": "Obriši zaposlenog",
+      "deleteCancel": "Otkaži",
+      "deleted": "Zaposleni je obrisan.",
+      "deleteFailed": "Brisanje zaposlenog nije uspelo."
+    }
+  },
+  "add": {
+    "button": "Dodaj zaposlenog",
+    "title": "Dodaj zaposlenog",
+    "description": "Sačuvajte ime i broj telefona zaposlenog.",
+    "fields": {
+      "name": {
+        "label": "Ime",
+        "placeholder": "Marko Petrović",
+        "required": "Unesite ime zaposlenog."
+      },
+      "phone": {
+        "label": "Broj telefona",
+        "country": "Država",
+        "hint": "Opciono. Pozivaoci koji traže ovog zaposlenog prebacuju se na ovaj broj; bez njega dobijaju broj za prebacivanje poziva firme.",
+        "invalid": "Unesite ispravan broj telefona.",
+        "exists": "Zaposleni sa ovim brojem telefona već postoji."
+      }
+    },
+    "save": "Sačuvaj",
+    "saving": "Čuvanje...",
+    "created": "Zaposleni je dodat.",
+    "failed": "Dodavanje zaposlenog nije uspelo."
+  },
+  "edit": {
+    "title": "Izmeni zaposlenog",
+    "description": "Ažurirajte ime i broj telefona ovog zaposlenog.",
+    "save": "Sačuvaj izmene",
+    "updated": "Zaposleni je ažuriran.",
+    "failed": "Ažuriranje zaposlenog nije uspelo."
+  },
+  "pagination": {
+    "rowsPerPage": "Redova po stranici",
+    "pageOf": "Stranica {{page}} od {{total}}",
+    "firstPage": "Idi na prvu stranicu",
+    "previousPage": "Idi na prethodnu stranicu",
+    "nextPage": "Idi na sledeću stranicu",
+    "lastPage": "Idi na poslednju stranicu",
+    "goToPage": "Idi na stranicu {{page}}"
+  }
+}

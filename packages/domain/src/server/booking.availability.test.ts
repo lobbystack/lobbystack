@@ -111,6 +111,23 @@ describe("booking availability reference locking", () => {
     expect(recording.selectCount()).toBe(31);
   });
 
+  it("keeps the default staff member bookable after the business adds employees", async () => {
+    const recording = useTransaction({ hours: [], staffRows: [{ id: "staff-1" }, { id: "staff-2" }, { id: "staff-3" }] });
+
+    await expect(bookAppointment(context, input)).rejects.toThrow("No staff member is available for this service.");
+
+    // staff-1 stands for the business; adding employees staff-2 and staff-3 doesn't take it out of the candidates.
+    expect(recording.executeCalls).toHaveLength(3);
+  });
+
+  it("only checks the employee the caller asked for", async () => {
+    const recording = useTransaction({ hours: [] });
+
+    await expect(bookAppointment(context, { ...input, preferredStaffId: "staff-2" })).rejects.toThrow("No staff member is available for this service.");
+
+    expect(recording.executeCalls).toHaveLength(1);
+  });
+
   it("rechecks conflicts after the lock and stops at the first available candidate", async () => {
     const recording = useTransaction({});
 
