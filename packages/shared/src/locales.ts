@@ -3,8 +3,8 @@
  * website widget, the landing site and transactional email. The short codes
  * are the identifiers used in URLs, cookies, storage and locale folders.
  *
- * This is separate from {@link RuntimeLocale}, which is the language the AI
- * receptionist speaks and only covers English and French.
+ * This is separate from {@link RuntimeLocale}, the English or French default
+ * that calls open in; the receptionist then follows the caller's language.
  */
 export const interfaceLocales = ["en", "fr", "es", "sr"] as const;
 
