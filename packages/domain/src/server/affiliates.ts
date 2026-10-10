@@ -248,11 +248,12 @@ export async function generateAffiliatePayoutRun(
 
 export async function markAffiliatePayoutItemPaid(
   context: DomainContext,
-  input: { payoutItemId: string; externalReference?: string; note?: string; paidAt?: string },
+  input: { payoutItemId: string; expectedAmountCents?: number; externalReference?: string; note?: string; paidAt?: string },
 ): Promise<boolean> {
   const paidAt = input.paidAt ? new Date(input.paidAt) : new Date();
   return await withDispatcherTransaction(context.db, async (tx) => {
-    const item = (await tx.update(affiliatePayoutItems).set({ status: "paid", paidAt, ...(input.externalReference ? { externalReference: input.externalReference } : {}), ...(input.note ? { note: input.note } : {}), updatedAt: paidAt }).where(and(eq(affiliatePayoutItems.id, input.payoutItemId), eq(affiliatePayoutItems.status, "ready"))).returning({ id: affiliatePayoutItems.id, payoutRunId: affiliatePayoutItems.payoutRunId }))[0];
+    // The daily run adds newly cleared commissions to a ready item, so match the amount that was actually sent.
+    const item = (await tx.update(affiliatePayoutItems).set({ status: "paid", paidAt, ...(input.externalReference ? { externalReference: input.externalReference } : {}), ...(input.note ? { note: input.note } : {}), updatedAt: paidAt }).where(and(eq(affiliatePayoutItems.id, input.payoutItemId), eq(affiliatePayoutItems.status, "ready"), ...(input.expectedAmountCents === undefined ? [] : [eq(affiliatePayoutItems.amountCents, input.expectedAmountCents)]))).returning({ id: affiliatePayoutItems.id, payoutRunId: affiliatePayoutItems.payoutRunId }))[0];
     if (!item) return false;
     const commissions = await tx.select({ id: affiliateCommissions.id, profileId: affiliateCommissions.affiliateProfileId, commissionCents: affiliateCommissions.commissionCents }).from(affiliateCommissions).where(and(eq(affiliateCommissions.payoutItemId, item.id), eq(affiliateCommissions.payoutState, "assigned")));
     for (const commission of commissions) {
