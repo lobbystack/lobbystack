@@ -8,7 +8,7 @@ vi.mock("@lobbystack/db", async (original) => ({ ...(await original<typeof impor
 import { BookingUnavailableError } from "../availability";
 import { bookAppointment, checkAvailability, findAvailability, findOpeningsInTransaction } from "./booking";
 
-type Rows = Partial<{ hours: unknown[]; closures: unknown[]; staff: unknown[]; assignments: unknown[]; connections: unknown[]; appointments: unknown[]; busy: unknown[] }>;
+type Rows = Partial<{ services: unknown[]; hours: unknown[]; closures: unknown[]; staff: unknown[]; assignments: unknown[]; connections: unknown[]; appointments: unknown[]; busy: unknown[] }>;
 
 // 2027-06-07 is a Monday. The service lasts 30 minutes.
 const startsAt = "2027-06-07T15:00:00.000Z";
@@ -16,7 +16,7 @@ const open = [{ dayOfWeek: 1, openMinutes: 9 * 60, closeMinutes: 17 * 60 }];
 
 function useRows(rows: Rows) {
   const rowsFor = (table: unknown): unknown[] => {
-    if (table === services) return [{ id: "svc-1", name: "Haircut", durationMinutes: 30 }];
+    if (table === services) return rows.services ?? [{ id: "svc-1", name: "Haircut", durationMinutes: 30 }];
     if (table === businesses) return [{ timezone: "UTC" }];
     if (table === staff) return rows.staff ?? [{ id: "staff-1" }];
     if (table === staffServiceAssignments) return rows.assignments ?? [];
@@ -67,6 +67,11 @@ describe("checkAvailability reasons", () => {
   ] as Array<[string, Rows]>)("says %s", async (reason, rows) => {
     useRows(rows);
     await expect(check()).resolves.toEqual({ slots: [], reason });
+  });
+
+  it("fails a turned-off service with a 409, so the API doesn't answer it as a server error", async () => {
+    useRows({ services: [] });
+    await expect(check()).rejects.toMatchObject({ message: "Service is not available.", status: 409 });
   });
 
   it("checks hours and closures before reading staff schedules", async () => {

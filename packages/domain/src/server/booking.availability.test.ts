@@ -81,6 +81,7 @@ function createRecordingTransaction(config: TransactionConfig = {}) {
 }
 
 const context = { db: {} as never };
+const takenByEveryone = ["staff-1", "staff-2", "staff-3"].map((staffId) => ({ staffId, startsAt: new Date("2027-06-07T15:00:00.000Z"), endsAt: new Date("2027-06-07T15:30:00.000Z") }));
 const input = {
   businessId: "biz-1",
   serviceId: "svc-1",
@@ -103,11 +104,11 @@ beforeEach(() => {
 
 describe("booking availability reference locking", () => {
   it("reloads reference data while rechecking every candidate under the advisory lock", async () => {
-    const recording = useTransaction({ hours: [] });
+    const recording = useTransaction({ appointments: takenByEveryone });
 
-    await expect(bookAppointment(context, input)).rejects.toThrow("No staff member is available for this service.");
+    await expect(bookAppointment(context, input)).rejects.toMatchObject({ reason: "taken", message: "No staff member is available for this service." });
 
-    // The advisory lock is still taken for each candidate that is evaluated.
+    // The advisory lock is taken for each candidate that is evaluated.
     expect(recording.executeCalls).toHaveLength(3);
     expect(recording.fromCounts.get(services)).toBe(4);
     expect(recording.fromCounts.get(businesses)).toBe(4);
@@ -116,9 +117,18 @@ describe("booking availability reference locking", () => {
     expect(recording.fromCounts.get(calendarConnections)).toBe(4);
     expect(recording.fromCounts.get(businessHours)).toBe(4);
     expect(recording.fromCounts.get(closures)).toBe(4);
-    // Without opening hours no candidate can take the time, so no bookings are read.
+    expect(recording.fromCounts.get(appointments)).toBe(3);
+    expect(recording.selectCount()).toBe(31);
+  });
+
+  it("refuses a time the schedule rules out before locking anyone", async () => {
+    const recording = useTransaction({ hours: [] });
+
+    await expect(bookAppointment(context, input)).rejects.toMatchObject({ reason: "no_hours", message: "No staff member is available for this service." });
+
+    expect(recording.executeCalls).toHaveLength(0);
+    expect(recording.fromCounts.get(services)).toBe(1);
     expect(recording.fromCounts.get(appointments)).toBeUndefined();
-    expect(recording.selectCount()).toBe(28);
   });
 
   it("rechecks conflicts after the lock and stops at the first available candidate", async () => {
@@ -137,19 +147,17 @@ describe("booking availability reference locking", () => {
   });
 
   it("keeps unassigned services available to every active staff member", async () => {
-    const recording = useTransaction({ hours: [], assignments: [] });
+    const recording = useTransaction({ assignments: [], appointments: takenByEveryone });
 
     await expect(bookAppointment(context, input)).rejects.toThrow("No staff member is available for this service.");
     expect(recording.executeCalls).toHaveLength(3);
   });
 
-  it("skips the availability read for staff that are not assigned to the service", async () => {
+  it("locks only the staff assigned to the service", async () => {
     const recording = useTransaction({ assignments: [{ staffId: "staff-2" }], appointments: [{ staffId: "staff-2", startsAt: new Date(input.startsAt), endsAt: new Date("2027-06-07T15:30:00.000Z") }] });
 
     await expect(bookAppointment(context, input)).rejects.toThrow("No staff member is available for this service.");
-    // The lock set is unchanged: every active candidate is still locked.
-    expect(recording.executeCalls).toHaveLength(3);
-    // Only the assigned candidate reaches the staff-specific conflict read.
+    expect(recording.executeCalls).toHaveLength(1);
     expect(recording.fromCounts.get(appointments)).toBe(1);
   });
 
