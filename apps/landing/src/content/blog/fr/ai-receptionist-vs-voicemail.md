@@ -29,6 +29,8 @@ La messagerie garde une utilité. Elle coûte peu, fonctionne avec presque toute
 | Coût | Abonnement et usage | Souvent inclus dans la téléphonie |
 | Travail interne | Examiner résultats et exceptions | Écouter, rappeler et terminer le travail |
 
+Si vous hésitez aussi avec un menu vocal ou une messagerie vocale transcrite, notre [guide du standard automatique](/fr/blog/automated-answering-service/) les compare avec un réceptionniste IA.
+
 ## La messagerie suffit quand l'attente coûte peu
 
 Elle reste adaptée aux appels peu urgents de personnes qui connaissent l'entreprise :

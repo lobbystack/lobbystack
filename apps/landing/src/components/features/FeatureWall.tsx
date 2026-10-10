@@ -76,7 +76,7 @@ const largeCards: FeatureCard[] = [
   {
     title: "Transfer the calls that need a person",
     description:
-      "LobbyStack handles routine calls first, then transfers based on your instructions. Urgent requests, upset customers, high-value leads, and special cases can go straight to the right person.",
+      "LobbyStack handles routine calls first, then transfers based on your instructions. Urgent requests, upset customers, high-value leads, and special cases can go straight to the number you set.",
     icon: ArrowRightLeft,
     size: "large",
     visual: "routing",
@@ -111,7 +111,7 @@ const mediumCards: FeatureCard[] = [
   {
     title: "Unlimited concurrent calls",
     description:
-      "Multiple customers can be helped at the same time instead of waiting in a queue or hitting a busy line.",
+      "Multiple customers can be helped at the same time instead of waiting in a queue.",
     icon: Users,
     size: "medium",
     tag: "No queue",
@@ -196,7 +196,7 @@ const mediumCards: FeatureCard[] = [
   {
     title: "Email and SMS notifications",
     description:
-      "Send booking updates, quote requests, urgent alerts, missed-transfer summaries, and high-value lead notices to the right person.",
+      "Alert your team by email or text when the receptionist takes a message, a transfer fails, or a calendar sync stops working.",
     icon: Mail,
     size: "medium",
   },
@@ -231,7 +231,7 @@ const mediumCards: FeatureCard[] = [
   {
     title: "Failed-transfer fallback",
     description:
-      "If no one picks up, LobbyStack takes a message and sends your team a summary.",
+      "If the transfer can't go through, LobbyStack tells the caller, offers to take a message, and can alert your team.",
     icon: PhoneForwarded,
     size: "medium",
   },
@@ -293,7 +293,7 @@ const largeCardsFr: FeatureCard[] = [
   {
     title: "Transférez les appels qui ont besoin d’une personne",
     description:
-      "LobbyStack traite d’abord les appels simples, puis transfère selon vos consignes. Urgences, clients mécontents, prospects importants et cas particuliers peuvent arriver directement à la bonne personne.",
+      "LobbyStack traite d’abord les appels simples, puis transfère selon vos consignes. Urgences, clients mécontents, prospects importants et cas particuliers peuvent arriver directement au numéro que vous choisissez.",
     icon: ArrowRightLeft,
     size: "large",
     visual: "routing",
@@ -328,7 +328,7 @@ const mediumCardsFr: FeatureCard[] = [
   {
     title: "Appels simultanés illimités",
     description:
-      "Plusieurs clients peuvent être aidés en même temps, sans file d’attente ni tonalité occupée.",
+      "Plusieurs clients peuvent être aidés en même temps, sans file d’attente.",
     icon: Users,
     size: "medium",
     tag: "Sans file",
@@ -413,7 +413,7 @@ const mediumCardsFr: FeatureCard[] = [
   {
     title: "Notifications courriel et SMS",
     description:
-      "Envoyez rendez‑vous, demandes de devis, alertes urgentes, transferts manqués et prospects importants à la bonne personne.",
+      "Alertez votre équipe par courriel ou SMS quand le réceptionniste prend un message, qu’un transfert échoue ou que la synchronisation du calendrier s’arrête.",
     icon: Mail,
     size: "medium",
   },
@@ -448,7 +448,7 @@ const mediumCardsFr: FeatureCard[] = [
   {
     title: "Secours après transfert manqué",
     description:
-      "Si personne ne décroche, LobbyStack prend un message et envoie un résumé à votre équipe.",
+      "Si le transfert ne passe pas, LobbyStack prévient l’appelant, propose de prendre un message et peut alerter votre équipe.",
     icon: PhoneForwarded,
     size: "medium",
   },
@@ -510,7 +510,7 @@ const largeCardsEs: FeatureCard[] = [
   {
     title: "Transfiera las llamadas que necesitan a una persona",
     description:
-      "LobbyStack atiende primero las llamadas rutinarias y luego transfiere según sus instrucciones. Las urgencias, los clientes molestos, los clientes potenciales de alto valor y los casos especiales pueden ir directamente a la persona adecuada.",
+      "LobbyStack atiende primero las llamadas rutinarias y luego transfiere según sus instrucciones. Las urgencias, los clientes molestos, los clientes potenciales de alto valor y los casos especiales pueden ir directamente al número que usted elija.",
     icon: ArrowRightLeft,
     size: "large",
     visual: "routing",
@@ -545,7 +545,7 @@ const mediumCardsEs: FeatureCard[] = [
   {
     title: "Llamadas simultáneas ilimitadas",
     description:
-      "Varios clientes pueden recibir atención al mismo tiempo, sin esperar en cola ni encontrar la línea ocupada.",
+      "Varios clientes pueden recibir atención al mismo tiempo, sin esperar en cola.",
     icon: Users,
     size: "medium",
     tag: "Sin espera",
@@ -629,7 +629,7 @@ const mediumCardsEs: FeatureCard[] = [
   {
     title: "Notificaciones por correo y SMS",
     description:
-      "Envíe a la persona adecuada novedades de reservas, solicitudes de presupuesto, alertas urgentes, resúmenes de transferencias fallidas y avisos de clientes potenciales de alto valor.",
+      "Avise a su equipo por correo o SMS cuando la recepcionista toma un mensaje, falla una transferencia o se detiene la sincronización del calendario.",
     icon: Mail,
     size: "medium",
   },
@@ -664,7 +664,7 @@ const mediumCardsEs: FeatureCard[] = [
   {
     title: "Respaldo si falla la transferencia",
     description:
-      "Si nadie contesta, LobbyStack toma un mensaje y envía un resumen a su equipo.",
+      "Si la transferencia no se completa, LobbyStack se lo dice a quien llama, ofrece tomar un mensaje y puede avisar a su equipo.",
     icon: PhoneForwarded,
     size: "medium",
   },
@@ -726,7 +726,7 @@ const largeCardsSr: FeatureCard[] = [
   {
     title: "Preusmerite pozive kojima je potreban čovek",
     description:
-      "LobbyStack prvo rešava rutinske pozive, a zatim preusmerava prema Vašim uputstvima. Hitni zahtevi, nezadovoljni klijenti, vredni potencijalni klijenti i posebni slučajevi mogu odmah stići do odgovarajuće osobe.",
+      "LobbyStack prvo rešava rutinske pozive, a zatim preusmerava prema Vašim uputstvima. Hitni zahtevi, nezadovoljni klijenti, vredni potencijalni klijenti i posebni slučajevi mogu odmah stići na broj koji izaberete.",
     icon: ArrowRightLeft,
     size: "large",
     visual: "routing",
@@ -761,7 +761,7 @@ const mediumCardsSr: FeatureCard[] = [
   {
     title: "Neograničen broj istovremenih poziva",
     description:
-      "Više klijenata može da dobije pomoć u isto vreme, bez čekanja u redu i bez zauzete linije.",
+      "Više klijenata može da dobije pomoć u isto vreme, bez čekanja u redu.",
     icon: Users,
     size: "medium",
     tag: "Bez čekanja",
@@ -845,7 +845,7 @@ const mediumCardsSr: FeatureCard[] = [
   {
     title: "Obaveštenja e-poštom i SMS-om",
     description:
-      "Šaljite pravoj osobi novosti o zakazivanjima, zahteve za ponudu, hitna upozorenja, rezimee neuspelih preusmeravanja i obaveštenja o vrednim potencijalnim klijentima.",
+      "Obavestite svoj tim e-poštom ili SMS-om kada recepcioner primi poruku, kada preusmeravanje ne uspe ili kada sinhronizacija kalendara prestane da radi.",
     icon: Mail,
     size: "medium",
   },
@@ -880,7 +880,7 @@ const mediumCardsSr: FeatureCard[] = [
   {
     title: "Kada preusmeravanje ne uspe",
     description:
-      "Ako se niko ne javi, LobbyStack prima poruku i šalje rezime Vašem timu.",
+      "Ako preusmeravanje ne uspe, LobbyStack to kaže pozivaocu, ponudi da primi poruku i može da obavesti Vaš tim.",
     icon: PhoneForwarded,
     size: "medium",
   },

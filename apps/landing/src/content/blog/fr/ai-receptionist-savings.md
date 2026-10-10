@@ -1,224 +1,330 @@
 ---
-title: "Économies avec un réceptionniste IA"
-description: "Estimez les économies possibles avec un réceptionniste IA : coûts d'accueil réduits et moins d'appels manqués."
+title: "Combien coûte un réceptionniste IA en 2026 ?"
+seoTitle: "Coût d'un réceptionniste IA en 2026 : 17 offres comparées"
+description: "Coût d'un réceptionniste IA en 2026 : prix d'entrée, usage inclus et dépassements de 17 fournisseurs au 9 octobre, le nôtre compris, et factures à 40 et 100 appels."
 pubDate: 2026-06-03T12:00:00-04:00
+updatedDate: 2026-10-09T09:00:00-04:00
 author: "Équipe LobbyStack"
 category: "Guides"
 featured: true
 coverImage: "/illustrations/ai-receptionist-savings-hero.webp"
+coverImageAlt: "Carte beige à motif de petits points, avec l'étiquette Pricing et le titre noir How much does an AI receptionist cost in 2026?"
 locale: "fr"
 canonicalSlug: "ai-receptionist-savings"
 ---
 
-Si vos nouveaux clients commencent souvent par un appel, chaque appel manqué gruge discrètement vos revenus. Le coût n'apparaît pas toujours tout de suite : il se voit plus tard, dans des plages horaires vides, des semaines plus lentes et des clients qui ont réservé ailleurs avant que vous ayez eu le temps de les rappeler.
+Le coût d'un réceptionniste IA va de 14 $ à 150 $ par mois sur la plupart des forfaits d'entrée, d'après les pages de prix de 17 fournisseurs, le nôtre compris, consultées le 9 octobre 2026. Ces forfaits incluent de 25 à 250 appels, minutes ou appelants, et la plupart facturent chaque unité supplémentaire. Le forfait gratuit de Smith.ai répond à 25 vrais appels par mois, et le forfait Gratuit de LobbyStack vous donne 30 minutes vocales dans le navigateur pour vos tests.
 
-Un **réceptionniste IA** peut faire économiser de l'argent de deux façons : il réduit ce que vous dépensez pour répondre aux appels, et il protège les revenus qui se perdent normalement dans la messagerie vocale, les rappels trop lents ou les appels hors heures d'ouverture. Le montant exact dépend moins de l'IA elle-même que de votre volume d'appels, de la valeur moyenne d'un client et du nombre de bons appels qui vous échappent aujourd'hui.
+**Prix relevés le 9 octobre 2026**, en dollars américains hors taxes, sur la page de prix de chaque fournisseur. Nous avons écrit ce guide et nous vendons un réceptionniste IA : notre ligne porte donc la mention « (le nôtre) ».
 
-Voici une façon simple et prudente de l'estimer.
+## Quel est le coût d'un réceptionniste IA par mois ?
 
-## Regardez d'abord le coût mensuel
+La plupart des forfaits d'entrée coûtent de 14 $ à 150 $ par mois, des 14 $ d'AI-Receptionist.com pour 75 minutes aux 150 $ de Smith.ai Pro pour 75 appels. Smith.ai et LobbyStack proposent des forfaits gratuits. Si le réceptionniste s'ajoute à un autre produit, vous payez aussi le forfait téléphonique ou le poste qu'il exige.
 
-Les économies les plus visibles sont les coûts que vous pouvez réduire ou éviter.
+### Prix d'entrée de 17 fournisseurs, relevés le 9 octobre 2026
 
-Une réceptionniste à temps plein peut être très utile, mais même un salaire horaire modeste devient vite une dépense mensuelle importante. Le [Bureau of Labor Statistics](https://www.bls.gov/ooh/Office-and-Administrative-Support/Receptionists.htm) indiquait un salaire médian de 17,90 $ US l'heure pour les réceptionnistes en mai 2024. À 40 heures par semaine, cela représente environ 3 100 $ US par mois avant les charges, les avantages sociaux, le recrutement, la formation, les congés maladie et la couverture nécessaire quand la personne est déjà au téléphone.
+| Fournisseur | Forfait d'entrée | Inclus | Usage supplémentaire | Unité de facturation | Frais de mise en service | Forfait gratuit ou essai |
+| --- | --- | --- | --- | --- | --- | --- |
+| [Smith.ai AI Receptionist](https://smith.ai/pricing/ai-receptionist) | Free 0 $ ; Pro 150 $ | 25 vrais appels ; 75 sur Pro | 3 $ l'appel sur Free, 2,50 $ sur Pro | Appel | Aucuns selon son site | Forfait gratuit |
+| [AI-Receptionist.com](https://ai-receptionist.com/pricing) | Essential 14 $ (140 $/an) | 75 min | 0,25 $/min en minutes Booster | Minute | Aucuns selon son site | 7 jours, 30 min en direct, sans carte |
+| [Upfirst](https://upfirst.ai/pricing) | Starter 24,95 $ (20 $ en annuel) | 30 appels | 1,50 $ l'appel | Appel | Non mentionnés | 14 jours, sans carte |
+| [Aira](https://www.getaira.io/agents/receptionist/pricing) | Starter 24,95 $ | 30 appels | 1,50 $ l'appel | Appel abouti | Non mentionnés | Aucun mentionné |
+| [Quo Sona](https://support.quo.com/core-concepts/ai-automations/sona/sona-pricing) | 25 $, plus un forfait Quo (19 $/utilisateur par mois) | Environ 40 appels | 0,75 $ l'appel, désactivé par défaut | Appel (100 crédits) | Non mentionnés | 7 jours |
+| [Dialzara](https://dialzara.com/pricing) | Business Lite 29 $ | 60 min | 0,48 $/min | Minute | Aucuns selon son site | 7 jours |
+| [ElevenLabs Reception](https://elevenlabs.io/docs/reception-ai/billing/plans-and-pricing) | Basic 29 $ (24 $ en annuel) | 75 crédits | 0,45 $ le crédit | Crédit (1 min de téléphone) | Non mentionnés | 14 jours, 30 crédits, sans carte |
+| [Zoom AI Receptionist](https://zoom.us/pricing/virtual-agent) | 29,99 $ | 100 min | Non publié | Minute | Non mentionnés | « Try for free », durée non précisée |
+| [LobbyStack](/fr/pricing/) (le nôtre) | Starter 30 $ (24 $ en annuel) | 150 min | 0,20 $/min | Seconde, prix à la minute | Aucuns | Forfait Gratuit : 30 minutes vocales dans le navigateur, sans numéro de téléphone |
+| [RingCentral AIR](https://www.ringcentral.com/pricing/ai-receptionist.html) | 49 $ en autonome | 100 min | 0,50 $/min | Minute, par tranches de 30 secondes | Non mentionnés | 14 jours |
+| [Rosie](https://heyrosie.com/pricing) | Professional 49 $ (41 $ en annuel) | 250 min | Passage à Scale (149 $) | Minute | Non mentionnés | 7 jours |
+| [Allo](https://www.withallo.com/pricing) | 32 $ le réceptionniste + 32 $ le poste, facturés à l'année | Non précisé | Non précisé | Prix fixe par agent | Aucuns selon son site | Aucun mentionné |
+| [Moneypenny AI](https://moneypenny.com/us/plans-pricing-ai/) | 69 $ | 25 appels | 2,49 $ l'appel | Appel | Non mentionnés | Aucun mentionné |
+| [Goodcall](https://www.goodcall.com/pricing) | Starter 79 $ | 100 appelants uniques | 0,79 $ l'appelant | Appelant unique par mois | Non mentionnés | Agent de démonstration gratuit |
+| [CloudTalk](https://www.cloudtalk.io/ai-receptionist/) | 99 $ | 200 min | Non publié | Minute | Aucuns selon son site | 50 min gratuites le premier mois ; 14 jours, sans carte |
+| [My AI Front Desk](https://www.myaifrontdesk.com/pricing) | 99 $ (79 $ en annuel) | 200 min | 0,25 $/min après une réserve mensuelle de crédits (environ 40 min) | Minute (crédits) | Non mentionnés | 7 jours |
+| [Nextiva XBert](https://www.nextiva.com/products/xbert) | 99 $ | 100 interactions | 0,99 $ l'interaction | Interaction | Mise en service assistée gratuite | 14 jours, remboursement sous 30 jours |
 
-Pour la plupart des entreprises, la question est plus nuancée que « remplacer ou non une réceptionniste ». Une excellente personne à l'accueil fait beaucoup plus que répondre au téléphone. Mais beaucoup de petites entreprises n'ont pas besoin d'une embauche à temps plein uniquement pour absorber les débordements, les pauses du midi, les fins de semaine, les appels après la fermeture ou les moments où le propriétaire est en train de faire le travail lui-même.
+« Aucuns selon son site » signifie que le fournisseur déclare ne pas facturer de frais de mise en service, et « Non mentionnés » que nous n'avons trouvé aucune indication dans un sens ou dans l'autre. La page IA de Moneypenny annonce des forfaits à partir de 99 $, mais sa page de forfaits affiche 69 $ pour 25 appels. Aira et Upfirst affichent des paliers identiques, mais ce sont deux sociétés distinctes, Aira Inc. et Upfirst, Inc. Synthflow n'apparaît pas dans le tableau, car il ne vend que des contrats d'entreprise à partir de [30 000 $ par an](https://synthflow.ai/pricing).
 
-Les services de prise d'appels en direct peuvent couvrir ce besoin, mais ils facturent souvent à la minute. Par exemple, les [tarifs publics de Ruby](https://www.ruby.com/plans-and-pricing/) affichent 50 minutes de réceptionniste à 250 $ US par mois et 100 minutes à 395 $ US par mois. Cela peut être rentable si chaque appel doit absolument être pris par une personne. Cela peut aussi devenir cher si la majorité des appelants veulent surtout une réponse simple, de l'aide pour prendre rendez-vous, une qualification rapide ou un transfert efficace.
+### Les forfaits qui exigent un autre abonnement
 
-C'est généralement là que les économies d'un réceptionniste IA commencent : le travail répétable de première ligne est couvert à moindre coût, et les appels inhabituels sont toujours transmis à une personne.
+Trois fournisseurs exigent un autre produit sur au moins une formule, et un quatrième ne le précise pas :
 
-La plupart des entreprises l'utilisent pour combler les trous autour de l'accueil :
+- **Quo Sona** exige un forfait Quo payant. [Quo Starter](https://www.quo.com/pricing) coûte 19 $ par utilisateur et par mois, ou 15 $ en facturation annuelle : le palier Sona à 25 $ revient donc à 44 $ par mois.
+- **Allo** ajoute le réceptionniste (32 $ par agent, facturés à l'année) à un forfait Allo payant (Business, 32 $ par poste, facturés à l'année), soit 64 $ par mois. Allo ne dit pas si une personne a aussi besoin d'un poste.
+- **RingCentral AIR** coûte 49 $ seul, ou 39 $ plus un poste RingEX Core à 30 $. Notre analyse des [prix de RingCentral AI Receptionist](/fr/blog/ringcentral-ai-receptionist-alternative/) couvre les autres formules.
+- **CloudTalk** présente le réceptionniste IA comme une option de ses forfaits par poste, sans dire si un acheteur qui ne veut que l'IA doit prendre un poste.
 
-- l'appel qui arrive pendant que tout le monde est déjà occupé ;
-- l'appel après la fermeture d'un client qui voulait réserver avant le lendemain matin ;
-- l'appel pendant la pause du midi qui serait autrement tombé sur la messagerie ;
-- la question répétitive qui ne devrait pas prendre cinq minutes au propriétaire ;
-- l'appel d'accueil où l'essentiel est de bien noter le nom, le besoin, le moment souhaité et les coordonnées de rappel.
+La FAQ de Nextiva indique que XBert se vend seul ou en option d'un forfait Nextiva.
 
-Pour certaines entreprises, les économies viennent surtout de la main-d'oeuvre. Pour d'autres, elles viennent surtout des revenus récupérés. Les meilleurs cas combinent souvent les deux.
+Les réponses des moteurs de recherche IA et d'autres articles comparatifs citent encore trois prix absents des pages des fournisseurs le 9 octobre : un forfait Allo à 18 $, RingCentral AIR à 59 $ et un forfait My AI Front Desk à 20 $. Vérifiez la page du fournisseur avant de bâtir un budget sur un résumé.
 
-## Comptez ensuite les appels que vous perdez
+## Comment les réceptionnistes IA facturent-ils ?
 
-Les économies de coût ne sont qu'une partie de l'histoire. Le plus gros montant est souvent le revenu que vous ne voyez jamais, parce qu'un appelant a abandonné.
+Les réceptionnistes IA facturent à la minute, à l'appel, par appelant unique ou par interaction. La facturation à la minute avantage les appels courts, celle à l'appel les appels longs, et celle par appelant les entreprises dont les clients rappellent souvent. Avant de comparer deux prix, vérifiez ce que chaque fournisseur compte comme facturable.
 
-Repensez aux dernières semaines :
+### À la minute
 
-- Combien d'appels sont tombés sur la messagerie vocale ?
-- Combien sont arrivés après les heures d'ouverture ?
-- Combien ont sonné pendant qu'une personne aidait déjà un autre client ?
-- Combien ont été rappelés des heures plus tard, quand le client avait déjà trouvé quelqu'un d'autre ?
+LobbyStack, RingCentral AIR, Dialzara, Zoom, Rosie, CloudTalk et AI-Receptionist.com vendent des blocs de minutes. ElevenLabs Reception vend des crédits, à raison d'un crédit par minute de téléphone. My AI Front Desk vend 200 minutes, puis puise les minutes supplémentaires dans une réserve de crédits, à 25 crédits la minute.
 
-Beaucoup d'appels manqués ne cachent aucun revenu : spam, mauvais numéros, fournisseurs, ou clients existants avec une question qui peut attendre. L'erreur consiste à ignorer tous les appels manqués simplement parce qu'une partie d'entre eux est du bruit.
+### À l'appel
 
-La meilleure question est plutôt : combien d'appels manqués étaient de vraies occasions d'affaires ?
+Upfirst, Aira, Smith.ai, Moneypenny AI et Quo Sona facturent à l'appel : un appel de 10 minutes vous coûte autant qu'un appel d'une minute. Aira facture les appels aboutis, et Quo Sona dépense 100 crédits par appel.
 
-Soyez strict à cette étape. Si vous manquez 40 appels dans un mois, ne les comptez pas tous comme des « clients perdus ». Retirez d'abord le bruit : spam, fournisseurs, mauvais numéros, rappels de rendez-vous et clients existants avec des demandes non urgentes.
+### Par appelant ou par interaction
 
-Ce que vous cherchez, c'est un chiffre plus petit, mais plus honnête : les appels manqués de personnes qui auraient raisonnablement pu réserver, commander, demander un devis ou passer à l'étape suivante si quelqu'un avait répondu.
+Goodcall compte chaque numéro de téléphone une fois par mois, peu importe combien de fois il appelle, et ne mesure pas les minutes. Nextiva XBert compte comme une interaction un appel de plus de 30 secondes, ou un fil de SMS ou de chat web de 3 messages ou plus. Allo facture un prix fixe par réceptionniste et ne précise pas l'usage inclus.
 
-Ce chiffre est souvent assez parlant à lui seul.
+### Ce qui compte comme un appel facturable
 
-## Utilisez le calculateur d'appels manqués
+- Upfirst ne facture ni le spam, ni les appels de moins de 15 secondes, ni les appelants qui ne disent rien. Quo Sona ignore les appels de moins de 15 secondes, et Nextiva XBert ceux de moins de 30 secondes.
+- Smith.ai filtre les spammeurs connus et vous laisse retirer jusqu'à 10 % des appels d'un cycle comme spam. Goodcall ne compte ni le spam ni les faux numéros.
+- RingCentral AIR arrondit chaque appel aux 30 secondes supérieures.
+- LobbyStack compte les secondes sans arrondir : un appel de 90 secondes utilise 1,5 minute. Les appels de moins de 10 secondes et ceux que le réceptionniste termine comme spam ne comptent pas.
 
-LobbyStack propose un [calculateur de revenus perdus](/fr/missed-call-revenue-calculator/) précisément pour cela. Il utilise une formule simple :
+Les autres fournisseurs n'énoncent aucune règle sur les pages que nous avons lues. Posez la question avant de supposer que le spam ne vous coûtera rien.
+
+## Combien paierez-vous pour 40 ou 100 appels par mois ?
+
+À 40 appels de trois minutes par mois, les 15 forfaits de ce guide que nous avons pu chiffrer en entier coûtent de 25,25 $ à 99 $. À 100 appels, ils coûtent de 60 $ à 212,50 $. AI-Receptionist.com est le moins cher à 40 appels, et le classement change dès que les appels s'allongent ou que les mêmes clients rappellent.
+
+Nous avons supposé que chaque appel dure 3 minutes, que chaque appelant est une personne différente, qu'aucun appel n'est du spam et que la facturation est mensuelle. Pour chaque fournisseur, nous avons retenu le forfait le moins cher, ou le forfait plus les dépassements publiés, qui couvre ce volume. Sans tarif de dépassement publié, nous avons pris le forfait le moins cher qui couvre tout le volume.
+
+### Factures mensuelles à deux volumes d'appels
+
+| Fournisseur | 40 appels (120 min) | 100 appels (300 min) | Notre calcul |
+| --- | --- | --- | --- |
+| AI-Receptionist.com | 25,25 $ | 70,25 $ | Essential 14 $ + 45 ou 225 minutes Booster à 0,25 $ |
+| LobbyStack (le nôtre) | 30 $ | 60 $ | Starter 30 $ ; à 100 appels, + 150 min à 0,20 $ |
+| Upfirst | 39,95 $ | 69,95 $ | Starter + 10 appels à 1,50 $ ; Premium + 10 à 1 $ |
+| Aira | 39,95 $ | 69,95 $ | Mêmes paliers qu'Upfirst |
+| Quo Sona | 44 $ | 68 $ | Palier Sona à 25 $ ou 49 $ + Quo Starter à 19 $ |
+| Smith.ai AI Receptionist | 45 $ | 212,50 $ | Free + 15 appels à 3 $ ; Pro 150 $ + 25 à 2,50 $ |
+| Rosie | 49 $ | 149 $ | Professional ; à 300 min, vous passez à Scale |
+| ElevenLabs Reception | 49,25 $ | 88,50 $ | Basic + 45 min à 0,45 $ ; Plus 79 $ + 25 à 0,38 $ |
+| Dialzara | 57,80 $ | 135 $ | Lite + 60 min à 0,48 $ ; Pro 99 $ + 80 à 0,45 $ |
+| RingCentral AIR | 59 $ | 149 $ | 49 $ + 20 ou 200 min à 0,50 $ |
+| Goodcall | 79 $ | 79 $ | Starter couvre 100 appelants uniques |
+| CloudTalk | 99 $ | 199 $ | Forfait de 200 min ; forfait de 500 min, faute de tarif de dépassement publié |
+| My AI Front Desk | 99 $ | 114 $ | 200 min ; puis environ 40 min de la réserve + 60 à 0,25 $ |
+| Moneypenny AI | 99 $ | 199 $ | Forfait de 50 appels ; forfait de 100 appels |
+| Nextiva XBert | 99 $ | 99 $ | 100 interactions |
+| Zoom AI Receptionist | Prix incomplet | Prix incomplet | 29,99 $ couvre 100 min ; les minutes supplémentaires n'ont pas de prix publié |
+
+Allo n'a pas de ligne, car il ne publie pas l'usage inclus avec un réceptionniste. Les cellules d'AI-Receptionist.com supposent que vous avez acheté les minutes Booster à l'avance, et celles de RingCentral que chaque appel se termine sur une tranche de 30 secondes. Le forfait Rosie à 49 $ envoie des liens de réservation par SMS, mais il ne peut ni réserver dans votre agenda ni transférer d'appels.
+
+### Quand les forfaits à l'appel coûtent moins cher
+
+Avec des appels de 6 minutes, 100 appels utilisent 600 minutes. LobbyStack coûte alors 118 $ (Pro 100 $ + 100 minutes à 0,18 $), alors qu'Upfirst et Aira Premium restent à 69,95 $ et Quo Sona à 68 $. Une minute supplémentaire coûte 0,20 $ sur LobbyStack Starter, et un appel supplémentaire 1,00 $ sur Upfirst Premium. LobbyStack ne facture donc moins par appel supplémentaire que si vos appels durent moins de 5 minutes. Un appel supplémentaire de 6 minutes coûte 1,20 $ sur Starter et 1,00 $ sur Upfirst Premium.
+
+Goodcall ne facture un appelant régulier qu'une fois par mois : une entreprise qui a des habitués paie moins que ne l'indique le tableau.
+
+### Les limites qui changent la facture
+
+- **Rosie** n'a pas de dépassement à la minute. Si vous dépassez, Rosie vous fait passer au forfait suivant à plein tarif jusqu'à ce que vous rétrogradiez : 251 minutes sur Professional vous coûtent 149 $ ce mois-là, environ trois fois les 49 $ prévus. La réservation et les transferts exigent aussi ce forfait Scale à 149 $. Voyez [comment fonctionnent les changements de forfait de Rosie](/fr/blog/rosie-ai-alternative/).
+- **AI-Receptionist.com** Essential répond à 2 appels à la fois, et les SMS commencent à son forfait à 39 $. Sa FAQ indique que le réceptionniste cesse de prendre de nouveaux appels quand vous avez épuisé vos minutes, sauf si vous détenez des minutes Booster.
+- **ElevenLabs Reception** Basic répond à 1 appel à la fois.
+- **Zoom** et **CloudTalk** ne publient pas de prix pour les minutes supplémentaires, et vous ne pouvez donc pas chiffrer un mois chargé à l'avance.
+- Les forfaits **LobbyStack** ne limitent pas le nombre d'appels auxquels le réceptionniste répond en même temps. Les appels simultanés puisent dans la même réserve de minutes.
+
+## Peut-on avoir un réceptionniste IA gratuit ?
+
+Oui, avec des limites. Le forfait Free de Smith.ai répond à 25 vrais appels par mois et facture 3 $ chaque appel supplémentaire. Le forfait Gratuit de LobbyStack vous donne 30 minutes vocales dans le navigateur par mois pour tester le réceptionniste, sans carte ni numéro de téléphone. La plupart des autres fournisseurs offrent un essai de 7 ou 14 jours.
+
+### Forfaits gratuits
+
+- **Smith.ai Free** prend 25 vrais appels par mois, puis facture 3 $ l'appel.
+- **LobbyStack Gratuit** vous donne 30 minutes vocales dans le navigateur par mois pour tester depuis le tableau de bord, sans carte ni numéro de téléphone, et il n'expire pas. Sans numéro, il ne peut ni prendre d'appels téléphoniques, ni envoyer de SMS, ni transférer.
+- **CloudTalk** donne 50 minutes gratuites aux nouveaux utilisateurs pendant leur premier mois.
+- **ServiceAgent** propose un forfait Launch à 0 $, avec des crédits à l'usage, dans son logiciel de gestion des interventions.
+- **Quo Sona** Tier 1 inclut environ 10 appels par mois, en plus d'un forfait Quo payant.
+- **Goodcall** vous laisse tester un agent de démonstration sans frais et commence à facturer quand vous connectez un numéro.
+
+### Essais gratuits
+
+- **14 jours :** Upfirst (sans carte), ElevenLabs Reception (30 crédits, sans carte), CloudTalk (sans carte), RingCentral AIR, et Nextiva XBert, qui ajoute une garantie de remboursement de 30 jours.
+- **7 jours :** AI-Receptionist.com (30 minutes en direct, sans carte), Rosie, Dialzara, My AI Front Desk et Quo Sona.
+- **Zoom** propose « Try for free » sans en préciser la durée.
+
+## Combien coûtent les réceptionnistes IA spécialisés par secteur ?
+
+Les forfaits d'entrée payants des réceptionnistes IA intégrés aux logiciels de gestion des interventions ou de cabinet dentaire coûtent de 29 $ à 699 $ par mois. ServiceAgent a un forfait à 0 $, et Housecall Pro et Avoca ne publient aucun prix. Plusieurs exigent d'abord un autre abonnement. Leur atout : ils inscrivent les travaux, les patients et les rendez-vous dans le logiciel que vous utilisez déjà.
+
+| Outil | Prix d'entrée | Inclus | Exige d'abord | Réserve dans |
+| --- | --- | --- | --- | --- |
+| [Jobber Receptionist](https://help.getjobber.com/en/articles/receptionistpowered-by-jobber-ai/) | Option à 29 $/mois | 30 conversations, puis 0,79 $ chacune | Un forfait Jobber (Core à partir de 29 $/mois, facturé à l'année) | Jobber |
+| [Housecall Pro CSR AI](https://www.housecallpro.com/features/ai-team/csr-ai/) | Option payante, prix non publié | Non publié | Un forfait Housecall Pro (Basic à partir de 59 $/mois, facturé à l'année) | Housecall Pro |
+| [Sameday AI](https://sameday.ai/pricing) | À partir de 449 $/mois | 500 min | Rien d'indiqué | ServiceTitan, Housecall Pro, FieldRoutes et d'autres |
+| [Avoca](https://www.avoca.ai/) | Prix sur demande | Non publié | Non publié | ServiceTitan, Housecall Pro, FieldRoutes |
+| [ServiceAgent](https://serviceagent.ai/pricing) | Launch 0 $ ; Core 49 $/mois | Core : 2 000 crédits, environ 133 min vocales si vous ne les utilisez que pour les appels | Son propre logiciel de gestion des interventions | Son CRM intégré |
+| [Dentina](https://dentina.ai/) | À partir de 299 $/établissement/mois, facturé à l'année | Appels et minutes illimités | Rien d'indiqué | Dentrix, Open Dental, Eaglesoft et 8 autres systèmes |
+| [Viva AI](https://www.getviva.ai/#pricing) | Gold 349 $/mois | 4 000 crédits, 10 par minute d'appel IA | Rien d'indiqué | Un logiciel de cabinet qu'il ne nomme pas |
+| [Peerlogic](https://www.peerlogic.com/pricing-page) | Premium 699 $/mois | Réceptionniste IA avec son système téléphonique | Passer à la téléphonie de Peerlogic | Dentrix, Eaglesoft, Open Dental, Curve, CareStack et d'autres |
+
+### Gestion des interventions : Jobber, Housecall Pro et Sameday
+
+Pour une entreprise déjà sur Jobber, 40 conversations par mois avec Jobber Receptionist coûtent 36,90 $ (29 $ + 10 à 0,79 $), plus le forfait Jobber. Jobber Plus inclut un usage illimité à partir de 399 $ par mois, facturé à l'année. Sameday AI réserve dans ServiceTitan pendant l'appel. Notre [comparatif des permanences pour le chauffage et la climatisation](/fr/blog/best-hvac-answering-services/) couvre la répartition des techniciens et les services qui se synchronisent avec ServiceTitan, Housecall Pro ou Jobber.
+
+LobbyStack réserve dans Google Calendar et ne se connecte à d'autres logiciels que par les webhooks et l'API REST. Si vous devez inscrire vos travaux dans Jobber, Housecall Pro ou ServiceTitan, commencez par les outils ci-dessus.
+
+### Cabinets dentaires : Dentina, Viva et Peerlogic
+
+Dentina nomme 11 logiciels de cabinet dans lesquels il réserve et ne facture pas de frais de mise en service ; Premium coûte 399 $ par établissement et par mois, facturé à l'année. Les 4 000 crédits Gold de Viva couvrent environ 400 minutes d'appel IA si vous ne les dépensez qu'en appels. Le forfait Premium de Peerlogic à 699 $ réunit le réceptionniste IA et un système téléphonique dentaire.
+
+LobbyStack ne revendique pas la conformité HIPAA et ne réserve que dans Google Calendar. Un cabinet qui veut réserver directement dans Dentrix devrait commencer par Dentina ou Peerlogic. Notre page sur le [réceptionniste IA pour cabinet dentaire](/fr/solutions/ai-receptionist-for-dental-offices/) montre où LobbyStack trouve sa place.
+
+## Un réceptionniste IA facture-t-il des frais de mise en service ou cachés ?
+
+Aucun des 17 fournisseurs de ce guide ne publie de frais de mise en service. CloudTalk, Allo, AI-Receptionist.com, Dialzara et Smith.ai déclarent n'en facturer aucun, et LobbyStack n'en facture sur aucun forfait. Prévoyez plutôt les frais d'enregistrement, les agents supplémentaires, les options et les tarifs de dépassement que certains fournisseurs ne publient pas.
+
+- **Quo :** des frais uniques de 19,50 $ pour la vérification par l'opérateur, exigée pour les SMS, plus le poste Quo.
+- **Allo :** des frais uniques de 24 $ pour l'enregistrement A2P des SMS.
+- **Upfirst :** 9,95 $ par mois pour chaque agent supplémentaire.
+- **Rosie :** 50 $ par mois pour les SMS depuis votre site web, avec 25 conversations, puis 1 $ chacune.
+- **RingCentral AIR :** une note de bas de page qui prévient que des frais supplémentaires peuvent s'appliquer (« Additional charges may apply »).
+- **CloudTalk et Zoom :** aucun prix publié pour les minutes supplémentaires.
+
+LobbyStack facture 0,02 $ pour chaque SMS d'alerte ou tentative de transfert supplémentaire, sans frais d'annulation. Sur Starter et Pro, les propriétaires et les administrateurs peuvent fixer un plafond mensuel de dépassement dans Réglages > Forfait. LobbyStack ne fixe aucun plafond par défaut : le dépassement s'accumule jusqu'à ce que vous en définissiez un. Une fois le plafond atteint, les nouveaux appels reçoivent une tonalité occupée jusqu'au mois suivant, ou jusqu'à ce que vous releviez le plafond.
+
+Les permanences téléphoniques facturent des frais de mise en service de 0 $ à 95 $, Davinci Virtual en tête. Notre guide sur [ce que coûte une permanence téléphonique](/fr/blog/how-much-does-an-answering-service-cost/) les détaille.
+
+## Un réceptionniste IA coûte-t-il moins cher qu'un secrétariat téléphonique ou une embauche ?
+
+Oui, au volume que nous avons chiffré. À 40 appels de trois minutes par mois, les forfaits IA de ce guide coûtent de 25,25 $ à 99 $, et les permanences téléphoniques de 127 $ à 720 $. Une réceptionniste à temps plein au salaire médian américain coûte environ 3 170 $ par mois, avant charges sociales et avantages. Une permanence vaut son prix quand vos appelants ont besoin du jugement d'une personne.
+
+| Option | Coût mensuel | Idéal pour | Points de vigilance |
+| --- | --- | --- | --- |
+| Réceptionniste IA | 14 $ à 150 $ à l'entrée ; 25,25 $ à 99 $ à 40 appels | Questions courantes, prise de renseignements, réservation, appels hors horaires et de débordement | Certains appels demandent encore une personne |
+| Permanence téléphonique | 127 $ (AnswerNet) à 720 $ (Ruby) pour 120 minutes | Appels qui demandent une personne en direct, hors de votre personnel | Les tarifs à la minute et à l'appel grimpent avec le volume |
+| Réceptionniste salariée | Environ 3 170 $ au salaire médian, avant charges et avantages | Accueils qui gèrent visiteurs, paperasse et appels | Une seule plage de couverture, plus les pauses du midi et les congés maladie |
+
+Nous avons chiffré les permanences à 120 minutes (40 appels de 3 minutes) le 9 octobre 2026 : [AnswerNet](https://answeringservicesus.com/pricing/) 127 $, [Specialty Answering Service](https://www.specialtyansweringservice.net/pricing/) 187,80 $, [PATLive](https://www.patlive.com/pricing/) 230,80 $ et [Ruby](https://www.ruby.com/plans-and-pricing/) 720 $. Ruby affiche toujours 250 $ pour 50 minutes et 395 $ pour 100, mais ne publie pas son tarif de dépassement : son forfait de 200 minutes est donc le moins cher qui couvre les 120 minutes. Les [réceptionnistes humaines de Smith.ai](https://smith.ai/pricing/receptionists) coûtent 415 $ pour 40 appels.
+
+Sur le jugement, les permanences gardent l'avantage. Une personne sait calmer un appelant contrarié ou traiter une demande qu'aucun script ne prévoit, et Ruby, PATLive et Abby Connect incluent l'espagnol dans le prix du forfait. Pour leurs grilles complètes, voyez [ce que coûte une permanence téléphonique](/fr/blog/how-much-does-an-answering-service-cost/). Pour ce qui distingue les deux services, lisez [réceptionniste IA ou réceptionniste virtuelle](/fr/blog/ai-receptionist-vs-virtual-receptionist/).
+
+Le [Bureau of Labor Statistics](https://www.bls.gov/ooh/office-and-administrative-support/receptionists.htm) fixe le salaire médian des réceptionnistes à 18,27 $ l'heure, soit 38 010 $ par an, en mai 2025. Cela donne environ 3 170 $ par mois à 40 heures par semaine, avant charges sociales, avantages et remplacement pendant les pauses et les congés.
+
+## Combien un réceptionniste IA peut-il vous faire économiser ?
+
+Un réceptionniste IA vous fait économiser quand les appels qu'il prend vous rapportent du travail que vous auriez perdu. Une entreprise qui manque 8 appels par semaine, avec un contrat moyen de 300 $, a environ 1 238 $ par mois en jeu selon les hypothèses ci-dessous. En récupérer de 25 % à 50 % vaut de 310 $ à 619 $ par mois, avant le coût du forfait.
+
+### Ne comptez que les appels qui pouvaient mener à une réservation
+
+Retirez le spam, les faux numéros, les fournisseurs et les clients actuels dont les questions peuvent attendre. Si vous avez manqué 40 appels le mois dernier, ne comptez pas 40 clients perdus. Comptez les appelants qui auraient pu réserver, commander ou demander un devis si quelqu'un avait décroché. Chacun de ces appels vous coûte aussi du temps : le message vocal, le rappel et le deuxième rappel.
+
+### Appliquez la formule des appels manqués
+
+Le [calculateur de revenus perdus](/fr/missed-call-revenue-calculator/) de LobbyStack utilise cette formule :
 
 ```text
-revenu mensuel à risque =
-appels manqués par semaine x 4,3 x taux d'occasion x taux de réservation x valeur moyenne
+revenus mensuels en jeu =
+appels manqués par semaine x 4,3 x taux d'occasions x taux de réservation x valeur moyenne d'un contrat ou d'une commande
 ```
 
-Voici un exemple prudent pour une petite entreprise :
+Prenez 8 appels manqués par semaine, dont 40 % de vraies occasions, 30 % de ces occasions qui réservent, et un contrat moyen de 300 $. Le calcul donne 8 x 4,3 x 0,40 x 0,30 x 300 $, soit environ **1 238 $ par mois en jeu**. Certains de ces appelants auraient rappelé, ou ne vous convenaient pas. Si une meilleure réponse en récupère de 25 % à 50 %, vous conservez environ **310 $ à 619 $ par mois** avant le coût du forfait.
 
-- 8 appels manqués par semaine
-- 40 % sont de vraies occasions
-- 30 % de ces occasions auraient réservé ou acheté
-- 300 $ de valeur moyenne par réservation ou commande
+### Un exemple chiffré
 
-Cela donne environ **1 238 $ par mois de revenu à risque**.
-
-Ces 1 238 $ ne sont pas du revenu garanti. Certains appelants ne seront pas un bon profil. Certains changeront d'idée. Certains auraient rappelé de toute façon.
-
-Mais si une meilleure réponse récupère seulement 25 % à 50 % de cette fuite, l'entreprise protège environ **310 $ à 619 $ par mois de revenus** avant même de soustraire le coût du logiciel.
-
-C'est ce chiffre qui mérite votre attention.
-
-## Un exemple plus réaliste
-
-Imaginons une entreprise de services locale qui manque environ 35 appels par mois. Après avoir vérifié l'identification de l'appelant, les messages vocaux et les notes d'appel, le propriétaire estime que seulement 15 de ces appels étaient probablement de nouvelles occasions clients. Les autres étaient du spam, des fournisseurs, des clients existants ou des appels avec peu de chances de devenir du travail payé.
-
-Sur ces 15 bons appels manqués, peut-être que 5 se seraient normalement transformés en rendez-vous ou en mandats. La valeur moyenne d'un mandat est de 275 $.
-
-L'occasion liée aux appels manqués est donc :
+Une entreprise de services locale manque 35 appels en un mois. Après avoir vérifié l'afficheur et les messages vocaux, le propriétaire compte 15 nouveaux clients probables. Dans un mois normal, cinq d'entre eux réserveraient, et le contrat moyen vaut 275 $.
 
 ```text
-5 réservations probables x 275 $ de valeur moyenne = 1 375 $ par mois
+5 réservations probables x 275 $ de contrat moyen = 1 375 $/mois
 ```
 
-Soyons volontairement prudents pour l'estimation de récupération. Supposons qu'une meilleure réponse ne récupère que 30 % de ce montant. Cela représente environ 413 $ par mois en revenus récupérés.
+Si une meilleure réponse n'en sauve que 30 %, vous récupérez environ 413 $ par mois.
 
-Si le réceptionniste IA coûte 30 $ à 100 $ par mois, le retour peut déjà être logique. Un ou deux bons clients supplémentaires peuvent couvrir le mois.
-
-C'est pour cette raison que la valeur moyenne d'un client compte autant. Une commande de 45 $, une urgence à 900 $, un projet à 2 500 $ et un client récurrent donnent des calculs de retour sur investissement très différents.
-
-## Soustrayez le coût du réceptionniste IA
-
-Une fois le revenu à risque estimé, comparez-le au coût mensuel de la couverture.
-
-Avec [les tarifs de LobbyStack](/fr/pricing/), vous pouvez commencer gratuitement avec 30 minutes vocales par mois. Starter coûte 30 $ par mois, ou 24 $ par mois avec la facturation annuelle, et inclut 150 minutes vocales. Pro coûte 100 $ par mois, ou 80 $ par mois avec la facturation annuelle, et inclut 500 minutes vocales.
-
-Dans l'exemple ci-dessus, si l'entreprise récupère ne serait-ce qu'un client de 300 $ grâce aux appels manqués, le mois est probablement payé. Deux clients récupérés rendent le calcul encore plus évident.
-
-La formule de retour la plus claire est :
+### Soustrayez le coût du forfait
 
 ```text
-impact mensuel net =
-revenus récupérés + coûts d'accueil évités - coût du réceptionniste IA
+effet net mensuel =
+revenus récupérés + frais de réponse téléphonique évités - coût du forfait de réceptionniste IA
 ```
 
-Donc, si vous protégez 450 $ par mois de revenus, évitez 150 $ de service de réponse externe et payez 30 $ par mois de logiciel, l'impact net est d'environ 570 $ par mois.
+Disons que vous récupérez 450 $ de revenus par mois, que vous cessez de payer 150 $ par mois à un service extérieur qui répondait à vos appels, et que vous payez 30 $ pour LobbyStack Starter. L'effet net atteint environ 570 $ par mois.
 
-Utilisez vos propres chiffres. Si votre vente moyenne est de 40 $ et que la plupart des appels manqués ne sont pas urgents, les économies peuvent rester modestes. Si votre mandat moyen vaut 500 $, 1 000 $ ou plus, quelques appels récupérés peuvent faire une vraie différence.
+Avant de décider, testez trois taux de récupération : 10 %, 25 % et 50 %. Sur l'exemple à 1 238 $, ils donnent 124 $, 310 $ et 619 $ par mois. Si le forfait ne devient rentable qu'à 80 % de récupération, votre estimation est trop optimiste. S'il l'est dès 10 %, vous risquez peu.
 
-## Où les économies apparaissent vraiment
+## Quand un réceptionniste IA est-il rentable ?
 
-Répondre à plus d'appels n'est qu'une partie de la valeur. Beaucoup de temps disparaît dans le travail administratif qui suit les appels manqués.
+Un réceptionniste IA est rentable quand le travail qu'il récupère vaut plus que le forfait. Si un contrat réservé vaut 300 $, une seule réservation récupérée paie LobbyStack Starter (30 $) ou Pro (100 $) pour le mois. Peu d'appels, de petits montants ou des appels qui demandent un professionnel agréé réduisent les économies.
 
-Chaque appel manqué crée une petite pile de tâches : écouter le message vocal, noter le numéro, rappeler, laisser vous-même un message, réessayer plus tard, vous souvenir de ce que la personne voulait et espérer qu'elle n'est pas déjà passée à autre chose. Sur le moment, rien de tout cela ne semble énorme. Sur un mois, cela devient du vrai temps administratif.
+### Les signes que ce sera rentable
 
-Un réceptionniste IA peut aider à :
+- Votre équipe manque des appels pendant les heures d'ouverture.
+- Des clients appellent le soir ou le week-end.
+- Un contrat réservé vaut plus que le forfait mensuel.
+- Les appelants posent les mêmes questions avant de réserver.
+- Vous passez vos soirées sur les messages vocaux et les rappels.
 
-- répondre avant que les appelants tombent sur la messagerie ;
-- poser des questions d'accueil cohérentes ;
-- noter les noms, les numéros, les moments préférés et la raison de l'appel ;
-- réserver les rendez-vous simples quand vos règles le permettent ;
-- envoyer un résumé d'appel pour que le transfert ne repose pas sur la mémoire ;
-- traiter les appels urgents différemment des demandes routinières.
+### Les signes que vous économiserez peu
 
-La rapidité compte ici. Un rappel deux heures plus tard perd souvent contre une réponse immédiate. Beaucoup de clients sont simplement occupés, et l'entreprise qui répond en premier leur simplifie la vie.
+- Vous recevez quelques appels par mois et vous répondez à presque tous.
+- Votre vente moyenne tourne autour de 40 $ et la plupart des appels manqués peuvent attendre.
+- La plupart des appels demandent un professionnel agréé, un devis sur mesure ou une conversation délicate.
+- La plupart de vos appels manqués viennent de spammeurs, de fournisseurs ou de clients actuels.
+- Vos chiffres ne tiennent qu'à 80 % de récupération.
 
-## Réceptionniste IA, service de réponse ou embauche ?
+## Ce que coûte LobbyStack, et ses limites
 
-La meilleure option dépend de ce que les appelants attendent de la première conversation.
+Nous avons écrit ce guide : nos propres forfaits reçoivent donc le même traitement que les 16 autres fournisseurs.
 
-| Option | Idéal pour | À surveiller |
-| --- | --- | --- |
-| Réceptionniste IA | Questions routinières, qualification, prise de rendez-vous, appels après fermeture, débordements | Tout ne devrait pas être automatisé |
-| Service de réponse humain | Appels qui exigent une vraie personne, mais pas nécessairement quelqu'un dans votre entreprise | La facturation à la minute peut grimper avec le volume |
-| Réceptionniste interne | Environnements très personnalisés où l'accueil gère plusieurs types de tâches | Paie, trous de couverture, formation et relève |
+| Forfait | Prix | Inclus chaque mois | Ensuite |
+| --- | --- | --- | --- |
+| Gratuit | 0 $ | 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone | Les appels tests s'arrêtent jusqu'au mois suivant |
+| Starter | 30 $/mois, ou 288 $/an (24 $/mois) | 150 minutes vocales, 50 SMS d'alerte, 20 tentatives de transfert, un numéro d'entreprise, assistance par e-mail | 0,20 $/min ; 0,02 $ par SMS ou tentative de transfert supplémentaire |
+| Pro | 100 $/mois, ou 960 $/an (80 $/mois) | 500 minutes vocales, 200 SMS d'alerte, 100 tentatives de transfert, un numéro d'entreprise, assistance prioritaire par e-mail | 0,18 $/min ; 0,02 $ par SMS ou tentative de transfert supplémentaire |
+| Enterprise | Sur mesure | Plusieurs numéros, accompagnement dédié à la mise en œuvre | Sur mesure |
 
-Pour beaucoup de petites entreprises, la vraie question est simple : quels appels exigent du jugement humain, et quels appels ont surtout besoin d'une première réponse rapide et exacte ?
+LobbyStack compte les minutes à la seconde, les minutes inutilisées ne passent pas au mois suivant, et les forfaits ne limitent pas le nombre d'appels auxquels le réceptionniste répond en même temps. Aucun forfait n'a de frais de mise en service, et vous pouvez annuler depuis les réglages de facturation, sans frais d'annulation.
 
-Si un appelant a besoin de jugement, d'une escalade ou d'une conversation sensible, il faut le transférer. S'il a besoin des heures d'ouverture, de renseignements de base sur les prix, de disponibilités, d'une qualification ou d'un rappel, l'automatisation peut suffire à garder l'occasion en vie.
+Chaque appel commence dans la langue par défaut de l'entreprise, l'anglais ou le français. Le réceptionniste répond ensuite dans la langue de l'appelant : plus de 70 langues avec GPT-Live d'OpenAI, dont l'espagnol et le serbe. La grille tarifaire de LobbyStack ne contient aucune option payante pour les langues.
 
-## Quand cela vaut probablement le coup
+Les limites de LobbyStack :
 
-Un réceptionniste IA a souvent du sens financièrement si plusieurs de ces situations s'appliquent :
+- Le forfait Gratuit ne sert qu'aux tests dans le navigateur. Les vrais appels, les SMS et les transferts commencent avec Starter.
+- Il ne réserve que dans Google Calendar. Les CRM et les logiciels de gestion des interventions ou de cabinet dentaire ne s'y connectent que par les webhooks et l'API REST.
+- L'IA ne répond pas aux SMS. Votre équipe y répond depuis le tableau de bord.
+- Les transferts vont vers un seul numéro par entreprise, et un appel téléphonique se termine au bout de 30 minutes.
+- Les SMS de confirmation et de rappel de rendez-vous n'atteignent que les numéros américains et canadiens.
 
-- votre équipe manque des appels pendant les heures d'ouverture ;
-- vous recevez des appels le soir ou la fin de semaine ;
-- les clients posent souvent les mêmes questions avant de réserver ;
-- la vitesse de réponse compte parce que les appelants comparent plusieurs options ;
-- vous passez du temps à écouter des messages vocaux et à rappeler ;
-- un seul rendez-vous, mandat ou achat vaut plus que le forfait mensuel.
+Choisissez un autre fournisseur dans ces cas :
 
-Il est particulièrement utile lorsque la prochaine étape est claire : répondre à une question, recueillir des détails, réserver un rendez-vous, envoyer un résumé ou transférer un appel urgent.
+- **AI-Receptionist.com** pour le prix d'entrée payant le plus bas et la facture la moins chère à 40 appels courts.
+- **Upfirst, Aira ou Quo Sona** quand vos appels durent longtemps.
+- **Goodcall** quand les mêmes clients appellent plusieurs fois par mois.
+- **Smith.ai** pour un forfait gratuit qui prend de vrais appels, chez une entreprise qui vend aussi des réceptionnistes humaines.
+- **Nextiva XBert** pour une seule allocation qui couvre les appels, les SMS et le chat web.
+- **Jobber Receptionist** pour les entreprises sur Jobber, et **Dentina** ou **Viva AI** pour réserver dans un logiciel de cabinet dentaire.
 
-Plus votre flux d'appels est répétable, plus il est facile pour un réceptionniste IA de vous faire économiser. Si vous connaissez déjà les cinq questions que votre équipe pose à chaque nouvel appelant, vous avez un excellent point de départ.
+D'autres répondent à des besoins plus étroits. Rosie vous donne 250 minutes à 49 $ si vous n'avez besoin ni de réservation dans l'agenda ni de transferts. ElevenLabs Reception réunit téléphone, chat et page de réservation dans un seul agent. My AI Front Desk regroupe un agent conversationnel et l'envoi vers HubSpot ou Salesforce dans un même forfait. Moneypenny AI peut faire passer les appels à ses réceptionnistes humaines, et CloudTalk fait tourner l'IA dans un système téléphonique que vos agents partagent.
 
-## Quand les économies peuvent être limitées
-
-Il faut aussi être honnête sur les cas où les économies seront faibles.
-
-Si vous recevez seulement quelques appels par mois, que vous répondez déjà à presque tous et que la valeur moyenne d'un client est basse, le retour financier ne sera peut-être pas spectaculaire. Vous pouvez quand même vouloir une meilleure couverture, mais la décision relèvera davantage du confort que des économies.
-
-Si la plupart des appels exigent un professionnel autorisé, un devis sur mesure ou une conversation humaine délicate, un réceptionniste IA devrait surtout recueillir le contexte, poser les bonnes attentes et transférer proprement.
-
-La partie utile, c'est la couverture. Les bons appelants obtiennent une réponse avant de disparaître.
-
-Il y a aussi une question de confiance. Si vos clients s'attendent à une conversation très personnelle dès la première seconde, l'automatisation doit être utilisée avec soin. Une mauvaise mise en place peut donner l'impression d'un mur. Une bonne mise en place devrait plutôt ressembler à une première étape utile : rapide, claire et honnête sur le moment où une personne prendra le relais.
-
-L'objectif est d'éviter que les occasions faciles meurent dans la messagerie vocale.
-
-## Une façon rapide d'estimer vos économies
-
-Utilisez cette feuille de calcul en cinq minutes :
-
-1. Comptez les appels manqués par semaine.
-2. Retirez le spam, les fournisseurs et les appels qui n'étaient pas de vraies occasions.
-3. Estimez combien de vraies occasions se transforment habituellement en réservation ou en achat.
-4. Multipliez par la valeur moyenne d'un mandat, d'un rendez-vous, d'une commande ou d'un client.
-5. Estimez le pourcentage qu'une meilleure réponse pourrait raisonnablement récupérer.
-6. Soustrayez le coût du forfait de réceptionniste IA.
-
-Ou évitez le tableur et utilisez le [calculateur d'appels manqués](/fr/missed-call-revenue-calculator/).
-
-Si vous n'êtes pas certain du pourcentage de récupération, commencez bas. Essayez 10 %, 25 % et 50 %, puis voyez où la décision change. Si les chiffres ne fonctionnent qu'avec 80 % de récupération, le scénario est probablement trop optimiste. S'ils fonctionnent déjà à 10 % ou 25 %, le risque est plus facile à comprendre.
-
-Il est aussi utile de séparer trois chiffres :
-
-- **Économies administratives :** le temps que vous ne passez plus à répondre aux appels routiniers ou à courir après les messages vocaux.
-- **Revenus récupérés :** les bonnes occasions traitées avant de disparaître.
-- **Coûts évités :** l'argent économisé sur une couverture téléphonique supplémentaire, les rappels d'appels manqués ou le soutien en débordement.
-
-Mettez ces trois éléments ensemble, et la décision devient plus claire. Le produit sert à couvrir une fuite précise dans l'entreprise.
+Pour entendre le réceptionniste avant de payer, [créez un compte LobbyStack gratuit](https://app.lobbystack.com/fr/signup) et appelez-le depuis votre navigateur, sans carte. Pour obtenir un numéro d'entreprise, comparez Starter et Pro sur la [page des tarifs de LobbyStack](/fr/pricing/).
 
 ## FAQ
 
-### Un réceptionniste IA coûte-t-il moins cher qu'un service de réponse ?
+### Un réceptionniste IA coûte-t-il moins cher qu'une permanence téléphonique ?
 
-Souvent, oui, surtout pour les appels routiniers, la qualification et la prise de rendez-vous. Un service de réponse humain peut toutefois rester le meilleur choix si chaque appel doit être traité par une vraie personne. La vraie question est de savoir si vous avez besoin de jugement humain sur chaque appel, ou d'une couverture fiable pour les appels répétables qui arrivent toute la journée.
+Pour la plupart des petites entreprises, oui. À 40 appels de trois minutes par mois, les forfaits IA que nous avons chiffrés le 9 octobre 2026 coûtent de 25,25 $ à 99 $, et les permanences téléphoniques de 127 $ à 720 $. Une permanence coûte plus cher parce qu'une personne prend chaque appel. Ce surcoût se justifie quand vos appelants ont besoin du jugement d'une personne.
 
-### Comment calculer le retour sur investissement d'un réceptionniste IA ?
+### Les appels indésirables comptent-ils dans mes minutes ?
 
-Additionnez les revenus que vous pensez récupérer grâce aux appels manqués et les coûts de réponse que vous pouvez réduire, puis soustrayez le coût du réceptionniste IA. Gardez la première estimation prudente. Il vaut mieux être agréablement surpris que bâtir un calcul d'affaires sur des chiffres trop optimistes.
+Cela dépend du fournisseur. Upfirst ne facture ni le spam ni les appels de moins de 15 secondes, Goodcall ne compte ni le spam ni les faux numéros, et Smith.ai vous laisse retirer jusqu'à 10 % des appels comme spam. Sur LobbyStack, les appels de moins de 10 secondes et ceux que le réceptionniste termine comme spam ne comptent pas, et les autres appels comptent.
 
-### Un réceptionniste IA récupère-t-il tous les appels manqués ?
+### Les minutes inutilisées sont-elles reportées ?
 
-Non. Certains appelants ne sont pas prêts à réserver, ne sont pas qualifiés, sont hors de votre zone de service ou ne correspondent pas à votre entreprise. L'objectif est de récupérer une part réaliste des bons appels en répondant plus vite, en recueillant les bons détails et en rendant la prochaine étape facile.
+Pas sur LobbyStack. Les minutes incluses repartent à zéro chaque mois, en facturation mensuelle comme annuelle. Les crédits de Quo Sona se renouvellent chaque mois sans report, et RingCentral AIR ne reporte pas non plus ses minutes. Smith.ai mentionne un forfait de 6 mois avec report des appels, sans en publier le prix : posez la question à son équipe commerciale.
+
+### Un réceptionniste IA peut-il répondre aux appels en espagnol ?
+
+Beaucoup le peuvent. Smith.ai, Rosie et Dialzara annoncent l'anglais et l'espagnol. Upfirst annonce plus de 35 langues, My AI Front Desk plus de 20, Zoom 23, et CloudTalk et ElevenLabs Reception plus de 70. LobbyStack commence chaque appel en anglais ou en français, puis répond dans la langue de l'appelant : plus de 70 langues avec GPT-Live d'OpenAI, dont l'espagnol et le serbe.
+
+### Combien d'appels manqués faut-il récupérer pour qu'il soit rentable ?
+
+Tout dépend de la valeur d'un client. Si un contrat réservé rapporte 300 $, une seule réservation récupérée paie LobbyStack Starter (30 $) ou Pro (100 $). Si chaque vente vaut 40 $, il vous faut une vente récupérée par mois pour Starter et trois pour Pro, sans compter le temps que vous gagnez sur les rappels.
+
+### Les appelants verront-ils un problème à parler à une IA ?
+
+Certains, oui, si l'appel paraît évasif ou s'ils ne peuvent pas joindre une personne. Les appelants qui veulent une réservation ou une réponse rapide ont besoin d'une prochaine étape claire. Gardez un message d'accueil court, dites ce que le réceptionniste peut faire, et transférez l'appel ou prenez un message quand l'appelant a besoin d'une personne.
 
 ## En bref
 
-Pour beaucoup de petites entreprises, un réceptionniste IA peut faire économiser de quelques dizaines à plusieurs centaines ou milliers de dollars par mois, entre temps administratif et revenus protégés. Les entreprises qui voient le retour le plus net ont souvent des appels à forte valeur, des équipes occupées et un vrai trou de couverture.
-
-Le meilleur moyen de trouver votre chiffre est de passer vos appels dans le [calculateur d'appels manqués](/fr/missed-call-revenue-calculator/), de comparer le résultat aux [tarifs](/fr/pricing/) et de décider si le prochain appel manqué mérite d'être couvert. Pour l'évaluation des fournisseurs, croisez cela avec [comment choisir un réceptionniste IA](/fr/blog/how-to-choose-an-ai-receptionist/) et [créer ou acheter son réceptionniste IA](/fr/blog/build-or-buy-ai-receptionist/).
+La plupart des réceptionnistes IA coûtent de 14 $ à 150 $ par mois à l'entrée. À 40 appels de trois minutes, les forfaits de ce guide chiffrés en entier vont de 25,25 $ à 99 $, et à 100 appels, de 60 $ à 212,50 $. Vos appels manqués et la valeur de chacun déterminent si le forfait est rentable : passez-les dans le [calculateur de revenus perdus](/fr/missed-call-revenue-calculator/). Comparez ensuite les forfaits sur la [page des tarifs de LobbyStack](/fr/pricing/), ou commencez avec le forfait Gratuit et écoutez le réceptionniste dans votre navigateur.

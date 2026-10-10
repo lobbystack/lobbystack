@@ -97,7 +97,7 @@ This can be a good fit when:
 - You want human backup during business hours or after hours.
 - You need a stronger service experience than pure automation can provide.
 
-For context, live virtual receptionist pricing can climb with usage. [Ruby's public pricing page](https://www.ruby.com/plans-and-pricing/) lists 50 receptionist minutes at $250/month and 100 minutes at $395/month, with larger plans above that. That may be worth it when every call needs a trained human. It may be overkill when most callers need routine answers, booking, intake, or a clear handoff.
+For context, live virtual receptionist pricing can climb with usage. [Ruby's public pricing page](https://www.ruby.com/plans-and-pricing/) lists 50 receptionist minutes at $250/month and 100 minutes at $395/month, with larger plans above that. That may be worth it when every call needs a trained human. It may be overkill when most callers need routine answers, booking, intake, or a clear handoff. Our roundup of the [best answering services for small business](/blog/best-answering-service-for-small-business/) compares live, hybrid and AI options side by side.
 
 ## Compare the features that change outcomes
 
@@ -207,7 +207,7 @@ real calls per month x average call length
 
 If the plan is based on unique customers, estimate that too. If your business has seasonal spikes, model the busy month, more than the quiet month.
 
-The better ROI question is not "Is this cheaper than a receptionist?" The [Bureau of Labor Statistics](https://www.bls.gov/ooh/Office-and-Administrative-Support/Receptionists.htm) reported a median receptionist wage of $17.90/hour in May 2024, before payroll taxes, benefits, training, and coverage gaps. That comparison can be useful, but it is too broad.
+The better ROI question is not "Is this cheaper than a receptionist?" The [Bureau of Labor Statistics](https://www.bls.gov/ooh/Office-and-Administrative-Support/Receptionists.htm) reported a median receptionist wage of $17.90/hour in May 2024, before payroll taxes, benefits, training, and coverage gaps. That comparison can be useful, but it is too broad. If your real alternative is a human service, compare against [what a live answering service costs](/blog/how-much-does-an-answering-service-cost/) instead.
 
 The sharper question is:
 

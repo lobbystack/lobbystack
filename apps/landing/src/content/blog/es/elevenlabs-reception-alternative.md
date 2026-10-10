@@ -58,7 +58,7 @@ Reception descuenta las llamadas y el chat web de una misma bolsa de créditos. 
 
 Basic, además, solo permite una llamada a la vez. Si dos clientes llaman al mismo tiempo, solo uno llega a la recepcionista. Plus sube el límite a 3 y Premium a 10.
 
-LobbyStack cuenta los minutos de voz por separado. Ningún plan limita cuántas llamadas pueden estar activas a la vez, así que dos personas que llaman en Starter llegan las dos a la recepcionista. Hay una excepción: si fija un límite de gasto mensual, la llamada activa reserva el saldo restante, y una segunda persona oye el mensaje de límite hasta que termina la primera llamada.
+LobbyStack cuenta los minutos de voz por separado. Ningún plan limita cuántas llamadas pueden estar activas a la vez, así que dos personas que llaman en Starter llegan las dos a la recepcionista. Hay una excepción: si fija un límite de gasto mensual, la llamada activa reserva el saldo restante, y una segunda persona oye tono de ocupado hasta que termina la primera llamada.
 
 ## ¿ElevenLabs Reception cumple con HIPAA?
 

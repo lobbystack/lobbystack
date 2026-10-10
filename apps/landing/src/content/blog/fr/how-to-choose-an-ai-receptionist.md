@@ -97,7 +97,7 @@ Cela peut convenir quand :
 - vous voulez une sécurité humaine en journée ou la nuit ;
 - vous avez besoin d'une expérience plus forte que ce que l'automatisation seule peut offrir.
 
-Pour contexte, la [page tarifs publique de Ruby](https://www.ruby.com/plans-and-pricing/) affiche 50 minutes de réceptionniste à 250 $/mois et 100 minutes à 395 $/mois, avec des forfaits plus grands au‑dessus. Cela peut valoir le coût quand chaque appel doit passer par un humain formé. Cela peut être excessif quand la plupart des appelants ont besoin de réponses routinières, de réservation, d'accueil ou d'un transfert clair.
+Pour contexte, la [page tarifs publique de Ruby](https://www.ruby.com/plans-and-pricing/) affiche 50 minutes de réceptionniste à 250 $/mois et 100 minutes à 395 $/mois, avec des forfaits plus grands au‑dessus. Cela peut valoir le coût quand chaque appel doit passer par un humain formé. Cela peut être excessif quand la plupart des appelants ont besoin de réponses routinières, de réservation, d'accueil ou d'un transfert clair. Notre comparatif de la [meilleure permanence téléphonique pour PME](/fr/blog/best-answering-service-for-small-business/) met côte à côte les services humains, hybrides et IA.
 
 ## Comparer les fonctionnalités qui changent le résultat
 
@@ -116,7 +116,7 @@ Appelez depuis un mobile. Appelez dans une pièce bruyante. Appelez en voiture h
 - la gestion des interruptions ;
 - la reprise quand l'appelant change d'avis ;
 - si l'IA pose une question à la fois ;
-- l'épellation des noms, courriels, adresses, numéros de commande ou dossiers ;
+- l'épellation des noms, e-mails, adresses, numéros de commande ou dossiers ;
 - si la voix correspond à votre marque sans prétendre être un employé réel.
 
 Une voix naturelle est agréable. Une gestion calme et précise compte davantage.
@@ -157,7 +157,7 @@ Cherchez :
 
 - transfert en direct vers le personnel ;
 - routage d'urgence hors horaires ;
-- alertes SMS ou courriel pour les appels urgents ;
+- alertes SMS ou e-mail pour les appels urgents ;
 - résumés de transfert à chaud ;
 - règles pour clients VIP ;
 - règles pour plaintes ;
@@ -180,7 +180,7 @@ Sans rapports, vous devinez. Et si la ligne téléphonique génère du chiffre d
 
 Le forfait le moins cher n'est pas toujours le coût le plus bas pour faire tourner votre téléphone.
 
-Les tarifs de réceptionniste IA peuvent reposer sur des forfaits mensuels, des minutes, des appels, des clients uniques, des agents, des sites, des crédits, des SMS, des numéros, des transferts humains, des workflows personnalisés, de l'onboarding ou du support entreprise. Le même prix affiché peut signifier des choses très différentes une fois un mois normal d'appels passé dedans. Par exemple, [ElevenLabs Reception](/fr/blog/elevenlabs-reception-alternative/) puise les appels et le clavardage web dans une seule réserve de crédits, donc le clavardage réduit vos minutes d'appel.
+Les tarifs de réceptionniste IA peuvent reposer sur des forfaits mensuels, des minutes, des appels, des clients uniques, des agents, des sites, des crédits, des SMS, des numéros, des transferts humains, des workflows personnalisés, de l'onboarding ou du support entreprise. Le même prix affiché peut signifier des choses très différentes une fois un mois normal d'appels passé dedans. Par exemple, [ElevenLabs Reception](/fr/blog/elevenlabs-reception-alternative/) puise les appels et le chat web dans une seule réserve de crédits, donc le chat réduit vos minutes d'appel.
 
 Posez ces questions avant de comparer les prix :
 
@@ -207,7 +207,7 @@ appels réels par mois x durée moyenne d'appel
 
 Si le forfait repose sur des clients uniques, estimez cela aussi. Si votre activité a des pics saisonniers, modélisez le mois chargé, pas seulement le mois calme.
 
-La meilleure question de retour sur investissement n'est pas « est‑ce moins cher qu'un réceptionniste ? » Le [Bureau of Labor Statistics](https://www.bls.gov/ooh/Office-and-Administrative-Support/Receptionists.htm) indiquait un salaire médian de 17,90 $/heure en mai 2024, avant charges, avantages, formation et trous de couverture. Cette comparaison peut aider, mais elle reste trop large.
+La meilleure question de retour sur investissement n'est pas « est‑ce moins cher qu'un réceptionniste ? » Le [Bureau of Labor Statistics](https://www.bls.gov/ooh/Office-and-Administrative-Support/Receptionists.htm) indiquait un salaire médian de 17,90 $/heure en mai 2024, avant charges, avantages, formation et trous de couverture. Cette comparaison peut aider, mais elle reste trop large. Si votre vraie alternative est un service humain, comparez plutôt avec [ce que coûte un service de réponse téléphonique](/fr/blog/how-much-does-an-answering-service-cost/).
 
 La question plus nette est :
 
@@ -247,7 +247,7 @@ Pour la santé, le dentaire, la thérapie et d'autres cas couverts, demandez si 
 
 Pour l'enregistrement d'appels, ne supposez pas qu'une seule règle s'applique partout. Les règles de consentement varient selon les juridictions. Un fournisseur doit faciliter la configuration des avis et du consentement, et votre déploiement doit suivre la règle la plus stricte applicable à vos appelants et à votre entreprise.
 
-Pour les appels et textos sortants, soyez encore plus prudent. La [FCC a confirmé](https://docs.fcc.gov/public/attachments/FCC-24-17A1.pdf) que les restrictions TCPA sur les messages vocaux artificiels ou préenregistrés incluent les voix humaines générées par IA. Si le produit peut appeler ou texter des clients, demandez comment il gère consentement, désinscription, divulgation et journaux d'audit.
+Pour les appels et SMS sortants, soyez encore plus prudent. La [FCC a confirmé](https://docs.fcc.gov/public/attachments/FCC-24-17A1.pdf) que les restrictions TCPA sur les messages vocaux artificiels ou préenregistrés incluent les voix humaines générées par IA. Si le produit peut appeler ou envoyer des SMS aux clients, demandez comment il gère consentement, désinscription, divulgation et journaux d'audit.
 
 Demandez aussi ce qui concerne l'usurpation. Un réceptionniste peut être agréable sans prétendre être un humain précis. Le clonage vocal, les fausses identités d'employés et les promesses vagues du type « ils ne le sauront jamais » ne sont pas des signes de confiance.
 

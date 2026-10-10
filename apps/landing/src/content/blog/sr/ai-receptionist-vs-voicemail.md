@@ -29,6 +29,8 @@ Govorna pošta i dalje ima svoje mesto. Malo košta, radi sa gotovo svakim telef
 | Cena | Pretplata i potrošnja | Često uključena u telefonski sistem |
 | Rad osoblja | Pregled ishoda i izuzetaka | Slušanje, tumačenje, povratni poziv i završetak posla |
 
+Ako razmatrate i telefonski meni ili govornu poštu sa prepisom, naš [vodič za automatsko odgovaranje na pozive](/sr/blog/automated-answering-service/) ih poredi sa AI recepcionerom.
+
 ## Govorna pošta radi kada čekanje nosi mali rizik
 
 Govorna pošta je i dalje dovoljna za manje hitne pozive ljudi koji već poznaju firmu:

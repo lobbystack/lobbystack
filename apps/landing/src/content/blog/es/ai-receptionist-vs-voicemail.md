@@ -29,6 +29,8 @@ El buzón de voz sigue teniendo su lugar. Cuesta poco, funciona con casi cualqui
 | Costo | Suscripción y uso | A menudo incluido en el sistema telefónico |
 | Trabajo del personal | Revisar resultados y excepciones | Escuchar, interpretar, devolver la llamada y completar el trabajo |
 
+Si también está pensando en un menú telefónico o un buzón de voz con transcripción, nuestra [guía de atención telefónica automatizada](/es/blog/automated-answering-service/) los compara con una recepcionista con IA.
+
 ## El buzón de voz funciona cuando esperar implica poco riesgo
 
 El buzón de voz sigue siendo adecuado para llamadas poco urgentes de personas que ya conocen el negocio:

@@ -128,15 +128,15 @@ The receptionist can turn caller language into a staff-ready message. LobbyStack
 
 ### Handoff
 
-Transfers need more than an intent branch. The receptionist should know which calls need a person, what to say before transfer, and what to do when no one answers.
+Transfers need more than an intent branch. The receptionist should know which calls need a person, what to say before transfer, and what to do when a transfer fails.
 
 You can write:
 
 ```text
 Transfer urgent calls, upset customers, high-value leads, and questions the
-AI is not allowed to answer. Before transferring, summarize what the caller
-needs. If no one answers, take a message, mark the reason for handoff, and
-tell the caller when the team will respond.
+AI is not allowed to answer. Before transferring, tell the caller you are
+transferring them. If the transfer fails, take a message, mark the reason
+for handoff, and tell the caller when the team will respond.
 ```
 
 The business gets a safer handoff because the AI has a policy, the voice layer executes the transfer, and the backend records the outcome.
@@ -149,7 +149,7 @@ If your AI receptionist depends on a chain of branches to decide what to say, wh
 
 LobbyStack replaces that layer. It owns the live call behavior, call state, tool results, transcript context, handoff reason, and final outcome.
 
-You may still use n8n, Zapier, or Make for automations outside the call. LobbyStack does not connect to them or send outgoing webhooks, so they stay off the live call. The AI receptionist should be able to decide the next responsible action during the call, then record a clean outcome staff can trust.
+You may still use n8n, Zapier, or Make for automations outside the call. LobbyStack's signed webhooks can start them after the call, so they stay off the live call. The AI receptionist should be able to decide the next responsible action during the call, then record a clean outcome staff can trust.
 
 ## Where LobbyStack fits
 

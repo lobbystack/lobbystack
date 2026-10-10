@@ -10,7 +10,7 @@ export const afterHoursRouting: Pick<TradeDetails, "noun" | "routing"> = {
       call: "An emergency your rules define, like no heat or an active leak",
       action: "Transfers",
       detail:
-        "Collects the address and the problem, then connects whoever is on call",
+        "Collects the address and the problem, then connects your on-call number",
     },
     {
       call: "A new customer who wants an appointment",
@@ -211,7 +211,8 @@ export const dentalDetails: Pick<TradeDetails, "noun" | "routing" | "intake"> =
       {
         call: "A patient who needs to reschedule",
         action: "Books",
-        detail: "Finds the appointment, checks who's calling, and moves it",
+        detail:
+          "Moves it if you've turned on appointment changes; otherwise files a request for your team",
       },
       {
         call: "A question about insurance, hours, or parking",
@@ -226,7 +227,7 @@ export const dentalDetails: Pick<TradeDetails, "noun" | "routing" | "intake"> =
       {
         call: "A robocall or sales pitch",
         action: "Ends the call",
-        detail: "Hangs up, and the call doesn't count toward your minutes",
+        detail: "Hangs up, and calls it ends as spam don't count toward your minutes",
       },
     ],
     intake: [

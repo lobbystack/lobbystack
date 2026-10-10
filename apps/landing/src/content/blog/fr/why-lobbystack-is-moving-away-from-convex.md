@@ -32,7 +32,7 @@ Convex nous a donné une bonne première étape et continue de servir nos client
 
 LobbyStack a maintenant besoin de plus d'entreprises utilisatrices et de plus de développeurs prêts à l'exécuter, l'inspecter et l'étendre. L'adoption de ces deux groupes reste sous nos attentes.
 
-L'évaluation technique créait des frictions pour certaines équipes que nous voulions rejoindre. Un contributeur devait comprendre notre produit et ajouter Convex aux systèmes à apprendre. Un opérateur devait gérer les services LobbyStack ainsi qu'un backend Convex séparé. Une agence qui préparait un déploiement client devait expliquer cette architecture à son équipe et à son client.
+L'évaluation technique créait des frictions pour certaines équipes que nous voulions toucher. Un contributeur devait comprendre notre produit et ajouter Convex aux systèmes à apprendre. Un opérateur devait gérer les services LobbyStack ainsi qu'un backend Convex séparé. Une agence qui préparait un déploiement client devait expliquer cette architecture à son équipe et à son client.
 
 Les équipes consacraient plus de temps à l'évaluation et à l'apprentissage de l'infrastructure avant de pouvoir adopter le produit.
 

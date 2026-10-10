@@ -131,7 +131,7 @@ export function Solution() {
     "Collect job details: service type, address, urgency, and budget",
     "Book appointments while the homeowner is still on the phone",
     "Send confirmation texts and notify your team instantly",
-    "Route emergency calls to your on-call technician with full context",
+    "Transfer emergency calls to your on-call technician",
     "Save recordings, transcripts, summaries, and next steps",
   ]
 

@@ -41,7 +41,7 @@ const freePlanPoint = "El plan Free incluye 30 minutos de voz para pruebas"
 
 const callSummaryFaq = (detail: string): FaqItem => ({
   question: "¿Podré ver lo que se habló en cada llamada?",
-  answer: `Sí. Después de cada llamada, LobbyStack envía un resumen con los datos de la persona que llama, ${detail}, la hora de la cita, la transcripción y la grabación. Puede revisarlo en el panel o recibir alertas por correo electrónico y SMS.`,
+  answer: `Sí. LobbyStack guarda en el panel un resumen, la transcripción y la grabación de cada llamada, donde encontrará ${detail}. Cuando toma un mensaje, su equipo recibe una alerta por correo electrónico, o por SMS si activa esas alertas.`,
 })
 
 const volumePricingFaq = (business: string, shops: string): FaqItem => ({
@@ -111,7 +111,7 @@ const tradePage = ({
         points: [
           "Consulta la disponibilidad del calendario en tiempo real",
           booking.point,
-          "Envía la confirmación y los próximos pasos a la persona que llama y a su equipo",
+          "Envía a la persona que llama una confirmación por SMS y agrega la visita a su calendario",
         ],
       },
       {
@@ -119,8 +119,8 @@ const tradePage = ({
         body: intake.body,
         points: [
           "Hace en cada llamada las preguntas iniciales que usted defina",
-          "Adjunta las respuestas al resumen de la reserva",
-          "Envía la transcripción y la grabación junto con los detalles de la cita",
+          "Guarda las respuestas en la transcripción de la llamada",
+          "Guarda la transcripción y la grabación en el panel",
         ],
       },
     ],
@@ -217,26 +217,26 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
     {
       title: "Servicio de atención fuera de horario con IA | LobbyStack",
       description:
-        "LobbyStack atiende las llamadas de su negocio fuera de horario, reserva citas en su calendario y transfiere las urgencias a quien esté de guardia. Plan gratuito y luego $30 al mes.",
+        "LobbyStack atiende las llamadas de su negocio fuera de horario, reserva citas en su calendario y transfiere las urgencias a su número de guardia. Plan gratuito y luego $30 al mes.",
       eyebrow: "Atención fuera de horario",
       h1: "Servicio de atención telefónica fuera de horario con IA para pequeños negocios",
       intro:
-        "LobbyStack contesta el teléfono de su negocio por la noche, los fines de semana y los días festivos. Reserva los trabajos de rutina en su calendario y transfiere las urgencias a quien esté de guardia. Por la mañana, encontrará en el panel un resumen de cada llamada.",
+        "LobbyStack contesta el teléfono de su negocio por la noche, los fines de semana y los días festivos. Reserva los trabajos de rutina en su calendario y transfiere las urgencias a su número de guardia. Por la mañana, encontrará en el panel un resumen de cada llamada.",
       imageAlt:
         "LobbyStack atiende llamadas fuera de horario y deriva las solicitudes urgentes",
       proofPoints: [
         "Atiende por la noche, los fines de semana y los festivos en su número actual",
-        "Transfiere las urgencias a su teléfono de guardia con los datos de quien llama",
+        "Transfiere las urgencias a su teléfono de guardia",
         "Plan Free con 30 minutos y luego $30 al mes por 150",
       ],
       sections: [
         {
-          title: "Las urgencias llegan a quien esté de guardia",
-          body: "Usted define qué es urgente: sin calefacción por debajo de cierta temperatura, agua que no deja de salir, un inquilino que se quedó fuera. LobbyStack hace las preguntas que su regla necesita y transfiere la llamada con la dirección y el problema ya registrados. Lo que puede esperar pasa al resumen de la mañana.",
+          title: "Las urgencias llegan a su teléfono de guardia",
+          body: "Usted define qué es urgente: sin calefacción por debajo de cierta temperatura, agua que no deja de salir, un inquilino que se quedó fuera. LobbyStack hace las preguntas que su regla necesita y transfiere la llamada a su número de guardia. La dirección y el problema que registró quedan en la transcripción de la llamada. Lo que puede esperar queda resumido en el panel para la mañana.",
           points: [
             "Transfiere al número de guardia que usted elija",
             "Primero lee sus pasos de seguridad, como dónde cerrar la llave de paso del agua",
-            "Envía un SMS de alerta a su equipo en las llamadas urgentes",
+            "Si una transferencia no se completa, ofrece tomar un mensaje y puede avisar a su equipo",
           ],
         },
         {
@@ -262,7 +262,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "¿Qué es un servicio de atención fuera de horario con IA?",
           answer:
-            "Un servicio de atención fuera de horario con IA contesta las llamadas de su negocio fuera del horario habitual, responde preguntas, reserva citas, registra los datos de quien llama y deriva las llamadas urgentes a la persona adecuada. Funciona por la noche, los fines de semana, los festivos y en cualquier momento en que su equipo no esté disponible.",
+            "Un servicio de atención fuera de horario con IA contesta las llamadas de su negocio fuera del horario habitual, responde preguntas, reserva citas, registra los datos de quien llama y transfiere las llamadas urgentes a su número de guardia. Funciona por la noche, los fines de semana, los festivos y en cualquier momento en que su equipo no esté disponible.",
         },
         {
           question: "¿De verdad puede reservar citas fuera de horario?",
@@ -277,7 +277,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "¿Va a despertar a mi personal de guardia?",
           answer:
-            "Solo cuando usted lo decida. Usted fija los criterios para las transferencias y las alertas. Los mensajes de rutina, las solicitudes de presupuesto y las reservas quedan resumidos para la mañana. Las urgencias reales se derivan de inmediato con todo el contexto.",
+            "Solo cuando usted lo decida. Usted fija los criterios para las transferencias y las alertas. Los mensajes de rutina, las solicitudes de presupuesto y las reservas quedan resumidos para la mañana. Las llamadas que cumplen sus reglas de urgencia se transfieren durante la llamada.",
         },
         {
           question: "¿Funciona con el número actual de mi negocio?",
@@ -293,7 +293,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "¿En qué se diferencia de un buzón de voz?",
           answer:
-            "El buzón de voz pide a quien llama que deje un mensaje y espere. La mayoría cuelga. LobbyStack contesta la llamada, hace preguntas, registra los datos y reserva citas. La persona recibe ayuda en el momento y su equipo recibe un resumen completo.",
+            "El buzón de voz pide a quien llama que deje un mensaje y espere. La mayoría cuelga. LobbyStack contesta la llamada, hace preguntas, registra los datos y reserva citas. La persona recibe ayuda en el momento y su equipo encuentra un resumen y la transcripción en el panel.",
         },
         {
           question: "¿Es más barato que un servicio de atención con personas?",
@@ -304,7 +304,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
           question:
             "¿Puedo revisar lo que pasó en las llamadas fuera de horario?",
           answer:
-            "Sí. Cada llamada genera un resumen, una transcripción, una grabación y los detalles de la reserva. Puede revisarlos en el panel de LobbyStack o recibir alertas por correo electrónico y SMS. Nada se pierde durante la noche.",
+            "Sí. Cada llamada genera un resumen, una transcripción, una grabación y los detalles de la reserva. Puede revisarlos en el panel de LobbyStack, y su equipo recibe una alerta por correo electrónico o SMS cuando la recepcionista toma un mensaje. Nada se pierde durante la noche.",
         },
         {
           question: "¿Cuánto cuesta la atención fuera de horario?",
@@ -317,6 +317,10 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         {
           label: "Atención telefónica con IA",
           href: "/solutions/ai-phone-answering/",
+        },
+        {
+          label: "Cuánto cuesta un servicio de atención telefónica",
+          href: "/blog/how-much-does-an-answering-service-cost/",
         },
         pricingLink,
         {
@@ -334,103 +338,149 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
   "/solutions/ai-receptionist-for-dental-offices/": spanishPage(
     "/solutions/ai-receptionist-for-dental-offices/",
     {
-      title: "Atención telefónica con IA para clínicas dentales | LobbyStack",
+      title: "Recepcionista dental con IA para su clínica | LobbyStack",
       description:
-        "LobbyStack atiende las llamadas de su clínica dental cuando la recepción está ocupada o cerrada. Reserva pacientes nuevos, responde sobre seguros y transfiere urgencias.",
+        "LobbyStack, recepcionista dental con IA, contesta si la recepción está ocupada o cerrada, reserva en Google Calendar y transfiere urgencias. Desde $30 al mes.",
       eyebrow: "Clínicas dentales",
-      h1: "Servicio de atención telefónica con IA para clínicas dentales",
+      h1: "Recepcionista con IA y atención telefónica para clínicas dentales",
       intro:
-        "LobbyStack contesta el teléfono de su clínica cuando la recepción está ocupada, a la hora del almuerzo y fuera de horario. Reserva en su calendario las citas de pacientes nuevos y las limpiezas, responde preguntas sobre seguros y envía las urgencias a su dentista de guardia.",
+        "Una recepcionista dental con IA contesta el teléfono de su clínica cuando la recepción está ocupada, a la hora del almuerzo o fuera de horario. LobbyStack reserva en Google Calendar las citas de pacientes nuevos y las limpiezas, responde preguntas sobre los seguros aceptados y las políticas de la clínica con la información que usted carga, y transfiere las urgencias a su número de guardia. Los planes de pago empiezan en $30 al mes, sin tarifa de configuración.",
       imageAlt: "LobbyStack reserva la cita de un paciente y resume la llamada",
       proofPoints: [
-        "Atiende llamadas de pacientes nuevos, seguros y citas",
-        "Reserva en Google Calendar y puede enviar un SMS de recordatorio el día anterior",
-        "Transfiere las urgencias fuera de horario a su dentista de guardia",
+        "Reserva en Google Calendar y puede enviar por SMS una confirmación y un recordatorio el día anterior",
+        "Transfiere las urgencias fuera de horario a su número de guardia",
+        "Empieza en inglés o francés y luego habla con los pacientes en más de 70 idiomas, entre ellos el español y el serbio",
       ],
       sections: [
         {
           title: "Su recepción se queda con el paciente que tiene delante",
-          body: "Cuando el teléfono suena mientras registran a un paciente, LobbyStack contesta. Reserva las visitas de rutina, responde preguntas sobre seguros y estacionamiento con la información que usted cargó, y deja por escrito todo lo demás para que su equipo lo gestione entre pacientes.",
+          body: "El teléfono suena mientras registran a un paciente, y LobbyStack atiende las llamadas de pacientes nuevos, de seguros y de citas. Reserva las visitas de rutina y responde sobre los seguros aceptados y el estacionamiento con la información que usted cargó. Deja por escrito todo lo demás para que su equipo lo resuelva entre un paciente y otro.",
           points: [
-            "Contesta cuando su línea está ocupada, o atiende todas las llamadas",
+            "Contesta cuando su línea está ocupada, después del cierre o en todas las llamadas, según cómo desvíe su número",
             "Responde sobre horarios, estacionamiento, formularios y seguros aceptados",
-            "Guarda un resumen, una transcripción y una grabación de cada llamada",
+            "Guarda la grabación, la transcripción y un resumen de una línea de cada llamada",
           ],
         },
         {
           title: "Los pacientes nuevos reservan en la primera llamada",
-          body: "Los pacientes nuevos suelen llamar a la hora del almuerzo o después del trabajo. LobbyStack registra su seguro y el motivo de la visita, ofrece horarios libres de su Google Calendar y reserva la consulta. El paciente recibe una confirmación por SMS y, si lo acepta, un recordatorio el día anterior.",
+          body: "Los pacientes nuevos también llaman a la hora del almuerzo y después del trabajo. LobbyStack registra su seguro y el motivo de la visita, ofrece los horarios libres de su Google Calendar dentro de su horario de atención y reserva la consulta. Si prefiere confirmar cada visita usted mismo, configúrelo para que guarde el horario que prefiere el paciente como una solicitud para su equipo, o para que tome un mensaje. Los pacientes que aceptan reciben un SMS de confirmación y un recordatorio el día anterior. En LobbyStack Cloud, los SMS solo llegan a números de Estados Unidos y Canadá.",
           points: [
-            "Reserva en Google Calendar durante la llamada",
-            "Envía un recordatorio por SMS 24 horas antes de la visita si el paciente lo acepta",
-            "Cambia o cancela citas después de verificar quién llama",
+            "Reserva en Google Calendar durante la llamada, para la clínica o para cada dentista e higienista",
+            "Envía por SMS una confirmación y un recordatorio 24 horas antes, si el paciente lo acepta",
+            "Si activa los cambios de citas, los pacientes pueden mover o cancelar desde el número con el que reservaron",
           ],
         },
         {
-          title: "Las urgencias dentales siguen sus reglas",
-          body: "Usted decide qué es una urgencia: inflamación, fiebre, un diente que se cayó por un golpe o un sangrado que no se detiene. LobbyStack hace esas preguntas, reserva una cita para el mismo día en horario de atención y, fuera de horario, transfiere la llamada a su dentista de guardia.",
+          title: "Usted define las reglas para las urgencias dentales",
+          body: "Usted decide qué es una urgencia: inflamación, fiebre, un diente que se cayó por un golpe o un sangrado que no se detiene. LobbyStack hace esas preguntas y luego reserva el primer horario libre o transfiere la llamada a su número de guardia, según las reglas que usted defina. Escriba en sus reglas, con sus propias palabras, las indicaciones de cuidado que quiere que escuchen los pacientes. Las transferencias van a un solo número por clínica. Cuando cambie el dentista de guardia, actualice ese número o desvíelo a quien esté de guardia.",
           points: [
             "Hace las preguntas de triaje que usted aprueba",
-            "Transfiere las urgencias fuera de horario a su número de guardia",
-            "Lee solo las instrucciones de cuidado que usted escribe",
+            "Transfiere las llamadas urgentes a su número de guardia según la regla de transferencia que elija",
+            "Si una transferencia no se completa, ofrece tomar un mensaje y puede avisar a su equipo",
+          ],
+        },
+        {
+          title: "Los pacientes hablan en su propio idioma",
+          body: "Cada llamada empieza en el idioma predeterminado de su clínica, inglés o francés. A partir de ahí, la recepcionista contesta en el idioma del paciente. Funciona con OpenAI GPT-Live, que maneja más de 70 idiomas, entre ellos el español y el serbio. Si un paciente empieza en español o pide hablar en serbio, escucha el resto de la llamada en ese idioma. Su panel y sus correos están disponibles en inglés, francés, español o serbio. Los SMS de confirmación y recordatorio salen en su idioma predeterminado, o en español o serbio para un paciente cuyo idioma guarde a través de la API.",
+          points: [
+            "Empieza cada llamada en su idioma predeterminado, inglés o francés",
+            "Cambia de idioma cuando un paciente lo pide o empieza a hablar otro",
+            "Envía los SMS de confirmación y recordatorio en su idioma predeterminado",
+          ],
+        },
+        {
+          title: "Lo que cuesta una recepcionista dental con IA",
+          body: "LobbyStack no cobra tarifa de configuración en ningún plan, y sus precios están en dólares estadounidenses. La facturación anual cuesta un 20% menos, así que Starter queda en $24 al mes y Pro en $80. LobbyStack cuenta el uso por segundo. Las llamadas de menos de 10 segundos y las que la recepcionista termina como spam no cuentan. El excedente no tiene tope hasta que un propietario o administrador fije uno. Para comparar, el 9 de octubre de 2026 revisamos en sus propios sitios web las recepcionistas con IA especializadas en odontología. Las que publican precios iban de $299 a $1,199 al mes. Dentina empieza en $299 al mes por sede, con facturación anual y llamadas ilimitadas. Viva AI va de $349 a $1,199 al mes, con el uso contado en créditos. Peerlogic Premium cuesta $699 al mes e incluye su sistema telefónico.",
+          points: [
+            "Starter: $30 al mes por 150 minutos y un número de teléfono, y después $0.20 por minuto",
+            "Pro: $100 al mes por 500 minutos, y después $0.18 por minuto. Con 1,000 minutos al mes, paga $190 ($100 más 500 minutos adicionales a $0.18)",
+            "Free: 30 minutos de voz en el navegador al mes para pruebas, sin tarjeta ni número de teléfono",
+          ],
+        },
+        {
+          title:
+            "Cuándo conviene más una recepcionista especializada en odontología",
+          body: "LobbyStack solo reserva en Google Calendar, así que su equipo copia las citas nuevas en Dentrix, Open Dental o Eaglesoft. La API REST y los webhooks firmados para seis eventos, como cita reservada y mensaje tomado, pueden enviar los datos de las llamadas a Zapier y otras herramientas. LobbyStack no afirma cumplir con HIPAA, no verifica la elegibilidad del seguro y no hace campañas de reactivación de pacientes. Le sirve a la clínica que reserva en Google Calendar o no tiene problema en volver a capturar las citas, y que quiere que alguien conteste cuando la recepción está ocupada, a la hora del almuerzo y después del cierre. Transfiere las urgencias y habla con los pacientes en su idioma. Si necesita que las citas se escriban en su software de gestión o campañas de reactivación, elija un proveedor dental. Leímos cada dato de la lista en el sitio web del proveedor el 9 de octubre de 2026.",
+          points: [
+            "Necesita que las citas se escriban en Dentrix, Open Dental o Eaglesoft: Dentina menciona 11 sistemas de gestión clínica en los que escribe las reservas",
+            "Quiere una recepcionista conectada a su software de gestión: Peerlogic menciona 8 sistemas con los que se integra",
+            "Necesita reactivar pacientes de forma automática: Dentina vende campañas salientes de reactivación (precio bajo consulta), y Viva AI incluye contacto de reactivación desde su plan Platinum de $899",
           ],
         },
       ],
       faqs: [
         {
-          question: "¿Qué es un servicio de atención telefónica dental con IA?",
+          question: "¿Qué es una recepcionista dental con IA?",
           answer:
-            "Un servicio de atención telefónica dental con IA contesta el teléfono de su clínica, reserva citas, responde preguntas sobre seguros y políticas, y deriva las urgencias. Contesta cuando la recepción está ocupada o cerrada, así los pacientes hablan con alguien en lugar de llegar al buzón de voz.",
+            "Una recepcionista dental con IA es una IA de voz que contesta el teléfono de una clínica. Reserva citas, responde preguntas sobre horarios y seguros aceptados, toma mensajes y transfiere las urgencias a una persona. Las clínicas la usan para el exceso de llamadas, la hora del almuerzo y la atención fuera de horario, o para contestar todas las llamadas. Algunos productos especializados en odontología también escriben las citas en el software de gestión de la clínica. LobbyStack, en cambio, reserva en Google Calendar.",
+        },
+        {
+          question:
+            "¿Cuánto cuesta una recepcionista con IA para una clínica dental?",
+          answer:
+            "LobbyStack cuesta $30 al mes en Starter o $100 al mes en Pro, sin tarifa de configuración. Starter incluye 150 minutos y después cobra $0.20 por minuto. Pro incluye 500 minutos y después cobra $0.18 por minuto, así que 1,000 minutos al mes en Pro cuestan $190 ($100 más 500 minutos adicionales a $0.18). Las llamadas de menos de 10 segundos y las que la recepcionista termina como spam no cuentan. Las recepcionistas especializadas en odontología que publicaban precios iban de $299 al mes por sede, con facturación anual (Dentina), a $1,199 al mes (Viva AI) cuando las revisamos el 9 de octubre de 2026.",
+        },
+        {
+          question: "¿LobbyStack cumple con HIPAA?",
+          answer:
+            "LobbyStack no afirma cumplir con HIPAA. En cada llamada guarda la grabación, una transcripción, un resumen de una línea, el número de quien llama y el nombre que da, y la cita que haya reservado. Los planes de pago conservan las grabaciones y transcripciones 90 días y los mensajes 365 días. El plan Free los conserva 30 días. Si autoaloja LobbyStack, la copia de esos datos que guarda LobbyStack queda en sus propios servidores. Twilio y OpenAI siguen procesando el audio de la llamada, y LobbyStack copia cada grabación desde OpenAI, así que consulte con su responsable de cumplimiento antes de que llamen los pacientes.",
+        },
+        {
+          question: "¿Puede reservar directamente en Dentrix u Open Dental?",
+          answer:
+            "No directamente. LobbyStack reserva en Google Calendar y no se conecta con Dentrix, Open Dental, Eaglesoft ni otro software de gestión de clínicas. Su equipo copia las citas nuevas en su sistema. Los webhooks firmados y la API REST pueden enviar los datos de reservas y llamadas a Zapier o a sus propias herramientas. Si necesita que las citas se escriban en su software de gestión, Dentina menciona 11 sistemas en los que escribe las reservas, y Peerlogic menciona 8 con los que se integra (revisado el 9 de octubre de 2026).",
+        },
+        {
+          question: "¿Cómo atiende una llamada por una urgencia dental?",
+          answer:
+            "LobbyStack hace las preguntas de triaje que usted aprueba, como el nivel de dolor, la inflamación, un golpe o un sangrado, y luego sigue su regla de transferencia. Usted elige cuándo transfiere: en llamadas urgentes, cuando quien llama lo pide, siempre, solo en horario de atención o nunca. Transfiere a un solo número de guardia. Si no configuró uno, toma un mensaje. Si la transferencia no se completa, la recepcionista se lo dice al paciente y ofrece tomar un mensaje. Su equipo también puede recibir la alerta “Falló la transferencia de una llamada en vivo”.",
+        },
+        {
+          question: "¿Puede verificar el seguro dental?",
+          answer:
+            "No. LobbyStack registra la aseguradora y el plan del paciente, y responde preguntas con los seguros aceptados y las políticas que usted agrega a su base de conocimiento. No consulta la elegibilidad ni los beneficios con la aseguradora, así que su equipo verifica la cobertura antes de la visita.",
+        },
+        {
+          question: "¿En qué idiomas pueden hablar los pacientes?",
+          answer:
+            "Los pacientes pueden hablar con la recepcionista en más de 70 idiomas, entre ellos el español y el serbio. Cada llamada empieza en el idioma predeterminado de su clínica, inglés o francés. Después, la recepcionista contesta en el idioma del paciente. Funciona con OpenAI GPT-Live y cambia de idioma cuando un paciente lo pide o empieza a hablar otro. La lista de precios de LobbyStack no incluye ningún cargo adicional por idioma. El panel y los correos están disponibles en inglés, francés, español o serbio. Los SMS de confirmación y recordatorio salen en su idioma predeterminado, o en español o serbio para un paciente cuyo idioma guarde a través de la API.",
         },
         {
           question: "¿Puede reservar citas de pacientes nuevos?",
           answer:
-            "Sí. LobbyStack puede registrar los datos de contacto de un paciente nuevo, su seguro, el motivo de la visita y el horario que prefiere, y luego reservar la cita directamente en su calendario y enviar una confirmación por SMS.",
+            "Sí. LobbyStack registra el nombre del paciente nuevo, su número de teléfono, su aseguradora, el motivo de la visita y el horario que prefiere, y luego reserva un horario libre en Google Calendar dentro de su horario de atención. También puede configurarlo para que guarde el horario preferido como una solicitud que su equipo confirma, o para que tome un mensaje. Si el paciente acepta, le envía por SMS una confirmación y un recordatorio 24 horas antes de la visita. En LobbyStack Cloud, los SMS solo llegan a números de Estados Unidos y Canadá.",
         },
         {
-          question: "¿Funciona fuera de horario y los fines de semana?",
+          question:
+            "¿Contesta fuera de horario, a la hora del almuerzo y los fines de semana?",
           answer:
-            "Sí. LobbyStack contesta llamadas por la noche, los fines de semana y a la hora del almuerzo. Puede reservar citas, tomar mensajes o transferir las urgencias dentales reales a su dentista de guardia según las reglas que usted defina.",
+            "Sí, en las llamadas que usted le desvía. Configure con su operador el desvío de las llamadas ocupadas o sin respuesta para cubrir el exceso y el almuerzo, de las llamadas después del cierre para las noches y los fines de semana, o de todas las llamadas. Conserva el número de su clínica cuando lo desvía. Si prefiere portar el número, contacte al equipo de LobbyStack. Starter y Pro incluyen un número en Estados Unidos, Canadá, Reino Unido o Australia.",
         },
         {
-          question: "¿Puede responder preguntas sobre seguros?",
+          question:
+            "¿Los pacientes pueden cambiar o cancelar su cita por teléfono?",
           answer:
-            "Sí. Puede agregar a la base de conocimiento de LobbyStack los seguros que acepta, sus políticas de cobertura y sus preguntas de precalificación. Responde las preguntas de rutina y marca los casos complejos para su equipo.",
+            "Sí, si activa los cambios de citas. Entonces, los pacientes pueden mover o cancelar una cita llamando desde el número con el que reservaron, y usted puede pedir antes un código de un solo uso por SMS. Los cambios de citas vienen desactivados de forma predeterminada. Si siguen desactivados, o si el paciente llama desde otro número, la recepcionista registra una solicitud y la cita sigue reservada hasta que su equipo la cambie.",
         },
         {
-          question: "¿Qué pasa cuando un paciente tiene una urgencia dental?",
+          question:
+            "¿Puede enviar recordatorios o hacer campañas de reactivación?",
           answer:
-            "Usted define qué es una urgencia. LobbyStack puede preguntar por el nivel de dolor, la inflamación, un golpe o un sangrado, y luego transferir la llamada a su línea de urgencias o tomar un mensaje detallado con el contexto.",
+            "LobbyStack envía recordatorios de las citas que reserva, pero no hace campañas de reactivación. Si el paciente acepta durante la llamada, le envía por SMS una confirmación y un recordatorio 24 horas antes de la visita, solo a números de Estados Unidos y Canadá. No contacta a los pacientes a los que les toca una limpieza, y las únicas llamadas salientes que hace son transferencias. Dentina vende campañas salientes de reactivación, y Viva AI incluye contacto de reactivación desde su plan Platinum de $899 (revisado el 9 de octubre de 2026).",
         },
         {
-          question: "¿Puede enviar recordatorios de citas?",
+          question:
+            "¿Una recepcionista con IA reemplaza a la recepción de mi clínica dental?",
           answer:
-            "Sí. LobbyStack envía un recordatorio por SMS 24 horas antes de cada cita que reserva, si el paciente aceptó recibir mensajes. No hace campañas para llamar a pacientes que ya deberían volver a una limpieza.",
-        },
-        {
-          question: "¿Los datos de los pacientes se manejan de forma segura?",
-          answer:
-            "En cada llamada, LobbyStack guarda la grabación, una transcripción, un resumen, el nombre y el número de quien llama, y la cita que haya reservado. También conserva los mensajes de texto con pacientes y los documentos que usted sube a su base de conocimiento. En LobbyStack Cloud, esos datos se guardan en nuestros servidores y las grabaciones se eliminan a los 90 días. Twilio y OpenAI también procesan el audio mientras la llamada está en curso. Si su clínica está sujeta a HIPAA, puede autoalojar LobbyStack para que los datos se queden en sus propios servidores. Revise la configuración con su responsable de cumplimiento antes de atender llamadas de pacientes.",
-        },
-        {
-          question: "¿Se integra con mi software de gestión de la clínica?",
-          answer:
-            "No directamente. LobbyStack reserva en Google Calendar y no se conecta con software de gestión de clínicas como Dentrix u Open Dental, así que su equipo copia las nuevas reservas en su sistema.",
-        },
-        {
-          question: "¿Puede cambiar o cancelar citas?",
-          answer:
-            "Sí. LobbyStack puede gestionar cambios y cancelaciones sencillos cuando sus reglas lo permiten. Los cambios complejos, sobre todo los del mismo día, pueden pasar a su recepción con los datos del paciente adjuntos.",
-        },
-        {
-          question: "¿Cuánto cuesta para una clínica dental?",
-          answer:
-            "El plan gratuito incluye 30 minutos de voz para pruebas, sin número de teléfono. Starter cuesta $30 al mes por 150 minutos y un número dedicado, y Pro cuesta $100 al mes por 500 minutos. Las llamadas de spam y las de menos de 10 segundos no cuentan.",
+            "No. LobbyStack cubre el teléfono: contesta, reserva, resuelve preguntas de rutina, toma mensajes y transfiere las llamadas urgentes. El registro de llegada, los cobros, la verificación de seguros, la captura de citas en su software de gestión y las respuestas a los SMS de los pacientes siguen en manos de su equipo. LobbyStack guarda los SMS de los pacientes y avisa a su equipo, pero la IA no los contesta. Desvíe las llamadas que su recepción no alcanza a atender, o desvíelas todas.",
         },
       ],
-      faqHeading:
-        "Preguntas sobre la recepcionista con IA para clínicas dentales",
+      faqHeading: "Preguntas sobre la recepcionista dental con IA",
       relatedLinks: [
+        {
+          label: "Atención fuera de horario",
+          href: "/solutions/after-hours-answering-service/",
+        },
         {
           label: "Programación de citas con IA",
           href: "/solutions/ai-appointment-scheduler/",
@@ -438,6 +488,14 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         {
           label: "Recepcionista con IA autoalojada",
           href: "/solutions/self-hosted-ai-receptionist/",
+        },
+        {
+          label: "Cuánto cuesta un servicio de atención telefónica",
+          href: "/blog/how-much-does-an-answering-service-cost/",
+        },
+        {
+          label: "Recepcionista con IA o recepcionista virtual",
+          href: "/blog/ai-receptionist-vs-virtual-receptionist/",
         },
         pricingLink,
       ],
@@ -497,7 +555,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
           points: [
             "Recoge el tipo de servicio, el profesional preferido, el horario y los datos de contacto",
             "Confirma el horario de la cita antes de que la persona cuelgue",
-            "Deriva las preguntas delicadas sobre servicios a la persona adecuada del equipo",
+            "Toma un mensaje para su equipo con las preguntas delicadas sobre servicios",
           ],
         },
         {
@@ -506,7 +564,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
           points: [
             "Explica las políticas de cancelación y de ausencias antes de confirmar cambios",
             "Usa su menú de servicios, duraciones, reglas por profesional y límites de reserva",
-            "Envía resúmenes para que su equipo sepa qué se prometió",
+            "Guarda un resumen de cada llamada para que su equipo sepa qué se prometió",
           ],
         },
       ],
@@ -722,10 +780,10 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
       sections: [
         {
           title: "Dé a quien llama algo que hacer mientras llega la ayuda",
-          body: "Usted carga sus propias instrucciones en LobbyStack: dónde está la llave de paso principal, cuándo apagar el calentador de agua y qué hacer si huele a gas. El asistente lee esos pasos, registra la dirección y transfiere la llamada a quien esté de guardia esa noche.",
+          body: "Usted carga sus propias instrucciones en LobbyStack: dónde está la llave de paso principal, cuándo apagar el calentador de agua y qué hacer si huele a gas. El asistente lee esos pasos, registra la dirección y transfiere la llamada a su número de guardia.",
           points: [
             "Lee los pasos de seguridad que usted aprueba",
-            "Transfiere la llamada con la dirección y el problema ya registrados",
+            "Guarda la dirección y el problema en la transcripción y luego transfiere la llamada",
           ],
         },
         {
@@ -764,7 +822,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "¿Qué pasa si quien llama huele a gas?",
           answer:
-            "Usted escribe la política. Una habitual pide a la persona que salga del edificio y llame a la línea de emergencias de la compañía de gas. LobbyStack sigue su guion y avisa a su equipo.",
+            "Usted escribe la política. Una habitual pide a la persona que salga del edificio y llame a la línea de emergencias de la compañía de gas. LobbyStack le lee su guion a la persona y luego transfiere la llamada o toma un mensaje según sus reglas.",
         },
         {
           question: "¿Puede cotizar un destape o la tarifa por visita?",
@@ -814,69 +872,100 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
   "/solutions/ai-receptionist-for-hvac/": spanishPage(
     "/solutions/ai-receptionist-for-hvac/",
     {
-      title: "Atención telefónica 24/7 con IA para climatización | LobbyStack",
+      title: "Recepcionista virtual para aire acondicionado | LobbyStack",
       description:
-        "LobbyStack atiende con IA las llamadas de climatización. Cubre el exceso de llamadas en olas de calor y frío, marca las urgencias y reserva mantenimientos y presupuestos.",
-      eyebrow: "Climatización (HVAC)",
-      h1: "Atención telefónica para climatización pensada para los picos de temporada",
+        "Recepcionista virtual para aire acondicionado y calefacción desde $30 al mes, sin tarifa de configuración. Transfiere las urgencias y reserva mantenimientos.",
+      eyebrow: "Aire acondicionado y calefacción",
+      h1: "Recepcionista virtual con IA para aire acondicionado y calefacción",
       intro:
-        "Sus teléfonos se calman en primavera y no paran de sonar la primera semana de calor del verano. LobbyStack atiende el exceso de llamadas, separa las urgencias reales de las dudas sobre el termostato y reserva los presupuestos de reemplazo que su oficina no tiene tiempo de devolver.",
+        "Una recepcionista virtual para aire acondicionado contesta las llamadas que su oficina no alcanza a atender. LobbyStack transfiere a su técnico de guardia las urgencias sin calefacción o sin aire acondicionado según las reglas que usted escribe, y reserva mantenimientos y visitas de presupuesto en Google Calendar durante la llamada. Starter cuesta $30 al mes por 150 minutos de voz. Ningún plan tiene tarifa de configuración.",
       imageAlt:
-        "Una llamada urgente de climatización marcada para atención humana y transferida a un técnico",
+        "Una llamada urgente por falta de calefacción dirigida al técnico de guardia de una empresa de aire acondicionado y calefacción",
       proofPoints: [
-        "Contesta solo cuando su oficina está ocupada, cerrada o en otra línea",
-        "Marca las llamadas sin calefacción o sin aire acondicionado según las reglas que usted escribe",
-        "Transfiere las urgencias a su técnico de guardia",
+        "Contesta las llamadas que desvía su operador: línea ocupada, sin respuesta, fuera de horario o todas",
+        "Transfiere a su técnico de guardia las llamadas sin calefacción, sin aire acondicionado o con olor a gas, según sus reglas",
+        "Contesta a cada persona en su idioma, con más de 70 idiomas en GPT-Live",
       ],
       sections: [
         {
-          title: "Afronte la avalancha de la primera ola de calor",
-          body: "Una oficina pequeña no da abasto cuando todos los aires acondicionados de la ciudad fallan la misma semana. Configure LobbyStack para contestar solo cuando su equipo esté ocupado. Atiende todas las llamadas que entren a la vez, registra el tipo de equipo, los síntomas y la dirección, y reserva el próximo horario libre o agrega a la persona a su lista de despacho.",
+          title: "¿Qué hace la recepcionista con IA en una ola de calor?",
+          body: "Sus teléfonos se calman en abril y no paran de sonar la primera semana de calor de junio, cuando todos los aires acondicionados de la ciudad fallan a la vez. Pida a su operador que desvíe las llamadas cuando la línea esté ocupada o nadie conteste, o que las desvíe todas. LobbyStack contesta todo lo que llega a su número. Los planes no limitan cuántas llamadas atiende a la vez, y esas llamadas comparten una misma bolsa de minutos. A cada persona le pide el tipo de equipo, los síntomas y la dirección, y luego reserva el próximo horario libre o toma un mensaje para su oficina.",
           points: [
-            "El modo de desbordamiento contesta cuando sus líneas están llenas",
-            "Atiende llamadas simultáneas sin tono de ocupado",
-            "Reserva el próximo horario libre o pone a la persona en la cola de despacho",
+            "Contesta las llamadas que envía su regla de desvío: ocupado, sin respuesta o todas",
+            "Los planes no limitan cuántas llamadas atiende a la vez",
+            "Reserva el próximo horario libre o deja a su oficina un mensaje con los datos de quien llama",
           ],
         },
         {
-          title: "Separe las urgencias reales de las dudas sobre el termostato",
-          body: "Una calefacción averiada en pleno invierno con un bebé en casa necesita a su técnico de guardia. Un termostato puesto en modo frío necesita una respuesta rápida. Usted escribe las reglas en lenguaje sencillo: qué síntomas, temperaturas interiores u ocupantes cuentan como urgentes. LobbyStack transfiere esas llamadas y responde las demás con los pasos de diagnóstico que usted aprueba, como revisar el interruptor o el filtro.",
+          title:
+            "¿Cómo distingue una urgencia sin calefacción de una duda sobre el termostato?",
+          body: "Usted escribe las reglas de urgencia en lenguaje sencillo, según los síntomas, la temperatura interior y quién vive en la casa. Si la calefacción se avería en enero y hay un bebé en casa, la llamada va a su técnico de guardia. Si el termostato está en modo frío, la persona recibe una respuesta rápida con los pasos de diagnóstico que usted aprueba, como revisar el interruptor automático o el filtro. Para un olor a gas o una alarma de monóxido de carbono, usted escribe los pasos de seguridad, por ejemplo salir de la casa y llamar a la línea de emergencias de la compañía de gas o al 911. La recepcionista los lee a quien llama antes de transferir. Las transferencias van a un solo número. Si no ha configurado un número de transferencia, la recepcionista toma un mensaje. Si la transferencia no se completa, se lo dice a quien llama y ofrece tomar un mensaje, y su equipo puede recibir la alerta “Falló la transferencia de una llamada en vivo”. En cuanto el teléfono de su técnico empieza a sonar, la recepcionista sale de la llamada. Si su técnico no contesta, la persona llega al buzón de voz de ese teléfono, si lo tiene.",
           points: [
             "Escala según los síntomas, la temperatura interior y quién vive en la casa",
-            "Transfiere las llamadas urgentes con los datos del equipo",
-            "Responde las dudas habituales de diagnóstico con su guion",
+            "Trata el olor a gas y las alarmas de monóxido de carbono como urgentes y transfiere de inmediato",
+            "Ofrece tomar un mensaje si la transferencia no se completa",
           ],
         },
         {
-          title: "Que los presupuestos de reemplazo no se enfríen",
-          body: "Quien cotiza un equipo nuevo puede esperar un día a que le devuelvan la llamada. Si en plena temporada alta tarda dos semanas, ya habrá firmado con otra empresa. LobbyStack registra el tamaño de la vivienda, la antigüedad del equipo y el tipo de combustible, y reserva la visita de presupuesto durante la llamada.",
+          title:
+            "¿Puede reservar presupuestos de reemplazo antes de perder al cliente?",
+          body: "Sí. Quien cotiza un equipo nuevo puede esperar un día a que usted le devuelva la llamada. A las dos semanas de temporada alta, sus devoluciones de llamada tardan más que eso, y esa persona firma con otra empresa. LobbyStack le pregunta el tamaño de la vivienda, la antigüedad del equipo y el tipo de combustible, y reserva la visita de presupuesto dentro de su horario de atención mientras la persona sigue al teléfono. Si conecta Google Calendar, evita sus horas ocupadas y agrega la visita como evento. Si la persona acepta, LobbyStack le envía por SMS una confirmación y un recordatorio 24 horas antes de la visita, solo a números de Estados Unidos y Canadá. Si prefiere aprobar cada visita, cambie al modo de solicitud: la recepcionista anota la hora que prefiere la persona y su equipo la confirma.",
           points: [
             "Recoge el tamaño de la vivienda, la antigüedad del equipo y el tipo de combustible",
-            "Reserva visitas de presupuesto mientras la persona sigue en la línea",
+            "Reserva visitas de presupuesto en Google Calendar mientras la persona sigue en la línea",
+            "Envía por SMS una confirmación y un recordatorio 24 horas antes si la persona acepta",
           ],
         },
         {
-          title: "Cuánto cuesta un mes de temporada alta",
-          body: "Supongamos que su llamada promedio de climatización dura 3 minutos. Los 150 minutos de voz de Starter cubren unas 50 llamadas por $30 al mes. Los 500 minutos de Pro cubren unas 165 llamadas por $100, y cada minuto adicional cuesta $0.18.",
-          points: [freePlanPoint, spamPoint],
+          title:
+            "¿Cuánto cuesta una recepcionista virtual para aire acondicionado?",
+          body: "Precios a octubre de 2026: Starter cuesta $30 al mes por 150 minutos de voz, y Pro cuesta $100 al mes por 500. Si su llamada promedio dura 3 minutos (nuestra suposición), Starter cubre unas 50 llamadas y Pro unas 165. Ahora piense en un julio con mucho trabajo y 300 llamadas, también una suposición nuestra. Eso suma 900 minutos. Pro cuesta $100 más 400 minutos adicionales a $0.18, o sea $172. Starter cuesta $30 más 750 minutos adicionales a $0.20, o sea $180. Los dos planes cuestan lo mismo a 500 minutos, y por encima de esa cifra Pro sale más barato. LobbyStack cuenta el uso por segundo, así que una llamada de 90 segundos usa 1.5 minutos. Con facturación anual, Starter cuesta $288 al año ($24 al mes) y Pro $960 ($80 al mes).",
+          points: [
+            "Sin tarifa de configuración en ningún plan",
+            "Las llamadas de menos de 10 segundos y las que la recepcionista termina como spam no cuentan para sus minutos",
+            "Los propietarios y administradores pueden fijar un tope mensual de excedente en Configuración > Plan. No hay tope por defecto, y al alcanzarlo, las llamadas nuevas reciben tono de ocupado",
+          ],
+        },
+        {
+          title: "¿Puede contestar en español o en otro idioma?",
+          body: "Sí. Cada llamada empieza en su idioma predeterminado, inglés o francés. Si la persona pide cambiar de idioma o habla otro, la recepcionista contesta en ese idioma. Funciona con OpenAI GPT-Live, que maneja más de 70 idiomas, entre ellos el español y el serbio. LobbyStack envía los SMS de confirmación y recordatorio en su idioma predeterminado. Si guarda el español o el serbio como idioma de un contacto a través de la API, ese contacto los recibe en ese idioma. La página de precios no incluye ningún complemento por idioma.",
+          points: [
+            "Empieza en inglés o francés y después sigue el idioma de quien llama",
+            "Más de 70 idiomas en GPT-Live, incluido el español",
+            "Sus reglas de urgencia y su configuración de reservas son las mismas en todos los idiomas",
+          ],
+        },
+        {
+          title: "¿Funciona con ServiceTitan, Housecall Pro o Jobber?",
+          body: "No de forma directa. LobbyStack no tiene integración con ServiceTitan, Housecall Pro ni Jobber, y Google Calendar es el único calendario al que se conecta. Envía webhooks firmados para seis eventos: llamada completada, cita reservada, cita reprogramada, cita cancelada, mensaje tomado y contacto creado. También tiene una API REST con claves de acceso limitado, y Zapier se conecta a través de los webhooks y la API. Un servidor MCP permite que Claude o ChatGPT lean sus llamadas y reserven citas. Si ya gestiona su negocio en Jobber o Housecall Pro, sus recepcionistas integradas reservan los trabajos dentro de ese software. LobbyStack no puede hacerlo. Jobber Receptionist cuesta $29 al mes por 30 conversaciones ($0.79 cada una después), además de un plan de Jobber. Housecall Pro vende CSR AI como complemento de pago sin precio publicado. Revisamos ambos el 9 de octubre de 2026.",
+          points: [
+            "Reserva en Google Calendar",
+            "Envía los datos de llamadas y reservas mediante webhooks y la API REST",
+            "Conecta Zapier a través de los webhooks y la API",
+          ],
         },
       ],
       faqs: [
         {
           question: "¿Puede contestar solo cuando mi oficina está saturada?",
           answer:
-            "Sí. Puede configurar LobbyStack para contestar todas las llamadas o solo cuando su equipo esté ocupado, cerrado o no disponible. Por ejemplo, puede usar el modo de desbordamiento en temporada alta y la cobertura completa fuera de horario.",
+            "Sí, con el desvío de llamadas de su operador. Desvíe las llamadas cuando su línea esté ocupada o nadie conteste para cubrir el exceso, desvíelas al cerrar para la atención fuera de horario, o desvíelas todas. LobbyStack contesta todo lo que llega a su número. Por ejemplo, puede desviar el exceso en temporada alta y todas las llamadas por la noche.",
         },
         {
           question:
             "¿Cómo decide qué llamada sin calefacción o sin aire acondicionado es urgente?",
           answer:
-            "Usted describe la regla en lenguaje sencillo, por ejemplo: sin calefacción y la casa por debajo de 55°F, o vive allí una persona mayor o un bebé. LobbyStack hace las preguntas que necesita para aplicar su regla y transfiere las llamadas que coinciden a su técnico de guardia.",
+            "Usted describe la regla en lenguaje sencillo, por ejemplo: sin calefacción y la casa por debajo de 55 °F (13 °C), o vive allí una persona mayor o un bebé. LobbyStack hace las preguntas que necesita para aplicar su regla y transfiere las llamadas que coinciden a su técnico de guardia.",
+        },
+        {
+          question: "¿Qué pasa si mi técnico de guardia no contesta?",
+          answer:
+            "La transferencia es directa: la recepcionista pasa la llamada a su número de guardia sin informar a su técnico y luego sale de la línea. Si su técnico no contesta, la persona llega al buzón de voz de ese teléfono, si lo tiene. Si la transferencia no se completa, la recepcionista se lo dice a quien llama y ofrece tomar un mensaje, que llega a su bandeja de entrada con una alerta por correo electrónico. Su equipo también puede recibir la alerta “Falló la transferencia de una llamada en vivo”. Si su plan no cubre otro intento de transferencia, la recepcionista toma un mensaje.",
         },
         {
           question: "¿Qué datos del equipo puede recoger?",
           answer:
-            "Lo que sus técnicos pidan: tipo de equipo, marca, antigüedad aproximada, tipo de combustible, lectura del termostato y los síntomas que describe la persona. Los datos aparecen en el resumen de la llamada y en la reserva.",
+            "Lo que sus técnicos pidan: tipo de equipo, marca, antigüedad aproximada, tipo de combustible, lectura del termostato y los síntomas que describe la persona. LobbyStack guarda las respuestas en la transcripción y la grabación de la llamada. Cuando la recepcionista toma un mensaje, este llega a su bandeja de entrada con el nombre de quien llama, su número para devolver la llamada y la urgencia. El evento de Google Calendar solo muestra el servicio y el nombre de la persona.",
         },
         {
           question:
@@ -887,36 +976,56 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "¿Funciona con mi número actual del negocio?",
           answer:
-            "Sí. Desvíe su número actual a LobbyStack o envíele solo las llamadas de desbordamiento y fuera de horario.",
+            "Sí. Pida a su operador que desvíe su número actual a LobbyStack, ya sea con todas las llamadas o solo con el exceso y las llamadas fuera de horario. Si prefiere portar el número, contacte al equipo de LobbyStack. Puede reemplazar su número de LobbyStack una vez desde Configuración > Número de teléfono.",
         },
         {
           question:
-            "¿Me conviene un servicio de atención con IA o con operadores para climatización?",
+            "¿Me conviene una recepcionista con IA o un servicio de atención con operadores?",
           answer:
-            "Depende de qué llamadas quiera que atienda una persona. LobbyStack encaja cuando quiere que las llamadas se reserven en su calendario durante la llamada y que el desbordamiento se atienda sin tono de ocupado. Puede usarlo solo para el desbordamiento y dejar que su oficina conteste las llamadas que prefiere atender en persona.",
+            "Las personas resuelven mejor las llamadas fuera de lo común. En MAP Communications, un servicio de atención con operadores, los agentes siguen el calendario de guardias que usted les envía y pueden agendar citas. Su plan Pay As You Go cuesta $49 al mes más $1.37 por minuto (revisado el 9 de octubre de 2026). Los minutos adicionales de LobbyStack cuestan $0.20 en Starter y $0.18 en Pro. Eso sí, LobbyStack transfiere a un solo número. Elija un servicio con operadores si quiere una persona en cada llamada o una lista de guardias rotativa.",
         },
         {
-          question: "¿Cuánto cuesta para una empresa de climatización?",
+          question:
+            "¿Vale la pena una recepcionista con IA para una empresa de aire acondicionado?",
           answer:
-            "El plan Free incluye 30 minutos de voz. Starter cuesta $30 al mes por 150 minutos y Pro cuesta $100 al mes por 500 minutos, con minutos adicionales a $0.20 y $0.18. Las llamadas de spam y las de menos de 10 segundos no cuentan para el uso.",
+            "Vale la pena probarla si en temporada alta o por la noche sus clientes terminan en el buzón de voz. Escriba sus llamadas perdidas por semana y el valor medio por trabajo en la calculadora de ingresos por llamadas perdidas para estimar los ingresos en riesgo. Después pruebe la recepcionista con el plan Free antes de desviar una línea.",
+        },
+        {
+          question: "¿Puedo probarla antes de desviar mi línea?",
+          answer:
+            "Sí. El plan Free le da 30 minutos de voz en el navegador al mes para probar la recepcionista desde el panel. Funciona sin tarjeta ni número de teléfono y no vence. Las llamadas telefónicas, las transferencias y los SMS empiezan en Starter.",
+        },
+        {
+          question:
+            "¿Cuánto cuesta para una empresa de aire acondicionado y calefacción?",
+          answer:
+            "Precios a octubre de 2026: el plan Free incluye 30 minutos de voz en el navegador. Starter cuesta $30 al mes por 150 minutos y Pro cuesta $100 al mes por 500 minutos, con minutos adicionales a $0.20 y $0.18. Ningún plan tiene tarifa de configuración. Las llamadas de menos de 10 segundos y las que la recepcionista termina como spam no cuentan para el uso.",
         },
       ],
       faqHeading:
-        "Preguntas sobre la recepcionista con IA para empresas de climatización",
+        "Preguntas sobre la recepcionista con IA para aire acondicionado y calefacción",
       relatedLinks: [
+        {
+          label: "Compare servicios de atención telefónica para climatización",
+          href: "/blog/best-hvac-answering-services/",
+        },
         {
           label: "Atención fuera de horario para contratistas",
           href: "/solutions/after-hours-answering-service-for-contractors/",
         },
         {
+          label: "Calculadora de ingresos por llamadas perdidas",
+          href: "/missed-call-revenue-calculator/",
+        },
+        pricingLink,
+        {
           label: "Servicios del hogar",
           href: "/solutions/ai-receptionist-for-home-services/",
         },
-        pricingLink,
       ],
-      ctaHeading: "Prepárese para la próxima ola de calor",
+      ctaHeading: "Prepárese para el primer frío",
       ctaBody:
-        "Configure LobbyStack ahora en su línea de desbordamiento y pruébelo con llamadas reales antes de que empiece la temporada alta.",
+        "Empiece con el plan Free, escriba sus reglas para las llamadas sin calefacción y desvíe las llamadas que su equipo no alcanza a contestar cuando esté listo.",
       ...ctaLabels,
     }
   ),
@@ -932,7 +1041,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
       intro:
         "Sus llamadas son de dos tipos. Una persona tiene un enchufe que echa chispas y necesita instrucciones de seguridad ya. La siguiente quiere cambiar el tablero eléctrico, instalar un cargador para vehículo eléctrico o un generador de respaldo, y necesita una visita de presupuesto. LobbyStack atiende ambas mientras usted está en un trabajo.",
       imageAlt:
-        "Una llamada eléctrica entrante derivada a la persona adecuada del equipo",
+        "Una llamada eléctrica entrante junto a tres miembros del equipo",
       proofPoints: [
         "Lee su guion de seguridad ante chispas, humo u olor a quemado",
         "Reserva visitas de presupuesto para tableros, cargadores de vehículos eléctricos y generadores",
@@ -941,7 +1050,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
       sections: [
         {
           title: "Ponga primero sus instrucciones de seguridad",
-          body: "Cuando alguien reporta humo u olor a quemado, LobbyStack lee las instrucciones que usted escribió: bajar el interruptor si se puede llegar a él sin riesgo, salir de la casa y llamar al número de emergencias si hay fuego. Luego transfiere la llamada a su electricista de guardia con la dirección y lo que vio la persona.",
+          body: "Cuando alguien reporta humo u olor a quemado, LobbyStack lee las instrucciones que usted escribió: bajar el interruptor si se puede llegar a él sin riesgo, salir de la casa y llamar al número de emergencias si hay fuego. Luego pide la dirección y lo que vio la persona, y transfiere la llamada a su electricista de guardia.",
           points: [
             "Usa sus propias palabras en las llamadas de riesgo",
             "Transfiere los riesgos a su electricista de guardia",
@@ -988,13 +1097,13 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
           question:
             "¿Qué pregunta sobre cambios de tablero y cargadores de vehículos eléctricos?",
           answer:
-            "Usted elige las preguntas. Las habituales cubren el amperaje del tablero, la antigüedad de la vivienda, el cargador o generador que quiere la persona y si es propietaria. LobbyStack adjunta las respuestas a la reserva del presupuesto.",
+            "Usted elige las preguntas. Las habituales cubren el amperaje del tablero, la antigüedad de la vivienda, el cargador o generador que quiere la persona y si es propietaria. LobbyStack guarda las respuestas en la transcripción de la llamada.",
         },
         {
           question:
             "¿Puede tratar de forma distinta las llamadas comerciales y residenciales?",
           answer:
-            "Sí. LobbyStack puede preguntar si la propiedad es comercial o residencial y enviar las llamadas comerciales a su presupuestador o a la línea de la oficina.",
+            "En parte. LobbyStack puede preguntar si la propiedad es comercial o residencial, y luego reservar un tipo y tomar un mensaje para el otro. Las transferencias van a un solo número, así que no puede enviar las llamadas comerciales a otra línea.",
         },
         {
           question: "¿Funciona con mi número actual del negocio?",
@@ -1039,7 +1148,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
     eyebrow: "Reparación de puertas de garaje",
     h1: "Recepcionista con IA para reparación de puertas de garaje que atiende cada llamada",
     intro:
-      "LobbyStack contesta las llamadas de puertas de garaje mientras usted cambia resortes, instala motores o ya terminó su jornada. Registra los detalles del problema, reserva citas y deriva las urgencias con todo el contexto.",
+      "LobbyStack contesta las llamadas de puertas de garaje mientras usted cambia resortes, instala motores o ya terminó su jornada. Registra los detalles del problema, reserva citas y transfiere las urgencias a su número de guardia.",
     imageAlt:
       "LobbyStack contesta una llamada de reparación de puertas de garaje y reserva una visita",
     proofPoints: [
@@ -1049,10 +1158,10 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
     ],
     emergency: {
       title: "No pierda ninguna urgencia por una puerta atascada",
-      body: "Cuando alguien llama porque su vehículo quedó encerrado o la puerta se quedó abierta de noche, necesita ayuda ya. LobbyStack contesta al primer tono, sigue sus reglas de escalamiento y transfiere la llamada a su técnico de guardia con los datos ya registrados.",
+      body: "Cuando alguien llama porque su vehículo quedó encerrado o la puerta se quedó abierta de noche, necesita ayuda ya. LobbyStack contesta al primer tono, sigue sus reglas de escalamiento y transfiere la llamada a su técnico de guardia.",
       points: [
         "Distingue las urgencias de las solicitudes de servicio de rutina",
-        "Transfiere las llamadas urgentes con el tipo de puerta y los datos de seguridad",
+        "Pregunta por el tipo de puerta y la seguridad, y luego transfiere las llamadas urgentes",
       ],
     },
     booking: {
@@ -1075,7 +1184,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         question:
           "¿Puede atender llamadas urgentes de puertas de garaje fuera de horario?",
         answer:
-          "Sí. LobbyStack contesta las llamadas fuera de horario y sigue sus reglas de escalamiento. Si alguien reporta un vehículo encerrado o una puerta que se quedó abierta de noche, transfiere la llamada a su técnico de guardia con los datos ya registrados.",
+          "Sí. LobbyStack contesta las llamadas fuera de horario y sigue sus reglas de escalamiento. Si alguien reporta un vehículo encerrado o una puerta que se quedó abierta de noche, transfiere la llamada a su técnico de guardia.",
       },
       {
         question: "¿Reserva citas mientras estoy en un trabajo?",
@@ -1085,7 +1194,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
       {
         question: "¿Qué preguntas iniciales puede hacer a quienes llaman?",
         answer:
-          "Usted elige las preguntas: tipo de puerta, marca del motor, síntomas, tamaño de la puerta, tipo de resorte y cualquier otro dato que su equipo necesite antes de salir. Las respuestas se adjuntan al resumen de la reserva.",
+          "Usted elige las preguntas: tipo de puerta, marca del motor, síntomas, tamaño de la puerta, tipo de resorte y cualquier otro dato que su equipo necesite antes de salir. LobbyStack guarda las respuestas en la transcripción de la llamada.",
       },
     ],
     summaryDetail: "la descripción del problema",
@@ -1096,7 +1205,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
     ctaHeading:
       "No pierda más llamadas de puertas de garaje en el buzón de voz",
     ctaBody:
-      "LobbyStack atiende llamadas urgentes y de rutina de puertas de garaje, reserva citas y deriva las puertas atascadas con todo el contexto.",
+      "LobbyStack atiende llamadas urgentes y de rutina de puertas de garaje, reserva citas y transfiere las puertas atascadas a su técnico de guardia.",
   }),
 
   "/solutions/ai-receptionist-for-appliance-repair/": tradePage({
@@ -1107,7 +1216,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
     eyebrow: "Reparación de electrodomésticos",
     h1: "Recepcionista con IA para reparación de electrodomésticos que atiende cada llamada",
     intro:
-      "LobbyStack contesta las llamadas de reparación mientras usted diagnostica un lavavajillas o cambia un compresor. Registra la marca y el modelo, reserva citas y deriva las urgencias con todo el contexto.",
+      "LobbyStack contesta las llamadas de reparación mientras usted diagnostica un lavavajillas o cambia un compresor. Registra la marca y el modelo, reserva citas y transfiere las urgencias a su número de guardia.",
     imageAlt:
       "LobbyStack contesta una llamada de reparación de electrodomésticos y reserva una visita",
     proofPoints: [
@@ -1117,10 +1226,10 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
     ],
     emergency: {
       title: "No pierda ninguna avería urgente",
-      body: "Cuando alguien llama porque su refrigerador dejó de funcionar o su lavadora está inundando el piso, no va a esperar al buzón de voz. LobbyStack contesta al primer tono, sigue sus reglas de escalamiento y transfiere la llamada a su técnico de guardia con los datos ya registrados.",
+      body: "Cuando alguien llama porque su refrigerador dejó de funcionar o su lavadora está inundando el piso, no va a esperar al buzón de voz. LobbyStack contesta al primer tono, sigue sus reglas de escalamiento y transfiere la llamada a su técnico de guardia.",
       points: [
         "Distingue las urgencias de las solicitudes de servicio de rutina",
-        "Transfiere las llamadas urgentes con la marca y el modelo del aparato",
+        "Pide la marca y el modelo, y luego transfiere las llamadas urgentes",
       ],
     },
     booking: {
@@ -1143,7 +1252,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         question:
           "¿Puede atender llamadas urgentes de electrodomésticos fuera de horario?",
         answer:
-          "Sí. LobbyStack contesta las llamadas fuera de horario y sigue sus reglas de escalamiento. Si alguien reporta un refrigerador que dejó de funcionar o una lavadora que inunda el piso, transfiere la llamada a su técnico de guardia con los datos ya registrados.",
+          "Sí. LobbyStack contesta las llamadas fuera de horario y sigue sus reglas de escalamiento. Si alguien reporta un refrigerador que dejó de funcionar o una lavadora que inunda el piso, transfiere la llamada a su técnico de guardia.",
       },
       {
         question: "¿Reserva citas mientras hago una reparación?",
@@ -1153,7 +1262,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
       {
         question: "¿Qué preguntas iniciales puede hacer a quienes llaman?",
         answer:
-          "Usted elige las preguntas: tipo de aparato, marca, número de modelo, síntomas, antigüedad y cualquier otro dato que su equipo necesite antes de programar una visita. Las respuestas se adjuntan al resumen de la reserva.",
+          "Usted elige las preguntas: tipo de aparato, marca, número de modelo, síntomas, antigüedad y cualquier otro dato que su equipo necesite antes de programar una visita. LobbyStack guarda las respuestas en la transcripción de la llamada.",
       },
     ],
     summaryDetail: "la descripción del aparato",
@@ -1163,7 +1272,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
       "Preguntas sobre la recepcionista con IA para reparación de electrodomésticos",
     ctaHeading: "No pierda más llamadas de reparación en el buzón de voz",
     ctaBody:
-      "LobbyStack atiende llamadas urgentes y de rutina de electrodomésticos, reserva citas y deriva las averías urgentes con todo el contexto.",
+      "LobbyStack atiende llamadas urgentes y de rutina de electrodomésticos, reserva citas y transfiere las averías urgentes a su técnico de guardia.",
   }),
 
   "/solutions/ai-receptionist-for-restoration-companies/": tradePage({
@@ -1174,7 +1283,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
     eyebrow: "Restauración de daños",
     h1: "Recepcionista con IA para empresas de restauración de daños que atiende cada urgencia",
     intro:
-      "LobbyStack contesta las llamadas de restauración mientras su equipo está en una obra o fuera de horario. Registra los detalles de los daños, reserva presupuestos y deriva las urgencias con todo el contexto.",
+      "LobbyStack contesta las llamadas de restauración mientras su equipo está en una obra o fuera de horario. Registra los detalles de los daños, reserva presupuestos y transfiere las urgencias a su número de guardia.",
     imageAlt:
       "LobbyStack contesta una llamada urgente de restauración y la deriva",
     proofPoints: [
@@ -1184,10 +1293,10 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
     ],
     emergency: {
       title: "No pierda ninguna urgencia por agua o fuego",
-      body: "Cuando un propietario llama a las 3 de la madrugada por una inundación o daños por humo, necesita mitigación ya. LobbyStack contesta al primer tono, sigue sus reglas de escalamiento y transfiere la llamada a su equipo de guardia con los datos ya registrados.",
+      body: "Cuando un propietario llama a las 3 de la madrugada por una inundación o daños por humo, necesita mitigación ya. LobbyStack contesta al primer tono, sigue sus reglas de escalamiento y transfiere la llamada a su equipo de guardia.",
       points: [
         "Distingue las urgencias de mitigación de las solicitudes de presupuesto de rutina",
-        "Transfiere las llamadas urgentes con el tipo de daño, la zona y el origen",
+        "Pregunta por el tipo de daño, la zona y el origen, y luego transfiere las llamadas urgentes",
       ],
     },
     booking: {
@@ -1210,7 +1319,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         question:
           "¿Puede atender llamadas urgentes de restauración fuera de horario?",
         answer:
-          "Sí. LobbyStack contesta las llamadas fuera de horario y sigue sus reglas de escalamiento. Si alguien reporta daños por agua, por humo o moho, transfiere la llamada a su equipo de guardia con los datos ya registrados. Las solicitudes de presupuesto de rutina pasan a la cola de la mañana.",
+          "Sí. LobbyStack contesta las llamadas fuera de horario y sigue sus reglas de escalamiento. Si alguien reporta daños por agua, por humo o moho, transfiere la llamada a su equipo de guardia. Las solicitudes de presupuesto de rutina pasan a la cola de la mañana.",
       },
       {
         question:
@@ -1221,7 +1330,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
       {
         question: "¿Qué preguntas iniciales puede hacer a quienes llaman?",
         answer:
-          "Usted elige las preguntas: tipo de daño, tamaño de la zona afectada, origen del agua, cuándo ocurrió, situación del seguro y cualquier otro dato que su equipo necesite antes de salir. Las respuestas se adjuntan al resumen de la reserva.",
+          "Usted elige las preguntas: tipo de daño, tamaño de la zona afectada, origen del agua, cuándo ocurrió, situación del seguro y cualquier otro dato que su equipo necesite antes de salir. LobbyStack guarda las respuestas en la transcripción de la llamada.",
       },
     ],
     summaryDetail: "la descripción de los daños",
@@ -1231,7 +1340,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
       "Preguntas sobre la recepcionista con IA para restauración de daños",
     ctaHeading: "No pierda más urgencias de restauración en el buzón de voz",
     ctaBody:
-      "LobbyStack atiende llamadas urgentes y de rutina de restauración, reserva presupuestos y deriva las solicitudes urgentes de mitigación con todo el contexto.",
+      "LobbyStack atiende llamadas urgentes y de rutina de restauración, reserva presupuestos y transfiere las solicitudes urgentes de mitigación a su equipo de guardia.",
   }),
 
   "/solutions/ai-receptionist-for-locksmiths/": tradePage({
@@ -1242,7 +1351,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
     eyebrow: "Cerrajeros",
     h1: "Recepcionista con IA para cerrajeros que atiende cada llamada urgente",
     intro:
-      "LobbyStack contesta las llamadas de cerrajería mientras usted recodifica cerraduras, instala herrajes o ya terminó su jornada. Registra los detalles de la apertura, reserva citas y deriva las urgencias con todo el contexto.",
+      "LobbyStack contesta las llamadas de cerrajería mientras usted recodifica cerraduras, instala herrajes o ya terminó su jornada. Registra los detalles de la apertura, reserva citas y transfiere las urgencias a su número de guardia.",
     imageAlt:
       "LobbyStack contesta una llamada de cerrajería y reserva una visita de servicio",
     proofPoints: [
@@ -1252,10 +1361,10 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
     ],
     emergency: {
       title: "No pierda ninguna llamada de apertura urgente",
-      body: "Cuando alguien se queda fuera de su casa o de su vehículo, necesita ayuda ya. No va a dejar un mensaje y esperar. LobbyStack contesta al primer tono, sigue sus reglas de escalamiento y transfiere la llamada a su cerrajero de guardia con la ubicación y los datos ya registrados.",
+      body: "Cuando alguien se queda fuera de su casa o de su vehículo, necesita ayuda ya. No va a dejar un mensaje y esperar. LobbyStack contesta al primer tono, sigue sus reglas de escalamiento y transfiere la llamada a su cerrajero de guardia.",
       points: [
         "Distingue las aperturas urgentes de las solicitudes de servicio de rutina",
-        "Transfiere las llamadas urgentes con la ubicación y el tipo de apertura",
+        "Pide la ubicación y el tipo de apertura, y luego transfiere las llamadas urgentes",
       ],
     },
     booking: {
@@ -1277,7 +1386,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
       {
         question: "¿Puede atender aperturas urgentes fuera de horario?",
         answer:
-          "Sí. LobbyStack contesta las llamadas fuera de horario y sigue sus reglas de escalamiento. Si alguien se quedó fuera de su casa o de su vehículo, transfiere la llamada a su cerrajero de guardia con la ubicación y los datos ya registrados.",
+          "Sí. LobbyStack contesta las llamadas fuera de horario y sigue sus reglas de escalamiento. Si alguien se quedó fuera de su casa o de su vehículo, transfiere la llamada a su cerrajero de guardia.",
       },
       {
         question: "¿Reserva citas mientras estoy en un trabajo?",
@@ -1287,7 +1396,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
       {
         question: "¿Qué preguntas iniciales puede hacer a quienes llaman?",
         answer:
-          "Usted elige las preguntas: tipo de apertura, ubicación, tipo de vehículo o propiedad, situación de las llaves, urgencia y cualquier otro dato que su equipo necesite antes de salir. Las respuestas se adjuntan al resumen de la reserva.",
+          "Usted elige las preguntas: tipo de apertura, ubicación, tipo de vehículo o propiedad, situación de las llaves, urgencia y cualquier otro dato que su equipo necesite antes de salir. LobbyStack guarda las respuestas en la transcripción de la llamada.",
       },
     ],
     summaryDetail: "la descripción del caso",
@@ -1296,7 +1405,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
     faqHeading: "Preguntas sobre la recepcionista con IA para cerrajeros",
     ctaHeading: "No pierda más llamadas de apertura en el buzón de voz",
     ctaBody:
-      "LobbyStack atiende llamadas urgentes y de rutina de cerrajería, reserva citas y deriva las aperturas urgentes con todo el contexto.",
+      "LobbyStack atiende llamadas urgentes y de rutina de cerrajería, reserva citas y transfiere las aperturas urgentes a su cerrajero de guardia.",
   }),
 
   "/solutions/after-hours-answering-service-for-contractors/": spanishPage(
@@ -1308,21 +1417,21 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
       eyebrow: "Contratistas fuera de horario",
       h1: "Atención telefónica para contratistas con trabajos urgentes fuera de horario",
       intro:
-        "LobbyStack contesta las llamadas de contratistas por la noche, los fines de semana y los días festivos. Filtra las urgencias, reserva citas para el día siguiente y deriva las solicitudes urgentes a su personal de guardia con todo el contexto.",
+        "LobbyStack contesta las llamadas de contratistas por la noche, los fines de semana y los días festivos. Filtra las urgencias, reserva citas para el día siguiente y transfiere las solicitudes urgentes a su número de guardia.",
       imageAlt:
         "LobbyStack atiende llamadas de contratistas fuera de horario y deriva las urgencias",
       proofPoints: [
         "Atiende llamadas fuera de horario y filtra las urgencias",
         "Reserva citas para el día siguiente directamente en su calendario",
-        "Deriva las llamadas urgentes a su personal de guardia con contexto",
+        "Transfiere las llamadas urgentes a su número de guardia",
       ],
       sections: [
         {
           title: "Deje de perder trabajos urgentes en el buzón de voz",
-          body: "Cuando un propietario llama a las 10 de la noche con un problema urgente, no deja un mensaje. Llama al siguiente contratista de la lista. LobbyStack contesta al primer tono, sigue sus reglas de escalamiento y transfiere la llamada a su persona de guardia con los datos ya registrados.",
+          body: "Cuando un propietario llama a las 10 de la noche con un problema urgente, no deja un mensaje. Llama al siguiente contratista de la lista. LobbyStack contesta al primer tono, sigue sus reglas de escalamiento y transfiere la llamada a su persona de guardia.",
           points: [
             "Distingue las urgencias de las solicitudes de presupuesto de rutina",
-            "Transfiere las llamadas urgentes con el problema, la ubicación y los datos de contacto",
+            "Registra el problema, la ubicación y los datos de contacto, y luego transfiere las llamadas urgentes",
             "Envía las solicitudes de rutina a la cola de revisión de la mañana",
           ],
         },
@@ -1332,7 +1441,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
           points: [
             "Consulta en tiempo real los horarios libres del día siguiente",
             "Reserva citas directamente en su calendario",
-            "Envía la confirmación y los próximos pasos a la persona que llama y a su equipo",
+            "Envía a la persona que llama una confirmación por SMS y agrega la visita a su calendario",
           ],
         },
         {
@@ -1340,13 +1449,13 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
           body: "No todas las llamadas fuera de horario justifican interrumpir su noche. LobbyStack filtra las llamadas automáticas, los televendedores y el spam. Solo las urgencias reales llegan a su personal de guardia.",
           points: [
             "Filtra automáticamente las llamadas que no hace una persona",
-            "Envía resúmenes ordenados para revisar por la mañana",
+            "Guarda un resumen de cada llamada para revisarlo por la mañana",
             "Protege su tiempo personal sin dejar la línea sin atender",
           ],
         },
         {
           title: "Siga su proceso de guardia real",
-          body: "Cada contratista define la urgencia a su manera. LobbyStack hace las preguntas de calificación que usted elija: daños activos por agua, riesgo para la seguridad, falla de la calefacción, riesgo estructural. Solo interrumpe a la persona adecuada cuando la llamada cumple sus reglas.",
+          body: "Cada contratista define la urgencia a su manera. LobbyStack hace las preguntas de calificación que usted elija: daños activos por agua, riesgo para la seguridad, falla de la calefacción, riesgo estructural. Solo hace sonar su número de guardia cuando la llamada cumple sus reglas.",
           points: [
             "Aplica sus reglas de escalamiento en cada llamada",
             "Recoge los síntomas, la ubicación y el momento antes de transferir",
@@ -1397,11 +1506,15 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
           label: "Climatización",
           href: "/solutions/ai-receptionist-for-hvac/",
         },
+        {
+          label: "Compare servicios de atención telefónica para climatización",
+          href: "/blog/best-hvac-answering-services/",
+        },
         pricingLink,
       ],
       ctaHeading: "No pierda más llamadas de contratistas fuera de horario",
       ctaBody:
-        "LobbyStack atiende las llamadas fuera de horario, filtra las urgencias, reserva citas para el día siguiente y deriva los trabajos urgentes a su personal de guardia con todo el contexto.",
+        "LobbyStack atiende las llamadas fuera de horario, filtra las urgencias, reserva citas para el día siguiente y transfiere los trabajos urgentes a su número de guardia.",
       ...ctaLabels,
     }
   ),
@@ -1519,14 +1632,14 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
       imageAlt:
         "Enrutamiento de llamadas que primero hace sonar los teléfonos de su equipo y pasa la llamada a LobbyStack si nadie está disponible",
       proofPoints: [
-        "Atiende llamadas simultáneas después de una tormenta, sin tono de ocupado",
+        "Los planes no limitan cuántas llamadas de tormenta atiende a la vez",
         "Reserva inspecciones y presupuestos en su calendario",
         "Transfiere las goteras activas a su equipo de guardia",
       ],
       sections: [
         {
           title: "Afronte la semana después de una tormenta",
-          body: "El granizo y el viento pueden traer un mes de llamadas en dos días. LobbyStack atiende todas las llamadas que entren a la vez, registra la dirección, la antigüedad del techo y los daños que ve el propietario, y reserva el primer horario libre de inspección. Su oficina empieza el día con una lista de inspecciones reservadas.",
+          body: "El granizo y el viento pueden traer un mes de llamadas en dos días. Los planes no limitan cuántas llamadas atiende LobbyStack a la vez, y las llamadas nuevas solo reciben tono de ocupado si usted fija un tope mensual de excedente y lo alcanza. LobbyStack registra la dirección, la antigüedad del techo y los daños que ve el propietario, y reserva el primer horario libre de inspección. Su oficina empieza el día con una lista de inspecciones reservadas.",
           points: [
             "Atiende llamadas simultáneas",
             "Recoge la dirección, la antigüedad del techo y los daños visibles",
@@ -1535,9 +1648,9 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         },
         {
           title: "Envíe las goteras activas a su equipo",
-          body: "El agua que se filtra dentro de la casa necesita una lona esta misma noche. Usted define qué es urgente, y LobbyStack transfiere esas llamadas a su equipo de guardia con la dirección y lo que describió el propietario. Unas pocas tejas faltantes sin gotera reciben una cita de inspección.",
+          body: "El agua que se filtra dentro de la casa necesita una lona esta misma noche. Usted define qué es urgente, y LobbyStack pide la dirección y lo que ve el propietario, y luego transfiere esas llamadas a su equipo de guardia. Unas pocas tejas faltantes sin gotera reciben una cita de inspección.",
           points: [
-            "Transfiere las goteras activas con la dirección y la descripción",
+            "Pide la dirección y luego transfiere las goteras activas a su equipo",
             "Reserva una inspección para los daños no urgentes",
           ],
         },
@@ -1561,12 +1674,12 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
           question:
             "¿Puede atender una avalancha de llamadas después de una tormenta?",
           answer:
-            "Sí. LobbyStack atiende llamadas simultáneas, así los propietarios no reciben tono de ocupado ni llegan al buzón de voz. Reserva inspecciones en sus horarios libres y deja el resto en la cola de su oficina.",
+            "Sí. Los planes no limitan cuántas llamadas atiende LobbyStack a la vez. Las llamadas nuevas solo reciben tono de ocupado si un propietario o administrador fija un tope mensual de excedente y usted lo alcanza. Reserva inspecciones en sus horarios libres y deja el resto en la cola de su oficina.",
         },
         {
           question: "¿Qué hace con una gotera activa?",
           answer:
-            "Sigue sus reglas. Una configuración habitual transfiere las goteras activas a su equipo de guardia con la dirección y la descripción, y reserva una inspección para todo lo demás.",
+            "Sigue sus reglas. Una configuración habitual pide la dirección y qué se está filtrando, transfiere las goteras activas a su equipo de guardia y reserva una inspección para todo lo demás.",
         },
         {
           question: "¿Puede responder preguntas sobre reclamaciones al seguro?",
@@ -1761,14 +1874,14 @@ const bespokeSolutionPagesEs: Record<string, SeoLandingPage> = {
     eyebrow: "Atención telefónica con IA",
     h1: "Atención telefónica con IA que convierte llamadas en trabajos reservados",
     intro:
-      "LobbyStack contesta cuando su equipo no puede. Responde las preguntas habituales, registra los datos de quien llama, reserva citas, envía confirmaciones por SMS y deriva las llamadas urgentes a la persona adecuada.",
+      "LobbyStack contesta cuando su equipo no puede. Responde las preguntas habituales, registra los datos de quien llama, reserva citas, envía confirmaciones por SMS y transfiere las llamadas urgentes al número que usted elija.",
     image: "/illustrations/call-capture.webp",
     imageAlt:
       "Servicio de atención telefónica con IA de LobbyStack registrando los datos de quien llama",
     proofPoints: [
       "Atiende llamadas 24/7",
-      "Reserva citas y envía resúmenes de cada llamada",
-      "Transfiere las llamadas urgentes a la persona adecuada",
+      "Reserva citas y guarda un resumen de cada llamada",
+      "Transfiere las llamadas urgentes al número que usted elija",
     ],
     sections: [
       {
@@ -1782,7 +1895,7 @@ const bespokeSolutionPagesEs: Record<string, SeoLandingPage> = {
       },
       {
         title: "Deje a su equipo las conversaciones que importan",
-        body: "Las llamadas de rutina se pueden resolver automáticamente, mientras que las urgencias, los clientes molestos o los clientes potenciales importantes pasan a su equipo con el contexto.",
+        body: "Las llamadas de rutina se pueden resolver automáticamente, mientras que las urgencias, los clientes molestos o los clientes potenciales importantes pasan a su equipo mediante una transferencia o un mensaje.",
         points: [
           "Reglas de transferencia configurables",
           "Mensajes para el equipo sobre las solicitudes no urgentes",
@@ -1832,7 +1945,7 @@ const bespokeSolutionPagesEs: Record<string, SeoLandingPage> = {
       },
       {
         title: "Mantenga el control de los casos especiales",
-        body: "Si una solicitud no encaja en sus reglas, LobbyStack anota las preferencias, explica los próximos pasos y pasa el contexto a su equipo.",
+        body: "Si una solicitud no encaja en sus reglas, LobbyStack anota las preferencias, explica los próximos pasos y deja un mensaje a su equipo.",
         points: [
           "Reglas por servicio, zona o tipo de cita",
           "Mensaje para el equipo cuando haga falta",
@@ -1868,7 +1981,7 @@ const bespokeSolutionPagesEs: Record<string, SeoLandingPage> = {
     proofPoints: [
       "Califica la urgencia, la zona de servicio y el tipo de trabajo",
       "Ayuda a quien llama a reservar o dejar un mensaje",
-      "Transfiere las situaciones críticas a la persona adecuada",
+      "Transfiere las situaciones críticas a su número de guardia",
     ],
     sections: [
       {
@@ -1882,7 +1995,7 @@ const bespokeSolutionPagesEs: Record<string, SeoLandingPage> = {
       },
       {
         title: "Priorice antes las llamadas correctas",
-        body: "Las urgencias, los proyectos grandes y las solicitudes delicadas se escalan con contexto, mientras que las llamadas de rutina avanzan hacia una cita o un mensaje.",
+        body: "Las urgencias, los proyectos grandes y las solicitudes delicadas se transfieren a su equipo, mientras que las llamadas de rutina avanzan hacia una cita o un mensaje.",
         points: [
           "Transferencia según la urgencia o el tipo de solicitud",
           "Reservas y confirmaciones según sus reglas",

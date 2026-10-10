@@ -97,7 +97,7 @@ Ovo može biti dobar izbor ako:
 - Želite ljudsku podršku tokom radnog vremena ili van njega.
 - Potrebno Vam je bolje korisničko iskustvo nego što čista automatizacija može da pruži.
 
-Za poređenje, cene virtuelnih recepcionera uživo mogu da rastu s potrošnjom. [Javna stranica s cenama kompanije Ruby](https://www.ruby.com/plans-and-pricing/) navodi 50 minuta recepcionera za $250 mesečno i 100 minuta za $395 mesečno, uz veće pakete iznad toga. To može da se isplati kada svaki poziv zahteva obučenog čoveka. Može biti previše kada je većini pozivalaca potreban rutinski odgovor, zakazivanje, prijem podataka ili jasna predaja čoveku.
+Za poređenje, cene virtuelnih recepcionera uživo mogu da rastu s potrošnjom. [Javna stranica s cenama kompanije Ruby](https://www.ruby.com/plans-and-pricing/) navodi 50 minuta recepcionera za $250 mesečno i 100 minuta za $395 mesečno, uz veće pakete iznad toga. To može da se isplati kada svaki poziv zahteva obučenog čoveka. Može biti previše kada je većini pozivalaca potreban rutinski odgovor, zakazivanje, prijem podataka ili jasna predaja čoveku. Naš pregled [najboljih usluga odgovaranja na pozive za male firme](/sr/blog/best-answering-service-for-small-business/) poredi ljudske, hibridne i AI usluge.
 
 ## Uporedite funkcije koje menjaju ishod
 
@@ -207,7 +207,7 @@ stvarni pozivi mesečno x prosečna dužina poziva
 
 Ako se paket zasniva na jedinstvenim klijentima, procenite i to. Ako Vaša firma ima sezonske skokove, računajte s najprometnijim mesecom, a ne s najmirnijim.
 
-Bolje pitanje o povraćaju investicije nije „Da li je ovo jeftinije od recepcionera?“ [Američki Biro za statistiku rada](https://www.bls.gov/ooh/Office-and-Administrative-Support/Receptionists.htm) objavio je medijanu zarade recepcionera od $17.90 po satu u maju 2024, pre poreza na zarade, beneficija, obuke i rupa u pokrivenosti. To poređenje može biti korisno, ali je preširoko.
+Bolje pitanje o povraćaju investicije nije „Da li je ovo jeftinije od recepcionera?“ [Američki Biro za statistiku rada](https://www.bls.gov/ooh/Office-and-Administrative-Support/Receptionists.htm) objavio je medijanu zarade recepcionera od $17.90 po satu u maju 2024, pre poreza na zarade, beneficija, obuke i rupa u pokrivenosti. To poređenje može biti korisno, ali je preširoko. Ako Vam je prava alternativa usluga sa živim operaterima, uporedite trošak s [cenom usluge odgovaranja na pozive](/sr/blog/how-much-does-an-answering-service-cost/).
 
 Preciznije pitanje glasi:
 

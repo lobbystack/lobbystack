@@ -24,7 +24,7 @@ Un premier montage de réceptionniste IA ressemble souvent à ceci :
 - n8n, Zapier, Make ou des webhooks maison relient les outils ;
 - Google Calendar ou Outlook gère les disponibilités ;
 - un CRM ou une feuille de calcul stocke le prospect ;
-- Slack, SMS ou courriel alerte l'équipe.
+- Slack, SMS ou e-mail alerte l'équipe.
 
 Cette pile peut valider l'idée. Un appelant veut réserver, l'agent appelle un webhook, le webhook vérifie le calendrier, le système crée un événement et l'entreprise reçoit une notification.
 
@@ -129,15 +129,16 @@ La réceptionniste transforme le langage de l'appelant en message utile pour l'�
 
 ### Transfert humain
 
-Un transfert demande plus qu'une branche d'intention. La réceptionniste doit savoir quels appels exigent une personne, quoi dire avant le transfert et quoi faire si personne ne répond.
+Un transfert demande plus qu'une branche d'intention. La réceptionniste doit savoir quels appels exigent une personne, quoi dire avant le transfert et quoi faire si le transfert échoue.
 
 Vous pouvez écrire :
 
 ```text
 Transfère les appels urgents, les clients mécontents, les prospects importants
 et les questions auxquelles l'IA n'a pas le droit de répondre. Avant le
-transfert, résume le besoin. Si personne ne répond, prends un message, marque
-la raison du transfert et indique quand l'équipe répondra.
+transfert, préviens l'appelant que tu le transfères. Si le transfert échoue,
+prends un message, marque la raison du transfert et indique quand l'équipe
+répondra.
 ```
 
 L'entreprise obtient un transfert plus fiable parce que l'IA suit une politique, la couche vocale exécute le transfert et le backend enregistre le résultat.
@@ -150,7 +151,7 @@ Si votre réceptionniste IA dépend d'une chaîne de branches pour décider quoi
 
 LobbyStack remplace cette couche. Il possède le comportement en direct, l'état de l'appel, les résultats d'outils, le contexte de transcription, la raison du transfert et le résultat final.
 
-Vous pouvez encore utiliser n8n, Zapier ou Make pour des automatisations hors appel. LobbyStack ne s'y connecte pas et n'envoie pas de webhooks sortants, donc ces outils restent hors de l'appel en direct. Le réceptionniste IA doit pouvoir décider de la prochaine action responsable pendant l'appel, puis enregistrer un résultat clair auquel l'équipe peut se fier.
+Vous pouvez encore utiliser n8n, Zapier ou Make pour des automatisations hors appel. Les webhooks signés de LobbyStack peuvent les déclencher après l'appel, donc ces outils restent hors de l'appel en direct. Le réceptionniste IA doit pouvoir décider de la prochaine action responsable pendant l'appel, puis enregistrer un résultat clair auquel l'équipe peut se fier.
 
 ## Où LobbyStack s'insère
 

@@ -35,7 +35,7 @@ Cene i funkcije su proverene 30. jula 2026.
 
 Smith.ai mreža živih agenata donosi stvarnu vrednost firmi u kojoj niko nije dostupan da primi težak poziv. Kupci treba da potvrde koja prebacivanja paket uključuje i koji zadaci provere ili zakazivanja od strane živih agenata dodaju naplatu po pozivu.
 
-Mnoge male firme već imaju vlasnika, dispečera ili dežurnog zaposlenog za hitne poslove. LobbyStack obrađuje rutinska pitanja i zakazivanja, a zatim pozive kojima je potrebna procena prebacuje toj osobi uz kontekst. Paket Free omogućava timu da pre plaćanja testira 30 minuta takvih razgovora u pregledaču.
+Mnoge male firme već imaju vlasnika, dispečera ili dežurnog zaposlenog za hitne poslove. LobbyStack obrađuje rutinska pitanja i zakazivanja, a zatim pozive kojima je potrebna procena prebacuje na broj te osobe. Paket Free omogućava timu da pre plaćanja testira 30 minuta takvih razgovora u pregledaču.
 
 LobbyStack i tok rada ostavlja dostupnim za pregled. Timovi mogu da kontrolišu provajdere, čuvanje podataka, promptove i infrastrukturu, umesto da čekaju da Enterprise nivo otključa dublje prilagođavanje.
 
@@ -45,7 +45,7 @@ Smith.ai godinama gradi službu recepcionera. Njegov AI proizvod navodi prijem p
 
 Taj model usluge odgovara advokatskim kancelarijama, konsultantskim firmama i drugim delatnostima u kojima težak poziv možda zahteva obučenu osobu izvan osoblja same firme. Može i da smanji posao oko pravljenja rasporeda dežurstava.
 
-LobbyStack preusmerava poziv ljudima koje podesite. Kontekst daje kroz transkripte, rezimee, podatke pozivaoca i obaveštenja, ali ne uključuje recepcionere spoljne firme. Razgovor sa čovekom vodi Vaše osoblje ili partner za javljanje koga izaberete.
+LobbyStack preusmerava poziv na jedan broj koji podesite, a osoba koja se javi ne dobija prethodno nikakav rezime. Vaš tim može da pročita transkript i rezime na kontrolnoj tabli. LobbyStack ne uključuje recepcionere spoljne firme. Razgovor sa čovekom vodi Vaše osoblje ili partner za javljanje koga izaberete.
 
 ## Cena uključuje različite modele rada
 
@@ -61,7 +61,7 @@ Procenite tri broja:
 2. udeo poziva kojima je potreban čovek
 3. trošak osoblja za preuzimanje tih preusmeravanja
 
-Ti brojevi pokazuju da li manje košta upravljana hibridna usluga ili AI sistem povezan sa Vašim timom.
+Ti brojevi pokazuju da li manje košta upravljana hibridna usluga ili AI sistem povezan sa Vašim timom. Kao merilo za ljudski deo usluge, pogledajte [koliko usluge odgovaranja na pozive naplaćuju po pozivu i po minutu](/sr/blog/how-much-does-an-answering-service-cost/).
 
 ## Prilagođavanje i vlasništvo razdvajaju ova dva proizvoda
 

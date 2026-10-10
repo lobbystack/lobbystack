@@ -40,7 +40,7 @@ Sona convient à une équipe déjà engagée dans Quo qui veut des messages dans
 
 ## Sona s'intègre à Quo
 
-Quo regroupe numéros partagés, appels, textos et collaboration. Sona s'insère dans les flux d'appels. Les pages officielles annoncent réponse continue, connaissances, collecte de prospects, messages et résumés.
+Quo regroupe numéros partagés, appels, SMS et collaboration. Sona s'insère dans les flux d'appels. Les pages officielles annoncent réponse continue, connaissances, collecte de prospects, messages et résumés.
 
 Une équipe déjà sur Quo voit les résultats de l'IA avec les appels et messages humains, sans autre tableau de bord.
 

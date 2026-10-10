@@ -35,7 +35,7 @@ Precios y funciones revisados el 30 de julio de 2026.
 
 La red de agentes en vivo de Smith.ai aporta un valor real a una empresa sin nadie disponible para atender una llamada difícil. Los compradores deberían confirmar qué escalaciones incluye el plan y qué tareas de verificación o agenda con agentes en vivo añaden un cargo por llamada.
 
-Muchos pequeños negocios ya tienen un dueño, un despachador o un empleado de guardia para el trabajo urgente. LobbyStack resuelve las preguntas rutinarias y las reservas, y luego transfiere a esa persona, con contexto, las llamadas que requieren criterio. El plan Free permite al equipo probar 30 minutos de esas conversaciones en el navegador antes de pagar.
+Muchos pequeños negocios ya tienen un dueño, un despachador o un empleado de guardia para el trabajo urgente. LobbyStack resuelve las preguntas rutinarias y las reservas, y luego transfiere al número de esa persona las llamadas que requieren criterio. El plan Free permite al equipo probar 30 minutos de esas conversaciones en el navegador antes de pagar.
 
 LobbyStack también mantiene el flujo de trabajo inspeccionable. Los equipos pueden controlar proveedores, retención de datos, prompts e infraestructura en lugar de esperar a un nivel empresarial para desbloquear una personalización más profunda.
 
@@ -45,7 +45,7 @@ Smith.ai lleva años construyendo operaciones de recepción. Su producto de IA a
 
 Ese modelo de servicio encaja con despachos de abogados, consultoras y otros negocios en los que una llamada difícil puede necesitar a una persona formada ajena al propio personal del cliente. También puede reducir el trabajo de organizar un turno de escalado.
 
-LobbyStack transfiere la llamada a las personas que usted configura. Aporta contexto mediante transcripciones, resúmenes, datos de quien llama y notificaciones, pero no incluye un equipo externo de recepcionistas. La conversación humana queda en manos de su personal o del servicio de atención telefónica que usted elija.
+LobbyStack transfiere la llamada al único número que usted configura, y la persona que contesta no recibe antes ningún resumen. Su equipo puede leer la transcripción y el resumen en el panel. LobbyStack no incluye un equipo externo de recepcionistas. La conversación humana queda en manos de su personal o del servicio de atención telefónica que usted elija.
 
 ## El precio incluye modelos de trabajo distintos
 
@@ -61,7 +61,7 @@ Calcule tres cifras:
 2. la proporción de llamadas que necesitan a una persona
 3. el costo de personal de atender esas transferencias
 
-Esas cifras muestran si cuesta menos un servicio híbrido gestionado o un sistema de IA conectado a su equipo.
+Esas cifras muestran si cuesta menos un servicio híbrido gestionado o un sistema de IA conectado a su equipo. Para tener una referencia del lado humano, vea [lo que cobran los servicios de atención telefónica por llamada y por minuto](/es/blog/how-much-does-an-answering-service-cost/).
 
 ## La personalización y la propiedad separan los productos
 

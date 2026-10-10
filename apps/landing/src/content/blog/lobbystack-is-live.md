@@ -31,7 +31,7 @@ When a caller reaches LobbyStack, it can:
 - **book appointments** from your calendar availability
 - **send a booking confirmation** by text on paid plans
 - **alert your team** with a call summary by email or SMS
-- **transfer urgent calls** to the right person with context attached
+- **transfer urgent calls** to the number you choose
 - **keep the record** with transcripts, recordings, summaries, callers, and outcomes in one dashboard
 
 It is not trying to replace the people who run the business. It is there to cover the moments when those people are with customers, closed for the night, or finally trying to eat lunch without holding a phone in one hand.

@@ -22,7 +22,7 @@ export function Hero() {
           <p className="animate-fade-up body-copy mx-auto mt-6 max-w-[65ch] stagger-2 md:text-lg">
             LobbyStack picks up when your team cannot. It answers common
             questions, captures caller details, books appointments, sends
-            confirmation texts, and routes urgent calls to the right person.
+            confirmation texts, and transfers urgent calls to the number you set.
           </p>
 
           <div className="animate-fade-up mt-8 flex items-center justify-center gap-4 stagger-3">
@@ -59,7 +59,7 @@ export function Hero() {
             </div>
             <div className="flex items-center gap-2">
               <Check className="size-4 text-primary" />
-              <span>Sends call summaries</span>
+              <span>Saves call summaries</span>
             </div>
             <div className="flex items-center gap-2">
               <Check className="size-4 text-primary" />
@@ -249,7 +249,7 @@ export function UseCases() {
     },
     {
       title: "Urgent call routing",
-      copy: "Send emergencies, upset customers, high-value leads, and special cases to the right person with context attached.",
+      copy: "Transfer emergencies, upset customers, high-value leads, and special cases to the number you set.",
     },
     {
       title: "Spam and robocalls",
