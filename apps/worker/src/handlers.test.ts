@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { vi } from "vitest";
 
 import type { JobEnvelope } from "@lobbystack/contracts";
-import { claimBillingCheckoutRequest, countPublishableOutboxMessages, deleteCallRecordingForRetention, deleteSentProductEventsBefore, deliverOutbound, expireProspectDemos, generateAffiliatePayoutRun, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, loadLiveCallForPricing, recordCallProviderPricing, recordProductEvent, recordSmsProviderPricing, reconcileBillingProviderEvent, runPrivacyRetentionSweep } from "@lobbystack/domain";
+import { billingCheckoutLeaseEndsAt, claimBillingCheckoutRequest, countPublishableOutboxMessages, deleteCallRecordingForRetention, deleteSentProductEventsBefore, deliverOutbound, expireProspectDemos, generateAffiliatePayoutRun, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, loadLiveCallForPricing, recordCallProviderPricing, recordProductEvent, recordSmsProviderPricing, reconcileBillingProviderEvent, runPrivacyRetentionSweep } from "@lobbystack/domain";
 import { queueDailyOperatorSummaries, queueOnboardingFollowupEmail } from "@lobbystack/domain";
 import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning, numberProvisioningLeaseEndsAt } from "@lobbystack/domain";
 
@@ -12,6 +12,7 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@lobbystack/domain")>();
   return {
     ...actual,
+    billingCheckoutLeaseEndsAt: vi.fn(),
     claimBillingCheckoutRequest: vi.fn(),
     deliverOutbound: vi.fn(),
     expireProspectDemos: vi.fn(),
@@ -350,6 +351,17 @@ describe("worker handlers", () => {
     expect(markBillingCheckoutFailed).toHaveBeenCalledWith(domain, { businessId, requestId, error: "Billing checkout provider is not configured." });
     expect(loadBillingCheckoutRequest).not.toHaveBeenCalled();
     expect(markBillingCheckoutCreated).not.toHaveBeenCalled();
+  });
+
+  it("retries a checkout request another worker holds once its lease ends", async () => {
+    const businessId = randomUUID(); const requestId = randomUUID(); const domain = { db: undefined as never }; const retryAt = new Date(Date.now() + 60_000);
+    vi.mocked(claimBillingCheckoutRequest).mockResolvedValue(false);
+    vi.mocked(billingCheckoutLeaseEndsAt).mockResolvedValue(retryAt);
+    const createCheckout = vi.fn();
+
+    await expect(handleJob({ jobId: randomUUID(), type: "billing.createCheckout", queue: "critical", businessId, payload: { requestId }, trace: {}, idempotencyKey: `test:${randomUUID()}`, scheduled: false }, { domain, polar: { recordUsage: vi.fn(), createCheckout } })).resolves.toEqual({ status: "deferred", entityId: requestId, retryAt });
+    expect(billingCheckoutLeaseEndsAt).toHaveBeenCalledWith(domain, { businessId, requestId });
+    expect(createCheckout).not.toHaveBeenCalled();
   });
 
   it("sends Polar's back arrow to the plan page without marking checkout successful", async () => {

@@ -177,18 +177,28 @@ export async function loadBillingCheckoutRequest(
   });
 }
 
+const billingCheckoutLeaseMs = 10 * 60_000;
+
 export async function claimBillingCheckoutRequest(
   context: DomainContext,
   input: { businessId: string; requestId: string },
 ): Promise<boolean> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const staleBefore = new Date(Date.now() - 10 * 60_000);
+    const staleBefore = new Date(Date.now() - billingCheckoutLeaseMs);
     const rows = await tx.update(billingCheckoutRequests).set({ status: "processing", updatedAt: new Date(), error: null }).where(and(
       eq(billingCheckoutRequests.id, input.requestId),
       eq(billingCheckoutRequests.businessId, input.businessId),
       or(eq(billingCheckoutRequests.status, "pending"), eq(billingCheckoutRequests.status, "error"), and(eq(billingCheckoutRequests.status, "processing"), lt(billingCheckoutRequests.updatedAt, staleBefore))),
     )).returning({ id: billingCheckoutRequests.id });
     return rows.length > 0;
+  });
+}
+
+/** When another run holds this checkout request, the time its lease ends and it may be claimed again. */
+export async function billingCheckoutLeaseEndsAt(context: DomainContext, input: { businessId: string; requestId: string }): Promise<Date | null> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const row = (await tx.select({ updatedAt: billingCheckoutRequests.updatedAt }).from(billingCheckoutRequests).where(and(eq(billingCheckoutRequests.id, input.requestId), eq(billingCheckoutRequests.businessId, input.businessId), eq(billingCheckoutRequests.status, "processing"))).limit(1))[0];
+    return row ? new Date(row.updatedAt.getTime() + billingCheckoutLeaseMs) : null;
   });
 }
 
