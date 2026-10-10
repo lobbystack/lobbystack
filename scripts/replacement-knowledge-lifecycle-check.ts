@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { and, eq } from "drizzle-orm";
-import { businesses, businessMemberships, createDatabaseClient, knowledgeDocuments, storageObjects, users, websiteIngestionJobs, withBusinessTransaction } from "@lobbystack/db";
+import { businesses, businessMemberships, createDatabaseClient, knowledgeChunks, knowledgeDocuments, users, websiteIngestionJobs, withBusinessTransaction } from "@lobbystack/db";
 import { createKnowledgeDocument, createUpload, finalizeUpload, cancelKnowledgeDocument, deleteKnowledgeDocument, getKnowledgeDocumentContent, indexCrawledWebsitePage, markKnowledgeDocumentFailed, retryKnowledgeDocument, searchKnowledge, setKnowledgeDocumentActive } from "@lobbystack/domain";
 import { handleJob } from "../apps/worker/src/handlers";
 import type { JobEnvelope } from "@lobbystack/contracts";
@@ -77,11 +77,13 @@ try {
   assert((await indexCrawledWebsitePage({ db: worker.db }, { ...prepared, sourceRevision: 2 })).chunkCount === 0, "Late worker recreated a deleted import.");
   const capacityUpload = await createUpload({ db: app.db }, { ...uploadInput, fileName: "over-capacity.txt" }, storage);
   await withBusinessTransaction(worker.db, { businessId, actorType: "worker" }, async tx => {
-    await tx.update(storageObjects).set({ contentLength: 25 * 1024 * 1024 }).where(eq(storageObjects.id, upload.objectId));
+    // The plan limit counts indexed text, so fill it with one chunk on the kept upload.
+    await tx.insert(knowledgeChunks).values({ businessId, documentId: uploaded.id, sequence: 1_000, content: "x".repeat(25 * 1024 * 1024), contentHash: "over-capacity" });
   });
   let capacityDenied = false;
   try { await finalizeUpload({ db: app.db }, { userId, businessId, objectId: capacityUpload.objectId, length: bytes.length, contentType: "text/plain", checksum }, storage); } catch (error) { capacityDenied = error instanceof Error && error.message.startsWith("Knowledge storage limit reached."); }
   assert(capacityDenied, "Knowledge uploads ignored the plan storage limit.");
+  await withBusinessTransaction(worker.db, { businessId, actorType: "worker" }, async tx => tx.delete(knowledgeChunks).where(and(eq(knowledgeChunks.businessId, businessId), eq(knowledgeChunks.contentHash, "over-capacity"))));
   const workerRoot = await createKnowledgeDocument({ db: app.db }, { businessId, userId, sourceType: "website", sourceUrl: "https://worker.example.invalid/", title: "Worker lifecycle" });
   const workerImport = () => withBusinessTransaction(worker.db, { businessId, actorType: "worker" }, async tx => (await tx.select().from(websiteIngestionJobs).where(eq(websiteIngestionJobs.rootDocumentId, workerRoot)))[0]!);
   const queuedImport = await workerImport();
