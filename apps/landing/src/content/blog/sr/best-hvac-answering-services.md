@@ -132,7 +132,7 @@ Ne sinhronizuje se sa ServiceTitan, Housecall Pro ni Jobber, a Google Calendar j
 
 Za 40 poziva od tri minuta mesečno, usluge uživo sa ovog spiska koštaju od $127 do $485, a AI usluge od $30 do $149, uz Sameday AI od $449. Za 100 poziva, usluge uživo sa potpuno objavljenim cenama koštaju od $237.50 do $1,160, a AI usluge od $60 do $212.50, opet uz Sameday AI od $449. Naknade za aktivaciju i dodaci mogu da podignu oba iznosa.
 
-Housecall Pro i Nexa ne objavljuju cene, pa smo ih izostavili. Za ostale zanate pogledajte [koliko košta usluga odgovaranja na pozive van HVAC delatnosti](/sr/blog/how-much-does-an-answering-service-cost/).
+Housecall Pro i Nexa ne objavljuju cene, pa smo ih izostavili. Za ostale zanate pogledajte [koliko košta usluga odgovaranja na pozive van HVAC delatnosti](/sr/blog/how-much-does-an-answering-service-cost/), ili naša poređenja [usluga odgovaranja na pozive za vodoinstalatere](/sr/blog/best-plumbing-answering-services/) i [usluga za izvođače radova](/sr/blog/best-answering-services-for-contractors/).
 
 ### Mesec između sezona (40 poziva) i mesec toplotnog talasa (100 poziva)
 

@@ -132,7 +132,7 @@ LobbyStack ne se synchronise ni avec ServiceTitan, ni avec Housecall Pro, ni ave
 
 À 40 appels de trois minutes par mois, les services humains de ce comparatif coûtent de 127 $ à 485 $, et les services IA de 30 $ à 149 $, avec Sameday AI à partir de 449 $. À 100 appels, les services humains aux prix publiés complets coûtent de 237,50 $ à 1 160 $, et les services IA de 60 $ à 212,50 $, là encore avec Sameday AI à partir de 449 $. Les frais de mise en service et les options peuvent alourdir les deux factures.
 
-Housecall Pro et Nexa ne publient aucun prix, donc nous les avons laissés de côté. Pour les autres métiers, voyez [ce que coûte un service de réponse téléphonique](/fr/blog/how-much-does-an-answering-service-cost/).
+Housecall Pro et Nexa ne publient aucun prix, donc nous les avons laissés de côté. Pour les autres métiers, voyez [ce que coûte un service de réponse téléphonique](/fr/blog/how-much-does-an-answering-service-cost/), ou nos comparatifs de [permanences téléphoniques pour plombiers](/fr/blog/best-plumbing-answering-services/) et de [télésecrétariat pour artisans du bâtiment](/fr/blog/best-answering-services-for-contractors/).
 
 ### Un mois de mi-saison (40 appels) et un mois de canicule (100 appels)
 

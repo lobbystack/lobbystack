@@ -61,7 +61,7 @@ For a back-office automation, a failed node can wait in an error queue. On a pho
 
 ## Plain language is the better control surface
 
-AI receptionist behavior should read like receptionist training.
+AI receptionist behavior should read like receptionist training. If your front desk already works from a script, our guide to [phone answering scripts](/blog/phone-answering-script/) shows how to rewrite it as plain-language rules.
 
 You describe the policy in words:
 

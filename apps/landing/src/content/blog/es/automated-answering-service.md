@@ -27,6 +27,7 @@ Es un software que contesta las llamadas de la línea de su negocio sin que inte
 - **Recepcionista automática**, **sistema de respuesta telefónica automática** o **contestador automático de llamadas**: etiquetas imprecisas que pueden referirse a cualquier tipo de esta guía. Pregunte al proveedor cuál vende.
 - **Recepcionista con IA** o **servicio de atención telefónica con IA**: software que conversa con quien llama, responde con la información de su negocio y puede reservar o transferir.
 - **Recepcionista virtual**: a menudo designa a una recepcionista humana que trabaja a distancia. Vea [qué es una recepcionista virtual](/es/blog/ai-receptionist-vs-virtual-receptionist/) y en qué se diferencia de una recepcionista con IA.
+- **Servicio de atención telefónica** o **servicio de contestación de llamadas**: suele designar a operadores humanos que contestan en nombre de su negocio. Vea [qué es un servicio de atención telefónica y cómo funciona](/es/blog/what-is-a-phone-answering-service/).
 
 ### Cómo le llegan las llamadas
 
@@ -94,7 +95,7 @@ Otros proveedores van más lejos en integraciones. [Upfirst](https://upfirst.ai/
 
 ### Qué idiomas habla
 
-Con LobbyStack, cada llamada empieza en el idioma predeterminado del negocio, inglés o francés. Después, la recepcionista responde en el idioma de quien llama: más de 70 idiomas con OpenAI GPT-Live, entre ellos el español y el serbio.
+Con LobbyStack, cada llamada empieza en el idioma predeterminado del negocio, inglés o francés. Después, la recepcionista responde en el idioma de quien llama: más de 70 idiomas con OpenAI GPT-Live, entre ellos el español y el serbio. Si su negocio está en Francia, nuestra guía de [conmutador virtual con IA para pymes en Francia](/es/blog/ai-phone-system-small-business/) compara proveedores franceses y sus precios en euros.
 
 Otros proveedores publican sus propias cifras: [AI-Receptionist.com](https://ai-receptionist.com/pricing) más de 55, Upfirst más de 35 y [Zoom AI Receptionist](https://zoom.us/pricing/virtual-agent) 23. [Dialzara](https://dialzara.com/pricing), [Rosie](https://heyrosie.com/pricing) y [Smith.ai AI Receptionist](https://smith.ai/pricing/ai-receptionist) indican inglés y español. [CloudTalk](https://www.cloudtalk.io/ai-receptionist/) y [ElevenLabs Reception](https://elevenlabs.io/docs/reception-ai/billing/plans-and-pricing) también declaran más de 70. Antes de comprar, haga una llamada de prueba en cada idioma que hablen sus clientes.
 
@@ -158,7 +159,7 @@ Diga el nombre del negocio y lo que puede hacer quien llama, en menos de 25 pala
 
 > "Gracias por llamar a [nombre del negocio]. Puedo reservar una visita, responder preguntas sobre nuestros servicios o tomar un mensaje. ¿En qué le ayudo?"
 
-Si el servicio graba las llamadas, como hace LobbyStack, añada un aviso de grabación donde la ley local lo exija. En un menú telefónico, ofrezca solo las opciones que necesita la mayoría de quienes llaman.
+Si el servicio graba las llamadas, como hace LobbyStack, añada un aviso de grabación donde la ley local lo exija. En un menú telefónico, ofrezca solo las opciones que necesita la mayoría de quienes llaman. Para saludos de línea ocupada, fuera de horario o para una recepcionista con IA, vea nuestras [plantillas de guion telefónico](/es/blog/phone-answering-script/).
 
 ### 4. Dele los datos de su negocio
 

@@ -29,6 +29,7 @@ Au sens strict, le terme désigne le menu vocal qui aiguille les appels. Ce guid
 - **Standard téléphonique automatique** ou **accueil téléphonique automatisé** : des étiquettes larges qui peuvent désigner n'importe quel type de ce guide. Demandez au fournisseur lequel il vend.
 - **Réceptionniste IA** ou **agent vocal IA** : un logiciel qui converse avec l'appelant, répond à partir des informations de votre entreprise, et peut réserver ou transférer.
 - **Réceptionniste virtuelle** : désigne souvent une personne qui répond à distance. Le guide [réceptionniste IA ou humain à distance](/fr/blog/ai-receptionist-vs-virtual-receptionist/) compare les deux options.
+- **Secrétariat téléphonique** ou **permanence téléphonique** : désigne le plus souvent des opérateurs humains qui répondent au nom de votre entreprise. Notre guide explique [ce qu'est un secrétariat téléphonique et comment il fonctionne](/fr/blog/what-is-a-phone-answering-service/).
 
 ### Comment les appels y arrivent
 
@@ -96,7 +97,7 @@ D'autres fournisseurs vont plus loin sur les intégrations. [Upfirst](https://up
 
 ### Les langues qu'il parle
 
-Avec LobbyStack, chaque appel commence dans la langue par défaut de l'entreprise, l'anglais ou le français. Le réceptionniste répond ensuite dans la langue de l'appelant : plus de 70 langues avec GPT-Live d'OpenAI, dont l'espagnol et le serbe.
+Avec LobbyStack, chaque appel commence dans la langue par défaut de l'entreprise, l'anglais ou le français. Le réceptionniste répond ensuite dans la langue de l'appelant : plus de 70 langues avec GPT-Live d'OpenAI, dont l'espagnol et le serbe. Si votre entreprise est en France, notre guide du [standard téléphonique IA pour TPE et PME](/fr/blog/ai-phone-system-small-business/) compare les offres françaises et leurs prix en euros.
 
 Les autres fournisseurs publient leurs propres chiffres : plus de 55 langues pour [AI-Receptionist.com](https://ai-receptionist.com/pricing), plus de 35 pour Upfirst et 23 pour [Zoom AI Receptionist](https://zoom.us/pricing/virtual-agent). [Dialzara](https://dialzara.com/pricing), [Rosie](https://heyrosie.com/pricing) et [Smith.ai AI Receptionist](https://smith.ai/pricing/ai-receptionist) indiquent l'anglais et l'espagnol. [CloudTalk](https://www.cloudtalk.io/ai-receptionist/) et [ElevenLabs Reception](https://elevenlabs.io/docs/reception-ai/billing/plans-and-pricing) annoncent aussi plus de 70 langues. Avant d'acheter, passez un appel test dans chaque langue que parlent vos clients.
 
@@ -160,7 +161,7 @@ Donnez le nom de l'entreprise et dites ce que l'appelant peut faire, en moins de
 
 > « Merci d'appeler [nom de l'entreprise]. Je peux réserver une visite, répondre à vos questions sur nos services ou prendre un message. Je vous écoute. »
 
-Si le service enregistre les appels, comme LobbyStack, ajoutez un avis d'enregistrement là où la loi locale l'exige. Pour un menu vocal, ne proposez que les choix dont la plupart des appelants ont besoin.
+Si le service enregistre les appels, comme LobbyStack, ajoutez un avis d'enregistrement là où la loi locale l'exige. Pour un menu vocal, ne proposez que les choix dont la plupart des appelants ont besoin. Pour une ligne chargée, les heures de fermeture ou un réceptionniste IA, reprenez les formules de nos [scripts d'accueil téléphonique](/fr/blog/phone-answering-script/).
 
 ### 4. Donnez-lui les informations de votre entreprise
 

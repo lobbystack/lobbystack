@@ -128,7 +128,7 @@ Goodcall factura una sola vez al mes a quien vuelve a llamar, así que un negoci
 
 ## ¿Se puede tener una recepcionista con IA gratis?
 
-Sí, con límites. El plan Free de Smith.ai contesta 25 llamadas reales al mes y cobra $3 por cada llamada extra. El plan Free de LobbyStack le da 30 minutos de voz en el navegador al mes para probar la recepcionista, sin tarjeta ni número de teléfono. La mayoría de los demás proveedores ofrecen una prueba de 7 o 14 días.
+Sí, con límites. El plan Free de Smith.ai contesta 25 llamadas reales al mes y cobra $3 por cada llamada extra. El plan Free de LobbyStack le da 30 minutos de voz en el navegador al mes para probar la recepcionista, sin tarjeta ni número de teléfono. La mayoría de los demás proveedores ofrecen una prueba de 7 o 14 días. Para ver qué incluye cada plan gratis y dónde se queda corto, consulte nuestra guía de [recepcionista virtual gratis con IA](/es/blog/free-ai-receptionist/).
 
 ### Planes gratuitos
 

@@ -47,7 +47,7 @@ Mantenga el saludo breve. Indique el nombre del negocio, el tiempo de respuesta 
 
 ## Las llamadas de clientes nuevos se comportan de otra forma
 
-Un cliente nuevo puede tener abierta una lista de negocios en los resultados de búsqueda. Si la primera llamada llega al buzón de voz, puede probar con el siguiente en segundos. El negocio quizá nunca lo sepa, porque mucha gente cuelga sin dejar mensaje.
+Un cliente nuevo puede tener abierta una lista de negocios en los resultados de búsqueda. Si la primera llamada llega al buzón de voz, puede probar con el siguiente en segundos. El negocio quizá nunca lo sepa, porque mucha gente cuelga sin dejar mensaje. Nuestra guía de [llamadas del Perfil de Negocio de Google](/es/blog/google-business-profile-calls/) explica cómo medir las llamadas que genera su ficha.
 
 El efecto depende de la urgencia y de la competencia local. Quien busca un fontanero por una emergencia tiene menos paciencia que un cliente con preguntas rutinarias sobre papeles contables.
 

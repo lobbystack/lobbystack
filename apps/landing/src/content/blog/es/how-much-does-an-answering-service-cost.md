@@ -107,7 +107,7 @@ Esta guía compara servicios con personas, así que LobbyStack es la única fila
 
 ### Cómo revisamos estos precios
 
-- Leímos la página de precios de cada proveedor el 9 de octubre de 2026, además de sus términos o preguntas frecuentes para las reglas de facturación, y damos los precios en dólares estadounidenses sin impuestos.
+- Leímos la página de precios de cada proveedor el 9 de octubre de 2026, además de sus términos o preguntas frecuentes para las reglas de facturación, y damos los precios en dólares estadounidenses sin impuestos. Para proveedores franceses con precios en euros, vea nuestra guía de [secretaria virtual en Francia](/es/blog/outsourced-phone-answering-france/).
 - Las facturas calculadas suponen 3 minutos por llamada, una suposición nuestra. La tarifa efectiva es el precio del plan dividido entre los minutos o las llamadas incluidas.
 - Las facturas cubren plan y excedente. Las tarifas de configuración, los recargos por festivos, los cargos de telecomunicaciones, los impuestos y el redondeo van aparte, y la [tabla de cargos](#qué-cargos-cobran-los-servicios-de-atención-telefónica-además-del-plan) los recoge.
 - Revisaremos los precios cada trimestre y cambiaremos la fecha de arriba.
@@ -312,7 +312,7 @@ Usted pierde dinero con un servicio cuando cada trabajo vale tan poco que unas p
 
 ## ¿Se siguen usando los servicios de atención telefónica?
 
-Sí. Cada proveedor con personas de nuestra tabla mostraba planes vigentes en su sitio cuando lo revisamos en octubre de 2026. Los [servicios de atención telefónica automatizada](/es/blog/automated-answering-service/) y las recepcionistas con IA conviven hoy con ellos y pueden tomar el exceso de llamadas o las habituales mientras las personas atienden el resto.
+Sí. Cada proveedor con personas de nuestra tabla mostraba planes vigentes en su sitio cuando lo revisamos en octubre de 2026. Los [servicios de atención telefónica automatizada](/es/blog/automated-answering-service/) y las recepcionistas con IA conviven hoy con ellos y pueden tomar el exceso de llamadas o las habituales mientras las personas atienden el resto. Si es nuevo en esta categoría, empiece por [qué es un servicio de atención telefónica y cómo funciona](/es/blog/what-is-a-phone-answering-service/).
 
 ### ¿Qué hace un operador de un servicio de atención telefónica?
 

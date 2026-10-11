@@ -128,7 +128,7 @@ Goodcall pozivaoca koji se vraća naplaćuje jednom mesečno, pa radnja sa staln
 
 ## Možete li dobiti AI recepcionera besplatno?
 
-Da, uz ograničenja. Smith.ai paket Free se javlja na 25 stvarnih poziva mesečno i naplaćuje $3 za svaki dodatni poziv. LobbyStack paket Free Vam daje 30 minuta razgovora u pregledaču mesečno za testiranje recepcionera, bez kartice i broja telefona. Većina ostalih ponuđača nudi probu od 7 ili 14 dana.
+Da, uz ograničenja. Smith.ai paket Free se javlja na 25 stvarnih poziva mesečno i naplaćuje $3 za svaki dodatni poziv. LobbyStack paket Free Vam daje 30 minuta razgovora u pregledaču mesečno za testiranje recepcionera, bez kartice i broja telefona. Većina ostalih ponuđača nudi probu od 7 ili 14 dana. U vodiču o [besplatnim AI recepcionerima](/sr/blog/free-ai-receptionist/) poredimo šta uključuju besplatni paketi i probe i gde su im granice.
 
 ### Besplatni paketi
 

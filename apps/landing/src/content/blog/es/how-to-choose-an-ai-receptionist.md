@@ -75,7 +75,7 @@ El riesgo está en la calidad de la configuración. Un sistema de autoservicio s
 
 ### Recepcionistas con IA verticales
 
-Algunos proveedores se centran en un sector concreto, como restaurantes, salud, servicios para el hogar, legal, administración de propiedades o automoción. Pueden costar más, pero traen supuestos de flujo de trabajo que ahorran tiempo.
+Algunos proveedores se centran en un sector concreto, como restaurantes, salud, servicios para el hogar, legal, administración de propiedades o automoción. Pueden costar más, pero traen supuestos de flujo de trabajo que ahorran tiempo. Comparamos las [recepcionistas para despachos de abogados](/es/blog/law-firm-answering-service/), los [call centers inmobiliarios](/es/blog/best-property-management-answering-services/) y las [recepcionistas virtuales para contratistas](/es/blog/best-answering-services-for-contractors/) en guías aparte.
 
 Pueden encajar bien cuando:
 

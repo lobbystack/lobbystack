@@ -128,7 +128,7 @@ Goodcall bills a repeat caller once a month, so a shop with regulars pays less t
 
 ## Can you get an AI receptionist for free?
 
-Yes, with limits. Smith.ai's Free plan answers 25 real calls a month and charges $3 for each extra call. LobbyStack's Free plan gives you 30 browser voice minutes a month to test the receptionist, with no card and no telephone number. Most other vendors offer a 7-day or 14-day trial.
+Yes, with limits. Smith.ai's Free plan answers 25 real calls a month and charges $3 for each extra call. LobbyStack's Free plan gives you 30 browser voice minutes a month to test the receptionist, with no card and no telephone number. Most other vendors offer a 7-day or 14-day trial. For what each free plan includes and where it stops, see our guide to [free AI receptionist plans and trials](/blog/free-ai-receptionist/).
 
 ### Free plans
 

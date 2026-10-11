@@ -61,7 +61,7 @@ Pour une automatisation interne, un nœud en échec peut attendre dans une file 
 
 ## Le langage naturel donne un meilleur contrôle
 
-Le comportement d'un réceptionniste IA devrait se lire comme une formation de réception.
+Le comportement d'un réceptionniste IA devrait se lire comme une formation de réception. Si votre accueil suit déjà un script, notre guide des [scripts d'accueil téléphonique professionnel](/fr/blog/phone-answering-script/) montre comment le réécrire en règles en langage naturel.
 
 Vous décrivez la politique en mots :
 

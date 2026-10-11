@@ -15,7 +15,7 @@ canonicalSlug: "how-much-does-an-answering-service-cost"
 
 Un **service de réponse téléphonique** avec des réceptionnistes humains (une permanence téléphonique, en France) coûte de 127 $ à 415 $ par mois pour 40 appels de trois minutes chez la plupart des fournisseurs qui publient leurs prix (relevé du 9 octobre 2026). Les forfaits à la minute tournent autour de 1 $ à 5 $ la minute. Les forfaits à l'appel facturent de 2 $ à 10 $ par appel inclus, et jusqu'à 11,50 $ par appel supplémentaire. Le réceptionniste IA de LobbyStack prend les mêmes appels pour 30 $, sans personne au bout du fil.
 
-**Prix relevés le 9 octobre 2026** sur la page tarifaire, les conditions et la FAQ de chaque fournisseur, hors taxes. Ce sont les prix que ces fournisseurs affichent pour l'Amérique du Nord, en dollars américains (sauf Posh, en dollars canadiens). LobbyStack propose des numéros aux États-Unis, au Canada, au Royaume-Uni et en Australie, et nulle part ailleurs. Si votre entreprise est en France, demandez des prix en euros à des permanences locales et servez-vous de ce guide pour comparer les modes de facturation. LobbyStack a rédigé ce guide et vend un réceptionniste IA : il apparaît dans une seule ligne IA, en dernier.
+**Prix relevés le 9 octobre 2026** sur la page tarifaire, les conditions et la FAQ de chaque fournisseur, hors taxes. Ce sont les prix que ces fournisseurs affichent pour l'Amérique du Nord, en dollars américains (sauf Posh, en dollars canadiens). LobbyStack propose des numéros aux États-Unis, au Canada, au Royaume-Uni et en Australie, et nulle part ailleurs. Si votre entreprise est en France, demandez des prix en euros à des permanences locales et servez-vous de ce guide pour comparer les modes de facturation. Notre guide du [standard téléphonique externalisé](/fr/blog/outsourced-phone-answering-france/) relève déjà les prix en euros de plusieurs prestataires français. LobbyStack a rédigé ce guide et vend un réceptionniste IA : il apparaît dans une seule ligne IA, en dernier.
 
 ## Combien coûte un service de réponse téléphonique par mois ?
 
@@ -312,7 +312,7 @@ Vous perdez de l'argent avec un service de réponse quand chaque contrat rapport
 
 ## Les entreprises utilisent-elles encore des services de réponse ?
 
-Oui. Chaque fournisseur humain de notre tableau affichait des forfaits en vigueur sur son site lors de notre relevé d'octobre 2026. Les [standards automatiques](/fr/blog/automated-answering-service/) et les réceptionnistes IA côtoient ces services et peuvent prendre le débordement ou les appels courants pendant que des personnes traitent le reste.
+Oui. Chaque fournisseur humain de notre tableau affichait des forfaits en vigueur sur son site lors de notre relevé d'octobre 2026. Les [standards automatiques](/fr/blog/automated-answering-service/) et les réceptionnistes IA côtoient ces services et peuvent prendre le débordement ou les appels courants pendant que des personnes traitent le reste. Si vous découvrez ces services, commencez par [ce qu'est un secrétariat téléphonique et comment il fonctionne](/fr/blog/what-is-a-phone-answering-service/).
 
 ### Que fait un opérateur de service de réponse ?
 

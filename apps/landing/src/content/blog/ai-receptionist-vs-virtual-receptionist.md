@@ -50,7 +50,7 @@ There are four types of virtual receptionist: a live person at an answering serv
 
 ### Live virtual receptionist (answering service)
 
-A live virtual receptionist is a trained person at a company such as [Ruby](https://www.ruby.com/plans-and-pricing/), [PATLive](https://www.patlive.com/pricing/) or [Smith.ai](https://smith.ai/pricing/receptionists). The agent follows the script you provide and can use judgment when a call goes off it. Ruby and PATLive bill per minute, and Smith.ai Virtual Front Desk bills per call. Ruby and [Abby Connect](https://www.abby.com/pricing/) include Spanish 24/7, and PATLive offers Spanish-speaking receptionists, all at no extra cost.
+A live virtual receptionist is a trained person at a company such as [Ruby](https://www.ruby.com/plans-and-pricing/), [PATLive](https://www.patlive.com/pricing/) or [Smith.ai](https://smith.ai/pricing/receptionists). The agent follows the script you provide and can use judgment when a call goes off it. Ruby and PATLive bill per minute, and Smith.ai Virtual Front Desk bills per call. Ruby and [Abby Connect](https://www.abby.com/pricing/) include Spanish 24/7, and PATLive offers Spanish-speaking receptionists, all at no extra cost. Our guide to [Ruby's pricing and an AI alternative](/blog/ruby-receptionists-alternative/) lists its plans and overage rates.
 
 ### AI receptionist
 

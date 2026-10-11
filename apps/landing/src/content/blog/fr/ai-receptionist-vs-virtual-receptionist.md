@@ -50,7 +50,7 @@ Il existe quatre types de réceptionniste virtuelle : une personne dans une perm
 
 ### Réceptionniste humaine : permanence ou secrétariat téléphonique
 
-Une réceptionniste virtuelle humaine est une personne formée qui travaille pour une entreprise comme [Ruby](https://www.ruby.com/plans-and-pricing/), [PATLive](https://www.patlive.com/pricing/) ou [Smith.ai](https://smith.ai/pricing/receptionists). Au Québec, on parle plutôt de service de réponse téléphonique. L'agent suit le script que vous fournissez et peut faire preuve de jugement quand un appel s'en écarte. Ruby et PATLive facturent à la minute, et Smith.ai Virtual Front Desk à l'appel. Ruby et [Abby Connect](https://www.abby.com/pricing/) incluent l'espagnol 24 h/24 et 7 j/7, et PATLive propose des réceptionnistes hispanophones, le tout sans supplément.
+Une réceptionniste virtuelle humaine est une personne formée qui travaille pour une entreprise comme [Ruby](https://www.ruby.com/plans-and-pricing/), [PATLive](https://www.patlive.com/pricing/) ou [Smith.ai](https://smith.ai/pricing/receptionists). Au Québec, on parle plutôt de service de réponse téléphonique. L'agent suit le script que vous fournissez et peut faire preuve de jugement quand un appel s'en écarte. Ruby et PATLive facturent à la minute, et Smith.ai Virtual Front Desk à l'appel. Ruby et [Abby Connect](https://www.abby.com/pricing/) incluent l'espagnol 24 h/24 et 7 j/7, et PATLive propose des réceptionnistes hispanophones, le tout sans supplément. Notre guide [Ruby Receptionists : tarifs et alternative IA](/fr/blog/ruby-receptionists-alternative/) détaille ses forfaits et ses tarifs de dépassement.
 
 ### Réceptionniste IA
 

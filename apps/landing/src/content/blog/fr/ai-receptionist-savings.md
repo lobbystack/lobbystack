@@ -128,7 +128,7 @@ Goodcall ne facture un appelant régulier qu'une fois par mois : une entreprise 
 
 ## Peut-on avoir un réceptionniste IA gratuit ?
 
-Oui, avec des limites. Le forfait Free de Smith.ai répond à 25 vrais appels par mois et facture 3 $ chaque appel supplémentaire. Le forfait Gratuit de LobbyStack vous donne 30 minutes vocales dans le navigateur par mois pour tester le réceptionniste, sans carte ni numéro de téléphone. La plupart des autres fournisseurs offrent un essai de 7 ou 14 jours.
+Oui, avec des limites. Le forfait Free de Smith.ai répond à 25 vrais appels par mois et facture 3 $ chaque appel supplémentaire. Le forfait Gratuit de LobbyStack vous donne 30 minutes vocales dans le navigateur par mois pour tester le réceptionniste, sans carte ni numéro de téléphone. La plupart des autres fournisseurs offrent un essai de 7 ou 14 jours. Pour savoir ce que chaque offre gratuite inclut et où elle s'arrête, consultez notre guide des [offres et essais de répondeur IA gratuit](/fr/blog/free-ai-receptionist/).
 
 ### Forfaits gratuits
 

@@ -123,7 +123,7 @@ Open source removes license mystery. It does not remove:
 - **Compliance thinking.** Recordings, transcripts, and customer data still need retention and access rules.
 - **Provider bills.** Twilio minutes, OpenAI usage, and calendar APIs still show up on invoices unless you go fully local.
 
-If you are deciding between building, buying, and self-hosting, pair this list with [how to choose an AI receptionist](/blog/how-to-choose-an-ai-receptionist/) and [build or buy an AI receptionist](/blog/build-or-buy-ai-receptionist/).
+If you are deciding between building, buying, and self-hosting, pair this list with [how to choose an AI receptionist](/blog/how-to-choose-an-ai-receptionist/) and [build or buy an AI receptionist](/blog/build-or-buy-ai-receptionist/). If you want to start for free without running servers, compare [free AI receptionist plans and trials](/blog/free-ai-receptionist/).
 
 ## Practical next steps
 

@@ -89,7 +89,7 @@ GPT-Live-1 est le modèle que ChatGPT Voice utilise par défaut pour les abonné
 
 ### Qu'est-ce qu'un agent vocal IA ?
 
-Un agent vocal IA est un logiciel qui répond aux appels en langage naturel et accomplit des tâches pendant l'appel, comme réserver un rendez-vous ou prendre un message. L'agent vocal IA de LobbyStack joue le rôle de réceptionniste pour les petites entreprises qui manquent des appels quand elles sont occupées avec leurs clients.
+Un agent vocal IA est un logiciel qui répond aux appels en langage naturel et accomplit des tâches pendant l'appel, comme réserver un rendez-vous ou prendre un message. L'agent vocal IA de LobbyStack joue le rôle de réceptionniste pour les petites entreprises qui manquent des appels quand elles sont occupées avec leurs clients. Pour les entreprises en France, notre guide du [standard téléphonique IA pour TPE et PME](/fr/blog/ai-phone-system-small-business/) compare les offres françaises et leurs prix.
 
 ### Dois-je changer de numéro de téléphone ?
 

@@ -15,7 +15,7 @@ canonicalSlug: "best-answering-service-for-small-business"
 
 El mejor servicio de recepcionista virtual para una pequeña empresa es PATLive si quiere un servicio de atención telefónica con una persona en cada llamada, Smith.ai si busca IA con agentes humanos detrás, y una recepcionista con IA como AI-Receptionist.com, LobbyStack o Upfirst si el costo decide. Con 40 llamadas de tres minutos al mes, los planes con personas cuestan de $127 a $599 y los de IA de $25.25 a $99.
 
-Revisamos los precios el 9 de octubre de 2026 en la página de precios de cada proveedor, en dólares estadounidenses y sin impuestos. LobbyStack escribió esta lista y vende una recepcionista con IA. Por eso aparece en la sección de IA, marcada como nuestra.
+Revisamos los precios el 9 de octubre de 2026 en la página de precios de cada proveedor, en dólares estadounidenses y sin impuestos. Si su negocio está en Francia, compare proveedores con precios en euros en nuestra guía de [secretaria virtual en Francia](/es/blog/outsourced-phone-answering-france/). LobbyStack escribió esta lista y vende una recepcionista con IA. Por eso aparece en la sección de IA, marcada como nuestra.
 
 ## ¿Cuál es el mejor servicio de recepcionista virtual para pequeñas empresas?
 
@@ -102,7 +102,7 @@ Estos cinco publican sus precios, desde la tarifa con personas más barata publi
 - **Configuración y contrato:** sin tarifas de configuración ni de activación, y los planes se renuevan cada 30 días. Ruby devuelve el dinero a los clientes nuevos que cancelan en 21 días o antes de llegar a 500 minutos.
 - **Idiomas:** español 24/7 sin costo adicional.
 - **También incluye:** Ruby no cobra las llamadas automáticas que su filtro envía al buzón de voz, y su app le avisa al 85% y al 100% de sus minutos.
-- **Dónde se queda corto:** con $485 por 40 llamadas, solo Abby Connect cuesta más en esta lista, y el redondeo a 60 segundos encarece las llamadas cortas.
+- **Dónde se queda corto:** con $485 por 40 llamadas, solo Abby Connect cuesta más en esta lista, y el redondeo a 60 segundos encarece las llamadas cortas. Nuestra [guía de precios de Ruby](/es/blog/ruby-receptionists-alternative/) compara sus planes con una alternativa con IA.
 - **Elíjalo si** sus clientes esperan hablar con una persona a cualquier hora, en inglés o en español.
 
 ### Smith.ai Virtual Front Desk: precio por llamada

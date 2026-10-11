@@ -79,7 +79,7 @@ Smith.ai can suit the firm if it wants access to an external receptionist after 
 
 LobbyStack can suit the firm if employees must handle all sensitive conversations and the AI should only collect approved intake, schedule consultations, or transfer urgent callers. Self-hosting may also matter when the firm sets strict data-retention and access policies.
 
-Both systems need careful instructions. The AI should not give legal advice, promise an outcome, or expose client information. A live human should follow the same limits.
+Both systems need careful instructions. The AI should not give legal advice, promise an outcome, or expose client information. A live human should follow the same limits. For live and AI services built around legal intake, see our guide to [law firm answering services](/blog/law-firm-answering-service/).
 
 ## Choose Smith.ai when
 

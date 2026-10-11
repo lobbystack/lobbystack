@@ -123,7 +123,7 @@ Otvoren kod uklanja nejasnoće oko licence. Ne uklanja:
 - **Razmišljanje o usklađenosti sa propisima.** Snimcima, transkriptima i podacima klijenata i dalje trebaju pravila čuvanja i pristupa.
 - **Račune dobavljača.** Twilio minuti, OpenAI potrošnja i kalendarski API servisi i dalje se pojavljuju na fakturama, osim ako sve ne radite lokalno.
 
-Ako birate između pravljenja, kupovine i samostalnog hostovanja, uz ovu listu pročitajte i [kako izabrati AI recepcionera](/sr/blog/how-to-choose-an-ai-receptionist/) i [da li napraviti ili kupiti AI recepcionera](/sr/blog/build-or-buy-ai-receptionist/).
+Ako birate između pravljenja, kupovine i samostalnog hostovanja, uz ovu listu pročitajte i [kako izabrati AI recepcionera](/sr/blog/how-to-choose-an-ai-receptionist/) i [da li napraviti ili kupiti AI recepcionera](/sr/blog/build-or-buy-ai-receptionist/). Ako želite da počnete besplatno, bez održavanja servera, uporedite [besplatne AI recepcionere i probne periode](/sr/blog/free-ai-receptionist/).
 
 ## Praktični sledeći koraci
 

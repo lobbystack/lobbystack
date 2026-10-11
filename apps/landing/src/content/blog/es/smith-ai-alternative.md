@@ -79,7 +79,7 @@ Smith.ai puede convenir al despacho si quiere acceso a una recepcionista externa
 
 LobbyStack puede convenir al despacho si los empleados deben atender todas las conversaciones delicadas y la IA solo debe recoger los datos aprobados, agendar consultas o transferir las llamadas urgentes. El autoalojamiento también puede importar cuando el despacho fija políticas estrictas de retención y acceso a los datos.
 
-Ambos sistemas necesitan instrucciones cuidadosas. La IA no debe dar asesoramiento legal, prometer un resultado ni exponer información de clientes. Una persona en vivo debería respetar los mismos límites.
+Ambos sistemas necesitan instrucciones cuidadosas. La IA no debe dar asesoramiento legal, prometer un resultado ni exponer información de clientes. Una persona en vivo debería respetar los mismos límites. Para comparar servicios con personas y con IA pensados para despachos, vea nuestra guía de [recepcionistas para despachos de abogados](/es/blog/law-firm-answering-service/).
 
 ## Elija Smith.ai si
 

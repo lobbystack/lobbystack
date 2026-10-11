@@ -70,7 +70,7 @@ Smith.ai peut convenir si le cabinet veut qu'un réceptionniste externe reprenne
 
 LobbyStack peut convenir si les employés doivent traiter tous les échanges sensibles et si l'IA ne fait que recueillir les données approuvées, réserver ou transférer. Le cabinet peut aussi choisir l'auto-hébergement pour renforcer ses règles d'accès.
 
-Les deux services ont besoin de limites claires. Aucun ne doit donner un avis juridique ou promettre un résultat.
+Les deux services ont besoin de limites claires. Aucun ne doit donner un avis juridique ou promettre un résultat. Pour comparer les services humains et IA adaptés aux cabinets, consultez notre guide de la [permanence téléphonique pour avocats](/fr/blog/law-firm-answering-service/).
 
 ## Choisissez Smith.ai si
 

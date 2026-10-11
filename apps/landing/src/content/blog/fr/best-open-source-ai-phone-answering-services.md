@@ -123,7 +123,7 @@ L'open source lève le mystère des licences. Il ne supprime pas :
 - **La réflexion conformité.** Enregistrements, transcriptions et données clients exigent encore des règles de conservation et d'accès.
 - **Les factures fournisseurs.** Les minutes Twilio, l'usage OpenAI et les API calendrier apparaissent encore sur les factures, sauf si vous passez entièrement en local.
 
-Si vous hésitez entre construire, acheter et auto-héberger, croisez cette liste avec [comment choisir un réceptionniste IA](/fr/blog/how-to-choose-an-ai-receptionist/) et [construire ou acheter un réceptionniste IA](/fr/blog/build-or-buy-ai-receptionist/).
+Si vous hésitez entre construire, acheter et auto-héberger, croisez cette liste avec [comment choisir un réceptionniste IA](/fr/blog/how-to-choose-an-ai-receptionist/) et [construire ou acheter un réceptionniste IA](/fr/blog/build-or-buy-ai-receptionist/). Si vous voulez démarrer gratuitement sans gérer de serveurs, comparez les [offres et essais de répondeur IA gratuit](/fr/blog/free-ai-receptionist/).
 
 ## Prochaines étapes concrètes
 

@@ -498,6 +498,10 @@ export const solutionPages: SeoLandingPage[] = [
     faqHeading: "Questions about AI receptionists for plumbers",
     relatedLinks: [
       {
+        label: "Compare plumbing answering services",
+        href: "/blog/best-plumbing-answering-services/",
+      },
+      {
         label: "After-hours answering for contractors",
         href: "/solutions/after-hours-answering-service-for-contractors/",
       },
@@ -1036,6 +1040,10 @@ export const solutionPages: SeoLandingPage[] = [
         label: "Compare HVAC answering services",
         href: "/blog/best-hvac-answering-services/",
       },
+      {
+        label: "Compare answering services for contractors",
+        href: "/blog/best-answering-services-for-contractors/",
+      },
       { label: "Pricing", href: "/pricing/" },
     ],
     ctaHeading: "Stop losing after-hours contractor calls to voicemail",
@@ -1104,6 +1112,10 @@ export const solutionPages: SeoLandingPage[] = [
     faqs: propertyManagementFaqs,
     faqHeading: "Questions about property management answering services",
     relatedLinks: [
+      {
+        label: "Compare property management answering services",
+        href: "/blog/best-property-management-answering-services/",
+      },
       {
         label: "After-hours answering",
         href: "/solutions/after-hours-answering-service/",

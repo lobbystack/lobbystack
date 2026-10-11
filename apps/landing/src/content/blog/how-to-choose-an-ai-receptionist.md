@@ -75,7 +75,7 @@ The risk is setup quality. A self-serve system is only as good as the business k
 
 ### Vertical AI receptionists
 
-Some vendors focus on a specific industry, such as restaurants, healthcare, home services, legal, property management, or automotive. They may cost more, but they can come with workflow assumptions that save time.
+Some vendors focus on a specific industry, such as restaurants, healthcare, home services, legal, property management, or automotive. They may cost more, but they can come with workflow assumptions that save time. We compare [law firm answering services](/blog/law-firm-answering-service/), [property management answering services](/blog/best-property-management-answering-services/) and [answering services for contractors](/blog/best-answering-services-for-contractors/) in separate guides.
 
 This can be a good fit when:
 

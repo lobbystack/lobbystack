@@ -82,7 +82,7 @@ Una administradora de propiedades atiende a 140 inquilinos. Los mismos inquilino
 
 El modelo de Goodcall por persona única puede encajar, porque cada inquilino cuenta una sola vez al mes. Con 140 inquilinos, Starter más 40 personas adicionales a 79¢ suma unos $111, y Growth cubre 500 personas por $129. La administradora debería confirmar cómo identifica el sistema a quienes llaman desde números compartidos o que cambian.
 
-LobbyStack puede encajar si la administradora recibe muchas llamadas cortas de interesados, proveedores e inquilinos, o si necesita control con autoalojamiento sobre los registros de llamadas. El equipo debería probar las transferencias de urgencia, la captura de direcciones, los contactos duplicados y la gestión cuando una persona oculta su número.
+LobbyStack puede encajar si la administradora recibe muchas llamadas cortas de interesados, proveedores e inquilinos, o si necesita control con autoalojamiento sobre los registros de llamadas. El equipo debería probar las transferencias de urgencia, la captura de direcciones, los contactos duplicados y la gestión cuando una persona oculta su número. Para servicios con personas y con IA pensados para este trabajo, vea nuestra comparativa de [servicios de atención telefónica para administradores de propiedades](/es/blog/best-property-management-answering-services/).
 
 Este caso no se puede presupuestar solo con el número de llamadas. Importan tanto las personas únicas como los minutos totales.
 

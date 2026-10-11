@@ -1070,6 +1070,10 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
             "Comparer les services de réponse téléphonique en chauffage et climatisation",
           href: "/blog/best-hvac-answering-services/",
         },
+        {
+          label: "Comparer le télésecrétariat pour artisans du bâtiment",
+          href: "/blog/best-answering-services-for-contractors/",
+        },
       ],
       ctaHeading: "Couvrez les appels après la fin de la journée",
       ctaBody:
@@ -1164,6 +1168,10 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
       ],
       faqHeading: "Questions sur la prise d’appels en gestion immobilière",
       relatedLinks: [
+        {
+          label: "Comparer les permanences téléphoniques pour l’immobilier",
+          href: "/blog/best-property-management-answering-services/",
+        },
         {
           label: "Réponse téléphonique hors horaires",
           href: "/solutions/after-hours-answering-service/",

@@ -107,7 +107,7 @@ Ovaj vodič poredi cene usluga uživo, pa je LobbyStack jedini AI red. Za druge 
 
 ### Kako smo proverili cene
 
-- Pročitali smo stranicu sa cenama svakog dobavljača 9. oktobra 2026, plus njegove uslove ili česta pitanja zbog pravila naplate, i navodimo cene u američkim dolarima bez poreza.
+- Pročitali smo stranicu sa cenama svakog dobavljača 9. oktobra 2026, plus njegove uslove ili česta pitanja zbog pravila naplate, i navodimo cene u američkim dolarima bez poreza. Za francuske dobavljače sa cenama u evrima pogledajte vodič o [eksternom call centru za firme u Francuskoj](/sr/blog/outsourced-phone-answering-france/).
 - Izračunati računi pretpostavljaju 3 minuta po pozivu, što je naša pretpostavka. Efektivna cena je cena paketa podeljena sa uključenim minutima ili pozivima.
 - Računi obuhvataju paket i prekoračenje. Naknade za aktivaciju, praznike i telekom, porezi i zaokruživanje dolaze povrh toga, a navodi ih [tabela naknada](#koje-naknade-usluge-odgovaranja-naplaćuju-povrh-paketa).
 - Cene ćemo osvežavati svakog kvartala i ažurirati datum na vrhu.
@@ -312,7 +312,7 @@ Gubite novac kada posao vredi premalo da bi nekoliko dodatnih zakazivanja pokril
 
 ## Da li ljudi i dalje koriste usluge odgovaranja?
 
-Da. Svaki dobavljač uživo iz naše tabele imao je aktuelne pakete na sajtu kada smo proverili u oktobru 2026. [Usluge automatskog odgovaranja na pozive](/sr/blog/automated-answering-service/) i AI recepcioneri sada rade uz njih i mogu da preuzmu višak ili rutinske pozive, dok ljudi rešavaju ostale.
+Da. Svaki dobavljač uživo iz naše tabele imao je aktuelne pakete na sajtu kada smo proverili u oktobru 2026. [Usluge automatskog odgovaranja na pozive](/sr/blog/automated-answering-service/) i AI recepcioneri sada rade uz njih i mogu da preuzmu višak ili rutinske pozive, dok ljudi rešavaju ostale. Ako se tek upoznajete sa ovim uslugama, počnite od teksta [šta je usluga odgovaranja na pozive i kako funkcioniše](/sr/blog/what-is-a-phone-answering-service/).
 
 ### Šta radi operater usluge odgovaranja?
 

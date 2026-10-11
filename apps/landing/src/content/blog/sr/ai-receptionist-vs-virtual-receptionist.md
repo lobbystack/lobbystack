@@ -50,7 +50,7 @@ Postoje četiri vrste virtuelnog recepcionera: osoba u službi za odgovaranje na
 
 ### Virtuelni recepcioner uživo (usluga odgovaranja na pozive)
 
-Virtuelni recepcioner uživo je obučena osoba u firmi kao što su [Ruby](https://www.ruby.com/plans-and-pricing/), [PATLive](https://www.patlive.com/pricing/) ili [Smith.ai](https://smith.ai/pricing/receptionists). Agent prati skriptu koju mu date i sam procenjuje šta da radi kada razgovor skrene sa nje. Ruby i PATLive naplaćuju po minutu, a Smith.ai Virtual Front Desk po pozivu. Ruby i [Abby Connect](https://www.abby.com/pricing/) uključuju španski 24/7, a PATLive nudi recepcionere koji govore španski, sve bez doplate.
+Virtuelni recepcioner uživo je obučena osoba u firmi kao što su [Ruby](https://www.ruby.com/plans-and-pricing/), [PATLive](https://www.patlive.com/pricing/) ili [Smith.ai](https://smith.ai/pricing/receptionists). Agent prati skriptu koju mu date i sam procenjuje šta da radi kada razgovor skrene sa nje. Ruby i PATLive naplaćuju po minutu, a Smith.ai Virtual Front Desk po pozivu. Ruby i [Abby Connect](https://www.abby.com/pricing/) uključuju španski 24/7, a PATLive nudi recepcionere koji govore španski, sve bez doplate. Njegove pakete i cene dodatnih minuta navodimo u vodiču [Ruby cene i AI alternativa](/sr/blog/ruby-receptionists-alternative/).
 
 ### AI recepcioner
 

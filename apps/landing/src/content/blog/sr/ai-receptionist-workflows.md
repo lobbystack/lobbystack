@@ -61,7 +61,7 @@ U automatizaciji za administraciju, čvor koji nije uspeo može da čeka u redu 
 
 ## Običan jezik je bolja kontrolna površina
 
-Ponašanje AI recepcionera treba da se čita kao obuka za recepcionera.
+Ponašanje AI recepcionera treba da se čita kao obuka za recepcionera. Ako Vaša recepcija već radi po skripti, naš vodič sa [skriptama za javljanje na telefon](/sr/blog/phone-answering-script/) pokazuje kako da je prepišete u pravila na običnom jeziku.
 
 Pravilo opišete rečima:
 

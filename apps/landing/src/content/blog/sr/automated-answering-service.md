@@ -27,6 +27,7 @@ Automatsko odgovaranje na pozive je softver koji se javlja na Vašoj poslovnoj l
 - **Automatska recepcija**, **sistem za automatsko javljanje** ili **virtuelna sekretarica**: labavi nazivi koji mogu da znače bilo koju vrstu iz ovog vodiča, pa pitajte dobavljača koju vrstu prodaje.
 - **AI recepcioner** ili **AI usluga odgovaranja na pozive**: softver koji razgovara sa pozivaocima, odgovara na osnovu podataka o Vašoj firmi i može da zakaže termin ili preusmeri poziv.
 - **Virtuelni recepcioner**: često znači recepcionera čoveka koji radi na daljinu. Pročitajte [šta je virtuelni recepcioner](/sr/blog/ai-receptionist-vs-virtual-receptionist/) i po čemu se razlikuje od AI recepcionera.
+- **Usluga odgovaranja na pozive**: obično znači operatere uživo koji se javljaju u ime Vaše firme. Pročitajte [šta je usluga odgovaranja na pozive i kako funkcioniše](/sr/blog/what-is-a-phone-answering-service/).
 
 ### Kako pozivi stižu do usluge
 
@@ -94,7 +95,7 @@ Drugi dobavljači nude više integracija. [Upfirst](https://upfirst.ai/pricing) 
 
 ### Kojim jezicima govori
 
-Kod LobbyStack-a svaki poziv počinje na podrazumevanom jeziku firme, engleskom ili francuskom. Recepcioner zatim odgovara na jeziku pozivaoca: na OpenAI GPT-Live modelu to je više od 70 jezika, uključujući španski i srpski.
+Kod LobbyStack-a svaki poziv počinje na podrazumevanom jeziku firme, engleskom ili francuskom. Recepcioner zatim odgovara na jeziku pozivaoca: na OpenAI GPT-Live modelu to je više od 70 jezika, uključujući španski i srpski. Ako je Vaša firma u Francuskoj, naš vodič o [AI telefonskoj centrali za male firme u Francuskoj](/sr/blog/ai-phone-system-small-business/) poredi francuske dobavljače i njihove cene u evrima.
 
 Drugi dobavljači objavljuju svoje brojke: [AI-Receptionist.com](https://ai-receptionist.com/pricing) 55+, Upfirst 35+ i [Zoom AI Receptionist](https://zoom.us/pricing/virtual-agent) 23. [Dialzara](https://dialzara.com/pricing), [Rosie](https://heyrosie.com/pricing) i [Smith.ai AI Receptionist](https://smith.ai/pricing/ai-receptionist) navode engleski i španski. [CloudTalk](https://www.cloudtalk.io/ai-receptionist/) i [ElevenLabs Reception](https://elevenlabs.io/docs/reception-ai/billing/plans-and-pricing) takođe navode 70+. Pre kupovine obavite probni poziv na svakom jeziku kojim govore Vaši klijenti.
 
@@ -158,7 +159,7 @@ Navedite naziv firme i recite šta pozivalac može da uradi, u manje od 25 reči
 
 > „Hvala što ste pozvali [naziv firme]. Mogu da zakažem posetu, odgovorim na pitanja o našim uslugama ili primim poruku. Kako mogu da pomognem?“
 
-Ako usluga snima pozive, kao LobbyStack, dodajte obaveštenje o snimanju tamo gde ga lokalni zakon traži. U IVR meniju ponudite samo opcije koje treba većini pozivalaca.
+Ako usluga snima pozive, kao LobbyStack, dodajte obaveštenje o snimanju tamo gde ga lokalni zakon traži. U IVR meniju ponudite samo opcije koje treba većini pozivalaca. Pozdrave za zauzetu liniju, vreme posle zatvaranja i AI recepcionera naći ćete u našim [šablonima skripti za javljanje na telefon](/sr/blog/phone-answering-script/).
 
 ### 4. Unesite podatke o firmi
 

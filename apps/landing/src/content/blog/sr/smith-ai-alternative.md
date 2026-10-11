@@ -79,7 +79,7 @@ Smith.ai može da odgovara kancelariji ako želi pristup spoljnom recepcioneru n
 
 LobbyStack može da odgovara kancelariji ako zaposleni moraju da vode sve osetljive razgovore, a AI treba samo da prikupi odobrene podatke, zakaže konsultacije ili preusmeri hitne pozivaoce. Samostalno hostovanje može da bude važno i kada kancelarija postavlja stroga pravila za čuvanje podataka i pristup.
 
-Oba sistema traže pažljiva uputstva. AI ne sme da daje pravne savete, obećava ishod ili otkriva podatke o klijentima. Živi čovek treba da poštuje iste granice.
+Oba sistema traže pažljiva uputstva. AI ne sme da daje pravne savete, obećava ishod ili otkriva podatke o klijentima. Živi čovek treba da poštuje iste granice. Usluge uživo i AI usluge za prijem klijenata u kancelarijama poredimo u vodiču o [uslugama odgovaranja na pozive za advokatske kancelarije](/sr/blog/law-firm-answering-service/).
 
 ## Izaberite Smith.ai ako
 

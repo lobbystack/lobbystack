@@ -853,6 +853,10 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
       faqHeading: "Preguntas sobre la recepcionista con IA para plomeros",
       relatedLinks: [
         {
+          label: "Compare servicios de atención telefónica para plomeros",
+          href: "/blog/best-plumbing-answering-services/",
+        },
+        {
           label: "Atención fuera de horario para contratistas",
           href: "/solutions/after-hours-answering-service-for-contractors/",
         },
@@ -1510,6 +1514,10 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
           label: "Compare servicios de atención telefónica para climatización",
           href: "/blog/best-hvac-answering-services/",
         },
+        {
+          label: "Compare servicios de atención telefónica para contratistas",
+          href: "/blog/best-answering-services-for-contractors/",
+        },
         pricingLink,
       ],
       ctaHeading: "No pierda más llamadas de contratistas fuera de horario",
@@ -1602,6 +1610,11 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
       faqHeading:
         "Preguntas sobre la atención telefónica para administradores de propiedades",
       relatedLinks: [
+        {
+          label:
+            "Compare servicios de atención telefónica para administradores de propiedades",
+          href: "/blog/best-property-management-answering-services/",
+        },
         {
           label: "Atención fuera de horario",
           href: "/solutions/after-hours-answering-service/",

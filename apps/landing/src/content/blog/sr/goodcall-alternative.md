@@ -82,7 +82,7 @@ Upravnik nekretnina radi sa 140 stanara. Isti stanari zovu zbog kirije, održava
 
 Goodcall model po jedinstvenom pozivaocu može da odgovara, jer se svaki stanar računa jednom mesečno. Sa 140 stanara, Starter i 40 dodatnih pozivalaca po 79¢ izlaze oko $111, a Growth pokriva 500 pozivalaca za $129. Upravnik treba da proveri kako sistem prepoznaje pozivaoce koji koriste zajedničke brojeve ili ih menjaju.
 
-LobbyStack može da odgovara ako upravnik dobija mnogo kratkih poziva od potencijalnih zakupaca, dobavljača i stanara, ili ako mu treba kontrola nad evidencijom poziva uz samostalno hostovanje. Tim treba da testira hitna preusmeravanja, beleženje adrese, duple kontakte i postupanje kada pozivalac sakrije svoj broj.
+LobbyStack može da odgovara ako upravnik dobija mnogo kratkih poziva od potencijalnih zakupaca, dobavljača i stanara, ili ako mu treba kontrola nad evidencijom poziva uz samostalno hostovanje. Tim treba da testira hitna preusmeravanja, beleženje adrese, duple kontakte i postupanje kada pozivalac sakrije svoj broj. Za usluge uživo i AI usluge prilagođene ovom poslu pogledajte naše poređenje [usluga odgovaranja na pozive za upravljanje nekretninama](/sr/blog/best-property-management-answering-services/).
 
 Cena za ovaj slučaj ne može se izračunati samo iz broja poziva. Važni su i broj različitih ljudi i ukupni minuti.
 

@@ -80,7 +80,7 @@ Un gestionnaire sert 140 locataires. Les mêmes personnes appellent pour le loye
 
 Le modèle de Goodcall peut convenir car chaque locataire ne compte qu'une fois par mois. Avec 140 locataires, Starter et 40 appelants en plus à 0,79 $ reviennent à environ 111 $, et Growth couvre 500 appelants pour 129 $. Il faut confirmer comment le service identifie un numéro partagé ou modifié.
 
-LobbyStack peut convenir si le gestionnaire reçoit beaucoup de demandes brèves de prospects et de fournisseurs, ou s'il veut contrôler ses dossiers dans une infrastructure privée.
+LobbyStack peut convenir si le gestionnaire reçoit beaucoup de demandes brèves de prospects et de fournisseurs, ou s'il veut contrôler ses dossiers dans une infrastructure privée. Pour des services humains et IA pensés pour la gestion locative, consultez notre comparatif des [permanences téléphoniques pour l'immobilier](/fr/blog/best-property-management-answering-services/).
 
 Le nombre d'appels ne suffit pas. Il faut compter les personnes et les minutes.
 

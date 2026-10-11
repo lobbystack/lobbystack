@@ -15,7 +15,7 @@ canonicalSlug: "best-answering-service-for-small-business"
 
 Najbolja **usluga odgovaranja na pozive** za malu firmu je PATLive ako želite osobu na svakom pozivu, Smith.ai ako želite AI iza koga stoje agenti uživo, a AI recepcioner, na primer AI-Receptionist.com, LobbyStack ili Upfirst, ako Vam je cena najvažnija. Za 40 poziva od po tri minuta mesečno, virtuelna sekretarica uživo košta od $127 do $599, a AI paketi od $25.25 do $99.
 
-Cene smo proverili 9. oktobra 2026. na stranici sa cenama svakog dobavljača, u američkim dolarima bez poreza. LobbyStack je sastavio ovaj spisak i prodaje AI recepcionera, pa se nalazi u AI delu, označen kao naš.
+Cene smo proverili 9. oktobra 2026. na stranici sa cenama svakog dobavljača, u američkim dolarima bez poreza. Ako Vam je firma u Francuskoj, francuske dobavljače sa cenama u evrima poredimo u vodiču o [eksternom call centru za firme u Francuskoj](/sr/blog/outsourced-phone-answering-france/). LobbyStack je sastavio ovaj spisak i prodaje AI recepcionera, pa se nalazi u AI delu, označen kao naš.
 
 ## Koja je najbolja usluga odgovaranja na pozive za male firme?
 
@@ -102,7 +102,7 @@ Ovih pet usluga objavljuje cene, od najniže objavljene cene uživo (AnswerNet) 
 - **Aktivacija i ugovor:** bez naknada za aktivaciju i uključenje, a paketi se obnavljaju na svakih 30 dana. Novi korisnici dobijaju povraćaj novca ako otkažu u roku od 21 dan ili pre 500 minuta.
 - **Jezici:** španski 24/7 bez doplate.
 - **Takođe uključeno:** Ruby ne naplaćuje robotske pozive koje njegov filter pošalje na govornu poštu, a aplikacija Vas obaveštava kada potrošite 85% i 100% minuta.
-- **Gde zaostaje:** sa $485 za 40 poziva, na ovom spisku skuplji je samo Abby Connect, a zaokruživanje na 60 sekundi poskupljuje kratke pozive.
+- **Gde zaostaje:** sa $485 za 40 poziva, na ovom spisku skuplji je samo Abby Connect, a zaokruživanje na 60 sekundi poskupljuje kratke pozive. Naš [vodič za Ruby cene](/sr/blog/ruby-receptionists-alternative/) poredi njegove pakete sa AI alternativom.
 - **Izaberite ga ako** pozivaoci očekuju osobu u bilo koje doba, na engleskom ili španskom.
 
 ### Smith.ai Virtual Front Desk: cena po pozivu

@@ -75,7 +75,7 @@ Le risque tient à la qualité de la configuration. Un système en libre‑servi
 
 ### Réceptionnistes IA verticaux
 
-Certains fournisseurs ciblent une industrie précise : restauration, santé, services à domicile, juridique, gestion immobilière ou automobile. Ils peuvent coûter plus cher, mais ils arrivent avec des hypothèses de workflow qui font gagner du temps.
+Certains fournisseurs ciblent une industrie précise : restauration, santé, services à domicile, juridique, gestion immobilière ou automobile. Ils peuvent coûter plus cher, mais ils arrivent avec des hypothèses de workflow qui font gagner du temps. Nous comparons les [permanences téléphoniques pour avocats](/fr/blog/law-firm-answering-service/), les [permanences téléphoniques pour l'immobilier](/fr/blog/best-property-management-answering-services/) et le [télésecrétariat pour artisans du bâtiment](/fr/blog/best-answering-services-for-contractors/) dans des guides dédiés.
 
 Cela peut convenir quand :
 

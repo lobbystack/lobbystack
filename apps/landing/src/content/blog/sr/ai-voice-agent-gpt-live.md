@@ -89,7 +89,7 @@ GPT-Live-1 je model koji ChatGPT Voice podrazumevano koristi za plaćene korisni
 
 ### Šta je AI glasovni agent?
 
-AI glasovni agent je softver koji odgovara na pozive prirodnim govorom i tokom poziva obavlja zadatke, kao što su zakazivanje termina ili primanje poruke. LobbyStack AI glasovni agent radi kao recepcioner za male firme koje propuštaju pozive dok su zauzete klijentima.
+AI glasovni agent je softver koji odgovara na pozive prirodnim govorom i tokom poziva obavlja zadatke, kao što su zakazivanje termina ili primanje poruke. LobbyStack AI glasovni agent radi kao recepcioner za male firme koje propuštaju pozive dok su zauzete klijentima. Za firme u Francuskoj, naš vodič o [AI telefonskoj centrali za male firme](/sr/blog/ai-phone-system-small-business/) poredi lokalne dobavljače i njihove cene u evrima.
 
 ### Da li treba da promenim broj telefona?
 

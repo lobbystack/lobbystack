@@ -47,7 +47,7 @@ Gardez une annonce courte. Donnez le nom, le délai de réponse et une autre rou
 
 ## Les nouveaux clients agissent autrement
 
-Un nouvel appelant peut voir plusieurs entreprises dans les résultats de recherche. Si le premier appel atteint la messagerie, il peut essayer le suivant sans laisser de trace.
+Un nouvel appelant peut voir plusieurs entreprises dans les résultats de recherche. Si le premier appel atteint la messagerie, il peut essayer le suivant sans laisser de trace. Notre guide sur les [appels de votre fiche d'établissement Google](/fr/blog/google-business-profile-calls/) explique comment suivre ceux que votre fiche génère.
 
 L'effet dépend de l'urgence et de la concurrence. Une fuite de plomberie crée moins de patience qu'une question comptable non urgente.
 

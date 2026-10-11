@@ -82,7 +82,7 @@ A property manager serves 140 tenants. The same tenants call about rent, mainten
 
 Goodcall's unique-caller model may fit because repeat calls from the same tenants count once a month. At 140 tenants, Starter's 100 callers plus 40 extra at 79¢ comes to about $111, and Growth covers 500 callers for $129. The manager should confirm how the system identifies callers who use shared or changing numbers.
 
-LobbyStack may fit if the manager gets many short calls from prospects, vendors, and tenants, or if it needs self-hosted control over call records. The team should test emergency transfers, address capture, duplicate contacts, and the handoff when a caller withholds their number.
+LobbyStack may fit if the manager gets many short calls from prospects, vendors, and tenants, or if it needs self-hosted control over call records. The team should test emergency transfers, address capture, duplicate contacts, and the handoff when a caller withholds their number. For live and AI services built for this work, see our comparison of [property management answering services](/blog/best-property-management-answering-services/).
 
 This use case cannot be priced from the number of calls alone. Unique people and total minutes both matter.
 

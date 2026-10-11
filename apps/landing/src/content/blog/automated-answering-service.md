@@ -27,6 +27,7 @@ An automated answering service is software that answers calls on your business l
 - **Automated receptionist**, **automated phone answering system** or **automated phone answering service**: loose labels that can mean any type in this guide, so ask which one a vendor sells.
 - **AI receptionist** or **AI answering service**: software that talks with callers, answers from your business information, and can book or transfer.
 - **Virtual receptionist**: often means a remote human receptionist. See [what a virtual receptionist is](/blog/ai-receptionist-vs-virtual-receptionist/) and how one compares with an AI receptionist.
+- **Phone answering service** or **answering service**: usually live operators who answer in your business name. See [what a phone answering service is and how it works](/blog/what-is-a-phone-answering-service/).
 
 ### How calls reach it
 
@@ -94,7 +95,7 @@ Other vendors go further on integrations. [Upfirst](https://upfirst.ai/pricing) 
 
 ### Which languages it speaks
 
-With LobbyStack, each call opens in the business's default language, English or French. The receptionist then answers in the caller's language: 70+ languages on OpenAI GPT-Live, including Spanish and Serbian.
+With LobbyStack, each call opens in the business's default language, English or French. The receptionist then answers in the caller's language: 70+ languages on OpenAI GPT-Live, including Spanish and Serbian. If your business is in France, our guide to an [AI phone system for small businesses in France](/blog/ai-phone-system-small-business/) compares French providers and their euro prices.
 
 Other vendors publish their own counts: [AI-Receptionist.com](https://ai-receptionist.com/pricing) 55+, Upfirst 35+ and [Zoom AI Receptionist](https://zoom.us/pricing/virtual-agent) 23. [Dialzara](https://dialzara.com/pricing), [Rosie](https://heyrosie.com/pricing) and [Smith.ai AI Receptionist](https://smith.ai/pricing/ai-receptionist) list English and Spanish. [CloudTalk](https://www.cloudtalk.io/ai-receptionist/) and [ElevenLabs Reception](https://elevenlabs.io/docs/reception-ai/billing/plans-and-pricing) also state 70+. Before you buy, place a test call in each language your customers speak.
 
@@ -158,7 +159,7 @@ Give the business name and say what the caller can do, in under 25 words:
 
 > "Thanks for calling [business name]. I can book a visit, answer questions about our services, or take a message. How can I help?"
 
-If the service records calls, as LobbyStack does, add a recording notice where local law requires one. For a phone tree, offer only the options most callers need.
+If the service records calls, as LobbyStack does, add a recording notice where local law requires one. For a phone tree, offer only the options most callers need. For busy-line, after-hours and AI receptionist greetings, see our [phone answering script templates](/blog/phone-answering-script/).
 
 ### 4. Give it your business facts
 

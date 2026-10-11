@@ -132,7 +132,7 @@ LobbyStack no sincroniza con ServiceTitan, Housecall Pro ni Jobber, y Google Cal
 
 Con 40 llamadas de tres minutos al mes, los servicios con personas de esta lista cuestan de $127 a $485 y los de IA de $30 a $149, con Sameday AI desde $449. Con 100 llamadas, los servicios con personas que publican precios completos van de $237.50 a $1,160 y los de IA de $60 a $212.50, de nuevo con Sameday AI desde $449. Las tarifas de configuración y los complementos pueden subir ambas cifras.
 
-Housecall Pro y Nexa no publican precios, así que los dejamos fuera. Para otros oficios, vea [lo que cuesta un servicio de atención telefónica fuera de la climatización](/es/blog/how-much-does-an-answering-service-cost/).
+Housecall Pro y Nexa no publican precios, así que los dejamos fuera. Para otros oficios, vea [lo que cuesta un servicio de atención telefónica fuera de la climatización](/es/blog/how-much-does-an-answering-service-cost/), o nuestras comparativas de [atención telefónica para plomeros](/es/blog/best-plumbing-answering-services/) y de [recepcionistas virtuales para contratistas](/es/blog/best-answering-services-for-contractors/).
 
 ### Un mes de entretemporada (40 llamadas) y un mes de ola de calor (100 llamadas)
 

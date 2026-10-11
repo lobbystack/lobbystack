@@ -1019,6 +1019,10 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
       faqHeading: "Pitanja o AI recepcionerima za vodoinstalatere",
       relatedLinks: [
         {
+          label: "Uporedite usluge odgovaranja na pozive za vodoinstalatere",
+          href: "/blog/best-plumbing-answering-services/",
+        },
+        {
           label: "Javljanje van radnog vremena za izvođače",
           href: "/solutions/after-hours-answering-service-for-contractors/",
         },
@@ -1652,6 +1656,10 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
             "Uporedite usluge odgovaranja na pozive za grejanje i klimatizaciju",
           href: "/blog/best-hvac-answering-services/",
         },
+        {
+          label: "Uporedite usluge odgovaranja na pozive za izvođače radova",
+          href: "/blog/best-answering-services-for-contractors/",
+        },
         pricingLink,
       ],
       ctaHeading: "Ne gubite više pozive van radnog vremena na govornoj pošti",
@@ -1740,6 +1748,11 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
       ],
       faqHeading: "Pitanja o telefonskoj službi za upravljanje nekretninama",
       relatedLinks: [
+        {
+          label:
+            "Uporedite usluge odgovaranja na pozive za upravljanje nekretninama",
+          href: "/blog/best-property-management-answering-services/",
+        },
         {
           label: "Javljanje van radnog vremena",
           href: "/solutions/after-hours-answering-service/",

@@ -132,7 +132,7 @@ It doesn't sync with ServiceTitan, Housecall Pro or Jobber, and Google Calendar 
 
 At 40 three-minute calls a month, the live services here cost $127 to $485 and the AI services $30 to $149, with Sameday AI from $449. At 100 calls, the live services with complete published prices run $237.50 to $1,160 and the AI services $60 to $212.50, again with Sameday AI from $449. Setup fees and add-ons can raise both.
 
-Housecall Pro and Nexa publish no prices, so we left them out. For other trades, see [what an answering service costs outside HVAC](/blog/how-much-does-an-answering-service-cost/).
+Housecall Pro and Nexa publish no prices, so we left them out. For other trades, see [what an answering service costs outside HVAC](/blog/how-much-does-an-answering-service-cost/), or our comparisons of [answering services for plumbers](/blog/best-plumbing-answering-services/) and [answering services for contractors](/blog/best-answering-services-for-contractors/).
 
 ### A shoulder month (40 calls) and a heat-wave month (100 calls)
 

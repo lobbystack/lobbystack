@@ -61,7 +61,7 @@ En una automatización interna, un nodo fallido puede esperar en una cola de err
 
 ## El lenguaje claro es la mejor superficie de control
 
-El comportamiento de una recepcionista con IA debería leerse como la formación de una recepcionista.
+El comportamiento de una recepcionista con IA debería leerse como la formación de una recepcionista. Si su recepción ya trabaja con un guion, nuestra guía de [guiones telefónicos para contestar llamadas](/es/blog/phone-answering-script/) muestra cómo reescribirlo como reglas en lenguaje claro.
 
 Usted describe la política con palabras:
 

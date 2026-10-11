@@ -47,7 +47,7 @@ Neka pozdrav bude kratak. Navedite naziv firme, očekivano vreme odgovora i drug
 
 ## Pozivi novih klijenata izgledaju drugačije
 
-Novi pozivalac možda ima otvoren spisak firmi u rezultatima pretrage. Ako prvi poziv završi u govornoj pošti, pozivalac za nekoliko sekundi može da pozove sledeću firmu sa spiska. Firma to možda nikada neće saznati, jer mnogi ljudi prekinu vezu bez ostavljanja poruke.
+Novi pozivalac možda ima otvoren spisak firmi u rezultatima pretrage. Ako prvi poziv završi u govornoj pošti, pozivalac za nekoliko sekundi može da pozove sledeću firmu sa spiska. Firma to možda nikada neće saznati, jer mnogi ljudi prekinu vezu bez ostavljanja poruke. Naš vodič o [pozivima sa Google Business Profile naloga](/sr/blog/google-business-profile-calls/) objašnjava kako da pratite pozive koje Vam profil donosi.
 
 Efekat zavisi od hitnosti i lokalne konkurencije. Pozivalac kome hitno treba vodoinstalater ima manje strpljenja od klijenta koji ostavlja rutinska pitanja o knjigovodstvenim papirima.
 

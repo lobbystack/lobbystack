@@ -15,7 +15,7 @@ canonicalSlug: "best-answering-service-for-small-business"
 
 The best answering service for small business is PATLive if you want a person on every call, Smith.ai if you want AI with live agents behind it, and an AI receptionist such as AI-Receptionist.com, LobbyStack or Upfirst if cost comes first. At 40 three-minute calls a month, live plans cost $127 to $599 and AI plans $25.25 to $99.
 
-Prices checked October 9, 2026 on each vendor's own pricing page, in US dollars before tax. LobbyStack wrote this list and sells an AI receptionist, so it appears in the AI section, marked as ours.
+Prices checked October 9, 2026 on each vendor's own pricing page, in US dollars before tax. Businesses in France can compare euro-priced providers in our guide to [outsourced phone answering in France](/blog/outsourced-phone-answering-france/). LobbyStack wrote this list and sells an AI receptionist, so it appears in the AI section, marked as ours.
 
 ## What is the best answering service for small business?
 
@@ -102,7 +102,7 @@ These five publish their prices, from the cheapest published live rate (AnswerNe
 - **Setup and contract:** no setup or activation fees, and plans renew every 30 days. First-time users get a refund if they cancel within 21 days or before 500 minutes.
 - **Languages:** Spanish 24/7 at no extra cost.
 - **Also included:** Ruby doesn't bill robocalls its filter sends to voicemail, and its app alerts you at 85% and 100% of your minutes.
-- **Where it falls short:** at $485 for 40 calls, only Abby Connect costs more in this list, and 60-second rounding makes short calls expensive.
+- **Where it falls short:** at $485 for 40 calls, only Abby Connect costs more in this list, and 60-second rounding makes short calls expensive. Our [Ruby pricing guide](/blog/ruby-receptionists-alternative/) compares its plans with an AI alternative.
 - **Pick it if** callers expect a person at any hour, in English or Spanish.
 
 ### Smith.ai Virtual Front Desk: priced per call

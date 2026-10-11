@@ -47,7 +47,7 @@ Keep the greeting short. State the business name, expected response time, and an
 
 ## New-customer calls behave differently
 
-A new caller may have a list of businesses open in search results. If the first call reaches voicemail, the caller can try the next listing within seconds. The business may never know because many people hang up without leaving a message.
+A new caller may have a list of businesses open in search results. If the first call reaches voicemail, the caller can try the next listing within seconds. The business may never know because many people hang up without leaving a message. Our guide to [Google Business Profile calls](/blog/google-business-profile-calls/) shows how to track the calls your listing sends.
 
 The effect depends on urgency and local competition. A caller looking for emergency plumbing has less patience than a customer leaving routine accounting paperwork questions.
 

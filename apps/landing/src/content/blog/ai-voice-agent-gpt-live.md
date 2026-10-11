@@ -89,7 +89,7 @@ GPT-Live-1 is the model ChatGPT Voice uses by default for paid users. LobbyStack
 
 ### What is an AI voice agent?
 
-An AI voice agent is software that answers calls in natural speech and completes tasks during the call, such as booking an appointment or taking a message. LobbyStack's AI voice agent works as a receptionist for small businesses that miss calls while they're busy with customers.
+An AI voice agent is software that answers calls in natural speech and completes tasks during the call, such as booking an appointment or taking a message. LobbyStack's AI voice agent works as a receptionist for small businesses that miss calls while they're busy with customers. For businesses in France, our guide to an [AI phone system for small businesses](/blog/ai-phone-system-small-business/) compares local providers and their prices in euros.
 
 ### Do I need to change my phone number?
 

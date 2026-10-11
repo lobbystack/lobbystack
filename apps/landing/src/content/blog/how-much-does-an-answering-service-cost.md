@@ -107,7 +107,7 @@ This guide prices live services, so LobbyStack is the only AI row. For other AI 
 
 ### How we checked these prices
 
-- We read each vendor's own pricing page on October 9, 2026, plus its terms or FAQ for billing rules, and list prices in US dollars before tax.
+- We read each vendor's own pricing page on October 9, 2026, plus its terms or FAQ for billing rules, and list prices in US dollars before tax. For French providers priced in euros, see [outsourced phone answering in France](/blog/outsourced-phone-answering-france/).
 - Computed bills assume 3 minutes a call, which is our assumption. Effective rate means plan price divided by included minutes or calls.
 - Bills cover plan and overage. Setup, holiday and telecom fees, taxes and rounding come on top, and the [fees table](#what-fees-do-answering-services-charge-on-top-of-the-plan) lists them.
 - We'll refresh the prices each quarter and update the date at the top.
@@ -312,7 +312,7 @@ A service loses money when each job is worth too little for a few extra bookings
 
 ## Do people still use answering services?
 
-Yes. Every live vendor in our table listed current plans on its site when we checked in October 2026. [Automated answering services](/blog/automated-answering-service/) and AI receptionists now sit next to them and can take overflow or routine calls while people handle the rest.
+Yes. Every live vendor in our table listed current plans on its site when we checked in October 2026. [Automated answering services](/blog/automated-answering-service/) and AI receptionists now sit next to them and can take overflow or routine calls while people handle the rest. If you're new to the category, start with [what a phone answering service is and how it works](/blog/what-is-a-phone-answering-service/).
 
 ### What does an answering service operator do?
 

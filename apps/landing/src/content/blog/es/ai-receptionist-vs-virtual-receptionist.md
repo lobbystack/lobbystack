@@ -50,7 +50,7 @@ Hay cuatro tipos de recepcionista virtual: una persona de un servicio de atenci�
 
 ### Recepcionista virtual humana (servicio de atención telefónica)
 
-Una recepcionista virtual humana es una persona formada que trabaja en una empresa como [Ruby](https://www.ruby.com/plans-and-pricing/), [PATLive](https://www.patlive.com/pricing/) o [Smith.ai](https://smith.ai/pricing/receptionists). El agente sigue el guion que usted le da y puede usar su criterio cuando la llamada se sale de él. Ruby y PATLive cobran por minuto, y Smith.ai Virtual Front Desk cobra por llamada. Ruby y [Abby Connect](https://www.abby.com/pricing/) incluyen atención en español las 24 horas, y PATLive ofrece recepcionistas que hablan español, en los tres casos sin costo adicional.
+Una recepcionista virtual humana es una persona formada que trabaja en una empresa como [Ruby](https://www.ruby.com/plans-and-pricing/), [PATLive](https://www.patlive.com/pricing/) o [Smith.ai](https://smith.ai/pricing/receptionists). El agente sigue el guion que usted le da y puede usar su criterio cuando la llamada se sale de él. Ruby y PATLive cobran por minuto, y Smith.ai Virtual Front Desk cobra por llamada. Ruby y [Abby Connect](https://www.abby.com/pricing/) incluyen atención en español las 24 horas, y PATLive ofrece recepcionistas que hablan español, en los tres casos sin costo adicional. Nuestra guía de [precios de Ruby y una alternativa con IA](/es/blog/ruby-receptionists-alternative/) detalla sus planes y sus tarifas por minuto adicional.
 
 ### Recepcionista con IA
 
