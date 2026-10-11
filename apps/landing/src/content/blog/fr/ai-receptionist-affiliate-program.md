@@ -27,11 +27,11 @@ Les conditions principales :
 | Période de retenue | 30 jours |
 | Paiement minimum | 100 USD en commissions admissibles impayées |
 | Méthode de paiement | Paypal |
-| Tableau de bord | Lien de parrainage, clics, inscriptions, conversions, revenus, paiements, courriel PayPal |
+| Tableau de bord | Lien de parrainage, clics, inscriptions, conversions, revenus, paiements, e-mail PayPal |
 
 Les remboursements, litiges, annulations et paiements invalides peuvent annuler les commissions impayées. Nous utilisons cette règle pour garder les paiements liés à de vrais clients.
 
-Vous gérez le tableau de bord affilié dans LobbyStack. Ajoutez votre courriel PayPal, copiez votre lien de parrainage et partagez-le avec des opérateurs qui ont besoin de répondre aux appels, prendre des rendez-vous et inspecter le produit qu'ils utilisent.
+Vous gérez le tableau de bord affilié dans LobbyStack. Ajoutez votre e-mail PayPal, copiez votre lien de parrainage et partagez-le avec des opérateurs qui ont besoin de répondre aux appels, prendre des rendez-vous et inspecter le produit qu'ils utilisent.
 
 ## Combien pouvez-vous gagner ?
 
@@ -81,7 +81,7 @@ LobbyStack donne aux affiliés du matériel plus solide :
 
 - **Inspection du code.** Un acheteur sceptique peut examiner le produit au lieu de s'en remettre à la page marketing.
 - **Auto-hébergement.** Les équipes peuvent faire tourner LobbyStack sur leur propre infrastructure quand elles veulent ce contrôle.
-- **Fournisseurs au choix.** Les déploiements auto-hébergés peuvent utiliser leurs propres comptes PostgreSQL, Redis, Twilio, IA compatible avec OpenAI, Google Calendar, analytics, facturation et courriel.
+- **Fournisseurs au choix.** Les déploiements auto-hébergés peuvent utiliser leurs propres comptes PostgreSQL, Redis, Twilio, IA compatible avec OpenAI, Google Calendar, analytics, facturation et e-mail.
 - **Extensibilité.** Les agences et développeurs peuvent adapter la pile aux workflows clients sans reconstruire la couche réceptionniste.
 - **Cloud hébergé.** Les entreprises non techniques peuvent choisir le produit géré et éviter l'infrastructure.
 
@@ -101,7 +101,7 @@ Bons profils :
 - Développeurs et spécialistes automation qui veulent une couche produit inspectable ou auto-hébergeable
 - Créateurs qui expliquent aux propriétaires comment utiliser l'IA sans transformer les opérations en workflows fragiles
 
-LobbyStack s'explique mieux quand l'acheteur a un vrai problème téléphonique. Un appel manqué peut devenir un rendez-vous perdu. Un rappel lent peut envoyer un prospect chez un autre fournisseur. Un transfert confus peut laisser l'équipe sans les bons détails.
+LobbyStack s'explique mieux quand l'acheteur a un vrai problème téléphonique. Un appel manqué peut devenir un rendez-vous perdu. Un rappel lent peut envoyer un prospect chez un autre fournisseur. Un message incomplet peut laisser l'équipe sans les bons détails.
 
 Ces problèmes convertissent mieux qu'une curiosité vague pour l'IA parce que l'acheteur peut nommer la fuite de revenu.
 
@@ -180,7 +180,7 @@ Quatre points à retenir :
 - LobbyStack offre un réceptionniste IA hébergé et une voie open source/auto-hébergée.
 - Les meilleures références viennent de vrais problèmes d'appels, de réservation et d'accueil.
 
-[Rejoignez le programme d'affiliation LobbyStack](/fr/affiliate-program/), ajoutez votre courriel PayPal dans votre tableau de bord et partagez votre lien avec des opérateurs qui ont besoin d'un meilleur accueil.
+[Rejoignez le programme d'affiliation LobbyStack](/fr/affiliate-program/), ajoutez votre e-mail PayPal dans votre tableau de bord et partagez votre lien avec des opérateurs qui ont besoin d'un meilleur accueil.
 
 Pour comprendre le produit avant de le recommander, consultez la [vue d'ensemble de la pile open source](/fr/blog/open-source-ai-receptionist-stack/) et [comment choisir un réceptionniste IA](/fr/blog/how-to-choose-an-ai-receptionist/).
 

@@ -259,7 +259,7 @@ export function UseCases() {
     },
     {
       title: "Urgent booking handoff",
-      copy: "Route emergencies, high-value requests, and sensitive situations to a real person with context from the call.",
+      copy: "Transfer emergencies, high-value requests, and sensitive situations to the number you set.",
     },
   ]
 
@@ -316,7 +316,7 @@ export function HowItWorks() {
     },
     {
       title: "Review the appointment details",
-      copy: "Your team receives the booking details, caller information, summary, transcript, and next step so nothing gets lost.",
+      copy: "Your team finds the booking, caller information, summary, and transcript in the dashboard.",
     },
   ]
 

@@ -66,7 +66,7 @@ export const tradeDetails: Record<string, TradeDetails> = {
       {
         at: "0:39",
         speaker: "lobbystack",
-        text: "This counts as an emergency, so I'm connecting you to Dave, who's on call tonight. He'll have your address and what happened.",
+        text: "This counts as an emergency, so I'm connecting you to our on-call plumber now.",
         note: "Matches your emergency rule and transfers",
       },
     ],
@@ -156,12 +156,12 @@ export const tradeDetails: Record<string, TradeDetails> = {
       {
         at: "0:32",
         speaker: "lobbystack",
-        text: "Then this is an emergency under your rules. I'm connecting you to Maria, who's on call this morning, with what you've told me.",
-        note: "Transfers with the details attached",
+        text: "Then this counts as an emergency under your rules. I'm connecting you to our on-call technician now.",
+        note: "Transfers to your on-call number",
       },
     ],
     outcome:
-      "Transferred to the on-call technician at 0:41. System type, indoor temperature, and occupants are saved with the call.",
+      "Transferred to the on-call technician at 0:41. LobbyStack saves the transcript, recording, and summary with the call.",
     routing: [
       {
         call: "No heat below your temperature threshold",
@@ -170,9 +170,16 @@ export const tradeDetails: Record<string, TradeDetails> = {
           "Checks the indoor temperature and who lives in the home, then connects your on-call tech",
       },
       {
-        call: "No cooling during a heat advisory",
+        call: "No cooling in a heat wave",
         action: "Transfers",
-        detail: "Applies the same rule to AC failures in summer",
+        detail:
+          "Applies your rule on indoor temperature and who lives in the home to AC failures",
+      },
+      {
+        call: "Gas smell or CO alarm",
+        action: "Transfers",
+        detail:
+          "Treats it as urgent and connects your on-call tech right away",
       },
       {
         call: "Thermostat or breaker question",
@@ -182,7 +189,8 @@ export const tradeDetails: Record<string, TradeDetails> = {
       {
         call: "Tune-up or maintenance visit",
         action: "Books",
-        detail: "Books into open maintenance slots and texts a confirmation",
+        detail:
+          "Books into open maintenance slots and texts a confirmation if the caller agrees",
       },
       {
         call: "System replacement quote",
@@ -194,6 +202,11 @@ export const tradeDetails: Record<string, TradeDetails> = {
         call: "Warranty or billing question",
         action: "Takes a message",
         detail: "Saves the details for your office to call back",
+      },
+      {
+        call: "Caller speaks Spanish or another language",
+        action: "Answers",
+        detail: "Switches to the caller's language and applies the same urgency rules",
       },
     ],
     intake: [
@@ -246,7 +259,7 @@ export const tradeDetails: Record<string, TradeDetails> = {
       {
         at: "0:32",
         speaker: "lobbystack",
-        text: "I'm connecting you to Sam, who's on call this weekend. He'll have your address and everything you've described.",
+        text: "I'm connecting you to our on-call electrician now.",
         note: "Transfers under your hazard rule",
       },
     ],
@@ -278,8 +291,8 @@ export const tradeDetails: Record<string, TradeDetails> = {
       },
       {
         call: "Commercial service request",
-        action: "Transfers",
-        detail: "Sends commercial calls to your estimator or office line",
+        action: "Takes a message",
+        detail: "Writes up the job for your estimator to call back",
       },
       {
         call: "Permit or licensing question",
@@ -514,7 +527,7 @@ export const tradeDetails: Record<string, TradeDetails> = {
       {
         at: "0:30",
         speaker: "lobbystack",
-        text: "I'm connecting you to Chris, who's on call tonight for water damage. He'll have your address and what you've told me.",
+        text: "I'm connecting you to our on-call water damage crew now.",
         note: "Transfers under your emergency rule",
       },
     ],
@@ -529,7 +542,7 @@ export const tradeDetails: Record<string, TradeDetails> = {
       {
         call: "Sewage backup",
         action: "Transfers",
-        detail: "Flags it as contaminated water for your crew",
+        detail: "Asks where the backup is, then connects your on-call crew",
       },
       {
         call: "Fire or smoke damage",
@@ -599,7 +612,7 @@ export const tradeDetails: Record<string, TradeDetails> = {
       {
         at: "0:25",
         speaker: "lobbystack",
-        text: "Our after-hours lockout fee is $125, and you'll need your ID when the tech arrives. I'm connecting you to Jordan, who's on call, with your location.",
+        text: "Our after-hours lockout fee is $125, and you'll need your ID when the tech arrives. I'm connecting you to our on-call locksmith now.",
         note: "Quotes your fee, then transfers",
       },
     ],
@@ -684,7 +697,7 @@ export const tradeDetails: Record<string, TradeDetails> = {
       {
         at: "0:28",
         speaker: "lobbystack",
-        text: "I'm connecting you to the on-call project manager now, with what you've told me.",
+        text: "I'm connecting you to the on-call project manager now.",
         note: "Transfers under your after-hours rule",
       },
     ],
@@ -699,7 +712,7 @@ export const tradeDetails: Record<string, TradeDetails> = {
       {
         call: "Security problem at a site",
         action: "Transfers",
-        detail: "Connects your on-call manager with the site address",
+        detail: "Takes the site address, then connects your on-call manager",
       },
       {
         call: "New project inquiry",

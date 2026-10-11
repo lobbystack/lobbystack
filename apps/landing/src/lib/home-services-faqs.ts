@@ -9,7 +9,7 @@ export const homeServicesFaqs: FaqItem[] = [
   {
     question: "Can it handle emergency calls after hours?",
     answer:
-      "Yes. LobbyStack can answer emergency calls at night, on weekends, and during holidays. You define what counts as urgent, and it can transfer the caller to your on-call technician with the details already collected.",
+      "Yes. LobbyStack can answer emergency calls at night, on weekends, and during holidays. You define what counts as urgent, and it can transfer the caller to your on-call technician.",
   },
   {
     question: "Will it book appointments while I am on a job site?",
@@ -19,7 +19,7 @@ export const homeServicesFaqs: FaqItem[] = [
   {
     question: "Can I control what questions it asks callers?",
     answer:
-      "Yes. You set the questions: service type, location, urgency, budget range, property type, or anything else your team needs before showing up. The answers are attached to the booking or summary.",
+      "Yes. You set the questions: service type, location, urgency, budget range, property type, or anything else your team needs before showing up. LobbyStack saves the answers in the call's transcript.",
   },
   {
     question: "What happens when a caller asks for a quote?",
@@ -39,7 +39,7 @@ export const homeServicesFaqs: FaqItem[] = [
   {
     question: "Will my team see what was booked or discussed?",
     answer:
-      "Yes. After every call, LobbyStack sends a summary with the caller's details, service request, appointment time, transcript, and next step. Your team reviews it from the dashboard or via email and SMS alerts.",
+      "Yes. LobbyStack saves a summary, transcript, and recording of every call in your dashboard, along with any booking it made. When it takes a message, your team gets an email alert, or a text alert if you turn those on.",
   },
   {
     question: "Is this better than a human answering service?",

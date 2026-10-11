@@ -58,7 +58,7 @@ Reception counts phone calls and web chat from one credit pool. A phone minute u
 
 Basic also allows one call at a time. If two customers call at once, only one reaches the receptionist. Plus raises the limit to 3 and Premium to 10.
 
-LobbyStack counts voice minutes on their own. No plan caps how many calls run at once, so two callers on Starter both reach the receptionist. One exception: if you set a monthly spending cap, the active call reserves the remaining allowance, and a second caller hears the limit message until the first call ends.
+LobbyStack counts voice minutes on their own. No plan caps how many calls run at once, so two callers on Starter both reach the receptionist. One exception: if you set a monthly spending cap, the active call reserves the remaining allowance, and a second caller gets a busy signal until the first call ends.
 
 ## Is ElevenLabs Reception HIPAA compliant?
 

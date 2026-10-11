@@ -123,7 +123,7 @@ El código abierto elimina el misterio de las licencias. No elimina:
 - **La reflexión sobre cumplimiento normativo.** Las grabaciones, las transcripciones y los datos de clientes siguen necesitando reglas de conservación y de acceso.
 - **Las facturas de los proveedores.** Los minutos de Twilio, el uso de OpenAI y las API de calendario siguen apareciendo en las facturas, salvo que todo sea local.
 
-Si está decidiendo entre crear, comprar o autoalojar, combine esta lista con [cómo elegir una recepcionista con IA](/es/blog/how-to-choose-an-ai-receptionist/) y [crear o comprar una recepcionista con IA](/es/blog/build-or-buy-ai-receptionist/).
+Si está decidiendo entre crear, comprar o autoalojar, combine esta lista con [cómo elegir una recepcionista con IA](/es/blog/how-to-choose-an-ai-receptionist/) y [crear o comprar una recepcionista con IA](/es/blog/build-or-buy-ai-receptionist/). Si quiere empezar gratis sin administrar servidores, compare los [planes y pruebas de recepcionista virtual gratis con IA](/es/blog/free-ai-receptionist/).
 
 ## Próximos pasos prácticos
 

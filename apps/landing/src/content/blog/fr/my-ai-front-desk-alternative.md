@@ -3,7 +3,7 @@ title: "Alternative à My AI Front Desk"
 seoTitle: "Alternative à My AI Front Desk : Frontdesk ou LobbyStack"
 description: "Comparez Frontdesk, anciennement My AI Front Desk, et LobbyStack sur la voix, le CRM, la réservation, le prix, le code et l'auto-hébergement."
 pubDate: 2026-07-30T11:40:00-04:00
-updatedDate: 2026-07-30T11:40:00-04:00
+updatedDate: 2026-10-10T09:00:00-04:00
 author: "Équipe LobbyStack"
 category: "Comparaisons"
 featured: false
@@ -13,62 +13,66 @@ locale: "fr"
 canonicalSlug: "my-ai-front-desk-alternative"
 ---
 
-Les acheteurs qui cherchent une **alternative à My AI Front Desk** doivent commencer par un détail tarifaire : le forfait Frontdesk à 20 $ inclut zéro minute vocale. LobbyStack inclut 30 minutes vocales dans le navigateur sur son forfait gratuit, avec rendez-vous, résumés d'appel et historique.
+Les acheteurs qui cherchent une **alternative à My AI Front Desk** doivent commencer par le prix d'entrée. Frontdesk ne vend plus qu'un forfait en libre-service, Business-in-a-Box, à 99 $ par mois pour 200 minutes vocales, ou 79 $ par mois en paiement annuel. Il propose un essai gratuit de 7 jours, sans forfait gratuit permanent. LobbyStack Starter coûte 30 $ par mois pour 150 minutes, et LobbyStack Gratuit inclut 30 minutes vocales dans le navigateur chaque mois, avec rendez-vous, résumés d'appel et historique.
 
-Frontdesk, anciennement My AI Front Desk, vend un large espace commercial IA. LobbyStack fournit un réceptionniste téléphonique complet à un prix d'entrée inférieur, plus de minutes sur les forfaits payants comparables et le choix entre cloud géré et auto-hébergement.
+Frontdesk, anciennement My AI Front Desk, vend un large espace commercial IA. LobbyStack fournit un réceptionniste téléphonique complet à un prix d'entrée inférieur, plus de minutes autour de 100 $ par mois et le choix entre cloud géré et auto-hébergement.
 
 ## Frontdesk et LobbyStack
 
 | Critère | Frontdesk | LobbyStack |
 | --- | --- | --- |
-| Forfait gratuit durable | Aucun, Basic coûte 20 $ avec 0 minute vocale | 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone |
-| Périmètre | Main-d'œuvre IA multicanale et CRM | Réceptionniste IA complet et opérations d'appel |
-| Premier accès vocal | 99 $ avec 200 minutes | Gratuit avec 30 minutes et fonctions de réception |
-| Près de 30 $ | Basic à 20 $ offre 0 minute vocale | Starter à 30 $ offre 150 minutes |
-| Près de 100 $ | Business à 99 $ offre 200 minutes | Pro à 100 $ offre 500 minutes |
-| Canaux | Voix, SMS, chat, courriel, formulaires | Voix, alertes au propriétaire par courriel ou SMS, tableau de bord |
-| Rendez-vous et dossiers | Inclus avec le forfait vocal | Inclus sur Gratuit, Starter et Pro |
-| CRM | CRM natif et séquences | Dossiers d'appelants et d'appels, sans synchronisation CRM |
+| Option gratuite | Essai gratuit de 7 jours, aucun forfait gratuit permanent | Forfait Gratuit : 30 minutes vocales dans le navigateur par mois, sans carte ni numéro de téléphone |
+| Premier forfait payant | 99 $ par mois pour 200 minutes, ou 79 $ en annuel | Starter : 30 $ par mois pour 150 minutes, ou 24 $ en annuel |
+| Près de 100 $ par mois | Business-in-a-Box à 99 $ : 200 minutes | Pro à 100 $ : 500 minutes |
+| Minutes supplémentaires | 25 crédits (0,25 $) la minute ; la réserve mensuelle de 1 000 crédits couvre environ 40 minutes | 0,20 $ sur Starter, 0,18 $ sur Pro |
+| Périmètre | Main-d'œuvre IA multicanale et CRM | Réceptionniste IA téléphonique et opérations d'appel |
+| Canaux | Voix, SMS bidirectionnels, chat, e-mail, formulaires | Voix, alertes au propriétaire par e-mail ou SMS, tableau de bord |
+| Réservation | Google Calendar, Outlook ou Calendly | Google Calendar |
+| Transferts | Transferts assistés selon vos règles | Transfert aveugle vers un seul numéro |
+| Langues | Plus de 20 langues, avec détection de la langue de l'appelant | Commence en anglais ou en français, puis répond dans la langue de l'appelant (plus de 70) |
+| CRM | CRM intégré et séquences, synchronisation HubSpot et Salesforce | Dossiers d'appel, webhooks et API REST, sans synchronisation CRM native |
 | Déploiement | Hébergé | Cloud géré ou auto-hébergement |
 | Code source | Non annoncé | Dépôt public sous licence MIT |
 
-Prix et fonctions vérifiés le 30 juillet 2026.
+Prix et fonctions vérifiés le 9 octobre 2026.
 
 ## Testez LobbyStack dans votre navigateur gratuitement
 
-Frontdesk présente Basic à 20 $ comme forfait d'entrée, mais ce forfait contient zéro minute vocale. Vous pouvez essayer le chat, les SMS, les courriels, les formulaires et les workflows. Le quota inclus ne permet pas de tester le travail principal d'un réceptionniste téléphonique.
+L'essai de Frontdesk dure sept jours, et sa FAQ indique qu'il n'existe pas de forfait gratuit permanent. Après l'essai, le forfait à 99 $ est le moins cher pour garder un agent vocal Frontdesk en service.
 
-Avec le forfait Gratuit de LobbyStack, vous pouvez tester 30 minutes vocales dans le navigateur. Vous n'obtenez aucun numéro de téléphone. Choisissez Starter ou Pro pour recevoir des appels sur un numéro dédié.
+Avec le forfait Gratuit de LobbyStack, vous pouvez tester 30 minutes vocales dans le navigateur chaque mois. Vous n'obtenez aucun numéro de téléphone, et le forfait n'expire pas. Choisissez Starter ou Pro pour recevoir des appels sur un numéro dédié.
 
-Un forfait à 20 $ sans voix ne concurrence pas un forfait gratuit qui répond au téléphone.
+Un essai de sept jours convient à une équipe qui boucle ses tests en une semaine. LobbyStack Gratuit convient à une équipe qui veut ajuster l'accueil, les règles et les connaissances pendant plusieurs semaines avant de basculer ses appels.
 
 ## Frontdesk couvre plus de canaux, si vous en avez besoin
 
-Les pages de Frontdesk annoncent la voix entrante et sortante, les SMS bidirectionnels, le chat web, la rédaction de courriels, les formulaires, les séquences et un CRM natif. Une petite équipe peut garder plusieurs échanges commerciaux dans le même produit.
+Les pages de Frontdesk annoncent la voix entrante, les appels sortants automatisés, les SMS bidirectionnels, le chat web, les réponses aux e-mails, les formulaires, les séquences de relance et un CRM intégré. Frontdesk peut aussi envoyer contacts, transcriptions et résumés vers HubSpot, Salesforce, Pipedrive ou GoHighLevel.
 
-Ce périmètre aide une entreprise sans CRM qui veut capter un prospect, lui écrire, l'appeler et suivre l'échange. Frontdesk vend aussi une offre en marque blanche.
+Ce périmètre aide une entreprise sans CRM qui veut capter un prospect, lui écrire, l'appeler et suivre l'échange. Frontdesk vend aussi des forfaits partenaires en marque blanche, qui commencent à 500 $ par mois selon sa FAQ tarifaire.
 
-LobbyStack évite de facturer un CRM de remplacement aux clients qui veulent un réceptionniste. Il conserve les appelants, rendez-vous, messages, transcriptions, résumés et règles, et réserve les rendez-vous dans Google Calendar.
+LobbyStack évite de facturer des outils commerciaux aux clients qui veulent un réceptionniste. Il conserve les appelants, rendez-vous, messages, transcriptions, résumés et règles, et réserve les rendez-vous dans Google Calendar. Les webhooks et l'API REST transmettent les appels et les réservations à vos outils.
 
-## Le forfait à 20 $ n'inclut pas de minutes vocales
+## Frontdesk ne vend plus qu'un forfait à 99 $
 
-Frontdesk affiche un forfait Basic à 20 $, sans minute vocale sur la page consultée. Business-in-a-Box inclut 200 minutes pour 99 $ par mois, ou un équivalent annuel annoncé à 79 $.
+Frontdesk affiche un seul forfait en libre-service, Business-in-a-Box, à 99 $ par mois ou 79 $ par mois en annuel, avec 200 minutes vocales. Sa FAQ précise qu'il n'existe pas de niveaux Starter ou Pro séparés. Les offres Partner et Enterprise sont sur devis.
 
-Le forfait à 99 $ indique aussi 20 pages de connaissances, les 200 dernières interactions, trois destinataires de notifications et deux éditeurs. Une équipe qui veut plus d'historique ou de contenu doit chiffrer le niveau suivant.
+Chaque minute supplémentaire coûte 25 crédits, soit 0,25 $. Le forfait inclut 1 000 crédits par mois, soit environ 40 minutes, qui expirent en fin de mois. La recharge automatique ajoute 1 000 crédits pour 10 $.
 
-LobbyStack offre beaucoup plus d'usage téléphonique au même niveau de dépense :
+Le forfait à 99 $ indique aussi 20 pages de connaissances, les 200 dernières interactions, trois destinataires de notifications et deux éditeurs. Une équipe qui veut plus d'historique ou de contenu doit demander un devis Partner ou Enterprise.
 
-- Gratuit : 30 minutes, contre zéro sur Frontdesk Basic à 20 $
-- Starter : 150 minutes pour 30 $ par mois
-- Pro : 500 minutes pour 100 $, contre 200 sur Frontdesk Business à 99 $
+LobbyStack offre plus d'usage téléphonique au même niveau de dépense :
 
-À 200 minutes, LobbyStack Starter coûte environ 40 $ avec le dépassement publié à 0,20 $ la minute. Frontdesk facture 99 $ au mois pour le même volume inclus. Près de 100 $, LobbyStack inclut deux fois et demie plus de minutes.
+- Gratuit : 30 minutes par mois dans le navigateur, sur un forfait qui n'expire pas
+- Starter : 150 minutes pour 30 $ par mois, ou 24 $ par mois en annuel
+- Pro : 500 minutes pour 100 $, contre 200 sur le forfait Frontdesk à 99 $
+
+À 200 minutes, LobbyStack Starter coûte environ 40 $ avec le dépassement publié à 0,20 $ la minute. Frontdesk facture 99 $ par mois pour le même volume inclus. À 240 minutes, à peu près le maximum que couvrent les 99 $ de Frontdesk avant recharge, Starter coûte 48 $. Pro inclut 500 minutes pour 100 $, deux fois et demie les 200 de Frontdesk.
 
 Frontdesk ajoute plus de logiciels commerciaux à son forfait. Une entreprise qui les utilise peut y trouver de la valeur. Un acheteur qui cherche un réceptionniste obtient plus de capacité par dollar avec LobbyStack.
 
 ## Une spécialisation peut mieux s'intégrer
 
-Une entreprise qui utilise déjà HubSpot, Salesforce, Jobber ou ServiceTitan ne veut pas toujours d'un second CRM.
+Frontdesk peut synchroniser ses fiches avec HubSpot ou Salesforce, et une équipe peut donc garder son CRM. Le prix de 99 $ couvre quand même le chat, les e-mails, les formulaires et les séquences, qu'un acheteur centré sur le téléphone n'utilisera peut-être pas.
 
 LobbyStack s'occupe du téléphone et laisse le CRM en place. Un opérateur auto-hébergé contrôle le déploiement, les fournisseurs, les journaux et la conservation. Les pages de Frontdesk consultées n'annoncent ni auto-hébergement ni accès au code source. LobbyStack conserve une sortie face au verrouillage fournisseur.
 
@@ -76,30 +80,29 @@ LobbyStack s'occupe du téléphone et laisse le CRM en place. Un opérateur auto
 
 Une agence crée des sites et des campagnes publicitaires pour dix entreprises de services. Chaque client veut un réceptionniste IA qui répond à ses appels et réserve les interventions.
 
-Frontdesk offre un produit multicanal hébergé et une formule en marque blanche. Cela peut réduire le délai de lancement.
+Frontdesk offre un produit multicanal hébergé et des forfaits partenaires en marque blanche à partir de 500 $ par mois. Cela peut réduire le délai de lancement.
 
 LobbyStack donne à l'agence un réceptionniste moins cher, du code qu'elle peut examiner et une pile qu'elle peut déployer. L'agence contrôle les fournisseurs, l'infrastructure, la conservation et la logique d'appel propre à chaque client.
 
 L'agence doit tester la séparation des clients, la facturation des fournisseurs, l'accès aux appels, les pannes de calendrier et les exports.
 
-## Choisissez frontdesk si
+## Choisissez Frontdesk si
 
-Choisissez Frontdesk si vous avez besoin de regrouper voix, messagerie, chat, courriel et CRM et comptez utiliser ces canaux comme un seul espace commercial.
+Choisissez Frontdesk si vous avez besoin de regrouper voix, messagerie, chat, e-mail et CRM et comptez utiliser ces canaux comme un seul espace commercial. Ses transferts assistés conviennent aux équipes qui veulent que l'IA passe l'appelant à un collègue selon des règles fixées.
 
 ## Choisissez LobbyStack si
 
-Choisissez LobbyStack pour tester la voix dans le navigateur gratuitement, payer moins entre 150 et 200 minutes, ou obtenir 500 minutes près de 100 $. Sur un forfait payant, vous pouvez recevoir des appels sur un numéro dédié sans remplacer votre CRM.
+Choisissez LobbyStack pour tester la voix dans le navigateur avec un forfait gratuit qui n'expire pas, payer 30 $ au lieu de 99 $ pour commencer, ou obtenir 500 minutes pour 100 $. Sur un forfait payant, vous recevez des appels sur un numéro dédié sans remplacer votre CRM. Aucun forfait LobbyStack n'a de frais de mise en service.
 
 ## Sources
 
-- [Tarifs Frontdesk](https://www.myaifrontdesk.com/pricing)
+- [Tarifs et FAQ Frontdesk](https://www.myaifrontdesk.com/pricing)
 - [Réceptionniste Frontdesk](https://www.myaifrontdesk.com/ai-receptionist)
-- [Offre en marque blanche](https://www.myaifrontdesk.com/white-label)
 - [Fonctions LobbyStack](/fr/features/)
 - [Pile open source LobbyStack](/fr/blog/open-source-ai-receptionist-stack/)
 
 ## Verdict
 
-Frontdesk vend plus de canaux. LobbyStack offre la meilleure valeur pour la réception téléphonique : voix gratuite utilisable, plus de capacité sur les forfaits payants, opérations d'appel complètes et déploiement ouvert.
+Frontdesk vend plus de canaux et des transferts assistés. LobbyStack offre la meilleure valeur pour la réception téléphonique : un forfait gratuit qui n'expire pas, plus de capacité sur les forfaits payants, des opérations d'appel complètes et un déploiement ouvert.
 
 [Testez 30 minutes vocales dans le navigateur sur LobbyStack Gratuit](/fr/pricing/). Choisissez Starter ou Pro pour recevoir des appels téléphoniques sur un numéro dédié.

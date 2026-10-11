@@ -29,6 +29,8 @@ El buzón de voz sigue teniendo su lugar. Cuesta poco, funciona con casi cualqui
 | Costo | Suscripción y uso | A menudo incluido en el sistema telefónico |
 | Trabajo del personal | Revisar resultados y excepciones | Escuchar, interpretar, devolver la llamada y completar el trabajo |
 
+Si también está pensando en un menú telefónico o un buzón de voz con transcripción, nuestra [guía de atención telefónica automatizada](/es/blog/automated-answering-service/) los compara con una recepcionista con IA.
+
 ## El buzón de voz funciona cuando esperar implica poco riesgo
 
 El buzón de voz sigue siendo adecuado para llamadas poco urgentes de personas que ya conocen el negocio:
@@ -45,7 +47,7 @@ Mantenga el saludo breve. Indique el nombre del negocio, el tiempo de respuesta 
 
 ## Las llamadas de clientes nuevos se comportan de otra forma
 
-Un cliente nuevo puede tener abierta una lista de negocios en los resultados de búsqueda. Si la primera llamada llega al buzón de voz, puede probar con el siguiente en segundos. El negocio quizá nunca lo sepa, porque mucha gente cuelga sin dejar mensaje.
+Un cliente nuevo puede tener abierta una lista de negocios en los resultados de búsqueda. Si la primera llamada llega al buzón de voz, puede probar con el siguiente en segundos. El negocio quizá nunca lo sepa, porque mucha gente cuelga sin dejar mensaje. Nuestra guía de [llamadas del Perfil de Negocio de Google](/es/blog/google-business-profile-calls/) explica cómo medir las llamadas que genera su ficha.
 
 El efecto depende de la urgencia y de la competencia local. Quien busca un fontanero por una emergencia tiene menos paciencia que un cliente con preguntas rutinarias sobre papeles contables.
 

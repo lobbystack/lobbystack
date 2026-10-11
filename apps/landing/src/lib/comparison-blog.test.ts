@@ -18,12 +18,26 @@ const competitorSlugs = [
   "cloudtalk-ai-receptionist-alternative",
   "moneypenny-ai-receptionist-alternative",
   "elevenlabs-reception-alternative",
+  "ruby-receptionists-alternative",
 ] as const
 
 const comparisonSlugs = [
   ...competitorSlugs,
   "ai-receptionist-vs-virtual-receptionist",
   "ai-receptionist-vs-voicemail",
+  "ai-receptionist-savings",
+  "how-much-does-an-answering-service-cost",
+  "best-answering-service-for-small-business",
+  "best-hvac-answering-services",
+  "automated-answering-service",
+  "what-is-a-phone-answering-service",
+  "free-ai-receptionist",
+  "best-plumbing-answering-services",
+  "best-property-management-answering-services",
+  "best-answering-services-for-contractors",
+  "law-firm-answering-service",
+  "outsourced-phone-answering-france",
+  "ai-phone-system-small-business",
 ] as const
 
 const rootPath = (path: string) =>

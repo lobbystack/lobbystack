@@ -57,7 +57,7 @@ Pregledane CloudTalk stranice navode sledeće nivoe za AI recepcionera:
 - $299 za 1,000 minuta
 - $699 za 2,500 minuta
 
-Šira CloudTalk platforma na javnoj stranici sa cenama počinje od oko $19 do $25 po korisniku. Firma koja već plaća CloudTalk treba te licence da posmatra kao postojeći trošak. Novi kupac treba da ih doda u procenu za recepcionera.
+Šira CloudTalk platforma na javnoj stranici sa cenama počinje od oko $19 do $25 po korisniku. Firma koja već plaća CloudTalk treba te licence da posmatra kao postojeći trošak. Novi kupac treba da ih doda u procenu za recepcionera. Isti račun važi i za [cenu za RingCentral AI Receptionist kao dodatak uz RingEX licencu](/sr/blog/ringcentral-ai-receptionist-alternative/).
 
 LobbyStack navodi $30 za 150 minuta i $100 za 500. Na objavljenom nivou od 500 minuta, LobbyStack košta manje pre prekoračenja. CloudTalk uključuje pristup većoj komunikacionoj platformi.
 

@@ -57,7 +57,7 @@ CloudTalk's reviewed pages list AI receptionist tiers at:
 - $299 for 1,000 minutes
 - $699 for 2,500 minutes
 
-The broader CloudTalk platform starts around $19 to $25 per user on the public pricing page. A company that already pays for CloudTalk should treat those seats as existing cost. A new buyer should add them to the receptionist estimate.
+The broader CloudTalk platform starts around $19 to $25 per user on the public pricing page. A company that already pays for CloudTalk should treat those seats as existing cost. A new buyer should add them to the receptionist estimate. The same math applies to [RingCentral's add-on plus seat pricing](/blog/ringcentral-ai-receptionist-alternative/), where you pay for the AI receptionist on top of a RingEX seat.
 
 LobbyStack lists $30 for 150 minutes and $100 for 500. At the published 500-minute tier, LobbyStack costs less before overages. CloudTalk includes access to a larger communications platform.
 

@@ -31,7 +31,7 @@ Cuando alguien llama y lo atiende LobbyStack, puede:
 - **reservar citas** según la disponibilidad de su calendario
 - **enviar una confirmación de reserva** por SMS en los planes de pago
 - **avisar a su equipo** con un resumen de la llamada por correo electrónico o SMS
-- **transferir llamadas urgentes** a la persona adecuada, con el contexto incluido
+- **transferir llamadas urgentes** al número que usted elija
 - **guardar el registro** con transcripciones, grabaciones, resúmenes, contactos y resultados en un solo panel
 
 No pretende sustituir a las personas que dirigen el negocio. Está ahí para cubrir los momentos en que esas personas están con clientes, han cerrado por la noche o por fin intentan comer sin un teléfono en la mano.

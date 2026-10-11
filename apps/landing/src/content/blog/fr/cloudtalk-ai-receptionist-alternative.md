@@ -51,7 +51,7 @@ LobbyStack ne remplace pas un centre de contact complet. Il gère les appels ent
 
 CloudTalk affiche 99 $ pour 200 minutes, 199 $ pour 500, 299 $ pour 1 000 et 699 $ pour 2 500. La plateforme commence autour de 19 à 25 $ par utilisateur sur la page publique.
 
-Un client CloudTalk traite ses sièges comme un coût existant. Un nouvel acheteur doit les ajouter.
+Un client CloudTalk traite ses sièges comme un coût existant. Un nouvel acheteur doit les ajouter. Faites le même calcul pour le [prix de RingCentral AI Receptionist en option avec un siège RingEX](/fr/blog/ringcentral-ai-receptionist-alternative/).
 
 LobbyStack affiche 30 $ pour 150 minutes et 100 $ pour 500. À 500 minutes, son prix public est inférieur. CloudTalk inclut une plateforme de communications plus large.
 

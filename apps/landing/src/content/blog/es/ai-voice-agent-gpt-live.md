@@ -89,7 +89,7 @@ GPT-Live-1 es el modelo que ChatGPT Voice usa por defecto para los usuarios de p
 
 ### ¿Qué es un agente de voz con IA?
 
-Un agente de voz con IA es un software que contesta llamadas hablando con naturalidad y completa tareas durante la llamada, como reservar una cita o tomar un mensaje. El agente de voz con IA de LobbyStack trabaja como recepcionista para pequeños negocios que pierden llamadas mientras atienden a sus clientes.
+Un agente de voz con IA es un software que contesta llamadas hablando con naturalidad y completa tareas durante la llamada, como reservar una cita o tomar un mensaje. El agente de voz con IA de LobbyStack trabaja como recepcionista para pequeños negocios que pierden llamadas mientras atienden a sus clientes. Si su negocio está en Francia, nuestra guía de [conmutador virtual con IA para pymes](/es/blog/ai-phone-system-small-business/) compara proveedores locales y sus precios en euros.
 
 ### ¿Tengo que cambiar mi número de teléfono?
 

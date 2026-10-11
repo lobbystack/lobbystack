@@ -92,7 +92,7 @@ export function Capabilities() {
     },
     {
       title: "Follow-up capture",
-      copy: "Send confirmation details, summaries, alerts, and next-step notes after a call.",
+      copy: "Text callers a booking confirmation, and alert your team when the receptionist takes a message.",
     },
     {
       title: "Call summaries",

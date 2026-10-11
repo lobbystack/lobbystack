@@ -29,6 +29,8 @@ Govorna pošta i dalje ima svoje mesto. Malo košta, radi sa gotovo svakim telef
 | Cena | Pretplata i potrošnja | Često uključena u telefonski sistem |
 | Rad osoblja | Pregled ishoda i izuzetaka | Slušanje, tumačenje, povratni poziv i završetak posla |
 
+Ako razmatrate i telefonski meni ili govornu poštu sa prepisom, naš [vodič za automatsko odgovaranje na pozive](/sr/blog/automated-answering-service/) ih poredi sa AI recepcionerom.
+
 ## Govorna pošta radi kada čekanje nosi mali rizik
 
 Govorna pošta je i dalje dovoljna za manje hitne pozive ljudi koji već poznaju firmu:
@@ -45,7 +47,7 @@ Neka pozdrav bude kratak. Navedite naziv firme, očekivano vreme odgovora i drug
 
 ## Pozivi novih klijenata izgledaju drugačije
 
-Novi pozivalac možda ima otvoren spisak firmi u rezultatima pretrage. Ako prvi poziv završi u govornoj pošti, pozivalac za nekoliko sekundi može da pozove sledeću firmu sa spiska. Firma to možda nikada neće saznati, jer mnogi ljudi prekinu vezu bez ostavljanja poruke.
+Novi pozivalac možda ima otvoren spisak firmi u rezultatima pretrage. Ako prvi poziv završi u govornoj pošti, pozivalac za nekoliko sekundi može da pozove sledeću firmu sa spiska. Firma to možda nikada neće saznati, jer mnogi ljudi prekinu vezu bez ostavljanja poruke. Naš vodič o [pozivima sa Google Business Profile naloga](/sr/blog/google-business-profile-calls/) objašnjava kako da pratite pozive koje Vam profil donosi.
 
 Efekat zavisi od hitnosti i lokalne konkurencije. Pozivalac kome hitno treba vodoinstalater ima manje strpljenja od klijenta koji ostavlja rutinska pitanja o knjigovodstvenim papirima.
 

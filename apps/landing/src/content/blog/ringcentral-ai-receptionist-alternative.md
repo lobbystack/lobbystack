@@ -1,107 +1,210 @@
 ---
-title: "RingCentral AI Receptionist alternative"
-seoTitle: "RingCentral AI Receptionist alternative: LobbyStack"
-description: "Compare RingCentral AI Receptionist and LobbyStack on pricing, phone-system fit, channels, booking, integrations, open-source access, and self-hosting."
+title: "RingCentral AI Receptionist pricing and an alternative"
+seoTitle: "RingCentral AI Receptionist pricing in 2026: cost and review"
+description: "RingCentral AI Receptionist pricing as of October 9, 2026: $49 standalone or $39 with RingEX for 100 minutes, then $0.50 a minute. Compare costs by volume."
 pubDate: 2026-07-30T10:40:00-04:00
-updatedDate: 2026-07-30T10:40:00-04:00
+updatedDate: 2026-10-09T09:00:00-04:00
 author: "LobbyStack Team"
 category: "Comparisons"
 featured: false
 coverImage: "/illustrations/ringcentral-ai-receptionist-alternative-hero.webp"
-coverImageAlt: "Large office communications suite compared with a portable AI receptionist module"
+coverImageAlt: "Beige card on a small dot pattern with a Pricing label and the black title RingCentral AI Receptionist pricing and an alternative"
 locale: "en"
 canonicalSlug: "ringcentral-ai-receptionist-alternative"
 ---
 
-A **RingCentral AI Receptionist alternative** can start free and avoid a phone-suite dependency. RingCentral AIR lists standalone pricing from $49 for 100 minutes. LobbyStack includes 30 minutes free and 150 minutes for $30, with booking, handoff, SMS alerts, transcripts, and summaries.
+As of October 9, 2026, **RingCentral AI Receptionist pricing** starts at $49 a month standalone, or $39 a month as an add-on to a paid RingEX plan. Both include 100 minutes. Extra minutes cost $0.50, and RingCentral rounds each call up to the next 30 seconds. [LobbyStack Starter](/pricing/) costs $30 for 150 minutes, then $0.20 a minute.
 
-LobbyStack runs as an independent managed service or a self-hosted stack. Buyers keep their provider choice instead of tying the receptionist to one communications vendor.
+**Prices checked October 9, 2026**, in each vendor's own currency before tax. LobbyStack wrote this page, and we sell a competing AI receptionist. We read RingCentral's US and regional pricing pages, its AI Receptionist FAQ and its service terms that day, and the links are under Sources. If you've seen $59 quoted elsewhere, RingCentral's own pricing page showed $49 on October 9.
 
-## RingCentral AIR vs LobbyStack
+## How much does RingCentral AI Receptionist cost?
 
-| Area | RingCentral AIR | LobbyStack |
+RingCentral AI Receptionist (AIR) costs $49 a month on its own, or $39 a month on top of RingEX, RingCentral's business phone service. Both ways include 100 minutes. RingCentral listed these US plans on October 9, 2026:
+
+| Plan | Monthly price | Included minutes | Overage | What else you need | Free trial |
+| --- | --- | --- | --- | --- | --- |
+| Standalone AIR | $49 | 100 | $0.50 a minute, 30-second rounding | None; RingCentral includes a new number, or you port yours | 14 days |
+| AIR with RingEX | $39 for AIR + $30 for RingEX Core (plan card) | 100 AIR minutes | $0.50 a minute, 30-second rounding | A paid RingEX seat | 14 days |
+| AI Customer Engagement Bundle with AIR | "Contact us for pricing" | Not published | Not published | A quote for this RingEX bundle | Not stated |
+
+### Standalone AIR: $49 a month for 100 minutes
+
+You forward calls to the standalone plan or connect it over SIP, so it works with any phone system. RingCentral includes a new phone number, or you can port the one you have. RingCentral's page doesn't say whether the 14-day trial needs a card.
+
+### RingEX add-on: $39 a month plus a RingEX seat
+
+RingCentral's FAQ says the add-on starts at $39 a month. The plan card on its pricing page shows "$39 + $30": $39 for AIR and $30 for a RingEX Core seat. If you don't use RingCentral yet, you'd pay $69 a month before overage. Existing RingEX customers add AIR in the admin portal and pay only the $39.
+
+### Overage: $0.50 a minute in 30-second steps
+
+After the included 100 minutes, RingCentral charges $0.50 a minute, pay as you go, and rounds each call up to the next 30 seconds. It also sells extra minute bundles but doesn't publish their prices. To compare a bundle, you have to ask RingCentral for a quote. A footnote on the pricing page says "Additional charges may apply."
+
+### What RingCentral's service terms add
+
+RingCentral's add-on service terms add four billing rules:
+
+- Each AIR license includes 100 minutes a month, pooled across the account.
+- Unused minutes don't roll over to the next month.
+- Extra usage draws on the account's Calling Credits first, then bills as overage.
+- AIR minutes are separate from any RingEX or toll-free minutes you buy.
+
+## What will RingCentral AI Receptionist cost per month?
+
+At 300 billed minutes a month, standalone AIR costs $149 and LobbyStack Starter costs $60. The table below adds each plan's price to its pay-as-you-go overage, as of October 9, 2026.
+
+### Monthly totals from 100 to 500 minutes
+
+| Billed minutes a month | AIR standalone | AIR add-on + RingEX Core seat | LobbyStack Starter (ours) | LobbyStack Pro (ours) |
+| --- | --- | --- | --- | --- |
+| 100 | $49 | $69 | $30 | $100 |
+| 120 (40 three-minute calls) | $59 | $79 | $30 | $100 |
+| 150 | $74 | $94 | $30 | $100 |
+| 300 | $149 | $169 | $60 | $100 |
+| 500 | $249 | $269 | $100 | $100 |
+
+How we got these totals: AIR standalone is $49 plus $0.50 for each minute over 100. The add-on column adds one RingEX Core seat, at the $30 on RingCentral's plan card, to the $39 AIR line and the same overage. Starter is $30 plus $0.20 for each minute over 150. Pro is $100 for up to 500 minutes. We left out taxes and minute bundles, counted RingCentral minutes after 30-second rounding, and assumed 3-minute calls for the 120-minute row.
+
+### How 30-second rounding changes the bill
+
+Take 60 calls in a month that each last 2 minutes 10 seconds. RingCentral bills each one as 2 minutes 30 seconds, so the month comes to 150 billed minutes. That's $74 on the standalone plan, or $64 for the AIR line on the add-on ($94 with the RingEX seat).
+
+LobbyStack counts seconds, so the same 60 calls use 130 minutes, inside Starter's 150. Your bill stays at $30.
+
+LobbyStack doesn't count calls under 10 seconds, or calls the receptionist ends as spam, toward your minutes or overage. RingCentral's pricing page doesn't say how it counts spam, hang-ups or very short calls. If your line gets a lot of robocalls, ask before you buy.
+
+## RingCentral AI Receptionist vs LobbyStack
+
+Both products as of October 9, 2026:
+
+| | RingCentral AIR | LobbyStack (ours) |
 | --- | --- | --- |
-| Ongoing free plan | Not advertised | 30 browser voice minutes, no card, no telephone number |
-| Standalone entry | From $49 for 100 minutes | Free for 30 minutes; $30 for 150 |
-| Existing customer price | RingEX add-on from $39 | No base phone-suite subscription |
-| Channels | Voice, SMS, WhatsApp | Voice, plus booking texts and SMS alerts |
-| Phone-system depth | RingCentral queues and administration | Provider-connected receptionist |
-| Booking | Calendly and other integrations advertised | Google Calendar booking with business rules |
-| Source code | Not advertised | Public MIT-licensed repository |
-| Deployment | RingCentral-managed | Managed cloud or self-hosted |
+| Entry price | $49 a month standalone, or $39 plus a RingEX seat | $30 a month on Starter |
+| Included minutes | 100 | 150 on Starter, 500 on Pro ($100) |
+| Overage | $0.50 a minute | $0.20 a minute on Starter, $0.18 on Pro |
+| How minutes are counted | Each call rounded up to the next 30 seconds | By the second; calls under 10 seconds and spam calls the receptionist ends don't count |
+| Free option | 14-day trial | Free plan with 30 browser voice minutes a month, no card, no telephone number, no expiry |
+| Phone number | New number included, or port yours | One number on Starter and Pro, in the US, Canada, the UK or Australia |
+| Works with your existing number | Yes, through forwarding or SIP | Yes, through carrier forwarding |
+| Caller languages | English, Spanish, French, Italian, German and Portuguese, per its FAQ, with more "coming soon"; switches language mid-call | Opens in English or French, then answers in the caller's language: 70+ languages on OpenAI GPT-Live |
+| Calendars | Google and Outlook | Google Calendar |
+| CRM | Salesforce, HubSpot and Zoho built in | Webhooks and a REST API; Zapier connects through them |
+| AI replies to texts | Yes, through its AI SMS agent (RingCentral notes extra charges may apply) | No; your team replies by hand |
+| Transfers and routing | By name, location and keyword, with live handoff | One transfer number, and a message if the transfer fails |
+| Voices | 8 | One built-in phone voice |
+| Setup fee | None stated | None on any plan |
+| Source code and self-hosting | Not advertised | MIT-licensed; self-host with Docker Compose or Railway |
 
-Pricing and features were checked on July 30, 2026.
+LobbyStack Starter costs $19 less than standalone AIR and includes 50 more minutes. The RingEX add-on brings AIR's own line down to $39, still $9 more than Starter. A business without RingEX also pays $30 for the seat.
 
-## LobbyStack lowers the entry cost and removes the suite dependency
+AIR does more in five areas: CRM sync, Outlook booking, AI replies to texts, routing across several sites and a choice of eight voices. Its standalone plan also answers calls to the number you already have, so you don't need a RingCentral phone system to use it.
 
-LobbyStack Starter costs $19 less than RingCentral's standalone entry and includes 50 more minutes. You can test greetings and answers in your browser on Free. Choose a paid plan to receive telephone calls and test transfers.
+## Is RingCentral AI Receptionist good?
 
-Existing RingEX customers can buy AIR as an add-on from $39. That price still sits above LobbyStack Starter and keeps the AI inside RingCentral. LobbyStack can remain in place if the business changes carriers, phone systems, or infrastructure.
+Yes, for a business that already runs RingEX or needs CRM sync and routing across locations. For an owner watching cost per minute, AIR's $0.50 overage with 30-second rounding costs more than LobbyStack's $0.20 a minute counted by the second. We based this review on RingCentral's own pages and quote no user ratings.
 
-RingCentral offers mature queues, WhatsApp, Shopify, and a broad communications administration layer. A buyer who needs those products may prefer one vendor. A buyer who needs the receptionist gets a lower price and more control from LobbyStack.
+### Where AIR is strong
 
-## RingCentral includes a wider communications suite
+- It works with RingCentral or any other phone system, through forwarding or SIP.
+- You can run unlimited AI receptionists and choose from eight voices.
+- Leads sync to Salesforce, HubSpot and Zoho, and bookings go into Google or Outlook calendars.
+- An AI SMS agent answers texts, though RingCentral notes additional charges may apply.
+- It routes callers by name, location and keyword across several sites, and hands live calls to your team with context.
+- RingCentral describes AIR as designed to support HIPAA compliance and lists SOC 2, though the pricing page doesn't mention a BAA. LobbyStack makes no HIPAA or SOC 2 claim.
+- Setup is self-serve: you train it from your website, FAQs or documents, and the paid product comes with a 14-day trial.
 
-RingCentral has a mature business-phone and contact-center product. AIR adds FAQ answers, contextual routing, multilingual voice, analytics, transcripts, SMS, WhatsApp, Shopify, Calendly, booking, and queue overflow.
+### Where AIR costs more or does less
 
-A company already using RingEX can add AI reception without introducing a separate phone administration model. Teams can keep extensions, queues, permissions, reporting, and support under one vendor.
+- Overage costs $0.50 a minute with 30-second rounding, and RingCentral doesn't publish minute-bundle prices.
+- Its FAQ lists six languages: English, Spanish, French, Italian, German and Portuguese, with more "coming soon".
+- RingCentral marks its Calendly, Shopify and WhatsApp integrations "coming soon".
+- There's no free plan after the 14-day trial.
+- The $39 add-on requires a paid RingEX seat.
 
-LobbyStack does not replace a full unified communications suite. It sits on the call path to answer, capture caller details, book, transfer, and record the outcome. It can serve a business that wants to keep its existing providers or self-host the receptionist layer.
+A RingEX customer who wants one vendor, one admin portal and one bill gets real value from AIR, because extensions, queues, permissions and support all stay with RingCentral.
 
-## Add-on pricing needs the base-system context
+## RingCentral AI Receptionist pricing in Canada, the UK and Australia
 
-RingCentral publishes standalone AIR pricing from $49 per month with 100 minutes. RingEX customers can add AIR from $39.
+RingCentral sells AIR in Canada as a standalone plan or an add-on. In the UK, Australia and the EU, it sells AIR only as a RingEX add-on. As of October 9, 2026, RingCentral includes 100 minutes in each plan below and rounds calls up in 30-second steps.
 
-The add-on figure can look lower, but an existing RingEX subscription sits underneath it. That is not an extra cost for a company that already uses RingCentral. It is part of the decision for a buyer starting from another phone system.
+| Country | Monthly price | Overage |
+| --- | --- | --- |
+| Canada | C$69 standalone, or C$55 for AIR + C$40 for RingEX Core | C$0.70 a minute |
+| United Kingdom | £32 per account, add-on only | £0.40 a minute |
+| Australia | A$62 per account, add-on only | A$0.80 a minute |
 
-LobbyStack Starter lists $30 with 150 voice minutes and Pro lists $100 with 500. The hosted product connects to the phone path without asking the business to adopt a complete collaboration suite.
+Prices are in Canadian dollars (C$), British pounds (£) and Australian dollars (A$), from RingCentral's regional pricing pages.
 
-Compare the total monthly communications bill, not one AI line item. Include users, numbers, texting, queues, recording, overages, and support.
+LobbyStack bills in US dollars on every plan: $30 a month for Starter and $100 for Pro. It offers local numbers, plus toll-free numbers where available, in the US, Canada, the UK and Australia. On LobbyStack Cloud, booking confirmations and reminders go only to US and Canadian numbers, and SMS alerts to your team need a US or Canadian mobile. A UK or Australian business still gets its calls answered and booked, but callers with UK or Australian mobiles won't get confirmation or reminder texts.
 
-## Proprietary integration or open ownership
+## How does AIR compare with other phone-system AI receptionists?
 
-RingCentral can connect AIR to its queues and communications data with a depth that an independent product may not match. Its official pages also advertise commerce, scheduling, and messaging integrations.
+Zoom, Nextiva, CloudTalk and Quo also sell an AI receptionist next to their phone systems. The plans below cost $25 to $99 a month as of October 9, 2026. Each vendor bills in its own unit, and Quo Sona also needs a paid Quo plan.
 
-LobbyStack's advantage is a different kind of integration freedom. The source code is public, and self-hosted teams can use their provider accounts, change workflows, and manage infrastructure policies. They can keep the receptionist even if the surrounding phone setup changes.
+- **[Zoom AI Receptionist](/blog/zoom-ai-receptionist-alternative/):** $29.99 a month, billed monthly, for 100 voice minutes, and it doesn't require Zoom Phone. That's $19.01 less than standalone AIR for the same minutes. Zoom doesn't publish a price for extra minutes.
+- **[Nextiva XBert](/blog/nextiva-xbert-alternative/):** $99 a month for 100 interactions, then $0.99 each. An interaction is a call over 30 seconds, or a text or chat thread of three or more messages, so one allowance covers calls, texts and chat. Nextiva's FAQ says you can buy XBert standalone or as an add-on.
+- **CloudTalk AI Receptionist:** $99 a month for 200 minutes, and CloudTalk says your first 50 minutes are free in your first month. CloudTalk doesn't publish an overage rate or state whether you also need a phone seat. It lists 70+ languages, as LobbyStack does, and human agents can answer on the same number.
+- **Quo Sona:** $25 a month for 4,000 credits, about 40 calls, then $0.75 a call, on top of a paid Quo plan (Starter is $19 per user, billed monthly). A long call uses the same credits as a short one, which favors Quo teams whose calls run long.
 
-RingCentral's reviewed pages do not advertise self-hosting or public source access for AIR. The managed platform saves operations work. LobbyStack's open route creates operations work and more control.
+For a wider table that adds AI-first vendors, see [what an AI receptionist costs across vendors](/blog/ai-receptionist-savings/). If you're also weighing a human service, see [what a human answering service costs](/blog/how-much-does-an-answering-service-cost/).
 
-## A regional retailer example
+### Are AI receptionists worth it?
 
-A retailer has 12 stores, RingCentral extensions, call queues, and a central support team. Customers call about store hours, stock questions, returns, and order status.
+It depends on how many calls you miss and what a booked job is worth to you, so [estimate what missed calls cost you](/missed-call-revenue-calculator/) and check [when an AI receptionist pays for itself](/blog/ai-receptionist-savings/#when-does-an-ai-receptionist-pay-for-itself). To test one on your own questions, LobbyStack's free plan gives you 30 browser voice minutes a month, and RingCentral offers a 14-day trial of AIR.
 
-AIR has a natural advantage because the phone system and queues already live in RingCentral. The retailer should test store identification, queue overflow, Shopify access, transfers, and reporting by location.
+## What to ask RingCentral before you buy
 
-LobbyStack does not route calls across stores, so the retailer would run one receptionist per store. It may fit if the retailer wants a deployment it can inspect or expects to change phone providers. The team should test data boundaries and the staff required to operate the stack.
+Price the whole monthly bill: the AI plan, any phone seats and the overage you expect. Ask RingCentral:
 
-The existing communications architecture carries more weight than a small difference in minute price.
+1. Which RingEX plans and regions support AIR?
+2. How do the pooled 100 minutes per license work across several locations?
+3. What do the extra minute bundles cost?
+4. How do spam calls, hang-ups and transfer time count toward minutes?
+5. Does the 14-day trial need a credit card, and what happens when it ends?
+6. Which "additional charges" could apply to your account?
 
-## Audit the add-on inside your RingCentral contract
-
-Ask your account team which base subscription, number type, and region support AIR. Confirm how the included minutes work across several locations and whether unused minutes pool. Add overages, implementation help, phone licenses, and any contact-center features that your reception workflow needs.
-
-Test a caller who asks for a store by city, then requests a person by name. Place another call after hours and decline the first transfer destination. Check whether AIR preserves context through the queue and records the final outcome where your managers work.
-
-Repeat the calls with LobbyStack connected to your carrier. RingCentral can reduce integration work for an existing customer. LobbyStack can reduce platform dependency for a team prepared to run the surrounding infrastructure.
+Then place the same three test calls on AIR and on LobbyStack: an after-hours caller who wants to book, a caller who switches to Spanish partway through, and a transfer nobody answers. Check what each product records and how many minutes each call adds to the bill.
 
 ## Choose RingCentral AIR when
 
-Choose RingCentral AIR when your company already uses RingCentral or wants a broad communications suite. Queue integration, WhatsApp, Shopify, and centralized administration are concrete advantages.
+- You already pay for RingEX and want AIR on the same bill and admin portal.
+- You need leads to sync into Salesforce, HubSpot or Zoho without extra tools.
+- Your team books in Outlook, or you want the AI to answer texts as well as calls.
+- You route callers by name or location across several sites.
+- You want a choice of voices, or RingCentral's HIPAA-supportive setup.
 
 ## Choose LobbyStack when
 
-Choose LobbyStack when you want 30 free minutes, 150 minutes for $30, booking and handoff without a phone-suite purchase, public source code, provider choice, or self-hosting.
+LobbyStack fits if you want a lower cost per minute and a free way to test first:
+
+- Free gives you 30 browser voice minutes a month, with no card and no telephone number, and it doesn't expire.
+- Starter costs $30 for 150 minutes, then $0.20 a minute, counted by the second. Calls under 10 seconds and calls the receptionist ends as spam don't count.
+- Each call opens in the business's default language, English or French. The receptionist then answers in the caller's language: 70+ languages on OpenAI GPT-Live, including Spanish and Serbian.
+- It books into Google Calendar and, when the caller agrees, texts a confirmation and a reminder 24 hours before the appointment to US and Canadian numbers.
+- Starter includes 20 transfer attempts a month to your transfer number, and the receptionist offers to take a message if a transfer doesn't go through.
+- There's no setup fee on any plan, and you can cancel from billing settings with no cancellation fees.
+- The code is MIT-licensed. You can self-host it with your own OpenAI and Twilio accounts and keep stored recordings and transcripts on servers you control. Twilio and OpenAI still process the live call audio.
+
+You can keep your current number by forwarding it to LobbyStack. [Create a free account](https://app.lobbystack.com/en/signup) to hear the receptionist in your browser, or [compare plans](/pricing/).
 
 ## Sources
 
-- [RingCentral AIR product](https://www.ringcentral.com/air.html)
-- [RingCentral AIR features and pricing](https://www.ringcentral.com/us/en/blog/ai-receptionist-texts-call-queues-integrations/)
-- [RingCentral service definition](https://www.ringcentral.com/legal/add-on-services.html)
+All checked October 9, 2026:
+
+- [RingCentral AI Receptionist pricing (US)](https://www.ringcentral.com/pricing/ai-receptionist.html)
+- [RingCentral AI Receptionist pricing (Canada)](https://www.ringcentral.com/ca/en/pricing/ai-receptionist.html)
+- [RingCentral AI Receptionist pricing (UK)](https://www.ringcentral.com/gb/en/pricing/ai-receptionist.html)
+- [RingCentral AI Receptionist pricing (Australia)](https://www.ringcentral.com/au/en/pricing/ai-receptionist.html)
+- [RingCentral AI Receptionist product page and FAQ](https://www.ringcentral.com/ai-receptionist.html)
+- [RingCentral add-on service terms](https://www.ringcentral.com/legal/add-on-services.html)
+- [RingCentral plans and pricing](https://www.ringcentral.com/office/plansandpricing.html)
+- [RingCentral blog: AI Receptionist texts, call queues and integrations](https://www.ringcentral.com/us/en/blog/ai-receptionist-texts-call-queues-integrations/)
+- [Zoom AI Receptionist pricing](https://zoom.us/pricing/virtual-agent)
+- [Nextiva XBert](https://www.nextiva.com/products/xbert)
+- [CloudTalk AI Receptionist](https://www.cloudtalk.io/ai-receptionist/)
+- [Quo Sona pricing](https://support.quo.com/core-concepts/ai-automations/sona/sona-pricing)
 - [LobbyStack pricing](/pricing/)
 - [LobbyStack GitHub repository](https://github.com/lobbystack/lobbystack)
 
 ## Verdict
 
-LobbyStack offers more minutes for less money and keeps the receptionist portable. RingCentral AIR earns consideration when a company already wants the wider RingCentral environment and accepts that dependency.
-
-[Try LobbyStack free](/pricing/) before adding another charge to a phone-suite contract.
+For an owner who doesn't use RingCentral, LobbyStack costs less per minute and counts calls by the second, where RingCentral rounds each one up to the next 30 seconds. A RingEX customer who wants AIR's CRM sync, Outlook booking and administration in one place may find the $39 add-on worth paying for. To try LobbyStack with your own questions before you pay anything, [start on the free plan](/pricing/).

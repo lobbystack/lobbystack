@@ -25,7 +25,7 @@ Upfirst charges by handled call, while LobbyStack charges by voice minute. Lobby
 | Entry plan | $24.95 for 30 calls | Free for 30 voice minutes |
 | Paid usage | Call allowances and per-call overages | Minute allowances and per-minute overages |
 | Booking | Direct calendar scheduling | Booking, changes, and business rules |
-| Transfers | Warm and waterfall transfers | Human handoff with call context |
+| Transfers | Warm and waterfall transfers | Blind transfer to one number |
 | Languages | More than 35 advertised | Answers in the caller's language |
 | Deployment | Hosted service | Managed cloud or self-hosted |
 | Source code | Public pages do not advertise source access | Public MIT-licensed repository |

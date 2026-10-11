@@ -31,7 +31,7 @@ Kada se pozivaocu javi LobbyStack, on može da:
 - **zakaže termine** prema dostupnosti u Vašem kalendaru
 - **pošalje potvrdu termina** putem SMS poruke na plaćenim paketima
 - **obavesti Vaš tim** rezimeom poziva putem e-pošte ili SMS poruke
-- **preusmeri hitne pozive** pravoj osobi, uz priložen kontekst
+- **preusmeri hitne pozive** na broj koji izaberete
 - **sačuva evidenciju** sa transkriptima, snimcima, rezimeima, pozivaocima i ishodima na jednoj kontrolnoj tabli
 
 Ne pokušava da zameni ljude koji vode firmu. Tu je da pokrije trenutke kada su ti ljudi sa klijentima, kada je zatvoreno preko noći ili kada konačno pokušavaju da ručaju bez telefona u jednoj ruci.

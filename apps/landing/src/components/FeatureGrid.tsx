@@ -11,9 +11,9 @@ const featureGridCopy = {
     headingStart: "Answer calls and book appointments",
     headingEmphasis: "while you work",
     intro:
-      "Answer questions, qualify new customers, book appointments, capture follow-up details, and route urgent calls with context.",
+      "Answer questions, qualify new customers, book appointments, capture follow-up details, and transfer urgent calls to your team.",
     imageAlt:
-      "LobbyStack AI receptionist capabilities: answers calls, books appointments, qualifies leads, transfers calls, and sends summaries",
+      "LobbyStack AI receptionist capabilities: answers calls, books appointments, qualifies leads, transfers calls, and saves call summaries",
     features: [
       {
         title: "Answers your calls",
@@ -45,7 +45,7 @@ const featureGridCopy = {
     headingStart: "Répondez aux appels et planifiez les rendez‑vous",
     headingEmphasis: "pendant que vous travaillez",
     intro:
-      "Répondez aux questions, qualifiez les nouveaux clients, planifiez les rendez‑vous, collectez les informations utiles et transférez les appels urgents avec le bon contexte.",
+      "Répondez aux questions, qualifiez les nouveaux clients, planifiez les rendez‑vous, collectez les informations utiles et transférez les appels urgents à votre équipe.",
     imageAlt:
       "Fonctionnalités du réceptionniste IA LobbyStack : réponse aux appels, rendez‑vous, qualification, transferts et résumés",
     features: [
@@ -79,9 +79,9 @@ const featureGridCopy = {
     headingStart: "Atienda llamadas y reserve citas",
     headingEmphasis: "mientras trabaja",
     intro:
-      "Responda preguntas, califique a nuevos clientes, reserve citas, tome los datos para el seguimiento y pase las llamadas urgentes con contexto.",
+      "Responda preguntas, califique a nuevos clientes, reserve citas, tome los datos para el seguimiento y transfiera las llamadas urgentes a su equipo.",
     imageAlt:
-      "Funciones de la recepcionista con IA de LobbyStack: atiende llamadas, reserva citas, califica clientes potenciales, transfiere llamadas y envía resúmenes",
+      "Funciones de la recepcionista con IA de LobbyStack: atiende llamadas, reserva citas, califica clientes potenciales, transfiere llamadas y guarda resúmenes",
     features: [
       {
         title: "Atiende sus llamadas",
@@ -113,9 +113,9 @@ const featureGridCopy = {
     headingStart: "Javljajte se na pozive i zakazujte termine",
     headingEmphasis: "dok radite",
     intro:
-      "Odgovarajte na pitanja, proveravajte nove klijente, zakazujte termine, beležite podatke za dalji kontakt i preusmeravajte hitne pozive uz kontekst.",
+      "Odgovarajte na pitanja, proveravajte nove klijente, zakazujte termine, beležite podatke za dalji kontakt i preusmeravajte hitne pozive Vašem timu.",
     imageAlt:
-      "Funkcije LobbyStack AI recepcionera: javlja se na pozive, zakazuje termine, proverava potencijalne klijente, preusmerava pozive i šalje rezimee",
+      "Funkcije LobbyStack AI recepcionera: javlja se na pozive, zakazuje termine, proverava potencijalne klijente, preusmerava pozive i čuva rezimee",
     features: [
       {
         title: "Javlja se na Vaše pozive",

@@ -6,11 +6,13 @@ import { FeaturesCtaSection } from "@/components/features/FeaturesCtaSection"
 import { render } from "astro:content"
 import type { BlogEntry } from "@/lib/blog"
 import { blogCanonicalSlug, blogPath, getBlogPosts } from "@/lib/blog"
+import { faqsFromMarkdown } from "@/lib/blog-faqs"
 import { nextInRotation } from "@/lib/related-posts"
 import {
   blogJsonLd,
   blogPostingJsonLd,
   breadcrumbJsonLd,
+  faqPageJsonLd,
   imageObjectJsonLd,
   organizationJsonLd,
   plainTextFromMarkdown,
@@ -43,6 +45,7 @@ const modifiedTime = (
 ).toISOString()
 const coverImageAlt = entry.data.coverImageAlt ?? entry.data.title
 const articleBody = plainTextFromMarkdown(entry.body)
+const faqs = faqsFromMarkdown(entry.body)
 const dateLocales = {
   en: "en-US",
   fr: "fr-FR",
@@ -240,6 +243,9 @@ const productResources = slug.includes("open-source")
         { name: "Blog", path: localizePath(locale, "/blog/") },
         { name: entry.data.title, path: canonicalPath },
       ]),
+      ...(faqs.length > 0
+        ? [faqPageJsonLd({ path: canonicalPath, faqs, locale })]
+        : []),
     ],
   }}
 >
