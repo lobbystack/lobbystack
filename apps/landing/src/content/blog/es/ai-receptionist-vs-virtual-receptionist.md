@@ -66,13 +66,13 @@ En un modelo híbrido, la IA contesta primero y las personas toman las llamadas 
 
 ## ¿Cuánto cuesta una recepcionista virtual?
 
-Un servicio de recepcionista virtual humana costaba entre $1 y $5 por minuto en octubre de 2026, o de $127 a $720 al mes por 40 llamadas de tres minutos. Los planes de IA salían de $25.25 a $99 por esas mismas llamadas, entre $0.19 y $0.50 por minuto en los planes por minuto. Una recepcionista en nómina con el salario mediano del BLS cuesta unos $3,170 al mes antes de impuestos y prestaciones.
+Un servicio de recepcionista virtual humana costaba entre $1 y $5 por minuto en octubre de 2026, o de $127 a $599 al mes por 40 llamadas de tres minutos. Los planes de IA salían de $25.25 a $99 por esas mismas llamadas, entre $0.19 y $0.50 por minuto en los planes por minuto. Una recepcionista en nómina con el salario mediano del BLS cuesta unos $3,170 al mes antes de impuestos y prestaciones.
 
 La tabla supone 40 llamadas al mes de 3 minutos cada una, o 120 minutos. Su propio patrón de llamadas moverá las cifras. Para cada proveedor tomamos la forma más barata de cubrir 120 minutos, ya sea un plan solo o un plan menor más el excedente publicado, en dólares estadounidenses y sin impuestos.
 
 | Opción | Costo con 40 llamadas de 3 minutos | Tarifa habitual | Extremos bajo y alto |
 | --- | --- | --- | --- |
-| Servicio de atención telefónica con personas | $127 a $720 al mes | Unos $1 a $5 por minuto, o $2 a $10 por llamada dentro del plan | [AnswerNet](https://answeringservicesus.com/pricing/): $105 por 100 minutos + 20 × $1.10 = $127. [Ruby](https://www.ruby.com/plans-and-pricing/): $720 por 200 minutos, porque Ruby no publica una tarifa de excedente |
+| Servicio de atención telefónica con personas | $127 a $599 al mes | Unos $1 a $5 por minuto, o $2 a $10 por llamada dentro del plan | [AnswerNet](https://answeringservicesus.com/pricing/): $105 por 100 minutos + 20 × $1.10 = $127. [Abby Connect](https://www.abby.com/pricing/): $599 por 200 minutos, porque Abby Connect no publica una tarifa de excedente |
 | Recepcionista con IA | $25.25 a $99 al mes | Unos $0.19 a $0.50 por minuto en los planes por minuto | [AI-Receptionist.com](https://ai-receptionist.com/pricing): $14 por 75 minutos + 45 minutos de Booster Pack a $0.25 = $25.25. Varios proveedores llegan a $99, como [My AI Front Desk](https://www.myaifrontdesk.com/pricing) por 200 minutos. LobbyStack Starter (nuestro): $30 |
 | Recepcionista en nómina | Unos $3,170 al mes | No cambia con el volumen de llamadas | Mediana del [BLS](https://www.bls.gov/ooh/Office-and-Administrative-Support/Receptionists.htm) de $18.27 por hora (mayo de 2025) × 40 horas × 52 semanas ÷ 12, antes de cargas sociales y prestaciones |
 
@@ -188,7 +188,7 @@ Haga estas preguntas en las llamadas de ventas y durante las pruebas, y pida las
 - ¿Cómo vuelven a formar a los agentes cuando cambian nuestras políticas?
 - ¿Qué pasa durante un pico de llamadas?
 - ¿En qué tramos facturan? ¿Cobran el tiempo en espera, el trabajo posterior a la llamada, el spam y las llamadas muy cortas?
-- ¿Hay tarifa de configuración y cuál es la tarifa de excedente? Ruby, por ejemplo, no publica su tarifa de excedente.
+- ¿Hay tarifa de configuración y cuál es la tarifa de excedente? Abby Connect, por ejemplo, no publica su tarifa de excedente.
 
 Si busca nombres concretos, vea nuestra lista de los [mejores servicios de atención telefónica para pequeñas empresas](/es/blog/best-answering-service-for-small-business/).
 

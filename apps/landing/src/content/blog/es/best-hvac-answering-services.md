@@ -45,7 +45,7 @@ La tabla cubre siete servicios con personas y siete de IA o híbridos. Cobran po
 | [PATLive](https://www.patlive.com/pricing/) | Personas | $49/mes + $2.99/min | Primer minuto, luego tramos de 6 segundos | Ninguna publicada | $230.80 | $479 |
 | [MAP Communications](https://www.mapcommunications.com/pricing/) | Personas | $49/mes + $1.37/min | Minutos completos, redondeados hacia arriba | No indicada | $179 + cargo de telecomunicaciones | $403 + cargo de telecomunicaciones |
 | [Specialty Answering Service](https://www.specialtyansweringservice.net/pricing/) | Personas | $44/mes + $1.54/min | Por segundo | $0 | $187.80 | $384.20 |
-| [Ruby](https://www.ruby.com/plans-and-pricing/) | Personas | $250/mes por 50 min | 60 segundos, redondeado hacia arriba | Ninguna | $720 | Sin precio completo |
+| [Ruby](https://www.ruby.com/plans-and-pricing/) | Personas | $250/mes por 50 min | 60 segundos, redondeado hacia arriba | Ninguna | $485 | $1,160 |
 | [Nexa](https://www.nexa.com/plans/) | Personas | Precio a consultar | No indicada | Sí, importe no publicado | Precio a consultar | Precio a consultar |
 | [Smith.ai Virtual Front Desk](https://smith.ai/pricing/receptionists) | Recepcionistas en vivo | $300/mes por 30 llamadas | Por llamada | Ninguna | $415 | $915 |
 | [Smith.ai AI Receptionist](https://smith.ai/pricing/ai-receptionist) | IA, que escala a personas | $0 por 25 llamadas | Por llamada | Ninguna | $45 (Free), o $150 en Pro | $212.50 |
@@ -84,7 +84,7 @@ Specialty Answering Service (SAS) factura por segundo, desde $44 al mes más $1.
 
 ### Ruby: la mejor opción para el español a cualquier hora
 
-Los planes de Ruby solo cambian en minutos, desde $250 por 50 hasta $1,725 por 500 ([página de precios](https://www.ruby.com/plans-and-pricing/)). Todos incluyen español 24/7, y la app de Ruby le avisa al llegar al 85% y al 100% de sus minutos. Ruby no cobra configuración ni recargos fuera de horario, y no factura las llamadas automáticas que detiene su filtro. Su [página de climatización](https://www.ruby.com/industries/hvac/) dice que los agentes escalan las llamadas de emergencia a su equipo. Los minutos incluidos salen a entre $3.45 y $5.00 cada uno, el precio por minuto más alto de esta lista, y Ruby no publica tarifa de excedente. Según sus términos (marzo de 2026), redondea cada llamada a 60 segundos.
+Los planes de Ruby solo cambian en minutos, desde $250 por 50 hasta $1,725 por 500 ([página de precios](https://www.ruby.com/plans-and-pricing/)). Todos incluyen español 24/7, y la app de Ruby le avisa al llegar al 85% y al 100% de sus minutos. Ruby no cobra configuración ni recargos fuera de horario, y no factura las llamadas automáticas que detiene su filtro. Su [página de climatización](https://www.ruby.com/industries/hvac/) dice que los agentes escalan las llamadas de emergencia a su equipo. Los minutos incluidos salen a entre $3.45 y $5.00 cada uno, el precio por minuto más alto de esta lista. El minuto adicional cuesta de $4.00 a $5.40 según el plan ([centro de ayuda](https://rubyhelpcenter.helpjuice.com/billing-plans/am-i-on-the-right-billing-plan), revisado el 10 de octubre de 2026). Según sus términos (marzo de 2026), redondea cada llamada a 60 segundos.
 
 ### Nexa: precio a consultar para llamadas, SMS y chats
 
@@ -130,7 +130,7 @@ LobbyStack no sincroniza con ServiceTitan, Housecall Pro ni Jobber, y Google Cal
 
 ## ¿Cuánto cuesta un servicio de atención telefónica para climatización?
 
-Con 40 llamadas de tres minutos al mes, los servicios con personas de esta lista cuestan de $127 a $720 y los de IA de $30 a $149, con Sameday AI desde $449. Con 100 llamadas, los servicios con personas que publican precios completos van de $237.50 a $915 y los de IA de $60 a $212.50, de nuevo con Sameday AI desde $449. Las tarifas de configuración y los complementos pueden subir ambas cifras.
+Con 40 llamadas de tres minutos al mes, los servicios con personas de esta lista cuestan de $127 a $485 y los de IA de $30 a $149, con Sameday AI desde $449. Con 100 llamadas, los servicios con personas que publican precios completos van de $237.50 a $1,160 y los de IA de $60 a $212.50, de nuevo con Sameday AI desde $449. Las tarifas de configuración y los complementos pueden subir ambas cifras.
 
 Housecall Pro y Nexa no publican precios, así que los dejamos fuera. Para otros oficios, vea [lo que cuesta un servicio de atención telefónica fuera de la climatización](/es/blog/how-much-does-an-answering-service-cost/).
 
@@ -144,7 +144,7 @@ Cada línea muestra la opción más barata con 40 llamadas (120 minutos) y despu
 - **PATLive:** $189 + 20 x $2.09 = $230.80; $479 por 300 minutos
 - **AnswerForce:** $349 por 200 minutos, más $75 de configuración una sola vez; $389 por 300 minutos
 - **Smith.ai Virtual Front Desk:** $300 + 10 x $11.50 = $415; $810 + 10 x $10.50 = $915. Reservar en cada llamada suma $60, y luego $150.
-- **Ruby:** $720 por 200 minutos, porque los 100 minutos del plan de $395 dejan 20 a una tarifa no publicada. Con 300 minutos son $720 más 100 minutos a esa tarifa, o $1,725 por 500.
+- **Ruby:** $395 + 20 x $4.50 = $485; $720 + 100 x $4.40 = $1,160
 - **Smith.ai AI Receptionist:** plan Free, 15 llamadas extra x $3.00 = $45; Pro, $150 + 25 x $2.50 = $212.50
 - **Jobber Receptionist:** $29 + 10 x $0.79 = $36.90; $29 + 70 x $0.79 = $84.30, más un plan de Jobber
 - **Rosie:** $49, o $149 con reservas y transferencias; $149, porque 300 minutos superan los 250 del plan de $49
@@ -214,7 +214,7 @@ Si sus despachadores trabajan en ServiceTitan y usted necesita que el servicio c
 
 Vale la pena cuando los trabajos que recuperaría cubren la factura. Multiplique las llamadas que pierde en un mes por la proporción que habría reservado y por su margen promedio por trabajo. Después compare el resultado con el precio mensual de arriba. Haga la cuenta para julio y para abril, porque el volumen de llamadas de climatización sigue al clima.
 
-Un ejemplo con cifras hipotéticas: 20 llamadas perdidas, 1 de cada 4 con reserva y $300 de margen por trabajo dan $1,500. Un mes de 100 llamadas cuesta de $60 a $915 con los servicios de arriba que publican precios completos. Pruebe sus propias cifras en la [calculadora de ingresos por llamadas perdidas](/es/missed-call-revenue-calculator/).
+Un ejemplo con cifras hipotéticas: 20 llamadas perdidas, 1 de cada 4 con reserva y $300 de margen por trabajo dan $1,500. Un mes de 100 llamadas cuesta de $60 a $1,160 con los servicios de arriba que publican precios completos. Pruebe sus propias cifras en la [calculadora de ingresos por llamadas perdidas](/es/missed-call-revenue-calculator/).
 
 En abril, usted deja sin usar la mayor parte de un plan calculado para julio. Los planes de pago por uso de A Message Center, SAS, MAP y PATLive mantienen baja la factura de los meses flojos. SAS y PATLive le permiten cambiar de plan para el mes siguiente, y en LobbyStack usted sube o baja de plan desde la configuración de facturación.
 
@@ -256,7 +256,7 @@ Goodcall puede probar hasta tres contactos de escalamiento, el plan de $299 de R
 
 ## Cómo revisamos estos servicios
 
-Actualizado el 9 de octubre de 2026. Ese día leímos cada precio, unidad de facturación y tarifa de configuración en la página de precios, el centro de ayuda o los términos del propio proveedor. Marcamos con "precio a consultar" los servicios que solo dan cotización, y solo comparamos unidades de facturación distintas con el patrón de llamadas de arriba. Las cifras de LobbyStack vienen de su [página de precios](/es/pricing/). Algunas listas más antiguas citan precios que ya cambiaron: el plan de 50 minutos de Ruby cuesta hoy $250. Haremos la próxima revisión de precios en enero de 2027.
+Actualizado el 9 de octubre de 2026. Ese día leímos cada precio, unidad de facturación y tarifa de configuración en la página de precios, el centro de ayuda o los términos del propio proveedor. Marcamos con "precio a consultar" los servicios que solo dan cotización, y solo comparamos unidades de facturación distintas con el patrón de llamadas de arriba. Revisamos las tarifas de excedente de Ruby en su centro de ayuda el 10 de octubre de 2026. Las cifras de LobbyStack vienen de su [página de precios](/es/pricing/). Algunas listas más antiguas citan precios que ya cambiaron: el plan de 50 minutos de Ruby cuesta hoy $250. Haremos la próxima revisión de precios en enero de 2027.
 
 Fuentes, todas consultadas el 9 de octubre de 2026:
 
@@ -265,7 +265,7 @@ Fuentes, todas consultadas el 9 de octubre de 2026:
 - PATLive: [precios](https://www.patlive.com/pricing/), [página de climatización](https://www.patlive.com/industries/hvac)
 - MAP Communications: [precios](https://www.mapcommunications.com/pricing/), [términos](https://www.mapcommunications.com/terms/), [página de climatización](https://www.mapcommunications.com/industries/contractors/hvac-answering-service/)
 - Specialty Answering Service: [precios](https://www.specialtyansweringservice.net/pricing/), [página de climatización](https://www.specialtyansweringservice.net/industries/construction/hvac-answering-service/)
-- Ruby: [precios](https://www.ruby.com/plans-and-pricing/), [página de climatización](https://www.ruby.com/industries/hvac/)
+- Ruby: [precios](https://www.ruby.com/plans-and-pricing/), [tarifas de excedente](https://rubyhelpcenter.helpjuice.com/billing-plans/am-i-on-the-right-billing-plan), [página de climatización](https://www.ruby.com/industries/hvac/)
 - Nexa: [planes](https://www.nexa.com/plans/), [página de climatización](https://www.nexa.com/industries/hvac/)
 - Smith.ai: [precios de AI Receptionist](https://smith.ai/pricing/ai-receptionist), [precios de Virtual Front Desk](https://smith.ai/pricing/receptionists)
 - Jobber: [artículo de ayuda de Receptionist](https://help.getjobber.com/en/articles/receptionistpowered-by-jobber-ai/), [precios](https://www.getjobber.com/pricing/)

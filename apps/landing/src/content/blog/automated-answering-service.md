@@ -100,7 +100,7 @@ Other vendors publish their own counts: [AI-Receptionist.com](https://ai-recepti
 
 ## How much does an automated answering service cost?
 
-Phone trees and voicemail often come as per-minute add-ons or inside a phone plan. AI receptionist entry plans run $14 to $150 a month as of October 9, 2026. For 40 three-minute calls a month, the AI plans we priced came to $25.25 to $99 and live answering services to $127 to $720.
+Phone trees and voicemail often come as per-minute add-ons or inside a phone plan. AI receptionist entry plans run $14 to $150 a month as of October 9, 2026. For 40 three-minute calls a month, the AI plans we priced came to $25.25 to $99 and live answering services to $127 to $599.
 
 ### Phone tree and voicemail costs
 
@@ -127,7 +127,7 @@ We assume 40 calls of 3 minutes each (120 minutes a month), billed on the cheape
 | Phone tree (PATLive auto attendant) | From $49 | Pay-as-you-go plan; 120 minutes of calls that never reach a receptionist fit in the 1,000 automated minutes included. Any receptionist minute adds $2.99 |
 | Phone tree or voicemail (SAS add-on) | $62 | $44 Economy plan + 120 minutes × $0.15, if no call reaches a live agent or gets connected through to you |
 | AI receptionist | $25.25 to $99 | Low: [AI-Receptionist.com](https://ai-receptionist.com/pricing) $14 + 45 Booster minutes × $0.25. LobbyStack (ours): $30, inside Starter's 150 minutes. High: $99 plans from [Moneypenny AI](https://moneypenny.com/us/plans-pricing-ai/), [Nextiva XBert](https://www.nextiva.com/products/xbert), [CloudTalk](https://www.cloudtalk.io/ai-receptionist/) and [My AI Front Desk](https://www.myaifrontdesk.com/pricing) |
-| Live answering service | $127 to $720 | Low: [AnswerNet](https://answeringservicesus.com/pricing/) Silver (prices on AnsweringServicesUS.com) $105 + 20 minutes × $1.10, plus $10 per holiday. High: [Ruby](https://www.ruby.com/plans-and-pricing/) $720 for 200 minutes. Ruby publishes no overage rate, so its 200-minute plan is the cheapest fully priced way to cover 120 minutes |
+| Live answering service | $127 to $599 | Low: [AnswerNet](https://answeringservicesus.com/pricing/) Silver (prices on AnsweringServicesUS.com) $105 + 20 minutes × $1.10, plus $10 per holiday. High: [Abby Connect](https://www.abby.com/pricing/) $599 for 200 minutes. Abby Connect publishes no overage rate, so its 200-minute plan is the cheapest fully priced way to cover 120 minutes |
 
 A phone tree or voicemail doesn't talk with the caller. The caller waits for your callback, or the menu routes them to a person you also pay for. The $25.25 AI figure assumes you buy Booster minutes. AI-Receptionist.com's FAQ says the receptionist stops taking new calls when included minutes run out unless you hold Booster minutes. For live plans at other volumes, see [live answering service prices by call volume](/blog/how-much-does-an-answering-service-cost/).
 
@@ -210,7 +210,7 @@ LobbyStack (ours) fits owners who want booking, transfers and confirmation texts
 
 ### Choose a live service if calls need judgment
 
-Live answering fits legal intake, sensitive calls and callers who want a person. [Ruby](https://www.ruby.com/plans-and-pricing/) and [PATLive](https://www.patlive.com/pricing/) include Spanish-speaking receptionists at no extra cost. In our check, 40 calls cost $127 to $720 with a live service, against $25.25 to $99 on AI plans.
+Live answering fits legal intake, sensitive calls and callers who want a person. [Ruby](https://www.ruby.com/plans-and-pricing/) and [PATLive](https://www.patlive.com/pricing/) include Spanish-speaking receptionists at no extra cost. In our check, 40 calls cost $127 to $599 with a live service, against $25.25 to $99 on AI plans.
 
 ## Automated answering service FAQ
 

@@ -13,7 +13,7 @@ locale: "es"
 canonicalSlug: "best-answering-service-for-small-business"
 ---
 
-El mejor servicio de recepcionista virtual para una pequeña empresa es PATLive si quiere un servicio de atención telefónica con una persona en cada llamada, Smith.ai si busca IA con agentes humanos detrás, y una recepcionista con IA como AI-Receptionist.com, LobbyStack o Upfirst si el costo decide. Con 40 llamadas de tres minutos al mes, los planes con personas cuestan de $127 a $720 y los de IA de $25.25 a $99.
+El mejor servicio de recepcionista virtual para una pequeña empresa es PATLive si quiere un servicio de atención telefónica con una persona en cada llamada, Smith.ai si busca IA con agentes humanos detrás, y una recepcionista con IA como AI-Receptionist.com, LobbyStack o Upfirst si el costo decide. Con 40 llamadas de tres minutos al mes, los planes con personas cuestan de $127 a $599 y los de IA de $25.25 a $99.
 
 Revisamos los precios el 9 de octubre de 2026 en la página de precios de cada proveedor, en dólares estadounidenses y sin impuestos. LobbyStack escribió esta lista y vende una recepcionista con IA. Por eso aparece en la sección de IA, marcada como nuestra.
 
@@ -30,7 +30,7 @@ Nuestro patrón de llamadas: 40 llamadas al mes de 3 minutos cada una, es decir,
 | Mejor servicio con personas en general | [PATLive](https://www.patlive.com/pricing/) | Personas | $49 al mes más $2.99 por minuto | $230.80 |
 | Facturación por segundo | [Specialty Answering Service](https://www.specialtyansweringservice.net/pricing/) | Personas | $44 al mes más $1.54 por minuto | $187.80 |
 | Precio publicado más bajo con personas | [AnswerNet](https://answeringservicesus.com/pricing/) | Personas | $29 al mes más $1.15 por minuto | $127 |
-| Recepcionistas premium 24/7 | [Ruby](https://www.ruby.com/plans-and-pricing/) | Personas | $250 por 50 min | $720 |
+| Recepcionistas premium 24/7 | [Ruby](https://www.ruby.com/plans-and-pricing/) | Personas | $250 por 50 min | $485 |
 | Llamadas largas, cobro por llamada | [Smith.ai Virtual Front Desk](https://smith.ai/pricing/receptionists) | Personas | $300 por 30 llamadas | $415 |
 | IA con agentes humanos detrás | [Smith.ai AI Receptionist](https://smith.ai/pricing/ai-receptionist) | IA, que escala a personas | $0 por 25 llamadas | $45 en Free, $150 en Pro |
 | Personas e IA en un mismo plan | [Abby Connect](https://www.abby.com/pricing/) | Personas e IA | $165 por 50 Abby Minutes | $599 |
@@ -38,13 +38,13 @@ Nuestro patrón de llamadas: 40 llamadas al mes de 3 minutos cada una, es decir,
 | IA con cobro por llamada | [Upfirst](https://upfirst.ai/pricing) | IA | $24.95 por 30 llamadas | $39.95 |
 | IA para clientes que llaman a menudo | [Goodcall](https://www.goodcall.com/pricing) | IA | $79 por 100 personas distintas que llaman | $79 |
 
-Para la última columna, sumamos el excedente al plan base. En PATLive son $189 por 100 minutos más 20 minutos a $2.09. En SAS, $159 más 20 minutos a $1.44, y en AnswerNet, $105 más 20 minutos a $1.10. En Smith.ai Virtual Front Desk, $300 más 10 llamadas a $11.50. El plan Free de IA de Smith.ai cuesta $0 más 15 llamadas extra a $3, y Upfirst cuesta $24.95 más 10 llamadas a $1.50. Como Ruby y Abby Connect no publican tarifas de excedente, sus cifras corresponden a los planes más pequeños que cubren los 120 minutos.
+Para la última columna, sumamos el excedente al plan base. En PATLive son $189 por 100 minutos más 20 minutos a $2.09. En SAS, $159 más 20 minutos a $1.44, y en AnswerNet, $105 más 20 minutos a $1.10. En Smith.ai Virtual Front Desk, $300 más 10 llamadas a $11.50. El plan Free de IA de Smith.ai cuesta $0 más 15 llamadas extra a $3, y Upfirst cuesta $24.95 más 10 llamadas a $1.50. En Ruby, $395 más 20 minutos a $4.50, la tarifa de excedente que su [centro de ayuda](https://rubyhelpcenter.helpjuice.com/billing-plans/am-i-on-the-right-billing-plan) indica para el plan de 100 minutos. Como Abby Connect no publica tarifa de excedente, su cifra corresponde al plan más pequeño que cubre los 120 minutos.
 
 ## ¿En qué se diferencian los servicios con personas, con IA e híbridos?
 
 Un servicio con personas pone a una persona al teléfono y cobra por minuto o por llamada. Un servicio con IA contesta con software y cobra por minuto, por llamada o por persona distinta que llama. Un servicio híbrido contesta con IA y pasa llamadas a una persona. Los precios de entrada empiezan en $29 más $1.15 por minuto con personas (AnswerNet) y en $14 por 75 minutos con IA (AI-Receptionist.com). Entre los híbridos, los planes de IA de Moneypenny pasan llamadas a su personal desde $69 por 25 llamadas, y la IA de Smith.ai empieza gratis.
 
-**Los servicios con personas** encajan con llamadas que exigen criterio, como un cliente molesto, una entrevista inicial larga o alguien que pide hablar con una persona. Usted paga ese tiempo, y los planes con personas de esta lista cuestan de $127 a $720 con 40 llamadas.
+**Los servicios con personas** encajan con llamadas que exigen criterio, como un cliente molesto, una entrevista inicial larga o alguien que pide hablar con una persona. Usted paga ese tiempo, y los planes con personas de esta lista cuestan de $127 a $599 con 40 llamadas.
 
 **Los servicios con IA** cuestan menos con el mismo volumen: de $25.25 a $99 con 40 llamadas en los planes de IA e híbridos de esta lista. LobbyStack Starter cuesta $30 por 150 minutos, y sus planes no limitan cuántas llamadas contesta a la vez. La IA sigue las reglas que usted escribe: decida cuándo debe transferir una llamada o tomar un mensaje.
 
@@ -54,9 +54,9 @@ Si está comparando menús telefónicos y complementos de buzón de voz, empiece
 
 ## ¿Cuánto cuestan estos servicios con 40 llamadas al mes?
 
-Con 40 llamadas de tres minutos al mes, los planes con personas de esta lista cuestan de $127 (AnswerNet) a $720 (Ruby), sin contar tarifas de configuración. Los planes de IA e híbridos van de $25.25 (AI-Receptionist.com, con minutos Booster) a $99 (el plan de IA de Moneypenny). Leímos cada precio en la página del propio proveedor el 9 de octubre de 2026, en dólares estadounidenses y sin impuestos.
+Con 40 llamadas de tres minutos al mes, los planes con personas de esta lista cuestan de $127 (AnswerNet) a $599 (Abby Connect), sin contar tarifas de configuración. Los planes de IA e híbridos van de $25.25 (AI-Receptionist.com, con minutos Booster) a $99 (el plan de IA de Moneypenny). Leímos cada precio en la página del propio proveedor el 9 de octubre de 2026, en dólares estadounidenses y sin impuestos.
 
-Entre esos extremos, la atención con personas cuesta $174.80 en [Ambs Call Center](https://www.ambscallcenter.com/answering-service-pricing) más una tarifa de configuración única de $85, $177 en [The Perfect Answer](https://theperfectanswer.com/pricing/), $179 en [MAP Communications](https://www.mapcommunications.com/pricing/), $187.80 en SAS y $213 en [Answering Service Care](https://answeringservicecare.com/pricing/) más una tarifa de configuración única de $50. Más arriba, PATLive cuesta $230.80, [Davinci Virtual](https://www.davincivirtual.com/live-receptionists) $251.50 más una tarifa de configuración única de $95, [Moneypenny](https://www.moneypenny.com/us/pricing/) $307.40, Smith.ai Virtual Front Desk $415 y Abby Connect $599. Del lado de la IA, LobbyStack cuesta $30, Upfirst $39.95, Smith.ai AI Receptionist $45, Rosie $49 ($149 con reservas en calendario y transferencias), [Dialzara](https://dialzara.com/pricing) $57.80 y Goodcall $79.
+Entre esos extremos, la atención con personas cuesta $174.80 en [Ambs Call Center](https://www.ambscallcenter.com/answering-service-pricing) más una tarifa de configuración única de $85, $177 en [The Perfect Answer](https://theperfectanswer.com/pricing/), $179 en [MAP Communications](https://www.mapcommunications.com/pricing/), $187.80 en SAS y $213 en [Answering Service Care](https://answeringservicecare.com/pricing/) más una tarifa de configuración única de $50. Más arriba, PATLive cuesta $230.80, [Davinci Virtual](https://www.davincivirtual.com/live-receptionists) $251.50 más una tarifa de configuración única de $95, [Moneypenny](https://www.moneypenny.com/us/pricing/) $307.40, Smith.ai Virtual Front Desk $415, Ruby $485 y Abby Connect $599. Del lado de la IA, LobbyStack cuesta $30, Upfirst $39.95, Smith.ai AI Receptionist $45, Rosie $49 ($149 con reservas en calendario y transferencias), [Dialzara](https://dialzara.com/pricing) $57.80 y Goodcall $79.
 
 Dejamos tres servicios fuera de estos totales. [AnswerConnect](https://www.answerconnect.com/view-pricing) usa un formulario de cotización, aunque una [hoja de precios que aloja](https://assets.answerconnect.com/answerconnect/us/pdf/AnswerConnectUS_Pricing.pdf), modificada por última vez el 30 de septiembre de 2025, indica $350 por 200 minutos más una tarifa de configuración de $49.99. [Nexa](https://www.nexa.com/plans/) da precios a petición y cobra una tarifa de configuración que no publica. [Posh](https://posh.com/en-ca/pricing/) solo nos mostró precios en dólares canadienses (CAD 215 por 100 minutos), así que no pudimos confirmar su precio en Estados Unidos.
 
@@ -97,12 +97,12 @@ Estos cinco publican sus precios, desde la tarifa con personas más barata publi
 
 ### Ruby: recepcionistas premium 24/7
 
-- **Precio (revisado el 9 de octubre de 2026):** $250 por 50 minutos, $395 por 100 o $720 por 200. Ruby no publica su tarifa de excedente. Vea los [precios de Ruby](https://www.ruby.com/plans-and-pricing/).
-- **Cómo factura:** Ruby redondea cada llamada a los 60 segundos siguientes, según sus términos actualizados en marzo de 2026, y cuenta el tiempo en espera.
+- **Precio (revisado el 9 de octubre de 2026):** $250 por 50 minutos, $395 por 100 o $720 por 200. El minuto adicional cuesta $5.40, $4.50 y $4.40 en esos planes, según el [centro de ayuda](https://rubyhelpcenter.helpjuice.com/billing-plans/am-i-on-the-right-billing-plan) de Ruby, revisado el 10 de octubre de 2026. Vea los [precios de Ruby](https://www.ruby.com/plans-and-pricing/).
+- **Cómo factura:** Ruby redondea cada llamada a los 60 segundos siguientes, según sus términos actualizados en marzo de 2026, y cuenta el tiempo en espera y las notas posteriores a la llamada.
 - **Configuración y contrato:** sin tarifas de configuración ni de activación, y los planes se renuevan cada 30 días. Ruby devuelve el dinero a los clientes nuevos que cancelan en 21 días o antes de llegar a 500 minutos.
 - **Idiomas:** español 24/7 sin costo adicional.
 - **También incluye:** Ruby no cobra las llamadas automáticas que su filtro envía al buzón de voz, y su app le avisa al 85% y al 100% de sus minutos.
-- **Dónde se queda corto:** es el más caro de esta lista con 40 llamadas, y el redondeo a 60 segundos encarece las llamadas cortas.
+- **Dónde se queda corto:** con $485 por 40 llamadas, solo Abby Connect cuesta más en esta lista, y el redondeo a 60 segundos encarece las llamadas cortas.
 - **Elíjalo si** sus clientes esperan hablar con una persona a cualquier hora, en inglés o en español.
 
 ### Smith.ai Virtual Front Desk: precio por llamada

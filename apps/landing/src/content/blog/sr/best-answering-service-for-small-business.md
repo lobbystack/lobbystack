@@ -13,7 +13,7 @@ locale: "sr"
 canonicalSlug: "best-answering-service-for-small-business"
 ---
 
-Najbolja **usluga odgovaranja na pozive** za malu firmu je PATLive ako želite osobu na svakom pozivu, Smith.ai ako želite AI iza koga stoje agenti uživo, a AI recepcioner, na primer AI-Receptionist.com, LobbyStack ili Upfirst, ako Vam je cena najvažnija. Za 40 poziva od po tri minuta mesečno, virtuelna sekretarica uživo košta od $127 do $720, a AI paketi od $25.25 do $99.
+Najbolja **usluga odgovaranja na pozive** za malu firmu je PATLive ako želite osobu na svakom pozivu, Smith.ai ako želite AI iza koga stoje agenti uživo, a AI recepcioner, na primer AI-Receptionist.com, LobbyStack ili Upfirst, ako Vam je cena najvažnija. Za 40 poziva od po tri minuta mesečno, virtuelna sekretarica uživo košta od $127 do $599, a AI paketi od $25.25 do $99.
 
 Cene smo proverili 9. oktobra 2026. na stranici sa cenama svakog dobavljača, u američkim dolarima bez poreza. LobbyStack je sastavio ovaj spisak i prodaje AI recepcionera, pa se nalazi u AI delu, označen kao naš.
 
@@ -30,7 +30,7 @@ Naš obrazac poziva: 40 poziva mesečno od po 3 minuta, ukupno 120 minuta. Posle
 | Najbolja usluga uživo u celini | [PATLive](https://www.patlive.com/pricing/) | Ljudi | $49 mesečno plus $2.99 po minutu | $230.80 |
 | Naplata po sekundi | [Specialty Answering Service](https://www.specialtyansweringservice.net/pricing/) | Ljudi | $44 mesečno plus $1.54 po minutu | $187.80 |
 | Najniža objavljena cena uživo | [AnswerNet](https://answeringservicesus.com/pricing/) | Ljudi | $29 mesečno plus $1.15 po minutu | $127 |
-| Premium recepcioneri 24/7 | [Ruby](https://www.ruby.com/plans-and-pricing/) | Ljudi | $250 za 50 min | $720 |
+| Premium recepcioneri 24/7 | [Ruby](https://www.ruby.com/plans-and-pricing/) | Ljudi | $250 za 50 min | $485 |
 | Dugi pozivi, naplata po pozivu | [Smith.ai Virtual Front Desk](https://smith.ai/pricing/receptionists) | Ljudi | $300 za 30 poziva | $415 |
 | AI iza koga stoje agenti uživo | [Smith.ai AI Receptionist](https://smith.ai/pricing/ai-receptionist) | AI, uz prebacivanje na ljude | $0 za 25 poziva | $45 na paketu Free, $150 na paketu Pro |
 | Ljudi i AI u jednom paketu | [Abby Connect](https://www.abby.com/pricing/) | Ljudi i AI | $165 za 50 Abby minuta | $599 |
@@ -38,13 +38,13 @@ Naš obrazac poziva: 40 poziva mesečno od po 3 minuta, ukupno 120 minuta. Posle
 | AI sa naplatom po pozivu | [Upfirst](https://upfirst.ai/pricing) | AI | $24.95 za 30 poziva | $39.95 |
 | AI za pozivaoce koji se vraćaju | [Goodcall](https://www.goodcall.com/pricing) | AI | $79 za 100 jedinstvenih pozivalaca | $79 |
 
-Za poslednju kolonu dodali smo prekoračenje na osnovni paket. Kod PATLive-a to je $189 za 100 minuta plus 20 minuta po $2.09, kod SAS-a $159 plus 20 minuta po $1.44, a kod AnswerNet-a $105 plus 20 minuta po $1.10. Smith.ai Virtual Front Desk košta $300 plus 10 poziva po $11.50. Smith.ai AI paket Free je $0 plus 15 dodatnih poziva po $3, a Upfirst $24.95 plus 10 poziva po $1.50. Ruby i Abby Connect ne objavljuju cenu prekoračenja, pa za njih navodimo najmanji paket koji pokriva svih 120 minuta.
+Za poslednju kolonu dodali smo prekoračenje na osnovni paket. Kod PATLive-a to je $189 za 100 minuta plus 20 minuta po $2.09, kod SAS-a $159 plus 20 minuta po $1.44, a kod AnswerNet-a $105 plus 20 minuta po $1.10. Smith.ai Virtual Front Desk košta $300 plus 10 poziva po $11.50. Smith.ai AI paket Free je $0 plus 15 dodatnih poziva po $3, a Upfirst $24.95 plus 10 poziva po $1.50. Ruby je $395 plus 20 minuta po $4.50, ceni prekoračenja koju njegov [centar za pomoć](https://rubyhelpcenter.helpjuice.com/billing-plans/am-i-on-the-right-billing-plan) navodi za paket od 100 minuta. Abby Connect ne objavljuje cenu prekoračenja, pa za njega navodimo najmanji paket koji pokriva svih 120 minuta.
 
 ## Po čemu se razlikuju usluge uživo, AI i hibridne usluge?
 
 Usluga uživo stavlja osobu na poziv i naplaćuje po minutu ili po pozivu. AI usluga odgovara pomoću softvera i naplaćuje po minutu, po pozivu ili po jedinstvenom pozivaocu. Hibridna usluga se javlja preko AI-ja i prebacuje pozive osobi. Ulazne cene počinju od $29 plus $1.15 po minutu za uslugu uživo (AnswerNet) i od $14 za 75 minuta za AI (AI-Receptionist.com). Među hibridnim, Moneypenny AI paketi prebacuju pozive njegovim ljudima od $69 za 25 poziva, a Smith.ai AI počinje besplatno.
 
-**Usluge odgovaranja uživo** odgovaraju pozivima koji traže procenu: nezadovoljan klijent, dug prijem podataka, pozivalac koji želi osobu. To vreme plaćate, pa paketi uživo sa ovog spiska koštaju od $127 do $720 za 40 poziva.
+**Usluge odgovaranja uživo** odgovaraju pozivima koji traže procenu: nezadovoljan klijent, dug prijem podataka, pozivalac koji želi osobu. To vreme plaćate, pa paketi uživo sa ovog spiska koštaju od $127 do $599 za 40 poziva.
 
 **AI usluge odgovaranja** koštaju manje za isti obim, od $25.25 do $99 za 40 poziva na AI i hibridnim paketima sa spiska. LobbyStack Starter košta $30 za 150 minuta, a njegovi paketi ne ograničavaju broj poziva na koje odgovara istovremeno. AI prati pravila koja napišete, pa odlučite kada treba da preusmeri poziv ili primi poruku.
 
@@ -54,9 +54,9 @@ Ako poredite telefonske menije i dodatke za govornu poštu, počnite od vodiča 
 
 ## Koliko ove usluge koštaju za 40 poziva mesečno?
 
-Za 40 poziva od po tri minuta mesečno, paketi uživo sa ovog spiska koštaju od $127 (AnswerNet) do $720 (Ruby), pre naknada za aktivaciju. AI i hibridni paketi koštaju od $25.25 (AI-Receptionist.com, sa Booster minutima) do $99 (Moneypenny AI paket). Svaku cenu smo pročitali 9. oktobra 2026. na stranici dobavljača, u američkim dolarima bez poreza.
+Za 40 poziva od po tri minuta mesečno, paketi uživo sa ovog spiska koštaju od $127 (AnswerNet) do $599 (Abby Connect), pre naknada za aktivaciju. AI i hibridni paketi koštaju od $25.25 (AI-Receptionist.com, sa Booster minutima) do $99 (Moneypenny AI paket). Svaku cenu smo pročitali 9. oktobra 2026. na stranici dobavljača, u američkim dolarima bez poreza.
 
-Između te dve krajnosti, odgovaranje uživo košta $174.80 kod [Ambs Call Center](https://www.ambscallcenter.com/answering-service-pricing) plus jednokratnu naknadu za aktivaciju od $85, $177 kod [The Perfect Answer](https://theperfectanswer.com/pricing/), $179 kod [MAP Communications](https://www.mapcommunications.com/pricing/), $187.80 kod SAS-a i $213 kod [Answering Service Care](https://answeringservicecare.com/pricing/) plus jednokratnu naknadu za aktivaciju od $50. Među skupljim uslugama, PATLive košta $230.80, [Davinci Virtual](https://www.davincivirtual.com/live-receptionists) $251.50 plus jednokratnu naknadu za aktivaciju od $95, [Moneypenny](https://www.moneypenny.com/us/pricing/) $307.40, Smith.ai Virtual Front Desk $415, a Abby Connect $599. Na AI strani, LobbyStack košta $30, Upfirst $39.95, Smith.ai AI Receptionist $45, Rosie $49 ($149 sa zakazivanjem u kalendar i preusmeravanjem), [Dialzara](https://dialzara.com/pricing) $57.80, a Goodcall $79.
+Između te dve krajnosti, odgovaranje uživo košta $174.80 kod [Ambs Call Center](https://www.ambscallcenter.com/answering-service-pricing) plus jednokratnu naknadu za aktivaciju od $85, $177 kod [The Perfect Answer](https://theperfectanswer.com/pricing/), $179 kod [MAP Communications](https://www.mapcommunications.com/pricing/), $187.80 kod SAS-a i $213 kod [Answering Service Care](https://answeringservicecare.com/pricing/) plus jednokratnu naknadu za aktivaciju od $50. Među skupljim uslugama, PATLive košta $230.80, [Davinci Virtual](https://www.davincivirtual.com/live-receptionists) $251.50 plus jednokratnu naknadu za aktivaciju od $95, [Moneypenny](https://www.moneypenny.com/us/pricing/) $307.40, Smith.ai Virtual Front Desk $415, Ruby $485, a Abby Connect $599. Na AI strani, LobbyStack košta $30, Upfirst $39.95, Smith.ai AI Receptionist $45, Rosie $49 ($149 sa zakazivanjem u kalendar i preusmeravanjem), [Dialzara](https://dialzara.com/pricing) $57.80, a Goodcall $79.
 
 Tri usluge smo izostavili iz ovih iznosa. [AnswerConnect](https://www.answerconnect.com/view-pricing) traži da popunite formular za ponudu, ali [cenovnik na njegovom sajtu](https://assets.answerconnect.com/answerconnect/us/pdf/AnswerConnectUS_Pricing.pdf), poslednji put izmenjen 30. septembra 2025, navodi $350 za 200 minuta plus naknadu za aktivaciju od $49.99. [Nexa](https://www.nexa.com/plans/) daje cene na upit i naplaćuje naknadu za aktivaciju koju ne objavljuje. [Posh](https://posh.com/en-ca/pricing/) nam je prikazao samo kanadske cene (CAD 215 za 100 minuta), pa njegovu cenu u SAD nismo potvrdili.
 
@@ -97,12 +97,12 @@ Ovih pet usluga objavljuje cene, od najniže objavljene cene uživo (AnswerNet) 
 
 ### Ruby: premium recepcioneri 24/7
 
-- **Cena (proverena 9. oktobra 2026.):** $250 za 50 minuta, $395 za 100 ili $720 za 200. Ruby ne objavljuje cenu prekoračenja. Pogledajte [Ruby cene](https://www.ruby.com/plans-and-pricing/).
-- **Kako naplaćuje:** Ruby zaokružuje svaki poziv na sledećih 60 sekundi, prema uslovima ažuriranim u martu 2026, i računa vreme čekanja na liniji.
+- **Cena (proverena 9. oktobra 2026.):** $250 za 50 minuta, $395 za 100 ili $720 za 200. Dodatni minut na tim paketima košta $5.40, $4.50 i $4.40, prema Ruby [centru za pomoć](https://rubyhelpcenter.helpjuice.com/billing-plans/am-i-on-the-right-billing-plan), provereno 10. oktobra 2026. Pogledajte [Ruby cene](https://www.ruby.com/plans-and-pricing/).
+- **Kako naplaćuje:** Ruby zaokružuje svaki poziv na sledećih 60 sekundi, prema uslovima ažuriranim u martu 2026, i računa vreme čekanja na liniji i beleške posle poziva.
 - **Aktivacija i ugovor:** bez naknada za aktivaciju i uključenje, a paketi se obnavljaju na svakih 30 dana. Novi korisnici dobijaju povraćaj novca ako otkažu u roku od 21 dan ili pre 500 minuta.
 - **Jezici:** španski 24/7 bez doplate.
 - **Takođe uključeno:** Ruby ne naplaćuje robotske pozive koje njegov filter pošalje na govornu poštu, a aplikacija Vas obaveštava kada potrošite 85% i 100% minuta.
-- **Gde zaostaje:** od svih na ovom spisku najskuplji je za 40 poziva, a zaokruživanje na 60 sekundi poskupljuje kratke pozive.
+- **Gde zaostaje:** sa $485 za 40 poziva, na ovom spisku skuplji je samo Abby Connect, a zaokruživanje na 60 sekundi poskupljuje kratke pozive.
 - **Izaberite ga ako** pozivaoci očekuju osobu u bilo koje doba, na engleskom ili španskom.
 
 ### Smith.ai Virtual Front Desk: cena po pozivu

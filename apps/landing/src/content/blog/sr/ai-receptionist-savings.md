@@ -189,15 +189,15 @@ Usluge odgovaranja uživo naplaćuju aktivaciju od $0 do $95, a najviše traži 
 
 ## Da li je AI recepcioner jeftiniji od usluge odgovaranja ili zaposlenog?
 
-Jeste, za obim koji smo računali. Za 40 poziva od po tri minuta mesečno, AI paketi iz ovog vodiča koštaju od $25.25 do $99, a usluge odgovaranja uživo od $127 do $720. Recepcioner sa punim radnim vremenom uz medijalnu zaradu u SAD košta oko $3,170 mesečno, pre poreza na zarade i beneficija. Usluge uživo opravdavaju cenu kada pozivaocima treba ljudska procena.
+Jeste, za obim koji smo računali. Za 40 poziva od po tri minuta mesečno, AI paketi iz ovog vodiča koštaju od $25.25 do $99, a usluge odgovaranja uživo od $127 do $485. Recepcioner sa punim radnim vremenom uz medijalnu zaradu u SAD košta oko $3,170 mesečno, pre poreza na zarade i beneficija. Usluge uživo opravdavaju cenu kada pozivaocima treba ljudska procena.
 
 | Opcija | Mesečni trošak | Najbolje za | Na šta treba paziti |
 | --- | --- | --- | --- |
 | AI recepcioner | Od $14 do $150 za ulazni paket; od $25.25 do $99 za 40 poziva | Rutinska pitanja, prijem podataka, zakazivanje, pozivi van radnog vremena i pozivi kada su svi zauzeti | Nekim pozivima i dalje treba osoba |
-| Usluga odgovaranja uživo | Od $127 (AnswerNet) do $720 (Ruby) za 120 minuta | Pozivi kojima treba živa osoba koja nije Vaš zaposleni | Cene po minutu i po pozivu rastu sa obimom |
+| Usluga odgovaranja uživo | Od $127 (AnswerNet) do $485 (Ruby) za 120 minuta | Pozivi kojima treba živa osoba koja nije Vaš zaposleni | Cene po minutu i po pozivu rastu sa obimom |
 | Recepcioner u firmi | Oko $3,170 uz medijalnu zaradu, pre poreza i beneficija | Recepcije koje primaju posetioce, vode papirologiju i javljaju se na pozive | Pokriva jednu smenu, uz pauze za ručak i bolovanja |
 
-Usluge uživo smo računali za 120 minuta (40 poziva od po 3 minuta) 9. oktobra 2026: [AnswerNet](https://answeringservicesus.com/pricing/) $127, [Specialty Answering Service](https://www.specialtyansweringservice.net/pricing/) $187.80, [PATLive](https://www.patlive.com/pricing/) $230.80 i [Ruby](https://www.ruby.com/plans-and-pricing/) $720. Ruby i dalje navodi $250 za 50 minuta i $395 za 100, ali ne objavljuje cenu prekoračenja, pa je njegov paket od 200 minuta najjeftiniji koji pokriva svih 120 minuta. [Smith.ai recepcioneri uživo](https://smith.ai/pricing/receptionists) koštaju $415 za 40 poziva.
+Usluge uživo smo računali za 120 minuta (40 poziva od po 3 minuta) 9. oktobra 2026: [AnswerNet](https://answeringservicesus.com/pricing/) $127, [Specialty Answering Service](https://www.specialtyansweringservice.net/pricing/) $187.80, [PATLive](https://www.patlive.com/pricing/) $230.80 i [Ruby](https://www.ruby.com/plans-and-pricing/) $485. Ruby paket od 100 minuta košta $395, a njegov [centar za pomoć](https://rubyhelpcenter.helpjuice.com/billing-plans/am-i-on-the-right-billing-plan) navodi $4.50 za svaki dodatni minut na tom paketu (provereno 10. oktobra 2026), pa preostalih 20 minuta dodaje $90. [Smith.ai recepcioneri uživo](https://smith.ai/pricing/receptionists) koštaju $415 za 40 poziva.
 
 Prednost usluga uživo je ljudska procena. Živa osoba može da smiri nezadovoljnog pozivaoca ili da reši zahtev koji nijedan scenario ne pokriva, a Ruby, PATLive i Abby Connect uključuju španski u cenu paketa. Njihove kompletne cenovnike naći ćete u tekstu [koliko košta usluga odgovaranja na pozive](/sr/blog/how-much-does-an-answering-service-cost/), a razliku između te dve vrste usluga u tekstu [AI ili virtuelni recepcioner](/sr/blog/ai-receptionist-vs-virtual-receptionist/).
 
@@ -303,7 +303,7 @@ Da čujete recepcionera pre nego što platite, [otvorite besplatan LobbyStack na
 
 ### Da li je AI recepcioner jeftiniji od usluge odgovaranja na pozive?
 
-Za većinu malih firmi jeste. Za 40 poziva od po tri minuta mesečno, AI paketi koje smo izračunali 9. oktobra 2026. koštaju od $25.25 do $99, a usluge odgovaranja uživo od $127 do $720. Usluga uživo košta više jer se na svaki poziv javlja osoba. To vredi platiti kada pozivaocima treba ljudska procena.
+Za većinu malih firmi jeste. Za 40 poziva od po tri minuta mesečno, AI paketi koje smo izračunali 9. oktobra 2026. koštaju od $25.25 do $99, a usluge odgovaranja uživo od $127 do $485. Usluga uživo košta više jer se na svaki poziv javlja osoba. To vredi platiti kada pozivaocima treba ljudska procena.
 
 ### Da li se spam pozivi računaju u moje minute?
 

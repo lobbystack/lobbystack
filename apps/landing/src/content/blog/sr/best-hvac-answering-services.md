@@ -45,7 +45,7 @@ Tabela obuhvata sedam usluga uživo i sedam AI ili hibridnih usluga. Naplaćuju 
 | [PATLive](https://www.patlive.com/pricing/) | Ljudi | $49 mesečno + $2.99/min | Prvi minut, zatim koraci od 6 sekundi | Ne navodi nijednu | $230.80 | $479 |
 | [MAP Communications](https://www.mapcommunications.com/pricing/) | Ljudi | $49 mesečno + $1.37/min | Celi minuti, zaokruženo naviše | Nije navedena | $179 + telekom naknada | $403 + telekom naknada |
 | [Specialty Answering Service](https://www.specialtyansweringservice.net/pricing/) | Ljudi | $44 mesečno + $1.54/min | Po sekundi | $0 | $187.80 | $384.20 |
-| [Ruby](https://www.ruby.com/plans-and-pricing/) | Ljudi | $250 mesečno za 50 min | 60 sekundi, zaokruženo naviše | Nema | $720 | Nije potpuno izračunato |
+| [Ruby](https://www.ruby.com/plans-and-pricing/) | Ljudi | $250 mesečno za 50 min | 60 sekundi, zaokruženo naviše | Nema | $485 | $1,160 |
 | [Nexa](https://www.nexa.com/plans/) | Ljudi | Cena na upit | Nije navedena | Da, iznos nije objavljen | Cena na upit | Cena na upit |
 | [Smith.ai Virtual Front Desk](https://smith.ai/pricing/receptionists) | Recepcioneri uživo | $300 mesečno za 30 poziva | Po pozivu | Nema | $415 | $915 |
 | [Smith.ai AI Receptionist](https://smith.ai/pricing/ai-receptionist) | AI, uz prebacivanje na ljude | $0 za 25 poziva | Po pozivu | Nema | $45 (Free), ili $150 na paketu Pro | $212.50 |
@@ -84,7 +84,7 @@ Specialty Answering Service (SAS) naplaćuje po sekundi, od $44 mesečno plus $1
 
 ### Ruby: najbolji za španski u bilo koje doba
 
-Ruby paketi se razlikuju samo po minutima, od $250 za 50 do $1,725 za 500 ([stranica sa cenama](https://www.ruby.com/plans-and-pricing/)). Svaki paket uključuje španski 24/7, a Ruby aplikacija Vas upozorava kada potrošite 85% i 100% minuta. Ruby ne naplaćuje aktivaciju ni rad van radnog vremena, a ni robotske pozive koje njegov filter uhvati. [Stranica za HVAC firme](https://www.ruby.com/industries/hvac/) kaže da agenti hitne pozive prosleđuju Vašem timu. Uključeni minuti izlaze od $3.45 do $5.00 po minutu, što je najviša cena po minutu na ovom spisku, a Ruby ne objavljuje cenu prekoračenja. Pozive zaokružuje na 60 sekundi (uslovi korišćenja, mart 2026).
+Ruby paketi se razlikuju samo po minutima, od $250 za 50 do $1,725 za 500 ([stranica sa cenama](https://www.ruby.com/plans-and-pricing/)). Svaki paket uključuje španski 24/7, a Ruby aplikacija Vas upozorava kada potrošite 85% i 100% minuta. Ruby ne naplaćuje aktivaciju ni rad van radnog vremena, a ni robotske pozive koje njegov filter uhvati. [Stranica za HVAC firme](https://www.ruby.com/industries/hvac/) kaže da agenti hitne pozive prosleđuju Vašem timu. Uključeni minuti izlaze od $3.45 do $5.00 po minutu, što je najviša cena po minutu na ovom spisku. Dodatni minut košta od $4.00 do $5.40, zavisno od paketa ([centar za pomoć](https://rubyhelpcenter.helpjuice.com/billing-plans/am-i-on-the-right-billing-plan), provereno 10. oktobra 2026). Pozive zaokružuje na 60 sekundi (uslovi korišćenja, mart 2026).
 
 ### Nexa: cena na upit za pozive, SMS i čet
 
@@ -130,7 +130,7 @@ Ne sinhronizuje se sa ServiceTitan, Housecall Pro ni Jobber, a Google Calendar j
 
 ## Koliko košta usluga odgovaranja na pozive za HVAC firme?
 
-Za 40 poziva od tri minuta mesečno, usluge uživo sa ovog spiska koštaju od $127 do $720, a AI usluge od $30 do $149, uz Sameday AI od $449. Za 100 poziva, usluge uživo sa potpuno objavljenim cenama koštaju od $237.50 do $915, a AI usluge od $60 do $212.50, opet uz Sameday AI od $449. Naknade za aktivaciju i dodaci mogu da podignu oba iznosa.
+Za 40 poziva od tri minuta mesečno, usluge uživo sa ovog spiska koštaju od $127 do $485, a AI usluge od $30 do $149, uz Sameday AI od $449. Za 100 poziva, usluge uživo sa potpuno objavljenim cenama koštaju od $237.50 do $1,160, a AI usluge od $60 do $212.50, opet uz Sameday AI od $449. Naknade za aktivaciju i dodaci mogu da podignu oba iznosa.
 
 Housecall Pro i Nexa ne objavljuju cene, pa smo ih izostavili. Za ostale zanate pogledajte [koliko košta usluga odgovaranja na pozive van HVAC delatnosti](/sr/blog/how-much-does-an-answering-service-cost/).
 
@@ -144,7 +144,7 @@ Svaki red prikazuje najjeftiniju opciju za 40 poziva (120 minuta), a zatim za 10
 - **PATLive:** $189 + 20 x $2.09 = $230.80; $479 za 300 minuta
 - **AnswerForce:** $349 za 200 minuta, plus jednokratnih $75 za aktivaciju; $389 za 300 minuta
 - **Smith.ai Virtual Front Desk:** $300 + 10 x $11.50 = $415; $810 + 10 x $10.50 = $915. Zakazivanje na svakom pozivu dodaje $60, odnosno $150.
-- **Ruby:** $720 za 200 minuta, jer paket od $395 sa 100 minuta ostavlja 20 minuta po neobjavljenoj ceni. Za 300 minuta to je $720 plus 100 minuta po toj ceni, ili $1,725 za 500.
+- **Ruby:** $395 + 20 x $4.50 = $485; $720 + 100 x $4.40 = $1,160
 - **Smith.ai AI Receptionist:** paket Free, 15 dodatnih poziva x $3.00 = $45; Pro, $150 + 25 x $2.50 = $212.50
 - **Jobber Receptionist:** $29 + 10 x $0.79 = $36.90; $29 + 70 x $0.79 = $84.30, plus Jobber paket
 - **Rosie:** $49, ili $149 sa zakazivanjem i preusmeravanjem; $149, jer 300 minuta prelazi 250 minuta paketa od $49
@@ -214,7 +214,7 @@ Ako Vaši dispečeri rade u ServiceTitan-u i treba Vam da se posao upiše tamo t
 
 Isplati se kada poslovi koje biste spasili pokriju račun. Pomnožite broj poziva koje propustite u mesecu sa udelom onih koji bi zakazali posao i sa Vašom prosečnom maržom po poslu, pa rezultat uporedite sa mesečnom cenom iz tabele iznad. Izračunajte to za jul i za april, jer broj poziva u HVAC delatnosti prati vremenske prilike.
 
-Primer sa izmišljenim ulaznim podacima: 20 propuštenih poziva, od kojih svaki četvrti zakaže posao, uz $300 marže po poslu, daje $1,500. Mesec od 100 poziva košta od $60 do $915 kod usluga sa potpunim cenama iznad. Unesite svoje brojeve u [kalkulator prihoda od propuštenih poziva](/sr/missed-call-revenue-calculator/).
+Primer sa izmišljenim ulaznim podacima: 20 propuštenih poziva, od kojih svaki četvrti zakaže posao, uz $300 marže po poslu, daje $1,500. Mesec od 100 poziva košta od $60 do $1,160 kod usluga sa potpunim cenama iznad. Unesite svoje brojeve u [kalkulator prihoda od propuštenih poziva](/sr/missed-call-revenue-calculator/).
 
 Veći deo paketa koji odaberete za jul ostaje neiskorišćen u aprilu. Uz plaćanje po korišćenju kod A Message Center, SAS, MAP i PATLive, u slabim mesecima plaćate malo. SAS i PATLive Vam dozvoljavaju da promenite paket za sledeći mesec, a kod LobbyStack-a paket podižete ili spuštate u podešavanjima naplate.
 
@@ -256,7 +256,7 @@ Goodcall može da proba do tri kontakta za eskalaciju, Rosie paket od $299 proba
 
 ## Kako smo proverili ove usluge
 
-Ažurirano 9. oktobra 2026. Tog dana smo svaku cenu, jedinicu naplate i naknadu za aktivaciju pročitali na stranici sa cenama, u centru za pomoć ili u uslovima korišćenja dobavljača. Usluge koje daju samo ponude označili smo sa „cena na upit“, a različite jedinice naplate poredimo samo za obrazac poziva iznad. Podaci o LobbyStack-u dolaze sa njegove [stranice sa cenama](/sr/pricing/). Neki stariji spiskovi navode cene koje su se od tada promenile; Ruby paket od 50 minuta danas košta $250. Sledeću proveru cena radimo u januaru 2027.
+Ažurirano 9. oktobra 2026. Tog dana smo svaku cenu, jedinicu naplate i naknadu za aktivaciju pročitali na stranici sa cenama, u centru za pomoć ili u uslovima korišćenja dobavljača. Usluge koje daju samo ponude označili smo sa „cena na upit“, a različite jedinice naplate poredimo samo za obrazac poziva iznad. Ruby cene prekoračenja proverili smo u njegovom centru za pomoć 10. oktobra 2026. Podaci o LobbyStack-u dolaze sa njegove [stranice sa cenama](/sr/pricing/). Neki stariji spiskovi navode cene koje su se od tada promenile; Ruby paket od 50 minuta danas košta $250. Sledeću proveru cena radimo u januaru 2027.
 
 Izvori, svi pročitani 9. oktobra 2026:
 
@@ -265,7 +265,7 @@ Izvori, svi pročitani 9. oktobra 2026:
 - PATLive: [cene](https://www.patlive.com/pricing/), [stranica za HVAC firme](https://www.patlive.com/industries/hvac)
 - MAP Communications: [cene](https://www.mapcommunications.com/pricing/), [uslovi korišćenja](https://www.mapcommunications.com/terms/), [stranica za HVAC firme](https://www.mapcommunications.com/industries/contractors/hvac-answering-service/)
 - Specialty Answering Service: [cene](https://www.specialtyansweringservice.net/pricing/), [stranica za HVAC firme](https://www.specialtyansweringservice.net/industries/construction/hvac-answering-service/)
-- Ruby: [cene](https://www.ruby.com/plans-and-pricing/), [stranica za HVAC firme](https://www.ruby.com/industries/hvac/)
+- Ruby: [cene](https://www.ruby.com/plans-and-pricing/), [cene prekoračenja](https://rubyhelpcenter.helpjuice.com/billing-plans/am-i-on-the-right-billing-plan), [stranica za HVAC firme](https://www.ruby.com/industries/hvac/)
 - Nexa: [paketi](https://www.nexa.com/plans/), [stranica za HVAC firme](https://www.nexa.com/industries/hvac/)
 - Smith.ai: [cene za AI Receptionist](https://smith.ai/pricing/ai-receptionist), [cene za Virtual Front Desk](https://smith.ai/pricing/receptionists)
 - Jobber: [članak o Receptionist-u u centru za pomoć](https://help.getjobber.com/en/articles/receptionistpowered-by-jobber-ai/), [cene](https://www.getjobber.com/pricing/)

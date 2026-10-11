@@ -189,15 +189,15 @@ Los servicios de atención telefónica con personas cobran tarifas de configurac
 
 ## ¿Es más barata una recepcionista con IA que un servicio de atención telefónica o que contratar a alguien?
 
-Sí, con el volumen que calculamos. Con 40 llamadas de tres minutos al mes, los planes de IA de esta guía cuestan de $25.25 a $99, y los servicios de atención telefónica con personas, de $127 a $720. Una recepcionista a tiempo completo con el salario mediano de Estados Unidos cuesta unos $3,170 al mes antes de cargas sociales y prestaciones. Un servicio con personas justifica su precio cuando quien llama necesita criterio humano.
+Sí, con el volumen que calculamos. Con 40 llamadas de tres minutos al mes, los planes de IA de esta guía cuestan de $25.25 a $99, y los servicios de atención telefónica con personas, de $127 a $485. Una recepcionista a tiempo completo con el salario mediano de Estados Unidos cuesta unos $3,170 al mes antes de cargas sociales y prestaciones. Un servicio con personas justifica su precio cuando quien llama necesita criterio humano.
 
 | Opción | Costo mensual | Ideal para | Tenga en cuenta |
 | --- | --- | --- | --- |
 | Recepcionista con IA | De $14 a $150 de entrada; de $25.25 a $99 con 40 llamadas | Preguntas habituales, toma de datos, reservas, llamadas fuera de horario y exceso de llamadas | Algunas llamadas siguen necesitando a una persona |
-| Servicio de atención telefónica con personas | De $127 (AnswerNet) a $720 (Ruby) por 120 minutos | Llamadas que necesitan a una persona en vivo que no forma parte de su personal | Las tarifas por minuto y por llamada suben con el volumen |
+| Servicio de atención telefónica con personas | De $127 (AnswerNet) a $485 (Ruby) por 120 minutos | Llamadas que necesitan a una persona en vivo que no forma parte de su personal | Las tarifas por minuto y por llamada suben con el volumen |
 | Recepcionista en nómina | Unos $3,170 con el salario mediano, antes de cargas sociales y prestaciones | Recepciones que atienden visitas, papeleo y llamadas | Cubre un solo turno, con pausas para comer y días de enfermedad |
 
-Calculamos los servicios con personas con 120 minutos (40 llamadas de 3 minutos) el 9 de octubre de 2026: [AnswerNet](https://answeringservicesus.com/pricing/) $127, [Specialty Answering Service](https://www.specialtyansweringservice.net/pricing/) $187.80, [PATLive](https://www.patlive.com/pricing/) $230.80 y [Ruby](https://www.ruby.com/plans-and-pricing/) $720. Ruby todavía publica $250 por 50 minutos y $395 por 100, pero no publica su tarifa de excedente, así que su plan de 200 minutos es el más barato que cubre los 120 minutos completos. [Las recepcionistas humanas de Smith.ai](https://smith.ai/pricing/receptionists) cuestan $415 por 40 llamadas.
+Calculamos los servicios con personas con 120 minutos (40 llamadas de 3 minutos) el 9 de octubre de 2026: [AnswerNet](https://answeringservicesus.com/pricing/) $127, [Specialty Answering Service](https://www.specialtyansweringservice.net/pricing/) $187.80, [PATLive](https://www.patlive.com/pricing/) $230.80 y [Ruby](https://www.ruby.com/plans-and-pricing/) $485. El plan de 100 minutos de Ruby cuesta $395, y su [centro de ayuda](https://rubyhelpcenter.helpjuice.com/billing-plans/am-i-on-the-right-billing-plan) indica $4.50 por cada minuto adicional en ese plan (revisado el 10 de octubre de 2026), así que los otros 20 minutos suman $90. [Las recepcionistas humanas de Smith.ai](https://smith.ai/pricing/receptionists) cuestan $415 por 40 llamadas.
 
 Los servicios con personas ganan en criterio. Una persona puede calmar a un cliente molesto o resolver una petición que ningún guion prevé, y Ruby, PATLive y Abby Connect incluyen el español en el precio del plan. Sus tarifas completas aparecen en [cuánto cuesta un servicio de atención telefónica](/es/blog/how-much-does-an-answering-service-cost/), y la diferencia entre los dos servicios, en [recepcionista con IA o recepcionista virtual](/es/blog/ai-receptionist-vs-virtual-receptionist/).
 
@@ -303,7 +303,7 @@ Para oír a la recepcionista antes de pagar, [cree una cuenta gratuita de LobbyS
 
 ### ¿Una recepcionista con IA sale más barata que un servicio de atención telefónica?
 
-Para la mayoría de los pequeños negocios, sí. Con 40 llamadas de tres minutos al mes, los planes de IA que calculamos el 9 de octubre de 2026 cuestan de $25.25 a $99, y los servicios con personas, de $127 a $720. Un servicio con personas cuesta más porque una persona atiende cada llamada, y ese precio vale la pena cuando quien llama necesita criterio humano.
+Para la mayoría de los pequeños negocios, sí. Con 40 llamadas de tres minutos al mes, los planes de IA que calculamos el 9 de octubre de 2026 cuestan de $25.25 a $99, y los servicios con personas, de $127 a $485. Un servicio con personas cuesta más porque una persona atiende cada llamada, y ese precio vale la pena cuando quien llama necesita criterio humano.
 
 ### ¿Las llamadas de spam cuentan para mis minutos?
 

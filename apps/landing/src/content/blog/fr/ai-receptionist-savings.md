@@ -189,15 +189,15 @@ Les permanences téléphoniques facturent des frais de mise en service de 0 $ à
 
 ## Un réceptionniste IA coûte-t-il moins cher qu'un secrétariat téléphonique ou une embauche ?
 
-Oui, au volume que nous avons chiffré. À 40 appels de trois minutes par mois, les forfaits IA de ce guide coûtent de 25,25 $ à 99 $, et les permanences téléphoniques de 127 $ à 720 $. Une réceptionniste à temps plein au salaire médian américain coûte environ 3 170 $ par mois, avant charges sociales et avantages. Une permanence vaut son prix quand vos appelants ont besoin du jugement d'une personne.
+Oui, au volume que nous avons chiffré. À 40 appels de trois minutes par mois, les forfaits IA de ce guide coûtent de 25,25 $ à 99 $, et les permanences téléphoniques de 127 $ à 485 $. Une réceptionniste à temps plein au salaire médian américain coûte environ 3 170 $ par mois, avant charges sociales et avantages. Une permanence vaut son prix quand vos appelants ont besoin du jugement d'une personne.
 
 | Option | Coût mensuel | Idéal pour | Points de vigilance |
 | --- | --- | --- | --- |
 | Réceptionniste IA | 14 $ à 150 $ à l'entrée ; 25,25 $ à 99 $ à 40 appels | Questions courantes, prise de renseignements, réservation, appels hors horaires et de débordement | Certains appels demandent encore une personne |
-| Permanence téléphonique | 127 $ (AnswerNet) à 720 $ (Ruby) pour 120 minutes | Appels qui demandent une personne en direct, hors de votre personnel | Les tarifs à la minute et à l'appel grimpent avec le volume |
+| Permanence téléphonique | 127 $ (AnswerNet) à 485 $ (Ruby) pour 120 minutes | Appels qui demandent une personne en direct, hors de votre personnel | Les tarifs à la minute et à l'appel grimpent avec le volume |
 | Réceptionniste salariée | Environ 3 170 $ au salaire médian, avant charges et avantages | Accueils qui gèrent visiteurs, paperasse et appels | Une seule plage de couverture, plus les pauses du midi et les congés maladie |
 
-Nous avons chiffré les permanences à 120 minutes (40 appels de 3 minutes) le 9 octobre 2026 : [AnswerNet](https://answeringservicesus.com/pricing/) 127 $, [Specialty Answering Service](https://www.specialtyansweringservice.net/pricing/) 187,80 $, [PATLive](https://www.patlive.com/pricing/) 230,80 $ et [Ruby](https://www.ruby.com/plans-and-pricing/) 720 $. Ruby affiche toujours 250 $ pour 50 minutes et 395 $ pour 100, mais ne publie pas son tarif de dépassement : son forfait de 200 minutes est donc le moins cher qui couvre les 120 minutes. Les [réceptionnistes humaines de Smith.ai](https://smith.ai/pricing/receptionists) coûtent 415 $ pour 40 appels.
+Nous avons chiffré les permanences à 120 minutes (40 appels de 3 minutes) le 9 octobre 2026 : [AnswerNet](https://answeringservicesus.com/pricing/) 127 $, [Specialty Answering Service](https://www.specialtyansweringservice.net/pricing/) 187,80 $, [PATLive](https://www.patlive.com/pricing/) 230,80 $ et [Ruby](https://www.ruby.com/plans-and-pricing/) 485 $. Le forfait de 100 minutes de Ruby coûte 395 $, et son [centre d'aide](https://rubyhelpcenter.helpjuice.com/billing-plans/am-i-on-the-right-billing-plan) indique 4,50 $ par minute supplémentaire sur ce forfait (vérifié le 10 octobre 2026) : les 20 autres minutes ajoutent donc 90 $. Les [réceptionnistes humaines de Smith.ai](https://smith.ai/pricing/receptionists) coûtent 415 $ pour 40 appels.
 
 Sur le jugement, les permanences gardent l'avantage. Une personne sait calmer un appelant contrarié ou traiter une demande qu'aucun script ne prévoit, et Ruby, PATLive et Abby Connect incluent l'espagnol dans le prix du forfait. Pour leurs grilles complètes, voyez [ce que coûte une permanence téléphonique](/fr/blog/how-much-does-an-answering-service-cost/). Pour ce qui distingue les deux services, lisez [réceptionniste IA ou réceptionniste virtuelle](/fr/blog/ai-receptionist-vs-virtual-receptionist/).
 
@@ -303,7 +303,7 @@ Pour entendre le réceptionniste avant de payer, [créez un compte LobbyStack gr
 
 ### Un réceptionniste IA coûte-t-il moins cher qu'une permanence téléphonique ?
 
-Pour la plupart des petites entreprises, oui. À 40 appels de trois minutes par mois, les forfaits IA que nous avons chiffrés le 9 octobre 2026 coûtent de 25,25 $ à 99 $, et les permanences téléphoniques de 127 $ à 720 $. Une permanence coûte plus cher parce qu'une personne prend chaque appel. Ce surcoût se justifie quand vos appelants ont besoin du jugement d'une personne.
+Pour la plupart des petites entreprises, oui. À 40 appels de trois minutes par mois, les forfaits IA que nous avons chiffrés le 9 octobre 2026 coûtent de 25,25 $ à 99 $, et les permanences téléphoniques de 127 $ à 485 $. Une permanence coûte plus cher parce qu'une personne prend chaque appel. Ce surcoût se justifie quand vos appelants ont besoin du jugement d'une personne.
 
 ### Les appels indésirables comptent-ils dans mes minutes ?
 

@@ -19,7 +19,7 @@ A live answering service costs $127 to $415 a month for 40 three-minute calls at
 
 ## How much does an answering service cost per month?
 
-For 40 three-minute calls a month, live plans cost $127 to $720. Most land between $127 and $415. Ruby ($720) and Abby Connect ($599) cost more at that volume because they publish no overage rate, so the cheapest plan that covers 120 minutes is their 200-minute plan. At 100 calls, bills run $237.50 to $1,725.
+For 40 three-minute calls a month, live plans cost $127 to $599. Most land between $127 and $415. Ruby costs $485: its 100-minute plan plus 20 extra minutes at $4.50. Abby Connect costs $599 because it publishes no overage rate, so the cheapest plan that covers 120 minutes is its 200-minute plan. At 100 calls, bills run $237.50 to $1,380.
 
 For every bill on this page, we take the cheapest plan, or plan plus overage, that covers the minutes. If a vendor publishes no overage rate, we use its cheapest plan that covers the full volume.
 
@@ -29,12 +29,12 @@ The table assumes 3 minutes a call. We chose that length ourselves, with no outs
 
 | Calls a month | Minutes | Live, billed per minute | Live, billed per call | No published overage | LobbyStack (ours, AI) |
 | --- | --- | --- | --- | --- | --- |
-| 40 | 120 | $127 to $307.40 | $127 to $415 | Abby Connect $599, Ruby $720 | $30 (Starter) |
-| 100 | 300 | $325 to $615 | $237.50 to $915 | Abby Connect $1,380, Ruby $1,725 | $60 (Starter) |
-| 200 | 600 | $599 to $1,200 | $407.50 to $1,965 | No published plan covers it | $118 (Pro) |
+| 40 | 120 | $127 to $485 | $127 to $415 | Abby Connect $599 | $30 (Starter) |
+| 100 | 300 | $325 to $1,160 | $237.50 to $915 | Abby Connect $1,380 | $60 (Starter) |
+| 200 | 600 | $599 to $2,125 | $407.50 to $1,965 | No published plan covers it | $118 (Pro) |
 
-- Per-minute ranges cover the ten per-minute services that publish what extra minutes cost. Per-call ranges cover A Message Center and Smith.ai Virtual Front Desk.
-- AnswerFirst charges $1.60 to $1.95 a minute without publishing where the rate drops, so its high end sets the top of the 100-call and 200-call per-minute ranges.
+- Per-minute ranges cover the eleven per-minute services that publish what extra minutes cost. Per-call ranges cover A Message Center and Smith.ai Virtual Front Desk.
+- Ruby sets the top of each per-minute range. Without it, the tops are $307.40 (Moneypenny), $615 and $1,200 (AnswerFirst, priced at its $1.95 high end because it doesn't publish where its rate drops toward $1.60).
 - Continental Message Solution bills every 28 days: $300 a cycle at 120 minutes ($325 a month on average) and $575 at 300 minutes ($622.92 on average). Its largest published plan is 500 minutes.
 - Davinci Virtual costs $251.50 at 120 minutes (Business 50 plus overage) and charges $95 setup once. Its plan page says 24/7; its FAQ says live receptionists answer 8am to 8pm Eastern on weekdays.
 - Posh shows Canadian dollars on the page we could load (CAD 258 at 120 minutes, CAD 630 at 300, CAD 1,170 at 600), so it stays out of the USD ranges.
@@ -63,7 +63,7 @@ Live answering services sell a monthly bundle of minutes with a per-minute overa
 | [Moneypenny](https://www.moneypenny.com/us/pricing/) (People Answering) | Per minute | $165/50; $265/100; $422/200; $985/500 | $2.28, $2.12, $1.91, $1.67 | $3.30 to $1.97 | Each call to 30 seconds, then the monthly total to a minute | In its terms, no amount |
 | [Davinci Virtual](https://www.davincivirtual.com/live-receptionists) | Per minute | Business $129/50, $239/100; Premium $249/50, $319/100 | $1.75 Business, $2.50 Premium | $2.58 to $2.39 (Business), $4.98 to $3.19 (Premium) | Per second | $95 |
 | [Abby Connect](https://www.abby.com/pricing/) | Per minute | $165/50; $329/100; $599/200; $1,380/500 | Not published | $3.30 to $2.76 | 30 seconds | None |
-| [Ruby](https://www.ruby.com/plans-and-pricing/) | Per minute | $250/50; $395/100; $720/200; $1,725/500 | Not published | $5.00 to $3.45 | 60 seconds, rounded up | None |
+| [Ruby](https://www.ruby.com/plans-and-pricing/) | Per minute | $250/50; $395/100; $720/200; $1,210/350; $1,725/500; larger plans to 2,500 | $5.40 falling to $3.30 ([help center](https://rubyhelpcenter.helpjuice.com/billing-plans/am-i-on-the-right-billing-plan), checked October 10, 2026) | $5.00 (50 min) to $3.15 (2,500 min) | 60 seconds, rounded up, after-call notes included | None |
 | [Continental Message Solution](https://www.continentalmessage.com/pricing/) | Per minute, billed every 28 days | $150/100; $300/250; $575/500 per 28 days | Not published | $1.50 to $1.15 per 28-day cycle | Not stated | Varies, no amount |
 | [Smith.ai Virtual Front Desk](https://smith.ai/pricing/receptionists) (human) | Per call | $300/30 calls; $810/90; $2,100/300 | $11.50, $10.50, $8.50 a call | $10 to $7 a call | Per call | None |
 | [A Message Center](https://amessagecenter.com/pricing) | Per call | $47 + $2.00/call; $145/50 calls; $320/150; $490/250 | $1.85, $1.75, $1.65 a call | $2.90 to $1.96 a call | Per call | Not stated |
@@ -154,7 +154,7 @@ Two vendors with the same rate can send different bills because each rounds call
 
 By our math, 40 calls of 2:10 add up to about 87 minutes of talk. Whole-minute billing turns that into 120 billed minutes, 38% more.
 
-Some vendors bill more than talk time. Ruby counts hold time. PATLive counts hold time while the receptionist looks something up, but not queue time or after-call notes. MAP and Answering Service Care bill after-call work, and Moneypenny bills up to 180 seconds of wrap-up a call. Ambs doesn't bill hold or ring time.
+Some vendors bill more than talk time. Ruby counts hold time and after-call notes. PATLive counts hold time while the receptionist looks something up, but not queue time or after-call notes. MAP and Answering Service Care bill after-call work, and Moneypenny bills up to 180 seconds of wrap-up a call. Ambs doesn't bill hold or ring time.
 
 Spam varies too. Three vendors keep spam off the bill: Smith.ai when Caller ID passes, The Perfect Answer for spam calls, and Ruby for robocalls its filter sends to voicemail. Ambs says solicitor calls and hang-ups use plan minutes. The other vendors don't say.
 
@@ -176,7 +176,7 @@ A solo plumber can't answer from under a sink, so the service takes the calls. A
 | Specialty Answering Service | 100 minutes: $159 + 20 at $1.44 | $187.80 |
 | PATLive | 100 minutes: $189 + 20 at $2.09 | $230.80 |
 | Smith.ai Virtual Front Desk | Starter: $300 + 10 calls at $11.50 | $415 |
-| Ruby | 200 minutes (no published overage) | $720 |
+| Ruby | 100 minutes: $395 + 20 at $4.50 | $485 |
 | LobbyStack Starter (ours, AI) | 150 minutes included | $30 |
 
 ### A salon: 100 short booking calls
@@ -300,7 +300,7 @@ An answering service is worth it when the jobs you win from answered calls bring
 
 **Missed calls × share that would book × profit per job ≥ monthly bill**
 
-In this example, every input is our assumption. Answering the calls you now miss wins you 2 extra jobs a month at $300 profit each, or $600. That covers every live bill in the 40-call row up to $415. It also covers Abby Connect's $599, with $1 left over, but not Ruby's $720. LobbyStack Starter costs $30 for the same calls. Try your own numbers in the [missed call revenue calculator](/missed-call-revenue-calculator/).
+In this example, every input is our assumption. Answering the calls you now miss wins you 2 extra jobs a month at $300 profit each, or $600. That covers every live bill in the 40-call row. Ruby's $485 leaves $115, and Abby Connect's $599, the highest, leaves $1. LobbyStack Starter costs $30 for the same calls. Try your own numbers in the [missed call revenue calculator](/missed-call-revenue-calculator/).
 
 ### When a live service is the better buy
 

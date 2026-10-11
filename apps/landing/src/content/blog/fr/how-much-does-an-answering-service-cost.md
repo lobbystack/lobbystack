@@ -19,7 +19,7 @@ Un **service de réponse téléphonique** avec des réceptionnistes humains (une
 
 ## Combien coûte un service de réponse téléphonique par mois ?
 
-Pour 40 appels de trois minutes par mois, les forfaits humains coûtent de 127 $ à 720 $. La plupart se situent entre 127 $ et 415 $. Ruby (720 $) et Abby Connect (599 $) coûtent plus cher à ce volume parce qu'ils ne publient aucun tarif de dépassement : leur forfait le moins cher qui couvre 120 minutes est celui de 200 minutes. À 100 appels, les factures vont de 237,50 $ à 1 725 $.
+Pour 40 appels de trois minutes par mois, les forfaits humains coûtent de 127 $ à 599 $. La plupart se situent entre 127 $ et 415 $. Ruby coûte 485 $ : son forfait de 100 minutes plus 20 minutes supplémentaires à 4,50 $. Abby Connect coûte 599 $ parce qu'il ne publie aucun tarif de dépassement : son forfait le moins cher qui couvre 120 minutes est celui de 200 minutes. À 100 appels, les factures vont de 237,50 $ à 1 380 $.
 
 Pour chaque facture de cette page, nous retenons le forfait le moins cher, ou le forfait plus les dépassements, qui couvre les minutes. Quand un fournisseur ne publie pas de tarif de dépassement, nous prenons son forfait le moins cher qui couvre tout le volume.
 
@@ -29,12 +29,12 @@ Le tableau suppose 3 minutes par appel. Nous avons choisi cette durée nous-mêm
 
 | Appels par mois | Minutes | Humain, facturé à la minute | Humain, facturé à l'appel | Sans tarif de dépassement publié | LobbyStack (le nôtre, IA) |
 | --- | --- | --- | --- | --- | --- |
-| 40 | 120 | 127 $ à 307,40 $ | 127 $ à 415 $ | Abby Connect 599 $, Ruby 720 $ | 30 $ (Starter) |
-| 100 | 300 | 325 $ à 615 $ | 237,50 $ à 915 $ | Abby Connect 1 380 $, Ruby 1 725 $ | 60 $ (Starter) |
-| 200 | 600 | 599 $ à 1 200 $ | 407,50 $ à 1 965 $ | Aucun forfait publié ne couvre ce volume | 118 $ (Pro) |
+| 40 | 120 | 127 $ à 485 $ | 127 $ à 415 $ | Abby Connect 599 $ | 30 $ (Starter) |
+| 100 | 300 | 325 $ à 1 160 $ | 237,50 $ à 915 $ | Abby Connect 1 380 $ | 60 $ (Starter) |
+| 200 | 600 | 599 $ à 2 125 $ | 407,50 $ à 1 965 $ | Aucun forfait publié ne couvre ce volume | 118 $ (Pro) |
 
-- Les fourchettes à la minute couvrent les dix services à la minute qui publient le prix des minutes supplémentaires. Les fourchettes à l'appel couvrent A Message Center et Smith.ai Virtual Front Desk.
-- AnswerFirst facture de 1,60 $ à 1,95 $ la minute sans dire à partir de quand le tarif baisse. Son haut de fourchette fixe donc le plafond des fourchettes à la minute à 100 et 200 appels.
+- Les fourchettes à la minute couvrent les onze services à la minute qui publient le prix des minutes supplémentaires. Les fourchettes à l'appel couvrent A Message Center et Smith.ai Virtual Front Desk.
+- Ruby fixe le plafond de chaque fourchette à la minute. Sans lui, les plafonds sont de 307,40 $ (Moneypenny), puis 615 $ et 1 200 $ (AnswerFirst, compté à 1,95 $, le haut de sa fourchette, parce qu'il ne dit pas à partir de quand son tarif baisse vers 1,60 $).
 - Continental Message Solution facture tous les 28 jours : 300 $ par cycle à 120 minutes (325 $ par mois en moyenne) et 575 $ à 300 minutes (622,92 $ en moyenne). Son plus gros forfait publié compte 500 minutes.
 - Davinci Virtual coûte 251,50 $ à 120 minutes (Business 50 plus dépassement) et facture 95 $ de mise en service, une seule fois. Sa page de forfaits annonce un service 24 h/24 et 7 j/7, mais sa FAQ indique que les réceptionnistes répondent de 8 h à 20 h, heure de l'Est, en semaine.
 - Posh affiche des dollars canadiens sur la page que nous avons pu charger (258 $ CA à 120 minutes, 630 $ CA à 300, 1 170 $ CA à 600). Nous l'avons donc exclu des fourchettes en dollars américains.
@@ -63,7 +63,7 @@ Les services de réponse humains vendent un forfait mensuel de minutes avec un d
 | [Moneypenny](https://www.moneypenny.com/us/pricing/) (People Answering) | À la minute | 165 $/50 ; 265 $/100 ; 422 $/200 ; 985 $/500 | 2,28 $, 2,12 $, 1,91 $, 1,67 $ | 3,30 $ à 1,97 $ | Chaque appel arrondi à 30 secondes, puis le total du mois à la minute | Dans ses conditions, sans montant |
 | [Davinci Virtual](https://www.davincivirtual.com/live-receptionists) | À la minute | Business 129 $/50, 239 $/100 ; Premium 249 $/50, 319 $/100 | 1,75 $ Business, 2,50 $ Premium | 2,58 $ à 2,39 $ (Business), 4,98 $ à 3,19 $ (Premium) | À la seconde | 95 $ |
 | [Abby Connect](https://www.abby.com/pricing/) | À la minute | 165 $/50 ; 329 $/100 ; 599 $/200 ; 1 380 $/500 | Non publié | 3,30 $ à 2,76 $ | 30 secondes | Aucuns frais |
-| [Ruby](https://www.ruby.com/plans-and-pricing/) | À la minute | 250 $/50 ; 395 $/100 ; 720 $/200 ; 1 725 $/500 | Non publié | 5,00 $ à 3,45 $ | 60 secondes, arrondi au supérieur | Aucuns frais |
+| [Ruby](https://www.ruby.com/plans-and-pricing/) | À la minute | 250 $/50 ; 395 $/100 ; 720 $/200 ; 1 210 $/350 ; 1 725 $/500 ; forfaits plus gros jusqu'à 2 500 | De 5,40 $ à 3,30 $ ([centre d'aide](https://rubyhelpcenter.helpjuice.com/billing-plans/am-i-on-the-right-billing-plan), vérifié le 10 octobre 2026) | 5,00 $ (50 min) à 3,15 $ (2 500 min) | 60 secondes, arrondi au supérieur, notes après l'appel incluses | Aucuns frais |
 | [Continental Message Solution](https://www.continentalmessage.com/pricing/) | À la minute, facturé tous les 28 jours | 150 $/100 ; 300 $/250 ; 575 $/500 par 28 jours | Non publié | 1,50 $ à 1,15 $ par cycle de 28 jours | Non précisé | Variables, sans montant |
 | [Smith.ai Virtual Front Desk](https://smith.ai/pricing/receptionists) (humain) | À l'appel | 300 $/30 appels ; 810 $/90 ; 2 100 $/300 | 11,50 $, 10,50 $, 8,50 $ l'appel | 10 $ à 7 $ l'appel | À l'appel | Aucuns frais |
 | [A Message Center](https://amessagecenter.com/pricing) | À l'appel | 47 $ + 2,00 $/appel ; 145 $/50 appels ; 320 $/150 ; 490 $/250 | 1,85 $, 1,75 $, 1,65 $ l'appel | 2,90 $ à 1,96 $ l'appel | À l'appel | Non précisé |
@@ -154,7 +154,7 @@ Deux fournisseurs au même tarif peuvent envoyer des factures différentes, parc
 
 D'après nos calculs, 40 appels de 2 min 10 s représentent environ 87 minutes de conversation. Avec une facturation à la minute entière, vous en payez 120, soit 38 % de plus.
 
-Certains fournisseurs facturent plus que le temps de conversation. Ruby compte l'attente. PATLive compte l'attente pendant que le réceptionniste cherche une information, mais pas l'attente en file ni les notes après l'appel. MAP et Answering Service Care facturent le travail après l'appel, et Moneypenny facture jusqu'à 180 secondes de finalisation par appel. Ambs ne facture ni l'attente ni la sonnerie.
+Certains fournisseurs facturent plus que le temps de conversation. Ruby compte l'attente et les notes après l'appel. PATLive compte l'attente pendant que le réceptionniste cherche une information, mais pas l'attente en file ni les notes après l'appel. MAP et Answering Service Care facturent le travail après l'appel, et Moneypenny facture jusqu'à 180 secondes de finalisation par appel. Ambs ne facture ni l'attente ni la sonnerie.
 
 Les règles sur le spam varient aussi. Trois fournisseurs le laissent hors de la facture : Smith.ai quand le numéro de l'appelant s'affiche, The Perfect Answer pour les appels indésirables, et Ruby pour les appels automatisés que son filtre envoie à la messagerie. Ambs indique que les appels de démarchage et les appels raccrochés consomment des minutes du forfait. Les autres fournisseurs n'en disent rien.
 
@@ -176,7 +176,7 @@ Un plombier seul ne peut pas répondre la tête sous un évier, alors le service
 | Specialty Answering Service | 100 minutes : 159 $ + 20 à 1,44 $ | 187,80 $ |
 | PATLive | 100 minutes : 189 $ + 20 à 2,09 $ | 230,80 $ |
 | Smith.ai Virtual Front Desk | Starter : 300 $ + 10 appels à 11,50 $ | 415 $ |
-| Ruby | 200 minutes (aucun dépassement publié) | 720 $ |
+| Ruby | 100 minutes : 395 $ + 20 à 4,50 $ | 485 $ |
 | LobbyStack Starter (le nôtre, IA) | 150 minutes incluses | 30 $ |
 
 ### Un salon de coiffure : 100 appels courts pour des rendez-vous
@@ -300,7 +300,7 @@ Un service de réponse est rentable quand les contrats que vous gagnez grâce au
 
 **Appels manqués × part qui réserverait × bénéfice par contrat ≥ facture mensuelle**
 
-Dans cet exemple, chaque donnée est une hypothèse de notre part. Prendre les appels que vous manquez aujourd'hui vous rapporte 2 contrats de plus par mois, à 300 $ de bénéfice chacun, soit 600 $. Ce montant couvre toutes les factures humaines de la ligne à 40 appels jusqu'à 415 $. Il couvre aussi les 599 $ d'Abby Connect, avec 1 $ de reste, mais pas les 720 $ de Ruby. LobbyStack Starter coûte 30 $ pour les mêmes appels. Essayez vos propres chiffres dans le [calculateur de revenus des appels manqués](/fr/missed-call-revenue-calculator/).
+Dans cet exemple, chaque donnée est une hypothèse de notre part. Prendre les appels que vous manquez aujourd'hui vous rapporte 2 contrats de plus par mois, à 300 $ de bénéfice chacun, soit 600 $. Ce montant couvre toutes les factures humaines de la ligne à 40 appels. Les 485 $ de Ruby laissent 115 $, et les 599 $ d'Abby Connect, la facture la plus élevée, laissent 1 $. LobbyStack Starter coûte 30 $ pour les mêmes appels. Essayez vos propres chiffres dans le [calculateur de revenus des appels manqués](/fr/missed-call-revenue-calculator/).
 
 ### Les cas où un service humain vaut son prix
 

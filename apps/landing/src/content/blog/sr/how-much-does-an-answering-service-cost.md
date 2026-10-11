@@ -19,7 +19,7 @@ Usluga odgovaranja na pozive uživo košta od $127 do $415 mesečno za 40 poziva
 
 ## Koliko košta usluga odgovaranja na pozive mesečno?
 
-Za 40 poziva od po tri minuta mesečno, paketi uživo koštaju od $127 do $720. Većina se kreće između $127 i $415. Ruby ($720) i Abby Connect ($599) koštaju više pri tom obimu jer ne objavljuju cenu prekoračenja, pa je njihov najjeftiniji paket koji pokriva 120 minuta onaj od 200 minuta. Za 100 poziva računi iznose od $237.50 do $1,725.
+Za 40 poziva od po tri minuta mesečno, paketi uživo koštaju od $127 do $599. Većina se kreće između $127 i $415. Ruby košta $485: paket od 100 minuta plus 20 dodatnih minuta po $4.50. Abby Connect košta $599 jer ne objavljuje cenu prekoračenja, pa je njegov najjeftiniji paket koji pokriva 120 minuta onaj od 200 minuta. Za 100 poziva računi iznose od $237.50 do $1,380.
 
 Za svaki račun u ovom tekstu uzimamo najjeftiniji paket, ili paket sa prekoračenjem, koji pokriva minute. Ako dobavljač ne objavljuje cenu prekoračenja, uzimamo njegov najjeftiniji paket koji pokriva ceo obim.
 
@@ -29,12 +29,12 @@ Tabela računa sa 3 minuta po pozivu. To trajanje smo sami izabrali, bez spoljno
 
 | Poziva mesečno | Minuta | Uživo, naplata po minutu | Uživo, naplata po pozivu | Bez objavljenog prekoračenja | LobbyStack (naš, AI) |
 | --- | --- | --- | --- | --- | --- |
-| 40 | 120 | Od $127 do $307.40 | Od $127 do $415 | Abby Connect $599, Ruby $720 | $30 (Starter) |
-| 100 | 300 | Od $325 do $615 | Od $237.50 do $915 | Abby Connect $1,380, Ruby $1,725 | $60 (Starter) |
-| 200 | 600 | Od $599 do $1,200 | Od $407.50 do $1,965 | Nijedan objavljeni paket ne pokriva taj obim | $118 (Pro) |
+| 40 | 120 | Od $127 do $485 | Od $127 do $415 | Abby Connect $599 | $30 (Starter) |
+| 100 | 300 | Od $325 do $1,160 | Od $237.50 do $915 | Abby Connect $1,380 | $60 (Starter) |
+| 200 | 600 | Od $599 do $2,125 | Od $407.50 do $1,965 | Nijedan objavljeni paket ne pokriva taj obim | $118 (Pro) |
 
-- Rasponi za naplatu po minutu obuhvataju deset usluga sa naplatom po minutu koje objavljuju cenu dodatnih minuta. Rasponi za naplatu po pozivu obuhvataju A Message Center i Smith.ai Virtual Front Desk.
-- AnswerFirst naplaćuje od $1.60 do $1.95 po minutu i ne objavljuje kada cena pada, pa njegova gornja cena određuje vrh raspona po minutu za 100 i 200 poziva.
+- Rasponi za naplatu po minutu obuhvataju jedanaest usluga sa naplatom po minutu koje objavljuju cenu dodatnih minuta. Rasponi za naplatu po pozivu obuhvataju A Message Center i Smith.ai Virtual Front Desk.
+- Ruby određuje vrh svakog raspona po minutu. Bez njega, vrhovi su $307.40 (Moneypenny), pa $615 i $1,200 (AnswerFirst, računat po $1.95, svojoj gornjoj ceni, jer ne objavljuje kada mu cena pada ka $1.60).
 - Continental Message Solution naplaćuje na svakih 28 dana: $300 po ciklusu za 120 minuta (u proseku $325 mesečno) i $575 za 300 minuta (u proseku $622.92). Njegov najveći objavljeni paket ima 500 minuta.
 - Davinci Virtual košta $251.50 za 120 minuta (Business 50 plus prekoračenje) i jednom naplaćuje aktivaciju od $95. Stranica sa paketima navodi 24/7, a česta pitanja kažu da se recepcioneri uživo javljaju radnim danima od 8 ujutru do 8 uveče po istočnom vremenu SAD.
 - Posh prikazuje kanadske dolare na stranici koju smo uspeli da otvorimo (CAD 258 za 120 minuta, CAD 630 za 300, CAD 1,170 za 600), pa ga nismo uvrstili u raspone u američkim dolarima.
@@ -63,7 +63,7 @@ Usluge odgovaranja uživo prodaju mesečni paket minuta sa cenom prekoračenja p
 | [Moneypenny](https://www.moneypenny.com/us/pricing/) (People Answering) | Po minutu | $165/50; $265/100; $422/200; $985/500 | $2.28, $2.12, $1.91, $1.67 | $3.30 do $1.97 | Svaki poziv na 30 sekundi, zatim mesečni zbir na minut | U uslovima, bez iznosa |
 | [Davinci Virtual](https://www.davincivirtual.com/live-receptionists) | Po minutu | Business $129/50, $239/100; Premium $249/50, $319/100 | $1.75 Business, $2.50 Premium | $2.58 do $2.39 (Business), $4.98 do $3.19 (Premium) | Po sekundi | $95 |
 | [Abby Connect](https://www.abby.com/pricing/) | Po minutu | $165/50; $329/100; $599/200; $1,380/500 | Nije objavljeno | $3.30 do $2.76 | 30 sekundi | Nema |
-| [Ruby](https://www.ruby.com/plans-and-pricing/) | Po minutu | $250/50; $395/100; $720/200; $1,725/500 | Nije objavljeno | $5.00 do $3.45 | 60 sekundi, zaokruženo naviše | Nema |
+| [Ruby](https://www.ruby.com/plans-and-pricing/) | Po minutu | $250/50; $395/100; $720/200; $1,210/350; $1,725/500; veći paketi do 2,500 | $5.40, opada do $3.30 ([centar za pomoć](https://rubyhelpcenter.helpjuice.com/billing-plans/am-i-on-the-right-billing-plan), provereno 10. oktobra 2026) | $5.00 (50 min) do $3.15 (2,500 min) | 60 sekundi, zaokruženo naviše, uključujući beleške posle poziva | Nema |
 | [Continental Message Solution](https://www.continentalmessage.com/pricing/) | Po minutu, naplata na svakih 28 dana | $150/100; $300/250; $575/500 za 28 dana | Nije objavljeno | $1.50 do $1.15 po ciklusu od 28 dana | Nije navedeno | Varira, bez iznosa |
 | [Smith.ai Virtual Front Desk](https://smith.ai/pricing/receptionists) (ljudi) | Po pozivu | $300/30 poziva; $810/90; $2,100/300 | $11.50, $10.50, $8.50 po pozivu | $10 do $7 po pozivu | Po pozivu | Nema |
 | [A Message Center](https://amessagecenter.com/pricing) | Po pozivu | $47 + $2.00/poziv; $145/50 poziva; $320/150; $490/250 | $1.85, $1.75, $1.65 po pozivu | $2.90 do $1.96 po pozivu | Po pozivu | Nije navedeno |
@@ -154,7 +154,7 @@ Dva dobavljača sa istom cenom mogu da pošalju različite račune jer svaki zao
 
 Po našoj računici, 40 poziva od 2:10 daje oko 87 minuta razgovora. Dobavljač koji naplaćuje po celom minutu za to ispostavlja 120 minuta, 38% više.
 
-Neki dobavljači naplaćuju više od vremena razgovora. Ruby računa vreme čekanja na liniji. PATLive računa čekanje dok recepcioner nešto proverava, ali ne i čekanje u redu ni beleške posle poziva. MAP i Answering Service Care naplaćuju rad posle poziva, a Moneypenny do 180 sekundi završnog rada po pozivu. Ambs ne naplaćuje čekanje na liniji ni zvonjenje.
+Neki dobavljači naplaćuju više od vremena razgovora. Ruby računa vreme čekanja na liniji i beleške posle poziva. PATLive računa čekanje dok recepcioner nešto proverava, ali ne i čekanje u redu ni beleške posle poziva. MAP i Answering Service Care naplaćuju rad posle poziva, a Moneypenny do 180 sekundi završnog rada po pozivu. Ambs ne naplaćuje čekanje na liniji ni zvonjenje.
 
 Dobavljači različito tretiraju i spam. Tri dobavljača ga ne naplaćuju: Smith.ai kada se prikazuje broj pozivaoca, The Perfect Answer za spam pozive, a Ruby za robotske pozive koje njegov filter pošalje na govornu poštu. Ambs kaže da pozivi prodavaca i prekinuti pozivi troše minute iz paketa. Ostali dobavljači to ne navode.
 
@@ -176,7 +176,7 @@ Vodoinstalater koji leži ispod sudopere ne može da se javi, pa pozive preuzima
 | Specialty Answering Service | 100 minuta: $159 + 20 po $1.44 | $187.80 |
 | PATLive | 100 minuta: $189 + 20 po $2.09 | $230.80 |
 | Smith.ai Virtual Front Desk | Starter: $300 + 10 poziva po $11.50 | $415 |
-| Ruby | 200 minuta (bez objavljenog prekoračenja) | $720 |
+| Ruby | 100 minuta: $395 + 20 po $4.50 | $485 |
 | LobbyStack Starter (naš, AI) | 150 minuta uključeno | $30 |
 
 ### Frizerski salon: 100 kratkih poziva za zakazivanje
@@ -300,7 +300,7 @@ Usluga odgovaranja se isplati kada poslovi koje dobijete od odgovorenih poziva d
 
 **Propušteni pozivi × udeo koji bi zakazao × profit po poslu ≥ mesečni račun**
 
-U ovom primeru, svaki ulazni podatak je naša pretpostavka. Kada odgovorite na pozive koje sada propuštate, dobijate 2 dodatna posla mesečno sa po $300 profita, ukupno $600. To pokriva svaki račun uživo u redu za 40 poziva do $415. Pokriva i Abby Connect od $599, uz $1 viška, ali ne i Ruby od $720. LobbyStack Starter košta $30 za iste pozive. Unesite svoje brojke u [kalkulator prihoda od propuštenih poziva](/sr/missed-call-revenue-calculator/).
+U ovom primeru, svaki ulazni podatak je naša pretpostavka. Kada odgovorite na pozive koje sada propuštate, dobijate 2 dodatna posla mesečno sa po $300 profita, ukupno $600. To pokriva svaki račun uživo u redu za 40 poziva. Posle Ruby računa od $485 ostaje $115, a posle najvišeg, Abby Connect od $599, ostaje $1. LobbyStack Starter košta $30 za iste pozive. Unesite svoje brojke u [kalkulator prihoda od propuštenih poziva](/sr/missed-call-revenue-calculator/).
 
 ### Kada je usluga uživo bolji izbor
 

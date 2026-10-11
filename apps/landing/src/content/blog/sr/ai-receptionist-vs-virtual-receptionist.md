@@ -66,13 +66,13 @@ U hibridnom modelu AI se javlja prvi, a ljudi preuzimaju pozive koje AI ne treba
 
 ## Koliko košta virtuelni recepcioner?
 
-Usluga virtuelnog recepcionera uživo koštala je u oktobru 2026. oko $1 do $5 po minutu, ili od $127 do $720 mesečno za 40 poziva od po tri minuta. AI paketi su za iste pozive koštali od $25.25 do $99, oko $0.19 do $0.50 po minutu na paketima sa naplatom po minutu. Ako zaposlite recepcionera po medijani zarade koju objavljuje američki Zavod za statistiku rada (BLS), platićete oko $3,170 mesečno pre poreza i beneficija.
+Usluga virtuelnog recepcionera uživo koštala je u oktobru 2026. oko $1 do $5 po minutu, ili od $127 do $599 mesečno za 40 poziva od po tri minuta. AI paketi su za iste pozive koštali od $25.25 do $99, oko $0.19 do $0.50 po minutu na paketima sa naplatom po minutu. Ako zaposlite recepcionera po medijani zarade koju objavljuje američki Zavod za statistiku rada (BLS), platićete oko $3,170 mesečno pre poreza i beneficija.
 
 U tabeli računamo sa 40 poziva mesečno od po 3 minuta, odnosno 120 minuta. Ako primate više ili duže pozive, izračunajte ponovo. Za svakog dobavljača uzeli smo najjeftiniji način da pokrije 120 minuta, sam paket ili manji paket uz objavljenu cenu prekoračenja, u američkim dolarima bez poreza.
 
 | Opcija | Trošak za 40 poziva od 3 minuta | Uobičajena cena | Najniža i najviša cena |
 | --- | --- | --- | --- |
-| Usluga odgovaranja uživo | Od $127 do $720 mesečno | Oko $1 do $5 po minutu, ili $2 do $10 po pozivu u okviru paketa | [AnswerNet](https://answeringservicesus.com/pricing/): $105 za 100 minuta + 20 × $1.10 = $127. [Ruby](https://www.ruby.com/plans-and-pricing/): $720 za 200 minuta, jer Ruby ne objavljuje cenu prekoračenja |
+| Usluga odgovaranja uživo | Od $127 do $599 mesečno | Oko $1 do $5 po minutu, ili $2 do $10 po pozivu u okviru paketa | [AnswerNet](https://answeringservicesus.com/pricing/): $105 za 100 minuta + 20 × $1.10 = $127. [Abby Connect](https://www.abby.com/pricing/): $599 za 200 minuta, jer Abby Connect ne objavljuje cenu prekoračenja |
 | AI recepcioner | Od $25.25 do $99 mesečno | Oko $0.19 do $0.50 po minutu na paketima sa naplatom po minutu | [AI-Receptionist.com](https://ai-receptionist.com/pricing): $14 za 75 minuta + 45 Booster Pack minuta po $0.25 = $25.25. Nekoliko dobavljača dolazi do $99, na primer [My AI Front Desk](https://www.myaifrontdesk.com/pricing) za 200 minuta. LobbyStack Starter (naš): $30 |
 | Zaposleni recepcioner | Oko $3,170 mesečno | Ne menja se sa brojem poziva | [BLS](https://www.bls.gov/ooh/Office-and-Administrative-Support/Receptionists.htm) medijana od $18.27 po satu (maj 2025) × 40 sati × 52 nedelje ÷ 12, pre poreza na zarade i beneficija |
 
@@ -188,7 +188,7 @@ Postavite ova pitanja na prodajnim razgovorima i tokom probnog perioda i tražit
 - Kako obučavate agente kada promenimo pravila?
 - Šta se dešava kada broj poziva skoči?
 - Koliki je korak naplate i da li naplaćujete čekanje na liniji, rad posle poziva, spam i kratke pozive?
-- Postoji li naknada za aktivaciju i kolika je cena prekoračenja? Ruby, na primer, ne objavljuje cenu prekoračenja.
+- Postoji li naknada za aktivaciju i kolika je cena prekoračenja? Abby Connect, na primer, ne objavljuje cenu prekoračenja.
 
 Konkretne preporuke naći ćete na našem spisku [najboljih usluga odgovaranja na pozive za male firme](/sr/blog/best-answering-service-for-small-business/).
 

@@ -100,7 +100,7 @@ Drugi dobavljači objavljuju svoje brojke: [AI-Receptionist.com](https://ai-rece
 
 ## Koliko košta automatsko odgovaranje na pozive?
 
-IVR i govorna pošta često dolaze kao dodatak po minutu ili u okviru telefonskog paketa. Ulazni paketi AI recepcionera koštaju od $14 do $150 mesečno, prema cenama od 9. oktobra 2026. Za 40 poziva od po tri minuta mesečno, AI paketi koje smo izračunali koštaju od $25.25 do $99, a usluge uživo od $127 do $720.
+IVR i govorna pošta često dolaze kao dodatak po minutu ili u okviru telefonskog paketa. Ulazni paketi AI recepcionera koštaju od $14 do $150 mesečno, prema cenama od 9. oktobra 2026. Za 40 poziva od po tri minuta mesečno, AI paketi koje smo izračunali koštaju od $25.25 do $99, a usluge uživo od $127 do $599.
 
 ### Cene IVR-a i govorne pošte
 
@@ -127,7 +127,7 @@ Računamo sa 40 poziva od po 3 minuta (120 minuta mesečno), na najjeftinijem pa
 | IVR (PATLive automatski operater) | Od $49 | Paket sa plaćanjem po korišćenju; 120 minuta poziva koji ne stignu do recepcionera staje u uključenih 1,000 automatizovanih minuta. Svaki minut recepcionera dodaje $2.99 |
 | IVR ili govorna pošta (SAS dodatak) | $62 | Paket Economy od $44 + 120 minuta × $0.15, ako nijedan poziv ne stigne do agenta uživo i nijedan ne bude prebačen Vama |
 | AI recepcioner | Od $25.25 do $99 | Najniže: [AI-Receptionist.com](https://ai-receptionist.com/pricing) $14 + 45 Booster minuta × $0.25. LobbyStack (naš): $30, u okviru 150 minuta paketa Starter. Najviše: paketi od $99 kod [Moneypenny AI](https://moneypenny.com/us/plans-pricing-ai/), [Nextiva XBert](https://www.nextiva.com/products/xbert), [CloudTalk](https://www.cloudtalk.io/ai-receptionist/) i [My AI Front Desk](https://www.myaifrontdesk.com/pricing) |
-| Usluga odgovaranja uživo | Od $127 do $720 | Najniže: [AnswerNet](https://answeringservicesus.com/pricing/) Silver (cene na AnsweringServicesUS.com) $105 + 20 minuta × $1.10, plus $10 po prazniku. Najviše: [Ruby](https://www.ruby.com/plans-and-pricing/) $720 za 200 minuta. Ruby ne objavljuje cenu prekoračenja, pa je paket od 200 minuta najjeftiniji način sa poznatom ukupnom cenom da pokrijete 120 minuta |
+| Usluga odgovaranja uživo | Od $127 do $599 | Najniže: [AnswerNet](https://answeringservicesus.com/pricing/) Silver (cene na AnsweringServicesUS.com) $105 + 20 minuta × $1.10, plus $10 po prazniku. Najviše: [Abby Connect](https://www.abby.com/pricing/) $599 za 200 minuta. Abby Connect ne objavljuje cenu prekoračenja, pa je paket od 200 minuta najjeftiniji način sa poznatom ukupnom cenom da pokrijete 120 minuta |
 
 IVR i govorna pošta ne razgovaraju sa pozivaocem. Pozivalac čeka Vaš povratni poziv ili ga meni šalje osobi koju takođe plaćate. Iznos od $25.25 za AI pretpostavlja da kupujete Booster minute. Prema odeljku sa čestim pitanjima na AI-Receptionist.com, recepcioner prestaje da prima nove pozive kada potroši uključene minute, osim ako imate Booster minute. Cene usluga uživo za drugi broj poziva naći ćete u tekstu [cene usluga odgovaranja uživo po broju poziva](/sr/blog/how-much-does-an-answering-service-cost/).
 
@@ -210,7 +210,7 @@ LobbyStack (naš) je za vlasnike koji žele zakazivanje, preusmeravanje i SMS po
 
 ### Izaberite uslugu uživo ako pozivi traže procenu
 
-Usluga uživo ima smisla za prijem pravnih predmeta, osetljive pozive i pozivaoce koji žele da razgovaraju sa osobom. [Ruby](https://www.ruby.com/plans-and-pricing/) i [PATLive](https://www.patlive.com/pricing/) bez doplate uključuju recepcionere koji govore španski. U našoj proveri 40 poziva kod usluge uživo košta od $127 do $720, a na AI paketima od $25.25 do $99.
+Usluga uživo ima smisla za prijem pravnih predmeta, osetljive pozive i pozivaoce koji žele da razgovaraju sa osobom. [Ruby](https://www.ruby.com/plans-and-pricing/) i [PATLive](https://www.patlive.com/pricing/) bez doplate uključuju recepcionere koji govore španski. U našoj proveri 40 poziva kod usluge uživo košta od $127 do $599, a na AI paketima od $25.25 do $99.
 
 ## Česta pitanja o automatskom odgovaranju na pozive
 

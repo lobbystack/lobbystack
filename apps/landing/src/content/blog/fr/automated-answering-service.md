@@ -102,7 +102,7 @@ Les autres fournisseurs publient leurs propres chiffres : plus de 55 langues pou
 
 ## Combien coûte un standard automatique ?
 
-Les fournisseurs vendent souvent le menu vocal et la messagerie en option à la minute, ou les incluent dans un forfait téléphonique. Les forfaits d'entrée des réceptionnistes IA coûtent de 14 $ à 150 $ par mois au 9 octobre 2026. Pour 40 appels de trois minutes par mois, les forfaits IA de notre relevé reviennent entre 25,25 $ et 99 $, et les permanences téléphoniques entre 127 $ et 720 $.
+Les fournisseurs vendent souvent le menu vocal et la messagerie en option à la minute, ou les incluent dans un forfait téléphonique. Les forfaits d'entrée des réceptionnistes IA coûtent de 14 $ à 150 $ par mois au 9 octobre 2026. Pour 40 appels de trois minutes par mois, les forfaits IA de notre relevé reviennent entre 25,25 $ et 99 $, et les permanences téléphoniques entre 127 $ et 599 $.
 
 ### Coût d'un menu vocal et d'une messagerie
 
@@ -129,7 +129,7 @@ Notre hypothèse : 40 appels de 3 minutes (120 minutes par mois), facturés sur 
 | Menu vocal (standard automatique PATLive) | Dès 49 $ | Forfait à l'usage ; 120 minutes d'appels qui n'atteignent jamais un réceptionniste entrent dans les 1 000 minutes automatisées incluses. Chaque minute de réceptionniste ajoute 2,99 $ |
 | Menu vocal ou messagerie (option SAS) | 62 $ | Forfait Economy à 44 $ + 120 minutes × 0,15 $, si aucun appel n'atteint un agent et qu'aucun ne vous est transféré |
 | Réceptionniste IA | 25,25 $ à 99 $ | Bas : [AI-Receptionist.com](https://ai-receptionist.com/pricing) 14 $ + 45 minutes Booster × 0,25 $. LobbyStack (notre produit) : 30 $, dans les 150 minutes de Starter. Haut : forfaits à 99 $ de [Moneypenny AI](https://moneypenny.com/us/plans-pricing-ai/), [Nextiva XBert](https://www.nextiva.com/products/xbert), [CloudTalk](https://www.cloudtalk.io/ai-receptionist/) et [My AI Front Desk](https://www.myaifrontdesk.com/pricing) |
-| Permanence téléphonique | 127 $ à 720 $ | Bas : [AnswerNet](https://answeringservicesus.com/pricing/) Silver (prix sur AnsweringServicesUS.com) 105 $ + 20 minutes × 1,10 $, plus 10 $ par jour férié. Haut : [Ruby](https://www.ruby.com/plans-and-pricing/) 720 $ pour 200 minutes. Ruby ne publie aucun tarif de dépassement, donc son forfait de 200 minutes est l'option entièrement chiffrée la moins chère pour couvrir 120 minutes |
+| Permanence téléphonique | 127 $ à 599 $ | Bas : [AnswerNet](https://answeringservicesus.com/pricing/) Silver (prix sur AnsweringServicesUS.com) 105 $ + 20 minutes × 1,10 $, plus 10 $ par jour férié. Haut : [Abby Connect](https://www.abby.com/pricing/) 599 $ pour 200 minutes. Abby Connect ne publie aucun tarif de dépassement, donc son forfait de 200 minutes est l'option entièrement chiffrée la moins chère pour couvrir 120 minutes |
 
 Un menu vocal ou une messagerie ne converse pas avec l'appelant. L'appelant attend votre rappel, ou le menu le dirige vers une personne que vous payez aussi. Le chiffre IA de 25,25 $ suppose que vous achetez des minutes Booster. Selon la FAQ d'AI-Receptionist.com, le réceptionniste cesse de prendre de nouveaux appels quand les minutes incluses sont épuisées, sauf si vous détenez des minutes Booster. Pour les forfaits de permanence à d'autres volumes, consultez [les prix d'un service de réponse téléphonique selon le volume d'appels](/fr/blog/how-much-does-an-answering-service-cost/).
 
@@ -212,7 +212,7 @@ LobbyStack (notre produit) convient au propriétaire qui veut la réservation, l
 
 ### Choisissez une permanence si les appels demandent du jugement
 
-La permanence téléphonique convient au premier contact avec les clients d'un cabinet d'avocats, aux appels délicats et aux appelants qui veulent parler à une personne. [Ruby](https://www.ruby.com/plans-and-pricing/) et [PATLive](https://www.patlive.com/pricing/) incluent des réceptionnistes hispanophones sans supplément. Dans notre relevé, 40 appels coûtent de 127 $ à 720 $ avec une permanence, contre 25,25 $ à 99 $ sur les forfaits IA.
+La permanence téléphonique convient au premier contact avec les clients d'un cabinet d'avocats, aux appels délicats et aux appelants qui veulent parler à une personne. [Ruby](https://www.ruby.com/plans-and-pricing/) et [PATLive](https://www.patlive.com/pricing/) incluent des réceptionnistes hispanophones sans supplément. Dans notre relevé, 40 appels coûtent de 127 $ à 599 $ avec une permanence, contre 25,25 $ à 99 $ sur les forfaits IA.
 
 ## FAQ sur le standard automatique
 

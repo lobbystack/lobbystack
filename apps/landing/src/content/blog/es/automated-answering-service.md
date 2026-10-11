@@ -100,7 +100,7 @@ Otros proveedores publican sus propias cifras: [AI-Receptionist.com](https://ai-
 
 ## ¿Cuánto cuesta la atención telefónica automatizada?
 
-Los proveedores suelen vender el menú telefónico y el buzón de voz como complementos por minuto o dentro de un plan telefónico. Los planes de entrada de una recepcionista con IA cuestan de $14 a $150 al mes, según los precios del 9 de octubre de 2026. Con 40 llamadas de tres minutos al mes, los planes de IA que revisamos salían por $25.25 a $99, y los servicios con personas por $127 a $720.
+Los proveedores suelen vender el menú telefónico y el buzón de voz como complementos por minuto o dentro de un plan telefónico. Los planes de entrada de una recepcionista con IA cuestan de $14 a $150 al mes, según los precios del 9 de octubre de 2026. Con 40 llamadas de tres minutos al mes, los planes de IA que revisamos salían por $25.25 a $99, y los servicios con personas por $127 a $599.
 
 ### Costos del menú telefónico y del buzón de voz
 
@@ -127,7 +127,7 @@ Partimos de 40 llamadas de 3 minutos cada una (120 minutos al mes), con el plan 
 | Menú telefónico (operadora automática de PATLive) | Desde $49 | Plan de pago por uso; 120 minutos de llamadas que nunca llegan a una recepcionista caben en los 1,000 minutos automatizados incluidos. Cada minuto de recepcionista suma $2.99 |
 | Menú telefónico o buzón de voz (complemento de SAS) | $62 | Plan Economy de $44 + 120 minutos × $0.15, si ninguna llamada llega a un agente ni se le transfiere a usted |
 | Recepcionista con IA | De $25.25 a $99 | Mínimo: [AI-Receptionist.com](https://ai-receptionist.com/pricing) $14 + 45 minutos Booster × $0.25. LobbyStack (nuestro producto): $30, dentro de los 150 minutos de Starter. Máximo: planes de $99 de [Moneypenny AI](https://moneypenny.com/us/plans-pricing-ai/), [Nextiva XBert](https://www.nextiva.com/products/xbert), [CloudTalk](https://www.cloudtalk.io/ai-receptionist/) y [My AI Front Desk](https://www.myaifrontdesk.com/pricing) |
-| Servicio de atención telefónica con personas | De $127 a $720 | Mínimo: [AnswerNet](https://answeringservicesus.com/pricing/) Silver (precios en AnsweringServicesUS.com) $105 + 20 minutos × $1.10, más $10 por día festivo. Máximo: [Ruby](https://www.ruby.com/plans-and-pricing/) $720 por 200 minutos. Ruby no publica una tarifa de excedente, así que su plan de 200 minutos es la opción más barata con precio completo publicado para cubrir 120 minutos |
+| Servicio de atención telefónica con personas | De $127 a $599 | Mínimo: [AnswerNet](https://answeringservicesus.com/pricing/) Silver (precios en AnsweringServicesUS.com) $105 + 20 minutos × $1.10, más $10 por día festivo. Máximo: [Abby Connect](https://www.abby.com/pricing/) $599 por 200 minutos. Abby Connect no publica una tarifa de excedente, así que su plan de 200 minutos es la opción más barata con precio completo publicado para cubrir 120 minutos |
 
 Un menú telefónico o un buzón de voz no conversa con quien llama. Esa persona espera a que usted le devuelva la llamada, o el menú la pasa a alguien a quien usted también le paga. La cifra de $25.25 para la IA supone que usted compra minutos Booster. Según las preguntas frecuentes de AI-Receptionist.com, la recepcionista deja de aceptar llamadas nuevas cuando se agotan los minutos incluidos, salvo que tenga minutos Booster. Para planes con personas en otros volúmenes, vea [los precios de los servicios de atención telefónica según el volumen de llamadas](/es/blog/how-much-does-an-answering-service-cost/).
 
@@ -210,7 +210,7 @@ LobbyStack (nuestro producto) encaja con dueños que quieren reservas, transfere
 
 ### Elija un servicio con personas si las llamadas exigen criterio
 
-La atención con personas encaja en la entrevista inicial de casos legales, en las llamadas delicadas y con quienes prefieren hablar con alguien. [Ruby](https://www.ruby.com/plans-and-pricing/) y [PATLive](https://www.patlive.com/pricing/) incluyen recepcionistas que hablan español sin costo adicional. En nuestra revisión, 40 llamadas costaban de $127 a $720 con un servicio con personas, frente a $25.25 a $99 con planes de IA.
+La atención con personas encaja en la entrevista inicial de casos legales, en las llamadas delicadas y con quienes prefieren hablar con alguien. [Ruby](https://www.ruby.com/plans-and-pricing/) y [PATLive](https://www.patlive.com/pricing/) incluyen recepcionistas que hablan español sin costo adicional. En nuestra revisión, 40 llamadas costaban de $127 a $599 con un servicio con personas, frente a $25.25 a $99 con planes de IA.
 
 ## Preguntas frecuentes sobre la atención telefónica automatizada
 

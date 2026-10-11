@@ -66,13 +66,13 @@ In a hybrid setup, AI answers first and people take the calls it shouldn't handl
 
 ## How much does a virtual receptionist cost?
 
-A live virtual receptionist service cost about $1 to $5 a minute in October 2026, or $127 to $720 a month for 40 three-minute calls. AI plans came to $25.25 to $99 for those calls, about $0.19 to $0.50 a minute on per-minute plans. Hiring in-house at the BLS median wage costs about $3,170 a month before taxes and benefits.
+A live virtual receptionist service cost about $1 to $5 a minute in October 2026, or $127 to $599 a month for 40 three-minute calls. AI plans came to $25.25 to $99 for those calls, about $0.19 to $0.50 a minute on per-minute plans. Hiring in-house at the BLS median wage costs about $3,170 a month before taxes and benefits.
 
 The table assumes 40 calls a month at 3 minutes each, or 120 minutes. Your own call pattern will shift the numbers. For each vendor we used the cheapest way to cover 120 minutes, either a plan on its own or a smaller plan plus published overage, in US dollars before tax.
 
 | Option | Cost at 40 calls of 3 minutes | Typical rate | Low and high ends |
 | --- | --- | --- | --- |
-| Live answering service | $127 to $720 a month | About $1 to $5 a minute, or $2 to $10 a call on plan | [AnswerNet](https://answeringservicesus.com/pricing/): $105 for 100 minutes + 20 × $1.10 = $127. [Ruby](https://www.ruby.com/plans-and-pricing/): $720 for 200 minutes, because Ruby doesn't publish an overage rate |
+| Live answering service | $127 to $599 a month | About $1 to $5 a minute, or $2 to $10 a call on plan | [AnswerNet](https://answeringservicesus.com/pricing/): $105 for 100 minutes + 20 × $1.10 = $127. [Abby Connect](https://www.abby.com/pricing/): $599 for 200 minutes, because Abby Connect doesn't publish an overage rate |
 | AI receptionist | $25.25 to $99 a month | About $0.19 to $0.50 a minute on per-minute plans | [AI-Receptionist.com](https://ai-receptionist.com/pricing): $14 for 75 minutes + 45 Booster Pack minutes at $0.25 = $25.25. Several vendors land at $99, such as [My AI Front Desk](https://www.myaifrontdesk.com/pricing) for 200 minutes. LobbyStack Starter (ours): $30 |
 | In-house receptionist | About $3,170 a month | Doesn't change with call volume | [BLS](https://www.bls.gov/ooh/Office-and-Administrative-Support/Receptionists.htm) median of $18.27 an hour (May 2025) × 40 hours × 52 weeks ÷ 12, before payroll taxes and benefits |
 
@@ -188,7 +188,7 @@ Ask these on sales calls and during trials, and get the answers in writing.
 - How do you retrain agents when our policies change?
 - What happens during a spike in calls?
 - What's your billing increment, and do you bill hold time, after-call work, spam and very short calls?
-- Is there a setup fee, and what's the overage rate? Ruby, for one, doesn't publish its overage rate.
+- Is there a setup fee, and what's the overage rate? Abby Connect, for one, doesn't publish its overage rate.
 
 For named picks, see our list of the [best answering services for small business](/blog/best-answering-service-for-small-business/).
 

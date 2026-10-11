@@ -66,13 +66,13 @@ Dans une formule hybride, l'IA répond d'abord et des personnes prennent les app
 
 ## Combien coûte une réceptionniste virtuelle ?
 
-Une réceptionniste virtuelle humaine coûtait environ 1 $ à 5 $ la minute en octobre 2026, soit 127 $ à 720 $ par mois pour 40 appels de trois minutes. Les forfaits IA revenaient à 25,25 $ à 99 $ pour ces mêmes appels, soit environ 0,19 $ à 0,50 $ la minute sur les forfaits à la minute. Une embauche au salaire médian américain du BLS coûte environ 3 170 $ par mois, avant charges et avantages sociaux.
+Une réceptionniste virtuelle humaine coûtait environ 1 $ à 5 $ la minute en octobre 2026, soit 127 $ à 599 $ par mois pour 40 appels de trois minutes. Les forfaits IA revenaient à 25,25 $ à 99 $ pour ces mêmes appels, soit environ 0,19 $ à 0,50 $ la minute sur les forfaits à la minute. Une embauche au salaire médian américain du BLS coûte environ 3 170 $ par mois, avant charges et avantages sociaux.
 
 Le tableau suppose 40 appels par mois de 3 minutes chacun, soit 120 minutes. Votre propre profil d'appels déplacera les chiffres. Pour chaque fournisseur, nous avons retenu la façon la moins chère de couvrir 120 minutes : un forfait seul, ou un forfait plus petit avec les dépassements publiés, en dollars américains hors taxes.
 
 | Option | Coût pour 40 appels de 3 minutes | Tarif courant | Bas et haut de la fourchette |
 | --- | --- | --- | --- |
-| Permanence téléphonique | 127 $ à 720 $ par mois | Environ 1 $ à 5 $ la minute, ou 2 $ à 10 $ l'appel au forfait | [AnswerNet](https://answeringservicesus.com/pricing/) : 105 $ pour 100 minutes + 20 × 1,10 $ = 127 $. [Ruby](https://www.ruby.com/plans-and-pricing/) : 720 $ pour 200 minutes, car Ruby ne publie pas de tarif de dépassement |
+| Permanence téléphonique | 127 $ à 599 $ par mois | Environ 1 $ à 5 $ la minute, ou 2 $ à 10 $ l'appel au forfait | [AnswerNet](https://answeringservicesus.com/pricing/) : 105 $ pour 100 minutes + 20 × 1,10 $ = 127 $. [Abby Connect](https://www.abby.com/pricing/) : 599 $ pour 200 minutes, car Abby Connect ne publie pas de tarif de dépassement |
 | Réceptionniste IA | 25,25 $ à 99 $ par mois | Environ 0,19 $ à 0,50 $ la minute sur les forfaits à la minute | [AI-Receptionist.com](https://ai-receptionist.com/pricing) : 14 $ pour 75 minutes + 45 minutes Booster Pack à 0,25 $ = 25,25 $. Plusieurs fournisseurs arrivent à 99 $, comme [My AI Front Desk](https://www.myaifrontdesk.com/pricing) pour 200 minutes. LobbyStack Starter (notre produit) : 30 $ |
 | Réceptionniste salariée | Environ 3 170 $ par mois | Ne varie pas avec le volume d'appels | Salaire médian du [BLS](https://www.bls.gov/ooh/Office-and-Administrative-Support/Receptionists.htm) de 18,27 $ l'heure (mai 2025) × 40 heures × 52 semaines ÷ 12, avant charges sociales et avantages |
 
@@ -188,7 +188,7 @@ Posez ces questions pendant les appels commerciaux et les essais, et obtenez les
 - Comment formez-vous de nouveau les agents quand nos règles changent ?
 - Que se passe-t-il pendant un pic d'appels ?
 - Quel est votre palier de facturation, et facturez-vous l'attente, le travail après l'appel, le spam et les appels très courts ?
-- Y a-t-il des frais de mise en service, et quel est le tarif de dépassement ? Ruby, par exemple, ne publie pas son tarif de dépassement.
+- Y a-t-il des frais de mise en service, et quel est le tarif de dépassement ? Abby Connect, par exemple, ne publie pas son tarif de dépassement.
 
 Pour des noms précis, voyez notre sélection des [meilleures permanences téléphoniques pour petites entreprises](/fr/blog/best-answering-service-for-small-business/).
 

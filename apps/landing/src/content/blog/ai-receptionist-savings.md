@@ -189,15 +189,15 @@ Live answering services charge setup fees of $0 to $95, with Davinci Virtual at 
 
 ## Is an AI receptionist cheaper than an answering service or a hire?
 
-Yes, at the volume we priced. At 40 three-minute calls a month, AI plans in this guide cost $25.25 to $99 and live answering services cost $127 to $720. A full-time receptionist at the median US wage costs about $3,170 a month before payroll taxes and benefits. Live services earn their price when callers need human judgment.
+Yes, at the volume we priced. At 40 three-minute calls a month, AI plans in this guide cost $25.25 to $99 and live answering services cost $127 to $485. A full-time receptionist at the median US wage costs about $3,170 a month before payroll taxes and benefits. Live services earn their price when callers need human judgment.
 
 | Option | Monthly cost | Best fit | Watch out for |
 | --- | --- | --- | --- |
 | AI receptionist | $14 to $150 at entry; $25.25 to $99 at 40 calls | Routine questions, intake, booking, after-hours and overflow calls | Some calls still need a person |
-| Live answering service | $127 (AnswerNet) to $720 (Ruby) for 120 minutes | Calls that need a live person who isn't on your staff | Per-minute and per-call rates climb with volume |
+| Live answering service | $127 (AnswerNet) to $485 (Ruby) for 120 minutes | Calls that need a live person who isn't on your staff | Per-minute and per-call rates climb with volume |
 | In-house receptionist | About $3,170 at the median wage, before taxes and benefits | Front desks that handle walk-ins, paperwork and calls | One shift of coverage, plus lunch breaks and sick days |
 
-We priced live services at 120 minutes (40 calls of 3 minutes) on October 9, 2026: [AnswerNet](https://answeringservicesus.com/pricing/) $127, [Specialty Answering Service](https://www.specialtyansweringservice.net/pricing/) $187.80, [PATLive](https://www.patlive.com/pricing/) $230.80 and [Ruby](https://www.ruby.com/plans-and-pricing/) $720. Ruby still lists $250 for 50 minutes and $395 for 100, but it doesn't publish its overage rate, so its 200-minute plan is the cheapest one that fully covers 120 minutes. [Smith.ai's human receptionists](https://smith.ai/pricing/receptionists) cost $415 for 40 calls.
+We priced live services at 120 minutes (40 calls of 3 minutes) on October 9, 2026: [AnswerNet](https://answeringservicesus.com/pricing/) $127, [Specialty Answering Service](https://www.specialtyansweringservice.net/pricing/) $187.80, [PATLive](https://www.patlive.com/pricing/) $230.80 and [Ruby](https://www.ruby.com/plans-and-pricing/) $485. Ruby's 100-minute plan costs $395, and its [help center](https://rubyhelpcenter.helpjuice.com/billing-plans/am-i-on-the-right-billing-plan) lists $4.50 for each extra minute on that plan (checked October 10, 2026), so the other 20 minutes add $90. [Smith.ai's human receptionists](https://smith.ai/pricing/receptionists) cost $415 for 40 calls.
 
 Live services win on judgment. A person can calm an upset caller or handle a request no script covers, and Ruby, PATLive and Abby Connect include Spanish in the plan price. For their full rate cards, see [how much an answering service costs](/blog/how-much-does-an-answering-service-cost/), and for how the two services differ, read [AI receptionist vs virtual receptionist](/blog/ai-receptionist-vs-virtual-receptionist/).
 
@@ -303,7 +303,7 @@ To hear the receptionist before you pay, [create a free LobbyStack account](http
 
 ### Is an AI receptionist cheaper than an answering service?
 
-For most small businesses, yes. At 40 three-minute calls a month, the AI plans we priced on October 9, 2026 cost $25.25 to $99, and live answering services cost $127 to $720. A live service costs more because a person takes every call. That's worth paying for when callers need human judgment.
+For most small businesses, yes. At 40 three-minute calls a month, the AI plans we priced on October 9, 2026 cost $25.25 to $99, and live answering services cost $127 to $485. A live service costs more because a person takes every call. That's worth paying for when callers need human judgment.
 
 ### Do spam calls count toward my minutes?
 

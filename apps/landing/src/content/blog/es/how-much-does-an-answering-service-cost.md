@@ -19,7 +19,7 @@ Con 40 llamadas de tres minutos al mes, un servicio de atención telefónica con
 
 ## ¿Cuánto cuesta un servicio de atención telefónica al mes?
 
-Con 40 llamadas de tres minutos al mes, los planes con personas cuestan de $127 a $720. La mayoría queda entre $127 y $415. Ruby ($720) y Abby Connect ($599) cuestan más con ese volumen porque no publican tarifa de excedente, de modo que su plan más barato que cubre 120 minutos es el de 200 minutos. Con 100 llamadas, las facturas van de $237.50 a $1,725.
+Con 40 llamadas de tres minutos al mes, los planes con personas cuestan de $127 a $599. La mayoría queda entre $127 y $415. Ruby cuesta $485: su plan de 100 minutos más 20 minutos adicionales a $4.50. Abby Connect cuesta $599 porque no publica tarifa de excedente, de modo que su plan más barato que cubre 120 minutos es el de 200 minutos. Con 100 llamadas, las facturas van de $237.50 a $1,380.
 
 Para cada factura de esta página, tomamos el plan más barato, o el plan más excedente, que cubre los minutos. Si un proveedor no publica tarifa de excedente, usamos su plan más barato que cubre todo el volumen.
 
@@ -29,12 +29,12 @@ La tabla supone 3 minutos por llamada. Elegimos esa duración nosotros, sin una 
 
 | Llamadas al mes | Minutos | Con personas, por minuto | Con personas, por llamada | Sin excedente publicado | LobbyStack (nuestro, IA) |
 | --- | --- | --- | --- | --- | --- |
-| 40 | 120 | $127 a $307.40 | $127 a $415 | Abby Connect $599, Ruby $720 | $30 (Starter) |
-| 100 | 300 | $325 a $615 | $237.50 a $915 | Abby Connect $1,380, Ruby $1,725 | $60 (Starter) |
-| 200 | 600 | $599 a $1,200 | $407.50 a $1,965 | Ningún plan publicado lo cubre | $118 (Pro) |
+| 40 | 120 | $127 a $485 | $127 a $415 | Abby Connect $599 | $30 (Starter) |
+| 100 | 300 | $325 a $1,160 | $237.50 a $915 | Abby Connect $1,380 | $60 (Starter) |
+| 200 | 600 | $599 a $2,125 | $407.50 a $1,965 | Ningún plan publicado lo cubre | $118 (Pro) |
 
-- Los rangos por minuto cubren los diez servicios por minuto que publican cuánto cuesta un minuto adicional. Los rangos por llamada cubren A Message Center y Smith.ai Virtual Front Desk.
-- AnswerFirst cobra de $1.60 a $1.95 por minuto y no publica a partir de qué volumen baja la tarifa, así que su extremo alto marca el máximo de los rangos por minuto con 100 y 200 llamadas.
+- Los rangos por minuto cubren los once servicios por minuto que publican cuánto cuesta un minuto adicional. Los rangos por llamada cubren A Message Center y Smith.ai Virtual Front Desk.
+- Ruby marca el máximo de cada rango por minuto. Sin Ruby, los máximos son $307.40 (Moneypenny), y luego $615 y $1,200 (AnswerFirst, calculado a $1.95, su extremo alto, porque no publica a partir de qué volumen su tarifa baja hacia $1.60).
 - Continental Message Solution factura cada 28 días: $300 por ciclo con 120 minutos ($325 al mes en promedio) y $575 con 300 minutos ($622.92 en promedio). Su plan publicado más grande es de 500 minutos.
 - Davinci Virtual cuesta $251.50 con 120 minutos (Business 50 más excedente) y cobra $95 de configuración una sola vez. Su página de planes dice 24/7, pero sus preguntas frecuentes dicen que las recepcionistas atienden de 8 a. m. a 8 p. m., hora del Este, de lunes a viernes.
 - Posh muestra dólares canadienses en la página que pudimos cargar (CAD 258 con 120 minutos, CAD 630 con 300 y CAD 1,170 con 600), así que lo dejamos fuera de los rangos en USD.
@@ -63,7 +63,7 @@ Muchos proveedores venden estos servicios como recepcionista virtual: una person
 | [Moneypenny](https://www.moneypenny.com/us/pricing/) (People Answering) | Por minuto | $165/50; $265/100; $422/200; $985/500 | $2.28, $2.12, $1.91, $1.67 | De $3.30 a $1.97 | Redondea cada llamada a 30 segundos y el total mensual al minuto | En sus términos, sin importe |
 | [Davinci Virtual](https://www.davincivirtual.com/live-receptionists) | Por minuto | Business $129/50, $239/100; Premium $249/50, $319/100 | $1.75 Business, $2.50 Premium | De $2.58 a $2.39 (Business), de $4.98 a $3.19 (Premium) | Por segundo | $95 |
 | [Abby Connect](https://www.abby.com/pricing/) | Por minuto | $165/50; $329/100; $599/200; $1,380/500 | No publicado | De $3.30 a $2.76 | 30 segundos | Ninguna |
-| [Ruby](https://www.ruby.com/plans-and-pricing/) | Por minuto | $250/50; $395/100; $720/200; $1,725/500 | No publicado | De $5.00 a $3.45 | 60 segundos, con redondeo hacia arriba | Ninguna |
+| [Ruby](https://www.ruby.com/plans-and-pricing/) | Por minuto | $250/50; $395/100; $720/200; $1,210/350; $1,725/500; planes más grandes hasta 2,500 | De $5.40 hasta $3.30 ([centro de ayuda](https://rubyhelpcenter.helpjuice.com/billing-plans/am-i-on-the-right-billing-plan), revisado el 10 de octubre de 2026) | De $5.00 (50 min) a $3.15 (2,500 min) | 60 segundos, con redondeo hacia arriba; cobra las notas posteriores a la llamada | Ninguna |
 | [Continental Message Solution](https://www.continentalmessage.com/pricing/) | Por minuto, con factura cada 28 días | $150/100; $300/250; $575/500 cada 28 días | No publicado | De $1.50 a $1.15 por ciclo de 28 días | No indicado | Variable, sin importe |
 | [Smith.ai Virtual Front Desk](https://smith.ai/pricing/receptionists) (personas) | Por llamada | $300/30 llamadas; $810/90; $2,100/300 | $11.50, $10.50, $8.50 por llamada | De $10 a $7 por llamada | Por llamada | Ninguna |
 | [A Message Center](https://amessagecenter.com/pricing) | Por llamada | $47 + $2.00/llamada; $145/50 llamadas; $320/150; $490/250 | $1.85, $1.75, $1.65 por llamada | De $2.90 a $1.96 por llamada | Por llamada | No indicado |
@@ -154,7 +154,7 @@ Dos proveedores con la misma tarifa pueden enviarle facturas distintas, porque c
 
 Según nuestros cálculos, 40 llamadas de 2:10 suman unos 87 minutos de conversación. Con facturación por minuto completo, usted paga 120 minutos, un 38% más.
 
-Algunos proveedores cobran más que el tiempo de conversación. Ruby cuenta el tiempo en espera. PATLive cuenta la espera mientras la recepcionista busca un dato, pero no el tiempo en cola ni las notas posteriores a la llamada. MAP y Answering Service Care cobran el trabajo posterior a la llamada, y Moneypenny cobra hasta 180 segundos de cierre por llamada. Ambs no cobra el tiempo en espera ni el de timbre.
+Algunos proveedores cobran más que el tiempo de conversación. Ruby cuenta el tiempo en espera y las notas posteriores a la llamada. PATLive cuenta la espera mientras la recepcionista busca un dato, pero no el tiempo en cola ni las notas posteriores a la llamada. MAP y Answering Service Care cobran el trabajo posterior a la llamada, y Moneypenny cobra hasta 180 segundos de cierre por llamada. Ambs no cobra el tiempo en espera ni el de timbre.
 
 Con el spam, cada proveedor tiene su regla. Tres no lo cobran: Smith.ai cuando la llamada llega con identificador de llamadas, The Perfect Answer en las llamadas de spam y Ruby en las llamadas automáticas que su filtro envía al buzón de voz. Ambs dice que las llamadas de vendedores y las que cuelgan consumen minutos del plan. Los demás proveedores no lo indican.
 
@@ -176,7 +176,7 @@ Un plomero que trabaja solo no puede contestar debajo de un fregadero, así que 
 | Specialty Answering Service | 100 minutos: $159 + 20 a $1.44 | $187.80 |
 | PATLive | 100 minutos: $189 + 20 a $2.09 | $230.80 |
 | Smith.ai Virtual Front Desk | Starter: $300 + 10 llamadas a $11.50 | $415 |
-| Ruby | 200 minutos (sin excedente publicado) | $720 |
+| Ruby | 100 minutos: $395 + 20 a $4.50 | $485 |
 | LobbyStack Starter (nuestro, IA) | 150 minutos incluidos | $30 |
 
 ### Un salón de belleza: 100 llamadas cortas para reservar
@@ -300,7 +300,7 @@ Vale la pena cuando los trabajos que gana con las llamadas contestadas le dejan 
 
 **Llamadas perdidas × proporción que reservaría × ganancia por trabajo ≥ factura mensual**
 
-En este ejemplo, cada dato es una suposición nuestra. Contestar las llamadas que hoy pierde le da 2 trabajos más al mes con $300 de ganancia cada uno, o $600. Eso cubre cualquier factura con personas de la fila de 40 llamadas hasta $415. También cubre los $599 de Abby Connect, con $1 de sobra, pero no los $720 de Ruby. LobbyStack Starter cuesta $30 por las mismas llamadas. Pruebe sus propias cifras en la [calculadora de ingresos por llamadas perdidas](/es/missed-call-revenue-calculator/).
+En este ejemplo, cada dato es una suposición nuestra. Contestar las llamadas que hoy pierde le da 2 trabajos más al mes con $300 de ganancia cada uno, o $600. Eso cubre cualquier factura con personas de la fila de 40 llamadas. Los $485 de Ruby dejan $115, y los $599 de Abby Connect, la factura más alta, dejan $1. LobbyStack Starter cuesta $30 por las mismas llamadas. Pruebe sus propias cifras en la [calculadora de ingresos por llamadas perdidas](/es/missed-call-revenue-calculator/).
 
 ### Cuándo conviene más un servicio con personas
 

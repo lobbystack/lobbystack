@@ -13,7 +13,7 @@ locale: "en"
 canonicalSlug: "best-answering-service-for-small-business"
 ---
 
-The best answering service for small business is PATLive if you want a person on every call, Smith.ai if you want AI with live agents behind it, and an AI receptionist such as AI-Receptionist.com, LobbyStack or Upfirst if cost comes first. At 40 three-minute calls a month, live plans cost $127 to $720 and AI plans $25.25 to $99.
+The best answering service for small business is PATLive if you want a person on every call, Smith.ai if you want AI with live agents behind it, and an AI receptionist such as AI-Receptionist.com, LobbyStack or Upfirst if cost comes first. At 40 three-minute calls a month, live plans cost $127 to $599 and AI plans $25.25 to $99.
 
 Prices checked October 9, 2026 on each vendor's own pricing page, in US dollars before tax. LobbyStack wrote this list and sells an AI receptionist, so it appears in the AI section, marked as ours.
 
@@ -30,7 +30,7 @@ Our call pattern: 40 calls a month at 3 minutes each, or 120 minutes. The last c
 | Best overall live service | [PATLive](https://www.patlive.com/pricing/) | People | $49/mo plus $2.99/min | $230.80 |
 | Billing by the second | [Specialty Answering Service](https://www.specialtyansweringservice.net/pricing/) | People | $44/mo plus $1.54/min | $187.80 |
 | Lowest published live price | [AnswerNet](https://answeringservicesus.com/pricing/) | People | $29/mo plus $1.15/min | $127 |
-| Premium 24/7 receptionists | [Ruby](https://www.ruby.com/plans-and-pricing/) | People | $250 for 50 min | $720 |
+| Premium 24/7 receptionists | [Ruby](https://www.ruby.com/plans-and-pricing/) | People | $250 for 50 min | $485 |
 | Long calls, billed per call | [Smith.ai Virtual Front Desk](https://smith.ai/pricing/receptionists) | People | $300 for 30 calls | $415 |
 | AI with live agents behind it | [Smith.ai AI Receptionist](https://smith.ai/pricing/ai-receptionist) | AI, escalating to people | $0 for 25 calls | $45 on Free, $150 on Pro |
 | People and AI on one plan | [Abby Connect](https://www.abby.com/pricing/) | People and AI | $165 for 50 Abby Minutes | $599 |
@@ -38,13 +38,13 @@ Our call pattern: 40 calls a month at 3 minutes each, or 120 minutes. The last c
 | AI billed per call | [Upfirst](https://upfirst.ai/pricing) | AI | $24.95 for 30 calls | $39.95 |
 | AI for repeat callers | [Goodcall](https://www.goodcall.com/pricing) | AI | $79 for 100 unique callers | $79 |
 
-For the last column, we added overage to the base plan. PATLive is $189 for 100 minutes plus 20 minutes at $2.09. SAS is $159 plus 20 minutes at $1.44. AnswerNet is $105 plus 20 minutes at $1.10. Smith.ai Virtual Front Desk is $300 plus 10 calls at $11.50. Smith.ai's AI Free plan is $0 plus 15 extra calls at $3, and Upfirst is $24.95 plus 10 calls at $1.50. Ruby and Abby Connect don't publish overage rates, so their figures are the smallest plans that cover all 120 minutes.
+For the last column, we added overage to the base plan. PATLive is $189 for 100 minutes plus 20 minutes at $2.09. SAS is $159 plus 20 minutes at $1.44. AnswerNet is $105 plus 20 minutes at $1.10. Smith.ai Virtual Front Desk is $300 plus 10 calls at $11.50. Smith.ai's AI Free plan is $0 plus 15 extra calls at $3, and Upfirst is $24.95 plus 10 calls at $1.50. Ruby is $395 plus 20 minutes at $4.50, the overage rate its [help center](https://rubyhelpcenter.helpjuice.com/billing-plans/am-i-on-the-right-billing-plan) lists for the 100-minute plan. Abby Connect doesn't publish an overage rate, so its figure is the smallest plan that covers all 120 minutes.
 
 ## How do live, AI and hybrid answering services differ?
 
 A live service puts a person on the call and bills by the minute or the call. An AI service answers with software and bills by the minute, the call or the unique caller. A hybrid answers with AI and hands calls to a person. Entry prices start at $29 plus $1.15 a minute for live (AnswerNet) and $14 for 75 minutes for AI (AI-Receptionist.com). For hybrid, Moneypenny's AI plans hand calls to its people from $69 for 25 calls, and Smith.ai's AI starts free.
 
-**Live answering services** suit calls that need judgment: an upset customer, a long intake, a caller who wants a person. You pay for that time, and live plans in this list cost $127 to $720 at 40 calls.
+**Live answering services** suit calls that need judgment: an upset customer, a long intake, a caller who wants a person. You pay for that time, and live plans in this list cost $127 to $599 at 40 calls.
 
 **AI answering services** cost less at the same volume, from $25.25 to $99 at 40 calls for the AI and hybrid plans here. LobbyStack Starter costs $30 for 150 minutes, and its plans don't limit how many calls it answers at once. The AI follows the rules you write, so decide when it should transfer a call or take a message.
 
@@ -54,9 +54,9 @@ If you're comparing phone trees and voicemail add-ons, start with our guide to t
 
 ## What do these services cost at 40 calls a month?
 
-At 40 three-minute calls a month, live plans in this list cost $127 (AnswerNet) to $720 (Ruby), before setup fees. AI and hybrid plans cost $25.25 (AI-Receptionist.com, with Booster minutes) to $99 (Moneypenny's AI plan). We read every price on the vendor's own page on October 9, 2026, in US dollars before tax.
+At 40 three-minute calls a month, live plans in this list cost $127 (AnswerNet) to $599 (Abby Connect), before setup fees. AI and hybrid plans cost $25.25 (AI-Receptionist.com, with Booster minutes) to $99 (Moneypenny's AI plan). We read every price on the vendor's own page on October 9, 2026, in US dollars before tax.
 
-Between those ends, live answering costs $174.80 at [Ambs Call Center](https://www.ambscallcenter.com/answering-service-pricing) plus a one-time $85 setup fee, $177 at [The Perfect Answer](https://theperfectanswer.com/pricing/), $179 at [MAP Communications](https://www.mapcommunications.com/pricing/), $187.80 at SAS and $213 at [Answering Service Care](https://answeringservicecare.com/pricing/) plus a one-time $50 setup fee. Higher up, PATLive costs $230.80, [Davinci Virtual](https://www.davincivirtual.com/live-receptionists) $251.50 plus a one-time $95 setup fee, [Moneypenny](https://www.moneypenny.com/us/pricing/) $307.40, Smith.ai Virtual Front Desk $415 and Abby Connect $599. On the AI side, LobbyStack costs $30, Upfirst $39.95, Smith.ai's AI Receptionist $45, Rosie $49 ($149 with calendar booking and transfers), [Dialzara](https://dialzara.com/pricing) $57.80 and Goodcall $79.
+Between those ends, live answering costs $174.80 at [Ambs Call Center](https://www.ambscallcenter.com/answering-service-pricing) plus a one-time $85 setup fee, $177 at [The Perfect Answer](https://theperfectanswer.com/pricing/), $179 at [MAP Communications](https://www.mapcommunications.com/pricing/), $187.80 at SAS and $213 at [Answering Service Care](https://answeringservicecare.com/pricing/) plus a one-time $50 setup fee. Higher up, PATLive costs $230.80, [Davinci Virtual](https://www.davincivirtual.com/live-receptionists) $251.50 plus a one-time $95 setup fee, [Moneypenny](https://www.moneypenny.com/us/pricing/) $307.40, Smith.ai Virtual Front Desk $415, Ruby $485 and Abby Connect $599. On the AI side, LobbyStack costs $30, Upfirst $39.95, Smith.ai's AI Receptionist $45, Rosie $49 ($149 with calendar booking and transfers), [Dialzara](https://dialzara.com/pricing) $57.80 and Goodcall $79.
 
 We left three services out of these totals. [AnswerConnect](https://www.answerconnect.com/view-pricing) uses a quote form, though a [price sheet it hosts](https://assets.answerconnect.com/answerconnect/us/pdf/AnswerConnectUS_Pricing.pdf), last modified September 30, 2025, lists $350 for 200 minutes plus a $49.99 setup fee. [Nexa](https://www.nexa.com/plans/) gives prices on request and charges a setup fee it doesn't publish. [Posh](https://posh.com/en-ca/pricing/) showed us only Canadian prices (CAD 215 for 100 minutes), so its US price isn't confirmed.
 
@@ -97,12 +97,12 @@ These five publish their prices, from the cheapest published live rate (AnswerNe
 
 ### Ruby: premium 24/7 receptionists
 
-- **Price (checked October 9, 2026):** $250 for 50 minutes, $395 for 100 or $720 for 200. Ruby doesn't publish its overage rate. See [Ruby pricing](https://www.ruby.com/plans-and-pricing/).
-- **How it bills:** each call rounds up to the next 60 seconds, per its terms updated March 2026, and hold time counts.
+- **Price (checked October 9, 2026):** $250 for 50 minutes, $395 for 100 or $720 for 200. Extra minutes cost $5.40, $4.50 and $4.40 on those plans, per Ruby's [help center](https://rubyhelpcenter.helpjuice.com/billing-plans/am-i-on-the-right-billing-plan), checked October 10, 2026. See [Ruby pricing](https://www.ruby.com/plans-and-pricing/).
+- **How it bills:** each call rounds up to the next 60 seconds, per its terms updated March 2026, and hold time and after-call notes count.
 - **Setup and contract:** no setup or activation fees, and plans renew every 30 days. First-time users get a refund if they cancel within 21 days or before 500 minutes.
 - **Languages:** Spanish 24/7 at no extra cost.
 - **Also included:** Ruby doesn't bill robocalls its filter sends to voicemail, and its app alerts you at 85% and 100% of your minutes.
-- **Where it falls short:** it costs the most at 40 calls in this list, and 60-second rounding makes short calls expensive.
+- **Where it falls short:** at $485 for 40 calls, only Abby Connect costs more in this list, and 60-second rounding makes short calls expensive.
 - **Pick it if** callers expect a person at any hour, in English or Spanish.
 
 ### Smith.ai Virtual Front Desk: priced per call

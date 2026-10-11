@@ -45,7 +45,7 @@ The table covers seven live services and seven AI or hybrid ones. They bill per 
 | [PATLive](https://www.patlive.com/pricing/) | Live | $49/mo + $2.99/min | First minute, then 6-second steps | None listed | $230.80 | $479 |
 | [MAP Communications](https://www.mapcommunications.com/pricing/) | Live | $49/mo + $1.37/min | Whole minutes, rounded up | Not stated | $179 + telecom fee | $403 + telecom fee |
 | [Specialty Answering Service](https://www.specialtyansweringservice.net/pricing/) | Live | $44/mo + $1.54/min | Per second | $0 | $187.80 | $384.20 |
-| [Ruby](https://www.ruby.com/plans-and-pricing/) | Live | $250/mo for 50 min | 60 seconds, rounded up | None | $720 | Not fully priced |
+| [Ruby](https://www.ruby.com/plans-and-pricing/) | Live | $250/mo for 50 min | 60 seconds, rounded up | None | $485 | $1,160 |
 | [Nexa](https://www.nexa.com/plans/) | Live | Price on request | Not stated | Yes, amount not published | Price on request | Price on request |
 | [Smith.ai Virtual Front Desk](https://smith.ai/pricing/receptionists) | Live receptionists | $300/mo for 30 calls | Per call | None | $415 | $915 |
 | [Smith.ai AI Receptionist](https://smith.ai/pricing/ai-receptionist) | AI, with live escalation | $0 for 25 calls | Per call | None | $45 (Free), or $150 on Pro | $212.50 |
@@ -84,7 +84,7 @@ Specialty Answering Service (SAS) bills by the second, from $44 a month plus $1.
 
 ### Ruby: best for Spanish at any hour
 
-Ruby's plans differ only in minutes, from $250 for 50 to $1,725 for 500 ([pricing page](https://www.ruby.com/plans-and-pricing/)). Every plan includes Spanish 24/7, and Ruby's app warns you at 85% and 100% of your minutes. Ruby charges no setup or after-hours fees and doesn't bill robocalls its filter catches. The [HVAC page](https://www.ruby.com/industries/hvac/) says agents escalate emergency calls to your team. Included minutes work out to $3.45 to $5.00 each, the highest per-minute price here, and Ruby publishes no overage rate. Calls round up to 60 seconds (terms, March 2026).
+Ruby's plans differ only in minutes, from $250 for 50 to $1,725 for 500 ([pricing page](https://www.ruby.com/plans-and-pricing/)). Every plan includes Spanish 24/7, and Ruby's app warns you at 85% and 100% of your minutes. Ruby charges no setup or after-hours fees and doesn't bill robocalls its filter catches. The [HVAC page](https://www.ruby.com/industries/hvac/) says agents escalate emergency calls to your team. Included minutes work out to $3.45 to $5.00 each, the highest per-minute price here. Extra minutes cost $4.00 to $5.40, depending on the plan ([help center](https://rubyhelpcenter.helpjuice.com/billing-plans/am-i-on-the-right-billing-plan), checked October 10, 2026). Calls round up to 60 seconds (terms, March 2026).
 
 ### Nexa: price on request for calls, texts and chats
 
@@ -130,7 +130,7 @@ It doesn't sync with ServiceTitan, Housecall Pro or Jobber, and Google Calendar 
 
 ## How much does an HVAC answering service cost?
 
-At 40 three-minute calls a month, the live services here cost $127 to $720 and the AI services $30 to $149, with Sameday AI from $449. At 100 calls, the live services with complete published prices run $237.50 to $915 and the AI services $60 to $212.50, again with Sameday AI from $449. Setup fees and add-ons can raise both.
+At 40 three-minute calls a month, the live services here cost $127 to $485 and the AI services $30 to $149, with Sameday AI from $449. At 100 calls, the live services with complete published prices run $237.50 to $1,160 and the AI services $60 to $212.50, again with Sameday AI from $449. Setup fees and add-ons can raise both.
 
 Housecall Pro and Nexa publish no prices, so we left them out. For other trades, see [what an answering service costs outside HVAC](/blog/how-much-does-an-answering-service-cost/).
 
@@ -144,7 +144,7 @@ Each line shows the cheapest option for 40 calls (120 minutes), then for 100 cal
 - **PATLive:** $189 + 20 x $2.09 = $230.80; $479 for 300 minutes
 - **AnswerForce:** $349 for 200 minutes, plus $75 setup once; $389 for 300 minutes
 - **Smith.ai Virtual Front Desk:** $300 + 10 x $11.50 = $415; $810 + 10 x $10.50 = $915. Booking on every call adds $60, then $150.
-- **Ruby:** $720 for 200 minutes, because the $395 plan's 100 minutes leaves 20 at an unpublished rate. At 300 minutes it's $720 plus 100 minutes at that rate, or $1,725 for 500.
+- **Ruby:** $395 + 20 x $4.50 = $485; $720 + 100 x $4.40 = $1,160
 - **Smith.ai AI Receptionist:** Free plan, 15 extra calls x $3.00 = $45; Pro, $150 + 25 x $2.50 = $212.50
 - **Jobber Receptionist:** $29 + 10 x $0.79 = $36.90; $29 + 70 x $0.79 = $84.30, plus a Jobber plan
 - **Rosie:** $49, or $149 with booking and transfers; $149, because 300 minutes passes the $49 plan's 250
@@ -214,7 +214,7 @@ If your dispatchers work in ServiceTitan and you need the job written there duri
 
 It pays off when the jobs you'd save cover the bill. Multiply the calls you miss in a month by the share that would have booked and by your average margin per job, then compare that with the month's price above. Run it for July and for April, because HVAC call volume follows the weather.
 
-Take an example with made-up inputs: 20 missed calls, 1 in 4 of them booking and $300 of margin per job come to $1,500. A 100-call month costs $60 to $915 on the services with complete prices above. Try your own numbers in the [missed-call revenue calculator](/missed-call-revenue-calculator/).
+Take an example with made-up inputs: 20 missed calls, 1 in 4 of them booking and $300 of margin per job come to $1,500. A 100-call month costs $60 to $1,160 on the services with complete prices above. Try your own numbers in the [missed-call revenue calculator](/missed-call-revenue-calculator/).
 
 Most of a plan sized for July goes unused in April. Pay-as-you-go plans at A Message Center, SAS, MAP and PATLive keep the slow-month bill low. SAS and PATLive let you change plans for the next month, and LobbyStack lets you upgrade or downgrade from billing settings.
 
@@ -256,7 +256,7 @@ Goodcall can try up to three escalation contacts, Rosie's $299 plan tries severa
 
 ## How we checked these services
 
-Updated October 9, 2026. We read each price, billing unit and setup fee on the vendor's own pricing page, help center or terms that day. We mark quote-only services price on request, and we compare different billing units only at the call pattern above. LobbyStack's figures come from its [pricing page](/pricing/). Some older lists quote prices that have since changed; Ruby's 50-minute plan costs $250 today. Our next price check is January 2027.
+Updated October 9, 2026. We read each price, billing unit and setup fee on the vendor's own pricing page, help center or terms that day. We mark quote-only services price on request, and we compare different billing units only at the call pattern above. We checked Ruby's overage rates in its help center on October 10, 2026. LobbyStack's figures come from its [pricing page](/pricing/). Some older lists quote prices that have since changed; Ruby's 50-minute plan costs $250 today. Our next price check is January 2027.
 
 Sources, all read October 9, 2026:
 
@@ -265,7 +265,7 @@ Sources, all read October 9, 2026:
 - PATLive: [pricing](https://www.patlive.com/pricing/), [HVAC page](https://www.patlive.com/industries/hvac)
 - MAP Communications: [pricing](https://www.mapcommunications.com/pricing/), [terms](https://www.mapcommunications.com/terms/), [HVAC page](https://www.mapcommunications.com/industries/contractors/hvac-answering-service/)
 - Specialty Answering Service: [pricing](https://www.specialtyansweringservice.net/pricing/), [HVAC page](https://www.specialtyansweringservice.net/industries/construction/hvac-answering-service/)
-- Ruby: [pricing](https://www.ruby.com/plans-and-pricing/), [HVAC page](https://www.ruby.com/industries/hvac/)
+- Ruby: [pricing](https://www.ruby.com/plans-and-pricing/), [overage rates](https://rubyhelpcenter.helpjuice.com/billing-plans/am-i-on-the-right-billing-plan), [HVAC page](https://www.ruby.com/industries/hvac/)
 - Nexa: [plans](https://www.nexa.com/plans/), [HVAC page](https://www.nexa.com/industries/hvac/)
 - Smith.ai: [AI Receptionist pricing](https://smith.ai/pricing/ai-receptionist), [Virtual Front Desk pricing](https://smith.ai/pricing/receptionists)
 - Jobber: [Receptionist help article](https://help.getjobber.com/en/articles/receptionistpowered-by-jobber-ai/), [pricing](https://www.getjobber.com/pricing/)
