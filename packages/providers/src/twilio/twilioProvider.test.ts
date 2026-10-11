@@ -5,15 +5,16 @@ const mocks = vi.hoisted(() => {
   const incomingPhoneNumbers = Object.assign(vi.fn(() => numberResource), { create: vi.fn(), list: vi.fn() });
   const localList = vi.fn();
   const tollFreeList = vi.fn();
+  const mobileList = vi.fn();
   const verificationCreate = vi.fn();
   const client = {
     incomingPhoneNumbers,
-    availablePhoneNumbers: vi.fn(() => ({ local: { list: localList }, tollFree: { list: tollFreeList } })),
+    availablePhoneNumbers: vi.fn(() => ({ local: { list: localList }, mobile: { list: mobileList }, tollFree: { list: tollFreeList } })),
     verify: { v2: { services: vi.fn(() => ({ verifications: { create: verificationCreate } })) } },
     messages: Object.assign(vi.fn(), { create: vi.fn() }),
     calls: vi.fn(),
   };
-  return { client, incomingPhoneNumbers, numberResource, localList, tollFreeList, verificationCreate };
+  return { client, incomingPhoneNumbers, numberResource, localList, mobileList, tollFreeList, verificationCreate };
 });
 
 vi.mock("twilio", () => ({ default: vi.fn(() => mocks.client) }));
@@ -56,6 +57,16 @@ describe("TwilioProvider phone provisioning", () => {
     const twilio = provider();
     expect(await twilio.purchasePhoneNumber({ e164: "+14165550100", friendlyName: "LobbyStack", smsUrl: "https://app.test/sms", statusCallbackUrl: "https://app.test/status" })).toEqual({ providerPhoneId: "PN123", e164: "+14165550100", smsUrl: "https://app.test/sms" });
     expect(await twilio.findOwnedPhoneNumber({ e164: "+14165550100" })).toEqual({ providerPhoneId: "PN123", e164: "+14165550100", friendlyName: "LobbyStack" });
+  });
+
+  it("lists mobile inventory and buys a number under its regulatory bundle and address", async () => {
+    mocks.mobileList.mockResolvedValue([{ phoneNumber: "+61491570006", capabilities: { SMS: true, voice: true } }]);
+    mocks.incomingPhoneNumbers.create.mockResolvedValue({ sid: "PN456", phoneNumber: "+61491570006" });
+    const twilio = provider();
+    expect(await twilio.listAvailablePhoneNumbers({ countryCode: "AU", kind: "mobile", limit: 10 })).toEqual([{ phoneE164: "+61491570006", countryCode: "AU", capabilities: { sms: true, voice: true } }]);
+    expect(mocks.localList).not.toHaveBeenCalled();
+    await twilio.purchasePhoneNumber({ e164: "+61491570006", friendlyName: "LobbyStack", smsUrl: "https://app.test/sms", statusCallbackUrl: "https://app.test/status", bundleSid: "BU123", addressSid: "AD123" });
+    expect(mocks.incomingPhoneNumbers.create).toHaveBeenCalledWith(expect.objectContaining({ phoneNumber: "+61491570006", bundleSid: "BU123", addressSid: "AD123" }));
   });
 
   it("starts Verify and returns the durable verification SID", async () => {

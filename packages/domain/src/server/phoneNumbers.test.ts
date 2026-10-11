@@ -59,6 +59,16 @@ describe("searchBusinessNumberInventory", () => {
     await expect(offer(purpose)).rejects.toMatchObject({ status, code });
   });
 
+  it("searches mobile numbers for businesses in the UK and Australia", async () => {
+    const listAvailablePhoneNumbers = vi.fn(async () => []);
+    setup(undefined, { timezone: "Europe/London" });
+    await searchBusinessNumberInventory(context, scope, { listAvailablePhoneNumbers });
+    setup();
+    await searchBusinessNumberInventory(context, { ...scope, selection: { countryCode: "AU", kind: "local" } }, { listAvailablePhoneNumbers });
+    expect(listAvailablePhoneNumbers).toHaveBeenNthCalledWith(1, expect.objectContaining({ countryCode: "GB", kind: "mobile" }));
+    expect(listAvailablePhoneNumbers).toHaveBeenNthCalledWith(2, expect.objectContaining({ countryCode: "AU", kind: "mobile" }));
+  });
+
   it("answers an unsupported country with 400", async () => {
     setup();
     await expect(searchBusinessNumberInventory(context, { ...scope, selection: { countryCode: "FR" as never } }, { listAvailablePhoneNumbers: async () => [] })).rejects.toMatchObject({ status: 400, code: "unsupported_country" });

@@ -659,7 +659,16 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       try {
         const owned = await dependencies.twilio.findOwnedPhoneNumber({ e164: claim.e164 });
         if (owned) providerPhoneId = owned.providerPhoneId;
-        else { const result = await dependencies.twilio.purchasePhoneNumber({ e164: claim.e164, friendlyName: `LobbyStack ${businessId}`, smsUrl, statusCallbackUrl }); providerPhoneId = result.providerPhoneId; purchased = true; }
+        else {
+          // Twilio sells UK and Australian mobile numbers only under the regulatory
+          // bundle it approved for LobbyStack. See docs/voice/runtime.md.
+          const country = claim.selection?.countryCode;
+          const bundleSid = country === "GB" ? process.env.TWILIO_GB_BUNDLE_SID?.trim() : country === "AU" ? process.env.TWILIO_AU_BUNDLE_SID?.trim() : undefined;
+          const addressSid = country === "AU" ? process.env.TWILIO_AU_ADDRESS_SID?.trim() : undefined;
+          if ((country === "GB" || country === "AU") && !bundleSid) throw new Error(`TWILIO_${country}_BUNDLE_SID is required to buy a number in ${country}. See docs/voice/runtime.md.`);
+          const result = await dependencies.twilio.purchasePhoneNumber({ e164: claim.e164, friendlyName: `LobbyStack ${businessId}`, smsUrl, statusCallbackUrl, ...(bundleSid ? { bundleSid } : {}), ...(addressSid ? { addressSid } : {}) });
+          providerPhoneId = result.providerPhoneId; purchased = true;
+        }
         await addNumberToSipTrunk({ trunkSid: sipTrunkSid, providerPhoneId });
         const phoneNumberId = await completeNumberProvisioning(dependencies.domain, { businessId, claimId, e164: claim.e164, providerPhoneId, voiceUrl: `sip-trunk:${sipTrunkSid}`, smsUrl });
         return { status: "completed", entityId: phoneNumberId };

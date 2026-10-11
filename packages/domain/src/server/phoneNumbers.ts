@@ -10,10 +10,10 @@ import type { DomainContext } from "./context";
 import { normalizeOnboardingStage } from "./onboarding";
 import { resolveBusinessNumberMarket } from "./phoneNumberMarket";
 
-export type NumberSelection = { countryCode: "US" | "CA" | "GB" | "AU"; kind: "local" | "toll_free"; areaCode?: string; city?: string; regionCode?: string; postalCode?: string };
+export type NumberSelection = { countryCode: "US" | "CA" | "GB" | "AU"; kind: "local" | "mobile" | "toll_free"; areaCode?: string; city?: string; regionCode?: string; postalCode?: string };
 export type NumberInventoryProvider = { listAvailablePhoneNumbers(input: NumberSelection & { limit: number }): Promise<Array<{ phoneE164: string; locality?: string; region?: string; countryCode: string; capabilities: { sms: boolean; voice: boolean } }>> };
 type NumberClaimPurpose = "onboarding" | "replacement";
-type Offer = { v: 1; purpose: NumberClaimPurpose; businessId: string; userId: string; e164: string; countryCode: string; kind: "local" | "toll_free"; capabilities: { sms: true; voice: true }; selection: NumberSelection; exp: number };
+type Offer = { v: 1; purpose: NumberClaimPurpose; businessId: string; userId: string; e164: string; countryCode: string; kind: NumberSelection["kind"]; capabilities: { sms: true; voice: true }; selection: NumberSelection; exp: number };
 
 function encode(value: unknown): string { return Buffer.from(JSON.stringify(value)).toString("base64url"); }
 function sign(encoded: string, secret: string): string { return createHmac("sha256", secret).update(encoded).digest("base64url"); }
@@ -83,7 +83,8 @@ export async function searchBusinessNumberInventory(context: DomainContext, inpu
   });
   const countryCode = market.countryCode;
   if (!["US", "CA", "GB", "AU"].includes(countryCode)) throw numberClaimError(400, "unsupported_country", "Unsupported country.");
-  const selection: NumberSelection = { countryCode, kind: input.selection?.kind ?? "local", ...(input.selection?.areaCode ? { areaCode: input.selection.areaCode.replace(/\D/g, "") } : {}), ...(input.selection?.city ? { city: input.selection.city.trim() } : {}), ...(input.selection?.regionCode ? { regionCode: input.selection.regionCode.trim() } : {}), ...(input.selection?.postalCode ? { postalCode: input.selection.postalCode.trim() } : {}) };
+  // Twilio's UK and Australian local numbers can't receive texts, so businesses there get mobile numbers.
+  const selection: NumberSelection = { countryCode, kind: countryCode === "GB" || countryCode === "AU" ? "mobile" : input.selection?.kind ?? "local", ...(input.selection?.areaCode ? { areaCode: input.selection.areaCode.replace(/\D/g, "") } : {}), ...(input.selection?.city ? { city: input.selection.city.trim() } : {}), ...(input.selection?.regionCode ? { regionCode: input.selection.regionCode.trim() } : {}), ...(input.selection?.postalCode ? { postalCode: input.selection.postalCode.trim() } : {}) };
   const limit = Math.max(1, Math.min(20, Math.trunc(input.limit ?? 10)));
   const numbers = (await provider.listAvailablePhoneNumbers({ ...selection, limit })).filter(number => number.capabilities.sms && number.capabilities.voice).slice(0, limit).map(number => ({ ...number, claimToken: issueOffer({ v: 1, purpose, businessId: input.businessId, userId: input.userId, e164: number.phoneE164, countryCode: number.countryCode, kind: selection.kind, capabilities: { sms: true, voice: true }, selection, exp: Date.now() + 5 * 60_000 }, input.claimTokenSecret) }));
   return { market, numbers };
@@ -123,7 +124,7 @@ export async function getOnboardingNumberClaim(context: DomainContext, input: { 
 const numberProvisioningLeaseMs = 10 * 60_000;
 
 export async function claimNumberProvisioning(context: DomainContext, input: { businessId: string; claimId: string }) {
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => (await tx.update(onboardingNumberClaimEvents).set({ status: "provisioning", attemptCount: sql`${onboardingNumberClaimEvents.attemptCount} + 1`, updatedAt: new Date() }).where(and(eq(onboardingNumberClaimEvents.id, input.claimId), eq(onboardingNumberClaimEvents.businessId, input.businessId), or(eq(onboardingNumberClaimEvents.status, "reserved"), and(eq(onboardingNumberClaimEvents.status, "provisioning"), lt(onboardingNumberClaimEvents.updatedAt, new Date(Date.now() - numberProvisioningLeaseMs)))))).returning({ id: onboardingNumberClaimEvents.id, e164: onboardingNumberClaimEvents.requestedE164 }))[0] ?? null);
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => (await tx.update(onboardingNumberClaimEvents).set({ status: "provisioning", attemptCount: sql`${onboardingNumberClaimEvents.attemptCount} + 1`, updatedAt: new Date() }).where(and(eq(onboardingNumberClaimEvents.id, input.claimId), eq(onboardingNumberClaimEvents.businessId, input.businessId), or(eq(onboardingNumberClaimEvents.status, "reserved"), and(eq(onboardingNumberClaimEvents.status, "provisioning"), lt(onboardingNumberClaimEvents.updatedAt, new Date(Date.now() - numberProvisioningLeaseMs)))))).returning({ id: onboardingNumberClaimEvents.id, e164: onboardingNumberClaimEvents.requestedE164, selection: onboardingNumberClaimEvents.selectionContext }))[0] ?? null);
 }
 
 /** When a claim another attempt holds becomes reclaimable, or null when no attempt holds it. */

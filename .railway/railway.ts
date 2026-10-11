@@ -77,6 +77,11 @@ export default defineRailway((ctx) => {
       // New phone numbers join this Twilio Elastic SIP trunk, which sends their
       // calls to GPT-Live. Provisioning fails without it.
       TWILIO_SIP_TRUNK_SID: preserve(),
+      // Twilio sells UK and Australian mobile numbers only under these approved
+      // regulatory bundles. See docs/voice/runtime.md.
+      TWILIO_GB_BUNDLE_SID: preserve(),
+      TWILIO_AU_BUNDLE_SID: preserve(),
+      TWILIO_AU_ADDRESS_SID: preserve(),
       FEEDBACK_TO_EMAIL: preserve(),
       ONBOARDING_FOLLOWUP_FROM: preserve(),
       ONBOARDING_FOLLOWUP_SENDER_NAME: preserve(),

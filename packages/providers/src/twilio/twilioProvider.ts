@@ -146,10 +146,10 @@ export class TwilioProvider {
     return { verificationSid: verification.sid, status: verification.status };
   }
 
-  async listAvailablePhoneNumbers(input: { countryCode: string; kind: "local" | "toll_free"; areaCode?: string; city?: string; regionCode?: string; postalCode?: string; limit: number }): Promise<AvailablePhoneNumber[]> {
+  async listAvailablePhoneNumbers(input: { countryCode: string; kind: "local" | "mobile" | "toll_free"; areaCode?: string; city?: string; regionCode?: string; postalCode?: string; limit: number }): Promise<AvailablePhoneNumber[]> {
     const collection = this.client.availablePhoneNumbers(input.countryCode);
     const filters = { smsEnabled: true, voiceEnabled: true, limit: Math.max(1, Math.min(20, Math.trunc(input.limit))), ...(input.areaCode && /^\d+$/.test(input.areaCode) ? { areaCode: Number(input.areaCode) } : {}), ...(input.city ? { inLocality: input.city } : {}), ...(input.regionCode ? { inRegion: input.regionCode } : {}), ...(input.postalCode ? { inPostalCode: input.postalCode } : {}) };
-    const numbers = input.kind === "toll_free" ? await collection.tollFree.list(filters) : await collection.local.list(filters);
+    const numbers = input.kind === "toll_free" ? await collection.tollFree.list(filters) : input.kind === "mobile" ? await collection.mobile.list(filters) : await collection.local.list(filters);
     // Twilio returns capability keys as "SMS"/"MMS"/"voice", while its TypeScript
     // types use lowercase. Read both so real inventory is not filtered out.
     return numbers
@@ -162,9 +162,10 @@ export class TwilioProvider {
       .filter((number) => number.capabilities.sms && number.capabilities.voice);
   }
 
-  async purchasePhoneNumber(input: { e164: string; friendlyName: string; smsUrl: string; statusCallbackUrl: string }): Promise<{ providerPhoneId: string; e164: string; smsUrl?: string }> {
+  /** Some countries sell numbers only under an approved regulatory bundle, and some also need an address on file. */
+  async purchasePhoneNumber(input: { e164: string; friendlyName: string; smsUrl: string; statusCallbackUrl: string; bundleSid?: string; addressSid?: string }): Promise<{ providerPhoneId: string; e164: string; smsUrl?: string }> {
     assertCertificationOperationAllowed();
-    const number = await this.client.incomingPhoneNumbers.create({ phoneNumber: input.e164, friendlyName: input.friendlyName, smsUrl: input.smsUrl, smsMethod: "POST", statusCallback: input.statusCallbackUrl, statusCallbackMethod: "POST" });
+    const number = await this.client.incomingPhoneNumbers.create({ phoneNumber: input.e164, friendlyName: input.friendlyName, smsUrl: input.smsUrl, smsMethod: "POST", statusCallback: input.statusCallbackUrl, statusCallbackMethod: "POST", ...(input.bundleSid ? { bundleSid: input.bundleSid } : {}), ...(input.addressSid ? { addressSid: input.addressSid } : {}) });
     return { providerPhoneId: number.sid, e164: number.phoneNumber, ...(number.smsUrl ? { smsUrl: number.smsUrl } : {}) };
   }
 

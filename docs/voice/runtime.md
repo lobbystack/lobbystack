@@ -221,6 +221,9 @@ The admin and worker read these variables:
 | `INTERNAL_SERVICE_TOKEN` | admin, worker | Authenticates the admin's attach request to the worker. |
 | `WORKER_INTERNAL_URL` | admin | Private URL of the worker's HTTP port, for example `http://worker:3002`. |
 | `TWILIO_SIP_TRUNK_SID` | worker | Adds new phone numbers to the SIP trunk. The worker refuses to provision a number without it. |
+| `TWILIO_GB_BUNDLE_SID` | worker | The approved Twilio regulatory bundle for UK mobile numbers. The worker won't buy a UK number without it. |
+| `TWILIO_AU_BUNDLE_SID` | worker | The approved Twilio regulatory bundle for Australian mobile numbers. The worker won't buy an Australian number without it. |
+| `TWILIO_AU_ADDRESS_SID` | worker | The address in the Australian bundle. Twilio needs an address on every Australian mobile number. |
 | `WEB_CALL_MAX_DURATION_MS` | admin | Optional cap on browser call length. |
 | `RAILWAY_DEPLOYMENT_DRAINING_SECONDS` | worker | Railway's time between SIGTERM and SIGKILL. Set it to `1860` so calls can finish during a deploy. See [Deploy the worker during calls](#deploy-the-worker-during-calls). |
 | `LIVE_DRAIN_TIMEOUT_MS` | worker | Optional. How long a shutdown lets calls finish on their own before it ends them with a goodbye. Overrides the timeout derived from `RAILWAY_DEPLOYMENT_DRAINING_SECONDS`. |
@@ -248,3 +251,18 @@ pnpm exec tsx scripts/operations/move-number-to-gpt-live.ts \
 ```
 
 A number off the trunk has nothing to answer its calls, so keep every number on it.
+
+### Sell numbers in the UK and Australia
+
+Twilio's UK and Australian local numbers can't receive texts, so businesses in those countries get mobile numbers. Twilio sells mobile numbers there only under a regulatory bundle it has approved. Create one bundle per country with LobbyStack as the business. The worker buys every number in that country under it.
+
+To set up a country:
+
+1. In the Twilio Console, open **Phone Numbers > Regulatory Compliance > Bundles**. Create a business bundle for mobile numbers in that country.
+2. Fill in what that country asks for:
+   - United Kingdom: set **Business Classification** to `INDEPENDENT_SOFTWARE_VENDOR`, and answer `YES` when Twilio asks whether you assign numbers to end customers. The address can be anywhere except a PO box. The representative's phone must be a mobile number they answer, and their email must use the company's domain.
+   - Australia: upload a commercial registry extract that shows the company's name, address and registration number.
+3. Submit the bundle and wait for Twilio to approve it.
+4. On the worker, set the bundle's SID as `TWILIO_GB_BUNDLE_SID` or `TWILIO_AU_BUNDLE_SID`. For Australia, also set the SID of the bundle's address as `TWILIO_AU_ADDRESS_SID`.
+
+Until you set a country's bundle, number claims there fail with an error that includes the missing variable's name.
