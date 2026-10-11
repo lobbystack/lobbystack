@@ -76,7 +76,7 @@ export const tradeDetails: Record<string, TradeDetails> = {
       {
         call: "Burst pipe or active leak",
         action: "Transfers",
-        detail: "Reads your shutoff steps, then connects your on-call plumber",
+        detail: "Connects your on-call plumber and can share your shutoff steps",
       },
       {
         call: "Sewage backup",
@@ -238,7 +238,7 @@ export const tradeDetails: Record<string, TradeDetails> = {
         at: "0:08",
         speaker: "lobbystack",
         text: "If you can reach the breaker panel safely, turn off the breaker for that room. If you see smoke or flames, leave the house and call 911.",
-        note: "Reads your safety script first",
+        note: "Uses your safety script",
       },
       {
         at: "0:18",
@@ -270,7 +270,7 @@ export const tradeDetails: Record<string, TradeDetails> = {
         call: "Burning smell, sparks, or a hot outlet",
         action: "Transfers",
         detail:
-          "Reads your safety script, then connects your on-call electrician",
+          "Connects your on-call electrician and can share your safety script",
       },
       {
         call: "Whole-house power loss",
@@ -453,7 +453,7 @@ export const tradeDetails: Record<string, TradeDetails> = {
         call: "Washer leaking",
         action: "Books",
         detail:
-          "Tells the caller to shut off the water supply, then books a visit",
+          "Books a visit and can tell the caller to shut off the water supply",
       },
       {
         call: "Brand you don't service",
@@ -537,7 +537,7 @@ export const tradeDetails: Record<string, TradeDetails> = {
       {
         call: "Active flooding or water coming in",
         action: "Transfers",
-        detail: "Reads your safety script, then connects your on-call crew",
+        detail: "Connects your on-call crew and can share your safety script",
       },
       {
         call: "Sewage backup",
@@ -707,7 +707,7 @@ export const tradeDetails: Record<string, TradeDetails> = {
       {
         call: "Active leak or damage at a job site",
         action: "Transfers",
-        detail: "Reads your safety steps, then connects your on-call manager",
+        detail: "Connects your on-call manager and can share your safety steps",
       },
       {
         call: "Security problem at a site",

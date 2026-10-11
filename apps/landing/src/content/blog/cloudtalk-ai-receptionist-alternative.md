@@ -1,7 +1,7 @@
 ---
 title: "CloudTalk AI Receptionist alternative"
-seoTitle: "CloudTalk AI Receptionist alternative: LobbyStack"
-description: "Compare CloudTalk AI Receptionist and LobbyStack on platform costs, included minutes, routing, CRM integrations, open-source access, and self-hosting."
+seoTitle: "CloudTalk subscription and AI Receptionist pricing compared"
+description: "CloudTalk's AI Receptionist costs $99 for 200 minutes on top of a CloudTalk user subscription. LobbyStack costs $30 for 150 minutes, with no seats to buy."
 pubDate: 2026-07-30T10:10:00-04:00
 updatedDate: 2026-07-30T10:10:00-04:00
 author: "LobbyStack Team"

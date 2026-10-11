@@ -235,7 +235,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
           body: "Usted define qué es urgente: sin calefacción por debajo de cierta temperatura, agua que no deja de salir, un inquilino que se quedó fuera. LobbyStack hace las preguntas que su regla necesita y transfiere la llamada a su número de guardia. La dirección y el problema que registró quedan en la transcripción de la llamada. Lo que puede esperar queda resumido en el panel para la mañana.",
           points: [
             "Transfiere al número de guardia que usted elija",
-            "Primero lee sus pasos de seguridad, como dónde cerrar la llave de paso del agua",
+            "Puede compartir sus pasos de seguridad, como dónde cerrar la llave de paso del agua",
             "Si una transferencia no se completa, ofrece tomar un mensaje y puede avisar a su equipo",
           ],
         },
@@ -765,24 +765,24 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
     {
       title: "Atención telefónica 24/7 con IA para plomeros | LobbyStack",
       description:
-        "LobbyStack atiende las llamadas de plomería con IA. Explica cómo cerrar el agua, cotiza sus tarifas de destape y visita, y pasa las tuberías rotas a su plomero de guardia.",
+        "LobbyStack atiende las llamadas de plomería con IA. Puede explicar cómo cerrar el agua, cotiza sus tarifas de destape y visita, y pasa las tuberías rotas a su plomero de guardia.",
       eyebrow: "Plomeros",
       h1: "Atención telefónica para plomeros que resuelve la tubería rota de medianoche",
       intro:
-        "Quien tiene agua cayendo del techo necesita dos cosas: alguien que le diga dónde está la llave de paso principal y un plomero en camino. LobbyStack hace ambas cosas al primer tono y luego reserva en su calendario los trabajos de desagües y calentadores de agua.",
+        "Quien tiene agua cayendo del techo necesita dos cosas: alguien que le diga dónde está la llave de paso principal y un plomero en camino. LobbyStack puede compartir los pasos de cierre que usted escribe y transfiere la llamada a su plomero de guardia. Además, reserva en su calendario los trabajos de desagües y calentadores de agua.",
       imageAlt:
         "Diagrama de una llamada de plomería perdida que pasa por LobbyStack y termina en una cita reservada",
       proofPoints: [
-        "Lee sus instrucciones de cierre y seguridad a quien tiene una fuga activa",
+        "Puede compartir sus instrucciones de cierre con quien tiene una fuga activa",
         "Cotiza los precios que usted define para destapes, visitas y servicios fuera de horario",
         "Transfiere tuberías rotas y desbordes de aguas residuales a su plomero de guardia",
       ],
       sections: [
         {
           title: "Dé a quien llama algo que hacer mientras llega la ayuda",
-          body: "Usted carga sus propias instrucciones en LobbyStack: dónde está la llave de paso principal, cuándo apagar el calentador de agua y qué hacer si huele a gas. El asistente lee esos pasos, registra la dirección y transfiere la llamada a su número de guardia.",
+          body: "Usted carga sus propias instrucciones en LobbyStack: dónde está la llave de paso principal, cuándo apagar el calentador de agua y qué hacer si huele a gas. El asistente puede compartir esos pasos con quien llama. Registra la dirección y transfiere la llamada a su número de guardia. Haga una llamada de prueba para escuchar cómo responde.",
           points: [
-            "Lee los pasos de seguridad que usted aprueba",
+            "Usa los pasos de seguridad que usted aprueba",
             "Guarda la dirección y el problema en la transcripción y luego transfiere la llamada",
           ],
         },
@@ -817,12 +817,12 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "¿Puede explicarle a quien llama cómo cerrar el agua?",
           answer:
-            "Sí. Agregue sus instrucciones de cierre a la base de conocimiento de LobbyStack. Cuando alguien reporta una fuga activa, LobbyStack lee esos pasos y luego transfiere la llamada o reserva la visita según sus reglas.",
+            "Sí. Agregue sus instrucciones de cierre a la base de conocimiento de LobbyStack, y LobbyStack puede compartirlas cuando alguien reporta una fuga activa. Transfiere la llamada o reserva la visita según sus reglas. Haga una llamada de prueba para escuchar cómo responde.",
         },
         {
           question: "¿Qué pasa si quien llama huele a gas?",
           answer:
-            "Usted escribe la política. Una habitual pide a la persona que salga del edificio y llame a la línea de emergencias de la compañía de gas. LobbyStack le lee su guion a la persona y luego transfiere la llamada o toma un mensaje según sus reglas.",
+            "Usted escribe la política. Una habitual pide a la persona que salga del edificio y llame a la línea de emergencias de la compañía de gas. LobbyStack puede compartir su guion con la persona, y transfiere la llamada o toma un mensaje según sus reglas.",
         },
         {
           question: "¿Puede cotizar un destape o la tarifa por visita?",
@@ -903,7 +903,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         {
           title:
             "¿Cómo distingue una urgencia sin calefacción de una duda sobre el termostato?",
-          body: "Usted escribe las reglas de urgencia en lenguaje sencillo, según los síntomas, la temperatura interior y quién vive en la casa. Si la calefacción se avería en enero y hay un bebé en casa, la llamada va a su técnico de guardia. Si el termostato está en modo frío, la persona recibe una respuesta rápida con los pasos de diagnóstico que usted aprueba, como revisar el interruptor automático o el filtro. Para un olor a gas o una alarma de monóxido de carbono, usted escribe los pasos de seguridad, por ejemplo salir de la casa y llamar a la línea de emergencias de la compañía de gas o al 911. La recepcionista los lee a quien llama antes de transferir. Las transferencias van a un solo número. Si no ha configurado un número de transferencia, la recepcionista toma un mensaje. Si la transferencia no se completa, se lo dice a quien llama y ofrece tomar un mensaje, y su equipo puede recibir la alerta “Falló la transferencia de una llamada en vivo”. En cuanto el teléfono de su técnico empieza a sonar, la recepcionista sale de la llamada. Si su técnico no contesta, la persona llega al buzón de voz de ese teléfono, si lo tiene.",
+          body: "Usted escribe las reglas de urgencia en lenguaje sencillo, según los síntomas, la temperatura interior y quién vive en la casa. Si la calefacción se avería en enero y hay un bebé en casa, la llamada va a su técnico de guardia. Si el termostato está en modo frío, la persona recibe una respuesta rápida con los pasos de diagnóstico que usted aprueba, como revisar el interruptor automático o el filtro. Para un olor a gas o una alarma de monóxido de carbono, usted escribe los pasos de seguridad, por ejemplo salir de la casa y llamar a la línea de emergencias de la compañía de gas o al 911. La recepcionista puede compartirlos con quien llama antes de transferir. Haga una llamada de prueba para escuchar cómo responde. Las transferencias van a un solo número. Si no ha configurado un número de transferencia, la recepcionista toma un mensaje. Si la transferencia no se completa, se lo dice a quien llama y ofrece tomar un mensaje, y su equipo puede recibir la alerta “Falló la transferencia de una llamada en vivo”. En cuanto el teléfono de su técnico empieza a sonar, la recepcionista sale de la llamada. Si su técnico no contesta, la persona llega al buzón de voz de ese teléfono, si lo tiene.",
           points: [
             "Escala según los síntomas, la temperatura interior y quién vive en la casa",
             "Trata el olor a gas y las alarmas de monóxido de carbono como urgentes y transfiere de inmediato",
@@ -1039,7 +1039,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
     {
       title: "Atención telefónica con IA para electricistas | LobbyStack",
       description:
-        "LobbyStack atiende con IA las llamadas de electricistas. Lee sus instrucciones ante chispas u olor a quemado y reserva presupuestos de tableros, cargadores y generadores.",
+        "LobbyStack atiende con IA las llamadas de electricistas. Puede dar sus instrucciones ante chispas u olor a quemado, y reserva presupuestos de tableros, cargadores y generadores.",
       eyebrow: "Electricistas",
       h1: "Atención telefónica para electricistas que filtra riesgos y reserva presupuestos",
       intro:
@@ -1047,14 +1047,14 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
       imageAlt:
         "Una llamada eléctrica entrante junto a tres miembros del equipo",
       proofPoints: [
-        "Lee su guion de seguridad ante chispas, humo u olor a quemado",
+        "Puede compartir su guion de seguridad ante chispas, humo u olor a quemado",
         "Reserva visitas de presupuesto para tableros, cargadores de vehículos eléctricos y generadores",
         "Transfiere las llamadas de riesgo a su electricista de guardia",
       ],
       sections: [
         {
-          title: "Ponga primero sus instrucciones de seguridad",
-          body: "Cuando alguien reporta humo u olor a quemado, LobbyStack lee las instrucciones que usted escribió: bajar el interruptor si se puede llegar a él sin riesgo, salir de la casa y llamar al número de emergencias si hay fuego. Luego pide la dirección y lo que vio la persona, y transfiere la llamada a su electricista de guardia.",
+          title: "Escriba las instrucciones de seguridad que escuchará quien llama",
+          body: "Cuando alguien reporta humo u olor a quemado, LobbyStack puede compartir las instrucciones que usted escribió: bajar el interruptor si se puede llegar a él sin riesgo, salir de la casa y llamar al número de emergencias si hay fuego. Pide la dirección y lo que vio la persona, y transfiere la llamada a su electricista de guardia. Haga una llamada de prueba para escuchar cómo responde.",
           points: [
             "Usa sus propias palabras en las llamadas de riesgo",
             "Transfiere los riesgos a su electricista de guardia",
@@ -1089,7 +1089,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "¿Qué le dice a alguien que reporta chispas o humo?",
           answer:
-            "Lee el guion de seguridad que usted escribe, por ejemplo bajar el interruptor si se puede llegar a él sin riesgo, salir de la casa y llamar al número de emergencias si hay fuego. Luego transfiere la llamada a su electricista de guardia.",
+            "Puede compartir el guion de seguridad que usted escribe, por ejemplo bajar el interruptor si se puede llegar a él sin riesgo, salir de la casa y llamar al número de emergencias si hay fuego. Transfiere la llamada a su electricista de guardia.",
         },
         {
           question:

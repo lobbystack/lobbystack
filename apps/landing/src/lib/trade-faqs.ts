@@ -4,12 +4,12 @@ export const plumberFaqs: FaqItem[] = [
   {
     question: "Can it tell a caller how to shut off their water?",
     answer:
-      "Yes. Add your shutoff instructions to LobbyStack's knowledge base. When a caller reports an active leak, LobbyStack reads those steps, then transfers the call or books the visit according to your rules.",
+      "Yes. Add your shutoff instructions to LobbyStack's knowledge base, and LobbyStack can share them when a caller reports an active leak. It transfers the call or books the visit according to your rules. Place a test call to hear how it handles one.",
   },
   {
     question: "What happens if a caller smells gas?",
     answer:
-      "You write the policy. A common one tells callers to leave the building and call the gas utility's emergency line. LobbyStack reads your script to the caller, then transfers the call or takes a message under your rules.",
+      "You write the policy. A common one tells callers to leave the building and call the gas utility's emergency line. LobbyStack can share your script with the caller, and it transfers the call or takes a message under your rules.",
   },
   {
     question: "Can it quote drain cleaning or a service call fee?",
@@ -96,7 +96,7 @@ export const electricianFaqs: FaqItem[] = [
   {
     question: "What does it say to someone reporting sparks or smoke?",
     answer:
-      "It reads the safety script you write, such as shutting off the breaker if it's safe to reach, leaving the house, and calling 911 if there's fire. Then it transfers the call to your on-call electrician.",
+      "It can share the safety script you write, such as shutting off the breaker if it's safe to reach, leaving the house, and calling 911 if there's fire. It transfers the call to your on-call electrician.",
   },
   {
     question: "Can it tell a utility outage apart from a problem in the house?",

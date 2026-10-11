@@ -412,7 +412,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
           body: "Vi zapisujete šta se smatra hitnim: nema grejanja ispod zadate temperature, voda koja ne prestaje da curi, stanar koji je ostao zaključan napolju. LobbyStack postavlja pitanja koja Vaše pravilo zahteva, a zatim preusmerava poziv na dežurni broj. Adresa i opis problema koje je prikupio ostaju u transkriptu poziva. Za sve što može da sačeka, rezime Vas ujutru čeka na kontrolnoj tabli.",
           points: [
             "Preusmerava na dežurni broj koji ste podesili",
-            "Prvo čita Vaša bezbednosna uputstva, na primer gde se zatvara voda",
+            "Može da prenese Vaša bezbednosna uputstva, na primer gde se zatvara voda",
             "Ako preusmeravanje ne uspe, nudi da primi poruku i može da obavesti Vaš tim",
           ],
         },
@@ -933,15 +933,15 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
     {
       title: "AI telefonska služba za vodoinstalatere 24/7 | LobbyStack",
       description:
-        "LobbyStack je AI telefonska služba za vodoinstalatere. Objašnjava pozivaocima kako da zatvore vodu, navodi Vaše cene i pukle cevi prosleđuje dežurnom majstoru.",
+        "LobbyStack je AI telefonska služba za vodoinstalatere. Može da objasni pozivaocima kako da zatvore vodu, navodi Vaše cene i pukle cevi prosleđuje dežurnom majstoru.",
       eyebrow: "Vodoinstalateri",
       h1: "Telefonska služba za vodoinstalatere koja rešava i ponoćnu puklu cev",
       intro:
-        "Pozivaocu kome voda curi kroz plafon trebaju dve stvari: neko da mu kaže gde je glavni ventil i vodoinstalater na putu. LobbyStack radi oboje već na prvo zvono, a zatim zakazuje odgušenja i radove na bojlerima u Vaš kalendar.",
+        "Pozivaocu kome voda curi kroz plafon trebaju dve stvari: neko da mu kaže gde je glavni ventil i vodoinstalater na putu. LobbyStack može da prenese korake za zatvaranje vode koje napišete i preusmerava poziv dežurnom vodoinstalateru. Odgušenja i radove na bojlerima zakazuje u Vaš kalendar.",
       imageAlt:
         "Dijagram propuštenog vodoinstalaterskog poziva koji preko LobbyStack-a postaje zakazan termin",
       proofPoints: [
-        "Pozivaocima sa aktivnim curenjem čita Vaša uputstva za zatvaranje vode i bezbednost",
+        "Može da prenese Vaša uputstva za zatvaranje vode pozivaocima sa aktivnim curenjem",
         "Navodi cene koje postavite za odgušenje, izlazak i intervencije van radnog vremena",
         "Pukle cevi i izlivanje kanalizacije prosleđuje dežurnom vodoinstalateru",
       ],
@@ -949,9 +949,9 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           title:
             "Dajte uspaničenom pozivaocu nešto da uradi dok pomoć stiže",
-          body: "U LobbyStack unosite svoja uputstva: gde je glavni ventil, kada isključiti bojler i šta raditi ako se oseti miris gasa. Asistent čita te korake pozivaocu, beleži adresu i preusmerava poziv na Vaš dežurni broj.",
+          body: "U LobbyStack unosite svoja uputstva: gde je glavni ventil, kada isključiti bojler i šta raditi ako se oseti miris gasa. Asistent može da prenese te korake pozivaocu. Beleži adresu i preusmerava poziv na Vaš dežurni broj. Obavite probni poziv da čujete kako to radi.",
           points: [
-            "Čita bezbednosne korake koje odobrite",
+            "Koristi bezbednosne korake koje odobrite",
             "Adresu i opis problema čuva u transkriptu, pa preusmerava poziv",
           ],
         },
@@ -983,12 +983,12 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Može li pozivaocu da objasni kako da zatvori vodu?",
           answer:
-            "Da. Dodajte uputstva za zatvaranje vode u bazu znanja. Kada pozivalac prijavi aktivno curenje, LobbyStack pročita te korake, a zatim preusmeri poziv ili zakaže izlazak prema Vašim pravilima.",
+            "Da. Dodajte uputstva za zatvaranje vode u bazu znanja, i LobbyStack može da ih prenese kada pozivalac prijavi aktivno curenje. Poziv preusmerava ili zakazuje izlazak prema Vašim pravilima. Obavite probni poziv da čujete kako to radi.",
         },
         {
           question: "Šta se dešava ako pozivalac oseti miris gasa?",
           answer:
-            "Vi pišete pravilo. Uobičajeno je da se pozivaocu kaže da napusti objekat i pozove dežurnu službu distributera gasa. LobbyStack pozivaocu pročita Vaš scenario, pa preusmeri poziv ili primi poruku prema Vašim pravilima.",
+            "Vi pišete pravilo. Uobičajeno je da se pozivaocu kaže da napusti objekat i pozove dežurnu službu distributera gasa. LobbyStack može da prenese Vaš scenario pozivaocu, a poziv preusmerava ili prima poruku prema Vašim pravilima.",
         },
         {
           question: "Može li da navede cenu odgušenja ili izlaska?",
@@ -1068,7 +1068,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         },
         {
           title: "Kako razlikuje hitan kvar grejanja od pitanja o termostatu?",
-          body: "Pravila hitnosti pišete običnim jezikom, prema simptomima, unutrašnjoj temperaturi i tome ko živi u kući. Ako se u januaru pokvari kotao, a u kući je beba, poziv ide dežurnom tehničaru. Ako je termostat podešen na hlađenje, pozivalac dobija brz odgovor iz koraka za otklanjanje kvara koje odobrite, kao što je provera osigurača ili filtera. Za miris gasa ili alarm za ugljen-monoksid Vi pišete bezbednosna uputstva, na primer da ukućani izađu iz kuće i pozovu hitnu liniju distributera gasa ili hitne službe. Recepcioner ih pročita pozivaocu pre nego što preusmeri poziv. Preusmeravanje ide na jedan broj. Ako niste uneli broj za preusmeravanje, recepcioner prima poruku. Ako preusmeravanje ne uspe, recepcioner o tome obavesti pozivaoca i ponudi da primi poruku, a Vaš tim može da dobije obaveštenje „Preusmeravanje poziva nije uspelo“. Čim telefon Vašeg tehničara počne da zvoni, recepcioner izlazi iz poziva. Ako se tehničar ne javi, pozivalac dobija govornu poštu tog telefona, ako je ima.",
+          body: "Pravila hitnosti pišete običnim jezikom, prema simptomima, unutrašnjoj temperaturi i tome ko živi u kući. Ako se u januaru pokvari kotao, a u kući je beba, poziv ide dežurnom tehničaru. Ako je termostat podešen na hlađenje, pozivalac dobija brz odgovor iz koraka za otklanjanje kvara koje odobrite, kao što je provera osigurača ili filtera. Za miris gasa ili alarm za ugljen-monoksid Vi pišete bezbednosna uputstva, na primer da ukućani izađu iz kuće i pozovu hitnu liniju distributera gasa ili hitne službe. Recepcioner može da ih prenese pozivaocu pre nego što preusmeri poziv. Obavite probni poziv da čujete kako to radi. Preusmeravanje ide na jedan broj. Ako niste uneli broj za preusmeravanje, recepcioner prima poruku. Ako preusmeravanje ne uspe, recepcioner o tome obavesti pozivaoca i ponudi da primi poruku, a Vaš tim može da dobije obaveštenje „Preusmeravanje poziva nije uspelo“. Čim telefon Vašeg tehničara počne da zvoni, recepcioner izlazi iz poziva. Ako se tehničar ne javi, pozivalac dobija govornu poštu tog telefona, ako je ima.",
           points: [
             "Procenjuje hitnost prema simptomima, unutrašnjoj temperaturi i ukućanima",
             "Miris gasa i alarm za ugljen-monoksid tretira kao hitne slučajeve i odmah preusmerava poziv",
@@ -1204,21 +1204,21 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
     {
       title: "AI telefonska služba za električare | LobbyStack",
       description:
-        "LobbyStack je AI telefonska služba za električare. Čita Vaša bezbednosna uputstva za varnice i miris paljevine i zakazuje procene za razvodne table, punjače i agregate.",
+        "LobbyStack je AI telefonska služba za električare. Može da prenese Vaša bezbednosna uputstva za varnice i miris paljevine, a zakazuje i procene za razvodne table, punjače i agregate.",
       eyebrow: "Električari",
       h1: "Telefonska služba za električare koja prepoznaje opasnost i zakazuje procene",
       intro:
         "Vaši pozivi su dve vrste. Jedan pozivalac ima utičnicu koja varniči i odmah mu trebaju bezbednosna uputstva. Sledeći želi novu razvodnu tablu, punjač za električno vozilo ili rezervni agregat i treba mu izlazak na procenu. LobbyStack obrađuje oba dok ste Vi na poslu.",
       imageAlt: "Dolazni poziv električaru pored tri člana tima",
       proofPoints: [
-        "Čita Vaš bezbednosni scenario za varnice, dim i miris paljevine",
+        "Može da prenese Vaš bezbednosni scenario za varnice, dim i miris paljevine",
         "Zakazuje procene za razvodne table, punjače za električna vozila i agregate",
         "Opasne situacije preusmerava dežurnom električaru",
       ],
       sections: [
         {
-          title: "Bezbednosna uputstva na prvom mestu",
-          body: "Kada neko prijavi dim ili miris paljevine, LobbyStack čita uputstva koja ste napisali: isključite osigurač ako je bezbedno prići, napustite kuću, pozovite hitne službe ako ima vatre. Zatim pita za adresu i ono što je pozivalac video, pa poziv preusmerava dežurnom električaru.",
+          title: "Napišite bezbednosna uputstva koja pozivaoci čuju",
+          body: "Kada neko prijavi dim ili miris paljevine, LobbyStack može da prenese uputstva koja ste napisali: isključite osigurač ako je bezbedno prići, napustite kuću, pozovite hitne službe ako ima vatre. Pita za adresu i ono što je pozivalac video, pa poziv preusmerava dežurnom električaru. Obavite probni poziv da čujete kako to radi.",
           points: [
             "Koristi Vaše reči za opasne situacije",
             "Opasne situacije preusmerava dežurnom električaru",
@@ -1252,7 +1252,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Šta kaže nekome ko prijavi varnice ili dim?",
           answer:
-            "Čita bezbednosni scenario koji napišete, na primer da isključi osigurač ako je bezbedno prići, napusti kuću i pozove hitne službe ako ima vatre. Zatim preusmerava poziv dežurnom električaru.",
+            "Može da prenese bezbednosni scenario koji napišete, na primer da isključi osigurač ako je bezbedno prići, napusti kuću i pozove hitne službe ako ima vatre. Poziv preusmerava dežurnom električaru.",
         },
         {
           question:
