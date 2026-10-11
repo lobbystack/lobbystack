@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 import { updateBusinessInTransaction } from "@lobbystack/domain";
 import { businesses, enqueueOutbox, receptionistProfiles } from "@lobbystack/db";
-import { defaultAppointmentChangePolicy, type AppointmentChangePolicy, type BookingMode } from "@lobbystack/shared";
+import { defaultAppointmentChangePolicy, defaultGreeting, type AppointmentChangePolicy, type BookingMode } from "@lobbystack/shared";
 import { jsonError } from "@/lib/api-helpers";
 import { operatorRoute } from "@/lib/operator-request";
 
@@ -96,7 +96,7 @@ export const PATCH = operatorRoute(async ({ businessId, body, transaction }) => 
 
   const [profile] = await tx.insert(receptionistProfiles).values({
     businessId,
-    greeting: patch.greeting ?? `Thank you for calling ${business.name}.`,
+    greeting: patch.greeting ?? defaultGreeting(business.name),
     tone: patch.tone ?? "professional",
     summary: patch.summary ?? business.name,
     // A summary a person writes is never replaced by AI.

@@ -107,6 +107,11 @@ export const defaultAppointmentChangePolicy: AppointmentChangePolicy = {
   verificationMode: "phone_match_and_facts",
 };
 
+/** A new business's greeting. It ends with a question so callers know it's their turn to talk. */
+export function defaultGreeting(businessName: string): string {
+  return `Thanks for calling ${businessName.trim()}. How can I help you today?`;
+}
+
 /** Missing legacy policy uses the original defaults; malformed policies disable automation. */
 export function normalizeAppointmentChangePolicy(value: unknown): AppointmentChangePolicy {
   if (value == null) return { ...defaultAppointmentChangePolicy };

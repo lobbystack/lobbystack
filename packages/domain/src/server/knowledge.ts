@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { and, asc, desc, eq, ilike, lt, ne, sql } from "drizzle-orm";
 
 import { agentRules, businessContextSnapshots, businessHours, businesses, closures, enqueueOutbox, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, phoneNumbers, receptionistProfiles, services, storageObjects, websiteIngestionJobs, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { getKnowledgeStorageLimitBytes, normalizeAppointmentChangePolicy, normalizeBookingMode, normalizeTransferMode, type BusinessContextSnapshot } from "@lobbystack/shared";
+import { defaultGreeting, getKnowledgeStorageLimitBytes, normalizeAppointmentChangePolicy, normalizeBookingMode, normalizeTransferMode, type BusinessContextSnapshot } from "@lobbystack/shared";
 import { buildBusinessContextSnapshot } from "../snapshot";
 import { countKnowledgeTokens, fuseKnowledgeRanks, KNOWLEDGE_SEARCH_TOKEN_BUDGET, knowledgeLexicalQueries, knowledgeQueryTerms, withinKnowledgeBudget, type KnowledgePassage } from "../knowledgeRanking";
 
@@ -556,7 +556,7 @@ export async function refreshBusinessSnapshot(
       telemetryEnabled: business[0].telemetryEnabled,
       ...(phoneNumber ? { phoneNumber } : {}),
       ...(smsNumber ? { smsNumber } : {}),
-      greeting: currentProfile?.greeting ?? `Thank you for calling ${business[0].name}.`,
+      greeting: currentProfile?.greeting ?? defaultGreeting(business[0].name),
       tone: currentProfile?.tone ?? "professional",
       bookingPolicy: currentProfile?.bookingPolicy ?? "Confirm availability before booking.",
       ...(currentProfile?.voiceInstructions ? { voiceInstructions: currentProfile.voiceInstructions } : {}),
