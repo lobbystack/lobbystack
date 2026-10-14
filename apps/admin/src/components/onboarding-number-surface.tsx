@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -71,7 +72,7 @@ export function OnboardingNumberSurface() {
           <p className="text-2xl font-semibold text-foreground">{formatPhoneNumberDisplay(primary.e164)}</p>
           <p className="text-sm text-muted-foreground">{t("number.ready.body")}</p>
         </div>
-        <Button nativeButton={false} render={<a href={`tel:${primary.e164}`} />}><Phone />{t("number.ready.call", { number: formatPhoneNumberDisplay(primary.e164) })}</Button>
+        <Button nativeButton={false} render={<Link href={`tel:${primary.e164}`} />}><Phone />{t("number.ready.call", { number: formatPhoneNumberDisplay(primary.e164) })}</Button>
         <Button onClick={() => router.push(finished ? "/" : "/onboarding/attribution")} type="button" variant="outline">{t("number.continue")}</Button>
       </Surface>
     );
