@@ -2,7 +2,7 @@
 // API can't apply to a template, so make each change in the dashboard template editor and keep
 // this file in step with it. In the template, generated secrets use ${{secret(64)}}; preserve()
 // marks them here. `randomString()` in the SDK is a public hash, so it must never produce a secret.
-import { bucket, defineRailway, github, preserve, project, service, volume } from "railway/iac";
+import { bucket, defineRailway, preserve, project, service, volume } from "railway/iac";
 
 const TEMPLATE_ID = "c85ce52d-09f7-434e-a3ee-be1da2755622";
 
@@ -11,11 +11,10 @@ export default defineRailway((ctx) => {
   if (ctx.projectId !== TEMPLATE_ID) {
     throw new Error(`This file declares Railway template ${TEMPLATE_ID}. Change the template in the dashboard template editor.`);
   }
-  const repo = github("lobbystack/lobbystack", { branch: "main", checkSuites: true });
+  // Prebuilt images from Docker Hub, published by scripts/publish-images.sh, so a deploy
+  // doesn't depend on reaching the source repository.
+  const images = { migrate: "morencyr/lobbystack-migrator:latest", admin: "morencyr/lobbystack-admin:latest", worker: "morencyr/lobbystack-worker:latest" };
   const region = "us-east4-eqdc4a";
-  const sharedWatchPatterns = ["/package.json", "/pnpm-lock.yaml", "/pnpm-workspace.yaml", "/.npmrc", "/tsconfig.base.json", "/packages/**"];
-  const migratorWatchPatterns = ["/package.json", "/pnpm-lock.yaml", "/pnpm-workspace.yaml", "/.npmrc", "/tsconfig.base.json", "/packages/db/**", "/packages/contracts/**", "/packages/telemetry/**", "/Dockerfile.migrator"];
-
   const postgresVolume = volume("postgres-data", { region, sizeMB: 5000 });
   const redisVolume = volume("redis-volume", { region, sizeMB: 1000 });
   const storage = bucket("lobbystack-template", { region: "iad" });
@@ -80,8 +79,7 @@ export default defineRailway((ctx) => {
   };
 
   const migrate = service("migrate", {
-    source: repo,
-    build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile.migrator", watchPatterns: migratorWatchPatterns },
+    source: { image: images.migrate },
     start: "sh -c 'node_modules/.bin/tsx dist/cli.js migrate && node_modules/.bin/tsx dist/cli.js bootstrap && node_modules/.bin/tsx dist/cli.js check && VERIFY_RLS_BEHAVIOR=true node_modules/.bin/tsx dist/cli.js verify-rls'",
     replicas: { [region]: 1 },
     deploy: { restartPolicyType: "NEVER" },
@@ -101,8 +99,7 @@ export default defineRailway((ctx) => {
 
   // admin owns the shared application secrets; worker references them.
   const admin = service("admin", {
-    source: repo,
-    build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile.admin", watchPatterns: [...sharedWatchPatterns, "/apps/admin/**", "/scripts/copy-widget-embed.mjs", "/Dockerfile.admin"] },
+    source: { image: images.admin },
     healthcheck: "/api/health/ready",
     healthcheckTimeout: 300,
     replicas: { [region]: 1 },
@@ -151,8 +148,7 @@ export default defineRailway((ctx) => {
   });
 
   const worker = service("worker", {
-    source: repo,
-    build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile.worker", watchPatterns: [...sharedWatchPatterns, "/apps/worker/**", "/Dockerfile.worker"] },
+    source: { image: images.worker },
     healthcheck: "/health/ready",
     healthcheckTimeout: 300,
     replicas: { [region]: 1 },

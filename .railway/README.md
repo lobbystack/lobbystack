@@ -42,6 +42,14 @@ After you apply the production source rollout, the parser should report no produ
 
 `template.ts` declares the published LobbyStack template at [railway.com/deploy/lobbystack](https://railway.com/deploy/lobbystack) (template id `c85ce52d-09f7-434e-a3ee-be1da2755622`). Railway’s CLI and API can’t apply changes to a template, so make each change in the dashboard under **Templates > LobbyStack**, then update `template.ts` to match. The editor stages each change until you select **Apply**.
 
+The template's `migrate`, `admin` and `worker` services run prebuilt images from Docker Hub (`morencyr/lobbystack-migrator`, `morencyr/lobbystack-admin` and `morencyr/lobbystack-worker`), so a deploy doesn't depend on reaching the source repository. To publish a release, log in with `docker login`, then build and push the images for `origin/main`:
+
+```bash
+scripts/publish-images.sh origin/main morencyr
+```
+
+The script tags each image with the short commit and `latest`. New deploys pick up `latest`. Existing self-hosted deployments update when their owner redeploys.
+
 Update the template when you add or remove a service or a variable in `railway.ts`. Mark a user-supplied value as optional unless every deployment needs it. Generate secrets in the template with `${{secret(64)}}`.
 
 The admin's `APP_BASE_URL` is the template's only public URL. Every other URL variable references it, with `${{APP_BASE_URL}}` on the admin and `${{admin.APP_BASE_URL}}` or another `admin` variable on the worker, so a custom domain needs one change. Keep new URL variables on that pattern. The self-hosting overview in `mintlify/` lists the variables a deployer sets after deploying; update it in all three languages when you change them.
