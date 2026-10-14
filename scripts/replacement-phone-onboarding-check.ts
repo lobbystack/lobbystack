@@ -13,7 +13,7 @@ async function main(): Promise<void> {
   const userId = randomUUID(); const businessId = randomUUID(); const foreignBusinessId = randomUUID();
   try {
     await auth.db.insert(users).values({ id: userId, email: `${userId}@example.test`, normalizedEmail: `${userId}@example.test` });
-    for (const id of [businessId, foreignBusinessId]) await withBusinessTransaction(worker.db, { businessId: id, actorType: "worker" }, async (tx) => { await tx.insert(businesses).values({ id, slug: `phone-${id}`, name: "Phone certification", timezone: "America/Toronto", businessType: "test", onboardingStage: "plan" }); if (id === businessId) { await tx.insert(businessMemberships).values({ businessId: id, userId, role: "business_owner", status: "active" }); await tx.insert(billingAccounts).values({ businessId: id, billingKey: `business:${id}`, plan: "starter", subscriptionState: "active" }); } });
+    for (const id of [businessId, foreignBusinessId]) await withBusinessTransaction(worker.db, { businessId: id, actorType: "worker" }, async (tx) => { await tx.insert(businesses).values({ id, slug: `phone-${id}`, name: "Phone certification", timezone: "America/Toronto", businessType: "test", onboardingStage: "phone_number" }); if (id === businessId) { await tx.insert(businessMemberships).values({ businessId: id, userId, role: "business_owner", status: "active" }); await tx.insert(billingAccounts).values({ businessId: id, billingKey: `business:${id}`, plan: "starter", subscriptionState: "active" }); } });
 
     const secret = "phone-certification-secret-at-least-32-characters";
 
@@ -22,8 +22,8 @@ async function main(): Promise<void> {
     const searched: Array<{ countryCode: string; areaCode?: string }> = [];
     const locationMarket = await searchBusinessNumberInventory({ db: app.db }, { userId, businessId, claimTokenSecret: secret }, { listAvailablePhoneNumbers: async selection => { searched.push(selection); return [{ phoneE164: "+14165550111", countryCode: selection.countryCode, capabilities: { sms: true, voice: true } }]; } });
     assert(locationMarket.market.countryCode === "CA" && locationMarket.market.source === "business_location", "Number search did not derive the market from the workspace location.");
-    const explicitMarket = await searchBusinessNumberInventory({ db: app.db }, { userId, businessId, selection: { countryCode: "GB" }, claimTokenSecret: secret }, { listAvailablePhoneNumbers: async selection => [{ phoneE164: "+442071234567", countryCode: selection.countryCode, capabilities: { sms: true, voice: true } }] });
-    assert(explicitMarket.market.countryCode === "GB" && explicitMarket.market.source === "selection", "An explicit country selection was not honored.");
+    const explicitMarket = await searchBusinessNumberInventory({ db: app.db }, { userId, businessId, selection: { countryCode: "US" }, claimTokenSecret: secret }, { listAvailablePhoneNumbers: async selection => [{ phoneE164: "+12125550123", countryCode: selection.countryCode, capabilities: { sms: true, voice: true } }] });
+    assert(explicitMarket.market.countryCode === "US" && explicitMarket.market.source === "selection", "An explicit country selection was not honored.");
     let unsupportedCountry = false;
     try { await searchBusinessNumberInventory({ db: app.db }, { userId, businessId, selection: { countryCode: "FR" } as unknown as Partial<NumberSelection>, claimTokenSecret: secret }, { listAvailablePhoneNumbers: async () => [] }); } catch { unsupportedCountry = true; }
     assert(unsupportedCountry, "An unsupported country was accepted for number search.");
