@@ -119,7 +119,7 @@ async function createWorkspace(page: Page, identity: string): Promise<string> {
   return workspace.businessId;
 }
 
-async function completeOnboardingBySkippingOptionalInputs(page: Page): Promise<void> {
+async function completeOnboardingBySkippingOptionalInputs(page: Page, businessId: string): Promise<void> {
   await page.getByRole("button", { name: "I don't have a website" }).click();
   await expect(page).toHaveURL("/onboarding/knowledge");
   await page.goBack();
@@ -130,14 +130,13 @@ async function completeOnboardingBySkippingOptionalInputs(page: Page): Promise<v
   await expect(page).toHaveURL("/onboarding/greeting");
   await page.getByLabel("Greeting").fill("Thanks for calling. How can we help?");
   await page.getByRole("button", { name: "Continue" }).click();
-  await expect(page).toHaveURL("/onboarding/plan");
-  await expect(page).toHaveURL("/onboarding/plan");
-  await page.goto("/onboarding/plan?checkout=success");
-  await expect(page.getByRole("heading", { name: "Choose your plan", exact: true })).toBeVisible();
-  await expect(page.getByText("Checkout completed", { exact: true })).toHaveCount(0);
-  await expect(page).toHaveURL("/onboarding/plan?checkout=success");
-  await page.getByRole("button", { name: "Start free" }).click();
-  await expect(page).toHaveURL("/onboarding/attribution");
+  await expect(page).toHaveURL("/onboarding/test-call");
+  await page.getByRole("button", { name: "Skip for now", exact: true }).click();
+  await expect(page).toHaveURL("/onboarding/verify-phone");
+  // Verifying a mobile needs a real phone, so leave the step the way an owner in a country without numbers does.
+  const moved = await page.evaluate(async (id) => (await fetch(`/api/onboarding/stage?businessId=${encodeURIComponent(id)}`, { method: "POST", credentials: "include", headers: { "content-type": "application/json" }, body: JSON.stringify({ to: "attribution" }) })).status, businessId);
+  expect(moved).toBe(200);
+  await page.goto("/onboarding/attribution");
   await page.getByRole("button", { name: "Skip", exact: true }).click();
   await expect(page).toHaveURL("/");
 }
@@ -156,7 +155,7 @@ test("operator authentication, workspace access, isolation, and revocation", asy
 
   await signUp(page, "owner-a", testInfo);
   const ownBusinessId = await createWorkspace(page, "owner-a");
-  await completeOnboardingBySkippingOptionalInputs(page);
+  await completeOnboardingBySkippingOptionalInputs(page, ownBusinessId);
   await page.goto("/");
   await expect(page.getByRole("button", { name: /Replacement E2E owner-a/ })).toBeVisible();
 
