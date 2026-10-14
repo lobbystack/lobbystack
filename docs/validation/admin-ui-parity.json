@@ -51,6 +51,7 @@
         "/onboarding/website",
         "/onboarding/knowledge",
         "/onboarding/greeting",
+        "/onboarding/test-call",
         "/onboarding/verify-phone",
         "/onboarding/verify-phone/code",
         "/onboarding/plan",
@@ -373,6 +374,12 @@
     },
     {
       "path": "/onboarding/greeting",
+      "fixtureState": "onboarding",
+      "state": "default",
+      "comparison": "frozen-main"
+    },
+    {
+      "path": "/onboarding/test-call",
       "fixtureState": "onboarding",
       "state": "default",
       "comparison": "frozen-main"
