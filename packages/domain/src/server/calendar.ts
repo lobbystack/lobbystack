@@ -76,7 +76,8 @@ export async function connectCalendar(
       if (replaced.length) {
         await tx.insert(auditLogs).values(replaced.map(({ id }) => ({ businessId: input.businessId, actorUserId: input.userId, eventType: "calendar_connection.disconnected", entityType: "calendar_connection", entityId: id, payload: { provider: input.provider, replacedBy: connection.id } })));
         await tx.delete(calendarBusyBlocks).where(and(eq(calendarBusyBlocks.businessId, input.businessId), inArray(calendarBusyBlocks.connectionId, replaced.map(({ id }) => id))));
-        await releaseCalendarAppointments(tx, input.businessId, null);
+        // The replaced connection's tokens are gone, so its calendar keeps the old events.
+        await releaseCalendarAppointments(tx, { businessId: input.businessId, owner: null });
       }
     }
     await enqueueOutbox(tx, {
@@ -215,7 +216,9 @@ export async function disconnectCalendar(
 ): Promise<void> {
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    const disconnected = await tx.update(calendarConnections).set({ status: "disconnected", encryptedAccessToken: null, encryptedRefreshToken: null, updatedAt: new Date() }).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId), ne(calendarConnections.status, "disconnected"))).returning({ id: calendarConnections.id, provider: calendarConnections.provider });
+    const disconnected = await tx.update(calendarConnections).set({ status: "disconnected", encryptedAccessToken: null, encryptedRefreshToken: null, updatedAt: new Date() }).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId), ne(calendarConnections.status, "disconnected"))).returning({ id: calendarConnections.id, provider: calendarConnections.provider, staffId: calendarConnections.staffId });
+    // Its bookings move to the connection that now owns them. The tokens are gone, so the calendar keeps its events.
+    if (disconnected[0]) await releaseCalendarAppointments(tx, { businessId: input.businessId, owner: disconnected[0].staffId });
     if (disconnected[0]) await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: input.userId, eventType: "calendar_connection.disconnected", entityType: "calendar_connection", entityId: disconnected[0].id, payload: { provider: disconnected[0].provider } });
     await tx.delete(calendarBusyBlocks).where(and(eq(calendarBusyBlocks.connectionId, input.connectionId), eq(calendarBusyBlocks.businessId, input.businessId)));
   });
@@ -251,8 +254,12 @@ export async function assignCalendarStaff(
       const member = (await tx.select({ id: staff.id }).from(staff).where(and(eq(staff.id, input.staffId), eq(staff.businessId, input.businessId), eq(staff.active, true))).limit(1))[0];
       if (!member) throw new Error("Staff member not found.");
     }
-    const changed = await tx.update(calendarConnections).set({ staffId: input.staffId, updatedAt: new Date() }).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId))).returning({ id: calendarConnections.id });
-    if (!changed.length) throw new Error("Calendar connection not found.");
+    const [current] = await tx.select({ staffId: calendarConnections.staffId, selectedCalendarId: calendarConnections.selectedCalendarId }).from(calendarConnections).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId))).limit(1).for("update");
+    if (!current) throw new Error("Calendar connection not found.");
+    // Assigned to a staff member, the connection keeps only their bookings; the rest leave its calendar.
+    // Made business-wide, it keeps its staff member's bookings and the others' backfill into it.
+    if (input.staffId && input.staffId !== current.staffId) await releaseCalendarAppointments(tx, { businessId: input.businessId, owner: current.staffId, keepStaffId: input.staffId, calendar: current.selectedCalendarId ? { connectionId: input.connectionId, calendarId: current.selectedCalendarId } : undefined });
+    await tx.update(calendarConnections).set({ staffId: input.staffId, updatedAt: new Date() }).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId)));
     await enqueueOutbox(tx, { topic: "calendar.reconcileBusiness", businessId: input.businessId, aggregateType: "calendar_connection", aggregateId: input.connectionId, dedupeKey: `calendar:${input.connectionId}:staff:${Date.now()}`, payload: { connectionId: input.connectionId } });
   });
 }
@@ -268,21 +275,31 @@ export async function selectCalendar(
     const [current] = await tx.select({ staffId: calendarConnections.staffId, selectedCalendarId: calendarConnections.selectedCalendarId }).from(calendarConnections).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId))).limit(1).for("update");
     if (!current) throw new Error("Calendar connection not found.");
     await tx.update(calendarConnections).set({ selectedCalendarId: input.calendarId.trim(), status: "syncing", lastSyncedAt: null, lastSyncError: null, updatedAt: new Date() }).where(and(eq(calendarConnections.id, input.connectionId), eq(calendarConnections.businessId, input.businessId)));
-    if (current.selectedCalendarId !== input.calendarId.trim()) await releaseCalendarAppointments(tx, input.businessId, current.staffId);
+    if (current.selectedCalendarId !== input.calendarId.trim()) await releaseCalendarAppointments(tx, { businessId: input.businessId, owner: current.staffId, calendar: current.selectedCalendarId ? { connectionId: input.connectionId, calendarId: current.selectedCalendarId } : undefined });
     await enqueueOutbox(tx, { topic: "calendar.reconcileBusiness", businessId: input.businessId, aggregateType: "calendar_connection", aggregateId: input.connectionId, dedupeKey: `calendar:${input.connectionId}:select:${Date.now()}`, payload: { connectionId: input.connectionId } });
   });
 }
 
-// Upcoming appointments keep the event id of the calendar they were written to. Once a connection's
-// calendar is replaced, clear it so the reconcile backfill writes them to the new calendar instead of
-// updating an event that is not there. A staff member's own calendar takes precedence over a business-wide one.
-async function releaseCalendarAppointments(tx: DatabaseTransaction, businessId: string, staffId: string | null): Promise<void> {
-  await tx.update(appointments).set({ calendarExternalId: null, calendarSyncState: "not_required", revision: sql`${appointments.revision} + 1`, updatedAt: new Date() }).where(and(
-    eq(appointments.businessId, businessId),
+// Upcoming appointments keep the event id of the calendar they were written to. When a connection
+// stops writing a booking to that calendar (another calendar, another owner, or no connection), clear
+// the id so the reconcile backfill writes the booking where it now belongs, and with `calendar`, delete
+// the old event so that calendar doesn't keep a stale appointment. `owner` is the connection's staff
+// member, or null for a business-wide one; a staff member's own calendar takes precedence over it.
+async function releaseCalendarAppointments(tx: DatabaseTransaction, input: { businessId: string; owner: string | null; keepStaffId?: string; calendar?: { connectionId: string; calendarId: string } | undefined }): Promise<void> {
+  const released = await tx.select({ id: appointments.id, eventId: appointments.calendarExternalId, revision: appointments.revision }).from(appointments).where(and(
+    eq(appointments.businessId, input.businessId),
     eq(appointments.status, "confirmed"),
     gt(appointments.endsAt, new Date()),
-    staffId ? eq(appointments.staffId, staffId) : notOwnedByStaffCalendar(tx, businessId),
-  ));
+    input.owner ? eq(appointments.staffId, input.owner) : notOwnedByStaffCalendar(tx, input.businessId),
+    input.keepStaffId ? ne(appointments.staffId, input.keepStaffId) : undefined,
+  )).for("update");
+  if (!released.length) return;
+  await tx.update(appointments).set({ calendarExternalId: null, calendarSyncState: "not_required", revision: sql`${appointments.revision} + 1`, updatedAt: new Date() }).where(and(eq(appointments.businessId, input.businessId), inArray(appointments.id, released.map(({ id }) => id))));
+  const calendar = input.calendar;
+  if (!calendar) return;
+  for (const { id, eventId, revision } of released) {
+    if (eventId) await enqueueOutbox(tx, { topic: "calendar.deleteEvent", businessId: input.businessId, aggregateType: "appointment", aggregateId: id, dedupeKey: `appointment:${id}:calendar:release:${calendar.connectionId}:${revision}`, payload: { appointmentId: id, ...calendar, eventId } });
+  }
 }
 
 // The sync job writes a booking to its staff member's connection whenever one exists, even one with no calendar.

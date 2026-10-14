@@ -3,7 +3,7 @@ const mocks = vi.hoisted(() => ({ transaction: vi.fn(), token: vi.fn(), update: 
 vi.mock("@lobbystack/db", async (original) => ({ ...await original<typeof import("@lobbystack/db")>(), withBusinessTransaction: mocks.transaction }));
 vi.mock("@lobbystack/domain", () => ({ CALENDAR_SYNC_HORIZON_MS: 90 * 86400_000, resolveCalendarAccessToken: mocks.token, updateAppointmentSyncState: mocks.update, updateAppointmentSyncStateInTransaction: mocks.updateTx, markCalendarConnectionSync: mocks.mark, queueUnsyncedAppointmentSyncs: mocks.backfill, upsertBusyBlocks: mocks.busy, recordProductEvent: mocks.record }));
 import { calendarConnections } from "@lobbystack/db";
-import { reconcileBusinessCalendar, syncAppointmentCalendar } from "./calendarJobs";
+import { deleteReleasedCalendarEvent, reconcileBusinessCalendar, syncAppointmentCalendar } from "./calendarJobs";
 
 type Chain = Promise<unknown[]> & { from: () => Chain; innerJoin: () => Chain; leftJoin: () => Chain; where: () => Chain; orderBy: () => Chain; limit: () => Chain; for: (...args: unknown[]) => Chain };
 let batches: unknown[][];
@@ -96,4 +96,17 @@ it("does not record a sync failure when the calendar selection changed mid-sync"
 
   expect(mocks.mark).not.toHaveBeenCalled();
   expect(mocks.record).not.toHaveBeenCalled();
+});
+
+it("deletes a released booking's event from the calendar its connection left, unless it switched back and wrote it again", async () => {
+  const release = { businessId: "business", appointmentId: "appointment", connectionId: "connection", calendarId: "old", eventId: "event" };
+  batches = [[{ status: "connected", selectedCalendarId: "new" }], [{ eventId: "event" }]];
+  await expect(deleteReleasedCalendarEvent(dependencies, release)).resolves.toMatchObject({ status: "completed" });
+  expect(provider.deleteEvent).toHaveBeenCalledWith({ accessToken: "access", calendarId: "old", eventId: "event" });
+  provider.deleteEvent.mockClear();
+  batches = [[{ status: "connected", selectedCalendarId: "old" }], [{ eventId: "event" }]];
+  await expect(deleteReleasedCalendarEvent(dependencies, release)).resolves.toMatchObject({ status: "skipped" });
+  batches = [[{ status: "disconnected", selectedCalendarId: "new" }], [{ eventId: null }]];
+  await expect(deleteReleasedCalendarEvent(dependencies, release)).resolves.toMatchObject({ status: "skipped" });
+  expect(provider.deleteEvent).not.toHaveBeenCalled();
 });

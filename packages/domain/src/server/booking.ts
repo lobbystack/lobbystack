@@ -5,7 +5,7 @@ import type { AvailabilitySlot } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 import { DateTime } from "luxon";
 
-import { BookingUnavailableError, candidateStartTimes, computeAvailability, scheduleUnavailableReason, type NoOpeningsReason, type UnavailableReason } from "../availability";
+import { BookingUnavailableError, candidateStartTimes, freeStaffSlots, scheduleUnavailableReason, type NoOpeningsReason, type UnavailableReason } from "../availability";
 import { requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
 import { recordCallOutcomeInTransaction } from "./callOutcome";
@@ -150,14 +150,12 @@ async function loadBusyTimes(tx: DatabaseTransaction, schedule: Schedule, input:
   ];
 }
 
-/** The slots at a time: the staff who could take it and aren't busy then. */
+/** The slots at a time: the staff who could take it and aren't busy then. staffForTime has checked the schedule. */
 function openSlots(schedule: Schedule, startsAt: Date, staffIds: string[], busy: BusyTime[]): AvailabilitySlot[] {
-  return computeAvailability({
+  return freeStaffSlots({
     request: { serviceId: schedule.serviceId, startsAt: startsAt.toISOString(), timezone: schedule.timezone },
     serviceDurationMinutes: schedule.serviceDurationMinutes,
     staffIds,
-    hours: schedule.hours,
-    closures: schedule.closures,
     existingAppointments: busy,
   });
 }

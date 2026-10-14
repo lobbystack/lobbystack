@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const rows = vi.hoisted(() => ({
   sms: { claimSmsDelivery: vi.fn(), smsDeliveryLeaseEndsAt: vi.fn(), loadSmsDeliveryTarget: vi.fn(), markSmsSent: vi.fn(), releaseSmsDelivery: vi.fn(), failSmsDelivery: vi.fn() },
-  changeCode: { claimAppointmentChangeOtp: vi.fn(), loadAppointmentChangeOtpTarget: vi.fn(), markAppointmentChangeOtpSent: vi.fn(), releaseAppointmentChangeOtp: vi.fn() },
+  changeCode: { claimAppointmentChangeOtp: vi.fn(), appointmentChangeOtpLeaseEndsAt: vi.fn(), loadAppointmentChangeOtpTarget: vi.fn(), markAppointmentChangeOtpSent: vi.fn(), releaseAppointmentChangeOtp: vi.fn() },
   code: { issueOperatorPhoneVerificationCode: vi.fn(), markOperatorPhoneVerificationCodeSent: vi.fn(), releaseOperatorPhoneVerificationCodeSend: vi.fn() },
   notifications: { claimNotificationDelivery: vi.fn(), notificationLeaseEndsAt: vi.fn(), resolveNotificationDelivery: vi.fn(), markNotificationSent: vi.fn(), transitionProcessingNotification: vi.fn(), claimOperatorNotificationDelivery: vi.fn(), operatorNotificationLeaseEndsAt: vi.fn(), loadOperatorNotificationDelivery: vi.fn(), markOperatorNotificationSent: vi.fn(), markOperatorNotificationSkipped: vi.fn(), releaseOperatorNotificationDelivery: vi.fn() },
   usage: { reserveAlertSmsUsage: vi.fn(), correctAlertSmsUsage: vi.fn(), enqueueBillingUsageSync: vi.fn() },
@@ -44,7 +44,7 @@ const kinds = {
     delivery: { kind: "changeCode", businessId, verificationId: "verification-1", code: "123456", ...smsTarget } satisfies OutboundDelivery,
     ready: () => { changeCode.claimAppointmentChangeOtp.mockResolvedValue(true); changeCode.loadAppointmentChangeOtpTarget.mockResolvedValue({ ...smsTarget, code: "123456" }); },
     held: () => changeCode.claimAppointmentChangeOtp.mockResolvedValue(false),
-    leaseEnds: undefined,
+    leaseEnds: changeCode.appointmentChangeOtpLeaseEndsAt,
     mark: changeCode.markAppointmentChangeOtpSent,
     // A change code goes back to the queue either way; it expires on its own.
     released: () => changeCode.releaseAppointmentChangeOtp.mock.calls.length > 0,
@@ -214,10 +214,10 @@ describe("codes", () => {
     expect(sender.twilio.sendSms).not.toHaveBeenCalled();
   });
 
-  it("finishes the mark of a change code a run before may have sent, so the caller can use it", async () => {
-    kinds.changeCode.held();
+  it("leaves a change code another run holds to that run, so a failed send can still go back to the queue", async () => {
+    kinds.changeCode.held(); changeCode.appointmentChangeOtpLeaseEndsAt.mockResolvedValue(null);
     await expect(deliverOutbound(context, providers(), kinds.changeCode.delivery)).resolves.toEqual({ status: "skipped", entityId: "verification-1" });
-    expect(changeCode.markAppointmentChangeOtpSent).toHaveBeenCalledWith(context, { businessId, verificationId: "verification-1" });
+    expect(changeCode.markAppointmentChangeOtpSent).not.toHaveBeenCalled();
   });
 
   it("texts a verification code in the operator's language and bills its estimated segments", async () => {

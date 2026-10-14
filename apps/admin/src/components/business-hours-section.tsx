@@ -204,9 +204,15 @@ export function BusinessHoursSection({ businessId, canManage }: { businessId: st
       telemetry.track("web.agent.settings_saved", { businessId, setting: "hours" });
       setStatus(t("actions.saved"));
       setEditing(false);
-    } catch (error) {
-      // A 400 says what the server refused, such as a malformed closure; anything else gets the generic message.
-      toast.error(error instanceof Error && error.message !== "Request failed." ? error.message : t("actions.saveFailed"));
+    } catch {
+      // The server refuses what the check above missed, such as a closure that ended since it ran. Check
+      // again to point at it in the operator's language; the server's own message is English.
+      const recheck = closuresForSave(closures, localNow(state.timezone));
+      if (recheck.ok) toast.error(t("actions.saveFailed"));
+      else {
+        setError(t(`hours.closures.${recheck.problem}`));
+        setInvalidClosure(recheck.index);
+      }
     } finally {
       setSaving(false);
     }

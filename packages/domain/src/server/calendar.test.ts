@@ -6,7 +6,7 @@ vi.mock("@lobbystack/db", async (original) => ({ ...await original<typeof import
 vi.mock("./notifications", () => ({ queueOperatorAlertInTransaction: mocks.alert }));
 vi.mock("../authz", () => ({ requireBusinessAdmin: vi.fn(), requireBusinessMembership: vi.fn() }));
 import { appointments, calendarBusyBlocks, calendarConnections } from "@lobbystack/db";
-import { queueUnsyncedAppointmentSyncs, resolveCalendarAccessToken, selectCalendar, updateAppointmentSyncStateInTransaction, upsertBusyBlocks } from "./calendar";
+import { assignCalendarStaff, queueUnsyncedAppointmentSyncs, resolveCalendarAccessToken, selectCalendar, updateAppointmentSyncStateInTransaction, upsertBusyBlocks } from "./calendar";
 
 const now = new Date("2026-09-13T12:00:00Z");
 const row = { id: "connection", businessId: "business", status: "connected", encryptedAccessToken: "enc:old", encryptedRefreshToken: "enc:refresh", tokenExpiresAt: new Date(now.getTime() - 1000) };
@@ -81,14 +81,25 @@ function recordWrites(reads: unknown[][]) {
   return (table: unknown) => writes.filter((entry) => entry.table === table).map((entry) => entry.values);
 }
 
-it("clears upcoming bookings' event ids only when the selected calendar changes", async () => {
+it("clears upcoming bookings' event ids only when the selected calendar changes, and deletes their old events", async () => {
   const select = () => selectCalendar(context, { userId: "user", businessId: "business", connectionId: "connection", calendarId: "new@group.calendar.google.com" });
-  let written = recordWrites([[{ staffId: "staff", selectedCalendarId: "old@group.calendar.google.com" }]]);
+  let written = recordWrites([[{ staffId: "staff", selectedCalendarId: "old@group.calendar.google.com" }], [{ id: "appointment", eventId: "event-1", revision: 4 }]]);
   await select();
   expect(written(appointments)).toEqual([expect.objectContaining({ calendarExternalId: null, calendarSyncState: "not_required", revision: expect.anything() })]);
+  expect(mocks.enqueue).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ topic: "calendar.deleteEvent", payload: { appointmentId: "appointment", connectionId: "connection", calendarId: "old@group.calendar.google.com", eventId: "event-1" } }));
+  mocks.enqueue.mockClear();
   written = recordWrites([[{ staffId: "staff", selectedCalendarId: "new@group.calendar.google.com" }]]);
   await select();
   expect(written(appointments)).toEqual([]);
+  expect(mocks.enqueue).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ topic: "calendar.deleteEvent" }));
+});
+
+it("moves other staff's bookings out of a business-wide calendar assigned to one staff member", async () => {
+  const written = recordWrites([[{ id: "staff-1" }], [{ staffId: null, selectedCalendarId: "shared@group.calendar.google.com" }], [{ id: "appointment", eventId: "event-2", revision: 1 }]]);
+  await assignCalendarStaff(context, { userId: "user", businessId: "business", connectionId: "connection", staffId: "staff-1" });
+  expect(written(appointments)).toEqual([expect.objectContaining({ calendarExternalId: null, calendarSyncState: "not_required" })]);
+  expect(mocks.enqueue).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ topic: "calendar.deleteEvent", payload: { appointmentId: "appointment", connectionId: "connection", calendarId: "shared@group.calendar.google.com", eventId: "event-2" } }));
+  expect(written(calendarConnections)).toEqual([expect.objectContaining({ staffId: "staff-1" })]);
 });
 
 it("backfills a booking again once its connection switches calendars", async () => {

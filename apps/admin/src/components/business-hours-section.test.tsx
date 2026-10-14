@@ -138,14 +138,14 @@ describe("opening hours editor", () => {
     expect(screen.getByLabelText("hours.closures.startsAt:1").getAttribute("aria-describedby")).toBeNull();
   });
 
-  it("shows the server's reason when it refuses the save", async () => {
+  it("shows a translated message when the server refuses the save", async () => {
     const fetchMock = stubFetch({ hoursSource: "operator", hours: weekdays });
     const base = fetchMock.getMockImplementation()!;
     fetchMock.mockImplementation(async (url, init) => (init?.method === "PUT" ? Response.json({ error: "A closure must end within two years." }, { status: 400 }) : await base(url, init)));
     render(<QueryClientProvider client={client()}><BusinessHoursSection businessId="business" canManage /></QueryClientProvider>);
     await userEvent.click(await screen.findByRole("button", { name: "hours.edit" }));
     await userEvent.click(screen.getByRole("button", { name: "hours.save" }));
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("A closure must end within two years."));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("actions.saveFailed"));
   });
 
   it("checks closures before saving", () => {

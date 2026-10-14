@@ -120,6 +120,14 @@ export async function loadAppointmentChangeOtpTarget(
   });
 }
 
+/** When another run holds this code's send, the time its lease ends and it may be claimed again. */
+export async function appointmentChangeOtpLeaseEndsAt(context: DomainContext, input: { businessId: string; verificationId: string }): Promise<Date | null> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const row = (await tx.select({ updatedAt: appointmentChangeVerifications.updatedAt }).from(appointmentChangeVerifications).where(and(eq(appointmentChangeVerifications.id, input.verificationId), eq(appointmentChangeVerifications.businessId, input.businessId), eq(appointmentChangeVerifications.status, "otp_sending"))).limit(1))[0];
+    return row ? new Date(row.updatedAt.getTime() + OTP_SEND_LEASE_MS) : null;
+  });
+}
+
 export async function markAppointmentChangeOtpSent(
   context: DomainContext,
   input: { businessId: string; verificationId: string },

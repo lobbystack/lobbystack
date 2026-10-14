@@ -114,6 +114,11 @@ export function computeAvailability(input: AvailabilityInput): Array<Availabilit
   if (scheduleUnavailableReason({ startsAt: input.request.startsAt, timezone: input.request.timezone, serviceDurationMinutes: input.serviceDurationMinutes, hours: input.hours, closures: input.closures })) {
     return [];
   }
+  return freeStaffSlots(input);
+}
+
+/** The slots of the staff not busy at the requested time, for a time the opening hours and closures already allow. */
+export function freeStaffSlots(input: Omit<AvailabilityInput, "hours" | "closures">): Array<AvailabilitySlot> {
   const requestedStartUtc = isoToDateTime(input.request.startsAt);
   const requestedEndUtc = requestedStartUtc.plus({
     minutes: input.serviceDurationMinutes,

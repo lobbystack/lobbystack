@@ -19,7 +19,7 @@ import type { TwilioProvider } from "@lobbystack/providers/twilio/twilioProvider
 import type OpenAI from "openai";
 import { extractDocumentTextInThread, type OcrRecorder } from "./documentExtraction";
 import { isLivePrototypeEnabled, type LiveRecoveryOutcome } from "./liveCalls";
-import { reconcileBusinessCalendar, syncAppointmentCalendar, type CalendarOperations } from "./calendarJobs";
+import { deleteReleasedCalendarEvent, reconcileBusinessCalendar, syncAppointmentCalendar, type CalendarOperations } from "./calendarJobs";
 import { getMeter } from "@lobbystack/telemetry/node";
 import { bucketOutboxBacklog, getPostHogDistinctIdForBusinessSystem, redactTelemetryProperties, type TelemetryProperties } from "@lobbystack/telemetry";
 
@@ -278,6 +278,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       let indexedChunks = 0;
       let indexedPages = 0;
       let failedPages = 0;
+      let pageError: unknown;
       if (!await progress("indexing", pages.length)) return { status: "skipped", entityId: documentId ?? websiteIngestionJobId ?? "" };
       for (const page of pages) {
         try {
@@ -286,11 +287,14 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         } catch (error) {
           // Skip the page: a job retry would pay for the whole crawl and every embedding again.
           failedPages += 1;
+          pageError = error;
           // Only the name: provider errors can echo page text.
           console.error(`[knowledge] ${documentId ?? websiteIngestionJobId} page failed`, error instanceof Error ? error.name : "unknown");
         }
         if (!await progress("indexing", pages.length, indexedPages)) return { status: "skipped", entityId: documentId ?? websiteIngestionJobId ?? "" };
       }
+      // Nothing indexed and pages failing points at an outage, such as the embedding provider's, so the job tries again.
+      if (indexedChunks === 0 && failedPages && execution.isFinalAttempt === false) throw pageError;
       if (indexedChunks === 0 && documentId) {
         await markKnowledgeDocumentFailed(dependencies.domain, { businessId: businessIdOrThrow(job), documentId, ...(source ? { expectedRevision: source.revision } : {}), error: failedPages ? "We couldn't index any page of this website." : "Website crawl returned no readable content." });
       }
@@ -357,6 +361,8 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       return await syncAppointmentCalendar(dependencies, { businessId: businessIdOrThrow(job), appointmentId: String(job.payload.appointmentId ?? "") });
     case "calendar.reconcileBusiness":
       return await reconcileBusinessCalendar(dependencies, businessIdOrThrow(job));
+    case "calendar.deleteEvent":
+      return await deleteReleasedCalendarEvent(dependencies, { businessId: businessIdOrThrow(job), appointmentId: String(job.payload.appointmentId ?? ""), connectionId: String(job.payload.connectionId ?? ""), calendarId: String(job.payload.calendarId ?? ""), eventId: String(job.payload.eventId ?? "") });
     case "email.send":
       if (!dependencies.email) {
         if (["verify_email", "password_reset", "existing_account"].includes(String(job.payload.template))) {

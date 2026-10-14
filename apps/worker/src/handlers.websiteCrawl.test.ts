@@ -59,11 +59,19 @@ describe("knowledge.crawlWebsite", () => {
     expect(mocks.updates.find((update) => update.table === websiteIngestionJobs && update.set.status === "completed")?.set).toMatchObject({ indexedCount: 1, errorCount: 1 });
   });
 
-  it("fails the import only when no page indexed", async () => {
+  it("retries the job when every page fails, since that points at an outage", async () => {
+    const { job, dependencies } = crawl();
+    vi.mocked(indexCrawledWebsitePage).mockRejectedValue(new Error("Embedding provider timed out."));
+
+    await expect(handleJob(job, dependencies, { isFinalAttempt: false })).rejects.toThrow("Embedding provider timed out.");
+    expect(markKnowledgeDocumentFailed).not.toHaveBeenCalled();
+  });
+
+  it("fails the import on the last attempt when no page indexed", async () => {
     const { job, documentId, dependencies } = crawl();
     vi.mocked(indexCrawledWebsitePage).mockRejectedValue(new Error("Embedding provider timed out."));
 
-    await expect(handleJob(job, dependencies, { isFinalAttempt: false })).resolves.toMatchObject({ status: "completed" });
+    await expect(handleJob(job, dependencies, { isFinalAttempt: true })).resolves.toMatchObject({ status: "completed" });
     expect(markKnowledgeDocumentFailed).toHaveBeenCalledWith(dependencies.domain, expect.objectContaining({ documentId, error: "We couldn't index any page of this website." }));
   });
 });

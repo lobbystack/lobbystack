@@ -87,6 +87,21 @@ export async function syncAppointmentCalendar(dependencies: Dependencies, input:
   }
 }
 
+/** Deletes the event a released booking left in a calendar its connection no longer writes it to. */
+export async function deleteReleasedCalendarEvent(dependencies: Dependencies, input: { businessId: string; appointmentId: string; connectionId: string; calendarId: string; eventId: string }): Promise<JobResult> {
+  const { businessId, appointmentId, connectionId, calendarId, eventId } = input;
+  if (!dependencies.calendar || !connectionId || !calendarId || !eventId) return { status: "skipped", entityId: appointmentId };
+  const { connection, currentEventId } = await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => ({
+    connection: (await tx.select({ status: calendarConnections.status, selectedCalendarId: calendarConnections.selectedCalendarId }).from(calendarConnections).where(and(eq(calendarConnections.id, connectionId), eq(calendarConnections.businessId, businessId))).limit(1))[0],
+    currentEventId: (await tx.select({ eventId: appointments.calendarExternalId }).from(appointments).where(and(eq(appointments.id, appointmentId), eq(appointments.businessId, businessId))).limit(1))[0]?.eventId,
+  }));
+  // A disconnected connection has no token left. Event ids repeat across calendars, so a connection
+  // switched back to this calendar that wrote the booking again holds a live event under this id.
+  if (!connection || connection.status === "disconnected" || (connection.selectedCalendarId === calendarId && currentEventId === eventId)) return { status: "skipped", entityId: appointmentId };
+  await dependencies.calendar.deleteEvent({ accessToken: await accessToken(dependencies, businessId, connectionId), calendarId, eventId });
+  return { status: "completed", entityId: appointmentId };
+}
+
 export async function reconcileBusinessCalendar(dependencies: Dependencies, businessId: string): Promise<JobResult> {
   if (!dependencies.calendar) return { status: "skipped", entityId: businessId };
   const connections = await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => tx.select({ id: calendarConnections.id, calendarId: calendarConnections.selectedCalendarId, staffId: calendarConnections.staffId, status: calendarConnections.status }).from(calendarConnections).where(and(eq(calendarConnections.businessId, businessId), ne(calendarConnections.status, "disconnected"))));

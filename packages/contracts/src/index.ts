@@ -204,6 +204,7 @@ export const queueForJobType = {
   "billing.createCheckout": "critical",
   "calendar.syncAppointment": "default",
   "calendar.reconcileBusiness": "default",
+  "calendar.deleteEvent": "default",
   "knowledge.extractDocument": "bulk",
   "knowledge.crawlWebsite": "bulk",
   "knowledge.reembedBusiness": "bulk",

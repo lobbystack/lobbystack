@@ -1,7 +1,7 @@
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 import { normalizeInterfaceLocale, permanentSmsErrorCode } from "@lobbystack/shared";
 
-import { claimAppointmentChangeOtp, loadAppointmentChangeOtpTarget, markAppointmentChangeOtpSent, releaseAppointmentChangeOtp } from "./appointmentChanges";
+import { appointmentChangeOtpLeaseEndsAt, claimAppointmentChangeOtp, loadAppointmentChangeOtpTarget, markAppointmentChangeOtpSent, releaseAppointmentChangeOtp } from "./appointmentChanges";
 import { correctAlertSmsUsage, enqueueBillingUsageSync, reserveAlertSmsUsage } from "./billing";
 import type { DomainContext } from "./context";
 import { claimNotificationDelivery, claimOperatorNotificationDelivery, loadOperatorNotificationDelivery, markNotificationSent, markOperatorNotificationSent, markOperatorNotificationSkipped, notificationLeaseEndsAt, operatorNotificationLeaseEndsAt, releaseOperatorNotificationDelivery, resolveNotificationDelivery, transitionProcessingNotification } from "./notifications";
@@ -191,10 +191,10 @@ function changeCodeLease(context: DomainContext, input: { businessId: string; ve
   return {
     id: input.code && input.to && input.from ? input.verificationId : "",
     claim: () => claimAppointmentChangeOtp(context, ids),
-    // The code is stored before it goes out, so a run that finds the send held
-    // finishes the mark rather than leave the caller's code unusable. A caller
-    // who got nothing asks for another code.
-    heldUntil: async () => { await markAppointmentChangeOtpSent(context, ids); return null; },
+    // The holder may still fail and hand the code back, so wait for its lease
+    // rather than mark the code sent. A holder that died mid-send leaves a
+    // stale lease, which the next claim takes over and sends the code again.
+    heldUntil: () => appointmentChangeOtpLeaseEndsAt(context, ids),
     load: async () => {
       const target = await loadAppointmentChangeOtpTarget(context, { ...ids, to: input.to, from: input.from, code: input.code });
       if (target) return { channel: "sms", to: target.to, from: target.from, body: verificationCodeSmsBody(target.code) };
