@@ -46,7 +46,8 @@ export async function assertAdminDatabaseRoles(
       );
       return;
     } catch (error) {
-      if (attempt >= wait.attempts) throw error;
+      // A role that connects with too much privilege is a misconfiguration, so fail at once.
+      if (attempt >= wait.attempts || (error instanceof Error && error.message.startsWith("Database role assertion failed"))) throw error;
       await new Promise((resolve) => setTimeout(resolve, wait.delayMs));
     }
   }

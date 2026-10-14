@@ -52,7 +52,7 @@ describe("admin startup database role assertion", () => {
         : stubClient(role, [{ role, privileged: false }]).client
     ));
 
-    await expect(assertAdminDatabaseRoles(production, resolveClient, { attempts: 2, delayMs: 0 })).rejects.toThrow(
+    await expect(assertAdminDatabaseRoles(production, resolveClient)).rejects.toThrow(
       "Database role assertion failed",
     );
   });
