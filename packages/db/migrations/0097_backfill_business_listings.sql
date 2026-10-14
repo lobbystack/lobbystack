@@ -30,11 +30,10 @@ $$;
 REVOKE ALL ON FUNCTION app.list_summary_backfill_businesses() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION app.list_summary_backfill_businesses() TO lobbystack_dispatcher;
 
--- Businesses with a chunk the re-embed job would pick up. A chunk gets a
--- fingerprint only with its embedding, and only a re-embed makes it pending or
--- failed while it keeps its old fingerprint, so a missing or other fingerprint
--- finds every such chunk. Each range reads knowledge_chunks_business_embedding_fingerprint_idx,
--- so a worker start doesn't scan the whole table.
+-- Businesses with a chunk the re-embed job would pick up: embedded with
+-- another model, not embedded, or pending or failed. Each test reads an index
+-- per business (knowledge_chunks_business_embedding_fingerprint_idx, and the
+-- small partial index 0100 adds), so a worker start doesn't scan every chunk.
 CREATE OR REPLACE FUNCTION app.list_reembed_businesses(p_fingerprint text)
 RETURNS SETOF uuid
 LANGUAGE sql
@@ -44,10 +43,17 @@ SET search_path = public, pg_catalog
 AS $$
   SELECT b.id
   FROM public.businesses b
-  WHERE EXISTS (
-      SELECT 1 FROM public.knowledge_chunks c
-      WHERE c.business_id = b.id
-        AND (c.embedding_fingerprint < p_fingerprint OR c.embedding_fingerprint > p_fingerprint OR c.embedding_fingerprint IS NULL)
+  WHERE (
+      EXISTS (
+        SELECT 1 FROM public.knowledge_chunks c
+        WHERE c.business_id = b.id
+          AND (c.embedding_fingerprint < p_fingerprint OR c.embedding_fingerprint > p_fingerprint OR c.embedding_fingerprint IS NULL)
+      )
+      OR EXISTS (
+        SELECT 1 FROM public.knowledge_chunks c
+        WHERE c.business_id = b.id
+          AND (c.embedding IS NULL OR c.embedding_status IN ('pending', 'failed'))
+      )
     )
     AND session_user = 'lobbystack_dispatcher'
     AND NULLIF(current_setting('app.actor_type', true), '') = 'dispatcher'

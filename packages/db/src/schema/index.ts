@@ -677,7 +677,7 @@ export const knowledgeChunks = pgTable(
     tokenCount: integer("token_count"),
     ...timestamps,
   },
-  (table) => [uniqueIndex("knowledge_chunks_document_sequence_unique").on(table.documentId, table.sequence), index("knowledge_chunks_business_embedding_fingerprint_idx").on(table.businessId, table.embeddingFingerprint), index("knowledge_chunks_keyword_idx").using("gin", sql`to_tsvector('simple', ${table.content})`)],
+  (table) => [uniqueIndex("knowledge_chunks_document_sequence_unique").on(table.documentId, table.sequence), index("knowledge_chunks_business_embedding_fingerprint_idx").on(table.businessId, table.embeddingFingerprint), index("knowledge_chunks_reembed_pending_idx").on(table.businessId).where(sql`${table.embedding} is null or ${table.embeddingStatus} in ('pending', 'failed')`), index("knowledge_chunks_keyword_idx").using("gin", sql`to_tsvector('simple', ${table.content})`)],
 );
 
 export const knowledgeSnippets = pgTable(
