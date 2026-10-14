@@ -32,11 +32,22 @@ export async function assertAdminDatabaseRoles(
     environment: process.env,
   },
   resolveClient: (role: DatabaseRole) => DatabaseClient = getDatabase,
+  wait: { attempts: number; delayMs: number } = { attempts: 60, delayMs: 5_000 },
 ): Promise<void> {
   if (!shouldAssertAdminDatabaseRoles(context)) return;
-  await Promise.all(
-    ADMIN_RUNTIME_DATABASE_ROLES.map((role) =>
-      assertDatabaseRole(resolveClient(role), context.environment),
-    ),
-  );
+  // A fresh deploy can start the admin before migrate gives the roles their logins, and a
+  // failed startup check keeps the admin answering 500 until it restarts, so wait for migrate.
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      await Promise.all(
+        ADMIN_RUNTIME_DATABASE_ROLES.map((role) =>
+          assertDatabaseRole(resolveClient(role), context.environment),
+        ),
+      );
+      return;
+    } catch (error) {
+      if (attempt >= wait.attempts) throw error;
+      await new Promise((resolve) => setTimeout(resolve, wait.delayMs));
+    }
+  }
 }

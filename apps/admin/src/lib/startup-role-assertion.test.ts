@@ -52,9 +52,23 @@ describe("admin startup database role assertion", () => {
         : stubClient(role, [{ role, privileged: false }]).client
     ));
 
-    await expect(assertAdminDatabaseRoles(production, resolveClient)).rejects.toThrow(
+    await expect(assertAdminDatabaseRoles(production, resolveClient, { attempts: 2, delayMs: 0 })).rejects.toThrow(
       "Database role assertion failed",
     );
+  });
+
+  it("waits for the role logins when the admin starts before migrate has created them", async () => {
+    let failures = 2;
+    const resolveClient = vi.fn((role: DatabaseRole) => {
+      const query = vi.fn(async () => {
+        if (role === "lobbystack_dispatcher" && failures-- > 0) throw new Error('password authentication failed for user "lobbystack_dispatcher"');
+        return { rows: [{ role, privileged: false }] };
+      });
+      return { role, pool: { query } } as unknown as DatabaseClient;
+    });
+
+    await expect(assertAdminDatabaseRoles(production, resolveClient, { attempts: 5, delayMs: 0 })).resolves.toBeUndefined();
+    expect(resolveClient).toHaveBeenCalledTimes(ADMIN_RUNTIME_DATABASE_ROLES.length * 3);
   });
 
   it.each([
