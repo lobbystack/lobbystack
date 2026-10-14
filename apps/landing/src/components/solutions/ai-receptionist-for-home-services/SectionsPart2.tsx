@@ -154,12 +154,12 @@ export function OpenSource() {
           </p>
           <div className="mt-8 flex items-center justify-center gap-6">
             <a
-              href="https://github.com/lobbystack/lobbystack"
+              href="https://gitlab.com/lobbystack-group/lobbystack"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 text-sm font-medium text-foreground underline decoration-1 underline-offset-4 transition-colors hover:text-foreground/80"
             >
-              View on GitHub
+              View on GitLab
               <ArrowRight className="size-3.5" />
             </a>
             <a

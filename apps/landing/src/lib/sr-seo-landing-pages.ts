@@ -354,7 +354,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         title: "Zašto smo izabrali otvoren kod",
         body: "Telefonski procesi se oslanjaju na podatke klijenata, pravila zakazivanja i pravila eskalacije. Timovi treba da mogu da provere kako se te odluke donose, umesto da veruju crnoj kutiji.",
         points: [
-          "Pregledajte kod pod MIT licencom, model postavljanja i granice podataka na GitHub-u",
+          "Pregledajte kod pod MIT licencom, model postavljanja i granice podataka na GitLab-u",
           "Počnite na LobbyStack Cloud-u i pređite na samostalno hostovanje kada Vašem timu zatreba više kontrole",
           "Izbegnite zavisnost od jednog dobavljača za recepcionera koji dočekuje svakog pozivaoca",
         ],
@@ -382,7 +382,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
     relatedLinks: [
       { label: "Funkcije", href: "/features/" },
       { label: "Javna dokumentacija", href: "/docs/api/" },
-      { label: "GitHub", href: "https://github.com/lobbystack/lobbystack" },
+      { label: "GitLab", href: "https://gitlab.com/lobbystack-group/lobbystack" },
     ],
     ctaHeading: "Javite se na svaki poziv bez preopterećenja tima",
     ctaBody:
@@ -889,7 +889,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Kako funkcionišu ažuriranja kod samostalnog hostovanja?",
           answer:
-            "Preuzimate izmene iz GitHub repozitorijuma, pregledate changelog i napomene o migracijama i ponovo postavljate kroz svoj proces izdavanja. Zaključajte verziju koju ste testirali umesto da automatski postavljate svaku novu izmenu.",
+            "Preuzimate izmene iz GitLab repozitorijuma, pregledate changelog i napomene o migracijama i ponovo postavljate kroz svoj proces izdavanja. Zaključajte verziju koju ste testirali umesto da automatski postavljate svaku novu izmenu.",
         },
         {
           question: "Šta je sa privatnošću podataka i usklađenošću?",
@@ -899,7 +899,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Da li pružate podršku za samostalne instalacije?",
           answer:
-            "Počnite od dokumentacije u repozitorijumu i javnog GitHub issue trackera. Za pitanja koja ne pripadaju javnom issue-u, kontaktirajte LobbyStack tim preko adrese za podršku navedene na sajtu.",
+            "Počnite od dokumentacije u repozitorijumu i javnog GitLab issue trackera. Za pitanja koja ne pripadaju javnom issue-u, kontaktirajte LobbyStack tim preko adrese za podršku navedene na sajtu.",
         },
         {
           question: "Mogu li da prilagodim glas, promptove i ponašanje?",
@@ -914,7 +914,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
       ],
       faqHeading: "Pitanja o samostalno hostovanim AI recepcionerima",
       relatedLinks: [
-        { label: "GitHub", href: "https://github.com/lobbystack/lobbystack" },
+        { label: "GitLab", href: "https://gitlab.com/lobbystack-group/lobbystack" },
         { label: "API dokumentacija", href: "/docs/api/" },
         pricingLink,
       ],
@@ -923,8 +923,8 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         "Vodič za samostalno hostovanje pokriva servise, naloge kod provajdera i rezervne kopije o kojima ćete brinuti. Vodič za Docker Compose prolazi kroz postavljanje na jednom serveru.",
       ctaPrimaryLabel: "Pročitajte vodič za hostovanje",
       ctaPrimaryHref: "https://docs.lobbystack.com/self-hosting/overview",
-      ctaSecondaryLabel: "Pogledajte na GitHub-u",
-      ctaSecondaryHref: "https://github.com/lobbystack/lobbystack",
+      ctaSecondaryLabel: "Pogledajte na GitLab-u",
+      ctaSecondaryHref: "https://gitlab.com/lobbystack-group/lobbystack",
     }
   ),
 
@@ -1963,7 +1963,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Gde mogu da nađem izvorni kod?",
           answer:
-            "Izvorni kod LobbyStack-a je na GitHub-u, na adresi github.com/lobbystack/lobbystack. Možete ga pregledati, prijavljivati probleme i doprinositi izmenama.",
+            "Izvorni kod LobbyStack-a je na GitLab-u, na adresi gitlab.com/lobbystack-group/lobbystack. Možete ga pregledati, prijavljivati probleme i doprinositi izmenama.",
         },
       ],
       faqHeading: "Pitanja o AI recepcionerima otvorenog koda",
@@ -1972,15 +1972,15 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
           label: "Samostalno hostovanje",
           href: "/solutions/self-hosted-ai-receptionist/",
         },
-        { label: "GitHub", href: "https://github.com/lobbystack/lobbystack" },
+        { label: "GitLab", href: "https://gitlab.com/lobbystack-group/lobbystack" },
         { label: "API dokumentacija", href: "/docs/api/" },
         pricingLink,
       ],
       ctaHeading: "Proverite, prilagodite i postavite AI recepcionera",
       ctaBody:
         "LobbyStack je otvorenog koda, pa možete proveriti logiku poziva, menjati proces i postaviti ga na svoju infrastrukturu. Bez crne kutije. Bez zavisnosti od jednog dobavljača.",
-      ctaPrimaryLabel: "Pogledajte na GitHub-u",
-      ctaPrimaryHref: "https://github.com/lobbystack/lobbystack",
+      ctaPrimaryLabel: "Pogledajte na GitLab-u",
+      ctaPrimaryHref: "https://gitlab.com/lobbystack-group/lobbystack",
       ctaSecondaryLabel: "Pročitajte dokumentaciju",
       ctaSecondaryHref: "/docs/api/",
     }

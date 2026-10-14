@@ -86,7 +86,7 @@ export const companyPages: SeoLandingPage[] = [
         title: "Why we built it open source",
         body: "Phone workflows sit on top of customer data, booking rules, and escalation policies. Teams should be able to inspect how those decisions are made instead of trusting a black box.",
         points: [
-          "Review the MIT-licensed codebase, deployment model, and data boundaries on GitHub",
+          "Review the MIT-licensed codebase, deployment model, and data boundaries on GitLab",
           "Start on LobbyStack Cloud and move to self-hosting when your team needs more control",
           "Avoid vendor lock-in for the receptionist layer that sits in front of every caller",
         ],
@@ -114,7 +114,7 @@ export const companyPages: SeoLandingPage[] = [
     relatedLinks: [
       { label: "Features", href: "/features/" },
       { label: "Public documentation", href: "/docs/api/" },
-      { label: "GitHub", href: "https://github.com/lobbystack/lobbystack" },
+      { label: "GitLab", href: "https://gitlab.com/lobbystack-group/lobbystack" },
     ],
   },
 ]
@@ -425,7 +425,7 @@ export const solutionPages: SeoLandingPage[] = [
     faqs: selfHostedFaqs,
     faqHeading: "Questions about self-hosted AI receptionists",
     relatedLinks: [
-      { label: "GitHub", href: "https://github.com/lobbystack/lobbystack" },
+      { label: "GitLab", href: "https://gitlab.com/lobbystack-group/lobbystack" },
       { label: "API docs", href: "/docs/api/" },
       { label: "Pricing", href: "/pricing/" },
     ],
@@ -434,8 +434,8 @@ export const solutionPages: SeoLandingPage[] = [
       "The self-hosting guide covers the services, provider accounts, and backups you'll run. The Docker Compose guide walks through a single-server deployment.",
     ctaPrimaryLabel: "Read the self-hosting guide",
     ctaPrimaryHref: "https://docs.lobbystack.com/self-hosting/overview",
-    ctaSecondaryLabel: "View on GitHub",
-    ctaSecondaryHref: "https://github.com/lobbystack/lobbystack",
+    ctaSecondaryLabel: "View on GitLab",
+    ctaSecondaryHref: "https://gitlab.com/lobbystack-group/lobbystack",
   },
 
   // ── Trade-specific solution pages ──────────────────────────────
@@ -1271,7 +1271,7 @@ export const solutionPages: SeoLandingPage[] = [
         label: "Self-hosted deployment",
         href: "/solutions/self-hosted-ai-receptionist/",
       },
-      { label: "GitHub", href: "https://github.com/lobbystack/lobbystack" },
+      { label: "GitLab", href: "https://gitlab.com/lobbystack-group/lobbystack" },
       { label: "API docs", href: "/docs/api/" },
       { label: "Pricing", href: "/pricing/" },
     ],
@@ -1279,8 +1279,8 @@ export const solutionPages: SeoLandingPage[] = [
       "Inspect, customize, and deploy an AI receptionist you can verify",
     ctaBody:
       "LobbyStack is open source so you can audit the call logic, modify the workflow, and deploy on your own infrastructure. No black box. No vendor lock-in.",
-    ctaPrimaryLabel: "View on GitHub",
-    ctaPrimaryHref: "https://github.com/lobbystack/lobbystack",
+    ctaPrimaryLabel: "View on GitLab",
+    ctaPrimaryHref: "https://gitlab.com/lobbystack-group/lobbystack",
     ctaSecondaryLabel: "Read deployment docs",
     ctaSecondaryHref: "/docs/api/",
   },

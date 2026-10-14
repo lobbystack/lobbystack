@@ -163,7 +163,7 @@ const homeSectionsCopy = {
     openSource: {
       heading: "Proudly open-source, self-hosted",
       body: "Run LobbyStack on your own servers and keep call recordings and customer data in your own infrastructure.",
-      cta: "View on GitHub",
+      cta: "View on GitLab",
       selfHostedCta: "Self-Hosting Overview",
     },
   },
@@ -329,7 +329,7 @@ const homeSectionsCopy = {
     openSource: {
       heading: "Open source, prêt pour l'auto-hébergement",
       body: "Hébergez LobbyStack sur vos propres serveurs et gardez les enregistrements d’appels et les données client dans votre infrastructure.",
-      cta: "Voir sur GitHub",
+      cta: "Voir sur GitLab",
       selfHostedCta: "Aperçu de l'auto-hébergement",
     },
   },
@@ -494,7 +494,7 @@ const homeSectionsCopy = {
     openSource: {
       heading: "Orgullosamente de código abierto y autoalojado",
       body: "Ejecute LobbyStack en sus propios servidores y guarde las grabaciones de llamadas y los datos de sus clientes en su propia infraestructura.",
-      cta: "Ver en GitHub",
+      cta: "Ver en GitLab",
       selfHostedCta: "Sobre el autoalojamiento",
     },
   },
@@ -657,7 +657,7 @@ const homeSectionsCopy = {
     openSource: {
       heading: "Otvoreni kod, samostalno hostovanje",
       body: "Pokrenite LobbyStack na sopstvenim serverima i čuvajte snimke poziva i podatke klijenata u svojoj infrastrukturi.",
-      cta: "Pogledajte na GitHubu",
+      cta: "Pogledajte na GitLabu",
       selfHostedCta: "O samostalnom hostovanju",
     },
   },
@@ -990,12 +990,12 @@ function OpenSourceSection({ locale = "en" }: LocalizedProps) {
 
         <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row sm:flex-wrap">
           <a
-            href="https://github.com/lobbystack/lobbystack"
+            href="https://gitlab.com/lobbystack-group/lobbystack"
             target="_blank"
             rel="noopener noreferrer"
             data-ph-capture-attribute-section="open_source"
             data-ph-capture-attribute-action="view_github"
-            data-ph-capture-attribute-destination="https://github.com/lobbystack/lobbystack"
+            data-ph-capture-attribute-destination="https://gitlab.com/lobbystack-group/lobbystack"
             className="inline-flex h-11 items-center justify-center gap-3 rounded-full bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"
           >
             {sectionCopy.cta}

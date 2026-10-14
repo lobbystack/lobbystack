@@ -1,6 +1,6 @@
 import { buttonVariants } from "@/components/ui/button"
 import { appLoginUrl, appSignupUrl } from "@/lib/app-links"
-import { GithubIcon } from "@/components/GithubIcon"
+import { GitlabIcon } from "@/components/GitlabIcon"
 import { localizeHref, localizePath, type Locale } from "@/i18n"
 import { cn } from "@/lib/utils"
 import {
@@ -60,7 +60,7 @@ const labels = {
     resources: "Resources",
     pricing: "Pricing",
     login: "Log in",
-    github: "LobbyStack on GitHub",
+    github: "LobbyStack on GitLab",
     tryFree: "Try for free",
     blog: "Blog",
     changelog: "Changelog",
@@ -76,7 +76,7 @@ const labels = {
     resources: "Ressources",
     pricing: "Tarifs",
     login: "Connexion",
-    github: "LobbyStack sur GitHub",
+    github: "LobbyStack sur GitLab",
     tryFree: "Essayer gratuitement",
     blog: "Blog",
     changelog: "Journal des changements",
@@ -92,7 +92,7 @@ const labels = {
     resources: "Recursos",
     pricing: "Precios",
     login: "Iniciar sesión",
-    github: "LobbyStack en GitHub",
+    github: "LobbyStack en GitLab",
     tryFree: "Pruébelo gratis",
     blog: "Blog",
     changelog: "Registro de cambios",
@@ -108,7 +108,7 @@ const labels = {
     resources: "Resursi",
     pricing: "Cene",
     login: "Prijava",
-    github: "LobbyStack na GitHub-u",
+    github: "LobbyStack na GitLab-u",
     tryFree: "Isprobajte besplatno",
     blog: "Blog",
     changelog: "Dnevnik izmena",
@@ -510,7 +510,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
         {/* Desktop CTAs */}
         <div className="hidden items-center gap-1 md:flex">
           <a
-            href="https://github.com/lobbystack/lobbystack"
+            href="https://gitlab.com/lobbystack-group/lobbystack"
             target="_blank"
             rel="noopener noreferrer"
             aria-label={copy.github}
@@ -518,9 +518,9 @@ export function Navbar({ locale = "en" }: NavbarProps) {
             className="inline-flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
             data-ph-capture-attribute-section="navbar"
             data-ph-capture-attribute-action="view_github"
-            data-ph-capture-attribute-destination="https://github.com/lobbystack/lobbystack"
+            data-ph-capture-attribute-destination="https://gitlab.com/lobbystack-group/lobbystack"
           >
-            <GithubIcon className="size-[18px]" />
+            <GitlabIcon className="size-[18px]" />
           </a>
           <a
             href={appLoginUrl(locale)}
@@ -663,16 +663,16 @@ export function Navbar({ locale = "en" }: NavbarProps) {
             </nav>
             <div className="flex flex-col gap-2 px-6 pt-2 pb-4">
               <a
-                href="https://github.com/lobbystack/lobbystack"
+                href="https://gitlab.com/lobbystack-group/lobbystack"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                 data-ph-capture-attribute-section="mobile_navbar"
                 data-ph-capture-attribute-action="view_github"
-                data-ph-capture-attribute-destination="https://github.com/lobbystack/lobbystack"
+                data-ph-capture-attribute-destination="https://gitlab.com/lobbystack-group/lobbystack"
               >
-                <GithubIcon className="size-4" />
-                GitHub
+                <GitlabIcon className="size-4" />
+                GitLab
               </a>
               <a
                 href={appLoginUrl(locale)}

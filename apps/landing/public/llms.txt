@@ -135,7 +135,7 @@ This file is provided to make LobbyStack's public product information easier to 
 
 ## Product Resources
 
-- [GitHub Repository](https://github.com/lobbystack/lobbystack): Open-source LobbyStack codebase for auditing, extension, contribution, and self-hosted deployment planning.
+- [GitLab Repository](https://gitlab.com/lobbystack-group/lobbystack): Open-source LobbyStack codebase for auditing, extension, contribution, and self-hosted deployment planning.
 - [Features Markdown](https://lobbystack.com/features.md): Compact markdown feature summary for agents and answer engines.
 - [Pricing Markdown](https://lobbystack.com/pricing.md): Compact markdown pricing summary for agents and answer engines.
 

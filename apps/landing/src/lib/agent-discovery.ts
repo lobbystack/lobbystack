@@ -509,7 +509,7 @@ Use this skill when an agent needs a concise, machine-readable orientation to Lo
 - Pricing markdown: ${absoluteUrl("/pricing.md")}
 - Affiliate program markdown: ${absoluteUrl("/affiliate-program.md")}
 - Calculator markdown: ${absoluteUrl("/missed-call-revenue-calculator/index.md")}
-- GitHub repository: https://github.com/lobbystack/lobbystack
+- GitLab repository: https://gitlab.com/lobbystack-group/lobbystack
 
 ## Guidance
 
@@ -569,7 +569,7 @@ ${DEFAULT_DESCRIPTION}
 - API catalog: ${absoluteUrl("/.well-known/api-catalog")}
 - OpenAPI: ${absoluteUrl("/openapi.json")}
 - Agent skills: ${absoluteUrl("/.well-known/agent-skills/index.json")}
-- GitHub: https://github.com/lobbystack/lobbystack
+- GitLab: https://gitlab.com/lobbystack-group/lobbystack
 
 ## Pricing Snapshot
 

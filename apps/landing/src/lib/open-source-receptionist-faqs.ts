@@ -39,6 +39,6 @@ export const openSourceReceptionistFaqs: FaqItem[] = [
   {
     question: "Where can I find the source code?",
     answer:
-      "The LobbyStack source code is available on GitHub at github.com/lobbystack/lobbystack. You can review it, open issues, and contribute changes.",
+      "The LobbyStack source code is available on GitLab at gitlab.com/lobbystack-group/lobbystack. You can review it, open issues, and contribute changes.",
   },
 ]
