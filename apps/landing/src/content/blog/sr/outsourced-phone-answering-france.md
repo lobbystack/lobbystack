@@ -87,12 +87,12 @@ Paket Starter kod LobbyStacka košta $30 mesečno za 150 minuta, zatim $0.20 po 
 
 ### Šta treba da znate pre korišćenja iz Francuske
 
-- **Nema francuskog broja.** LobbyStack nudi brojeve u SAD, Kanadi, Velikoj Britaniji i Australiji. Zadržavate francuski broj i preusmeravate ga na svoj LobbyStack broj.
+- **Nema francuskog broja.** LobbyStack nudi brojeve u SAD, Kanadi, Velikoj Britaniji, Australiji i na Novom Zelandu. Zadržavate francuski broj i preusmeravate ga na svoj LobbyStack broj.
 - **Preusmeravanje ide u inostranstvo.** Vaš operater naplaćuje preusmereni deo svakog poziva kao poziv ka zemlji Vašeg LobbyStack broja, osim ako Vaša tarifa uključuje tu destinaciju. Tarifa Forfait Free 5G+, na primer, uključuje pozive ka mobilnim brojevima u SAD i Kanadi, ali njena stranica ne kaže ništa o preusmerenim pozivima. Pitajte operatera za tačnu cenu pre nego što uključite preusmeravanje. Vaš klijent i dalje plaća poziv ka Vašem francuskom broju, kao i ranije.
 - **Naplata u dolarima.** LobbyStack naplaćuje u američkim dolarima. Iznos u evrima zavisi od kursa i provizija Vaše banke.
 - **Nema SMS poruka ka francuskim mobilnim brojevima.** Potvrde termina i podsetnik 24 sata pre termina stižu samo na brojeve iz SAD i Kanade, pa ih Vaši francuski klijenti ne dobijaju. Obaveštenja timu imejlom rade u svakoj zemlji; SMS obaveštenja idu na američki ili kanadski mobilni broj.
 - **Nema živog operatera.** Prebacivanje ide na jedan broj, broj Vašeg tima, bez predstavljanja pozivaoca. Ako prebacivanje ne uspe, recepcioner to kaže pozivaocu i nudi da primi poruku.
-- **Samostalni hosting ne rešava pitanje broja.** Kod je otvoren (MIT licenca) i radi sa Vašim OpenAI i Twilio nalozima, ali i objavljeni kod nudi brojeve samo u te četiri zemlje.
+- **Samostalni hosting ne rešava pitanje broja.** Kod je otvoren (MIT licenca) i radi sa Vašim OpenAI i Twilio nalozima, ali i objavljeni kod nudi brojeve samo u tih pet zemalja.
 
 Za poređenje AI sistema koji se prodaju u Francuskoj, sa francuskim brojem i cenama u evrima, pročitajte naš vodič o [AI telefonskoj centrali za male firme u Francuskoj](/sr/blog/ai-phone-system-small-business/).
 
@@ -113,7 +113,7 @@ U oktobru 2026, dobavljači koji objavljuju cene naplaćuju od €1 do €1.99 p
 
 ### Mogu li da zadržim broj firme?
 
-Da. Kod svog operatera uključite preusmeravanje na broj koji Vam da dobavljač: sve pozive, ili samo one na koje se ne javite. Vaši klijenti biraju isti broj kao i pre. LobbyStack radi na isti način, s tim što preusmeravanje ide na broj u SAD, Kanadi, Velikoj Britaniji ili Australiji, uz trošak međunarodnog poziva.
+Da. Kod svog operatera uključite preusmeravanje na broj koji Vam da dobavljač: sve pozive, ili samo one na koje se ne javite. Vaši klijenti biraju isti broj kao i pre. LobbyStack radi na isti način, s tim što preusmeravanje ide na broj u SAD, Kanadi, Velikoj Britaniji, Australiji ili na Novom Zelandu, uz trošak međunarodnog poziva.
 
 ### Da li moram da potpišem dugoročni ugovor?
 

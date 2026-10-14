@@ -278,7 +278,7 @@ Por minuto, sí. LobbyStack Starter sale a $0.20 por minuto, lo mismo que su tar
 
 LobbyStack cuesta $30 con 40 llamadas, $60 con 100 llamadas y $118 con 200 llamadas (Pro, $100 por 500 minutos más $0.18 por minuto). Las tres facturas de ejemplo suman $30, $40 y $48. Con facturación anual, Starter cuesta $24 al mes.
 
-Starter incluye 150 minutos, un número de empresa en Estados Unidos, Canadá, el Reino Unido o Australia, reservas en Google Calendar, y mensajes de texto de confirmación y de recordatorio 24 horas antes a números de Estados Unidos y Canadá. También incluye 20 intentos de transferencia al mes; después, cada intento cuesta $0.02.
+Starter incluye 150 minutos, un número de empresa en Estados Unidos, Canadá, el Reino Unido, Australia o Nueva Zelanda, reservas en Google Calendar, y mensajes de texto de confirmación y de recordatorio 24 horas antes a números de Estados Unidos y Canadá. También incluye 20 intentos de transferencia al mes; después, cada intento cuesta $0.02.
 
 Los planes no limitan cuántas llamadas contesta la recepcionista a la vez. Las llamadas empiezan en su idioma predeterminado, inglés o francés, y luego la recepcionista contesta en el idioma de quien llama (más de 70 idiomas). Usted conserva su número y lo desvía a LobbyStack. La regla de desvío de su operador decide si LobbyStack toma el exceso de llamadas, las de fuera de horario o todas.
 

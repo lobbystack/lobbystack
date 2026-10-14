@@ -83,7 +83,7 @@ Les deux produits au 9 octobre 2026 :
 | Dépassement | 0,50 $ la minute | 0,20 $ la minute sur Starter, 0,18 $ sur Pro |
 | Décompte des minutes | Chaque appel arrondi aux 30 secondes supérieures | À la seconde ; les appels de moins de 10 secondes et le spam que le réceptionniste termine ne comptent pas |
 | Option gratuite | Essai de 14 jours | Forfait gratuit avec 30 minutes vocales dans le navigateur par mois, sans carte ni numéro de téléphone, sans date d'expiration |
-| Numéro de téléphone | Nouveau numéro inclus, ou portez le vôtre | Un numéro sur Starter et Pro, aux États-Unis, au Canada, au Royaume-Uni ou en Australie |
+| Numéro de téléphone | Nouveau numéro inclus, ou portez le vôtre | Un numéro sur Starter et Pro, aux États-Unis, au Canada, au Royaume-Uni, en Australie ou en Nouvelle-Zélande |
 | Fonctionne avec votre numéro actuel | Oui, par renvoi d'appel ou SIP | Oui, par le renvoi d'appel de votre opérateur |
 | Langues des appelants | Anglais, espagnol, français, italien, allemand et portugais selon sa FAQ, d'autres annoncées comme à venir ; change de langue pendant l'appel | Commence en anglais ou en français, puis répond dans la langue de l'appelant : plus de 70 langues avec OpenAI GPT-Live |
 | Calendriers | Google et Outlook | Google Calendar |
@@ -134,7 +134,7 @@ RingCentral vend AIR au Canada en forfait autonome ou en option. Au Royaume-Uni,
 
 Les prix sont en dollars canadiens ($ CA), en livres sterling (£) et en dollars australiens ($ AU), tirés des pages de prix régionales de RingCentral.
 
-LobbyStack facture en dollars américains sur tous les forfaits : 30 $ par mois pour Starter et 100 $ pour Pro. Il propose des numéros locaux, et des numéros gratuits là où ils existent, aux États-Unis, au Canada, au Royaume-Uni et en Australie. Sur LobbyStack Cloud, les confirmations et rappels de rendez-vous ne partent que vers des numéros américains et canadiens, et les alertes SMS à votre équipe exigent un mobile américain ou canadien. LobbyStack répond quand même aux appels d'une entreprise britannique ou australienne et prend ses réservations, mais les appelants qui ont un mobile britannique ou australien ne recevront ni confirmation ni rappel par SMS.
+LobbyStack facture en dollars américains sur tous les forfaits : 30 $ par mois pour Starter et 100 $ pour Pro. Il propose des numéros locaux, et des numéros gratuits là où ils existent, aux États-Unis, au Canada, au Royaume-Uni, en Australie et en Nouvelle-Zélande. Sur LobbyStack Cloud, les confirmations et rappels de rendez-vous ne partent que vers des numéros américains et canadiens, et les alertes SMS à votre équipe exigent un mobile américain ou canadien. LobbyStack répond quand même aux appels d'une entreprise britannique ou australienne et prend ses réservations, mais les appelants qui ont un mobile britannique ou australien ne recevront ni confirmation ni rappel par SMS.
 
 ## Comment AIR se compare-t-il aux autres réceptionnistes IA des fournisseurs de téléphonie ?
 

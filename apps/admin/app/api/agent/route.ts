@@ -1,9 +1,9 @@
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
-import { updateBusinessInTransaction } from "@lobbystack/domain";
+import { trialTransferNumberInTransaction, updateBusinessInTransaction } from "@lobbystack/domain";
 import { businesses, enqueueOutbox, receptionistProfiles } from "@lobbystack/db";
-import { defaultAppointmentChangePolicy, type AppointmentChangePolicy, type BookingMode } from "@lobbystack/shared";
+import { defaultAppointmentChangePolicy, defaultGreeting, isDefaultGreeting, isRuntimeLocale, normalizeRuntimeLocale, type AppointmentChangePolicy, type BookingMode } from "@lobbystack/shared";
 import { jsonError } from "@/lib/api-helpers";
 import { operatorRoute } from "@/lib/operator-request";
 
@@ -75,7 +75,7 @@ export const GET = operatorRoute(async ({ businessId, transaction }) => NextResp
 export const PATCH = operatorRoute(async ({ businessId, body, transaction }) => NextResponse.json(await transaction(async (tx) => {
   const patch = readProfilePatch(body);
   const { locale } = body;
-  if (locale !== undefined && locale !== "en" && locale !== "fr") throw jsonError("locale is invalid.");
+  if (locale !== undefined && !isRuntimeLocale(locale)) throw jsonError("locale is invalid.");
   const { timezone } = body;
   if (timezone !== undefined && typeof timezone !== "string") throw jsonError("timezone must be a string.");
   // Hands the summary back to AI, which rewrites it from the knowledge sources.
@@ -86,8 +86,19 @@ export const PATCH = operatorRoute(async ({ businessId, body, transaction }) => 
     throw jsonError("At least one profile field is required.");
   }
 
-  const business = (await tx.select({ name: businesses.name }).from(businesses).where(eq(businesses.id, businessId)).limit(1))[0];
+  const business = (await tx.select({ name: businesses.name, defaultLocale: businesses.defaultLocale }).from(businesses).where(eq(businesses.id, businessId)).limit(1))[0];
   if (!business) throw jsonError("Business not found.", 404);
+  if (patch.transferNumber) {
+    // During a free trial, calls transfer only to the owner's verified phone.
+    const trialPhone = await trialTransferNumberInTransaction(tx, { businessId });
+    if (trialPhone && patch.transferNumber.trim() !== trialPhone) throw jsonError("During your free trial, calls can only transfer to the mobile number you verified.", 409, "trial_transfer_locked");
+  }
+  const previousLocale = normalizeRuntimeLocale(business.defaultLocale);
+  // A greeting still on the old language's default follows the new language; one the owner wrote stays.
+  if (locale !== undefined && locale !== previousLocale && patch.greeting === undefined) {
+    const [current] = await tx.select({ greeting: receptionistProfiles.greeting }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, businessId)).limit(1);
+    if (current && isDefaultGreeting(current.greeting, business.name, previousLocale)) patch.greeting = defaultGreeting(business.name, locale);
+  }
 
   // Opening hours keep their clock times in a new zone; booked appointments keep theirs.
   if (locale !== undefined || timezone !== undefined) {
@@ -96,7 +107,7 @@ export const PATCH = operatorRoute(async ({ businessId, body, transaction }) => 
 
   const [profile] = await tx.insert(receptionistProfiles).values({
     businessId,
-    greeting: patch.greeting ?? `Thank you for calling ${business.name}.`,
+    greeting: patch.greeting ?? defaultGreeting(business.name, locale ?? previousLocale),
     tone: patch.tone ?? "professional",
     summary: patch.summary ?? business.name,
     // A summary a person writes is never replaced by AI.

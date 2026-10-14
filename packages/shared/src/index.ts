@@ -1,9 +1,9 @@
 import { z } from "zod";
 
 export { isMaintenanceMode } from "./maintenance";
-export { interfaceLocaleTags, interfaceLocales, intlLocale, isInterfaceLocale, normalizeInterfaceLocale } from "./locales";
-export type { InterfaceLocale } from "./locales";
-import { interfaceLocales, type InterfaceLocale } from "./locales";
+export { interfaceLocaleTags, interfaceLocales, intlLocale, isInterfaceLocale, isRuntimeLocale, normalizeInterfaceLocale, normalizeRuntimeLocale, runtimeLocales } from "./locales";
+export type { InterfaceLocale, RuntimeLocale } from "./locales";
+import { interfaceLocales, runtimeLocales, type InterfaceLocale, type RuntimeLocale } from "./locales";
 export { isCertificationMode, assertCertificationRecipient, assertCertificationOperationAllowed, assertCertificationCalendar, assertCertificationBillingSandbox } from "./certification";
 
 export type DeploymentMode = "cloud" | "self_hosted_standard" | "development";
@@ -55,14 +55,6 @@ export type BusinessRole =
   | "scheduler"
   | "viewer";
 
-/**
- * Languages the AI receptionist speaks and the business default language.
- * Interface languages (dashboard, widget UI, email) are {@link InterfaceLocale}.
- */
-export type RuntimeLocale = "en" | "fr";
-
-export const runtimeLocales = ["en", "fr"] as const satisfies ReadonlyArray<RuntimeLocale>;
-
 export type HoursWindow = {
   dayOfWeek: number;
   openMinutes: number;
@@ -106,6 +98,33 @@ export const defaultAppointmentChangePolicy: AppointmentChangePolicy = {
   allowReschedule: true,
   verificationMode: "phone_match_and_facts",
 };
+
+const greetings: Record<RuntimeLocale, (name: string) => string> = {
+  en: (name) => `Thanks for calling ${name}. How can I help you today?`,
+  fr: (name) => `Merci d'avoir appelé ${name}. Comment puis-je vous aider aujourd'hui ?`,
+  es: (name) => `Gracias por llamar a ${name}. ¿En qué puedo ayudarle hoy?`,
+  de: (name) => `Vielen Dank für Ihren Anruf bei ${name}. Wie kann ich Ihnen heute helfen?`,
+  pt: (name) => `Obrigado por ligar para ${name}. Como posso ajudar você hoje?`,
+  it: (name) => `Grazie per aver chiamato ${name}. Come posso aiutarla oggi?`,
+  nl: (name) => `Bedankt voor het bellen naar ${name}. Waarmee kan ik u vandaag helpen?`,
+};
+
+/**
+ * A new business's greeting, in its caller language, which the call opens in.
+ * It ends with a question so callers know it's their turn to talk.
+ */
+export function defaultGreeting(businessName: string, locale: RuntimeLocale = "en"): string {
+  return greetings[locale](businessName.trim());
+}
+
+/**
+ * Whether LobbyStack wrote this greeting for the language, so it can follow a
+ * change of caller language. Businesses created before the default asked a
+ * question have "Thanks for calling {name}."
+ */
+export function isDefaultGreeting(greeting: string, businessName: string, locale: RuntimeLocale): boolean {
+  return greeting === defaultGreeting(businessName, locale) || (locale === "en" && greeting === `Thanks for calling ${businessName.trim()}.`);
+}
 
 /** Missing legacy policy uses the original defaults; malformed policies disable automation. */
 export function normalizeAppointmentChangePolicy(value: unknown): AppointmentChangePolicy {

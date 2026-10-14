@@ -29,11 +29,14 @@ test("checkout return waits for billing confirmation and localized spending caps
     await context.route("**/api/onboarding/phone-numbers/suggestion?*", route => route.fulfill({ json: { numbers: [], market: { countryCode: "CA", areaCode: "416" } } }));
     const page = await context.newPage();
     const firstPoll = page.waitForResponse(response => response.url().includes("/api/billing/checkout?"));
+    // A return URL from before the success page still lands on it.
     await page.goto(`${baseURL}/onboarding/plan?checkout=success&requestId=${requestId}`);
+    await expect(page).toHaveURL(`${baseURL}/billing/success?requestId=${requestId}`);
     expect((await (await firstPoll).json()).synced).toBe(false);
-    expect(new URL(page.url()).pathname).toBe("/onboarding/plan");
+    await expect(page.getByRole("heading", { name: settings.billing.success.received.title, exact: true })).toBeVisible();
     // Simulate a validated webhook's durable billing result; never open a paid checkout.
     await transaction(tx => tx.update(billingAccounts).set({ plan: "pro", billingInterval: "monthly", subscriptionState: "active" }).where(eq(billingAccounts.businessId, businessId)));
+    await page.getByRole("button", { name: settings.billing.success.number.choose, exact: true }).click();
     await expect(page).toHaveURL(`${baseURL}/onboarding/number`);
     await transaction(async tx => {
       expect((await tx.select().from(businesses).where(eq(businesses.id, businessId)))[0]?.onboardingStage).toBe("phone_number");

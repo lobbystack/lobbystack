@@ -1,4 +1,4 @@
-import { and, eq, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, like, lt, or, sql } from "drizzle-orm";
 
 import { billingAccounts, billingCheckoutRequests, billingTransactions, billingUsageEvents, businesses, enqueueOutbox, providerEvents, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { billingErrorCodes, billingPlanCatalog, DEFAULT_WEB_CALL_MAX_DURATION_MS, isPaidSubscription, MAX_WEB_CALL_MAX_DURATION_MS, type BillingPlanSlug } from "@lobbystack/shared";
@@ -6,6 +6,7 @@ import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
 import type { DomainContext } from "./context";
 import { recordAffiliateCommissionInTransaction } from "./affiliates";
+import { keepBusinessNumbersInTransaction, queuePlanCancelNoticeInTransaction, scheduleNumberReleaseInTransaction } from "./numberTrials";
 import { recordProductEventInTransaction } from "./productEvents";
 import { requireBusinessAdmin } from "../authz";
 import { correctUsageInTransaction, enqueueUsageSyncInTransaction, getUsageStatusInTransaction, getVoiceSecondsLeftInTransaction, loadBillingContext, reserveUsageInTransaction } from "./usage";
@@ -105,12 +106,35 @@ export async function reserveWidgetChatUsageInTransaction(
   return { allowed: true, errorCode: null, plan };
 }
 
+// We never learn that someone abandoned a Polar checkout, so one counts as open for 30 minutes: time to finish paying, and short enough that a dropped one stops blocking soon.
+const openCheckoutWindowMs = 30 * 60_000;
+
+/**
+ * Refuses a checkout that could start a second subscription: the business
+ * already pays (plan changes go through the customer portal) or another
+ * checkout is open. Asking again for the same open checkout returns it.
+ */
 export async function createBillingCheckoutRequest(
   context: DomainContext,
   input: { userId: string; businessId: string; target: BillingCheckoutTarget; billingInterval: BillingInterval },
 ): Promise<string> {
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
+    // Two tabs asking at once would both see no open checkout without this.
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`billing-checkout:${input.businessId}`}, 0))`);
+    const account = (await tx.select({ plan: billingAccounts.plan, subscriptionState: billingAccounts.subscriptionState }).from(billingAccounts).where(eq(billingAccounts.businessId, input.businessId)).limit(1))[0];
+    if (isPaidSubscription(account?.plan, account?.subscriptionState)) {
+      throw Object.assign(new Error("This workspace already has a paid plan. Change it from Manage subscription."), { status: 409, code: billingErrorCodes.subscriptionActive });
+    }
+    const open = (await tx.select({ id: billingCheckoutRequests.id, requestedByUserId: billingCheckoutRequests.requestedByUserId, target: billingCheckoutRequests.target, billingInterval: billingCheckoutRequests.billingInterval })
+      .from(billingCheckoutRequests)
+      .where(and(eq(billingCheckoutRequests.businessId, input.businessId), inArray(billingCheckoutRequests.status, ["pending", "processing", "ready"]), gt(billingCheckoutRequests.createdAt, new Date(Date.now() - openCheckoutWindowMs))))
+      .orderBy(desc(billingCheckoutRequests.createdAt))
+      .limit(1))[0];
+    if (open) {
+      if (open.requestedByUserId === input.userId && open.target === input.target && open.billingInterval === input.billingInterval) return open.id;
+      throw Object.assign(new Error("A checkout is already open for this workspace."), { status: 409, code: billingErrorCodes.checkoutInProgress });
+    }
     await tx.insert(billingAccounts).values({ businessId: input.businessId, billingKey: `business:${input.businessId}` }).onConflictDoNothing({ target: billingAccounts.businessId });
     const [request] = await tx.insert(billingCheckoutRequests).values({
       businessId: input.businessId,
@@ -397,6 +421,19 @@ function dateField(source: Record<string, unknown>, ...keys: string[]): Date | u
   return Number.isNaN(date.valueOf()) ? undefined : date;
 }
 
+/**
+ * When a canceled plan ends, or null when it renews. Polar keeps the
+ * subscription active until then, so only its newest snapshot says so.
+ */
+export async function scheduledSubscriptionEndInTransaction(tx: DatabaseTransaction, businessId: string): Promise<string | null> {
+  const latest = (await tx.select({ payload: providerEvents.payload }).from(providerEvents)
+    .where(and(eq(providerEvents.businessId, businessId), eq(providerEvents.provider, "polar"), like(providerEvents.eventType, "subscription.%"), eq(providerEvents.status, "processed")))
+    .orderBy(sql`${providerEvents.payload}->>'subscriptionModifiedAt' desc nulls last`, desc(providerEvents.createdAt))
+    .limit(1))[0]?.payload;
+  if (latest?.cancel_at_period_end !== true || !["active", "trialing"].includes(String(latest.status))) return null;
+  return stringField(latest, "ends_at", "current_period_end") ?? null;
+}
+
 export type SubscriptionStart = { plan: string; billingInterval: string | null; previousPlan: string | null };
 
 /**
@@ -488,6 +525,16 @@ export async function reconcileBillingProviderEvent(
           updatedAt: new Date(),
         },
       });
+      if (!stale) {
+        // A live paid plan keeps the business's numbers, including a trial number.
+        // When a paid plan ends, the numbers stay 30 more days, then go.
+        const wasPaid = isPaidSubscription(existing?.plan ?? null, existing?.subscriptionState ?? null);
+        const isPaid = isPaidSubscription(plan ?? existing?.plan ?? null, subscriptionState ?? existing?.subscriptionState ?? null);
+        if (isPaid) await keepBusinessNumbersInTransaction(tx, { businessId: input.businessId });
+        else if (wasPaid) await scheduleNumberReleaseInTransaction(tx, { businessId: input.businessId });
+        // Polar sends subscription.canceled when the owner cancels at the end of the period, while the plan is still live.
+        if (isPaid && event.eventType === "subscription.canceled" && currentPeriodEnd) await queuePlanCancelNoticeInTransaction(tx, { businessId: input.businessId, periodEnd: currentPeriodEnd });
+      }
     }
 
     // Refunds arrive as order.refunded (refund.* payloads name no business, so the webhook route drops them).

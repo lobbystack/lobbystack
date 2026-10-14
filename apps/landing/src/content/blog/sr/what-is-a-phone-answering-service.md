@@ -15,7 +15,7 @@ canonicalSlug: "what-is-a-phone-answering-service"
 
 **Usluga odgovaranja na pozive** javlja se na pozive Vaše firme, u ime firme, kada Vi ne možete da se javite. Recepcioneri uživo, AI softver ili kombinacija to dvoje pozdravljaju pozivaoce, odgovaraju na pitanja, primaju poruke, zakazuju termine i preusmeravaju hitne pozive Vama. Svoj broj prosleđujete usluzi i birate koje pozive dobija: sve, one koje propustite ili one posle radnog vremena.
 
-*Cene smo proverili 9. oktobra 2026. na stranici sa cenama svakog dobavljača, u američkim dolarima bez poreza. To su severnoamerički dobavljači, a LobbyStack brojevi su dostupni u SAD, Kanadi, Ujedinjenom Kraljevstvu i Australiji. LobbyStack je napisao ovaj vodič i prodaje AI recepcionera, pa se naš paket pojavljuje kao jedan od primera i označen je kao naš.*
+*Cene smo proverili 9. oktobra 2026. na stranici sa cenama svakog dobavljača, u američkim dolarima bez poreza. To su severnoamerički dobavljači, a LobbyStack brojevi su dostupni u SAD, Kanadi, Ujedinjenom Kraljevstvu, Australiji i na Novom Zelandu. LobbyStack je napisao ovaj vodič i prodaje AI recepcionera, pa se naš paket pojavljuje kao jedan od primera i označen je kao naš.*
 
 ## Šta radi usluga odgovaranja na pozive?
 
@@ -151,7 +151,7 @@ Neki dobavljači besplatno preuzimaju deo stvarnih poziva. [Smith.ai AI paket Fr
 
 ### Mogu li da zadržim poslovni broj?
 
-Da. Prosledite postojeći broj usluzi i izaberite pravilo prosleđivanja kod operatera: svi pozivi, prelivanje poziva ili pozivi van radnog vremena. Neke usluge preuzimaju broj i prenosom, a [PATLive](https://www.patlive.com/pricing/) prenosi brojeve besplatno, u oba smera. Uz LobbyStack prosleđujete broj na LobbyStack broj u SAD, Kanadi, Ujedinjenom Kraljevstvu ili Australiji.
+Da. Prosledite postojeći broj usluzi i izaberite pravilo prosleđivanja kod operatera: svi pozivi, prelivanje poziva ili pozivi van radnog vremena. Neke usluge preuzimaju broj i prenosom, a [PATLive](https://www.patlive.com/pricing/) prenosi brojeve besplatno, u oba smera. Uz LobbyStack prosleđujete broj na LobbyStack broj u SAD, Kanadi, Ujedinjenom Kraljevstvu, Australiji ili na Novom Zelandu.
 
 ### Koja je razlika između usluge odgovaranja na pozive i call centra?
 

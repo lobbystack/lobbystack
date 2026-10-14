@@ -102,7 +102,7 @@ Pour les tarifs d'autres services en direct, voyez [combien coûte un service de
 | Autres services | Encaissement, formulaires d'accueil, appels sortants, chat sur le site | Aucun ; il répond aux appels téléphoniques |
 | SMS | Appels et SMS depuis votre numéro professionnel | Confirmation de rendez-vous et rappel 24 heures avant, avec l'accord de l'appelant, vers les numéros américains et canadiens ; l'IA ne répond pas aux SMS |
 | Intégrations | « 5000+ » par des intégrations directes et Zapier | API REST et webhooks signés pour six événements |
-| Zones couvertes | États-Unis, Canada et Caraïbes américaines | Numéros aux États-Unis, au Canada, au Royaume-Uni et en Australie |
+| Zones couvertes | États-Unis, Canada et Caraïbes américaines | Numéros aux États-Unis, au Canada, au Royaume-Uni, en Australie et en Nouvelle-Zélande |
 | HIPAA | Annonce des services conformes à HIPAA | Aucune revendication HIPAA |
 | Frais de mise en service | Aucun sur la page de prix | Aucun, sur tous les forfaits |
 | Code source | Un service assuré par du personnel | Licence MIT ; auto-hébergement avec vos propres comptes OpenAI et Twilio |
@@ -195,7 +195,7 @@ Non. Les réceptionnistes de Ruby répondent, et l'IA travaille en coulisse. Un 
 
 ### Puis-je garder mon numéro si je quitte Ruby ?
 
-Si votre opérateur détient le numéro et renvoie les appels vers Ruby, modifiez la règle de renvoi pour qu'elle pointe vers LobbyStack. Si Ruby héberge le numéro, demandez à Ruby comment le transférer avant de résilier, et contactez l'équipe LobbyStack pour le porter. LobbyStack propose des numéros aux États-Unis, au Canada, au Royaume-Uni et en Australie.
+Si votre opérateur détient le numéro et renvoie les appels vers Ruby, modifiez la règle de renvoi pour qu'elle pointe vers LobbyStack. Si Ruby héberge le numéro, demandez à Ruby comment le transférer avant de résilier, et contactez l'équipe LobbyStack pour le porter. LobbyStack propose des numéros aux États-Unis, au Canada, au Royaume-Uni, en Australie et en Nouvelle-Zélande.
 
 ## Choisissez Ruby si
 

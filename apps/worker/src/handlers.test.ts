@@ -118,7 +118,7 @@ describe("worker handlers", () => {
     const businessId = randomUUID(); const claimId = randomUUID(); const phoneNumberId = randomUUID(); const domain = { db: undefined as never };
     vi.stubEnv("APP_BASE_URL", "https://app.example.test");
     vi.stubEnv("TWILIO_SIP_TRUNK_SID", "TK123");
-    vi.mocked(claimNumberProvisioning).mockResolvedValue({ id: claimId, e164: "+14165550199" });
+    vi.mocked(claimNumberProvisioning).mockResolvedValue({ id: claimId, e164: "+14165550199", selection: { countryCode: "CA", kind: "local" } });
     vi.mocked(completeNumberProvisioning).mockResolvedValue(phoneNumberId);
     const findOwnedPhoneNumber = vi.fn().mockResolvedValue({ providerPhoneId: "PN123", e164: "+14165550199" }); const purchasePhoneNumber = vi.fn();
     const addNumberToSipTrunk = vi.fn().mockResolvedValue(undefined);
@@ -133,7 +133,7 @@ describe("worker handlers", () => {
     const businessId = randomUUID(); const claimId = randomUUID(); const phoneNumberId = randomUUID(); const domain = { db: undefined as never };
     vi.stubEnv("APP_BASE_URL", "https://app.example.test/");
     vi.stubEnv("TWILIO_SIP_TRUNK_SID", "TK123");
-    vi.mocked(claimNumberProvisioning).mockResolvedValue({ id: claimId, e164: "+14165550199" });
+    vi.mocked(claimNumberProvisioning).mockResolvedValue({ id: claimId, e164: "+14165550199", selection: { countryCode: "CA", kind: "local" } });
     vi.mocked(completeNumberProvisioning).mockResolvedValue(phoneNumberId);
     const findOwnedPhoneNumber = vi.fn().mockResolvedValue(null);
     const purchasePhoneNumber = vi.fn().mockResolvedValue({ providerPhoneId: "PN456", e164: "+14165550199" });
@@ -150,11 +150,42 @@ describe("worker handlers", () => {
     expect(addNumberToSipTrunk).toHaveBeenCalledWith({ trunkSid: "TK123", providerPhoneId: "PN456" });
   });
 
+  it("buys UK and Australian numbers under their regulatory bundle", async () => {
+    const businessId = randomUUID(); const domain = { db: undefined as never };
+    vi.stubEnv("TWILIO_SIP_TRUNK_SID", "TK123");
+    vi.stubEnv("TWILIO_GB_BUNDLE_SID", "BUGB");
+    vi.stubEnv("TWILIO_AU_BUNDLE_SID", "BUAU");
+    vi.stubEnv("TWILIO_AU_ADDRESS_SID", "ADAU");
+    vi.mocked(completeNumberProvisioning).mockResolvedValue(randomUUID());
+    const purchasePhoneNumber = vi.fn().mockResolvedValue({ providerPhoneId: "PN456", e164: "+447700900123" });
+    const twilio = { sendSms: vi.fn(), findOwnedPhoneNumber: vi.fn().mockResolvedValue(null), purchasePhoneNumber, addNumberToSipTrunk: vi.fn().mockResolvedValue(undefined) };
+    for (const [countryCode, e164] of [["GB", "+447700900123"], ["AU", "+61491570006"]] as const) {
+      const claimId = randomUUID();
+      vi.mocked(claimNumberProvisioning).mockResolvedValue({ id: claimId, e164, selection: { countryCode, kind: "mobile" } });
+      await handleJob({ jobId: randomUUID(), type: "phoneNumber.provision", queue: "critical", businessId, payload: { claimId }, trace: {}, idempotencyKey: `claim:${claimId}`, scheduled: false }, { domain, twilio });
+    }
+    expect(purchasePhoneNumber).toHaveBeenNthCalledWith(1, expect.objectContaining({ e164: "+447700900123", bundleSid: "BUGB" }));
+    expect(purchasePhoneNumber.mock.calls[0]![0]).not.toHaveProperty("addressSid");
+    expect(purchasePhoneNumber).toHaveBeenNthCalledWith(2, expect.objectContaining({ e164: "+61491570006", bundleSid: "BUAU", addressSid: "ADAU" }));
+  });
+
+  it("fails a UK claim without buying when the UK bundle isn't set", async () => {
+    const businessId = randomUUID(); const claimId = randomUUID(); const domain = { db: undefined as never };
+    vi.stubEnv("TWILIO_SIP_TRUNK_SID", "TK123");
+    vi.stubEnv("TWILIO_GB_BUNDLE_SID", "");
+    vi.mocked(claimNumberProvisioning).mockResolvedValue({ id: claimId, e164: "+447700900123", selection: { countryCode: "GB", kind: "mobile" } });
+    const purchasePhoneNumber = vi.fn();
+
+    await expect(handleJob({ jobId: randomUUID(), type: "phoneNumber.provision", queue: "critical", businessId, payload: { claimId }, trace: {}, idempotencyKey: `claim:${claimId}`, scheduled: false }, { domain, twilio: { sendSms: vi.fn(), findOwnedPhoneNumber: vi.fn().mockResolvedValue(null), purchasePhoneNumber, addNumberToSipTrunk: vi.fn() } })).rejects.toThrow("TWILIO_GB_BUNDLE_SID is required");
+    expect(purchasePhoneNumber).not.toHaveBeenCalled();
+    expect(failNumberProvisioning).toHaveBeenCalledWith(domain, expect.objectContaining({ businessId, claimId, unavailable: false }));
+  });
+
   it("releases a purchased number when it can't join the SIP trunk", async () => {
     const businessId = randomUUID(); const claimId = randomUUID(); const domain = { db: undefined as never };
     vi.stubEnv("APP_BASE_URL", "https://app.example.test");
     vi.stubEnv("TWILIO_SIP_TRUNK_SID", "TK123");
-    vi.mocked(claimNumberProvisioning).mockResolvedValue({ id: claimId, e164: "+14165550199" });
+    vi.mocked(claimNumberProvisioning).mockResolvedValue({ id: claimId, e164: "+14165550199", selection: { countryCode: "CA", kind: "local" } });
     const purchasePhoneNumber = vi.fn().mockResolvedValue({ providerPhoneId: "PN789", e164: "+14165550199" });
     const addNumberToSipTrunk = vi.fn().mockRejectedValue(new Error("trunk unavailable"));
     const releasePhoneNumber = vi.fn().mockResolvedValue(undefined);
@@ -389,7 +420,7 @@ describe("worker handlers", () => {
     expect(result).toEqual({ status: "completed", entityId: requestId });
     expect(createCheckout).toHaveBeenCalledWith(expect.objectContaining({
       productId: "product-starter-monthly",
-      successUrl: `https://app.example/settings/plan?checkout=success&requestId=${requestId}`,
+      successUrl: `https://app.example/billing/success?requestId=${requestId}`,
       returnUrl: "https://app.example/settings/plan",
     }));
     vi.unstubAllEnvs();

@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { buildPhoneSessionConfig } from "@lobbystack/agent-core/live/session";
-import { finishLiveCall, getCachedBusinessSnapshot, startLivePhoneCall } from "@lobbystack/domain";
+import { finishLiveCall, getCachedBusinessSnapshot, isNumberTrialEnded, markNumberTrialMinutesExhausted, startLivePhoneCall } from "@lobbystack/domain";
 import { getAppDatabase } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
 import { attachWorkerToLiveSession, getLiveClient } from "@/lib/live-prototype";
@@ -114,6 +114,12 @@ type LiveClient = ReturnType<typeof getLiveClient>;
 // snapshot loads at the same time, since the caller is still hearing it ring.
 async function answerCall(client: LiveClient, input: { sessionId: string; businessId: string; from: string | undefined; to: string; timing: Timing }) {
   const domain = createWorkerDomainContext();
+  // An ended trial's number goes unanswered, as if it were gone. The worker
+  // also takes it off the trunk; this covers calls that arrive before it does.
+  if (await isNumberTrialEnded(domain, { businessId: input.businessId })) {
+    await client.live.sessions.reject(input.sessionId, { status_code: 486 });
+    return new NextResponse(null, { status: 200 });
+  }
   const [loaded, started] = await Promise.allSettled([
     getCachedBusinessSnapshot(domain, { businessId: input.businessId }),
     startLivePhoneCall(domain, { businessId: input.businessId, sessionId: input.sessionId, from: input.from, to: input.to }),
@@ -123,7 +129,8 @@ async function answerCall(client: LiveClient, input: { sessionId: string; busine
     const error: unknown = started.reason;
     if (error !== null && typeof error === "object" && "code" in error && error.code === "voice_limit_reached") {
       // 486 Busy Here: the caller hears a busy signal rather than an answer
-      // the business can't pay for.
+      // the business can't pay for. A trial number forwards later calls to the owner.
+      await markNumberTrialMinutesExhausted(domain, { businessId: input.businessId }).catch((cause: unknown) => console.error("[live] couldn't switch the trial number to forwarding", cause instanceof Error ? cause.message : cause));
       await client.live.sessions.reject(input.sessionId, { status_code: 486 });
       return new NextResponse(null, { status: 200 });
     }

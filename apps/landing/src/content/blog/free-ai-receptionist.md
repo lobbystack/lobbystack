@@ -120,7 +120,7 @@ After you use the 30 minutes, test calls stop until the next month or until you 
 | Starter | $30, or $24 billed annually | 150 minutes, one business number | $0.20 a minute |
 | Pro | $100, or $80 billed annually | 500 minutes, one business number | $0.18 a minute |
 
-No plan has a setup fee. Starter and Pro answer calls on a number in the US, Canada, the UK or Australia. You can forward your existing number for every call, or only for overflow or after-hours calls. The receptionist books appointments into Google Calendar, transfers urgent calls to one number and saves a summary, transcript and recording of every call. Calls under 10 seconds and calls the receptionist ends as spam don't count toward your minutes.
+No plan has a setup fee. Starter and Pro answer calls on a number in the US, Canada, the UK, Australia or New Zealand. You can forward your existing number for every call, or only for overflow or after-hours calls. The receptionist books appointments into Google Calendar, transfers urgent calls to one number and saves a summary, transcript and recording of every call. Calls under 10 seconds and calls the receptionist ends as spam don't count toward your minutes.
 
 ## When does a free AI receptionist stop being enough?
 

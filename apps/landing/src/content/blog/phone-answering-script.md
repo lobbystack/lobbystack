@@ -307,7 +307,7 @@ With LobbyStack as the example (more on the [AI phone answering](/solutions/ai-p
 - **Messages.** You get an email alert when it takes a message, with text alerts as an option. LobbyStack saves a summary, a transcript and a recording of every call in the dashboard.
 - **Spam.** LobbyStack doesn't bill spam calls or calls under 10 seconds.
 - **Texts.** The AI doesn't reply to text messages, so keep a person on any text line you advertise.
-- **Numbers.** LobbyStack has phone numbers in the US, Canada, the UK and Australia, and you can forward your existing business number to it.
+- **Numbers.** LobbyStack has phone numbers in the US, Canada, the UK, Australia and New Zealand, and you can forward your existing business number to it.
 
 ### Test the rules before callers hear them
 

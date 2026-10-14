@@ -169,6 +169,7 @@ const errorCopy: Record<
     connectionDropped: "The voice connection dropped.",
     browserNoMicrophone: "This browser does not support microphone calls.",
     browserNoWebRtc: "This browser does not support live voice calls.",
+    voiceLimitReached: "The AI receptionist is unavailable right now.",
     unavailable: "The AI receptionist is unavailable right now.",
     generic: "Something went wrong while starting the call.",
   },

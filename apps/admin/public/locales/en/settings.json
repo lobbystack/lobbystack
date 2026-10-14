@@ -143,7 +143,8 @@
       "openingCheckout": "Opening checkout...",
       "openingPortal": "Opening portal...",
       "viewInvoice": "View invoice",
-      "retry": "Try again"
+      "retry": "Try again",
+      "cancelPlan": "Cancel plan"
     },
     "currentPlan": {
       "title": "Your plan",
@@ -329,6 +330,76 @@
         "order": "Order",
         "refund": "Refund"
       }
+    },
+    "checkoutErrors": {
+      "inProgress": "A checkout is already open for this workspace. Finish it, or start a new one after 30 minutes.",
+      "subscriptionActive": "This workspace already has a paid plan. To change it, use Manage subscription on the Plan page."
+    },
+    "cancel": {
+      "title": "Cancel your {{plan}} plan?",
+      "description": "Your plan stays active until {{date}}. After that, you're on the Free plan.",
+      "descriptionNoDate": "Your plan stays active until the end of the current billing period. After that, you're on the Free plan.",
+      "reasonLabel": "Why are you canceling? (optional)",
+      "reasons": {
+        "setup": "Setup was confusing or slow",
+        "quality": "The voice or call quality",
+        "price": "The price",
+        "missing_feature": "A missing feature",
+        "other": "Something else"
+      },
+      "commentLabel": "Tell us more (optional)",
+      "keep": "Keep my plan",
+      "confirm": "Cancel plan",
+      "canceling": "Canceling plan...",
+      "failed": "We couldn't cancel your plan. Try again, or use Manage subscription.",
+      "endsOn": "Your {{plan}} plan ends on {{date}}. It stays active until then."
+    },
+    "success": {
+      "received": {
+        "title": "Payment received",
+        "description": "This page updates when your plan is ready.",
+        "status": "Setting up your plan..."
+      },
+      "missing": {
+        "title": "We couldn't find this checkout",
+        "description": "Open your plan page to see the plan you're on.",
+        "action": "Go to your plan"
+      },
+      "title": "Your {{plan}} plan is ready",
+      "unlocks": {
+        "voiceMinutes_one": "{{count}} voice minute each month",
+        "voiceMinutes_other": "{{count}} voice minutes each month",
+        "numbers_one": "{{count}} dedicated business number",
+        "numbers_other": "{{count}} dedicated business numbers",
+        "alertSms_one": "{{count}} alert SMS segment each month",
+        "alertSms_other": "{{count}} alert SMS segments each month",
+        "transfers_one": "{{count}} transfer attempt each month",
+        "transfers_other": "{{count}} transfer attempts each month"
+      },
+      "number": {
+        "label": "Your number",
+        "keep": "It's yours to keep.",
+        "choose": "Choose your number"
+      },
+      "steps": {
+        "title": "Next steps",
+        "call": {
+          "title": "Call it now",
+          "description": "Hear your receptionist answer a real call."
+        },
+        "forward": {
+          "title": "Forward your business line to it",
+          "description": "Callers keep dialing the number they know. Your phone carrier forwards those calls to your LobbyStack number.",
+          "action": "Call forwarding guide"
+        },
+        "transfer": {
+          "title": "Choose where urgent calls go",
+          "description": "Add a transfer number in AI settings so your receptionist can pass urgent callers to a person.",
+          "action": "Open AI settings"
+        }
+      },
+      "continue": "Continue setup",
+      "dashboard": "Go to your dashboard"
     }
   },
   "phoneNumber": {

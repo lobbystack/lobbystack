@@ -626,7 +626,7 @@ LobbyStack has Free, Starter, Pro, and Enterprise options. Plans scale by usage 
 
 | Plan | Price | Included usage |
 | --- | ---: | --- |
-| Free | $0/month | 30 browser voice minutes, no telephone number, 1 MB knowledge base |
+| Free | $0/month | 30 voice minutes, a phone number free for 14 days, 1 MB knowledge base |
 | Starter | $30/month or $288/year | 150 voice minutes, 20 transfer attempts, 50 alert SMS segments, 5 MB knowledge base |
 | Pro | $100/month or $960/year | 500 voice minutes, 100 transfer attempts, 200 alert SMS segments, 20 MB knowledge base |
 | Enterprise | Custom | Custom volume, multiple numbers, and self-hosting implementation support |
@@ -645,7 +645,7 @@ LobbyStack has Free, Starter, Pro, and Enterprise options. Plans scale by usage 
 
 ### Does the Free plan include voice minutes?
 
-Yes. You can test 30 browser voice minutes on Free. Free has no telephone number.
+Yes. Free includes 30 voice minutes. You can use them on browser test calls and, where a free trial is available, on a phone number free for 14 days.
 
 ### How do paid plans work?
 

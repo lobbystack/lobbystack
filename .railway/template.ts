@@ -124,8 +124,9 @@ export default defineRailway((ctx) => {
       OPENAI_WEBHOOK_SECRET: preserve(),
       TWILIO_SMS_WEBHOOK_URL: "${{APP_BASE_URL}}/api/webhooks/twilio/sms",
       TWILIO_STATUS_CALLBACK_URL: "${{APP_BASE_URL}}/api/webhooks/twilio/status",
-      // Optional user input for Google Calendar: an OAuth client from Google Cloud whose
-      // authorized redirect URI is GOOGLE_REDIRECT_URI. The worker references all three.
+      // Optional user input for Google Calendar and Google sign-in: an OAuth client from Google Cloud
+      // whose authorized redirect URIs are GOOGLE_REDIRECT_URI and APP_BASE_URL/api/auth/callback/google.
+      // The worker references all three.
       GOOGLE_CLIENT_ID: preserve(),
       GOOGLE_CLIENT_SECRET: preserve(),
       GOOGLE_REDIRECT_URI: "${{APP_BASE_URL}}/api/calendar/google/callback",

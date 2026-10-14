@@ -19,7 +19,7 @@ LobbyStack nudi pakete Free, Starter, Pro i Enterprise. Paketi rastu sa potrošn
 
 | Paket | Cena | Uključena potrošnja |
 | --- | ---: | --- |
-| Free | $0 mesečno | 30 minuta razgovora u pregledaču, bez broja telefona, baza znanja od 1 MB |
+| Free | $0 mesečno | 30 minuta razgovora, broj telefona besplatno na 14 dana, baza znanja od 1 MB |
 | Starter | $30 mesečno ili $288 godišnje | 150 minuta razgovora, 20 pokušaja preusmeravanja, 50 SMS segmenata za obaveštenja, baza znanja od 5 MB |
 | Pro | $100 mesečno ili $960 godišnje | 500 minuta razgovora, 100 pokušaja preusmeravanja, 200 SMS segmenata za obaveštenja, baza znanja od 20 MB |
 | Enterprise | Po dogovoru | Prilagođen obim, više brojeva i podrška pri uvođenju samostalnog hostovanja |
@@ -38,7 +38,7 @@ LobbyStack nudi pakete Free, Starter, Pro i Enterprise. Paketi rastu sa potrošn
 
 ### Da li Free paket uključuje minute razgovora?
 
-Da. Na Free paketu možete da isprobate 30 minuta razgovora u pregledaču. Free nema broj telefona.
+Da. Free paket uključuje 30 minuta razgovora. Možete da ih koristite za probne pozive u pregledaču i, gde je dostupna besplatna proba, na broju telefona koji je besplatan 14 dana.
 
 ### Kako funkcionišu plaćeni paketi?
 

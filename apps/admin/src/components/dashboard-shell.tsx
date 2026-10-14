@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/sidebar";
 import { LiveUpgradePlanProvider } from "./live-upgrade-plan-provider";
 import { BillingPastDueBanner, type BillingPermissions } from "./billing-past-due-banner";
+import { NumberTrialBanner } from "./number-trial-banner";
 import { DashboardUtilityBar } from "./dashboard-utility-bar";
 import { DashboardSetupGuideCard } from "./dashboard-setup-guide-card";
 import { NavUser } from "./nav-user";
@@ -83,6 +84,7 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
     <div className="flex h-svh w-full flex-col overflow-hidden bg-background">
       <a href="#dashboard-main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:rounded-xl focus:bg-background focus:p-4">{t("accessibility.skipToContent")}</a>
       <BillingBanner />
+      <NumberTrialBanner />
       <SidebarProvider
         className="relative min-h-0 flex-1 overflow-hidden"
         defaultOpen={getSidebarDefaultOpen()}

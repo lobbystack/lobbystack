@@ -56,6 +56,8 @@ export type InitialSuggestionResult = {
   market: VerifiedPhoneMarket;
   suggestion: AvailableNumberSummary | null;
   alternatives: Array<AvailableNumberSummary>;
+  /** The owner's verified phone decides the country, so there's no other to pick. */
+  countryFixed?: boolean;
 };
 
 export type SearchResult = {
@@ -110,7 +112,7 @@ type PhoneNumberChooserProps = {
 };
 
 type NumberOffer = { phoneE164: string; locality?: string; region?: string; countryCode: string; claimToken: string; capabilities: { sms: boolean; voice: boolean } };
-type OffersResponse = { numbers: NumberOffer[]; market?: { countryCode: string; areaCode?: string } };
+type OffersResponse = { numbers: NumberOffer[]; market?: { countryCode: string; areaCode?: string }; countryFixed?: boolean };
 
 function toSummary(offer: NumberOffer, selectionContext: NumberSelectionContext): AvailableNumberSummary {
   return { ...offer, e164: offer.phoneE164, display: formatPhoneNumberDisplay(offer.phoneE164), kind: "local", selectionContext };
@@ -132,7 +134,7 @@ export function phoneNumberChooserApi(replacement: boolean): Pick<PhoneNumberCho
         : await requestJson<OffersResponse>(`${prefix}/suggestion?businessId=${encodeURIComponent(businessId)}`);
       const countryCode = normalizeOnboardingPhoneCountry(result.market?.countryCode ?? result.numbers[0]?.countryCode);
       const numbers = result.numbers.map(offer => toSummary(offer, { mode: "suggested", countryCode }));
-      return { market: { ...result.market, countryCode }, suggestion: numbers[0] ?? null, alternatives: numbers.slice(1) };
+      return { market: { ...result.market, countryCode }, suggestion: numbers[0] ?? null, alternatives: numbers.slice(1), countryFixed: Boolean(result.countryFixed) };
     },
     async claimNumber({ businessId, claimToken, selectionContext }) {
       const { claimId } = await requestJson<{ claimId: string }>(`${prefix}/claim?businessId=${encodeURIComponent(businessId)}`, { method: "POST", body: JSON.stringify({ claimToken, idempotencyKey: crypto.randomUUID() }) });
@@ -161,6 +163,7 @@ const COUNTRY_OPTIONS: Array<{
   { code: "CA", label: "CA", flag: "🇨🇦" },
   { code: "GB", label: "UK", flag: "🇬🇧" },
   { code: "AU", label: "AU", flag: "🇦🇺" },
+  { code: "NZ", label: "NZ", flag: "🇳🇿" },
 ];
 
 function getNumberLocationLabel(number: AvailableNumberSummary): string | null {
@@ -198,6 +201,7 @@ export function PhoneNumberChooser({
   onClaimCompleted,
 }: PhoneNumberChooserProps) {
   const [country, setCountry] = useState<SupportedOnboardingPhoneCountry>("US");
+  const [countryFixed, setCountryFixed] = useState(false);
   const [areaCode, setAreaCode] = useState<string>("");
   const [numbers, setNumbers] = useState<Array<AvailableNumberSummary>>([]);
   const [selectedE164, setSelectedE164] = useState<string | null>(null);
@@ -229,6 +233,7 @@ export function PhoneNumberChooser({
 
         const initialCountry = normalizeOnboardingPhoneCountry(result.market.countryCode);
         setCountry(initialCountry);
+        setCountryFixed(Boolean(result.countryFixed));
         setAreaCode(
           supportsOnboardingAreaCodeSearch(initialCountry)
             ? (result.market.areaCode ?? "")
@@ -339,7 +344,12 @@ export function PhoneNumberChooser({
           <label className="text-sm font-medium" htmlFor="number-country">
             {labels.countryLabel}
           </label>
-          <Select onValueChange={handleCountryChange} value={country}>
+          {countryFixed ? (
+            <p className="flex h-9 items-center gap-2 text-sm" id="number-country">
+              <span aria-hidden="true">{COUNTRY_OPTIONS.find((option) => option.code === country)?.flag}</span>
+              {COUNTRY_OPTIONS.find((option) => option.code === country)?.label ?? country}
+            </p>
+          ) : <Select onValueChange={handleCountryChange} value={country}>
             <SelectTrigger id="number-country">
               <SelectValue />
             </SelectTrigger>
@@ -353,7 +363,7 @@ export function PhoneNumberChooser({
                 </SelectItem>
               ))}
             </SelectContent>
-          </Select>
+          </Select>}
         </div>
         {supportsAreaCodeSearch ? (
           <>

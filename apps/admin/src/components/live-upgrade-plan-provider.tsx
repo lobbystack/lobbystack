@@ -8,6 +8,8 @@ import { isPaidSubscription, type BillingInterval, type BillingPlanSlug, type Ho
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { requestJson } from "@/lib/request-json";
 import { selectActiveBusiness } from "@/lib/active-business";
+import { checkoutRefusalKey } from "@/lib/checkout-errors";
+import { rememberedPlan } from "@/lib/remembered-plan";
 import { setUpgradeInProgress } from "@/lib/upgrade-in-progress";
 import type { WorkspaceViewModel } from "@/lib/page-view-models";
 import { UpgradePlanDialog, type HostedUpgradePlan } from "./upgrade-plan-dialog";
@@ -25,6 +27,7 @@ export function LiveUpgradePlanProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation("settings");
   const client = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<HostedUpgradePlan>("starter");
   const [interval, setInterval] = useState<BillingInterval>("annual");
   const [checkout, setCheckout] = useState<Checkout | null>(null);
   const [leaving, setLeaving] = useState(false);
@@ -37,7 +40,7 @@ export function LiveUpgradePlanProvider({ children }: { children: ReactNode }) {
   const mutation = useMutation({
     mutationFn: (input: { businessId: string; target: HostedUpgradePlan; billingInterval: BillingInterval }) => requestJson<{ requestId: string }>("/api/billing/checkout", { method: "POST", body: JSON.stringify(input) }),
     onSuccess: (result, input) => { if (activeBusinessId() === input.businessId) setCheckout({ businessId: input.businessId, requestId: result.requestId, target: input.target }); },
-    onError: (_error, input) => { if (activeBusinessId() === input.businessId) toast.error(t("billing.toast.checkoutFailed")); },
+    onError: (error, input) => { if (activeBusinessId() === input.businessId) toast.error(t(checkoutRefusalKey(error) ?? "billing.toast.checkoutFailed")); },
   });
   const result = useQuery({
     queryKey: ["billing-checkout", checkout?.businessId, checkout?.requestId],
@@ -84,7 +87,7 @@ export function LiveUpgradePlanProvider({ children }: { children: ReactNode }) {
     setUpgradeInProgress(upgrading);
     return () => setUpgradeInProgress(false);
   }, [upgrading]);
-  return <UpgradePlanDialogProvider onOpen={() => setOpen(true)}>
+  return <UpgradePlanDialogProvider onOpen={() => { setSelectedPlan(rememberedPlan() ?? "starter"); setOpen(true); }}>
     {children}
     {businessId && billing.data ? <UpgradePlanDialog
       availableCheckoutPlans={billing.data.availableCheckoutPlans ?? []}
@@ -98,6 +101,7 @@ export function LiveUpgradePlanProvider({ children }: { children: ReactNode }) {
       onOpenChange={setOpen}
       onStartCheckout={(target, billingInterval) => mutation.mutate({ businessId, target, billingInterval })}
       open={open}
+      selectedPlan={selectedPlan}
       t={t}
     /> : null}
   </UpgradePlanDialogProvider>;

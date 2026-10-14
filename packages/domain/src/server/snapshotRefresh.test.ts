@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
-import { demoSnapshot, type BusinessContextSnapshot } from "@lobbystack/shared";
+import { defaultGreeting, demoSnapshot, type BusinessContextSnapshot, type RuntimeLocale } from "@lobbystack/shared";
 
 const mocks = vi.hoisted(() => ({
   withBusinessTransaction: vi.fn(),
@@ -122,6 +122,13 @@ describe("refreshBusinessSnapshot write-through", () => {
     expect(cached).not.toBeNull();
     expect(cached?.displayName).toBe("Maple Family Clinic");
     expect(cached?.bookingPolicy).toBe("Confirm before booking.");
+  });
+
+  it.each([["pt", "pt"], ["fr", "fr"], ["xx", "en"]])("opens calls of a business set to %s in %s, with that language's greeting when it has no profile", async (stored, locale) => {
+    mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => callback(makeTx({ businesses: [{ ...businessRow, defaultLocale: stored }] })));
+    const cache = memoryCache();
+    await refreshBusinessSnapshot({ db: {} as never, snapshotCache: cache }, { businessId });
+    expect(await cache.get(businessId)).toMatchObject({ defaultLocale: locale, greeting: defaultGreeting("Maple Family Clinic", locale as RuntimeLocale) });
   });
 
   it("tolerates a failing cache write without failing the refresh", async () => {

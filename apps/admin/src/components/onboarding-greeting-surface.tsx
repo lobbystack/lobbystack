@@ -5,12 +5,14 @@ import { requestJson } from "@/lib/request-json";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useStepNavigation } from "@/lib/use-step-navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { defaultGreeting, isDefaultGreeting, normalizeRuntimeLocale, runtimeLocales, type RuntimeLocale } from "@lobbystack/shared";
 import { LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { getSafeOnboardingErrorMessage } from "@/lib/onboarding-errors";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Textarea } from "@/components/ui/textarea";
 import { useTelemetry } from "@/components/product-analytics";
 import { currentWebsiteImport, isWebsiteImportRunning, WebsiteImportProgress, type WebsiteImportSummary } from "./website-import-progress";
@@ -19,17 +21,18 @@ type Profile = { greeting: string };
 type KnowledgeDocument = { id: string; createdAt?: string; websiteImport?: WebsiteImportSummary | null };
 
 export function OnboardingGreetingSurface() {
-  const { i18n, t } = useTranslation("onboarding");
+  const { t } = useTranslation("onboarding");
   const { navigate, navigating, prefetch } = useStepNavigation();
   const telemetry = useTelemetry();
   const queryClient = useQueryClient();
   const [greeting, setGreeting] = useState("");
   const [hasUserEdited, setHasUserEdited] = useState(false);
+  const [locale, setLocale] = useState<RuntimeLocale>("en");
   const [error, setError] = useState<string | null>(null);
   const { business } = useActiveBusiness();
   // Warm the next step while the greeting is being written, so continuing
   // waits only on the save and its progress refresh.
-  useEffect(() => { prefetch("/onboarding/plan"); }, [prefetch]);
+  useEffect(() => { prefetch("/onboarding/test-call"); }, [prefetch]);
   const agent = useQuery({ queryKey: ["onboarding-agent", business?.businessId], queryFn: () => requestJson<{ profile: Profile | null }>("/api/agent"), enabled: Boolean(business) });
   const documents = useQuery({
     queryKey: ["onboarding-knowledge", business?.businessId],
@@ -38,18 +41,24 @@ export function OnboardingGreetingSurface() {
     refetchInterval: query => query.state.data?.documents?.some(document => isWebsiteImportRunning(document.websiteImport)) ? 2000 : false,
   });
   const websiteImport = currentWebsiteImport(documents.data?.documents, business?.websiteUrl);
+  // Read after hydration, so the server render and the first client render match.
+  useEffect(() => { setLocale(normalizeRuntimeLocale(navigator.language)); }, []);
+  const savedGreeting = agent.data?.profile?.greeting;
+  const businessName = business?.name ?? "";
+  const savedLocale = normalizeRuntimeLocale(business?.defaultLocale);
   useEffect(() => {
-    if (!hasUserEdited && agent.data?.profile?.greeting) setGreeting(agent.data.profile.greeting);
-  }, [agent.data?.profile?.greeting, hasUserEdited]);
+    // Until the owner types, a default greeting follows the language picked here.
+    if (!hasUserEdited && savedGreeting) setGreeting(isDefaultGreeting(savedGreeting, businessName, savedLocale) ? defaultGreeting(businessName, locale) : savedGreeting);
+  }, [businessName, hasUserEdited, locale, savedGreeting, savedLocale]);
   const save = useMutation({
     mutationFn: async () => {
-      await requestJson("/api/agent", { method: "PATCH", body: JSON.stringify({ greeting: greeting.trim(), locale: i18n.language.startsWith("fr") ? "fr" : "en" }) });
-      return await requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: "plan" }) });
+      await requestJson("/api/agent", { method: "PATCH", body: JSON.stringify({ greeting: greeting.trim(), locale }) });
+      return await requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: "test_call" }) });
     },
     onSuccess: async () => {
       if (business) telemetry.track("web.onboarding.greeting_submitted", { businessId: business.businessId });
       await queryClient.invalidateQueries({ queryKey: ["businesses"] });
-      navigate("/onboarding/plan");
+      navigate("/onboarding/test-call");
     },
     meta: { inlineError: true },
   });
@@ -68,6 +77,12 @@ export function OnboardingGreetingSurface() {
     <form className="flex flex-col gap-4" onSubmit={submit}>
       {websiteImport ? <WebsiteImportProgress job={websiteImport} /> : null}
       <FieldGroup className="gap-4">
+        <Field>
+          <FieldLabel htmlFor="onboarding-caller-language">{t("greeting.language")}</FieldLabel>
+          <NativeSelect className="w-full" id="onboarding-caller-language" onChange={(event) => setLocale(event.target.value as RuntimeLocale)} value={locale}>
+            {runtimeLocales.map((code) => <NativeSelectOption key={code} value={code}>{t(`common:callerLanguage.${code}`)}</NativeSelectOption>)}
+          </NativeSelect>
+        </Field>
         <Field>
           <FieldLabel htmlFor="onboarding-greeting">{t("greeting.label")}</FieldLabel>
           <Textarea autoFocus className="min-h-32 rounded-xl" id="onboarding-greeting" onChange={(event) => { setHasUserEdited(true); setGreeting(event.target.value); }} placeholder={t("greeting.placeholder")} value={greeting} />

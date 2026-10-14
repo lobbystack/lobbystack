@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { requestJson } from "@/lib/request-json";
-import { intlLocale, normalizeBookingMode, type AppointmentChangePolicy, type BookingMode, type RuntimeLocale } from "@lobbystack/shared";
+import { intlLocale, normalizeBookingMode, runtimeLocales, type AppointmentChangePolicy, type BookingMode, type RuntimeLocale } from "@lobbystack/shared";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
@@ -444,11 +444,11 @@ export function AgentBasicSettingsPage({
               </ItemContent>
               <ItemActions className="w-full sm:w-auto">
                 {isLoadingConfiguration ? (
-                  <Skeleton className="h-10 w-full rounded-md sm:w-[9.5ch]" />
+                  <Skeleton className="h-10 w-full rounded-md sm:w-52" />
                 ) : (
                   <NativeSelect
                     aria-label={t("agent:fields.defaultLocale.label")}
-                    className="w-full sm:w-[9.5ch]"
+                    className="w-full sm:w-52"
                     disabled={!canManageTenant}
                     id="agent-default-language"
                     onChange={(event) => {
@@ -474,12 +474,11 @@ export function AgentBasicSettingsPage({
                     }}
                     value={defaultLocale}
                   >
-                    <NativeSelectOption value="en">
-                      {t("common:language.english")}
-                    </NativeSelectOption>
-                    <NativeSelectOption value="fr">
-                      {t("common:language.french")}
-                    </NativeSelectOption>
+                    {runtimeLocales.map((code) => (
+                      <NativeSelectOption key={code} value={code}>
+                        {t(`common:callerLanguage.${code}`)}
+                      </NativeSelectOption>
+                    ))}
                   </NativeSelect>
                 )}
               </ItemActions>

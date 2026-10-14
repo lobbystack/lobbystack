@@ -3,7 +3,7 @@
  * website widget, the landing site and transactional email. The short codes
  * are the identifiers used in URLs, cookies, storage and locale folders.
  *
- * This is separate from {@link RuntimeLocale}, the English or French default
+ * This is separate from {@link RuntimeLocale}, the business's caller language
  * that calls open in; the receptionist then follows the caller's language.
  */
 export const interfaceLocales = ["en", "fr", "es", "sr"] as const;
@@ -31,6 +31,25 @@ export function normalizeInterfaceLocale(value: string | null | undefined): Inte
   if (!value) return null;
   const primary = value.trim().toLowerCase().split(/[-_]/)[0];
   return isInterfaceLocale(primary) ? primary : null;
+}
+
+/**
+ * Caller languages: the business's choice, which calls open in and the AI
+ * receptionist speaks until the caller switches. `pt` is Brazilian Portuguese.
+ * Interface languages (dashboard, widget UI, email) are {@link InterfaceLocale}.
+ */
+export const runtimeLocales = ["en", "fr", "es", "de", "pt", "it", "nl"] as const;
+
+export type RuntimeLocale = (typeof runtimeLocales)[number];
+
+export function isRuntimeLocale(value: unknown): value is RuntimeLocale {
+  return typeof value === "string" && (runtimeLocales as ReadonlyArray<string>).includes(value);
+}
+
+/** Reduces a language tag such as `pt-BR` to a caller language, or English when it isn't one. */
+export function normalizeRuntimeLocale(value: string | null | undefined): RuntimeLocale {
+  const primary = value?.trim().toLowerCase().split(/[-_]/)[0];
+  return isRuntimeLocale(primary) ? primary : "en";
 }
 
 /**

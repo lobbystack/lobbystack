@@ -49,7 +49,7 @@ Početni paketi objavljeni u Francuskoj idu od €23.99 mesečno za 250 minuta k
 | [Callsens](https://callsens.fr/tarifs) Starter | €79 mesečno bez PDV-a | 200 minuta, 5 istovremenih poziva | €0.29 | Bez troška | 1 broj uključen, zemlja nije navedena | Google kalendar, Calendly |
 | [Elio](https://eliocall.com/tarifs) | €79 mesečno bez PDV-a | 150 minuta | €0.39 | €879 bez PDV-a, besplatno | Zadržavate svoj broj preko preusmeravanja | Nije navedeno za standardni paket |
 | [AirAgent](https://airagent.fr/tarifs/) Starter | €89 mesečno bez PDV-a | „Jusqu'à 250 appels” (do 250 poziva), 1 istovremeni poziv | „+ 0,30 € par min HT” (€0.30 po minutu) | Podešavanje od strane inženjera od €490 | 1 broj uključen, zemlja nije navedena | Google kalendar, Cal.com |
-| [LobbyStack](/sr/pricing/) Starter (naš) | $30 mesečno | 150 minuta, paket ne ograničava istovremene pozive | $0.20 | Bez troška | Broj u SAD, Kanadi, Velikoj Britaniji ili Australiji | Google kalendar |
+| [LobbyStack](/sr/pricing/) Starter (naš) | $30 mesečno | 150 minuta, paket ne ograničava istovremene pozive | $0.20 | Bez troška | Broj u SAD, Kanadi, Velikoj Britaniji, Australiji ili na Novom Zelandu | Google kalendar |
 
 - AirAgent ispod svake cene prikazuje „+ 0,30 € par min HT”, bez navoda da li se naplaćuje od prvog minuta. Njegova sekcija čestih pitanja naplaćuje €0.30 po minutu kada se dostignu ograničenja paketa. Tražite pojašnjenje u pisanom obliku.
 - Elio navodi cene „en vigueur au 4 octobre 2026” (važe od 4. oktobra 2026). Ostale stranice ne navode datum cena.
@@ -90,7 +90,7 @@ Tri slučaja:
 
 - **Francuski broj uključen.** Konten uključuje francuski broj. Callsens, Tala i AirAgent uključuju broj, ali na stranici sa cenama ne navode zemlju, pa pitajte.
 - **Vaš broj, preusmeren.** Elio radi preko preusmeravanja kod Vašeg operatera i objavljuje kodove za preusmeravanje kod glavnih francuskih operatera.
-- **Strani broj.** LobbyStack nudi brojeve u SAD, Kanadi, Velikoj Britaniji i Australiji, i nigde drugde. Preusmeravanje sa Vaše francuske linije zato ide u inostranstvo.
+- **Strani broj.** LobbyStack nudi brojeve u SAD, Kanadi, Velikoj Britaniji, Australiji i na Novom Zelandu, i nigde drugde. Preusmeravanje sa Vaše francuske linije zato ide u inostranstvo.
 
 Naš vodič o tome [kako preusmeriti pozive firme](/sr/blog/how-to-forward-business-calls/) objašnjava vrste: svi pozivi, kada je zauzeto ili kada se ne javite.
 
@@ -108,13 +108,13 @@ LobbyStack naplaćuje $0.20 po dodatnom minutu, u donjem delu raspona francuskih
 
 Šta ne radi iz Francuske:
 
-- Nema francuskog broja: preusmeravanje na broj u SAD, Kanadi, Velikoj Britaniji ili Australiji košta koliko Vaš operater naplaćuje za tu zemlju. Objavljeni kod, čak i kada ga sami hostujete, nudi samo te četiri zemlje.
+- Nema francuskog broja: preusmeravanje na broj u SAD, Kanadi, Velikoj Britaniji, Australiji ili na Novom Zelandu košta koliko Vaš operater naplaćuje za tu zemlju. Objavljeni kod, čak i kada ga sami hostujete, nudi samo tih pet zemalja.
 - Naplata u američkim dolarima: iznos u evrima zavisi od kursa i Vaše banke.
 - Potvrde i podsetnici za termine stižu SMS-om samo na brojeve iz SAD i Kanade. Obaveštenja timu imejlom rade u svakoj zemlji.
 - Samo Google kalendar, bez direktne integracije sa CRM-om ili poslovnim softverom: druge alate povezujete preko potpisanih webhookova ili REST API-ja.
 - Prebacivanje ide na jedan broj, bez predstavljanja pozivaoca osobi koja se javi.
 
-Izaberite francuskog dobavljača ako želite francuski broj, SMS poruke na mobilne telefone klijenata ili račun u evrima. Konten ima najjeftiniji minut među početnim paketima, ali ne zakazuje termine, Callsens prima pet poziva odjednom već na početnom paketu, a Elio poklanja podešavanje. LobbyStack više odgovara ako Vaši pozivaoci govore mnogo jezika, ako Vaš tim želi sam da hostuje kod ili ako poslujete i u SAD, Kanadi, Velikoj Britaniji ili Australiji.
+Izaberite francuskog dobavljača ako želite francuski broj, SMS poruke na mobilne telefone klijenata ili račun u evrima. Konten ima najjeftiniji minut među početnim paketima, ali ne zakazuje termine, Callsens prima pet poziva odjednom već na početnom paketu, a Elio poklanja podešavanje. LobbyStack više odgovara ako Vaši pozivaoci govore mnogo jezika, ako Vaš tim želi sam da hostuje kod ili ako poslujete i u SAD, Kanadi, Velikoj Britaniji, Australiji ili na Novom Zelandu.
 
 ## Kako izabrati AI telefonsku centralu?
 

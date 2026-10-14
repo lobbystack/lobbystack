@@ -49,7 +49,7 @@ Entry plans published in France run from €23.99 a month for 250 minutes at Kon
 | [Callsens](https://callsens.fr/tarifs) Starter | €79 a month before VAT | 200 minutes, 5 simultaneous calls | €0.29 | No fee | 1 number included, country not stated | Google Calendar, Calendly |
 | [Elio](https://eliocall.com/tarifs) | €79 a month before VAT | 150 minutes | €0.39 | €879 before VAT, waived | You keep your number through call forwarding | Not stated for the standard plan |
 | [AirAgent](https://airagent.fr/tarifs/) Starter | €89 a month before VAT | "Jusqu'à 250 appels" (up to 250 calls), 1 simultaneous call | "+ 0,30 € par min HT" (€0.30 a minute) | Setup by an engineer from €490 | 1 number included, country not stated | Google Calendar, Cal.com |
-| [LobbyStack](/pricing/) Starter (ours) | $30 a month | 150 minutes, no plan limit on simultaneous calls | $0.20 | No fee | Number in the US, Canada, the UK or Australia | Google Calendar |
+| [LobbyStack](/pricing/) Starter (ours) | $30 a month | 150 minutes, no plan limit on simultaneous calls | $0.20 | No fee | Number in the US, Canada, the UK, Australia or New Zealand | Google Calendar |
 
 - AirAgent shows "+ 0,30 € par min HT" under each price without saying whether it applies from the first minute. Its FAQ charges €0.30 a minute once you reach the plan's limits. Get this in writing.
 - Elio states its prices are "en vigueur au 4 octobre 2026" (in effect October 4, 2026). The other pages don't date their prices.
@@ -90,7 +90,7 @@ Three setups:
 
 - **A French number provided.** Konten includes a French number. Callsens, Tala and AirAgent include a number without naming the country on their pricing pages, so ask.
 - **Your own number, forwarded.** Elio works through forwarding from your carrier and publishes forwarding codes for the main French carriers.
-- **A foreign number.** LobbyStack offers numbers in the US, Canada, the UK and Australia, and nowhere else. Forwarding from your French line goes abroad.
+- **A foreign number.** LobbyStack offers numbers in the US, Canada, the UK, Australia and New Zealand, and nowhere else. Forwarding from your French line goes abroad.
 
 Our guide on [how to forward business calls](/blog/how-to-forward-business-calls/) explains the types: all calls, when busy, or when unanswered.
 
@@ -108,13 +108,13 @@ What works:
 
 What doesn't, from France:
 
-- No French number: forwarding to a US, Canadian, UK or Australian number costs whatever your carrier charges for that country. The published code, even self-hosted, offers only those four countries.
+- No French number: forwarding to a US, Canadian, UK, Australian or New Zealand number costs whatever your carrier charges for that country. The published code, even self-hosted, offers only those five countries.
 - Billing in US dollars: the euro amount depends on the exchange rate and your bank.
 - Booking confirmation and reminder texts only go to US and Canadian numbers. Email alerts to your team work anywhere.
 - Google Calendar only, and no direct CRM or business-software integration: you connect other tools through signed webhooks or the REST API.
 - Transfers go to one number, with no introduction of the caller to the person who answers.
 
-Pick a French provider if you want a French number, texts to your customers' mobiles or an invoice in euros. Konten has the cheapest minute among the entry plans but doesn't book appointments, Callsens takes five calls at once on its entry plan, and Elio waives its setup fee. LobbyStack fits better if your callers speak many languages, if your team wants to host the code itself, or if you also operate in the US, Canada, the UK or Australia.
+Pick a French provider if you want a French number, texts to your customers' mobiles or an invoice in euros. Konten has the cheapest minute among the entry plans but doesn't book appointments, Callsens takes five calls at once on its entry plan, and Elio waives its setup fee. LobbyStack fits better if your callers speak many languages, if your team wants to host the code itself, or if you also operate in the US, Canada, the UK, Australia or New Zealand.
 
 ## How do you choose an AI phone system?
 

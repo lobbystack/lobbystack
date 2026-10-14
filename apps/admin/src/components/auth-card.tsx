@@ -8,7 +8,7 @@ import { TriangleAlert } from "lucide-react";
 
 import { ReplacementOnboardingShell } from "@/components/replacement-onboarding-shell";
 import { Button } from "@/components/ui/button";
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldError, FieldGroup, FieldLabel, FieldSeparator } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Turnstile } from "@/components/turnstile";
@@ -21,17 +21,26 @@ import { captureAffiliateReferralFromUrl, getAffiliateVisitorId } from "@/lib/af
 
 import { buildAuthPathWithReturnTo, getSafeReturnTo } from "@/lib/auth-return-to";
 
-export function AuthCard({ mode }: { mode: "login" | "signup" }) {
+function GoogleLogo() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z" fill="currentColor" /></svg>;
+}
+
+export function AuthCard({ mode, google = false }: { mode: "login" | "signup"; google?: boolean }) {
   const router = useRouter();
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
   const { t, i18n } = useTranslation("auth");
   const authLocale = resolveLocale(i18n.resolvedLanguage, i18n.language);
   const [returnTo, setReturnTo] = useState<string | null>(null);
   const [signupSource, setSignupSource] = useState<"calculator" | null>(null);
+  const [googleError, setGoogleError] = useState<string | null>(null);
+  const [googleLoading, setGoogleLoading] = useState(false);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     setReturnTo(getSafeReturnTo(params.get("returnTo")));
     setSignupSource(params.get("source") === "calculator" ? "calculator" : null);
+    // Better Auth sends a failed Google sign-in back here with ?error=.
+    const googleFailure = params.get("error");
+    if (googleFailure) setGoogleError(googleFailure === "account_not_linked" ? "errors.googleAccountNotLinked" : "errors.googleFailed");
   }, []);
   function authPath(path: "/login" | "/signup") {
     const target = buildAuthPathWithReturnTo(path, returnTo, authLocale);
@@ -124,10 +133,37 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
     }
   }
 
+  async function continueWithGoogle() {
+    setGoogleError(null);
+    setGoogleLoading(true);
+    try {
+      const params = new URLSearchParams(window.location.search);
+      for (const stale of ["google", "error", "error_description"]) params.delete(stale);
+      // Google returns to this page with every query param (returnTo, source, plan). The marker
+      // tells GuestAuthCard which event to record; Better Auth picks the signup one for new users.
+      const back = (marker?: "login" | "signup") => {
+        const query = new URLSearchParams(params);
+        if (marker) query.set("google", marker);
+        return `${window.location.pathname}?${query}`;
+      };
+      const response = await fetch("/api/auth/sign-in/social", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ provider: "google", callbackURL: back("login"), newUserCallbackURL: back("signup"), errorCallbackURL: back(), additionalData: { preferredLocale: authLocale } }),
+      });
+      const result = response.ok ? await response.json() as { url?: unknown } : null;
+      if (typeof result?.url !== "string") throw new Error("Google sign-in did not start.");
+      window.location.assign(result.url);
+    } catch {
+      setGoogleError("errors.googleFailed");
+    } finally {
+      setGoogleLoading(false);
+    }
+  }
+
   function finishAuthentication() {
     const event = login ? "web.auth.login_succeeded" : "web.auth.signup_succeeded";
-    if (signupSource) recordAuthSuccess(event, { source: signupSource });
-    else recordAuthSuccess(event);
+    recordAuthSuccess(event, { method: "email", ...(signupSource ? { source: signupSource } : {}) });
     const safeReturnTo = getSafeReturnTo(new URLSearchParams(window.location.search).get("returnTo")) ?? "/";
     const target = new URL(safeReturnTo, window.location.origin);
     window.location.assign(target.origin === window.location.origin ? `${target.pathname}${target.search}${target.hash}` : "/");
@@ -276,6 +312,13 @@ export function AuthCard({ mode }: { mode: "login" | "signup" }) {
   return (
     <ReplacementOnboardingShell legalFooter={legalFooter} progress={login ? null : { current: 1, total: 8 }} title={login ? t("login.title") : t("signup.title")} width="sm">
       <div className="flex w-full flex-col gap-6">
+        {google ? <>
+          <div className="flex flex-col gap-2">
+            <Button className="h-11 w-full" loading={googleLoading} loadingLabel={t("google.redirecting")} onClick={() => void continueWithGoogle()} type="button" variant="outline"><GoogleLogo />{t("google.continue")}</Button>
+            {googleError ? <FieldError>{t(googleError)}</FieldError> : null}
+          </div>
+          <FieldSeparator>{t("google.or")}</FieldSeparator>
+        </> : null}
         <form onSubmit={submit}>
           <FieldGroup className="gap-4">
             <Field data-invalid={hasBlurredEmail && email.length > 0 && !isEmailValid ? true : undefined}><FieldLabel htmlFor="auth-email">{login ? t("login.email") : t("signup.email")}</FieldLabel><Input aria-invalid={hasBlurredEmail && email.length > 0 && !isEmailValid} autoComplete="email" className={cn("h-11", hasBlurredEmail && email.length > 0 && !isEmailValid && "border-destructive text-destructive focus-visible:border-destructive focus-visible:ring-destructive/20")} id="auth-email" onBlur={() => setHasBlurredEmail(true)} onChange={(event) => { setHasBlurredEmail(false); setEmail(event.target.value); }} placeholder={login ? t("login.emailPlaceholder") : t("signup.emailPlaceholder")} required type="email" value={email} />{hasBlurredEmail && email.length > 0 && !isEmailValid ? <FieldError className="flex items-center gap-2 font-medium"><TriangleAlert className="size-4 shrink-0" aria-hidden="true" /><span>{t(login ? "login.emailInvalid" : "signup.emailInvalid")}</span></FieldError> : null}</Field>

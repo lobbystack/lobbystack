@@ -37,6 +37,7 @@ export type WebVoiceErrorKey =
   | "browserNoWebRtc"
   | "businessNotFound"
   | "rateLimited"
+  | "voiceLimitReached"
   | "unavailable"
   | "generic";
 
@@ -72,7 +73,10 @@ export function getWebVoiceErrorKey(error: unknown): WebVoiceErrorKey {
     if (error.message === "web_voice_rate_limited") {
       return "rateLimited";
     }
-    if (error.message === "voice_limit_reached" || error.message === "voice_unavailable" || error.message === "The AI receptionist is unavailable right now.") {
+    if (error.message === "voice_limit_reached") {
+      return "voiceLimitReached";
+    }
+    if (error.message === "voice_unavailable" || error.message === "The AI receptionist is unavailable right now.") {
       return "unavailable";
     }
   }

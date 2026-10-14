@@ -143,7 +143,8 @@
       "openingCheckout": "Ouverture du paiement...",
       "openingPortal": "Ouverture du portail...",
       "viewInvoice": "Voir la facture",
-      "retry": "Réessayer"
+      "retry": "Réessayer",
+      "cancelPlan": "Annuler le forfait"
     },
     "currentPlan": {
       "title": "Votre forfait",
@@ -329,6 +330,80 @@
         "order": "Commande",
         "refund": "Remboursement"
       }
+    },
+    "checkoutErrors": {
+      "inProgress": "Un paiement est déjà en cours pour cet espace de travail. Terminez-le ou lancez-en un nouveau dans 30 minutes.",
+      "subscriptionActive": "Cet espace de travail a déjà un forfait payant. Pour le modifier, utilisez Gérer l'abonnement sur la page Forfait."
+    },
+    "cancel": {
+      "title": "Annuler votre forfait {{plan}} ?",
+      "description": "Votre forfait reste actif jusqu'au {{date}}. Vous passerez ensuite au forfait gratuit.",
+      "descriptionNoDate": "Votre forfait reste actif jusqu'à la fin de la période de facturation en cours. Vous passerez ensuite au forfait gratuit.",
+      "reasonLabel": "Pourquoi annulez-vous ? (facultatif)",
+      "reasons": {
+        "setup": "La configuration était confuse ou lente",
+        "quality": "La qualité de la voix ou des appels",
+        "price": "Le prix",
+        "missing_feature": "Une fonctionnalité manquante",
+        "other": "Autre chose"
+      },
+      "commentLabel": "Dites-nous-en plus (facultatif)",
+      "keep": "Garder mon forfait",
+      "confirm": "Annuler le forfait",
+      "canceling": "Annulation du forfait...",
+      "failed": "Impossible d'annuler votre forfait. Réessayez ou utilisez Gérer l'abonnement.",
+      "endsOn": "Votre forfait {{plan}} prend fin le {{date}}. Il reste actif d'ici là."
+    },
+    "success": {
+      "received": {
+        "title": "Paiement reçu",
+        "description": "Cette page se met à jour dès que votre forfait est prêt.",
+        "status": "Activation de votre forfait..."
+      },
+      "missing": {
+        "title": "Nous ne trouvons pas ce paiement",
+        "description": "Ouvrez la page de votre forfait pour voir votre forfait actuel.",
+        "action": "Voir mon forfait"
+      },
+      "title": "Votre forfait {{plan}} est prêt",
+      "unlocks": {
+        "voiceMinutes_one": "{{count}} minute vocale par mois",
+        "voiceMinutes_many": "{{count}} minutes vocales par mois",
+        "voiceMinutes_other": "{{count}} minutes vocales par mois",
+        "numbers_one": "{{count}} numéro d'entreprise dédié",
+        "numbers_many": "{{count}} numéros d'entreprise dédiés",
+        "numbers_other": "{{count}} numéros d'entreprise dédiés",
+        "alertSms_one": "{{count}} segment SMS d'alerte par mois",
+        "alertSms_many": "{{count}} segments SMS d'alerte par mois",
+        "alertSms_other": "{{count}} segments SMS d'alerte par mois",
+        "transfers_one": "{{count}} tentative de transfert par mois",
+        "transfers_many": "{{count}} tentatives de transfert par mois",
+        "transfers_other": "{{count}} tentatives de transfert par mois"
+      },
+      "number": {
+        "label": "Votre numéro",
+        "keep": "Ce numéro est à vous.",
+        "choose": "Choisir votre numéro"
+      },
+      "steps": {
+        "title": "Prochaines étapes",
+        "call": {
+          "title": "Appelez-le maintenant",
+          "description": "Écoutez votre réceptionniste répondre à un vrai appel."
+        },
+        "forward": {
+          "title": "Transférez votre ligne d'entreprise vers ce numéro",
+          "description": "Vos appelants composent toujours le numéro qu'ils connaissent. Votre opérateur transfère ces appels vers votre numéro LobbyStack.",
+          "action": "Guide du renvoi d'appel"
+        },
+        "transfer": {
+          "title": "Choisissez où vont les appels urgents",
+          "description": "Ajoutez un numéro de transfert dans les Paramètres IA pour que votre réceptionniste puisse passer les appels urgents à une personne.",
+          "action": "Ouvrir les Paramètres IA"
+        }
+      },
+      "continue": "Continuer la configuration",
+      "dashboard": "Aller au tableau de bord"
     }
   },
   "phoneNumber": {

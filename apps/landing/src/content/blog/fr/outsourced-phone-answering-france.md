@@ -87,12 +87,12 @@ Le forfait Starter de LobbyStack coûte 30 $ par mois pour 150 minutes, puis 0,
 
 ### Ce qu'il faut savoir avant de l'utiliser depuis la France
 
-- **Pas de numéro français.** LobbyStack propose des numéros aux États-Unis, au Canada, au Royaume-Uni et en Australie. Vous gardez votre numéro français et le renvoyez vers votre numéro LobbyStack.
+- **Pas de numéro français.** LobbyStack propose des numéros aux États-Unis, au Canada, au Royaume-Uni, en Australie et en Nouvelle-Zélande. Vous gardez votre numéro français et le renvoyez vers votre numéro LobbyStack.
 - **Un renvoi d'appel vers l'étranger.** Votre opérateur facture la partie renvoyée de chaque appel au prix d'un appel vers le pays du numéro LobbyStack, sauf si votre forfait inclut cette destination. Le Forfait Free 5G+, par exemple, inclut les appels vers les mobiles des États-Unis et du Canada, mais sa page ne dit rien des renvois. Demandez le prix exact à votre opérateur avant d'activer le renvoi. Votre client, lui, paie un appel vers votre numéro français, comme avant.
 - **Une facture en dollars.** LobbyStack facture en dollars américains. Le montant en euros dépend du taux de change et des frais de votre banque.
 - **Pas de SMS vers les portables français.** Les SMS de confirmation et de rappel, 24 heures avant le rendez-vous, partent vers les seuls numéros des États-Unis et du Canada. Vos clients français ne les reçoivent pas. Les alertes par e-mail à votre équipe fonctionnent partout ; les alertes par SMS vont vers un portable américain ou canadien.
 - **Pas d'opérateur humain.** Le transfert va vers un seul numéro, celui de votre équipe, sans présenter l'appelant. Si le transfert échoue, le réceptionniste le dit à l'appelant et propose de prendre un message.
-- **L'auto-hébergement ne règle pas la question du numéro.** Le code est open source (licence MIT) et tourne avec vos propres comptes OpenAI et Twilio, mais le code publié ne propose lui aussi des numéros que dans ces quatre pays.
+- **L'auto-hébergement ne règle pas la question du numéro.** Le code est open source (licence MIT) et tourne avec vos propres comptes OpenAI et Twilio, mais le code publié ne propose lui aussi des numéros que dans ces cinq pays.
 
 Pour comparer des standards IA vendus en France, avec un numéro français et des prix en euros, lisez notre guide du [standard téléphonique IA pour TPE et PME](/fr/blog/ai-phone-system-small-business/).
 
@@ -113,7 +113,7 @@ En octobre 2026, les prestataires qui publient leurs prix facturent un secrétar
 
 ### Peut-on garder son numéro avec un standard externalisé ?
 
-Oui. Vous activez chez votre opérateur un renvoi d'appel vers le numéro que vous donne le prestataire : tous les appels, ou seulement ceux auxquels vous ne répondez pas. Vos clients composent le même numéro qu'avant. LobbyStack fonctionne de la même façon, mais vers un numéro des États-Unis, du Canada, du Royaume-Uni ou d'Australie.
+Oui. Vous activez chez votre opérateur un renvoi d'appel vers le numéro que vous donne le prestataire : tous les appels, ou seulement ceux auxquels vous ne répondez pas. Vos clients composent le même numéro qu'avant. LobbyStack fonctionne de la même façon, mais vers un numéro des États-Unis, du Canada, du Royaume-Uni, d'Australie ou de Nouvelle-Zélande.
 
 ### Faut-il s'engager sur la durée ?
 

@@ -87,12 +87,12 @@ LobbyStack's Starter plan costs $30 a month for 150 minutes, then $0.20 a minute
 
 ### What to know before you use it from France
 
-- **No French number.** LobbyStack offers numbers in the US, Canada, the UK and Australia. You keep your French number and forward it to your LobbyStack number.
+- **No French number.** LobbyStack offers numbers in the US, Canada, the UK, Australia and New Zealand. You keep your French number and forward it to your LobbyStack number.
 - **Forwarding goes abroad.** Your carrier bills the forwarded leg of each call as a call to the country of your LobbyStack number, unless your plan includes that destination. Free's Forfait Free 5G+, for example, includes calls to US and Canadian mobiles, but its page says nothing about forwarded calls. Ask your carrier for the exact price before you turn forwarding on. Your caller still pays for a call to your French number, as before.
 - **Billing in dollars.** LobbyStack bills in US dollars. The euro amount depends on the exchange rate and your bank's fees.
 - **No texts to French mobiles.** Booking confirmations and the reminder 24 hours before the appointment only go to US and Canadian numbers, so your French customers won't get them. Email alerts to your team work anywhere; text alerts go to a US or Canadian mobile.
 - **No human operator.** Transfers go to one number, your team's, with no introduction of the caller. If a transfer fails, the receptionist tells the caller and offers to take a message.
-- **Self-hosting doesn't solve the number.** The code is MIT open source and runs on your own OpenAI and Twilio accounts, but the published code also offers numbers in those four countries only.
+- **Self-hosting doesn't solve the number.** The code is MIT open source and runs on your own OpenAI and Twilio accounts, but the published code also offers numbers in those five countries only.
 
 To compare AI phone systems sold in France, with French numbers and euro prices, read our guide to an [AI phone system for small businesses in France](/blog/ai-phone-system-small-business/).
 
@@ -113,7 +113,7 @@ In October 2026, providers that publish prices charge €1 to €1.99 per call b
 
 ### Can I keep my business number?
 
-Yes. You set up call forwarding with your carrier to the number the provider gives you: all calls, or only the ones you don't answer. Your customers dial the same number as before. LobbyStack works the same way, except that the forwarding goes to a number in the US, Canada, the UK or Australia.
+Yes. You set up call forwarding with your carrier to the number the provider gives you: all calls, or only the ones you don't answer. Your customers dial the same number as before. LobbyStack works the same way, except that the forwarding goes to a number in the US, Canada, the UK, Australia or New Zealand.
 
 ### Do outsourced answering services in France require a contract?
 

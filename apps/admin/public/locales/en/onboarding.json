@@ -89,19 +89,72 @@
     "continueFailed": "We couldn't continue right now. Please try again.",
     "skipFailed": "We couldn't skip this step right now. Please try again."
   },
+  "testCall": {
+    "title": "Hear your receptionist",
+    "description": "Call it from your browser and ask what your customers ask.",
+    "call": "Call my receptionist",
+    "callAgain": "Call again",
+    "hint": "Your browser will ask to use your microphone.",
+    "continue": "Continue",
+    "skip": "Skip for now",
+    "continueFailed": "We couldn't continue. Try again."
+  },
+  "verifyPhone": {
+    "title": "Verify your mobile number",
+    "description": "We text you a code. Your business number comes from the same country.",
+    "fields": {
+      "mobileNumber": "Mobile number",
+      "country": "Country"
+    },
+    "hint": "Use a mobile that gets texts. Internet phone numbers won't work.",
+    "sendCode": "Text me a code",
+    "sending": "Sending…",
+    "sendFailed": "We couldn't send the code. Try again.",
+    "errors": {
+      "voip": "Use your mobile number. Internet phone numbers can't be verified.",
+      "notMobile": "Use a mobile number that gets texts.",
+      "countryMismatch": "This number isn't from the country you picked.",
+      "invalidNumber": "Enter a valid mobile number.",
+      "rateLimited": "Too many codes. Wait a moment and try again."
+    },
+    "code": {
+      "sentTo": "Enter the 6-digit code we sent to {{phone}}.",
+      "checking": "Checking…",
+      "invalid_one": "That code didn't work. You have {{count}} try left.",
+      "invalid_other": "That code didn't work. You have {{count}} tries left.",
+      "expired": "This code expired. Send a new one.",
+      "locked": "Too many tries. Send a new code.",
+      "failed": "We couldn't check the code. Try again.",
+      "resend": "Send a new code",
+      "changeNumber": "Use another number"
+    },
+    "unavailable": {
+      "title": "We don't offer numbers in this country yet ({{country}}).",
+      "body": "You can still use your receptionist in the browser, and we can email you when numbers arrive there.",
+      "notify": "Email me when they're available",
+      "joined": "Done. We'll email you.",
+      "continue": "Continue without a number",
+      "failed": "Something went wrong. Try again."
+    }
+  },
   "greeting": {
     "title": "How should we greet your callers?",
     "description": "This is what your AI says first. You can change it any time.",
     "label": "Greeting",
-    "language": "Language",
-    "english": "English",
-    "french": "French",
+    "language": "Caller language",
     "placeholder": "Thanks for calling. How can I help?",
     "continue": "Continue",
     "submitting": "Saving...",
     "submitFailed": "We couldn't save that greeting right now. Please try again."
   },
   "number": {
+    "ready": {
+      "label": "Your number is ready",
+      "body": "Call it from your phone and hear your receptionist answer.",
+      "call": "Call {{number}}"
+    },
+    "planRequired": "To get a number, choose a plan.",
+    "trialNote": "Your number is free for 14 days. No card needed.",
     "title": "Pick your AI's phone number",
     "description": "Choose a local number callers can reach you on.",
     "countryLabel": "Country",

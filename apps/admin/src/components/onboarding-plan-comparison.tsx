@@ -197,7 +197,7 @@ const comparisonGroups: ComparisonGroup[] = [
       },
       {
         key: "history",
-        free: { key: "common.unlimited" },
+        free: { includedKey: "data.contentRetention.free", params: { days: FREE_CONTENT_RETENTION_MAX_DAYS } },
         pro: { key: "common.unlimited" },
         enterprise: { key: "common.unlimited" },
       },

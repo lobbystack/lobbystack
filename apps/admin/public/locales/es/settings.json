@@ -143,7 +143,8 @@
       "openingCheckout": "Abriendo el pago...",
       "openingPortal": "Abriendo el portal...",
       "viewInvoice": "Ver factura",
-      "retry": "Reintentar"
+      "retry": "Reintentar",
+      "cancelPlan": "Cancelar el plan"
     },
     "currentPlan": {
       "title": "Su plan",
@@ -329,6 +330,80 @@
         "order": "Pedido",
         "refund": "Reembolso"
       }
+    },
+    "checkoutErrors": {
+      "inProgress": "Ya hay un pago abierto para este espacio de trabajo. Termínelo o inicie uno nuevo dentro de 30 minutos.",
+      "subscriptionActive": "Este espacio de trabajo ya tiene un plan de pago. Para cambiarlo, use Gestionar suscripción en la página Plan."
+    },
+    "cancel": {
+      "title": "¿Cancelar su plan {{plan}}?",
+      "description": "Su plan sigue activo hasta el {{date}}. Después pasará al plan Free.",
+      "descriptionNoDate": "Su plan sigue activo hasta el final del período de facturación actual. Después pasará al plan Free.",
+      "reasonLabel": "¿Por qué cancela? (opcional)",
+      "reasons": {
+        "setup": "La configuración fue confusa o lenta",
+        "quality": "La calidad de la voz o de las llamadas",
+        "price": "El precio",
+        "missing_feature": "Falta una función",
+        "other": "Otra cosa"
+      },
+      "commentLabel": "Cuéntenos más (opcional)",
+      "keep": "Mantener mi plan",
+      "confirm": "Cancelar el plan",
+      "canceling": "Cancelando el plan...",
+      "failed": "No se pudo cancelar su plan. Inténtelo de nuevo o use Gestionar suscripción.",
+      "endsOn": "Su plan {{plan}} termina el {{date}}. Sigue activo hasta entonces."
+    },
+    "success": {
+      "received": {
+        "title": "Pago recibido",
+        "description": "Esta página se actualiza cuando su plan esté listo.",
+        "status": "Activando su plan..."
+      },
+      "missing": {
+        "title": "No encontramos este pago",
+        "description": "Abra la página de su plan para ver el plan que tiene.",
+        "action": "Ver mi plan"
+      },
+      "title": "Su plan {{plan}} está listo",
+      "unlocks": {
+        "voiceMinutes_one": "{{count}} minuto de voz al mes",
+        "voiceMinutes_many": "{{count}} minutos de voz al mes",
+        "voiceMinutes_other": "{{count}} minutos de voz al mes",
+        "numbers_one": "{{count}} número del negocio dedicado",
+        "numbers_many": "{{count}} números del negocio dedicados",
+        "numbers_other": "{{count}} números del negocio dedicados",
+        "alertSms_one": "{{count}} segmento de SMS de alerta al mes",
+        "alertSms_many": "{{count}} segmentos de SMS de alerta al mes",
+        "alertSms_other": "{{count}} segmentos de SMS de alerta al mes",
+        "transfers_one": "{{count}} intento de transferencia al mes",
+        "transfers_many": "{{count}} intentos de transferencia al mes",
+        "transfers_other": "{{count}} intentos de transferencia al mes"
+      },
+      "number": {
+        "label": "Su número",
+        "keep": "Este número es suyo.",
+        "choose": "Elegir su número"
+      },
+      "steps": {
+        "title": "Próximos pasos",
+        "call": {
+          "title": "Llámelo ahora",
+          "description": "Escuche a su recepcionista atender una llamada real."
+        },
+        "forward": {
+          "title": "Desvíe la línea de su negocio a este número",
+          "description": "Sus clientes siguen marcando el número que conocen. Su operador desvía esas llamadas a su número de LobbyStack.",
+          "action": "Guía de desvío de llamadas"
+        },
+        "transfer": {
+          "title": "Elija adónde van las llamadas urgentes",
+          "description": "Agregue un número de transferencia en Ajustes de IA para que su recepcionista pueda pasar las llamadas urgentes a una persona.",
+          "action": "Abrir Ajustes de IA"
+        }
+      },
+      "continue": "Continuar la configuración",
+      "dashboard": "Ir al panel"
     }
   },
   "phoneNumber": {

@@ -181,7 +181,7 @@ Vous réglez la couverture avec le renvoi d'appel de votre opérateur :
 | Renvoi à la fermeture | Couverture hors horaires |
 | Renvoi de tous les appels | Réponse à temps plein |
 
-LobbyStack répond à tous les appels qui arrivent sur son numéro. Renvoyez votre numéro pour le garder, ou contactez l'équipe pour le transférer chez nous (portabilité). LobbyStack propose des numéros aux États-Unis, au Canada, au Royaume-Uni et en Australie. Si vous manquez surtout les appels du soir et du week-end, voyez [la réponse hors horaires](/fr/solutions/after-hours-answering-service/).
+LobbyStack répond à tous les appels qui arrivent sur son numéro. Renvoyez votre numéro pour le garder, ou contactez l'équipe pour le transférer chez nous (portabilité). LobbyStack propose des numéros aux États-Unis, au Canada, au Royaume-Uni, en Australie et en Nouvelle-Zélande. Si vous manquez surtout les appels du soir et du week-end, voyez [la réponse hors horaires](/fr/solutions/after-hours-answering-service/).
 
 ### 7. Testez-le avant de renvoyer de vrais appels
 

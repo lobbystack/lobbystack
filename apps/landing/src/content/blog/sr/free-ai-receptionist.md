@@ -120,7 +120,7 @@ Kad potrošite 30 minuta, probni pozivi staju do sledećeg meseca ili dok ne pre
 | Starter | $30, ili $24 uz godišnje plaćanje | 150 minuta, jedan poslovni broj | $0.20 po minutu |
 | Pro | $100, ili $80 uz godišnje plaćanje | 500 minuta, jedan poslovni broj | $0.18 po minutu |
 
-Nijedan paket nema naknadu za aktivaciju. Starter i Pro se javljaju na broj u SAD, Kanadi, Ujedinjenom Kraljevstvu ili Australiji. Postojeći broj možete preusmeriti za sve pozive, ili samo kad ste zauzeti i van radnog vremena. Recepcioner zakazuje termine u Google Calendar, prebacuje hitne pozive na jedan broj i čuva sažetak, transkript i snimak svakog poziva. Pozivi kraći od 10 sekundi i pozivi koje recepcioner prekine kao spam ne troše Vaše minute.
+Nijedan paket nema naknadu za aktivaciju. Starter i Pro se javljaju na broj u SAD, Kanadi, Ujedinjenom Kraljevstvu, Australiji ili na Novom Zelandu. Postojeći broj možete preusmeriti za sve pozive, ili samo kad ste zauzeti i van radnog vremena. Recepcioner zakazuje termine u Google Calendar, prebacuje hitne pozive na jedan broj i čuva sažetak, transkript i snimak svakog poziva. Pozivi kraći od 10 sekundi i pozivi koje recepcioner prekine kao spam ne troše Vaše minute.
 
 ## Kada besplatan AI recepcioner prestaje da bude dovoljan?
 

@@ -21,6 +21,12 @@ describe("original phone inventory chooser", () => {
     expect(props.searchAvailableNumbers).toHaveBeenCalledWith({ businessId: "business-1", mode: "area_code", countryCode: "CA", areaCode: "416", limit: 20 });
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
   });
+  it("shows the verified phone's country without a picker", async () => {
+    setup({ getInitialNumberSuggestion: vi.fn().mockResolvedValue({ market: { countryCode: "NZ" }, suggestion: null, alternatives: [], countryFixed: true }) });
+    expect(await screen.findByText("Empty")).toBeTruthy();
+    expect(screen.getByText("NZ")).toBeTruthy();
+    expect(screen.queryByRole("combobox")).toBeNull();
+  });
   it("omits area-code search for a UK market", async () => {
     setup({ getInitialNumberSuggestion: vi.fn().mockResolvedValue({ market: { countryCode: "GB" }, suggestion: null, alternatives: [] }) });
     expect(await screen.findByText("Empty")).toBeTruthy();

@@ -11,6 +11,8 @@ vi.mock("@lobbystack/db", async (original) => ({
 }));
 
 vi.mock("./productEvents", () => ({ recordProductEventInTransaction: mocks.recordProductEventInTransaction }));
+// What a plan change does to the business's numbers has its own tests.
+vi.mock("./numberTrials", () => ({ keepBusinessNumbersInTransaction: vi.fn(), scheduleNumberReleaseInTransaction: vi.fn(), queuePlanCancelNoticeInTransaction: vi.fn() }));
 
 import { validateTelemetryEvent } from "@lobbystack/telemetry";
 

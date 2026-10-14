@@ -1,3 +1,5 @@
+import { isFreshPendingRecord } from "./pending-analytics";
+
 const storageKey = "lobbystack.pending-workspace-switch";
 
 type PendingWorkspaceSwitch = {
@@ -20,7 +22,7 @@ export function consumePendingWorkspaceSwitch(expectedBusinessId?: string): Pend
     const value = window.sessionStorage.getItem(storageKey);
     if (!value) return null;
     const record = JSON.parse(value) as Partial<PendingWorkspaceSwitch>;
-    if (typeof record.businessId !== "string" || record.businessId.length === 0 || typeof record.previousBusinessId !== "string" || record.previousBusinessId.length === 0 || typeof record.createdAt !== "number" || Date.now() - record.createdAt < 0 || Date.now() - record.createdAt > 10 * 60_000) {
+    if (typeof record.businessId !== "string" || record.businessId.length === 0 || typeof record.previousBusinessId !== "string" || record.previousBusinessId.length === 0 || !isFreshPendingRecord(record)) {
       window.sessionStorage.removeItem(storageKey);
       return null;
     }

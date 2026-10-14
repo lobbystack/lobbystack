@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 import { versionedAssetUrl } from "@/lib/versioned-assets";
 
 type OnboardingShellProps = {
+  /** Shown above the title. */
+  icon?: React.ReactNode;
   eyebrow?: string;
   title: string;
   description?: React.ReactNode;
@@ -25,16 +27,17 @@ export const onboardingRoutes = {
   "/onboarding/website": { key: "website", step: 3, width: "md" },
   "/onboarding/knowledge": { key: "knowledge", step: 4, width: "lg" },
   "/onboarding/greeting": { key: "greeting", step: 5, width: "md" },
-  "/onboarding/plan": { key: "plan", step: 6, width: "wide" },
-  "/onboarding/number": { key: "number", step: 7, width: "lg" },
-  "/onboarding/attribution": { key: "attribution", step: 8, width: "xl" },
+  "/onboarding/test-call": { key: "testCall", step: 6, width: "md" },
+  "/onboarding/verify-phone": { key: "verifyPhone", step: 7, width: "md" },
+  "/onboarding/number": { key: "number", step: 8, width: "lg" },
+  "/onboarding/attribution": { key: "attribution", step: 9, width: "xl" },
 } as const;
 
 const progressRoutes: Record<number, string> = Object.fromEntries(Object.entries(onboardingRoutes).map(([path, route]) => [route.step, path]));
 
 const widths = { sm: "max-w-sm", md: "max-w-md", lg: "max-w-lg", xl: "max-w-xl", wide: "max-w-7xl" } as const;
 
-export function ReplacementOnboardingShell({ eyebrow, title, description, progress, width = "md", children, legalFooter, onSignOut }: OnboardingShellProps) {
+export function ReplacementOnboardingShell({ icon, eyebrow, title, description, progress, width = "md", children, legalFooter, onSignOut }: OnboardingShellProps) {
   const { t, i18n } = useTranslation("onboarding");
   const marketingLocale = resolveLocale(i18n.resolvedLanguage, i18n.language);
   return (
@@ -51,6 +54,7 @@ export function ReplacementOnboardingShell({ eyebrow, title, description, progre
             <span className="font-heading text-xl font-semibold leading-none text-foreground">LobbyStack</span>
           </div>
           <div className="mt-10 flex w-full flex-col items-center gap-4 text-center">
+            {icon}
             {eyebrow ? <span className="inline-flex items-center rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">{eyebrow}</span> : null}
             <h1 className="font-heading text-3xl leading-tight font-semibold tracking-tight text-foreground">{title}</h1>
             {description ? <p className="text-[15px] leading-7 text-muted-foreground">{description}</p> : null}

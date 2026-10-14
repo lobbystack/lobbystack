@@ -1,9 +1,9 @@
 import { countKnowledgeTokens } from "@lobbystack/domain";
-import { demoSnapshot } from "@lobbystack/shared";
+import { demoSnapshot, runtimeLocales } from "@lobbystack/shared";
 import { DateTime } from "luxon";
 import { describe, expect, it } from "vitest";
 
-import { buildAgentInstructions, buildLiveInstructions } from "./instructions";
+import { buildAgentInstructions, buildLiveInstructions, liveLanguage } from "./instructions";
 
 const callStart = DateTime.fromISO("2026-10-01T18:30:00.000Z");
 
@@ -80,6 +80,11 @@ describe("buildLiveInstructions", () => {
     expect(instructions).toContain("Speak French unless the caller asks to switch");
     expect(instructions).toContain("Backchannel policy: Use moderate backchannels. Acknowledge naturally without competing with the main response.");
     expect(instructions).toContain(`Open the call with this greeting as soon as you're told to start: "${demoSnapshot.greeting}" Say it once, at the start of the call only.`);
+  });
+
+  it("names each caller language for GPT-Live", () => {
+    expect(runtimeLocales.map((defaultLocale) => liveLanguage({ ...demoSnapshot, defaultLocale }))).toEqual(["English", "French", "Spanish", "German", "Brazilian Portuguese", "Italian", "Dutch"]);
+    expect(buildLiveInstructions({ ...demoSnapshot, defaultLocale: "pt" }, "voice", callStart)).toContain("Speak Brazilian Portuguese unless the caller asks to switch or clearly speaks another language.");
   });
 
   it("keeps later rules when an earlier one is too long for the budget", () => {

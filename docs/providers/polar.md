@@ -73,13 +73,16 @@ Match `POLAR_API_BASE_URL` to the environment that issued the token, webhook sec
 
 ## Route billing requests
 
-The Next.js app exposes three billing entry points.
+The Next.js app exposes four billing entry points.
 
 | Route | Purpose |
 | --- | --- |
-| `POST /api/billing/checkout` | Queue a Starter or Pro checkout request. |
+| `POST /api/billing/checkout` | Queue a Starter or Pro checkout request. Returns HTTP 409 while the business has a live paid plan or a checkout from the last 30 minutes. |
 | `POST /api/billing/portal` | Create a customer portal session for an active paid subscription. |
+| `POST /api/billing/cancel` | Cancel an active Starter or Pro subscription at the end of its billing period. |
 | `POST /api/webhooks/polar` | Verify and store Polar events for worker reconciliation. |
+
+Grant your token `subscriptions:write` access for the cancel route, which calls `PATCH /v1/subscriptions/{id}`.
 
 Configure Polar to send subscription and order webhooks to `https://app.example.com/api/webhooks/polar`. Replace `app.example.com` with your admin application’s public host.
 
@@ -94,9 +97,10 @@ Use this sequence to check where a checkout stops:
 1. The admin API writes a checkout request and enqueues `billing.createCheckout`.
 2. The worker creates the Polar checkout with the configured product ID.
 3. The browser opens the checkout URL after the request becomes ready.
-4. Polar sends subscription and order events to the Next.js webhook route.
-5. The route stores each provider event once and enqueues `billing.reconcile`.
-6. The worker updates local subscription and transaction records.
+4. After payment, Polar sends the browser to `/billing/success`, which polls the checkout request until step 7 finishes.
+5. Polar sends subscription and order events to the Next.js webhook route.
+6. The route stores each provider event once and enqueues `billing.reconcile`.
+7. The worker updates local subscription and transaction records.
 
 The billing page reads PostgreSQL for plan, usage, spending-cap, and transaction data. It creates portal sessions on the server for billing administrators.
 

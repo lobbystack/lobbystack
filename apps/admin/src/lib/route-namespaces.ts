@@ -17,5 +17,6 @@ export function routeNamespaces(pathname: string): string[] {
   if (section === "embed") return ["common", "widget"];
   if (["demo", "claim-demo"].includes(section)) return ["common", "auth", "demos", "widget"];
   if (section === "onboarding") return ["common", "onboarding", "auth", "settings", "nav"];
+  if (section === "billing") return ["common", "onboarding", "settings"];
   return DASHBOARD_NAMESPACES;
 }

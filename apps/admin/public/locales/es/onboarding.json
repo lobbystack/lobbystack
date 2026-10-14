@@ -89,19 +89,73 @@
     "continueFailed": "No pudimos continuar en este momento. Inténtelo de nuevo.",
     "skipFailed": "No pudimos omitir este paso en este momento. Inténtelo de nuevo."
   },
+  "testCall": {
+    "title": "Escuche a su recepcionista",
+    "description": "Llámela desde su navegador y pregúntele lo que preguntan sus clientes.",
+    "call": "Llamar a mi recepcionista",
+    "callAgain": "Llamar de nuevo",
+    "hint": "Su navegador le pedirá acceso al micrófono.",
+    "continue": "Continuar",
+    "skip": "Omitir por ahora",
+    "continueFailed": "No pudimos continuar. Inténtelo de nuevo."
+  },
+  "verifyPhone": {
+    "title": "Verifique su número de móvil",
+    "description": "Le enviamos un código por SMS. Su número comercial será del mismo país.",
+    "fields": {
+      "mobileNumber": "Número de móvil",
+      "country": "País"
+    },
+    "hint": "Use un móvil que reciba SMS. Los números de internet no funcionan.",
+    "sendCode": "Enviarme un código",
+    "sending": "Enviando…",
+    "sendFailed": "No pudimos enviar el código. Inténtelo de nuevo.",
+    "errors": {
+      "voip": "Use su número de móvil. Los números de internet no se pueden verificar.",
+      "notMobile": "Use un número de móvil que reciba SMS.",
+      "countryMismatch": "Este número no es del país que eligió.",
+      "invalidNumber": "Escriba un número de móvil válido.",
+      "rateLimited": "Demasiados códigos. Espere un momento y vuelva a intentarlo."
+    },
+    "code": {
+      "sentTo": "Escriba el código de 6 dígitos que enviamos al {{phone}}.",
+      "checking": "Comprobando…",
+      "invalid_one": "Ese código no funcionó. Le queda {{count}} intento.",
+      "invalid_many": "Ese código no funcionó. Le quedan {{count}} intentos.",
+      "invalid_other": "Ese código no funcionó. Le quedan {{count}} intentos.",
+      "expired": "Este código caducó. Pida uno nuevo.",
+      "locked": "Demasiados intentos. Pida un código nuevo.",
+      "failed": "No pudimos comprobar el código. Inténtelo de nuevo.",
+      "resend": "Enviar un código nuevo",
+      "changeNumber": "Usar otro número"
+    },
+    "unavailable": {
+      "title": "Todavía no ofrecemos números en este país ({{country}}).",
+      "body": "Puede seguir usando a su recepcionista en el navegador, y podemos escribirle cuando los números lleguen allí.",
+      "notify": "Avísenme cuando estén disponibles",
+      "joined": "Listo. Le escribiremos.",
+      "continue": "Continuar sin número",
+      "failed": "Algo salió mal. Inténtelo de nuevo."
+    }
+  },
   "greeting": {
     "title": "¿Cómo debemos saludar a quienes llaman?",
     "description": "Esto es lo primero que dice su IA. Puede cambiarlo en cualquier momento.",
     "label": "Saludo",
-    "language": "Idioma",
-    "english": "English",
-    "french": "Français",
+    "language": "Idioma de quienes llaman",
     "placeholder": "Gracias por llamar. ¿En qué puedo ayudarle?",
     "continue": "Continuar",
     "submitting": "Guardando...",
     "submitFailed": "No pudimos guardar ese saludo en este momento. Inténtelo de nuevo."
   },
   "number": {
+    "ready": {
+      "label": "Su número está listo",
+      "body": "Llámelo desde su teléfono y escuche cómo responde su recepcionista.",
+      "call": "Llamar al {{number}}"
+    },
+    "planRequired": "Para obtener un número, elija un plan.",
+    "trialNote": "Su número es gratis durante 14 días, sin tarjeta.",
     "title": "Elija el número de teléfono de su IA",
     "description": "Elija un número local en el que sus clientes puedan llamarle.",
     "countryLabel": "País",

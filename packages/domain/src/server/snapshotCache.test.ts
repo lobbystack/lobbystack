@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { demoSnapshot, type BusinessContextSnapshot } from "@lobbystack/shared";
+import { demoSnapshot, runtimeLocales, type BusinessContextSnapshot } from "@lobbystack/shared";
 
 import type { DomainContext } from "./context";
 import { deserializeSnapshot, getCachedBusinessSnapshot, redisSnapshotCache, snapshotCacheKey, SNAPSHOT_CACHE_TTL_SECONDS, type SnapshotCacheClient } from "./snapshotCache";
@@ -53,6 +53,12 @@ describe("snapshot cache contract", () => {
     expect(deserializeSnapshot("garbage")).toBeNull();
     expect(deserializeSnapshot(null)).toBeNull();
     expect(deserializeSnapshot(undefined)).toBeNull();
+  });
+
+  it("keeps a snapshot in any caller language, so calls don't miss the cache", () => {
+    for (const defaultLocale of runtimeLocales) {
+      expect(deserializeSnapshot(JSON.stringify({ ...validSnapshot, defaultLocale }))?.defaultLocale).toBe(defaultLocale);
+    }
   });
 });
 

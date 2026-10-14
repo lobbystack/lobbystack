@@ -143,7 +143,8 @@
       "openingCheckout": "Otvaranje plaćanja...",
       "openingPortal": "Otvaranje portala...",
       "viewInvoice": "Prikaži račun",
-      "retry": "Pokušaj ponovo"
+      "retry": "Pokušaj ponovo",
+      "cancelPlan": "Otkaži paket"
     },
     "currentPlan": {
       "title": "Vaš paket",
@@ -329,6 +330,80 @@
         "order": "Porudžbina",
         "refund": "Povraćaj novca"
       }
+    },
+    "checkoutErrors": {
+      "inProgress": "Za ovaj radni prostor je već otvoreno plaćanje. Završite ga ili započnite novo za 30 minuta.",
+      "subscriptionActive": "Ovaj radni prostor već ima plaćeni paket. Da biste ga promenili, koristite Upravljaj pretplatom na stranici Paket."
+    },
+    "cancel": {
+      "title": "Otkazati {{plan}} paket?",
+      "description": "Vaš paket ostaje aktivan do isteka tekućeg perioda ({{date}}). Posle toga prelazite na Free paket.",
+      "descriptionNoDate": "Vaš paket ostaje aktivan do isteka tekućeg perioda naplate. Posle toga prelazite na Free paket.",
+      "reasonLabel": "Zašto otkazujete? (opciono)",
+      "reasons": {
+        "setup": "Podešavanje je bilo nejasno ili sporo",
+        "quality": "Kvalitet glasa ili poziva",
+        "price": "Cena",
+        "missing_feature": "Nedostaje neka funkcija",
+        "other": "Nešto drugo"
+      },
+      "commentLabel": "Recite nam više (opciono)",
+      "keep": "Zadrži paket",
+      "confirm": "Otkaži paket",
+      "canceling": "Otkazivanje paketa...",
+      "failed": "Paket nije otkazan. Pokušajte ponovo ili koristite Upravljaj pretplatom.",
+      "endsOn": "Vaš {{plan}} paket ostaje aktivan do isteka tekućeg perioda ({{date}})."
+    },
+    "success": {
+      "received": {
+        "title": "Uplata je primljena",
+        "description": "Ova stranica se osvežava kada Vaš paket bude spreman.",
+        "status": "Pripremamo Vaš paket..."
+      },
+      "missing": {
+        "title": "Ne možemo da pronađemo ovo plaćanje",
+        "description": "Otvorite stranicu paketa da vidite koji paket imate.",
+        "action": "Idi na paket"
+      },
+      "title": "Vaš {{plan}} paket je spreman",
+      "unlocks": {
+        "voiceMinutes_one": "{{count}} minut razgovora mesečno",
+        "voiceMinutes_few": "{{count}} minuta razgovora mesečno",
+        "voiceMinutes_other": "{{count}} minuta razgovora mesečno",
+        "numbers_one": "{{count}} namenski poslovni broj",
+        "numbers_few": "{{count}} namenska poslovna broja",
+        "numbers_other": "{{count}} namenskih poslovnih brojeva",
+        "alertSms_one": "{{count}} SMS segment za upozorenja mesečno",
+        "alertSms_few": "{{count}} SMS segmenta za upozorenja mesečno",
+        "alertSms_other": "{{count}} SMS segmenata za upozorenja mesečno",
+        "transfers_one": "{{count}} pokušaj preusmeravanja mesečno",
+        "transfers_few": "{{count}} pokušaja preusmeravanja mesečno",
+        "transfers_other": "{{count}} pokušaja preusmeravanja mesečno"
+      },
+      "number": {
+        "label": "Vaš broj",
+        "keep": "Ovaj broj je Vaš.",
+        "choose": "Izaberite broj"
+      },
+      "steps": {
+        "title": "Sledeći koraci",
+        "call": {
+          "title": "Pozovite ga sada",
+          "description": "Čujte kako recepcioner odgovara na pravi poziv."
+        },
+        "forward": {
+          "title": "Preusmerite poslovnu liniju na ovaj broj",
+          "description": "Pozivaoci i dalje biraju broj koji znaju. Vaš operater preusmerava te pozive na Vaš LobbyStack broj.",
+          "action": "Uputstvo za preusmeravanje poziva"
+        },
+        "transfer": {
+          "title": "Izaberite kuda idu hitni pozivi",
+          "description": "Dodajte broj za preusmeravanje u AI podešavanjima da bi recepcioner mogao da prosledi hitne pozive osobi.",
+          "action": "Otvori AI podešavanja"
+        }
+      },
+      "continue": "Nastavite podešavanje",
+      "dashboard": "Idi na kontrolnu tablu"
     }
   },
   "phoneNumber": {

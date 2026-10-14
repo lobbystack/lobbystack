@@ -426,7 +426,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
           question:
             "Répond-il après les heures d’ouverture, le midi et le week-end ?",
           answer:
-            "Oui, pour les appels que vous lui renvoyez. Réglez le renvoi chez votre opérateur : appels occupés ou sans réponse pour le débordement et le midi, appels après la fermeture pour les soirs et les week-ends, ou tous les appels. Vous gardez le numéro du cabinet quand vous le renvoyez. Pour porter le numéro chez nous, contactez l’équipe LobbyStack. Starter et Pro incluent un numéro aux États-Unis, au Canada, au Royaume-Uni ou en Australie.",
+            "Oui, pour les appels que vous lui renvoyez. Réglez le renvoi chez votre opérateur : appels occupés ou sans réponse pour le débordement et le midi, appels après la fermeture pour les soirs et les week-ends, ou tous les appels. Vous gardez le numéro du cabinet quand vous le renvoyez. Pour porter le numéro chez nous, contactez l’équipe LobbyStack. Starter et Pro incluent un numéro aux États-Unis, au Canada, au Royaume-Uni, en Australie ou en Nouvelle-Zélande.",
         },
         {
           question:

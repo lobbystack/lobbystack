@@ -549,6 +549,12 @@
       "comparison": "port-baseline"
     },
     {
+      "path": "/billing/success",
+      "fixtureState": "operator",
+      "state": "payment-received",
+      "comparison": "port-baseline"
+    },
+    {
       "path": "/reset-password",
       "fixtureState": "public",
       "state": "default",

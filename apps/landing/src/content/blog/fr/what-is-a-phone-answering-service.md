@@ -15,7 +15,7 @@ canonicalSlug: "what-is-a-phone-answering-service"
 
 Un **secrétariat téléphonique** répond aux appels de votre entreprise, en son nom, quand vous ne pouvez pas décrocher. Des réceptionnistes humains, une IA ou les deux accueillent l'appelant, répondent à ses questions, prennent des messages, fixent des rendez-vous et vous transfèrent les appels urgents. Vous renvoyez votre numéro vers le service et vous choisissez les appels qu'il reçoit : tous, le débordement ou ceux hors horaires.
 
-*Prix relevés le 9 octobre 2026 sur la page tarifaire de chaque fournisseur, en dollars américains hors taxes. Ce sont des fournisseurs nord-américains : en France, demandez des prix en euros à des secrétariats locaux et servez-vous de ce guide pour comparer les modes de facturation. LobbyStack propose des numéros aux États-Unis, au Canada, au Royaume-Uni et en Australie. LobbyStack a rédigé ce guide et vend un réceptionniste IA : notre forfait apparaît comme un exemple parmi d'autres, signalé comme le nôtre.*
+*Prix relevés le 9 octobre 2026 sur la page tarifaire de chaque fournisseur, en dollars américains hors taxes. Ce sont des fournisseurs nord-américains : en France, demandez des prix en euros à des secrétariats locaux et servez-vous de ce guide pour comparer les modes de facturation. LobbyStack propose des numéros aux États-Unis, au Canada, au Royaume-Uni, en Australie et en Nouvelle-Zélande. LobbyStack a rédigé ce guide et vend un réceptionniste IA : notre forfait apparaît comme un exemple parmi d'autres, signalé comme le nôtre.*
 
 ## Que fait un secrétariat téléphonique ?
 
@@ -151,7 +151,7 @@ Quelques fournisseurs prennent gratuitement une partie de vrais appels. Le [forf
 
 ### Puis-je garder mon numéro professionnel ?
 
-Oui. Vous renvoyez votre numéro actuel vers le service et vous choisissez une règle de renvoi chez votre opérateur : tous les appels, le débordement ou les appels hors horaires. Certains services reprennent aussi votre numéro par portabilité, et [PATLive](https://www.patlive.com/pricing/) le fait gratuitement, à l'entrée comme à la sortie. Avec LobbyStack, vous renvoyez votre numéro vers un numéro LobbyStack aux États-Unis, au Canada, au Royaume-Uni ou en Australie.
+Oui. Vous renvoyez votre numéro actuel vers le service et vous choisissez une règle de renvoi chez votre opérateur : tous les appels, le débordement ou les appels hors horaires. Certains services reprennent aussi votre numéro par portabilité, et [PATLive](https://www.patlive.com/pricing/) le fait gratuitement, à l'entrée comme à la sortie. Avec LobbyStack, vous renvoyez votre numéro vers un numéro LobbyStack aux États-Unis, au Canada, au Royaume-Uni, en Australie ou en Nouvelle-Zélande.
 
 ### Quelle différence entre un secrétariat téléphonique et un centre d'appels ?
 

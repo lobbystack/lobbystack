@@ -17,7 +17,7 @@ En octobre 2026, la meilleure **permanence téléphonique immobilier** pour un g
 
 LobbyStack publie ce comparatif et vend un réceptionniste IA. Vous le trouverez dans la section IA, avec ses limites détaillées. Il ne se connecte ni à AppFolio, ni à Buildium, ni à Yardi, ni à Rent Manager.
 
-**Prix vérifiés les 9 et 10 octobre 2026.** Nous avons relevé chaque prix sur le site du fournisseur, en dollars américains hors taxes. Ces services visent surtout l'Amérique du Nord, et LobbyStack fournit des numéros aux États-Unis, au Canada, au Royaume-Uni et en Australie. En France, demandez des tarifs en euros à un secrétariat téléphonique local, puis comparez-les avec les modes de facturation décrits ici. Pour les autres secteurs, consultez [ce que coûte une permanence téléphonique](/fr/blog/how-much-does-an-answering-service-cost/).
+**Prix vérifiés les 9 et 10 octobre 2026.** Nous avons relevé chaque prix sur le site du fournisseur, en dollars américains hors taxes. Ces services visent surtout l'Amérique du Nord, et LobbyStack fournit des numéros aux États-Unis, au Canada, au Royaume-Uni, en Australie et en Nouvelle-Zélande. En France, demandez des tarifs en euros à un secrétariat téléphonique local, puis comparez-les avec les modes de facturation décrits ici. Pour les autres secteurs, consultez [ce que coûte une permanence téléphonique](/fr/blog/how-much-does-an-answering-service-cost/).
 
 ## Quelle permanence téléphonique immobilier choisir pour votre parc ?
 

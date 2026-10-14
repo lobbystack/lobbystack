@@ -14,27 +14,19 @@ vi.mock("next/navigation", () => ({ useRouter: () => route.router, useSearchPara
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock("./onboarding-plan-comparison", () => ({ OnboardingPlanComparison: () => null }));
 const clients: QueryClient[] = [];
-let store: Record<string, string> = {};
 beforeEach(() => {
   route.search = new URLSearchParams();
   telemetryRef.current = createRecordedBrowserTelemetry();
-  store = {};
-  vi.stubGlobal("localStorage", {
-    getItem: (key: string) => store[key] ?? null,
-    setItem: (key: string, value: string) => { store[key] = value; },
-    removeItem: (key: string) => { delete store[key]; },
-  });
 });
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
-function setup(synced: boolean | "error" = false, monthlyOnly = false) {
+function setup(monthlyOnly = false, refusal?: string) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true }] });
   client.setQueryData(["billing", "business"], { checkoutAvailable: true, availableCheckoutPlans: ["pro"], availableCheckoutIntervals: { starter: [], pro: monthlyOnly ? ["monthly"] : ["monthly", "annual"] } });
   const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     if (url.includes("/api/onboarding/stage?")) return Response.json({ ok: true });
-    if (url === "/api/billing/checkout" && init?.method === "POST") return Response.json({ requestId: "new-checkout" });
+    if (url === "/api/billing/checkout" && init?.method === "POST") return refusal ? Response.json({ error: "Refused", code: refusal }, { status: 409 }) : Response.json({ requestId: "new-checkout" });
     if (url.includes("requestId=new-checkout")) return Response.json({ status: "error", checkoutUrl: null, error: "Checkout failed" });
-    if (url.includes("requestId=returned-checkout")) return synced === "error" ? Response.json({ error: "Not synchronized" }, { status: 503 }) : Response.json({ synced, target: "pro" });
     throw new Error(`Unexpected request ${url}`);
   });
   vi.stubGlobal("fetch", fetchMock);
@@ -42,38 +34,24 @@ function setup(synced: boolean | "error" = false, monthlyOnly = false) {
   return fetchMock;
 }
 describe("original onboarding plan behavior with asynchronous checkout", () => {
-  it("reconciles a paid return once under StrictMode before advancing onboarding", async () => {
+  it("sends a checkout return from before the success page to it, without polling here", async () => {
     route.search = new URLSearchParams("checkout=success&requestId=returned-checkout");
-    const fetchMock = setup(true);
-    await waitFor(() => expect(route.router.replace).toHaveBeenCalledWith("/onboarding/number"));
-    expect(fetchMock.mock.calls.filter(([url]) => url.includes("/api/onboarding/stage?"))).toHaveLength(1);
+    const fetchMock = setup();
+    await waitFor(() => expect(route.router.replace).toHaveBeenCalledWith("/billing/success?requestId=returned-checkout"));
+    expect(fetchMock.mock.calls.some(([url]) => url.includes("/api/billing/checkout?") || url.includes("/api/onboarding/stage?"))).toBe(false);
   });
-  it("records plan_checkout_completed once when a paid return synchronizes", async () => {
-    route.search = new URLSearchParams("checkout=success&requestId=returned-checkout");
-    setup(true);
-    await waitFor(() => expect(route.router.replace).toHaveBeenCalledWith("/onboarding/number"));
-    telemetryRef.current!.expectEvent("web.onboarding.plan_checkout_completed", { businessId: "business", plan: "pro" });
-    expect(telemetryRef.current!.events.filter(event => event.name === "web.onboarding.plan_checkout_completed")).toHaveLength(1);
+  it("explains a checkout refused because another one is open", async () => {
+    setup(false, "checkout_in_progress");
+    await userEvent.click(screen.getByRole("button", { name: "plan.tiers.pro.cta.annual" }));
+    expect(await screen.findByText("settings:billing.checkoutErrors.inProgress")).toBeTruthy();
+    expect(route.router.push).not.toHaveBeenCalled();
   });
-  it("does not report the same checkout again when the return page is reopened", async () => {
-    route.search = new URLSearchParams("checkout=success&requestId=returned-checkout");
-    setup(true);
-    await waitFor(() => expect(route.router.replace).toHaveBeenCalledWith("/onboarding/number"));
-    cleanup();
-    // A reload of the return URL: the endpoint still answers synced, and a
-    // fresh mount has a fresh ref.
-    route.router.replace.mockClear();
-    setup(true);
-    await waitFor(() => expect(route.router.replace).toHaveBeenCalledWith("/onboarding/number"));
-    expect(telemetryRef.current!.events.filter(event => event.name === "web.onboarding.plan_checkout_completed")).toHaveLength(1);
-  });
-  it.each([false, "error"] as const)("keeps return parameters and stays put while synchronization is %s", async synced => {
-    route.search = new URLSearchParams("checkout=success&requestId=returned-checkout");
-    const fetchMock = setup(synced);
-    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
-    expect(route.router.replace).not.toHaveBeenCalled();
-    expect(route.search.get("requestId")).toBe("returned-checkout");
-    expect(fetchMock.mock.calls.some(([url]) => url.includes("/api/onboarding/stage?"))).toBe(false);
+  it("moves a workspace that already pays on to its number instead of a second checkout", async () => {
+    const fetchMock = setup(false, "subscription_active");
+    await userEvent.click(screen.getByRole("button", { name: "plan.tiers.pro.cta.annual" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/onboarding/stage?businessId=business", expect.objectContaining({ body: JSON.stringify({ to: "phone_number" }) })));
+    await waitFor(() => expect(route.router.push).toHaveBeenCalledWith("/onboarding/number"));
+    expect(screen.queryByText("settings:billing.checkoutErrors.subscriptionActive")).toBeNull();
   });
   it.each(["annual", "monthly"])("starts Pro checkout with the selected %s interval and allows retry after provider failure", async interval => {
     const fetchMock = setup();
@@ -110,7 +88,7 @@ describe("original onboarding plan behavior with asynchronous checkout", () => {
     telemetryRef.current!.expectEvent("web.onboarding.plan_selected", { businessId: "business", plan: "free_cloud" });
   });
   it("selects the only configured interval and disables unavailable plans", async () => {
-    setup(false, true);
+    setup(true);
     await waitFor(() => expect(screen.getByRole("tab", { name: "plan.billingInterval.monthly" }).getAttribute("aria-selected")).toBe("true"));
     expect(screen.getByRole("button", { name: "plan.tiers.starter.cta.monthly" }).hasAttribute("disabled")).toBe(true);
     expect(screen.getByRole("button", { name: "plan.tiers.pro.cta.monthly" }).hasAttribute("disabled")).toBe(false);

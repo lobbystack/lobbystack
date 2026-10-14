@@ -116,7 +116,8 @@ export const snapshotSchema = z.object({
   displayName: z.string().min(1),
   legalName: z.string().optional(),
   timezone: z.string().min(1),
-  defaultLocale: z.enum(["en", "fr"]),
+  // runtimeLocales from @lobbystack/shared, which this package doesn't depend on.
+  defaultLocale: z.enum(["en", "fr", "es", "de", "pt", "it", "nl"]),
   businessType: z.string().min(1),
   telemetryEnabled: z.boolean().optional(),
   greeting: z.string(),
@@ -220,6 +221,11 @@ export const queueForJobType = {
   "phoneVerification.sendCode": "critical",
   "phoneNumber.provision": "critical",
   "phoneNumber.reclaim": "maintenance",
+  // Moves a number between the receptionist and the forward-or-reject fallback; callers notice a delay.
+  "phoneNumber.route": "critical",
+  "numberTrial.sweep": "maintenance",
+  "numberTrial.sendEmail": "default",
+  "phoneNumber.releaseEmail": "default",
   "prospectDemo.expire": "maintenance",
   "onboarding.sendFollowup": "default",
   "affiliate.generatePayoutRun": "maintenance",

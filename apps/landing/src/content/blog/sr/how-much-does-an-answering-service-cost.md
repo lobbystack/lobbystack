@@ -278,7 +278,7 @@ Po minutu, da. LobbyStack Starter izlazi $0.20 po minutu, koliko i njegova cena 
 
 LobbyStack košta $30 za 40 poziva, $60 za 100 poziva i $118 za 200 poziva (Pro, $100 za 500 minuta plus $0.18 po minutu). Tri primera računa iznose $30, $40 i $48. Uz godišnju naplatu, Starter košta $24 mesečno.
 
-Starter uključuje 150 minuta, jedan poslovni broj u SAD, Kanadi, Ujedinjenom Kraljevstvu ili Australiji, zakazivanje u Google Calendar i SMS potvrde i podsetnike 24 sata unapred na američke i kanadske brojeve. Uključuje i 20 pokušaja preusmeravanja mesečno, zatim $0.02 po pokušaju.
+Starter uključuje 150 minuta, jedan poslovni broj u SAD, Kanadi, Ujedinjenom Kraljevstvu, Australiji ili na Novom Zelandu, zakazivanje u Google Calendar i SMS potvrde i podsetnike 24 sata unapred na američke i kanadske brojeve. Uključuje i 20 pokušaja preusmeravanja mesečno, zatim $0.02 po pokušaju.
 
 Paketi ne ograničavaju broj poziva na koje recepcioner odgovara istovremeno. Pozivi počinju na Vašem podrazumevanom jeziku, engleskom ili francuskom, a recepcioner zatim odgovara na jeziku pozivaoca (više od 70 jezika). Svoj broj zadržavate tako što ga prosledite, a pravilom prosleđivanja kod Vašeg operatera birate da li LobbyStack preuzima višak poziva, pozive van radnog vremena ili sve pozive.
 

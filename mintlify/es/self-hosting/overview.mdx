@@ -49,6 +49,8 @@ Configure `FIRECRAWL_API_KEY` en el servicio `worker`. Sin ella, la importación
 
 En Google Cloud, active la API de Google Calendar y cree un cliente OAuth para una aplicación web. Agregue `https://su_dominio_de_administracion/api/calendar/google/callback` como URI de redireccionamiento autorizado. Configure `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` en el servicio `admin`. La plantilla completa `GOOGLE_REDIRECT_URI`, y el worker lee los tres valores del servicio de administración.
 
+Con ambos valores configurados, las páginas de inicio de sesión y de registro también ofrecen **Continuar con Google**. Agregue `https://su_dominio_de_administracion/api/auth/callback/google` al mismo cliente OAuth como segundo URI de redireccionamiento autorizado.
+
 #### Use un dominio personalizado
 
 Agregue el dominio al servicio `admin` y luego configure `APP_BASE_URL` en el servicio `admin` con el valor `https://su_dominio`. Estas variables hacen referencia a ella y siguen el cambio:
@@ -56,7 +58,7 @@ Agregue el dominio al servicio `admin` y luego configure `APP_BASE_URL` en el se
 - `SITE_URL`, `AUTH_TRUSTED_ORIGINS`, `TWILIO_SMS_WEBHOOK_URL`, `TWILIO_STATUS_CALLBACK_URL` y `GOOGLE_REDIRECT_URI` en el servicio `admin`
 - `APP_BASE_URL`, `TWILIO_STATUS_CALLBACK_URL` y `GOOGLE_REDIRECT_URI` en el servicio `worker`
 
-Una implementación creada con una versión anterior de la plantilla tiene el dominio de Railway escrito en cada una de estas variables, así que modifíquelas todas. Después, apunte el webhook de OpenAI y el URI de redireccionamiento de Google al nuevo dominio. Los números de teléfono que aprovisionó antes del cambio conservan en Twilio sus URL anteriores de SMS y de devolución de llamada de estado hasta que las actualice allí.
+Una implementación creada con una versión anterior de la plantilla tiene el dominio de Railway escrito en cada una de estas variables, así que modifíquelas todas. Después, apunte el webhook de OpenAI y los dos URI de redireccionamiento de Google al nuevo dominio. Los números de teléfono que aprovisionó antes del cambio conservan en Twilio sus URL anteriores de SMS y de devolución de llamada de estado hasta que las actualice allí.
 
 ## Base oficial
 

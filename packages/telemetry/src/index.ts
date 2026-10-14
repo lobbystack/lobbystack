@@ -27,6 +27,9 @@ export const WEB_EVENT_NAMES = [
   "web.onboarding.knowledge_uploaded",
   "web.onboarding.knowledge_skipped",
   "web.onboarding.greeting_submitted",
+  "web.onboarding.test_call_continued",
+  "web.onboarding.phone_verified",
+  "web.onboarding.number_waitlist_joined",
   "web.onboarding.number_claim_started",
   "web.onboarding.number_claim_completed",
   "web.onboarding.plan_selected",
@@ -109,6 +112,7 @@ export const WORKFLOW_EVENT_NAMES = [
 
 export const BILLING_EVENT_NAMES = [
   "billing.subscription_started",
+  "billing.subscription_canceled",
 ] as const;
 
 export const OPERATIONS_EVENT_NAMES = [
@@ -219,7 +223,8 @@ export type TelemetryContext = {
 
 export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "web.auth.login_succeeded": ["deploymentMode", "pathname"],
-  "web.auth.signup_succeeded": ["deploymentMode", "pathname"],
+  // method: "email" or "google".
+  "web.auth.signup_succeeded": ["deploymentMode", "method", "pathname"],
   "web.workspace.business_switched": [
     "businessId",
     "deploymentMode",
@@ -253,6 +258,10 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "web.onboarding.knowledge_uploaded": ["businessId", "deploymentMode"],
   "web.onboarding.knowledge_skipped": ["businessId", "deploymentMode"],
   "web.onboarding.greeting_submitted": ["businessId", "deploymentMode"],
+  // heard: whether a test call ended on that screen before the owner moved on.
+  "web.onboarding.test_call_continued": ["businessId", "deploymentMode", "heard"],
+  "web.onboarding.phone_verified": ["businessId", "deploymentMode", "countryCode"],
+  "web.onboarding.number_waitlist_joined": ["businessId", "deploymentMode", "countryCode"],
   "web.onboarding.number_claim_started": [
     "businessId",
     "deploymentMode",
@@ -321,6 +330,8 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "web.activation.upgrade_prompt_clicked": ["businessId", "deploymentMode", "trigger"],
   "web.activation.abandon_intent": ["businessId", "deploymentMode", "trigger"],
   "billing.subscription_started": ["businessId", "plan", "billingInterval", "previousPlan"],
+  // reason: the operator's answer in the cancel dialog, or "none" when they skipped it.
+  "billing.subscription_canceled": ["businessId", "plan", "reason"],
   "voice.call_started": [
     "businessId",
     "deploymentMode",

@@ -120,7 +120,7 @@ Une fois les 30 minutes utilisées, les appels de test s'arrêtent jusqu'au mois
 | Starter | 30 $, ou 24 $ en facturation annuelle | 150 minutes, un numéro professionnel | 0,20 $ la minute |
 | Pro | 100 $, ou 80 $ en facturation annuelle | 500 minutes, un numéro professionnel | 0,18 $ la minute |
 
-Aucun forfait ne comporte de frais de mise en service. Starter et Pro répondent sur un numéro aux États-Unis, au Canada, au Royaume-Uni ou en Australie. Vous pouvez renvoyer votre numéro actuel pour tous les appels, ou seulement en débordement ou hors horaires. Le réceptionniste réserve les rendez-vous dans Google Agenda, transfère les appels urgents vers un numéro et enregistre un résumé, une transcription et un enregistrement de chaque appel. Les appels de moins de 10 secondes et ceux que le réceptionniste raccroche comme spam ne comptent pas dans vos minutes.
+Aucun forfait ne comporte de frais de mise en service. Starter et Pro répondent sur un numéro aux États-Unis, au Canada, au Royaume-Uni, en Australie ou en Nouvelle-Zélande. Vous pouvez renvoyer votre numéro actuel pour tous les appels, ou seulement en débordement ou hors horaires. Le réceptionniste réserve les rendez-vous dans Google Agenda, transfère les appels urgents vers un numéro et enregistre un résumé, une transcription et un enregistrement de chaque appel. Les appels de moins de 10 secondes et ceux que le réceptionniste raccroche comme spam ne comptent pas dans vos minutes.
 
 ## Quand un réceptionniste IA gratuit ne suffit-il plus ?
 

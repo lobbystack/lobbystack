@@ -10,16 +10,18 @@ const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof crea
 vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetryRef.current!.telemetry }));
 vi.mock("next/navigation", () => ({ useRouter: () => navigation }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock("./onboarding-plan-surface", () => ({ OnboardingPlanSurface: () => <div>plans</div> }));
 const clients: QueryClient[] = [];
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); });
 beforeEach(() => { telemetryRef.current = createRecordedBrowserTelemetry(); navigation.push.mockReset(); navigation.replace.mockReset(); });
-function setup(stage: string, primary = false, pending = false) {
+function setup(stage: string, primary = false, pending = false, suggestion?: () => Response) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business-1", active: true, onboardingStage: stage }] });
   client.setQueryData(["onboarding-primary-number", "business-1"], { activeClaim: pending ? { id: "claim-1", status: "provisioning" } : null, phoneNumbers: primary ? [{ id: "phone-1", e164: "+15815550102", reclaimScheduledAt: null }] : [] });
+  client.setQueryData(["billing", "business-1"], { account: null });
   const fetchMock = vi.fn(async (input: string) => {
     if (input.includes("/api/phone-numbers?")) return Response.json({ activeClaim: null, phoneNumbers: [{ id: "phone-1", e164: "+14165550100", reclaimScheduledAt: null }] });
-    if (input.includes("/suggestion?")) return Response.json({ numbers: [{ phoneE164: "+14165550100", countryCode: "CA", claimToken: "signed-offer", capabilities: { sms: true, voice: true } }] });
+    if (input.includes("/suggestion?")) return suggestion ? suggestion() : Response.json({ numbers: [{ phoneE164: "+14165550100", countryCode: "CA", claimToken: "signed-offer", capabilities: { sms: true, voice: true } }] });
     if (input.includes("/claim?")) return Response.json({ claimId: "claim-1" });
     if (input.includes("/claim/claim-1?")) return Response.json({ claim: { status: "claimed", requestedE164: "+14165550100", phoneNumberId: "phone-1" } });
     if (input.includes("/skip?")) return Response.json({ ok: true });
@@ -30,19 +32,22 @@ function setup(stage: string, primary = false, pending = false) {
   return fetchMock;
 }
 describe("onboarding number API adapter", () => {
-  it("resumes a provisioning claim after reload without allowing another purchase or skip", async () => {
+  it("resumes a provisioning claim after reload, then offers the new number to call", async () => {
     const fetchMock = setup("phone_number", false, true);
     expect(screen.queryByRole("button", { name: "number.select" })).toBeNull();
     expect(screen.queryByRole("button", { name: "number.skipLater" })).toBeNull();
-    await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith("/onboarding/attribution"), { timeout: 2500 });
+    expect(await screen.findByText("(416) 555-0100", {}, { timeout: 2500 })).toBeTruthy();
     expect(fetchMock.mock.calls.every(([url]) => url.includes("/api/phone-numbers?"))).toBe(true);
   });
-  it("moves a fresh claim forward before onboarding progress catches up", async () => {
+  it("asks the owner to call their new number before moving on", async () => {
     const fetchMock = setup("phone_number", true);
-    await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith("/onboarding/attribution"));
+    expect(screen.getByText("number.ready.label")).toBeTruthy();
+    expect(screen.getByText("number.ready.call").closest("a")?.getAttribute("href")).toBe("tel:+15815550102");
+    await userEvent.click(screen.getByRole("button", { name: "number.continue" }));
+    expect(navigation.push).toHaveBeenCalledWith("/onboarding/attribution");
     expect(fetchMock).not.toHaveBeenCalled();
   });
-  it("shows the original selected-number review when revisiting attribution", async () => {
+  it("shows the chosen number when revisiting from attribution", async () => {
     const fetchMock = setup("attribution", true);
     expect(screen.getByText("(581) 555-0102")).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "number.continue" }));
@@ -51,8 +56,11 @@ describe("onboarding number API adapter", () => {
   });
   it.each(["attribution", "complete"])("claims a number from %s", async stage => {
     const fetchMock = setup(stage);
+    expect(screen.getByText("number.trialNote")).toBeTruthy();
     await userEvent.click(await screen.findByRole("button", { name: "number.select" }));
-    await waitFor(() => expect(navigation.push).toHaveBeenCalledWith(stage === "complete" ? "/settings/phone-number" : "/onboarding/attribution"));
+    expect(await screen.findByText("number.ready.label")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "number.continue" }));
+    expect(navigation.push).toHaveBeenCalledWith(stage === "complete" ? "/" : "/onboarding/attribution");
     const claimRequest = fetchMock.mock.calls.find(([url]) => url.includes("/claim?"));
     expect(claimRequest).toBeTruthy();
     const claimProperties = { businessId: "business-1", countryCode: "CA", selectionMode: "suggested", numberKind: "local" };
@@ -64,5 +72,10 @@ describe("onboarding number API adapter", () => {
     await userEvent.click(await screen.findByRole("button", { name: "number.skipLater" }));
     await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => url.includes("/skip?"))).toBe(true));
     expect(navigation.push).toHaveBeenCalledWith("/");
+  });
+  it("shows the plans where a number needs one", async () => {
+    setup("phone_number", false, false, () => Response.json({ error: "No trial here.", code: "dedicated_number_requires_paid_plan" }, { status: 402 }));
+    expect(await screen.findByText("number.planRequired")).toBeTruthy();
+    expect(screen.getByText("plans")).toBeTruthy();
   });
 });

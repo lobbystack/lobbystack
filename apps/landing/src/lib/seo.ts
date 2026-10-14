@@ -301,7 +301,7 @@ export const softwareApplicationJsonLd = (
       price: "0",
       priceCurrency: "USD",
       description:
-        "Test 30 browser voice minutes on Free, with no telephone number. Store up to 1 MB in your knowledge base.",
+        "Free includes 30 voice minutes and a phone number free for 14 days. Store up to 1 MB in your knowledge base.",
       url: absoluteUrl("/pricing/"),
       availability: "https://schema.org/InStock",
     },

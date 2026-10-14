@@ -79,9 +79,11 @@ export function ProductAnalytics({ children }: { children?: ReactNode }) {
     const telemetry = telemetryRef.current;
     if (!telemetry) return;
     if (!allowed) {
-      // Drop any identity carried in from the previous page before opting out,
-      // so a sensitive route cannot be attributed to the operator.
-      if (sensitive) telemetry.reset();
+      // Drop an operator identity carried in from the previous page before
+      // opting out, so a sensitive route cannot be attributed to the operator.
+      // An anonymous id, such as one carried over from lobbystack.com, stays
+      // through signup so identify() can merge the landing visit.
+      if (sensitive && posthog.get_property("$user_state") === "identified") telemetry.reset();
       telemetry.setOptOut(true);
       telemetry.setSensitiveRoute(sensitive);
       if (!sensitive && businessId && preference.data?.telemetryEnabled === false) {
@@ -105,7 +107,7 @@ export function ProductAnalytics({ children }: { children?: ReactNode }) {
     posthog.register({ businessId });
     posthog.group("business", businessGroup);
     const authEvent = consumeAuthSuccess();
-    if (authEvent) telemetry.track(authEvent.event, { businessId, pathname: pathname ?? "/", ...(authEvent.source ? { source: authEvent.source } : {}), $groups: { business: businessGroup } });
+    if (authEvent) telemetry.track(authEvent.event, { businessId, pathname: pathname ?? "/", method: authEvent.method, ...(authEvent.source ? { source: authEvent.source } : {}), $groups: { business: businessGroup } });
     const pendingOnboardingBusinessId = consumePendingOnboardingBusiness(businessId);
     if (pendingOnboardingBusinessId === businessId) {
       telemetry.track("web.onboarding.business_name_submitted", {

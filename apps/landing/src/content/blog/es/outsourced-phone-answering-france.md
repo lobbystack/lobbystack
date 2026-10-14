@@ -87,12 +87,12 @@ El plan Starter de LobbyStack cuesta $30 al mes por 150 minutos, luego $0.20 por
 
 ### Lo que debe saber antes de usarla desde Francia
 
-- **Sin número francés.** LobbyStack ofrece números en Estados Unidos, Canadá, Reino Unido y Australia. Usted conserva su número francés y lo desvía a su número de LobbyStack.
+- **Sin número francés.** LobbyStack ofrece números en Estados Unidos, Canadá, Reino Unido, Australia y Nueva Zelanda. Usted conserva su número francés y lo desvía a su número de LobbyStack.
 - **El desvío sale al extranjero.** Su operador cobra el tramo desviado de cada llamada como una llamada al país de su número de LobbyStack, salvo que su plan incluya ese destino. El Forfait Free 5G+, por ejemplo, incluye llamadas a móviles de Estados Unidos y Canadá, pero su página no dice nada de los desvíos. Pida el precio exacto a su operador antes de activar el desvío. Su cliente sigue pagando una llamada a su número francés, como antes.
 - **Facturación en dólares.** LobbyStack factura en dólares estadounidenses. El monto en euros depende del tipo de cambio y de las comisiones de su banco.
 - **Sin SMS a móviles franceses.** Las confirmaciones de cita y el recordatorio 24 horas antes solo llegan a números de Estados Unidos y Canadá, así que sus clientes franceses no los reciben. Los avisos por correo a su equipo funcionan en cualquier país; los avisos por SMS van a un móvil estadounidense o canadiense.
 - **Sin operador humano.** Las transferencias van a un solo número, el de su equipo, sin presentar a quien llama. Si una transferencia falla, la recepcionista se lo dice a quien llama y ofrece tomar un mensaje.
-- **El autoalojamiento no resuelve el número.** El código es de código abierto (licencia MIT) y funciona con sus propias cuentas de OpenAI y Twilio, pero el código publicado también ofrece números solo en esos cuatro países.
+- **El autoalojamiento no resuelve el número.** El código es de código abierto (licencia MIT) y funciona con sus propias cuentas de OpenAI y Twilio, pero el código publicado también ofrece números solo en esos cinco países.
 
 Para comparar sistemas con IA que se venden en Francia, con número francés y precios en euros, lea nuestra guía del [conmutador virtual con IA para pymes en Francia](/es/blog/ai-phone-system-small-business/).
 
@@ -113,7 +113,7 @@ En octubre de 2026, los proveedores que publican precios cobran de €1 a €1.9
 
 ### ¿Puedo conservar el número de mi empresa?
 
-Sí. Activa con su operador un desvío de llamadas al número que le da el proveedor: todas las llamadas, o solo las que no contesta. Sus clientes marcan el mismo número de siempre. LobbyStack funciona igual, pero el desvío va a un número de Estados Unidos, Canadá, Reino Unido o Australia, con el costo internacional que eso implica.
+Sí. Activa con su operador un desvío de llamadas al número que le da el proveedor: todas las llamadas, o solo las que no contesta. Sus clientes marcan el mismo número de siempre. LobbyStack funciona igual, pero el desvío va a un número de Estados Unidos, Canadá, Reino Unido, Australia o Nueva Zelanda, con el costo internacional que eso implica.
 
 ### ¿Hay que firmar un contrato de permanencia?
 

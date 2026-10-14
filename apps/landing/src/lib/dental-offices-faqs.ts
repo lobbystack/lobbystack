@@ -44,7 +44,7 @@ export const dentalOfficesFaqs: FaqItem[] = [
   {
     question: "Does it answer after hours, at lunch, and on weekends?",
     answer:
-      "Yes, for the calls you forward to it. Set your phone carrier to forward busy or unanswered calls for overflow and lunch, calls after close for nights and weekends, or every call. You keep your practice number when you forward it. To port the number instead, contact the LobbyStack team. Starter and Pro include one number in the US, Canada, the UK, or Australia.",
+      "Yes, for the calls you forward to it. Set your phone carrier to forward busy or unanswered calls for overflow and lunch, calls after close for nights and weekends, or every call. You keep your practice number when you forward it. To port the number instead, contact the LobbyStack team. Starter and Pro include one number in the US, Canada, the UK, Australia, or New Zealand.",
   },
   {
     question: "Can patients reschedule or cancel by phone?",

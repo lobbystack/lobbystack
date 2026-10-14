@@ -25,13 +25,13 @@ try {
   let business = await withBusinessTransaction(app.db, { ...actor, actorType: "operator" }, async (tx) => (await tx.select().from(businesses).where(eq(businesses.id, businessId)))[0]);
   assert(business?.websiteUrl === "https://example.com/" && business.onboardingStage === "knowledge", "Website URL and stage were not committed together.");
   await advanceOnboardingStage(context, { ...actor, to: "greeting" });
-  // Greeting advances straight to plan; no personal phone verification gate.
-  await advanceOnboardingStage(context, { ...actor, to: "plan" });
-  assert((await getActiveOnboardingState(app.db, userId)).stage === "plan", "Greeting did not advance to plan without phone verification.");
+  // Greeting leads to the test call: owners hear their agent before anything else is asked of them.
+  await advanceOnboardingStage(context, { ...actor, to: "test_call" });
+  assert((await getActiveOnboardingState(app.db, userId)).stage === "test_call", "Greeting did not advance to the test call.");
   await advanceOnboardingStage(context, { ...actor, to: "knowledge" });
   await createKnowledgeDocument(context, website);
   business = await withBusinessTransaction(app.db, { ...actor, actorType: "operator" }, async (tx) => (await tx.select().from(businesses).where(eq(businesses.id, businessId)))[0]);
-  assert(business?.onboardingStage === "plan", "Revisiting an earlier form regressed onboarding progress.");
+  assert(business?.onboardingStage === "test_call", "Revisiting an earlier form regressed onboarding progress.");
   const documents = await withBusinessTransaction(app.db, { ...actor, actorType: "operator" }, async (tx) => tx.select().from(knowledgeDocuments).where(eq(knowledgeDocuments.businessId, businessId)));
   assert(documents.length === 1, "Revisiting a website duplicated its import.");
   await denied(() => advanceOnboardingStage(context, { businessId, userId: viewerId, to: "knowledge" }), "Viewer could mutate a completed onboarding step.");
@@ -42,21 +42,22 @@ try {
     await tx.insert(billingAccounts).values({ businessId, billingKey: `business:${businessId}`, plan: "free_cloud" });
     await tx.update(businesses).set({ onboardingStage: "phone_number" }).where(eq(businesses.id, businessId));
   });
-  assert((await getActiveOnboardingState(app.db, userId)).stage === "plan", "A legacy free-plan number stage skipped plan selection.");
-  await withBusinessTransaction(worker.db, { businessId, actorType: "worker" }, tx => tx.update(billingAccounts).set({ plan: "starter" }).where(eq(billingAccounts.businessId, businessId)));
-  assert((await getActiveOnboardingState(app.db, userId)).stage === "phone_number", "A paid number stage was incorrectly sent back to plan selection.");
-  // Retired verification stages resume forward to plan instead of dead-ending.
+  // A free business picks a trial number, so the number step no longer sends it back to plans.
+  assert((await getActiveOnboardingState(app.db, userId)).stage === "phone_number", "A free-plan number stage was sent away from the number step.");
+  // Retired stages resume at the nearest step that still exists.
   await withBusinessTransaction(worker.db, { businessId, actorType: "worker" }, tx => tx.update(businesses).set({ onboardingStage: "verify_phone_code" }).where(eq(businesses.id, businessId)));
-  assert((await getActiveOnboardingState(app.db, userId)).stage === "plan", "A retired verification stage did not resume to plan.");
-  await advanceOnboardingStage(context, { ...actor, to: "plan" });
+  assert((await getActiveOnboardingState(app.db, userId)).stage === "verify_phone", "The retired code stage did not resume at phone verification.");
+  await withBusinessTransaction(worker.db, { businessId, actorType: "worker" }, tx => tx.update(businesses).set({ onboardingStage: "plan" }).where(eq(businesses.id, businessId)));
+  assert((await getActiveOnboardingState(app.db, userId)).stage === "test_call", "The retired plan stage did not resume at the test call.");
+  await advanceOnboardingStage(context, { ...actor, to: "verify_phone" });
   business = await withBusinessTransaction(app.db, { ...actor, actorType: "operator" }, async (tx) => (await tx.select().from(businesses).where(eq(businesses.id, businessId)))[0]);
-  assert(business?.onboardingStage === "plan", "Advancing from a retired verification stage did not normalize to plan.");
+  assert(business?.onboardingStage === "verify_phone", "Advancing from the retired plan stage did not reach phone verification.");
   await withBusinessTransaction(worker.db, { businessId, actorType: "worker" }, async tx => {
     await tx.update(billingAccounts).set({ plan: "free_cloud" }).where(eq(billingAccounts.businessId, businessId));
     await tx.update(businesses).set({ onboardingStage: "complete" }).where(eq(businesses.id, businessId));
   });
   assert((await getActiveOnboardingState(app.db, userId)).stage === "complete", "Completed free onboarding was regressed.");
-  console.log(JSON.stringify({ legacyFreeNumberReturnsToPlan: true, paidNumberStagePreserved: true, completedFreeStagePreserved: true, websiteAndStageAtomic: true, concurrentImportDeduplication: true, greetingAdvancesToPlan: true, legacyVerificationResumesToPlan: true, revisitsPreserveProgress: true, viewerDenied: true, invalidUrlDenied: true }));
+  console.log(JSON.stringify({ freeNumberStagePreserved: true, completedFreeStagePreserved: true, websiteAndStageAtomic: true, concurrentImportDeduplication: true, greetingAdvancesToTestCall: true, retiredStagesResume: true, revisitsPreserveProgress: true, viewerDenied: true, invalidUrlDenied: true }));
 } finally {
   await withBusinessTransaction(worker.db, { businessId, actorType: "worker" }, async (tx) => tx.delete(businesses).where(eq(businesses.id, businessId)));
   for (const id of [userId, viewerId]) await auth.db.delete(users).where(eq(users.id, id));

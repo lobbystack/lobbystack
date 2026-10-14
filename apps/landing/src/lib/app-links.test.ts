@@ -25,6 +25,12 @@ describe("dashboard auth links", () => {
     expect(url.searchParams.get("source")).toBe("calculator")
   })
 
+  it("carries a pricing plan to signup", () => {
+    expect(appSignupUrl("fr", { plan: "pro" })).toBe(
+      "https://app.lobbystack.com/fr/signup?plan=pro"
+    )
+  })
+
   it("sends affiliates back to the affiliate page in their language", () => {
     expect(appAffiliateSignupUrl("es")).toBe(
       "https://app.lobbystack.com/es/signup?returnTo=%2Faffiliate"

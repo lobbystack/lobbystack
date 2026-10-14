@@ -4,6 +4,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { callerIsDone, closeLiveSession, createAgentModel, createReceptionistAgent, LiveCallController, liveDelegationEnvironment, WRAP_UP_MAX_MS, type AgentChannel, type CallControl, type LiveCallSetup, type LiveCallSummary } from "@lobbystack/agent-core";
 import {
   blockLiveCaller,
+  checkNumberTrialMinutes,
   extendLiveCallReservation,
   finishLiveCall,
   getCachedBusinessSnapshot,
@@ -473,6 +474,8 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
       const completed = await finishLiveCall(input.domain, { ...call, seconds, measuredSeconds: durationMs / 1000, end: summary.end, channel: request.channel, recording: { sessionId: request.sessionId } });
       // A recovered call missed its start, so its latency would mislead.
       if (completed && !recovery) recordLiveCallLatency(input.domain, telemetryCall, summary);
+      // A trial that used its minutes forwards the next caller to the owner instead of a busy signal.
+      if (completed) void checkNumberTrialMinutes(input.domain, { businessId: call.businessId }).catch(logError(request.sessionId, "trial minutes check failed"));
     };
 
     controller = new LiveCallController({

@@ -5,6 +5,8 @@ const APP_ORIGIN = import.meta.env.PUBLIC_APP_URL || "https://app.lobbystack.com
 type AppAuthLinkOptions = {
   source?: "calculator"
   returnTo?: string
+  // The dashboard keeps it through signup and offers it first when upgrading.
+  plan?: "starter" | "pro"
 }
 
 // The dashboard serves its public auth pages under a locale prefix
@@ -13,11 +15,12 @@ type AppAuthLinkOptions = {
 function appAuthUrl(
   page: "login" | "signup",
   locale: Locale,
-  { source, returnTo }: AppAuthLinkOptions = {}
+  { source, returnTo, plan }: AppAuthLinkOptions = {}
 ) {
   const url = new URL(`/${locale}/${page}`, APP_ORIGIN)
   if (source) url.searchParams.set("source", source)
   if (returnTo) url.searchParams.set("returnTo", returnTo)
+  if (plan) url.searchParams.set("plan", plan)
   return url.toString()
 }
 

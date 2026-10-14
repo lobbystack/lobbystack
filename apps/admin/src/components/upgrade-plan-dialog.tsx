@@ -27,7 +27,6 @@ type UpgradePlanCard = {
   price: Record<BillingInterval, string>;
   period: string;
   highlights: string[];
-  highlighted?: boolean;
 };
 
 const upgradePlanCards: UpgradePlanCard[] = [
@@ -57,7 +56,6 @@ const upgradePlanCards: UpgradePlanCard[] = [
     },
     period: "/mo",
     highlights: ["voiceMinutes", "dedicatedNumber", "alertSms", "support"],
-    highlighted: true,
   },
   {
     slug: "enterprise",
@@ -86,6 +84,7 @@ export function UpgradePlanDialog({
   onOpenChange,
   onStartCheckout,
   open,
+  selectedPlan,
   t,
 }: {
   availableCheckoutPlans: Array<"starter" | "pro">;
@@ -99,6 +98,8 @@ export function UpgradePlanDialog({
   onOpenChange: (open: boolean) => void;
   onStartCheckout: (target: HostedUpgradePlan, billingInterval: BillingInterval) => void;
   open: boolean;
+  /** The plan the dialog opens on, shown as the primary choice. */
+  selectedPlan: HostedUpgradePlan;
   t: BillingTranslation;
 }) {
   const availableBillingIntervals = (["monthly", "annual"] as const).filter(
@@ -166,6 +167,7 @@ export function UpgradePlanDialog({
             const isCurrentPlan = currentPlan === card.slug;
             const checkoutPlan = isHostedUpgradePlan(card.slug) ? card.slug : null;
             const isEnterprisePlan = card.slug === "enterprise";
+            const isSelected = card.slug === selectedPlan;
             const isSelectedIntervalAvailable =
               checkoutPlan === null ||
               availableCheckoutIntervals[checkoutPlan].includes(selectedBillingInterval);
@@ -184,10 +186,11 @@ export function UpgradePlanDialog({
               <section
                 className={cn(
                   "flex min-h-[29rem] flex-col rounded-xl border bg-background p-5",
-                  card.highlighted
+                  isSelected
                     ? "border-foreground/30 bg-muted/20"
                     : "border-border/70",
                 )}
+                data-selected={isSelected || undefined}
                 key={card.slug}
               >
                 <div className="mb-5">
@@ -243,7 +246,7 @@ export function UpgradePlanDialog({
                     }
                   }}
                   type="button"
-                  variant={card.highlighted ? "default" : "outline"}
+                  variant={isSelected ? "default" : "outline"}
                 >
                   {actionLabel}
                 </Button>

@@ -22,6 +22,15 @@
     "spanish": "Español",
     "serbian": "Srpski"
   },
+  "callerLanguage": {
+    "en": "Engleski",
+    "fr": "Francuski",
+    "es": "Španski",
+    "de": "Nemački",
+    "pt": "Portugalski (Brazil)",
+    "it": "Italijanski",
+    "nl": "Holandski"
+  },
   "badges": {
     "live": "Uživo",
     "configured": "Podešeno",
@@ -76,12 +85,23 @@
       "failed": "Nismo uspeli da sačuvamo povratne informacije."
     }
   },
+  "numberTrial": {
+    "daysLeft_one": "{{number}} je Vaš još {{count}} dan. Izaberite paket da biste ga zadržali.",
+    "daysLeft_few": "{{number}} je Vaš još {{count}} dana. Izaberite paket da biste ga zadržali.",
+    "daysLeft_other": "{{number}} je Vaš još {{count}} dana. Izaberite paket da biste ga zadržali.",
+    "outOfMinutes": "Potrošili ste minute. Pozivi sada idu na {{forwardTo}}.",
+    "stillAvailable": "{{number}} je i dalje dostupan. Pretplatite se sada da biste ga vratili.",
+    "keepNumber": "Zadrži moj broj",
+    "getReceptionistBack": "Vrati mog recepcionera",
+    "getNumberBack": "Vrati moj broj"
+  },
   "testCall": {
     "trigger": "Probni poziv",
     "title": "Isprobajte svog AI recepcionera",
     "description": "Započnite poziv uživo iz pregledača sa podešenim recepcionerom.",
     "connecting": "Povezivanje...",
     "hangUp": "Prekini",
+    "upgrade": "Nadogradite paket",
     "status": {
       "idle": "Spremno kad i Vi",
       "requesting_microphone": "Traži se pristup mikrofonu",
@@ -111,6 +131,7 @@
       "browserNoWebRtc": "Ovaj pregledač ne podržava glasovne pozive uživo.",
       "businessNotFound": "Nismo pronašli ovaj radni prostor. Pređite na aktivan radni prostor i pokušajte ponovo.",
       "rateLimited": "Započeto je previše probnih poziva. Pokušajte ponovo malo kasnije.",
+      "voiceLimitReached": "Ovaj radni prostor je potrošio minute razgovora za ovaj mesec.",
       "unavailable": "Vaš AI recepcioner trenutno nije dostupan.",
       "generic": "Došlo je do greške pri pokretanju poziva."
     }

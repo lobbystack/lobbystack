@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { requestJson } from "@/lib/request-json";
 import { useActiveBusiness } from "@/hooks/use-active-business";
@@ -8,11 +8,13 @@ import { useStepNavigation } from "@/lib/use-step-navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ArrowRight, Check, LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { billingErrorCodes } from "@lobbystack/shared";
 
 import { Button } from "@/components/ui/button";
 import { FieldError } from "@/components/ui/field";
 import { OnboardingPlanComparison } from "@/components/onboarding-plan-comparison";
 import { useTelemetry } from "@/components/product-analytics";
+import { checkoutRefusalKey, errorCode } from "@/lib/checkout-errors";
 import { cn } from "@/lib/utils";
 
 type BillingInterval = "monthly" | "annual";
@@ -27,32 +29,6 @@ const tiers: Array<{ slug: Plan; highlight?: boolean; features: string[] }> = [
   { slug: "enterprise", features: ["phoneNumbers", "selfHosted", "support"] },
 ];
 
-const REPORTED_CHECKOUT_KEY = "lobbystack.onboarding.checkoutReported";
-
-/**
- * The funnel should count checkouts, not visits to the return URL. A ref only
- * lasts one mount, so a reload of that URL would report the same checkout again.
- */
-function hasReportedCheckout(key: string): boolean {
-  try {
-    const raw = window.localStorage.getItem(REPORTED_CHECKOUT_KEY);
-    return raw ? (JSON.parse(raw) as string[]).includes(key) : false;
-  } catch {
-    return false;
-  }
-}
-
-function markCheckoutReported(key: string): void {
-  try {
-    const raw = window.localStorage.getItem(REPORTED_CHECKOUT_KEY);
-    const current = raw ? JSON.parse(raw) as string[] : [];
-    if (current.includes(key)) return;
-    window.localStorage.setItem(REPORTED_CHECKOUT_KEY, JSON.stringify([...current.slice(-19), key]));
-  } catch {
-    // Storage is unavailable, so the per-mount ref is the only guard left.
-  }
-}
-
 export function OnboardingPlanSurface() {
   const { t } = useTranslation("onboarding");
   const { navigate, navigating, router } = useStepNavigation();
@@ -61,7 +37,6 @@ export function OnboardingPlanSurface() {
   const [interval, setInterval] = useState<BillingInterval>("annual");
   const [checkoutRequestId, setCheckoutRequestId] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
-  const returnAttempt = useRef<{ key: string; promise: Promise<unknown> } | null>(null);
   const { business } = useActiveBusiness();
   const billing = useQuery({ queryKey: ["billing", business?.businessId], queryFn: () => requestJson<BillingStatus>(`/api/billing?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business) });
   const checkout = useQuery({
@@ -78,32 +53,18 @@ export function OnboardingPlanSurface() {
   const startCheckout = useMutation({
     mutationFn: (target: "starter" | "pro") => requestJson<{ requestId: string }>("/api/billing/checkout", { method: "POST", body: JSON.stringify({ businessId: business!.businessId, target, billingInterval: interval }) }),
     onSuccess: ({ requestId }) => setCheckoutRequestId(requestId),
+    // Already paying, from a checkout whose return page closed early: the number is next.
+    onError: (error) => {
+      if (errorCode(error) !== billingErrorCodes.subscriptionActive) return;
+      void requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: "phone_number" }) })
+        .then(() => navigate("/onboarding/number"), () => setCheckoutError(t("plan.continueFailed")));
+    },
     meta: { inlineError: true },
   });
 
+  // Checkouts opened before the success page existed still return here.
   const returnRequestId = searchParams.get("checkout") === "success" ? searchParams.get("requestId") : null;
-  const returnedCheckout = useQuery({
-    queryKey: ["onboarding-checkout-return", business?.businessId, returnRequestId],
-    enabled: Boolean(business && returnRequestId),
-    queryFn: () => requestJson<{ synced: boolean; target: string | null }>(`/api/billing/checkout?businessId=${encodeURIComponent(business!.businessId)}&requestId=${encodeURIComponent(returnRequestId!)}`),
-    refetchInterval: query => query.state.data?.synced ? false : 1500,
-  });
-  useEffect(() => {
-    const key = `${business?.businessId}:${returnRequestId}`;
-    if (!business || !returnRequestId || !returnedCheckout.data?.synced) return;
-    if (returnAttempt.current?.key !== key) {
-      if (!hasReportedCheckout(key)) {
-        markCheckoutReported(key);
-        telemetry.track("web.onboarding.plan_checkout_completed", { businessId: business.businessId, plan: returnedCheckout.data.target ?? "unknown" });
-      }
-      returnAttempt.current = { key, promise: requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business.businessId)}`, { method: "POST", body: JSON.stringify({ to: "phone_number" }) }) };
-    }
-    let cancelled = false;
-    void returnAttempt.current.promise.then(() => {
-      if (!cancelled) router.replace("/onboarding/number");
-    }).catch(() => { if (!cancelled) returnAttempt.current = null; });
-    return () => { cancelled = true; };
-  }, [business, returnRequestId, returnedCheckout.data?.synced, returnedCheckout.data?.target, router, telemetry]);
+  useEffect(() => { if (returnRequestId) router.replace(`/billing/success?requestId=${encodeURIComponent(returnRequestId)}`); }, [returnRequestId, router]);
   useEffect(() => {
     if (checkout.data?.status === "error" || checkout.isError) {
       setCheckoutError(checkout.data?.error ?? t("plan.continueFailed"));
@@ -128,6 +89,8 @@ export function OnboardingPlanSurface() {
   }, [availableIntervals, interval]);
 
   const pendingPlan = selectFree.isPending || navigating ? "free_cloud" : startCheckout.isPending || checkoutRequestId ? "paid" : null;
+  const refusal = checkoutRefusalKey(startCheckout.error);
+  const checkoutFailure = startCheckout.isError && errorCode(startCheckout.error) !== billingErrorCodes.subscriptionActive ? (refusal ? t(`settings:${refusal}`) : startCheckout.error.message) : null;
 
   function act(plan: Plan) {
     if (!business || pendingPlan) return;
@@ -164,7 +127,7 @@ export function OnboardingPlanSurface() {
           </section>;
         })}
       </div>
-      {selectFree.isError || startCheckout.isError || checkoutError ? <FieldError>{selectFree.error?.message ?? startCheckout.error?.message ?? checkoutError ?? t("plan.continueFailed")}</FieldError> : null}
+      {selectFree.isError || checkoutFailure || checkoutError ? <FieldError>{selectFree.error?.message ?? checkoutFailure ?? checkoutError ?? t("plan.continueFailed")}</FieldError> : null}
       <OnboardingPlanComparison t={t} />
     </div>
   );

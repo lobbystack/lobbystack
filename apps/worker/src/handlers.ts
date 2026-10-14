@@ -4,16 +4,16 @@ import { and, eq, inArray, isNull, lte, ne, or } from "drizzle-orm";
 
 import { hasSummarizableTranscript, type BusinessHoursExtractor, type BusinessSummarizer, type CallSummarizer } from "@lobbystack/agent-core";
 import { realtimeEventSchema, type JobEnvelope } from "@lobbystack/contracts";
-import { getPolarMeteredUsagePayload, type BillingUsageKind } from "@lobbystack/shared";
+import { getPolarMeteredUsagePayload, intlLocale, type BillingUsageKind } from "@lobbystack/shared";
 import { appointments, calls, contacts, enqueueOutbox, knowledgeChunks, knowledgeDocuments, messages, notifications, phoneNumbers, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database } from "@lobbystack/db";
 import { enqueueKnowledgeDerivedRefresh, loadBusinessHoursInput, loadBusinessSummaryInput, markBusinessHoursChecked, resetGeneratedBusinessSummary, saveGeneratedBusinessHours, saveGeneratedBusinessSummary } from "@lobbystack/domain";
 import { billingCheckoutLeaseEndsAt, checkKnowledgeStorageLimit, claimBillingCheckoutRequest, countPublishableOutboxMessages, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteSentProductEventsBefore, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markKnowledgeDocumentFailed, markProductEventsSent, reconcileBillingProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, runPrivacyRetentionSweep, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, chunkText, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type GeneratedCallSummary, type OnboardingFollowupSender } from "@lobbystack/domain";
 import { deliverOutbound, markFeedbackEmailFailed, markFeedbackEmailSent, queueDailyOperatorSummaries, refreshUnitEconomicsMonth } from "@lobbystack/domain";
-import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning, numberProvisioningLeaseEndsAt } from "@lobbystack/domain";
+import { claimNumberProvisioning, completeNumberProvisioning, desiredNumberRouting, failNumberProvisioning, loadNumberReleaseEmail, loadNumberTrialEmail, numberProvisioningLeaseEndsAt, sharedSmsSender, sweepNumberReleases, sweepNumberTrial } from "@lobbystack/domain";
 import { createWebhookSender, processWebhookDelivery, pruneApiHistory, type WebhookSender } from "@lobbystack/domain";
 import { LIVE_RECORDING_ATTEMPTS, listBusinessesWithOpenLiveCalls, listOpenLiveCalls, liveCallHasRecording, persistCallRecording, retryLiveCallRecording, type OpenLiveCall } from "@lobbystack/domain";
 import type { DomainContext } from "@lobbystack/domain";
-import type { SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
+import { numberReleaseEmailSubject, numberTrialEmailSubject, type SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
 import type { RuntimeStorageProvider } from "@lobbystack/providers/storage/provider";
 import type { TwilioProvider } from "@lobbystack/providers/twilio/twilioProvider";
 import type OpenAI from "openai";
@@ -55,7 +55,7 @@ export type WorkerDependencies = {
   domain: DomainContext;
   storage?: RuntimeStorageProvider;
   email?: Pick<SmtpEmailProvider, "sendTemplate">;
-  twilio?: Pick<TwilioProvider, "sendSms"> & Partial<Pick<TwilioProvider, "getMessagePricing" | "getCallPricing" | "findTrunkCall" | "releasePhoneNumber" | "verifyPhone" | "findOwnedPhoneNumber" | "purchasePhoneNumber" | "addNumberToSipTrunk">>;
+  twilio?: Pick<TwilioProvider, "sendSms"> & Partial<Pick<TwilioProvider, "getMessagePricing" | "getCallPricing" | "findTrunkCall" | "releasePhoneNumber" | "verifyPhone" | "findOwnedPhoneNumber" | "purchasePhoneNumber" | "addNumberToSipTrunk" | "routeNumber">>;
   twilioAlerts?: Pick<TwilioProvider, "sendSms"> & { from: string };
   polar?: { recordUsage(input: { eventName: string; externalCustomerId: string; quantity: number; timestamp: string; idempotencyKey: string; businessId: string; usageKind: string }): Promise<void>; createCheckout?(input: { productId: string; customerEmail: string; externalCustomerId: string; successUrl: string; returnUrl: string; idempotencyKey?: string }): Promise<{ checkoutUrl: string; checkoutId: string }> };
   embeddings?: { fingerprint?: string; embed(values: string[], onUsage?: (usage: DurableAiUsage) => Promise<void> | void): Promise<number[][]> };
@@ -557,12 +557,13 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       const request = await loadBillingCheckoutRequest(dependencies.domain, { businessId, requestId });
       if (!request) return { status: "skipped", entityId: requestId };
       try {
-        const planUrl = `${(process.env.APP_BASE_URL ?? "http://localhost:3000").replace(/\/$/, "")}/${request.onboardingStage === "complete" ? "settings/plan" : "onboarding/plan"}`;
+        const appUrl = (process.env.APP_BASE_URL ?? "http://localhost:3000").replace(/\/$/, "");
+        const planUrl = `${appUrl}/${request.onboardingStage === "complete" ? "settings/plan" : "onboarding/plan"}`;
         const checkout = await dependencies.polar.createCheckout({
           productId: polarCheckoutProductId(request.target, request.billingInterval),
           customerEmail: request.customerEmail,
           externalCustomerId: request.externalCustomerId,
-          successUrl: `${planUrl}?checkout=success&requestId=${encodeURIComponent(requestId)}`,
+          successUrl: `${appUrl}/billing/success?requestId=${encodeURIComponent(requestId)}`,
           // Polar's back arrow. Someone leaving checkout hasn't paid, so it
           // returns to the plan page without the success marker.
           returnUrl: planUrl,
@@ -665,7 +666,16 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       try {
         const owned = await dependencies.twilio.findOwnedPhoneNumber({ e164: claim.e164 });
         if (owned) providerPhoneId = owned.providerPhoneId;
-        else { const result = await dependencies.twilio.purchasePhoneNumber({ e164: claim.e164, friendlyName: `LobbyStack ${businessId}`, smsUrl, statusCallbackUrl }); providerPhoneId = result.providerPhoneId; purchased = true; }
+        else {
+          // Twilio sells UK, Australian and New Zealand numbers only under the
+          // regulatory bundle it approved for LobbyStack. See docs/voice/runtime.md.
+          const country = claim.selection?.countryCode;
+          const bundleSid = country === "GB" ? process.env.TWILIO_GB_BUNDLE_SID?.trim() : country === "AU" ? process.env.TWILIO_AU_BUNDLE_SID?.trim() : country === "NZ" ? process.env.TWILIO_NZ_BUNDLE_SID?.trim() : undefined;
+          const addressSid = country === "AU" ? process.env.TWILIO_AU_ADDRESS_SID?.trim() : country === "NZ" ? process.env.TWILIO_NZ_ADDRESS_SID?.trim() : undefined;
+          if ((country === "GB" || country === "AU" || country === "NZ") && !bundleSid) throw new Error(`TWILIO_${country}_BUNDLE_SID is required to buy a number in ${country}. See docs/voice/runtime.md.`);
+          const result = await dependencies.twilio.purchasePhoneNumber({ e164: claim.e164, friendlyName: `LobbyStack ${businessId}`, smsUrl, statusCallbackUrl, ...(bundleSid ? { bundleSid } : {}), ...(addressSid ? { addressSid } : {}) });
+          providerPhoneId = result.providerPhoneId; purchased = true;
+        }
         await addNumberToSipTrunk({ trunkSid: sipTrunkSid, providerPhoneId });
         const phoneNumberId = await completeNumberProvisioning(dependencies.domain, { businessId, claimId, e164: claim.e164, providerPhoneId, voiceUrl: `sip-trunk:${sipTrunkSid}`, smsUrl });
         return { status: "completed", entityId: phoneNumberId };
@@ -690,10 +700,12 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         });
         return { status: queued > 0 ? "completed" : "skipped", entityId: `${businessId}:${queued}` };
       }
+      // Every hosted business texts from the shared sender, so it's never released, whatever its workspace's plan.
+      const sharedSender = sharedSmsSender();
       const claimed = await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => {
         const rows = await tx.update(phoneNumbers)
           .set({ status: "reclaiming", updatedAt: new Date() })
-          .where(and(eq(phoneNumbers.id, phoneNumberId), eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"), lte(phoneNumbers.reclaimScheduledAt, new Date())))
+          .where(and(eq(phoneNumbers.id, phoneNumberId), eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"), lte(phoneNumbers.reclaimScheduledAt, new Date()), ...(sharedSender ? [ne(phoneNumbers.e164, sharedSender)] : [])))
           .returning({ id: phoneNumbers.id, providerPhoneId: phoneNumbers.providerPhoneId });
         return rows[0] ?? null;
       });
@@ -713,6 +725,76 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         });
         throw error;
       }
+    }
+    case "phoneNumber.route": {
+      const businessId = businessIdOrThrow(job);
+      const phoneNumberId = String(job.payload.phoneNumberId ?? "");
+      if (!phoneNumberId || !dependencies.twilio?.routeNumber) return { status: "skipped", entityId: phoneNumberId };
+      const trunkSid = process.env.TWILIO_SIP_TRUNK_SID?.trim();
+      if (!trunkSid) throw new Error("TWILIO_SIP_TRUNK_SID is required to route a phone number. See docs/voice/runtime.md.");
+      // The trial decides where calls go now, whatever this job asked for, so jobs that run out of order agree.
+      const desired = await desiredNumberRouting(dependencies.domain, { businessId, phoneNumberId });
+      if (!desired) return { status: "skipped", entityId: phoneNumberId };
+      const fallbackUrl = `${(process.env.APP_BASE_URL ?? "http://localhost:3000").replace(/\/$/, "")}/api/webhooks/twilio/voice`;
+      await dependencies.twilio.routeNumber({ providerPhoneId: desired.providerPhoneId, trunkSid, mode: desired.mode, fallbackUrl });
+      await withBusinessTransaction(dependencies.domain.db, { businessId, actorType: "worker" }, async (tx) => {
+        await tx.update(phoneNumbers).set({ voiceWebhookTargetUrl: desired.mode === "receptionist" ? `sip-trunk:${trunkSid}` : fallbackUrl, voiceWebhookStatus: "synced", voiceWebhookLastSyncedAt: new Date(), updatedAt: new Date() }).where(and(eq(phoneNumbers.id, phoneNumberId), eq(phoneNumbers.businessId, businessId)));
+      });
+      return { status: "completed", entityId: `${phoneNumberId}:${desired.mode}` };
+    }
+    case "numberTrial.sweep": {
+      const businessId = businessIdOrThrow(job);
+      const swept = await sweepNumberTrial(dependencies.domain, { businessId });
+      const reminders = await sweepNumberReleases(dependencies.domain, { businessId });
+      return { status: swept.ended || swept.emails.length || reminders ? "completed" : "skipped", entityId: businessId };
+    }
+    case "phoneNumber.releaseEmail": {
+      const businessId = businessIdOrThrow(job);
+      const phoneNumberId = String(job.payload.phoneNumberId ?? "");
+      const kind = job.payload.kind === "canceled" ? "canceled" : "release_soon";
+      if (!dependencies.email || !dependencies.onboardingFollowupSender) return { status: "skipped", entityId: phoneNumberId };
+      const content = await loadNumberReleaseEmail(dependencies.domain, { businessId, phoneNumberId });
+      if (!content) return { status: "skipped", entityId: phoneNumberId };
+      const date = (value: unknown) => (typeof value === "string" ? new Intl.DateTimeFormat(intlLocale(content.locale), { month: "long", day: "numeric", timeZone: content.timezone }).format(new Date(value)) : "");
+      const variables = {
+        kind,
+        locale: content.locale,
+        firstName: content.firstName,
+        number: content.number,
+        periodEnd: date(job.payload.periodEnd),
+        releaseDate: date(job.payload.releaseAt),
+        url: `${(process.env.APP_BASE_URL ?? "http://localhost:3000").replace(/\/$/, "")}/settings/plan`,
+        senderName: dependencies.onboardingFollowupSender.name,
+      };
+      await dependencies.email.sendTemplate({ template: "number_release", to: content.to, from: dependencies.onboardingFollowupSender.from, subject: numberReleaseEmailSubject(variables), variables, idempotencyKey: job.idempotencyKey });
+      return { status: "completed", entityId: `${phoneNumberId}:${kind}` };
+    }
+    case "numberTrial.sendEmail": {
+      const businessId = businessIdOrThrow(job);
+      const trialId = String(job.payload.trialId ?? "");
+      const kind = job.payload.email;
+      if (!dependencies.email || !dependencies.onboardingFollowupSender) return { status: "skipped", entityId: trialId };
+      if (!trialId || (kind !== "day10" && kind !== "day13" && kind !== "ended" && kind !== "minutes_out")) throw new Error("Invalid number trial email payload.");
+      const content = await loadNumberTrialEmail(dependencies.domain, { businessId, trialId, email: kind });
+      if (!content) return { status: "skipped", entityId: trialId };
+      const endDate = content.endsAt
+        // The trial's last day is the day before endsAt, which is midnight that ends it.
+        ? new Intl.DateTimeFormat(intlLocale(content.locale), { month: "long", day: "numeric", timeZone: content.timezone }).format(new Date(content.endsAt.getTime() - 1))
+        : "";
+      const variables = {
+        kind,
+        locale: content.locale,
+        firstName: content.firstName,
+        businessName: content.businessName,
+        trialNumber: content.trialNumber,
+        forwardTo: content.forwardTo ?? "",
+        endDate,
+        calls: String(content.callsAnswered),
+        url: `${(process.env.APP_BASE_URL ?? "http://localhost:3000").replace(/\/$/, "")}/settings/plan`,
+        senderName: dependencies.onboardingFollowupSender.name,
+      };
+      await dependencies.email.sendTemplate({ template: "number_trial", to: content.to, from: dependencies.onboardingFollowupSender.from, subject: numberTrialEmailSubject(variables), variables, idempotencyKey: job.idempotencyKey });
+      return { status: "completed", entityId: `${trialId}:${kind}` };
     }
     case "prospectDemo.expire": {
       const expired = await expireProspectDemos(dependencies.domain);

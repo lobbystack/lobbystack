@@ -4,7 +4,7 @@ import { createElement, useEffect } from "react";
 import { act, render, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { readSessionClosedReason, useWebVoiceCall } from "./useWebVoiceCall";
+import { getWebVoiceErrorKey, readSessionClosedReason, useWebVoiceCall } from "./useWebVoiceCall";
 
 type HookControls = ReturnType<typeof useWebVoiceCall>;
 
@@ -127,5 +127,13 @@ describe("readSessionClosedReason", () => {
     expect(readSessionClosedReason(JSON.stringify({ type: "session.input_transcript.delta", delta: "my session.closed question" }))).toBeUndefined();
     expect(readSessionClosedReason("session.closed")).toBeUndefined();
     expect(readSessionClosedReason(new ArrayBuffer(8))).toBeUndefined();
+  });
+});
+
+describe("getWebVoiceErrorKey", () => {
+  it("tells a used-up voice allowance apart from an unavailable receptionist", () => {
+    expect(getWebVoiceErrorKey(new Error("voice_limit_reached"))).toBe("voiceLimitReached");
+    expect(getWebVoiceErrorKey(new Error("voice_unavailable"))).toBe("unavailable");
+    expect(getWebVoiceErrorKey(new Error("The AI receptionist is unavailable right now."))).toBe("unavailable");
   });
 });

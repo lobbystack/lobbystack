@@ -16,6 +16,15 @@
     "spanish": "Español",
     "serbian": "Srpski"
   },
+  "callerLanguage": {
+    "en": "English",
+    "fr": "French",
+    "es": "Spanish",
+    "de": "German",
+    "pt": "Portuguese (Brazil)",
+    "it": "Italian",
+    "nl": "Dutch"
+  },
   "badges": {
     "live": "Live",
     "configured": "Configured",
@@ -70,12 +79,22 @@
       "failed": "We could not save that feedback."
     }
   },
+  "numberTrial": {
+    "daysLeft_one": "{{number}} is yours for {{count}} more day. Choose a plan to keep it.",
+    "daysLeft_other": "{{number}} is yours for {{count}} more days. Choose a plan to keep it.",
+    "outOfMinutes": "You're out of minutes. Calls now go to {{forwardTo}}.",
+    "stillAvailable": "{{number}} is still available. Subscribe now to get it back.",
+    "keepNumber": "Keep my number",
+    "getReceptionistBack": "Get my receptionist back",
+    "getNumberBack": "Get my number back"
+  },
   "testCall": {
     "trigger": "Test Call",
     "title": "Test your AI receptionist",
     "description": "Start a live browser call with your configured receptionist.",
     "connecting": "Connecting...",
     "hangUp": "Hang up",
+    "upgrade": "Upgrade plan",
     "status": {
       "idle": "Ready when you are",
       "requesting_microphone": "Asking for microphone access",
@@ -105,6 +124,7 @@
       "browserNoWebRtc": "This browser does not support live voice calls.",
       "businessNotFound": "We couldn't find this workspace. Switch to an active workspace and try again.",
       "rateLimited": "Too many test calls have been started. Please try again shortly.",
+      "voiceLimitReached": "This workspace has used this month's voice minutes.",
       "unavailable": "Your AI receptionist is unavailable right now.",
       "generic": "Something went wrong while starting the call."
     }

@@ -49,6 +49,8 @@ Set `FIRECRAWL_API_KEY` on the `worker` service. Without it, website import fail
 
 In Google Cloud, enable the Google Calendar API and create an OAuth client for a web application. Add `https://your_admin_domain/api/calendar/google/callback` as an authorized redirect URI. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` on the `admin` service. The template fills in `GOOGLE_REDIRECT_URI`, and the worker reads all three from the admin.
 
+With both values set, the sign-in and sign-up pages also offer **Continue with Google**. Add `https://your_admin_domain/api/auth/callback/google` to the same OAuth client as a second authorized redirect URI.
+
 #### Use a custom domain
 
 Add the domain to the `admin` service, then set `APP_BASE_URL` on the `admin` service to `https://your_domain`. These variables reference it and follow the change:
@@ -56,7 +58,7 @@ Add the domain to the `admin` service, then set `APP_BASE_URL` on the `admin` se
 - `SITE_URL`, `AUTH_TRUSTED_ORIGINS`, `TWILIO_SMS_WEBHOOK_URL`, `TWILIO_STATUS_CALLBACK_URL`, and `GOOGLE_REDIRECT_URI` on the `admin` service
 - `APP_BASE_URL`, `TWILIO_STATUS_CALLBACK_URL`, and `GOOGLE_REDIRECT_URI` on the `worker` service
 
-A deployment from an older version of the template has the Railway domain written into each of these variables, so edit them all. Then point the OpenAI webhook and the Google redirect URI at the new domain. Phone numbers you provisioned before the change keep their old SMS and status callback URLs in Twilio until you update them there.
+A deployment from an older version of the template has the Railway domain written into each of these variables, so edit them all. Then point the OpenAI webhook and both Google redirect URIs at the new domain. Phone numbers you provisioned before the change keep their old SMS and status callback URLs in Twilio until you update them there.
 
 ## Official baseline
 

@@ -1,3 +1,5 @@
+import { isFreshPendingRecord } from "./pending-analytics";
+
 const storageKey = "lobbystack.pending-onboarding-business";
 
 /** Defer first-workspace analytics until that workspace's telemetry consent is known. */
@@ -14,7 +16,7 @@ export function consumePendingOnboardingBusiness(expectedBusinessId?: string): s
     const value = window.sessionStorage.getItem(storageKey);
     if (!value) return null;
     const record = JSON.parse(value) as { businessId?: unknown; createdAt?: unknown };
-    if (typeof record.businessId !== "string" || record.businessId.length === 0 || typeof record.createdAt !== "number" || Date.now() - record.createdAt < 0 || Date.now() - record.createdAt > 10 * 60_000) {
+    if (typeof record.businessId !== "string" || record.businessId.length === 0 || !isFreshPendingRecord(record)) {
       window.sessionStorage.removeItem(storageKey);
       return null;
     }

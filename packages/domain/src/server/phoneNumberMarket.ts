@@ -1,4 +1,4 @@
-export type SupportedNumberMarketCountry = "US" | "CA" | "GB" | "AU";
+export type SupportedNumberMarketCountry = "US" | "CA" | "GB" | "AU" | "NZ";
 
 export type BusinessNumberMarket = {
   countryCode: SupportedNumberMarketCountry;
@@ -8,7 +8,7 @@ export type BusinessNumberMarket = {
   source: "selection" | "business_location" | "default";
 };
 
-const supportedNumberMarketCountries = new Set<string>(["US", "CA", "GB", "AU"]);
+const supportedNumberMarketCountries = new Set<string>(["US", "CA", "GB", "AU", "NZ"]);
 
 // America/ spans multiple countries. Only infer a country from known zones;
 // unknown zones use the default rather than claiming a business location.
@@ -50,6 +50,7 @@ export function countryCodeForBusinessTimezone(
   if (!normalized) return undefined;
   if (normalized === "Europe/London") return "GB";
   if (normalized.startsWith("Australia/")) return "AU";
+  if (normalized === "Pacific/Auckland" || normalized === "Pacific/Chatham") return "NZ";
   if (canadianTimezones.has(normalized)) return "CA";
   if (["America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles", "America/Phoenix", "America/Detroit", "America/Anchorage", "America/Juneau", "America/Sitka", "America/Metlakatla", "America/Yakutat", "America/Nome", "America/Adak", "America/Boise", "Pacific/Honolulu"].includes(normalized) || normalized.startsWith("America/Indiana/") || normalized.startsWith("America/Kentucky/") || normalized.startsWith("America/North_Dakota/")) return "US";
   return undefined;

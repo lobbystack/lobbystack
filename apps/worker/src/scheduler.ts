@@ -11,6 +11,8 @@ const tenantSchedules: Array<{ queue: JobQueue; name: string; type: JobType; eve
   { queue: "maintenance", name: "pending-upload-cleanup", type: "privacy.cleanupPendingUpload", every: 15 * 60_000 },
   { queue: "default", name: "calendar-reconcile", type: "calendar.reconcileBusiness", every: 15 * 60_000 },
   { queue: "maintenance", name: "phone-number-reclaim", type: "phoneNumber.reclaim", every: 60 * 60_000 },
+  // A trial ends and sends its emails on time even when nobody uses the workspace.
+  { queue: "maintenance", name: "number-trial-sweep", type: "numberTrial.sweep", every: 60 * 60_000 },
   { queue: "maintenance", name: "operator-daily-summary", type: "notification.dailySummary", every: 60_000, idleEvery: 0 },
   // A closed demo still records events (a failed claim, a call that ends late), and only this job sends them.
   { queue: "maintenance", name: "telemetry-flush", type: "telemetry.flush", every: 60_000, idleEvery: 60 * 60_000 },

@@ -17,7 +17,7 @@ En octobre 2026, le meilleur **service de réponse téléphonique** pour une ent
 
 LobbyStack publie ce comparatif et vend un réceptionniste IA. Vous le trouverez dans la section IA, avec ses limites détaillées.
 
-**Prix vérifiés le 9 octobre 2026.** Ce jour-là, nous avons relevé chaque prix sur le site du fournisseur, en dollars américains hors taxes. LobbyStack fournit des numéros aux États-Unis, au Canada, au Royaume-Uni et en Australie. En France, demandez des tarifs en euros à un secrétariat téléphonique local, puis comparez-les avec les modes de facturation décrits ici. Pour les autres métiers, consultez notre comparatif de la [meilleure permanence téléphonique pour PME](/fr/blog/best-answering-service-for-small-business/).
+**Prix vérifiés le 9 octobre 2026.** Ce jour-là, nous avons relevé chaque prix sur le site du fournisseur, en dollars américains hors taxes. LobbyStack fournit des numéros aux États-Unis, au Canada, au Royaume-Uni, en Australie et en Nouvelle-Zélande. En France, demandez des tarifs en euros à un secrétariat téléphonique local, puis comparez-les avec les modes de facturation décrits ici. Pour les autres métiers, consultez notre comparatif de la [meilleure permanence téléphonique pour PME](/fr/blog/best-answering-service-for-small-business/).
 
 ## Quel est le meilleur service de réponse téléphonique pour une entreprise de chauffage et climatisation ?
 

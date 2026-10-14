@@ -40,6 +40,8 @@ type AuraVoiceDemoProps = {
     startCall: () => Promise<void>;
   }) => void;
   onCallEnded?: () => void;
+  /** Offered when the workspace has used its voice minutes, for a workspace that can buy more. */
+  onUpgrade?: () => void;
 };
 
 function getButtonLabelKey(
@@ -76,6 +78,7 @@ export function AuraVoiceDemo({
   onEvent,
   onRegisterControls,
   onCallEnded,
+  onUpgrade,
 }: AuraVoiceDemoProps) {
   const { t } = useTranslation("common");
   const call = useWebVoiceCall({
@@ -163,6 +166,11 @@ export function AuraVoiceDemo({
         >
           {statusMessage}
         </p>
+      ) : null}
+      {errorKey === "voiceLimitReached" && onUpgrade ? (
+        <Button className="mt-3 cursor-pointer rounded-full" onClick={onUpgrade} size="sm" type="button" variant="secondary">
+          {t("testCall.upgrade")}
+        </Button>
       ) : null}
     </div>
   );

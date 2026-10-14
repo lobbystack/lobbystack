@@ -177,7 +177,7 @@ If you're weighing human receptionists too, compare the [best answering services
 2. Setup walks you through your business details, a website import, your knowledge, the greeting and a plan.
 3. Write your call rules in plain language and pick a booking mode: book the appointment, take a request for your team to confirm, or take a message. Connect Google Calendar and set your opening hours. Booking won't work without them.
 4. Run test calls from the dashboard in your browser.
-5. On Starter or Pro, pick a local number, or a toll-free one where available, in the US, Canada, the UK or Australia. To keep your existing number, set your carrier to forward calls to LobbyStack when you're busy or don't answer, when you're closed, or all the time. To port the number instead, contact the LobbyStack team. Then add a transfer number and choose when transfers happen.
+5. On Starter or Pro, pick a local number, or a toll-free one where available, in the US, Canada, the UK, Australia or New Zealand. To keep your existing number, set your carrier to forward calls to LobbyStack when you're busy or don't answer, when you're closed, or all the time. To port the number instead, contact the LobbyStack team. Then add a transfer number and choose when transfers happen.
 6. Run the same five calls on Rosie's trial, on the plan you'd keep: a policy question, a booking that needs a buffer, an urgent caller who needs a transfer, a request for a confirmation text and a cancellation. Note which tasks work on that plan and which need Scale or Growth.
 
 Rosie supports the same forwarding setup for overflow and after-hours calls. Read both sets of transcripts with the person on your team who handles the follow-up.

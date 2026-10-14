@@ -221,6 +221,13 @@ The admin and worker read these variables:
 | `INTERNAL_SERVICE_TOKEN` | admin, worker | Authenticates the admin's attach request to the worker. |
 | `WORKER_INTERNAL_URL` | admin | Private URL of the worker's HTTP port, for example `http://worker:3002`. |
 | `TWILIO_SIP_TRUNK_SID` | worker | Adds new phone numbers to the SIP trunk. The worker refuses to provision a number without it. |
+| `TWILIO_GB_BUNDLE_SID` | worker | The approved Twilio regulatory bundle for UK mobile numbers. The worker won't buy a UK number without it. |
+| `TWILIO_AU_BUNDLE_SID` | worker | The approved Twilio regulatory bundle for Australian mobile numbers. The worker won't buy an Australian number without it. |
+| `TWILIO_AU_ADDRESS_SID` | worker | The address in the Australian bundle. Twilio needs an address on every Australian mobile number. |
+| `TWILIO_NZ_BUNDLE_SID`, `TWILIO_NZ_ADDRESS_SID` | admin, worker | The approved Twilio regulatory bundle for New Zealand local numbers, and the address in it. |
+| `TWILIO_VERIFY_SERVICE_SID` | admin | The Twilio Verify service that texts the onboarding phone code. Onboarding can't verify a phone without it. |
+
+The admin also reads the bundle variables: it offers numbers only in the countries whose bundle is set. Set `TWILIO_GB_BUNDLE_SID`, `TWILIO_AU_BUNDLE_SID` and `TWILIO_AU_ADDRESS_SID` on the admin too.
 | `WEB_CALL_MAX_DURATION_MS` | admin | Optional cap on browser call length. |
 | `RAILWAY_DEPLOYMENT_DRAINING_SECONDS` | worker | Railway's time between SIGTERM and SIGKILL. Set it to `1860` so calls can finish during a deploy. See [Deploy the worker during calls](#deploy-the-worker-during-calls). |
 | `LIVE_DRAIN_TIMEOUT_MS` | worker | Optional. How long a shutdown lets calls finish on their own before it ends them with a goodbye. Overrides the timeout derived from `RAILWAY_DEPLOYMENT_DRAINING_SECONDS`. |
@@ -248,3 +255,19 @@ pnpm exec tsx scripts/operations/move-number-to-gpt-live.ts \
 ```
 
 A number off the trunk has nothing to answer its calls, so keep every number on it.
+
+### Sell numbers in the UK, Australia and New Zealand
+
+Twilio sells numbers in these countries only under a regulatory bundle it has approved. Create one bundle per country with LobbyStack as the business, and the worker buys every number in that country under it. UK and Australian businesses get mobile numbers, because local numbers there need a local address. New Zealand businesses get local numbers, which take calls but not texts. That's fine, because hosted businesses text from the shared sender.
+
+To set up a country:
+
+1. In the Twilio Console, open **Phone Numbers > Regulatory Compliance > Bundles**. Create a business bundle for mobile numbers in that country.
+2. Fill in what that country asks for:
+   - United Kingdom: set **Business Classification** to `INDEPENDENT_SOFTWARE_VENDOR`, and answer `YES` when Twilio asks whether you assign numbers to end customers. The address can be anywhere except a PO box. The representative's phone must be a mobile number they answer, and their email must use the company's domain.
+   - Australia: upload a commercial registry extract that shows the company's name, address and registration number.
+   - New Zealand: upload a registry extract with the company's name, and a document that proves its address, such as a recent utility bill or tax notice.
+3. Submit the bundle and wait for Twilio to approve it.
+4. On the admin and the worker, set the bundle's SID as `TWILIO_GB_BUNDLE_SID`, `TWILIO_AU_BUNDLE_SID` or `TWILIO_NZ_BUNDLE_SID`. For Australia and New Zealand, also set the SID of the bundle's address as `TWILIO_AU_ADDRESS_SID` or `TWILIO_NZ_ADDRESS_SID`.
+
+Until you set a country's bundle, number claims there fail with an error that includes the missing variable's name.

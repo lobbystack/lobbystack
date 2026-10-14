@@ -151,7 +151,7 @@ A few vendors answer some real calls for free. [Smith.ai's AI Free plan](https:/
 
 ### Can I keep my business number?
 
-Yes. You forward your existing number to the service and pick a forwarding rule at your carrier: every call, overflow or after-hours calls. Some services also take your number over by porting, and [PATLive](https://www.patlive.com/pricing/) ports numbers in and out for free. With LobbyStack, you forward your number to a LobbyStack number in the US, Canada, the UK or Australia.
+Yes. You forward your existing number to the service and pick a forwarding rule at your carrier: every call, overflow or after-hours calls. Some services also take your number over by porting, and [PATLive](https://www.patlive.com/pricing/) ports numbers in and out for free. With LobbyStack, you forward your number to a LobbyStack number in the US, Canada, the UK, Australia or New Zealand.
 
 ### What is the difference between an answering service and a call center?
 

@@ -17,7 +17,7 @@ Najbolja usluga odgovaranja na pozive za **upravljanje nekretninama** u oktobru 
 
 LobbyStack objavljuje ovu listu i prodaje AI recepcionera, pa ćete ga naći u odeljku o AI uslugama, sa jasno navedenim ograničenjima. Ne povezuje se sa AppFolio, Buildium, Yardi ni Rent Manager sistemom.
 
-**Cene proverene 9. i 10. oktobra 2026.** Svaku cenu smo pročitali na sajtu samog dobavljača, u američkim dolarima bez poreza. Ove usluge su uglavnom namenjene Severnoj Americi, a LobbyStack nudi brojeve u SAD, Kanadi, Velikoj Britaniji i Australiji. Za druge delatnosti pogledajte [koliko košta usluga odgovaranja na pozive](/sr/blog/how-much-does-an-answering-service-cost/).
+**Cene proverene 9. i 10. oktobra 2026.** Svaku cenu smo pročitali na sajtu samog dobavljača, u američkim dolarima bez poreza. Ove usluge su uglavnom namenjene Severnoj Americi, a LobbyStack nudi brojeve u SAD, Kanadi, Velikoj Britaniji, Australiji i na Novom Zelandu. Za druge delatnosti pogledajte [koliko košta usluga odgovaranja na pozive](/sr/blog/how-much-does-an-answering-service-cost/).
 
 ## Koja usluga za upravljanje nekretninama odgovara Vašem portfoliju?
 

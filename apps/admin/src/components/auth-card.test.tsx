@@ -25,7 +25,7 @@ describe("original login and signup behavior", () => {
     await userEvent.type(screen.getByLabelText("signup.email"), "owner@example.invalid");
     await userEvent.type(screen.getByLabelText("signup.password"), "Valid-Password-123!");
     await userEvent.click(screen.getByRole("button", { name: "signup.submit" }));
-    await waitFor(() => expect(analytics.record).toHaveBeenCalledWith("web.auth.signup_succeeded", { source: "calculator" }));
+    await waitFor(() => expect(analytics.record).toHaveBeenCalledWith("web.auth.signup_succeeded", { method: "email", source: "calculator" }));
   });
   it("shows verification code entry when signup succeeds without a session", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(Response.json({ token: null, user: { id: "operator" } }));
@@ -61,7 +61,7 @@ describe("original login and signup behavior", () => {
     await userEvent.click(screen.getByRole("button", { name: "verifyEmail.verify" }));
     await waitFor(() => expect(fetch).toHaveBeenNthCalledWith(2, "/api/auth/email-otp/verify-email", expect.objectContaining({ body: JSON.stringify({ email: "owner@example.invalid", otp: "123456" }) })));
     expect(fetch).toHaveBeenNthCalledWith(3, "/api/auth/sign-in/email", expect.objectContaining({ body: JSON.stringify({ email: "owner@example.invalid", password: "Valid-Password-123!" }) }));
-    expect(analytics.record).toHaveBeenCalledExactlyOnceWith("web.auth.signup_succeeded");
+    expect(analytics.record).toHaveBeenCalledExactlyOnceWith("web.auth.signup_succeeded", { method: "email" });
     expect(screen.getByLabelText("verifyEmail.codeLabel")).toBeTruthy();
     expect((screen.getByRole("button", { name: "verifyEmail.verifying" }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.queryByText("verifyEmail.verifiedTitle")).toBeNull();
@@ -194,5 +194,35 @@ it.each(["login", "signup"] as const)("records %s success only after the authent
   await userEvent.type(screen.getByLabelText(`${mode}.email`), "owner@example.invalid");
   await userEvent.type(screen.getByLabelText(`${mode}.password`), "Valid-Password-123!");
   await userEvent.click(screen.getByRole("button", { name: `${mode}.submit` }));
-  await waitFor(() => expect(analytics.record).toHaveBeenCalledExactlyOnceWith(`web.auth.${mode}_succeeded`));
+  await waitFor(() => expect(analytics.record).toHaveBeenCalledExactlyOnceWith(`web.auth.${mode}_succeeded`, { method: "email" }));
+});
+
+describe("Continue with Google", () => {
+  it("stays hidden unless the server offers Google", () => {
+    render(<AuthCard mode="signup" />);
+    expect(screen.queryByRole("button", { name: "google.continue" })).toBeNull();
+  });
+  it.each(["login", "signup"] as const)("starts Google from %s and comes back with every query param", async mode => {
+    window.history.replaceState(null, "", `/en/${mode}?returnTo=%2Fagent&source=calculator&plan=pro&error=access_denied`);
+    vi.mocked(fetch).mockResolvedValueOnce(Response.json({ url: "https://accounts.google.com/o/oauth2/v2/auth?state=fixture", redirect: true }));
+    render(<AuthCard google mode={mode} />);
+    expect(screen.getByText("errors.googleFailed")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "google.continue" }));
+    const back = `/en/${mode}?returnTo=%2Fagent&source=calculator&plan=pro`;
+    await waitFor(() => expect(fetch).toHaveBeenCalledExactlyOnceWith("/api/auth/sign-in/social", expect.objectContaining({ method: "POST", body: JSON.stringify({ provider: "google", callbackURL: `${back}&google=login`, newUserCallbackURL: `${back}&google=signup`, errorCallbackURL: back, additionalData: { preferredLocale: "en" } }) })));
+    expect(screen.queryByText("errors.googleFailed")).toBeNull();
+    expect(analytics.record).not.toHaveBeenCalled();
+  });
+  it("tells an unverified account holder to use their password", () => {
+    window.history.replaceState(null, "", "/en/login?error=account_not_linked");
+    render(<AuthCard google mode="login" />);
+    expect(screen.getByText("errors.googleAccountNotLinked")).toBeTruthy();
+  });
+  it("shows an error and re-enables the button when Google sign-in cannot start", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(Response.json({ code: "PROVIDER_NOT_FOUND" }, { status: 404 }));
+    render(<AuthCard google mode="login" />);
+    await userEvent.click(screen.getByRole("button", { name: "google.continue" }));
+    expect(await screen.findByText("errors.googleFailed")).toBeTruthy();
+    expect((screen.getByRole("button", { name: "google.continue" }) as HTMLButtonElement).disabled).toBe(false);
+  });
 });

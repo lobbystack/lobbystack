@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { interfaceLocales } from "../locales";
+import { interfaceLocales, runtimeLocales } from "../locales";
 import { PUBLIC_API_VERSION, WEBHOOK_TEST_EVENT_TYPE, apiKeyScopes, webhookEventTypes, weekdays } from "./constants";
 
 // The v1 public contract. Responses built by packages/domain are typed from
@@ -18,7 +18,7 @@ const inputTimestamp = z.stringFormat("datetime", (value) => withSeconds.safePar
 const e164 = z.string().regex(/^\+[1-9]\d{6,14}$/, "Use E.164 format, for example +14165550134.").describe("Phone number in E.164 format.");
 const clock = z.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$|^24:00$/, "Use 24-hour HH:MM.").describe("Local time as 24-hour HH:MM.");
 // A business's caller language is the language the AI receptionist speaks.
-const locale = z.enum(["en", "fr"]);
+const locale = z.enum(runtimeLocales);
 // A contact's language picks the copy of the reminders and confirmations they receive.
 const contactLocale = z.enum(interfaceLocales).describe("Language for the contact's reminders and confirmations: en, fr, es or sr.");
 
@@ -70,7 +70,7 @@ export const apiBusinessSchema = z.object({
   id,
   name: z.string(),
   timezone: z.string().describe("IANA time zone, for example America/Toronto."),
-  locale: z.string().describe("Default language for callers: en or fr."),
+  locale: z.string().describe("Default language for callers: en, fr, es, de, pt (Brazilian Portuguese), it or nl."),
   website_url: z.string().nullable(),
   booking_mode: z.enum(["instant", "request", "off"]).describe("instant: appointments are booked directly. request: the receptionist takes a request and the team confirms it. off: no booking."),
   hours: z.array(apiHoursWindowSchema),

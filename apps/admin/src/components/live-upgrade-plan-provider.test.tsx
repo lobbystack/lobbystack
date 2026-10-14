@@ -46,6 +46,40 @@ describe("restarting a plan that lapsed", () => {
   });
 });
 
+describe("the plan the picker opens on", () => {
+  async function openPicker(fetchMock: () => Promise<Response> = async () => Response.json({ error: "Checkout unavailable" }, { status: 503 })) {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+    clients.push(client);
+    client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_owner" }] });
+    client.setQueryData(["billing", "business"], { account: { plan: "free_cloud" }, availableCheckoutPlans: ["starter", "pro"], availableCheckoutIntervals: { starter: ["annual"], pro: ["annual"] } });
+    vi.stubGlobal("fetch", vi.fn(fetchMock));
+    render(<QueryClientProvider client={client}><LiveUpgradePlanProvider><OpenButton /></LiveUpgradePlanProvider></QueryClientProvider>);
+    await userEvent.click(screen.getByRole("button", { name: "Open plans" }));
+  }
+  const selectedPlans = () => screen.getAllByRole("heading", { level: 3 }).filter(heading => heading.closest("section")?.hasAttribute("data-selected")).map(heading => heading.textContent);
+  afterEach(() => { localStorage.clear(); });
+
+  it("opens on Starter when the pricing page sent no plan", async () => {
+    await openPicker();
+    expect(selectedPlans()).toEqual(["billing.upgradeDialog.plans.starter.name"]);
+  });
+
+  it("opens on the plan picked on the pricing page", async () => {
+    localStorage.setItem("lobbystack.pricing.plan", "pro");
+    await openPicker();
+    expect(selectedPlans()).toEqual(["billing.upgradeDialog.plans.pro.name"]);
+  });
+
+  it.each([
+    ["checkout_in_progress", "billing.checkoutErrors.inProgress"],
+    ["subscription_active", "billing.checkoutErrors.subscriptionActive"],
+  ])("explains a checkout refused with %s", async (code, message) => {
+    await openPicker(async () => Response.json({ error: "Refused", code }, { status: 409 }));
+    await userEvent.click(screen.getByRole("button", { name: "billing.upgradeDialog.actions.starter" }));
+    await waitFor(() => expect(alerts.error).toHaveBeenCalledWith(message));
+  });
+});
+
 describe("checkout workspace isolation", () => {
   it.each(["starter", "pro"])("switches displayed prices and submits %s with the selected monthly interval", async target => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });

@@ -77,6 +77,13 @@ export default defineRailway((ctx) => {
       // New phone numbers join this Twilio Elastic SIP trunk, which sends their
       // calls to GPT-Live. Provisioning fails without it.
       TWILIO_SIP_TRUNK_SID: preserve(),
+      // Twilio sells UK, Australian and New Zealand numbers only under these
+      // approved regulatory bundles. See docs/voice/runtime.md.
+      TWILIO_GB_BUNDLE_SID: preserve(),
+      TWILIO_AU_BUNDLE_SID: preserve(),
+      TWILIO_AU_ADDRESS_SID: preserve(),
+      TWILIO_NZ_BUNDLE_SID: preserve(),
+      TWILIO_NZ_ADDRESS_SID: preserve(),
       FEEDBACK_TO_EMAIL: preserve(),
       ONBOARDING_FOLLOWUP_FROM: preserve(),
       ONBOARDING_FOLLOWUP_SENDER_NAME: preserve(),
@@ -171,6 +178,14 @@ export default defineRailway((ctx) => {
       SITE_URL: preserve(),
       TWILIO_ACCOUNT_SID: preserve(),
       TWILIO_AUTH_TOKEN: preserve(),
+      // Onboarding texts the owner's verification code through this Twilio Verify service.
+      TWILIO_VERIFY_SERVICE_SID: preserve(),
+      // The countries onboarding offers numbers in follow the bundles the worker can buy under.
+      TWILIO_GB_BUNDLE_SID: preserve(),
+      TWILIO_AU_BUNDLE_SID: preserve(),
+      TWILIO_AU_ADDRESS_SID: preserve(),
+      TWILIO_NZ_BUNDLE_SID: preserve(),
+      TWILIO_NZ_ADDRESS_SID: preserve(),
       TWILIO_SMS_WEBHOOK_URL: production ? preserve() : `${stagingAdminUrl}/api/webhooks/twilio/sms`,
       TWILIO_ALERT_ACCOUNT_SID: preserve(),
       TWILIO_ALERT_SMS_FROM: preserve(),

@@ -102,7 +102,7 @@ Para las tarifas de otros servicios en vivo, vea [cuánto cuesta un servicio de 
 | Otros servicios | Cobro de pagos, formularios de admisión, llamadas salientes, chat web | Ninguno; contesta llamadas telefónicas |
 | SMS | Llamadas y SMS desde el número de su negocio | Confirmación de la cita y recordatorio 24 horas antes, con el permiso de quien llama, a números de Estados Unidos y Canadá; la IA no responde mensajes de texto |
 | Integraciones | "5000+" con integraciones directas y Zapier | API REST y webhooks firmados para seis eventos |
-| Dónde funciona | Estados Unidos, Canadá y el Caribe estadounidense | Números en Estados Unidos, Canadá, el Reino Unido y Australia |
+| Dónde funciona | Estados Unidos, Canadá y el Caribe estadounidense | Números en Estados Unidos, Canadá, el Reino Unido, Australia y Nueva Zelanda |
 | HIPAA | Anuncia servicios conformes con HIPAA | No afirma cumplir con HIPAA |
 | Tarifa de configuración | Ninguna en la página de precios | Ninguna en ningún plan |
 | Código fuente | Un servicio con personal | Licencia MIT; puede alojarlo usted con sus propias cuentas de OpenAI y Twilio |
@@ -195,7 +195,7 @@ No. Las recepcionistas de Ruby contestan, y la IA trabaja tras bambalinas. Una h
 
 ### ¿Puedo conservar mi número si dejo Ruby?
 
-Si su operador tiene el número y desvía las llamadas a Ruby, cambie la regla de desvío para que apunte a LobbyStack. Si Ruby aloja el número, pregunte a Ruby cómo transferirlo antes de cancelar, y escriba al equipo de LobbyStack para portarlo. LobbyStack ofrece números en Estados Unidos, Canadá, el Reino Unido y Australia.
+Si su operador tiene el número y desvía las llamadas a Ruby, cambie la regla de desvío para que apunte a LobbyStack. Si Ruby aloja el número, pregunte a Ruby cómo transferirlo antes de cancelar, y escriba al equipo de LobbyStack para portarlo. LobbyStack ofrece números en Estados Unidos, Canadá, el Reino Unido, Australia y Nueva Zelanda.
 
 ## Elija Ruby si
 

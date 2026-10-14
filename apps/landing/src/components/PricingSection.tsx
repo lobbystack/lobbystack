@@ -2,7 +2,10 @@ import { Button, buttonVariants } from "@/components/ui/button"
 import { appSignupUrl } from "@/lib/app-links"
 import type { Locale } from "@/i18n"
 import { cn } from "@/lib/utils"
-import { getCloudPlanFactSheet } from "@lobbystack/shared/product-capabilities"
+import {
+  FREE_CONTENT_RETENTION_MAX_DAYS,
+  getCloudPlanFactSheet,
+} from "@lobbystack/shared/product-capabilities"
 import { Check, Minus, ArrowRight } from "lucide-react"
 import { Fragment, useLayoutEffect, useRef, useState } from "react"
 
@@ -27,6 +30,8 @@ type Tier = {
     annual: string
   }
   ctaHref?: string
+  // Carried to signup, so the dashboard offers this plan first.
+  plan?: "starter" | "pro"
   ctaVariant: "default" | "outline"
   highlight: boolean
   highlights: Array<
@@ -63,12 +68,15 @@ const tiers: Tier[] = [
     highlight: false,
     highlights: [
       `${freeVoiceMinutes} browser voice minutes included`,
-      ...(freePlanFacts.browserVoiceOnly ? ["No telephone number"] : []),
+      ...(freePlanFacts.browserVoiceOnly
+        ? ["Phone number free for 14 days"]
+        : []),
       "Community support",
     ],
   },
   {
     name: "Starter",
+    plan: "starter",
     price: {
       monthly: "$30",
       annual: "$24",
@@ -96,6 +104,7 @@ const tiers: Tier[] = [
   },
   {
     name: "Pro",
+    plan: "pro",
     price: {
       monthly: "$100",
       annual: "$80",
@@ -167,12 +176,15 @@ const tiersFr: Tier[] = [
     highlight: false,
     highlights: [
       `${freeVoiceMinutes} minutes vocales dans le navigateur`,
-      ...(freePlanFacts.browserVoiceOnly ? ["Aucun numéro de téléphone"] : []),
+      ...(freePlanFacts.browserVoiceOnly
+        ? ["Numéro de téléphone gratuit pendant 14 jours"]
+        : []),
       "Support communautaire",
     ],
   },
   {
     name: "Starter",
+    plan: "starter",
     price: {
       monthly: "$30",
       annual: "$24",
@@ -200,6 +212,7 @@ const tiersFr: Tier[] = [
   },
   {
     name: "Pro",
+    plan: "pro",
     price: {
       monthly: "$100",
       annual: "$80",
@@ -271,12 +284,15 @@ const tiersEs: Tier[] = [
     highlight: false,
     highlights: [
       `${freeVoiceMinutes} minutos de voz en el navegador`,
-      ...(freePlanFacts.browserVoiceOnly ? ["Sin número de teléfono"] : []),
+      ...(freePlanFacts.browserVoiceOnly
+        ? ["Número de teléfono gratis durante 14 días"]
+        : []),
       "Soporte de la comunidad",
     ],
   },
   {
     name: "Starter",
+    plan: "starter",
     price: {
       monthly: "$30",
       annual: "$24",
@@ -304,6 +320,7 @@ const tiersEs: Tier[] = [
   },
   {
     name: "Pro",
+    plan: "pro",
     price: {
       monthly: "$100",
       annual: "$80",
@@ -375,12 +392,15 @@ const tiersSr: Tier[] = [
     highlight: false,
     highlights: [
       `${freeVoiceMinutes} minuta razgovora u pregledaču`,
-      ...(freePlanFacts.browserVoiceOnly ? ["Bez broja telefona"] : []),
+      ...(freePlanFacts.browserVoiceOnly
+        ? ["Broj telefona besplatno 14 dana"]
+        : []),
       "Podrška zajednice",
     ],
   },
   {
     name: "Starter",
+    plan: "starter",
     price: {
       monthly: "$30",
       annual: "$24",
@@ -408,6 +428,7 @@ const tiersSr: Tier[] = [
   },
   {
     name: "Pro",
+    plan: "pro",
     price: {
       monthly: "$100",
       annual: "$80",
@@ -523,7 +544,7 @@ const comparisonGroupsEn: ComparisonGroup[] = [
       },
       {
         feature: "Phone numbers",
-        free: false,
+        free: "Free for 14 days",
         starter: "1 dedicated",
         pro: "1 dedicated",
         enterprise: "Multiple",
@@ -657,7 +678,7 @@ const comparisonGroupsEn: ComparisonGroup[] = [
       },
       {
         feature: "Call history and recordings",
-        free: "Unlimited",
+        free: `${FREE_CONTENT_RETENTION_MAX_DAYS} days`,
         pro: "Unlimited",
         enterprise: "Unlimited",
       },
@@ -741,7 +762,7 @@ const comparisonGroupsFr: ComparisonGroup[] = [
       },
       {
         feature: "Numéros de téléphone",
-        free: false,
+        free: "Gratuit 14 jours",
         starter: "1 dédié",
         pro: "1 dédié",
         enterprise: "Plusieurs",
@@ -875,7 +896,7 @@ const comparisonGroupsFr: ComparisonGroup[] = [
       },
       {
         feature: "Historique et enregistrements d'appels",
-        free: "Illimités",
+        free: `${FREE_CONTENT_RETENTION_MAX_DAYS} jours`,
         pro: "Illimités",
         enterprise: "Illimités",
       },
@@ -959,7 +980,7 @@ const comparisonGroupsEs: ComparisonGroup[] = [
       },
       {
         feature: "Números de teléfono",
-        free: false,
+        free: "Gratis 14 días",
         starter: "1 dedicado",
         pro: "1 dedicado",
         enterprise: "Varios",
@@ -1093,7 +1114,7 @@ const comparisonGroupsEs: ComparisonGroup[] = [
       },
       {
         feature: "Historial y grabaciones de llamadas",
-        free: "Ilimitados",
+        free: `${FREE_CONTENT_RETENTION_MAX_DAYS} días`,
         pro: "Ilimitados",
         enterprise: "Ilimitados",
       },
@@ -1177,7 +1198,7 @@ const comparisonGroupsSr: ComparisonGroup[] = [
       },
       {
         feature: "Brojevi telefona",
-        free: false,
+        free: "Besplatno 14 dana",
         starter: "1 namenski",
         pro: "1 namenski",
         enterprise: "Više",
@@ -1311,7 +1332,7 @@ const comparisonGroupsSr: ComparisonGroup[] = [
       },
       {
         feature: "Istorija i snimci poziva",
-        free: "Neograničeno",
+        free: `${FREE_CONTENT_RETENTION_MAX_DAYS} dana`,
         pro: "Neograničeno",
         enterprise: "Neograničeno",
       },
@@ -1435,7 +1456,7 @@ const pricingSectionCopy = {
     save: "Save 20%",
     compareHeading: "Compare plans in detail",
     compareIntro:
-      "Free includes 30 browser voice minutes with no telephone number. Starter and Pro include a dedicated number, monthly usage allowances, and usage-based overages.",
+      "Free includes 30 voice minutes and a phone number free for 14 days. Starter and Pro include a dedicated number, monthly usage allowances, and usage-based overages.",
     billingLabel: "Billing interval",
     tableLabel: "Plan comparison table",
     caption:
@@ -1453,7 +1474,7 @@ const pricingSectionCopy = {
     save: "Économisez 20 %",
     compareHeading: "Comparer les forfaits en détail",
     compareIntro:
-      "Free comprend 30 minutes vocales dans le navigateur, sans numéro de téléphone. Starter et Pro comprennent un numéro dédié, des volumes mensuels et des dépassements facturés à l’usage.",
+      "Free comprend 30 minutes vocales et un numéro de téléphone gratuit pendant 14 jours. Starter et Pro comprennent un numéro dédié, des volumes mensuels et des dépassements facturés à l’usage.",
     billingLabel: "Intervalle de facturation",
     tableLabel: "Tableau de comparaison des forfaits",
     caption:
@@ -1471,7 +1492,7 @@ const pricingSectionCopy = {
     save: "Ahorre 20%",
     compareHeading: "Compare los planes en detalle",
     compareIntro:
-      "Free incluye 30 minutos de voz en el navegador, sin número de teléfono. Starter y Pro incluyen un número dedicado, minutos mensuales incluidos y excedentes según el uso.",
+      "Free incluye 30 minutos de voz y un número de teléfono gratis durante 14 días. Starter y Pro incluyen un número dedicado, minutos mensuales incluidos y excedentes según el uso.",
     billingLabel: "Periodo de facturación",
     tableLabel: "Tabla comparativa de planes",
     caption:
@@ -1489,7 +1510,7 @@ const pricingSectionCopy = {
     save: "Uštedite 20%",
     compareHeading: "Detaljno uporedite pakete",
     compareIntro:
-      "Free uključuje 30 minuta razgovora u pregledaču, bez broja telefona. Starter i Pro uključuju namenski broj, mesečnu kvotu minuta i prekoračenja koja se naplaćuju prema potrošnji.",
+      "Free uključuje 30 minuta razgovora i broj telefona besplatno na 14 dana. Starter i Pro uključuju namenski broj, mesečnu kvotu minuta i prekoračenja koja se naplaćuju prema potrošnji.",
     billingLabel: "Period naplate",
     tableLabel: "Tabela poređenja paketa",
     caption: "Poređenje funkcija paketa Free, Starter, Pro i Enterprise.",
@@ -1627,7 +1648,7 @@ export function PricingSection({ locale = "en" }: PricingSectionProps) {
 
               {/* Action */}
               <a
-                href={tier.ctaHref ?? appSignupUrl(locale)}
+                href={tier.ctaHref ?? appSignupUrl(locale, tier.plan ? { plan: tier.plan } : undefined)}
                 className={cn(
                   buttonVariants({ variant: tier.ctaVariant }),
                   "mb-6 h-11 w-full min-w-0 rounded-full px-4 text-[0.8125rem] sm:text-sm"
@@ -1636,7 +1657,7 @@ export function PricingSection({ locale = "en" }: PricingSectionProps) {
                 data-ph-capture-attribute-section="pricing_plan"
                 data-ph-capture-attribute-action="pricing_cta"
                 data-ph-capture-attribute-destination={
-                  tier.ctaHref ?? appSignupUrl(locale)
+                  tier.ctaHref ?? appSignupUrl(locale, tier.plan ? { plan: tier.plan } : undefined)
                 }
                 data-ph-capture-attribute-plan={tier.name}
                 data-ph-capture-attribute-billing-interval={billingInterval}

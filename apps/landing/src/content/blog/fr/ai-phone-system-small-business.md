@@ -49,7 +49,7 @@ Les offres d'entrée publiées en France vont de 23,99 € par mois pour 250 mi
 | [Callsens](https://callsens.fr/tarifs) Starter | 79 € HT par mois | 200 minutes, 5 appels simultanés | 0,29 € HT | Aucuns frais | 1 numéro inclus, pays non précisé | Google Agenda, Calendly |
 | [Elio](https://eliocall.com/tarifs) | 79 € HT par mois | 150 minutes | 0,39 € HT | 879 € HT, offerts | Vous gardez votre numéro par renvoi d'appel | Non précisé pour l'offre standard |
 | [AirAgent](https://airagent.fr/tarifs/) Starter | 89 € HT par mois | « Jusqu'à 250 appels », 1 appel simultané | « + 0,30 € par min HT » | Configuration par un ingénieur dès 490 € | 1 numéro inclus, pays non précisé | Google Agenda, Cal.com |
-| [LobbyStack](/fr/pricing/) Starter (le nôtre) | 30 $ par mois | 150 minutes, appels simultanés non limités par le forfait | 0,20 $ | Aucuns frais | Numéro aux États-Unis, au Canada, au Royaume-Uni ou en Australie | Google Agenda |
+| [LobbyStack](/fr/pricing/) Starter (le nôtre) | 30 $ par mois | 150 minutes, appels simultanés non limités par le forfait | 0,20 $ | Aucuns frais | Numéro aux États-Unis, au Canada, au Royaume-Uni, en Australie ou en Nouvelle-Zélande | Google Agenda |
 
 - AirAgent affiche « + 0,30 € par min HT » sous chaque prix, sans dire si ce tarif s'applique dès la première minute. Sa FAQ facture 0,30 € la minute une fois les limites du forfait atteintes. Faites-le préciser par écrit.
 - Elio annonce des tarifs « en vigueur au 4 octobre 2026 ». Les autres pages ne datent pas leurs prix.
@@ -90,7 +90,7 @@ Trois cas de figure :
 
 - **Un numéro français fourni.** Konten inclut un numéro français. Callsens, Tala et AirAgent incluent un numéro sans préciser le pays sur leur page de tarifs : demandez-le.
 - **Votre numéro, renvoyé.** Elio fonctionne par renvoi depuis votre opérateur et publie les codes de renvoi des principaux opérateurs.
-- **Un numéro étranger.** LobbyStack propose des numéros aux États-Unis, au Canada, au Royaume-Uni et en Australie, et nulle part ailleurs. Le renvoi depuis votre ligne française part donc à l'international.
+- **Un numéro étranger.** LobbyStack propose des numéros aux États-Unis, au Canada, au Royaume-Uni, en Australie et en Nouvelle-Zélande, et nulle part ailleurs. Le renvoi depuis votre ligne française part donc à l'international.
 
 Notre guide pour [renvoyer les appels de votre entreprise](/fr/blog/how-to-forward-business-calls/) explique les types de renvoi : tous les appels, sur occupation ou sur non-réponse.
 
@@ -108,13 +108,13 @@ Ce qui marche :
 
 Ce qui coince depuis la France :
 
-- Pas de numéro français : le renvoi vers un numéro américain, canadien, britannique ou australien se paie au tarif de votre opérateur pour ce pays. Le code publié, même auto-hébergé, ne propose que ces quatre pays.
+- Pas de numéro français : le renvoi vers un numéro américain, canadien, britannique, australien ou néo-zélandais se paie au tarif de votre opérateur pour ce pays. Le code publié, même auto-hébergé, ne propose que ces cinq pays.
 - Une facture en dollars américains : le montant en euros dépend du taux de change et de votre banque.
 - Les SMS de confirmation et de rappel partent vers les seuls numéros des États-Unis et du Canada. Les alertes de l'équipe par e-mail fonctionnent partout.
 - Google Agenda seulement, et aucune intégration directe avec un CRM ou un logiciel métier : il faut passer par les webhooks signés ou l'API REST.
 - Le transfert va vers un seul numéro, sans présenter l'appelant à la personne qui décroche.
 
-Choisissez une offre française si vous voulez un numéro français, des SMS vers les portables de vos clients ou une facture en euros. Konten affiche la minute la moins chère des offres d'entrée mais ne prend pas de rendez-vous, Callsens prend cinq appels à la fois dès son offre d'entrée, et Elio offre sa mise en place. LobbyStack convient mieux si vos appelants parlent beaucoup de langues, si votre équipe veut héberger le code elle-même, ou si vous avez aussi une activité aux États-Unis, au Canada, au Royaume-Uni ou en Australie.
+Choisissez une offre française si vous voulez un numéro français, des SMS vers les portables de vos clients ou une facture en euros. Konten affiche la minute la moins chère des offres d'entrée mais ne prend pas de rendez-vous, Callsens prend cinq appels à la fois dès son offre d'entrée, et Elio offre sa mise en place. LobbyStack convient mieux si vos appelants parlent beaucoup de langues, si votre équipe veut héberger le code elle-même, ou si vous avez aussi une activité aux États-Unis, au Canada, au Royaume-Uni, en Australie ou en Nouvelle-Zélande.
 
 ## Comment choisir son standard téléphonique IA ?
 

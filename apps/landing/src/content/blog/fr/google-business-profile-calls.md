@@ -127,7 +127,7 @@ Vous réglez la règle chez votre opérateur : renvoi sur occupation ou non-rép
 
 Avec LobbyStack comme exemple :
 
-- Vous obtenez un numéro LobbyStack (disponible aux États-Unis, au Canada, au Royaume-Uni et en Australie) et vous y renvoyez votre numéro professionnel. Il peut répondre à tous les appels ou seulement aux appels en débordement ou hors horaires.
+- Vous obtenez un numéro LobbyStack (disponible aux États-Unis, au Canada, au Royaume-Uni, en Australie et en Nouvelle-Zélande) et vous y renvoyez votre numéro professionnel. Il peut répondre à tous les appels ou seulement aux appels en débordement ou hors horaires.
 - Il prend les rendez-vous dans Google Calendar. Avec l'accord de l'appelant, il envoie par SMS une confirmation et un rappel 24 heures avant le rendez-vous aux numéros américains et canadiens.
 - Il transfère les appels urgents vers un seul numéro par entreprise. Les transferts se font à l'aveugle : il ne présente pas l'appel à la personne qui décroche. Si un transfert échoue, il prévient l'appelant, propose de prendre un message, et votre équipe peut recevoir une alerte d'échec de transfert.
 - Chaque appel reçoit un résumé, une transcription et un enregistrement. Vous recevez une alerte par e-mail quand il prend un message, et les alertes SMS sont en option.

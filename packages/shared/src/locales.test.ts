@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { interfaceLocaleTags, interfaceLocales, intlLocale, normalizeInterfaceLocale } from "./locales";
+import { interfaceLocaleTags, interfaceLocales, intlLocale, normalizeInterfaceLocale, normalizeRuntimeLocale } from "./locales";
 
 const CYRILLIC = /[Ѐ-ӿ]/;
 const sample = new Date(Date.UTC(2026, 8, 30, 12));
@@ -44,5 +44,15 @@ describe("normalizeInterfaceLocale", () => {
     expect(normalizeInterfaceLocale("FR")).toBe("fr");
     expect(normalizeInterfaceLocale("de")).toBeNull();
     expect(normalizeInterfaceLocale("")).toBeNull();
+  });
+});
+
+describe("normalizeRuntimeLocale", () => {
+  it("reduces language tags to a caller language, or English", () => {
+    expect(normalizeRuntimeLocale("pt-BR")).toBe("pt");
+    expect(normalizeRuntimeLocale("de_CH")).toBe("de");
+    expect(normalizeRuntimeLocale(" NL ")).toBe("nl");
+    expect(normalizeRuntimeLocale("sr-Latn-RS")).toBe("en");
+    expect(normalizeRuntimeLocale(null)).toBe("en");
   });
 });

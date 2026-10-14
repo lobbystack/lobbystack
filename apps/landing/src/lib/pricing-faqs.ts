@@ -20,7 +20,7 @@ export const pricingFaqs: FaqItem[] = [
   {
     question: "Can I use LobbyStack for free?",
     answer:
-      "Yes. You can test 30 browser voice minutes on Free without a credit card. Free has no telephone number. Choose Starter or Pro for a dedicated number.",
+      "Yes. Free includes 30 voice minutes, with no credit card. You can test your receptionist in your browser and, where a free trial is available, get a phone number free for 14 days. Choose Starter or Pro to keep your number after the trial.",
   },
   {
     question: "What AI receptionist features are available today?",
@@ -49,7 +49,7 @@ export const pricingFaqsFr: FaqItem[] = [
   {
     question: "Puis-je utiliser LobbyStack gratuitement ?",
     answer:
-      "Oui. Vous pouvez tester 30 minutes vocales dans le navigateur sur Free, sans carte bancaire. Free ne comprend aucun numéro de téléphone. Choisissez Starter ou Pro pour obtenir un numéro dédié.",
+      "Oui. Free inclut 30 minutes vocales, sans carte bancaire. Vous pouvez tester votre réceptionniste dans le navigateur et, là où l’essai gratuit est proposé, obtenir un numéro de téléphone gratuit pendant 14 jours. Choisissez Starter ou Pro pour garder votre numéro après l’essai.",
   },
   {
     question:
@@ -78,7 +78,7 @@ export const pricingFaqsEs: FaqItem[] = [
   {
     question: "¿Puedo usar LobbyStack gratis?",
     answer:
-      "Sí. Puede probar 30 minutos de voz en el navegador con Free, sin tarjeta de crédito. Free no incluye número de teléfono. Elija Starter o Pro para tener un número dedicado.",
+      "Sí. Free incluye 30 minutos de voz, sin tarjeta de crédito. Puede probar a su recepcionista en el navegador y, donde haya prueba gratuita, obtener un número de teléfono gratis durante 14 días. Elija Starter o Pro para conservar su número después de la prueba.",
   },
   {
     question: "¿Qué funciones de recepcionista con IA están disponibles hoy?",
@@ -106,7 +106,7 @@ export const pricingFaqsSr: FaqItem[] = [
   {
     question: "Mogu li da koristim LobbyStack besplatno?",
     answer:
-      "Da. Na paketu Free možete da isprobate 30 minuta razgovora u pregledaču, bez platne kartice. Free nema broj telefona. Izaberite Starter ili Pro za namenski broj.",
+      "Da. Free uključuje 30 minuta razgovora, bez platne kartice. Možete da isprobate Vašeg AI recepcionera u pregledaču, a gde je dostupna besplatna proba, dobijate i broj telefona besplatno na 14 dana. Izaberite Starter ili Pro da biste zadržali broj posle probnog perioda.",
   },
   {
     question: "Koje funkcije AI recepcionera su dostupne danas?",

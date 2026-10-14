@@ -77,7 +77,8 @@
               "introduction",
               "quickstart",
               "getting-started/account-setup",
-              "getting-started/claim-your-number"
+              "getting-started/claim-your-number",
+              "getting-started/number-countries"
             ]
           },
           {
@@ -201,7 +202,8 @@
               "fr/introduction",
               "fr/quickstart",
               "fr/getting-started/account-setup",
-              "fr/getting-started/claim-your-number"
+              "fr/getting-started/claim-your-number",
+              "fr/getting-started/number-countries"
             ]
           },
           {
@@ -328,7 +330,8 @@
               "es/introduction",
               "es/quickstart",
               "es/getting-started/account-setup",
-              "es/getting-started/claim-your-number"
+              "es/getting-started/claim-your-number",
+              "es/getting-started/number-countries"
             ]
           },
           {

@@ -125,7 +125,7 @@ In the [Grasshopper admin portal](https://support.grasshopper.com/help/forward-i
 
 Turn on busy and no-answer forwarding to the service's number, and leave all-calls forwarding off. Your phone rings first, and the service gets the calls your team can't take. Add unreachable forwarding if you also want coverage when a mobile is off or out of signal.
 
-1. **Get the service's number.** With LobbyStack, that's your LobbyStack number, available in the US, Canada, the UK and Australia. Pick one in your line's country: AT&T, Verizon, T-Mobile and Spectrum Mobile don't forward to international numbers, and TELUS forwards only within North America.
+1. **Get the service's number.** With LobbyStack, that's your LobbyStack number, available in the US, Canada, the UK, Australia and New Zealand. Pick one in your line's country: AT&T, Verizon, T-Mobile and Spectrum Mobile don't forward to international numbers, and TELUS forwards only within North America.
 2. **Turn on busy and no-answer forwarding.** Use the codes above, or the Busy Line & Missed Calls or Missed calls setting in your portal. Skip `*72` for overflow, because it forwards every call before your phone rings.
 3. **Set the ring time.** T-Mobile lets you pick 5 to 30 seconds and TELUS 10, 20 or 30. Grasshopper defaults to 25 seconds and Ooma Office to 12. Verizon's `*71` forwards after 3 to 6 rings and Bell Business Phone's `*92` after 4. A short delay sends calls your team could have answered; a long one keeps callers waiting.
 4. **Check your voicemail.** AT&T says forwarding replaces voicemail, and Spectrum Mobile says unanswered calls skip it. Rogers says conditional forwarding won't work while voicemail is on, so ask Rogers to turn voicemail off on that line if your codes don't take.

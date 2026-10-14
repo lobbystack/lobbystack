@@ -39,6 +39,8 @@ describe("client analytics initialization", () => {
       capture_exceptions: false,
       capture_pageview: "history_change",
       capture_pageleave: "if_capture_pageview",
+      persistence: "localStorage+cookie",
+      cross_subdomain_cookie: true,
       opt_out_capturing_by_default: true,
       save_campaign_params: false,
       save_referrer: false,
@@ -46,7 +48,14 @@ describe("client analytics initialization", () => {
     });
   });
 
-  it("falls back to the PostHog host and does not initialize without a token", async () => {
+  it("sends to the first-party proxy when no host is configured", async () => {
+    vi.stubEnv("NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN", "fixture-key");
+    vi.stubEnv("NEXT_PUBLIC_POSTHOG_HOST", "");
+    await import("./instrumentation-client");
+    expect(mocks.posthog.init.mock.calls[0]![1]).toMatchObject({ api_host: "https://ts.lobbystack.com" });
+  });
+
+  it("does not initialize without a token", async () => {
     vi.stubEnv("NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN", "");
     vi.stubEnv("NEXT_PUBLIC_POSTHOG_HOST", "");
     await import("./instrumentation-client");

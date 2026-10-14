@@ -179,7 +179,7 @@ You set the coverage with your carrier's call forwarding:
 | Forward at closing time | After-hours coverage |
 | Forward every call | Full-time answering |
 
-LobbyStack answers whatever calls reach its number. Forward your number to keep it, or contact the team to port it. LobbyStack numbers are available in the US, Canada, the UK and Australia. If nights and weekends are your gap, see [after-hours answering](/solutions/after-hours-answering-service/).
+LobbyStack answers whatever calls reach its number. Forward your number to keep it, or contact the team to port it. LobbyStack numbers are available in the US, Canada, the UK, Australia and New Zealand. If nights and weekends are your gap, see [after-hours answering](/solutions/after-hours-answering-service/).
 
 ### 7. Test it before you forward real calls
 

@@ -89,19 +89,73 @@
     "continueFailed": "Trenutno ne možemo da nastavimo. Pokušajte ponovo.",
     "skipFailed": "Trenutno ne možemo da preskočimo ovaj korak. Pokušajte ponovo."
   },
+  "testCall": {
+    "title": "Poslušajte svog recepcionera",
+    "description": "Pozovite ga iz pregledača i pitajte ono što pitaju Vaši klijenti.",
+    "call": "Pozovi mog recepcionera",
+    "callAgain": "Pozovi ponovo",
+    "hint": "Pregledač će tražiti pristup mikrofonu.",
+    "continue": "Nastavi",
+    "skip": "Preskoči za sada",
+    "continueFailed": "Nismo mogli da nastavimo. Pokušajte ponovo."
+  },
+  "verifyPhone": {
+    "title": "Potvrdite broj mobilnog telefona",
+    "description": "Poslaćemo Vam kôd SMS porukom. Vaš poslovni broj biće iz iste zemlje.",
+    "fields": {
+      "mobileNumber": "Broj mobilnog telefona",
+      "country": "Zemlja"
+    },
+    "hint": "Koristite mobilni koji prima SMS poruke. Internet brojevi ne rade.",
+    "sendCode": "Pošalji mi kôd",
+    "sending": "Slanje…",
+    "sendFailed": "Nismo mogli da pošaljemo kôd. Pokušajte ponovo.",
+    "errors": {
+      "voip": "Koristite broj mobilnog telefona. Internet brojevi ne mogu da se potvrde.",
+      "notMobile": "Koristite broj mobilnog telefona koji prima SMS poruke.",
+      "countryMismatch": "Ovaj broj nije iz zemlje koju ste izabrali.",
+      "invalidNumber": "Unesite ispravan broj mobilnog telefona.",
+      "rateLimited": "Previše kodova. Sačekajte malo i pokušajte ponovo."
+    },
+    "code": {
+      "sentTo": "Unesite šestocifreni kôd koji smo poslali na {{phone}}.",
+      "checking": "Proveravamo…",
+      "invalid_one": "Taj kôd nije ispravan. Ostao Vam je {{count}} pokušaj.",
+      "invalid_few": "Taj kôd nije ispravan. Ostala su Vam {{count}} pokušaja.",
+      "invalid_other": "Taj kôd nije ispravan. Ostalo Vam je {{count}} pokušaja.",
+      "expired": "Kôd je istekao. Zatražite novi.",
+      "locked": "Previše pokušaja. Zatražite novi kôd.",
+      "failed": "Nismo mogli da proverimo kôd. Pokušajte ponovo.",
+      "resend": "Pošalji novi kôd",
+      "changeNumber": "Koristi drugi broj"
+    },
+    "unavailable": {
+      "title": "Brojevi još nisu dostupni u ovoj zemlji ({{country}}).",
+      "body": "Recepcionera i dalje možete da koristite u pregledaču, a možemo i da Vam pišemo kada brojevi stignu tamo.",
+      "notify": "Javite mi kada budu dostupni",
+      "joined": "Važi. Pisaćemo Vam.",
+      "continue": "Nastavi bez broja",
+      "failed": "Nešto nije u redu. Pokušajte ponovo."
+    }
+  },
   "greeting": {
     "title": "Kako da pozdravimo Vaše pozivaoce?",
     "description": "Ovo je prvo što Vaš AI recepcioner kaže. Možete to promeniti bilo kada.",
     "label": "Pozdrav",
-    "language": "Jezik",
-    "english": "English",
-    "french": "Français",
+    "language": "Jezik pozivalaca",
     "placeholder": "Hvala što ste nas pozvali. Kako mogu da pomognem?",
     "continue": "Nastavi",
     "submitting": "Čuvanje...",
     "submitFailed": "Trenutno ne možemo da sačuvamo pozdrav. Pokušajte ponovo."
   },
   "number": {
+    "ready": {
+      "label": "Vaš broj je spreman",
+      "body": "Pozovite ga sa svog telefona i čujte kako recepcioner odgovara.",
+      "call": "Pozovi {{number}}"
+    },
+    "planRequired": "Da biste dobili broj, izaberite paket.",
+    "trialNote": "Vaš broj je besplatan 14 dana, bez kartice.",
     "title": "Izaberite broj telefona za AI recepcionera",
     "description": "Izaberite lokalni broj na koji Vas pozivaoci mogu dobiti.",
     "countryLabel": "Zemlja",

@@ -120,7 +120,7 @@ Cuando usa los 30 minutos, las llamadas de prueba se detienen hasta el mes sigui
 | Starter | $30, o $24 con pago anual | 150 minutos, un número del negocio | $0.20 por minuto |
 | Pro | $100, o $80 con pago anual | 500 minutos, un número del negocio | $0.18 por minuto |
 
-Ningún plan tiene tarifa de configuración. Starter y Pro contestan en un número de Estados Unidos, Canadá, el Reino Unido o Australia. Puede desviar su número actual para todas las llamadas, o solo para el desborde o fuera de horario. La recepcionista agenda citas en Google Calendar, transfiere las llamadas urgentes a un número y guarda un resumen, una transcripción y una grabación de cada llamada. Las llamadas de menos de 10 segundos y las que la recepcionista corta por spam no cuentan en sus minutos.
+Ningún plan tiene tarifa de configuración. Starter y Pro contestan en un número de Estados Unidos, Canadá, el Reino Unido, Australia o Nueva Zelanda. Puede desviar su número actual para todas las llamadas, o solo para el desborde o fuera de horario. La recepcionista agenda citas en Google Calendar, transfiere las llamadas urgentes a un número y guarda un resumen, una transcripción y una grabación de cada llamada. Las llamadas de menos de 10 segundos y las que la recepcionista corta por spam no cuentan en sus minutos.
 
 ## ¿Cuándo deja de bastar una recepcionista con IA gratis?
 

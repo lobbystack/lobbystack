@@ -1,9 +1,13 @@
+import { isFreshPendingRecord } from "./pending-analytics";
+
 type AuthSuccessEvent = "web.auth.login_succeeded" | "web.auth.signup_succeeded";
 export const authSuccessSources = ["calculator"] as const;
 export type AuthSuccessSource = (typeof authSuccessSources)[number];
+export type AuthMethod = "email" | "google";
 
 export type ConsumedAuthSuccess = {
   event: AuthSuccessEvent;
+  method: AuthMethod;
   source?: AuthSuccessSource;
 };
 
@@ -14,8 +18,8 @@ function isAuthSuccessSource(value: unknown): value is AuthSuccessSource {
 }
 
 /** Defer the event across auth's full navigation until tenant telemetry consent is known. */
-export function recordAuthSuccess(event: AuthSuccessEvent, options: { source?: AuthSuccessSource } = {}): void {
-  try { window.sessionStorage.setItem(storageKey, JSON.stringify({ event, ...(options.source ? { source: options.source } : {}), createdAt: Date.now() })); } catch { /* Analytics must never prevent authentication. */ }
+export function recordAuthSuccess(event: AuthSuccessEvent, options: { method: AuthMethod; source?: AuthSuccessSource }): void {
+  try { window.sessionStorage.setItem(storageKey, JSON.stringify({ event, method: options.method, ...(options.source ? { source: options.source } : {}), createdAt: Date.now() })); } catch { /* Analytics must never prevent authentication. */ }
 }
 
 export function consumeAuthSuccess(): ConsumedAuthSuccess | null {
@@ -23,9 +27,10 @@ export function consumeAuthSuccess(): ConsumedAuthSuccess | null {
     const value = window.sessionStorage.getItem(storageKey);
     window.sessionStorage.removeItem(storageKey);
     if (!value) return null;
-    const record = JSON.parse(value) as { event?: unknown; source?: unknown; createdAt?: unknown };
+    const record = JSON.parse(value) as { event?: unknown; method?: unknown; source?: unknown; createdAt?: unknown };
     if (record.event !== "web.auth.login_succeeded" && record.event !== "web.auth.signup_succeeded") return null;
-    if (typeof record.createdAt !== "number" || Date.now() - record.createdAt < 0 || Date.now() - record.createdAt > 10 * 60_000) return null;
-    return { event: record.event, ...(isAuthSuccessSource(record.source) ? { source: record.source } : {}) };
+    if (!isFreshPendingRecord(record)) return null;
+    // Records queued before Google sign-in existed carry no method; they were all email.
+    return { event: record.event, method: record.method === "google" ? "google" : "email", ...(isAuthSuccessSource(record.source) ? { source: record.source } : {}) };
   } catch { return null; }
 }

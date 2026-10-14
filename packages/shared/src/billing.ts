@@ -62,6 +62,8 @@ export const billingErrorCodes = {
   aiSmsNotEnabled: "ai_sms_not_enabled",
   dedicatedNumberRequiresPaidPlan: "dedicated_number_requires_paid_plan",
   chatAiLimitReached: "chat_ai_limit_reached",
+  checkoutInProgress: "checkout_in_progress",
+  subscriptionActive: "subscription_active",
 } as const;
 
 export type BillingErrorCode =

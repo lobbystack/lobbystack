@@ -179,7 +179,7 @@ Usted define la cobertura con el desvío de llamadas de su operador:
 | Desviar a la hora de cierre | Cobertura fuera de horario |
 | Desviar todas las llamadas | Atención a tiempo completo |
 
-LobbyStack contesta todas las llamadas que llegan a su número. Desvíe su número para conservarlo, o pida al equipo que lo porte. LobbyStack ofrece números en Estados Unidos, Canadá, el Reino Unido y Australia. Si lo que le falta cubrir son las noches y los fines de semana, vea la [atención telefónica fuera de horario](/es/solutions/after-hours-answering-service/).
+LobbyStack contesta todas las llamadas que llegan a su número. Desvíe su número para conservarlo, o pida al equipo que lo porte. LobbyStack ofrece números en Estados Unidos, Canadá, el Reino Unido, Australia y Nueva Zelanda. Si lo que le falta cubrir son las noches y los fines de semana, vea la [atención telefónica fuera de horario](/es/solutions/after-hours-answering-service/).
 
 ### 7. Pruébelo antes de desviar llamadas reales
 

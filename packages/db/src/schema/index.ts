@@ -322,6 +322,36 @@ export const onboardingNumberClaimEvents = pgTable("onboarding_number_claim_even
   id: uuid("id").defaultRandom().primaryKey(), businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }), userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }), purpose: varchar("purpose", { length: 32 }).default("onboarding").notNull(), replacingPhoneNumberId: uuid("replacing_phone_number_id").references(() => phoneNumbers.id, { onDelete: "set null" }), requestedE164: varchar("requested_e164", { length: 32 }).notNull(), selectionContext: jsonb("selection_context").$type<Record<string, unknown>>().notNull(), claimTokenHash: text("claim_token_hash").notNull(), idempotencyKey: varchar("idempotency_key", { length: 255 }).notNull(), status: varchar("status", { length: 32 }).default("reserved").notNull(), phoneNumberId: uuid("phone_number_id").references(() => phoneNumbers.id, { onDelete: "set null" }), providerPhoneId: varchar("provider_phone_id", { length: 255 }), reservedAt: timestamp("reserved_at", { withTimezone: true }).defaultNow().notNull(), purchasedAt: timestamp("purchased_at", { withTimezone: true }), completedAt: timestamp("completed_at", { withTimezone: true }), attemptCount: integer("attempt_count").default(0).notNull(), lastError: text("last_error"), alternatives: jsonb("alternatives").$type<Array<Record<string, unknown>>>(), ...timestamps,
 }, (table) => [uniqueIndex("onboarding_number_claim_events_business_key_unique").on(table.businessId, table.idempotencyKey), uniqueIndex("onboarding_number_claim_events_provider_unique").on(table.providerPhoneId), index("onboarding_number_claim_events_user_purchased_idx").on(table.userId, table.purchasedAt), index("onboarding_number_claim_events_business_status_idx").on(table.businessId, table.status, table.reservedAt)]);
 
+export const numberTrials = pgTable("number_trials", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  claimId: uuid("claim_id").references(() => onboardingNumberClaimEvents.id, { onDelete: "set null" }),
+  phoneNumberId: uuid("phone_number_id").references(() => phoneNumbers.id, { onDelete: "set null" }),
+  verifiedPhone: varchar("verified_phone", { length: 32 }).notNull(),
+  ipHash: text("ip_hash"),
+  status: varchar("status", { length: 16 }).default("reserved").notNull(),
+  startedAt: timestamp("started_at", { withTimezone: true }),
+  endsAt: timestamp("ends_at", { withTimezone: true }),
+  minutesExhaustedAt: timestamp("minutes_exhausted_at", { withTimezone: true }),
+  emailsSent: jsonb("emails_sent").$type<Record<string, string>>().default({}).notNull(),
+  ...timestamps,
+}, (table) => [
+  uniqueIndex("number_trials_business_unique").on(table.businessId).where(sql`${table.status} <> 'failed'`),
+  index("number_trials_phone_idx").on(table.verifiedPhone),
+  index("number_trials_user_idx").on(table.userId),
+  index("number_trials_ip_created_idx").on(table.ipHash, table.createdAt),
+  index("number_trials_claim_idx").on(table.claimId),
+]);
+
+export const numberWaitlist = pgTable("number_waitlist", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  countryCode: varchar("country_code", { length: 2 }).notNull(),
+  ...timestamps,
+}, (table) => [uniqueIndex("number_waitlist_business_country_unique").on(table.businessId, table.countryCode)]);
+
 export const receptionistProfiles = pgTable(
   "receptionist_profiles",
   {

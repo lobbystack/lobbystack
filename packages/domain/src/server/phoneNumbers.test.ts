@@ -17,7 +17,7 @@ const phone = "+14165550123";
 
 function chain(rows: unknown[]) {
   const node: Record<string, unknown> = {};
-  for (const method of ["from", "where", "limit"]) node[method] = () => node;
+  for (const method of ["from", "where", "limit", "orderBy"]) node[method] = () => node;
   node.then = (onFulfilled: (value: unknown[]) => unknown) => Promise.resolve(rows).then(onFulfilled);
   return node;
 }
@@ -38,25 +38,76 @@ beforeEach(() => { vi.clearAllMocks(); vi.useFakeTimers({ now: new Date("2026-10
 afterEach(() => { vi.useRealTimers(); });
 
 describe("searchBusinessNumberInventory", () => {
-  it("offers only numbers that can call and text, up to the limit", async () => {
+  afterEach(() => { vi.unstubAllEnvs(); });
+
+  it("offers numbers that take calls, texting or not, up to the limit", async () => {
     setup();
     const result = await searchBusinessNumberInventory(context, { ...scope, limit: 2 }, { listAvailablePhoneNumbers: async () => [
+      { phoneE164: "+14165550100", countryCode: "CA", capabilities: { sms: true, voice: false } },
       { phoneE164: "+14165550101", countryCode: "CA", capabilities: { sms: false, voice: true } },
       { phoneE164: "+14165550102", countryCode: "CA", capabilities: { sms: true, voice: true } },
       { phoneE164: "+14165550103", countryCode: "CA", capabilities: { sms: true, voice: true } },
-      { phoneE164: "+14165550104", countryCode: "CA", capabilities: { sms: true, voice: true } },
     ] });
-    expect(result.numbers.map(number => number.phoneE164)).toEqual(["+14165550102", "+14165550103"]);
+    expect(result.numbers.map(number => number.phoneE164)).toEqual(["+14165550101", "+14165550102"]);
     expect(result.numbers.every(number => typeof number.claimToken === "string")).toBe(true);
+    expect(result.trial).toBe(false);
   });
 
   it.each([
-    ["a cloud workspace without a paid plan", { deploymentMode: "cloud" }, "onboarding", 409, "dedicated_number_requires_paid_plan"],
+    ["a cloud workspace without a verified phone", { deploymentMode: "cloud" }, "onboarding", 409, "phone_verification_required"],
     ["a workspace that already replaced its number", { replacementUsedAt: new Date() }, "replacement", 409, "replacement_already_used"],
     ["a workspace still creating its business", { stage: "create_business" }, "onboarding", 409, "invalid_onboarding_stage"],
   ] as const)("answers a search from %s with %i", async (_case, business, purpose, status, code) => {
     setup(undefined, business);
     await expect(offer(purpose)).rejects.toMatchObject({ status, code });
+  });
+
+  it("searches mobile numbers for businesses in the UK and Australia once their bundles are set", async () => {
+    vi.stubEnv("TWILIO_GB_BUNDLE_SID", "BUGB");
+    vi.stubEnv("TWILIO_AU_BUNDLE_SID", "BUAU");
+    vi.stubEnv("TWILIO_AU_ADDRESS_SID", "ADAU");
+    const listAvailablePhoneNumbers = vi.fn(async () => []);
+    setup(undefined, { timezone: "Europe/London" });
+    await searchBusinessNumberInventory(context, scope, { listAvailablePhoneNumbers });
+    setup();
+    await searchBusinessNumberInventory(context, { ...scope, selection: { countryCode: "AU", kind: "local" } }, { listAvailablePhoneNumbers });
+    expect(listAvailablePhoneNumbers).toHaveBeenNthCalledWith(1, expect.objectContaining({ countryCode: "GB", kind: "mobile" }));
+    expect(listAvailablePhoneNumbers).toHaveBeenNthCalledWith(2, expect.objectContaining({ countryCode: "AU", kind: "mobile" }));
+  });
+
+  it("refuses UK numbers until the UK bundle is set", async () => {
+    setup(undefined, { timezone: "Europe/London" });
+    await expect(searchBusinessNumberInventory(context, scope, { listAvailablePhoneNumbers: async () => [] })).rejects.toMatchObject({ status: 400, code: "unsupported_country" });
+  });
+
+  describe("free trial numbers", () => {
+    // Selects in order: business, billing (none), the user's verified phone, its approved attempt, then trials.
+    function trialSetup(countryCode: string, trials: unknown[] = []) {
+      const selects = [[{ stage: "phone_number", timezone: "America/Toronto", deploymentMode: "cloud", replacementUsedAt: null }], [], [{ phone: "+14165550123" }], [{ countryCode }], trials];
+      mocks.withBusinessTransaction.mockImplementation(async (_db: unknown, _scope: unknown, callback: (tx: unknown) => unknown) => await callback({ select: () => chain(selects.shift() ?? []) }));
+    }
+
+    it("offers a free business trial numbers from its verified phone's country", async () => {
+      trialSetup("CA");
+      const listAvailablePhoneNumbers = vi.fn(async () => [{ phoneE164: "+14165550101", countryCode: "CA", capabilities: { sms: true, voice: true } }]);
+      const result = await searchBusinessNumberInventory(context, { ...scope, selection: { countryCode: "US", kind: "local" } }, { listAvailablePhoneNumbers });
+      expect(listAvailablePhoneNumbers).toHaveBeenCalledWith(expect.objectContaining({ countryCode: "CA" }));
+      expect(result.trial).toBe(true);
+      const payload = JSON.parse(Buffer.from(result.numbers[0]!.claimToken.split(".")[0]!, "base64url").toString("utf8")) as { selection: { trial?: boolean; verifiedPhone?: string } };
+      expect(payload.selection).toMatchObject({ trial: true, verifiedPhone: "+14165550123" });
+    });
+
+    it("sends Australia to the plans, since its numbers are paid only", async () => {
+      vi.stubEnv("TWILIO_AU_BUNDLE_SID", "BUAU");
+      vi.stubEnv("TWILIO_AU_ADDRESS_SID", "ADAU");
+      trialSetup("AU");
+      await expect(searchBusinessNumberInventory(context, scope, { listAvailablePhoneNumbers: async () => [] })).rejects.toMatchObject({ status: 409, code: "dedicated_number_requires_paid_plan" });
+    });
+
+    it("refuses a second trial for the same business", async () => {
+      trialSetup("CA", [{ id: "trial-1" }]);
+      await expect(searchBusinessNumberInventory(context, scope, { listAvailablePhoneNumbers: async () => [] })).rejects.toMatchObject({ status: 409, code: "trial_already_used" });
+    });
   });
 
   it("answers an unsupported country with 400", async () => {

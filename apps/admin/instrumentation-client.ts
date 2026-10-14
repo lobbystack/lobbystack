@@ -1,9 +1,10 @@
 import posthog from "posthog-js";
 
+import { DEFAULT_POSTHOG_HOST } from "./csp";
 import { sanitizeAnalyticsProperties } from "./src/lib/analytics-sanitize";
 
 const projectToken = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
-const apiHost = process.env.NEXT_PUBLIC_POSTHOG_HOST?.trim() || "https://us.i.posthog.com";
+const apiHost = process.env.NEXT_PUBLIC_POSTHOG_HOST?.trim() || DEFAULT_POSTHOG_HOST;
 
 /**
  * Next.js runs this module once per app launch. PostHog starts opted out and
@@ -25,6 +26,12 @@ export function initializeClientAnalytics(): void {
     capture_pageview: "history_change",
     capture_pageleave: "if_capture_pageview",
     capture_performance: { web_vitals: true, network_timing: false, web_vitals_attribution: false },
+    // Read and write the cookie lobbystack.com sets once a visitor consents, so
+    // the anonymous id from the landing site reaches identify() and is merged
+    // into the operator. Cookies are named per project token, so both sites
+    // must use the same one.
+    persistence: "localStorage+cookie",
+    cross_subdomain_cookie: true,
     opt_out_capturing_by_default: true,
     save_campaign_params: false,
     save_referrer: false,

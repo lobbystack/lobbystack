@@ -16,6 +16,15 @@
     "spanish": "Español",
     "serbian": "Srpski"
   },
+  "callerLanguage": {
+    "en": "Inglés",
+    "fr": "Francés",
+    "es": "Español",
+    "de": "Alemán",
+    "pt": "Portugués (Brasil)",
+    "it": "Italiano",
+    "nl": "Neerlandés"
+  },
   "badges": {
     "live": "En vivo",
     "configured": "Configurado",
@@ -70,12 +79,23 @@
       "failed": "No pudimos guardar sus comentarios."
     }
   },
+  "numberTrial": {
+    "daysLeft_one": "El {{number}} es suyo {{count}} día más. Elija un plan para conservarlo.",
+    "daysLeft_many": "El {{number}} es suyo {{count}} días más. Elija un plan para conservarlo.",
+    "daysLeft_other": "El {{number}} es suyo {{count}} días más. Elija un plan para conservarlo.",
+    "outOfMinutes": "Se acabaron sus minutos. Las llamadas ahora van al {{forwardTo}}.",
+    "stillAvailable": "El {{number}} sigue disponible. Suscríbase ahora para recuperarlo.",
+    "keepNumber": "Conservar mi número",
+    "getReceptionistBack": "Recuperar a mi recepcionista",
+    "getNumberBack": "Recuperar mi número"
+  },
   "testCall": {
     "trigger": "Llamada de prueba",
     "title": "Pruebe su recepcionista con IA",
     "description": "Inicie una llamada en vivo desde el navegador con su recepcionista configurada.",
     "connecting": "Conectando...",
     "hangUp": "Colgar",
+    "upgrade": "Cambiar de plan",
     "status": {
       "idle": "Listo cuando usted quiera",
       "requesting_microphone": "Solicitando acceso al micrófono",
@@ -105,6 +125,7 @@
       "browserNoWebRtc": "Este navegador no admite llamadas de voz en vivo.",
       "businessNotFound": "No encontramos este espacio de trabajo. Cambie a un espacio de trabajo activo e inténtelo de nuevo.",
       "rateLimited": "Se han iniciado demasiadas llamadas de prueba. Inténtelo de nuevo en unos minutos.",
+      "voiceLimitReached": "Este espacio de trabajo ya usó los minutos de voz de este mes.",
       "unavailable": "Su recepcionista con IA no está disponible en este momento.",
       "generic": "Algo salió mal al iniciar la llamada."
     }

@@ -1,8 +1,11 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
+import { act, cleanup, fireEvent, render as renderView, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DashboardTestCallWidget } from "./dashboard-test-call-widget";
+import { UpgradePlanDialogProvider } from "./upgrade-plan-dialog-context";
 import { DISCONNECT_GRACE_MS } from "@lobbystack/web-voice";
 import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
 
@@ -75,6 +78,15 @@ const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
   });
 });
 
+const openUpgrade = vi.fn();
+let client: QueryClient;
+// Billing is seeded, so the only request a test sees is the call itself.
+function render(ui: ReactNode, plan = "pro") {
+  client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+  client.setQueryData(["billing", "business-1"], { effectivePlan: plan });
+  return renderView(<QueryClientProvider client={client}><UpgradePlanDialogProvider onOpen={openUpgrade}>{ui}</UpgradePlanDialogProvider></QueryClientProvider>);
+}
+
 beforeEach(() => {
   telemetryRef.current = createRecordedBrowserTelemetry();
   FakePeerConnection.last = undefined;
@@ -92,6 +104,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  client?.clear();
   vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.clearAllMocks();
@@ -252,5 +265,31 @@ describe("DashboardTestCallWidget voice call endings", () => {
     expect(statusText()).toBe("testCall.status.ended");
     telemetryRef.current!.expectEvent("web.voice.test_call_ended", { endedBy: "agent" });
     expect(eventNames()).not.toContain("web.voice.test_call_error");
+  });
+});
+
+describe("DashboardTestCallWidget when the free minutes run out", () => {
+  function refuseForUsedMinutes() {
+    fetchMock.mockImplementationOnce(async () => Response.json({ code: "voice_limit_reached" }, { status: 402 }));
+  }
+
+  it("says the minutes are used and offers the plans to a free workspace", async () => {
+    refuseForUsedMinutes();
+    render(<DashboardTestCallWidget businessId={"business-1" as never} businessSlug="acme-dental" />, "free_cloud");
+    fireEvent.click(screen.getByRole("button", { name: "testCall.trigger" }));
+
+    const upgrade = await screen.findByRole("button", { name: "testCall.upgrade" });
+    expect(screen.getAllByText("testCall.errors.voiceLimitReached").length).toBeGreaterThan(0);
+    fireEvent.click(upgrade);
+    expect(openUpgrade).toHaveBeenCalledOnce();
+  });
+
+  it("shows no upgrade to a paid workspace that reached its spending cap", async () => {
+    refuseForUsedMinutes();
+    render(<DashboardTestCallWidget businessId={"business-1" as never} businessSlug="acme-dental" />);
+    fireEvent.click(screen.getByRole("button", { name: "testCall.trigger" }));
+
+    await waitFor(() => expect(screen.getAllByText("testCall.errors.voiceLimitReached").length).toBeGreaterThan(0));
+    expect(screen.queryByRole("button", { name: "testCall.upgrade" })).toBeNull();
   });
 });

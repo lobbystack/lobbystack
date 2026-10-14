@@ -4,7 +4,7 @@ import { and, eq, gt, ne, or, sql } from "drizzle-orm";
 
 import { enqueueOutbox, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { businessInvitations, businessMemberships, businesses, closures, receptionistProfiles, staff, users } from "@lobbystack/db";
-import { defaultAppointmentChangePolicy, normalizeAuthEmail } from "@lobbystack/shared";
+import { defaultAppointmentChangePolicy, defaultGreeting, normalizeAuthEmail } from "@lobbystack/shared";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import { enqueueBusinessSummaryRefresh } from "./businessSummary";
@@ -108,7 +108,7 @@ export async function createBusiness(
     await tx.insert(staff).values({ businessId, name: input.name.trim(), timezone });
     await tx.insert(receptionistProfiles).values({
       businessId,
-      greeting: `Thanks for calling ${input.name.trim()}.`,
+      greeting: defaultGreeting(input.name),
       tone: "warm and direct",
       summary: `${input.name.trim()} uses LobbyStack to answer calls.`,
       bookingPolicy: "Only confirm a booking after availability is checked.",

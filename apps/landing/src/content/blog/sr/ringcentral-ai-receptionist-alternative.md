@@ -83,7 +83,7 @@ Oba proizvoda, stanje od 9. oktobra 2026. godine:
 | Prekoračenje | $0.50 po minutu | $0.20 po minutu na paketu Starter, $0.18 na paketu Pro |
 | Kako se broje minuti | Svaki poziv se zaokružuje naviše na sledećih 30 sekundi | Po sekundi; pozivi kraći od 10 sekundi i spam pozivi koje recepcioner prekine se ne računaju |
 | Besplatna opcija | Probni period od 14 dana | Besplatan paket sa 30 minuta razgovora u pregledaču mesečno, bez kartice i broja telefona, bez isteka |
-| Broj telefona | Nov broj uključen, ili prenosite svoj | Jedan broj na paketima Starter i Pro, u SAD, Kanadi, Velikoj Britaniji ili Australiji |
+| Broj telefona | Nov broj uključen, ili prenosite svoj | Jedan broj na paketima Starter i Pro, u SAD, Kanadi, Velikoj Britaniji, Australiji ili na Novom Zelandu |
 | Radi sa postojećim brojem | Da, preko prosleđivanja ili SIP-a | Da, preko prosleđivanja kod operatera |
 | Jezici pozivalaca | Engleski, španski, francuski, italijanski, nemački i portugalski, prema njegovim čestim pitanjima, a još jezika stiže "uskoro"; menja jezik tokom poziva | Počinje na engleskom ili francuskom, zatim odgovara na jeziku pozivaoca: 70+ jezika na OpenAI GPT-Live |
 | Kalendari | Google i Outlook | Google Calendar |
@@ -134,7 +134,7 @@ U Kanadi RingCentral prodaje AIR kao samostalni paket ili kao dodatak. U Velikoj
 
 Cene su u kanadskim dolarima (C$), britanskim funtama (£) i australijskim dolarima (A$), sa RingCentral regionalnih stranica sa cenama.
 
-LobbyStack naplaćuje sve pakete u američkim dolarima: $30 mesečno za Starter i $100 za Pro. Nudi lokalne brojeve, kao i besplatne brojeve za pozivaoce gde postoje, u SAD, Kanadi, Velikoj Britaniji i Australiji. Na usluzi LobbyStack Cloud potvrde i podsetnici za termine idu samo na američke i kanadske brojeve, a SMS obaveštenja za Vaš tim traže američki ili kanadski mobilni broj. Firma iz Velike Britanije ili Australije i dalje dobija odgovorene pozive i zakazane termine, ali pozivaoci sa britanskim ili australijskim mobilnim brojevima neće dobiti SMS potvrde ni podsetnike.
+LobbyStack naplaćuje sve pakete u američkim dolarima: $30 mesečno za Starter i $100 za Pro. Nudi lokalne brojeve, kao i besplatne brojeve za pozivaoce gde postoje, u SAD, Kanadi, Velikoj Britaniji, Australiji i na Novom Zelandu. Na usluzi LobbyStack Cloud potvrde i podsetnici za termine idu samo na američke i kanadske brojeve, a SMS obaveštenja za Vaš tim traže američki ili kanadski mobilni broj. Firma iz Velike Britanije ili Australije i dalje dobija odgovorene pozive i zakazane termine, ali pozivaoci sa britanskim ili australijskim mobilnim brojevima neće dobiti SMS potvrde ni podsetnike.
 
 ## Kako se AIR poredi sa AI recepcionerima drugih telefonskih sistema?
 

@@ -102,7 +102,7 @@ For other live services' rates, see [what an answering service costs](/blog/how-
 | Other services | Payment collection, intake forms, outbound call assists, website chat | None of these; it answers phone calls |
 | Texts | Call and text from your business number | Booking confirmation and 24-hour reminder with the caller's consent, to US and Canadian numbers; the AI doesn't reply to texts |
 | Integrations | "5000+" through direct integrations and Zapier | REST API and signed webhooks for six events |
-| Where it works | US, Canada and the US Caribbean | Phone numbers in the US, Canada, the UK and Australia |
+| Where it works | US, Canada and the US Caribbean | Phone numbers in the US, Canada, the UK, Australia and New Zealand |
 | HIPAA | Lists HIPAA-compliant services | Makes no HIPAA claim |
 | Setup fee | None on the pricing page | None on any plan |
 | Source code | A staffed service | MIT-licensed; self-host with your own OpenAI and Twilio accounts |
@@ -195,7 +195,7 @@ No. Ruby's receptionists answer, and its AI works behind the scenes. A tool call
 
 ### Can I keep my business number if I leave Ruby?
 
-If your carrier holds the number and forwards calls to Ruby, change the forwarding rule to point at LobbyStack. If Ruby hosts the number, ask Ruby how to transfer it out before you cancel, and contact the LobbyStack team to port it. LobbyStack offers numbers in the US, Canada, the UK and Australia.
+If your carrier holds the number and forwards calls to Ruby, change the forwarding rule to point at LobbyStack. If Ruby hosts the number, ask Ruby how to transfer it out before you cancel, and contact the LobbyStack team to port it. LobbyStack offers numbers in the US, Canada, the UK, Australia and New Zealand.
 
 ## Choose Ruby when
 

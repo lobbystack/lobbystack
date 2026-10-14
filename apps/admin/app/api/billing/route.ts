@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { and, desc, eq, sql } from "drizzle-orm";
 
 import { billingAccounts, billingTransactions, billingUsageEvents, billingUsageMonths } from "@lobbystack/db";
-import { billingAccess, getKnowledgeStorageUsageBytes, loadBillingContext, setOverageSpendingCap } from "@lobbystack/domain";
+import { billingAccess, getKnowledgeStorageUsageBytes, loadBillingContext, scheduledSubscriptionEndInTransaction, setOverageSpendingCap } from "@lobbystack/domain";
 import { jsonError } from "@/lib/api-helpers";
 import { operatorRoute } from "@/lib/operator-request";
 
@@ -29,7 +29,8 @@ export const GET = operatorRoute(async ({ businessId, transaction }) => NextResp
     }
   }
   const availableCheckoutPlans = (["starter", "pro"] as const).filter(plan => availableCheckoutIntervals[plan].length > 0);
-  return { availableCheckoutPlans, availableCheckoutIntervals, account: account[0] ?? null, effectivePlan, knowledgeStorageBytesUsed, permissions, checkoutAvailable: permissions.hasCheckoutAccess, widgetIssuanceEnabled: isWidgetKeyIssuanceEnabled(process.env), usage, usageStatus: month ? { ...month, usageComplete: Number(incompleteUsage[0]?.count ?? 0) === 0, overageSpendingCapCents: cap, overageSpendingCapReached: cap !== null && month.overageSpendCents > 0 && month.overageSpendCents >= cap } : null, transactions: permissions.hasBillingManagementAccess ? transactions : [] };
+  const planEndsAt = effectivePlan === "starter" || effectivePlan === "pro" ? await scheduledSubscriptionEndInTransaction(tx, businessId) : null;
+  return { availableCheckoutPlans, availableCheckoutIntervals, account: account[0] ?? null, effectivePlan, planEndsAt, knowledgeStorageBytesUsed, permissions, checkoutAvailable: permissions.hasCheckoutAccess, widgetIssuanceEnabled: isWidgetKeyIssuanceEnabled(process.env), usage, usageStatus: month ? { ...month, usageComplete: Number(incompleteUsage[0]?.count ?? 0) === 0, overageSpendingCapCents: cap, overageSpendingCapReached: cap !== null && month.overageSpendCents > 0 && month.overageSpendCents >= cap } : null, transactions: permissions.hasBillingManagementAccess ? transactions : [] };
 })));
 
 export const POST = operatorRoute(async ({ userId, businessId, body, domain }) => {

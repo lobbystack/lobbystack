@@ -631,7 +631,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
           question:
             "Da li se javlja posle radnog vremena, tokom pauze i vikendom?",
           answer:
-            "Da, na pozive koje mu prosledite. Podesite kod operatera da prosleđuje zauzete ili neodgovorene pozive za višak poziva i pauzu, pozive posle zatvaranja za noći i vikende, ili sve pozive. Kada prosleđujete broj ordinacije, zadržavate ga. Ako želite da prenesete broj, javite se LobbyStack timu. Starter i Pro uključuju jedan broj u SAD, Kanadi, Velikoj Britaniji ili Australiji.",
+            "Da, na pozive koje mu prosledite. Podesite kod operatera da prosleđuje zauzete ili neodgovorene pozive za višak poziva i pauzu, pozive posle zatvaranja za noći i vikende, ili sve pozive. Kada prosleđujete broj ordinacije, zadržavate ga. Ako želite da prenesete broj, javite se LobbyStack timu. Starter i Pro uključuju jedan broj u SAD, Kanadi, Velikoj Britaniji, Australiji ili na Novom Zelandu.",
         },
         {
           question: "Mogu li pacijenti telefonom da pomere ili otkažu termin?",

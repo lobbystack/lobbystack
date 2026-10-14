@@ -40,13 +40,11 @@ describe("getSafeOnboardingErrorMessage", () => {
     ).toBe("number.trialAccountPurchaseLimit");
   });
 
-  it("falls back for retired phone-verification errors instead of returning stale copy", () => {
-    expect(
-      getSafeOnboardingErrorMessage(
-        Object.assign(new Error("A valid mobile phone number is required."), { code: "phone_number_invalid" }),
-        t,
-        "number.searchFailed",
-      ),
-    ).toBe("number.searchFailed");
+  it("explains the phone step's refusals in the owner's language", () => {
+    const refusal = (code: string) => getSafeOnboardingErrorMessage(Object.assign(new Error("server text"), { code }), t, "verifyPhone.sendFailed");
+    expect(refusal("phone_number_invalid")).toBe("verifyPhone.errors.invalidNumber");
+    expect(refusal("phone_voip_refused")).toBe("verifyPhone.errors.voip");
+    expect(refusal("phone_country_mismatch")).toBe("verifyPhone.errors.countryMismatch");
+    expect(refusal("something_else")).toBe("verifyPhone.sendFailed");
   });
 });

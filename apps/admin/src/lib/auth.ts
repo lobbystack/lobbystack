@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth";
 import { emailOTP } from "better-auth/plugins/email-otp";
-import { APIError, createAuthMiddleware } from "better-auth/api";
+import { APIError, createAuthMiddleware, getOAuthState } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { runWithAdapter } from "@better-auth/core/context";
 import { z } from "zod";
@@ -56,6 +56,17 @@ export function isDisabledAuthEmailEndpoint(path?: string): boolean {
   if (!path) return false;
   if (path === "/send-verification-email") return true;
   return (path.startsWith("/email-otp/") || path.endsWith("/email-otp")) && !enabledEmailOtpPaths.has(path);
+}
+
+/** Google sign-in reuses the Google Calendar OAuth client, so it is on wherever that client is configured. */
+function googleOAuthClient() {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  return clientId && clientSecret ? { clientId, clientSecret } : null;
+}
+
+export function googleSignInEnabled(): boolean {
+  return googleOAuthClient() !== null;
 }
 
 export function getAuthDatabase() {
@@ -201,6 +212,7 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
   const database = getAuthDatabase();
   const secondaryStorage = getAuthSecondaryStorage();
   const trustedOrigins = configuredAppOrigins(process.env, [], true);
+  const google = googleOAuthClient();
   return betterAuth({
     database: drizzleAdapter(adapterDatabase ?? database.db, {
       provider: "pg",
@@ -235,6 +247,22 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
         });
       },
     })],
+    ...(google ? { socialProviders: { google: {
+      ...google,
+      // Better Auth asks Google for openid, email and profile only. This stops Google from adding
+      // the Calendar scopes the shared client may already hold to the sign-in token.
+      includeGrantedScopes: false,
+      disableIdTokenSignIn: true,
+      requireEmailVerification: process.env.REQUIRE_EMAIL_VERIFICATION === "true",
+      // The sign-in page sends its language as additionalData; that is client input, so clamp it.
+      mapProfileToUser: async () => {
+        const locale = (await getOAuthState())?.preferredLocale;
+        return { preferredLocale: resolveLocale(typeof locale === "string" ? locale : undefined) };
+      },
+    } } } : {}),
+    // A Google sign-in joins the existing account with the same email. Better Auth still refuses
+    // when that account never verified its email, so a squatter's unverified signup can't capture it.
+    account: { accountLinking: { trustedProviders: ["google"] } },
     emailAndPassword: {
       enabled: true,
       autoSignIn: false,

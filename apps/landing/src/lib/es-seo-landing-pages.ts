@@ -454,7 +454,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
           question:
             "¿Contesta fuera de horario, a la hora del almuerzo y los fines de semana?",
           answer:
-            "Sí, en las llamadas que usted le desvía. Configure con su operador el desvío de las llamadas ocupadas o sin respuesta para cubrir el exceso y el almuerzo, de las llamadas después del cierre para las noches y los fines de semana, o de todas las llamadas. Conserva el número de su clínica cuando lo desvía. Si prefiere portar el número, contacte al equipo de LobbyStack. Starter y Pro incluyen un número en Estados Unidos, Canadá, Reino Unido o Australia.",
+            "Sí, en las llamadas que usted le desvía. Configure con su operador el desvío de las llamadas ocupadas o sin respuesta para cubrir el exceso y el almuerzo, de las llamadas después del cierre para las noches y los fines de semana, o de todas las llamadas. Conserva el número de su clínica cuando lo desvía. Si prefiere portar el número, contacte al equipo de LobbyStack. Starter y Pro incluyen un número en Estados Unidos, Canadá, Reino Unido, Australia o Nueva Zelanda.",
         },
         {
           question:

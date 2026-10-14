@@ -22,6 +22,15 @@
     "spanish": "Español",
     "serbian": "Srpski"
   },
+  "callerLanguage": {
+    "en": "Anglais",
+    "fr": "Français",
+    "es": "Espagnol",
+    "de": "Allemand",
+    "pt": "Portugais (Brésil)",
+    "it": "Italien",
+    "nl": "Néerlandais"
+  },
   "badges": {
     "live": "Actif",
     "configured": "Configuré",
@@ -76,12 +85,23 @@
       "failed": "Nous n’avons pas pu enregistrer ce feedback."
     }
   },
+  "numberTrial": {
+    "daysLeft_one": "Le {{number}} est à vous encore {{count}} jour. Choisissez un forfait pour le garder.",
+    "daysLeft_many": "Le {{number}} est à vous encore {{count}} jours. Choisissez un forfait pour le garder.",
+    "daysLeft_other": "Le {{number}} est à vous encore {{count}} jours. Choisissez un forfait pour le garder.",
+    "outOfMinutes": "Vos minutes sont épuisées. Les appels vont maintenant au {{forwardTo}}.",
+    "stillAvailable": "Le {{number}} est encore disponible. Abonnez-vous pour le récupérer.",
+    "keepNumber": "Garder mon numéro",
+    "getReceptionistBack": "Retrouver ma réceptionniste",
+    "getNumberBack": "Récupérer mon numéro"
+  },
   "testCall": {
     "trigger": "Appel test",
     "title": "Tester votre réceptionniste IA",
     "description": "Démarrez un appel en direct dans le navigateur avec votre réceptionniste configurée.",
     "connecting": "Connexion...",
     "hangUp": "Raccrocher",
+    "upgrade": "Changer de forfait",
     "status": {
       "idle": "Prêt quand vous l’êtes",
       "requesting_microphone": "Demande d’accès au microphone",
@@ -111,6 +131,7 @@
       "browserNoWebRtc": "Ce navigateur ne prend pas en charge les appels vocaux en direct.",
       "businessNotFound": "Nous ne trouvons pas cet espace de travail. Passez à un espace actif et réessayez.",
       "rateLimited": "Trop d’appels test ont été lancés. Veuillez réessayer bientôt.",
+      "voiceLimitReached": "Cet espace de travail a utilisé ses minutes vocales de ce mois-ci.",
       "unavailable": "Votre réceptionniste IA est indisponible pour le moment.",
       "generic": "Une erreur est survenue au démarrage de l’appel."
     }

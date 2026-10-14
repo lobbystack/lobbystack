@@ -15,7 +15,7 @@ canonicalSlug: "what-is-a-phone-answering-service"
 
 Un **servicio de atención telefónica** contesta las llamadas de su negocio, a nombre de su empresa, cuando usted no puede. Recepcionistas humanas, un software de IA o una mezcla de ambos saludan a quien llama, responden preguntas, toman recados, agendan citas y le transfieren las llamadas urgentes. Usted desvía su número al servicio y elige qué llamadas recibe: todas, las que su equipo no alcanza a contestar o las de fuera de horario.
 
-*Precios revisados el 9 de octubre de 2026 en la página de precios de cada proveedor, en dólares estadounidenses y sin impuestos. Son proveedores de Norteamérica, y LobbyStack ofrece números en Estados Unidos, Canadá, el Reino Unido y Australia. LobbyStack escribió esta guía y vende una recepcionista con IA, así que nuestro plan aparece como un ejemplo más y lo marcamos como nuestro.*
+*Precios revisados el 9 de octubre de 2026 en la página de precios de cada proveedor, en dólares estadounidenses y sin impuestos. Son proveedores de Norteamérica, y LobbyStack ofrece números en Estados Unidos, Canadá, el Reino Unido, Australia y Nueva Zelanda. LobbyStack escribió esta guía y vende una recepcionista con IA, así que nuestro plan aparece como un ejemplo más y lo marcamos como nuestro.*
 
 ## ¿Qué hace un servicio de atención telefónica?
 
@@ -151,7 +151,7 @@ Algunos proveedores contestan gratis una parte de las llamadas reales. El [plan 
 
 ### ¿Puedo conservar el número de mi negocio?
 
-Sí. Usted desvía su número actual al servicio y elige una regla de desvío en su operador: todas las llamadas, el desbordamiento o las llamadas fuera de horario. Algunos servicios también se quedan con su número por portabilidad, y [PATLive](https://www.patlive.com/pricing/) lo hace gratis, tanto de entrada como de salida. Con LobbyStack, usted desvía su número a un número de LobbyStack en Estados Unidos, Canadá, el Reino Unido o Australia.
+Sí. Usted desvía su número actual al servicio y elige una regla de desvío en su operador: todas las llamadas, el desbordamiento o las llamadas fuera de horario. Algunos servicios también se quedan con su número por portabilidad, y [PATLive](https://www.patlive.com/pricing/) lo hace gratis, tanto de entrada como de salida. Con LobbyStack, usted desvía su número a un número de LobbyStack en Estados Unidos, Canadá, el Reino Unido, Australia o Nueva Zelanda.
 
 ### ¿Qué diferencia hay entre un servicio de atención telefónica y un call center?
 

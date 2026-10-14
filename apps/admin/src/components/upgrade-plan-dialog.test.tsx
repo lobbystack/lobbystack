@@ -12,7 +12,7 @@ function setup(overrides: Partial<Props> = {}) {
     availableCheckoutPlans: ["starter", "pro"], availableCheckoutIntervals: { starter: ["monthly", "annual"], pro: ["monthly", "annual"] },
     billingInterval: "annual", currentPlan: "free_cloud", loading: null, loadingPlan: null,
     onBillingIntervalChange: vi.fn(), onContactEnterprise: vi.fn(), onOpenChange: vi.fn(), onStartCheckout: vi.fn(), open: true,
-    t: ((key: string) => key) as Props["t"], ...overrides,
+    selectedPlan: "starter", t: ((key: string) => key) as Props["t"], ...overrides,
   };
   render(<UpgradePlanDialog {...props} />);
   return props;
@@ -45,6 +45,11 @@ describe("main upgrade dialog", () => {
     await userEvent.click(screen.getByRole("button", { name: "billing.upgradeDialog.actions.enterprise" }));
     expect(props.onContactEnterprise).toHaveBeenCalledOnce();
     expect(props.onStartCheckout).not.toHaveBeenCalled();
+  });
+  it.each(["starter", "pro"] as const)("opens on %s as the primary choice", (selectedPlan) => {
+    setup({ selectedPlan });
+    const selected = screen.getAllByRole("heading", { level: 3 }).map(heading => heading.closest("section")!).filter(card => card.hasAttribute("data-selected"));
+    expect(selected.map(card => card.textContent)).toEqual([expect.stringContaining(`billing.upgradeDialog.plans.${selectedPlan}.name`)]);
   });
   it("changes the billing interval through the original tabs", async () => {
     const props = setup();

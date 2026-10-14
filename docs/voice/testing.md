@@ -31,6 +31,7 @@ These options change what runs:
 - **`--runs <n>`**: runs each scenario this many times. The default is 3.
 - **`--concurrency <n>`**: how many sessions run at once. The default is 4. With 22 sessions at once, many runs lost their transcripts.
 - **`--snapshot <file>`**: uses a real business's snapshot instead of the demo business.
+- **`--locale <code>`**: sets the business's caller language to `en`, `fr`, `es`, `de`, `pt`, `it` or `nl` and gives it that language's default greeting. The scripted caller speaks the same language. Without it, the caller speaks English and the business keeps its own language and greeting.
 
 Each run uses under a minute of GPT-Live audio, plus a delegation model call for each hand-over. The default 18 runs take about 5 minutes.
 
@@ -41,7 +42,7 @@ Agent tools that read the database fail in the eval, as they would with the data
 The eval prints one line per run, then a summary per scenario. A run line looks like this:
 
 ```text
-PASS trailing-goodbye  greeted at 1.6 s | ended 4.1 s after the caller | hand-overs: endCall | checks: done | goodbyes: 1 | receptionist: "Okay." / "Good bye."
+PASS trailing-goodbye  greeted at 1.6 s | ended 4.1 s after the caller | hand-overs: endCall | checks: done | goodbyes: 1 | opened: "Thank you for calling Maple Family Clinic." / "We're closed on Saturdays. Anything else?" | receptionist: "Okay." / "Good bye."
 ```
 
 Each field answers one question:
@@ -52,6 +53,7 @@ Each field answers one question:
 - **`hand-overs`**: each request GPT-Live handed to the backend after the opening question, by the tools the agent used. `reply` means the agent answered without a tool.
 - **`checks`**: each answer from the caller check, which runs when the caller speaks after the agent ended the call
 - **`goodbyes`**: how many of the receptionist's lines said goodbye. More than 1 means the caller heard a double goodbye.
+- **`opened`**: the greeting, then the answer to the opening question. With `--locale`, check that both are in that language.
 - **`receptionist`**: what the receptionist said after the opening question
 
 The script exits with code 1 when any run fails.
@@ -110,4 +112,4 @@ Both scripts read their callers from `scripts/voice/scenarios.ts`. Every call fi
 - **`expect`**: `ends` when the receptionist should hang up after the last line, `continues` when the call should go on
 - **`lines`**: the caller's lines, each with an optional `pauseMs` of silence before it. The phone script rounds pauses to whole seconds.
 
-Add a scenario when you fix a call that went wrong, so the eval catches the same failure next time. Put a scenario that books or changes an appointment in `BOOKING_SCENARIOS`, so it runs only when you name it.
+Add a scenario when you fix a call that went wrong, so the eval catches the same failure next time. Put a scenario that books or changes an appointment in `BOOKING_SCENARIOS`, so it runs only when you name it. Add each new line in `SCENARIOS` to `TRANSLATED_LINES` in every caller language, or `--locale` stops with an error naming the missing line.

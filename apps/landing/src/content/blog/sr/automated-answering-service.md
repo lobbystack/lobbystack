@@ -179,7 +179,7 @@ Pokrivenost određujete prosleđivanjem poziva kod operatera:
 | Prosleđivanje posle radnog vremena | Pokrivenost van radnog vremena |
 | Prosleđivanje svih poziva | Odgovaranje na sve pozive |
 
-LobbyStack odgovara na sve pozive koji stignu na njegov broj. Prosledite svoj broj ako želite da ga zadržite ili se javite timu za prenos broja. LobbyStack brojevi su dostupni u SAD, Kanadi, Ujedinjenom Kraljevstvu i Australiji. Ako su Vam problem noći i vikendi, pogledajte [javljanje na pozive van radnog vremena](/sr/solutions/after-hours-answering-service/).
+LobbyStack odgovara na sve pozive koji stignu na njegov broj. Prosledite svoj broj ako želite da ga zadržite ili se javite timu za prenos broja. LobbyStack brojevi su dostupni u SAD, Kanadi, Ujedinjenom Kraljevstvu, Australiji i na Novom Zelandu. Ako su Vam problem noći i vikendi, pogledajte [javljanje na pozive van radnog vremena](/sr/solutions/after-hours-answering-service/).
 
 ### 7. Testirajte uslugu pre nego što prosledite prave pozive
 

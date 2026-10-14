@@ -127,7 +127,7 @@ Pravilo podešavate kod operatera: prosleđivanje kada je zauzeto ili nema odgov
 
 Na primeru LobbyStack-a:
 
-- Dobijate LobbyStack broj (dostupan u SAD, Kanadi, Velikoj Britaniji i Australiji) i na njega prosleđujete poslovni broj. Može da se javlja na sve pozive ili samo na višak poziva i pozive posle radnog vremena.
+- Dobijate LobbyStack broj (dostupan u SAD, Kanadi, Velikoj Britaniji, Australiji i na Novom Zelandu) i na njega prosleđujete poslovni broj. Može da se javlja na sve pozive ili samo na višak poziva i pozive posle radnog vremena.
 - Upisuje termine u Google Calendar. Uz pristanak pozivaoca šalje SMS potvrdu i podsetnik 24 sata pre termina na brojeve iz SAD i Kanade.
 - Hitne pozive preusmerava na jedan broj po preduzeću. Preusmeravanje je slepo, pa osobu koja se javi ne upoznaje sa pozivom. Ako preusmeravanje ne uspe, kaže to pozivaocu, ponudi da primi poruku, a Vaš tim može da dobije upozorenje o neuspelom preusmeravanju.
 - Svaki poziv dobija rezime, transkript i snimak. Kada primi poruku, dobijate upozorenje e-poštom, a SMS upozorenja su opciona.

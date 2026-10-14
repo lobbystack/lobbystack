@@ -127,7 +127,7 @@ La regla se configura con su operador: desvío si está ocupado o no contesta pa
 
 Con LobbyStack como ejemplo:
 
-- Usted obtiene un número de LobbyStack (disponible en Estados Unidos, Canadá, Reino Unido y Australia) y desvía a él el número de su negocio. Puede contestar todas las llamadas o solo las de exceso o fuera de horario.
+- Usted obtiene un número de LobbyStack (disponible en Estados Unidos, Canadá, Reino Unido, Australia y Nueva Zelanda) y desvía a él el número de su negocio. Puede contestar todas las llamadas o solo las de exceso o fuera de horario.
 - Agenda citas en Google Calendar. Con el consentimiento de quien llama, envía por SMS una confirmación y un recordatorio 24 horas antes de la cita a números de Estados Unidos y Canadá.
 - Transfiere las llamadas urgentes a un solo número por negocio. Las transferencias son directas, sin aviso previo a la persona que contesta. Si una transferencia no se completa, se lo dice a quien llama, ofrece tomar un mensaje y su equipo puede recibir una alerta de transferencia fallida.
 - Cada llamada queda con un resumen, una transcripción y una grabación. Usted recibe una alerta por correo cuando toma un mensaje, y las alertas por SMS son opcionales.

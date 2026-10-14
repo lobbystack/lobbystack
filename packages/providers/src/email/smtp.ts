@@ -13,7 +13,7 @@ export type SmtpConfig = {
   replyTo?: string;
 };
 
-type TemplateName = "existing_account" | "verify_email" | "password_reset" | "invitation" | "operator_alert" | "feedback_submission" | "onboarding_followup";
+type TemplateName = "existing_account" | "verify_email" | "password_reset" | "invitation" | "operator_alert" | "feedback_submission" | "onboarding_followup" | "number_trial" | "number_release";
 
 export class SmtpEmailProvider {
   private readonly transporter: Transporter;
@@ -91,7 +91,116 @@ function templateBody(template: TemplateName, variables: Record<string, string>)
       return variables.body ?? "LobbyStack dashboard feedback";
     case "onboarding_followup":
       return onboardingFollowupBody(variables);
+    case "number_trial":
+      return numberTrialBody(variables);
+    case "number_release":
+      return numberReleaseBody(variables);
   }
+}
+
+// After a paid plan ends we keep the number 30 days, then release it.
+function numberReleaseCopy(variables: Record<string, string>): TrialCopy {
+  const num = variables.number ?? "";
+  const canceled = variables.kind === "canceled";
+  const ends = variables.periodEnd ?? "";
+  const release = variables.releaseDate ?? "";
+  switch (variables.locale) {
+    case "fr":
+      return canceled
+        ? { subject: `Votre forfait se termine le ${ends}`, lines: [`Votre forfait reste actif jusqu'au ${ends}. Nous gardons ensuite le ${num} pendant 30 jours, jusqu'au ${release}, puis nous le libérons. Réabonnez-vous d'ici là pour le garder.`], button: "Garder mon numéro" }
+        : { subject: `Nous libérons le ${num} le ${release}`, lines: [`Votre forfait est terminé, et nous gardons les numéros pendant 30 jours. Le ${num} sera libéré le ${release}. Réabonnez-vous d'ici là pour le garder.`], button: "Garder mon numéro" };
+    case "es":
+      return canceled
+        ? { subject: `Su plan termina el ${ends}`, lines: [`Su plan sigue activo hasta el ${ends}. Después conservamos el ${num} durante 30 días, hasta el ${release}, y luego lo liberamos. Vuelva a suscribirse antes para conservarlo.`], button: "Conservar mi número" }
+        : { subject: `Liberaremos el ${num} el ${release}`, lines: [`Su plan terminó, y conservamos los números durante 30 días. El ${num} se liberará el ${release}. Vuelva a suscribirse antes para conservarlo.`], button: "Conservar mi número" };
+    case "sr":
+      return canceled
+        ? { subject: `Vaš paket ističe ${ends}`, lines: [`Vaš paket je aktivan do ${ends}. Nakon toga čuvamo broj ${num} još 30 dana, do ${release}, a zatim ga oslobađamo. Obnovite pretplatu do tada da biste ga zadržali.`], button: "Zadrži moj broj" }
+        : { subject: `Oslobađamo broj ${num} ${release}`, lines: [`Vaš paket je istekao, a brojeve čuvamo 30 dana. Broj ${num} oslobađamo ${release}. Obnovite pretplatu do tada da biste ga zadržali.`], button: "Zadrži moj broj" };
+    default:
+      return canceled
+        ? { subject: `Your plan ends on ${ends}`, lines: [`Your plan stays active until ${ends}. After that, we keep ${num} for 30 days, until ${release}, then release it. Resubscribe before then to keep it.`], button: "Keep my number" }
+        : { subject: `We release ${num} on ${release}`, lines: [`Your plan ended, and we keep numbers for 30 days. ${num} goes on ${release}. Resubscribe before then to keep it.`], button: "Keep my number" };
+  }
+}
+
+/** The subject of a number release email, in the owner's language. */
+export function numberReleaseEmailSubject(variables: Record<string, string>): string {
+  return numberReleaseCopy(variables).subject;
+}
+
+function numberReleaseBody(variables: Record<string, string>): string {
+  const copy = numberReleaseCopy(variables);
+  const greet = TRIAL_GREETINGS[variables.locale ?? "en"] ?? TRIAL_GREETINGS.en!;
+  return [greet(variables.firstName ?? ""), "", ...copy.lines.flatMap((line) => [line, ""]), `${copy.button}: ${variables.url ?? ""}`, "", variables.senderName ?? "LobbyStack"].join("\n");
+}
+
+type TrialEmailKind = "day10" | "day13" | "ended" | "minutes_out";
+type TrialCopy = { subject: string; lines: string[]; button: string };
+
+// The trial emails, written to be urgent and true: the trial does end, the
+// receptionist does stop answering, and we do release the number afterwards.
+function numberTrialCopy(kind: TrialEmailKind, locale: string | undefined, v: Record<string, string>): TrialCopy {
+  const calls = Number(v.calls ?? "0");
+  const num = v.trialNumber ?? "";
+  const fwd = v.forwardTo ?? "";
+  const business = v.businessName ?? "";
+  if (locale === "fr") {
+    const answered = calls > 0 ? [`Votre réceptionniste a déjà répondu à ${calls} appel${calls > 1 ? "s" : ""} pour ${business}.`] : [];
+    switch (kind) {
+      case "day10": return { subject: `Plus que 4 jours pour garder le ${num}`, lines: [`Votre essai gratuit se termine le ${v.endDate}.`, ...answered, `À la fin de l'essai, votre réceptionniste cesse de répondre au ${num} et nous libérons le numéro. Choisissez un forfait pour le garder. Starter coûte 30 $ par mois pour 150 minutes.`], button: "Garder mon numéro" };
+      case "day13": return { subject: `Demain, dernier jour avec le ${num}`, lines: ["Votre essai gratuit se termine demain à minuit.", ...answered, `Ensuite, les appels au ${num} restent sans réponse et nous libérons le numéro. Gardez-le pour 30 $ par mois avec Starter.`], button: "Garder mon numéro" };
+      case "ended": return { subject: `Votre essai est terminé. Le ${num} ne répond plus`, lines: [`Votre essai de 14 jours s'est terminé hier, alors votre réceptionniste ne répond plus au ${num}. Nous libérons le numéro. Abonnez-vous dès maintenant si vous voulez le garder. Starter coûte 30 $ par mois pour 150 minutes.`], button: "Garder mon numéro" };
+      case "minutes_out": return { subject: `Vos minutes sont épuisées. Les appels vont maintenant au ${fwd}`, lines: [`${business} a utilisé ses 30 minutes gratuites, alors votre réceptionniste ne répond plus au ${num}. Les appels sonnent maintenant au ${fwd}. Passez à un forfait payant pour retrouver votre réceptionniste. Starter coûte 30 $ par mois pour 150 minutes, et vous gardez votre numéro.`], button: "Retrouver ma réceptionniste" };
+    }
+  }
+  if (locale === "es") {
+    const answered = calls > 0 ? [`Su recepcionista ya contestó ${calls} llamada${calls > 1 ? "s" : ""} para ${business}.`] : [];
+    switch (kind) {
+      case "day10": return { subject: `Quedan 4 días para conservar el ${num}`, lines: [`Su prueba gratuita termina el ${v.endDate}.`, ...answered, `Cuando termine la prueba, su recepcionista dejará de contestar el ${num} y liberaremos el número. Elija un plan para conservarlo. Starter cuesta 30 USD al mes por 150 minutos.`], button: "Conservar mi número" };
+      case "day13": return { subject: `Mañana es su último día con el ${num}`, lines: ["Su prueba gratuita termina mañana a medianoche.", ...answered, `Después, las llamadas al ${num} quedarán sin respuesta y liberaremos el número. Consérvelo por 30 USD al mes con Starter.`], button: "Conservar mi número" };
+      case "ended": return { subject: `Su prueba terminó. El ${num} dejó de contestar`, lines: [`Su prueba de 14 días terminó ayer, así que su recepcionista dejó de contestar el ${num}. Estamos liberando el número. Suscríbase ahora si quiere conservarlo. Starter cuesta 30 USD al mes por 150 minutos.`], button: "Conservar mi número" };
+      case "minutes_out": return { subject: `Se acabaron sus minutos. Las llamadas ahora van al ${fwd}`, lines: [`${business} usó sus 30 minutos gratuitos, así que su recepcionista dejó de contestar el ${num}. Las llamadas ahora suenan en el ${fwd}. Mejore su plan ahora para recuperar a su recepcionista. Starter cuesta 30 USD al mes por 150 minutos, y conserva su número.`], button: "Recuperar a mi recepcionista" };
+    }
+  }
+  if (locale === "sr") {
+    const answered = calls > 0 ? [`Vaš recepcioner je već odgovorio na ${calls} ${calls === 1 ? "poziv" : "poziva"} za ${business}.`] : [];
+    switch (kind) {
+      case "day10": return { subject: `Još 4 dana da zadržite broj ${num}`, lines: [`Vaša besplatna proba ističe ${v.endDate}.`, ...answered, `Kada proba istekne, recepcioner prestaje da odgovara na ${num} i mi oslobađamo broj. Izaberite paket da biste ga zadržali. Starter košta 30 USD mesečno za 150 minuta.`], button: "Zadrži moj broj" };
+      case "day13": return { subject: `Sutra je Vaš poslednji dan sa brojem ${num}`, lines: ["Vaša besplatna proba ističe sutra u ponoć.", ...answered, `Nakon toga, pozivi na ${num} ostaju bez odgovora i mi oslobađamo broj. Zadržite ga za 30 USD mesečno uz Starter.`], button: "Zadrži moj broj" };
+      case "ended": return { subject: `Proba je istekla. ${num} više ne odgovara`, lines: [`Vaša proba od 14 dana istekla je juče, pa recepcioner više ne odgovara na ${num}. Oslobađamo broj. Pretplatite se sada ako želite da ga zadržite. Starter košta 30 USD mesečno za 150 minuta.`], button: "Zadrži moj broj" };
+      case "minutes_out": return { subject: `Potrošili ste minute. Pozivi sada idu na ${fwd}`, lines: [`${business} je potrošio 30 besplatnih minuta, pa recepcioner više ne odgovara na ${num}. Pozivi sada zvone na ${fwd}. Pređite na plaćeni paket da biste vratili recepcionera. Starter košta 30 USD mesečno za 150 minuta, a broj ostaje Vaš.`], button: "Vrati mog recepcionera" };
+    }
+  }
+  const answered = calls > 0 ? [`So far your receptionist has answered ${calls} call${calls > 1 ? "s" : ""} for ${business}.`] : [];
+  switch (kind) {
+    case "day10": return { subject: `4 days left to keep ${num}`, lines: [`Your free trial ends on ${v.endDate}.`, ...answered, `When it ends, your receptionist stops answering ${num} and we release the number. Choose a plan to keep it. Starter is $30 a month for 150 minutes.`], button: "Keep my number" };
+    case "day13": return { subject: `Tomorrow is your last day with ${num}`, lines: ["Your free trial ends at midnight tomorrow.", ...answered, `After that, calls to ${num} go unanswered and we release the number. Keep it for $30 a month with Starter.`], button: "Keep my number" };
+    case "ended": return { subject: `Your trial ended. ${num} stopped answering`, lines: [`Your 14-day trial ended yesterday, so your receptionist stopped answering ${num}. We're releasing the number. Subscribe now if you want to keep it. Starter is $30 a month for 150 minutes.`], button: "Keep my number" };
+    case "minutes_out": return { subject: `You're out of minutes. Calls now go to ${fwd}`, lines: [`${business} used its 30 free minutes, so your receptionist stopped answering ${num}. Calls now ring ${fwd}. Upgrade now to get your receptionist back. Starter is $30 a month for 150 minutes, and you keep your number.`], button: "Get my receptionist back" };
+  }
+}
+
+const TRIAL_GREETINGS: Record<string, (name: string) => string> = {
+  fr: (name) => (name ? `Bonjour ${name},` : "Bonjour,"),
+  es: (name) => (name ? `Hola, ${name}:` : "Hola:"),
+  sr: (name) => (name ? `Zdravo, ${name},` : "Zdravo,"),
+  en: (name) => (name ? `Hi ${name},` : "Hi,"),
+};
+
+function trialKind(value: string | undefined): TrialEmailKind {
+  return value === "day10" || value === "day13" || value === "ended" ? value : "minutes_out";
+}
+
+/** The subject of a trial email, in the owner's language. */
+export function numberTrialEmailSubject(variables: Record<string, string>): string {
+  return numberTrialCopy(trialKind(variables.kind), variables.locale, variables).subject;
+}
+
+function numberTrialBody(variables: Record<string, string>): string {
+  const copy = numberTrialCopy(trialKind(variables.kind), variables.locale, variables);
+  const greet = TRIAL_GREETINGS[variables.locale ?? "en"] ?? TRIAL_GREETINGS.en!;
+  return [greet(variables.firstName ?? ""), "", ...copy.lines.flatMap((line) => [line, ""]), `${copy.button}: ${variables.url ?? ""}`, "", variables.senderName ?? "LobbyStack"].join("\n");
 }
 
 function existingAccountBody(variables: Record<string, string>): string {

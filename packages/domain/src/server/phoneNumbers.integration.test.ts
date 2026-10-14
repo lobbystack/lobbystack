@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { businesses, createDatabaseClient, onboardingNumberClaimEvents, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { businesses, createDatabaseClient, numberTrials, onboardingNumberClaimEvents, onboardingPhoneVerifications, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
 import { reserveOnboardingNumberClaim, searchBusinessNumberInventory } from "./phoneNumbers";
 import { createBusiness } from "./tenancy";
@@ -45,8 +45,21 @@ async function workspaceWithProvisioningClaim(tx: DatabaseTransaction, idleMinut
   return { userId, businessId, stalledId: stalled!.id };
 }
 
+/** A cloud workspace on the number step whose owner verified a Canadian mobile, so its number is a free trial. */
+async function trialWorkspace(tx: DatabaseTransaction, input: { phone: string; userId?: string }) {
+  const userId = input.userId ?? randomUUID();
+  if (!input.userId) await tx.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid`, name: "Sam" });
+  await tx.update(users).set({ phone: input.phone, phoneVerifiedAt: new Date() }).where(eq(users.id, userId));
+  await tx.execute(sql`set local role lobbystack_app`);
+  const { businessId } = await createBusiness({ db: tx as unknown as Database }, { userId, name: "Trial workspace", timezone: "America/Toronto", businessType: "test" });
+  await tx.execute(sql`reset role`);
+  await tx.update(businesses).set({ onboardingStage: "phone_number", deploymentMode: "cloud" }).where(eq(businesses.id, businessId));
+  await tx.insert(onboardingPhoneVerifications).values({ businessId, userId, phoneE164: input.phone, countryCode: "CA", status: "approved", approvedAt: new Date(), expiresAt: new Date(Date.now() + 600_000), requestFingerprint: "test" });
+  return { userId, businessId };
+}
+
 // The reservation function trusts only the app's login identity, so switch session_user rather than the current role.
-async function reserveAsApp(tx: DatabaseTransaction, input: { userId: string; businessId: string }) {
+async function reserveAsApp(tx: DatabaseTransaction, input: { userId: string; businessId: string; ipHash?: string }) {
   await tx.execute(sql`set local session authorization lobbystack_app`);
   try {
     const db = tx as unknown as Database;
@@ -71,6 +84,22 @@ describe.skipIf(!testUrl)("onboarding number claims against dedicated PostgreSQL
       expect(await reserveAsApp(tx, { userId, businessId })).toMatch(/^[0-9a-f-]{36}$/);
       const [stalled] = await tx.select({ status: onboardingNumberClaimEvents.status }).from(onboardingNumberClaimEvents).where(eq(onboardingNumberClaimEvents.id, stalledId));
       expect(stalled?.status).toBe("failed");
+    });
+  });
+
+  it("gives one free trial number per account, verified phone and network", async () => {
+    await rollbackTest(async (tx) => {
+      const first = await trialWorkspace(tx, { phone: "+14165550111" });
+      expect(await reserveAsApp(tx, { ...first, ipHash: "network-1" })).toMatch(/^[0-9a-f-]{36}$/);
+      const trials = await tx.select({ status: numberTrials.status, verifiedPhone: numberTrials.verifiedPhone, ipHash: numberTrials.ipHash }).from(numberTrials).where(eq(numberTrials.businessId, first.businessId));
+      expect(trials).toEqual([{ status: "reserved", verifiedPhone: "+14165550111", ipHash: "network-1" }]);
+
+      const sameAccount = await trialWorkspace(tx, { phone: "+14165550111", userId: first.userId });
+      await expect(reserveAsApp(tx, { ...sameAccount, ipHash: "network-2" })).rejects.toMatchObject({ status: 409, code: "trial_already_used" });
+      const samePhone = await trialWorkspace(tx, { phone: "+14165550111" });
+      await expect(reserveAsApp(tx, { ...samePhone, ipHash: "network-2" })).rejects.toMatchObject({ status: 409, code: "trial_already_used" });
+      const sameNetwork = await trialWorkspace(tx, { phone: "+14165550122" });
+      await expect(reserveAsApp(tx, { ...sameNetwork, ipHash: "network-1" })).rejects.toMatchObject({ status: 429, code: "trial_ip_limited" });
     });
   });
 });

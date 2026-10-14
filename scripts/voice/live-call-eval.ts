@@ -4,18 +4,18 @@
 // that runs on calls. Agent tools that need the database fail, as they would
 // with the database down. See docs/voice/testing.md.
 //
-// OPENAI_API_KEY=... pnpm voice:eval [--scenario <name>]... [--runs <n>] [--concurrency <n>] [--snapshot <file.json>]
+// OPENAI_API_KEY=... pnpm voice:eval [--scenario <name>]... [--runs <n>] [--concurrency <n>] [--snapshot <file.json>] [--locale <code>]
 
 import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 
 import { buildPhoneSessionConfig, callerIsDone, createAgentModel, createReceptionistAgent, LiveCallController, liveDelegationEnvironment, type CallControl, type LiveCallSummary } from "@lobbystack/agent-core";
-import { demoSnapshot, type BusinessContextSnapshot } from "@lobbystack/shared";
+import { defaultGreeting, demoSnapshot, isRuntimeLocale, runtimeLocales, type BusinessContextSnapshot } from "@lobbystack/shared";
 import OpenAI from "openai";
 import type { SidebandWS } from "openai/resources/live/sideband/ws";
 import { LiveWS } from "openai/resources/live/ws";
 
-import { findScenarios, OPENING, type CallScenario } from "./scenarios";
+import { callerLine, findScenarios, OPENING, type CallScenario } from "./scenarios";
 
 const RATE = 24_000;
 const CHUNK_MS = 100;
@@ -26,8 +26,9 @@ const END_WINDOW_MS = 15_000;
 const REPLY_QUIET_MS = 1_500;
 // How long the caller waits for a greeting before speaking: long enough for the worker's fallback and both retries.
 const GREETING_WAIT_MS = 15_000;
-// For the report only: the product never matches words to end a call.
-const GOODBYE = /\b(bye|goodbye|take care|have a (good|great|nice|wonderful)|thanks for calling)\b/i;
+// For the report only: the product never matches words to end a call. No
+// trailing \b, which fails after a non-ASCII letter such as the é of journée.
+const GOODBYE = /\b(bye|goodbye|take care|have a (good|great|nice|wonderful)|thanks for calling|au revoir|bonne (journée|soirée)|merci d'avoir appelé|adiós|hasta (luego|pronto)|que tenga (un )?buen día|gracias por llamar|auf wieder(hören|sehen)|tschüss|schönen tag|tchau|até (logo|mais)|tenha um (bom|ótimo) dia|obrigad[oa] (por ligar|pela ligação)|arrivederci|buona giornata|grazie per aver chiamato|tot ziens|doei|fijne dag|bedankt voor het bellen)/i;
 
 const { values } = parseArgs({
   options: {
@@ -35,11 +36,18 @@ const { values } = parseArgs({
     runs: { type: "string", default: "3" },
     concurrency: { type: "string", default: "4" },
     snapshot: { type: "string" },
+    locale: { type: "string" },
   },
 });
 if (!process.env.OPENAI_API_KEY) throw new Error("Set OPENAI_API_KEY.");
-const scenarios = findScenarios(values.scenario);
-const snapshot: BusinessContextSnapshot = values.snapshot ? JSON.parse(readFileSync(values.snapshot, "utf8")) : demoSnapshot;
+const locale = values.locale ?? "en";
+if (!isRuntimeLocale(locale)) throw new Error(`--locale must be one of ${runtimeLocales.join(", ")}.`);
+// The caller speaks the call's language: --locale's, or English.
+const opening = callerLine(OPENING, locale);
+const scenarios = findScenarios(values.scenario).map((scenario) => ({ ...scenario, lines: scenario.lines.map((line) => ({ ...line, text: callerLine(line.text, locale) })) }));
+const loaded: BusinessContextSnapshot = values.snapshot ? JSON.parse(readFileSync(values.snapshot, "utf8")) : demoSnapshot;
+// --locale opens the call in that language, with its default greeting.
+const snapshot: BusinessContextSnapshot = values.locale ? { ...loaded, defaultLocale: locale, greeting: defaultGreeting(loaded.displayName, locale) } : loaded;
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const model = createAgentModel(liveDelegationEnvironment());
 if (!model) throw new Error("No delegation model: set OPENAI_API_KEY or the AI_CHAT_* variables.");
@@ -78,7 +86,7 @@ async function speak(text: string): Promise<Buffer> {
   return phoneLine(Buffer.from(await response.arrayBuffer()));
 }
 
-type RunResult = { scenario: CallScenario; passed: boolean; greetedAfterMs?: number; greetingCommands: number; ended: boolean; endedAfterMs?: number; handOvers: string[]; checks: boolean[]; goodbyes: number; replies: string[]; error?: string };
+type RunResult = { scenario: CallScenario; passed: boolean; greetedAfterMs?: number; greetingCommands: number; ended: boolean; endedAfterMs?: number; handOvers: string[]; checks: boolean[]; goodbyes: number; opened: string[]; replies: string[]; error?: string };
 
 async function run(scenario: CallScenario, audio: Map<string, Buffer>, agentModel: NonNullable<typeof model>): Promise<RunResult> {
   const ws = new LiveWS(client);
@@ -91,6 +99,8 @@ async function run(scenario: CallScenario, audio: Map<string, Buffer>, agentMode
   let greetedAfterMs: number | undefined;
   let greetingCommands = 0;
   let callerSpoke = false;
+  // What the receptionist said before the scenario's lines: the greeting, then the answer to OPENING.
+  const opened = ["", ""];
   let reply = "";
   let replyEndMs = -1;
   const replies: string[] = [];
@@ -106,7 +116,10 @@ async function run(scenario: CallScenario, audio: Map<string, Buffer>, agentMode
     lastReplyEndMs = Math.max(lastReplyEndMs, event.end_ms);
     replied = true;
     if (!callerSpoke && greetedAfterMs === undefined && event.delta.trim()) greetedAfterMs = sessionMs;
-    if (event.start_ms < scenarioStartMs) return;
+    if (event.start_ms < scenarioStartMs) {
+      opened[callerSpoke ? 1 : 0] += event.delta;
+      return;
+    }
     if (replyEndMs >= 0 && event.start_ms - replyEndMs > 700) flushReply();
     reply += event.delta;
     replyEndMs = event.end_ms;
@@ -169,7 +182,7 @@ async function run(scenario: CallScenario, audio: Map<string, Buffer>, agentMode
     }, CHUNK_MS);
     await waitForReply(GREETING_WAIT_MS);
     callerSpoke = true;
-    await play(OPENING);
+    await play(opening);
     await waitForReply(20_000);
     scenarioStartMs = sessionMs;
     for (const [index, line] of scenario.lines.entries()) {
@@ -186,9 +199,9 @@ async function run(scenario: CallScenario, audio: Map<string, Buffer>, agentMode
     const goodbyes = replies.filter((line) => GOODBYE.test(line)).length;
     const endedAfterMs = ended === undefined ? undefined : Math.max(0, ended - lastLineAt);
     const passed = scenario.expect === "ends" ? ended !== undefined : ended === undefined;
-    return { scenario, passed, ...(greetedAfterMs !== undefined ? { greetedAfterMs } : {}), greetingCommands, ended: ended !== undefined, ...(endedAfterMs !== undefined ? { endedAfterMs } : {}), handOvers, checks, goodbyes, replies };
+    return { scenario, passed, ...(greetedAfterMs !== undefined ? { greetedAfterMs } : {}), greetingCommands, ended: ended !== undefined, ...(endedAfterMs !== undefined ? { endedAfterMs } : {}), handOvers, checks, goodbyes, opened, replies };
   } catch (error) {
-    return { scenario, passed: false, ...(greetedAfterMs !== undefined ? { greetedAfterMs } : {}), greetingCommands, ended: false, handOvers, checks, goodbyes: 0, replies, error: error instanceof Error ? error.message : String(error) };
+    return { scenario, passed: false, ...(greetedAfterMs !== undefined ? { greetedAfterMs } : {}), greetingCommands, ended: false, handOvers, checks, goodbyes: 0, opened, replies, error: error instanceof Error ? error.message : String(error) };
   } finally {
     clearInterval(pump);
     setTimeout(() => ws.close(), 1_000);
@@ -196,7 +209,7 @@ async function run(scenario: CallScenario, audio: Map<string, Buffer>, agentMode
 }
 
 const audio = new Map<string, Buffer>();
-for (const text of new Set([OPENING, ...scenarios.flatMap((scenario) => scenario.lines.map((line) => line.text))])) audio.set(text, await speak(text));
+for (const text of new Set([opening, ...scenarios.flatMap((scenario) => scenario.lines.map((line) => line.text))])) audio.set(text, await speak(text));
 
 const jobs = Array.from({ length: Number(values.runs) }, () => scenarios).flat();
 const results: RunResult[] = [];
@@ -207,7 +220,7 @@ await Promise.all(Array.from({ length: Math.min(Number(values.concurrency), jobs
     results.push(result);
     const greeting = `${result.greetedAfterMs === undefined ? "no greeting in 15 s" : `greeted at ${(result.greetedAfterMs / 1000).toFixed(1)} s`}${result.greetingCommands ? ` after ${result.greetingCommands} command${result.greetingCommands > 1 ? "s" : ""}` : ""}`;
     const outcome = result.error ? `error: ${result.error}` : result.ended ? `ended ${((result.endedAfterMs ?? 0) / 1000).toFixed(1)} s after the caller` : "still open";
-    console.log(`${result.passed ? "PASS" : "FAIL"} ${result.scenario.name.padEnd(17)} ${greeting} | ${outcome} | hand-overs: ${result.handOvers.join(", ") || "none"} | checks: ${result.checks.map((done) => (done ? "done" : "continue")).join(", ") || "none"} | goodbyes: ${result.goodbyes} | receptionist: ${result.replies.map((line) => `"${line}"`).join(" / ")}`);
+    console.log(`${result.passed ? "PASS" : "FAIL"} ${result.scenario.name.padEnd(17)} ${greeting} | ${outcome} | hand-overs: ${result.handOvers.join(", ") || "none"} | checks: ${result.checks.map((done) => (done ? "done" : "continue")).join(", ") || "none"} | goodbyes: ${result.goodbyes} | opened: ${result.opened.map((line) => `"${line.trim()}"`).join(" / ")} | receptionist: ${result.replies.map((line) => `"${line}"`).join(" / ")}`);
   }
 }));
 

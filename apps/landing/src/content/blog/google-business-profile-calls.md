@@ -127,7 +127,7 @@ You set the rule with your carrier: forward when busy or unanswered for overflow
 
 With LobbyStack as the example:
 
-- You get a LobbyStack number (available in the US, Canada, the UK and Australia) and forward your business number to it. It can answer every call or only overflow or after-hours calls.
+- You get a LobbyStack number (available in the US, Canada, the UK, Australia and New Zealand) and forward your business number to it. It can answer every call or only overflow or after-hours calls.
 - It books into Google Calendar. With the caller's consent, it texts a confirmation and a reminder 24 hours before the appointment to US and Canadian numbers.
 - It transfers urgent calls to one number per business. Transfers are blind, so it doesn't brief the person who picks up. If a transfer can't go through, it tells the caller, offers to take a message, and your team can get a "Live call transfer failed" alert.
 - Each call gets a summary, transcript and recording. You get an email alert when it takes a message, and text alerts are optional.

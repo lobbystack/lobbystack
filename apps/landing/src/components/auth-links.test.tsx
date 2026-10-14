@@ -61,3 +61,17 @@ describe.each(["es", "sr"] as const)("%s auth links", (locale) => {
     }
   )
 })
+
+describe.each(["en", "fr", "es", "sr"] as const)("%s pricing plan links", (locale) => {
+  it("sends Starter and Pro to signup with their plan, and Free without one", () => {
+    const hrefs = dashboardLinks(renderToStaticMarkup(<PricingSection locale={locale} />))
+      .map((link) => link.href)
+      .filter((href) => href?.includes("/signup"))
+
+    expect(hrefs).toEqual([
+      `https://app.lobbystack.com/${locale}/signup`,
+      `https://app.lobbystack.com/${locale}/signup?plan=starter`,
+      `https://app.lobbystack.com/${locale}/signup?plan=pro`,
+    ])
+  })
+})

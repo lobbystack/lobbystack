@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   posthog: {
     __loaded: true,
     capture: vi.fn(),
+    get_property: vi.fn(),
     identify: vi.fn(),
     register: vi.fn(),
     group: vi.fn(),
@@ -40,6 +41,7 @@ afterEach(() => {
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
   vi.clearAllMocks();
+  mocks.posthog.get_property.mockReset();
 });
 
 function setup(enabled: boolean | undefined) {
@@ -145,8 +147,19 @@ describe("sensitive analytics routes", () => {
 
   it("drops identity and refuses to opt in on a token-bearing demo route", () => {
     mocks.pathname = "/demo/private-token";
+    mocks.posthog.get_property.mockReturnValue("identified");
     setup(true);
     expect(mocks.posthog.reset).toHaveBeenCalled();
+    expect(mocks.posthog.opt_in_capturing).not.toHaveBeenCalled();
+    expect(mocks.posthog.capture).not.toHaveBeenCalled();
+  });
+
+  it("keeps a visitor's anonymous id on signup so identify can merge their landing visit", () => {
+    mocks.pathname = "/signup";
+    mocks.posthog.get_property.mockReturnValue("anonymous");
+    setup(true);
+    expect(mocks.posthog.get_property).toHaveBeenCalledWith("$user_state");
+    expect(mocks.posthog.reset).not.toHaveBeenCalled();
     expect(mocks.posthog.opt_in_capturing).not.toHaveBeenCalled();
     expect(mocks.posthog.capture).not.toHaveBeenCalled();
   });
@@ -154,7 +167,7 @@ describe("sensitive analytics routes", () => {
 
 describe("queued authentication analytics", () => {
   it.each(["web.auth.login_succeeded", "web.auth.signup_succeeded"] as const)("captures %s once after consent resolves", async event => {
-    recordAuthSuccess(event);
+    recordAuthSuccess(event, { method: "email" });
     const client = setup(undefined);
     expect(mocks.posthog.capture).not.toHaveBeenCalled();
     await act(async () => { client.setQueryData(["appearance-preferences", "business"], { telemetryEnabled: true }); });
@@ -162,27 +175,34 @@ describe("queued authentication analytics", () => {
       businessId: "business",
       deploymentMode: "development",
       pathname: "/calls",
+      method: "email",
       $groups: { business: "business:business" },
     }));
     expect(mocks.posthog.capture.mock.calls.filter(([name]) => name === event)).toHaveLength(1);
     expect(consumeAuthSuccess()).toBeNull();
   });
 
-  it("carries the calculator source onto the deferred signup event", async () => {
-    recordAuthSuccess("web.auth.signup_succeeded", { source: "calculator" });
+  it("carries the Google method and calculator source onto the deferred signup event", async () => {
+    recordAuthSuccess("web.auth.signup_succeeded", { method: "google", source: "calculator" });
     const client = setup(undefined);
     await act(async () => { client.setQueryData(["appearance-preferences", "business"], { telemetryEnabled: true }); });
     await waitFor(() => expect(mocks.posthog.capture).toHaveBeenCalledWith("web.auth.signup_succeeded", {
       businessId: "business",
       deploymentMode: "development",
       pathname: "/calls",
+      method: "google",
       source: "calculator",
       $groups: { business: "business:business" },
     }));
   });
 
+  it("reads a signup queued before the method existed as an email signup", () => {
+    sessionStorage.setItem("lobbystack.pending-auth-success", JSON.stringify({ event: "web.auth.signup_succeeded", createdAt: Date.now() }));
+    expect(consumeAuthSuccess()).toEqual({ event: "web.auth.signup_succeeded", method: "email" });
+  });
+
   it("discards queued authentication analytics when the tenant opts out", () => {
-    recordAuthSuccess("web.auth.login_succeeded");
+    recordAuthSuccess("web.auth.login_succeeded", { method: "email" });
     setup(false);
     expect(mocks.posthog.capture).not.toHaveBeenCalled();
     expect(consumeAuthSuccess()).toBeNull();
@@ -258,5 +278,39 @@ describe("queued workspace-switch analytics", () => {
 
     expect(mocks.posthog.capture).not.toHaveBeenCalledWith("web.workspace.business_switched", expect.anything());
     await waitFor(() => expect(window.sessionStorage.getItem("lobbystack.pending-workspace-switch")).toBeNull());
+  });
+});
+
+describe("queued analytics age", () => {
+  const hour = 60 * 60_000;
+  const queued = [
+    ["web.auth.signup_succeeded", () => recordAuthSuccess("web.auth.signup_succeeded", { method: "email" })],
+    ["web.onboarding.business_name_submitted", () => recordPendingOnboardingBusiness("business")],
+    ["web.workspace.business_switched", () => recordPendingWorkspaceSwitch("business", "business-0")],
+  ] as const;
+
+  function recordAgo(age: number, record: () => void) {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(Date.now() - age);
+    record();
+    vi.useRealTimers();
+  }
+
+  beforeEach(() => window.sessionStorage.clear());
+
+  it.each(queued)("captures %s once at the next identify, hours after it was queued", async (event, record) => {
+    recordAgo(3 * hour, record);
+    setup(true);
+    await waitFor(() => expect(mocks.posthog.capture).toHaveBeenCalledWith(event, expect.objectContaining({ businessId: "business" })));
+    expect(mocks.posthog.capture.mock.calls.filter(([name]) => name === event)).toHaveLength(1);
+    expect(window.sessionStorage.length).toBe(0);
+  });
+
+  it.each(queued)("drops %s once it has waited more than a day", async (event, record) => {
+    recordAgo(25 * hour, record);
+    setup(true);
+    await waitFor(() => expect(mocks.posthog.identify).toHaveBeenCalledWith("user:operator"));
+    expect(mocks.posthog.capture).not.toHaveBeenCalledWith(event, expect.anything());
+    expect(window.sessionStorage.length).toBe(0);
   });
 });

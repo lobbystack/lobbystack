@@ -60,8 +60,11 @@ describe("posthogSources", () => {
     ]);
   });
 
-  it("falls back to PostHog hosts for missing or malformed values", () => {
-    expect(posthogSources({})).toEqual(["https://*.posthog.com"]);
+  it("allows the SDK's default proxy when no host is configured", () => {
+    expect(posthogSources({})).toEqual(["https://ts.lobbystack.com", "https://*.posthog.com"]);
+  });
+
+  it("falls back to PostHog hosts for malformed values", () => {
     expect(posthogSources({ NEXT_PUBLIC_POSTHOG_HOST: "not a url" })).toEqual(["https://*.posthog.com"]);
   });
 });

@@ -89,19 +89,73 @@
     "continueFailed": "Impossible de continuer maintenant. Réessayez.",
     "skipFailed": "Impossible d'ignorer cette étape maintenant. Réessayez."
   },
+  "testCall": {
+    "title": "Écoutez votre réceptionniste",
+    "description": "Appelez-la depuis votre navigateur et posez-lui les questions de vos clients.",
+    "call": "Appeler ma réceptionniste",
+    "callAgain": "Rappeler",
+    "hint": "Votre navigateur demandera l'accès à votre micro.",
+    "continue": "Continuer",
+    "skip": "Passer pour l'instant",
+    "continueFailed": "Impossible de continuer. Réessayez."
+  },
+  "verifyPhone": {
+    "title": "Vérifiez votre numéro de mobile",
+    "description": "Nous vous envoyons un code par SMS. Votre numéro d'entreprise viendra du même pays.",
+    "fields": {
+      "mobileNumber": "Numéro de mobile",
+      "country": "Pays"
+    },
+    "hint": "Utilisez un mobile qui reçoit les SMS. Les numéros Internet ne fonctionnent pas.",
+    "sendCode": "M'envoyer un code",
+    "sending": "Envoi…",
+    "sendFailed": "Impossible d'envoyer le code. Réessayez.",
+    "errors": {
+      "voip": "Utilisez votre numéro de mobile. Les numéros Internet ne peuvent pas être vérifiés.",
+      "notMobile": "Utilisez un numéro de mobile qui reçoit les SMS.",
+      "countryMismatch": "Ce numéro ne vient pas du pays choisi.",
+      "invalidNumber": "Entrez un numéro de mobile valide.",
+      "rateLimited": "Trop de codes demandés. Patientez un moment, puis réessayez."
+    },
+    "code": {
+      "sentTo": "Entrez le code à 6 chiffres envoyé au {{phone}}.",
+      "checking": "Vérification…",
+      "invalid_one": "Ce code ne fonctionne pas. Il vous reste {{count}} essai.",
+      "invalid_many": "Ce code ne fonctionne pas. Il vous reste {{count}} essais.",
+      "invalid_other": "Ce code ne fonctionne pas. Il vous reste {{count}} essais.",
+      "expired": "Ce code a expiré. Demandez-en un nouveau.",
+      "locked": "Trop d'essais. Demandez un nouveau code.",
+      "failed": "Impossible de vérifier le code. Réessayez.",
+      "resend": "Envoyer un nouveau code",
+      "changeNumber": "Utiliser un autre numéro"
+    },
+    "unavailable": {
+      "title": "Nous n'offrons pas encore de numéros dans ce pays ({{country}}).",
+      "body": "Vous pouvez quand même utiliser votre réceptionniste dans le navigateur, et nous pouvons vous écrire quand les numéros y arriveront.",
+      "notify": "M'écrire quand ils seront disponibles",
+      "joined": "C'est noté. Nous vous écrirons.",
+      "continue": "Continuer sans numéro",
+      "failed": "Une erreur est survenue. Réessayez."
+    }
+  },
   "greeting": {
     "title": "Comment devons-nous accueillir vos appelants ?",
     "description": "C'est la première phrase que dira votre IA. Modifiable à tout moment.",
     "label": "Message d'accueil",
-    "language": "Langue",
-    "english": "Anglais",
-    "french": "Français",
+    "language": "Langue des appelants",
     "placeholder": "Merci d'appeler. Comment puis-je vous aider ?",
     "continue": "Continuer",
     "submitting": "Enregistrement...",
     "submitFailed": "Impossible d'enregistrer ce message maintenant. Réessayez."
   },
   "number": {
+    "ready": {
+      "label": "Votre numéro est prêt",
+      "body": "Appelez-le depuis votre téléphone et écoutez votre réceptionniste répondre.",
+      "call": "Appeler le {{number}}"
+    },
+    "planRequired": "Pour obtenir un numéro, choisissez un forfait.",
+    "trialNote": "Votre numéro est gratuit pendant 14 jours, sans carte bancaire.",
     "title": "Choisissez le numéro de votre IA",
     "description": "Choisissez un numéro local que vos appelants peuvent composer.",
     "countryLabel": "Pays",

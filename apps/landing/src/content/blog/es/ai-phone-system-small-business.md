@@ -49,7 +49,7 @@ Los planes de entrada publicados en Francia van de €23.99 al mes por 250 minut
 | [Callsens](https://callsens.fr/tarifs) Starter | €79 al mes sin IVA | 200 minutos, 5 llamadas simultáneas | €0.29 | Sin costo | 1 número incluido, país no indicado | Google Calendar, Calendly |
 | [Elio](https://eliocall.com/tarifs) | €79 al mes sin IVA | 150 minutos | €0.39 | €879 sin IVA, sin cargo | Conserva su número con un desvío de llamadas | No indicado para el plan estándar |
 | [AirAgent](https://airagent.fr/tarifs/) Starter | €89 al mes sin IVA | «Jusqu'à 250 appels» (hasta 250 llamadas), 1 llamada simultánea | «+ 0,30 € par min HT» (€0.30 por minuto) | Configuración por un ingeniero desde €490 | 1 número incluido, país no indicado | Google Calendar, Cal.com |
-| [LobbyStack](/es/pricing/) Starter (el nuestro) | $30 al mes | 150 minutos, sin límite de llamadas simultáneas en el plan | $0.20 | Sin costo | Número en Estados Unidos, Canadá, Reino Unido o Australia | Google Calendar |
+| [LobbyStack](/es/pricing/) Starter (el nuestro) | $30 al mes | 150 minutos, sin límite de llamadas simultáneas en el plan | $0.20 | Sin costo | Número en Estados Unidos, Canadá, Reino Unido, Australia o Nueva Zelanda | Google Calendar |
 
 - AirAgent muestra «+ 0,30 € par min HT» bajo cada precio sin aclarar si se cobra desde el primer minuto. Su sección de preguntas cobra €0.30 por minuto una vez alcanzados los límites del plan. Pida la aclaración por escrito.
 - Elio indica precios «en vigueur au 4 octobre 2026» (vigentes al 4 de octubre de 2026). Las otras páginas no fechan sus precios.
@@ -90,7 +90,7 @@ Tres casos:
 
 - **Un número francés incluido.** Konten incluye un número francés. Callsens, Tala y AirAgent incluyen un número sin indicar el país en su página de precios: pregúntelo.
 - **Su propio número, desviado.** Elio funciona con el desvío de su operador y publica los códigos de desvío de los principales operadores franceses.
-- **Un número extranjero.** LobbyStack ofrece números en Estados Unidos, Canadá, Reino Unido y Australia, y en ningún otro país. El desvío desde su línea francesa sale al extranjero.
+- **Un número extranjero.** LobbyStack ofrece números en Estados Unidos, Canadá, Reino Unido, Australia y Nueva Zelanda, y en ningún otro país. El desvío desde su línea francesa sale al extranjero.
 
 Nuestra guía para [desviar las llamadas de su empresa](/es/blog/how-to-forward-business-calls/) explica los tipos: todas las llamadas, si está ocupado o si no contesta.
 
@@ -108,13 +108,13 @@ Lo que funciona:
 
 Lo que no funciona desde Francia:
 
-- Sin número francés: desviar a un número de Estados Unidos, Canadá, Reino Unido o Australia cuesta lo que su operador cobre por ese país. El código publicado, incluso autoalojado, solo ofrece esos cuatro países.
+- Sin número francés: desviar a un número de Estados Unidos, Canadá, Reino Unido, Australia o Nueva Zelanda cuesta lo que su operador cobre por ese país. El código publicado, incluso autoalojado, solo ofrece esos cinco países.
 - Facturación en dólares estadounidenses: el monto en euros depende del tipo de cambio y de su banco.
 - Las confirmaciones de cita y los recordatorios por SMS solo llegan a números de Estados Unidos y Canadá. Los avisos por correo a su equipo funcionan en cualquier país.
 - Solo Google Calendar y ninguna integración directa con un CRM o software de gestión: otras herramientas se conectan con webhooks firmados o la API REST.
 - Las transferencias van a un solo número, sin presentar a quien llama a la persona que contesta.
 
-Elija un proveedor francés si quiere un número francés, SMS a los móviles de sus clientes o una factura en euros. Konten tiene el minuto más barato entre los planes de entrada pero no agenda citas, Callsens atiende cinco llamadas a la vez desde su plan de entrada y Elio regala su configuración. LobbyStack encaja mejor si sus clientes hablan muchos idiomas, si su equipo quiere alojar el código por su cuenta o si también opera en Estados Unidos, Canadá, Reino Unido o Australia.
+Elija un proveedor francés si quiere un número francés, SMS a los móviles de sus clientes o una factura en euros. Konten tiene el minuto más barato entre los planes de entrada pero no agenda citas, Callsens atiende cinco llamadas a la vez desde su plan de entrada y Elio regala su configuración. LobbyStack encaja mejor si sus clientes hablan muchos idiomas, si su equipo quiere alojar el código por su cuenta o si también opera en Estados Unidos, Canadá, Reino Unido, Australia o Nueva Zelanda.
 
 ## ¿Cómo elegir un conmutador virtual con IA?
 

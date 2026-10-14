@@ -49,6 +49,8 @@ Définissez `FIRECRAWL_API_KEY` sur le service `worker`. Sans elle, l'import de 
 
 Dans Google Cloud, activez l'API Google Calendar et créez un client OAuth pour une application Web. Ajoutez `https://votre_domaine_admin/api/calendar/google/callback` comme URI de redirection autorisée. Définissez `GOOGLE_CLIENT_ID` et `GOOGLE_CLIENT_SECRET` sur le service `admin`. Le modèle remplit `GOOGLE_REDIRECT_URI`, et le worker lit les trois valeurs depuis l'admin.
 
+Une fois ces deux valeurs définies, les pages de connexion et d'inscription proposent aussi **Continuer avec Google**. Ajoutez `https://votre_domaine_admin/api/auth/callback/google` au même client OAuth comme deuxième URI de redirection autorisée.
+
 #### Utilisez un domaine personnalisé
 
 Ajoutez le domaine au service `admin`, puis donnez à `APP_BASE_URL` sur le service `admin` la valeur `https://votre_domaine`. Ces variables y font référence et suivent le changement :
@@ -56,7 +58,7 @@ Ajoutez le domaine au service `admin`, puis donnez à `APP_BASE_URL` sur le serv
 - `SITE_URL`, `AUTH_TRUSTED_ORIGINS`, `TWILIO_SMS_WEBHOOK_URL`, `TWILIO_STATUS_CALLBACK_URL` et `GOOGLE_REDIRECT_URI` sur le service `admin`
 - `APP_BASE_URL`, `TWILIO_STATUS_CALLBACK_URL` et `GOOGLE_REDIRECT_URI` sur le service `worker`
 
-Un déploiement issu d'une ancienne version du modèle contient le domaine Railway écrit dans chacune de ces variables, alors modifiez-les toutes. Faites ensuite pointer le webhook OpenAI et l'URI de redirection Google vers le nouveau domaine. Les numéros de téléphone provisionnés avant le changement gardent leurs anciennes URL de SMS et de rappel de statut dans Twilio jusqu'à ce que vous les y mettiez à jour.
+Un déploiement issu d'une ancienne version du modèle contient le domaine Railway écrit dans chacune de ces variables, alors modifiez-les toutes. Faites ensuite pointer le webhook OpenAI et les deux URI de redirection Google vers le nouveau domaine. Les numéros de téléphone provisionnés avant le changement gardent leurs anciennes URL de SMS et de rappel de statut dans Twilio jusqu'à ce que vous les y mettiez à jour.
 
 ## Base officielle
 

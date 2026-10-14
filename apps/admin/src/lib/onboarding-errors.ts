@@ -25,6 +25,18 @@ export function getSafeOnboardingErrorMessage(
     return t("website.invalidUrl");
   }
 
+  const phoneErrors: Record<string, string> = {
+    phone_voip_refused: "verifyPhone.errors.voip",
+    phone_not_mobile: "verifyPhone.errors.notMobile",
+    phone_country_mismatch: "verifyPhone.errors.countryMismatch",
+    phone_number_invalid: "verifyPhone.errors.invalidNumber",
+    verification_rate_limited: "verifyPhone.errors.rateLimited",
+    verification_cooldown: "verifyPhone.errors.rateLimited",
+  };
+  if (typeof code === "string" && phoneErrors[code]) {
+    return t(phoneErrors[code]);
+  }
+
   if (includesAny(message, ["Too many workspaces"])) {
     return t("errors.tooManyBusinesses");
   }

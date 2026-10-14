@@ -6,12 +6,25 @@ import { LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { AuthCard } from "./auth-card";
 import { getSafeReturnTo } from "@/lib/auth-return-to";
+import { recordAuthSuccess } from "@/lib/auth-success-analytics";
 import { stripLocalePrefix } from "@/lib/locale-path";
+import { rememberPlanFromUrl } from "@/lib/remembered-plan";
 
 export function GuestAuthCard({ mode }: { mode: "login" | "signup" }) {
   const router = useRouter();
   const { t } = useTranslation("auth");
   const [checking, setChecking] = useState(true);
+  const [google, setGoogle] = useState(false);
+  useEffect(() => {
+    let active = true;
+    // Offer Google only when this server has the OAuth client for it.
+    fetch("/api/auth/providers")
+      .then(async (response) => (await response.json() as { google?: unknown } | null)?.google === true)
+      .then((enabled) => { if (active) setGoogle(enabled); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
+  useEffect(() => { if (mode === "signup") rememberPlanFromUrl(window.location.search); }, [mode]);
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
@@ -23,7 +36,11 @@ export function GuestAuthCard({ mode }: { mode: "login" | "signup" }) {
         const session = await response.json() as { user?: { id?: string }; session?: { id?: string } } | null;
         if (!active) return;
         if (session?.user?.id && session.session?.id) {
-          const returnTo = getSafeReturnTo(new URLSearchParams(window.location.search).get("returnTo")) ?? "/";
+          const params = new URLSearchParams(window.location.search);
+          // AuthCard's Google callback URLs add this marker; router.replace below drops it from history, so it counts once.
+          const googleEvent = params.get("google");
+          if (googleEvent === "login" || googleEvent === "signup") recordAuthSuccess(`web.auth.${googleEvent}_succeeded`, { method: "google", ...(params.get("source") === "calculator" ? { source: "calculator" } : {}) });
+          const returnTo = getSafeReturnTo(params.get("returnTo")) ?? "/";
           const path = stripLocalePrefix(new URL(returnTo, window.location.origin).pathname).replace(/\/$/, "");
           router.replace(path === "/login" || path === "/signup" ? "/" : returnTo);
           return;
@@ -39,5 +56,5 @@ export function GuestAuthCard({ mode }: { mode: "login" | "signup" }) {
   }, [router]);
 
   if (checking) return <div className="flex min-h-svh items-center justify-center" role="status"><LoaderCircle className="size-5 animate-spin" aria-hidden="true" /><span className="sr-only">{t("checkingSession")}</span></div>;
-  return <AuthCard mode={mode} />;
+  return <AuthCard google={google} mode={mode} />;
 }

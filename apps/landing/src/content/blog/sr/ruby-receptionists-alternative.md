@@ -102,7 +102,7 @@ Za cene drugih usluga sa živim recepcionerima, pogledajte [koliko košta usluga
 | Druge usluge | Naplata, formulari za prijem klijenata, odlazni pozivi, chat na sajtu | Nijedna; odgovara na telefonske pozive |
 | SMS | Pozivi i SMS sa broja Vaše firme | Potvrda termina i podsetnik 24 sata ranije kada se pozivalac složi, na američke i kanadske brojeve; AI ne odgovara na SMS poruke |
 | Integracije | "5000+" preko direktnih integracija i Zapier-a | REST API i potpisani webhookovi za šest događaja |
-| Gde radi | SAD, Kanada i američki Karibi | Brojevi u SAD, Kanadi, Velikoj Britaniji i Australiji |
+| Gde radi | SAD, Kanada i američki Karibi | Brojevi u SAD, Kanadi, Velikoj Britaniji, Australiji i na Novom Zelandu |
 | HIPAA | Navodi usluge u skladu sa HIPAA | Ne tvrdi da je u skladu sa HIPAA |
 | Naknada za podešavanje | Nije navedena na stranici sa cenama | Nema je ni na jednom paketu |
 | Izvorni kod | Usluga koju pružaju zaposleni | MIT licenca; samostalno hostovanje sa Vašim OpenAI i Twilio nalozima |
@@ -195,7 +195,7 @@ Ne. Ruby recepcioneri se javljaju, a AI radi u pozadini. Alat Call Nav prikazuje
 
 ### Mogu li da zadržim broj ako napustim Ruby?
 
-Ako Vaš operater drži broj i prosleđuje pozive na Ruby, promenite pravilo prosleđivanja tako da vodi na LobbyStack. Ako Ruby hostuje broj, pitajte Ruby kako da ga prenesete pre otkaza i javite se LobbyStack timu za prenos broja. LobbyStack nudi brojeve u SAD, Kanadi, Velikoj Britaniji i Australiji.
+Ako Vaš operater drži broj i prosleđuje pozive na Ruby, promenite pravilo prosleđivanja tako da vodi na LobbyStack. Ako Ruby hostuje broj, pitajte Ruby kako da ga prenesete pre otkaza i javite se LobbyStack timu za prenos broja. LobbyStack nudi brojeve u SAD, Kanadi, Velikoj Britaniji, Australiji i na Novom Zelandu.
 
 ## Izaberite Ruby ako
 

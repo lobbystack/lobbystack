@@ -13,25 +13,25 @@ const ctaCopy = {
     headingStart: "Never miss another",
     headingMiddle: "ready-to-book",
     headingEnd: "caller",
-    body: "Test 30 browser voice minutes for free. No telephone number included.",
+    body: "Start free with 30 voice minutes and no credit card.",
   },
   fr: {
     headingStart: "Ne manquez plus aucun",
     headingMiddle: "appel prêt à réserver",
     headingEnd: "",
-    body: "Testez 30 minutes vocales dans le navigateur gratuitement. Aucun numéro de téléphone inclus.",
+    body: "Commencez gratuitement avec 30 minutes vocales, sans carte bancaire.",
   },
   es: {
     headingStart: "No vuelva a perder",
     headingMiddle: "ninguna llamada",
     headingEnd: "lista para reservar",
-    body: "Pruebe gratis 30 minutos de voz en el navegador. No incluye número de teléfono.",
+    body: "Empiece gratis con 30 minutos de voz, sin tarjeta de crédito.",
   },
   sr: {
     headingStart: "Ne propustite više nijednog",
     headingMiddle: "klijenta koji",
     headingEnd: "želi termin",
-    body: "Isprobajte besplatno 30 minuta razgovora u pregledaču. Broj telefona nije uključen.",
+    body: "Počnite besplatno uz 30 minuta razgovora, bez platne kartice.",
   },
 } satisfies Record<Locale, Record<string, string>>
 

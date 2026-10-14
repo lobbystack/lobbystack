@@ -83,7 +83,7 @@ Both products as of October 9, 2026:
 | Overage | $0.50 a minute | $0.20 a minute on Starter, $0.18 on Pro |
 | How minutes are counted | Each call rounded up to the next 30 seconds | By the second; calls under 10 seconds and spam calls the receptionist ends don't count |
 | Free option | 14-day trial | Free plan with 30 browser voice minutes a month, no card, no telephone number, no expiry |
-| Phone number | New number included, or port yours | One number on Starter and Pro, in the US, Canada, the UK or Australia |
+| Phone number | New number included, or port yours | One number on Starter and Pro, in the US, Canada, the UK, Australia or New Zealand |
 | Works with your existing number | Yes, through forwarding or SIP | Yes, through carrier forwarding |
 | Caller languages | English, Spanish, French, Italian, German and Portuguese, per its FAQ, with more "coming soon"; switches language mid-call | Opens in English or French, then answers in the caller's language: 70+ languages on OpenAI GPT-Live |
 | Calendars | Google and Outlook | Google Calendar |
@@ -134,7 +134,7 @@ RingCentral sells AIR in Canada as a standalone plan or an add-on. In the UK, Au
 
 Prices are in Canadian dollars (C$), British pounds (£) and Australian dollars (A$), from RingCentral's regional pricing pages.
 
-LobbyStack bills in US dollars on every plan: $30 a month for Starter and $100 for Pro. It offers local numbers, plus toll-free numbers where available, in the US, Canada, the UK and Australia. On LobbyStack Cloud, booking confirmations and reminders go only to US and Canadian numbers, and SMS alerts to your team need a US or Canadian mobile. A UK or Australian business still gets its calls answered and booked, but callers with UK or Australian mobiles won't get confirmation or reminder texts.
+LobbyStack bills in US dollars on every plan: $30 a month for Starter and $100 for Pro. It offers local numbers, plus toll-free numbers where available, in the US, Canada, the UK, Australia and New Zealand. On LobbyStack Cloud, booking confirmations and reminders go only to US and Canadian numbers, and SMS alerts to your team need a US or Canadian mobile. A UK or Australian business still gets its calls answered and booked, but callers with UK or Australian mobiles won't get confirmation or reminder texts.
 
 ## How does AIR compare with other phone-system AI receptionists?
 

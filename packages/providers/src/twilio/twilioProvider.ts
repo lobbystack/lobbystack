@@ -140,16 +140,45 @@ export class TwilioProvider {
     await number.remove();
   }
 
-  async verifyPhone(input: { to: string; serviceSid: string }): Promise<{ verificationSid: string; status: string }> {
+  async verifyPhone(input: { to: string; serviceSid: string; locale?: string }): Promise<{ verificationSid: string; status: string }> {
     assertCertificationRecipient("phone", input.to);
-    const verification = await this.client.verify.v2.services(input.serviceSid).verifications.create({ to: input.to, channel: "sms" });
+    const verification = await this.client.verify.v2.services(input.serviceSid).verifications.create({ to: input.to, channel: "sms", ...(input.locale ? { locale: input.locale } : {}) });
     return { verificationSid: verification.sid, status: verification.status };
   }
 
-  async listAvailablePhoneNumbers(input: { countryCode: string; kind: "local" | "toll_free"; areaCode?: string; city?: string; regionCode?: string; postalCode?: string; limit: number }): Promise<AvailablePhoneNumber[]> {
+  /** Twilio Verify's answer to a code: "approved" when it matches, "pending" when it doesn't. */
+  async checkPhoneVerification(input: { to: string; code: string; serviceSid: string }): Promise<string> {
+    const check = await this.client.verify.v2.services(input.serviceSid).verificationChecks.create({ to: input.to, code: input.code });
+    return check.status;
+  }
+
+  /** The line type from Twilio Lookup (mobile, landline, fixedVoip, nonFixedVoip, …), or null when Lookup doesn't know. */
+  async lookupLineType(phoneE164: string): Promise<string | null> {
+    const result = await this.client.lookups.v2.phoneNumbers(phoneE164).fetch({ fields: "line_type_intelligence" });
+    const type = (result.lineTypeIntelligence as { type?: unknown } | null | undefined)?.type;
+    return typeof type === "string" && type ? type : null;
+  }
+
+  /**
+   * Puts a number on the SIP trunk, where the receptionist answers, or takes
+   * it off so Twilio asks `fallbackUrl` what to do with each call.
+   */
+  async routeNumber(input: { providerPhoneId: string; trunkSid: string; mode: "receptionist" | "fallback"; fallbackUrl: string }): Promise<void> {
+    assertCertificationOperationAllowed();
+    if (input.mode === "receptionist") {
+      await this.addNumberToSipTrunk(input);
+      return;
+    }
+    const number = await this.client.incomingPhoneNumbers(input.providerPhoneId).fetch();
+    if (number.trunkSid) await this.client.trunking.v1.trunks(number.trunkSid).phoneNumbers(input.providerPhoneId).remove();
+    await this.client.incomingPhoneNumbers(input.providerPhoneId).update({ voiceUrl: input.fallbackUrl, voiceMethod: "POST" });
+  }
+
+  async listAvailablePhoneNumbers(input: { countryCode: string; kind: "local" | "mobile" | "toll_free"; areaCode?: string; city?: string; regionCode?: string; postalCode?: string; limit: number }): Promise<AvailablePhoneNumber[]> {
     const collection = this.client.availablePhoneNumbers(input.countryCode);
-    const filters = { smsEnabled: true, voiceEnabled: true, limit: Math.max(1, Math.min(20, Math.trunc(input.limit))), ...(input.areaCode && /^\d+$/.test(input.areaCode) ? { areaCode: Number(input.areaCode) } : {}), ...(input.city ? { inLocality: input.city } : {}), ...(input.regionCode ? { inRegion: input.regionCode } : {}), ...(input.postalCode ? { inPostalCode: input.postalCode } : {}) };
-    const numbers = input.kind === "toll_free" ? await collection.tollFree.list(filters) : await collection.local.list(filters);
+    // Hosted businesses text from LobbyStack's shared number, so a number only has to take calls.
+    const filters = { voiceEnabled: true, limit: Math.max(1, Math.min(20, Math.trunc(input.limit))), ...(input.areaCode && /^\d+$/.test(input.areaCode) ? { areaCode: Number(input.areaCode) } : {}), ...(input.city ? { inLocality: input.city } : {}), ...(input.regionCode ? { inRegion: input.regionCode } : {}), ...(input.postalCode ? { inPostalCode: input.postalCode } : {}) };
+    const numbers = input.kind === "toll_free" ? await collection.tollFree.list(filters) : input.kind === "mobile" ? await collection.mobile.list(filters) : await collection.local.list(filters);
     // Twilio returns capability keys as "SMS"/"MMS"/"voice", while its TypeScript
     // types use lowercase. Read both so real inventory is not filtered out.
     return numbers
@@ -159,12 +188,13 @@ export class TwilioProvider {
         const voice = Boolean(capabilities.voice ?? capabilities.VOICE);
         return { phoneE164: number.phoneNumber, ...(number.locality ? { locality: number.locality } : {}), ...(number.region ? { region: number.region } : {}), countryCode: input.countryCode.toUpperCase(), capabilities: { sms, voice } };
       })
-      .filter((number) => number.capabilities.sms && number.capabilities.voice);
+      .filter((number) => number.capabilities.voice);
   }
 
-  async purchasePhoneNumber(input: { e164: string; friendlyName: string; smsUrl: string; statusCallbackUrl: string }): Promise<{ providerPhoneId: string; e164: string; smsUrl?: string }> {
+  /** Some countries sell numbers only under an approved regulatory bundle, and some also need an address on file. */
+  async purchasePhoneNumber(input: { e164: string; friendlyName: string; smsUrl: string; statusCallbackUrl: string; bundleSid?: string; addressSid?: string }): Promise<{ providerPhoneId: string; e164: string; smsUrl?: string }> {
     assertCertificationOperationAllowed();
-    const number = await this.client.incomingPhoneNumbers.create({ phoneNumber: input.e164, friendlyName: input.friendlyName, smsUrl: input.smsUrl, smsMethod: "POST", statusCallback: input.statusCallbackUrl, statusCallbackMethod: "POST" });
+    const number = await this.client.incomingPhoneNumbers.create({ phoneNumber: input.e164, friendlyName: input.friendlyName, smsUrl: input.smsUrl, smsMethod: "POST", statusCallback: input.statusCallbackUrl, statusCallbackMethod: "POST", ...(input.bundleSid ? { bundleSid: input.bundleSid } : {}), ...(input.addressSid ? { addressSid: input.addressSid } : {}) });
     return { providerPhoneId: number.sid, e164: number.phoneNumber, ...(number.smsUrl ? { smsUrl: number.smsUrl } : {}) };
   }
 

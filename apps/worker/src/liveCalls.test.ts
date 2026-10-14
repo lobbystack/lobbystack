@@ -22,6 +22,7 @@ const mocks = vi.hoisted(() => ({
   hangup: vi.fn(async (..._args: unknown[]) => undefined),
   lastLiveCallSequence: vi.fn(async (..._args: unknown[]) => 0),
   extendLiveCallReservation: vi.fn(async (..._args: unknown[]) => 300),
+  checkNumberTrialMinutes: vi.fn(async (..._args: unknown[]) => false),
 }));
 
 vi.mock("@lobbystack/agent-core", () => ({
@@ -57,6 +58,7 @@ vi.mock("@lobbystack/domain", async (importOriginal) => ({
   blockLiveCaller: mocks.blockLiveCaller,
   getCachedBusinessSnapshot: mocks.snapshot,
   finishLiveCall: mocks.finishLiveCall,
+  checkNumberTrialMinutes: mocks.checkNumberTrialMinutes,
   prepareLiveCallTransfer: mocks.prepareLiveCallTransfer,
   recordLiveCallTransferResult: mocks.recordLiveCallTransferResult,
   LIVE_CALL_PROVIDER: "openai_live",
@@ -328,6 +330,8 @@ describe("createLiveCallHandler", () => {
     expect(lock.keys.has("live-attach:live_finalizing")).toBe(true);
     finalize();
     await vi.waitFor(() => expect(lock.keys.has("live-attach:live_finalizing")).toBe(false));
+    // A finished call checks whether a trial number has used its minutes.
+    expect(mocks.checkNumberTrialMinutes).toHaveBeenCalledWith(expect.anything(), { businessId: "biz_1" });
   });
 
   it("leaves the attach lock alone when another worker took it over before the call ended", async () => {

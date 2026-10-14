@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Phone } from "lucide-react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
@@ -10,6 +11,8 @@ import { AuraVoiceDemo } from "@/components/web-voice/AuraVoiceDemo";
 import { LIVE_WEB_CALL_ENDPOINT } from "@lobbystack/web-voice";
 import { announceTestCallEnded, registerTestCallStarter, setTestCallActive } from "@/lib/test-call-launcher";
 import { useTelemetry } from "@/components/product-analytics";
+import { useUpgradePlanDialogOpener } from "@/components/upgrade-plan-dialog-context";
+import { requestJson } from "@/lib/request-json";
 import type { TelemetryEventName, TelemetryProperties } from "@lobbystack/telemetry";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,6 +43,9 @@ export function DashboardTestCallWidget({
   const { t } = useTranslation("common");
   const [open, setOpen] = useState(false);
   const voiceControlsRef = useRef<WebVoiceControls | null>(null);
+  // Onboarding renders this widget too, where no plan dialog is mounted.
+  const openUpgradePlanDialog = useUpgradePlanDialogOpener();
+  const billing = useQuery({ queryKey: ["billing", businessId], enabled: Boolean(businessId), queryFn: () => requestJson<{ effectivePlan: string }>(`/api/billing?businessId=${encodeURIComponent(businessId!)}`) });
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
@@ -103,6 +109,8 @@ export function DashboardTestCallWidget({
           onRegisterControls={(controls) => {
             voiceControlsRef.current = controls;
           }}
+          // A paid plan at its spending cap raises the cap instead; it has no plan to buy.
+          onUpgrade={openUpgradePlanDialog && billing.data?.effectivePlan === "free_cloud" ? () => { handleOpenChange(false); openUpgradePlanDialog(); } : undefined}
         />
       </TestCallAuraPortal>
     </div>
@@ -141,6 +149,7 @@ type TestCallAuraProps = {
   businessSlug: string;
   onCallEnded: () => void;
   onRegisterControls: (controls: WebVoiceControls) => void;
+  onUpgrade: (() => void) | undefined;
 };
 
 function TestCallAura({
@@ -148,6 +157,7 @@ function TestCallAura({
   businessSlug,
   onCallEnded,
   onRegisterControls,
+  onUpgrade,
 }: TestCallAuraProps) {
   const telemetry = useTelemetry();
   const handleVoiceEvent = useCallback((eventName: TelemetryEventName, properties?: Record<string, unknown>) => {
@@ -165,6 +175,7 @@ function TestCallAura({
       onCallEnded={onCallEnded}
       onEvent={handleVoiceEvent}
       onRegisterControls={onRegisterControls}
+      {...(onUpgrade ? { onUpgrade } : {})}
       widgetId="lobbystack-dashboard-test-call"
     />
   );

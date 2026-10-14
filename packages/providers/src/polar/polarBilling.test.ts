@@ -27,4 +27,22 @@ describe("PolarBillingProvider", () => {
     expect(new Headers(request.headers).get("idempotency-key")).toBe("billing-checkout:request-1");
     expect(JSON.parse(String(request.body))).toEqual({ products: ["product-1"], customer_email: "owner@example.com", external_customer_id: "business:1", success_url: "https://app.example/settings/plan?checkout=success", return_url: "https://app.example/settings/plan", customer_metadata: { externalCustomerId: "business:1" } });
   });
+  it("cancels a subscription at the end of its period with the customer's reason and comment", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ id: "sub/1", cancel_at_period_end: true, ends_at: "2026-11-12T00:00:00Z", current_period_end: "2026-11-12T00:00:00Z" }) });
+    vi.stubGlobal("fetch", fetchMock);
+    const provider = new PolarBillingProvider({ accessToken: "token", organizationId: "organization", baseUrl: "https://polar.example" });
+
+    await expect(provider.cancelSubscriptionAtPeriodEnd({ subscriptionId: "sub/1", reason: "too_expensive", comment: "Too much for one clinic" })).resolves.toEqual({ endsAt: "2026-11-12T00:00:00Z" });
+
+    expect(fetchMock).toHaveBeenCalledWith("https://polar.example/v1/subscriptions/sub%2F1", expect.objectContaining({ method: "PATCH" }));
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1].body))).toEqual({ cancel_at_period_end: true, customer_cancellation_reason: "too_expensive", customer_cancellation_comment: "Too much for one clinic" });
+  });
+  it("cancels without a reason and falls back to the period end", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ends_at: null, current_period_end: "2026-11-12T00:00:00Z" }) });
+    vi.stubGlobal("fetch", fetchMock);
+    const provider = new PolarBillingProvider({ accessToken: "token", organizationId: "organization", baseUrl: "https://polar.example" });
+
+    await expect(provider.cancelSubscriptionAtPeriodEnd({ subscriptionId: "sub-1" })).resolves.toEqual({ endsAt: "2026-11-12T00:00:00Z" });
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1].body))).toEqual({ cancel_at_period_end: true });
+  });
 });

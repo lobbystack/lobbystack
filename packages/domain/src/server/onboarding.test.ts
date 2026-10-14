@@ -1,29 +1,32 @@
 import { describe, expect, it } from "vitest";
 
-import { canVisitOnboardingStage, isOnboardingStage, isValidOnboardingTransition, normalizeOnboardingStage, resolveOnboardingRoute, resolveOnboardingStageForPlan, selectPreferredMembership } from "./onboarding";
+import { canVisitOnboardingStage, isOnboardingStage, isValidOnboardingTransition, normalizeOnboardingStage, resolveOnboardingRoute, selectPreferredMembership } from "./onboarding";
 
 describe("onboarding stages", () => {
   it("maps persisted stages to their dedicated routes", () => {
-    expect(resolveOnboardingRoute("plan")).toBe("/onboarding/plan");
+    expect(resolveOnboardingRoute("test_call")).toBe("/onboarding/test-call");
+    expect(resolveOnboardingRoute("verify_phone")).toBe("/onboarding/verify-phone");
     expect(resolveOnboardingRoute("phone_number_claiming")).toBe("/onboarding/number");
     expect(resolveOnboardingRoute("complete")).toBe("/");
   });
 
-  it("normalizes retired verification stages forward to plan", () => {
-    expect(normalizeOnboardingStage("verify_phone")).toBe("plan");
-    expect(normalizeOnboardingStage("verify_phone_code")).toBe("plan");
-    expect(resolveOnboardingRoute("verify_phone")).toBe("/onboarding/plan");
-    expect(resolveOnboardingRoute("verify_phone_code")).toBe("/onboarding/plan");
+  it("resumes retired stages at the nearest step that still exists", () => {
+    expect(normalizeOnboardingStage("plan")).toBe("test_call");
+    expect(normalizeOnboardingStage("verify_phone_code")).toBe("verify_phone");
+    expect(resolveOnboardingRoute("plan")).toBe("/onboarding/test-call");
     expect(normalizeOnboardingStage("not-a-stage")).toBe("create_business");
   });
 
-  it("allows only adjacent transitions, with an explicit number-selection skip", () => {
+  it("asks for no plan: the owner hears the agent, verifies a phone, then picks a number", () => {
     expect(isValidOnboardingTransition("create_business", "website")).toBe(true);
     expect(isValidOnboardingTransition("website", "knowledge")).toBe(true);
-    expect(isValidOnboardingTransition("plan", "attribution")).toBe(true);
-    expect(isValidOnboardingTransition("greeting", "plan")).toBe(true);
+    expect(isValidOnboardingTransition("greeting", "test_call")).toBe(true);
+    expect(isValidOnboardingTransition("test_call", "verify_phone")).toBe(true);
+    expect(isValidOnboardingTransition("verify_phone", "phone_number")).toBe(true);
+    // A country without numbers skips the number step.
+    expect(isValidOnboardingTransition("verify_phone", "attribution")).toBe(true);
+    expect(isValidOnboardingTransition("test_call", "phone_number")).toBe(false);
     expect(isValidOnboardingTransition("greeting", "knowledge")).toBe(false);
-    expect(isValidOnboardingTransition("website", "plan")).toBe(false);
     expect(isValidOnboardingTransition("complete", "website")).toBe(false);
   });
 
@@ -31,29 +34,19 @@ describe("onboarding stages", () => {
     expect(isOnboardingStage("not-a-stage")).toBe(false);
     expect(isOnboardingStage("toString")).toBe(false);
     expect(isOnboardingStage("constructor")).toBe(false);
-    expect(isOnboardingStage("verify_phone")).toBe(false);
+    expect(isOnboardingStage("plan")).toBe(false);
+    expect(isOnboardingStage("verify_phone")).toBe(true);
     expect(isOnboardingStage("attribution")).toBe(true);
   });
 
   it("allows completed and later stages to revisit every reached step", () => {
     expect(canVisitOnboardingStage("create_business", "website")).toBe(false);
     expect(canVisitOnboardingStage("website", "website")).toBe(true);
-    expect(canVisitOnboardingStage("plan", "knowledge")).toBe(true);
-    expect(canVisitOnboardingStage("plan", "phone_number")).toBe(false);
+    expect(canVisitOnboardingStage("verify_phone", "test_call")).toBe(true);
+    expect(canVisitOnboardingStage("verify_phone", "phone_number")).toBe(false);
     expect(canVisitOnboardingStage("phone_number_claiming", "phone_number")).toBe(true);
     expect(canVisitOnboardingStage("complete", "attribution")).toBe(true);
     expect(canVisitOnboardingStage("complete", "create_business")).toBe(true);
-  });
-});
-
-describe("original legacy plan-stage navigation", () => {
-  it.each(["phone_number", "phone_number_claiming"] as const)("returns free-plan %s stages to plan selection", stage => {
-    expect(resolveOnboardingStageForPlan(stage, "free_cloud")).toBe("plan");
-    expect(resolveOnboardingStageForPlan(stage, "starter")).toBe(stage);
-    expect(resolveOnboardingStageForPlan(stage, "self_host")).toBe(stage);
-  });
-  it("preserves completed onboarding on the free plan", () => {
-    expect(resolveOnboardingStageForPlan("complete", "free_cloud")).toBe("complete");
   });
 });
 

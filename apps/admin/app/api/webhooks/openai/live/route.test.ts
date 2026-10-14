@@ -2,10 +2,10 @@ import type { SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ unwrap: vi.fn(), reject: vi.fn(), accept: vi.fn(), execute: vi.fn(), snapshot: vi.fn(), startLivePhoneCall: vi.fn(), finishLiveCall: vi.fn(), attach: vi.fn() }));
+const mocks = vi.hoisted(() => ({ unwrap: vi.fn(), reject: vi.fn(), accept: vi.fn(), execute: vi.fn(), snapshot: vi.fn(), startLivePhoneCall: vi.fn(), finishLiveCall: vi.fn(), attach: vi.fn(), isNumberTrialEnded: vi.fn(), markNumberTrialMinutesExhausted: vi.fn() }));
 
 vi.mock("@lobbystack/agent-core/live/session", () => ({ buildPhoneSessionConfig: vi.fn() }));
-vi.mock("@lobbystack/domain", () => ({ finishLiveCall: mocks.finishLiveCall, getCachedBusinessSnapshot: mocks.snapshot, startLivePhoneCall: mocks.startLivePhoneCall }));
+vi.mock("@lobbystack/domain", () => ({ finishLiveCall: mocks.finishLiveCall, getCachedBusinessSnapshot: mocks.snapshot, startLivePhoneCall: mocks.startLivePhoneCall, isNumberTrialEnded: mocks.isNumberTrialEnded, markNumberTrialMinutesExhausted: mocks.markNumberTrialMinutesExhausted }));
 vi.mock("@/lib/api-helpers", () => ({ getAppDatabase: () => ({ db: { execute: mocks.execute } }) }));
 vi.mock("@/lib/domain-context", () => ({ createWorkerDomainContext: () => ({}) }));
 vi.mock("@/lib/live-prototype", () => ({
@@ -20,6 +20,8 @@ beforeEach(() => {
   vi.stubEnv("LIVE_PROTOTYPE_ENABLED", "true");
   mocks.reject.mockResolvedValue(undefined);
   mocks.execute.mockResolvedValue({ rows: [{ business_id: null, position: 1 }] });
+  mocks.isNumberTrialEnded.mockResolvedValue(false);
+  mocks.markNumberTrialMinutesExhausted.mockResolvedValue(true);
 });
 afterEach(() => { vi.unstubAllEnvs(); vi.restoreAllMocks(); });
 
@@ -154,6 +156,34 @@ describe("POST /api/webhooks/openai/live", () => {
     expect(mocks.reject).toHaveBeenCalledWith("live_1", { status_code: 503 });
     expect(mocks.accept).not.toHaveBeenCalled();
     expect(mocks.finishLiveCall).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ callId: "call_1", end: "setup_failed" }));
+  });
+
+  it("lets a call to an ended trial's number go unanswered, without recording it", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => undefined);
+    mocks.execute.mockResolvedValue({ rows: [{ business_id: "biz_1", position: 1 }] });
+    mocks.isNumberTrialEnded.mockResolvedValue(true);
+    mocks.unwrap.mockResolvedValue({ type: "live.transport.incoming", created_at: Math.floor(Date.now() / 1000), data: { session_id: "live_1", sip_headers: [{ name: "Diversion", value: "<sip:+15815550100@example.com>" }] } });
+
+    const response = await POST(new Request("https://admin.lobbystack.test/api/webhooks/openai/live", { method: "POST", body: "{}" }));
+
+    expect(response.status).toBe(200);
+    expect(mocks.reject).toHaveBeenCalledWith("live_1", { status_code: 486 });
+    expect(mocks.startLivePhoneCall).not.toHaveBeenCalled();
+    expect(mocks.accept).not.toHaveBeenCalled();
+  });
+
+  it("turns a trial out of minutes over to forwarding when its limit stops a call", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => undefined);
+    mocks.execute.mockResolvedValue({ rows: [{ business_id: "biz_1", position: 1 }] });
+    mocks.snapshot.mockResolvedValue({ businessId: "biz_1" });
+    mocks.startLivePhoneCall.mockRejectedValue(Object.assign(new Error("Out of minutes."), { code: "voice_limit_reached" }));
+    mocks.unwrap.mockResolvedValue({ type: "live.transport.incoming", created_at: Math.floor(Date.now() / 1000), data: { session_id: "live_1", sip_headers: [{ name: "Diversion", value: "<sip:+15815550100@example.com>" }] } });
+
+    const response = await POST(new Request("https://admin.lobbystack.test/api/webhooks/openai/live", { method: "POST", body: "{}" }));
+
+    expect(response.status).toBe(200);
+    expect(mocks.markNumberTrialMinutesExhausted).toHaveBeenCalledWith(expect.anything(), { businessId: "biz_1" });
+    expect(mocks.reject).toHaveBeenCalledWith("live_1", { status_code: 486 });
   });
 
   it("leaves an already answered call alone when a retried delivery can't load the snapshot", async () => {

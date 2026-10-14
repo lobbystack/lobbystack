@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { billingPlanCatalog, type BillingPlanSlug } from "@lobbystack/shared";
 import { ArrowUpRight, Check } from "lucide-react";
 import { toast } from "sonner";
@@ -11,6 +11,7 @@ import type { BillingPermissions } from "./billing-past-due-banner";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "react-i18next";
 
+import { CancelPlanDialog } from "./cancel-plan-dialog";
 import { PageSurface } from "./page-surface";
 import { SectionBlock } from "./section-block";
 import { Button } from "./ui/button";
@@ -26,7 +27,8 @@ type Billing = {
   availableCheckoutIntervals: { starter: string[]; pro: string[] };
   permissions: BillingPermissions;
   effectivePlan: BillingPlanSlug;
-  account: { plan: string | null; billingKey: string; billingInterval: string | null; subscriptionState: string | null; currentPeriodStart: string | null; currentPeriodEnd: string | null; overageSpendingCapCents: number | null } | null;
+  planEndsAt?: string | null;
+  account: { plan: string | null; billingKey: string; subscriptionId?: string | null; billingInterval: string | null; subscriptionState: string | null; currentPeriodStart: string | null; currentPeriodEnd: string | null; overageSpendingCapCents: number | null } | null;
   usage: Array<{ periodKey: string; usageKind: string; quantity: number; syncStatus: string }>;
   transactions: Array<{ kind: string; sourceId: string; status: string; amountCents: number; refundedAmountCents: number; currency: string; description: string | null; invoiceUrl: string | null; occurredAt: string }>;
   usageStatus: { usageComplete: boolean; voiceBlocked: boolean; alertSmsBlocked: boolean; outboundCallAttemptsBlocked: boolean; overageSpendingCapReached: boolean; overageSpendCents: number; overageSpendingCapCents: number | null } | null;
@@ -40,27 +42,15 @@ export function LivePlanSurface() {
   const money = (cents: number, currency = "usd") => formatMoney(cents, currency, i18n.language);
   const searchParams = useSearchParams();
   const router = useRouter();
-  const queryClient = useQueryClient();
   const openUpgradePlanDialog = useOpenUpgradePlanDialog();
   const [portalPending, setPortalPending] = useState(false);
+  const [canceled, setCanceled] = useState<{ businessId: string; endsAt: string | null } | null>(null);
   const { businesses, business } = useActiveBusiness();
   const billing = useQuery({ queryKey: ["billing", business?.businessId], queryFn: () => requestJson<Billing>(`/api/billing?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business?.businessId) });
 
-
+  // Checkouts opened before the success page existed still return here.
   const returnRequestId = searchParams.get("checkout") === "success" ? searchParams.get("requestId") : null;
-  const returnedCheckout = useQuery({
-    queryKey: ["billing-checkout-return", business?.businessId, returnRequestId],
-    enabled: Boolean(business && returnRequestId),
-    queryFn: () => requestJson<{ synced: boolean }>(`/api/billing/checkout?businessId=${encodeURIComponent(business!.businessId)}&requestId=${encodeURIComponent(returnRequestId!)}`),
-    refetchInterval: query => query.state.data?.synced ? false : 1500,
-  });
-  useEffect(() => {
-    if (!business || !returnRequestId || !returnedCheckout.data?.synced) return;
-    void queryClient.invalidateQueries({ queryKey: ["billing", business.businessId] });
-    router.replace("/settings/plan");
-  }, [business, returnRequestId, returnedCheckout.data?.synced, queryClient, router]);
-
-  useEffect(() => { if (searchParams.get("checkout") && business?.businessId) void queryClient.invalidateQueries({ queryKey: ["billing", business.businessId] }); }, [business?.businessId, queryClient, searchParams]);
+  useEffect(() => { if (returnRequestId) router.replace(`/billing/success?requestId=${encodeURIComponent(returnRequestId)}`); }, [returnRequestId, router]);
 
   async function openPortal() { if (!business) return; setPortalPending(true); try { const result = await requestJson<{ url: string }>(`/api/billing/portal?businessId=${encodeURIComponent(business.businessId)}`, { method: "POST", body: JSON.stringify({}) }); window.location.assign(result.url); } catch { toast.error(t("billing.toast.portalFailed")); } finally { setPortalPending(false); } }
 
@@ -73,9 +63,12 @@ export function LivePlanSurface() {
   const monthlyPrice = account?.billingInterval === "annual" ? catalog.annualEffectiveMonthlyChargeCents : catalog.monthlyChargeCents;
   const included = [catalog.voiceSecondsIncluded === null ? t("billing.currentPlan.includedVoiceCustom") : `${Math.round(catalog.voiceSecondsIncluded / 60)} ${t("billing.currentPlan.includedVoiceLabel")}`, catalog.outboundCallAttemptsIncluded === null ? t("billing.currentPlan.includedOutboundCustom") : `${catalog.outboundCallAttemptsIncluded} ${t("billing.currentPlan.includedOutboundLabel")}`, catalog.alertSmsSegmentsIncluded === null ? t("billing.currentPlan.includedSmsCustom") : `${catalog.alertSmsSegmentsIncluded} ${t("billing.currentPlan.includedSmsLabel")}`, catalog.knowledgeStorageBytes === null ? t("billing.currentPlan.includedStorageCustom") : t("billing.currentPlan.includedStorage", { amount: (catalog.knowledgeStorageBytes / (catalog.knowledgeStorageBytes >= 1024 ** 3 ? 1024 ** 3 : 1024 ** 2)).toLocaleString(intlLocale(i18n.language)), unit: catalog.knowledgeStorageBytes >= 1024 ** 3 ? "GB" : "MB" })];
   const permissions = billing.data?.permissions;
-  const canUpgrade = permissions?.hasCheckoutAccess && billing.data?.availableCheckoutPlans.some(target =>
-    (plan === "free_cloud" || (plan === "starter" && target === "pro")) && billing.data.availableCheckoutIntervals[target].length > 0);
+  // A paying business changes plans in the customer portal; checkout refuses it.
+  const canUpgrade = permissions?.hasCheckoutAccess && plan === "free_cloud" && billing.data?.availableCheckoutPlans.some(target => billing.data.availableCheckoutIntervals[target].length > 0);
   const canManage = permissions?.hasCustomerPortalAccess === true;
+  const ended = canceled?.businessId === business.businessId ? canceled : null;
+  const endsAt = ended ? ended.endsAt : billing.data.planEndsAt ?? null;
+  const canCancel = canManage && !ended && !endsAt && (plan === "starter" || plan === "pro") && Boolean(account?.subscriptionId) && ["active", "trialing"].includes(account?.subscriptionState ?? "");
 
   return <PageSurface title={t("sections.billing")}>
     <div className="flex w-full flex-col gap-10">
@@ -128,6 +121,9 @@ export function LivePlanSurface() {
               </div>
             </div>
           </div>
+          {endsAt && (plan === "starter" || plan === "pro") ? (
+            <p className="text-sm text-muted-foreground">{t("billing.cancel.endsOn", { plan: t(`billing.planLabels.${plan}`), date: formatDateTime(endsAt, i18n.language, { month: "long", day: "numeric", year: "numeric" }) })}</p>
+          ) : null}
           {(canUpgrade || canManage) && (
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               {canUpgrade && (
@@ -153,6 +149,14 @@ export function LivePlanSurface() {
                     : t("billing.actions.manageSubscription")}
                   <ArrowUpRight className="size-3.5" />
                 </Button>
+              )}
+              {canCancel && (
+                <CancelPlanDialog
+                  businessId={business.businessId}
+                  onCanceled={(endsAt) => setCanceled({ businessId: business.businessId, endsAt })}
+                  periodEnd={account?.currentPeriodEnd ?? null}
+                  plan={t(`billing.planLabels.${plan}`)}
+                />
               )}
             </div>
           )}
