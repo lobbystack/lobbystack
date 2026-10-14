@@ -20,6 +20,9 @@ import { currentWebsiteImport, isWebsiteImportRunning, WebsiteImportProgress, ty
 type Profile = { greeting: string };
 type KnowledgeDocument = { id: string; createdAt?: string; websiteImport?: WebsiteImportSummary | null };
 
+// The stages after this one: an owner there already saved a caller language.
+const PAST_GREETING = new Set(["test_call", "verify_phone", "phone_number", "phone_number_claiming", "attribution", "complete"]);
+
 export function OnboardingGreetingSurface() {
   const { t } = useTranslation("onboarding");
   const { navigate, navigating, prefetch } = useStepNavigation();
@@ -41,8 +44,10 @@ export function OnboardingGreetingSurface() {
     refetchInterval: query => query.state.data?.documents?.some(document => isWebsiteImportRunning(document.websiteImport)) ? 2000 : false,
   });
   const websiteImport = currentWebsiteImport(documents.data?.documents, business?.websiteUrl);
+  // A first visit starts from the browser's language; an owner coming back starts from the one they saved.
   // Read after hydration, so the server render and the first client render match.
-  useEffect(() => { setLocale(normalizeRuntimeLocale(navigator.language)); }, []);
+  const savedChoice = business && PAST_GREETING.has(business.onboardingStage ?? "") ? normalizeRuntimeLocale(business.defaultLocale) : null;
+  useEffect(() => { setLocale(savedChoice ?? normalizeRuntimeLocale(navigator.language)); }, [savedChoice]);
   const savedGreeting = agent.data?.profile?.greeting;
   const businessName = business?.name ?? "";
   const savedLocale = normalizeRuntimeLocale(business?.defaultLocale);

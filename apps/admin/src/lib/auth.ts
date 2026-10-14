@@ -260,9 +260,9 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
         return { preferredLocale: resolveLocale(typeof locale === "string" ? locale : undefined) };
       },
     } } } : {}),
-    // A Google sign-in joins the existing account with the same email. Better Auth still refuses
-    // when that account never verified its email, so a squatter's unverified signup can't capture it.
-    account: { accountLinking: { trustedProviders: ["google"] } },
+    // A Google sign-in joins the existing account with the same email only when Google verified
+    // that email and the account verified it too (Better Auth's default): an unverified Google
+    // identity can't take over an account, and a squatter's unverified signup can't capture one.
     emailAndPassword: {
       enabled: true,
       autoSignIn: false,

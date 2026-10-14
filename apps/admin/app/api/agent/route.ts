@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 import { trialTransferNumberInTransaction, updateBusinessInTransaction } from "@lobbystack/domain";
 import { businesses, enqueueOutbox, receptionistProfiles } from "@lobbystack/db";
-import { defaultAppointmentChangePolicy, defaultGreeting, isDefaultGreeting, isRuntimeLocale, normalizeRuntimeLocale, type AppointmentChangePolicy, type BookingMode } from "@lobbystack/shared";
+import { defaultAppointmentChangePolicy, defaultGreeting, isRuntimeLocale, normalizeRuntimeLocale, type AppointmentChangePolicy, type BookingMode } from "@lobbystack/shared";
 import { jsonError } from "@/lib/api-helpers";
 import { operatorRoute } from "@/lib/operator-request";
 
@@ -94,11 +94,6 @@ export const PATCH = operatorRoute(async ({ businessId, body, transaction }) => 
     if (trialPhone && patch.transferNumber.trim() !== trialPhone) throw jsonError("During your free trial, calls can only transfer to the mobile number you verified.", 409, "trial_transfer_locked");
   }
   const previousLocale = normalizeRuntimeLocale(business.defaultLocale);
-  // A greeting still on the old language's default follows the new language; one the owner wrote stays.
-  if (locale !== undefined && locale !== previousLocale && patch.greeting === undefined) {
-    const [current] = await tx.select({ greeting: receptionistProfiles.greeting }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, businessId)).limit(1);
-    if (current && isDefaultGreeting(current.greeting, business.name, previousLocale)) patch.greeting = defaultGreeting(business.name, locale);
-  }
 
   // Opening hours keep their clock times in a new zone; booked appointments keep theirs.
   if (locale !== undefined || timezone !== undefined) {

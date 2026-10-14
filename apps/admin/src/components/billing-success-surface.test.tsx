@@ -86,6 +86,23 @@ describe("billing success page", () => {
     expect(telemetryRef.current!.events).toHaveLength(1);
   });
 
+  it("shows a trial number the payment converted once the plan syncs", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
+    client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, onboardingStage: "complete" }] });
+    // The first poll finds the payment unsynced; the second finds it synced, which converts the trial.
+    let polls = 0;
+    let synced = false;
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      if (url.startsWith("/api/billing/checkout?")) { polls += 1; synced = polls > 1; return Response.json({ synced, target: "starter" }); }
+      // Until the payment syncs, the trial number still has its release date.
+      if (url.startsWith("/api/phone-numbers?")) return Response.json({ phoneNumbers: [{ e164: "+14165550123", reclaimScheduledAt: synced ? null : "2026-11-08T00:00:00.000Z" }] });
+      throw new Error(`Unexpected request ${url}`);
+    }));
+    render(<StrictMode><QueryClientProvider client={client}><BillingSuccessSurface /></QueryClientProvider></StrictMode>);
+    expect(await screen.findByRole("link", { name: "(416) 555-0123" }, { timeout: 4000 })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "billing.success.number.choose" })).toBeNull();
+  });
+
   it("gives a settings checkout with a number the number and every next step", async () => {
     const fetchMock = setup({ stage: "complete", number: "+14165550123" });
     expect(await screen.findByText("billing.success.number.keep")).toBeTruthy();

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { businesses, createDatabaseClient, numberTrials, numberWaitlist, outboxMessages, phoneNumbers, receptionistProfiles, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { billingAccounts, businesses, createDatabaseClient, numberTrials, numberWaitlist, outboxMessages, phoneNumbers, receptionistProfiles, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
 import { getNumberTrialState, isNumberTrialEnded, joinNumberWaitlist, keepBusinessNumbersInTransaction, loadNumberTrialEmail, markNumberTrialMinutesExhausted, resolveNumberFallback, sweepNumberTrial } from "./numberTrials";
 import { claimNumberProvisioning, completeNumberProvisioning, reserveOnboardingNumberClaim, searchBusinessNumberInventory } from "./phoneNumbers";
@@ -98,6 +98,51 @@ describe.skipIf(!testUrl)("free trial numbers against dedicated PostgreSQL roles
       await as(tx, "lobbystack_worker", db => withBusinessTransaction(db, { businessId, actorType: "worker" }, inner => keepBusinessNumbersInTransaction(inner, { businessId })));
       expect((await tx.select({ status: numberTrials.status }).from(numberTrials).where(eq(numberTrials.id, trial!.id)))[0]?.status).toBe("converted");
       expect((await tx.select({ reason: phoneNumbers.reclaimReason, at: phoneNumbers.reclaimScheduledAt }).from(phoneNumbers).where(eq(phoneNumbers.id, phoneNumberId)))[0]).toEqual({ reason: null, at: null });
+    });
+  });
+
+  it("converts a trial whose number finishes buying after the owner paid", async () => {
+    await rollbackTest(async (tx) => {
+      const userId = randomUUID();
+      await tx.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid`, name: "Sam Lee" });
+      await tx.execute(sql`set local role lobbystack_app`);
+      const { businessId } = await createBusiness({ db: tx as unknown as Database }, { userId, name: "Paying clinic", timezone: "America/Toronto", businessType: "test" });
+      await tx.execute(sql`reset role`);
+      await tx.update(businesses).set({ onboardingStage: "verify_phone", deploymentMode: "cloud" }).where(eq(businesses.id, businessId));
+      const owner = { userId, businessId };
+      const { attemptId } = await as(tx, "lobbystack_app", db => startOnboardingPhoneVerification({ db }, { ...owner, phoneE164: ownerPhone, countryCode: "CA" }, verify));
+      await as(tx, "lobbystack_app", db => checkOnboardingPhoneVerificationCode({ db }, { ...owner, attemptId, code: "123456" }, verify));
+      const claimId = await as(tx, "lobbystack_app", async (db) => {
+        const search = await searchBusinessNumberInventory({ db }, { ...owner, claimTokenSecret }, inventory);
+        return await reserveOnboardingNumberClaim({ db }, { ...owner, claimToken: search.numbers[0]!.claimToken, claimTokenSecret, idempotencyKey: randomUUID(), ipHash: "network-2" });
+      });
+      // The payment lands while the number is still being bought, so it finds no trial to convert.
+      await tx.insert(billingAccounts).values({ businessId, billingKey: `business:${businessId}`, plan: "starter", subscriptionState: "active" }).onConflictDoUpdate({ target: billingAccounts.businessId, set: { plan: "starter", subscriptionState: "active" } });
+      const phoneNumberId = await as(tx, "lobbystack_worker", async (db) => {
+        expect(await claimNumberProvisioning({ db }, { businessId, claimId })).toBeTruthy();
+        return await completeNumberProvisioning({ db }, { businessId, claimId, e164: trialNumber, providerPhoneId: `PN${randomUUID().replaceAll("-", "")}`, voiceUrl: "sip-trunk:TK-test", smsUrl: "https://example.invalid/sms" });
+      });
+      expect((await tx.select({ status: numberTrials.status }).from(numberTrials).where(eq(numberTrials.businessId, businessId)))[0]?.status).toBe("converted");
+      expect((await tx.select({ reason: phoneNumbers.reclaimReason, at: phoneNumbers.reclaimScheduledAt }).from(phoneNumbers).where(eq(phoneNumbers.id, phoneNumberId)))[0]).toEqual({ reason: null, at: null });
+    });
+  });
+
+  it("counts a refused internet number against the rate limit, and looks a number up only within it", async () => {
+    await rollbackTest(async (tx) => {
+      const userId = randomUUID();
+      await tx.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid`, name: "Sam Lee" });
+      await tx.execute(sql`set local role lobbystack_app`);
+      const { businessId } = await createBusiness({ db: tx as unknown as Database }, { userId, name: "VoIP clinic", timezone: "America/Toronto", businessType: "test" });
+      await tx.execute(sql`reset role`);
+      const lookups: string[] = [];
+      const voip = { ...verify, lookupLineType: async (phone: string) => { lookups.push(phone); return "nonFixedVoip"; } };
+      const start = (phoneE164: string) => as(tx, "lobbystack_app", db => startOnboardingPhoneVerification({ db }, { userId, businessId, phoneE164, countryCode: "CA" }, voip));
+      // A country without numbers gets no text, whatever the client sends.
+      await expect(as(tx, "lobbystack_app", db => startOnboardingPhoneVerification({ db }, { userId, businessId, phoneE164: "+33612345678", countryCode: "FR" }, voip))).rejects.toMatchObject({ code: "phone_country_unsupported" });
+      for (let index = 0; index < 5; index += 1) await expect(start(`+1416555020${index}`)).rejects.toMatchObject({ code: "phone_voip_refused" });
+      // The sixth attempt this hour is refused before any paid lookup.
+      await expect(start("+14165550209")).rejects.toMatchObject({ code: "verification_rate_limited" });
+      expect(lookups).toHaveLength(5);
     });
   });
 

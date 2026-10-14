@@ -212,6 +212,19 @@ describe("POST /api/widget/chat", () => {
     })));
   });
 
+  it.each([
+    ["the business's caller language", { defaultLocale: "de" }, {}, "German"],
+    ["French when the widget shows French", { defaultLocale: "de" }, { locale: "fr" }, "French"],
+    ["the widget's set language over the business's", { defaultLocale: "de", config: { localeOverride: "es" } }, {}, "Spanish"],
+  ])("answers website chat in %s", async (_case, sessionOverrides, body, language) => {
+    vi.stubEnv("AI_CHAT_API_KEY", "test-api-key");
+    mocks.resolveWidgetSessionAccess.mockResolvedValue({ ok: true, session: { ...session, ...sessionOverrides } });
+    mocks.getCachedBusinessSnapshot.mockResolvedValue({ businessId } as BusinessContextSnapshot);
+    mocks.loadWidgetChatHistory.mockResolvedValue([]);
+    await readSse(await POST(widgetRequest(body)));
+    expect(mocks.createReceptionistAgent).toHaveBeenCalledWith(expect.objectContaining({ extraInstructions: `Reply in ${language} unless the visitor clearly asks to switch languages.` }));
+  });
+
   it("does not expose provider error details in the UI stream", async () => {
     // eslint-disable-next-line require-yield -- mock generator must throw before yielding.
     mocks.createReceptionistAgent.mockReturnValue(agentStreaming((async function* () { throw new Error("secret provider token"); })(), "error"));

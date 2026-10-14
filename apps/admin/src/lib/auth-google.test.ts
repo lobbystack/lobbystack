@@ -68,12 +68,20 @@ it("asks Google for the sign-in scopes only and creates a new user in the page's
   expect(store.tables.account).toEqual([expect.objectContaining({ providerId: "google", accountId: "google-new" })]);
 });
 
-it.each([true, false])("links Google to an existing verified account with the same email (Google says verified: %s)", async googleVerified => {
+it("links Google to an existing verified account with the same email", async () => {
   seedUser(true);
-  const { callback } = await signInWithGoogle({ sub: "google-owner", email: "owner@example.invalid", email_verified: googleVerified });
+  const { callback } = await signInWithGoogle({ sub: "google-owner", email: "owner@example.invalid", email_verified: true });
   expect(callback.headers.get("location")).toBe(`${page}&google=login`);
   expect(store.tables.user).toEqual([expect.objectContaining({ id: "existing", preferredLocale: "en" })]);
   expect(store.tables.account).toContainEqual(expect.objectContaining({ providerId: "google", accountId: "google-owner", userId: "existing" }));
+});
+
+it("refuses to link a Google identity whose email Google hasn't verified", async () => {
+  seedUser(true);
+  const { callback } = await signInWithGoogle({ sub: "google-owner", email: "owner@example.invalid", email_verified: false });
+  expect(callback.headers.get("location")).toBe(`${page}&error=account_not_linked`);
+  expect(store.tables.account?.map(account => account.providerId)).toEqual(["credential"]);
+  expect(store.tables.session).toEqual([]);
 });
 
 it("refuses to link an existing account that never verified its email", async () => {

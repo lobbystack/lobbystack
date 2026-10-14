@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 import { businesses, widgetKeys, withBusinessTransaction } from "@lobbystack/db";
 import { bearerToken } from "@lobbystack/domain";
-import type { WidgetConfig, WidgetKeyConfig } from "@lobbystack/shared";
+import { normalizeRuntimeLocale, type RuntimeLocale, type WidgetConfig, type WidgetKeyConfig } from "@lobbystack/shared";
 
 import { getWorkerDatabase, jsonError } from "./api-helpers";
 import { hashWidgetKey, isAllowedWidgetOrigin, normalizeOrigin, requestWidgetOrigin, resolveWidgetKeyByHash, serializeWidgetKeyConfig, verifyWidgetSessionToken } from "./widget-keys";
@@ -16,7 +16,7 @@ export type WidgetSession = {
   key: WidgetKeyConfig;
   businessName: string;
   businessSlug: string;
-  defaultLocale: "en" | "fr";
+  defaultLocale: RuntimeLocale;
   config: WidgetConfig;
   visitorId?: string;
 };
@@ -40,7 +40,7 @@ async function loadWidgetSession(businessId: string, widgetKeyId: string) {
       config: key.config as WidgetConfig,
       businessName: business?.name ?? "",
       businessSlug: business?.slug ?? "",
-      defaultLocale: (business?.defaultLocale === "fr" ? "fr" : "en") as "en" | "fr",
+      defaultLocale: normalizeRuntimeLocale(business?.defaultLocale),
     };
   });
 }

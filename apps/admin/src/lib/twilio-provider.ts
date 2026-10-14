@@ -2,8 +2,12 @@ import "server-only";
 
 import { createHmac } from "node:crypto";
 
+import { normalizeIP } from "@better-auth/core/utils/ip";
+
 import type { OnboardingPhoneVerifyProvider } from "@lobbystack/domain";
 import { TwilioProvider } from "@lobbystack/providers";
+
+import { trustedClientIp } from "./trusted-client-ip";
 
 let provider: TwilioProvider | undefined;
 
@@ -35,10 +39,11 @@ export function getOnboardingPhoneVerifyProvider(): OnboardingPhoneVerifyProvide
 
 /**
  * A keyed hash of the caller's IP address, to allow one free trial per
- * address every 30 days without storing the address. Railway's proxy puts the
- * client first in x-forwarded-for.
+ * address every 30 days without storing the address. Only the trusted ingress
+ * header counts: a caller sets x-forwarded-for to anything.
  */
 export function requestIpHash(request: Request): string | null {
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip")?.trim();
-  return ip ? createHmac("sha256", getNumberClaimTokenSecret()).update(`trial-ip:${ip}`).digest("hex") : null;
+  const ip = trustedClientIp(request);
+  // One host usually owns a whole IPv6 /64, so count the subnet as one network.
+  return ip ? createHmac("sha256", getNumberClaimTokenSecret()).update(`trial-ip:${normalizeIP(ip, { ipv6Subnet: 64 })}`).digest("hex") : null;
 }

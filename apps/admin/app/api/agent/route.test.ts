@@ -14,7 +14,7 @@ beforeEach(() => {
   fixture.business = { name: "Clinic", defaultLocale: "en" };
   fixture.profile = undefined;
   fakeOperator.tx = {
-    select: () => ({ from: (table: unknown) => ({ where: () => ({ limit: async () => table === receptionistProfiles ? [fixture.profile].filter(Boolean) : [fixture.business], for: async () => [{ timezone: "America/Toronto" }] }) }) }),
+    select: () => ({ from: (table: unknown) => ({ where: () => ({ limit: async () => table === receptionistProfiles ? [fixture.profile].filter(Boolean) : [fixture.business], for: async () => [{ timezone: "America/Toronto", ...fixture.business }] }) }) }),
     insert: () => ({ values: (value: unknown) => { fixture.insert(value); return { onConflictDoUpdate: (config: { set: unknown }) => { fixture.conflict(config.set); return { returning: async () => [{ id: "profile", updatedAt: new Date(0) }] }; } }; } }),
     update: () => ({ set: (value: unknown) => { fixture.update(value); return { where: () => ({ returning: async () => [{ id: "business" }] }) }; } }),
   };
@@ -71,16 +71,17 @@ describe("the greeting when the caller language changes", () => {
   it("switches a default greeting to the new language's default", async () => {
     fixture.profile = { greeting: defaultGreeting("Clinic", "en") };
     expect((await patch({ locale: "de" })).status).toBe(200);
-    expect(fixture.conflict).toHaveBeenCalledWith(expect.objectContaining({ greeting: defaultGreeting("Clinic", "de") }));
+    expect(fixture.update).toHaveBeenCalledWith(expect.objectContaining({ greeting: defaultGreeting("Clinic", "de") }));
   });
   it("switches the English default that older businesses have", async () => {
     fixture.profile = { greeting: "Thanks for calling Clinic." };
     expect((await patch({ locale: "es" })).status).toBe(200);
-    expect(fixture.conflict).toHaveBeenCalledWith(expect.objectContaining({ greeting: defaultGreeting("Clinic", "es") }));
+    expect(fixture.update).toHaveBeenCalledWith(expect.objectContaining({ greeting: defaultGreeting("Clinic", "es") }));
   });
   it("keeps a greeting the owner edited", async () => {
     fixture.profile = { greeting: "Welcome to Clinic, how can we help?" };
     expect((await patch({ locale: "de" })).status).toBe(200);
+    expect(fixture.update).not.toHaveBeenCalledWith(expect.objectContaining({ greeting: expect.anything() }));
     expect(fixture.conflict).toHaveBeenCalledWith(expect.not.objectContaining({ greeting: expect.anything() }));
   });
   it("keeps the greeting sent with the language", async () => {
@@ -92,7 +93,7 @@ describe("the greeting when the caller language changes", () => {
     fixture.business = { name: "Clinic", defaultLocale: "fr" };
     fixture.profile = { greeting: defaultGreeting("Clinic", "fr") };
     expect((await patch({ locale: "it" })).status).toBe(200);
-    expect(fixture.conflict).toHaveBeenCalledWith(expect.objectContaining({ greeting: defaultGreeting("Clinic", "it") }));
+    expect(fixture.update).toHaveBeenCalledWith(expect.objectContaining({ greeting: defaultGreeting("Clinic", "it") }));
   });
   it("gives a business without a profile the default in its new language", async () => {
     expect((await patch({ locale: "nl" })).status).toBe(200);

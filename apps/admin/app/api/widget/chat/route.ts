@@ -4,10 +4,11 @@ import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
 import { NextResponse } from "next/server";
 
 import { createReceptionistAgent } from "@lobbystack/agent-core/agent";
+import { LANGUAGE_NAMES } from "@lobbystack/agent-core/instructions";
 import { createAgentModel, describeAgentUsage } from "@lobbystack/agent-core/model";
 import { appendMessage, getCachedBusinessSnapshot, getOrCreateWidgetConversation, loadWidgetChatHistory, recordAiGenerationEvent, registerWidgetVisitor, reserveWidgetChatUsageInTransaction } from "@lobbystack/domain";
 import { withBusinessTransaction } from "@lobbystack/db";
-import { widgetChatRequestSchema, type BusinessContextSnapshot } from "@lobbystack/shared";
+import { normalizeRuntimeLocale, widgetChatRequestSchema, type BusinessContextSnapshot } from "@lobbystack/shared";
 
 import { getWorkerDatabase, readJson } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
@@ -100,7 +101,8 @@ export async function POST(request: Request) {
           const snapshot = await getCachedBusinessSnapshot(context, { businessId: session.businessId });
           const activeSnapshot = snapshot ?? fallbackSnapshot(session);
           const history = await loadWidgetChatHistory(context, { businessId: session.businessId, conversationId });
-          const language = body.locale === "fr" || (!body.locale && (session.config.localeOverride === "fr" || session.defaultLocale === "fr")) ? "French" : "English";
+          // A French widget answers in French; otherwise the widget's set language, else the business's caller language.
+          const language = LANGUAGE_NAMES[body.locale === "fr" ? "fr" : normalizeRuntimeLocale(session.config.localeOverride ?? session.defaultLocale)];
           const agent = createReceptionistAgent({
             model: model!,
             context: { domain: context, snapshot: activeSnapshot, channel: "web_chat", conversationId },

@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PgDialect } from "drizzle-orm/pg-core";
 import type { SQL } from "drizzle-orm";
 
-import { businesses, closures, staff } from "@lobbystack/db";
+import { businesses, closures, receptionistProfiles, staff } from "@lobbystack/db";
+import { defaultGreeting } from "@lobbystack/shared";
 
 const mocks = vi.hoisted(() => ({ enqueueOutbox: vi.fn(), tx: undefined as unknown }));
 vi.mock("@lobbystack/db", async (original) => ({ ...(await original<typeof import("@lobbystack/db")>()), enqueueOutbox: mocks.enqueueOutbox, withBusinessTransaction: async (_db: unknown, _context: unknown, callback: (tx: unknown) => unknown) => await callback(mocks.tx) }));
@@ -67,6 +68,22 @@ describe("business timezone", () => {
     expect(new PgDialect().sqlToQuery(values.endsAt as SQL)).toMatchObject({ sql: `("closures"."ends_at" at time zone $1) at time zone $2`, params: ["America/Los_Angeles", "Europe/Belgrade"] });
   });
 
+  it("puts a default greeting in the new caller language, and keeps one the owner wrote", async () => {
+    const updates: Array<{ table: unknown; values: Record<string, unknown> }> = [];
+    const greetingTx = (greeting: string) => ({
+      select: (fields: Record<string, unknown>) => ({ from: () => ({ where: () => "greeting" in fields
+        ? { limit: async () => [{ greeting }] }
+        : { for: async () => [{ timezone: "America/Toronto", defaultLocale: "en", name: "Clinic" }] } }) }),
+      update: (table: unknown) => ({ set: (values: Record<string, unknown>) => { updates.push({ table, values }); return { where: () => ({ returning: async () => [{ id: "biz-1" }] }) }; } }),
+    }) as never;
+    await updateBusinessInTransaction(greetingTx(defaultGreeting("Clinic", "en")), { businessId: "biz-1", defaultLocale: "es" });
+    expect(updates.find((update) => update.table === receptionistProfiles)?.values).toMatchObject({ greeting: defaultGreeting("Clinic", "es") });
+    expect(updates.some((update) => update.table === closures)).toBe(false);
+    updates.length = 0;
+    await updateBusinessInTransaction(greetingTx("Welcome to Clinic, how can we help?"), { businessId: "biz-1", defaultLocale: "es" });
+    expect(updates.map((update) => update.table)).toEqual([businesses]);
+  });
+
   it("leaves closures alone when the zone stays the same", async () => {
     const { tx, updates } = useTransaction("Europe/Belgrade");
     await updateBusinessInTransaction(tx, { businessId: "biz-1", timezone: "Europe/Belgrade" });
@@ -88,7 +105,8 @@ describe("business timezone", () => {
 });
 
 describe("business summary", () => {
-  const tx = { update: () => ({ set: () => ({ where: () => ({ returning: async () => [{ id: "biz-1" }] }) }) }) } as never;
+  // A locale change reads the business first, to carry a default greeting over; this one is already in French.
+  const tx = { select: () => ({ from: () => ({ where: () => ({ for: async () => [{ timezone: "UTC", defaultLocale: "fr", name: "Oak Clinic" }] }) }) }), update: () => ({ set: () => ({ where: () => ({ returning: async () => [{ id: "biz-1" }] }) }) }) } as never;
   const summaryJobs = () => mocks.enqueueOutbox.mock.calls.filter(([, job]) => job.topic === "business.generateSummary");
 
   it.each([[{ name: "Oak Clinic" }], [{ defaultLocale: "fr" }]])("refreshes the generated summary after %j", async (fields) => {

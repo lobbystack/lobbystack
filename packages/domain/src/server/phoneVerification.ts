@@ -8,6 +8,7 @@ import { enqueueOutbox, onboardingPhoneVerifications, withBusinessTransaction } 
 import { requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
 import { enableOperatorSmsAlertsWithConsent } from "./notifications";
+import { isNumberCountry } from "./numberTrials";
 import { resolveSmsSender } from "./smsSender";
 import { VERIFICATION_CODE_TTL_MS, newVerificationCode, verificationCodeSecret } from "./verificationCode";
 
@@ -243,9 +244,8 @@ export async function startOnboardingPhoneVerification(
 ): Promise<{ attemptId: string }> {
   const countryCode = input.countryCode.trim().toUpperCase();
   if (!E164_PATTERN.test(input.phoneE164) || !/^[A-Z]{2}$/.test(countryCode)) throw phoneVerificationError(422, "phone_number_invalid", "Enter a valid mobile number.");
-  const lineType = await provider.lookupLineType(input.phoneE164);
-  if (lineType === "fixedVoip" || lineType === "nonFixedVoip") throw phoneVerificationError(422, "phone_voip_refused", "Use your mobile number. Internet phone numbers can't be verified.");
-  if (lineType && !["mobile", "personal", "unknown"].includes(lineType)) throw phoneVerificationError(422, "phone_not_mobile", "Use a mobile number that can receive texts.");
+  // The step guards a number from the phone's country, so a country without numbers gets no text.
+  if (!isNumberCountry(countryCode)) throw phoneVerificationError(422, "phone_country_unsupported", "Phone numbers aren't available in this country yet.");
   const fingerprint = createHash("sha256").update(`${input.userId}:${input.phoneE164}`).digest("hex");
   let attemptId: string;
   try {
@@ -254,7 +254,7 @@ export async function startOnboardingPhoneVerification(
       await tx.update(onboardingPhoneVerifications)
         .set({ status: "canceled", codeHash: null, lastError: "Replaced by a newer verification.", updatedAt: new Date() })
         .where(and(eq(onboardingPhoneVerifications.businessId, input.businessId), eq(onboardingPhoneVerifications.userId, input.userId), inArray(onboardingPhoneVerifications.status, ["queued", "processing", "pending"])));
-      const result = await tx.execute(sql`SELECT app.reserve_phone_verification_attempt(${input.businessId}::uuid, ${input.userId}::uuid, ${input.phoneE164}, ${countryCode}, ${lineType}, ${fingerprint}) AS id`);
+      const result = await tx.execute(sql`SELECT app.reserve_phone_verification_attempt(${input.businessId}::uuid, ${input.userId}::uuid, ${input.phoneE164}, ${countryCode}, ${null}, ${fingerprint}) AS id`);
       const id = String((result.rows[0] as { id?: unknown } | undefined)?.id ?? "");
       if (!id) throw new Error("Phone verification could not be reserved.");
       return id;
@@ -263,10 +263,23 @@ export async function startOnboardingPhoneVerification(
     throw reservationError(error) ?? error;
   }
   const scope = and(eq(onboardingPhoneVerifications.id, attemptId), eq(onboardingPhoneVerifications.businessId, input.businessId), eq(onboardingPhoneVerifications.userId, input.userId));
+  // Each lookup is a paid Twilio request, so it runs only once the attempt counts against the
+  // rate limits; a refused number uses up an attempt too.
+  const closeAttempt = async (lastError: string, lineType: string | null = null) => await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
+    await tx.update(onboardingPhoneVerifications).set({ status: "failed", lineType, lastError, updatedAt: new Date() }).where(scope);
+  });
+  const lineType = await provider.lookupLineType(input.phoneE164).catch(async (error: unknown) => { await closeAttempt("The line type lookup failed."); throw error; });
+  const refusal = lineType === "fixedVoip" || lineType === "nonFixedVoip"
+    ? phoneVerificationError(422, "phone_voip_refused", "Use your mobile number. Internet phone numbers can't be verified.")
+    : lineType && !["mobile", "personal", "unknown"].includes(lineType) ? phoneVerificationError(422, "phone_not_mobile", "Use a mobile number that can receive texts.") : undefined;
+  if (refusal) {
+    await closeAttempt(refusal.message, lineType);
+    throw refusal;
+  }
   try {
     const { sid } = await provider.sendCode({ to: input.phoneE164, ...(input.locale ? { locale: input.locale } : {}) });
     await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
-      await tx.update(onboardingPhoneVerifications).set({ status: "pending", providerVerificationId: sid, expiresAt: new Date(Date.now() + PHONE_VERIFICATION_CODE_TTL_MS), updatedAt: new Date() }).where(scope);
+      await tx.update(onboardingPhoneVerifications).set({ status: "pending", lineType, providerVerificationId: sid, expiresAt: new Date(Date.now() + PHONE_VERIFICATION_CODE_TTL_MS), updatedAt: new Date() }).where(scope);
     });
   } catch (error) {
     await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {

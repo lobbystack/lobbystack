@@ -57,12 +57,15 @@ export function LivePhoneNumberSettingsSurface() {
   const canClaimDedicatedNumber =
     billingStatus != null &&
     (billingStatus.includedBusinessNumbers === null || billingStatus.includedBusinessNumbers > 0);
-  const reclaimScheduledAt =
+  // A trial number's release date isn't the owner's deadline: the trial banner says when it ends,
+  // and keeping or changing the number takes a paid plan.
+  const isTrialNumber = primaryPhoneNumber?.reclaimReason === "trial";
+  const reclaimScheduledAt = isTrialNumber ? null :
     (primaryPhoneNumber?.reclaimScheduledAt ? new Date(primaryPhoneNumber.reclaimScheduledAt).getTime() : null) ??
     billingStatus?.phoneNumberReclaimScheduledAt ??
     null;
   const showReclaimBanner = Boolean(hasPhoneNumber && reclaimScheduledAt);
-  const showPaidPlanRequired = !hasPhoneNumber && billingStatus != null && !canClaimDedicatedNumber;
+  const showPaidPlanRequired = (!hasPhoneNumber || isTrialNumber) && billingStatus != null && !canClaimDedicatedNumber;
 
   function handleClaimed(result: Extract<ClaimResult, { status: "claimed" }>): void {
     toast.success(t(hasPhoneNumber ? "phoneNumber.toast.changed" : "phoneNumber.toast.added"));

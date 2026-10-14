@@ -71,6 +71,9 @@ DECLARE new_claim_id uuid; business_row public.businesses%ROWTYPE; account_plan 
 BEGIN
   IF session_user <> 'lobbystack_app' OR target_user_id <> NULLIF(current_setting('app.user_id', true), '')::uuid OR target_business_id <> NULLIF(current_setting('app.business_id', true), '')::uuid OR NOT app.has_business_membership(target_business_id) THEN RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501'; END IF;
   PERFORM pg_advisory_xact_lock(hashtextextended('phone-claim:' || target_business_id::text, 0));
+  -- The once-per-user, per-phone and per-network checks below read other businesses' trials,
+  -- so trial claims take turns: two workspaces claiming at once can't both pass them.
+  PERFORM pg_advisory_xact_lock(hashtextextended('number-trial-claims', 0));
   SELECT id INTO new_claim_id FROM public.onboarding_number_claim_events WHERE business_id = target_business_id AND idempotency_key = request_key;
   IF new_claim_id IS NOT NULL THEN RETURN new_claim_id; END IF;
   UPDATE public.onboarding_number_claim_events SET status = 'failed', completed_at = now(), last_error = CASE WHEN status = 'reserved' THEN 'Number claim reservation expired.' ELSE 'Number provisioning stalled.' END, updated_at = now()

@@ -174,10 +174,11 @@ export class TwilioProvider {
     await this.client.incomingPhoneNumbers(input.providerPhoneId).update({ voiceUrl: input.fallbackUrl, voiceMethod: "POST" });
   }
 
-  async listAvailablePhoneNumbers(input: { countryCode: string; kind: "local" | "mobile" | "toll_free"; areaCode?: string; city?: string; regionCode?: string; postalCode?: string; limit: number }): Promise<AvailablePhoneNumber[]> {
+  async listAvailablePhoneNumbers(input: { countryCode: string; kind: "local" | "mobile" | "toll_free"; areaCode?: string; city?: string; regionCode?: string; postalCode?: string; sms?: boolean; limit: number }): Promise<AvailablePhoneNumber[]> {
     const collection = this.client.availablePhoneNumbers(input.countryCode);
-    // Hosted businesses text from LobbyStack's shared number, so a number only has to take calls.
-    const filters = { voiceEnabled: true, limit: Math.max(1, Math.min(20, Math.trunc(input.limit))), ...(input.areaCode && /^\d+$/.test(input.areaCode) ? { areaCode: Number(input.areaCode) } : {}), ...(input.city ? { inLocality: input.city } : {}), ...(input.regionCode ? { inRegion: input.regionCode } : {}), ...(input.postalCode ? { inPostalCode: input.postalCode } : {}) };
+    // Hosted businesses text from LobbyStack's shared number, so a number only has to take calls;
+    // `sms` asks for numbers that also text, for a self-hosted business that texts from its own.
+    const filters = { voiceEnabled: true, ...(input.sms ? { smsEnabled: true } : {}), limit: Math.max(1, Math.min(20, Math.trunc(input.limit))), ...(input.areaCode && /^\d+$/.test(input.areaCode) ? { areaCode: Number(input.areaCode) } : {}), ...(input.city ? { inLocality: input.city } : {}), ...(input.regionCode ? { inRegion: input.regionCode } : {}), ...(input.postalCode ? { inPostalCode: input.postalCode } : {}) };
     const numbers = input.kind === "toll_free" ? await collection.tollFree.list(filters) : input.kind === "mobile" ? await collection.mobile.list(filters) : await collection.local.list(filters);
     // Twilio returns capability keys as "SMS"/"MMS"/"voice", while its TypeScript
     // types use lowercase. Read both so real inventory is not filtered out.
@@ -188,7 +189,7 @@ export class TwilioProvider {
         const voice = Boolean(capabilities.voice ?? capabilities.VOICE);
         return { phoneE164: number.phoneNumber, ...(number.locality ? { locality: number.locality } : {}), ...(number.region ? { region: number.region } : {}), countryCode: input.countryCode.toUpperCase(), capabilities: { sms, voice } };
       })
-      .filter((number) => number.capabilities.voice);
+      .filter((number) => number.capabilities.voice && (!input.sms || number.capabilities.sms));
   }
 
   /** Some countries sell numbers only under an approved regulatory bundle, and some also need an address on file. */

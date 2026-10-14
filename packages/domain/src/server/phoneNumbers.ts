@@ -7,7 +7,7 @@ import { billingAccounts, businesses, enqueueOutbox, numberTrials, onboardingNum
 
 import { requireBusinessAdmin } from "../authz";
 import type { DomainContext } from "./context";
-import { activateNumberTrialInTransaction, failNumberTrialInTransaction, isNumberCountry, trialCountries, type NumberCountry } from "./numberTrials";
+import { activateNumberTrialInTransaction, failNumberTrialInTransaction, isNumberCountry, keepBusinessNumbersInTransaction, trialCountries, type NumberCountry } from "./numberTrials";
 import { normalizeOnboardingStage } from "./onboarding";
 import { resolveBusinessNumberMarket } from "./phoneNumberMarket";
 
@@ -83,7 +83,7 @@ function claimRefusal(error: unknown): Error | undefined {
 
 export async function searchBusinessNumberInventory(context: DomainContext, input: { userId: string; businessId: string; purpose?: NumberClaimPurpose; selection?: Partial<NumberSelection>; limit?: number; claimTokenSecret: string }, provider: NumberInventoryProvider) {
   const purpose = input.purpose ?? "onboarding";
-  const { market, trial, countryFixed } = await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
+  const { market, trial, countryFixed, smsRequired } = await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
     const business = (await tx.select({ stage: businesses.onboardingStage, timezone: businesses.timezone, deploymentMode: businesses.deploymentMode, replacementUsedAt: businesses.phoneNumberReplacementUsedAt }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1))[0];
     const billing = (await tx.select({ plan: billingAccounts.plan, state: billingAccounts.subscriptionState }).from(billingAccounts).where(eq(billingAccounts.businessId, input.businessId)).limit(1))[0];
@@ -110,7 +110,8 @@ export async function searchBusinessNumberInventory(context: DomainContext, inpu
       if (used.length) throw refused("trial_already_used");
       trial = { verifiedPhone: verified.phone };
     }
-    return { market: resolveBusinessNumberMarket({ selection: requested ? { ...input.selection, countryCode: requested } : input.selection, timezone: business.timezone }), trial, countryFixed: Boolean(verified) };
+    // Hosted businesses text from the shared sender; a self-hosted one texts from this number.
+    return { market: resolveBusinessNumberMarket({ selection: requested ? { ...input.selection, countryCode: requested } : input.selection, timezone: business.timezone }), trial, countryFixed: Boolean(verified), smsRequired: business.deploymentMode !== "cloud" };
   });
   const countryCode = market.countryCode;
   if (!isNumberCountry(countryCode)) throw numberClaimError(400, "unsupported_country", "Phone numbers aren't available in this country yet.");
@@ -119,7 +120,7 @@ export async function searchBusinessNumberInventory(context: DomainContext, inpu
   const kind: NumberSelection["kind"] = countryCode === "GB" || countryCode === "AU" ? "mobile" : countryCode === "NZ" ? "local" : input.selection?.kind ?? "local";
   const selection: NumberSelection = { countryCode, kind, ...(input.selection?.areaCode ? { areaCode: input.selection.areaCode.replace(/\D/g, "") } : {}), ...(input.selection?.city ? { city: input.selection.city.trim() } : {}), ...(input.selection?.regionCode ? { regionCode: input.selection.regionCode.trim() } : {}), ...(input.selection?.postalCode ? { postalCode: input.selection.postalCode.trim() } : {}) };
   const limit = Math.max(1, Math.min(20, Math.trunc(input.limit ?? 10)));
-  const numbers = (await provider.listAvailablePhoneNumbers({ ...selection, limit })).filter(number => number.capabilities.voice).slice(0, limit).map(number => {
+  const numbers = (await provider.listAvailablePhoneNumbers({ ...selection, limit, ...(smsRequired ? { sms: true } : {}) })).filter(number => number.capabilities.voice && (!smsRequired || number.capabilities.sms)).slice(0, limit).map(number => {
     const offered: NumberSelection = { ...selection, sms: number.capabilities.sms, ...(trial ? { trial: true, verifiedPhone: trial.verifiedPhone } : {}) };
     return { ...number, claimToken: issueOffer({ v: 1, purpose, businessId: input.businessId, userId: input.userId, e164: number.phoneE164, countryCode: number.countryCode, kind, capabilities: { sms: number.capabilities.sms, voice: true }, selection: offered, exp: Date.now() + 5 * 60_000 }, input.claimTokenSecret) };
   });
@@ -203,7 +204,10 @@ export async function completeNumberProvisioning(context: DomainContext, input: 
       if (!retired.length || !business.length) throw new Error("Number replacement entitlement is no longer valid.");
     } else {
       await tx.update(businesses).set({ onboardingStage: sql`CASE WHEN ${businesses.onboardingStage} = 'complete' THEN 'complete' ELSE 'attribution' END`, updatedAt: new Date() }).where(eq(businesses.id, input.businessId));
-      await activateNumberTrialInTransaction(tx, { businessId: input.businessId, claimId: input.claimId, phoneNumberId: number.id });
+      const activated = await activateNumberTrialInTransaction(tx, { businessId: input.businessId, claimId: input.claimId, phoneNumberId: number.id });
+      // The owner may have paid while we bought the number: that payment found no trial to convert, so convert it now.
+      const billing = activated ? (await tx.select({ plan: billingAccounts.plan, state: billingAccounts.subscriptionState }).from(billingAccounts).where(eq(billingAccounts.businessId, input.businessId)).limit(1))[0] : undefined;
+      if (billing && isPaidSubscription(billing.plan, billing.state)) await keepBusinessNumbersInTransaction(tx, { businessId: input.businessId });
     }
     return number.id;
   });

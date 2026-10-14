@@ -4,7 +4,7 @@ import { and, eq, gt, ne, or, sql } from "drizzle-orm";
 
 import { enqueueOutbox, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { businessInvitations, businessMemberships, businesses, closures, receptionistProfiles, staff, users } from "@lobbystack/db";
-import { defaultAppointmentChangePolicy, defaultGreeting, normalizeAuthEmail } from "@lobbystack/shared";
+import { defaultAppointmentChangePolicy, defaultGreeting, isDefaultGreeting, normalizeAuthEmail, normalizeRuntimeLocale } from "@lobbystack/shared";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import { enqueueBusinessSummaryRefresh } from "./businessSummary";
@@ -159,19 +159,26 @@ export async function updateBusinessInTransaction(
   const timezone = input.timezone === undefined ? undefined : requireIanaTimeZone(input.timezone);
   const values = { ...(input.name !== undefined ? { name: input.name.trim() } : {}), ...(timezone !== undefined ? { timezone } : {}), ...(input.businessType !== undefined ? { businessType: input.businessType.trim() } : {}), ...(input.defaultLocale !== undefined ? { defaultLocale: input.defaultLocale.trim() } : {}), ...(input.websiteUrl !== undefined ? { websiteUrl: input.websiteUrl } : {}), updatedAt: new Date() };
   if (Object.keys(values).length === 1) throw Object.assign(new Error("At least one business field is required."), { status: 400 });
-  // Locks the row, so a concurrent change can't alter the zone the closures were entered in.
-  const [before] = timezone === undefined ? [] : await tx.select({ timezone: businesses.timezone }).from(businesses).where(eq(businesses.id, input.businessId)).for("update");
+  // Locks the row, so a concurrent change can't alter the zone the closures were entered in, or the language the greeting is in.
+  const [before] = timezone === undefined && input.defaultLocale === undefined ? [] : await tx.select({ timezone: businesses.timezone, defaultLocale: businesses.defaultLocale, name: businesses.name }).from(businesses).where(eq(businesses.id, input.businessId)).for("update");
   const [business] = await tx.update(businesses).set(values).where(eq(businesses.id, input.businessId)).returning({ id: businesses.id });
   if (!business) throw Object.assign(new Error("Business not found."), { status: 404 });
   // shortcut: every staff row today is the default member that stands for the business; once staff set their own zones, update only that member.
   if (timezone !== undefined) await tx.update(staff).set({ timezone, updatedAt: new Date() }).where(eq(staff.businessId, input.businessId));
   // Closures are entered as local times but saved as instants. Keep their local times in the new zone, as weekly hours do.
-  if (before && before.timezone !== timezone) {
+  if (timezone !== undefined && before && before.timezone !== timezone) {
     await tx.update(closures).set({
       startsAt: sql`(${closures.startsAt} at time zone ${before.timezone}) at time zone ${timezone}`,
       endsAt: sql`(${closures.endsAt} at time zone ${before.timezone}) at time zone ${timezone}`,
       updatedAt: new Date(),
     }).where(and(eq(closures.businessId, input.businessId), gt(closures.endsAt, sql`now()`)));
+  }
+  // A greeting still on the old language's default follows the new language; one the owner wrote stays.
+  if (input.defaultLocale !== undefined && before) {
+    const from = normalizeRuntimeLocale(before.defaultLocale);
+    const to = normalizeRuntimeLocale(input.defaultLocale);
+    const [profile] = from === to ? [] : await tx.select({ greeting: receptionistProfiles.greeting }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, input.businessId)).limit(1);
+    if (profile && isDefaultGreeting(profile.greeting, before.name, from)) await tx.update(receptionistProfiles).set({ greeting: defaultGreeting(input.name?.trim() || before.name, to), updatedAt: new Date() }).where(eq(receptionistProfiles.businessId, input.businessId));
   }
   await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "business", aggregateId: input.businessId, dedupeKey: `business:${input.businessId}:snapshot:${Date.now()}`, payload: { businessId: input.businessId, reason: "business_updated" } });
   // The generated summary names the business and is written in its default locale.

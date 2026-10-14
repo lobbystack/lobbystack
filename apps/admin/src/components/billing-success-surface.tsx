@@ -76,12 +76,13 @@ export function BillingSuccessSurface() {
     queryFn: () => requestJson<Checkout>(`/api/billing/checkout?businessId=${encodeURIComponent(businessId!)}&requestId=${encodeURIComponent(requestId!)}`),
     refetchInterval: (query) => query.state.data?.synced ? false : 1_500,
   });
+  const plan = checkout.data?.synced ? checkout.data.target : null;
+  // Read again once the plan syncs: that's when a trial number becomes theirs to keep.
   const numbers = useQuery({
-    queryKey: ["phone-numbers", businessId],
+    queryKey: ["phone-numbers", businessId, plan],
     enabled: Boolean(businessId),
     queryFn: () => requestJson<Numbers>(`/api/phone-numbers?businessId=${encodeURIComponent(businessId!)}`),
   });
-  const plan = checkout.data?.synced ? checkout.data.target : null;
   const number = numbers.data?.phoneNumbers.find((candidate) => !candidate.reclaimScheduledAt) ?? null;
 
   // The number step only opens once onboarding moves past the plan. Moving

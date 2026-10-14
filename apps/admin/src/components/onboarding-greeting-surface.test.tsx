@@ -17,10 +17,10 @@ const clients: QueryClient[] = [];
 beforeEach(() => { telemetryRef.current = createRecordedBrowserTelemetry(); navigation.push.mockReset(); });
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.restoreAllMocks(); vi.clearAllMocks(); });
 
-function setup(greeting = "Hi there") {
+function setup(greeting = "Hi there", business: Record<string, unknown> = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   clients.push(client);
-  client.setQueryData(["businesses"], { businesses: [{ businessId: "business", name: "Clinic", defaultLocale: "en", active: true }] });
+  client.setQueryData(["businesses"], { businesses: [{ businessId: "business", name: "Clinic", defaultLocale: "en", active: true, ...business }] });
   client.setQueryData(["onboarding-agent", "business"], { profile: { greeting } });
   const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => url === "/api/businesses" ? Response.json({ businesses: [{ businessId: "business", active: true }] }) : Response.json({ ok: true }));
   vi.stubGlobal("fetch", fetchMock);
@@ -57,6 +57,17 @@ describe("onboarding caller language", () => {
     expect(textarea.value).toBe(defaultGreeting("Clinic", "de"));
     await userEvent.click(screen.getByRole("button", { name: "greeting.continue" }));
     await waitFor(() => expect(navigation.push).toHaveBeenCalledWith("/onboarding/test-call"));
+    expect(sentAgentPatch(fetchMock)).toEqual({ greeting: defaultGreeting("Clinic", "de"), locale: "de" });
+  });
+
+  it("starts from the language the owner saved when they come back to the step", async () => {
+    vi.spyOn(navigator, "language", "get").mockReturnValue("en-US");
+    const fetchMock = setup(defaultGreeting("Clinic", "de"), { defaultLocale: "de", onboardingStage: "test_call" });
+    const select = (await screen.findByLabelText("greeting.language")) as HTMLSelectElement;
+    await waitFor(() => expect((screen.getByLabelText("greeting.label") as HTMLTextAreaElement).value).toBe(defaultGreeting("Clinic", "de")));
+    expect(select.value).toBe("de");
+    await userEvent.click(screen.getByRole("button", { name: "greeting.continue" }));
+    await waitFor(() => expect(navigation.push).toHaveBeenCalled());
     expect(sentAgentPatch(fetchMock)).toEqual({ greeting: defaultGreeting("Clinic", "de"), locale: "de" });
   });
 

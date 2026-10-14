@@ -310,7 +310,7 @@ export function AuthCard({ mode, google = false }: { mode: "login" | "signup"; g
     </p>
   ) : undefined;
   return (
-    <ReplacementOnboardingShell legalFooter={legalFooter} progress={login ? null : { current: 1, total: 8 }} title={login ? t("login.title") : t("signup.title")} width="sm">
+    <ReplacementOnboardingShell legalFooter={legalFooter} progress={login ? null : { current: 1, total: 9 }} title={login ? t("login.title") : t("signup.title")} width="sm">
       <div className="flex w-full flex-col gap-6">
         {google ? <>
           <div className="flex flex-col gap-2">

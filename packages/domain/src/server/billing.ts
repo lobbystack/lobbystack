@@ -111,8 +111,9 @@ const openCheckoutWindowMs = 30 * 60_000;
 
 /**
  * Refuses a checkout that could start a second subscription: the business
- * already pays (plan changes go through the customer portal) or another
- * checkout is open. Asking again for the same open checkout returns it.
+ * already pays (plan changes go through the customer portal) or someone else's
+ * checkout is open. Asking again for the same open checkout returns it, and
+ * asking for another plan replaces your own.
  */
 export async function createBillingCheckoutRequest(
   context: DomainContext,
@@ -132,8 +133,10 @@ export async function createBillingCheckoutRequest(
       .orderBy(desc(billingCheckoutRequests.createdAt))
       .limit(1))[0];
     if (open) {
-      if (open.requestedByUserId === input.userId && open.target === input.target && open.billingInterval === input.billingInterval) return open.id;
-      throw Object.assign(new Error("A checkout is already open for this workspace."), { status: 409, code: billingErrorCodes.checkoutInProgress });
+      if (open.requestedByUserId !== input.userId) throw Object.assign(new Error("A checkout is already open for this workspace."), { status: 409, code: billingErrorCodes.checkoutInProgress });
+      if (open.target === input.target && open.billingInterval === input.billingInterval) return open.id;
+      // The same person picking another plan, such as after Polar's back arrow, replaces their own checkout.
+      await tx.update(billingCheckoutRequests).set({ status: "superseded", updatedAt: new Date() }).where(and(eq(billingCheckoutRequests.id, open.id), eq(billingCheckoutRequests.businessId, input.businessId)));
     }
     await tx.insert(billingAccounts).values({ businessId: input.businessId, billingKey: `business:${input.businessId}` }).onConflictDoNothing({ target: billingAccounts.businessId });
     const [request] = await tx.insert(billingCheckoutRequests).values({

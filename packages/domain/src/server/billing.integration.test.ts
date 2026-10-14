@@ -57,14 +57,27 @@ async function workspace(tx: DatabaseTransaction) {
 }
 
 describe.skipIf(!testUrl)("checkout guard against dedicated PostgreSQL roles", () => {
-  it("hands back the open checkout for the same plan and refuses a different one", async () => {
+  it("hands back the open checkout for the same plan, and replaces it for another plan", async () => {
     await rollbackTest(async tx => {
-      const { checkout } = await workspace(tx);
+      const { businessId, checkout } = await workspace(tx);
       const first = await checkout("starter");
       await expect(checkout("starter")).resolves.toBe(first);
+      const second = await checkout("pro");
+      expect(second).not.toBe(first);
+      expect((await tx.select({ status: billingCheckoutRequests.status }).from(billingCheckoutRequests).where(eq(billingCheckoutRequests.id, first)))[0]?.status).toBe("superseded");
+      await expect(checkout("starter", "annual")).resolves.not.toBe(second);
+      expect(await tx.select().from(billingCheckoutRequests).where(eq(billingCheckoutRequests.businessId, businessId))).toHaveLength(3);
+    });
+  });
+
+  it("refuses a checkout while another member's checkout is open", async () => {
+    await rollbackTest(async tx => {
+      const { businessId, checkout } = await workspace(tx);
+      const otherUserId = randomUUID();
+      const email = `${randomUUID()}@example.invalid`;
+      await tx.insert(users).values({ id: otherUserId, email, normalizedEmail: email, name: "Alex Admin" });
+      await tx.insert(billingCheckoutRequests).values({ businessId, requestedByUserId: otherUserId, target: "starter", billingInterval: "monthly", status: "ready" });
       await expect(checkout("pro")).rejects.toMatchObject({ status: 409, code: "checkout_in_progress" });
-      await expect(checkout("starter", "annual")).rejects.toMatchObject({ status: 409, code: "checkout_in_progress" });
-      expect(await tx.select().from(billingCheckoutRequests).where(eq(billingCheckoutRequests.id, first))).toHaveLength(1);
     });
   });
 

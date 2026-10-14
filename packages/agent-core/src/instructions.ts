@@ -111,7 +111,7 @@ function liveBusinessFacts(snapshot: BusinessContextSnapshot, now: DateTime): st
   ].filter(Boolean);
 }
 
-const LANGUAGE_NAMES: Record<BusinessContextSnapshot["defaultLocale"], string> = { en: "English", fr: "French", es: "Spanish", de: "German", pt: "Brazilian Portuguese", it: "Italian", nl: "Dutch" };
+export const LANGUAGE_NAMES: Record<BusinessContextSnapshot["defaultLocale"], string> = { en: "English", fr: "French", es: "Spanish", de: "German", pt: "Brazilian Portuguese", it: "Italian", nl: "Dutch" };
 
 /** The language a call starts in, named for GPT-Live: the business's default locale. */
 export function liveLanguage(snapshot: BusinessContextSnapshot): string {

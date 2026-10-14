@@ -40,17 +40,30 @@ afterEach(() => { vi.useRealTimers(); });
 describe("searchBusinessNumberInventory", () => {
   afterEach(() => { vi.unstubAllEnvs(); });
 
-  it("offers numbers that take calls, texting or not, up to the limit", async () => {
-    setup();
-    const result = await searchBusinessNumberInventory(context, { ...scope, limit: 2 }, { listAvailablePhoneNumbers: async () => [
-      { phoneE164: "+14165550100", countryCode: "CA", capabilities: { sms: true, voice: false } },
-      { phoneE164: "+14165550101", countryCode: "CA", capabilities: { sms: false, voice: true } },
-      { phoneE164: "+14165550102", countryCode: "CA", capabilities: { sms: true, voice: true } },
-      { phoneE164: "+14165550103", countryCode: "CA", capabilities: { sms: true, voice: true } },
-    ] });
+  const inventory = [
+    { phoneE164: "+14165550100", countryCode: "CA" as const, capabilities: { sms: true, voice: false } },
+    { phoneE164: "+14165550101", countryCode: "CA" as const, capabilities: { sms: false, voice: true } },
+    { phoneE164: "+14165550102", countryCode: "CA" as const, capabilities: { sms: true, voice: true } },
+    { phoneE164: "+14165550103", countryCode: "CA" as const, capabilities: { sms: true, voice: true } },
+  ];
+
+  it("offers a hosted business numbers that take calls, texting or not, up to the limit", async () => {
+    const selects = [[{ stage: "complete", timezone: "America/Toronto", deploymentMode: "cloud", replacementUsedAt: null }], [{ plan: "starter", state: "active" }], []];
+    mocks.withBusinessTransaction.mockImplementation(async (_db: unknown, _scope: unknown, callback: (tx: unknown) => unknown) => await callback({ select: () => chain(selects.shift() ?? []) }));
+    const listAvailablePhoneNumbers = vi.fn(async () => inventory);
+    const result = await searchBusinessNumberInventory(context, { ...scope, limit: 2 }, { listAvailablePhoneNumbers });
     expect(result.numbers.map(number => number.phoneE164)).toEqual(["+14165550101", "+14165550102"]);
     expect(result.numbers.every(number => typeof number.claimToken === "string")).toBe(true);
     expect(result.trial).toBe(false);
+    expect(listAvailablePhoneNumbers).toHaveBeenCalledWith(expect.not.objectContaining({ sms: true }));
+  });
+
+  it("offers a self-hosted business only numbers that also text, since it texts from its own number", async () => {
+    setup();
+    const listAvailablePhoneNumbers = vi.fn(async () => inventory);
+    const result = await searchBusinessNumberInventory(context, { ...scope, limit: 2 }, { listAvailablePhoneNumbers });
+    expect(result.numbers.map(number => number.phoneE164)).toEqual(["+14165550102", "+14165550103"]);
+    expect(listAvailablePhoneNumbers).toHaveBeenCalledWith(expect.objectContaining({ sms: true }));
   });
 
   it.each([
