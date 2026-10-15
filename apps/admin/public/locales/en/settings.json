@@ -868,7 +868,7 @@
   },
   "apiKeys": {
     "title": "API keys",
-    "description": "Zapier asks for an API key when you connect it, and your own scripts need one to call the LobbyStack API. You choose what each key can read and change in this business.",
+    "description": "Use a key to connect your own code or another app to the LobbyStack API. You choose what each key can read and change in this business.",
     "empty": "No API keys yet.",
     "neverUsed": "Never",
     "createdBy": "{{date}} by {{name}}",
@@ -890,7 +890,7 @@
       "title": "Create an API key",
       "description": "Give the key a name you'll recognize and allow only the access it needs.",
       "nameLabel": "Name",
-      "namePlaceholder": "Zapier",
+      "namePlaceholder": "CRM sync",
       "scopesLabel": "Access",
       "cancel": "Cancel",
       "submit": "Create key",

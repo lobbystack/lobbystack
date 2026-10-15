@@ -872,7 +872,7 @@
   },
   "apiKeys": {
     "title": "Clés API",
-    "description": "Zapier vous demande une clé API quand vous le connectez, et vos propres scripts en ont besoin pour appeler l'API LobbyStack. Vous choisissez ce que chaque clé peut lire et modifier dans cette entreprise.",
+    "description": "Utilisez une clé pour connecter votre propre code ou une autre application à l'API LobbyStack. Vous choisissez ce que chaque clé peut lire et modifier dans cette entreprise.",
     "empty": "Aucune clé API pour l'instant.",
     "neverUsed": "Jamais",
     "createdBy": "{{date}} par {{name}}",
@@ -894,7 +894,7 @@
       "title": "Créer une clé API",
       "description": "Donnez à la clé un nom que vous reconnaîtrez et n'autorisez que l'accès dont elle a besoin.",
       "nameLabel": "Nom",
-      "namePlaceholder": "Zapier",
+      "namePlaceholder": "Synchro CRM",
       "scopesLabel": "Accès",
       "cancel": "Annuler",
       "submit": "Créer la clé",

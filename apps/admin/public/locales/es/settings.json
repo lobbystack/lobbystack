@@ -872,7 +872,7 @@
   },
   "apiKeys": {
     "title": "Claves de API",
-    "description": "Zapier le pide una clave de API al conectarlo, y sus propios scripts necesitan una para llamar a la API de LobbyStack. Usted elige qué puede leer y cambiar cada clave en este negocio.",
+    "description": "Use una clave para conectar su propio código u otra aplicación a la API de LobbyStack. Usted elige qué puede leer y cambiar cada clave en este negocio.",
     "empty": "Aún no hay claves de API.",
     "neverUsed": "Nunca",
     "createdBy": "{{date}} por {{name}}",
@@ -894,7 +894,7 @@
       "title": "Crear una clave de API",
       "description": "Dele a la clave un nombre que pueda reconocer y permita solo el acceso que necesita.",
       "nameLabel": "Nombre",
-      "namePlaceholder": "Zapier",
+      "namePlaceholder": "Sincronización con el CRM",
       "scopesLabel": "Acceso",
       "cancel": "Cancelar",
       "submit": "Crear clave",
