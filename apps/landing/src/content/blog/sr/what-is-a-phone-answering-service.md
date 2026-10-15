@@ -137,7 +137,7 @@ Pitajte gde stižu poruke i za koliko vremena, šta pozivalac čuje kada se niko
 
 ### 5. Testirajte svojim pozivima
 
-Iskoristite probni period ili besplatan paket za pozive koji Vas najviše brinu: hitan slučaj, zakazivanje i pozivaoca koji govori drugi jezik. [PATLive](https://www.patlive.com/pricing/) i [Upfirst](https://upfirst.ai/pricing) nude besplatan probni period od 14 dana. Paket Free u LobbyStack-u daje Vam 30 minuta razgovora u pregledaču mesečno, bez kartice i broja telefona. Za konkretne usluge pogledajte [najbolju uslugu odgovaranja na pozive za male firme](/sr/blog/best-answering-service-for-small-business/).
+Iskoristite probni period ili besplatan paket za pozive koji Vas najviše brinu: hitan slučaj, zakazivanje i pozivaoca koji govori drugi jezik. [PATLive](https://www.patlive.com/pricing/) i [Upfirst](https://upfirst.ai/pricing) nude besplatan probni period od 14 dana. Paket Free u LobbyStack-u daje Vam 30 minuta razgovora mesečno i broj iz SAD ili Kanade besplatno 14 dana, bez kartice. Za konkretne usluge pogledajte [najbolju uslugu odgovaranja na pozive za male firme](/sr/blog/best-answering-service-for-small-business/).
 
 ## Pitanja o usluzi odgovaranja na pozive
 
@@ -147,7 +147,7 @@ Da. PATLive, Ruby, Smith.ai i druge firme koje se javljaju uživo imale su aktue
 
 ### Postoji li besplatna usluga odgovaranja na pozive?
 
-Neki dobavljači besplatno preuzimaju deo stvarnih poziva. [Smith.ai AI paket Free](https://smith.ai/pricing/ai-receptionist) odgovara na 25 stvarnih poziva mesečno, a zatim naplaćuje $3 po pozivu. Paket Free u LobbyStack-u daje Vam 30 minuta razgovora u pregledaču mesečno, bez kartice i broja telefona. Služi za testiranje, ali ne može da odgovara na Vašoj liniji. Pogledajte [besplatne opcije AI recepcionera](/sr/blog/free-ai-receptionist/).
+Neki dobavljači besplatno preuzimaju deo stvarnih poziva. [Smith.ai AI paket Free](https://smith.ai/pricing/ai-receptionist) odgovara na 25 stvarnih poziva mesečno, a zatim naplaćuje $3 po pozivu. Paket Free u LobbyStack-u daje Vam 30 minuta razgovora mesečno i broj iz SAD ili Kanade koji 14 dana besplatno odgovara na prave pozive, bez kartice. Pogledajte [besplatne opcije AI recepcionera](/sr/blog/free-ai-receptionist/).
 
 ### Mogu li da zadržim poslovni broj?
 
@@ -165,4 +165,4 @@ Skoro. Dobavljači zovu virtuelnim recepcionerom uslugu uživo koja radi više o
 
 Izaberite poziv za koji biste najmanje voleli da pođe naopako, na primer hitan slučaj ili novog klijenta koji ne zna tačno šta mu treba. Obavite ga sa svakom uslugom sa svog spiska pre nego što prosledite broj, pa pročitajte šta Vam svaka pošalje posle poziva.
 
-Ako Vam odgovara AI ili hibridno rešenje, isti test možete da uradite sa LobbyStack-om već danas. Paket Free daje Vam 30 minuta razgovora u pregledaču mesečno, bez kartice i broja telefona. Kada pozivi zvuče kako treba, paket Starter košta $30 mesečno za 150 minuta, zatim $0.20 po minutu, i dodaje poslovni broj, zakazivanje u Google Calendar i preusmeravanje na Vaš tim. Nijedan paket nema naknadu za aktivaciju. [Isprobajte LobbyStack besplatno u pregledaču](https://app.lobbystack.com/sr/signup) ili uporedite pakete na [stranici sa cenama](/sr/pricing/).
+Ako Vam odgovara AI ili hibridno rešenje, isti test možete da uradite sa LobbyStack-om već danas. Paket Free daje Vam 30 minuta razgovora mesečno i broj iz SAD ili Kanade besplatno 14 dana, bez kartice. Kada pozivi zvuče kako treba, paket Starter košta $30 mesečno za 150 minuta, zatim $0.20 po minutu, i uz njega zadržavate broj, sa zakazivanjem u Google Calendar i preusmeravanjem na Vaš tim. Nijedan paket nema naknadu za aktivaciju. [Isprobajte LobbyStack besplatno](https://app.lobbystack.com/sr/signup) ili uporedite pakete na [stranici sa cenama](/sr/pricing/).

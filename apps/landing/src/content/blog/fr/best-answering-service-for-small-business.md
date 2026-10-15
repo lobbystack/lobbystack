@@ -166,7 +166,7 @@ Un réceptionniste IA répond avec un logiciel, puis réserve, transfère ou pre
 - **Facturation :** à la seconde, sans arrondi, donc un appel de 90 secondes consomme 1,5 minute. Les appels de moins de 10 secondes et ceux que le réceptionniste termine comme indésirables ne comptent pas.
 - **Inclus :** réservation dans Google Calendar selon vos horaires, vos services et vos employés, SMS de confirmation et de rappel 24 heures avant vers les numéros américains et canadiens quand l'appelant accepte, et 20 tentatives de transfert par mois vers un numéro.
 - **Langues :** chaque appel commence dans la langue par défaut de l'entreprise, anglais ou français. Le réceptionniste répond ensuite dans la langue de l'appelant : plus de 70 langues avec OpenAI GPT-Live, dont l'espagnol et le serbe.
-- **Numéros et mise en service :** numéros aux États-Unis, au Canada, au Royaume-Uni, en Australie et en Nouvelle-Zélande, ou renvoi de votre numéro actuel. Les forfaits ne limitent pas le nombre d'appels simultanés. Aucun forfait ne comporte de frais de mise en service, et vous pouvez résilier à tout moment, sans frais de résiliation. Le forfait Gratuit vous donne 30 minutes vocales dans le navigateur par mois, sans carte ni numéro de téléphone.
+- **Numéros et mise en service :** numéros aux États-Unis, au Canada, au Royaume-Uni, en Australie et en Nouvelle-Zélande, ou renvoi de votre numéro actuel. Les forfaits ne limitent pas le nombre d'appels simultanés. Aucun forfait ne comporte de frais de mise en service, et vous pouvez résilier à tout moment, sans frais de résiliation. Le forfait Gratuit vous donne 30 minutes vocales par mois et un numéro américain ou canadien gratuit pendant 14 jours, sans carte.
 - **Limites :** aucune personne au bout du fil, Google Calendar comme seul agenda, et aucune synchronisation avec un logiciel de gestion de cabinet ou d'interventions terrain. LobbyStack transfère sans annoncer l'appel, vers un seul numéro. L'IA ne répond pas aux SMS, et LobbyStack ne revendique aucune conformité HIPAA.
 - **Choisissez-le si** vous voulez une réponse et une réservation à chaque appel pour 30 $ par mois, si votre équipe prend les transferts urgents et si vos appelants parlent de nombreuses langues.
 
@@ -264,7 +264,7 @@ Certaines ne les facturent pas. Les réceptionnistes de Smith.ai ne facturent pa
 
 ### Existe-t-il une permanence téléphonique gratuite pour les PME ?
 
-Aucun service humain de ce comparatif n'est gratuit. Le forfait IA Free de Smith.ai répond à 25 vrais appels par mois pour 0 $, puis facture 3 $ par appel. LobbyStack Gratuit vous donne 30 minutes vocales dans le navigateur par mois pour tester, sans carte ni numéro de téléphone, et Goodcall propose un agent de démonstration gratuit. Notre guide sur le [coût d'un réceptionniste IA, forfaits gratuits et essais compris](/fr/blog/ai-receptionist-savings/) présente les autres options.
+Aucun service humain de ce comparatif n'est gratuit. Le forfait IA Free de Smith.ai répond à 25 vrais appels par mois pour 0 $, puis facture 3 $ par appel. LobbyStack Gratuit vous donne 30 minutes vocales par mois et un numéro américain ou canadien gratuit pendant 14 jours, sans carte, et Goodcall propose un agent de démonstration gratuit. Notre guide sur le [coût d'un réceptionniste IA, forfaits gratuits et essais compris](/fr/blog/ai-receptionist-savings/) présente les autres options.
 
 ## Verdict
 
@@ -276,4 +276,4 @@ Choisissez selon la personne qui doit répondre à votre téléphone.
 
 Si vous avez besoin d'une personne à chaque appel ou d'une synchronisation avec un logiciel de gestion de cabinet ou d'interventions terrain, LobbyStack ne vous conviendra pas. Choisissez un service humain ou un outil conçu pour votre secteur.
 
-**[Essayez LobbyStack gratuitement](https://app.lobbystack.com/fr/signup).** Ajoutez les informations de votre entreprise et votre message d'accueil, puis testez le réceptionniste depuis votre tableau de bord avec 30 minutes vocales dans le navigateur par mois, sans carte ni numéro de téléphone. Le forfait Gratuit n'expire pas. Quand vous voudrez un numéro, Starter coûte 30 $ par mois sans frais de mise en service, et vous pouvez résilier à tout moment. Comparez les forfaits sur la page des [tarifs de LobbyStack](/fr/pricing/).
+**[Essayez LobbyStack gratuitement](https://app.lobbystack.com/fr/signup).** Ajoutez les informations de votre entreprise et votre message d'accueil, puis testez le réceptionniste avec 30 minutes vocales par mois et un numéro américain ou canadien gratuit pendant 14 jours, sans carte. Pour garder le numéro, Starter coûte 30 $ par mois sans frais de mise en service, et vous pouvez résilier à tout moment. Comparez les forfaits sur la page des [tarifs de LobbyStack](/fr/pricing/).

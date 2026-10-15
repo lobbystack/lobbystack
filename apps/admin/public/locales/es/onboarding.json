@@ -223,7 +223,7 @@
     "popular": "Popular",
     "enterpriseSubject": "Plan Enterprise",
     "compareTitle": "Compare los planes en detalle",
-    "compareDescription": "Pruebe 30 minutos de voz en el navegador con Free, sin número de teléfono. Starter y Pro incluyen un número dedicado y uso mensual incluido.",
+    "compareDescription": "Free le da 30 minutos de voz y un número de EE. UU. o Canadá durante 14 días. Starter y Pro incluyen un número dedicado y uso mensual incluido.",
     "featureHeader": "Función",
     "billingInterval": {
       "label": "Periodo de facturación",
@@ -236,11 +236,11 @@
         "name": "Free",
         "price": "$0",
         "period": "",
-        "description": "Pruebe LobbyStack con suficiente uso para verlo en acción.",
+        "description": "Acceso completo durante 14 días",
         "cta": "Empezar gratis",
         "highlights": {
-          "voiceMinutes": "30 minutos de voz en el navegador incluidos",
-          "bookingContacts": "Sin número de teléfono",
+          "voiceMinutes": "30 minutos de voz incluidos",
+          "bookingContacts": "1 número de teléfono",
           "support": "Soporte de la comunidad"
         }
       },
@@ -350,11 +350,11 @@
           "notIncluded": "No incluido",
           "multiple": "Varios",
           "unlimited": "Ilimitado",
-          "browserTesting": "Pruebas en el navegador"
+          "trialDays": "Durante 14 días"
         },
         "usage": {
           "voiceMinutes": {
-            "freeIncluded": "{{minutes}} minutos en el navegador",
+            "freeIncluded": "{{minutes}} incluidos",
             "starterIncluded": "150 incluidos",
             "starterThen": "luego $0.20/min",
             "proIncluded": "500 incluidos",

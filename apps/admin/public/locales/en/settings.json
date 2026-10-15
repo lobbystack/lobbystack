@@ -197,12 +197,12 @@
         "free_cloud": {
           "name": "Free",
           "description": {
-            "monthly": "Test voice in your browser",
-            "annual": "Test voice in your browser"
+            "monthly": "Full access for 14 days",
+            "annual": "Full access for 14 days"
           },
           "highlights": {
-            "voiceMinutes": "30 browser voice minutes included",
-            "allFeatures": "No telephone number",
+            "voiceMinutes": "30 voice minutes included",
+            "allFeatures": "1 phone number",
             "support": "Community support"
           }
         },

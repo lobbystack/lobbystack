@@ -13,7 +13,7 @@ locale: "sr"
 canonicalSlug: "my-ai-front-desk-alternative"
 ---
 
-Kupci koji traže **alternativu za My AI Front Desk** treba da počnu od početne cene. Frontdesk sada prodaje jedan paket za samostalnu kupovinu, Business-in-a-Box, po ceni od $99 mesečno za 200 minuta razgovora, ili $79 mesečno uz godišnju naplatu. Nudi besplatnu probu od 7 dana i nema trajni besplatni paket. LobbyStack Starter košta $30 mesečno za 150 minuta, a LobbyStack Free svakog meseca uključuje 30 minuta razgovora u pregledaču, uz zakazivanje termina, rezimee poziva i istoriju poziva.
+Kupci koji traže **alternativu za My AI Front Desk** treba da počnu od početne cene. Frontdesk sada prodaje jedan paket za samostalnu kupovinu, Business-in-a-Box, po ceni od $99 mesečno za 200 minuta razgovora, ili $79 mesečno uz godišnju naplatu. Nudi besplatnu probu od 7 dana i nema trajni besplatni paket. LobbyStack Starter košta $30 mesečno za 150 minuta, a LobbyStack Free uključuje 30 minuta razgovora mesečno i broj iz SAD ili Kanade besplatno 14 dana, uz zakazivanje termina, rezimee poziva i istoriju poziva.
 
 Frontdesk, ranije My AI Front Desk, sada prodaje širok AI radni prostor za prodaju. LobbyStack firmama daje kompletnog telefonskog recepcionera po nižoj početnoj ceni, više uključenih minuta razgovora za oko $100 mesečno i izbor između upravljane cloud verzije i samostalnog hostovanja.
 
@@ -21,7 +21,7 @@ Frontdesk, ranije My AI Front Desk, sada prodaje širok AI radni prostor za prod
 
 | Oblast | Frontdesk | LobbyStack |
 | --- | --- | --- |
-| Besplatna opcija | Besplatna proba od 7 dana, bez trajnog besplatnog paketa | Paket Free: 30 minuta razgovora u pregledaču mesečno, bez kartice i broja telefona |
+| Besplatna opcija | Besplatna proba od 7 dana, bez trajnog besplatnog paketa | Paket Free: 30 minuta razgovora mesečno, bez kartice, broj iz SAD ili Kanade besplatno 14 dana |
 | Prvi plaćeni paket | $99 mesečno za 200 minuta razgovora, ili $79 uz godišnju naplatu | Starter: $30 mesečno za 150 minuta razgovora, ili $24 uz godišnju naplatu |
 | Oko $100 mesečno | Business-in-a-Box od $99: 200 minuta razgovora | Pro od $100: 500 minuta razgovora |
 | Dodatni minuti | 25 kredita ($0.25) po minutu; mesečna rezerva od 1,000 kredita pokriva oko 40 | $0.20 na Starter paketu, $0.18 na Pro paketu |
@@ -36,11 +36,11 @@ Frontdesk, ranije My AI Front Desk, sada prodaje širok AI radni prostor za prod
 
 Cene i funkcije su proverene 9. oktobra 2026.
 
-## Isprobajte LobbyStack besplatno u pregledaču
+## Isprobajte LobbyStack besplatno
 
 Frontdesk proba traje sedam dana, a u njegovim čestim pitanjima piše da nema trajni besplatni paket. Posle probe, paket od $99 je najjeftiniji način da Frontdesk glasovni agent nastavi da se javlja.
 
-LobbyStack paket Free uključuje 30 minuta razgovora u pregledaču mesečno, bez broja telefona. Paket ne ističe, pa scenarije sa klijentima možete da testirate u pregledaču koliko god Vam treba pre nego što izaberete plaćeni paket. Starter i Pro uključuju namenski broj za telefonske pozive.
+LobbyStack paket Free uključuje 30 minuta razgovora mesečno i broj iz SAD ili Kanade besplatno 14 dana. Sam paket ne ističe, pa posle tih 14 dana scenarije sa klijentima možete i dalje da testirate u pregledaču pre nego što izaberete plaćeni paket. Starter i Pro uključuju namenski broj za telefonske pozive.
 
 Proba od sedam dana odgovara timu koji može da završi testove za nedelju dana. LobbyStack Free odgovara timu koji želi nekoliko nedelja da podešava pozdrav, pravila i znanje pre nego što prebaci telefonski saobraćaj.
 
@@ -69,7 +69,7 @@ Ta ograničenja mogu biti dovoljna za mali posao. Tim sa velikom bazom znanja, d
 
 LobbyStack nudi više telefonske potrošnje za isti iznos:
 
-- Free: 30 minuta razgovora mesečno u pregledaču, na paketu koji ne ističe
+- Free: 30 minuta razgovora mesečno i broj iz SAD ili Kanade na 14 dana, na paketu koji ne ističe
 - Starter: 150 minuta za $30 mesečno, ili $24 mesečno uz godišnju naplatu
 - Pro: 500 minuta za $100 mesečno, naspram 200 na Frontdesk paketu od $99
 
@@ -101,7 +101,7 @@ Izaberite Frontdesk ako Vam je potreban hostovani paket koji objedinjuje glas, p
 
 ## Izaberite LobbyStack ako
 
-Izaberite LobbyStack ako želite da testirate glasovne razgovore u pregledaču na besplatnom paketu koji ne ističe, na početku platite $30 umesto $99 ili dobijete 500 minuta za $100. Na plaćenom paketu možete da primate telefonske pozive na namenski broj bez zamene CRM-a. Nijedan LobbyStack paket nema naknadu za podešavanje.
+Izaberite LobbyStack ako želite da 14 dana testirate prave pozive na besplatnom broju, na početku platite $30 umesto $99 ili dobijete 500 minuta za $100. Na plaćenom paketu zadržavate namenski broj bez zamene CRM-a. Nijedan LobbyStack paket nema naknadu za podešavanje.
 
 ## Izvori
 
@@ -114,4 +114,4 @@ Izaberite LobbyStack ako želite da testirate glasovne razgovore u pregledaču n
 
 Frontdesk prodaje više kanala i asistirano preusmeravanje. LobbyStack nudi bolju vrednost za AI recepcionera: besplatan paket koji ne ističe, jeftiniji plaćeni kapacitet za pozive, kompletno upravljanje pozivima i otvoren put za primenu.
 
-[Isprobajte 30 minuta razgovora u pregledaču na paketu LobbyStack Free](/sr/pricing/). Izaberite Starter ili Pro kada Vam treba namenski broj za telefonske pozive.
+[Isprobajte LobbyStack Free uz broj na 14 dana](/sr/pricing/). Izaberite Starter ili Pro da biste zadržali namenski broj.

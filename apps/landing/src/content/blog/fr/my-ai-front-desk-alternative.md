@@ -13,7 +13,7 @@ locale: "fr"
 canonicalSlug: "my-ai-front-desk-alternative"
 ---
 
-Les acheteurs qui cherchent une **alternative à My AI Front Desk** doivent commencer par le prix d'entrée. Frontdesk ne vend plus qu'un forfait en libre-service, Business-in-a-Box, à 99 $ par mois pour 200 minutes vocales, ou 79 $ par mois en paiement annuel. Il propose un essai gratuit de 7 jours, sans forfait gratuit permanent. LobbyStack Starter coûte 30 $ par mois pour 150 minutes, et LobbyStack Gratuit inclut 30 minutes vocales dans le navigateur chaque mois, avec rendez-vous, résumés d'appel et historique.
+Les acheteurs qui cherchent une **alternative à My AI Front Desk** doivent commencer par le prix d'entrée. Frontdesk ne vend plus qu'un forfait en libre-service, Business-in-a-Box, à 99 $ par mois pour 200 minutes vocales, ou 79 $ par mois en paiement annuel. Il propose un essai gratuit de 7 jours, sans forfait gratuit permanent. LobbyStack Starter coûte 30 $ par mois pour 150 minutes, et LobbyStack Gratuit inclut 30 minutes vocales chaque mois et un numéro américain ou canadien gratuit pendant 14 jours, avec rendez-vous, résumés d'appel et historique.
 
 Frontdesk, anciennement My AI Front Desk, vend un large espace commercial IA. LobbyStack fournit un réceptionniste téléphonique complet à un prix d'entrée inférieur, plus de minutes autour de 100 $ par mois et le choix entre cloud géré et auto-hébergement.
 
@@ -21,7 +21,7 @@ Frontdesk, anciennement My AI Front Desk, vend un large espace commercial IA. Lo
 
 | Critère | Frontdesk | LobbyStack |
 | --- | --- | --- |
-| Option gratuite | Essai gratuit de 7 jours, aucun forfait gratuit permanent | Forfait Gratuit : 30 minutes vocales dans le navigateur par mois, sans carte ni numéro de téléphone |
+| Option gratuite | Essai gratuit de 7 jours, aucun forfait gratuit permanent | Forfait Gratuit : 30 minutes vocales par mois, sans carte, numéro américain ou canadien gratuit pendant 14 jours |
 | Premier forfait payant | 99 $ par mois pour 200 minutes, ou 79 $ en annuel | Starter : 30 $ par mois pour 150 minutes, ou 24 $ en annuel |
 | Près de 100 $ par mois | Business-in-a-Box à 99 $ : 200 minutes | Pro à 100 $ : 500 minutes |
 | Minutes supplémentaires | 25 crédits (0,25 $) la minute ; la réserve mensuelle de 1 000 crédits couvre environ 40 minutes | 0,20 $ sur Starter, 0,18 $ sur Pro |
@@ -36,11 +36,11 @@ Frontdesk, anciennement My AI Front Desk, vend un large espace commercial IA. Lo
 
 Prix et fonctions vérifiés le 9 octobre 2026.
 
-## Testez LobbyStack dans votre navigateur gratuitement
+## Testez LobbyStack gratuitement
 
 L'essai de Frontdesk dure sept jours, et sa FAQ indique qu'il n'existe pas de forfait gratuit permanent. Après l'essai, le forfait à 99 $ est le moins cher pour garder un agent vocal Frontdesk en service.
 
-Avec le forfait Gratuit de LobbyStack, vous pouvez tester 30 minutes vocales dans le navigateur chaque mois. Vous n'obtenez aucun numéro de téléphone, et le forfait n'expire pas. Choisissez Starter ou Pro pour recevoir des appels sur un numéro dédié.
+Le forfait Gratuit de LobbyStack inclut 30 minutes vocales par mois et un numéro américain ou canadien gratuit pendant 14 jours. Le forfait lui-même n'expire pas : après ces 14 jours, vous pouvez continuer à tester vos scénarios clients dans le navigateur avant de choisir un forfait payant. Choisissez Starter ou Pro pour recevoir des appels sur un numéro dédié.
 
 Un essai de sept jours convient à une équipe qui boucle ses tests en une semaine. LobbyStack Gratuit convient à une équipe qui veut ajuster l'accueil, les règles et les connaissances pendant plusieurs semaines avant de basculer ses appels.
 
@@ -62,7 +62,7 @@ Le forfait à 99 $ indique aussi 20 pages de connaissances, les 200 dernières i
 
 LobbyStack offre plus d'usage téléphonique au même niveau de dépense :
 
-- Gratuit : 30 minutes par mois dans le navigateur, sur un forfait qui n'expire pas
+- Gratuit : 30 minutes par mois et un numéro américain ou canadien pendant 14 jours, sur un forfait qui n'expire pas
 - Starter : 150 minutes pour 30 $ par mois, ou 24 $ par mois en annuel
 - Pro : 500 minutes pour 100 $, contre 200 sur le forfait Frontdesk à 99 $
 
@@ -92,7 +92,7 @@ Choisissez Frontdesk si vous avez besoin de regrouper voix, messagerie, chat, e-
 
 ## Choisissez LobbyStack si
 
-Choisissez LobbyStack pour tester la voix dans le navigateur avec un forfait gratuit qui n'expire pas, payer 30 $ au lieu de 99 $ pour commencer, ou obtenir 500 minutes pour 100 $. Sur un forfait payant, vous recevez des appels sur un numéro dédié sans remplacer votre CRM. Aucun forfait LobbyStack n'a de frais de mise en service.
+Choisissez LobbyStack pour tester de vrais appels sur un numéro gratuit pendant 14 jours, payer 30 $ au lieu de 99 $ pour commencer, ou obtenir 500 minutes pour 100 $. Sur un forfait payant, vous gardez un numéro dédié sans remplacer votre CRM. Aucun forfait LobbyStack n'a de frais de mise en service.
 
 ## Sources
 
@@ -105,4 +105,4 @@ Choisissez LobbyStack pour tester la voix dans le navigateur avec un forfait gra
 
 Frontdesk vend plus de canaux et des transferts assistés. LobbyStack offre la meilleure valeur pour la réception téléphonique : un forfait gratuit qui n'expire pas, plus de capacité sur les forfaits payants, des opérations d'appel complètes et un déploiement ouvert.
 
-[Testez 30 minutes vocales dans le navigateur sur LobbyStack Gratuit](/fr/pricing/). Choisissez Starter ou Pro pour recevoir des appels téléphoniques sur un numéro dédié.
+[Essayez LobbyStack Gratuit avec un numéro pendant 14 jours](/fr/pricing/). Choisissez Starter ou Pro pour garder un numéro dédié.

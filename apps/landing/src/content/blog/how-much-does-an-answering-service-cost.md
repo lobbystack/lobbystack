@@ -288,7 +288,7 @@ Plans don't limit how many calls the receptionist answers at once. Calls open in
 - The AI doesn't reply to texts.
 - Google Calendar is the only calendar. For a CRM or practice software, you use webhooks and the REST API.
 - LobbyStack makes no HIPAA claim, and a phone call ends at 30 minutes.
-- The Free plan runs in the browser, with no phone number.
+- The Free plan includes a US or Canadian number for 14 days. After that, you test in the browser.
 
 A live service is the better buy when you want a person on every call or your callers won't talk to an AI. Live agents also suit upset callers and sensitive subjects, and some vendors offer warm handoffs (Moneypenny) and on-call rosters (MAP's Roster Service, A Message Center's on-call technicians). For other AI vendors' prices and the cost of hiring, see [what AI receptionists cost and save](/blog/ai-receptionist-savings/).
 
@@ -346,4 +346,4 @@ Most live services in our table bill month to month, with a notice period in pla
 
 Multiply your monthly calls by your average call length, then find the closest minutes row in the volume table. That row shows each billing model's cost before you call a vendor.
 
-If the AI row fits, [LobbyStack pricing](/pricing/) starts at $30 a month for 150 minutes, then $0.20 a minute. Pro costs $100 for 500 minutes, then $0.18. No plan has a setup fee. The Free plan gives you 30 browser voice minutes a month to test your hardest calls. It needs no card and comes with no telephone number, so it can't answer your business line. It doesn't expire. [Create a free account](https://app.lobbystack.com/en/signup).
+If the AI row fits, [LobbyStack pricing](/pricing/) starts at $30 a month for 150 minutes, then $0.20 a minute. Pro costs $100 for 500 minutes, then $0.18. No plan has a setup fee. The Free plan gives you 30 voice minutes a month to test your hardest calls, and a US or Canadian number free for 14 days. It needs no card. [Create a free account](https://app.lobbystack.com/en/signup).

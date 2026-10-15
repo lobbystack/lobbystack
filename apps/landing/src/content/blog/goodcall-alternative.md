@@ -22,7 +22,7 @@ Goodcall never meters minutes, so its model can favor repeated long calls from t
 | Area | Goodcall | LobbyStack |
 | --- | --- | --- |
 | Billing unit | Unique callers a month, with a plan for each agent | Voice minutes, counted by the second |
-| Free option | Free demo agent; billing starts when you connect a number | Free: 30 browser voice minutes, no card, no telephone number |
+| Free option | Free demo agent; billing starts when you connect a number | Free: 30 voice minutes, no card, US or Canadian number free for 14 days |
 | Entry paid plan | $79 for 100 unique callers (about 150 calls) | $30 for 150 minutes |
 | Higher tiers | $129 for 500 callers, $299 for 2,000 | $100 for 500 minutes |
 | Extra usage | 79¢, 26¢, or 15¢ per extra caller | $0.20 or $0.18 per extra minute |

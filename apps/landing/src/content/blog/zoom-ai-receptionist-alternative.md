@@ -21,7 +21,7 @@ LobbyStack includes booking, call transfers, SMS alerts, transcripts, summaries,
 
 | Area | Zoom Virtual Agent Receptionist | LobbyStack |
 | --- | --- | --- |
-| Free option | Free trial offered, length not stated | 30 browser voice minutes, no card, no telephone number |
+| Free option | Free trial offered, length not stated | 30 voice minutes, no card, US or Canadian number free for 14 days |
 | Monthly price | $29.99 for 100 minutes | $30 for 150 minutes |
 | Annual price | $25.00 a month for 100 minutes | $24 a month for 150 minutes |
 | Extra minutes | Price not published | $0.20 on Starter, $0.18 on Pro |
@@ -36,7 +36,7 @@ Pricing and features were checked on October 9, 2026.
 
 ## LobbyStack gives you more room to prove the workflow
 
-Zoom's standalone plan includes 100 minutes. LobbyStack Starter includes 150 for one cent more. You can test 30 browser voice minutes on Free, without a telephone number. On annual billing, LobbyStack costs $1 less per month and includes 50 more minutes.
+Zoom's standalone plan includes 100 minutes. LobbyStack Starter includes 150 for one cent more. You can test 30 voice minutes on Free, with a US or Canadian number free for 14 days. On annual billing, LobbyStack costs $1 less per month and includes 50 more minutes.
 
 That extra capacity gives a small business more room to test booking rules, after-hours transfers, caller questions, and failure handling. The team can review transcripts and summaries before forwarding all traffic.
 
@@ -105,6 +105,6 @@ Choose LobbyStack when you want 30 free test minutes, 50% more included usage ne
 
 ## Verdict
 
-With LobbyStack, you get more minutes than Zoom's standalone plan at both the monthly and annual price, and you can test voice conversations in your browser for free. Choose Zoom if your team prefers its communications administration or needs warm transfers.
+With LobbyStack, you get more minutes than Zoom's standalone plan at both the monthly and annual price, and you can test it on a free US or Canadian number for 14 days. Choose Zoom if your team prefers its communications administration or needs warm transfers.
 
-[Start LobbyStack free](/pricing/) and test voice conversations in your browser.
+[Start LobbyStack free](/pricing/) and test it on a free US or Canadian number for 14 days.

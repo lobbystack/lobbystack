@@ -13,7 +13,7 @@ locale: "en"
 canonicalSlug: "ai-receptionist-savings"
 ---
 
-An AI receptionist costs $14 to $150 a month on most entry plans, going by 17 vendors' pricing pages, ours included, on October 9, 2026. Those plans include 25 to 250 calls, minutes or callers, and most charge for each extra one. Smith.ai's free plan answers 25 real calls a month, and LobbyStack's Free plan gives you 30 browser voice minutes for testing.
+An AI receptionist costs $14 to $150 a month on most entry plans, going by 17 vendors' pricing pages, ours included, on October 9, 2026. Those plans include 25 to 250 calls, minutes or callers, and most charge for each extra one. Smith.ai's free plan answers 25 real calls a month, and LobbyStack's Free plan gives you 30 voice minutes and a US or Canadian number free for 14 days.
 
 **Prices checked October 9, 2026**, in US dollars before tax, on each vendor's own pricing page. We wrote this guide and sell an AI receptionist, so our row carries the label "(ours)".
 
@@ -33,7 +33,7 @@ Most entry plans cost $14 to $150 a month, from AI-Receptionist.com's $14 for 75
 | [Dialzara](https://dialzara.com/pricing) | Business Lite $29 | 60 min | $0.48/min | Minute | Says none | 7 days |
 | [ElevenLabs Reception](https://elevenlabs.io/docs/reception-ai/billing/plans-and-pricing) | Basic $29 ($24 annual) | 75 credits | $0.45 a credit | Credit (1 phone min) | Not mentioned | 14 days, 30 credits, no card |
 | [Zoom AI Receptionist](https://zoom.us/pricing/virtual-agent) | $29.99 | 100 min | Not published | Minute | Not mentioned | "Try for free", length not stated |
-| [LobbyStack](/pricing/) (ours) | Starter $30 ($24 annual) | 150 min | $0.20/min | Second, priced per minute | None | Free plan: 30 browser voice minutes, no telephone number |
+| [LobbyStack](/pricing/) (ours) | Starter $30 ($24 annual) | 150 min | $0.20/min | Second, priced per minute | None | Free plan: 30 voice minutes, US or Canadian number free for 14 days |
 | [RingCentral AIR](https://www.ringcentral.com/pricing/ai-receptionist.html) | $49 standalone | 100 min | $0.50/min | Minute, 30-second increments | Not mentioned | 14 days |
 | [Rosie](https://heyrosie.com/pricing) | Professional $49 ($41 annual) | 250 min | Moves you to Scale ($149) | Minute | Not mentioned | 7 days |
 | [Allo](https://www.withallo.com/pricing) | $32 receptionist + $32 seat, billed yearly | Not stated | Not stated | Flat per agent | Says none | None mentioned |
@@ -128,12 +128,12 @@ Goodcall bills a repeat caller once a month, so a shop with regulars pays less t
 
 ## Can you get an AI receptionist for free?
 
-Yes, with limits. Smith.ai's Free plan answers 25 real calls a month and charges $3 for each extra call. LobbyStack's Free plan gives you 30 browser voice minutes a month to test the receptionist, with no card and no telephone number. Most other vendors offer a 7-day or 14-day trial. For what each free plan includes and where it stops, see our guide to [free AI receptionist plans and trials](/blog/free-ai-receptionist/).
+Yes, with limits. Smith.ai's Free plan answers 25 real calls a month and charges $3 for each extra call. LobbyStack's Free plan gives you 30 voice minutes a month and a US or Canadian number free for 14 days, with no card. Most other vendors offer a 7-day or 14-day trial. For what each free plan includes and where it stops, see our guide to [free AI receptionist plans and trials](/blog/free-ai-receptionist/).
 
 ### Free plans
 
 - **Smith.ai Free** goes live on 25 real calls a month, then charges $3 a call.
-- **LobbyStack Free** gives you 30 browser voice minutes a month to test from the dashboard, with no card and no telephone number, and it doesn't expire. Without a number, it can't take phone calls, send texts or transfer.
+- **LobbyStack Free** gives you 30 voice minutes a month and a US or Canadian number free for 14 days, with no card. The number answers real calls for those 14 days, and transfers go only to the mobile number you verified. To keep the number, choose Starter or Pro.
 - **CloudTalk** gives new users 50 free minutes in their first month.
 - **ServiceAgent** has a $0 Launch plan with pay-as-you-go credits inside its field-service software.
 - **Quo Sona** Tier 1 includes about 10 calls a month, on top of a paid Quo plan.
@@ -269,7 +269,7 @@ We wrote this guide, so our own plans get the same treatment as the other 16.
 
 | Plan | Price | Included each month | After that |
 | --- | --- | --- | --- |
-| Free | $0 | 30 browser voice minutes, no card, no telephone number | Test calls stop until next month |
+| Free | $0 | 30 voice minutes, no card, US or Canadian number free for 14 days | Calls stop until next month |
 | Starter | $30/mo, or $288/yr ($24/mo) | 150 voice minutes, 50 alert SMS, 20 transfer attempts, one business number, email support | $0.20/min; $0.02 per extra text or transfer attempt |
 | Pro | $100/mo, or $960/yr ($80/mo) | 500 voice minutes, 200 alert SMS, 100 transfer attempts, one business number, priority email support | $0.18/min; $0.02 per extra text or transfer attempt |
 | Enterprise | Custom | Multiple numbers, dedicated implementation support | Custom |
@@ -280,7 +280,7 @@ Each call opens in the business's default language, English or French. The recep
 
 LobbyStack's limits:
 
-- Free is for browser tests only. Real calls, texts and transfers start on Starter.
+- Free answers real calls on a US or Canadian number for 14 days. To keep the number, choose Starter or Pro.
 - It books into Google Calendar only. CRMs, field-service and dental software connect only through webhooks and the REST API.
 - The AI doesn't reply to texts. Your team replies from the dashboard.
 - Transfers go to one number per business, and a phone call ends at 30 minutes.

@@ -15,7 +15,7 @@ canonicalSlug: "rosie-ai-alternative"
 
 Le réceptionniste IA **Rosie AI** coûte 49 $ par mois pour 250 minutes, 149 $ pour 1 000 et 299 $ pour 2 000, au 9 octobre 2026. Le forfait Professional à 49 $ prend des messages et envoie un lien de réservation par SMS. La réservation dans le calendrier, les transferts et les SMS pendant l'appel commencent avec Scale. Si vous dépassez 250 minutes, Rosie vous fait passer à Scale jusqu'à ce que vous repassiez au forfait inférieur.
 
-LobbyStack a écrit cette page, et nous vendons un réceptionniste IA concurrent. Notre [forfait Starter](/fr/pricing/) coûte 30 $ par mois pour 150 minutes et inclut la réservation et les transferts. Le forfait gratuit vous donne 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone. Aucun forfait LobbyStack n'a de frais de mise en service. Nous avons vérifié les prix de Rosie le 9 octobre 2026 sur sa page de prix, sa FAQ et ses conditions de service, dont les liens figurent dans la section Sources.
+LobbyStack a écrit cette page, et nous vendons un réceptionniste IA concurrent. Notre [forfait Starter](/fr/pricing/) coûte 30 $ par mois pour 150 minutes et inclut la réservation et les transferts. Le forfait gratuit vous donne 30 minutes vocales et un numéro américain ou canadien gratuit pendant 14 jours, sans carte. Aucun forfait LobbyStack n'a de frais de mise en service. Nous avons vérifié les prix de Rosie le 9 octobre 2026 sur sa page de prix, sa FAQ et ses conditions de service, dont les liens figurent dans la section Sources.
 
 ## Qu'est-ce que Rosie AI ?
 
@@ -64,7 +64,7 @@ LobbyStack est une des alternatives à Rosie AI. Le tableau aligne les limites q
 | Forfait libre-service le plus élevé | 299 $ pour 2 000 minutes (Growth) | 100 $ pour 500 minutes (Pro) |
 | Dépassement de vos minutes | Vous fait passer au forfait suivant, à son prix standard, jusqu'à ce que vous repassiez au forfait inférieur (voir la note sur les conditions plus haut) | 0,20 $ la minute sur Starter, 0,18 $ sur Pro, avec un plafond de dépenses facultatif |
 | Unité de facturation | Chaque appel arrondi aux 60 secondes supérieures | À la seconde, sans arrondi |
-| Option gratuite | Essai gratuit de 7 jours ; les conditions exigent un moyen de paiement enregistré | Forfait gratuit : 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone, sans date d'expiration |
+| Option gratuite | Essai gratuit de 7 jours ; les conditions exigent un moyen de paiement enregistré | Forfait gratuit : 30 minutes vocales, sans carte, numéro américain ou canadien gratuit pendant 14 jours |
 | Calendriers | Google Calendar, Calendly, Acuity, Appointlet (Scale et plus) | Google Calendar seul |
 | Transferts | En direct et assistés (Scale), en cascade (Growth) | Transfert à l'aveugle vers un numéro (Starter et Pro) |
 | SMS aux appelants | Liens de réservation sur chaque forfait ; SMS pendant l'appel à partir de Scale | Confirmation de rendez-vous et rappel 24 heures avant, si l'appelant accepte, vers les numéros américains et canadiens ; l'IA ne répond pas aux SMS |
@@ -173,7 +173,7 @@ Si vous envisagez aussi une permanence téléphonique humaine, comparez [les mei
 
 ## Comment configurer et tester une alternative à Rosie ?
 
-1. Inscrivez-vous sur [app.lobbystack.com](https://app.lobbystack.com/fr/signup). Le forfait gratuit vous donne 30 minutes vocales dans le navigateur par mois, sans carte.
+1. Inscrivez-vous sur [app.lobbystack.com](https://app.lobbystack.com/fr/signup). Le forfait gratuit vous donne 30 minutes vocales par mois et un numéro américain ou canadien gratuit pendant 14 jours, sans carte.
 2. La configuration vous guide à travers les informations de votre entreprise, l'import de votre site, vos connaissances, le message d'accueil et le choix d'un forfait.
 3. Écrivez vos règles d'appel en langage courant et choisissez un mode de réservation : réserver le rendez-vous, prendre une demande que votre équipe confirmera, ou prendre un message. Connectez Google Calendar et indiquez vos heures d'ouverture. Sans eux, la réservation ne fonctionne pas.
 4. Passez des appels de test depuis le tableau de bord, dans votre navigateur.
@@ -196,7 +196,7 @@ Rosie prend en charge le même renvoi d'appel pour les débordements et les appe
 - Vos appels restent sous environ 772 minutes par mois, ou se situent entre 1 001 et environ 1 605.
 - Vous voulez une facturation à la seconde et un dépassement à la minute avec un plafond de dépenses facultatif, plutôt qu'un saut de forfait.
 - Vos appelants parlent d'autres langues que l'anglais et l'espagnol.
-- Vous voulez un forfait gratuit sans compte à rebours d'essai (30 minutes vocales dans le navigateur par mois).
+- Vous voulez un forfait gratuit qui n'expire pas (30 minutes vocales par mois, plus un numéro américain ou canadien pendant 14 jours).
 - Vous voulez des enregistrements conservés 90 jours sur les forfaits payants.
 - Vous voulez du code sous licence MIT, l'auto-hébergement, une API REST, des webhooks ou le serveur MCP.
 
@@ -226,4 +226,4 @@ Toutes consultées le 9 octobre 2026 :
 
 LobbyStack vous coûte moins cher pour obtenir la réservation et un transfert quand vos appels restent sous environ 772 minutes par mois. Rosie donne plus de minutes par dollar d'environ 773 à 1 000 minutes et d'environ 1 606 à 2 000. Rosie propose aussi plus de types de transfert, plus de calendriers, le chat sur votre site et des applis mobiles. Chiffrez votre propre mois avec le tableau des coûts plus haut, en comptant les minutes comme chaque fournisseur les compte.
 
-Pour entendre comment LobbyStack répond aux questions de vos appelants, [commencez avec le forfait gratuit](https://app.lobbystack.com/fr/signup). Vous obtenez 30 minutes vocales par mois dans le navigateur, avec votre propre accueil et vos règles, et vous n'avez pas besoin de carte. Si vous prenez plus tard un forfait payant, vous pourrez passer à un forfait inférieur ou annuler depuis les paramètres de facturation, sans frais d'annulation.
+Pour entendre comment LobbyStack répond aux questions de vos appelants, [commencez avec le forfait gratuit](https://app.lobbystack.com/fr/signup). Vous obtenez 30 minutes vocales par mois, avec votre propre accueil et vos règles, et vous n'avez pas besoin de carte. Si vous prenez plus tard un forfait payant, vous pourrez passer à un forfait inférieur ou annuler depuis les paramètres de facturation, sans frais d'annulation.

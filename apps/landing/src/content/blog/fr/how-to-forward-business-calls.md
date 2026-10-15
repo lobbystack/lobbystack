@@ -175,8 +175,8 @@ Cela dépend de l'opérateur. Chez Verizon, le renvoi se gère depuis le mobile,
 
 ### Peut-on renvoyer ses appels professionnels vers un réceptionniste IA ?
 
-Oui. Vous renvoyez vers le numéro du réceptionniste IA comme vers n'importe quel numéro. Ooma Office exige une ligne externe partagée (Pro Plus) pour joindre un numéro externe. Google Voice fait exception : Google ne prend pas en charge le renvoi vers un système automatisé. Avec LobbyStack, utilisez le numéro inclus dans Starter ou Pro ; Gratuit n'en a pas.
+Oui. Vous renvoyez vers le numéro du réceptionniste IA comme vers n'importe quel numéro. Ooma Office exige une ligne externe partagée (Pro Plus) pour joindre un numéro externe. Google Voice fait exception : Google ne prend pas en charge le renvoi vers un système automatisé. Avec LobbyStack, renvoyez vers votre numéro LobbyStack. Gratuit inclut un numéro américain ou canadien pendant 14 jours, et Starter ou Pro vous permet de le garder.
 
 ## Écoutez le réceptionniste avant de renvoyer une ligne
 
-Le forfait Gratuit de LobbyStack vous donne 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone, pour tester depuis le tableau de bord la façon dont il traite vos appels. Si les appels tests vous conviennent, Starter coûte 30 $ par mois (24 $ par mois en facturation annuelle) pour 150 minutes et un numéro professionnel, sans frais de mise en service, et vous pouvez résilier sans frais. Composez ensuite votre code de renvoi sur non-réponse pour ne lui envoyer que les appels manqués. [Commencez gratuitement](https://app.lobbystack.com/fr/signup) ou [comparez les forfaits](/fr/pricing/).
+Le forfait Gratuit de LobbyStack vous donne 30 minutes vocales et un numéro américain ou canadien gratuit pendant 14 jours, sans carte. Composez votre code de renvoi sur non-réponse pour ne lui envoyer que les appels manqués, et voyez comment il les traite. Pour garder le numéro, Starter coûte 30 $ par mois (24 $ par mois en facturation annuelle) pour 150 minutes, sans frais de mise en service, et vous pouvez résilier sans frais. [Commencez gratuitement](https://app.lobbystack.com/fr/signup) ou [comparez les forfaits](/fr/pricing/).

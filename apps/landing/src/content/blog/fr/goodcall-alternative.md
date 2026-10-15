@@ -22,7 +22,7 @@ Goodcall ne compte jamais les minutes, et son modèle favorise donc les appels l
 | Critère | Goodcall | LobbyStack |
 | --- | --- | --- |
 | Unité | Appelants uniques par mois, un forfait par agent | Minutes vocales, comptées à la seconde |
-| Option gratuite | Agent de démonstration gratuit ; facturation à la connexion d'un numéro | Gratuit : 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone |
+| Option gratuite | Agent de démonstration gratuit ; facturation à la connexion d'un numéro | Gratuit : 30 minutes vocales, sans carte, numéro américain ou canadien gratuit pendant 14 jours |
 | Premier forfait payant | 79 $ pour 100 appelants uniques (environ 150 appels) | 30 $ pour 150 minutes |
 | Niveaux supérieurs | 129 $ pour 500 appelants, 299 $ pour 2 000 | 100 $ pour 500 minutes |
 | Usage supplémentaire | 0,79 $, 0,26 $ ou 0,15 $ par appelant en plus | 0,20 $ ou 0,18 $ par minute en plus |

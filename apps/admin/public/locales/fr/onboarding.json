@@ -223,7 +223,7 @@
     "popular": "Populaire",
     "enterpriseSubject": "Forfait Entreprise",
     "compareTitle": "Comparer les forfaits en détail",
-    "compareDescription": "Testez 30 minutes vocales dans le navigateur sur Free, sans numéro de téléphone. Starter et Pro comprennent un numéro dédié et des volumes mensuels.",
+    "compareDescription": "Free vous donne 30 minutes vocales et un numéro américain ou canadien pendant 14 jours. Starter et Pro comprennent un numéro dédié et des volumes mensuels.",
     "featureHeader": "Fonctionnalité",
     "billingInterval": {
       "label": "Intervalle de facturation",
@@ -236,11 +236,11 @@
         "name": "Gratuit",
         "price": "0 $",
         "period": "",
-        "description": "Essayez LobbyStack avec assez d'utilisation pour le voir en action.",
+        "description": "Accès complet pendant 14 jours",
         "cta": "Commencer gratuitement",
         "highlights": {
-          "voiceMinutes": "30 minutes vocales dans le navigateur",
-          "bookingContacts": "Aucun numéro de téléphone",
+          "voiceMinutes": "30 minutes vocales incluses",
+          "bookingContacts": "1 numéro de téléphone",
           "support": "Support communautaire"
         }
       },
@@ -350,11 +350,11 @@
           "notIncluded": "Non inclus",
           "multiple": "Plusieurs",
           "unlimited": "Illimité",
-          "browserTesting": "Tests dans le navigateur"
+          "trialDays": "Pendant 14 jours"
         },
         "usage": {
           "voiceMinutes": {
-            "freeIncluded": "{{minutes}} minutes dans le navigateur",
+            "freeIncluded": "{{minutes}} incluses",
             "starterIncluded": "150 incluses",
             "starterThen": "puis 0,20 $/min",
             "proIncluded": "500 incluses",

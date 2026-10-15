@@ -21,7 +21,7 @@ LobbyStack uključuje zakazivanje, preusmeravanje poziva, SMS obaveštenja, tran
 
 | Oblast | Zoom Virtual Agent Receptionist | LobbyStack |
 | --- | --- | --- |
-| Besplatna opcija | Ponuđena besplatna proba, trajanje nije navedeno | 30 minuta razgovora u pregledaču, bez kartice i broja telefona |
+| Besplatna opcija | Ponuđena besplatna proba, trajanje nije navedeno | 30 minuta razgovora, bez kartice, broj iz SAD ili Kanade besplatno 14 dana |
 | Mesečna cena | $29.99 za 100 minuta | $30 za 150 minuta |
 | Godišnja cena | $25.00 mesečno za 100 minuta | $24 mesečno za 150 minuta |
 | Dodatni minuti | Cena nije objavljena | $0.20 na Starter paketu, $0.18 na Pro paketu |
@@ -36,7 +36,7 @@ Cene i funkcije su proverene 9. oktobra 2026.
 
 ## LobbyStack Vam daje više prostora da proverite tok rada
 
-Samostalni Zoom paket uključuje 100 minuta. LobbyStack Starter uključuje 150 za jedan cent više. Na paketu Free možete da testirate 30 minuta razgovora u pregledaču, bez broja telefona. Uz godišnju naplatu, LobbyStack košta $1 manje mesečno i uključuje 50 minuta više.
+Samostalni Zoom paket uključuje 100 minuta. LobbyStack Starter uključuje 150 za jedan cent više. Na paketu Free možete da testirate 30 minuta razgovora, uz broj iz SAD ili Kanade besplatno 14 dana. Uz godišnju naplatu, LobbyStack košta $1 manje mesečno i uključuje 50 minuta više.
 
 Taj dodatni kapacitet maloj firmi daje više prostora da testira pravila zakazivanja, preusmeravanja van radnog vremena, pitanja pozivalaca i postupanje u slučaju greške. Tim može da pregleda transkripte i rezimee pre nego što prosledi sav saobraćaj.
 
@@ -105,6 +105,6 @@ Izaberite LobbyStack ako želite 30 besplatnih minuta za test, 50% više uključ
 
 ## Zaključak
 
-Uz LobbyStack dobijate više minuta nego na samostalnom Zoom paketu, i po mesečnoj i po godišnjoj ceni, i možete besplatno da testirate glasovne razgovore u pregledaču. Izaberite Zoom ako Vaš tim više voli njegovu administraciju komunikacija ili mu treba asistirano preusmeravanje.
+Uz LobbyStack dobijate više minuta nego na samostalnom Zoom paketu, i po mesečnoj i po godišnjoj ceni, i možete 14 dana da ga testirate na besplatnom broju iz SAD ili Kanade. Izaberite Zoom ako Vaš tim više voli njegovu administraciju komunikacija ili mu treba asistirano preusmeravanje.
 
-[Počnite besplatno sa LobbyStack](/sr/pricing/) i testirajte glasovne razgovore u pregledaču.
+[Počnite besplatno sa LobbyStack](/sr/pricing/) i testirajte ga 14 dana na besplatnom broju iz SAD ili Kanade.

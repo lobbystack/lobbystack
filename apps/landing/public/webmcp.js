@@ -110,7 +110,7 @@
               knowledgeStorageMb: 1,
             },
             description:
-              "Free includes 30 voice minutes for browser test calls and a 1 MB knowledge base. It has no phone number, so it sends no texts and cannot transfer calls.",
+              "Free includes 30 voice minutes, a US or Canadian phone number free for 14 days, and a 1 MB knowledge base. During the trial, transfers go only to the owner's verified mobile number. Starter or Pro keeps the number.",
           },
           {
             name: "Starter",

@@ -209,7 +209,7 @@ LobbyStack je AI recepcioner za male firme. Zakazuje termine u Google Calendar n
 
 Svaki poziv počinje na podrazumevanom jeziku firme, engleskom ili francuskom. Recepcioner zatim odgovara na jeziku pozivaoca. Radi na OpenAI GPT-Live modelu i govori 70+ jezika, uključujući španski i srpski.
 
-Paket [Starter](/sr/pricing/) košta $30 mesečno za 150 minuta, zatim $0.20 po minutu, bez naknade za aktivaciju. Paket Free Vam daje 30 minuta razgovora u pregledaču mesečno, bez kartice i broja telefona, i ne ističe. Kod je [pod MIT licencom na GitHubu](https://github.com/lobbystack/lobbystack), a možete i da ga [sami hostujete](https://docs.lobbystack.com/self-hosting/overview) uz sopstvene OpenAI i Twilio naloge.
+Paket [Starter](/sr/pricing/) košta $30 mesečno za 150 minuta, zatim $0.20 po minutu, bez naknade za aktivaciju. Paket Free Vam daje 30 minuta razgovora mesečno i broj iz SAD ili Kanade besplatno 14 dana, bez kartice. Sam paket ne ističe. Kod je [pod MIT licencom na GitHubu](https://github.com/lobbystack/lobbystack), a možete i da ga [sami hostujete](https://docs.lobbystack.com/self-hosting/overview) uz sopstvene OpenAI i Twilio naloge.
 
 Upoznajte ograničenja pre nego što se prijavite:
 
@@ -229,7 +229,7 @@ Nije. Virtuelni asistent radi na daljinu i obavlja širi administrativni posao, 
 
 ### Da li je virtuelni recepcioner pouzdana usluga?
 
-Da. Virtuelni recepcioneri su ustaljena vrsta usluge, pa konkretnu firmu procenite po objavljenim cenama, uslovima ugovora i probnom periodu. [SAS](https://www.specialtyansweringservice.net/pricing/) i [PATLive](https://www.patlive.com/pricing/) nude besplatan probni period od 14 dana, [Ruby](https://www.ruby.com/plans-and-pricing/) novim klijentima nudi garanciju povrata novca, a LobbyStack paket Free ne ističe.
+Da. Virtuelni recepcioneri su ustaljena vrsta usluge, pa konkretnu firmu procenite po objavljenim cenama, uslovima ugovora i probnom periodu. [SAS](https://www.specialtyansweringservice.net/pricing/) i [PATLive](https://www.patlive.com/pricing/) nude besplatan probni period od 14 dana, [Ruby](https://www.ruby.com/plans-and-pricing/) novim klijentima nudi garanciju povrata novca, a LobbyStack paket Free uključuje broj iz SAD ili Kanade na 14 dana.
 
 ## Zaključak
 

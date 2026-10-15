@@ -138,7 +138,7 @@ const homeSectionsCopy = {
           name: "Free",
           price: "$0",
           description:
-            "30 browser voice minutes. No telephone number or credit card required.",
+            "30 voice minutes and a US or Canadian number free for 14 days. No credit card required.",
         },
         {
           name: "Starter",
@@ -304,7 +304,7 @@ const homeSectionsCopy = {
           name: "Free",
           price: "$0",
           description:
-            "30 minutes vocales dans le navigateur. Aucun numéro de téléphone ni carte bancaire requis.",
+            "30 minutes vocales et un numéro américain ou canadien gratuit pendant 14 jours. Aucune carte bancaire requise.",
         },
         {
           name: "Starter",
@@ -469,7 +469,7 @@ const homeSectionsCopy = {
           name: "Free",
           price: "$0",
           description:
-            "30 minutos de voz en el navegador. No necesita número de teléfono ni tarjeta de crédito.",
+            "30 minutos de voz y un número de EE. UU. o Canadá gratis durante 14 días. No necesita tarjeta de crédito.",
         },
         {
           name: "Starter",
@@ -632,7 +632,7 @@ const homeSectionsCopy = {
           name: "Free",
           price: "$0",
           description:
-            "30 minuta razgovora u pregledaču. Nisu potrebni broj telefona ni kreditna kartica.",
+            "30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana. Kreditna kartica nije potrebna.",
         },
         {
           name: "Starter",

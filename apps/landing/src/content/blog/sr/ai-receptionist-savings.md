@@ -13,7 +13,7 @@ locale: "sr"
 canonicalSlug: "ai-receptionist-savings"
 ---
 
-AI recepcioner košta od $14 do $150 mesečno na većini ulaznih paketa, prema stranicama sa cenama 17 ponuđača, uključujući i naš, na dan 9. oktobra 2026. Ti paketi uključuju od 25 do 250 poziva, minuta ili pozivalaca, a većina naplaćuje svaki dodatni. Smith.ai paket Free se javlja na 25 stvarnih poziva mesečno, a LobbyStack paket Free Vam daje 30 minuta razgovora u pregledaču za testiranje.
+AI recepcioner košta od $14 do $150 mesečno na većini ulaznih paketa, prema stranicama sa cenama 17 ponuđača, uključujući i naš, na dan 9. oktobra 2026. Ti paketi uključuju od 25 do 250 poziva, minuta ili pozivalaca, a većina naplaćuje svaki dodatni. Smith.ai paket Free se javlja na 25 stvarnih poziva mesečno, a LobbyStack paket Free Vam daje 30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana.
 
 **Cene smo proverili 9. oktobra 2026.** na stranici sa cenama svakog ponuđača, u američkim dolarima bez poreza. Mi smo napisali ovaj vodič i prodajemo AI recepcionera, pa naš red nosi oznaku „(naš)“.
 
@@ -33,7 +33,7 @@ Većina ulaznih paketa košta od $14 do $150 mesečno, od AI-Receptionist.com pa
 | [Dialzara](https://dialzara.com/pricing) | Business Lite $29 | 60 min | $0.48/min | Minut | Navodi da je nema | 7 dana |
 | [ElevenLabs Reception](https://elevenlabs.io/docs/reception-ai/billing/plans-and-pricing) | Basic $29 ($24 uz godišnju naplatu) | 75 kredita | $0.45 po kreditu | Kredit (1 min telefonom) | Nije navedeno | 14 dana, 30 kredita, bez kartice |
 | [Zoom AI Receptionist](https://zoom.us/pricing/virtual-agent) | $29.99 | 100 min | Nije objavljeno | Minut | Nije navedeno | „Try for free“, trajanje nije navedeno |
-| [LobbyStack](/sr/pricing/) (naš) | Starter $30 ($24 uz godišnju naplatu) | 150 min | $0.20/min | Sekunda, cena po minutu | Nema | Besplatan paket: 30 minuta razgovora u pregledaču, bez broja telefona |
+| [LobbyStack](/sr/pricing/) (naš) | Starter $30 ($24 uz godišnju naplatu) | 150 min | $0.20/min | Sekunda, cena po minutu | Nema | Besplatan paket: 30 minuta razgovora, broj iz SAD ili Kanade besplatno 14 dana |
 | [RingCentral AIR](https://www.ringcentral.com/pricing/ai-receptionist.html) | $49 samostalno | 100 min | $0.50/min | Minut, koraci od 30 sekundi | Nije navedeno | 14 dana |
 | [Rosie](https://heyrosie.com/pricing) | Professional $49 ($41 uz godišnju naplatu) | 250 min | Prebacuje Vas na Scale ($149) | Minut | Nije navedeno | 7 dana |
 | [Allo](https://www.withallo.com/pricing) | $32 recepcioner + $32 licenca, godišnja naplata | Nije navedeno | Nije navedeno | Fiksno po agentu | Navodi da je nema | Nije navedena |
@@ -128,12 +128,12 @@ Goodcall pozivaoca koji se vraća naplaćuje jednom mesečno, pa radnja sa staln
 
 ## Možete li dobiti AI recepcionera besplatno?
 
-Da, uz ograničenja. Smith.ai paket Free se javlja na 25 stvarnih poziva mesečno i naplaćuje $3 za svaki dodatni poziv. LobbyStack paket Free Vam daje 30 minuta razgovora u pregledaču mesečno za testiranje recepcionera, bez kartice i broja telefona. Većina ostalih ponuđača nudi probu od 7 ili 14 dana. U vodiču o [besplatnim AI recepcionerima](/sr/blog/free-ai-receptionist/) poredimo šta uključuju besplatni paketi i probe i gde su im granice.
+Da, uz ograničenja. Smith.ai paket Free se javlja na 25 stvarnih poziva mesečno i naplaćuje $3 za svaki dodatni poziv. LobbyStack paket Free Vam daje 30 minuta razgovora mesečno i broj iz SAD ili Kanade besplatno 14 dana, bez kartice. Većina ostalih ponuđača nudi probu od 7 ili 14 dana. U vodiču o [besplatnim AI recepcionerima](/sr/blog/free-ai-receptionist/) poredimo šta uključuju besplatni paketi i probe i gde su im granice.
 
 ### Besplatni paketi
 
 - **Smith.ai Free** radi na 25 stvarnih poziva mesečno, a zatim naplaćuje $3 po pozivu.
-- **LobbyStack Free** Vam daje 30 minuta razgovora u pregledaču mesečno za testiranje iz kontrolne table, bez kartice i broja telefona, i ne ističe. Bez broja ne može da prima telefonske pozive, da šalje SMS poruke ni da preusmerava pozive.
+- **LobbyStack Free** Vam daje 30 minuta razgovora mesečno i broj iz SAD ili Kanade besplatno 14 dana, bez kartice. Tokom tih 14 dana broj odgovara na prave pozive, a preusmeravanja idu samo na mobilni broj koji ste potvrdili. Izaberite Starter ili Pro da biste zadržali broj.
 - **CloudTalk** novim korisnicima daje 50 besplatnih minuta u prvom mesecu.
 - **ServiceAgent** ima Launch paket od $0 sa kreditima koje plaćate po korišćenju, unutar svog softvera za terenske usluge.
 - **Quo Sona** Tier 1 uključuje oko 10 poziva mesečno, uz plaćeni Quo paket.
@@ -269,7 +269,7 @@ Mi smo napisali ovaj vodič, pa naše pakete ocenjujemo po istim merilima kao os
 
 | Paket | Cena | Uključeno mesečno | Posle toga |
 | --- | --- | --- | --- |
-| Free | $0 | 30 minuta razgovora u pregledaču, bez kartice i broja telefona | Probni pozivi staju do sledećeg meseca |
+| Free | $0 | 30 minuta razgovora, bez kartice, broj iz SAD ili Kanade besplatno 14 dana | Pozivi staju do sledećeg meseca |
 | Starter | $30 mesečno, ili $288 godišnje ($24 mesečno) | 150 minuta razgovora, 50 SMS obaveštenja, 20 pokušaja preusmeravanja, jedan poslovni broj, podrška e-poštom | $0.20/min; $0.02 po dodatnom SMS-u ili pokušaju preusmeravanja |
 | Pro | $100 mesečno, ili $960 godišnje ($80 mesečno) | 500 minuta razgovora, 200 SMS obaveštenja, 100 pokušaja preusmeravanja, jedan poslovni broj, prioritetna podrška e-poštom | $0.18/min; $0.02 po dodatnom SMS-u ili pokušaju preusmeravanja |
 | Enterprise | Po dogovoru | Više brojeva, namenska podrška pri uvođenju | Po dogovoru |
@@ -280,7 +280,7 @@ Svaki poziv počinje na podrazumevanom jeziku firme, engleskom ili francuskom. R
 
 Ograničenja LobbyStack-a:
 
-- Free služi samo za testove u pregledaču. Pravi pozivi, SMS poruke i preusmeravanja počinju od paketa Starter.
+- Free 14 dana odgovara na prave pozive na broju iz SAD ili Kanade. Da biste zadržali broj, izaberite Starter ili Pro.
 - Zakazuje samo u Google Calendar. CRM sistemi i softver za terenske usluge i ordinacije povezuju se samo preko webhookova i REST API-ja.
 - AI ne odgovara na SMS poruke. Na njih odgovara Vaš tim iz kontrolne table.
 - Preusmeravanje ide na jedan broj po firmi, a telefonski poziv se prekida posle 30 minuta.

@@ -126,7 +126,7 @@ Le forfait Starter de LobbyStack coûte 30 $ par mois pour 150 minutes, puis 0,2
 
 Chaque appel commence dans la langue par défaut de l'entreprise, l'anglais ou le français. Le réceptionniste répond ensuite dans la langue de l'appelant : plus de 70 langues avec GPT-Live d'OpenAI, dont l'espagnol et le serbe. Vous décidez en langage courant quels appels sont urgents, et il peut les transférer vers un numéro. Si le transfert échoue, il propose de prendre un message, et votre équipe peut recevoir une alerte « Transfert d'appel échoué ». Il réserve dans Google Calendar et, si l'appelant accepte, envoie par SMS une confirmation et un rappel 24 heures avant aux numéros américains et canadiens.
 
-LobbyStack ne se synchronise ni avec ServiceTitan, ni avec Housecall Pro, ni avec Jobber, et Google Calendar reste son seul agenda. Les transferts vont vers un seul numéro, sans présenter l'appelant au technicien, et vous n'avez pas de rotation de garde. Aucun agent humain ne prend le relais, et l'IA ne répond pas aux SMS. Le forfait Gratuit vous donne 30 minutes vocales dans le navigateur pour tester, sans carte ni numéro de téléphone. Voyez comment il traite les appels urgents sur la page [réceptionniste IA en chauffage et climatisation](/fr/solutions/ai-receptionist-for-hvac/).
+LobbyStack ne se synchronise ni avec ServiceTitan, ni avec Housecall Pro, ni avec Jobber, et Google Calendar reste son seul agenda. Les transferts vont vers un seul numéro, sans présenter l'appelant au technicien, et vous n'avez pas de rotation de garde. Aucun agent humain ne prend le relais, et l'IA ne répond pas aux SMS. Le forfait Gratuit vous donne 30 minutes vocales et un numéro américain ou canadien gratuit pendant 14 jours, sans carte. Voyez comment il traite les appels urgents sur la page [réceptionniste IA en chauffage et climatisation](/fr/solutions/ai-receptionist-for-hvac/).
 
 ## Combien coûte une permanence téléphonique en chauffage et climatisation ?
 
@@ -226,7 +226,7 @@ Relevez sur votre facture de téléphone le nombre d'appels et leur durée moyen
 
 ### 2. Passez trois appels tests avant de signer
 
-Appelez chaque finaliste trois fois : une panne de chauffage à 2 h du matin avec un bébé à la maison, une demande d'entretien saisonnier et un appelant hispanophone. Vérifiez qui a répondu, ce que disait le résumé et si le technicien de garde a reçu l'appel. Essais : PATLive 14 jours, SAS 14 jours ou 200 minutes, essais gratuits chez MAP et Housecall Pro, Rosie 7 jours, forfait IA Free de Smith.ai, et LobbyStack Gratuit, qui fonctionne dans le navigateur pendant 30 minutes.
+Appelez chaque finaliste trois fois : une panne de chauffage à 2 h du matin avec un bébé à la maison, une demande d'entretien saisonnier et un appelant hispanophone. Vérifiez qui a répondu, ce que disait le résumé et si le technicien de garde a reçu l'appel. Essais : PATLive 14 jours, SAS 14 jours ou 200 minutes, essais gratuits chez MAP et Housecall Pro, Rosie 7 jours, forfait IA Free de Smith.ai, et LobbyStack Gratuit, avec 30 minutes et un numéro américain ou canadien gratuit pendant 14 jours.
 
 ### 3. Lisez les conditions de facturation et les frais
 
@@ -240,7 +240,7 @@ Renvoyez votre numéro actuel depuis votre opérateur pour le débordement, les 
 
 ### Existe-t-il un service de réponse téléphonique gratuit pour les chauffagistes ?
 
-Aucun service humain de ce comparatif n'est gratuit ; les essais s'en approchent le plus. Le forfait IA Free de Smith.ai couvre 25 vrais appels par mois. LobbyStack Gratuit vous donne 30 minutes vocales dans le navigateur par mois, sans numéro de téléphone : vous testez le réceptionniste, mais il ne peut pas répondre à votre ligne professionnelle.
+Aucun service humain de ce comparatif n'est gratuit ; les essais s'en approchent le plus. Le forfait IA Free de Smith.ai couvre 25 vrais appels par mois. LobbyStack Gratuit vous donne 30 minutes vocales par mois et un numéro américain ou canadien gratuit pendant 14 jours : si vous y renvoyez votre ligne professionnelle, il y répond pendant deux semaines.
 
 ### Un service de réponse téléphonique peut-il ne prendre que les appels hors horaires ?
 
@@ -282,4 +282,4 @@ Sources, toutes consultées le 9 octobre 2026 :
 - **Jobber ou Housecall Pro :** essayez d'abord le réceptionniste intégré.
 - **La réservation dans Google Calendar, le débordement et les appels hors horaires pour 30 $ à 100 $ par mois, avec des appelants qui parlent d'autres langues :** LobbyStack.
 
-Vous voulez entendre LobbyStack prendre un appel pour une panne de chauffage avant de payer ? [Créez un compte gratuit](https://app.lobbystack.com/fr/signup) et testez-le avec 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone. Les forfaits payants n'ont aucuns frais de mise en service, et vous pouvez résilier depuis les réglages de facturation, sans frais de résiliation. Voyez ensuite comment fonctionnent les appels urgents, les réservations et les transferts sur la page [réceptionniste IA en chauffage et climatisation](/fr/solutions/ai-receptionist-for-hvac/).
+Vous voulez entendre LobbyStack prendre un appel pour une panne de chauffage avant de payer ? [Créez un compte gratuit](https://app.lobbystack.com/fr/signup) et testez-le avec 30 minutes vocales et un numéro gratuit pendant 14 jours, sans carte. Les forfaits payants n'ont aucuns frais de mise en service, et vous pouvez résilier depuis les réglages de facturation, sans frais de résiliation. Voyez ensuite comment fonctionnent les appels urgents, les réservations et les transferts sur la page [réceptionniste IA en chauffage et climatisation](/fr/solutions/ai-receptionist-for-hvac/).

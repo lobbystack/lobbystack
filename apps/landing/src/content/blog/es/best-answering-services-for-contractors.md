@@ -124,7 +124,7 @@ El plan Starter de LobbyStack cuesta $30 al mes por 150 minutos, luego $0.20 por
 
 Usted obtiene un número en Estados Unidos, Canadá, el Reino Unido, Australia o Nueva Zelanda y puede desviar a él su número actual. Contesta todas las llamadas o solo las de desborde o fuera de horario. Agenda visitas de presupuesto en Google Calendar y, si quien llama lo acepta, envía por SMS una confirmación y un recordatorio 24 horas antes a números de Estados Unidos y Canadá. El resumen, la transcripción y la grabación de cada llamada quedan en el panel, y usted recibe un correo cuando toma un mensaje, con alertas por SMS opcionales. Cada llamada empieza en el idioma predeterminado del negocio, inglés o francés, y luego la recepcionista responde en el idioma de quien llama: más de 70 idiomas con GPT-Live de OpenAI, incluido el español. El código es abierto con licencia MIT, y puede alojarlo usted mismo.
 
-No tiene integración con Jobber, Housecall Pro, ServiceTitan, JobNimbus ni ningún CRM, y Google Calendar es su único calendario. Los webhooks firmados para 6 eventos y una API REST pueden enviar los datos de llamadas a otras herramientas, pero esa conexión la construye usted. Las transferencias son directas, sin presentar a quien llama, y van a un solo número. Si una transferencia no se completa, se lo dice a quien llama, ofrece tomar un mensaje y su equipo puede recibir una alerta de transferencia fallida. Ninguna persona la respalda, y la IA no contesta mensajes de texto. El plan gratuito le da 30 minutos de voz en el navegador, sin tarjeta ni número de teléfono, así que no puede atender llamadas reales, transferir ni enviar SMS. Vea cómo atiende las llamadas tras una tormenta en la página de [atención telefónica para techadores](/es/solutions/roofing-answering-service/).
+No tiene integración con Jobber, Housecall Pro, ServiceTitan, JobNimbus ni ningún CRM, y Google Calendar es su único calendario. Los webhooks firmados para 6 eventos y una API REST pueden enviar los datos de llamadas a otras herramientas, pero esa conexión la construye usted. Las transferencias son directas, sin presentar a quien llama, y van a un solo número. Si una transferencia no se completa, se lo dice a quien llama, ofrece tomar un mensaje y su equipo puede recibir una alerta de transferencia fallida. Ninguna persona la respalda, y la IA no contesta mensajes de texto. El plan gratuito le da 30 minutos de voz y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta. Durante la prueba, las transferencias solo van al celular que usted verificó. Vea cómo atiende las llamadas tras una tormenta en la página de [atención telefónica para techadores](/es/solutions/roofing-answering-service/).
 
 ## ¿Cuánto cuesta un servicio de atención telefónica para contratistas?
 
@@ -213,7 +213,7 @@ Saque de su factura telefónica el número de llamadas y la duración media de s
 
 ### 2. Haga tres llamadas de prueba antes de firmar
 
-Llame a cada finalista tres veces: una solicitud de presupuesto para remodelar un baño, una llamada a las 9 p. m. por una gotera activa y una persona que habla español. Revise quién contestó, qué dice el resumen y si la llamada urgente llegó a su celular. Pruebas: PATLive 14 días, OnCrew 14 días, la prueba gratuita de Housecall Pro, el plan gratuito de la IA de Smith.ai y el plan gratuito de LobbyStack, que funciona en el navegador con 30 minutos y sin número de teléfono.
+Llame a cada finalista tres veces: una solicitud de presupuesto para remodelar un baño, una llamada a las 9 p. m. por una gotera activa y una persona que habla español. Revise quién contestó, qué dice el resumen y si la llamada urgente llegó a su celular. Pruebas: PATLive 14 días, OnCrew 14 días, la prueba gratuita de Housecall Pro, el plan gratuito de la IA de Smith.ai y el plan gratuito de LobbyStack, con 30 minutos y un número de EE. UU. o Canadá gratis durante 14 días.
 
 ### 3. Vea cómo llega una cita a su software
 
@@ -227,7 +227,7 @@ Desvíe su número actual desde su operador para el desborde, el horario sin ate
 
 ### ¿Existe un servicio de atención telefónica gratis para contratistas?
 
-Ningún servicio en vivo de esta lista es gratis, pero varios ofrecen prueba. La IA de Smith.ai cubre 25 llamadas al mes, luego $3.00 por llamada. El plan gratuito de LobbyStack le da 30 minutos de voz en el navegador, sin tarjeta ni número de teléfono: sirve para probar, sin contestar su línea, transferir ni enviar SMS.
+Ningún servicio en vivo de esta lista es gratis, pero varios ofrecen prueba. La IA de Smith.ai cubre 25 llamadas al mes, luego $3.00 por llamada. El plan gratuito de LobbyStack le da 30 minutos de voz y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta, así que puede contestar su línea durante dos semanas si la desvía.
 
 ### ¿Un servicio de atención telefónica puede agendar presupuestos?
 
@@ -270,4 +270,4 @@ Fuentes, todas consultadas el 9 o el 10 de octubre de 2026:
 - **Un techador en JobNimbus o AccuLynx que quiere IA:** Sameday AI.
 - **Citas en Google Calendar por $30 a $100 al mes, con clientes que hablan varios idiomas:** LobbyStack.
 
-¿Quiere oír a LobbyStack atender una solicitud de presupuesto antes de pagar? [Cree una cuenta gratis](https://app.lobbystack.com/es/signup) y pruébela con 30 minutos de voz en el navegador, sin tarjeta ni número de teléfono. Los planes de pago no tienen cargo de alta. Después vea cómo cubre noches y fines de semana en la página de [atención fuera de horario para contratistas](/es/solutions/after-hours-answering-service-for-contractors/).
+¿Quiere oír a LobbyStack atender una solicitud de presupuesto antes de pagar? [Cree una cuenta gratis](https://app.lobbystack.com/es/signup) y pruébela con 30 minutos de voz y un número gratis durante 14 días, sin tarjeta. Los planes de pago no tienen cargo de alta. Después vea cómo cubre noches y fines de semana en la página de [atención fuera de horario para contratistas](/es/solutions/after-hours-answering-service-for-contractors/).

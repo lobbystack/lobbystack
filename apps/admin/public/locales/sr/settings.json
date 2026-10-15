@@ -197,12 +197,12 @@
         "free_cloud": {
           "name": "Free",
           "description": {
-            "monthly": "Isprobajte glas u pregledaču",
-            "annual": "Isprobajte glas u pregledaču"
+            "monthly": "Pun pristup 14 dana",
+            "annual": "Pun pristup 14 dana"
           },
           "highlights": {
-            "voiceMinutes": "30 minuta razgovora u pregledaču",
-            "allFeatures": "Bez broja telefona",
+            "voiceMinutes": "30 minuta razgovora uključeno",
+            "allFeatures": "1 broj telefona",
             "support": "Podrška zajednice"
           }
         },

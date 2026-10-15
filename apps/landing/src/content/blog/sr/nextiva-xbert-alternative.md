@@ -13,7 +13,7 @@ locale: "sr"
 canonicalSlug: "nextiva-xbert-alternative"
 ---
 
-**Alternativa za Nextiva XBert** može da Vas poštedi XBert dodatka i Nextiva paketa koji on zahteva. Uz LobbyStack možete na paketu Free da testirate 30 minuta razgovora u pregledaču, a zatim da kupite 150 minuta za $30. XBert navodi 100 zajedničkih interakcija putem glasa, SMS-a ili četa na sajtu za $99, a zatim $0.99 po interakciji.
+**Alternativa za Nextiva XBert** može da Vas poštedi XBert dodatka i Nextiva paketa koji on zahteva. Uz LobbyStack možete da testirate paket Free sa 30 minuta razgovora i brojem iz SAD ili Kanade besplatno 14 dana, a zatim da kupite 150 minuta za $30. XBert navodi 100 zajedničkih interakcija putem glasa, SMS-a ili četa na sajtu za $99, a zatim $0.99 po interakciji.
 
 LobbyStack taj budžet usmerava na telefonsku recepciju: zakazivanje, izmene termina, predaju razgovora čoveku, SMS obaveštenja, transkripte, rezimee i istoriju poziva. Radi kao upravljana usluga ili kao samostalno hostovan stek, nezavisno od Nextive.
 
@@ -21,7 +21,7 @@ LobbyStack taj budžet usmerava na telefonsku recepciju: zakazivanje, izmene ter
 
 | Oblast | Nextiva XBert | LobbyStack |
 | --- | --- | --- |
-| Trajni besplatni paket | Nije naveden | 30 minuta razgovora u pregledaču, bez kartice i broja telefona |
+| Trajni besplatni paket | Nije naveden | 30 minuta razgovora, bez kartice, broj iz SAD ili Kanade besplatno 14 dana |
 | Početna cena | $99 za 100 interakcija | $30 za 150 minuta razgovora |
 | Prekoračenje | $0.99 po interakciji | Minuti preko kvote, po ceni paketa |
 | Kanali | Glas, SMS i čet na sajtu | Glas, uz SMS potvrde zakazivanja i SMS obaveštenja |
@@ -36,7 +36,7 @@ Cene i funkcije su proverene 30. jula 2026.
 
 XBert se dodaje na Nextiva pretplatu. Kupac mora da izračuna cenu oba proizvoda i da utvrdi kako glas, SMS i čet troše zajedničku kvotu od 100 interakcija.
 
-Na paketu LobbyStack Free možete da testirate 30 minuta razgovora u pregledaču, bez Nextiva paketa i bez broja telefona. Na paketu Starter dobijate 150 minuta i namenski broj za $30.
+LobbyStack Free možete da testirate bez Nextiva paketa: dobijate 30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana. Na paketu Starter dobijate 150 minuta i namenski broj za $30.
 
 XBert nudi čet na sajtu i objedinjen Nextiva radni prostor. Ti kanali opravdavaju paket kada su timu potrebni. Firma koja kupuje pokrivenost telefona uz LobbyStack plaća manje i zadržava veću slobodu izbora provajdera.
 

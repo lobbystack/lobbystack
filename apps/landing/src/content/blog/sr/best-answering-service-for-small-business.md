@@ -166,7 +166,7 @@ AI recepcioner odgovara pomoću softvera, a zatim zakazuje, preusmerava ili prim
 - **Kako naplaćuje:** po sekundi, bez zaokruživanja, pa poziv od 90 sekundi troši 1.5 minuta. LobbyStack ne računa pozive kraće od 10 sekundi ni pozive koje recepcioner završi kao spam.
 - **Uključeno:** zakazivanje u Google Calendar na osnovu Vašeg radnog vremena, usluga i osoblja, SMS potvrde i podsetnici 24 sata unapred na američke i kanadske brojeve kada pozivalac pristane, i 20 pokušaja preusmeravanja mesečno na jedan broj.
 - **Jezici:** svaki poziv počinje na podrazumevanom jeziku firme, engleskom ili francuskom. Recepcioner zatim odgovara na jeziku pozivaoca: na OpenAI GPT-Live modelu to je više od 70 jezika, uključujući španski i srpski.
-- **Brojevi i aktivacija:** brojevi u SAD, Kanadi, Ujedinjenom Kraljevstvu, Australiji i na Novom Zelandu, ili prosledite postojeći broj. Paketi ne ograničavaju broj poziva na koje odgovara istovremeno. Nema naknade za aktivaciju ni na jednom paketu, a pretplatu otkazujete kad god želite, bez naknade za otkazivanje. Paket Free Vam daje 30 minuta razgovora u pregledaču mesečno, bez kartice i broja telefona.
+- **Brojevi i aktivacija:** brojevi u SAD, Kanadi, Ujedinjenom Kraljevstvu, Australiji i na Novom Zelandu, ili prosledite postojeći broj. Paketi ne ograničavaju broj poziva na koje odgovara istovremeno. Nema naknade za aktivaciju ni na jednom paketu, a pretplatu otkazujete kad god želite, bez naknade za otkazivanje. Paket Free Vam daje 30 minuta razgovora mesečno i broj iz SAD ili Kanade besplatno 14 dana, bez kartice.
 - **Gde zaostaje:** nema osobe na liniji, podržava samo Google Calendar i nema sinhronizaciju sa softverom za ordinacije ili terenski servis. LobbyStack preusmerava pozive bez najave i samo na jedan broj. AI ne odgovara na SMS poruke, a LobbyStack ne tvrdi da ispunjava HIPAA.
 - **Izaberite ga ako** želite odgovor na svaki poziv i zakazivanje za $30 mesečno, Vaš tim preuzima hitna preusmerenja, a Vaši pozivaoci govore različite jezike.
 
@@ -264,7 +264,7 @@ Neke ne naplaćuju. Smith.ai recepcioneri ne naplaćuju spam kada Vaše linije p
 
 ### Postoji li besplatna usluga odgovaranja na pozive za male firme?
 
-Nijedna usluga uživo sa ovog spiska nije besplatna. Smith.ai paket AI Free odgovara na 25 stvarnih poziva mesečno za $0, a zatim naplaćuje $3 po pozivu. LobbyStack Free Vam daje 30 minuta razgovora u pregledaču mesečno za testiranje, bez kartice i broja telefona, a Goodcall nudi besplatnog demo agenta. Ostale opcije navodi naš vodič [koliko koštaju AI recepcioneri, uključujući besplatne pakete i probe](/sr/blog/ai-receptionist-savings/).
+Nijedna usluga uživo sa ovog spiska nije besplatna. Smith.ai paket AI Free odgovara na 25 stvarnih poziva mesečno za $0, a zatim naplaćuje $3 po pozivu. LobbyStack Free Vam daje 30 minuta razgovora mesečno i broj iz SAD ili Kanade besplatno 14 dana, bez kartice, a Goodcall nudi besplatnog demo agenta. Ostale opcije navodi naš vodič [koliko koštaju AI recepcioneri, uključujući besplatne pakete i probe](/sr/blog/ai-receptionist-savings/).
 
 ## Zaključak
 
@@ -276,4 +276,4 @@ Birajte prema tome ko mora da se javi na Vaš telefon.
 
 Ako Vam treba osoba na svakom pozivu ili sinhronizacija sa softverom za ordinacije ili terenski servis, LobbyStack nije pravi izbor. Izaberite uslugu uživo ili rešenje napravljeno za Vašu delatnost.
 
-**[Isprobajte LobbyStack besplatno](https://app.lobbystack.com/sr/signup).** Unesite podatke o firmi i pozdrav, a zatim testirajte recepcionera iz kontrolne table sa 30 minuta razgovora u pregledaču mesečno, bez kartice i broja telefona. Paket Free ne ističe. Kada Vam zatreba broj telefona, Starter košta $30 mesečno bez naknade za aktivaciju, a pretplatu otkazujete kad god želite. Uporedite pakete na stranici [LobbyStack cene](/sr/pricing/).
+**[Isprobajte LobbyStack besplatno](https://app.lobbystack.com/sr/signup).** Unesite podatke o firmi i pozdrav, a zatim testirajte recepcionera sa 30 minuta razgovora mesečno i brojem iz SAD ili Kanade besplatno 14 dana, bez kartice. Da biste zadržali broj, izaberite Starter za $30 mesečno, bez naknade za aktivaciju, a pretplatu otkazujete kad god želite. Uporedite pakete na stranici [LobbyStack cene](/sr/pricing/).

@@ -13,7 +13,7 @@ locale: "es"
 canonicalSlug: "upfirst-alternative"
 ---
 
-Puede probar una **alternativa a Upfirst** en su navegador sin comprar un plan. Con LobbyStack, obtiene 30 minutos de voz en el navegador en el plan Free, sin número de teléfono. El primer nivel publicado de Upfirst cuesta $24.95 por 30 llamadas.
+Puede probar una **alternativa a Upfirst** sin comprar un plan. Con LobbyStack, obtiene 30 minutos de voz en el plan Free y un número de EE. UU. o Canadá gratis durante 14 días. El primer nivel publicado de Upfirst cuesta $24.95 por 30 llamadas.
 
 Upfirst cobra por llamada atendida, mientras que LobbyStack cobra por minuto de voz. LobbyStack añade código fuente público, control de proveedores y autoalojamiento, algo que las páginas de Upfirst revisadas no anuncian.
 
@@ -21,7 +21,7 @@ Upfirst cobra por llamada atendida, mientras que LobbyStack cobra por minuto de 
 
 | Aspecto | Upfirst | LobbyStack |
 | --- | --- | --- |
-| Plan gratuito permanente | No; se anuncia una prueba de 14 días | 30 minutos de voz en el navegador, sin tarjeta ni número de teléfono |
+| Plan gratuito permanente | No; se anuncia una prueba de 14 días | 30 minutos de voz, sin tarjeta, número de EE. UU. o Canadá gratis durante 14 días |
 | Plan de entrada | $24.95 por 30 llamadas | Gratis para 30 minutos de voz |
 | Uso de pago | Asignaciones de llamadas y excedentes por llamada | Asignaciones de minutos y excedentes por minuto |
 | Reservas | Agenda directa en el calendario | Reservas, cambios y reglas del negocio |
@@ -34,7 +34,7 @@ Precios y funciones revisados el 30 de julio de 2026. Revise las páginas actual
 
 ## LobbyStack empieza gratis y sigue bajo su control
 
-Puede usar Free para probar saludos y respuestas en su navegador. Elija un plan de pago con un número dedicado para probar llamadas telefónicas y transferencias.
+Puede usar Free para probar saludos, respuestas y llamadas reales con un número de EE. UU. o Canadá durante 14 días. Elija un plan de pago para conservar un número dedicado y transferir llamadas a su equipo.
 
 El modelo por llamada de Upfirst puede favorecer a una empresa con conversaciones de recogida de datos largas. El modelo por minuto de LobbyStack puede salir más barato cuando las personas hacen preguntas breves. Noventa llamadas de un minuto caben en LobbyStack Starter por $30, mientras que Upfirst cobra $59.95 por 90 llamadas.
 

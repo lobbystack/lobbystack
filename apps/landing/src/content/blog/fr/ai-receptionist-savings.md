@@ -13,7 +13,7 @@ locale: "fr"
 canonicalSlug: "ai-receptionist-savings"
 ---
 
-Le coût d'un réceptionniste IA va de 14 $ à 150 $ par mois sur la plupart des forfaits d'entrée, d'après les pages de prix de 17 fournisseurs, le nôtre compris, consultées le 9 octobre 2026. Ces forfaits incluent de 25 à 250 appels, minutes ou appelants, et la plupart facturent chaque unité supplémentaire. Le forfait gratuit de Smith.ai répond à 25 vrais appels par mois, et le forfait Gratuit de LobbyStack vous donne 30 minutes vocales dans le navigateur pour vos tests.
+Le coût d'un réceptionniste IA va de 14 $ à 150 $ par mois sur la plupart des forfaits d'entrée, d'après les pages de prix de 17 fournisseurs, le nôtre compris, consultées le 9 octobre 2026. Ces forfaits incluent de 25 à 250 appels, minutes ou appelants, et la plupart facturent chaque unité supplémentaire. Le forfait gratuit de Smith.ai répond à 25 vrais appels par mois, et le forfait Gratuit de LobbyStack vous donne 30 minutes vocales et un numéro américain ou canadien gratuit pendant 14 jours.
 
 **Prix relevés le 9 octobre 2026**, en dollars américains hors taxes, sur la page de prix de chaque fournisseur. Nous avons écrit ce guide et nous vendons un réceptionniste IA : notre ligne porte donc la mention « (le nôtre) ».
 
@@ -33,7 +33,7 @@ La plupart des forfaits d'entrée coûtent de 14 $ à 150 $ par mois, des 14 $ d
 | [Dialzara](https://dialzara.com/pricing) | Business Lite 29 $ | 60 min | 0,48 $/min | Minute | Aucuns selon son site | 7 jours |
 | [ElevenLabs Reception](https://elevenlabs.io/docs/reception-ai/billing/plans-and-pricing) | Basic 29 $ (24 $ en annuel) | 75 crédits | 0,45 $ le crédit | Crédit (1 min de téléphone) | Non mentionnés | 14 jours, 30 crédits, sans carte |
 | [Zoom AI Receptionist](https://zoom.us/pricing/virtual-agent) | 29,99 $ | 100 min | Non publié | Minute | Non mentionnés | « Try for free », durée non précisée |
-| [LobbyStack](/fr/pricing/) (le nôtre) | Starter 30 $ (24 $ en annuel) | 150 min | 0,20 $/min | Seconde, prix à la minute | Aucuns | Forfait Gratuit : 30 minutes vocales dans le navigateur, sans numéro de téléphone |
+| [LobbyStack](/fr/pricing/) (le nôtre) | Starter 30 $ (24 $ en annuel) | 150 min | 0,20 $/min | Seconde, prix à la minute | Aucuns | Forfait Gratuit : 30 minutes vocales, numéro américain ou canadien gratuit pendant 14 jours |
 | [RingCentral AIR](https://www.ringcentral.com/pricing/ai-receptionist.html) | 49 $ en autonome | 100 min | 0,50 $/min | Minute, par tranches de 30 secondes | Non mentionnés | 14 jours |
 | [Rosie](https://heyrosie.com/pricing) | Professional 49 $ (41 $ en annuel) | 250 min | Passage à Scale (149 $) | Minute | Non mentionnés | 7 jours |
 | [Allo](https://www.withallo.com/pricing) | 32 $ le réceptionniste + 32 $ le poste, facturés à l'année | Non précisé | Non précisé | Prix fixe par agent | Aucuns selon son site | Aucun mentionné |
@@ -128,12 +128,12 @@ Goodcall ne facture un appelant régulier qu'une fois par mois : une entreprise 
 
 ## Peut-on avoir un réceptionniste IA gratuit ?
 
-Oui, avec des limites. Le forfait Free de Smith.ai répond à 25 vrais appels par mois et facture 3 $ chaque appel supplémentaire. Le forfait Gratuit de LobbyStack vous donne 30 minutes vocales dans le navigateur par mois pour tester le réceptionniste, sans carte ni numéro de téléphone. La plupart des autres fournisseurs offrent un essai de 7 ou 14 jours. Pour savoir ce que chaque offre gratuite inclut et où elle s'arrête, consultez notre guide des [offres et essais de répondeur IA gratuit](/fr/blog/free-ai-receptionist/).
+Oui, avec des limites. Le forfait Free de Smith.ai répond à 25 vrais appels par mois et facture 3 $ chaque appel supplémentaire. Le forfait Gratuit de LobbyStack vous donne 30 minutes vocales par mois et un numéro américain ou canadien gratuit pendant 14 jours, sans carte. La plupart des autres fournisseurs offrent un essai de 7 ou 14 jours. Pour savoir ce que chaque offre gratuite inclut et où elle s'arrête, consultez notre guide des [offres et essais de répondeur IA gratuit](/fr/blog/free-ai-receptionist/).
 
 ### Forfaits gratuits
 
 - **Smith.ai Free** prend 25 vrais appels par mois, puis facture 3 $ l'appel.
-- **LobbyStack Gratuit** vous donne 30 minutes vocales dans le navigateur par mois pour tester depuis le tableau de bord, sans carte ni numéro de téléphone, et il n'expire pas. Sans numéro, il ne peut ni prendre d'appels téléphoniques, ni envoyer de SMS, ni transférer.
+- **LobbyStack Gratuit** vous donne 30 minutes vocales par mois et un numéro américain ou canadien gratuit pendant 14 jours, sans carte. Pendant ces 14 jours, le numéro répond à de vrais appels, et les transferts vont uniquement vers le numéro mobile que vous avez vérifié. Pour garder le numéro, choisissez Starter ou Pro.
 - **CloudTalk** donne 50 minutes gratuites aux nouveaux utilisateurs pendant leur premier mois.
 - **ServiceAgent** propose un forfait Launch à 0 $, avec des crédits à l'usage, dans son logiciel de gestion des interventions.
 - **Quo Sona** Tier 1 inclut environ 10 appels par mois, en plus d'un forfait Quo payant.
@@ -269,7 +269,7 @@ Nous avons écrit ce guide : nos propres forfaits reçoivent donc le même trait
 
 | Forfait | Prix | Inclus chaque mois | Ensuite |
 | --- | --- | --- | --- |
-| Gratuit | 0 $ | 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone | Les appels tests s'arrêtent jusqu'au mois suivant |
+| Gratuit | 0 $ | 30 minutes vocales, sans carte, numéro américain ou canadien gratuit pendant 14 jours | Les appels s'arrêtent jusqu'au mois suivant |
 | Starter | 30 $/mois, ou 288 $/an (24 $/mois) | 150 minutes vocales, 50 SMS d'alerte, 20 tentatives de transfert, un numéro d'entreprise, assistance par e-mail | 0,20 $/min ; 0,02 $ par SMS ou tentative de transfert supplémentaire |
 | Pro | 100 $/mois, ou 960 $/an (80 $/mois) | 500 minutes vocales, 200 SMS d'alerte, 100 tentatives de transfert, un numéro d'entreprise, assistance prioritaire par e-mail | 0,18 $/min ; 0,02 $ par SMS ou tentative de transfert supplémentaire |
 | Enterprise | Sur mesure | Plusieurs numéros, accompagnement dédié à la mise en œuvre | Sur mesure |
@@ -280,7 +280,7 @@ Chaque appel commence dans la langue par défaut de l'entreprise, l'anglais ou l
 
 Les limites de LobbyStack :
 
-- Le forfait Gratuit ne sert qu'aux tests dans le navigateur. Les vrais appels, les SMS et les transferts commencent avec Starter.
+- Le numéro du forfait Gratuit répond pendant 14 jours, et ses transferts vont uniquement vers le numéro mobile que vous avez vérifié. Pour garder un numéro, choisissez Starter ou Pro.
 - Il ne réserve que dans Google Calendar. Les CRM et les logiciels de gestion des interventions ou de cabinet dentaire ne s'y connectent que par les webhooks et l'API REST.
 - L'IA ne répond pas aux SMS. Votre équipe y répond depuis le tableau de bord.
 - Les transferts vont vers un seul numéro par entreprise, et un appel téléphonique se termine au bout de 30 minutes.

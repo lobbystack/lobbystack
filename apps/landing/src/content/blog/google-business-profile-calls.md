@@ -138,7 +138,7 @@ Know the limits before you forward a line: Google Calendar is the only calendar,
 
 ### 4. Test it from your own profile
 
-After your closing time, find your business on Google from a phone, tap **Call** and check that the call reaches your backup. Book a test appointment and ask for something urgent. Then read the call record. LobbyStack's Free plan gives you 30 browser voice minutes with no card and no telephone number, so you can hear the receptionist before you pay. It can't take real calls; forwarding needs Starter or Pro.
+After your closing time, find your business on Google from a phone, tap **Call** and check that the call reaches your backup. Book a test appointment and ask for something urgent. Then read the call record. LobbyStack's Free plan gives you 30 voice minutes and a US or Canadian number free for 14 days, with no card, so you can forward your line and run this test before you pay.
 
 ## Are calls from Google about my Business Profile real?
 
@@ -174,4 +174,4 @@ Yes. Keep your number on the profile and forward it to the AI receptionist for m
 
 ## Answer the calls your profile already sends you
 
-Your profile puts your number one tap away from people searching for you. The person who picks up decides whether they book. Start with LobbyStack Free: 30 browser voice minutes, no card and no telephone number, enough to hear how the receptionist handles a caller who found you on Google. When it sounds right, Starter costs $30 a month for 150 minutes, then $0.20 a minute, and gives you a number to forward your line to. There's no setup fee. [Start free](https://app.lobbystack.com/en/signup) or compare plans on the [pricing page](/pricing/).
+Your profile puts your number one tap away from people searching for you. The person who picks up decides whether they book. Start with LobbyStack Free: 30 voice minutes and a US or Canadian number free for 14 days, no card needed, enough to hear how the receptionist handles a caller who found you on Google. To keep the number, Starter costs $30 a month for 150 minutes, then $0.20 a minute. There's no setup fee. [Start free](https://app.lobbystack.com/en/signup) or compare plans on the [pricing page](/pricing/).

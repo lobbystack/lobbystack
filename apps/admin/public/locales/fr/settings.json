@@ -197,12 +197,12 @@
         "free_cloud": {
           "name": "Gratuit",
           "description": {
-            "monthly": "Testez la voix dans votre navigateur",
-            "annual": "Testez la voix dans votre navigateur"
+            "monthly": "Accès complet pendant 14 jours",
+            "annual": "Accès complet pendant 14 jours"
           },
           "highlights": {
-            "voiceMinutes": "30 minutes vocales dans le navigateur",
-            "allFeatures": "Aucun numéro de téléphone",
+            "voiceMinutes": "30 minutes vocales incluses",
+            "allFeatures": "1 numéro de téléphone",
             "support": "Soutien communautaire"
           }
         },

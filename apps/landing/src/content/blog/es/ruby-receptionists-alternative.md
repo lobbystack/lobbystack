@@ -15,7 +15,7 @@ canonicalSlug: "ruby-receptionists-alternative"
 
 Los **precios de Ruby Receptionists** empiezan en $250 al mes por 50 minutos, luego $395 por 100, $720 por 200 y $1,725 por 500, al 10 de octubre de 2026. El centro de ayuda de Ruby cobra los minutos extra de $5.40 a $4.00 en esos planes. Ruby redondea cada llamada al minuto siguiente y cuenta el tiempo en espera.
 
-LobbyStack escribió esta página, y vendemos una recepcionista con IA que compite con Ruby. Las dos contestan su teléfono de forma distinta: en Ruby atiende una recepcionista virtual capacitada, y en LobbyStack atiende una IA. Nuestro [plan Starter](/es/pricing/) cuesta $30 al mes por 150 minutos, con reservas y transferencias. Free le da 30 minutos de voz en el navegador, sin tarjeta ni número de teléfono. Ningún plan de LobbyStack tiene tarifa de configuración. Leímos la página de precios, las preguntas frecuentes, las condiciones y el centro de ayuda de Ruby el 10 de octubre de 2026, y los enlazamos en Fuentes.
+LobbyStack escribió esta página, y vendemos una recepcionista con IA que compite con Ruby. Las dos contestan su teléfono de forma distinta: en Ruby atiende una recepcionista virtual capacitada, y en LobbyStack atiende una IA. Nuestro [plan Starter](/es/pricing/) cuesta $30 al mes por 150 minutos, con reservas y transferencias. Free le da 30 minutos de voz y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta. Ningún plan de LobbyStack tiene tarifa de configuración. Leímos la página de precios, las preguntas frecuentes, las condiciones y el centro de ayuda de Ruby el 10 de octubre de 2026, y los enlazamos en Fuentes.
 
 ## ¿Qué es Ruby, la recepcionista virtual?
 
@@ -92,7 +92,7 @@ Para las tarifas de otros servicios en vivo, vea [cuánto cuesta un servicio de 
 | Planes más grandes | $720 por 200 minutos, $1,725 por 500 | $100 por 500 minutos (Pro) |
 | Minutos extra | $5.40 a $3.30 el minuto, según el centro de ayuda de Ruby | $0.20 en Starter, $0.18 en Pro, con un tope de gasto opcional |
 | Unidad de cobro | Cada llamada redondeada a los 60 segundos siguientes; cuentan la espera y el trabajo posterior | Por segundo; las llamadas de menos de 10 segundos y las que la recepcionista corta como spam no cuentan |
-| Probar primero | Garantía de devolución para clientes nuevos: 21 días o 500 minutos | Plan Free: 30 minutos de voz en el navegador, sin tarjeta ni número de teléfono y sin vencimiento |
+| Probar primero | Garantía de devolución para clientes nuevos: 21 días o 500 minutos | Plan Free: 30 minutos de voz, sin tarjeta, número de EE. UU. o Canadá gratis durante 14 días |
 | Cambios de plan | Subir de plan obliga a por lo menos tres periodos; bajar, después de tres | Subir, bajar o cancelar desde la configuración de facturación, sin cargo por cancelación |
 | Idiomas de quien llama | Inglés y español | Abre la llamada en inglés o francés y luego contesta en el idioma de quien llama (más de 70, incluido el español) |
 | Reservas | Las recepcionistas agendan citas | Reserva solo en Google Calendar |
@@ -164,7 +164,7 @@ LobbyStack cuesta menos en cada volumen que calculamos, y sus minutos extra cues
 
 ## ¿Cómo probar LobbyStack como alternativa a Ruby Receptionists?
 
-1. Regístrese en [app.lobbystack.com](https://app.lobbystack.com/es/signup). Free le da 30 minutos de voz en el navegador al mes, sin tarjeta.
+1. Regístrese en [app.lobbystack.com](https://app.lobbystack.com/es/signup). Free le da 30 minutos de voz al mes y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta.
 2. La configuración lo guía por los datos de su negocio, la importación de su sitio web, su información, el saludo y un plan.
 3. Escriba sus reglas de llamada en lenguaje sencillo y elija un modo de reserva: reservar la cita, tomar una solicitud para que su equipo la confirme o tomar un mensaje. Conecte Google Calendar y defina su horario de atención, porque las reservas lo necesitan.
 4. Desde su navegador, haga las cinco llamadas que Ruby más atiende por usted: una pregunta de precio, una reserva, una urgencia, alguien que pide hablar con una persona y un número equivocado. Lea cada transcripción con quien se encarga del seguimiento.
@@ -175,7 +175,7 @@ LobbyStack cuesta menos en cada volumen que calculamos, y sus minutos extra cues
 
 ### ¿Ruby ofrece una prueba gratuita?
 
-Las páginas de Ruby que leímos no mencionan una prueba gratuita. Quien usa Ruby por primera vez tiene una garantía de devolución: cancele dentro de los 21 días siguientes a la compra, o antes de pasar de 500 minutos de recepcionista, lo que ocurra primero, y Ruby le reembolsa el servicio cancelado. LobbyStack no tiene cuenta regresiva: Free da 30 minutos de voz en el navegador al mes, sin tarjeta.
+Las páginas de Ruby que leímos no mencionan una prueba gratuita. Quien usa Ruby por primera vez tiene una garantía de devolución: cancele dentro de los 21 días siguientes a la compra, o antes de pasar de 500 minutos de recepcionista, lo que ocurra primero, y Ruby le reembolsa el servicio cancelado. El plan Free de LobbyStack no caduca. Le da 30 minutos de voz al mes sin tarjeta, y un número de EE. UU. o Canadá gratis durante 14 días.
 
 ### ¿Ruby cobra las llamadas de spam?
 
@@ -187,7 +187,7 @@ Sí, cuando recibe pocas llamadas. La [Oficina de Estadísticas Laborales de Est
 
 ### ¿Cuál es el servicio de contestación con IA más barato?
 
-El plan de pago más barato que encontramos en octubre de 2026 fue el de [AI-Receptionist.com](https://ai-receptionist.com/pricing), a $14 al mes por 75 minutos. La [recepcionista con IA de Smith.ai](https://smith.ai/pricing/ai-receptionist) tiene un plan de $0 por 25 llamadas al mes, y luego $3 por llamada. LobbyStack Starter cuesta $30 por 150 minutos, y nuestro plan Free no incluye número. Nuestra [guía de recepcionistas con IA gratis](/es/blog/free-ai-receptionist/) compara las opciones gratuitas.
+El plan de pago más barato que encontramos en octubre de 2026 fue el de [AI-Receptionist.com](https://ai-receptionist.com/pricing), a $14 al mes por 75 minutos. La [recepcionista con IA de Smith.ai](https://smith.ai/pricing/ai-receptionist) tiene un plan de $0 por 25 llamadas al mes, y luego $3 por llamada. LobbyStack Starter cuesta $30 por 150 minutos, y nuestro plan Free incluye un número de EE. UU. o Canadá durante 14 días. Nuestra [guía de recepcionistas con IA gratis](/es/blog/free-ai-receptionist/) compara las opciones gratuitas.
 
 ### ¿Ruby usa IA para contestar llamadas?
 
@@ -213,7 +213,7 @@ Si su operador tiene el número y desvía las llamadas a Ruby, cambie la regla d
 - Prefiere pagar $30 por 150 minutos en vez de $250 por 50.
 - Quiere cobro por segundo, sin cargo por llamadas de menos de 10 segundos.
 - Quienes le llaman hablan idiomas además del inglés y el español.
-- Quiere probar antes de pagar, con 30 minutos de voz en el navegador al mes y sin tarjeta.
+- Quiere probar antes de pagar, con 30 minutos de voz al mes, un número gratis durante 14 días y sin tarjeta.
 - Quiere código con licencia MIT, alojarlo usted mismo, la API REST o los webhooks.
 
 ## Fuentes
@@ -235,4 +235,4 @@ Revisadas el 10 de octubre de 2026, salvo que se indique otra fecha:
 
 Ruby es la mejor opción cuando una persona capacitada tiene que atender la llamada: una admisión que pide criterio, un pago, personal que hable español o un cliente molesto. Usted paga de $3.15 a $5.00 por minuto incluido por esa persona, según el tamaño del plan. LobbyStack es la mejor opción cuando la mayoría de sus llamadas son preguntas de rutina y citas. Contesta 150 minutos por $30, reserva en Google Calendar y transfiere las urgencias a su equipo.
 
-Para escuchar cómo responde LobbyStack a las preguntas de sus clientes, [empiece en el plan gratuito](https://app.lobbystack.com/es/signup). Tiene 30 minutos de voz al mes en el navegador, con su propio saludo y sus reglas, y no necesita tarjeta.
+Para escuchar cómo responde LobbyStack a las preguntas de sus clientes, [empiece en el plan gratuito](https://app.lobbystack.com/es/signup). Tiene 30 minutos de voz al mes, con su propio saludo y sus reglas, y no necesita tarjeta.

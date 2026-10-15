@@ -222,7 +222,7 @@
     "popular": "Popular",
     "enterpriseSubject": "Enterprise plan",
     "compareTitle": "Compare plans in detail",
-    "compareDescription": "Test 30 browser voice minutes on Free, without a telephone number. Starter and Pro include a dedicated number and monthly usage allowances.",
+    "compareDescription": "Free gives you 30 voice minutes and a US or Canadian number for 14 days. Starter and Pro include a dedicated number and monthly usage allowances.",
     "featureHeader": "Feature",
     "billingInterval": {
       "label": "Billing interval",
@@ -235,11 +235,11 @@
         "name": "Free",
         "price": "$0",
         "period": "",
-        "description": "Try LobbyStack with enough usage to see it work.",
+        "description": "Full access for 14 days",
         "cta": "Start free",
         "highlights": {
-          "voiceMinutes": "30 browser voice minutes included",
-          "bookingContacts": "No telephone number",
+          "voiceMinutes": "30 voice minutes included",
+          "bookingContacts": "1 phone number",
           "support": "Community support"
         }
       },
@@ -349,11 +349,11 @@
           "notIncluded": "Not included",
           "multiple": "Multiple",
           "unlimited": "Unlimited",
-          "browserTesting": "Browser testing"
+          "trialDays": "For 14 days"
         },
         "usage": {
           "voiceMinutes": {
-            "freeIncluded": "{{minutes}} browser minutes",
+            "freeIncluded": "{{minutes}} included",
             "starterIncluded": "150 included",
             "starterThen": "then $0.20/min",
             "proIncluded": "500 included",

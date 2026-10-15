@@ -127,7 +127,7 @@ El plan Starter de LobbyStack cuesta $30 al mes por 150 minutos, y después $0.2
 
 Contesta todas las llamadas, o solo las de desborde y fuera de horario, en un número de Estados Unidos, Canadá, el Reino Unido, Australia o Nueva Zelanda, o en su número actual mediante desvío de llamadas. Hace las preguntas de admisión que usted escribe, toma mensajes y reserva consultas en Google Calendar. Si la persona que llama acepta, le envía por SMS una confirmación y un recordatorio 24 horas antes, en números de Estados Unidos y Canadá. Transfiere las llamadas urgentes, como una detención o una audiencia mañana, a un solo número. Cada llamada empieza en inglés o francés, y después la recepcionista contesta en el idioma de quien llama, entre más de 70 idiomas con OpenAI GPT-Live, español incluido. El panel guarda un resumen, la transcripción y la grabación de cada llamada, y usted recibe una alerta por correo cuando toma un mensaje.
 
-Estos límites importan para un despacho. LobbyStack no tiene integración con Clio, MyCase ni Lawmatics, y se conecta a otras herramientas con webhooks firmados para 6 eventos y una API REST. No revisa conflictos, no califica prospectos y no da asesoría legal. Las transferencias son directas y van a un solo número, sin presentar a quien llama al abogado. Si una transferencia no se completa, se lo dice a quien llama, le ofrece tomar un mensaje, y su equipo puede recibir la alerta "Falló la transferencia de una llamada en vivo". Ninguna recepcionista humana la respalda, y la IA no responde mensajes de texto. El plan Gratis le da 30 minutos de voz en el navegador, sin tarjeta ni número de teléfono: puede probar la recepcionista, pero no puede contestar la línea de su despacho.
+Estos límites importan para un despacho. LobbyStack no tiene integración con Clio, MyCase ni Lawmatics, y se conecta a otras herramientas con webhooks firmados para 6 eventos y una API REST. No revisa conflictos, no califica prospectos y no da asesoría legal. Las transferencias son directas y van a un solo número, sin presentar a quien llama al abogado. Si una transferencia no se completa, se lo dice a quien llama, le ofrece tomar un mensaje, y su equipo puede recibir la alerta "Falló la transferencia de una llamada en vivo". Ninguna recepcionista humana la respalda, y la IA no responde mensajes de texto. El plan Gratis le da 30 minutos de voz y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta. Pasados los 14 días, para contestar la línea de su despacho necesita Starter o Pro.
 
 ## ¿Cuánto cuesta un servicio de atención telefónica para abogados?
 
@@ -207,7 +207,7 @@ Saque de su factura telefónica la cantidad de llamadas del mes pasado y su dura
 
 ### 2. Haga tres llamadas de prueba durante el periodo de prueba
 
-Llame a cada finalista como un prospecto nuevo de lesiones personales a las 9 p. m., como un cliente actual con audiencia mañana y como alguien que habla español. Revise quién contestó, qué datos tomó y si la llamada urgente llegó a un abogado. Pruebas: Veza y PATLive duran 14 días, Answering Legal da 400 minutos gratis, Upfirst dura 14 días sin tarjeta, el plan de IA Gratis de Smith.ai cubre 25 llamadas al mes y LobbyStack Gratis le da 30 minutos de voz en el navegador.
+Llame a cada finalista como un prospecto nuevo de lesiones personales a las 9 p. m., como un cliente actual con audiencia mañana y como alguien que habla español. Revise quién contestó, qué datos tomó y si la llamada urgente llegó a un abogado. Pruebas: Veza y PATLive duran 14 días, Answering Legal da 400 minutos gratis, Upfirst dura 14 días sin tarjeta, el plan de IA Gratis de Smith.ai cubre 25 llamadas al mes y LobbyStack Gratis le da 30 minutos de voz y un número de EE. UU. o Canadá gratis durante 14 días.
 
 ### 3. Lea las condiciones de cobro
 
@@ -233,7 +233,7 @@ No debería, y sus instrucciones deben decirlo. Haga que la recepcionista diga q
 
 ### ¿Existe un servicio de atención telefónica legal gratis?
 
-Ningún servicio con personas de esta guía es gratis, y las pruebas son lo más cercano: Veza y PATLive ofrecen 14 días, y Answering Legal ofrece 400 minutos gratis. El plan de IA Gratis de Smith.ai cubre 25 llamadas reales al mes. LobbyStack Gratis le da 30 minutos de voz en el navegador sin número de teléfono, así que sirve para probar la recepcionista, pero no para contestar la línea del despacho.
+Ningún servicio con personas de esta guía es gratis, y las pruebas son lo más cercano: Veza y PATLive ofrecen 14 días, y Answering Legal ofrece 400 minutos gratis. El plan de IA Gratis de Smith.ai cubre 25 llamadas reales al mes. LobbyStack Gratis le da 30 minutos de voz y un número de EE. UU. o Canadá gratis durante 14 días, así que puede contestar la línea del despacho durante dos semanas si la desvía.
 
 ### ¿Puedo usar un servicio de atención telefónica legal solo fuera de horario?
 
@@ -263,4 +263,4 @@ Fuentes, todas consultadas el 9 o el 10 de octubre de 2026:
 - **Admisión escrita en Clio, MyCase o Lawmatics:** PATLive, Abby Connect, Smith.ai o Answering Legal, o Lexidesk con IA.
 - **Desborde y llamadas fuera de horario, con consultas reservadas en Google Calendar, por $30 a $100 al mes:** LobbyStack.
 
-¿Quiere oír a LobbyStack atender la llamada de un cliente nuevo antes de pagar? [Cree una cuenta gratis](https://app.lobbystack.com/es/signup) y pruébela con 30 minutos de voz en el navegador, sin tarjeta. Cuando esté listo para llamadas reales, Starter agrega un número de teléfono por $30 al mes, sin tarifa de configuración.
+¿Quiere oír a LobbyStack atender la llamada de un cliente nuevo antes de pagar? [Cree una cuenta gratis](https://app.lobbystack.com/es/signup) y pruébela con 30 minutos de voz y un número gratis durante 14 días, sin tarjeta. Para conservar el número, Starter cuesta $30 al mes, sin tarifa de configuración.

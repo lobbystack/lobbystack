@@ -21,7 +21,7 @@ Reception zvuči odlično i govori više od 70 jezika. LobbyStack Vam daje dvost
 
 | Oblast | ElevenLabs Reception | LobbyStack |
 | --- | --- | --- |
-| Besplatna opcija | Probni period od 14 dana sa 30 kredita, bez kartice | 30 minuta razgovora u pregledaču, bez kartice i broja telefona |
+| Besplatna opcija | Probni period od 14 dana sa 30 kredita, bez kartice | 30 minuta razgovora, bez kartice, broj iz SAD ili Kanade besplatno 14 dana |
 | Početni paket | $29 za 75 kredita ($24 uz godišnje plaćanje) | $30 za 150 minuta ($24 uz godišnje plaćanje) |
 | Prekoračenje u početnom paketu | $0.45 po kreditu | $0.20 po minutu |
 | Pogrešni brojevi i spam | Računaju se kao potrošeni krediti | Pozivi kraći od 10 sekundi i spam pozivi koje recepcioner prekine ne naplaćuju se |
@@ -86,7 +86,7 @@ Izaberite ElevenLabs Reception ako su Vam kvalitet glasa i broj jezika najvažni
 
 ## Izaberite LobbyStack ako
 
-Izaberite LobbyStack za 150 minuta po ceni od $30 i prekoračenje od $0.20. Na Free paketu možete da isprobate 30 minuta razgovora u pregledaču bez broja telefona. Uz MIT kod možete sami da hostujete proizvod, menjate ga ili ga preprodajete svojim klijentima.
+Izaberite LobbyStack za 150 minuta po ceni od $30 i prekoračenje od $0.20. Na Free paketu možete da isprobate 30 minuta razgovora, uz broj iz SAD ili Kanade besplatno 14 dana. Uz MIT kod možete sami da hostujete proizvod, menjate ga ili ga preprodajete svojim klijentima.
 
 ## Izvori
 

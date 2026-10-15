@@ -288,7 +288,7 @@ Les forfaits ne limitent pas le nombre d'appels auxquels le réceptionniste rép
 - L'IA ne répond pas aux SMS.
 - Google Calendar est le seul agenda. Pour un CRM ou un logiciel de cabinet, vous passez par les webhooks et l'API REST.
 - LobbyStack ne revendique aucune conformité HIPAA, et un appel téléphonique s'arrête à 30 minutes.
-- Le forfait Gratuit fonctionne dans le navigateur, sans numéro de téléphone.
+- Le forfait Gratuit inclut un numéro américain ou canadien pendant 14 jours. Ensuite, vous testez dans le navigateur.
 
 Un service humain vaut mieux si vous voulez une personne à chaque appel ou si vos clients refusent de parler à une IA. Les agents humains conviennent aussi aux appelants mécontents et aux sujets délicats, et certains fournisseurs proposent des transferts accompagnés (Moneypenny) et des calendriers de garde (Roster Service de MAP, techniciens de garde d'A Message Center). Pour les prix des autres fournisseurs IA et le coût d'une embauche, voyez [ce que coûte un réceptionniste IA et ce qu'il fait économiser](/fr/blog/ai-receptionist-savings/).
 
@@ -346,4 +346,4 @@ La plupart des services humains de notre tableau facturent de mois en mois, avec
 
 Multipliez vos appels mensuels par la durée moyenne d'un appel, puis trouvez la ligne de minutes la plus proche dans le tableau des volumes. Cette ligne vous donne le coût de chaque mode de facturation avant d'appeler un fournisseur.
 
-Si la ligne IA vous convient, les [tarifs de LobbyStack](/fr/pricing/) commencent à 30 $ par mois pour 150 minutes, puis 0,20 $ la minute. Pro coûte 100 $ pour 500 minutes, puis 0,18 $. Aucun forfait ne comporte de frais de mise en service. Le forfait Gratuit vous donne 30 minutes vocales dans le navigateur par mois pour tester vos appels les plus difficiles, sans carte ni numéro de téléphone : il ne peut donc pas répondre à votre ligne professionnelle. Il n'expire pas. [Créez un compte gratuit](https://app.lobbystack.com/fr/signup).
+Si la ligne IA vous convient, les [tarifs de LobbyStack](/fr/pricing/) commencent à 30 $ par mois pour 150 minutes, puis 0,20 $ la minute. Pro coûte 100 $ pour 500 minutes, puis 0,18 $. Aucun forfait ne comporte de frais de mise en service. Le forfait Gratuit vous donne 30 minutes vocales par mois pour tester vos appels les plus difficiles, et un numéro américain ou canadien gratuit pendant 14 jours. Il ne demande pas de carte. [Créez un compte gratuit](https://app.lobbystack.com/fr/signup).

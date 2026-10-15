@@ -13,7 +13,7 @@ locale: "es"
 canonicalSlug: "ai-receptionist-savings"
 ---
 
-Una recepcionista con IA cuesta de $14 a $150 al mes en la mayoría de los planes de entrada, según las páginas de precios de 17 proveedores, el nuestro incluido, que revisamos el 9 de octubre de 2026. Esos planes incluyen de 25 a 250 llamadas, minutos o personas que llaman, y la mayoría cobra cada unidad extra. El plan gratuito de Smith.ai contesta 25 llamadas reales al mes, y el plan Free de LobbyStack le da 30 minutos de voz en el navegador para hacer pruebas.
+Una recepcionista con IA cuesta de $14 a $150 al mes en la mayoría de los planes de entrada, según las páginas de precios de 17 proveedores, el nuestro incluido, que revisamos el 9 de octubre de 2026. Esos planes incluyen de 25 a 250 llamadas, minutos o personas que llaman, y la mayoría cobra cada unidad extra. El plan gratuito de Smith.ai contesta 25 llamadas reales al mes, y el plan Free de LobbyStack le da 30 minutos de voz y un número de EE. UU. o Canadá gratis durante 14 días.
 
 **Precios revisados el 9 de octubre de 2026**, en dólares estadounidenses y sin impuestos, en la página de precios de cada proveedor. Escribimos esta guía y vendemos una recepcionista con IA, así que nuestra fila lleva la etiqueta "(nuestro)".
 
@@ -33,7 +33,7 @@ La mayoría de los planes de entrada cuestan de $14 a $150 al mes, desde los $14
 | [Dialzara](https://dialzara.com/pricing) | Business Lite $29 | 60 min | $0.48/min | Minuto | Dice que ninguna | 7 días |
 | [ElevenLabs Reception](https://elevenlabs.io/docs/reception-ai/billing/plans-and-pricing) | Basic $29 ($24 anual) | 75 créditos | $0.45 por crédito | Crédito (1 min telefónico) | No se menciona | 14 días, 30 créditos, sin tarjeta |
 | [Zoom AI Receptionist](https://zoom.us/pricing/virtual-agent) | $29.99 | 100 min | No publicado | Minuto | No se menciona | "Try for free" (pruébelo gratis), sin duración indicada |
-| [LobbyStack](/es/pricing/) (nuestro) | Starter $30 ($24 anual) | 150 min | $0.20/min | Segundo, con precio por minuto | Ninguna | Plan Free: 30 minutos de voz en el navegador, sin número de teléfono |
+| [LobbyStack](/es/pricing/) (nuestro) | Starter $30 ($24 anual) | 150 min | $0.20/min | Segundo, con precio por minuto | Ninguna | Plan Free: 30 minutos de voz, número de EE. UU. o Canadá gratis durante 14 días |
 | [RingCentral AIR](https://www.ringcentral.com/pricing/ai-receptionist.html) | $49 independiente | 100 min | $0.50/min | Minuto, en tramos de 30 segundos | No se menciona | 14 días |
 | [Rosie](https://heyrosie.com/pricing) | Professional $49 ($41 anual) | 250 min | Lo pasa a Scale ($149) | Minuto | No se menciona | 7 días |
 | [Allo](https://www.withallo.com/pricing) | $32 por la recepcionista + $32 por licencia, facturación anual | No indicado | No indicado | Precio fijo por agente | Dice que ninguna | No menciona ninguno |
@@ -128,12 +128,12 @@ Goodcall factura una sola vez al mes a quien vuelve a llamar, así que un negoci
 
 ## ¿Se puede tener una recepcionista con IA gratis?
 
-Sí, con límites. El plan Free de Smith.ai contesta 25 llamadas reales al mes y cobra $3 por cada llamada extra. El plan Free de LobbyStack le da 30 minutos de voz en el navegador al mes para probar la recepcionista, sin tarjeta ni número de teléfono. La mayoría de los demás proveedores ofrecen una prueba de 7 o 14 días. Para ver qué incluye cada plan gratis y dónde se queda corto, consulte nuestra guía de [recepcionista virtual gratis con IA](/es/blog/free-ai-receptionist/).
+Sí, con límites. El plan Free de Smith.ai contesta 25 llamadas reales al mes y cobra $3 por cada llamada extra. El plan Free de LobbyStack le da 30 minutos de voz al mes y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta. La mayoría de los demás proveedores ofrecen una prueba de 7 o 14 días. Para ver qué incluye cada plan gratis y dónde se queda corto, consulte nuestra guía de [recepcionista virtual gratis con IA](/es/blog/free-ai-receptionist/).
 
 ### Planes gratuitos
 
 - **Smith.ai Free** atiende 25 llamadas reales al mes y después cobra $3 por llamada.
-- **LobbyStack Free** le da 30 minutos de voz en el navegador al mes para probar desde el panel, sin tarjeta ni número de teléfono, y no caduca. Sin número, no puede atender llamadas telefónicas, enviar mensajes de texto ni transferir.
+- **LobbyStack Free** le da 30 minutos de voz al mes y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta. El número contesta llamadas reales durante esos 14 días, y las transferencias solo van al celular que usted verificó. Para conservar el número, elija Starter o Pro.
 - **CloudTalk** regala 50 minutos a los usuarios nuevos durante su primer mes.
 - **ServiceAgent** tiene un plan Launch de $0 con créditos de pago por uso dentro de su software para servicios de campo.
 - **Quo Sona** Tier 1 incluye unas 10 llamadas al mes, además de un plan de pago de Quo.
@@ -269,7 +269,7 @@ Escribimos esta guía, así que nuestros planes reciben el mismo trato que los o
 
 | Plan | Precio | Incluye cada mes | Después |
 | --- | --- | --- | --- |
-| Free | $0 | 30 minutos de voz en el navegador, sin tarjeta ni número de teléfono | Las llamadas de prueba se detienen hasta el mes siguiente |
+| Free | $0 | 30 minutos de voz, sin tarjeta, número de EE. UU. o Canadá gratis durante 14 días | Las llamadas se detienen hasta el mes siguiente |
 | Starter | $30/mes, o $288/año ($24/mes) | 150 minutos de voz, 50 SMS de aviso, 20 intentos de transferencia, un número de empresa, soporte por correo electrónico | $0.20/min; $0.02 por SMS o intento de transferencia extra |
 | Pro | $100/mes, o $960/año ($80/mes) | 500 minutos de voz, 200 SMS de aviso, 100 intentos de transferencia, un número de empresa, soporte prioritario por correo electrónico | $0.18/min; $0.02 por SMS o intento de transferencia extra |
 | Enterprise | A medida | Varios números, soporte de implementación dedicado | A medida |
@@ -280,7 +280,7 @@ Cada llamada empieza en el idioma predeterminado del negocio, inglés o francés
 
 Los límites de LobbyStack:
 
-- Free sirve solo para pruebas en el navegador. Las llamadas reales, los mensajes de texto y las transferencias empiezan en Starter.
+- En Free, el número de EE. UU. o Canadá contesta llamadas reales durante 14 días, y las transferencias solo van al celular que usted verificó. Después, el número deja de contestar si no elige Starter o Pro.
 - Solo reserva en Google Calendar. Los CRM y el software para servicios de campo o clínicas dentales necesitan webhooks o la API REST para conectarse.
 - La IA no responde mensajes de texto. Su equipo los responde desde el panel.
 - Las transferencias van a un solo número por negocio, y una llamada telefónica termina a los 30 minutos.

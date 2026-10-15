@@ -138,7 +138,7 @@ Upoznajte ograničenja pre nego što prosledite liniju: Google Calendar je jedin
 
 ### 4. Testirajte sa svog profila
 
-Posle radnog vremena pronađite svoje preduzeće na Google-u sa telefona, dodirnite dugme za poziv i proverite da poziv stiže do rezerve. Zakažite probni termin i tražite nešto hitno. Zatim pročitajte zapis poziva. Paket Free u LobbyStack-u daje Vam 30 minuta razgovora u pregledaču, bez kartice i broja telefona, da čujete recepcionera pre nego što platite. Ne može da prima prave pozive; za prosleđivanje treba Starter ili Pro.
+Posle radnog vremena pronađite svoje preduzeće na Google-u sa telefona, dodirnite dugme za poziv i proverite da poziv stiže do rezerve. Zakažite probni termin i tražite nešto hitno. Zatim pročitajte zapis poziva. Paket Free u LobbyStack-u daje Vam 30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana, bez kartice, pa možete da prosledite liniju i uradite ovaj test pre nego što platite.
 
 ## Da li su pozivi od Google-a u vezi sa profilom pravi?
 
@@ -174,4 +174,4 @@ Može. Zadržite broj u profilu i prosledite ga AI recepcioneru za propuštene p
 
 ## Javite se na pozive koje Vam profil već šalje
 
-Profil stavlja Vaš broj na jedan dodir od ljudi koji Vas traže. Osoba koja se javi odlučuje da li će ti pozivi postati termini. Počnite sa paketom Free u LobbyStack-u: 30 minuta razgovora u pregledaču, bez kartice i broja telefona, dovoljno da čujete kako recepcioner razgovara sa nekim ko Vas je našao na Google-u. Kada Vam se dopadne, Starter košta $30 mesečno za 150 minuta, zatim $0.20 po minutu, i dobijate broj na koji prosleđujete svoju liniju. Nema naknade za aktivaciju. [Počnite besplatno](https://app.lobbystack.com/sr/signup) ili uporedite pakete na [stranici sa cenama](/sr/pricing/).
+Profil stavlja Vaš broj na jedan dodir od ljudi koji Vas traže. Osoba koja se javi odlučuje da li će ti pozivi postati termini. Počnite sa paketom Free u LobbyStack-u: 30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana, bez kartice, dovoljno da čujete kako recepcioner razgovara sa nekim ko Vas je našao na Google-u. Ako želite da zadržite broj, Starter košta $30 mesečno za 150 minuta, zatim $0.20 po minutu. Nema naknade za aktivaciju. [Počnite besplatno](https://app.lobbystack.com/sr/signup) ili uporedite pakete na [stranici sa cenama](/sr/pricing/).

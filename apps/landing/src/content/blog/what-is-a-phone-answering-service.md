@@ -137,7 +137,7 @@ Ask where messages go and how fast they arrive, what the caller hears when a tra
 
 ### 5. Test with your own calls
 
-Use a trial or a free plan to place the calls that worry you most: an emergency, a booking and a caller who speaks another language. [PATLive](https://www.patlive.com/pricing/) and [Upfirst](https://upfirst.ai/pricing) offer 14-day free trials. LobbyStack's Free plan gives you 30 browser voice minutes a month, with no card and no telephone number. For named picks, see the [best answering services for small business](/blog/best-answering-service-for-small-business/).
+Use a trial or a free plan to place the calls that worry you most: an emergency, a booking and a caller who speaks another language. [PATLive](https://www.patlive.com/pricing/) and [Upfirst](https://upfirst.ai/pricing) offer 14-day free trials. LobbyStack's Free plan gives you 30 voice minutes a month and a US or Canadian number free for 14 days, with no card. For named picks, see the [best answering services for small business](/blog/best-answering-service-for-small-business/).
 
 ## Questions about phone answering services
 
@@ -147,7 +147,7 @@ Yes. PATLive, Ruby, Smith.ai and other live answering companies all listed curre
 
 ### Is there a free phone answering service?
 
-A few vendors answer some real calls for free. [Smith.ai's AI Free plan](https://smith.ai/pricing/ai-receptionist) answers 25 real calls a month, then charges $3 a call. LobbyStack's Free plan gives you 30 browser voice minutes a month with no card and no telephone number, so you can test with it but it can't answer your business line. See [free AI receptionist options](/blog/free-ai-receptionist/).
+A few vendors answer some real calls for free. [Smith.ai's AI Free plan](https://smith.ai/pricing/ai-receptionist) answers 25 real calls a month, then charges $3 a call. LobbyStack's Free plan gives you 30 voice minutes a month and a US or Canadian number that answers real calls free for 14 days, with no card. See [free AI receptionist options](/blog/free-ai-receptionist/).
 
 ### Can I keep my business number?
 
@@ -165,4 +165,4 @@ Close enough. Vendors use "virtual receptionist" for a live answering service th
 
 Pick the call you'd least want to go wrong, such as an emergency or a confused first-time customer. Place it with every service on your shortlist before you forward your number, and read what each one sends you afterward.
 
-If an AI or hybrid setup fits, you can run that test on LobbyStack today. The Free plan gives you 30 browser voice minutes a month, with no card and no telephone number. When the calls sound right, Starter costs $30 a month for 150 minutes, then $0.20 a minute, and adds a business number, Google Calendar booking and transfers to your team. No plan has a setup fee. [Try LobbyStack free in your browser](https://app.lobbystack.com/en/signup) or compare plans on the [pricing page](/pricing/).
+If an AI or hybrid setup fits, you can run that test on LobbyStack today. The Free plan gives you 30 voice minutes a month and a US or Canadian number free for 14 days, with no card. When the calls sound right, Starter costs $30 a month for 150 minutes, then $0.20 a minute, and lets you keep the number, with Google Calendar booking and transfers to your team. No plan has a setup fee. [Try LobbyStack free](https://app.lobbystack.com/en/signup) or compare plans on the [pricing page](/pricing/).

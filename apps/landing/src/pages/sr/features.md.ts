@@ -32,7 +32,7 @@ LobbyStack je AI recepcioner otvorenog koda za male firme koje primaju mnogo poz
 
 Svaki paket uključuje glasovne pozive u pregledaču, tokove rada opisane običnim jezikom, zakazivanje termina, rezimee poziva, obaveštenja e-poštom, bazu znanja, kontrolnu tablu, istoriju poziva i neograničen broj istovremenih poziva.
 
-Free uključuje 30 minuta razgovora u pregledaču, bez broja telefona. Starter i Pro uključuju namenski broj telefona za dolazne pozive i preusmeravanje. Ograničenja paketa za pokušaje preusmeravanja i SMS segmente za obaveštenja navedena su u poređenju cena.
+Free uključuje 30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana. Starter i Pro uključuju namenski broj telefona za dolazne pozive i preusmeravanje. Ograničenja paketa za pokušaje preusmeravanja i SMS segmente za obaveštenja navedena su u poređenju cena.
 `
 
 export const GET: APIRoute = () =>

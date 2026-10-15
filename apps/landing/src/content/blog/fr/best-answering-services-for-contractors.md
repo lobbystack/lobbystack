@@ -124,7 +124,7 @@ Le forfait Starter de LobbyStack coûte 30 $ par mois pour 150 minutes, puis 0,2
 
 Vous obtenez un numéro aux États-Unis, au Canada, au Royaume-Uni, en Australie ou en Nouvelle-Zélande, et vous pouvez y renvoyer votre numéro professionnel actuel. Il répond à tous les appels, ou seulement aux appels en débordement ou hors horaires. Il réserve les rendez-vous de devis dans Google Calendar et, si l'appelant accepte, envoie par SMS une confirmation et un rappel 24 heures avant aux numéros américains et canadiens. Le résumé, la transcription et l'enregistrement de chaque appel arrivent dans le tableau de bord, et vous recevez un e-mail quand il prend un message, avec des alertes SMS en option. Chaque appel commence dans la langue par défaut de l'entreprise, l'anglais ou le français, puis le réceptionniste répond dans la langue de l'appelant : plus de 70 langues avec GPT-Live d'OpenAI, dont l'espagnol. Le code est open source sous licence MIT, et vous pouvez l'héberger vous-même.
 
-Il n'a aucune intégration avec Jobber, Housecall Pro, ServiceTitan, JobNimbus ni aucun CRM, et Google Calendar reste son seul agenda. Des webhooks signés pour 6 événements et une API REST peuvent envoyer les données d'appel ailleurs, mais c'est à vous de construire ce lien. Les transferts sont directs, sans présentation de l'appelant, et vont vers un seul numéro. Si un transfert n'aboutit pas, il prévient l'appelant, propose de prendre un message, et votre équipe peut recevoir une alerte d'échec de transfert. Aucun agent humain ne prend le relais, et l'IA ne répond pas aux SMS. Le forfait Gratuit vous donne 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone : il ne peut donc pas prendre de vrais appels, transférer ni envoyer de SMS. Voyez comment il traite les appels après une tempête sur la page [permanence téléphonique pour couvreurs](/fr/solutions/roofing-answering-service/).
+Il n'a aucune intégration avec Jobber, Housecall Pro, ServiceTitan, JobNimbus ni aucun CRM, et Google Calendar reste son seul agenda. Des webhooks signés pour 6 événements et une API REST peuvent envoyer les données d'appel ailleurs, mais c'est à vous de construire ce lien. Les transferts sont directs, sans présentation de l'appelant, et vont vers un seul numéro. Si un transfert n'aboutit pas, il prévient l'appelant, propose de prendre un message, et votre équipe peut recevoir une alerte d'échec de transfert. Aucun agent humain ne prend le relais, et l'IA ne répond pas aux SMS. Le forfait Gratuit vous donne 30 minutes vocales et un numéro américain ou canadien gratuit pendant 14 jours, sans carte. Pendant l'essai, les transferts vont uniquement vers le numéro mobile que vous avez vérifié. Voyez comment il traite les appels après une tempête sur la page [permanence téléphonique pour couvreurs](/fr/solutions/roofing-answering-service/).
 
 ## Combien coûte un télésecrétariat pour artisans ?
 
@@ -213,7 +213,7 @@ Relevez le nombre d'appels et leur durée moyenne pour vos mois les plus chargé
 
 ### 2. Passez trois appels de test avant de signer
 
-Appelez chaque finaliste trois fois : une demande de devis pour une salle de bains, un appel à 21 h pour une fuite en cours, et un appelant hispanophone. Vérifiez qui a répondu, ce que dit le résumé, et si l'appel urgent a bien atteint votre portable. Essais : PATLive 14 jours, OnCrew 14 jours, l'essai gratuit de Housecall Pro, le forfait gratuit de l'IA de Smith.ai, et le forfait Gratuit de LobbyStack, qui fonctionne dans le navigateur avec 30 minutes et sans numéro de téléphone.
+Appelez chaque finaliste trois fois : une demande de devis pour une salle de bains, un appel à 21 h pour une fuite en cours, et un appelant hispanophone. Vérifiez qui a répondu, ce que dit le résumé, et si l'appel urgent a bien atteint votre portable. Essais : PATLive 14 jours, OnCrew 14 jours, l'essai gratuit de Housecall Pro, le forfait gratuit de l'IA de Smith.ai, et le forfait Gratuit de LobbyStack, avec 30 minutes et un numéro américain ou canadien gratuit pendant 14 jours.
 
 ### 3. Regardez un rendez-vous arriver dans votre logiciel
 
@@ -227,7 +227,7 @@ Renvoyez votre numéro actuel depuis votre opérateur pour le débordement, les 
 
 ### Existe-t-il un télésecrétariat gratuit pour les artisans ?
 
-Aucun service humain de ce comparatif n'est gratuit, mais plusieurs proposent un essai. L'IA de Smith.ai couvre 25 appels par mois, puis 3,00 $ l'appel. Le forfait Gratuit de LobbyStack donne 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone : il sert à tester, sans répondre à votre ligne, transférer ni envoyer de SMS.
+Aucun service humain de ce comparatif n'est gratuit, mais plusieurs proposent un essai. L'IA de Smith.ai couvre 25 appels par mois, puis 3,00 $ l'appel. Le forfait Gratuit de LobbyStack donne 30 minutes vocales et un numéro américain ou canadien gratuit pendant 14 jours, sans carte : si vous y renvoyez votre ligne professionnelle, il y répond pendant deux semaines.
 
 ### Un télésecrétariat peut-il planifier des devis ?
 
@@ -270,4 +270,4 @@ Sources, toutes consultées les 9 ou 10 octobre 2026 :
 - **Un couvreur sur JobNimbus ou AccuLynx qui veut de l'IA :** Sameday AI.
 - **Des rendez-vous dans Google Calendar pour 30 $ à 100 $ par mois, avec des appelants qui parlent plusieurs langues :** LobbyStack.
 
-Vous voulez entendre LobbyStack prendre une demande de devis avant de payer ? [Créez un compte gratuit](https://app.lobbystack.com/fr/signup) et testez-le avec 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone. Les forfaits payants n'ont aucuns frais de mise en service. Voyez ensuite comment il couvre les nuits et les week-ends sur la page [permanence téléphonique hors horaires pour les artisans](/fr/solutions/after-hours-answering-service-for-contractors/).
+Vous voulez entendre LobbyStack prendre une demande de devis avant de payer ? [Créez un compte gratuit](https://app.lobbystack.com/fr/signup) et testez-le avec 30 minutes vocales et un numéro gratuit pendant 14 jours, sans carte. Les forfaits payants n'ont aucuns frais de mise en service. Voyez ensuite comment il couvre les nuits et les week-ends sur la page [permanence téléphonique hors horaires pour les artisans](/fr/solutions/after-hours-answering-service-for-contractors/).

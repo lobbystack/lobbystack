@@ -15,7 +15,7 @@ canonicalSlug: "free-ai-receptionist"
 
 A free AI receptionist means one of four things: a free plan with a small monthly cap, a trial that ends after 7 to 30 days, starter credit on a build-it-yourself platform, or open-source code you host yourself. As of October 2026, we found two free plans that answer real calls at no cost: Smith.ai (25 calls a month) and HireJosie (15 minutes a month).
 
-**Checked October 9 and 10, 2026** on each vendor's own pricing, FAQ or signup page, in US dollars. LobbyStack wrote this guide and sells an AI receptionist. Our Free plan gives you 30 browser voice minutes a month with no telephone number. You can test the receptionist with it, but it can't answer a business line.
+**Checked October 9 and 10, 2026** on each vendor's own pricing, FAQ or signup page, in US dollars. LobbyStack wrote this guide and sells an AI receptionist. Our Free plan gives you 30 voice minutes a month and a US or Canadian number free for 14 days. After 14 days, the number stops answering unless you choose a paid plan.
 
 ## What does "free" mean for an AI receptionist?
 
@@ -40,13 +40,13 @@ Five vendors we checked let you start at $0 without a trial clock. Two of them, 
 | [HireJosie](https://hirejosie.ai/pricing/) | 15 AI minutes a month and 1 number, no card | Yes, then voicemail after 15 minutes | Pro is $49 for 500 minutes, then $0.25 a minute |
 | [ServiceAgent](https://serviceagent.ai/pricing) | Launch plan: $0 a month, no included credits | Yes, paid per credit | About $0.30 to $0.60 per AI voice minute; Core is $49 |
 | [Goodcall](https://www.goodcall.com/pricing) | A demo agent you build and test for free | No; you start paying when you connect a number | Starter is $79 for 100 unique callers |
-| [LobbyStack](/pricing/) (ours) | 30 browser voice minutes a month, no card | No; it has no telephone number | Starter is $30 for 150 minutes, then $0.20 a minute |
+| [LobbyStack](/pricing/) (ours) | 30 voice minutes a month, no card | Yes, for 14 days on a free US or Canadian number | Starter is $30 for 150 minutes, then $0.20 a minute |
 
 - **Smith.ai** has the largest ongoing free allowance we found. Its free plan includes scheduling through tools like Calendly, call routing, recordings, transcripts and summaries. It leaves out live phone, email and chat support and dedicated onboarding. Each call past 25 costs $3.00.
 - **HireJosie** puts a dedicated number, Google Calendar booking and warm transfers on its free plan. Fifteen minutes covers about five 3-minute calls, and then calls switch to voicemail mode. You keep the number only if it gets at least 3 unique customer calls a month, and the free plan carries HireJosie branding.
 - **ServiceAgent** sells field-service software with a receptionist inside, alongside CRM, booking, invoicing and reviews. Its Launch plan has no monthly fee, but each AI voice minute uses 15 credits, and credits cost $0.02 to $0.04 each.
 - **Goodcall** has no free trial. You build and test a demo agent for free and pay once you connect a phone number.
-- **LobbyStack** Free is a test bench in your browser. [Details below](#what-does-lobbystacks-free-plan-include).
+- **LobbyStack** Free answers real calls on a US or Canadian number for 14 days. [Details below](#what-does-lobbystacks-free-plan-include).
 
 Some lists and chatbot answers name other free plans. We included only offers we could confirm on the vendor's own site. RingCentral's pages, for example, show a 14-day trial and a $49 plan, with no free tier.
 
@@ -104,7 +104,7 @@ Twilio and OpenAI process the call audio while a call is live, on a self-hosted 
 
 ## What does LobbyStack's Free plan include?
 
-LobbyStack's Free plan gives you 30 browser voice minutes a month to test the receptionist from your dashboard. It needs no card and comes with no telephone number, so it can't answer your business line, transfer a caller or send a text. It doesn't expire.
+LobbyStack's Free plan gives you 30 voice minutes a month and a US or Canadian number free for 14 days. It needs no card. For those 14 days, the number answers real calls, and transfers go only to the mobile number you verified. After that, the number stops answering unless you choose Starter or Pro, and you keep testing in your browser. The plan itself doesn't expire.
 
 Use the 30 minutes to:
 
@@ -116,7 +116,7 @@ After you use the 30 minutes, test calls stop until the next month or until you 
 
 | LobbyStack plan | Price per month | Included | After that |
 | --- | --- | --- | --- |
-| Free | $0 | 30 browser voice minutes, no telephone number | Test calls stop until next month |
+| Free | $0 | 30 voice minutes, US or Canadian number free for 14 days | Calls stop until next month |
 | Starter | $30, or $24 billed annually | 150 minutes, one business number | $0.20 a minute |
 | Pro | $100, or $80 billed annually | 500 minutes, one business number | $0.18 a minute |
 
@@ -126,7 +126,7 @@ No plan has a setup fee. Starter and Pro answer calls on a number in the US, Can
 
 A free option stops being enough when it can't take the calls you'd otherwise miss. One of four limits decides it:
 
-1. **It can't answer your real number.** Browser tests and demo agents, such as LobbyStack Free and Goodcall's demo, prove the voice and the rules. They don't cover your line.
+1. **It can't answer your real number, or not for long.** Demo agents, such as Goodcall's, prove the voice and the rules but don't cover your line. LobbyStack Free covers it for 14 days.
 2. **The cap is smaller than your missed calls.** Fifteen minutes covers about five 3-minute calls. Twenty-five calls is less than one a day.
 3. **The trial ends.** A 7-day trial may not include your busiest day.
 4. **You need booking, transfers or texts.** Check which plan includes them. Rosie's $49 plan texts callers a booking link instead of booking into your calendar and doesn't transfer calls. Both start on its $149 plan.
@@ -150,11 +150,11 @@ Plans also differ in how they bill and what they include. Smith.ai and Upfirst b
 
 ### Is there a free AI answering service?
 
-Yes, though few answer real calls for free. As of October 2026, Smith.ai's free plan covers 25 real calls a month, and HireJosie's covers 15 minutes with a dedicated number. Most other AI answering services offer 7- to 30-day trials. Some free plans, including LobbyStack's, are browser tests with no phone number.
+Yes, though few answer real calls for free. As of October 2026, Smith.ai's free plan covers 25 real calls a month, and HireJosie's covers 15 minutes with a dedicated number. Most other AI answering services offer 7- to 30-day trials. Some free plans are browser tests with no phone number. LobbyStack's adds a US or Canadian number for 14 days.
 
 ### Can a free AI receptionist answer my business number?
 
-Some can. Smith.ai's and HireJosie's free plans take real calls, and the trials from Upfirst, ElevenLabs Reception and ModPhone take real calls while they last. You keep your existing number and set your carrier to forward calls to the AI's number. LobbyStack Free and Goodcall's demo agent can't answer a phone line.
+Some can. Smith.ai's and HireJosie's free plans take real calls, and the trials from Upfirst, ElevenLabs Reception and ModPhone take real calls while they last. You keep your existing number and set your carrier to forward calls to the AI's number. LobbyStack Free answers real calls on a US or Canadian number for 14 days. Goodcall's demo agent can't answer a phone line.
 
 ### Do free AI receptionists need a credit card?
 
@@ -172,4 +172,4 @@ Usually only for testing. A business that misses five calls a week misses about 
 
 Use a free plan to hear the voice and check your rules, and run a trial on real forwarded calls. Then pick the plan that covers the calls you miss today.
 
-LobbyStack's Free plan gives you 30 browser voice minutes a month with no card, and it doesn't expire. Write your rules, load your website and call it with your hardest questions. When it sounds right, Starter answers your business line at $30 a month for 150 minutes, with no setup fee. [Create a free account](https://app.lobbystack.com/en/signup) or compare [LobbyStack plans](/pricing/).
+LobbyStack's Free plan gives you 30 voice minutes a month and a US or Canadian number free for 14 days, with no card. Write your rules, load your website and call it with your hardest questions. When it sounds right, Starter keeps your number answering at $30 a month for 150 minutes, with no setup fee. [Create a free account](https://app.lobbystack.com/en/signup) or compare [LobbyStack plans](/pricing/).

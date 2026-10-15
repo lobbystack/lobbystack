@@ -21,7 +21,7 @@ Smith.ai kombinuje AI sa pristupom mreži recepcionera iz Severne Amerike. Lobby
 
 | Oblast | Smith.ai AI Receptionist | LobbyStack |
 | --- | --- | --- |
-| Besplatno uključeno | 25 poziva; potrebna kartica | 30 minuta razgovora u pregledaču, bez kartice i broja telefona |
+| Besplatno uključeno | 25 poziva; potrebna kartica | 30 minuta razgovora, bez kartice, broj iz SAD ili Kanade besplatno 14 dana |
 | Plaćeni ulazni paket | Pro od $150 za 75 poziva | Starter za $30 sa 150 minuta |
 | Rezervna ljudska podrška | Mreža agenata; neki zadaci živih agenata naplaćuju se po pozivu | Preusmeravanje na tim koji podesite |
 | Zakazivanje i prijem podataka | Navedeni | Uključeni, uz pravila koja možete da podesite |

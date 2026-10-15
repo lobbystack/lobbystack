@@ -83,12 +83,12 @@ export const hvacFaqs: FaqItem[] = [
   {
     question: "Can I try it before I forward my line?",
     answer:
-      "Yes. The Free plan gives you 30 browser voice minutes a month to test the receptionist from the dashboard. It needs no credit card, includes no telephone number, and doesn't expire. Phone calls, transfers, and texts start on Starter.",
+      "Yes. The Free plan gives you 30 voice minutes a month and a US or Canadian number free for 14 days, with no credit card. During those 14 days, the number answers real calls, and transfers go only to the mobile number you verified. Choose Starter or Pro to keep the number.",
   },
   {
     question: "How much does it cost for an HVAC company?",
     answer:
-      "Prices as of October 2026: the Free plan includes 30 browser voice minutes. Starter is $30 a month for 150 minutes, and Pro is $100 a month for 500 minutes, with extra minutes at $0.20 and $0.18. No plan has a setup fee. Calls under 10 seconds and calls the receptionist ends as spam don't count toward usage.",
+      "Prices as of October 2026: the Free plan includes 30 voice minutes and a US or Canadian number free for 14 days. Starter is $30 a month for 150 minutes, and Pro is $100 a month for 500 minutes, with extra minutes at $0.20 and $0.18. No plan has a setup fee. Calls under 10 seconds and calls the receptionist ends as spam don't count toward usage.",
   },
 ]
 

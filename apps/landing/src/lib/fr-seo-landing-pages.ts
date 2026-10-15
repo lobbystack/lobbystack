@@ -365,7 +365,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
           points: [
             "Starter : 30 $ par mois pour 150 minutes et un numéro de téléphone, puis 0,20 $ la minute",
             "Pro : 100 $ par mois pour 500 minutes, puis 0,18 $ la minute. À 1 000 minutes par mois, vous payez 190 $ (100 $ plus 500 minutes supplémentaires à 0,18 $)",
-            "Forfait gratuit : 30 minutes vocales dans le navigateur par mois pour tester, sans carte ni numéro de téléphone",
+            "Forfait gratuit : 30 minutes vocales par mois et un numéro américain ou canadien gratuit pendant 14 jours, sans carte",
           ],
         },
         {
@@ -816,13 +816,13 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Puis-je l’essayer avant de renvoyer ma ligne ?",
           answer:
-            "Oui. Le forfait gratuit vous donne 30 minutes vocales dans le navigateur chaque mois pour tester le réceptionniste depuis le tableau de bord. Il fonctionne sans carte ni numéro de téléphone et n’expire pas. Les appels téléphoniques, les transferts et les SMS commencent avec Starter.",
+            "Oui. Le forfait gratuit vous donne 30 minutes vocales chaque mois et un numéro américain ou canadien gratuit pendant 14 jours, sans carte. Pendant ces 14 jours, le numéro répond aux vrais appels et les transferts vont uniquement au mobile que vous avez vérifié. Choisissez Starter ou Pro pour garder le numéro.",
         },
         {
           question:
             "Combien coûte LobbyStack pour une entreprise de chauffage et climatisation ?",
           answer:
-            "Prix d’octobre 2026 : le forfait gratuit inclut 30 minutes vocales dans le navigateur. Starter coûte 30 $ par mois pour 150 minutes et Pro 100 $ par mois pour 500 minutes, avec des minutes supplémentaires à 0,20 $ et 0,18 $. Aucun forfait n’a de frais de mise en service. Les appels de moins de 10 secondes et ceux que le réceptionniste termine comme indésirables ne comptent pas dans l’utilisation.",
+            "Prix d’octobre 2026 : le forfait gratuit inclut 30 minutes vocales et un numéro américain ou canadien gratuit pendant 14 jours. Starter coûte 30 $ par mois pour 150 minutes et Pro 100 $ par mois pour 500 minutes, avec des minutes supplémentaires à 0,20 $ et 0,18 $. Aucun forfait n’a de frais de mise en service. Les appels de moins de 10 secondes et ceux que le réceptionniste termine comme indésirables ne comptent pas dans l’utilisation.",
         },
       ],
       faqHeading:

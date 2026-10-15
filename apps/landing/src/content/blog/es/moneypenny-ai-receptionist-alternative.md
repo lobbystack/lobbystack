@@ -21,7 +21,7 @@ Moneypenny añade una configuración inicial gestionada y puede pasar la llamada
 
 | Aspecto | Moneypenny AI Receptionist | LobbyStack |
 | --- | --- | --- |
-| Plan gratuito permanente | No se anuncia | 30 minutos de voz en el navegador, sin tarjeta ni número de teléfono |
+| Plan gratuito permanente | No se anuncia | 30 minutos de voz, sin tarjeta, número de EE. UU. o Canadá gratis durante 14 días |
 | Plan de pago de entrada | $69 por 25 llamadas de IA | $30 por 150 minutos |
 | Nivel de 100 unidades | $199 por 100 llamadas de IA | $100 por 500 minutos |
 | Uso adicional | De $2.49 a $1.89 por llamada adicional | $0.20 o $0.18 por minuto adicional |
@@ -113,4 +113,4 @@ Elija LobbyStack si su equipo puede recibir las transferencias y usted quiere un
 
 LobbyStack ofrece más valor cuando su empresa ya tiene a alguien para atender las llamadas urgentes. Moneypenny justifica su precio superior cuando necesita comprar tiempo de recepcionista además de la IA.
 
-[Empiece con LobbyStack gratis](https://app.lobbystack.com/es/signup) y pruebe conversaciones de voz en su navegador. Elija un plan de pago para probar las transferencias telefónicas.
+[Empiece con LobbyStack gratis](https://app.lobbystack.com/es/signup) y pruébelo con un número gratis de EE. UU. o Canadá durante 14 días. Elija un plan de pago para transferir llamadas a su equipo.

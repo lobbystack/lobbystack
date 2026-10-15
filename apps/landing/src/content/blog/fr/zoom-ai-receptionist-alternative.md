@@ -21,7 +21,7 @@ LobbyStack inclut réservation, transfert d'appel, alertes SMS, transcriptions, 
 
 | Critère | Zoom | LobbyStack |
 | --- | --- | --- |
-| Option gratuite | Essai gratuit proposé, durée non précisée | 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone |
+| Option gratuite | Essai gratuit proposé, durée non précisée | 30 minutes vocales, sans carte, numéro américain ou canadien gratuit pendant 14 jours |
 | Prix mensuel | 29,99 $ pour 100 minutes | 30 $ pour 150 minutes |
 | Prix annuel | 25,00 $ par mois pour 100 minutes | 24 $ par mois pour 150 minutes |
 | Minutes supplémentaires | Prix non publié | 0,20 $ sur Starter, 0,18 $ sur Pro |
@@ -98,6 +98,6 @@ Choisissez LobbyStack pour 30 minutes gratuites, 50 % d'usage en plus près de 
 
 ## Verdict
 
-Avec LobbyStack, vous obtenez plus de minutes que sur le forfait autonome de Zoom, en mensuel comme en annuel, et vous pouvez tester la voix dans votre navigateur gratuitement. Choisissez Zoom si votre équipe préfère son administration ou a besoin de transferts assistés.
+Avec LobbyStack, vous obtenez plus de minutes que sur le forfait autonome de Zoom, en mensuel comme en annuel, et vous pouvez le tester sur un numéro américain ou canadien gratuit pendant 14 jours. Choisissez Zoom si votre équipe préfère son administration ou a besoin de transferts assistés.
 
-[Commencez avec LobbyStack gratuitement](/fr/pricing/) et testez la voix dans votre navigateur.
+[Commencez avec LobbyStack gratuitement](/fr/pricing/) et testez-le sur un numéro américain ou canadien gratuit pendant 14 jours.

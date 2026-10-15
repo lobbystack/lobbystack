@@ -137,7 +137,7 @@ Demandez où arrivent les messages et en combien de temps, ce qu'entend l'appela
 
 ### 5. Testez avec vos propres appels
 
-Profitez d'un essai ou d'un forfait gratuit pour passer les appels qui vous inquiètent le plus : une urgence, une prise de rendez-vous et un appelant qui parle une autre langue. [PATLive](https://www.patlive.com/pricing/) et [Upfirst](https://upfirst.ai/pricing) proposent un essai gratuit de 14 jours. Le forfait Free de LobbyStack vous donne 30 minutes vocales dans le navigateur par mois, sans carte ni numéro de téléphone. Pour des noms précis, voyez notre comparatif de la [meilleure permanence téléphonique pour PME](/fr/blog/best-answering-service-for-small-business/).
+Profitez d'un essai ou d'un forfait gratuit pour passer les appels qui vous inquiètent le plus : une urgence, une prise de rendez-vous et un appelant qui parle une autre langue. [PATLive](https://www.patlive.com/pricing/) et [Upfirst](https://upfirst.ai/pricing) proposent un essai gratuit de 14 jours. Le forfait Free de LobbyStack vous donne 30 minutes vocales par mois et un numéro américain ou canadien gratuit pendant 14 jours, sans carte. Pour des noms précis, voyez notre comparatif de la [meilleure permanence téléphonique pour PME](/fr/blog/best-answering-service-for-small-business/).
 
 ## Questions sur le secrétariat téléphonique
 
@@ -147,7 +147,7 @@ Oui. PATLive, Ruby, Smith.ai et d'autres services humains affichaient tous des f
 
 ### Existe-t-il un secrétariat téléphonique gratuit ?
 
-Quelques fournisseurs prennent gratuitement une partie de vrais appels. Le [forfait IA Free de Smith.ai](https://smith.ai/pricing/ai-receptionist) répond à 25 vrais appels par mois, puis facture 3 $ l'appel. Le forfait Free de LobbyStack vous donne 30 minutes vocales dans le navigateur par mois, sans carte ni numéro de téléphone. Il sert à tester, mais il ne peut pas répondre sur votre ligne. Voyez [les options de réceptionniste IA gratuit](/fr/blog/free-ai-receptionist/).
+Quelques fournisseurs prennent gratuitement une partie de vrais appels. Le [forfait IA Free de Smith.ai](https://smith.ai/pricing/ai-receptionist) répond à 25 vrais appels par mois, puis facture 3 $ l'appel. Le forfait Free de LobbyStack vous donne 30 minutes vocales par mois et un numéro américain ou canadien qui répond gratuitement à de vrais appels pendant 14 jours, sans carte. Voyez [les options de réceptionniste IA gratuit](/fr/blog/free-ai-receptionist/).
 
 ### Puis-je garder mon numéro professionnel ?
 
@@ -165,4 +165,4 @@ Presque. Les fournisseurs parlent de réceptionniste virtuelle pour un service h
 
 Choisissez l'appel que vous voudriez le moins voir mal tourner, comme une urgence ou un nouveau client un peu perdu. Passez-le à chaque service de votre liste avant de renvoyer votre numéro, et lisez ce que chacun vous envoie ensuite.
 
-Si une solution IA ou hybride vous convient, vous pouvez faire ce test sur LobbyStack dès aujourd'hui. Le forfait Free vous donne 30 minutes vocales dans le navigateur par mois, sans carte ni numéro de téléphone. Quand les appels sonnent juste, le forfait Starter coûte 30 $ par mois pour 150 minutes, puis 0,20 $ la minute, et ajoute un numéro professionnel, la prise de rendez-vous dans Google Calendar et les transferts vers votre équipe. Aucun forfait ne comporte de frais de mise en service. [Essayez LobbyStack gratuitement dans votre navigateur](https://app.lobbystack.com/fr/signup) ou comparez les forfaits sur la [page des tarifs](/fr/pricing/).
+Si une solution IA ou hybride vous convient, vous pouvez faire ce test sur LobbyStack dès aujourd'hui. Le forfait Free vous donne 30 minutes vocales par mois et un numéro américain ou canadien gratuit pendant 14 jours, sans carte. Quand les appels sonnent juste, le forfait Starter coûte 30 $ par mois pour 150 minutes, puis 0,20 $ la minute, et vous permet de garder le numéro, avec la prise de rendez-vous dans Google Calendar et les transferts vers votre équipe. Aucun forfait ne comporte de frais de mise en service. [Essayez LobbyStack gratuitement](https://app.lobbystack.com/fr/signup) ou comparez les forfaits sur la [page des tarifs](/fr/pricing/).

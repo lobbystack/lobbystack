@@ -13,7 +13,7 @@ locale: "es"
 canonicalSlug: "my-ai-front-desk-alternative"
 ---
 
-Quien busca una **alternativa a My AI Front Desk** debería empezar por el precio de entrada. Frontdesk vende ahora un solo plan de autoservicio, Business-in-a-Box, a $99 al mes por 200 minutos de voz, o $79 al mes con facturación anual. Ofrece una prueba gratuita de 7 días y ningún plan gratuito permanente. LobbyStack Starter cuesta $30 al mes por 150 minutos, y LobbyStack Free incluye 30 minutos de voz en el navegador cada mes, con reserva de citas, resúmenes de llamadas e historial de llamadas.
+Quien busca una **alternativa a My AI Front Desk** debería empezar por el precio de entrada. Frontdesk vende ahora un solo plan de autoservicio, Business-in-a-Box, a $99 al mes por 200 minutos de voz, o $79 al mes con facturación anual. Ofrece una prueba gratuita de 7 días y ningún plan gratuito permanente. LobbyStack Starter cuesta $30 al mes por 150 minutos, y LobbyStack Free incluye 30 minutos de voz cada mes y un número de EE. UU. o Canadá gratis durante 14 días, con reserva de citas, resúmenes de llamadas e historial de llamadas.
 
 Frontdesk, antes My AI Front Desk, vende ahora un amplio espacio de ventas con IA. LobbyStack ofrece a los negocios una recepcionista telefónica completa con un precio de entrada más bajo, más minutos de voz incluidos por unos $100 al mes y la opción de elegir entre la nube gestionada o el autoalojamiento.
 
@@ -21,7 +21,7 @@ Frontdesk, antes My AI Front Desk, vende ahora un amplio espacio de ventas con I
 
 | Área | Frontdesk | LobbyStack |
 | --- | --- | --- |
-| Opción gratuita | Prueba gratuita de 7 días, sin plan gratuito permanente | Plan Free: 30 minutos de voz en el navegador al mes, sin tarjeta ni número de teléfono |
+| Opción gratuita | Prueba gratuita de 7 días, sin plan gratuito permanente | Plan Free: 30 minutos de voz al mes, sin tarjeta, número de EE. UU. o Canadá gratis durante 14 días |
 | Primer plan de pago | $99 al mes por 200 minutos de voz, o $79 con facturación anual | Starter: $30 al mes por 150 minutos de voz, o $24 con facturación anual |
 | Alrededor de $100 al mes | Business-in-a-Box de $99: 200 minutos de voz | Pro de $100: 500 minutos de voz |
 | Minutos adicionales | 25 créditos ($0.25) cada uno; la reserva mensual de 1,000 créditos cubre unos 40 | $0.20 en Starter, $0.18 en Pro |
@@ -36,11 +36,11 @@ Frontdesk, antes My AI Front Desk, vende ahora un amplio espacio de ventas con I
 
 Precios y funciones verificados el 9 de octubre de 2026.
 
-## Pruebe LobbyStack gratis en su navegador
+## Pruebe LobbyStack gratis
 
 La prueba de Frontdesk dura siete días, y sus preguntas frecuentes dicen que no ofrece un plan gratuito permanente. Después de la prueba, el plan de $99 es la forma más barata de mantener activo un agente de voz de Frontdesk.
 
-El plan Free de LobbyStack incluye 30 minutos de voz en el navegador al mes y ningún número de teléfono. El plan no caduca, así que puede probar escenarios de clientes en su navegador todo el tiempo que necesite antes de elegir un plan de pago. Starter y Pro incluyen un número dedicado para llamadas telefónicas.
+El plan Free de LobbyStack incluye 30 minutos de voz al mes y un número de EE. UU. o Canadá gratis durante 14 días. El plan en sí no caduca, así que, pasados esos 14 días, puede seguir probando escenarios de clientes en su navegador antes de elegir un plan de pago. Starter y Pro incluyen un número dedicado para llamadas telefónicas.
 
 Una prueba de siete días sirve a un equipo que puede terminar sus pruebas en una semana. LobbyStack Free sirve a un equipo que quiere ajustar el saludo, las reglas y el conocimiento durante varias semanas antes de trasladar sus llamadas.
 
@@ -69,7 +69,7 @@ Esos límites pueden bastar para una operación pequeña. Un equipo con una base
 
 LobbyStack incluye más uso telefónico con el mismo nivel de gasto:
 
-- Free: 30 minutos de voz al mes en el navegador, en un plan que no caduca
+- Free: 30 minutos de voz al mes y un número de EE. UU. o Canadá durante 14 días, en un plan que no caduca
 - Starter: 150 minutos por $30 al mes, o $24 al mes con facturación anual
 - Pro: 500 minutos por $100 al mes, frente a 200 en el plan de $99 de Frontdesk
 
@@ -101,7 +101,7 @@ Elija Frontdesk si necesita un paquete alojado de voz, mensajería, chat, correo
 
 ## Elija LobbyStack si
 
-Elija LobbyStack para probar conversaciones de voz en su navegador con un plan gratuito que no caduca, pagar $30 en lugar de $99 para empezar u obtener 500 minutos por $100. Con un plan de pago, puede recibir llamadas telefónicas en un número dedicado sin reemplazar su CRM. Ningún plan de LobbyStack tiene tarifa de configuración.
+Elija LobbyStack para probar llamadas reales con un número gratis durante 14 días, pagar $30 en lugar de $99 para empezar u obtener 500 minutos por $100. Con un plan de pago, conserva un número dedicado sin reemplazar su CRM. Ningún plan de LobbyStack tiene tarifa de configuración.
 
 ## Fuentes
 
@@ -114,4 +114,4 @@ Elija LobbyStack para probar conversaciones de voz en su navegador con un plan g
 
 Frontdesk vende más canales y transferencias asistidas. LobbyStack ofrece más valor como recepcionista con IA: un plan gratuito que no caduca, capacidad de llamadas de pago más barata, operaciones de llamadas completas y una vía de implementación abierta.
 
-[Pruebe 30 minutos de voz en el navegador con LobbyStack Free](/es/pricing/). Elija Starter o Pro cuando necesite un número dedicado para llamadas telefónicas.
+[Pruebe LobbyStack Free con un número durante 14 días](/es/pricing/). Elija Starter o Pro para conservar un número dedicado.

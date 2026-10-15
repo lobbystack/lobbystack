@@ -13,7 +13,7 @@ locale: "sr"
 canonicalSlug: "upfirst-alternative"
 ---
 
-**Alternativu za Upfirst** možete da testirate u pregledaču bez kupovine paketa. Uz LobbyStack dobijate 30 minuta razgovora u pregledaču na paketu Free, bez broja telefona. Prvi objavljeni Upfirst nivo košta $24.95 za 30 poziva.
+**Alternativu za Upfirst** možete da testirate bez kupovine paketa. Uz LobbyStack na paketu Free dobijate 30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana. Prvi objavljeni Upfirst nivo košta $24.95 za 30 poziva.
 
 Upfirst naplaćuje po obrađenom pozivu, a LobbyStack po minutu razgovora. LobbyStack dodaje javni izvorni kod, kontrolu nad provajderima i samostalno hostovanje, što pregledane Upfirst stranice ne navode.
 
@@ -21,7 +21,7 @@ Upfirst naplaćuje po obrađenom pozivu, a LobbyStack po minutu razgovora. Lobby
 
 | Oblast | Upfirst | LobbyStack |
 | --- | --- | --- |
-| Trajni besplatni paket | Ne; naveden probni period od 14 dana | 30 minuta razgovora u pregledaču, bez kartice i broja telefona |
+| Trajni besplatni paket | Ne; naveden probni period od 14 dana | 30 minuta razgovora, bez kartice, broj iz SAD ili Kanade besplatno 14 dana |
 | Ulazni paket | $24.95 za 30 poziva | Besplatno za 30 minuta razgovora |
 | Plaćeno korišćenje | Paketi poziva i prekoračenja po pozivu | Paketi minuta i prekoračenja po minutu |
 | Zakazivanje | Direktno zakazivanje u kalendaru | Zakazivanje, izmene i pravila firme |
@@ -34,7 +34,7 @@ Cene i funkcije su proverene 30. jula 2026. Pre kupovine pregledajte trenutne st
 
 ## LobbyStack počinje besplatno i ostaje pod Vašom kontrolom
 
-Na paketu Free možete da testirate pozdrave i odgovore u pregledaču. Izaberite plaćeni paket sa namenskim brojem da biste testirali telefonske pozive i preusmeravanja.
+Na paketu Free možete 14 dana da testirate pozdrave, odgovore i prave pozive na broju iz SAD ili Kanade. Izaberite plaćeni paket da biste zadržali namenski broj i preusmeravali pozive na svoj tim.
 
 Upfirst model naplate po pozivu može da odgovara firmi sa dugim razgovorima za prijem podataka. LobbyStack model po minutu može da košta manje kada pozivaoci postavljaju kratka pitanja. Devedeset poziva od po jedan minut staje u LobbyStack Starter za $30, dok Upfirst navodi 90 poziva za $59.95.
 

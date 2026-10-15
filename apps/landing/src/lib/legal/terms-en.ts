@@ -3,7 +3,7 @@ import type { LegalDocument } from "./types"
 const support = `<a href="mailto:support@lobbystack.com">support@lobbystack.com</a>`
 
 export const termsEn: LegalDocument = {
-  updated: "Last updated: September 26, 2026",
+  updated: "Last updated: October 14, 2026",
   h1: "Terms of Service",
   intro: `These Terms of Service ("Terms") govern your use of LobbyStack's hosted service, websites, and support. Please read them before you use LobbyStack. They limit our liability, make you responsible for call recording consent and text message compliance, and set out how we handle disputes.`,
   sections: [
@@ -93,7 +93,7 @@ export const termsEn: LegalDocument = {
       nav: "Phone numbers",
       title: "8. Phone numbers and telephony",
       blocks: [
-        `8.1 We provide phone numbers and calling through third-party carriers, currently Twilio. Starter and Pro plans include one business phone number. The Free plan includes browser calls only and no phone number.`,
+        `8.1 We provide phone numbers and calling through third-party carriers, currently Twilio. Starter and Pro plans include one business phone number. The Free plan includes browser calls and, where we offer a free trial in your country, one phone number for 14 days. When the trial ends, the number stops answering, and we may release it unless you choose a paid plan.`,
         `8.2 You do not own a phone number we provide. You get the right to use it while your paid subscription is active and in good standing. Carriers, regulators, or our providers may require us to change, reclaim, or restrict a number, and we are not responsible for that.`,
         `8.3 We do not guarantee that a specific number, area code, or country is available, or that a number can be ported into or out of the Service. Where we support porting out, you must ask before your account closes and pay any carrier fees.`,
         `8.4 When your subscription ends, is downgraded to the Free plan, or is suspended for non-payment, we may release your number. A released number may be assigned to someone else. We are not liable for calls or texts that reach a number after its release.`,
@@ -165,7 +165,7 @@ export const termsEn: LegalDocument = {
         `12.8 <strong>Refunds.</strong> Fees are non-refundable, including for partial terms, unused usage, downgrades, and cancellations, except where the law requires otherwise or we agree in writing.`,
         `12.9 <strong>Price changes.</strong> We may change prices and included usage. For an active paid plan, we will give you at least 30 days' notice, and the change applies from your next renewal. If you do not agree, cancel before the renewal.`,
         `12.10 <strong>Billing disputes.</strong> You must tell us about a billing dispute within 60 days of the charge. Please contact us before starting a chargeback.`,
-        `12.11 <strong>Free plan.</strong> The Free plan includes limited browser call minutes and no phone number. We may change its limits, or end it, at any time. We may close free accounts that stay inactive for a long period. We offer no support commitment for the Free plan.`,
+        `12.11 <strong>Free plan.</strong> The Free plan includes limited call minutes. Where we offer a free trial in your country, it also includes one phone number for 14 days, limited to one trial per person, phone number and network. When the trial ends, the number stops answering, and we may release it unless you choose a paid plan. We may change its limits, or end it, at any time. We may close free accounts that stay inactive for a long period. We offer no support commitment for the Free plan.`,
       ],
     },
     {

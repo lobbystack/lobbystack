@@ -3,7 +3,7 @@ import type { LegalDocument } from "./types"
 const support = `<a href="mailto:support@lobbystack.com">support@lobbystack.com</a>`
 
 export const termsFr: LegalDocument = {
-  updated: "Dernière mise à jour : 26 septembre 2026",
+  updated: "Dernière mise à jour : 14 octobre 2026",
   h1: "Conditions d’utilisation",
   intro: `Les présentes conditions d’utilisation (les « Conditions ») régissent votre utilisation du service hébergé, des sites Web et du support de LobbyStack. Lisez-les avant d’utiliser LobbyStack. Elles limitent notre responsabilité, vous rendent responsable du consentement à l’enregistrement des appels et de la conformité des SMS, et précisent comment nous réglons les litiges.`,
   sections: [
@@ -93,7 +93,7 @@ export const termsFr: LegalDocument = {
       nav: "Numéros",
       title: "8. Numéros de téléphone et téléphonie",
       blocks: [
-        `8.1 Nous fournissons les numéros de téléphone et les appels au moyen d’opérateurs tiers, actuellement Twilio. Les forfaits Starter et Pro comprennent un numéro de téléphone d’entreprise. Le forfait gratuit comprend seulement les appels depuis le navigateur et aucun numéro de téléphone.`,
+        `8.1 Nous fournissons les numéros de téléphone et les appels au moyen d’opérateurs tiers, actuellement Twilio. Les forfaits Starter et Pro comprennent un numéro de téléphone d’entreprise. Le forfait gratuit comprend les appels depuis le navigateur et, lorsque nous offrons un essai gratuit dans votre pays, un numéro de téléphone pendant 14 jours. À la fin de l’essai, le numéro cesse de répondre, et nous pouvons le libérer si vous ne choisissez pas un forfait payant.`,
         `8.2 Vous n’êtes pas propriétaire d’un numéro de téléphone que nous fournissons. Vous obtenez le droit de l’utiliser tant que votre abonnement payant est actif et en règle. Les opérateurs, les autorités de réglementation ou nos fournisseurs peuvent nous obliger à changer, reprendre ou restreindre un numéro, et nous n’en sommes pas responsables.`,
         `8.3 Nous ne garantissons pas qu’un numéro, un indicatif régional ou un pays précis soit disponible, ni qu’un numéro puisse être transféré vers le Service ou hors de celui-ci. Lorsque nous permettons le transfert d’un numéro hors du Service, vous devez le demander avant la fermeture de votre compte et payer les frais de l’opérateur.`,
         `8.4 Lorsque votre abonnement prend fin, passe au forfait gratuit ou est suspendu pour non-paiement, nous pouvons libérer votre numéro. Un numéro libéré peut être attribué à quelqu’un d’autre. Nous ne sommes pas responsables des appels ou SMS qui parviennent à un numéro après sa libération.`,
@@ -165,7 +165,7 @@ export const termsFr: LegalDocument = {
         `12.8 <strong>Remboursements.</strong> Les frais ne sont pas remboursables, y compris pour les périodes partielles, l’utilisation inutilisée, les passages à un forfait inférieur et les annulations, sauf si la loi l’exige ou si nous en convenons par écrit.`,
         `12.9 <strong>Changements de prix.</strong> Nous pouvons modifier les prix et l’utilisation incluse. Pour un forfait payant actif, nous vous donnerons un préavis d’au moins 30 jours, et le changement s’appliquera à compter de votre prochain renouvellement. Si vous n’êtes pas d’accord, annulez avant le renouvellement.`,
         `12.10 <strong>Contestations de facturation.</strong> Vous devez nous signaler toute contestation de facturation dans les 60 jours suivant le prélèvement. Communiquez avec nous avant de demander une rétrofacturation.`,
-        `12.11 <strong>Forfait gratuit.</strong> Le forfait gratuit comprend un nombre limité de minutes d’appel depuis le navigateur et aucun numéro de téléphone. Nous pouvons modifier ses limites ou y mettre fin à tout moment. Nous pouvons fermer les comptes gratuits inactifs depuis longtemps. Nous n’offrons aucun engagement de support pour le forfait gratuit.`,
+        `12.11 <strong>Forfait gratuit.</strong> Le forfait gratuit comprend un nombre limité de minutes d’appel. Lorsque nous offrons un essai gratuit dans votre pays, il comprend aussi un numéro de téléphone pendant 14 jours, à raison d’un seul essai par personne, par numéro de téléphone et par réseau. À la fin de l’essai, le numéro cesse de répondre, et nous pouvons le libérer si vous ne choisissez pas un forfait payant. Nous pouvons modifier ses limites ou y mettre fin à tout moment. Nous pouvons fermer les comptes gratuits inactifs depuis longtemps. Nous n’offrons aucun engagement de support pour le forfait gratuit.`,
       ],
     },
     {

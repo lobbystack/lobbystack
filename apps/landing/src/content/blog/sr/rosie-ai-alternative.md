@@ -15,7 +15,7 @@ canonicalSlug: "rosie-ai-alternative"
 
 AI recepcioner **Rosie AI** košta $49 mesečno za 250 minuta, $149 za 1,000 i $299 za 2,000, prema stanju od 9. oktobra 2026. Paket Professional od $49 prima poruke i šalje SMS sa linkom za zakazivanje. Zakazivanje u kalendar, preusmeravanje i SMS poruke tokom poziva počinju od paketa Scale. Ako pređete 250 minuta, Rosie Vas prebacuje na Scale, a tu ostajete dok sami ne pređete na niži paket.
 
-LobbyStack je napisao ovu stranicu i prodaje konkurentskog AI recepcionera. Naš [paket Starter](/sr/pricing/) košta $30 mesečno za 150 minuta i uključuje zakazivanje i preusmeravanje. Besplatni paket daje 30 minuta razgovora u pregledaču, bez kartice i broja telefona. Nijedan LobbyStack paket nema naknadu za podešavanje. Cene smo proverili 9. oktobra 2026. na Rosie stranici sa cenama, u čestim pitanjima i u uslovima usluge, a linkove smo stavili u odeljak Izvori.
+LobbyStack je napisao ovu stranicu i prodaje konkurentskog AI recepcionera. Naš [paket Starter](/sr/pricing/) košta $30 mesečno za 150 minuta i uključuje zakazivanje i preusmeravanje. Besplatni paket daje 30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana, bez kartice. Nijedan LobbyStack paket nema naknadu za podešavanje. Cene smo proverili 9. oktobra 2026. na Rosie stranici sa cenama, u čestim pitanjima i u uslovima usluge, a linkove smo stavili u odeljak Izvori.
 
 ## Šta je Rosie AI?
 
@@ -64,7 +64,7 @@ LobbyStack je jedna od alternativa za Rosie AI. Tabela poredi limite koji menjaj
 | Najviši paket koji kupujete sami | $299 za 2,000 minuta (Growth) | $100 za 500 minuta (Pro) |
 | Prekoračenje minuta | Prebacuje Vas na sledeći paket po standardnoj ceni dok ne pređete na niži (pogledajte napomenu o uslovima iznad) | $0.20 po minutu na paketu Starter, $0.18 na paketu Pro, uz opcionu gornju granicu potrošnje |
 | Jedinica naplate | Svaki poziv se zaokružuje naviše na sledećih 60 sekundi | Po sekundi, bez zaokruživanja naviše |
-| Besplatna opcija | Besplatan probni period od 7 dana; uslovi traže način plaćanja na nalogu | Besplatan paket: 30 minuta razgovora u pregledaču, bez kartice i broja telefona, bez isteka |
+| Besplatna opcija | Besplatan probni period od 7 dana; uslovi traže način plaćanja na nalogu | Besplatan paket: 30 minuta razgovora, bez kartice, broj iz SAD ili Kanade besplatno 14 dana |
 | Kalendari | Google Calendar, Calendly, Acuity, Appointlet (od paketa Scale) | Samo Google Calendar |
 | Preusmeravanje | Uživo i uz najavu (Scale), kaskadno (Growth) | Preusmeravanje bez najave na jedan broj (Starter i Pro) |
 | SMS pozivaocima | Linkovi za zakazivanje na svakom paketu; SMS tokom poziva od paketa Scale | Potvrda termina i podsetnik 24 sata ranije kada se pozivalac složi, na američke i kanadske brojeve; AI ne odgovara na SMS poruke |
@@ -173,7 +173,7 @@ Ako razmatrate i recepcionere uživo, uporedite [najbolje usluge odgovaranja na 
 
 ## Kako da podesite i testirate alternativu za Rosie?
 
-1. Registrujte se na [app.lobbystack.com](https://app.lobbystack.com/sr/signup). Besplatni paket daje 30 minuta razgovora u pregledaču mesečno, bez kartice.
+1. Registrujte se na [app.lobbystack.com](https://app.lobbystack.com/sr/signup). Besplatni paket daje 30 minuta razgovora mesečno i broj iz SAD ili Kanade besplatno 14 dana, bez kartice.
 2. Podešavanje Vas vodi kroz podatke o firmi, uvoz sajta, Vaše znanje, pozdrav i izbor paketa.
 3. Napišite pravila za pozive običnim jezikom i izaberite način zakazivanja: recepcioner zakazuje termin, prima zahtev koji Vaš tim potvrđuje ili prima poruku. Povežite Google Calendar i podesite radno vreme, jer bez njih zakazivanje ne radi.
 4. Obavite test pozive iz kontrolne table u pregledaču.
@@ -196,7 +196,7 @@ Rosie podržava isto prosleđivanje za pozive koje tim ne stigne da primi i za p
 - Mesečno imate manje od oko 772 minuta poziva, ili između 1,001 i oko 1,605.
 - Želite naplatu po sekundi i prekoračenje po minutu uz opcionu gornju granicu potrošnje, umesto skoka na viši paket.
 - Vaši pozivaoci govore i druge jezike osim engleskog i španskog.
-- Želite besplatan paket bez roka probnog perioda (30 minuta razgovora u pregledaču mesečno).
+- Želite besplatan paket koji ne ističe (30 minuta razgovora mesečno, uz broj iz SAD ili Kanade na 14 dana).
 - Želite da se snimci čuvaju 90 dana na plaćenim paketima.
 - Želite kod pod MIT licencom, samostalno hostovanje, REST API, webhookove ili MCP server.
 
@@ -226,4 +226,4 @@ Sve smo proverili 9. oktobra 2026. godine:
 
 LobbyStack je jeftiniji način da dobijete zakazivanje i preusmeravanje kada imate manje od oko 772 minuta poziva mesečno. Rosie daje više minuta po dolaru od oko 773 do 1,000 minuta i od oko 1,606 do 2,000. Nudi i više vrsta preusmeravanja, više kalendara, chat na sajtu i mobilne aplikacije. Izračunajte svoj mesec pomoću tabele troškova iznad, sa minutima onako kako ih broji svaki dobavljač.
 
-Da biste čuli kako LobbyStack odgovara na pitanja Vaših pozivalaca, [počnite na besplatnom paketu](https://app.lobbystack.com/sr/signup). Dobijate 30 minuta razgovora u pregledaču mesečno, sa svojim pozdravom i pravilima, bez kartice. Ako kasnije pređete na plaćeni paket, u podešavanjima naplate možete da pređete na niži paket ili otkažete, bez naknade za otkazivanje.
+Da biste čuli kako LobbyStack odgovara na pitanja Vaših pozivalaca, [počnite na besplatnom paketu](https://app.lobbystack.com/sr/signup). Dobijate 30 minuta razgovora mesečno i broj iz SAD ili Kanade na 14 dana, sa svojim pozdravom i pravilima, bez kartice. Ako kasnije pređete na plaćeni paket, u podešavanjima naplate možete da pređete na niži paket ili otkažete, bez naknade za otkazivanje.

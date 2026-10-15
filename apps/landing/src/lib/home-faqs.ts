@@ -35,7 +35,7 @@ export const homeFaqs: FaqItem[] = [
   {
     question: "How much does an AI receptionist cost?",
     answer:
-      "LobbyStack starts free with 30 voice minutes per month for browser test calls. Paid plans begin at $30 per month for Starter and $100 per month for Pro, with usage-based overages. Enterprise pricing is available for higher volume and self-hosted support.",
+      "LobbyStack starts free with 30 voice minutes per month and a US or Canadian number free for 14 days. Paid plans begin at $30 per month for Starter and $100 per month for Pro, with usage-based overages. Enterprise pricing is available for higher volume and self-hosted support.",
   },
   {
     question: "How is LobbyStack different from a call tree or voicemail?",
@@ -80,7 +80,7 @@ export const homeFaqsFr: FaqItem[] = [
   {
     question: "Combien coûte un réceptionniste IA ?",
     answer:
-      "LobbyStack commence gratuitement avec 30 minutes vocales par mois pour des appels de test dans le navigateur. Les forfaits payants démarrent à 30 $/mois pour Starter et 100 $/mois pour Pro, avec des dépassements à l'usage. Enterprise est disponible pour les volumes plus élevés et l'accompagnement à l'auto-hébergement.",
+      "LobbyStack commence gratuitement avec 30 minutes vocales par mois et un numéro américain ou canadien gratuit pendant 14 jours. Les forfaits payants démarrent à 30 $/mois pour Starter et 100 $/mois pour Pro, avec des dépassements à l'usage. Enterprise est disponible pour les volumes plus élevés et l'accompagnement à l'auto-hébergement.",
   },
   {
     question:
@@ -126,7 +126,7 @@ export const homeFaqsEs: FaqItem[] = [
   {
     question: "¿Cuánto cuesta una recepcionista con IA?",
     answer:
-      "LobbyStack empieza gratis con 30 minutos de voz al mes para llamadas de prueba en el navegador. Los planes de pago empiezan en $30 al mes para Starter y $100 al mes para Pro, con cargos adicionales según el uso. Enterprise ofrece precios para mayor volumen y soporte de autoalojamiento.",
+      "LobbyStack empieza gratis con 30 minutos de voz al mes y un número de EE. UU. o Canadá gratis durante 14 días. Los planes de pago empiezan en $30 al mes para Starter y $100 al mes para Pro, con cargos adicionales según el uso. Enterprise ofrece precios para mayor volumen y soporte de autoalojamiento.",
   },
   {
     question:
@@ -170,7 +170,7 @@ export const homeFaqsSr: FaqItem[] = [
   {
     question: "Koliko košta AI recepcioner?",
     answer:
-      "LobbyStack možete početi da koristite besplatno, sa 30 minuta razgovora mesečno za probne pozive u pregledaču. Plaćeni paketi počinju od $30 mesečno za Starter i $100 mesečno za Pro, uz dodatnu naplatu prema potrošnji. Enterprise cene su dostupne za veći obim poziva i podršku za samostalno hostovanje.",
+      "LobbyStack možete početi da koristite besplatno, sa 30 minuta razgovora mesečno i brojem iz SAD ili Kanade besplatno 14 dana. Plaćeni paketi počinju od $30 mesečno za Starter i $100 mesečno za Pro, uz dodatnu naplatu prema potrošnji. Enterprise cene su dostupne za veći obim poziva i podršku za samostalno hostovanje.",
   },
   {
     question:

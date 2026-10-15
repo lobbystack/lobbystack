@@ -573,7 +573,7 @@ ${DEFAULT_DESCRIPTION}
 
 ## Pricing Snapshot
 
-- Free: $0/month with 30 browser voice minutes and a 1 MB knowledge base. Free has no telephone number, so it sends no texts and cannot transfer calls.
+- Free: $0/month with 30 voice minutes, a US or Canadian phone number free for 14 days, and a 1 MB knowledge base. During the trial, transfers go only to the owner's verified mobile number. Starter or Pro keeps the number.
 - Starter: $30/month or $288/year ($24/month effective) with 150 voice minutes, 20 transfer attempts, 50 alert SMS segments, and 5 MB knowledge base.
 - Pro: $100/month or $960/year ($80/month effective) with 500 voice minutes, 100 transfer attempts, 200 alert SMS segments, and 20 MB knowledge base.
 - Starter overage: $0.20 per voice minute, $0.02 per transfer attempt, and $0.02 per alert SMS segment.
@@ -609,7 +609,7 @@ LobbyStack is an open-source AI receptionist for call-heavy small businesses. It
 
 Every plan includes browser voice, plain-language workflows, appointment booking, call summaries, email notifications, knowledge base, dashboard, call history, and unlimited concurrent calls.
 
-Free includes 30 browser voice minutes and no telephone number. Starter and Pro include a dedicated telephone number for inbound phone calls and call transfers. Plan allowances for transfer attempts and alert SMS segments are listed in the pricing comparison.
+Free includes 30 voice minutes and a US or Canadian phone number free for 14 days. Starter and Pro include a dedicated telephone number for inbound phone calls and call transfers. Plan allowances for transfer attempts and alert SMS segments are listed in the pricing comparison.
 `
 
 export const pricingMarkdown = `---

@@ -288,7 +288,7 @@ Los planes no limitan cuántas llamadas contesta la recepcionista a la vez. Las 
 - La IA no responde mensajes de texto.
 - Google Calendar es el único calendario. Para un CRM o un software de gestión, use webhooks y la API REST.
 - LobbyStack no afirma cumplir HIPAA, y una llamada telefónica termina a los 30 minutos.
-- El plan Free funciona en el navegador, sin número de teléfono.
+- El plan Free incluye un número de EE. UU. o Canadá durante 14 días. Después, usted prueba en el navegador.
 
 Un servicio con personas le conviene más si quiere una persona en cada llamada o si sus clientes no aceptan hablar con una IA. Los agentes humanos también atienden mejor a clientes molestos y temas delicados, y algunos proveedores ofrecen transferencias asistidas (Moneypenny) y calendarios de guardia (el Roster Service de MAP, los técnicos de guardia de A Message Center). Para los precios de otras IA y el costo de contratar a alguien, vea [cuánto cuesta y cuánto ahorra una recepcionista con IA](/es/blog/ai-receptionist-savings/).
 
@@ -346,4 +346,4 @@ La mayoría de los servicios con personas de nuestra tabla facturan mes a mes, c
 
 Multiplique sus llamadas mensuales por la duración promedio de sus llamadas y busque la fila de minutos más cercana en la tabla de volumen. Esa fila le muestra lo que cuesta cada modelo de facturación antes de que llame a un proveedor.
 
-Si la fila de IA le encaja, los [precios de LobbyStack](/es/pricing/) empiezan en $30 al mes por 150 minutos, y después $0.20 por minuto. Pro cuesta $100 por 500 minutos, y después $0.18. Ningún plan tiene tarifa de configuración. El plan Free le da 30 minutos de voz en el navegador al mes para probar sus llamadas más difíciles, sin tarjeta ni número de teléfono. Como no tiene número, no puede contestar la línea de su negocio. El plan Free no caduca. [Cree una cuenta gratis](https://app.lobbystack.com/es/signup).
+Si la fila de IA le encaja, los [precios de LobbyStack](/es/pricing/) empiezan en $30 al mes por 150 minutos, y después $0.20 por minuto. Pro cuesta $100 por 500 minutos, y después $0.18. Ningún plan tiene tarifa de configuración. El plan Free le da 30 minutos de voz al mes para probar sus llamadas más difíciles, y un número de EE. UU. o Canadá gratis durante 14 días. No necesita tarjeta. [Cree una cuenta gratis](https://app.lobbystack.com/es/signup).

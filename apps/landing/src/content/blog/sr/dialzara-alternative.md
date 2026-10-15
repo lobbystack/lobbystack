@@ -13,7 +13,7 @@ locale: "sr"
 canonicalSlug: "dialzara-alternative"
 ---
 
-**Alternativa za Dialzara** može da uključi više vremena za razgovor po sličnoj ceni. Dialzara naplaćuje $29 za 60 minuta i $99 za 220. LobbyStack naplaćuje $30 za 150 minuta i $100 za 500. Na paketu Free možete da testirate 30 minuta razgovora u pregledaču, bez broja telefona.
+**Alternativa za Dialzara** može da uključi više vremena za razgovor po sličnoj ceni. Dialzara naplaćuje $29 za 60 minuta i $99 za 220. LobbyStack naplaćuje $30 za 150 minuta i $100 za 500. Na paketu Free možete da testirate 30 minuta razgovora, uz broj iz SAD ili Kanade besplatno 14 dana.
 
 LobbyStack uključuje i zakazivanje, predaju razgovora čoveku, SMS obaveštenja, transkripte, rezimee i istoriju poziva, bez razbijanja toka rada recepcije na zasebne dodatke. Tehnički timovi mogu da pregledaju izvorni kod ili da ga sami hostuju.
 
@@ -21,7 +21,7 @@ LobbyStack uključuje i zakazivanje, predaju razgovora čoveku, SMS obaveštenja
 
 | Oblast | Dialzara | LobbyStack |
 | --- | --- | --- |
-| Trajni besplatni paket | Nema; naveden probni period od 7 dana | 30 minuta razgovora u pregledaču, bez kartice i broja telefona |
+| Trajni besplatni paket | Nema; naveden probni period od 7 dana | 30 minuta razgovora, bez kartice, broj iz SAD ili Kanade besplatno 14 dana |
 | Početni plaćeni paket | $29 za 60 minuta | $30 za 150 minuta |
 | Srednji paket | $99 za 220 minuta | $100 za 500 minuta |
 | Zakazivanje i preusmeravanje uz najavu | Od paketa od $99 | Podržani tokovi rada recepcije |
@@ -36,7 +36,7 @@ Cene i funkcije su proverene 30. jula 2026.
 
 Jedan dolar više menja početnu kvotu sa 60 minuta kod Dialzare na 150 kod LobbyStacka. Za oko $100, LobbyStack uključuje 500 minuta naspram 220 kod Dialzare. LobbyStack uključuje i SMS segmente za obaveštenja, dok Dialzara SMS navodi kao dodatak od $19 mesečno plus potrošnja.
 
-Dialzara sinhronizaciju kalendara, preusmeravanje uz najavu, pravila van radnog vremena i dvojezičnu podršku stavlja u paket od $99. Uz LobbyStack glasovne razgovore možete da testirate u pregledaču na paketu Free. Za telefonske pozive i predaju razgovora čoveku izaberite Starter ili Pro.
+Dialzara sinhronizaciju kalendara, preusmeravanje uz najavu, pravila van radnog vremena i dvojezičnu podršku stavlja u paket od $99. Uz LobbyStack prave pozive možete da testirate na paketu Free, sa brojem iz SAD ili Kanade na 14 dana. Da biste zadržali broj i preusmeravali pozive na svoj tim, izaberite Starter ili Pro.
 
 Dialzara ima korisne proizvode za agencije i white-label. Firma koja kupuje telefonsku recepciju treba da uporedi gotov tok rada, a tu LobbyStack daje više uključene potrošnje i manje plaćenih prepreka.
 
@@ -97,7 +97,7 @@ Izaberite Dialzara ako firmi odgovara hostovana ponuda za agencije, white-label 
 
 ## Izaberite LobbyStack ako
 
-Izaberite LobbyStack za 150 minuta po ceni od $30 ili 500 po ceni od $100, uz namenski broj. Glasovne razgovore možete besplatno da testirate u pregledaču pre nego što izaberete plaćeni paket.
+Izaberite LobbyStack za 150 minuta po ceni od $30 ili 500 po ceni od $100, uz namenski broj. Pre nego što izaberete plaćeni paket, možete 14 dana da ga testirate na besplatnom broju iz SAD ili Kanade.
 
 ## Izvori
 

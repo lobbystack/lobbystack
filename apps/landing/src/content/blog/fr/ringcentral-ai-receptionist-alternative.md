@@ -82,7 +82,7 @@ Les deux produits au 9 octobre 2026 :
 | Minutes incluses | 100 | 150 sur Starter, 500 sur Pro (100 $) |
 | Dépassement | 0,50 $ la minute | 0,20 $ la minute sur Starter, 0,18 $ sur Pro |
 | Décompte des minutes | Chaque appel arrondi aux 30 secondes supérieures | À la seconde ; les appels de moins de 10 secondes et le spam que le réceptionniste termine ne comptent pas |
-| Option gratuite | Essai de 14 jours | Forfait gratuit avec 30 minutes vocales dans le navigateur par mois, sans carte ni numéro de téléphone, sans date d'expiration |
+| Option gratuite | Essai de 14 jours | Forfait gratuit avec 30 minutes vocales par mois, sans carte, numéro américain ou canadien gratuit pendant 14 jours |
 | Numéro de téléphone | Nouveau numéro inclus, ou portez le vôtre | Un numéro sur Starter et Pro, aux États-Unis, au Canada, au Royaume-Uni, en Australie ou en Nouvelle-Zélande |
 | Fonctionne avec votre numéro actuel | Oui, par renvoi d'appel ou SIP | Oui, par le renvoi d'appel de votre opérateur |
 | Langues des appelants | Anglais, espagnol, français, italien, allemand et portugais selon sa FAQ, d'autres annoncées comme à venir ; change de langue pendant l'appel | Commence en anglais ou en français, puis répond dans la langue de l'appelant : plus de 70 langues avec OpenAI GPT-Live |
@@ -149,7 +149,7 @@ Pour un tableau plus large qui ajoute des fournisseurs spécialisés en IA, cons
 
 ### Un réceptionniste IA vaut-il le coup ?
 
-Tout dépend du nombre d'appels que vous manquez et de ce que vous rapporte un client qui réserve. [Estimez ce que vous coûtent les appels manqués](/fr/missed-call-revenue-calculator/), puis vérifiez [à partir de quand un réceptionniste IA se rentabilise](/fr/blog/ai-receptionist-savings/). Pour en tester un sur vos propres questions, le forfait gratuit de LobbyStack vous donne 30 minutes vocales dans le navigateur par mois, et RingCentral propose un essai d'AIR de 14 jours.
+Tout dépend du nombre d'appels que vous manquez et de ce que vous rapporte un client qui réserve. [Estimez ce que vous coûtent les appels manqués](/fr/missed-call-revenue-calculator/), puis vérifiez [à partir de quand un réceptionniste IA se rentabilise](/fr/blog/ai-receptionist-savings/). Pour en tester un sur vos propres questions, le forfait gratuit de LobbyStack vous donne 30 minutes vocales par mois et un numéro américain ou canadien pendant 14 jours, et RingCentral propose un essai d'AIR de 14 jours.
 
 ## Les questions à poser à RingCentral avant d'acheter
 
@@ -176,7 +176,7 @@ Passez ensuite les trois mêmes appels de test sur AIR et sur LobbyStack : un ap
 
 LobbyStack vous convient si vous voulez un coût à la minute plus bas et un moyen gratuit de tester d'abord :
 
-- Le forfait gratuit vous donne 30 minutes vocales dans le navigateur par mois, sans carte ni numéro de téléphone, et il n'expire pas.
+- Le forfait gratuit vous donne 30 minutes vocales par mois et un numéro américain ou canadien gratuit pendant 14 jours, sans carte.
 - Starter coûte 30 $ pour 150 minutes, puis 0,20 $ la minute, comptée à la seconde. Les appels de moins de 10 secondes et ceux que le réceptionniste termine comme spam ne comptent pas.
 - Chaque appel commence dans la langue par défaut de l'entreprise, l'anglais ou le français. Le réceptionniste répond ensuite dans la langue de l'appelant : plus de 70 langues avec OpenAI GPT-Live, dont l'espagnol et le serbe.
 - Il réserve dans Google Calendar et, si l'appelant accepte, envoie par SMS une confirmation et un rappel 24 heures avant le rendez-vous aux numéros américains et canadiens.

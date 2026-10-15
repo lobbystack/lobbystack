@@ -136,7 +136,7 @@ El plan Starter de LobbyStack cuesta $30 al mes por 150 minutos, luego $0.20 por
 
 Cada llamada empieza en el idioma predeterminado del negocio, inglés o francés. Luego la recepcionista contesta en el idioma de quien llama: más de 70 idiomas con OpenAI GPT-Live, entre ellos español y serbio. Usted escribe su lista de emergencias en lenguaje sencillo, y ella transfiere las llamadas que coinciden a un número. Si la transferencia no se completa, se lo dice a quien llama, ofrece tomar un mensaje, y su equipo puede recibir una alerta "Live call transfer failed". Agenda visitas en Google Calendar y, si la persona acepta, envía por SMS una confirmación y un recordatorio 24 horas antes a números de Estados Unidos y Canadá. Cada llamada deja un resumen, una transcripción y una grabación en el panel, y cada mensaje genera una alerta por correo electrónico.
 
-LobbyStack no se sincroniza con AppFolio, Buildium, Yardi ni Rent Manager, así que no crea órdenes de trabajo ahí. Los webhooks firmados para 6 eventos y una API REST pueden enviar los datos de la llamada a otras herramientas si alguien de su equipo lo configura. Las transferencias van a un solo número y sin aviso previo a quien recibe, así que no hay rotación de guardias, y un propietario no puede llegar en vivo a otra persona distinta de la que recibe las emergencias. No hay agentes humanos detrás, y la IA no responde mensajes de texto. El plan gratuito incluye 30 minutos de voz en el navegador, sin tarjeta ni número de teléfono, para hacer pruebas. Vea cómo clasifica las llamadas de inquilinos en la [página para administración de propiedades](/es/solutions/property-management-answering-service/).
+LobbyStack no se sincroniza con AppFolio, Buildium, Yardi ni Rent Manager, así que no crea órdenes de trabajo ahí. Los webhooks firmados para 6 eventos y una API REST pueden enviar los datos de la llamada a otras herramientas si alguien de su equipo lo configura. Las transferencias van a un solo número y sin aviso previo a quien recibe, así que no hay rotación de guardias, y un propietario no puede llegar en vivo a otra persona distinta de la que recibe las emergencias. No hay agentes humanos detrás, y la IA no responde mensajes de texto. El plan gratuito incluye 30 minutos de voz y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta. Vea cómo clasifica las llamadas de inquilinos en la [página para administración de propiedades](/es/solutions/property-management-answering-service/).
 
 ## ¿Cuánto cuesta un call center para administración de propiedades?
 
@@ -234,7 +234,7 @@ Use la tabla de arriba como punto de partida. Agregue su política para inquilin
 
 ### 3. Haga tres llamadas de prueba antes de firmar
 
-Llame tres veces a cada finalista: una fuga a las 2 a. m. que pasa a la unidad de abajo, un propietario que pregunta por el estado de cuenta del mes pasado y un prospecto que pregunta en español si aceptan mascotas. Revise quién contestó, qué dice el resumen y si el técnico de guardia recibió la fuga. Pruebas: PATLive 14 días, SAS 14 días o 200 minutos, prueba gratis en MAP, Rosie 7 días, el plan Free de la IA de Smith.ai y LobbyStack Free, que funciona en el navegador por 30 minutos.
+Llame tres veces a cada finalista: una fuga a las 2 a. m. que pasa a la unidad de abajo, un propietario que pregunta por el estado de cuenta del mes pasado y un prospecto que pregunta en español si aceptan mascotas. Revise quién contestó, qué dice el resumen y si el técnico de guardia recibió la fuga. Pruebas: PATLive 14 días, SAS 14 días o 200 minutos, prueba gratis en MAP, Rosie 7 días, el plan Free de la IA de Smith.ai y LobbyStack Free, con 30 minutos y un número de EE. UU. o Canadá gratis durante 14 días.
 
 ### 4. Lea los términos de facturación
 
@@ -248,7 +248,7 @@ Desvíe el número de su oficina desde su operador fuera de horario, cuando no c
 
 ### ¿Existe un call center inmobiliario gratis?
 
-Ningún servicio con personas de esta lista es gratis, aunque PATLive, SAS y MAP ofrecen pruebas. El plan Free de la IA de Smith.ai cubre 25 llamadas reales al mes. LobbyStack Free le da 30 minutos de voz en el navegador, sin número de teléfono: sirve para probar la recepcionista, pero no puede contestar a sus inquilinos.
+Ningún servicio con personas de esta lista es gratis, aunque PATLive, SAS y MAP ofrecen pruebas. El plan Free de la IA de Smith.ai cubre 25 llamadas reales al mes. LobbyStack Free le da 30 minutos de voz y un número de EE. UU. o Canadá gratis durante 14 días, así que puede contestar a sus inquilinos durante dos semanas si desvía su línea.
 
 ### ¿Puedo usar el servicio solo fuera de horario?
 
@@ -292,4 +292,4 @@ Fuentes:
 - **IA con recepcionistas en vivo como respaldo:** Smith.ai.
 - **Visitas en Google Calendar, clasificación de emergencias fuera de horario hacia un número de guardia por $30 a $100 al mes, e inquilinos que hablan muchos idiomas:** LobbyStack.
 
-¿Quiere escuchar cómo LobbyStack distingue una fuga a las 2 a. m. de una llave que gotea antes de pagar? [Cree una cuenta gratis](https://app.lobbystack.com/es/signup), escriba su lista de emergencias y pruébelo con 30 minutos de voz en el navegador, sin tarjeta. Cuando esté listo para las llamadas de sus inquilinos, los planes de pago agregan un número de teléfono desde $30 al mes, sin tarifa de configuración. Vea cómo funcionan la clasificación y las visitas en la [página para administración de propiedades](/es/solutions/property-management-answering-service/).
+¿Quiere escuchar cómo LobbyStack distingue una fuga a las 2 a. m. de una llave que gotea antes de pagar? [Cree una cuenta gratis](https://app.lobbystack.com/es/signup), escriba su lista de emergencias y pruébelo con 30 minutos de voz y un número gratis durante 14 días, sin tarjeta. Para conservar el número, los planes de pago empiezan en $30 al mes, sin tarifa de configuración. Vea cómo funcionan la clasificación y las visitas en la [página para administración de propiedades](/es/solutions/property-management-answering-service/).

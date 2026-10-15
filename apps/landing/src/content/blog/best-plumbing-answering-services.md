@@ -139,7 +139,7 @@ LobbyStack's Starter plan costs $30 a month for 150 minutes, then $0.20 a minute
 
 Each call opens in the business's default language, English or French. The receptionist then answers in the caller's language: 70+ languages on OpenAI GPT-Live, including Spanish and Serbian. You tell it which calls count as urgent, such as water that won't stop or sewage coming up a drain, and it transfers them to one number. If the transfer doesn't go through, it tells the caller, offers to take a message, and your team can get a "Live call transfer failed" alert. It books into Google Calendar and, when the caller agrees, texts a confirmation and a 24-hour reminder to US and Canadian numbers. Every call leaves a summary, transcript and recording in the dashboard, and you get an email when it takes a message.
 
-It doesn't sync with ServiceTitan, Housecall Pro or Jobber, and Google Calendar is its only calendar. Transfers go to one number with no briefing, and you get no on-call rotation. No human agents back it up, and the AI doesn't reply to texts. Free gives you 30 browser voice minutes with no card and no telephone number, for testing. See how it handles urgent calls on the [AI receptionist for plumbers](/solutions/ai-receptionist-for-plumbers/) page.
+It doesn't sync with ServiceTitan, Housecall Pro or Jobber, and Google Calendar is its only calendar. Transfers go to one number with no briefing, and you get no on-call rotation. No human agents back it up, and the AI doesn't reply to texts. Free gives you 30 voice minutes and a US or Canadian number free for 14 days, with no card. See how it handles urgent calls on the [AI receptionist for plumbers](/solutions/ai-receptionist-for-plumbers/) page.
 
 ## How much does an answering service for plumbers cost?
 
@@ -230,7 +230,7 @@ Pull call counts and average call length for your busiest and quietest months fr
 
 ### 2. Place three test calls before you sign
 
-Call each finalist three times: a 2 a.m. burst pipe with water still running, a sewer backup in a basement, and a water heater quote. Make one of them in Spanish if your customers speak it. Check who answered, what the summary said, and whether the on-call plumber got the call. Trials: PATLive 14 days, SAS 14 days or 200 minutes, Rosie 7 days, free trials at MAP and Housecall Pro, Smith.ai's AI Free plan, and LobbyStack Free, which runs in the browser for 30 minutes.
+Call each finalist three times: a 2 a.m. burst pipe with water still running, a sewer backup in a basement, and a water heater quote. Make one of them in Spanish if your customers speak it. Check who answered, what the summary said, and whether the on-call plumber got the call. Trials: PATLive 14 days, SAS 14 days or 200 minutes, Rosie 7 days, free trials at MAP and Housecall Pro, Smith.ai's AI Free plan, and LobbyStack Free, with 30 minutes and a US or Canadian number free for 14 days.
 
 ### 3. Read the terms for billing and fees
 
@@ -244,7 +244,7 @@ Forward your existing number from your carrier for overflow, after-hours or ever
 
 ### Is there a free answering service for plumbers?
 
-No live service in this list is free; trials come closest. Smith.ai's AI Free plan covers 25 real calls a month, then $3.00 a call. LobbyStack Free gives you 30 browser voice minutes with no telephone number, so you can test the receptionist, but it can't answer your business line.
+No live service in this list is free; trials come closest. Smith.ai's AI Free plan covers 25 real calls a month, then $3.00 a call. LobbyStack Free gives you 30 voice minutes and a US or Canadian number free for 14 days, so it can answer your business line for two weeks if you forward it.
 
 ### Can I use an answering service only after hours?
 
@@ -289,4 +289,4 @@ Sources:
 - **Jobber or Housecall Pro:** try the built-in receptionist first.
 - **Google Calendar booking, overflow and after-hours calls for $30 to $100 a month, and callers in other languages:** LobbyStack.
 
-Want to hear LobbyStack take a burst-pipe call before you pay? [Create a free account](https://app.lobbystack.com/en/signup) and test it with 30 browser voice minutes, no card needed. Paid plans have no setup fee. Then see how urgent calls, bookings and transfers work on the [AI receptionist for plumbers](/solutions/ai-receptionist-for-plumbers/) page.
+Want to hear LobbyStack take a burst-pipe call before you pay? [Create a free account](https://app.lobbystack.com/en/signup) and test it with 30 voice minutes and a free number for 14 days, no card needed. Paid plans have no setup fee. Then see how urgent calls, bookings and transfers work on the [AI receptionist for plumbers](/solutions/ai-receptionist-for-plumbers/) page.

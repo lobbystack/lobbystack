@@ -15,7 +15,7 @@ canonicalSlug: "rosie-ai-alternative"
 
 **Rosie AI answering service** costs $49 a month for 250 minutes, $149 for 1,000 and $299 for 2,000, as of October 9, 2026. The $49 Professional plan takes messages and texts booking links. Calendar booking, transfers and texts during the call start on Scale. Go over 250 minutes and Rosie moves you to Scale until you downgrade.
 
-LobbyStack wrote this page, and we sell a competing AI receptionist. Our [Starter plan](/pricing/) costs $30 a month for 150 minutes and includes booking and transfers. Free gives you 30 browser voice minutes with no card and no telephone number. No LobbyStack plan has a setup fee. Prices checked October 9, 2026, on Rosie's pricing page, FAQ and terms, linked under Sources.
+LobbyStack wrote this page, and we sell a competing AI receptionist. Our [Starter plan](/pricing/) costs $30 a month for 150 minutes and includes booking and transfers. Free gives you 30 voice minutes and a US or Canadian number free for 14 days, with no card. No LobbyStack plan has a setup fee. Prices checked October 9, 2026, on Rosie's pricing page, FAQ and terms, linked under Sources.
 
 ## What is Rosie AI answering service?
 
@@ -64,7 +64,7 @@ LobbyStack is one Rosie AI alternative. The table lines up the limits that chang
 | Top self-serve plan | $299 for 2,000 minutes (Growth) | $100 for 500 minutes (Pro) |
 | Going over your minutes | Moves you to the next plan at its standard price until you downgrade (see the terms note above) | $0.20 a minute on Starter, $0.18 on Pro, with an optional spending cap |
 | Billing increment | Each call rounded up to the next 60 seconds | Counted in seconds, with no rounding up |
-| Free option | 7-day free trial; the terms require a payment method on file | Free plan: 30 browser voice minutes, no card, no telephone number, no expiry |
+| Free option | 7-day free trial; the terms require a payment method on file | Free plan: 30 voice minutes, no card, US or Canadian number free for 14 days |
 | Calendars | Google Calendar, Calendly, Acuity, Appointlet (Scale and up) | Google Calendar only |
 | Transfers | Live and warm (Scale), waterfall (Growth) | Blind transfer to one number (Starter and Pro) |
 | Texts to callers | Booking links on every plan; texts during the call on Scale and up | Booking confirmation and 24-hour reminder when the caller agrees, to US and Canadian numbers; the AI doesn't reply to texts |
@@ -173,7 +173,7 @@ If you're weighing human receptionists too, compare the [best answering services
 
 ## How do you set up and test a Rosie alternative?
 
-1. Sign up at [app.lobbystack.com](https://app.lobbystack.com/en/signup). Free gives you 30 browser voice minutes a month without a card.
+1. Sign up at [app.lobbystack.com](https://app.lobbystack.com/en/signup). Free gives you 30 voice minutes a month and a US or Canadian number free for 14 days, without a card.
 2. Setup walks you through your business details, a website import, your knowledge, the greeting and a plan.
 3. Write your call rules in plain language and pick a booking mode: book the appointment, take a request for your team to confirm, or take a message. Connect Google Calendar and set your opening hours. Booking won't work without them.
 4. Run test calls from the dashboard in your browser.
@@ -196,7 +196,7 @@ Rosie supports the same forwarding setup for overflow and after-hours calls. Rea
 - Your calls stay under about 772 minutes a month, or fall between 1,001 and about 1,605.
 - You want billing by the second and per-minute overage with an optional spending cap, instead of a plan jump.
 - Your callers speak languages beyond English and Spanish.
-- You want a free plan with no trial clock (30 browser voice minutes a month).
+- You want a free plan that doesn't expire (30 voice minutes a month, plus a US or Canadian number for 14 days).
 - You want recordings kept 90 days on paid plans.
 - You want MIT-licensed code, self-hosting, a REST API, webhooks or the MCP server.
 
@@ -226,4 +226,4 @@ All checked October 9, 2026:
 
 LobbyStack is the cheaper way to get booking and a transfer when your calls stay under about 772 minutes a month. Rosie gives more minutes per dollar from about 773 to 1,000 minutes and from about 1,606 to 2,000. It also offers more transfer types, more calendars, website chat and mobile apps. Price your own month with the cost table above, using minutes as each vendor counts them.
 
-To hear how LobbyStack handles your callers' questions, [start on the free plan](https://app.lobbystack.com/en/signup). You get 30 voice minutes a month in the browser with your own greeting and rules, and you don't need a card. If you upgrade later, you can downgrade or cancel from billing settings with no cancellation fee.
+To hear how LobbyStack handles your callers' questions, [start on the free plan](https://app.lobbystack.com/en/signup). You get 30 voice minutes a month and a US or Canadian number for 14 days, with your own greeting and rules, and you don't need a card. If you upgrade later, you can downgrade or cancel from billing settings with no cancellation fee.

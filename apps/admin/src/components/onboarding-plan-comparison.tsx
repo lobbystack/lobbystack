@@ -63,7 +63,7 @@ const comparisonGroups: ComparisonGroup[] = [
       },
       {
         key: "phoneNumbers",
-        free: false,
+        free: { key: "common.trialDays" },
         starter: { key: "usage.phoneNumbers.starter" },
         pro: { key: "usage.phoneNumbers.pro" },
         enterprise: { key: "common.multiple" },
@@ -75,7 +75,7 @@ const comparisonGroups: ComparisonGroup[] = [
     rows: [
       {
         key: "callAnswering",
-        free: { key: "common.browserTesting" },
+        free: { key: "common.trialDays" },
         pro: true,
         enterprise: true,
       },

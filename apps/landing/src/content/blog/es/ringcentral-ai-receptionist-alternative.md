@@ -82,7 +82,7 @@ Los dos productos al 9 de octubre de 2026:
 | Minutos incluidos | 100 | 150 en Starter, 500 en Pro ($100) |
 | Excedente | $0.50 el minuto | $0.20 el minuto en Starter, $0.18 en Pro |
 | Cómo cuenta los minutos | Redondea cada llamada a los 30 segundos siguientes | Por segundo; no cuentan las llamadas de menos de 10 segundos ni las de spam que corta la recepcionista |
-| Opción gratuita | Prueba de 14 días | Plan Free con 30 minutos de voz en el navegador al mes, sin tarjeta ni número de teléfono y sin vencimiento |
+| Opción gratuita | Prueba de 14 días | Plan Free con 30 minutos de voz al mes, sin tarjeta, número de EE. UU. o Canadá gratis durante 14 días |
 | Número de teléfono | Incluye un número nuevo, o usted porta el suyo | Un número en Starter y Pro, en Estados Unidos, Canadá, el Reino Unido, Australia o Nueva Zelanda |
 | Funciona con su número actual | Sí, por desvío o SIP | Sí, con el desvío de llamadas de su operador |
 | Idiomas de quien llama | Inglés, español, francés, italiano, alemán y portugués, según sus preguntas frecuentes, con más anunciados como próximos; cambia de idioma durante la llamada | Empieza en inglés o francés y luego responde en el idioma de quien llama: más de 70 idiomas con OpenAI GPT-Live |
@@ -149,7 +149,7 @@ Si quiere una tabla más amplia con proveedores que nacieron como productos de I
 
 ### ¿Vale la pena una recepcionista con IA?
 
-Depende de cuántas llamadas pierde y de lo que vale para usted un trabajo reservado. [Calcule lo que le cuestan las llamadas perdidas](/es/missed-call-revenue-calculator/) y revise [cuándo se paga sola una recepcionista con IA](/es/blog/ai-receptionist-savings/). Para probar una con sus propias preguntas, el plan gratuito de LobbyStack le da 30 minutos de voz en el navegador al mes, y RingCentral ofrece una prueba de AIR de 14 días.
+Depende de cuántas llamadas pierde y de lo que vale para usted un trabajo reservado. [Calcule lo que le cuestan las llamadas perdidas](/es/missed-call-revenue-calculator/) y revise [cuándo se paga sola una recepcionista con IA](/es/blog/ai-receptionist-savings/). Para probar una con sus propias preguntas, el plan gratuito de LobbyStack le da 30 minutos de voz al mes y un número de EE. UU. o Canadá durante 14 días, y RingCentral ofrece una prueba de AIR de 14 días.
 
 ## Qué preguntar a RingCentral antes de comprar
 
@@ -176,7 +176,7 @@ Después haga las mismas tres llamadas de prueba en AIR y en LobbyStack: alguien
 
 LobbyStack le conviene si quiere pagar menos por minuto y probar gratis antes:
 
-- Free le da 30 minutos de voz en el navegador al mes, sin tarjeta ni número de teléfono, y no vence.
+- Free le da 30 minutos de voz al mes y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta.
 - Starter cuesta $30 por 150 minutos y después $0.20 el minuto, contados por segundo. No cuentan las llamadas de menos de 10 segundos ni las que la recepcionista corta por spam.
 - Cada llamada empieza en el idioma predeterminado del negocio, inglés o francés. Luego la recepcionista responde en el idioma de quien llama: más de 70 idiomas con OpenAI GPT-Live, incluidos el español y el serbio.
 - Reserva en Google Calendar y, si quien llama acepta, le envía por SMS una confirmación y un recordatorio 24 horas antes de la cita, a números de Estados Unidos y Canadá.

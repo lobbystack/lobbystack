@@ -21,7 +21,7 @@ Reception suena excelente y habla más de 70 idiomas. LobbyStack le da el doble 
 
 | Aspecto | ElevenLabs Reception | LobbyStack |
 | --- | --- | --- |
-| Opción gratuita | Prueba de 14 días con 30 créditos, sin tarjeta | 30 minutos de voz en el navegador, sin tarjeta ni número de teléfono |
+| Opción gratuita | Prueba de 14 días con 30 créditos, sin tarjeta | 30 minutos de voz, sin tarjeta, número de EE. UU. o Canadá gratis durante 14 días |
 | Plan de entrada | $29 por 75 créditos ($24 con facturación anual) | $30 por 150 minutos ($24 con facturación anual) |
 | Excedente del plan de entrada | $0.45 por crédito | $0.20 por minuto |
 | Números equivocados y spam | Cuentan como créditos usados | No se cobran las llamadas de menos de 10 segundos ni el spam colgado |
@@ -86,7 +86,7 @@ Elija ElevenLabs Reception si la calidad de la voz y la cantidad de idiomas son 
 
 ## Elija LobbyStack si
 
-Elija LobbyStack para tener 150 minutos por $30 y un excedente de $0.20. Puede probar 30 minutos de voz en el navegador en el plan Free sin número de teléfono. Con el código MIT, puede autoalojarlo, modificar el producto o revenderlo a sus propios clientes.
+Elija LobbyStack para tener 150 minutos por $30 y un excedente de $0.20. Puede probar 30 minutos de voz en el plan Free, con un número de EE. UU. o Canadá gratis durante 14 días. Con el código MIT, puede autoalojarlo, modificar el producto o revenderlo a sus propios clientes.
 
 ## Fuentes
 

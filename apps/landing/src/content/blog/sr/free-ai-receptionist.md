@@ -15,7 +15,7 @@ canonicalSlug: "free-ai-receptionist"
 
 Besplatan AI recepcioner, odnosno AI virtuelni asistent za pozive, obično je jedna od četiri ponude: besplatan paket sa malim mesečnim limitom, probni period koji ističe posle 7 do 30 dana, početni kredit na platformi na kojoj ga sami sklapate, ili otvoreni kod koji sami hostujete. U oktobru 2026. našli smo dva besplatna paketa koja bez naplate odgovaraju na prave pozive: Smith.ai (25 poziva mesečno) i HireJosie (15 minuta mesečno).
 
-**Proverili smo 9. i 10. oktobra 2026.** na stranici sa cenama, u čestim pitanjima ili na stranici za registraciju svakog dobavljača, u američkim dolarima. LobbyStack je napisao ovaj vodič i prodaje AI recepcionera. Naš paket Free Vam daje 30 minuta razgovora u pregledaču mesečno, bez kartice i broja telefona: sa njim možete da isprobate recepcionera, ali ne može da se javlja na poslovni broj.
+**Proverili smo 9. i 10. oktobra 2026.** na stranici sa cenama, u čestim pitanjima ili na stranici za registraciju svakog dobavljača, u američkim dolarima. LobbyStack je napisao ovaj vodič i prodaje AI recepcionera. Naš paket Free Vam daje 30 minuta razgovora mesečno i broj iz SAD ili Kanade besplatno 14 dana. Posle 14 dana broj prestaje da se javlja ako ne izaberete plaćeni paket.
 
 ## Šta znači „besplatan” AI recepcioner ili virtuelni asistent?
 
@@ -40,13 +40,13 @@ Pet dobavljača koje smo proverili Vam dozvoljava da počnete sa $0, bez probnog
 | [HireJosie](https://hirejosie.ai/pricing/) | 15 AI minuta mesečno i 1 broj, bez kartice | Da, a posle 15 minuta govorna pošta | Pro košta $49 za 500 minuta, zatim $0.25 po minutu |
 | [ServiceAgent](https://serviceagent.ai/pricing) | Paket Launch: $0 mesečno, bez uključenih kredita | Da, uz plaćanje po kreditu | Oko $0.30 do $0.60 po AI glasovnom minutu; Core košta $49 |
 | [Goodcall](https://www.goodcall.com/pricing) | Demo agent koji besplatno pravite i testirate | Ne: plaćate kad povežete broj | Starter košta $79 za 100 jedinstvenih pozivalaca |
-| [LobbyStack](/sr/pricing/) (naš) | 30 minuta razgovora u pregledaču mesečno, bez kartice | Ne: nema broj telefona | Starter košta $30 za 150 minuta, zatim $0.20 po minutu |
+| [LobbyStack](/sr/pricing/) (naš) | 30 minuta razgovora mesečno, bez kartice | Da, 14 dana na besplatnom broju iz SAD ili Kanade | Starter košta $30 za 150 minuta, zatim $0.20 po minutu |
 
 - **Smith.ai** ima najveći trajni besplatni paket koji smo našli. Uključuje zakazivanje preko alata kao što je Calendly, usmeravanje poziva, snimke, transkripte i sažetke. Ne uključuje podršku telefonom, e-poštom ni četom, niti posebnu pomoć pri uvođenju. Svaki poziv posle 25. košta $3.00.
 - **HireJosie** u besplatnom paketu daje poseban broj, zakazivanje u Google Calendar i prebacivanje poziva uz najavu. Petnaest minuta je dovoljno za oko pet poziva od po 3 minuta, a zatim pozivi idu na govornu poštu. Broj zadržavate samo ako mesečno dobije bar 3 poziva od različitih klijenata, a besplatan paket nosi HireJosie oznaku.
 - **ServiceAgent** prodaje softver za firme koje rade na terenu, sa recepcionerom ugrađenim pored CRM-a, zakazivanja, fakturisanja i recenzija. Paket Launch nema mesečnu pretplatu, ali svaki AI glasovni minut troši 15 kredita, a kredit košta od $0.02 do $0.04.
 - **Goodcall** nema besplatan probni period. Demo agenta pravite i testirate besplatno, a plaćate kad povežete broj telefona.
-- **LobbyStack** Free je probni teren u Vašem pregledaču. [Više detalja u nastavku](#šta-uključuje-lobbystack-paket-free).
+- **LobbyStack** Free 14 dana odgovara na prave pozive na broju iz SAD ili Kanade. [Više detalja u nastavku](#šta-uključuje-lobbystack-paket-free).
 
 Neke liste i odgovori četbotova navode i druge besplatne pakete. Uvrstili smo samo ponude koje smo potvrdili na sajtu samog dobavljača. Stranice RingCentrala, na primer, prikazuju probni period od 14 dana i paket od $49, bez besplatne opcije.
 
@@ -104,7 +104,7 @@ Twilio i OpenAI obrađuju zvuk dok poziv traje, i kad sami hostujete. Samostalno
 
 ## Šta uključuje LobbyStack paket Free?
 
-LobbyStack paket Free Vam daje 30 minuta razgovora u pregledaču mesečno, da isprobate recepcionera iz kontrolne table. Paket je bez kartice i broja telefona, pa ne može da se javlja na Vaš poslovni broj, da prebaci poziv niti da pošalje SMS. Paket ne ističe.
+LobbyStack paket Free Vam daje 30 minuta razgovora mesečno i broj iz SAD ili Kanade besplatno 14 dana. Kartica nije potrebna. Tokom tih 14 dana broj odgovara na prave pozive, a preusmeravanja idu samo na mobilni broj koji ste potvrdili. Posle toga broj prestaje da se javlja ako ne izaberete Starter ili Pro, a recepcionera i dalje testirate u pregledaču. Sam paket ne ističe.
 
 Iskoristite 30 minuta da:
 
@@ -116,7 +116,7 @@ Kad potrošite 30 minuta, probni pozivi staju do sledećeg meseca ili dok ne pre
 
 | LobbyStack paket | Cena mesečno | Uključeno | Posle toga |
 | --- | --- | --- | --- |
-| Free | $0 | 30 minuta razgovora u pregledaču, bez broja telefona | Probni pozivi staju do sledećeg meseca |
+| Free | $0 | 30 minuta razgovora, broj iz SAD ili Kanade besplatno 14 dana | Pozivi staju do sledećeg meseca |
 | Starter | $30, ili $24 uz godišnje plaćanje | 150 minuta, jedan poslovni broj | $0.20 po minutu |
 | Pro | $100, ili $80 uz godišnje plaćanje | 500 minuta, jedan poslovni broj | $0.18 po minutu |
 
@@ -126,7 +126,7 @@ Nijedan paket nema naknadu za aktivaciju. Starter i Pro se javljaju na broj u SA
 
 Besplatna opcija prestaje da bude dovoljna kad ne može da primi pozive koje biste inače propustili. Obično o tome odlučuje jedno od četiri ograničenja:
 
-1. **Ne javlja se na Vaš pravi broj.** Probe u pregledaču i demo agenti, kao što su LobbyStack Free i Goodcall demo, potvrđuju glas i pravila. Vašu liniju ne pokrivaju.
+1. **Ne javlja se na Vaš pravi broj ili se javlja samo kratko.** Demo agenti, kao što je Goodcall demo, potvrđuju glas i pravila, ali ne pokrivaju Vašu liniju. LobbyStack Free je pokriva 14 dana.
 2. **Limit je manji od broja propuštenih poziva.** Petnaest minuta je dovoljno za oko pet poziva od po 3 minuta. Dvadeset pet poziva je manje od jednog dnevno.
 3. **Probni period ističe.** Probni period od 7 dana možda neće obuhvatiti Vaš najprometniji dan.
 4. **Treba Vam zakazivanje, prebacivanje ili SMS.** Proverite koji paket ih uključuje. Rosie paket od $49 šalje pozivaocu link za zakazivanje putem SMS-a umesto da zakaže termin u Vašem kalendaru, i ne prebacuje pozive. Obe funkcije počinju od njihovog paketa od $149.
@@ -150,11 +150,11 @@ Paketi se razlikuju i po načinu naplate i po sadržaju. Smith.ai i Upfirst napl
 
 ### Postoji li besplatna AI usluga odgovaranja na pozive?
 
-Postoji, ali retko koja besplatno odgovara na prave pozive. U oktobru 2026. besplatan paket Smith.ai pokriva 25 pravih poziva mesečno, a HireJosie 15 minuta uz poseban broj. Većina drugih AI usluga nudi probni period od 7 do 30 dana. Neki besplatni paketi, kao što je LobbyStack Free, služe za probu u pregledaču i nemaju broj telefona.
+Postoji, ali retko koja besplatno odgovara na prave pozive. U oktobru 2026. besplatan paket Smith.ai pokriva 25 pravih poziva mesečno, a HireJosie 15 minuta uz poseban broj. Većina drugih AI usluga nudi probni period od 7 do 30 dana. Neki besplatni paketi služe za probu u pregledaču i nemaju broj telefona. LobbyStack Free dodaje broj iz SAD ili Kanade na 14 dana.
 
 ### Može li besplatan AI recepcioner da se javlja na moj poslovni broj?
 
-Neki mogu. Besplatni paketi Smith.ai i HireJosie primaju prave pozive, kao i probni periodi kod Upfirsta, ElevenLabs Receptiona i ModPhonea, dok traju. Zadržavate svoj broj i podesite kod operatera preusmeravanje poziva na broj AI recepcionera. LobbyStack Free i Goodcall demo agent ne mogu da se javljaju na telefonsku liniju.
+Neki mogu. Besplatni paketi Smith.ai i HireJosie primaju prave pozive, kao i probni periodi kod Upfirsta, ElevenLabs Receptiona i ModPhonea, dok traju. Zadržavate svoj broj i podesite kod operatera preusmeravanje poziva na broj AI recepcionera. LobbyStack Free 14 dana odgovara na prave pozive na broju iz SAD ili Kanade. Goodcall demo agent ne može da se javlja na telefonsku liniju.
 
 ### Da li besplatan AI recepcioner traži platnu karticu?
 
@@ -172,4 +172,4 @@ Uglavnom samo za probu. Firma koja propusti pet poziva nedeljno propusti oko 22 
 
 Poslušajte glas i proverite pravila na besplatnom paketu, pa pokrenite probni period na pravim preusmerenim pozivima. Zatim izaberite paket koji pokriva pozive koje danas propuštate.
 
-LobbyStack paket Free Vam daje 30 minuta razgovora u pregledaču mesečno, bez kartice, i ne ističe. Napišite pravila, učitajte sajt i pozovite recepcionera sa najtežim pitanjima. Kad zvuči kako treba, Starter se javlja na Vaš poslovni broj za $30 mesečno uz 150 minuta, bez naknade za aktivaciju. [Napravite besplatan nalog](https://app.lobbystack.com/sr/signup) ili uporedite [LobbyStack pakete](/sr/pricing/).
+LobbyStack paket Free Vam daje 30 minuta razgovora mesečno i broj iz SAD ili Kanade besplatno 14 dana, bez kartice. Napišite pravila, učitajte sajt i pozovite recepcionera sa najtežim pitanjima. Kad zvuči kako treba, uz Starter broj nastavlja da se javlja za $30 mesečno i 150 minuta, bez naknade za aktivaciju. [Napravite besplatan nalog](https://app.lobbystack.com/sr/signup) ili uporedite [LobbyStack pakete](/sr/pricing/).

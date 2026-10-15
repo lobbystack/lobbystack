@@ -21,7 +21,7 @@ Sona se centra en responder, captar clientes potenciales, tomar mensajes y gener
 
 | Aspecto | Quo Sona | LobbyStack |
 | --- | --- | --- |
-| Asignación sin complemento | Unas 10 llamadas, pero requiere Quo de pago | 30 minutos de voz en el navegador, sin tarjeta ni número de teléfono |
+| Asignación sin complemento | Unas 10 llamadas, pero requiere Quo de pago | 30 minutos de voz, sin tarjeta, número de EE. UU. o Canadá gratis durante 14 días |
 | Entrada de pago | $25 por 40 llamadas | $30 por 150 minutos |
 | Requisito de plataforma | Plan telefónico de pago de Quo | No requiere una suite de telefonía empresarial |
 | Función principal | Respuesta, captación de clientes potenciales y mensajes | Respuesta, reservas, traspaso, gestión de llamadas |
@@ -94,7 +94,7 @@ Elija Sona si ya usa Quo y necesita respuesta, captación de clientes potenciale
 
 ## Elija LobbyStack si
 
-Elija LobbyStack para reservas directas, traspaso a una persona, código fuente público o autoalojamiento. Puede probar conversaciones de voz en su navegador con el plan Free sin un plan de Quo.
+Elija LobbyStack para reservas directas, traspaso a una persona, código fuente público o autoalojamiento. Puede probar llamadas reales en el plan Free con un número de EE. UU. o Canadá durante 14 días, sin un plan de Quo.
 
 ## Fuentes
 
@@ -107,4 +107,4 @@ Elija LobbyStack para reservas directas, traspaso a una persona, código fuente 
 
 LobbyStack ofrece la recepcionista más completa y portátil. Sona sigue siendo un complemento práctico para tomar mensajes en equipos comprometidos con Quo, pero añade otro cargo y mantiene el flujo de trabajo dentro de ese sistema telefónico.
 
-[Empiece con LobbyStack gratis](/es/pricing/) y pruebe conversaciones de voz en su navegador antes de elegir un plan de pago.
+[Empiece con LobbyStack gratis](/es/pricing/) y pruébelo con un número gratis de EE. UU. o Canadá durante 14 días antes de elegir un plan de pago.

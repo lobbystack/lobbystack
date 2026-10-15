@@ -288,7 +288,7 @@ Paketi ne ograničavaju broj poziva na koje recepcioner odgovara istovremeno. Po
 - AI ne odgovara na SMS poruke.
 - Google Calendar je jedini kalendar. Za CRM ili softver za ordinacije koristite webhookove i REST API.
 - LobbyStack ne tvrdi da ispunjava HIPAA i prekida telefonski poziv posle 30 minuta.
-- Paket Free radi u pregledaču, bez broja telefona.
+- Paket Free uključuje broj iz SAD ili Kanade na 14 dana. Posle toga testirate u pregledaču.
 
 Usluga uživo je bolji izbor kada želite osobu na svakom pozivu ili Vaši pozivaoci neće da razgovaraju sa AI-jem. Agenti uživo odgovaraju i za nezadovoljne pozivaoce i osetljive teme, a neki dobavljači nude najavljena preusmerenja (Moneypenny) i rasporede dežurstava (Roster Service kod MAP-a, dežurni tehničari kod A Message Center). Cene drugih AI dobavljača i trošak zapošljavanja recepcionera poredi tekst [koliko možete da uštedite uz AI recepcionera](/sr/blog/ai-receptionist-savings/).
 
@@ -346,4 +346,4 @@ Većina usluga uživo iz naše tabele naplaćuje iz meseca u mesec, sa otkaznim 
 
 Pomnožite broj poziva mesečno sa prosečnim trajanjem poziva, pa u tabeli po obimu nađite red sa najbližim brojem minuta. Taj red pokazuje cenu svakog modela naplate pre nego što pozovete dobavljača.
 
-Ako Vam odgovara AI red, [LobbyStack paketi](/sr/pricing/) počinju od $30 mesečno za 150 minuta, zatim $0.20 po minutu. Pro košta $100 za 500 minuta, zatim $0.18. Nijedan paket nema naknadu za aktivaciju. Paket Free Vam daje 30 minuta razgovora u pregledaču mesečno da isprobate najteže pozive, bez kartice i broja telefona, pa ne može da se javlja na Vaš poslovni broj. Paket ne ističe. [Napravite besplatan nalog](https://app.lobbystack.com/sr/signup).
+Ako Vam odgovara AI red, [LobbyStack paketi](/sr/pricing/) počinju od $30 mesečno za 150 minuta, zatim $0.20 po minutu. Pro košta $100 za 500 minuta, zatim $0.18. Nijedan paket nema naknadu za aktivaciju. Paket Free Vam daje 30 minuta razgovora mesečno da isprobate najteže pozive i broj iz SAD ili Kanade besplatno 14 dana. Kartica nije potrebna. [Napravite besplatan nalog](https://app.lobbystack.com/sr/signup).

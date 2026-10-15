@@ -136,7 +136,7 @@ LobbyStack Starter paket košta $30 mesečno za 150 minuta, zatim $0.20 po minut
 
 Svaki poziv počinje na podrazumevanom jeziku firme, engleskom ili francuskom. Recepcioner zatim odgovara na jeziku pozivaoca: više od 70 jezika uz OpenAI GPT-Live, uključujući španski i srpski. Listu hitnih slučajeva pišete običnim jezikom, a on poklapajuće pozive preusmerava na jedan broj. Ako preusmeravanje ne uspe, kaže to pozivaocu, ponudi da primi poruku, a Vaš tim može da dobije upozorenje „Live call transfer failed“. Razgledanja zakazuje u Google Calendar i, uz pristanak pozivaoca, šalje SMS potvrdu i podsetnik 24 sata ranije na brojeve u SAD i Kanadi. Za svaki poziv ostaju rezime, transkript i snimak u kontrolnoj tabli, a svaka poruka šalje upozorenje mejlom.
 
-LobbyStack se ne povezuje sa AppFolio, Buildium, Yardi ni Rent Manager sistemom, pa u njima ne otvara radne naloge. Potpisani webhookovi za 6 događaja i REST API mogu da pošalju podatke o pozivu u druge alate ako to neko iz Vašeg tima podesi. Preusmeravanje ide na jedan broj, bez najave osobi koja prima poziv, pa nema rotacije dežurstava, a vlasnik ne može uživo da dobije drugu osobu od one koja prima hitne slučajeve. Iza AI-ja ne stoje ljudi, a AI ne odgovara na SMS poruke. Besplatni paket daje 30 minuta razgovora u pregledaču, bez kartice i broja telefona, za testiranje. Pogledajte kako razvrstava pozive stanara na [stranici za upravljanje nekretninama](/sr/solutions/property-management-answering-service/).
+LobbyStack se ne povezuje sa AppFolio, Buildium, Yardi ni Rent Manager sistemom, pa u njima ne otvara radne naloge. Potpisani webhookovi za 6 događaja i REST API mogu da pošalju podatke o pozivu u druge alate ako to neko iz Vašeg tima podesi. Preusmeravanje ide na jedan broj, bez najave osobi koja prima poziv, pa nema rotacije dežurstava, a vlasnik ne može uživo da dobije drugu osobu od one koja prima hitne slučajeve. Iza AI-ja ne stoje ljudi, a AI ne odgovara na SMS poruke. Besplatni paket daje 30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana, bez kartice. Pogledajte kako razvrstava pozive stanara na [stranici za upravljanje nekretninama](/sr/solutions/property-management-answering-service/).
 
 ## Koliko košta usluga odgovaranja na pozive za upravljanje nekretninama?
 
@@ -234,7 +234,7 @@ Krenite od tabele iznad. Dodajte pravilo za zaključana vrata, unutrašnju tempe
 
 ### 3. Obavite tri probna poziva pre potpisivanja
 
-Pozovite svakog finalistu tri puta: curenje vode u 2 ujutru koje se širi na stan ispod, vlasnik koji pita za prošlomesečni izveštaj i potencijalni zakupac koji na španskom pita da li su ljubimci dozvoljeni. Proverite ko se javio, šta piše u rezimeu i da li je dežurni tehničar dobio poziv zbog curenja. Probni periodi: PATLive 14 dana, SAS 14 dana ili 200 minuta, besplatna proba kod MAP-a, Rosie 7 dana, Smith.ai Free paket za AI i LobbyStack Free, koji radi u pregledaču 30 minuta.
+Pozovite svakog finalistu tri puta: curenje vode u 2 ujutru koje se širi na stan ispod, vlasnik koji pita za prošlomesečni izveštaj i potencijalni zakupac koji na španskom pita da li su ljubimci dozvoljeni. Proverite ko se javio, šta piše u rezimeu i da li je dežurni tehničar dobio poziv zbog curenja. Probni periodi: PATLive 14 dana, SAS 14 dana ili 200 minuta, besplatna proba kod MAP-a, Rosie 7 dana, Smith.ai Free paket za AI i LobbyStack Free sa 30 minuta i brojem iz SAD ili Kanade besplatno 14 dana.
 
 ### 4. Pročitajte uslove naplate
 
@@ -248,7 +248,7 @@ Prosledite broj kancelarije kod svog operatera van radnog vremena, kada se niko 
 
 ### Postoji li besplatna usluga odgovaranja na pozive za upravljanje nekretninama?
 
-Nijedna usluga uživo sa ove liste nije besplatna, ali PATLive, SAS i MAP nude probni period. Smith.ai Free paket za AI pokriva 25 stvarnih poziva mesečno. LobbyStack Free daje 30 minuta razgovora u pregledaču, bez broja telefona, pa služi za testiranje recepcionera, ali ne može da odgovara stanarima.
+Nijedna usluga uživo sa ove liste nije besplatna, ali PATLive, SAS i MAP nude probni period. Smith.ai Free paket za AI pokriva 25 stvarnih poziva mesečno. LobbyStack Free daje 30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana, pa dve nedelje može da odgovara stanarima ako prosledite liniju.
 
 ### Mogu li da koristim uslugu samo van radnog vremena?
 
@@ -292,4 +292,4 @@ Izvori:
 - **AI sa recepcionerima uživo kao rezervom:** Smith.ai.
 - **Razgledanja u Google Calendar, trijaža hitnih slučajeva van radnog vremena na jedan dežurni broj za $30 do $100 mesečno, i stanari koji govore mnogo jezika:** LobbyStack.
 
-Želite da čujete kako LobbyStack razlikuje curenje vode u 2 ujutru od slavine koja kaplje pre nego što platite? [Napravite besplatan nalog](https://app.lobbystack.com/sr/signup), napišite listu hitnih slučajeva i testirajte ga sa 30 minuta razgovora u pregledaču, bez kartice. Kada budete spremni za pozive stanara, plaćeni paketi dodaju broj telefona od $30 mesečno, bez naknade za aktivaciju. Pogledajte kako rade trijaža i razgledanja na [stranici za upravljanje nekretninama](/sr/solutions/property-management-answering-service/).
+Želite da čujete kako LobbyStack razlikuje curenje vode u 2 ujutru od slavine koja kaplje pre nego što platite? [Napravite besplatan nalog](https://app.lobbystack.com/sr/signup), napišite listu hitnih slučajeva i testirajte ga sa 30 minuta razgovora i besplatnim brojem na 14 dana, bez kartice. Ako želite da zadržite broj, plaćeni paketi počinju od $30 mesečno, bez naknade za aktivaciju. Pogledajte kako rade trijaža i razgledanja na [stranici za upravljanje nekretninama](/sr/solutions/property-management-answering-service/).

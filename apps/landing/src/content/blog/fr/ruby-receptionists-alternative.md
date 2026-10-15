@@ -15,7 +15,7 @@ canonicalSlug: "ruby-receptionists-alternative"
 
 Les **tarifs de Ruby Receptionists** commencent à 250 $ par mois pour 50 minutes, puis 395 $ pour 100, 720 $ pour 200 et 1 725 $ pour 500, au 10 octobre 2026. Le centre d'aide de Ruby facture les minutes supplémentaires de 5,40 $ à 4,00 $ sur ces forfaits. Ruby arrondit chaque appel à la minute supérieure et compte le temps d'attente.
 
-LobbyStack a écrit cette page, et nous vendons un réceptionniste IA concurrent de Ruby. Les deux répondent à votre téléphone de façon différente : chez Ruby, une réceptionniste virtuelle formée prend l'appel, et chez LobbyStack, c'est une IA. Notre [forfait Starter](/fr/pricing/) coûte 30 $ par mois pour 150 minutes, avec la réservation et les transferts. Le forfait gratuit vous donne 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone. Aucun forfait LobbyStack n'a de frais de mise en service. Nous avons lu la page de prix, la FAQ, les conditions et le centre d'aide de Ruby le 10 octobre 2026. Les liens figurent dans la section Sources.
+LobbyStack a écrit cette page, et nous vendons un réceptionniste IA concurrent de Ruby. Les deux répondent à votre téléphone de façon différente : chez Ruby, une réceptionniste virtuelle formée prend l'appel, et chez LobbyStack, c'est une IA. Notre [forfait Starter](/fr/pricing/) coûte 30 $ par mois pour 150 minutes, avec la réservation et les transferts. Le forfait gratuit vous donne 30 minutes vocales et un numéro américain ou canadien gratuit pendant 14 jours, sans carte. Aucun forfait LobbyStack n'a de frais de mise en service. Nous avons lu la page de prix, la FAQ, les conditions et le centre d'aide de Ruby le 10 octobre 2026. Les liens figurent dans la section Sources.
 
 ## Qu'est-ce que Ruby, la réceptionniste virtuelle ?
 
@@ -92,7 +92,7 @@ Pour les tarifs d'autres services en direct, voyez [combien coûte un service de
 | Forfaits plus grands | 720 $ pour 200 minutes, 1 725 $ pour 500 | 100 $ pour 500 minutes (Pro) |
 | Minutes supplémentaires | 5,40 $ à 3,30 $ la minute, selon le centre d'aide de Ruby | 0,20 $ sur Starter, 0,18 $ sur Pro, avec un plafond de dépenses en option |
 | Unité de facturation | Chaque appel arrondi aux 60 secondes supérieures ; attente et travail après l'appel compris | Décompte à la seconde ; les appels de moins de 10 secondes et ceux que le réceptionniste coupe comme indésirables ne comptent pas |
-| Essayer d'abord | Satisfait ou remboursé pour les nouveaux utilisateurs : 21 jours ou 500 minutes | Forfait gratuit : 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone, sans date d'expiration |
+| Essayer d'abord | Satisfait ou remboursé pour les nouveaux utilisateurs : 21 jours ou 500 minutes | Forfait gratuit : 30 minutes vocales, sans carte, numéro américain ou canadien gratuit pendant 14 jours |
 | Changer de forfait | Forfait supérieur gardé au moins trois périodes ; forfait inférieur après trois | Passer au forfait supérieur ou inférieur, ou résilier, depuis les paramètres de facturation, sans frais de résiliation |
 | Langues des appelants | Anglais et espagnol | Ouvre l'appel en anglais ou en français, puis répond dans la langue de l'appelant (plus de 70, dont l'espagnol) |
 | Réservation | Les réceptionnistes prennent les rendez-vous | Réserve dans Google Agenda uniquement |
@@ -164,7 +164,7 @@ LobbyStack coûte moins cher à chaque volume que nous avons chiffré, et ses mi
 
 ## Comment tester LobbyStack comme alternative à Ruby Receptionists ?
 
-1. Inscrivez-vous sur [app.lobbystack.com](https://app.lobbystack.com/fr/signup). Le forfait gratuit vous donne 30 minutes vocales dans le navigateur par mois, sans carte.
+1. Inscrivez-vous sur [app.lobbystack.com](https://app.lobbystack.com/fr/signup). Le forfait gratuit vous donne 30 minutes vocales par mois et un numéro américain ou canadien gratuit pendant 14 jours, sans carte.
 2. La configuration vous guide : les informations sur votre entreprise, l'import de votre site, vos connaissances, l'accueil et un forfait.
 3. Écrivez vos règles d'appel en langage courant et choisissez un mode de réservation : réserver le rendez-vous, prendre une demande que votre équipe confirmera, ou prendre un message. Connectez Google Agenda et définissez vos horaires d'ouverture, car la réservation en a besoin.
 4. Depuis votre navigateur, testez les cinq appels que Ruby traite le plus souvent pour vous : une question de prix, une réservation, une demande urgente, un appelant qui veut parler à quelqu'un et un faux numéro. Relisez chaque transcription avec la personne qui gère le suivi.
@@ -175,7 +175,7 @@ LobbyStack coûte moins cher à chaque volume que nous avons chiffré, et ses mi
 
 ### Ruby propose-t-il un essai gratuit ?
 
-Les pages de Ruby que nous avons lues ne mentionnent aucun essai gratuit. Les nouveaux utilisateurs ont une garantie satisfait ou remboursé : résiliez dans les 21 jours suivant l'achat, ou avant 500 minutes de réceptionniste, selon ce qui arrive en premier, et Ruby rembourse le service résilié. LobbyStack n'a pas de compte à rebours : son forfait gratuit donne 30 minutes vocales dans le navigateur par mois, sans carte.
+Les pages de Ruby que nous avons lues ne mentionnent aucun essai gratuit. Les nouveaux utilisateurs ont une garantie satisfait ou remboursé : résiliez dans les 21 jours suivant l'achat, ou avant 500 minutes de réceptionniste, selon ce qui arrive en premier, et Ruby rembourse le service résilié. Le forfait gratuit de LobbyStack n'expire pas. Il donne 30 minutes vocales par mois sans carte, et un numéro américain ou canadien gratuit pendant 14 jours.
 
 ### Ruby facture-t-il les appels indésirables ?
 
@@ -187,7 +187,7 @@ Oui, quand vous recevez peu d'appels. Le [Bureau of Labor Statistics](https://ww
 
 ### Quel est le service de réponse par IA le moins cher ?
 
-Le premier forfait payant le moins cher que nous avons trouvé en octobre 2026 est celui d'[AI-Receptionist.com](https://ai-receptionist.com/pricing), à 14 $ par mois pour 75 minutes. Le [réceptionniste IA de Smith.ai](https://smith.ai/pricing/ai-receptionist) a un forfait à 0 $ pour 25 appels par mois, puis 3 $ l'appel. LobbyStack Starter coûte 30 $ pour 150 minutes, et notre forfait gratuit n'a pas de numéro. Notre [guide du réceptionniste IA gratuit](/fr/blog/free-ai-receptionist/) compare les options gratuites.
+Le premier forfait payant le moins cher que nous avons trouvé en octobre 2026 est celui d'[AI-Receptionist.com](https://ai-receptionist.com/pricing), à 14 $ par mois pour 75 minutes. Le [réceptionniste IA de Smith.ai](https://smith.ai/pricing/ai-receptionist) a un forfait à 0 $ pour 25 appels par mois, puis 3 $ l'appel. LobbyStack Starter coûte 30 $ pour 150 minutes, et notre forfait gratuit inclut un numéro américain ou canadien pendant 14 jours. Notre [guide du réceptionniste IA gratuit](/fr/blog/free-ai-receptionist/) compare les options gratuites.
 
 ### Ruby utilise-t-il l'IA pour répondre aux appels ?
 
@@ -213,7 +213,7 @@ Si votre opérateur détient le numéro et renvoie les appels vers Ruby, modifie
 - Vous préférez payer 30 $ pour 150 minutes plutôt que 250 $ pour 50.
 - Vous voulez une facturation à la seconde, sans frais pour les appels de moins de 10 secondes.
 - Vos appelants parlent d'autres langues que l'anglais et l'espagnol.
-- Vous voulez tester avant de payer, avec 30 minutes vocales dans le navigateur par mois et sans carte.
+- Vous voulez tester avant de payer, avec 30 minutes vocales par mois, un numéro gratuit pendant 14 jours et sans carte.
 - Vous voulez du code sous licence MIT, l'auto-hébergement, l'API REST ou les webhooks.
 
 ## Sources
@@ -235,4 +235,4 @@ Vérifiées le 10 octobre 2026, sauf mention contraire :
 
 Ruby est le meilleur choix quand une personne formée doit traiter l'appel : un accueil qui demande du jugement, un paiement, un personnel hispanophone ou un appelant contrarié. Vous payez de 3,15 $ à 5,00 $ par minute incluse pour cette personne, selon la taille du forfait. LobbyStack est le meilleur choix quand la plupart de vos appels sont des questions courantes et des rendez-vous. Il répond pendant 150 minutes pour 30 $, réserve dans Google Agenda et transfère les urgences à votre équipe.
 
-Pour entendre comment LobbyStack répond aux questions de vos appelants, [commencez avec le forfait gratuit](https://app.lobbystack.com/fr/signup). Vous obtenez 30 minutes vocales par mois dans le navigateur, avec votre propre accueil et vos règles, et vous n'avez pas besoin de carte.
+Pour entendre comment LobbyStack répond aux questions de vos appelants, [commencez avec le forfait gratuit](https://app.lobbystack.com/fr/signup). Vous obtenez 30 minutes vocales par mois, avec votre propre accueil et vos règles, et vous n'avez pas besoin de carte.

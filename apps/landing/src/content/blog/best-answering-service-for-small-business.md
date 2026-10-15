@@ -166,7 +166,7 @@ An AI receptionist answers with software, then books, transfers or takes a messa
 - **How it bills:** by the second, with no round-up, so a 90-second call uses 1.5 minutes. Calls under 10 seconds and calls the receptionist ends as spam don't count.
 - **Included:** booking from your hours, services and staff into Google Calendar, confirmation and 24-hour reminder texts to US and Canadian numbers when the caller agrees, and 20 transfer attempts a month to one number.
 - **Languages:** each call opens in the business's default language, English or French. The receptionist then answers in the caller's language: 70+ languages on OpenAI GPT-Live, including Spanish and Serbian.
-- **Numbers and setup:** numbers in the US, Canada, the UK, Australia and New Zealand, or forward your current number. Plans don't limit how many calls it answers at once. There's no setup fee on any plan, and you can cancel anytime with no cancellation fees. The Free plan gives you 30 browser voice minutes a month, with no card and no telephone number.
+- **Numbers and setup:** numbers in the US, Canada, the UK, Australia and New Zealand, or forward your current number. Plans don't limit how many calls it answers at once. There's no setup fee on any plan, and you can cancel anytime with no cancellation fees. The Free plan gives you 30 voice minutes a month and a US or Canadian number free for 14 days, with no card.
 - **Where it falls short:** no person on the line, Google Calendar only, and no practice-management or field-service software sync. Transfers are blind and go to one number. The AI doesn't reply to texts, and LobbyStack makes no HIPAA claim.
 - **Pick it if** you want every call answered and booked for $30 a month, your own team takes the urgent transfers, and your callers speak many languages.
 
@@ -264,7 +264,7 @@ Some don't. Smith.ai's receptionists don't bill spam when your lines pass Caller
 
 ### Is there a free answering service for small businesses?
 
-No live service in this list is free. Smith.ai's AI Free plan answers 25 real calls a month at $0, then charges $3 a call. LobbyStack Free gives you 30 browser voice minutes a month to test, with no card and no telephone number, and Goodcall offers a free demo agent. Our guide to [AI receptionist cost, including free plans and trials](/blog/ai-receptionist-savings/) lists the rest.
+No live service in this list is free. Smith.ai's AI Free plan answers 25 real calls a month at $0, then charges $3 a call. LobbyStack Free gives you 30 voice minutes a month and a US or Canadian number free for 14 days, with no card, and Goodcall offers a free demo agent. Our guide to [AI receptionist cost, including free plans and trials](/blog/ai-receptionist-savings/) lists the rest.
 
 ## Verdict
 
@@ -276,4 +276,4 @@ Pick by who must answer your phone.
 
 If you need a person on every call or sync with practice-management or field-service software, LobbyStack isn't the right fit. Pick a live service or one built for your industry.
 
-**[Try LobbyStack free](https://app.lobbystack.com/en/signup).** Add your business details and greeting, then test the receptionist from your dashboard with 30 browser voice minutes a month, no card and no telephone number. The Free plan doesn't expire. When you want a phone number, Starter costs $30 a month with no setup fee, and you can cancel anytime. Compare plans on [LobbyStack pricing](/pricing/).
+**[Try LobbyStack free](https://app.lobbystack.com/en/signup).** Add your business details and greeting, then test the receptionist with 30 voice minutes a month and a US or Canadian number free for 14 days, no card needed. To keep the number, Starter costs $30 a month with no setup fee, and you can cancel anytime. Compare plans on [LobbyStack pricing](/pricing/).

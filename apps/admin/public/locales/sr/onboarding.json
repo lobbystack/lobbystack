@@ -223,7 +223,7 @@
     "popular": "Popularno",
     "enterpriseSubject": "Enterprise paket",
     "compareTitle": "Detaljno poređenje paketa",
-    "compareDescription": "Na Free paketu isprobajte 30 minuta razgovora u pregledaču, bez broja telefona. Starter i Pro uključuju namenski broj i mesečnu količinu potrošnje.",
+    "compareDescription": "Paket Free Vam daje 30 minuta razgovora i broj iz SAD ili Kanade na 14 dana. Starter i Pro uključuju namenski broj i mesečnu količinu potrošnje.",
     "featureHeader": "Funkcija",
     "billingInterval": {
       "label": "Period naplate",
@@ -236,11 +236,11 @@
         "name": "Free",
         "price": "0 $",
         "period": "",
-        "description": "Isprobajte LobbyStack uz dovoljno potrošnje da vidite kako radi.",
+        "description": "Pun pristup 14 dana",
         "cta": "Počnite besplatno",
         "highlights": {
-          "voiceMinutes": "30 minuta razgovora u pregledaču",
-          "bookingContacts": "Bez broja telefona",
+          "voiceMinutes": "30 minuta razgovora uključeno",
+          "bookingContacts": "1 broj telefona",
           "support": "Podrška zajednice"
         }
       },
@@ -350,11 +350,11 @@
           "notIncluded": "Nije uključeno",
           "multiple": "Više",
           "unlimited": "Neograničeno",
-          "browserTesting": "Testiranje u pregledaču"
+          "trialDays": "Tokom 14 dana"
         },
         "usage": {
           "voiceMinutes": {
-            "freeIncluded": "{{minutes}} minuta u pregledaču",
+            "freeIncluded": "{{minutes}} uključeno",
             "starterIncluded": "150 uključeno",
             "starterThen": "zatim 0,20 $/min",
             "proIncluded": "500 uključeno",

@@ -3,7 +3,7 @@ import type { LegalDocument } from "./types"
 const support = `<a href="mailto:support@lobbystack.com">support@lobbystack.com</a>`
 
 export const termsEs: LegalDocument = {
-  updated: "Última actualización: 26 de septiembre de 2026",
+  updated: "Última actualización: 14 de octubre de 2026",
   h1: "Términos del servicio",
   intro: `Estos Términos del servicio (los “Términos”) rigen el uso que usted hace del servicio alojado, los sitios web y el soporte de LobbyStack. Le rogamos que los lea antes de utilizar LobbyStack. Limitan nuestra responsabilidad, le atribuyen a usted la responsabilidad por el consentimiento para la grabación de llamadas y por el cumplimiento normativo de los mensajes de texto, y establecen cómo resolvemos las controversias.`,
   sections: [
@@ -93,7 +93,7 @@ export const termsEs: LegalDocument = {
       nav: "Números de teléfono",
       title: "8. Números de teléfono y telefonía",
       blocks: [
-        `8.1 Proporcionamos números de teléfono y servicios de llamadas a través de operadores externos, actualmente Twilio. Los planes Starter y Pro incluyen un número de teléfono del negocio. El plan Free incluye únicamente llamadas desde el navegador y no incluye número de teléfono.`,
+        `8.1 Proporcionamos números de teléfono y servicios de llamadas a través de operadores externos, actualmente Twilio. Los planes Starter y Pro incluyen un número de teléfono del negocio. El plan Free incluye llamadas desde el navegador y, cuando ofrecemos una prueba gratuita en su país, un número de teléfono durante 14 días. Cuando termina la prueba, el número deja de contestar y podemos liberarlo si usted no elige un plan de pago.`,
         `8.2 Usted no es propietario de un número de teléfono que nosotros proporcionamos. Usted obtiene el derecho a utilizarlo mientras su suscripción de pago esté activa y al corriente. Los operadores, los reguladores o nuestros proveedores pueden exigirnos que cambiemos, recuperemos o restrinjamos un número, y no somos responsables de ello.`,
         `8.3 No garantizamos que un número, un código de área o un país determinados estén disponibles, ni que un número pueda portarse al Servicio o desde él. Cuando admitamos la portabilidad saliente, usted debe solicitarla antes del cierre de su cuenta y pagar las tarifas del operador.`,
         `8.4 Cuando su suscripción finalice, se cambie al plan Free o se suspenda por falta de pago, podemos liberar su número. Un número liberado puede asignarse a otra persona. No somos responsables de las llamadas ni de los mensajes de texto que lleguen a un número después de su liberación.`,
@@ -165,7 +165,7 @@ export const termsEs: LegalDocument = {
         `12.8 <strong>Reembolsos.</strong> Las tarifas no son reembolsables, incluso en el caso de periodos parciales, uso no consumido, cambios a un plan inferior y cancelaciones, salvo que la ley disponga otra cosa o que lo aceptemos por escrito.`,
         `12.9 <strong>Cambios de precio.</strong> Podemos modificar los precios y el uso incluido. En el caso de un plan de pago activo, le daremos un aviso previo de al menos 30 días, y el cambio se aplicará a partir de su próxima renovación. Si no está de acuerdo, cancele antes de la renovación.`,
         `12.10 <strong>Controversias sobre la facturación.</strong> Usted debe informarnos de cualquier controversia sobre la facturación dentro de los 60 días siguientes al cargo. Le rogamos que se comunique con nosotros antes de iniciar un contracargo.`,
-        `12.11 <strong>Plan Free.</strong> El plan Free incluye minutos limitados de llamadas desde el navegador y no incluye número de teléfono. Podemos modificar sus límites, o ponerle fin, en cualquier momento. Podemos cerrar las cuentas gratuitas que permanezcan inactivas durante un periodo prolongado. No ofrecemos ningún compromiso de soporte para el plan Free.`,
+        `12.11 <strong>Plan Free.</strong> El plan Free incluye minutos limitados de llamadas. Cuando ofrecemos una prueba gratuita en su país, también incluye un número de teléfono durante 14 días, con una sola prueba por persona, por número de teléfono y por red. Cuando termina la prueba, el número deja de contestar y podemos liberarlo si usted no elige un plan de pago. Podemos modificar sus límites, o ponerle fin, en cualquier momento. Podemos cerrar las cuentas gratuitas que permanezcan inactivas durante un periodo prolongado. No ofrecemos ningún compromiso de soporte para el plan Free.`,
       ],
     },
     {

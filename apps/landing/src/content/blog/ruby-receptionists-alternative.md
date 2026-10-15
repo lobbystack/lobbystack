@@ -15,7 +15,7 @@ canonicalSlug: "ruby-receptionists-alternative"
 
 **Ruby receptionist pricing** starts at $250 a month for 50 minutes, then $395 for 100, $720 for 200 and $1,725 for 500, as of October 10, 2026. Ruby's help center lists extra minutes at $5.40 to $4.00 on those plans. Ruby rounds each call up to the next minute and counts hold time.
 
-LobbyStack wrote this page, and we sell an AI receptionist that competes with Ruby Receptionists. The two answer your phone in different ways: Ruby puts a trained person on the line, and LobbyStack puts an AI on it. Our [Starter plan](/pricing/) costs $30 a month for 150 minutes, with booking and transfers. Free gives you 30 browser voice minutes with no card and no telephone number. No LobbyStack plan has a setup fee. We read Ruby's pricing page, FAQ, terms and help center on October 10, 2026, and link them under Sources.
+LobbyStack wrote this page, and we sell an AI receptionist that competes with Ruby Receptionists. The two answer your phone in different ways: Ruby puts a trained person on the line, and LobbyStack puts an AI on it. Our [Starter plan](/pricing/) costs $30 a month for 150 minutes, with booking and transfers. Free gives you 30 voice minutes and a US or Canadian number free for 14 days, with no card. No LobbyStack plan has a setup fee. We read Ruby's pricing page, FAQ, terms and help center on October 10, 2026, and link them under Sources.
 
 ## What is a Ruby receptionist?
 
@@ -92,7 +92,7 @@ For other live services' rates, see [what an answering service costs](/blog/how-
 | Larger plans | $720 for 200 minutes, $1,725 for 500 | $100 for 500 minutes (Pro) |
 | Extra minutes | $5.40 to $3.30 a minute, per Ruby's help center | $0.20 on Starter, $0.18 on Pro, with an optional spending cap |
 | Billing increment | Each call rounded up to the next 60 seconds; hold time and after-call work count | Counted in seconds; calls under 10 seconds and calls the receptionist ends as spam don't count |
-| Try it first | Money-back guarantee for first-time users: 21 days or 500 minutes | Free plan: 30 browser voice minutes, no card, no telephone number, no expiry |
+| Try it first | Money-back guarantee for first-time users: 21 days or 500 minutes | Free plan: 30 voice minutes, no card, US or Canadian number free for 14 days |
 | Plan changes | Upgrades hold for at least three billing periods; downgrades after three | Upgrade, downgrade or cancel from billing settings, with no cancellation fee |
 | Caller languages | English and Spanish | Opens in English or French, then answers in the caller's language (70+, including Spanish) |
 | Booking | Receptionists schedule appointments | Books into Google Calendar only |
@@ -164,7 +164,7 @@ LobbyStack costs less at every volume we priced, and its extra minutes cost $0.1
 
 ## How do you test LobbyStack as a Ruby Receptionists alternative?
 
-1. Sign up at [app.lobbystack.com](https://app.lobbystack.com/en/signup). Free gives you 30 browser voice minutes a month without a card.
+1. Sign up at [app.lobbystack.com](https://app.lobbystack.com/en/signup). Free gives you 30 voice minutes a month and a US or Canadian number free for 14 days, without a card.
 2. Setup walks you through your business details, a website import, your knowledge, the greeting and a plan.
 3. Write your call rules in plain language and pick a booking mode: book the appointment, take a request for your team to confirm, or take a message. Connect Google Calendar and set your opening hours, because booking needs them.
 4. From your browser, run the five calls Ruby handles most for you: a price question, a booking, an urgent request, a caller who asks for a person and a wrong number. Read each transcript with whoever handles the follow-up.
@@ -175,7 +175,7 @@ LobbyStack costs less at every volume we priced, and its extra minutes cost $0.1
 
 ### Does Ruby offer a free trial?
 
-The Ruby pages we read list no free trial. First-time users get a money-back guarantee instead: cancel within 21 days of buying, or before you pass 500 receptionist minutes, whichever comes first, and Ruby refunds the cancelled service. LobbyStack has no trial clock. Its Free plan gives you 30 browser voice minutes a month without a card.
+The Ruby pages we read list no free trial. First-time users get a money-back guarantee instead: cancel within 21 days of buying, or before you pass 500 receptionist minutes, whichever comes first, and Ruby refunds the cancelled service. LobbyStack's Free plan doesn't expire. It gives you 30 voice minutes a month without a card, and a US or Canadian number free for 14 days.
 
 ### Does Ruby charge for spam calls?
 
@@ -187,7 +187,7 @@ At low call volumes, yes. The [Bureau of Labor Statistics](https://www.bls.gov/o
 
 ### What is the cheapest AI answering service?
 
-The lowest paid entry we found in October 2026 was [AI-Receptionist.com](https://ai-receptionist.com/pricing) at $14 a month for 75 minutes. [Smith.ai's AI Receptionist](https://smith.ai/pricing/ai-receptionist) has a $0 plan for 25 calls a month, then $3 a call. LobbyStack Starter costs $30 for 150 minutes, and our Free plan has no phone number. Our [free AI receptionist guide](/blog/free-ai-receptionist/) compares the free options.
+The lowest paid entry we found in October 2026 was [AI-Receptionist.com](https://ai-receptionist.com/pricing) at $14 a month for 75 minutes. [Smith.ai's AI Receptionist](https://smith.ai/pricing/ai-receptionist) has a $0 plan for 25 calls a month, then $3 a call. LobbyStack Starter costs $30 for 150 minutes, and our Free plan includes a US or Canadian number for 14 days. Our [free AI receptionist guide](/blog/free-ai-receptionist/) compares the free options.
 
 ### Does Ruby use AI to answer calls?
 
@@ -213,7 +213,7 @@ If your carrier holds the number and forwards calls to Ruby, change the forwardi
 - You'd rather pay $30 for 150 minutes than $250 for 50.
 - You want billing by the second, with no charge for calls under 10 seconds.
 - Your callers speak languages beyond English and Spanish.
-- You want to test before you pay, with 30 browser voice minutes a month and no card.
+- You want to test before you pay, with 30 voice minutes a month, a free number for 14 days and no card.
 - You want MIT-licensed code, self-hosting, the REST API or webhooks.
 
 ## Sources
@@ -235,4 +235,4 @@ Checked October 10, 2026, unless noted:
 
 Ruby is the stronger choice when a trained person has to handle the call: intake that needs judgment, payments, Spanish-speaking staff or upset callers. You pay $3.15 to $5.00 per included minute for that person, depending on plan size. LobbyStack is the stronger choice when most of your calls are routine questions and bookings. It answers 150 minutes for $30, books into Google Calendar and transfers urgent calls to your team.
 
-To hear how LobbyStack handles your callers' questions, [start on the free plan](https://app.lobbystack.com/en/signup). You get 30 voice minutes a month in the browser with your own greeting and rules, and you don't need a card.
+To hear how LobbyStack handles your callers' questions, [start on the free plan](https://app.lobbystack.com/en/signup). You get 30 voice minutes a month and a US or Canadian number for 14 days, with your own greeting and rules, and you don't need a card.

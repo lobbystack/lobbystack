@@ -136,7 +136,7 @@ LobbyStack's Starter plan costs $30 a month for 150 minutes, then $0.20 a minute
 
 Each call opens in the business's default language, English or French. The receptionist then answers in the caller's language: 70+ languages on OpenAI GPT-Live, including Spanish and Serbian. You write your emergency list in plain language, and it transfers matching calls to one number. If the transfer can't go through, it tells the caller, offers to take a message, and your team can get a "Live call transfer failed" alert. It books showings into Google Calendar and, when the caller agrees, texts a confirmation and a 24-hour reminder to US and Canadian numbers. Every call gets a summary, transcript and recording in the dashboard, and messages trigger an email alert.
 
-LobbyStack doesn't sync with AppFolio, Buildium, Yardi or Rent Manager, so it creates no work orders there. Signed webhooks for 6 events and a REST API can push call details into other tools if someone on your team builds it. Transfers go to one number with no briefing, so there's no on-call rotation, and owner calls can't go live to a different person than emergencies. No human agents back it up, and the AI doesn't reply to texts. Free gives you 30 browser voice minutes with no card and no telephone number, for testing. See how it sorts tenant calls on the [property management answering page](/solutions/property-management-answering-service/).
+LobbyStack doesn't sync with AppFolio, Buildium, Yardi or Rent Manager, so it creates no work orders there. Signed webhooks for 6 events and a REST API can push call details into other tools if someone on your team builds it. Transfers go to one number with no briefing, so there's no on-call rotation, and owner calls can't go live to a different person than emergencies. No human agents back it up, and the AI doesn't reply to texts. Free gives you 30 voice minutes and a US or Canadian number free for 14 days, with no card. See how it sorts tenant calls on the [property management answering page](/solutions/property-management-answering-service/).
 
 ## How much do property management answering services cost?
 
@@ -234,7 +234,7 @@ Use the table above as a start. Add your lockout policy, the indoor temperature 
 
 ### 3. Place three test calls before you sign
 
-Call each finalist three times: a 2 a.m. leak spreading to the unit below, an owner asking about last month's statement, and a prospect asking about pets in Spanish. Check who answered, what the summary said, and whether the on-call tech got the leak. Trials: PATLive 14 days, SAS 14 days or 200 minutes, MAP free trial, Rosie 7 days, Smith.ai's AI Free plan, and LobbyStack Free, which runs in the browser for 30 minutes.
+Call each finalist three times: a 2 a.m. leak spreading to the unit below, an owner asking about last month's statement, and a prospect asking about pets in Spanish. Check who answered, what the summary said, and whether the on-call tech got the leak. Trials: PATLive 14 days, SAS 14 days or 200 minutes, MAP free trial, Rosie 7 days, Smith.ai's AI Free plan, and LobbyStack Free, with 30 minutes and a US or Canadian number free for 14 days.
 
 ### 4. Read the billing terms
 
@@ -248,7 +248,7 @@ Forward your existing office number from your carrier after hours, on no answer,
 
 ### Is there a free property management answering service?
 
-No live service here is free, though trials come close: PATLive 14 days, SAS 14 days or 200 minutes, and MAP a free trial with no card. Smith.ai's AI Free plan covers 25 real calls a month. LobbyStack Free gives you 30 browser voice minutes with no telephone number, so it tests the receptionist but can't answer tenant calls.
+No live service here is free, though trials come close: PATLive 14 days, SAS 14 days or 200 minutes, and MAP a free trial with no card. Smith.ai's AI Free plan covers 25 real calls a month. LobbyStack Free gives you 30 voice minutes and a US or Canadian number free for 14 days, so it can answer tenant calls for two weeks if you forward your line.
 
 ### Can I use an answering service only after hours?
 
@@ -292,4 +292,4 @@ Sources:
 - **AI with live receptionists to fall back on:** Smith.ai.
 - **Showings in Google Calendar, after-hours triage to one on-call number for $30 to $100 a month, and tenants who speak many languages:** LobbyStack.
 
-Want to hear LobbyStack tell a 2 a.m. leak from a dripping faucet before you pay? [Create a free account](https://app.lobbystack.com/en/signup), write your emergency list, and test it with 30 browser voice minutes, no card needed. When you're ready for tenant calls, paid plans add a phone number from $30 a month with no setup fee. See how triage and showings work on the [property management answering page](/solutions/property-management-answering-service/).
+Want to hear LobbyStack tell a 2 a.m. leak from a dripping faucet before you pay? [Create a free account](https://app.lobbystack.com/en/signup), write your emergency list, and test it with 30 voice minutes and a free number for 14 days, no card needed. To keep the number, paid plans start at $30 a month with no setup fee. See how triage and showings work on the [property management answering page](/solutions/property-management-answering-service/).

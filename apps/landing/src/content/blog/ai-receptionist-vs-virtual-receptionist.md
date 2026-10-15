@@ -209,7 +209,7 @@ LobbyStack is an AI receptionist for small businesses. It books appointments fro
 
 Each call opens in the business's default language, English or French. The receptionist then answers in the caller's language. It runs on OpenAI GPT-Live and handles 70+ languages, including Spanish and Serbian.
 
-[Starter](/pricing/) costs $30 a month for 150 minutes, then $0.20 a minute, with no setup fee. The Free plan gives you 30 browser voice minutes a month, with no card and no telephone number, and it doesn't expire. The code is [MIT-licensed on GitHub](https://github.com/lobbystack/lobbystack), and you can [self-host it](https://docs.lobbystack.com/self-hosting/overview) with your own OpenAI and Twilio accounts.
+[Starter](/pricing/) costs $30 a month for 150 minutes, then $0.20 a minute, with no setup fee. The Free plan gives you 30 voice minutes a month and a US or Canadian number free for 14 days, with no card. The plan itself doesn't expire. The code is [MIT-licensed on GitHub](https://github.com/lobbystack/lobbystack), and you can [self-host it](https://docs.lobbystack.com/self-hosting/overview) with your own OpenAI and Twilio accounts.
 
 Know the limits before you sign up:
 
@@ -229,7 +229,7 @@ No. A virtual assistant is a remote worker who does wider admin work, such as em
 
 ### Is a virtual receptionist legit?
 
-Yes. Virtual receptionists are an established service category, so judge the specific company by its published prices, contract terms and trial. [SAS](https://www.specialtyansweringservice.net/pricing/) and [PATLive](https://www.patlive.com/pricing/) offer 14-day free trials, [Ruby](https://www.ruby.com/plans-and-pricing/) offers first-time customers a money-back guarantee, and LobbyStack's Free plan doesn't expire.
+Yes. Virtual receptionists are an established service category, so judge the specific company by its published prices, contract terms and trial. [SAS](https://www.specialtyansweringservice.net/pricing/) and [PATLive](https://www.patlive.com/pricing/) offer 14-day free trials, [Ruby](https://www.ruby.com/plans-and-pricing/) offers first-time customers a money-back guarantee, and LobbyStack's Free plan includes a US or Canadian number for 14 days.
 
 ## Verdict
 

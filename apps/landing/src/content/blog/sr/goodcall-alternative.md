@@ -22,7 +22,7 @@ Goodcall nikad ne meri minute, pa njegov model može da odgovara ponovljenim dug
 | Oblast | Goodcall | LobbyStack |
 | --- | --- | --- |
 | Jedinica naplate | Jedinstveni pozivaoci mesečno, uz paket za svakog agenta | Minuti razgovora, računati po sekundi |
-| Besplatna opcija | Besplatan demo agent; naplata počinje kada povežete broj | Free: 30 minuta razgovora u pregledaču, bez kartice i broja telefona |
+| Besplatna opcija | Besplatan demo agent; naplata počinje kada povežete broj | Free: 30 minuta razgovora, bez kartice, broj iz SAD ili Kanade besplatno 14 dana |
 | Prvi plaćeni paket | $79 za 100 jedinstvenih pozivalaca (oko 150 poziva) | $30 za 150 minuta |
 | Viši nivoi | $129 za 500 pozivalaca, $299 za 2,000 | $100 za 500 minuta |
 | Dodatna potrošnja | 79¢, 26¢ ili 15¢ po dodatnom pozivaocu | $0.20 ili $0.18 po dodatnom minutu |

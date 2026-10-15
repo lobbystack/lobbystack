@@ -21,7 +21,7 @@ Smith.ai combina la IA con el acceso a una red de recepcionistas en Norteaméric
 
 | Aspecto | Smith.ai AI Receptionist | LobbyStack |
 | --- | --- | --- |
-| Asignación gratuita | 25 llamadas; requiere tarjeta | 30 minutos de voz en el navegador, sin tarjeta ni número de teléfono |
+| Asignación gratuita | 25 llamadas; requiere tarjeta | 30 minutos de voz, sin tarjeta, número de EE. UU. o Canadá gratis durante 14 días |
 | Entrada de pago | Pro desde $150 por 75 llamadas | Starter a $30 por 150 minutos |
 | Respaldo humano | Red de agentes; algunas tareas en vivo se cobran por llamada | Transferencia al equipo que usted configure |
 | Reservas y recogida de datos | Anunciadas | Incluidas con reglas configurables |

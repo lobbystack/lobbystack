@@ -137,7 +137,7 @@ Pregunte adónde llegan los recados y en cuánto tiempo, qué escucha quien llam
 
 ### 5. Pruebe con sus propias llamadas
 
-Use una prueba o un plan gratuito para hacer las llamadas que más le preocupan: una emergencia, una cita y una persona que habla otro idioma. [PATLive](https://www.patlive.com/pricing/) y [Upfirst](https://upfirst.ai/pricing) ofrecen pruebas gratuitas de 14 días. El plan Free de LobbyStack le da 30 minutos de voz en el navegador al mes, sin tarjeta ni número de teléfono. Para opciones con nombre y apellido, vea la [mejor recepcionista virtual para pymes](/es/blog/best-answering-service-for-small-business/).
+Use una prueba o un plan gratuito para hacer las llamadas que más le preocupan: una emergencia, una cita y una persona que habla otro idioma. [PATLive](https://www.patlive.com/pricing/) y [Upfirst](https://upfirst.ai/pricing) ofrecen pruebas gratuitas de 14 días. El plan Free de LobbyStack le da 30 minutos de voz al mes y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta. Para opciones con nombre y apellido, vea la [mejor recepcionista virtual para pymes](/es/blog/best-answering-service-for-small-business/).
 
 ## Preguntas sobre el servicio de atención telefónica
 
@@ -147,7 +147,7 @@ Sí. PATLive, Ruby, Smith.ai y otras empresas de atención con personas publicab
 
 ### ¿Hay un servicio de atención telefónica gratis?
 
-Algunos proveedores contestan gratis una parte de las llamadas reales. El [plan Free de IA de Smith.ai](https://smith.ai/pricing/ai-receptionist) contesta 25 llamadas reales al mes y luego cobra $3 por llamada. El plan Free de LobbyStack le da 30 minutos de voz en el navegador al mes, sin tarjeta ni número de teléfono. Sirve para probar, pero no puede contestar su línea. Vea las [opciones de recepcionista con IA gratis](/es/blog/free-ai-receptionist/).
+Algunos proveedores contestan gratis una parte de las llamadas reales. El [plan Free de IA de Smith.ai](https://smith.ai/pricing/ai-receptionist) contesta 25 llamadas reales al mes y luego cobra $3 por llamada. El plan Free de LobbyStack le da 30 minutos de voz al mes, sin tarjeta, y un número de EE. UU. o Canadá gratis durante 14 días. Ese número contesta llamadas reales. Vea las [opciones de recepcionista con IA gratis](/es/blog/free-ai-receptionist/).
 
 ### ¿Puedo conservar el número de mi negocio?
 
@@ -165,4 +165,4 @@ Casi. Los proveedores llaman recepcionista virtual a un servicio con personas qu
 
 Elija la llamada que menos querría que saliera mal, como una emergencia o un cliente nuevo que no sabe bien qué pedir. Hágala con cada servicio de su lista antes de desviar su número, y lea lo que cada uno le envía después.
 
-Si le conviene una opción con IA o híbrida, puede hacer esa prueba hoy mismo en LobbyStack. El plan Free le da 30 minutos de voz en el navegador al mes, sin tarjeta ni número de teléfono. Cuando las llamadas suenen bien, el plan Starter cuesta $30 al mes por 150 minutos, luego $0.20 por minuto, y suma un número de negocio, citas en Google Calendar y transferencias a su equipo. Ningún plan tiene cargo de activación. [Pruebe LobbyStack gratis en su navegador](https://app.lobbystack.com/es/signup) o compare planes en la [página de precios](/es/pricing/).
+Si le conviene una opción con IA o híbrida, puede hacer esa prueba hoy mismo en LobbyStack. El plan Free le da 30 minutos de voz al mes y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta. Cuando las llamadas suenen bien, el plan Starter cuesta $30 al mes por 150 minutos, luego $0.20 por minuto, y le permite conservar el número, con citas en Google Calendar y transferencias a su equipo. Ningún plan tiene cargo de activación. [Pruebe LobbyStack gratis](https://app.lobbystack.com/es/signup) o compare planes en la [página de precios](/es/pricing/).

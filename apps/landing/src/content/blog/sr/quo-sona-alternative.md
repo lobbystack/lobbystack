@@ -21,7 +21,7 @@ Sona se fokusira na javljanje, prikupljanje potencijalnih klijenata, poruke i re
 
 | Oblast | Quo Sona | LobbyStack |
 | --- | --- | --- |
-| Uključeno bez dodatka | Oko 10 poziva, ali je potreban plaćeni Quo | 30 minuta razgovora u pregledaču, bez kartice i broja telefona |
+| Uključeno bez dodatka | Oko 10 poziva, ali je potreban plaćeni Quo | 30 minuta razgovora, bez kartice, broj iz SAD ili Kanade besplatno 14 dana |
 | Plaćeni ulazni paket | $25 za 40 poziva | $30 za 150 minuta |
 | Zahtev za platformu | Plaćeni Quo telefonski paket | Nije potreban paket poslovne telefonije |
 | Glavni posao | Javljanje, beleženje potencijalnih klijenata i poruka | Javljanje, zakazivanje, prebacivanje na zaposlenog, rad sa pozivima |
@@ -94,7 +94,7 @@ Izaberite Sona ako već koristite Quo i treba Vam javljanje, prikupljanje potenc
 
 ## Izaberite LobbyStack ako
 
-Izaberite LobbyStack za direktno zakazivanje, prebacivanje na zaposlenog, javni izvorni kod ili samostalno hostovanje. Glasovne razgovore možete da testirate u pregledaču na paketu Free, bez Quo paketa.
+Izaberite LobbyStack za direktno zakazivanje, prebacivanje na zaposlenog, javni izvorni kod ili samostalno hostovanje. Prave pozive možete da testirate na paketu Free sa brojem iz SAD ili Kanade na 14 dana, bez Quo paketa.
 
 ## Izvori
 
@@ -107,4 +107,4 @@ Izaberite LobbyStack za direktno zakazivanje, prebacivanje na zaposlenog, javni 
 
 LobbyStack nudi potpunijeg i prenosivijeg recepcionera. Sona ostaje praktičan dodatak za primanje poruka za timove koji su se opredelili za Quo, ali donosi još jedan trošak i drži tok rada unutar tog telefonskog sistema.
 
-[Počnite sa LobbyStack besplatno](/sr/pricing/) i testirajte glasovne razgovore u pregledaču pre nego što izaberete plaćeni paket.
+[Počnite sa LobbyStack besplatno](/sr/pricing/) i testirajte ga 14 dana na besplatnom broju iz SAD ili Kanade pre nego što izaberete plaćeni paket.

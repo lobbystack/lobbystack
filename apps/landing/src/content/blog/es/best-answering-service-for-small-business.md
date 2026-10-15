@@ -166,7 +166,7 @@ Una recepcionista con IA contesta con software y después reserva, transfiere o 
 - **Cómo factura:** por segundo, sin redondeo: una llamada de 90 segundos usa 1.5 minutos. No cuentan las llamadas de menos de 10 segundos ni las que la recepcionista corta por spam.
 - **Incluye:** reservas en Google Calendar según su horario, sus servicios y su personal; SMS de confirmación y de recordatorio 24 horas antes a números de Estados Unidos y Canadá cuando quien llama lo acepta; y 20 intentos de transferencia al mes a un número.
 - **Idiomas:** cada llamada empieza en el idioma predeterminado del negocio, inglés o francés. Después, la recepcionista responde en el idioma de quien llama: más de 70 idiomas con OpenAI GPT-Live, entre ellos el español y el serbio.
-- **Números y configuración:** números en Estados Unidos, Canadá, el Reino Unido, Australia y Nueva Zelanda, o desvíe su número actual. Los planes no limitan cuántas llamadas contesta a la vez. No hay tarifa de configuración en ningún plan, y puede cancelar en cualquier momento sin cargos por cancelación. El plan Free le da 30 minutos de voz en el navegador al mes, sin tarjeta ni número de teléfono.
+- **Números y configuración:** números en Estados Unidos, Canadá, el Reino Unido, Australia y Nueva Zelanda, o desvíe su número actual. Los planes no limitan cuántas llamadas contesta a la vez. No hay tarifa de configuración en ningún plan, y puede cancelar en cualquier momento sin cargos por cancelación. El plan Free le da 30 minutos de voz al mes y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta.
 - **Dónde se queda corto:** no hay una persona al teléfono, solo conecta Google Calendar y no se sincroniza con software de gestión de consultorios ni de servicios de campo. LobbyStack transfiere sin anunciar la llamada y a un solo número. La IA no responde mensajes de texto, y LobbyStack no afirma cumplir HIPAA.
 - **Elíjalo si** quiere que la recepcionista conteste cada llamada y reserve citas por $30 al mes, su propio equipo se encarga de las transferencias urgentes y sus clientes hablan muchos idiomas.
 
@@ -264,7 +264,7 @@ Algunos no. Las recepcionistas de Smith.ai no cobran el spam cuando sus líneas 
 
 ### ¿Hay un servicio de atención telefónica gratuito para pequeñas empresas?
 
-Ningún servicio con personas de esta lista es gratuito. El plan Free de IA de Smith.ai contesta 25 llamadas reales al mes por $0, y después cobra $3 por llamada. LobbyStack Free le da 30 minutos de voz en el navegador al mes para probar, sin tarjeta ni número de teléfono, y Goodcall ofrece un agente de demostración gratuito. Nuestra guía del [costo de una recepcionista con IA, con planes gratuitos y pruebas](/es/blog/ai-receptionist-savings/) recoge el resto.
+Ningún servicio con personas de esta lista es gratuito. El plan Free de IA de Smith.ai contesta 25 llamadas reales al mes por $0, y después cobra $3 por llamada. LobbyStack Free le da 30 minutos de voz al mes y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta, y Goodcall ofrece un agente de demostración gratuito. Nuestra guía del [costo de una recepcionista con IA, con planes gratuitos y pruebas](/es/blog/ai-receptionist-savings/) recoge el resto.
 
 ## Veredicto
 
@@ -276,4 +276,4 @@ Elija según quién debe contestar su teléfono.
 
 Si necesita una persona en cada llamada o sincronización con software de gestión de consultorios o de servicios de campo, LobbyStack no le conviene. Elija un servicio con personas o uno hecho para su sector.
 
-**[Pruebe LobbyStack gratis](https://app.lobbystack.com/es/signup).** Añada los datos de su negocio y su saludo, y pruebe la recepcionista desde su panel con 30 minutos de voz en el navegador al mes, sin tarjeta ni número de teléfono. El plan Free no caduca. Cuando quiera un número de teléfono, Starter cuesta $30 al mes sin tarifa de configuración, y puede cancelar en cualquier momento. Compare los planes en los [precios de LobbyStack](/es/pricing/).
+**[Pruebe LobbyStack gratis](https://app.lobbystack.com/es/signup).** Añada los datos de su negocio y su saludo, y pruebe la recepcionista con 30 minutos de voz al mes y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta. Para conservar el número, Starter cuesta $30 al mes sin tarifa de configuración, y puede cancelar en cualquier momento. Compare los planes en los [precios de LobbyStack](/es/pricing/).

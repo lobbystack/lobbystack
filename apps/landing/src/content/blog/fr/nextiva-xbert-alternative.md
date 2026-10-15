@@ -21,7 +21,7 @@ LobbyStack consacre le budget à la réception : rendez-vous, modifications, rel
 
 | Critère | Nextiva XBert | LobbyStack |
 | --- | --- | --- |
-| Forfait gratuit durable | Non annoncé | 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone |
+| Forfait gratuit durable | Non annoncé | 30 minutes vocales, sans carte, numéro américain ou canadien gratuit pendant 14 jours |
 | Prix d'entrée | 99 $ pour 100 interactions | 30 $ pour 150 minutes |
 | Dépassement | 0,99 $ par interaction | À la minute selon le forfait |
 | Canaux | Voix, SMS, chat web | Voix, SMS de réservation et alertes SMS |
@@ -35,7 +35,7 @@ Prix et fonctions vérifiés le 30 juillet 2026.
 
 XBert s'ajoute à un abonnement Nextiva. L'acheteur doit chiffrer les deux produits et vérifier comment la voix, les SMS et le chat consomment les 100 interactions.
 
-Avec LobbyStack, vous pouvez tester 30 minutes vocales dans le navigateur gratuitement, sans numéro de téléphone. Vous obtenez 150 minutes et un numéro dédié pour 30 $ sur Starter.
+Avec LobbyStack, vous pouvez tester Gratuit sans forfait Nextiva : 30 minutes vocales et un numéro américain ou canadien gratuit pendant 14 jours. Vous obtenez 150 minutes et un numéro dédié pour 30 $ sur Starter.
 
 XBert offre le chat web et un espace Nextiva unifié. Si vous achetez la couverture téléphonique, LobbyStack coûte moins cher et préserve le choix des fournisseurs.
 

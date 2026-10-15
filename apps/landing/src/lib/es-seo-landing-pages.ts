@@ -394,7 +394,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
           points: [
             "Starter: $30 al mes por 150 minutos y un número de teléfono, y después $0.20 por minuto",
             "Pro: $100 al mes por 500 minutos, y después $0.18 por minuto. Con 1,000 minutos al mes, paga $190 ($100 más 500 minutos adicionales a $0.18)",
-            "Free: 30 minutos de voz en el navegador al mes para pruebas, sin tarjeta ni número de teléfono",
+            "Free: 30 minutos de voz al mes y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta",
           ],
         },
         {
@@ -997,13 +997,13 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "¿Puedo probarla antes de desviar mi línea?",
           answer:
-            "Sí. El plan Free le da 30 minutos de voz en el navegador al mes para probar la recepcionista desde el panel. Funciona sin tarjeta ni número de teléfono y no vence. Las llamadas telefónicas, las transferencias y los SMS empiezan en Starter.",
+            "Sí. El plan Free le da 30 minutos de voz al mes y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta. Durante esos 14 días, el número contesta llamadas reales y las transferencias van solo al móvil que verificó. Elija Starter o Pro para conservar el número.",
         },
         {
           question:
             "¿Cuánto cuesta para una empresa de aire acondicionado y calefacción?",
           answer:
-            "Precios a octubre de 2026: el plan Free incluye 30 minutos de voz en el navegador. Starter cuesta $30 al mes por 150 minutos y Pro cuesta $100 al mes por 500 minutos, con minutos adicionales a $0.20 y $0.18. Ningún plan tiene tarifa de configuración. Las llamadas de menos de 10 segundos y las que la recepcionista termina como spam no cuentan para el uso.",
+            "Precios a octubre de 2026: el plan Free incluye 30 minutos de voz y un número de EE. UU. o Canadá gratis durante 14 días. Starter cuesta $30 al mes por 150 minutos y Pro cuesta $100 al mes por 500 minutos, con minutos adicionales a $0.20 y $0.18. Ningún plan tiene tarifa de configuración. Las llamadas de menos de 10 segundos y las que la recepcionista termina como spam no cuentan para el uso.",
         },
       ],
       faqHeading:

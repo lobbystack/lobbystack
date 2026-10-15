@@ -3,7 +3,7 @@ import type { LegalDocument } from "./types"
 const support = `<a href="mailto:support@lobbystack.com">support@lobbystack.com</a>`
 
 export const termsSr: LegalDocument = {
-  updated: "Poslednje ažuriranje: 26. septembar 2026.",
+  updated: "Poslednje ažuriranje: 14. oktobar 2026.",
   h1: "Uslovi korišćenja",
   intro: `Ovi Uslovi korišćenja („Uslovi“) uređuju Vaše korišćenje hostovane usluge, sajtova i podrške kompanije LobbyStack. Pročitajte ih pre nego što počnete da koristite LobbyStack. Oni ograničavaju našu odgovornost, čine Vas odgovornim za pristanak na snimanje poziva i za usklađenost SMS poruka sa propisima i utvrđuju način na koji rešavamo sporove.`,
   sections: [
@@ -93,7 +93,7 @@ export const termsSr: LegalDocument = {
       nav: "Brojevi telefona",
       title: "8. Brojevi telefona i telefonija",
       blocks: [
-        `8.1 Brojeve telefona i pozive obezbeđujemo preko telefonskih operatera koji su treća lica, trenutno preko usluge Twilio. Paketi Starter i Pro uključuju jedan poslovni broj. Paket Free uključuje samo pozive iz pregledača i ne uključuje broj telefona.`,
+        `8.1 Brojeve telefona i pozive obezbeđujemo preko telefonskih operatera koji su treća lica, trenutno preko usluge Twilio. Paketi Starter i Pro uključuju jedan poslovni broj. Paket Free uključuje pozive iz pregledača i, gde nudimo besplatnu probu u Vašoj zemlji, jedan broj telefona na 14 dana. Kada proba istekne, broj prestaje da odgovara na pozive i možemo ga osloboditi ako ne izaberete plaćeni paket.`,
         `8.2 Broj telefona koji Vam obezbedimo nije Vaše vlasništvo. Imate pravo da ga koristite dok je Vaša plaćena pretplata aktivna i uredno izmirena. Operateri, regulatorni organi ili naši pružaoci usluga mogu od nas zahtevati da broj promenimo, povučemo ili ograničimo, i mi za to nismo odgovorni.`,
         `8.3 Ne garantujemo da je određeni broj, pozivni broj područja ili zemlja dostupna, niti da se broj može preneti u Uslugu ili iz nje. Tamo gde podržavamo prenos broja iz Usluge, morate to zatražiti pre zatvaranja naloga i platiti sve naknade operatera.`,
         `8.4 Kada Vaša pretplata prestane, bude prebačena na paket Free ili suspendovana zbog neplaćanja, možemo osloboditi Vaš broj. Oslobođeni broj može biti dodeljen nekom drugom. Nismo odgovorni za pozive ili SMS poruke koje stignu na broj nakon što je oslobođen.`,
@@ -165,7 +165,7 @@ export const termsSr: LegalDocument = {
         `12.8 <strong>Povraćaj novca.</strong> Naknade se ne vraćaju, uključujući slučajeve delimičnih perioda, neiskorišćene potrošnje, prelaska na niži paket i otkazivanja, osim ako zakon zahteva drugačije ili se pisanim putem drugačije ne saglasimo.`,
         `12.9 <strong>Izmene cena.</strong> Možemo menjati cene i uključenu potrošnju. Za aktivan plaćeni paket obavestićemo Vas najmanje 30 dana unapred, a izmena se primenjuje od Vašeg sledećeg obnavljanja. Ako se ne slažete, otkažite paket pre obnavljanja.`,
         `12.10 <strong>Sporovi oko naplate.</strong> Dužni ste da nas o sporu oko naplate obavestite u roku od 60 dana od zaduženja. Kontaktirajte nas pre nego što pokrenete osporavanje transakcije kod izdavaoca kartice (chargeback).`,
-        `12.11 <strong>Paket Free.</strong> Paket Free uključuje ograničen broj minuta poziva iz pregledača i ne uključuje broj telefona. Možemo u bilo kom trenutku izmeniti njegova ograničenja ili ga ukinuti. Možemo zatvoriti besplatne naloge koji duže vreme ostanu neaktivni. Za paket Free ne preuzimamo nikakvu obavezu pružanja podrške.`,
+        `12.11 <strong>Paket Free.</strong> Paket Free uključuje ograničen broj minuta poziva. Gde nudimo besplatnu probu u Vašoj zemlji, uključuje i jedan broj telefona na 14 dana, uz najviše jednu probu po osobi, broju telefona i mreži. Kada proba istekne, broj prestaje da odgovara na pozive i možemo ga osloboditi ako ne izaberete plaćeni paket. Možemo u bilo kom trenutku izmeniti njegova ograničenja ili ga ukinuti. Možemo zatvoriti besplatne naloge koji duže vreme ostanu neaktivni. Za paket Free ne preuzimamo nikakvu obavezu pružanja podrške.`,
       ],
     },
     {

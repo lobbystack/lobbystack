@@ -13,7 +13,7 @@ locale: "en"
 canonicalSlug: "upfirst-alternative"
 ---
 
-You can test an **Upfirst alternative** in your browser without buying a plan. With LobbyStack, you get 30 browser voice minutes on Free, without a telephone number. Upfirst's first published tier costs $24.95 for 30 calls.
+You can test an **Upfirst alternative** without buying a plan. With LobbyStack, you get 30 voice minutes on Free and a US or Canadian number free for 14 days. Upfirst's first published tier costs $24.95 for 30 calls.
 
 Upfirst charges by handled call, while LobbyStack charges by voice minute. LobbyStack adds public source code, provider control, and self-hosting that Upfirst's reviewed pages do not advertise.
 
@@ -21,7 +21,7 @@ Upfirst charges by handled call, while LobbyStack charges by voice minute. Lobby
 
 | Area | Upfirst | LobbyStack |
 | --- | --- | --- |
-| Ongoing free plan | No; 14-day trial advertised | 30 browser voice minutes, no card, no telephone number |
+| Ongoing free plan | No; 14-day trial advertised | 30 voice minutes, no card, US or Canadian number free for 14 days |
 | Entry plan | $24.95 for 30 calls | Free for 30 voice minutes |
 | Paid usage | Call allowances and per-call overages | Minute allowances and per-minute overages |
 | Booking | Direct calendar scheduling | Booking, changes, and business rules |
@@ -34,7 +34,7 @@ Pricing and features were checked on July 30, 2026. Review both vendors' current
 
 ## LobbyStack starts free and stays under your control
 
-You can use Free to test greetings and answers in your browser. Choose a paid plan with a dedicated number to test telephone calls and transfers.
+You can use Free to test greetings, answers and real calls on a US or Canadian number for 14 days. Choose a paid plan to keep a dedicated number and transfer calls to your team.
 
 Upfirst's per-call model can favor a company with long intake conversations. LobbyStack's minute model can cost less when callers ask brief questions. Ninety one-minute calls fit inside LobbyStack Starter at $30, while Upfirst lists 90 calls at $59.95.
 

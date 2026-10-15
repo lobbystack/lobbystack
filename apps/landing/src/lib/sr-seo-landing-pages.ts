@@ -166,7 +166,7 @@ const commonFaqs: FaqItem[] = [
   {
     question: "Mogu li da počnem besplatno?",
     answer:
-      "Da. Paket Free uključuje 30 minuta razgovora, pa svog recepcionera možete da testirate probnim pozivom u pregledaču pre prelaska na plaćeni paket.",
+      "Da. Paket Free uključuje 30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana, pa svog recepcionera možete da testirate na pravim pozivima pre prelaska na plaćeni paket.",
   },
 ]
 
@@ -571,7 +571,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
           points: [
             "Starter: $30 mesečno za 150 minuta i jedan broj telefona, zatim $0.20 po minutu",
             "Pro: $100 mesečno za 500 minuta, zatim $0.18 po minutu. Za 1,000 minuta mesečno plaćate $190 ($100 plus 500 dodatnih minuta po $0.18)",
-            "Free: 30 minuta razgovora u pregledaču mesečno za testiranje, bez kartice i broja telefona",
+            "Free: 30 minuta razgovora mesečno i broj iz SAD ili Kanade besplatno 14 dana, bez kartice",
           ],
         },
         {
@@ -1163,12 +1163,12 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Mogu li da ga isprobam pre nego što prosledim liniju?",
           answer:
-            "Da. Paket Free Vam daje 30 minuta razgovora u pregledaču mesečno da testirate recepcionera sa kontrolne table. Radi bez kartice i broja telefona i ne ističe. Telefonski pozivi, preusmeravanja i SMS poruke počinju od paketa Starter.",
+            "Da. Paket Free Vam daje 30 minuta razgovora mesečno i broj iz SAD ili Kanade besplatno 14 dana, bez kartice. Tokom tih 14 dana broj odgovara na prave pozive, a preusmeravanja idu samo na mobilni broj koji ste potvrdili. Izaberite Starter ili Pro da biste zadržali broj.",
         },
         {
           question: "Koliko košta za firmu za grejanje i klimatizaciju?",
           answer:
-            "Cene iz oktobra 2026: paket Free uključuje 30 minuta razgovora u pregledaču. Starter košta $30 mesečno za 150 minuta, a Pro $100 mesečno za 500 minuta, uz dodatne minute po $0.20 i $0.18. Nijedan paket nema naknadu za aktivaciju. Pozivi kraći od 10 sekundi i pozivi koje recepcioner prekine kao neželjene ne računaju se u potrošnju.",
+            "Cene iz oktobra 2026: paket Free uključuje 30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana. Starter košta $30 mesečno za 150 minuta, a Pro $100 mesečno za 500 minuta, uz dodatne minute po $0.20 i $0.18. Nijedan paket nema naknadu za aktivaciju. Pozivi kraći od 10 sekundi i pozivi koje recepcioner prekine kao neželjene ne računaju se u potrošnju.",
         },
       ],
       faqHeading: "Pitanja o AI recepcionerima za grejanje i klimatizaciju",

@@ -14,9 +14,9 @@ it.each(["en", "fr"] as const)("describes supported capabilities in %s", async (
   const t = i18n.getFixedT(locale, "onboarding");
   render(<OnboardingPlanComparison t={t} />);
   expect(screen.queryByText(/Outlook/)).toBeNull();
-  expect(screen.getByText(/30 browser minutes|30 minutes dans le navigateur/)).toBeTruthy();
+  expect(screen.getByText(/^30 included$|^30 incluses$/)).toBeTruthy();
   const numbers = screen.getByText(t("plan.comparison.features.phoneNumbers")).closest("tr")!;
-  expect(within(numbers).getAllByRole("cell")[1]?.textContent).toBe(t("plan.comparison.values.common.notIncluded"));
+  expect(within(numbers).getAllByRole("cell")[1]?.textContent).toBe(t("plan.comparison.values.common.trialDays"));
   expect(screen.queryByText(/AI SMS|SMS IA|Outbound|sortants|Missed-call|appels manqués|Multi-location|multisite/i)).toBeNull();
   for (const feature of ["confirmationTexts", "smsNotifications", "alertSms", "outboundCalls"]) {
     const row = screen.getByText(t(`plan.comparison.features.${feature}`)).closest("tr")!;

@@ -138,7 +138,7 @@ Conozca los límites antes de desviar una línea: Google Calendar es el único c
 
 ### 4. Pruébelo desde su propio perfil
 
-Después de su hora de cierre, busque su negocio en Google desde un teléfono, toque el botón de llamada y compruebe que la llamada llega a su respaldo. Agende una cita de prueba y pida algo urgente. Luego lea el registro de la llamada. El plan Free de LobbyStack le da 30 minutos de voz en el navegador, sin tarjeta ni número de teléfono, para escuchar a la recepcionista antes de pagar. No puede recibir llamadas reales; el desvío requiere Starter o Pro.
+Después de su hora de cierre, busque su negocio en Google desde un teléfono, toque el botón de llamada y compruebe que la llamada llega a su respaldo. Agende una cita de prueba y pida algo urgente. Luego lea el registro de la llamada. El plan Free de LobbyStack le da 30 minutos de voz y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta, así que puede desviar su línea y hacer esta prueba antes de pagar.
 
 ## ¿Son reales las llamadas de Google sobre mi Perfil de Negocio?
 
@@ -174,4 +174,4 @@ Sí. Deje su número en el perfil y desvíelo a la recepcionista con IA para lla
 
 ## Conteste las llamadas que su perfil ya le envía
 
-Su perfil pone su número a un toque de quienes lo buscan. La persona que contesta decide si esas llamadas se vuelven citas. Empiece con el plan Free de LobbyStack: 30 minutos de voz en el navegador, sin tarjeta ni número de teléfono, suficiente para escuchar cómo la recepcionista atiende a alguien que lo encontró en Google. Cuando le convenza, Starter cuesta $30 al mes por 150 minutos, luego $0.20 por minuto, e incluye un número al que desviar su línea. No hay cuota de configuración. [Empiece gratis](https://app.lobbystack.com/es/signup) o compare planes en la [página de precios](/es/pricing/).
+Su perfil pone su número a un toque de quienes lo buscan. La persona que contesta decide si esas llamadas se vuelven citas. Empiece con el plan Free de LobbyStack: 30 minutos de voz y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta, suficiente para escuchar cómo la recepcionista atiende a alguien que lo encontró en Google. Para conservar el número, Starter cuesta $30 al mes por 150 minutos, luego $0.20 por minuto. No hay cuota de configuración. [Empiece gratis](https://app.lobbystack.com/es/signup) o compare planes en la [página de precios](/es/pricing/).

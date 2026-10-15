@@ -21,7 +21,7 @@ Moneypenny dodaje upravljano uvođenje i može da prebaci poziv nekom od svojih 
 
 | Oblast | Moneypenny AI Receptionist | LobbyStack |
 | --- | --- | --- |
-| Trajni besplatni paket | Nije naveden | 30 minuta razgovora u pregledaču, bez kartice i broja telefona |
+| Trajni besplatni paket | Nije naveden | 30 minuta razgovora, bez kartice, broj iz SAD ili Kanade besplatno 14 dana |
 | Ulazni plaćeni paket | $69 za 25 AI poziva | $30 za 150 minuta |
 | Nivo od 100 jedinica | $199 za 100 AI poziva | $100 za 500 minuta |
 | Dodatna potrošnja | Od $2.49 do $1.89 po dodatnom pozivu | $0.20 ili $0.18 po dodatnom minutu |
@@ -113,4 +113,4 @@ Izaberite LobbyStack ako Vaš tim može da prima preusmerene pozive i želite be
 
 LobbyStack je isplativiji kada Vaša firma već ima nekoga ko prima hitne pozive. Moneypenny opravdava višu cenu kada morate da kupite i vreme recepcionera, a ne samo AI.
 
-[Počnite sa LobbyStack besplatno](https://app.lobbystack.com/sr/signup) i testirajte glasovne razgovore u pregledaču. Izaberite plaćeni paket da biste testirali preusmeravanje telefonskih poziva.
+[Počnite sa LobbyStack besplatno](https://app.lobbystack.com/sr/signup) i testirajte ga 14 dana na besplatnom broju iz SAD ili Kanade. Izaberite plaćeni paket da biste preusmeravali pozive na svoj tim.

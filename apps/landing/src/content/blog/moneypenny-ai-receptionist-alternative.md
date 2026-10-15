@@ -21,7 +21,7 @@ Moneypenny adds managed onboarding and can pass calls to one of its own receptio
 
 | Area | Moneypenny AI Receptionist | LobbyStack |
 | --- | --- | --- |
-| Ongoing free plan | Not advertised | 30 browser voice minutes, no card, no telephone number |
+| Ongoing free plan | Not advertised | 30 voice minutes, no card, US or Canadian number free for 14 days |
 | Entry paid plan | $69 for 25 AI calls | $30 for 150 minutes |
 | 100-unit tier | $199 for 100 AI calls | $100 for 500 minutes |
 | Extra usage | $2.49 to $1.89 per extra call | $0.20 or $0.18 per extra minute |
@@ -113,4 +113,4 @@ Choose LobbyStack when your team can receive transfers and you want a free test,
 
 LobbyStack is the stronger value when your company already has someone to take urgent calls. Moneypenny earns its premium when you need to buy receptionist time as well as the AI.
 
-[Start LobbyStack free](https://app.lobbystack.com/en/signup) and test voice conversations in your browser. Choose a paid plan to test telephone transfers.
+[Start LobbyStack free](https://app.lobbystack.com/en/signup) and test it on a free US or Canadian number for 14 days. Choose a paid plan to transfer calls to your team.

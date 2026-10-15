@@ -15,7 +15,7 @@ canonicalSlug: "ruby-receptionists-alternative"
 
 **Cene Ruby Receptionists** počinju od $250 mesečno za 50 minuta, zatim $395 za 100, $720 za 200 i $1,725 za 500, prema stanju od 10. oktobra 2026. Ruby centar za pomoć naplaćuje dodatne minute od $5.40 do $4.00 na tim paketima. Ruby zaokružuje svaki poziv naviše na sledeći minut i računa vreme čekanja.
 
-LobbyStack je napisao ovu stranicu i prodaje AI recepcionera koji je konkurent servisu Ruby. Ova dva servisa se javljaju na Vaš telefon na različite načine: kod servisa Ruby poziv prima obučena osoba, a kod LobbyStack-a AI. Naš [paket Starter](/sr/pricing/) košta $30 mesečno za 150 minuta, sa zakazivanjem i preusmeravanjem. Besplatni paket daje 30 minuta razgovora u pregledaču, bez kartice i broja telefona. Nijedan LobbyStack paket nema naknadu za podešavanje. Ruby stranicu sa cenama, česta pitanja, uslove i centar za pomoć pročitali smo 10. oktobra 2026, a linkove smo stavili u odeljak Izvori.
+LobbyStack je napisao ovu stranicu i prodaje AI recepcionera koji je konkurent servisu Ruby. Ova dva servisa se javljaju na Vaš telefon na različite načine: kod servisa Ruby poziv prima obučena osoba, a kod LobbyStack-a AI. Naš [paket Starter](/sr/pricing/) košta $30 mesečno za 150 minuta, sa zakazivanjem i preusmeravanjem. Besplatni paket daje 30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana, bez kartice. Nijedan LobbyStack paket nema naknadu za podešavanje. Ruby stranicu sa cenama, česta pitanja, uslove i centar za pomoć pročitali smo 10. oktobra 2026, a linkove smo stavili u odeljak Izvori.
 
 ## Šta je Ruby virtuelna recepcija?
 
@@ -92,7 +92,7 @@ Za cene drugih usluga sa živim recepcionerima, pogledajte [koliko košta usluga
 | Veći paketi | $720 za 200 minuta, $1,725 za 500 | $100 za 500 minuta (Pro) |
 | Dodatni minuti | $5.40 do $3.30 po minutu, prema Ruby centru za pomoć | $0.20 na paketu Starter, $0.18 na paketu Pro, uz opcionu gornju granicu potrošnje |
 | Jedinica naplate | Svaki poziv se zaokružuje naviše na sledećih 60 sekundi; računaju se čekanje i rad posle poziva | Po sekundi; pozivi kraći od 10 sekundi i pozivi koje recepcioner prekine kao spam se ne računaju |
-| Isprobavanje | Garancija povraćaja novca za nove korisnike: 21 dan ili 500 minuta | Besplatan paket: 30 minuta razgovora u pregledaču, bez kartice i broja telefona, bez isteka |
+| Isprobavanje | Garancija povraćaja novca za nove korisnike: 21 dan ili 500 minuta | Besplatan paket: 30 minuta razgovora, bez kartice, broj iz SAD ili Kanade besplatno 14 dana |
 | Promena paketa | Viši paket važi najmanje tri perioda; niži posle tri | Prelazak na viši ili niži paket ili otkaz u podešavanjima naplate, bez naknade za otkazivanje |
 | Jezici pozivalaca | Engleski i španski | Počinje na engleskom ili francuskom, zatim odgovara na jeziku pozivaoca (70+, uključujući španski) |
 | Zakazivanje | Recepcioneri zakazuju termine | Samo u Google Calendar |
@@ -164,7 +164,7 @@ LobbyStack je jeftiniji na svakom obimu koji smo izračunali, a njegovi dodatni 
 
 ## Kako da testirate LobbyStack kao alternativu za Ruby Receptionists?
 
-1. Registrujte se na [app.lobbystack.com](https://app.lobbystack.com/sr/signup). Besplatni paket daje 30 minuta razgovora u pregledaču mesečno, bez kartice.
+1. Registrujte se na [app.lobbystack.com](https://app.lobbystack.com/sr/signup). Besplatni paket daje 30 minuta razgovora mesečno i broj iz SAD ili Kanade besplatno 14 dana, bez kartice.
 2. Podešavanje Vas vodi kroz podatke o firmi, uvoz sajta, Vaše znanje, pozdrav i izbor paketa.
 3. Napišite pravila za pozive običnim jezikom i izaberite način zakazivanja: recepcioner zakazuje termin, prima zahtev koji Vaš tim potvrđuje ili prima poruku. Povežite Google Calendar i podesite radno vreme, jer bez njih zakazivanje ne radi.
 4. Iz pregledača isprobajte pet poziva koje Ruby najčešće prima za Vas: pitanje o ceni, zakazivanje, hitan zahtev, pozivaoca koji traži živu osobu i pogrešan broj. Pročitajte svaki transkript sa osobom koja radi na daljem praćenju.
@@ -175,7 +175,7 @@ LobbyStack je jeftiniji na svakom obimu koji smo izračunali, a njegovi dodatni 
 
 ### Da li Ruby nudi besplatan probni period?
 
-Ruby stranice koje smo pročitali ne navode besplatan probni period. Novi korisnici umesto toga imaju garanciju povraćaja novca: otkažite u roku od 21 dana od kupovine ili pre nego što potrošite 500 minuta recepcionera, šta god nastupi prvo, i Ruby vraća novac za otkazanu uslugu. LobbyStack nema rok probnog perioda: besplatni paket daje 30 minuta razgovora u pregledaču mesečno, bez kartice.
+Ruby stranice koje smo pročitali ne navode besplatan probni period. Novi korisnici umesto toga imaju garanciju povraćaja novca: otkažite u roku od 21 dana od kupovine ili pre nego što potrošite 500 minuta recepcionera, šta god nastupi prvo, i Ruby vraća novac za otkazanu uslugu. Besplatni LobbyStack paket ne ističe. Daje 30 minuta razgovora mesečno, bez kartice, i broj iz SAD ili Kanade besplatno 14 dana.
 
 ### Da li Ruby naplaćuje spam pozive?
 
@@ -187,7 +187,7 @@ Da, kada imate malo poziva. Američki [Biro za statistiku rada](https://www.bls.
 
 ### Koja je najjeftinija AI usluga za javljanje na pozive?
 
-Najjeftiniji plaćeni ulazni paket koji smo našli u oktobru 2026. imao je [AI-Receptionist.com](https://ai-receptionist.com/pricing): $14 mesečno za 75 minuta. [Smith.ai AI recepcioner](https://smith.ai/pricing/ai-receptionist) ima paket od $0 za 25 poziva mesečno, a zatim $3 po pozivu. LobbyStack Starter košta $30 za 150 minuta, a naš besplatni paket nema broj telefona. Naš [vodič za besplatnog AI recepcionera](/sr/blog/free-ai-receptionist/) poredi besplatne opcije.
+Najjeftiniji plaćeni ulazni paket koji smo našli u oktobru 2026. imao je [AI-Receptionist.com](https://ai-receptionist.com/pricing): $14 mesečno za 75 minuta. [Smith.ai AI recepcioner](https://smith.ai/pricing/ai-receptionist) ima paket od $0 za 25 poziva mesečno, a zatim $3 po pozivu. LobbyStack Starter košta $30 za 150 minuta, a naš besplatni paket uključuje broj iz SAD ili Kanade na 14 dana. Naš [vodič za besplatnog AI recepcionera](/sr/blog/free-ai-receptionist/) poredi besplatne opcije.
 
 ### Da li Ruby koristi AI za javljanje na pozive?
 
@@ -213,7 +213,7 @@ Ako Vaš operater drži broj i prosleđuje pozive na Ruby, promenite pravilo pro
 - Radije biste platili $30 za 150 minuta nego $250 za 50.
 - Želite naplatu po sekundi, bez naplate poziva kraćih od 10 sekundi.
 - Vaši pozivaoci govore i druge jezike osim engleskog i španskog.
-- Želite da isprobate pre plaćanja, uz 30 minuta razgovora u pregledaču mesečno i bez kartice.
+- Želite da isprobate pre plaćanja, uz 30 minuta razgovora mesečno, besplatan broj na 14 dana i bez kartice.
 - Želite kod pod MIT licencom, samostalno hostovanje, REST API ili webhookove.
 
 ## Izvori
@@ -235,4 +235,4 @@ Provereno 10. oktobra 2026, osim gde je drugačije navedeno:
 
 Ruby je bolji izbor kada poziv mora da vodi obučena osoba: prijem koji traži procenu, naplata, osoblje koje govori španski ili nezadovoljan pozivalac. Za tu osobu plaćate od $3.15 do $5.00 po uključenom minutu, zavisno od veličine paketa. LobbyStack je bolji izbor kada su Vaši pozivi uglavnom rutinska pitanja i termini. Odgovara 150 minuta za $30, zakazuje u Google Calendar i preusmerava hitne pozive Vašem timu.
 
-Da biste čuli kako LobbyStack odgovara na pitanja Vaših pozivalaca, [počnite na besplatnom paketu](https://app.lobbystack.com/sr/signup). Dobijate 30 minuta razgovora u pregledaču mesečno, sa svojim pozdravom i pravilima, bez kartice.
+Da biste čuli kako LobbyStack odgovara na pitanja Vaših pozivalaca, [počnite na besplatnom paketu](https://app.lobbystack.com/sr/signup). Dobijate 30 minuta razgovora mesečno i broj iz SAD ili Kanade na 14 dana, sa svojim pozdravom i pravilima, bez kartice.

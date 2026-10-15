@@ -139,7 +139,7 @@ El plan Starter de LobbyStack cuesta $30 al mes por 150 minutos, y luego $0.20 p
 
 Cada llamada empieza en el idioma predeterminado del negocio, inglés o francés. Después, la recepcionista contesta en el idioma de quien llama: más de 70 idiomas con OpenAI GPT-Live, entre ellos español y serbio. Usted le indica qué llamadas son urgentes, como agua que no se puede detener o aguas negras que salen por una coladera, y ella las transfiere a un solo número. Si la transferencia no se completa, se lo dice a quien llama, ofrece tomar un mensaje y su equipo puede recibir una alerta "Live call transfer failed". Reserva en Google Calendar y, si quien llama acepta, envía por mensaje de texto una confirmación y un recordatorio 24 horas antes a números de Estados Unidos y Canadá. Cada llamada deja un resumen, una transcripción y una grabación en el panel, y usted recibe un correo electrónico cuando la recepcionista toma un mensaje.
 
-No se sincroniza con ServiceTitan, Housecall Pro ni Jobber, y Google Calendar es su único calendario. Las transferencias van a un solo número sin resumen previo, y no hay rotación de guardias. No hay agentes humanos de respaldo, y la IA no contesta mensajes de texto. El plan gratis da 30 minutos de voz en el navegador, sin tarjeta ni número de teléfono, para hacer pruebas. Vea cómo maneja las llamadas urgentes en la página de [recepcionista con IA para plomeros](/es/solutions/ai-receptionist-for-plumbers/).
+No se sincroniza con ServiceTitan, Housecall Pro ni Jobber, y Google Calendar es su único calendario. Las transferencias van a un solo número sin resumen previo, y no hay rotación de guardias. No hay agentes humanos de respaldo, y la IA no contesta mensajes de texto. El plan gratis da 30 minutos de voz y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta. Vea cómo maneja las llamadas urgentes en la página de [recepcionista con IA para plomeros](/es/solutions/ai-receptionist-for-plumbers/).
 
 ## ¿Cuánto cuesta la atención telefónica para plomeros?
 
@@ -230,7 +230,7 @@ Saque de su factura telefónica cuántas llamadas recibe y cuánto duran en su m
 
 ### 2. Haga tres llamadas de prueba antes de firmar
 
-Llame tres veces a cada finalista: una tubería reventada a las 2 a. m. con el agua todavía corriendo, un regreso de aguas negras en un sótano y una cotización de calentador de agua. Haga una de ellas en español si sus clientes lo hablan. Revise quién contestó, qué decía el resumen y si el plomero de guardia recibió la llamada. Pruebas: PATLive 14 días, SAS 14 días o 200 minutos, Rosie 7 días, pruebas gratis en MAP y Housecall Pro, el plan AI Free de Smith.ai, y el plan gratis de LobbyStack, que funciona en el navegador durante 30 minutos.
+Llame tres veces a cada finalista: una tubería reventada a las 2 a. m. con el agua todavía corriendo, un regreso de aguas negras en un sótano y una cotización de calentador de agua. Haga una de ellas en español si sus clientes lo hablan. Revise quién contestó, qué decía el resumen y si el plomero de guardia recibió la llamada. Pruebas: PATLive 14 días, SAS 14 días o 200 minutos, Rosie 7 días, pruebas gratis en MAP y Housecall Pro, el plan AI Free de Smith.ai, y el plan gratis de LobbyStack, con 30 minutos y un número de EE. UU. o Canadá gratis durante 14 días.
 
 ### 3. Lea los términos de cobro y los cargos
 
@@ -244,7 +244,7 @@ Desvíe su número actual desde su operador para el exceso de llamadas, fuera de
 
 ### ¿Existe un servicio de atención telefónica gratis para plomeros?
 
-Ningún servicio con personas de esta lista es gratis; las pruebas son lo más cercano. El plan AI Free de Smith.ai cubre 25 llamadas reales al mes y luego cobra $3.00 por llamada. El plan gratis de LobbyStack da 30 minutos de voz en el navegador, sin tarjeta ni número de teléfono: sirve para probar la recepcionista, pero no contesta su línea de negocio.
+Ningún servicio con personas de esta lista es gratis; las pruebas son lo más cercano. El plan AI Free de Smith.ai cubre 25 llamadas reales al mes y luego cobra $3.00 por llamada. El plan gratis de LobbyStack da 30 minutos de voz y un número de EE. UU. o Canadá gratis durante 14 días, así que puede contestar su línea de negocio durante dos semanas si la desvía.
 
 ### ¿Puedo usar un servicio de atención telefónica solo fuera de horario?
 
@@ -289,4 +289,4 @@ Fuentes:
 - **Jobber o Housecall Pro:** pruebe primero la recepcionista incluida.
 - **Reservas en Google Calendar, exceso de llamadas y llamadas fuera de horario por $30 a $100 al mes, y clientes que hablan otros idiomas:** LobbyStack.
 
-¿Quiere oír a LobbyStack contestar una llamada por una tubería reventada antes de pagar? [Cree una cuenta gratis](https://app.lobbystack.com/es/signup) y pruébela con 30 minutos de voz en el navegador, sin tarjeta. Los planes de pago no tienen tarifa de configuración. Después vea cómo funcionan las llamadas urgentes, las reservas y las transferencias en la página de [recepcionista con IA para plomeros](/es/solutions/ai-receptionist-for-plumbers/).
+¿Quiere oír a LobbyStack contestar una llamada por una tubería reventada antes de pagar? [Cree una cuenta gratis](https://app.lobbystack.com/es/signup) y pruébela con 30 minutos de voz y un número gratis durante 14 días, sin tarjeta. Los planes de pago no tienen tarifa de configuración. Después vea cómo funcionan las llamadas urgentes, las reservas y las transferencias en la página de [recepcionista con IA para plomeros](/es/solutions/ai-receptionist-for-plumbers/).

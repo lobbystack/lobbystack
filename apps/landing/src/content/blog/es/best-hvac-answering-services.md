@@ -126,7 +126,7 @@ El plan Starter de LobbyStack cuesta $30 al mes por 150 minutos, y después $0.2
 
 Cada llamada empieza en el idioma predeterminado del negocio, inglés o francés. Después, la recepcionista contesta en el idioma de quien llama: más de 70 idiomas con OpenAI GPT-Live, incluidos el español y el serbio. Usted decide qué llamadas son urgentes con reglas escritas en lenguaje sencillo, y la recepcionista puede transferirlas a un número. Si la transferencia no se completa, le ofrece tomar un mensaje, y su equipo puede recibir la alerta "Falló la transferencia de una llamada en vivo". Reserva en Google Calendar y, si la persona que llama acepta, le envía por SMS una confirmación y un recordatorio 24 horas antes, en números de Estados Unidos y Canadá.
 
-LobbyStack no sincroniza con ServiceTitan, Housecall Pro ni Jobber, y Google Calendar es su único calendario. Transfiere a un solo número sin informar antes al técnico, y usted no tiene rotación de guardias. Ningún agente humano respalda a la recepcionista, y la IA no responde SMS. El plan Free le da 30 minutos de voz en el navegador para probar, sin tarjeta ni número de teléfono. Vea cómo atiende las llamadas urgentes en nuestra página de [atención telefónica con IA para climatización](/es/solutions/ai-receptionist-for-hvac/).
+LobbyStack no sincroniza con ServiceTitan, Housecall Pro ni Jobber, y Google Calendar es su único calendario. Transfiere a un solo número sin informar antes al técnico, y usted no tiene rotación de guardias. Ningún agente humano respalda a la recepcionista, y la IA no responde SMS. El plan Free le da 30 minutos de voz y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta. Vea cómo atiende las llamadas urgentes en nuestra página de [atención telefónica con IA para climatización](/es/solutions/ai-receptionist-for-hvac/).
 
 ## ¿Cuánto cuesta un servicio de atención telefónica para climatización?
 
@@ -226,7 +226,7 @@ Saque de su factura telefónica cuántas llamadas recibió el julio pasado y el 
 
 ### 2. Haga tres llamadas de prueba antes de firmar
 
-Llame tres veces a cada finalista: una llamada por falta de calefacción a las 2 a. m. con un bebé en casa, una reserva de mantenimiento y una persona que llama en español. Revise quién contestó, qué decía el resumen y si la llamada llegó al técnico de guardia. Pruebas: PATLive 14 días, SAS 14 días o 200 minutos, pruebas gratis de MAP y Housecall Pro, Rosie 7 días, el plan Free de IA de Smith.ai y LobbyStack Free, que funciona en el navegador durante 30 minutos.
+Llame tres veces a cada finalista: una llamada por falta de calefacción a las 2 a. m. con un bebé en casa, una reserva de mantenimiento y una persona que llama en español. Revise quién contestó, qué decía el resumen y si la llamada llegó al técnico de guardia. Pruebas: PATLive 14 días, SAS 14 días o 200 minutos, pruebas gratis de MAP y Housecall Pro, Rosie 7 días, el plan Free de IA de Smith.ai y LobbyStack Free, con 30 minutos y un número de EE. UU. o Canadá gratis durante 14 días.
 
 ### 3. Lea los términos sobre facturación y cargos
 
@@ -240,7 +240,7 @@ Desvíe su número actual desde su operador para el exceso de llamadas, para las
 
 ### ¿Hay un servicio de atención telefónica gratuito para climatización?
 
-Ningún servicio con personas de esta lista es gratuito; las pruebas son lo más parecido. El plan Free de IA de Smith.ai cubre 25 llamadas reales al mes. LobbyStack Free le da 30 minutos de voz en el navegador al mes, sin número de teléfono, así que sirve para probar la recepcionista, pero no puede contestar la línea de su negocio.
+Ningún servicio con personas de esta lista es gratuito; las pruebas son lo más parecido. El plan Free de IA de Smith.ai cubre 25 llamadas reales al mes. LobbyStack Free le da 30 minutos de voz al mes y un número de EE. UU. o Canadá gratis durante 14 días, así que puede contestar la línea de su negocio durante dos semanas si la desvía.
 
 ### ¿Puedo usar un servicio de atención telefónica solo fuera de horario?
 
@@ -282,4 +282,4 @@ Fuentes, todas consultadas el 9 de octubre de 2026:
 - **Jobber o Housecall Pro:** pruebe primero la recepcionista integrada.
 - **Reservas en Google Calendar, exceso de llamadas y llamadas fuera de horario por $30 a $100 al mes, con clientes que hablan otros idiomas:** LobbyStack.
 
-¿Quiere oír a LobbyStack atender una llamada por falta de calefacción antes de pagar? [Cree una cuenta gratis](https://app.lobbystack.com/es/signup) y pruebe la recepcionista con 30 minutos de voz en el navegador, sin tarjeta ni número de teléfono. Los planes de pago no tienen tarifa de configuración, y puede cancelar desde la configuración de facturación sin cargos por cancelación. Después vea cómo funcionan las llamadas urgentes, las reservas y las transferencias en nuestra página de [atención telefónica con IA para climatización](/es/solutions/ai-receptionist-for-hvac/).
+¿Quiere oír a LobbyStack atender una llamada por falta de calefacción antes de pagar? [Cree una cuenta gratis](https://app.lobbystack.com/es/signup) y pruebe la recepcionista con 30 minutos de voz y un número gratis durante 14 días, sin tarjeta. Los planes de pago no tienen tarifa de configuración, y puede cancelar desde la configuración de facturación sin cargos por cancelación. Después vea cómo funcionan las llamadas urgentes, las reservas y las transferencias en nuestra página de [atención telefónica con IA para climatización](/es/solutions/ai-receptionist-for-hvac/).

@@ -15,7 +15,7 @@ canonicalSlug: "free-ai-receptionist"
 
 Un répondeur IA gratuit, ou réceptionniste IA gratuit, correspond à l'une de ces quatre offres : un forfait gratuit plafonné chaque mois, un essai qui s'arrête après 7 à 30 jours, un crédit de départ sur une plateforme à monter vous-même, ou un code open source que vous hébergez. En octobre 2026, nous avons trouvé deux forfaits gratuits qui prennent de vrais appels sans frais : Smith.ai (25 appels par mois) et HireJosie (15 minutes par mois).
 
-**Offres vérifiées les 9 et 10 octobre 2026** sur la page de tarifs, la FAQ ou la page d'inscription de chaque fournisseur, en dollars américains. Ces offres visent surtout l'Amérique du Nord. LobbyStack a rédigé ce guide et vend un réceptionniste IA. Notre forfait Gratuit vous donne 30 minutes vocales dans le navigateur par mois, sans carte ni numéro de téléphone : vous pouvez tester le réceptionniste avec, mais il ne peut pas répondre à une ligne professionnelle.
+**Offres vérifiées les 9 et 10 octobre 2026** sur la page de tarifs, la FAQ ou la page d'inscription de chaque fournisseur, en dollars américains. Ces offres visent surtout l'Amérique du Nord. LobbyStack a rédigé ce guide et vend un réceptionniste IA. Notre forfait Gratuit vous donne 30 minutes vocales par mois et un numéro américain ou canadien gratuit pendant 14 jours, sans carte. Après 14 jours, le numéro cesse de répondre, sauf si vous choisissez un forfait payant.
 
 ## Que veut dire « gratuit » pour un répondeur IA ?
 
@@ -40,13 +40,13 @@ Cinq des fournisseurs vérifiés vous laissent démarrer à 0 $ sans durée d'es
 | [HireJosie](https://hirejosie.ai/pricing/) | 15 minutes d'IA par mois et 1 numéro, sans carte | Oui, puis messagerie vocale après 15 minutes | Pro à 49 $ pour 500 minutes, puis 0,25 $ la minute |
 | [ServiceAgent](https://serviceagent.ai/pricing) | Forfait Launch : 0 $ par mois, sans crédits inclus | Oui, payé au crédit | Environ 0,30 $ à 0,60 $ par minute vocale d'IA ; Core à 49 $ |
 | [Goodcall](https://www.goodcall.com/pricing) | Un agent de démonstration à créer et tester gratuitement | Non : vous payez dès que vous connectez un numéro | Starter à 79 $ pour 100 appelants uniques |
-| [LobbyStack](/fr/pricing/) (le nôtre) | 30 minutes vocales dans le navigateur par mois, sans carte | Non : il n'a pas de numéro de téléphone | Starter à 30 $ pour 150 minutes, puis 0,20 $ la minute |
+| [LobbyStack](/fr/pricing/) (le nôtre) | 30 minutes vocales par mois, sans carte | Oui, pendant 14 jours sur un numéro américain ou canadien gratuit | Starter à 30 $ pour 150 minutes, puis 0,20 $ la minute |
 
 - **Smith.ai** offre la plus grande enveloppe gratuite permanente que nous ayons trouvée. Son forfait gratuit comprend la prise de rendez-vous avec des outils comme Calendly, le routage des appels, les enregistrements, les transcriptions et les résumés. Il exclut l'assistance par téléphone, e-mail et chat, ainsi que l'accompagnement dédié. Chaque appel au-delà de 25 coûte 3,00 $.
 - **HireJosie** inclut dans son forfait gratuit un numéro dédié, la prise de rendez-vous dans Google Agenda et les transferts accompagnés. Quinze minutes couvrent environ cinq appels de 3 minutes, puis les appels basculent sur la messagerie vocale. Vous gardez le numéro seulement s'il reçoit au moins 3 appels de clients différents par mois, et le forfait gratuit porte la marque HireJosie.
 - **ServiceAgent** vend un logiciel pour les entreprises d'intervention, avec un réceptionniste intégré à côté du CRM, de la prise de rendez-vous, de la facturation et des avis. Son forfait Launch n'a pas d'abonnement mensuel, mais chaque minute vocale d'IA consomme 15 crédits, vendus de 0,02 $ à 0,04 $ l'unité.
 - **Goodcall** n'a pas d'essai gratuit. Vous créez et testez un agent de démonstration gratuitement, puis vous payez dès que vous connectez un numéro de téléphone.
-- **LobbyStack** Gratuit est un banc d'essai dans votre navigateur. [Détails plus bas](#que-comprend-le-forfait-gratuit-de-lobbystack-).
+- **LobbyStack** Gratuit répond à de vrais appels sur un numéro américain ou canadien pendant 14 jours. [Détails plus bas](#que-comprend-le-forfait-gratuit-de-lobbystack-).
 
 Certaines listes et certains chatbots citent d'autres forfaits gratuits. Nous n'avons retenu que les offres confirmées sur le site du fournisseur lui-même. Les pages de RingCentral, par exemple, affichent un essai de 14 jours et un forfait à 49 $, sans offre gratuite.
 
@@ -104,7 +104,7 @@ Twilio et OpenAI traitent l'audio pendant l'appel, y compris sur une installatio
 
 ## Que comprend le forfait Gratuit de LobbyStack ?
 
-Le forfait Gratuit de LobbyStack vous donne 30 minutes vocales dans le navigateur par mois pour tester le réceptionniste depuis votre tableau de bord. Il est sans carte ni numéro de téléphone : il ne peut donc pas répondre à votre ligne professionnelle, transférer un appelant ni envoyer de SMS. Il n'expire pas.
+Le forfait Gratuit de LobbyStack vous donne 30 minutes vocales par mois et un numéro américain ou canadien gratuit pendant 14 jours. Il ne demande pas de carte. Pendant ces 14 jours, le numéro répond à de vrais appels, et les transferts vont uniquement vers le numéro mobile que vous avez vérifié. Ensuite, le numéro cesse de répondre, sauf si vous choisissez Starter ou Pro, et vous continuez à tester dans votre navigateur. Le forfait lui-même n'expire pas.
 
 Servez-vous des 30 minutes pour :
 
@@ -116,7 +116,7 @@ Une fois les 30 minutes utilisées, les appels de test s'arrêtent jusqu'au mois
 
 | Forfait LobbyStack | Prix par mois | Inclus | Ensuite |
 | --- | --- | --- | --- |
-| Gratuit | 0 $ | 30 minutes vocales dans le navigateur, sans numéro de téléphone | Les appels de test s'arrêtent jusqu'au mois suivant |
+| Gratuit | 0 $ | 30 minutes vocales, numéro américain ou canadien gratuit pendant 14 jours | Les appels s'arrêtent jusqu'au mois suivant |
 | Starter | 30 $, ou 24 $ en facturation annuelle | 150 minutes, un numéro professionnel | 0,20 $ la minute |
 | Pro | 100 $, ou 80 $ en facturation annuelle | 500 minutes, un numéro professionnel | 0,18 $ la minute |
 
@@ -126,7 +126,7 @@ Aucun forfait ne comporte de frais de mise en service. Starter et Pro répondent
 
 Une offre gratuite ne suffit plus quand elle ne peut pas prendre les appels que vous manqueriez. Quatre limites tranchent en général :
 
-1. **Elle ne répond pas à votre vrai numéro.** Les tests dans le navigateur et les agents de démonstration, comme LobbyStack Gratuit et la démo de Goodcall, valident la voix et les règles. Ils ne couvrent pas votre ligne.
+1. **Elle ne répond pas à votre vrai numéro.** Les tests dans le navigateur et les agents de démonstration, comme la démo de Goodcall, valident la voix et les règles. Ils ne couvrent pas votre ligne.
 2. **Le plafond est inférieur à vos appels manqués.** Quinze minutes couvrent environ cinq appels de 3 minutes. Vingt-cinq appels, c'est moins d'un par jour.
 3. **L'essai se termine.** Un essai de 7 jours peut passer à côté de votre journée la plus chargée.
 4. **Il vous faut la prise de rendez-vous, les transferts ou les SMS.** Vérifiez quel forfait les inclut. Le forfait à 49 $ de Rosie envoie par SMS un lien de réservation au lieu de réserver dans votre agenda, et ne transfère pas les appels. Les deux arrivent avec son forfait à 149 $.
@@ -150,11 +150,11 @@ Les forfaits diffèrent aussi par leur mode de facturation et leur contenu. Smit
 
 ### Existe-t-il un répondeur IA gratuit ?
 
-Oui, mais peu prennent de vrais appels gratuitement. En octobre 2026, le forfait gratuit de Smith.ai couvre 25 vrais appels par mois, et celui de HireJosie 15 minutes avec un numéro dédié. La plupart des autres services de réponse par IA proposent des essais de 7 à 30 jours. Certains forfaits gratuits, dont celui de LobbyStack, sont des tests dans le navigateur sans numéro.
+Oui, mais peu prennent de vrais appels gratuitement. En octobre 2026, le forfait gratuit de Smith.ai couvre 25 vrais appels par mois, et celui de HireJosie 15 minutes avec un numéro dédié. La plupart des autres services de réponse par IA proposent des essais de 7 à 30 jours. Certains forfaits gratuits sont des tests dans le navigateur sans numéro. Celui de LobbyStack ajoute un numéro américain ou canadien pendant 14 jours.
 
 ### Un réceptionniste IA gratuit peut-il répondre à mon numéro professionnel ?
 
-Certains, oui. Les forfaits gratuits de Smith.ai et de HireJosie prennent de vrais appels, et les essais d'Upfirst, d'ElevenLabs Reception et de ModPhone aussi, tant qu'ils durent. Vous gardez votre numéro actuel et demandez à votre opérateur de renvoyer les appels vers le numéro de l'IA. LobbyStack Gratuit et l'agent de démonstration de Goodcall ne répondent pas à une ligne téléphonique.
+Certains, oui. Les forfaits gratuits de Smith.ai et de HireJosie prennent de vrais appels, et les essais d'Upfirst, d'ElevenLabs Reception et de ModPhone aussi, tant qu'ils durent. Vous gardez votre numéro actuel et demandez à votre opérateur de renvoyer les appels vers le numéro de l'IA. LobbyStack Gratuit prend de vrais appels pendant 14 jours sur un numéro américain ou canadien gratuit. L'agent de démonstration de Goodcall ne répond pas à une ligne téléphonique.
 
 ### Faut-il une carte bancaire pour un réceptionniste IA gratuit ?
 
@@ -172,4 +172,4 @@ En général, seulement pour tester. Une entreprise qui manque cinq appels par s
 
 Écoutez la voix et vérifiez vos règles avec un forfait gratuit, puis lancez un essai sur de vrais appels renvoyés. Choisissez ensuite le forfait qui couvre les appels que vous manquez aujourd'hui.
 
-Le forfait Gratuit de LobbyStack vous donne 30 minutes vocales dans le navigateur par mois, sans carte, et il n'expire pas. Rédigez vos règles, chargez votre site et appelez-le avec vos questions les plus difficiles. Quand le résultat vous convient, Starter répond à votre ligne professionnelle pour 30 $ par mois et 150 minutes, sans frais de mise en service. [Créez un compte gratuit](https://app.lobbystack.com/fr/signup) ou comparez les [forfaits LobbyStack](/fr/pricing/).
+Le forfait Gratuit de LobbyStack vous donne 30 minutes vocales par mois et un numéro américain ou canadien gratuit pendant 14 jours, sans carte. Rédigez vos règles, chargez votre site et appelez-le avec vos questions les plus difficiles. Quand le résultat vous convient, Starter garde votre numéro en service pour 30 $ par mois et 150 minutes, sans frais de mise en service. [Créez un compte gratuit](https://app.lobbystack.com/fr/signup) ou comparez les [forfaits LobbyStack](/fr/pricing/).

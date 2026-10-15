@@ -127,7 +127,7 @@ LobbyStack's Starter plan costs $30 a month for 150 minutes, then $0.20 a minute
 
 It answers every call or only overflow and after-hours calls, on a number in the US, Canada, the UK, Australia or New Zealand, or on your existing number through call forwarding. It asks the intake questions you write, takes messages and books consultations into Google Calendar. When the caller agrees, it texts a confirmation and a 24-hour reminder to US and Canadian numbers. It transfers urgent calls, such as an arrest or a hearing tomorrow, to one number. Each call opens in English or French, and the receptionist then answers in the caller's language, across 70+ languages on OpenAI GPT-Live, Spanish included. The dashboard keeps a summary, transcript and recording of every call, and you get an email alert when it takes a message.
 
-These limits matter for a law firm. It has no Clio, MyCase or Lawmatics integration, and it connects to other tools through signed webhooks for 6 events and a REST API. It doesn't run conflict checks, score intake or give legal advice. Transfers are blind and go to one number, with no briefing for the attorney. If a transfer can't go through, it tells the caller, offers to take a message, and your team can get a "Live call transfer failed" alert. No human receptionist backs it up, and the AI doesn't reply to texts. Free gives you 30 browser voice minutes with no card and no telephone number, so you can test the receptionist, but it can't answer your firm's line.
+These limits matter for a law firm. It has no Clio, MyCase or Lawmatics integration, and it connects to other tools through signed webhooks for 6 events and a REST API. It doesn't run conflict checks, score intake or give legal advice. Transfers are blind and go to one number, with no briefing for the attorney. If a transfer can't go through, it tells the caller, offers to take a message, and your team can get a "Live call transfer failed" alert. No human receptionist backs it up, and the AI doesn't reply to texts. Free gives you 30 voice minutes and a US or Canadian number free for 14 days, with no card. After 14 days, answering your firm's line takes Starter or Pro.
 
 ## How much does a law firm answering service cost?
 
@@ -207,7 +207,7 @@ Pull last month's call count and average call length from your phone bill. Per-c
 
 ### 2. Place three test calls during the trial
 
-Call each finalist as a new personal-injury lead at 9 p.m., as an existing client whose hearing is tomorrow, and as a Spanish-speaking caller. Check who answered, what the intake captured, and whether the urgent call reached an attorney. Trials: Veza and PATLive run 14 days, Answering Legal gives 400 free minutes, Upfirst runs 14 days with no card, Smith.ai's AI Free plan covers 25 calls a month, and LobbyStack Free gives you 30 browser voice minutes.
+Call each finalist as a new personal-injury lead at 9 p.m., as an existing client whose hearing is tomorrow, and as a Spanish-speaking caller. Check who answered, what the intake captured, and whether the urgent call reached an attorney. Trials: Veza and PATLive run 14 days, Answering Legal gives 400 free minutes, Upfirst runs 14 days with no card, Smith.ai's AI Free plan covers 25 calls a month, and LobbyStack Free gives you 30 voice minutes and a US or Canadian number free for 14 days.
 
 ### 3. Read the billing terms
 
@@ -233,7 +233,7 @@ It shouldn't, and your instructions should say so. Have the receptionist tell ca
 
 ### Is there a free legal answering service?
 
-No live service here is free, and trials come closest: Veza and PATLive offer 14 days, and Answering Legal offers 400 free minutes. Smith.ai's AI Free plan covers 25 real calls a month. LobbyStack Free gives you 30 browser voice minutes with no telephone number, so it tests the receptionist but can't answer your firm's line.
+No live service here is free, and trials come closest: Veza and PATLive offer 14 days, and Answering Legal offers 400 free minutes. Smith.ai's AI Free plan covers 25 real calls a month. LobbyStack Free gives you 30 voice minutes and a US or Canadian number free for 14 days, so it can answer your firm's line for two weeks if you forward it.
 
 ### Can I use a legal answering service only after hours?
 
@@ -263,4 +263,4 @@ Sources, all read October 9 or 10, 2026:
 - **Intake written into Clio, MyCase or Lawmatics:** PATLive, Abby Connect, Smith.ai or Answering Legal, or Lexidesk for AI.
 - **Overflow and after-hours calls with consultations booked in Google Calendar, for $30 to $100 a month:** LobbyStack.
 
-Want to hear LobbyStack take a new-client call before you pay? [Create a free account](https://app.lobbystack.com/en/signup) and test it with 30 browser voice minutes, no card needed. When you're ready for real calls, Starter adds a phone number for $30 a month with no setup fee.
+Want to hear LobbyStack take a new-client call before you pay? [Create a free account](https://app.lobbystack.com/en/signup) and test it with 30 voice minutes and a free number for 14 days, no card needed. To keep the number, Starter costs $30 a month with no setup fee.

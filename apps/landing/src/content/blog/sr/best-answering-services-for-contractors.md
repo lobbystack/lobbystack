@@ -124,7 +124,7 @@ LobbyStack Starter košta $30 mesečno za 150 minuta, zatim $0.20 po minutu. Pro
 
 Dobijate broj u SAD, Kanadi, Ujedinjenom Kraljevstvu, Australiji ili na Novom Zelandu i na njega možete da preusmerite svoj postojeći poslovni broj. Odgovara na sve pozive ili samo na pozive kada je linija zauzeta ili van radnog vremena. Izlaske za predračun zakazuje u Google Calendar i, kada pozivalac pristane, šalje SMS potvrdu i podsetnik 24 sata unapred na američke i kanadske brojeve. Rezime, transkript i snimak svakog poziva stižu u kontrolnu tablu, a imejl dobijate kada primi poruku, uz opcione SMS obaveštenja. Svaki poziv počinje na podrazumevanom jeziku firme, engleskom ili francuskom, a recepcioner zatim odgovara na jeziku pozivaoca: na OpenAI GPT-Live modelu to je više od 70 jezika, uključujući španski i srpski. Kod je otvoren pod MIT licencom i možete sami da ga hostujete.
 
-Nema integraciju sa Jobber, Housecall Pro, ServiceTitan, JobNimbus ni sa bilo kojim CRM-om, a Google Calendar je jedini kalendar sa kojim radi. Potpisani webhook-ovi za 6 događaja i REST API mogu da šalju podatke o pozivima drugim alatima, ali tu vezu pravite Vi. Preusmerenja su direktna, bez najave pozivaoca, i idu na jedan broj. Ako preusmeravanje ne uspe, kaže to pozivaocu, nudi da primi poruku, a Vaš tim može da dobije obaveštenje o neuspelom preusmeravanju. Iza njega ne stoje ljudski agenti, a AI ne odgovara na SMS poruke. Besplatan paket Vam daje 30 minuta razgovora u pregledaču, bez kartice i broja telefona, pa ne može da prima prave pozive, preusmerava ni šalje SMS. Kako radi sa pozivima posle oluje, pogledajte na stranici [usluga odgovaranja na pozive za krovopokrivače](/sr/solutions/roofing-answering-service/).
+Nema integraciju sa Jobber, Housecall Pro, ServiceTitan, JobNimbus ni sa bilo kojim CRM-om, a Google Calendar je jedini kalendar sa kojim radi. Potpisani webhook-ovi za 6 događaja i REST API mogu da šalju podatke o pozivima drugim alatima, ali tu vezu pravite Vi. Preusmerenja su direktna, bez najave pozivaoca, i idu na jedan broj. Ako preusmeravanje ne uspe, kaže to pozivaocu, nudi da primi poruku, a Vaš tim može da dobije obaveštenje o neuspelom preusmeravanju. Iza njega ne stoje ljudski agenti, a AI ne odgovara na SMS poruke. Besplatan paket Vam daje 30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana, bez kartice. Tokom probnog perioda preusmeravanja idu samo na mobilni broj koji ste potvrdili. Kako radi sa pozivima posle oluje, pogledajte na stranici [usluga odgovaranja na pozive za krovopokrivače](/sr/solutions/roofing-answering-service/).
 
 ## Koliko košta usluga odgovaranja na pozive za izvođače radova?
 
@@ -213,7 +213,7 @@ Iz telefonskog računa izvucite broj poziva i prosečno trajanje za najprometnij
 
 ### 2. Obavite tri probna poziva pre potpisivanja
 
-Pozovite svakog finalistu tri puta: zahtev za predračun za renoviranje kupatila, poziv u 21 h zbog krova koji prokišnjava i pozivalac koji govori španski. Proverite ko se javio, šta piše u rezimeu i da li je hitan poziv stigao na Vaš mobilni. Probe: PATLive 14 dana, OnCrew 14 dana, besplatna proba Housecall Pro-a, besplatan Smith.ai AI paket i LobbyStack besplatan paket, koji radi u pregledaču sa 30 minuta i bez broja telefona.
+Pozovite svakog finalistu tri puta: zahtev za predračun za renoviranje kupatila, poziv u 21 h zbog krova koji prokišnjava i pozivalac koji govori španski. Proverite ko se javio, šta piše u rezimeu i da li je hitan poziv stigao na Vaš mobilni. Probe: PATLive 14 dana, OnCrew 14 dana, besplatna proba Housecall Pro-a, besplatan Smith.ai AI paket i LobbyStack besplatan paket sa 30 minuta i brojem iz SAD ili Kanade besplatno 14 dana.
 
 ### 3. Gledajte kako termin stiže u Vaš softver
 
@@ -227,7 +227,7 @@ Preusmerite postojeći broj kod svog operatera za zauzetu liniju, vreme posle za
 
 ### Postoji li besplatna usluga odgovaranja na pozive za izvođače?
 
-Nijedna usluga uživo na ovom spisku nije besplatna, ali nekoliko nudi probu. Smith.ai AI pokriva 25 poziva mesečno, zatim $3.00 po pozivu. LobbyStack besplatan paket daje 30 minuta razgovora u pregledaču, bez kartice i broja telefona: služi za testiranje, ali ne odgovara na Vašu liniju, ne preusmerava i ne šalje SMS.
+Nijedna usluga uživo na ovom spisku nije besplatna, ali nekoliko nudi probu. Smith.ai AI pokriva 25 poziva mesečno, zatim $3.00 po pozivu. LobbyStack besplatan paket daje 30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana, bez kartice, pa dve nedelje može da odgovara na Vašu liniju ako je prosledite.
 
 ### Može li usluga odgovaranja na pozive da zakazuje predračune?
 
@@ -270,4 +270,4 @@ Izvori, svi pročitani 9. ili 10. oktobra 2026:
 - **Krovopokrivač u JobNimbus ili AccuLynx koji želi AI:** Sameday AI.
 - **Termini u Google Calendar za $30 do $100 mesečno, sa pozivaocima koji govore različite jezike:** LobbyStack.
 
-Želite da čujete kako LobbyStack prima zahtev za predračun pre nego što platite? [Napravite besplatan nalog](https://app.lobbystack.com/sr/signup) i isprobajte ga uz 30 minuta razgovora u pregledaču, bez kartice i broja telefona. Plaćeni paketi nemaju naknadu za aktivaciju. Zatim pogledajte kako pokriva noći i vikende na stranici [odgovaranje na pozive van radnog vremena za izvođače](/sr/solutions/after-hours-answering-service-for-contractors/).
+Želite da čujete kako LobbyStack prima zahtev za predračun pre nego što platite? [Napravite besplatan nalog](https://app.lobbystack.com/sr/signup) i isprobajte ga uz 30 minuta razgovora i besplatan broj na 14 dana, bez kartice. Plaćeni paketi nemaju naknadu za aktivaciju. Zatim pogledajte kako pokriva noći i vikende na stranici [odgovaranje na pozive van radnog vremena za izvođače](/sr/solutions/after-hours-answering-service-for-contractors/).

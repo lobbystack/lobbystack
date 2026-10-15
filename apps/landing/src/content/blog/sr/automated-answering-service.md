@@ -117,7 +117,7 @@ SAS paket Economy od $44 dodaje $1.54 za svaki minut koji agent uživo provede n
 
 ### Cene AI recepcionera
 
-Ulazni paketi koštaju od $14 do $150 mesečno, a Smith.ai i LobbyStack imaju i besplatne pakete (LobbyStack paket služi za testiranje u pregledaču). Jedinice naplate se razlikuju: AI-Receptionist.com, Dialzara, RingCentral AIR i LobbyStack naplaćuju po minutu, Upfirst i Smith.ai po pozivu, a Goodcall po jedinstvenom pozivaocu. Bez podataka o trajanju Vaših poziva ne preračunavamo jednu jedinicu u drugu. Ulazni paket i cenu prekoračenja svakog dobavljača naći ćete u tekstu [koliko koštaju AI recepcioneri, dobavljač po dobavljač](/sr/blog/ai-receptionist-savings/).
+Ulazni paketi koštaju od $14 do $150 mesečno, a Smith.ai i LobbyStack imaju i besplatne pakete (LobbyStack paket uključuje broj iz SAD ili Kanade na 14 dana). Jedinice naplate se razlikuju: AI-Receptionist.com, Dialzara, RingCentral AIR i LobbyStack naplaćuju po minutu, Upfirst i Smith.ai po pozivu, a Goodcall po jedinstvenom pozivaocu. Bez podataka o trajanju Vaših poziva ne preračunavamo jednu jedinicu u drugu. Ulazni paket i cenu prekoračenja svakog dobavljača naći ćete u tekstu [koliko koštaju AI recepcioneri, dobavljač po dobavljač](/sr/blog/ai-receptionist-savings/).
 
 ### Koliko košta 40 poziva mesečno po vrsti
 
@@ -183,7 +183,7 @@ LobbyStack odgovara na sve pozive koji stignu na njegov broj. Prosledite svoj br
 
 ### 7. Testirajte uslugu pre nego što prosledite prave pozive
 
-Pozovite sami, pre klijenata. Paket Free u LobbyStack-u daje Vam 30 minuta razgovora u pregledaču mesečno za testiranje, bez kartice i broja telefona. Pripremite scenario za hitan slučaj, zakazivanje i pozivaoca koji govori srpski ili drugi jezik Vaših klijenata, jer poziv počinje na engleskom ili francuskom. Kada prosledite liniju, pročitajte snimke, transkripte i rezimee iz prve nedelje i ispravite svako pravilo koje ne radi kako treba.
+Pozovite sami, pre klijenata. Paket Free u LobbyStack-u daje Vam 30 minuta razgovora mesečno i broj iz SAD ili Kanade besplatno 14 dana, bez kartice. Pripremite scenario za hitan slučaj, zakazivanje i pozivaoca koji govori srpski ili drugi jezik Vaših klijenata, jer poziv počinje na engleskom ili francuskom. Kada prosledite liniju, pročitajte snimke, transkripte i rezimee iz prve nedelje i ispravite svako pravilo koje ne radi kako treba.
 
 ## Kako da izaberete automatsko odgovaranje na pozive za svoju firmu?
 
@@ -217,7 +217,7 @@ Usluga uživo ima smisla za prijem pravnih predmeta, osetljive pozive i pozivaoc
 
 ### Postoji li besplatno automatsko odgovaranje na pozive?
 
-LobbyStack Free Vam daje 30 minuta razgovora u pregledaču mesečno, bez kartice i broja telefona, i ne ističe, ali ne odgovara na prave pozive. Smith.ai paket AI Free odgovara na 25 stvarnih poziva mesečno, a zatim naplaćuje $3 po pozivu. Drugi dobavljači nude probne periode; spisak ima tekst [koliko koštaju AI recepcioneri, dobavljač po dobavljač](/sr/blog/ai-receptionist-savings/).
+LobbyStack Free Vam daje 30 minuta razgovora mesečno i broj iz SAD ili Kanade koji 14 dana besplatno odgovara na prave pozive, bez kartice. Smith.ai paket AI Free odgovara na 25 stvarnih poziva mesečno, a zatim naplaćuje $3 po pozivu. Drugi dobavljači nude probne periode; spisak ima tekst [koliko koštaju AI recepcioneri, dobavljač po dobavljač](/sr/blog/ai-receptionist-savings/).
 
 ### Mogu li da zadržim poslovni broj?
 
@@ -229,4 +229,4 @@ LobbyStack recepcioner može da prekine spam i uvredljive pozive, a pozivaoca mo
 
 ## Isprobajte AI recepcionera pre nego što prosledite poziv
 
-Poslušajte kako AI recepcioner vodi Vaše pozive pre nego što ga čuje prvi klijent. Paket Free u LobbyStack-u daje Vam 30 minuta razgovora u pregledaču mesečno, bez kartice i broja telefona. Ako probni pozivi zvuče dobro, Starter košta $30 mesečno za 150 minuta i poslovni broj. Nema naknade za aktivaciju, a pretplatu otkazujete kad god želite, bez naknade za otkazivanje. [Počnite besplatno](https://app.lobbystack.com/sr/signup) ili uporedite pakete na [stranici sa cenama](/sr/pricing/).
+Poslušajte kako AI recepcioner vodi Vaše pozive pre nego što ga čuje prvi klijent. Paket Free u LobbyStack-u daje Vam 30 minuta razgovora mesečno i broj iz SAD ili Kanade besplatno 14 dana, bez kartice. Ako pozivi zvuče dobro, Starter košta $30 mesečno za 150 minuta i poslovni broj. Nema naknade za aktivaciju, a pretplatu otkazujete kad god želite, bez naknade za otkazivanje. [Počnite besplatno](https://app.lobbystack.com/sr/signup) ili uporedite pakete na [stranici sa cenama](/sr/pricing/).

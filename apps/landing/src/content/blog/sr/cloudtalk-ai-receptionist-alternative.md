@@ -15,13 +15,13 @@ canonicalSlug: "cloudtalk-ai-receptionist-alternative"
 
 **Alternativa za CloudTalk AI Receptionist** ne bi trebalo da traži pretplatu na kontakt centar da bi odgovarala na pozive i zakazivala termine. CloudTalk navodi 200 AI minuta za $99 i 500 za $199, povrh svoje platforme za poslovnu telefoniju. LobbyStack uključuje 150 minuta za $30 i 500 za $100, bez obaveznih CloudTalk licenci po korisniku.
 
-LobbyStack možete da testirate sa 30 minuta razgovora u pregledaču na paketu Free, bez broja telefona. Starter i Pro uključuju namenski broj za telefonske pozive.
+LobbyStack možete da testirate na paketu Free sa 30 minuta razgovora i brojem iz SAD ili Kanade besplatno 14 dana. Starter i Pro uključuju namenski broj za telefonske pozive.
 
 ## CloudTalk i LobbyStack ukratko
 
 | Oblast | CloudTalk AI Receptionist | LobbyStack |
 | --- | --- | --- |
-| Trajni besplatni paket | Ne; probni period od 50 minuta u prvom mesecu | 30 minuta razgovora u pregledaču, bez kartice i broja telefona |
+| Trajni besplatni paket | Ne; probni period od 50 minuta u prvom mesecu | 30 minuta razgovora, bez kartice, broj iz SAD ili Kanade besplatno 14 dana |
 | Ulazni AI paket | $99 za 200 minuta | $30 za 150 minuta |
 | Nivo od 500 minuta | $199 | $100 |
 | Osnovna platforma | Potrebna CloudTalk pretplata po korisniku | Nije potrebna pretplata na kontakt centar |

@@ -250,7 +250,7 @@ export const solutionPages: SeoLandingPage[] = [
         points: [
           "Starter: $30 a month for 150 minutes and one phone number, then $0.20 a minute",
           "Pro: $100 a month for 500 minutes, then $0.18 a minute. At 1,000 minutes a month, you pay $190 ($100 plus 500 extra minutes at $0.18)",
-          "Free: 30 browser voice minutes a month for testing, without a card or a phone number",
+          "Free: 30 voice minutes a month and a US or Canadian number free for 14 days, without a card",
         ],
       },
       {

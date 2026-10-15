@@ -117,7 +117,7 @@ SAS's $44 Economy plan adds $1.54 for each minute a live agent spends on a call,
 
 ### AI receptionist costs
 
-Entry plans run $14 to $150 a month, and Smith.ai and LobbyStack also have free plans (LobbyStack's is for browser testing). Billing units differ: AI-Receptionist.com, Dialzara, RingCentral AIR and LobbyStack charge per minute, Upfirst and Smith.ai per call, and Goodcall per unique caller. We don't convert between units without knowing your call lengths. See [what AI receptionists cost, vendor by vendor](/blog/ai-receptionist-savings/) for each entry plan and overage.
+Entry plans run $14 to $150 a month, and Smith.ai and LobbyStack also have free plans (LobbyStack's includes a US or Canadian number for 14 days). Billing units differ: AI-Receptionist.com, Dialzara, RingCentral AIR and LobbyStack charge per minute, Upfirst and Smith.ai per call, and Goodcall per unique caller. We don't convert between units without knowing your call lengths. See [what AI receptionists cost, vendor by vendor](/blog/ai-receptionist-savings/) for each entry plan and overage.
 
 ### What 40 calls a month cost by type
 
@@ -183,7 +183,7 @@ LobbyStack answers whatever calls reach its number. Forward your number to keep 
 
 ### 7. Test it before you forward real calls
 
-Call it yourself before customers do. LobbyStack's Free plan gives you 30 browser voice minutes a month for testing, with no card and no telephone number. Script an emergency, a booking and a caller who speaks Spanish or another language your customers use. After you forward your line, read the first week's recordings, transcripts and summaries, and fix any rule that misfires.
+Call it yourself before customers do. LobbyStack's Free plan gives you 30 voice minutes a month and a US or Canadian number free for 14 days, with no card. Script an emergency, a booking and a caller who speaks Spanish or another language your customers use. After you forward your line, read the first week's recordings, transcripts and summaries, and fix any rule that misfires.
 
 ## Which automated answering service fits your business?
 
@@ -217,7 +217,7 @@ Live answering fits legal intake, sensitive calls and callers who want a person.
 
 ### Is there a free automated answering service?
 
-LobbyStack Free gives you 30 browser voice minutes a month with no card and no telephone number, and it doesn't expire, but it can't answer real calls. Smith.ai's AI Free plan answers 25 real calls a month, then charges $3 per call. Other vendors offer trials; [what AI receptionists cost, vendor by vendor](/blog/ai-receptionist-savings/) lists them.
+LobbyStack Free gives you 30 voice minutes a month and a US or Canadian number that answers real calls free for 14 days, with no card. Smith.ai's AI Free plan answers 25 real calls a month, then charges $3 per call. Other vendors offer trials; [what AI receptionists cost, vendor by vendor](/blog/ai-receptionist-savings/) lists them.
 
 ### Can I keep my business number?
 
@@ -229,4 +229,4 @@ LobbyStack's receptionist can hang up on spam and abusive calls, and you can blo
 
 ## Try an AI receptionist before you forward a call
 
-Hear how an AI receptionist handles your calls before a customer does. LobbyStack's Free plan gives you 30 browser voice minutes a month, with no card and no telephone number. If the test calls sound right, Starter costs $30 a month for 150 minutes and a business number. There's no setup fee, and you can cancel anytime without a cancellation fee. [Start free](https://app.lobbystack.com/en/signup) or compare plans on the [pricing page](/pricing/).
+Hear how an AI receptionist handles your calls before a customer does. LobbyStack's Free plan gives you 30 voice minutes a month and a US or Canadian number free for 14 days, with no card. If the calls sound right, Starter costs $30 a month for 150 minutes and a business number. There's no setup fee, and you can cancel anytime without a cancellation fee. [Start free](https://app.lobbystack.com/en/signup) or compare plans on the [pricing page](/pricing/).

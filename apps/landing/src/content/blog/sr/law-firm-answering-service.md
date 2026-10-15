@@ -127,7 +127,7 @@ LobbyStack Starter košta $30 mesečno za 150 minuta, zatim $0.20 po minutu. Pro
 
 Javlja se na sve pozive, ili samo na preliv i pozive van radnog vremena, na broju u SAD, Kanadi, Velikoj Britaniji, Australiji ili na Novom Zelandu, ili na Vašem postojećem broju preko preusmeravanja poziva. Postavlja pitanja za prijem koja Vi napišete, prima poruke i zakazuje konsultacije u Google Calendar. Kada pozivalac pristane, šalje SMS potvrdu i podsetnik 24 sata unapred na američke i kanadske brojeve. Hitne pozive, kao što su hapšenje ili ročište sutra, preusmerava na jedan broj. Svaki poziv počinje na engleskom ili francuskom, a recepcioner zatim odgovara na jeziku pozivaoca, na nekom od više od 70 jezika na OpenAI GPT-Live modelu, uključujući španski i srpski. Kontrolna tabla čuva rezime, transkript i snimak svakog poziva, a Vi dobijate obaveštenje e-poštom kada primi poruku.
 
-Ova ograničenja su važna za advokatsku kancelariju. LobbyStack nema integraciju sa Clio, MyCase ni Lawmatics programom, a sa drugim alatima se povezuje preko potpisanih webhookova za 6 događaja i REST API-ja. Ne proverava sukob interesa, ne ocenjuje potencijalne klijente i ne daje pravne savete. Preusmeravanja su direktna i idu na jedan broj, bez predstavljanja pozivaoca advokatu. Ako preusmeravanje ne uspe, kaže to pozivaocu, nudi da primi poruku, a Vaš tim može da dobije obaveštenje „Preusmeravanje poziva nije uspelo“. Nijedan recepcioner uživo ne preuzima poziv, a AI ne odgovara na SMS poruke. Paket Free Vam daje 30 minuta razgovora u pregledaču, bez kartice i broja telefona: možete da isprobate recepcionera, ali on ne može da se javlja na liniju Vaše kancelarije.
+Ova ograničenja su važna za advokatsku kancelariju. LobbyStack nema integraciju sa Clio, MyCase ni Lawmatics programom, a sa drugim alatima se povezuje preko potpisanih webhookova za 6 događaja i REST API-ja. Ne proverava sukob interesa, ne ocenjuje potencijalne klijente i ne daje pravne savete. Preusmeravanja su direktna i idu na jedan broj, bez predstavljanja pozivaoca advokatu. Ako preusmeravanje ne uspe, kaže to pozivaocu, nudi da primi poruku, a Vaš tim može da dobije obaveštenje „Preusmeravanje poziva nije uspelo“. Nijedan recepcioner uživo ne preuzima poziv, a AI ne odgovara na SMS poruke. Paket Free Vam daje 30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana, bez kartice. Posle 14 dana za javljanje na liniju Vaše kancelarije treba Vam Starter ili Pro.
 
 ## Koliko košta usluga odgovaranja na pozive za advokatske kancelarije?
 
@@ -207,7 +207,7 @@ Sa telefonskog računa uzmite broj poziva iz prošlog meseca i prosečno trajanj
 
 ### 2. Obavite tri probna poziva tokom probnog perioda
 
-Pozovite svakog finalistu kao novi potencijalni klijent za naknadu štete zbog povrede u 21 čas, kao postojeći klijent koji sutra ima ročište i kao pozivalac koji govori španski. Proverite ko se javio, šta je prijem zabeležio i da li je hitan poziv stigao do advokata. Probni periodi: Veza i PATLive traju 14 dana, Answering Legal daje 400 besplatnih minuta, Upfirst traje 14 dana bez kartice, besplatni Smith.ai AI paket pokriva 25 poziva mesečno, a LobbyStack Free daje 30 minuta razgovora u pregledaču.
+Pozovite svakog finalistu kao novi potencijalni klijent za naknadu štete zbog povrede u 21 čas, kao postojeći klijent koji sutra ima ročište i kao pozivalac koji govori španski. Proverite ko se javio, šta je prijem zabeležio i da li je hitan poziv stigao do advokata. Probni periodi: Veza i PATLive traju 14 dana, Answering Legal daje 400 besplatnih minuta, Upfirst traje 14 dana bez kartice, besplatni Smith.ai AI paket pokriva 25 poziva mesečno, a LobbyStack Free daje 30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana.
 
 ### 3. Pročitajte uslove naplate
 
@@ -233,7 +233,7 @@ Ne bi trebalo, i Vaša uputstva to treba da kažu. Neka recepcioner kaže poziva
 
 ### Postoji li besplatna usluga odgovaranja na pozive za advokate?
 
-Nijedna usluga uživo ovde nije besplatna, a probni periodi su najbliži tome: Veza i PATLive nude 14 dana, a Answering Legal 400 besplatnih minuta. Besplatni Smith.ai AI paket pokriva 25 stvarnih poziva mesečno. LobbyStack Free daje 30 minuta razgovora u pregledaču, bez broja telefona, pa njime isprobavate recepcionera, ali ne možete da pokrijete liniju kancelarije.
+Nijedna usluga uživo ovde nije besplatna, a probni periodi su najbliži tome: Veza i PATLive nude 14 dana, a Answering Legal 400 besplatnih minuta. Besplatni Smith.ai AI paket pokriva 25 stvarnih poziva mesečno. LobbyStack Free daje 30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana, pa dve nedelje može da odgovara na liniju kancelarije ako je prosledite.
 
 ### Mogu li da koristim uslugu odgovaranja na pozive za advokate samo van radnog vremena?
 
@@ -263,4 +263,4 @@ Izvori, svi pročitani 9. ili 10. oktobra 2026:
 - **Prijem upisan u Clio, MyCase ili Lawmatics:** PATLive, Abby Connect, Smith.ai ili Answering Legal, ili Lexidesk za AI.
 - **Preliv i pozivi van radnog vremena, sa konsultacijama zakazanim u Google Calendar, za $30 do $100 mesečno:** LobbyStack.
 
-Želite da čujete kako LobbyStack prima poziv novog klijenta pre nego što platite? [Napravite besplatan nalog](https://app.lobbystack.com/sr/signup) i isprobajte ga uz 30 minuta razgovora u pregledaču, bez kartice. Kada budete spremni za prave pozive, Starter dodaje broj telefona za $30 mesečno, bez naknade za aktivaciju.
+Želite da čujete kako LobbyStack prima poziv novog klijenta pre nego što platite? [Napravite besplatan nalog](https://app.lobbystack.com/sr/signup) i isprobajte ga uz 30 minuta razgovora i besplatan broj na 14 dana, bez kartice. Ako želite da zadržite broj, Starter košta $30 mesečno, bez naknade za aktivaciju.

@@ -15,7 +15,7 @@ canonicalSlug: "rosie-ai-alternative"
 
 **Rosie AI** cuesta $49 al mes por 250 minutos, $149 por 1,000 y $299 por 2,000, al 9 de octubre de 2026. El plan Professional de $49 toma mensajes y envía por SMS un enlace para reservar. La reserva en calendario, las transferencias y los SMS durante la llamada empiezan en Scale. Si pasa de 250 minutos, Rosie lo cambia a Scale hasta que usted vuelva a bajar de plan.
 
-LobbyStack escribió esta página, y vendemos una recepcionista con IA que compite con Rosie. Nuestro [plan Starter](/es/pricing/) cuesta $30 al mes por 150 minutos e incluye reservas y transferencias. Free le da 30 minutos de voz en el navegador, sin tarjeta ni número de teléfono. Ningún plan de LobbyStack tiene tarifa de configuración. Revisamos los precios el 9 de octubre de 2026 en la página de precios, las preguntas frecuentes y las condiciones de servicio de Rosie, que enlazamos en Fuentes.
+LobbyStack escribió esta página, y vendemos una recepcionista con IA que compite con Rosie. Nuestro [plan Starter](/es/pricing/) cuesta $30 al mes por 150 minutos e incluye reservas y transferencias. Free le da 30 minutos de voz y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta. Ningún plan de LobbyStack tiene tarifa de configuración. Revisamos los precios el 9 de octubre de 2026 en la página de precios, las preguntas frecuentes y las condiciones de servicio de Rosie, que enlazamos en Fuentes.
 
 ## ¿Qué es Rosie AI?
 
@@ -64,7 +64,7 @@ LobbyStack es una alternativa a Rosie AI. La tabla reúne los límites que cambi
 | Plan de autoservicio más alto | $299 por 2,000 minutos (Growth) | $100 por 500 minutos (Pro) |
 | Si se pasa de sus minutos | Lo cambia al plan siguiente a su precio normal hasta que baje de plan (vea la nota sobre las condiciones más arriba) | $0.20 el minuto en Starter, $0.18 en Pro, con un tope de gasto opcional |
 | Unidad de facturación | Redondea cada llamada a los 60 segundos siguientes | Por segundo, sin redondeo |
-| Opción gratuita | Prueba gratuita de 7 días; las condiciones exigen un método de pago registrado | Plan Free: 30 minutos de voz en el navegador, sin tarjeta ni número de teléfono y sin vencimiento |
+| Opción gratuita | Prueba gratuita de 7 días; las condiciones exigen un método de pago registrado | Plan Free: 30 minutos de voz, sin tarjeta, número de EE. UU. o Canadá gratis durante 14 días |
 | Calendarios | Google Calendar, Calendly, Acuity, Appointlet (desde Scale) | Solo Google Calendar |
 | Transferencias | En vivo y asistidas (Scale), en cascada (Growth) | Transferencia directa, sin aviso previo, a un número (Starter y Pro) |
 | SMS a quien llama | Enlaces para reservar en todos los planes; SMS durante la llamada desde Scale | Confirmación de la reserva y recordatorio 24 horas antes si quien llama acepta, a números de Estados Unidos y Canadá; la IA no responde mensajes de texto |
@@ -173,7 +173,7 @@ Si también está valorando una recepcionista humana, compare las [mejores recep
 
 ## ¿Cómo configurar y probar una alternativa a Rosie?
 
-1. Regístrese en [app.lobbystack.com](https://app.lobbystack.com/es/signup). Free le da 30 minutos de voz en el navegador al mes, sin tarjeta.
+1. Regístrese en [app.lobbystack.com](https://app.lobbystack.com/es/signup). Free le da 30 minutos de voz al mes y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta.
 2. La configuración lo guía por los datos de su negocio, la importación de su sitio web, sus conocimientos, el saludo y un plan.
 3. Escriba sus reglas de llamada en lenguaje sencillo y elija un modo de reserva: reservar la cita, tomar una solicitud para que su equipo la confirme o tomar un mensaje. Conecte Google Calendar y defina su horario de atención. Sin esos dos pasos, las reservas no funcionan.
 4. Haga llamadas de prueba desde el panel, en su navegador.
@@ -196,7 +196,7 @@ Rosie admite el mismo desvío para el exceso de llamadas y las llamadas fuera de
 - Sus llamadas no pasan de unos 772 minutos al mes, o quedan entre 1,001 y unos 1,605.
 - Quiere facturación por segundo y excedente por minuto con un tope de gasto opcional, en lugar de un salto de plan.
 - Sus clientes hablan otros idiomas además del inglés y el español.
-- Quiere un plan gratuito sin fecha de vencimiento (30 minutos de voz en el navegador al mes).
+- Quiere un plan gratuito sin fecha de vencimiento (30 minutos de voz al mes, más un número de EE. UU. o Canadá durante 14 días).
 - Quiere conservar las grabaciones 90 días en los planes de pago.
 - Quiere código con licencia MIT, autoalojamiento, una API REST, webhooks o el servidor MCP.
 
@@ -226,4 +226,4 @@ Todas revisadas el 9 de octubre de 2026:
 
 LobbyStack es la forma más barata de tener reservas y una transferencia cuando sus llamadas no pasan de unos 772 minutos al mes. Rosie da más minutos por dólar entre unos 773 y 1,000 minutos y entre unos 1,606 y 2,000. También ofrece más tipos de transferencia, más calendarios, chat web y apps móviles. Calcule su propio mes con la tabla de costos de arriba, usando los minutos tal como los cuenta cada proveedor.
 
-Para escuchar cómo responde LobbyStack a las preguntas de sus clientes, [empiece en el plan gratuito](https://app.lobbystack.com/es/signup). Tiene 30 minutos de voz al mes en el navegador, con su propio saludo y sus reglas, y no necesita tarjeta. Si más adelante sube de plan, puede bajar o cancelar desde la configuración de facturación sin cargos por cancelación.
+Para escuchar cómo responde LobbyStack a las preguntas de sus clientes, [empiece en el plan gratuito](https://app.lobbystack.com/es/signup). Tiene 30 minutos de voz al mes, con su propio saludo y sus reglas, y no necesita tarjeta. Si más adelante sube de plan, puede bajar o cancelar desde la configuración de facturación sin cargos por cancelación.

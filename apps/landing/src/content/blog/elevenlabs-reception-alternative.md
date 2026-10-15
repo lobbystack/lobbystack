@@ -21,7 +21,7 @@ Reception sounds excellent and speaks more than 70 languages. LobbyStack gives y
 
 | Area | ElevenLabs Reception | LobbyStack |
 | --- | --- | --- |
-| Free option | 14-day trial with 30 credits, no card | 30 browser voice minutes, no card, no telephone number |
+| Free option | 14-day trial with 30 credits, no card | 30 voice minutes, no card, US or Canadian number free for 14 days |
 | Entry plan | $29 for 75 credits ($24 billed annually) | $30 for 150 minutes ($24 billed annually) |
 | Entry overage | $0.45 per credit | $0.20 per minute |
 | Wrong numbers and spam | Counted as used credits | Calls under 10 seconds and spam hang-ups are not billed |
@@ -86,7 +86,7 @@ Choose ElevenLabs Reception when voice quality and language coverage matter most
 
 ## Choose LobbyStack when
 
-Choose LobbyStack for 150 minutes at $30 and a $0.20 overage rate. You can test 30 browser voice minutes on Free without a telephone number. With the MIT code, you can self-host, change the product, or resell it to your own clients.
+Choose LobbyStack for 150 minutes at $30 and a $0.20 overage rate. You can test 30 voice minutes on Free, with a US or Canadian number free for 14 days. With the MIT code, you can self-host, change the product, or resell it to your own clients.
 
 ## Sources
 

@@ -82,7 +82,7 @@ Both products as of October 9, 2026:
 | Included minutes | 100 | 150 on Starter, 500 on Pro ($100) |
 | Overage | $0.50 a minute | $0.20 a minute on Starter, $0.18 on Pro |
 | How minutes are counted | Each call rounded up to the next 30 seconds | By the second; calls under 10 seconds and spam calls the receptionist ends don't count |
-| Free option | 14-day trial | Free plan with 30 browser voice minutes a month, no card, no telephone number, no expiry |
+| Free option | 14-day trial | Free plan with 30 voice minutes a month, no card, US or Canadian number free for 14 days |
 | Phone number | New number included, or port yours | One number on Starter and Pro, in the US, Canada, the UK, Australia or New Zealand |
 | Works with your existing number | Yes, through forwarding or SIP | Yes, through carrier forwarding |
 | Caller languages | English, Spanish, French, Italian, German and Portuguese, per its FAQ, with more "coming soon"; switches language mid-call | Opens in English or French, then answers in the caller's language: 70+ languages on OpenAI GPT-Live |
@@ -149,7 +149,7 @@ For a wider table that adds AI-first vendors, see [what an AI receptionist costs
 
 ### Are AI receptionists worth it?
 
-It depends on how many calls you miss and what a booked job is worth to you, so [estimate what missed calls cost you](/missed-call-revenue-calculator/) and check [when an AI receptionist pays for itself](/blog/ai-receptionist-savings/#when-does-an-ai-receptionist-pay-for-itself). To test one on your own questions, LobbyStack's free plan gives you 30 browser voice minutes a month, and RingCentral offers a 14-day trial of AIR.
+It depends on how many calls you miss and what a booked job is worth to you, so [estimate what missed calls cost you](/missed-call-revenue-calculator/) and check [when an AI receptionist pays for itself](/blog/ai-receptionist-savings/#when-does-an-ai-receptionist-pay-for-itself). To test one on your own questions, LobbyStack's free plan gives you 30 voice minutes a month and a US or Canadian number for 14 days, and RingCentral offers a 14-day trial of AIR.
 
 ## What to ask RingCentral before you buy
 
@@ -176,7 +176,7 @@ Then place the same three test calls on AIR and on LobbyStack: an after-hours ca
 
 LobbyStack fits if you want a lower cost per minute and a free way to test first:
 
-- Free gives you 30 browser voice minutes a month, with no card and no telephone number, and it doesn't expire.
+- Free gives you 30 voice minutes a month and a US or Canadian number free for 14 days, with no card.
 - Starter costs $30 for 150 minutes, then $0.20 a minute, counted by the second. Calls under 10 seconds and calls the receptionist ends as spam don't count.
 - Each call opens in the business's default language, English or French. The receptionist then answers in the caller's language: 70+ languages on OpenAI GPT-Live, including Spanish and Serbian.
 - It books into Google Calendar and, when the caller agrees, texts a confirmation and a reminder 24 hours before the appointment to US and Canadian numbers.

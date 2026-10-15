@@ -175,8 +175,8 @@ It depends on the carrier. Verizon says you manage forwarding from the mobile ph
 
 ### Can I forward business calls to an AI receptionist?
 
-Yes. You forward to the AI receptionist's phone number like any other number. Ooma Office needs a shared external line, a Pro Plus feature, to reach an outside number. Google Voice is the exception: Google says forwarding to an automated system is unsupported. With LobbyStack, forward to the number included with Starter or Pro; Free has no telephone number.
+Yes. You forward to the AI receptionist's phone number like any other number. Ooma Office needs a shared external line, a Pro Plus feature, to reach an outside number. Google Voice is the exception: Google says forwarding to an automated system is unsupported. With LobbyStack, forward to your LobbyStack number. Free includes a US or Canadian number for 14 days, and Starter or Pro keeps it.
 
 ## Hear the receptionist before you forward a line
 
-LobbyStack's Free plan gives you 30 browser voice minutes, with no card and no telephone number, so you can test how it handles your calls from the dashboard. If the test calls sound right, Starter costs $30 a month ($24 a month billed annually) for 150 minutes and a business number, with no setup fee, and you can cancel without a fee. Then dial your no-answer code and send it only the calls you miss. [Start free](https://app.lobbystack.com/en/signup) or [compare plans](/pricing/).
+LobbyStack's Free plan gives you 30 voice minutes and a US or Canadian number free for 14 days, with no card. Dial your no-answer code to send it only the calls you miss, and see how it handles them. To keep the number, Starter costs $30 a month ($24 a month billed annually) for 150 minutes, with no setup fee, and you can cancel without a fee. [Start free](https://app.lobbystack.com/en/signup) or [compare plans](/pricing/).

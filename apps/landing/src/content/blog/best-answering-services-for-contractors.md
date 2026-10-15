@@ -124,7 +124,7 @@ LobbyStack's Starter plan costs $30 a month for 150 minutes, then $0.20 a minute
 
 You get a number in the US, Canada, the UK, Australia or New Zealand and can forward your existing business number to it. It answers every call or only overflow or after-hours calls. It books estimate visits into Google Calendar and, with the caller's consent, texts a confirmation and a 24-hour reminder to US and Canadian numbers. Every call's summary, transcript and recording lands in the dashboard, and you get an email when it takes a message, with text alerts optional. Each call opens in the business's default language, English or French, then the receptionist answers in the caller's language: 70+ languages on OpenAI GPT-Live, Spanish included. The code is MIT open source, and you can self-host it.
 
-It has no integration with Jobber, Housecall Pro, ServiceTitan, JobNimbus or any CRM, and Google Calendar is its only calendar. Signed webhooks for 6 events and a REST API can send call data elsewhere, but you build that connection. Transfers are blind and go to one number without a briefing. If a transfer can't go through, it tells the caller, offers to take a message, and your team can get a "Live call transfer failed" alert. No human agents back it up, and the AI doesn't reply to texts. Free gives you 30 browser voice minutes with no card and no telephone number, so it can't take real calls, transfer or text. See how it handles storm calls on the [roofing answering service](/solutions/roofing-answering-service/) page.
+It has no integration with Jobber, Housecall Pro, ServiceTitan, JobNimbus or any CRM, and Google Calendar is its only calendar. Signed webhooks for 6 events and a REST API can send call data elsewhere, but you build that connection. Transfers are blind and go to one number without a briefing. If a transfer can't go through, it tells the caller, offers to take a message, and your team can get a "Live call transfer failed" alert. No human agents back it up, and the AI doesn't reply to texts. Free gives you 30 voice minutes and a US or Canadian number free for 14 days, with no card. During the trial, transfers go only to the mobile number you verified. See how it handles storm calls on the [roofing answering service](/solutions/roofing-answering-service/) page.
 
 ## How much does an answering service for contractors cost?
 
@@ -213,7 +213,7 @@ Pull call counts and average call length for your busiest and slowest months fro
 
 ### 2. Place three test calls before you sign
 
-Call each finalist three times: a bathroom remodel estimate request, a 9 p.m. call about an active leak, and a Spanish-speaking caller. Check who answered, what the summary said, and whether the urgent call reached your phone. Trials: PATLive 14 days, OnCrew 14 days, Housecall Pro's free trial, Smith.ai's AI Free plan, and LobbyStack Free, which runs in the browser with 30 minutes and no phone number.
+Call each finalist three times: a bathroom remodel estimate request, a 9 p.m. call about an active leak, and a Spanish-speaking caller. Check who answered, what the summary said, and whether the urgent call reached your phone. Trials: PATLive 14 days, OnCrew 14 days, Housecall Pro's free trial, Smith.ai's AI Free plan, and LobbyStack Free, with 30 minutes and a US or Canadian number free for 14 days.
 
 ### 3. Watch a booking land in your software
 
@@ -227,7 +227,7 @@ Forward your existing number from your carrier for overflow, after-hours or ever
 
 ### Is there a free answering service for contractors?
 
-No live service in this list is free; trials come closest. Smith.ai's AI Free plan covers 25 real calls a month, then $3.00 a call. LobbyStack Free gives you 30 browser voice minutes with no card and no telephone number, so you can test the receptionist, but it can't answer your business line, transfer or text.
+No live service in this list is free; trials come closest. Smith.ai's AI Free plan covers 25 real calls a month, then $3.00 a call. LobbyStack Free gives you 30 voice minutes and a US or Canadian number free for 14 days, with no card, so it can answer your business line for two weeks if you forward it.
 
 ### Can an answering service book estimates for contractors?
 
@@ -270,4 +270,4 @@ Sources, all read October 9 or 10, 2026:
 - **A roofer on JobNimbus or AccuLynx who wants AI:** Sameday AI.
 - **Google Calendar booking for $30 to $100 a month, with callers in many languages:** LobbyStack.
 
-Want to hear LobbyStack take an estimate request before you pay? [Create a free account](https://app.lobbystack.com/en/signup) and test it with 30 browser voice minutes, no card needed. Paid plans have no setup fee. Then see how it covers nights and weekends on the [after-hours answering for contractors](/solutions/after-hours-answering-service-for-contractors/) page.
+Want to hear LobbyStack take an estimate request before you pay? [Create a free account](https://app.lobbystack.com/en/signup) and test it with 30 voice minutes and a free number for 14 days, no card needed. Paid plans have no setup fee. Then see how it covers nights and weekends on the [after-hours answering for contractors](/solutions/after-hours-answering-service-for-contractors/) page.

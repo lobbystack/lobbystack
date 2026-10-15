@@ -128,8 +128,9 @@ describe("competitor comparison blog collection", () => {
       const english = readFileSync(postPath(slug, "en"), "utf8")
       const french = readFileSync(postPath(slug, "fr"), "utf8")
 
-      expect(english, slug).toContain("30 browser voice minutes")
-      expect(english, slug).toContain("no telephone number")
+      expect(english, slug).toContain("30 voice minutes")
+      expect(english, slug).toContain("US or Canadian number free for 14 days")
+      expect(english, slug).not.toContain("no telephone number")
       expect(english, slug).not.toMatch(/\ball features\b/)
       expect(english, slug).toContain("## Choose LobbyStack")
       expect(english, slug).toContain("## Verdict")
@@ -138,8 +139,8 @@ describe("competitor comparison blog collection", () => {
       )
 
       expect(french, slug).toMatch(/30 minutes/)
-      expect(french, slug).toContain("30 minutes vocales dans le navigateur")
-      expect(french, slug).toContain("sans carte ni numéro de téléphone")
+      expect(french, slug).toContain("30 minutes vocales")
+      expect(french, slug).toContain("numéro américain ou canadien gratuit pendant 14 jours")
       expect(french, slug).toContain("## Choisissez LobbyStack")
       expect(french, slug).toContain("## Verdict")
       expect(french, slug).not.toMatch(
@@ -147,14 +148,14 @@ describe("competitor comparison blog collection", () => {
       )
 
       const spanish = readFileSync(postPath(slug, "es"), "utf8")
-      expect(spanish, slug).toContain("30 minutos de voz en el navegador")
-      expect(spanish, slug).toContain("sin tarjeta ni número de teléfono")
+      expect(spanish, slug).toContain("30 minutos de voz")
+      expect(spanish, slug).toContain("número de EE. UU. o Canadá gratis durante 14 días")
       expect(spanish, slug).toContain("## Elija LobbyStack")
       expect(spanish, slug).toContain("## Veredicto")
 
       const serbian = readFileSync(postPath(slug, "sr"), "utf8")
-      expect(serbian, slug).toContain("30 minuta razgovora u pregledaču")
-      expect(serbian, slug).toContain("bez kartice i broja telefona")
+      expect(serbian, slug).toContain("30 minuta razgovora")
+      expect(serbian, slug).toContain("broj iz SAD ili Kanade besplatno 14 dana")
       expect(serbian, slug).toContain("## Izaberite LobbyStack")
       expect(serbian, slug).toContain("## Zaključak")
       expect(serbian, slug).not.toMatch(/[\u0400-\u04FF]/)

@@ -22,7 +22,7 @@ Goodcall nunca mide los minutos, así que su modelo puede favorecer las llamadas
 | Área | Goodcall | LobbyStack |
 | --- | --- | --- |
 | Unidad de cobro | Personas únicas que llaman al mes, con un plan por agente | Minutos de voz, contados por segundo |
-| Opción gratuita | Agente de demostración gratis; el cobro empieza al conectar un número | Free: 30 minutos de voz en el navegador, sin tarjeta ni número de teléfono |
+| Opción gratuita | Agente de demostración gratis; el cobro empieza al conectar un número | Free: 30 minutos de voz, sin tarjeta, número de EE. UU. o Canadá gratis durante 14 días |
 | Primer plan de pago | $79 por 100 personas únicas (unas 150 llamadas) | $30 por 150 minutos |
 | Niveles superiores | $129 por 500 personas, $299 por 2,000 | $100 por 500 minutos |
 | Uso adicional | 79¢, 26¢ o 15¢ por cada persona adicional | $0.20 o $0.18 por minuto adicional |

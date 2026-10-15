@@ -209,7 +209,7 @@ LobbyStack es una recepcionista con IA para pequeñas empresas. Reserva citas en
 
 Cada llamada empieza en el idioma predeterminado del negocio, inglés o francés. Después, la recepcionista contesta en el idioma de quien llama. Funciona con OpenAI GPT-Live y atiende más de 70 idiomas, entre ellos el español y el serbio.
 
-[Starter](/es/pricing/) cuesta $30 al mes por 150 minutos, y después $0.20 por minuto, sin tarifa de configuración. El plan Free le da 30 minutos de voz en el navegador al mes, sin tarjeta ni número de teléfono, y no caduca. El código tiene [licencia MIT en GitHub](https://github.com/lobbystack/lobbystack), y usted puede [autoalojarlo](https://docs.lobbystack.com/self-hosting/overview) con sus propias cuentas de OpenAI y Twilio.
+[Starter](/es/pricing/) cuesta $30 al mes por 150 minutos, y después $0.20 por minuto, sin tarifa de configuración. El plan Free le da 30 minutos de voz al mes y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta. El plan en sí no caduca. El código tiene [licencia MIT en GitHub](https://github.com/lobbystack/lobbystack), y usted puede [autoalojarlo](https://docs.lobbystack.com/self-hosting/overview) con sus propias cuentas de OpenAI y Twilio.
 
 Conozca los límites antes de registrarse:
 
@@ -229,7 +229,7 @@ No. Un asistente virtual trabaja a distancia en tareas administrativas más ampl
 
 ### ¿Es confiable una recepcionista virtual?
 
-Sí. Las recepcionistas virtuales son una categoría de servicio consolidada, así que juzgue a cada empresa por sus precios publicados, sus condiciones de contrato y su periodo de prueba. [SAS](https://www.specialtyansweringservice.net/pricing/) y [PATLive](https://www.patlive.com/pricing/) ofrecen pruebas gratis de 14 días, [Ruby](https://www.ruby.com/plans-and-pricing/) ofrece a los clientes nuevos una garantía de devolución del dinero, y el plan Free de LobbyStack no caduca.
+Sí. Las recepcionistas virtuales son una categoría de servicio consolidada, así que juzgue a cada empresa por sus precios publicados, sus condiciones de contrato y su periodo de prueba. [SAS](https://www.specialtyansweringservice.net/pricing/) y [PATLive](https://www.patlive.com/pricing/) ofrecen pruebas gratis de 14 días, [Ruby](https://www.ruby.com/plans-and-pricing/) ofrece a los clientes nuevos una garantía de devolución del dinero, y el plan Free de LobbyStack incluye un número de EE. UU. o Canadá durante 14 días.
 
 ## Veredicto
 

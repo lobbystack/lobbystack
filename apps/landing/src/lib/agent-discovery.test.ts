@@ -27,9 +27,9 @@ describe("markdownAlternatePath", () => {
 })
 
 describe("featuresMarkdown", () => {
-  it("distinguishes Free browser voice from paid telephone features", () => {
+  it("distinguishes the Free trial number from paid telephone features", () => {
     const everyPlan = featuresMarkdown.split("## Every Plan Includes\n\n")[1]
-    expect(everyPlan).toContain("Free includes 30 browser voice minutes and no telephone number.")
+    expect(everyPlan).toContain("Free includes 30 voice minutes and a US or Canadian phone number free for 14 days.")
     expect(everyPlan).toContain("Starter and Pro include a dedicated telephone number for inbound phone calls and call transfers.")
     expect(everyPlan).not.toMatch(/Every plan includes[^\n]*\b(outbound calls|transfers|telephone call answering)\b/)
     expect(everyPlan).toContain("unlimited concurrent calls")

@@ -209,7 +209,7 @@ LobbyStack est un réceptionniste IA pour les petites entreprises. Il réserve l
 
 Chaque appel commence dans la langue par défaut de l'entreprise, l'anglais ou le français. Le réceptionniste répond ensuite dans la langue de l'appelant. Il fonctionne avec GPT-Live d'OpenAI et prend en charge plus de 70 langues, dont l'espagnol et le serbe.
 
-[Starter](/fr/pricing/) coûte 30 $ par mois pour 150 minutes, puis 0,20 $ la minute, sans frais de mise en service. Le forfait Gratuit vous donne 30 minutes vocales dans le navigateur par mois, sans carte ni numéro de téléphone, et il n'expire pas. Le code est [sous licence MIT sur GitHub](https://github.com/lobbystack/lobbystack), et vous pouvez [l'auto-héberger](https://docs.lobbystack.com/self-hosting/overview) avec vos propres comptes OpenAI et Twilio.
+[Starter](/fr/pricing/) coûte 30 $ par mois pour 150 minutes, puis 0,20 $ la minute, sans frais de mise en service. Le forfait Gratuit vous donne 30 minutes vocales par mois et un numéro américain ou canadien gratuit pendant 14 jours, sans carte. Le forfait lui-même n'expire pas. Le code est [sous licence MIT sur GitHub](https://github.com/lobbystack/lobbystack), et vous pouvez [l'auto-héberger](https://docs.lobbystack.com/self-hosting/overview) avec vos propres comptes OpenAI et Twilio.
 
 Connaissez les limites avant de vous inscrire :
 
@@ -229,7 +229,7 @@ Non. Une assistante virtuelle travaille à distance sur des tâches administrati
 
 ### Les réceptionnistes virtuelles sont-elles fiables ?
 
-Oui. La réceptionniste virtuelle est une catégorie de service établie : jugez donc chaque entreprise sur ses prix publiés, ses conditions de contrat et son essai. [SAS](https://www.specialtyansweringservice.net/pricing/) et [PATLive](https://www.patlive.com/pricing/) offrent un essai gratuit de 14 jours, [Ruby](https://www.ruby.com/plans-and-pricing/) offre aux nouveaux clients une garantie de remboursement, et le forfait Gratuit de LobbyStack n'expire pas.
+Oui. La réceptionniste virtuelle est une catégorie de service établie : jugez donc chaque entreprise sur ses prix publiés, ses conditions de contrat et son essai. [SAS](https://www.specialtyansweringservice.net/pricing/) et [PATLive](https://www.patlive.com/pricing/) offrent un essai gratuit de 14 jours, [Ruby](https://www.ruby.com/plans-and-pricing/) offre aux nouveaux clients une garantie de remboursement, et le forfait Gratuit de LobbyStack inclut un numéro américain ou canadien pendant 14 jours.
 
 ## Verdict
 

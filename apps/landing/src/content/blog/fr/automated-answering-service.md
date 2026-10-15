@@ -119,7 +119,7 @@ Le forfait Economy de SAS à 44 $ ajoute 1,54 $ pour chaque minute qu'un agent p
 
 ### Coût d'un réceptionniste IA
 
-Les forfaits d'entrée coûtent de 14 $ à 150 $ par mois, et Smith.ai et LobbyStack proposent aussi un forfait gratuit (celui de LobbyStack sert aux tests dans le navigateur). Les unités de facturation diffèrent : AI-Receptionist.com, Dialzara, RingCentral AIR et LobbyStack facturent à la minute, Upfirst et Smith.ai à l'appel, et Goodcall par appelant unique. Nous ne convertissons pas une unité en une autre sans connaître la durée de vos appels. L'article [le coût des réceptionnistes IA, fournisseur par fournisseur](/fr/blog/ai-receptionist-savings/) détaille chaque forfait d'entrée et ses dépassements.
+Les forfaits d'entrée coûtent de 14 $ à 150 $ par mois, et Smith.ai et LobbyStack proposent aussi un forfait gratuit (celui de LobbyStack inclut un numéro américain ou canadien gratuit pendant 14 jours). Les unités de facturation diffèrent : AI-Receptionist.com, Dialzara, RingCentral AIR et LobbyStack facturent à la minute, Upfirst et Smith.ai à l'appel, et Goodcall par appelant unique. Nous ne convertissons pas une unité en une autre sans connaître la durée de vos appels. L'article [le coût des réceptionnistes IA, fournisseur par fournisseur](/fr/blog/ai-receptionist-savings/) détaille chaque forfait d'entrée et ses dépassements.
 
 ### Ce que coûtent 40 appels par mois selon le type
 
@@ -185,7 +185,7 @@ LobbyStack répond à tous les appels qui arrivent sur son numéro. Renvoyez vot
 
 ### 7. Testez-le avant de renvoyer de vrais appels
 
-Appelez-le vous-même avant vos clients. Le forfait Gratuit de LobbyStack vous donne 30 minutes vocales dans le navigateur par mois pour vos tests, sans carte ni numéro de téléphone. Préparez trois scénarios : une urgence, une réservation et un appelant qui parle espagnol ou une autre langue de vos clients. Après le renvoi de votre ligne, lisez les enregistrements, transcriptions et résumés de la première semaine, et corrigez chaque règle qui se déclenche mal.
+Appelez-le vous-même avant vos clients. Le forfait Gratuit de LobbyStack vous donne 30 minutes vocales par mois et un numéro américain ou canadien gratuit pendant 14 jours, sans carte. Préparez trois scénarios : une urgence, une réservation et un appelant qui parle espagnol ou une autre langue de vos clients. Après le renvoi de votre ligne, lisez les enregistrements, transcriptions et résumés de la première semaine, et corrigez chaque règle qui se déclenche mal.
 
 ## Quel standard automatique choisir pour votre entreprise ?
 
@@ -219,7 +219,7 @@ La permanence téléphonique convient au premier contact avec les clients d'un c
 
 ### Existe-t-il un standard automatique gratuit ?
 
-Le forfait Gratuit de LobbyStack vous donne 30 minutes vocales dans le navigateur par mois, sans carte ni numéro de téléphone, et il n'expire pas, mais il ne répond pas à de vrais appels. Le forfait AI Free de Smith.ai répond à 25 vrais appels par mois, puis facture 3 $ par appel. D'autres fournisseurs proposent des essais, que liste l'article [le coût des réceptionnistes IA, fournisseur par fournisseur](/fr/blog/ai-receptionist-savings/).
+Le forfait Gratuit de LobbyStack vous donne 30 minutes vocales par mois et un numéro américain ou canadien qui répond gratuitement à de vrais appels pendant 14 jours, sans carte. Le forfait AI Free de Smith.ai répond à 25 vrais appels par mois, puis facture 3 $ par appel. D'autres fournisseurs proposent des essais, que liste l'article [le coût des réceptionnistes IA, fournisseur par fournisseur](/fr/blog/ai-receptionist-savings/).
 
 ### Puis-je garder mon numéro professionnel ?
 
@@ -231,4 +231,4 @@ Le réceptionniste LobbyStack peut raccrocher sur les appels indésirables et ab
 
 ## Testez un réceptionniste IA avant de renvoyer un appel
 
-Écoutez comment un réceptionniste IA traite vos appels avant qu'un client l'entende. Le forfait Gratuit de LobbyStack vous donne 30 minutes vocales dans le navigateur par mois, sans carte ni numéro de téléphone. Si les appels tests vous conviennent, Starter coûte 30 $ par mois pour 150 minutes et un numéro professionnel. LobbyStack ne facture pas de frais de mise en service, et vous pouvez résilier à tout moment sans frais de résiliation. [Commencez gratuitement](https://app.lobbystack.com/fr/signup) ou comparez les forfaits sur la [page des tarifs](/fr/pricing/).
+Écoutez comment un réceptionniste IA traite vos appels avant qu'un client l'entende. Le forfait Gratuit de LobbyStack vous donne 30 minutes vocales par mois et un numéro américain ou canadien gratuit pendant 14 jours, sans carte. Si les appels vous conviennent, Starter coûte 30 $ par mois pour 150 minutes et un numéro professionnel. LobbyStack ne facture pas de frais de mise en service, et vous pouvez résilier à tout moment sans frais de résiliation. [Commencez gratuitement](https://app.lobbystack.com/fr/signup) ou comparez les forfaits sur la [page des tarifs](/fr/pricing/).

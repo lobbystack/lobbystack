@@ -139,7 +139,7 @@ LobbyStack paket Starter košta $30 mesečno za 150 minuta, a zatim $0.20 po min
 
 Svaki poziv počinje na podrazumevanom jeziku firme, engleskom ili francuskom. Recepcioner zatim odgovara na jeziku pozivaoca: više od 70 jezika preko OpenAI GPT-Live, uključujući španski i srpski. Vi mu kažete koji su pozivi hitni, na primer voda koja ne prestaje da teče ili kanalizacija koja se vraća kroz odvod, a on ih prebacuje na jedan broj. Ako prebacivanje ne uspe, kaže to pozivaocu, ponudi da primi poruku, a Vaš tim može da dobije upozorenje "Live call transfer failed". Zakazuje u Google Calendar i, kada pozivalac pristane, šalje SMS potvrdu i podsetnik 24 sata ranije na brojeve iz SAD i Kanade. Svaki poziv ostavlja rezime, transkript i snimak na kontrolnoj tabli, a Vi dobijate imejl kada recepcioner primi poruku.
 
-Ne sinhronizuje se sa ServiceTitan-om, Housecall Pro-om ni Jobber-om, a Google Calendar mu je jedini kalendar. Prebacivanje ide na jedan broj, bez kratkog izveštaja, i nema rotacije dežurstava. Iza njega ne stoje ljudski agenti, a AI ne odgovara na SMS poruke. Besplatni paket daje 30 minuta razgovora u pregledaču, bez kartice i broja telefona, za testiranje. Pogledajte kako radi sa hitnim pozivima na stranici [AI recepcioner za vodoinstalatere](/sr/solutions/ai-receptionist-for-plumbers/).
+Ne sinhronizuje se sa ServiceTitan-om, Housecall Pro-om ni Jobber-om, a Google Calendar mu je jedini kalendar. Prebacivanje ide na jedan broj, bez kratkog izveštaja, i nema rotacije dežurstava. Iza njega ne stoje ljudski agenti, a AI ne odgovara na SMS poruke. Besplatni paket daje 30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana, bez kartice. Pogledajte kako radi sa hitnim pozivima na stranici [AI recepcioner za vodoinstalatere](/sr/solutions/ai-receptionist-for-plumbers/).
 
 ## Koliko košta usluga odgovaranja na pozive za vodoinstalatere?
 
@@ -230,7 +230,7 @@ Sa telefonskog računa uzmite broj poziva i prosečno trajanje za najprometniji 
 
 ### 2. Obavite tri probna poziva pre potpisivanja
 
-Pozovite svakog finalistu tri puta: pukla cev u 2 ujutru dok voda još teče, izlivanje kanalizacije u podrumu i zahtev za ponudu za bojler. Jedan poziv obavite na španskom ako ga Vaše mušterije govore. Proverite ko se javio, šta piše u rezimeu i da li je dežurni vodoinstalater dobio poziv. Probe: PATLive 14 dana, SAS 14 dana ili 200 minuta, Rosie 7 dana, besplatne probe kod MAP-a i Housecall Pro-a, Smith.ai paket AI Free, i besplatni LobbyStack paket, koji radi u pregledaču 30 minuta.
+Pozovite svakog finalistu tri puta: pukla cev u 2 ujutru dok voda još teče, izlivanje kanalizacije u podrumu i zahtev za ponudu za bojler. Jedan poziv obavite na španskom ako ga Vaše mušterije govore. Proverite ko se javio, šta piše u rezimeu i da li je dežurni vodoinstalater dobio poziv. Probe: PATLive 14 dana, SAS 14 dana ili 200 minuta, Rosie 7 dana, besplatne probe kod MAP-a i Housecall Pro-a, Smith.ai paket AI Free, i besplatni LobbyStack paket sa 30 minuta i brojem iz SAD ili Kanade besplatno 14 dana.
 
 ### 3. Pročitajte uslove naplate i naknade
 
@@ -244,7 +244,7 @@ Preusmerite postojeći broj kod svog operatera za višak poziva, pozive van radn
 
 ### Postoji li besplatna usluga odgovaranja na pozive za vodoinstalatere?
 
-Nijedna usluga uživo sa ovog spiska nije besplatna; najbliže su probe. Smith.ai paket AI Free pokriva 25 stvarnih poziva mesečno, a zatim naplaćuje $3.00 po pozivu. Besplatni LobbyStack paket daje 30 minuta razgovora u pregledaču, bez kartice i broja telefona, pa možete da testirate recepcionera, ali on ne može da odgovara na Vašu poslovnu liniju.
+Nijedna usluga uživo sa ovog spiska nije besplatna; najbliže su probe. Smith.ai paket AI Free pokriva 25 stvarnih poziva mesečno, a zatim naplaćuje $3.00 po pozivu. Besplatni LobbyStack paket daje 30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana, bez kartice, pa dve nedelje može da odgovara na Vašu poslovnu liniju ako je prosledite.
 
 ### Mogu li da koristim uslugu samo van radnog vremena?
 
@@ -289,4 +289,4 @@ Izvori:
 - **Jobber ili Housecall Pro:** prvo probajte ugrađenog recepcionera.
 - **Zakazivanje u Google Calendar, višak poziva i pozivi van radnog vremena za $30 do $100 mesečno, uz pozivaoce na drugim jezicima:** LobbyStack.
 
-Želite da čujete kako LobbyStack prima poziv zbog pukle cevi pre nego što platite? [Napravite besplatan nalog](https://app.lobbystack.com/sr/signup) i testirajte ga sa 30 minuta razgovora u pregledaču, bez kartice. Plaćeni paketi nemaju naknadu za aktivaciju. Zatim pogledajte kako rade hitni pozivi, zakazivanje i prebacivanje na stranici [AI recepcioner za vodoinstalatere](/sr/solutions/ai-receptionist-for-plumbers/).
+Želite da čujete kako LobbyStack prima poziv zbog pukle cevi pre nego što platite? [Napravite besplatan nalog](https://app.lobbystack.com/sr/signup) i testirajte ga sa 30 minuta razgovora i besplatnim brojem na 14 dana, bez kartice. Plaćeni paketi nemaju naknadu za aktivaciju. Zatim pogledajte kako rade hitni pozivi, zakazivanje i prebacivanje na stranici [AI recepcioner za vodoinstalatere](/sr/solutions/ai-receptionist-for-plumbers/).

@@ -311,7 +311,7 @@ With LobbyStack as the example (more on the [AI phone answering](/solutions/ai-p
 
 ### Test the rules before callers hear them
 
-Call your receptionist and play each caller: an urgent call, a booking, a price question, an upset customer and a wrong number. LobbyStack's Free plan gives you 30 browser voice minutes, with no card and no telephone number, enough to run each scenario more than once. The Free plan can't take real calls, transfer or text, so check those on a paid plan before you rely on them.
+Call your receptionist and play each caller: an urgent call, a booking, a price question, an upset customer and a wrong number. LobbyStack's Free plan gives you 30 voice minutes and a US or Canadian number free for 14 days, with no card, enough to run each scenario more than once. During the trial, transfers go only to the mobile number you verified, so check transfers to your team on a paid plan before you rely on them.
 
 Fix the rule behind any answer you don't like. Then [forward your business number](/blog/how-to-forward-business-calls/) for every call, for overflow only or for after-hours calls. For more rule examples, see [AI receptionist workflows in plain language](/blog/ai-receptionist-workflows/).
 
@@ -339,4 +339,4 @@ Forward your business number to an answering service or AI receptionist with you
 
 ## Try your scripts on an AI receptionist
 
-Write your rules in an evening and test them the same night. LobbyStack's Free plan gives you 30 browser voice minutes, with no card and no telephone number. When the calls sound right, Starter is $30 a month for 150 minutes and a business number, then $0.20 a minute, with no setup fee. [Start free](https://app.lobbystack.com/en/signup) and run your first script in the browser.
+Write your rules in an evening and test them the same night. LobbyStack's Free plan gives you 30 voice minutes and a US or Canadian number free for 14 days, with no card. When the calls sound right, Starter is $30 a month for 150 minutes and a business number, then $0.20 a minute, with no setup fee. [Start free](https://app.lobbystack.com/en/signup) and run your first script in the browser.

@@ -6,7 +6,7 @@ const includedCopy = {
     headingStart: "Answer telephone calls with",
     headingEmphasis: "Starter or Pro",
     intro:
-      "Test 30 browser voice minutes on Free, without a telephone number. Choose Starter or Pro for a dedicated number and the telephone features below.",
+      "Free gives you 30 voice minutes and a US or Canadian number for 14 days. Choose Starter or Pro to keep a dedicated number and the telephone features below.",
     label: "Included on Starter and Pro",
     features: [
       "Call answering",
@@ -29,7 +29,7 @@ const includedCopy = {
     headingStart: "Recevez des appels téléphoniques avec",
     headingEmphasis: "Starter ou Pro",
     intro:
-      "Testez 30 minutes vocales dans le navigateur sur Free, sans numéro de téléphone. Choisissez Starter ou Pro pour obtenir un numéro dédié et les fonctions téléphoniques ci-dessous.",
+      "Free vous donne 30 minutes vocales et un numéro américain ou canadien pendant 14 jours. Choisissez Starter ou Pro pour garder un numéro dédié et les fonctions téléphoniques ci-dessous.",
     label: "Inclus dans Starter et Pro",
     features: [
       "Réponse aux appels",
@@ -52,7 +52,7 @@ const includedCopy = {
     headingStart: "Conteste llamadas telefónicas con",
     headingEmphasis: "Starter o Pro",
     intro:
-      "Pruebe 30 minutos de voz en el navegador con Free, sin número de teléfono. Elija Starter o Pro para tener un número dedicado y las funciones telefónicas de abajo.",
+      "Free le da 30 minutos de voz y un número de EE. UU. o Canadá durante 14 días. Elija Starter o Pro para conservar un número dedicado y las funciones telefónicas de abajo.",
     label: "Incluido en Starter y Pro",
     features: [
       "Atención de llamadas",
@@ -75,7 +75,7 @@ const includedCopy = {
     headingStart: "Odgovarajte na telefonske pozive uz",
     headingEmphasis: "Starter ili Pro",
     intro:
-      "Isprobajte 30 minuta razgovora u pregledaču na paketu Free, bez broja telefona. Izaberite Starter ili Pro za namenski broj i telefonske funkcije ispod.",
+      "Paket Free Vam daje 30 minuta razgovora i broj iz SAD ili Kanade na 14 dana. Izaberite Starter ili Pro da biste zadržali namenski broj i telefonske funkcije ispod.",
     label: "Uključeno u Starter i Pro",
     features: [
       "Odgovaranje na pozive",

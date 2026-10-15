@@ -126,7 +126,7 @@ LobbyStack Starter košta $30 mesečno za 150 minuta, zatim $0.20 po minutu. Pro
 
 Svaki poziv počinje na podrazumevanom jeziku firme, engleskom ili francuskom. Recepcioner zatim odgovara na jeziku pozivaoca: na OpenAI GPT-Live modelu to je više od 70 jezika, uključujući španski i srpski. Vaša pravila napisana običnim jezikom određuju koji pozivi su hitni, a recepcioner te pozive može da preusmeri na jedan broj. Ako preusmeravanje ne uspe, nudi da primi poruku, a Vaš tim može da dobije obaveštenje „Preusmeravanje poziva nije uspelo“. Zakazuje u Google Calendar i, kada pozivalac pristane, šalje SMS potvrdu i podsetnik 24 sata unapred na američke i kanadske brojeve.
 
-Ne sinhronizuje se sa ServiceTitan, Housecall Pro ni Jobber, a Google Calendar je jedini kalendar sa kojim radi. Preusmerenja idu na jedan broj, bez najave, i nemate rotaciju dežurstava. Iza njega ne stoje ljudski agenti, a AI ne odgovara na SMS poruke. Paket Free Vam za testiranje daje 30 minuta razgovora u pregledaču, bez kartice i broja telefona. Rad sa hitnim pozivima opisuje stranica [AI recepcioner za grejanje i klimatizaciju](/sr/solutions/ai-receptionist-for-hvac/).
+Ne sinhronizuje se sa ServiceTitan, Housecall Pro ni Jobber, a Google Calendar je jedini kalendar sa kojim radi. Preusmerenja idu na jedan broj, bez najave, i nemate rotaciju dežurstava. Iza njega ne stoje ljudski agenti, a AI ne odgovara na SMS poruke. Paket Free Vam daje 30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana, bez kartice. Rad sa hitnim pozivima opisuje stranica [AI recepcioner za grejanje i klimatizaciju](/sr/solutions/ai-receptionist-for-hvac/).
 
 ## Koliko košta usluga odgovaranja na pozive za HVAC firme?
 
@@ -226,7 +226,7 @@ Sa računa za telefon uzmite broj poziva i prosečno trajanje poziva za prošli 
 
 ### 2. Pozovite tri puta pre potpisivanja
 
-Pozovite svakog finalistu tri puta: kao roditelj bebe kome u 2 ujutru ne radi grejanje, kao neko ko zakazuje redovan servis i kao pozivalac koji govori španski. Proverite ko se javio, šta piše u rezimeu i da li je poziv stigao do dežurnog tehničara. Probe: PATLive 14 dana, SAS 14 dana ili 200 minuta, MAP i Housecall Pro besplatne probe, Rosie 7 dana, Smith.ai paket AI Free i LobbyStack Free sa 30 minuta u pregledaču.
+Pozovite svakog finalistu tri puta: kao roditelj bebe kome u 2 ujutru ne radi grejanje, kao neko ko zakazuje redovan servis i kao pozivalac koji govori španski. Proverite ko se javio, šta piše u rezimeu i da li je poziv stigao do dežurnog tehničara. Probe: PATLive 14 dana, SAS 14 dana ili 200 minuta, MAP i Housecall Pro besplatne probe, Rosie 7 dana, Smith.ai paket AI Free i LobbyStack Free sa 30 minuta i brojem iz SAD ili Kanade besplatno 14 dana.
 
 ### 3. Pročitajte uslove naplate i naknade
 
@@ -240,7 +240,7 @@ Kod operatera podesite prosleđivanje postojećeg broja za višak poziva, pozive
 
 ### Postoji li besplatna usluga odgovaranja na pozive za HVAC firme?
 
-Nijedna usluga uživo na ovom spisku nije besplatna; najbliže tome su probe. Smith.ai paket AI Free pokriva 25 stvarnih poziva mesečno. LobbyStack Free Vam daje 30 minuta razgovora u pregledaču mesečno, bez kartice i broja telefona, pa njime testirate recepcionera, ali ga ne možete povezati sa poslovnom linijom.
+Nijedna usluga uživo na ovom spisku nije besplatna; najbliže tome su probe. Smith.ai paket AI Free pokriva 25 stvarnih poziva mesečno. LobbyStack Free Vam daje 30 minuta razgovora mesečno i broj iz SAD ili Kanade besplatno 14 dana, bez kartice, pa dve nedelje može da odgovara na Vašu poslovnu liniju ako je prosledite.
 
 ### Mogu li da koristim uslugu odgovaranja samo van radnog vremena?
 
@@ -282,4 +282,4 @@ Izvori, svi pročitani 9. oktobra 2026:
 - **Jobber ili Housecall Pro:** prvo probajte ugrađenog recepcionera.
 - **Zakazivanje u Google Calendar, višak poziva i pozivi van radnog vremena za $30 do $100 mesečno, uz pozivaoce na drugim jezicima:** LobbyStack.
 
-Poslušajte kako LobbyStack prima poziv zbog pokvarenog grejanja pre nego što platite: [napravite besplatan nalog](https://app.lobbystack.com/sr/signup) i testirajte ga sa 30 minuta razgovora u pregledaču, bez kartice. Plaćeni paketi nemaju naknadu za aktivaciju, a pretplatu otkazujete u podešavanjima naplate, bez naknade za otkazivanje. Zatim na stranici [AI recepcioner za grejanje i klimatizaciju](/sr/solutions/ai-receptionist-for-hvac/) pogledajte kako rade hitni pozivi, zakazivanje i preusmeravanje.
+Poslušajte kako LobbyStack prima poziv zbog pokvarenog grejanja pre nego što platite: [napravite besplatan nalog](https://app.lobbystack.com/sr/signup) i testirajte ga sa 30 minuta razgovora i besplatnim brojem na 14 dana, bez kartice. Plaćeni paketi nemaju naknadu za aktivaciju, a pretplatu otkazujete u podešavanjima naplate, bez naknade za otkazivanje. Zatim na stranici [AI recepcioner za grejanje i klimatizaciju](/sr/solutions/ai-receptionist-for-hvac/) pogledajte kako rade hitni pozivi, zakazivanje i preusmeravanje.

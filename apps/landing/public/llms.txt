@@ -50,7 +50,7 @@ A business on a paid plan gets a local or toll-free number (or forwards its exis
 
 ### What does LobbyStack cost?
 
-LobbyStack has a Free plan with 30 voice minutes for browser test calls (no phone number), a Starter plan at $30/month with 150 voice minutes, a Pro plan at $100/month with 500 voice minutes, and custom Enterprise pricing for higher volume or self-hosting implementation support. Starter includes 20 transfer attempts and 50 alert SMS segments. Pro includes 100 transfer attempts and 200 alert SMS segments.
+LobbyStack has a Free plan with 30 voice minutes and a US or Canadian phone number free for 14 days, a Starter plan at $30/month with 150 voice minutes, a Pro plan at $100/month with 500 voice minutes, and custom Enterprise pricing for higher volume or self-hosting implementation support. Starter includes 20 transfer attempts and 50 alert SMS segments. Pro includes 100 transfer attempts and 200 alert SMS segments.
 
 ## Ideal customers
 
@@ -94,7 +94,7 @@ LobbyStack is designed to be transparent and self-hostable. Teams can inspect th
 
 ## Pricing summary
 
-- Free: $0/month with 30 voice minutes for browser test calls and a 1 MB knowledge base. Free has no phone number, so it sends no texts and cannot transfer calls.
+- Free: $0/month with 30 voice minutes, a US or Canadian phone number free for 14 days, and a 1 MB knowledge base. During the trial, transfers go only to the owner's verified mobile number. Starter or Pro keeps the number.
 - Starter: $30/month or $288/year ($24/month effective) with 1 phone number, 150 voice minutes, 20 transfer attempts, 50 alert SMS segments, and a 5 MB knowledge base.
 - Pro: $100/month or $960/year ($80/month effective) with 1 phone number, 500 voice minutes, 100 transfer attempts, 200 alert SMS segments, and a 20 MB knowledge base.
 - Starter overage: $0.20 per voice minute, $0.02 per transfer attempt, and $0.02 per alert SMS segment.

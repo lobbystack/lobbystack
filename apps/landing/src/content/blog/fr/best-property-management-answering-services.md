@@ -136,7 +136,7 @@ Le forfait Starter de LobbyStack coûte 30 $ par mois pour 150 minutes, puis 0,
 
 Chaque appel s'ouvre dans la langue par défaut de l'entreprise, l'anglais ou le français. Le réceptionniste répond ensuite dans la langue de l'appelant : plus de 70 langues avec OpenAI GPT-Live, dont l'espagnol et le serbe. Vous rédigez votre liste d'urgences en langage courant, et il transfère les appels concernés vers un numéro. Si le transfert échoue, il prévient l'appelant, propose de prendre un message, et votre équipe peut recevoir une alerte « Live call transfer failed ». Il réserve les visites dans Google Calendar et, avec l'accord de l'appelant, envoie par SMS une confirmation et un rappel 24 heures avant aux numéros américains et canadiens. Chaque appel laisse un résumé, une transcription et un enregistrement dans le tableau de bord, et chaque message déclenche une alerte par e-mail.
 
-LobbyStack ne se synchronise ni avec AppFolio, ni avec Buildium, ni avec Yardi, ni avec Rent Manager : il n'y crée donc aucun bon d'intervention. Des webhooks signés pour 6 événements et une API REST peuvent envoyer les détails des appels vers d'autres outils, si quelqu'un de votre équipe s'en charge. Les transferts vont vers un seul numéro, sans briefing : pas de rotation d'astreinte, et un propriétaire ne peut pas joindre en direct une autre personne que celle qui reçoit les urgences. Aucun agent humain ne prend le relais, et l'IA ne répond pas aux SMS. Le forfait gratuit offre 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone, pour tester. Découvrez comment il trie les appels des locataires sur la [page consacrée à la gestion locative](/fr/solutions/property-management-answering-service/).
+LobbyStack ne se synchronise ni avec AppFolio, ni avec Buildium, ni avec Yardi, ni avec Rent Manager : il n'y crée donc aucun bon d'intervention. Des webhooks signés pour 6 événements et une API REST peuvent envoyer les détails des appels vers d'autres outils, si quelqu'un de votre équipe s'en charge. Les transferts vont vers un seul numéro, sans briefing : pas de rotation d'astreinte, et un propriétaire ne peut pas joindre en direct une autre personne que celle qui reçoit les urgences. Aucun agent humain ne prend le relais, et l'IA ne répond pas aux SMS. Le forfait gratuit offre 30 minutes vocales et un numéro américain ou canadien gratuit pendant 14 jours, sans carte. Découvrez comment il trie les appels des locataires sur la [page consacrée à la gestion locative](/fr/solutions/property-management-answering-service/).
 
 ## Combien coûte une permanence téléphonique pour la gestion locative ?
 
@@ -234,7 +234,7 @@ Partez du tableau ci-dessus. Ajoutez votre règle pour les portes claquées, la 
 
 ### 3. Passez trois appels tests avant de signer
 
-Appelez chaque finaliste trois fois : une fuite à 2 h du matin qui gagne le logement du dessous, un propriétaire qui pose une question sur son relevé du mois dernier, et un candidat qui demande en espagnol si les animaux sont acceptés. Vérifiez qui a répondu, ce que dit le résumé, et si le technicien d'astreinte a bien reçu la fuite. Essais : PATLive 14 jours, SAS 14 jours ou 200 minutes, essai gratuit chez MAP, Rosie 7 jours, forfait Free de l'IA de Smith.ai, et LobbyStack Free, qui fonctionne dans le navigateur pendant 30 minutes.
+Appelez chaque finaliste trois fois : une fuite à 2 h du matin qui gagne le logement du dessous, un propriétaire qui pose une question sur son relevé du mois dernier, et un candidat qui demande en espagnol si les animaux sont acceptés. Vérifiez qui a répondu, ce que dit le résumé, et si le technicien d'astreinte a bien reçu la fuite. Essais : PATLive 14 jours, SAS 14 jours ou 200 minutes, essai gratuit chez MAP, Rosie 7 jours, forfait Free de l'IA de Smith.ai, et LobbyStack Free, avec 30 minutes et un numéro américain ou canadien gratuit pendant 14 jours.
 
 ### 4. Lisez les conditions de facturation
 
@@ -248,7 +248,7 @@ Renvoyez votre numéro d'agence depuis votre opérateur hors horaires, en cas de
 
 ### Existe-t-il une permanence téléphonique gratuite pour la gestion locative ?
 
-Aucun service humain de ce comparatif n'est gratuit, mais PATLive, SAS et MAP proposent un essai. Le forfait Free de l'IA de Smith.ai couvre 25 appels réels par mois. LobbyStack Free offre 30 minutes vocales dans le navigateur, sans numéro de téléphone : il permet de tester le réceptionniste, pas de répondre aux locataires.
+Aucun service humain de ce comparatif n'est gratuit, mais PATLive, SAS et MAP proposent un essai. Le forfait Free de l'IA de Smith.ai couvre 25 appels réels par mois. LobbyStack Free offre 30 minutes vocales et un numéro américain ou canadien gratuit pendant 14 jours : si vous y renvoyez votre ligne, il répond aux locataires pendant deux semaines.
 
 ### Peut-on utiliser une permanence uniquement hors horaires ?
 
@@ -292,4 +292,4 @@ Sources :
 - **Une IA avec des réceptionnistes humains en renfort :** Smith.ai.
 - **Des visites dans Google Calendar, un tri des urgences hors horaires vers un numéro d'astreinte pour 30 $ à 100 $ par mois, et des locataires qui parlent toutes sortes de langues :** LobbyStack.
 
-Vous voulez entendre LobbyStack distinguer une fuite à 2 h du matin d'un robinet qui goutte avant de payer ? [Créez un compte gratuit](https://app.lobbystack.com/fr/signup), rédigez votre liste d'urgences et testez-le avec 30 minutes vocales dans le navigateur, sans carte. Quand vous êtes prêt pour les appels des locataires, les forfaits payants ajoutent un numéro de téléphone dès 30 $ par mois, sans frais de mise en service. Voyez comment fonctionnent le tri et les visites sur la [page consacrée à la gestion locative](/fr/solutions/property-management-answering-service/).
+Vous voulez entendre LobbyStack distinguer une fuite à 2 h du matin d'un robinet qui goutte avant de payer ? [Créez un compte gratuit](https://app.lobbystack.com/fr/signup), rédigez votre liste d'urgences et testez-le avec 30 minutes vocales et un numéro gratuit pendant 14 jours, sans carte. Pour garder le numéro, les forfaits payants commencent à 30 $ par mois, sans frais de mise en service. Voyez comment fonctionnent le tri et les visites sur la [page consacrée à la gestion locative](/fr/solutions/property-management-answering-service/).

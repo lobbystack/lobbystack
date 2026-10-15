@@ -21,7 +21,7 @@ LobbyStack incluye reservas, transferencia de llamadas, alertas por SMS, transcr
 
 | Área | Zoom Virtual Agent Receptionist | LobbyStack |
 | --- | --- | --- |
-| Opción gratuita | Prueba gratuita ofrecida, sin duración indicada | 30 minutos de voz en el navegador, sin tarjeta ni número de teléfono |
+| Opción gratuita | Prueba gratuita ofrecida, sin duración indicada | 30 minutos de voz, sin tarjeta, número de EE. UU. o Canadá gratis durante 14 días |
 | Precio mensual | $29.99 por 100 minutos | $30 por 150 minutos |
 | Precio anual | $25.00 al mes por 100 minutos | $24 al mes por 150 minutos |
 | Minutos adicionales | Precio no publicado | $0.20 en Starter, $0.18 en Pro |
@@ -36,7 +36,7 @@ Precios y funciones verificados el 9 de octubre de 2026.
 
 ## LobbyStack le da más margen para validar el flujo
 
-El plan independiente de Zoom incluye 100 minutos. LobbyStack Starter incluye 150 por un centavo más. Puede probar 30 minutos de voz en el navegador en Free, sin número de teléfono. Con facturación anual, LobbyStack cuesta $1 menos al mes e incluye 50 minutos más.
+El plan independiente de Zoom incluye 100 minutos. LobbyStack Starter incluye 150 por un centavo más. Puede probar 30 minutos de voz en Free, con un número de EE. UU. o Canadá gratis durante 14 días. Con facturación anual, LobbyStack cuesta $1 menos al mes e incluye 50 minutos más.
 
 Esa capacidad adicional da a un pequeño negocio más margen para probar las reglas de reserva, las transferencias fuera de horario, las preguntas de quienes llaman y la gestión de fallos. El equipo puede revisar transcripciones y resúmenes antes de desviar todo el tráfico.
 
@@ -105,6 +105,6 @@ Elija LobbyStack si quiere 30 minutos de prueba gratis, un 50% más de uso inclu
 
 ## Veredicto
 
-Con LobbyStack, obtiene más minutos que con el plan independiente de Zoom, tanto al precio mensual como al anual, y puede probar gratis conversaciones de voz en su navegador. Elija Zoom si su equipo prefiere su administración de comunicaciones o necesita transferencias asistidas.
+Con LobbyStack, obtiene más minutos que con el plan independiente de Zoom, tanto al precio mensual como al anual, y puede probarlo con un número gratis de EE. UU. o Canadá durante 14 días. Elija Zoom si su equipo prefiere su administración de comunicaciones o necesita transferencias asistidas.
 
-[Empiece gratis con LobbyStack](/es/pricing/) y pruebe conversaciones de voz en su navegador.
+[Empiece gratis con LobbyStack](/es/pricing/) y pruébelo con un número gratis de EE. UU. o Canadá durante 14 días.

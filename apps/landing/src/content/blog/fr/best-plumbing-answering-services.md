@@ -139,7 +139,7 @@ Le forfait Starter de LobbyStack coûte 30 $ par mois pour 150 minutes, puis 0,2
 
 Chaque appel commence dans la langue par défaut de l'entreprise, anglais ou français. Le réceptionniste répond ensuite dans la langue de l'appelant : plus de 70 langues avec OpenAI GPT-Live, dont l'espagnol et le serbe. Vous lui indiquez quels appels sont urgents, par exemple une fuite qu'on n'arrive pas à arrêter ou des eaux usées qui remontent par une évacuation, et il les transfère vers un seul numéro. Si le transfert n'aboutit pas, il le dit à l'appelant, propose de prendre un message, et votre équipe peut recevoir une alerte « Live call transfer failed ». Il réserve dans Google Calendar et, si l'appelant accepte, envoie par SMS une confirmation et un rappel 24 heures avant aux numéros américains et canadiens. Chaque appel laisse un résumé, une transcription et un enregistrement dans le tableau de bord, et vous recevez un e-mail quand il prend un message.
 
-Il ne se synchronise ni avec ServiceTitan, ni avec Housecall Pro, ni avec Jobber, et Google Calendar est son seul agenda. Les transferts vont vers un seul numéro, sans briefing, et il n'y a pas de rotation de garde. Aucun agent humain ne prend le relais, et l'IA ne répond pas aux SMS. L'offre gratuite donne 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone, pour tester. Voyez comment il traite les appels urgents sur la page [réceptionniste IA pour plombiers](/fr/solutions/ai-receptionist-for-plumbers/).
+Il ne se synchronise ni avec ServiceTitan, ni avec Housecall Pro, ni avec Jobber, et Google Calendar est son seul agenda. Les transferts vont vers un seul numéro, sans briefing, et il n'y a pas de rotation de garde. Aucun agent humain ne prend le relais, et l'IA ne répond pas aux SMS. L'offre gratuite donne 30 minutes vocales et un numéro américain ou canadien gratuit pendant 14 jours, sans carte. Voyez comment il traite les appels urgents sur la page [réceptionniste IA pour plombiers](/fr/solutions/ai-receptionist-for-plumbers/).
 
 ## Combien coûte une permanence téléphonique pour plombier ?
 
@@ -230,7 +230,7 @@ Relevez sur votre facture téléphonique le nombre d'appels et la durée moyenne
 
 ### 2. Passez trois appels de test avant de signer
 
-Appelez chaque finaliste trois fois : une canalisation éclatée à 2 h du matin avec l'eau qui coule encore, un refoulement d'égout dans un sous-sol, et une demande de devis pour un chauffe-eau. Passez-en un en espagnol si vos clients le parlent. Vérifiez qui a répondu, ce que disait le résumé, et si le plombier de garde a reçu l'appel. Essais : PATLive 14 jours, SAS 14 jours ou 200 minutes, Rosie 7 jours, essais gratuits chez MAP et Housecall Pro, le forfait AI Free de Smith.ai, et l'offre gratuite de LobbyStack, qui fonctionne dans le navigateur pendant 30 minutes.
+Appelez chaque finaliste trois fois : une canalisation éclatée à 2 h du matin avec l'eau qui coule encore, un refoulement d'égout dans un sous-sol, et une demande de devis pour un chauffe-eau. Passez-en un en espagnol si vos clients le parlent. Vérifiez qui a répondu, ce que disait le résumé, et si le plombier de garde a reçu l'appel. Essais : PATLive 14 jours, SAS 14 jours ou 200 minutes, Rosie 7 jours, essais gratuits chez MAP et Housecall Pro, le forfait AI Free de Smith.ai, et l'offre gratuite de LobbyStack, avec 30 minutes et un numéro américain ou canadien gratuit pendant 14 jours.
 
 ### 3. Lisez les conditions de facturation et les frais
 
@@ -244,7 +244,7 @@ Renvoyez votre numéro actuel depuis votre opérateur pour le débordement, les 
 
 ### Existe-t-il une permanence téléphonique gratuite pour plombier ?
 
-Aucun service humain de ce comparatif n'est gratuit ; les essais s'en approchent le plus. Le forfait AI Free de Smith.ai couvre 25 vrais appels par mois, puis 3,00 $ l'appel. L'offre gratuite de LobbyStack donne 30 minutes vocales dans le navigateur, sans carte ni numéro de téléphone : vous testez le réceptionniste, mais il ne peut pas répondre à votre ligne professionnelle.
+Aucun service humain de ce comparatif n'est gratuit ; les essais s'en approchent le plus. Le forfait AI Free de Smith.ai couvre 25 vrais appels par mois, puis 3,00 $ l'appel. L'offre gratuite de LobbyStack donne 30 minutes vocales et un numéro américain ou canadien gratuit pendant 14 jours, sans carte : si vous y renvoyez votre ligne professionnelle, il y répond pendant deux semaines.
 
 ### Peut-on utiliser une permanence téléphonique seulement hors horaires ?
 
@@ -289,4 +289,4 @@ Sources :
 - **Jobber ou Housecall Pro :** essayez d'abord le réceptionniste intégré.
 - **Réservation dans Google Calendar, débordement et appels hors horaires pour 30 $ à 100 $ par mois, et des clients qui parlent d'autres langues :** LobbyStack.
 
-Vous voulez entendre LobbyStack prendre un appel pour une canalisation éclatée avant de payer ? [Créez un compte gratuit](https://app.lobbystack.com/fr/signup) et testez-le avec 30 minutes vocales dans le navigateur, sans carte. Les forfaits payants n'ont pas de frais de mise en service. Voyez ensuite comment fonctionnent les appels urgents, les réservations et les transferts sur la page [réceptionniste IA pour plombiers](/fr/solutions/ai-receptionist-for-plumbers/).
+Vous voulez entendre LobbyStack prendre un appel pour une canalisation éclatée avant de payer ? [Créez un compte gratuit](https://app.lobbystack.com/fr/signup) et testez-le avec 30 minutes vocales et un numéro gratuit pendant 14 jours, sans carte. Les forfaits payants n'ont pas de frais de mise en service. Voyez ensuite comment fonctionnent les appels urgents, les réservations et les transferts sur la page [réceptionniste IA pour plombiers](/fr/solutions/ai-receptionist-for-plumbers/).

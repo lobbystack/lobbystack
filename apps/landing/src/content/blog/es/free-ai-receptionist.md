@@ -15,7 +15,7 @@ canonicalSlug: "free-ai-receptionist"
 
 Una recepcionista virtual gratis con IA es una de estas cuatro ofertas: un plan gratis con un límite mensual pequeño, una prueba que termina a los 7 a 30 días, un crédito inicial en una plataforma para armarla usted mismo, o código abierto que usted aloja. En octubre de 2026 encontramos dos planes gratis que contestan llamadas reales sin costo: Smith.ai (25 llamadas al mes) y HireJosie (15 minutos al mes).
 
-**Revisado el 9 y el 10 de octubre de 2026** en la página de precios, las preguntas frecuentes o la página de registro de cada proveedor, en dólares estadounidenses. LobbyStack escribió esta guía y vende una recepcionista con IA. Nuestro plan Free le da 30 minutos de voz en el navegador al mes, sin tarjeta ni número de teléfono: con él puede probar la recepcionista, pero no puede contestar la línea de un negocio.
+**Revisado el 9 y el 10 de octubre de 2026** en la página de precios, las preguntas frecuentes o la página de registro de cada proveedor, en dólares estadounidenses. LobbyStack escribió esta guía y vende una recepcionista con IA. Nuestro plan Free le da 30 minutos de voz al mes, sin tarjeta, y un número de EE. UU. o Canadá gratis durante 14 días. Pasados los 14 días, el número deja de contestar si no elige un plan de pago.
 
 ## ¿Qué es una recepcionista virtual gratis con IA?
 
@@ -40,13 +40,13 @@ Cinco de los proveedores que revisamos le dejan empezar con $0 sin plazo de prue
 | [HireJosie](https://hirejosie.ai/pricing/) | 15 minutos de IA al mes y 1 número, sin tarjeta | Sí, y después buzón de voz al pasar los 15 minutos | Pro cuesta $49 por 500 minutos, después $0.25 por minuto |
 | [ServiceAgent](https://serviceagent.ai/pricing) | Plan Launch: $0 al mes, sin créditos incluidos | Sí, pagando por crédito | Entre $0.30 y $0.60 por minuto de voz con IA; Core cuesta $49 |
 | [Goodcall](https://www.goodcall.com/pricing) | Un agente de demostración que crea y prueba gratis | No: empieza a pagar al conectar un número | Starter cuesta $79 por 100 clientes únicos |
-| [LobbyStack](/es/pricing/) (el nuestro) | 30 minutos de voz en el navegador al mes, sin tarjeta | No: no tiene número de teléfono | Starter cuesta $30 por 150 minutos, después $0.20 por minuto |
+| [LobbyStack](/es/pricing/) (el nuestro) | 30 minutos de voz al mes, sin tarjeta | Sí, durante 14 días con un número gratis de EE. UU. o Canadá | Starter cuesta $30 por 150 minutos, después $0.20 por minuto |
 
 - **Smith.ai** tiene el plan gratis permanente más amplio que encontramos. Incluye agenda con herramientas como Calendly, enrutamiento de llamadas, grabaciones, transcripciones y resúmenes. No incluye soporte por teléfono, correo ni chat, ni una incorporación dedicada. Cada llamada después de la número 25 cuesta $3.00.
 - **HireJosie** incluye en su plan gratis un número propio, citas en Google Calendar y transferencias asistidas. Quince minutos alcanzan para unas cinco llamadas de 3 minutos, y después las llamadas pasan al buzón de voz. Usted conserva el número solo si recibe al menos 3 llamadas de clientes distintos al mes, y el plan gratis lleva la marca HireJosie.
 - **ServiceAgent** vende software para empresas de servicios en campo, con una recepcionista integrada junto al CRM, la agenda, la facturación y las reseñas. Su plan Launch no tiene cuota mensual, pero cada minuto de voz con IA consume 15 créditos, que cuestan entre $0.02 y $0.04 cada uno.
 - **Goodcall** no ofrece prueba gratis. Usted crea y prueba un agente de demostración sin pagar, y paga cuando conecta un número de teléfono.
-- **LobbyStack** Free es un banco de pruebas en su navegador. [Más detalles abajo](#qué-incluye-el-plan-free-de-lobbystack).
+- **LobbyStack** Free contesta llamadas reales con un número de EE. UU. o Canadá durante 14 días. [Más detalles abajo](#qué-incluye-el-plan-free-de-lobbystack).
 
 Algunas listas y respuestas de chatbots mencionan otros planes gratis. Solo incluimos ofertas que pudimos confirmar en el sitio del propio proveedor. Las páginas de RingCentral, por ejemplo, muestran una prueba de 14 días y un plan de $49, sin opción gratis.
 
@@ -104,7 +104,7 @@ Twilio y OpenAI procesan el audio mientras la llamada está en curso, también e
 
 ## ¿Qué incluye el plan Free de LobbyStack?
 
-El plan Free de LobbyStack le da 30 minutos de voz en el navegador al mes para probar la recepcionista desde su panel. Es sin tarjeta ni número de teléfono, así que no puede contestar la línea de su negocio, transferir una llamada ni enviar un SMS. No caduca.
+El plan Free de LobbyStack le da 30 minutos de voz al mes y un número de EE. UU. o Canadá gratis durante 14 días. No necesita tarjeta. Durante esos 14 días, el número contesta llamadas reales, y las transferencias solo van al celular que usted verificó. Después, el número deja de contestar si no elige Starter o Pro, y usted sigue probando en el navegador. El plan en sí no caduca.
 
 Use los 30 minutos para:
 
@@ -116,7 +116,7 @@ Cuando usa los 30 minutos, las llamadas de prueba se detienen hasta el mes sigui
 
 | Plan de LobbyStack | Precio al mes | Incluye | Después |
 | --- | --- | --- | --- |
-| Free | $0 | 30 minutos de voz en el navegador, sin número de teléfono | Las llamadas de prueba se detienen hasta el mes siguiente |
+| Free | $0 | 30 minutos de voz, número de EE. UU. o Canadá gratis durante 14 días | Las llamadas se detienen hasta el mes siguiente |
 | Starter | $30, o $24 con pago anual | 150 minutos, un número del negocio | $0.20 por minuto |
 | Pro | $100, o $80 con pago anual | 500 minutos, un número del negocio | $0.18 por minuto |
 
@@ -126,7 +126,7 @@ Ningún plan tiene tarifa de configuración. Starter y Pro contestan en un núme
 
 Una opción gratis deja de bastar cuando no puede tomar las llamadas que usted perdería. Casi siempre lo decide uno de estos cuatro límites:
 
-1. **No contesta su número real.** Las pruebas en el navegador y los agentes de demostración, como LobbyStack Free y la demo de Goodcall, validan la voz y las reglas. No cubren su línea.
+1. **No contesta su número real.** Las pruebas en el navegador y los agentes de demostración, como la demo de Goodcall, validan la voz y las reglas. No cubren su línea. El número de LobbyStack Free deja de contestar a los 14 días si no elige Starter o Pro.
 2. **El límite es menor que sus llamadas perdidas.** Quince minutos alcanzan para unas cinco llamadas de 3 minutos. Veinticinco llamadas son menos de una al día.
 3. **La prueba se termina.** Una prueba de 7 días puede no incluir su día de más trabajo.
 4. **Necesita citas, transferencias o SMS.** Revise qué plan los incluye. El plan de $49 de Rosie envía por SMS un enlace para reservar en lugar de agendar en su calendario, y no transfiere llamadas. Las dos funciones empiezan en su plan de $149.
@@ -150,11 +150,11 @@ Los planes también cambian en cómo cobran y qué incluyen. Smith.ai y Upfirst 
 
 ### ¿Existe un servicio gratis de atención telefónica con IA?
 
-Sí, aunque pocos contestan llamadas reales gratis. En octubre de 2026, el plan gratis de Smith.ai cubre 25 llamadas reales al mes, y el de HireJosie cubre 15 minutos con un número propio. La mayoría de los demás servicios con IA ofrecen pruebas de 7 a 30 días. Algunos planes gratis, como el de LobbyStack, son pruebas en el navegador sin número de teléfono.
+Sí, aunque pocos contestan llamadas reales gratis. En octubre de 2026, el plan gratis de Smith.ai cubre 25 llamadas reales al mes, y el de HireJosie cubre 15 minutos con un número propio. La mayoría de los demás servicios con IA ofrecen pruebas de 7 a 30 días. Algunos planes gratis son pruebas en el navegador sin número de teléfono. El de LobbyStack añade un número de EE. UU. o Canadá durante 14 días.
 
 ### ¿Puede una recepcionista con IA gratis contestar el número de mi negocio?
 
-Algunas sí. Los planes gratis de Smith.ai y de HireJosie toman llamadas reales, y las pruebas de Upfirst, ElevenLabs Reception y ModPhone también, mientras duran. Usted conserva su número actual y le pide a su operador que desvíe las llamadas al número de la IA. LobbyStack Free y el agente de demostración de Goodcall no contestan una línea telefónica.
+Algunas sí. Los planes gratis de Smith.ai y de HireJosie toman llamadas reales, y las pruebas de Upfirst, ElevenLabs Reception y ModPhone también, mientras duran. Usted conserva su número actual y le pide a su operador que desvíe las llamadas al número de la IA. LobbyStack Free contesta llamadas reales durante 14 días con un número de EE. UU. o Canadá. El agente de demostración de Goodcall no contesta una línea telefónica.
 
 ### ¿Una recepcionista con IA gratis pide tarjeta de crédito?
 
@@ -172,4 +172,4 @@ Casi siempre, solo para probar. Un negocio que pierde cinco llamadas por semana 
 
 Escuche la voz y revise sus reglas con un plan gratis, y haga una prueba con llamadas reales desviadas. Después elija el plan que cubre las llamadas que hoy pierde.
 
-El plan Free de LobbyStack le da 30 minutos de voz en el navegador al mes, sin tarjeta, y no caduca. Escriba sus reglas, cargue su sitio web y llámela con sus preguntas más difíciles. Cuando suene bien, Starter contesta la línea de su negocio por $30 al mes con 150 minutos, sin tarifa de configuración. [Cree una cuenta gratis](https://app.lobbystack.com/es/signup) o compare los [planes de LobbyStack](/es/pricing/).
+El plan Free de LobbyStack le da 30 minutos de voz al mes y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta. Escriba sus reglas, cargue su sitio web y llámela con sus preguntas más difíciles. Cuando suene bien, con Starter su número sigue contestando por $30 al mes con 150 minutos, sin tarifa de configuración. [Cree una cuenta gratis](https://app.lobbystack.com/es/signup) o compare los [planes de LobbyStack](/es/pricing/).
