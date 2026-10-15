@@ -1,290 +1,25 @@
 import { Fragment } from "react";
-import { planCards } from "@lobbystack/shared";
+import { planCards, planComparison, type ComparisonValue } from "@lobbystack/shared";
 import { useTranslation } from "react-i18next";
 import { Check, Minus } from "lucide-react";
-import { getCloudPlanFactSheet, FREE_CONTENT_RETENTION_MAX_DAYS, contentRetentionDaysForPlan } from "@lobbystack/shared/product-capabilities";
-
-const freePlanFacts = getCloudPlanFactSheet("free_cloud");
-
-type ComparisonValue =
-  | boolean
-  | {
-      key: string;
-    }
-  | {
-      includedKey: string;
-      thenKey?: string;
-      params?: Record<string, string | number>;
-    };
-
-type ComparisonRow = {
-  key: string;
-  free: ComparisonValue;
-  starter?: ComparisonValue;
-  pro: ComparisonValue;
-  enterprise: ComparisonValue;
-};
-
-type ComparisonGroup = {
-  key: string;
-  rows: ComparisonRow[];
-};
-
-const comparisonGroups: ComparisonGroup[] = [
-  {
-    key: "usage",
-    rows: [
-      {
-        key: "voiceMinutes",
-        free: { includedKey: "usage.voiceMinutes.freeIncluded", params: { minutes: freePlanFacts.voiceMinutesIncluded ?? 0 } },
-        starter: { includedKey: "usage.voiceMinutes.starterIncluded", thenKey: "usage.voiceMinutes.starterThen" },
-        pro: { includedKey: "usage.voiceMinutes.proIncluded", thenKey: "usage.voiceMinutes.proThen" },
-        enterprise: { key: "common.custom" },
-      },
-      {
-        key: "outboundCalls",
-        free: false,
-        starter: { includedKey: "usage.outboundCalls.starterIncluded", thenKey: "usage.outboundCalls.starterThen" },
-        pro: { includedKey: "usage.outboundCalls.proIncluded", thenKey: "usage.outboundCalls.proThen" },
-        enterprise: { key: "common.custom" },
-      },
-      {
-        key: "alertSms",
-        free: false,
-        starter: { includedKey: "usage.alertSms.starterIncluded", thenKey: "usage.alertSms.starterThen" },
-        pro: { includedKey: "usage.alertSms.proIncluded", thenKey: "usage.alertSms.proThen" },
-        enterprise: { key: "common.custom" },
-      },
-      {
-        key: "knowledgeStorage",
-        free: { key: "usage.knowledgeStorage.free" },
-        starter: { key: "usage.knowledgeStorage.starter" },
-        pro: { key: "usage.knowledgeStorage.pro" },
-        enterprise: { key: "common.custom" },
-      },
-      {
-        key: "phoneNumbers",
-        free: { key: "common.trialDays" },
-        starter: { key: "usage.phoneNumbers.starter" },
-        pro: { key: "usage.phoneNumbers.pro" },
-        enterprise: { key: "common.multiple" },
-      },
-    ],
-  },
-  {
-    key: "core",
-    rows: [
-      {
-        key: "callAnswering",
-        free: { key: "common.trialDays" },
-        pro: true,
-        enterprise: true,
-      },
-      {
-        key: "callerDetails",
-        free: true,
-        pro: true,
-        enterprise: true,
-      },
-      {
-        key: "knowledgeAnswers",
-        free: true,
-        pro: true,
-        enterprise: true,
-      },
-      {
-        key: "workflows",
-        free: true,
-        pro: true,
-        enterprise: true,
-      },
-      {
-        key: "spamFiltering",
-        free: true,
-        pro: true,
-        enterprise: true,
-      },
-      {
-        key: "shortCalls",
-        free: true,
-        pro: true,
-        enterprise: true,
-      },
-      {
-        key: "concurrentCalls",
-        free: true,
-        pro: true,
-        enterprise: true,
-      },
-      {
-        key: "multilingual",
-        free: true,
-        pro: true,
-        enterprise: true,
-      },
-    ],
-  },
-  {
-    key: "booking",
-    rows: [
-      {
-        key: "appointmentBooking",
-        free: { key: "common.unlimited" },
-        pro: { key: "common.unlimited" },
-        enterprise: { key: "common.unlimited" },
-      },
-      {
-        key: "confirmationTexts",
-        free: false,
-        pro: true,
-        enterprise: true,
-      },
-      {
-        key: "googleCalendar",
-        free: true,
-        pro: true,
-        enterprise: true,
-      },
-    ],
-  },
-  {
-    key: "routing",
-    rows: [
-      {
-        key: "urgentHandoff",
-        free: false,
-        pro: true,
-        enterprise: true,
-      },
-      {
-        key: "callTransfers",
-        free: false,
-        pro: true,
-        enterprise: true,
-      },
-      {
-        key: "afterHours",
-        free: false,
-        pro: true,
-        enterprise: true,
-      },
-    ],
-  },
-  {
-    key: "notifications",
-    rows: [
-      {
-        key: "emailNotifications",
-        free: true,
-        pro: true,
-        enterprise: true,
-      },
-      {
-        key: "smsNotifications",
-        free: false,
-        pro: true,
-        enterprise: true,
-      },
-    ],
-  },
-  {
-    key: "data",
-    rows: [
-      {
-        key: "summaries",
-        free: { key: "common.unlimited" },
-        pro: { key: "common.unlimited" },
-        enterprise: { key: "common.unlimited" },
-      },
-      {
-        key: "history",
-        free: { includedKey: "data.contentRetention.free", params: { days: FREE_CONTENT_RETENTION_MAX_DAYS } },
-        pro: { key: "common.unlimited" },
-        enterprise: { key: "common.unlimited" },
-      },
-      {
-        key: "contentRetention",
-        free: { includedKey: "data.contentRetention.free", params: { days: FREE_CONTENT_RETENTION_MAX_DAYS } },
-        starter: { includedKey: "data.contentRetention.paid", params: { days: contentRetentionDaysForPlan("starter", "transcripts") } },
-        pro: { includedKey: "data.contentRetention.paid", params: { days: contentRetentionDaysForPlan("pro", "transcripts") } },
-        enterprise: { key: "common.custom" },
-      },
-      {
-        key: "callerProfiles",
-        free: true,
-        pro: true,
-        enterprise: true,
-      },
-      {
-        key: "contacts",
-        free: { key: "common.unlimited" },
-        pro: { key: "common.unlimited" },
-        enterprise: { key: "common.unlimited" },
-      },
-      {
-        key: "websiteImport",
-        free: true,
-        pro: true,
-        enterprise: true,
-      },
-    ],
-  },
-  {
-    key: "deployment",
-    rows: [
-      {
-        key: "hosting",
-        free: { key: "deployment.hosting.managed" },
-        pro: { key: "deployment.hosting.managed" },
-        enterprise: { key: "deployment.hosting.enterprise" },
-      },
-      {
-        key: "usageBilling",
-        free: false,
-        pro: true,
-        enterprise: true,
-      },
-      {
-        key: "support",
-        free: { key: "deployment.support.community" },
-        starter: { key: "deployment.support.email" },
-        pro: { key: "deployment.support.priority" },
-        enterprise: { key: "deployment.support.dedicated" },
-      },
-    ],
-  },
-];
 
 type OnboardingT = ReturnType<typeof useTranslation<"onboarding">>["t"];
 
 function ComparisonCell({ t, value }: { t: OnboardingT; value: ComparisonValue }) {
   if (typeof value === "boolean") {
     return value ? (
-      <span><Check aria-hidden="true" className="mx-auto size-4 text-foreground/60" /><span className="sr-only">{t("plan.comparison.values.common.included")}</span></span>
+      <span><Check aria-hidden="true" className="mx-auto size-4 text-foreground/60" /><span className="sr-only">{t("plan.comparison.included")}</span></span>
     ) : (
-      <span><Minus aria-hidden="true" className="mx-auto size-4 text-muted-foreground/30" /><span className="sr-only">{t("plan.comparison.values.common.notIncluded")}</span></span>
+      <span><Minus aria-hidden="true" className="mx-auto size-4 text-muted-foreground/30" /><span className="sr-only">{t("plan.comparison.notIncluded")}</span></span>
     );
   }
 
-  if ("key" in value) {
-    const label = t(`plan.comparison.values.${value.key}`);
-    return (
-      <span className={label === "-" ? "text-muted-foreground/40" : "text-muted-foreground"}>
-        {label}
-      </span>
-    );
-  }
+  if (typeof value === "string") return <span className="text-muted-foreground">{value}</span>;
 
   return (
     <span className="inline-flex flex-col gap-0.5 leading-tight">
-      <span className="font-medium text-foreground">
-        {t(`plan.comparison.values.${value.includedKey}`, value.params ?? {})}
-      </span>
-      {value.thenKey ? (
-        <span className="text-xs text-muted-foreground">
-          {t(`plan.comparison.values.${value.thenKey}`)}
-        </span>
-      ) : null}
+      <span className="font-medium text-foreground">{value.included}</span>
+      {value.then ? <span className="text-xs text-muted-foreground">{value.then}</span> : null}
     </span>
   );
 }
@@ -311,13 +46,13 @@ export function OnboardingPlanComparison({ locale, t }: { locale: string; t: Onb
             </tr>
           </thead>
           <tbody>
-            {comparisonGroups.map((group) => (
-              <Fragment key={group.key}>
-                <tr><td className="pt-8 pb-3 text-xs font-medium tracking-wide text-muted-foreground uppercase" colSpan={5}>{t(`plan.comparison.groups.${group.key}`)}</td></tr>
+            {planComparison(locale).map((group) => (
+              <Fragment key={group.category}>
+                <tr><td className="pt-8 pb-3 text-xs font-medium tracking-wide text-muted-foreground uppercase" colSpan={5}>{group.category}</td></tr>
                 {group.rows.map((row) => (
-                  <tr className="border-b border-border/40 last:border-0" key={row.key}>
-                    <td className="py-3 pr-8 text-foreground">{t(`plan.comparison.features.${row.key}`)}</td>
-                    {([row.free, row.starter ?? row.pro, row.pro, row.enterprise] as ComparisonValue[]).map((value, index) => <td className="px-4 py-3 text-center" key={index}><ComparisonCell t={t} value={value} /></td>)}
+                  <tr className="border-b border-border/40 last:border-0" key={row.feature}>
+                    <td className="py-3 pr-8 text-foreground">{row.feature}</td>
+                    {[row.free, row.starter, row.pro, row.enterprise].map((value, index) => <td className="px-4 py-3 text-center" key={index}><ComparisonCell t={t} value={value} /></td>)}
                   </tr>
                 ))}
               </Fragment>

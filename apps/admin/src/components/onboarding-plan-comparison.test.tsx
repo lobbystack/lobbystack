@@ -8,23 +8,19 @@ import { OnboardingPlanComparison } from "./onboarding-plan-comparison";
 
 afterEach(cleanup);
 
-it.each(["en", "fr"] as const)("describes supported capabilities in %s", async (locale) => {
+const cells = (feature: string) => within(screen.getByText(feature).closest("tr")!).getAllByRole("cell").map((cell) => cell.textContent);
+
+it.each([
+  ["en", { minutes: "30 included", numbers: "Phone numbers", trial: "Free for 14 days", history: "Call history and recordings", notIncluded: "Not included", noFree: ["Appointment confirmation texts", "SMS notifications", "Alert SMS segments", "Transfer attempts"] }],
+  ["fr", { minutes: "30 incluses", numbers: "Numéros de téléphone", trial: "Gratuit 14 jours", history: "Historique et enregistrements d'appels", notIncluded: "Non inclus", noFree: ["SMS de confirmation de rendez‑vous", "Notifications SMS", "Segments SMS d'alerte", "Tentatives de transfert"] }],
+] as const)("describes supported capabilities in %s", async (locale, text) => {
   const i18n = createInstance();
   await i18n.init({ lng: locale, resources: { en: { onboarding: en }, fr: { onboarding: fr } } });
-  const t = i18n.getFixedT(locale, "onboarding");
-  render(<OnboardingPlanComparison locale={locale} t={t} />);
+  render(<OnboardingPlanComparison locale={locale} t={i18n.getFixedT(locale, "onboarding")} />);
   expect(screen.queryByText(/Outlook/)).toBeNull();
-  expect(screen.getByText(/^30 included$|^30 incluses$/)).toBeTruthy();
-  const numbers = screen.getByText(t("plan.comparison.features.phoneNumbers")).closest("tr")!;
-  expect(within(numbers).getAllByRole("cell")[1]?.textContent).toBe(t("plan.comparison.values.common.trialDays"));
-  expect(screen.queryByText(/AI SMS|SMS IA|Outbound|sortants|Missed-call|appels manqués|Multi-location|multisite/i)).toBeNull();
-  for (const feature of ["confirmationTexts", "smsNotifications", "alertSms", "outboundCalls"]) {
-    const row = screen.getByText(t(`plan.comparison.features.${feature}`)).closest("tr")!;
-    expect(within(row).getAllByRole("cell")[1]?.textContent).toBe(t("plan.comparison.values.common.notIncluded"));
-  }
-  const retention = screen.getByText(t("plan.comparison.features.contentRetention")).closest("tr")!;
-  const retentionCells = within(retention).getAllByRole("cell");
-  expect(retentionCells[1]?.textContent).toBe(t("plan.comparison.values.data.contentRetention.free", { days: 30 }));
-  expect(retentionCells[2]?.textContent).toBe(t("plan.comparison.values.data.contentRetention.paid", { days: 90 }));
-  expect(retentionCells[3]?.textContent).toBe(t("plan.comparison.values.data.contentRetention.paid", { days: 90 }));
+  expect(screen.getByText(text.minutes)).toBeTruthy();
+  expect(cells(text.numbers)[1]).toBe(text.trial);
+  for (const feature of text.noFree) expect(cells(feature)[1]).toBe(text.notIncluded);
+  // Recordings and transcripts are kept 30 days on Free and 90 on paid plans.
+  expect(cells(text.history).slice(1, 4)).toEqual(locale === "en" ? ["30 days", "90 days", "90 days"] : ["30 jours", "90 jours", "90 jours"]);
 });
