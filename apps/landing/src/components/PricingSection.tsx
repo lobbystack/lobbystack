@@ -71,6 +71,7 @@ const tiers: Tier[] = [
       ...(freePlanFacts.browserVoiceOnly
         ? ["1 phone number"]
         : []),
+      "Unlimited calls at once",
       "Community support",
     ],
   },
@@ -87,8 +88,8 @@ const tiers: Tier[] = [
       annual: "Per month, billed annually",
     },
     cta: {
-      monthly: "Start free",
-      annual: "Start free",
+      monthly: "Get Starter",
+      annual: "Get Starter",
     },
     ctaVariant: "outline" as const,
     highlight: false,
@@ -98,6 +99,7 @@ const tiers: Tier[] = [
         sublabel: "Then $0.20/min",
       },
       "1 dedicated business number",
+      "Unlimited calls at once",
       "50 alert SMS segments",
       "Email support",
     ],
@@ -115,8 +117,8 @@ const tiers: Tier[] = [
       annual: "Per month, billed annually",
     },
     cta: {
-      monthly: "Start free",
-      annual: "Start free",
+      monthly: "Get Pro",
+      annual: "Get Pro",
     },
     ctaVariant: "default" as const,
     highlight: true,
@@ -126,6 +128,7 @@ const tiers: Tier[] = [
         sublabel: "Then $0.18/min",
       },
       "1 dedicated business number",
+      "Unlimited calls at once",
       "200 alert SMS segments",
       "Priority email support",
     ],
@@ -150,6 +153,7 @@ const tiers: Tier[] = [
     highlight: false,
     highlights: [
       "Multiple dedicated numbers",
+      "Unlimited calls at once",
       "Custom usage limits",
       "Dedicated implementation support",
     ],
@@ -179,6 +183,7 @@ const tiersFr: Tier[] = [
       ...(freePlanFacts.browserVoiceOnly
         ? ["1 numéro de téléphone"]
         : []),
+      "Appels simultanés illimités",
       "Support communautaire",
     ],
   },
@@ -195,8 +200,8 @@ const tiersFr: Tier[] = [
       annual: "Par mois, facturé annuellement",
     },
     cta: {
-      monthly: "Commencer gratuitement",
-      annual: "Commencer gratuitement",
+      monthly: "Choisir Starter",
+      annual: "Choisir Starter",
     },
     ctaVariant: "outline" as const,
     highlight: false,
@@ -206,6 +211,7 @@ const tiersFr: Tier[] = [
         sublabel: "Puis 0,20 $/min",
       },
       "1 numéro d'entreprise dédié",
+      "Appels simultanés illimités",
       "50 segments SMS d'alerte",
       "Support par courriel",
     ],
@@ -223,8 +229,8 @@ const tiersFr: Tier[] = [
       annual: "Par mois, facturé annuellement",
     },
     cta: {
-      monthly: "Commencer gratuitement",
-      annual: "Commencer gratuitement",
+      monthly: "Choisir Pro",
+      annual: "Choisir Pro",
     },
     ctaVariant: "default" as const,
     highlight: true,
@@ -234,6 +240,7 @@ const tiersFr: Tier[] = [
         sublabel: "Puis 0,18 $/min",
       },
       "1 numéro d'entreprise dédié",
+      "Appels simultanés illimités",
       "200 segments SMS d'alerte",
       "Support prioritaire par courriel",
     ],
@@ -258,6 +265,7 @@ const tiersFr: Tier[] = [
     highlight: false,
     highlights: [
       "Plusieurs numéros dédiés",
+      "Appels simultanés illimités",
       "Limites d'utilisation sur mesure",
       "Accompagnement dédié à l’implémentation",
     ],
@@ -287,6 +295,7 @@ const tiersEs: Tier[] = [
       ...(freePlanFacts.browserVoiceOnly
         ? ["1 número de teléfono"]
         : []),
+      "Llamadas simultáneas ilimitadas",
       "Soporte de la comunidad",
     ],
   },
@@ -303,8 +312,8 @@ const tiersEs: Tier[] = [
       annual: "Por mes, facturación anual",
     },
     cta: {
-      monthly: "Empezar gratis",
-      annual: "Empezar gratis",
+      monthly: "Elegir Starter",
+      annual: "Elegir Starter",
     },
     ctaVariant: "outline" as const,
     highlight: false,
@@ -314,6 +323,7 @@ const tiersEs: Tier[] = [
         sublabel: "Luego $0.20/min",
       },
       "1 número dedicado para su negocio",
+      "Llamadas simultáneas ilimitadas",
       "50 segmentos de SMS de alerta",
       "Soporte por correo electrónico",
     ],
@@ -331,8 +341,8 @@ const tiersEs: Tier[] = [
       annual: "Por mes, facturación anual",
     },
     cta: {
-      monthly: "Empezar gratis",
-      annual: "Empezar gratis",
+      monthly: "Elegir Pro",
+      annual: "Elegir Pro",
     },
     ctaVariant: "default" as const,
     highlight: true,
@@ -342,6 +352,7 @@ const tiersEs: Tier[] = [
         sublabel: "Luego $0.18/min",
       },
       "1 número dedicado para su negocio",
+      "Llamadas simultáneas ilimitadas",
       "200 segmentos de SMS de alerta",
       "Soporte prioritario por correo electrónico",
     ],
@@ -366,6 +377,7 @@ const tiersEs: Tier[] = [
     highlight: false,
     highlights: [
       "Varios números dedicados",
+      "Llamadas simultáneas ilimitadas",
       "Límites de uso a medida",
       "Soporte dedicado para la implementación",
     ],
@@ -395,6 +407,7 @@ const tiersSr: Tier[] = [
       ...(freePlanFacts.browserVoiceOnly
         ? ["1 broj telefona"]
         : []),
+      "Neograničen broj istovremenih poziva",
       "Podrška zajednice",
     ],
   },
@@ -411,8 +424,8 @@ const tiersSr: Tier[] = [
       annual: "Mesečno, uz godišnju naplatu",
     },
     cta: {
-      monthly: "Počnite besplatno",
-      annual: "Počnite besplatno",
+      monthly: "Izaberite Starter",
+      annual: "Izaberite Starter",
     },
     ctaVariant: "outline" as const,
     highlight: false,
@@ -422,6 +435,7 @@ const tiersSr: Tier[] = [
         sublabel: "Zatim $0.20/min",
       },
       "1 namenski poslovni broj",
+      "Neograničen broj istovremenih poziva",
       "50 segmenata SMS upozorenja",
       "Podrška putem e-pošte",
     ],
@@ -439,8 +453,8 @@ const tiersSr: Tier[] = [
       annual: "Mesečno, uz godišnju naplatu",
     },
     cta: {
-      monthly: "Počnite besplatno",
-      annual: "Počnite besplatno",
+      monthly: "Izaberite Pro",
+      annual: "Izaberite Pro",
     },
     ctaVariant: "default" as const,
     highlight: true,
@@ -450,6 +464,7 @@ const tiersSr: Tier[] = [
         sublabel: "Zatim $0.18/min",
       },
       "1 namenski poslovni broj",
+      "Neograničen broj istovremenih poziva",
       "200 segmenata SMS upozorenja",
       "Prioritetna podrška putem e-pošte",
     ],
@@ -474,6 +489,7 @@ const tiersSr: Tier[] = [
     highlight: false,
     highlights: [
       "Više namenskih brojeva",
+      "Neograničen broj istovremenih poziva",
       "Prilagođeni limiti potrošnje",
       "Posvećena podrška pri implementaciji",
     ],
@@ -556,7 +572,7 @@ const comparisonGroupsEn: ComparisonGroup[] = [
     rows: [
       {
         feature: "24/7 call answering",
-        free: "Browser testing",
+        free: "For 14 days",
         pro: true,
         enterprise: true,
       },
@@ -774,7 +790,7 @@ const comparisonGroupsFr: ComparisonGroup[] = [
     rows: [
       {
         feature: "Réponse aux appels 24/7",
-        free: "Tests dans le navigateur",
+        free: "Pendant 14 jours",
         pro: true,
         enterprise: true,
       },
@@ -992,7 +1008,7 @@ const comparisonGroupsEs: ComparisonGroup[] = [
     rows: [
       {
         feature: "Atención de llamadas 24/7",
-        free: "Pruebas en el navegador",
+        free: "Durante 14 días",
         pro: true,
         enterprise: true,
       },
@@ -1210,7 +1226,7 @@ const comparisonGroupsSr: ComparisonGroup[] = [
     rows: [
       {
         feature: "Odgovaranje na pozive 24/7",
-        free: "Testiranje u pregledaču",
+        free: "Tokom 14 dana",
         pro: true,
         enterprise: true,
       },
