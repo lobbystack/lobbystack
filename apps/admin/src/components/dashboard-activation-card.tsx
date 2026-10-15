@@ -3,10 +3,13 @@
 import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { Phone } from "lucide-react";
+import { ExternalLink, Phone } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { useTelemetry } from "@/components/product-analytics";
+import { forwardingHelpUrl } from "@/lib/forwarding-help";
+import { formatPhoneNumberDisplay } from "@/lib/phone";
+import { requestJson } from "@/lib/request-json";
 import { getTestCallStarter, startTestCall, subscribeTestCallStarter } from "@/lib/test-call-launcher";
 import { useCallSettleRefetch } from "@/lib/use-call-settle-refetch";
 import { Button } from "./ui/button";
@@ -60,7 +63,7 @@ async function getActivation(businessId: string): Promise<Activation> {
 }
 
 export function DashboardActivationCard({ businessId }: { businessId: string | undefined }) {
-  const { t } = useTranslation("dashboard");
+  const { t, i18n } = useTranslation("dashboard");
   const telemetry = useTelemetry();
   const openUpgradePlanDialog = useOpenUpgradePlanDialog();
   const canStartTestCall = useSyncExternalStore(subscribeTestCallStarter, () => getTestCallStarter() !== null, () => false);
@@ -77,6 +80,10 @@ export function DashboardActivationCard({ businessId }: { businessId: string | u
     },
   });
 
+  // The same request as the trial banner, so the two share one cached answer.
+  const trial = useQuery({ queryKey: ["number-trial", businessId], enabled: Boolean(businessId), queryFn: () => requestJson<{ trial: { status: string; e164?: string } }>(`/api/number-trial?businessId=${encodeURIComponent(businessId!)}`) });
+  const trialNumber = trial.data?.trial?.status === "active" ? trial.data.trial.e164 ?? null : null;
+
   const data = activation.data;
   // Self-hosting is carried by the business, not the billing row: a self-hosted
   // workspace has no hosted plan to sell and claims no numbers from us. The
@@ -87,7 +94,8 @@ export function DashboardActivationCard({ businessId }: { businessId: string | u
   // Someone already paying who skipped the number step needs the claiming
   // screen; the upgrade dialog disables their current plan and hands out no numbers.
   const needsNumberClaim = Boolean(data?.paidPlanLive);
-  const showsUpgrade = eligible && heardItWork && !needsNumberClaim;
+  // A live trial number already answers; the next step is forwarding the real line to it, and the banner asks for a plan.
+  const showsUpgrade = eligible && heardItWork && !needsNumberClaim && !trialNumber;
 
   useEffect(() => {
     // Marking an ineligible workspace would also suppress the real report once
@@ -111,6 +119,18 @@ export function DashboardActivationCard({ businessId }: { businessId: string | u
 
   if (isWebsiteImportRunning(data.websiteImport)) {
     return <WebsiteImportProgress job={data.websiteImport!} />;
+  }
+
+  if (trialNumber && !needsNumberClaim) {
+    return (
+      <Surface className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 flex-col gap-1">
+          <p className="type-card-title text-foreground">{t("activation.forwardTrial.title", { number: formatPhoneNumberDisplay(trialNumber) })}</p>
+          <p className="type-body-muted">{t("activation.forwardTrial.description")}</p>
+        </div>
+        <Button className="shrink-0" nativeButton={false} render={<Link href={forwardingHelpUrl(i18n.language)} rel="noreferrer" target="_blank" />} variant="outline">{t("activation.forwardTrial.cta")}<ExternalLink data-icon="inline-end" /></Button>
+      </Surface>
+    );
   }
 
   const pagesRead = data.websiteImport?.status === "completed" ? data.websiteImport.indexedCount || data.websiteImport.importedCount : 0;

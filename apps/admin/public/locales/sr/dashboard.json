@@ -223,6 +223,11 @@
       "description": "Vaš paket uključuje namenski broj, a još ga niste izabrali. Izaberite ga i agent počinje da se javlja.",
       "cta": "Izaberi broj"
     },
+    "forwardTrial": {
+      "title": "Preusmerite propuštene pozive na {{number}}",
+      "description": "Uključite preusmeravanje poziva kod svog operatera i pozivi na koje ne stignete da odgovorite ići će Vašem recepcioneru umesto na govornu poštu.",
+      "cta": "Podesite preusmeravanje"
+    },
     "upgrade": {
       "title": "Dodelite agentu broj telefona",
       "description": "Čuli ste kako radi. Uz namenski broj može da se javlja Vašim pravim klijentima, danju i noću.",

@@ -16,7 +16,7 @@ type TrialState =
   | { status: "active"; e164: string; daysLeft: number; minutesExhausted: boolean; forwardTo: string | null }
   | { status: "ended"; e164: string };
 
-/** The trial number's countdown, across the top of every dashboard page until the owner picks a plan. */
+/** The trial number's countdown, across the top of every dashboard page in the trial's last week, until the owner picks a plan. */
 export function NumberTrialBanner() {
   const { t } = useTranslation("common");
   const openUpgrade = useOpenUpgradePlanDialog();
@@ -24,6 +24,8 @@ export function NumberTrialBanner() {
   const trial = useQuery({ queryKey: ["number-trial", business?.businessId], enabled: Boolean(business), refetchInterval: 5 * 60_000, queryFn: () => requestJson<{ trial: TrialState }>(`/api/number-trial?businessId=${encodeURIComponent(business!.businessId)}`) });
   const state = trial.data?.trial;
   if (!state || state.status === "none" || state.status === "over") return null;
+  // The countdown waits for the last week; running out of minutes shows at once, since calls already go to the owner.
+  if (state.status === "active" && state.daysLeft > 7 && !(state.minutesExhausted && state.forwardTo)) return null;
   const number = formatPhoneNumberDisplay(state.e164);
   const [message, action] = state.status === "ended"
     ? [t("numberTrial.stillAvailable", { number }), t("numberTrial.getNumberBack")]

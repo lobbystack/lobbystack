@@ -11,7 +11,7 @@ import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
 
 const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof createRecordedBrowserTelemetry> | null }));
 vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetryRef.current!.telemetry }));
-vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string, values?: { number?: string }) => values?.number ? `${key}:${values.number}` : key, i18n: { language: "en" } }) }));
 
 const clients: QueryClient[] = [];
 let store: Record<string, string>;
@@ -49,9 +49,9 @@ function activationBody(activation: Partial<Activation>): Activation {
   };
 }
 
-function setup(activation: Partial<Activation>) {
+function setup(activation: Partial<Activation>, trial: Record<string, unknown> = { status: "none" }) {
   const body = activationBody(activation);
-  vi.stubGlobal("fetch", vi.fn(async () => Response.json(body)));
+  vi.stubGlobal("fetch", vi.fn(async (url: string) => Response.json(String(url).startsWith("/api/number-trial") ? { trial } : body)));
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   clients.push(client);
   const onOpen = vi.fn();
@@ -76,6 +76,14 @@ async function activationLoaded() {
 }
 
 describe("dashboard activation card", () => {
+  it("asks a trial owner to forward missed calls to the trial number, not to buy one", async () => {
+    setup({ completedWebCalls: 1 }, { status: "active", e164: "+15818927672", daysLeft: 12, minutesExhausted: false, forwardTo: null });
+    expect(await screen.findByText("activation.forwardTrial.title:(581) 892-7672")).toBeTruthy();
+    expect(screen.getByText("activation.forwardTrial.cta").closest("a")?.getAttribute("href")).toBe("https://docs.lobbystack.com/getting-started/claim-your-number#using-your-existing-business-number");
+    expect(screen.queryByText("activation.upgrade.title")).toBeNull();
+    expect(telemetryRef.current!.events.filter(event => event.name === "web.activation.upgrade_prompt_shown")).toHaveLength(0);
+  });
+
   it("shows crawl progress while the website import is still running", async () => {
     setup({ websiteImport: { status: "crawling", websiteUrl: "https://example.com", importedCount: 4, indexedCount: 0 } });
     expect(await screen.findByText("websiteImport.runningTitle")).toBeTruthy();

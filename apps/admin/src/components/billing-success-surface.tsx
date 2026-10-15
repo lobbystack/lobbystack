@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { billingPlanCatalog } from "@lobbystack/shared";
 
 import { useActiveBusiness } from "@/hooks/use-active-business";
+import { forwardingHelpUrl } from "@/lib/forwarding-help";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 import { requestJson } from "@/lib/request-json";
 import { useTelemetry } from "./product-analytics";
@@ -44,13 +45,6 @@ function markCheckoutReported(key: string): void {
   } catch {
     // Storage is unavailable, so the per-mount ref is the only guard left.
   }
-}
-
-// The docs have French and Spanish pages; Serbian readers get the English one.
-function forwardingHelpUrl(language: string): string {
-  return language === "fr" || language === "es"
-    ? `https://docs.lobbystack.com/${language}/getting-started/claim-your-number`
-    : "https://docs.lobbystack.com/getting-started/claim-your-number#using-your-existing-business-number";
 }
 
 function SuccessCheck() {

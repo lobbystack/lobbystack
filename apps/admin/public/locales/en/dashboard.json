@@ -222,6 +222,11 @@
       "description": "Your plan includes a dedicated number and you have not picked one yet. Choose it and the agent starts answering.",
       "cta": "Pick a number"
     },
+    "forwardTrial": {
+      "title": "Send your missed calls to {{number}}",
+      "description": "Turn on call forwarding with your phone carrier, and the calls you can't pick up go to your receptionist instead of voicemail.",
+      "cta": "Set up forwarding"
+    },
     "upgrade": {
       "title": "Give your agent a phone number",
       "description": "You have heard it work. A dedicated number lets it answer your real customers, day and night.",
