@@ -238,5 +238,67 @@
       "description": "Vous l'avez entendu travailler. Un numéro dédié lui permet de répondre à vos vrais clients, jour et nuit.",
       "cta": "Choisir un forfait"
     }
+  },
+  "forwarding": {
+    "title": "Renvoyez vos appels vers le {{number}}",
+    "description": "Choisissez votre fournisseur, puis suivez les étapes sur le téléphone que vos clients appellent.",
+    "modes": {
+      "missed": {
+        "label": "Appels manqués",
+        "help": "Votre téléphone sonne d'abord. Si vous ne répondez pas, votre réceptionniste prend l'appel."
+      },
+      "all": {
+        "label": "Tous les appels",
+        "help": "Votre réceptionniste répond à chaque appel, et votre téléphone ne sonne pas."
+      }
+    },
+    "carrier": {
+      "label": "Fournisseur ou système téléphonique",
+      "placeholder": "Rechercher un fournisseur",
+      "empty": "Aucun fournisseur à ce nom."
+    },
+    "groups": {
+      "usMobile": "Mobile (États-Unis)",
+      "caMobile": "Mobile (Canada)",
+      "landline": "Lignes fixes",
+      "voip": "Systèmes téléphoniques d'entreprise"
+    },
+    "code": {
+      "dial": "Composez ce code :",
+      "call": "Appuyez sur Appeler. Une tonalité ou un message confirme que le renvoi est activé.",
+      "busy": "Pour renvoyer aussi les appels reçus pendant que vous êtes au téléphone, composez :",
+      "off": "Pour le désactiver plus tard, composez {{code}}.",
+      "unreachable": "Pour renvoyer aussi les appels quand votre téléphone est éteint ou sans réseau, composez :",
+      "enterNumber": "Quand on vous le demande, entrez le {{number}}."
+    },
+    "settings": {
+      "open": "Dans {{name}}, ouvrez {{path}}.",
+      "missed": "Renvoyez les appels sans réponse vers le {{number}}, puis enregistrez.",
+      "all": "Renvoyez tous les appels vers le {{number}}, puis enregistrez.",
+      "openPhone": "Sur votre téléphone, ouvrez {{path}}."
+    },
+    "notes": {
+      "planFeature": "Si le renvoi ne s'active pas, demandez à {{name}} d'ajouter le renvoi d'appel à votre forfait.",
+      "iphone": "Sur un iPhone, désactivez la messagerie vocale en direct dans les réglages de Téléphone. Sinon, elle répond avant votre réceptionniste.",
+      "ringTime": "Si vous pouvez choisir la durée de sonnerie, 15 à 20 secondes vous laissent environ quatre sonneries avant que votre réceptionniste réponde.",
+      "voicemail": "Si vous avez la messagerie vocale de {{name}}, demandez à {{name}} de la retirer. Les appels manqués ne peuvent pas être renvoyés tant qu'elle est active.",
+      "androidOnly": "Ces étapes sont pour les téléphones Android. Sur un iPhone, demandez à {{name}} de l'activer pour vous.",
+      "adminOnly": "Seul un administrateur de votre compte {{name}} peut modifier ce réglage.",
+      "verifyNumber": "{{name}} envoie un code au {{number}} avant d'activer le renvoi. Choisissez de recevoir le code par appel, puis lisez-le dans la transcription de cet appel, sous Appels."
+    },
+    "test": {
+      "missed": "Pour tester, appelez votre numéro d'entreprise depuis un autre téléphone et laissez sonner. Votre réceptionniste devrait répondre.",
+      "all": "Pour tester, appelez votre numéro d'entreprise depuis un autre téléphone. Votre réceptionniste devrait répondre."
+    },
+    "unsupported": {
+      "missed": "{{name}} ne propose pas de renvoi pour les appels manqués seulement. Choisissez Tous les appels, ou demandez à {{name}} de renvoyer les appels sans réponse vers le {{number}}.",
+      "all": "{{name}} n'indique pas comment renvoyer tous les appels. Demandez à {{name}} de renvoyer vos appels vers le {{number}}."
+    },
+    "notListed": {
+      "missed": "Votre fournisseur n'est pas dans la liste? Demandez-lui de renvoyer les appels sans réponse vers le {{number}}.",
+      "all": "Votre fournisseur n'est pas dans la liste? Demandez-lui de renvoyer tous vos appels vers le {{number}}."
+    },
+    "copy": "Copier",
+    "copied": "Copié"
   }
 }

@@ -1,13 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { ExternalLink, Phone } from "lucide-react";
+import { Phone } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import { CallForwardingDialog } from "@/components/call-forwarding-dialog";
 import { useTelemetry } from "@/components/product-analytics";
-import { forwardingHelpUrl } from "@/lib/forwarding-help";
+import { useOpenNumberStep } from "@/lib/number-step";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 import { requestJson } from "@/lib/request-json";
 import { getTestCallStarter, startTestCall, subscribeTestCallStarter } from "@/lib/test-call-launcher";
@@ -63,9 +64,11 @@ async function getActivation(businessId: string): Promise<Activation> {
 }
 
 export function DashboardActivationCard({ businessId }: { businessId: string | undefined }) {
-  const { t, i18n } = useTranslation("dashboard");
+  const { t } = useTranslation("dashboard");
   const telemetry = useTelemetry();
   const openUpgradePlanDialog = useOpenUpgradePlanDialog();
+  const [forwardingOpen, setForwardingOpen] = useState(false);
+  const openNumberStep = useOpenNumberStep();
   const canStartTestCall = useSyncExternalStore(subscribeTestCallStarter, () => getTestCallStarter() !== null, () => false);
   const callSettleInterval = useCallSettleRefetch();
 
@@ -129,7 +132,8 @@ export function DashboardActivationCard({ businessId }: { businessId: string | u
           <p className="type-card-title text-foreground">{t("activation.forwardTrial.title", { number: formatPhoneNumberDisplay(trialNumber) })}</p>
           <p className="type-body-muted">{t("activation.forwardTrial.description")}</p>
         </div>
-        <Button className="shrink-0" nativeButton={false} render={<Link href={forwardingHelpUrl(i18n.language)} rel="noreferrer" target="_blank" />} variant="outline">{t("activation.forwardTrial.cta")}<ExternalLink data-icon="inline-end" /></Button>
+        <Button className="shrink-0" onClick={() => setForwardingOpen(true)} type="button" variant="outline">{t("activation.forwardTrial.cta")}</Button>
+        <CallForwardingDialog e164={trialNumber} onOpenChange={setForwardingOpen} open={forwardingOpen} />
       </Surface>
     );
   }
@@ -141,7 +145,7 @@ export function DashboardActivationCard({ businessId }: { businessId: string | u
           <p className="type-card-title text-foreground">{t("activation.freeTrial.title")}</p>
           <p className="type-body-muted">{t("activation.freeTrial.description")}</p>
         </div>
-        <Button className="shrink-0" nativeButton={false} render={<Link href="/onboarding/number" />}>{t("activation.freeTrial.cta")}</Button>
+        <Button className="shrink-0" onClick={() => void openNumberStep(businessId!)} type="button">{t("activation.freeTrial.cta")}</Button>
       </Surface>
     );
   }

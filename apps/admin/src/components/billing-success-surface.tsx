@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { Check, LoaderCircle } from "lucide-react";
@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { billingPlanCatalog } from "@lobbystack/shared";
 
+import { CallForwardingDialog } from "@/components/call-forwarding-dialog";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { forwardingHelpUrl } from "@/lib/forwarding-help";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
@@ -58,6 +59,7 @@ function SuccessCheck() {
 /** Where Polar sends someone after they pay: confirmation while the plan syncs, then what to do next. */
 export function BillingSuccessSurface() {
   const { t, i18n } = useTranslation("settings");
+  const [forwardingOpen, setForwardingOpen] = useState(false);
   const router = useRouter();
   const telemetry = useTelemetry();
   const requestId = useSearchParams().get("requestId");
@@ -135,7 +137,9 @@ export function BillingSuccessSurface() {
   const displayNumber = number ? formatPhoneNumberDisplay(number.e164, i18n.language) : null;
   const steps = [
     { key: "call", action: number ? <a className="font-medium text-foreground underline underline-offset-4" href={`tel:${number.e164}`}>{displayNumber}</a> : null },
-    { key: "forward", action: <a className="font-medium text-foreground underline underline-offset-4" href={forwardingHelpUrl(i18n.language)} rel="noreferrer" target="_blank">{t("billing.success.steps.forward.action")}</a> },
+    { key: "forward", action: number
+      ? <><button className="self-start font-medium text-foreground underline underline-offset-4" onClick={() => setForwardingOpen(true)} type="button">{t("billing.success.steps.forward.action")}</button><CallForwardingDialog e164={number.e164} onOpenChange={setForwardingOpen} open={forwardingOpen} /></>
+      : <a className="font-medium text-foreground underline underline-offset-4" href={forwardingHelpUrl(i18n.language)} rel="noreferrer" target="_blank">{t("billing.success.steps.forward.action")}</a> },
     // The dashboard sends anyone still in onboarding back to it, so the link waits until setup is done.
     { key: "transfer", action: onboarding ? null : <Link className="font-medium text-foreground underline underline-offset-4" href="/agent#agent-transfer-number">{t("billing.success.steps.transfer.action")}</Link> },
   ] as const;

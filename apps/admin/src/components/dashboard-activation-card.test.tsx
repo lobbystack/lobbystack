@@ -11,6 +11,8 @@ import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
 
 const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof createRecordedBrowserTelemetry> | null }));
 vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetryRef.current!.telemetry }));
+const router = vi.hoisted(() => ({ push: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => router }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string, values?: { number?: string }) => values?.number ? `${key}:${values.number}` : key, i18n: { language: "en" } }) }));
 
 const clients: QueryClient[] = [];
@@ -79,14 +81,18 @@ describe("dashboard activation card", () => {
   it("offers the free trial number to a free workspace that can still start one", async () => {
     setup({ completedWebCalls: 1 }, { status: "available" });
     expect(await screen.findByText("activation.freeTrial.title")).toBeTruthy();
-    expect(screen.getByText("activation.freeTrial.cta").closest("a")?.getAttribute("href")).toBe("/onboarding/number");
+    // The number step opens on the workspace the offer was shown in, even if another tab switched away.
+    await userEvent.click(screen.getByRole("button", { name: "activation.freeTrial.cta" }));
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith("/onboarding/number"));
+    expect(vi.mocked(fetch).mock.calls.some(([url, init]) => url === "/api/businesses/switch" && JSON.parse(String(init?.body)).businessId === "business")).toBe(true);
     expect(telemetryRef.current!.events.filter(event => event.name === "web.activation.upgrade_prompt_shown")).toHaveLength(0);
   });
 
   it("asks a trial owner to forward missed calls to the trial number, not to buy one", async () => {
     setup({ completedWebCalls: 1 }, { status: "active", e164: "+15818927672", daysLeft: 12, minutesExhausted: false, forwardTo: null });
     expect(await screen.findByText("activation.forwardTrial.title:(581) 892-7672")).toBeTruthy();
-    expect(screen.getByText("activation.forwardTrial.cta").closest("a")?.getAttribute("href")).toBe("https://docs.lobbystack.com/getting-started/claim-your-number#using-your-existing-business-number");
+    await userEvent.click(screen.getByRole("button", { name: "activation.forwardTrial.cta" }));
+    expect(await screen.findByText("forwarding.title:(581) 892-7672")).toBeTruthy();
     expect(screen.queryByText("activation.upgrade.title")).toBeNull();
     expect(telemetryRef.current!.events.filter(event => event.name === "web.activation.upgrade_prompt_shown")).toHaveLength(0);
   });

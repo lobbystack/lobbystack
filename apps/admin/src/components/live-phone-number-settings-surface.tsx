@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { billingPlanCatalog } from "@lobbystack/shared";
@@ -13,6 +12,7 @@ import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemTitle }
 import { Skeleton } from "@/components/ui/skeleton";
 import { PhoneNumberChooser, phoneNumberChooserApi, type ClaimResult } from "./phone-number-chooser";
 import { useOpenUpgradePlanDialog } from "./upgrade-plan-dialog-context";
+import { useOpenNumberStep } from "@/lib/number-step";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
 import { requestJson } from "@/lib/request-json";
 import type { BillingUsageViewModel, PhoneNumberViewModel } from "@/lib/page-view-models";
@@ -42,6 +42,7 @@ export function LivePhoneNumberSettingsSurface() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { business } = useActiveBusiness();
   const businessId = business?.businessId ?? "";
+  const openNumberStep = useOpenNumberStep();
   const canManageTenant = Boolean(business && ["business_owner", "business_admin"].includes(business.role));
   const numbers = useQuery({ queryKey: ["phone-numbers", businessId], refetchInterval: query => query.state.data?.activeClaim || query.state.data?.replacement.activeClaim ? 1000 : false, enabled: Boolean(businessId), queryFn: () => requestJson<NumbersResponse>(`/api/phone-numbers?businessId=${encodeURIComponent(businessId)}`) });
   const billing = useQuery({ queryKey: ["billing", businessId], enabled: Boolean(businessId), queryFn: () => requestJson<BillingUsageViewModel>(`/api/billing?businessId=${encodeURIComponent(businessId)}`) });
@@ -129,7 +130,7 @@ export function LivePhoneNumberSettingsSurface() {
             {canManageTenant ? (
               <ItemActions>
                 {offersFreeTrial ? (
-                  <Button nativeButton={false} render={<Link href="/onboarding/number" />} size="sm">
+                  <Button onClick={() => void openNumberStep(businessId)} size="sm" type="button">
                     {t("phoneNumber.freeTrial.cta")}
                   </Button>
                 ) : showPaidPlanRequired ? (

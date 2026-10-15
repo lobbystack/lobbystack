@@ -301,6 +301,23 @@ async function trialAvailableInTransaction(tx: DatabaseTransaction, input: { use
   return !verified || (trialCountries() as string[]).includes(verified.countryCode);
 }
 
+/**
+ * Where the number step sends someone it can't help yet: Home, for a finished
+ * workspace that already has a number, or the phone step, when a free trial
+ * needs a mobile verified in this workspace first.
+ */
+export async function numberStepRedirect(context: DomainContext, input: { userId: string; businessId: string; finished: boolean }): Promise<"/" | "/onboarding/verify-phone" | null> {
+  return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
+    await requireBusinessMembership(tx, input);
+    const number = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), inArray(phoneNumbers.status, ["active", "provisioning"]))).limit(1);
+    if (number.length) return input.finished ? "/" : null;
+    const business = (await tx.select({ deploymentMode: businesses.deploymentMode }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1))[0];
+    const billing = (await tx.select({ plan: billingAccounts.plan, state: billingAccounts.subscriptionState }).from(billingAccounts).where(eq(billingAccounts.businessId, input.businessId)).limit(1))[0];
+    if (business?.deploymentMode !== "cloud" || (billing && isPaidSubscription(billing.plan, billing.state))) return null;
+    return await verifiedPhone(tx, input) ? null : "/onboarding/verify-phone";
+  });
+}
+
 export async function getNumberTrialState(context: DomainContext, input: { userId: string; businessId: string; now?: Date }): Promise<NumberTrialState> {
   const now = input.now ?? new Date();
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {

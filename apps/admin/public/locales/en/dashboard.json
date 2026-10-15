@@ -237,5 +237,67 @@
       "description": "You have heard it work. A dedicated number lets it answer your real customers, day and night.",
       "cta": "Choose a plan"
     }
+  },
+  "forwarding": {
+    "title": "Forward your calls to {{number}}",
+    "description": "Pick your carrier, then follow the steps on the phone your customers call.",
+    "modes": {
+      "missed": {
+        "label": "Calls you miss",
+        "help": "Your phone rings first. When you don't answer, your receptionist picks up."
+      },
+      "all": {
+        "label": "All calls",
+        "help": "Your receptionist answers every call, and your phone doesn't ring."
+      }
+    },
+    "carrier": {
+      "label": "Carrier or phone system",
+      "placeholder": "Search carriers",
+      "empty": "No carrier by that name."
+    },
+    "groups": {
+      "usMobile": "US mobile",
+      "caMobile": "Canadian mobile",
+      "landline": "Landlines",
+      "voip": "Business phone systems"
+    },
+    "code": {
+      "dial": "Dial this code:",
+      "call": "Press Call. A tone or a message confirms that forwarding is on.",
+      "busy": "To also forward calls that come in while you're on the phone, dial:",
+      "off": "To turn it off later, dial {{code}}.",
+      "unreachable": "To also forward calls when your phone is off or has no signal, dial:",
+      "enterNumber": "When asked, enter {{number}}."
+    },
+    "settings": {
+      "open": "In {{name}}, open {{path}}.",
+      "missed": "Forward unanswered calls to {{number}}, then save.",
+      "all": "Forward all calls to {{number}}, then save.",
+      "openPhone": "On your phone, open {{path}}."
+    },
+    "notes": {
+      "planFeature": "If forwarding doesn't turn on, ask {{name}} to add call forwarding to your plan.",
+      "iphone": "On an iPhone, turn off Live Voicemail in your Phone settings. Otherwise it picks up before your receptionist can.",
+      "ringTime": "If you can pick a ring time, 15 to 20 seconds gives you about four rings before your receptionist answers.",
+      "voicemail": "If you have {{name}} voicemail, ask {{name}} to remove it. Missed calls can't forward while it's on.",
+      "androidOnly": "These steps are for Android phones. On an iPhone, ask {{name}} to turn it on for you.",
+      "adminOnly": "Only an admin of your {{name}} account can change this.",
+      "verifyNumber": "{{name}} sends a code to {{number}} before it forwards. Choose to get the code by phone call, then read it in that call's transcript under Calls."
+    },
+    "test": {
+      "missed": "To test it, call your business number from another phone and let it ring. Your receptionist should answer.",
+      "all": "To test it, call your business number from another phone. Your receptionist should answer."
+    },
+    "unsupported": {
+      "missed": "{{name}} doesn't offer forwarding for missed calls only. Choose All calls, or ask {{name}} to forward unanswered calls to {{number}}.",
+      "all": "{{name}} doesn't list a way to forward all calls. Ask {{name}} to forward your calls to {{number}}."
+    },
+    "notListed": {
+      "missed": "Carrier not listed? Ask them to forward unanswered calls to {{number}}.",
+      "all": "Carrier not listed? Ask them to forward all your calls to {{number}}."
+    },
+    "copy": "Copy",
+    "copied": "Copied"
   }
 }

@@ -3,7 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 import { billingAccounts, businesses, createDatabaseClient, numberTrials, numberWaitlist, onboardingPhoneVerifications, outboxMessages, phoneNumbers, receptionistProfiles, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
-import { getNumberTrialState, isNumberTrialEnded, joinNumberWaitlist, keepBusinessNumbersInTransaction, loadNumberTrialEmail, markNumberTrialMinutesExhausted, resolveNumberFallback, sweepNumberTrial } from "./numberTrials";
+import { getNumberTrialState, isNumberTrialEnded, joinNumberWaitlist, keepBusinessNumbersInTransaction, loadNumberTrialEmail, markNumberTrialMinutesExhausted, numberStepRedirect, resolveNumberFallback, sweepNumberTrial } from "./numberTrials";
 import { claimNumberProvisioning, completeNumberProvisioning, reserveOnboardingNumberClaim, searchBusinessNumberInventory } from "./phoneNumbers";
 import { checkOnboardingPhoneVerificationCode, startOnboardingPhoneVerification } from "./phoneVerification";
 import { createBusiness } from "./tenancy";
@@ -58,11 +58,15 @@ describe.skipIf(!testUrl)("free trial numbers against dedicated PostgreSQL roles
       await tx.update(businesses).set({ onboardingStage: "verify_phone", deploymentMode: "cloud" }).where(eq(businesses.id, businessId));
       const owner = { userId, businessId };
 
+      // Without a verified mobile, the number step sends the owner to verify one first.
+      expect(await as(tx, "lobbystack_app", db => numberStepRedirect({ db }, { ...owner, finished: false }))).toBe("/onboarding/verify-phone");
+
       // The owner verifies a mobile, and onboarding moves on to the number step.
       const { attemptId } = await as(tx, "lobbystack_app", db => startOnboardingPhoneVerification({ db }, { ...owner, phoneE164: ownerPhone, countryCode: "CA" }, verify));
       expect(await as(tx, "lobbystack_app", db => checkOnboardingPhoneVerificationCode({ db }, { ...owner, attemptId, code: "123456" }, verify))).toMatchObject({ approved: true });
       expect((await tx.select({ stage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, businessId)))[0]?.stage).toBe("phone_number");
       expect(await as(tx, "lobbystack_app", db => getNumberTrialState({ db }, owner))).toEqual({ status: "available" });
+      expect(await as(tx, "lobbystack_app", db => numberStepRedirect({ db }, { ...owner, finished: false }))).toBeNull();
 
       // The number they pick is a trial, and the worker buys it.
       const claimId = await as(tx, "lobbystack_app", async (db) => {
@@ -79,6 +83,9 @@ describe.skipIf(!testUrl)("free trial numbers against dedicated PostgreSQL roles
       expect((await tx.select({ reason: phoneNumbers.reclaimReason }).from(phoneNumbers).where(eq(phoneNumbers.id, phoneNumberId)))[0]?.reason).toBe("trial");
       expect((await tx.select({ transferNumber: receptionistProfiles.transferNumber }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, businessId)))[0]?.transferNumber).toBe(ownerPhone);
       expect(await as(tx, "lobbystack_app", db => getNumberTrialState({ db }, owner))).toMatchObject({ status: "active", e164: trialNumber, minutesExhausted: false });
+      // Once onboarding is done, a workspace with a number has nothing to do on the number step.
+      expect(await as(tx, "lobbystack_app", db => numberStepRedirect({ db }, { ...owner, finished: true }))).toBe("/");
+      expect(await as(tx, "lobbystack_app", db => numberStepRedirect({ db }, { ...owner, finished: false }))).toBeNull();
 
       // A second workspace for the same owner doesn't offer another free number.
       await tx.execute(sql`set local role lobbystack_app`);

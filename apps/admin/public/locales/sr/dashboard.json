@@ -238,5 +238,67 @@
       "description": "Čuli ste kako radi. Uz namenski broj može da se javlja Vašim pravim klijentima, danju i noću.",
       "cta": "Izaberi paket"
     }
+  },
+  "forwarding": {
+    "title": "Preusmerite pozive na {{number}}",
+    "description": "Izaberite operatera, pa pratite korake na telefonu koji Vaši klijenti zovu.",
+    "modes": {
+      "missed": {
+        "label": "Propušteni pozivi",
+        "help": "Vaš telefon prvo zvoni. Ako se ne javite, javlja se recepcioner."
+      },
+      "all": {
+        "label": "Svi pozivi",
+        "help": "Recepcioner odgovara na svaki poziv, a Vaš telefon ne zvoni."
+      }
+    },
+    "carrier": {
+      "label": "Operater ili telefonski sistem",
+      "placeholder": "Pretražite operatere",
+      "empty": "Nema operatera s tim imenom."
+    },
+    "groups": {
+      "usMobile": "Mobilni (SAD)",
+      "caMobile": "Mobilni (Kanada)",
+      "landline": "Fiksne linije",
+      "voip": "Poslovni telefonski sistemi"
+    },
+    "code": {
+      "dial": "Ukucajte ovaj kod:",
+      "call": "Pritisnite Pozovi. Ton ili poruka potvrđuje da je preusmeravanje uključeno.",
+      "busy": "Da biste preusmerili i pozive koji stignu dok razgovarate, ukucajte:",
+      "off": "Da biste ga kasnije isključili, ukucajte {{code}}.",
+      "unreachable": "Da biste preusmerili i pozive kada je telefon isključen ili bez signala, ukucajte:",
+      "enterNumber": "Kada Vas pita, unesite {{number}}."
+    },
+    "settings": {
+      "open": "U podešavanjima za {{name}} otvorite {{path}}.",
+      "missed": "Preusmerite neodgovorene pozive na {{number}}, pa sačuvajte.",
+      "all": "Preusmerite sve pozive na {{number}}, pa sačuvajte.",
+      "openPhone": "Na telefonu otvorite {{path}}."
+    },
+    "notes": {
+      "planFeature": "Ako se preusmeravanje ne uključi, zamolite operatera {{name}} da doda preusmeravanje poziva u Vaš paket.",
+      "iphone": "Na iPhone-u isključite Live Voicemail u podešavanjima aplikacije Telefon. U suprotnom se ona javlja pre recepcionera.",
+      "ringTime": "Ako možete da izaberete trajanje zvonjenja, 15 do 20 sekundi Vam daje oko četiri zvona pre nego što se recepcioner javi.",
+      "voicemail": "Ako koristite govornu poštu operatera {{name}}, zamolite {{name}} da je ukloni. Propušteni pozivi ne mogu da se preusmere dok je uključena.",
+      "androidOnly": "Ovi koraci su za Android telefone. Na iPhone-u zamolite operatera {{name}} da ga uključi za Vas.",
+      "adminOnly": "Ovo može da promeni samo administrator Vašeg {{name}} naloga.",
+      "verifyNumber": "{{name}} šalje kod na {{number}} pre nego što uključi preusmeravanje. Izaberite da kod dobijete pozivom, pa ga pročitajte u transkriptu tog poziva u odeljku Pozivi."
+    },
+    "test": {
+      "missed": "Da biste proverili, pozovite poslovni broj s drugog telefona i pustite da zvoni. Recepcioner bi trebalo da se javi.",
+      "all": "Da biste proverili, pozovite poslovni broj s drugog telefona. Recepcioner bi trebalo da se javi."
+    },
+    "unsupported": {
+      "missed": "{{name}} ne nudi preusmeravanje samo propuštenih poziva. Izaberite Svi pozivi ili zamolite {{name}} da preusmeri neodgovorene pozive na {{number}}.",
+      "all": "{{name}} ne navodi kako se preusmeravaju svi pozivi. Zamolite {{name}} da preusmeri Vaše pozive na {{number}}."
+    },
+    "notListed": {
+      "missed": "Vašeg operatera nema na listi? Zamolite ga da preusmeri neodgovorene pozive na {{number}}.",
+      "all": "Vašeg operatera nema na listi? Zamolite ga da preusmeri sve Vaše pozive na {{number}}."
+    },
+    "copy": "Kopiraj",
+    "copied": "Kopirano"
   }
 }

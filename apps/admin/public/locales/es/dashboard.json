@@ -238,5 +238,67 @@
       "description": "Ya ha comprobado que funciona. Con un número propio puede atender a sus clientes reales, de día y de noche.",
       "cta": "Elegir un plan"
     }
+  },
+  "forwarding": {
+    "title": "Desvíe sus llamadas al {{number}}",
+    "description": "Elija su operador y siga los pasos en el teléfono al que llaman sus clientes.",
+    "modes": {
+      "missed": {
+        "label": "Llamadas perdidas",
+        "help": "Su teléfono suena primero. Si no contesta, su recepcionista atiende."
+      },
+      "all": {
+        "label": "Todas las llamadas",
+        "help": "Su recepcionista contesta cada llamada, y su teléfono no suena."
+      }
+    },
+    "carrier": {
+      "label": "Operador o sistema telefónico",
+      "placeholder": "Buscar operador",
+      "empty": "Ningún operador con ese nombre."
+    },
+    "groups": {
+      "usMobile": "Celular (EE. UU.)",
+      "caMobile": "Celular (Canadá)",
+      "landline": "Líneas fijas",
+      "voip": "Sistemas telefónicos para empresas"
+    },
+    "code": {
+      "dial": "Marque este código:",
+      "call": "Pulse Llamar. Un tono o un mensaje confirma que el desvío está activo.",
+      "busy": "Para desviar también las llamadas que entran mientras habla, marque:",
+      "off": "Para desactivarlo después, marque {{code}}.",
+      "unreachable": "Para desviar también las llamadas cuando su teléfono está apagado o sin señal, marque:",
+      "enterNumber": "Cuando se lo pida, ingrese {{number}}."
+    },
+    "settings": {
+      "open": "En {{name}}, abra {{path}}.",
+      "missed": "Desvíe las llamadas sin respuesta al {{number}} y guarde.",
+      "all": "Desvíe todas las llamadas al {{number}} y guarde.",
+      "openPhone": "En su teléfono, abra {{path}}."
+    },
+    "notes": {
+      "planFeature": "Si el desvío no se activa, pida a {{name}} que agregue el desvío de llamadas a su plan.",
+      "iphone": "En un iPhone, desactive el Buzón de voz en vivo en los ajustes de Teléfono. Si no, contesta antes que su recepcionista.",
+      "ringTime": "Si puede elegir el tiempo de timbre, de 15 a 20 segundos le dan unos cuatro timbres antes de que su recepcionista conteste.",
+      "voicemail": "Si tiene el buzón de voz de {{name}}, pida a {{name}} que lo quite. Las llamadas perdidas no se pueden desviar mientras esté activo.",
+      "androidOnly": "Estos pasos son para teléfonos Android. En un iPhone, pida a {{name}} que lo active por usted.",
+      "adminOnly": "Solo un administrador de su cuenta de {{name}} puede cambiar esto.",
+      "verifyNumber": "{{name}} envía un código al {{number}} antes de desviar. Elija recibir el código por llamada y léalo en la transcripción de esa llamada, en Llamadas."
+    },
+    "test": {
+      "missed": "Para probarlo, llame a su número de negocio desde otro teléfono y déjelo sonar. Su recepcionista debería contestar.",
+      "all": "Para probarlo, llame a su número de negocio desde otro teléfono. Su recepcionista debería contestar."
+    },
+    "unsupported": {
+      "missed": "{{name}} no ofrece desvío solo para llamadas perdidas. Elija Todas las llamadas, o pida a {{name}} que desvíe las llamadas sin respuesta al {{number}}.",
+      "all": "{{name}} no indica cómo desviar todas las llamadas. Pida a {{name}} que desvíe sus llamadas al {{number}}."
+    },
+    "notListed": {
+      "missed": "¿Su operador no aparece? Pídale que desvíe las llamadas sin respuesta al {{number}}.",
+      "all": "¿Su operador no aparece? Pídale que desvíe todas sus llamadas al {{number}}."
+    },
+    "copy": "Copiar",
+    "copied": "Copiado"
   }
 }
