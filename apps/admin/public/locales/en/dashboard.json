@@ -222,6 +222,11 @@
       "description": "Your plan includes a dedicated number and you have not picked one yet. Choose it and the agent starts answering.",
       "cta": "Pick a number"
     },
+    "freeTrial": {
+      "title": "Get a free number for 14 days",
+      "description": "Pick a local number and your receptionist starts answering real calls. No card needed.",
+      "cta": "Get my free number"
+    },
     "forwardTrial": {
       "title": "Send your missed calls to {{number}}",
       "description": "Turn on call forwarding with your phone carrier, and the calls you can't pick up go to your receptionist instead of voicemail.",

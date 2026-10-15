@@ -413,6 +413,10 @@
       "description": "Free plans do not include a dedicated business number. Upgrade to Starter or Pro before then to keep {{number}}.",
       "upgradeCta": "Upgrade to keep this number"
     },
+    "freeTrial": {
+      "description": "Pick a local number free for 14 days, and your receptionist starts answering real calls.",
+      "cta": "Get my free number"
+    },
     "requiresPaidPlan": {
       "title": "Dedicated numbers are on paid plans",
       "description": "Upgrade to Starter or Pro to claim a local business number callers can dial.",

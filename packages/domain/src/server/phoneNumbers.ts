@@ -1,13 +1,13 @@
 import { isPaidSubscription } from "@lobbystack/shared";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
-import { and, desc, eq, isNull, lt, ne, or, sql } from "drizzle-orm";
+import { and, eq, isNull, lt, ne, or, sql } from "drizzle-orm";
 
-import { billingAccounts, businesses, enqueueOutbox, numberTrials, onboardingNumberClaimEvents, onboardingPhoneVerifications, phoneNumbers, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { billingAccounts, businesses, enqueueOutbox, numberTrials, onboardingNumberClaimEvents, phoneNumbers, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 
 import { requireBusinessAdmin } from "../authz";
 import type { DomainContext } from "./context";
-import { activateNumberTrialInTransaction, failNumberTrialInTransaction, isNumberCountry, keepBusinessNumbersInTransaction, trialCountries, type NumberCountry } from "./numberTrials";
+import { activateNumberTrialInTransaction, failNumberTrialInTransaction, isNumberCountry, keepBusinessNumbersInTransaction, trialCountries, verifiedPhone, type NumberCountry } from "./numberTrials";
 import { normalizeOnboardingStage } from "./onboarding";
 import { resolveBusinessNumberMarket } from "./phoneNumberMarket";
 
@@ -129,16 +129,6 @@ export async function searchBusinessNumberInventory(context: DomainContext, inpu
 }
 
 /** The signed-in user's verified phone and the country they picked for it, or null. */
-async function verifiedPhone(tx: DatabaseTransaction, input: { userId: string; businessId: string }): Promise<{ phone: string; countryCode: string } | null> {
-  // The app role can't read phone_verified_at; the approved attempt below proves the phone, and the claim function checks it again.
-  const user = (await tx.select({ phone: users.phone }).from(users).where(eq(users.id, input.userId)).limit(1))[0];
-  if (!user?.phone) return null;
-  const attempt = (await tx.select({ countryCode: onboardingPhoneVerifications.countryCode }).from(onboardingPhoneVerifications)
-    .where(and(eq(onboardingPhoneVerifications.businessId, input.businessId), eq(onboardingPhoneVerifications.userId, input.userId), eq(onboardingPhoneVerifications.phoneE164, user.phone), eq(onboardingPhoneVerifications.status, "approved")))
-    .orderBy(desc(onboardingPhoneVerifications.approvedAt)).limit(1))[0];
-  return attempt ? { phone: user.phone, countryCode: attempt.countryCode.toUpperCase() } : null;
-}
-
 export async function reserveOnboardingNumberClaim(context: DomainContext, input: { userId: string; businessId: string; claimToken: string; claimTokenSecret: string; idempotencyKey: string; ipHash?: string | null }): Promise<string> {
   const offer = verifyOffer(input.claimToken, input.claimTokenSecret);
   if (offer.purpose !== "onboarding" || offer.businessId !== input.businessId || offer.userId !== input.userId) throw numberClaimError(400, "number_offer_invalid", "Number claim token does not belong to this onboarding flow.");

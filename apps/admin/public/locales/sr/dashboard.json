@@ -223,6 +223,11 @@
       "description": "Vaš paket uključuje namenski broj, a još ga niste izabrali. Izaberite ga i agent počinje da se javlja.",
       "cta": "Izaberi broj"
     },
+    "freeTrial": {
+      "title": "Besplatan broj na 14 dana",
+      "description": "Izaberite lokalni broj i Vaš recepcioner počinje da odgovara na prave pozive. Kartica nije potrebna.",
+      "cta": "Uzmite besplatan broj"
+    },
     "forwardTrial": {
       "title": "Preusmerite propuštene pozive na {{number}}",
       "description": "Uključite preusmeravanje poziva kod svog operatera i pozivi na koje ne stignete da odgovorite ići će Vašem recepcioneru umesto na govornu poštu.",

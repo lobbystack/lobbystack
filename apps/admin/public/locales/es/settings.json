@@ -417,6 +417,10 @@
       "description": "Los planes gratuitos no incluyen un número del negocio dedicado. Cambie a Starter o Pro antes de esa fecha para conservar {{number}}.",
       "upgradeCta": "Mejorar el plan para conservar este número"
     },
+    "freeTrial": {
+      "description": "Elija un número local gratis durante 14 días y su recepcionista empezará a contestar llamadas reales.",
+      "cta": "Obtener mi número gratis"
+    },
     "requiresPaidPlan": {
       "title": "Los números dedicados están en los planes de pago",
       "description": "Cambie a Starter o Pro para obtener un número local del negocio al que puedan llamar sus clientes.",

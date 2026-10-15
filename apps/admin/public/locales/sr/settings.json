@@ -417,6 +417,10 @@
       "description": "Free paket ne uključuje namenski poslovni broj. Pređite na Starter ili Pro pre tog datuma da biste zadržali {{number}}.",
       "upgradeCta": "Nadogradite i zadržite broj"
     },
+    "freeTrial": {
+      "description": "Izaberite lokalni broj besplatno na 14 dana i Vaš recepcioner počinje da odgovara na prave pozive.",
+      "cta": "Uzmite besplatan broj"
+    },
     "requiresPaidPlan": {
       "title": "Namenski brojevi su deo plaćenih paketa",
       "description": "Pređite na Starter ili Pro da biste dobili lokalni poslovni broj koji pozivaoci mogu da pozovu.",

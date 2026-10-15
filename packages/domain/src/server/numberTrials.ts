@@ -1,8 +1,8 @@
 import { DateTime } from "luxon";
-import { and, eq, gt, gte, inArray, isNull, lte, ne, sql } from "drizzle-orm";
+import { and, desc, eq, gt, gte, inArray, isNull, lte, ne, sql } from "drizzle-orm";
 
-import { businesses, calls, enqueueOutbox, numberTrials, numberWaitlist, phoneNumbers, receptionistProfiles, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { normalizeInterfaceLocale, type InterfaceLocale } from "@lobbystack/shared";
+import { billingAccounts, businesses, calls, enqueueOutbox, numberTrials, numberWaitlist, onboardingPhoneVerifications, phoneNumbers, receptionistProfiles, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { isPaidSubscription, normalizeInterfaceLocale, type InterfaceLocale } from "@lobbystack/shared";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
@@ -269,10 +269,36 @@ export async function isNumberTrialEnded(context: DomainContext, input: { busine
 
 export type NumberTrialState =
   | { status: "none" }
+  // No trial yet, and this workspace can start one.
+  | { status: "available" }
   | { status: "active"; e164: string; endsAt: string; daysLeft: number; minutesExhausted: boolean; forwardTo: string | null }
   // Ended, and the number is still ours. The owner sees it as still available, without the release date.
   | { status: "ended"; e164: string }
   | { status: "over" };
+
+export async function verifiedPhone(tx: DatabaseTransaction, input: { userId: string; businessId: string }): Promise<{ phone: string; countryCode: string } | null> {
+  // The app role can't read phone_verified_at; the approved attempt below proves the phone, and the claim function checks it again.
+  const user = (await tx.select({ phone: users.phone }).from(users).where(eq(users.id, input.userId)).limit(1))[0];
+  if (!user?.phone) return null;
+  const attempt = (await tx.select({ countryCode: onboardingPhoneVerifications.countryCode }).from(onboardingPhoneVerifications)
+    .where(and(eq(onboardingPhoneVerifications.businessId, input.businessId), eq(onboardingPhoneVerifications.userId, input.userId), eq(onboardingPhoneVerifications.phoneE164, user.phone), eq(onboardingPhoneVerifications.status, "approved")))
+    .orderBy(desc(onboardingPhoneVerifications.approvedAt)).limit(1))[0];
+  return attempt ? { phone: user.phone, countryCode: attempt.countryCode.toUpperCase() } : null;
+}
+
+// The workspace checks the number search makes before it offers a trial. The claim itself also
+// enforces once per user, phone and network; when it refuses, the number step offers the plans.
+async function trialAvailableInTransaction(tx: DatabaseTransaction, input: { userId: string; businessId: string }): Promise<boolean> {
+  const business = (await tx.select({ deploymentMode: businesses.deploymentMode }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1))[0];
+  const billing = (await tx.select({ plan: billingAccounts.plan, state: billingAccounts.subscriptionState }).from(billingAccounts).where(eq(billingAccounts.businessId, input.businessId)).limit(1))[0];
+  if (business?.deploymentMode !== "cloud" || (billing && isPaidSubscription(billing.plan, billing.state))) return false;
+  const number = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), inArray(phoneNumbers.status, ["active", "provisioning"]))).limit(1);
+  const used = await tx.select({ id: numberTrials.id }).from(numberTrials).where(and(eq(numberTrials.businessId, input.businessId), ne(numberTrials.status, "failed"))).limit(1);
+  if (number.length || used.length) return false;
+  // An owner who hasn't verified a mobile yet verifies it on the way to the number.
+  const verified = await verifiedPhone(tx, input);
+  return !verified || (trialCountries() as string[]).includes(verified.countryCode);
+}
 
 export async function getNumberTrialState(context: DomainContext, input: { userId: string; businessId: string; now?: Date }): Promise<NumberTrialState> {
   const now = input.now ?? new Date();
@@ -284,7 +310,7 @@ export async function getNumberTrialState(context: DomainContext, input: { userI
       .leftJoin(receptionistProfiles, eq(receptionistProfiles.businessId, numberTrials.businessId))
       .where(and(eq(numberTrials.businessId, input.businessId), inArray(numberTrials.status, ["active", "ended", "released"])))
       .limit(1))[0];
-    if (!row) return { status: "none" };
+    if (!row) return await trialAvailableInTransaction(tx, input) ? { status: "available" } : { status: "none" };
     if (row.status === "active" && row.e164 && row.endsAt) {
       return { status: "active", e164: row.e164, endsAt: row.endsAt.toISOString(), daysLeft: Math.max(1, Math.ceil((row.endsAt.getTime() - now.getTime()) / 86_400_000)), minutesExhausted: Boolean(row.minutesExhaustedAt), forwardTo: row.minutesExhaustedAt ? row.transferNumber?.trim() || row.verifiedPhone : null };
     }

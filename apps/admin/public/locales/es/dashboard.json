@@ -223,6 +223,11 @@
       "description": "Su plan incluye un número propio y aún no ha elegido uno. Elíjalo y el agente empezará a responder.",
       "cta": "Elegir un número"
     },
+    "freeTrial": {
+      "title": "Un número gratis durante 14 días",
+      "description": "Elija un número local y su recepcionista empezará a contestar llamadas reales. No necesita tarjeta.",
+      "cta": "Obtener mi número gratis"
+    },
     "forwardTrial": {
       "title": "Envíe sus llamadas perdidas al {{number}}",
       "description": "Active el desvío de llamadas con su operador y las llamadas que no pueda contestar irán a su recepcionista en lugar del buzón de voz.",

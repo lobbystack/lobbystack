@@ -223,6 +223,11 @@
       "description": "Votre forfait inclut un numéro dédié et vous n'en avez pas encore choisi un. Choisissez-le et l'agent commence à répondre.",
       "cta": "Choisir un numéro"
     },
+    "freeTrial": {
+      "title": "Un numéro gratuit pendant 14 jours",
+      "description": "Choisissez un numéro local et votre réceptionniste commence à répondre aux vrais appels. Aucune carte requise.",
+      "cta": "Obtenir mon numéro gratuit"
+    },
     "forwardTrial": {
       "title": "Envoyez vos appels manqués au {{number}}",
       "description": "Activez le renvoi d'appels chez votre opérateur, et les appels que vous ne pouvez pas prendre vont à votre réceptionniste plutôt qu'à la messagerie vocale.",

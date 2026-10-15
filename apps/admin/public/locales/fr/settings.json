@@ -417,6 +417,10 @@
       "description": "Les forfaits gratuits n'incluent pas de numéro d'entreprise dédié. Passez à Starter ou Pro avant cette date pour conserver {{number}}.",
       "upgradeCta": "Mettre à niveau pour conserver ce numéro"
     },
+    "freeTrial": {
+      "description": "Choisissez un numéro local gratuit pendant 14 jours, et votre réceptionniste commence à répondre aux vrais appels.",
+      "cta": "Obtenir mon numéro gratuit"
+    },
     "requiresPaidPlan": {
       "title": "Les numéros dédiés sont réservés aux forfaits payants",
       "description": "Passez à Starter ou Pro pour obtenir un numéro local que les appelants peuvent composer.",

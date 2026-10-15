@@ -76,6 +76,13 @@ async function activationLoaded() {
 }
 
 describe("dashboard activation card", () => {
+  it("offers the free trial number to a free workspace that can still start one", async () => {
+    setup({ completedWebCalls: 1 }, { status: "available" });
+    expect(await screen.findByText("activation.freeTrial.title")).toBeTruthy();
+    expect(screen.getByText("activation.freeTrial.cta").closest("a")?.getAttribute("href")).toBe("/onboarding/number");
+    expect(telemetryRef.current!.events.filter(event => event.name === "web.activation.upgrade_prompt_shown")).toHaveLength(0);
+  });
+
   it("asks a trial owner to forward missed calls to the trial number, not to buy one", async () => {
     setup({ completedWebCalls: 1 }, { status: "active", e164: "+15818927672", daysLeft: 12, minutesExhausted: false, forwardTo: null });
     expect(await screen.findByText("activation.forwardTrial.title:(581) 892-7672")).toBeTruthy();

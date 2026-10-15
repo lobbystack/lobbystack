@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { billingPlanCatalog } from "@lobbystack/shared";
@@ -66,6 +67,9 @@ export function LivePhoneNumberSettingsSurface() {
     null;
   const showReclaimBanner = Boolean(hasPhoneNumber && reclaimScheduledAt);
   const showPaidPlanRequired = (!hasPhoneNumber || isTrialNumber) && billingStatus != null && !canClaimDedicatedNumber;
+  // Only a free workspace without a number can start a trial. The number step runs the claim, and offers the plans if the claim refuses.
+  const trial = useQuery({ queryKey: ["number-trial", businessId], enabled: Boolean(businessId) && showPaidPlanRequired && !hasPhoneNumber, queryFn: () => requestJson<{ trial: { status: string } }>(`/api/number-trial?businessId=${encodeURIComponent(businessId)}`) });
+  const offersFreeTrial = showPaidPlanRequired && !hasPhoneNumber && trial.data?.trial?.status === "available";
 
   function handleClaimed(result: Extract<ClaimResult, { status: "claimed" }>): void {
     toast.success(t(hasPhoneNumber ? "phoneNumber.toast.changed" : "phoneNumber.toast.added"));
@@ -114,7 +118,9 @@ export function LivePhoneNumberSettingsSurface() {
                 <p className="text-[15px] leading-6 text-foreground">{displayPhoneNumber}</p>
               ) : (
                 <p className="text-[15px] leading-6 text-muted-foreground">
-                  {showPaidPlanRequired
+                  {offersFreeTrial
+                    ? t("phoneNumber.freeTrial.description")
+                    : showPaidPlanRequired
                     ? t("phoneNumber.requiresPaidPlan.description")
                     : t("phoneNumber.current.empty")}
                 </p>
@@ -122,7 +128,11 @@ export function LivePhoneNumberSettingsSurface() {
             </ItemContent>
             {canManageTenant ? (
               <ItemActions>
-                {showPaidPlanRequired ? (
+                {offersFreeTrial ? (
+                  <Button nativeButton={false} render={<Link href="/onboarding/number" />} size="sm">
+                    {t("phoneNumber.freeTrial.cta")}
+                  </Button>
+                ) : showPaidPlanRequired ? (
                   <Button onClick={openUpgradePlanDialog} size="sm" variant="outline">
                     {t("phoneNumber.requiresPaidPlan.upgradeCta")}
                   </Button>

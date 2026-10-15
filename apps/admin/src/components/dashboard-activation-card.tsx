@@ -83,6 +83,7 @@ export function DashboardActivationCard({ businessId }: { businessId: string | u
   // The same request as the trial banner, so the two share one cached answer.
   const trial = useQuery({ queryKey: ["number-trial", businessId], enabled: Boolean(businessId), queryFn: () => requestJson<{ trial: { status: string; e164?: string } }>(`/api/number-trial?businessId=${encodeURIComponent(businessId!)}`) });
   const trialNumber = trial.data?.trial?.status === "active" ? trial.data.trial.e164 ?? null : null;
+  const trialAvailable = trial.data?.trial?.status === "available";
 
   const data = activation.data;
   // Self-hosting is carried by the business, not the billing row: a self-hosted
@@ -95,7 +96,7 @@ export function DashboardActivationCard({ businessId }: { businessId: string | u
   // screen; the upgrade dialog disables their current plan and hands out no numbers.
   const needsNumberClaim = Boolean(data?.paidPlanLive);
   // A live trial number already answers; the next step is forwarding the real line to it, and the banner asks for a plan.
-  const showsUpgrade = eligible && heardItWork && !needsNumberClaim && !trialNumber;
+  const showsUpgrade = eligible && heardItWork && !needsNumberClaim && !trialNumber && !trialAvailable;
 
   useEffect(() => {
     // Marking an ineligible workspace would also suppress the real report once
@@ -129,6 +130,18 @@ export function DashboardActivationCard({ businessId }: { businessId: string | u
           <p className="type-body-muted">{t("activation.forwardTrial.description")}</p>
         </div>
         <Button className="shrink-0" nativeButton={false} render={<Link href={forwardingHelpUrl(i18n.language)} rel="noreferrer" target="_blank" />} variant="outline">{t("activation.forwardTrial.cta")}<ExternalLink data-icon="inline-end" /></Button>
+      </Surface>
+    );
+  }
+
+  if (trialAvailable && heardItWork && !needsNumberClaim) {
+    return (
+      <Surface className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 flex-col gap-1">
+          <p className="type-card-title text-foreground">{t("activation.freeTrial.title")}</p>
+          <p className="type-body-muted">{t("activation.freeTrial.description")}</p>
+        </div>
+        <Button className="shrink-0" nativeButton={false} render={<Link href="/onboarding/number" />}>{t("activation.freeTrial.cta")}</Button>
       </Surface>
     );
   }

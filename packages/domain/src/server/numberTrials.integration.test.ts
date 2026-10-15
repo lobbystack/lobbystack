@@ -62,6 +62,7 @@ describe.skipIf(!testUrl)("free trial numbers against dedicated PostgreSQL roles
       const { attemptId } = await as(tx, "lobbystack_app", db => startOnboardingPhoneVerification({ db }, { ...owner, phoneE164: ownerPhone, countryCode: "CA" }, verify));
       expect(await as(tx, "lobbystack_app", db => checkOnboardingPhoneVerificationCode({ db }, { ...owner, attemptId, code: "123456" }, verify))).toMatchObject({ approved: true });
       expect((await tx.select({ stage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, businessId)))[0]?.stage).toBe("phone_number");
+      expect(await as(tx, "lobbystack_app", db => getNumberTrialState({ db }, owner))).toEqual({ status: "available" });
 
       // The number they pick is a trial, and the worker buys it.
       const claimId = await as(tx, "lobbystack_app", async (db) => {
