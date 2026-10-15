@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { planCards } from "@lobbystack/shared";
 import { useTranslation } from "react-i18next";
 import { Check, Minus } from "lucide-react";
 import { getCloudPlanFactSheet, FREE_CONTENT_RETENTION_MAX_DAYS, contentRetentionDaysForPlan } from "@lobbystack/shared/product-capabilities";
@@ -288,7 +289,8 @@ function ComparisonCell({ t, value }: { t: OnboardingT; value: ComparisonValue }
   );
 }
 
-export function OnboardingPlanComparison({ t }: { t: OnboardingT }) {
+export function OnboardingPlanComparison({ locale, t }: { locale: string; t: OnboardingT }) {
+  const name = Object.fromEntries(planCards(locale).map((card) => [card.slug, card.name]));
   return (
     <section id="compare">
       <h2 className="mb-4 text-center font-heading text-2xl font-semibold tracking-tighter md:text-3xl">
@@ -302,10 +304,10 @@ export function OnboardingPlanComparison({ t }: { t: OnboardingT }) {
           <thead>
             <tr className="border-b border-border/60">
               <th className="pr-8 pb-4 text-left text-xs font-medium text-muted-foreground">{t("plan.featureHeader")}</th>
-              <th className="w-[150px] px-4 pb-4 text-center text-xs font-medium text-muted-foreground">{t("plan.tiers.free_cloud.name")}</th>
-              <th className="w-[150px] px-4 pb-4 text-center text-xs font-medium text-muted-foreground">{t("plan.tiers.starter.name")}</th>
-              <th className="w-[150px] px-4 pb-4 text-center text-xs font-medium text-muted-foreground"><span className="inline-flex items-center gap-1.5">{t("plan.tiers.pro.name")}<span className="rounded-full bg-foreground px-1.5 py-px text-[10px] font-medium text-background">{t("plan.popular")}</span></span></th>
-              <th className="w-[150px] px-4 pb-4 text-center text-xs font-medium text-muted-foreground">{t("plan.tiers.enterprise.name")}</th>
+              <th className="w-[150px] px-4 pb-4 text-center text-xs font-medium text-muted-foreground">{name.free_cloud}</th>
+              <th className="w-[150px] px-4 pb-4 text-center text-xs font-medium text-muted-foreground">{name.starter}</th>
+              <th className="w-[150px] px-4 pb-4 text-center text-xs font-medium text-muted-foreground"><span className="inline-flex items-center gap-1.5">{name.pro}<span className="rounded-full bg-foreground px-1.5 py-px text-[10px] font-medium text-background">{t("plan.popular")}</span></span></th>
+              <th className="w-[150px] px-4 pb-4 text-center text-xs font-medium text-muted-foreground">{name.enterprise}</th>
             </tr>
           </thead>
           <tbody>

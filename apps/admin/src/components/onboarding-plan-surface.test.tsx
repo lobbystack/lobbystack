@@ -11,7 +11,7 @@ const route = vi.hoisted(() => ({ router: { push: vi.fn(), replace: vi.fn() }, s
 const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof createRecordedBrowserTelemetry> | null }));
 vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetryRef.current!.telemetry }));
 vi.mock("next/navigation", () => ({ useRouter: () => route.router, useSearchParams: () => route.search }));
-vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }) }));
 vi.mock("./onboarding-plan-comparison", () => ({ OnboardingPlanComparison: () => null }));
 const clients: QueryClient[] = [];
 beforeEach(() => {
@@ -42,13 +42,13 @@ describe("original onboarding plan behavior with asynchronous checkout", () => {
   });
   it("explains a checkout refused because another one is open", async () => {
     setup(false, "checkout_in_progress");
-    await userEvent.click(screen.getByRole("button", { name: "plan.tiers.pro.cta.annual" }));
+    await userEvent.click(screen.getByRole("button", { name: "Get Pro" }));
     expect(await screen.findByText("settings:billing.checkoutErrors.inProgress")).toBeTruthy();
     expect(route.router.push).not.toHaveBeenCalled();
   });
   it("moves a workspace that already pays on to its number instead of a second checkout", async () => {
     const fetchMock = setup(false, "subscription_active");
-    await userEvent.click(screen.getByRole("button", { name: "plan.tiers.pro.cta.annual" }));
+    await userEvent.click(screen.getByRole("button", { name: "Get Pro" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/onboarding/stage?businessId=business", expect.objectContaining({ body: JSON.stringify({ to: "phone_number" }) })));
     await waitFor(() => expect(route.router.push).toHaveBeenCalledWith("/onboarding/number"));
     expect(screen.queryByText("settings:billing.checkoutErrors.subscriptionActive")).toBeNull();
@@ -56,7 +56,7 @@ describe("original onboarding plan behavior with asynchronous checkout", () => {
   it.each(["annual", "monthly"])("starts Pro checkout with the selected %s interval and allows retry after provider failure", async interval => {
     const fetchMock = setup();
     if (interval === "monthly") await userEvent.click(screen.getByRole("tab", { name: "plan.billingInterval.monthly" }));
-    const button = screen.getByRole("button", { name: `plan.tiers.pro.cta.${interval}` });
+    const button = screen.getByRole("button", { name: "Get Pro" });
     await userEvent.click(button);
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/billing/checkout", expect.objectContaining({ body: JSON.stringify({ businessId: "business", target: "pro", billingInterval: interval }) })));
     telemetryRef.current!.expectEvent("web.onboarding.plan_selected", { businessId: "business", plan: "pro" });
@@ -71,7 +71,7 @@ describe("original onboarding plan behavior with asynchronous checkout", () => {
     vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => init?.method === "POST"
       ? Response.json({ requestId: "new-checkout" })
       : Response.json({ status: "ready", checkoutUrl: "https://checkout.example/session", error: null })));
-    const button = screen.getByRole("button", { name: "plan.tiers.pro.cta.annual" });
+    const button = screen.getByRole("button", { name: "Get Pro" });
     await userEvent.click(button);
     await waitFor(() => expect(assign).toHaveBeenCalledWith("https://checkout.example/session"));
     expect(button.hasAttribute("disabled")).toBe(true);
@@ -79,18 +79,18 @@ describe("original onboarding plan behavior with asynchronous checkout", () => {
     Object.defineProperty(restored, "persisted", { value: true });
     act(() => { window.dispatchEvent(restored); });
     await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
-    expect(screen.getByRole("button", { name: "plan.tiers.free_cloud.cta" }).hasAttribute("disabled")).toBe(false);
+    expect(screen.getByRole("button", { name: "Start free" }).hasAttribute("disabled")).toBe(false);
     expect(assign).toHaveBeenCalledTimes(1);
   });
   it("records plan_selected when the free plan is chosen", async () => {
     setup();
-    await userEvent.click(screen.getByRole("button", { name: "plan.tiers.free_cloud.cta" }));
+    await userEvent.click(screen.getByRole("button", { name: "Start free" }));
     telemetryRef.current!.expectEvent("web.onboarding.plan_selected", { businessId: "business", plan: "free_cloud" });
   });
   it("selects the only configured interval and disables unavailable plans", async () => {
     setup(true);
     await waitFor(() => expect(screen.getByRole("tab", { name: "plan.billingInterval.monthly" }).getAttribute("aria-selected")).toBe("true"));
-    expect(screen.getByRole("button", { name: "plan.tiers.starter.cta.monthly" }).hasAttribute("disabled")).toBe(true);
-    expect(screen.getByRole("button", { name: "plan.tiers.pro.cta.monthly" }).hasAttribute("disabled")).toBe(false);
+    expect(screen.getByRole("button", { name: "Get Starter" }).hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("button", { name: "Get Pro" }).hasAttribute("disabled")).toBe(false);
   });
 });

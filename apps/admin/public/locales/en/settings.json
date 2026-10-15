@@ -188,64 +188,7 @@
         "annual": "Annual"
       },
       "actions": {
-        "currentPlan": "Current plan",
-        "starter": "Get Starter",
-        "pro": "Get Pro",
-        "enterprise": "Contact us"
-      },
-      "plans": {
-        "free_cloud": {
-          "name": "Free",
-          "description": {
-            "monthly": "Full access for 14 days",
-            "annual": "Full access for 14 days"
-          },
-          "highlights": {
-            "voiceMinutes": "30 voice minutes included",
-            "allFeatures": "1 phone number",
-            "concurrentCalls": "Unlimited calls at once",
-            "support": "Community support"
-          }
-        },
-        "starter": {
-          "name": "Starter",
-          "description": {
-            "monthly": "Per month, billed monthly",
-            "annual": "Per month, billed annually"
-          },
-          "highlights": {
-            "voiceMinutes": "150 voice minutes included\nThen $0.20/min",
-            "dedicatedNumber": "1 dedicated business number",
-            "concurrentCalls": "Unlimited calls at once",
-            "support": "Email support"
-          }
-        },
-        "pro": {
-          "name": "Pro",
-          "description": {
-            "monthly": "Per month, billed monthly",
-            "annual": "Per month, billed annually"
-          },
-          "highlights": {
-            "voiceMinutes": "500 voice minutes included\nThen $0.18/min",
-            "dedicatedNumber": "1 dedicated business number",
-            "concurrentCalls": "Unlimited calls at once",
-            "support": "Priority email support"
-          }
-        },
-        "enterprise": {
-          "name": "Enterprise",
-          "description": {
-            "monthly": "For higher volume",
-            "annual": "For higher volume"
-          },
-          "highlights": {
-            "phoneNumbers": "Multiple dedicated numbers",
-            "concurrentCalls": "Unlimited calls at once",
-            "usageLimits": "Custom usage limits",
-            "support": "Dedicated implementation support"
-          }
-        }
+        "currentPlan": "Current plan"
       }
     },
     "usage": {

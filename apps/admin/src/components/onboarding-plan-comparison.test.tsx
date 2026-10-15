@@ -12,7 +12,7 @@ it.each(["en", "fr"] as const)("describes supported capabilities in %s", async (
   const i18n = createInstance();
   await i18n.init({ lng: locale, resources: { en: { onboarding: en }, fr: { onboarding: fr } } });
   const t = i18n.getFixedT(locale, "onboarding");
-  render(<OnboardingPlanComparison t={t} />);
+  render(<OnboardingPlanComparison locale={locale} t={t} />);
   expect(screen.queryByText(/Outlook/)).toBeNull();
   expect(screen.getByText(/^30 included$|^30 incluses$/)).toBeTruthy();
   const numbers = screen.getByText(t("plan.comparison.features.phoneNumbers")).closest("tr")!;

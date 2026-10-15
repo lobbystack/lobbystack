@@ -188,64 +188,7 @@
         "annual": "Godišnje"
       },
       "actions": {
-        "currentPlan": "Trenutni paket",
-        "starter": "Izaberite Starter",
-        "pro": "Izaberite Pro",
-        "enterprise": "Kontaktirajte nas"
-      },
-      "plans": {
-        "free_cloud": {
-          "name": "Free",
-          "description": {
-            "monthly": "Pun pristup 14 dana",
-            "annual": "Pun pristup 14 dana"
-          },
-          "highlights": {
-            "voiceMinutes": "30 minuta razgovora uključeno",
-            "allFeatures": "1 broj telefona",
-            "concurrentCalls": "Neograničen broj istovremenih poziva",
-            "support": "Podrška zajednice"
-          }
-        },
-        "starter": {
-          "name": "Starter",
-          "description": {
-            "monthly": "Mesečno, uz mesečnu naplatu",
-            "annual": "Mesečno, uz godišnju naplatu"
-          },
-          "highlights": {
-            "voiceMinutes": "150 minuta razgovora uključeno\nZatim 0,20 $/min",
-            "dedicatedNumber": "1 namenski poslovni broj",
-            "concurrentCalls": "Neograničen broj istovremenih poziva",
-            "support": "Podrška putem imejla"
-          }
-        },
-        "pro": {
-          "name": "Pro",
-          "description": {
-            "monthly": "Mesečno, uz mesečnu naplatu",
-            "annual": "Mesečno, uz godišnju naplatu"
-          },
-          "highlights": {
-            "voiceMinutes": "500 minuta razgovora uključeno\nZatim 0,18 $/min",
-            "dedicatedNumber": "1 namenski poslovni broj",
-            "concurrentCalls": "Neograničen broj istovremenih poziva",
-            "support": "Prioritetna podrška putem imejla"
-          }
-        },
-        "enterprise": {
-          "name": "Enterprise",
-          "description": {
-            "monthly": "Za veći obim",
-            "annual": "Za veći obim"
-          },
-          "highlights": {
-            "phoneNumbers": "Više namenskih brojeva",
-            "concurrentCalls": "Neograničen broj istovremenih poziva",
-            "usageLimits": "Prilagođeni limiti potrošnje",
-            "support": "Namenska podrška pri uvođenju"
-          }
-        }
+        "currentPlan": "Trenutni paket"
       }
     },
     "usage": {

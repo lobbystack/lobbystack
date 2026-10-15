@@ -188,64 +188,7 @@
         "annual": "Annuel"
       },
       "actions": {
-        "currentPlan": "Forfait actuel",
-        "starter": "Choisir Starter",
-        "pro": "Choisir Pro",
-        "enterprise": "Nous contacter"
-      },
-      "plans": {
-        "free_cloud": {
-          "name": "Gratuit",
-          "description": {
-            "monthly": "Accès complet pendant 14 jours",
-            "annual": "Accès complet pendant 14 jours"
-          },
-          "highlights": {
-            "voiceMinutes": "30 minutes vocales incluses",
-            "allFeatures": "1 numéro de téléphone",
-            "concurrentCalls": "Appels simultanés illimités",
-            "support": "Soutien communautaire"
-          }
-        },
-        "starter": {
-          "name": "Starter",
-          "description": {
-            "monthly": "Par mois, facturé mensuellement",
-            "annual": "Par mois, facturé annuellement"
-          },
-          "highlights": {
-            "voiceMinutes": "150 minutes vocales incluses\nPuis 0,20 $/min",
-            "dedicatedNumber": "1 numéro d'entreprise dédié",
-            "concurrentCalls": "Appels simultanés illimités",
-            "support": "Soutien par courriel"
-          }
-        },
-        "pro": {
-          "name": "Pro",
-          "description": {
-            "monthly": "Par mois, facturé mensuellement",
-            "annual": "Par mois, facturé annuellement"
-          },
-          "highlights": {
-            "voiceMinutes": "500 minutes vocales incluses\nPuis 0,18 $/min",
-            "dedicatedNumber": "1 numéro d'entreprise dédié",
-            "concurrentCalls": "Appels simultanés illimités",
-            "support": "Soutien prioritaire par courriel"
-          }
-        },
-        "enterprise": {
-          "name": "Entreprise",
-          "description": {
-            "monthly": "Pour un volume plus élevé",
-            "annual": "Pour un volume plus élevé"
-          },
-          "highlights": {
-            "phoneNumbers": "Plusieurs numéros dédiés",
-            "concurrentCalls": "Appels simultanés illimités",
-            "usageLimits": "Limites d'utilisation sur mesure",
-            "support": "Accompagnement dédié à l'implantation"
-          }
-        }
+        "currentPlan": "Forfait actuel"
       }
     },
     "usage": {

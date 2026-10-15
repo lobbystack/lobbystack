@@ -9,7 +9,7 @@ import { isUpgradeInProgress } from "@/lib/upgrade-in-progress";
 
 const alerts = vi.hoisted(() => ({ error: vi.fn() }));
 vi.mock("sonner", () => ({ toast: alerts }));
-vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }) }));
 const clients: QueryClient[] = [];
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
 function OpenButton() { const open = useOpenUpgradePlanDialog(); return <button onClick={open}>Open plans</button>; }
@@ -27,7 +27,7 @@ describe("restarting a plan that lapsed", () => {
 
   it("lets a cancelled Starter buy Starter again, which is the tier that carries their number", async () => {
     await openPlansFor("canceled");
-    const starter = screen.getByRole("button", { name: "billing.upgradeDialog.actions.starter" });
+    const starter = screen.getByRole("button", { name: "Get Starter" });
     expect(starter.hasAttribute("disabled")).toBe(false);
     // Free carries the current-plan marker instead, which is where a cancelled
     // account actually sits.
@@ -37,7 +37,7 @@ describe("restarting a plan that lapsed", () => {
   it("still marks a live Starter as the plan they are on", async () => {
     await openPlansFor("active");
     expect(screen.getByRole("button", { name: "billing.upgradeDialog.actions.currentPlan" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "billing.upgradeDialog.actions.starter" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Get Starter" })).toBeNull();
   });
 
   it("treats a past_due Starter as still on the plan, matching the number gate", async () => {
@@ -61,13 +61,13 @@ describe("the plan the picker opens on", () => {
 
   it("opens on Starter when the pricing page sent no plan", async () => {
     await openPicker();
-    expect(selectedPlans()).toEqual(["billing.upgradeDialog.plans.starter.name"]);
+    expect(selectedPlans()).toEqual(["Starter"]);
   });
 
   it("opens on the plan picked on the pricing page", async () => {
     localStorage.setItem("lobbystack.pricing.plan", "pro");
     await openPicker();
-    expect(selectedPlans()).toEqual(["billing.upgradeDialog.plans.pro.name"]);
+    expect(selectedPlans()).toEqual(["Pro"]);
   });
 
   it.each([
@@ -75,7 +75,7 @@ describe("the plan the picker opens on", () => {
     ["subscription_active", "billing.checkoutErrors.subscriptionActive"],
   ])("explains a checkout refused with %s", async (code, message) => {
     await openPicker(async () => Response.json({ error: "Refused", code }, { status: 409 }));
-    await userEvent.click(screen.getByRole("button", { name: "billing.upgradeDialog.actions.starter" }));
+    await userEvent.click(screen.getByRole("button", { name: "Get Starter" }));
     await waitFor(() => expect(alerts.error).toHaveBeenCalledWith(message));
   });
 });
@@ -96,7 +96,7 @@ describe("checkout workspace isolation", () => {
     expect(screen.getByText("$30")).toBeTruthy();
     expect(screen.getByText("$100")).toBeTruthy();
     expect(screen.queryByText("$24")).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: `billing.upgradeDialog.actions.${target}` }));
+    await userEvent.click(screen.getByRole("button", { name: target === "starter" ? "Get Starter" : "Get Pro" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/billing/checkout", expect.objectContaining({ body: JSON.stringify({ businessId: "business", target, billingInterval: "monthly" }) })));
     await waitFor(() => expect(alerts.error).toHaveBeenCalledWith("billing.toast.checkoutFailed"));
     expect(screen.getByRole("dialog")).toBeTruthy();
@@ -114,7 +114,7 @@ describe("checkout workspace isolation", () => {
     vi.stubGlobal("fetch", fetchMock);
     render(<QueryClientProvider client={client}><LiveUpgradePlanProvider><OpenButton /></LiveUpgradePlanProvider></QueryClientProvider>);
     await userEvent.click(screen.getByRole("button", { name: "Open plans" }));
-    await userEvent.click(screen.getByRole("button", { name: "billing.upgradeDialog.actions.pro" }));
+    await userEvent.click(screen.getByRole("button", { name: "Get Pro" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
     const request = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(JSON.parse(String(request[1].body))).toMatchObject({ businessId: "a", target: "pro", billingInterval: "annual" });
@@ -122,7 +122,7 @@ describe("checkout workspace isolation", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     await userEvent.click(screen.getByRole("button", { name: "Open plans" }));
     await act(async () => { if (outcome === "success") resolve(Response.json({ requestId: "old-request" })); else reject(new Error("Old workspace checkout failed")); });
-    await waitFor(() => expect(screen.getByRole("button", { name: "billing.upgradeDialog.actions.pro" }).hasAttribute("disabled")).toBe(false));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Get Pro" }).hasAttribute("disabled")).toBe(false));
     expect(screen.getByRole("dialog")).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledOnce();
     expect(alerts.error).not.toHaveBeenCalled();
@@ -150,7 +150,7 @@ describe("telling the dashboard an upgrade is under way", () => {
       ? Response.json({ requestId: "request" })
       : Response.json({ status, checkoutUrl: status === "ready" ? "https://checkout.example/session" : null, error: null }));
     expect(isUpgradeInProgress()).toBe(true);
-    await userEvent.click(screen.getByRole("button", { name: "billing.upgradeDialog.actions.pro" }));
+    await userEvent.click(screen.getByRole("button", { name: "Get Pro" }));
     await userEvent.click(screen.getByRole("button", { name: "accessibility.close" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(isUpgradeInProgress()).toBe(true);
@@ -165,14 +165,14 @@ describe("telling the dashboard an upgrade is under way", () => {
     await renderPlans(async (_url, init) => init?.method === "POST"
       ? Response.json({ requestId: "request" })
       : Response.json({ status: "ready", checkoutUrl: "https://checkout.example/session", error: null }));
-    await userEvent.click(screen.getByRole("button", { name: "billing.upgradeDialog.actions.pro" }));
+    await userEvent.click(screen.getByRole("button", { name: "Get Pro" }));
     await waitFor(() => expect(assign).toHaveBeenCalledWith("https://checkout.example/session"), { timeout: 3_000 });
     // The Pro button shows its loading state while the redirect is under way.
-    expect(screen.queryByRole("button", { name: "billing.upgradeDialog.actions.pro" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Get Pro" })).toBeNull();
     const restored = new Event("pageshow");
     Object.defineProperty(restored, "persisted", { value: true });
     act(() => { window.dispatchEvent(restored); });
-    await waitFor(() => expect(screen.getByRole("button", { name: "billing.upgradeDialog.actions.pro" })).toHaveProperty("disabled", false));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Get Pro" })).toHaveProperty("disabled", false));
     expect(assign).toHaveBeenCalledTimes(1);
     expect(isUpgradeInProgress()).toBe(true);
     await userEvent.click(screen.getByRole("button", { name: "accessibility.close" }));
@@ -193,7 +193,7 @@ describe("telling the dashboard an upgrade is under way", () => {
 
   it("lets go once a failed checkout's picker is closed, and on unmount", async () => {
     const view = await renderPlans(async () => Response.json({ error: "Checkout unavailable" }, { status: 503 }));
-    await userEvent.click(screen.getByRole("button", { name: "billing.upgradeDialog.actions.pro" }));
+    await userEvent.click(screen.getByRole("button", { name: "Get Pro" }));
     await waitFor(() => expect(alerts.error).toHaveBeenCalledWith("billing.toast.checkoutFailed"));
     expect(isUpgradeInProgress()).toBe(true);
     await userEvent.click(screen.getByRole("button", { name: "accessibility.close" }));

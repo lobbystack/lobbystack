@@ -188,64 +188,7 @@
         "annual": "Anual"
       },
       "actions": {
-        "currentPlan": "Plan actual",
-        "starter": "Elegir Starter",
-        "pro": "Elegir Pro",
-        "enterprise": "Contáctenos"
-      },
-      "plans": {
-        "free_cloud": {
-          "name": "Free",
-          "description": {
-            "monthly": "Acceso completo durante 14 días",
-            "annual": "Acceso completo durante 14 días"
-          },
-          "highlights": {
-            "voiceMinutes": "30 minutos de voz incluidos",
-            "allFeatures": "1 número de teléfono",
-            "concurrentCalls": "Llamadas simultáneas ilimitadas",
-            "support": "Soporte de la comunidad"
-          }
-        },
-        "starter": {
-          "name": "Starter",
-          "description": {
-            "monthly": "Por mes, facturado mensualmente",
-            "annual": "Por mes, facturado anualmente"
-          },
-          "highlights": {
-            "voiceMinutes": "150 minutos de voz incluidos\nLuego $0.20/min",
-            "dedicatedNumber": "1 número del negocio dedicado",
-            "concurrentCalls": "Llamadas simultáneas ilimitadas",
-            "support": "Soporte por correo electrónico"
-          }
-        },
-        "pro": {
-          "name": "Pro",
-          "description": {
-            "monthly": "Por mes, facturado mensualmente",
-            "annual": "Por mes, facturado anualmente"
-          },
-          "highlights": {
-            "voiceMinutes": "500 minutos de voz incluidos\nLuego $0.18/min",
-            "dedicatedNumber": "1 número del negocio dedicado",
-            "concurrentCalls": "Llamadas simultáneas ilimitadas",
-            "support": "Soporte prioritario por correo electrónico"
-          }
-        },
-        "enterprise": {
-          "name": "Enterprise",
-          "description": {
-            "monthly": "Para mayor volumen",
-            "annual": "Para mayor volumen"
-          },
-          "highlights": {
-            "phoneNumbers": "Varios números dedicados",
-            "concurrentCalls": "Llamadas simultáneas ilimitadas",
-            "usageLimits": "Límites de uso a medida",
-            "support": "Soporte dedicado para la implementación"
-          }
-        }
+        "currentPlan": "Plan actual"
       }
     },
     "usage": {

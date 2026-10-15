@@ -17,7 +17,7 @@ vi.mock("@/lib/abandon-intent-survey", () => ({
   captureSurveyDismissed: survey.dismissed,
   captureSurveyResponse: survey.response,
 }));
-vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
+vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }) }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 
 const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof createRecordedBrowserTelemetry> | null }));
@@ -218,7 +218,7 @@ describe("abandon intent during an upgrade", () => {
     );
     await vi.advanceTimersByTimeAsync(ABANDON_INTENT_MIN_DWELL_MS);
     fireEvent.click(screen.getByRole("button", { name: "Open plans" }));
-    await screen.findByRole("button", { name: "billing.upgradeDialog.actions.pro" });
+    await screen.findByRole("button", { name: "Get Pro" });
   }
 
   function expectNoSurvey() {
@@ -238,7 +238,7 @@ describe("abandon intent during an upgrade", () => {
     leaveThroughTop();
     expectNoSurvey();
 
-    fireEvent.click(screen.getByRole("button", { name: "billing.upgradeDialog.actions.pro" }));
+    fireEvent.click(screen.getByRole("button", { name: "Get Pro" }));
     await waitFor(() => expect(fetch).toHaveBeenCalledWith(expect.stringContaining("requestId=request"), expect.anything()));
     leaveThroughTop();
     expectNoSurvey();
@@ -252,13 +252,13 @@ describe("abandon intent during an upgrade", () => {
 
   it("asks again once a failed checkout is behind them and the picker is closed", async () => {
     await renderDashboard(async () => Response.json({ error: "Checkout unavailable" }, { status: 503 }));
-    fireEvent.click(screen.getByRole("button", { name: "billing.upgradeDialog.actions.pro" }));
-    await waitFor(() => expect(screen.getByRole("button", { name: "billing.upgradeDialog.actions.pro" }).hasAttribute("disabled")).toBe(false));
+    fireEvent.click(screen.getByRole("button", { name: "Get Pro" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Get Pro" }).hasAttribute("disabled")).toBe(false));
     leaveThroughTop();
     expectNoSurvey();
 
     fireEvent.click(screen.getByRole("button", { name: "accessibility.close" }));
-    await waitFor(() => expect(screen.queryByRole("button", { name: "billing.upgradeDialog.actions.pro" })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Get Pro" })).toBeNull());
     leaveThroughTop();
     expect(survey.shown).toHaveBeenCalledOnce();
     telemetryRef.current!.expectEvent("web.activation.abandon_intent", { businessId: "business", trigger: "exit_intent" });

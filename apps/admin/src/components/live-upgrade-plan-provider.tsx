@@ -24,7 +24,7 @@ type Billing = {
 type Checkout = { businessId: string; requestId: string; target: HostedUpgradePlan };
 
 export function LiveUpgradePlanProvider({ children }: { children: ReactNode }) {
-  const { t } = useTranslation("settings");
+  const { i18n, t } = useTranslation("settings");
   const client = useQueryClient();
   const [open, setOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<HostedUpgradePlan>("starter");
@@ -95,6 +95,7 @@ export function LiveUpgradePlanProvider({ children }: { children: ReactNode }) {
       billingInterval={interval}
       currentPlan={plan}
       loading={pending ? "checkout" : null}
+      locale={i18n.language}
       loadingPlan={checkout?.target ?? (mutation.isPending ? mutation.variables.target : null)}
       onBillingIntervalChange={setInterval}
       onContactEnterprise={() => window.location.assign(`mailto:hello@lobbystack.ai?subject=${encodeURIComponent(t("billing.upgradeDialog.enterpriseSubject"))}`)}

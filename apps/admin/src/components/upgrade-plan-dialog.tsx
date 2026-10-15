@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { planCards, type PlanCard } from "@lobbystack/shared";
 import type {
   BillingInterval,
   BillingPlanSlug,
@@ -22,53 +23,7 @@ export type HostedUpgradePlan = "starter" | "pro";
 
 type BillingTranslation = TFunction<"settings">;
 
-type UpgradePlanCard = {
-  slug: "free_cloud" | HostedUpgradePlan | "enterprise";
-  price: Record<BillingInterval, string>;
-  period: string;
-  highlights: string[];
-};
-
-const upgradePlanCards: UpgradePlanCard[] = [
-  {
-    slug: "free_cloud",
-    price: {
-      monthly: "$0",
-      annual: "$0",
-    },
-    period: "",
-    highlights: ["voiceMinutes", "allFeatures", "concurrentCalls", "support"],
-  },
-  {
-    slug: "starter",
-    price: {
-      monthly: "$30",
-      annual: "$24",
-    },
-    period: "/mo",
-    highlights: ["voiceMinutes", "dedicatedNumber", "concurrentCalls", "support"],
-  },
-  {
-    slug: "pro",
-    price: {
-      monthly: "$100",
-      annual: "$80",
-    },
-    period: "/mo",
-    highlights: ["voiceMinutes", "dedicatedNumber", "concurrentCalls", "support"],
-  },
-  {
-    slug: "enterprise",
-    price: {
-      monthly: "Custom",
-      annual: "Custom",
-    },
-    period: "",
-    highlights: ["phoneNumbers", "concurrentCalls", "usageLimits", "support"],
-  },
-];
-
-function isHostedUpgradePlan(slug: UpgradePlanCard["slug"]): slug is HostedUpgradePlan {
+function isHostedUpgradePlan(slug: PlanCard["slug"]): slug is HostedUpgradePlan {
   return slug === "starter" || slug === "pro";
 }
 
@@ -78,6 +33,7 @@ export function UpgradePlanDialog({
   billingInterval,
   currentPlan,
   loading,
+  locale,
   loadingPlan,
   onBillingIntervalChange,
   onContactEnterprise,
@@ -92,6 +48,7 @@ export function UpgradePlanDialog({
   billingInterval: BillingInterval;
   currentPlan: BillingPlanSlug;
   loading: "checkout" | "portal" | null;
+  locale: string;
   loadingPlan: HostedUpgradePlan | null;
   onBillingIntervalChange: (billingInterval: BillingInterval) => void;
   onContactEnterprise: () => void;
@@ -163,7 +120,7 @@ export function UpgradePlanDialog({
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {upgradePlanCards.map((card) => {
+          {planCards(locale).map((card) => {
             const isCurrentPlan = currentPlan === card.slug;
             const checkoutPlan = isHostedUpgradePlan(card.slug) ? card.slug : null;
             const isEnterprisePlan = card.slug === "enterprise";
@@ -178,9 +135,7 @@ export function UpgradePlanDialog({
                 isSelectedIntervalAvailable);
             const actionLabel = isCurrentPlan
               ? t("billing.upgradeDialog.actions.currentPlan")
-              : checkoutPlan !== null
-                ? t(`billing.upgradeDialog.actions.${checkoutPlan}`)
-                : t("billing.upgradeDialog.actions.enterprise");
+              : card.cta;
 
             return (
               <section
@@ -195,7 +150,7 @@ export function UpgradePlanDialog({
               >
                 <div className="mb-5">
                   <h3 className="font-heading text-lg font-medium tracking-[-0.03em]">
-                    {t(`billing.upgradeDialog.plans.${card.slug}.name`)}
+                    {card.name}
                   </h3>
                   <div className="mt-4 flex items-baseline gap-1">
                     <span className="font-heading text-4xl font-medium tracking-[-0.05em] tabular-nums">
@@ -208,21 +163,17 @@ export function UpgradePlanDialog({
                     ) : null}
                   </div>
                   <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                    {t(
-                      `billing.upgradeDialog.plans.${card.slug}.description.${selectedBillingInterval}`,
-                    )}
+                    {card.description[selectedBillingInterval]}
                   </p>
                 </div>
 
                 <div className="flex-1 border-t border-border/60 pt-4">
                   <ul className="flex flex-col gap-3">
-                    {card.highlights.map((highlight) => (
-                      <li className="flex items-start gap-2.5 text-sm" key={highlight}>
+                    {card.lines.map((line) => (
+                      <li className="flex items-start gap-2.5 text-sm" key={line.label}>
                         <Check className="mt-0.5 size-3.5 shrink-0 text-emerald-500" />
                         <span className="whitespace-pre-line">
-                          {t(
-                            `billing.upgradeDialog.plans.${card.slug}.highlights.${highlight}`,
-                          )}
+                          {line.sublabel ? `${line.label}\n${line.sublabel}` : line.label}
                         </span>
                       </li>
                     ))}
