@@ -67,7 +67,7 @@ const tiers: Tier[] = [
     ctaVariant: "outline" as const,
     highlight: false,
     highlights: [
-      `${freeVoiceMinutes} browser voice minutes included`,
+      `${freeVoiceMinutes} voice minutes included`,
       ...(freePlanFacts.browserVoiceOnly
         ? ["1 phone number"]
         : []),
@@ -175,7 +175,7 @@ const tiersFr: Tier[] = [
     ctaVariant: "outline" as const,
     highlight: false,
     highlights: [
-      `${freeVoiceMinutes} minutes vocales dans le navigateur`,
+      `${freeVoiceMinutes} minutes vocales incluses`,
       ...(freePlanFacts.browserVoiceOnly
         ? ["1 numéro de téléphone"]
         : []),
@@ -283,7 +283,7 @@ const tiersEs: Tier[] = [
     ctaVariant: "outline" as const,
     highlight: false,
     highlights: [
-      `${freeVoiceMinutes} minutos de voz en el navegador`,
+      `${freeVoiceMinutes} minutos de voz incluidos`,
       ...(freePlanFacts.browserVoiceOnly
         ? ["1 número de teléfono"]
         : []),
@@ -391,7 +391,7 @@ const tiersSr: Tier[] = [
     ctaVariant: "outline" as const,
     highlight: false,
     highlights: [
-      `${freeVoiceMinutes} minuta razgovora u pregledaču`,
+      `${freeVoiceMinutes} minuta razgovora uključeno`,
       ...(freePlanFacts.browserVoiceOnly
         ? ["1 broj telefona"]
         : []),
@@ -516,7 +516,7 @@ const comparisonGroupsEn: ComparisonGroup[] = [
     rows: [
       {
         feature: "Voice minutes",
-        free: { included: `${freeVoiceMinutes} browser minutes` },
+        free: { included: `${freeVoiceMinutes} included` },
         starter: { included: "150 included", then: "then $0.20/min" },
         pro: { included: "500 included", then: "then $0.18/min" },
         enterprise: "Custom",
@@ -734,7 +734,7 @@ const comparisonGroupsFr: ComparisonGroup[] = [
     rows: [
       {
         feature: "Minutes vocales",
-        free: { included: `${freeVoiceMinutes} minutes dans le navigateur` },
+        free: { included: `${freeVoiceMinutes} incluses` },
         starter: { included: "150 incluses", then: "puis 0,20 $/min" },
         pro: { included: "500 incluses", then: "puis 0,18 $/min" },
         enterprise: "Sur mesure",
@@ -952,7 +952,7 @@ const comparisonGroupsEs: ComparisonGroup[] = [
     rows: [
       {
         feature: "Minutos de voz",
-        free: { included: `${freeVoiceMinutes} minutos en el navegador` },
+        free: { included: `${freeVoiceMinutes} incluidos` },
         starter: { included: "150 incluidos", then: "luego $0.20/min" },
         pro: { included: "500 incluidos", then: "luego $0.18/min" },
         enterprise: "A medida",
@@ -1170,7 +1170,7 @@ const comparisonGroupsSr: ComparisonGroup[] = [
     rows: [
       {
         feature: "Minuti razgovora",
-        free: { included: `${freeVoiceMinutes} minuta u pregledaču` },
+        free: { included: `${freeVoiceMinutes} uključeno` },
         starter: { included: "150 uključeno", then: "zatim $0.20/min" },
         pro: { included: "500 uključeno", then: "zatim $0.18/min" },
         enterprise: "Po dogovoru",
