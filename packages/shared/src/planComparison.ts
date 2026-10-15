@@ -173,7 +173,7 @@ export function planComparison(locale: string): ComparisonGroup[] {
     { category: c.groups[5], rows: [
       row("summaries", c.unlimited.m, c.unlimited.m, c.unlimited.m),
       // Recordings and transcripts are deleted after the plan's retention period.
-      row("history", c.days(contentRetentionDaysByPlan.free_cloud.recordings), { starter: c.days(contentRetentionDaysByPlan.starter.recordings), pro: c.days(contentRetentionDaysByPlan.pro.recordings) }, c.days(contentRetentionDaysByPlan.enterprise.recordings)),
+      row("history", c.days(contentRetentionDaysByPlan.free_cloud.recordings), { starter: c.days(contentRetentionDaysByPlan.starter.recordings), pro: c.days(contentRetentionDaysByPlan.pro.recordings) }, c.custom),
       row("callerProfiles", true, true),
       row("contacts", c.unlimited.m, c.unlimited.m, c.unlimited.m),
       row("websiteImport", true, true),

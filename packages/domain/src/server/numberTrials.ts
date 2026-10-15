@@ -4,7 +4,7 @@ import { and, desc, eq, gt, gte, inArray, isNull, lte, ne, sql } from "drizzle-o
 import { billingAccounts, businesses, calls, enqueueOutbox, numberTrials, numberWaitlist, onboardingPhoneVerifications, phoneNumbers, receptionistProfiles, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { isPaidSubscription, normalizeInterfaceLocale, type InterfaceLocale } from "@lobbystack/shared";
 
-import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
+import { hasMinimumRole, requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
 import { sharedSmsSender } from "./smsSender";
 import { getVoiceSecondsLeftInTransaction } from "./usage";
@@ -293,8 +293,9 @@ async function trialAvailableInTransaction(tx: DatabaseTransaction, input: { use
   const billing = (await tx.select({ plan: billingAccounts.plan, state: billingAccounts.subscriptionState }).from(billingAccounts).where(eq(billingAccounts.businessId, input.businessId)).limit(1))[0];
   if (business?.deploymentMode !== "cloud" || (billing && isPaidSubscription(billing.plan, billing.state))) return false;
   const number = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), inArray(phoneNumbers.status, ["active", "provisioning"]))).limit(1);
-  const used = await tx.select({ id: numberTrials.id }).from(numberTrials).where(and(eq(numberTrials.businessId, input.businessId), ne(numberTrials.status, "failed"))).limit(1);
-  if (number.length || used.length) return false;
+  // The same once-per-workspace, per-user and per-phone rule the claim enforces.
+  const used = await tx.execute(sql`SELECT app.number_trial_used(${input.businessId}::uuid, ${input.userId}::uuid) AS used`);
+  if (number.length || (used.rows[0] as { used?: boolean } | undefined)?.used) return false;
   // An owner who hasn't verified a mobile yet verifies it on the way to the number.
   const verified = await verifiedPhone(tx, input);
   return !verified || (trialCountries() as string[]).includes(verified.countryCode);
@@ -303,14 +304,15 @@ async function trialAvailableInTransaction(tx: DatabaseTransaction, input: { use
 export async function getNumberTrialState(context: DomainContext, input: { userId: string; businessId: string; now?: Date }): Promise<NumberTrialState> {
   const now = input.now ?? new Date();
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
-    await requireBusinessMembership(tx, input);
+    const { role } = await requireBusinessMembership(tx, input);
     const row = (await tx.select({ status: numberTrials.status, endsAt: numberTrials.endsAt, minutesExhaustedAt: numberTrials.minutesExhaustedAt, verifiedPhone: numberTrials.verifiedPhone, e164: phoneNumbers.e164, numberStatus: phoneNumbers.status, transferNumber: receptionistProfiles.transferNumber })
       .from(numberTrials)
       .leftJoin(phoneNumbers, eq(phoneNumbers.id, numberTrials.phoneNumberId))
       .leftJoin(receptionistProfiles, eq(receptionistProfiles.businessId, numberTrials.businessId))
       .where(and(eq(numberTrials.businessId, input.businessId), inArray(numberTrials.status, ["active", "ended", "released"])))
       .limit(1))[0];
-    if (!row) return await trialAvailableInTransaction(tx, input) ? { status: "available" } : { status: "none" };
+    // Only admins can search and claim numbers, so only they see the offer.
+    if (!row) return hasMinimumRole(role, "business_admin") && await trialAvailableInTransaction(tx, input) ? { status: "available" } : { status: "none" };
     if (row.status === "active" && row.e164 && row.endsAt) {
       return { status: "active", e164: row.e164, endsAt: row.endsAt.toISOString(), daysLeft: Math.max(1, Math.ceil((row.endsAt.getTime() - now.getTime()) / 86_400_000)), minutesExhausted: Boolean(row.minutesExhaustedAt), forwardTo: row.minutesExhaustedAt ? row.transferNumber?.trim() || row.verifiedPhone : null };
     }

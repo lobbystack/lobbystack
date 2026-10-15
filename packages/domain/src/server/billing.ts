@@ -136,6 +136,8 @@ export async function createBillingCheckoutRequest(
       if (open.requestedByUserId !== input.userId) throw Object.assign(new Error("A checkout is already open for this workspace."), { status: 409, code: billingErrorCodes.checkoutInProgress });
       if (open.target === input.target && open.billingInterval === input.billingInterval) return open.id;
       // The same person picking another plan, such as after Polar's back arrow, replaces their own checkout.
+      // The old Polar session stays open, but Polar allows one active subscription per customer
+      // (keep "Allow multiple subscriptions" off), so paying in both tabs can't start two.
       await tx.update(billingCheckoutRequests).set({ status: "superseded", updatedAt: new Date() }).where(and(eq(billingCheckoutRequests.id, open.id), eq(billingCheckoutRequests.businessId, input.businessId)));
     }
     await tx.insert(billingAccounts).values({ businessId: input.businessId, billingKey: `business:${input.businessId}` }).onConflictDoNothing({ target: billingAccounts.businessId });

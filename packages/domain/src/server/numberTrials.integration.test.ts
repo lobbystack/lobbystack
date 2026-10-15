@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { billingAccounts, businesses, createDatabaseClient, numberTrials, numberWaitlist, outboxMessages, phoneNumbers, receptionistProfiles, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { billingAccounts, businesses, createDatabaseClient, numberTrials, numberWaitlist, onboardingPhoneVerifications, outboxMessages, phoneNumbers, receptionistProfiles, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
 import { getNumberTrialState, isNumberTrialEnded, joinNumberWaitlist, keepBusinessNumbersInTransaction, loadNumberTrialEmail, markNumberTrialMinutesExhausted, resolveNumberFallback, sweepNumberTrial } from "./numberTrials";
 import { claimNumberProvisioning, completeNumberProvisioning, reserveOnboardingNumberClaim, searchBusinessNumberInventory } from "./phoneNumbers";
@@ -80,6 +80,13 @@ describe.skipIf(!testUrl)("free trial numbers against dedicated PostgreSQL roles
       expect((await tx.select({ transferNumber: receptionistProfiles.transferNumber }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, businessId)))[0]?.transferNumber).toBe(ownerPhone);
       expect(await as(tx, "lobbystack_app", db => getNumberTrialState({ db }, owner))).toMatchObject({ status: "active", e164: trialNumber, minutesExhausted: false });
 
+      // A second workspace for the same owner doesn't offer another free number.
+      await tx.execute(sql`set local role lobbystack_app`);
+      const second = await createBusiness({ db: tx as unknown as Database }, { userId, name: "Second clinic", timezone: "America/Toronto", businessType: "test" });
+      await tx.execute(sql`reset role`);
+      await tx.update(businesses).set({ deploymentMode: "cloud" }).where(eq(businesses.id, second.businessId));
+      expect(await as(tx, "lobbystack_app", db => getNumberTrialState({ db }, { userId, businessId: second.businessId }))).toEqual({ status: "none" });
+
       // Out of minutes: calls ring the owner, who gets one email about it.
       expect(await as(tx, "lobbystack_worker", db => markNumberTrialMinutesExhausted({ db }, { businessId }))).toBe(true);
       expect(await as(tx, "lobbystack_worker", db => resolveNumberFallback({ db }, { businessId, e164: trialNumber }))).toEqual({ action: "forward", to: ownerPhone });
@@ -144,6 +151,25 @@ describe.skipIf(!testUrl)("free trial numbers against dedicated PostgreSQL roles
       // The sixth attempt this hour is refused before any paid lookup.
       await expect(start("+14165550209")).rejects.toMatchObject({ code: "verification_rate_limited" });
       expect(lookups).toHaveLength(5);
+    });
+  });
+
+  it("keeps a sent code when a later number is refused, and doesn't count a lookup that errors", async () => {
+    await rollbackTest(async (tx) => {
+      const userId = randomUUID();
+      await tx.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid`, name: "Sam Lee" });
+      await tx.execute(sql`set local role lobbystack_app`);
+      const { businessId } = await createBusiness({ db: tx as unknown as Database }, { userId, name: "Retry clinic", timezone: "America/Toronto", businessType: "test" });
+      await tx.execute(sql`reset role`);
+      const start = (phoneE164: string, provider: typeof verify) => as(tx, "lobbystack_app", db => startOnboardingPhoneVerification({ db }, { userId, businessId, phoneE164, countryCode: "CA" }, provider));
+      const { attemptId } = await start(ownerPhone, verify);
+      await expect(start("+14165550301", { ...verify, lookupLineType: async () => "nonFixedVoip" })).rejects.toMatchObject({ code: "phone_voip_refused" });
+      // Without dropping the errored attempts, the second retry would hit the 30-second cooldown.
+      const outage = { ...verify, lookupLineType: async () => { throw new Error("Lookup unavailable"); } };
+      for (let index = 0; index < 4; index += 1) await expect(start("+14165550302", outage)).rejects.toThrow("Lookup unavailable");
+      const rows = await tx.select({ id: onboardingPhoneVerifications.id, status: onboardingPhoneVerifications.status }).from(onboardingPhoneVerifications).where(eq(onboardingPhoneVerifications.userId, userId));
+      expect(rows).toHaveLength(2);
+      expect(rows.find((row) => row.id === attemptId)?.status).toBe("pending");
     });
   });
 

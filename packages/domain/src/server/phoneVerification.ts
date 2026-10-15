@@ -1,6 +1,6 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
-import { and, eq, inArray, isNotNull, lt, or, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, lt, ne, or, sql } from "drizzle-orm";
 
 import { canTextNumber, type InterfaceLocale } from "@lobbystack/shared";
 import { enqueueOutbox, onboardingPhoneVerifications, withBusinessTransaction } from "@lobbystack/db";
@@ -251,9 +251,6 @@ export async function startOnboardingPhoneVerification(
   try {
     attemptId = await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
       await requireBusinessMembership(tx, input);
-      await tx.update(onboardingPhoneVerifications)
-        .set({ status: "canceled", codeHash: null, lastError: "Replaced by a newer verification.", updatedAt: new Date() })
-        .where(and(eq(onboardingPhoneVerifications.businessId, input.businessId), eq(onboardingPhoneVerifications.userId, input.userId), inArray(onboardingPhoneVerifications.status, ["queued", "processing", "pending"])));
       const result = await tx.execute(sql`SELECT app.reserve_phone_verification_attempt(${input.businessId}::uuid, ${input.userId}::uuid, ${input.phoneE164}, ${countryCode}, ${null}, ${fingerprint}) AS id`);
       const id = String((result.rows[0] as { id?: unknown } | undefined)?.id ?? "");
       if (!id) throw new Error("Phone verification could not be reserved.");
@@ -268,7 +265,12 @@ export async function startOnboardingPhoneVerification(
   const closeAttempt = async (lastError: string, lineType: string | null = null) => await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
     await tx.update(onboardingPhoneVerifications).set({ status: "failed", lineType, lastError, updatedAt: new Date() }).where(scope);
   });
-  const lineType = await provider.lookupLineType(input.phoneE164).catch(async (error: unknown) => { await closeAttempt("The line type lookup failed."); throw error; });
+  // A lookup that errors isn't billed, so the attempt is dropped and the user can retry once Twilio recovers.
+  const lineType = await provider.lookupLineType(input.phoneE164).catch(async (error: unknown) => {
+    await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => { await tx.delete(onboardingPhoneVerifications).where(scope); })
+      .catch((cleanupError: unknown) => console.error("[phone-verification] attempt not dropped", cleanupError instanceof Error ? cleanupError.message : cleanupError));
+    throw error;
+  });
   const refusal = lineType === "fixedVoip" || lineType === "nonFixedVoip"
     ? phoneVerificationError(422, "phone_voip_refused", "Use your mobile number. Internet phone numbers can't be verified.")
     : lineType && !["mobile", "personal", "unknown"].includes(lineType) ? phoneVerificationError(422, "phone_not_mobile", "Use a mobile number that can receive texts.") : undefined;
@@ -279,6 +281,10 @@ export async function startOnboardingPhoneVerification(
   try {
     const { sid } = await provider.sendCode({ to: input.phoneE164, ...(input.locale ? { locale: input.locale } : {}) });
     await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
+      // An earlier code stays valid until this one is on its way, so a refused number doesn't cost it.
+      await tx.update(onboardingPhoneVerifications)
+        .set({ status: "canceled", codeHash: null, lastError: "Replaced by a newer verification.", updatedAt: new Date() })
+        .where(and(eq(onboardingPhoneVerifications.businessId, input.businessId), eq(onboardingPhoneVerifications.userId, input.userId), inArray(onboardingPhoneVerifications.status, ["queued", "processing", "pending"]), ne(onboardingPhoneVerifications.id, attemptId)));
       await tx.update(onboardingPhoneVerifications).set({ status: "pending", lineType, providerVerificationId: sid, expiresAt: new Date(Date.now() + PHONE_VERIFICATION_CODE_TTL_MS), updatedAt: new Date() }).where(scope);
     });
   } catch (error) {
