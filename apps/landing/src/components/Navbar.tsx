@@ -1,6 +1,7 @@
 import { buttonVariants } from "@/components/ui/button"
 import { appLoginUrl, appSignupUrl } from "@/lib/app-links"
-import { GitlabIcon } from "@/components/GitlabIcon"
+import gitlab from "@iconify-icons/logos/gitlab-icon"
+import { Icon } from "@iconify/react/offline"
 import { localizeHref, localizePath, type Locale } from "@/i18n"
 import { cn } from "@/lib/utils"
 import {
@@ -520,7 +521,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
             data-ph-capture-attribute-action="view_github"
             data-ph-capture-attribute-destination="https://gitlab.com/lobbystack-group/lobbystack"
           >
-            <GitlabIcon className="size-[18px]" />
+            <Icon icon={gitlab} className="size-[18px]" id="navbar-gitlab" ssr />
           </a>
           <a
             href={appLoginUrl(locale)}
@@ -671,7 +672,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
                 data-ph-capture-attribute-action="view_github"
                 data-ph-capture-attribute-destination="https://gitlab.com/lobbystack-group/lobbystack"
               >
-                <GitlabIcon className="size-4" />
+                <Icon icon={gitlab} className="size-4" id="navbar-gitlab-menu" ssr />
                 GitLab
               </a>
               <a

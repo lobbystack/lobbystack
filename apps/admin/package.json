@@ -21,6 +21,8 @@
     "@better-auth/core": "1.7.7",
     "@better-auth/oauth-provider": "1.7.7",
     "@fontsource-variable/geist": "^5.3.0",
+    "@iconify-icons/logos": "^2.0.2",
+    "@iconify/react": "^6.0.2",
     "@lobbystack/agent-core": "workspace:*",
     "@lobbystack/contracts": "workspace:*",
     "@lobbystack/db": "workspace:*",

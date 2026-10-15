@@ -22,6 +22,8 @@
     "@astrojs/rss": "^4.0.19",
     "@astrojs/sitemap": "^3.7.4",
     "@base-ui/react": "^1.8.0",
+    "@iconify-icons/logos": "^2.0.2",
+    "@iconify/react": "^6.0.2",
     "@jdevalk/astro-seo-graph": "^2.2.0",
     "@jdevalk/seo-graph-core": "^0.7.0",
     "@lobbystack/shared": "workspace:*",
