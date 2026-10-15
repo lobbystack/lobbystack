@@ -74,7 +74,7 @@ describe("billing success page", () => {
     const steps = within(screen.getAllByRole("list").at(-1)!);
     expect(steps.getAllByRole("listitem")).toHaveLength(3);
     // No number to call yet, and the dashboard would send them back to onboarding.
-    expect(steps.getAllByRole("link").map(link => link.getAttribute("href"))).toEqual(["https://docs.lobbystack.com/getting-started/claim-your-number#using-your-existing-business-number"]);
+    expect(steps.getAllByRole("link").map(link => link.getAttribute("href"))).toEqual(["https://docs.lobbystack.com/getting-started/forward-calls"]);
   });
 
   it("does not report the same checkout again when the page is reloaded", async () => {
@@ -124,7 +124,7 @@ describe("billing success page", () => {
   it("links French readers to the French forwarding guide", async () => {
     locale.language = "fr";
     setup({ stage: "complete" });
-    expect((await screen.findByRole("link", { name: "billing.success.steps.forward.action" })).getAttribute("href")).toBe("https://docs.lobbystack.com/fr/getting-started/claim-your-number");
+    expect((await screen.findByRole("link", { name: "billing.success.steps.forward.action" })).getAttribute("href")).toBe("https://docs.lobbystack.com/fr/getting-started/forward-calls");
   });
 
   it("points a visit without a checkout to the plan page", () => {
