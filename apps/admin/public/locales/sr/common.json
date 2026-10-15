@@ -99,6 +99,7 @@
     "trigger": "Probni poziv",
     "title": "Isprobajte svog AI recepcionera",
     "description": "Započnite poziv uživo iz pregledača sa podešenim recepcionerom.",
+    "start": "Započni poziv",
     "connecting": "Povezivanje...",
     "hangUp": "Prekini",
     "upgrade": "Nadogradite paket",

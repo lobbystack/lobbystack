@@ -91,10 +91,6 @@
   },
   "testCall": {
     "title": "Hear your receptionist",
-    "description": "Call it from your browser and ask what your customers ask.",
-    "call": "Call my receptionist",
-    "callAgain": "Call again",
-    "hint": "Your browser will ask to use your microphone.",
     "continue": "Continue",
     "skip": "Skip for now",
     "continueFailed": "We couldn't continue. Try again."

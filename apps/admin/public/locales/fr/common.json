@@ -99,6 +99,7 @@
     "trigger": "Appel test",
     "title": "Tester votre réceptionniste IA",
     "description": "Démarrez un appel en direct dans le navigateur avec votre réceptionniste configurée.",
+    "start": "Lancer l’appel",
     "connecting": "Connexion...",
     "hangUp": "Raccrocher",
     "upgrade": "Changer de forfait",

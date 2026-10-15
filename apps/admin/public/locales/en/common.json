@@ -92,6 +92,7 @@
     "trigger": "Test Call",
     "title": "Test your AI receptionist",
     "description": "Start a live browser call with your configured receptionist.",
+    "start": "Start call",
     "connecting": "Connecting...",
     "hangUp": "Hang up",
     "upgrade": "Upgrade plan",

@@ -91,10 +91,6 @@
   },
   "testCall": {
     "title": "Poslušajte svog recepcionera",
-    "description": "Pozovite ga iz pregledača i pitajte ono što pitaju Vaši klijenti.",
-    "call": "Pozovi mog recepcionera",
-    "callAgain": "Pozovi ponovo",
-    "hint": "Pregledač će tražiti pristup mikrofonu.",
     "continue": "Nastavi",
     "skip": "Preskoči za sada",
     "continueFailed": "Nismo mogli da nastavimo. Pokušajte ponovo."

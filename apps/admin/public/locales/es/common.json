@@ -93,6 +93,7 @@
     "trigger": "Llamada de prueba",
     "title": "Pruebe su recepcionista con IA",
     "description": "Inicie una llamada en vivo desde el navegador con su recepcionista configurada.",
+    "start": "Iniciar llamada",
     "connecting": "Conectando...",
     "hangUp": "Colgar",
     "upgrade": "Cambiar de plan",

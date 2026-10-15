@@ -8,16 +8,13 @@ import { createRecordedBrowserTelemetry } from "@/lib/telemetry-testing";
 
 const navigation = vi.hoisted(() => ({ push: vi.fn(), prefetch: vi.fn() }));
 const telemetryRef = vi.hoisted(() => ({ current: null as ReturnType<typeof createRecordedBrowserTelemetry> | null }));
-const launcher = vi.hoisted(() => ({ startTestCall: vi.fn(), ended: null as (() => void) | null }));
+const voice = vi.hoisted(() => ({ props: null as Record<string, unknown> | null }));
 vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => telemetryRef.current!.telemetry }));
 vi.mock("next/navigation", () => ({ useRouter: () => navigation }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en" }, t: (key: string) => key }) }));
-// The widget runs the real browser call; here only its launcher matters.
-vi.mock("@/components/dashboard-test-call-widget", () => ({ DashboardTestCallWidget: () => null }));
-vi.mock("@/lib/test-call-launcher", () => ({
-  startTestCall: launcher.startTestCall,
-  subscribeTestCallEnded: (onEnded: () => void) => { launcher.ended = onEnded; return () => { launcher.ended = null; }; },
-}));
+vi.mock("@/components/theme-provider", () => ({ useTheme: () => ({ resolvedTheme: "dark" }) }));
+// The orb runs the real browser call; here only what the page hands it matters.
+vi.mock("@/components/web-voice/AuraVoiceDemo", () => ({ AuraVoiceDemo: (props: Record<string, unknown>) => { voice.props = props; return null; } }));
 
 const clients: QueryClient[] = [];
 beforeEach(() => { telemetryRef.current = createRecordedBrowserTelemetry(); navigation.push.mockReset(); });
@@ -34,11 +31,10 @@ function setup() {
 }
 
 describe("onboarding test call", () => {
-  it("starts the browser call, then moves on to phone verification and records that the owner heard the agent", async () => {
+  it("calls the receptionist as the dashboard test call, then moves on to phone verification and records that the owner heard the agent", async () => {
     const fetchMock = setup();
-    await userEvent.click(await screen.findByRole("button", { name: "testCall.call" }));
-    expect(launcher.startTestCall).toHaveBeenCalled();
-    act(() => launcher.ended?.());
+    await waitFor(() => expect(voice.props).toMatchObject({ auraTone: "dark", businessSlug: "biz", endpoint: "/api/voice/live/session?businessId=business", widgetId: "lobbystack-dashboard-test-call" }));
+    act(() => (voice.props!.onCallEnded as () => void)());
     await userEvent.click(await screen.findByRole("button", { name: "testCall.continue" }));
     await waitFor(() => expect(navigation.push).toHaveBeenCalledWith("/onboarding/verify-phone"));
     const stageCall = fetchMock.mock.calls.find(([url]) => String(url).includes("/api/onboarding/stage?"));

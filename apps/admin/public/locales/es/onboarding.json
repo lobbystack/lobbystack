@@ -91,10 +91,6 @@
   },
   "testCall": {
     "title": "Escuche a su recepcionista",
-    "description": "Llámela desde su navegador y pregúntele lo que preguntan sus clientes.",
-    "call": "Llamar a mi recepcionista",
-    "callAgain": "Llamar de nuevo",
-    "hint": "Su navegador le pedirá acceso al micrófono.",
     "continue": "Continuar",
     "skip": "Omitir por ahora",
     "continueFailed": "No pudimos continuar. Inténtelo de nuevo."

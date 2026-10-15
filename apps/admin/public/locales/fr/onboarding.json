@@ -91,10 +91,6 @@
   },
   "testCall": {
     "title": "Écoutez votre réceptionniste",
-    "description": "Appelez-la depuis votre navigateur et posez-lui les questions de vos clients.",
-    "call": "Appeler ma réceptionniste",
-    "callAgain": "Rappeler",
-    "hint": "Votre navigateur demandera l'accès à votre micro.",
     "continue": "Continuer",
     "skip": "Passer pour l'instant",
     "continueFailed": "Impossible de continuer. Réessayez."
