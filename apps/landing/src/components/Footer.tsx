@@ -1,3 +1,4 @@
+import { DiscordIcon } from "@/components/DiscordIcon"
 import { GitlabIcon } from "@/components/GitlabIcon"
 import { Separator } from "@/components/ui/separator"
 import {
@@ -127,6 +128,7 @@ const footerSections = (locale: Locale) => {
           href: "/affiliate-program/",
         },
         { label: "GitLab", href: "https://gitlab.com/lobbystack-group/lobbystack" },
+        { label: "Discord", href: "https://discord.gg/WKX4wCTTpJ" },
       ],
     },
     {
@@ -187,6 +189,16 @@ export function Footer({ locale = "en", path }: FooterProps) {
               data-ph-capture-attribute-destination="https://gitlab.com/lobbystack-group/lobbystack"
             >
               <GitlabIcon className="size-5" />
+            </a>
+            <a
+              href="https://discord.gg/WKX4wCTTpJ"
+              className="text-muted-foreground transition-colors hover:text-foreground"
+              aria-label="Discord"
+              data-ph-capture-attribute-section="footer_social"
+              data-ph-capture-attribute-action="join_discord"
+              data-ph-capture-attribute-destination="https://discord.gg/WKX4wCTTpJ"
+            >
+              <DiscordIcon className="size-5" />
             </a>
           </div>
         </div>
