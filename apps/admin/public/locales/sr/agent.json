@@ -108,7 +108,8 @@
         "from": "od {{amount}}",
         "range": "{{min}} – {{max}}",
         "inPerson": "Određuje se na licu mesta",
-        "none": "Nije postavljena"
+        "none": "Nije postavljena",
+        "discounted": "{{price}} (−{{percent}}%)"
       },
       "duplicated": "Usluga je duplirana.",
       "duplicateFailed": "Usluga nije duplirana.",
@@ -184,8 +185,12 @@
           "errors": {
             "invalid": "Unesite cenu, na primer 3.500 ili 12,50.",
             "rangeIncomplete": "Unesite i najnižu i najvišu cenu.",
-            "rangeOrder": "Najviša cena mora biti veća od najniže."
-          }
+            "rangeOrder": "Najviša cena mora biti veća od najniže.",
+            "discountInvalid": "Unesite popust od 0 do 100%."
+          },
+          "discount": "Popust",
+          "discountPercent": "Procenat popusta",
+          "discountPreview": "Klijenti plaćaju {{price}} umesto {{regular}}."
         },
         "active": {
           "label": "Može se zakazati",

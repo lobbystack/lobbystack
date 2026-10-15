@@ -168,8 +168,8 @@ export const snapshotSchema = z.object({
     durationMinutes: z.number().int().positive(),
     description: z.string().optional(),
     price: z.discriminatedUnion("type", [
-      z.object({ type: z.enum(["fixed", "from"]), amountMinor: z.number().int().nonnegative(), currency: z.string().regex(/^[A-Z]{3}$/) }),
-      z.object({ type: z.literal("range"), amountMinor: z.number().int().nonnegative(), maxAmountMinor: z.number().int().nonnegative(), currency: z.string().regex(/^[A-Z]{3}$/) }),
+      z.object({ type: z.enum(["fixed", "from"]), amountMinor: z.number().int().nonnegative(), currency: z.string().regex(/^[A-Z]{3}$/), discountPercent: z.number().gt(0).max(100).optional() }),
+      z.object({ type: z.literal("range"), amountMinor: z.number().int().nonnegative(), maxAmountMinor: z.number().int().nonnegative(), currency: z.string().regex(/^[A-Z]{3}$/), discountPercent: z.number().gt(0).max(100).optional() }),
       z.object({ type: z.literal("in_person") }),
     ]).optional(),
   })),
