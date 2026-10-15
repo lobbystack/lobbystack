@@ -223,9 +223,9 @@
       "cta": "Pick a number"
     },
     "freeTrial": {
-      "title": "Get a free number for 14 days",
-      "description": "Pick a local number and your receptionist starts answering real calls. No card needed.",
-      "cta": "Get my free number"
+      "title": "Answer your missed calls free for 14 days",
+      "description": "Choose a local number, then forward the calls you can't pick up to it. No card needed.",
+      "cta": "Choose my number"
     },
     "forwardTrial": {
       "title": "Send your missed calls to {{number}}",

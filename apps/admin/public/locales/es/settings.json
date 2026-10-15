@@ -418,8 +418,8 @@
       "upgradeCta": "Mejorar el plan para conservar este número"
     },
     "freeTrial": {
-      "description": "Elija un número local gratis durante 14 días y su recepcionista empezará a contestar llamadas reales.",
-      "cta": "Obtener mi número gratis"
+      "description": "Todavía no tiene un número. Pruebe uno gratis durante 14 días.",
+      "cta": "Elegir mi número"
     },
     "requiresPaidPlan": {
       "title": "Los números dedicados están en los planes de pago",

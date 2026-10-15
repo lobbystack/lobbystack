@@ -224,9 +224,9 @@
       "cta": "Izaberi broj"
     },
     "freeTrial": {
-      "title": "Besplatan broj na 14 dana",
-      "description": "Izaberite lokalni broj i Vaš recepcioner počinje da odgovara na prave pozive. Kartica nije potrebna.",
-      "cta": "Uzmite besplatan broj"
+      "title": "Odgovarajte na propuštene pozive besplatno 14 dana",
+      "description": "Izaberite lokalni broj, pa na njega preusmerite pozive na koje ne stignete da odgovorite. Kartica nije potrebna.",
+      "cta": "Izaberite broj"
     },
     "forwardTrial": {
       "title": "Preusmerite propuštene pozive na {{number}}",

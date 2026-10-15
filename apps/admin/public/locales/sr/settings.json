@@ -418,8 +418,8 @@
       "upgradeCta": "Nadogradite i zadržite broj"
     },
     "freeTrial": {
-      "description": "Izaberite lokalni broj besplatno na 14 dana i Vaš recepcioner počinje da odgovara na prave pozive.",
-      "cta": "Uzmite besplatan broj"
+      "description": "Još nemate broj. Isprobajte ga besplatno 14 dana.",
+      "cta": "Izaberite broj"
     },
     "requiresPaidPlan": {
       "title": "Namenski brojevi su deo plaćenih paketa",

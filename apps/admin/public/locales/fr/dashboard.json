@@ -224,9 +224,9 @@
       "cta": "Choisir un numéro"
     },
     "freeTrial": {
-      "title": "Un numéro gratuit pendant 14 jours",
-      "description": "Choisissez un numéro local et votre réceptionniste commence à répondre aux vrais appels. Aucune carte requise.",
-      "cta": "Obtenir mon numéro gratuit"
+      "title": "Répondez à vos appels manqués gratuitement pendant 14 jours",
+      "description": "Choisissez un numéro local, puis renvoyez-y les appels que vous ne pouvez pas prendre. Aucune carte requise.",
+      "cta": "Choisir mon numéro"
     },
     "forwardTrial": {
       "title": "Envoyez vos appels manqués au {{number}}",

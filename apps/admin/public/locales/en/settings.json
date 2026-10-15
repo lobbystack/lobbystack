@@ -414,8 +414,8 @@
       "upgradeCta": "Upgrade to keep this number"
     },
     "freeTrial": {
-      "description": "Pick a local number free for 14 days, and your receptionist starts answering real calls.",
-      "cta": "Get my free number"
+      "description": "You don't have a number yet. Try one free for 14 days.",
+      "cta": "Choose my number"
     },
     "requiresPaidPlan": {
       "title": "Dedicated numbers are on paid plans",
