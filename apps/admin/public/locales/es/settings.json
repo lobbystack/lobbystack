@@ -872,7 +872,7 @@
   },
   "apiKeys": {
     "title": "Claves de API",
-    "description": "Use una clave para conectar su propio código u otra aplicación a la API de LobbyStack. Usted elige qué puede leer y cambiar cada clave en este negocio.",
+    "description": "Use una clave para conectar su propio código u otra aplicación a la API de LobbyStack.",
     "empty": "Aún no hay claves de API.",
     "neverUsed": "Nunca",
     "createdBy": "{{date}} por {{name}}",

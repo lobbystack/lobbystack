@@ -868,7 +868,7 @@
   },
   "apiKeys": {
     "title": "API keys",
-    "description": "Use a key to connect your own code or another app to the LobbyStack API. You choose what each key can read and change in this business.",
+    "description": "Use a key to connect your own code or another app to the LobbyStack API.",
     "empty": "No API keys yet.",
     "neverUsed": "Never",
     "createdBy": "{{date}} by {{name}}",

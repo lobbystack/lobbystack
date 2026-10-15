@@ -872,7 +872,7 @@
   },
   "apiKeys": {
     "title": "API ključevi",
-    "description": "Koristite ključ da povežete sopstveni kod ili drugu aplikaciju sa LobbyStack API-jem. Vi birate šta svaki ključ može da čita i menja u ovoj firmi.",
+    "description": "Koristite ključ da povežete sopstveni kod ili drugu aplikaciju sa LobbyStack API-jem.",
     "empty": "Još nema API ključeva.",
     "neverUsed": "Nikad",
     "createdBy": "{{date}}, korisnik {{name}}",
