@@ -10,8 +10,6 @@ describe("service prices", () => {
     expect(formatServicePrice({ type: "from", amountMinor: 70000, currency: "RSD" })).toBe("from RSD 700");
     expect(formatServicePrice({ type: "range", amountMinor: 70000, maxAmountMinor: 100000, currency: "RSD" })).toBe("RSD 700 to RSD 1,000");
     expect(formatServicePrice({ type: "in_person" })).toBe("set in person");
-    expect(formatServicePrice({ type: "fixed", amountMinor: 70000, currency: "RSD", discountPercent: 20 })).toBe("RSD 560 after a 20% discount (regular RSD 700)");
-    expect(formatServicePrice({ type: "range", amountMinor: 100000, maxAmountMinor: 200000, currency: "RSD", discountPercent: 10 })).toBe("RSD 900 to RSD 1,800 after a 10% discount (regular RSD 1,000 to RSD 2,000)");
   });
 
   it("uses each currency's ISO 4217 decimals, the same in every runtime", () => {
@@ -22,8 +20,12 @@ describe("service prices", () => {
 
   it("accepts only ISO 4217 codes", () => {
     expect(isCurrencyCode("RSD")).toBe(true);
+    expect(isCurrencyCode("JPY")).toBe(true);
     expect(isCurrencyCode("rsd")).toBe(false);
     expect(isCurrencyCode("dinar")).toBe(false);
+    // Three capital letters aren't enough.
+    expect(isCurrencyCode("ABC")).toBe(false);
+    expect(isCurrencyCode("XYZ")).toBe(false);
   });
 
   it("picks a new business's currency from its timezone", () => {

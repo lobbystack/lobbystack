@@ -4,8 +4,7 @@
 -- currencyFractionDigits in @lobbystack/shared). price_type says how to read it:
 -- fixed (price_minor), from (a starting price in price_minor), range
 -- (price_minor to price_max_minor), or in_person (the business sets it once it
--- knows the customer, so no amount). Null means no price is set. A discount
--- is a percentage from 0 (none) to 100, with up to two decimals.
+-- knows the customer, so no amount). Null means no price is set.
 ALTER TABLE public.businesses
   ADD COLUMN IF NOT EXISTS currency varchar(3) NOT NULL DEFAULT 'USD';
 
@@ -25,8 +24,7 @@ WHERE currency = 'USD';
 ALTER TABLE public.services
   ADD COLUMN IF NOT EXISTS price_minor bigint,
   ADD COLUMN IF NOT EXISTS price_max_minor bigint,
-  ADD COLUMN IF NOT EXISTS price_type varchar(16) NOT NULL DEFAULT 'fixed',
-  ADD COLUMN IF NOT EXISTS discount_percent numeric(5,2) NOT NULL DEFAULT 0;
+  ADD COLUMN IF NOT EXISTS price_type varchar(16) NOT NULL DEFAULT 'fixed';
 
 DO $$
 BEGIN
@@ -41,9 +39,6 @@ BEGIN
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'services_price_type_check') THEN
     ALTER TABLE public.services ADD CONSTRAINT services_price_type_check CHECK (price_type IN ('fixed', 'from', 'range', 'in_person'));
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'services_discount_percent_check') THEN
-    ALTER TABLE public.services ADD CONSTRAINT services_discount_percent_check CHECK (discount_percent BETWEEN 0 AND 100);
   END IF;
 END
 $$;

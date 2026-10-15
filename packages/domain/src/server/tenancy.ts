@@ -3,8 +3,8 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { and, eq, gt, ne, or, sql } from "drizzle-orm";
 
 import { enqueueOutbox, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
-import { businessInvitations, businessMemberships, businesses, closures, receptionistProfiles, staff, users } from "@lobbystack/db";
-import { defaultAppointmentChangePolicy, defaultCurrencyForTimezone, defaultGreeting, isCurrencyCode, isDefaultGreeting, normalizeAuthEmail, normalizeRuntimeLocale } from "@lobbystack/shared";
+import { businessInvitations, businessMemberships, businesses, closures, receptionistProfiles, services, staff, users } from "@lobbystack/db";
+import { currencyFractionDigits, defaultAppointmentChangePolicy, defaultCurrencyForTimezone, defaultGreeting, isCurrencyCode, isDefaultGreeting, normalizeAuthEmail, normalizeRuntimeLocale } from "@lobbystack/shared";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import { enqueueBusinessSummaryRefresh } from "./businessSummary";
@@ -162,9 +162,16 @@ export async function updateBusinessInTransaction(
   const values = { ...(input.name !== undefined ? { name: input.name.trim() } : {}), ...(timezone !== undefined ? { timezone } : {}), ...(input.businessType !== undefined ? { businessType: input.businessType.trim() } : {}), ...(input.defaultLocale !== undefined ? { defaultLocale: input.defaultLocale.trim() } : {}), ...(input.websiteUrl !== undefined ? { websiteUrl: input.websiteUrl } : {}), ...(input.currency !== undefined ? { currency: input.currency } : {}), updatedAt: new Date() };
   if (Object.keys(values).length === 1) throw Object.assign(new Error("At least one business field is required."), { status: 400 });
   // Locks the row, so a concurrent change can't alter the zone the closures were entered in, or the language the greeting is in.
-  const [before] = timezone === undefined && input.defaultLocale === undefined ? [] : await tx.select({ timezone: businesses.timezone, defaultLocale: businesses.defaultLocale, name: businesses.name }).from(businesses).where(eq(businesses.id, input.businessId)).for("update");
+  const [before] = timezone === undefined && input.defaultLocale === undefined && input.currency === undefined ? [] : await tx.select({ timezone: businesses.timezone, defaultLocale: businesses.defaultLocale, name: businesses.name, currency: businesses.currency }).from(businesses).where(eq(businesses.id, input.businessId)).for("update");
   const [business] = await tx.update(businesses).set(values).where(eq(businesses.id, input.businessId)).returning({ id: businesses.id });
   if (!business) throw Object.assign(new Error("Business not found."), { status: 404 });
+  // Prices are stored in the currency's smallest unit. Keep the numbers people read: USD 40.00 (4000) becomes JPY 40 (40).
+  const shift = input.currency !== undefined && before ? currencyFractionDigits(input.currency) - currencyFractionDigits(before.currency) : 0;
+  if (shift) {
+    const factor = sql.raw(`${10 ** Math.abs(shift)}`);
+    const rescale = (column: typeof services.priceMinor) => shift > 0 ? sql`${column} * ${factor}` : sql`round(${column}::numeric / ${factor})::bigint`;
+    await tx.update(services).set({ priceMinor: rescale(services.priceMinor), priceMaxMinor: rescale(services.priceMaxMinor), updatedAt: new Date() }).where(eq(services.businessId, input.businessId));
+  }
   // shortcut: every staff row today is the default member that stands for the business; once staff set their own zones, update only that member.
   if (timezone !== undefined) await tx.update(staff).set({ timezone, updatedAt: new Date() }).where(eq(staff.businessId, input.businessId));
   // Closures are entered as local times but saved as instants. Keep their local times in the new zone, as weekly hours do.

@@ -82,41 +82,27 @@ export type ServicePriceType = (typeof servicePriceTypes)[number];
 /**
  * A service's price, in whole numbers of the currency's smallest unit: a fixed
  * price, a starting price, a range, or set in person once the business knows
- * the customer (no amount). discountPercent (1-100) comes off every amount.
+ * the customer (no amount).
  */
 export type ServicePrice =
-  | { type: "fixed" | "from"; amountMinor: number; currency: string; discountPercent?: number }
-  | { type: "range"; amountMinor: number; maxAmountMinor: number; currency: string; discountPercent?: number }
+  | { type: "fixed" | "from"; amountMinor: number; currency: string }
+  | { type: "range"; amountMinor: number; maxAmountMinor: number; currency: string }
   | { type: "in_person" };
 
 /** A service's stored price columns as a price, or undefined when the business hasn't set one. */
-export function servicePriceFromColumns(row: { priceType: ServicePriceType; priceMinor: number | null; priceMaxMinor: number | null; discountPercent: number }, currency: string): ServicePrice | undefined {
+export function servicePriceFromColumns(row: { priceType: ServicePriceType; priceMinor: number | null; priceMaxMinor: number | null }, currency: string): ServicePrice | undefined {
   if (row.priceType === "in_person") return { type: "in_person" };
   if (row.priceMinor === null) return undefined;
-  const discount = row.discountPercent > 0 ? { discountPercent: row.discountPercent } : {};
-  if (row.priceType === "range") return row.priceMaxMinor === null ? undefined : { type: "range", amountMinor: row.priceMinor, maxAmountMinor: row.priceMaxMinor, currency, ...discount };
-  return { type: row.priceType, amountMinor: row.priceMinor, currency, ...discount };
+  if (row.priceType === "range") return row.priceMaxMinor === null ? undefined : { type: "range", amountMinor: row.priceMinor, maxAmountMinor: row.priceMaxMinor, currency };
+  return { type: row.priceType, amountMinor: row.priceMinor, currency };
 }
 
-/** An amount after a percentage discount, rounded to the currency's smallest unit. */
-export function discountedAmount(amountMinor: number, discountPercent: number): number {
-  return Math.round(amountMinor * (100 - discountPercent) / 100);
-}
+let currencyCodes: Set<string> | undefined;
 
-/** A discount from 0 to 100 percent, with at most two decimal places. */
-export function isDiscountPercent(value: unknown): value is number {
-  return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 100 && Math.abs(Math.round(value * 100) - value * 100) < 1e-9;
-}
-
-/** Whether a value is an ISO 4217 code Intl can format. */
+/** Whether a value is a current ISO 4217 code, from the runtime's list of currencies. */
 export function isCurrencyCode(value: unknown): value is string {
-  if (typeof value !== "string" || !/^[A-Z]{3}$/.test(value)) return false;
-  try {
-    new Intl.NumberFormat("en", { style: "currency", currency: value });
-    return true;
-  } catch {
-    return false;
-  }
+  currencyCodes ??= new Set(Intl.supportedValuesOf("currency"));
+  return typeof value === "string" && currencyCodes.has(value);
 }
 
 // ISO 4217 minor units. Not read from Intl: browsers and Node disagree (Chrome gives RSD 0 decimals, Node 2),
@@ -130,9 +116,9 @@ export function currencyFractionDigits(currency: string): number {
   return THREE_DECIMAL_CURRENCIES.has(currency) ? 3 : 2;
 }
 
-export type ServicePriceLabels = { from: (amount: string) => string; range: (min: string, max: string) => string; inPerson: string; discounted: (regular: string, percent: number, discounted: string) => string };
+export type ServicePriceLabels = { from: (amount: string) => string; range: (min: string, max: string) => string; inPerson: string };
 
-const ENGLISH_PRICE_LABELS: ServicePriceLabels = { from: (amount) => `from ${amount}`, range: (min, max) => `${min} to ${max}`, inPerson: "set in person", discounted: (regular, percent, discounted) => `${discounted} after a ${percent}% discount (regular ${regular})` };
+const ENGLISH_PRICE_LABELS: ServicePriceLabels = { from: (amount) => `from ${amount}`, range: (min, max) => `${min} to ${max}`, inPerson: "set in person" };
 
 /** An amount in the currency's smallest unit, as "RSD 700" in the given locale. */
 export function formatPriceAmount(amountMinor: number, currency: string, locale = "en"): string {
@@ -140,20 +126,13 @@ export function formatPriceAmount(amountMinor: number, currency: string, locale 
   return new Intl.NumberFormat(locale, { style: "currency", currency, currencyDisplay: "code", minimumFractionDigits: amountMinor % 10 ** digits === 0 ? 0 : digits, maximumFractionDigits: digits }).format(amountMinor / 10 ** digits).replace(/[\u00a0\u202f]/gu, " ");
 }
 
-/**
- * "RSD 700", "from RSD 700", "RSD 700 to RSD 1,000" or "set in person", in the
- * given locale. A discounted price gives the price after the discount, the
- * discount and the regular price.
- */
+/** "RSD 700", "from RSD 700", "RSD 700 to RSD 1,000" or "set in person", in the given locale. */
 export function formatServicePrice(price: ServicePrice, locale = "en", labels: ServicePriceLabels = ENGLISH_PRICE_LABELS): string {
   if (price.type === "in_person") return labels.inPerson;
-  const describe = (percent: number) => {
-    const amount = formatPriceAmount(discountedAmount(price.amountMinor, percent), price.currency, locale);
-    if (price.type === "from") return labels.from(amount);
-    if (price.type === "range") return labels.range(amount, formatPriceAmount(discountedAmount(price.maxAmountMinor, percent), price.currency, locale));
-    return amount;
-  };
-  return price.discountPercent ? labels.discounted(describe(0), price.discountPercent, describe(price.discountPercent)) : describe(0);
+  const amount = formatPriceAmount(price.amountMinor, price.currency, locale);
+  if (price.type === "from") return labels.from(amount);
+  if (price.type === "range") return labels.range(amount, formatPriceAmount(price.maxAmountMinor, price.currency, locale));
+  return amount;
 }
 
 const TIMEZONE_CURRENCIES: Record<string, string> = {
