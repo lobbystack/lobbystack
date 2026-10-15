@@ -141,8 +141,8 @@ export function planComparison(locale: string): ComparisonGroup[] {
   return [
     { category: c.groups[0], rows: [
       row("voiceMinutes", { included: c.included(free.voiceSecondsIncluded / 60, "f") }, { starter: allowance(starter.voiceSecondsIncluded / 60, starter.voiceOverageRatePerMinuteCents, "min", "f"), pro: allowance(pro.voiceSecondsIncluded / 60, pro.voiceOverageRatePerMinuteCents, "min", "f") }, c.custom),
-      row("outboundCalls", false, { starter: allowance(starter.outboundCallAttemptsIncluded, starter.outboundCallAttemptOverageRateCents, "attempt", "f"), pro: allowance(pro.outboundCallAttemptsIncluded, pro.outboundCallAttemptOverageRateCents, "attempt", "f") }, c.custom),
-      row("alertSms", false, { starter: allowance(starter.alertSmsSegmentsIncluded, starter.alertSmsOverageRatePerSegmentCents, "segment", "m"), pro: allowance(pro.alertSmsSegmentsIncluded, pro.alertSmsOverageRatePerSegmentCents, "segment", "m") }, c.custom),
+      row("outboundCalls", { included: c.included(free.outboundCallAttemptsIncluded, "f") }, { starter: allowance(starter.outboundCallAttemptsIncluded, starter.outboundCallAttemptOverageRateCents, "attempt", "f"), pro: allowance(pro.outboundCallAttemptsIncluded, pro.outboundCallAttemptOverageRateCents, "attempt", "f") }, c.custom),
+      row("alertSms", { included: c.included(free.alertSmsSegmentsIncluded, "m") }, { starter: allowance(starter.alertSmsSegmentsIncluded, starter.alertSmsOverageRatePerSegmentCents, "segment", "m"), pro: allowance(pro.alertSmsSegmentsIncluded, pro.alertSmsOverageRatePerSegmentCents, "segment", "m") }, c.custom),
       row("knowledgeStorage", mb(free.knowledgeStorageBytes), { starter: mb(starter.knowledgeStorageBytes), pro: mb(pro.knowledgeStorageBytes) }, c.custom),
       row("phoneNumbers", c.freeForDays, c.dedicated, c.multiple),
     ] },
@@ -162,13 +162,13 @@ export function planComparison(locale: string): ComparisonGroup[] {
       row("googleCalendar", true, true),
     ] },
     { category: c.groups[3], rows: [
-      row("urgentHandoff", false, true),
-      row("callTransfers", false, true),
+      row("urgentHandoff", true, true),
+      row("callTransfers", true, true),
       row("afterHours", false, true),
     ] },
     { category: c.groups[4], rows: [
       row("emailNotifications", true, true),
-      row("smsNotifications", false, true),
+      row("smsNotifications", true, true),
     ] },
     { category: c.groups[5], rows: [
       row("summaries", c.unlimited.m, c.unlimited.m, c.unlimited.m),

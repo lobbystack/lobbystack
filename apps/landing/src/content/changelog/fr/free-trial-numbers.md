@@ -1,6 +1,6 @@
 ---
 title: "Un numéro de téléphone gratuit pendant 14 jours"
-description: "Les comptes gratuits aux États-Unis et au Canada reçoivent maintenant un numéro pendant 14 jours, la configuration commence par un appel test et votre réceptionniste parle sept langues."
+description: "Les comptes gratuits aux États-Unis et au Canada reçoivent maintenant un numéro pendant 14 jours, la configuration commence par un appel test et les appels peuvent commencer dans sept langues."
 pubDate: 2026-10-15
 locale: "fr"
 canonicalSlug: "free-trial-numbers"
@@ -11,6 +11,4 @@ Les nouveaux comptes gratuits aux États-Unis et au Canada reçoivent maintenant
 
 La configuration commence maintenant par un appel. Après avoir ajouté votre site web et votre message d'accueil, vous appelez votre réceptionniste depuis le navigateur, puis vous vérifiez votre mobile et choisissez votre numéro d'entreprise.
 
-Votre réceptionniste parle maintenant sept langues : anglais, français, espagnol, allemand, portugais du Brésil, italien et néerlandais. Les appels commencent dans la langue que vous choisissez, et votre réceptionniste change de langue quand un appelant le demande ou en parle une autre. Le chat du site web répond aussi dans cette langue.
-
-Chaque forfait répond à autant d'appels simultanés qu'il en arrive. La page des prix l'indique maintenant sur chaque forfait.
+Vous pouvez maintenant choisir la langue dans laquelle les appels commencent : anglais, français, espagnol, allemand, portugais du Brésil, italien ou néerlandais. Jusqu'ici, c'était l'anglais ou le français. Chaque langue a son propre message d'accueil par défaut, et le chat du site web répond dans la langue choisie. Votre réceptionniste passe toujours à la langue de l'appelant quand celui-ci en parle une autre, parmi plus de 70 langues.
