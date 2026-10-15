@@ -297,8 +297,6 @@
     "notListed": {
       "missed": "Votre fournisseur n'est pas dans la liste? Demandez-lui de renvoyer les appels sans réponse vers le {{number}}.",
       "all": "Votre fournisseur n'est pas dans la liste? Demandez-lui de renvoyer tous vos appels vers le {{number}}."
-    },
-    "copy": "Copier",
-    "copied": "Copié"
+    }
   }
 }

@@ -296,8 +296,6 @@
     "notListed": {
       "missed": "Carrier not listed? Ask them to forward unanswered calls to {{number}}.",
       "all": "Carrier not listed? Ask them to forward all your calls to {{number}}."
-    },
-    "copy": "Copy",
-    "copied": "Copied"
+    }
   }
 }

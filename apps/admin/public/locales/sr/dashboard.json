@@ -297,8 +297,6 @@
     "notListed": {
       "missed": "Vašeg operatera nema na listi? Zamolite ga da preusmeri neodgovorene pozive na {{number}}.",
       "all": "Vašeg operatera nema na listi? Zamolite ga da preusmeri sve Vaše pozive na {{number}}."
-    },
-    "copy": "Kopiraj",
-    "copied": "Kopirano"
+    }
   }
 }

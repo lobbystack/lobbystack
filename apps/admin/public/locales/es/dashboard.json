@@ -297,8 +297,6 @@
     "notListed": {
       "missed": "¿Su operador no aparece? Pídale que desvíe las llamadas sin respuesta al {{number}}.",
       "all": "¿Su operador no aparece? Pídale que desvíe todas sus llamadas al {{number}}."
-    },
-    "copy": "Copiar",
-    "copied": "Copiado"
+    }
   }
 }
