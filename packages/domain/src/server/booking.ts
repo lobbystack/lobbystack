@@ -64,8 +64,8 @@ type Schedule = {
 /**
  * Reads the rules for booking a service: the service, the business's
  * timezone, staff, assignments, calendars, the business's and staff members'
- * hours, and the closures and time off that end after `from`. Booking reloads it after each staff lock so it never validates
- * against stale rules.
+ * hours, and the closures and time off that end after `from`. Booking reloads
+ * it after each staff lock so it never validates against stale rules.
  */
 async function loadSchedule(tx: DatabaseTransaction, input: { businessId: string; serviceId: string; from: Date }): Promise<Schedule> {
   const [service] = await tx.select({ id: services.id, name: services.name, durationMinutes: services.durationMinutes }).from(services).where(and(eq(services.id, input.serviceId), eq(services.businessId, input.businessId), eq(services.active, true))).limit(1);

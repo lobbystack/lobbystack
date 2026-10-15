@@ -45,9 +45,8 @@ const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 function requireSchedule(input: { hours: HoursWindow[] | null; timeOff: EmployeeTimeOff[] }, timezone: string) {
   if (input.hours && !input.hours.length) throw Object.assign(new Error("Add at least one working day, or use the business's hours."), { status: 400, code: "employee_hours_required" });
   const hours = input.hours ? normalizeHoursWindows(input.hours) : null;
-  const invalidTimeOff = (message: string) => Object.assign(new Error(message), { status: 400, code: "employee_time_off_invalid" });
   for (const entry of input.timeOff) {
-    if (![entry.startsOn, entry.endsOn].every((day) => ISO_DAY.test(day) && DateTime.fromISO(day).isValid) || entry.endsOn < entry.startsOn) throw invalidTimeOff("Choose the first and last day of each time off.");
+    if (![entry.startsOn, entry.endsOn].every((day) => ISO_DAY.test(day) && DateTime.fromISO(day).isValid) || entry.endsOn < entry.startsOn) throw Object.assign(new Error("Choose the first and last day of each time off."), { status: 400, code: "employee_time_off_invalid" });
   }
   try {
     const timeOff = normalizeClosures(input.timeOff.map((entry) => ({ startsAt: `${entry.startsOn}T00:00`, endsAt: `${DateTime.fromISO(entry.endsOn).plus({ days: 1 }).toISODate()}T00:00` })), timezone, new Date());
