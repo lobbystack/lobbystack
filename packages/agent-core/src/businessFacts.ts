@@ -55,9 +55,19 @@ export function serviceFacts(snapshot: Pick<BusinessContextSnapshot, "services">
   }));
 }
 
-/** One line per service. Descriptions are dropped when the list would run past maxChars; prices never are. */
+/**
+ * One line per service. When the list would run past maxChars, descriptions
+ * go from the last service up until it fits, so the first services keep
+ * theirs. Names, durations and prices always stay.
+ */
 export function describeServices(services: ServiceFact[], maxChars = Number.POSITIVE_INFINITY): string {
   const line = (service: ServiceFact, withDescription: boolean) => `- ${service.name} (${[`${service.durationMinutes} min`, service.price].filter(Boolean).join(", ")})${withDescription && service.description ? `: ${service.description.trim()}` : ""}`;
-  const full = services.map((service) => line(service, true)).join("\n");
-  return full.length <= maxChars ? full : services.map((service) => line(service, false)).join("\n");
+  const lines = services.map((service) => line(service, true));
+  let length = lines.join("\n").length;
+  for (let index = lines.length - 1; index >= 0 && length > maxChars; index -= 1) {
+    const short = line(services[index]!, false);
+    length -= lines[index]!.length - short.length;
+    lines[index] = short;
+  }
+  return lines.join("\n");
 }

@@ -39,8 +39,9 @@ describe("directToolAnswer", () => {
   it("drops service descriptions rather than cut the list short", () => {
     const services = Array.from({ length: 30 }, (_, index) => ({ name: `Service ${index + 1}`, durationMinutes: 30, description: "A long description of what the visit covers and who it suits.".repeat(2) }));
     const answer = directToolAnswer(step({ toolName: "getBusinessServices", output: { services } }))!;
+    expect(answer).toContain("- Service 1 (30 min): A long description");
     expect(answer).toContain("- Service 30 (30 min)");
-    expect(answer).not.toContain("long description");
+    expect(answer).not.toContain("- Service 30 (30 min):");
   });
 
   it("confirms a saved appointment request and an ending call", () => {

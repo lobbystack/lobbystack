@@ -39,13 +39,15 @@ describe("buildLiveInstructions", () => {
     expect(instructions).not.toContain("Service 41");
   });
 
-  it("keeps every price when the list is too long for descriptions, and tells GPT-Live not to guess a missing one", () => {
+  it("drops descriptions from the last services first but keeps every price, and tells GPT-Live not to guess a missing one", () => {
     const services = Array.from({ length: 30 }, (_, index) => ({ id: `svc-${index}`, name: `Feniranje ${index + 1}`, durationMinutes: 45, description: "Duga kosa, feniranje na ravno ili lokne. ".repeat(3), ...(index ? { price: { type: "fixed" as const, amountMinor: (700 + index * 100) * 100, currency: "RSD" } } : {}) }));
     const instructions = buildLiveInstructions({ ...demoSnapshot, services }, "voice", callStart);
-    expect(instructions).not.toContain("Duga kosa");
-    expect(instructions).toContain("- Feniranje 1 (45 min)\n");
-    expect(instructions).toContain("- Feniranje 2 (45 min, RSD 800)");
-    expect(instructions).toContain("- Feniranje 30 (45 min, RSD 3,600)");
+    expect(instructions).toContain("- Feniranje 1 (45 min): Duga kosa");
+    expect(instructions).toContain("- Feniranje 2 (45 min, RSD 800): Duga kosa");
+    expect(instructions).toContain("- Feniranje 30 (45 min, RSD 3,600)\n");
+    for (let index = 2; index <= 30; index += 1) expect(instructions).toContain(`- Feniranje ${index} (45 min, RSD ${(600 + index * 100).toLocaleString("en")})`);
+    const list = instructions.slice(instructions.indexOf("- Feniranje 1 "), instructions.indexOf("- Feniranje 30 "));
+    expect(list.length).toBeLessThanOrEqual(3_000);
     expect(instructions).toContain("When a service lists no price, delegate the question instead of guessing.");
     expect(buildAgentInstructions({ ...demoSnapshot, services }, { channel: "web_chat" })).toContain("Feniranje 2 (45 min, RSD 800)");
   });
