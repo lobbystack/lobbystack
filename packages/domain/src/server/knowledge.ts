@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { and, asc, desc, eq, ilike, inArray, lt, ne, notInArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, isNull, lt, ne, notInArray, sql } from "drizzle-orm";
 
 import { agentRules, businessContextSnapshots, businessHours, businesses, closures, enqueueOutbox, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, phoneNumbers, receptionistProfiles, services, staffServiceAssignments, storageObjects, websiteIngestionJobs, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { defaultGreeting, getKnowledgeStorageLimitBytes, normalizeAppointmentChangePolicy, normalizeBookingMode, normalizeRuntimeLocale, normalizeTransferMode, runtimeLocales, servicePriceFromColumns, type BusinessContextSnapshot } from "@lobbystack/shared";
@@ -15,7 +15,7 @@ import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 import { advanceOnboardingStageInTransaction } from "./onboarding";
 import { recordProductEventBestEffort } from "./productEvents";
 import { enqueueKnowledgeDerivedRefresh } from "./businessHours";
-import { businessToday, currentVacation, listBookableEmployees } from "./employees";
+import { listBookableEmployees, loadStaffSchedules } from "./employees";
 import { resolveBusinessBillingPlan } from "./contentRetentionPolicy";
 import { resolveSmsSender } from "./smsSender";
 
@@ -569,8 +569,8 @@ export async function refreshBusinessSnapshot(
       throw new Error("Business not found.");
     }
     const [hours, closureRows, serviceRows, ruleRows, snippets, documents, numbers, employeeRows, assignments] = await Promise.all([
-      tx.select().from(businessHours).where(eq(businessHours.businessId, input.businessId)).orderBy(asc(businessHours.dayOfWeek), asc(businessHours.openMinutes)),
-      tx.select().from(closures).where(eq(closures.businessId, input.businessId)).orderBy(asc(closures.startsAt)),
+      tx.select().from(businessHours).where(and(eq(businessHours.businessId, input.businessId), isNull(businessHours.staffId))).orderBy(asc(businessHours.dayOfWeek), asc(businessHours.openMinutes)),
+      tx.select().from(closures).where(and(eq(closures.businessId, input.businessId), isNull(closures.staffId))).orderBy(asc(closures.startsAt)),
       tx.select().from(services).where(and(eq(services.businessId, input.businessId), eq(services.active, true))).orderBy(asc(services.name)),
       tx.select().from(agentRules).where(and(eq(agentRules.businessId, input.businessId), eq(agentRules.active, true))).orderBy(asc(agentRules.sortOrder)),
       tx.select().from(knowledgeSnippets).where(and(eq(knowledgeSnippets.businessId, input.businessId), eq(knowledgeSnippets.active, true))).orderBy(desc(knowledgeSnippets.priority)).limit(8),
@@ -579,6 +579,7 @@ export async function refreshBusinessSnapshot(
       listBookableEmployees(tx, input.businessId),
       tx.select({ staffId: staffServiceAssignments.staffId, serviceId: staffServiceAssignments.serviceId }).from(staffServiceAssignments).where(eq(staffServiceAssignments.businessId, input.businessId)),
     ]);
+    const schedules = await loadStaffSchedules(tx, { businessId: input.businessId, staffIds: employeeRows.map((row) => row.staffId), timezone: business[0].timezone });
     const currentProfile = profile[0];
     const phoneNumber = numbers.find((number) => number.status === "active" && number.voiceEnabled)?.e164;
     // The number customer texts come from, so the agent offers texts only to
@@ -620,8 +621,8 @@ export async function refreshBusinessSnapshot(
       employees: employeeRows.map((row) => {
         const assigned = new Set(assignments.filter((assignment) => assignment.staffId === row.staffId).map((assignment) => assignment.serviceId));
         const names = serviceRows.filter((service) => assigned.has(service.id)).map((service) => service.name);
-        const vacation = currentVacation(row, businessToday(business[0]!.timezone));
-        return { name: row.name, ...(names.length ? { services: names } : {}), ...(vacation ? { vacation } : {}) };
+        const { hours: ownHours, timeOff } = schedules.get(row.staffId)!;
+        return { name: row.name, ...(names.length ? { services: names } : {}), ...(ownHours ? { hours: ownHours } : {}), ...(timeOff.length ? { timeOff } : {}) };
       }),
       snippets: snippets.map((row) => ({ id: row.id, title: row.title, content: row.content, tags: row.tags, priority: row.priority })),
       appointmentChangePolicy: normalizeAppointmentChangePolicy(currentProfile?.appointmentChangePolicy),

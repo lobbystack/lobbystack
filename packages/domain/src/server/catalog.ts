@@ -18,8 +18,8 @@ export async function listCatalog(
     const [staffRows, serviceRows, hoursRows, closureRows, numberRows, profileRows, ruleRows] = await Promise.all([
       tx.select().from(staff).where(eq(staff.businessId, input.businessId)).orderBy(asc(staff.name)),
       tx.select().from(services).where(and(eq(services.businessId, input.businessId), isNull(services.deletedAt), ...(input.search?.trim() ? [ilike(services.name, `%${input.search.trim()}%`)] : []))).orderBy(asc(services.name)).limit(Math.min(Math.max(Math.trunc(input.limit ?? 100), 1), 100) + 1).offset(Math.max(Math.trunc(input.offset ?? 0), 0)),
-      tx.select().from(businessHours).where(eq(businessHours.businessId, input.businessId)).orderBy(asc(businessHours.dayOfWeek), asc(businessHours.openMinutes)),
-      tx.select().from(closures).where(eq(closures.businessId, input.businessId)).orderBy(asc(closures.startsAt)),
+      tx.select().from(businessHours).where(and(eq(businessHours.businessId, input.businessId), isNull(businessHours.staffId))).orderBy(asc(businessHours.dayOfWeek), asc(businessHours.openMinutes)),
+      tx.select().from(closures).where(and(eq(closures.businessId, input.businessId), isNull(closures.staffId))).orderBy(asc(closures.startsAt)),
       tx.select().from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"))).orderBy(asc(phoneNumbers.e164)),
       tx.select().from(receptionistProfiles).where(eq(receptionistProfiles.businessId, input.businessId)).limit(1),
       tx.select().from(agentRules).where(eq(agentRules.businessId, input.businessId)).orderBy(asc(agentRules.sortOrder)),
@@ -196,13 +196,13 @@ export async function replaceBusinessHoursInTransaction(
     if (!business) throw Object.assign(new Error("Business not found."), { status: 404 });
     closureRows = normalizeClosures(input.closures, business.timezone, new Date());
     const current = await tx.select({ dayOfWeek: businessHours.dayOfWeek, openMinutes: businessHours.openMinutes, closeMinutes: businessHours.closeMinutes }).from(businessHours)
-      .where(eq(businessHours.businessId, input.businessId)).orderBy(asc(businessHours.dayOfWeek), asc(businessHours.openMinutes));
+      .where(and(eq(businessHours.businessId, input.businessId), isNull(businessHours.staffId))).orderBy(asc(businessHours.dayOfWeek), asc(businessHours.openMinutes));
     sameHours = sameHoursWindows(hours, current);
   }
   // Saving only closures leaves the hours to whoever set them, so AI can still fill an empty week.
   await tx.update(businesses).set({ ...(sameHours ? {} : { hoursSource: "operator" as const }), updatedAt: new Date() }).where(eq(businesses.id, input.businessId));
   if (closureRows) {
-    await tx.delete(closures).where(eq(closures.businessId, input.businessId));
+    await tx.delete(closures).where(and(eq(closures.businessId, input.businessId), isNull(closures.staffId)));
     if (closureRows.length) await tx.insert(closures).values(closureRows.map((closure) => ({ businessId: input.businessId, ...closure })));
   }
   // Its snapshot refresh picks up the closures too.

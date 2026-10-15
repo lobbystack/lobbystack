@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { and, asc, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 
 import { countKnowledgeTokens } from "../knowledgeRanking";
 import { businesses, businessHours, enqueueOutbox, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
@@ -50,7 +50,7 @@ export async function enqueueKnowledgeDerivedRefresh(tx: DatabaseTransaction, in
 
 /** Replaces the hours rows and refreshes the snapshot. Callers set hours_source and authorize first. */
 export async function writeBusinessHoursInTransaction(tx: DatabaseTransaction, input: { businessId: string; hours: HoursWindow[]; reason: "hours_updated" | "hours_generated" }): Promise<void> {
-  await tx.delete(businessHours).where(eq(businessHours.businessId, input.businessId));
+  await tx.delete(businessHours).where(and(eq(businessHours.businessId, input.businessId), isNull(businessHours.staffId)));
   if (input.hours.length) await tx.insert(businessHours).values(input.hours.map((window) => ({ businessId: input.businessId, ...window })));
   await enqueueOutbox(tx, {
     topic: "snapshot.refresh",
@@ -117,7 +117,7 @@ export async function loadBusinessHoursInput(context: DomainContext, input: { bu
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const [business] = await tx.select({ name: businesses.name, hoursSource: businesses.hoursSource, hoursFingerprint: businesses.hoursFingerprint }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1);
     if (!business) return null;
-    const [windows] = await tx.select({ count: sql<number>`count(*)::int` }).from(businessHours).where(eq(businessHours.businessId, input.businessId));
+    const [windows] = await tx.select({ count: sql<number>`count(*)::int` }).from(businessHours).where(and(eq(businessHours.businessId, input.businessId), isNull(businessHours.staffId)));
     const snippets = await tx.select({ title: knowledgeSnippets.title, content: knowledgeSnippets.content }).from(knowledgeSnippets)
       .where(and(eq(knowledgeSnippets.businessId, input.businessId), eq(knowledgeSnippets.active, true)))
       .orderBy(asc(knowledgeSnippets.createdAt)).limit(HOURS_MAX_SNIPPETS);
@@ -161,7 +161,7 @@ export async function saveGeneratedBusinessHours(context: DomainContext, input: 
     const [business] = await tx.select({ hoursSource: businesses.hoursSource }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1).for("update");
     if (!business || business.hoursSource === "operator") return false;
     const current = await tx.select({ dayOfWeek: businessHours.dayOfWeek, openMinutes: businessHours.openMinutes, closeMinutes: businessHours.closeMinutes }).from(businessHours)
-      .where(eq(businessHours.businessId, input.businessId)).orderBy(asc(businessHours.dayOfWeek), asc(businessHours.openMinutes));
+      .where(and(eq(businessHours.businessId, input.businessId), isNull(businessHours.staffId))).orderBy(asc(businessHours.dayOfWeek), asc(businessHours.openMinutes));
     if (business.hoursSource === "none" && current.length) return false;
     await tx.update(businesses).set({ hoursSource: "generated", hoursFingerprint: input.fingerprint, hoursGeneratedAt: new Date(), updatedAt: new Date() }).where(eq(businesses.id, input.businessId));
     if (!sameHoursWindows(current, hours)) await writeBusinessHoursInTransaction(tx, { businessId: input.businessId, hours, reason: "hours_generated" });

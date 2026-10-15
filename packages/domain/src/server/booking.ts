@@ -1,7 +1,7 @@
 import { and, asc, eq, gt, inArray, isNull, lt, ne, notExists, or, sql } from "drizzle-orm";
 
 import { appointments, auditLogs, businesses, businessHours, calendarBusyBlocks, calendarConnections, closures, contacts, enqueueOutbox, inboxItems, notifications, services, staff, staffServiceAssignments, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import type { AvailabilitySlot } from "@lobbystack/shared";
+import type { AvailabilitySlot, ClosureWindow, HoursWindow } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 import { DateTime } from "luxon";
 
@@ -11,7 +11,6 @@ import type { DomainContext } from "./context";
 import { recordCallOutcomeInTransaction } from "./callOutcome";
 import { consumeAppointmentChangeVerificationInTransaction } from "./appointmentChanges";
 import { findOrCreateContactByPhone } from "./contacts";
-import { businessToday, isOnVacation } from "./employees";
 import { recordSmsConsentAnswerInTransaction, smsConsentOnFile, type SmsConsentAnswer, type SmsConsentOnFile } from "./contactSmsConsent";
 import { recordProductEventBestEffort } from "./productEvents";
 import { CANCELLATION_CONFIRMATION, heldForCall, rescheduleAppointmentReminderInTransaction } from "./notifications";
@@ -50,18 +49,22 @@ type Schedule = {
   serviceDurationMinutes: number;
   timezone: string;
   activeStaffIds: string[];
-  employeeStaffIds: Set<string>;
-  vacations: Map<string, { startsOn: string; endsOn: string }>;
+  /** The active employees' names by staff id. The other active staff stand for the business. */
+  employees: Map<string, string>;
   assignedStaffIds: Set<string>;
   connections: Array<typeof calendarConnections.$inferSelect>;
-  hours: Array<typeof businessHours.$inferSelect>;
-  closures: Array<{ startsAt: string; endsAt: string; reason: string }>;
+  /** The business's hours and closures. They bind everyone. */
+  hours: HoursWindow[];
+  closures: ClosureWindow[];
+  /** Staff members' own working hours, for those who have them, and their time off. */
+  staffHours: Map<string, HoursWindow[]>;
+  staffClosures: Map<string, ClosureWindow[]>;
 };
 
 /**
  * Reads the rules for booking a service: the service, the business's
- * timezone, staff, assignments, calendars, hours, and the closures that end
- * after `from`. Booking reloads it after each staff lock so it never validates
+ * timezone, staff, assignments, calendars, the business's and staff members'
+ * hours, and the closures and time off that end after `from`. Booking reloads it after each staff lock so it never validates
  * against stale rules.
  */
 async function loadSchedule(tx: DatabaseTransaction, input: { businessId: string; serviceId: string; from: Date }): Promise<Schedule> {
@@ -70,14 +73,18 @@ async function loadSchedule(tx: DatabaseTransaction, input: { businessId: string
   // 409: the API and MCP answer a turned-off service as a client error, not a 500.
   if (!service || !business) throw Object.assign(new Error("Service is not available."), { status: 409 });
   if (!Number.isFinite(input.from.getTime()) || !Number.isSafeInteger(service.durationMinutes) || service.durationMinutes <= 0) throw new Error("A valid appointment time and duration are required.");
-  const activeStaff = await tx.select({ id: staff.id, isEmployee: staff.isEmployee, vacationStartsOn: staff.vacationStartsOn, vacationEndsOn: staff.vacationEndsOn }).from(staff).where(and(eq(staff.businessId, input.businessId), eq(staff.active, true))).orderBy(asc(staff.id));
+  const activeStaff = await tx.select({ id: staff.id, name: staff.name, isEmployee: staff.isEmployee }).from(staff).where(and(eq(staff.businessId, input.businessId), eq(staff.active, true))).orderBy(asc(staff.id));
   const activeStaffIds = activeStaff.map((row) => row.id);
   const assignments = await tx.select({ staffId: staffServiceAssignments.staffId }).from(staffServiceAssignments).where(and(eq(staffServiceAssignments.businessId, input.businessId), eq(staffServiceAssignments.serviceId, input.serviceId)));
   const connections = activeStaffIds.length
     ? await tx.select().from(calendarConnections).where(and(eq(calendarConnections.businessId, input.businessId), ne(calendarConnections.status, "disconnected"), or(isNull(calendarConnections.staffId), inArray(calendarConnections.staffId, activeStaffIds))))
     : [];
-  const hours = await tx.select().from(businessHours).where(eq(businessHours.businessId, input.businessId));
-  const closed = await tx.select().from(closures).where(and(eq(closures.businessId, input.businessId), gt(closures.endsAt, input.from)));
+  const hourRows = await tx.select().from(businessHours).where(eq(businessHours.businessId, input.businessId));
+  const closureRows = await tx.select().from(closures).where(and(eq(closures.businessId, input.businessId), gt(closures.endsAt, input.from)));
+  const staffHours = new Map<string, HoursWindow[]>();
+  const staffClosures = new Map<string, ClosureWindow[]>();
+  for (const row of hourRows) if (row.staffId) staffHours.set(row.staffId, [...staffHours.get(row.staffId) ?? [], row]);
+  for (const row of closureRows) if (row.staffId) staffClosures.set(row.staffId, [...staffClosures.get(row.staffId) ?? [], closureWindow(row)]);
   return {
     businessId: input.businessId,
     serviceId: input.serviceId,
@@ -85,13 +92,18 @@ async function loadSchedule(tx: DatabaseTransaction, input: { businessId: string
     serviceDurationMinutes: service.durationMinutes,
     timezone: business.timezone,
     activeStaffIds,
-    employeeStaffIds: new Set(activeStaff.filter((row) => row.isEmployee).map((row) => row.id)),
-    vacations: new Map(activeStaff.flatMap((row) => row.vacationStartsOn && row.vacationEndsOn ? [[row.id, { startsOn: row.vacationStartsOn, endsOn: row.vacationEndsOn }] as const] : [])),
+    employees: new Map(activeStaff.flatMap((row) => row.isEmployee ? [[row.id, row.name] as const] : [])),
     assignedStaffIds: new Set(assignments.map((row) => row.staffId)),
     connections,
-    hours,
-    closures: closed.map((row) => ({ startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString(), reason: row.reason })),
+    hours: hourRows.filter((row) => !row.staffId),
+    closures: closureRows.filter((row) => !row.staffId).map(closureWindow),
+    staffHours,
+    staffClosures,
   };
+}
+
+function closureWindow(row: { startsAt: Date; endsAt: Date; reason: string }): ClosureWindow {
+  return { startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString(), reason: row.reason };
 }
 
 type AvailabilityReference = Schedule & { startsAt: Date; endsAt: Date };
@@ -103,26 +115,34 @@ async function loadAvailabilityReference(tx: DatabaseTransaction, input: { busin
   return { ...schedule, startsAt, endsAt: new Date(startsAt.getTime() + schedule.serviceDurationMinutes * 60_000) };
 }
 
-// Unassigned services retain the existing all-active-staff default, except for
-// employees, who only do the services they are assigned. Explicit assignments
-// constrain eligibility instead of being silently ignored.
+// A service with assigned staff is booked against them. One with no one
+// assigned falls back to the staff that stand for the business, never to an
+// employee. `keepStaffId` stays eligible while active: an appointment's staff
+// member when its service's assignments changed since it was booked.
 function doesService(schedule: Schedule, staffId: string): boolean {
-  return schedule.assignedStaffIds.size ? schedule.assignedStaffIds.has(staffId) : !schedule.employeeStaffIds.has(staffId);
+  return schedule.assignedStaffIds.size ? schedule.assignedStaffIds.has(staffId) : !schedule.employees.has(staffId);
 }
 
-function eligibleStaffIds(schedule: Schedule, requestedStaffIds?: string[]): string[] {
-  return schedule.activeStaffIds.filter((id) => (!requestedStaffIds || requestedStaffIds.includes(id)) && doesService(schedule, id));
+function eligibleStaffIds(schedule: Schedule, requestedStaffIds?: string[], keepStaffId?: string): string[] {
+  return schedule.activeStaffIds.filter((id) => (!requestedStaffIds || requestedStaffIds.includes(id)) && (id === keepStaffId || doesService(schedule, id)));
 }
 
-/** Nobody on vacation the day the appointment starts takes the booking. */
-function isAway(schedule: Schedule, staffId: string, startsAt: Date): boolean {
-  const vacation = schedule.vacations.get(staffId);
-  return vacation ? isOnVacation(vacation, businessToday(schedule.timezone, startsAt)) : false;
+/** Whether a staff member works the whole appointment: inside their own hours, when they have them, and not on time off. */
+function isWorking(schedule: Schedule, staffId: string, startsAt: Date): boolean {
+  const hours = schedule.staffHours.get(staffId);
+  const timeOff = schedule.staffClosures.get(staffId);
+  return (!hours && !timeOff) || !scheduleUnavailableReason({ startsAt: startsAt.toISOString(), timezone: schedule.timezone, serviceDurationMinutes: schedule.serviceDurationMinutes, hours: hours ?? schedule.hours, closures: timeOff ?? [] });
+}
+
+// A staff member's own calendar blocks only them. The business's calendar, one with no staff owner, blocks the staff
+// that stand for the business and not its employees.
+function calendarCovers(schedule: Schedule, connection: { staffId: string | null }, staffId: string): boolean {
+  return connection.staffId ? connection.staffId === staffId : !schedule.employees.has(staffId);
 }
 
 function isCalendarFresh(schedule: Schedule, staffId: string, startsAt: Date, now: number): boolean {
   const endsAt = startsAt.getTime() + schedule.serviceDurationMinutes * 60_000;
-  return !schedule.connections.some((connection) => connection.selectedCalendarId && (!connection.staffId || connection.staffId === staffId) && (
+  return !schedule.connections.some((connection) => connection.selectedCalendarId && calendarCovers(schedule, connection, staffId) && (
     connection.status !== "connected" || !connection.lastSyncedAt || now - connection.lastSyncedAt.getTime() > MAX_CALENDAR_SYNC_AGE_MS
     || startsAt.getTime() < connection.lastSyncedAt.getTime() || endsAt > connection.lastSyncedAt.getTime() + CALENDAR_SYNC_HORIZON_MS
   ));
@@ -130,15 +150,19 @@ function isCalendarFresh(schedule: Schedule, staffId: string, startsAt: Date, no
 
 /**
  * The staff who could take the service at a time, judged from the schedule
- * alone, or why no one can: the opening hours and closures first, then staff
- * and calendar freshness. Their bookings decide the rest.
+ * alone, or why no one can: the opening hours and closures first, then who
+ * does the service, who works then, and calendar freshness. Their bookings
+ * decide the rest.
  */
-function staffForTime(schedule: Schedule, startsAt: Date, requestedStaffIds: string[] | undefined, now: number): string[] | UnavailableReason {
+function staffForTime(schedule: Schedule, startsAt: Date, requestedStaffIds: string[] | undefined, now: number, keepStaffId?: string): string[] | UnavailableReason {
   const closed = scheduleUnavailableReason({ startsAt: startsAt.toISOString(), timezone: schedule.timezone, serviceDurationMinutes: schedule.serviceDurationMinutes, hours: schedule.hours, closures: schedule.closures });
   if (closed) return closed;
-  const eligible = eligibleStaffIds(schedule, requestedStaffIds).filter((id) => !isAway(schedule, id, startsAt));
+  const eligible = eligibleStaffIds(schedule, requestedStaffIds, keepStaffId);
   if (!eligible.length) return "no_staff";
-  const fresh = eligible.filter((id) => isCalendarFresh(schedule, id, startsAt, now));
+  const working = eligible.filter((id) => isWorking(schedule, id, startsAt));
+  // Off then, through their own hours or time off: the time isn't free, and the receptionist offers another.
+  if (!working.length) return "taken";
+  const fresh = working.filter((id) => isCalendarFresh(schedule, id, startsAt, now));
   return fresh.length ? fresh : "calendar_not_synced";
 }
 
@@ -152,7 +176,7 @@ type BusyTime = { staffId: string; startsAt: string; endsAt: string };
 async function loadBusyTimes(tx: DatabaseTransaction, schedule: Schedule, input: { staffIds: string[]; from: Date; to: Date; ignoreAppointmentId?: string | undefined }): Promise<BusyTime[]> {
   if (!input.staffIds.length) return [];
   const existing = await tx.select({ staffId: appointments.staffId, startsAt: appointments.startsAt, endsAt: appointments.endsAt }).from(appointments).where(and(eq(appointments.businessId, schedule.businessId), ne(appointments.status, "canceled"), input.ignoreAppointmentId ? ne(appointments.id, input.ignoreAppointmentId) : undefined, inArray(appointments.staffId, input.staffIds), lt(appointments.startsAt, input.to), gt(appointments.endsAt, input.from)));
-  const configured = schedule.connections.filter((connection) => connection.selectedCalendarId && input.staffIds.some((id) => !connection.staffId || connection.staffId === id));
+  const configured = schedule.connections.filter((connection) => connection.selectedCalendarId && input.staffIds.some((id) => calendarCovers(schedule, connection, id)));
   const connectionIds = configured.filter((connection) => connection.status === "connected").map((connection) => connection.id);
   // Events LobbyStack wrote for its own appointments come back as busy blocks. Skip them:
   // the appointment rows above already hold that time for the right staff member. An event
@@ -162,7 +186,7 @@ async function loadBusyTimes(tx: DatabaseTransaction, schedule: Schedule, input:
   const staffByConnection = new Map(schedule.connections.map((connection) => [connection.id, connection.staffId]));
   return [
     ...existing.map((row) => ({ staffId: row.staffId, startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString() })),
-    ...busy.flatMap((row) => { const owner = row.staffId ?? staffByConnection.get(row.connectionId); return (owner ? [owner] : input.staffIds).map((staffId) => ({ staffId, startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString() })); }),
+    ...busy.flatMap((row) => { const owner = row.staffId ?? staffByConnection.get(row.connectionId); return (owner ? [owner] : input.staffIds.filter((id) => !schedule.employees.has(id))).map((staffId) => ({ staffId, startsAt: row.startsAt.toISOString(), endsAt: row.endsAt.toISOString() })); }),
   ];
 }
 
@@ -246,7 +270,7 @@ export async function findOpeningsInTransaction(
 export async function bookAppointment(
   context: DomainContext,
   input: BookingInput,
-): Promise<{ appointmentId: string; contactId: string; staffId: string }> {
+): Promise<{ appointmentId: string; contactId: string; staffId: string; employeeName?: string }> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     // The first read refuses a time the schedule rules out without taking any
     // lock, and otherwise gives a stable, sorted lock set: the staff who could
@@ -353,7 +377,8 @@ export async function bookAppointment(
     if (input.apiAudit) await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: input.apiAudit.actorUserId, eventType: "api.appointment.booked", entityType: "appointment", entityId: appointment.id, payload: input.apiAudit.payload });
     if (contactCreated) await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "contact.created", resourceId: contactId });
     await emitWebhookEventInTransaction(tx, { businessId: input.businessId, type: "appointment.booked", resourceId: appointment.id });
-    return { appointmentId: appointment.id, contactId, staffId: selectedStaff.id };
+    const employeeName = reference.employees.get(selectedStaff.id);
+    return { appointmentId: appointment.id, contactId, staffId: selectedStaff.id, ...(employeeName ? { employeeName } : {}) };
   });
 }
 
@@ -458,12 +483,14 @@ export async function cancelAppointment(
 }
 
 /**
- * Moves an appointment to a new time with the same staff member, inside the
- * caller's transaction. Checks availability (hours, closures, calendar busy
- * time and freshness) under the staff lock, reschedules the reminder, queues
- * the calendar update and emits appointment.rescheduled. `beforeUpdate` runs
- * after the checks and can veto the change, for example to consume a caller's
- * verification.
+ * Moves an appointment to a new time, inside the caller's transaction. It
+ * keeps its staff member while they're active and free then, even when its
+ * service is now assigned to others; otherwise it goes to a free staff member
+ * who does the service. `staffId` asks for one staff member instead. Checks
+ * availability (hours, closures, time off, calendar busy time and freshness)
+ * under the staff locks, reschedules the reminder, queues the calendar update
+ * and emits appointment.rescheduled. `beforeUpdate` runs after the checks and
+ * can veto the change, for example to consume a caller's verification.
  */
 export async function rescheduleAppointmentInTransaction(
   tx: DatabaseTransaction,
@@ -471,14 +498,26 @@ export async function rescheduleAppointmentInTransaction(
 ): Promise<{ appointmentId: string; serviceId: string; startsAt: Date; endsAt: Date } | null> {
   const row = (await tx.select({ id: appointments.id, serviceId: appointments.serviceId, staffId: appointments.staffId, durationMinutes: services.durationMinutes }).from(appointments).innerJoin(contacts, and(eq(appointments.contactId, contacts.id), eq(contacts.businessId, input.businessId))).innerJoin(services, and(eq(appointments.serviceId, services.id), eq(services.businessId, input.businessId))).where(and(eq(appointments.id, input.appointmentId), eq(appointments.businessId, input.businessId), input.callerPhone !== undefined ? eq(contacts.phone, input.callerPhone) : undefined)).limit(1))[0];
   if (!row) return null;
-  // The appointment keeps its staff member unless the caller moves it to another one.
-  const staffId = input.staffId ?? row.staffId;
-  await lockStaff(tx, staffId);
   const startsAt = new Date(input.startsAt);
   if (!Number.isFinite(startsAt.getTime())) throw new Error("A valid appointment start time is required.");
   const endsAt = new Date(startsAt.getTime() + row.durationMinutes * 60_000);
-  const availability = await availabilityInTransaction(tx, { businessId: input.businessId, serviceId: row.serviceId, startsAt: startsAt.toISOString(), staffIds: [staffId], ignoreAppointmentId: row.id });
-  if (!availability.slots.length) throw new BookingUnavailableError(availability.reason ?? "taken", "That appointment time is no longer available.");
+  const lookup = { businessId: input.businessId, serviceId: row.serviceId, startsAt: startsAt.toISOString() };
+  const candidates = input.staffId ? [input.staffId] : [row.staffId, ...eligibleStaffIds(await loadAvailabilityReference(tx, lookup)).filter((id) => id !== row.staffId)];
+  // Every candidate locked up front, in id order like booking, so two changes can't deadlock; then the rules read again under the locks.
+  for (const id of [...candidates].sort()) await lockStaff(tx, id);
+  const reference = await loadAvailabilityReference(tx, lookup);
+  let staffId: string | undefined;
+  let reason: UnavailableReason | undefined;
+  for (const candidate of candidates) {
+    const free = staffForTime(reference, startsAt, [candidate], Date.now(), row.staffId);
+    if (typeof free !== "string" && openSlots(reference, startsAt, free, await loadBusyTimes(tx, reference, { staffIds: free, from: startsAt, to: endsAt, ignoreAppointmentId: row.id })).length) {
+      staffId = candidate;
+      break;
+    }
+    // The appointment's own staff member's reason, unless they can no longer take the service at all.
+    if (!reason || reason === "no_staff") reason = typeof free === "string" ? free : "taken";
+  }
+  if (!staffId) throw new BookingUnavailableError(reason ?? "taken", "That appointment time is no longer available.");
   if (input.beforeUpdate && !(await input.beforeUpdate())) return null;
   const [updated] = await tx.update(appointments).set({ startsAt, endsAt, staffId, status: "confirmed", calendarSyncState: "pending", revision: sql`${appointments.revision} + 1`, updatedAt: new Date() }).where(and(eq(appointments.id, row.id), eq(appointments.businessId, input.businessId), ne(appointments.status, "canceled"))).returning({ revision: appointments.revision });
   if (!updated) return null;

@@ -36,7 +36,7 @@ beforeEach(() => {
 
 describe("booking with an employee", () => {
   it("looks up and books only the employee the caller asked for", async () => {
-    vi.mocked(resolveEmployee).mockResolvedValue({ ok: true, staffId: "staff-ana", name: "Ana Petrović", phone: null, services: ["General Checkup"], vacation: null });
+    vi.mocked(resolveEmployee).mockResolvedValue({ ok: true, staffId: "staff-ana", name: "Ana Petrović", phone: null, services: ["General Checkup"], timeOff: [] });
     vi.mocked(findOpenings).mockResolvedValueOnce({ ok: true, serviceName: "General Checkup", date: "2026-10-06", timezone: "America/Toronto", openings: [{ startsAt: "2026-10-06T14:00:00.000Z", displayTime: "Tuesday Oct 6, 10:00 AM" }] } as never);
     const { run } = tools();
     await expect(run("findAvailability", { serviceName: "General Checkup", date: "2026-10-06", employeeName: "ana" })).resolves.toMatchObject({ employeeName: "Ana Petrović" });
@@ -59,7 +59,7 @@ describe("booking with an employee", () => {
   });
 
   it("tells the caller which services the employee does instead of looking up or booking one they don't do", async () => {
-    vi.mocked(resolveEmployee).mockResolvedValue({ ok: true, staffId: "staff-ana", name: "Ana Petrović", phone: null, services: ["Colour", "Haircut"], vacation: null });
+    vi.mocked(resolveEmployee).mockResolvedValue({ ok: true, staffId: "staff-ana", name: "Ana Petrović", phone: null, services: ["Colour", "Haircut"], timeOff: [] });
     vi.mocked(employeeDoesService).mockResolvedValue({ does: false, serviceName: "General Checkup" });
     const { run } = tools();
     const refusal = { ok: false, reason: expect.stringContaining("Ana Petrović doesn't do General Checkup, so it can't be booked with them. Ana Petrović does: Colour, Haircut.") };
@@ -70,10 +70,10 @@ describe("booking with an employee", () => {
     expect(bookForCaller).not.toHaveBeenCalled();
   });
 
-  it("tells the caller when an employee on vacation is back instead of booking them that day", async () => {
-    vi.mocked(resolveEmployee).mockResolvedValue({ ok: true, staffId: "staff-ana", name: "Ana Petrović", phone: null, services: ["General Checkup"], vacation: { startsOn: "2026-10-05", endsOn: "2026-10-09" } });
+  it("tells the caller when an employee who is off is back instead of booking them that day", async () => {
+    vi.mocked(resolveEmployee).mockResolvedValue({ ok: true, staffId: "staff-ana", name: "Ana Petrović", phone: null, services: ["General Checkup"], timeOff: [{ startsOn: "2026-09-01", endsOn: "2026-09-02" }, { startsOn: "2026-10-05", endsOn: "2026-10-09" }] });
     const { run } = tools();
-    const refusal = { ok: false, reason: expect.stringContaining("Ana Petrović is on vacation from Monday, October 5 to Friday, October 9, so they can't be booked that day. Tell the caller, then offer Ana Petrović from Saturday, October 10 on") };
+    const refusal = { ok: false, reason: expect.stringContaining("Ana Petrović is off from Monday, October 5 to Friday, October 9, so they can't be booked that day. Tell the caller, then offer Ana Petrović from Saturday, October 10 on") };
     await expect(run("findAvailability", { serviceName: "General Checkup", date: "2026-10-06", employeeName: "Ana" })).resolves.toEqual(refusal);
     await expect(run("bookAppointment", { ...booking, employeeName: "Ana" })).resolves.toEqual(refusal);
     expect(findOpenings).not.toHaveBeenCalled();

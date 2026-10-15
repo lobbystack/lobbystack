@@ -124,6 +124,11 @@ const DAY_UNAVAILABLE: Partial<Record<NoOpeningsReason, string>> = {
   outside_hours: "The service doesn't fit inside the opening hours that day. Offer another day.",
 };
 
+/** The entry of an employee's time off that covers a day (YYYY-MM-DD), if any. */
+function timeOffOn(timeOff: Array<{ startsOn: string; endsOn: string }>, day: string) {
+  return timeOff.find((entry) => entry.startsOn <= day && day <= entry.endsOn);
+}
+
 const isReason = (value: unknown): value is NoOpeningsReason => typeof value === "string" && value in UNAVAILABLE_TOOL_MESSAGES;
 
 const OFFERINGS_QUERY = "What does the business do and offer: services, products and prices";
@@ -245,11 +250,12 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
             : "This business doesn't book with specific employees. Leave employeeName out.",
         };
       }
-      if (day && match.vacation && match.vacation.startsOn <= day && day <= match.vacation.endsOn) {
-        const back = DateTime.fromISO(match.vacation.endsOn).plus({ days: 1 }).toFormat("cccc, LLLL d");
+      const off = day ? timeOffOn(match.timeOff, day) : undefined;
+      if (off) {
+        const back = DateTime.fromISO(off.endsOn).plus({ days: 1 }).toFormat("cccc, LLLL d");
         return {
           ok: false as const,
-          reason: `${match.name} is on vacation from ${DateTime.fromISO(match.vacation.startsOn).toFormat("cccc, LLLL d")} to ${DateTime.fromISO(match.vacation.endsOn).toFormat("cccc, LLLL d")}, so they can't be booked that day. Tell the caller, then offer ${match.name} from ${back} on, or another employee or whoever is available first on the day they wanted.`,
+          reason: `${match.name} is off from ${DateTime.fromISO(off.startsOn).toFormat("cccc, LLLL d")} to ${DateTime.fromISO(off.endsOn).toFormat("cccc, LLLL d")}, so they can't be booked that day. Tell the caller, then offer ${match.name} from ${back} on, or another employee or whoever is available first on the day they wanted.`,
         };
       }
       const check = await employeeDoesService(domain, { businessId, staffId: match.staffId, serviceName });
@@ -502,11 +508,11 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
                 : "This business has no employees to transfer to by name. Leave employeeName out to reach the business.",
             };
           }
-          const today = DateTime.now().setZone(snapshot.timezone).toISODate()!;
-          if (match.vacation && match.vacation.startsOn <= today && today <= match.vacation.endsOn) {
-            return { ok: false, reason: `${match.name} is on vacation until ${DateTime.fromISO(match.vacation.endsOn).toFormat("cccc, LLLL d")}. Tell the caller, and offer to take a message for them or to connect the caller to the business instead.` };
+          const off = timeOffOn(match.timeOff, DateTime.now().setZone(snapshot.timezone).toISODate()!);
+          if (off) {
+            return { ok: false, reason: `${match.name} is off until ${DateTime.fromISO(off.endsOn).toFormat("cccc, LLLL d")}. Tell the caller, and offer to take a message for them or to connect the caller to the business instead.` };
           }
-          // An employee without a number of their own is reached through the business.
+          // An employee without a number of their own, or during a free trial (resolveEmployee leaves it out), is reached through the business.
           destination = match.phone ?? businessNumber;
           employeeName = match.name;
         }

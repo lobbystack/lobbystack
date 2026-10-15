@@ -10,16 +10,16 @@
     "status": "Estado",
     "statuses": {
       "working": "Trabajando",
-      "on_vacation": "De vacaciones",
+      "off": "De permiso",
       "no_services": "No reservable"
     },
     "statusDetail": {
       "until": "Hasta el {{date}}",
-      "vacationFrom": "Vacaciones desde el {{date}}",
+      "offFrom": "De permiso desde el {{date}}",
       "noServices": "Sin servicios elegidos"
     },
     "statusTooltip": {
-      "vacation": "Vacaciones: {{dates}}",
+      "timeOff": "Permisos: {{dates}}",
       "noServices": "Edita este empleado y elige sus servicios para que los clientes puedan reservarlo."
     },
     "added": "Añadido",
@@ -40,7 +40,7 @@
   "add": {
     "button": "Añadir empleado",
     "title": "Añadir empleado",
-    "description": "Guarda el nombre, el número de teléfono y los servicios de un empleado.",
+    "description": "Guarda los datos, los servicios y el horario de un empleado.",
     "fields": {
       "name": {
         "label": "Nombre",
@@ -52,7 +52,8 @@
         "country": "País",
         "hint": "Opcional. Quien pida hablar con este empleado se transfiere aquí; si no hay número, se transfiere al número de transferencia del negocio.",
         "invalid": "Introduce un número de teléfono válido.",
-        "exists": "Ya existe un empleado con este número de teléfono."
+        "exists": "Ya existe un empleado con este número de teléfono.",
+        "trialLocked": "Durante tu prueba gratuita, las llamadas solo se pueden transferir al número móvil que verificaste."
       },
       "services": {
         "label": "Servicios",
@@ -67,12 +68,20 @@
         "empty": "Primero añade un servicio y luego elige los que hace este empleado.",
         "goToServices": "Ir a Servicios"
       },
-      "vacation": {
-        "label": "Vacaciones",
+      "hours": {
+        "label": "Mismo horario que el negocio",
+        "hint": "Desactívalo para elegir los días y las horas en que trabaja este empleado. Solo se reserva cuando trabaja y el negocio está abierto.",
+        "required": "Agrega al menos un día de trabajo."
+      },
+      "timeOff": {
+        "label": "Permisos",
         "hint": "Opcional. El recepcionista no reserva a este empleado esos días y les dice a los clientes cuándo vuelve.",
+        "add": "Agregar permiso",
         "placeholder": "Elige el primer y el último día",
-        "dates": "Fechas de vacaciones",
-        "required": "Elige el primer y el último día de las vacaciones."
+        "dates": "Fechas del permiso",
+        "remove": "Quitar permiso",
+        "required": "Elige el primer y el último día de cada permiso.",
+        "invalid": "Los permisos no pueden superponerse ni terminar en el pasado."
       }
     },
     "cancel": "Cancelar",
@@ -83,7 +92,7 @@
   },
   "edit": {
     "title": "Editar empleado",
-    "description": "Actualiza el nombre, el número de teléfono y los servicios de este empleado.",
+    "description": "Actualiza los datos, los servicios y el horario de este empleado.",
     "save": "Guardar",
     "updated": "Empleado actualizado.",
     "failed": "No se pudo actualizar el empleado."

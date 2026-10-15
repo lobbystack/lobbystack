@@ -10,16 +10,16 @@
     "status": "Status",
     "statuses": {
       "working": "Working",
-      "on_vacation": "On vacation",
+      "off": "On leave",
       "no_services": "Not bookable"
     },
     "statusDetail": {
       "until": "Until {{date}}",
-      "vacationFrom": "Vacation from {{date}}",
+      "offFrom": "On leave from {{date}}",
       "noServices": "No services chosen"
     },
     "statusTooltip": {
-      "vacation": "Vacation: {{dates}}",
+      "timeOff": "Time off: {{dates}}",
       "noServices": "Edit this employee and choose their services so callers can book them."
     },
     "added": "Added",
@@ -40,7 +40,7 @@
   "add": {
     "button": "Add Employee",
     "title": "Add employee",
-    "description": "Save an employee's name, phone number and services.",
+    "description": "Save an employee's details, services and schedule.",
     "fields": {
       "name": {
         "label": "Name",
@@ -52,7 +52,8 @@
         "country": "Country",
         "hint": "Optional. Callers who ask for this employee are transferred here; without it, they reach the business's transfer number.",
         "invalid": "Enter a valid phone number.",
-        "exists": "An employee with this phone number already exists."
+        "exists": "An employee with this phone number already exists.",
+        "trialLocked": "During your free trial, calls can only transfer to the mobile number you verified."
       },
       "services": {
         "label": "Services",
@@ -67,12 +68,20 @@
         "empty": "Add a service first, then choose which ones this employee does.",
         "goToServices": "Go to Services"
       },
-      "vacation": {
-        "label": "Vacation",
-        "hint": "Optional. The receptionist won't book this employee on these days and tells callers when they're back.",
+      "hours": {
+        "label": "Same as business hours",
+        "hint": "Turn this off to set the days and times this employee works. They're only booked when they work and the business is open.",
+        "required": "Add at least one working day."
+      },
+      "timeOff": {
+        "label": "Time off",
+        "hint": "Optional. The receptionist doesn't book this employee on these days and tells callers when they're back.",
+        "add": "Add time off",
         "placeholder": "Pick the first and last day",
-        "dates": "Vacation dates",
-        "required": "Pick the first and last day of the vacation."
+        "dates": "Time off dates",
+        "remove": "Remove time off",
+        "required": "Pick the first and last day of each time off.",
+        "invalid": "Time off can't overlap or end in the past."
       }
     },
     "cancel": "Cancel",
@@ -83,7 +92,7 @@
   },
   "edit": {
     "title": "Edit employee",
-    "description": "Update this employee's name, phone number and services.",
+    "description": "Update this employee's details, services and schedule.",
     "save": "Save",
     "updated": "Employee updated.",
     "failed": "Couldn't update the employee."

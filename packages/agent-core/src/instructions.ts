@@ -1,4 +1,4 @@
-import { normalizeBookingMode, normalizeRuntimeLocale, runtimeLocaleName, type BusinessContextSnapshot } from "@lobbystack/shared";
+import { normalizeBookingMode, normalizeRuntimeLocale, runtimeLocaleName, type BusinessContextSnapshot, type SnapshotEmployee } from "@lobbystack/shared";
 import { countKnowledgeTokens } from "@lobbystack/domain";
 import { DateTime } from "luxon";
 
@@ -21,27 +21,32 @@ function businessFacts(snapshot: BusinessContextSnapshot): string[] {
   ].filter(Boolean);
 }
 
-// When an employee is away, from the business's current date. A vacation that has ended says nothing.
-function vacationNote(vacation: { startsOn: string; endsOn: string } | undefined, today: string): string {
-  if (!vacation || vacation.endsOn < today) return "";
+// When an employee is off, from the business's current date: their next few
+// time off entries. Time off that has ended says nothing.
+function timeOffNote(timeOff: SnapshotEmployee["timeOff"], today: string): string {
   const day = (value: string) => DateTime.fromISO(value).toFormat("cccc, LLLL d");
-  return vacation.startsOn <= today ? `on vacation until ${day(vacation.endsOn)}` : `on vacation from ${day(vacation.startsOn)} to ${day(vacation.endsOn)}`;
+  return (timeOff ?? []).filter((entry) => entry.endsOn >= today).slice(0, 3)
+    .map((entry) => entry.startsOn <= today ? `off until ${day(entry.endsOn)}` : `off from ${day(entry.startsOn)} to ${day(entry.endsOn)}`)
+    .join(", ");
 }
 
-// Names with the services each employee does and any vacation, for snapshots that have them.
-function employeeRoster(snapshot: BusinessContextSnapshot): string {
-  const employees = snapshot.employees ?? [];
+// Names with the services each employee does, their own working hours and
+// their time off, for snapshots that have them.
+function employeeRoster(snapshot: BusinessContextSnapshot, employees: SnapshotEmployee[] = snapshot.employees ?? []): string {
   const today = DateTime.now().setZone(snapshot.timezone).toISODate()!;
   const listsServices = employees.some((employee) => employee.services?.length);
   const entries = employees.map((employee) => {
-    const vacation = vacationNote(employee.vacation, today);
-    const details = [employee.services?.join(", ") ?? "", vacation].filter(Boolean).join("; ");
-    return { text: details ? `${employee.name} (${details})` : employee.name, away: Boolean(vacation) };
+    const off = timeOffNote(employee.timeOff, today);
+    const services = snapshot.services.length > 1 && snapshot.services.every((service) => employee.services?.includes(service.name)) ? "all services" : employee.services?.join(", ") ?? "";
+    const hours = employee.hours?.length ? `works ${weeklyHours({ hours: employee.hours }).filter((line) => !line.endsWith(": closed")).join(", ")}` : "";
+    const details = [services, hours, off].filter(Boolean).join("; ");
+    return { text: details ? `${employee.name} (${details})` : employee.name, off: Boolean(off), ownHours: Boolean(hours) };
   });
   return [
     entries.map((entry) => entry.text).join(", "),
     listsServices ? ". Each employee only does the services in brackets after their name: use this to answer which services an employee does and which employees do a service, and never offer or book an employee for a service they don't do" : "",
-    entries.some((entry) => entry.away) ? ". An employee can't be booked on the days of their vacation: when a caller asks for one who is away, say when they're back, and offer a later day or another employee" : "",
+    entries.some((entry) => entry.ownHours) ? ". An employee with their own working hours can only be booked inside them" : "",
+    entries.some((entry) => entry.off) ? ". An employee can't be booked while they're off: when a caller asks for one who is off, say when they're back, and offer a later day or another employee" : "",
   ].join("");
 }
 
@@ -77,6 +82,7 @@ export function buildAgentInstructions(snapshot: BusinessContextSnapshot, conver
 // GPT-Live reads these at call start. Its instructions hold up to 16,384
 // tokens, so the facts below stay well inside that.
 const LIVE_MAX_SERVICES = 40;
+const LIVE_MAX_EMPLOYEES = 20;
 const LIVE_SERVICES_MAX_CHARS = 3_000;
 const LIVE_MAX_CLOSURES = 5;
 const LIVE_FAQ_TOKENS = 3_000;
@@ -127,6 +133,12 @@ function liveBusinessFacts(snapshot: BusinessContextSnapshot, now: DateTime): st
   const servicesHeading = services.length < allServices.length
     ? `Services (the first ${services.length} of ${allServices.length}; delegate questions about any service not listed):`
     : "Services:";
+  const allEmployees = snapshot.employees ?? [];
+  const employees = allEmployees.slice(0, LIVE_MAX_EMPLOYEES);
+  // Like the services: a partial list says so, or GPT-Live would deny someone it can't see.
+  const employeesHeading = employees.length < allEmployees.length
+    ? `Employees (the first ${employees.length} of ${allEmployees.length}; delegate questions about anyone not listed): `
+    : "Employees: ";
   const snippets = (snapshot.knowledgeSnippets ?? []).slice().sort((left, right) => right.priority - left.priority);
   const topics = knowledgeTopics(snapshot);
   const faqs = withinTokens(snippets, LIVE_FAQ_TOKENS, (snippet) => `- ${snippet.title}: ${snippet.content.trim().replace(/\s+/g, " ")}`);
@@ -137,9 +149,9 @@ function liveBusinessFacts(snapshot: BusinessContextSnapshot, now: DateTime): st
     closures.length ? `Upcoming closures: ${closures.map((closure) => describeClosure(closure, timezone)).join("; ")}.` : "",
     services.length ? `${servicesHeading}\n${describeServices(services, LIVE_SERVICES_MAX_CHARS)}` : "",
     services.some((service) => service.price) ? LIVE_PRICE_GUIDANCE : "",
-    snapshot.employees?.length
+    employees.length
       ? [
-        `Employees: ${employeeRoster(snapshot)}. Answer questions about who works here from this list yourself, without delegating.`,
+        `${employeesHeading}${employeeRoster(snapshot, employees)}. Answer questions about the employees listed yourself, without delegating.`,
         normalizeBookingMode(snapshot.bookingMode) !== "off" ? "When a caller wants an appointment, ask whether they'd like a specific employee before you delegate, unless they already said, and pass their answer along. With no preference, whoever is available first gets the appointment." : "",
       ].filter(Boolean).join(" ")
       : "",

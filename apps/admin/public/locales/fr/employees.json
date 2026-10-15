@@ -10,16 +10,16 @@
     "status": "Statut",
     "statuses": {
       "working": "En service",
-      "on_vacation": "En vacances",
+      "off": "En congé",
       "no_services": "Non réservable"
     },
     "statusDetail": {
       "until": "Jusqu'au {{date}}",
-      "vacationFrom": "Vacances à partir du {{date}}",
+      "offFrom": "En congé à partir du {{date}}",
       "noServices": "Aucun service choisi"
     },
     "statusTooltip": {
-      "vacation": "Vacances : {{dates}}",
+      "timeOff": "Congés : {{dates}}",
       "noServices": "Modifiez cet employé et choisissez ses services pour que les clients puissent le réserver."
     },
     "added": "Ajouté",
@@ -40,7 +40,7 @@
   "add": {
     "button": "Ajouter un employé",
     "title": "Ajouter un employé",
-    "description": "Enregistrez le nom, le numéro de téléphone et les services d'un employé.",
+    "description": "Enregistrez les coordonnées, les services et l'horaire d'un employé.",
     "fields": {
       "name": {
         "label": "Nom",
@@ -52,7 +52,8 @@
         "country": "Pays",
         "hint": "Facultatif. Les appelants qui demandent cet employé sont transférés ici ; sinon, ils joignent le numéro de transfert de l'entreprise.",
         "invalid": "Saisissez un numéro de téléphone valide.",
-        "exists": "Un employé avec ce numéro de téléphone existe déjà."
+        "exists": "Un employé avec ce numéro de téléphone existe déjà.",
+        "trialLocked": "Pendant votre essai gratuit, les appels ne peuvent être transférés qu'au numéro mobile que vous avez vérifié."
       },
       "services": {
         "label": "Services",
@@ -67,12 +68,20 @@
         "empty": "Ajoutez d'abord un service, puis choisissez ceux que cet employé propose.",
         "goToServices": "Aller aux services"
       },
-      "vacation": {
-        "label": "Vacances",
-        "hint": "Facultatif. Le réceptionniste ne réserve pas cet employé pendant ces jours et indique aux clients quand il revient.",
+      "hours": {
+        "label": "Mêmes horaires que l'entreprise",
+        "hint": "Désactivez pour choisir les jours et heures de travail de cet employé. Il n'est réservé que lorsqu'il travaille et que l'entreprise est ouverte.",
+        "required": "Ajoutez au moins un jour de travail."
+      },
+      "timeOff": {
+        "label": "Congés",
+        "hint": "Facultatif. Le réceptionniste ne réserve pas cet employé ces jours-là et indique aux clients quand il revient.",
+        "add": "Ajouter un congé",
         "placeholder": "Choisissez le premier et le dernier jour",
-        "dates": "Dates des vacances",
-        "required": "Choisissez le premier et le dernier jour des vacances."
+        "dates": "Dates du congé",
+        "remove": "Retirer le congé",
+        "required": "Choisissez le premier et le dernier jour de chaque congé.",
+        "invalid": "Les congés ne peuvent pas se chevaucher ni se terminer dans le passé."
       }
     },
     "cancel": "Annuler",
@@ -83,7 +92,7 @@
   },
   "edit": {
     "title": "Modifier l'employé",
-    "description": "Mettez à jour le nom, le numéro de téléphone et les services de cet employé.",
+    "description": "Mettez à jour les coordonnées, les services et l'horaire de cet employé.",
     "save": "Enregistrer",
     "updated": "Employé mis à jour.",
     "failed": "Impossible de mettre à jour l'employé."

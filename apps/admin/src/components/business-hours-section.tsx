@@ -39,7 +39,9 @@ const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 // A Sunday, so 2024-01-07 plus dayOfWeek days falls on that weekday.
 const SUNDAY = Date.UTC(2024, 0, 7, 12);
 
-type Window = { open: string; close: string };
+/** One opening window as the editor shows it, "09:00" to "17:00". */
+export type HoursWindowInput = { open: string; close: string };
+type Window = HoursWindowInput;
 
 export function businessHoursQueryKey(businessId: string) {
   return ["business-hours", businessId] as const;
@@ -71,7 +73,7 @@ function minutesOf(value: string, closing: boolean): number | undefined {
   return closing && minutes === 0 ? 1440 : minutes;
 }
 
-function toDays(hours: HoursWindow[]): Window[][] {
+export function toDays(hours: HoursWindow[]): Window[][] {
   const days: Window[][] = Array.from({ length: 7 }, () => []);
   for (const window of hours) days[window.dayOfWeek]?.push({ open: clock(window.openMinutes), close: clock(window.closeMinutes) });
   return days;
@@ -140,9 +142,6 @@ export function BookingWithoutHoursAlert({ className }: { className?: string }) 
 
 export function BusinessHoursSection({ businessId, canManage }: { businessId: string; canManage: boolean }) {
   const { i18n, t } = useTranslation("agent");
-  const hourCycle = useTimeFormatPreference() ?? "24h";
-  const pickerLabels = { hours: t("hours.picker.hours"), minutes: t("hours.picker.minutes"), period: t("hours.picker.period") };
-  const pickerTitles = { hours: t("hours.picker.hoursTitle"), minutes: t("hours.picker.minutesTitle") };
   const telemetry = useTelemetry();
   const queryClient = useQueryClient();
   const query = useBusinessHours(businessId);
@@ -163,10 +162,7 @@ export function BusinessHoursSection({ businessId, canManage }: { businessId: st
     return () => window.removeEventListener(OPEN_HOURS_EDITOR_EVENT, open);
   }, [canManage]);
   useEffect(() => { if (state) { setDays(toDays(state.hours)); setClosures(state.closures); } }, [state]);
-  const [dayNames, shortDayNames] = useMemo(() => (["long", "short"] as const).map((weekday) => {
-    const format = new Intl.DateTimeFormat(intlLocale(i18n.language), { weekday, timeZone: "UTC" });
-    return Array.from({ length: 7 }, (_, day) => format.format(new Date(SUNDAY + day * 86_400_000)));
-  }), [i18n.language]) as [string[], string[]];
+  const [dayNames, shortDayNames] = useDayNames();
   // Local times read as UTC, so the format shows them as entered.
   const closureFormat = useMemo(() => new Intl.DateTimeFormat(intlLocale(i18n.language), { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }), [i18n.language]);
   const describeClosure = (closure: Closure) => `${closureFormat.formatRange(new Date(`${closure.startsAt}:00Z`), new Date(`${closure.endsAt}:00Z`))}${closure.reason ? ` (${closure.reason})` : ""}`;
@@ -249,33 +245,7 @@ export function BusinessHoursSection({ businessId, canManage }: { businessId: st
         <DialogContent className="flex max-h-[85vh] flex-col gap-4 sm:max-w-lg">
           <DialogHeader><DialogTitle>{t("hours.title")}</DialogTitle></DialogHeader>
           <div className="-mx-1 flex flex-col overflow-x-hidden overflow-y-auto px-1">
-            {DAY_ORDER.map((dayOfWeek) => {
-              const windows = days[dayOfWeek] ?? [];
-              const day = dayNames[dayOfWeek] ?? "";
-              return (
-                <div className="flex items-start justify-between gap-4 border-b border-border py-3 last:border-b-0" key={dayOfWeek}>
-                  <div className="flex min-w-0 flex-col gap-2">
-                    <span className="text-sm font-medium">{day}</span>
-                    {windows.length ? (
-                      <div className="flex flex-col gap-2">
-                        {windows.map((window, index) => (
-                          <div className="flex items-center gap-2" key={index}>
-                            <TimePicker aria-label={t("hours.opensAt", { day })} className="w-32 min-w-0 shrink" columnLabels={pickerLabels} columnTitles={pickerTitles} disabled={disabled} hourCycle={hourCycle} locale={intlLocale(i18n.language)} onChange={(open) => update(dayOfWeek, windows.map((item, position) => (position === index ? { ...item, open } : item)))} value={window.open} />
-                            <span aria-hidden="true" className="text-muted-foreground">–</span>
-                            <TimePicker aria-label={t("hours.closesAt", { day })} className="w-32 min-w-0 shrink" columnLabels={pickerLabels} columnTitles={pickerTitles} disabled={disabled} hourCycle={hourCycle} locale={intlLocale(i18n.language)} onChange={(close) => update(dayOfWeek, windows.map((item, position) => (position === index ? { ...item, close } : item)))} value={window.close} />
-                            {windows.length > 1 ? <Button aria-label={t("hours.removeWindow")} disabled={disabled} onClick={() => update(dayOfWeek, windows.filter((_, position) => position !== index))} size="icon-sm" type="button" variant="ghost"><X /></Button> : null}
-                          </div>
-                        ))}
-                        {windows.length < MAX_WINDOWS_PER_DAY ? (
-                          <Button className="w-fit" disabled={disabled} onClick={() => update(dayOfWeek, [...windows, { open: windows.at(-1)?.close ?? "13:00", close: "17:00" }])} size="sm" type="button" variant="ghost"><Plus />{t("hours.addWindow")}</Button>
-                        ) : null}
-                      </div>
-                    ) : <span className="text-sm text-muted-foreground">{t("hours.closed")}</span>}
-                  </div>
-                  <Switch aria-label={t("hours.openOn", { day })} checked={windows.length > 0} disabled={disabled} onCheckedChange={(checked) => update(dayOfWeek, checked ? [{ open: "09:00", close: "17:00" }] : [])} />
-                </div>
-              );
-            })}
+            <WeeklyHoursEditor days={days} disabled={disabled} onChange={update} />
             <div className="flex flex-col gap-4 py-3">
               <div className="flex flex-col gap-1">
                 <span className="text-sm font-medium">{t("hours.closures.title")}</span>
@@ -310,5 +280,54 @@ export function BusinessHoursSection({ businessId, canManage }: { businessId: st
         </DialogContent>
       </Dialog>
     </section>
+  );
+}
+
+/** Weekday names in the interface language, long and short, Sunday first. */
+export function useDayNames(): [string[], string[]] {
+  const { i18n } = useTranslation("agent");
+  return useMemo(() => (["long", "short"] as const).map((weekday) => {
+    const format = new Intl.DateTimeFormat(intlLocale(i18n.language), { weekday, timeZone: "UTC" });
+    return Array.from({ length: 7 }, (_, day) => format.format(new Date(SUNDAY + day * 86_400_000)));
+  }), [i18n.language]) as [string[], string[]];
+}
+
+/** The week's windows, Monday first: a switch opens or closes each day, and a day can have up to four windows. Employees' hours use it too. */
+export function WeeklyHoursEditor({ days, disabled, onChange: update }: { days: HoursWindowInput[][]; disabled: boolean; onChange: (dayOfWeek: number, windows: HoursWindowInput[]) => void }) {
+  const { i18n, t } = useTranslation("agent");
+  const hourCycle = useTimeFormatPreference() ?? "24h";
+  const pickerLabels = { hours: t("hours.picker.hours"), minutes: t("hours.picker.minutes"), period: t("hours.picker.period") };
+  const pickerTitles = { hours: t("hours.picker.hoursTitle"), minutes: t("hours.picker.minutesTitle") };
+  const [dayNames] = useDayNames();
+  return (
+    <div className="flex flex-col">
+      {DAY_ORDER.map((dayOfWeek) => {
+        const windows = days[dayOfWeek] ?? [];
+        const day = dayNames[dayOfWeek] ?? "";
+        return (
+          <div className="flex items-start justify-between gap-4 border-b border-border py-3 last:border-b-0" key={dayOfWeek}>
+            <div className="flex min-w-0 flex-col gap-2">
+              <span className="text-sm font-medium">{day}</span>
+              {windows.length ? (
+                <div className="flex flex-col gap-2">
+                  {windows.map((window, index) => (
+                    <div className="flex items-center gap-2" key={index}>
+                      <TimePicker aria-label={t("hours.opensAt", { day })} className="w-32 min-w-0 shrink" columnLabels={pickerLabels} columnTitles={pickerTitles} disabled={disabled} hourCycle={hourCycle} locale={intlLocale(i18n.language)} onChange={(open) => update(dayOfWeek, windows.map((item, position) => (position === index ? { ...item, open } : item)))} value={window.open} />
+                      <span aria-hidden="true" className="text-muted-foreground">–</span>
+                      <TimePicker aria-label={t("hours.closesAt", { day })} className="w-32 min-w-0 shrink" columnLabels={pickerLabels} columnTitles={pickerTitles} disabled={disabled} hourCycle={hourCycle} locale={intlLocale(i18n.language)} onChange={(close) => update(dayOfWeek, windows.map((item, position) => (position === index ? { ...item, close } : item)))} value={window.close} />
+                      {windows.length > 1 ? <Button aria-label={t("hours.removeWindow")} disabled={disabled} onClick={() => update(dayOfWeek, windows.filter((_, position) => position !== index))} size="icon-sm" type="button" variant="ghost"><X /></Button> : null}
+                    </div>
+                  ))}
+                  {windows.length < MAX_WINDOWS_PER_DAY ? (
+                    <Button className="w-fit" disabled={disabled} onClick={() => update(dayOfWeek, [...windows, { open: windows.at(-1)?.close ?? "13:00", close: "17:00" }])} size="sm" type="button" variant="ghost"><Plus />{t("hours.addWindow")}</Button>
+                  ) : null}
+                </div>
+              ) : <span className="text-sm text-muted-foreground">{t("hours.closed")}</span>}
+            </div>
+            <Switch aria-label={t("hours.openOn", { day })} checked={windows.length > 0} disabled={disabled} onCheckedChange={(checked) => update(dayOfWeek, checked ? [{ open: "09:00", close: "17:00" }] : [])} />
+          </div>
+        );
+      })}
+    </div>
   );
 }

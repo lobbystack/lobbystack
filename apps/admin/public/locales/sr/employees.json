@@ -10,16 +10,16 @@
     "status": "Status",
     "statuses": {
       "working": "Radi",
-      "on_vacation": "Na odmoru",
+      "off": "Na odsustvu",
       "no_services": "Ne može se zakazati"
     },
     "statusDetail": {
       "until": "Do {{date}}",
-      "vacationFrom": "Odmor od {{date}}",
+      "offFrom": "Odsustvo od {{date}}",
       "noServices": "Nema izabranih usluga"
     },
     "statusTooltip": {
-      "vacation": "Odmor: {{dates}}",
+      "timeOff": "Odsustvo: {{dates}}",
       "noServices": "Izmenite zaposlenog i izaberite njegove usluge kako bi klijenti mogli da zakažu kod njega."
     },
     "added": "Dodato",
@@ -40,7 +40,7 @@
   "add": {
     "button": "Dodaj zaposlenog",
     "title": "Dodaj zaposlenog",
-    "description": "Sačuvajte ime, broj telefona i usluge zaposlenog.",
+    "description": "Sačuvajte podatke, usluge i raspored zaposlenog.",
     "fields": {
       "name": {
         "label": "Ime",
@@ -52,7 +52,8 @@
         "country": "Država",
         "hint": "Opciono. Pozivaoci koji traže ovog zaposlenog prebacuju se na ovaj broj; bez njega dobijaju broj za prebacivanje poziva firme.",
         "invalid": "Unesite ispravan broj telefona.",
-        "exists": "Zaposleni sa ovim brojem telefona već postoji."
+        "exists": "Zaposleni sa ovim brojem telefona već postoji.",
+        "trialLocked": "Tokom besplatne probe pozivi mogu da se prebace samo na broj mobilnog telefona koji ste potvrdili."
       },
       "services": {
         "label": "Usluge",
@@ -67,12 +68,20 @@
         "empty": "Prvo dodajte uslugu, pa izaberite koje usluge ovaj zaposleni radi.",
         "goToServices": "Idi na Usluge"
       },
-      "vacation": {
-        "label": "Odmor",
+      "hours": {
+        "label": "Isto radno vreme kao firma",
+        "hint": "Isključite da biste izabrali dane i sate kada ovaj zaposleni radi. Kod njega se zakazuje samo dok radi i dok je firma otvorena.",
+        "required": "Dodajte bar jedan radni dan."
+      },
+      "timeOff": {
+        "label": "Odsustvo",
         "hint": "Opciono. Recepcioner ne zakazuje kod ovog zaposlenog tih dana i kaže klijentima kada se vraća.",
+        "add": "Dodaj odsustvo",
         "placeholder": "Izaberite prvi i poslednji dan",
-        "dates": "Datumi odmora",
-        "required": "Izaberite prvi i poslednji dan odmora."
+        "dates": "Datumi odsustva",
+        "remove": "Ukloni odsustvo",
+        "required": "Izaberite prvi i poslednji dan svakog odsustva.",
+        "invalid": "Odsustva ne mogu da se preklapaju niti da se završe u prošlosti."
       }
     },
     "cancel": "Otkaži",
@@ -83,7 +92,7 @@
   },
   "edit": {
     "title": "Izmeni zaposlenog",
-    "description": "Ažurirajte ime, broj telefona i usluge ovog zaposlenog.",
+    "description": "Ažurirajte podatke, usluge i raspored ovog zaposlenog.",
     "save": "Sačuvaj",
     "updated": "Zaposleni je ažuriran.",
     "failed": "Ažuriranje zaposlenog nije uspelo."

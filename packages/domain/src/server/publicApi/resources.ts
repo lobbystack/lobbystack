@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, lt, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gte, isNull, lt, or, sql, type SQL } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 
 import { appointments, businessHours, businesses, calls, contacts, conversations, conversationSessions, inboxItems, knowledgeSnippets, receptionistProfiles, services, staff, staffServiceAssignments, storageObjects, transcripts, webhookEndpoints, type DatabaseTransaction } from "@lobbystack/db";
@@ -100,7 +100,7 @@ export async function loadBusinessResource(tx: DatabaseTransaction, businessId: 
   const [business] = await tx.select().from(businesses).where(eq(businesses.id, businessId)).limit(1);
   if (!business) return null;
   const [profile] = await tx.select({ bookingMode: receptionistProfiles.bookingMode }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, businessId)).limit(1);
-  const hours = await tx.select({ dayOfWeek: businessHours.dayOfWeek, openMinutes: businessHours.openMinutes, closeMinutes: businessHours.closeMinutes }).from(businessHours).where(eq(businessHours.businessId, businessId)).orderBy(asc(businessHours.dayOfWeek), asc(businessHours.openMinutes));
+  const hours = await tx.select({ dayOfWeek: businessHours.dayOfWeek, openMinutes: businessHours.openMinutes, closeMinutes: businessHours.closeMinutes }).from(businessHours).where(and(eq(businessHours.businessId, businessId), isNull(businessHours.staffId))).orderBy(asc(businessHours.dayOfWeek), asc(businessHours.openMinutes));
   return {
     id: business.id,
     name: business.name,
@@ -122,8 +122,9 @@ export async function listServiceResources(tx: DatabaseTransaction, businessId: 
   return rows.map((row) => ({ id: row.id, name: row.name, description: row.description, duration_minutes: row.durationMinutes, created_at: iso(row.createdAt), updated_at: iso(row.updatedAt) }));
 }
 
-// Staff. Booking treats a service with no assignments as open to every
-// active staff member, and a service with assignments as open only to them.
+// Staff. Booking treats a service with no assignments as open to the active
+// staff that stand for the business (not employees), and a service with
+// assignments as open only to them.
 
 export async function listStaffResources(tx: DatabaseTransaction, businessId: string): Promise<ApiStaff[]> {
   const [members, activeServices, assignments] = await Promise.all([
@@ -142,7 +143,7 @@ export async function listStaffResources(tx: DatabaseTransaction, businessId: st
     name: member.name,
     active: member.active,
     timezone: member.timezone,
-    service_ids: member.active ? activeServices.filter((service) => !assigned.get(service.id)?.size || assigned.get(service.id)!.has(member.id)).map((service) => service.id) : [],
+    service_ids: member.active ? activeServices.filter((service) => assigned.get(service.id)?.size ? assigned.get(service.id)!.has(member.id) : !member.isEmployee).map((service) => service.id) : [],
     created_at: iso(member.createdAt),
     updated_at: iso(member.updatedAt),
   }));

@@ -1,5 +1,6 @@
 "use client";
 
+import type { HoursWindow } from "@lobbystack/shared";
 import { requestJson } from "@/lib/request-json";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 
@@ -11,7 +12,7 @@ import {
   type ColumnDef,
   type PaginationState,
 } from "@tanstack/react-table";
-import { CalendarDays, ChevronDown, MoreHorizontal, Pencil, Plus, Search, Trash2, UserRound } from "lucide-react";
+import { CalendarDays, ChevronDown, MoreHorizontal, Pencil, Plus, Search, Trash2, UserRound, X } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 import { enUS, es, fr, srLatn } from "react-day-picker/locale";
 import type { Country } from "react-phone-number-input/input";
@@ -19,6 +20,7 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { toDays, useBusinessHours, useDayNames, WeeklyHoursEditor, windowsForSave, type HoursWindowInput } from "@/components/business-hours-section";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { DataTablePagination, paginationFeatures } from "@/components/data-table/pagination";
 import { DATA_TABLE_ROW_ACTIONS_CELL_CLASS, DATA_TABLE_ROW_ACTIONS_COLGROUP_CLASS, DATA_TABLE_ROW_TRAILING_VALUE_OFFSET_CLASS, DataTableRowActions } from "@/components/data-table/row-controls";
@@ -29,7 +31,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldTitle } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -40,15 +42,17 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { formatDateTime, intlLocale } from "@/lib/locale";
 import { formatPhoneNumberDisplay, getDefaultPhoneCountry, getPhoneCountryOptions, inferPhoneCountry } from "@/lib/phone";
 
-type Vacation = { startsOn: string; endsOn: string };
+type TimeOff = { startsOn: string; endsOn: string };
 
 type Employee = {
   id: string;
   name: string;
   phone: string | null;
   serviceIds: string[];
-  vacation: Vacation | null;
-  status: "working" | "on_vacation" | "no_services";
+  /** Their own working hours, or null when they work the business's. */
+  hours: HoursWindow[] | null;
+  timeOff: TimeOff[];
+  status: "working" | "off" | "no_services";
   createdAt: string;
   updatedAt: string;
 };
@@ -58,7 +62,7 @@ type ServiceOption = { id: string; name: string };
 const PICKER_TRIGGER_CLASS = "flex h-9 w-full items-center justify-between gap-1.5 rounded-4xl border border-input bg-input/30 px-3 py-2 text-sm whitespace-nowrap transition-colors outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 data-invalid:border-destructive data-invalid:ring-[3px] data-invalid:ring-destructive/20 enabled:hover:bg-input/50";
 const DAY_PICKER_LOCALES = { en: enUS, fr, es, sr: srLatn } as const;
 
-// Vacation days are calendar dates, YYYY-MM-DD, read and written in local time so they don't shift a day.
+// Time off days are calendar dates, YYYY-MM-DD, read and written in local time so they don't shift a day.
 function parseDay(day: string): Date {
   const [year, month, date] = day.split("-").map(Number);
   return new Date(year!, month! - 1, date!);
@@ -72,8 +76,8 @@ function formatDay(day: string, locale: string): string {
   return new Intl.DateTimeFormat(intlLocale(locale), { month: "short", day: "numeric" }).format(parseDay(day));
 }
 
-function formatVacation(vacation: Vacation, locale: string): string {
-  return new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: "medium" }).formatRange(parseDay(vacation.startsOn), parseDay(vacation.endsOn));
+function formatTimeOff(timeOff: TimeOff, locale: string): string {
+  return new Intl.DateTimeFormat(intlLocale(locale), { dateStyle: "medium" }).formatRange(parseDay(timeOff.startsOn), parseDay(timeOff.endsOn));
 }
 
 function errorCode(error: unknown): string | undefined {
@@ -144,14 +148,17 @@ export function LiveEmployeesSurface() {
       accessorKey: "status",
       header: () => t("table.status"),
       cell: ({ row }) => {
-        const { status, vacation } = row.original;
-        const detail = status === "on_vacation" && vacation
-          ? t("table.statusDetail.until", { date: formatDay(vacation.endsOn, locale) })
+        const { status, timeOff } = row.original;
+        // The time off going on today, or the next one.
+        const current = timeOff.find((entry) => entry.startsOn <= today && today <= entry.endsOn);
+        const next = timeOff.find((entry) => entry.startsOn > today);
+        const detail = current
+          ? t("table.statusDetail.until", { date: formatDay(current.endsOn, locale) })
           : status === "no_services" ? t("table.statusDetail.noServices")
-            : vacation ? t("table.statusDetail.vacationFrom", { date: formatDay(vacation.startsOn, locale) }) : "";
-        const tooltip = vacation ? t("table.statusTooltip.vacation", { dates: formatVacation(vacation, locale) }) : status === "no_services" ? t("table.statusTooltip.noServices") : "";
+            : next ? t("table.statusDetail.offFrom", { date: formatDay(next.startsOn, locale) }) : "";
+        const tooltip = timeOff.length ? t("table.statusTooltip.timeOff", { dates: timeOff.map((entry) => formatTimeOff(entry, locale)).join("; ") }) : status === "no_services" ? t("table.statusTooltip.noServices") : "";
         const content = <>
-          <Badge className="shrink-0" variant={status === "working" ? "secondary" : status === "on_vacation" ? "outline" : "destructive"}>{t(`table.statuses.${status}`)}</Badge>
+          <Badge className="shrink-0" variant={status === "working" ? "secondary" : status === "off" ? "outline" : "destructive"}>{t(`table.statuses.${status}`)}</Badge>
           {detail ? <span className="truncate text-sm text-muted-foreground">{detail}</span> : null}
         </>;
         return tooltip
@@ -179,7 +186,7 @@ export function LiveEmployeesSurface() {
         </DropdownMenu></DataTableRowActions>
       ),
     },
-  ], [canMutate, locale, services, t]);
+  ], [canMutate, locale, services, t, today]);
 
   const table = useTable({ features: paginationFeatures, columns, data: rows, manualPagination: true, rowCount: total, onPaginationChange: setPagination, state: { pagination } });
 
@@ -251,13 +258,13 @@ function ServicesPicker({ id, invalid, label, onChange, services, value }: { id:
   </Popover>;
 }
 
-function VacationPicker({ invalid, label, locale, onChange, today, value }: { invalid: boolean; label: string; locale: string; onChange: (value: Vacation | null) => void; today: string; value: Vacation | null }) {
+function TimeOffPicker({ invalid, label, locale, onChange, today, value }: { invalid: boolean; label: string; locale: string; onChange: (value: TimeOff | null) => void; today: string; value: TimeOff | null }) {
   const { t } = useTranslation("employees");
   const selected: DateRange | undefined = value ? { from: parseDay(value.startsOn), to: parseDay(value.endsOn) } : undefined;
-  // Turning vacation on with no dates yet goes straight to the calendar.
+  // New time off with no dates yet goes straight to the calendar.
   return <Popover defaultOpen={!value}>
     <PopoverTrigger render={<button aria-label={label} className={PICKER_TRIGGER_CLASS} data-invalid={invalid || undefined} type="button" />}>
-      <span className={value ? "min-w-0 flex-1 truncate text-left" : "min-w-0 flex-1 truncate text-left text-muted-foreground"}>{value ? formatVacation(value, locale) : t("add.fields.vacation.placeholder")}</span>
+      <span className={value ? "min-w-0 flex-1 truncate text-left" : "min-w-0 flex-1 truncate text-left text-muted-foreground"}>{value ? formatTimeOff(value, locale) : t("add.fields.timeOff.placeholder")}</span>
       <CalendarDays aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
     </PopoverTrigger>
     <PopoverContent align="start" className="w-auto p-0">
@@ -278,36 +285,46 @@ function EmployeeDialog({ businessId, employee, open, onOpenChange, services, to
   const queryClient = useQueryClient();
   const defaultCountry = getDefaultPhoneCountry(locale) as Country;
   const countries = useMemo(() => getPhoneCountryOptions(locale), [locale]);
+  const [dayNames] = useDayNames();
+  const businessHours = useBusinessHours(businessId);
   const nameId = useId();
   const phoneId = useId();
   const servicesId = useId();
-  const vacationId = useId();
+  const hoursId = useId();
+  const timeOffId = useId();
   const [name, setName] = useState("");
   const [country, setCountry] = useState<Country>(defaultCountry);
   const [phone, setPhone] = useState("");
   // What was typed, so a blank phone (allowed) can be told apart from an incomplete one.
   const [phoneDraft, setPhoneDraft] = useState("");
   const [submitted, setSubmitted] = useState(false);
-  const [phoneExists, setPhoneExists] = useState(false);
+  const [phoneProblem, setPhoneProblem] = useState<"exists" | "invalid" | "trialLocked" | null>(null);
   const [serviceIds, setServiceIds] = useState<string[]>([]);
   const [serviceInvalid, setServiceInvalid] = useState(false);
-  const [vacation, setVacation] = useState<Vacation | null>(null);
-  // Off keeps the picked dates, so turning it back on in the same dialog restores them.
-  const [vacationOn, setVacationOn] = useState(false);
+  // On: the business's hours. Off: the employee's own days and times.
+  const [sameHours, setSameHours] = useState(true);
+  const [days, setDays] = useState<HoursWindowInput[][]>(() => toDays([]));
+  // Each entry keeps its key while its dates change, so its open calendar stays open.
+  const nextTimeOffKey = useRef(0);
+  const [timeOff, setTimeOff] = useState<Array<{ key: number; value: TimeOff | null }>>([]);
+  const [timeOffInvalid, setTimeOffInvalid] = useState(false);
 
   useEffect(() => {
     if (!open) return;
-    setName(employee?.name ?? ""); setPhone(employee?.phone ?? ""); setPhoneDraft(employee?.phone ?? ""); setCountry(employee ? (inferPhoneCountry(employee.phone, defaultCountry) ?? defaultCountry) as Country : defaultCountry); setSubmitted(false); setPhoneExists(false); setServiceInvalid(false);
+    setName(employee?.name ?? ""); setPhone(employee?.phone ?? ""); setPhoneDraft(employee?.phone ?? ""); setCountry(employee ? (inferPhoneCountry(employee.phone, defaultCountry) ?? defaultCountry) as Country : defaultCountry); setSubmitted(false); setPhoneProblem(null); setServiceInvalid(false);
     // A new employee starts with every service; anyone can be narrowed down from there.
     setServiceIds(employee ? employee.serviceIds : services.map((service) => service.id));
-    setVacation(employee?.vacation ?? null);
-    setVacationOn(Boolean(employee?.vacation));
+    setSameHours(!employee?.hours);
+    setDays(toDays(employee?.hours ?? []));
+    setTimeOff((employee?.timeOff ?? []).map((value) => ({ key: nextTimeOffKey.current++, value })));
+    setTimeOffInvalid(false);
   }, [defaultCountry, employee, open, services]);
 
+  const hours = sameHours ? null : windowsForSave(days);
   const save = useMutation({
     mutationFn: () => {
       const query = `businessId=${encodeURIComponent(businessId)}`;
-      const body = JSON.stringify({ name: name.trim(), phone: phone || null, serviceIds, vacation: vacationOn ? vacation : null });
+      const body = JSON.stringify({ name: name.trim(), phone: phone || null, serviceIds, hours: hours?.ok ? hours.hours : null, timeOff: timeOff.flatMap((entry) => entry.value ? [entry.value] : []) });
       return employee
         ? requestJson(`/api/employees/${encodeURIComponent(employee.id)}?${query}`, { method: "PATCH", body })
         : requestJson(`/api/employees?${query}`, { method: "POST", body });
@@ -319,7 +336,10 @@ function EmployeeDialog({ businessId, employee, open, onOpenChange, services, to
     },
     onError: (error) => {
       const code = errorCode(error);
-      if (code === "employee_phone_exists") setPhoneExists(true);
+      if (code === "employee_phone_exists") setPhoneProblem("exists");
+      else if (code === "trial_transfer_locked") setPhoneProblem("trialLocked");
+      else if (code === "transfer_number_invalid") setPhoneProblem("invalid");
+      else if (code === "employee_time_off_invalid") setTimeOffInvalid(true);
       else if (code === "employee_service_invalid") { setServiceInvalid(true); void queryClient.invalidateQueries({ queryKey: ["employees", businessId] }); }
       else toast.error(t(employee ? "edit.failed" : "add.failed"));
     },
@@ -327,54 +347,70 @@ function EmployeeDialog({ businessId, employee, open, onOpenChange, services, to
 
   const nameMissing = submitted && !name.trim();
   const phoneIncomplete = /\d/.test(phoneDraft) && !phone;
-  const phoneError = submitted && phoneIncomplete ? t("add.fields.phone.invalid") : phoneExists ? t("add.fields.phone.exists") : null;
+  const phoneError = submitted && phoneIncomplete ? t("add.fields.phone.invalid") : phoneProblem ? t(`add.fields.phone.${phoneProblem}`) : null;
   const knownServiceIds = serviceIds.filter((id) => services.some((service) => service.id === id));
   const servicesError = submitted && !knownServiceIds.length && services.length ? t("add.fields.services.required") : serviceInvalid ? t("add.fields.services.invalid") : null;
   const servicesLabel = serviceSummary(knownServiceIds, services, t("table.allServices"));
-  const vacationMissing = submitted && vacationOn && !vacation;
+  const hoursProblem = !hours ? null : !hours.ok ? t("hours.invalid", { ns: "agent", day: dayNames[hours.dayOfWeek] }) : !hours.hours.length ? t("add.fields.hours.required") : null;
+  const hoursError = submitted ? hoursProblem : null;
+  const timeOffMissing = timeOff.some((entry) => !entry.value);
+  const timeOffError = submitted && timeOffMissing ? t("add.fields.timeOff.required") : timeOffInvalid ? t("add.fields.timeOff.invalid") : null;
   const selected = countries.find((option) => option.code === country) ?? countries[0];
+  const editTimeOff = (next: Array<{ key: number; value: TimeOff | null }>) => { setTimeOff(next); setTimeOffInvalid(false); };
 
   return <Dialog onOpenChange={onOpenChange} open={open}>
-    <DialogContent className="sm:max-w-md">
+    <DialogContent className="max-h-[calc(100svh-2rem)] grid-rows-[auto_minmax(0,1fr)] sm:max-w-md">
       <DialogHeader><DialogTitle>{t(employee ? "edit.title" : "add.title")}</DialogTitle><DialogDescription>{t(employee ? "edit.description" : "add.description")}</DialogDescription></DialogHeader>
-      <form className="flex flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); setSubmitted(true); if (!save.isPending && name.trim() && !phoneIncomplete && knownServiceIds.length && (!vacationOn || vacation)) save.mutate(); }}>
-        <FieldGroup>
-          <Field data-invalid={nameMissing || undefined}>
-            <FieldLabel htmlFor={nameId}>{t("add.fields.name.label")}</FieldLabel>
-            <Input aria-describedby={nameMissing ? `${nameId}-error` : undefined} aria-invalid={nameMissing || undefined} id={nameId} maxLength={200} onChange={(event) => setName(event.target.value)} placeholder={t("add.fields.name.placeholder")} value={name} />
-            {nameMissing ? <FieldError id={`${nameId}-error`}>{t("add.fields.name.required")}</FieldError> : null}
-          </Field>
-          <Field data-invalid={phoneError ? true : undefined}>
-            <FieldContent><FieldLabel htmlFor={phoneId}>{t("add.fields.phone.label")}</FieldLabel><FieldDescription>{t("add.fields.phone.hint")}</FieldDescription></FieldContent>
-            <div className="flex min-w-0">
-              <Select onValueChange={(value) => { if (value && value !== country) { setCountry(value as Country); setPhone(""); setPhoneDraft(""); setPhoneExists(false); } }} value={country}>
-                <SelectTrigger aria-label={t("add.fields.phone.country")} className="w-20 shrink-0 rounded-r-none px-4 font-medium text-muted-foreground" data-phone-country-prefix><span>{selected?.callingCode ?? ""}</span></SelectTrigger>
-                <SelectContent className="min-w-72"><SelectGroup>{countries.map((option) => <SelectItem key={option.code} value={option.code}><span>{option.label}</span><span className="text-muted-foreground">{option.callingCode}</span></SelectItem>)}</SelectGroup></SelectContent>
-              </Select>
-              <PhoneInput aria-describedby={phoneError ? `${phoneId}-error` : undefined} aria-invalid={phoneError ? true : undefined} className="rounded-l-none border-l-0" containerClassName="min-w-0 flex-1" country={country} id={phoneId} limitNationalDigits locale={locale} onChange={(value) => { setPhone(value ?? ""); setPhoneExists(false); }} onRawValueChange={(raw) => { setPhoneDraft(raw); if (raw.trim().startsWith("+")) { const inferred = inferPhoneCountry(raw, country); if (inferred && inferred !== country) setCountry(inferred as Country); } }} value={phone} />
-            </div>
-            {phoneError ? <FieldError id={`${phoneId}-error`}>{phoneError}</FieldError> : null}
-          </Field>
-          <Field data-invalid={servicesError ? true : undefined}>
-            <FieldContent><FieldLabel htmlFor={servicesId}>{t("add.fields.services.label")}</FieldLabel><FieldDescription>{t(services.length ? "add.fields.services.hint" : "add.fields.services.empty")}</FieldDescription></FieldContent>
-            {services.length ? (
-              <ServicesPicker id={servicesId} invalid={Boolean(servicesError)} label={servicesLabel} onChange={(value) => { setServiceIds(value); setServiceInvalid(false); }} services={services} value={knownServiceIds} />
-            ) : (
-              <Button className="w-fit" nativeButton={false} render={<Link href="/agent/services" />} variant="outline">{t("add.fields.services.goToServices")}</Button>
-            )}
-            {servicesError ? <FieldError id={`${servicesId}-error`}>{servicesError}</FieldError> : null}
-          </Field>
-          <div className="flex flex-col gap-3">
-            <Field orientation="horizontal">
-              <FieldContent><FieldLabel htmlFor={vacationId}>{t("add.fields.vacation.label")}</FieldLabel><FieldDescription>{t("add.fields.vacation.hint")}</FieldDescription></FieldContent>
-              <Switch checked={vacationOn} id={vacationId} onCheckedChange={setVacationOn} />
+      <form className="flex min-h-0 flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); setSubmitted(true); if (!save.isPending && name.trim() && !phoneIncomplete && knownServiceIds.length && !hoursProblem && !timeOffMissing) save.mutate(); }}>
+        <div className="-m-1 min-h-0 overflow-x-hidden overflow-y-auto p-1">
+          <FieldGroup>
+            <Field data-invalid={nameMissing || undefined}>
+              <FieldLabel htmlFor={nameId}>{t("add.fields.name.label")}</FieldLabel>
+              <Input aria-describedby={nameMissing ? `${nameId}-error` : undefined} aria-invalid={nameMissing || undefined} id={nameId} maxLength={200} onChange={(event) => setName(event.target.value)} placeholder={t("add.fields.name.placeholder")} value={name} />
+              {nameMissing ? <FieldError id={`${nameId}-error`}>{t("add.fields.name.required")}</FieldError> : null}
             </Field>
-            {vacationOn ? <Field data-invalid={vacationMissing || undefined}>
-              <VacationPicker invalid={vacationMissing} label={t("add.fields.vacation.dates")} locale={locale} onChange={setVacation} today={today} value={vacation} />
-              {vacationMissing ? <FieldError>{t("add.fields.vacation.required")}</FieldError> : null}
-            </Field> : null}
-          </div>
-        </FieldGroup>
+            <Field data-invalid={phoneError ? true : undefined}>
+              <FieldContent><FieldLabel htmlFor={phoneId}>{t("add.fields.phone.label")}</FieldLabel><FieldDescription>{t("add.fields.phone.hint")}</FieldDescription></FieldContent>
+              <div className="flex min-w-0">
+                <Select onValueChange={(value) => { if (value && value !== country) { setCountry(value as Country); setPhone(""); setPhoneDraft(""); setPhoneProblem(null); } }} value={country}>
+                  <SelectTrigger aria-label={t("add.fields.phone.country")} className="w-20 shrink-0 rounded-r-none px-4 font-medium text-muted-foreground" data-phone-country-prefix><span>{selected?.callingCode ?? ""}</span></SelectTrigger>
+                  <SelectContent className="min-w-72"><SelectGroup>{countries.map((option) => <SelectItem key={option.code} value={option.code}><span>{option.label}</span><span className="text-muted-foreground">{option.callingCode}</span></SelectItem>)}</SelectGroup></SelectContent>
+                </Select>
+                <PhoneInput aria-describedby={phoneError ? `${phoneId}-error` : undefined} aria-invalid={phoneError ? true : undefined} className="rounded-l-none border-l-0" containerClassName="min-w-0 flex-1" country={country} id={phoneId} limitNationalDigits locale={locale} onChange={(value) => { setPhone(value ?? ""); setPhoneProblem(null); }} onRawValueChange={(raw) => { setPhoneDraft(raw); if (raw.trim().startsWith("+")) { const inferred = inferPhoneCountry(raw, country); if (inferred && inferred !== country) setCountry(inferred as Country); } }} value={phone} />
+              </div>
+              {phoneError ? <FieldError id={`${phoneId}-error`}>{phoneError}</FieldError> : null}
+            </Field>
+            <Field data-invalid={servicesError ? true : undefined}>
+              <FieldContent><FieldLabel htmlFor={servicesId}>{t("add.fields.services.label")}</FieldLabel><FieldDescription>{t(services.length ? "add.fields.services.hint" : "add.fields.services.empty")}</FieldDescription></FieldContent>
+              {services.length ? (
+                <ServicesPicker id={servicesId} invalid={Boolean(servicesError)} label={servicesLabel} onChange={(value) => { setServiceIds(value); setServiceInvalid(false); }} services={services} value={knownServiceIds} />
+              ) : (
+                <Button className="w-fit" nativeButton={false} render={<Link href="/agent/services" />} variant="outline">{t("add.fields.services.goToServices")}</Button>
+              )}
+              {servicesError ? <FieldError id={`${servicesId}-error`}>{servicesError}</FieldError> : null}
+            </Field>
+            <div className="flex flex-col gap-3">
+              <Field orientation="horizontal">
+                <FieldContent><FieldLabel htmlFor={hoursId}>{t("add.fields.hours.label")}</FieldLabel><FieldDescription>{t("add.fields.hours.hint")}</FieldDescription></FieldContent>
+                {/* Custom hours start from the business's, so the owner only changes what differs. */}
+                <Switch checked={sameHours} id={hoursId} onCheckedChange={(checked) => { setSameHours(checked); if (!checked && !days.some((day) => day.length)) setDays(toDays(businessHours.data?.hours ?? [])); }} />
+              </Field>
+              {sameHours ? null : <Field data-invalid={hoursError ? true : undefined}>
+                <WeeklyHoursEditor days={days} disabled={save.isPending} onChange={(dayOfWeek, windows) => setDays((current) => current.map((day, index) => (index === dayOfWeek ? windows : day)))} />
+                {hoursError ? <FieldError>{hoursError}</FieldError> : null}
+              </Field>}
+            </div>
+            <Field data-invalid={timeOffError ? true : undefined}>
+              <FieldContent><FieldTitle id={timeOffId}>{t("add.fields.timeOff.label")}</FieldTitle><FieldDescription>{t("add.fields.timeOff.hint")}</FieldDescription></FieldContent>
+              {timeOff.map((entry) => <div className="flex items-center gap-2" key={entry.key}>
+                <div className="min-w-0 flex-1"><TimeOffPicker invalid={(submitted && !entry.value) || timeOffInvalid} label={t("add.fields.timeOff.dates")} locale={locale} onChange={(value) => editTimeOff(timeOff.map((item) => (item.key === entry.key ? { ...item, value } : item)))} today={today} value={entry.value} /></div>
+                <Button aria-label={t("add.fields.timeOff.remove")} onClick={() => editTimeOff(timeOff.filter((item) => item.key !== entry.key))} size="icon-sm" type="button" variant="ghost"><X /></Button>
+              </div>)}
+              <Button aria-describedby={timeOffId} className="w-fit" onClick={() => editTimeOff([...timeOff, { key: nextTimeOffKey.current++, value: null }])} size="sm" type="button" variant="outline"><Plus data-icon="inline-start" />{t("add.fields.timeOff.add")}</Button>
+              {timeOffError ? <FieldError>{timeOffError}</FieldError> : null}
+            </Field>
+          </FieldGroup>
+        </div>
         <DialogFooter><Button disabled={save.isPending} onClick={() => onOpenChange(false)} type="button" variant="outline">{t("add.cancel")}</Button><Button disabled={save.isPending || !services.length} type="submit">{save.isPending ? t("add.saving") : t(employee ? "edit.save" : "add.save")}</Button></DialogFooter>
       </form>
     </DialogContent>

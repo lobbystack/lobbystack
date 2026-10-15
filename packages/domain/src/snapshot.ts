@@ -5,6 +5,7 @@ import type {
   HoursWindow,
   KnowledgeSnippet,
   ServiceSummary,
+  SnapshotEmployee,
   TransferPolicy,
   AppointmentChangePolicy,
   BookingMode,
@@ -30,7 +31,7 @@ type SnapshotBuilderInput = {
   hours: Array<HoursWindow>;
   closures: Array<ClosureWindow>;
   services: Array<ServiceSummary>;
-  employees?: Array<{ name: string; services?: string[]; vacation?: { startsOn: string; endsOn: string } }>;
+  employees?: Array<SnapshotEmployee>;
   rules?: Array<AgentRuleSummary>;
   snippets: Array<KnowledgeSnippet>;
   knowledgeDigest?: string;

@@ -149,6 +149,8 @@ export function defaultCurrencyForTimezone(timezone: string): string {
   return "USD";
 }
 
+export type SnapshotEmployee = { name: string; services?: string[]; hours?: HoursWindow[]; timeOff?: Array<{ startsOn: string; endsOn: string }> };
+
 export type TransferPolicy = {
   mode: "never" | "always" | "on_request" | "on_urgent" | "during_business_hours";
   transferNumber?: string;
@@ -259,8 +261,13 @@ export type BusinessContextSnapshot = {
   hours: Array<HoursWindow>;
   closures: Array<ClosureWindow>;
   services: Array<ServiceSummary>;
-  /** Employees a caller can ask for by name, with the services each does and a vacation (inclusive YYYY-MM-DD days) that hasn't ended. Absent in snapshots built before employees existed. */
-  employees?: Array<{ name: string; services?: string[]; vacation?: { startsOn: string; endsOn: string } }>;
+  /**
+   * Employees a caller can ask for by name, with the services each does, their
+   * own working hours when they don't work the business's, and their time off
+   * that hasn't ended (inclusive YYYY-MM-DD days). Absent in snapshots built
+   * before employees existed.
+   */
+  employees?: Array<SnapshotEmployee>;
   rules?: Array<AgentRuleSummary>;
   knowledgeSnippets?: Array<KnowledgeSnippet>;
   contactChannels: {

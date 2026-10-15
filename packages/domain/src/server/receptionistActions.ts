@@ -1,7 +1,7 @@
 import { and, asc, eq, gt, gte, lt, ne } from "drizzle-orm";
 import { DateTime } from "luxon";
 
-import { appointments, calls, contacts, conversationSessions, receptionistProfiles, services, staff, staffServiceAssignments, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { appointments, calls, contacts, conversationSessions, receptionistProfiles, services, staffServiceAssignments, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { normalizeAppointmentChangePolicy } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
@@ -124,7 +124,7 @@ export async function bookForCaller(
   const { service, existing } = found;
   if (existing) return { ok: true, ...existing, serviceName: service.name, startsAt: input.startsAt, alreadyBooked: true };
   try {
-    const { appointmentId, staffId } = await bookAppointment(context, {
+    const { appointmentId, employeeName } = await bookAppointment(context, {
       businessId: input.businessId,
       serviceId: service.id,
       startsAt: input.startsAt,
@@ -138,8 +138,6 @@ export async function bookForCaller(
       ...(input.apiAudit ? { apiAudit: input.apiAudit } : {}),
     });
     await recordProductEventBestEffort(context, { name: "appointment.booked", businessId: input.businessId, distinctId, properties: { appointmentId, channel: input.channel, serviceId: service.id, sourceChannel: input.channel } });
-    const employeeName = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) =>
-      (await tx.select({ name: staff.name }).from(staff).where(and(eq(staff.businessId, input.businessId), eq(staff.id, staffId), eq(staff.isEmployee, true))).limit(1))[0]?.name);
     return { ok: true, appointmentId, serviceName: service.name, startsAt: input.startsAt, ...(employeeName ? { employeeName } : {}) };
   } catch (error) {
     const reason = error instanceof BookingUnavailableError ? error.reason : undefined;

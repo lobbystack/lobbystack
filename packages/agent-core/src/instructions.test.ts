@@ -251,10 +251,10 @@ describe("employees", () => {
   it("answers who works here from the employee list instead of searching or delegating, even when the business takes no bookings", () => {
     for (const bookingMode of ["instant", "off"] as const) {
       expect(buildAgentInstructions({ ...withEmployees, bookingMode }, chat)).toContain("Employees: Ana Petrović, Marko Jovanović. Answer questions about who works here from this list; don't search for it.");
-      expect(buildLiveInstructions({ ...withEmployees, bookingMode }, "voice", callStart)).toContain("Employees: Ana Petrović, Marko Jovanović. Answer questions about who works here from this list yourself, without delegating.");
+      expect(buildLiveInstructions({ ...withEmployees, bookingMode }, "voice", callStart)).toContain("Employees: Ana Petrović, Marko Jovanović. Answer questions about the employees listed yourself, without delegating.");
     }
     expect(buildAgentInstructions(demoSnapshot, chat)).not.toContain("who works here");
-    expect(buildLiveInstructions(demoSnapshot, "voice", callStart)).not.toContain("who works here");
+    expect(buildLiveInstructions(demoSnapshot, "voice", callStart)).not.toMatch(/employee/i);
   });
 
   it("lists the services each employee does, so the agent doesn't offer one for another service", () => {
@@ -264,23 +264,42 @@ describe("employees", () => {
     expect(buildLiveInstructions(withServices, "voice", callStart)).toContain(roster);
   });
 
-  it("says when an employee is away, and leaves out a vacation that has ended", () => {
-    const withVacations = { ...withEmployees, timezone: "UTC", employees: [
-      { name: "Ana Petrović", services: ["Haircut"], vacation: { startsOn: "2026-10-20", endsOn: "2026-10-24" } },
-      { name: "Marko Jovanović", services: ["Haircut"], vacation: { startsOn: "2026-10-01", endsOn: "2026-10-09" } },
+  it("says when an employee is off, and leaves out time off that has ended", () => {
+    const withTimeOff = { ...withEmployees, timezone: "UTC", employees: [
+      { name: "Ana Petrović", services: ["Haircut"], timeOff: [{ startsOn: "2026-10-20", endsOn: "2026-10-24" }, { startsOn: "2026-11-02", endsOn: "2026-11-02" }] },
+      { name: "Marko Jovanović", services: ["Haircut"], timeOff: [{ startsOn: "2026-10-01", endsOn: "2026-10-09" }] },
     ] };
     try {
       vi.useFakeTimers({ now: new Date("2026-10-12T12:00:00Z") });
-      const upcoming = buildAgentInstructions(withVacations, chat);
-      expect(upcoming).toContain("Employees: Ana Petrović (Haircut; on vacation from Tuesday, October 20 to Saturday, October 24), Marko Jovanović (Haircut).");
-      expect(upcoming).toContain("An employee can't be booked on the days of their vacation: when a caller asks for one who is away, say when they're back, and offer a later day or another employee.");
+      const upcoming = buildAgentInstructions(withTimeOff, chat);
+      expect(upcoming).toContain("Employees: Ana Petrović (Haircut; off from Tuesday, October 20 to Saturday, October 24, off from Monday, November 2 to Monday, November 2), Marko Jovanović (Haircut).");
+      expect(upcoming).toContain("An employee can't be booked while they're off: when a caller asks for one who is off, say when they're back, and offer a later day or another employee.");
       vi.setSystemTime(new Date("2026-10-21T12:00:00Z"));
-      expect(buildLiveInstructions(withVacations, "voice", callStart)).toContain("Ana Petrović (Haircut; on vacation until Saturday, October 24)");
-      vi.setSystemTime(new Date("2026-10-25T12:00:00Z"));
-      expect(buildAgentInstructions(withVacations, chat)).not.toContain("vacation");
+      expect(buildLiveInstructions(withTimeOff, "voice", callStart)).toContain("Ana Petrović (Haircut; off until Saturday, October 24, off from Monday, November 2 to Monday, November 2)");
+      vi.setSystemTime(new Date("2026-11-03T12:00:00Z"));
+      expect(buildAgentInstructions(withTimeOff, chat)).not.toContain("off ");
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("gives an employee's own working hours, and says when one does every service", () => {
+    const services = [{ id: "svc-1", name: "Colour", durationMinutes: 60 }, { id: "svc-2", name: "Haircut", durationMinutes: 30 }];
+    const withHours = { ...withEmployees, services, employees: [{ name: "Ana Petrović", services: ["Colour", "Haircut"], hours: [{ dayOfWeek: 1, openMinutes: 540, closeMinutes: 720 }, { dayOfWeek: 3, openMinutes: 780, closeMinutes: 1020 }] }, { name: "Marko Jovanović", services: ["Haircut"] }] };
+    const instructions = buildLiveInstructions(withHours, "voice", callStart);
+    expect(instructions).toContain("Employees: Ana Petrović (all services; works Monday: 9:00 AM to 12:00 PM, Wednesday: 1:00 PM to 5:00 PM), Marko Jovanović (Haircut).");
+    expect(instructions).toContain("An employee with their own working hours can only be booked inside them.");
+    expect(buildLiveInstructions(withEmployees, "voice", callStart)).not.toContain("own working hours");
+  });
+
+  it("caps GPT-Live's employee list and marks it as partial", () => {
+    const employees = Array.from({ length: 25 }, (_, index) => ({ name: `Employee ${index + 1}` }));
+    const instructions = buildLiveInstructions({ ...withEmployees, employees }, "voice", callStart);
+    expect(instructions).toContain("Employees (the first 20 of 25; delegate questions about anyone not listed): Employee 1, Employee 2,");
+    expect(instructions).toContain("Employee 20.");
+    expect(instructions).not.toContain("Employee 21");
+    // The text agent behind the call has room for all of them.
+    expect(buildAgentInstructions({ ...withEmployees, employees }, chat)).toContain("Employee 25");
   });
 
   it("leaves employee guidance out when the business has none, books nothing, or runs a demo", () => {

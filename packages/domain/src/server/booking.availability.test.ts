@@ -21,6 +21,7 @@ type TransactionConfig = {
   assignmentsAfterLock?: unknown[];
   connections?: unknown[];
   hours?: unknown[];
+  closures?: unknown[];
   appointments?: unknown[];
   contacts?: unknown[];
 };
@@ -42,6 +43,7 @@ function createRecordingTransaction(config: TransactionConfig = {}) {
       : config.assignments ?? [];
     if (table === calendarConnections) return config.connections ?? [];
     if (table === businessHours) return config.hours ?? [{ dayOfWeek: 1, openMinutes: 0, closeMinutes: 1440 }];
+    if (table === closures) return config.closures ?? [];
     if (table === appointments) return config.appointments ?? [];
     if (table === contacts) return config.contacts ?? [];
     return [];
@@ -135,14 +137,19 @@ describe("booking availability reference locking", () => {
     await expect(bookAppointment(context, input)).resolves.toMatchObject({ staffId: "staff-2" });
   });
 
-  it("doesn't book an employee on a day of their vacation, but does the day after", async () => {
-    const away = { id: "staff-2", isEmployee: true, vacationStartsOn: "2027-06-01", vacationEndsOn: "2027-06-07" };
+  it("doesn't book an employee during their time off, or outside their own hours", async () => {
+    const ana = { id: "staff-2", isEmployee: true, name: "Ana" };
     const hours = [0, 1, 2, 3, 4, 5, 6].map((dayOfWeek) => ({ dayOfWeek, openMinutes: 0, closeMinutes: 1440 }));
-    useTransaction({ hours, staffRows: [{ id: "staff-1" }, away], assignments: [{ staffId: "staff-2" }] });
-    await expect(bookAppointment(context, input)).rejects.toThrow("No staff member is available for this service.");
+    const timeOff = [{ staffId: "staff-2", startsAt: new Date("2027-06-01T00:00:00.000Z"), endsAt: new Date("2027-06-08T00:00:00.000Z"), reason: "" }];
+    useTransaction({ hours, closures: timeOff, staffRows: [{ id: "staff-1" }, ana], assignments: [{ staffId: "staff-2" }] });
+    await expect(bookAppointment(context, input)).rejects.toMatchObject({ reason: "taken", message: "No staff member is available for this service." });
 
-    useTransaction({ hours, staffRows: [{ id: "staff-1" }, away], assignments: [{ staffId: "staff-2" }] });
-    await expect(bookAppointment(context, { ...input, startsAt: "2027-06-08T15:00:00.000Z" })).resolves.toMatchObject({ staffId: "staff-2" });
+    useTransaction({ hours, closures: timeOff, staffRows: [{ id: "staff-1" }, ana], assignments: [{ staffId: "staff-2" }] });
+    await expect(bookAppointment(context, { ...input, startsAt: "2027-06-08T15:00:00.000Z" })).resolves.toMatchObject({ staffId: "staff-2", employeeName: "Ana" });
+
+    // Tuesday mornings only.
+    useTransaction({ hours: [...hours, { staffId: "staff-2", dayOfWeek: 2, openMinutes: 540, closeMinutes: 720 }], staffRows: [{ id: "staff-1" }, ana], assignments: [{ staffId: "staff-2" }] });
+    await expect(bookAppointment(context, { ...input, startsAt: "2027-06-08T15:00:00.000Z" })).rejects.toMatchObject({ reason: "taken" });
   });
 
   it("only checks the employee the caller asked for", async () => {

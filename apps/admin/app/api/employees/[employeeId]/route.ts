@@ -2,22 +2,24 @@ import { NextResponse } from "next/server";
 
 import { deleteEmployee, updateEmployee } from "@lobbystack/domain";
 import { jsonError } from "@/lib/api-helpers";
-import { employeeServiceIds, employeeVacation, optionalEmployeePhone } from "@/lib/employee-phone";
+import { employeeHours, employeeServiceIds, employeeTimeOff, optionalEmployeePhone } from "@/lib/employee-phone";
 import { operatorRoute } from "@/lib/operator-request";
 
 export const dynamic = "force-dynamic";
 
 export const PATCH = operatorRoute<{ employeeId: string }>(async ({ body, userId, businessId, domain }, { employeeId }) => {
-  const fields = body as { name?: unknown; phone?: unknown; serviceIds?: unknown; vacation?: unknown };
+  const fields = body as { name?: unknown; phone?: unknown; serviceIds?: unknown; hours?: unknown; timeOff?: unknown };
   const name = typeof fields.name === "string" ? fields.name.trim().slice(0, 200) : "";
   if (!name) return jsonError("Employee name is required.", 400, "employee_name_required");
   const phone = optionalEmployeePhone(fields.phone);
   if (phone === undefined) return jsonError("Enter a valid phone number.", 400, "employee_phone_invalid");
   const serviceIds = employeeServiceIds(fields.serviceIds);
   if (!serviceIds) return jsonError("Choose at least one service.", 400, "employee_services_required");
-  const vacation = employeeVacation(fields.vacation);
-  if (vacation === undefined) return jsonError("Choose the first and last day of the vacation.", 400, "employee_vacation_invalid");
-  const employee = await updateEmployee(domain, { userId, businessId, employeeId, name, phone, serviceIds, vacation });
+  const hours = employeeHours(fields.hours);
+  if (hours === undefined) return jsonError("Working hours are invalid.", 400, "employee_hours_invalid");
+  const timeOff = employeeTimeOff(fields.timeOff);
+  if (timeOff === undefined) return jsonError("Choose the first and last day of each time off.", 400, "employee_time_off_invalid");
+  const employee = await updateEmployee(domain, { userId, businessId, employeeId, name, phone, serviceIds, hours, timeOff });
   return employee ? NextResponse.json({ employee }) : jsonError("Employee not found.", 404);
 });
 

@@ -3,7 +3,6 @@ import { sql } from "drizzle-orm";
 import {
   bigint,
   boolean,
-  date,
   doublePrecision,
   index,
   integer,
@@ -228,9 +227,6 @@ export const staff = pgTable(
     transferNumber: text("transfer_number"),
     // Listed on the Employees page. The default staff member that stands for the business is not one.
     isEmployee: boolean("is_employee").default(false).notNull(),
-    // Inclusive dates in the business's timezone when the staff member is away. Both set or neither.
-    vacationStartsOn: date("vacation_starts_on", { mode: "string" }),
-    vacationEndsOn: date("vacation_ends_on", { mode: "string" }),
     ...legacyId,
     ...timestamps,
   },
@@ -278,13 +274,18 @@ export const businessHours = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+    // A staff member's own working hours; null for the business's. Staff without rows work the business's hours.
+    staffId: uuid("staff_id").references(() => staff.id, { onDelete: "cascade" }),
     dayOfWeek: integer("day_of_week").notNull(),
     openMinutes: integer("open_minutes").notNull(),
     closeMinutes: integer("close_minutes").notNull(),
     ...timestamps,
   },
   // A day can have several windows, such as a morning and an afternoon around a lunch break.
-  (table) => [uniqueIndex("business_hours_business_day_open_unique").on(table.businessId, table.dayOfWeek, table.openMinutes)],
+  (table) => [
+    uniqueIndex("business_hours_business_day_open_unique").on(table.businessId, table.dayOfWeek, table.openMinutes).where(sql`${table.staffId} is null`),
+    uniqueIndex("business_hours_staff_day_open_unique").on(table.staffId, table.dayOfWeek, table.openMinutes).where(sql`${table.staffId} is not null`),
+  ],
 );
 
 export const closures = pgTable(
@@ -292,6 +293,8 @@ export const closures = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+    // A staff member's time off; null for a closure of the whole business.
+    staffId: uuid("staff_id").references(() => staff.id, { onDelete: "cascade" }),
     startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
     endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
     reason: text("reason").notNull(),

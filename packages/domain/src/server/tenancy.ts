@@ -169,7 +169,7 @@ export async function updateBusinessInTransaction(
   const shift = input.currency !== undefined && before ? currencyFractionDigits(input.currency) - currencyFractionDigits(before.currency) : 0;
   if (shift) {
     const factor = sql.raw(`${10 ** Math.abs(shift)}`);
-    const rescale = (column: typeof services.priceMinor) => shift > 0 ? sql`${column} * ${factor}` : sql`round(${column}::numeric / ${factor})::bigint`;
+    const rescale = (column: typeof services.priceMinor | typeof services.priceMaxMinor) => shift > 0 ? sql`${column} * ${factor}` : sql`round(${column}::numeric / ${factor})::bigint`;
     await tx.update(services).set({ priceMinor: rescale(services.priceMinor), priceMaxMinor: rescale(services.priceMaxMinor), updatedAt: new Date() }).where(eq(services.businessId, input.businessId));
   }
   // shortcut: every staff row today is the default member that stands for the business; once staff set their own zones, update only that member.

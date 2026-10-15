@@ -108,7 +108,7 @@ export const SCHEMA_MIGRATIONS = [
   "0102_number_trial_used.sql",
   "0103_staff_employees.sql",
   "0104_employee_services.sql",
-  "0105_employee_vacation.sql",
+  "0105_staff_hours_and_time_off.sql",
   "0106_summary_regenerate_status.sql",
   "0107_service_price.sql",
 ] as const;

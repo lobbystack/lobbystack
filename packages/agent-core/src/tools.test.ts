@@ -68,19 +68,19 @@ describe("transferCall to an employee", () => {
   const ask = (employeeName: string) => ({ callerRequested: true, urgent: false, employeeName });
 
   it("transfers to the employee's own number", async () => {
-    vi.mocked(resolveEmployee).mockResolvedValueOnce({ ok: true, staffId: "staff-ana", name: "Ana Petrović", phone: "+381641234567", services: [], vacation: null });
+    vi.mocked(resolveEmployee).mockResolvedValueOnce({ ok: true, staffId: "staff-ana", name: "Ana Petrović", phone: "+381641234567", services: [], timeOff: [] });
     await expect(transferTo()(ask("Ana"), { toolCallId: "1", messages: [] })).resolves.toEqual({ ok: true, transferring: true, employeeName: "Ana Petrović" });
     expect(callControl.transfer).toHaveBeenCalledWith("+381641234567");
   });
 
   it("falls back to the business's transfer number when the employee has none", async () => {
-    vi.mocked(resolveEmployee).mockResolvedValueOnce({ ok: true, staffId: "staff-marko", name: "Marko", phone: null, services: [], vacation: null });
+    vi.mocked(resolveEmployee).mockResolvedValueOnce({ ok: true, staffId: "staff-marko", name: "Marko", phone: null, services: [], timeOff: [] });
     await expect(transferTo()(ask("Marko"), { toolCallId: "1", messages: [] })).resolves.toMatchObject({ ok: true, employeeName: "Marko" });
     expect(callControl.transfer).toHaveBeenCalledWith("+14165550199");
   });
 
   it("follows the business's transfer rules, even for an employee with a number", async () => {
-    vi.mocked(resolveEmployee).mockResolvedValue({ ok: true, staffId: "staff-ana", name: "Ana Petrović", phone: "+381641234567", services: [], vacation: null });
+    vi.mocked(resolveEmployee).mockResolvedValue({ ok: true, staffId: "staff-ana", name: "Ana Petrović", phone: "+381641234567", services: [], timeOff: [] });
     for (const transferPolicy of [{ mode: "on_request" as const }, { mode: "never" as const, transferNumber: "+14165550199" }]) {
       expect(createReceptionistTools({ domain: { db: {} as never }, channel: "voice", callControl, snapshot: { ...demoSnapshot, transferPolicy } }).transferCall).toBeUndefined();
     }
@@ -89,9 +89,9 @@ describe("transferCall to an employee", () => {
     vi.mocked(resolveEmployee).mockReset();
   });
 
-  it("doesn't transfer to an employee who is on vacation today", async () => {
-    vi.mocked(resolveEmployee).mockResolvedValueOnce({ ok: true, staffId: "staff-ana", name: "Ana Petrović", phone: "+381641234567", services: [], vacation: { startsOn: "2026-09-28", endsOn: "2026-10-09" } });
-    await expect(transferTo({ timezone: "UTC" })(ask("Ana"), { toolCallId: "1", messages: [] })).resolves.toEqual({ ok: false, reason: expect.stringContaining("Ana Petrović is on vacation until Friday, October 9.") });
+  it("doesn't transfer to an employee who is off today", async () => {
+    vi.mocked(resolveEmployee).mockResolvedValueOnce({ ok: true, staffId: "staff-ana", name: "Ana Petrović", phone: "+381641234567", services: [], timeOff: [{ startsOn: "2026-09-28", endsOn: "2026-10-09" }] });
+    await expect(transferTo({ timezone: "UTC" })(ask("Ana"), { toolCallId: "1", messages: [] })).resolves.toEqual({ ok: false, reason: expect.stringContaining("Ana Petrović is off until Friday, October 9.") });
     expect(callControl.transfer).not.toHaveBeenCalled();
   });
 
