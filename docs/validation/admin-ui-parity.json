@@ -457,6 +457,12 @@
       "comparison": "frozen-main"
     },
     {
+      "path": "/agent/employees",
+      "fixtureState": "operator",
+      "state": "default",
+      "comparison": "port-baseline"
+    },
+    {
       "path": "/agent/rules",
       "fixtureState": "operator",
       "state": "default",
