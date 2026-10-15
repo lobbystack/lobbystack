@@ -2,34 +2,48 @@ import { describe, expect, it } from "vitest";
 
 import { evenlySpacedTicks } from "./analytics-charts";
 
-const weeks = Array.from({ length: 52 }, (_, index) => `W${String(index).padStart(2, "0")}x`);
+const days = (length: number) => Array.from({ length }, (_, index) => `Sep ${String(index + 1).padStart(2, "0")}`);
 const sorted = (set: Set<number>) => [...set].sort((left, right) => left - right);
+const steps = (shown: number[]) => shown.slice(1).map((index, position) => index - shown[position]!);
+const LABEL = 6 * 7;
+const EDGE_ROOM = LABEL * 1.5 + 12;
 
 describe("evenlySpacedTicks", () => {
-  it("shows every label when they fit", () => {
-    expect(sorted(evenlySpacedTicks(["Mon", "Tue", "Wed"], 800))).toEqual([0, 1, 2]);
+  it("labels every point when they all fit", () => {
+    expect(sorted(evenlySpacedTicks(days(12), 1200))).toEqual([...days(12).keys()]);
   });
 
-  it("always labels the newest point and keeps a constant step", () => {
-    const shown = sorted(evenlySpacedTicks(weeks, 360));
-    expect(shown.at(-1)).toBe(51);
-    const steps = new Set(shown.slice(1).map((index, position) => index - shown[position]!));
-    expect(steps.size).toBe(1);
-    expect(shown.length).toBeLessThan(weeks.length);
+  it("always labels the first and newest dates, with gaps that differ by at most one point", () => {
+    for (const length of [24, 29, 30, 31, 52, 90, 365]) {
+      for (const span of [300, 600, 900]) {
+        const shown = sorted(evenlySpacedTicks(days(length), span));
+        expect(shown[0]).toBe(0);
+        expect(shown.at(-1)).toBe(length - 1);
+        expect(Math.max(...steps(shown)) - Math.min(...steps(shown))).toBeLessThanOrEqual(1);
+      }
+    }
   });
 
-  it("leaves room for edge labels that shift inward", () => {
-    const width = 360;
-    const shown = sorted(evenlySpacedTicks(weeks, width));
-    const spacing = width / (weeks.length - 1);
-    expect((shown[1]! - shown[0]!) * spacing).toBeGreaterThanOrEqual(4 * 7 * 1.5 + 12);
+  it("keeps labels apart, leaving room for the edge labels to reach inward", () => {
+    for (const length of [24, 30, 31, 90]) {
+      const spacing = 600 / (length - 1);
+      expect(Math.min(...steps(sorted(evenlySpacedTicks(days(length), 600)))) * spacing).toBeGreaterThanOrEqual(EDGE_ROOM);
+    }
+  });
+
+  it("uses one exact step when a nearby step divides the axis", () => {
+    expect(new Set(steps(sorted(evenlySpacedTicks(days(31), 900)))).size).toBe(1);
+  });
+
+  it("keeps only the newest date when the chart is too narrow for both ends", () => {
+    expect(sorted(evenlySpacedTicks(days(30), 80))).toEqual([29]);
   });
 
   it("shows more labels on wider charts", () => {
-    expect(evenlySpacedTicks(weeks, 1200).size).toBeGreaterThan(evenlySpacedTicks(weeks, 360).size);
+    expect(evenlySpacedTicks(days(52), 1200).size).toBeGreaterThan(evenlySpacedTicks(days(52), 360).size);
   });
 
   it("shows everything before the width is known", () => {
-    expect(evenlySpacedTicks(weeks, 0).size).toBe(52);
+    expect(evenlySpacedTicks(days(52), 0).size).toBe(52);
   });
 });

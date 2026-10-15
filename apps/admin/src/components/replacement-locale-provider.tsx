@@ -21,7 +21,8 @@ import { readPublicAuthSession } from "@/lib/public-auth-session";
 
 type LocaleContextValue = {
   locale: SupportedLocale;
-  setLocale: (locale: SupportedLocale) => Promise<void>;
+  /** Resolves true once the language is saved, false when the save failed and the previous one came back. */
+  setLocale: (locale: SupportedLocale) => Promise<boolean>;
   isSaving: boolean;
 };
 
@@ -148,7 +149,7 @@ export function LocaleProvider({
         const search = searchParams.size > 0 ? `?${searchParams.toString()}` : "";
         const target = `${localizePublicPath(pathname, nextLocale)}${search}${window.location.hash}`;
         router.replace(target, { scroll: false });
-        return;
+        return true;
       }
       try {
         const response = await fetch("/api/preferences/locale", {
@@ -158,6 +159,7 @@ export function LocaleProvider({
           body: JSON.stringify({ locale: nextLocale }),
         });
         if (!response.ok) throw new Error("Unable to save locale preference.");
+        return true;
       } catch {
         if (revision === preferenceRevision.current) {
           setLocaleState(previousLocale);
@@ -166,6 +168,7 @@ export function LocaleProvider({
           await i18n.changeLanguage(previousLocale);
           toast.error(i18n.t("settings:appearance.language.saveFailed"));
         }
+        return false;
       } finally {
         if (revision === preferenceRevision.current) setIsSaving(false);
       }

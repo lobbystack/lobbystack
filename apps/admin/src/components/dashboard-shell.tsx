@@ -3,22 +3,21 @@
 import Link from "next/link";
 import { requestJson } from "@/lib/request-json";
 import { usePathname, useRouter } from "next/navigation";
-import { useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Blocks,
-  BookText,
-  ChartColumnIncreasing,
-  ClipboardCheck,
-  House,
-  MessageSquareMore,
-  Phone,
-  Settings,
-  Users,
-  Workflow,
-  type LucideIcon,
-} from "lucide-react";
+import { BookTextIcon } from "@/components/ui/book-text";
+import { BlocksIcon } from "@/components/ui/blocks";
+import { ChartColumnIncreasingIcon } from "@/components/ui/chart-column-increasing";
+import { ClipboardCheckIcon } from "@/components/ui/clipboard-check";
+import { HomeIcon } from "@/components/ui/home";
+import { HandHelpingIcon } from "@/components/ui/hand-helping";
+import { IdCardIcon } from "@/components/ui/id-card";
+import { MessageSquareMoreIcon } from "@/components/ui/message-square-more";
+import { PhoneAnimatedIcon } from "@/components/ui/phone-animated";
+import { SettingsIcon } from "@/components/ui/settings";
+import { UsersIcon } from "@/components/ui/users";
+import { WorkflowIcon } from "@/components/ui/workflow";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useSignOut } from "@/hooks/use-sign-out";
 import { WorkspaceSwitcher } from "@/components/layout/workspace-switcher";
@@ -49,6 +48,7 @@ import { useOpenUpgradePlanDialog } from "./upgrade-plan-dialog-context";
 
 type DashboardShellProps = {
   children: React.ReactNode;
+  sidebarOpen?: boolean;
   user: {
     email: string;
     name: string;
@@ -58,7 +58,7 @@ type DashboardShellProps = {
 type NavigationItem = {
   href: string;
   label: string;
-  icon: LucideIcon;
+  icon: typeof HomeIcon;
 };
 
 function getSidebarDefaultOpen(): boolean {
@@ -67,7 +67,7 @@ function getSidebarDefaultOpen(): boolean {
   return value?.split("=")[1] !== "false";
 }
 
-export function DashboardShell({ children, user }: DashboardShellProps) {
+export function DashboardShell({ children, sidebarOpen, user }: DashboardShellProps) {
   const { t } = useTranslation("common");
   const pathname = usePathname();
   const contentScrollRef = useRef<HTMLElement>(null);
@@ -87,7 +87,8 @@ export function DashboardShell({ children, user }: DashboardShellProps) {
       <NumberTrialBanner />
       <SidebarProvider
         className="relative min-h-0 flex-1 overflow-hidden"
-        defaultOpen={getSidebarDefaultOpen()}
+        // The server reads the same cookie, so both renders agree on the sidebar state.
+        defaultOpen={sidebarOpen ?? getSidebarDefaultOpen()}
         style={{ "--sidebar-width": "16rem" } as React.CSSProperties}
       >
         <ReplacementSidebar user={user} />
@@ -124,22 +125,23 @@ function ReplacementSidebar({ user }: Pick<DashboardShellProps, "user">) {
   const { isMobile, setOpenMobile } = useSidebar();
   const { t } = useTranslation(["nav", "settings", "agent"]);
   const general: NavigationItem[] = [
-    { label: t("nav:items.home"), href: "/", icon: House },
-    { label: t("nav:items.calls"), href: "/calls", icon: Phone },
-    ...(["/messages", "/settings/widget"].some(route => pathname === route || pathname.startsWith(`${route}/`)) ? [{ label: t("nav:items.messages"), href: "/messages", icon: MessageSquareMore }] : []),
-    { label: t("nav:items.contacts"), href: "/contacts", icon: Users },
+    { label: t("nav:items.home"), href: "/", icon: HomeIcon },
+    { label: t("nav:items.calls"), href: "/calls", icon: PhoneAnimatedIcon },
+    ...(["/messages", "/settings/widget"].some(route => pathname === route || pathname.startsWith(`${route}/`)) ? [{ label: t("nav:items.messages"), href: "/messages", icon: MessageSquareMoreIcon }] : []),
+    { label: t("nav:items.contacts"), href: "/contacts", icon: UsersIcon },
   ];
   const receptionist: NavigationItem[] = [
-    { label: t("agent:sections.basicSettings.title"), href: "/agent", icon: ClipboardCheck },
-    { label: t("agent:sections.knowledge.title"), href: "/agent/knowledge", icon: BookText },
-    { label: t("agent:sections.services.title"), href: "/agent/services", icon: Blocks },
-    { label: t("agent:sections.rules.title"), href: "/agent/rules", icon: Workflow },
+    { label: t("agent:sections.basicSettings.title"), href: "/agent", icon: ClipboardCheckIcon },
+    { label: t("agent:sections.knowledge.title"), href: "/agent/knowledge", icon: BookTextIcon },
+    { label: t("agent:sections.services.title"), href: "/agent/services", icon: HandHelpingIcon },
+    { label: t("agent:sections.employees.title"), href: "/agent/employees", icon: IdCardIcon },
+    { label: t("agent:sections.rules.title"), href: "/agent/rules", icon: WorkflowIcon },
   ];
   const other: NavigationItem[] = [
-    { label: t("nav:items.analytics"), href: "/analytics", icon: ChartColumnIncreasing },
-    { label: t("settings:sections.integrations"), href: "/integrations", icon: Blocks },
-    { label: t("nav:items.settings"), href: "/settings/usage", icon: Settings },
-    ...(["/messages", "/settings/widget"].some(route => pathname === route || pathname.startsWith(`${route}/`)) ? [{ label: t("settings:sections.widget"), href: "/settings/widget", icon: Settings }] : []),
+    { label: t("nav:items.analytics"), href: "/analytics", icon: ChartColumnIncreasingIcon },
+    { label: t("settings:sections.integrations"), href: "/integrations", icon: BlocksIcon },
+    { label: t("nav:items.settings"), href: "/settings/usage", icon: SettingsIcon },
+    ...(["/messages", "/settings/widget"].some(route => pathname === route || pathname.startsWith(`${route}/`)) ? [{ label: t("settings:sections.widget"), href: "/settings/widget", icon: SettingsIcon }] : []),
   ];
 
   return (
@@ -161,9 +163,19 @@ function ReplacementSidebar({ user }: Pick<DashboardShellProps, "user">) {
   );
 }
 
+function AnimatedNavigationIcon({ icon: Icon, hovered }: { icon: typeof HomeIcon; hovered: boolean }) {
+  const iconRef = useRef<{ startAnimation: () => void; stopAnimation: () => void } | null>(null);
+  useEffect(() => {
+    if (hovered) iconRef.current?.startAnimation();
+    else iconRef.current?.stopAnimation();
+  }, [hovered]);
+  return <Icon ref={iconRef} className="size-4 shrink-0 [&_svg]:size-4" size={16} />;
+}
+
 function NavigationGroup({ items, pathname, title }: { items: NavigationItem[]; pathname: string; title: string }) {
   const router = useRouter();
   const { isMobile, setOpenMobile } = useSidebar();
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   return (
     <SidebarGroup>
       <SidebarGroupLabel>{title}</SidebarGroupLabel>
@@ -177,12 +189,16 @@ function NavigationGroup({ items, pathname, title }: { items: NavigationItem[]; 
           return (
             <SidebarMenuItem key={item.href}>
               <SidebarMenuButton
+                onMouseEnter={() => setHoveredItem(item.href)}
+                onMouseLeave={() => setHoveredItem(null)}
+                onFocus={() => setHoveredItem(item.href)}
+                onBlur={() => setHoveredItem(null)}
                 isActive={active}
                 {...(!isMobile ? { render: <Link href={item.href} /> } : {})}
                 tooltip={item.label}
                 onClick={() => { if (isMobile) { router.push(item.href); setOpenMobile(false); } }}
               >
-                <item.icon className="size-4 shrink-0" />
+                <AnimatedNavigationIcon icon={item.icon} hovered={hoveredItem === item.href} />
                 <span>{item.label}</span>
               </SidebarMenuButton>
             </SidebarMenuItem>

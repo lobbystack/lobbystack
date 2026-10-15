@@ -1,4 +1,4 @@
-import type { BusinessContextSnapshot } from "@lobbystack/shared";
+import { formatServicePrice, type BusinessContextSnapshot } from "@lobbystack/shared";
 import { DateTime } from "luxon";
 
 // Snapshot facts in the words the receptionist speaks them. The hours and
@@ -44,15 +44,20 @@ export function businessSummary(snapshot: Pick<BusinessContextSnapshot, "summary
   return summary && !PLACEHOLDER_SUMMARY.test(summary) ? summary : undefined;
 }
 
-export type ServiceFact = { name: string; durationMinutes: number; description?: string };
+export type ServiceFact = { name: string; durationMinutes: number; price?: string; description?: string };
 
 export function serviceFacts(snapshot: Pick<BusinessContextSnapshot, "services">): ServiceFact[] {
-  return snapshot.services.map((service) => ({ name: service.name, durationMinutes: service.durationMinutes, ...(service.description ? { description: service.description } : {}) }));
+  return snapshot.services.map((service) => ({
+    name: service.name,
+    durationMinutes: service.durationMinutes,
+    ...(service.price ? { price: formatServicePrice(service.price) } : {}),
+    ...(service.description ? { description: service.description } : {}),
+  }));
 }
 
-/** One line per service. Descriptions are dropped when the list would run past maxChars. */
+/** One line per service. Descriptions are dropped when the list would run past maxChars; prices never are. */
 export function describeServices(services: ServiceFact[], maxChars = Number.POSITIVE_INFINITY): string {
-  const line = (service: ServiceFact, withDescription: boolean) => `- ${service.name} (${service.durationMinutes} min)${withDescription && service.description ? `: ${service.description.trim()}` : ""}`;
+  const line = (service: ServiceFact, withDescription: boolean) => `- ${service.name} (${[`${service.durationMinutes} min`, service.price].filter(Boolean).join(", ")})${withDescription && service.description ? `: ${service.description.trim()}` : ""}`;
   const full = services.map((service) => line(service, true)).join("\n");
   return full.length <= maxChars ? full : services.map((service) => line(service, false)).join("\n");
 }

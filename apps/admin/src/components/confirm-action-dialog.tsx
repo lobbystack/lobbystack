@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -39,6 +39,7 @@ export function ConfirmActionDialog({
   pending = false,
   title,
 }: ConfirmActionDialogProps) {
+  const confirmRef = useRef<HTMLButtonElement>(null);
   const handleConfirm = useCallback(async () => {
     try {
       await onConfirm();
@@ -50,7 +51,7 @@ export function ConfirmActionDialog({
 
   return (
     <AlertDialog onOpenChange={onOpenChange} open={open}>
-      <AlertDialogContent>
+      <AlertDialogContent initialFocus={confirmRef} onOverlayClick={() => { if (!pending) onOpenChange(false); }}>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription className={descriptionClassName}>{description}</AlertDialogDescription>
@@ -66,6 +67,7 @@ export function ConfirmActionDialog({
             onClick={() => {
               void handleConfirm();
             }}
+            ref={confirmRef}
             type="button"
             variant={confirmVariant}
           >

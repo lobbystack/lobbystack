@@ -20,13 +20,15 @@
         "text": "Texte"
       },
       "editKnowledge": "Modifier les connaissances",
+      "deleteWebsite": { "action": "Tout supprimer", "title": "Supprimer toutes les pages de ce site ?", "description": "Toutes les pages importées depuis {{host}} seront définitivement supprimées.", "deleted": "Toutes les pages de {{host}} ont été supprimées." },
+      "toast": { "added": "Connaissance ajoutée.", "updated": "Connaissance mise à jour.", "uploaded": "Document importé. Il sera bientôt prêt.", "deleted": "Connaissance supprimée.", "enabled": "Connaissance activée.", "disabled": "Connaissance désactivée." },
       "uploadDocument": "Téléverser un document",
       "websiteImport": {
         "badge": "Site web",
         "title": "Importer un site web",
         "description": "Explorez les pages publiques de votre site web pour que votre réceptionniste puisse les utiliser comme connaissances.",
-        "submit": "Importer le site web",
-        "submitting": "Import du site web…",
+        "submit": "Importer",
+        "submitting": "Importation…",
         "success": "L'import du site web a démarré. Les pages apparaîtront ici au fur et à mesure du traitement.",
         "submitFailed": "Nous n'avons pas pu démarrer l'import du site web. Réessayez.",
         "previewPending": "Nous explorons ce site web. Les pages importées apparaîtront ici automatiquement.",
@@ -71,7 +73,7 @@
         },
         "websiteUrl": {
           "label": "URL du site web",
-          "placeholder": "https://example.com",
+          "placeholder": "example.com",
           "hint": "Utilisez la page d'accueil publique ou la section que vous voulez importer."
         },
         "title": {
@@ -87,9 +89,9 @@
           "required": "Saisissez l'information que le réceptionniste doit utiliser."
         },
         "tags": {
-          "label": "Mots-clés (optionnel)",
+          "label": "Mots-clés",
           "placeholder": "Horaires, adresse",
-          "hint": "Mots-clés séparés par des virgules pour catégoriser cette information."
+          "hint": "Facultatif. Mots-clés séparés par des virgules pour catégoriser cette information."
         }
       }
     },
@@ -99,6 +101,20 @@
       "listTitle": "Services",
       "addKnowledge": "Ajouter un service",
       "editKnowledge": "Modifier le service",
+      "edit": "Modifier",
+      "duplicate": "Dupliquer",
+      "price": {
+        "column": "Prix",
+        "from": "à partir de {{amount}}",
+        "range": "{{min}} – {{max}}",
+        "inPerson": "Fixé sur place",
+        "discounted": "{{price}} (−{{percent}} %)",
+        "none": "Non défini"
+      },
+      "duplicated": "Service dupliqué.",
+      "duplicateFailed": "Impossible de dupliquer le service.",
+      "copyName": "{{name}} (copie)",
+      "copyNameNumbered": "{{name}} (copie {{number}})",
       "uploadDocument": "Téléverser un document",
       "addKnowledgeDescription": "Ajoutez vos services, ce qu'ils incluent, à qui ils s'adressent et tout ce que votre réceptionniste devrait mentionner.",
       "editKnowledgeDescription": "Mettez a jour les details du service que votre receptionniste doit expliquer et utiliser pendant la reservation.",
@@ -107,7 +123,7 @@
       "textBadge": "Texte",
       "emptyState": "Aucun service ajouté pour le moment.",
       "unavailable": "Le catalogue de services est indisponible.",
-      "durationValue": "Rendez-vous de {{count}} min",
+      "durationValue": "Rendez-vous de {{duration}}",
       "previewPending": "Ce document est en cours de traitement.",
       "previewError": "Ce document n'a pas pu être traité.",
       "status": {
@@ -145,21 +161,53 @@
         "duration": {
           "label": "Durée",
           "placeholder": "30",
-          "hint": "Durée du rendez-vous en minutes pour vérifier les disponibilités.",
-          "required": "Saisissez un nombre entier de minutes, au moins 1."
+          "hint": "Durée du rendez-vous, pour vérifier les disponibilités.",
+          "required": "Choisissez une durée d'au moins 1 minute.",
+          "hours": "Heures",
+          "minutes": "Minutes",
+          "hoursTitle": "h",
+          "minutesTitle": "min"
+        },
+        "price": {
+          "label": "Prix",
+          "hint": "Facultatif. Le réceptionniste annonce ce prix tel quel ; laissez le montant vide et il n'en inventera pas.",
+          "placeholder": "0",
+          "amount": "Prix",
+          "lowest": "Prix minimum",
+          "highest": "Prix maximum",
+          "discount": "Remise",
+          "discountPercent": "Pourcentage de remise",
+          "discountPreview": "Les clients paient {{price}} au lieu de {{regular}}.",
+          "inPersonHint": "Le réceptionniste indique aux appelants que le prix est fixé une fois que l'entreprise connaît leurs besoins.",
+          "types": {
+            "fixed": "Fixe",
+            "from": "À partir de",
+            "range": "Entre",
+            "in_person": "Sur place"
+          },
+          "errors": {
+            "invalid": "Saisissez un prix, par exemple 3,500 ou 12.50.",
+            "rangeIncomplete": "Saisissez le prix minimum et le prix maximum.",
+            "rangeOrder": "Le prix maximum doit être supérieur au prix minimum.",
+            "discountInvalid": "Saisissez une remise de 0 à 100 %."
+          }
         },
         "active": {
           "label": "Réservable",
           "hint": "Seuls les services réservables sont proposés pendant les appels."
         },
         "tags": {
-          "label": "Mots-clés (optionnel)",
+          "label": "Mots-clés",
           "placeholder": "Consultation, nouveaux clients",
-          "hint": "Mots-clés séparés par des virgules pour catégoriser ces services."
+          "hint": "Facultatif. Mots-clés séparés par des virgules pour catégoriser ces services."
         }
       },
       "deleteTitle": "Supprimer le service ?",
       "deleteDescription": "Votre réceptionniste ne le proposera plus. Les rendez-vous passés l'affichent toujours."
+    },
+    "employees": {
+      "title": "Employés",
+      "description": "Personnes avec qui votre réceptionniste peut prendre des rendez-vous et vers qui transférer les appels."
     },
     "rules": {
       "title": "Règles",
@@ -210,9 +258,9 @@
           "required": "Décrivez ce que le réceptionniste doit faire."
         },
         "tags": {
-          "label": "Mots-clés (optionnel)",
+          "label": "Mots-clés",
           "placeholder": "Transferts, escalade",
-          "hint": "Mots-clés séparés par des virgules pour catégoriser ces règles."
+          "hint": "Facultatif. Mots-clés séparés par des virgules pour catégoriser ces règles."
         }
       }
     }
@@ -249,7 +297,11 @@
       "hint": "Ce que votre réceptionniste dit aux appelants au sujet de l'entreprise.",
       "placeholder": "Par exemple : La Clinique familiale Maple est une clinique de Toronto qui offre des examens, des vaccins et de la physiothérapie.",
       "regenerate": "Réécrire avec l'IA",
-      "regenerating": "L'IA le réécrit à partir de vos connaissances. Revenez dans une minute."
+      "regenerating": "L'IA le réécrit à partir de vos connaissances. Cela prend un instant.",
+      "rewriteCompleted": "Résumé de l'entreprise réécrit.",
+      "rewriteEmpty": "Vos connaissances ne disent pas encore ce que fait l'entreprise, le résumé n'a donc pas changé.",
+      "rewriteFailed": "Nous n'avons pas pu réécrire le résumé. Veuillez réessayer.",
+      "rewriteNeedsKnowledge": "Ajoutez d'abord des connaissances, pour que l'IA ait de quoi écrire."
     },
     "bookingPolicy": {
       "label": "Politique de réservation",
@@ -274,6 +326,8 @@
     "timezone": {
       "label": "Fuseau horaire de l’entreprise",
       "hint": "Votre réceptionniste utilise ce fuseau horaire pour vos heures d’ouverture et les créneaux qu’il propose aux clients.",
+      "search": "Rechercher un fuseau horaire...",
+      "noResults": "Aucun fuseau horaire trouvé.",
       "regions": {
         "africa": "Afrique",
         "america": "Amériques",
@@ -286,6 +340,12 @@
         "indian": "Océan Indien",
         "pacific": "Pacifique"
       }
+    },
+    "currency": {
+      "label": "Devise",
+      "hint": "La devise des prix de vos services.",
+      "search": "Rechercher une devise",
+      "noResults": "Aucune devise trouvée."
     },
     "transferNumber": {
       "label": "Numéro de transfert par défaut",
@@ -328,12 +388,13 @@
     }
   },
   "actions": {
+    "add": "Ajouter",
     "save": "Enregistrer",
     "saveChanges": "Enregistrer les modifications",
     "saving": "Enregistrement…",
-    "saved": "Modifications enregistrées",
+    "saved": "Modifications enregistrées.",
     "deleted": "Supprimé",
-    "importCancelled": "Import annulé",
+    "importCancelled": "Import annulé.",
     "moreOptions": "Plus d options",
     "delete": "Supprimer",
     "confirmDelete": "Confirmer ?",
@@ -348,6 +409,7 @@
     "retry": "Réessayer",
     "moveUp": "Monter",
     "moveDown": "Descendre",
+    "dragToReorder": "Faites glisser pour réorganiser",
     "activateEntry": "Activer l'entrée",
     "deactivateEntry": "Désactiver l'entrée",
     "upload": "Téléverser",
@@ -377,6 +439,7 @@
     "closesAt": "Heure de fermeture du {{day}}",
     "addWindow": "Ajouter des heures",
     "removeWindow": "Retirer ces heures",
+    "picker": { "hours": "Heures", "minutes": "Minutes", "period": "AM ou PM", "hoursTitle": "HH", "minutesTitle": "MM" },
     "save": "Enregistrer les heures",
     "invalid": "Vérifiez le {{day}} : chaque fermeture doit suivre son ouverture, sans chevauchement.",
     "noHoursAlert": {

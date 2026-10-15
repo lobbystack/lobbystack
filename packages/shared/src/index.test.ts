@@ -8,6 +8,7 @@ describe("defaultGreeting", () => {
       "Thanks for calling Maple Clinic. How can I help you today?",
       "Merci d'avoir appelé Maple Clinic. Comment puis-je vous aider aujourd'hui ?",
       "Gracias por llamar a Maple Clinic. ¿En qué puedo ayudarle hoy?",
+      "Hvala što ste pozvali Maple Clinic. Kako mogu da vam pomognem danas?",
       "Vielen Dank für Ihren Anruf bei Maple Clinic. Wie kann ich Ihnen heute helfen?",
       "Obrigado por ligar para Maple Clinic. Como posso ajudar você hoje?",
       "Grazie per aver chiamato Maple Clinic. Come posso aiutarla oggi?",

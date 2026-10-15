@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export { isMaintenanceMode } from "./maintenance";
-export { interfaceLocaleTags, interfaceLocales, intlLocale, isInterfaceLocale, isRuntimeLocale, normalizeInterfaceLocale, normalizeRuntimeLocale, runtimeLocales } from "./locales";
+export { interfaceLocaleTags, interfaceLocales, intlLocale, isInterfaceLocale, isRuntimeLocale, normalizeInterfaceLocale, normalizeRuntimeLocale, runtimeLocaleName, runtimeLocales } from "./locales";
 export type { InterfaceLocale, RuntimeLocale } from "./locales";
 import { interfaceLocales, runtimeLocales, type InterfaceLocale, type RuntimeLocale } from "./locales";
 export { isCertificationMode, assertCertificationRecipient, assertCertificationOperationAllowed, assertCertificationCalendar, assertCertificationBillingSandbox } from "./certification";
@@ -73,7 +73,102 @@ export type ServiceSummary = {
   localizedNames?: Partial<Record<RuntimeLocale, string>>;
   durationMinutes: number;
   description?: string;
+  price?: ServicePrice;
 };
+
+export const servicePriceTypes = ["fixed", "from", "range", "in_person"] as const;
+export type ServicePriceType = (typeof servicePriceTypes)[number];
+
+/**
+ * A service's price, in whole numbers of the currency's smallest unit: a fixed
+ * price, a starting price, a range, or set in person once the business knows
+ * the customer (no amount). discountPercent (1-100) comes off every amount.
+ */
+export type ServicePrice =
+  | { type: "fixed" | "from"; amountMinor: number; currency: string; discountPercent?: number }
+  | { type: "range"; amountMinor: number; maxAmountMinor: number; currency: string; discountPercent?: number }
+  | { type: "in_person" };
+
+/** A service's stored price columns as a price, or undefined when the business hasn't set one. */
+export function servicePriceFromColumns(row: { priceType: ServicePriceType; priceMinor: number | null; priceMaxMinor: number | null; discountPercent: number }, currency: string): ServicePrice | undefined {
+  if (row.priceType === "in_person") return { type: "in_person" };
+  if (row.priceMinor === null) return undefined;
+  const discount = row.discountPercent > 0 ? { discountPercent: row.discountPercent } : {};
+  if (row.priceType === "range") return row.priceMaxMinor === null ? undefined : { type: "range", amountMinor: row.priceMinor, maxAmountMinor: row.priceMaxMinor, currency, ...discount };
+  return { type: row.priceType, amountMinor: row.priceMinor, currency, ...discount };
+}
+
+/** An amount after a percentage discount, rounded to the currency's smallest unit. */
+export function discountedAmount(amountMinor: number, discountPercent: number): number {
+  return Math.round(amountMinor * (100 - discountPercent) / 100);
+}
+
+/** A discount from 0 to 100 percent, with at most two decimal places. */
+export function isDiscountPercent(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 100 && Math.abs(Math.round(value * 100) - value * 100) < 1e-9;
+}
+
+/** Whether a value is an ISO 4217 code Intl can format. */
+export function isCurrencyCode(value: unknown): value is string {
+  if (typeof value !== "string" || !/^[A-Z]{3}$/.test(value)) return false;
+  try {
+    new Intl.NumberFormat("en", { style: "currency", currency: value });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// ISO 4217 minor units. Not read from Intl: browsers and Node disagree (Chrome gives RSD 0 decimals, Node 2),
+// and the server and dashboard must agree on what a stored amount means.
+const ZERO_DECIMAL_CURRENCIES = new Set(["BIF", "CLP", "DJF", "GNF", "ISK", "JPY", "KMF", "KRW", "PYG", "RWF", "UGX", "UYI", "VND", "VUV", "XAF", "XOF", "XPF"]);
+const THREE_DECIMAL_CURRENCIES = new Set(["BHD", "IQD", "JOD", "KWD", "LYD", "OMR", "TND"]);
+
+/** The digits after the decimal point prices in this currency use: 2 for EUR and RSD, 0 for JPY, 3 for KWD. */
+export function currencyFractionDigits(currency: string): number {
+  if (ZERO_DECIMAL_CURRENCIES.has(currency)) return 0;
+  return THREE_DECIMAL_CURRENCIES.has(currency) ? 3 : 2;
+}
+
+export type ServicePriceLabels = { from: (amount: string) => string; range: (min: string, max: string) => string; inPerson: string; discounted: (regular: string, percent: number, discounted: string) => string };
+
+const ENGLISH_PRICE_LABELS: ServicePriceLabels = { from: (amount) => `from ${amount}`, range: (min, max) => `${min} to ${max}`, inPerson: "set in person", discounted: (regular, percent, discounted) => `${discounted} after a ${percent}% discount (regular ${regular})` };
+
+/** An amount in the currency's smallest unit, as "RSD 700" in the given locale. */
+export function formatPriceAmount(amountMinor: number, currency: string, locale = "en"): string {
+  const digits = currencyFractionDigits(currency);
+  return new Intl.NumberFormat(locale, { style: "currency", currency, currencyDisplay: "code", minimumFractionDigits: amountMinor % 10 ** digits === 0 ? 0 : digits, maximumFractionDigits: digits }).format(amountMinor / 10 ** digits).replace(/[\u00a0\u202f]/gu, " ");
+}
+
+/**
+ * "RSD 700", "from RSD 700", "RSD 700 to RSD 1,000" or "set in person", in the
+ * given locale. A discounted price gives the price after the discount, the
+ * discount and the regular price.
+ */
+export function formatServicePrice(price: ServicePrice, locale = "en", labels: ServicePriceLabels = ENGLISH_PRICE_LABELS): string {
+  if (price.type === "in_person") return labels.inPerson;
+  const describe = (percent: number) => {
+    const amount = formatPriceAmount(discountedAmount(price.amountMinor, percent), price.currency, locale);
+    if (price.type === "from") return labels.from(amount);
+    if (price.type === "range") return labels.range(amount, formatPriceAmount(discountedAmount(price.maxAmountMinor, percent), price.currency, locale));
+    return amount;
+  };
+  return price.discountPercent ? labels.discounted(describe(0), price.discountPercent, describe(price.discountPercent)) : describe(0);
+}
+
+const TIMEZONE_CURRENCIES: Record<string, string> = {
+  "Europe/Belgrade": "RSD", "Europe/London": "GBP", "Europe/Zurich": "CHF", "America/Mexico_City": "MXN",
+  "America/Toronto": "CAD", "America/Vancouver": "CAD", "America/Edmonton": "CAD", "America/Winnipeg": "CAD", "America/Halifax": "CAD", "America/St_Johns": "CAD", "America/Regina": "CAD", "America/Montreal": "CAD",
+};
+const EURO_TIMEZONES = new Set(["Europe/Paris", "Europe/Berlin", "Europe/Madrid", "Europe/Rome", "Europe/Amsterdam", "Europe/Brussels", "Europe/Vienna", "Europe/Lisbon", "Europe/Dublin", "Europe/Athens", "Europe/Helsinki", "Europe/Ljubljana", "Europe/Zagreb", "Europe/Podgorica", "Europe/Luxembourg", "Europe/Bratislava", "Europe/Tallinn", "Europe/Riga", "Europe/Vilnius", "Europe/Malta", "Atlantic/Canary"]);
+
+/** A new business's currency, from the timezone it picked. USD when the zone doesn't say. */
+export function defaultCurrencyForTimezone(timezone: string): string {
+  if (TIMEZONE_CURRENCIES[timezone]) return TIMEZONE_CURRENCIES[timezone];
+  if (EURO_TIMEZONES.has(timezone)) return "EUR";
+  if (timezone.startsWith("Australia/")) return "AUD";
+  return "USD";
+}
 
 export type TransferPolicy = {
   mode: "never" | "always" | "on_request" | "on_urgent" | "during_business_hours";
@@ -103,6 +198,7 @@ const greetings: Record<RuntimeLocale, (name: string) => string> = {
   en: (name) => `Thanks for calling ${name}. How can I help you today?`,
   fr: (name) => `Merci d'avoir appelé ${name}. Comment puis-je vous aider aujourd'hui ?`,
   es: (name) => `Gracias por llamar a ${name}. ¿En qué puedo ayudarle hoy?`,
+  sr: (name) => `Hvala što ste pozvali ${name}. Kako mogu da vam pomognem danas?`,
   de: (name) => `Vielen Dank für Ihren Anruf bei ${name}. Wie kann ich Ihnen heute helfen?`,
   pt: (name) => `Obrigado por ligar para ${name}. Como posso ajudar você hoje?`,
   it: (name) => `Grazie per aver chiamato ${name}. Come posso aiutarla oggi?`,
@@ -184,6 +280,8 @@ export type BusinessContextSnapshot = {
   hours: Array<HoursWindow>;
   closures: Array<ClosureWindow>;
   services: Array<ServiceSummary>;
+  /** Employees a caller can ask for by name, with the services each does and a vacation (inclusive YYYY-MM-DD days) that hasn't ended. Absent in snapshots built before employees existed. */
+  employees?: Array<{ name: string; services?: string[]; vacation?: { startsOn: string; endsOn: string } }>;
   rules?: Array<AgentRuleSummary>;
   knowledgeSnippets?: Array<KnowledgeSnippet>;
   contactChannels: {

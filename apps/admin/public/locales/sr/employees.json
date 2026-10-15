@@ -1,0 +1,100 @@
+{
+  "page": {
+    "searchPlaceholder": "Pretraži zaposlene..."
+  },
+  "table": {
+    "name": "Ime",
+    "phone": "Broj telefona",
+    "services": "Usluge",
+    "allServices": "Sve usluge",
+    "status": "Status",
+    "statuses": {
+      "working": "Radi",
+      "on_vacation": "Na odmoru",
+      "no_services": "Ne može se zakazati"
+    },
+    "statusDetail": {
+      "until": "Do {{date}}",
+      "vacationFrom": "Odmor od {{date}}",
+      "noServices": "Nema izabranih usluga"
+    },
+    "statusTooltip": {
+      "vacation": "Odmor: {{dates}}",
+      "noServices": "Izmenite zaposlenog i izaberite njegove usluge kako bi klijenti mogli da zakažu kod njega."
+    },
+    "added": "Dodato",
+    "empty": "Nijedan zaposleni ne odgovara pretrazi.",
+    "emptyState": "Još nema zaposlenih.",
+    "actions": {
+      "moreOptions": "Više opcija",
+      "editEmployee": "Izmeni",
+      "deleteEmployee": "Obriši",
+      "deleteTitle": "Obrisati zaposlenog?",
+      "deleteDescription": "Zaposleni će biti trajno uklonjen sa vaše kontrolne table.",
+      "deleteConfirm": "Obriši",
+      "deleteCancel": "Otkaži",
+      "deleted": "Zaposleni je obrisan.",
+      "deleteFailed": "Brisanje zaposlenog nije uspelo."
+    }
+  },
+  "add": {
+    "button": "Dodaj zaposlenog",
+    "title": "Dodaj zaposlenog",
+    "description": "Sačuvajte ime, broj telefona i usluge zaposlenog.",
+    "fields": {
+      "name": {
+        "label": "Ime",
+        "placeholder": "Marko Petrović",
+        "required": "Unesite ime zaposlenog."
+      },
+      "phone": {
+        "label": "Broj telefona",
+        "country": "Država",
+        "hint": "Opciono. Pozivaoci koji traže ovog zaposlenog prebacuju se na ovaj broj; bez njega dobijaju broj za prebacivanje poziva firme.",
+        "invalid": "Unesite ispravan broj telefona.",
+        "exists": "Zaposleni sa ovim brojem telefona već postoji."
+      },
+      "services": {
+        "label": "Usluge",
+        "hint": "Klijenti mogu da zakažu kod ovog zaposlenog samo ove usluge.",
+        "placeholder": "Izaberite usluge",
+        "search": "Pretraži usluge...",
+        "selectAll": "Izaberi sve",
+        "unselectAll": "Poništi izbor",
+        "noMatches": "Nijedna usluga ne odgovara pretrazi.",
+        "required": "Izaberite bar jednu uslugu.",
+        "invalid": "Usluga koju ste izabrali je obrisana. Proverite listu i pokušajte ponovo.",
+        "empty": "Prvo dodajte uslugu, pa izaberite koje usluge ovaj zaposleni radi.",
+        "goToServices": "Idi na Usluge"
+      },
+      "vacation": {
+        "label": "Odmor",
+        "hint": "Opciono. Recepcioner ne zakazuje kod ovog zaposlenog tih dana i kaže klijentima kada se vraća.",
+        "placeholder": "Izaberite prvi i poslednji dan",
+        "dates": "Datumi odmora",
+        "required": "Izaberite prvi i poslednji dan odmora."
+      }
+    },
+    "cancel": "Otkaži",
+    "save": "Dodaj",
+    "saving": "Čuvanje...",
+    "created": "Zaposleni je dodat.",
+    "failed": "Dodavanje zaposlenog nije uspelo."
+  },
+  "edit": {
+    "title": "Izmeni zaposlenog",
+    "description": "Ažurirajte ime, broj telefona i usluge ovog zaposlenog.",
+    "save": "Sačuvaj",
+    "updated": "Zaposleni je ažuriran.",
+    "failed": "Ažuriranje zaposlenog nije uspelo."
+  },
+  "pagination": {
+    "rowsPerPage": "Redova po stranici",
+    "pageOf": "Stranica {{page}} od {{total}}",
+    "firstPage": "Idi na prvu stranicu",
+    "previousPage": "Idi na prethodnu stranicu",
+    "nextPage": "Idi na sledeću stranicu",
+    "lastPage": "Idi na poslednju stranicu",
+    "goToPage": "Idi na stranicu {{page}}"
+  }
+}

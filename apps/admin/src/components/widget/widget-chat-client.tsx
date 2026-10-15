@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useTranslation } from "react-i18next";
-import { normalizeInterfaceLocale, type InterfaceLocale } from "@lobbystack/shared";
+import { normalizeInterfaceLocale, type InterfaceLocale, type RuntimeLocale } from "@lobbystack/shared";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,7 @@ import { useWebVoiceCall } from "@lobbystack/web-voice";
 
 type WidgetConfigPayload = {
   key: string;
-  business: { id: string; name: string; defaultLocale: "en" | "fr" };
+  business: { id: string; name: string; defaultLocale: RuntimeLocale };
   config: {
     color?: string;
     title?: string;

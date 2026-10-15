@@ -69,6 +69,13 @@ describe("model-written call summaries", () => {
     expect(normalizeCallSummaryLocale(null)).toBe("en");
   });
 
+  it("uses the Spanish and Serbian fallbacks, and English for a language the receptionist doesn't speak", () => {
+    expect(buildConversationSessionSummary({ locale: normalizeCallSummaryLocale("es-MX"), transcript: ["Hola"] })).toEqual({ kind: "summary", summary: "Resumen de la llamada: Hola" });
+    expect(buildConversationSessionSummary({ locale: normalizeCallSummaryLocale("sr-Latn"), transcript: [] })).toEqual({ kind: "summary", summary: "Glasovna interakcija je završena." });
+    expect(normalizeCallSummaryLocale("de")).toBe("de");
+    expect(normalizeCallSummaryLocale("ja")).toBe("en");
+  });
+
   it("bounds a generated summary to one short line", () => {
     const summary = sanitizeGeneratedSummary(`"${"Asked about parking. ".repeat(20)}\n"`);
     expect(summary?.length).toBeLessThanOrEqual(200);

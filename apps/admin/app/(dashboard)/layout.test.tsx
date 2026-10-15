@@ -1,7 +1,7 @@
 import type { ReactElement } from "react";
 import { expect, it, vi } from "vitest";
 
-vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
+vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => undefined }), headers: async () => new Headers() }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 vi.mock("@lobbystack/domain", () => ({ getActiveOnboardingState: async () => ({ stage: "complete" }), resolveOnboardingRoute: () => "/" }));
 vi.mock("@/lib/auth", () => ({ getSession: async () => ({ user: { id: "user", email: "owner@example.com", name: "Owner" } }) }));

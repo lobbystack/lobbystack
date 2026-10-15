@@ -9,7 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAppearancePreference } from "@/components/appearance-provider";
 import { useLocalePreference } from "@/components/replacement-locale-provider";
 import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Surface } from "@/components/ui/surface";
 import { Switch } from "@/components/ui/switch";
 import { requestJson } from "@/lib/request-json";
@@ -37,6 +37,10 @@ export default function AppearancePage() {
       const current = queryClient.getQueryData<{ businesses: Array<{ businessId: string; active: boolean }> }>(["businesses"]);
       if (selectActiveBusiness(current?.businesses)?.businessId === input.businessId) toast.error(t("appearance.telemetry.saveFailed"));
     },
+    onSuccess: (_result, input) => {
+      const current = queryClient.getQueryData<{ businesses: Array<{ businessId: string; active: boolean }> }>(["businesses"]);
+      if (selectActiveBusiness(current?.businesses)?.businessId === input.businessId) toast.success(t("appearance.saved"));
+    },
     onSettled: async (_result, _error, input) => { await queryClient.invalidateQueries({ queryKey: ["appearance-preferences", input.businessId] }); },
   });
   return (
@@ -45,11 +49,21 @@ export default function AppearancePage() {
         <Surface className="flex flex-col">
           <Item className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0" variant="default">
             <ItemContent><ItemTitle>{t("appearance.language.label")}</ItemTitle><ItemDescription>{t("appearance.language.description")}</ItemDescription></ItemContent>
-            <ItemActions className="w-full sm:w-auto"><NativeSelect aria-label={t("common:language.ariaLabel")} disabled={isLocaleSaving} className="w-full sm:w-28" onChange={(event) => void setLocale(event.target.value as SupportedLocale)} value={locale}>{SUPPORTED_LOCALES.map((option) => <NativeSelectOption key={option} lang={localeTag(option)} value={option}>{t(LOCALE_LABEL_KEYS[option])}</NativeSelectOption>)}</NativeSelect></ItemActions>
+            <ItemActions className="w-full sm:w-auto">
+              <Select disabled={isLocaleSaving} items={SUPPORTED_LOCALES.map((option) => ({ value: option, label: t(LOCALE_LABEL_KEYS[option]) }))} onValueChange={(value) => { if (value) void setLocale(value as SupportedLocale).then((saved) => { if (saved) toast.success(t("appearance.saved")); }); }} value={locale}>
+                <SelectTrigger aria-label={t("common:language.ariaLabel")} className="w-full sm:w-36"><SelectValue /></SelectTrigger>
+                <SelectContent><SelectGroup>{SUPPORTED_LOCALES.map((option) => <SelectItem key={option} lang={localeTag(option)} value={option}>{t(LOCALE_LABEL_KEYS[option])}</SelectItem>)}</SelectGroup></SelectContent>
+              </Select>
+            </ItemActions>
           </Item>
           <Item className="rounded-none border-x-0 border-t-0 border-b border-border last:border-b-0" variant="default">
             <ItemContent><ItemTitle>{t("appearance.timeFormat.label")}</ItemTitle><ItemDescription>{t("appearance.timeFormat.description")}</ItemDescription></ItemContent>
-            <ItemActions className="w-full sm:w-auto"><NativeSelect aria-label={t("appearance.timeFormat.label")} className="w-full sm:w-28" onChange={(event) => setTimeFormatPreference(event.target.value as TimeFormatPreference)} value={timeFormatPreference}><NativeSelectOption value="24h">{t("appearance.timeFormat.twentyFourHour")}</NativeSelectOption><NativeSelectOption value="ampm">{t("appearance.timeFormat.ampm")}</NativeSelectOption></NativeSelect></ItemActions>
+            <ItemActions className="w-full sm:w-auto">
+              <Select items={[{ value: "24h", label: t("appearance.timeFormat.twentyFourHour") }, { value: "ampm", label: t("appearance.timeFormat.ampm") }]} onValueChange={(value) => { if (value) { setTimeFormatPreference(value as TimeFormatPreference); toast.success(t("appearance.saved")); } }} value={timeFormatPreference}>
+                <SelectTrigger aria-label={t("appearance.timeFormat.label")} className="w-full sm:w-36"><SelectValue /></SelectTrigger>
+                <SelectContent><SelectGroup><SelectItem value="24h">{t("appearance.timeFormat.twentyFourHour")}</SelectItem><SelectItem value="ampm">{t("appearance.timeFormat.ampm")}</SelectItem></SelectGroup></SelectContent>
+              </Select>
+            </ItemActions>
           </Item>
           <Item className="rounded-none border-0" variant="default">
             <ItemContent><ItemTitle>{t("appearance.telemetry.label")}</ItemTitle><ItemDescription>{t("appearance.telemetry.description")}</ItemDescription></ItemContent>

@@ -93,6 +93,21 @@ describe("original knowledge row interactions", () => {
     await userEvent.click(within(dialog).getByRole("button", { name: "actions.delete" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/knowledge/document?businessId=business", expect.objectContaining({ method: "DELETE" })));
   });
+  it("deletes every page from a website after confirming that website", async () => {
+    const fetchMock = setup({ sourceType: "website" });
+    await userEvent.click(screen.getByRole("button", { name: "actions.moreOptions" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "sections.knowledge.deleteWebsite.action" }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(within(dialog).getByText("sections.knowledge.deleteWebsite.title")).toBeTruthy();
+    await userEvent.click(within(dialog).getByRole("button", { name: "actions.delete" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/knowledge/document?businessId=business&scope=website", expect.objectContaining({ method: "DELETE" })));
+  });
+  it("offers deleting a whole website only on website pages", async () => {
+    setup({ sourceType: "upload" });
+    await userEvent.click(screen.getByRole("button", { name: "actions.moreOptions" }));
+    await screen.findByRole("menuitem", { name: "actions.delete" });
+    expect(screen.queryByRole("menuitem", { name: "sections.knowledge.deleteWebsite.action" })).toBeNull();
+  });
   it("opens snippet rows with stored values and updates that snippet", async () => {
     const fetchMock = setup({ snippet: true }); await userEvent.click(screen.getByText("Clinic hours", { exact: true }));
     const dialog = await screen.findByRole("dialog");
@@ -148,7 +163,7 @@ describe("original knowledge row interactions", () => {
     await userEvent.click(screen.getByRole("button", { name: "sections.knowledge.addKnowledge" }));
     await userEvent.click(await screen.findByRole("menuitem", { name: "sections.knowledge.addKnowledgeOptions.upload" }));
     fireEvent.change(document.getElementById("knowledge-document-file")!, { target: { files: [new File(["hours"], "hours.txt", { type: "text/plain" })] } });
-    await userEvent.click(screen.getByRole("button", { name: "actions.save" }));
+    await userEvent.click(screen.getByRole("button", { name: "actions.upload" }));
     await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => url === "/api/uploads")).toBe(true));
     const expected = { businessId: "business", section: "knowledge", contentType: "text/plain" };
     telemetryRef.current!.expectEvent("web.knowledge.upload_started", expected);
@@ -166,7 +181,7 @@ describe("original knowledge row interactions", () => {
     await userEvent.click(screen.getByRole("button", { name: "sections.knowledge.addKnowledge" }));
     await userEvent.click(await screen.findByRole("menuitem", { name: "sections.knowledge.addKnowledgeOptions.upload" }));
     fireEvent.change(document.getElementById("knowledge-document-file")!, { target: { files: [new File(["hours"], "hours.txt", { type: "text/plain" })] } });
-    await userEvent.click(screen.getByRole("button", { name: "actions.save" }));
+    await userEvent.click(screen.getByRole("button", { name: "actions.upload" }));
     expect(await screen.findByText("sections.knowledge.uploadValidation.uploadFailed")).toBeTruthy();
     expect(captureBrowserError).toHaveBeenCalledWith(expect.objectContaining({ message: "Storage upload to uploads.example.invalid failed without a response: Failed to fetch" }));
     expect(() => telemetryRef.current!.expectEvent("web.knowledge.upload_completed", { businessId: "business" })).toThrow();

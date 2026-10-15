@@ -3,7 +3,7 @@ import { DateTime } from "luxon";
 type AppointmentFact = { startsAt: string; timezone: string };
 type ServiceFact = { name: string; slug: string; localizedNames?: Record<string, string> | null };
 function getServiceNameCandidates(service: ServiceFact): string[] {
-  return [...new Set([service.name, service.slug, service.localizedNames?.en, service.localizedNames?.fr].map(value => value?.trim()).filter((value): value is string => Boolean(value)))];
+  return [...new Set([service.name, service.slug, ...Object.values(service.localizedNames ?? {})].map(value => value?.trim()).filter((value): value is string => Boolean(value)))];
 }
 
 // Lowercase ASCII without accents, so "Émilie" compares as "emilie". NFD leaves đ alone.

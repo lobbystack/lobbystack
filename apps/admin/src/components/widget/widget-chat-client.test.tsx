@@ -41,7 +41,8 @@ describe("widget chat after a team member takes over", () => {
     await act(async () => {
       vi.advanceTimersByTime(45_000);
     });
-    expect(await screen.findByText(teamReply.content)).toBeTruthy();
+    // The poll's fetch and refetch run on real timers, which a loaded CI runner can stretch past the 1s default.
+    expect(await screen.findByText(teamReply.content, {}, { timeout: 5_000 })).toBeTruthy();
     client.clear();
   });
 });

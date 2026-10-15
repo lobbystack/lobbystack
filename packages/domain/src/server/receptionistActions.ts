@@ -1,7 +1,7 @@
 import { and, asc, eq, gt, gte, lt, ne } from "drizzle-orm";
 import { DateTime } from "luxon";
 
-import { appointments, calls, contacts, conversationSessions, receptionistProfiles, services, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { appointments, calls, contacts, conversationSessions, receptionistProfiles, services, staff, staffServiceAssignments, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { normalizeAppointmentChangePolicy } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
@@ -28,6 +28,17 @@ async function activeService(tx: DatabaseTransaction, businessId: string, servic
   return "id" in service ? rows[0] : matchServiceName(rows, service.name);
 }
 
+/** Whether a staff member is assigned a service. An unknown service counts as done, so the booking reports it instead. */
+export async function employeeDoesService(context: DomainContext, input: { businessId: string; staffId: string; serviceName: string }) {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const service = await activeService(tx, input.businessId, { name: input.serviceName });
+    if (!service) return { does: true as const };
+    const assigned = await tx.select({ staffId: staffServiceAssignments.staffId }).from(staffServiceAssignments)
+      .where(and(eq(staffServiceAssignments.businessId, input.businessId), eq(staffServiceAssignments.staffId, input.staffId), eq(staffServiceAssignments.serviceId, service.id))).limit(1);
+    return assigned.length ? { does: true as const } : { does: false as const, serviceName: service.name };
+  });
+}
+
 /** Why there's nothing to book: the business offers no such service, or the time can't be booked. */
 export type BookingRefusal = UnavailableReason | "unknown_service";
 
@@ -37,7 +48,7 @@ export type BookingRefusal = UnavailableReason | "unknown_service";
  */
 export async function findOpenings(
   context: DomainContext,
-  input: { businessId: string; serviceName: string; date: string; preferredHour24?: number; preferredMinute?: number; limit?: number; callId?: string },
+  input: { businessId: string; serviceName: string; date: string; preferredHour24?: number; preferredMinute?: number; limit?: number; callId?: string; staffId?: string },
 ) {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const service = await activeService(tx, input.businessId, { name: input.serviceName });
@@ -47,6 +58,7 @@ export async function findOpenings(
       serviceId: service.id,
       dates: [input.date],
       limit: input.limit ?? 3,
+      ...(input.staffId ? { staffId: input.staffId } : {}),
       ...(input.preferredHour24 !== undefined ? { preferredMinutes: input.preferredHour24 * 60 + (input.preferredMinute ?? 0) } : {}),
     });
     if (input.callId) await recordCallOutcomeInTransaction(tx, { businessId: input.businessId, callId: input.callId, outcome: { kind: "booking_in_progress", serviceName: service.name, startsAt: null } });
@@ -90,7 +102,7 @@ async function earlierBooking(tx: DatabaseTransaction, input: { businessId: stri
 export async function bookForCaller(
   context: DomainContext,
   input: { businessId: string; service: { id: string } | { name: string }; startsAt: string; timezone: string; contactPhone: string; contactName?: string; channel: ReceptionistChannel | "api"; callerPhone?: string; callId?: string; preferredStaffId?: string; smsConsent?: SmsConsentAnswer; apiAudit?: ApiAudit },
-): Promise<{ ok: true; appointmentId?: string; serviceName: string; startsAt: string; alreadyBooked?: true } | { ok: false; reason: BookingRefusal }> {
+): Promise<{ ok: true; appointmentId?: string; serviceName: string; startsAt: string; alreadyBooked?: true; employeeName?: string } | { ok: false; reason: BookingRefusal }> {
   const distinctId = getPostHogDistinctIdForBusinessSystem(input.businessId);
   const failed = async (reason: BookingRefusal | "unknown", serviceId?: string) => {
     // Telemetry keeps its earlier names for these refusals.
@@ -112,7 +124,7 @@ export async function bookForCaller(
   const { service, existing } = found;
   if (existing) return { ok: true, ...existing, serviceName: service.name, startsAt: input.startsAt, alreadyBooked: true };
   try {
-    const { appointmentId } = await bookAppointment(context, {
+    const { appointmentId, staffId } = await bookAppointment(context, {
       businessId: input.businessId,
       serviceId: service.id,
       startsAt: input.startsAt,
@@ -126,7 +138,9 @@ export async function bookForCaller(
       ...(input.apiAudit ? { apiAudit: input.apiAudit } : {}),
     });
     await recordProductEventBestEffort(context, { name: "appointment.booked", businessId: input.businessId, distinctId, properties: { appointmentId, channel: input.channel, serviceId: service.id, sourceChannel: input.channel } });
-    return { ok: true, appointmentId, serviceName: service.name, startsAt: input.startsAt };
+    const employeeName = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) =>
+      (await tx.select({ name: staff.name }).from(staff).where(and(eq(staff.businessId, input.businessId), eq(staff.id, staffId), eq(staff.isEmployee, true))).limit(1))[0]?.name);
+    return { ok: true, appointmentId, serviceName: service.name, startsAt: input.startsAt, ...(employeeName ? { employeeName } : {}) };
   } catch (error) {
     const reason = error instanceof BookingUnavailableError ? error.reason : undefined;
     await failed(reason ?? "unknown", service.id);

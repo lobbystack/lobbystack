@@ -60,16 +60,17 @@ test("the owner's browser zone becomes the business timezone, and AI settings ch
     // The rest of onboarding has its own journeys; the dashboard opens once it's complete.
     await database.db.update(businesses).set({ onboardingStage: "complete" }).where(eq(businesses.id, businessId));
     await page.goto("/agent");
-    const select = page.getByRole("combobox", { name: agent.fields.timezone.label, exact: true });
+    const select = page.getByLabel(agent.fields.timezone.label, { exact: true });
     await expect(select).toBeEnabled();
-    await expect(select).toHaveValue("Europe/Belgrade");
-    await expect(select.locator(`optgroup[label="${agent.fields.timezone.regions.america}"] option[value="America/Vancouver"]`)).toHaveCount(1);
+    await expect(select).toHaveText(/^Belgrade \(/);
 
     // An unsaved transfer number survives the timezone save.
     const transferNumber = page.locator("#agent-transfer-number");
     await transferNumber.pressSequentially("+14165550100");
     const savedZone = page.waitForResponse((response) => response.url().includes("/api/agent?") && response.request().method() === "PATCH");
-    await select.selectOption("America/Vancouver");
+    await select.click();
+    await page.getByPlaceholder(agent.fields.timezone.search).fill("Vancouver");
+    await page.getByRole("option", { name: /^Vancouver \(/ }).click();
     expect((await savedZone).ok()).toBe(true);
     await expect(page.getByText(agent.actions.saved, { exact: true })).toBeVisible();
     expect(await zones(businessId)).toEqual({ business: "America/Vancouver", staff: ["America/Vancouver"] });
@@ -93,7 +94,7 @@ test("the owner's browser zone becomes the business timezone, and AI settings ch
     expect(await savedTransferNumber()).toBe("+14165550199");
 
     await page.reload();
-    await expect(select).toHaveValue("America/Vancouver");
+    await expect(select).toHaveText(/^Vancouver \(/);
 
     // The API refuses offsets and names that aren't IANA zones, and keeps the saved zone.
     for (const timezone of ["+05:00", "Eastern"]) {

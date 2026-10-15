@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Combobox as ComboboxPrimitive } from "@base-ui/react"
+import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox"
 import { cn } from "@/lib/utils"
 
 import { Button } from "@/components/ui/button"
@@ -11,8 +11,9 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from "@/components/ui/input-group"
-import { CheckIcon, ChevronDownIcon, XIcon } from "lucide-react"
+import { ChevronDownIcon, XIcon, CheckIcon } from "lucide-react"
 
+import { Spinner } from "@/components/ui/spinner"
 const Combobox = ComboboxPrimitive.Root
 
 function ComboboxValue({ ...props }: ComboboxPrimitive.Value.Props) {
@@ -21,19 +22,22 @@ function ComboboxValue({ ...props }: ComboboxPrimitive.Value.Props) {
 
 function ComboboxTrigger({
   className,
+  loading = false,
   children,
   ...props
-}: ComboboxPrimitive.Trigger.Props) {
+}: ComboboxPrimitive.Trigger.Props & {
+  /** Swaps the chevron for a spinner; pair it with `disabled` on the Combobox while a change saves. */
+  loading?: boolean
+}) {
   return (
     <ComboboxPrimitive.Trigger
+      aria-busy={loading || undefined}
       data-slot="combobox-trigger"
-      className={cn("[&_svg:not([class*='size-'])]:size-4", className)}
+      className={cn("aria-busy:disabled:cursor-progress aria-busy:disabled:opacity-100 [&_svg:not([class*='size-'])]:size-4", className)}
       {...props}
     >
       {children}
-      <ChevronDownIcon
-        className="pointer-events-none size-4 text-muted-foreground"
-      />
+      {loading ? <Spinner aria-hidden className="size-4 text-muted-foreground" /> : <ChevronDownIcon className="pointer-events-none size-4 text-muted-foreground" />}
     </ComboboxPrimitive.Trigger>
   )
 }
@@ -46,9 +50,7 @@ function ComboboxClear({ className, ...props }: ComboboxPrimitive.Clear.Props) {
       className={cn(className)}
       {...props}
     >
-      <XIcon
-        className="pointer-events-none"
-      />
+      <XIcon className="pointer-events-none" />
     </ComboboxPrimitive.Clear>
   )
 }
@@ -114,10 +116,7 @@ function ComboboxContent({
         <ComboboxPrimitive.Popup
           data-slot="combobox-content"
           data-chips={!!anchor}
-          className={cn(
-            "cn-menu-target cn-menu-translucent group/combobox-content relative max-h-(--available-height) w-(--anchor-width) max-w-(--available-width) min-w-[calc(var(--anchor-width)+--spacing(7))] origin-(--transform-origin) overflow-hidden rounded-2xl bg-popover text-popover-foreground shadow-2xl ring-1 ring-foreground/5 duration-100 data-[chips=true]:min-w-(--anchor-width) data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 *:data-[slot=input-group]:m-1 *:data-[slot=input-group]:mb-0 *:data-[slot=input-group]:h-9 *:data-[slot=input-group]:border-none *:data-[slot=input-group]:bg-input/30 *:data-[slot=input-group]:shadow-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
-            className
-          )}
+          className={cn("group/combobox-content relative max-h-(--available-height) w-(--anchor-width) max-w-(--available-width) min-w-[calc(var(--anchor-width)+--spacing(7))] origin-(--transform-origin) overflow-hidden rounded-2xl bg-popover text-popover-foreground shadow-2xl ring-1 ring-foreground/5 duration-100 data-[chips=true]:min-w-(--anchor-width) data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 *:data-[slot=input-group]:m-1 *:data-[slot=input-group]:mb-0 *:data-[slot=input-group]:h-9 *:data-[slot=input-group]:border-none *:data-[slot=input-group]:bg-input/30 *:data-[slot=input-group]:shadow-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95", className )}
           {...props}
         />
       </ComboboxPrimitive.Positioner>
@@ -158,9 +157,7 @@ function ComboboxItem({
           <span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center" />
         }
       >
-        <CheckIcon
-          className="pointer-events-none"
-        />
+        <CheckIcon className="pointer-events-none" />
       </ComboboxPrimitive.ItemIndicator>
     </ComboboxPrimitive.Item>
   )
@@ -230,7 +227,7 @@ function ComboboxChips({
     <ComboboxPrimitive.Chips
       data-slot="combobox-chips"
       className={cn(
-        "flex min-h-9 flex-wrap items-center gap-1.5 rounded-4xl border border-input bg-input/30 bg-clip-padding px-2.5 py-1.5 text-sm transition-colors focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50 has-aria-invalid:border-destructive has-aria-invalid:ring-[3px] has-aria-invalid:ring-destructive/20 has-data-[slot=combobox-chip]:px-1.5 dark:has-aria-invalid:border-destructive/50 dark:has-aria-invalid:ring-destructive/40",
+        "flex min-h-9 flex-wrap items-center gap-1.5 rounded-4xl border border-input bg-input/30 bg-clip-padding px-2.5 py-1.5 text-sm transition-colors hover:bg-input/50 focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50 has-aria-invalid:border-destructive has-aria-invalid:ring-[3px] has-aria-invalid:ring-destructive/20 has-data-[slot=combobox-chip]:px-1.5 dark:has-aria-invalid:border-destructive/50 dark:has-aria-invalid:ring-destructive/40",
         className
       )}
       {...props}
@@ -262,9 +259,7 @@ function ComboboxChip({
           className="-ml-1 opacity-50 hover:opacity-100"
           data-slot="combobox-chip-remove"
         >
-          <XIcon
-            className="pointer-events-none"
-          />
+          <XIcon className="pointer-events-none" />
         </ComboboxPrimitive.ChipRemove>
       )}
     </ComboboxPrimitive.Chip>

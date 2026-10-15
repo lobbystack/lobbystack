@@ -20,13 +20,15 @@
         "text": "Texto"
       },
       "editKnowledge": "Editar conocimiento",
+      "deleteWebsite": { "action": "Eliminar todo", "title": "¿Eliminar todas las páginas de este sitio?", "description": "Se eliminarán de forma permanente todas las páginas importadas de {{host}}.", "deleted": "Se eliminaron todas las páginas de {{host}}." },
+      "toast": { "added": "Conocimiento añadido.", "updated": "Conocimiento actualizado.", "uploaded": "Documento subido. Estará listo en breve.", "deleted": "Conocimiento eliminado.", "enabled": "Conocimiento activado.", "disabled": "Conocimiento desactivado." },
       "uploadDocument": "Subir documento",
       "websiteImport": {
         "badge": "Sitio web",
         "title": "Importar sitio web",
         "description": "Rastree las páginas públicas de su sitio web para que su recepcionista pueda usarlas como conocimiento.",
-        "submit": "Importar sitio web",
-        "submitting": "Importando sitio web…",
+        "submit": "Importar",
+        "submitting": "Importando…",
         "success": "La importación del sitio web ha comenzado. Las páginas aparecerán aquí a medida que terminen de procesarse.",
         "submitFailed": "No pudimos iniciar la importación del sitio web. Inténtelo de nuevo.",
         "previewPending": "Estamos rastreando este sitio web. Las páginas importadas aparecerán aquí automáticamente.",
@@ -71,7 +73,7 @@
         },
         "websiteUrl": {
           "label": "URL del sitio web",
-          "placeholder": "https://example.com",
+          "placeholder": "example.com",
           "hint": "Use la página de inicio pública o la sección que desea importar."
         },
         "title": {
@@ -87,9 +89,9 @@
           "required": "Escriba la información que debe usar la recepcionista."
         },
         "tags": {
-          "label": "Etiquetas (opcional)",
+          "label": "Etiquetas",
           "placeholder": "Horario, ubicación",
-          "hint": "Palabras clave separadas por comas para clasificar este conocimiento."
+          "hint": "Opcional. Palabras clave separadas por comas para clasificar este conocimiento."
         }
       }
     },
@@ -99,6 +101,20 @@
       "listTitle": "Servicios",
       "addKnowledge": "Añadir servicio",
       "editKnowledge": "Editar servicio",
+      "edit": "Editar",
+      "duplicate": "Duplicar",
+      "price": {
+        "column": "Precio",
+        "from": "desde {{amount}}",
+        "range": "{{min}} – {{max}}",
+        "inPerson": "Se fija en persona",
+        "discounted": "{{price}} (−{{percent}} %)",
+        "none": "Sin definir"
+      },
+      "duplicated": "Servicio duplicado.",
+      "duplicateFailed": "No se pudo duplicar el servicio.",
+      "copyName": "{{name}} (copia)",
+      "copyNameNumbered": "{{name}} (copia {{number}})",
       "uploadDocument": "Subir documento",
       "addKnowledgeDescription": "Añada sus servicios, qué incluyen, para quién son y cualquier cosa que su recepcionista deba mencionar.",
       "editKnowledgeDescription": "Actualice los detalles del servicio que su recepcionista debe mencionar y usar al reservar.",
@@ -107,7 +123,7 @@
       "textBadge": "Texto",
       "emptyState": "Aún no ha añadido servicios.",
       "unavailable": "El catálogo de servicios no está disponible.",
-      "durationValue": "Cita de {{count}} min",
+      "durationValue": "Cita de {{duration}}",
       "previewPending": "Este documento se está procesando.",
       "previewError": "No se pudo procesar este documento.",
       "status": {
@@ -145,21 +161,53 @@
         "duration": {
           "label": "Duración",
           "placeholder": "30",
-          "hint": "Duración de la cita en minutos, para comprobar la disponibilidad.",
-          "required": "Escriba un número entero de minutos, al menos 1."
+          "hint": "Duración de la cita, para comprobar la disponibilidad.",
+          "required": "Elija una duración de al menos 1 minuto.",
+          "hours": "Horas",
+          "minutes": "Minutos",
+          "hoursTitle": "h",
+          "minutesTitle": "min"
+        },
+        "price": {
+          "label": "Precio",
+          "hint": "Opcional. La recepcionista dice este precio tal cual; si deja el importe vacío, no se inventará uno.",
+          "placeholder": "0",
+          "amount": "Precio",
+          "lowest": "Precio mínimo",
+          "highest": "Precio máximo",
+          "discount": "Descuento",
+          "discountPercent": "Porcentaje de descuento",
+          "discountPreview": "Los clientes pagan {{price}} en lugar de {{regular}}.",
+          "inPersonHint": "La recepcionista dice a quien llama que el precio se fija cuando el negocio sabe lo que necesita.",
+          "types": {
+            "fixed": "Fijo",
+            "from": "Desde",
+            "range": "Entre",
+            "in_person": "En persona"
+          },
+          "errors": {
+            "invalid": "Escriba un precio, por ejemplo 3,500 o 12.50.",
+            "rangeIncomplete": "Escriba el precio mínimo y el máximo.",
+            "rangeOrder": "El precio máximo debe ser mayor que el mínimo.",
+            "discountInvalid": "Escriba un descuento de 0 a 100 %."
+          }
         },
         "active": {
           "label": "Reservable",
           "hint": "Durante las llamadas solo se ofrecen los servicios reservables."
         },
         "tags": {
-          "label": "Etiquetas (opcional)",
+          "label": "Etiquetas",
           "placeholder": "Consulta, clientes nuevos",
-          "hint": "Palabras clave separadas por comas para clasificar estos servicios."
+          "hint": "Opcional. Palabras clave separadas por comas para clasificar estos servicios."
         }
       },
       "deleteTitle": "¿Eliminar el servicio?",
       "deleteDescription": "Su recepcionista dejará de ofrecerlo. Las citas pasadas lo siguen mostrando."
+    },
+    "employees": {
+      "title": "Empleados",
+      "description": "Personas con las que su recepcionista puede reservar citas y a las que puede transferir llamadas."
     },
     "rules": {
       "title": "Reglas",
@@ -210,9 +258,9 @@
           "required": "Describa lo que debe hacer la recepcionista."
         },
         "tags": {
-          "label": "Etiquetas (opcional)",
+          "label": "Etiquetas",
           "placeholder": "Transferencias, escalado",
-          "hint": "Palabras clave separadas por comas para clasificar estas reglas."
+          "hint": "Opcional. Palabras clave separadas por comas para clasificar estas reglas."
         }
       }
     }
@@ -249,7 +297,11 @@
       "hint": "Lo que su recepcionista dice a quienes llaman sobre el negocio.",
       "placeholder": "Por ejemplo: Clínica Familiar Maple es una clínica de Toronto que ofrece chequeos, vacunas y fisioterapia.",
       "regenerate": "Reescribir con IA",
-      "regenerating": "La IA lo está reescribiendo a partir de su conocimiento. Vuelva en un minuto."
+      "regenerating": "La IA lo está reescribiendo a partir de su conocimiento. Tardará un momento.",
+      "rewriteCompleted": "Resumen del negocio reescrito.",
+      "rewriteEmpty": "Su conocimiento aún no dice a qué se dedica el negocio, así que el resumen no cambió.",
+      "rewriteFailed": "No pudimos reescribir el resumen. Inténtelo de nuevo.",
+      "rewriteNeedsKnowledge": "Añada conocimiento primero, para que la IA tenga de dónde escribir."
     },
     "bookingPolicy": {
       "label": "Política de reservas",
@@ -274,6 +326,8 @@
     "timezone": {
       "label": "Zona horaria del negocio",
       "hint": "Su recepcionista usa esta zona horaria para su horario de atención y los horarios de citas que ofrece a los clientes.",
+      "search": "Buscar zonas horarias...",
+      "noResults": "No se encontraron zonas horarias.",
       "regions": {
         "africa": "África",
         "america": "América",
@@ -286,6 +340,12 @@
         "indian": "Océano Índico",
         "pacific": "Pacífico"
       }
+    },
+    "currency": {
+      "label": "Moneda",
+      "hint": "La moneda de los precios de sus servicios.",
+      "search": "Buscar moneda",
+      "noResults": "No se encontraron monedas."
     },
     "transferNumber": {
       "label": "Número de transferencia predeterminado",
@@ -328,12 +388,13 @@
     }
   },
   "actions": {
+    "add": "Añadir",
     "save": "Guardar",
     "saveChanges": "Guardar cambios",
     "saving": "Guardando…",
-    "saved": "Cambios guardados",
+    "saved": "Cambios guardados.",
     "deleted": "Eliminado",
-    "importCancelled": "Importación cancelada",
+    "importCancelled": "Importación cancelada.",
     "moreOptions": "Más opciones",
     "delete": "Eliminar",
     "confirmDelete": "¿Confirmar?",
@@ -348,6 +409,7 @@
     "retry": "Reintentar",
     "moveUp": "Subir",
     "moveDown": "Bajar",
+    "dragToReorder": "Arrastre para reordenar",
     "activateEntry": "Activar entrada",
     "deactivateEntry": "Desactivar entrada",
     "upload": "Subir",
@@ -377,6 +439,7 @@
     "closesAt": "Hora de cierre del {{day}}",
     "addWindow": "Agregar horario",
     "removeWindow": "Quitar este horario",
+    "picker": { "hours": "Horas", "minutes": "Minutos", "period": "a. m. o p. m.", "hoursTitle": "HH", "minutesTitle": "MM" },
     "save": "Guardar horario",
     "invalid": "Revise el {{day}}: cada hora de cierre debe ir después de su apertura, sin superponerse.",
     "noHoursAlert": {

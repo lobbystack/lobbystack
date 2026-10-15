@@ -40,11 +40,12 @@ function AlertDialogOverlay({
 function AlertDialogContent({
   className,
   children,
+  onOverlayClick,
   ...props
-}: AlertDialogPrimitive.Popup.Props) {
+}: AlertDialogPrimitive.Popup.Props & { onOverlayClick?: () => void }) {
   return (
     <AlertDialogPortal>
-      <AlertDialogOverlay />
+      <AlertDialogOverlay onClick={onOverlayClick} />
       <AlertDialogPrimitive.Popup
         data-slot="alert-dialog-content"
         className={cn(

@@ -81,6 +81,14 @@ const SAVE_TEXT_ANSWER = "Whenever the caller says whether they want texts, save
 const BOOKING_TEXT_GUIDANCE = "On a phone call, findAvailability returns smsConsentOnFile, the caller's earlier answer about texts from this business. When it's not_asked, or missing, ask together with the time you offer, in the language of the call: \"Can I text this number with your appointment confirmation and reminder? Message and data rates may apply. Reply STOP to opt out or HELP for help.\" When it's subscribed, don't ask: tell the caller they'll get a confirmation text. When it's declined or opted_out, don't ask and don't mention texts.";
 const CANCELLATION_TEXT_GUIDANCE = "Once verifyAppointmentForChange or verifyAppointmentChangeOtp verifies a cancellation, its result has smsConsentOnFile. When it's not_asked, ask once, together with the final confirmation and in the language of the call: \"Can I text this number to confirm the cancellation? Message and data rates may apply. Reply STOP to opt out or HELP for help.\" When it's subscribed, don't ask: tell the caller they'll get a text confirming the cancellation. When it's declined or opted_out, don't ask and don't mention texts.";
 
+function employeeGuidance(snapshot: BusinessContextSnapshot, booking: BookingMode): string {
+  if (!snapshot.employees?.length || booking === "off") return "";
+  const names = snapshot.employees.map((employee) => employee.name).join(", ");
+  return booking === "instant"
+    ? `Callers can book with a specific employee: ${names}. Before you look up open times, ask whether the caller would like a specific employee, unless they already said. If they name one, pass that name as employeeName to findAvailability and bookAppointment. If they have no preference, leave employeeName out and whoever is available first gets the appointment. When bookAppointment's result names an employee, tell the caller who they're booked with.`
+    : `Callers can ask for a specific employee: ${names}. Ask whether the caller would like one, and include their choice in the request's notes.`;
+}
+
 /**
  * Which tools the agent gets on a conversation, what its instructions say
  * about them, and what GPT-Live hears the backend can do. Every place that
@@ -134,6 +142,7 @@ export function receptionistCapabilities(snapshot: BusinessContextSnapshot, conv
       intakeOnly
         ? "This is a demo of the receptionist. Answer questions and take messages only. Don't book or check appointments, don't transfer the call, and don't promise texts or emails."
         : BOOKING_GUIDANCE[booking],
+      employeeGuidance(snapshot, booking),
       // A phone call can come from another number than the booking's, and
       // callers must not hang up thinking it's done.
       !offered.requestAppointmentCancellation
@@ -158,6 +167,9 @@ export function receptionistCapabilities(snapshot: BusinessContextSnapshot, conv
         : "",
       // Once, for the booking and the cancellation question alike.
       offered.recordTextPreference ? SAVE_TEXT_ANSWER : "",
+      offered.transferCall && phone && snapshot.employees?.length
+        ? "When the caller asks to speak with a specific employee, pass that employee's name as employeeName to transferCall."
+        : "",
       // The voice model says goodbye once it hears the call is ending, and a
       // reply here would be a second one.
       offered.endCall
@@ -176,7 +188,11 @@ export function receptionistCapabilities(snapshot: BusinessContextSnapshot, conv
           ? `- Appointment changes: ${changeVerbs} an appointment when the call comes from the phone number it was booked with. ${cancels ? "When it can't find or verify the appointment, as on a call from another number, the backend passes a cancellation request to the team, and the appointment stays booked until the team cancels it." : "The backend passes a cancellation request to the team, and the appointment stays booked until the team cancels it."}`
           : "- Appointment cancellations: the backend passes a cancellation request to the team. The appointment stays booked until the team cancels it.",
       "- Messages: take a message for the team.",
-      phone && transfers ? "- Transfers: connect the caller to a person when the business allows it." : "",
+      phone && transfers
+        ? snapshot.employees?.length
+          ? "- Transfers: connect the caller to a person, or to an employee they ask for by name, when the business allows it."
+          : "- Transfers: connect the caller to a person when the business allows it."
+        : "",
       "- Ending the call: hang up when the caller is done, or on a spam or abusive call.",
     ].filter(Boolean),
   };

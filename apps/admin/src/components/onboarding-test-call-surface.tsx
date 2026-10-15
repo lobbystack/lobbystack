@@ -49,7 +49,7 @@ export function OnboardingTestCallSurface() {
       {/* The same call as the dashboard's test call: the owner's login authorizes it, and it counts as heard. */}
       {business ? (
         <AuraVoiceDemo
-          auraTone={resolvedTheme}
+          auraTone={resolvedTheme === "dark" ? "dark" : "light"}
           businessSlug={business.slug}
           className="w-full max-w-[22rem]"
           endpoint={`${LIVE_WEB_CALL_ENDPOINT}?businessId=${encodeURIComponent(business.businessId)}`}

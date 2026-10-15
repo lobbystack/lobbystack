@@ -11,6 +11,7 @@ import type { DomainContext } from "./context";
 import { recordCallOutcomeInTransaction } from "./callOutcome";
 import { consumeAppointmentChangeVerificationInTransaction } from "./appointmentChanges";
 import { findOrCreateContactByPhone } from "./contacts";
+import { businessToday, isOnVacation } from "./employees";
 import { recordSmsConsentAnswerInTransaction, smsConsentOnFile, type SmsConsentAnswer, type SmsConsentOnFile } from "./contactSmsConsent";
 import { recordProductEventBestEffort } from "./productEvents";
 import { CANCELLATION_CONFIRMATION, heldForCall, rescheduleAppointmentReminderInTransaction } from "./notifications";
@@ -49,6 +50,8 @@ type Schedule = {
   serviceDurationMinutes: number;
   timezone: string;
   activeStaffIds: string[];
+  employeeStaffIds: Set<string>;
+  vacations: Map<string, { startsOn: string; endsOn: string }>;
   assignedStaffIds: Set<string>;
   connections: Array<typeof calendarConnections.$inferSelect>;
   hours: Array<typeof businessHours.$inferSelect>;
@@ -67,7 +70,7 @@ async function loadSchedule(tx: DatabaseTransaction, input: { businessId: string
   // 409: the API and MCP answer a turned-off service as a client error, not a 500.
   if (!service || !business) throw Object.assign(new Error("Service is not available."), { status: 409 });
   if (!Number.isFinite(input.from.getTime()) || !Number.isSafeInteger(service.durationMinutes) || service.durationMinutes <= 0) throw new Error("A valid appointment time and duration are required.");
-  const activeStaff = await tx.select({ id: staff.id }).from(staff).where(and(eq(staff.businessId, input.businessId), eq(staff.active, true))).orderBy(asc(staff.id));
+  const activeStaff = await tx.select({ id: staff.id, isEmployee: staff.isEmployee, vacationStartsOn: staff.vacationStartsOn, vacationEndsOn: staff.vacationEndsOn }).from(staff).where(and(eq(staff.businessId, input.businessId), eq(staff.active, true))).orderBy(asc(staff.id));
   const activeStaffIds = activeStaff.map((row) => row.id);
   const assignments = await tx.select({ staffId: staffServiceAssignments.staffId }).from(staffServiceAssignments).where(and(eq(staffServiceAssignments.businessId, input.businessId), eq(staffServiceAssignments.serviceId, input.serviceId)));
   const connections = activeStaffIds.length
@@ -82,6 +85,8 @@ async function loadSchedule(tx: DatabaseTransaction, input: { businessId: string
     serviceDurationMinutes: service.durationMinutes,
     timezone: business.timezone,
     activeStaffIds,
+    employeeStaffIds: new Set(activeStaff.filter((row) => row.isEmployee).map((row) => row.id)),
+    vacations: new Map(activeStaff.flatMap((row) => row.vacationStartsOn && row.vacationEndsOn ? [[row.id, { startsOn: row.vacationStartsOn, endsOn: row.vacationEndsOn }] as const] : [])),
     assignedStaffIds: new Set(assignments.map((row) => row.staffId)),
     connections,
     hours,
@@ -98,10 +103,21 @@ async function loadAvailabilityReference(tx: DatabaseTransaction, input: { busin
   return { ...schedule, startsAt, endsAt: new Date(startsAt.getTime() + schedule.serviceDurationMinutes * 60_000) };
 }
 
-// Unassigned services retain the existing all-active-staff default. Explicit
-// assignments constrain eligibility instead of being silently ignored.
+// Unassigned services retain the existing all-active-staff default, except for
+// employees, who only do the services they are assigned. Explicit assignments
+// constrain eligibility instead of being silently ignored.
+function doesService(schedule: Schedule, staffId: string): boolean {
+  return schedule.assignedStaffIds.size ? schedule.assignedStaffIds.has(staffId) : !schedule.employeeStaffIds.has(staffId);
+}
+
 function eligibleStaffIds(schedule: Schedule, requestedStaffIds?: string[]): string[] {
-  return schedule.activeStaffIds.filter((id) => (!requestedStaffIds || requestedStaffIds.includes(id)) && (!schedule.assignedStaffIds.size || schedule.assignedStaffIds.has(id)));
+  return schedule.activeStaffIds.filter((id) => (!requestedStaffIds || requestedStaffIds.includes(id)) && doesService(schedule, id));
+}
+
+/** Nobody on vacation the day the appointment starts takes the booking. */
+function isAway(schedule: Schedule, staffId: string, startsAt: Date): boolean {
+  const vacation = schedule.vacations.get(staffId);
+  return vacation ? isOnVacation(vacation, businessToday(schedule.timezone, startsAt)) : false;
 }
 
 function isCalendarFresh(schedule: Schedule, staffId: string, startsAt: Date, now: number): boolean {
@@ -120,7 +136,7 @@ function isCalendarFresh(schedule: Schedule, staffId: string, startsAt: Date, no
 function staffForTime(schedule: Schedule, startsAt: Date, requestedStaffIds: string[] | undefined, now: number): string[] | UnavailableReason {
   const closed = scheduleUnavailableReason({ startsAt: startsAt.toISOString(), timezone: schedule.timezone, serviceDurationMinutes: schedule.serviceDurationMinutes, hours: schedule.hours, closures: schedule.closures });
   if (closed) return closed;
-  const eligible = eligibleStaffIds(schedule, requestedStaffIds);
+  const eligible = eligibleStaffIds(schedule, requestedStaffIds).filter((id) => !isAway(schedule, id, startsAt));
   if (!eligible.length) return "no_staff";
   const fresh = eligible.filter((id) => isCalendarFresh(schedule, id, startsAt, now));
   return fresh.length ? fresh : "calendar_not_synced";

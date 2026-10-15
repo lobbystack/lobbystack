@@ -35,12 +35,21 @@ export function normalizeInterfaceLocale(value: string | null | undefined): Inte
 
 /**
  * Caller languages: the business's choice, which calls open in and the AI
- * receptionist speaks until the caller switches. `pt` is Brazilian Portuguese.
+ * receptionist speaks until the caller switches. `pt` is Brazilian Portuguese;
+ * Serbian is written in Latin script.
  * Interface languages (dashboard, widget UI, email) are {@link InterfaceLocale}.
  */
-export const runtimeLocales = ["en", "fr", "es", "de", "pt", "it", "nl"] as const;
+export const runtimeLocales = ["en", "fr", "es", "sr", "de", "pt", "it", "nl"] as const;
 
 export type RuntimeLocale = (typeof runtimeLocales)[number];
+
+// Language names for model prompts. Serbian is written in Latin script, never Cyrillic.
+const RUNTIME_LOCALE_NAMES: Record<RuntimeLocale, string> = { en: "English", fr: "French", es: "Spanish", sr: "Serbian (Latin script)", de: "German", pt: "Brazilian Portuguese", it: "Italian", nl: "Dutch" };
+
+/** A caller language named for a model prompt. */
+export function runtimeLocaleName(locale: RuntimeLocale): string {
+  return RUNTIME_LOCALE_NAMES[locale];
+}
 
 export function isRuntimeLocale(value: unknown): value is RuntimeLocale {
   return typeof value === "string" && (runtimeLocales as ReadonlyArray<string>).includes(value);

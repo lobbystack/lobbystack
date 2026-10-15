@@ -42,8 +42,9 @@ describe("agent settings telemetry", () => {
   it("saves the booking mode and records settings_saved for it", async () => {
     const fetchMock = setup();
     const select = await screen.findByRole("combobox", { name: "agent:booking.mode.label" });
-    await waitFor(() => expect((select as HTMLSelectElement).disabled).toBe(false));
-    await userEvent.selectOptions(select, "request");
+    await waitFor(() => expect(select.hasAttribute("data-disabled")).toBe(false));
+    await userEvent.click(select);
+    await userEvent.click(await screen.findByRole("option", { name: "agent:booking.mode.options.request" }));
     await waitFor(() => telemetryRef.current!.expectEvent("web.agent.settings_saved", { businessId: "business", setting: "booking_mode" }));
     const patch = fetchMock.mock.calls.find(([, init]) => init?.method === "PATCH");
     expect(JSON.parse(String(patch?.[1]?.body))).toEqual({ businessId: "business", bookingMode: "request" });
@@ -73,20 +74,30 @@ describe("agent settings telemetry", () => {
 });
 
 describe("business timezone", () => {
-  async function timezoneSelect() {
-    const select = await screen.findByRole("combobox", { name: "agent:fields.timezone.label" }) as HTMLSelectElement;
-    await waitFor(() => expect(select.disabled).toBe(false));
-    return select;
+  async function timezonePicker() {
+    const picker = await screen.findByLabelText("agent:fields.timezone.label") as HTMLButtonElement;
+    await waitFor(() => expect(picker.disabled).toBe(false));
+    return picker;
+  }
+
+  // Opens the picker, searches by city and picks the matching zone.
+  async function pickZone(picker: HTMLElement, city: string) {
+    await userEvent.click(picker);
+    await userEvent.type(await screen.findByPlaceholderText("agent:fields.timezone.search"), city);
+    await userEvent.click(await screen.findByRole("option", { name: new RegExp(`^${city} \\(`) }));
   }
 
   it("lists zones worldwide by region, saves the one picked and records settings_saved for it", async () => {
     const fetchMock = setup();
-    const select = await timezoneSelect();
-    expect(select.value).toBe("America/Toronto");
-    expect(select.querySelector('optgroup[label="agent:fields.timezone.regions.europe"] option[value="Europe/Belgrade"]')).not.toBeNull();
-    expect(select.querySelector('optgroup[label="agent:fields.timezone.regions.asia"] option[value="Asia/Tokyo"]')).not.toBeNull();
-    expect(select.querySelector(':scope > option[value="UTC"]')).not.toBeNull();
-    await userEvent.selectOptions(select, "Europe/Belgrade");
+    const picker = await timezonePicker();
+    expect(picker.textContent).toMatch(/^Toronto \(/);
+    await userEvent.click(picker);
+    expect(await screen.findByText("agent:fields.timezone.regions.europe")).toBeTruthy();
+    expect(screen.getByText("agent:fields.timezone.regions.asia")).toBeTruthy();
+    expect(screen.getByRole("option", { name: /^Tokyo \(/ })).toBeTruthy();
+    expect(screen.getByRole("option", { name: /^UTC/ })).toBeTruthy();
+    await userEvent.keyboard("{Escape}");
+    await pickZone(picker, "Belgrade");
     await waitFor(() => telemetryRef.current!.expectEvent("web.agent.settings_saved", { businessId: "business", setting: "timezone" }));
     const patch = fetchMock.mock.calls.find(([, init]) => init?.method === "PATCH");
     expect(JSON.parse(String(patch?.[1]?.body))).toEqual({ businessId: "business", timezone: "Europe/Belgrade" });
@@ -103,7 +114,7 @@ describe("business timezone", () => {
       return Response.json({ ...body, business: { ...body.business, timezone: saved } });
     });
     await userEvent.type(await screen.findByRole("textbox", { name: "" }), "4165550100");
-    await userEvent.selectOptions(await timezoneSelect(), "Europe/Belgrade");
+    await pickZone(await timezonePicker(), "Belgrade");
     await waitFor(() => telemetryRef.current!.expectEvent("web.agent.settings_saved", { businessId: "business", setting: "timezone" }));
     await userEvent.click(screen.getByRole("button", { name: "agent:actions.save" }));
     await waitFor(() => telemetryRef.current!.expectEvent("web.agent.settings_saved", { businessId: "business", setting: "transfer_number" }));
@@ -113,16 +124,16 @@ describe("business timezone", () => {
 
   it("offers the business's zone even before it has a receptionist profile", async () => {
     setup(null);
-    expect((await timezoneSelect()).value).toBe("America/Toronto");
+    expect((await timezonePicker()).textContent).toMatch(/^Toronto \(/);
   });
 
   it("puts the saved zone back and says so when the save fails", async () => {
     const fetchMock = setup();
     const get = fetchMock.getMockImplementation()!;
     fetchMock.mockImplementation(async (url, init) => init?.method === "PATCH" ? Response.json({ error: "Failed" }, { status: 500 }) : await get(url, init));
-    const select = await timezoneSelect();
-    await userEvent.selectOptions(select, "America/Vancouver");
+    const picker = await timezonePicker();
+    await pickZone(picker, "Vancouver");
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("agent:actions.saveFailed"));
-    expect(select.value).toBe("America/Toronto");
+    await waitFor(() => expect(picker.textContent).toMatch(/^Toronto \(/));
   });
 });

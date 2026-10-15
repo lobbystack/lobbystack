@@ -121,6 +121,38 @@ describe("booking availability reference locking", () => {
     expect(recording.selectCount()).toBe(31);
   });
 
+  it("keeps the default staff member, and no employee, bookable for a service no employee does", async () => {
+    const recording = useTransaction({ appointments: takenByEveryone, staffRows: [{ id: "staff-1" }, { id: "staff-2", isEmployee: true }, { id: "staff-3", isEmployee: true }] });
+
+    await expect(bookAppointment(context, input)).rejects.toThrow("No staff member is available for this service.");
+    // staff-1 stands for the business, so it alone reaches the conflict read.
+    expect(recording.fromCounts.get(appointments)).toBe(1);
+  });
+
+  it("books an employee for a service they are assigned", async () => {
+    useTransaction({ staffRows: [{ id: "staff-1" }, { id: "staff-2", isEmployee: true }], assignments: [{ staffId: "staff-2" }] });
+
+    await expect(bookAppointment(context, input)).resolves.toMatchObject({ staffId: "staff-2" });
+  });
+
+  it("doesn't book an employee on a day of their vacation, but does the day after", async () => {
+    const away = { id: "staff-2", isEmployee: true, vacationStartsOn: "2027-06-01", vacationEndsOn: "2027-06-07" };
+    const hours = [0, 1, 2, 3, 4, 5, 6].map((dayOfWeek) => ({ dayOfWeek, openMinutes: 0, closeMinutes: 1440 }));
+    useTransaction({ hours, staffRows: [{ id: "staff-1" }, away], assignments: [{ staffId: "staff-2" }] });
+    await expect(bookAppointment(context, input)).rejects.toThrow("No staff member is available for this service.");
+
+    useTransaction({ hours, staffRows: [{ id: "staff-1" }, away], assignments: [{ staffId: "staff-2" }] });
+    await expect(bookAppointment(context, { ...input, startsAt: "2027-06-08T15:00:00.000Z" })).resolves.toMatchObject({ staffId: "staff-2" });
+  });
+
+  it("only checks the employee the caller asked for", async () => {
+    const recording = useTransaction({ appointments: takenByEveryone });
+
+    await expect(bookAppointment(context, { ...input, preferredStaffId: "staff-2" })).rejects.toThrow("No staff member is available for this service.");
+
+    expect(recording.executeCalls).toHaveLength(1);
+  });
+
   it("refuses a time the schedule rules out before locking anyone", async () => {
     const recording = useTransaction({ hours: [] });
 

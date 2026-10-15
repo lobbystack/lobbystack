@@ -117,7 +117,7 @@ export const snapshotSchema = z.object({
   legalName: z.string().optional(),
   timezone: z.string().min(1),
   // runtimeLocales from @lobbystack/shared, which this package doesn't depend on.
-  defaultLocale: z.enum(["en", "fr", "es", "de", "pt", "it", "nl"]),
+  defaultLocale: z.enum(["en", "fr", "es", "sr", "de", "pt", "it", "nl"]),
   businessType: z.string().min(1),
   telemetryEnabled: z.boolean().optional(),
   greeting: z.string(),
@@ -167,6 +167,11 @@ export const snapshotSchema = z.object({
     localizedNames: z.object({ en: z.string().optional(), fr: z.string().optional() }).optional(),
     durationMinutes: z.number().int().positive(),
     description: z.string().optional(),
+    price: z.discriminatedUnion("type", [
+      z.object({ type: z.enum(["fixed", "from"]), amountMinor: z.number().int().nonnegative(), currency: z.string().regex(/^[A-Z]{3}$/), discountPercent: z.number().gt(0).max(100).optional() }),
+      z.object({ type: z.literal("range"), amountMinor: z.number().int().nonnegative(), maxAmountMinor: z.number().int().nonnegative(), currency: z.string().regex(/^[A-Z]{3}$/), discountPercent: z.number().gt(0).max(100).optional() }),
+      z.object({ type: z.literal("in_person") }),
+    ]).optional(),
   })),
   contactChannels: z.object({
     phoneNumber: z.string().optional(),

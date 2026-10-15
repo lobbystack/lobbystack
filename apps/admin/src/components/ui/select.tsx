@@ -6,6 +6,7 @@ import { Select as SelectPrimitive } from "@base-ui/react/select"
 import { cn } from "@/lib/utils"
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
 
+import { Spinner } from "@/components/ui/spinner"
 const Select = SelectPrimitive.Root
 
 function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
@@ -31,27 +32,35 @@ function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
 function SelectTrigger({
   className,
   size = "default",
+  loading = false,
   children,
   ...props
 }: SelectPrimitive.Trigger.Props & {
   size?: "sm" | "default"
+  /** Swaps the chevron for a spinner; pair it with `disabled` on the Select while a change saves. */
+  loading?: boolean
 }) {
   return (
     <SelectPrimitive.Trigger
+      aria-busy={loading || undefined}
       data-slot="select-trigger"
       data-size={size}
       className={cn(
-        "flex w-fit items-center justify-between gap-1.5 rounded-4xl border border-input bg-input/30 px-3 py-2 text-sm whitespace-nowrap transition-colors outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-[3px] aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[size=default]:h-9 data-[size=sm]:h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:hover:bg-input/50 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "flex w-fit items-center justify-between gap-1.5 rounded-4xl border border-input bg-input/30 px-3 py-2 text-sm whitespace-nowrap transition-colors outline-none enabled:hover:bg-input/50 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-busy:disabled:cursor-progress aria-busy:disabled:opacity-100 aria-invalid:border-destructive aria-invalid:ring-[3px] aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[size=default]:h-9 data-[size=sm]:h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}
     >
       {children}
-      <SelectPrimitive.Icon
-        render={
-          <ChevronDownIcon className="pointer-events-none size-4 text-muted-foreground" />
-        }
-      />
+      {loading ? (
+        <Spinner aria-hidden className="size-4 text-muted-foreground" />
+      ) : (
+        <SelectPrimitive.Icon
+          render={
+            <ChevronDownIcon className="pointer-events-none size-4 text-muted-foreground" />
+          }
+        />
+      )}
     </SelectPrimitive.Trigger>
   )
 }

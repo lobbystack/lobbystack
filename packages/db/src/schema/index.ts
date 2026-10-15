@@ -1,11 +1,14 @@
 import { customType } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import {
+  bigint,
   boolean,
+  date,
   doublePrecision,
   index,
   integer,
   jsonb,
+  numeric,
   pgTable,
   primaryKey,
   text,
@@ -120,6 +123,8 @@ export const businesses = pgTable(
     legalName: text("legal_name"),
     timezone: varchar("timezone", { length: 80 }).notNull(),
     defaultLocale: varchar("default_locale", { length: 8 }).default("en").notNull(),
+    /** ISO 4217 code every service price is in. */
+    currency: varchar("currency", { length: 3 }).default("USD").notNull(),
     businessType: varchar("business_type", { length: 64 }).notNull(),
     deploymentMode: varchar("deployment_mode", { length: 32 }).default("cloud").notNull(),
     status: varchar("status", { length: 32 }).default("active").notNull(),
@@ -222,10 +227,18 @@ export const staff = pgTable(
     timezone: varchar("timezone", { length: 80 }).notNull(),
     active: boolean("active").default(true).notNull(),
     transferNumber: text("transfer_number"),
+    // Listed on the Employees page. The default staff member that stands for the business is not one.
+    isEmployee: boolean("is_employee").default(false).notNull(),
+    // Inclusive dates in the business's timezone when the staff member is away. Both set or neither.
+    vacationStartsOn: date("vacation_starts_on", { mode: "string" }),
+    vacationEndsOn: date("vacation_ends_on", { mode: "string" }),
     ...legacyId,
     ...timestamps,
   },
-  (table) => [index("staff_business_active_idx").on(table.businessId, table.active)],
+  (table) => [
+    index("staff_business_active_idx").on(table.businessId, table.active),
+    uniqueIndex("staff_employee_phone_unique").on(table.businessId, table.transferNumber).where(sql`${table.isEmployee} and ${table.active} and ${table.transferNumber} is not null`),
+  ],
 );
 
 export const services = pgTable(
@@ -238,6 +251,12 @@ export const services = pgTable(
     localizedNames: jsonb("localized_names").$type<Record<string, string>>(),
     description: text("description"),
     durationMinutes: integer("duration_minutes").notNull(),
+    /** In the business currency's smallest unit; null when no price is set. The lower bound for a range. */
+    priceMinor: bigint("price_minor", { mode: "number" }),
+    priceMaxMinor: bigint("price_max_minor", { mode: "number" }),
+    priceType: varchar("price_type", { length: 16 }).$type<"fixed" | "from" | "range" | "in_person">().default("fixed").notNull(),
+    /** Percent off every amount, 0-100 with up to two decimals. */
+    discountPercent: numeric("discount_percent", { precision: 5, scale: 2, mode: "number" }).default(0).notNull(),
     active: boolean("active").default(true).notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     ...legacyId,
@@ -366,6 +385,8 @@ export const receptionistProfiles = pgTable(
     summarySource: varchar("summary_source", { length: 16 }).$type<"placeholder" | "generated" | "operator">().default("placeholder").notNull(),
     summaryFingerprint: varchar("summary_fingerprint", { length: 64 }),
     summaryGeneratedAt: timestamp("summary_generated_at", { withTimezone: true }),
+    // The outcome of the last "Rewrite with AI"; null when none was asked for.
+    summaryRegenerateStatus: varchar("summary_regenerate_status", { length: 16 }).$type<"pending" | "completed" | "empty" | "failed">(),
     bookingPolicy: text("booking_policy").notNull(),
     voiceInstructions: text("voice_instructions"),
     smsInstructions: text("sms_instructions"),

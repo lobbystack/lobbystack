@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { cancelKnowledgeDocument, deleteKnowledgeDocument, expandWebsiteCrawl, getKnowledgeDocumentContent, retryKnowledgeDocument, setKnowledgeDocumentActive } from "@lobbystack/domain";
+import { cancelKnowledgeDocument, deleteKnowledgeDocument, deleteWebsiteKnowledge, expandWebsiteCrawl, getKnowledgeDocumentContent, retryKnowledgeDocument, setKnowledgeDocumentActive } from "@lobbystack/domain";
 import { jsonError } from "@/lib/api-helpers";
 import { operatorRoute } from "@/lib/operator-request";
 
@@ -21,7 +21,11 @@ export const PATCH = operatorRoute<{ documentId: string }>(async ({ userId, busi
   return NextResponse.json({ ok: true });
 });
 
-export const DELETE = operatorRoute<{ documentId: string }>(async ({ userId, businessId, domain }, { documentId }) => {
+export const DELETE = operatorRoute<{ documentId: string }>(async ({ request, userId, businessId, domain }, { documentId }) => {
+  if (new URL(request.url).searchParams.get("scope") === "website") {
+    const deleted = await deleteWebsiteKnowledge(domain, { userId, businessId, documentId });
+    return NextResponse.json({ ok: true, deleted });
+  }
   await deleteKnowledgeDocument(domain, { userId, businessId, documentId });
   return NextResponse.json({ ok: true });
 });

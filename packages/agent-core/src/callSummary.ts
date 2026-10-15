@@ -1,4 +1,4 @@
-import type { AiUsage } from "@lobbystack/shared";
+import { runtimeLocaleName, type AiUsage, type RuntimeLocale } from "@lobbystack/shared";
 import type { LanguageModel } from "ai";
 import { z } from "zod";
 
@@ -17,7 +17,7 @@ export type CallSummaryResult = {
 export type CallSummarizer = {
   /** The provider and model summaries run on, for error events that have no usage. */
   modelId: { provider: string; model: string };
-  summarize(input: { transcript: CallSummaryTurn[]; locale: "en" | "fr"; disposition?: string | null; abortSignal?: AbortSignal }): Promise<CallSummaryResult>;
+  summarize(input: { transcript: CallSummaryTurn[]; locale: RuntimeLocale; disposition?: string | null; abortSignal?: AbortSignal }): Promise<CallSummaryResult>;
 };
 
 /** Transcript characters sent to the model: the opening and the ending of a long call. */
@@ -95,7 +95,7 @@ export function buildCallSummaryPrompt(input: { transcript: CallSummaryTurn[]; d
 export async function summarizeCall(input: {
   model: LanguageModel;
   transcript: CallSummaryTurn[];
-  locale: "en" | "fr";
+  locale: RuntimeLocale;
   disposition?: string | null;
   abortSignal?: AbortSignal;
   timeoutMs?: number;
@@ -105,7 +105,7 @@ export async function summarizeCall(input: {
     model: input.model,
     name: "call_summary",
     schema: callSummarySchema,
-    instructions: instructions(input.locale === "fr" ? "French" : "English"),
+    instructions: instructions(runtimeLocaleName(input.locale)),
     prompt: buildCallSummaryPrompt(input),
     timeoutMs: input.timeoutMs ?? DEFAULT_TIMEOUT_MS,
     abortSignal: input.abortSignal,

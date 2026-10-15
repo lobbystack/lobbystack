@@ -1,0 +1,100 @@
+{
+  "page": {
+    "searchPlaceholder": "Search employees..."
+  },
+  "table": {
+    "name": "Name",
+    "phone": "Phone Number",
+    "services": "Services",
+    "allServices": "All services",
+    "status": "Status",
+    "statuses": {
+      "working": "Working",
+      "on_vacation": "On vacation",
+      "no_services": "Not bookable"
+    },
+    "statusDetail": {
+      "until": "Until {{date}}",
+      "vacationFrom": "Vacation from {{date}}",
+      "noServices": "No services chosen"
+    },
+    "statusTooltip": {
+      "vacation": "Vacation: {{dates}}",
+      "noServices": "Edit this employee and choose their services so callers can book them."
+    },
+    "added": "Added",
+    "empty": "No employees match the current search.",
+    "emptyState": "No employees yet.",
+    "actions": {
+      "moreOptions": "More options",
+      "editEmployee": "Edit",
+      "deleteEmployee": "Delete",
+      "deleteTitle": "Delete employee?",
+      "deleteDescription": "This will permanently remove the employee from your dashboard.",
+      "deleteConfirm": "Delete",
+      "deleteCancel": "Cancel",
+      "deleted": "Employee deleted.",
+      "deleteFailed": "Couldn't delete the employee."
+    }
+  },
+  "add": {
+    "button": "Add Employee",
+    "title": "Add employee",
+    "description": "Save an employee's name, phone number and services.",
+    "fields": {
+      "name": {
+        "label": "Name",
+        "placeholder": "Jane Smith",
+        "required": "Enter the employee's name."
+      },
+      "phone": {
+        "label": "Phone number",
+        "country": "Country",
+        "hint": "Optional. Callers who ask for this employee are transferred here; without it, they reach the business's transfer number.",
+        "invalid": "Enter a valid phone number.",
+        "exists": "An employee with this phone number already exists."
+      },
+      "services": {
+        "label": "Services",
+        "hint": "Callers can only book this employee for these services.",
+        "placeholder": "Choose services",
+        "search": "Search services...",
+        "selectAll": "Select all",
+        "unselectAll": "Unselect all",
+        "noMatches": "No services match.",
+        "required": "Choose at least one service.",
+        "invalid": "A service you chose was deleted. Check the list and try again.",
+        "empty": "Add a service first, then choose which ones this employee does.",
+        "goToServices": "Go to Services"
+      },
+      "vacation": {
+        "label": "Vacation",
+        "hint": "Optional. The receptionist won't book this employee on these days and tells callers when they're back.",
+        "placeholder": "Pick the first and last day",
+        "dates": "Vacation dates",
+        "required": "Pick the first and last day of the vacation."
+      }
+    },
+    "cancel": "Cancel",
+    "save": "Add",
+    "saving": "Saving...",
+    "created": "Employee added.",
+    "failed": "Couldn't add the employee."
+  },
+  "edit": {
+    "title": "Edit employee",
+    "description": "Update this employee's name, phone number and services.",
+    "save": "Save",
+    "updated": "Employee updated.",
+    "failed": "Couldn't update the employee."
+  },
+  "pagination": {
+    "rowsPerPage": "Rows per page",
+    "pageOf": "Page {{page}} of {{total}}",
+    "firstPage": "Go to first page",
+    "previousPage": "Go to previous page",
+    "nextPage": "Go to next page",
+    "lastPage": "Go to last page",
+    "goToPage": "Go to page {{page}}"
+  }
+}

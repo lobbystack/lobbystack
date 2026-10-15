@@ -1,0 +1,100 @@
+{
+  "page": {
+    "searchPlaceholder": "Rechercher des employés..."
+  },
+  "table": {
+    "name": "Nom",
+    "phone": "Numéro de téléphone",
+    "services": "Services",
+    "allServices": "Tous les services",
+    "status": "Statut",
+    "statuses": {
+      "working": "En service",
+      "on_vacation": "En vacances",
+      "no_services": "Non réservable"
+    },
+    "statusDetail": {
+      "until": "Jusqu'au {{date}}",
+      "vacationFrom": "Vacances à partir du {{date}}",
+      "noServices": "Aucun service choisi"
+    },
+    "statusTooltip": {
+      "vacation": "Vacances : {{dates}}",
+      "noServices": "Modifiez cet employé et choisissez ses services pour que les clients puissent le réserver."
+    },
+    "added": "Ajouté",
+    "empty": "Aucun employé ne correspond à la recherche.",
+    "emptyState": "Aucun employé pour le moment.",
+    "actions": {
+      "moreOptions": "Plus d'options",
+      "editEmployee": "Modifier",
+      "deleteEmployee": "Supprimer",
+      "deleteTitle": "Supprimer l'employé ?",
+      "deleteDescription": "L'employé sera définitivement retiré de votre tableau de bord.",
+      "deleteConfirm": "Supprimer",
+      "deleteCancel": "Annuler",
+      "deleted": "Employé supprimé.",
+      "deleteFailed": "Impossible de supprimer l'employé."
+    }
+  },
+  "add": {
+    "button": "Ajouter un employé",
+    "title": "Ajouter un employé",
+    "description": "Enregistrez le nom, le numéro de téléphone et les services d'un employé.",
+    "fields": {
+      "name": {
+        "label": "Nom",
+        "placeholder": "Marie Tremblay",
+        "required": "Saisissez le nom de l'employé."
+      },
+      "phone": {
+        "label": "Numéro de téléphone",
+        "country": "Pays",
+        "hint": "Facultatif. Les appelants qui demandent cet employé sont transférés ici ; sinon, ils joignent le numéro de transfert de l'entreprise.",
+        "invalid": "Saisissez un numéro de téléphone valide.",
+        "exists": "Un employé avec ce numéro de téléphone existe déjà."
+      },
+      "services": {
+        "label": "Services",
+        "hint": "Les clients ne peuvent réserver cet employé que pour ces services.",
+        "placeholder": "Choisir des services",
+        "search": "Rechercher des services...",
+        "selectAll": "Tout sélectionner",
+        "unselectAll": "Tout désélectionner",
+        "noMatches": "Aucun service ne correspond.",
+        "required": "Choisissez au moins un service.",
+        "invalid": "Un service choisi a été supprimé. Vérifiez la liste et réessayez.",
+        "empty": "Ajoutez d'abord un service, puis choisissez ceux que cet employé propose.",
+        "goToServices": "Aller aux services"
+      },
+      "vacation": {
+        "label": "Vacances",
+        "hint": "Facultatif. Le réceptionniste ne réserve pas cet employé pendant ces jours et indique aux clients quand il revient.",
+        "placeholder": "Choisissez le premier et le dernier jour",
+        "dates": "Dates des vacances",
+        "required": "Choisissez le premier et le dernier jour des vacances."
+      }
+    },
+    "cancel": "Annuler",
+    "save": "Ajouter",
+    "saving": "Enregistrement...",
+    "created": "Employé ajouté.",
+    "failed": "Impossible d'ajouter l'employé."
+  },
+  "edit": {
+    "title": "Modifier l'employé",
+    "description": "Mettez à jour le nom, le numéro de téléphone et les services de cet employé.",
+    "save": "Enregistrer",
+    "updated": "Employé mis à jour.",
+    "failed": "Impossible de mettre à jour l'employé."
+  },
+  "pagination": {
+    "rowsPerPage": "Lignes par page",
+    "pageOf": "Page {{page}} sur {{total}}",
+    "firstPage": "Aller a la premiere page",
+    "previousPage": "Aller a la page precedente",
+    "nextPage": "Aller a la page suivante",
+    "lastPage": "Aller a la derniere page",
+    "goToPage": "Aller a la page {{page}}"
+  }
+}

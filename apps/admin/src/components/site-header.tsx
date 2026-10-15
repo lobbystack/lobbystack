@@ -7,13 +7,16 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { getTestCallStarter, startTestCall, subscribeTestCallStarter } from "@/lib/test-call-launcher";
 import { cn } from "@/lib/utils";
 
+/** Where the dashboard's utility bar renders on phones. */
+export const MOBILE_UTILITY_SLOT_ID = "mobile-utility-slot";
+
 /** The test call button on phones. The dashboard's call widget runs the call; this only starts it. */
 function MobileTestCallButton() {
   const { t } = useTranslation("common");
   const ready = useSyncExternalStore(subscribeTestCallStarter, () => getTestCallStarter() !== null, () => false);
   if (!ready) return null;
   return (
-    <Button className="ml-auto md:hidden" onClick={() => startTestCall()} size="sm" type="button" variant="outline">
+    <Button className="md:hidden" onClick={() => startTestCall()} size="sm" type="button" variant="outline">
       <Phone />
       {t("testCall.trigger")}
     </Button>
@@ -73,7 +76,10 @@ export function SiteHeader({
         )}
       >
         <SidebarTrigger className="md:hidden" size="icon" type="button" variant="outline" />
-        <MobileTestCallButton />
+        <div className="ml-auto flex items-center gap-2">
+          <MobileTestCallButton />
+          <div className="flex items-center gap-0.5" id={MOBILE_UTILITY_SLOT_ID} />
+        </div>
       </div>
     </header>
   );

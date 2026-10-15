@@ -23,7 +23,7 @@ describe("restored knowledge dialogs", () => {
   it("keeps empty snippet submission available but does not write invalid content", async () => {
     const save = vi.fn();
     render(<AddKnowledgeSheet open save={save} onOpenChange={vi.fn()} />);
-    const button = screen.getByRole("button", { name: "agent:actions.save" });
+    const button = screen.getByRole("button", { name: "agent:actions.add" });
     expect((button as HTMLButtonElement).disabled).toBe(false);
     await userEvent.click(button);
     expect(save).not.toHaveBeenCalled();
@@ -40,7 +40,7 @@ describe("restored knowledge dialogs", () => {
     expect(textarea.className).toMatch(/\bmax-h-\[40svh\]/);
     expect(textarea.className).toMatch(/\boverflow-y-auto\b/);
     const scrollArea = textarea.closest(".overflow-y-auto:not(textarea)");
-    const button = screen.getByRole("button", { name: "agent:actions.save" });
+    const button = screen.getByRole("button", { name: "agent:actions.add" });
     expect(scrollArea).toBeTruthy();
     expect(scrollArea!.contains(button)).toBe(false);
     expect(screen.getByRole("dialog").className).toMatch(/max-h-\[calc\(100svh-2rem\)\]/);
@@ -69,7 +69,7 @@ describe("restored knowledge dialogs", () => {
   it("requires a file before uploading", async () => {
     const upload = vi.fn();
     render(<UploadKnowledgeDocumentSheet open upload={upload} onOpenChange={vi.fn()} />);
-    await userEvent.click(screen.getByRole("button", { name: "actions.save" }));
+    await userEvent.click(screen.getByRole("button", { name: "actions.upload" }));
     expect(screen.getByText("sections.knowledge.uploadValidation.fileRequired")).toBeTruthy();
     expect(upload).not.toHaveBeenCalled();
   });
@@ -81,7 +81,7 @@ describe("restored knowledge dialogs", () => {
     expect((screen.getByLabelText("sections.knowledge.fields.title.label") as HTMLInputElement).value).toBe("clinic");
     fireEvent.change(screen.getByLabelText("sections.knowledge.fields.title.label"), { target: { value: "  Clinic policy " } });
     fireEvent.change(screen.getByLabelText("sections.knowledge.fields.tags.label"), { target: { value: "clinic, hours" } });
-    await userEvent.click(screen.getByRole("button", { name: "actions.save" }));
+    await userEvent.click(screen.getByRole("button", { name: "actions.upload" }));
     expect(upload).toHaveBeenCalledWith({ file, contentType: "text/markdown", title: "Clinic policy", tags: ["clinic", "hours"] });
   });
   it("rejects oversized and unsupported files before making upload requests", async () => {
@@ -93,7 +93,7 @@ describe("restored knowledge dialogs", () => {
     fireEvent.change(input, { target: { files: [large] } });
     expect(screen.getByText("sections.knowledge.uploadValidation.maxSize")).toBeTruthy();
     fireEvent.change(input, { target: { files: [new File(["x"], "bad.exe", { type: "application/octet-stream" })] } });
-    await userEvent.click(screen.getByRole("button", { name: "actions.save" }));
+    await userEvent.click(screen.getByRole("button", { name: "actions.upload" }));
     expect(screen.getByText("sections.knowledge.uploadValidation.unsupportedFile")).toBeTruthy();
     expect(upload).not.toHaveBeenCalled();
   });
@@ -102,7 +102,7 @@ describe("restored knowledge dialogs", () => {
     const close = vi.fn();
     render(<UploadKnowledgeDocumentSheet open upload={upload} onOpenChange={close} />);
     fireEvent.change(document.getElementById("knowledge-document-file")!, { target: { files: [new File(["x"], "hours.txt", { type: "text/plain" })] } });
-    await userEvent.click(screen.getByRole("button", { name: "actions.save" }));
+    await userEvent.click(screen.getByRole("button", { name: "actions.upload" }));
     await waitFor(() => expect(screen.getByText("sections.knowledge.uploadValidation.uploadFailed")).toBeTruthy());
     expect(close).not.toHaveBeenCalled();
   });

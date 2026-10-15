@@ -60,3 +60,8 @@ export function useAppearancePreference(): AppearanceContextValue {
 
   return context;
 }
+
+/** The time format preference, or null outside an AppearanceProvider. */
+export function useTimeFormatPreference(): TimeFormatPreference | null {
+  return useContext(AppearanceContext)?.timeFormatPreference ?? null;
+}

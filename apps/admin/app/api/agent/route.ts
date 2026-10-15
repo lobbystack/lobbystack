@@ -1,9 +1,9 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { trialTransferNumberInTransaction, updateBusinessInTransaction } from "@lobbystack/domain";
-import { businesses, enqueueOutbox, receptionistProfiles } from "@lobbystack/db";
-import { defaultAppointmentChangePolicy, defaultGreeting, isRuntimeLocale, normalizeRuntimeLocale, type AppointmentChangePolicy, type BookingMode } from "@lobbystack/shared";
+import { businesses, enqueueOutbox, knowledgeDocuments, knowledgeSnippets, receptionistProfiles } from "@lobbystack/db";
+import { defaultAppointmentChangePolicy, defaultGreeting, isCurrencyCode, isRuntimeLocale, normalizeRuntimeLocale, type AppointmentChangePolicy, type BookingMode } from "@lobbystack/shared";
 import { jsonError } from "@/lib/api-helpers";
 import { operatorRoute } from "@/lib/operator-request";
 
@@ -65,11 +65,14 @@ function readProfilePatch(body: Record<string, unknown>): ProfilePatch {
 }
 
 export const GET = operatorRoute(async ({ businessId, transaction }) => NextResponse.json(await transaction(async (tx) => {
-  const [business, profile] = await Promise.all([
-    tx.select({ id: businesses.id, name: businesses.name, timezone: businesses.timezone, defaultLocale: businesses.defaultLocale }).from(businesses).where(eq(businesses.id, businessId)).limit(1),
+  const [business, profile, snippet, document] = await Promise.all([
+    tx.select({ id: businesses.id, name: businesses.name, timezone: businesses.timezone, defaultLocale: businesses.defaultLocale, currency: businesses.currency }).from(businesses).where(eq(businesses.id, businessId)).limit(1),
     tx.select().from(receptionistProfiles).where(eq(receptionistProfiles.businessId, businessId)).limit(1),
+    tx.select({ id: knowledgeSnippets.id }).from(knowledgeSnippets).where(and(eq(knowledgeSnippets.businessId, businessId), eq(knowledgeSnippets.active, true))).limit(1),
+    tx.select({ id: knowledgeDocuments.id }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, businessId), eq(knowledgeDocuments.active, true), eq(knowledgeDocuments.status, "indexed"))).limit(1),
   ]);
-  return { business: business[0] ?? null, profile: profile[0] ?? null };
+  // The same sources the summary rewrite reads; without any, "Rewrite with AI" has nothing to go on.
+  return { business: business[0] ?? null, profile: profile[0] ?? null, hasKnowledgeSources: snippet.length > 0 || document.length > 0 };
 })));
 
 export const PATCH = operatorRoute(async ({ businessId, body, transaction }) => NextResponse.json(await transaction(async (tx) => {
@@ -78,11 +81,13 @@ export const PATCH = operatorRoute(async ({ businessId, body, transaction }) => 
   if (locale !== undefined && !isRuntimeLocale(locale)) throw jsonError("locale is invalid.");
   const { timezone } = body;
   if (timezone !== undefined && typeof timezone !== "string") throw jsonError("timezone must be a string.");
+  const { currency } = body;
+  if (currency !== undefined && !isCurrencyCode(currency)) throw jsonError("currency is invalid.");
   // Hands the summary back to AI, which rewrites it from the knowledge sources.
   const { regenerateSummary } = body;
   if (regenerateSummary !== undefined && regenerateSummary !== true) throw jsonError("regenerateSummary must be true.");
   if (regenerateSummary && patch.summary !== undefined) throw jsonError("Send summary or regenerateSummary, not both.");
-  if (Object.keys(patch).length === 0 && locale === undefined && timezone === undefined && !regenerateSummary) {
+  if (Object.keys(patch).length === 0 && locale === undefined && timezone === undefined && currency === undefined && !regenerateSummary) {
     throw jsonError("At least one profile field is required.");
   }
 
@@ -96,8 +101,8 @@ export const PATCH = operatorRoute(async ({ businessId, body, transaction }) => 
   const previousLocale = normalizeRuntimeLocale(business.defaultLocale);
 
   // Opening hours keep their clock times in a new zone; booked appointments keep theirs.
-  if (locale !== undefined || timezone !== undefined) {
-    await updateBusinessInTransaction(tx, { businessId, ...(locale !== undefined ? { defaultLocale: locale } : {}), ...(timezone !== undefined ? { timezone } : {}) });
+  if (locale !== undefined || timezone !== undefined || currency !== undefined) {
+    await updateBusinessInTransaction(tx, { businessId, ...(locale !== undefined ? { defaultLocale: locale } : {}), ...(timezone !== undefined ? { timezone } : {}), ...(currency !== undefined ? { currency } : {}) });
   }
 
   const [profile] = await tx.insert(receptionistProfiles).values({
@@ -117,7 +122,7 @@ export const PATCH = operatorRoute(async ({ businessId, body, transaction }) => 
     ...(patch.bookingMode !== undefined ? { bookingMode: patch.bookingMode } : {}),
   }).onConflictDoUpdate({
     target: receptionistProfiles.businessId,
-    set: { ...patch, ...(patch.summary !== undefined ? { summarySource: "operator" as const } : {}), ...(regenerateSummary ? { summarySource: "generated" as const } : {}), updatedAt: new Date() },
+    set: { ...patch, ...(patch.summary !== undefined ? { summarySource: "operator" as const, summaryRegenerateStatus: null } : {}), ...(regenerateSummary ? { summarySource: "generated" as const, summaryRegenerateStatus: "pending" as const } : {}), updatedAt: new Date() },
   }).returning();
 
   if (!profile) throw jsonError("Receptionist profile could not be saved.", 500);

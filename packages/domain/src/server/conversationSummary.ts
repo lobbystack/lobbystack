@@ -1,3 +1,5 @@
+import { normalizeRuntimeLocale, type RuntimeLocale } from "@lobbystack/shared";
+
 export type ConversationSessionSummary =
   | { kind: "message_taking"; summary?: string }
   | { kind: "disposition"; disposition: string }
@@ -51,11 +53,22 @@ export function extractCallerContext(transcript: ConversationTranscriptTurn[]): 
   };
 }
 
-export type CallSummaryLocale = "en" | "fr";
+export type CallSummaryLocale = RuntimeLocale;
 
 export function normalizeCallSummaryLocale(locale: string | null | undefined): CallSummaryLocale {
-  return locale?.trim().toLowerCase().startsWith("fr") ? "fr" : "en";
+  return normalizeRuntimeLocale(locale);
 }
+
+const FALLBACK_SUMMARY: Record<CallSummaryLocale, { excerpt: string; empty: string }> = {
+  en: { excerpt: "Call summary: ", empty: "Voice interaction completed." },
+  fr: { excerpt: "Résumé de l'appel : ", empty: "Interaction vocale terminée." },
+  es: { excerpt: "Resumen de la llamada: ", empty: "Interacción de voz completada." },
+  sr: { excerpt: "Rezime poziva: ", empty: "Glasovna interakcija je završena." },
+  de: { excerpt: "Anrufzusammenfassung: ", empty: "Sprachinteraktion abgeschlossen." },
+  pt: { excerpt: "Resumo da chamada: ", empty: "Interação por voz concluída." },
+  it: { excerpt: "Riepilogo della chiamata: ", empty: "Interazione vocale completata." },
+  nl: { excerpt: "Samenvatting van het gesprek: ", empty: "Spraakinteractie voltooid." },
+};
 
 /** A model-written summary and caller name, before the domain validates them. */
 export type GeneratedCallSummary = {
@@ -182,7 +195,7 @@ export function buildConversationSessionSummary(input: {
   const transcript = normalizedSummary(input.transcript?.map((turn) => typeof turn === "string" ? turn : turn.text).join(" "));
   if (transcript) {
     const excerpt = bounded(transcript);
-    return { kind: "summary", summary: input.locale === "fr" ? `Résumé de l'appel : ${excerpt}` : `Call summary: ${excerpt}` };
+    return { kind: "summary", summary: `${FALLBACK_SUMMARY[normalizeCallSummaryLocale(input.locale)].excerpt}${excerpt}` };
   }
-  return { kind: "summary", summary: input.locale === "fr" ? "Interaction vocale terminée." : "Voice interaction completed." };
+  return { kind: "summary", summary: FALLBACK_SUMMARY[normalizeCallSummaryLocale(input.locale)].empty };
 }

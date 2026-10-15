@@ -106,6 +106,15 @@ export const SCHEMA_MIGRATIONS = [
   "0100_knowledge_chunks_reembed_pending_index.sql",
   "0101_number_trials.sql",
   "0102_number_trial_used.sql",
+  "0103_staff_employees.sql",
+  "0104_employee_services.sql",
+  "0105_employee_vacation.sql",
+  "0106_summary_regenerate_status.sql",
+  "0107_service_price.sql",
+  "0108_service_price_type.sql",
+  "0109_service_discount.sql",
+  "0110_service_discount_decimals.sql",
+  "0111_service_price_whole_unit_decimals.sql",
 ] as const;
 
 const CONCURRENT_INDEX_DIRECTIVE = /^-- lobbystack:concurrent-index ([a-z][a-z0-9_]*)$/m;

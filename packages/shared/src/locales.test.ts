@@ -1,6 +1,19 @@
 import { describe, expect, it } from "vitest";
 
-import { interfaceLocaleTags, interfaceLocales, intlLocale, normalizeInterfaceLocale, normalizeRuntimeLocale } from "./locales";
+import { interfaceLocaleTags, interfaceLocales, intlLocale, normalizeInterfaceLocale, normalizeRuntimeLocale, runtimeLocaleName } from "./locales";
+
+describe("receptionist languages", () => {
+  it("keeps the languages the receptionist speaks, from a full tag too, and falls back to English", () => {
+    expect(["en", "fr-CA", "ES-mx", "sr_Latn_RS", "pt-BR"].map(normalizeRuntimeLocale)).toEqual(["en", "fr", "es", "sr", "pt"]);
+    expect([null, undefined, "", "ja"].map(normalizeRuntimeLocale)).toEqual(["en", "en", "en", "en"]);
+  });
+
+  it("names Serbian for models in Latin script", () => {
+    expect(runtimeLocaleName("sr")).toBe("Serbian (Latin script)");
+    expect(runtimeLocaleName("es")).toBe("Spanish");
+    expect(runtimeLocaleName("pt")).toBe("Brazilian Portuguese");
+  });
+});
 
 const CYRILLIC = /[Ѐ-ӿ]/;
 const sample = new Date(Date.UTC(2026, 8, 30, 12));
@@ -52,7 +65,8 @@ describe("normalizeRuntimeLocale", () => {
     expect(normalizeRuntimeLocale("pt-BR")).toBe("pt");
     expect(normalizeRuntimeLocale("de_CH")).toBe("de");
     expect(normalizeRuntimeLocale(" NL ")).toBe("nl");
-    expect(normalizeRuntimeLocale("sr-Latn-RS")).toBe("en");
+    expect(normalizeRuntimeLocale("sr-Latn-RS")).toBe("sr");
+    expect(normalizeRuntimeLocale("ja-JP")).toBe("en");
     expect(normalizeRuntimeLocale(null)).toBe("en");
   });
 });

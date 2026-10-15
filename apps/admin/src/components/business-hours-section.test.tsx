@@ -70,6 +70,7 @@ describe("opening hours editor", () => {
     expect(body.hours).toEqual([...weekdays, { dayOfWeek: 6, openMinutes: 540, closeMinutes: 1020 }]);
     await waitFor(() => expect(screen.queryByText("hours.generated")).toBeNull());
     expect(screen.getByTestId("hours-summary").textContent).toBe("Mon–Fri 09:00–20:00, Sat 09:00–17:00");
+    expect(toast.success).toHaveBeenCalledWith("actions.saved");
     telemetryRef.current!.expectEvent("web.agent.settings_saved", { businessId: "business", setting: "hours" });
   });
 
@@ -83,6 +84,23 @@ describe("opening hours editor", () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/hours?businessId=business", expect.objectContaining({ method: "PUT" })));
     const body = JSON.parse(String(fetchMock.mock.calls.find(([, init]) => init?.method === "PUT")?.[1]?.body)) as Hours;
     expect(body.hours).toEqual([{ dayOfWeek: 1, openMinutes: 540, closeMinutes: 720 }, { dayOfWeek: 1, openMinutes: 720, closeMinutes: 1020 }]);
+  });
+
+  it("picks a closing time from the time picker", async () => {
+    const fetchMock = stubFetch({ hoursSource: "operator", hours: [{ dayOfWeek: 1, openMinutes: 540, closeMinutes: 1020 }] });
+    render(<QueryClientProvider client={client()}><BusinessHoursSection businessId="business" canManage /></QueryClientProvider>);
+    await userEvent.click(await screen.findByRole("button", { name: "hours.edit" }));
+    const closing = await screen.findByRole("button", { name: "hours.closesAt:Monday" });
+    expect(closing.textContent).toBe("17:00");
+    await userEvent.click(closing);
+    await userEvent.click(within(await screen.findByRole("listbox", { name: "hours.picker.hours" })).getByRole("option", { name: "18" }));
+    await userEvent.click(within(screen.getByRole("listbox", { name: "hours.picker.minutes" })).getByRole("option", { name: "30" }));
+    expect(closing.textContent).toBe("18:30");
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(screen.getByRole("button", { name: "hours.save" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/hours?businessId=business", expect.objectContaining({ method: "PUT" })));
+    const body = JSON.parse(String(fetchMock.mock.calls.find(([, init]) => init?.method === "PUT")?.[1]?.body)) as Hours;
+    expect(body.hours).toEqual([{ dayOfWeek: 1, openMinutes: 540, closeMinutes: 1110 }]);
   });
 
   it("asks for the hours when there are none", async () => {

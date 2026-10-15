@@ -21,7 +21,7 @@ beforeEach(() => {
 });
 
 describe("agent settings validation", () => {
-  it.each([{}, { locale: "xx" }, { locale: "pt-BR" }, { locale: "sr" }, { timezone: "Eastern" }, { timezone: "+05:00" }, { timezone: 5 }, { greeting: "" }, { transferMode: "invalid" }, { appointmentChangePolicy: {} }])("rejects invalid input %j before writing", async (body) => {
+  it.each([{}, { locale: "xx" }, { locale: "pt-BR" }, { locale: "ja" }, { timezone: "Eastern" }, { timezone: "+05:00" }, { timezone: 5 }, { greeting: "" }, { transferMode: "invalid" }, { appointmentChangePolicy: {} }])("rejects invalid input %j before writing", async (body) => {
     expect((await patch(body)).status).toBe(400);
     expect(fixture.insert).not.toHaveBeenCalled();
     expect(fixture.enqueue).not.toHaveBeenCalled();

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { and, asc, desc, eq, inArray, lt, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, lt, ne, sql } from "drizzle-orm";
 
 import { countKnowledgeTokens } from "../knowledgeRanking";
 import { businesses, enqueueOutbox, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, receptionistProfiles, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
@@ -131,5 +131,15 @@ export async function saveGeneratedBusinessSummary(context: DomainContext, input
       payload: { businessId: input.businessId, reason: "summary_generated" },
     });
     return true;
+  });
+}
+
+export type SummaryRegenerateOutcome = "completed" | "empty" | "failed";
+
+/** Records how an operator's "Rewrite with AI" ended; null clears it, as when an operator wrote the summary meanwhile. */
+export async function finishBusinessSummaryRegenerate(context: DomainContext, input: { businessId: string; outcome: SummaryRegenerateOutcome | null }): Promise<void> {
+  await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    // Only a rewrite that was asked for; a retry that succeeds after a failure still reports it.
+    await tx.update(receptionistProfiles).set({ summaryRegenerateStatus: input.outcome }).where(and(eq(receptionistProfiles.businessId, input.businessId), isNotNull(receptionistProfiles.summaryRegenerateStatus)));
   });
 }

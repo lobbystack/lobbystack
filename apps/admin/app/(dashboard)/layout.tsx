@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { getActiveOnboardingState, resolveOnboardingRoute } from "@lobbystack/domain";
@@ -22,9 +22,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!session) redirect(localizePublicPath("/login", locale));
   const onboarding = await getActiveOnboardingState(getAppDatabase().db, session.user.id);
   if (onboarding.stage !== "complete") redirect(resolveOnboardingRoute(onboarding.stage));
+  const sidebarOpen = (await cookies()).get("sidebar_state")?.value !== "false";
   return (
     <RootDocument locale={locale} localeSource={source} namespaces={DASHBOARD_NAMESPACES}>
       <DashboardShell
+        sidebarOpen={sidebarOpen}
         user={{
           email: session.user.email ?? "",
           name: session.user.name ?? session.user.email ?? "",

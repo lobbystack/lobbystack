@@ -4,12 +4,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { BusinessSummarizer } from "@lobbystack/agent-core";
 import type { JobEnvelope } from "@lobbystack/contracts";
-import { loadBusinessSummaryInput, recordAiGenerationEvent, resetGeneratedBusinessSummary, saveGeneratedBusinessSummary, type BusinessSummaryInput } from "@lobbystack/domain";
+import { finishBusinessSummaryRegenerate, loadBusinessSummaryInput, recordAiGenerationEvent, resetGeneratedBusinessSummary, saveGeneratedBusinessSummary, type BusinessSummaryInput } from "@lobbystack/domain";
 
 vi.mock("@lobbystack/domain", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@lobbystack/domain")>();
   return {
     ...actual,
+    finishBusinessSummaryRegenerate: vi.fn(async () => undefined),
     loadBusinessSummaryInput: vi.fn(),
     saveGeneratedBusinessSummary: vi.fn(async () => true),
     resetGeneratedBusinessSummary: vi.fn(async () => true),
@@ -93,5 +94,29 @@ describe("business.generateSummary", () => {
   it("skips without a text model", async () => {
     await expect(handleJob(job(randomUUID()), { domain })).resolves.toMatchObject({ status: "skipped" });
     expect(loadBusinessSummaryInput).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["completed", "A fresh summary."],
+    ["empty", null],
+  ] as const)("reports %s to the operator who asked for the rewrite", async (outcome, summary) => {
+    const businessId = randomUUID();
+    vi.mocked(loadBusinessSummaryInput).mockResolvedValueOnce(summaryInput({ summarySource: "generated" }));
+    await handleJob(job(businessId, { force: true, reason: "operator_regenerate" }), { domain, businessSummarizer: summarizer(summary) });
+    expect(finishBusinessSummaryRegenerate).toHaveBeenCalledWith(domain, { businessId, outcome });
+  });
+
+  it("reports a failed rewrite and still lets the job retry", async () => {
+    const businessId = randomUUID();
+    vi.mocked(loadBusinessSummaryInput).mockResolvedValueOnce(summaryInput());
+    const businessSummarizer: BusinessSummarizer = { modelId: { provider: "openai", model: "gpt-6-luna" }, summarize: vi.fn(async () => { throw new Error("timeout"); }) };
+    await expect(handleJob(job(businessId, { force: true, reason: "operator_regenerate" }), { domain, businessSummarizer })).rejects.toThrow();
+    expect(finishBusinessSummaryRegenerate).toHaveBeenCalledWith(domain, { businessId, outcome: "failed" });
+  });
+
+  it("leaves the outcome alone for rewrites nobody asked for", async () => {
+    vi.mocked(loadBusinessSummaryInput).mockResolvedValueOnce(summaryInput());
+    await handleJob(job(randomUUID(), { reason: "knowledge_changed" }), { domain, businessSummarizer: summarizer("A summary.") });
+    expect(finishBusinessSummaryRegenerate).not.toHaveBeenCalled();
   });
 });

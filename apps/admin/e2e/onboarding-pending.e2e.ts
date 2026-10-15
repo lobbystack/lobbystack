@@ -56,9 +56,10 @@ test("a business name typed before the step finishes loading is kept", async ({ 
   await signUp(page, "early", testInfo);
 
   // Hold the page's scripts so the name goes in before React takes over the field.
+  // Only scripts: a held stylesheet also holds the theme's inline script, and with it the parser before the form.
   let release = (): void => undefined;
   const held = new Promise<void>((resolve) => { release = resolve; });
-  await page.route("**/_next/static/chunks/**", async route => {
+  await page.route("**/_next/static/chunks/**/*.js", async route => {
     await held;
     await route.continue();
   });

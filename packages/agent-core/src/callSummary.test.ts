@@ -63,6 +63,14 @@ describe("summarizeCall", () => {
     expect(promptText(calls[0]!)).toContain("in French");
   });
 
+  it("asks for a Spanish or Serbian summary for businesses in those languages", async () => {
+    for (const [locale, language] of [["es", "in Spanish"], ["sr", "in Serbian (Latin script)"]] as const) {
+      const calls: GenerateOptions[] = [];
+      await summarizeCall({ model: mockModel(JSON.stringify({ summary: "Pitao za radno vreme petkom.", callerName: null }), calls), transcript, locale });
+      expect(promptText(calls[0]!)).toContain(language);
+    }
+  });
+
   it("rejects output that does not match the schema", async () => {
     await expect(summarizeCall({ model: mockModel("Sure! The caller asked about hours."), transcript, locale: "en" })).rejects.toThrow();
   });

@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -67,7 +68,7 @@ export function AddKnowledgeSheet({
     mode === "edit"
       ? t("agent:sections.knowledge.editKnowledgeDescription")
       : t("agent:sections.knowledge.addKnowledgeDescription");
-  const submitLabel = mode === "edit" ? t("agent:actions.saveChanges") : t("agent:actions.save");
+  const submitLabel = mode === "edit" ? t("agent:actions.saveChanges") : t("agent:actions.add");
   useEffect(() => {
     setSubmitted(false);
     if (!open) {
@@ -180,7 +181,8 @@ export function AddKnowledgeSheet({
           </div>
 
           <DialogFooter>
-            <Button className="w-full" disabled={isSaving} type="submit">
+            <DialogClose render={<Button disabled={isSaving} type="button" variant="outline" />}>{t("agent:actions.cancel")}</DialogClose>
+            <Button disabled={isSaving} type="submit">
               {isSaving ? t("agent:actions.saving") : submitLabel}
             </Button>
           </DialogFooter>

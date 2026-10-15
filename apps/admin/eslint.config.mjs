@@ -40,6 +40,11 @@ export default defineConfig([
     rules: { "jsx-a11y/label-has-associated-control": "off" },
   },
   {
+    // A click on an addon only moves focus to the group's input, which keyboard users reach directly.
+    files: ["src/components/ui/input-group.tsx"],
+    rules: { "jsx-a11y/click-events-have-key-events": "off", "jsx-a11y/no-noninteractive-element-interactions": "off" },
+  },
+  {
     // These elements play live WebRTC streams, not captionable media files.
     files: ["src/components/widget/widget-chat-client.tsx"],
     rules: { "jsx-a11y/media-has-caption": "off" },

@@ -26,6 +26,7 @@ import { ChartBlockSkeleton, MetricCardGridSkeleton } from "@/components/loading
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 import { intlLocale } from "@/lib/locale";
+import type { AnalyticsChartPoint } from "./analytics-charts";
 
 const AnalyticsOverviewChart = dynamic(() => import("./analytics-charts").then((module) => module.AnalyticsOverviewChart), { ssr: false });
 const AnalyticsMetricChart = dynamic(() => import("./analytics-charts").then((module) => module.AnalyticsMetricChart), { ssr: false });
@@ -99,8 +100,10 @@ export function LiveAnalyticsSurface() {
   }, [business?.businessId, queryClient]);
 
   const data = analytics.data;
-  const chartData = (data?.series ?? []).map((point) => ({
-    label: new Intl.DateTimeFormat(intlLocale(i18n.language), effectiveGranularity === "year" ? { year: "numeric", timeZone: "UTC" } : effectiveGranularity === "month" ? { month: "short", ...(longRange ? { year: "2-digit" as const } : {}), timeZone: "UTC" } : effectiveGranularity === "hour" ? { hour: "numeric", timeZone: "UTC" } : { day: "2-digit", month: "short", ...(longRange ? { year: "2-digit" as const } : {}), timeZone: "UTC" }).format(new Date(point.bucket)),
+  const pointFormat = new Intl.DateTimeFormat(intlLocale(i18n.language), effectiveGranularity === "year" ? { year: "numeric", timeZone: "UTC" } : effectiveGranularity === "month" ? { month: "short", ...(longRange ? { year: "2-digit" as const } : {}), timeZone: "UTC" } : effectiveGranularity === "hour" ? { hour: "numeric", timeZone: "UTC" } : { day: "2-digit", month: "short", ...(longRange ? { year: "2-digit" as const } : {}), timeZone: "UTC" });
+  const series = data?.series ?? [];
+  const chartData: AnalyticsChartPoint[] = series.map((point) => ({
+    label: pointFormat.format(new Date(point.bucket)),
     calls: point.calls, messages: point.messages, appointments: point.appointments, agentResponseSeconds: point.agentResponseSeconds,
   }));
   const rangeLabel = `${new Intl.DateTimeFormat(intlLocale(i18n.language), { day: "2-digit", month: "short" }).format(range.from)} - ${new Intl.DateTimeFormat(intlLocale(i18n.language), { day: "2-digit", month: "short", year: "numeric" }).format(range.to)}`;

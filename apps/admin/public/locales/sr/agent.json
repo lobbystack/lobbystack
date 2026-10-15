@@ -20,13 +20,15 @@
         "text": "Tekst"
       },
       "editKnowledge": "Izmeni znanje",
+      "deleteWebsite": { "action": "Obriši sve", "title": "Obrisati sve stranice sa ovog sajta?", "description": "Ovo će trajno ukloniti sve stranice uvezene sa {{host}}.", "deleted": "Sve stranice sa {{host}} su obrisane." },
+      "toast": { "added": "Znanje je dodato.", "updated": "Znanje je ažurirano.", "uploaded": "Dokument je otpremljen. Uskoro će biti spreman.", "deleted": "Znanje je obrisano.", "enabled": "Znanje je uključeno.", "disabled": "Znanje je isključeno." },
       "uploadDocument": "Otpremi dokument",
       "websiteImport": {
         "badge": "Sajt",
         "title": "Uvezi sajt",
         "description": "Učitajte javne stranice Vašeg sajta kako bi ih recepcioner koristio kao znanje.",
-        "submit": "Uvezi sajt",
-        "submitting": "Uvoz sajta…",
+        "submit": "Uvezi",
+        "submitting": "Uvoz…",
         "success": "Uvoz sajta je pokrenut. Stranice će se pojavljivati ovde kako se budu obrađivale.",
         "submitFailed": "Nismo mogli da pokrenemo uvoz sajta. Pokušajte ponovo.",
         "previewPending": "Čitamo ovaj sajt. Uvezene stranice će se automatski pojaviti ovde.",
@@ -71,7 +73,7 @@
         },
         "websiteUrl": {
           "label": "URL sajta",
-          "placeholder": "https://example.com",
+          "placeholder": "example.com",
           "hint": "Unesite javnu početnu stranicu ili odeljak koji želite da uvezete."
         },
         "title": {
@@ -87,9 +89,9 @@
           "required": "Unesite informaciju koju recepcioner treba da koristi."
         },
         "tags": {
-          "label": "Oznake (opciono)",
+          "label": "Oznake",
           "placeholder": "Radno vreme, lokacija",
-          "hint": "Ključne reči odvojene zarezima koje pomažu da se ovo znanje razvrsta."
+          "hint": "Opciono. Ključne reči odvojene zarezima koje pomažu da se ovo znanje razvrsta."
         }
       }
     },
@@ -99,6 +101,20 @@
       "listTitle": "Usluge",
       "addKnowledge": "Dodaj uslugu",
       "editKnowledge": "Izmeni uslugu",
+      "edit": "Izmeni",
+      "duplicate": "Dupliraj",
+      "price": {
+        "column": "Cena",
+        "from": "od {{amount}}",
+        "range": "{{min}} – {{max}}",
+        "inPerson": "Određuje se na licu mesta",
+        "discounted": "{{price}} (−{{percent}}%)",
+        "none": "Nije postavljena"
+      },
+      "duplicated": "Usluga je duplirana.",
+      "duplicateFailed": "Usluga nije duplirana.",
+      "copyName": "{{name}} (kopija)",
+      "copyNameNumbered": "{{name}} (kopija {{number}})",
       "uploadDocument": "Otpremi dokument",
       "addKnowledgeDescription": "Dodajte svoje usluge, šta obuhvataju, kome su namenjene i sve što recepcioner treba da pomene.",
       "editKnowledgeDescription": "Izmenite detalje usluge koje recepcioner treba da pomene i koristi pri zakazivanju.",
@@ -107,7 +123,7 @@
       "textBadge": "Tekst",
       "emptyState": "Još niste dodali usluge.",
       "unavailable": "Katalog usluga nije dostupan.",
-      "durationValue": "Termin od {{count}} min",
+      "durationValue": "Termin od {{duration}}",
       "previewPending": "Ovaj dokument se obrađuje.",
       "previewError": "Ovaj dokument nije mogao da se obradi.",
       "status": {
@@ -145,21 +161,53 @@
         "duration": {
           "label": "Trajanje",
           "placeholder": "30",
-          "hint": "Trajanje termina u minutima, za proveru slobodnih termina.",
-          "required": "Unesite ceo broj minuta, najmanje 1."
+          "hint": "Trajanje termina, za proveru slobodnih termina.",
+          "required": "Izaberite trajanje od najmanje 1 minuta.",
+          "hours": "Sati",
+          "minutes": "Minuti",
+          "hoursTitle": "h",
+          "minutesTitle": "min"
+        },
+        "price": {
+          "label": "Cena",
+          "hint": "Opciono. Recepcioner navodi tačno ovu cenu; ako iznos ostavite prazan, neće ga izmišljati.",
+          "placeholder": "0",
+          "amount": "Cena",
+          "lowest": "Najniža cena",
+          "highest": "Najviša cena",
+          "discount": "Popust",
+          "discountPercent": "Procenat popusta",
+          "discountPreview": "Klijenti plaćaju {{price}} umesto {{regular}}.",
+          "inPersonHint": "Recepcioner kaže pozivaocima da se cena određuje kada firma sazna šta im je potrebno.",
+          "types": {
+            "fixed": "Fiksna",
+            "from": "Od",
+            "range": "Između",
+            "in_person": "Na licu mesta"
+          },
+          "errors": {
+            "invalid": "Unesite cenu, na primer 3,500 ili 12.50.",
+            "rangeIncomplete": "Unesite i najnižu i najvišu cenu.",
+            "rangeOrder": "Najviša cena mora biti veća od najniže.",
+            "discountInvalid": "Unesite popust od 0 do 100%."
+          }
         },
         "active": {
           "label": "Može se zakazati",
           "hint": "Tokom poziva se nude samo usluge koje se mogu zakazati."
         },
         "tags": {
-          "label": "Oznake (opciono)",
+          "label": "Oznake",
           "placeholder": "Konsultacije, novi klijenti",
-          "hint": "Ključne reči odvojene zarezima koje pomažu da se ove usluge razvrstaju."
+          "hint": "Opciono. Ključne reči odvojene zarezima koje pomažu da se ove usluge razvrstaju."
         }
       },
       "deleteTitle": "Obrisati uslugu?",
       "deleteDescription": "Recepcioner prestaje da je nudi. Prošli termini je i dalje prikazuju."
+    },
+    "employees": {
+      "title": "Zaposleni",
+      "description": "Osobe kod kojih recepcioner može da zakaže termin i kojima može da preusmeri poziv."
     },
     "rules": {
       "title": "Pravila",
@@ -210,9 +258,9 @@
           "required": "Opišite šta recepcioner treba da uradi."
         },
         "tags": {
-          "label": "Oznake (opciono)",
+          "label": "Oznake",
           "placeholder": "Preusmeravanja, eskalacija",
-          "hint": "Ključne reči odvojene zarezima koje pomažu da se ova pravila razvrstaju."
+          "hint": "Opciono. Ključne reči odvojene zarezima koje pomažu da se ova pravila razvrstaju."
         }
       }
     }
@@ -249,7 +297,11 @@
       "hint": "Šta Vaš recepcioner govori pozivaocima o firmi.",
       "placeholder": "Na primer: Porodična klinika Maple u Torontu nudi preglede, vakcinacije i fizioterapiju.",
       "regenerate": "Napiši ponovo pomoću AI",
-      "regenerating": "AI ga ponovo piše na osnovu Vašeg znanja. Proverite ponovo za minut."
+      "regenerating": "AI ga ponovo piše na osnovu Vašeg znanja. To traje trenutak.",
+      "rewriteCompleted": "Opis poslovanja je ponovo napisan.",
+      "rewriteEmpty": "Vaše znanje još ne govori čime se poslovanje bavi, pa opis nije promenjen.",
+      "rewriteFailed": "Nismo uspeli da ponovo napišemo opis. Pokušajte ponovo.",
+      "rewriteNeedsKnowledge": "Prvo dodajte znanje, da bi AI imao na osnovu čega da piše."
     },
     "bookingPolicy": {
       "label": "Pravila zakazivanja",
@@ -274,6 +326,8 @@
     "timezone": {
       "label": "Vremenska zona firme",
       "hint": "Recepcioner koristi ovu vremensku zonu za radno vreme i termine koje nudi klijentima.",
+      "search": "Pretraži vremenske zone...",
+      "noResults": "Nije pronađena nijedna vremenska zona.",
       "regions": {
         "africa": "Afrika",
         "america": "Amerika",
@@ -286,6 +340,12 @@
         "indian": "Indijski okean",
         "pacific": "Pacifik"
       }
+    },
+    "currency": {
+      "label": "Valuta",
+      "hint": "Valuta u kojoj su cene Vaših usluga.",
+      "search": "Pretražite valute",
+      "noResults": "Nema pronađenih valuta."
     },
     "transferNumber": {
       "label": "Podrazumevani broj za preusmeravanje",
@@ -328,12 +388,13 @@
     }
   },
   "actions": {
+    "add": "Dodaj",
     "save": "Sačuvaj",
     "saveChanges": "Sačuvaj izmene",
     "saving": "Čuvanje…",
-    "saved": "Izmene su sačuvane",
+    "saved": "Izmene su sačuvane.",
     "deleted": "Obrisano",
-    "importCancelled": "Uvoz je otkazan",
+    "importCancelled": "Uvoz je otkazan.",
     "moreOptions": "Još opcija",
     "delete": "Obriši",
     "confirmDelete": "Potvrđujete?",
@@ -348,6 +409,7 @@
     "retry": "Pokušaj ponovo",
     "moveUp": "Pomeri gore",
     "moveDown": "Pomeri dole",
+    "dragToReorder": "Prevucite da promenite redosled",
     "activateEntry": "Aktiviraj unos",
     "deactivateEntry": "Deaktiviraj unos",
     "upload": "Otpremi",
@@ -377,6 +439,7 @@
     "closesAt": "Vreme zatvaranja: {{day}}",
     "addWindow": "Dodaj vreme",
     "removeWindow": "Ukloni ovo vreme",
+    "picker": { "hours": "Sati", "minutes": "Minuti", "period": "Pre ili posle podne", "hoursTitle": "HH", "minutesTitle": "MM" },
     "save": "Sačuvaj radno vreme",
     "invalid": "Proverite dan {{day}}: svako zatvaranje mora biti posle otvaranja, bez preklapanja.",
     "noHoursAlert": {

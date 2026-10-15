@@ -6,7 +6,7 @@ import { hasSummarizableTranscript, type BusinessHoursExtractor, type BusinessSu
 import { realtimeEventSchema, type JobEnvelope } from "@lobbystack/contracts";
 import { getPolarMeteredUsagePayload, intlLocale, type BillingUsageKind } from "@lobbystack/shared";
 import { appointments, calls, contacts, enqueueOutbox, knowledgeChunks, knowledgeDocuments, messages, notifications, phoneNumbers, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database } from "@lobbystack/db";
-import { enqueueKnowledgeDerivedRefresh, loadBusinessHoursInput, loadBusinessSummaryInput, markBusinessHoursChecked, resetGeneratedBusinessSummary, saveGeneratedBusinessHours, saveGeneratedBusinessSummary } from "@lobbystack/domain";
+import { enqueueKnowledgeDerivedRefresh, finishBusinessSummaryRegenerate, loadBusinessHoursInput, loadBusinessSummaryInput, markBusinessHoursChecked, resetGeneratedBusinessSummary, saveGeneratedBusinessHours, saveGeneratedBusinessSummary, type SummaryRegenerateOutcome } from "@lobbystack/domain";
 import { billingCheckoutLeaseEndsAt, checkKnowledgeStorageLimit, claimBillingCheckoutRequest, countPublishableOutboxMessages, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteSentProductEventsBefore, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markKnowledgeDocumentFailed, markProductEventsSent, reconcileBillingProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, runPrivacyRetentionSweep, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, chunkText, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type GeneratedCallSummary, type OnboardingFollowupSender } from "@lobbystack/domain";
 import { deliverOutbound, markFeedbackEmailFailed, markFeedbackEmailSent, queueDailyOperatorSummaries, refreshUnitEconomicsMonth } from "@lobbystack/domain";
 import { claimNumberProvisioning, completeNumberProvisioning, desiredNumberRouting, failNumberProvisioning, loadNumberReleaseEmail, loadNumberTrialEmail, numberProvisioningLeaseEndsAt, sharedSmsSender, sweepNumberReleases, sweepNumberTrial } from "@lobbystack/domain";
@@ -212,8 +212,18 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       return await deliverOutbound(dependencies.domain, dependencies, { kind: "verificationCode", businessId: businessIdOrThrow(job), attemptId: String(job.payload.attemptId ?? ""), locale: String(job.payload.locale ?? "") }, execution);
     case "snapshot.refresh":
       return { status: "completed", entityId: await refreshBusinessSnapshot(dependencies.domain, { businessId: businessIdOrThrow(job) }) };
-    case "business.generateSummary":
-      return await generateBusinessSummary(dependencies, { businessId: businessIdOrThrow(job), force: job.payload.force === true });
+    case "business.generateSummary": {
+      const businessId = businessIdOrThrow(job);
+      const operatorAsked = job.payload.reason === "operator_regenerate";
+      try {
+        const { result, outcome } = await generateBusinessSummary(dependencies, { businessId, force: job.payload.force === true });
+        if (operatorAsked) await finishBusinessSummaryRegenerate(dependencies.domain, { businessId, outcome });
+        return result;
+      } catch (error) {
+        if (operatorAsked) await finishBusinessSummaryRegenerate(dependencies.domain, { businessId, outcome: "failed" }).catch(() => undefined);
+        throw error;
+      }
+    }
     case "business.extractHours":
       return await extractBusinessHours(dependencies, { businessId: businessIdOrThrow(job) });
     case "knowledge.extractDocument": {
@@ -938,17 +948,18 @@ async function generateCallSummary(
  * operator wrote, a business with no knowledge yet, and knowledge that hasn't
  * changed since the last summary unless the operator asked to regenerate.
  */
-async function generateBusinessSummary(dependencies: WorkerDependencies, input: { businessId: string; force: boolean }): Promise<JobResult> {
+async function generateBusinessSummary(dependencies: WorkerDependencies, input: { businessId: string; force: boolean }): Promise<{ result: JobResult; outcome: SummaryRegenerateOutcome | null }> {
+  const skipped = { status: "skipped", entityId: input.businessId } as const;
   const summarizer = dependencies.businessSummarizer;
-  if (!summarizer) return { status: "skipped", entityId: input.businessId };
+  if (!summarizer) return { result: skipped, outcome: "failed" };
   const summaryInput = await loadBusinessSummaryInput(dependencies.domain, { businessId: input.businessId });
-  if (!summaryInput || summaryInput.summarySource === "operator") return { status: "skipped", entityId: input.businessId };
+  if (!summaryInput || summaryInput.summarySource === "operator") return { result: skipped, outcome: null };
   if (!summaryInput.sources.length) {
     // Every source is gone: a generated summary would describe removed content.
     const reset = summaryInput.summarySource === "generated" && await resetGeneratedBusinessSummary(dependencies.domain, { businessId: input.businessId, businessName: summaryInput.businessName });
-    return { status: reset ? "completed" : "skipped", entityId: input.businessId };
+    return { result: { status: reset ? "completed" : "skipped", entityId: input.businessId }, outcome: "empty" };
   }
-  if (!input.force && summaryInput.summarySource === "generated" && summaryInput.fingerprint === summaryInput.currentFingerprint) return { status: "skipped", entityId: input.businessId };
+  if (!input.force && summaryInput.summarySource === "generated" && summaryInput.fingerprint === summaryInput.currentFingerprint) return { result: skipped, outcome: "completed" };
   const startedAt = performance.now();
   let summary: string | null;
   try {
@@ -961,9 +972,9 @@ async function generateBusinessSummary(dependencies: WorkerDependencies, input: 
     await recordAiGenerationEvent(dependencies.domain, { ...summarizer.modelId, businessId: input.businessId, operation: "business.summary", latencyMs: performance.now() - startedAt, isError: true, error: timedOut ? "generation_timeout" : "generation_failed" }).catch(() => undefined);
     throw error;
   }
-  if (!summary) return { status: "skipped", entityId: input.businessId };
+  if (!summary) return { result: skipped, outcome: "empty" };
   const saved = await saveGeneratedBusinessSummary(dependencies.domain, { businessId: input.businessId, summary, fingerprint: summaryInput.fingerprint });
-  return { status: saved ? "completed" : "skipped", entityId: input.businessId };
+  return { result: { status: saved ? "completed" : "skipped", entityId: input.businessId }, outcome: saved ? "completed" : null };
 }
 
 /**

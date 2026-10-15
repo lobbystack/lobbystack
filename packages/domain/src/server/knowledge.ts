@@ -1,9 +1,9 @@
 import { createHash } from "node:crypto";
 
-import { and, asc, desc, eq, ilike, lt, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, lt, ne, sql } from "drizzle-orm";
 
-import { agentRules, businessContextSnapshots, businessHours, businesses, closures, enqueueOutbox, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, phoneNumbers, receptionistProfiles, services, storageObjects, websiteIngestionJobs, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { defaultGreeting, getKnowledgeStorageLimitBytes, normalizeAppointmentChangePolicy, normalizeBookingMode, normalizeRuntimeLocale, normalizeTransferMode, type BusinessContextSnapshot } from "@lobbystack/shared";
+import { agentRules, businessContextSnapshots, businessHours, businesses, closures, enqueueOutbox, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, phoneNumbers, receptionistProfiles, services, staffServiceAssignments, storageObjects, websiteIngestionJobs, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { defaultGreeting, getKnowledgeStorageLimitBytes, normalizeAppointmentChangePolicy, normalizeBookingMode, normalizeRuntimeLocale, normalizeTransferMode, runtimeLocales, servicePriceFromColumns, type BusinessContextSnapshot } from "@lobbystack/shared";
 import { buildBusinessContextSnapshot } from "../snapshot";
 import { countKnowledgeTokens, fuseKnowledgeRanks, KNOWLEDGE_SEARCH_TOKEN_BUDGET, knowledgeLexicalQueries, knowledgeQueryTerms, withinKnowledgeBudget, type KnowledgePassage } from "../knowledgeRanking";
 
@@ -15,6 +15,7 @@ import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 import { advanceOnboardingStageInTransaction } from "./onboarding";
 import { recordProductEventBestEffort } from "./productEvents";
 import { enqueueKnowledgeDerivedRefresh } from "./businessHours";
+import { businessToday, currentVacation, listBookableEmployees } from "./employees";
 import { resolveBusinessBillingPlan } from "./contentRetentionPolicy";
 import { resolveSmsSender } from "./smsSender";
 
@@ -198,6 +199,33 @@ export async function deleteKnowledgeDocument(context: DomainContext, input: { u
     if (document.storageObjectId) await tx.update(storageObjects).set({ retentionUntil: new Date(), updatedAt: new Date() }).where(and(eq(storageObjects.id, document.storageObjectId), eq(storageObjects.businessId, input.businessId)));
     await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "knowledge_document", aggregateId: document.id, dedupeKey: `knowledge:${document.id}:deleted:${Date.now()}`, payload: { businessId: input.businessId, reason: "document_deleted" } });
     await enqueueKnowledgeDerivedRefresh(tx, { businessId: input.businessId, reason: "document_deleted" });
+  });
+}
+
+function websiteHost(sourceUrl: string | null): string | null {
+  if (!sourceUrl) return null;
+  try {
+    return new URL(sourceUrl).host.toLowerCase().replace(/^www\./u, "");
+  } catch {
+    return null;
+  }
+}
+
+/** Deletes every imported page from the same website as the given page, and returns how many went. */
+export async function deleteWebsiteKnowledge(context: DomainContext, input: { userId: string; businessId: string; documentId: string }): Promise<number> {
+  return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
+    await requireBusinessAdmin(tx, input);
+    const [page] = await tx.select({ sourceType: knowledgeDocuments.sourceType, sourceUrl: knowledgeDocuments.sourceUrl }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).limit(1);
+    if (!page) throw new Error("Knowledge document not found.");
+    const host = page.sourceType === "website" ? websiteHost(page.sourceUrl) : null;
+    if (!host) throw new Error("Only imported website pages can be deleted by website.");
+    const pages = await tx.select({ id: knowledgeDocuments.id, sourceUrl: knowledgeDocuments.sourceUrl }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, input.businessId), eq(knowledgeDocuments.sourceType, "website")));
+    const ids = pages.filter((candidate) => websiteHost(candidate.sourceUrl) === host).map((candidate) => candidate.id);
+    await tx.delete(knowledgeChunks).where(and(eq(knowledgeChunks.businessId, input.businessId), inArray(knowledgeChunks.documentId, ids)));
+    await tx.delete(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, input.businessId), inArray(knowledgeDocuments.id, ids)));
+    await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "knowledge_document", aggregateId: input.documentId, dedupeKey: `knowledge:website:${input.documentId}:deleted:${Date.now()}`, payload: { businessId: input.businessId, reason: "document_deleted" } });
+    await enqueueKnowledgeDerivedRefresh(tx, { businessId: input.businessId, reason: "document_deleted" });
+    return ids.length;
   });
 }
 
@@ -528,7 +556,7 @@ export async function refreshBusinessSnapshot(
     if (!business[0]) {
       throw new Error("Business not found.");
     }
-    const [hours, closureRows, serviceRows, ruleRows, snippets, documents, numbers] = await Promise.all([
+    const [hours, closureRows, serviceRows, ruleRows, snippets, documents, numbers, employeeRows, assignments] = await Promise.all([
       tx.select().from(businessHours).where(eq(businessHours.businessId, input.businessId)).orderBy(asc(businessHours.dayOfWeek), asc(businessHours.openMinutes)),
       tx.select().from(closures).where(eq(closures.businessId, input.businessId)).orderBy(asc(closures.startsAt)),
       tx.select().from(services).where(and(eq(services.businessId, input.businessId), eq(services.active, true))).orderBy(asc(services.name)),
@@ -536,6 +564,8 @@ export async function refreshBusinessSnapshot(
       tx.select().from(knowledgeSnippets).where(and(eq(knowledgeSnippets.businessId, input.businessId), eq(knowledgeSnippets.active, true))).orderBy(desc(knowledgeSnippets.priority)).limit(8),
       tx.select({ title: knowledgeDocuments.title, sourceUrl: knowledgeDocuments.sourceUrl, tags: knowledgeDocuments.tags, revision: knowledgeDocuments.revision }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, input.businessId), eq(knowledgeDocuments.active, true), eq(knowledgeDocuments.status, "indexed"))).orderBy(desc(knowledgeDocuments.updatedAt), asc(knowledgeDocuments.id)).limit(40),
       tx.select().from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"))).orderBy(desc(phoneNumbers.createdAt), asc(phoneNumbers.id)),
+      listBookableEmployees(tx, input.businessId),
+      tx.select({ staffId: staffServiceAssignments.staffId, serviceId: staffServiceAssignments.serviceId }).from(staffServiceAssignments).where(eq(staffServiceAssignments.businessId, input.businessId)),
     ]);
     const currentProfile = profile[0];
     const phoneNumber = numbers.find((number) => number.status === "active" && number.voiceEnabled)?.e164;
@@ -571,12 +601,16 @@ export async function refreshBusinessSnapshot(
       services: serviceRows.map((row) => ({
         id: row.id, name: row.name, durationMinutes: row.durationMinutes,
         ...(row.description ? { description: row.description } : {}),
-        ...(row.localizedNames ? { localizedNames: {
-          ...(typeof row.localizedNames.en === "string" ? { en: row.localizedNames.en } : {}),
-          ...(typeof row.localizedNames.fr === "string" ? { fr: row.localizedNames.fr } : {}),
-        } } : {}),
+        ...(servicePriceFromColumns(row, business[0]!.currency) ? { price: servicePriceFromColumns(row, business[0]!.currency)! } : {}),
+        ...(row.localizedNames ? { localizedNames: Object.fromEntries(runtimeLocales.flatMap((locale) => typeof row.localizedNames?.[locale] === "string" ? [[locale, row.localizedNames[locale]]] : [])) } : {}),
       })),
       rules: ruleRows.map((row) => ({ id: row.id, title: row.title, content: row.content, order: row.sortOrder })),
+      employees: employeeRows.map((row) => {
+        const assigned = new Set(assignments.filter((assignment) => assignment.staffId === row.staffId).map((assignment) => assignment.serviceId));
+        const names = serviceRows.filter((service) => assigned.has(service.id)).map((service) => service.name);
+        const vacation = currentVacation(row, businessToday(business[0]!.timezone));
+        return { name: row.name, ...(names.length ? { services: names } : {}), ...(vacation ? { vacation } : {}) };
+      }),
       snippets: snippets.map((row) => ({ id: row.id, title: row.title, content: row.content, tags: row.tags, priority: row.priority })),
       appointmentChangePolicy: normalizeAppointmentChangePolicy(currentProfile?.appointmentChangePolicy),
       bookingMode: normalizeBookingMode(currentProfile?.bookingMode),

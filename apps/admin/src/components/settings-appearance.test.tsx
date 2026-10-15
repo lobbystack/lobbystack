@@ -4,13 +4,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import AppearancePage from "../../app/(dashboard)/settings/appearance/page";
-const mocks = vi.hoisted(() => ({ toast: vi.fn() }));
-vi.mock("sonner", () => ({ toast: { error: mocks.toast } }));
+const mocks = vi.hoisted(() => ({ toast: vi.fn(), success: vi.fn() }));
+vi.mock("sonner", () => ({ toast: { error: mocks.toast, success: mocks.success } }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock("./appearance-provider", () => ({ useAppearancePreference: () => ({ timeFormatPreference: "24h", setTimeFormatPreference: vi.fn() }) }));
 vi.mock("./replacement-locale-provider", () => ({ useLocalePreference: () => ({ locale: "en", setLocale: vi.fn(), isSaving: false }) }));
 const clients: QueryClient[] = [];
-afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); mocks.toast.mockReset(); });
+afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); mocks.toast.mockReset(); mocks.success.mockReset(); });
 describe("appearance workspace mutation isolation", () => {
   it.each([true, false])("keeps the new workspace unchanged when the old request succeeds=%s", async succeeds => {
     const client = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity, retry: false } } }); clients.push(client);
@@ -28,6 +28,17 @@ describe("appearance workspace mutation isolation", () => {
     await waitFor(() => expect(screen.getByRole("switch", { name: "appearance.telemetry.label" }).getAttribute("aria-checked")).toBe("false"));
     expect(screen.getByRole("switch", { name: "appearance.telemetry.label" }).hasAttribute("disabled")).toBe(false);
     expect(mocks.toast).not.toHaveBeenCalled();
+    expect(mocks.success).not.toHaveBeenCalled();
     expect(client.getQueryData(["appearance-preferences", "business-b"])).toEqual({ telemetryEnabled: false, canManageTenant: true });
+  });
+
+  it("confirms a saved telemetry preference for the active workspace", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity, retry: false } } }); clients.push(client);
+    client.setQueryData(["businesses"], { businesses: [{ businessId: "business-a", active: true }] });
+    client.setQueryData(["appearance-preferences", "business-a"], { telemetryEnabled: false, canManageTenant: true });
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ telemetryEnabled: true })));
+    render(<QueryClientProvider client={client}><AppearancePage /></QueryClientProvider>);
+    await userEvent.click(screen.getByRole("switch", { name: "appearance.telemetry.label" }));
+    await waitFor(() => expect(mocks.success).toHaveBeenCalledWith("appearance.saved"));
   });
 });

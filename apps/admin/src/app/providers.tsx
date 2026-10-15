@@ -81,7 +81,7 @@ export function Providers({ children, initialLocale, initialLocaleSource, initia
   return (
     <QueryClientProvider client={queryClient}>
       <I18nextProvider i18n={i18n}>
-        <ThemeProvider>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <AppearanceProvider>
             <LocaleProvider initialLocale={initialLocale} initialLocaleSource={initialLocaleSource}>
               <ProductAnalytics>

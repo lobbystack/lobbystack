@@ -27,7 +27,7 @@
     "analytics": {
       "chart": {
         "title": "Vue d'ensemble de l'activite",
-        "description": "Appels et messages de la semaine dans votre espace reception."
+        "description": "Appels et messages dans votre espace reception."
       },
       "cards": {
         "calls": "Nombre d'appels",
@@ -137,6 +137,7 @@
       "title": "À venir",
       "description": "Les prochains rendez-vous au calendrier.",
       "unknownService": "Service inconnu",
+      "employee": "Employé : {{name}}",
       "withStaff": "avec {{staff}}",
       "emptyTitle": "Aucun rendez-vous à venir",
       "emptyDescription": "Les futures réservations apparaîtront ici dès leur création.",

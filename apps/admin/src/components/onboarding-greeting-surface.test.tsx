@@ -72,7 +72,7 @@ describe("onboarding caller language", () => {
   });
 
   it("starts in English when the browser's language isn't a caller language", async () => {
-    vi.spyOn(navigator, "language", "get").mockReturnValue("sr-Latn-RS");
+    vi.spyOn(navigator, "language", "get").mockReturnValue("ja-JP");
     setup(defaultGreeting("Clinic"));
     const select = (await screen.findByLabelText("greeting.language")) as HTMLSelectElement;
     await waitFor(() => expect((screen.getByLabelText("greeting.label") as HTMLTextAreaElement).value).toBe(defaultGreeting("Clinic")));
