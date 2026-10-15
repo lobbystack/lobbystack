@@ -22,7 +22,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { surfaceClassName } from "@/components/ui/surface";
 import { useTelemetry } from "@/components/product-analytics";
 import googleCalendar from "@iconify-icons/logos/google-calendar-2020";
+import zapierIcon from "@iconify-icons/logos/zapier-icon";
 import { Icon } from "@iconify/react/offline";
+
+// shortcut: the private invite link, since the Zapier app isn't public yet; switch to https://zapier.com/apps/lobbystack/integrations once Zapier lists it.
+const ZAPIER_URL = "https://zapier.com/developer/public-invite/246868/514017/c9d0e185f460afe60a82c7678d8558a1/";
 
 function GoogleCalendarLogo() {
   return <Icon aria-hidden="true" className="size-7" icon={googleCalendar} id="google-calendar-logo" ssr />;
@@ -82,6 +86,9 @@ export function LiveIntegrationsSurface() {
       </li><li className={`${surfaceClassName} p-4`}>
         <div className="mb-8 flex items-center justify-between gap-3"><div className="flex size-10 shrink-0 items-center justify-center"><Webhook aria-hidden="true" className="size-7" /></div><Button disabled={!canManage} nativeButton={false} render={<Link href="/integrations/webhooks" />} size="sm" variant="outline">{t("integrations.actions.manage")}</Button></div>
         <div className="flex flex-col gap-1"><h2 className="type-section-title text-lg">{t("integrations.cards.webhooks.title")}</h2><p className="type-body-muted line-clamp-2">{t("integrations.cards.webhooks.description")}</p></div>
+      </li><li className={`${surfaceClassName} p-4`}>
+        <div className="mb-8 flex items-center justify-between gap-3"><div className="flex size-10 shrink-0 items-center justify-center"><Icon aria-hidden="true" className="size-7" icon={zapierIcon} id="zapier-logo" ssr /></div><Button nativeButton={false} render={<Link href={ZAPIER_URL} rel="noreferrer" target="_blank" />} size="sm" variant="outline">{t("integrations.actions.setUp")}</Button></div>
+        <div className="flex flex-col gap-1"><h2 className="type-section-title text-lg">{t("integrations.cards.zapier.title")}</h2><p className="type-body-muted line-clamp-2">{t("integrations.cards.zapier.description")}</p></div>
       </li></ul>
     </div>
     <Dialog onOpenChange={setDialogOpen} open={dialogOpen}><DialogContent className="w-full gap-0 p-0 sm:max-w-md">

@@ -490,7 +490,8 @@
       "connect": "Poveži",
       "connected": "Povezano",
       "settings": "Otvori podešavanja integracije",
-      "manage": "Upravljaj"
+      "manage": "Upravljaj",
+      "setUp": "Podesi"
     },
     "providers": {
       "google": "Sinhronizujte zakazivanja sa servisom Google Calendar."
@@ -548,6 +549,10 @@
       "webhooks": {
         "title": "Webhooks",
         "description": "Šaljite pozive, zakazivanja i poruke u svoje alate."
+      },
+      "zapier": {
+        "title": "Zapier",
+        "description": "Povežite pozive, zakazivanja i kontakte sa hiljadama aplikacija."
       }
     },
     "status": {

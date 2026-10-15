@@ -486,7 +486,8 @@
       "connect": "Connect",
       "connected": "Connected",
       "settings": "Open integration settings",
-      "manage": "Manage"
+      "manage": "Manage",
+      "setUp": "Set up"
     },
     "providers": {
       "google": "Sync bookings with Google Calendar."
@@ -544,6 +545,10 @@
       "webhooks": {
         "title": "Webhooks",
         "description": "Send calls, bookings and messages to your own tools."
+      },
+      "zapier": {
+        "title": "Zapier",
+        "description": "Connect calls, bookings and contacts to thousands of apps."
       }
     },
     "status": {

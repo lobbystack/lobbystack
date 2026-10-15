@@ -490,7 +490,8 @@
       "connect": "Connecter",
       "connected": "Connecté",
       "settings": "Ouvrir les réglages de l'intégration",
-      "manage": "Gérer"
+      "manage": "Gérer",
+      "setUp": "Configurer"
     },
     "providers": {
       "google": "Synchronisez les réservations avec Google Calendar."
@@ -548,6 +549,10 @@
       "webhooks": {
         "title": "Webhooks",
         "description": "Envoyez les appels, les réservations et les messages à vos outils."
+      },
+      "zapier": {
+        "title": "Zapier",
+        "description": "Reliez les appels, les réservations et les contacts à des milliers d'applications."
       }
     },
     "status": {
