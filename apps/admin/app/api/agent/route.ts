@@ -93,7 +93,7 @@ export const PATCH = operatorRoute(async ({ businessId, body, transaction }) => 
 
   const business = (await tx.select({ name: businesses.name, defaultLocale: businesses.defaultLocale }).from(businesses).where(eq(businesses.id, businessId)).limit(1))[0];
   if (!business) throw jsonError("Business not found.", 404);
-  // An E.164 number and, during a free trial, only the owner's verified phone. Employees' numbers follow the same rules.
+  // An E.164 number in a country Twilio can call and, during a free trial, only the owner's verified phone. Employees' numbers follow the same rules.
   if (patch.transferNumber) await assertTransferNumberAllowed(tx, { businessId, phone: patch.transferNumber });
   const previousLocale = normalizeRuntimeLocale(business.defaultLocale);
 

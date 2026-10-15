@@ -142,3 +142,37 @@ describe("AgentBasicSettingsPage saves", () => {
     client.clear();
   });
 });
+
+describe("AgentBasicSettingsPage transfer number", () => {
+  it("offers only the transfer countries, and says when the server refuses the number's country", async () => {
+    const patches: unknown[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method === "PATCH") {
+        patches.push(JSON.parse(String(init.body)));
+        return Response.json({ error: "Your receptionist can't transfer calls to this country yet.", code: "transfer_country_unsupported" }, { status: 400 });
+      }
+      return Response.json({
+        business: { defaultLocale: "en" },
+        profile: { greeting: "Thanks for calling.", summary: "Clinic", summarySource: "operator", transferNumber: "+15145550123", transferMode: "on_request", appointmentChangePolicy: null, bookingMode: "instant" },
+      });
+    }));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><AgentBasicSettingsPage businessId="business" canManageTenant /></QueryClientProvider>);
+
+    const user = userEvent.setup();
+    const country = await screen.findByRole("combobox", { name: "agent:fields.transferNumber.country" });
+    expect(country.textContent).toContain("+1");
+    await user.click(country);
+    expect(await screen.findAllByRole("option")).toHaveLength(17);
+    await user.keyboard("{Escape}");
+
+    const input = document.getElementById("agent-transfer-number") as HTMLInputElement;
+    await user.clear(input);
+    await user.type(input, "+18769261234");
+    await user.click(screen.getByRole("button", { name: "agent:actions.save" }));
+
+    expect(await screen.findByText("agent:fields.transferNumber.errors.countryUnsupported")).toBeTruthy();
+    expect(patches).toEqual([{ businessId: "business", transferNumber: "+18769261234" }]);
+    client.clear();
+  });
+});

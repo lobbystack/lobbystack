@@ -6,7 +6,8 @@ import { Sparkles } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { requestJson } from "@/lib/request-json";
-import { intlLocale, normalizeBookingMode, runtimeLocales, type AppointmentChangePolicy, type BookingMode, type RuntimeLocale } from "@lobbystack/shared";
+import { intlLocale, isTransferCountry, normalizeBookingMode, runtimeLocales, type AppointmentChangePolicy, type BookingMode, type RuntimeLocale } from "@lobbystack/shared";
+import type { Country } from "react-phone-number-input/input";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
@@ -29,6 +30,8 @@ import { Switch } from "@/components/ui/switch";
 import { useTelemetry } from "@/components/product-analytics";
 import { BookingWithoutHoursAlert, BusinessHoursSection, needsHoursForBooking, useBusinessHours } from "@/components/business-hours-section";
 import { availableTimeZones, groupTimeZones, isTimeZoneRegion, type TimeZoneOption } from "@/lib/time-zones";
+import { errorCode } from "@/lib/checkout-errors";
+import { getDefaultTransferCountry, getPhoneCountryOptions, inferPhoneCountry } from "@/lib/phone";
 import { cn } from "@/lib/utils";
 
 type AgentBasicSettingsPageProps = {
@@ -189,6 +192,10 @@ export function AgentBasicSettingsPage({
   const [isCurrencySaving, setIsCurrencySaving] = useState(false);
   const [transferNumber, setTransferNumber] = useState("");
   const [transferNumberInputValue, setTransferNumberInputValue] = useState("");
+  const defaultTransferCountry = getDefaultTransferCountry(i18n.language) as Country;
+  const countries = useMemo(() => getPhoneCountryOptions(i18n.language), [i18n.language]);
+  const [transferCountry, setTransferCountry] = useState<Country>(defaultTransferCountry);
+  const selectedTransferCountry = countries.find((option) => option.code === transferCountry);
   const [allowAppointmentCancel, setAllowAppointmentCancel] = useState(true);
   const [allowAppointmentReschedule, setAllowAppointmentReschedule] = useState(true);
   const [requireAppointmentChangeOtp, setRequireAppointmentChangeOtp] = useState(false);
@@ -221,6 +228,12 @@ export function AgentBasicSettingsPage({
       appointmentChangePolicy?.verificationMode === "otp_required",
     );
   }, [configuration]);
+
+  // The saved number's country, else the locale's.
+  const savedTransferNumber = configuration?.profile?.transferNumber;
+  useEffect(() => {
+    setTransferCountry((inferPhoneCountry(savedTransferNumber, defaultTransferCountry) ?? defaultTransferCountry) as Country);
+  }, [defaultTransferCountry, savedTransferNumber]);
 
   useEffect(() => {
     if (!transferStatus) return;
@@ -289,8 +302,9 @@ export function AgentBasicSettingsPage({
       await saveProfile({ businessId, transferNumber: transferNumberResolution.value });
       telemetry.track("web.agent.settings_saved", { businessId, setting: "transfer_number" });
       toast.success(t("agent:actions.saved"));
-    } catch {
-      toast.error(t("agent:actions.saveFailed"));
+    } catch (error) {
+      if (errorCode(error) === "transfer_country_unsupported") setTransferStatus(t("agent:fields.transferNumber.errors.countryUnsupported"));
+      else toast.error(t("agent:actions.saveFailed"));
     } finally {
       setIsTransferSaving(false);
     }
@@ -653,23 +667,35 @@ export function AgentBasicSettingsPage({
                   {isLoadingConfiguration ? (
                     <Skeleton className="h-10 w-full rounded-md sm:w-72" />
                   ) : (
-                    <PhoneInput
-                      className="w-full min-w-0 sm:w-40"
-                      containerClassName="w-full sm:w-fit"
-                      disabled={!canManageTenant}
-                      id="agent-transfer-number"
-                      locale={i18n.language}
-                      maxLength={18}
-                      onChange={(nextValue) => {
-                        setTransferNumber(nextValue ?? "");
-                        setTransferStatus(null);
-                      }}
-                      onRawValueChange={(nextRawValue) => {
-                        setTransferNumberInputValue(nextRawValue);
-                        setTransferStatus(null);
-                      }}
-                      {...(transferNumber ? { value: transferNumber } : {})}
-                    />
+                    <div className="flex w-full min-w-0 sm:w-fit">
+                      <Select disabled={!canManageTenant} onValueChange={(value) => { if (value && value !== transferCountry) { setTransferCountry(value as Country); setTransferNumber(""); setTransferNumberInputValue(""); setTransferStatus(null); } }} value={transferCountry}>
+                        <SelectTrigger aria-label={t("agent:fields.transferNumber.country")} className="w-20 shrink-0 rounded-r-none px-4 font-medium text-muted-foreground" data-phone-country-prefix><span>{selectedTransferCountry?.callingCode ?? ""}</span></SelectTrigger>
+                        <SelectContent className="min-w-72"><SelectGroup>{countries.filter((option) => isTransferCountry(option.code)).map((option) => <SelectItem key={option.code} value={option.code}><span>{option.label}</span><span className="text-muted-foreground">{option.callingCode}</span></SelectItem>)}</SelectGroup></SelectContent>
+                      </Select>
+                      <PhoneInput
+                        className="rounded-l-none border-l-0 sm:w-40"
+                        containerClassName="min-w-0 flex-1"
+                        country={transferCountry}
+                        disabled={!canManageTenant}
+                        id="agent-transfer-number"
+                        limitNationalDigits
+                        locale={i18n.language}
+                        maxLength={18}
+                        onChange={(nextValue) => {
+                          setTransferNumber(nextValue ?? "");
+                          setTransferStatus(null);
+                        }}
+                        onRawValueChange={(nextRawValue) => {
+                          setTransferNumberInputValue(nextRawValue);
+                          setTransferStatus(null);
+                          if (nextRawValue.trim().startsWith("+")) {
+                            const inferred = inferPhoneCountry(nextRawValue, transferCountry);
+                            if (inferred && inferred !== transferCountry) setTransferCountry(inferred as Country);
+                          }
+                        }}
+                        {...(transferNumber ? { value: transferNumber } : {})}
+                      />
+                    </div>
                   )}
                 </div>
                 {transferStatus ? <ItemDescription className="text-destructive">{transferStatus}</ItemDescription> : null}

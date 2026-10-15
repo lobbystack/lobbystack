@@ -1,6 +1,6 @@
 "use client";
 
-import type { HoursWindow } from "@lobbystack/shared";
+import { isTransferCountry, type HoursWindow } from "@lobbystack/shared";
 import { requestJson } from "@/lib/request-json";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 
@@ -40,7 +40,7 @@ import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCard, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatDateTime, intlLocale } from "@/lib/locale";
-import { formatPhoneNumberDisplay, getDefaultPhoneCountry, getPhoneCountryOptions, inferPhoneCountry } from "@/lib/phone";
+import { formatPhoneNumberDisplay, getDefaultTransferCountry, getPhoneCountryOptions, inferPhoneCountry } from "@/lib/phone";
 
 type TimeOff = { startsOn: string; endsOn: string };
 
@@ -283,7 +283,7 @@ function EmployeeDialog({ businessId, employee, open, onOpenChange, services, to
   const { i18n, t } = useTranslation("employees");
   const locale = i18n.resolvedLanguage ?? i18n.language;
   const queryClient = useQueryClient();
-  const defaultCountry = getDefaultPhoneCountry(locale) as Country;
+  const defaultCountry = getDefaultTransferCountry(locale) as Country;
   const countries = useMemo(() => getPhoneCountryOptions(locale), [locale]);
   const [dayNames] = useDayNames();
   const businessHours = useBusinessHours(businessId);
@@ -298,7 +298,7 @@ function EmployeeDialog({ businessId, employee, open, onOpenChange, services, to
   // What was typed, so a blank phone (allowed) can be told apart from an incomplete one.
   const [phoneDraft, setPhoneDraft] = useState("");
   const [submitted, setSubmitted] = useState(false);
-  const [phoneProblem, setPhoneProblem] = useState<"exists" | "invalid" | "trialLocked" | null>(null);
+  const [phoneProblem, setPhoneProblem] = useState<"exists" | "invalid" | "trialLocked" | "countryUnsupported" | null>(null);
   const [serviceIds, setServiceIds] = useState<string[]>([]);
   const [serviceInvalid, setServiceInvalid] = useState(false);
   // On: the business's hours. Off: the employee's own days and times.
@@ -339,6 +339,7 @@ function EmployeeDialog({ businessId, employee, open, onOpenChange, services, to
       if (code === "employee_phone_exists") setPhoneProblem("exists");
       else if (code === "trial_transfer_locked") setPhoneProblem("trialLocked");
       else if (code === "transfer_number_invalid") setPhoneProblem("invalid");
+      else if (code === "transfer_country_unsupported") setPhoneProblem("countryUnsupported");
       else if (code === "employee_time_off_invalid") setTimeOffInvalid(true);
       else if (code === "employee_service_invalid") { setServiceInvalid(true); void queryClient.invalidateQueries({ queryKey: ["employees", businessId] }); }
       else toast.error(t(employee ? "edit.failed" : "add.failed"));
@@ -374,7 +375,7 @@ function EmployeeDialog({ businessId, employee, open, onOpenChange, services, to
               <div className="flex min-w-0">
                 <Select onValueChange={(value) => { if (value && value !== country) { setCountry(value as Country); setPhone(""); setPhoneDraft(""); setPhoneProblem(null); } }} value={country}>
                   <SelectTrigger aria-label={t("add.fields.phone.country")} className="w-20 shrink-0 rounded-r-none px-4 font-medium text-muted-foreground" data-phone-country-prefix><span>{selected?.callingCode ?? ""}</span></SelectTrigger>
-                  <SelectContent className="min-w-72"><SelectGroup>{countries.map((option) => <SelectItem key={option.code} value={option.code}><span>{option.label}</span><span className="text-muted-foreground">{option.callingCode}</span></SelectItem>)}</SelectGroup></SelectContent>
+                  <SelectContent className="min-w-72"><SelectGroup>{countries.filter((option) => isTransferCountry(option.code)).map((option) => <SelectItem key={option.code} value={option.code}><span>{option.label}</span><span className="text-muted-foreground">{option.callingCode}</span></SelectItem>)}</SelectGroup></SelectContent>
                 </Select>
                 <PhoneInput aria-describedby={phoneError ? `${phoneId}-error` : undefined} aria-invalid={phoneError ? true : undefined} className="rounded-l-none border-l-0" containerClassName="min-w-0 flex-1" country={country} id={phoneId} limitNationalDigits locale={locale} onChange={(value) => { setPhone(value ?? ""); setPhoneProblem(null); }} onRawValueChange={(raw) => { setPhoneDraft(raw); if (raw.trim().startsWith("+")) { const inferred = inferPhoneCountry(raw, country); if (inferred && inferred !== country) setCountry(inferred as Country); } }} value={phone} />
               </div>

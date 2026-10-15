@@ -481,6 +481,7 @@ export { normalizeAuthEmail } from "./auth";
 export { assertProductionSecrets } from "./productionSecrets";
 
 export { isTransferPermitted, normalizeTransferMode } from "./transferPolicy";
+export { isTransferCountry, isTransferPhone, TRANSFER_COUNTRY_CALLING_CODES, type TransferCountry } from "./transferCountries";
 
 export { OPERATOR_SMS_ACCEPTED_DISCLOSURE_VERSIONS, OPERATOR_SMS_DISCLOSURE_TEXT, OPERATOR_SMS_DISCLOSURE_VERSION } from "./operatorSmsConsent";
 export { canTextNumber, permanentSmsErrorCode } from "./smsReach";

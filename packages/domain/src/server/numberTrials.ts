@@ -2,7 +2,7 @@ import { DateTime } from "luxon";
 import { and, desc, eq, gt, gte, inArray, isNull, lte, ne, sql } from "drizzle-orm";
 
 import { billingAccounts, businesses, calls, enqueueOutbox, numberTrials, numberWaitlist, onboardingPhoneVerifications, phoneNumbers, receptionistProfiles, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { isPaidSubscription, normalizeInterfaceLocale, type InterfaceLocale } from "@lobbystack/shared";
+import { isPaidSubscription, isTransferPhone, normalizeInterfaceLocale, type InterfaceLocale } from "@lobbystack/shared";
 
 import { hasMinimumRole, requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
@@ -97,11 +97,12 @@ const E164 = /^\+[1-9]\d{6,14}$/;
 
 /**
  * The rules for every number the receptionist transfers calls to, the
- * business's and each employee's: an E.164 number and, during a free number
- * trial, only the owner's verified phone.
+ * business's and each employee's: an E.164 number in a country Twilio lets us
+ * call and, during a free number trial, only the owner's verified phone.
  */
 export async function assertTransferNumberAllowed(tx: DatabaseTransaction, input: { businessId: string; phone: string }): Promise<void> {
   if (!E164.test(input.phone)) throw Object.assign(new Error("Enter a valid phone number."), { status: 400, code: "transfer_number_invalid" });
+  if (!isTransferPhone(input.phone)) throw Object.assign(new Error("Your receptionist can't transfer calls to this country yet."), { status: 400, code: "transfer_country_unsupported" });
   const trialPhone = await trialTransferNumberInTransaction(tx, input);
   if (trialPhone && input.phone !== trialPhone) throw Object.assign(new Error("During your free trial, calls can only transfer to the mobile number you verified."), { status: 409, code: "trial_transfer_locked" });
 }

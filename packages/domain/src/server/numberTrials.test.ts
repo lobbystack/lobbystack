@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { numberCountries, numberTrialEmailDueAt, numberTrialEndsAt, numberTrialReleaseAt, trialCountries } from "./numberTrials";
+import { assertTransferNumberAllowed, numberCountries, numberTrialEmailDueAt, numberTrialEndsAt, numberTrialReleaseAt, trialCountries } from "./numberTrials";
 
 describe("number trial clock", () => {
   it("ends at midnight after the 14th day in the business's time zone, counting the purchase day as day 1", () => {
@@ -30,5 +30,20 @@ describe("number countries", () => {
 
   it("gives no free trial in Australia, where a number costs $8.25 a month", () => {
     expect(trialCountries({ TWILIO_GB_BUNDLE_SID: "BU1", TWILIO_AU_BUNDLE_SID: "BU2", TWILIO_AU_ADDRESS_SID: "AD2" })).toEqual(["US", "CA", "GB"]);
+  });
+});
+
+describe("assertTransferNumberAllowed", () => {
+  // A business with no number trial.
+  const tx = { select: () => ({ from: () => ({ where: () => ({ limit: async () => [] }) }) }) } as never;
+  const businessId = "biz_1";
+
+  it("refuses a number in a country Twilio can't call, including a Caribbean +1 number", async () => {
+    await expect(assertTransferNumberAllowed(tx, { businessId, phone: "+18765550100" })).rejects.toMatchObject({ status: 400, code: "transfer_country_unsupported" });
+    await expect(assertTransferNumberAllowed(tx, { businessId, phone: "+79161234567" })).rejects.toMatchObject({ status: 400, code: "transfer_country_unsupported" });
+  });
+
+  it("accepts a Canadian number", async () => {
+    await expect(assertTransferNumberAllowed(tx, { businessId, phone: "+14165550199" })).resolves.toBeUndefined();
   });
 });

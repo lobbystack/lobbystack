@@ -346,8 +346,10 @@
       "label": "Número de transferencia predeterminado",
       "placeholder": "+1 555-123-4567",
       "hint": "El número de teléfono que su recepcionista debe usar al pasar una llamada a una persona.",
+      "country": "País",
       "errors": {
-        "invalid": "Introduzca un número de transferencia completo y válido antes de guardar."
+        "invalid": "Introduzca un número de transferencia completo y válido antes de guardar.",
+        "countryUnsupported": "Su recepcionista aún no puede transferir llamadas a este país."
       }
     }
   },

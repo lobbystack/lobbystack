@@ -346,8 +346,10 @@
       "label": "Default transfer number",
       "placeholder": "+1 555-123-4567",
       "hint": "The phone number your receptionist should use when handing a caller off to a human.",
+      "country": "Country",
       "errors": {
-        "invalid": "Enter a complete valid transfer number before saving."
+        "invalid": "Enter a complete valid transfer number before saving.",
+        "countryUnsupported": "Your receptionist can't transfer calls to this country yet."
       }
     }
   },

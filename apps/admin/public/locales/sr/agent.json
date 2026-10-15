@@ -346,8 +346,10 @@
       "label": "Podrazumevani broj za preusmeravanje",
       "placeholder": "+1 555-123-4567",
       "hint": "Broj telefona na koji recepcioner preusmerava pozivaoca kada treba da razgovara sa osobom.",
+      "country": "Država",
       "errors": {
-        "invalid": "Pre čuvanja unesite potpun i ispravan broj za preusmeravanje."
+        "invalid": "Pre čuvanja unesite potpun i ispravan broj za preusmeravanje.",
+        "countryUnsupported": "Recepcioner još ne može da preusmerava pozive na brojeve u ovoj zemlji."
       }
     }
   },

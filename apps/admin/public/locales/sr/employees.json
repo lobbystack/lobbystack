@@ -53,7 +53,8 @@
         "hint": "Opciono. Pozivaoci koji traže ovog zaposlenog prebacuju se na ovaj broj; bez njega dobijaju broj za prebacivanje poziva firme.",
         "invalid": "Unesite ispravan broj telefona.",
         "exists": "Zaposleni sa ovim brojem telefona već postoji.",
-        "trialLocked": "Tokom besplatne probe pozivi mogu da se prebace samo na broj mobilnog telefona koji ste potvrdili."
+        "trialLocked": "Tokom besplatne probe pozivi mogu da se prebace samo na broj mobilnog telefona koji ste potvrdili.",
+        "countryUnsupported": "Recepcioner još ne može da prebacuje pozive na brojeve u ovoj zemlji."
       },
       "services": {
         "label": "Usluge",

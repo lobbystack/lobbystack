@@ -53,7 +53,8 @@
         "hint": "Opcional. Quien pida hablar con este empleado se transfiere aquí; si no hay número, se transfiere al número de transferencia del negocio.",
         "invalid": "Introduce un número de teléfono válido.",
         "exists": "Ya existe un empleado con este número de teléfono.",
-        "trialLocked": "Durante tu prueba gratuita, las llamadas solo se pueden transferir al número móvil que verificaste."
+        "trialLocked": "Durante tu prueba gratuita, las llamadas solo se pueden transferir al número móvil que verificaste.",
+        "countryUnsupported": "Tu recepcionista aún no puede transferir llamadas a este país."
       },
       "services": {
         "label": "Servicios",

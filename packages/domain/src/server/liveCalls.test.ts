@@ -144,6 +144,12 @@ describe("prepareLiveCallTransfer", () => {
     expect(mocks.setTransferState).not.toHaveBeenCalled();
     await expect(prepareLiveCallTransfer(context, { ...call, destination: "+14165550100" })).resolves.toBe(true);
   });
+
+  it("never dials a number saved before the country rule in a country Twilio can't call", async () => {
+    await expect(prepareLiveCallTransfer(context, { ...call, destination: "+18765550100" })).resolves.toBe(false);
+    expect(mocks.reserveOutboundCallAttempt).not.toHaveBeenCalled();
+    expect(mocks.setTransferState).not.toHaveBeenCalled();
+  });
 });
 
 describe("recordLiveCallTransferResult", () => {

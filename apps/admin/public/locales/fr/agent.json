@@ -346,8 +346,10 @@
       "label": "Numéro de transfert par défaut",
       "placeholder": "+1 555-123-4567",
       "hint": "Le numéro que votre réceptionniste doit utiliser lorsqu'il transfère un appel à une personne.",
+      "country": "Pays",
       "errors": {
-        "invalid": "Entrez un numéro de transfert complet et valide avant d'enregistrer."
+        "invalid": "Entrez un numéro de transfert complet et valide avant d'enregistrer.",
+        "countryUnsupported": "Votre réceptionniste ne peut pas encore transférer d'appels vers ce pays."
       }
     }
   },

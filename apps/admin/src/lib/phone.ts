@@ -10,7 +10,7 @@ import enLabels from "react-phone-number-input/locale/en";
 import esLabels from "react-phone-number-input/locale/es";
 import frLabels from "react-phone-number-input/locale/fr";
 
-import { normalizeInterfaceLocale } from "@lobbystack/shared";
+import { isTransferCountry, normalizeInterfaceLocale } from "@lobbystack/shared";
 
 import type { SupportedLocale } from "./locale";
 
@@ -125,6 +125,12 @@ export function getDefaultPhoneCountry(locale?: string | null): CountryCode {
   }
 
   return DEFAULT_PHONE_COUNTRY;
+}
+
+/** The default country for a transfer number: the locale's, or the US when calls can't transfer there. */
+export function getDefaultTransferCountry(locale?: string | null): CountryCode {
+  const country = getDefaultPhoneCountry(locale);
+  return isTransferCountry(country) ? country : DEFAULT_PHONE_COUNTRY;
 }
 
 /** The country a language tag points to (es-MX → MX, bare sr → RS), when libphonenumber knows it. */
