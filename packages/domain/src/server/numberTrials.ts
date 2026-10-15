@@ -88,6 +88,24 @@ export async function trialTransferNumberInTransaction(tx: DatabaseTransaction, 
   return trial?.verifiedPhone ?? null;
 }
 
+/** trialTransferNumberInTransaction in a transaction of its own. */
+export async function trialTransferNumber(context: DomainContext, input: { businessId: string }): Promise<string | null> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => await trialTransferNumberInTransaction(tx, input));
+}
+
+const E164 = /^\+[1-9]\d{6,14}$/;
+
+/**
+ * The rules for every number the receptionist transfers calls to, the
+ * business's and each employee's: an E.164 number and, during a free number
+ * trial, only the owner's verified phone.
+ */
+export async function assertTransferNumberAllowed(tx: DatabaseTransaction, input: { businessId: string; phone: string }): Promise<void> {
+  if (!E164.test(input.phone)) throw Object.assign(new Error("Enter a valid phone number."), { status: 400, code: "transfer_number_invalid" });
+  const trialPhone = await trialTransferNumberInTransaction(tx, input);
+  if (trialPhone && input.phone !== trialPhone) throw Object.assign(new Error("During your free trial, calls can only transfer to the mobile number you verified."), { status: 409, code: "trial_transfer_locked" });
+}
+
 /** A failed purchase doesn't use up the trial. */
 export async function failNumberTrialInTransaction(tx: DatabaseTransaction, input: { businessId: string; claimId: string }): Promise<void> {
   await tx.update(numberTrials).set({ status: "failed", updatedAt: new Date() }).where(and(eq(numberTrials.businessId, input.businessId), eq(numberTrials.claimId, input.claimId), eq(numberTrials.status, "reserved")));

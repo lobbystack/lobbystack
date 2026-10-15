@@ -7,6 +7,7 @@ import { reserveOutboundCallAttempt } from "./billing";
 import type { DomainContext } from "./context";
 import { recordProspectDemoCallOutcome } from "./demos";
 import { releaseCallTexts } from "./notifications";
+import { trialTransferNumber } from "./numberTrials";
 import { extendPhoneReservationInTransaction } from "./usage";
 import { completeCall, setTransferState, startCall, upsertTranscript } from "./voice";
 import { boundedReconciledVoiceSeconds } from "./voiceRecovery";
@@ -130,9 +131,13 @@ export async function saveLiveCallTurn(context: DomainContext, input: { business
 
 /**
  * Reserves a transfer attempt before the call is referred. Returns false when
- * the plan has no attempts left, so the agent can take a message instead.
+ * the plan has no attempts left, or during a free number trial for any number
+ * but the owner's verified phone, so the agent can take a message instead.
  */
-export async function prepareLiveCallTransfer(context: DomainContext, input: { businessId: string; callId: string }): Promise<boolean> {
+export async function prepareLiveCallTransfer(context: DomainContext, input: { businessId: string; callId: string; destination: string }): Promise<boolean> {
+  // The last check before a number is dialed, whoever chose it: during a free number trial, only the owner's verified phone.
+  const trialPhone = await trialTransferNumber(context, input);
+  if (trialPhone && input.destination !== trialPhone) return false;
   await setTransferState(context, { businessId: input.businessId, callId: input.callId, transferState: "requested" });
   const reservation = await reserveOutboundCallAttempt(context, { businessId: input.businessId, sourceKey: `outbound_call:${input.callId}` });
   await setTransferState(context, { businessId: input.businessId, callId: input.callId, transferState: reservation.allowed ? "preparing" : "released" });

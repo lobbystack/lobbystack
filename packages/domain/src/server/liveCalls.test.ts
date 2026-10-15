@@ -7,12 +7,14 @@ const mocks = vi.hoisted(() => ({
   upsertTranscript: vi.fn(),
   reserveOutboundCallAttempt: vi.fn(),
   releaseCallTexts: vi.fn(),
+  trialTransferNumber: vi.fn(),
 }));
 
 vi.mock("./voice", () => ({ completeCall: mocks.completeCall, setTransferState: mocks.setTransferState, startCall: mocks.startCall, upsertTranscript: mocks.upsertTranscript }));
 vi.mock("./billing", () => ({ reserveOutboundCallAttempt: mocks.reserveOutboundCallAttempt }));
 vi.mock("./demos", () => ({ recordProspectDemoCallOutcome: vi.fn() }));
 vi.mock("./notifications", () => ({ releaseCallTexts: mocks.releaseCallTexts }));
+vi.mock("./numberTrials", () => ({ trialTransferNumber: mocks.trialTransferNumber }));
 
 import { finishLiveCall, LIVE_CALL_PROVIDER, liveCallRecordingJob, orphanedLiveCallSeconds, prepareLiveCallTransfer, recordLiveCallTransferResult, saveLiveCallTurn, startLivePhoneCall } from "./liveCalls";
 
@@ -117,17 +119,30 @@ describe("finishLiveCall", () => {
 });
 
 describe("prepareLiveCallTransfer", () => {
+  const transfer = { ...call, destination: "+14165550199" };
+
   it("reserves a transfer attempt before the call is referred", async () => {
     mocks.reserveOutboundCallAttempt.mockResolvedValue({ allowed: true });
-    await expect(prepareLiveCallTransfer(context, call)).resolves.toBe(true);
+    await expect(prepareLiveCallTransfer(context, transfer)).resolves.toBe(true);
     expect(mocks.reserveOutboundCallAttempt).toHaveBeenCalledWith(context, { businessId: "biz_1", sourceKey: "outbound_call:call_1" });
     expect(mocks.setTransferState).toHaveBeenLastCalledWith(context, expect.objectContaining({ transferState: "preparing" }));
   });
 
   it("refuses when the plan has no transfer attempts left", async () => {
     mocks.reserveOutboundCallAttempt.mockResolvedValue({ allowed: false });
-    await expect(prepareLiveCallTransfer(context, call)).resolves.toBe(false);
+    await expect(prepareLiveCallTransfer(context, transfer)).resolves.toBe(false);
     expect(mocks.setTransferState).toHaveBeenLastCalledWith(context, expect.objectContaining({ transferState: "released" }));
+  });
+
+  it("during a free number trial, dials only the owner's verified phone, so never an employee's number", async () => {
+    mocks.reserveOutboundCallAttempt.mockResolvedValue({ allowed: true });
+    mocks.trialTransferNumber.mockResolvedValue("+14165550100");
+    await expect(prepareLiveCallTransfer(context, transfer)).resolves.toBe(false);
+    expect(mocks.trialTransferNumber).toHaveBeenCalledWith(context, transfer);
+    // Refused before an attempt is used or the transfer state changes.
+    expect(mocks.reserveOutboundCallAttempt).not.toHaveBeenCalled();
+    expect(mocks.setTransferState).not.toHaveBeenCalled();
+    await expect(prepareLiveCallTransfer(context, { ...call, destination: "+14165550100" })).resolves.toBe(true);
   });
 });
 

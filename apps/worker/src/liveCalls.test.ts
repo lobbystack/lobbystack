@@ -262,6 +262,8 @@ describe("createLiveCallHandler", () => {
     const controller = mocks.controllers_.at(-1)!;
     const context = (mocks.createReceptionistAgent.mock.lastCall![0] as { context: { callControl: { transfer: (destination: string) => Promise<boolean> } } }).context;
     await expect(context.callControl.transfer("+14165550199")).resolves.toBe(true);
+    // The domain checks the number itself, as during a free trial, before an attempt is used.
+    expect(mocks.prepareLiveCallTransfer).toHaveBeenLastCalledWith({ db: {} }, { businessId: "biz_1", callId: "call_t", destination: "+14165550199" });
     expect(controller.transferAfterAnnouncement).toHaveBeenCalledWith("tel:+14165550199");
     expect(mocks.recordLiveCallTransferResult).not.toHaveBeenCalled();
     const onTransfer = controller.options.onTransfer as (state: string) => void;
@@ -281,6 +283,19 @@ describe("createLiveCallHandler", () => {
     mocks.controllers_.at(-1)!.transferAfterAnnouncement.mockReturnValueOnce(false);
     const context = (mocks.createReceptionistAgent.mock.lastCall![0] as { context: { callControl: { transfer: (destination: string) => Promise<boolean> } } }).context;
     await expect(context.callControl.transfer("+14165550199")).resolves.toBe(false);
+  });
+
+  it("refers nothing when the domain refuses the number, as an employee's during a free trial", async () => {
+    vi.stubEnv("LIVE_PROTOTYPE_ENABLED", "true");
+    vi.stubEnv("INTERNAL_SERVICE_TOKEN", "token");
+    vi.stubEnv("OPENAI_API_KEY", "sk-test");
+    mocks.snapshot.mockResolvedValue({ businessId: "biz_1", greeting: "Hi" });
+    const handler = createLiveCallHandler({ domain: { db: {} as never } });
+    await handler.handle(attachRequest({ sessionId: "live_transfer_trial", businessId: "biz_1", callId: "call_tt", channel: "voice" }), response());
+    mocks.prepareLiveCallTransfer.mockResolvedValueOnce(false);
+    const context = (mocks.createReceptionistAgent.mock.lastCall![0] as { context: { callControl: { transfer: (destination: string) => Promise<boolean> } } }).context;
+    await expect(context.callControl.transfer("+381641234567")).resolves.toBe(false);
+    expect(mocks.controllers_.at(-1)!.transferAfterAnnouncement).not.toHaveBeenCalled();
   });
 
   it("reserves no transfer attempt while another transfer is under way or the call is ending", async () => {

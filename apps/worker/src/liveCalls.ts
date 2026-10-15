@@ -419,7 +419,7 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
         transfer: async (destination: string) => {
           // Checked before reserving, so a skipped transfer neither uses an attempt
           // nor overwrites the state of the transfer already under way.
-          if (!controller?.canTransfer() || !(await prepareLiveCallTransfer(input.domain, call))) return false;
+          if (!controller?.canTransfer() || !(await prepareLiveCallTransfer(input.domain, { ...call, destination }))) return false;
           // False when the call started ending meanwhile, so GPT-Live doesn't announce a transfer.
           return controller.transferAfterAnnouncement(`tel:${destination}`);
         },

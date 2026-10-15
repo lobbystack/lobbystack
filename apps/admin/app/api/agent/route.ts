@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
-import { trialTransferNumberInTransaction, updateBusinessInTransaction } from "@lobbystack/domain";
+import { assertTransferNumberAllowed, updateBusinessInTransaction } from "@lobbystack/domain";
 import { businesses, enqueueOutbox, knowledgeDocuments, knowledgeSnippets, receptionistProfiles } from "@lobbystack/db";
 import { defaultAppointmentChangePolicy, defaultGreeting, isCurrencyCode, isRuntimeLocale, normalizeRuntimeLocale, type AppointmentChangePolicy, type BookingMode } from "@lobbystack/shared";
 import { jsonError } from "@/lib/api-helpers";
@@ -93,11 +93,8 @@ export const PATCH = operatorRoute(async ({ businessId, body, transaction }) => 
 
   const business = (await tx.select({ name: businesses.name, defaultLocale: businesses.defaultLocale }).from(businesses).where(eq(businesses.id, businessId)).limit(1))[0];
   if (!business) throw jsonError("Business not found.", 404);
-  if (patch.transferNumber) {
-    // During a free trial, calls transfer only to the owner's verified phone.
-    const trialPhone = await trialTransferNumberInTransaction(tx, { businessId });
-    if (trialPhone && patch.transferNumber.trim() !== trialPhone) throw jsonError("During your free trial, calls can only transfer to the mobile number you verified.", 409, "trial_transfer_locked");
-  }
+  // An E.164 number and, during a free trial, only the owner's verified phone. Employees' numbers follow the same rules.
+  if (patch.transferNumber) await assertTransferNumberAllowed(tx, { businessId, phone: patch.transferNumber });
   const previousLocale = normalizeRuntimeLocale(business.defaultLocale);
 
   // Opening hours keep their clock times in a new zone; booked appointments keep theirs.
