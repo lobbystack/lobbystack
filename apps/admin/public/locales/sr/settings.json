@@ -872,7 +872,7 @@
   },
   "apiKeys": {
     "title": "API ključevi",
-    "description": "Povežite LobbyStack sa alatima kao što je Zapier ili sa sopstvenim skriptama. Svaki ključ važi samo za ovu firmu.",
+    "description": "Zapier traži API ključ kada ga povežete, a Vašim skriptama je potreban da bi pozivale LobbyStack API. Vi birate šta svaki ključ može da čita i menja u ovoj firmi.",
     "empty": "Još nema API ključeva.",
     "neverUsed": "Nikad",
     "createdBy": "{{date}}, korisnik {{name}}",

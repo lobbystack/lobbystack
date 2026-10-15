@@ -868,7 +868,7 @@
   },
   "apiKeys": {
     "title": "API keys",
-    "description": "Connect tools like Zapier or your own scripts to LobbyStack. Each key works for this business only.",
+    "description": "Zapier asks for an API key when you connect it, and your own scripts need one to call the LobbyStack API. You choose what each key can read and change in this business.",
     "empty": "No API keys yet.",
     "neverUsed": "Never",
     "createdBy": "{{date}} by {{name}}",

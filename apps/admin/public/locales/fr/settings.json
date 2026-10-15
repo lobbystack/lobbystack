@@ -872,7 +872,7 @@
   },
   "apiKeys": {
     "title": "Clés API",
-    "description": "Connectez des outils comme Zapier ou vos propres scripts à LobbyStack. Chaque clé ne fonctionne que pour cette entreprise.",
+    "description": "Zapier vous demande une clé API quand vous le connectez, et vos propres scripts en ont besoin pour appeler l'API LobbyStack. Vous choisissez ce que chaque clé peut lire et modifier dans cette entreprise.",
     "empty": "Aucune clé API pour l'instant.",
     "neverUsed": "Jamais",
     "createdBy": "{{date}} par {{name}}",
