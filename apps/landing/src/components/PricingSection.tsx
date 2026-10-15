@@ -57,8 +57,8 @@ const tiers: Tier[] = [
     },
     period: "",
     description: {
-      monthly: "Test voice in your browser",
-      annual: "Test voice in your browser",
+      monthly: "Full access for 14 days",
+      annual: "Full access for 14 days",
     },
     cta: {
       monthly: "Start free",
@@ -69,7 +69,7 @@ const tiers: Tier[] = [
     highlights: [
       `${freeVoiceMinutes} browser voice minutes included`,
       ...(freePlanFacts.browserVoiceOnly
-        ? ["Phone number free for 14 days"]
+        ? ["1 phone number"]
         : []),
       "Community support",
     ],
@@ -165,8 +165,8 @@ const tiersFr: Tier[] = [
     },
     period: "",
     description: {
-      monthly: "Testez la voix dans votre navigateur",
-      annual: "Testez la voix dans votre navigateur",
+      monthly: "Accès complet pendant 14 jours",
+      annual: "Accès complet pendant 14 jours",
     },
     cta: {
       monthly: "Commencer gratuitement",
@@ -177,7 +177,7 @@ const tiersFr: Tier[] = [
     highlights: [
       `${freeVoiceMinutes} minutes vocales dans le navigateur`,
       ...(freePlanFacts.browserVoiceOnly
-        ? ["Numéro de téléphone gratuit pendant 14 jours"]
+        ? ["1 numéro de téléphone"]
         : []),
       "Support communautaire",
     ],
@@ -273,8 +273,8 @@ const tiersEs: Tier[] = [
     },
     period: "",
     description: {
-      monthly: "Pruebe la voz en su navegador",
-      annual: "Pruebe la voz en su navegador",
+      monthly: "Acceso completo durante 14 días",
+      annual: "Acceso completo durante 14 días",
     },
     cta: {
       monthly: "Empezar gratis",
@@ -285,7 +285,7 @@ const tiersEs: Tier[] = [
     highlights: [
       `${freeVoiceMinutes} minutos de voz en el navegador`,
       ...(freePlanFacts.browserVoiceOnly
-        ? ["Número de teléfono gratis durante 14 días"]
+        ? ["1 número de teléfono"]
         : []),
       "Soporte de la comunidad",
     ],
@@ -381,8 +381,8 @@ const tiersSr: Tier[] = [
     },
     period: "",
     description: {
-      monthly: "Isprobajte glas u pregledaču",
-      annual: "Isprobajte glas u pregledaču",
+      monthly: "Pun pristup 14 dana",
+      annual: "Pun pristup 14 dana",
     },
     cta: {
       monthly: "Počnite besplatno",
@@ -393,7 +393,7 @@ const tiersSr: Tier[] = [
     highlights: [
       `${freeVoiceMinutes} minuta razgovora u pregledaču`,
       ...(freePlanFacts.browserVoiceOnly
-        ? ["Broj telefona besplatno 14 dana"]
+        ? ["1 broj telefona"]
         : []),
       "Podrška zajednice",
     ],
