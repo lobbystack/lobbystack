@@ -149,7 +149,6 @@
       "call": "Call {{number}}"
     },
     "planRequired": "To get a number, choose a plan.",
-    "trialNote": "Your number is free for 14 days. No card needed.",
     "title": "Pick your AI's phone number",
     "description": "Choose a local number callers can reach you on.",
     "countryLabel": "Country",

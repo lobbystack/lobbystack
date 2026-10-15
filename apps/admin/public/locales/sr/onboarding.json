@@ -150,7 +150,6 @@
       "call": "Pozovi {{number}}"
     },
     "planRequired": "Da biste dobili broj, izaberite paket.",
-    "trialNote": "Vaš broj je besplatan 14 dana, bez kartice.",
     "title": "Izaberite broj telefona za AI recepcionera",
     "description": "Izaberite lokalni broj na koji Vas pozivaoci mogu dobiti.",
     "countryLabel": "Zemlja",

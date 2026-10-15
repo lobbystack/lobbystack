@@ -18,7 +18,6 @@ function setup(stage: string, primary = false, pending = false, suggestion?: () 
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business-1", active: true, onboardingStage: stage }] });
   client.setQueryData(["onboarding-primary-number", "business-1"], { activeClaim: pending ? { id: "claim-1", status: "provisioning" } : null, phoneNumbers: primary ? [{ id: "phone-1", e164: "+15815550102", reclaimScheduledAt: null }] : [] });
-  client.setQueryData(["billing", "business-1"], { account: null });
   const fetchMock = vi.fn(async (input: string) => {
     if (input.includes("/api/phone-numbers?")) return Response.json({ activeClaim: null, phoneNumbers: [{ id: "phone-1", e164: "+14165550100", reclaimScheduledAt: null }] });
     if (input.includes("/suggestion?")) return suggestion ? suggestion() : Response.json({ numbers: [{ phoneE164: "+14165550100", countryCode: "CA", claimToken: "signed-offer", capabilities: { sms: true, voice: true } }] });
@@ -56,7 +55,6 @@ describe("onboarding number API adapter", () => {
   });
   it.each(["attribution", "complete"])("claims a number from %s", async stage => {
     const fetchMock = setup(stage);
-    expect(screen.getByText("number.trialNote")).toBeTruthy();
     await userEvent.click(await screen.findByRole("button", { name: "number.select" }));
     expect(await screen.findByText("number.ready.label")).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "number.continue" }));

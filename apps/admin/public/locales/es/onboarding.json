@@ -150,7 +150,6 @@
       "call": "Llamar al {{number}}"
     },
     "planRequired": "Para obtener un número, elija un plan.",
-    "trialNote": "Su número es gratis durante 14 días, sin tarjeta.",
     "title": "Elija el número de teléfono de su IA",
     "description": "Elija un número local en el que sus clientes puedan llamarle.",
     "countryLabel": "País",

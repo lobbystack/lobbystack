@@ -150,7 +150,6 @@
       "call": "Appeler le {{number}}"
     },
     "planRequired": "Pour obtenir un numéro, choisissez un forfait.",
-    "trialNote": "Votre numéro est gratuit pendant 14 jours, sans carte bancaire.",
     "title": "Choisissez le numéro de votre IA",
     "description": "Choisissez un numéro local que vos appelants peuvent composer.",
     "countryLabel": "Pays",
