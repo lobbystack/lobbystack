@@ -80,10 +80,10 @@ The account owner has to accept the Zapier Developer Platform Agreement first. S
 - [x] Accept the Zapier Developer Platform Agreement.
 - [x] Create a LobbyStack test account for `integration-testing@zapier.com` that never expires. It needs instant booking turned on, at least one service with staff and hours, and an API key with every scope. Zapier support must be able to reset its password.
 - [x] Add a team member to the Zapier integration who has an `@lobbystack.com` email address.
-- [ ] Upload a logo and set the category and homepage.
-- [ ] Write the app description, starting with "LobbyStack is a...". Leave out links and sales language.
+- [x] Upload a logo and set the category and homepage.
+- [x] Write the app description, starting with "LobbyStack is a...". Leave out links and sales language.
 - [x] Check that `https://docs.lobbystack.com/api/authentication` is live, since the API key help text links to it.
 - [x] Publish the API v1 docs (PR #211) before submission. Zapier requires public API documentation.
-- [ ] Run a test Zap for each trigger, action and search, and keep them turned on.
+- [x] Run a test Zap for each trigger, action and search, and keep them turned on.
 - [ ] Get at least 3 Zapier users with live Zaps. Zapier checks this before it lists the integration, so share the private invite link (`zapier-platform users:links`) with early customers.
 - [ ] Record a short demo or write steps for booking, since it depends on business settings.
