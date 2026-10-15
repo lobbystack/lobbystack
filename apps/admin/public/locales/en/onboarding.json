@@ -240,6 +240,7 @@
         "highlights": {
           "voiceMinutes": "30 voice minutes included",
           "bookingContacts": "1 phone number",
+          "concurrentCalls": "Unlimited calls at once",
           "support": "Community support"
         }
       },
@@ -255,13 +256,13 @@
           "annual": "Billed annually. Includes 150 voice minutes that reset monthly."
         },
         "cta": {
-          "monthly": "Start monthly",
-          "annual": "Start annual"
+          "monthly": "Get Starter",
+          "annual": "Get Starter"
         },
         "highlights": {
           "voiceMinutes": "150 voice minutes included\nThen $0.20/min",
           "dedicatedNumber": "1 dedicated business number",
-          "alertSms": "50 alert SMS segments",
+          "concurrentCalls": "Unlimited calls at once",
           "support": "Email support"
         }
       },
@@ -277,13 +278,13 @@
           "annual": "Billed annually. More included usage for growing call volume."
         },
         "cta": {
-          "monthly": "Go Pro monthly",
-          "annual": "Go Pro annual"
+          "monthly": "Get Pro",
+          "annual": "Get Pro"
         },
         "highlights": {
           "voiceMinutes": "500 voice minutes included\nThen $0.18/min",
           "dedicatedNumber": "1 dedicated business number",
-          "alertSms": "200 alert SMS segments",
+          "concurrentCalls": "Unlimited calls at once",
           "support": "Priority email support"
         }
       },
@@ -295,7 +296,8 @@
         "cta": "Contact us",
         "highlights": {
           "phoneNumbers": "Multiple dedicated numbers",
-          "selfHosted": "Self-hosted deployment option",
+          "concurrentCalls": "Unlimited calls at once",
+          "usageLimits": "Custom usage limits",
           "support": "Dedicated implementation support"
         }
       }

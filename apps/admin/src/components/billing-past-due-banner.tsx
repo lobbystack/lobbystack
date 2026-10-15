@@ -40,7 +40,7 @@ export function BillingPastDueBanner({ businessId, plan, subscriptionState, perm
   return (
         <div
           aria-live="polite"
-          className="relative z-60 w-full shrink-0 border-b border-amber-500/30 bg-amber-500/10 text-amber-950 dark:text-amber-100"
+          className="relative z-30 w-full shrink-0 border-b border-amber-500/30 bg-amber-500/10 text-amber-950 dark:text-amber-100"
           role="alert"
         >
           <div className="flex w-full flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between md:px-6">

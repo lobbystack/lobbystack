@@ -190,7 +190,7 @@
       "actions": {
         "currentPlan": "Plan actual",
         "starter": "Elegir Starter",
-        "pro": "Cambiar a Pro",
+        "pro": "Elegir Pro",
         "enterprise": "Contáctenos"
       },
       "plans": {
@@ -203,6 +203,7 @@
           "highlights": {
             "voiceMinutes": "30 minutos de voz incluidos",
             "allFeatures": "1 número de teléfono",
+            "concurrentCalls": "Llamadas simultáneas ilimitadas",
             "support": "Soporte de la comunidad"
           }
         },
@@ -215,8 +216,7 @@
           "highlights": {
             "voiceMinutes": "150 minutos de voz incluidos\nLuego $0.20/min",
             "dedicatedNumber": "1 número del negocio dedicado",
-            "phoneNumber": "50 segmentos de SMS de alerta",
-            "overages": "Excedentes de voz a $0.20/min",
+            "concurrentCalls": "Llamadas simultáneas ilimitadas",
             "support": "Soporte por correo electrónico"
           }
         },
@@ -229,7 +229,7 @@
           "highlights": {
             "voiceMinutes": "500 minutos de voz incluidos\nLuego $0.18/min",
             "dedicatedNumber": "1 número del negocio dedicado",
-            "alertSms": "200 segmentos de SMS de alerta",
+            "concurrentCalls": "Llamadas simultáneas ilimitadas",
             "support": "Soporte prioritario por correo electrónico"
           }
         },
@@ -241,7 +241,8 @@
           },
           "highlights": {
             "phoneNumbers": "Varios números dedicados",
-            "selfHosted": "Opción de implementación autoalojada",
+            "concurrentCalls": "Llamadas simultáneas ilimitadas",
+            "usageLimits": "Límites de uso a medida",
             "support": "Soporte dedicado para la implementación"
           }
         }

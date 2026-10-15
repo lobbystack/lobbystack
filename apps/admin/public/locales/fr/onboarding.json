@@ -241,6 +241,7 @@
         "highlights": {
           "voiceMinutes": "30 minutes vocales incluses",
           "bookingContacts": "1 numéro de téléphone",
+          "concurrentCalls": "Appels simultanés illimités",
           "support": "Support communautaire"
         }
       },
@@ -256,13 +257,13 @@
           "annual": "Facturé annuellement. Inclut 150 minutes vocales réinitialisées chaque mois."
         },
         "cta": {
-          "monthly": "Starter mensuel",
-          "annual": "Starter annuel"
+          "monthly": "Choisir Starter",
+          "annual": "Choisir Starter"
         },
         "highlights": {
           "voiceMinutes": "150 minutes vocales incluses\nPuis 0,20 $/min",
           "dedicatedNumber": "1 numéro d'entreprise dédié",
-          "alertSms": "50 segments SMS d'alerte",
+          "concurrentCalls": "Appels simultanés illimités",
           "support": "Support par email"
         }
       },
@@ -278,13 +279,13 @@
           "annual": "Facturé annuellement. Plus d'utilisation incluse pour un volume d'appels croissant."
         },
         "cta": {
-          "monthly": "Pro mensuel",
-          "annual": "Pro annuel"
+          "monthly": "Choisir Pro",
+          "annual": "Choisir Pro"
         },
         "highlights": {
           "voiceMinutes": "500 minutes vocales incluses\nPuis 0,18 $/min",
           "dedicatedNumber": "1 numéro d'entreprise dédié",
-          "alertSms": "200 segments SMS d'alerte",
+          "concurrentCalls": "Appels simultanés illimités",
           "support": "Support prioritaire par email"
         }
       },
@@ -296,7 +297,8 @@
         "cta": "Nous contacter",
         "highlights": {
           "phoneNumbers": "Plusieurs numéros dédiés",
-          "selfHosted": "Option de déploiement auto-hébergé",
+          "concurrentCalls": "Appels simultanés illimités",
+          "usageLimits": "Limites d'utilisation sur mesure",
           "support": "Accompagnement dédié"
         }
       }

@@ -34,7 +34,7 @@ export function NumberTrialBanner() {
       ? [t("numberTrial.outOfMinutes", { forwardTo: formatPhoneNumberDisplay(state.forwardTo) }), t("numberTrial.getReceptionistBack")]
       : [t("numberTrial.daysLeft", { number, count: state.daysLeft }), t("numberTrial.keepNumber")];
   return (
-    <div aria-live="polite" className="relative z-60 w-full shrink-0 border-b border-amber-500/30 bg-amber-500/10 text-amber-950 dark:text-amber-100" role="status">
+    <div aria-live="polite" className="relative z-30 w-full shrink-0 border-b border-amber-500/30 bg-amber-500/10 text-amber-950 dark:text-amber-100" role="status">
       <div className="flex w-full flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between md:px-6">
         <div className="flex min-w-0 items-center gap-3">
           <Clock aria-hidden="true" className="size-5 shrink-0 text-amber-600 dark:text-amber-400" />

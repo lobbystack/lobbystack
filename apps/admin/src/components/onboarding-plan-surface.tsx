@@ -23,10 +23,10 @@ type Checkout = { id: string; status: string; checkoutUrl: string | null; error:
 type BillingStatus = { checkoutAvailable: boolean; availableCheckoutPlans?: Array<"starter" | "pro">; availableCheckoutIntervals?: { starter: BillingInterval[]; pro: BillingInterval[] } };
 
 const tiers: Array<{ slug: Plan; highlight?: boolean; features: string[] }> = [
-  { slug: "free_cloud", features: ["voiceMinutes", "bookingContacts", "support"] },
-  { slug: "starter", features: ["voiceMinutes", "dedicatedNumber", "alertSms", "support"] },
-  { slug: "pro", highlight: true, features: ["voiceMinutes", "dedicatedNumber", "alertSms", "support"] },
-  { slug: "enterprise", features: ["phoneNumbers", "selfHosted", "support"] },
+  { slug: "free_cloud", features: ["voiceMinutes", "bookingContacts", "concurrentCalls", "support"] },
+  { slug: "starter", features: ["voiceMinutes", "dedicatedNumber", "concurrentCalls", "support"] },
+  { slug: "pro", highlight: true, features: ["voiceMinutes", "dedicatedNumber", "concurrentCalls", "support"] },
+  { slug: "enterprise", features: ["phoneNumbers", "concurrentCalls", "usageLimits", "support"] },
 ];
 
 export function OnboardingPlanSurface() {

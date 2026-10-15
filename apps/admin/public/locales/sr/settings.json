@@ -190,7 +190,7 @@
       "actions": {
         "currentPlan": "Trenutni paket",
         "starter": "Izaberite Starter",
-        "pro": "Pređite na Pro",
+        "pro": "Izaberite Pro",
         "enterprise": "Kontaktirajte nas"
       },
       "plans": {
@@ -203,6 +203,7 @@
           "highlights": {
             "voiceMinutes": "30 minuta razgovora uključeno",
             "allFeatures": "1 broj telefona",
+            "concurrentCalls": "Neograničen broj istovremenih poziva",
             "support": "Podrška zajednice"
           }
         },
@@ -215,8 +216,7 @@
           "highlights": {
             "voiceMinutes": "150 minuta razgovora uključeno\nZatim 0,20 $/min",
             "dedicatedNumber": "1 namenski poslovni broj",
-            "phoneNumber": "50 SMS segmenata za upozorenja",
-            "overages": "0,20 $/min za dodatne minute razgovora",
+            "concurrentCalls": "Neograničen broj istovremenih poziva",
             "support": "Podrška putem imejla"
           }
         },
@@ -229,7 +229,7 @@
           "highlights": {
             "voiceMinutes": "500 minuta razgovora uključeno\nZatim 0,18 $/min",
             "dedicatedNumber": "1 namenski poslovni broj",
-            "alertSms": "200 SMS segmenata za upozorenja",
+            "concurrentCalls": "Neograničen broj istovremenih poziva",
             "support": "Prioritetna podrška putem imejla"
           }
         },
@@ -241,7 +241,8 @@
           },
           "highlights": {
             "phoneNumbers": "Više namenskih brojeva",
-            "selfHosted": "Mogućnost samostalnog hostovanja",
+            "concurrentCalls": "Neograničen broj istovremenih poziva",
+            "usageLimits": "Prilagođeni limiti potrošnje",
             "support": "Namenska podrška pri uvođenju"
           }
         }

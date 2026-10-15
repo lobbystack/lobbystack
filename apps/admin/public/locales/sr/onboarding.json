@@ -241,6 +241,7 @@
         "highlights": {
           "voiceMinutes": "30 minuta razgovora uključeno",
           "bookingContacts": "1 broj telefona",
+          "concurrentCalls": "Neograničen broj istovremenih poziva",
           "support": "Podrška zajednice"
         }
       },
@@ -256,13 +257,13 @@
           "annual": "Naplaćuje se godišnje. Uključuje 150 minuta razgovora koji se obnavljaju svakog meseca."
         },
         "cta": {
-          "monthly": "Počnite mesečno",
-          "annual": "Počnite godišnje"
+          "monthly": "Izaberite Starter",
+          "annual": "Izaberite Starter"
         },
         "highlights": {
           "voiceMinutes": "150 minuta razgovora uključeno\nZatim 0,20 $/min",
           "dedicatedNumber": "1 namenski poslovni broj",
-          "alertSms": "50 SMS segmenata za obaveštenja",
+          "concurrentCalls": "Neograničen broj istovremenih poziva",
           "support": "Podrška putem imejla"
         }
       },
@@ -278,13 +279,13 @@
           "annual": "Naplaćuje se godišnje. Više uključene potrošnje za rastući broj poziva."
         },
         "cta": {
-          "monthly": "Pro mesečno",
-          "annual": "Pro godišnje"
+          "monthly": "Izaberite Pro",
+          "annual": "Izaberite Pro"
         },
         "highlights": {
           "voiceMinutes": "500 minuta razgovora uključeno\nZatim 0,18 $/min",
           "dedicatedNumber": "1 namenski poslovni broj",
-          "alertSms": "200 SMS segmenata za obaveštenja",
+          "concurrentCalls": "Neograničen broj istovremenih poziva",
           "support": "Prioritetna podrška putem imejla"
         }
       },
@@ -296,7 +297,8 @@
         "cta": "Kontaktirajte nas",
         "highlights": {
           "phoneNumbers": "Više namenskih brojeva",
-          "selfHosted": "Mogućnost samostalnog hostovanja",
+          "concurrentCalls": "Neograničen broj istovremenih poziva",
+          "usageLimits": "Prilagođeni limiti potrošnje",
           "support": "Namenska podrška pri uvođenju"
         }
       }
