@@ -3401,7 +3401,7 @@
           },
           "locale": {
             "type": "string",
-            "description": "Default language for callers: en, fr, es, de, pt (Brazilian Portuguese), it or nl."
+            "description": "Default language for callers: en, fr, es, sr (Serbian, Latin script), de, pt (Brazilian Portuguese), it or nl."
           },
           "website_url": {
             "type": [

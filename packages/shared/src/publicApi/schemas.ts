@@ -70,7 +70,7 @@ export const apiBusinessSchema = z.object({
   id,
   name: z.string(),
   timezone: z.string().describe("IANA time zone, for example America/Toronto."),
-  locale: z.string().describe("Default language for callers: en, fr, es, de, pt (Brazilian Portuguese), it or nl."),
+  locale: z.string().describe("Default language for callers: en, fr, es, sr (Serbian, Latin script), de, pt (Brazilian Portuguese), it or nl."),
   website_url: z.string().nullable(),
   booking_mode: z.enum(["instant", "request", "off"]).describe("instant: appointments are booked directly. request: the receptionist takes a request and the team confirms it. off: no booking."),
   hours: z.array(apiHoursWindowSchema),

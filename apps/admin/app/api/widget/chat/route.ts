@@ -100,8 +100,9 @@ export async function POST(request: Request) {
           const snapshot = await getCachedBusinessSnapshot(context, { businessId: session.businessId });
           const activeSnapshot = snapshot ?? fallbackSnapshot(session);
           const history = await loadWidgetChatHistory(context, { businessId: session.businessId, conversationId });
-          // The widget's interface language when the receptionist speaks it; otherwise the widget's set language, else the business's caller language.
-          const language = runtimeLocaleName(normalizeRuntimeLocale(body.locale ?? session.config.localeOverride ?? session.defaultLocale));
+          // A French widget answers in French; otherwise the widget's set language, else the business's caller language.
+          // The widget's interface falls back to English for other languages, so its locale says nothing about the visitor.
+          const language = runtimeLocaleName(body.locale === "fr" ? "fr" : normalizeRuntimeLocale(session.config.localeOverride ?? session.defaultLocale));
           const agent = createReceptionistAgent({
             model: model!,
             context: { domain: context, snapshot: activeSnapshot, channel: "web_chat", conversationId },

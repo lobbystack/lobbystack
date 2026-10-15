@@ -31,7 +31,7 @@ These options change what runs:
 - **`--runs <n>`**: runs each scenario this many times. The default is 3.
 - **`--concurrency <n>`**: how many sessions run at once. The default is 4. With 22 sessions at once, many runs lost their transcripts.
 - **`--snapshot <file>`**: uses a real business's snapshot instead of the demo business.
-- **`--locale <code>`**: sets the business's caller language to `en`, `fr`, `es`, `de`, `pt`, `it` or `nl` and gives it that language's default greeting. The scripted caller speaks the same language. Without it, the caller speaks English and the business keeps its own language and greeting.
+- **`--locale <code>`**: sets the business's caller language to `en`, `fr`, `es`, `sr`, `de`, `pt`, `it` or `nl` and gives it that language's default greeting. The scripted caller speaks the same language. Without it, the caller speaks English and the business keeps its own language and greeting.
 
 Each run uses under a minute of GPT-Live audio, plus a delegation model call for each hand-over. The default 18 runs take about 5 minutes.
 
