@@ -1,0 +1,70 @@
+---
+title: "Añada empleados que se puedan reservar"
+description: "Añada a las personas de su equipo para que quienes llaman puedan reservar con ellas por su nombre o pedir que les transfieran, con sus servicios, horarios y permisos."
+sidebarTitle: "Empleados"
+contentType: "How-to"
+---
+
+La página **Empleados** muestra a las personas con las que su recepcionista reserva citas y a las que transfiere llamadas. Quien llama puede pedir a alguien por su nombre. Si no tiene preferencia, su recepcionista reserva con el primer empleado disponible que hace el servicio.
+
+<Note>
+  Cada empleado necesita al menos un servicio, así que añada primero sus [servicios](/es/agent/services).
+</Note>
+
+## Añadir un empleado
+
+<Steps>
+  <Step title="Abra Empleados">
+    Vaya a **Agente** > **Empleados**.
+  </Step>
+  <Step title="Añada un empleado">
+    Haga clic en **Añadir empleado**.
+  </Step>
+  <Step title="Introduzca un nombre">
+    Introduzca el nombre con el que quienes llaman conocen al empleado.
+  </Step>
+  <Step title="Añada un número de teléfono">
+    Opcional. Elija el país e introduzca el número de teléfono del empleado. Quien pida hablar con este empleado se transfiere a ese número. Consulte [Transferencias a empleados](#transferencias-a-empleados).
+  </Step>
+  <Step title="Elija los servicios">
+    En **Servicios**, elija los servicios que hace este empleado o haga clic en **Seleccionar todo**. Solo se puede reservar con este empleado para esos servicios.
+  </Step>
+  <Step title="Defina el horario de trabajo">
+    Deje **Mismo horario que el negocio** activado si el empleado trabaja siempre que el negocio está abierto. Desactívelo para elegir los días y las horas en que trabaja.
+  </Step>
+  <Step title="Añada permisos">
+    Opcional. Haga clic en **Agregar permiso** y elija el primer y el último día de cada ausencia. Los permisos no pueden superponerse ni terminar en el pasado.
+  </Step>
+  <Step title="Añada">
+    Haga clic en **Añadir**. El empleado aparece en la tabla.
+  </Step>
+</Steps>
+
+Para cambiar o quitar un empleado, abra **Más opciones** en su fila y elija **Editar** o **Eliminar**.
+
+## Cómo reserva su recepcionista con los empleados
+
+Su recepcionista reserva con un empleado solo:
+
+- Para los servicios que usted le asignó.
+- Cuando trabaja y el negocio está abierto. Un empleado con su propio horario se reserva dentro de ese horario y de su [horario de atención](/es/agent/ai-settings/overview).
+- Fuera de sus permisos. Cuando quien llama pide a un empleado que está de permiso, su recepcionista le dice cuándo vuelve y le ofrece otro día u otro empleado.
+
+Antes de buscar un horario, su recepcionista pregunta a quien llama si quiere un empleado en concreto. Después de reservar, le dice con quién es la cita.
+
+Cuando **Citas** está en **Toma solicitudes** en **Ajustes de IA**, su recepcionista añade a la solicitud el empleado que eligió quien llama, y su equipo la confirma.
+
+## Transferencias a empleados
+
+Cuando quien llama pide hablar con un empleado por su nombre, su recepcionista transfiere la llamada al número de teléfono de ese empleado. Quien pide a un empleado sin número llega a su [número de transferencia predeterminado](/es/agent/ai-settings/overview#número-de-transferencia-predeterminado).
+
+- El número del empleado debe estar en uno de los países que aparecen en [Número de transferencia predeterminado](/es/agent/ai-settings/overview#número-de-transferencia-predeterminado). Las transferencias a números de otros países no se conectan.
+- Durante una prueba gratuita, las llamadas se transfieren solo al número de móvil que usted verificó, así que no puede guardar otro número para un empleado.
+
+## Estado de los empleados
+
+| Estado | Qué significa |
+| --- | --- |
+| **Trabajando** | Quienes llaman pueden reservar con este empleado. Cuando se acerca un permiso, la tabla muestra el día en que empieza. |
+| **De permiso** | El empleado está de permiso hoy. La tabla muestra el último día de su permiso. |
+| **No reservable** | El empleado no tiene servicios. Edítelo y elija sus servicios para que quienes llaman puedan reservar con él. |

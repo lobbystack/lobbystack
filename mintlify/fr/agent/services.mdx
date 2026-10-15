@@ -1,13 +1,11 @@
 ---
 title: "Ajouter des services réservables"
-description: "Ajoutez des services pour que les appelants comprennent ce que vous offrez et demandent le bon rendez-vous."
+description: "Ajoutez les services que les appelants peuvent réserver, avec une durée et un prix, pour que votre réceptionniste explique ce que vous offrez et réserve le bon rendez-vous."
 sidebarTitle: "Services"
 contentType: "How-to"
 ---
 
-La page **Services** contient les types de rendez-vous ou les prestations dont votre réceptionniste peut parler avec les appelants. Vous gérez les services avec le même tableau d'entrées que les Connaissances et les Règles : un titre, un contenu, des étiquettes facultatives, un statut et des actions.
-
-Les services aident LobbyStack à expliquer ce que vous offrez, à recueillir les bons renseignements auprès des appelants et à guider les demandes de rendez-vous quand votre calendrier est connecté.
+La page **Services** liste ce que les appelants peuvent réserver. Chaque service a un titre, une durée, un prix facultatif, une description et un interrupteur **Réservable**. Votre réceptionniste s'en sert pour expliquer ce que vous offrez, annoncer les prix et réserver des rendez-vous de la bonne durée.
 
 ## Ajouter un service
 
@@ -18,21 +16,52 @@ Les services aident LobbyStack à expliquer ce que vous offrez, à recueillir le
   <Step title="Ajoutez un service">
     Cliquez sur **Ajouter un service**.
   </Step>
-  <Step title="Décrivez le service">
-    Entrez un titre clair, comme « Consultation initiale », et décrivez ce que comprend le service. Au besoin, ajoutez des étiquettes qui reprennent les mots de vos appelants.
+  <Step title="Nommez le service et choisissez sa durée">
+    Entrez un **Titre** clair, comme « Consultation initiale », et choisissez la **Durée**. Votre réceptionniste se sert de la durée pour trouver des créneaux libres.
   </Step>
-  <Step title="Enregistrez">
-    Cliquez sur **Enregistrer**. Le service apparaît dans le tableau Services.
+  <Step title="Indiquez un prix">
+    Choisissez un type de prix et entrez le montant, ou laissez le montant vide. Consultez [Prix](#prix).
+  </Step>
+  <Step title="Décrivez le service">
+    Dans **Contenu**, décrivez ce que comprend le service et à qui il s'adresse.
+  </Step>
+  <Step title="Ajoutez">
+    Laissez **Réservable** activé pour que votre réceptionniste propose le service pendant les appels, puis cliquez sur **Ajouter**. Le service apparaît dans le tableau Services.
   </Step>
 </Steps>
+
+Pour modifier un service, cliquez sur sa ligne, faites vos changements et cliquez sur **Enregistrer**.
+
+## Prix
+
+| Type de prix | Ce que vous entrez | Ce que votre réceptionniste dit aux appelants |
+| --- | --- | --- |
+| **Fixe** | Un montant | Ce prix. |
+| **À partir de** | Le prix le plus bas | Un prix de départ, comme « à partir de 40 $ ». |
+| **Entre** | Le prix le plus bas et le plus élevé | La fourchette de prix. |
+| **Sur place** | Aucun montant | L'entreprise fixe le prix une fois qu'elle connaît les besoins de l'appelant. |
+
+Votre réceptionniste annonce le prix que vous avez entré. Si vous laissez le montant vide, elle n'en invente pas, et la colonne **Prix** affiche **Non défini**. Les prix utilisent la devise que vous choisissez dans les [Paramètres IA](/fr/agent/ai-settings/overview#devise).
+
+## Dupliquer, désactiver ou supprimer un service
+
+Ouvrez le menu **Plus d'options** sur la ligne d'un service :
+
+- **Dupliquer** copie le service et ajoute « (copie) » à son titre. Modifiez la copie pour créer un service semblable.
+- **Désactiver** empêche votre réceptionniste de proposer le service, qui reste dans le tableau. Cliquez sur **Activer** pour le proposer de nouveau.
+- **Supprimer** retire le service. Votre réceptionniste ne le propose plus, et les rendez-vous passés l'affichent toujours.
+
+## Choisir qui fait chaque service
+
+Si vous ajoutez des [employés](/fr/agent/employees), choisissez les services de chacun dans la page **Employés**. Les appelants peuvent alors réserver une personne précise pour un service.
 
 ## Aider les appelants à réserver le bon service
 
 Rédigez vos services avec les mots qu'emploient les appelants :
 
 - Utilisez le nom du service tel que vos clients le disent.
-- Indiquez la durée, l'admissibilité, les consignes de préparation et les prix seulement si ces détails sont stables.
-- Ajoutez des synonymes dans les étiquettes quand les appelants désignent le même service par des mots différents.
+- Ajoutez l'admissibilité et les consignes de préparation à la description seulement si ces détails sont stables.
+- Mentionnez dans la description les autres noms que les appelants donnent au service.
 - Laissez désactivés les services indisponibles ou saisonniers.
 
 ## Exemples de services

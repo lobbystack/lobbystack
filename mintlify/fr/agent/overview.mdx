@@ -1,23 +1,26 @@
 ---
 title: "Configurer votre réceptionniste IA"
-description: "Utilisez la section Agent pour configurer les paramètres IA, les connaissances, les services et les règles de votre réceptionniste."
+description: "Utilisez la section Agent pour configurer les paramètres IA, les connaissances, les services, les employés et les règles de votre réceptionniste."
 sidebarTitle: "Vue d'ensemble de l'agent"
 contentType: "Conceptual"
 ---
 
-La section **Agent** détermine le comportement de votre réceptionniste IA. Elle se divise en Paramètres IA, Connaissances, Services et Règles.
+La section **Agent** détermine le comportement de votre réceptionniste IA. Elle se divise en Paramètres IA, Connaissances, Services, Employés et Règles.
 
 Les modifications s'appliquent aux nouveaux appels et aux nouvelles réponses du clavardage du site Web. Elles ne modifient pas les appels ni les messages passés.
 
 <CardGroup cols={2}>
   <Card title="Paramètres IA" icon="comment-dots" href="/fr/agent/ai-settings/overview">
-    Définissez la phrase d'ouverture, la langue de repli, les modifications de rendez-vous et le numéro de transfert par défaut.
+    Définissez la phrase d'ouverture, la langue des appels, la devise, les modifications de rendez-vous et le numéro de transfert par défaut.
   </Card>
   <Card title="Connaissances" icon="book-open" href="/fr/agent/knowledge">
     Ajoutez des informations sur votre entreprise à partir d'entrées de texte, de documents ou d'une importation de site Web.
   </Card>
   <Card title="Services" icon="calendar-check" href="/fr/agent/services">
-    Ajoutez vos types de rendez-vous et les informations dont les appelants ont besoin sur vos services.
+    Ajoutez vos types de rendez-vous avec leur durée, leur prix et les informations dont les appelants ont besoin.
+  </Card>
+  <Card title="Employés" icon="id-card" href="/fr/agent/employees">
+    Ajoutez les personnes que les appelants peuvent réserver ou demander, avec leurs services, leurs horaires et leurs congés.
   </Card>
   <Card title="Règles" icon="list-check" href="/fr/agent/rules">
     Ajoutez des consignes pour les transferts, les demandes de rappel, le comportement de repli et les cas particuliers.
@@ -35,7 +38,7 @@ Pour le clavardage du site Web, LobbyStack s'appuie sur le contexte actuel de l'
 Avant de renvoyer de vrais appels, vérifiez que :
 
 - Votre message d'accueil nomme votre entreprise et indique clairement à quoi l'appelant peut s'attendre.
-- La langue de repli est définie pour les cas où la langue de l'appelant n'est pas claire.
-- Un numéro de transfert est enregistré si vous voulez qu'un humain puisse prendre le relais en direct.
+- La langue client par défaut est celle que parlent la plupart de vos appelants, car les appels commencent dans cette langue.
+- Un numéro de transfert est enregistré si vous voulez qu'un humain puisse prendre le relais en direct. Il doit se trouver dans un [pays que LobbyStack peut appeler](/fr/agent/ai-settings/overview#numéro-de-transfert-par-défaut).
 - Vos entrées de connaissances couvrent les heures d'ouverture, l'adresse, les services, les prix, les politiques et les questions fréquentes des appelants.
-- Vos services et votre connexion Google Calendar sont prêts avant de compter sur la prise de rendez-vous ou les modifications de rendez-vous.
+- Vos services, vos employés et votre connexion Google Calendar sont prêts avant de compter sur la prise de rendez-vous ou les modifications de rendez-vous.

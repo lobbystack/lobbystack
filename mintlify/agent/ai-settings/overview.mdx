@@ -1,6 +1,6 @@
 ---
 title: "Configure voice and behavior"
-description: "Configure the opening line, default customer language, opening hours, appointment changes, and default transfer number for your AI receptionist."
+description: "Configure the opening line, default customer language, opening hours, currency, appointment changes, and default transfer number for your AI receptionist."
 sidebarTitle: "AI settings"
 contentType: "How-to"
 ---
@@ -25,10 +25,10 @@ Good greetings usually include the business name, a brief disclosure that the ca
     In the dashboard sidebar, go to **Agent** > **AI settings**.
   </Step>
   <Step title="Edit the greeting">
-    Update the **Greeting** field.
+    Click **Edit** beside **Greeting**, then change the text.
   </Step>
   <Step title="Save">
-    Click **Save** beside the greeting field.
+    Click **Save**.
   </Step>
 </Steps>
 
@@ -38,7 +38,9 @@ The business summary is what your receptionist tells callers when they ask what 
 
 You don't have to write it. When you add your website or documents in **Knowledge**, AI writes a summary of two to four sentences from them, in your default customer language. It rewrites the summary a few minutes after your knowledge changes, and only when the content changed.
 
-To write your own, edit the **Business summary** field and click **Save**. AI never changes a summary you wrote. To go back to the AI summary, click **Rewrite with AI**.
+To write your own, click **Edit** beside **Business summary**, change the text, and click **Save**. AI never changes a summary you wrote.
+
+To go back to an AI summary, click **Edit**, then **Rewrite with AI**. AI rewrites the summary from your knowledge and tells you when it's done. If your knowledge doesn't say what the business does yet, the summary stays as it was.
 
 ## Opening hours
 
@@ -51,6 +53,8 @@ To set the hours yourself, turn each day on or off and enter its times. Click **
 For holidays and other times you're closed, click **Add closure** and enter when you close and reopen. Use your business timezone, then click **Save hours**. Your receptionist won't book appointments during a closure. It tells callers the business is closed then and offers another day.
 
 ## Default customer language
+
+Calls open in your **Default customer language**: your receptionist greets callers in it. When a caller asks for another language or speaks one, your receptionist switches to it. It can talk with callers in more than 70 languages.
 
 The **Default customer language** setting supports:
 
@@ -65,21 +69,31 @@ The **Default customer language** setting supports:
 | Italian | `it` |
 | Dutch | `nl` |
 
-Choose the fallback language your receptionist should use when the caller's language is unclear. If you haven't changed the greeting, it switches to the default greeting in the new language.
+Choose the language most of your callers speak. If you haven't changed the greeting, it switches to the default greeting in the new language.
 
 <Note>
-  This setting is a fallback, not a limit on conversation language. The receptionist can respond in other languages when the caller's language is clear. Add greeting, knowledge, service, and rule content in the languages your callers are most likely to use.
+  Add greeting, knowledge, service, and rule content in the languages your callers are most likely to use.
 </Note>
+
+## Currency
+
+Pick the currency your [service prices](/agent/services#prices) are in from **Currency**. Your receptionist quotes prices in it. If you change the currency later, the amounts you entered stay the same.
 
 ## Default transfer number
 
-The **Default transfer number** is the phone number used when the receptionist performs a live handoff to a human.
+The **Default transfer number** is the phone number your receptionist calls when it hands a caller to a person. When a caller asks for an [employee](/agent/employees) who has a phone number, your receptionist transfers the call to that employee instead.
 
 Use a number that is answered during business hours. If different teams handle different requests, keep the default number as the safest general handoff and add rules for when a caller should be transferred.
 
+<Note>
+  Transfer numbers must be in one of these countries: the United States, Canada, the United Kingdom, Australia, New Zealand, France, Germany, Spain, Italy, the Netherlands, Portugal, Mexico, Brazil, Israel, India, Japan, or Serbia. Transfers to numbers elsewhere don't connect.
+</Note>
+
+During a free trial, your receptionist transfers calls only to the mobile number you verified, and you can't save a different number. Upgrade to Starter or Pro to change it.
+
 <Steps>
   <Step title="Enter a number">
-    Add a complete phone number in the transfer number field.
+    Enter the complete phone number in **Default transfer number**.
   </Step>
   <Step title="Save">
     Click **Save** beside the transfer number field.

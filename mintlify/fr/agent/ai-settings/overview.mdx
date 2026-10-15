@@ -1,6 +1,6 @@
 ---
 title: "Configurer la voix et le comportement"
-description: "Configurez la phrase d'ouverture, la langue client par défaut, les heures d'ouverture, les modifications de rendez-vous et le numéro de transfert par défaut de votre réceptionniste IA."
+description: "Configurez la phrase d'ouverture, la langue client par défaut, les heures d'ouverture, la devise, les modifications de rendez-vous et le numéro de transfert par défaut de votre réceptionniste IA."
 sidebarTitle: "Paramètres IA"
 contentType: "How-to"
 ---
@@ -25,10 +25,10 @@ Un bon message d'accueil comprend en général le nom de l'entreprise, une court
     Dans la barre latérale du tableau de bord, allez dans **Agent** > **Paramètres IA**.
   </Step>
   <Step title="Modifiez le message d'accueil">
-    Mettez à jour le champ **Message d'accueil**.
+    Cliquez sur **Modifier** à côté de **Message d'accueil**, puis changez le texte.
   </Step>
   <Step title="Enregistrez">
-    Cliquez sur **Enregistrer** à côté du champ du message d'accueil.
+    Cliquez sur **Enregistrer**.
   </Step>
 </Steps>
 
@@ -38,7 +38,9 @@ Le résumé de l'entreprise est ce que votre réceptionniste dit aux appelants q
 
 Vous n'avez pas à le rédiger. Quand vous ajoutez votre site web ou vos documents dans **Connaissances**, l'IA en rédige un résumé de deux à quatre phrases, dans votre langue client par défaut. Elle le réécrit quelques minutes après un changement de vos connaissances, et seulement si le contenu a changé.
 
-Pour rédiger le vôtre, modifiez le champ **Résumé de l'entreprise** et cliquez sur **Enregistrer**. L'IA ne modifie jamais un résumé que vous avez rédigé. Pour revenir au résumé de l'IA, cliquez sur **Réécrire avec l'IA**.
+Pour rédiger le vôtre, cliquez sur **Modifier** à côté de **Résumé de l'entreprise**, changez le texte et cliquez sur **Enregistrer**. L'IA ne modifie jamais un résumé que vous avez rédigé.
+
+Pour revenir à un résumé de l'IA, cliquez sur **Modifier**, puis sur **Réécrire avec l'IA**. L'IA réécrit le résumé à partir de vos connaissances et vous indique quand c'est fait. Si vos connaissances ne disent pas encore ce que fait l'entreprise, le résumé reste tel quel.
 
 ## Heures d'ouverture
 
@@ -51,6 +53,8 @@ Pour définir les heures vous-même, activez ou désactivez chaque jour, saisiss
 Pour les jours fériés et les autres périodes où vous êtes fermé, cliquez sur **Ajouter une fermeture** et indiquez quand vous fermez et rouvrez. Utilisez le fuseau horaire de votre entreprise, puis cliquez sur **Enregistrer les heures**. Votre réceptionniste ne réserve aucun rendez-vous pendant une fermeture. Elle dit aux appelants que l'entreprise est fermée à ce moment-là et leur propose un autre jour.
 
 ## Langue client par défaut
+
+Les appels commencent dans votre **Langue client par défaut** : votre réceptionniste accueille les appelants dans cette langue. Quand un appelant demande une autre langue ou en parle une autre, votre réceptionniste passe à cette langue. Elle peut converser avec les appelants dans plus de 70 langues.
 
 Le réglage **Langue client par défaut** prend en charge :
 
@@ -65,21 +69,31 @@ Le réglage **Langue client par défaut** prend en charge :
 | Italien | `it` |
 | Néerlandais | `nl` |
 
-Choisissez la langue de repli que votre réceptionniste doit utiliser quand la langue de l'appelant n'est pas claire. Si vous n'avez pas modifié le message d'accueil, il passe au message d'accueil par défaut de la nouvelle langue.
+Choisissez la langue que parlent la plupart de vos appelants. Si vous n'avez pas modifié le message d'accueil, il passe au message d'accueil par défaut de la nouvelle langue.
 
 <Note>
-  Ce réglage sert de solution de repli. Il ne limite pas la langue de la conversation. La réceptionniste peut répondre dans d'autres langues quand la langue de l'appelant est claire. Rédigez votre message d'accueil, vos connaissances, vos services et vos règles dans les langues que vos appelants utilisent le plus.
+  Rédigez votre message d'accueil, vos connaissances, vos services et vos règles dans les langues que vos appelants utilisent le plus.
 </Note>
+
+## Devise
+
+Choisissez dans **Devise** la devise de vos [prix de services](/fr/agent/services#prix). Votre réceptionniste annonce les prix dans cette devise. Si vous changez de devise plus tard, les montants que vous avez saisis restent les mêmes.
 
 ## Numéro de transfert par défaut
 
-Le **Numéro de transfert par défaut** est le numéro de téléphone utilisé quand la réceptionniste transfère l'appel à un humain en direct.
+Le **Numéro de transfert par défaut** est le numéro que votre réceptionniste appelle quand elle transfère un appelant à une personne. Quand un appelant demande un [employé](/fr/agent/employees) qui a un numéro de téléphone, votre réceptionniste transfère plutôt l'appel à cet employé.
 
 Choisissez un numéro qui répond pendant les heures d'ouverture. Si différentes équipes traitent différentes demandes, gardez le numéro par défaut comme destination de transfert la plus sûre et ajoutez des règles qui précisent quand transférer un appelant.
 
+<Note>
+  Les numéros de transfert doivent se trouver dans l'un de ces pays : États-Unis, Canada, Royaume-Uni, Australie, Nouvelle-Zélande, France, Allemagne, Espagne, Italie, Pays-Bas, Portugal, Mexique, Brésil, Israël, Inde, Japon ou Serbie. Les transferts vers des numéros d'autres pays n'aboutissent pas.
+</Note>
+
+Pendant un essai gratuit, votre réceptionniste transfère les appels uniquement vers le numéro de mobile que vous avez vérifié, et vous ne pouvez pas enregistrer un autre numéro. Passez à Starter ou à Pro pour le changer.
+
 <Steps>
   <Step title="Entrez un numéro">
-    Ajoutez un numéro de téléphone complet dans le champ du numéro de transfert.
+    Entrez le numéro de téléphone complet dans **Numéro de transfert par défaut**.
   </Step>
   <Step title="Enregistrez">
     Cliquez sur **Enregistrer** à côté du champ du numéro de transfert.

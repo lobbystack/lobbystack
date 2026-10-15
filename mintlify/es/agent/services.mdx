@@ -1,13 +1,11 @@
 ---
 title: "Añada servicios reservables"
-description: "Añada entradas de servicios para que quienes llaman entiendan lo que ofrece y pidan la cita adecuada."
+description: "Añada los servicios que se pueden reservar, con su duración y su precio, para que su recepcionista explique lo que ofrece y reserve la cita adecuada."
 sidebarTitle: "Servicios"
 contentType: "How-to"
 ---
 
-La página **Servicios** contiene los tipos de cita o las prestaciones de las que su recepcionista puede hablar con quienes llaman. Los servicios se gestionan con la misma tabla de entradas que Conocimiento y Reglas: un título, el contenido, etiquetas opcionales, el estado y las acciones.
-
-Las entradas de servicios ayudan a LobbyStack a explicar lo que usted ofrece, recopilar los datos adecuados de quien llama y guiar las solicitudes de cita cuando su calendario está conectado.
+La página **Servicios** muestra lo que quienes llaman pueden reservar. Cada servicio tiene un título, una duración, un precio opcional, una descripción y un interruptor **Reservable**. Su recepcionista los usa para explicar lo que ofrece, decir los precios y reservar citas de la duración correcta.
 
 ## Añadir un servicio
 
@@ -18,21 +16,52 @@ Las entradas de servicios ayudan a LobbyStack a explicar lo que usted ofrece, re
   <Step title="Añada un servicio">
     Haga clic en **Añadir servicio**.
   </Step>
-  <Step title="Describa el servicio">
-    Introduzca un título claro, como "Consulta inicial", y describa qué incluye el servicio. Si le resulta útil, añada etiquetas con las palabras que usan quienes llaman.
+  <Step title="Ponga nombre al servicio y elija su duración">
+    Introduzca un **Título** claro, como "Consulta inicial", y elija la **Duración**. Su recepcionista usa la duración para buscar horarios libres.
   </Step>
-  <Step title="Guarde">
-    Haga clic en **Guardar**. El servicio aparece en la tabla de Servicios.
+  <Step title="Indique un precio">
+    Elija un tipo de precio e introduzca el importe, o deje el importe vacío. Consulte [Precios](#precios).
+  </Step>
+  <Step title="Describa el servicio">
+    En **Contenido**, describa qué incluye el servicio y para quién es.
+  </Step>
+  <Step title="Añada">
+    Deje **Reservable** activado para que su recepcionista ofrezca el servicio en las llamadas y haga clic en **Añadir**. El servicio aparece en la tabla de Servicios.
   </Step>
 </Steps>
 
+Para cambiar un servicio, haga clic en su fila, edítelo y haga clic en **Guardar**.
+
+## Precios
+
+| Tipo de precio | Qué introduce | Qué dice su recepcionista a quien llama |
+| --- | --- | --- |
+| **Fijo** | Un importe | Ese precio. |
+| **Desde** | El precio más bajo | Un precio de partida, como "desde $40". |
+| **Entre** | El precio más bajo y el más alto | El rango de precios. |
+| **En persona** | Ningún importe | El negocio fija el precio cuando sabe lo que necesita quien llama. |
+
+Su recepcionista dice el precio que introdujo. Si deja el importe vacío, no se inventa uno, y la columna **Precio** muestra **Sin definir**. Los precios usan la moneda que elija en [Ajustes de IA](/es/agent/ai-settings/overview#moneda).
+
+## Duplicar, desactivar o eliminar un servicio
+
+Abra el menú **Más opciones** en la fila de un servicio:
+
+- **Duplicar** copia el servicio y añade "(copia)" a su título. Edite la copia para crear un servicio parecido.
+- **Desactivar** impide que su recepcionista ofrezca el servicio, que sigue en la tabla. Haga clic en **Activar** para volver a ofrecerlo.
+- **Eliminar** borra el servicio. Su recepcionista deja de ofrecerlo, y las citas pasadas lo siguen mostrando.
+
+## Elegir quién hace cada servicio
+
+Si añade [empleados](/es/agent/employees), elija los servicios de cada uno en la página **Empleados**. Así, quienes llaman pueden reservar con una persona concreta.
+
 ## Ayudar a quienes llaman a reservar el servicio adecuado
 
-Escriba las entradas de servicios tal como las piden quienes llaman:
+Escriba los servicios como los piden quienes llaman:
 
-- Use el nombre sencillo con el que sus clientes conocen el servicio.
-- Incluya la duración, los requisitos, las instrucciones de preparación y los precios solo cuando esos datos no cambien.
-- Añada sinónimos en las etiquetas cuando quienes llaman usen palabras distintas para el mismo servicio.
+- Use el nombre del servicio que entienden sus clientes.
+- Añada a la descripción los requisitos y las instrucciones de preparación solo cuando esos datos sean estables.
+- Mencione en la descripción otros nombres que quienes llaman usan para el servicio.
 - Mantenga desactivados los servicios no disponibles o de temporada.
 
 ## Ejemplos de servicios

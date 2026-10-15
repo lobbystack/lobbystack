@@ -1,13 +1,11 @@
 ---
 title: "Add bookable services"
-description: "Add service entries so callers can understand what you offer and ask for the right appointment."
+description: "Add the services callers can book, with a duration and a price, so your receptionist explains what you offer and books the right appointment."
 sidebarTitle: "Services"
 contentType: "How-to"
 ---
 
-The **Services** page contains the appointment types or offerings your receptionist can discuss with callers. Services are managed with the same entry table pattern as Knowledge and Rules: a title, content, optional tags, status, and actions.
-
-Service entries help LobbyStack explain what you offer, collect the right caller details, and guide appointment requests when your calendar is connected.
+The **Services** page lists what callers can book. Each service has a title, a duration, an optional price, a description, and a **Bookable** switch. Your receptionist uses them to explain what you offer, quote prices, and book appointments of the right length.
 
 ## Add a service
 
@@ -18,21 +16,52 @@ Service entries help LobbyStack explain what you offer, collect the right caller
   <Step title="Add service">
     Click **Add Service**.
   </Step>
-  <Step title="Describe the service">
-    Enter a clear title, such as "Initial Consultation", and describe what the service includes. Add tags that match caller language if helpful.
+  <Step title="Name the service and set its length">
+    Enter a clear **Title**, such as "Initial Consultation", and pick the **Duration**. Your receptionist uses the duration to find open times.
   </Step>
-  <Step title="Save">
-    Click **Save**. The service appears in the Services table.
+  <Step title="Set a price">
+    Choose a price type and enter the amount, or leave the amount empty. See [Prices](#prices).
+  </Step>
+  <Step title="Describe the service">
+    In **Content**, describe what the service includes and who it's for.
+  </Step>
+  <Step title="Add">
+    Leave **Bookable** on so your receptionist offers the service on calls, then click **Add**. The service appears in the Services table.
   </Step>
 </Steps>
+
+To change a service, click its row, edit it, and click **Save**.
+
+## Prices
+
+| Price type | What you enter | What your receptionist tells callers |
+| --- | --- | --- |
+| **Fixed** | One amount | That price. |
+| **From** | The lowest price | A starting price, such as "from $40". |
+| **Between** | The lowest and the highest price | The range. |
+| **In person** | No amount | The business sets the price once it knows what the caller needs. |
+
+Your receptionist quotes the price you entered. If you leave the amount empty, it doesn't guess one, and the **Price** column shows **Not set**. Prices use the currency you pick in [AI settings](/agent/ai-settings/overview#currency).
+
+## Duplicate, disable, or delete a service
+
+Open the **More options** menu on a service's row:
+
+- **Duplicate** copies the service and adds "(copy)" to its title. Edit the copy to set up a similar service.
+- **Disable** stops your receptionist from offering the service and keeps it in the table. Click **Enable** to offer it again.
+- **Delete** removes the service. Your receptionist stops offering it, and past appointments still show it.
+
+## Choose who does each service
+
+If you add [employees](/agent/employees), choose the services each one does on the **Employees** page. Callers can then book a specific person for a service.
 
 ## Help callers book the right service
 
 Write service entries the way callers ask for them:
 
 - Use the plain customer-facing service name.
-- Include duration, eligibility, prep instructions, and pricing only when those details are stable.
-- Add synonyms in tags when callers use different words for the same service.
+- Add eligibility and prep instructions to the description only when those details are stable.
+- Mention other names callers use for the service in the description.
 - Keep unavailable or seasonal services disabled.
 
 ## Service examples

@@ -78,6 +78,7 @@
               "quickstart",
               "getting-started/account-setup",
               "getting-started/claim-your-number",
+              "getting-started/forward-calls",
               "getting-started/number-countries"
             ]
           },
@@ -104,6 +105,7 @@
               },
               "agent/knowledge",
               "agent/services",
+              "agent/employees",
               "agent/rules"
             ]
           },
@@ -203,6 +205,7 @@
               "fr/quickstart",
               "fr/getting-started/account-setup",
               "fr/getting-started/claim-your-number",
+              "fr/getting-started/forward-calls",
               "fr/getting-started/number-countries"
             ]
           },
@@ -229,6 +232,7 @@
               },
               "fr/agent/knowledge",
               "fr/agent/services",
+              "fr/agent/employees",
               "fr/agent/rules"
             ]
           },
@@ -331,6 +335,7 @@
               "es/quickstart",
               "es/getting-started/account-setup",
               "es/getting-started/claim-your-number",
+              "es/getting-started/forward-calls",
               "es/getting-started/number-countries"
             ]
           },
@@ -357,6 +362,7 @@
               },
               "es/agent/knowledge",
               "es/agent/services",
+              "es/agent/employees",
               "es/agent/rules"
             ]
           },

@@ -1,0 +1,70 @@
+---
+title: "Ajouter les employés que les appelants peuvent réserver"
+description: "Ajoutez les membres de votre équipe pour que les appelants puissent les réserver par leur nom ou demander à leur parler, avec leurs services, leurs horaires et leurs congés."
+sidebarTitle: "Employés"
+contentType: "How-to"
+---
+
+La page **Employés** liste les personnes avec qui votre réceptionniste prend des rendez-vous et vers qui elle transfère les appels. Les appelants peuvent demander quelqu'un par son nom. S'ils n'ont pas de préférence, votre réceptionniste réserve le premier employé disponible qui fait le service.
+
+<Note>
+  Chaque employé a besoin d'au moins un service. Ajoutez donc d'abord vos [services](/fr/agent/services).
+</Note>
+
+## Ajouter un employé
+
+<Steps>
+  <Step title="Ouvrez Employés">
+    Allez dans **Agent** > **Employés**.
+  </Step>
+  <Step title="Ajoutez un employé">
+    Cliquez sur **Ajouter un employé**.
+  </Step>
+  <Step title="Entrez un nom">
+    Entrez le nom sous lequel les appelants connaissent l'employé.
+  </Step>
+  <Step title="Ajoutez un numéro de téléphone">
+    Facultatif. Choisissez le pays et entrez le numéro de téléphone de l'employé. Les appelants qui demandent cet employé sont transférés à ce numéro. Consultez [Transferts vers les employés](#transferts-vers-les-employés).
+  </Step>
+  <Step title="Choisissez les services">
+    Sous **Services**, choisissez les services que fait cet employé, ou cliquez sur **Tout sélectionner**. Les appelants ne peuvent réserver cet employé que pour ces services.
+  </Step>
+  <Step title="Définissez les horaires de travail">
+    Laissez **Mêmes horaires que l'entreprise** activé si l'employé travaille pendant toutes vos heures d'ouverture. Désactivez-le pour choisir ses jours et ses heures de travail.
+  </Step>
+  <Step title="Ajoutez des congés">
+    Facultatif. Cliquez sur **Ajouter un congé** et choisissez le premier et le dernier jour de chaque absence. Les congés ne peuvent pas se chevaucher ni se terminer dans le passé.
+  </Step>
+  <Step title="Ajoutez">
+    Cliquez sur **Ajouter**. L'employé apparaît dans le tableau.
+  </Step>
+</Steps>
+
+Pour modifier ou retirer un employé, ouvrez **Plus d'options** sur sa ligne et choisissez **Modifier** ou **Supprimer**.
+
+## Comment votre réceptionniste réserve les employés
+
+Votre réceptionniste réserve un employé seulement :
+
+- Pour les services que vous lui avez attribués.
+- Quand il travaille et que l'entreprise est ouverte. Un employé qui a ses propres horaires est réservé pendant ces horaires et pendant vos [heures d'ouverture](/fr/agent/ai-settings/overview).
+- En dehors de ses congés. Quand un appelant demande un employé en congé, votre réceptionniste lui dit quand il revient et propose un autre jour ou un autre employé.
+
+Avant de chercher un créneau, votre réceptionniste demande à l'appelant s'il veut un employé en particulier. Après la réservation, elle lui dit avec qui est le rendez-vous.
+
+Quand **Prise de rendez-vous** est réglé sur **Prend les demandes** dans les **Paramètres IA**, votre réceptionniste ajoute le choix d'employé de l'appelant à la demande, et votre équipe la confirme.
+
+## Transferts vers les employés
+
+Quand un appelant demande à parler à un employé par son nom, votre réceptionniste transfère l'appel au numéro de téléphone de cet employé. Les appelants qui demandent un employé sans numéro joignent votre [numéro de transfert par défaut](/fr/agent/ai-settings/overview#numéro-de-transfert-par-défaut).
+
+- Le numéro de l'employé doit se trouver dans l'un des pays indiqués sous [Numéro de transfert par défaut](/fr/agent/ai-settings/overview#numéro-de-transfert-par-défaut). Les transferts vers des numéros d'autres pays n'aboutissent pas.
+- Pendant un essai gratuit, les appels sont transférés uniquement vers le numéro de mobile que vous avez vérifié. Vous ne pouvez donc pas enregistrer un autre numéro pour un employé.
+
+## Statut des employés
+
+| Statut | Ce qu'il signifie |
+| --- | --- |
+| **En service** | Les appelants peuvent réserver cet employé. Quand un congé approche, le tableau indique le jour où il commence. |
+| **En congé** | L'employé est en congé aujourd'hui. Le tableau indique le dernier jour de son congé. |
+| **Non réservable** | L'employé n'a aucun service. Modifiez l'employé et choisissez ses services pour que les appelants puissent le réserver. |

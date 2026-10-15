@@ -1,6 +1,6 @@
 ---
 title: "Configure la voz y el comportamiento"
-description: "Configure la frase de bienvenida, el idioma predeterminado del cliente, el horario de atención, los cambios de citas y el número de transferencia predeterminado de su recepcionista con IA."
+description: "Configure la frase de bienvenida, el idioma predeterminado del cliente, el horario de atención, la moneda, los cambios de citas y el número de transferencia predeterminado de su recepcionista con IA."
 sidebarTitle: "Ajustes de IA"
 contentType: "How-to"
 ---
@@ -25,10 +25,10 @@ Un buen saludo suele incluir el nombre del negocio, una breve aclaración de que
     En la barra lateral del panel, vaya a **Agente** > **Ajustes de IA**.
   </Step>
   <Step title="Edite el saludo">
-    Cambie el campo **Saludo**.
+    Haga clic en **Editar** junto a **Saludo** y cambie el texto.
   </Step>
   <Step title="Guarde">
-    Haga clic en **Guardar** junto al campo del saludo.
+    Haga clic en **Guardar**.
   </Step>
 </Steps>
 
@@ -38,7 +38,9 @@ El resumen del negocio es lo que su recepcionista dice a quienes llaman y pregun
 
 No tiene que escribirlo. Cuando agrega su sitio web o sus documentos en **Conocimiento**, la IA escribe con ellos un resumen de dos a cuatro oraciones, en su idioma predeterminado del cliente. Lo reescribe unos minutos después de que cambie su conocimiento, y solo si el contenido cambió.
 
-Para escribir el suyo, edite el campo **Resumen del negocio** y haga clic en **Guardar**. La IA nunca cambia un resumen que usted escribió. Para volver al resumen de la IA, haga clic en **Reescribir con IA**.
+Para escribir el suyo, haga clic en **Editar** junto a **Resumen del negocio**, cambie el texto y haga clic en **Guardar**. La IA nunca cambia un resumen que usted escribió.
+
+Para volver a un resumen de la IA, haga clic en **Editar** y luego en **Reescribir con IA**. La IA reescribe el resumen a partir de su conocimiento y le avisa cuando termina. Si su conocimiento aún no dice a qué se dedica el negocio, el resumen queda como estaba.
 
 ## Horario de atención
 
@@ -51,6 +53,8 @@ Para definir el horario usted mismo, active o desactive cada día, ingrese sus h
 Para los días festivos y otros períodos en que su negocio cierra, haga clic en **Agregar cierre** e indique cuándo cierra y cuándo vuelve a abrir. Use la zona horaria de su negocio y luego haga clic en **Guardar horario**. Su recepcionista no reserva citas durante un cierre. Les dice a quienes llaman que el negocio está cerrado en ese momento y les ofrece otro día.
 
 ## Idioma predeterminado del cliente
+
+Las llamadas empiezan en su **Idioma predeterminado del cliente**: su recepcionista saluda a quien llama en ese idioma. Cuando quien llama pide otro idioma o habla otro, su recepcionista cambia a ese idioma. Puede conversar con quienes llaman en más de 70 idiomas.
 
 El ajuste **Idioma predeterminado del cliente** admite:
 
@@ -65,21 +69,31 @@ El ajuste **Idioma predeterminado del cliente** admite:
 | Italiano | `it` |
 | Neerlandés | `nl` |
 
-Elija el idioma de respaldo que su recepcionista debe usar cuando el idioma de quien llama no es claro. Si no ha cambiado el saludo, pasa al saludo predeterminado del nuevo idioma.
+Elija el idioma que habla la mayoría de quienes le llaman. Si no ha cambiado el saludo, pasa al saludo predeterminado del nuevo idioma.
 
 <Note>
-  Este ajuste es un idioma de respaldo, no un límite del idioma de la conversación. La recepcionista puede responder en otros idiomas cuando el idioma de quien llama es claro. Añada el saludo, el conocimiento, los servicios y las reglas en los idiomas que más probablemente usen quienes le llaman.
+  Añada el saludo, el conocimiento, los servicios y las reglas en los idiomas que más probablemente usen quienes le llaman.
 </Note>
+
+## Moneda
+
+Elija en **Moneda** la moneda de los [precios de sus servicios](/es/agent/services#precios). Su recepcionista dice los precios en esa moneda. Si cambia la moneda más adelante, los importes que introdujo no cambian.
 
 ## Número de transferencia predeterminado
 
-El **Número de transferencia predeterminado** es el número de teléfono al que la recepcionista transfiere la llamada cuando la pasa en vivo a una persona.
+El **Número de transferencia predeterminado** es el número al que su recepcionista llama cuando pasa a quien llama con una persona. Cuando quien llama pide hablar con un [empleado](/es/agent/employees) que tiene número de teléfono, su recepcionista transfiere la llamada a ese empleado.
 
 Use un número que alguien conteste durante el horario de atención. Si distintos equipos atienden distintas solicitudes, deje como número predeterminado la opción de traspaso general más segura y añada reglas que indiquen cuándo transferir a quien llama.
 
+<Note>
+  Los números de transferencia deben estar en uno de estos países: Estados Unidos, Canadá, Reino Unido, Australia, Nueva Zelanda, Francia, Alemania, España, Italia, Países Bajos, Portugal, México, Brasil, Israel, India, Japón o Serbia. Las transferencias a números de otros países no se conectan.
+</Note>
+
+Durante una prueba gratuita, su recepcionista transfiere las llamadas solo al número de móvil que usted verificó, y no puede guardar otro número. Cambie a Starter o Pro para modificarlo.
+
 <Steps>
   <Step title="Introduzca un número">
-    Añada un número de teléfono completo en el campo del número de transferencia.
+    Introduzca el número de teléfono completo en **Número de transferencia predeterminado**.
   </Step>
   <Step title="Guarde">
     Haga clic en **Guardar** junto al campo del número de transferencia.

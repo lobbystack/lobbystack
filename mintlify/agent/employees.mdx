@@ -1,0 +1,70 @@
+---
+title: "Add employees callers can book"
+description: "Add the people on your team so callers can book them by name or ask to be transferred to them, with their services, working hours, and time off."
+sidebarTitle: "Employees"
+contentType: "How-to"
+---
+
+The **Employees** page lists the people your receptionist books appointments with and transfers calls to. Callers can ask for someone by name. When they have no preference, your receptionist books the first available employee who does the service.
+
+<Note>
+  Each employee needs at least one service, so add your [services](/agent/services) first.
+</Note>
+
+## Add an employee
+
+<Steps>
+  <Step title="Open Employees">
+    Go to **Agent** > **Employees**.
+  </Step>
+  <Step title="Add employee">
+    Click **Add Employee**.
+  </Step>
+  <Step title="Enter a name">
+    Enter the name callers know the employee by.
+  </Step>
+  <Step title="Add a phone number">
+    Optional. Pick the country and enter the employee's phone number. Callers who ask for this employee are transferred to it. See [Transfers to employees](#transfers-to-employees).
+  </Step>
+  <Step title="Choose services">
+    Under **Services**, choose the services this employee does, or click **Select all**. Callers can book this employee only for these services.
+  </Step>
+  <Step title="Set working hours">
+    Leave **Same as business hours** on if the employee works whenever you're open. Turn it off to set the days and times they work.
+  </Step>
+  <Step title="Add time off">
+    Optional. Click **Add time off** and pick the first and last day of each absence. Time off can't overlap or end in the past.
+  </Step>
+  <Step title="Add">
+    Click **Add**. The employee appears in the table.
+  </Step>
+</Steps>
+
+To change or remove an employee, open **More options** on their row and choose **Edit** or **Delete**.
+
+## How your receptionist books employees
+
+Your receptionist books an employee only:
+
+- For the services you chose for them.
+- When they work and the business is open. An employee with their own hours is booked inside those hours and your [opening hours](/agent/ai-settings/overview#opening-hours).
+- Outside their time off. When a caller asks for an employee who is off, your receptionist says when they're back and offers a later day or another employee.
+
+Before it looks for a time, your receptionist asks whether the caller wants a specific employee. After it books, it tells the caller who the appointment is with.
+
+When **Appointments** in **AI settings** is set to **Takes requests**, your receptionist adds the caller's choice of employee to the request, and your team confirms it.
+
+## Transfers to employees
+
+When a caller asks to speak with an employee by name, your receptionist transfers the call to that employee's phone number. Callers who ask for an employee without a phone number reach your [default transfer number](/agent/ai-settings/overview#default-transfer-number).
+
+- The employee's number must be in one of the countries listed under [Default transfer number](/agent/ai-settings/overview#default-transfer-number). Transfers to numbers elsewhere don't connect.
+- During a free trial, calls transfer only to the mobile number you verified, so you can't save a different number for an employee.
+
+## Employee status
+
+| Status | What it means |
+| --- | --- |
+| **Working** | Callers can book this employee. When time off is coming up, the table shows the day it starts. |
+| **On leave** | The employee is on time off today. The table shows the last day of their time off. |
+| **Not bookable** | The employee has no services. Edit the employee and choose their services so callers can book them. |

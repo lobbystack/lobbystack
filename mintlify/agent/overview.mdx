@@ -1,23 +1,26 @@
 ---
 title: "Configure your AI receptionist"
-description: "Use the Agent section to configure AI settings, knowledge, services, and rules for your receptionist."
+description: "Use the Agent section to configure AI settings, knowledge, services, employees, and rules for your receptionist."
 sidebarTitle: "Agent overview"
 contentType: "Conceptual"
 ---
 
-The **Agent** section controls how your AI receptionist behaves. It is split into AI settings, Knowledge, Services, and Rules.
+The **Agent** section controls how your AI receptionist behaves. It is split into AI settings, Knowledge, Services, Employees, and Rules.
 
 Changes apply to new calls and website chat responses. They do not rewrite calls or messages that already happened.
 
 <CardGroup cols={2}>
   <Card title="AI settings" icon="comment-dots" href="/agent/ai-settings/overview">
-    Set the opening line, fallback language, appointment changes, and default transfer number.
+    Set the opening line, caller language, currency, appointment changes, and default transfer number.
   </Card>
   <Card title="Knowledge" icon="book-open" href="/agent/knowledge">
     Add business information from text entries, documents, or a website import.
   </Card>
   <Card title="Services" icon="calendar-check" href="/agent/services">
-    Add appointment types and the service information callers need.
+    Add appointment types with their duration, price, and the details callers need.
+  </Card>
+  <Card title="Employees" icon="id-card" href="/agent/employees">
+    Add the people callers can book or ask for, with their services, hours, and time off.
   </Card>
   <Card title="Rules" icon="list-check" href="/agent/rules">
     Add operating instructions for transfers, callback requests, fallback behavior, and special cases.
@@ -35,7 +38,7 @@ For website chat, LobbyStack uses the current business context and saved convers
 Before forwarding production calls, check that:
 
 - Your greeting names your business and sets the right expectation.
-- The fallback language is set for cases where the caller's language is unclear.
-- A transfer number is saved if you want live human handoff.
+- The default customer language is the one most of your callers speak, because calls open in it.
+- A transfer number is saved if you want live human handoff. It must be in a [country LobbyStack can call](/agent/ai-settings/overview#default-transfer-number).
 - Your knowledge entries include hours, location, services, pricing, policies, and common caller questions.
-- Your service entries and Google Calendar connection are ready before you rely on appointment booking or appointment changes.
+- Your services, employees, and Google Calendar connection are ready before you rely on appointment booking or appointment changes.
