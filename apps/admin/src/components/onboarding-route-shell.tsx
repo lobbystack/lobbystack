@@ -15,7 +15,7 @@ export function OnboardingRouteShell({ children }: { children: React.ReactNode }
   const { t } = useTranslation("onboarding");
   const signOut = useSignOut();
   const route = routes[pathname as keyof typeof routes] ?? routes["/onboarding/business"];
-  const showDescription = !["testCall", "number", "attribution"].includes(route.key);
+  const showDescription = !["testCall", "verifyPhone", "number", "attribution"].includes(route.key);
   const { business } = useActiveBusiness();
   const stage = business?.onboardingStage;
   const phones = useQuery({ queryKey: ["onboarding-primary-number", business?.businessId], enabled: route.key === "number" && Boolean(business), queryFn: () => requestJson<{ phoneNumbers: Array<{ id: string; e164: string; reclaimScheduledAt: string | null }> }>(`/api/phone-numbers?businessId=${encodeURIComponent(business!.businessId)}`) });

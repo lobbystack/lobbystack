@@ -97,7 +97,6 @@
   },
   "verifyPhone": {
     "title": "Potvrdite broj mobilnog telefona",
-    "description": "Poslaćemo Vam kôd SMS porukom. Vaš poslovni broj biće iz iste zemlje.",
     "fields": {
       "mobileNumber": "Broj mobilnog telefona",
       "country": "Zemlja"

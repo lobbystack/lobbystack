@@ -97,7 +97,6 @@
   },
   "verifyPhone": {
     "title": "Verify your mobile number",
-    "description": "We text you a code. Your business number comes from the same country.",
     "fields": {
       "mobileNumber": "Mobile number",
       "country": "Country"
