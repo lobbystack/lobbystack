@@ -1,7 +1,7 @@
 ---
 title: "A free phone number for 14 days"
 description: "Free accounts in the US and Canada now get a phone number for 14 days, setup starts with a test call, and your receptionist speaks seven languages."
-pubDate: 2026-10-14
+pubDate: 2026-10-15
 locale: "en"
 canonicalSlug: "free-trial-numbers"
 category: "Product"

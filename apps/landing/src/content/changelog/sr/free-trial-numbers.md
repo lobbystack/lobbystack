@@ -1,7 +1,7 @@
 ---
 title: "Besplatan broj telefona na 14 dana"
 description: "Besplatni nalozi u SAD i Kanadi sada dobijaju broj na 14 dana, podešavanje počinje probnim pozivom, a Vaš recepcioner govori sedam jezika."
-pubDate: 2026-10-14
+pubDate: 2026-10-15
 locale: "sr"
 canonicalSlug: "free-trial-numbers"
 category: "Proizvod"

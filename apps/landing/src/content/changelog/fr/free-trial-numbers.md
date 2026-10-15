@@ -1,7 +1,7 @@
 ---
 title: "Un numéro de téléphone gratuit pendant 14 jours"
 description: "Les comptes gratuits aux États-Unis et au Canada reçoivent maintenant un numéro pendant 14 jours, la configuration commence par un appel test et votre réceptionniste parle sept langues."
-pubDate: 2026-10-14
+pubDate: 2026-10-15
 locale: "fr"
 canonicalSlug: "free-trial-numbers"
 category: "Produit"
