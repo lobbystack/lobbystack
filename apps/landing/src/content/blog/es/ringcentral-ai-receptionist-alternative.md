@@ -85,7 +85,7 @@ Los dos productos al 9 de octubre de 2026:
 | Opción gratuita | Prueba de 14 días | Plan Free con 30 minutos de voz al mes, sin tarjeta, número de EE. UU. o Canadá gratis durante 14 días |
 | Número de teléfono | Incluye un número nuevo, o usted porta el suyo | Un número en Starter y Pro, en Estados Unidos, Canadá, el Reino Unido, Australia o Nueva Zelanda |
 | Funciona con su número actual | Sí, por desvío o SIP | Sí, con el desvío de llamadas de su operador |
-| Idiomas de quien llama | Inglés, español, francés, italiano, alemán y portugués, según sus preguntas frecuentes, con más anunciados como próximos; cambia de idioma durante la llamada | Empieza en inglés o francés y luego responde en el idioma de quien llama: más de 70 idiomas con OpenAI GPT-Live |
+| Idiomas de quien llama | Inglés, español, francés, italiano, alemán y portugués, según sus preguntas frecuentes, con más anunciados como próximos; cambia de idioma durante la llamada | Empieza en uno de 8 idiomas a elegir y luego responde en el idioma de quien llama: más de 70 idiomas con OpenAI GPT-Live |
 | Calendarios | Google y Outlook | Google Calendar |
 | CRM | Salesforce, HubSpot y Zoho integrados | Webhooks y una API REST; Zapier se conecta a través de ellos |
 | Respuestas de IA a mensajes de texto | Sí, con su agente de SMS con IA (RingCentral advierte que puede haber cargos extra) | No; su equipo responde a mano |
@@ -178,7 +178,7 @@ LobbyStack le conviene si quiere pagar menos por minuto y probar gratis antes:
 
 - Free le da 30 minutos de voz al mes y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta.
 - Starter cuesta $30 por 150 minutos y después $0.20 el minuto, contados por segundo. No cuentan las llamadas de menos de 10 segundos ni las que la recepcionista corta por spam.
-- Cada llamada empieza en el idioma predeterminado del negocio, inglés o francés. Luego la recepcionista responde en el idioma de quien llama: más de 70 idiomas con OpenAI GPT-Live, incluidos el español y el serbio.
+- Cada llamada empieza en el idioma predeterminado del negocio: inglés, francés, español, serbio, alemán, portugués de Brasil, italiano o neerlandés. Luego la recepcionista responde en el idioma de quien llama: más de 70 idiomas con OpenAI GPT-Live, incluidos el español y el serbio.
 - Reserva en Google Calendar y, si quien llama acepta, le envía por SMS una confirmación y un recordatorio 24 horas antes de la cita, a números de Estados Unidos y Canadá.
 - Starter incluye 20 intentos de transferencia al mes a su número de transferencia, y la recepcionista ofrece tomar un mensaje si una transferencia no se completa.
 - Ningún plan tiene tarifa de configuración, y puede cancelar desde la configuración de facturación sin cargos por cancelación.

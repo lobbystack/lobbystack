@@ -242,7 +242,7 @@ The Perfect Answer's and MAP's terms add $0.024 to every call, or $2.40 on 100 c
 
 Smith.ai prices extras per call: $1.50 for booking, $1.50 for complex routing and $1.00 for a dedicated Spanish line. Eight of the per-minute services include Spanish-speaking agents in the plan price.
 
-On LobbyStack, each call opens in the business's default language, English or French. The receptionist then answers in the caller's language: 70+ languages on OpenAI GPT-Live, including Spanish and Serbian. LobbyStack's pricing lists no language add-on.
+On LobbyStack, each call opens in the business's default language: English, French, Spanish, Serbian, German, Brazilian Portuguese, Italian or Dutch. The receptionist then answers in the caller's language: 70+ languages on OpenAI GPT-Live, including Spanish and Serbian. LobbyStack's pricing lists no language add-on.
 
 ### 28-day billing cycles
 
@@ -280,7 +280,7 @@ LobbyStack costs $30 at 40 calls, $60 at 100 calls and $118 at 200 calls (Pro, $
 
 Starter includes 150 minutes, one business number in the US, Canada, the UK, Australia or New Zealand, booking into Google Calendar, and confirmation and 24-hour reminder texts to US and Canadian numbers. It also includes 20 transfer attempts a month, then $0.02 each.
 
-Plans don't limit how many calls the receptionist answers at once. Calls open in your default language, English or French, and the receptionist then answers in the caller's language (70+ languages). You keep your number by forwarding it, and your carrier's forwarding rule decides whether LobbyStack takes overflow, after-hours or every call.
+Plans don't limit how many calls the receptionist answers at once. Calls open in your default language (English, French, Spanish, Serbian, German, Brazilian Portuguese, Italian or Dutch), and the receptionist then answers in the caller's language (70+ languages). You keep your number by forwarding it, and your carrier's forwarding rule decides whether LobbyStack takes overflow, after-hours or every call.
 
 ### What you give up without a live agent
 

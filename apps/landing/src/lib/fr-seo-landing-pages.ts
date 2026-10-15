@@ -320,7 +320,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
       proofPoints: [
         "Réserve dans Google Calendar et peut envoyer par SMS une confirmation et un rappel la veille",
         "Transfère les urgences hors horaires à votre numéro de garde",
-        "Commence en anglais ou en français, puis parle avec les patients dans plus de 70 langues, dont l’espagnol et le serbe",
+        "Commence dans l’une des 8 langues au choix, puis parle avec les patients dans plus de 70 langues, dont l’espagnol et le serbe",
       ],
       sections: [
         {
@@ -352,9 +352,9 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
         },
         {
           title: "Chaque patient parle dans sa langue",
-          body: "Chaque appel commence dans la langue par défaut de votre cabinet, l’anglais ou le français. Le réceptionniste répond ensuite dans la langue du patient. Il fonctionne avec GPT-Live d’OpenAI, qui prend en charge plus de 70 langues, dont l’espagnol et le serbe. Un patient qui commence en espagnol, ou qui demande le serbe, entend la suite de l’appel dans cette langue. Votre tableau de bord et vos e-mails existent en anglais, en français, en espagnol et en serbe. Les SMS de confirmation et de rappel partent dans votre langue par défaut, ou en espagnol ou en serbe pour un patient dont vous enregistrez la langue par l’API.",
+          body: "Chaque appel commence dans la langue par défaut de votre cabinet : anglais, français, espagnol, serbe, allemand, portugais du Brésil, italien ou néerlandais. Le réceptionniste répond ensuite dans la langue du patient. Il fonctionne avec GPT-Live d’OpenAI, qui prend en charge plus de 70 langues, dont l’espagnol et le serbe. Un patient qui commence en espagnol, ou qui demande le serbe, entend la suite de l’appel dans cette langue. Votre tableau de bord et vos e-mails existent en anglais, en français, en espagnol et en serbe. Les SMS de confirmation et de rappel partent dans votre langue par défaut, ou en espagnol ou en serbe pour un patient dont vous enregistrez la langue par l’API.",
           points: [
-            "Commence chaque appel dans votre langue par défaut, l’anglais ou le français",
+            "Commence chaque appel dans votre langue par défaut",
             "Change de langue quand un patient le demande ou se met à parler une autre langue",
             "Envoie les SMS de confirmation et de rappel dans votre langue par défaut",
           ],
@@ -415,7 +415,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Dans quelles langues les patients peuvent-ils parler ?",
           answer:
-            "Les patients peuvent parler au réceptionniste dans plus de 70 langues, dont l’espagnol et le serbe. Chaque appel commence dans la langue par défaut de votre cabinet, l’anglais ou le français. Le réceptionniste répond ensuite dans la langue du patient. Il fonctionne avec GPT-Live d’OpenAI et change de langue quand un patient le demande ou se met à parler une autre langue. La grille tarifaire de LobbyStack ne prévoit aucun supplément pour les langues. Le tableau de bord et les e-mails existent en anglais, en français, en espagnol et en serbe. Les SMS de confirmation et de rappel partent dans votre langue par défaut, ou en espagnol ou en serbe pour un patient dont vous enregistrez la langue par l’API.",
+            "Les patients peuvent parler au réceptionniste dans plus de 70 langues, dont l’espagnol et le serbe. Chaque appel commence dans la langue par défaut de votre cabinet : anglais, français, espagnol, serbe, allemand, portugais du Brésil, italien ou néerlandais. Le réceptionniste répond ensuite dans la langue du patient. Il fonctionne avec GPT-Live d’OpenAI et change de langue quand un patient le demande ou se met à parler une autre langue. La grille tarifaire de LobbyStack ne prévoit aucun supplément pour les langues. Le tableau de bord et les e-mails existent en anglais, en français, en espagnol et en serbe. Les SMS de confirmation et de rappel partent dans votre langue par défaut, ou en espagnol ou en serbe pour un patient dont vous enregistrez la langue par l’API.",
         },
         {
           question: "Peut-il réserver les rendez-vous des nouveaux patients ?",
@@ -750,9 +750,9 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
         {
           title:
             "Peut-il répondre aux appelants qui parlent espagnol ou une autre langue ?",
-          body: "Oui. Chaque appel commence dans votre langue par défaut, l’anglais ou le français. Si l’appelant demande à changer de langue ou en parle une autre, le réceptionniste répond dans cette langue. Il fonctionne avec GPT-Live d’OpenAI, qui prend en charge plus de 70 langues, dont l’espagnol et le serbe. LobbyStack envoie les SMS de confirmation et de rappel dans votre langue par défaut. Si vous enregistrez l’espagnol ou le serbe comme langue d’un contact par l’API, ce contact les reçoit dans cette langue. La page des tarifs ne mentionne aucun supplément pour les langues.",
+          body: "Oui. Chaque appel commence dans votre langue par défaut : anglais, français, espagnol, serbe, allemand, portugais du Brésil, italien ou néerlandais. Si l’appelant demande à changer de langue ou en parle une autre, le réceptionniste répond dans cette langue. Il fonctionne avec GPT-Live d’OpenAI, qui prend en charge plus de 70 langues, dont l’espagnol et le serbe. LobbyStack envoie les SMS de confirmation et de rappel dans votre langue par défaut. Si vous enregistrez l’espagnol ou le serbe comme langue d’un contact par l’API, ce contact les reçoit dans cette langue. La page des tarifs ne mentionne aucun supplément pour les langues.",
           points: [
-            "Commence en anglais ou en français, puis suit la langue de l’appelant",
+            "Commence dans l’une des 8 langues au choix, puis suit la langue de l’appelant",
             "Plus de 70 langues avec GPT-Live, dont l’espagnol",
             "Vos règles d’urgence et vos réglages de réservation restent les mêmes dans toutes les langues",
           ],

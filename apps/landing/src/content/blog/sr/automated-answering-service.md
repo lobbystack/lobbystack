@@ -95,7 +95,7 @@ Drugi dobavljači nude više integracija. [Upfirst](https://upfirst.ai/pricing) 
 
 ### Kojim jezicima govori
 
-Kod LobbyStack-a svaki poziv počinje na podrazumevanom jeziku firme, engleskom ili francuskom. Recepcioner zatim odgovara na jeziku pozivaoca: na OpenAI GPT-Live modelu to je više od 70 jezika, uključujući španski i srpski. Ako je Vaša firma u Francuskoj, naš vodič o [AI telefonskoj centrali za male firme u Francuskoj](/sr/blog/ai-phone-system-small-business/) poredi francuske dobavljače i njihove cene u evrima.
+Kod LobbyStack-a svaki poziv počinje na podrazumevanom jeziku firme: engleskom, francuskom, španskom, srpskom, nemačkom, brazilskom portugalskom, italijanskom ili holandskom. Recepcioner zatim odgovara na jeziku pozivaoca: na OpenAI GPT-Live modelu to je više od 70 jezika, uključujući španski i srpski. Ako je Vaša firma u Francuskoj, naš vodič o [AI telefonskoj centrali za male firme u Francuskoj](/sr/blog/ai-phone-system-small-business/) poredi francuske dobavljače i njihove cene u evrima.
 
 Drugi dobavljači objavljuju svoje brojke: [AI-Receptionist.com](https://ai-receptionist.com/pricing) 55+, Upfirst 35+ i [Zoom AI Receptionist](https://zoom.us/pricing/virtual-agent) 23. [Dialzara](https://dialzara.com/pricing), [Rosie](https://heyrosie.com/pricing) i [Smith.ai AI Receptionist](https://smith.ai/pricing/ai-receptionist) navode engleski i španski. [CloudTalk](https://www.cloudtalk.io/ai-receptionist/) i [ElevenLabs Reception](https://elevenlabs.io/docs/reception-ai/billing/plans-and-pricing) takođe navode 70+. Pre kupovine obavite probni poziv na svakom jeziku kojim govore Vaši klijenti.
 
@@ -183,7 +183,7 @@ LobbyStack odgovara na sve pozive koji stignu na njegov broj. Prosledite svoj br
 
 ### 7. Testirajte uslugu pre nego što prosledite prave pozive
 
-Pozovite sami, pre klijenata. Paket Free u LobbyStack-u daje Vam 30 minuta razgovora mesečno i broj iz SAD ili Kanade besplatno 14 dana, bez kartice. Pripremite scenario za hitan slučaj, zakazivanje i pozivaoca koji govori srpski ili drugi jezik Vaših klijenata, jer poziv počinje na engleskom ili francuskom. Kada prosledite liniju, pročitajte snimke, transkripte i rezimee iz prve nedelje i ispravite svako pravilo koje ne radi kako treba.
+Pozovite sami, pre klijenata. Paket Free u LobbyStack-u daje Vam 30 minuta razgovora mesečno i broj iz SAD ili Kanade besplatno 14 dana, bez kartice. Pripremite scenario za hitan slučaj, zakazivanje i pozivaoca koji govori srpski ili drugi jezik Vaših klijenata, jer poziv počinje na Vašem podrazumevanom jeziku. Kada prosledite liniju, pročitajte snimke, transkripte i rezimee iz prve nedelje i ispravite svako pravilo koje ne radi kako treba.
 
 ## Kako da izaberete automatsko odgovaranje na pozive za svoju firmu?
 

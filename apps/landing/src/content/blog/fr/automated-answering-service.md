@@ -97,7 +97,7 @@ D'autres fournisseurs vont plus loin sur les intégrations. [Upfirst](https://up
 
 ### Les langues qu'il parle
 
-Avec LobbyStack, chaque appel commence dans la langue par défaut de l'entreprise, l'anglais ou le français. Le réceptionniste répond ensuite dans la langue de l'appelant : plus de 70 langues avec GPT-Live d'OpenAI, dont l'espagnol et le serbe. Si votre entreprise est en France, notre guide du [standard téléphonique IA pour TPE et PME](/fr/blog/ai-phone-system-small-business/) compare les offres françaises et leurs prix en euros.
+Avec LobbyStack, chaque appel commence dans la langue par défaut de l'entreprise : anglais, français, espagnol, serbe, allemand, portugais du Brésil, italien ou néerlandais. Le réceptionniste répond ensuite dans la langue de l'appelant : plus de 70 langues avec GPT-Live d'OpenAI, dont l'espagnol et le serbe. Si votre entreprise est en France, notre guide du [standard téléphonique IA pour TPE et PME](/fr/blog/ai-phone-system-small-business/) compare les offres françaises et leurs prix en euros.
 
 Les autres fournisseurs publient leurs propres chiffres : plus de 55 langues pour [AI-Receptionist.com](https://ai-receptionist.com/pricing), plus de 35 pour Upfirst et 23 pour [Zoom AI Receptionist](https://zoom.us/pricing/virtual-agent). [Dialzara](https://dialzara.com/pricing), [Rosie](https://heyrosie.com/pricing) et [Smith.ai AI Receptionist](https://smith.ai/pricing/ai-receptionist) indiquent l'anglais et l'espagnol. [CloudTalk](https://www.cloudtalk.io/ai-receptionist/) et [ElevenLabs Reception](https://elevenlabs.io/docs/reception-ai/billing/plans-and-pricing) annoncent aussi plus de 70 langues. Avant d'acheter, passez un appel test dans chaque langue que parlent vos clients.
 

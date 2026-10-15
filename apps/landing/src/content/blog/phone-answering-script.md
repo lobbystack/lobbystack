@@ -301,7 +301,7 @@ Wrong numbers: If the caller wanted another business, say they've reached
 
 With LobbyStack as the example (more on the [AI phone answering](/solutions/ai-phone-answering/) page):
 
-- **Greeting and language.** Every call opens with your greeting in the business's default language, English or French. The receptionist then answers in the caller's language: 70+ languages on OpenAI GPT-Live, including Spanish and Serbian.
+- **Greeting and language.** Every call opens with your greeting in the business's default language: English, French, Spanish, Serbian, German, Brazilian Portuguese, Italian or Dutch. The receptionist then answers in the caller's language: 70+ languages on OpenAI GPT-Live, including Spanish and Serbian.
 - **Booking.** It books into Google Calendar, the only calendar it connects to. With the caller's consent, it texts a confirmation and a reminder 24 hours before the appointment to US and Canadian numbers.
 - **Transfers.** Transfers are blind and go to one number per business, so the receptionist doesn't brief whoever picks up. Answer transferred calls with your business name and ask what the call is about. If a transfer can't go through, the receptionist tells the caller and offers to take a message, and your team can get a "Live call transfer failed" alert.
 - **Messages.** You get an email alert when it takes a message, with text alerts as an option. LobbyStack saves a summary, a transcript and a recording of every call in the dashboard.

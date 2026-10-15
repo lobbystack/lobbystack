@@ -100,7 +100,7 @@ AI recepcioner košta manje po minutu i primenjuje ista pravila na svakom pozivu
 | Doslednost | Isti podaci i pravila na svakom pozivu, ako ih ažurirate | Skripte plus procena svakog agenta |
 | Empatija | Ljubazan, ali ne čita emocije kao osoba | Obučena osoba čita emocije i kontekst |
 | Zakazivanje | Upisuje termin u povezani kalendar tokom poziva | Zavisi od pristupa kalendaru; neke usluge naplaćuju svako zakazivanje |
-| Jezici | Zavisi od dobavljača: [Upfirst](https://upfirst.ai/pricing) navodi 35+, [CloudTalk](https://www.cloudtalk.io/ai-receptionist/) i [ElevenLabs Reception](https://elevenlabs.io/docs/reception-ai/billing/plans-and-pricing) 70+. LobbyStack počinje na engleskom ili francuskom, a zatim odgovara na jeziku pozivaoca (70+ na GPT-Live) | Ruby, PATLive i Abby Connect uključuju španski; ostali jezici zavise od usluge |
+| Jezici | Zavisi od dobavljača: [Upfirst](https://upfirst.ai/pricing) navodi 35+, [CloudTalk](https://www.cloudtalk.io/ai-receptionist/) i [ElevenLabs Reception](https://elevenlabs.io/docs/reception-ai/billing/plans-and-pricing) 70+. LobbyStack počinje na jednom od 8 jezika po izboru, a zatim odgovara na jeziku pozivaoca (70+ na GPT-Live) | Ruby, PATLive i Abby Connect uključuju španski; ostali jezici zavise od usluge |
 | Naknada za aktivaciju | AI dobavljači koje smo proverili je ne objavljuju | Od $0 do $95 kod usluga koje smo proverili |
 | Nadzor | Snimci, transkripti, rezimei i probni pozivi | Obuka agenata, kontrola kvaliteta i beleške o pozivima |
 
@@ -207,7 +207,7 @@ Više o testiranju piše u našem vodiču [kako da izaberete AI recepcionera](/s
 
 LobbyStack je AI recepcioner za male firme. Zakazuje termine u Google Calendar na osnovu Vašeg radnog vremena, usluga i osoblja, a zatim na američke i kanadske brojeve šalje SMS potvrdu i podsetnik 24 sata pre termina. Pozive preusmerava na jedan broj, po pravilima koja odredite. Ako niste uneli broj za preusmeravanje ili preusmeravanje ne uspe, prima poruku i Vašem timu šalje obaveštenje imejlom. Kontrolna tabla čuva snimak, transkript i rezime od jednog reda za svaki poziv.
 
-Svaki poziv počinje na podrazumevanom jeziku firme, engleskom ili francuskom. Recepcioner zatim odgovara na jeziku pozivaoca. Radi na OpenAI GPT-Live modelu i govori 70+ jezika, uključujući španski i srpski.
+Svaki poziv počinje na podrazumevanom jeziku firme: engleskom, francuskom, španskom, srpskom, nemačkom, brazilskom portugalskom, italijanskom ili holandskom. Recepcioner zatim odgovara na jeziku pozivaoca. Radi na OpenAI GPT-Live modelu i govori 70+ jezika, uključujući španski i srpski.
 
 Paket [Starter](/sr/pricing/) košta $30 mesečno za 150 minuta, zatim $0.20 po minutu, bez naknade za aktivaciju. Paket Free Vam daje 30 minuta razgovora mesečno i broj iz SAD ili Kanade besplatno 14 dana, bez kartice. Sam paket ne ističe. Kod je [pod MIT licencom na GitHubu](https://github.com/lobbystack/lobbystack), a možete i da ga [sami hostujete](https://docs.lobbystack.com/self-hosting/overview) uz sopstvene OpenAI i Twilio naloge.
 

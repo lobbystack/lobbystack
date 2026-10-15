@@ -124,7 +124,7 @@ Le forfait à 49 $ de Rosie ne réserve que par un lien envoyé par SMS et n'off
 
 Le forfait Starter de LobbyStack coûte 30 $ par mois pour 150 minutes, puis 0,20 $ la minute. Pro coûte 100 $ pour 500 minutes, puis 0,18 $. En facturation annuelle, ils reviennent à 24 $ et 80 $ par mois, et aucun forfait n'a de frais de mise en service. LobbyStack compte l'utilisation à la seconde, et les appels de moins de 10 secondes ou ceux qu'il termine comme spam ne comptent pas. Les forfaits ne limitent pas le nombre d'appels auxquels il répond en même temps, et les appels simultanés puisent dans les mêmes minutes.
 
-Chaque appel commence dans la langue par défaut de l'entreprise, l'anglais ou le français. Le réceptionniste répond ensuite dans la langue de l'appelant : plus de 70 langues avec GPT-Live d'OpenAI, dont l'espagnol et le serbe. Vous décidez en langage courant quels appels sont urgents, et il peut les transférer vers un numéro. Si le transfert échoue, il propose de prendre un message, et votre équipe peut recevoir une alerte « Transfert d'appel échoué ». Il réserve dans Google Calendar et, si l'appelant accepte, envoie par SMS une confirmation et un rappel 24 heures avant aux numéros américains et canadiens.
+Chaque appel commence dans la langue par défaut de l'entreprise : anglais, français, espagnol, serbe, allemand, portugais du Brésil, italien ou néerlandais. Le réceptionniste répond ensuite dans la langue de l'appelant : plus de 70 langues avec GPT-Live d'OpenAI, dont l'espagnol et le serbe. Vous décidez en langage courant quels appels sont urgents, et il peut les transférer vers un numéro. Si le transfert échoue, il propose de prendre un message, et votre équipe peut recevoir une alerte « Transfert d'appel échoué ». Il réserve dans Google Calendar et, si l'appelant accepte, envoie par SMS une confirmation et un rappel 24 heures avant aux numéros américains et canadiens.
 
 LobbyStack ne se synchronise ni avec ServiceTitan, ni avec Housecall Pro, ni avec Jobber, et Google Calendar reste son seul agenda. Les transferts vont vers un seul numéro, sans présenter l'appelant au technicien, et vous n'avez pas de rotation de garde. Aucun agent humain ne prend le relais, et l'IA ne répond pas aux SMS. Le forfait Gratuit vous donne 30 minutes vocales et un numéro américain ou canadien gratuit pendant 14 jours, sans carte. Voyez comment il traite les appels urgents sur la page [réceptionniste IA en chauffage et climatisation](/fr/solutions/ai-receptionist-for-hvac/).
 
@@ -177,7 +177,7 @@ Oui, s'il travaille à partir de votre calendrier de garde. A Message Center, MA
 | Sameday AI | L'Emergency line fait sonner tous les membres les nuits et les week-ends | Files à tour de rôle | Multilingue sur Enterprise |
 | Goodcall | Flux d'orientation et de répartition ; transfert vers un contact d'escalade, jusqu'à trois essais | Non décrit | Non publiées |
 | Rosie | Transferts dès 149 $ ; en cascade sur 299 $ | La cascade essaie plusieurs numéros | Anglais, espagnol |
-| LobbyStack (le nôtre) | Vos règles décident de l'urgence ; transfert vers un numéro ; message et alerte si le transfert échoue | Un numéro de transfert que vous changez dans les réglages | Commence en anglais ou en français, répond dans plus de 70 langues |
+| LobbyStack (le nôtre) | Vos règles décident de l'urgence ; transfert vers un numéro ; message et alerte si le transfert échoue | Un numéro de transfert que vous changez dans les réglages | Commence dans l'une des 8 langues au choix, répond dans plus de 70 langues |
 
 ### Les services qui suivent un calendrier de garde
 
@@ -248,7 +248,7 @@ Oui. Demandez à votre opérateur de renvoyer les appels à la fermeture. PATLiv
 
 ### Un service de réponse téléphonique peut-il répondre en espagnol ?
 
-Oui. AnswerForce, PATLive, MAP, Ruby, Nexa, Rosie et les forfaits IA de Smith.ai annoncent l'anglais et l'espagnol, et les forfaits humains de Smith.ai facturent 1,00 $ par appel pour une ligne espagnole dédiée. SAS propose l'espagnol, mais cite deux prix. LobbyStack ouvre chaque appel en anglais ou en français, puis répond dans la langue de l'appelant, parmi plus de 70 langues, dont l'espagnol.
+Oui. AnswerForce, PATLive, MAP, Ruby, Nexa, Rosie et les forfaits IA de Smith.ai annoncent l'anglais et l'espagnol, et les forfaits humains de Smith.ai facturent 1,00 $ par appel pour une ligne espagnole dédiée. SAS propose l'espagnol, mais cite deux prix. LobbyStack ouvre chaque appel dans l'une des huit langues au choix, puis répond dans la langue de l'appelant, parmi plus de 70 langues, dont l'espagnol.
 
 ### Que se passe-t-il si le technicien de garde ne répond pas ?
 

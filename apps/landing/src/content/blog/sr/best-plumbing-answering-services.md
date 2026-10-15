@@ -137,7 +137,7 @@ Rosie paket od $49 zakazuje samo preko linka u SMS poruci i nema preusmeravanje.
 
 LobbyStack paket Starter košta $30 mesečno za 150 minuta, a zatim $0.20 po minutu. Pro košta $100 za 500 minuta, a zatim $0.18. Uz godišnje plaćanje koštaju $24 i $80 mesečno, a nijedan paket nema naknadu za aktivaciju. LobbyStack meri potrošnju u sekundama i ne naplaćuje spam ni pozive kraće od 10 sekundi. Paketi ne ograničavaju broj istovremenih poziva, a istovremeni pozivi troše iste minute.
 
-Svaki poziv počinje na podrazumevanom jeziku firme, engleskom ili francuskom. Recepcioner zatim odgovara na jeziku pozivaoca: više od 70 jezika preko OpenAI GPT-Live, uključujući španski i srpski. Vi mu kažete koji su pozivi hitni, na primer voda koja ne prestaje da teče ili kanalizacija koja se vraća kroz odvod, a on ih prebacuje na jedan broj. Ako prebacivanje ne uspe, kaže to pozivaocu, ponudi da primi poruku, a Vaš tim može da dobije upozorenje "Live call transfer failed". Zakazuje u Google Calendar i, kada pozivalac pristane, šalje SMS potvrdu i podsetnik 24 sata ranije na brojeve iz SAD i Kanade. Svaki poziv ostavlja rezime, transkript i snimak na kontrolnoj tabli, a Vi dobijate imejl kada recepcioner primi poruku.
+Svaki poziv počinje na podrazumevanom jeziku firme: engleskom, francuskom, španskom, srpskom, nemačkom, brazilskom portugalskom, italijanskom ili holandskom. Recepcioner zatim odgovara na jeziku pozivaoca: više od 70 jezika preko OpenAI GPT-Live, uključujući španski i srpski. Vi mu kažete koji su pozivi hitni, na primer voda koja ne prestaje da teče ili kanalizacija koja se vraća kroz odvod, a on ih prebacuje na jedan broj. Ako prebacivanje ne uspe, kaže to pozivaocu, ponudi da primi poruku, a Vaš tim može da dobije upozorenje "Live call transfer failed". Zakazuje u Google Calendar i, kada pozivalac pristane, šalje SMS potvrdu i podsetnik 24 sata ranije na brojeve iz SAD i Kanade. Svaki poziv ostavlja rezime, transkript i snimak na kontrolnoj tabli, a Vi dobijate imejl kada recepcioner primi poruku.
 
 Ne sinhronizuje se sa ServiceTitan-om, Housecall Pro-om ni Jobber-om, a Google Calendar mu je jedini kalendar. Prebacivanje ide na jedan broj, bez kratkog izveštaja, i nema rotacije dežurstava. Iza njega ne stoje ljudski agenti, a AI ne odgovara na SMS poruke. Besplatni paket daje 30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana, bez kartice. Pogledajte kako radi sa hitnim pozivima na stranici [AI recepcioner za vodoinstalatere](/sr/solutions/ai-receptionist-for-plumbers/).
 
@@ -190,7 +190,7 @@ Usluga koja prati Vaš raspored dežurstava može da dođe do onoga ko te noći 
 | Avoca | Primer dnevnika prikazuje puklu cev i izlivanje kanalizacije sa oznakom "Routed to Tech" | Nije opisano | Nije navedeno |
 | Goodcall | Usmerava po "burst pipe, flooding, and sewer backup"; pokušava do tri kontakta | Nije opisano | Nije objavljeno |
 | Rosie | Ne može da pošalje vodoinstalatera; daje uputstva van radnog vremena i obaveštava Vas | Kaskadno preusmeravanje na paketu od $299 | Engleski, španski |
-| LobbyStack (naš) | Vi određujete koji su pozivi hitni; prebacivanje na jedan broj; poruka i upozorenje ako prebacivanje ne uspe | Jedan broj za prebacivanje | Počinje na engleskom ili francuskom, odgovara na više od 70 jezika |
+| LobbyStack (naš) | Vi određujete koji su pozivi hitni; prebacivanje na jedan broj; poruka i upozorenje ako prebacivanje ne uspe | Jedan broj za prebacivanje | Počinje na jednom od 8 jezika po izboru, odgovara na više od 70 jezika |
 
 ### Usluge koje prate raspored dežurstava
 
@@ -260,7 +260,7 @@ Goodcall pokušava do tri kontakta, Rosie paket od $299 pokušava više brojeva,
 
 ### Može li usluga za vodoinstalatere da odgovara na španskom?
 
-Može. AnswerForce, PATLive, MAP, SAS, Ruby, Rosie, A Message Center i Smith.ai AI paketi navode engleski i španski, a Smith.ai paketi uživo naplaćuju $1.00 po pozivu za posebnu liniju na španskom. LobbyStack svaki poziv počinje na engleskom ili francuskom, a zatim odgovara na jeziku pozivaoca, na više od 70 jezika, uključujući španski i srpski.
+Može. AnswerForce, PATLive, MAP, SAS, Ruby, Rosie, A Message Center i Smith.ai AI paketi navode engleski i španski, a Smith.ai paketi uživo naplaćuju $1.00 po pozivu za posebnu liniju na španskom. LobbyStack svaki poziv počinje na jednom od osam jezika po izboru, a zatim odgovara na jeziku pozivaoca, na više od 70 jezika, uključujući španski i srpski.
 
 ## Kako smo proverili ove usluge
 

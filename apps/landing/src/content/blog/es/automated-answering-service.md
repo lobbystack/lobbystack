@@ -95,7 +95,7 @@ Otros proveedores van más lejos en integraciones. [Upfirst](https://upfirst.ai/
 
 ### Qué idiomas habla
 
-Con LobbyStack, cada llamada empieza en el idioma predeterminado del negocio, inglés o francés. Después, la recepcionista responde en el idioma de quien llama: más de 70 idiomas con OpenAI GPT-Live, entre ellos el español y el serbio. Si su negocio está en Francia, nuestra guía de [conmutador virtual con IA para pymes en Francia](/es/blog/ai-phone-system-small-business/) compara proveedores franceses y sus precios en euros.
+Con LobbyStack, cada llamada empieza en el idioma predeterminado del negocio: inglés, francés, español, serbio, alemán, portugués de Brasil, italiano o neerlandés. Después, la recepcionista responde en el idioma de quien llama: más de 70 idiomas con OpenAI GPT-Live, entre ellos el español y el serbio. Si su negocio está en Francia, nuestra guía de [conmutador virtual con IA para pymes en Francia](/es/blog/ai-phone-system-small-business/) compara proveedores franceses y sus precios en euros.
 
 Otros proveedores publican sus propias cifras: [AI-Receptionist.com](https://ai-receptionist.com/pricing) más de 55, Upfirst más de 35 y [Zoom AI Receptionist](https://zoom.us/pricing/virtual-agent) 23. [Dialzara](https://dialzara.com/pricing), [Rosie](https://heyrosie.com/pricing) y [Smith.ai AI Receptionist](https://smith.ai/pricing/ai-receptionist) indican inglés y español. [CloudTalk](https://www.cloudtalk.io/ai-receptionist/) y [ElevenLabs Reception](https://elevenlabs.io/docs/reception-ai/billing/plans-and-pricing) también declaran más de 70. Antes de comprar, haga una llamada de prueba en cada idioma que hablen sus clientes.
 
@@ -183,7 +183,7 @@ LobbyStack contesta todas las llamadas que llegan a su número. Desvíe su núme
 
 ### 7. Pruébelo antes de desviar llamadas reales
 
-Llame usted antes que sus clientes. El plan Free de LobbyStack le da 30 minutos de voz al mes y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta. Prepare un guion con una emergencia, una reserva y una persona que habla español u otro idioma de sus clientes, ya que la llamada empieza en inglés o en francés. Cuando desvíe su línea, lea las grabaciones, las transcripciones y los resúmenes de la primera semana, y corrija cualquier regla que falle.
+Llame usted antes que sus clientes. El plan Free de LobbyStack le da 30 minutos de voz al mes y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta. Prepare un guion con una emergencia, una reserva y una persona que habla español u otro idioma de sus clientes, ya que la llamada empieza en su idioma predeterminado. Cuando desvíe su línea, lea las grabaciones, las transcripciones y los resúmenes de la primera semana, y corrija cualquier regla que falle.
 
 ## ¿Qué atención telefónica automatizada le conviene?
 

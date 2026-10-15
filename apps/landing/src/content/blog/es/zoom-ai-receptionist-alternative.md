@@ -28,7 +28,7 @@ LobbyStack incluye reservas, transferencia de llamadas, alertas por SMS, transcr
 | Sistema telefónico existente | Funciona con cualquier sistema, sin Zoom Phone | Desvío de llamadas desde su número actual |
 | Reservas | Zoom Scheduler, Google, Microsoft y Calendly | Reservas en Google Calendar con reglas del negocio |
 | Transferencias | Transferencia asistida y transferencia por nombre | Transferencia ciega a un solo número |
-| Idiomas | 23 en la tabla de precios de Zoom | Empieza en inglés o francés y luego contesta en el idioma de quien llama (más de 70) |
+| Idiomas | 23 en la tabla de precios de Zoom | Empieza en uno de 8 idiomas a elegir y luego contesta en el idioma de quien llama (más de 70) |
 | Código fuente | No se anuncia | Repositorio público con licencia MIT |
 | Implementación | Servicio gestionado por Zoom | Nube gestionada o autoalojamiento |
 

@@ -124,7 +124,7 @@ Rosie's $49 plan books only by texted link and has no transfers. The $149 plan a
 
 LobbyStack's Starter plan costs $30 a month for 150 minutes, then $0.20 a minute. Pro costs $100 for 500 minutes, then $0.18. Billed annually, they cost $24 and $80 a month, and no plan has a setup fee. LobbyStack counts usage in seconds, and calls under 10 seconds or calls it ends as spam don't count. Plans don't limit how many calls it answers at once, and simultaneous calls share the same minutes.
 
-Each call opens in the business's default language, English or French. The receptionist then answers in the caller's language: 70+ languages on OpenAI GPT-Live, including Spanish and Serbian. Your plain-language rules decide which calls are urgent, and it can transfer them to one number. If the transfer doesn't go through, it offers to take a message, and your team can get a "Live call transfer failed" alert. It books into Google Calendar and, when the caller agrees, texts a confirmation and a 24-hour reminder to US and Canadian numbers.
+Each call opens in the business's default language: English, French, Spanish, Serbian, German, Brazilian Portuguese, Italian or Dutch. The receptionist then answers in the caller's language: 70+ languages on OpenAI GPT-Live, including Spanish and Serbian. Your plain-language rules decide which calls are urgent, and it can transfer them to one number. If the transfer doesn't go through, it offers to take a message, and your team can get a "Live call transfer failed" alert. It books into Google Calendar and, when the caller agrees, texts a confirmation and a 24-hour reminder to US and Canadian numbers.
 
 It doesn't sync with ServiceTitan, Housecall Pro or Jobber, and Google Calendar is its only calendar. Transfers go to one number without a briefing, and you get no on-call rotation. No human agents back it up, and the AI doesn't reply to texts. Free gives you 30 voice minutes and a US or Canadian number free for 14 days, with no card. See how it handles urgent calls on the [AI receptionist for HVAC companies](/solutions/ai-receptionist-for-hvac/) page.
 
@@ -177,7 +177,7 @@ Yes, if it works from your on-call schedule. A Message Center, MAP and SAS descr
 | Sameday AI | Emergency line rings every member on nights and weekends | Round-robin queues | Multilingual on Enterprise |
 | Goodcall | Routing and dispatch flows; transfers to an escalation contact, trying up to three | Not described | Not published |
 | Rosie | Transfers from $149; waterfall on $299 | Waterfall tries several numbers | English, Spanish |
-| LobbyStack (ours) | Your rules decide what's urgent; transfer to one number; message and alert if the transfer fails | One transfer number you change in settings | Opens in English or French, answers in 70+ languages |
+| LobbyStack (ours) | Your rules decide what's urgent; transfer to one number; message and alert if the transfer fails | One transfer number you change in settings | Opens in your choice of 8 languages, answers in 70+ languages |
 
 ### Services that follow an on-call schedule
 
@@ -248,7 +248,7 @@ Yes. Set your carrier to forward calls when you close. PATLive, Ruby and Smith.a
 
 ### Can an HVAC answering service answer in Spanish?
 
-Yes. AnswerForce, PATLive, MAP, Ruby, Nexa, Rosie and Smith.ai's AI plans list English and Spanish, and Smith.ai's live plans charge $1.00 a call for a dedicated Spanish line. SAS offers Spanish but quotes two prices for it. LobbyStack opens each call in English or French, then answers in the caller's language across 70+ languages, Spanish included.
+Yes. AnswerForce, PATLive, MAP, Ruby, Nexa, Rosie and Smith.ai's AI plans list English and Spanish, and Smith.ai's live plans charge $1.00 a call for a dedicated Spanish line. SAS offers Spanish but quotes two prices for it. LobbyStack opens each call in your choice of eight languages, then answers in the caller's language across 70+ languages, Spanish included.
 
 ### What happens if the on-call tech doesn't pick up?
 

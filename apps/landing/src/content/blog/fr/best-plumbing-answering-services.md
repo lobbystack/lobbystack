@@ -137,7 +137,7 @@ Le forfait Rosie à 49 $ ne réserve que par lien envoyé par SMS et n'offre auc
 
 Le forfait Starter de LobbyStack coûte 30 $ par mois pour 150 minutes, puis 0,20 $ la minute. Pro coûte 100 $ pour 500 minutes, puis 0,18 $. En facturation annuelle, ils reviennent à 24 $ et 80 $ par mois, et aucun forfait n'a de frais de mise en service. LobbyStack compte l'usage à la seconde et ne facture ni le spam ni les appels de moins de 10 secondes. Les forfaits ne limitent pas le nombre d'appels simultanés, et ces appels se partagent les mêmes minutes.
 
-Chaque appel commence dans la langue par défaut de l'entreprise, anglais ou français. Le réceptionniste répond ensuite dans la langue de l'appelant : plus de 70 langues avec OpenAI GPT-Live, dont l'espagnol et le serbe. Vous lui indiquez quels appels sont urgents, par exemple une fuite qu'on n'arrive pas à arrêter ou des eaux usées qui remontent par une évacuation, et il les transfère vers un seul numéro. Si le transfert n'aboutit pas, il le dit à l'appelant, propose de prendre un message, et votre équipe peut recevoir une alerte « Live call transfer failed ». Il réserve dans Google Calendar et, si l'appelant accepte, envoie par SMS une confirmation et un rappel 24 heures avant aux numéros américains et canadiens. Chaque appel laisse un résumé, une transcription et un enregistrement dans le tableau de bord, et vous recevez un e-mail quand il prend un message.
+Chaque appel commence dans la langue par défaut de l'entreprise : anglais, français, espagnol, serbe, allemand, portugais du Brésil, italien ou néerlandais. Le réceptionniste répond ensuite dans la langue de l'appelant : plus de 70 langues avec OpenAI GPT-Live, dont l'espagnol et le serbe. Vous lui indiquez quels appels sont urgents, par exemple une fuite qu'on n'arrive pas à arrêter ou des eaux usées qui remontent par une évacuation, et il les transfère vers un seul numéro. Si le transfert n'aboutit pas, il le dit à l'appelant, propose de prendre un message, et votre équipe peut recevoir une alerte « Live call transfer failed ». Il réserve dans Google Calendar et, si l'appelant accepte, envoie par SMS une confirmation et un rappel 24 heures avant aux numéros américains et canadiens. Chaque appel laisse un résumé, une transcription et un enregistrement dans le tableau de bord, et vous recevez un e-mail quand il prend un message.
 
 Il ne se synchronise ni avec ServiceTitan, ni avec Housecall Pro, ni avec Jobber, et Google Calendar est son seul agenda. Les transferts vont vers un seul numéro, sans briefing, et il n'y a pas de rotation de garde. Aucun agent humain ne prend le relais, et l'IA ne répond pas aux SMS. L'offre gratuite donne 30 minutes vocales et un numéro américain ou canadien gratuit pendant 14 jours, sans carte. Voyez comment il traite les appels urgents sur la page [réceptionniste IA pour plombiers](/fr/solutions/ai-receptionist-for-plumbers/).
 
@@ -190,7 +190,7 @@ Un service qui suit votre calendrier de garde peut joindre la personne d'astrein
 | Avoca | Un exemple de journal montre une canalisation éclatée et un refoulement d'égout « Routed to Tech » | Non décrit | Non précisé |
 | Goodcall | Oriente sur « burst pipe, flooding, and sewer backup » ; essaie jusqu'à trois contacts | Non décrit | Non publié |
 | Rosie | Ne peut pas envoyer de plombier ; donne des consignes hors horaires et vous prévient | Transferts en cascade à 299 $ | Anglais, espagnol |
-| LobbyStack (le nôtre) | Vous fixez les appels urgents ; transfert vers un seul numéro ; message et alerte si le transfert échoue | Un seul numéro de transfert | Commence en anglais ou en français, répond dans plus de 70 langues |
+| LobbyStack (le nôtre) | Vous fixez les appels urgents ; transfert vers un seul numéro ; message et alerte si le transfert échoue | Un seul numéro de transfert | Commence dans l'une des 8 langues au choix, répond dans plus de 70 langues |
 
 ### Les services qui suivent un calendrier de garde
 
@@ -260,7 +260,7 @@ Goodcall essaie jusqu'à trois contacts, le forfait à 299 $ de Rosie essaie plu
 
 ### Une permanence téléphonique pour plombier peut-elle répondre en espagnol ?
 
-Oui. AnswerForce, PATLive, MAP, SAS, Ruby, Rosie, A Message Center et les forfaits IA de Smith.ai indiquent l'anglais et l'espagnol, et les forfaits humains de Smith.ai facturent 1,00 $ par appel pour une ligne dédiée en espagnol. LobbyStack commence chaque appel en anglais ou en français, puis répond dans la langue de l'appelant, parmi plus de 70 langues, espagnol compris.
+Oui. AnswerForce, PATLive, MAP, SAS, Ruby, Rosie, A Message Center et les forfaits IA de Smith.ai indiquent l'anglais et l'espagnol, et les forfaits humains de Smith.ai facturent 1,00 $ par appel pour une ligne dédiée en espagnol. LobbyStack commence chaque appel dans l'une des huit langues au choix, puis répond dans la langue de l'appelant, parmi plus de 70 langues, espagnol compris.
 
 ## Comment nous avons vérifié ces services
 

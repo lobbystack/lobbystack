@@ -124,7 +124,7 @@ Rosie paket od $49 zakazuje samo preko linka u SMS poruci i nema preusmeravanje.
 
 LobbyStack Starter košta $30 mesečno za 150 minuta, zatim $0.20 po minutu. Pro košta $100 za 500 minuta, zatim $0.18. Uz godišnju naplatu izlaze $24 i $80 mesečno, a nijedan paket nema naknadu za aktivaciju. LobbyStack računa potrošnju u sekundama i ne računa pozive kraće od 10 sekundi ni pozive koje završi kao spam. Paketi ne ograničavaju broj poziva na koje odgovara istovremeno, a istovremeni pozivi troše iste minute.
 
-Svaki poziv počinje na podrazumevanom jeziku firme, engleskom ili francuskom. Recepcioner zatim odgovara na jeziku pozivaoca: na OpenAI GPT-Live modelu to je više od 70 jezika, uključujući španski i srpski. Vaša pravila napisana običnim jezikom određuju koji pozivi su hitni, a recepcioner te pozive može da preusmeri na jedan broj. Ako preusmeravanje ne uspe, nudi da primi poruku, a Vaš tim može da dobije obaveštenje „Preusmeravanje poziva nije uspelo“. Zakazuje u Google Calendar i, kada pozivalac pristane, šalje SMS potvrdu i podsetnik 24 sata unapred na američke i kanadske brojeve.
+Svaki poziv počinje na podrazumevanom jeziku firme: engleskom, francuskom, španskom, srpskom, nemačkom, brazilskom portugalskom, italijanskom ili holandskom. Recepcioner zatim odgovara na jeziku pozivaoca: na OpenAI GPT-Live modelu to je više od 70 jezika, uključujući španski i srpski. Vaša pravila napisana običnim jezikom određuju koji pozivi su hitni, a recepcioner te pozive može da preusmeri na jedan broj. Ako preusmeravanje ne uspe, nudi da primi poruku, a Vaš tim može da dobije obaveštenje „Preusmeravanje poziva nije uspelo“. Zakazuje u Google Calendar i, kada pozivalac pristane, šalje SMS potvrdu i podsetnik 24 sata unapred na američke i kanadske brojeve.
 
 Ne sinhronizuje se sa ServiceTitan, Housecall Pro ni Jobber, a Google Calendar je jedini kalendar sa kojim radi. Preusmerenja idu na jedan broj, bez najave, i nemate rotaciju dežurstava. Iza njega ne stoje ljudski agenti, a AI ne odgovara na SMS poruke. Paket Free Vam daje 30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana, bez kartice. Rad sa hitnim pozivima opisuje stranica [AI recepcioner za grejanje i klimatizaciju](/sr/solutions/ai-receptionist-for-hvac/).
 
@@ -177,7 +177,7 @@ Može, ako radi po Vašem rasporedu dežurstava. A Message Center, MAP i SAS opi
 | Sameday AI | Emergency line zvoni svim članovima noću i vikendom | Redovi sa kružnom raspodelom | Više jezika na paketu Enterprise |
 | Goodcall | Tokovi za usmeravanje i slanje tehničara; preusmerava kontaktu za eskalaciju i proba do tri kontakta | Nije opisano | Nije objavljeno |
 | Rosie | Preusmeravanje od $149; kaskadno na paketu od $299 | Kaskadno preusmeravanje proba nekoliko brojeva | Engleski, španski |
-| LobbyStack (naš) | Vaša pravila određuju šta je hitno; preusmeravanje na jedan broj; poruka i obaveštenje ako preusmeravanje ne uspe | Jedan broj za preusmeravanje koji menjate u podešavanjima | Otvara poziv na engleskom ili francuskom, odgovara na više od 70 jezika |
+| LobbyStack (naš) | Vaša pravila određuju šta je hitno; preusmeravanje na jedan broj; poruka i obaveštenje ako preusmeravanje ne uspe | Jedan broj za preusmeravanje koji menjate u podešavanjima | Otvara poziv na jednom od 8 jezika po izboru, odgovara na više od 70 jezika |
 
 ### Usluge koje rade po rasporedu dežurstava
 
@@ -248,7 +248,7 @@ Možete. Podesite kod operatera da prosleđuje pozive kada zatvorite. PATLive, R
 
 ### Može li usluga odgovaranja za HVAC firme da odgovara na španskom?
 
-Može. AnswerForce, PATLive, MAP, Ruby, Nexa, Rosie i Smith.ai AI paketi navode engleski i španski, a Smith.ai paketi uživo naplaćuju $1.00 po pozivu za posebnu liniju na španskom. SAS nudi španski, ali za njega navodi dve cene. LobbyStack svaki poziv otvara na engleskom ili francuskom, a zatim odgovara na jeziku pozivaoca, na više od 70 jezika, uključujući španski i srpski.
+Može. AnswerForce, PATLive, MAP, Ruby, Nexa, Rosie i Smith.ai AI paketi navode engleski i španski, a Smith.ai paketi uživo naplaćuju $1.00 po pozivu za posebnu liniju na španskom. SAS nudi španski, ali za njega navodi dve cene. LobbyStack svaki poziv otvara na jednom od osam jezika po izboru, a zatim odgovara na jeziku pozivaoca, na više od 70 jezika, uključujući španski i srpski.
 
 ### Šta se dešava ako se dežurni tehničar ne javi?
 

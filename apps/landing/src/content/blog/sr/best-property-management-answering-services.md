@@ -134,7 +134,7 @@ Rosie paket od $49 pokriva 250 minuta, bez preusmeravanja poziva, i zakazuje sam
 
 LobbyStack Starter paket košta $30 mesečno za 150 minuta, zatim $0.20 po minutu. Pro košta $100 za 500 minuta, zatim $0.18. Uz godišnju naplatu koštaju $24 i $80 mesečno, i nijedan paket nema naknadu za aktivaciju. LobbyStack meri potrošnju u sekundama, a neželjeni pozivi i pozivi kraći od 10 sekundi se ne naplaćuju. Paketi ne ograničavaju broj istovremenih poziva, što je važno kada kvar u celoj zgradi natera mnogo stanara da zovu u isto vreme.
 
-Svaki poziv počinje na podrazumevanom jeziku firme, engleskom ili francuskom. Recepcioner zatim odgovara na jeziku pozivaoca: više od 70 jezika uz OpenAI GPT-Live, uključujući španski i srpski. Listu hitnih slučajeva pišete običnim jezikom, a on poklapajuće pozive preusmerava na jedan broj. Ako preusmeravanje ne uspe, kaže to pozivaocu, ponudi da primi poruku, a Vaš tim može da dobije upozorenje „Live call transfer failed“. Razgledanja zakazuje u Google Calendar i, uz pristanak pozivaoca, šalje SMS potvrdu i podsetnik 24 sata ranije na brojeve u SAD i Kanadi. Za svaki poziv ostaju rezime, transkript i snimak u kontrolnoj tabli, a svaka poruka šalje upozorenje mejlom.
+Svaki poziv počinje na podrazumevanom jeziku firme: engleskom, francuskom, španskom, srpskom, nemačkom, brazilskom portugalskom, italijanskom ili holandskom. Recepcioner zatim odgovara na jeziku pozivaoca: više od 70 jezika uz OpenAI GPT-Live, uključujući španski i srpski. Listu hitnih slučajeva pišete običnim jezikom, a on poklapajuće pozive preusmerava na jedan broj. Ako preusmeravanje ne uspe, kaže to pozivaocu, ponudi da primi poruku, a Vaš tim može da dobije upozorenje „Live call transfer failed“. Razgledanja zakazuje u Google Calendar i, uz pristanak pozivaoca, šalje SMS potvrdu i podsetnik 24 sata ranije na brojeve u SAD i Kanadi. Za svaki poziv ostaju rezime, transkript i snimak u kontrolnoj tabli, a svaka poruka šalje upozorenje mejlom.
 
 LobbyStack se ne povezuje sa AppFolio, Buildium, Yardi ni Rent Manager sistemom, pa u njima ne otvara radne naloge. Potpisani webhookovi za 6 događaja i REST API mogu da pošalju podatke o pozivu u druge alate ako to neko iz Vašeg tima podesi. Preusmeravanje ide na jedan broj, bez najave osobi koja prima poziv, pa nema rotacije dežurstava, a vlasnik ne može uživo da dobije drugu osobu od one koja prima hitne slučajeve. Iza AI-ja ne stoje ljudi, a AI ne odgovara na SMS poruke. Besplatni paket daje 30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana, bez kartice. Pogledajte kako razvrstava pozive stanara na [stranici za upravljanje nekretninama](/sr/solutions/property-management-answering-service/).
 
@@ -194,7 +194,7 @@ Miris gasa, požar i alarm za ugljen-monoksid idu prvo hitnim službama ili dist
 | Rent Manager Call Center | Agenti rešavaju hitne slučajeve i slanje tehničara | Nije opisan | Nisu navedeni |
 | Goodcall | Preusmerava na kontakt za eskalaciju, uz rezervni kontakt | Nije opisan | Nisu objavljeni |
 | Rosie | Obaveštenja; preusmeravanje od $149, kaskadno na $299 | Kaskada proba više brojeva | Engleski, španski |
-| LobbyStack (naš) | Vaša lista običnim jezikom; preusmeravanje na jedan broj; poruka i upozorenje ako ne uspe | Jedan broj za preusmeravanje, menjate ga u podešavanjima | Počinje na engleskom ili francuskom, odgovara na 70+ jezika |
+| LobbyStack (naš) | Vaša lista običnim jezikom; preusmeravanje na jedan broj; poruka i upozorenje ako ne uspe | Jedan broj za preusmeravanje, menjate ga u podešavanjima | Počinje na jednom od 8 jezika po izboru, odgovara na 70+ jezika |
 
 ## Da li pozivi stanara, vlasnika i potencijalnih zakupaca treba da idu na različita mesta?
 
@@ -260,7 +260,7 @@ Neke mogu. Buildium linija je povezana sa Vašim Buildium nalogom, a Rent Manage
 
 ### Može li usluga da odgovara stanarima na drugim jezicima?
 
-Da. MAP, Ambs, Smith.ai i Rosie nude engleski i španski, a PATLive španski od 8 do 22 časa po istočnom vremenu, bez doplate. Posebna linija na španskom kod Smith.ai uživo košta $1.00 po pozivu. LobbyStack počinje svaki poziv na engleskom ili francuskom, a zatim odgovara na jeziku pozivaoca, među više od 70 jezika.
+Da. MAP, Ambs, Smith.ai i Rosie nude engleski i španski, a PATLive španski od 8 do 22 časa po istočnom vremenu, bez doplate. Posebna linija na španskom kod Smith.ai uživo košta $1.00 po pozivu. LobbyStack počinje svaki poziv na jednom od osam jezika po izboru, a zatim odgovara na jeziku pozivaoca, među više od 70 jezika.
 
 ### Šta ako se dežurni tehničar ne javi?
 

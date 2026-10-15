@@ -304,7 +304,7 @@ qu'il a joint [nom de l'entreprise] et termine l'appel poliment.
 
 Avec LobbyStack comme exemple (plus de détails sur la page [réponse téléphonique IA](/fr/solutions/ai-phone-answering/)) :
 
-- **Message d'accueil et langue.** Chaque appel s'ouvre sur votre message d'accueil dans la langue par défaut de l'entreprise, le français ou l'anglais. Le réceptionniste répond ensuite dans la langue de l'appelant : plus de 70 langues avec OpenAI GPT-Live, dont l'espagnol et le serbe.
+- **Message d'accueil et langue.** Chaque appel s'ouvre sur votre message d'accueil dans la langue par défaut de l'entreprise : anglais, français, espagnol, serbe, allemand, portugais du Brésil, italien ou néerlandais. Le réceptionniste répond ensuite dans la langue de l'appelant : plus de 70 langues avec OpenAI GPT-Live, dont l'espagnol et le serbe.
 - **Rendez-vous.** Il réserve dans Google Agenda, le seul agenda qu'il connecte. Avec l'accord de l'appelant, il envoie par SMS une confirmation et un rappel 24 heures avant le rendez-vous, vers les numéros américains et canadiens.
 - **Transferts.** Les transferts sont directs et vont vers un seul numéro par entreprise : le réceptionniste ne présente pas l'appel à la personne qui décroche. Répondez aux appels transférés avec le nom de l'entreprise et demandez l'objet de l'appel. Si un transfert ne passe pas, le réceptionniste le dit à l'appelant et propose de prendre un message, et votre équipe peut recevoir une alerte « Live call transfer failed ».
 - **Messages.** Vous recevez une alerte par e-mail quand il prend un message, avec des alertes par SMS en option. LobbyStack conserve un résumé, une transcription et l'enregistrement de chaque appel dans le tableau de bord.

@@ -85,7 +85,7 @@ Les deux produits au 9 octobre 2026 :
 | Option gratuite | Essai de 14 jours | Forfait gratuit avec 30 minutes vocales par mois, sans carte, numéro américain ou canadien gratuit pendant 14 jours |
 | Numéro de téléphone | Nouveau numéro inclus, ou portez le vôtre | Un numéro sur Starter et Pro, aux États-Unis, au Canada, au Royaume-Uni, en Australie ou en Nouvelle-Zélande |
 | Fonctionne avec votre numéro actuel | Oui, par renvoi d'appel ou SIP | Oui, par le renvoi d'appel de votre opérateur |
-| Langues des appelants | Anglais, espagnol, français, italien, allemand et portugais selon sa FAQ, d'autres annoncées comme à venir ; change de langue pendant l'appel | Commence en anglais ou en français, puis répond dans la langue de l'appelant : plus de 70 langues avec OpenAI GPT-Live |
+| Langues des appelants | Anglais, espagnol, français, italien, allemand et portugais selon sa FAQ, d'autres annoncées comme à venir ; change de langue pendant l'appel | Commence dans l'une des 8 langues au choix, puis répond dans la langue de l'appelant : plus de 70 langues avec OpenAI GPT-Live |
 | Calendriers | Google et Outlook | Google Calendar |
 | CRM | Salesforce, HubSpot et Zoho intégrés | Webhooks et API REST ; Zapier s'y connecte |
 | Réponses IA aux SMS | Oui, avec son agent SMS IA (RingCentral précise que des frais supplémentaires peuvent s'appliquer) | Non ; votre équipe répond elle-même |
@@ -178,7 +178,7 @@ LobbyStack vous convient si vous voulez un coût à la minute plus bas et un moy
 
 - Le forfait gratuit vous donne 30 minutes vocales par mois et un numéro américain ou canadien gratuit pendant 14 jours, sans carte.
 - Starter coûte 30 $ pour 150 minutes, puis 0,20 $ la minute, comptée à la seconde. Les appels de moins de 10 secondes et ceux que le réceptionniste termine comme spam ne comptent pas.
-- Chaque appel commence dans la langue par défaut de l'entreprise, l'anglais ou le français. Le réceptionniste répond ensuite dans la langue de l'appelant : plus de 70 langues avec OpenAI GPT-Live, dont l'espagnol et le serbe.
+- Chaque appel commence dans la langue par défaut de l'entreprise : anglais, français, espagnol, serbe, allemand, portugais du Brésil, italien ou néerlandais. Le réceptionniste répond ensuite dans la langue de l'appelant : plus de 70 langues avec OpenAI GPT-Live, dont l'espagnol et le serbe.
 - Il réserve dans Google Calendar et, si l'appelant accepte, envoie par SMS une confirmation et un rappel 24 heures avant le rendez-vous aux numéros américains et canadiens.
 - Starter inclut 20 tentatives de transfert par mois vers votre numéro de transfert, et le réceptionniste propose de prendre un message si un transfert échoue.
 - Aucun forfait n'a de frais de mise en service, et vous pouvez annuler depuis les paramètres de facturation, sans frais d'annulation.

@@ -134,7 +134,7 @@ Rosie's $49 plan covers 250 minutes but has no transfers and books only by texte
 
 LobbyStack's Starter plan costs $30 a month for 150 minutes, then $0.20 a minute. Pro costs $100 for 500 minutes, then $0.18. Billed annually, they cost $24 and $80 a month, and no plan has a setup fee. LobbyStack counts usage in seconds, and spam and calls under 10 seconds aren't billed. Plans don't limit how many calls it answers at once, which matters when a building-wide outage sends many tenants to the phone together.
 
-Each call opens in the business's default language, English or French. The receptionist then answers in the caller's language: 70+ languages on OpenAI GPT-Live, including Spanish and Serbian. You write your emergency list in plain language, and it transfers matching calls to one number. If the transfer can't go through, it tells the caller, offers to take a message, and your team can get a "Live call transfer failed" alert. It books showings into Google Calendar and, when the caller agrees, texts a confirmation and a 24-hour reminder to US and Canadian numbers. Every call gets a summary, transcript and recording in the dashboard, and messages trigger an email alert.
+Each call opens in the business's default language: English, French, Spanish, Serbian, German, Brazilian Portuguese, Italian or Dutch. The receptionist then answers in the caller's language: 70+ languages on OpenAI GPT-Live, including Spanish and Serbian. You write your emergency list in plain language, and it transfers matching calls to one number. If the transfer can't go through, it tells the caller, offers to take a message, and your team can get a "Live call transfer failed" alert. It books showings into Google Calendar and, when the caller agrees, texts a confirmation and a 24-hour reminder to US and Canadian numbers. Every call gets a summary, transcript and recording in the dashboard, and messages trigger an email alert.
 
 LobbyStack doesn't sync with AppFolio, Buildium, Yardi or Rent Manager, so it creates no work orders there. Signed webhooks for 6 events and a REST API can push call details into other tools if someone on your team builds it. Transfers go to one number with no briefing, so there's no on-call rotation, and owner calls can't go live to a different person than emergencies. No human agents back it up, and the AI doesn't reply to texts. Free gives you 30 voice minutes and a US or Canadian number free for 14 days, with no card. See how it sorts tenant calls on the [property management answering page](/solutions/property-management-answering-service/).
 
@@ -194,7 +194,7 @@ Gas smells, fires and carbon monoxide alarms go to 911 or the gas utility first.
 | Rent Manager Call Center | Agents handle emergencies and dispatching | Not described | Not stated |
 | Goodcall | Transfers to an escalation contact, with a backup | Not described | Not published |
 | Rosie | Notifications; transfers from $149, waterfall on $299 | Waterfall tries several numbers | English, Spanish |
-| LobbyStack (ours) | Your plain-language list; transfer to one number; message and alert if it fails | One transfer number you change in settings | Opens in English or French, answers in 70+ languages |
+| LobbyStack (ours) | Your plain-language list; transfer to one number; message and alert if it fails | One transfer number you change in settings | Opens in your choice of 8 languages, answers in 70+ languages |
 
 ## Should tenant, owner and prospect calls go to different places?
 
@@ -260,7 +260,7 @@ Some can. Buildium's line connects to your Buildium account, and Rent Manager's 
 
 ### Can an answering service answer tenants in Spanish?
 
-Yes. MAP, Ambs, Smith.ai and Rosie list English and Spanish, and PATLive offers Spanish from 8am to 10pm ET at no extra charge. Smith.ai's live plans charge $1.00 a call for a dedicated Spanish line. LobbyStack opens each call in English or French, then answers in the caller's language across 70+ languages, Spanish included.
+Yes. MAP, Ambs, Smith.ai and Rosie list English and Spanish, and PATLive offers Spanish from 8am to 10pm ET at no extra charge. Smith.ai's live plans charge $1.00 a call for a dedicated Spanish line. LobbyStack opens each call in your choice of eight languages, then answers in the caller's language across 70+ languages, Spanish included.
 
 ### What happens if the on-call tech doesn't answer?
 

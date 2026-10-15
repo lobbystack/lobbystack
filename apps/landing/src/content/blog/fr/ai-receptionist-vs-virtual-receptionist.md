@@ -100,7 +100,7 @@ Un réceptionniste IA coûte moins cher à la minute et applique les mêmes règ
 | Cohérence | Mêmes faits et mêmes règles à chaque appel, si vous les tenez à jour | Scripts plus le jugement de chaque agent |
 | Empathie | Poli, mais il ne perçoit pas l'émotion comme une personne | Une personne formée perçoit l'émotion et le contexte |
 | Réservation | Réserve dans un agenda connecté pendant l'appel | Dépend de l'accès à l'agenda ; certains services facturent chaque réservation |
-| Langues | Varie selon le fournisseur : [Upfirst](https://upfirst.ai/pricing) en annonce plus de 35, [CloudTalk](https://www.cloudtalk.io/ai-receptionist/) et [ElevenLabs Reception](https://elevenlabs.io/docs/reception-ai/billing/plans-and-pricing) plus de 70. LobbyStack commence en anglais ou en français, puis répond dans la langue de l'appelant (plus de 70 avec GPT-Live) | Ruby, PATLive et Abby Connect incluent l'espagnol ; les autres langues varient |
+| Langues | Varie selon le fournisseur : [Upfirst](https://upfirst.ai/pricing) en annonce plus de 35, [CloudTalk](https://www.cloudtalk.io/ai-receptionist/) et [ElevenLabs Reception](https://elevenlabs.io/docs/reception-ai/billing/plans-and-pricing) plus de 70. LobbyStack commence dans l'une des 8 langues au choix, puis répond dans la langue de l'appelant (plus de 70 avec GPT-Live) | Ruby, PATLive et Abby Connect incluent l'espagnol ; les autres langues varient |
 | Frais de mise en service | Aucuns frais publiés par les fournisseurs IA vérifiés | 0 $ à 95 $ parmi les services vérifiés |
 | Supervision | Enregistrements, transcriptions, résumés et appels tests | Formation des agents, contrôle qualité et notes d'appel |
 
@@ -207,7 +207,7 @@ Notre guide pour [choisir un réceptionniste IA](/fr/blog/how-to-choose-an-ai-re
 
 LobbyStack est un réceptionniste IA pour les petites entreprises. Il réserve les rendez-vous dans Google Calendar à partir de vos horaires, de vos services et de votre personnel, puis envoie par SMS une confirmation et un rappel 24 heures avant le rendez-vous aux numéros américains et canadiens. Il transfère les appels vers un seul numéro selon les règles que vous fixez. Si vous n'avez pas défini de numéro de transfert ou si un transfert échoue, il prend un message et envoie une alerte par e-mail à votre équipe. Le tableau de bord garde un enregistrement, une transcription et un résumé d'une ligne pour chaque appel.
 
-Chaque appel commence dans la langue par défaut de l'entreprise, l'anglais ou le français. Le réceptionniste répond ensuite dans la langue de l'appelant. Il fonctionne avec GPT-Live d'OpenAI et prend en charge plus de 70 langues, dont l'espagnol et le serbe.
+Chaque appel commence dans la langue par défaut de l'entreprise : anglais, français, espagnol, serbe, allemand, portugais du Brésil, italien ou néerlandais. Le réceptionniste répond ensuite dans la langue de l'appelant. Il fonctionne avec GPT-Live d'OpenAI et prend en charge plus de 70 langues, dont l'espagnol et le serbe.
 
 [Starter](/fr/pricing/) coûte 30 $ par mois pour 150 minutes, puis 0,20 $ la minute, sans frais de mise en service. Le forfait Gratuit vous donne 30 minutes vocales par mois et un numéro américain ou canadien gratuit pendant 14 jours, sans carte. Le forfait lui-même n'expire pas. Le code est [sous licence MIT sur GitHub](https://github.com/lobbystack/lobbystack), et vous pouvez [l'auto-héberger](https://docs.lobbystack.com/self-hosting/overview) avec vos propres comptes OpenAI et Twilio.
 

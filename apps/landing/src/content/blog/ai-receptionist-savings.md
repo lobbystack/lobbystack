@@ -276,7 +276,7 @@ We wrote this guide, so our own plans get the same treatment as the other 16.
 
 LobbyStack counts minutes by the second, unused minutes don't roll over, and plans don't limit how many calls the receptionist answers at once. No plan has a setup fee, and you can cancel from billing settings with no cancellation fee.
 
-Each call opens in the business's default language, English or French. The receptionist then answers in the caller's language: 70+ languages on OpenAI GPT-Live, including Spanish and Serbian. LobbyStack's pricing lists no language add-on.
+Each call opens in the business's default language: English, French, Spanish, Serbian, German, Brazilian Portuguese, Italian or Dutch. The receptionist then answers in the caller's language: 70+ languages on OpenAI GPT-Live, including Spanish and Serbian. LobbyStack's pricing lists no language add-on.
 
 LobbyStack's limits:
 
@@ -315,7 +315,7 @@ Not on LobbyStack. Included minutes reset each month, on monthly and annual bill
 
 ### Can an AI receptionist answer calls in Spanish?
 
-Many can. Smith.ai, Rosie and Dialzara list English and Spanish. Upfirst lists 35+ languages, My AI Front Desk 20+, Zoom 23, and CloudTalk and ElevenLabs Reception 70+. LobbyStack opens each call in English or French, then answers in the caller's language: 70+ languages on OpenAI GPT-Live, including Spanish and Serbian.
+Many can. Smith.ai, Rosie and Dialzara list English and Spanish. Upfirst lists 35+ languages, My AI Front Desk 20+, Zoom 23, and CloudTalk and ElevenLabs Reception 70+. LobbyStack opens each call in your choice of eight languages, then answers in the caller's language: 70+ languages on OpenAI GPT-Live, including Spanish and Serbian.
 
 ### How many missed calls before it pays for itself?
 

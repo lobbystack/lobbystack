@@ -276,7 +276,7 @@ Mi smo napisali ovaj vodič, pa naše pakete ocenjujemo po istim merilima kao os
 
 LobbyStack računa minute po sekundi, neiskorišćeni minuti se ne prenose, a paketi ne ograničavaju broj poziva na koje recepcioner odgovara istovremeno. Nijedan paket nema naknadu za aktivaciju, a pretplatu otkazujete u podešavanjima naplate, bez naknade za otkazivanje.
 
-Svaki poziv počinje na podrazumevanom jeziku firme, engleskom ili francuskom. Recepcioner zatim odgovara na jeziku pozivaoca: 70+ jezika na OpenAI GPT-Live modelu, uključujući španski i srpski. LobbyStack cenovnik ne navodi doplatu za jezike.
+Svaki poziv počinje na podrazumevanom jeziku firme: engleskom, francuskom, španskom, srpskom, nemačkom, brazilskom portugalskom, italijanskom ili holandskom. Recepcioner zatim odgovara na jeziku pozivaoca: 70+ jezika na OpenAI GPT-Live modelu, uključujući španski i srpski. LobbyStack cenovnik ne navodi doplatu za jezike.
 
 Ograničenja LobbyStack-a:
 
@@ -315,7 +315,7 @@ Na LobbyStack-u ne. Uključeni minuti se resetuju svakog meseca, i uz mesečnu i
 
 ### Može li AI recepcioner da se javlja na španskom?
 
-Mnogi mogu. Smith.ai, Rosie i Dialzara navode engleski i španski. Upfirst navodi 35+ jezika, My AI Front Desk 20+, Zoom 23, a CloudTalk i ElevenLabs Reception 70+. LobbyStack svaki poziv počinje na engleskom ili francuskom, a zatim odgovara na jeziku pozivaoca: 70+ jezika na OpenAI GPT-Live modelu, uključujući španski i srpski.
+Mnogi mogu. Smith.ai, Rosie i Dialzara navode engleski i španski. Upfirst navodi 35+ jezika, My AI Front Desk 20+, Zoom 23, a CloudTalk i ElevenLabs Reception 70+. LobbyStack svaki poziv počinje na jednom od osam jezika po izboru, a zatim odgovara na jeziku pozivaoca: 70+ jezika na OpenAI GPT-Live modelu, uključujući španski i srpski.
 
 ### Posle koliko propuštenih poziva se isplati?
 

@@ -131,7 +131,7 @@ With LobbyStack as the example:
 - It books into Google Calendar. With the caller's consent, it texts a confirmation and a reminder 24 hours before the appointment to US and Canadian numbers.
 - It transfers urgent calls to one number per business. Transfers are blind, so it doesn't brief the person who picks up. If a transfer can't go through, it tells the caller, offers to take a message, and your team can get a "Live call transfer failed" alert.
 - Each call gets a summary, transcript and recording. You get an email alert when it takes a message, and text alerts are optional.
-- Calls open in your default language, English or French, and the receptionist then answers in the caller's language: 70+ languages, including Spanish.
+- Calls open in your default language (English, French, Spanish, Serbian, German, Brazilian Portuguese, Italian or Dutch), and the receptionist then answers in the caller's language: 70+ languages, including Spanish.
 - LobbyStack doesn't bill spam calls or calls under 10 seconds.
 
 Know the limits before you forward a line: Google Calendar is the only calendar, the AI doesn't reply to texts, and there's no CRM or field-service software sync. For a full after-hours setup, see [after-hours answering](/solutions/after-hours-answering-service/).

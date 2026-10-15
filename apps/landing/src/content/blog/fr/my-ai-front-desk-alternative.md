@@ -29,7 +29,7 @@ Frontdesk, anciennement My AI Front Desk, vend un large espace commercial IA. Lo
 | Canaux | Voix, SMS bidirectionnels, chat, e-mail, formulaires | Voix, alertes au propriétaire par e-mail ou SMS, tableau de bord |
 | Réservation | Google Calendar, Outlook ou Calendly | Google Calendar |
 | Transferts | Transferts assistés selon vos règles | Transfert aveugle vers un seul numéro |
-| Langues | Plus de 20 langues, avec détection de la langue de l'appelant | Commence en anglais ou en français, puis répond dans la langue de l'appelant (plus de 70) |
+| Langues | Plus de 20 langues, avec détection de la langue de l'appelant | Commence dans l'une des 8 langues au choix, puis répond dans la langue de l'appelant (plus de 70) |
 | CRM | CRM intégré et séquences, synchronisation HubSpot et Salesforce | Dossiers d'appel, webhooks et API REST, sans synchronisation CRM native |
 | Déploiement | Hébergé | Cloud géré ou auto-hébergement |
 | Code source | Non annoncé | Dépôt public sous licence MIT |

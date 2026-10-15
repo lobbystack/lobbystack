@@ -28,7 +28,7 @@ Moneypenny ajoute un accompagnement et peut passer l'appel à l'un de ses récep
 | Réceptionnistes humains | Forfaits séparés à partir de 165 $ pour 50 minutes | Non proposés ; les transferts vont à votre équipe |
 | Relais humain | Un réceptionniste Moneypenny ou votre équipe ; facturation non précisée sur les forfaits IA | Transfert aveugle vers un seul numéro choisi par votre équipe |
 | Mise en place | Accompagnement par un Solutions Architect | Cloud libre-service ou aide Enterprise |
-| Langues | Voix anglaises à accent américain ou britannique | Commence en anglais ou en français, puis répond dans la langue de l'appelant (plus de 70) |
+| Langues | Voix anglaises à accent américain ou britannique | Commence dans l'une des 8 langues au choix, puis répond dans la langue de l'appelant (plus de 70) |
 | Déploiement | Géré par Moneypenny | Cloud géré ou auto-hébergement |
 | Code source | Non annoncé | Dépôt public sous licence MIT |
 

@@ -110,7 +110,7 @@ Servez-vous des 30 minutes pour :
 
 - rédiger votre accueil, vos règles et votre politique de transfert en langage courant, puis écouter le réceptionniste les appliquer
 - charger votre site et votre FAQ (jusqu'à 1 Mo de texte sur Gratuit) et lui poser les questions de vos clients
-- tester un appelant qui parle une autre langue : les appels commencent en anglais ou en français, puis le réceptionniste passe à la langue de l'appelant, parmi plus de 70 langues grâce à OpenAI GPT-Live
+- tester un appelant qui parle une autre langue : les appels commencent dans votre langue par défaut, puis le réceptionniste passe à la langue de l'appelant, parmi plus de 70 langues grâce à OpenAI GPT-Live
 
 Une fois les 30 minutes utilisées, les appels de test s'arrêtent jusqu'au mois suivant ou jusqu'à ce que vous changiez de forfait. Gratuit conserve l'historique des appels 30 jours.
 

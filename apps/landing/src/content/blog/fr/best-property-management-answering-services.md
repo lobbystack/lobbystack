@@ -134,7 +134,7 @@ Le forfait Rosie à 49 $ couvre 250 minutes, sans transfert, et ne réserve que
 
 Le forfait Starter de LobbyStack coûte 30 $ par mois pour 150 minutes, puis 0,20 $ la minute. Pro coûte 100 $ pour 500 minutes, puis 0,18 $. En facturation annuelle, ils reviennent à 24 $ et 80 $ par mois, et aucun forfait n'a de frais de mise en service. LobbyStack compte l'usage à la seconde, et les appels indésirables et les appels de moins de 10 secondes ne sont pas facturés. Les forfaits ne limitent pas le nombre d'appels simultanés, ce qui compte quand une panne dans tout un immeuble pousse de nombreux locataires à appeler en même temps.
 
-Chaque appel s'ouvre dans la langue par défaut de l'entreprise, l'anglais ou le français. Le réceptionniste répond ensuite dans la langue de l'appelant : plus de 70 langues avec OpenAI GPT-Live, dont l'espagnol et le serbe. Vous rédigez votre liste d'urgences en langage courant, et il transfère les appels concernés vers un numéro. Si le transfert échoue, il prévient l'appelant, propose de prendre un message, et votre équipe peut recevoir une alerte « Live call transfer failed ». Il réserve les visites dans Google Calendar et, avec l'accord de l'appelant, envoie par SMS une confirmation et un rappel 24 heures avant aux numéros américains et canadiens. Chaque appel laisse un résumé, une transcription et un enregistrement dans le tableau de bord, et chaque message déclenche une alerte par e-mail.
+Chaque appel s'ouvre dans la langue par défaut de l'entreprise : anglais, français, espagnol, serbe, allemand, portugais du Brésil, italien ou néerlandais. Le réceptionniste répond ensuite dans la langue de l'appelant : plus de 70 langues avec OpenAI GPT-Live, dont l'espagnol et le serbe. Vous rédigez votre liste d'urgences en langage courant, et il transfère les appels concernés vers un numéro. Si le transfert échoue, il prévient l'appelant, propose de prendre un message, et votre équipe peut recevoir une alerte « Live call transfer failed ». Il réserve les visites dans Google Calendar et, avec l'accord de l'appelant, envoie par SMS une confirmation et un rappel 24 heures avant aux numéros américains et canadiens. Chaque appel laisse un résumé, une transcription et un enregistrement dans le tableau de bord, et chaque message déclenche une alerte par e-mail.
 
 LobbyStack ne se synchronise ni avec AppFolio, ni avec Buildium, ni avec Yardi, ni avec Rent Manager : il n'y crée donc aucun bon d'intervention. Des webhooks signés pour 6 événements et une API REST peuvent envoyer les détails des appels vers d'autres outils, si quelqu'un de votre équipe s'en charge. Les transferts vont vers un seul numéro, sans briefing : pas de rotation d'astreinte, et un propriétaire ne peut pas joindre en direct une autre personne que celle qui reçoit les urgences. Aucun agent humain ne prend le relais, et l'IA ne répond pas aux SMS. Le forfait gratuit offre 30 minutes vocales et un numéro américain ou canadien gratuit pendant 14 jours, sans carte. Découvrez comment il trie les appels des locataires sur la [page consacrée à la gestion locative](/fr/solutions/property-management-answering-service/).
 
@@ -194,7 +194,7 @@ Les odeurs de gaz, les incendies et les alarmes de monoxyde de carbone relèvent
 | Rent Manager Call Center | Les agents traitent urgences et répartition | Non décrit | Non précisées |
 | Goodcall | Transfert à un contact d'escalade, avec un contact de secours | Non décrit | Non publiées |
 | Rosie | Notifications ; transferts dès 149 $, en cascade à 299 $ | La cascade essaie plusieurs numéros | Anglais, espagnol |
-| LobbyStack (le nôtre) | Votre liste en langage courant ; transfert vers un numéro ; message et alerte en cas d'échec | Un numéro de transfert, modifiable dans les paramètres | S'ouvre en anglais ou en français, répond dans plus de 70 langues |
+| LobbyStack (le nôtre) | Votre liste en langage courant ; transfert vers un numéro ; message et alerte en cas d'échec | Un numéro de transfert, modifiable dans les paramètres | S'ouvre dans l'une des 8 langues au choix, répond dans plus de 70 langues |
 
 ## Faut-il orienter locataires, propriétaires et candidats vers des interlocuteurs différents ?
 
@@ -260,7 +260,7 @@ Certaines, oui. La ligne de Buildium est reliée à votre compte, et le Call Cen
 
 ### Une permanence peut-elle répondre aux locataires dans une autre langue ?
 
-Oui. MAP, Ambs, Smith.ai et Rosie proposent l'anglais et l'espagnol, et PATLive l'espagnol de 8 h à 22 h (heure de l'Est), sans supplément. Les forfaits humains de Smith.ai facturent 1,00 $ l'appel pour une ligne dédiée en espagnol. LobbyStack ouvre chaque appel en anglais ou en français, puis répond dans la langue de l'appelant parmi plus de 70 langues.
+Oui. MAP, Ambs, Smith.ai et Rosie proposent l'anglais et l'espagnol, et PATLive l'espagnol de 8 h à 22 h (heure de l'Est), sans supplément. Les forfaits humains de Smith.ai facturent 1,00 $ l'appel pour une ligne dédiée en espagnol. LobbyStack ouvre chaque appel dans l'une des huit langues au choix, puis répond dans la langue de l'appelant parmi plus de 70 langues.
 
 ### Que se passe-t-il si le technicien d'astreinte ne répond pas ?
 

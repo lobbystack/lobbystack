@@ -94,7 +94,7 @@ Pour les tarifs d'autres services en direct, voyez [combien coûte un service de
 | Unité de facturation | Chaque appel arrondi aux 60 secondes supérieures ; attente et travail après l'appel compris | Décompte à la seconde ; les appels de moins de 10 secondes et ceux que le réceptionniste coupe comme indésirables ne comptent pas |
 | Essayer d'abord | Satisfait ou remboursé pour les nouveaux utilisateurs : 21 jours ou 500 minutes | Forfait gratuit : 30 minutes vocales, sans carte, numéro américain ou canadien gratuit pendant 14 jours |
 | Changer de forfait | Forfait supérieur gardé au moins trois périodes ; forfait inférieur après trois | Passer au forfait supérieur ou inférieur, ou résilier, depuis les paramètres de facturation, sans frais de résiliation |
-| Langues des appelants | Anglais et espagnol | Ouvre l'appel en anglais ou en français, puis répond dans la langue de l'appelant (plus de 70, dont l'espagnol) |
+| Langues des appelants | Anglais et espagnol | Ouvre l'appel dans l'une des 8 langues au choix, puis répond dans la langue de l'appelant (plus de 70, dont l'espagnol) |
 | Réservation | Les réceptionnistes prennent les rendez-vous | Réserve dans Google Agenda uniquement |
 | Transferts | Vers le numéro de votre choix ; frais possibles hors Amérique du Nord | Transfert à l'aveugle vers un seul numéro par entreprise |
 | Messages | E-mail, SMS ou notification dans l'appli | Alerte par e-mail quand il prend un message ; alertes SMS en option |
@@ -158,7 +158,7 @@ LobbyStack coûte moins cher à chaque volume que nous avons chiffré, et ses mi
 - **Facturation à la seconde.** Les appels de moins de 10 secondes et ceux que le réceptionniste coupe comme indésirables ne comptent pas.
 - **Pas de limite d'appels simultanés.** Si vous fixez un plafond de dépenses de dépassement et qu'il est atteint, les nouveaux appelants entendent la tonalité occupée jusqu'au mois suivant ou jusqu'à ce que vous releviez le plafond.
 - **Une trace de chaque appel.** Le tableau de bord garde l'enregistrement, la transcription et le résumé, et votre équipe reçoit une alerte par e-mail quand le réceptionniste prend un message.
-- **Plus de langues pour vos appelants.** L'appel s'ouvre en anglais ou en français, puis le réceptionniste passe à la langue de l'appelant, parmi plus de 70.
+- **Plus de langues pour vos appelants.** L'appel s'ouvre dans l'une des huit langues au choix, puis le réceptionniste passe à la langue de l'appelant, parmi plus de 70.
 - **La couverture que vous choisissez.** Il peut répondre à tous les appels, ou seulement en cas de débordement ou hors des heures d'ouverture, selon la règle de renvoi de votre opérateur. Notre guide pour [renvoyer les appels de votre entreprise](/fr/blog/how-to-forward-business-calls/) explique la marche à suivre.
 - **Code ouvert.** LobbyStack est sous licence MIT. Vous pouvez l'héberger vous-même et relier d'autres outils par l'API REST et des webhooks signés.
 

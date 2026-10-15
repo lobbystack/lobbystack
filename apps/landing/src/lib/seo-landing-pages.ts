@@ -205,7 +205,7 @@ export const solutionPages: SeoLandingPage[] = [
     proofPoints: [
       "Books into Google Calendar and can text a confirmation and a reminder the day before",
       "Transfers after-hours emergencies to your on-call number",
-      "Opens in English or French, then talks with patients in 70+ languages, including Spanish and Serbian",
+      "Opens in your choice of 8 languages, then talks with patients in 70+ languages, including Spanish and Serbian",
     ],
     sections: [
       {
@@ -237,9 +237,9 @@ export const solutionPages: SeoLandingPage[] = [
       },
       {
         title: "Patients talk in their own language",
-        body: "Each call opens in your practice's default language, English or French. From there, the receptionist answers in the patient's language. It runs on OpenAI GPT-Live, which handles 70+ languages, including Spanish and Serbian. A patient who starts in Spanish, or asks for Serbian, hears the rest of the call in that language. Your dashboard and emails come in English, French, Spanish, or Serbian. Confirmation and reminder texts go out in your default language, or in Spanish or Serbian for a patient whose language you save through the API.",
+        body: "Each call opens in your practice's default language: English, French, Spanish, Serbian, German, Brazilian Portuguese, Italian, or Dutch. From there, the receptionist answers in the patient's language. It runs on OpenAI GPT-Live, which handles 70+ languages, including Spanish and Serbian. A patient who starts in Spanish, or asks for Serbian, hears the rest of the call in that language. Your dashboard and emails come in English, French, Spanish, or Serbian. Confirmation and reminder texts go out in your default language, or in Spanish or Serbian for a patient whose language you save through the API.",
         points: [
-          "Opens each call in your default language, English or French",
+          "Opens each call in your default language",
           "Switches when a patient asks or starts speaking another language",
           "Sends confirmation and reminder texts in your default language",
         ],
@@ -577,9 +577,9 @@ export const solutionPages: SeoLandingPage[] = [
       },
       {
         title: "Can it answer callers who speak Spanish or another language?",
-        body: "Yes. Each call opens in your default language, English or French. If the caller asks to switch or speaks another language, the receptionist answers in that language. It runs on OpenAI GPT-Live, which handles 70+ languages, including Spanish and Serbian. LobbyStack sends confirmation and reminder texts in your default language. If you save a contact's language as Spanish or Serbian through the API, that contact gets them in that language. The pricing page lists no language add-on.",
+        body: "Yes. Each call opens in your default language: English, French, Spanish, Serbian, German, Brazilian Portuguese, Italian, or Dutch. If the caller asks to switch or speaks another language, the receptionist answers in that language. It runs on OpenAI GPT-Live, which handles 70+ languages, including Spanish and Serbian. LobbyStack sends confirmation and reminder texts in your default language. If you save a contact's language as Spanish or Serbian through the API, that contact gets them in that language. The pricing page lists no language add-on.",
         points: [
-          "Opens in English or French, then follows the caller's language",
+          "Opens in your choice of 8 languages, then follows the caller's language",
           "70+ languages on GPT-Live, including Spanish",
           "Your urgency rules and booking settings stay the same in every language",
         ],

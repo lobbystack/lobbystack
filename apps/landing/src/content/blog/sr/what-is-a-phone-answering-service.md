@@ -81,7 +81,7 @@ Obučeni recepcioneri u spoljnoj firmi javljaju se po scenariju koji odobrite. P
 
 Glasovni AI softver se javlja na poziv, razgovara sa pozivaocem prirodnim jezikom i može da zakaže termin u povezanom kalendaru. Primenjuje Vaša pravila isto na svakom pozivu i košta mali deo cene po minutu usluge uživo (pogledajte tabelu cena niže). Ne čita emocije kao obučena osoba. Dobavljači naplaćuju po minutu, po pozivu ili po jedinstvenom pozivaocu.
 
-[AI odgovaranje na pozive](/sr/solutions/ai-phone-answering/) u LobbyStack-u je naše. Zakazuje termine u Google Calendar, šalje SMS potvrdu i podsetnik 24 sata pre termina pozivaocima sa američkim i kanadskim brojevima koji pristanu, i čuva snimak, transkript i rezime svakog poziva. Pozivi počinju na podrazumevanom jeziku Vaše firme, engleskom ili francuskom, a zatim recepcioner odgovara na jeziku pozivaoca: više od 70 jezika uz OpenAI GPT-Live, uključujući srpski. Ograničenja: Google Calendar je jedini kalendar, preusmeravanja idu na jedan broj bez predstavljanja pozivaoca, a AI ne odgovara na SMS poruke.
+[AI odgovaranje na pozive](/sr/solutions/ai-phone-answering/) u LobbyStack-u je naše. Zakazuje termine u Google Calendar, šalje SMS potvrdu i podsetnik 24 sata pre termina pozivaocima sa američkim i kanadskim brojevima koji pristanu, i čuva snimak, transkript i rezime svakog poziva. Pozivi počinju na podrazumevanom jeziku Vaše firme (engleskom, francuskom, španskom, srpskom, nemačkom, brazilskom portugalskom, italijanskom ili holandskom), a zatim recepcioner odgovara na jeziku pozivaoca: više od 70 jezika uz OpenAI GPT-Live, uključujući srpski. Ograničenja: Google Calendar je jedini kalendar, preusmeravanja idu na jedan broj bez predstavljanja pozivaoca, a AI ne odgovara na SMS poruke.
 
 ### Hibridna usluga
 

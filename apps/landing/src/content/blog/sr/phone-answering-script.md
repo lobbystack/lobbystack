@@ -301,7 +301,7 @@ Pogrešan broj: Ako je pozivalac tražio drugu firmu, reci da je dobio
 
 Sa LobbyStack-om kao primerom (više na stranici [AI odgovaranje na pozive](/sr/solutions/ai-phone-answering/)):
 
-- **Pozdrav i jezik.** Svaki poziv počinje Vašim pozdravom na podrazumevanom jeziku firme, engleskom ili francuskom. Recepcioner zatim odgovara na jeziku pozivaoca: više od 70 jezika preko OpenAI GPT-Live, uključujući srpski i španski.
+- **Pozdrav i jezik.** Svaki poziv počinje Vašim pozdravom na podrazumevanom jeziku firme: engleskom, francuskom, španskom, srpskom, nemačkom, brazilskom portugalskom, italijanskom ili holandskom. Recepcioner zatim odgovara na jeziku pozivaoca: više od 70 jezika preko OpenAI GPT-Live, uključujući srpski i španski.
 - **Zakazivanje.** Zakazuje u Google Calendar, jedini kalendar koji povezuje. Uz saglasnost pozivaoca šalje SMS potvrdu i podsetnik 24 sata pre termina na američke i kanadske brojeve.
 - **Preusmeravanje.** Preusmeravanja su direktna i idu na jedan broj po firmi, pa recepcioner ne najavljuje poziv osobi koja se javi. Na preusmerene pozive javljajte se nazivom firme i pitajte o čemu se radi. Ako preusmeravanje ne uspe, recepcioner to kaže pozivaocu i ponudi da primi poruku, a Vaš tim može da dobije upozorenje „Live call transfer failed“.
 - **Poruke.** Kada primi poruku, dobijate obaveštenje mejlom, a SMS obaveštenja su opcija. LobbyStack čuva sažetak, transkript i snimak svakog poziva na kontrolnoj tabli.

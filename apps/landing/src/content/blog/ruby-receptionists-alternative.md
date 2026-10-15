@@ -94,7 +94,7 @@ For other live services' rates, see [what an answering service costs](/blog/how-
 | Billing increment | Each call rounded up to the next 60 seconds; hold time and after-call work count | Counted in seconds; calls under 10 seconds and calls the receptionist ends as spam don't count |
 | Try it first | Money-back guarantee for first-time users: 21 days or 500 minutes | Free plan: 30 voice minutes, no card, US or Canadian number free for 14 days |
 | Plan changes | Upgrades hold for at least three billing periods; downgrades after three | Upgrade, downgrade or cancel from billing settings, with no cancellation fee |
-| Caller languages | English and Spanish | Opens in English or French, then answers in the caller's language (70+, including Spanish) |
+| Caller languages | English and Spanish | Opens in your choice of 8 languages, then answers in the caller's language (70+, including Spanish) |
 | Booking | Receptionists schedule appointments | Books into Google Calendar only |
 | Transfers | To any number you choose; fees may apply outside North America | Blind transfer to one number per business |
 | Messages | Email, text or app notification | Email alert when it takes a message; text alerts optional |
@@ -158,7 +158,7 @@ LobbyStack costs less at every volume we priced, and its extra minutes cost $0.1
 - **Billing by the second.** Calls under 10 seconds and calls the receptionist ends as spam don't count toward your minutes.
 - **No limit on simultaneous calls.** If you set an overage spending cap and reach it, new callers get a busy signal until the next month or until you raise the cap.
 - **A record of every call.** The dashboard keeps a recording, transcript and summary, and your team gets an email alert when the receptionist takes a message.
-- **More caller languages.** Calls open in English or French, and the receptionist switches to the caller's language, from 70+.
+- **More caller languages.** Calls open in your choice of eight languages, and the receptionist switches to the caller's language, from 70+.
 - **Coverage you choose.** It can answer every call, or only overflow or after-hours calls, depending on your carrier's forwarding rule. Our guide on [how to forward business calls](/blog/how-to-forward-business-calls/) covers the setup.
 - **Open code.** LobbyStack is MIT-licensed. You can self-host it, and you can connect other tools through the REST API and signed webhooks.
 

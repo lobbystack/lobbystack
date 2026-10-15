@@ -134,7 +134,7 @@ El plan de $49 de Rosie cubre 250 minutos, sin transferencias, y solo agenda con
 
 El plan Starter de LobbyStack cuesta $30 al mes por 150 minutos, luego $0.20 por minuto. Pro cuesta $100 por 500 minutos, luego $0.18. Con facturación anual cuestan $24 y $80 al mes, y ningún plan tiene tarifa de configuración. LobbyStack mide el uso en segundos, y no cobra el spam ni las llamadas de menos de 10 segundos. Los planes no limitan cuántas llamadas contesta a la vez, algo útil cuando una falla en todo un edificio hace que muchos inquilinos llamen al mismo tiempo.
 
-Cada llamada empieza en el idioma predeterminado del negocio, inglés o francés. Luego la recepcionista contesta en el idioma de quien llama: más de 70 idiomas con OpenAI GPT-Live, entre ellos español y serbio. Usted escribe su lista de emergencias en lenguaje sencillo, y ella transfiere las llamadas que coinciden a un número. Si la transferencia no se completa, se lo dice a quien llama, ofrece tomar un mensaje, y su equipo puede recibir una alerta "Live call transfer failed". Agenda visitas en Google Calendar y, si la persona acepta, envía por SMS una confirmación y un recordatorio 24 horas antes a números de Estados Unidos y Canadá. Cada llamada deja un resumen, una transcripción y una grabación en el panel, y cada mensaje genera una alerta por correo electrónico.
+Cada llamada empieza en el idioma predeterminado del negocio: inglés, francés, español, serbio, alemán, portugués de Brasil, italiano o neerlandés. Luego la recepcionista contesta en el idioma de quien llama: más de 70 idiomas con OpenAI GPT-Live, entre ellos español y serbio. Usted escribe su lista de emergencias en lenguaje sencillo, y ella transfiere las llamadas que coinciden a un número. Si la transferencia no se completa, se lo dice a quien llama, ofrece tomar un mensaje, y su equipo puede recibir una alerta "Live call transfer failed". Agenda visitas en Google Calendar y, si la persona acepta, envía por SMS una confirmación y un recordatorio 24 horas antes a números de Estados Unidos y Canadá. Cada llamada deja un resumen, una transcripción y una grabación en el panel, y cada mensaje genera una alerta por correo electrónico.
 
 LobbyStack no se sincroniza con AppFolio, Buildium, Yardi ni Rent Manager, así que no crea órdenes de trabajo ahí. Los webhooks firmados para 6 eventos y una API REST pueden enviar los datos de la llamada a otras herramientas si alguien de su equipo lo configura. Las transferencias van a un solo número y sin aviso previo a quien recibe, así que no hay rotación de guardias, y un propietario no puede llegar en vivo a otra persona distinta de la que recibe las emergencias. No hay agentes humanos detrás, y la IA no responde mensajes de texto. El plan gratuito incluye 30 minutos de voz y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta. Vea cómo clasifica las llamadas de inquilinos en la [página para administración de propiedades](/es/solutions/property-management-answering-service/).
 
@@ -194,7 +194,7 @@ Los olores a gas, los incendios y las alarmas de monóxido de carbono van primer
 | Rent Manager Call Center | Los agentes atienden emergencias y despacho | No descrito | No indicados |
 | Goodcall | Transfiere a un contacto de escalamiento, con uno de respaldo | No descrito | No publicados |
 | Rosie | Avisos; transferencias desde $149, en cascada con $299 | La cascada prueba varios números | Inglés, español |
-| LobbyStack (nuestro) | Su lista en lenguaje sencillo; transferencia a un número; mensaje y alerta si falla | Un número de transferencia que cambia en la configuración | Empieza en inglés o francés, contesta en más de 70 idiomas |
+| LobbyStack (nuestro) | Su lista en lenguaje sencillo; transferencia a un número; mensaje y alerta si falla | Un número de transferencia que cambia en la configuración | Empieza en uno de 8 idiomas a elegir, contesta en más de 70 idiomas |
 
 ## ¿Deben ir a lugares distintos las llamadas de inquilinos, propietarios y prospectos?
 
@@ -260,7 +260,7 @@ Algunos sí. La línea de Buildium se conecta con su cuenta, y el Call Center de
 
 ### ¿Puede el servicio contestar a los inquilinos en español?
 
-Sí. MAP, Ambs, Smith.ai y Rosie ofrecen inglés y español, y PATLive ofrece español de 8 a. m. a 10 p. m., hora del Este, sin costo extra. La línea dedicada en español de Smith.ai cuesta $1.00 por llamada. LobbyStack empieza cada llamada en inglés o francés y luego contesta en el idioma de quien llama, entre más de 70 idiomas.
+Sí. MAP, Ambs, Smith.ai y Rosie ofrecen inglés y español, y PATLive ofrece español de 8 a. m. a 10 p. m., hora del Este, sin costo extra. La línea dedicada en español de Smith.ai cuesta $1.00 por llamada. LobbyStack empieza cada llamada en uno de ocho idiomas a elegir y luego contesta en el idioma de quien llama, entre más de 70 idiomas.
 
 ### ¿Qué pasa si el técnico de guardia no contesta?
 

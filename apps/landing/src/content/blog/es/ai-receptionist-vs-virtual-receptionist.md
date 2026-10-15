@@ -100,7 +100,7 @@ Una recepcionista con IA cuesta menos por minuto y aplica las mismas reglas en c
 | Coherencia | Los mismos datos y reglas en cada llamada, si usted los mantiene al día | Guiones más el criterio de cada agente |
 | Empatía | Educada, pero no lee las emociones como una persona | Una persona formada lee las emociones y el contexto |
 | Reservas | Reserva en un calendario conectado durante la llamada | Depende del acceso al calendario; algunos servicios cobran por reserva |
-| Idiomas | Varía según el proveedor: [Upfirst](https://upfirst.ai/pricing) indica más de 35, [CloudTalk](https://www.cloudtalk.io/ai-receptionist/) y [ElevenLabs Reception](https://elevenlabs.io/docs/reception-ai/billing/plans-and-pricing), más de 70. LobbyStack abre en inglés o francés y luego contesta en el idioma de quien llama (más de 70 con GPT-Live) | Ruby, PATLive y Abby Connect incluyen español; otros idiomas varían |
+| Idiomas | Varía según el proveedor: [Upfirst](https://upfirst.ai/pricing) indica más de 35, [CloudTalk](https://www.cloudtalk.io/ai-receptionist/) y [ElevenLabs Reception](https://elevenlabs.io/docs/reception-ai/billing/plans-and-pricing), más de 70. LobbyStack abre en uno de 8 idiomas a elegir y luego contesta en el idioma de quien llama (más de 70 con GPT-Live) | Ruby, PATLive y Abby Connect incluyen español; otros idiomas varían |
 | Tarifa de configuración | Ninguna publicada por los proveedores de IA que revisamos | De $0 a $95 entre los servicios que revisamos |
 | Supervisión | Grabaciones, transcripciones, resúmenes y llamadas de prueba | Formación de agentes, revisión de calidad y notas de llamada |
 
@@ -207,7 +207,7 @@ Nuestra guía sobre [cómo elegir una recepcionista con IA](/es/blog/how-to-choo
 
 LobbyStack es una recepcionista con IA para pequeñas empresas. Reserva citas en Google Calendar según sus horarios, servicios y personal, y luego envía por SMS una confirmación y un recordatorio 24 horas antes de la cita a números de Estados Unidos y Canadá. Transfiere las llamadas a un número según las reglas que usted fije. Si no ha configurado un número de transferencia o una transferencia falla, toma un mensaje y avisa a su equipo por correo electrónico. El panel guarda una grabación, una transcripción y un resumen de una línea de cada llamada.
 
-Cada llamada empieza en el idioma predeterminado del negocio, inglés o francés. Después, la recepcionista contesta en el idioma de quien llama. Funciona con OpenAI GPT-Live y atiende más de 70 idiomas, entre ellos el español y el serbio.
+Cada llamada empieza en el idioma predeterminado del negocio: inglés, francés, español, serbio, alemán, portugués de Brasil, italiano o neerlandés. Después, la recepcionista contesta en el idioma de quien llama. Funciona con OpenAI GPT-Live y atiende más de 70 idiomas, entre ellos el español y el serbio.
 
 [Starter](/es/pricing/) cuesta $30 al mes por 150 minutos, y después $0.20 por minuto, sin tarifa de configuración. El plan Free le da 30 minutos de voz al mes y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta. El plan en sí no caduca. El código tiene [licencia MIT en GitHub](https://github.com/lobbystack/lobbystack), y usted puede [autoalojarlo](https://docs.lobbystack.com/self-hosting/overview) con sus propias cuentas de OpenAI y Twilio.
 

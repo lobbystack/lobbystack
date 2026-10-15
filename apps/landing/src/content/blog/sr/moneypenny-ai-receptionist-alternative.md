@@ -29,7 +29,7 @@ Moneypenny dodaje upravljano uvođenje i može da prebaci poziv nekom od svojih 
 | Prebacivanje na čoveka | Moneypenny recepcioner ili Vaš tim; naplata nije navedena u AI paketima | Direktno preusmeravanje na jedan broj koji odredi Vaš tim, bez najave |
 | Uvođenje | Upravljano podešavanje uz Solutions Architect stručnjaka | Cloud uz samostalno podešavanje ili Enterprise podrška pri uvođenju |
 | Zakazivanje i kvalifikacija | Navedeni | Zakazivanje i prikupljanje potencijalnih klijenata uključeni |
-| Jezici | Navedeni engleski glasovi sa američkim ili britanskim akcentom | Počinje na engleskom ili francuskom, zatim odgovara na jeziku pozivaoca (više od 70) |
+| Jezici | Navedeni engleski glasovi sa američkim ili britanskim akcentom | Počinje na jednom od 8 jezika po izboru, zatim odgovara na jeziku pozivaoca (više od 70) |
 | Izvorni kod | Nije naveden | Javni repozitorijum pod MIT licencom |
 | Primena | Upravlja Moneypenny | Upravljani cloud ili samostalno hostovanje |
 

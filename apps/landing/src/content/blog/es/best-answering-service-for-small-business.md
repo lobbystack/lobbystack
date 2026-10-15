@@ -165,7 +165,7 @@ Una recepcionista con IA contesta con software y después reserva, transfiere o 
 - **Precio (revisado el 9 de octubre de 2026):** Starter cuesta $30 al mes por 150 minutos, y después $0.20 por minuto. Vea los [precios de LobbyStack](/es/pricing/).
 - **Cómo factura:** por segundo, sin redondeo: una llamada de 90 segundos usa 1.5 minutos. No cuentan las llamadas de menos de 10 segundos ni las que la recepcionista corta por spam.
 - **Incluye:** reservas en Google Calendar según su horario, sus servicios y su personal; SMS de confirmación y de recordatorio 24 horas antes a números de Estados Unidos y Canadá cuando quien llama lo acepta; y 20 intentos de transferencia al mes a un número.
-- **Idiomas:** cada llamada empieza en el idioma predeterminado del negocio, inglés o francés. Después, la recepcionista responde en el idioma de quien llama: más de 70 idiomas con OpenAI GPT-Live, entre ellos el español y el serbio.
+- **Idiomas:** cada llamada empieza en el idioma predeterminado del negocio: inglés, francés, español, serbio, alemán, portugués de Brasil, italiano o neerlandés. Después, la recepcionista responde en el idioma de quien llama: más de 70 idiomas con OpenAI GPT-Live, entre ellos el español y el serbio.
 - **Números y configuración:** números en Estados Unidos, Canadá, el Reino Unido, Australia y Nueva Zelanda, o desvíe su número actual. Los planes no limitan cuántas llamadas contesta a la vez. No hay tarifa de configuración en ningún plan, y puede cancelar en cualquier momento sin cargos por cancelación. El plan Free le da 30 minutos de voz al mes y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta.
 - **Dónde se queda corto:** no hay una persona al teléfono, solo conecta Google Calendar y no se sincroniza con software de gestión de consultorios ni de servicios de campo. LobbyStack transfiere sin anunciar la llamada y a un solo número. La IA no responde mensajes de texto, y LobbyStack no afirma cumplir HIPAA.
 - **Elíjalo si** quiere que la recepcionista conteste cada llamada y reserve citas por $30 al mes, su propio equipo se encarga de las transferencias urgentes y sus clientes hablan muchos idiomas.
@@ -230,7 +230,7 @@ Los planes por minuto favorecen las llamadas cortas, los planes por llamada favo
 
 ### Revise el horario de cobertura y los idiomas
 
-Ruby, PATLive y Abby Connect no cobran extra por noches, fines de semana ni días festivos. Las preguntas frecuentes de Davinci Virtual sitúan a su equipo en vivo de lunes a viernes, de 8 a. m. a 8 p. m., hora del Este, mientras que su página de recepcionistas en vivo dice 24/7, así que pregunte antes de contar con las noches. La mayoría de los servicios con personas de esta lista atienden en inglés y español. Entre los servicios con IA, Upfirst indica más de 35 idiomas y AI-Receptionist.com más de 55. LobbyStack abre la llamada en inglés o francés y después responde en el idioma de quien llama, entre más de 70.
+Ruby, PATLive y Abby Connect no cobran extra por noches, fines de semana ni días festivos. Las preguntas frecuentes de Davinci Virtual sitúan a su equipo en vivo de lunes a viernes, de 8 a. m. a 8 p. m., hora del Este, mientras que su página de recepcionistas en vivo dice 24/7, así que pregunte antes de contar con las noches. La mayoría de los servicios con personas de esta lista atienden en inglés y español. Entre los servicios con IA, Upfirst indica más de 35 idiomas y AI-Receptionist.com más de 55. LobbyStack abre la llamada en uno de ocho idiomas a elegir y después responde en el idioma de quien llama, entre más de 70.
 
 ### Pregunte cuánto cuestan las reservas, las transferencias y los mensajes de texto
 
@@ -244,7 +244,7 @@ Davinci Virtual cobra $95 por configurar la atención con personas, Ambs Call Ce
 
 ### ¿Qué servicios de atención telefónica contestan en español?
 
-Ruby, PATLive y Abby Connect incluyen recepcionistas que hablan español sin costo adicional, y Moneypenny, MAP Communications, The Perfect Answer, Ambs Call Center y Answering Service Care indican el español en todos sus planes. Smith.ai cobra $1 por llamada por una línea en español, y la hoja de precios de 2025 de AnswerConnect lo incluye como complemento. LobbyStack abre cada llamada en el idioma predeterminado del negocio, inglés o francés, y después responde en el idioma de quien llama, entre más de 70 idiomas, incluido el español.
+Ruby, PATLive y Abby Connect incluyen recepcionistas que hablan español sin costo adicional, y Moneypenny, MAP Communications, The Perfect Answer, Ambs Call Center y Answering Service Care indican el español en todos sus planes. Smith.ai cobra $1 por llamada por una línea en español, y la hoja de precios de 2025 de AnswerConnect lo incluye como complemento. LobbyStack abre cada llamada en el idioma predeterminado del negocio (inglés, francés, español, serbio, alemán, portugués de Brasil, italiano o neerlandés), y después responde en el idioma de quien llama, entre más de 70 idiomas, incluido el español.
 
 ### ¿Puedo conservar el número de teléfono de mi negocio?
 

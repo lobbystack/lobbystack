@@ -242,7 +242,7 @@ Uslovi kod The Perfect Answer i MAP dodaju $0.024 na svaki poziv, ili $2.40 na 1
 
 Smith.ai naplaćuje dodatke po pozivu: $1.50 za zakazivanje, $1.50 za složeno usmeravanje i $1.00 za posebnu liniju na španskom. Osam usluga sa naplatom po minutu uključuje agente koji govore španski u cenu paketa.
 
-Na LobbyStack-u svaki poziv počinje na podrazumevanom jeziku firme, engleskom ili francuskom. Recepcioner zatim odgovara na jeziku pozivaoca: na OpenAI GPT-Live modelu to je više od 70 jezika, uključujući španski i srpski. LobbyStack cenovnik ne navodi doplatu za jezike.
+Na LobbyStack-u svaki poziv počinje na podrazumevanom jeziku firme: engleskom, francuskom, španskom, srpskom, nemačkom, brazilskom portugalskom, italijanskom ili holandskom. Recepcioner zatim odgovara na jeziku pozivaoca: na OpenAI GPT-Live modelu to je više od 70 jezika, uključujući španski i srpski. LobbyStack cenovnik ne navodi doplatu za jezike.
 
 ### Obračunski ciklusi od 28 dana
 
@@ -280,7 +280,7 @@ LobbyStack košta $30 za 40 poziva, $60 za 100 poziva i $118 za 200 poziva (Pro,
 
 Starter uključuje 150 minuta, jedan poslovni broj u SAD, Kanadi, Ujedinjenom Kraljevstvu, Australiji ili na Novom Zelandu, zakazivanje u Google Calendar i SMS potvrde i podsetnike 24 sata unapred na američke i kanadske brojeve. Uključuje i 20 pokušaja preusmeravanja mesečno, zatim $0.02 po pokušaju.
 
-Paketi ne ograničavaju broj poziva na koje recepcioner odgovara istovremeno. Pozivi počinju na Vašem podrazumevanom jeziku, engleskom ili francuskom, a recepcioner zatim odgovara na jeziku pozivaoca (više od 70 jezika). Svoj broj zadržavate tako što ga prosledite, a pravilom prosleđivanja kod Vašeg operatera birate da li LobbyStack preuzima višak poziva, pozive van radnog vremena ili sve pozive.
+Paketi ne ograničavaju broj poziva na koje recepcioner odgovara istovremeno. Pozivi počinju na Vašem podrazumevanom jeziku (engleskom, francuskom, španskom, srpskom, nemačkom, brazilskom portugalskom, italijanskom ili holandskom), a recepcioner zatim odgovara na jeziku pozivaoca (više od 70 jezika). Svoj broj zadržavate tako što ga prosledite, a pravilom prosleđivanja kod Vašeg operatera birate da li LobbyStack preuzima višak poziva, pozive van radnog vremena ili sve pozive.
 
 ### Čega se odričete bez agenta uživo
 

@@ -276,7 +276,7 @@ Escribimos esta guía, así que nuestros planes reciben el mismo trato que los o
 
 LobbyStack cuenta los minutos por segundo, los minutos que usted no usa no pasan al mes siguiente, y los planes no limitan cuántas llamadas contesta la recepcionista a la vez. Ningún plan tiene tarifa de configuración, y usted puede cancelar desde la configuración de facturación sin cargo por cancelación.
 
-Cada llamada empieza en el idioma predeterminado del negocio, inglés o francés. Después, la recepcionista responde en el idioma de quien llama: más de 70 idiomas con OpenAI GPT-Live, entre ellos el español y el serbio. La página de precios de LobbyStack no incluye ningún cargo extra por idioma.
+Cada llamada empieza en el idioma predeterminado del negocio: inglés, francés, español, serbio, alemán, portugués de Brasil, italiano o neerlandés. Después, la recepcionista responde en el idioma de quien llama: más de 70 idiomas con OpenAI GPT-Live, entre ellos el español y el serbio. La página de precios de LobbyStack no incluye ningún cargo extra por idioma.
 
 Los límites de LobbyStack:
 
@@ -315,7 +315,7 @@ En LobbyStack, no. Los minutos incluidos se reinician cada mes, tanto con factur
 
 ### ¿Una recepcionista con IA puede contestar llamadas en español?
 
-Muchas pueden. Smith.ai, Rosie y Dialzara indican inglés y español. Upfirst indica más de 35 idiomas, My AI Front Desk más de 20, Zoom 23, y CloudTalk y ElevenLabs Reception más de 70. LobbyStack empieza cada llamada en inglés o francés y después responde en el idioma de quien llama: más de 70 idiomas con OpenAI GPT-Live, entre ellos el español y el serbio.
+Muchas pueden. Smith.ai, Rosie y Dialzara indican inglés y español. Upfirst indica más de 35 idiomas, My AI Front Desk más de 20, Zoom 23, y CloudTalk y ElevenLabs Reception más de 70. LobbyStack empieza cada llamada en uno de ocho idiomas a elegir y después responde en el idioma de quien llama: más de 70 idiomas con OpenAI GPT-Live, entre ellos el español y el serbio.
 
 ### ¿Cuántas llamadas perdidas hacen falta para que se pague sola?
 

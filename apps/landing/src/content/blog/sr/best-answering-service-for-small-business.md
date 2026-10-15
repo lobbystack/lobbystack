@@ -165,7 +165,7 @@ AI recepcioner odgovara pomoću softvera, a zatim zakazuje, preusmerava ili prim
 - **Cena (proverena 9. oktobra 2026.):** Starter košta $30 mesečno za 150 minuta, zatim $0.20 po minutu. Pogledajte [LobbyStack cene](/sr/pricing/).
 - **Kako naplaćuje:** po sekundi, bez zaokruživanja, pa poziv od 90 sekundi troši 1.5 minuta. LobbyStack ne računa pozive kraće od 10 sekundi ni pozive koje recepcioner završi kao spam.
 - **Uključeno:** zakazivanje u Google Calendar na osnovu Vašeg radnog vremena, usluga i osoblja, SMS potvrde i podsetnici 24 sata unapred na američke i kanadske brojeve kada pozivalac pristane, i 20 pokušaja preusmeravanja mesečno na jedan broj.
-- **Jezici:** svaki poziv počinje na podrazumevanom jeziku firme, engleskom ili francuskom. Recepcioner zatim odgovara na jeziku pozivaoca: na OpenAI GPT-Live modelu to je više od 70 jezika, uključujući španski i srpski.
+- **Jezici:** svaki poziv počinje na podrazumevanom jeziku firme: engleskom, francuskom, španskom, srpskom, nemačkom, brazilskom portugalskom, italijanskom ili holandskom. Recepcioner zatim odgovara na jeziku pozivaoca: na OpenAI GPT-Live modelu to je više od 70 jezika, uključujući španski i srpski.
 - **Brojevi i aktivacija:** brojevi u SAD, Kanadi, Ujedinjenom Kraljevstvu, Australiji i na Novom Zelandu, ili prosledite postojeći broj. Paketi ne ograničavaju broj poziva na koje odgovara istovremeno. Nema naknade za aktivaciju ni na jednom paketu, a pretplatu otkazujete kad god želite, bez naknade za otkazivanje. Paket Free Vam daje 30 minuta razgovora mesečno i broj iz SAD ili Kanade besplatno 14 dana, bez kartice.
 - **Gde zaostaje:** nema osobe na liniji, podržava samo Google Calendar i nema sinhronizaciju sa softverom za ordinacije ili terenski servis. LobbyStack preusmerava pozive bez najave i samo na jedan broj. AI ne odgovara na SMS poruke, a LobbyStack ne tvrdi da ispunjava HIPAA.
 - **Izaberite ga ako** želite odgovor na svaki poziv i zakazivanje za $30 mesečno, Vaš tim preuzima hitna preusmerenja, a Vaši pozivaoci govore različite jezike.
@@ -230,7 +230,7 @@ Paketi po minutu idu u korist kratkim pozivima, paketi po pozivu dugim (Smith.ai
 
 ### Proverite radno vreme i jezike
 
-Ruby, PATLive i Abby Connect ne naplaćuju ništa dodatno za noći, vikende i praznike. Česta pitanja kod Davinci Virtual-a navode da tim uživo radi radnim danima od 8 ujutru do 8 uveče po istočnom vremenu SAD, dok stranica o recepcionerima uživo kaže 24/7, pa pitajte pre nego što računate na noći. Većina usluga uživo sa spiska odgovara na engleskom i španskom. Od AI usluga, Upfirst navodi 35+ jezika, AI-Receptionist.com 55+, a LobbyStack poziv otvara na engleskom ili francuskom i zatim odgovara na jeziku pozivaoca, na više od 70 jezika.
+Ruby, PATLive i Abby Connect ne naplaćuju ništa dodatno za noći, vikende i praznike. Česta pitanja kod Davinci Virtual-a navode da tim uživo radi radnim danima od 8 ujutru do 8 uveče po istočnom vremenu SAD, dok stranica o recepcionerima uživo kaže 24/7, pa pitajte pre nego što računate na noći. Većina usluga uživo sa spiska odgovara na engleskom i španskom. Od AI usluga, Upfirst navodi 35+ jezika, AI-Receptionist.com 55+, a LobbyStack poziv otvara na jednom od osam jezika po izboru i zatim odgovara na jeziku pozivaoca, na više od 70 jezika.
 
 ### Pitajte koliko koštaju zakazivanje, preusmeravanje i SMS
 
@@ -244,7 +244,7 @@ Davinci Virtual naplaćuje $95 za aktivaciju odgovaranja uživo, Ambs Call Cente
 
 ### Koje usluge odgovaraju na pozive na španskom?
 
-Ruby, PATLive i Abby Connect bez doplate uključuju recepcionere koji govore španski, a Moneypenny, MAP Communications, The Perfect Answer, Ambs Call Center i Answering Service Care navode španski na svakom paketu. Smith.ai naplaćuje $1 po pozivu za liniju na španskom, a cenovnik AnswerConnect-a iz 2025. navodi španski kao dodatak. LobbyStack svaki poziv otvara na podrazumevanom jeziku firme, engleskom ili francuskom, a zatim odgovara na jeziku pozivaoca, na više od 70 jezika, uključujući španski i srpski.
+Ruby, PATLive i Abby Connect bez doplate uključuju recepcionere koji govore španski, a Moneypenny, MAP Communications, The Perfect Answer, Ambs Call Center i Answering Service Care navode španski na svakom paketu. Smith.ai naplaćuje $1 po pozivu za liniju na španskom, a cenovnik AnswerConnect-a iz 2025. navodi španski kao dodatak. LobbyStack svaki poziv otvara na podrazumevanom jeziku firme (engleskom, francuskom, španskom, srpskom, nemačkom, brazilskom portugalskom, italijanskom ili holandskom), a zatim odgovara na jeziku pozivaoca, na više od 70 jezika, uključujući španski i srpski.
 
 ### Mogu li da zadržim poslovni broj?
 

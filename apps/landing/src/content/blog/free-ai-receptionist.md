@@ -110,7 +110,7 @@ Use the 30 minutes to:
 
 - write your greeting, rules and transfer policy in plain language, then hear the receptionist follow them
 - load your website and FAQs (up to 1 MB of text on Free) and ask what your callers ask
-- test a caller who speaks another language: calls open in English or French, and the receptionist switches to the caller's language, with 70+ languages through OpenAI GPT-Live
+- test a caller who speaks another language: calls open in your default language, and the receptionist switches to the caller's language, with 70+ languages through OpenAI GPT-Live
 
 After you use the 30 minutes, test calls stop until the next month or until you upgrade. Free keeps call records for 30 days.
 

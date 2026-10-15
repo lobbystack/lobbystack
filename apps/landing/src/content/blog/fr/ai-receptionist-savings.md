@@ -276,7 +276,7 @@ Nous avons écrit ce guide : nos propres forfaits reçoivent donc le même trait
 
 LobbyStack compte les minutes à la seconde, les minutes inutilisées ne passent pas au mois suivant, et les forfaits ne limitent pas le nombre d'appels auxquels le réceptionniste répond en même temps. Aucun forfait n'a de frais de mise en service, et vous pouvez annuler depuis les réglages de facturation, sans frais d'annulation.
 
-Chaque appel commence dans la langue par défaut de l'entreprise, l'anglais ou le français. Le réceptionniste répond ensuite dans la langue de l'appelant : plus de 70 langues avec GPT-Live d'OpenAI, dont l'espagnol et le serbe. La grille tarifaire de LobbyStack ne contient aucune option payante pour les langues.
+Chaque appel commence dans la langue par défaut de l'entreprise : anglais, français, espagnol, serbe, allemand, portugais du Brésil, italien ou néerlandais. Le réceptionniste répond ensuite dans la langue de l'appelant : plus de 70 langues avec GPT-Live d'OpenAI, dont l'espagnol et le serbe. La grille tarifaire de LobbyStack ne contient aucune option payante pour les langues.
 
 Les limites de LobbyStack :
 
@@ -315,7 +315,7 @@ Pas sur LobbyStack. Les minutes incluses repartent à zéro chaque mois, en fact
 
 ### Un réceptionniste IA peut-il répondre aux appels en espagnol ?
 
-Beaucoup le peuvent. Smith.ai, Rosie et Dialzara annoncent l'anglais et l'espagnol. Upfirst annonce plus de 35 langues, My AI Front Desk plus de 20, Zoom 23, et CloudTalk et ElevenLabs Reception plus de 70. LobbyStack commence chaque appel en anglais ou en français, puis répond dans la langue de l'appelant : plus de 70 langues avec GPT-Live d'OpenAI, dont l'espagnol et le serbe.
+Beaucoup le peuvent. Smith.ai, Rosie et Dialzara annoncent l'anglais et l'espagnol. Upfirst annonce plus de 35 langues, My AI Front Desk plus de 20, Zoom 23, et CloudTalk et ElevenLabs Reception plus de 70. LobbyStack commence chaque appel dans l'une des huit langues au choix, puis répond dans la langue de l'appelant : plus de 70 langues avec GPT-Live d'OpenAI, dont l'espagnol et le serbe.
 
 ### Combien d'appels manqués faut-il récupérer pour qu'il soit rentable ?
 

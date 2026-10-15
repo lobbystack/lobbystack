@@ -68,7 +68,7 @@ LobbyStack je jedna od alternativa za Rosie AI. Tabela poredi limite koji menjaj
 | Kalendari | Google Calendar, Calendly, Acuity, Appointlet (od paketa Scale) | Samo Google Calendar |
 | Preusmeravanje | Uživo i uz najavu (Scale), kaskadno (Growth) | Preusmeravanje bez najave na jedan broj (Starter i Pro) |
 | SMS pozivaocima | Linkovi za zakazivanje na svakom paketu; SMS tokom poziva od paketa Scale | Potvrda termina i podsetnik 24 sata ranije kada se pozivalac složi, na američke i kanadske brojeve; AI ne odgovara na SMS poruke |
-| Jezici pozivalaca | Engleski i španski na svakom pozivu | Počinje na engleskom ili francuskom, zatim odgovara na jeziku pozivaoca (70+, uključujući španski) |
+| Jezici pozivalaca | Engleski i španski na svakom pozivu | Počinje na jednom od 8 jezika po izboru, zatim odgovara na jeziku pozivaoca (70+, uključujući španski) |
 | Chat na sajtu | Besplatan na svakom paketu | Ne nudi ga; samo telefonski pozivi |
 | Aplikacije i glasovi | Nativne iOS i Android aplikacije, 10+ glasova | Veb kontrolna tabla, jedan ugrađeni telefonski glas |
 | Spam i kratki pozivi | Prepoznavanje spama; stranica ne navodi da li spam troši minute | Pozivi kraći od 10 sekundi i pozivi koje recepcioner prekine kao spam se ne računaju |
@@ -136,9 +136,9 @@ LobbyStack ima četiri nedostatka zbog kojih Vam možda ne odgovara. Ne nudi cha
 
 ## Na kojim jezicima odgovaraju Rosie i LobbyStack?
 
-Rosie odgovara na engleskom i španskom na svakom pozivu. LobbyStack svaki poziv počinje na podrazumevanom jeziku firme, engleskom ili francuskom. Ako pozivalac zatraži drugi jezik ili njime počne da govori, recepcioner prelazi na taj jezik. LobbyStack [radi na OpenAI GPT-Live](/sr/blog/ai-voice-agent-gpt-live/) i odgovara na 70+ jezika, uključujući španski i srpski.
+Rosie odgovara na engleskom i španskom na svakom pozivu. LobbyStack svaki poziv počinje na podrazumevanom jeziku firme: engleskom, francuskom, španskom, srpskom, nemačkom, brazilskom portugalskom, italijanskom ili holandskom. Ako pozivalac zatraži drugi jezik ili njime počne da govori, recepcioner prelazi na taj jezik. LobbyStack [radi na OpenAI GPT-Live](/sr/blog/ai-voice-agent-gpt-live/) i odgovara na 70+ jezika, uključujući španski i srpski.
 
-CloudTalk i ElevenLabs Reception takođe navode 70+ jezika, pa sam broj ne izdvaja LobbyStack. Rosie pokriva manje jezika, ali je španski spreman na svakom pozivu. Ako većina Vaših pozivalaca govori španski, proverite kako reaguju na LobbyStack pozdrav na engleskom ili francuskom pre nego što recepcioner pređe na španski. Vaši zaposleni mogu da koriste LobbyStack kontrolnu tablu na engleskom, francuskom, španskom i srpskom.
+CloudTalk i ElevenLabs Reception takođe navode 70+ jezika, pa sam broj ne izdvaja LobbyStack. Rosie pokriva manje jezika, ali je španski spreman na svakom pozivu. Ako većina Vaših pozivalaca govori španski, postavite španski kao podrazumevani jezik u LobbyStack-u da bi pozivi počinjali na španskom. Vaši zaposleni mogu da koriste LobbyStack kontrolnu tablu na engleskom, francuskom, španskom i srpskom.
 
 Broj jezika ne dokazuje kvalitet ni kod jednog proizvoda. Pozovite svaki proizvod iz užeg izbora, izgovorite imena Vaših klijenata i ulične adrese, upadnite recepcioneru u reč i promenite jezik usred poziva.
 

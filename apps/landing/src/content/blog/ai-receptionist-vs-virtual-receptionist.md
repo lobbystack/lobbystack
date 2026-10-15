@@ -100,7 +100,7 @@ An AI receptionist costs less per minute and applies the same rules on every cal
 | Consistency | Same facts and rules on every call, if you keep them current | Scripts plus each agent's judgment |
 | Empathy | Polite, but it doesn't read emotion the way a person does | A trained person reads emotion and context |
 | Booking | Books into a connected calendar during the call | Depends on calendar access; some services charge per booking |
-| Languages | Varies by vendor: [Upfirst](https://upfirst.ai/pricing) lists 35+, [CloudTalk](https://www.cloudtalk.io/ai-receptionist/) and [ElevenLabs Reception](https://elevenlabs.io/docs/reception-ai/billing/plans-and-pricing) 70+. LobbyStack opens in English or French, then answers in the caller's language (70+ on GPT-Live) | Ruby, PATLive and Abby Connect include Spanish; other languages vary |
+| Languages | Varies by vendor: [Upfirst](https://upfirst.ai/pricing) lists 35+, [CloudTalk](https://www.cloudtalk.io/ai-receptionist/) and [ElevenLabs Reception](https://elevenlabs.io/docs/reception-ai/billing/plans-and-pricing) 70+. LobbyStack opens in your choice of 8 languages, then answers in the caller's language (70+ on GPT-Live) | Ruby, PATLive and Abby Connect include Spanish; other languages vary |
 | Setup fee | None published by the AI vendors we checked | $0 to $95 among the services we checked |
 | Oversight | Recordings, transcripts, summaries and test calls | Agent training, quality review and call notes |
 
@@ -207,7 +207,7 @@ Our guide on [how to choose an AI receptionist](/blog/how-to-choose-an-ai-recept
 
 LobbyStack is an AI receptionist for small businesses. It books appointments from your hours, services and staff into Google Calendar, then texts a confirmation and a reminder 24 hours before the appointment to US and Canadian numbers. It transfers calls to one number by the rules you set. It takes a message and emails your team an alert if you haven't set a transfer number or a transfer fails. The dashboard keeps a recording, a transcript and a one-line summary of each call.
 
-Each call opens in the business's default language, English or French. The receptionist then answers in the caller's language. It runs on OpenAI GPT-Live and handles 70+ languages, including Spanish and Serbian.
+Each call opens in the business's default language: English, French, Spanish, Serbian, German, Brazilian Portuguese, Italian or Dutch. The receptionist then answers in the caller's language. It runs on OpenAI GPT-Live and handles 70+ languages, including Spanish and Serbian.
 
 [Starter](/pricing/) costs $30 a month for 150 minutes, then $0.20 a minute, with no setup fee. The Free plan gives you 30 voice minutes a month and a US or Canadian number free for 14 days, with no card. The plan itself doesn't expire. The code is [MIT-licensed on GitHub](https://github.com/lobbystack/lobbystack), and you can [self-host it](https://docs.lobbystack.com/self-hosting/overview) with your own OpenAI and Twilio accounts.
 

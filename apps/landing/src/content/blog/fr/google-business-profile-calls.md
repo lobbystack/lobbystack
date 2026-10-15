@@ -131,7 +131,7 @@ Avec LobbyStack comme exemple :
 - Il prend les rendez-vous dans Google Calendar. Avec l'accord de l'appelant, il envoie par SMS une confirmation et un rappel 24 heures avant le rendez-vous aux numéros américains et canadiens.
 - Il transfère les appels urgents vers un seul numéro par entreprise. Les transferts se font à l'aveugle : il ne présente pas l'appel à la personne qui décroche. Si un transfert échoue, il prévient l'appelant, propose de prendre un message, et votre équipe peut recevoir une alerte d'échec de transfert.
 - Chaque appel reçoit un résumé, une transcription et un enregistrement. Vous recevez une alerte par e-mail quand il prend un message, et les alertes SMS sont en option.
-- Les appels commencent dans la langue par défaut de votre entreprise, le français ou l'anglais, puis le réceptionniste répond dans la langue de l'appelant : plus de 70 langues, dont l'espagnol.
+- Les appels commencent dans la langue par défaut de votre entreprise (anglais, français, espagnol, serbe, allemand, portugais du Brésil, italien ou néerlandais), puis le réceptionniste répond dans la langue de l'appelant : plus de 70 langues, dont l'espagnol.
 - LobbyStack ne facture ni les appels indésirables ni les appels de moins de 10 secondes.
 
 Connaissez les limites avant de renvoyer une ligne : Google Calendar est le seul agenda, l'IA ne répond pas aux SMS, et il n'y a pas de synchronisation avec un CRM ou un logiciel de gestion d'interventions. Pour une couverture complète du soir et du week-end, voyez [la permanence hors horaires](/fr/solutions/after-hours-answering-service/).

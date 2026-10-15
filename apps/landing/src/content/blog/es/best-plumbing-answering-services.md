@@ -137,7 +137,7 @@ El plan de $49 de Rosie solo agenda con un enlace por mensaje de texto y no tien
 
 El plan Starter de LobbyStack cuesta $30 al mes por 150 minutos, y luego $0.20 por minuto. Pro cuesta $100 por 500 minutos, y luego $0.18. Con pago anual cuestan $24 y $80 al mes, y ningún plan tiene tarifa de configuración. LobbyStack mide el uso por segundos y no cobra el spam ni las llamadas de menos de 10 segundos. Los planes no limitan cuántas llamadas contesta a la vez, y las llamadas simultáneas comparten los mismos minutos.
 
-Cada llamada empieza en el idioma predeterminado del negocio, inglés o francés. Después, la recepcionista contesta en el idioma de quien llama: más de 70 idiomas con OpenAI GPT-Live, entre ellos español y serbio. Usted le indica qué llamadas son urgentes, como agua que no se puede detener o aguas negras que salen por una coladera, y ella las transfiere a un solo número. Si la transferencia no se completa, se lo dice a quien llama, ofrece tomar un mensaje y su equipo puede recibir una alerta "Live call transfer failed". Reserva en Google Calendar y, si quien llama acepta, envía por mensaje de texto una confirmación y un recordatorio 24 horas antes a números de Estados Unidos y Canadá. Cada llamada deja un resumen, una transcripción y una grabación en el panel, y usted recibe un correo electrónico cuando la recepcionista toma un mensaje.
+Cada llamada empieza en el idioma predeterminado del negocio: inglés, francés, español, serbio, alemán, portugués de Brasil, italiano o neerlandés. Después, la recepcionista contesta en el idioma de quien llama: más de 70 idiomas con OpenAI GPT-Live, entre ellos español y serbio. Usted le indica qué llamadas son urgentes, como agua que no se puede detener o aguas negras que salen por una coladera, y ella las transfiere a un solo número. Si la transferencia no se completa, se lo dice a quien llama, ofrece tomar un mensaje y su equipo puede recibir una alerta "Live call transfer failed". Reserva en Google Calendar y, si quien llama acepta, envía por mensaje de texto una confirmación y un recordatorio 24 horas antes a números de Estados Unidos y Canadá. Cada llamada deja un resumen, una transcripción y una grabación en el panel, y usted recibe un correo electrónico cuando la recepcionista toma un mensaje.
 
 No se sincroniza con ServiceTitan, Housecall Pro ni Jobber, y Google Calendar es su único calendario. Las transferencias van a un solo número sin resumen previo, y no hay rotación de guardias. No hay agentes humanos de respaldo, y la IA no contesta mensajes de texto. El plan gratis da 30 minutos de voz y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta. Vea cómo maneja las llamadas urgentes en la página de [recepcionista con IA para plomeros](/es/solutions/ai-receptionist-for-plumbers/).
 
@@ -190,7 +190,7 @@ Un servicio que sigue su calendario de guardias puede localizar a quien esté de
 | Avoca | Un registro de ejemplo muestra una tubería reventada y un regreso de aguas negras "Routed to Tech" | No descrito | No indicado |
 | Goodcall | Dirige con "burst pipe, flooding, and sewer backup"; prueba hasta tres contactos | No descrito | No publicado |
 | Rosie | No puede enviar plomeros; da instrucciones fuera de horario y le avisa | Transferencias en cascada en $299 | Inglés, español |
-| LobbyStack (nuestro) | Usted fija qué llamadas son urgentes; transferencia a un solo número; mensaje y alerta si la transferencia falla | Un solo número de transferencia | Empieza en inglés o francés, contesta en más de 70 idiomas |
+| LobbyStack (nuestro) | Usted fija qué llamadas son urgentes; transferencia a un solo número; mensaje y alerta si la transferencia falla | Un solo número de transferencia | Empieza en uno de 8 idiomas a elegir, contesta en más de 70 idiomas |
 
 ### Servicios que siguen un calendario de guardias
 
@@ -260,7 +260,7 @@ Goodcall prueba hasta tres contactos, el plan de $299 de Rosie prueba varios nú
 
 ### ¿Un servicio de atención telefónica para plomeros puede contestar en español?
 
-Sí. AnswerForce, PATLive, MAP, SAS, Ruby, Rosie, A Message Center y los planes de IA de Smith.ai incluyen inglés y español, y los planes con personas de Smith.ai cobran $1.00 por llamada por una línea dedicada en español. LobbyStack empieza cada llamada en inglés o francés y luego contesta en el idioma de quien llama, en más de 70 idiomas, español incluido.
+Sí. AnswerForce, PATLive, MAP, SAS, Ruby, Rosie, A Message Center y los planes de IA de Smith.ai incluyen inglés y español, y los planes con personas de Smith.ai cobran $1.00 por llamada por una línea dedicada en español. LobbyStack empieza cada llamada en uno de ocho idiomas a elegir y luego contesta en el idioma de quien llama, en más de 70 idiomas, español incluido.
 
 ## Cómo revisamos estos servicios
 

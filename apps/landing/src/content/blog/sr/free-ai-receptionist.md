@@ -110,7 +110,7 @@ Iskoristite 30 minuta da:
 
 - napišete pozdrav, pravila i način prebacivanja poziva običnim jezikom, pa čujete kako ih recepcioner sprovodi
 - učitate svoj sajt i česta pitanja (do 1 MB teksta na paketu Free) i postavite mu pitanja koja postavljaju Vaši klijenti
-- isprobate pozivaoca koji govori drugi jezik: pozivi počinju na engleskom ili francuskom, a recepcioner prelazi na jezik pozivaoca, uz više od 70 jezika preko OpenAI GPT-Live
+- isprobate pozivaoca koji govori drugi jezik: pozivi počinju na Vašem podrazumevanom jeziku, a recepcioner prelazi na jezik pozivaoca, uz više od 70 jezika preko OpenAI GPT-Live
 
 Kad potrošite 30 minuta, probni pozivi staju do sledećeg meseca ili dok ne pređete na viši paket. Paket Free čuva istoriju poziva 30 dana.
 

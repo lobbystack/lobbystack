@@ -28,7 +28,7 @@ LobbyStack uključuje zakazivanje, preusmeravanje poziva, SMS obaveštenja, tran
 | Postojeći telefonski sistem | Radi sa bilo kojim sistemom, bez Zoom Phone | Prosleđivanje poziva sa Vašeg postojećeg broja |
 | Zakazivanje | Zoom Scheduler, Google, Microsoft i Calendly | Zakazivanje u Google Calendar uz poslovna pravila |
 | Preusmeravanje | Asistirano preusmeravanje i preusmeravanje po imenu | Direktno preusmeravanje na jedan broj, bez najave |
-| Jezici | 23 u Zoom tabeli cena | Počinje na engleskom ili francuskom, zatim odgovara na jeziku pozivaoca (više od 70) |
+| Jezici | 23 u Zoom tabeli cena | Počinje na jednom od 8 jezika po izboru, zatim odgovara na jeziku pozivaoca (više od 70) |
 | Izvorni kod | Nije naveden | Javni repozitorijum pod MIT licencom |
 | Primena | Usluga kojom upravlja Zoom | Upravljani cloud ili samostalno hostovanje |
 

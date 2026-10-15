@@ -29,7 +29,7 @@ Moneypenny adds managed onboarding and can pass calls to one of its own receptio
 | Human escalation | A Moneypenny receptionist or your own team; billing not stated on the AI plans | Blind transfer to one number your team sets |
 | Onboarding | Managed setup with a Solutions Architect | Self-serve cloud or Enterprise implementation support |
 | Booking and qualification | Advertised | Booking and lead capture included |
-| Languages | English voices with US or British accents listed | Opens in English or French, then answers in the caller's language (70+) |
+| Languages | English voices with US or British accents listed | Opens in your choice of 8 languages, then answers in the caller's language (70+) |
 | Source code | Not advertised | Public MIT-licensed repository |
 | Deployment | Moneypenny-managed | Managed cloud or self-hosted |
 

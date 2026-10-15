@@ -94,7 +94,7 @@ Za cene drugih usluga sa živim recepcionerima, pogledajte [koliko košta usluga
 | Jedinica naplate | Svaki poziv se zaokružuje naviše na sledećih 60 sekundi; računaju se čekanje i rad posle poziva | Po sekundi; pozivi kraći od 10 sekundi i pozivi koje recepcioner prekine kao spam se ne računaju |
 | Isprobavanje | Garancija povraćaja novca za nove korisnike: 21 dan ili 500 minuta | Besplatan paket: 30 minuta razgovora, bez kartice, broj iz SAD ili Kanade besplatno 14 dana |
 | Promena paketa | Viši paket važi najmanje tri perioda; niži posle tri | Prelazak na viši ili niži paket ili otkaz u podešavanjima naplate, bez naknade za otkazivanje |
-| Jezici pozivalaca | Engleski i španski | Počinje na engleskom ili francuskom, zatim odgovara na jeziku pozivaoca (70+, uključujući španski) |
+| Jezici pozivalaca | Engleski i španski | Počinje na jednom od 8 jezika po izboru, zatim odgovara na jeziku pozivaoca (70+, uključujući španski) |
 | Zakazivanje | Recepcioneri zakazuju termine | Samo u Google Calendar |
 | Preusmeravanje | Na broj koji izaberete; van Severne Amerike moguće su dodatne naknade | Preusmeravanje bez najave na jedan broj po firmi |
 | Poruke | E-pošta, SMS ili obaveštenje u aplikaciji | Obaveštenje e-poštom kada primi poruku; SMS obaveštenja opciono |
@@ -158,7 +158,7 @@ LobbyStack je jeftiniji na svakom obimu koji smo izračunali, a njegovi dodatni 
 - **Naplata po sekundi.** Pozivi kraći od 10 sekundi i pozivi koje recepcioner prekine kao spam se ne računaju.
 - **Bez ograničenja istovremenih poziva.** Ako postavite gornju granicu potrošnje za prekoračenje i dostignete je, novi pozivaoci čuju signal zauzeća do sledećeg meseca ili dok ne povećate granicu.
 - **Evidencija svakog poziva.** Kontrolna tabla čuva snimak, transkript i rezime, a Vaš tim dobija obaveštenje e-poštom kada recepcioner primi poruku.
-- **Više jezika za pozivaoce.** Poziv počinje na engleskom ili francuskom, a recepcioner prelazi na jezik pozivaoca, od 70+ jezika.
+- **Više jezika za pozivaoce.** Poziv počinje na jednom od osam jezika po izboru, a recepcioner prelazi na jezik pozivaoca, od 70+ jezika.
 - **Pokrivenost koju birate.** Može da odgovara na sve pozive ili samo na one koje Vaš tim ne stigne da primi i one van radnog vremena, zavisno od pravila prosleđivanja kod Vašeg operatera. Naš vodič za [prosleđivanje poslovnih poziva](/sr/blog/how-to-forward-business-calls/) objašnjava podešavanje.
 - **Otvoren kod.** LobbyStack ima MIT licencu. Možete sami da ga hostujete i da povežete druge alate preko REST API-ja i potpisanih webhookova.
 

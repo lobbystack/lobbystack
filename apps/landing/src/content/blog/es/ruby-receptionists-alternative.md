@@ -94,7 +94,7 @@ Para las tarifas de otros servicios en vivo, vea [cuánto cuesta un servicio de 
 | Unidad de cobro | Cada llamada redondeada a los 60 segundos siguientes; cuentan la espera y el trabajo posterior | Por segundo; las llamadas de menos de 10 segundos y las que la recepcionista corta como spam no cuentan |
 | Probar primero | Garantía de devolución para clientes nuevos: 21 días o 500 minutos | Plan Free: 30 minutos de voz, sin tarjeta, número de EE. UU. o Canadá gratis durante 14 días |
 | Cambios de plan | Subir de plan obliga a por lo menos tres periodos; bajar, después de tres | Subir, bajar o cancelar desde la configuración de facturación, sin cargo por cancelación |
-| Idiomas de quien llama | Inglés y español | Abre la llamada en inglés o francés y luego contesta en el idioma de quien llama (más de 70, incluido el español) |
+| Idiomas de quien llama | Inglés y español | Abre la llamada en uno de 8 idiomas a elegir y luego contesta en el idioma de quien llama (más de 70, incluido el español) |
 | Reservas | Las recepcionistas agendan citas | Reserva solo en Google Calendar |
 | Transferencias | Al número que usted elija; puede haber cargos fuera de Norteamérica | Transferencia ciega a un solo número por negocio |
 | Mensajes | Correo electrónico, SMS o notificación en la app | Alerta por correo cuando toma un mensaje; alertas por SMS opcionales |
@@ -158,7 +158,7 @@ LobbyStack cuesta menos en cada volumen que calculamos, y sus minutos extra cues
 - **Cobro por segundo.** Las llamadas de menos de 10 segundos y las que la recepcionista corta como spam no cuentan.
 - **Sin límite de llamadas simultáneas.** Si usted fija un tope de gasto en excedente y lo alcanza, quien llame oirá tono de ocupado hasta el mes siguiente o hasta que usted suba el tope.
 - **Un registro de cada llamada.** El panel guarda la grabación, la transcripción y el resumen, y su equipo recibe una alerta por correo cuando la recepcionista toma un mensaje.
-- **Más idiomas para quien llama.** La llamada se abre en inglés o francés, y la recepcionista cambia al idioma de quien llama, entre más de 70.
+- **Más idiomas para quien llama.** La llamada se abre en uno de ocho idiomas a elegir, y la recepcionista cambia al idioma de quien llama, entre más de 70.
 - **La cobertura que usted elija.** Puede contestar todas las llamadas, o solo las que su equipo no alcanza o las de fuera de horario, según la regla de desvío de su operador. Nuestra guía para [desviar las llamadas de su negocio](/es/blog/how-to-forward-business-calls/) explica cómo hacerlo.
 - **Código abierto.** LobbyStack tiene licencia MIT. Puede alojarlo usted mismo y conectar otras herramientas con la API REST y webhooks firmados.
 

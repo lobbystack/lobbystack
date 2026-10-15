@@ -137,7 +137,7 @@ Rosie's $49 plan books only by texted link and has no transfers. The $149 plan a
 
 LobbyStack's Starter plan costs $30 a month for 150 minutes, then $0.20 a minute. Pro costs $100 for 500 minutes, then $0.18. Billed annually, they cost $24 and $80 a month, and no plan has a setup fee. LobbyStack counts usage in seconds and doesn't bill spam or calls under 10 seconds. Plans don't limit how many calls it answers at once, and simultaneous calls share the same minutes.
 
-Each call opens in the business's default language, English or French. The receptionist then answers in the caller's language: 70+ languages on OpenAI GPT-Live, including Spanish and Serbian. You tell it which calls count as urgent, such as water that won't stop or sewage coming up a drain, and it transfers them to one number. If the transfer doesn't go through, it tells the caller, offers to take a message, and your team can get a "Live call transfer failed" alert. It books into Google Calendar and, when the caller agrees, texts a confirmation and a 24-hour reminder to US and Canadian numbers. Every call leaves a summary, transcript and recording in the dashboard, and you get an email when it takes a message.
+Each call opens in the business's default language: English, French, Spanish, Serbian, German, Brazilian Portuguese, Italian or Dutch. The receptionist then answers in the caller's language: 70+ languages on OpenAI GPT-Live, including Spanish and Serbian. You tell it which calls count as urgent, such as water that won't stop or sewage coming up a drain, and it transfers them to one number. If the transfer doesn't go through, it tells the caller, offers to take a message, and your team can get a "Live call transfer failed" alert. It books into Google Calendar and, when the caller agrees, texts a confirmation and a 24-hour reminder to US and Canadian numbers. Every call leaves a summary, transcript and recording in the dashboard, and you get an email when it takes a message.
 
 It doesn't sync with ServiceTitan, Housecall Pro or Jobber, and Google Calendar is its only calendar. Transfers go to one number with no briefing, and you get no on-call rotation. No human agents back it up, and the AI doesn't reply to texts. Free gives you 30 voice minutes and a US or Canadian number free for 14 days, with no card. See how it handles urgent calls on the [AI receptionist for plumbers](/solutions/ai-receptionist-for-plumbers/) page.
 
@@ -190,7 +190,7 @@ A service that follows your on-call schedule can reach whoever is on duty that n
 | Avoca | Sample log shows burst pipe and sewer backup calls "Routed to Tech" | Not described | Not stated |
 | Goodcall | Routes on "burst pipe, flooding, and sewer backup"; tries up to three contacts | Not described | Not published |
 | Rosie | Can't dispatch plumbers; gives after-hours instructions and notifies you | Waterfall transfers on $299 | English, Spanish |
-| LobbyStack (ours) | You set which calls are urgent; transfer to one number; message and alert if the transfer fails | One transfer number | Opens in English or French, answers in 70+ languages |
+| LobbyStack (ours) | You set which calls are urgent; transfer to one number; message and alert if the transfer fails | One transfer number | Opens in your choice of 8 languages, answers in 70+ languages |
 
 ### Services that follow an on-call schedule
 
@@ -260,7 +260,7 @@ Goodcall tries up to three contacts, Rosie's $299 plan tries several numbers, an
 
 ### Can a plumbing answering service answer in Spanish?
 
-Yes. AnswerForce, PATLive, MAP, SAS, Ruby, Rosie, A Message Center and Smith.ai's AI plans list English and Spanish, and Smith.ai's live plans charge $1.00 a call for a dedicated Spanish line. LobbyStack opens each call in English or French, then answers in the caller's language across 70+ languages, Spanish included.
+Yes. AnswerForce, PATLive, MAP, SAS, Ruby, Rosie, A Message Center and Smith.ai's AI plans list English and Spanish, and Smith.ai's live plans charge $1.00 a call for a dedicated Spanish line. LobbyStack opens each call in your choice of eight languages, then answers in the caller's language across 70+ languages, Spanish included.
 
 ## How we checked these services
 

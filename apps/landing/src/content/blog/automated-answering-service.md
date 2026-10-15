@@ -95,7 +95,7 @@ Other vendors go further on integrations. [Upfirst](https://upfirst.ai/pricing) 
 
 ### Which languages it speaks
 
-With LobbyStack, each call opens in the business's default language, English or French. The receptionist then answers in the caller's language: 70+ languages on OpenAI GPT-Live, including Spanish and Serbian. If your business is in France, our guide to an [AI phone system for small businesses in France](/blog/ai-phone-system-small-business/) compares French providers and their euro prices.
+With LobbyStack, each call opens in the business's default language: English, French, Spanish, Serbian, German, Brazilian Portuguese, Italian or Dutch. The receptionist then answers in the caller's language: 70+ languages on OpenAI GPT-Live, including Spanish and Serbian. If your business is in France, our guide to an [AI phone system for small businesses in France](/blog/ai-phone-system-small-business/) compares French providers and their euro prices.
 
 Other vendors publish their own counts: [AI-Receptionist.com](https://ai-receptionist.com/pricing) 55+, Upfirst 35+ and [Zoom AI Receptionist](https://zoom.us/pricing/virtual-agent) 23. [Dialzara](https://dialzara.com/pricing), [Rosie](https://heyrosie.com/pricing) and [Smith.ai AI Receptionist](https://smith.ai/pricing/ai-receptionist) list English and Spanish. [CloudTalk](https://www.cloudtalk.io/ai-receptionist/) and [ElevenLabs Reception](https://elevenlabs.io/docs/reception-ai/billing/plans-and-pricing) also state 70+. Before you buy, place a test call in each language your customers speak.
 

@@ -29,7 +29,7 @@ Moneypenny añade una configuración inicial gestionada y puede pasar la llamada
 | Escalado a personas | Una recepcionista de Moneypenny o su propio equipo; el cobro no se indica en los planes de IA | Transferencia ciega a un solo número que fija su equipo |
 | Configuración inicial | Configuración gestionada con un Solutions Architect | Nube de autoservicio o apoyo Enterprise en la implementación |
 | Reservas y calificación | Anunciadas | Reservas y captación de clientes potenciales incluidas |
-| Idiomas | Voces en inglés con acento estadounidense o británico | Empieza en inglés o francés y luego contesta en el idioma de quien llama (más de 70) |
+| Idiomas | Voces en inglés con acento estadounidense o británico | Empieza en uno de 8 idiomas a elegir y luego contesta en el idioma de quien llama (más de 70) |
 | Código fuente | No se anuncia | Repositorio público con licencia MIT |
 | Despliegue | Gestionado por Moneypenny | Nube gestionada o autoalojado |
 

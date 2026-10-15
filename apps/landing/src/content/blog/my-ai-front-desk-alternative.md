@@ -29,7 +29,7 @@ Frontdesk, formerly My AI Front Desk, now sells a broad AI sales workspace. Lobb
 | Channels | Voice, two-way SMS, chat, email, forms | Voice, owner alerts by email or SMS, dashboard |
 | Booking | Google Calendar, Outlook, or Calendly | Google Calendar |
 | Transfers | Warm transfers under rules you set | Blind transfer to one number |
-| Languages | 20+ languages, with caller-language detection | Opens in English or French, then answers in the caller's language (70+) |
+| Languages | 20+ languages, with caller-language detection | Opens in your choice of 8 languages, then answers in the caller's language (70+) |
 | CRM | Built-in CRM and sequences, plus HubSpot and Salesforce sync | Call records, webhooks, and REST API, no native CRM sync |
 | Deployment | Hosted | Managed cloud or self-hosted |
 | Source access | Not advertised on reviewed pages | Public MIT-licensed repository |

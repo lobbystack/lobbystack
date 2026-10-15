@@ -81,7 +81,7 @@ Trained people at an outside company answer from a script you approve. Examples 
 
 Voice AI software answers the call, talks with the caller in everyday speech and can book into a connected calendar. It applies your rules the same way on every call and costs a fraction of a live service's per-minute rate (see the cost table below). It doesn't read emotion the way a trained person does. Vendors bill per minute, per call or per unique caller.
 
-LobbyStack's [AI phone answering service](/solutions/ai-phone-answering/) is ours. It books into Google Calendar, texts a confirmation and a 24-hour reminder to US and Canadian callers who agree, and saves a recording, a transcript and a summary of every call. Calls open in your default language, English or French, then the receptionist answers in the caller's language: 70+ languages on OpenAI GPT-Live. Its limits: Google Calendar is the only calendar, transfers go to one number without a briefing, and the AI doesn't reply to texts.
+LobbyStack's [AI phone answering service](/solutions/ai-phone-answering/) is ours. It books into Google Calendar, texts a confirmation and a 24-hour reminder to US and Canadian callers who agree, and saves a recording, a transcript and a summary of every call. Calls open in your default language (English, French, Spanish, Serbian, German, Brazilian Portuguese, Italian or Dutch), then the receptionist answers in the caller's language: 70+ languages on OpenAI GPT-Live. Its limits: Google Calendar is the only calendar, transfers go to one number without a briefing, and the AI doesn't reply to texts.
 
 ### Hybrid answering
 

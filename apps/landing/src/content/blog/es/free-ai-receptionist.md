@@ -110,7 +110,7 @@ Use los 30 minutos para:
 
 - escribir su saludo, sus reglas y su política de transferencias en lenguaje sencillo, y escuchar cómo la recepcionista las sigue
 - cargar su sitio web y sus preguntas frecuentes (hasta 1 MB de texto en Free) y hacerle las preguntas de sus clientes
-- probar con alguien que hable otro idioma: las llamadas empiezan en inglés o francés, y la recepcionista cambia al idioma de quien llama, entre más de 70 idiomas con OpenAI GPT-Live
+- probar con alguien que hable otro idioma: las llamadas empiezan en su idioma predeterminado, y la recepcionista cambia al idioma de quien llama, entre más de 70 idiomas con OpenAI GPT-Live
 
 Cuando usa los 30 minutos, las llamadas de prueba se detienen hasta el mes siguiente o hasta que cambie de plan. Free guarda el historial de llamadas 30 días.
 

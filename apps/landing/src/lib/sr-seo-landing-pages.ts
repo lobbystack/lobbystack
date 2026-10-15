@@ -526,7 +526,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
       proofPoints: [
         "Zakazuje u Google Calendar i može SMS-om da pošalje potvrdu i podsetnik dan ranije",
         "Hitne pozive van radnog vremena preusmerava na Vaš dežurni broj",
-        "Počinje na engleskom ili francuskom, a zatim sa pacijentima razgovara na više od 70 jezika, uključujući srpski i španski",
+        "Počinje na jednom od 8 jezika po izboru, a zatim sa pacijentima razgovara na više od 70 jezika, uključujući srpski i španski",
       ],
       sections: [
         {
@@ -558,9 +558,9 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         },
         {
           title: "Pacijenti govore na svom jeziku",
-          body: "Svaki poziv počinje na podrazumevanom jeziku Vaše ordinacije, engleskom ili francuskom. Odatle recepcioner odgovara na jeziku pacijenta. Radi na OpenAI GPT-Live modelu, koji podržava više od 70 jezika, uključujući srpski i španski. Pacijent koji počne na srpskom ili zatraži španski čuje ostatak poziva na tom jeziku. Kontrolna tabla i imejlovi dostupni su Vam na engleskom, francuskom, španskom ili srpskom. SMS potvrde i podsetnici stižu na Vašem podrazumevanom jeziku, ili na srpskom ili španskom za pacijenta kome jezik sačuvate preko API-ja.",
+          body: "Svaki poziv počinje na podrazumevanom jeziku Vaše ordinacije: engleskom, francuskom, španskom, srpskom, nemačkom, brazilskom portugalskom, italijanskom ili holandskom. Odatle recepcioner odgovara na jeziku pacijenta. Radi na OpenAI GPT-Live modelu, koji podržava više od 70 jezika, uključujući srpski i španski. Pacijent koji počne na srpskom ili zatraži španski čuje ostatak poziva na tom jeziku. Kontrolna tabla i imejlovi dostupni su Vam na engleskom, francuskom, španskom ili srpskom. SMS potvrde i podsetnici stižu na Vašem podrazumevanom jeziku, ili na srpskom ili španskom za pacijenta kome jezik sačuvate preko API-ja.",
           points: [
-            "Svaki poziv počinje na Vašem podrazumevanom jeziku, engleskom ili francuskom",
+            "Svaki poziv počinje na Vašem podrazumevanom jeziku",
             "Menja jezik kada pacijent to zatraži ili počne da govori drugim jezikom",
             "Šalje SMS potvrde i podsetnike na Vašem podrazumevanom jeziku",
           ],
@@ -620,7 +620,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Na kojim jezicima pacijenti mogu da govore?",
           answer:
-            "Pacijenti mogu da razgovaraju sa recepcionerom na više od 70 jezika, uključujući srpski i španski. Svaki poziv počinje na podrazumevanom jeziku Vaše ordinacije, engleskom ili francuskom. Recepcioner zatim odgovara na jeziku pacijenta. Radi na OpenAI GPT-Live modelu i menja jezik kada pacijent to zatraži ili počne da govori drugim jezikom. Cenovnik LobbyStack-a ne navodi doplatu za jezike. Kontrolna tabla i imejlovi dostupni su na engleskom, francuskom, španskom ili srpskom. SMS potvrde i podsetnici stižu na Vašem podrazumevanom jeziku, ili na srpskom ili španskom za pacijenta kome jezik sačuvate preko API-ja.",
+            "Pacijenti mogu da razgovaraju sa recepcionerom na više od 70 jezika, uključujući srpski i španski. Svaki poziv počinje na podrazumevanom jeziku Vaše ordinacije: engleskom, francuskom, španskom, srpskom, nemačkom, brazilskom portugalskom, italijanskom ili holandskom. Recepcioner zatim odgovara na jeziku pacijenta. Radi na OpenAI GPT-Live modelu i menja jezik kada pacijent to zatraži ili počne da govori drugim jezikom. Cenovnik LobbyStack-a ne navodi doplatu za jezike. Kontrolna tabla i imejlovi dostupni su na engleskom, francuskom, španskom ili srpskom. SMS potvrde i podsetnici stižu na Vašem podrazumevanom jeziku, ili na srpskom ili španskom za pacijenta kome jezik sačuvate preko API-ja.",
         },
         {
           question: "Može li da zakaže termin za novog pacijenta?",
@@ -1097,9 +1097,9 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           title:
             "Može li da razgovara sa pozivaocima na srpskom, španskom ili drugom jeziku?",
-          body: "Da. Svaki poziv počinje na Vašem podrazumevanom jeziku, engleskom ili francuskom. Ako pozivalac zatraži drugi jezik ili govori nekim drugim jezikom, recepcioner odgovara na tom jeziku. Radi na OpenAI GPT-Live modelu, koji podržava više od 70 jezika, uključujući srpski i španski. LobbyStack šalje SMS potvrde i podsetnike na Vašem podrazumevanom jeziku. Ako preko API-ja kontaktu sačuvate srpski ili španski kao jezik, taj kontakt ih dobija na tom jeziku. Stranica sa cenama ne navodi doplatu za jezike.",
+          body: "Da. Svaki poziv počinje na Vašem podrazumevanom jeziku: engleskom, francuskom, španskom, srpskom, nemačkom, brazilskom portugalskom, italijanskom ili holandskom. Ako pozivalac zatraži drugi jezik ili govori nekim drugim jezikom, recepcioner odgovara na tom jeziku. Radi na OpenAI GPT-Live modelu, koji podržava više od 70 jezika, uključujući srpski i španski. LobbyStack šalje SMS potvrde i podsetnike na Vašem podrazumevanom jeziku. Ako preko API-ja kontaktu sačuvate srpski ili španski kao jezik, taj kontakt ih dobija na tom jeziku. Stranica sa cenama ne navodi doplatu za jezike.",
           points: [
-            "Počinje na engleskom ili francuskom, a zatim prati jezik pozivaoca",
+            "Počinje na jednom od 8 jezika po izboru, a zatim prati jezik pozivaoca",
             "Više od 70 jezika uz GPT-Live, uključujući srpski i španski",
             "Vaša pravila hitnosti i podešavanja zakazivanja ista su na svakom jeziku",
           ],

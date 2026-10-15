@@ -165,7 +165,7 @@ An AI receptionist answers with software, then books, transfers or takes a messa
 - **Price (checked October 9, 2026):** Starter is $30 a month for 150 minutes, then $0.20 a minute. See [LobbyStack pricing](/pricing/).
 - **How it bills:** by the second, with no round-up, so a 90-second call uses 1.5 minutes. Calls under 10 seconds and calls the receptionist ends as spam don't count.
 - **Included:** booking from your hours, services and staff into Google Calendar, confirmation and 24-hour reminder texts to US and Canadian numbers when the caller agrees, and 20 transfer attempts a month to one number.
-- **Languages:** each call opens in the business's default language, English or French. The receptionist then answers in the caller's language: 70+ languages on OpenAI GPT-Live, including Spanish and Serbian.
+- **Languages:** each call opens in the business's default language: English, French, Spanish, Serbian, German, Brazilian Portuguese, Italian or Dutch. The receptionist then answers in the caller's language: 70+ languages on OpenAI GPT-Live, including Spanish and Serbian.
 - **Numbers and setup:** numbers in the US, Canada, the UK, Australia and New Zealand, or forward your current number. Plans don't limit how many calls it answers at once. There's no setup fee on any plan, and you can cancel anytime with no cancellation fees. The Free plan gives you 30 voice minutes a month and a US or Canadian number free for 14 days, with no card.
 - **Where it falls short:** no person on the line, Google Calendar only, and no practice-management or field-service software sync. Transfers are blind and go to one number. The AI doesn't reply to texts, and LobbyStack makes no HIPAA claim.
 - **Pick it if** you want every call answered and booked for $30 a month, your own team takes the urgent transfers, and your callers speak many languages.
@@ -230,7 +230,7 @@ Per-minute plans favor short calls, per-call plans favor long ones (Smith.ai, Up
 
 ### Check coverage hours and languages
 
-Ruby, PATLive and Abby Connect charge nothing extra for nights, weekends or holidays. Davinci Virtual's FAQ puts its live team on weekdays from 8am to 8pm Eastern, while its live-receptionists page says 24/7, so ask before you count on nights. Most live services here answer in English and Spanish. Among AI services, Upfirst lists 35+ languages and AI-Receptionist.com 55+, and LobbyStack answers in the caller's language across 70+ after opening in English or French.
+Ruby, PATLive and Abby Connect charge nothing extra for nights, weekends or holidays. Davinci Virtual's FAQ puts its live team on weekdays from 8am to 8pm Eastern, while its live-receptionists page says 24/7, so ask before you count on nights. Most live services here answer in English and Spanish. Among AI services, Upfirst lists 35+ languages and AI-Receptionist.com 55+, and LobbyStack answers in the caller's language across 70+ after opening in your choice of eight languages.
 
 ### Ask what booking, transfers and texts cost
 
@@ -244,7 +244,7 @@ Davinci Virtual charges $95 to set up live answering, Ambs Call Center $85 and A
 
 ### Which answering services answer in Spanish?
 
-Ruby, PATLive and Abby Connect include Spanish-speaking receptionists at no extra cost, and Moneypenny, MAP Communications, The Perfect Answer, Ambs Call Center and Answering Service Care list Spanish on every plan. Smith.ai charges $1 a call for a Spanish line, and AnswerConnect's 2025 price sheet lists Spanish as an add-on. LobbyStack opens each call in the business's default language, English or French, then answers in the caller's language, across 70+ languages including Spanish.
+Ruby, PATLive and Abby Connect include Spanish-speaking receptionists at no extra cost, and Moneypenny, MAP Communications, The Perfect Answer, Ambs Call Center and Answering Service Care list Spanish on every plan. Smith.ai charges $1 a call for a Spanish line, and AnswerConnect's 2025 price sheet lists Spanish as an add-on. LobbyStack opens each call in the business's default language (English, French, Spanish, Serbian, German, Brazilian Portuguese, Italian or Dutch), then answers in the caller's language, across 70+ languages including Spanish.
 
 ### Can I keep my business phone number?
 

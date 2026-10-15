@@ -34,7 +34,7 @@ export const dentalOfficesFaqs: FaqItem[] = [
   {
     question: "Which languages can patients speak?",
     answer:
-      "Patients can talk to the receptionist in 70+ languages, including Spanish and Serbian. Each call opens in your practice's default language, English or French. The receptionist then answers in the patient's language. It runs on OpenAI GPT-Live and switches when a patient asks or starts speaking another language. LobbyStack's pricing lists no language add-on. The dashboard and emails come in English, French, Spanish, or Serbian. Confirmation and reminder texts go out in your default language, or in Spanish or Serbian for a patient whose language you save through the API.",
+      "Patients can talk to the receptionist in 70+ languages, including Spanish and Serbian. Each call opens in your practice's default language: English, French, Spanish, Serbian, German, Brazilian Portuguese, Italian, or Dutch. The receptionist then answers in the patient's language. It runs on OpenAI GPT-Live and switches when a patient asks or starts speaking another language. LobbyStack's pricing lists no language add-on. The dashboard and emails come in English, French, Spanish, or Serbian. Confirmation and reminder texts go out in your default language, or in Spanish or Serbian for a patient whose language you save through the API.",
   },
   {
     question: "Can it book new patient appointments?",

@@ -29,7 +29,7 @@ Frontdesk, ranije My AI Front Desk, sada prodaje širok AI radni prostor za prod
 | Kanali | Glas, dvosmerni SMS, čet, imejl, formulari | Glas, obaveštenja vlasniku putem imejla ili SMS-a, kontrolna tabla |
 | Zakazivanje | Google Calendar, Outlook ili Calendly | Google Calendar |
 | Preusmeravanje | Asistirano preusmeravanje po Vašim pravilima | Direktno preusmeravanje na jedan broj, bez najave |
-| Jezici | Više od 20 jezika, uz prepoznavanje jezika pozivaoca | Počinje na engleskom ili francuskom, zatim odgovara na jeziku pozivaoca (više od 70) |
+| Jezici | Više od 20 jezika, uz prepoznavanje jezika pozivaoca | Počinje na jednom od 8 jezika po izboru, zatim odgovara na jeziku pozivaoca (više od 70) |
 | CRM | Ugrađeni CRM i sekvence, uz sinhronizaciju sa HubSpot i Salesforce | Evidencija poziva, webhookovi i REST API, bez ugrađene CRM sinhronizacije |
 | Primena | Hostovano | Upravljani cloud ili samostalno hostovanje |
 | Pristup izvornom kodu | Nije navedeno na pregledanim stranicama | Javni repozitorijum pod MIT licencom |

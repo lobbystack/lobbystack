@@ -242,7 +242,7 @@ Los términos de The Perfect Answer y de MAP suman $0.024 a cada llamada, o $2.4
 
 Smith.ai cobra los extras por llamada: $1.50 por reservar, $1.50 por enrutamiento complejo y $1.00 por una línea dedicada en español. Ocho de los servicios por minuto incluyen agentes que hablan español en el precio del plan.
 
-En LobbyStack, cada llamada empieza en el idioma predeterminado del negocio, inglés o francés. Luego la recepcionista contesta en el idioma de quien llama: más de 70 idiomas con OpenAI GPT-Live, entre ellos el español y el serbio. Si su cliente habla español, la recepcionista le contesta en español. Los precios de LobbyStack no tienen complemento de idioma.
+En LobbyStack, cada llamada empieza en el idioma predeterminado del negocio: inglés, francés, español, serbio, alemán, portugués de Brasil, italiano o neerlandés. Luego la recepcionista contesta en el idioma de quien llama: más de 70 idiomas con OpenAI GPT-Live, entre ellos el español y el serbio. Si su cliente habla español, la recepcionista le contesta en español. Los precios de LobbyStack no tienen complemento de idioma.
 
 ### Ciclos de facturación de 28 días
 
@@ -280,7 +280,7 @@ LobbyStack cuesta $30 con 40 llamadas, $60 con 100 llamadas y $118 con 200 llama
 
 Starter incluye 150 minutos, un número de empresa en Estados Unidos, Canadá, el Reino Unido, Australia o Nueva Zelanda, reservas en Google Calendar, y mensajes de texto de confirmación y de recordatorio 24 horas antes a números de Estados Unidos y Canadá. También incluye 20 intentos de transferencia al mes; después, cada intento cuesta $0.02.
 
-Los planes no limitan cuántas llamadas contesta la recepcionista a la vez. Las llamadas empiezan en su idioma predeterminado, inglés o francés, y luego la recepcionista contesta en el idioma de quien llama (más de 70 idiomas). Usted conserva su número y lo desvía a LobbyStack. La regla de desvío de su operador decide si LobbyStack toma el exceso de llamadas, las de fuera de horario o todas.
+Los planes no limitan cuántas llamadas contesta la recepcionista a la vez. Las llamadas empiezan en su idioma predeterminado (inglés, francés, español, serbio, alemán, portugués de Brasil, italiano o neerlandés), y luego la recepcionista contesta en el idioma de quien llama (más de 70 idiomas). Usted conserva su número y lo desvía a LobbyStack. La regla de desvío de su operador decide si LobbyStack toma el exceso de llamadas, las de fuera de horario o todas.
 
 ### Lo que pierde sin un agente humano
 

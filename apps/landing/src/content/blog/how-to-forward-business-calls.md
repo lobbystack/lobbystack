@@ -137,7 +137,7 @@ For after-hours coverage, turn on all-calls forwarding when you close and turn i
 
 ### Where LobbyStack fits
 
-LobbyStack answers the calls your carrier forwards to its number. It has no built-in overflow schedule, so your forwarding rule decides which calls it gets. A caller you miss can still get answers from your business information and book a time in your Google Calendar. The receptionist also takes messages, emails your team an alert, and transfers urgent calls to one number. Each call gets a summary, a transcript and a recording in the dashboard. Calls open in English or French, and the receptionist switches to the caller's language, with 70+ languages on OpenAI GPT-Live.
+LobbyStack answers the calls your carrier forwards to its number. It has no built-in overflow schedule, so your forwarding rule decides which calls it gets. A caller you miss can still get answers from your business information and book a time in your Google Calendar. The receptionist also takes messages, emails your team an alert, and transfers urgent calls to one number. Each call gets a summary, a transcript and a recording in the dashboard. Calls open in your choice of eight languages, and the receptionist switches to the caller's language, with 70+ languages on OpenAI GPT-Live.
 
 Set the transfer number to a phone that doesn't forward its missed calls back to LobbyStack. Otherwise a transfer nobody answers can land on the receptionist again. To decide what it should say on each call, start from these [phone answering scripts](/blog/phone-answering-script/). If you're still weighing a person against software, read [what a phone answering service is](/blog/what-is-a-phone-answering-service/) and [where voicemail still works](/blog/ai-receptionist-vs-voicemail/).
 

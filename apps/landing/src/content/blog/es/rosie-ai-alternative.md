@@ -68,7 +68,7 @@ LobbyStack es una alternativa a Rosie AI. La tabla reúne los límites que cambi
 | Calendarios | Google Calendar, Calendly, Acuity, Appointlet (desde Scale) | Solo Google Calendar |
 | Transferencias | En vivo y asistidas (Scale), en cascada (Growth) | Transferencia directa, sin aviso previo, a un número (Starter y Pro) |
 | SMS a quien llama | Enlaces para reservar en todos los planes; SMS durante la llamada desde Scale | Confirmación de la reserva y recordatorio 24 horas antes si quien llama acepta, a números de Estados Unidos y Canadá; la IA no responde mensajes de texto |
-| Idiomas de quien llama | Inglés y español en cada llamada | Empieza en inglés o francés y luego responde en el idioma de quien llama (más de 70, incluido el español) |
+| Idiomas de quien llama | Inglés y español en cada llamada | Empieza en uno de 8 idiomas a elegir y luego responde en el idioma de quien llama (más de 70, incluido el español) |
 | Chat web | Gratis en todos los planes | No lo ofrece; solo llamadas telefónicas |
 | Apps y voces | Apps nativas para iOS y Android, más de 10 voces | Panel web, una voz telefónica integrada |
 | Spam y llamadas cortas | Detección de spam; la página no dice si los minutos de spam cuentan | No cuentan las llamadas de menos de 10 segundos ni las que la recepcionista corta por spam |
@@ -136,9 +136,9 @@ LobbyStack tiene cuatro carencias que podrían descartarlo. No ofrece chat web. 
 
 ## ¿En qué idiomas contestan Rosie y LobbyStack?
 
-Rosie contesta en inglés y español en cada llamada. LobbyStack empieza cada llamada en el idioma predeterminado del negocio, inglés o francés. Si quien llama pide cambiar de idioma o habla otro, la recepcionista le responde en ese idioma. LobbyStack [funciona con OpenAI GPT-Live](/es/blog/ai-voice-agent-gpt-live/) y maneja más de 70 idiomas, incluidos el español y el serbio.
+Rosie contesta en inglés y español en cada llamada. LobbyStack empieza cada llamada en el idioma predeterminado del negocio: inglés, francés, español, serbio, alemán, portugués de Brasil, italiano o neerlandés. Si quien llama pide cambiar de idioma o habla otro, la recepcionista le responde en ese idioma. LobbyStack [funciona con OpenAI GPT-Live](/es/blog/ai-voice-agent-gpt-live/) y maneja más de 70 idiomas, incluidos el español y el serbio.
 
-CloudTalk y ElevenLabs Reception también anuncian más de 70 idiomas, así que la cifra por sí sola no distingue a LobbyStack. Rosie cubre menos idiomas, pero tiene el español listo en cada llamada. Si la mayoría de sus clientes habla español, compruebe cómo reaccionan al saludo en inglés o francés de LobbyStack antes de que la recepcionista cambie al español. Para su equipo, el panel de LobbyStack está en inglés, francés, español y serbio.
+CloudTalk y ElevenLabs Reception también anuncian más de 70 idiomas, así que la cifra por sí sola no distingue a LobbyStack. Rosie cubre menos idiomas, pero tiene el español listo en cada llamada. Si la mayoría de sus clientes habla español, elija el español como idioma predeterminado de LobbyStack para que las llamadas empiecen en español. Para su equipo, el panel de LobbyStack está en inglés, francés, español y serbio.
 
 El número de idiomas no prueba la calidad de ninguno de los dos productos. Llame a cada finalista con los nombres de sus clientes, direcciones reales, interrupciones y un cambio de idioma a mitad de la llamada.
 

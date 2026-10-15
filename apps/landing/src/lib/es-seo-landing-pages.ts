@@ -349,7 +349,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
       proofPoints: [
         "Reserva en Google Calendar y puede enviar por SMS una confirmación y un recordatorio el día anterior",
         "Transfiere las urgencias fuera de horario a su número de guardia",
-        "Empieza en inglés o francés y luego habla con los pacientes en más de 70 idiomas, entre ellos el español y el serbio",
+        "Empieza en uno de 8 idiomas a elegir y luego habla con los pacientes en más de 70 idiomas, entre ellos el español y el serbio",
       ],
       sections: [
         {
@@ -381,9 +381,9 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         },
         {
           title: "Los pacientes hablan en su propio idioma",
-          body: "Cada llamada empieza en el idioma predeterminado de su clínica, inglés o francés. A partir de ahí, la recepcionista contesta en el idioma del paciente. Funciona con OpenAI GPT-Live, que maneja más de 70 idiomas, entre ellos el español y el serbio. Si un paciente empieza en español o pide hablar en serbio, escucha el resto de la llamada en ese idioma. Su panel y sus correos están disponibles en inglés, francés, español o serbio. Los SMS de confirmación y recordatorio salen en su idioma predeterminado, o en español o serbio para un paciente cuyo idioma guarde a través de la API.",
+          body: "Cada llamada empieza en el idioma predeterminado de su clínica: inglés, francés, español, serbio, alemán, portugués de Brasil, italiano o neerlandés. A partir de ahí, la recepcionista contesta en el idioma del paciente. Funciona con OpenAI GPT-Live, que maneja más de 70 idiomas, entre ellos el español y el serbio. Si un paciente empieza en español o pide hablar en serbio, escucha el resto de la llamada en ese idioma. Su panel y sus correos están disponibles en inglés, francés, español o serbio. Los SMS de confirmación y recordatorio salen en su idioma predeterminado, o en español o serbio para un paciente cuyo idioma guarde a través de la API.",
           points: [
-            "Empieza cada llamada en su idioma predeterminado, inglés o francés",
+            "Empieza cada llamada en su idioma predeterminado",
             "Cambia de idioma cuando un paciente lo pide o empieza a hablar otro",
             "Envía los SMS de confirmación y recordatorio en su idioma predeterminado",
           ],
@@ -443,7 +443,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "¿En qué idiomas pueden hablar los pacientes?",
           answer:
-            "Los pacientes pueden hablar con la recepcionista en más de 70 idiomas, entre ellos el español y el serbio. Cada llamada empieza en el idioma predeterminado de su clínica, inglés o francés. Después, la recepcionista contesta en el idioma del paciente. Funciona con OpenAI GPT-Live y cambia de idioma cuando un paciente lo pide o empieza a hablar otro. La lista de precios de LobbyStack no incluye ningún cargo adicional por idioma. El panel y los correos están disponibles en inglés, francés, español o serbio. Los SMS de confirmación y recordatorio salen en su idioma predeterminado, o en español o serbio para un paciente cuyo idioma guarde a través de la API.",
+            "Los pacientes pueden hablar con la recepcionista en más de 70 idiomas, entre ellos el español y el serbio. Cada llamada empieza en el idioma predeterminado de su clínica: inglés, francés, español, serbio, alemán, portugués de Brasil, italiano o neerlandés. Después, la recepcionista contesta en el idioma del paciente. Funciona con OpenAI GPT-Live y cambia de idioma cuando un paciente lo pide o empieza a hablar otro. La lista de precios de LobbyStack no incluye ningún cargo adicional por idioma. El panel y los correos están disponibles en inglés, francés, español o serbio. Los SMS de confirmación y recordatorio salen en su idioma predeterminado, o en español o serbio para un paciente cuyo idioma guarde a través de la API.",
         },
         {
           question: "¿Puede reservar citas de pacientes nuevos?",
@@ -932,9 +932,9 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         },
         {
           title: "¿Puede contestar en español o en otro idioma?",
-          body: "Sí. Cada llamada empieza en su idioma predeterminado, inglés o francés. Si la persona pide cambiar de idioma o habla otro, la recepcionista contesta en ese idioma. Funciona con OpenAI GPT-Live, que maneja más de 70 idiomas, entre ellos el español y el serbio. LobbyStack envía los SMS de confirmación y recordatorio en su idioma predeterminado. Si guarda el español o el serbio como idioma de un contacto a través de la API, ese contacto los recibe en ese idioma. La página de precios no incluye ningún complemento por idioma.",
+          body: "Sí. Cada llamada empieza en su idioma predeterminado: inglés, francés, español, serbio, alemán, portugués de Brasil, italiano o neerlandés. Si la persona pide cambiar de idioma o habla otro, la recepcionista contesta en ese idioma. Funciona con OpenAI GPT-Live, que maneja más de 70 idiomas, entre ellos el español y el serbio. LobbyStack envía los SMS de confirmación y recordatorio en su idioma predeterminado. Si guarda el español o el serbio como idioma de un contacto a través de la API, ese contacto los recibe en ese idioma. La página de precios no incluye ningún complemento por idioma.",
           points: [
-            "Empieza en inglés o francés y después sigue el idioma de quien llama",
+            "Empieza en uno de 8 idiomas a elegir y después sigue el idioma de quien llama",
             "Más de 70 idiomas en GPT-Live, incluido el español",
             "Sus reglas de urgencia y su configuración de reservas son las mismas en todos los idiomas",
           ],

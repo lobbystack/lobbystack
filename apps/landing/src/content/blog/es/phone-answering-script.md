@@ -302,7 +302,7 @@ Números equivocados: Si buscaban otro negocio, di que se comunicaron a
 
 Con LobbyStack como ejemplo (más detalles en la página de [atención telefónica con IA](/es/solutions/ai-phone-answering/)):
 
-- **Saludo e idioma.** Cada llamada empieza con su saludo en el idioma predeterminado del negocio, inglés o francés. Después, la recepcionista responde en el idioma de quien llama: más de 70 idiomas con OpenAI GPT-Live, entre ellos el español y el serbio.
+- **Saludo e idioma.** Cada llamada empieza con su saludo en el idioma predeterminado del negocio: inglés, francés, español, serbio, alemán, portugués de Brasil, italiano o neerlandés. Después, la recepcionista responde en el idioma de quien llama: más de 70 idiomas con OpenAI GPT-Live, entre ellos el español y el serbio.
 - **Citas.** Agenda en Google Calendar, el único calendario que conecta. Con el consentimiento de la persona, envía por mensaje de texto una confirmación y un recordatorio 24 horas antes de la cita a números de Estados Unidos y Canadá.
 - **Transferencias.** Las transferencias son directas y van a un solo número por negocio, así que la recepcionista no le presenta la llamada a quien contesta. Conteste las llamadas transferidas con el nombre del negocio y pregunte el motivo. Si una transferencia no entra, la recepcionista se lo dice a la persona y ofrece tomar un recado, y su equipo puede recibir la alerta "Live call transfer failed".
 - **Recados.** Usted recibe una alerta por correo cuando toma un recado, con alertas por mensaje de texto como opción. LobbyStack guarda en el panel un resumen, una transcripción y la grabación de cada llamada.

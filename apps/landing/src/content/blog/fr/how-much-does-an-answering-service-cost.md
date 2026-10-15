@@ -242,7 +242,7 @@ Les conditions de The Perfect Answer et de MAP ajoutent 0,024 $ à chaque appel,
 
 Smith.ai facture ses options à l'appel : 1,50 $ pour la réservation, 1,50 $ pour un routage complexe et 1,00 $ pour une ligne espagnole dédiée. Huit des services à la minute incluent des agents hispanophones dans le prix du forfait.
 
-Avec LobbyStack, chaque appel commence dans la langue par défaut de l'entreprise, l'anglais ou le français. Le réceptionniste répond ensuite dans la langue de l'appelant : plus de 70 langues avec GPT-Live d'OpenAI, dont l'espagnol et le serbe. La grille de LobbyStack ne comporte aucune option de langue.
+Avec LobbyStack, chaque appel commence dans la langue par défaut de l'entreprise : anglais, français, espagnol, serbe, allemand, portugais du Brésil, italien ou néerlandais. Le réceptionniste répond ensuite dans la langue de l'appelant : plus de 70 langues avec GPT-Live d'OpenAI, dont l'espagnol et le serbe. La grille de LobbyStack ne comporte aucune option de langue.
 
 ### Cycles de facturation de 28 jours
 
@@ -280,7 +280,7 @@ LobbyStack coûte 30 $ à 40 appels, 60 $ à 100 appels et 118 $ à 200 appels (
 
 Starter inclut 150 minutes, un numéro professionnel aux États-Unis, au Canada, au Royaume-Uni, en Australie ou en Nouvelle-Zélande, la réservation dans Google Calendar, et des SMS de confirmation et de rappel 24 heures avant le rendez-vous vers les numéros américains et canadiens. Il inclut aussi 20 tentatives de transfert par mois, puis 0,02 $ chacune.
 
-Les forfaits ne limitent pas le nombre d'appels auxquels le réceptionniste répond en même temps. Les appels commencent dans votre langue par défaut, l'anglais ou le français, puis le réceptionniste répond dans la langue de l'appelant (plus de 70 langues). Vous gardez votre numéro et le renvoyez vers LobbyStack : la règle de renvoi de votre opérateur détermine si LobbyStack prend le débordement, les appels hors horaires ou tous les appels.
+Les forfaits ne limitent pas le nombre d'appels auxquels le réceptionniste répond en même temps. Les appels commencent dans votre langue par défaut (anglais, français, espagnol, serbe, allemand, portugais du Brésil, italien ou néerlandais), puis le réceptionniste répond dans la langue de l'appelant (plus de 70 langues). Vous gardez votre numéro et le renvoyez vers LobbyStack : la règle de renvoi de votre opérateur détermine si LobbyStack prend le débordement, les appels hors horaires ou tous les appels.
 
 ### Ce que vous perdez sans agent humain
 

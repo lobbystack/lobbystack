@@ -131,7 +131,7 @@ Na primeru LobbyStack-a:
 - Upisuje termine u Google Calendar. Uz pristanak pozivaoca šalje SMS potvrdu i podsetnik 24 sata pre termina na brojeve iz SAD i Kanade.
 - Hitne pozive preusmerava na jedan broj po preduzeću. Preusmeravanje je slepo, pa osobu koja se javi ne upoznaje sa pozivom. Ako preusmeravanje ne uspe, kaže to pozivaocu, ponudi da primi poruku, a Vaš tim može da dobije upozorenje o neuspelom preusmeravanju.
 - Svaki poziv dobija rezime, transkript i snimak. Kada primi poruku, dobijate upozorenje e-poštom, a SMS upozorenja su opciona.
-- Pozivi počinju na podrazumevanom jeziku preduzeća, engleskom ili francuskom, a zatim recepcioner odgovara na jeziku pozivaoca: više od 70 jezika, uključujući srpski i španski.
+- Pozivi počinju na podrazumevanom jeziku preduzeća (engleskom, francuskom, španskom, srpskom, nemačkom, brazilskom portugalskom, italijanskom ili holandskom), a zatim recepcioner odgovara na jeziku pozivaoca: više od 70 jezika, uključujući srpski i španski.
 - LobbyStack ne naplaćuje spam pozive ni pozive kraće od 10 sekundi.
 
 Upoznajte ograničenja pre nego što prosledite liniju: Google Calendar je jedini kalendar, AI ne odgovara na SMS poruke i nema sinhronizacije sa CRM-om ni softverom za terenski servis. Za potpunu pokrivenost posle radnog vremena pogledajte [javljanje posle radnog vremena](/sr/solutions/after-hours-answering-service/).
