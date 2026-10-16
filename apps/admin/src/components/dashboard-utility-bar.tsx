@@ -25,9 +25,9 @@ export function DashboardUtilityBar() {
   if (!business) return null;
   const items = (
     <>
-        <DashboardTestCallWidget className="pointer-events-auto flex" businessId={business.businessId} businessSlug={business.slug} />
+        <DashboardTestCallWidget className="pointer-events-auto md:flex" businessId={business.businessId} businessSlug={business.slug} />
         {/* mr is smaller than ml because the icon button's own padding adds the rest of the visible gap. */}
-        <span aria-hidden="true" className="ml-3 mr-2.5 h-4 w-px bg-border" />
+        <span aria-hidden="true" className="ml-3 mr-2.5 hidden h-4 w-px bg-border md:block" />
         <Tooltip>
           <TooltipTrigger
             render={

@@ -1,6 +1,7 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -24,19 +25,19 @@ const AppearanceContext = createContext<AppearanceContextValue | null>(null);
 
 export function AppearanceProvider({ children }: { children: ReactNode }) {
   const { i18n } = useTranslation();
-  const [timeFormatPreference, setTimeFormatPreferenceState] =
-    useState<TimeFormatPreference>(
-      resolveTimeFormatPreference({
-        storedPreference: readStoredTimeFormatPreference(),
-        locale: i18n.resolvedLanguage ?? i18n.language,
-      }),
-    );
+  // Read after mount: the server can't see localStorage, so the first render uses the locale's default.
+  const [storedPreference, setStoredPreference] = useState<TimeFormatPreference | null>(null);
+  useEffect(() => { setStoredPreference(readStoredTimeFormatPreference()); }, []);
+  const timeFormatPreference = resolveTimeFormatPreference({
+    storedPreference,
+    locale: i18n.resolvedLanguage ?? i18n.language,
+  });
 
   const value = useMemo<AppearanceContextValue>(
     () => ({
       timeFormatPreference,
       setTimeFormatPreference: (nextValue) => {
-        setTimeFormatPreferenceState(nextValue);
+        setStoredPreference(nextValue);
         writeStoredTimeFormatPreference(nextValue);
       },
     }),
