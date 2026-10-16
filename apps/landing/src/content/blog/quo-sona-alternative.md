@@ -1,7 +1,7 @@
 ---
 title: "Quo Sona alternative for AI call answering"
-seoTitle: "Quo Sona alternative: LobbyStack vs Sona"
-description: "Compare Quo Sona and LobbyStack on call-credit pricing, phone-system requirements, message capture, booking, source access, and self-hosting."
+seoTitle: "Quo Sona AI receptionist pricing and alternative: LobbyStack"
+description: "Quo Sona charges $25 for 40 call credits on top of a Quo phone plan. Compare its pricing, booking, and handoff with LobbyStack: $30 for 150 minutes."
 pubDate: 2026-07-30T10:20:00-04:00
 updatedDate: 2026-07-30T10:20:00-04:00
 author: "LobbyStack Team"

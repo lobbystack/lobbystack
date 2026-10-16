@@ -145,7 +145,7 @@ export const solutionPages: SeoLandingPage[] = [
         body: "You write what counts as urgent: no heat below a set temperature, water that won't stop, a tenant locked out. LobbyStack asks the questions your rule needs, then transfers the call to your on-call number. The address and problem it collected stay in the call's transcript. Anything that can wait gets a summary in your dashboard for the morning.",
         points: [
           "Transfers to the on-call number you set",
-          "Reads your safety steps first, like where to shut off the water",
+          "Can share your safety steps, like where to shut off the water",
           "If a transfer doesn't connect, offers to take a message and can alert your team",
         ],
       },
@@ -446,25 +446,25 @@ export const solutionPages: SeoLandingPage[] = [
     path: "/solutions/ai-receptionist-for-plumbers/",
     title: "24/7 Plumbing Answering Service with AI | LobbyStack",
     description:
-      "LobbyStack is an AI plumbing answering service. It tells callers how to shut off the water, quotes your drain and dispatch fees, and routes burst pipes to your on-call plumber.",
+      "LobbyStack is an AI plumbing answering service. It can tell callers how to shut off the water, quotes your drain and dispatch fees, and routes burst pipes to your on-call plumber.",
     eyebrow: "Plumbers",
     h1: "Plumbing answering service that handles the midnight burst pipe",
     intro:
-      "A caller with water coming through the ceiling needs two things: someone to tell them where the main shutoff is, and a plumber on the way. LobbyStack does both on the first ring, then books the drain and water heater jobs into your calendar.",
+      "A caller with water coming through the ceiling needs two things: someone to tell them where the main shutoff is, and a plumber on the way. LobbyStack can share the shutoff steps you write and transfers the call to your on-call plumber. It books the drain and water heater jobs into your calendar.",
     image: "/illustrations/missed-calls-v3.webp",
     imageAlt:
       "Diagram of a missed plumbing call routed through LobbyStack to a booked appointment",
     proofPoints: [
-      "Reads your shutoff and safety instructions to callers with an active leak",
+      "Can share your shutoff instructions with callers who have an active leak",
       "Quotes the prices you set for drain cleaning, dispatch, and after-hours visits",
       "Transfers burst pipes and sewage backups to your on-call plumber",
     ],
     sections: [
       {
         title: "Give panicked callers something to do while help is coming",
-        body: "You load your own instructions into LobbyStack: where to find the main shutoff, when to turn off the water heater, and what to do if they smell gas. The assistant reads those steps to the caller, collects the address, and transfers the call to your on-call number.",
+        body: "You load your own instructions into LobbyStack: where to find the main shutoff, when to turn off the water heater, and what to do if they smell gas. The assistant can share those steps with the caller. It collects the address and transfers the call to your on-call number. Place a test call to hear how it handles one.",
         points: [
-          "Reads the safety steps you approve",
+          "Uses the safety steps you approve",
           "Saves the address and problem in the call's transcript, then transfers the call",
         ],
       },
@@ -550,7 +550,7 @@ export const solutionPages: SeoLandingPage[] = [
       {
         title:
           "How does it tell a no-heat emergency from a thermostat question?",
-        body: "You write the urgency rules in plain language, based on symptoms, indoor temperature, and who lives in the home. A caller with a dead furnace in January and an infant in the house gets your on-call tech. A caller whose thermostat is set to cool gets a quick answer from troubleshooting steps you approve, like checking the breaker or the filter. For a gas smell or a CO alarm, you write the safety steps, such as leaving the house and calling the gas utility's emergency line or 911. The receptionist reads them to the caller before it transfers. Transfers go to one number. If you haven't set a transfer number, the receptionist takes a message. If the transfer can't go through, it tells the caller and offers to take a message, and your team can get a \"Live call transfer failed\" alert. Once your tech's phone starts ringing, the receptionist leaves the call. If your tech doesn't pick up, the caller reaches that phone's voicemail, if it has one.",
+        body: "You write the urgency rules in plain language, based on symptoms, indoor temperature, and who lives in the home. A caller with a dead furnace in January and an infant in the house gets your on-call tech. A caller whose thermostat is set to cool gets a quick answer from troubleshooting steps you approve, like checking the breaker or the filter. For a gas smell or a CO alarm, you write the safety steps, such as leaving the house and calling the gas utility's emergency line or 911. The receptionist can share them before it transfers. Place a test call to hear how it handles one. Transfers go to one number. If you haven't set a transfer number, the receptionist takes a message. If the transfer can't go through, it tells the caller and offers to take a message, and your team can get a \"Live call transfer failed\" alert. Once your tech's phone starts ringing, the receptionist leaves the call. If your tech doesn't pick up, the caller reaches that phone's voicemail, if it has one.",
         points: [
           "Escalates on symptoms, indoor temperature, and who lives in the home",
           "Treats gas smells and CO alarms as urgent and transfers right away",
@@ -628,7 +628,7 @@ export const solutionPages: SeoLandingPage[] = [
     path: "/solutions/ai-receptionist-for-electricians/",
     title: "Electrician Answering Service with AI | LobbyStack",
     description:
-      "LobbyStack is an AI answering service for electricians. It reads your safety instructions for sparks and burning smells and books panel upgrade, EV charger, and generator estimates.",
+      "LobbyStack is an AI answering service for electricians. It can give callers your safety instructions for sparks and burning smells, and it books panel upgrade, EV charger, and generator estimates.",
     eyebrow: "Electricians",
     h1: "Electrician answering service that screens hazards and books estimates",
     intro:
@@ -637,14 +637,14 @@ export const solutionPages: SeoLandingPage[] = [
     imageAlt:
       "An incoming electrical call next to three team members",
     proofPoints: [
-      "Reads your safety script for sparks, smoke, and burning smells",
+      "Can share your safety script for sparks, smoke, and burning smells",
       "Books estimate visits for panel upgrades, EV chargers, and generators",
       "Transfers hazard calls to your on-call electrician",
     ],
     sections: [
       {
-        title: "Put your safety instructions first",
-        body: "When someone reports smoke or a burning smell, LobbyStack reads the instructions you wrote: shut off the breaker if it's safe to reach, leave the house, call 911 if there's fire. Then it asks for the address and what the caller saw, and transfers the call to your on-call electrician.",
+        title: "Write the safety instructions callers hear",
+        body: "When someone reports smoke or a burning smell, LobbyStack can share the instructions you wrote: shut off the breaker if it's safe to reach, leave the house, call 911 if there's fire. It asks for the address and what the caller saw, and transfers the call to your on-call electrician. Place a test call to hear how it handles one.",
         points: [
           "Uses your wording for hazard calls",
           "Transfers hazards to your on-call electrician",
@@ -700,9 +700,9 @@ export const solutionPages: SeoLandingPage[] = [
     group: "solution",
     slug: "ai-receptionist-for-garage-door-repair",
     path: "/solutions/ai-receptionist-for-garage-door-repair/",
-    title: "AI Receptionist for Garage Door Repair | LobbyStack",
+    title: "AI Receptionist for Garage Door Companies, 24/7 | LobbyStack",
     description:
-      "LobbyStack answers garage-door calls, gathers equipment details, books repairs, and routes urgent stuck-door or broken-spring requests to your technician.",
+      "LobbyStack answers garage door calls 24/7, books repair visits, and routes stuck-door and broken-spring emergencies to your on-call tech. Plans from $30/month.",
     eyebrow: "Garage door repair",
     h1: "AI receptionist for garage door repair that captures every call",
     intro:
@@ -768,9 +768,9 @@ export const solutionPages: SeoLandingPage[] = [
     group: "solution",
     slug: "ai-receptionist-for-appliance-repair",
     path: "/solutions/ai-receptionist-for-appliance-repair/",
-    title: "AI Receptionist for Appliance Repair | LobbyStack",
+    title: "AI Receptionist for Appliance Repair Companies | LobbyStack",
     description:
-      "LobbyStack answers appliance-repair calls, collects appliance, brand, model, and symptom details, then books an appropriate service visit.",
+      "LobbyStack answers appliance repair calls 24/7, collects brand, model, and symptoms, and books service visits. Urgent failures go to your on-call tech.",
     eyebrow: "Appliance repair",
     h1: "AI receptionist for appliance repair that captures every call",
     intro:
@@ -836,9 +836,9 @@ export const solutionPages: SeoLandingPage[] = [
     group: "solution",
     slug: "ai-receptionist-for-restoration-companies",
     path: "/solutions/ai-receptionist-for-restoration-companies/",
-    title: "AI Receptionist for Restoration Companies | LobbyStack",
+    title: "24/7 AI Receptionist for Restoration Companies | LobbyStack",
     description:
-      "LobbyStack qualifies water, fire, and mold damage calls, books restoration estimates, and routes urgent mitigation requests to your on-call team.",
+      "LobbyStack answers water, fire, and mold damage calls 24/7, books restoration estimates, and routes urgent mitigation calls to your on-call team.",
     eyebrow: "Restoration",
     h1: "AI receptionist for restoration companies that captures every emergency",
     intro:
@@ -904,9 +904,9 @@ export const solutionPages: SeoLandingPage[] = [
     group: "solution",
     slug: "ai-receptionist-for-locksmiths",
     path: "/solutions/ai-receptionist-for-locksmiths/",
-    title: "AI Receptionist for Locksmiths | LobbyStack",
+    title: "Locksmith AI Receptionist for 24/7 Lockouts | LobbyStack",
     description:
-      "An AI receptionist for locksmiths that answers emergency lockout calls, books service appointments, and routes urgent calls to your on-call technician.",
+      "LobbyStack answers locksmith calls 24/7, books service appointments, and routes lockouts and other urgent calls to your on-call technician.",
     eyebrow: "Locksmiths",
     h1: "AI receptionist for locksmiths that captures every emergency call",
     intro:
