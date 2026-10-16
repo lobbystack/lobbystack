@@ -7,6 +7,7 @@ import {
   index,
   integer,
   jsonb,
+  numeric,
   pgTable,
   primaryKey,
   text,
@@ -250,6 +251,8 @@ export const services = pgTable(
     priceMinor: bigint("price_minor", { mode: "number" }),
     priceMaxMinor: bigint("price_max_minor", { mode: "number" }),
     priceType: varchar("price_type", { length: 16 }).$type<"fixed" | "from" | "range" | "in_person">().default("fixed").notNull(),
+    /** Percent off every amount, 0 for none; up to two decimals. */
+    discountPercent: numeric("discount_percent", { precision: 5, scale: 2, mode: "number" }).default(0).notNull(),
     active: boolean("active").default(true).notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     ...legacyId,

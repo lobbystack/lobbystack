@@ -28,6 +28,12 @@ function setup(greeting = "Hi there", business: Record<string, unknown> = {}) {
   return fetchMock;
 }
 
+const languagePicker = () => screen.findByRole("combobox", { name: "greeting.language" });
+const pickLanguage = async (code: string) => {
+  await userEvent.click(await languagePicker());
+  await userEvent.click(await screen.findByRole("option", { name: `common:callerLanguage.${code}` }));
+};
+
 const sentAgentPatch = (fetchMock: ReturnType<typeof setup>) => JSON.parse(String(fetchMock.mock.calls.find(([url]) => url === "/api/agent")?.[1]?.body));
 
 describe("onboarding greeting telemetry", () => {
@@ -48,12 +54,12 @@ describe("onboarding caller language", () => {
   it("starts in the browser's language and puts the default greeting in the language picked", async () => {
     vi.spyOn(navigator, "language", "get").mockReturnValue("pt-BR");
     const fetchMock = setup(defaultGreeting("Clinic"));
-    const select = (await screen.findByLabelText("greeting.language")) as HTMLSelectElement;
+    const select = await languagePicker();
     const textarea = screen.getByLabelText("greeting.label") as HTMLTextAreaElement;
     await waitFor(() => expect(textarea.value).toBe(defaultGreeting("Clinic", "pt")));
-    expect(select.value).toBe("pt");
+    expect(select.textContent).toContain("common:callerLanguage.pt");
 
-    await userEvent.selectOptions(select, "de");
+    await pickLanguage("de");
     expect(textarea.value).toBe(defaultGreeting("Clinic", "de"));
     await userEvent.click(screen.getByRole("button", { name: "greeting.continue" }));
     await waitFor(() => expect(navigation.push).toHaveBeenCalledWith("/onboarding/test-call"));
@@ -63,9 +69,9 @@ describe("onboarding caller language", () => {
   it("starts from the language the owner saved when they come back to the step", async () => {
     vi.spyOn(navigator, "language", "get").mockReturnValue("en-US");
     const fetchMock = setup(defaultGreeting("Clinic", "de"), { defaultLocale: "de", onboardingStage: "test_call" });
-    const select = (await screen.findByLabelText("greeting.language")) as HTMLSelectElement;
+    const select = await languagePicker();
     await waitFor(() => expect((screen.getByLabelText("greeting.label") as HTMLTextAreaElement).value).toBe(defaultGreeting("Clinic", "de")));
-    expect(select.value).toBe("de");
+    expect(select.textContent).toContain("common:callerLanguage.de");
     await userEvent.click(screen.getByRole("button", { name: "greeting.continue" }));
     await waitFor(() => expect(navigation.push).toHaveBeenCalled());
     expect(sentAgentPatch(fetchMock)).toEqual({ greeting: defaultGreeting("Clinic", "de"), locale: "de" });
@@ -74,16 +80,16 @@ describe("onboarding caller language", () => {
   it("starts in English when the browser's language isn't a caller language", async () => {
     vi.spyOn(navigator, "language", "get").mockReturnValue("ja-JP");
     setup(defaultGreeting("Clinic"));
-    const select = (await screen.findByLabelText("greeting.language")) as HTMLSelectElement;
+    const select = await languagePicker();
     await waitFor(() => expect((screen.getByLabelText("greeting.label") as HTMLTextAreaElement).value).toBe(defaultGreeting("Clinic")));
-    expect(select.value).toBe("en");
+    expect(select.textContent).toContain("common:callerLanguage.en");
   });
 
   it("keeps a greeting the owner wrote earlier when the language changes", async () => {
     setup("Welcome to Clinic!");
     const textarea = (await screen.findByLabelText("greeting.label")) as HTMLTextAreaElement;
     await waitFor(() => expect(textarea.value).toBe("Welcome to Clinic!"));
-    await userEvent.selectOptions(screen.getByLabelText("greeting.language"), "fr");
+    await pickLanguage("fr");
     expect(textarea.value).toBe("Welcome to Clinic!");
   });
 
@@ -93,7 +99,7 @@ describe("onboarding caller language", () => {
     const textarea = (await screen.findByLabelText("greeting.label")) as HTMLTextAreaElement;
     await waitFor(() => expect(textarea.value).toBe(defaultGreeting("Clinic")));
     await userEvent.type(textarea, " Hi.");
-    await userEvent.selectOptions(screen.getByLabelText("greeting.language"), "it");
+    await pickLanguage("it");
     expect(textarea.value).toBe(`${defaultGreeting("Clinic")} Hi.`);
   });
 });
