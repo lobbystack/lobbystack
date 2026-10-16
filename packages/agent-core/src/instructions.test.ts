@@ -70,6 +70,13 @@ describe("buildLiveInstructions", () => {
     expect(instructions).toContain("For one set in person, don't give or estimate an amount");
   });
 
+  it("gives a discounted price with the discount and the regular price", () => {
+    const services = [{ id: "svc-1", name: "Farbanje", durationMinutes: 120, price: { type: "fixed" as const, amountMinor: 400000, currency: "RSD", discountPercent: 12.5 } }];
+    const instructions = buildLiveInstructions({ ...demoSnapshot, services }, "voice", callStart);
+    expect(instructions).toContain("- Farbanje (120 min, RSD 3,500 after a 12.5% discount (regular RSD 4,000))");
+    expect(instructions).toContain("say it's discounted and by how much");
+  });
+
   it("keeps GPT-Live's waiting line neutral until the backend confirms an action", () => {
     const instructions = buildLiveInstructions(demoSnapshot, "voice", callStart);
     expect(instructions).toContain("say one short neutral line such as \"One moment.\"");

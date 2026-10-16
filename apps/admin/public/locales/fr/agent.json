@@ -108,7 +108,8 @@
         "from": "à partir de {{amount}}",
         "range": "{{min}} – {{max}}",
         "inPerson": "Fixé sur place",
-        "none": "Non défini"
+        "none": "Non défini",
+        "discounted": "{{price}} (−{{percent}} %)"
       },
       "duplicated": "Service dupliqué.",
       "duplicateFailed": "Impossible de dupliquer le service.",
@@ -184,8 +185,12 @@
           "errors": {
             "invalid": "Saisissez un prix, par exemple 3 500 ou 12,50.",
             "rangeIncomplete": "Saisissez le prix minimum et le prix maximum.",
-            "rangeOrder": "Le prix maximum doit être supérieur au prix minimum."
-          }
+            "rangeOrder": "Le prix maximum doit être supérieur au prix minimum.",
+            "discountInvalid": "Saisissez une remise de 0 à 100 %."
+          },
+          "discount": "Remise",
+          "discountPercent": "Pourcentage de remise",
+          "discountPreview": "Les clients paient {{price}} au lieu de {{regular}}."
         },
         "active": {
           "label": "Réservable",
