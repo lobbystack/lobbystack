@@ -88,6 +88,11 @@
     },
     "metrics": {
       "loading": "Učitavanje mesečnog poređenja...",
+      "today": {
+        "title": "Danas",
+        "next": "Sledeći u {{time}}",
+        "none": "Ništa više danas"
+      },
       "calls": {
         "title": "Pozivi"
       },
@@ -135,6 +140,7 @@
     },
     "upcoming": {
       "title": "Predstojeće",
+      "viewAll": "Prikaži sve",
       "description": "Sledeći termini u kalendaru.",
       "unknownService": "Nepoznata usluga",
       "employee": "Zaposleni: {{name}}",

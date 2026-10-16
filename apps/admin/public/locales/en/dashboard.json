@@ -88,6 +88,11 @@
     },
     "metrics": {
       "loading": "Loading monthly comparison...",
+      "today": {
+        "title": "Today",
+        "next": "Next at {{time}}",
+        "none": "Nothing else today"
+      },
       "calls": {
         "title": "Calls"
       },
@@ -135,6 +140,7 @@
     },
     "upcoming": {
       "title": "Upcoming",
+      "viewAll": "View all",
       "description": "The next appointments on the calendar.",
       "unknownService": "Unknown service",
       "employee": "Employee: {{name}}",

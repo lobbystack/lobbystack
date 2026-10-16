@@ -31,7 +31,7 @@ export function appointmentSummary(appointment: CancellableAppointment, locale: 
  * requests to cancel it. With `approve`, it reads as approving one of those
  * requests. Hidden from roles that can't cancel.
  */
-export function CancelAppointmentButton({ appointment, approve, className }: { appointment: CancellableAppointment; approve?: boolean; className?: string }) {
+export function CancelAppointmentButton({ appointment, approve, className, size = "xs", variant = "outline" }: { appointment: CancellableAppointment; approve?: boolean; className?: string; size?: "xs" | "default"; variant?: "outline" | "destructive" }) {
   const { t, i18n } = useTranslation("common");
   const queryClient = useQueryClient();
   const { business } = useActiveBusiness();
@@ -59,7 +59,7 @@ export function CancelAppointmentButton({ appointment, approve, className }: { a
   const summary = appointmentSummary(appointment, i18n.language, t);
   return (
     <>
-      <Button aria-label={approve ? undefined : t("appointments.cancel.actionLabel", { time: formatDateTime(appointment.startsAt, i18n.language, { dateStyle: "medium", timeStyle: "short", timeZone: appointment.timezone }) })} className={className} onClick={() => setOpen(true)} size="xs" variant="outline">
+      <Button aria-label={approve ? undefined : t("appointments.cancel.actionLabel", { time: formatDateTime(appointment.startsAt, i18n.language, { dateStyle: "medium", timeStyle: "short", timeZone: appointment.timezone }) })} className={className} onClick={() => setOpen(true)} size={size} variant={variant}>
         {approve ? t("appointments.cancel.approve") : t("appointments.cancel.action")}
       </Button>
       <ConfirmActionDialog

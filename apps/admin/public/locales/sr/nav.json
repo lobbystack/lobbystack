@@ -1,6 +1,10 @@
 {
   "items": {
     "home": "Početna",
+    "appointments": "Termini",
+    "newCount_one": "{{count}} nova rezervacija",
+    "newCount_few": "{{count}} nove rezervacije",
+    "newCount_other": "{{count}} novih rezervacija",
     "calls": "Pozivi",
     "messages": "Poruke",
     "agent": "Agent",

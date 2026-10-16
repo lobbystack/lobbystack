@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createInstance } from "i18next";
 import { I18nextProvider } from "react-i18next";
@@ -8,9 +9,15 @@ import en from "../../public/locales/en/common.json";
 import fr from "../../public/locales/fr/common.json";
 import { LiveAppointmentsSurface } from "./live-appointments-surface";
 
+const route = vi.hoisted(() => ({ search: "", replace: vi.fn() }));
+vi.mock("next/navigation", () => ({ usePathname: () => "/appointments", useRouter: () => ({ replace: route.replace }), useSearchParams: () => new URLSearchParams(route.search) }));
+
 const clients: QueryClient[] = [];
+beforeEach(() => { route.search = ""; route.replace.mockReset(); });
+// The details panel picks its side from the screen width.
+beforeEach(() => { vi.stubGlobal("matchMedia", vi.fn((query: string) => ({ matches: false, media: query, addEventListener: vi.fn(), removeEventListener: vi.fn() }))); });
 beforeEach(() => { vi.stubGlobal("localStorage", { getItem: () => null, setItem: vi.fn() }); });
-afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.useRealTimers(); });
 async function setup(locale: "en" | "fr", populated: boolean, role?: string) {
   vi.stubGlobal("EventSource", class { addEventListener() {} removeEventListener() {} close() {} });
   const i18n = createInstance();
@@ -26,7 +33,6 @@ describe("new appointments locale baseline", () => {
     const copy = locale === "fr" ? fr : en;
     expect(screen.getByRole("heading", { name: copy.appointments.title })).toBeTruthy();
     expect(screen.getByText(copy.appointments.empty)).toBeTruthy();
-    expect(screen.getByRole("button", { name: copy.appointments.refresh })).toBeTruthy();
   });
   it("uses the chosen French locale for dates and enum display labels", async () => {
     await setup("fr", true);
@@ -42,5 +48,89 @@ describe("new appointments locale baseline", () => {
     cleanup();
     await setup("en", true, "viewer");
     expect(screen.queryByRole("button", { name: /Cancel appointment/ })).toBeNull();
+  });
+  it("keeps the chosen view and range in the URL", async () => {
+    await setup("en", false);
+    await userEvent.click(screen.getByRole("tab", { name: en.appointments.views.calendar }));
+    expect(route.replace).toHaveBeenLastCalledWith("/appointments?view=calendar", { scroll: false });
+    cleanup();
+    route.search = "view=calendar&range=month";
+    await setup("en", false);
+    await userEvent.click(screen.getByRole("tab", { name: en.appointments.views.list }));
+    expect(route.replace).toHaveBeenLastCalledWith("/appointments?range=month", { scroll: false });
+  });
+  it("opens the calendar from the URL and shows today's appointments under it", async () => {
+    route.search = "view=calendar";
+    await setup("en", false);
+    clients[0]!.setQueryData(["appointments", "business"], { appointments: [{ id: "today", startsAt: new Date().toISOString(), endsAt: new Date(Date.now() + 45 * 60_000).toISOString(), timezone: "UTC", status: "confirmed", sourceChannel: "voice", calendarSyncState: "synced", contactName: "Rosa", serviceName: "Haircut", staffName: "Ana", employeeName: "Ana" }] });
+    expect((await screen.findAllByRole("button", { name: en.appointments.calendarView.today })).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Rosa").length).toBeGreaterThan(0);
+    expect(screen.getByText("Haircut")).toBeTruthy();
+    expect(screen.getByText("with Ana")).toBeTruthy();
+    // A confirmed booking needs no status badge.
+    expect(screen.queryByText(en.appointments.statuses.confirmed)).toBeNull();
+    // Both the phone and the desktop grid label today's cell with its booking count.
+    expect(screen.getAllByRole("gridcell", { name: /1 appointment$/ })).toHaveLength(2);
+  });
+  it("filters by the employee in the URL, keeps a new choice there, and shows everyone for an unknown one", async () => {
+    const booking = { startsAt: "2026-09-06T12:00:00Z", timezone: "UTC", status: "confirmed", sourceChannel: "voice", calendarSyncState: "synced", contactName: null, serviceName: "Haircut" };
+    const twoEmployees = [{ ...booking, id: "a", staffId: "ana", staffName: "Ana" }, { ...booking, id: "b", staffId: "ivan", staffName: "Ivan" }];
+    route.search = "employee=ana";
+    await setup("en", false);
+    clients[0]!.setQueryData(["appointments", "business"], { appointments: twoEmployees });
+    expect(await screen.findByText("Ana", { selector: "td" })).toBeTruthy();
+    expect(screen.queryByText("Ivan", { selector: "td" })).toBeNull();
+
+    await userEvent.click(screen.getByRole("combobox", { name: en.appointments.filter.label }));
+    await userEvent.click(await screen.findByRole("option", { name: "Ivan" }));
+    expect(route.replace).toHaveBeenLastCalledWith("/appointments?employee=ivan", { scroll: false });
+
+    cleanup();
+    route.search = "employee=gone";
+    await setup("en", false);
+    clients.at(-1)!.setQueryData(["appointments", "business"], { appointments: twoEmployees });
+    expect(await screen.findByText("Ana", { selector: "td" })).toBeTruthy();
+    expect(screen.getByText("Ivan", { selector: "td" })).toBeTruthy();
+  });
+  it("opens a booking's full details from its row, but not from its Cancel button", async () => {
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-09-01T00:00:00Z") });
+    await setup("en", false, "scheduler");
+    clients[0]!.setQueryData(["appointments", "business"], { appointments: [{ id: "a", startsAt: "2026-09-06T12:00:00Z", endsAt: "2026-09-06T12:45:00Z", timezone: "UTC", status: "confirmed", sourceChannel: "voice", calendarSyncState: "synced", contactName: "Rosa", contactPhone: "+14155550100", contactEmail: "rosa@example.invalid", serviceName: "Feniranje na ravno + ampula - nadogradnja", staffName: "Marija", employeeName: "Marija" }] });
+
+    await userEvent.click(await screen.findByRole("button", { name: /Cancel appointment/ }));
+    expect(screen.queryByRole("dialog", { name: "Rosa" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: en.appointments.cancel.keep }));
+
+    await userEvent.click(screen.getByRole("button", { name: "Sun, Sep 6, 12:00 PM" }));
+    const sheet = await screen.findByRole("dialog", { name: "Rosa" });
+    expect(within(sheet).getByText("Feniranje na ravno + ampula - nadogradnja")).toBeTruthy();
+    expect(within(sheet).getByText("Marija")).toBeTruthy();
+    expect(within(sheet).getByText("45 min")).toBeTruthy();
+    expect(within(sheet).getByRole("link", { name: "rosa@example.invalid" }).getAttribute("href")).toBe("mailto:rosa@example.invalid");
+    expect(within(sheet).getByRole("link", { name: /555/ }).getAttribute("href")).toBe("tel:+14155550100");
+  });
+  it("lists ended appointments under Past, without a Cancel button, and out of the upcoming count", async () => {
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-09-06T13:00:00Z") });
+    const booking = { timezone: "UTC", status: "confirmed", sourceChannel: "voice", calendarSyncState: "synced", contactName: "Rosa", serviceName: "Haircut", staffName: "Ana" };
+    const bookings = [
+      { ...booking, id: "ended", startsAt: "2026-09-06T12:00:00Z", endsAt: "2026-09-06T12:45:00Z" },
+      { ...booking, id: "next", startsAt: "2026-09-06T15:00:00Z", endsAt: "2026-09-06T15:45:00Z" },
+    ];
+    await setup("en", false, "scheduler");
+    clients[0]!.setQueryData(["appointments", "business"], { appointments: bookings });
+
+    expect(within(await screen.findByRole("row", { name: /3:00 PM/ })).getByRole("button", { name: /Cancel appointment/ })).toBeTruthy();
+    expect(screen.queryByRole("row", { name: /12:00 PM/ })).toBeNull();
+    expect(screen.getByText("Clinic · 1 upcoming appointment")).toBeTruthy();
+    await userEvent.click(screen.getByRole("tab", { name: en.appointments.when.past }));
+    expect(route.replace).toHaveBeenLastCalledWith("/appointments?when=past", { scroll: false });
+
+    cleanup();
+    route.search = "when=past";
+    await setup("en", false, "scheduler");
+    clients.at(-1)!.setQueryData(["appointments", "business"], { appointments: bookings });
+    const ended = await screen.findByRole("row", { name: /12:00 PM/ });
+    expect(within(ended).queryByRole("button", { name: /Cancel appointment/ })).toBeNull();
+    expect(screen.queryByRole("row", { name: /3:00 PM/ })).toBeNull();
   });
 });

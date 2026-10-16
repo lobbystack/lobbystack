@@ -88,6 +88,11 @@
     },
     "metrics": {
       "loading": "Cargando la comparación mensual...",
+      "today": {
+        "title": "Hoy",
+        "next": "Próxima a las {{time}}",
+        "none": "Nada más por hoy"
+      },
       "calls": {
         "title": "Llamadas"
       },
@@ -135,6 +140,7 @@
     },
     "upcoming": {
       "title": "Próximas",
+      "viewAll": "Ver todas",
       "description": "Las próximas citas del calendario.",
       "unknownService": "Servicio desconocido",
       "employee": "Empleado: {{name}}",

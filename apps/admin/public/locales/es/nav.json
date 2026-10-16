@@ -1,6 +1,10 @@
 {
   "items": {
     "home": "Inicio",
+    "appointments": "Citas",
+    "newCount_one": "{{count}} reserva nueva",
+    "newCount_many": "{{count}} reservas nuevas",
+    "newCount_other": "{{count}} reservas nuevas",
     "calls": "Llamadas",
     "messages": "Mensajes",
     "agent": "Agente",

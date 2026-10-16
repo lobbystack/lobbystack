@@ -45,7 +45,8 @@ function AlertDialogContent({
 }: AlertDialogPrimitive.Popup.Props & { onOverlayClick?: () => void }) {
   return (
     <AlertDialogPortal>
-      <AlertDialogOverlay onClick={onOverlayClick} />
+      {/* Base UI skips a nested backdrop by default; a confirmation opened from a drawer or dialog still dims it. */}
+      <AlertDialogOverlay forceRender onClick={onOverlayClick} />
       <AlertDialogPrimitive.Popup
         data-slot="alert-dialog-content"
         className={cn(

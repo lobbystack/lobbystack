@@ -27,6 +27,8 @@ import { Separator } from "@/components/ui/separator";
 import { Surface } from "@/components/ui/surface";
 import { intlLocale, formatDateTime } from "@/lib/locale";
 import { formatDuration } from "@/lib/duration";
+import { hasEnded, useAppointments } from "@/hooks/use-appointments";
+import { dayKey } from "@/lib/calendar-days";
 
 const OverviewCallChart = dynamic(() => import("./overview-call-chart").then((module) => module.OverviewCallChart), {
   loading: () => <div className="h-[350px] animate-pulse rounded-xl bg-muted" />,
@@ -66,15 +68,19 @@ export function LiveOverviewSurface() {
   const queryClient = useQueryClient();
   const summary = useQuery({ queryKey: ["dashboard"], queryFn: getSummary });
   const businessId = summary.data?.businessId;
+  const { appointments } = useAppointments();
 
   useEffect(() => {
     if (!businessId) return;
     return subscribeRealtimeQuery(queryClient, businessId, ["dashboard"], ["call.started", "call.updated", "call.completed", "message.upserted", "appointment.updated"]);
   }, [businessId, queryClient]);
 
+  const today = summary.data ? todaysAppointments(appointments.data?.appointments, summary.data.upcoming[0]?.timezone) : null;
   const metrics = summary.data ? [
     { key: "calls", value: summary.data.kpis.calls.total.toLocaleString(intlLocale(i18n.language)), description: formatDelta(summary.data.kpis.calls.deltaPercent, t) },
-    { key: "appointments", value: summary.data.kpis.appointments.total.toLocaleString(intlLocale(i18n.language)), description: formatDelta(summary.data.kpis.appointments.deltaPercent, t) },
+    today
+      ? { key: "today", value: today.count.toLocaleString(intlLocale(i18n.language)), description: today.next ? t("home.metrics.today.next", { time: formatDateTime(today.next.startsAt, i18n.language, { hour: "numeric", minute: "2-digit", timeZone: today.next.timezone }) }) : t("home.metrics.today.none") }
+      : { key: "appointments", value: summary.data.kpis.appointments.total.toLocaleString(intlLocale(i18n.language)), description: formatDelta(summary.data.kpis.appointments.deltaPercent, t) },
     { key: "averageDuration", value: formatDuration(summary.data.kpis.averageDuration.totalSeconds), description: formatDurationDelta(summary.data.kpis.averageDuration.deltaSeconds, t) },
   ] as const : [];
 
@@ -83,21 +89,6 @@ export function LiveOverviewSurface() {
       <PageHeader title={t("home.title")} />
       <div className="flex flex-col gap-6">
         <DashboardActivationCard businessId={businessId} />
-        {summary.isLoading ? <MetricCardGridSkeleton count={3} /> : (
-          <Surface className="grid sm:grid-cols-2 md:grid-cols-3">
-            {metrics.map((metric) => (
-              <section className="border-b p-5 last:border-b-0 sm:odd:border-r sm:[&:nth-last-child(-n+2)]:border-b-0 md:border-b-0 md:border-r md:last:border-r-0" key={metric.key}>
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-2">
-                    <h2 className="type-card-title text-foreground">{t(`home.metrics.${metric.key}.title`)}</h2>
-                    <p className="text-4xl font-normal tracking-normal text-foreground tabular-nums">{metric.value}</p>
-                  </div>
-                  <p className="type-meta">{metric.description}</p>
-                </div>
-              </section>
-            ))}
-          </Surface>
-        )}
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
           <section className="animate-in fade-in slide-in-from-bottom-2 duration-200 flex flex-col gap-3 xl:h-full">
             <div className="flex items-center justify-between gap-4 px-1"><h2 className="type-section-title">{t("home.actionRequired.title")}</h2>{summary.isLoading ? <Skeleton className="h-6 w-12 rounded-full" /> : <Badge variant="outline">{(summary.data?.actionRequired.length ?? 0).toLocaleString(intlLocale(i18n.language))}</Badge>}</div>
@@ -193,8 +184,8 @@ export function LiveOverviewSurface() {
                 </CardContent>
               </Card> : <div className="rounded-xl border border-dashed p-12 text-center xl:flex xl:flex-1 xl:flex-col xl:items-center xl:justify-center"><p className="type-empty-title">{t("home.actionRequired.emptyTitle")}</p><p className="type-empty-description mt-2">{t("home.actionRequired.emptyDescription")}</p></div>}
           </section>
-          <section className="animate-in fade-in slide-in-from-bottom-2 duration-200 flex flex-col gap-3 xl:h-full">
-            <div className="flex items-center justify-between gap-4 px-1"><h2 className="type-section-title">{t("home.upcoming.title")}</h2>{summary.isLoading ? <Skeleton className="h-6 w-12 rounded-full" /> : <Badge variant="outline">{(summary.data?.upcoming.length ?? 0).toLocaleString(intlLocale(i18n.language))}</Badge>}</div>
+          <section className="animate-in fade-in slide-in-from-bottom-2 duration-200 order-first flex flex-col gap-3 xl:h-full">
+            <div className="flex items-center justify-between gap-4 px-1"><div className="flex items-center gap-3"><h2 className="type-section-title">{t("home.upcoming.title")}</h2><Link className="text-sm text-muted-foreground transition-colors hover:text-foreground" href="/appointments">{t("home.upcoming.viewAll")}</Link></div>{summary.isLoading ? <Skeleton className="h-6 w-12 rounded-full" /> : <Badge variant="outline">{(summary.data?.upcoming.length ?? 0).toLocaleString(intlLocale(i18n.language))}</Badge>}</div>
             {summary.isLoading ? <UpcomingSkeleton /> : summary.data?.upcoming.length ? (
               <Card className="ph-mask border-border/70"><CardContent className="flex flex-col gap-4">
                 {summary.data.upcoming.map((appointment, index) => {
@@ -215,6 +206,21 @@ export function LiveOverviewSurface() {
             ) : <div className="rounded-xl border border-dashed p-12 text-center xl:flex xl:flex-1 xl:flex-col xl:items-center xl:justify-center"><p className="type-empty-title">{t("home.upcoming.emptyTitle")}</p><p className="type-empty-description mt-2">{t("home.upcoming.emptyDescription")}</p></div>}
           </section>
         </div>
+        {summary.isLoading ? <MetricCardGridSkeleton count={3} /> : (
+          <Surface className="grid sm:grid-cols-2 md:grid-cols-3">
+            {metrics.map((metric) => (
+              <section className="border-b p-5 last:border-b-0 sm:odd:border-r sm:[&:nth-last-child(-n+2)]:border-b-0 md:border-b-0 md:border-r md:last:border-r-0" key={metric.key}>
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-2">
+                    <h2 className="type-card-title text-foreground">{t(`home.metrics.${metric.key}.title`)}</h2>
+                    <p className="text-4xl font-normal tracking-normal text-foreground tabular-nums">{metric.value}</p>
+                  </div>
+                  <p className="type-meta">{metric.description}</p>
+                </div>
+              </section>
+            ))}
+          </Surface>
+        )}
         {summary.isLoading ? <OverviewChartSkeleton /> : <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
           <Card className="col-span-1 lg:col-span-4"><CardHeader><CardTitle>{t("home.chart.title")}</CardTitle></CardHeader><CardContent className="ps-2"><OverviewCallChart data={(summary.data?.monthlyCalls ?? []).map((item) => ({ name: formatDateTime(item.monthStart, i18n.language, { month: "short", timeZone: "UTC" }), total: item.total }))} /></CardContent></Card>
           <Card className="ph-mask col-span-1 lg:col-span-3"><CardHeader><CardTitle>{t("home.recentCalls.title")}</CardTitle><CardDescription>{t("home.recentCalls.description", { count: summary.data?.recentCalls.length ?? 0 })}</CardDescription></CardHeader><CardContent><div className="flex flex-col gap-6">{(summary.data?.recentCalls ?? []).map((call) => <div className="flex items-center gap-4" key={call.id}><Avatar className="h-9 w-9"><AvatarFallback>{initials(call.contactName)}</AvatarFallback></Avatar><div className="flex flex-1 flex-wrap items-center justify-between"><div className="flex flex-col gap-1"><p className="type-item-title leading-none">{getContactDisplayName({ name: call.contactName, phone: call.contactPhone, email: call.contactEmail, channels: [call.transport] }, i18n.language, t)}</p><p className="type-body-muted">{call.contactName && hasDisplayablePhone(call.contactPhone) ? formatPhoneNumberDisplay(call.contactPhone, i18n.language) : formatDateTime(call.startedAt, i18n.language, { dateStyle: "medium", timeStyle: "short" })}</p></div><div className="type-item-title">{call.durationSeconds ? t("home.recentCalls.durationValue", { value: call.durationSeconds }) : call.status}</div></div></div>)}</div></CardContent></Card>
@@ -222,6 +228,16 @@ export function LiveOverviewSurface() {
       </div>
     </div>
   );
+}
+
+/** Appointments still to come today in the business's time zone, and the next one; null until the list loads. */
+function todaysAppointments(rows: Array<{ startsAt: string; endsAt: string; timezone: string; status: string }> | undefined, fallbackTimeZone: string | undefined): { count: number; next: { startsAt: string; timezone: string } | undefined } | null {
+  if (!rows) return null;
+  const now = Date.now();
+  const timeZone = rows[0]?.timezone ?? fallbackTimeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const today = dayKey(new Date(now), timeZone);
+  const todays = rows.filter((row) => row.status !== "canceled" && !hasEnded(row, now) && dayKey(row.startsAt, timeZone) === today);
+  return { count: todays.length, next: todays.find((row) => Date.parse(row.startsAt) > now) };
 }
 
 function formatDelta(value: number, t: ReturnType<typeof useTranslation<"dashboard">>["t"]): string {

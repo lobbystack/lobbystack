@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { BookTextIcon } from "@/components/ui/book-text";
 import { BlocksIcon } from "@/components/ui/blocks";
+import { CalendarDaysIcon } from "@/components/ui/calendar-days";
 import { ChartColumnIncreasingIcon } from "@/components/ui/chart-column-increasing";
 import { ClipboardCheckIcon } from "@/components/ui/clipboard-check";
 import { HomeIcon } from "@/components/ui/home";
@@ -19,6 +20,8 @@ import { SettingsIcon } from "@/components/ui/settings";
 import { UsersIcon } from "@/components/ui/users";
 import { WorkflowIcon } from "@/components/ui/workflow";
 import { useActiveBusiness } from "@/hooks/use-active-business";
+import { useAppointments } from "@/hooks/use-appointments";
+import { useNewAppointmentCount } from "@/lib/appointments-seen";
 import { useSignOut } from "@/hooks/use-sign-out";
 import { WorkspaceSwitcher } from "@/components/layout/workspace-switcher";
 import { Main } from "@/components/layout/main";
@@ -59,6 +62,8 @@ type NavigationItem = {
   href: string;
   label: string;
   icon: typeof HomeIcon;
+  /** A count of new things behind the link, such as new bookings. */
+  badge?: number;
 };
 
 function getSidebarDefaultOpen(): boolean {
@@ -124,8 +129,11 @@ function ReplacementSidebar({ user }: Pick<DashboardShellProps, "user">) {
   const pathname = usePathname();
   const { isMobile, setOpenMobile } = useSidebar();
   const { t } = useTranslation(["nav", "settings", "agent"]);
+  const { business, appointments } = useAppointments();
+  const newAppointments = useNewAppointmentCount(business?.businessId, appointments.data?.appointments ?? []);
   const general: NavigationItem[] = [
     { label: t("nav:items.home"), href: "/", icon: HomeIcon },
+    { label: t("nav:items.appointments"), href: "/appointments", icon: CalendarDaysIcon as typeof HomeIcon, badge: newAppointments },
     { label: t("nav:items.calls"), href: "/calls", icon: PhoneAnimatedIcon },
     ...(["/messages", "/settings/widget"].some(route => pathname === route || pathname.startsWith(`${route}/`)) ? [{ label: t("nav:items.messages"), href: "/messages", icon: MessageSquareMoreIcon }] : []),
     { label: t("nav:items.contacts"), href: "/contacts", icon: UsersIcon },
@@ -174,6 +182,7 @@ function AnimatedNavigationIcon({ icon: Icon, hovered }: { icon: typeof HomeIcon
 
 function NavigationGroup({ items, pathname, title }: { items: NavigationItem[]; pathname: string; title: string }) {
   const router = useRouter();
+  const { t } = useTranslation("nav");
   const { isMobile, setOpenMobile } = useSidebar();
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   return (
@@ -189,6 +198,7 @@ function NavigationGroup({ items, pathname, title }: { items: NavigationItem[]; 
           return (
             <SidebarMenuItem key={item.href}>
               <SidebarMenuButton
+                className="relative"
                 onMouseEnter={() => setHoveredItem(item.href)}
                 onMouseLeave={() => setHoveredItem(null)}
                 onFocus={() => setHoveredItem(item.href)}
@@ -200,6 +210,12 @@ function NavigationGroup({ items, pathname, title }: { items: NavigationItem[]; 
               >
                 <AnimatedNavigationIcon icon={item.icon} hovered={hoveredItem === item.href} />
                 <span>{item.label}</span>
+                {item.badge ? <>
+                  <span aria-hidden="true" className="ml-auto min-w-5 rounded-full bg-primary px-1.5 py-0.5 text-center text-[11px] leading-none font-medium text-primary-foreground tabular-nums group-data-[collapsible=icon]:hidden">{item.badge > 99 ? "99+" : item.badge}</span>
+                  {/* With the sidebar collapsed to icons, a dot stands in for the number. */}
+                  <span aria-hidden="true" className="absolute top-1 right-1 hidden size-2 rounded-full bg-primary group-data-[collapsible=icon]:block" />
+                  <span className="sr-only">{t("items.newCount", { count: item.badge })}</span>
+                </> : null}
               </SidebarMenuButton>
             </SidebarMenuItem>
           );
