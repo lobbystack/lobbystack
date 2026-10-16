@@ -2,10 +2,9 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
-const DATA_TABLE_ROW_ACTIONS_COLGROUP_CLASS = "w-[8%]";
-// Below xl the table scrolls sideways, so the actions stay pinned to the right edge where people can reach them.
-const DATA_TABLE_ROW_ACTIONS_CELL_CLASS = "w-16 text-right max-xl:sticky max-xl:right-0 max-xl:bg-card";
-const DATA_TABLE_ROW_TRAILING_VALUE_OFFSET_CLASS = "translate-x-12";
+// Same as the services and rules tables: a narrow column that scrolls with the rest.
+const DATA_TABLE_ROW_ACTIONS_COLGROUP_CLASS = "w-12";
+const DATA_TABLE_ROW_ACTIONS_CELL_CLASS = "text-right";
 
 function DataTableRowActions({
   children,
@@ -16,7 +15,7 @@ function DataTableRowActions({
 }) {
   return (
     <div
-      className={cn("flex w-16 justify-end pr-0", className)}
+      className={cn("flex justify-end", className)}
       data-slot="data-table-row-actions"
     >
       {children}
@@ -27,6 +26,5 @@ function DataTableRowActions({
 export {
   DATA_TABLE_ROW_ACTIONS_CELL_CLASS,
   DATA_TABLE_ROW_ACTIONS_COLGROUP_CLASS,
-  DATA_TABLE_ROW_TRAILING_VALUE_OFFSET_CLASS,
   DataTableRowActions,
 };
