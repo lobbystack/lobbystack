@@ -140,11 +140,44 @@
   },
   "appointments": {
     "title": "Rendez-vous",
+    "details": {
+      "employee": "Employé",
+      "duration": "Durée",
+      "phone": "Téléphone",
+      "email": "E-mail",
+      "channel": "Réservé via"
+    },
+    "views": {
+      "list": "Liste",
+      "calendar": "Calendrier"
+    },
+    "when": {
+      "label": "Afficher",
+      "upcoming": "À venir",
+      "past": "Passés",
+      "pastEmpty": "Aucun rendez-vous passé au cours du dernier mois."
+    },
+    "filter": {
+      "label": "Employé",
+      "all": "Tous les employés"
+    },
+    "calendarView": {
+      "previous": "Précédent",
+      "next": "Suivant",
+      "today": "Aujourd'hui",
+      "week": "Semaine",
+      "month": "Mois",
+      "count_one": "{{count}} rendez-vous",
+      "count_many": "{{count}} rendez-vous",
+      "count_other": "{{count}} rendez-vous",
+      "more": "+{{count}} de plus",
+      "dayEmpty": "Aucun rendez-vous ce jour-là.",
+      "with": "avec {{name}}"
+    },
     "summary_one": "{{name}} · {{count}} rendez-vous à venir",
     "summary_many": "{{name}} · {{count}} rendez-vous à venir",
     "summary_other": "{{name}} · {{count}} rendez-vous à venir",
     "chooseWorkspace": "Choisissez un espace pour consulter les rendez-vous.",
-    "refresh": "Actualiser",
     "time": "Heure",
     "customer": "Client",
     "service": "Service",
@@ -177,8 +210,8 @@
       "title": "Annuler ce rendez-vous ?",
       "description": "{{appointment}}. Nous le retirerons de votre calendrier connecté et n’enverrons pas son rappel.",
       "requestDescription": "{{appointment}}. Nous le retirerons de votre calendrier connecté, n’enverrons pas son rappel et fermerons la demande.",
-      "confirm": "Annuler le rendez-vous",
-      "keep": "Garder le rendez-vous",
+      "confirm": "Annuler",
+      "keep": "Garder",
       "done": "Rendez-vous annulé",
       "failed": "Nous n’avons pas pu annuler le rendez-vous. Réessayez.",
       "summary": "{{service}} pour {{name}} le {{time}}",

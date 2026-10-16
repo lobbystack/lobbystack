@@ -108,7 +108,8 @@
         "from": "from {{amount}}",
         "range": "{{min}} – {{max}}",
         "inPerson": "Set in person",
-        "none": "Not set"
+        "none": "Not set",
+        "discounted": "{{price}} (−{{percent}}%)"
       },
       "duplicated": "Service duplicated.",
       "duplicateFailed": "Couldn't duplicate the service.",
@@ -184,8 +185,12 @@
           "errors": {
             "invalid": "Enter a price, such as 3,500 or 12.50.",
             "rangeIncomplete": "Enter both the lowest and the highest price.",
-            "rangeOrder": "The highest price must be more than the lowest."
-          }
+            "rangeOrder": "The highest price must be more than the lowest.",
+            "discountInvalid": "Enter a discount from 0 to 100%."
+          },
+          "discount": "Discount",
+          "discountPercent": "Discount percentage",
+          "discountPreview": "Customers pay {{price}} instead of {{regular}}."
         },
         "active": {
           "label": "Bookable",

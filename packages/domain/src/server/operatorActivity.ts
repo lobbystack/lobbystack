@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, lt, ne, sql } from "drizzle-orm";
 
 import { appointments, calls, contacts, services, staff, type DatabaseTransaction } from "@lobbystack/db";
 
@@ -41,9 +41,17 @@ export async function listUpcomingAppointments(tx: DatabaseTransaction, business
   }).from(appointments).leftJoin(contacts, eq(appointments.contactId, contacts.id)).leftJoin(services, eq(appointments.serviceId, services.id)).leftJoin(staff, eq(appointments.staffId, staff.id)).where(and(eq(appointments.businessId, businessId), ne(appointments.status, "canceled"), gte(appointments.startsAt, from))).orderBy(appointments.startsAt).limit(limit);
 }
 
-/** Appointments that have not ended by `now` and aren't cancelled, for the appointments page. */
+/** How far back the appointments page keeps showing appointments that have ended. */
+export const PAST_APPOINTMENT_DAYS = 31;
+
+/**
+ * Appointments that aren't cancelled for the appointments page: those that
+ * haven't ended by `now`, preceded by those that ended in the last
+ * `PAST_APPOINTMENT_DAYS` days. Each side has its own `limit`, so a busy past
+ * never crowds out what's coming.
+ */
 export async function listCurrentAppointments(tx: DatabaseTransaction, businessId: string, now: Date, limit = 100) {
-  return await tx.select({
+  const select = () => tx.select({
     id: appointments.id,
     startsAt: appointments.startsAt,
     endsAt: appointments.endsAt,
@@ -51,17 +59,28 @@ export async function listCurrentAppointments(tx: DatabaseTransaction, businessI
     status: appointments.status,
     sourceChannel: appointments.sourceChannel,
     calendarSyncState: appointments.calendarSyncState,
+    createdAt: appointments.createdAt,
+    staffId: appointments.staffId,
     contactName: contacts.name,
     contactPhone: contacts.phone,
     contactEmail: contacts.email,
     serviceName: services.name,
     staffName: staff.name,
+    employeeName: sql<string | null>`case when ${staff.isEmployee} then ${staff.name} end`,
   })
     .from(appointments)
     .innerJoin(contacts, eq(contacts.id, appointments.contactId))
     .innerJoin(services, eq(services.id, appointments.serviceId))
-    .innerJoin(staff, eq(staff.id, appointments.staffId))
-    .where(and(eq(appointments.businessId, businessId), ne(appointments.status, "canceled"), gte(appointments.endsAt, now)))
+    .innerJoin(staff, eq(staff.id, appointments.staffId));
+  const active = and(eq(appointments.businessId, businessId), ne(appointments.status, "canceled"));
+  const pastFrom = new Date(now.getTime() - PAST_APPOINTMENT_DAYS * 24 * 60 * 60 * 1000);
+  const past = await select()
+    .where(and(active, lt(appointments.endsAt, now), gte(appointments.endsAt, pastFrom)))
+    .orderBy(desc(appointments.startsAt))
+    .limit(limit);
+  const current = await select()
+    .where(and(active, gte(appointments.endsAt, now)))
     .orderBy(asc(appointments.startsAt))
     .limit(limit);
+  return [...past.reverse(), ...current];
 }

@@ -133,10 +133,42 @@
   },
   "appointments": {
     "title": "Appointments",
+    "details": {
+      "employee": "Employee",
+      "duration": "Duration",
+      "phone": "Phone",
+      "email": "Email",
+      "channel": "Booked via"
+    },
+    "views": {
+      "list": "List",
+      "calendar": "Calendar"
+    },
+    "when": {
+      "label": "Show",
+      "upcoming": "Upcoming",
+      "past": "Past",
+      "pastEmpty": "No past appointments in the last month."
+    },
+    "filter": {
+      "label": "Employee",
+      "all": "All employees"
+    },
+    "calendarView": {
+      "previous": "Previous",
+      "next": "Next",
+      "today": "Today",
+      "week": "Week",
+      "month": "Month",
+      "count_one": "{{count}} appointment",
+      "count_other": "{{count}} appointments",
+      "more": "+{{count}} more",
+      "dayEmpty": "No appointments on this day.",
+      "with": "with {{name}}"
+    },
     "summary_one": "{{name}} · {{count}} upcoming appointment",
     "summary_other": "{{name}} · {{count}} upcoming appointments",
     "chooseWorkspace": "Choose a workspace to view appointments.",
-    "refresh": "Refresh",
     "time": "Time",
     "customer": "Customer",
     "service": "Service",
@@ -169,8 +201,8 @@
       "title": "Cancel this appointment?",
       "description": "{{appointment}}. We'll remove it from your connected calendar and skip its reminder.",
       "requestDescription": "{{appointment}}. We'll remove it from your connected calendar, skip its reminder and close the request.",
-      "confirm": "Cancel appointment",
-      "keep": "Keep appointment",
+      "confirm": "Cancel",
+      "keep": "Keep",
       "done": "Appointment cancelled",
       "failed": "We couldn't cancel the appointment. Try again.",
       "summary": "{{service}} for {{name}} on {{time}}",

@@ -43,7 +43,7 @@ describe("dashboard voice follow-up parity", () => {
   });
   it("keeps a retained follow-up readable when its related call is absent", async () => {
     await setup("en", null);
-    expect(screen.queryByRole("link")).toBeNull();
+    expect(screen.getAllByRole("link").map(link => link.getAttribute("href"))).toEqual(["/appointments"]);
     expect(screen.getByText(/Please call back.*Alex/)).toBeTruthy();
   });
 });

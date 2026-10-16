@@ -140,11 +140,44 @@
   },
   "appointments": {
     "title": "Termini",
+    "details": {
+      "employee": "Zaposleni",
+      "duration": "Trajanje",
+      "phone": "Telefon",
+      "email": "E-pošta",
+      "channel": "Zakazano putem"
+    },
+    "views": {
+      "list": "Lista",
+      "calendar": "Kalendar"
+    },
+    "when": {
+      "label": "Prikaz",
+      "upcoming": "Predstojeći",
+      "past": "Prošli",
+      "pastEmpty": "Nema prošlih termina u poslednjih mesec dana."
+    },
+    "filter": {
+      "label": "Zaposleni",
+      "all": "Svi zaposleni"
+    },
+    "calendarView": {
+      "previous": "Prethodno",
+      "next": "Sledeće",
+      "today": "Danas",
+      "week": "Nedelja",
+      "month": "Mesec",
+      "count_one": "{{count}} termin",
+      "count_few": "{{count}} termina",
+      "count_other": "{{count}} termina",
+      "more": "+{{count}} još",
+      "dayEmpty": "Nema termina za ovaj dan.",
+      "with": "Zaposleni: {{name}}"
+    },
     "summary_one": "{{name}} · {{count}} predstojeći termin",
     "summary_few": "{{name}} · {{count}} predstojeća termina",
     "summary_other": "{{name}} · {{count}} predstojećih termina",
     "chooseWorkspace": "Izaberite radni prostor da biste videli termine.",
-    "refresh": "Osveži",
     "time": "Vreme",
     "customer": "Klijent",
     "service": "Usluga",
@@ -177,8 +210,8 @@
       "title": "Otkazati ovaj termin?",
       "description": "{{appointment}}. Uklonićemo ga iz povezanog kalendara i nećemo poslati podsetnik.",
       "requestDescription": "{{appointment}}. Uklonićemo ga iz povezanog kalendara, nećemo poslati podsetnik i zatvorićemo zahtev.",
-      "confirm": "Otkaži termin",
-      "keep": "Zadrži termin",
+      "confirm": "Otkaži",
+      "keep": "Zadrži",
       "done": "Termin je otkazan",
       "failed": "Nismo uspeli da otkažemo termin. Pokušajte ponovo.",
       "summary": "{{service}} za {{name}}, {{time}}",

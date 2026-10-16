@@ -138,6 +138,8 @@
 
   body {
     @apply min-h-svh w-full antialiased bg-background text-foreground;
+    /* iOS Safari positions the drawer overlay absolutely; it needs a positioned body to cover the scrolled viewport. */
+    position: relative;
   }
 
   #root {

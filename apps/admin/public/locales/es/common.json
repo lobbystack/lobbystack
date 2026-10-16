@@ -134,11 +134,44 @@
   },
   "appointments": {
     "title": "Citas",
+    "details": {
+      "employee": "Empleado",
+      "duration": "Duración",
+      "phone": "Teléfono",
+      "email": "Correo electrónico",
+      "channel": "Reservado por"
+    },
+    "views": {
+      "list": "Lista",
+      "calendar": "Calendario"
+    },
+    "when": {
+      "label": "Mostrar",
+      "upcoming": "Próximas",
+      "past": "Pasadas",
+      "pastEmpty": "No hay citas pasadas en el último mes."
+    },
+    "filter": {
+      "label": "Empleado",
+      "all": "Todos los empleados"
+    },
+    "calendarView": {
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "today": "Hoy",
+      "week": "Semana",
+      "month": "Mes",
+      "count_one": "{{count}} cita",
+      "count_many": "{{count}} citas",
+      "count_other": "{{count}} citas",
+      "more": "+{{count}} más",
+      "dayEmpty": "No hay citas este día.",
+      "with": "con {{name}}"
+    },
     "summary_one": "{{name}} · {{count}} cita próxima",
     "summary_many": "{{name}} · {{count}} citas próximas",
     "summary_other": "{{name}} · {{count}} citas próximas",
     "chooseWorkspace": "Elija un espacio de trabajo para ver las citas.",
-    "refresh": "Actualizar",
     "time": "Hora",
     "customer": "Cliente",
     "service": "Servicio",
@@ -171,8 +204,8 @@
       "title": "¿Cancelar esta cita?",
       "description": "{{appointment}}. La quitaremos de su calendario conectado y no enviaremos su recordatorio.",
       "requestDescription": "{{appointment}}. La quitaremos de su calendario conectado, no enviaremos su recordatorio y cerraremos la solicitud.",
-      "confirm": "Cancelar la cita",
-      "keep": "Mantener la cita",
+      "confirm": "Cancelar",
+      "keep": "Mantener",
       "done": "Cita cancelada",
       "failed": "No pudimos cancelar la cita. Inténtelo de nuevo.",
       "summary": "{{service}} para {{name}} el {{time}}",

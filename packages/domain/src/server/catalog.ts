@@ -4,7 +4,7 @@ import { enqueueOutbox, withBusinessTransaction, type DatabaseTransaction } from
 import { agentRules, businesses, businessHours, closures, phoneNumbers, receptionistProfiles, services, staff, staffServiceAssignments } from "@lobbystack/db";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
-import { servicePriceTypes, type ServicePriceType } from "@lobbystack/shared";
+import { isDiscountPercent, servicePriceTypes, type ServicePriceType } from "@lobbystack/shared";
 import { normalizeClosures, normalizeHoursWindows, sameHoursWindows } from "../hours";
 import { writeBusinessHoursInTransaction } from "./businessHours";
 import type { DomainContext } from "./context";
@@ -43,7 +43,7 @@ export async function listCatalog(
  * clears them). A range's upper bound must be above its lower one. Fields left
  * out aren't checked.
  */
-function assertServiceFields(input: { name?: string | undefined; slug?: string | undefined; durationMinutes?: number | undefined; description?: string | null | undefined; active?: boolean | undefined; priceType?: ServicePriceType | undefined; priceMinor?: number | null | undefined; priceMaxMinor?: number | null | undefined }): void {
+function assertServiceFields(input: { name?: string | undefined; slug?: string | undefined; durationMinutes?: number | undefined; description?: string | null | undefined; active?: boolean | undefined; priceType?: ServicePriceType | undefined; priceMinor?: number | null | undefined; priceMaxMinor?: number | null | undefined; discountPercent?: number | undefined }): void {
   const invalid = (field: string) => Object.assign(new Error(`${field} is invalid.`), { status: 400 });
   const text = (value: unknown, maxLength: number) => typeof value === "string" && value.trim().length > 0 && value.trim().length <= maxLength;
   const amount = (value: number) => Number.isSafeInteger(value) && value >= 0 && value <= 1_000_000_000_000;
@@ -55,21 +55,23 @@ function assertServiceFields(input: { name?: string | undefined; slug?: string |
   if (input.priceType !== undefined && !(servicePriceTypes as readonly unknown[]).includes(input.priceType)) throw invalid("priceType");
   if (input.priceMinor != null && !amount(input.priceMinor)) throw invalid("priceMinor");
   if (input.priceMaxMinor != null && !(amount(input.priceMaxMinor) && (input.priceMinor == null || input.priceMaxMinor > input.priceMinor))) throw invalid("priceMaxMinor");
+  if (input.discountPercent !== undefined && !isDiscountPercent(input.discountPercent)) throw invalid("discountPercent");
 }
 
-// Only a range keeps an upper bound, and a price set in person keeps no amount.
-function priceColumns(input: { priceType?: ServicePriceType | undefined; priceMinor?: number | null | undefined; priceMaxMinor?: number | null | undefined }) {
-  if (input.priceType === undefined) return {};
+// Only a range keeps an upper bound, and a price set in person keeps no amount or discount.
+function priceColumns(input: { priceType?: ServicePriceType | undefined; priceMinor?: number | null | undefined; priceMaxMinor?: number | null | undefined; discountPercent?: number | undefined }) {
+  if (input.priceType === undefined) return input.discountPercent === undefined ? {} : { discountPercent: input.discountPercent };
   return {
     priceType: input.priceType,
     priceMinor: input.priceType === "in_person" ? null : input.priceMinor ?? null,
     priceMaxMinor: input.priceType === "range" ? input.priceMaxMinor ?? null : null,
+    ...(input.priceType === "in_person" ? { discountPercent: 0 } : input.discountPercent === undefined ? {} : { discountPercent: input.discountPercent }),
   };
 }
 
 export async function createService(
   context: DomainContext,
-  input: { userId: string; businessId: string; name: string; slug: string; durationMinutes: number; description?: string; active?: boolean; priceType?: ServicePriceType; priceMinor?: number | null; priceMaxMinor?: number | null },
+  input: { userId: string; businessId: string; name: string; slug: string; durationMinutes: number; description?: string; active?: boolean; priceType?: ServicePriceType; priceMinor?: number | null; priceMaxMinor?: number | null; discountPercent?: number },
 ): Promise<string> {
   assertServiceFields(input);
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
@@ -100,7 +102,7 @@ export async function createService(
 
 export async function updateService(
   context: DomainContext,
-  input: { userId: string; businessId: string; serviceId: string; name?: string; slug?: string; durationMinutes?: number; description?: string | null; active?: boolean; priceType?: ServicePriceType; priceMinor?: number | null; priceMaxMinor?: number | null },
+  input: { userId: string; businessId: string; serviceId: string; name?: string; slug?: string; durationMinutes?: number; description?: string | null; active?: boolean; priceType?: ServicePriceType; priceMinor?: number | null; priceMaxMinor?: number | null; discountPercent?: number },
 ): Promise<void> {
   assertServiceFields(input);
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
