@@ -28,8 +28,9 @@ export class PolarBillingProvider {
     await this.request("/v1/events/ingest", { method: "POST", body: JSON.stringify({ events: [{ name: input.eventName, external_customer_id: input.externalCustomerId, external_id: input.idempotencyKey, timestamp: input.timestamp, metadata: { quantity: input.quantity, businessId: input.businessId, usageKind: input.usageKind } }] }) });
   }
 
-  async createCustomerPortalSession(input: { externalCustomerId: string; returnUrl: string }): Promise<{ url: string }> {
-    const result = await this.request<{ customer_portal_url: string }>("/v1/customer-sessions/", { method: "POST", body: JSON.stringify({ external_customer_id: input.externalCustomerId, return_url: input.returnUrl }) });
+  // Polar's own customer ID, because an account migrated from Convex can carry a different external ID.
+  async createCustomerPortalSession(input: { customerId: string; returnUrl: string }): Promise<{ url: string }> {
+    const result = await this.request<{ customer_portal_url: string }>("/v1/customer-sessions/", { method: "POST", body: JSON.stringify({ customer_id: input.customerId, return_url: input.returnUrl }) });
     return { url: result.customer_portal_url };
   }
 

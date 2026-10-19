@@ -27,7 +27,7 @@ describe("billing portal route", () => {
     const response = await POST(new Request("http://localhost:3000/api/billing/portal?businessId=business", { method: "POST" }));
     expect(response.status).toBe(200);
     expect(fakeOperator.transactions).toEqual([{ minimumRole: "business_admin" }]);
-    expect(fixture.portal).toHaveBeenCalledWith({ externalCustomerId: "tenant-billing-key", returnUrl: "http://localhost:3000/settings/plan" });
+    expect(fixture.portal).toHaveBeenCalledWith({ customerId: "customer", returnUrl: "http://localhost:3000/settings/plan" });
   });
   it("rejects a customer without billing history before calling the provider", async () => {
     fixture.account = null;
