@@ -30,7 +30,10 @@ export class PolarBillingProvider {
 
   // Polar's own customer ID, because an account migrated from Convex can carry a different external ID.
   async createCustomerPortalSession(input: { customerId: string; returnUrl: string }): Promise<{ url: string }> {
-    const result = await this.request<{ customer_portal_url: string }>("/v1/customer-sessions/", { method: "POST", body: JSON.stringify({ customer_id: input.customerId, return_url: input.returnUrl }) });
+    // Polar requires a member for team customers, which every account migrated from Convex is; the owner manages billing.
+    const owners = await this.request<{ items: Array<{ id: string }> }>(`/v1/customers/${encodeURIComponent(input.customerId)}/members?role=owner&limit=1`);
+    const memberId = owners.items[0]?.id;
+    const result = await this.request<{ customer_portal_url: string }>("/v1/customer-sessions/", { method: "POST", body: JSON.stringify({ customer_id: input.customerId, ...(memberId ? { member_id: memberId } : {}), return_url: input.returnUrl }) });
     return { url: result.customer_portal_url };
   }
 
