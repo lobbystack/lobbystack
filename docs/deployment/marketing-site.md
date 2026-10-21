@@ -86,6 +86,74 @@ node apps/admin/scripts/marketing/parity.mjs \
 
 The script compares status, title, description, canonical URL, robots, Open Graph and hreflang tags, JSON-LD types, headings and the text of `<main>`. On the first run, 278 of 288 pages matched. The 10 trade solution pages differ by one space that the Astro build dropped in "a plumbing business".
 
+## Cache pages at Cloudflare's edge
+
+The server runs in Virginia. Without a cache, a visitor in Frankfurt waits on a round trip across the Atlantic for every page. A Cache Rule on the `lobbystack.com` zone lets Cloudflare answer from the data center nearest the visitor.
+
+The proxy adds `Cloudflare-CDN-Cache-Control: max-age=300, stale-while-revalidate=86400` to every page, Markdown twin and generated file. Cloudflare reads that header and removes it before the response leaves its network. It treats a page as fresh for five minutes. After that, it serves the cached copy for up to a day while it fetches a new one in the background. Browsers still get `Cache-Control: public, max-age=0, must-revalidate`, so they check with Cloudflare on every visit.
+
+Cloudflare keeps one copy of each URL, but two kinds of request can get a different response for the same URL. English pages send French, Spanish and Serbian visitors to their language, and `/` and `/fr/` answer `Accept: text/markdown` with Markdown. Next.js replaces the `Vary` header on page responses, so Cloudflare can't tell those responses apart by itself. The rule uses the cache only for requests that would get the same response as anyone else:
+
+- Requests for paths under `/fr/`, `/es/` and `/sr/`.
+- Requests for other paths that carry no `lobbystack.locale` cookie and whose `Accept-Language` header names no French, Spanish or Serbian.
+
+Requests that accept `text/markdown` skip the cache on every path. The server answers each skipped request as it did before the rule.
+
+### Create the Cache Rule
+
+In the Cloudflare dashboard, open the `lobbystack.com` zone, go to **Caching > Cache Rules**, and create a rule with this expression:
+
+```text
+(http.host in {"lobbystack.com" "www.lobbystack.com"})
+and not any(lower(http.request.headers["accept"][*])[*] contains "text/markdown")
+and (
+  starts_with(http.request.uri.path, "/fr/")
+  or starts_with(http.request.uri.path, "/es/")
+  or starts_with(http.request.uri.path, "/sr/")
+  or (
+    not http.cookie contains "lobbystack.locale="
+    and not any(lower(http.request.headers["accept-language"][*])[*] contains "fr")
+    and not any(lower(http.request.headers["accept-language"][*])[*] contains "es")
+    and not any(lower(http.request.headers["accept-language"][*])[*] contains "sr")
+  )
+)
+```
+
+Give the rule these settings:
+
+- **Cache eligibility:** Eligible for cache.
+- **Edge TTL:** Use cache-control header if present, bypass cache if not.
+- **Browser TTL:** Respect origin TTL. The zone's Browser Cache TTL of 4 hours otherwise replaces the pages' `max-age=0`, and a visitor who picks a language in the switcher keeps getting the old page from their browser.
+
+On staging, list only `staging-www.lobbystack.com` in the first line of the expression. Add the production hosts when you move production.
+
+### Purge the cache after each release
+
+Purge `lobbystack.com` and `www.lobbystack.com` once the new admin container serves traffic. When a release changes the site's scripts, their file names change too. Until you purge, Cloudflare serves the old pages for about five minutes, and those pages ask for scripts the new server doesn't have.
+
+The purge needs an API token with the **Zone > Cache Purge** permission for the `lobbystack.com` zone:
+
+```bash
+curl -X POST "https://api.cloudflare.com/client/v4/zones/0ca4e71d1814f06e45487e766cba2bca/purge_cache" \
+  -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data '{"hosts":["lobbystack.com","www.lobbystack.com"]}'
+```
+
+### Check the cache
+
+Request a page twice. The second response shows `cf-cache-status: HIT`:
+
+```bash
+curl -sI https://lobbystack.com/pricing/ | grep -i cf-cache-status
+```
+
+A request that names French shows `DYNAMIC`, because it skipped the cache:
+
+```bash
+curl -sI -H "Accept-Language: fr" https://lobbystack.com/pricing/ | grep -i cf-cache-status
+```
+
 ## Move lobbystack.com to the admin
 
 Try the move on staging first, with a hostname of its own. Cloudflare's universal certificate covers one level of subdomain, so use `staging-www.lobbystack.com`, not `www.staging.lobbystack.com`.
@@ -93,7 +161,8 @@ Try the move on staging first, with a hostname of its own. Cloudflare's universa
 1. Add a proxied A record for `staging-www.lobbystack.com` pointing at `40.160.96.129`.
 2. Build and release a staging admin image with `MARKETING_SITE=true` and `NEXT_PUBLIC_LANDING_SITE_URL=https://staging-www.lobbystack.com`, following [Release a commit to Dokploy](dokploy-release.md). That origin makes the staging `robots.txt` disallow crawling.
 3. On the staging admin app in Dokploy, add the domain `staging-www.lobbystack.com` on port 3000 with a Let's Encrypt certificate, and set `MARKETING_HOSTS=staging-www.lobbystack.com`.
-4. Run the parity script with `https://staging-www.lobbystack.com` as the candidate.
+4. [Create the Cache Rule](#create-the-cache-rule) with `staging-www.lobbystack.com` as its only host, then [check the cache](#check-the-cache) on that host.
+5. Run the parity script with `https://staging-www.lobbystack.com` as the candidate.
 
 Then move production:
 
@@ -101,11 +170,13 @@ Then move production:
 2. On the production admin app in Dokploy, add the domains `lobbystack.com` and `www.lobbystack.com` on port 3000 with Let's Encrypt certificates, and set `MARKETING_HOSTS=lobbystack.com,www.lobbystack.com` and `INDEXNOW_KEY`.
 3. In Cloudflare DNS, replace the proxied CNAME records for `lobbystack.com` and `www.lobbystack.com`, which point at `lobbystack-site.pages.dev`, with proxied A records for `40.160.96.129`.
 4. Remove both domains from the `lobbystack-site` Pages project, so Pages stops claiming them. Then check that the A records from step 3 are still in place.
-5. Run the parity script against `https://lobbystack.com`. For `--reference`, use the address of the project's latest deployment, `deployment_id.lobbystack-site.pages.dev`; the project redirects its main `lobbystack-site.pages.dev` hostname to `lobbystack.com`.
-6. Watch the admin's memory in Dokploy for a day. Production runs without a memory cap.
+5. Add `lobbystack.com` and `www.lobbystack.com` to the Cache Rule's hosts, and [check the cache](#check-the-cache).
+6. Add the [purge](#purge-the-cache-after-each-release) to the `release-production` CI job, after the admin deploys.
+7. Run the parity script against `https://lobbystack.com`. For `--reference`, use the address of the project's latest deployment, `deployment_id.lobbystack-site.pages.dev`; the project redirects its main `lobbystack-site.pages.dev` hostname to `lobbystack.com`.
+8. Watch the admin's memory in Dokploy for a day. Production runs without a memory cap.
 
 Let's Encrypt validates each new domain through Cloudflare over HTTP, so the certificates are issued only after step 3 sends the domains to the server. Cloudflare serves its own certificate to visitors in the meantime.
 
 ## Roll back to Cloudflare Pages
 
-Point the `lobbystack.com` and `www.lobbystack.com` records back at `lobbystack-site.pages.dev` as proxied CNAME records, and add both domains to the `lobbystack-site` project again. The project keeps building from `apps/landing` until that app is removed, so it serves the latest content.
+Remove `lobbystack.com` and `www.lobbystack.com` from the Cache Rule and [purge them](#purge-the-cache-after-each-release), so Cloudflare stops serving the admin's pages. Then point both records back at `lobbystack-site.pages.dev` as proxied CNAME records, and add both domains to the `lobbystack-site` project again. The project keeps building from `apps/landing` until that app is removed, so it serves the latest content.

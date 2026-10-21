@@ -19,9 +19,14 @@ import {
 } from "./routing";
 
 const MARKETING_HSTS = "max-age=31536000; includeSubDomains; preload";
-// Pages are prerendered, so the server answers them from disk. Browsers and
-// Cloudflare revalidate every time, which keeps the locale redirect below working.
+// Pages are prerendered, so the server answers them from disk. Browsers
+// revalidate every time, so a language picked in the switcher applies at once.
 const PAGE_CACHE_CONTROL = "public, max-age=0, must-revalidate";
+// Only Cloudflare reads this header. It keeps a page fresh for five minutes, then
+// serves the old copy for up to a day while it fetches a new one. Its Cache Rule
+// skips requests whose language or Markdown preference could change the response,
+// and each release purges the cache (docs/deployment/marketing-site.md).
+const EDGE_CACHE_CONTROL = "max-age=300, stale-while-revalidate=86400";
 
 type Env = Readonly<Record<string, string | undefined>>;
 
@@ -36,6 +41,11 @@ function withMarketingHeaders(response: NextResponse, env: Env, cacheControl?: s
   }
   if (env.NODE_ENV === "production") response.headers.set("Strict-Transport-Security", MARKETING_HSTS);
   if (cacheControl) response.headers.set("Cache-Control", cacheControl);
+  return response;
+}
+
+function cachedAtEdge(response: NextResponse): NextResponse {
+  response.headers.set("Cloudflare-CDN-Cache-Control", EDGE_CACHE_CONTROL);
   return response;
 }
 
@@ -142,14 +152,16 @@ export function marketingProxy(request: NextRequest, env: Env = process.env): Ne
 
   const { locale, rest } = splitMarketingPath(pathname);
   if (readsPage && rest === "/" && wantsMarkdown(request)) {
-    const response = withMarketingHeaders(rewriteTo(request, `${MARKETING_ROUTE_PREFIX}/${locale}/md/index`), env, PAGE_CACHE_CONTROL, pathname);
+    const response = cachedAtEdge(withMarketingHeaders(rewriteTo(request, `${MARKETING_ROUTE_PREFIX}/${locale}/md/index`), env, PAGE_CACHE_CONTROL, pathname));
     response.headers.set("Vary", "Accept");
     return response;
   }
 
   // Social cards never change under the same URL; everything else revalidates.
-  const cacheControl = /^\/og\/.+\.jpg$/.test(pathname) ? "public, max-age=31536000, immutable" : PAGE_CACHE_CONTROL;
-  const response = withMarketingHeaders(rewriteTo(request, route.internalPath), env, cacheControl, pathname);
+  if (/^\/og\/.+\.jpg$/.test(pathname)) {
+    return withMarketingHeaders(rewriteTo(request, route.internalPath), env, "public, max-age=31536000, immutable", pathname);
+  }
+  const response = cachedAtEdge(withMarketingHeaders(rewriteTo(request, route.internalPath), env, PAGE_CACHE_CONTROL, pathname));
   if (negotiable) response.headers.set("Vary", "Accept-Language, Cookie");
   return response;
 }

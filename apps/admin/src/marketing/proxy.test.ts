@@ -196,6 +196,28 @@ describe("headers and redirects from the Pages site", () => {
     expect(visit("https://lobbystack.com/webmcp.js")?.headers.get("cache-control")).toBe("public, max-age=3600")
   })
 
+  it.each(["/", "/fr/pricing/", "/blog/upfirst-alternative/", "/pricing.md", "/feed.xml", "/sitemap-index.xml", "/robots.txt"])(
+    "lets Cloudflare keep %s at its edge for five minutes",
+    (pathname) => {
+      const response = visit(`https://lobbystack.com${pathname}`, { "accept-language": "en" })
+      expect(response?.headers.get("cloudflare-cdn-cache-control")).toBe("max-age=300, stale-while-revalidate=86400")
+      expect(response?.headers.get("cache-control")).toBe("public, max-age=0, must-revalidate")
+    }
+  )
+
+  it("lets Cloudflare keep the homepage's Markdown twin", () => {
+    const response = visit("https://lobbystack.com/", { accept: "text/markdown", "accept-language": "en" })
+    expect(response?.headers.get("cloudflare-cdn-cache-control")).toBe("max-age=300, stale-while-revalidate=86400")
+  })
+
+  it("leaves redirects, social cards and static files to their own cache headers", () => {
+    expect(visit("https://lobbystack.com/pricing/", { "accept-language": "fr" })?.headers.get("cloudflare-cdn-cache-control")).toBeNull()
+    expect(visit("https://www.lobbystack.com/pricing/")?.headers.get("cloudflare-cdn-cache-control")).toBeNull()
+    expect(visit("https://lobbystack.com/comparison")?.headers.get("cloudflare-cdn-cache-control")).toBeNull()
+    expect(visit("https://lobbystack.com/og/pricing.jpg")?.headers.get("cloudflare-cdn-cache-control")).toBeNull()
+    expect(visit("https://lobbystack.com/illustrations/hero.webp")?.headers.get("cloudflare-cdn-cache-control")).toBeNull()
+  })
+
   it.each([
     ["/comparison", "/blog/"],
     ["/fr/comparison/", "/fr/blog/"],
