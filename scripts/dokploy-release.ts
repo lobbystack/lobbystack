@@ -339,10 +339,21 @@ async function checkOtherEnvironmentsStopped(config: Config) {
   }
 }
 
+/** Only a "not found" answer counts as missing: rebuilding after a network error would overwrite a tag production may run. */
+export function isMissingManifest(message: string): boolean {
+  return /no such manifest|manifest unknown|name unknown|not found/i.test(message);
+}
+
 async function registryLacks(images: Record<Service, string>): Promise<Service[]> {
   const lacking: Service[] = [];
   for (const service of SERVICES) {
-    const present = await run("docker", ["manifest", "inspect", images[service]], { capture: true }).then(() => true, () => false);
+    const present = await run("docker", ["manifest", "inspect", images[service]], { capture: true }).then(
+      () => true,
+      (error: Error) => {
+        if (isMissingManifest(error.message)) return false;
+        throw new Error(`Couldn't check ${images[service]} in the registry: ${error.message}`);
+      },
+    );
     if (!present) lacking.push(service);
   }
   return lacking;

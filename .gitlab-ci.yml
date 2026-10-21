@@ -123,7 +123,9 @@ images:
 release-production:
   extends: .dokploy
   needs: [images]
-  timeout: 30m
+  # Longer than the script's own waits added up, so a stuck release still
+  # reports what Dokploy points at before GitLab stops it.
+  timeout: 1h30m
   resource_group: production
   environment:
     name: production
@@ -139,7 +141,8 @@ release-production:
 release-staging:
   extends: .dokploy
   needs: [images]
-  timeout: 45m
+  # The production budget plus a build of the staging admin.
+  timeout: 2h
   resource_group: staging
   environment:
     name: staging
