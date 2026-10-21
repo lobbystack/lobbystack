@@ -72,7 +72,7 @@ describe("internal routes", () => {
   });
 
   it("leaves static files to public/", () => {
-    for (const pathname of ["/illustrations/hero.webp", "/favicon.svg", "/webmcp.js", "/pagefind/pagefind.js"]) {
+    for (const pathname of ["/illustrations/hero.webp", "/favicon.svg", "/webmcp.js", "/pagefind/pagefind.js", "/_next/hmr", "/__nextjs_original-stack-frames"]) {
       const response = visit(`https://lobbystack.com${pathname}`);
       expect(rewrittenPath(response)).toBeNull();
       expect(response?.headers.get("x-middleware-next")).toBe("1");

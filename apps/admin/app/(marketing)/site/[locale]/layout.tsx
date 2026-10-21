@@ -4,13 +4,11 @@ import { notFound } from "next/navigation";
 import { CookieConsentBanner } from "@/marketing/components/CookieConsentBanner";
 import { SiteBehaviors } from "@/marketing/components/SiteBehaviors";
 import { SUPPORTED_LOCALES, isLocale, localeMeta, type Locale } from "@/marketing/i18n";
-import { marketingSiteUrl } from "@/marketing/site-url";
 import "@/marketing/styles/site.css";
 
 // Every marketing page is built ahead of time; scripts/verify-admin-prerender.ts
-// fails the build if one isn't. The 404 catch-all is the one per-request route,
-// so this layout leaves dynamicParams alone: set to false here, it would reject
-// the catch-all's paths above the not-found boundary.
+// fails the build if one isn't. The 404 catch-all renders unknown paths per
+// request, so this layout doesn't set dynamicParams to false.
 
 export function generateStaticParams() {
   return SUPPORTED_LOCALES.map((locale) => ({ locale }));
@@ -23,8 +21,10 @@ const skipLabels: Record<Locale, string> = {
   sr: "Pređi na glavni sadržaj",
 };
 
+// No metadataBase: every URL the pages give is absolute already, and resolving
+// through it would turn the home page's canonical https://lobbystack.com/ into
+// https://lobbystack.com.
 export const metadata: Metadata = {
-  metadataBase: new URL(marketingSiteUrl()),
   icons: { icon: { url: "/favicon.svg", type: "image/svg+xml" } },
   verification: {
     ...(process.env.GOOGLE_SITE_VERIFICATION ? { google: process.env.GOOGLE_SITE_VERIFICATION } : {}),

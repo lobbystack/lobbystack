@@ -1,9 +1,11 @@
-export default async function MarketingHome({ params }: { params: Promise<{ locale: string }> }) {
-  const { locale } = await params;
-  return (
-    <main>
-      <h1>LobbyStack</h1>
-      <p data-locale={locale}>Marketing site placeholder.</p>
-    </main>
-  );
+import { HomePage, homePageSeo } from "@/marketing/pages/HomePage";
+import { localeFrom, type LocaleParams } from "@/marketing/route-params";
+import { pageMetadata } from "@/marketing/seo/page-seo";
+
+export async function generateMetadata({ params }: LocaleParams) {
+  return pageMetadata(homePageSeo(await localeFrom(params)));
+}
+
+export default async function Page({ params }: LocaleParams) {
+  return <HomePage locale={await localeFrom(params)} />;
 }

@@ -80,6 +80,8 @@ export type MarketingRoute =
  * Paths that match nothing generated are left to public/ as static files.
  */
 export function resolveMarketingRoute(pathname: string, indexNowKey?: string): MarketingRoute {
+  // Next.js's own files and dev tools (HMR, stack frames) serve every host as they are.
+  if (pathname.startsWith("/_next/") || pathname.startsWith("/__nextjs")) return { kind: "asset" };
   const { locale, rest } = splitMarketingPath(pathname);
   const base = `${MARKETING_ROUTE_PREFIX}/${locale}`;
 
