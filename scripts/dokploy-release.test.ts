@@ -7,6 +7,7 @@ import {
   declaredBuildArgs,
   imageName,
   isMissingManifest,
+  marketingHosts,
   newDeployment,
   parseArgs,
   rolloutProgress,
@@ -35,6 +36,11 @@ describe("dokploy release", () => {
     expect(() => parseArgs(["--force"])).toThrow("Unknown option");
     expect(() => parseArgs(["--env=nowhere"])).toThrow("Unknown environment nowhere");
     expect(() => parseArgs(["--env"])).toThrow("--env needs a value");
+  });
+
+  it("purges the marketing hosts the admin serves", () => {
+    expect(marketingHosts({ MARKETING_HOSTS: " lobbystack.com, WWW.lobbystack.com ," })).toEqual(["lobbystack.com", "www.lobbystack.com"]);
+    expect(marketingHosts({})).toEqual([]);
   });
 
   it("names images in GitLab's registry, with an admin per environment", () => {

@@ -18,6 +18,7 @@ GitLab CI ships each merge to `main` to the `production` environment of the `Lob
 8. Deploys the worker and waits until Docker Swarm reports the new worker running, which it does once the health check passes. The old worker keeps its calls and exits when the last one ends, after 31 minutes at most in production.
 9. Deploys the admin and waits until the new admin runs and the old one has stopped.
 10. Requests the environment's `/api/health/ready` and expects a 200.
+11. Purges Cloudflare's cache for the hosts in the admin's `MARKETING_HOSTS`, so visitors get the new marketing pages. Without `CLOUDFLARE_CACHE_PURGE_TOKEN`, or when Cloudflare refuses, it warns and the release still succeeds. [Serve lobbystack.com from the admin app](marketing-site.md#cache-pages-at-cloudflares-edge) explains the cache.
 
 The script talks to Dokploy through its API alone, so it needs no SSH access to the host. Each Dokploy deployment gets the title `Release <tag>` and the commit subject, so the deployment list shows what shipped.
 
@@ -50,10 +51,11 @@ The jobs live at the end of `.gitlab-ci.yml` and run on pipelines for `main`:
 
 The `production` and `staging` resource groups let one release at a time run per environment. When a newer commit reaches `main` before an older pipeline's release starts, the older release skips itself and the newer pipeline ships both.
 
-The jobs need two project variables, under **Settings → CI/CD → Variables**:
+The jobs read these project variables, under **Settings → CI/CD → Variables**:
 
 - `DOKPLOY_API_KEY`: a Dokploy API key. Mark it protected and masked, so only `main` pipelines can read it. Create the key in Dokploy under **Settings → Profile**.
 - `DOKPLOY_AUTO_RELEASE`: set it to `true` to release each merge to production without a click. Remove it, or set anything else, to pause automatic releases.
+- `CLOUDFLARE_CACHE_PURGE_TOKEN`: a Cloudflare API token with the **Zone → Cache Purge** permission for the `lobbystack.com` zone. Mark it protected and masked. Create it in the Cloudflare dashboard under **My Profile → API Tokens**.
 
 To store the key without it landing in your shell history, copy it from Dokploy and run:
 

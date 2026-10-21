@@ -129,9 +129,9 @@ On staging, list only `staging-www.lobbystack.com` in the first line of the expr
 
 ### Purge the cache after each release
 
-Purge `lobbystack.com` and `www.lobbystack.com` once the new admin container serves traffic. When a release changes the site's scripts, their file names change too. Until you purge, Cloudflare serves the old pages for about five minutes, and those pages ask for scripts the new server doesn't have.
+When a release changes the site's scripts, their file names change too. Until someone purges the cache, Cloudflare serves the old pages for about five minutes, and those pages ask for scripts the new server doesn't have. The release script purges the hosts in the admin's `MARKETING_HOSTS` once the new admin serves traffic, with the `CLOUDFLARE_CACHE_PURGE_TOKEN` that [Release a commit to Dokploy](dokploy-release.md#release-from-gitlab-ci) describes.
 
-The purge needs an API token with the **Zone > Cache Purge** permission for the `lobbystack.com` zone:
+To purge by hand, use an API token with the **Zone > Cache Purge** permission for the `lobbystack.com` zone:
 
 ```bash
 curl -X POST "https://api.cloudflare.com/client/v4/zones/0ca4e71d1814f06e45487e766cba2bca/purge_cache" \
@@ -171,7 +171,7 @@ Then move production:
 3. In Cloudflare DNS, replace the proxied CNAME records for `lobbystack.com` and `www.lobbystack.com`, which point at `lobbystack-site.pages.dev`, with proxied A records for `40.160.96.129`.
 4. Remove both domains from the `lobbystack-site` Pages project, so Pages stops claiming them. Then check that the A records from step 3 are still in place.
 5. Add `lobbystack.com` and `www.lobbystack.com` to the Cache Rule's hosts, and [check the cache](#check-the-cache).
-6. Add the [purge](#purge-the-cache-after-each-release) to the `release-production` CI job, after the admin deploys.
+6. Set `CLOUDFLARE_CACHE_PURGE_TOKEN` in GitLab, so each release [purges the cache](#purge-the-cache-after-each-release).
 7. Run the parity script against `https://lobbystack.com`. For `--reference`, use the address of the project's latest deployment, `deployment_id.lobbystack-site.pages.dev`; the project redirects its main `lobbystack-site.pages.dev` hostname to `lobbystack.com`.
 8. Watch the admin's memory in Dokploy for a day. Production runs without a memory cap.
 
