@@ -43,16 +43,16 @@ Keep these settings when you change a service:
 
 ## Images and releases
 
-The apps pull their images from a private registry on the server, `127.0.0.1:5000`, run by the `lobbystack-registry` container and reachable from the server only. Build images for `linux/amd64` on another machine: a Next.js build on this server would compete with live calls for its 4 GB.
+GitLab CI builds the images on GitLab's runners and pushes them to the project's public container registry, tagged with the commit's first 8 characters:
 
-Next.js writes some settings into the admin at build time, so each environment gets its own admin image. Pass the environment's values for these build arguments:
+- `registry.gitlab.com/lobbystack-group/lobbystack/migrator:<tag>` and `worker:<tag>`, shared by both environments
+- `registry.gitlab.com/lobbystack-group/lobbystack/admin:<tag>` for production and `admin:<tag>-staging` for staging
 
-- the Turnstile site key and PostHog settings (`NEXT_PUBLIC_*`, `POSTHOG_*`)
-- `DEPLOYMENT_MODE` and the brand and link settings
-- the `S3_*` settings, because the content security policy names the storage origin
-- `SERVICE_VERSION`, set to the commit SHA
+Each environment gets its own admin image because Next.js writes some settings into it at build time: the Turnstile and PostHog settings, `DEPLOYMENT_MODE`, the brand and link settings, and the `S3_*` settings, since the content security policy names the storage origin. The release reads these build arguments from the admin's environment in Dokploy, so change them there and release again.
 
-The worker and migrator images don't depend on the environment. [Release a commit to Dokploy](dokploy-release.md) covers the release steps: build, push to the registry, run `migrate`, then deploy the worker and the admin.
+[Release a commit to Dokploy](dokploy-release.md) covers the `release-production` and `release-staging` CI jobs and `pnpm release:dokploy`. Don't build images on the server: a Next.js build would compete with live calls for its 4 GB.
+
+The server also runs a registry at `127.0.0.1:5000`, in the `lobbystack-registry` container, which only the server can reach. It holds the images from before CI. Production runs admin `911ca1f9-r2` and worker and migrator `55379a5f` from it until its first `release-production` run, so keep the registry as a rollback until then.
 
 ## Staging
 

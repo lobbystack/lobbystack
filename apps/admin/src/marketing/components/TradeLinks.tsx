@@ -1,0 +1,269 @@
+import {
+  Building2,
+  ChevronRight,
+  CloudHail,
+  DoorOpen,
+  Hammer,
+  HardHat,
+  KeyRound,
+  Scissors,
+  Stethoscope,
+  WashingMachine,
+  Wind,
+  Wrench,
+  Zap,
+} from "lucide-react"
+
+import { localizeHref, type Locale } from "@/marketing/i18n"
+import { cn } from "@/marketing/lib/utils"
+
+// Titles name the search each page targets, so the homepage passes that
+// context to the trade pages. Icons match the navbar's trade menu.
+const trades = [
+  {
+    href: "/solutions/ai-receptionist-for-plumbers/",
+    icon: Wrench,
+    en: [
+      "Plumbing answering service",
+      "Burst pipes, sewage backups, and drain bookings",
+    ],
+    fr: ["Plomberie", "Dégâts d’eau, refoulements et débouchage"],
+    es: [
+      "Plomería",
+      "Tuberías rotas, desbordes de aguas residuales y destapes",
+    ],
+    sr: [
+      "Vodoinstalateri",
+      "Pukle cevi, izlivanje kanalizacije i odgušivanje odvoda",
+    ],
+  },
+  {
+    href: "/solutions/ai-receptionist-for-hvac/",
+    icon: Wind,
+    en: [
+      "HVAC answering service",
+      "No-heat emergencies and heat-wave overflow",
+    ],
+    fr: [
+      "Chauffage et climatisation",
+      "Pannes de chauffage et pics de canicule",
+    ],
+    es: [
+      "Calefacción y aire acondicionado",
+      "Averías de calefacción y picos por olas de calor",
+    ],
+    sr: [
+      "Grejanje i klimatizacija",
+      "Kvarovi grejanja i gužve tokom toplotnih talasa",
+    ],
+  },
+  {
+    href: "/solutions/ai-receptionist-for-electricians/",
+    icon: Zap,
+    en: [
+      "Electrician answering service",
+      "Hazard calls, panel upgrades, and EV chargers",
+    ],
+    fr: ["Électriciens", "Appels à risque, panneaux et bornes de recharge"],
+    es: [
+      "Electricistas",
+      "Riesgos eléctricos, tableros y cargadores para autos eléctricos",
+    ],
+    sr: [
+      "Električari",
+      "Opasni kvarovi, razvodne table i punjači za električna vozila",
+    ],
+  },
+  {
+    href: "/solutions/roofing-answering-service/",
+    icon: CloudHail,
+    en: [
+      "Roofing answering service",
+      "Storm surges, active leaks, and inspections",
+    ],
+    fr: ["Toiture", "Tempêtes, fuites actives et inspections"],
+    es: ["Techado", "Tormentas, goteras activas e inspecciones"],
+    sr: ["Krovopokrivači", "Oluje, aktivna curenja i pregledi krova"],
+  },
+  {
+    href: "/solutions/property-management-answering-service/",
+    icon: Building2,
+    en: [
+      "Property management answering service",
+      "After-hours maintenance and showing requests",
+    ],
+    fr: [
+      "Gestion immobilière",
+      "Entretien hors horaires et demandes de visite",
+    ],
+    es: [
+      "Administración de propiedades",
+      "Mantenimiento fuera de horario y solicitudes de visitas",
+    ],
+    sr: [
+      "Upravljanje nekretninama",
+      "Održavanje van radnog vremena i zahtevi za razgledanje",
+    ],
+  },
+  {
+    href: "/solutions/after-hours-answering-service-for-contractors/",
+    icon: HardHat,
+    en: ["Contractor answering service", "Job-site emergencies after hours"],
+    fr: ["Entrepreneurs", "Urgences de chantier hors horaires"],
+    es: ["Contratistas", "Emergencias en obra fuera de horario"],
+    sr: ["Izvođači radova", "Hitni slučajevi na gradilištu van radnog vremena"],
+  },
+  {
+    href: "/solutions/ai-receptionist-for-dental-offices/",
+    icon: Stethoscope,
+    en: [
+      "Dental answering service",
+      "New patients, recalls, and dental emergencies",
+    ],
+    fr: ["Cliniques dentaires", "Nouveaux patients, rappels et urgences"],
+    es: [
+      "Consultorios dentales",
+      "Pacientes nuevos, recordatorios y urgencias dentales",
+    ],
+    sr: [
+      "Stomatološke ordinacije",
+      "Novi pacijenti, kontrolni pregledi i hitni slučajevi",
+    ],
+  },
+  {
+    href: "/solutions/ai-receptionist-for-salons-and-spas/",
+    icon: Scissors,
+    en: [
+      "Salon and spa answering service",
+      "Bookings and reschedules while you're with a client",
+    ],
+    fr: ["Salons et spas", "Rendez-vous et reports pendant vos soins"],
+    es: [
+      "Salones y spas",
+      "Reservas y cambios de cita mientras atiende a un cliente",
+    ],
+    sr: [
+      "Saloni i spa centri",
+      "Zakazivanje i pomeranje termina dok ste sa klijentom",
+    ],
+  },
+  {
+    href: "/solutions/ai-receptionist-for-garage-door-repair/",
+    icon: DoorOpen,
+    en: ["Garage door repair", "Broken springs and doors stuck shut"],
+    fr: ["Portes de garage", "Ressorts brisés et portes bloquées"],
+    es: ["Puertas de garaje", "Resortes rotos y puertas atascadas"],
+    sr: ["Garažna vrata", "Pukle opruge i zaglavljena vrata"],
+  },
+  {
+    href: "/solutions/ai-receptionist-for-appliance-repair/",
+    icon: WashingMachine,
+    en: [
+      "Appliance repair",
+      "Repair bookings with the brand and model attached",
+    ],
+    fr: [
+      "Réparation d’électroménagers",
+      "Rendez-vous avec la marque et le modèle",
+    ],
+    es: [
+      "Reparación de electrodomésticos",
+      "Reservas de reparación con la marca y el modelo",
+    ],
+    sr: [
+      "Servis kućnih aparata",
+      "Zakazani servisi sa markom i modelom uređaja",
+    ],
+  },
+  {
+    href: "/solutions/ai-receptionist-for-restoration-companies/",
+    icon: Hammer,
+    en: ["Restoration", "Flooding, fire, and mold calls at any hour"],
+    fr: [
+      "Restauration après sinistre",
+      "Inondations, incendies et moisissures",
+    ],
+    es: [
+      "Restauración de daños",
+      "Inundaciones, incendios y moho a cualquier hora",
+    ],
+    sr: ["Sanacija šteta", "Poplave, požari i buđ u bilo koje doba"],
+  },
+  {
+    href: "/solutions/ai-receptionist-for-locksmiths/",
+    icon: KeyRound,
+    en: ["Locksmiths", "Lockouts, rekeys, and key replacements"],
+    fr: ["Serruriers", "Portes verrouillées, changements de serrure et clés"],
+    es: [
+      "Cerrajeros",
+      "Aperturas de puertas, cambios de cilindro y copias de llaves",
+    ],
+    sr: ["Bravari", "Zaključana vrata, zamena cilindra i izrada ključeva"],
+  },
+]
+
+const copyByLocale = {
+  en: {
+    heading: "Answering service by trade",
+    intro:
+      "See how LobbyStack handles emergencies, bookings, and quotes for your kind of business.",
+  },
+  fr: {
+    heading: "Réponse téléphonique par métier",
+    intro:
+      "Voyez comment LobbyStack traite les urgences, les rendez‑vous et les demandes de prix dans votre secteur.",
+  },
+  es: {
+    heading: "Atención telefónica por sector",
+    intro:
+      "Vea cómo LobbyStack gestiona emergencias, reservas y presupuestos en su tipo de negocio.",
+  },
+  sr: {
+    heading: "Odgovaranje na pozive po delatnostima",
+    intro:
+      "Pogledajte kako LobbyStack rešava hitne slučajeve, zakazivanja i upite za ponude u Vašoj vrsti posla.",
+  },
+}
+
+export function TradeLinks({ locale = "en" }: { locale?: Locale }) {
+  const copy = copyByLocale[locale]
+  return (
+    <section className="border-t border-border/40 py-20 md:py-28" id="by-trade">
+      <div className="mx-auto max-w-7xl px-6">
+        <div className="max-w-3xl">
+          <h2 className="section-heading">{copy.heading}</h2>
+          <p className="section-intro">{copy.intro}</p>
+        </div>
+
+        <ul className="mt-12 grid border-t border-border/70 lg:grid-cols-2 lg:gap-x-12 lg:border-t-0">
+          {trades.map((trade, index) => {
+            const [title, detail] = trade[locale]
+            const Icon = trade.icon
+            return (
+              <li key={trade.href} className={cn("border-b border-border/70", index < 2 && "lg:border-t")}>
+                <a
+                  href={localizeHref(locale, trade.href)}
+                  className="group grid grid-cols-[1.25rem_minmax(0,1fr)_1rem] items-start gap-x-3 rounded-xl px-2 py-5 transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none md:px-3"
+                >
+                  <Icon
+                    className="mt-1 size-[18px] text-muted-foreground transition-colors group-hover:text-foreground md:mt-[5px]"
+                    strokeWidth={1.75}
+                    aria-hidden="true"
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-base font-medium text-foreground md:text-lg">{title}</span>
+                    <span className="mt-0.5 block text-sm text-muted-foreground">{detail}</span>
+                  </span>
+                  <ChevronRight
+                    className="mt-1.5 size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground motion-reduce:transition-none"
+                    aria-hidden="true"
+                  />
+                </a>
+              </li>
+            )
+          })}
+        </ul>
+      </div>
+    </section>
+  )
+}

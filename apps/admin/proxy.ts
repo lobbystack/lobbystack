@@ -3,6 +3,8 @@ import type { NextRequest } from "next/server";
 import { BRAND_LOGO_PATH, isMaintenanceMode, normalizeInterfaceLocale } from "@lobbystack/shared";
 
 import { configuredAppOrigins } from "@/lib/app-origins";
+import { marketingProxy } from "@/marketing/proxy";
+import { MARKETING_ROUTE_PREFIX } from "@/marketing/routing";
 import { LOCALE_COOKIE, LOCALE_COOKIE_MAX_AGE_SECONDS, localeTag } from "@/lib/locale";
 import {
   isLegacyPublicRoutePath,
@@ -111,6 +113,10 @@ function hasValidCsrfOrigin(request: NextRequest): boolean {
 }
 
 export function proxy(request: NextRequest) {
+  // The marketing hosts get their own routing, headers, and trailing slashes.
+  const marketing = marketingProxy(request);
+  if (marketing) return marketing;
+
   const { pathname } = request.nextUrl;
   const headers = isEmbeddablePath(pathname) ? embeddableSecurityHeaders() : pathname === BRAND_LOGO_PATH ? brandLogoSecurityHeaders() : securityHeaders();
 
@@ -119,6 +125,22 @@ export function proxy(request: NextRequest) {
     // Webhooks are rejected before their handlers can validate, enqueue, or acknowledge them.
     // Health probes are the only API exemption: GET handlers can perform side effects.
     return maintenanceResponse(headers);
+  }
+
+  // The marketing site's internal routes only answer on its own hosts.
+  if (pathname === MARKETING_ROUTE_PREFIX || pathname.startsWith(`${MARKETING_ROUTE_PREFIX}/`)) {
+    return new NextResponse("Not found.", { status: 404, headers: { ...headers, "Cache-Control": "private, no-store" } });
+  }
+
+  // next.config.ts skips Next.js' own trailing-slash redirect because marketing
+  // pages keep theirs. Dashboard and API paths still drop it. This reads the raw
+  // URL because NextURL can hide the slash and would put it back.
+  const target = new URL(request.url);
+  if (target.pathname !== "/" && target.pathname.endsWith("/")) {
+    target.pathname = target.pathname.replace(/\/+$/, "") || "/";
+    const response = NextResponse.redirect(target, 308);
+    for (const [name, value] of Object.entries(headers)) response.headers.set(name, value);
+    return response;
   }
 
   const negotiatedLocale = negotiateLocale({

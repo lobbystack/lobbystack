@@ -34,6 +34,8 @@ jobs:
       - run: pnpm --filter @lobbystack/admin --filter @lobbystack/landing lint
       - run: pnpm telemetry:coverage
       - run: pnpm build
+      - name: Validate the marketing site's SEO
+        run: pnpm --filter @lobbystack/admin marketing:validate
       - name: Verify the committed embed loader matches the build
         run: git diff --exit-code -- apps/admin/public/embed/embed.js
       - name: Check the lobbystack CLI bundle runs with plain node

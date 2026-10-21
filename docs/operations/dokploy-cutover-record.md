@@ -41,7 +41,7 @@ Webhooks and new calls failed from 03:41 to 03:54. Polar and Twilio retry webhoo
 ## Differences from the plan
 
 - **One server.** The plan's second server became the existing VPS. A 1 GB memory cap on `openseo` and caps on every staging service keep production's headroom; see [Memory on the shared server](../deployment/dokploy.md#memory-on-the-shared-server).
-- **No CI release yet.** Phase 1 didn't ship before the cutover. Images go to the server's registry by hand until [Release a commit to Dokploy](../deployment/dokploy-release.md) lands.
+- **Release path after the cutover.** Phase 1 didn't ship first, so the cutover images went to a registry on the server by hand. GitLab CI took over releases with `80d48885` later on 2026-10-21: staging runs its images, and production moves to them with its first `release-production` run. See [Release a commit to Dokploy](../deployment/dokploy-release.md).
 - **No GitHub access.** `lobbystack/lobbystack` on GitHub no longer resolves from the developer machine, and production releases came from GitLab.
 - **Railway worker stopped instead of paused.** Railway can't run the worker in maintenance mode, because the mode fails its health check.
 - **Worker Google redirect fixed.** Production's worker had `GOOGLE_REDIRECT_URI` pointing at the staging admin. It now uses `https://app.lobbystack.com/api/calendar/google/callback`.

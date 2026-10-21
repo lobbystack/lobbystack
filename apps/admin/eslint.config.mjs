@@ -50,6 +50,17 @@ export default defineConfig([
     rules: { "jsx-a11y/media-has-caption": "off" },
   },
   {
+    // The marketing site navigates with plain links, so each page is a full
+    // load as on the Astro site it replaced, and it serves images from public/ as they are.
+    files: ["src/marketing/**/*.{ts,tsx}", "app/(marketing)/**/*.{ts,tsx}"],
+    rules: {
+      "@next/next/no-html-link-for-pages": "off",
+      "@next/next/no-img-element": "off",
+      // Scrollable regions take focus so keyboard users can scroll them.
+      "jsx-a11y/no-noninteractive-tabindex": ["error", { roles: ["region"] }],
+    },
+  },
+  {
     // Test files assert on partial fixtures and mocked modules.
     files: ["**/*.test.{ts,tsx}", "**/*.test-d.{ts,tsx}"],
     rules: { "@typescript-eslint/no-explicit-any": "off" },

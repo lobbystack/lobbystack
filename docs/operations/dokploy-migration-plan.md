@@ -1,6 +1,6 @@
 # Move LobbyStack from Railway to Dokploy
 
-**Status:** done on 2026-10-21. The [Dokploy cutover record](dokploy-cutover-record.md) lists what happened and how it differed from this plan, and [Deploy LobbyStack on Dokploy](../deployment/dokploy.md) describes the running setup. Phase 1 (the release path) and the R2 move for staging's files are still open.
+**Status:** done on 2026-10-21. The [Dokploy cutover record](dokploy-cutover-record.md) lists what happened and how it differed from this plan, and [Deploy LobbyStack on Dokploy](../deployment/dokploy.md) describes the running setup. Phase 1, the release path, is done except for the first production release from GitLab CI. Moving staging's files to R2 is still open.
 
 This plan moves production and staging from Railway to the Dokploy host at `deploy.lobbystack.com`, which also keeps running the Dokploy panel and `openseo`. Production keeps `app.lobbystack.com`, so Twilio, Polar, OpenAI and Google keep their webhook and redirect URLs. The cutover takes one maintenance window of about 30 minutes, and phone calls fail during it. Railway stays frozen for 14 days as the rollback target.
 

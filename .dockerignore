@@ -39,3 +39,6 @@ certification-results
 **/.env
 **/.env.*
 !**/.env.example
+apps/admin/.marketing-dist
+apps/admin/public/pagefind
+apps/admin/public/marketing-sitemaps

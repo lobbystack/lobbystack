@@ -37,6 +37,9 @@ export const HOST = {
   branch: "main",
 };
 
+/** The lobbystack.com zone, whose edge cache holds the marketing pages. */
+export const CLOUDFLARE_ZONE_ID = "0ca4e71d1814f06e45487e766cba2bca";
+
 export type Target = {
   healthUrl: string;
   migrateScheduleId: string;
@@ -160,6 +163,11 @@ export function adminBuildArgs(declared: string[], env: Record<string, string | 
   }
   const missing = REQUIRED_ADMIN_BUILD_ARGS.filter((name) => !values[name]);
   return { values, missing };
+}
+
+/** The marketing hosts the admin serves, whose cached pages a release replaces. */
+export function marketingHosts(env: Record<string, string | undefined>): string[] {
+  return (env.MARKETING_HOSTS ?? "").split(",").map((host) => host.trim().toLowerCase()).filter(Boolean);
 }
 
 export type Deployment = {
@@ -461,6 +469,33 @@ async function checkHealth(url: string) {
   throw new Error(`${url} didn't answer 200 within 2 minutes (last: ${last}).`);
 }
 
+/**
+ * Cloudflare keeps marketing pages at its edge, and their scripts change names
+ * with each build, so drop the old pages once the new admin serves. A failed
+ * purge only leaves old pages for a few minutes, so it warns instead of failing
+ * a release that already shipped.
+ */
+async function purgeMarketingCache(hosts: string[]) {
+  if (hosts.length === 0) return;
+  step(`Purging Cloudflare's cache for ${hosts.join(", ")}`);
+  const token = process.env.CLOUDFLARE_CACHE_PURGE_TOKEN;
+  if (!token) {
+    console.warn("    Skipped: set CLOUDFLARE_CACHE_PURGE_TOKEN. Cloudflare serves the old pages for about five minutes.");
+    return;
+  }
+  try {
+    const response = await fetch(`https://api.cloudflare.com/client/v4/zones/${CLOUDFLARE_ZONE_ID}/purge_cache`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+      body: JSON.stringify({ hosts }),
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (!response.ok) console.warn(`    Cloudflare refused the purge: HTTP ${response.status} ${(await response.text()).slice(0, 300)}`);
+  } catch (error) {
+    console.warn(`    Couldn't reach Cloudflare: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (options.help) {
@@ -537,6 +572,7 @@ async function main() {
     await deployService(config, "worker", apps.worker, images.worker, release);
     await deployService(config, "admin", apps.admin, images.admin, release);
     await checkHealth(config.healthUrl);
+    await purgeMarketingCache(marketingHosts(parseEnv(apps.admin.env ?? "")));
   } catch (error) {
     console.error("\nDokploy now points at:");
     for (const service of SERVICES) {
