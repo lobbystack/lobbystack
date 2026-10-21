@@ -1,77 +1,86 @@
 #!/usr/bin/env bash
-# Rebuild and start the staging environment from its configured sources.
-# Follows the service order in docs/deployment/railway.md: datastores, then
-# the migrator, then the apps once migration has succeeded.
-# Stop it again with scripts/staging-stop.sh
+# Start the Dokploy staging environment: datastores, then the migrator and its
+# `migrate` schedule, then the apps once migration has succeeded.
+# Staging shares a 4 GB box with production, so stop it again with
+# scripts/staging-stop.sh when you finish. See docs/deployment/dokploy.md.
+#
+# Needs DOKPLOY_API_KEY (Dokploy: Settings > Profile > API keys).
 set -euo pipefail
 
-PROJECT_ID="${RAILWAY_PROJECT_ID:-af0a130e-7b02-4fc0-94ef-b0ac45a0a0a6}"
-# Never read RAILWAY_ENVIRONMENT here: CI exports it as production.
+: "${DOKPLOY_API_KEY:?Set DOKPLOY_API_KEY to a Dokploy API key}"
+DOKPLOY_URL="${DOKPLOY_URL:-https://deploy.lobbystack.com}"
+PROJECT=LobbyStack
 ENVIRONMENT=staging
-# The migrator applies migrations twice and runs consistency and RLS checks,
-# so give it room. Override for a slow build or a large migration.
-DEPLOY_TIMEOUT_SECONDS="${DEPLOY_TIMEOUT_SECONDS:-900}"
-export RAILWAY_CALLER="script:staging-start"
+HEALTH_URL="${STAGING_HEALTH_URL:-https://staging.lobbystack.com/api/health/ready}"
+READY_TIMEOUT_SECONDS="${READY_TIMEOUT_SECONDS:-300}"
 
-railway_for() {
-  railway "$@" --project "$PROJECT_ID" --environment "$ENVIRONMENT"
+# api GET <path> [key=value...] or api POST <path> <json>
+api() {
+  local method="$1" path="$2" param
+  shift 2
+  if [ "$method" = GET ]; then
+    local query=()
+    for param in "$@"; do query+=(--data-urlencode "$param"); done
+    curl -fsS -G "$DOKPLOY_URL/api/$path" -H "x-api-key: $DOKPLOY_API_KEY" ${query[@]+"${query[@]}"}
+  else
+    curl -fsS -X POST "$DOKPLOY_URL/api/$path" -H "x-api-key: $DOKPLOY_API_KEY" \
+      -H 'content-type: application/json' --data-binary "${1:-{\}}"
+  fi
 }
 
-# Newest deployment for a service, as "<id> <status>". Empty if it has none.
-latest_deployment() {
-  railway_for deployment list --service "$1" --json 2>/dev/null | python3 -c '
-import json, sys
-try:
-    deployments = json.load(sys.stdin)
-except ValueError:
-    sys.exit(0)
-if deployments:
-    print(deployments[0]["id"], deployments[0]["status"])
+# Prints "kind name id" for every staging service, e.g. "application worker abc123".
+services() {
+  api GET project.all | PROJECT="$PROJECT" ENVIRONMENT="$ENVIRONMENT" python3 -c '
+import json, os, sys
+project = next(p for p in json.load(sys.stdin) if p["name"] == os.environ["PROJECT"])
+env = next(e for e in project["environments"] if e["name"] == os.environ["ENVIRONMENT"])
+for db in env["postgres"]: print("postgres postgres", db["postgresId"])
+for db in env["redis"]: print("redis redis", db["redisId"])
+for app in env["applications"]: print("application", app["name"], app["applicationId"])
 '
 }
 
-start() {
-  local service="$1" previous_id new_id status waited=0
-  previous_id="$(latest_deployment "$service" | cut -d' ' -f1)"
+id_of() { awk -v k="$1" -v n="$2" '$1 == k && $2 == n { print $3 }' <<<"$SERVICES"; }
 
-  echo "Starting ${service}..."
-  railway_for service redeploy --service "$service" --from-source --yes >/dev/null
+SERVICES="$(services)"
 
-  # Poll the deployment this run created, not whatever was there before.
-  while [ "$waited" -lt "$DEPLOY_TIMEOUT_SECONDS" ]; do
-    read -r new_id status <<<"$(latest_deployment "$service")"
+echo "Starting Postgres and Redis..."
+api POST postgres.start "{\"postgresId\":\"$(id_of postgres postgres)\"}" >/dev/null
+api POST redis.start "{\"redisId\":\"$(id_of redis redis)\"}" >/dev/null
 
-    if [ -n "${new_id:-}" ] && [ "$new_id" != "$previous_id" ]; then
-      case "$status" in
-        SUCCESS)
-          echo "  ${service}: ready"
-          return 0
-          ;;
-        FAILED|CRASHED|REMOVED|SKIPPED)
-          echo "  ${service}: deployment $status" >&2
-          echo "  railway logs --project $PROJECT_ID --environment $ENVIRONMENT --service $service" >&2
-          return 1
-          ;;
-      esac
-    fi
+echo "Starting the migrator and running migrations..."
+migrator="$(id_of application migrator)"
+api POST application.start "{\"applicationId\":\"$migrator\"}" >/dev/null
+schedule="$(api GET schedule.list "id=$migrator" scheduleType=application | python3 -c '
+import json, sys
+print(next(s["scheduleId"] for s in json.load(sys.stdin) if s["name"] == "migrate"))
+')"
+# runManually waits for the command and reports "error" when it exits non-zero,
+# or when the migrator container hasn't started yet, so give it a few tries.
+for attempt in 1 2 3 4 5 6; do
+  result="$(api POST schedule.runManually "{\"scheduleId\":\"$schedule\"}" | python3 -c 'import json, sys; print(json.load(sys.stdin)["status"])')"
+  [ "$result" = done ] && break
+  sleep 10
+done
+if [ "$result" != done ]; then
+  echo "  migrate: $result. Read the schedule's log in Dokploy before starting the apps." >&2
+  exit 1
+fi
+echo "  migrate: done"
 
-    sleep 10
-    waited=$((waited + 10))
-  done
+echo "Starting the worker and admin..."
+api POST application.start "{\"applicationId\":\"$(id_of application worker)\"}" >/dev/null
+api POST application.start "{\"applicationId\":\"$(id_of application admin)\"}" >/dev/null
 
-  echo "  ${service}: still ${status:-pending} after ${DEPLOY_TIMEOUT_SECONDS}s" >&2
-  return 1
-}
-
-start Postgres
-start Redis
-
-# The apps must not come up against an unverified schema, so a migrator
-# failure aborts the run here.
-start migrator
-
-start admin
-start worker
+waited=0
+until curl -fsS -o /dev/null --max-time 5 "$HEALTH_URL"; do
+  if [ "$waited" -ge "$READY_TIMEOUT_SECONDS" ]; then
+    echo "  admin: not ready after ${READY_TIMEOUT_SECONDS}s ($HEALTH_URL)" >&2
+    exit 1
+  fi
+  sleep 5
+  waited=$((waited + 5))
+done
 
 echo
-echo "Staging is up."
+echo "Staging is up at ${HEALTH_URL%/api/health/ready}. Stop it with scripts/staging-stop.sh."
