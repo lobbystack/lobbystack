@@ -53,7 +53,7 @@ Then open `http://lobbystack.localhost:13099`. Bind to `0.0.0.0` as production d
 
 ## Set the build arguments and variables
 
-The marketing pages are built ahead of time, so the admin image needs their settings at build time. Only `MARKETING_HOSTS` and the runtime half of `INDEXNOW_KEY` are read while the server runs.
+The marketing pages are built ahead of time, so the admin image needs their settings at build time. Only `MARKETING_HOSTS` and the runtime half of `INDEXNOW_KEY` are read while the server runs. Set them all in the admin's environment in Dokploy: [Release a commit to Dokploy](dokploy-release.md) builds the admin image with build arguments taken from there, and its list of build arguments must name the ones below.
 
 | Name | When | Production value | Purpose |
 | --- | --- | --- | --- |
