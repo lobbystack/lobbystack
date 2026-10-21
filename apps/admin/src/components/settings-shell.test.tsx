@@ -17,9 +17,9 @@ describe("original settings route shell", () => {
     expect(screen.getAllByRole("link").map(link => link.getAttribute("href"))).toEqual(paths.map(path => `/settings/${path}`));
     expect(screen.getByRole("link", { name: "sections.usage" }).className).toContain("bg-muted");
   });
-  it("adds the widget navigation only inside the intentionally excluded widget view", () => {
-    route.pathname = "/settings/widget";
-    render(<SettingsShell><p>Widget content</p></SettingsShell>);
-    expect(screen.getByRole("link", { name: "sections.widget" }).getAttribute("href")).toBe("/settings/widget");
+  it("leaves the website widget out of Settings", () => {
+    route.pathname = "/settings/usage";
+    render(<SettingsShell><p>Settings content</p></SettingsShell>);
+    expect(screen.queryByRole("link", { name: "sections.widget" })).toBeNull();
   });
 });

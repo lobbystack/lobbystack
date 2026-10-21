@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { connectCalendar } from "@lobbystack/domain";
+import { connectCalendar, switchWorkspace } from "@lobbystack/domain";
 import { SecretBox } from "@lobbystack/providers";
 import { assertCertificationRecipient } from "@lobbystack/shared";
 import { asApiResponse, jsonError, requireApiSession } from "@/lib/api-helpers";
@@ -53,6 +53,9 @@ export async function GET(request: Request) {
       ...(tokens.refreshToken ? { encryptedRefreshToken: new SecretBox(encryptionKey).encrypt(tokens.refreshToken) } : {}),
       tokenExpiresAt: new Date(Date.now() + tokens.expiresIn * 1000).toISOString(),
     });
+    // The integrations page shows the active business, so open the one just connected: a link from
+    // POST /v1/calendars/google/connect may start from another. The connection stands either way.
+    await switchWorkspace(createDomainContext(), { userId: verified.userId, businessId: verified.businessId }).catch(() => undefined);
     return destination("success");
   } catch (error) {
     asApiResponse(error); // Retain the existing sanitized operational reporting.

@@ -63,7 +63,7 @@ At minimum, you are building or wiring together:
 
 This is why a phone agent appears contained until it meets real customers. A phone agent is production software the moment a real customer calls it.
 
-The raw infrastructure can look cheap on paper. [Twilio Voice pricing](https://www.twilio.com/en-us/voice/pricing/us) lists US local inbound calling in fractions of a cent per minute, plus phone number and add-on costs. [OpenAI API pricing](https://openai.com/api/pricing/) publishes realtime audio model pricing separately from text models. Those rates matter, but they are not the whole bill.
+The raw infrastructure can look cheap on paper. [Twilio Voice pricing](https://www.twilio.com/en-us/voice/pricing/us) lists US local inbound calling in fractions of a cent per minute, plus phone number and add-on costs. [OpenAI API pricing](https://openai.com/api/pricing/) publishes realtime audio model pricing separately from text models. Those rates matter, but they are not the whole bill. For a line-by-line look at building on GPT-Live, the model behind ChatGPT Voice, see [how to build an AI receptionist with the ChatGPT voice](/blog/how-to-build-an-ai-receptionist/).
 
 The bigger cost is usually the human time around the system:
 

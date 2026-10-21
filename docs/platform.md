@@ -11,6 +11,8 @@ The canonical stack provides a Next.js admin/backend, a worker that also runs GP
 5. Use `docker compose --env-file .env -f docker-compose.yml --profile development up mailpit` for local email inspection.
 6. Set `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_HEADERS` when you want direct export to an OTLP-compatible backend.
 
+To run the admin and worker from source with breakpoints, set up on Windows, or take real calls on a local stack, see [Run and debug LobbyStack on your desktop](voice/local-debugging.md).
+
 Keep each `LOBBYSTACK_*_DATABASE_URL` password synchronized with its matching `LOBBYSTACK_*_PASSWORD` value. The Postgres init script creates the least-privilege runtime roles from those variables.
 
 Shell variables take precedence over values from `--env-file`. Unset stale replacement variables or run Compose from a clean environment when switching between local stacks.

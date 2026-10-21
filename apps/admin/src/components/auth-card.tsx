@@ -15,7 +15,7 @@ import { Turnstile } from "@/components/turnstile";
 import { recordAuthSuccess } from "@/lib/auth-success-analytics";
 import { resolveLocale } from "@/lib/locale";
 import { localizePublicPath } from "@/lib/locale-path";
-import { localizeMarketingHref } from "@/lib/marketing-site-url";
+import { privacyHref, termsHref } from "@/lib/marketing-site-url";
 import { cn } from "@/lib/utils";
 import { captureAffiliateReferralFromUrl, getAffiliateVisitorId } from "@/lib/affiliate-referral";
 
@@ -305,9 +305,9 @@ export function AuthCard({ mode, google = false }: { mode: "login" | "signup"; g
   const legalFooter = !login ? (
     <p className="max-w-full text-center text-xs leading-5 text-muted-foreground sm:whitespace-nowrap">
       {t("signup.legal.prefix")} {" "}
-      <a className="underline underline-offset-4 hover:text-foreground" href={localizeMarketingHref(marketingLocale, "/terms")} rel="noreferrer" target="_blank">{t("signup.legal.terms")}</a>{" "}
+      <a className="underline underline-offset-4 hover:text-foreground" href={termsHref(marketingLocale)} rel="noreferrer" target="_blank">{t("signup.legal.terms")}</a>{" "}
       {t("signup.legal.and")} {" "}
-      <a className="underline underline-offset-4 hover:text-foreground" href={localizeMarketingHref(marketingLocale, "/privacy")} rel="noreferrer" target="_blank">{t("signup.legal.privacy")}</a>
+      <a className="underline underline-offset-4 hover:text-foreground" href={privacyHref(marketingLocale)} rel="noreferrer" target="_blank">{t("signup.legal.privacy")}</a>
       {t("signup.legal.suffix")}
     </p>
   ) : undefined;

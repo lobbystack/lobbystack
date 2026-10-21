@@ -57,6 +57,20 @@ describe.each(SUPPORTED_LOCALES.filter((locale) => locale !== DEFAULT_LOCALE))("
   });
 });
 
+// The text-alert consent is recorded word for word with each opt-in, so it
+// keeps the name it was approved with until it gets a new version.
+const LITERAL_NAME_KEYS = new Set(["settings:notifications.phoneVerification.phone.consent", "settings:notifications.phoneVerification.confirm.consent"]);
+
+describe.each(SUPPORTED_LOCALES)("%s app name", (locale) => {
+  it("comes from the deployment's branding rather than the text", () => {
+    for (const [namespace, bundle] of Object.entries(localeResources[locale])) {
+      for (const [key, value] of leafEntries(bundle)) {
+        if (!LITERAL_NAME_KEYS.has(`${namespace}:${key}`)) expect(value, `${locale}/${namespace}:${key}`).not.toContain("LobbyStack");
+      }
+    }
+  });
+});
+
 describe("Serbian", () => {
   it("is written in Latin script only", () => {
     for (const [namespace, bundle] of Object.entries(localeResources.sr)) {

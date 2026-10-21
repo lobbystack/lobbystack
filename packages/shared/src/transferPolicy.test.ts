@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isTransferPermitted, normalizeTransferMode } from "./transferPolicy";
+import { isBusinessOpen, isTransferPermitted, normalizeTransferMode } from "./transferPolicy";
 import { demoSnapshot, normalizeAppointmentChangePolicy, type TransferPolicy } from "./index";
 
 const snapshot = (mode: TransferPolicy["mode"]) => ({ ...demoSnapshot, timezone: "America/Toronto", transferPolicy: { mode, transferNumber: "+14165550100" }, hours: [{ dayOfWeek: 5, openMinutes: 540, closeMinutes: 1020 }], closures: [] });
@@ -29,6 +29,13 @@ describe("live transfer policy", () => {
     expect(isTransferPermitted(business, { now })).toBe(true);
     expect(isTransferPermitted({ ...business, closures: [{ startsAt: "2026-09-05T04:00:00Z", endsAt: "2026-09-05T06:00:00Z", reason: "Closed" }] }, { now })).toBe(false);
     expect(isTransferPermitted({ ...business, timezone: "invalid" }, { now })).toBe(false);
+  });
+  it("tells whether the business is open, whatever its transfer rule", () => {
+    const business = snapshot("never");
+    expect(isBusinessOpen(business, new Date("2026-09-04T13:00:00Z"))).toBe(true);
+    expect(isBusinessOpen(business, new Date("2026-09-04T21:00:00Z"))).toBe(false);
+    expect(isBusinessOpen({ ...business, closures: [{ startsAt: "2026-09-04T12:00:00Z", endsAt: "2026-09-04T14:00:00Z", reason: "Closed" }] }, new Date("2026-09-04T13:00:00Z"))).toBe(false);
+    expect(isBusinessOpen({ ...business, hours: [] }, new Date("2026-09-04T13:00:00Z"))).toBe(false);
   });
 });
 

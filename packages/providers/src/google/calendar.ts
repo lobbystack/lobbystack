@@ -63,7 +63,7 @@ export class GoogleCalendarProvider {
 
   async listCalendars(input: { accessToken: string }): Promise<Array<{ id: string; summary: string; primary: boolean; accessRole?: string }>> {
     const response = await fetch("https://www.googleapis.com/calendar/v3/users/me/calendarList", { headers: { authorization: `Bearer ${input.accessToken}` } });
-    if (!response.ok) throw new Error(`Google Calendar discovery failed with status ${response.status}.`);
+    if (!response.ok) throw Object.assign(new Error(`Google Calendar discovery failed with status ${response.status}.`), { responseStatus: response.status });
     const payload = (await response.json()) as { items?: Array<{ id?: string; summary?: string; primary?: boolean; accessRole?: string }> };
     return (payload.items ?? []).flatMap((calendar) => calendar.id && calendar.summary ? [{ id: calendar.id, summary: calendar.summary, primary: calendar.primary === true, ...(calendar.accessRole ? { accessRole: calendar.accessRole } : {}) }] : []);
   }

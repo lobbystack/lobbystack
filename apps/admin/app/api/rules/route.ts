@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { createAgentRule, deleteAgentRule, listAgentRules, reorderAgentRules, updateAgentRule } from "@lobbystack/domain";
+import { RULE_CONTENT_MAX_LENGTH, RULE_TITLE_MAX_LENGTH, RULES_MAX } from "@lobbystack/shared";
 import { operatorRoute } from "@/lib/operator-request";
 
-const createSchema = z.object({ title: z.string().trim().min(1).max(160), content: z.string().trim().min(1).max(10_000), active: z.boolean().optional() });
-const updateSchema = z.object({ ruleId: z.uuid(), title: z.string().trim().min(1).max(160).optional(), content: z.string().trim().min(1).max(10_000).optional(), active: z.boolean().optional() });
-const reorderSchema = z.object({ ruleIds: z.array(z.uuid()).max(100) });
+const createSchema = z.object({ title: z.string().trim().min(1).max(RULE_TITLE_MAX_LENGTH), content: z.string().trim().min(1).max(RULE_CONTENT_MAX_LENGTH), active: z.boolean().optional() });
+const updateSchema = z.object({ ruleId: z.uuid(), title: z.string().trim().min(1).max(RULE_TITLE_MAX_LENGTH).optional(), content: z.string().trim().min(1).max(RULE_CONTENT_MAX_LENGTH).optional(), active: z.boolean().optional() });
+const reorderSchema = z.object({ ruleIds: z.array(z.uuid()).max(RULES_MAX) });
 const deleteSchema = z.object({ ruleId: z.uuid() });
 
 export const runtime = "nodejs";

@@ -28,4 +28,9 @@ describe("original sidebar setup guide eligibility", () => {
     expect(screen.getByText("2/5")).toBeTruthy();
     expect(screen.getByRole("button", { name: "sidebar.setupGuide.open" }).getAttribute("href")).toBe("/setup-guide");
   });
+  it("fills bars left to right by completed count, not by which step is done", () => {
+    setup("business_owner", ["pending", "pending", "complete", "pending"]);
+    const bars = Array.from(screen.getByRole("button").querySelectorAll("[aria-hidden='true'] > span"));
+    expect(bars.map(bar => bar.classList.contains("bg-background"))).toEqual([true, false, false, false]);
+  });
 });

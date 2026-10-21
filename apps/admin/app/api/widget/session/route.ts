@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 
+import { registerWidgetVisitor } from "@lobbystack/domain";
 import { widgetSessionRequestSchema, widgetSessionResponseSchema } from "@lobbystack/shared";
 import { readJson } from "@/lib/api-helpers";
-import { createWidgetSessionToken, requestIpHash } from "@/lib/widget-keys";
+import { createWorkerDomainContext } from "@/lib/domain-context";
+import { createWidgetSessionToken, requestIpHash, touchWidgetKeyLastUsed } from "@/lib/widget-keys";
 import { enforceWidgetRateLimits } from "@/lib/widget-policy";
 import { resolveWidgetAccess } from "@/lib/widget-access";
 
@@ -32,7 +34,15 @@ export async function POST(request: Request) {
     }
     const allowance = await enforceWidgetRateLimits({ businessId: access.session.businessId, widgetKeyId: access.session.widgetKeyId, visitorId, ipHash: requestIpHash(request), operation: "session" });
     if (!allowance.allowed) return NextResponse.json({ error: "Widget session limit reached.", code: allowance.code }, { status: allowance.status, headers: corsHeaders(request) });
-    const token = createWidgetSessionToken({ widgetKeyId: access.session.widgetKeyId, businessId: access.session.businessId, visitorId, origin: access.session.origin! });
+    const { businessId, widgetKeyId } = access.session;
+    const origin = access.session.origin!;
+    // The visitor and the key's last use are saved once per session, here,
+    // rather than by each request the chat makes with it.
+    await Promise.all([
+      registerWidgetVisitor(createWorkerDomainContext(), { businessId, visitorId, metadata: { userAgent: request.headers.get("user-agent") ?? undefined, pageUrl: origin } }),
+      touchWidgetKeyLastUsed({ businessId, widgetKeyId }),
+    ]);
+    const token = createWidgetSessionToken({ widgetKeyId, businessId, visitorId, origin });
     return NextResponse.json(widgetSessionResponseSchema.parse({ token: token.token, expiresAt: token.expiresAt, visitorId }), { headers: corsHeaders(request) });
   } catch (error) {
     if (error instanceof Response) {

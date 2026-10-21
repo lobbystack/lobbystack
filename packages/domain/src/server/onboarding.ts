@@ -139,6 +139,14 @@ export async function advanceOnboardingStageInTransaction(
   input: { userId: string; businessId: string; from: OnboardingStage; to: OnboardingStage },
 ): Promise<void> {
   await requireBusinessAdmin(tx, input);
+  await moveOnboardingStageInTransaction(tx, input);
+}
+
+/** Moves a business to the next onboarding stage. The caller has already checked who may do that. */
+export async function moveOnboardingStageInTransaction(
+  tx: DatabaseTransaction,
+  input: { businessId: string; from: OnboardingStage; to: OnboardingStage },
+): Promise<void> {
   if (!isValidOnboardingTransition(input.from, input.to)) {
     throw new Error(`Invalid onboarding transition from ${input.from} to ${input.to}.`);
   }
@@ -208,17 +216,21 @@ export async function submitOnboardingAttribution(
       error.code = "onboarding_stage_conflict";
       throw error;
     }
-    const completedAt = new Date();
-    // The dedupe key keeps a revisited attribution form from scheduling a second check-in.
-    await enqueueOutbox(tx, {
-      topic: "onboarding.sendFollowup",
-      businessId: input.businessId,
-      aggregateType: "business",
-      aggregateId: input.businessId,
-      dedupeKey: `onboarding-followup:${input.businessId}`,
-      availableAt: new Date(completedAt.getTime() + ONBOARDING_FOLLOWUP_DELAY_MS),
-      payload: { completedAt: completedAt.toISOString() },
-    });
+    await scheduleOnboardingFollowupInTransaction(tx, input.businessId, new Date());
+  });
+}
+
+/** Schedules the founder's check-in a day after onboarding finished. */
+export async function scheduleOnboardingFollowupInTransaction(tx: DatabaseTransaction, businessId: string, completedAt: Date): Promise<void> {
+  // The dedupe key keeps a revisited attribution form from scheduling a second check-in.
+  await enqueueOutbox(tx, {
+    topic: "onboarding.sendFollowup",
+    businessId,
+    aggregateType: "business",
+    aggregateId: businessId,
+    dedupeKey: `onboarding-followup:${businessId}`,
+    availableAt: new Date(completedAt.getTime() + ONBOARDING_FOLLOWUP_DELAY_MS),
+    payload: { completedAt: completedAt.toISOString() },
   });
 }
 

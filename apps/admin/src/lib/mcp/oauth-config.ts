@@ -1,4 +1,4 @@
-import { oauthGrantableScopes } from "@lobbystack/shared";
+import { brandLinks, oauthGrantableScopes } from "@lobbystack/shared";
 
 // Where the MCP resource and its authorization server live. Everything is
 // derived from APP_BASE_URL, the public URL of the admin app, so metadata,
@@ -38,7 +38,7 @@ export function protectedResourceMetadata(environment?: Readonly<Record<string, 
     scopes_supported: [...MCP_OAUTH_SCOPES],
     bearer_methods_supported: ["header"],
     resource_name: "LobbyStack",
-    resource_documentation: "https://docs.lobbystack.com/ai/mcp",
+    resource_documentation: `${brandLinks().docsUrl}/ai/mcp`,
   };
 }
 

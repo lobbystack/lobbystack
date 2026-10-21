@@ -1,10 +1,10 @@
 {
   "eyebrow": "Programa de afiliados",
   "title": "Programa de afiliados",
-  "description": "Recomiende LobbyStack a operadores y agencias. Aquí verá sus referidos, sus comisiones y los pagos mensuales por PayPal.",
+  "description": "Recomiende {{appName}} a operadores y agencias. Aquí verá sus referidos, sus comisiones y los pagos mensuales por PayPal.",
   "referral": {
     "title": "Enlace de referido",
-    "description": "Comparta este enlace dondequiera que recomiende LobbyStack.",
+    "description": "Comparta este enlace dondequiera que recomiende {{appName}}.",
     "active": "Activo",
     "copy": "Copiar enlace",
     "code": "Código de referido: {{code}}"
@@ -49,7 +49,7 @@
     },
     "resources": {
       "title": "Sea preciso en lo que dice",
-      "description": "Describa LobbyStack con honestidad e indique que puede recibir una comisión."
+      "description": "Describa {{appName}} con honestidad e indique que puede recibir una comisión."
     },
     "receive": {
       "title": "Reciba sus ganancias",
@@ -105,7 +105,7 @@
     },
     "method": {
       "question": "¿Cómo se envían los pagos?",
-      "answer": "LobbyStack paga a los afiliados por PayPal, al correo de PayPal guardado en la configuración."
+      "answer": "{{appName}} paga a los afiliados por PayPal, al correo de PayPal guardado en la configuración."
     },
     "refunds": {
       "question": "¿Qué pasa si hay un reembolso?",

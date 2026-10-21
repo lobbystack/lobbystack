@@ -4,7 +4,8 @@ import { describe, expect, it } from "vitest";
 import { receptionistCapabilities, toolUse, type Conversation } from "./capabilities";
 
 const callerPhone = "+14165550100";
-const callControl = { transfer: async () => true, hangup: async () => undefined };
+// A phone call's controls, as the worker gives them.
+const callControl = { transfer: async () => true, hangup: async () => undefined, collectPasscode: async () => true };
 const phoneCall: Conversation = { channel: "voice", callerPhone, callId: "call_1", callControl };
 
 function capabilities(snapshot: Partial<BusinessContextSnapshot> = {}, conversation: Conversation = { channel: "web_chat" }) {
@@ -92,7 +93,7 @@ describe("receptionistCapabilities", () => {
       for (const bookingMode of ["instant", "request", "off"] as BookingMode[]) {
         for (const allowCancel of [true, false]) {
           for (const allowReschedule of [true, false]) {
-            for (const verificationMode of ["phone_match_and_facts", "otp_required", "operator_only"] as const) {
+            for (const verificationMode of ["phone_match_and_facts", "otp_required", "passcode_required", "operator_only"] as const) {
               const { tools, live } = capabilities({ bookingMode, ...changePolicy({ allowCancel, allowReschedule, verificationMode }) }, phoneCall);
               const promised = liveChanges(live);
               expect(promised.includes("cancel")).toBe(tools.includes("cancelAppointment"));
@@ -107,14 +108,15 @@ describe("receptionistCapabilities", () => {
 
     it("leaves every change to the team where the call has no trusted number or the business wants it", () => {
       const teamOnly = "- Appointment cancellations: the backend passes a cancellation request to the team. The appointment stays booked until the team cancels it.";
-      for (const { tools, live } of [
-        capabilities({}, { channel: "web_voice", callControl: { hangup: callControl.hangup } }),
-        capabilities(changePolicy({ verificationMode: "operator_only" }), phoneCall),
-        capabilities(changePolicy({ allowCancel: false, allowReschedule: false }), phoneCall),
-      ]) {
+      const browserTeamOnly = "- Appointment cancellations: a browser call has no phone number to identify the caller, so the backend passes a cancellation request to the team. The appointment stays booked until the team cancels it.";
+      for (const [{ tools, live }, line] of [
+        [capabilities({}, { channel: "web_voice", callControl: { hangup: callControl.hangup } }), browserTeamOnly],
+        [capabilities(changePolicy({ verificationMode: "operator_only" }), phoneCall), teamOnly],
+        [capabilities(changePolicy({ allowCancel: false, allowReschedule: false }), phoneCall), teamOnly],
+      ] as const) {
         expect(tools).toContain("requestAppointmentCancellation");
         expect(tools).not.toContain("lookupAppointmentForChange");
-        expect(live).toContain(teamOnly);
+        expect(live).toContain(line);
       }
       // GPT-Live's instructions are set before the caller's number is known.
       const withheldNumber = capabilities({}, { channel: "voice", callControl });
@@ -124,10 +126,15 @@ describe("receptionistCapabilities", () => {
   });
 
   it("tells GPT-Live on a browser call only what the backend can do there", () => {
-    const { live } = capabilities({}, { channel: "web_voice" });
+    const { live, livePersonRule } = capabilities({}, { channel: "web_voice" });
     expect(live.join("\n")).not.toContain("- Transfers:");
+    expect(live).toContain("- Messages: take a message for the team, such as a request to be called back.");
     expect(liveChanges(live)).toEqual([]);
-    expect(capabilities({}, { channel: "voice" }).live).toContain("- Transfers: connect the caller to a person when the business allows it.");
+    expect(livePersonRule).toContain("so it can't be transferred");
+    const phone = capabilities({}, { channel: "voice" });
+    expect(phone.live).toContain("- Transfers: connect the caller to a person when the business allows it.");
+    expect(phone.live).toContain("- Messages: take a message for the team.");
+    expect(phone.livePersonRule).toBe("");
   });
 
   it("gives every tool it offers a kind and a progress line, and guidance only about those tools", () => {
@@ -138,8 +145,9 @@ describe("receptionistCapabilities", () => {
       [{ bookingMode: "off" }, phoneCall],
       [{ hours: [] }, { channel: "web_voice", callControl: { hangup: callControl.hangup } }],
       [{}, { ...phoneCall, intakeOnly: true }],
+      [changePolicy({ verificationMode: "passcode_required" }), phoneCall],
     ];
-    const names = ["findAvailability", "bookAppointment", "requestAppointment", "requestAppointmentCancellation", "verifyAppointmentForChange", "verifyAppointmentChangeOtp", "cancelAppointment", "rescheduleAppointment", "recordTextPreference", "transferCall", "endCall"];
+    const names = ["findAvailability", "bookAppointment", "requestAppointment", "requestAppointmentCancellation", "verifyAppointmentForChange", "verifyAppointmentChangeOtp", "requestKeypadPasscode", "cancelAppointment", "rescheduleAppointment", "recordTextPreference", "transferCall", "endCall"];
     for (const [snapshot, conversation] of conversations) {
       const { tools, guidance } = capabilities(snapshot, conversation);
       for (const name of tools) expect(toolUse(name).progress).not.toBe(`ran ${name}`);

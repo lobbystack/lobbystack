@@ -7,7 +7,7 @@ contentType: "Reference"
 
 ## Pagination
 
-List endpoints return up to 25 items per page, newest first. Pass `limit` to ask for 1 to 100 items.
+List endpoints return up to 25 items per page, newest first. Pass `limit` to ask for 1 to 100 items. `GET /services`, `GET /staff` and `GET /rules` return everything in one page, in their own order.
 
 ```json
 {
@@ -55,8 +55,18 @@ Network errors can leave you unsure whether a request worked. Send an `Idempoten
 - `POST /contacts`
 - `POST /appointments`
 - `POST /knowledge`
+- `POST /services`
+- `POST /rules`
+- `POST /billing/checkout`
+- `POST /widget-keys`
+- `POST /phone-numbers/claims` and `POST /phone-numbers/{phone_number_id}/replace`, which require it
+- `POST /team/invitations`, which requires it
 
 `POST /webhooks` ignores the header, so LobbyStack never stores a copy of the signing secret. If a create request fails with a network error, check `GET /webhooks` before you retry.
+
+`POST /contacts/passcodes` and `POST /contacts/passcodes/generate` ignore it too, so LobbyStack never stores a copy of a keypad PIN. Sending the same PINs to `POST /contacts/passcodes` again just sets them again. If `POST /contacts/passcodes/generate` fails with a network error, look for contacts whose `passcode.set_at` is from that request, and give them new PINs with `contact_ids`.
+
+`POST /team/claim-link` ignores it too, so LobbyStack never stores a copy of the link that hands over the business. Each request sends a new link and revokes the one before, so after a network error, look in `GET /team` for a pending invitation with `transfers_ownership` before you retry.
 
 ```bash
 curl https://app.lobbystack.com/api/v1/appointments \
@@ -89,7 +99,7 @@ Errors use one shape:
 }
 ```
 
-`details` appears only on validation errors. Match on `code`; the `message` wording can change.
+`details` appears on validation errors, and on the 409 from `POST /onboarding/complete`, where each `path` names a missing step. Match on `code`; the `message` wording can change.
 
 | Status | Code | When |
 | --- | --- | --- |
@@ -124,7 +134,7 @@ API keys act for the business, so the API skips the caller verification the rece
 
 ## Staff
 
-`GET /staff` lists everyone who takes appointments, with `active` and the `service_ids` each person can be booked for. A service with no staff assigned in the dashboard is open to every active staff member.
+`GET /staff` lists everyone who takes appointments, with `active` and the `service_ids` each person can be booked for. A service with no staff assigned, in the dashboard or with `staff_ids` on `POST /services` and `PATCH /services/{service_id}`, is open to every active staff member.
 
 A business that never set up staff still has one active staff member, named after the business. Bookings go to that person, so `GET /staff` returns it like any other staff member, and you can pass its `id` as `staff_id`.
 

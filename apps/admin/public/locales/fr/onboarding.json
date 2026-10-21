@@ -16,6 +16,28 @@
     "statusDescription": "Vous pourrez utiliser l'espace de travail dès qu'un administrateur aura terminé l'accueil. Les changements de configuration sont réservés aux propriétaires et aux administrateurs.",
     "goToWorkspace": "Aller à l'espace de travail"
   },
+  "brand": {
+    "title": "Personnalisez cette application",
+    "description": "Vous êtes la première personne à configurer ce déploiement : vous choisissez le nom et le logo que tout le monde voit en se connectant et dans le tableau de bord.",
+    "nameLabel": "Nom de l'application",
+    "nameHint": "40 caractères au maximum. Il remplace {{appName}} sur chaque page et dans l'onglet du navigateur.",
+    "logoLabel": "Logo",
+    "logoChoose": "Choisir un logo",
+    "logoChange": "En choisir un autre",
+    "logoRemove": "Retirer",
+    "logoHint": "Une image carrée PNG, JPEG, WebP ou SVG de 256 Ko au maximum. Elle s'affiche à côté du nom et dans l'onglet du navigateur.",
+    "preview": "Aperçu",
+    "continue": "Continuer",
+    "saving": "Enregistrement...",
+    "skip": "Passer et garder {{appName}}",
+    "errors": {
+      "appName": "Choisissez un nom de 40 caractères au maximum.",
+      "logoType": "Choisissez une image PNG, JPEG, WebP ou SVG. Un SVG ne peut pas contenir de script.",
+      "logoSize": "Choisissez un logo de 256 Ko au maximum.",
+      "closed": "Le nom et le logo de ce déploiement ne peuvent plus être choisis ici.",
+      "failed": "Impossible d'enregistrer le nom et le logo. Veuillez réessayer."
+    }
+  },
   "businessName": {
     "title": "D'abord, quel est le nom de votre entreprise ?",
     "description": "",
@@ -47,7 +69,7 @@
     "submitFailed": "Impossible d'enregistrer cette entreprise pour le moment. Réessayez."
   },
   "website": {
-    "title": "Entraînons LobbyStack avec votre site web",
+    "title": "Entraînons {{appName}} avec votre site web",
     "description": "",
     "label": "Site web",
     "placeholder": "votreentreprise.com",
@@ -185,7 +207,7 @@
     "continue": "Continuer"
   },
   "attribution": {
-    "title": "Comment avez-vous connu LobbyStack ?",
+    "title": "Comment avez-vous connu {{appName}} ?",
     "description": "Cela nous aide à savoir ce qui fonctionne.",
     "options": {
       "ai_assistant": "ChatGPT, Claude, etc.",

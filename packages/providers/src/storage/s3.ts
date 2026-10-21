@@ -109,7 +109,7 @@ export class S3StorageProvider {
     await this.run("health_check", async () => { await this.client.send(new HeadBucketCommand({ Bucket: this.bucket })); });
   }
 
-  async createUpload(input: { key: string; contentType: string; length: number; checksum?: string }): Promise<{ url: string; headers: Record<string, string> }> {
+  async createUpload(input: { key: string; contentType: string; length: number; checksum?: string }): Promise<{ url: string; headers: Record<string, string>; expiresAt: Date }> {
     await this.ensureBucket();
     await this.corsReady;
     const command = new PutObjectCommand({
@@ -119,9 +119,12 @@ export class S3StorageProvider {
       ContentLength: input.length,
       ...(input.checksum ? { ChecksumSHA256: input.checksum } : {}),
     });
-    const url = await this.run("create_upload", async () => await getSignedUrl(this.client, command, { expiresIn: 900 }));
+    const expiresIn = 900;
+    const signedAt = Date.now();
+    const url = await this.run("create_upload", async () => await getSignedUrl(this.client, command, { expiresIn }));
     return {
       url,
+      expiresAt: new Date(signedAt + expiresIn * 1000),
       headers: {
         "content-type": input.contentType,
         "content-length": String(input.length),

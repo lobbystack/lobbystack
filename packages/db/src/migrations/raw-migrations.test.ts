@@ -43,6 +43,15 @@ describe("raw migration manifest", () => {
     expect(backfill).toContain("AND conv.summary = e.summary_text");
   });
 
+  it("adds the message sender's foreign key without reading every message under a lock, then indexes and validates it", () => {
+    const column = readFileSync(`${migrationsDirectory}/0110_widget_live_chat.sql`, "utf8");
+    expect(column).toContain("ADD COLUMN IF NOT EXISTS sent_by_user_id uuid;");
+    expect(column).toContain("FOREIGN KEY (sent_by_user_id) REFERENCES public.users(id) ON DELETE SET NULL NOT VALID");
+    expect(concurrentIndexName(readFileSync(`${migrationsDirectory}/0119_messages_sent_by_user_index.sql`, "utf8"))).toBe("messages_sent_by_user_idx");
+    expect(readFileSync(`${migrationsDirectory}/0120_validate_messages_sent_by_user.sql`, "utf8")).toContain("VALIDATE CONSTRAINT messages_sent_by_user_id_fkey");
+    expect(SCHEMA_MIGRATIONS.indexOf("0119_messages_sent_by_user_index.sql")).toBeLessThan(SCHEMA_MIGRATIONS.indexOf("0120_validate_messages_sent_by_user.sql"));
+  });
+
   it("recognizes only validated concurrent-index migration directives", () => {
     expect(concurrentIndexName("-- lobbystack:concurrent-index product_events_business_sent_idx\nCREATE INDEX CONCURRENTLY ..."))
       .toBe("product_events_business_sent_idx");

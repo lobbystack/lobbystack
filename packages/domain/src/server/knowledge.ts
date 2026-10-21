@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { and, asc, desc, eq, ilike, inArray, isNull, lt, ne, notInArray, sql } from "drizzle-orm";
 
 import { agentRules, businessContextSnapshots, businessHours, businesses, closures, enqueueOutbox, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, phoneNumbers, receptionistProfiles, services, staffServiceAssignments, storageObjects, websiteIngestionJobs, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { defaultGreeting, getKnowledgeStorageLimitBytes, normalizeAppointmentChangePolicy, normalizeBookingMode, normalizeRuntimeLocale, normalizeTransferMode, runtimeLocales, servicePriceFromColumns, type BusinessContextSnapshot } from "@lobbystack/shared";
+import { defaultGreeting, FULL_CRAWL_PAGE_LIMIT, getKnowledgeStorageLimitBytes, normalizeAppointmentChangePolicy, normalizeBookingMode, normalizeRuntimeLocale, normalizeTransferMode, ONBOARDING_CRAWL_PAGE_LIMIT, runtimeLocales, servicePriceFromColumns, type BusinessContextSnapshot } from "@lobbystack/shared";
 import { buildBusinessContextSnapshot } from "../snapshot";
 import { countKnowledgeTokens, fuseKnowledgeRanks, KNOWLEDGE_SEARCH_TOKEN_BUDGET, knowledgeLexicalQueries, knowledgeQueryTerms, withinKnowledgeBudget, type KnowledgePassage } from "../knowledgeRanking";
 
@@ -12,7 +12,7 @@ import type { DomainContext } from "./context";
 import { normalizeWebsiteSourceUrl } from "./knowledgeUrl";
 import { getMeter } from "@lobbystack/telemetry/node";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
-import { advanceOnboardingStageInTransaction } from "./onboarding";
+import { moveOnboardingStageInTransaction } from "./onboarding";
 import { recordProductEventBestEffort } from "./productEvents";
 import { enqueueKnowledgeDerivedRefresh } from "./businessHours";
 import { listBookableEmployees, loadStaffSchedules } from "./employees";
@@ -64,15 +64,8 @@ export function hashContent(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
-/**
- * Onboarding reads enough of a site to make the agent recognisable and no more.
- * Most people who start onboarding never finish it, and every crawled page is
- * billed, so the full read waits until someone asks for it.
- */
-export const ONBOARDING_CRAWL_PAGE_LIMIT = 10;
-
-/** Matches the crawler's own default, used once someone asks for the full read. */
-export const FULL_CRAWL_PAGE_LIMIT = 50;
+// The API reports a website's page limit, so its clients tell a sample from a full read by these.
+export { FULL_CRAWL_PAGE_LIMIT, ONBOARDING_CRAWL_PAGE_LIMIT };
 
 export async function createKnowledgeDocument(
   context: DomainContext,
@@ -82,45 +75,59 @@ export async function createKnowledgeDocument(
     await requireBusinessAdmin(tx, input);
     // finalizeUpload creates the document for an uploaded file.
     if (input.sourceType !== "website") throw Object.assign(new Error('sourceType must be "website". Upload files with /api/uploads.'), { status: 400 });
-    if (!input.sourceUrl) throw Object.assign(new Error("A website source URL is required."), { status: 400 });
-    const sourceUrl = normalizeWebsiteSourceUrl(input.sourceUrl);
-    // Serialize website submissions so retries/revisited forms reuse the same import.
-    const business = (await tx.select({ onboardingStage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1).for("update"))[0];
-    if (input.onboarding || business?.onboardingStage === "website") {
-      await tx.update(businesses).set({ websiteUrl: sourceUrl, updatedAt: new Date() }).where(eq(businesses.id, input.businessId));
-      if (business?.onboardingStage === "website") {
-        await advanceOnboardingStageInTransaction(tx, { userId: input.userId, businessId: input.businessId, from: "website", to: "knowledge" });
-      }
-    }
-    const existing = (await tx.select().from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, input.businessId), eq(knowledgeDocuments.sourceUrl, sourceUrl))).limit(1).for("update"))[0];
-    if (existing) {
-      // A retry of an onboarding submission is still onboarding: without the
-      // limit it would fall back to the full crawl this sampling exists to defer.
-      if (["cancelled", "error"].includes(existing.status)) await queueKnowledgeDocumentRetry(tx, { businessId: input.businessId, documentId: existing.id, crawlLimit: input.onboarding ? ONBOARDING_CRAWL_PAGE_LIMIT : FULL_CRAWL_PAGE_LIMIT }, existing);
-      return existing.id;
-    }
-    const [document] = await tx.insert(knowledgeDocuments).values({
-      businessId: input.businessId,
-      title: input.title.trim(),
-      sourceType: "website",
-      sourceUrl,
-      status: "processing",
-    }).returning({ id: knowledgeDocuments.id });
-    if (!document) {
-      throw new Error("Knowledge document could not be created.");
-    }
-    const crawlLimit = input.onboarding ? ONBOARDING_CRAWL_PAGE_LIMIT : FULL_CRAWL_PAGE_LIMIT;
-    const [ingestion] = await tx.insert(websiteIngestionJobs).values({ businessId: input.businessId, rootDocumentId: document.id, websiteUrl: sourceUrl, provider: "firecrawl", status: "queued", pageLimit: crawlLimit }).returning({ id: websiteIngestionJobs.id });
-    await enqueueOutbox(tx, {
-      topic: "knowledge.crawlWebsite",
-      businessId: input.businessId,
-      aggregateType: "knowledge_document",
-      aggregateId: document.id,
-      dedupeKey: `knowledge:${document.id}:crawl`,
-      payload: { url: sourceUrl, documentId: document.id, revision: 0, websiteIngestionJobId: ingestion!.id, limit: crawlLimit },
-    });
-    return document.id;
+    return await createKnowledgeDocumentInTransaction(tx, input);
   });
+}
+
+/**
+ * Adds a website as a knowledge source and queues its crawl. The caller checks
+ * who may do that. onboarding (or a business still on its website step) also
+ * saves the URL as the business's website; onboarding or sample limit the
+ * crawl to a sample of the site. Submitting a website that is already a
+ * source returns that source.
+ */
+export async function createKnowledgeDocumentInTransaction(
+  tx: DatabaseTransaction,
+  input: { businessId: string; title: string; sourceUrl?: string | undefined; onboarding?: boolean | undefined; sample?: boolean | undefined },
+): Promise<string> {
+  if (!input.sourceUrl) throw Object.assign(new Error("A website source URL is required."), { status: 400 });
+  const sourceUrl = normalizeWebsiteSourceUrl(input.sourceUrl);
+  const crawlLimit = input.onboarding || input.sample ? ONBOARDING_CRAWL_PAGE_LIMIT : FULL_CRAWL_PAGE_LIMIT;
+  // Serialize website submissions so retries/revisited forms reuse the same import.
+  const business = (await tx.select({ onboardingStage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1).for("update"))[0];
+  if (input.onboarding || business?.onboardingStage === "website") {
+    await tx.update(businesses).set({ websiteUrl: sourceUrl, updatedAt: new Date() }).where(eq(businesses.id, input.businessId));
+    if (business?.onboardingStage === "website") {
+      await moveOnboardingStageInTransaction(tx, { businessId: input.businessId, from: "website", to: "knowledge" });
+    }
+  }
+  const existing = (await tx.select().from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, input.businessId), eq(knowledgeDocuments.sourceUrl, sourceUrl))).limit(1).for("update"))[0];
+  if (existing) {
+    // A retry of an onboarding submission is still onboarding: without the
+    // limit it would fall back to the full crawl this sampling exists to defer.
+    if (["cancelled", "error"].includes(existing.status)) await queueKnowledgeDocumentRetry(tx, { businessId: input.businessId, documentId: existing.id, crawlLimit }, existing);
+    return existing.id;
+  }
+  const [document] = await tx.insert(knowledgeDocuments).values({
+    businessId: input.businessId,
+    title: input.title.trim(),
+    sourceType: "website",
+    sourceUrl,
+    status: "processing",
+  }).returning({ id: knowledgeDocuments.id });
+  if (!document) {
+    throw new Error("Knowledge document could not be created.");
+  }
+  const [ingestion] = await tx.insert(websiteIngestionJobs).values({ businessId: input.businessId, rootDocumentId: document.id, websiteUrl: sourceUrl, provider: "firecrawl", status: "queued", pageLimit: crawlLimit }).returning({ id: websiteIngestionJobs.id });
+  await enqueueOutbox(tx, {
+    topic: "knowledge.crawlWebsite",
+    businessId: input.businessId,
+    aggregateType: "knowledge_document",
+    aggregateId: document.id,
+    dedupeKey: `knowledge:${document.id}:crawl`,
+    payload: { url: sourceUrl, documentId: document.id, revision: 0, websiteIngestionJobId: ingestion!.id, limit: crawlLimit },
+  });
+  return document.id;
 }
 
 export async function listKnowledgeSnippets(context: DomainContext, input: { userId: string; businessId: string }) {
@@ -130,7 +137,7 @@ export async function listKnowledgeSnippets(context: DomainContext, input: { use
   });
 }
 
-async function queueKnowledgeDocumentRetry(tx: DatabaseTransaction, input: { businessId: string; documentId: string; crawlLimit?: number }, document: Pick<typeof knowledgeDocuments.$inferSelect, "id" | "sourceType" | "sourceUrl" | "revision">): Promise<void> {
+async function queueKnowledgeDocumentRetry(tx: DatabaseTransaction, input: { businessId: string; documentId: string; crawlLimit?: number | undefined }, document: Pick<typeof knowledgeDocuments.$inferSelect, "id" | "sourceType" | "sourceUrl" | "revision">): Promise<void> {
     await tx.update(knowledgeDocuments).set({ status: document.sourceType === "website" ? "processing" : "pending", processingProgress: 0, error: null, revision: sql`${knowledgeDocuments.revision} + 1`, updatedAt: new Date() }).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId)));
     const retryLimit = input.crawlLimit ?? FULL_CRAWL_PAGE_LIMIT;
     const ingestion = document.sourceType === "website" && document.sourceUrl ? (await tx.insert(websiteIngestionJobs).values({ businessId: input.businessId, rootDocumentId: input.documentId, websiteUrl: document.sourceUrl, provider: "firecrawl", status: "queued", pageLimit: retryLimit }).onConflictDoUpdate({ target: websiteIngestionJobs.rootDocumentId, set: { status: "queued", importedCount: 0, indexedCount: 0, errorCount: 0, lastError: null, pageLimit: retryLimit, updatedAt: new Date() } }).returning({ id: websiteIngestionJobs.id }))[0] : undefined;
@@ -140,10 +147,19 @@ async function queueKnowledgeDocumentRetry(tx: DatabaseTransaction, input: { bus
 export async function retryKnowledgeDocument(context: DomainContext, input: { userId: string; businessId: string; documentId: string }): Promise<void> {
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    const document = (await tx.select({ id: knowledgeDocuments.id, sourceType: knowledgeDocuments.sourceType, sourceUrl: knowledgeDocuments.sourceUrl, revision: knowledgeDocuments.revision }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).limit(1).for("update"))[0];
-    if (!document) throw new Error("Knowledge document not found.");
-    await queueKnowledgeDocumentRetry(tx, input, document);
+    if (!(await retryKnowledgeDocumentInTransaction(tx, input))) throw new Error("Knowledge document not found.");
   });
+}
+
+/**
+ * Queues a source's crawl or extraction again, crawling up to crawlLimit pages
+ * (the full limit by default). False when the business has no such document.
+ */
+export async function retryKnowledgeDocumentInTransaction(tx: DatabaseTransaction, input: { businessId: string; documentId: string; crawlLimit?: number | undefined }): Promise<boolean> {
+  const document = (await tx.select({ id: knowledgeDocuments.id, sourceType: knowledgeDocuments.sourceType, sourceUrl: knowledgeDocuments.sourceUrl, revision: knowledgeDocuments.revision }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).limit(1).for("update"))[0];
+  if (!document) return false;
+  await queueKnowledgeDocumentRetry(tx, input, document);
+  return true;
 }
 
 /**
@@ -153,30 +169,44 @@ export async function retryKnowledgeDocument(context: DomainContext, input: { us
 export async function expandWebsiteCrawl(context: DomainContext, input: { userId: string; businessId: string; documentId: string }): Promise<void> {
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    const document = (await tx.select({ id: knowledgeDocuments.id, sourceType: knowledgeDocuments.sourceType, sourceUrl: knowledgeDocuments.sourceUrl, revision: knowledgeDocuments.revision }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).limit(1).for("update"))[0];
-    if (!document) throw Object.assign(new Error("Knowledge document not found."), { status: 404 });
-    if (document.sourceType !== "website" || !document.sourceUrl) throw Object.assign(new Error("Only a website import can be read further."), { status: 400 });
-    await queueKnowledgeDocumentRetry(tx, { ...input, crawlLimit: FULL_CRAWL_PAGE_LIMIT }, document);
+    await expandWebsiteCrawlInTransaction(tx, input);
   });
+}
+
+export async function expandWebsiteCrawlInTransaction(tx: DatabaseTransaction, input: { businessId: string; documentId: string }): Promise<void> {
+  const document = (await tx.select({ id: knowledgeDocuments.id, sourceType: knowledgeDocuments.sourceType, sourceUrl: knowledgeDocuments.sourceUrl, revision: knowledgeDocuments.revision }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).limit(1).for("update"))[0];
+  if (!document) throw Object.assign(new Error("Knowledge document not found."), { status: 404 });
+  if (document.sourceType !== "website" || !document.sourceUrl) throw Object.assign(new Error("Only a website import can be read further."), { status: 400 });
+  await queueKnowledgeDocumentRetry(tx, { ...input, crawlLimit: FULL_CRAWL_PAGE_LIMIT }, document);
 }
 
 export async function setKnowledgeDocumentActive(context: DomainContext, input: { userId: string; businessId: string; documentId: string; active: boolean }): Promise<void> {
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async tx => {
     await requireBusinessAdmin(tx, input);
-    const [document] = await tx.update(knowledgeDocuments).set({ active: input.active, updatedAt: new Date() }).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).returning({ id: knowledgeDocuments.id });
-    if (!document) throw Object.assign(new Error("Knowledge document not found."), { status: 404 });
-    await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "knowledge_document", aggregateId: input.documentId, dedupeKey: `knowledge:${input.documentId}:active:${Date.now()}`, payload: { businessId: input.businessId, reason: "document_activity_changed" } });
-    await enqueueKnowledgeDerivedRefresh(tx, { businessId: input.businessId, reason: "document_activity_changed" });
+    if (!await setKnowledgeDocumentActiveInTransaction(tx, input)) throw Object.assign(new Error("Knowledge document not found."), { status: 404 });
   });
+}
+
+/** Turns a document on or off for the receptionist. False when the business has no such document. Callers authorize first. */
+export async function setKnowledgeDocumentActiveInTransaction(tx: DatabaseTransaction, input: { businessId: string; documentId: string; active: boolean }): Promise<boolean> {
+  const [document] = await tx.update(knowledgeDocuments).set({ active: input.active, updatedAt: new Date() }).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).returning({ id: knowledgeDocuments.id });
+  if (!document) return false;
+  await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "knowledge_document", aggregateId: input.documentId, dedupeKey: `knowledge:${input.documentId}:active:${Date.now()}`, payload: { businessId: input.businessId, reason: "document_activity_changed" } });
+  await enqueueKnowledgeDerivedRefresh(tx, { businessId: input.businessId, reason: "document_activity_changed" });
+  return true;
 }
 
 export async function cancelKnowledgeDocument(context: DomainContext, input: { userId: string; businessId: string; documentId: string }): Promise<void> {
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    const [document] = await tx.update(knowledgeDocuments).set({ status: "cancelled", revision: sql`${knowledgeDocuments.revision} + 1`, error: "Cancelled by operator.", updatedAt: new Date() }).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId), eq(knowledgeDocuments.status, "processing"))).returning({ id: knowledgeDocuments.id });
-    if (!document) throw Object.assign(new Error("Only a processing knowledge document can be cancelled."), { status: 409 });
-    await tx.update(websiteIngestionJobs).set({ status: "cancelled", updatedAt: new Date() }).where(and(eq(websiteIngestionJobs.businessId, input.businessId), eq(websiteIngestionJobs.rootDocumentId, input.documentId)));
+    await cancelKnowledgeDocumentInTransaction(tx, input);
   });
+}
+
+export async function cancelKnowledgeDocumentInTransaction(tx: DatabaseTransaction, input: { businessId: string; documentId: string }): Promise<void> {
+  const [document] = await tx.update(knowledgeDocuments).set({ status: "cancelled", revision: sql`${knowledgeDocuments.revision} + 1`, error: "Cancelled by operator.", updatedAt: new Date() }).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId), eq(knowledgeDocuments.status, "processing"))).returning({ id: knowledgeDocuments.id });
+  if (!document) throw Object.assign(new Error("Only a processing knowledge document can be cancelled."), { status: 409 });
+  await tx.update(websiteIngestionJobs).set({ status: "cancelled", updatedAt: new Date() }).where(and(eq(websiteIngestionJobs.businessId, input.businessId), eq(websiteIngestionJobs.rootDocumentId, input.documentId)));
 }
 
 export async function getKnowledgeDocumentContent(context: DomainContext, input: { userId: string; businessId: string; documentId: string }): Promise<{ document: Record<string, unknown>; content: string } | null> {
@@ -192,14 +222,20 @@ export async function getKnowledgeDocumentContent(context: DomainContext, input:
 export async function deleteKnowledgeDocument(context: DomainContext, input: { userId: string; businessId: string; documentId: string }): Promise<void> {
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    await tx.delete(knowledgeChunks).where(and(eq(knowledgeChunks.documentId, input.documentId), eq(knowledgeChunks.businessId, input.businessId)));
-    const [document] = await tx.delete(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).returning({ id: knowledgeDocuments.id, storageObjectId: knowledgeDocuments.storageObjectId });
-    if (!document) throw new Error("Knowledge document not found.");
-    // Downloads stop now; the retained-object sweep deletes the file within 15 minutes.
-    if (document.storageObjectId) await tx.update(storageObjects).set({ retentionUntil: new Date(), updatedAt: new Date() }).where(and(eq(storageObjects.id, document.storageObjectId), eq(storageObjects.businessId, input.businessId)));
-    await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "knowledge_document", aggregateId: document.id, dedupeKey: `knowledge:${document.id}:deleted:${Date.now()}`, payload: { businessId: input.businessId, reason: "document_deleted" } });
-    await enqueueKnowledgeDerivedRefresh(tx, { businessId: input.businessId, reason: "document_deleted" });
+    if (!await deleteKnowledgeDocumentInTransaction(tx, input)) throw new Error("Knowledge document not found.");
   });
+}
+
+/** Deletes a document and its indexed text. False when the business has no such document. Callers authorize first. */
+export async function deleteKnowledgeDocumentInTransaction(tx: DatabaseTransaction, input: { businessId: string; documentId: string }): Promise<boolean> {
+  await tx.delete(knowledgeChunks).where(and(eq(knowledgeChunks.documentId, input.documentId), eq(knowledgeChunks.businessId, input.businessId)));
+  const [document] = await tx.delete(knowledgeDocuments).where(and(eq(knowledgeDocuments.id, input.documentId), eq(knowledgeDocuments.businessId, input.businessId))).returning({ id: knowledgeDocuments.id, storageObjectId: knowledgeDocuments.storageObjectId });
+  if (!document) return false;
+  // Downloads stop now; the retained-object sweep deletes the file within 15 minutes.
+  if (document.storageObjectId) await tx.update(storageObjects).set({ retentionUntil: new Date(), updatedAt: new Date() }).where(and(eq(storageObjects.id, document.storageObjectId), eq(storageObjects.businessId, input.businessId)));
+  await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "knowledge_document", aggregateId: document.id, dedupeKey: `knowledge:${document.id}:deleted:${Date.now()}`, payload: { businessId: input.businessId, reason: "document_deleted" } });
+  await enqueueKnowledgeDerivedRefresh(tx, { businessId: input.businessId, reason: "document_deleted" });
+  return true;
 }
 
 function websiteHost(sourceUrl: string | null): string | null {
@@ -269,21 +305,36 @@ export async function updateKnowledgeSnippet(
 ): Promise<void> {
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    const [snippet] = await tx.update(knowledgeSnippets).set({ ...(input.title !== undefined ? { title: input.title.trim() } : {}), ...(input.content !== undefined ? { content: input.content.trim() } : {}), tags: input.tags, priority: input.priority, active: input.active, updatedAt: new Date() }).where(and(eq(knowledgeSnippets.id, input.snippetId), eq(knowledgeSnippets.businessId, input.businessId))).returning({ id: knowledgeSnippets.id });
-    if (!snippet) throw new Error("Knowledge snippet not found.");
-    await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "knowledge_snippet", aggregateId: snippet.id, dedupeKey: `knowledge-snippet:${snippet.id}:snapshot:${Date.now()}`, payload: { businessId: input.businessId, reason: "snippet_updated" } });
-    await enqueueKnowledgeDerivedRefresh(tx, { businessId: input.businessId, reason: "snippet_updated" });
+    if (!await updateKnowledgeSnippetInTransaction(tx, input)) throw new Error("Knowledge snippet not found.");
   });
+}
+
+/** Changes the fields given and refreshes the receptionist snapshot. Null when the business has no such snippet. Callers authorize first. */
+export async function updateKnowledgeSnippetInTransaction(
+  tx: DatabaseTransaction,
+  input: { businessId: string; snippetId: string; title?: string | undefined; content?: string | undefined; tags?: string[] | undefined; priority?: number | undefined; active?: boolean | undefined },
+): Promise<typeof knowledgeSnippets.$inferSelect | null> {
+  const [snippet] = await tx.update(knowledgeSnippets).set({ ...(input.title !== undefined ? { title: input.title.trim() } : {}), ...(input.content !== undefined ? { content: input.content.trim() } : {}), tags: input.tags, priority: input.priority, active: input.active, updatedAt: new Date() }).where(and(eq(knowledgeSnippets.id, input.snippetId), eq(knowledgeSnippets.businessId, input.businessId))).returning();
+  if (!snippet) return null;
+  await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "knowledge_snippet", aggregateId: snippet.id, dedupeKey: `knowledge-snippet:${snippet.id}:snapshot:${Date.now()}`, payload: { businessId: input.businessId, reason: "snippet_updated" } });
+  await enqueueKnowledgeDerivedRefresh(tx, { businessId: input.businessId, reason: "snippet_updated" });
+  return snippet;
 }
 
 export async function deleteKnowledgeSnippet(context: DomainContext, input: { userId: string; businessId: string; snippetId: string }): Promise<void> {
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    const [snippet] = await tx.delete(knowledgeSnippets).where(and(eq(knowledgeSnippets.id, input.snippetId), eq(knowledgeSnippets.businessId, input.businessId))).returning({ id: knowledgeSnippets.id });
-    if (!snippet) throw new Error("Knowledge snippet not found.");
-    await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "knowledge_snippet", aggregateId: snippet.id, dedupeKey: `knowledge-snippet:${snippet.id}:snapshot:${Date.now()}`, payload: { businessId: input.businessId, reason: "snippet_deleted" } });
-    await enqueueKnowledgeDerivedRefresh(tx, { businessId: input.businessId, reason: "snippet_deleted" });
+    if (!await deleteKnowledgeSnippetInTransaction(tx, input)) throw new Error("Knowledge snippet not found.");
   });
+}
+
+/** Deletes a snippet and refreshes the receptionist snapshot. False when the business has no such snippet. Callers authorize first. */
+export async function deleteKnowledgeSnippetInTransaction(tx: DatabaseTransaction, input: { businessId: string; snippetId: string }): Promise<boolean> {
+  const [snippet] = await tx.delete(knowledgeSnippets).where(and(eq(knowledgeSnippets.id, input.snippetId), eq(knowledgeSnippets.businessId, input.businessId))).returning({ id: knowledgeSnippets.id });
+  if (!snippet) return false;
+  await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "knowledge_snippet", aggregateId: snippet.id, dedupeKey: `knowledge-snippet:${snippet.id}:snapshot:${Date.now()}`, payload: { businessId: input.businessId, reason: "snippet_deleted" } });
+  await enqueueKnowledgeDerivedRefresh(tx, { businessId: input.businessId, reason: "snippet_deleted" });
+  return true;
 }
 
 type IndexDocumentInput = { businessId: string; documentId: string; text: string; embeddings: number[][]; embeddingFingerprint?: string };
@@ -572,7 +623,7 @@ export async function refreshBusinessSnapshot(
       tx.select().from(businessHours).where(and(eq(businessHours.businessId, input.businessId), isNull(businessHours.staffId))).orderBy(asc(businessHours.dayOfWeek), asc(businessHours.openMinutes)),
       tx.select().from(closures).where(and(eq(closures.businessId, input.businessId), isNull(closures.staffId))).orderBy(asc(closures.startsAt)),
       tx.select().from(services).where(and(eq(services.businessId, input.businessId), eq(services.active, true))).orderBy(asc(services.name)),
-      tx.select().from(agentRules).where(and(eq(agentRules.businessId, input.businessId), eq(agentRules.active, true))).orderBy(asc(agentRules.sortOrder)),
+      tx.select().from(agentRules).where(and(eq(agentRules.businessId, input.businessId), eq(agentRules.active, true))).orderBy(asc(agentRules.sortOrder), asc(agentRules.createdAt), asc(agentRules.id)),
       tx.select().from(knowledgeSnippets).where(and(eq(knowledgeSnippets.businessId, input.businessId), eq(knowledgeSnippets.active, true))).orderBy(desc(knowledgeSnippets.priority)).limit(8),
       tx.select({ title: knowledgeDocuments.title, sourceUrl: knowledgeDocuments.sourceUrl, tags: knowledgeDocuments.tags, revision: knowledgeDocuments.revision }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, input.businessId), eq(knowledgeDocuments.active, true), eq(knowledgeDocuments.status, "indexed"))).orderBy(desc(knowledgeDocuments.updatedAt), asc(knowledgeDocuments.id)).limit(40),
       tx.select().from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"))).orderBy(desc(phoneNumbers.createdAt), asc(phoneNumbers.id)),
@@ -669,4 +720,12 @@ export async function getKnowledgeStorageUsageBytes(tx: DatabaseTransaction, bus
 
 export function knowledgeStorageLimitMessage(limitBytes: number): string {
   return `Knowledge storage limit reached. ${Math.ceil(limitBytes / 1024 / 1024)} MB of text is included on this plan.`;
+}
+
+/** Refuses new knowledge for a business whose plan already holds all the text it includes. */
+export class KnowledgeStorageLimitError extends Error {
+  constructor(limitBytes: number) {
+    super(knowledgeStorageLimitMessage(limitBytes));
+    this.name = "KnowledgeStorageLimitError";
+  }
 }

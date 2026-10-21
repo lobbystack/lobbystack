@@ -150,10 +150,12 @@ export class LocalStorageProvider {
     });
   }
 
-  async createUpload(input: { key: string; contentType: string; length: number; checksum?: string }): Promise<{ url: string; headers: Record<string, string> }> {
+  async createUpload(input: { key: string; contentType: string; length: number; checksum?: string }): Promise<{ url: string; headers: Record<string, string>; expiresAt: Date }> {
     validatedSegments(input.key);
+    const expiresAt = Math.floor(Date.now() / 1000) + 900;
     return {
-      url: this.signedUrl({ operation: "upload", key: input.key, expiresAt: Math.floor(Date.now() / 1000) + 900, contentType: input.contentType, length: input.length, ...(input.checksum ? { checksum: input.checksum } : {}) }),
+      url: this.signedUrl({ operation: "upload", key: input.key, expiresAt, contentType: input.contentType, length: input.length, ...(input.checksum ? { checksum: input.checksum } : {}) }),
+      expiresAt: new Date(expiresAt * 1000),
       headers: {
         "content-type": input.contentType,
         "content-length": String(input.length),

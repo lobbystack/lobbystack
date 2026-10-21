@@ -10,6 +10,7 @@ import type {
   AppointmentChangePolicy,
   BookingMode,
 } from "@lobbystack/shared";
+import { RULE_CONTENT_CALL_MAX_LENGTH, RULE_TITLE_MAX_LENGTH, RULES_CALL_MAX } from "@lobbystack/shared";
 
 type SnapshotBuilderInput = {
   businessId: string;
@@ -43,9 +44,9 @@ type SnapshotBuilderInput = {
   email?: string;
 };
 
-export const MAX_AGENT_RULES_PER_SNAPSHOT = 50;
-export const MAX_AGENT_RULE_TITLE_CHARS = 160;
-export const MAX_AGENT_RULE_CONTENT_CHARS = 4000;
+export const MAX_AGENT_RULES_PER_SNAPSHOT = RULES_CALL_MAX;
+export const MAX_AGENT_RULE_TITLE_CHARS = RULE_TITLE_MAX_LENGTH;
+export const MAX_AGENT_RULE_CONTENT_CHARS = RULE_CONTENT_CALL_MAX_LENGTH;
 
 export function buildBusinessContextSnapshot(
   input: SnapshotBuilderInput,

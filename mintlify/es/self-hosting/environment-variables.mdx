@@ -18,7 +18,28 @@ Use `.env.example` como fuente de referencia. Guarde los valores de producción 
 | `LOBBYSTACK_<ROLE>_DATABASE_URL` | Opcional. Reemplaza la cadena de conexión construida para un rol, por ejemplo para usar otro host. |
 | `BETTER_AUTH_SECRET` | Secreto de firma de Better Auth. Use al menos 32 caracteres aleatorios. |
 | `ENCRYPTION_KEY` | Cifra las credenciales de la aplicación almacenadas. |
-| `OTP_HASH_SECRET` | Genera el hash de los códigos de verificación de un solo uso. |
+| `OTP_HASH_SECRET` | Genera el hash de los códigos de verificación de un solo uso y de los PIN de quienes llaman. Configure el mismo valor en el servicio de administración y en el worker. Si lo cambia, todos los PIN guardados dejan de funcionar. |
+
+## Imagen de marca
+
+Configúrelas en el servicio de administración. Cada una tiene prioridad sobre el nombre y el logo que elige el primer propietario de la implementación durante la incorporación, así que déjelas vacías para que esa persona elija. Páselas también a la compilación del servicio de administración, como argumentos de compilación de Docker con el mismo nombre, para que las páginas de inicio de sesión prerrenderizadas las muestren sin consultar antes al servidor.
+
+| Variable | Función |
+| --- | --- |
+| `BRAND_APP_NAME` | El nombre que muestra el panel en lugar de LobbyStack, de hasta 40 caracteres. Aparece en la pestaña del navegador, encima de las páginas de inicio de sesión y de incorporación, y en los textos del panel. |
+| `BRAND_LOGO_URL` | El logo que aparece junto al nombre y como icono de la pestaña. Use una URL `https://` o una ruta del panel, como `/brand/logo.svg`. Sin logo, una implementación con otro nombre muestra solo su nombre. |
+
+Los enlaces del panel a páginas externas vienen de cinco variables más. Next.js las escribe en la compilación del servicio de administración, así que páselas como argumentos de compilación de Docker con el mismo nombre y vuelva a compilar después de cambiar una. Deje una vacía o sin configurar para enlazar a la página de LobbyStack.
+
+| Variable | Función |
+| --- | --- |
+| `NEXT_PUBLIC_LANDING_SITE_URL` | Su sitio web, como `https://example.com`. La página de demostración pública enlaza a él, y la respuesta SMS a HELP lo indica. Sin sus propias variables, los enlaces a los términos y a la privacidad abren `/terms` y `/privacy` en ese sitio. |
+| `NEXT_PUBLIC_TERMS_URL` | Sus términos del servicio, enlazados debajo del formulario de registro, al pie de la incorporación y desde el programa de afiliados. |
+| `NEXT_PUBLIC_PRIVACY_URL` | Su política de privacidad, enlazada debajo del formulario de registro y al pie de la incorporación. |
+| `NEXT_PUBLIC_DOCS_SITE_URL` | Su documentación, enlazada desde el panel Comentarios y desde los metadatos del servidor MCP. |
+| `NEXT_PUBLIC_CONTACT_EMAIL` | La única dirección a la que se le escribe: el enlace de contacto del panel Comentarios, el botón de contacto del plan Enterprise y las respuestas SMS a HELP. |
+
+La respuesta SMS a HELP empieza con el nombre de la aplicación. Los correos electrónicos, la API y los demás SMS todavía dicen LobbyStack.
 
 ## Servicios internos
 
@@ -62,6 +83,7 @@ El almacenamiento local sirve para una implementación en un solo host. Use S3 c
 | Variable | Función |
 | --- | --- |
 | `PUBLIC_API_RATE_LIMIT_PER_MINUTE` | Solicitudes por minuto para cada clave de API en `/api/v1`. El valor predeterminado es `120`. Configúrela en el servicio de administración. El límite usa `REDIS_URL`; en producción, las solicitudes fallan con `503` cuando no se puede acceder a Redis. |
+| `PLATFORM_API_KEYS` | Claves de plataforma (`lsp_...`) que registran y administran negocios en `/api/v1`, como un arreglo JSON. Cada entrada indica su socio, la cuenta verificada en cuyo nombre actúa (`owner_email`) y si llega a todos los negocios (`"access": "all"`) o solo a los que registró su socio. `pnpm platform-key:create` crea una clave e imprime su entrada; la entrada solo guarda un hash de la clave. Una clave con `"access": "all"` y su cuenta propietaria son credenciales raíz: llegan a todos los negocios. Configúrela en el servicio de administración. Déjela vacía si no hay ninguna. |
 | `ENCRYPTION_KEY` | También cifra los secretos de firma de los webhooks y sirve de clave para el HMAC con el que se almacenan los hashes de las claves de API. Configure el mismo valor en el servicio de administración y en el worker, o el worker no podrá firmar las entregas. Cambiarla invalida todas las claves de API y todos los secretos de webhook. |
 
 Las entregas de webhooks rechazan las direcciones privadas, de loopback, de enlace local y de metadatos de la nube en todas las implementaciones, incluidas las autoalojadas. Apunte los endpoints a una URL HTTPS pública. Las URL `http://` simples solo funcionan cuando `NODE_ENV=development`.

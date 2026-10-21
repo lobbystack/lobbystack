@@ -37,6 +37,8 @@ describe("LocalStorageProvider", () => {
     const upload = await storage.createUpload({ key: "business/attachment/object/file.pdf", contentType: "application/pdf", length: 12, checksum: "checksum" });
     const uploadToken = new URL(upload.url).searchParams.get("token");
     expect(uploadToken).toBeTruthy();
+    // The upload URL works for 15 minutes, and says when it stops.
+    expect(Math.abs(upload.expiresAt.getTime() - (Date.now() + 900_000))).toBeLessThan(2_000);
     expect(storage.verifyToken(uploadToken!, "upload")).toMatchObject({ key: "business/attachment/object/file.pdf", length: 12, checksum: "checksum" });
 
     const downloadUrl = await storage.createDownloadUrl({ key: "business/attachment/object/file.pdf", expiresInSeconds: 300, range: "bytes=1-3" });

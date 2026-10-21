@@ -16,6 +16,28 @@
     "statusDescription": "Podrá usar el espacio de trabajo cuando un administrador complete la configuración inicial. Solo los propietarios y administradores del negocio pueden cambiar la configuración.",
     "goToWorkspace": "Ir al espacio de trabajo"
   },
+  "brand": {
+    "title": "Personalice esta aplicación",
+    "description": "Usted es la primera persona en configurar esta instalación, así que elige el nombre y el logo que todos ven al iniciar sesión y en el panel.",
+    "nameLabel": "Nombre de la aplicación",
+    "nameHint": "Hasta 40 caracteres. Reemplaza el nombre {{appName}} en todas las páginas y en la pestaña del navegador.",
+    "logoLabel": "Logo",
+    "logoChoose": "Elegir un logo",
+    "logoChange": "Elegir otro",
+    "logoRemove": "Quitar",
+    "logoHint": "Una imagen cuadrada PNG, JPEG, WebP o SVG de hasta 256 KB. Aparece junto al nombre y como icono de la pestaña del navegador.",
+    "preview": "Vista previa",
+    "continue": "Continuar",
+    "saving": "Guardando...",
+    "skip": "Omitir y conservar {{appName}}",
+    "errors": {
+      "appName": "Elija un nombre de 40 caracteres o menos.",
+      "logoType": "Elija una imagen PNG, JPEG, WebP o SVG. Un SVG no puede contener scripts.",
+      "logoSize": "Elija un logo de 256 KB o menos.",
+      "closed": "El nombre y el logo de esta instalación ya no se pueden elegir aquí.",
+      "failed": "No pudimos guardar el nombre y el logo. Inténtelo de nuevo."
+    }
+  },
   "businessName": {
     "title": "Primero, ¿cómo se llama su negocio?",
     "description": "",
@@ -47,7 +69,7 @@
     "submitFailed": "No pudimos guardar ese negocio en este momento. Inténtelo de nuevo."
   },
   "website": {
-    "title": "Ahora entrenemos a LobbyStack con su sitio web",
+    "title": "Ahora entrenemos a {{appName}} con su sitio web",
     "description": "",
     "label": "Sitio web",
     "placeholder": "suempresa.com",
@@ -185,7 +207,7 @@
     "continue": "Continuar"
   },
   "attribution": {
-    "title": "¿Cómo conoció LobbyStack?",
+    "title": "¿Cómo conoció {{appName}}?",
     "description": "Nos ayuda a centrarnos en lo que funciona.",
     "options": {
       "ai_assistant": "ChatGPT, Claude, etc.",

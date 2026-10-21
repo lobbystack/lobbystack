@@ -46,6 +46,20 @@ export function embeddableSecurityHeaders(env: Record<string, string | undefined
   };
 }
 
+/**
+ * The logo onboarding saved may be an SVG, and an SVG opened on its own is a
+ * document. Serve it with no script, no requests and a sandbox, whichever of
+ * the proxy, next.config.ts or the route sets the header last.
+ */
+export const BRAND_LOGO_SECURITY_HEADERS: Record<string, string> = {
+  "Content-Security-Policy": "default-src 'none'; img-src data:; style-src 'unsafe-inline'; sandbox",
+  "X-Content-Type-Options": "nosniff",
+};
+
+export function brandLogoSecurityHeaders(env: Record<string, string | undefined> = process.env): Record<string, string> {
+  return { ...securityHeaders(env), ...BRAND_LOGO_SECURITY_HEADERS };
+}
+
 /** Header records converted to the shape the next.config.ts headers array expects. */
 export function toNextHeaderList(headers: Record<string, string>): Array<{ key: string; value: string }> {
   return Object.entries(headers).map(([key, value]) => ({ key, value }));

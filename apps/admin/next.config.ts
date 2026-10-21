@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 
 import { publicAssetVersion } from "./asset-version";
 import { releaseVersion } from "./src/lib/release-version";
-import { embeddableSecurityHeaders, securityHeaders, toNextHeaderList } from "./security-headers";
+import { brandLogoSecurityHeaders, embeddableSecurityHeaders, securityHeaders, toNextHeaderList } from "./security-headers";
 
 // One release identifies the build everywhere: browser error reports, the source
 // maps uploaded to PostHog, and the deployment ID below.
@@ -34,6 +34,14 @@ const nextConfig: NextConfig = {
     // deployment variable that can stay unchanged across deploys.
     NEXT_PUBLIC_ASSET_VERSION: publicAssetVersion(resolve(process.cwd(), "public"), serviceVersion),
     NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT: process.env.RAILWAY_ENVIRONMENT_NAME ?? process.env.NODE_ENV ?? "development",
+    // Where the dashboard's outside links go (packages/shared/src/brandLinks.ts),
+    // fixed at build even when unset, so a value set only at run time can't make
+    // the server render a link the browser then disagrees with.
+    NEXT_PUBLIC_LANDING_SITE_URL: process.env.NEXT_PUBLIC_LANDING_SITE_URL ?? "",
+    NEXT_PUBLIC_TERMS_URL: process.env.NEXT_PUBLIC_TERMS_URL ?? "",
+    NEXT_PUBLIC_PRIVACY_URL: process.env.NEXT_PUBLIC_PRIVACY_URL ?? "",
+    NEXT_PUBLIC_DOCS_SITE_URL: process.env.NEXT_PUBLIC_DOCS_SITE_URL ?? "",
+    NEXT_PUBLIC_CONTACT_EMAIL: process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "",
     // No NEXT_PUBLIC_DEPLOYMENT_MODE: browser telemetry gets the mode from the
     // server at runtime (src/lib/deployment-mode.ts).
   },
@@ -76,15 +84,23 @@ const nextConfig: NextConfig = {
     const embeddable = toNextHeaderList(embeddableSecurityHeaders());
     const immutableAssetCache = [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }];
     const embedLoaderCache = [{ key: "Cache-Control", value: "public, max-age=600, s-maxage=3600, stale-while-revalidate=86400" }];
+    // A loader for one key carries the bubble look saved in the dashboard, so edits must reach websites quickly.
+    const keyedEmbedLoaderCache = [{ key: "Cache-Control", value: "public, max-age=60, s-maxage=60" }];
     return [
       { source: "/locales/:path*", headers: immutableAssetCache },
       { source: "/brand/:path*", headers: immutableAssetCache },
       { source: "/lobbystack-logo.svg", headers: immutableAssetCache },
       { source: "/embed/embed.js", headers: immutableAssetCache },
-      { source: "/((?!embed\\.js|embed/).*)", headers: toNextHeaderList(securityHeaders()) },
-      { source: "/embed.js", headers: [...embeddable, ...embedLoaderCache] },
+      { source: "/((?!embed\\.js|embed/|api/branding/logo$).*)", headers: toNextHeaderList(securityHeaders()) },
+      { source: "/api/branding/logo", headers: toNextHeaderList(brandLogoSecurityHeaders()) },
+      { source: "/embed.js", missing: [{ type: "query", key: "key" }], headers: [...embeddable, ...embedLoaderCache] },
+      { source: "/embed.js", has: [{ type: "query", key: "key" }], headers: [...embeddable, ...keyedEmbedLoaderCache] },
       { source: "/embed/:key*", headers: embeddable },
     ];
+  },
+  async redirects() {
+    // The widget page moved out of Settings; keep old bookmarks and alert links working.
+    return [{ source: "/settings/widget", destination: "/widget", permanent: true }];
   },
 };
 

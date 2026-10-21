@@ -7,7 +7,7 @@ contentType: "Reference"
 
 ## Pagination
 
-Les points de terminaison de liste renvoient jusqu'à 25 éléments par page, du plus récent au plus ancien. Passez `limit` pour demander de 1 à 100 éléments.
+Les points de terminaison de liste renvoient jusqu'à 25 éléments par page, du plus récent au plus ancien. Passez `limit` pour demander de 1 à 100 éléments. `GET /services`, `GET /staff` et `GET /rules` renvoient tout en une seule page, dans leur propre ordre.
 
 ```json
 {
@@ -55,8 +55,18 @@ Une erreur réseau peut vous laisser dans le doute : la requête a-t-elle foncti
 - `POST /contacts`
 - `POST /appointments`
 - `POST /knowledge`
+- `POST /services`
+- `POST /rules`
+- `POST /billing/checkout`
+- `POST /widget-keys`
+- `POST /phone-numbers/claims` et `POST /phone-numbers/{phone_number_id}/replace`, qui l'exigent
+- `POST /team/invitations`, qui l'exige
 
 `POST /webhooks` ignore cet en-tête, pour que LobbyStack ne garde jamais de copie du secret de signature. Si une création échoue à cause d'une erreur réseau, vérifiez `GET /webhooks` avant de relancer.
+
+`POST /contacts/passcodes` et `POST /contacts/passcodes/generate` l'ignorent aussi, pour que LobbyStack ne garde jamais de copie d'un code PIN. Renvoyer les mêmes codes PIN à `POST /contacts/passcodes` les définit simplement de nouveau. Si `POST /contacts/passcodes/generate` échoue à cause d'une erreur réseau, cherchez les contacts dont `passcode.set_at` date de cette requête, et donnez-leur de nouveaux codes PIN avec `contact_ids`.
+
+`POST /team/claim-link` l'ignore aussi, pour que LobbyStack ne garde jamais de copie du lien qui remet l'entreprise. Chaque requête envoie un nouveau lien et révoque le précédent : après une erreur réseau, cherchez dans `GET /team` une invitation en attente avec `transfers_ownership` avant de relancer.
 
 ```bash
 curl https://app.lobbystack.com/api/v1/appointments \
@@ -89,7 +99,7 @@ Les erreurs ont toutes la même forme :
 }
 ```
 
-`details` n'apparaît que sur les erreurs de validation. Basez-vous sur `code`, car la formulation de `message` peut changer.
+`details` apparaît sur les erreurs de validation, ainsi que sur le 409 de `POST /onboarding/complete`, où chaque `path` nomme une étape manquante. Basez-vous sur `code`, car la formulation de `message` peut changer.
 
 | Statut | Code | Quand |
 | --- | --- | --- |
@@ -124,7 +134,7 @@ Les clés API agissent au nom de l'entreprise, donc l'API saute la vérification
 
 ## Personnel
 
-`GET /staff` liste toutes les personnes qui prennent des rendez-vous, avec `active` et les `service_ids` pour lesquels chaque personne peut être réservée. Un service sans personnel assigné dans le tableau de bord est ouvert à tous les membres actifs du personnel.
+`GET /staff` liste toutes les personnes qui prennent des rendez-vous, avec `active` et les `service_ids` pour lesquels chaque personne peut être réservée. Un service sans personnel assigné, dans le tableau de bord ou avec `staff_ids` sur `POST /services` et `PATCH /services/{service_id}`, est ouvert à tous les membres actifs du personnel.
 
 Une entreprise qui n'a jamais configuré de personnel a quand même un membre actif, qui porte le nom de l'entreprise. Les réservations vont à cette personne. `GET /staff` la renvoie donc comme n'importe quel autre membre du personnel, et vous pouvez passer son `id` comme `staff_id`.
 

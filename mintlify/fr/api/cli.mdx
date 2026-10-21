@@ -1,0 +1,189 @@
+---
+title: "Intégrer une entreprise en ligne de commande"
+description: "Décrivez une entreprise dans un seul fichier, et laissez la commande lobbystack configurer ses connaissances, sa réceptionniste, son forfait, son numéro de téléphone et son propriétaire."
+sidebarTitle: "Ligne de commande"
+contentType: "How-to"
+---
+
+La commande `lobbystack` travaille avec LobbyStack par l'[API](/fr/api/overview). `lobbystack onboard` lit un fichier qui décrit une entreprise et rend l'entreprise conforme à ce fichier. Elle crée l'entreprise, ajoute ses connaissances, configure la réceptionniste et les services, choisit un forfait, réserve un numéro de téléphone et envoie au propriétaire un lien pour prendre le relais. Quand vous modifiez le fichier et la relancez, elle ne change que ce qui diffère.
+
+## Installer la commande
+
+La commande fait partie du [dépôt LobbyStack](https://github.com/lobbystack/lobbystack). Il vous faut Node.js 26 et pnpm 10.
+
+```bash
+git clone https://github.com/lobbystack/lobbystack.git
+cd lobbystack
+pnpm install
+pnpm --filter "@lobbystack/cli..." build
+```
+
+Le résultat tient en un seul fichier, `packages/cli/dist/bin.js`, qui s'exécute avec Node.js seul. Copiez-le où vous voulez, ou créez un alias :
+
+```bash
+alias lobbystack="node $PWD/packages/cli/dist/bin.js"
+```
+
+## Se connecter
+
+`lobbystack login` vérifie une clé et l'enregistre, avec l'adresse du tableau de bord, dans un profil :
+
+```bash
+lobbystack login --url https://app.lobbystack.com --key-stdin < key.txt
+```
+
+`--key-stdin` garde la clé hors de l'historique de votre shell. Sur un déploiement auto-hébergé, utilisez votre `APP_BASE_URL`. `lobbystack whoami` affiche la clé utilisée et son entreprise.
+
+La clé que vous utilisez détermine ce que `onboard` peut faire :
+
+- **Une clé API** de **Réglages** > **Clés API** configure sa propre entreprise, à condition que l'entreprise porte déjà le nom du manifeste ou que le manifeste donne son ID. Donnez-lui `business:read`, `business:write`, `knowledge:read` et `knowledge:write`, plus `billing:manage` pour un forfait, `phone_numbers:manage` pour un numéro et `team:manage` pour remettre l'entreprise, ce que seule une clé créée par un propriétaire peut faire. Consultez [Authentification](/fr/api/authentication).
+- **Une clé de plateforme** crée de nouvelles entreprises. C'est l'exploitant du déploiement qui les crée ; consultez [Clés de plateforme](/fr/api/authentication#clés-de-plateforme). La clé d'un exploitant, qui atteint toutes les entreprises, peut aussi donner à une entreprise un forfait et un numéro. Celle d'un partenaire ne le peut pas : le propriétaire paie les deux, et une fois qu'il a réclamé l'entreprise, la clé du partenaire ne l'atteint plus. Laissez `plan` et `phone_number` hors du manifeste d'un partenaire : le propriétaire les choisit dans le tableau de bord. La clé d'un partenaire laisse aussi au propriétaire la lecture complète d'un site.
+
+Dans un script ou une CI, définissez `LOBBYSTACK_URL` et `LOBBYSTACK_API_KEY` au lieu de vous connecter.
+
+## Décrire l'entreprise
+
+Décrivez l'entreprise dans un fichier YAML ou JSON, comme `acme.yaml`. Toutes les sections sauf `business` sont facultatives :
+
+```yaml acme.yaml
+business:
+  name: Acme Plumbing
+  timezone: America/Toronto
+  locale: en
+  website_url: https://acmeplumbing.ca
+  hours:
+    - { day: mon, open: "08:00", close: "17:00" }
+    - { day: tue, open: "08:00", close: "17:00" }
+knowledge:
+  websites: [https://acmeplumbing.ca]
+  read_full_site: true
+  files:
+    - ./docs/price-list.pdf
+    - path: ./docs/service-area.md
+      title: Where we work
+  faqs:
+    - question: Do you take emergency calls?
+      answer: Yes, 24/7 for existing customers.
+receptionist:
+  greeting: Thanks for calling Acme Plumbing, how can I help?
+  transfer_mode: on_urgent
+  transfer_number: "+14165550100"
+  booking_mode: request
+services:
+  - name: Drain cleaning
+    duration_minutes: 60
+rules:
+  - title: Gas leaks
+    content: If a caller smells gas, tell them to leave the building and call the gas company.
+plan:
+  checkout: { plan: pro, interval: monthly }
+phone_number: { country: CA, area_code: "416" }
+owner:
+  email: owner@acmeplumbing.ca
+```
+
+<Warning>
+  Mettez les heures et les numéros de téléphone entre guillemets. Dans la forme `{ ... }` de YAML, une virgule commence le champ suivant : écrivez donc un texte qui contient une virgule sous la forme indentée, comme la FAQ ci-dessus.
+</Warning>
+
+| Section | Ce qu'elle définit |
+| --- | --- |
+| `business` | `name` et `timezone` sont obligatoires. `locale` (`en` ou `fr`), `website_url`, `business_type` et `slug` sont facultatifs. `hours` liste les plages d'ouverture de la semaine par `day`, `open` et `close`, et remplace les heures que l'entreprise avait. `id` configure une entreprise qui existe déjà au lieu d'en créer une. |
+| `receptionist` | Les champs de `PATCH /receptionist`, comme `greeting`, `tone`, `transfer_mode`, `transfer_number` et `booking_mode`. |
+| `services` | Les champs de `POST /services`. Un service du même nom est mis à jour au lieu d'être ajouté de nouveau. |
+| `rules` | Les champs de `POST /rules`. Une règle du même titre est mise à jour. |
+| `knowledge.websites` | Les sites que la réceptionniste lit. La première lecture prend un échantillon de chaque site. |
+| `knowledge.read_full_site` | `true` attend cet échantillon, puis lit le reste de chaque site. |
+| `knowledge.files` | Des fichiers PDF, Word, texte, Markdown, JPEG, PNG, WebP ou TIFF jusqu'à 10 Mo, sous forme de chemins dans le dossier du manifeste. Donnez à une entrée `path`, `title` et `tags` pour la nommer. |
+| `knowledge.faqs` | Des questions et leurs réponses. Une FAQ avec la même question reçoit la nouvelle réponse. |
+| `knowledge.texts` | Des notes avec un `title` et un `content`. Une note du même titre reçoit le nouveau contenu. |
+| `plan` | `checkout` avec un `plan` (`starter` ou `pro`) et un `interval` (`monthly` ou `annual`). Ou `managed: true` pour un forfait facturé hors de Polar, que seule la clé de plateforme d'un exploitant peut définir. |
+| `phone_number` | Les champs de `POST /phone-numbers/search` : `country`, `kind`, `area_code`, `city`, `region` et `postal_code`. La commande réserve le premier numéro que la recherche propose. |
+| `onboarding` | L'intégration se termine dès qu'il ne lui manque plus rien, sauf avec la clé d'un partenaire, qui la laisse ouverte pour le propriétaire. `skip_number: true` la termine sans numéro, `complete` indique si elle se termine, et `source` indique d'où vient l'entreprise. |
+| `owner` | L'`email` de la personne qui sera propriétaire de l'entreprise. Elle reçoit un lien pour la réclamer. |
+
+La commande ne supprime jamais ce que le fichier omet. Pour retirer un service, une règle ou une connaissance, utilisez le tableau de bord ou les autres commandes `lobbystack`.
+
+## Prévisualiser les changements
+
+`--plan` affiche ce qu'une exécution changerait, sans rien changer :
+
+```bash
+lobbystack onboard acme.yaml --plan
+```
+
+```text
+business       would create Acme Plumbing
+receptionist   would set up
+services       would set up
+rules          would set up
+knowledge      would set up
+plan           would set up
+phone number   would set up
+owner          would set up
+
+Nothing was changed: that's what a run would do.
+```
+
+Une erreur dans le fichier, ou un document absent ou hors du dossier du manifeste, arrête la commande avant qu'elle ne change quoi que ce soit. Le message indique où se trouve l'erreur, comme `services[0].duration_minutes`.
+
+## Lancer la commande
+
+```bash
+lobbystack onboard acme.yaml
+```
+
+Chaque ligne dit ce qu'une étape a fait :
+
+```text
+business       created      Acme Plumbing (75795511-9ee2-4cb2-a89d-f173ec1dd82d). Keep acme.state.json with the manifest, or put id: 75795511-9ee2-4cb2-a89d-f173ec1dd82d under business in it.
+details        updated      hours
+receptionist   updated      greeting, transfer_mode, transfer_number, booking_mode
+services       added        Drain cleaning
+websites       added        https://acmeplumbing.ca (reading a sample of its pages)
+files          uploaded     docs/price-list.pdf
+```
+
+Un paiement et un numéro de téléphone coûtent de l'argent, donc la commande demande confirmation avant de lancer l'un ou l'autre. Passez `--yes` pour sauter les questions, ce dont un script a besoin : sans terminal où poser la question, la commande s'arrête.
+
+Pour configurer une entreprise qui existe déjà, mettez son ID dans `business.id`. `--business <id>` fonctionne aussi quand l'entreprise porte déjà le nom du manifeste. La commande ignore `LOBBYSTACK_BUSINESS` et l'entreprise enregistrée dans un profil, pour qu'un nouveau manifeste n'atterrisse jamais sur l'une d'elles par erreur.
+
+Le lien de réclamation part une fois tout le reste terminé, ou avant le paiement quand la clé d'un exploitant configure un forfait que le propriétaire paie. Quand le propriétaire l'accepte, la clé d'un partenaire et la clé API qui l'a envoyé n'atteignent plus l'entreprise, et une nouvelle exécution le signale. La clé d'un exploitant l'atteint toujours.
+
+### Quand l'exécution attend quelqu'un
+
+Certaines étapes demandent une personne. La commande fait tout le reste, affiche ce qu'elle attend et se termine avec le code `4` :
+
+- **Un paiement.** La commande affiche le lien de paiement : envoyez-le à la personne qui paie. Tant que le forfait n'est pas payé, l'entreprise garde son forfait actuel. Le numéro de téléphone, les documents pour lesquels le forfait gratuit n'a pas de place et la lecture complète d'un site attendent le forfait payant. Une page de paiement de plus d'une heure a peut-être expiré : une exécution dans un terminal, sans `--yes`, propose d'en créer une nouvelle.
+- **La réclamation du propriétaire.** Avec la clé d'un exploitant, c'est le propriétaire de l'entreprise qui paie son forfait, donc le lien de réclamation part avant le paiement. La page de paiement est créée à la première exécution après que le propriétaire a accepté le lien.
+
+Relancez la même commande une fois que la personne a terminé. Un paiement peut acheter un forfait pour une entreprise gratuite, ou passer de Starter à Pro. Les autres changements de forfait, comme passer de Pro à Starter ou changer d'intervalle de facturation, se font dans le portail de facturation : la commande les signale et continue.
+
+## La relancer
+
+Relancez la commande chaque fois que le fichier change, ou après un échec. Chaque étape compare d'abord l'entreprise au fichier et ne change que ce qui diffère : une entreprise déjà conforme ne reçoit aucun changement.
+
+La commande garde les ID qu'elle crée dans un fichier d'état à côté du manifeste, comme `acme.state.json`. Conservez ce fichier avec le manifeste :
+
+- Après un échec, l'exécution suivante reprend là où la précédente s'est arrêtée. Elle renvoie les mêmes requêtes, donc elle récupère l'entreprise, le numéro ou la page de paiement déjà créés au lieu d'en créer d'autres.
+- Les fichiers sont envoyés une seule fois. Quand le contenu, le titre ou les étiquettes d'un fichier changent, l'exécution suivante envoie la nouvelle version et supprime l'ancienne. Un fichier déplacé dans le dossier garde son envoi.
+- Un document ou un site qui n'a pas pu être lu est relu une fois à l'exécution suivante. S'il échoue de la même façon, la commande le signale, et `lobbystack knowledge retry <id>` le relit une fois le problème réglé.
+- Un fichier d'état créé pour un tableau de bord est refusé sur un autre. Passez `--state <path>` pour en garder un par tableau de bord.
+
+Sans fichier d'état, une clé de plateforme ne crée pas d'entreprise si vous en avez déjà intégré une du même nom. Mettez l'ID de cette entreprise dans `business.id` pour la configurer, ou donnez un autre nom à la nouvelle. Une fois l'entreprise réclamée par son propriétaire, `GET /businesses` ne la liste plus, même pour la clé d'un exploitant : conservez donc le fichier d'état, ou copiez dans `business.id` l'ID qu'affiche la première exécution.
+
+## Codes de sortie
+
+| Code | Signification |
+| --- | --- |
+| `0` | L'entreprise est conforme au fichier. |
+| `1` | L'API ou le réseau a échoué, ou la réservation d'un numéro ou la lecture d'un site a échoué. Relancez plus tard. |
+| `2` | Le fichier ou une option doit être corrigé, ou une question a reçu la réponse non ou n'a pas pu être posée : passez `--yes` dans les scripts. |
+| `3` | LobbyStack a refusé la clé, ou il manque une portée à la clé. |
+| `4` | Pas terminé : le reste attend un paiement ou la réclamation du propriétaire. |
+
+`--json` affiche plutôt l'ID de l'entreprise, le fichier d'état, chaque changement et ce que l'exécution attend, en JSON.
+
+## Autres commandes
+
+`lobbystack` a une commande pour chaque point de terminaison de l'API, regroupées comme l'API : `lobbystack services list`, `lobbystack knowledge upload`, `lobbystack numbers search`, etc. `lobbystack --help` liste les groupes, et `--help` après n'importe quelle commande liste ses options.

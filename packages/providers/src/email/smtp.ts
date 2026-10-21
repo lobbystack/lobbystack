@@ -13,7 +13,7 @@ export type SmtpConfig = {
   replyTo?: string;
 };
 
-type TemplateName = "existing_account" | "verify_email" | "password_reset" | "invitation" | "operator_alert" | "feedback_submission" | "onboarding_followup" | "number_trial" | "number_release";
+type TemplateName = "existing_account" | "account_setup" | "verify_email" | "password_reset" | "invitation" | "operator_alert" | "feedback_submission" | "onboarding_followup" | "number_trial" | "number_release";
 
 export class SmtpEmailProvider {
   private readonly transporter: Transporter;
@@ -75,6 +75,8 @@ function templateBody(template: TemplateName, variables: Record<string, string>)
   switch (template) {
     case "existing_account":
       return existingAccountBody(variables);
+    case "account_setup":
+      return accountSetupBody(variables);
     case "verify_email":
       return variables.code
         ? `Your LobbyStack email verification code is: ${variables.code}. It expires in 10 minutes.`
@@ -201,6 +203,22 @@ function numberTrialBody(variables: Record<string, string>): string {
   const copy = numberTrialCopy(trialKind(variables.kind), variables.locale, variables);
   const greet = TRIAL_GREETINGS[variables.locale ?? "en"] ?? TRIAL_GREETINGS.en!;
   return [greet(variables.firstName ?? ""), "", ...copy.lines.flatMap((line) => [line, ""]), `${copy.button}: ${variables.url ?? ""}`, "", variables.senderName ?? "LobbyStack"].join("\n");
+}
+
+/** For an owner a platform key invited: the link opens sign-up, where they make their account with this address. */
+function accountSetupBody(variables: Record<string, string>): string {
+  const url = variables.url;
+  const email = variables.email;
+  switch (variables.locale) {
+    case "fr":
+      return `On vous a invité à créer un compte LobbyStack avec l’adresse ${email}. Créez-le ici, avec cette adresse : ${url}. Si vous ne l’attendiez pas, ignorez cet e-mail.`;
+    case "es":
+      return `Le invitaron a crear una cuenta de LobbyStack con la dirección ${email}. Créela aquí, con esta dirección: ${url}. Si no lo esperaba, ignore este correo.`;
+    case "sr":
+      return `Pozvani ste da napravite LobbyStack nalog sa adresom ${email}. Napravite ga ovde, sa ovom adresom: ${url}. Ako ovo niste očekivali, zanemarite ovaj imejl.`;
+    default:
+      return `You were invited to make a LobbyStack account with ${email}. Make it here, with this address: ${url}. If you weren't expecting this, ignore this email.`;
+  }
 }
 
 function existingAccountBody(variables: Record<string, string>): string {

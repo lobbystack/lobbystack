@@ -6,7 +6,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { apiKeyScopes, type ApiKeyScope } from "@lobbystack/shared";
+import { offeredApiKeyScopes, type ApiKeyScope } from "@lobbystack/shared";
 
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
@@ -150,7 +150,7 @@ export function LiveApiKeysSurface() {
                 </Field>
                 <fieldset className="flex flex-col gap-3">
                   <legend className="mb-2 text-sm font-medium">{t("apiKeys.create.scopesLabel")}</legend>
-                  {apiKeyScopes.map((scope) => (
+                  {offeredApiKeyScopes.map((scope) => (
                     <div className="flex items-start gap-3 text-sm" key={scope}>
                       <Checkbox
                         checked={scopes.includes(scope)}

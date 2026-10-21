@@ -17,6 +17,7 @@ node_modules
 .replacement-backups/
 .firecrawl/
 .prospect-demos/
+.platform-keys/
 apps/landing/.astro
 apps/landing/.wrangler
 apps/landing/dist

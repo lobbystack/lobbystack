@@ -1,14 +1,15 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 
-import { and, eq, gt, ne, or, sql } from "drizzle-orm";
+import { and, eq, gt, isNull, ne, or, sql } from "drizzle-orm";
 
 import { enqueueOutbox, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
-import { businessInvitations, businessMemberships, businesses, closures, receptionistProfiles, services, staff, users } from "@lobbystack/db";
-import { currencyFractionDigits, defaultAppointmentChangePolicy, defaultCurrencyForTimezone, defaultGreeting, isCurrencyCode, isDefaultGreeting, normalizeAuthEmail, normalizeRuntimeLocale } from "@lobbystack/shared";
+import { apiKeys, businesses, businessInvitations, businessMemberships, closures, receptionistProfiles, services, staff, users } from "@lobbystack/db";
+import { currencyFractionDigits, defaultAppointmentChangePolicy, defaultCurrencyForTimezone, defaultGreeting, isCurrencyCode, isDefaultGreeting, normalizeAuthEmail, normalizeRuntimeLocale, parseDeploymentMode } from "@lobbystack/shared";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import { enqueueBusinessSummaryRefresh } from "./businessSummary";
 import type { DomainContext } from "./context";
+import { disableWebhookEndpointsInTransaction } from "./publicApi/webhooks";
 
 export type BusinessRole = "business_owner" | "business_admin" | "scheduler" | "viewer";
 
@@ -61,9 +62,9 @@ export async function createBusiness(
   input: CreateBusinessInput,
 ): Promise<{ businessId: string; membershipId: string }> {
   const timezone = requireIanaTimeZone(input.timezone);
+  // Refuse a bad slug before taking any locks.
+  if (input.slug !== undefined) cleanSlug(input.slug);
   const businessId = randomUUID();
-  const generatedSlug = input.name.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 96).replace(/-$/, "") || "business";
-  const baseSlug = input.slug === undefined ? generatedSlug : cleanSlug(input.slug);
   return await withBusinessTransaction(context.db, {
     userId: input.userId,
     businessId,
@@ -75,60 +76,83 @@ export async function createBusiness(
     if ((owned.rows[0]?.count ?? 0) >= maxOwnedBusinesses) {
       throw Object.assign(new Error(`Too many workspaces. One account can own up to ${maxOwnedBusinesses}.`), { status: 403 });
     }
-    let business: { id: string } | undefined;
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const insert = tx.insert(businesses).values({
-        id: businessId,
-        name: input.name.trim(),
-        slug: attempt === 0 ? baseSlug : `${baseSlug}-${randomBytes(6).toString("hex")}`,
-        timezone,
-        currency: defaultCurrencyForTimezone(timezone),
-        businessType: input.businessType,
-        deploymentMode: input.deploymentMode ?? "cloud",
-        onboardingStage: "website",
-      });
-      // Only generated slugs are replaceable. Target this constraint explicitly
-      // so unrelated insert failures still roll back the transaction.
-      [business] = await (input.slug === undefined ? insert.onConflictDoNothing({ target: businesses.slug }) : insert).returning({ id: businesses.id });
-      if (business) break;
-    }
-    if (!business) {
-      throw new Error("Business could not be created.");
-    }
-    const [membership] = await tx.insert(businessMemberships).values({
-      businessId,
-      userId: input.userId,
-      role: "business_owner",
-      status: "active",
-    }).returning({ id: businessMemberships.id });
-    if (!membership) {
-      throw new Error("Business owner membership could not be created.");
-    }
-    // Booking assigns every appointment to a staff member. Businesses that don't
-    // manage a team get one hidden member that stands for the business itself.
-    await tx.insert(staff).values({ businessId, name: input.name.trim(), timezone });
-    await tx.insert(receptionistProfiles).values({
-      businessId,
-      greeting: defaultGreeting(input.name),
-      tone: "warm and direct",
-      summary: `${input.name.trim()} uses LobbyStack to answer calls.`,
-      bookingPolicy: "Only confirm a booking after availability is checked.",
-      voiceInstructions: "Sound calm, confident, and concise. Escalate urgent requests to a human when policy requires it.",
-      smsInstructions: "Keep replies concise and friendly. Ask one follow-up question at a time.",
-      transferMode: "on_request",
-      appointmentChangePolicy: defaultAppointmentChangePolicy,
-    });
+    const created = await insertBusinessInTransaction(tx, { businessId, userId: input.userId, name: input.name, slug: input.slug, timezone, businessType: input.businessType, deploymentMode: input.deploymentMode });
     await tx.update(users).set({ activeBusinessId: businessId, updatedAt: new Date() }).where(eq(users.id, input.userId));
-    await enqueueOutbox(tx, {
-      topic: "snapshot.refresh",
-      businessId,
-      aggregateType: "business",
-      aggregateId: businessId,
-      dedupeKey: `business:${businessId}:snapshot:initial`,
-      payload: { businessId, reason: "business_created" },
-    });
-    return { businessId, membershipId: membership.id };
+    return created;
   });
+}
+
+/**
+ * Inserts a business with what every new business needs: its owner, the staff
+ * member that stands for it, a receptionist profile, and its first snapshot.
+ * The transaction must be scoped to businessId, and timezone must already be
+ * an IANA name. A generated slug gets a random suffix when taken; a taken slug
+ * the caller chose fails with a unique violation.
+ */
+export async function insertBusinessInTransaction(
+  tx: DatabaseTransaction,
+  input: { businessId: string; userId: string; name: string; slug?: string | undefined; timezone: string; businessType: string; deploymentMode?: string | undefined; defaultLocale?: string | undefined; websiteUrl?: string | undefined },
+): Promise<{ businessId: string; membershipId: string }> {
+  const { businessId, timezone } = input;
+  const name = input.name.trim();
+  const generatedSlug = name.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 96).replace(/-$/, "") || "business";
+  const baseSlug = input.slug === undefined ? generatedSlug : cleanSlug(input.slug);
+  let business: { id: string } | undefined;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const insert = tx.insert(businesses).values({
+      id: businessId,
+      name,
+      slug: attempt === 0 ? baseSlug : `${baseSlug}-${randomBytes(6).toString("hex")}`,
+      timezone,
+      currency: defaultCurrencyForTimezone(timezone),
+      businessType: input.businessType,
+      // A self-hosted server's businesses get its unlimited plan, not the cloud's free one. Any other mode, development included, keeps them cloud, as before:
+      // every mode but cloud skips billing and the paid-plan check on numbers.
+      deploymentMode: input.deploymentMode ?? (parseDeploymentMode(process.env.DEPLOYMENT_MODE) === "self_hosted_standard" ? "self_hosted_standard" : "cloud"),
+      onboardingStage: "website",
+      ...(input.defaultLocale !== undefined ? { defaultLocale: input.defaultLocale } : {}),
+      ...(input.websiteUrl !== undefined ? { websiteUrl: input.websiteUrl } : {}),
+    });
+    // Only generated slugs are replaceable. Target this constraint explicitly
+    // so unrelated insert failures still roll back the transaction.
+    [business] = await (input.slug === undefined ? insert.onConflictDoNothing({ target: businesses.slug }) : insert).returning({ id: businesses.id });
+    if (business) break;
+  }
+  if (!business) {
+    throw new Error("Business could not be created.");
+  }
+  const [membership] = await tx.insert(businessMemberships).values({
+    businessId,
+    userId: input.userId,
+    role: "business_owner",
+    status: "active",
+  }).returning({ id: businessMemberships.id });
+  if (!membership) {
+    throw new Error("Business owner membership could not be created.");
+  }
+  // Booking assigns every appointment to a staff member. Businesses that don't
+  // manage a team get one hidden member that stands for the business itself.
+  await tx.insert(staff).values({ businessId, name, timezone });
+  await tx.insert(receptionistProfiles).values({
+    businessId,
+    greeting: defaultGreeting(name),
+    tone: "warm and direct",
+    summary: `${name} uses LobbyStack to answer calls.`,
+    bookingPolicy: "Only confirm a booking after availability is checked.",
+    voiceInstructions: "Sound calm, confident, and concise. Escalate urgent requests to a human when policy requires it.",
+    smsInstructions: "Keep replies concise and friendly. Ask one follow-up question at a time.",
+    transferMode: "on_request",
+    appointmentChangePolicy: defaultAppointmentChangePolicy,
+  });
+  await enqueueOutbox(tx, {
+    topic: "snapshot.refresh",
+    businessId,
+    aggregateType: "business",
+    aggregateId: businessId,
+    dedupeKey: `business:${businessId}:snapshot:initial`,
+    payload: { businessId, reason: "business_created" },
+  });
+  return { businessId, membershipId: membership.id };
 }
 
 export async function listUserBusinesses(
@@ -208,52 +232,76 @@ export async function switchWorkspace(
   });
 }
 
+/**
+ * The lock every change to a business's team takes: role changes, removals,
+ * accepting an invitation and sending a claim link. Taken first, it keeps the
+ * last owner from being demoted twice at once without two transactions waiting
+ * on each other's rows.
+ */
+export async function lockBusinessTeam(tx: DatabaseTransaction, businessId: string): Promise<void> {
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended('team:' || ${businessId}::uuid::text, 0))`);
+}
+
+/** Exactly one plain address: mail transports send a comma or semicolon list to every recipient. */
+export function isSingleEmailAddress(normalizedEmail: string): boolean {
+  return /^[^\s@,;:<>()"]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+$/.test(normalizedEmail);
+}
+
+/** Where an invitation's email sends its recipient to accept it. */
+export function invitationUrl(token: string): string {
+  // Invitations may go to someone without an account preference. Let the
+  // compatibility entry point negotiate their locale before redirecting.
+  return `${process.env.APP_BASE_URL ?? "http://localhost"}/accept-invite?token=${encodeURIComponent(token)}`;
+}
+
+/** Records an invitation the caller may send and queues its email. The email must already be normalized and valid. */
+export async function insertInvitationInTransaction(
+  tx: DatabaseTransaction,
+  input: { businessId: string; invitedByUserId: string; normalizedEmail: string; role: BusinessRole; transfersOwnership?: boolean },
+): Promise<{ invitationId: string; token: string; expiresAt: Date }> {
+  const token = randomBytes(32).toString("base64url");
+  const tokenHash = createHash("sha256").update(token).digest("hex");
+  const invitationId = randomUUID();
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  await tx.insert(businessInvitations).values({
+    id: invitationId,
+    businessId: input.businessId,
+    invitedByUserId: input.invitedByUserId,
+    email: input.normalizedEmail,
+    normalizedEmail: input.normalizedEmail,
+    role: input.role,
+    tokenHash,
+    expiresAt,
+    transfersOwnership: input.transfersOwnership ?? false,
+  });
+  await enqueueOutbox(tx, {
+    topic: "email.send",
+    businessId: input.businessId,
+    aggregateType: "business_invitation",
+    aggregateId: invitationId,
+    dedupeKey: `invitation:${invitationId}:send`,
+    payload: { invitationId, email: input.normalizedEmail, token, template: "invitation", url: invitationUrl(token) },
+  });
+  return { invitationId, token, expiresAt };
+}
+
 export async function inviteMember(
   context: DomainContext,
   input: { userId: string; businessId: string; email: string; role: BusinessRole },
 ): Promise<{ invitationId: string; token: string }> {
-  const token = randomBytes(32).toString("base64url");
-  const tokenHash = createHash("sha256").update(token).digest("hex");
   const normalizedEmail = normalizeAuthEmail(input.email);
-  // Exactly one plain address: mail transports send a comma or semicolon list to every recipient.
-  if (!/^[^\s@,;:<>()"]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+$/.test(normalizedEmail)) {
+  if (!isSingleEmailAddress(normalizedEmail)) {
     throw Object.assign(new Error("Enter one valid email address."), { status: 400 });
   }
-  const invitationId = randomUUID();
-  await withBusinessTransaction(context.db, {
+  return await withBusinessTransaction(context.db, {
     userId: input.userId,
     businessId: input.businessId,
     actorType: "operator",
   }, async (tx) => {
     await requireBusinessAdmin(tx, { userId: input.userId, businessId: input.businessId });
-    await tx.insert(businessInvitations).values({
-      id: invitationId,
-      businessId: input.businessId,
-      invitedByUserId: input.userId,
-      email: normalizedEmail,
-      normalizedEmail,
-      role: input.role,
-      tokenHash,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    });
-    await enqueueOutbox(tx, {
-      topic: "email.send",
-      businessId: input.businessId,
-      aggregateType: "business_invitation",
-      aggregateId: invitationId,
-      dedupeKey: `invitation:${invitationId}:send`,
-      payload: {
-        invitationId,
-        email: normalizedEmail,
-        token,
-        template: "invitation",
-        // Invitations may go to someone without an account preference. Let the
-        // compatibility entry point negotiate their locale before redirecting.
-        url: `${process.env.APP_BASE_URL ?? "http://localhost"}/accept-invite?token=${encodeURIComponent(token)}`,
-      },
-    });
+    const { invitationId, token } = await insertInvitationInTransaction(tx, { businessId: input.businessId, invitedByUserId: input.userId, normalizedEmail, role: input.role });
+    return { invitationId, token };
   });
-  return { invitationId, token };
 }
 
 export async function acceptInvitation(
@@ -266,6 +314,7 @@ export async function acceptInvitation(
     throw Object.assign(new Error("Invitation is invalid or expired."), { status: 404 });
   }
   return await withBusinessTransaction(context.db, { userId: input.userId, actorType: "system", businessId }, async (tx) => {
+    await lockBusinessTeam(tx, businessId);
     const rows = await tx.select().from(businessInvitations).where(and(eq(businessInvitations.tokenHash, input.tokenHash), eq(businessInvitations.status, "pending"))).limit(1);
     const invitation = rows[0];
     // The resolver also finds accepted, revoked and expired invitations, so the preview can say which.
@@ -276,10 +325,38 @@ export async function acceptInvitation(
     if (!input.emailVerified || !input.email || normalizeAuthEmail(input.email) !== invitation.normalizedEmail) {
       throw Object.assign(new Error("Sign in with the verified email address this invitation was sent to."), { status: 403 });
     }
+    // Only an owner can hand the business over, and the sender may have stopped being one since.
+    if (invitation.transfersOwnership && invitation.invitedByUserId !== input.userId) {
+      const [sender] = await tx.select({ role: businessMemberships.role }).from(businessMemberships).where(and(eq(businessMemberships.businessId, invitation.businessId), eq(businessMemberships.userId, invitation.invitedByUserId), eq(businessMemberships.status, "active"))).limit(1);
+      if (sender?.role !== "business_owner") throw Object.assign(new Error("This claim link no longer works. Ask whoever sent it for a new one."), { status: 409 });
+    }
     // Claim the invitation before joining, so a second accept of the same token fails.
     const [claimed] = await tx.update(businessInvitations).set({ status: "accepted", acceptedByUserId: input.userId, acceptedAt: new Date(), updatedAt: new Date() }).where(and(eq(businessInvitations.id, invitation.id), eq(businessInvitations.status, "pending"))).returning({ id: businessInvitations.id });
     if (!claimed) {
       throw Object.assign(new Error("Invitation is invalid or expired."), { status: 409 });
+    }
+    if (invitation.transfersOwnership) {
+      // A claim link makes the claimant an owner even if they were already on the team.
+      await tx.insert(businessMemberships).values({ businessId: invitation.businessId, userId: input.userId, role: "business_owner", status: "active" }).onConflictDoUpdate({
+        target: [businessMemberships.businessId, businessMemberships.userId],
+        set: { role: "business_owner", status: "active", updatedAt: new Date() },
+      });
+      // The business is theirs now, so the account that set it up loses its access:
+      // its place on the team, the invitations it sent (it holds their links), its
+      // API keys for the business, the webhooks those keys, the account or any
+      // platform key set up, and any partner's platform-key link to it.
+      if (invitation.invitedByUserId !== input.userId) {
+        await tx.update(businessMemberships).set({ status: "removed", updatedAt: new Date() }).where(and(eq(businessMemberships.businessId, invitation.businessId), eq(businessMemberships.userId, invitation.invitedByUserId), eq(businessMemberships.status, "active")));
+        await tx.update(businessInvitations).set({ status: "revoked", updatedAt: new Date() }).where(and(eq(businessInvitations.businessId, invitation.businessId), eq(businessInvitations.invitedByUserId, invitation.invitedByUserId), eq(businessInvitations.status, "pending")));
+        const revokedKeys = await tx.update(apiKeys).set({ revokedAt: new Date(), revokedByUserId: input.userId, updatedAt: new Date() }).where(and(eq(apiKeys.businessId, invitation.businessId), eq(apiKeys.createdByUserId, invitation.invitedByUserId), isNull(apiKeys.revokedAt))).returning({ id: apiKeys.id });
+        // Otherwise the sender, or the partner whose platform keys set the business up, would keep
+        // receiving the new owner's calls, contacts, appointments and messages.
+        await disableWebhookEndpointsInTransaction(tx, { businessId: invitation.businessId, createdByApiKeyIds: revokedKeys.map((key) => key.id), createdByUserId: invitation.invitedByUserId, createdByPlatformKeys: true });
+        await tx.execute(sql`select app.finish_business_handover(${invitation.businessId}::uuid, ${invitation.invitedByUserId}::uuid)`);
+      }
+      // As with a claimed prospect demo, the dashboard opens on the business they now own.
+      await tx.update(users).set({ activeBusinessId: invitation.businessId, updatedAt: new Date() }).where(eq(users.id, input.userId));
+      return { businessId: invitation.businessId, role: "business_owner" };
     }
     // An active member keeps their role, so an owner who accepts a viewer invite stays owner.
     const [joined] = await tx.insert(businessMemberships).values({
@@ -316,23 +393,58 @@ export async function previewInvitation(
   });
 }
 
+export type TeamChangeOutcome = "changed" | "not_found" | "final_owner";
+
+/** Whether the active membership is the business's last active owner. The caller holds the team lock. */
+async function isFinalOwner(tx: DatabaseTransaction, businessId: string, role: string): Promise<boolean> {
+  if (role !== "business_owner") return false;
+  const owners = await tx.select({ id: businessMemberships.id }).from(businessMemberships).where(and(eq(businessMemberships.businessId, businessId), eq(businessMemberships.role, "business_owner"), eq(businessMemberships.status, "active")));
+  return owners.length <= 1;
+}
+
+/** Changes an active member's role. A business always keeps an owner. */
+export async function updateMemberRoleInTransaction(tx: DatabaseTransaction, input: { businessId: string; membershipId: string; role: Exclude<BusinessRole, "business_owner"> }): Promise<TeamChangeOutcome> {
+  await lockBusinessTeam(tx, input.businessId);
+  const membership = (await tx.select({ role: businessMemberships.role }).from(businessMemberships).where(and(eq(businessMemberships.id, input.membershipId), eq(businessMemberships.businessId, input.businessId), eq(businessMemberships.status, "active"))).limit(1))[0];
+  if (!membership) return "not_found";
+  if (await isFinalOwner(tx, input.businessId, membership.role)) return "final_owner";
+  await tx.update(businessMemberships).set({ role: input.role, updatedAt: new Date() }).where(and(eq(businessMemberships.id, input.membershipId), eq(businessMemberships.businessId, input.businessId), eq(businessMemberships.status, "active")));
+  return "changed";
+}
+
+/**
+ * Takes an active member off the team, with the pending invitations they sent
+ * (the inviter holds the link) or received, either of which would let them
+ * back in. The app role can't read other people's users rows, so the caller
+ * says how to find the member's email.
+ */
+export async function removeMemberInTransaction(tx: DatabaseTransaction, input: { businessId: string; membershipId: string }, memberEmail: () => Promise<string | undefined>): Promise<TeamChangeOutcome> {
+  await lockBusinessTeam(tx, input.businessId);
+  const membership = (await tx.select({ role: businessMemberships.role, userId: businessMemberships.userId }).from(businessMemberships).where(and(eq(businessMemberships.id, input.membershipId), eq(businessMemberships.businessId, input.businessId), eq(businessMemberships.status, "active"))).limit(1))[0];
+  if (!membership) return "not_found";
+  if (await isFinalOwner(tx, input.businessId, membership.role)) return "final_owner";
+  const email = await memberEmail();
+  await tx.update(businessMemberships).set({ status: "removed", updatedAt: new Date() }).where(and(eq(businessMemberships.id, input.membershipId), eq(businessMemberships.businessId, input.businessId), eq(businessMemberships.status, "active")));
+  await tx.update(businessInvitations).set({ status: "revoked", updatedAt: new Date() }).where(and(eq(businessInvitations.businessId, input.businessId), eq(businessInvitations.status, "pending"), or(eq(businessInvitations.invitedByUserId, membership.userId), email ? eq(businessInvitations.normalizedEmail, normalizeAuthEmail(email)) : undefined)));
+  return "changed";
+}
+
+/** Revokes a pending invitation. False when the business has no such pending invitation. */
+export async function revokeInvitationInTransaction(tx: DatabaseTransaction, input: { businessId: string; invitationId: string }): Promise<boolean> {
+  const changed = await tx.update(businessInvitations).set({ status: "revoked", updatedAt: new Date() }).where(and(eq(businessInvitations.id, input.invitationId), eq(businessInvitations.businessId, input.businessId), eq(businessInvitations.status, "pending"))).returning({ id: businessInvitations.id });
+  return changed.length > 0;
+}
+
 export async function removeMember(
   context: DomainContext,
   input: { userId: string; businessId: string; membershipId: string },
 ): Promise<void> {
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    const membership = (await tx.select({ role: businessMemberships.role, userId: businessMemberships.userId }).from(businessMemberships).where(and(eq(businessMemberships.id, input.membershipId), eq(businessMemberships.businessId, input.businessId), eq(businessMemberships.status, "active"))).limit(1))[0];
-    if (!membership) throw Object.assign(new Error("Membership not found."), { status: 404, code: "not_found" });
-    if (membership.role === "business_owner") {
-      const owners = await tx.select({ id: businessMemberships.id }).from(businessMemberships).where(and(eq(businessMemberships.businessId, input.businessId), eq(businessMemberships.role, "business_owner"), eq(businessMemberships.status, "active")));
-      if (owners.length <= 1) throw Object.assign(new Error("The final owner cannot be removed."), { status: 409, code: "final_owner" });
-    }
     // RLS hides the member's users row from the app role; this function returns their email.
-    const email = (await tx.execute<{ email: string }>(sql`select email from app.list_business_members(${input.businessId}::uuid) where membership_id = ${input.membershipId}::uuid`)).rows[0]?.email;
-    await tx.update(businessMemberships).set({ status: "removed", updatedAt: new Date() }).where(and(eq(businessMemberships.id, input.membershipId), eq(businessMemberships.businessId, input.businessId), eq(businessMemberships.status, "active")));
-    // Pending invitations the member sent (the inviter gets the token) or received would let them back in.
-    await tx.update(businessInvitations).set({ status: "revoked", updatedAt: new Date() }).where(and(eq(businessInvitations.businessId, input.businessId), eq(businessInvitations.status, "pending"), or(eq(businessInvitations.invitedByUserId, membership.userId), email ? eq(businessInvitations.normalizedEmail, normalizeAuthEmail(email)) : undefined)));
+    const outcome = await removeMemberInTransaction(tx, input, async () => (await tx.execute<{ email: string }>(sql`select email from app.list_business_members(${input.businessId}::uuid) where membership_id = ${input.membershipId}::uuid`)).rows[0]?.email);
+    if (outcome === "not_found") throw Object.assign(new Error("Membership not found."), { status: 404, code: "not_found" });
+    if (outcome === "final_owner") throw Object.assign(new Error("The final owner cannot be removed."), { status: 409, code: "final_owner" });
   });
 }
 
@@ -342,7 +454,6 @@ export async function revokeInvitation(
 ): Promise<void> {
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    const changed = await tx.update(businessInvitations).set({ status: "revoked", updatedAt: new Date() }).where(and(eq(businessInvitations.id, input.invitationId), eq(businessInvitations.businessId, input.businessId), eq(businessInvitations.status, "pending"))).returning({ id: businessInvitations.id });
-    if (!changed.length) throw Object.assign(new Error("Invitation not found or already resolved."), { status: 409 });
+    if (!await revokeInvitationInTransaction(tx, input)) throw Object.assign(new Error("Invitation not found or already resolved."), { status: 409 });
   });
 }

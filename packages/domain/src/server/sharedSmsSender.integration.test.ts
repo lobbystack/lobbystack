@@ -12,7 +12,7 @@ import type { SmsConsentAnswer } from "./contactSmsConsent";
 import { refreshBusinessSnapshot } from "./knowledge";
 import { CANCELLATION_CONFIRMATION, defaultOperatorNotificationEventPreferences, queueOperatorAlert, resolveNotificationDelivery } from "./notifications";
 import { createAppointmentForApi } from "./publicApi/operations";
-import { receiveSharedSenderSms, SHARED_SENDER_HELP_REPLY, SHARED_SENDER_START_REPLY } from "./sms";
+import { receiveSharedSenderSms, sharedSenderHelpReply, SHARED_SENDER_START_REPLY } from "./sms";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
 const testUrl = process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL;
@@ -255,7 +255,7 @@ describe.skipIf(!client)("STOP and START to the shared sender", () => {
       const customer = phone();
       const business = await seed(tx, { selfHosted: false });
       await business.book(customer, "agreed");
-      expect(await textShared(tx, customer, "help")).toEqual({ reply: SHARED_SENDER_HELP_REPLY, contactsChanged: 0 });
+      expect(await textShared(tx, customer, "help")).toEqual({ reply: sharedSenderHelpReply(), contactsChanged: 0 });
       expect(await textShared(tx, customer, "Can I move my appointment?")).toEqual({ reply: null, contactsChanged: 0 });
       expect(await business.consent(customer)).toMatchObject({ status: "subscribed" });
     });

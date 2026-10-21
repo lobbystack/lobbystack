@@ -7,6 +7,10 @@ const { DEFAULT_BASE_URL, apiUrl } = require('./lib/client');
 const test = async (z, bundle) => {
   const response = await z.request({ url: apiUrl(bundle, '/me'), method: 'GET' });
   const me = response.data.data;
+  // A platform key (lsp_) acts on many businesses and has none of its own here.
+  if (!me.business) {
+    throw new z.errors.Error('This is a LobbyStack platform key. Zapier needs an API key from Settings > API keys, which starts with lsk_.', 'platform_key', 400);
+  }
   return {
     business_id: me.business.id,
     business_name: me.business.name,

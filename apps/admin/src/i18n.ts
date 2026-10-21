@@ -1,5 +1,6 @@
 import i18next, { type i18n as I18nextInstance } from "i18next";
 import { initReactI18next } from "react-i18next";
+import { DEFAULT_APP_NAME } from "@lobbystack/shared";
 
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES, resolveLocale, type SupportedLocale } from "@/lib/locale";
 import { TranslationNetworkError } from "@/lib/translation-network-error";
@@ -14,6 +15,8 @@ export type I18nNamespaceResources = Record<string, Record<string, unknown>>;
 export type I18nResources = Record<string, I18nNamespaceResources>;
 
 const NETWORK_RETRY_DELAY_MS = 500;
+// Emitted when the deployment's name changes, so translated text re-renders with it.
+const APP_NAME_CHANGED_EVENT = "appNameChanged";
 
 let fallbackInstance: I18nextInstance | undefined;
 // Resolution state belongs to one render tree, never a shared user's locale.
@@ -32,11 +35,13 @@ const chromeResources: Record<SupportedLocale, I18nNamespaceResources> = {
  *
  * The instance is seeded with the locale and namespaces the server resolved, so
  * the first paint (server render and hydration) is already localized and never
- * depends on a client-side translation fetch.
+ * depends on a client-side translation fetch. Every string can name the
+ * deployment as {{appName}}.
  */
 export function createI18nInstance(input: {
   locale: SupportedLocale;
   resources?: I18nNamespaceResources;
+  appName?: string;
 }): I18nextInstance {
   const instance = i18next.createInstance();
   instance.use(initReactI18next);
@@ -58,8 +63,8 @@ export function createI18nInstance(input: {
     ns: ["common"],
     resources,
     partialBundledLanguages: true,
-    interpolation: { escapeValue: false },
-    react: { useSuspense: false, bindI18nStore: "added" },
+    interpolation: { escapeValue: false, defaultVariables: { appName: input.appName ?? DEFAULT_APP_NAME } },
+    react: { useSuspense: false, bindI18n: `languageChanged ${APP_NAME_CHANGED_EVENT}`, bindI18nStore: "added" },
     returnNull: false,
     // Bundled resources make initialization synchronous, which keeps the server
     // render and hydration output identical.
@@ -67,6 +72,14 @@ export function createI18nInstance(input: {
   });
 
   return instance;
+}
+
+/** Names the deployment in this instance's strings and re-renders the components that use them. */
+export function setI18nAppName(instance: I18nextInstance, appName: string): void {
+  const interpolation = instance.options.interpolation;
+  if (!interpolation || interpolation.defaultVariables?.appName === appName) return;
+  interpolation.defaultVariables = { ...interpolation.defaultVariables, appName };
+  instance.emit(APP_NAME_CHANGED_EVENT);
 }
 
 /** Namespaces this instance still has to fetch before a route can render. */

@@ -21,6 +21,7 @@ import {
 import { useTranslation } from "react-i18next";
 
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
+import { ContactPasscodeSection, type ContactPasscodeStatus } from "@/components/contact-passcode-section";
 import { CONTACT_CHANNEL_ICONS, ContactChannelIcons } from "@/components/contact-channel-icons";
 import { BackLink, DetailSection, MetadataField, truncateId, useCopiedField } from "@/components/detail-fields";
 import { Badge } from "@/components/ui/badge";
@@ -55,6 +56,8 @@ type Detail = {
   } | null;
   /** Stored channel values the contact used; older API responses omit it. */
   channels?: string[];
+  /** The contact's keypad PIN for appointment changes; older API responses omit it. */
+  passcode?: ContactPasscodeStatus;
   calls: Array<{ id: string; status: string; disposition: string | null; transport: string; startedAt: string; endedAt: string | null; providerDurationSeconds: number | null }>;
   messages: Array<{ id: string; conversationId: string; direction: string; channel: string; body: string; status: string; createdAt: string }>;
   appointments: Array<{ id: string; startsAt: string; endsAt: string; timezone: string; status: string; sourceChannel: string; calendarSyncState: string; serviceName: string; staffName: string }>;
@@ -191,7 +194,7 @@ export function LiveContactDetailSurface({ contactId }: { contactId: string }) {
         </TabsList>
         <TabsContent value="activity"><ActivityTab data={data} locale={i18n.language} /></TabsContent>
         <TabsContent value="appointments"><AppointmentsTab appointments={data.appointments} locale={i18n.language} /></TabsContent>
-        <TabsContent value="details"><DetailsTab contact={contact} copiedField={copiedField} locale={i18n.language} onCopy={copy} /></TabsContent>
+        <TabsContent value="details"><DetailsTab businessId={business!.businessId} canMutate={canMutate} contact={contact} copiedField={copiedField} locale={i18n.language} onCopy={copy} passcode={data.passcode} /></TabsContent>
       </Tabs>
 
       <ConfirmActionDialog cancelLabel={t("detail.blocking.cancel")} confirmLabel={contact.operatorBlockedAt ? t("detail.blocking.unblockConfirm") : t("detail.blocking.blockConfirm")} confirmVariant={contact.operatorBlockedAt ? "default" : "destructive"} description={contact.operatorBlockedAt ? t("detail.blocking.unblockDescription") : t("detail.blocking.blockDescription")} onConfirm={async () => { await updateBlock.mutateAsync(!contact.operatorBlockedAt); }} onOpenChange={(open) => { if (!updateBlock.isPending) setBlockDialogOpen(open); }} open={blockDialogOpen} pending={updateBlock.isPending} title={contact.operatorBlockedAt ? t("detail.blocking.unblockTitle") : t("detail.blocking.blockTitle")} />
@@ -241,13 +244,14 @@ function AppointmentsTab({ appointments, locale }: { appointments: Detail["appoi
   return <div className="flex flex-col gap-3 py-4">{appointments.map((appointment) => <Surface className="flex flex-col gap-3 px-4 py-3" key={appointment.id}><div className="flex items-start justify-between gap-3"><div className="flex flex-col gap-0.5"><span className="type-item-title">{appointment.serviceName ?? "—"}</span>{appointment.staffName ? <span className="type-body-muted">{t("detail.activity.withStaff", { staff: appointment.staffName })}</span> : null}</div><Badge variant={appointmentStatusVariant(appointment.status)}>{appointmentStatusLabel(appointment.status, t)}</Badge></div><Separator /><div className="grid grid-cols-2 gap-4 sm:grid-cols-3"><div className="flex flex-col gap-0.5"><span className="type-meta">{t("detail.appointments.dateTime")}</span><span className="type-body">{dateTime(appointment.startsAt, locale)}</span></div><div className="flex flex-col gap-0.5"><span className="type-meta">{t("detail.appointments.syncState")}</span><span className="type-body">{calendarSyncStateLabel(appointment.calendarSyncState, t)}</span></div><div className="flex flex-col gap-0.5"><span className="type-meta">{t("detail.appointments.channel")}</span><span className="type-body">{getChannelLabel(appointment.sourceChannel, t)}</span></div></div></Surface>)}</div>;
 }
 
-function DetailsTab({ contact, copiedField, locale, onCopy }: { contact: NonNullable<Detail["contact"]>; copiedField: string | null; locale: string; onCopy: (text: string, field: string) => void }) {
+function DetailsTab({ businessId, canMutate, contact, copiedField, locale, onCopy, passcode }: { businessId: string; canMutate: boolean; contact: NonNullable<Detail["contact"]>; copiedField: string | null; locale: string; onCopy: (text: string, field: string) => void; passcode: Detail["passcode"] }) {
   const { t } = useTranslation("contacts");
   const displayId = contact.legacyConvexId ?? contact.id;
   return <div className="py-4"><Surface className="flex flex-col">
     <DetailSection className="ph-mask" title={t("detail.details.contactInfoTitle")}><DescriptionList rows={[[t("detail.details.name"), contact.name ?? t("detail.details.notSet")], [t("detail.details.phone"), hasDisplayablePhone(contact.phone) ? formatPhoneNumberDisplay(contact.phone, locale) : t("detail.details.notSet")], [t("detail.details.email"), contact.email ?? t("detail.details.notSet")], [t("detail.details.timezone"), contact.timezone ?? t("detail.details.notSet")], [t("detail.details.preferredLocale"), contact.preferredLocale ? new Intl.DisplayNames([intlLocale(locale)], { type: "language" }).of(contact.preferredLocale) ?? contact.preferredLocale : t("detail.details.notSet")]]} /></DetailSection>
     <DetailSection className="border-t" title={t("detail.details.blockingTitle")}><DescriptionList rows={[[t("detail.details.blockingStatus"), contact.operatorBlockedAt ? t("detail.blocking.badge") : t("detail.blocking.active")], [t("detail.details.blockedAt"), contact.operatorBlockedAt ? dateTime(contact.operatorBlockedAt, locale) : t("detail.details.notSet")], [t("detail.details.blockedBy"), t("detail.details.notSet")]]} /></DetailSection>
     <DetailSection className="border-t" title={t("detail.details.smsConsentTitle")}><DescriptionList rows={[[t("detail.details.smsConsentStatus"), contact.smsConsentStatus ? smsConsentStatusLabel(contact.smsConsentStatus, t) : t("detail.details.notSet")], [t("detail.details.smsConsentUpdatedAt"), contact.smsConsentUpdatedAt ? dateTime(contact.smsConsentUpdatedAt, locale) : t("detail.details.notSet")], [t("detail.details.smsConsentSource"), contact.smsConsentSource ?? t("detail.details.notSet")]]} /></DetailSection>
+    <ContactPasscodeSection businessId={businessId} canMutate={canMutate} contactId={contact.id} locale={locale} passcode={passcode} />
     <DetailSection className="border-t" title={t("detail.details.systemTitle")}><dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-6 gap-y-3"><dt className="type-meta">{t("detail.details.contactId")}</dt><dd className="flex items-center gap-1.5"><span className="type-technical-value">{truncateId(displayId)}</span><button aria-label={t("detail.details.copy")} className={cn("text-muted-foreground", copiedField === "contactId" && "text-emerald-500")} onClick={() => onCopy(displayId, "contactId")} type="button">{copiedField === "contactId" ? <CheckCircle2 className="size-3" /> : <Copy className="size-3" />}</button></dd><dt className="type-meta">{t("detail.details.createdAt")}</dt><dd className="type-body">{dateTime(contact.createdAt, locale)}</dd></dl></DetailSection>
   </Surface></div>;
 }

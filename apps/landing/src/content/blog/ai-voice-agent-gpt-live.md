@@ -85,7 +85,7 @@ LobbyStack is open source under the MIT license. You can run it yourself or let 
 
 ### Is this the same model as ChatGPT Voice?
 
-GPT-Live-1 is the model ChatGPT Voice uses by default for paid users. LobbyStack connects it to your business through delegation, so it can check your calendar and book appointments, which ChatGPT on its own can't do for your customers.
+GPT-Live-1 is the model ChatGPT Voice uses by default for paid users. LobbyStack connects it to your business through delegation, so it can check your calendar and book appointments, which ChatGPT on its own can't do for your customers. The API doesn't offer ChatGPT's app voice names; our [list of OpenAI voices](/blog/openai-voices/) shows which voices it does offer, and our guide on [how to build an AI receptionist](/blog/how-to-build-an-ai-receptionist/) compares the ways to put GPT-Live on a phone line.
 
 ### What is an AI voice agent?
 

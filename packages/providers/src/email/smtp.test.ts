@@ -34,6 +34,16 @@ describe("SMTP delivery", () => {
     expect(french.text).toMatch(/^Bonjour,\n/);
     expect(french.text).toContain("une réceptionniste pour Clinique hier");
   });
+  it("invites an owner a platform key named to make their account at the sign-up page", async () => {
+    const sendMail = vi.fn().mockResolvedValue({ messageId: "provider-id" });
+    const provider = new SmtpEmailProvider({ host: "localhost", port: 1025, secure: false, username: "", password: "", from: "no-reply@example.test" }, { sendMail } as never);
+    await provider.sendTemplate({ template: "account_setup", to: "owner@example.test", subject: "Make your LobbyStack account", variables: { locale: "en", email: "owner@example.test", url: "https://app.example.test/en/signup" } });
+    await provider.sendTemplate({ template: "account_setup", to: "owner@example.test", subject: "Créez votre compte LobbyStack", variables: { locale: "fr", email: "owner@example.test", url: "https://app.example.test/fr/signup" } });
+    const [english, french] = sendMail.mock.calls.map((call) => call[0].text as string);
+    expect(english).toBe("You were invited to make a LobbyStack account with owner@example.test. Make it here, with this address: https://app.example.test/en/signup. If you weren't expecting this, ignore this email.");
+    expect(french).toContain("Créez-le ici, avec cette adresse : https://app.example.test/fr/signup");
+  });
+
   it("localizes the onboarding follow-up and existing-account emails in Spanish and Serbian", async () => {
     const sendMail = vi.fn().mockResolvedValue({ messageId: "provider-id" });
     const provider = new SmtpEmailProvider({ host: "localhost", port: 1025, secure: false, username: "", password: "", from: "no-reply@example.test" }, { sendMail } as never);

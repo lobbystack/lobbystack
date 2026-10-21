@@ -4,6 +4,11 @@ export { isMaintenanceMode } from "./maintenance";
 export { interfaceLocaleTags, interfaceLocales, intlLocale, isInterfaceLocale, isRuntimeLocale, normalizeInterfaceLocale, normalizeRuntimeLocale, runtimeLocaleName, runtimeLocales } from "./locales";
 export type { InterfaceLocale, RuntimeLocale } from "./locales";
 import { interfaceLocales, runtimeLocales, type InterfaceLocale, type RuntimeLocale } from "./locales";
+import { appointmentChangeVerificationModes, bookingModes, transferModes } from "./receptionist";
+import { WIDGET_COLOR_PATTERN, widgetPositionSchema, type WidgetPosition } from "./widget";
+export * from "./receptionist";
+export * from "./branding";
+export * from "./brandLinks";
 export { isCertificationMode, assertCertificationRecipient, assertCertificationOperationAllowed, assertCertificationCalendar, assertCertificationBillingSandbox } from "./certification";
 
 export type DeploymentMode = "cloud" | "self_hosted_standard" | "development";
@@ -13,6 +18,12 @@ export const deploymentModes = [
   "self_hosted_standard",
   "development",
 ] as const satisfies ReadonlyArray<DeploymentMode>;
+
+/** The deployment mode a DEPLOYMENT_MODE value names, or undefined when it names none. */
+export function parseDeploymentMode(value: string | undefined): DeploymentMode | undefined {
+  const trimmed = value?.trim();
+  return deploymentModes.find((mode) => mode === trimmed);
+}
 
 export const DEFAULT_WEB_CALL_MAX_DURATION_MS = 5 * 60 * 1000;
 export const MAX_WEB_CALL_MAX_DURATION_MS = 30 * 60 * 1000;
@@ -170,14 +181,11 @@ export function defaultCurrencyForTimezone(timezone: string): string {
 export type SnapshotEmployee = { name: string; services?: string[]; hours?: HoursWindow[]; timeOff?: Array<{ startsOn: string; endsOn: string }> };
 
 export type TransferPolicy = {
-  mode: "never" | "always" | "on_request" | "on_urgent" | "during_business_hours";
+  mode: (typeof transferModes)[number];
   transferNumber?: string;
 };
 
-export type AppointmentChangeVerificationMode =
-  | "phone_match_and_facts"
-  | "otp_required"
-  | "operator_only";
+export type AppointmentChangeVerificationMode = (typeof appointmentChangeVerificationModes)[number];
 
 export type AppointmentChangePolicy = {
   enabled: boolean;
@@ -225,7 +233,7 @@ export function isDefaultGreeting(greeting: string, businessName: string, locale
 export function normalizeAppointmentChangePolicy(value: unknown): AppointmentChangePolicy {
   if (value == null) return { ...defaultAppointmentChangePolicy };
   const policy = value as Partial<AppointmentChangePolicy>;
-  if (typeof policy.enabled === "boolean" && typeof policy.allowCancel === "boolean" && typeof policy.allowReschedule === "boolean" && ["phone_match_and_facts", "otp_required", "operator_only"].includes(policy.verificationMode ?? "")) {
+  if (typeof policy.enabled === "boolean" && typeof policy.allowCancel === "boolean" && typeof policy.allowReschedule === "boolean" && (appointmentChangeVerificationModes as readonly string[]).includes(policy.verificationMode ?? "")) {
     return { enabled: policy.enabled, allowCancel: policy.allowCancel, allowReschedule: policy.allowReschedule, verificationMode: policy.verificationMode! };
   }
   return { enabled: false, allowCancel: false, allowReschedule: false, verificationMode: "operator_only" };
@@ -247,11 +255,11 @@ export type AgentRuleSummary = {
 };
 
 /** How the agent handles appointment requests. */
-export type BookingMode = "off" | "request" | "instant";
+export type BookingMode = (typeof bookingModes)[number];
 
 /** Unknown or missing values keep today's behavior: book directly. */
 export function normalizeBookingMode(value: string | null | undefined): BookingMode {
-  return value === "off" || value === "request" ? value : "instant";
+  return (bookingModes as readonly string[]).includes(value ?? "") ? value as BookingMode : "instant";
 }
 
 export type BusinessContextSnapshot = {
@@ -381,13 +389,30 @@ export const demoSnapshot: BusinessContextSnapshot = {
 };
 
 // Website chat widget contracts.
-export type WidgetPosition = "bottom-right" | "bottom-left" | "bottom-center";
+export { normalizeWidgetOrigin, WIDGET_COLOR_PATTERN, widgetEmbedSnippet, widgetPositions, widgetPositionSchema, type WidgetPosition } from "./widget";
+
+/**
+ * What the loader takes from the dashboard: the bubble look the key's config
+ * sets, and the language the chat opens in.
+ */
+export type WidgetAppearance = { color?: string; position?: WidgetPosition; locale?: InterfaceLocale };
+
+/** The global the keyed loader fills before its own code runs, one entry per widget key. */
+export const WIDGET_APPEARANCE_GLOBAL = "__lobbyStackWidgetAppearance";
 
 export type WidgetLeadFormConfig = {
   enabled: boolean;
   requirePhone?: boolean;
   requireEmail?: boolean;
   showBeforeChat?: boolean;
+};
+
+/**
+ * Live chat with the team: during opening hours, a visitor who asks for a
+ * person gets someone from the team in the chat, who replies from Messages.
+ */
+export type WidgetLiveChatConfig = {
+  enabled: boolean;
 };
 
 export type WidgetConfig = {
@@ -398,18 +423,14 @@ export type WidgetConfig = {
   greeting?: string;
   localeOverride?: InterfaceLocale;
   leadForm?: WidgetLeadFormConfig;
+  liveChat?: WidgetLiveChatConfig;
 };
-
-export const widgetPositions = [
-  "bottom-right",
-  "bottom-left",
-  "bottom-center",
-] as const satisfies ReadonlyArray<WidgetPosition>;
 
 export const defaultWidgetConfig: WidgetConfig = {
   position: "bottom-right",
   title: "",
   leadForm: { enabled: false, requirePhone: false, requireEmail: false, showBeforeChat: false },
+  liveChat: { enabled: false },
 };
 
 export const widgetLeadFormConfigSchema = z.object({
@@ -420,13 +441,14 @@ export const widgetLeadFormConfigSchema = z.object({
 });
 
 export const widgetConfigSchema = z.object({
-  color: z.string().regex(/^#[0-9a-fA-F]{3,8}$/).optional(),
-  position: z.enum(widgetPositions).optional(),
+  color: z.string().regex(WIDGET_COLOR_PATTERN).optional(),
+  position: widgetPositionSchema.optional(),
   title: z.string().max(160).optional(),
   subtitle: z.string().max(320).optional(),
   greeting: z.string().max(400).optional(),
   localeOverride: z.enum(interfaceLocales).optional(),
   leadForm: widgetLeadFormConfigSchema.optional(),
+  liveChat: z.object({ enabled: z.boolean() }).optional(),
 });
 
 export const widgetSessionRequestSchema = z.object({
@@ -498,7 +520,7 @@ export * from "./planComparison";
 export { normalizeAuthEmail } from "./auth";
 export { assertProductionSecrets } from "./productionSecrets";
 
-export { isTransferPermitted, normalizeTransferMode } from "./transferPolicy";
+export { isBusinessOpen, isTransferPermitted, normalizeTransferMode } from "./transferPolicy";
 export { isTransferCountry, isTransferPhone, TRANSFER_COUNTRY_CALLING_CODES, type TransferCountry } from "./transferCountries";
 
 export { OPERATOR_SMS_ACCEPTED_DISCLOSURE_VERSIONS, OPERATOR_SMS_DISCLOSURE_TEXT, OPERATOR_SMS_DISCLOSURE_VERSION } from "./operatorSmsConsent";

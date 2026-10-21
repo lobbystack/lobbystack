@@ -167,3 +167,22 @@ describe("finance export", () => {
     expect(mocks.execute.mock.calls[0]?.[0]).toContain("HH24:MI:SS.US");
   });
 });
+
+describe("finance export service periods", () => {
+  afterEach(() => {
+    delete process.env.FINANCE_EXPORT_ENABLED;
+    delete process.env.FINANCE_EXPORT_TOKEN;
+    mocks.execute.mockReset();
+  });
+
+  it("exports each billing account's source, so a managed plan isn't read as a Polar subscription", async () => {
+    process.env.FINANCE_EXPORT_ENABLED = "true";
+    process.env.FINANCE_EXPORT_TOKEN = "finance-only-token";
+    const managed = { id: "acct_1", businessId: "biz_1", source: "managed", customerId: null, subscriptionId: null, plan: "enterprise", billingInterval: null, subscriptionState: "active", currentPeriodStart: "2026-10-01T00:00:00.000Z", currentPeriodEnd: null, updatedAt: "2026-10-01T00:00:00.000000Z" };
+    mocks.execute.mockResolvedValue({ rows: [managed] });
+    const response = await GET(new Request("http://localhost/api/internal/finance/export?resource=service-periods", { headers: { authorization: "Bearer finance-only-token" } }));
+    expect(response.status).toBe(200);
+    expect(String(mocks.execute.mock.calls[0]?.[0])).toMatch(/\bsource\b/);
+    expect(await response.json()).toMatchObject({ data: [{ source: "managed", plan: "enterprise", subscriptionId: null }] });
+  });
+});

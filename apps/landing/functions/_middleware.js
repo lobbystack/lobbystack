@@ -79,6 +79,8 @@ const TRANSLATED_PATHS = new Set([
   "/blog/google-business-profile-calls/",
   "/blog/outsourced-phone-answering-france/",
   "/blog/ai-phone-system-small-business/",
+  "/blog/how-to-build-an-ai-receptionist/",
+  "/blog/openai-voices/",
   "/affiliate-program/",
   "/about/",
   "/docs/api/",

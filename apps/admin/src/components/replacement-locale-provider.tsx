@@ -8,7 +8,6 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import {
-  localeTag,
   readStoredLocale,
   resolveLocale,
   writeStoredLocale,
@@ -66,11 +65,6 @@ export function LocaleProvider({
     i18n.on("languageChanged", handleLanguageChange);
     return () => { i18n.off("languageChanged", handleLanguageChange); };
   }, [i18n]);
-
-  // Keeps assistive technologies in sync with the locale used for the visible copy.
-  useEffect(() => {
-    document.documentElement.lang = localeTag(locale);
-  }, [locale]);
 
   /**
    * Mirrors the persisted choice into the cookie so the next document request is

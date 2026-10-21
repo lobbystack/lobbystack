@@ -6,7 +6,7 @@ vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 vi.mock("@lobbystack/domain", () => ({ getActiveOnboardingState: async () => ({ stage: "complete" }), resolveOnboardingRoute: () => "/" }));
 vi.mock("@/lib/auth", () => ({ getSession: async () => ({ user: { id: "user", email: "owner@example.com", name: "Owner" } }) }));
 vi.mock("@/lib/api-helpers", () => ({ getAppDatabase: () => ({ db: {} }) }));
-vi.mock("@/app/root-document", () => ({ RootDocument: () => null, appMetadata: {} }));
+vi.mock("@/app/root-document", () => ({ RootDocument: () => null, generateBrandingMetadata: async () => ({}) }));
 vi.mock("@/components/dashboard-shell", () => ({ DashboardShell: () => null }));
 vi.mock("../globals.css", () => ({}));
 

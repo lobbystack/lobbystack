@@ -1,0 +1,189 @@
+---
+title: "Onboard a business from the command line"
+description: "Describe a business in one file, and let the lobbystack command set up its knowledge, receptionist, plan, phone number and owner."
+sidebarTitle: "Command line"
+contentType: "How-to"
+---
+
+The `lobbystack` command works with LobbyStack through the [API](/api/overview). `lobbystack onboard` reads one file that describes a business and makes the business match it. It creates the business, adds its knowledge, sets up the receptionist and services, picks a plan, claims a phone number, and sends the owner a link to take over. When you change the file and run it again, it changes only what differs.
+
+## Install the command
+
+The command is part of the [LobbyStack repository](https://github.com/lobbystack/lobbystack). You need Node.js 26 and pnpm 10.
+
+```bash
+git clone https://github.com/lobbystack/lobbystack.git
+cd lobbystack
+pnpm install
+pnpm --filter "@lobbystack/cli..." build
+```
+
+The build is one file, `packages/cli/dist/bin.js`, which runs with Node.js alone. Copy it anywhere, or point an alias at it:
+
+```bash
+alias lobbystack="node $PWD/packages/cli/dist/bin.js"
+```
+
+## Sign in
+
+`lobbystack login` checks a key and saves it, with the dashboard's address, as a profile:
+
+```bash
+lobbystack login --url https://app.lobbystack.com --key-stdin < key.txt
+```
+
+`--key-stdin` keeps the key out of your shell history. On a self-hosted deployment, use your `APP_BASE_URL`. `lobbystack whoami` shows the key in use and its business.
+
+Which key you use decides what `onboard` can do:
+
+- **An API key** from **Settings** > **API keys** sets up its own business, as long as the business already has the manifest's name or the manifest gives its ID. Give it `business:read`, `business:write`, `knowledge:read` and `knowledge:write`, plus `billing:manage` for a plan, `phone_numbers:manage` for a number and `team:manage` to hand the business over, which only a key an owner created can do. See [Authentication](/api/authentication).
+- **A platform key** creates new businesses. Whoever runs the deployment makes platform keys; see [Platform keys](/api/authentication#platform-keys). An operator's key, which reaches every business, can also give a business a plan and a number. A partner's key can't: the owner pays for both, and once they claim the business, a partner's key can't reach it. Leave `plan` and `phone_number` out of a partner's manifest, and the owner picks them in the dashboard. A partner's key also leaves the full read of a website to the owner.
+
+In a script or CI, set `LOBBYSTACK_URL` and `LOBBYSTACK_API_KEY` instead of signing in.
+
+## Describe the business
+
+Write the business in a YAML or JSON file, such as `acme.yaml`. Every section but `business` is optional:
+
+```yaml acme.yaml
+business:
+  name: Acme Plumbing
+  timezone: America/Toronto
+  locale: en
+  website_url: https://acmeplumbing.ca
+  hours:
+    - { day: mon, open: "08:00", close: "17:00" }
+    - { day: tue, open: "08:00", close: "17:00" }
+knowledge:
+  websites: [https://acmeplumbing.ca]
+  read_full_site: true
+  files:
+    - ./docs/price-list.pdf
+    - path: ./docs/service-area.md
+      title: Where we work
+  faqs:
+    - question: Do you take emergency calls?
+      answer: Yes, 24/7 for existing customers.
+receptionist:
+  greeting: Thanks for calling Acme Plumbing, how can I help?
+  transfer_mode: on_urgent
+  transfer_number: "+14165550100"
+  booking_mode: request
+services:
+  - name: Drain cleaning
+    duration_minutes: 60
+rules:
+  - title: Gas leaks
+    content: If a caller smells gas, tell them to leave the building and call the gas company.
+plan:
+  checkout: { plan: pro, interval: monthly }
+phone_number: { country: CA, area_code: "416" }
+owner:
+  email: owner@acmeplumbing.ca
+```
+
+<Warning>
+  Put times and phone numbers in quotes. Inside YAML's `{ ... }` form a comma starts the next field, so write text that has a comma in the indented form, as the FAQ above does.
+</Warning>
+
+| Section | What it sets |
+| --- | --- |
+| `business` | `name` and `timezone` are required. `locale` (`en` or `fr`), `website_url`, `business_type` and `slug` are optional. `hours` lists the week's open windows by `day`, `open` and `close`, and replaces the hours the business had. `id` sets up a business that already exists instead of creating one. |
+| `receptionist` | The fields of `PATCH /receptionist`, such as `greeting`, `tone`, `transfer_mode`, `transfer_number` and `booking_mode`. |
+| `services` | The fields of `POST /services`. A service with the same name is updated instead of added again. |
+| `rules` | The fields of `POST /rules`. A rule with the same title is updated. |
+| `knowledge.websites` | Sites the receptionist reads. The first read takes a sample of each site. |
+| `knowledge.read_full_site` | `true` waits for that sample, then reads the rest of each site. |
+| `knowledge.files` | PDF, Word, text, Markdown, JPEG, PNG, WebP or TIFF files up to 10 MB, as paths inside the manifest's folder. Give an entry `path`, `title` and `tags` to name it. |
+| `knowledge.faqs` | Questions and answers. An FAQ with the same question gets the new answer. |
+| `knowledge.texts` | Notes with a `title` and `content`. A note with the same title gets the new content. |
+| `plan` | `checkout` with a `plan` (`starter` or `pro`) and an `interval` (`monthly` or `annual`). Or `managed: true` for a plan billed outside Polar, which only an operator's platform key can set. |
+| `phone_number` | The fields of `POST /phone-numbers/search`: `country`, `kind`, `area_code`, `city`, `region` and `postal_code`. The command claims the first number the search offers. |
+| `onboarding` | Onboarding finishes once nothing it needs is missing, except with a partner's key, which leaves it open for the owner. `skip_number: true` finishes it without a number, `complete` sets whether it finishes, and `source` records where the business came from. |
+| `owner` | The `email` of the person who will own the business. They get a link to claim it. |
+
+The command never deletes what the file leaves out. To remove a service, a rule or knowledge, use the dashboard or the other `lobbystack` commands.
+
+## Preview the changes
+
+`--plan` prints what a run would change, and changes nothing:
+
+```bash
+lobbystack onboard acme.yaml --plan
+```
+
+```text
+business       would create Acme Plumbing
+receptionist   would set up
+services       would set up
+rules          would set up
+knowledge      would set up
+plan           would set up
+phone number   would set up
+owner          would set up
+
+Nothing was changed: that's what a run would do.
+```
+
+A mistake in the file, or a document that's missing or outside the manifest's folder, stops the command before it changes anything. The message names where the mistake is, such as `services[0].duration_minutes`.
+
+## Run it
+
+```bash
+lobbystack onboard acme.yaml
+```
+
+Each line says what a step did:
+
+```text
+business       created      Acme Plumbing (75795511-9ee2-4cb2-a89d-f173ec1dd82d). Keep acme.state.json with the manifest, or put id: 75795511-9ee2-4cb2-a89d-f173ec1dd82d under business in it.
+details        updated      hours
+receptionist   updated      greeting, transfer_mode, transfer_number, booking_mode
+services       added        Drain cleaning
+websites       added        https://acmeplumbing.ca (reading a sample of its pages)
+files          uploaded     docs/price-list.pdf
+```
+
+A checkout and a phone number cost money, so the command asks before it starts either one. Pass `--yes` to skip the questions, which a script needs: without a terminal to ask in, the command stops instead.
+
+To set up a business that already exists, put its ID in `business.id`. `--business <id>` works too when the business already has the manifest's name. The command ignores `LOBBYSTACK_BUSINESS` and a profile's saved business, so a new manifest never lands on one by mistake.
+
+The claim link goes out once everything else is done, or before the checkout when an operator's key sets up a plan the owner pays for. When the owner accepts it, a partner's key and the API key that sent it can't reach the business any more, and a rerun says so. An operator's key still can.
+
+### When the run waits on someone
+
+Some steps need a person. The command does everything else, prints what it's waiting for, and exits with code `4`:
+
+- **A payment.** The command prints the checkout link: send it to whoever pays. Until the plan is paid, the business keeps its current plan. The phone number, documents the free plan has no room for, and the full read of a website wait for the paid plan. A checkout page more than an hour old may have run out: a run in a terminal, without `--yes`, offers to start a new one.
+- **The owner's claim.** With an operator's key, the business's owner pays for its plan, so the claim link goes out before the checkout. The checkout starts on the first run after the owner accepts the link.
+
+Run the same command again once the person is done. A checkout can buy a plan for a free business, or move Starter to Pro. Other plan changes, such as Pro to Starter or another billing interval, happen in the billing portal: the command reports them and carries on.
+
+## Run it again
+
+Run the command again whenever the file changes, or after a run fails. Each step compares the business with the file first and changes only what differs, so a business that already matches gets no changes.
+
+The command keeps the IDs it makes in a state file next to the manifest, such as `acme.state.json`. Keep that file with the manifest:
+
+- After a failure, the next run picks up where the last one stopped. It sends the same requests again, so it gets back the business, number or checkout it already made instead of a second one.
+- Files are uploaded once. When a file's contents, title or tags change, the next run uploads the new version and deletes the old one. A file you move within the folder keeps its upload.
+- A document or website that couldn't be read is read once more on the next run. If it fails the same way again, the command reports it, and `lobbystack knowledge retry <id>` reads it again once it's fixed.
+- A state file made against one dashboard is refused against another. Pass `--state <path>` to keep one per dashboard.
+
+Without a state file, a platform key won't create a business when you already onboarded one with the same name. Put that business's ID in `business.id` to set it up, or give the new business another name. Once its owner claims a business, `GET /businesses` stops listing it, even for an operator's key, so keep the state file, or copy the ID the first run prints into `business.id`.
+
+## Exit codes
+
+| Code | Meaning |
+| --- | --- |
+| `0` | The business matches the file. |
+| `1` | The API or the network failed, or a number claim or a website read failed. Run it again later. |
+| `2` | The file or an option needs changes, or a question was answered no or couldn't be asked: pass `--yes` in scripts. |
+| `3` | LobbyStack refused the key, or the key lacks a scope. |
+| `4` | Not finished: the rest waits on a payment or the owner's claim. |
+
+`--json` prints the business ID, the state file, every change and what the run waits on as JSON instead.
+
+## Other commands
+
+`lobbystack` has a command for every API endpoint, grouped like the API: `lobbystack services list`, `lobbystack knowledge upload`, `lobbystack numbers search`, and so on. `lobbystack --help` lists the groups, and `--help` after any command lists its options.

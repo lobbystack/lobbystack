@@ -175,6 +175,7 @@ export default defineRailway((ctx) => {
       POLAR_PRO_MONTHLY_PRODUCT_ID: preserve(),
       POLAR_PRO_ANNUAL_PRODUCT_ID: preserve(),
       PROSPECT_DEMO_OPERATOR_EMAIL: preserve(),
+      PLATFORM_API_KEYS: preserve(),
       SITE_URL: preserve(),
       TWILIO_ACCOUNT_SID: preserve(),
       TWILIO_AUTH_TOKEN: preserve(),

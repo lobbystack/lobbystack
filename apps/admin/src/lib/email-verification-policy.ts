@@ -38,7 +38,7 @@ function recipientDigest(email: string): string {
   return createHash("sha256").update(email.trim().toLowerCase()).digest("hex");
 }
 
-type EmailSendLimitInput = { email: string; remoteIp?: string | null; scope?: "email-verification" | "password-reset" };
+type EmailSendLimitInput = { email: string; remoteIp?: string | null; scope?: "email-verification" | "password-reset" | "account-setup" };
 
 export async function enforceEmailVerificationSendLimit(
   store: EmailVerificationLimitStore,

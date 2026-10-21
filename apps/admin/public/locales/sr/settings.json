@@ -23,47 +23,48 @@
   },
   "widget": {
     "title": "Vidžet za sajt",
-    "description": "Ugradite vidžet za ćaskanje na svoj sajt.",
+    "description": "Omogućite posetiocima sajta da se dopisuju sa Vašim recepcionerom.",
     "created": {
-      "title": "Ključ vidžeta je kreiran",
-      "description": "Kopirajte ovaj ključ sada. Više ga nećete videti.",
+      "title": "Vaš vidžet je spreman",
+      "description": "Ovaj kod možete ponovo kopirati bilo kada iz podešavanja vidžeta ispod.",
       "copy": "Kopiraj",
       "copied": "Kopirano",
-      "copySnippet": "Kopiraj kod za ugradnju",
-      "hint": "Dodajte kod na bilo koju stranicu na dozvoljenom domenu. Vidžet se učitava automatski.",
+      "copySnippet": "Kopiraj kod",
+      "hint": "Nalepite kod pre oznake </body> na svom sajtu. Čet se prikazuje na sajtovima koje ste naveli.",
       "done": "Gotovo"
     },
     "create": {
-      "title": "Kreirajte ključ vidžeta",
-      "description": "Svaki ključ pripada ovom radnom prostoru i ima sopstvenu listu dozvoljenih domena.",
-      "action": "Kreiraj ključ vidžeta"
+      "title": "Dodaj vidžet",
+      "description": "Svaki vidžet ima svoj izgled i svoju listu sajtova.",
+      "action": "Napravi vidžet"
     },
     "restricted": {
-      "title": "Novi vidžeti za sajt još nisu dostupni",
-      "description": "Još ne izdajemo nove vidžete za ćaskanje na sajtu. Postojeći vidžeti i dalje rade, a ispod ih možete menjati ili pauzirati."
+      "title": "Još ne možete da dodate nove vidžete",
+      "description": "Čet na sajtu je u ograničenoj dostupnosti. Vaši postojeći vidžeti i dalje rade, a možete ih menjati ili pauzirati."
     },
     "fields": {
       "label": "Naziv",
       "labelPlaceholder": "Glavni sajt",
-      "origins": "Dozvoljeni domeni",
+      "origins": "Sajtovi",
       "color": "Boja akcenta",
       "position": "Položaj",
       "title": "Naslov",
       "titlePlaceholder": "Pišite nam",
       "subtitle": "Podnaslov",
-      "subtitlePlaceholder": "Odgovaramo za nekoliko minuta",
-      "greeting": "Pozdrav",
-      "greetingPlaceholder": "Zdravo. Kako možemo da pomognemo?",
+      "subtitlePlaceholder": "Pitajte za radno vreme, cene ili termine",
+      "greeting": "Prva poruka",
+      "greetingPlaceholder": "Dobar dan, kako možemo da Vam pomognemo?",
       "localeOverride": "Jezik",
       "leadEnabled": "Tražite od posetilaca kontakt podatke",
-      "requireEmail": "Obavezan imejl",
-      "requirePhone": "Obavezan telefon",
-      "showBeforeChat": "Pitaj pre ćaskanja"
+      "requireEmail": "Obavezna imejl adresa",
+      "requirePhone": "Obavezan broj telefona",
+      "showBeforeChat": "Pitaj pre početka razgovora",
+      "liveChat": "Dozvolite posetiocima da razgovaraju sa Vašim timom",
+      "liveChatHint": "Kada posetilac tokom radnog vremena zatraži osobu, Vaš tim dobija upozorenje i može da odgovori iz Poruka. Ako se niko ne pridruži u roku od 3 minuta, recepcioner nudi da primi poruku."
     },
     "positions": {
       "bottomRight": "Dole desno",
-      "bottomLeft": "Dole levo",
-      "bottomCenter": "Dole u sredini"
+      "bottomLeft": "Dole levo"
     },
     "locales": {
       "visitor": "Jezik posetioca",
@@ -73,28 +74,33 @@
       "serbian": "Srpski"
     },
     "leadCapture": {
-      "title": "Obrazac za kontakt",
+      "title": "Kontakt podaci",
       "enabled": "Uključeno"
     },
     "status": {
       "active": "Aktivan",
       "disabled": "Pauziran",
-      "revoked": "Opozvan"
+      "revoked": "Uklonjen"
     },
     "keys": {
-      "title": "Ključevi vidžeta",
+      "title": "Vaši vidžeti",
       "fallbackBusiness": "Aktivni radni prostor",
       "refresh": "Osveži",
-      "loading": "Učitavanje ključeva vidžeta...",
-      "unavailable": "Ključevi vidžeta nisu dostupni.",
-      "empty": "Još nema ključeva vidžeta.",
+      "loading": "Učitavamo Vaše vidžete…",
+      "unavailable": "Nismo uspeli da učitamo Vaše vidžete. Osvežite stranicu i pokušajte ponovo.",
+      "empty": "Još nema vidžeta",
       "untitled": "Vidžet bez naziva",
       "pause": "Pauziraj",
       "resume": "Nastavi",
-      "revoke": "Opozovi",
-      "revokeConfirm": "Opozvati ovaj ključ vidžeta? Postojeće ugradnje će prestati da rade.",
+      "revoke": "Ukloni",
+      "revokeConfirm": "Ukloniti ovaj vidžet? Čet će nestati sa svih sajtova koji ga koriste.",
       "save": "Sačuvaj",
-      "lastUsed": "Poslednja upotreba: {{date}}"
+      "saved": "Sačuvano",
+      "appearanceHint": "Promene boje i položaja stižu na vaš sajt za oko dva minuta.",
+      "snippet": "Kod za Vaš sajt",
+      "snippetCopied": "Kod je kopiran",
+      "noSnippet": "Ne možemo da prikažemo kod ovog starijeg vidžeta. Dodajte novi vidžet da biste dobili kod koji možete kopirati bilo kada.",
+      "lastUsed": "Poslednja aktivnost: {{date}}"
     }
   },
   "billing": {
@@ -337,7 +343,7 @@
         },
         "forward": {
           "title": "Preusmerite poslovnu liniju na ovaj broj",
-          "description": "Pozivaoci i dalje biraju broj koji znaju. Vaš operater preusmerava te pozive na Vaš LobbyStack broj.",
+          "description": "Pozivaoci i dalje biraju broj koji znaju. Vaš operater preusmerava te pozive na Vaš {{appName}} broj.",
           "action": "Uputstvo za preusmeravanje poziva"
         },
         "transfer": {
@@ -426,7 +432,7 @@
     },
     "telemetry": {
       "label": "Deli podatke telemetrije",
-      "description": "Pomozite nam da poboljšamo LobbyStack deljenjem anonimizovanih podataka o korišćenju i greškama.",
+      "description": "Pomozite nam da poboljšamo {{appName}} deljenjem anonimizovanih podataka o korišćenju i greškama.",
       "saveFailed": "Nismo uspeli da sačuvamo podešavanje telemetrije. Pokušajte ponovo."
     }
   },
@@ -447,7 +453,7 @@
     "google": {
       "sheetTitle": "Google Calendar",
       "sheetDescription": "Povežite Google Calendar i izaberite kalendar u koji stižu zakazivanja.",
-      "privacyNoticeText": "Povezivanjem servisa Google Calendar omogućavate da LobbyStack čita dostupnost u Vašem kalendaru i da kreira, menja ili briše termine u kalendaru koji izaberete.",
+      "privacyNoticeText": "Povezivanjem servisa Google Calendar omogućavate da {{appName}} čita dostupnost u Vašem kalendaru i da kreira, menja ili briše termine u kalendaru koji izaberete.",
       "privacyPolicyLinkText": "Politika privatnosti",
       "staffLabel": "Član tima",
       "selectStaff": "Izaberite člana tima",
@@ -608,7 +614,8 @@
       "joinedOn": "Član od {{date}}",
       "invitedOn": "Poziv poslat {{date}}",
       "status": {
-        "pending": "Na čekanju"
+        "pending": "Na čekanju",
+        "handover": "Predaja firme"
       },
       "actions": {
         "moreOptions": "Još opcija",
@@ -816,9 +823,13 @@
         "title": "Nova poruka u ćaskanju na sajtu",
         "description": "Kada posetilac pošalje poruku preko vidžeta na Vašem sajtu. Dobijate najviše jedno upozorenje po razgovoru dnevno."
       },
+      "liveChatRequest": {
+        "title": "Posetilac traži osobu",
+        "description": "Kada posetilac Vašeg sajta zatraži razgovor sa nekim iz Vašeg tima. Odgovorite iz Poruka u roku od 3 minuta da biste se pridružili razgovoru."
+      },
       "webhookDisabled": {
         "title": "Webhook endpoint je isključen",
-        "description": "Kada LobbyStack prestane da šalje događaje na webhook endpoint jer nijedna isporuka nije uspela oko jedan dan."
+        "description": "Kada {{appName}} prestane da šalje događaje na webhook endpoint jer nijedna isporuka nije uspela oko jedan dan."
       }
     },
     "systemIssues": {
@@ -872,7 +883,7 @@
   },
   "apiKeys": {
     "title": "API ključevi",
-    "description": "Koristite ključ da povežete sopstveni kod ili drugu aplikaciju sa LobbyStack API-jem.",
+    "description": "Koristite ključ da povežete sopstveni kod ili drugu aplikaciju sa {{appName}} API-jem.",
     "empty": "Još nema API ključeva.",
     "neverUsed": "Nikad",
     "createdBy": "{{date}}, korisnik {{name}}",
@@ -909,28 +920,32 @@
     "revoke": {
       "action": "Opozovi",
       "title": "Opozvati ovaj API ključ?",
-      "description": "Sve što koristi {{name}} odmah prestaje da radi. Ovo ne može da se poništi. LobbyStack isključuje i webhookove koje je ovaj ključ napravio.",
+      "description": "Sve što koristi {{name}} odmah prestaje da radi. Ovo ne može da se poništi. {{appName}} isključuje i webhookove koje je ovaj ključ napravio.",
       "confirm": "Opozovi ključ",
       "cancel": "Otkaži",
       "done": "API ključ je opozvan",
       "failed": "Nismo uspeli da opozovemo ključ. Pokušajte ponovo."
     },
     "scopes": {
-      "business_read": "Čitanje podataka o firmi, radnog vremena i usluga",
-      "business_write": "Izmena podataka o firmi i radnog vremena",
+      "business_read": "Čitanje podataka o firmi, radnog vremena, usluga, kao i podešavanja i pravila recepcionera",
+      "business_write": "Izmena podataka o firmi, radnog vremena, usluga, kao i podešavanja i pravila recepcionera, uključujući broj na koji se pozivi prebacuju",
       "calls_read": "Čitanje poziva, rezimea i transkripata",
       "contacts_read": "Čitanje kontakata",
       "contacts_write": "Kreiranje i izmena kontakata",
       "appointments_read": "Čitanje zakazanih i slobodnih termina",
       "appointments_write": "Zakazivanje, otkazivanje i pomeranje termina",
       "messages_read": "Čitanje poruka koje je primio recepcioner",
-      "knowledge_write": "Dodavanje unosa u znanje i čestih pitanja",
+      "knowledge_read": "Čitanje unosa u znanje, čestih pitanja, veb-sajtova i fajlova",
+      "knowledge_write": "Dodavanje, izmena i brisanje unosa u znanje, čestih pitanja, veb-sajtova i fajlova",
+      "billing_manage": "Pregled plana, podešavanje limita potrošnje i pokretanje plaćanja",
+      "phone_numbers_manage": "Pretraga, kupovina, zamena i oslobađanje brojeva telefona",
+      "team_manage": "Pozivanje i uklanjanje članova tima, promena uloga i predaja firme",
       "webhooks_manage": "Kreiranje i brisanje webhook endpointa"
     }
   },
   "webhooks": {
     "title": "Webhooks",
-    "description": "LobbyStack šalje HTTPS POST zahtev na Vaš URL kada se nešto dogodi, na primer kada se poziv završi ili stigne novo zakazivanje. Svaki zahtev je potpisan, pa možete proveriti da je stigao od nas.",
+    "description": "{{appName}} šalje HTTPS POST zahtev na Vaš URL kada se nešto dogodi, na primer kada se poziv završi ili stigne novo zakazivanje. Svaki zahtev je potpisan, pa možete proveriti da je stigao od nas.",
     "empty": "Još nema webhook endpointa.",
     "enabledLabel": "Šalji događaje na ovaj endpoint",
     "restricted": {
@@ -964,19 +979,19 @@
     "create": {
       "action": "Dodaj endpoint",
       "title": "Dodajte webhook endpoint",
-      "description": "Izaberite gde LobbyStack šalje događaje i koje događaje šalje.",
+      "description": "Izaberite gde {{appName}} šalje događaje i koje događaje šalje.",
       "submit": "Dodaj endpoint"
     },
     "edit": {
       "action": "Izmeni",
       "title": "Izmenite webhook endpoint",
-      "description": "Izmene važe od sledećeg događaja koji LobbyStack pošalje.",
+      "description": "Izmene važe od sledećeg događaja koji {{appName}} pošalje.",
       "submit": "Sačuvaj"
     },
     "delete": {
       "action": "Obriši",
       "title": "Obrisati ovaj endpoint?",
-      "description": "LobbyStack prestaje da šalje događaje na {{url}} i briše njegov dnevnik isporuka.",
+      "description": "{{appName}} prestaje da šalje događaje na {{url}} i briše njegov dnevnik isporuka.",
       "confirm": "Obriši endpoint",
       "done": "Endpoint je obrisan"
     },
@@ -1023,8 +1038,8 @@
   },
   "connectedApps": {
     "title": "Povezane aplikacije",
-    "description": "AI asistenti kao što su Claude ili ChatGPT koje je neko povezao sa LobbyStack nalogom. Svaki radi samo za ovu firmu, sa pristupom koji je odobren pri povezivanju.",
-    "empty": "Još nema povezanih aplikacija. Da biste povezali aplikaciju, dodajte LobbyStack u podešavanjima asistenta i prijavite se.",
+    "description": "AI asistenti kao što su Claude ili ChatGPT koje je neko povezao sa {{appName}} nalogom. Svaki radi samo za ovu firmu, sa pristupom koji je odobren pri povezivanju.",
+    "empty": "Još nema povezanih aplikacija. Da biste povezali aplikaciju, dodajte {{appName}} u podešavanjima asistenta i prijavite se.",
     "neverUsed": "Nikad",
     "unnamed": "Aplikacija bez naziva",
     "grantedBy": "{{date}}, korisnik {{name}}",

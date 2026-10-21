@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getOrCreateWidgetConversation, loadWidgetChatHistory, registerWidgetVisitor } from "@lobbystack/domain";
+import { findCurrentWidgetConversationId, loadWidgetChatView } from "@lobbystack/domain";
 import { isUuid } from "@lobbystack/shared";
 
 import { asApiResponse } from "@/lib/api-helpers";
@@ -23,10 +23,24 @@ export async function GET(request: Request) {
 
     const context = createWorkerDomainContext();
     if (!isUuid(visitorId)) return NextResponse.json({ messages: [] });
-    await registerWidgetVisitor(context, { businessId: session.businessId, visitorId, metadata: { userAgent: request.headers.get("user-agent") ?? undefined } });
-    const { conversationId, automationState } = await getOrCreateWidgetConversation(context, { businessId: session.businessId, widgetVisitorId: visitorId });
-    const rows = await loadWidgetChatHistory(context, { businessId: session.businessId, conversationId });
-    return NextResponse.json({ conversationId, automationState, messages: rows.map((row) => ({ id: row.id, role: row.direction === "outbound" ? "assistant" : "user", content: row.body, createdAt: row.createdAt.toISOString() })) });
+    // Reading never starts a chat: the visitor's first message does, so one who only looks leaves none behind.
+    const conversationId = await findCurrentWidgetConversationId(context, { businessId: session.businessId, widgetVisitorId: visitorId });
+    if (!conversationId) return NextResponse.json({ messages: [] });
+    const view = await loadWidgetChatView(context, { businessId: session.businessId, conversationId, liveChatOn: session.config.liveChat?.enabled === true });
+    return NextResponse.json({
+      conversationId,
+      automationState: view.automationState,
+      waitingForTeam: view.waitingForTeam,
+      teamMemberName: view.teamMemberName,
+      // A team member's message carries their first name, when they have one.
+      messages: view.messages.map((row) => ({
+        id: row.id,
+        role: row.direction === "outbound" ? "assistant" : "user",
+        content: row.body,
+        createdAt: row.createdAt.toISOString(),
+        ...(row.fromTeam ? { fromTeam: true, teamMemberName: row.teamMemberName } : {}),
+      })),
+    });
   } catch (error) {
     return asApiResponse(error);
   }

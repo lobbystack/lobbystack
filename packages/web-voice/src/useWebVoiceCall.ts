@@ -153,6 +153,41 @@ export function readSessionClosedReason(data: unknown): string | undefined {
   }
 }
 
+/** One speaker's stretch of a browser call, as the live captions show it. */
+export type WebVoiceTranscriptTurn = { speaker: "caller" | "assistant"; text: string };
+
+type TranscriptDelta = { speaker: WebVoiceTranscriptTurn["speaker"]; delta: string };
+
+/**
+ * Returns the caption text when a data channel message is one of GPT-Live's
+ * transcript deltas for the caller or the receptionist. The captions only
+ * render in this browser; they are never sent anywhere, including telemetry.
+ */
+export function readTranscriptDelta(data: unknown): TranscriptDelta | undefined {
+  if (typeof data !== "string" || !data.includes("_transcript.delta")) return undefined;
+  try {
+    const event = JSON.parse(data) as { type?: unknown; delta?: unknown } | null;
+    if (typeof event?.delta !== "string" || !event.delta) return undefined;
+    if (event.type === "session.input_transcript.delta") return { speaker: "caller", delta: event.delta };
+    if (event.type === "session.output_transcript.delta") return { speaker: "assistant", delta: event.delta };
+    return undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Adds a delta the way the worker builds the saved transcript: the current
+ * speaker's turn grows, and a new speaker starts a turn. A blank delta from
+ * the other speaker starts nothing, so it can't split a sentence in two.
+ */
+export function appendTranscriptDelta(turns: readonly WebVoiceTranscriptTurn[], { speaker, delta }: TranscriptDelta): WebVoiceTranscriptTurn[] {
+  const last = turns.at(-1);
+  if (last?.speaker === speaker) return [...turns.slice(0, -1), { speaker, text: last.text + delta }];
+  if (!delta.trim()) return [...turns];
+  return [...turns, { speaker, text: delta }];
+}
+
 // Asks the server to end a session whose audio channel never opened. The end
 // route sits next to the start endpoint, and only accepts the start response's token.
 function requestSessionEnd(endpoint: string, session: StartedSession): void {
@@ -205,6 +240,8 @@ export function useWebVoiceCall({
   const [muted, setMuted] = useState(false);
   const [errorKey, setErrorKey] = useState<WebVoiceErrorKey | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+  // Captions for the current or last call; a new call starts them over.
+  const [transcript, setTranscript] = useState<WebVoiceTranscriptTurn[]>([]);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const eventsChannelRef = useRef<RTCDataChannel | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
@@ -365,6 +402,7 @@ export function useWebVoiceCall({
     };
 
     setErrorKey(null);
+    setTranscript([]);
     setStatus("requesting_microphone");
     emit("started");
 
@@ -400,7 +438,7 @@ export function useWebVoiceCall({
       peerConnectionRef.current = connection;
       stream.getAudioTracks().forEach((track) => connection.addTrack(track, stream));
       // GPT-Live reads client events from this channel; we only ever send
-      // session.close, and only read session.closed.
+      // session.close, and only read session.closed and the transcript deltas.
       const eventsChannel = connection.createDataChannel("oai-events");
       eventsChannelRef.current = eventsChannel;
       // Ignore events from a call this hook has already torn down.
@@ -433,6 +471,13 @@ export function useWebVoiceCall({
       // connection still shows as an error.
       eventsChannel.onmessage = (event: MessageEvent) => {
         if (!isCurrentCall()) return;
+        // The same channel carries both sides' words as they are spoken,
+        // which the widget shows as live captions.
+        const caption = readTranscriptDelta(event.data);
+        if (caption) {
+          setTranscript((turns) => appendTranscriptDelta(turns, caption));
+          return;
+        }
         const reason = readSessionClosedReason(event.data);
         if (reason === undefined) return;
         // The session is already closed at OpenAI, so there is nothing to end.
@@ -578,6 +623,7 @@ export function useWebVoiceCall({
     errorKey,
     remoteAudioRef,
     remoteStream,
+    transcript,
     startCall,
     endCall,
     forceEndCall,

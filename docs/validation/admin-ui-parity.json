@@ -20,13 +20,14 @@
   },
   "visualExemptions": [
     "/messages",
-    "/settings/widget",
+    "/widget",
     "/embed/[key]",
     "/settings/plan/ai-sms-compliance",
     "/settings/api-keys",
     "/integrations/webhooks",
     "/settings/connected-apps",
-    "/oauth/consent"
+    "/oauth/consent",
+    "/onboarding/brand"
   ],
   "localizedPortRoutes": [
     "/[locale]/accept-invite",
@@ -361,6 +362,13 @@
       "comparison": "frozen-main"
     },
     {
+      "path": "/onboarding/brand",
+      "fixtureState": "onboarding",
+      "state": "default",
+      "comparison": "excluded",
+      "reason": "New self-hosted branding step"
+    },
+    {
       "path": "/onboarding/website",
       "fixtureState": "onboarding",
       "state": "default",
@@ -581,7 +589,7 @@
       "reason": "New AI chat view"
     },
     {
-      "path": "/settings/widget",
+      "path": "/widget",
       "fixtureState": "operator",
       "state": "default",
       "comparison": "excluded",
