@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.mjs",
-    "build": "NODE_ENV=production next build && pnpm run marketing:postbuild",
+    "build": "NODE_ENV=production NODE_OPTIONS=--max-old-space-size=4096 next build && pnpm run marketing:postbuild",
     "marketing:postbuild": "node scripts/marketing/postbuild.mjs",
     "marketing:validate": "node scripts/marketing/validate-seo.mjs",
     "start": "next start",
