@@ -1,5 +1,7 @@
 # Deploy LobbyStack on Railway
 
+LobbyStack's own production and staging moved to Dokploy on 2026-10-21; see [Deploy LobbyStack on Dokploy](dokploy.md). The Railway project stays frozen as a rollback until 2026-11-04: its admin runs in maintenance mode and its worker and staging services are stopped. Don't deploy to it or apply `.railway/railway.ts` in that time. This page still describes a Railway deployment for self-hosters and for that rollback.
+
 Manage the project with Railway Infrastructure as Code in `.railway/railway.ts`. The definition adopts the isolated parity staging environment: admin, worker, a separate migrator, PostgreSQL 16 with pgvector, Redis 7, two persistent volumes, and a private bucket. See `.railway/README.md` for explicit environment selection and plan/apply commands.
 
 Legacy `apps/*/railway.json` files have been removed. Do not reintroduce per-service Config as Code. Review every IaC plan before applying, and preserve existing credentials with `preserve()`; never export secrets into source.
