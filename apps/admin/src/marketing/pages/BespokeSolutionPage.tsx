@@ -1,0 +1,311 @@
+import { FaqSection } from "@/marketing/components/FaqSection"
+import { Footer } from "@/marketing/components/Footer"
+import { Navbar } from "@/marketing/components/Navbar"
+import {
+  Comparison as SchedulerComparison,
+  Hero as SchedulerHero,
+  HowItWorks as SchedulerHowItWorks,
+  Problem as SchedulerProblem,
+  Solution as SchedulerSolution,
+  UseCases as SchedulerUseCases,
+} from "@/marketing/components/solutions/ai-appointment-scheduler/SectionsPart1"
+import {
+  BusinessFit as SchedulerBusinessFit,
+  Capabilities as SchedulerCapabilities,
+  OpenSource as SchedulerOpenSource,
+  RevenueTieIn as SchedulerRevenueTieIn,
+} from "@/marketing/components/solutions/ai-appointment-scheduler/SectionsPart2"
+import {
+  Comparison as PhoneComparison,
+  Hero as PhoneHero,
+  HowItWorks as PhoneHowItWorks,
+  Problem as PhoneProblem,
+  Solution as PhoneSolution,
+  UseCases as PhoneUseCases,
+} from "@/marketing/components/solutions/ai-phone-answering/SectionsPart1"
+import {
+  BusinessFit as PhoneBusinessFit,
+  Capabilities as PhoneCapabilities,
+  OpenSource as PhoneOpenSource,
+  RevenueTieIn as PhoneRevenueTieIn,
+} from "@/marketing/components/solutions/ai-phone-answering/SectionsPart2"
+import {
+  Comparison as HomeComparison,
+  Hero as HomeHero,
+  HowItWorks as HomeHowItWorks,
+  Problem as HomeProblem,
+  Solution as HomeSolution,
+  UseCases as HomeUseCases,
+} from "@/marketing/components/solutions/ai-receptionist-for-home-services/SectionsPart1"
+import {
+  BusinessFit as HomeBusinessFit,
+  Capabilities as HomeCapabilities,
+  OpenSource as HomeOpenSource,
+  RevenueTieIn as HomeRevenueTieIn,
+} from "@/marketing/components/solutions/ai-receptionist-for-home-services/SectionsPart2"
+import { SolutionCta } from "@/marketing/components/solutions/SolutionCta"
+import { localeTag, localizePath, type Locale } from "@/marketing/i18n"
+import { appointmentSchedulerFaqs } from "@/marketing/lib/appointment-scheduler-faqs"
+import { homeServicesFaqs } from "@/marketing/lib/home-services-faqs"
+import { getLocalizedSeoLandingPage } from "@/marketing/lib/localized-seo-landing-pages"
+import {
+  absoluteUrl,
+  breadcrumbJsonLd,
+  faqPageJsonLd,
+  organizationJsonLd,
+  webSiteJsonLd,
+  type FaqItem,
+} from "@/marketing/lib/seo"
+import { aiPhoneAnsweringFaqs } from "@/marketing/lib/solution-faqs"
+import { PageJsonLd, type MarketingPageSeo } from "@/marketing/seo/page-seo"
+
+export type BespokeSolutionKind = "phone" | "scheduler" | "homeServices"
+
+type LocalizedSeo = { title: string; description: string }
+
+export const bespokeSolutionVariants = {
+  phone: {
+    path: "/solutions/ai-phone-answering/",
+    image: "/illustrations/call-capture.webp",
+    imageAlt: "LobbyStack AI phone answering service capturing caller details",
+    breadcrumb: {
+      en: "AI Phone Answering",
+      fr: "Réponse téléphonique IA",
+      es: "Atención telefónica con IA",
+      sr: "AI odgovaranje na pozive",
+    },
+    faqs: aiPhoneAnsweringFaqs,
+    faqHeading: "Questions about AI phone answering",
+    cta: {
+      heading: "Start answering every call without hiring another receptionist",
+      intro:
+        "Try LobbyStack with included voice minutes, set your answering rules, and see how many calls it can turn into clear next steps.",
+      footnote: "No credit card required. Cancel anytime.",
+    },
+    seo: {
+      en: {
+        title: "AI Phone Answering Service for Small Businesses | LobbyStack",
+        description:
+          "LobbyStack answers business calls 24/7, books appointments, captures caller details, and routes urgent calls to your team.",
+      },
+      fr: {
+        title: "Réponse téléphonique IA pour petites entreprises",
+        description:
+          "Répondez aux appels entrants, collectez les détails, prenez des rendez‑vous et transférez les demandes urgentes avec LobbyStack.",
+      },
+      es: {
+        title: "Atención telefónica con IA para pequeñas empresas",
+        description:
+          "Conteste las llamadas entrantes, recopile datos, reserve citas y transfiera las solicitudes urgentes con LobbyStack.",
+      },
+      sr: {
+        title: "AI odgovaranje na pozive za male firme",
+        description:
+          "Odgovarajte na dolazne pozive, prikupljajte podatke, zakazujte termine i preusmeravajte hitne zahteve uz LobbyStack.",
+      },
+    },
+  },
+  scheduler: {
+    path: "/solutions/ai-appointment-scheduler/",
+    image: "/illustrations/booking-flow.webp",
+    imageAlt: "LobbyStack AI appointment scheduler booking a caller",
+    breadcrumb: {
+      en: "AI Appointment Scheduler",
+      fr: "Planification IA",
+      es: "Programación de citas con IA",
+      sr: "AI zakazivanje termina",
+    },
+    faqs: appointmentSchedulerFaqs,
+    faqHeading: "Questions about AI appointment scheduling",
+    cta: {
+      heading: "Book more appointments from the calls you already get",
+      intro:
+        "Try LobbyStack with included voice minutes, set your scheduling rules, and let callers book while they are ready to act.",
+      footnote: "No credit card required. Cancel anytime.",
+    },
+    seo: {
+      en: {
+        title: "AI Appointment Scheduler and Answering Service | LobbyStack",
+        description:
+          "LobbyStack is an answering service with appointment scheduling built in. It books appointments during calls, captures caller details, sends confirmations, and routes urgent requests.",
+      },
+      fr: {
+        title: "Planificateur de rendez‑vous IA pour petites entreprises",
+        description:
+          "LobbyStack planifie les rendez‑vous depuis les appels, collecte les détails, envoie les confirmations et transfère les demandes urgentes.",
+      },
+      es: {
+        title: "Programador de citas con IA para pequeñas empresas",
+        description:
+          "LobbyStack reserva citas durante las llamadas, recopila datos, envía confirmaciones y transfiere las solicitudes urgentes.",
+      },
+      sr: {
+        title: "AI zakazivanje termina za male firme",
+        description:
+          "LobbyStack zakazuje termine tokom poziva, prikuplja podatke, šalje potvrde i preusmerava hitne zahteve.",
+      },
+    },
+  },
+  homeServices: {
+    path: "/solutions/ai-receptionist-for-home-services/",
+    image: "/illustrations/industry-bookings.webp",
+    imageAlt: "LobbyStack AI receptionist booking home services jobs from phone calls",
+    breadcrumb: {
+      en: "Home Services Answering Service",
+      fr: "Services à domicile",
+      es: "Servicios para el hogar",
+      sr: "Kućne usluge",
+    },
+    faqs: homeServicesFaqs,
+    faqHeading: "Questions about AI receptionists for home services",
+    cta: {
+      heading: "Answer the next job call, even when your crew is already working",
+      intro:
+        "Try LobbyStack with included voice minutes, set your trade-specific intake rules, and turn more phone calls into booked jobs.",
+      footnote: "No credit card required. Works with your existing business number.",
+    },
+    seo: {
+      en: {
+        title: "Home Services Answering Service with AI | LobbyStack",
+        description:
+          "LobbyStack is an AI answering service for home services teams. It answers HVAC, plumbing, electrical, roofing, and landscaping calls while crews are on the job.",
+      },
+      fr: {
+        title: "Réceptionniste IA pour services à domicile | LobbyStack",
+        description:
+          "LobbyStack répond aux appels pour CVC, plomberie, électricité, toiture, paysagement et autres services pendant que vos équipes travaillent.",
+      },
+      es: {
+        title: "Recepcionista con IA para servicios del hogar | LobbyStack",
+        description:
+          "LobbyStack contesta llamadas de climatización, plomería, electricidad, techado, jardinería y otros servicios mientras sus equipos trabajan.",
+      },
+      sr: {
+        title: "AI recepcioner za kućne usluge | LobbyStack",
+        description:
+          "LobbyStack odgovara na pozive za grejanje i klimatizaciju, vodoinstalaterske, električarske, krovopokrivačke, baštovanske i druge usluge dok su Vaše ekipe na terenu.",
+      },
+    },
+  },
+} satisfies Record<
+  BespokeSolutionKind,
+  {
+    path: string
+    image: string
+    imageAlt: string
+    breadcrumb: Record<Locale, string>
+    faqs: FaqItem[]
+    faqHeading: string
+    cta: { heading: string; intro: string; footnote: string }
+    seo: Record<Locale, LocalizedSeo>
+  }
+>
+
+const breadcrumbLabels = {
+  en: { home: "Home", solutions: "Solutions" },
+  fr: { home: "Accueil", solutions: "Solutions" },
+  es: { home: "Inicio", solutions: "Soluciones" },
+  sr: { home: "Početna", solutions: "Rešenja" },
+} satisfies Record<Locale, { home: string; solutions: string }>
+
+export function bespokeSolutionPageSeo(locale: Locale, kind: BespokeSolutionKind): MarketingPageSeo {
+  const variant = bespokeSolutionVariants[kind]
+  const localizedPage = getLocalizedSeoLandingPage(locale, variant.path)
+  const title = localizedPage?.title ?? variant.seo[locale].title
+  const description = localizedPage?.description ?? variant.seo[locale].description
+  const canonicalPath = localizePath(locale, variant.path)
+  const homeLabel = breadcrumbLabels[locale].home
+  return {
+    title,
+    description,
+    canonicalPath,
+    locale,
+    image: variant.image,
+    imageAlt: variant.imageAlt,
+    jsonLd: [
+      organizationJsonLd(),
+      webSiteJsonLd({ locale }),
+      breadcrumbJsonLd([
+        { name: homeLabel, path: localizePath(locale, "/") },
+        {
+          name: breadcrumbLabels[locale].solutions,
+          path: localizePath(locale, "/solutions/"),
+        },
+        { name: variant.breadcrumb[locale], path: canonicalPath },
+      ]),
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "@id": absoluteUrl(`${canonicalPath}#webpage`),
+        name: title,
+        url: absoluteUrl(canonicalPath),
+        description,
+        inLanguage: localeTag(locale),
+        isPartOf: {
+          "@id": absoluteUrl("/#website"),
+        },
+      },
+      faqPageJsonLd({ path: canonicalPath, faqs: variant.faqs, locale }),
+    ],
+  }
+}
+
+export function BespokeSolutionPage({ locale, kind }: { locale: Locale; kind: BespokeSolutionKind }) {
+  const seo = bespokeSolutionPageSeo(locale, kind)
+  const variant = bespokeSolutionVariants[kind]
+  return (
+    <>
+      <PageJsonLd seo={seo} />
+      <Navbar locale={locale} />
+
+      <main id="main-content">
+        {kind === "phone" && (
+          <>
+            <PhoneHero />
+            <PhoneProblem />
+            <PhoneSolution />
+            <PhoneUseCases />
+            <PhoneHowItWorks />
+            <PhoneComparison />
+            <PhoneBusinessFit />
+            <PhoneCapabilities />
+            <PhoneRevenueTieIn />
+            <PhoneOpenSource />
+          </>
+        )}
+        {kind === "scheduler" && (
+          <>
+            <SchedulerHero />
+            <SchedulerProblem />
+            <SchedulerSolution />
+            <SchedulerUseCases />
+            <SchedulerHowItWorks />
+            <SchedulerComparison />
+            <SchedulerBusinessFit />
+            <SchedulerCapabilities />
+            <SchedulerRevenueTieIn />
+            <SchedulerOpenSource />
+          </>
+        )}
+        {kind === "homeServices" && (
+          <>
+            <HomeHero />
+            <HomeProblem />
+            <HomeSolution />
+            <HomeUseCases />
+            <HomeHowItWorks />
+            <HomeComparison />
+            <HomeBusinessFit />
+            <HomeCapabilities />
+            <HomeRevenueTieIn />
+            <HomeOpenSource />
+          </>
+        )}
+        <FaqSection heading={variant.faqHeading} faqs={variant.faqs} />
+        <SolutionCta {...variant.cta} />
+      </main>
+
+      <Footer locale={locale} path={seo.canonicalPath} />
+    </>
+  )
+}

@@ -51,6 +51,18 @@ function rehypeCodeLanguage() {
   }
 }
 
+// Astro aligned table columns with an inline style; mdast-util-to-hast uses
+// the align attribute, which the stylesheet's text-align rules would override.
+function rehypeTableAlignStyle() {
+  return (tree: Root) => {
+    visitElements(tree, (element) => {
+      if ((element.tagName !== "td" && element.tagName !== "th") || typeof element.properties.align !== "string") return
+      element.properties.style = `text-align: ${element.properties.align}`
+      delete element.properties.align
+    })
+  }
+}
+
 const processor = unified()
   .use(remarkParse)
   .use(remarkGfm)
@@ -58,7 +70,8 @@ const processor = unified()
   .use(remarkRehype)
   .use(rehypeHeadingIds)
   .use(rehypeCodeLanguage)
-  .use(rehypeStringify)
+  .use(rehypeTableAlignStyle)
+  .use(rehypeStringify, { characterReferences: { useNamedReferences: true } })
 
 /** Renders a post's Markdown to HTML the way the Astro site did. */
 export async function renderMarkdown(markdown: string): Promise<string> {

@@ -48,10 +48,10 @@ Entry plans published in France run from €23.99 a month for 250 minutes at Kon
 | [Tala](https://www.tala-assistant.com/pricing) Découverte | €29 a month before VAT | 50 minutes, 1 simultaneous call | €0.20 | Expert setup: €300 before VAT, one time | 1 number included, country not stated | Not stated |
 | [Callsens](https://callsens.fr/tarifs) Starter | €79 a month before VAT | 200 minutes, 5 simultaneous calls | €0.29 | No fee | 1 number included, country not stated | Google Calendar, Calendly |
 | [Elio](https://eliocall.com/tarifs) | €79 a month before VAT | 150 minutes | €0.39 | €879 before VAT, waived | You keep your number through call forwarding | Not stated for the standard plan |
-| [AirAgent](https://airagent.fr/tarifs/) Starter | €89 a month before VAT | "Jusqu'à 250 appels" (up to 250 calls), 1 simultaneous call | "+ 0,30 € par min HT" (€0.30 a minute) | Setup by an engineer from €490 | 1 number included, country not stated | Google Calendar, Cal.com |
+| [AirAgent](https://airagent.fr/tarifs/) Starter | €89 a month before VAT | "Jusqu'à 250 appels" (up to 250 calls), 1 simultaneous call | “+ 0,30 € par min HT” (€0.30 a minute) | Setup by an engineer from €490 | 1 number included, country not stated | Google Calendar, Cal.com |
 | [LobbyStack](/pricing/) Starter (ours) | $30 a month | 150 minutes, no plan limit on simultaneous calls | $0.20 | No fee | Number in the US, Canada, the UK, Australia or New Zealand | Google Calendar |
 
-- AirAgent shows "+ 0,30 € par min HT" under each price without saying whether it applies from the first minute. Its FAQ charges €0.30 a minute once you reach the plan's limits. Get this in writing.
+- AirAgent shows “+ 0,30 € par min HT” under each price without saying whether it applies from the first minute. Its FAQ charges €0.30 a minute once you reach the plan's limits. Get this in writing.
 - Elio states its prices are "en vigueur au 4 octobre 2026" (in effect October 4, 2026). The other pages don't date their prices.
 - For 17 North American AI receptionists priced in dollars, see [how much an AI receptionist costs](/blog/ai-receptionist-savings/).
 

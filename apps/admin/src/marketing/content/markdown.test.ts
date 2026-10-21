@@ -15,6 +15,11 @@ describe("renderMarkdown", () => {
     expect(html).toBe('<pre class="language-text" data-language="text"><code class="language-text">Hello</code></pre>')
   })
 
+  it("aligns table columns with an inline style, as Astro did", async () => {
+    const html = await renderMarkdown("| Plan | Price |\n| --- | ---: |\n| Free | $0 |\n")
+    expect(html).toContain('<td style="text-align: right">$0</td>')
+  })
+
   it("renders tables and typographic quotes", async () => {
     const html = await renderMarkdown('| Plan | Price |\n| --- | --- |\n| Free | $0 |\n\nIt\'s "free".\n')
     expect(html).toContain("<table>")
