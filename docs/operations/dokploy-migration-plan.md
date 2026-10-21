@@ -40,7 +40,7 @@ Ship these changes in one pull request before you touch infrastructure. None of 
 2. **Images in GHCR.** On pushes to `main`, make `.github/workflows/runtime-images.yml` push `ghcr.io/lobbystack/lobbystack-{admin,worker,migrator}` tagged with the commit SHA. The workflow already builds them with `SERVICE_VERSION` set to the SHA. Build the admin once per environment: Next.js writes the Turnstile site key, the PostHog token and host, `DEPLOYMENT_MODE` and the brand links into the bundle. Store those values as GitHub environment variables and `POSTHOG_SOURCEMAP_API_KEY` as an environment secret.
 3. **Release script.** Add `scripts/dokploy-release.ts` and call it from `release-dokploy` with `DOKPLOY_URL` and `DOKPLOY_API_KEY` from the GitHub `production` environment. Keep the two "release is current" checks from `migrate-production`. The script runs these steps and stops at the first failure:
    1. Point the `migrator` application at the new tag with `application.saveDockerProvider`, deploy it, and poll `deployment.all` until the deployment finishes.
-   2. Start the `migrate` schedule with `schedule.runManually`, then poll `deployment.allByType` with type `schedule` for its result.
+   2. Run the `migrate` schedule with `schedule.runManually`. The call returns once the command ends, with `status: "error"` when it exits non-zero, so the script needs no polling here.
    3. Deploy `worker`, then `admin`, the same way as step 1.
    4. Request `https://app.lobbystack.com/api/health/ready` and fail on any status other than 200.
 4. **Environment label.** `apps/admin/next.config.ts` and `apps/admin/src/lib/error-reporting.ts` read `RAILWAY_ENVIRONMENT_NAME` and fall back to `NODE_ENV`, so Dokploy staging would report itself as `production`. Read a new `DEPLOYMENT_ENVIRONMENT` first, pass it as an admin build argument, and keep the Railway fallback for template users. The release version needs no change: without the Railway variables, `release-version.ts` and `packages/telemetry` use the `SERVICE_VERSION` baked into the image.
@@ -59,18 +59,18 @@ Create these five services in each Dokploy environment:
 | `worker` | Application, Docker source | `lobbystack-worker` | No domain. Apply the worker settings below. |
 | `admin` | Application, Docker source | `lobbystack-admin` | Domain `app.lobbystack.com` on the container's `PORT`, with the Cloudflare origin certificate. Apply the admin settings below. |
 
-The Docker API measures health check and grace periods in nanoseconds. Confirm Dokploy's units on staging before you trust the numbers below.
+Dokploy hands the stop grace period and health check durations to Docker unchanged, so enter them in nanoseconds. Its form labels the field "Stop Grace Period (nanoseconds)".
 
 Set these Swarm settings on the worker:
 
-- **Update config:** `Order: "start-first"`, `FailureAction: "rollback"`, `Parallelism: 1`. The new worker starts before the old one gets SIGTERM, which matches Railway.
+- **Update config:** keep Dokploy's default, `Order: "start-first"` with `FailureAction: "rollback"` and `Parallelism: 1`. The new worker starts before the old one gets SIGTERM, which matches Railway.
 - **Stop grace period:** 31 minutes (`1860000000000` ns). Docker sends SIGKILL when it runs out.
 - **Health check:** `/health/live` on port 3002. Docker keeps checking after the deploy and replaces an unhealthy task, so a readiness check would restart the worker and end its calls during a short Redis or Postgres outage. Railway checks health only while it deploys.
 - **Environment:** `LIVE_DRAIN_TIMEOUT_MS=1825000`, which is 31 minutes minus the worker's 35-second margin.
 
 Set these on the admin:
 
-- **Update config:** `Order: "start-first"`, `FailureAction: "rollback"`.
+- **Update config:** keep Dokploy's start-first default.
 - **Health check:** `/api/health/ready`, a 10-second interval, a 60-second start period and 6 retries.
 - **Environment:** `HOSTNAME=0.0.0.0`. Docker sets `HOSTNAME` to the container ID, and the Next.js standalone server binds to whatever `HOSTNAME` holds.
 
@@ -116,9 +116,9 @@ Prepare the server before the staging rehearsal, so you test the same Cloudflare
 Build staging on the panel host and run the whole cutover against Railway staging. Time each step, and use those times to plan the production window:
 
 1. Create a `staging` environment in the `LobbyStack` project with the five services.
-2. Move Railway staging's data with steps 2 to 7 of the cutover.
+2. Start Railway staging with `scripts/staging-start.sh`, because `railway ssh` can't reach a stopped service. Then move its data with steps 2 to 7 of the cutover.
 3. Run the checks in `docs/validation/certification-runbook.md`, then `pnpm voice:call` against staging.
-4. Start a browser test call, deploy the worker, and confirm the call carries on while the new worker takes the next call. Read the stop grace period from `docker service inspect` to confirm the units.
+4. Start a browser test call, deploy the worker, and confirm the call carries on while the new worker takes the next call.
 5. Upload a document from the dashboard to test the R2 credentials, the CORS rule and the Content Security Policy.
 6. Text the staging number and resend a Polar sandbox event to test webhook signatures behind Traefik.
 7. Restore a Dokploy Postgres backup into a scratch database and run `pnpm db:check` against it.
@@ -140,8 +140,16 @@ Choose the hour with the fewest calls. For the provider side, follow section 3 o
 
 1. Set `RELEASE_TARGET` to `dokploy`, and turn off **Auto Deploy** on Railway's admin and worker, so no release lands during the window.
 2. Wait until no call is in progress, then set `LOBBYSTACK_MAINTENANCE_MODE=true` on Railway's admin and worker. Wait for the old worker to exit, which it does when its last call ends.
-3. Inside Railway's Postgres service, run `pg_dumpall --roles-only` and `pg_dump --format=custom`. The roles file keeps the passwords the services use. Copy both files to the production server and compare SHA-256 checksums.
-4. Save Redis with `redis-cli --rdb` and copy `dump.rdb` the same way. Redis holds delayed BullMQ jobs, such as retries, that the app can't rebuild from Postgres.
+3. Stream the Postgres roles and database to your machine over `railway ssh`. The roles file keeps the passwords the services use. Don't use a Railway TCP proxy instead: the plain Postgres image doesn't encrypt connections.
+   ```bash
+   railway ssh --service Postgres --environment production -- sh -c 'pg_dumpall --roles-only -U "$POSTGRES_USER"' > roles.sql
+   railway ssh --service Postgres --environment production -- sh -c 'pg_dump --format=custom -U "$POSTGRES_USER" "$POSTGRES_DB"' > lobbystack.dump
+   ```
+4. Save Redis the same way. Redis holds delayed BullMQ jobs, such as retries, that the app can't rebuild from Postgres.
+   ```bash
+   railway ssh --service Redis-production --environment production -- sh -c 'redis-cli -a "$REDIS_PASSWORD" --no-auth-warning --rdb /tmp/dump.rdb > /dev/null && cat /tmp/dump.rdb && rm /tmp/dump.rdb' > dump.rdb
+   ```
+   Copy the three files to the production server with `scp` and compare SHA-256 checksums.
 5. Run `rclone sync` to R2 one last time.
 6. Restore everything on the production server:
    1. Load the roles file with `psql`, and ignore the error for the superuser, which already exists.
@@ -173,11 +181,14 @@ Close out the move over the next 14 days:
 - Delete Railway staging and `.railway/railway.ts`, and remove both from `scripts/check-drift.ts`. Trim `docs/deployment/railway.md` to the self-hosting template. Keep `.railway/template.ts`, `scripts/publish-images.sh` and the `railway` package, which the template needs.
 - To get config as code back, declare the Dokploy settings in a `.dokploy/` file and add a drift check that compares it with the API, in place of `railway config plan`.
 
-## Open questions
+## Checked facts
 
-Answer these during the staging rehearsal:
+These answers come from Dokploy's v0.30.8 source and a test against Railway production on 2026-10-20:
 
-- Does Dokploy's `stopGracePeriodSwarm` take nanoseconds? `docker service inspect` shows the value Docker received.
-- Does a manual schedule run record a failed deployment when its command exits non-zero? If it doesn't, give CI an SSH key whose `authorized_keys` entry forces one `docker run` of the migrator image, so the exit code reaches CI.
-- Does `railway ssh` pass binary output through intact? Compare checksums. If it doesn't, pipe the dumps through `base64`. Don't send them over a Railway TCP proxy: the plain Postgres and Redis images don't encrypt connections.
-- Which address does `x-real-ip` hold on Railway today? Behind Cloudflare it may hold a Cloudflare edge address, which would mean today's per-client rate limits lump visitors together.
+- Dokploy copies `stopGracePeriodSwarm` and the health check fields into the Docker service spec unchanged (`packages/server/src/utils/builders/index.ts`), so they take nanoseconds.
+- `schedule.runManually` waits for the command and marks the run `error` when it exits non-zero (`packages/server/src/utils/schedules/utils.ts`).
+- `railway ssh` copied the 9.57 MB `postgres` binary out of the production Postgres container in 2 seconds with a matching SHA-256 checksum. The containers ship `pg_dump` 16.15 and `redis-cli` 7.4.11.
+
+## Open question
+
+Which address does `x-real-ip` hold on Railway today? Behind Cloudflare it may hold a Cloudflare edge address, which would mean today's per-client rate limits lump visitors together.
