@@ -24,7 +24,7 @@ Dokploy v0.30.8 runs on an OVH VPS in Virginia (`vps-569f1528.vps.ovh.us`, `40.1
 | Decision | Choice | Reason |
 | --- | --- | --- |
 | Where production runs | The existing Dokploy host, next to the panel, `openseo` and staging | One box to pay for and run. Phase 2 lists the guards that keep the other tenants from interrupting calls. |
-| Host size | At least 4 vCPU, 8 GB RAM and 80 GB of free disk | Two workers run side by side during a drain, next to staging, `openseo` and the panel. The VPS already sits in Virginia, close to us-east4 and the iad bucket, so the worker's OpenAI requests during a call take as long as today. |
+| Host size | Keep the current VPS-1 (2 vCores, 4 GB RAM, 40 GB disk) | Production plus the panel and `openseo` need about 2.3 GB, and about 2.8 GB while a deploy runs two admins and two workers. Calls use little CPU because OpenAI does the speech work, and CI does the builds. Staging adds about 0.8 GB, so run it only when no production deploy is under way. The VPS sits in Virginia, close to us-east4 and the iad bucket, so the worker's OpenAI requests during a call take as long as today. |
 | Where images build | GitHub Actions, pushed to GitHub Container Registry (GHCR) | A Next.js build on the box would compete with live calls for CPU and memory. CI also deploys the image it tested, and a rollback redeploys an earlier tag. |
 | Object storage | Cloudflare R2 | Files survive the loss of the box, Cloudflare already runs the DNS, and 1 GB fits in R2's free tier. |
 | Staging | The same host, stopped when idle | Dokploy can't sleep services, so scripts start and stop it. |
@@ -102,7 +102,7 @@ Use the app name Dokploy shows for each service, which ends in a random suffix. 
 
 Production will share the box with the panel, `openseo` and staging. Set up these guards before the staging rehearsal, so the rehearsal runs on the final setup:
 
-1. Check the size with `nproc`, `free -h` and `df -h /`. If the box has fewer than 4 vCPU, 8 GB RAM or 80 GB of free disk, upgrade the VPS in the OVH control panel.
+1. Add a 4 GB swap file. Without swap, a memory spike makes the kernel kill a process, and it could pick the worker in the middle of a call. With swap, the box slows down instead. Upgrade the VPS in the OVH control panel once the memory alert fires or swap stays in use.
 2. Turn on the Cloudflare proxy for `deploy.lobbystack.com` and `seo.lobbystack.com`. Then, in OVH's network firewall, admit ports 80 and 443 from Cloudflare's published IP ranges only, and SSH from your own address. Docker opens Traefik's ports through its own iptables rules, so `ufw` on the box can't block them.
 3. Create a Cloudflare origin certificate for `lobbystack.com` and `*.lobbystack.com`, and add it in Dokploy under **Certificates**. Set the certificate type to None on the `app`, `seo` and `deploy` domains so Traefik serves the origin certificate, and Let's Encrypt renewals stop depending on reaching the box through Cloudflare. Set the zone's SSL mode to Full (strict) after you check that every other proxied hostname has a valid certificate at its origin.
 4. Give `openseo` and every staging service a memory limit, sized from its current use, so none of them can starve production. Leave production without limits.
@@ -188,7 +188,7 @@ Close out the move over the next 14 days:
 Follow these rules for as long as production shares the box:
 
 - Upgrade Dokploy, Docker or the kernel, and reboot the VPS, only in the quiet hour with no call in progress. Each of these can restart Traefik or every container on the box.
-- Stop staging when you finish with it. While it runs, it uses memory on the machine that takes calls.
+- Stop staging when you finish with it, and don't release to production while it runs. Both together push a 4 GB box close to its limit.
 - Give any new service on the box a memory limit before you deploy it.
 
 ## Checked facts
