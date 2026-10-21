@@ -1,34 +1,11 @@
 import { LOBBYSTACK_SITE_URL, brandLinks, isInterfaceLocale } from "@lobbystack/shared";
 
+import { translatedBasePaths } from "@/marketing/i18n/translated-base-paths";
+
 import { DEFAULT_LOCALE, type SupportedLocale } from "./locale";
 
-const translatedBasePaths = new Set([
-  "/",
-  "/features/",
-  "/pricing/",
-  "/solutions/",
-  "/solutions/ai-phone-answering/",
-  "/solutions/ai-appointment-scheduler/",
-  "/solutions/ai-receptionist-for-home-services/",
-  "/missed-call-revenue-calculator/",
-  "/blog/",
-  "/changelog/",
-  "/blog/ai-receptionist-vs-virtual-receptionist/",
-  "/blog/lobbystack-is-live/",
-  "/blog/ai-receptionist-savings/",
-  "/blog/how-to-choose-an-ai-receptionist/",
-  "/blog/build-or-buy-ai-receptionist/",
-  "/blog/open-source-ai-receptionist-stack/",
-  "/blog/best-open-source-ai-phone-answering-services/",
-  "/blog/ai-receptionist-workflows/",
-  "/blog/ai-receptionist-affiliate-program/",
-  "/affiliate-program/",
-  "/docs/api/",
-  "/privacy/",
-  "/cookie-policy/",
-  "/terms/",
-  "/search/",
-]);
+// The pages the marketing site has in every locale, from the site's own list.
+const translatedPaths = new Set<string>(translatedBasePaths);
 
 export type MarketingLocale = SupportedLocale;
 
@@ -63,7 +40,7 @@ export function localizeMarketingPath(
   if (locale === DEFAULT_LOCALE) {
     return basePath;
   }
-  if (!translatedBasePaths.has(basePath)) {
+  if (!translatedPaths.has(basePath)) {
     return basePath;
   }
   if (basePath === "/") {
