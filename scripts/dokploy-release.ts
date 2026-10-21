@@ -7,7 +7,7 @@
 // Usage: pnpm release:dokploy [ref] [--env <name>] [--tag <tag>] [--allow-older]
 //
 //   ref            Commit to release. Defaults to the tip of GitLab main.
-//   --env <name>   Dokploy environment. Defaults to production.
+//   --env <name>   Dokploy environment: production (the default) or staging.
 //   --tag <tag>    Image tag. Defaults to the first 8 characters of the commit.
 //                  Pass a new one, such as 911ca1f9-r2, to rebuild a commit
 //                  whose tag the registry already holds.
@@ -34,7 +34,13 @@ export const HOST = {
   branch: "main",
 };
 
-export type Target = { healthUrl: string; migrateScheduleId: string; applicationIds: Record<Service, string> };
+export type Target = {
+  healthUrl: string;
+  migrateScheduleId: string;
+  applicationIds: Record<Service, string>;
+  /** Ship only the tip of GitLab main. Staging takes any commit, so you can try a branch before you merge it. */
+  requireMain: boolean;
+};
 
 export const ENVIRONMENTS: Record<string, Target> = {
   production: {
@@ -45,6 +51,17 @@ export const ENVIRONMENTS: Record<string, Target> = {
       worker: "pXB3lJeaaOaSeS7ZeeUlA",
       admin: "2kPJAKf2HA6ZDqBxIYJ9U",
     },
+    requireMain: true,
+  },
+  staging: {
+    healthUrl: "https://staging.lobbystack.com/api/health/ready",
+    migrateScheduleId: "-lvCeaCfj1-5BV1_gNHIP",
+    applicationIds: {
+      migrator: "JjpRnQG_KGgi1SpU0QhIT",
+      worker: "8Amtebi-ZJN2aMf90od9f",
+      admin: "UK9uxQ5uknxLLsSVc13AF",
+    },
+    requireMain: false,
   },
 };
 
@@ -114,10 +131,19 @@ export function isImageTag(tag: string): boolean {
   return /^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$/.test(tag);
 }
 
-/** Every environment builds its own admin, and they share the worker and migrator. */
+/** Every environment builds its own admin, tagged `<tag>-<environment>` outside production. They share the worker and migrator. */
 export function imageName(registry: string, service: Service, tag: string, environment: string): string {
-  const repository = service === "admin" && environment !== "production" ? `lobbystack-admin-${environment}` : `lobbystack-${service}`;
-  return `${registry}/${repository}:${tag}`;
+  const suffix = service === "admin" && environment !== "production" ? `-${environment}` : "";
+  return `${registry}/lobbystack-${service}:${tag}${suffix}`;
+}
+
+/** Whether an image on the host belongs to an environment, judged by its name alone. */
+export function belongsTo(image: string, environment: string): boolean {
+  const match = /^(?:127\.0\.0\.1:5000\/)?lobbystack-(admin|worker|migrator):([\w][\w.-]*)$/.exec(image);
+  if (!match) return false;
+  if (match[1] !== "admin") return true;
+  const owner = Object.keys(ENVIRONMENTS).find((name) => name !== "production" && match[2]!.endsWith(`-${name}`)) ?? "production";
+  return owner === environment;
 }
 
 export function declaredBuildArgs(dockerfile: string): string[] {
@@ -304,6 +330,7 @@ async function fetchTip(config: Config, root: string): Promise<string> {
 
 /** Same rule as the old GitHub release job: ship the tip of main, nothing else. */
 async function checkReleasable(config: Config, root: string, sha: string, allowOlder: boolean): Promise<void> {
+  if (!config.requireMain) return;
   const tip = await fetchTip(config, root);
   if (sha === tip) return;
   const onMain = await run("git", ["-C", root, "merge-base", "--is-ancestor", sha, tip], { capture: true }).then(() => true, () => false);
@@ -441,20 +468,26 @@ async function checkHealth(url: string) {
 }
 
 /**
- * Keeps the running images and the ones they replaced, for a quick rollback.
- * Docker refuses to remove an image a container uses, such as another
- * environment's worker, and a stopped service pulls its image again.
+ * Removes this environment's older images from the host's Docker. The
+ * registry still holds them, and Docker refuses to remove an image in use.
  */
-async function pruneHostImages(config: Config, images: Record<Service, string>, keep: Set<string>) {
-  const repositories = new Set(SERVICES.map((service) => images[service].slice(config.registry.length + 1).split(":")[0]!));
+async function pruneHostImages(config: Config, keep: Set<string>) {
   const listed = (await ssh(config, "sudo docker images --format '{{.Repository}}:{{.Tag}}'")).split("\n");
-  const stale = listed.filter((image) => {
-    const match = /^(?:127\.0\.0\.1:5000\/)?([\w.-]+):[\w][\w.-]*$/.exec(image);
-    return match !== null && repositories.has(match[1]!) && !keep.has(image);
-  });
+  const stale = listed.filter((image) => belongsTo(image, config.environment) && !keep.has(image));
   if (stale.length === 0) return;
   step(`Removing ${stale.length} older images from the host`);
   await ssh(config, `sudo docker image rm ${stale.join(" ")} > /dev/null 2>&1 || true`);
+}
+
+/** Production and staging together don't fit in the host's 4 GB, so production releases wait for staging to stop. */
+async function checkOtherEnvironmentsStopped(config: Config) {
+  if (config.environment !== "production") return;
+  const names = (await ssh(config, "sudo docker ps --format '{{.Names}}'")).split("\n");
+  for (const environment of Object.keys(ENVIRONMENTS).filter((name) => name !== "production")) {
+    if (names.some((name) => name.startsWith(`lobbystack-${environment}-`))) {
+      throw new Error(`${environment} is running on the host. Stop it with scripts/${environment}-stop.sh before you release to production.`);
+    }
+  }
 }
 
 async function preflight(config: Config) {
@@ -497,7 +530,8 @@ async function main() {
 
   const root = (await run("git", ["rev-parse", "--show-toplevel"], { capture: true })).trim();
   await preflight(config);
-  step(`Checking the commit against GitLab ${config.branch}`);
+  await checkOtherEnvironmentsStopped(config);
+  step(config.requireMain ? `Checking the commit against GitLab ${config.branch}` : "Resolving the commit");
   const tip = await fetchTip(config, root);
   const sha = (await run("git", ["-C", root, "rev-parse", "--verify", `${options.ref ?? tip}^{commit}`], { capture: true })).trim();
   await checkReleasable(config, root, sha, options.allowOlder);
@@ -533,8 +567,9 @@ async function main() {
     await shipImages(config, toBuild.map((service) => images[service]));
   }
 
-  // A build takes long enough for someone to merge in the meantime.
+  // A build takes long enough for someone to merge, or start staging, in the meantime.
   await checkReleasable(config, root, sha, options.allowOlder);
+  await checkOtherEnvironmentsStopped(config);
   const release = { tag, subject };
   try {
     await deployService(config, "migrator", apps.migrator, images.migrator, release);
@@ -551,9 +586,17 @@ async function main() {
     throw error;
   }
 
-  const previous = SERVICES.map((service) => apps[service].dockerImage).filter((image): image is string => Boolean(image));
-  await pruneHostImages(config, images, new Set([...SERVICES.map((service) => images[service]), ...previous]));
-  console.log(`\nReleased ${sha.slice(0, 12)} to ${config.environment} as ${tag}. The old worker keeps its calls for up to 31 minutes before it exits.`);
+  // Keep what the other environments run too, so a stopped staging starts without a pull.
+  const elsewhere = await Promise.all(
+    Object.entries(ENVIRONMENTS)
+      .filter(([name]) => name !== config.environment)
+      .flatMap(([, target]) => SERVICES.map((service) => target.applicationIds[service]))
+      .map((applicationId) => dokploy<Application>(config, "GET", "application.one", { applicationId }).then((app) => app.dockerImage, () => null)),
+  );
+  const previous = SERVICES.map((service) => apps[service].dockerImage);
+  const keep = [...SERVICES.map((service) => images[service]), ...previous, ...elsewhere].filter((image): image is string => Boolean(image));
+  await pruneHostImages(config, new Set(keep));
+  console.log(`\nReleased ${sha.slice(0, 12)} to ${config.environment} as ${tag}. The old worker exits once its last call ends.`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
