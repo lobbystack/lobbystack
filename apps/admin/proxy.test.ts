@@ -158,3 +158,36 @@ it("rejects webhooks before their handlers can acknowledge events during mainten
   expect(response.status).toBe(503);
   expect(response.headers.get("retry-after")).toBe("60");
 });
+
+it("hides the marketing site's internal routes on the dashboard host", () => {
+  vi.stubEnv("MARKETING_HOSTS", "lobbystack.com");
+  for (const url of ["http://localhost:3210/site", "http://localhost:3210/site/en/pricing", "https://app.lobbystack.com/site/en"]) {
+    const response = proxy(new NextRequest(url));
+    expect(response.status).toBe(404);
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+  }
+  expect(proxy(new NextRequest("http://localhost:3210/sites")).status).toBe(200);
+});
+
+it("drops trailing slashes on dashboard and API paths now that Next.js leaves them to the proxy", () => {
+  for (const [from, to] of [
+    ["http://localhost:3210/calls/", "http://localhost:3210/calls"],
+    ["http://localhost:3210/fr/login/?next=%2Fcalls", "http://localhost:3210/fr/login?next=%2Fcalls"],
+    ["http://localhost:3210/api/webhooks/twilio/voice/", "http://localhost:3210/api/webhooks/twilio/voice"],
+  ] as const) {
+    const response = proxy(new NextRequest(from, { method: from.includes("webhooks") ? "POST" : "GET" }));
+    expect(response.status).toBe(308);
+    expect(response.headers.get("location")).toBe(to);
+  }
+  expect(proxy(new NextRequest("http://localhost:3210/")).status).toBe(200);
+});
+
+it("routes the marketing hosts away from the dashboard proxy", () => {
+  vi.stubEnv("MARKETING_HOSTS", "lobbystack.com");
+  const marketing = proxy(new NextRequest("https://lobbystack.com/pricing/", { headers: { "accept-language": "en" } }));
+  expect(new URL(marketing.headers.get("x-middleware-rewrite") ?? "").pathname).toBe("/site/en/pricing");
+  expect(marketing.headers.get("x-frame-options")).toBe("DENY");
+  const dashboard = proxy(new NextRequest("https://app.lobbystack.com/calls"));
+  expect(dashboard.headers.get("x-middleware-rewrite")).toBeNull();
+  expect(dashboard.headers.get("cache-control")).toBe("private, no-store");
+});

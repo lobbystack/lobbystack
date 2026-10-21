@@ -78,6 +78,8 @@ const nextConfig: NextConfig = {
     },
   },
   poweredByHeader: false,
+  // The proxy owns trailing slashes: marketing pages keep them, dashboard and API paths drop them.
+  skipTrailingSlashRedirect: true,
   async headers() {
     // The iframe document routes own their own framing policy: the global DENY
     // header must not be stamped on top of the embeddable CSP.
