@@ -83,3 +83,70 @@ database:
     - pnpm test:reliability
     - pnpm --filter @lobbystack/admin exec vitest run src/lib/auth-issuance.integration.test.ts src/lib/email-verification-policy.test.ts
     - pnpm --filter @lobbystack/admin exec vitest run src/lib/voice-presence.integration.test.ts
+
+# Releases to Dokploy (docs/deployment/dokploy-release.md). Each merge to main
+# builds the images on GitLab's runners and pushes them to this project's
+# container registry. The production release then runs on its own when the
+# project variable DOKPLOY_AUTO_RELEASE is "true", and waits for a click
+# otherwise. Staging always waits for a click. All three jobs need the
+# protected variable DOKPLOY_API_KEY.
+.dokploy:
+  stage: deploy
+  image: docker:29-cli
+  services:
+    - name: docker:29-dind
+      alias: docker
+  variables:
+    DOCKER_HOST: tcp://docker:2376
+    DOCKER_TLS_CERTDIR: /certs
+    DOCKER_TLS_VERIFY: "1"
+    DOCKER_CERT_PATH: /certs/client
+    # The release checks the commit against main's history.
+    GIT_DEPTH: "0"
+    RELEASE_REGISTRY: $CI_REGISTRY_IMAGE
+  # Never cancel a release halfway through.
+  interruptible: false
+  before_script:
+    - apk add --no-cache git nodejs
+    - for attempt in $(seq 30); do docker info > /dev/null 2>&1 && break; sleep 2; done
+    - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" --username "$CI_REGISTRY_USER" --password-stdin
+
+images:
+  extends: .dokploy
+  needs: [checks, zapier, database]
+  timeout: 45m
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  script:
+    - node scripts/dokploy-release.ts "$CI_COMMIT_SHA" --build-only --skip-superseded
+
+release-production:
+  extends: .dokploy
+  needs: [images]
+  timeout: 30m
+  resource_group: production
+  environment:
+    name: production
+    url: https://app.lobbystack.com
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $DOKPLOY_AUTO_RELEASE == "true"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+      allow_failure: true
+  script:
+    - node scripts/dokploy-release.ts "$CI_COMMIT_SHA" --skip-superseded
+
+release-staging:
+  extends: .dokploy
+  needs: [images]
+  timeout: 45m
+  resource_group: staging
+  environment:
+    name: staging
+    url: https://staging.lobbystack.com
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+      allow_failure: true
+  script:
+    - node scripts/dokploy-release.ts "$CI_COMMIT_SHA" --env staging

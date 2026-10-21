@@ -34,7 +34,7 @@ Dokploy v0.30.8 runs on an OVH VPS in Virginia (`vps-569f1528.vps.ovh.us`, `40.1
 
 ## Phase 1: Code and CI
 
-The GitHub remote is no longer reachable, so releases don't use GitHub Actions or GHCR. `pnpm release:dokploy` builds the images on your machine and streams them over SSH into a registry on the host; [the Dokploy release guide](../deployment/dokploy-release.md) describes it.
+The GitHub remote is no longer reachable, so releases run on GitLab CI and push to GitLab's container registry instead of GHCR. [The Dokploy release guide](../deployment/dokploy-release.md) describes them.
 
 Ship these changes in one pull request before you touch infrastructure. None of them changes how Railway deploys:
 

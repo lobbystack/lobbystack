@@ -1,20 +1,25 @@
-// Releases one commit to a Dokploy environment, from this machine. It builds the
-// migrator, worker and admin images for linux/amd64, streams them over SSH into
-// the registry on the Dokploy host, then points each Dokploy application at the
-// new tag. It runs the `migrate` schedule before it deploys the worker and then
-// the admin, checks /api/health/ready, and stops at the first failure.
+// Releases one commit to a Dokploy environment. It builds the migrator, worker
+// and admin images for linux/amd64 that the registry doesn't hold yet, pushes
+// them to GitLab's container registry, then points each Dokploy application at
+// the new tag. It runs the `migrate` schedule before it deploys the worker and
+// then the admin, checks /api/health/ready, and stops at the first failure.
+// GitLab CI runs it on every merge to main (.gitlab-ci.yml); you can run it
+// from your machine too.
 //
-// Usage: pnpm release:dokploy [ref] [--env <name>] [--tag <tag>] [--allow-older]
+// Usage: pnpm release:dokploy [ref] [--env <name>] [--tag <tag>] [--allow-older] [--build-only] [--skip-superseded]
 //
-//   ref            Commit to release. Defaults to the tip of GitLab main.
-//   --env <name>   Dokploy environment: production (the default) or staging.
-//   --tag <tag>    Image tag. Defaults to the first 8 characters of the commit.
-//                  Pass a new one, such as 911ca1f9-r2, to rebuild a commit
-//                  whose tag the registry already holds.
-//   --allow-older  Release a commit on main that is no longer its tip.
+//   ref                Commit to release. Defaults to the tip of GitLab main.
+//   --env <name>       Dokploy environment: production (the default) or staging.
+//   --tag <tag>        Image tag. Defaults to the first 8 characters of the commit.
+//                      Pass a new one, such as 911ca1f9-r2, to rebuild a commit
+//                      whose tag the registry already holds.
+//   --allow-older      Release a commit on main that is no longer its tip.
+//   --build-only       Build and push the images, then stop.
+//   --skip-superseded  Exit successfully, without releasing, when main has
+//                      moved past the commit. CI uses it.
 //
-// Needs DOKPLOY_API_KEY, Docker, zstd, and SSH access to the host. See
-// docs/deployment/dokploy-release.md.
+// Needs DOKPLOY_API_KEY, Docker, and `docker login registry.gitlab.com` when
+// it has images to push. See docs/deployment/dokploy-release.md.
 import { spawn } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -27,9 +32,7 @@ export type Service = (typeof SERVICES)[number];
 
 export const HOST = {
   dokployUrl: "https://deploy.lobbystack.com",
-  ssh: "ubuntu@40.160.96.129",
-  // The registry container on the host listens on localhost only.
-  registry: "127.0.0.1:5000",
+  registry: "registry.gitlab.com/lobbystack-group/lobbystack",
   gitRemote: "https://gitlab.com/lobbystack-group/lobbystack.git",
   branch: "main",
 };
@@ -80,15 +83,15 @@ export const REQUIRED_ADMIN_BUILD_ARGS = [
   "STORAGE_PROVIDER",
 ];
 
-type RolloutRule = { requireHealthy: boolean; requireOldGone: boolean; timeoutMs: number };
+type RolloutRule = { requireOldGone: boolean; timeoutMs: number };
 
 const ROLLOUT: Record<Service, RolloutRule> = {
   // Dokploy runs the migrate schedule in the first running container it finds,
   // so wait until the old migrator has stopped.
-  migrator: { requireHealthy: false, requireOldGone: true, timeoutMs: 3 * 60_000 },
+  migrator: { requireOldGone: true, timeoutMs: 3 * 60_000 },
   // The old worker keeps its calls for up to 31 minutes after it gets SIGTERM.
-  worker: { requireHealthy: true, requireOldGone: false, timeoutMs: 6 * 60_000 },
-  admin: { requireHealthy: true, requireOldGone: true, timeoutMs: 6 * 60_000 },
+  worker: { requireOldGone: false, timeoutMs: 6 * 60_000 },
+  admin: { requireOldGone: true, timeoutMs: 6 * 60_000 },
 };
 
 export type ReleaseOptions = {
@@ -96,11 +99,13 @@ export type ReleaseOptions = {
   tag?: string | undefined;
   environment: string;
   allowOlder: boolean;
+  buildOnly: boolean;
+  skipSuperseded: boolean;
   help: boolean;
 };
 
 export function parseArgs(argv: string[]): ReleaseOptions {
-  const options: ReleaseOptions = { environment: "production", allowOlder: false, help: false };
+  const options: ReleaseOptions = { environment: "production", allowOlder: false, buildOnly: false, skipSuperseded: false, help: false };
   const value = (index: number, name: string) => {
     const next = argv[index];
     if (next === undefined) throw new Error(`${name} needs a value.`);
@@ -110,6 +115,8 @@ export function parseArgs(argv: string[]): ReleaseOptions {
     const arg = argv[index]!;
     if (arg === "--help" || arg === "-h") options.help = true;
     else if (arg === "--allow-older") options.allowOlder = true;
+    else if (arg === "--build-only") options.buildOnly = true;
+    else if (arg === "--skip-superseded") options.skipSuperseded = true;
     else if (arg === "--tag") options.tag = value(++index, "--tag");
     else if (arg.startsWith("--tag=")) options.tag = arg.slice("--tag=".length);
     else if (arg === "--env") options.environment = value(++index, "--env");
@@ -134,16 +141,7 @@ export function isImageTag(tag: string): boolean {
 /** Every environment builds its own admin, tagged `<tag>-<environment>` outside production. They share the worker and migrator. */
 export function imageName(registry: string, service: Service, tag: string, environment: string): string {
   const suffix = service === "admin" && environment !== "production" ? `-${environment}` : "";
-  return `${registry}/lobbystack-${service}:${tag}${suffix}`;
-}
-
-/** Whether an image on the host belongs to an environment, judged by its name alone. */
-export function belongsTo(image: string, environment: string): boolean {
-  const match = /^(?:127\.0\.0\.1:5000\/)?lobbystack-(admin|worker|migrator):([\w][\w.-]*)$/.exec(image);
-  if (!match) return false;
-  if (match[1] !== "admin") return true;
-  const owner = Object.keys(ENVIRONMENTS).find((name) => name !== "production" && match[2]!.endsWith(`-${name}`)) ?? "production";
-  return owner === environment;
+  return `${registry}/${service}:${tag}${suffix}`;
 }
 
 export function declaredBuildArgs(dockerfile: string): string[] {
@@ -168,7 +166,6 @@ export type Deployment = {
   deploymentId: string;
   status: string;
   createdAt: string;
-  logPath?: string | null;
   errorMessage?: string | null;
 };
 
@@ -181,46 +178,35 @@ export function newDeployment(deployments: Deployment[], known: Set<string>): De
     .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))[0];
 }
 
-export type Container = { id: string; image: string; status: string };
+/** A Swarm task, as Dokploy's docker.getServiceContainersByAppName lists it. */
+export type Task = { containerId: string; state: string; currentState: string; error: string };
 
-export function parseContainers(output: string): Container[] {
-  return output
-    .split("\n")
-    .filter((line) => line.trim())
-    .map((line) => {
-      const [id = "", image = "", status = ""] = line.split("\t");
-      return { id, image, status };
-    });
-}
-
-/** Swarm can record the tag with a pinned digest after it. */
-export function runsImage(container: Container, image: string): boolean {
-  return container.image === image || container.image.startsWith(`${image}@`);
-}
+// Swarm keeps a task with a health check in "Starting" until the check passes,
+// so "Running" means healthy.
+const isRunning = (task: Task) => task.currentState.startsWith("Running");
+const hasFailed = (task: Task) => /^(Failed|Rejected)/.test(task.currentState);
 
 export type Rollout = { state: "done" } | { state: "waiting"; reason: string } | { state: "failed"; reason: string };
 
-export function rolloutProgress(input: {
-  containers: Container[];
-  image: string;
-  previousIds: Set<string>;
-  updateState: string;
-  previousUpdateState: string;
-  rule: Pick<RolloutRule, "requireHealthy" | "requireOldGone">;
-}): Rollout {
-  const { containers, image, previousIds, updateState, previousUpdateState, rule } = input;
-  if (updateState !== previousUpdateState && /^(rollback|paused)/.test(updateState)) {
-    return { state: "failed", reason: `Swarm reports ${updateState.split(" ")[0]}` };
-  }
-  const fresh = containers.filter((container) => !previousIds.has(container.id) && runsImage(container, image));
-  if (fresh.length === 0) return { state: "waiting", reason: "no new container yet" };
-  if (rule.requireHealthy && !fresh.some((container) => container.status.includes("(healthy)"))) {
-    return { state: "waiting", reason: `new container is ${fresh[0]!.status}` };
-  }
-  if (rule.requireOldGone && containers.some((container) => previousIds.has(container.id))) {
+export function rolloutProgress(tasks: Task[], previousIds: Set<string>, rule: Pick<RolloutRule, "requireOldGone">): Rollout {
+  const fresh = tasks.filter((task) => !previousIds.has(task.containerId));
+  // Swarm rolls the service back after any failure during the update.
+  const failed = fresh.find(hasFailed);
+  if (failed) return { state: "failed", reason: `the new container failed (${failed.currentState}${failed.error ? `: ${failed.error}` : ""})` };
+  const running = fresh.find(isRunning);
+  if (!running) return { state: "waiting", reason: fresh[0] ? `new container is ${fresh[0].currentState}` : "no new container yet" };
+  if (rule.requireOldGone && tasks.some((task) => previousIds.has(task.containerId) && isRunning(task))) {
     return { state: "waiting", reason: "old container is still stopping" };
   }
   return { state: "done" };
+}
+
+/** Whether a release has moved on from the commit: ship it, skip it, or refuse. */
+export function supersededAction(sha: string, tip: string, onMain: boolean, options: Pick<ReleaseOptions, "allowOlder" | "skipSuperseded">) {
+  if (sha === tip) return "release" as const;
+  if (!onMain) return "refuse" as const;
+  if (options.allowOlder) return "release" as const;
+  return options.skipSuperseded ? ("skip" as const) : ("refuse" as const);
 }
 
 // --- Process helpers ------------------------------------------------------------
@@ -264,10 +250,6 @@ function step(message: string) {
 
 type Config = typeof HOST & Target & { environment: string; apiKey: string };
 
-function ssh(config: Config, command: string, options: Omit<RunOptions, "env"> = { capture: true }): Promise<string> {
-  return run("ssh", ["-o", "BatchMode=yes", config.ssh, command], options);
-}
-
 // --- Dokploy API ------------------------------------------------------------------
 
 class DokployError extends Error {
@@ -305,6 +287,10 @@ type Application = {
   env: string | null;
 };
 
+const getApplication = (config: Config, applicationId: string) => dokploy<Application>(config, "GET", "application.one", { applicationId });
+
+const getTasks = (config: Config, appName: string) => dokploy<Task[]>(config, "GET", "docker.getServiceContainersByAppName", { appName });
+
 async function waitForDeployment(list: () => Promise<Deployment[]>, known: Set<string>, timeoutMs: number, label: string): Promise<Deployment> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -315,9 +301,9 @@ async function waitForDeployment(list: () => Promise<Deployment[]>, known: Set<s
   throw new Error(`${label} didn't finish within ${Math.round(timeoutMs / 60_000)} minutes.`);
 }
 
-async function logTail(config: Config, path: string | null | undefined, lines = 40): Promise<string> {
-  if (!path || /[^\w./:@-]/.test(path)) return "(no log)";
-  return (await ssh(config, `sudo tail -n ${lines} '${path}'`).catch((error: Error) => `(couldn't read ${path}: ${error.message})`)).trimEnd();
+async function deploymentLog(config: Config, deploymentId: string, tail: number): Promise<string> {
+  const log = await dokploy<string>(config, "GET", "deployment.readLogs", { deploymentId, tail }).catch((error: Error) => `(couldn't read the log: ${error.message})`);
+  return String(log).trimEnd().replace(/^/gm, "    ");
 }
 
 // --- Release steps -----------------------------------------------------------------
@@ -329,28 +315,40 @@ async function fetchTip(config: Config, root: string): Promise<string> {
 }
 
 /** Same rule as the old GitHub release job: ship the tip of main, nothing else. */
-async function checkReleasable(config: Config, root: string, sha: string, allowOlder: boolean): Promise<void> {
-  if (!config.requireMain) return;
+async function checkReleasable(config: Config, root: string, sha: string, options: ReleaseOptions): Promise<"release" | "skip"> {
+  if (!config.requireMain) return "release";
   const tip = await fetchTip(config, root);
-  if (sha === tip) return;
-  const onMain = await run("git", ["-C", root, "merge-base", "--is-ancestor", sha, tip], { capture: true }).then(() => true, () => false);
+  const onMain = sha === tip || (await run("git", ["-C", root, "merge-base", "--is-ancestor", sha, tip], { capture: true }).then(() => true, () => false));
+  const action = supersededAction(sha, tip, onMain, options);
+  if (action !== "refuse") return action;
   if (!onMain) throw new Error(`${sha.slice(0, 12)} isn't on GitLab ${config.branch}. Merge it first.`);
-  if (!allowOlder) {
-    throw new Error(`${config.branch} has moved on to ${tip.slice(0, 12)}. Release that instead, or pass --allow-older to ship ${sha.slice(0, 12)}.`);
+  throw new Error(`${config.branch} has moved on to ${tip.slice(0, 12)}. Release that instead, or pass --allow-older to ship ${sha.slice(0, 12)}.`);
+}
+
+/** Production and staging together don't fit in the host's 4 GB, so production releases wait for staging to stop. */
+async function checkOtherEnvironmentsStopped(config: Config) {
+  if (config.environment !== "production") return;
+  for (const [name, target] of Object.entries(ENVIRONMENTS)) {
+    if (name === "production") continue;
+    for (const applicationId of Object.values(target.applicationIds)) {
+      const app = await getApplication(config, applicationId);
+      if ((await getTasks(config, app.appName)).some((task) => task.state === "running")) {
+        throw new Error(`${name} is running on the host. Stop it with scripts/${name}-stop.sh, then release again.`);
+      }
+    }
   }
 }
 
-async function registryLacks(config: Config, images: Record<Service, string>): Promise<Service[]> {
-  const accept = "application/vnd.oci.image.index.v1+json,application/vnd.oci.image.manifest.v1+json,application/vnd.docker.distribution.manifest.v2+json,application/vnd.docker.distribution.manifest.list.v2+json";
-  const checks = SERVICES.map((service) => {
-    const [repository, tag] = images[service].slice(config.registry.length + 1).split(":");
-    return `curl -s -o /dev/null -w '%{http_code}\\n' -I -H '${accept}' http://${config.registry}/v2/${repository}/manifests/${tag}`;
-  });
-  const codes = (await ssh(config, checks.join("; "))).trim().split("\n");
-  return SERVICES.filter((_, index) => codes[index] !== "200");
+async function registryLacks(images: Record<Service, string>): Promise<Service[]> {
+  const lacking: Service[] = [];
+  for (const service of SERVICES) {
+    const present = await run("docker", ["manifest", "inspect", images[service]], { capture: true }).then(() => true, () => false);
+    if (!present) lacking.push(service);
+  }
+  return lacking;
 }
 
-async function buildImages(root: string, sha: string, services: Service[], images: Record<Service, string>, adminArgs: Record<string, string>) {
+async function buildAndPush(root: string, sha: string, services: Service[], images: Record<Service, string>, adminArgs: Record<string, string>) {
   const work = await mkdtemp(join(tmpdir(), "lobbystack-release-"));
   const tree = join(work, "tree");
   await run("git", ["-C", root, "worktree", "add", "--detach", tree, sha], { capture: true });
@@ -363,6 +361,10 @@ async function buildImages(root: string, sha: string, services: Service[], image
       if (service === "admin") for (const name of Object.keys(adminArgs)) args.push("--build-arg", name);
       args.push(".");
       await run("docker", args, { cwd: tree, env: service === "admin" ? { ...process.env, ...adminArgs } : process.env });
+      step(`Pushing ${images[service]}`);
+      await run("docker", ["push", "--quiet", images[service]]).catch((error: Error) => {
+        throw new Error(`${error.message}\nLog in with \`docker login ${images[service].split("/")[0]}\` and run the release again.`);
+      });
     }
   } finally {
     await run("git", ["-C", root, "worktree", "remove", "--force", tree], { capture: true }).catch(() => undefined);
@@ -370,39 +372,22 @@ async function buildImages(root: string, sha: string, services: Service[], image
   }
 }
 
-async function shipImages(config: Config, images: string[]) {
-  step(`Streaming ${images.length} images to ${config.ssh}`);
-  await run("bash", [
-    "-o",
-    "pipefail",
-    "-c",
-    `docker save --platform linux/amd64 ${images.join(" ")} | zstd -T0 -3 -q | ssh -o BatchMode=yes ${config.ssh} 'zstd -dcq | sudo docker load -q'`,
-  ]);
-  step(`Pushing to the registry on the host`);
-  await ssh(config, `for image in ${images.join(" ")}; do sudo docker push -q "$image" || exit 1; done`, {});
-  // The build cache keeps the layers, so a rebuild stays fast.
-  await run("docker", ["image", "rm", ...images], { capture: true }).catch(() => undefined);
-}
-
-async function serviceState(config: Config, appName: string) {
-  const output = await ssh(
-    config,
-    `sudo docker ps --filter label=com.docker.swarm.service.name=${appName} --format '{{.ID}}\t{{.Image}}\t{{.Status}}'; echo '--'; sudo docker service inspect ${appName} --format '{{if .UpdateStatus}}{{.UpdateStatus.State}} {{.UpdateStatus.StartedAt}}{{end}}'`,
-  );
-  const [containers = "", updateState = ""] = output.split("--\n");
-  return { containers: parseContainers(containers), updateState: updateState.trim() };
+/**
+ * GitLab hands CI jobs the `gitlab-deploy-token` deploy token. When it exists,
+ * Dokploy pulls with it, which a private registry needs. Otherwise the
+ * application keeps whatever credentials it has.
+ */
+function pullCredentials(app: Application, image: string) {
+  const username = process.env.CI_DEPLOY_USER;
+  const password = process.env.CI_DEPLOY_PASSWORD;
+  if (username && password) return { username, password, registryUrl: image.split("/")[0]! };
+  return { username: app.username, password: app.password, registryUrl: app.registryUrl };
 }
 
 async function deployService(config: Config, service: Service, app: Application, image: string, release: { tag: string; subject: string }) {
   step(`Deploying ${service}: ${image}`);
-  const before = await serviceState(config, app.appName);
-  await dokploy(config, "POST", "application.saveDockerProvider", {
-    applicationId: app.applicationId,
-    dockerImage: image,
-    username: app.username,
-    password: app.password,
-    registryUrl: app.registryUrl,
-  });
+  const previousIds = new Set((await getTasks(config, app.appName)).map((task) => task.containerId));
+  await dokploy(config, "POST", "application.saveDockerProvider", { applicationId: app.applicationId, dockerImage: image, ...pullCredentials(app, image) });
   const listDeployments = () => dokploy<Deployment[]>(config, "GET", "deployment.all", { applicationId: app.applicationId });
   const known = new Set((await listDeployments()).map((deployment) => deployment.deploymentId));
   await dokploy(config, "POST", "application.deploy", {
@@ -412,18 +397,16 @@ async function deployService(config: Config, service: Service, app: Application,
   });
   const deployment = await waitForDeployment(listDeployments, known, 10 * 60_000, `The ${service} deployment`);
   if (deployment.status !== "done") {
-    throw new Error(`Dokploy couldn't deploy ${service} (${deployment.status}${deployment.errorMessage ? `: ${deployment.errorMessage}` : ""}).\n${await logTail(config, deployment.logPath)}`);
+    throw new Error(`Dokploy couldn't deploy ${service} (${deployment.status}${deployment.errorMessage ? `: ${deployment.errorMessage}` : ""}).\n${await deploymentLog(config, deployment.deploymentId, 40)}`);
   }
 
   const rule = ROLLOUT[service];
-  const previousIds = new Set(before.containers.map((container) => container.id));
   const deadline = Date.now() + rule.timeoutMs;
   let reason = "";
   while (Date.now() < deadline) {
-    const now = await serviceState(config, app.appName);
-    const progress = rolloutProgress({ ...now, image, previousIds, previousUpdateState: before.updateState, rule });
+    const progress = rolloutProgress(await getTasks(config, app.appName), previousIds, rule);
     if (progress.state === "done") return;
-    if (progress.state === "failed") throw new Error(`${service} didn't start: ${progress.reason}. Check its logs in Dokploy.`);
+    if (progress.state === "failed") throw new Error(`${service} didn't start: ${progress.reason}. Swarm rolls it back; check its logs in Dokploy.`);
     if (progress.reason !== reason) console.log(`    ${progress.reason}`);
     reason = progress.reason;
     await sleep(3_000);
@@ -445,9 +428,9 @@ async function runMigrations(config: Config) {
     console.log(`    Lost Dokploy's answer (${error instanceof Error ? error.message : String(error)}); following the run instead.`);
   }
   const deployment = result && FINISHED.has(result.status) ? result : await waitForDeployment(listRuns, known, 30 * 60_000, "The migrate schedule");
-  const log = await logTail(config, deployment.logPath, deployment.status === "done" ? 5 : 40);
+  const log = await deploymentLog(config, deployment.deploymentId, deployment.status === "done" ? 5 : 40);
   if (deployment.status !== "done") throw new Error(`The migrate schedule failed, so the worker and admin weren't deployed.\n${log}`);
-  console.log(log.replace(/^/gm, "    "));
+  console.log(log);
 }
 
 async function checkHealth(url: string) {
@@ -467,46 +450,10 @@ async function checkHealth(url: string) {
   throw new Error(`${url} didn't answer 200 within 2 minutes (last: ${last}).`);
 }
 
-/**
- * Removes this environment's older images from the host's Docker. The
- * registry still holds them, and Docker refuses to remove an image in use.
- */
-async function pruneHostImages(config: Config, keep: Set<string>) {
-  const listed = (await ssh(config, "sudo docker images --format '{{.Repository}}:{{.Tag}}'")).split("\n");
-  const stale = listed.filter((image) => belongsTo(image, config.environment) && !keep.has(image));
-  if (stale.length === 0) return;
-  step(`Removing ${stale.length} older images from the host`);
-  await ssh(config, `sudo docker image rm ${stale.join(" ")} > /dev/null 2>&1 || true`);
-}
-
-/** Production and staging together don't fit in the host's 4 GB, so production releases wait for staging to stop. */
-async function checkOtherEnvironmentsStopped(config: Config) {
-  if (config.environment !== "production") return;
-  const names = (await ssh(config, "sudo docker ps --format '{{.Names}}'")).split("\n");
-  for (const environment of Object.keys(ENVIRONMENTS).filter((name) => name !== "production")) {
-    if (names.some((name) => name.startsWith(`lobbystack-${environment}-`))) {
-      throw new Error(`${environment} is running on the host. Stop it with scripts/${environment}-stop.sh before you release to production.`);
-    }
-  }
-}
-
-async function preflight(config: Config) {
-  step("Checking Docker, zstd and SSH");
-  await run("docker", ["info", "--format", "{{.ServerVersion}}"], { capture: true }).catch(() => {
-    throw new Error("Docker isn't running. Start Docker Desktop.");
-  });
-  await run("zstd", ["--version"], { capture: true }).catch(() => {
-    throw new Error("zstd is missing. Install it with `brew install zstd`.");
-  });
-  await ssh(config, "sudo -n docker info --format '{{.Swarm.LocalNodeState}}'").catch((error: Error) => {
-    throw new Error(`Can't run Docker on ${config.ssh} over SSH: ${error.message}`);
-  });
-}
-
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (options.help) {
-    console.log("Usage: pnpm release:dokploy [ref] [--env <name>] [--tag <tag>] [--allow-older]\nSee docs/deployment/dokploy-release.md.");
+    console.log("Usage: pnpm release:dokploy [ref] [--env <name>] [--tag <tag>] [--allow-older] [--build-only] [--skip-superseded]\nSee docs/deployment/dokploy-release.md.");
     return;
   }
   const apiKey = process.env.DOKPLOY_API_KEY;
@@ -516,12 +463,11 @@ async function main() {
     ...ENVIRONMENTS[options.environment]!,
     environment: options.environment,
     dokployUrl: process.env.DOKPLOY_URL ?? HOST.dokployUrl,
-    ssh: process.env.DOKPLOY_SSH ?? HOST.ssh,
+    registry: process.env.RELEASE_REGISTRY ?? HOST.registry,
     apiKey,
   };
-  if (!/^[\w.@-]+$/.test(config.ssh)) throw new Error(`DOKPLOY_SSH must look like user@host, not ${config.ssh}.`);
-  // Ctrl-C stops a running build or SSH command, and the release stops at the
-  // next step, after cleaning up. A second Ctrl-C exits at once.
+  // Ctrl-C stops a running build, and the release stops at the next step,
+  // after cleaning up. A second Ctrl-C exits at once.
   process.on("SIGINT", () => {
     if (interrupted) process.exit(130);
     interrupted = true;
@@ -529,12 +475,13 @@ async function main() {
   });
 
   const root = (await run("git", ["rev-parse", "--show-toplevel"], { capture: true })).trim();
-  await preflight(config);
-  await checkOtherEnvironmentsStopped(config);
+  if (!options.buildOnly) await checkOtherEnvironmentsStopped(config);
   step(config.requireMain ? `Checking the commit against GitLab ${config.branch}` : "Resolving the commit");
-  const tip = await fetchTip(config, root);
-  const sha = (await run("git", ["-C", root, "rev-parse", "--verify", `${options.ref ?? tip}^{commit}`], { capture: true })).trim();
-  await checkReleasable(config, root, sha, options.allowOlder);
+  const sha = (await run("git", ["-C", root, "rev-parse", "--verify", `${options.ref ?? (await fetchTip(config, root))}^{commit}`], { capture: true })).trim();
+  if ((await checkReleasable(config, root, sha, options)) === "skip") {
+    console.log(`    Skipping ${sha.slice(0, 12)}: ${config.branch} has moved on, and its own pipeline releases it.`);
+    return;
+  }
   const subject = (await run("git", ["-C", root, "log", "-1", "--format=%s", sha], { capture: true })).trim();
   const tag = options.tag ?? sha.slice(0, 8);
   console.log(`    ${sha.slice(0, 12)} ${subject}`);
@@ -542,18 +489,14 @@ async function main() {
   step(`Reading the ${config.environment} applications in Dokploy`);
   const apps = {} as Record<Service, Application>;
   for (const service of SERVICES) {
-    apps[service] = await dokploy<Application>(config, "GET", "application.one", { applicationId: config.applicationIds[service] });
-    // The name goes into shell commands on the host.
-    if (!/^[\w.-]+$/.test(apps[service].appName)) throw new Error(`Unexpected Dokploy app name ${apps[service].appName}.`);
+    apps[service] = await getApplication(config, config.applicationIds[service]);
     console.log(`    ${service} runs ${apps[service].dockerImage}`);
   }
   const images = Object.fromEntries(SERVICES.map((service) => [service, imageName(config.registry, service, tag, config.environment)])) as Record<Service, string>;
 
-  const toBuild = await registryLacks(config, images);
-  if (toBuild.length < SERVICES.length) {
-    const present = SERVICES.filter((service) => !toBuild.includes(service));
-    console.log(`    The registry already holds ${present.map((service) => images[service]).join(", ")}, so those aren't rebuilt.`);
-  }
+  const toBuild = await registryLacks(images);
+  const present = SERVICES.filter((service) => !toBuild.includes(service));
+  if (present.length > 0) console.log(`    The registry already holds ${present.map((service) => images[service]).join(", ")}.`);
   if (toBuild.length > 0) {
     let adminArgs: Record<string, string> = {};
     if (toBuild.includes("admin")) {
@@ -563,12 +506,18 @@ async function main() {
       console.log(`    Admin build arguments from Dokploy: ${Object.keys(values).sort().join(", ")}`);
       adminArgs = values;
     }
-    await buildImages(root, sha, toBuild, images, adminArgs);
-    await shipImages(config, toBuild.map((service) => images[service]));
+    await buildAndPush(root, sha, toBuild, images, adminArgs);
+  }
+  if (options.buildOnly) {
+    console.log(`\nPushed the images for ${sha.slice(0, 12)}.`);
+    return;
   }
 
   // A build takes long enough for someone to merge, or start staging, in the meantime.
-  await checkReleasable(config, root, sha, options.allowOlder);
+  if ((await checkReleasable(config, root, sha, options)) === "skip") {
+    console.log(`    Skipping ${sha.slice(0, 12)}: ${config.branch} moved on during the build, and its own pipeline releases it.`);
+    return;
+  }
   await checkOtherEnvironmentsStopped(config);
   const release = { tag, subject };
   try {
@@ -580,22 +529,11 @@ async function main() {
   } catch (error) {
     console.error("\nDokploy now points at:");
     for (const service of SERVICES) {
-      const app = await dokploy<Application>(config, "GET", "application.one", { applicationId: config.applicationIds[service] }).catch(() => undefined);
+      const app = await getApplication(config, config.applicationIds[service]).catch(() => undefined);
       console.error(`    ${service}: ${app?.dockerImage ?? "unknown"}`);
     }
     throw error;
   }
-
-  // Keep what the other environments run too, so a stopped staging starts without a pull.
-  const elsewhere = await Promise.all(
-    Object.entries(ENVIRONMENTS)
-      .filter(([name]) => name !== config.environment)
-      .flatMap(([, target]) => SERVICES.map((service) => target.applicationIds[service]))
-      .map((applicationId) => dokploy<Application>(config, "GET", "application.one", { applicationId }).then((app) => app.dockerImage, () => null)),
-  );
-  const previous = SERVICES.map((service) => apps[service].dockerImage);
-  const keep = [...SERVICES.map((service) => images[service]), ...previous, ...elsewhere].filter((image): image is string => Boolean(image));
-  await pruneHostImages(config, new Set(keep));
   console.log(`\nReleased ${sha.slice(0, 12)} to ${config.environment} as ${tag}. The old worker exits once its last call ends.`);
 }
 
