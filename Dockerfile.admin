@@ -58,6 +58,8 @@ ARG NEXT_PUBLIC_LIVE_CALL_ENDPOINT
 ARG NEXT_PUBLIC_WEB_CALL_BUSINESS_SLUG
 ARG GOOGLE_SITE_VERIFICATION
 ARG BING_SITE_VERIFICATION
+# Production only: the build submits the pages it changes to IndexNow.
+ARG INDEXNOW_KEY
 RUN pnpm --filter @lobbystack/admin... build
 RUN mkdir -p /prod && cp -R /app/apps/admin/.next/static /prod/admin-static && \
     find /prod/admin-static -type f -name '*.map' -delete

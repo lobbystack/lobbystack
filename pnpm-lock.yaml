@@ -361,6 +361,9 @@ importers:
       pagefind:
         specifier: 1.5.2
         version: 1.5.2
+      parse5:
+        specifier: ^8.0.1
+        version: 8.0.1
       postcss:
         specifier: ^8.5.29
         version: 8.5.29

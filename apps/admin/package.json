@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "build": "NODE_ENV=production next build && pnpm run marketing:postbuild",
-    "marketing:postbuild": "node scripts/marketing/snapshot.mjs && node scripts/marketing/sitemap.mjs && pagefind --site .marketing-dist --output-path public/pagefind",
+    "marketing:postbuild": "node scripts/marketing/snapshot.mjs && node scripts/marketing/sitemap.mjs && pagefind --site .marketing-dist --output-path public/pagefind && node scripts/marketing/indexnow.mjs",
     "marketing:validate": "node scripts/marketing/validate-seo.mjs",
     "start": "next start",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -96,6 +96,7 @@
     "globals": "^17.13.0",
     "jsdom": "^30.1.2",
     "pagefind": "1.5.2",
+    "parse5": "^8.0.1",
     "postcss": "^8.5.29",
     "shadcn": "^4.21.2",
     "tailwindcss": "^4.3.3",
