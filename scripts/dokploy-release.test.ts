@@ -16,10 +16,11 @@ const image = "127.0.0.1:5000/lobbystack-worker:abcdef12";
 
 describe("dokploy release", () => {
   it("parses the commit, tag and flags", () => {
-    expect(parseArgs([])).toEqual({ allowOlder: false, help: false });
-    expect(parseArgs(["911ca1f9", "--tag", "911ca1f9-r2", "--allow-older"])).toEqual({
+    expect(parseArgs([])).toEqual({ environment: "production", allowOlder: false, help: false });
+    expect(parseArgs(["911ca1f9", "--tag", "911ca1f9-r2", "--allow-older", "--env", "production"])).toEqual({
       ref: "911ca1f9",
       tag: "911ca1f9-r2",
+      environment: "production",
       allowOlder: true,
       help: false,
     });
@@ -29,10 +30,14 @@ describe("dokploy release", () => {
     expect(() => parseArgs(["--tag="])).toThrow("not a valid image tag");
     expect(() => parseArgs(["a", "b"])).toThrow("Pass one commit");
     expect(() => parseArgs(["--force"])).toThrow("Unknown option");
+    expect(() => parseArgs(["--env=nowhere"])).toThrow("Unknown environment nowhere");
+    expect(() => parseArgs(["--env"])).toThrow("--env needs a value");
   });
 
-  it("names images in the host registry", () => {
-    expect(imageName("127.0.0.1:5000", "admin", "911ca1f9")).toBe("127.0.0.1:5000/lobbystack-admin:911ca1f9");
+  it("names images in the host registry, with an admin per environment", () => {
+    expect(imageName("127.0.0.1:5000", "admin", "911ca1f9", "production")).toBe("127.0.0.1:5000/lobbystack-admin:911ca1f9");
+    expect(imageName("127.0.0.1:5000", "admin", "911ca1f9", "staging")).toBe("127.0.0.1:5000/lobbystack-admin-staging:911ca1f9");
+    expect(imageName("127.0.0.1:5000", "worker", "911ca1f9", "staging")).toBe("127.0.0.1:5000/lobbystack-worker:911ca1f9");
   });
 
   it("takes the admin build arguments the Dockerfile declares from the Dokploy environment", () => {

@@ -1,20 +1,12 @@
-# Release LobbyStack on Dokploy
+# Release a commit to Dokploy
 
-Production has run on Dokploy since 2026-10-21, on one OVH VPS (2 vCores, 4 GB RAM, Virginia) behind Cloudflare. The panel lives at `https://deploy.lobbystack.com`, and the `LobbyStack` project's `production` environment holds the services. `pnpm release:dokploy` ships a commit from your machine and replaces the old `railway up` releases. Railway stays frozen as the rollback target until 2026-11-04, so a release sent there reaches no users.
+`pnpm release:dokploy` ships a commit from your machine to the `production` environment of the `LobbyStack` project on Dokploy (`https://deploy.lobbystack.com`). It replaces the old `railway up` releases. Railway stays frozen as the rollback target until 2026-11-04, so a release sent there reaches no users.
 
-See the [migration plan](../operations/dokploy-migration-plan.md) for how the host was set up and why.
+[The Dokploy setup](dokploy.md) covers the host, the services and their settings.
 
-## Services and images
+## How images reach the host
 
-Production runs three Dokploy applications next to the `postgres` and `redis` databases:
-
-| Service | Dokploy application | Image |
-| --- | --- | --- |
-| migrator | `lobbystack-migrator-algwj6` | `127.0.0.1:5000/lobbystack-migrator:<tag>`, command `sleep infinity` |
-| worker | `lobbystack-worker-rbcwtj` | `127.0.0.1:5000/lobbystack-worker:<tag>` |
-| admin | `lobbystack-admin-8oaiya` | `127.0.0.1:5000/lobbystack-admin:<tag>`, domain `app.lobbystack.com` |
-
-All three pull from a private registry on the host, the `lobbystack-registry` container. It listens on `127.0.0.1:5000` only, so images reach it over SSH. The `migrate` schedule on the migrator runs `migrate`, `bootstrap`, `check` and `verify-rls`. It has no cron of its own: the release runs it.
+The release updates the migrator, worker and admin applications. All three pull from a private registry on the host, the `lobbystack-registry` container. It listens on `127.0.0.1:5000` only, so the script sends images over SSH. The `migrate` schedule on the migrator runs `migrate`, `bootstrap`, `check` and `verify-rls`, and only a release runs it.
 
 Don't build images on the host. A Next.js build would take CPU and memory from live calls.
 
@@ -34,7 +26,7 @@ Set up your machine once:
 
 `DOKPLOY_URL` and `DOKPLOY_SSH` override the panel address and the SSH target.
 
-## Release a commit
+## Release the tip of main
 
 Merge to `main` on GitLab (`gitlab.com/lobbystack-group/lobbystack`), then run:
 
@@ -47,7 +39,7 @@ With no argument, the script releases the tip of GitLab `main`. It works from an
 1. Fetches GitLab `main` and checks that the commit is its tip.
 2. Reads the three Dokploy applications. The admin's environment supplies the admin's build arguments.
 3. Builds the migrator, worker and admin images for `linux/amd64`, tagged with the commit's first 8 characters.
-4. Streams the images over SSH into the host's Docker and pushes them to the registry. It skips the build and the upload when the registry already holds the tag for all three services.
+4. Streams the images over SSH into the host's Docker and pushes them to the registry. It builds only the images the registry doesn't hold yet.
 5. Checks `main` again, since someone may have merged during the build.
 6. Points the migrator at the new tag, deploys it, and waits for the old migrator container to stop. Dokploy runs a schedule in the first running container it finds, so the old one has to go first.
 7. Runs the `migrate` schedule and prints the end of its log.

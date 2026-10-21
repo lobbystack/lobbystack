@@ -1,19 +1,20 @@
-// Releases one commit to production on Dokploy, from this machine. It builds the
+// Releases one commit to a Dokploy environment, from this machine. It builds the
 // migrator, worker and admin images for linux/amd64, streams them over SSH into
 // the registry on the Dokploy host, then points each Dokploy application at the
 // new tag. It runs the `migrate` schedule before it deploys the worker and then
 // the admin, checks /api/health/ready, and stops at the first failure.
 //
-// Usage: pnpm release:dokploy [ref] [--tag <tag>] [--allow-older]
+// Usage: pnpm release:dokploy [ref] [--env <name>] [--tag <tag>] [--allow-older]
 //
 //   ref            Commit to release. Defaults to the tip of GitLab main.
+//   --env <name>   Dokploy environment. Defaults to production.
 //   --tag <tag>    Image tag. Defaults to the first 8 characters of the commit.
 //                  Pass a new one, such as 911ca1f9-r2, to rebuild a commit
 //                  whose tag the registry already holds.
 //   --allow-older  Release a commit on main that is no longer its tip.
 //
 // Needs DOKPLOY_API_KEY, Docker, zstd, and SSH access to the host. See
-// docs/deployment/dokploy.md.
+// docs/deployment/dokploy-release.md.
 import { spawn } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -24,20 +25,27 @@ import { parseEnv } from "node:util";
 export const SERVICES = ["migrator", "worker", "admin"] as const;
 export type Service = (typeof SERVICES)[number];
 
-export const PRODUCTION = {
+export const HOST = {
   dokployUrl: "https://deploy.lobbystack.com",
   ssh: "ubuntu@40.160.96.129",
   // The registry container on the host listens on localhost only.
   registry: "127.0.0.1:5000",
   gitRemote: "https://gitlab.com/lobbystack-group/lobbystack.git",
   branch: "main",
-  healthUrl: "https://app.lobbystack.com/api/health/ready",
-  migrateScheduleId: "CGDsS2xNHhoslxaO4DbHs",
-  applicationIds: {
-    migrator: "KNsXmLEpJfdZEI9exooki",
-    worker: "pXB3lJeaaOaSeS7ZeeUlA",
-    admin: "2kPJAKf2HA6ZDqBxIYJ9U",
-  } satisfies Record<Service, string>,
+};
+
+export type Target = { healthUrl: string; migrateScheduleId: string; applicationIds: Record<Service, string> };
+
+export const ENVIRONMENTS: Record<string, Target> = {
+  production: {
+    healthUrl: "https://app.lobbystack.com/api/health/ready",
+    migrateScheduleId: "CGDsS2xNHhoslxaO4DbHs",
+    applicationIds: {
+      migrator: "KNsXmLEpJfdZEI9exooki",
+      worker: "pXB3lJeaaOaSeS7ZeeUlA",
+      admin: "2kPJAKf2HA6ZDqBxIYJ9U",
+    },
+  },
 };
 
 // Next.js writes these into the admin bundle at build time, and next.config
@@ -66,24 +74,38 @@ const ROLLOUT: Record<Service, RolloutRule> = {
   admin: { requireHealthy: true, requireOldGone: true, timeoutMs: 6 * 60_000 },
 };
 
-export type ReleaseOptions = { ref?: string | undefined; tag?: string | undefined; allowOlder: boolean; help: boolean };
+export type ReleaseOptions = {
+  ref?: string | undefined;
+  tag?: string | undefined;
+  environment: string;
+  allowOlder: boolean;
+  help: boolean;
+};
 
 export function parseArgs(argv: string[]): ReleaseOptions {
-  const options: ReleaseOptions = { allowOlder: false, help: false };
+  const options: ReleaseOptions = { environment: "production", allowOlder: false, help: false };
+  const value = (index: number, name: string) => {
+    const next = argv[index];
+    if (next === undefined) throw new Error(`${name} needs a value.`);
+    return next;
+  };
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index]!;
     if (arg === "--help" || arg === "-h") options.help = true;
     else if (arg === "--allow-older") options.allowOlder = true;
-    else if (arg === "--tag") {
-      options.tag = argv[++index];
-      if (options.tag === undefined) throw new Error("--tag needs a value.");
-    } else if (arg.startsWith("--tag=")) options.tag = arg.slice("--tag=".length);
+    else if (arg === "--tag") options.tag = value(++index, "--tag");
+    else if (arg.startsWith("--tag=")) options.tag = arg.slice("--tag=".length);
+    else if (arg === "--env") options.environment = value(++index, "--env");
+    else if (arg.startsWith("--env=")) options.environment = arg.slice("--env=".length);
     else if (arg.startsWith("-")) throw new Error(`Unknown option ${arg}.`);
     else if (options.ref) throw new Error(`Pass one commit, not ${options.ref} and ${arg}.`);
     else options.ref = arg;
   }
   if (options.tag !== undefined && !isImageTag(options.tag)) {
     throw new Error(`"${options.tag}" is not a valid image tag.`);
+  }
+  if (!Object.hasOwn(ENVIRONMENTS, options.environment)) {
+    throw new Error(`Unknown environment ${options.environment}. Pick one of: ${Object.keys(ENVIRONMENTS).join(", ")}.`);
   }
   return options;
 }
@@ -92,8 +114,10 @@ export function isImageTag(tag: string): boolean {
   return /^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$/.test(tag);
 }
 
-export function imageName(registry: string, service: Service, tag: string): string {
-  return `${registry}/lobbystack-${service}:${tag}`;
+/** Every environment builds its own admin, and they share the worker and migrator. */
+export function imageName(registry: string, service: Service, tag: string, environment: string): string {
+  const repository = service === "admin" && environment !== "production" ? `lobbystack-admin-${environment}` : `lobbystack-${service}`;
+  return `${registry}/${repository}:${tag}`;
 }
 
 export function declaredBuildArgs(dockerfile: string): string[] {
@@ -212,7 +236,7 @@ function step(message: string) {
   console.log(`\n==> ${message}`);
 }
 
-type Config = typeof PRODUCTION & { apiKey: string };
+type Config = typeof HOST & Target & { environment: string; apiKey: string };
 
 function ssh(config: Config, command: string, options: Omit<RunOptions, "env"> = { capture: true }): Promise<string> {
   return run("ssh", ["-o", "BatchMode=yes", config.ssh, command], options);
@@ -289,22 +313,22 @@ async function checkReleasable(config: Config, root: string, sha: string, allowO
   }
 }
 
-async function registryHas(config: Config, images: string[]): Promise<boolean> {
+async function registryLacks(config: Config, images: Record<Service, string>): Promise<Service[]> {
   const accept = "application/vnd.oci.image.index.v1+json,application/vnd.oci.image.manifest.v1+json,application/vnd.docker.distribution.manifest.v2+json,application/vnd.docker.distribution.manifest.list.v2+json";
-  const checks = images.map((image) => {
-    const [repository, tag] = image.slice(config.registry.length + 1).split(":");
+  const checks = SERVICES.map((service) => {
+    const [repository, tag] = images[service].slice(config.registry.length + 1).split(":");
     return `curl -s -o /dev/null -w '%{http_code}\\n' -I -H '${accept}' http://${config.registry}/v2/${repository}/manifests/${tag}`;
   });
   const codes = (await ssh(config, checks.join("; "))).trim().split("\n");
-  return codes.length === images.length && codes.every((code) => code === "200");
+  return SERVICES.filter((_, index) => codes[index] !== "200");
 }
 
-async function buildImages(root: string, sha: string, images: Record<Service, string>, adminArgs: Record<string, string>) {
+async function buildImages(root: string, sha: string, services: Service[], images: Record<Service, string>, adminArgs: Record<string, string>) {
   const work = await mkdtemp(join(tmpdir(), "lobbystack-release-"));
   const tree = join(work, "tree");
   await run("git", ["-C", root, "worktree", "add", "--detach", tree, sha], { capture: true });
   try {
-    for (const service of SERVICES) {
+    for (const service of services) {
       step(`Building ${images[service]}`);
       const args = ["build", "--platform", "linux/amd64", "--provenance=false", "-f", `Dockerfile.${service}`, "--build-arg", `SERVICE_VERSION=${sha}`, "-t", images[service]];
       // A bare --build-arg takes its value from the environment, which keeps the
@@ -416,10 +440,18 @@ async function checkHealth(url: string) {
   throw new Error(`${url} didn't answer 200 within 2 minutes (last: ${last}).`);
 }
 
-/** Keeps the running images and the ones they replaced, for a quick rollback. */
-async function pruneHostImages(config: Config, keep: Set<string>) {
+/**
+ * Keeps the running images and the ones they replaced, for a quick rollback.
+ * Docker refuses to remove an image a container uses, such as another
+ * environment's worker, and a stopped service pulls its image again.
+ */
+async function pruneHostImages(config: Config, images: Record<Service, string>, keep: Set<string>) {
+  const repositories = new Set(SERVICES.map((service) => images[service].slice(config.registry.length + 1).split(":")[0]!));
   const listed = (await ssh(config, "sudo docker images --format '{{.Repository}}:{{.Tag}}'")).split("\n");
-  const stale = listed.filter((image) => /^(127\.0\.0\.1:5000\/)?lobbystack-(admin|worker|migrator):[\w][\w.-]*$/.test(image) && !keep.has(image));
+  const stale = listed.filter((image) => {
+    const match = /^(?:127\.0\.0\.1:5000\/)?([\w.-]+):[\w][\w.-]*$/.exec(image);
+    return match !== null && repositories.has(match[1]!) && !keep.has(image);
+  });
   if (stale.length === 0) return;
   step(`Removing ${stale.length} older images from the host`);
   await ssh(config, `sudo docker image rm ${stale.join(" ")} > /dev/null 2>&1 || true`);
@@ -441,12 +473,19 @@ async function preflight(config: Config) {
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   if (options.help) {
-    console.log("Usage: pnpm release:dokploy [ref] [--tag <tag>] [--allow-older]\nSee docs/deployment/dokploy.md.");
+    console.log("Usage: pnpm release:dokploy [ref] [--env <name>] [--tag <tag>] [--allow-older]\nSee docs/deployment/dokploy-release.md.");
     return;
   }
   const apiKey = process.env.DOKPLOY_API_KEY;
-  if (!apiKey) throw new Error("Set DOKPLOY_API_KEY to a Dokploy API key. See docs/deployment/dokploy.md.");
-  const config: Config = { ...PRODUCTION, dokployUrl: process.env.DOKPLOY_URL ?? PRODUCTION.dokployUrl, ssh: process.env.DOKPLOY_SSH ?? PRODUCTION.ssh, apiKey };
+  if (!apiKey) throw new Error("Set DOKPLOY_API_KEY to a Dokploy API key. See docs/deployment/dokploy-release.md.");
+  const config: Config = {
+    ...HOST,
+    ...ENVIRONMENTS[options.environment]!,
+    environment: options.environment,
+    dokployUrl: process.env.DOKPLOY_URL ?? HOST.dokployUrl,
+    ssh: process.env.DOKPLOY_SSH ?? HOST.ssh,
+    apiKey,
+  };
   if (!/^[\w.@-]+$/.test(config.ssh)) throw new Error(`DOKPLOY_SSH must look like user@host, not ${config.ssh}.`);
   // Ctrl-C stops a running build or SSH command, and the release stops at the
   // next step, after cleaning up. A second Ctrl-C exits at once.
@@ -466,7 +505,7 @@ async function main() {
   const tag = options.tag ?? sha.slice(0, 8);
   console.log(`    ${sha.slice(0, 12)} ${subject}`);
 
-  step("Reading the Dokploy applications");
+  step(`Reading the ${config.environment} applications in Dokploy`);
   const apps = {} as Record<Service, Application>;
   for (const service of SERVICES) {
     apps[service] = await dokploy<Application>(config, "GET", "application.one", { applicationId: config.applicationIds[service] });
@@ -474,18 +513,24 @@ async function main() {
     if (!/^[\w.-]+$/.test(apps[service].appName)) throw new Error(`Unexpected Dokploy app name ${apps[service].appName}.`);
     console.log(`    ${service} runs ${apps[service].dockerImage}`);
   }
-  const images = Object.fromEntries(SERVICES.map((service) => [service, imageName(config.registry, service, tag)])) as Record<Service, string>;
-  const imageList = SERVICES.map((service) => images[service]);
+  const images = Object.fromEntries(SERVICES.map((service) => [service, imageName(config.registry, service, tag, config.environment)])) as Record<Service, string>;
 
-  if (await registryHas(config, imageList)) {
-    console.log(`    The registry already holds ${tag} for every service, so the build is skipped.`);
-  } else {
-    const declared = declaredBuildArgs(await run("git", ["-C", root, "show", `${sha}:Dockerfile.admin`], { capture: true }));
-    const { values, missing } = adminBuildArgs(declared, parseEnv(apps.admin.env ?? ""));
-    if (missing.length > 0) throw new Error(`The Dokploy admin has no ${missing.join(", ")}, which the admin build needs.`);
-    console.log(`    Admin build arguments from Dokploy: ${Object.keys(values).sort().join(", ")}`);
-    await buildImages(root, sha, images, values);
-    await shipImages(config, imageList);
+  const toBuild = await registryLacks(config, images);
+  if (toBuild.length < SERVICES.length) {
+    const present = SERVICES.filter((service) => !toBuild.includes(service));
+    console.log(`    The registry already holds ${present.map((service) => images[service]).join(", ")}, so those aren't rebuilt.`);
+  }
+  if (toBuild.length > 0) {
+    let adminArgs: Record<string, string> = {};
+    if (toBuild.includes("admin")) {
+      const declared = declaredBuildArgs(await run("git", ["-C", root, "show", `${sha}:Dockerfile.admin`], { capture: true }));
+      const { values, missing } = adminBuildArgs(declared, parseEnv(apps.admin.env ?? ""));
+      if (missing.length > 0) throw new Error(`The ${config.environment} admin in Dokploy has no ${missing.join(", ")}, which the admin build needs.`);
+      console.log(`    Admin build arguments from Dokploy: ${Object.keys(values).sort().join(", ")}`);
+      adminArgs = values;
+    }
+    await buildImages(root, sha, toBuild, images, adminArgs);
+    await shipImages(config, toBuild.map((service) => images[service]));
   }
 
   // A build takes long enough for someone to merge in the meantime.
@@ -507,8 +552,8 @@ async function main() {
   }
 
   const previous = SERVICES.map((service) => apps[service].dockerImage).filter((image): image is string => Boolean(image));
-  await pruneHostImages(config, new Set([...imageList, ...previous]));
-  console.log(`\nReleased ${sha.slice(0, 12)} as ${tag}. The old worker keeps its calls for up to 31 minutes before it exits.`);
+  await pruneHostImages(config, images, new Set([...SERVICES.map((service) => images[service]), ...previous]));
+  console.log(`\nReleased ${sha.slice(0, 12)} to ${config.environment} as ${tag}. The old worker keeps its calls for up to 31 minutes before it exits.`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
