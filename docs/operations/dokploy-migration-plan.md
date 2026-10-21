@@ -34,6 +34,8 @@ Dokploy v0.30.8 runs on an OVH VPS in Virginia (`vps-569f1528.vps.ovh.us`, `40.1
 
 ## Phase 1: Code and CI
 
+The GitHub remote is no longer reachable, so releases run on GitLab CI and push to GitLab's container registry instead of GHCR. [The Dokploy release guide](../deployment/dokploy-release.md) describes them.
+
 Ship these changes in one pull request before you touch infrastructure. None of them changes how Railway deploys:
 
 1. **Release target.** Add a repository variable `RELEASE_TARGET` set to `railway`. The `migrate-production` job runs only when it reads `railway`, and a new `release-dokploy` job runs only when it reads `dokploy`. You flip it during the cutover.
