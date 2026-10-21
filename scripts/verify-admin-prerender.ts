@@ -39,9 +39,16 @@ const prerenderedSources = new Set(prerenderedMarketing.map(([route, entry]) => 
 const dynamicMarketing = appRoutes
   .filter((route) => route === "/site" || route.startsWith("/site/"))
   .filter((route) => !marketingDynamicRoutes.has(route) && !prerenderedSources.has(route));
-const missingHomes = locales.map((locale) => `/site/${locale}`).filter((route) => manifest.routes?.[route]?.compute !== "static");
+// A build with MARKETING_SITE=false leaves the marketing site out entirely.
+const marketingBuilt = process.env.MARKETING_SITE !== "false";
+const missingHomes = marketingBuilt
+  ? locales.map((locale) => `/site/${locale}`).filter((route) => manifest.routes?.[route]?.compute !== "static")
+  : [];
 
-if (dynamicMarketing.length > 0 || missingHomes.length > 0) {
+if (!marketingBuilt && prerenderedMarketing.length > 0) {
+  throw new Error(`MARKETING_SITE=false, yet the build prerendered ${prerenderedMarketing.length} marketing pages.`);
+}
+if (marketingBuilt && (dynamicMarketing.length > 0 || missingHomes.length > 0)) {
   throw new Error(`Marketing routes must be prerendered:\n${[...dynamicMarketing, ...missingHomes].map((route) => `- ${route}`).join("\n")}`);
 }
 

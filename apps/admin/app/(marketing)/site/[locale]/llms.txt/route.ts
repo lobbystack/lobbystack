@@ -2,13 +2,14 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import { CONTENT_ROOT } from "@/marketing/content/collections";
+import { marketingStaticParams } from "@/marketing/build";
 
 // Prerendered once, for the unprefixed English site.
 export const dynamic = "force-static";
 export const dynamicParams = false;
 
 export function generateStaticParams() {
-  return [{ locale: "en" }];
+  return marketingStaticParams([{ locale: "en" }]);
 }
 
 // The guide for language models, kept in content/ so it is served only on the

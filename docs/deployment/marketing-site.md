@@ -57,7 +57,8 @@ The marketing pages are built ahead of time, so the admin image needs their sett
 
 | Name | When | Production value | Purpose |
 | --- | --- | --- | --- |
-| `MARKETING_HOSTS` | Runtime | `lobbystack.com,www.lobbystack.com` | Hosts that get the marketing site. The first is canonical. Leave it unset to serve only the dashboard. |
+| `MARKETING_SITE` | Build | `true` | Builds the marketing site into the image. `Dockerfile.admin` defaults to `false`, so self-hosted images leave out its pages, social cards and search index, about 380 MB. `pnpm build` includes it unless you set `false`. |
+| `MARKETING_HOSTS` | Runtime | `lobbystack.com,www.lobbystack.com` | Hosts that get the marketing site. The first is canonical. Leave it unset to serve only the dashboard. An image built without the site ignores it and logs a warning. |
 | `NEXT_PUBLIC_LANDING_SITE_URL` | Build | `https://lobbystack.com` | The site's origin. Any other origin makes `robots.txt` disallow crawling. |
 | `NEXT_PUBLIC_APP_URL` | Build | `https://app.lobbystack.com` | Origin of the sign-up and log-in links. Unset falls back to the production dashboard. |
 | `NEXT_PUBLIC_WEB_CALL_BUSINESS_SLUG` | Build | `lobbystack-mp35s9y1` | Business the hero demo call reaches. Keep it equal to the admin's `WEB_CALL_PUBLIC_BUSINESS_SLUG`. |
@@ -90,7 +91,7 @@ The script compares status, title, description, canonical URL, robots, Open Grap
 Try the move on staging first, with a hostname of its own. Cloudflare's universal certificate covers one level of subdomain, so use `staging-www.lobbystack.com`, not `www.staging.lobbystack.com`.
 
 1. Add a proxied A record for `staging-www.lobbystack.com` pointing at `40.160.96.129`.
-2. Build and release a staging admin image with `NEXT_PUBLIC_LANDING_SITE_URL=https://staging-www.lobbystack.com`, following [Release a commit to Dokploy](dokploy-release.md). That origin makes the staging `robots.txt` disallow crawling.
+2. Build and release a staging admin image with `MARKETING_SITE=true` and `NEXT_PUBLIC_LANDING_SITE_URL=https://staging-www.lobbystack.com`, following [Release a commit to Dokploy](dokploy-release.md). That origin makes the staging `robots.txt` disallow crawling.
 3. On the staging admin app in Dokploy, add the domain `staging-www.lobbystack.com` on port 3000 with a Let's Encrypt certificate, and set `MARKETING_HOSTS=staging-www.lobbystack.com`.
 4. Run the parity script with `https://staging-www.lobbystack.com` as the candidate.
 

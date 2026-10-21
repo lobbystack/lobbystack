@@ -4,6 +4,7 @@ import sharp from "sharp";
 import { blogCollection } from "@/marketing/content/collections";
 import { ogEntries } from "@/marketing/lib/pages";
 import { DEFAULT_DESCRIPTION, OG_IMAGE_HEIGHT, OG_IMAGE_WIDTH } from "@/marketing/lib/seo";
+import { marketingStaticParams } from "@/marketing/build";
 
 // Social cards at /og/<page>.jpg and /og/blog/<post id>.jpg, drawn at build time.
 export const dynamic = "force-static";
@@ -30,7 +31,7 @@ const entryMap = () => {
 };
 
 export function generateStaticParams() {
-  return [...entryMap().keys()].map((slug) => ({ locale: "en", slug: `${slug}.jpg`.split("/") }));
+  return marketingStaticParams([...entryMap().keys()].map((slug) => ({ locale: "en", slug: `${slug}.jpg`.split("/") })));
 }
 
 const escapeXml = (value: string) =>

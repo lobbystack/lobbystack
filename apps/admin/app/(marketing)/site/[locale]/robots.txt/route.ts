@@ -1,10 +1,11 @@
 import { isIndexableMarketingSite, marketingSiteUrl } from "@/marketing/site-url";
+import { marketingStaticParams } from "@/marketing/build";
 
 export const dynamic = "force-static";
 export const dynamicParams = false;
 
 export function generateStaticParams() {
-  return [{ locale: "en" }];
+  return marketingStaticParams([{ locale: "en" }]);
 }
 
 export function GET() {

@@ -1,12 +1,13 @@
 import { blogCanonicalSlug, getBlogPosts } from "@/marketing/content/blog";
 import { DEFAULT_DESCRIPTION, SITE_NAME, absoluteUrl } from "@/marketing/lib/seo";
+import { marketingStaticParams } from "@/marketing/build";
 
 // Prerendered once, for the unprefixed English site.
 export const dynamic = "force-static";
 export const dynamicParams = false;
 
 export function generateStaticParams() {
-  return [{ locale: "en" }];
+  return marketingStaticParams([{ locale: "en" }]);
 }
 
 const escapeHtml = (value: string) =>

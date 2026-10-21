@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 import { marketingProxy } from "./proxy";
@@ -15,7 +15,15 @@ function rewrittenPath(response: Response | null): string | null {
   return target ? new URL(target).pathname : null;
 }
 
+afterEach(() => vi.unstubAllEnvs())
+
 describe("host routing", () => {
+  it("leaves every host to the dashboard proxy when the build left the site out", () => {
+    vi.stubEnv("MARKETING_SITE_BUILT", "false")
+    expect(visit("https://lobbystack.com/pricing/")).toBeNull()
+    expect(visit("https://www.lobbystack.com/")).toBeNull()
+  })
+
   it("leaves every other host to the dashboard proxy", () => {
     expect(visit("https://app.lobbystack.com/pricing/")).toBeNull();
     expect(marketingProxy(new NextRequest("https://lobbystack.com/"), {})).toBeNull();

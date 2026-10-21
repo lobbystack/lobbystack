@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "build": "NODE_ENV=production next build && pnpm run marketing:postbuild",
-    "marketing:postbuild": "node scripts/marketing/snapshot.mjs && node scripts/marketing/sitemap.mjs && pagefind --site .marketing-dist --output-path public/pagefind && node scripts/marketing/indexnow.mjs",
+    "marketing:postbuild": "node scripts/marketing/postbuild.mjs",
     "marketing:validate": "node scripts/marketing/validate-seo.mjs",
     "start": "next start",
     "typecheck": "tsc -p tsconfig.json --noEmit",

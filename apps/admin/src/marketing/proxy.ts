@@ -5,6 +5,7 @@ import { DEFAULT_LOCALE } from "@/lib/locale";
 import { localeFromCookieHeader, negotiateLocale } from "@/lib/locale-request";
 
 import { marketingSecurityHeaders } from "../../security-headers";
+import { marketingSiteBuilt } from "./build";
 import { MARKETING_REDIRECTS, assetCacheControl, marketingResponseHeaders } from "./response-headers";
 import {
   MARKETING_ROUTE_PREFIX,
@@ -87,9 +88,18 @@ function rewriteTo(request: NextRequest, pathname: string): NextResponse {
  * Serves the marketing site on the hosts named in `MARKETING_HOSTS`, and
  * returns null for every other host so the dashboard proxy handles it.
  */
+let warnedUnbuilt = false;
+
 export function marketingProxy(request: NextRequest, env: Env = process.env): NextResponse | null {
   const hosts = marketingHosts(env);
   if (!hosts) return null;
+  if (!marketingSiteBuilt()) {
+    if (!warnedUnbuilt) {
+      warnedUnbuilt = true;
+      console.warn("MARKETING_HOSTS is set, but this build left the marketing site out. Build the admin image with MARKETING_SITE=true to serve it.");
+    }
+    return null;
+  }
   const url = visitorUrl(request);
   const hostname = url.hostname.toLowerCase();
   const { pathname } = url;

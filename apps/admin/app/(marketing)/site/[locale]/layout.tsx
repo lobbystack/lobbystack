@@ -5,13 +5,14 @@ import { CookieConsentBanner } from "@/marketing/components/CookieConsentBanner"
 import { SiteBehaviors } from "@/marketing/components/SiteBehaviors";
 import { SUPPORTED_LOCALES, isLocale, localeMeta, type Locale } from "@/marketing/i18n";
 import "@/marketing/styles/site.css";
+import { marketingStaticParams } from "@/marketing/build";
 
 // Every marketing page is built ahead of time; scripts/verify-admin-prerender.ts
 // fails the build if one isn't. The 404 catch-all renders unknown paths per
 // request, so this layout doesn't set dynamicParams to false.
 
 export function generateStaticParams() {
-  return SUPPORTED_LOCALES.map((locale) => ({ locale }));
+  return marketingStaticParams(SUPPORTED_LOCALES.map((locale) => ({ locale })));
 }
 
 const skipLabels: Record<Locale, string> = {

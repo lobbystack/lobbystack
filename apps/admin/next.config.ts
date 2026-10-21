@@ -51,6 +51,9 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL ?? "",
     NEXT_PUBLIC_LIVE_CALL_ENDPOINT: process.env.NEXT_PUBLIC_LIVE_CALL_ENDPOINT ?? "",
     NEXT_PUBLIC_WEB_CALL_BUSINESS_SLUG: process.env.NEXT_PUBLIC_WEB_CALL_BUSINESS_SLUG ?? "",
+    // Whether the build includes the marketing site (src/marketing/build.ts).
+    // Dockerfile.admin sets MARKETING_SITE=false unless a release asks for it.
+    MARKETING_SITE_BUILT: process.env.MARKETING_SITE === "false" ? "false" : "true",
     // No NEXT_PUBLIC_DEPLOYMENT_MODE: browser telemetry gets the mode from the
     // server at runtime (src/lib/deployment-mode.ts).
   },
