@@ -34,6 +34,7 @@ checks:
     - pnpm --filter @lobbystack/admin --filter @lobbystack/landing lint
     - pnpm telemetry:coverage
     - pnpm build
+    - pnpm --filter @lobbystack/admin marketing:validate
     - git diff --exit-code -- apps/admin/public/embed/embed.js
     - pnpm test
     - pnpm replacement:telemetry

@@ -61,7 +61,6 @@ const machinePathPatterns: readonly RegExp[] = [
   /^\/robots\.txt$/,
   /^\/llms\.txt$/,
   /^\/feed\.xml$/,
-  /^\/sitemap-[a-z0-9-]+\.xml$/,
   /^\/schemamap\.xml$/,
   /^\/schema\/[a-z0-9-]+\.json$/,
   /^\/openapi\.json$/,
@@ -85,6 +84,10 @@ export function resolveMarketingRoute(pathname: string, indexNowKey?: string): M
   const { locale, rest } = splitMarketingPath(pathname);
   const base = `${MARKETING_ROUTE_PREFIX}/${locale}`;
 
+  // The build writes the sitemaps to public/ (scripts/marketing/sitemap.mjs).
+  if (locale === DEFAULT_LOCALE && /^\/sitemap-[a-z0-9-]+\.xml$/.test(rest)) {
+    return { kind: "page", locale, internalPath: `/marketing-sitemaps${rest}` };
+  }
   if (machinePathPatterns.some((pattern) => pattern.test(rest))) {
     return { kind: "page", locale, internalPath: `${base}${rest}` };
   }
