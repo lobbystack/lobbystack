@@ -48,6 +48,14 @@ ARG NEXT_PUBLIC_TERMS_URL
 ARG NEXT_PUBLIC_PRIVACY_URL
 ARG NEXT_PUBLIC_DOCS_SITE_URL
 ARG NEXT_PUBLIC_CONTACT_EMAIL
+# The marketing site the admin serves on MARKETING_HOSTS. Its pages are built
+# ahead of time, so the dashboard origin for its sign-in links, the voice demo's
+# endpoint and business, and the search engines' verification tokens go in here.
+ARG NEXT_PUBLIC_APP_URL
+ARG NEXT_PUBLIC_LIVE_CALL_ENDPOINT
+ARG NEXT_PUBLIC_WEB_CALL_BUSINESS_SLUG
+ARG GOOGLE_SITE_VERIFICATION
+ARG BING_SITE_VERIFICATION
 RUN pnpm --filter @lobbystack/admin... build
 RUN mkdir -p /prod && cp -R /app/apps/admin/.next/static /prod/admin-static && \
     find /prod/admin-static -type f -name '*.map' -delete

@@ -19,7 +19,11 @@ const nextConfig: NextConfig = {
   // asset URL, so each deploy's chunks are fetched fresh.
   ...(serviceVersion === "development" ? {} : { deploymentId: serviceVersion }),
   // Extra hosts (e.g. an ngrok tunnel) that may load dev-only resources such as HMR.
-  allowedDevOrigins: (process.env.ALLOWED_DEV_ORIGINS ?? "").split(",").map((host) => host.trim()).filter(Boolean),
+  // The marketing hosts (lobbystack.localhost in development) count as extra hosts too.
+  allowedDevOrigins: [process.env.ALLOWED_DEV_ORIGINS, process.env.MARKETING_HOSTS]
+    .flatMap((hosts) => (hosts ?? "").split(","))
+    .map((host) => host.trim())
+    .filter(Boolean),
   experimental: {
     preloadEntriesOnStart: false,
     requestInsights: process.env.NODE_ENV === "development",
@@ -42,6 +46,11 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_PRIVACY_URL: process.env.NEXT_PUBLIC_PRIVACY_URL ?? "",
     NEXT_PUBLIC_DOCS_SITE_URL: process.env.NEXT_PUBLIC_DOCS_SITE_URL ?? "",
     NEXT_PUBLIC_CONTACT_EMAIL: process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "",
+    // The marketing site's sign-in links and voice demo. Its pages and islands
+    // are prerendered, so these are fixed at build like the links above.
+    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL ?? "",
+    NEXT_PUBLIC_LIVE_CALL_ENDPOINT: process.env.NEXT_PUBLIC_LIVE_CALL_ENDPOINT ?? "",
+    NEXT_PUBLIC_WEB_CALL_BUSINESS_SLUG: process.env.NEXT_PUBLIC_WEB_CALL_BUSINESS_SLUG ?? "",
     // No NEXT_PUBLIC_DEPLOYMENT_MODE: browser telemetry gets the mode from the
     // server at runtime (src/lib/deployment-mode.ts).
   },
