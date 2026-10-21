@@ -1,8 +1,7 @@
-import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { RootDocument, appMetadata } from "@/app/root-document";
+import { RootDocument } from "@/app/root-document";
 import { getSession } from "@/lib/auth";
 import { localizePublicPath } from "@/lib/locale-path";
 import { localeFromRequestHeaders, PATHNAME_HEADER } from "@/lib/locale-request";
@@ -10,7 +9,7 @@ import { routeNamespaces } from "@/lib/route-namespaces";
 import "../globals.css";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = appMetadata;
+export { generateBrandingMetadata as generateMetadata } from "@/app/root-document";
 
 export default async function AuthenticatedOnboardingLayout({ children }: { children: React.ReactNode }) {
   const requestHeaders = await headers();

@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => ({
   callerIsDone: vi.fn(async (..._args: unknown[]) => true),
   createReceptionistAgent: vi.fn((..._args: unknown[]) => ({})),
   closeLiveSession: vi.fn(async (..._args: unknown[]) => undefined),
-  controllers_: [] as Array<{ endSession: ReturnType<typeof vi.fn>; end: ReturnType<typeof vi.fn>; wrapUp: ReturnType<typeof vi.fn>; transferAfterAnnouncement: ReturnType<typeof vi.fn>; canTransfer: ReturnType<typeof vi.fn>; detach: ReturnType<typeof vi.fn>; options: Record<string, unknown> }>,
+  controllers_: [] as Array<{ endSession: ReturnType<typeof vi.fn>; end: ReturnType<typeof vi.fn>; wrapUp: ReturnType<typeof vi.fn>; transferAfterAnnouncement: ReturnType<typeof vi.fn>; canTransfer: ReturnType<typeof vi.fn>; collectPasscode: ReturnType<typeof vi.fn>; detach: ReturnType<typeof vi.fn>; options: Record<string, unknown> }>,
   blockLiveCaller: vi.fn(async (..._args: unknown[]) => undefined),
   prepareLiveCallTransfer: vi.fn(async (..._args: unknown[]) => true),
   recordLiveCallTransferResult: vi.fn(async (..._args: unknown[]) => undefined),
@@ -41,11 +41,12 @@ vi.mock("@lobbystack/agent-core", () => ({
     wrapUp = vi.fn(async (_reason: string) => undefined);
     transferAfterAnnouncement = vi.fn((_targetUri: string) => true);
     canTransfer = vi.fn(() => true);
+    collectPasscode = vi.fn((_check: unknown) => true);
     detach = vi.fn();
     constructor(options: Record<string, (...args: never[]) => unknown>) {
       mocks.controllers += 1;
       mocks.controllerOptions.push(options);
-      mocks.controllers_.push({ endSession: this.endSession, end: this.end, wrapUp: this.wrapUp, transferAfterAnnouncement: this.transferAfterAnnouncement, canTransfer: this.canTransfer, detach: this.detach, options });
+      mocks.controllers_.push({ endSession: this.endSession, end: this.end, wrapUp: this.wrapUp, transferAfterAnnouncement: this.transferAfterAnnouncement, canTransfer: this.canTransfer, collectPasscode: this.collectPasscode, detach: this.detach, options });
     }
     start() {}
   },
@@ -249,6 +250,33 @@ describe("createLiveCallHandler", () => {
     expect(mocks.extendLiveCallReservation).toHaveBeenCalledWith(expect.anything(), { businessId: "biz_1", callId: "call_live_reserved" });
     mocks.extendLiveCallReservation.mockResolvedValueOnce(0);
     await expect((topUps[1] as () => Promise<number>)()).resolves.toBe(0);
+  });
+
+  it("takes keypad PINs on phone calls, and keeps keys out of the transcript when the business requires a PIN", async () => {
+    vi.stubEnv("LIVE_PROTOTYPE_ENABLED", "true");
+    vi.stubEnv("INTERNAL_SERVICE_TOKEN", "token");
+    vi.stubEnv("OPENAI_API_KEY", "sk-test");
+    const pinPolicy = { enabled: true, allowCancel: true, allowReschedule: true, verificationMode: "passcode_required" };
+    mocks.snapshot.mockResolvedValue({ businessId: "biz_1", greeting: "Hi", appointmentChangePolicy: pinPolicy });
+    const handler = createLiveCallHandler({ domain: { db: {} as never } });
+    await handler.handle(attachRequest({ sessionId: "live_pin", businessId: "biz_1", callId: "call_pin", channel: "voice" }), response());
+    const controller = mocks.controllers_.at(-1)!;
+    await expect(controller.options.setup as Promise<object>).resolves.toMatchObject({ maskKeypad: true });
+    const context = (mocks.createReceptionistAgent.mock.lastCall![0] as { context: { callControl: { collectPasscode: (check: unknown) => Promise<boolean> } } }).context;
+    const check = vi.fn();
+    await expect(context.callControl.collectPasscode(check)).resolves.toBe(true);
+    expect(controller.collectPasscode).toHaveBeenCalledWith(check);
+    controller.collectPasscode.mockReturnValueOnce(false);
+    await expect(context.callControl.collectPasscode(check)).resolves.toBe(false);
+
+    // Other checks keep keys in the transcript, and a browser call has no keypad.
+    mocks.snapshot.mockResolvedValue({ businessId: "biz_1", greeting: "Hi", appointmentChangePolicy: { ...pinPolicy, verificationMode: "otp_required" } });
+    await handler.handle(attachRequest({ sessionId: "live_otp", businessId: "biz_1", callId: "call_otp", channel: "voice" }), response());
+    expect(await (mocks.controllers_.at(-1)!.options.setup as Promise<object>)).not.toHaveProperty("maskKeypad");
+    mocks.snapshot.mockResolvedValue({ businessId: "biz_1", greeting: "Hi", appointmentChangePolicy: pinPolicy });
+    await handler.handle(attachRequest({ sessionId: "live_pin_web", businessId: "biz_1", callId: "call_pin_web", channel: "web_voice" }), response());
+    expect(await (mocks.controllers_.at(-1)!.options.setup as Promise<object>)).not.toHaveProperty("maskKeypad");
+    expect((mocks.createReceptionistAgent.mock.lastCall![0] as { context: { callControl: object } }).context.callControl).not.toHaveProperty("collectPasscode");
   });
 
   it("refers a transfer after the announcement, and records it as referred until the destination answers", async () => {

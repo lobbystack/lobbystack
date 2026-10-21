@@ -29,6 +29,8 @@ for (const locale of ["en", "fr"] as const) for (const viewport of [{ width: 144
       const page = await context.newPage();
       let sessionRequests = 0;
       page.on("request", request => { if (new URL(request.url()).pathname === "/api/widget/session") sessionRequests += 1; });
+      const streamStatuses: number[] = [];
+      page.on("response", response => { if (new URL(response.url()).pathname === "/api/widget/stream") streamStatuses.push(response.status()); });
       await page.goto(`http://localhost:18090/widget-host?key=${key}`);
       await expect(page.getByRole("button", { name: "Open chat", exact: true })).toBeVisible();
       expect(sessionRequests).toBe(0);
@@ -39,10 +41,14 @@ for (const locale of ["en", "fr"] as const) for (const viewport of [{ width: 144
       const frame = page.frameLocator('iframe[title="Chat with us"]');
       const composer = frame.getByRole("textbox", { name: t.chat.composerPlaceholder, exact: true });
       await expect(composer).toBeEnabled();
+      // Opening the chat starts no conversation: the visitor's first message does.
+      expect(await database.db.select().from(conversations).where(eq(conversations.businessId, businessId))).toEqual([]);
       await composer.fill("What are your opening hours?");
       await composer.press("Enter");
       await expect(frame.getByText(reply, { exact: true })).toBeVisible();
       await expect.poll(async () => (await database.db.select().from(messages).where(and(eq(messages.businessId, businessId), eq(messages.aiGenerated, true)))).length).toBe(1);
+      // The live updates wait for that first answer, so they find the new chat at once.
+      await expect.poll(() => [...streamStatuses]).toEqual([200]);
       const restoredConfig = page.waitForResponse(response => new URL(response.url()).pathname === "/api/widget/config");
       const restoredHistory = page.waitForResponse(response => new URL(response.url()).pathname === "/api/widget/history");
       await page.reload();
@@ -56,7 +62,8 @@ for (const locale of ["en", "fr"] as const) for (const viewport of [{ width: 144
       const conversation = (await database.db.select().from(conversations).where(eq(conversations.businessId, businessId)))[0];
       expect(conversation?.channel).toBe("web_chat");
       const before = provider!.requests.length;
-      await database.db.update(conversations).set({ automationState: "human_handoff" }).where(eq(conversations.id, conversation!.id));
+      // As the dashboard's Take over does it: the team took the chat just now.
+      await database.db.update(conversations).set({ automationState: "human_handoff", automationPausedAt: new Date() }).where(eq(conversations.id, conversation!.id));
       await composer.fill("Please ask a person to reply.");
       await frame.getByRole("button", { name: t.chat.send, exact: true }).click();
       await expect(frame.getByText(t.chat.handoffBanner, { exact: true })).toBeVisible();

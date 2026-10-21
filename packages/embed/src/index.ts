@@ -6,19 +6,35 @@ type LobbyStackApi = {
 
 type WidgetMessage = { type: string; [key: string]: unknown };
 
+const EASE_OUT = "cubic-bezier(.23,1,.32,1)";
+// Phones get the chat as a full-screen sheet; the loader tells the chat so it can draw its own close button.
+const SHEET_QUERY = "(max-width: 480px)";
+// The root's z-index lifts the panel above the site's own fixed elements: a
+// fixed element is a stacking context, so the panel's z-index alone only counts
+// inside it. The bubble has the same z-index and comes later in the page, so it
+// stays above the panel's shadow.
 const WIDGET_STYLES = `
-.lobby-widget-root{position:fixed;inset:0;pointer-events:none}
-.lobby-widget-bubble{position:fixed;bottom:24px;right:24px;width:60px;height:60px;border-radius:9999px;border:0;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.22);pointer-events:auto;transition:transform .15s ease;z-index:2147483000}
-.lobby-widget-bubble:hover{transform:scale(1.06)}
+.lobby-widget-root{position:fixed;inset:0;pointer-events:none;z-index:2147483000}
+.lobby-widget-bubble{position:fixed;bottom:24px;right:24px;width:56px;height:56px;padding:0;border-radius:9999px;border:0;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(24,24,27,.12),0 8px 24px rgba(24,24,27,.18);pointer-events:auto;outline:none;-webkit-tap-highlight-color:transparent;transition:transform .16s ease-out,opacity .16s ease-out;z-index:2147483000}
+.lobby-widget-bubble:focus-visible{box-shadow:0 0 0 2px #fff,0 0 0 4px #18181b,0 8px 24px rgba(24,24,27,.18)}
+.lobby-widget-bubble:active{transform:scale(.95)}
+@media (hover:hover) and (pointer:fine){.lobby-widget-bubble:hover{transform:scale(1.05)}.lobby-widget-bubble:hover:active{transform:scale(.95)}}
 .lobby-widget-bubble[data-position="bottom-left"]{left:24px;right:auto}
-.lobby-widget-bubble[data-position="bottom-center"]{left:50%;transform:translateX(-50%)}
-.lobby-widget-bubble[data-position="bottom-center"]:hover{transform:translateX(-50%) scale(1.06)}
-.lobby-widget-bubble svg{width:30px;height:30px}
-.lobby-widget-frame-holder{position:fixed;bottom:96px;right:24px;width:min(380px,calc(100vw - 32px));height:0;opacity:0;pointer-events:none;transition:opacity .18s ease;z-index:2147483001}
-.lobby-widget-frame-holder[data-position="bottom-left"]{left:24px;right:auto}
-.lobby-widget-frame-holder[data-position="bottom-center"]{left:50%;transform:translateX(-50%)}
-.lobby-widget-frame-holder.lobby-widget-open{opacity:1;pointer-events:auto}
-.lobby-widget-frame{width:100%;height:100%;border:0;border-radius:16px;background:#fff;box-shadow:0 24px 64px rgba(0,0,0,.24)}
+.lobby-widget-bubble svg{position:absolute;width:26px;height:26px;transition:transform .2s ${EASE_OUT},opacity .2s ${EASE_OUT}}
+.lobby-widget-bubble .lobby-widget-icon-close{opacity:0;transform:rotate(-90deg) scale(.6)}
+.lobby-widget-bubble[aria-expanded="true"] .lobby-widget-icon-chat{opacity:0;transform:rotate(90deg) scale(.6)}
+.lobby-widget-bubble[aria-expanded="true"] .lobby-widget-icon-close{opacity:1;transform:none}
+.lobby-widget-frame-holder{position:fixed;bottom:92px;right:24px;width:min(380px,calc(100vw - 32px));height:min(640px,calc(100vh - 116px));opacity:0;transform:translateY(12px) scale(.96);transform-origin:bottom right;pointer-events:none;transition:opacity .15s ease-out,transform .15s ease-out;z-index:2147483001}
+.lobby-widget-frame-holder[data-position="bottom-left"]{left:24px;right:auto;transform-origin:bottom left}
+.lobby-widget-frame-holder.lobby-widget-open{opacity:1;transform:none;pointer-events:auto;transition-duration:.24s;transition-timing-function:${EASE_OUT}}
+.lobby-widget-frame{display:block;width:100%;height:100%;border:0;border-radius:16px;background:#fff;color-scheme:light;box-shadow:0 0 0 1px rgba(24,24,27,.08),0 4px 8px rgba(24,24,27,.04),0 16px 48px rgba(24,24,27,.18)}
+@media ${SHEET_QUERY}{
+.lobby-widget-frame-holder,.lobby-widget-frame-holder[data-position]{inset:0;width:100%;height:100%;translate:none;transform:translateY(24px);transform-origin:bottom center}
+.lobby-widget-frame-holder.lobby-widget-open{transform:none}
+.lobby-widget-frame{border-radius:0;box-shadow:none}
+.lobby-widget-bubble[aria-expanded="true"]{opacity:0;pointer-events:none;transform:scale(.8)}
+}
+@media (prefers-reduced-motion:reduce){.lobby-widget-frame-holder,.lobby-widget-frame-holder[data-position]{transform:none}.lobby-widget-bubble,.lobby-widget-bubble svg{transition:opacity .15s ease}}
 .lobby-widget-hidden{display:none!important}
 `;
 
@@ -56,9 +72,54 @@ export function loaderLabels(language: string): LoaderLabels {
   return primary === "fr" || primary === "es" || primary === "sr" ? LOADER_LABELS[primary] : LOADER_LABELS.en;
 }
 
+/** The key in the loader's own URL (`/embed.js?key=…`), for a tag without data-widget-key. */
+function scriptSrcKey(): string | null {
+  const src = (document.currentScript as HTMLScriptElement | null)?.src;
+  if (!src) return null;
+  try {
+    return new URL(src, window.location.href).searchParams.get("key");
+  } catch {
+    return null;
+  }
+}
+
 function currentScriptAttribute(name: string): string | null {
   const script = document.currentScript as HTMLScriptElement | null;
   return script?.getAttribute(name) ?? null;
+}
+
+type WidgetPosition = "bottom-left" | "bottom-right";
+type WidgetLocale = "en" | "fr" | "es" | "sr";
+type WidgetAppearance = { color?: string; position?: WidgetPosition; locale?: WidgetLocale };
+
+// Filled by the dashboard's keyed loader (`/embed.js?key=…`) before this code
+// runs; the name matches WIDGET_APPEARANCE_GLOBAL in @lobbystack/shared.
+const APPEARANCE_GLOBAL = "__lobbyStackWidgetAppearance";
+const POSITIONS: ReadonlyArray<WidgetPosition> = ["bottom-left", "bottom-right"];
+const LOCALES: ReadonlyArray<WidgetLocale> = ["en", "fr", "es", "sr"];
+// Matches WIDGET_COLOR_PATTERN in @lobbystack/shared, which this bundle doesn't import.
+const COLOR_PATTERN = /^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
+
+/** Near-black or white, whichever reads better on the bubble color. Matches readableOn in the admin widget. */
+export function readableOn(hex: string): string {
+  let value = hex.replace("#", "");
+  if (value.length <= 4) value = [...value].map((digit) => digit + digit).join("");
+  const [red, green, blue] = [0, 2, 4].map((start) => {
+    const channel = Number.parseInt(value.slice(start, start + 2), 16) / 255;
+    return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+  });
+  const luminance = 0.2126 * red! + 0.7152 * green! + 0.0722 * blue!;
+  return (luminance + 0.05) / 0.0597 > 1.05 / (luminance + 0.05) ? "#18181b" : "#ffffff";
+}
+
+/** The bubble look and chat language the dashboard saved for this key, when the loader carried them. */
+function savedAppearance(widgetKey: string): WidgetAppearance {
+  const saved = (window as unknown as Record<string, Record<string, WidgetAppearance> | undefined>)[APPEARANCE_GLOBAL]?.[widgetKey];
+  return {
+    ...(typeof saved?.color === "string" && COLOR_PATTERN.test(saved.color) ? { color: saved.color } : {}),
+    ...(saved?.position && POSITIONS.includes(saved.position) ? { position: saved.position } : {}),
+    ...(saved?.locale && LOCALES.includes(saved.locale) ? { locale: saved.locale } : {}),
+  };
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -91,14 +152,20 @@ function makeVisitorId(widgetKey: string): string {
 }
 
 export function initWidget(): boolean {
-  const widgetKey = (currentScriptAttribute("data-widget-key") ?? "").trim();
+  const widgetKey = (currentScriptAttribute("data-widget-key") ?? scriptSrcKey() ?? "").trim();
   if (!widgetKey) return false;
-  const position = (currentScriptAttribute("data-position") as "bottom-left" | "bottom-center" | "bottom-right" | null) ?? "bottom-right";
-  const color = currentScriptAttribute("data-color") ?? "#0f766e";
+  // The dashboard's saved look wins; the script tag's attributes cover older snippets.
+  const saved = savedAppearance(widgetKey);
+  // An older snippet may still ask for the retired center spot, or something unknown; those open bottom right.
+  const tagPosition = currentScriptAttribute("data-position") as WidgetPosition | null;
+  const position = saved.position ?? (tagPosition && POSITIONS.includes(tagPosition) ? tagPosition : "bottom-right");
+  const color = saved.color ?? currentScriptAttribute("data-color") ?? "#18181b";
   const labels = loaderLabels(currentScriptAttribute("data-locale") ?? document.documentElement.lang ?? "en");
   const adminOrigin = resolveOrigin();
   let visitorId = makeVisitorId(widgetKey);
-  const frameSrc = `${adminOrigin}/embed/${encodeURIComponent(widgetKey)}`;
+  // The chat page draws itself in the bubble's color and the business's language from its first
+  // paint, instead of defaults that its settings then replace.
+  const frameSrc = `${adminOrigin}/embed/${encodeURIComponent(widgetKey)}?${new URLSearchParams({ color, ...(saved.locale ? { locale: saved.locale } : {}) })}`;
 
   injectStyles();
 
@@ -121,14 +188,18 @@ export function initWidget(): boolean {
   holder.inert = true;
   bubble.setAttribute("data-position", position);
   bubble.style.backgroundColor = color;
-  const chatSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`;
-  const closeSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
-  bubble.innerHTML = chatSvg;
+  bubble.style.color = readableOn(color);
+  // Lucide's message-circle and chevron-down. Both stay in the bubble and cross-fade on open and close.
+  const icon = (name: string, paths: string) => `<svg class="lobby-widget-icon-${name}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+  bubble.innerHTML = icon("chat", `<path d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719"></path>`) + icon("close", `<path d="m6 9 6 6 6-6"></path>`);
 
   holder.appendChild(frame);
   root.appendChild(holder);
-  document.body.appendChild(root);
-  document.body.appendChild(bubble);
+  // A snippet in the page's <head> without defer runs before <body> exists, so
+  // the widget joins the page once it has been read.
+  const attach = () => (document.body ?? document.documentElement).append(root, bubble);
+  if (document.body) attach();
+  else document.addEventListener("DOMContentLoaded", attach, { once: true });
 
   let open = false;
   let started = false;
@@ -166,10 +237,6 @@ export function initWidget(): boolean {
     }
   }
 
-  function syncBubbleIcon(): void {
-    bubble.innerHTML = open ? closeSvg : chatSvg;
-  }
-
   function setOpen(next: boolean): void {
     open = next;
     holder.inert = !open;
@@ -180,12 +247,13 @@ export function initWidget(): boolean {
     if (open && (sessionState === "idle" || sessionState === "error")) {
       void refreshSession(visitorId);
     }
+    // The panel keeps one height whatever the chat holds, so new messages never move the page.
     holder.classList.toggle("lobby-widget-open", open);
-    if (open && !holder.style.height) holder.style.height = "min(640px, calc(100vh - 120px))";
     bubble.setAttribute("aria-expanded", String(open));
     bubble.setAttribute("aria-label", open ? labels.close : labels.open);
-    syncBubbleIcon();
     postToFrame({ type: open ? "open" : "close" });
+    // The sheet covers the bubble on a phone, so focus goes back to it on close.
+    if (!open && holder.contains(document.activeElement)) bubble.focus();
   }
 
   function postToFrame(message: WidgetMessage): void {
@@ -196,13 +264,36 @@ export function initWidget(): boolean {
     }
   }
 
+  const sheetQuery = typeof window.matchMedia === "function" ? window.matchMedia(SHEET_QUERY) : null;
+  const postLayout = () => postToFrame({ type: "layout", sheet: sheetQuery?.matches === true });
+  sheetQuery?.addEventListener?.("change", postLayout);
+
   function onFrameReady(): void {
     frameLoaded = true;
     if (sessionMessage) postToFrame(sessionMessage);
     postToFrame({ type: "visitor", visitorId });
+    postLayout();
   }
 
   frame.addEventListener("load", onFrameReady);
+
+  // Leaving or reloading the page hangs up a voice call in the chat, and its
+  // captions aren't saved, so while the chat says it has one the browser asks
+  // first. Browsers word the prompt themselves. The listener only exists while
+  // it's needed, since a standing beforeunload listener can keep the page out
+  // of the browser's back/forward cache.
+  let warnOnLeave = false;
+  const confirmLeave = (event: BeforeUnloadEvent) => {
+    event.preventDefault();
+    // Chrome and Edge before 119 ignore preventDefault and need returnValue.
+    event.returnValue = true;
+  };
+  function setWarnOnLeave(next: boolean): void {
+    if (next === warnOnLeave) return;
+    warnOnLeave = next;
+    if (next) window.addEventListener("beforeunload", confirmLeave);
+    else window.removeEventListener("beforeunload", confirmLeave);
+  }
 
   // Issue the session on first open instead of at script load. This keeps the
   // widget dormant (and avoids an unauthenticated request) until a visitor
@@ -213,10 +304,8 @@ export function initWidget(): boolean {
     const data = event.data as Partial<WidgetMessage>;
     if (!data || typeof data !== "object") return;
     if (data.type === "ready") onFrameReady();
-    if (data.type === "resize" && typeof data.height === "number" && Number.isFinite(data.height) && open) {
-      holder.style.height = `${Math.max(0, Math.min(data.height, Math.floor(window.innerHeight - 120)))}px`;
-    }
     if (data.type === "close") setOpen(false);
+    if (data.type === "leave-warning") setWarnOnLeave(data.enabled === true);
   });
 
   window.LobbyStack = {

@@ -8,6 +8,7 @@ const state = vi.hoisted(() => ({
   missing: vi.fn((..._args: unknown[]) => [] as string[]),
   load: vi.fn((..._args: unknown[]) => Promise.resolve()),
   capture: vi.fn(),
+  themeProps: undefined as Record<string, unknown> | undefined,
   instance: {
     resolvedLanguage: "en",
     language: "en",
@@ -25,16 +26,21 @@ vi.mock("@/i18n", () => ({
   createI18nInstance: () => state.instance,
   missingNamespaces: (...args: unknown[]) => state.missing(...args),
   loadRouteNamespaces: (...args: unknown[]) => state.load(...args),
+  setI18nAppName: () => undefined,
 }));
-vi.mock("@/components/theme-provider", () => ({ ThemeProvider: ({ children }: { children: ReactNode }) => children }));
+vi.mock("@/components/theme-provider", () => ({ ThemeProvider: ({ children, ...props }: { children: ReactNode }) => { state.themeProps = props; return children; } }));
 vi.mock("@/components/appearance-provider", () => ({ AppearanceProvider: ({ children }: { children: ReactNode }) => children }));
 vi.mock("@/components/replacement-locale-provider", () => ({ LocaleProvider: ({ children }: { children: ReactNode }) => children }));
 vi.mock("@/components/product-analytics", () => ({ ProductAnalytics: ({ children }: { children?: ReactNode }) => children }));
 vi.mock("@/components/ui/sonner", () => ({ Toaster: () => null }));
+vi.mock("@/lib/branding", () => ({ loadBranding: async () => ({ appName: "LobbyStack", logoUrl: null }), brandingSnapshot: (branding: object) => ({ ...branding, final: true }) }));
+vi.mock("@/lib/i18n-resources", () => ({ resourcesForRoute: () => ({ common: {} }) }));
 vi.mock("@/lib/browser-error-reporting", () => ({ captureBrowserError: (...args: unknown[]) => state.capture(...args) }));
 
 import { TranslationNetworkError } from "@/lib/translation-network-error";
+import { BaseProviders } from "./base-providers";
 import { Providers } from "./providers";
+import { WidgetDocument } from "./widget-document";
 
 function wrap(children: ReactNode) {
   return (
@@ -120,4 +126,24 @@ it("offers a retry without reporting when the connection dropped", async () => {
   render(wrap(<div>Affiliate</div>));
   await screen.findByRole("button", { name: "common:loading.retry" });
   expect(state.capture).not.toHaveBeenCalled();
+});
+
+it("keeps the page's language attribute in step with the copy, on the website widget too", () => {
+  render(<BaseProviders initialLocale="en" initialResources={{ common: {} }}><div>Chat</div></BaseProviders>);
+  expect(document.documentElement.lang).toBe("en");
+  const [, onLanguageChanged] = state.instance.on.mock.calls.find(([event]) => event === "languageChanged") as [string, (language: string) => void];
+  act(() => { onLanguageChanged("sr"); });
+  expect(document.documentElement.lang).toBe("sr-Latn");
+});
+
+it("follows the system theme on the dashboard", () => {
+  render(wrap(<div>Dashboard</div>));
+  expect(state.themeProps).toMatchObject({ defaultTheme: "system", enableSystem: true, forcedTheme: undefined });
+});
+
+it("draws the website widget in light colors even when the visitor's system is dark", async () => {
+  const page = await WidgetDocument({ children: <div>Chat</div>, locale: "en", namespaces: ["common"] });
+  // <html><body><BaseProviders>: render the providers, since <html> can't mount inside a test container.
+  render(page.props.children.props.children);
+  expect(state.themeProps).toMatchObject({ forcedTheme: "light" });
 });

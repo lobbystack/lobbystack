@@ -38,11 +38,43 @@ Si la réceptionniste ne parvient pas à confirmer le rendez-vous avec certitude
   LobbyStack vous aide à appliquer des étapes de confirmation cohérentes, mais ne remplace pas votre propre analyse juridique ou de confidentialité. Configurez le niveau de vérification adapté à votre entreprise, à votre région et au type de rendez-vous.
 </Note>
 
-## Ajouter un code unique pour une vérification plus stricte
+## Choisir comment vérifier l'appelant
 
-Si votre entreprise veut une garantie supplémentaire, vous pouvez exiger un code unique avant que l'IA modifie un rendez-vous.
+Si votre entreprise veut une garantie supplémentaire, **Vérification de l'appelant** ajoute une étape avant que l'IA modifie un rendez-vous :
 
-Quand la vérification par code unique est activée, la réceptionniste envoie un code au client et attend le bon code avant d'annuler ou de déplacer le rendez-vous. C'est utile pour les rendez-vous sensibles, de grande valeur ou soumis à des politiques internes plus strictes.
+| Option | Ce que fait l'appelant |
+| --- | --- |
+| **Numéro de téléphone et détails du rendez-vous** | Il appelle du numéro utilisé pour réserver et indique l'heure ou le service du rendez-vous. C'est l'option par défaut. |
+| **Code unique par SMS** | Il lit aussi un code que la réceptionniste envoie par SMS à ce numéro. |
+| **Code PIN sur le clavier** | Il saisit aussi un code PIN sur le clavier de son téléphone. Votre équipe définit le code PIN de chaque client, sans aucun SMS. |
+
+Une vérification plus stricte est utile pour les rendez-vous sensibles, de grande valeur ou soumis à des politiques internes plus strictes.
+
+### Configurer les codes PIN
+
+Avec **Code PIN sur le clavier**, la réceptionniste demande à l'appelant de saisir son code PIN sur le clavier de son téléphone, puis d'appuyer sur la touche dièse (#). Le code PIN n'est jamais transmis à l'IA ni à la transcription de l'appel, et la réceptionniste refuse un code PIN dit à voix haute.
+
+<Steps>
+  <Step title="Ouvrez le contact">
+    Dans la barre latérale du tableau de bord, allez dans **Contacts** et ouvrez la fiche du client.
+  </Step>
+  <Step title="Définissez le code PIN">
+    Dans l'onglet **Détails**, sous **Code PIN**, sélectionnez **Définir un code PIN**. Saisissez de 4 à 8 chiffres, ou sélectionnez **Générer**, puis enregistrez.
+  </Step>
+  <Step title="Communiquez le code PIN au client">
+    LobbyStack enregistre le code PIN de façon sécurisée et ne peut plus l'afficher. Si le client l'oublie, définissez-en un nouveau.
+  </Step>
+</Steps>
+
+Pour donner un code PIN à de nombreux clients à la fois, utilisez la [ligne de commande](/fr/api/cli) ou l'[API](/fr/api/overview). `lobbystack contacts generate-pins --all` crée un code PIN pour chaque contact qui a un numéro de téléphone et aucun code PIN, et affiche chaque code PIN cette seule fois. `lobbystack contacts set-pins` définit les codes PIN que vous choisissez. Dans l'API, ce sont `POST /contacts/passcodes/generate` et `POST /contacts/passcodes`.
+
+L'appelant peut essayer son code PIN 3 fois par modification. Après 5 codes PIN erronés d'affilée, même sur plusieurs appels, le code PIN est bloqué et la fiche contact l'indique. Définir un nouveau code PIN le débloque.
+
+Un appelant sans code PIN, ou dont le code PIN est bloqué, ne peut pas modifier ses rendez-vous par téléphone. La réceptionniste transmet plutôt sa demande d'annulation à votre équipe.
+
+<Warning>
+  Sur une installation auto-hébergée de LobbyStack, les codes PIN sont vérifiés avec le `OTP_HASH_SECRET` du serveur (ou `ENCRYPTION_KEY` s'il n'est pas défini). Si ce secret change, tous les codes PIN enregistrés cessent de fonctionner et doivent être redéfinis.
+</Warning>
 
 ## Mises à jour automatiques du calendrier
 
@@ -58,7 +90,7 @@ Pour un déplacement, LobbyStack vérifie les disponibilités avant de proposer 
 
 ## Activer ou désactiver les modifications de rendez-vous
 
-Vous décidez si la réceptionniste peut annuler, déplacer ou exiger un code unique.
+Vous décidez si la réceptionniste peut annuler ou déplacer des rendez-vous, et comment elle vérifie l'appelant.
 
 <Steps>
   <Step title="Ouvrez Paramètres IA">
@@ -71,7 +103,7 @@ Vous décidez si la réceptionniste peut annuler, déplacer ou exiger un code un
     Activez ou désactivez l'annulation et le déplacement.
   </Step>
   <Step title="Choisissez le niveau de vérification">
-    Activez **Exiger un code unique** si vous voulez une vérification plus stricte.
+    Choisissez une option dans **Vérification de l'appelant** si vous voulez une vérification plus stricte.
   </Step>
   <Step title="Enregistrez">
     Enregistrez vos modifications.
@@ -85,7 +117,7 @@ Pour offrir la meilleure expérience à vos clients :
 - Ajoutez des services clairement décrits pour que les clients puissent dire ce qu'ils ont réservé.
 - Connectez Google Calendar pour que LobbyStack puisse vérifier les disponibilités et synchroniser les modifications.
 - Tenez votre numéro de transfert à jour pour les cas qui demandent une vérification humaine.
-- Utilisez la vérification par code unique pour les rendez-vous sensibles ou de grande valeur.
+- Utilisez un code unique par SMS ou un code PIN sur le clavier pour les rendez-vous sensibles ou de grande valeur.
 
 <CardGroup cols={2}>
   <Card title="Configurer les services" icon="calendar-check" href="/fr/agent/services">

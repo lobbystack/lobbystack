@@ -483,6 +483,15 @@ describe("worker handlers", () => {
     }
   });
 
+  it("never sends a managed enterprise plan's usage to Polar", async () => {
+    const job = billingJob({ usageEventId: randomUUID() });
+    vi.mocked(loadBillingUsageEvent).mockResolvedValue({ id: String(job.payload.usageEventId), sourceKey: "voice:call-1", isFinal: true, plan: "enterprise", businessId: job.businessId!, usageKind: "voice_seconds", quantity: 120, billableQuantity: null, billingIntervalAtRecordTime: null, createdAt: new Date("2026-01-01T00:00:00.000Z"), syncStatus: "pending", billingKey: "business-key", customerId: "polar-customer-id" });
+    const recordUsage = vi.fn();
+
+    expect(await handleJob(job, { domain: { db: undefined as never }, polar: { recordUsage } })).toEqual({ status: "skipped", entityId: String(job.payload.usageEventId) });
+    expect(recordUsage).not.toHaveBeenCalled();
+  });
+
   it("syncs the existing usage event with a stable Polar idempotency key", async () => {
     const job = billingJob({ usageEventId: randomUUID() });
     const domain = { db: undefined as never };

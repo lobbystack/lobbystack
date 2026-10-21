@@ -35,6 +35,19 @@ Keypad presses on phone calls reach the sideband as `transport.dtmf.received`, a
 
 The worker logs each answer as `live.delegation` with `agentMs`, `totalMs`, `queueMs` (time waiting for an earlier request), `tools`, `modelSteps`, `directAnswer`, `stepMs` (each model step with the tools it called), `toolMs` (time in tools), `failed` and `superseded`. It also records each answer's tokens and cost as an AI generation with the operation `voice.delegation`.
 
+### Keypad PINs
+
+A business can require a PIN before the receptionist cancels or reschedules (verification mode `passcode_required`). Operators set each caller's PIN on the contact's **Details** tab, and `contact_passcodes` keeps only a salted scrypt hash of it, with `OTP_HASH_SECRET` (or `ENCRYPTION_KEY`, then `BETTER_AUTH_SECRET`) in the hash input. Changing that secret makes every saved PIN stop matching.
+
+GPT-Live never hears key presses, so the worker takes the PIN:
+
+- On a phone call for such a business, every press goes into the transcript as `[pressed a key]`, without the key, so a PIN typed early stays out of it too.
+- When `verifyAppointmentForChange` returns `requiresPasscode`, the agent calls `requestKeypadPasscode`, and the controller starts taking keys for that verification. GPT-Live is told to ask the caller to type the PIN and press the pound key.
+- The PIN ends at the pound key, at 8 digits, or 6 seconds after the last key once it has 4 digits. The star key starts it over. With no key for 60 seconds, the controller stops taking a PIN.
+- The digits go only to the domain check. The transcript gets `[typed a PIN]`, GPT-Live gets the outcome with `session.instructions.append`, and the next delegated request sees the check's result with the verification and appointment ids, never the PIN.
+- Each change allows 3 tries. Five wrong PINs in a row, across calls, lock the contact's PIN until an operator sets a new one. A caller without a PIN, or with a locked one, can't change appointments on a call, and the agent passes a cancellation to the team.
+- An accepted PIN counts for that appointment until the verification expires (10 minutes), but only on the call where the caller typed it. The agent doesn't ask for it again for the other change on that call. A later call from the same number has to type it again, because caller ID can be spoofed. Each verification records its call in `appointment_change_verifications.call_id`.
+
 ## Greet the caller before they speak
 
 GPT-Live waits for the caller by default. To make it greet first, the admin starts every session with the greeting command in its starting history (`input`), as OpenAI's guide suggests for context the model needs from the start. In tests against the API, GPT-Live ignored a command appended after `session.started` more often, and on phone calls the worker can only connect after the session has started.
@@ -133,9 +146,9 @@ When a transfer is already under way or the call is ending, the transfer tool re
 
 - `referred`: OpenAI accepted the REFER. Nobody has answered yet.
 - `completed`: the sideband reported `transport.answered`, so the destination picked up.
-- `failed`: OpenAI refused the REFER, the sideband reported `transport.failed`, or the session was still open 30 seconds after `referred`. The worker tells GPT-Live, which offers to take a message, and the operator gets a transfer alert. The agent can then try another transfer.
+- `failed`: OpenAI refused the REFER, the sideband reported `transport.failed`, or the session was still open 70 seconds after `referred`. The worker tells GPT-Live, which offers to take a message, and the operator gets a transfer alert. The agent can then try another transfer.
 
-OpenAI documents `transport.answered` and `transport.failed` for outbound SIP legs. The worker treats the leg the carrier dials for a REFER as one. An accepted REFER ends OpenAI's leg, so `session.closed` follows soon after. If the session closes without either event, the transfer stays at `referred`. If neither the close nor an event arrives within 30 seconds, the caller is still talking to GPT-Live, and the worker records the transfer as `failed`.
+OpenAI documents `transport.answered` and `transport.failed` for outbound SIP legs. The worker treats the leg the carrier dials for a REFER as one. An accepted REFER ends OpenAI's leg, so `session.closed` follows. With Twilio it doesn't follow soon: OpenAI doesn't hang up when Twilio's NOTIFY reports the transfer, so Twilio hangs up OpenAI's leg itself 32 seconds after the destination answers, and the destination may ring first. On a Twilio test call on 2026-10-12, the session closed about 35 seconds after the REFER. Twilio sent no `transport.answered`. If the session closes without either event, the transfer stays at `referred`. If neither the close nor an event arrives within 70 seconds, the caller is still talking to GPT-Live, and the worker records the transfer as `failed`. A 30-second limit recorded every Twilio transfer as `failed`.
 
 The worker ends phone calls with OpenAI's SIP hangup and browser calls with `session.close`. Either way it keeps the sideband open until `session.closed` brings the final usage, for up to 15 seconds. If the connection drops first, it records the latest `session.usage.updated` seconds, or its own measurement when that's larger, and logs `usageConfirmed: false` on `live.closed`.
 
@@ -255,6 +268,8 @@ pnpm exec tsx scripts/operations/move-number-to-gpt-live.ts \
 ```
 
 A number off the trunk has nothing to answer its calls, so keep every number on it.
+
+To take calls and texts on a local stack while a deployment keeps its numbers, see [Run and debug LobbyStack on your desktop](./local-debugging.md).
 
 ### Sell numbers in the UK, Australia and New Zealand
 

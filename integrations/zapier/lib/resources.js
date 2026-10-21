@@ -95,7 +95,11 @@ const samples = {
     type: 'faq',
     title: 'Do you offer evening appointments?',
     content: 'Yes. We are open until 8 PM on Thursdays.',
+    tags: [],
+    priority: 0,
+    active: true,
     created_at: '2026-09-22T17:00:00Z',
+    updated_at: '2026-09-22T17:00:00Z',
   },
 };
 
@@ -163,7 +167,11 @@ const outputFields = {
     { key: 'type', label: 'Type', type: 'string' },
     { key: 'title', label: 'Title', type: 'string' },
     { key: 'content', label: 'Content', type: 'string' },
+    { key: 'tags', label: 'Tags', type: 'string', list: true },
+    { key: 'priority', label: 'Priority', type: 'integer' },
+    { key: 'active', label: 'Active', type: 'boolean' },
     { key: 'created_at', label: 'Created At', type: 'datetime' },
+    { key: 'updated_at', label: 'Updated At', type: 'datetime' },
   ],
 };
 

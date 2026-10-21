@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
-import { afterAll, describe, expect, it } from "vitest";
-import { businesses, calls, contacts, conversations, conversationSessions, createDatabaseClient, transcripts, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { afterAll, describe, expect, it, vi } from "vitest";
+import { businesses, calls, contacts, conversations, conversationSessions, createDatabaseClient, transcripts, widgetVisitors, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
 import { recordCallOutcomeInTransaction } from "./callOutcome";
-import { finalizeConversationSession, loadCallSummaryInput } from "./conversations";
+import { finalizeConversationSession, getOrCreateWidgetConversation, loadCallSummaryInput, registerWidgetVisitor } from "./conversations";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
 const testUrl = process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL;
@@ -118,6 +118,54 @@ describe.skipIf(!testUrl)("call summaries against PostgreSQL under worker RLS", 
       await tx.execute(sql`set local role lobbystack_worker`);
       await finalizeConversationSession({ db: fixture.db }, fixture);
       expect((await readBack(fixture)).session).toEqual({ summaryKind: "summary", summary: { kind: "summary", summary: "Résumé de l'appel : Bonjour, comment puis-je vous aider? Oui" } });
+    });
+  });
+});
+
+describe.skipIf(!testUrl)("website visitors against PostgreSQL under worker RLS", () => {
+  it("keeps the page a new visitor came from when two requests register it at once", async () => {
+    // One request inserts the visitor with its page while the other, which
+    // found no visitor yet, waits to insert it too.
+    const businessId = randomUUID();
+    const visitorId = randomUUID();
+    const blocker = await client!.pool.connect();
+    let pending: Promise<unknown> | undefined;
+    try {
+      await client!.db.insert(businesses).values({ id: businessId, slug: businessId, name: "Widget visitor race test", timezone: "UTC", businessType: "test", telemetryEnabled: false });
+      await blocker.query("begin");
+      const settingsRequest = (await blocker.query<{ pid: number }>("insert into widget_visitors (id, business_id, metadata) values ($1, $2, $3) returning pg_backend_pid() as pid", [visitorId, businessId, { userAgent: "Browser", pageUrl: "https://business.test" }])).rows[0]!;
+      pending = client!.db.transaction(async (tx) => {
+        await tx.execute(sql`set local role lobbystack_worker`);
+        return await registerWidgetVisitor({ db: tx as unknown as Database }, { businessId, visitorId, metadata: { userAgent: "Browser" } });
+      });
+      await vi.waitFor(async () => {
+        const result = await client!.pool.query("select count(*)::int as waiting from pg_stat_activity where $1 = any(pg_blocking_pids(pid))", [settingsRequest.pid]);
+        expect(result.rows[0].waiting).toBe(1);
+      }, { timeout: 3000 });
+      await blocker.query("commit");
+      await expect(pending).resolves.toEqual({ visitorId, contactId: null });
+      const [visitor] = await client!.db.select({ metadata: widgetVisitors.metadata }).from(widgetVisitors).where(eq(widgetVisitors.id, visitorId));
+      expect(visitor?.metadata).toEqual({ userAgent: "Browser", pageUrl: "https://business.test" });
+    } finally {
+      await blocker.query("rollback");
+      blocker.release();
+      await pending?.catch(() => undefined);
+      await client!.db.delete(businesses).where(eq(businesses.id, businessId));
+    }
+  });
+
+  it("registers the visitor of a session the previous version issued when its chat starts", async () => {
+    await rollbackTest(async (tx) => {
+      const businessId = randomUUID();
+      const visitorId = randomUUID();
+      await tx.insert(businesses).values({ id: businessId, slug: businessId, name: "Widget visitor session test", timezone: "UTC", businessType: "test", telemetryEnabled: false });
+      await tx.execute(sql`set local role lobbystack_worker`);
+      const { conversationId } = await getOrCreateWidgetConversation({ db: tx as unknown as Database }, { businessId, widgetVisitorId: visitorId });
+      await tx.execute(sql`reset role`);
+      const [visitor] = await tx.select({ businessId: widgetVisitors.businessId }).from(widgetVisitors).where(eq(widgetVisitors.id, visitorId));
+      const [conversation] = await tx.select({ widgetVisitorId: conversations.widgetVisitorId, channel: conversations.channel }).from(conversations).where(eq(conversations.id, conversationId));
+      expect(visitor).toEqual({ businessId });
+      expect(conversation).toEqual({ widgetVisitorId: visitorId, channel: "web_chat" });
     });
   });
 });

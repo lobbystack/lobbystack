@@ -20,7 +20,6 @@ export function SettingsShell({ children }: { children: React.ReactNode }) {
     { label: t("sections.notifications"), href: "/settings/notifications" },
     { label: t("sections.apiKeys"), href: "/settings/api-keys" },
     { label: t("sections.connectedApps"), href: "/settings/connected-apps" },
-    ...(pathname === "/settings/widget" || pathname.startsWith("/settings/widget/") ? [{ label: t("sections.widget"), href: "/settings/widget" }] : []),
   ];
   return (
     <section className="flex flex-1 flex-col gap-6">

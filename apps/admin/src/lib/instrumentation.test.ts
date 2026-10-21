@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DatabaseClient, DatabaseRole } from "@lobbystack/db";
 
-const mocks = vi.hoisted(() => ({ getDatabase: vi.fn() }));
+const mocks = vi.hoisted(() => ({ getDatabase: vi.fn(), disableRemovedPlatformKeyWebhooks: vi.fn(async (): Promise<number | null> => 0), reportServerError: vi.fn(async () => undefined) }));
 
 vi.mock("@lobbystack/telemetry/node", async (importOriginal) => ({
   ...await importOriginal<typeof import("@lobbystack/telemetry/node")>(),
@@ -10,6 +10,8 @@ vi.mock("@lobbystack/telemetry/node", async (importOriginal) => ({
   shutdownTelemetry: vi.fn(),
 }));
 vi.mock("@/lib/databases", () => ({ getDatabase: mocks.getDatabase }));
+vi.mock("@/lib/platform-key-webhooks", () => ({ disableRemovedPlatformKeyWebhooksAtStartup: mocks.disableRemovedPlatformKeyWebhooks }));
+vi.mock("@/lib/error-reporting", () => ({ reportServerError: mocks.reportServerError }));
 
 import { register } from "../../instrumentation";
 
@@ -72,6 +74,15 @@ describe("production database role startup validation", () => {
     }
   });
 
+  it("turns off removed platform keys' webhooks once the roles check out, and starts even if that fails", async () => {
+    await expect(register()).resolves.toBeUndefined();
+    expect(mocks.disableRemovedPlatformKeyWebhooks).toHaveBeenCalledTimes(1);
+    const failure = new Error("connection refused");
+    mocks.disableRemovedPlatformKeyWebhooks.mockRejectedValueOnce(failure);
+    await expect(register()).resolves.toBeUndefined();
+    expect(mocks.reportServerError).toHaveBeenCalledWith(failure, { operation: "startup.disable_removed_platform_key_webhooks" });
+  });
+
   it("rejects startup when a runtime role resolves to the privileged base role", async () => {
     mocks.getDatabase.mockImplementation((role: DatabaseRole) => (
       role === "lobbystack_worker"
@@ -95,5 +106,32 @@ describe("production database role startup validation", () => {
     vi.stubEnv("NEXT_RUNTIME", "edge");
     await expect(register()).resolves.toBeUndefined();
     expect(mocks.getDatabase).not.toHaveBeenCalled();
+  });
+});
+
+describe("brand link startup check", () => {
+  beforeEach(() => {
+    vi.stubEnv("NEXT_RUNTIME", "nodejs");
+    vi.stubEnv("NODE_ENV", "development");
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  it("names the link variables it can't use", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.stubEnv("NEXT_PUBLIC_LANDING_SITE_URL", "acme.example");
+    vi.stubEnv("NEXT_PUBLIC_CONTACT_EMAIL", "support@acme.example");
+    await expect(register()).resolves.toBeUndefined();
+    expect(warn).toHaveBeenCalledWith(expect.stringMatching(/^\[branding\] Ignoring NEXT_PUBLIC_LANDING_SITE_URL: /));
+  });
+
+  it("stays quiet when every link variable is usable", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.stubEnv("NEXT_PUBLIC_LANDING_SITE_URL", "https://acme.example");
+    vi.stubEnv("NEXT_PUBLIC_TERMS_URL", "https://acme.example/legal/terms");
+    await expect(register()).resolves.toBeUndefined();
+    expect(warn).not.toHaveBeenCalledWith(expect.stringContaining("[branding]"));
   });
 });

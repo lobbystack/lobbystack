@@ -3,9 +3,10 @@ import { readFileSync } from "node:fs";
 import { and, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it, vi } from "vitest";
 import { businessHours, calls, conversations, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, messages, receptionistProfiles, storageObjects, transcripts, websiteIngestionJobs } from "@lobbystack/db";
-import { affiliateCommissions, affiliatePayoutItems, affiliateProfiles, billingAccounts, billingTransactions, appointments, auditLogs, businessMemberships, contacts, productEvents, providerEvents, services, staff, users, businesses, notifications, outboxMessages, withBusinessTransaction, claimOutboxBatch, createDatabaseClient, enqueueOutbox, markOutboxFailed, listReembedBusinesses, listSchedulerBusinesses, listSummaryBackfillBusinesses, markOutboxPublished, prunePublishedOutbox, sessions, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { affiliateCommissions, affiliatePayoutItems, affiliateProfiles, billingAccounts, billingTransactions, billingUsageEvents, billingUsageMonths, appointments, auditLogs, businessMemberships, contacts, productEvents, providerEvents, services, staff, users, businesses, notifications, outboxMessages, withBusinessTransaction, claimOutboxBatch, createDatabaseClient, enqueueOutbox, markOutboxFailed, listReembedBusinesses, listSchedulerBusinesses, listSummaryBackfillBusinesses, markOutboxPublished, prunePublishedOutbox, sessions, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { generateAffiliatePayoutRun } from "./affiliates";
-import { getBillingUsageStatus, reconcileBillingProviderEvent } from "./billing";
+import { getBillingUsageStatus, getWebVoiceBillingAllowance, getWidgetChatAllowance, reconcileBillingProviderEvent } from "./billing";
+import { periodKeyFor } from "./usage";
 import { DASHBOARD_TEST_CALL_WIDGET_ID } from "@lobbystack/shared";
 import { currentWebsiteIngestion } from "./activation";
 import { createBusiness } from "./tenancy";
@@ -753,6 +754,49 @@ describe.skipIf(!testUrl)("reliability against dedicated PostgreSQL roles", () =
     const lockError = blocked as { code?: string; cause?: { code?: string } } | undefined;
     // 55P03 is lock_not_available.
     expect(lockError?.cause?.code ?? lockError?.code).toBe("55P03");
+  });
+
+  it("checks the website chat and call allowances without writing the month's usage", async () => {
+    // The widget asks on every open whether to offer the chat and a call. Each
+    // chat and call still reserves under the usage lock before it starts.
+    await rollbackTest(async (tx) => {
+      const businessId = randomUUID();
+      const periodKey = periodKeyFor();
+      await tx.insert(businesses).values({ id: businessId, slug: businessId, name: "Allowance read test", timezone: "UTC", businessType: "test" });
+      // The free plan's 30 minutes and 5 website chats are used up.
+      await tx.insert(billingUsageEvents).values([
+        { businessId, periodKey, sourceKey: `voice:${randomUUID()}`, usageKind: "voice_seconds", quantity: 1_800, planAtRecordTime: "free_cloud", syncStatus: "skipped" },
+        ...Array.from({ length: 5 }, () => ({ businessId, periodKey, sourceKey: `chat:${randomUUID()}`, usageKind: "chat_ai_tokens", quantity: 1, planAtRecordTime: "free_cloud", syncStatus: "skipped" })),
+      ]);
+      await tx.execute(sql`set local role lobbystack_worker`);
+      const db = tx as unknown as Database;
+      expect(await getWidgetChatAllowance({ db }, { businessId })).toEqual({ allowed: false, errorCode: "chat_ai_limit_reached", plan: "free_cloud" });
+      expect(await getWebVoiceBillingAllowance({ db }, { businessId })).toEqual({ allowed: false, errorCode: "voice_limit_reached", maxDurationMs: 0, plan: "free_cloud" });
+      await tx.execute(sql`reset role`);
+      expect(await tx.select({ periodKey: billingUsageMonths.periodKey }).from(billingUsageMonths).where(eq(billingUsageMonths.businessId, businessId))).toEqual([]);
+    });
+  });
+
+  it("checks the website chat and call allowances while a call holds the usage lock", async () => {
+    // Opening the chat doesn't wait for a call that is reserving its minutes.
+    const businessId = randomUUID();
+    const call = await client!.pool.connect();
+    try {
+      await call.query("begin");
+      await call.query("select pg_advisory_xact_lock(hashtextextended($1, 0))", [`billing-usage:${businessId}:${periodKeyFor()}`]);
+      await rollbackTest(async (tx) => {
+        await tx.insert(businesses).values({ id: businessId, slug: businessId, name: "Allowance lock test", timezone: "UTC", businessType: "test" });
+        await tx.execute(sql`set local role lobbystack_worker`);
+        // Waiting for the lock fails with lock_not_available instead of hanging the test.
+        await tx.execute(sql`set local lock_timeout = '250ms'`);
+        const db = tx as unknown as Database;
+        expect(await getWidgetChatAllowance({ db }, { businessId })).toEqual({ allowed: true, errorCode: null, plan: "free_cloud" });
+        expect(await getWebVoiceBillingAllowance({ db }, { businessId })).toMatchObject({ allowed: true, errorCode: null, plan: "free_cloud" });
+      });
+    } finally {
+      await call.query("rollback");
+      call.release();
+    }
   });
 
   it("counts only the operator's own test call, not a customer reaching the website widget", async () => {

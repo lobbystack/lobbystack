@@ -106,4 +106,10 @@ describe("GoogleCalendarProvider", () => {
     await expect(provider.listCalendars({ accessToken: "access" })).resolves.toEqual([{ id: "primary", summary: "Personal", primary: true, accessRole: "owner" }, { id: "team", summary: "Team", primary: false, accessRole: "writer" }]);
     expect(JSON.stringify(fetchMock.mock.calls)).not.toContain("client");
   });
+
+  it("says which status Google refused calendar discovery with", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 401, json: async () => ({}) }));
+    const provider = new GoogleCalendarProvider({ clientId: "client", clientSecret: "secret", redirectUri: "https://app.example/oauth" });
+    await expect(provider.listCalendars({ accessToken: "revoked" })).rejects.toMatchObject({ message: "Google Calendar discovery failed with status 401.", responseStatus: 401 });
+  });
 });

@@ -22,14 +22,14 @@ beforeEach(() => {
   window.localStorage.clear();
 });
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
-function setup(role = "business_owner", appointments: Array<Record<string, unknown>> = []) {
+function setup(role = "business_owner", widgetsEnabled = false, appointments: Array<Record<string, unknown>> = []) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business", name: "Tenant name", active: true, role }] });
   client.setQueryData(["billing", "business"], { account: null, permissions: { hasCheckoutAccess: false }, availableCheckoutPlans: [], availableCheckoutIntervals: { starter: [], pro: [] } });
   client.setQueryData(["phone-numbers", "business"], { phoneNumbers: [] });
   client.setQueryData(["setup", "business"], { steps: [] });
   client.setQueryData(["appointments", "business"], { appointments });
-  const content = () => <QueryClientProvider client={client}><DashboardShell user={{ email: "operator@example.invalid", name: "Operator" }}><p>Page content</p></DashboardShell></QueryClientProvider>;
+  const content = () => <QueryClientProvider client={client}><DashboardShell user={{ email: "operator@example.invalid", name: "Operator" }} widgetsEnabled={widgetsEnabled}><p>Page content</p></DashboardShell></QueryClientProvider>;
   const view = render(content());
   return { ...view, navigate(pathname: string) { route.pathname = pathname; view.rerender(content()); } };
 }
@@ -41,12 +41,25 @@ describe("original shared navigation", () => {
     expect(screen.getAllByRole("link").map(link => link.getAttribute("href"))).toEqual(["#dashboard-main-content", "/", "/appointments", "/calls", "/contacts", "/agent", "/agent/knowledge", "/agent/services", "/agent/employees", "/agent/rules", "/analytics", "/integrations", "/settings/usage"]);
     expect(document.getElementById("dashboard-main-content")?.tabIndex).toBe(-1);
   });
+  it("links the website widget and messages from every page when new widgets are on", () => {
+    setup("business_owner", true);
+    expect(screen.getAllByRole("link").map(link => link.getAttribute("href"))).toEqual(["#dashboard-main-content", "/", "/appointments", "/calls", "/messages", "/contacts", "/agent", "/agent/knowledge", "/agent/services", "/agent/employees", "/agent/rules", "/analytics", "/integrations", "/widget", "/settings/usage"]);
+  });
+  it("marks only the widget item active on the widget page", () => {
+    const view = setup("business_owner", true);
+    view.navigate("/widget");
+    expect(screen.getByRole("link", { name: "settings:sections.widget" }).hasAttribute("data-active")).toBe(true);
+    expect(screen.getByRole("link", { name: "nav:items.settings" }).hasAttribute("data-active")).toBe(false);
+    view.navigate("/settings/team");
+    expect(screen.getByRole("link", { name: "nav:items.settings" }).hasAttribute("data-active")).toBe(true);
+    expect(screen.getByRole("link", { name: "settings:sections.widget" }).hasAttribute("data-active")).toBe(false);
+  });
   it("keeps integrations visible for viewers", () => {
     setup("viewer"); expect(screen.getByRole("link", { name: "settings:sections.integrations" })).toBeTruthy();
   });
   it("badges Appointments with bookings made since the owner last looked", () => {
     window.localStorage.setItem("lobbystack:appointments-seen:business", String(Date.parse("2026-10-16T10:00:00Z")));
-    setup("business_owner", [
+    setup("business_owner", false, [
       { id: "old", createdAt: "2026-10-16T09:00:00Z" },
       { id: "new", createdAt: "2026-10-16T11:00:00Z" },
     ]);

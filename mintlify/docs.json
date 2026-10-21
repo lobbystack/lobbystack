@@ -88,6 +88,7 @@
               "dashboard/home",
               "dashboard/calls",
               "dashboard/messages",
+              "settings/widget",
               "dashboard/contacts",
               "dashboard/appointments"
             ]
@@ -124,8 +125,7 @@
                   "settings/account",
                   "settings/team",
                   "settings/notifications",
-                  "settings/phone-number",
-                  "settings/widget"
+                  "settings/phone-number"
                 ]
               },
               {
@@ -144,7 +144,8 @@
               "api/overview",
               "api/authentication",
               "api/requests",
-              "api/webhooks"
+              "api/webhooks",
+              "api/cli"
             ]
           },
           {
@@ -215,6 +216,7 @@
               "fr/dashboard/home",
               "fr/dashboard/calls",
               "fr/dashboard/messages",
+              "fr/settings/widget",
               "fr/dashboard/contacts",
               "fr/dashboard/appointments"
             ]
@@ -251,8 +253,7 @@
                   "fr/settings/account",
                   "fr/settings/team",
                   "fr/settings/notifications",
-                  "fr/settings/phone-number",
-                  "fr/settings/widget"
+                  "fr/settings/phone-number"
                 ]
               },
               {
@@ -271,7 +272,8 @@
               "fr/api/overview",
               "fr/api/authentication",
               "fr/api/requests",
-              "fr/api/webhooks"
+              "fr/api/webhooks",
+              "fr/api/cli"
             ]
           },
           {
@@ -345,6 +347,7 @@
               "es/dashboard/home",
               "es/dashboard/calls",
               "es/dashboard/messages",
+              "es/settings/widget",
               "es/dashboard/contacts",
               "es/dashboard/appointments"
             ]
@@ -381,8 +384,7 @@
                   "es/settings/account",
                   "es/settings/team",
                   "es/settings/notifications",
-                  "es/settings/phone-number",
-                  "es/settings/widget"
+                  "es/settings/phone-number"
                 ]
               },
               {
@@ -401,7 +403,8 @@
               "es/api/overview",
               "es/api/authentication",
               "es/api/requests",
-              "es/api/webhooks"
+              "es/api/webhooks",
+              "es/api/cli"
             ]
           },
           {

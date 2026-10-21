@@ -23,78 +23,84 @@
   },
   "widget": {
     "title": "Widget de site web",
-    "description": "Intégrez le widget de clavardage à votre site web.",
+    "description": "Permettez aux visiteurs de votre site de clavarder avec votre réceptionniste.",
     "created": {
-      "title": "Clé de widget créée",
-      "description": "Copiez cette clé maintenant. Vous ne la verrez plus.",
+      "title": "Votre widget est prêt",
+      "description": "Vous pouvez copier ce code à tout moment dans les réglages du widget ci-dessous.",
       "copy": "Copier",
       "copied": "Copié",
-      "copySnippet": "Copier le code d’intégration",
-      "hint": "Ajoutez le code à une page d’une origine autorisée. Le widget se charge automatiquement.",
+      "copySnippet": "Copier le code",
+      "hint": "Collez le code avant la balise </body> de votre site. Le clavardage apparaît sur les sites que vous avez indiqués.",
       "done": "Terminé"
     },
     "create": {
-      "title": "Créer une clé de widget",
-      "description": "Chaque clé appartient à cet espace de travail et possède sa propre liste d’origines autorisées.",
-      "action": "Créer la clé de widget"
+      "title": "Ajouter un widget",
+      "description": "Chaque widget a sa propre apparence et sa propre liste de sites.",
+      "action": "Créer le widget"
     },
     "restricted": {
-      "title": "Les nouveaux widgets de site web ne sont pas encore disponibles",
-      "description": "Nous ne délivrons pas encore de nouvelles clés de widget. Les widgets existants continuent de fonctionner et vous pouvez toujours les modifier ou les mettre en pause ci-dessous."
+      "title": "Vous ne pouvez pas encore ajouter de widgets",
+      "description": "Le clavardage sur le site Web est offert en accès limité. Vos widgets existants continuent de fonctionner, et vous pouvez toujours les modifier ou les mettre en pause."
     },
     "fields": {
-      "label": "Étiquette",
+      "label": "Nom",
       "labelPlaceholder": "Site principal",
-      "origins": "Origines autorisées",
+      "origins": "Sites Web",
       "color": "Couleur d’accent",
       "position": "Position",
       "title": "Titre",
       "titlePlaceholder": "Discutez avec nous",
       "subtitle": "Sous-titre",
-      "subtitlePlaceholder": "Nous répondons en quelques minutes",
-      "greeting": "Message d’accueil",
-      "greetingPlaceholder": "Bonjour. Comment pouvons-nous vous aider ?",
+      "subtitlePlaceholder": "Questions sur les heures, les prix ou les rendez-vous",
+      "greeting": "Premier message",
+      "greetingPlaceholder": "Bonjour, comment pouvons-nous vous aider aujourd'hui ?",
       "localeOverride": "Langue",
       "leadEnabled": "Demander les coordonnées des visiteurs",
-      "requireEmail": "Courriel obligatoire",
-      "requirePhone": "Téléphone obligatoire",
-      "showBeforeChat": "Demander avant le clavardage"
+      "requireEmail": "Exiger une adresse courriel",
+      "requirePhone": "Exiger un numéro de téléphone",
+      "showBeforeChat": "Demander avant le début du clavardage",
+      "liveChat": "Permettre aux visiteurs de clavarder avec votre équipe",
+      "liveChatHint": "Quand un visiteur demande à parler à une personne pendant les heures d'ouverture, votre équipe reçoit une alerte et peut répondre depuis Messages. Si personne ne se joint dans les 3 minutes, la réceptionniste propose de prendre un message."
     },
     "positions": {
       "bottomRight": "Bas à droite",
-      "bottomLeft": "Bas à gauche",
-      "bottomCenter": "Bas au centre"
+      "bottomLeft": "Bas à gauche"
     },
     "locales": {
-      "visitor": "Langue du visiteur",
+      "visitor": "Suivre la langue du visiteur",
       "english": "Anglais",
       "french": "Français",
       "spanish": "Espagnol",
       "serbian": "Serbe"
     },
     "leadCapture": {
-      "title": "Formulaire de coordonnées",
+      "title": "Coordonnées",
       "enabled": "Activé"
     },
     "status": {
       "active": "Actif",
       "disabled": "En pause",
-      "revoked": "Révoqué"
+      "revoked": "Retiré"
     },
     "keys": {
-      "title": "Clés de widget",
+      "title": "Vos widgets",
       "fallbackBusiness": "Espace de travail actif",
       "refresh": "Actualiser",
-      "loading": "Chargement des clés de widget...",
-      "unavailable": "Les clés de widget sont indisponibles.",
-      "empty": "Aucune clé de widget pour le moment.",
+      "loading": "Chargement de vos widgets…",
+      "unavailable": "Nous n'avons pas pu charger vos widgets. Actualisez la page pour réessayer.",
+      "empty": "Aucun widget pour l'instant",
       "untitled": "Widget sans nom",
       "pause": "Mettre en pause",
       "resume": "Reprendre",
-      "revoke": "Révoquer",
-      "revokeConfirm": "Révoquer cette clé de widget ? Les intégrations existantes cesseront de fonctionner.",
+      "revoke": "Retirer",
+      "revokeConfirm": "Retirer ce widget ? Le clavardage disparaîtra de tous les sites qui l'utilisent.",
       "save": "Enregistrer",
-      "lastUsed": "Dernière utilisation {{date}}"
+      "saved": "Enregistré",
+      "appearanceHint": "Les changements de couleur et de position s'appliquent à votre site en environ deux minutes.",
+      "snippet": "Code pour votre site",
+      "snippetCopied": "Code copié",
+      "noSnippet": "Nous ne pouvons pas afficher le code de cet ancien widget. Ajoutez un nouveau widget pour obtenir un code que vous pourrez copier en tout temps.",
+      "lastUsed": "Dernière activité : {{date}}"
     }
   },
   "billing": {
@@ -337,7 +343,7 @@
         },
         "forward": {
           "title": "Transférez votre ligne d'entreprise vers ce numéro",
-          "description": "Vos appelants composent toujours le numéro qu'ils connaissent. Votre opérateur transfère ces appels vers votre numéro LobbyStack.",
+          "description": "Vos appelants composent toujours le numéro qu'ils connaissent. Votre opérateur transfère ces appels vers votre numéro {{appName}}.",
           "action": "Guide du renvoi d'appel"
         },
         "transfer": {
@@ -426,7 +432,7 @@
     },
     "telemetry": {
       "label": "Partager les données de télémétrie",
-      "description": "Aidez-nous à améliorer LobbyStack en partageant des données d'utilisation et d'erreurs anonymisées.",
+      "description": "Aidez-nous à améliorer {{appName}} en partageant des données d'utilisation et d'erreurs anonymisées.",
       "saveFailed": "Nous n’avons pas pu enregistrer votre préférence de télémétrie. Veuillez réessayer."
     }
   },
@@ -447,7 +453,7 @@
     "google": {
       "sheetTitle": "Google Calendar",
       "sheetDescription": "Connectez les calendriers de l'équipe et choisissez celui qui reçoit les réservations.",
-      "privacyNoticeText": "La connexion à Google Calendar permet à LobbyStack de lire la disponibilité de votre calendrier et de créer, mettre à jour ou supprimer des rendez-vous sur le calendrier que vous sélectionnez.",
+      "privacyNoticeText": "La connexion à Google Calendar permet à {{appName}} de lire la disponibilité de votre calendrier et de créer, mettre à jour ou supprimer des rendez-vous sur le calendrier que vous sélectionnez.",
       "privacyPolicyLinkText": "Politique de confidentialité",
       "staffLabel": "Membre de l'équipe",
       "selectStaff": "Choisir un membre",
@@ -608,7 +614,8 @@
       "joinedOn": "A rejoint le {{date}}",
       "invitedOn": "Invité le {{date}}",
       "status": {
-        "pending": "En attente"
+        "pending": "En attente",
+        "handover": "Cède l'entreprise"
       },
       "actions": {
         "moreOptions": "Plus d'options",
@@ -816,9 +823,13 @@
         "title": "Nouveau message sur le clavardage du site",
         "description": "Lorsqu’un visiteur envoie un message via le widget de votre site. Vous recevez au plus une alerte par conversation chaque jour."
       },
+      "liveChatRequest": {
+        "title": "Visiteur qui demande une personne",
+        "description": "Lorsqu'un visiteur de votre site demande à parler à quelqu'un de votre équipe. Répondez depuis Messages dans les 3 minutes pour rejoindre le clavardage."
+      },
       "webhookDisabled": {
         "title": "Point de terminaison webhook désactivé",
-        "description": "Quand LobbyStack cesse d'envoyer des événements à un point de terminaison webhook parce que toutes les livraisons ont échoué pendant environ une journée."
+        "description": "Quand {{appName}} cesse d'envoyer des événements à un point de terminaison webhook parce que toutes les livraisons ont échoué pendant environ une journée."
       }
     },
     "systemIssues": {
@@ -872,7 +883,7 @@
   },
   "apiKeys": {
     "title": "Clés API",
-    "description": "Utilisez une clé pour connecter votre propre code ou une autre application à l'API LobbyStack.",
+    "description": "Utilisez une clé pour connecter votre propre code ou une autre application à l'API {{appName}}.",
     "empty": "Aucune clé API pour l'instant.",
     "neverUsed": "Jamais",
     "createdBy": "{{date}} par {{name}}",
@@ -909,28 +920,32 @@
     "revoke": {
       "action": "Révoquer",
       "title": "Révoquer cette clé API?",
-      "description": "Tout ce qui utilise {{name}} cesse de fonctionner immédiatement. Cette action est définitive. LobbyStack désactive aussi les webhooks créés par cette clé.",
+      "description": "Tout ce qui utilise {{name}} cesse de fonctionner immédiatement. Cette action est définitive. {{appName}} désactive aussi les webhooks créés par cette clé.",
       "confirm": "Révoquer la clé",
       "cancel": "Annuler",
       "done": "Clé API révoquée",
       "failed": "Impossible de révoquer la clé. Réessayez."
     },
     "scopes": {
-      "business_read": "Lire les informations, les heures et les services de l'entreprise",
-      "business_write": "Modifier les informations et les heures de l'entreprise",
+      "business_read": "Lire les informations, les heures, les services, ainsi que les réglages et les règles de la réceptionniste de l'entreprise",
+      "business_write": "Modifier les informations, les heures, les services, ainsi que les réglages et les règles de la réceptionniste de l'entreprise, y compris le numéro de transfert des appels",
       "calls_read": "Lire les appels, les résumés et les transcriptions",
       "contacts_read": "Lire les contacts",
       "contacts_write": "Créer et modifier des contacts",
       "appointments_read": "Lire les rendez-vous et les plages libres",
       "appointments_write": "Réserver, annuler et déplacer des rendez-vous",
       "messages_read": "Lire les messages pris par la réceptionniste",
-      "knowledge_write": "Ajouter des entrées de connaissances et des FAQ",
+      "knowledge_read": "Lire les entrées de connaissances, les FAQ, les sites web et les fichiers",
+      "knowledge_write": "Ajouter, modifier et supprimer des entrées de connaissances, des FAQ, des sites web et des fichiers",
+      "billing_manage": "Voir le forfait, fixer le plafond de dépenses et lancer des paiements",
+      "phone_numbers_manage": "Rechercher, acheter, remplacer et libérer des numéros de téléphone",
+      "team_manage": "Inviter et retirer des membres de l'équipe, changer les rôles et céder l'entreprise",
       "webhooks_manage": "Créer et supprimer des points de terminaison webhook"
     }
   },
   "webhooks": {
     "title": "Webhooks",
-    "description": "LobbyStack envoie une requête HTTPS POST à votre URL quand quelque chose se produit, par exemple un appel terminé ou une nouvelle réservation. Chaque requête est signée pour que vous puissiez vérifier qu'elle vient de nous.",
+    "description": "{{appName}} envoie une requête HTTPS POST à votre URL quand quelque chose se produit, par exemple un appel terminé ou une nouvelle réservation. Chaque requête est signée pour que vous puissiez vérifier qu'elle vient de nous.",
     "empty": "Aucun point de terminaison webhook pour l'instant.",
     "enabledLabel": "Envoyer les événements à ce point de terminaison",
     "restricted": {
@@ -964,19 +979,19 @@
     "create": {
       "action": "Ajouter un point de terminaison",
       "title": "Ajouter un point de terminaison webhook",
-      "description": "Choisissez où LobbyStack envoie les événements et lesquels envoyer.",
+      "description": "Choisissez où {{appName}} envoie les événements et lesquels envoyer.",
       "submit": "Ajouter"
     },
     "edit": {
       "action": "Modifier",
       "title": "Modifier le point de terminaison webhook",
-      "description": "Les changements s'appliquent au prochain événement envoyé par LobbyStack.",
+      "description": "Les changements s'appliquent au prochain événement envoyé par {{appName}}.",
       "submit": "Enregistrer"
     },
     "delete": {
       "action": "Supprimer",
       "title": "Supprimer ce point de terminaison?",
-      "description": "LobbyStack cesse d'envoyer des événements à {{url}} et supprime son journal des livraisons.",
+      "description": "{{appName}} cesse d'envoyer des événements à {{url}} et supprime son journal des livraisons.",
       "confirm": "Supprimer",
       "done": "Point de terminaison supprimé"
     },
@@ -1023,8 +1038,8 @@
   },
   "connectedApps": {
     "title": "Applications connectées",
-    "description": "Les assistants IA comme Claude ou ChatGPT connectés à LobbyStack. Chacun ne fonctionne que pour cette entreprise, avec l'accès approuvé lors de la connexion.",
-    "empty": "Aucune application connectée pour l'instant. Pour en connecter une, ajoutez LobbyStack dans les réglages de l'assistant et connectez-vous.",
+    "description": "Les assistants IA comme Claude ou ChatGPT connectés à {{appName}}. Chacun ne fonctionne que pour cette entreprise, avec l'accès approuvé lors de la connexion.",
+    "empty": "Aucune application connectée pour l'instant. Pour en connecter une, ajoutez {{appName}} dans les réglages de l'assistant et connectez-vous.",
     "neverUsed": "Jamais",
     "unnamed": "Application sans nom",
     "grantedBy": "{{date}} par {{name}}",

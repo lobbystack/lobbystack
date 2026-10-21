@@ -5,7 +5,7 @@ sidebarTitle: "Authentication"
 contentType: "How-to"
 ---
 
-Every request needs an API key for one business. Owners and admins create and revoke keys in the dashboard. The same keys connect AI assistants through the [MCP server](/ai/mcp).
+Every request needs a key. An API key from the dashboard works on one business, and a [platform key](#platform-keys) works on many. Owners and admins create and revoke API keys in the dashboard. API keys, but not platform keys, also connect AI assistants through the [MCP server](/ai/mcp).
 
 ## Create a key
 
@@ -59,18 +59,53 @@ Each endpoint except `GET /me` requires one scope. A key without it gets `403` w
 
 | Scope | Allows |
 | --- | --- |
-| `business:read` | `GET /business`, `GET /services`, `GET /staff` |
-| `business:write` | `PATCH /business` |
+| `business:read` | `GET /business`, `GET /services`, `GET /staff`, `GET /receptionist`, `GET /rules`, `GET /onboarding`, `GET /widget-keys`, `GET /calendars`, `GET /calendars/{connection_id}/calendars`, `GET /notification-preferences` |
+| `business:write` | `PATCH /business`, `PATCH /receptionist`, `POST /services`, `PATCH` and `DELETE` on `/services/{service_id}`, `POST /rules`, `PATCH` and `DELETE` on `/rules/{rule_id}`, `POST /rules/reorder`, `PATCH /onboarding`, `POST /onboarding/complete`, `POST /widget-keys`, `PATCH /widget-keys/{widget_key_id}`, `POST /calendars/google/connect`, `PATCH` and `DELETE` on `/calendars/{connection_id}`, `PATCH /notification-preferences` |
 | `calls:read` | `GET /calls`, `GET /calls/{call_id}` |
 | `contacts:read` | `GET /contacts`, `GET /contacts/{contact_id}` |
-| `contacts:write` | `POST /contacts`, `PATCH /contacts/{contact_id}` |
+| `contacts:write` | `POST /contacts`, `PATCH /contacts/{contact_id}`, `POST /contacts/passcodes`, `POST /contacts/passcodes/generate` |
 | `appointments:read` | `GET /appointments`, `GET /appointments/{appointment_id}`, `GET /availability` |
 | `appointments:write` | `POST /appointments`, `POST /appointments/{appointment_id}/cancel`, `POST /appointments/{appointment_id}/reschedule` |
 | `messages:read` | `GET /messages` |
-| `knowledge:write` | `POST /knowledge` |
+| `knowledge:read` | `GET /knowledge`, `GET /knowledge/{entry_id}`, `GET /knowledge/sources`, `GET /knowledge/sources/{source_id}` |
+| `knowledge:write` | `POST /knowledge`, `PATCH` and `DELETE` on `/knowledge/{entry_id}`, `POST /knowledge/sources`, `PATCH` and `DELETE` on `/knowledge/sources/{source_id}`, `POST /knowledge/sources/{source_id}/expand`, `/retry` and `/cancel`, `POST /knowledge/uploads` and `POST /knowledge/uploads/{upload_id}/complete` |
+| `billing:manage` | `GET` and `PATCH /billing`, `POST /billing/checkout`, `GET /billing/checkout/{checkout_id}` and, with an operator's platform key, `POST` and `DELETE /billing/managed-plan` |
+| `phone_numbers:manage` | `GET /phone-numbers`, `POST /phone-numbers/search`, `POST /phone-numbers/claims`, `GET /phone-numbers/claims/{claim_id}`, `DELETE /phone-numbers/{phone_number_id}` and `POST /phone-numbers/{phone_number_id}/replace` |
+| `team:manage` | `GET /team`, `POST /team/invitations`, `DELETE /team/invitations/{invitation_id}`, `PATCH` and `DELETE` on `/team/members/{membership_id}`, `POST /team/claim-link` |
 | `webhooks:manage` | `GET`, `POST`, `PATCH` and `DELETE` on `/webhooks`, and `POST /webhooks/{webhook_id}/test` |
 
 To subscribe an endpoint to an event or change its URL, your key also needs the event's read scope. For example, `call.completed` needs `calls:read`, and the [events table](/api/webhooks#events) lists the rest.
+
+## Platform keys
+
+A platform key (`lsp_...`) onboards and manages many businesses, where an API key works on one. Partners use platform keys to set up businesses for their customers, for example with [`lobbystack onboard`](/api/cli).
+
+Whoever runs the deployment makes platform keys; the dashboard has no page for them. On a self-hosted deployment, `pnpm platform-key:create` writes a new key to `.platform-keys/<prefix>.json` and prints its entry for [`PLATFORM_API_KEYS`](/self-hosting/environment-variables). Each entry sets:
+
+- The partner the key belongs to.
+- The verified LobbyStack account the key acts as (`owner_email`), which owns the businesses the key creates.
+- Whether the key reaches every business (`"access": "all"`, an operator's key; pass `--access all`) or, by default, only the ones its partner onboarded.
+- Its scopes. Unless you name some, a new key gets the scopes an API key can hold. `POST /businesses` needs `businesses:create` and `POST /users` needs `users:create`. Only platform keys can hold these two, and a new key gets them only when you pass `--create-businesses` or `--create-users`. `GET /businesses` needs `business:read`.
+
+<Warning>
+A key with `"access": "all"` acts as its `owner_email` account on every business on the deployment, without being on any team, and can read and change all of them. That key, and that account with its password, sessions and email inbox, are root credentials. Give them to as few people as you can, keep the account's password as safe as the database's, and remove the key's entry from `PLATFORM_API_KEYS` if either leaks. `pnpm platform-key:create --access all` prints the same warning.
+</Warning>
+
+Once the admin restarts without a key's entry in `PLATFORM_API_KEYS`, requests with that key fail, and LobbyStack turns off the webhook endpoints the key created. To keep one, turn it back on with another of your platform keys.
+
+`POST /businesses` creates a business, and `GET /businesses` lists the ones the partner onboarded. Every other request names its business in the `LobbyStack-Business` header:
+
+```bash
+curl https://app.lobbystack.com/api/v1/services \
+  -H "Authorization: Bearer $LOBBYSTACK_PLATFORM_KEY" \
+  -H "LobbyStack-Business: 75795511-9ee2-4cb2-a89d-f173ec1dd82d"
+```
+
+Without the header, the request returns `400` with the code `business_required`. A business the key can't reach returns `404`. `GET /me` works without the header and shows the key's partner and access.
+
+`POST /team/claim-link` hands a business to its owner. Once they accept, a partner's key no longer reaches it, and an operator's key still does. Either way, `GET /businesses` stops listing it. LobbyStack also turns off the business's webhook endpoints that a platform key, the account that sent the link, or that account's API keys created.
+
+Only a verified LobbyStack account can accept a claim link, and the link's page lets an owner without an account sign up first. To invite them ahead of it, `POST /users` emails the address a sign-up link, or a sign-in link if the address already has an account. It never makes an account, so the owner signs up with their own password or with Google, and it answers the same either way, so you can't tell who has an account. A platform key can invite 50 addresses a day.
 
 ## Revoke a key
 

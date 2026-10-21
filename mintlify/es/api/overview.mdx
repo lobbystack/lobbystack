@@ -53,7 +53,7 @@ La respuesta envuelve el recurso en `data`:
 - Los ID son UUID y nunca cambian.
 - Las marcas de tiempo usan ISO 8601 en UTC, por ejemplo `2026-09-29T13:30:00.000Z`. Los cuerpos de las solicitudes también aceptan un desfase numérico como `-04:00`.
 - Las listas devuelven `data`, `next_cursor` y `has_more`. Consulte [Solicitudes y errores](/es/api/requests).
-- Cada clave pertenece a un negocio. Nunca necesita enviar un ID de negocio.
+- Una clave de API del panel pertenece a un negocio, así que no necesita enviar un ID de negocio. Una [clave de plataforma](/es/api/authentication#claves-de-plataforma) indica el negocio en el encabezado `LobbyStack-Business`.
 
 ## OpenAPI
 

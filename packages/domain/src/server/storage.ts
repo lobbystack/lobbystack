@@ -3,8 +3,8 @@ import { randomUUID } from "node:crypto";
 import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, ne, notInArray, or, type SQL } from "drizzle-orm";
 
 import { businesses, calls, enqueueOutbox, knowledgeDocuments, storageObjects, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { getKnowledgeStorageLimitBytes } from "@lobbystack/shared";
-import { getKnowledgeStorageUsageBytes, knowledgeStorageLimitMessage } from "./knowledge";
+import { getKnowledgeStorageLimitBytes, KNOWLEDGE_UPLOAD_MAX_BYTES } from "@lobbystack/shared";
+import { getKnowledgeStorageUsageBytes, KnowledgeStorageLimitError } from "./knowledge";
 import { isAllowedUploadContentType } from "@lobbystack/contracts";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
@@ -12,7 +12,7 @@ import type { DomainContext } from "./context";
 import { contentExpiryForPlan, isContentRetentionEnabled, resolveBusinessBillingPlan } from "./contentRetentionPolicy";
 
 export type StorageProvider = {
-  createUpload(input: { key: string; contentType: string; length: number; checksum?: string }): Promise<{ url: string; headers?: Record<string, string> }>;
+  createUpload(input: { key: string; contentType: string; length: number; checksum?: string }): Promise<{ url: string; headers?: Record<string, string>; expiresAt?: Date }>;
   headObject(input: { key: string }): Promise<{ length: number; contentType: string; checksum?: string } | null>;
   deleteObject(input: { key: string }): Promise<void>;
   createDownloadUrl(input: { key: string; expiresInSeconds: number; range?: string }): Promise<string>;
@@ -27,18 +27,30 @@ export async function createUpload(
   input: { userId: string; businessId: string; purpose: string; fileName: string; contentType: string; length: number; checksum?: string | undefined },
   storage: StorageProvider,
 ): Promise<{ objectId: string; key: string; url: string; headers?: Record<string, string> }> {
-  if (!isAllowedUploadContentType(input.purpose, input.contentType)) throw new Error(`Content type is not allowed for ${input.purpose} uploads.`);
-  if (input.purpose === "knowledge" && !input.checksum) throw new Error("Knowledge uploads require a SHA-256 checksum.");
-  if (input.purpose === "knowledge" && input.length > 10 * 1024 * 1024) throw new Error("Documents must be 10 MB or smaller.");
-  const objectId = randomUUID();
-  const key = `${input.businessId}/${input.purpose}/${objectId}/${input.fileName.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+  const planned = planUpload(input);
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     if (input.purpose === "knowledge") await requireBusinessAdmin(tx, input);
     else await requireBusinessMembership(tx, input);
-    await tx.insert(storageObjects).values({ id: objectId, businessId: input.businessId, objectKey: key, purpose: input.purpose, fileName: input.fileName, contentType: input.contentType, contentLength: input.length, checksum: input.checksum, status: "pending", expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) });
+    await insertPendingUploadInTransaction(tx, { ...input, ...planned });
   });
-  const upload = await storage.createUpload({ key, contentType: input.contentType, length: input.length, ...(input.checksum !== undefined ? { checksum: input.checksum } : {}) });
-  return { objectId, key, url: upload.url, ...(upload.headers ? { headers: upload.headers } : {}) };
+  const upload = await storage.createUpload({ key: planned.key, contentType: input.contentType, length: input.length, ...(input.checksum !== undefined ? { checksum: input.checksum } : {}) });
+  return { objectId: planned.objectId, key: planned.key, url: upload.url, ...(upload.headers ? { headers: upload.headers } : {}) };
+}
+
+/** Checks an upload request and names the object it will be stored as. */
+export function planUpload(input: { businessId: string; purpose: string; fileName: string; contentType: string; length: number; checksum?: string | undefined }): { objectId: string; key: string } {
+  if (!isAllowedUploadContentType(input.purpose, input.contentType)) throw new Error(`Content type is not allowed for ${input.purpose} uploads.`);
+  if (input.purpose === "knowledge" && !input.checksum) throw new Error("Knowledge uploads require a SHA-256 checksum.");
+  if (input.purpose === "knowledge" && input.length > KNOWLEDGE_UPLOAD_MAX_BYTES) throw new Error("Documents must be 10 MB or smaller.");
+  const objectId = randomUUID();
+  const name = input.fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+  // A name of only dots, such as "..", would be read as a path step rather than a file.
+  return { objectId, key: `${input.businessId}/${input.purpose}/${objectId}/${/^\.*$/.test(name) ? "file" : name}` };
+}
+
+/** Records an upload that waits for its bytes. Unfinished uploads expire after a day. */
+export async function insertPendingUploadInTransaction(tx: DatabaseTransaction, input: { objectId: string; key: string; businessId: string; purpose: string; fileName: string; contentType: string; length: number; checksum?: string | undefined }): Promise<void> {
+  await tx.insert(storageObjects).values({ id: input.objectId, businessId: input.businessId, objectKey: input.key, purpose: input.purpose, fileName: input.fileName, contentType: input.contentType, contentLength: input.length, checksum: input.checksum, status: "pending", expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) });
 }
 
 export async function finalizeUpload(
@@ -62,50 +74,66 @@ export async function finalizeUpload(
   }
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    if (object.purpose === "knowledge") {
-      // Locks the business so concurrent uploads check the limit one at a time.
-      await tx.select({ id: businesses.id }).from(businesses).where(eq(businesses.id, input.businessId)).for("update");
-      const limit = getKnowledgeStorageLimitBytes(await resolveBusinessBillingPlan(tx, input.businessId));
-      // The limit counts indexed text, which indexing checks once it's extracted.
-      // Refuse here only when the plan is already full.
-      if (limit !== null && await getKnowledgeStorageUsageBytes(tx, input.businessId) >= limit) throw new Error(knowledgeStorageLimitMessage(limit));
-    }
-    const finalized = await tx.update(storageObjects).set({ status: "ready", contentLength: metadata.length, contentType: metadata.contentType, ...(metadata.checksum ? { checksum: metadata.checksum } : {}), updatedAt: new Date() }).where(and(eq(storageObjects.id, input.objectId), eq(storageObjects.businessId, input.businessId), eq(storageObjects.status, "pending"))).returning({ id: storageObjects.id });
-    if (!finalized.length) throw new Error("Upload is missing or already finalized.");
-    if (object.purpose === "knowledge") {
-      const [document] = await tx.insert(knowledgeDocuments).values({
-        businessId: input.businessId,
-        sourceType: "upload",
-        title: input.title?.trim() || object.fileName,
-        tags: input.tags ?? [],
-        storageObjectId: input.objectId,
-        mimeType: metadata.contentType,
-        status: "pending",
-        processingProgress: 0,
-      }).returning({ id: knowledgeDocuments.id });
-      if (!document) {
-        throw new Error("Knowledge document could not be created for the uploaded object.");
-      }
-      await enqueueOutbox(tx, {
-        topic: "knowledge.extractDocument",
-        businessId: input.businessId,
-        aggregateType: "knowledge_document",
-        aggregateId: document.id,
-        dedupeKey: `knowledge:${document.id}:extract`,
-        payload: { documentId: document.id },
-      });
-      return;
-    }
-
-    await enqueueOutbox(tx, {
-      topic: "realtime.publish",
-      businessId: input.businessId,
-      aggregateType: "storage_object",
-      aggregateId: input.objectId,
-      dedupeKey: `storage:${input.objectId}:ready`,
-      payload: { type: "document.progressed", entityId: input.objectId },
-    });
+    await completeUploadInTransaction(tx, { businessId: input.businessId, objectId: input.objectId, purpose: object.purpose, fileName: object.fileName, metadata, title: input.title, tags: input.tags });
   });
+}
+
+/**
+ * Marks an uploaded object ready once its bytes are checked. A knowledge
+ * upload becomes a knowledge document queued for extraction, and its id is
+ * returned; other uploads tell the dashboard they're ready. The caller has
+ * already checked who may do this. A business whose plan's knowledge storage
+ * is full is refused before anything changes.
+ */
+export async function completeUploadInTransaction(
+  tx: DatabaseTransaction,
+  input: { businessId: string; objectId: string; purpose: string; fileName: string; metadata: { length: number; contentType: string; checksum?: string | undefined }; title?: string | undefined; tags?: string[] | undefined },
+): Promise<string | null> {
+  const { metadata } = input;
+  if (input.purpose === "knowledge") {
+    // Locks the business so concurrent uploads check the limit one at a time.
+    await tx.select({ id: businesses.id }).from(businesses).where(eq(businesses.id, input.businessId)).for("update");
+    const limit = getKnowledgeStorageLimitBytes(await resolveBusinessBillingPlan(tx, input.businessId));
+    // The limit counts indexed text, which indexing checks once it's extracted.
+    // Refuse here only when the plan is already full.
+    if (limit !== null && await getKnowledgeStorageUsageBytes(tx, input.businessId) >= limit) throw new KnowledgeStorageLimitError(limit);
+  }
+  const finalized = await tx.update(storageObjects).set({ status: "ready", contentLength: metadata.length, contentType: metadata.contentType, ...(metadata.checksum ? { checksum: metadata.checksum } : {}), updatedAt: new Date() }).where(and(eq(storageObjects.id, input.objectId), eq(storageObjects.businessId, input.businessId), eq(storageObjects.status, "pending"))).returning({ id: storageObjects.id });
+  if (!finalized.length) throw new Error("Upload is missing or already finalized.");
+  if (input.purpose === "knowledge") {
+    const [document] = await tx.insert(knowledgeDocuments).values({
+      businessId: input.businessId,
+      sourceType: "upload",
+      title: input.title?.trim() || input.fileName,
+      tags: input.tags ?? [],
+      storageObjectId: input.objectId,
+      mimeType: metadata.contentType,
+      status: "pending",
+      processingProgress: 0,
+    }).returning({ id: knowledgeDocuments.id });
+    if (!document) {
+      throw new Error("Knowledge document could not be created for the uploaded object.");
+    }
+    await enqueueOutbox(tx, {
+      topic: "knowledge.extractDocument",
+      businessId: input.businessId,
+      aggregateType: "knowledge_document",
+      aggregateId: document.id,
+      dedupeKey: `knowledge:${document.id}:extract`,
+      payload: { documentId: document.id },
+    });
+    return document.id;
+  }
+
+  await enqueueOutbox(tx, {
+    topic: "realtime.publish",
+    businessId: input.businessId,
+    aggregateType: "storage_object",
+    aggregateId: input.objectId,
+    dedupeKey: `storage:${input.objectId}:ready`,
+    payload: { type: "document.progressed", entityId: input.objectId },
+  });
+  return null;
 }
 
 export async function createObjectDownload(

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { isPaidSubscription, type BillingInterval, type BillingPlanSlug, type HostedCheckoutPlanIntervals } from "@lobbystack/shared";
+import { brandLinks, contactEmailFor, isPaidSubscription, type BillingInterval, type BillingPlanSlug, type HostedCheckoutPlanIntervals } from "@lobbystack/shared";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { requestJson } from "@/lib/request-json";
 import { selectActiveBusiness } from "@/lib/active-business";
@@ -98,7 +98,7 @@ export function LiveUpgradePlanProvider({ children }: { children: ReactNode }) {
       locale={i18n.language}
       loadingPlan={checkout?.target ?? (mutation.isPending ? mutation.variables.target : null)}
       onBillingIntervalChange={setInterval}
-      onContactEnterprise={() => window.location.assign(`mailto:hello@lobbystack.ai?subject=${encodeURIComponent(t("billing.upgradeDialog.enterpriseSubject"))}`)}
+      onContactEnterprise={() => window.location.assign(`mailto:${contactEmailFor(brandLinks(), "sales")}?subject=${encodeURIComponent(t("billing.upgradeDialog.enterpriseSubject"))}`)}
       onOpenChange={setOpen}
       onStartCheckout={(target, billingInterval) => mutation.mutate({ businessId, target, billingInterval })}
       open={open}

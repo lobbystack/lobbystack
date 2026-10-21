@@ -82,6 +82,9 @@ The answer gap skips caller speech that ended while the receptionist was still t
 - `sms.delivery_accepted`
 - `sms.delivery_failed`
 - `conversation.automation_paused`
+- `conversation.team_requested`: a website visitor asked for a person and the team was alerted.
+- `conversation.team_joined`: a team member replied or pressed Join while the visitor waited. `waitSeconds` is how long the visitor waited.
+- `conversation.team_request_expired`: nobody joined in time, so the receptionist took the chat back.
 
 ### Appointment events
 

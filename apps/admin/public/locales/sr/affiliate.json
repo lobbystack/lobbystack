@@ -1,10 +1,10 @@
 {
   "eyebrow": "Partnerski program",
   "title": "Partnerski program",
-  "description": "Preporučite LobbyStack firmama i agencijama. Ovde pratimo preporuke, provizije i mesečne isplate preko PayPal-a.",
+  "description": "Preporučite {{appName}} firmama i agencijama. Ovde pratimo preporuke, provizije i mesečne isplate preko PayPal-a.",
   "referral": {
     "title": "Link za preporuku",
-    "description": "Podelite ovaj link gde god preporučujete LobbyStack.",
+    "description": "Podelite ovaj link gde god preporučujete {{appName}}.",
     "active": "Aktivan",
     "copy": "Kopiraj link",
     "code": "Kod preporuke: {{code}}"
@@ -49,7 +49,7 @@
     },
     "resources": {
       "title": "Iznosite tačne tvrdnje",
-      "description": "Opišite LobbyStack iskreno i navedite da možete zaraditi proviziju."
+      "description": "Opišite {{appName}} iskreno i navedite da možete zaraditi proviziju."
     },
     "receive": {
       "title": "Primajte zaradu",
@@ -105,7 +105,7 @@
     },
     "method": {
       "question": "Kako se šalju isplate?",
-      "answer": "LobbyStack isplaćuje partnere preko PayPal-a, na PayPal imejl sačuvan u podešavanjima."
+      "answer": "{{appName}} isplaćuje partnere preko PayPal-a, na PayPal imejl sačuvan u podešavanjima."
     },
     "refunds": {
       "question": "Šta se dešava nakon povraćaja novca?",

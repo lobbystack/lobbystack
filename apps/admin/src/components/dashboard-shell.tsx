@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
+import { AppWindowIcon } from "@/components/ui/app-window";
 import { BookTextIcon } from "@/components/ui/book-text";
 import { BlocksIcon } from "@/components/ui/blocks";
 import { CalendarDaysIcon } from "@/components/ui/calendar-days";
@@ -52,6 +53,8 @@ import { useOpenUpgradePlanDialog } from "./upgrade-plan-dialog-context";
 type DashboardShellProps = {
   children: React.ReactNode;
   sidebarOpen?: boolean;
+  /** Shows Messages and the website widget in the menu on every page (`WIDGET_KEY_ISSUANCE_ENABLED`). */
+  widgetsEnabled?: boolean;
   user: {
     email: string;
     name: string;
@@ -72,7 +75,7 @@ function getSidebarDefaultOpen(): boolean {
   return value?.split("=")[1] !== "false";
 }
 
-export function DashboardShell({ children, sidebarOpen, user }: DashboardShellProps) {
+export function DashboardShell({ children, sidebarOpen, user, widgetsEnabled = false }: DashboardShellProps) {
   const { t } = useTranslation("common");
   const pathname = usePathname();
   const contentScrollRef = useRef<HTMLElement>(null);
@@ -96,7 +99,7 @@ export function DashboardShell({ children, sidebarOpen, user }: DashboardShellPr
         defaultOpen={sidebarOpen ?? getSidebarDefaultOpen()}
         style={{ "--sidebar-width": "16rem" } as React.CSSProperties}
       >
-        <ReplacementSidebar user={user} />
+        <ReplacementSidebar user={user} widgetsEnabled={widgetsEnabled} />
         <SidebarInset
           ref={contentScrollRef}
           className="@container/content min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain has-data-[layout=fixed]:h-full peer-data-[variant=inset]:has-data-[layout=fixed]:h-[calc(100%-(var(--spacing)*4))]"
@@ -125,8 +128,9 @@ function BillingBanner() {
   return <BillingPastDueBanner businessId={business.businessId} plan={billing.data.account.plan} subscriptionState={billing.data.account.subscriptionState} permissions={billing.data.permissions} />;
 }
 
-function ReplacementSidebar({ user }: Pick<DashboardShellProps, "user">) {
+function ReplacementSidebar({ user, widgetsEnabled }: Pick<DashboardShellProps, "user" | "widgetsEnabled">) {
   const pathname = usePathname();
+  const showWidgets = widgetsEnabled || ["/messages", "/widget"].some(route => pathname === route || pathname.startsWith(`${route}/`));
   const { isMobile, setOpenMobile } = useSidebar();
   const { t } = useTranslation(["nav", "settings", "agent"]);
   const { business, appointments } = useAppointments();
@@ -135,7 +139,7 @@ function ReplacementSidebar({ user }: Pick<DashboardShellProps, "user">) {
     { label: t("nav:items.home"), href: "/", icon: HomeIcon },
     { label: t("nav:items.appointments"), href: "/appointments", icon: CalendarDaysIcon as typeof HomeIcon, badge: newAppointments },
     { label: t("nav:items.calls"), href: "/calls", icon: PhoneAnimatedIcon },
-    ...(["/messages", "/settings/widget"].some(route => pathname === route || pathname.startsWith(`${route}/`)) ? [{ label: t("nav:items.messages"), href: "/messages", icon: MessageSquareMoreIcon }] : []),
+    ...(showWidgets ? [{ label: t("nav:items.messages"), href: "/messages", icon: MessageSquareMoreIcon }] : []),
     { label: t("nav:items.contacts"), href: "/contacts", icon: UsersIcon },
   ];
   const receptionist: NavigationItem[] = [
@@ -148,8 +152,8 @@ function ReplacementSidebar({ user }: Pick<DashboardShellProps, "user">) {
   const other: NavigationItem[] = [
     { label: t("nav:items.analytics"), href: "/analytics", icon: ChartColumnIncreasingIcon },
     { label: t("settings:sections.integrations"), href: "/integrations", icon: BlocksIcon },
+    ...(showWidgets ? [{ label: t("settings:sections.widget"), href: "/widget", icon: AppWindowIcon }] : []),
     { label: t("nav:items.settings"), href: "/settings/usage", icon: SettingsIcon },
-    ...(["/messages", "/settings/widget"].some(route => pathname === route || pathname.startsWith(`${route}/`)) ? [{ label: t("settings:sections.widget"), href: "/settings/widget", icon: SettingsIcon }] : []),
   ];
 
   return (

@@ -45,7 +45,7 @@ export function DashboardSetupGuideCard({ onNavigate }: { onNavigate?: () => voi
           </span>
           <span className="text-xs text-background/70">{t("sidebar.setupGuide.progress", { completed, total: setup.data.steps.length })}</span>
           <span aria-hidden="true" className="grid w-full grid-cols-5 gap-1">
-            {setup.data.steps.map((step) => <span className={cn("h-1 rounded-full bg-background/20", (step.status === "complete" || step.status === "skipped") && "bg-background")} key={step.name} />)}
+            {setup.data.steps.map((step, index) => <span className={cn("h-1 rounded-full bg-background/20", index < completed && "bg-background")} key={step.name} />)}
           </span>
         </span>
       </Button>

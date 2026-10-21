@@ -7,7 +7,7 @@ contentType: "Reference"
 
 ## Paginación
 
-Los endpoints de lista devuelven hasta 25 elementos por página, del más reciente al más antiguo. Envíe `limit` para pedir entre 1 y 100 elementos.
+Los endpoints de lista devuelven hasta 25 elementos por página, del más reciente al más antiguo. Envíe `limit` para pedir entre 1 y 100 elementos. `GET /services`, `GET /staff` y `GET /rules` devuelven todo en una sola página, en su propio orden.
 
 ```json
 {
@@ -55,8 +55,18 @@ Un error de red puede dejarle sin saber si una solicitud funcionó. Envíe un en
 - `POST /contacts`
 - `POST /appointments`
 - `POST /knowledge`
+- `POST /services`
+- `POST /rules`
+- `POST /billing/checkout`
+- `POST /widget-keys`
+- `POST /phone-numbers/claims` y `POST /phone-numbers/{phone_number_id}/replace`, que lo exigen
+- `POST /team/invitations`, que lo exige
 
 `POST /webhooks` ignora este encabezado para que LobbyStack nunca guarde una copia del secreto de firma. Si una creación falla por un error de red, consulte `GET /webhooks` antes de reintentar.
+
+`POST /contacts/passcodes` y `POST /contacts/passcodes/generate` también lo ignoran, para que LobbyStack nunca guarde una copia de un PIN. Volver a enviar los mismos PIN a `POST /contacts/passcodes` solo los vuelve a establecer. Si `POST /contacts/passcodes/generate` falla por un error de red, busque los contactos cuyo `passcode.set_at` sea de esa solicitud y deles PIN nuevos con `contact_ids`.
+
+`POST /team/claim-link` también lo ignora, para que LobbyStack nunca guarde una copia del enlace que entrega el negocio. Cada solicitud envía un enlace nuevo y revoca el anterior, así que después de un error de red, busque en `GET /team` una invitación pendiente con `transfers_ownership` antes de reintentar.
 
 ```bash
 curl https://app.lobbystack.com/api/v1/appointments \
@@ -89,7 +99,7 @@ Los errores siempre tienen la misma forma:
 }
 ```
 
-`details` solo aparece en los errores de validación. Base su lógica en `code`; la redacción de `message` puede cambiar.
+`details` aparece en los errores de validación y en el 409 de `POST /onboarding/complete`, donde cada `path` nombra un paso pendiente. Base su lógica en `code`; la redacción de `message` puede cambiar.
 
 | Estado | Código | Cuándo |
 | --- | --- | --- |
@@ -124,7 +134,7 @@ Las claves de API actúan en nombre del negocio, así que la API omite la verifi
 
 ## Personal
 
-`GET /staff` lista a todas las personas que atienden citas, con `active` y los `service_ids` para los que se puede reservar a cada una. Un servicio sin personal asignado en el panel está abierto a todos los miembros activos del personal.
+`GET /staff` lista a todas las personas que atienden citas, con `active` y los `service_ids` para los que se puede reservar a cada una. Un servicio sin personal asignado, en el panel o con `staff_ids` en `POST /services` y `PATCH /services/{service_id}`, está abierto a todos los miembros activos del personal.
 
 Un negocio que nunca configuró su personal tiene igualmente un miembro activo del personal, con el nombre del negocio. Las reservas se asignan a esa persona, así que `GET /staff` la devuelve como a cualquier otro miembro del personal, y puede enviar su `id` como `staff_id`.
 

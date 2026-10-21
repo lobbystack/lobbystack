@@ -63,6 +63,12 @@ describe("directToolAnswer", () => {
     expect(directToolAnswer(step({ toolName: "transferCall", output: { ok: false, reason: "Transfers aren't allowed right now. Offer to take a message." } }))).toBeUndefined();
   });
 
+  // GPT-Live asks for the PIN at once, so the caller isn't kept waiting for a model step.
+  it("has GPT-Live ask for the keypad PIN once the check starts, and leaves a refused one to the model", () => {
+    expect(directToolAnswer(step({ toolName: "requestKeypadPasscode", input: { verificationId: "ver_1" }, output: { ok: true, waitingForKeypad: true } }))).toBe("The caller has to type their PIN on the phone keypad, then press the pound key. It's checked as they type it, and you'll be told whether it was accepted.");
+    expect(directToolAnswer(step({ toolName: "requestKeypadPasscode", output: { ok: false, reason: "The call can't take a PIN right now, so the change can't be verified." } }))).toBeUndefined();
+  });
+
   it("leaves refusals, failures, other tools and plain replies to the model", () => {
     expect(directToolAnswer(step({ toolName: "requestAppointment", output: { ok: false, reason: "Ask for a callback number first." } }))).toBeUndefined();
     expect(directToolAnswer(step({ toolName: "takeMessage" }))).toBeUndefined();

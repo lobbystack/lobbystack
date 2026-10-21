@@ -28,7 +28,7 @@ function tableName(table: unknown): string {
   return String(table);
 }
 
-function makeTx(overrides: { visitor?: Row | null; conversations?: Row[]; messages?: Row[]; contacts?: Row[] } = {}) {
+function makeTx(overrides: { visitor?: Row | null; visitorElsewhere?: boolean; conversations?: Row[]; messages?: Row[]; contacts?: Row[] } = {}) {
   const state = {
     visitor: overrides.visitor === undefined ? { id: visitorId } : overrides.visitor,
     conversations: overrides.conversations ?? [],
@@ -99,7 +99,11 @@ function makeTx(overrides: { visitor?: Row | null; conversations?: Row[]; messag
       values: (values: Row) => {
         const name = tableName(table);
         if (name === "conversations") state.insertedConversation = values;
-        if (name === "widget_visitors") state.insertedVisitor = values;
+        if (name === "widget_visitors") {
+          state.insertedVisitor = values;
+          // A visitor id another business already has stays out of sight.
+          if (!overrides.visitorElsewhere) state.visitor = values;
+        }
         if (name === "contacts") state.insertedContact = values;
         const base = {
           onConflictDoUpdate: () => ({ run: () => Promise.resolve(), returning: () => Promise.resolve([{ contactId: values.contactId ?? null, contactLinkedAt: null }]) }),
@@ -196,11 +200,23 @@ describe("getOrCreateWidgetConversation", () => {
     expect(state.lockModes).toEqual(["widget_visitors:update"]);
   });
 
-  it("throws when the visitor has not been registered", async () => {
-    const { tx } = makeTx({ visitor: null, conversations: [] });
+  it("registers a visitor its session didn't, then starts the chat", async () => {
+    const { tx, state } = makeTx({ visitor: null, conversations: [] });
+    mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => await callback(tx));
+
+    const result = await getOrCreateWidgetConversation(context, { businessId, widgetVisitorId: visitorId });
+
+    expect(state.insertedVisitor).toEqual({ id: visitorId, businessId });
+    expect(result).toEqual({ conversationId, automationState: "ai_active" });
+    expect(state.insertedConversation).toMatchObject({ businessId, widgetVisitorId: visitorId, channel: "web_chat" });
+  });
+
+  it("throws when another business has the visitor's id", async () => {
+    const { tx, state } = makeTx({ visitor: null, visitorElsewhere: true, conversations: [] });
     mocks.withBusinessTransaction.mockImplementation(async (_db, _ctx, callback) => await callback(tx));
 
     await expect(getOrCreateWidgetConversation(context, { businessId, widgetVisitorId: visitorId })).rejects.toThrow(/not found/i);
+    expect(state.insertedConversation).toBeNull();
   });
 });
 

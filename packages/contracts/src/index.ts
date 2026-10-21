@@ -145,7 +145,7 @@ export const snapshotSchema = z.object({
     enabled: z.boolean(),
     allowCancel: z.boolean(),
     allowReschedule: z.boolean(),
-    verificationMode: z.enum(["phone_match_and_facts", "otp_required", "operator_only"]),
+    verificationMode: z.enum(["phone_match_and_facts", "otp_required", "passcode_required", "operator_only"]),
   }).optional(),
   transferPolicy: z.object({
     mode: z.enum(["never", "always", "on_request", "on_urgent", "during_business_hours"]),
@@ -220,6 +220,7 @@ export const queueForJobType = {
   "notification.dispatch": "default",
   "notification.dailySummary": "maintenance",
   "conversation.finalizeSession": "default",
+  "conversation.expireTeamRequest": "default",
   "privacy.scrubMessage": "maintenance",
   "privacy.deleteRecording": "maintenance",
   "privacy.cleanupPendingUpload": "maintenance",

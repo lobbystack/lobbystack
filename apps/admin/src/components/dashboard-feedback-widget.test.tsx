@@ -8,7 +8,7 @@ const submitFeedbackMock = vi.fn();
 const toastErrorMock = vi.fn();
 const toastSuccessMock = vi.fn();
 
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
 vi.mock("sonner", () => ({
   toast: {
@@ -68,10 +68,23 @@ describe("DashboardFeedbackWidget", () => {
     fireEvent.click(screen.getByRole("button", { name: "Feedback" }));
 
     expect(screen.getByLabelText("Feedback message")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Contact us" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Contact us" }).getAttribute("href")).toBe("mailto:support@lobbystack.com");
     const helpCenterLink = screen.getByRole("link", { name: "Help Center" });
     expect(helpCenterLink.getAttribute("href")).toBe("https://docs.lobbystack.com");
     expect(helpCenterLink.getAttribute("target")).toBe("_blank");
+  });
+
+  it("links to the deployment's own address and docs", () => {
+    vi.stubEnv("NEXT_PUBLIC_DOCS_SITE_URL", "https://acme.example/");
+    vi.stubEnv("NEXT_PUBLIC_CONTACT_EMAIL", "support@acme.example");
+
+    renderDashboardFeedbackWidget();
+
+    fireEvent.click(screen.getByRole("button", { name: "Feedback" }));
+
+    expect(screen.getByRole("link", { name: "Contact us" }).getAttribute("href")).toBe("mailto:support@acme.example");
+    expect(screen.getByRole("link", { name: "see docs." }).getAttribute("href")).toBe("https://acme.example");
+    expect(screen.getByRole("link", { name: "Help Center" }).getAttribute("href")).toBe("https://acme.example");
   });
 
   it("keeps send disabled for an empty message", async () => {

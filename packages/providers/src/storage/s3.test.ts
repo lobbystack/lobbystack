@@ -36,6 +36,15 @@ describe("S3StorageProvider browser uploads", () => {
     expect(putRules(send)).toEqual([[expect.objectContaining({ AllowedOrigins: [origin], AllowedMethods: ["PUT"], AllowedHeaders: ["*"] })]]);
   });
 
+  it("says when the signed upload URL stops working", async () => {
+    stubSend([{ AllowedOrigins: [origin], AllowedMethods: ["PUT"] }]);
+
+    const signed = await storage().createUpload(upload);
+
+    expect(new URL(signed.url).searchParams.get("X-Amz-Expires")).toBe("900");
+    expect(Math.abs(signed.expiresAt.getTime() - (Date.now() + 900_000))).toBeLessThan(2_000);
+  });
+
   it("keeps the bucket's other CORS rules", async () => {
     const existing = { AllowedOrigins: ["https://other.example.com"], AllowedMethods: ["GET"] };
     const send = stubSend([{ ...existing, ID: "" }]);

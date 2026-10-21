@@ -5,7 +5,7 @@ sidebarTitle: "Authentification"
 contentType: "How-to"
 ---
 
-Chaque requête nécessite une clé API liée à une entreprise. Les propriétaires et les administrateurs créent et révoquent les clés dans le tableau de bord. Les mêmes clés connectent les assistants IA par le [serveur MCP](/fr/ai/mcp).
+Chaque requête nécessite une clé. Une clé API du tableau de bord agit sur une seule entreprise, et une [clé de plateforme](#clés-de-plateforme) sur plusieurs. Les propriétaires et les administrateurs créent et révoquent les clés API dans le tableau de bord. Les clés API, mais pas les clés de plateforme, connectent aussi les assistants IA par le [serveur MCP](/fr/ai/mcp).
 
 ## Créer une clé
 
@@ -59,18 +59,53 @@ Chaque point de terminaison, sauf `GET /me`, exige une portée. Une clé qui ne 
 
 | Portée | Autorise |
 | --- | --- |
-| `business:read` | `GET /business`, `GET /services`, `GET /staff` |
-| `business:write` | `PATCH /business` |
+| `business:read` | `GET /business`, `GET /services`, `GET /staff`, `GET /receptionist`, `GET /rules`, `GET /onboarding`, `GET /widget-keys`, `GET /calendars`, `GET /calendars/{connection_id}/calendars`, `GET /notification-preferences` |
+| `business:write` | `PATCH /business`, `PATCH /receptionist`, `POST /services`, `PATCH` et `DELETE` sur `/services/{service_id}`, `POST /rules`, `PATCH` et `DELETE` sur `/rules/{rule_id}`, `POST /rules/reorder`, `PATCH /onboarding`, `POST /onboarding/complete`, `POST /widget-keys`, `PATCH /widget-keys/{widget_key_id}`, `POST /calendars/google/connect`, `PATCH` et `DELETE` sur `/calendars/{connection_id}`, `PATCH /notification-preferences` |
 | `calls:read` | `GET /calls`, `GET /calls/{call_id}` |
 | `contacts:read` | `GET /contacts`, `GET /contacts/{contact_id}` |
-| `contacts:write` | `POST /contacts`, `PATCH /contacts/{contact_id}` |
+| `contacts:write` | `POST /contacts`, `PATCH /contacts/{contact_id}`, `POST /contacts/passcodes`, `POST /contacts/passcodes/generate` |
 | `appointments:read` | `GET /appointments`, `GET /appointments/{appointment_id}`, `GET /availability` |
 | `appointments:write` | `POST /appointments`, `POST /appointments/{appointment_id}/cancel`, `POST /appointments/{appointment_id}/reschedule` |
 | `messages:read` | `GET /messages` |
-| `knowledge:write` | `POST /knowledge` |
+| `knowledge:read` | `GET /knowledge`, `GET /knowledge/{entry_id}`, `GET /knowledge/sources`, `GET /knowledge/sources/{source_id}` |
+| `knowledge:write` | `POST /knowledge`, `PATCH` et `DELETE` sur `/knowledge/{entry_id}`, `POST /knowledge/sources`, `PATCH` et `DELETE` sur `/knowledge/sources/{source_id}`, `POST /knowledge/sources/{source_id}/expand`, `/retry` et `/cancel`, `POST /knowledge/uploads` et `POST /knowledge/uploads/{upload_id}/complete` |
+| `billing:manage` | `GET` et `PATCH /billing`, `POST /billing/checkout`, `GET /billing/checkout/{checkout_id}` et, avec la clé de plateforme d'un opérateur, `POST` et `DELETE /billing/managed-plan` |
+| `phone_numbers:manage` | `GET /phone-numbers`, `POST /phone-numbers/search`, `POST /phone-numbers/claims`, `GET /phone-numbers/claims/{claim_id}`, `DELETE /phone-numbers/{phone_number_id}` et `POST /phone-numbers/{phone_number_id}/replace` |
+| `team:manage` | `GET /team`, `POST /team/invitations`, `DELETE /team/invitations/{invitation_id}`, `PATCH` et `DELETE` sur `/team/members/{membership_id}`, `POST /team/claim-link` |
 | `webhooks:manage` | `GET`, `POST`, `PATCH` et `DELETE` sur `/webhooks`, et `POST /webhooks/{webhook_id}/test` |
 
 Pour abonner un point de terminaison à un événement ou changer son URL, votre clé a aussi besoin de la portée de lecture de cet événement. Par exemple, `call.completed` exige `calls:read`, et le tableau des événements de la page [Webhooks](/fr/api/webhooks) donne les autres.
+
+## Clés de plateforme
+
+Une clé de plateforme (`lsp_...`) intègre et gère de nombreuses entreprises, alors qu'une clé API agit sur une seule. Les partenaires s'en servent pour configurer les entreprises de leurs clients, par exemple avec [`lobbystack onboard`](/fr/api/cli).
+
+C'est l'exploitant du déploiement qui crée les clés de plateforme ; le tableau de bord n'a pas de page pour elles. Sur un déploiement auto-hébergé, `pnpm platform-key:create` écrit une nouvelle clé dans `.platform-keys/<prefix>.json` et affiche son entrée pour [`PLATFORM_API_KEYS`](/fr/self-hosting/environment-variables). Chaque entrée définit :
+
+- Le partenaire à qui appartient la clé.
+- Le compte LobbyStack vérifié au nom duquel la clé agit (`owner_email`), qui possède les entreprises qu'elle crée.
+- Si la clé atteint toutes les entreprises (`"access": "all"`, la clé d'un exploitant ; passez `--access all`) ou, par défaut, seulement celles que son partenaire a intégrées.
+- Ses portées. Sauf si vous en nommez certaines, une nouvelle clé reçoit les portées qu'une clé API peut détenir. `POST /businesses` nécessite `businesses:create` et `POST /users` nécessite `users:create`. Seules les clés de plateforme peuvent détenir ces deux portées, et une nouvelle clé les reçoit seulement si vous passez `--create-businesses` ou `--create-users`. `GET /businesses` nécessite `business:read`.
+
+<Warning>
+Une clé avec `"access": "all"` agit au nom du compte de son `owner_email` sur toutes les entreprises du déploiement, sans faire partie d'aucune équipe, et peut toutes les lire et les modifier. Cette clé, et ce compte avec son mot de passe, ses sessions et sa boîte de réception, sont des identifiants racine. Confiez-les au moins de personnes possible, protégez le mot de passe du compte comme celui de la base de données, et retirez l'entrée de la clé de `PLATFORM_API_KEYS` si l'un des deux fuit. `pnpm platform-key:create --access all` affiche le même avertissement.
+</Warning>
+
+Une fois que l'admin redémarre sans l'entrée d'une clé dans `PLATFORM_API_KEYS`, les requêtes avec cette clé échouent, et LobbyStack désactive les points de terminaison webhook que la clé a créés. Pour en garder un, réactivez-le avec une autre de vos clés de plateforme.
+
+`POST /businesses` crée une entreprise, et `GET /businesses` liste celles que le partenaire a intégrées. Toutes les autres requêtes nomment leur entreprise dans l'en-tête `LobbyStack-Business` :
+
+```bash
+curl https://app.lobbystack.com/api/v1/services \
+  -H "Authorization: Bearer $LOBBYSTACK_PLATFORM_KEY" \
+  -H "LobbyStack-Business: 75795511-9ee2-4cb2-a89d-f173ec1dd82d"
+```
+
+Sans cet en-tête, la requête renvoie `400` avec le code `business_required`. Une entreprise que la clé ne peut pas atteindre renvoie `404`. `GET /me` fonctionne sans l'en-tête et affiche le partenaire et l'accès de la clé.
+
+`POST /team/claim-link` remet une entreprise à son propriétaire. Une fois qu'il l'accepte, la clé d'un partenaire n'atteint plus l'entreprise, alors que celle d'un exploitant l'atteint toujours. Dans les deux cas, `GET /businesses` ne la liste plus. LobbyStack désactive aussi les points de terminaison webhook de l'entreprise créés par une clé de plateforme, par le compte qui a envoyé le lien ou par les clés API de ce compte.
+
+Seul un compte LobbyStack vérifié peut accepter un lien de réclamation, et la page du lien permet à un propriétaire sans compte de s'inscrire d'abord. Pour l'inviter avant, `POST /users` envoie à l'adresse un lien d'inscription, ou un lien de connexion si l'adresse a déjà un compte. Il ne crée jamais de compte : le propriétaire s'inscrit avec son propre mot de passe ou avec Google. La réponse est la même dans les deux cas, donc vous ne pouvez pas savoir qui a un compte. Une clé de plateforme peut inviter 50 adresses par jour.
 
 ## Révoquer une clé
 

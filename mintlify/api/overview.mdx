@@ -53,7 +53,7 @@ The response wraps the resource in `data`:
 - IDs are UUIDs and never change.
 - Timestamps use ISO 8601 in UTC, for example `2026-09-29T13:30:00.000Z`. Request bodies also accept a numeric offset such as `-04:00`.
 - Lists return `data`, `next_cursor` and `has_more`. See [Requests and errors](/api/requests).
-- Each key belongs to one business. You never pass a business ID.
+- An API key from the dashboard belongs to one business, so you never pass a business ID. A [platform key](/api/authentication#platform-keys) names the business in the `LobbyStack-Business` header.
 
 ## OpenAPI
 

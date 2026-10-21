@@ -1,10 +1,10 @@
+import { BrandWordmark } from "@/components/brand-mark"
 import { buttonVariants } from "@/components/ui/button"
 import {
   localizeMarketingHref,
   type MarketingLocale,
 } from "@/lib/marketing-site-url"
 import { cn } from "@/lib/utils"
-import { versionedAssetUrl } from "@/lib/versioned-assets"
 import { localizePublicPath } from "@/lib/locale-path"
 
 const labels = {
@@ -29,14 +29,7 @@ export function LandingNavbar({ locale = "en" }: LandingNavbarProps) {
           href={localizeMarketingHref(locale, "/")}
           className="flex items-center focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
-          <img
-            src={versionedAssetUrl("/lobbystack-logo.svg")}
-            alt="LobbyStack"
-            width={155}
-            height={43}
-            decoding="async"
-            className="h-7 w-auto"
-          />
+          <BrandWordmark />
         </a>
         <div className="flex items-center gap-3">
           <a

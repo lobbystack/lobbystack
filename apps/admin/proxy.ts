@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { isMaintenanceMode, normalizeInterfaceLocale } from "@lobbystack/shared";
+import { BRAND_LOGO_PATH, isMaintenanceMode, normalizeInterfaceLocale } from "@lobbystack/shared";
 
 import { configuredAppOrigins } from "@/lib/app-origins";
 import { LOCALE_COOKIE, LOCALE_COOKIE_MAX_AGE_SECONDS, localeTag } from "@/lib/locale";
@@ -20,13 +20,16 @@ import {
   negotiateLocale,
 } from "@/lib/locale-request";
 
-import { embeddableSecurityHeaders, isEmbeddablePath, securityHeaders } from "./security-headers";
+import { brandLogoSecurityHeaders, embeddableSecurityHeaders, isEmbeddablePath, securityHeaders } from "./security-headers";
 
 const stateChangingMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 // /api/v1 and /api/mcp authenticate with bearer API keys only, never cookies, so they need no CSRF
 // origin check. /api/mcp refuses foreign browser origins itself.
 // "/api/widget/" keeps its slash so the cookie-authenticated /api/widget-keys admin route stays guarded.
 const csrfExemptPrefixes = ["/api/auth", "/api/webhooks", "/api/health", "/api/voice", "/api/widget/", "/api/v1/", "/api/mcp"];
+// /api/storage/local authorizes each upload with a signed token in its URL, never a cookie, and
+// API clients such as the CLI send no Origin header. It is matched exactly so routes added beside it stay guarded.
+const csrfExemptPaths = new Set(["/api/storage/local"]);
 
 function isWebhookPath(pathname: string): boolean {
   return pathname.startsWith("/api/webhooks/");
@@ -74,9 +77,11 @@ function applyResponsePolicy(
 
 function cacheControlForRequest(pathname: string, searchParams: URLSearchParams): string | undefined {
   if (isTokenBearingRoute(pathname, searchParams)) return "private, no-store";
-  if (pathname.startsWith("/api/realtime") || pathname.startsWith("/api/widget/chat")) {
+  if (pathname.startsWith("/api/realtime") || pathname.startsWith("/api/widget/chat") || pathname.startsWith("/api/widget/stream")) {
     return "private, no-cache, no-store, no-transform";
   }
+  // The logo route caches its own versioned responses for good.
+  if (pathname === BRAND_LOGO_PATH) return undefined;
   if (pathname.startsWith("/api/") || pathname.startsWith("/embed/")) {
     return "private, no-store";
   }
@@ -107,7 +112,7 @@ function hasValidCsrfOrigin(request: NextRequest): boolean {
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const headers = isEmbeddablePath(pathname) ? embeddableSecurityHeaders() : securityHeaders();
+  const headers = isEmbeddablePath(pathname) ? embeddableSecurityHeaders() : pathname === BRAND_LOGO_PATH ? brandLogoSecurityHeaders() : securityHeaders();
 
   const isApiRequest = pathname.startsWith("/api/");
   if (isMaintenanceMode(process.env) && (isWebhookPath(pathname) || (isApiRequest && !isMaintenanceHealthProbe(pathname, request.method)) || stateChangingMethods.has(request.method))) {
@@ -151,11 +156,18 @@ export function proxy(request: NextRequest) {
     );
   }
 
+  // The website widget's loader names the business's language in the chat's
+  // address, so the chat paints in it from the start. That is the business's
+  // choice, not the visitor's, so unlike ?lng= it is never saved.
+  const widgetLocale = pathname.startsWith("/embed/") ? normalizeInterfaceLocale(request.nextUrl.searchParams.get("locale")) : null;
+
   // Dynamic application roots read these headers. Locale-prefixed public roots
   // derive their first paint directly from the path and remain prerenderable.
-  const locale: NegotiatedLocale = pathLocale && isPublicRoutePath(pathname)
-    ? { locale: pathLocale, source: "path" }
-    : negotiatedLocale;
+  const locale: NegotiatedLocale = widgetLocale
+    ? { locale: widgetLocale, source: "path" }
+    : pathLocale && isPublicRoutePath(pathname)
+      ? { locale: pathLocale, source: "path" }
+      : negotiatedLocale;
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set(LOCALE_HEADER, locale.locale);
   requestHeaders.set(LOCALE_SOURCE_HEADER, locale.source);
@@ -164,7 +176,7 @@ export function proxy(request: NextRequest) {
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   applyResponsePolicy(response, request, headers, locale, cacheControlForRequest(pathname, request.nextUrl.searchParams));
 
-  if (stateChangingMethods.has(request.method) && pathname.startsWith("/api/") && !csrfExemptPrefixes.some((prefix) => pathname.startsWith(prefix)) && !hasValidCsrfOrigin(request)) {
+  if (stateChangingMethods.has(request.method) && pathname.startsWith("/api/") && !csrfExemptPaths.has(pathname) && !csrfExemptPrefixes.some((prefix) => pathname.startsWith(prefix)) && !hasValidCsrfOrigin(request)) {
     return applyResponsePolicy(
       NextResponse.json({ error: "CSRF origin validation failed." }, { status: 403 }),
       request,

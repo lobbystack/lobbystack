@@ -3,7 +3,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 import { appointments, auditLogs, businessHours, businessMemberships, businesses, calendarBusyBlocks, calendarConnections, contacts, createDatabaseClient, outboxMessages, services, staff, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { checkAvailability, rescheduleAppointmentInTransaction } from "./booking";
-import { connectCalendar, disconnectCalendar, queueUnsyncedAppointmentSyncs } from "./calendar";
+import { assignCalendarStaff, connectCalendar, disconnectCalendar, queueUnsyncedAppointmentSyncs, selectCalendar } from "./calendar";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
 const testUrl = process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL;
@@ -162,6 +162,22 @@ describe.skipIf(!testUrl)("calendar backfill against dedicated PostgreSQL roles"
       expect(rows.find((row) => row.id === covered.id)).toMatchObject({ calendarSyncState: "not_required", calendarExternalId: null });
       expect(rows.find((row) => row.id === past.id)).toMatchObject({ calendarSyncState: "synced", calendarExternalId: "past-event" });
       expect(rows.find((row) => row.id === ownCalendar.id)).toMatchObject({ calendarSyncState: "synced", calendarExternalId: "staff-event" });
+    });
+  });
+
+  it("keeps a disconnected connection disconnected when the dashboard picks its calendar or staff member", async () => {
+    await rollbackTest(async (tx) => {
+      const { businessId, userId, firstStaffId } = await workspace(tx);
+      const [connection] = await tx.insert(calendarConnections).values({ businessId, ownerUserId: userId, provider: "google", externalAccountId: "owner@example.invalid", selectedCalendarId: "primary" }).returning();
+      await tx.execute(sql`set local role lobbystack_app`);
+      const db = tx as unknown as Database;
+      await disconnectCalendar({ db }, { userId, businessId, connectionId: connection!.id });
+      await expect(selectCalendar({ db }, { userId, businessId, connectionId: connection!.id, calendarId: "team@example.invalid" })).rejects.toThrow("Calendar connection not found.");
+      await expect(assignCalendarStaff({ db }, { userId, businessId, connectionId: connection!.id, staffId: firstStaffId })).rejects.toThrow("Calendar connection not found.");
+      await tx.execute(sql`reset role`);
+
+      const [row] = await tx.select().from(calendarConnections).where(eq(calendarConnections.id, connection!.id));
+      expect(row).toMatchObject({ status: "disconnected", selectedCalendarId: "primary", staffId: null });
     });
   });
 

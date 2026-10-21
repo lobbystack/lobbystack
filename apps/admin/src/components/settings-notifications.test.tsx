@@ -17,7 +17,7 @@ afterEach(async () => {
 function setup(reason: "phone_unverified" | "sender_missing" | null = null, widgetOnly = false, smsConsent = false) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business-1", active: true }] });
-  let preferences = { emailEnabled: true, smsEnabled: false, smsConsent, canUseSms: reason === null, smsUnavailableReason: reason, eventPreferences: Object.fromEntries(["voiceMessage", "pausedSms", "widgetChat", "smsFailed", "calendarSync", "transferFailed", "aiReplyFailed", "webhookDisabled"].map(key => [key, { email: true, sms: false }])), dailySummaryEnabled: false, dailySummarySendTime: null };
+  let preferences = { emailEnabled: true, smsEnabled: false, smsConsent, canUseSms: reason === null, smsUnavailableReason: reason, eventPreferences: Object.fromEntries(["voiceMessage", "pausedSms", "widgetChat", "liveChatRequest", "smsFailed", "calendarSync", "transferFailed", "aiReplyFailed", "webhookDisabled"].map(key => [key, { email: true, sms: false }])), dailySummaryEnabled: false, dailySummarySendTime: null };
   client.setQueryData(["notification-preferences", "business-1"], preferences);
   const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     // The server records consent and turns SMS on when it approves the code.
@@ -37,11 +37,13 @@ describe("original notification controls", () => {
     expect(await screen.findByRole("switch", { name: "notifications.sources.email.title" })).toBeTruthy();
     expect(screen.getByRole("switch", { name: "notifications.sources.sms.title" })).toBeTruthy();
     expect(screen.queryByText("notifications.events.widgetChat.title")).toBeNull();
+    expect(screen.queryByText("notifications.events.liveChatRequest.title")).toBeNull();
     expect(screen.queryByText(/browser/i)).toBeNull();
   });
   it("exposes widget notification controls in the excluded widget view", async () => {
     setup(null, true);
     expect(await screen.findByText("notifications.events.widgetChat.title")).toBeTruthy();
+    expect(screen.getByText("notifications.events.liveChatRequest.title")).toBeTruthy();
     expect(screen.queryByText("notifications.events.voiceMessage.title")).toBeNull();
   });
   it("disables SMS when the workspace has no alert sender", async () => {

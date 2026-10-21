@@ -1,7 +1,17 @@
-import posthog from "posthog-js";
+import type { PostHog } from "posthog-js";
+
+type ErrorSink = Pick<PostHog, "__loaded" | "has_opted_out_capturing" | "captureException">;
+
+// Set when the dashboard starts PostHog. The website widget never loads it, so
+// its errors stay in the visitor's browser.
+let sink: ErrorSink | undefined;
+
+export function sendBrowserErrorsTo(client: ErrorSink): void {
+  sink = client;
+}
 
 export function captureBrowserError(error: unknown): void {
-  if (!posthog.__loaded || posthog.has_opted_out_capturing()) return;
+  if (!sink?.__loaded || sink.has_opted_out_capturing()) return;
   const original = error instanceof Error ? error : new Error("Unhandled browser rejection");
   const redact = (text: string) => text
     .replace(/https?:\/\/[^\s)]+/g, value => { try { const url = new URL(value); url.search = ""; url.hash = ""; return url.toString(); } catch { return "[url]"; } })
@@ -10,5 +20,5 @@ export function captureBrowserError(error: unknown): void {
   const safe = new Error(redact(original.message).slice(0, 500));
   safe.name = original.name;
   if (original.stack) safe.stack = original.stack.split("\n").slice(0, 25).map(redact).join("\n");
-  posthog.captureException(safe, { service: "lobbystack-admin-browser", release: process.env.NEXT_PUBLIC_SERVICE_VERSION, environment: process.env.NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT, ...( "digest" in original ? { digest: String(original.digest) } : {}) });
+  sink.captureException(safe, { service: "lobbystack-admin-browser", release: process.env.NEXT_PUBLIC_SERVICE_VERSION, environment: process.env.NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT, ...( "digest" in original ? { digest: String(original.digest) } : {}) });
 }

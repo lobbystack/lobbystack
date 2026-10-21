@@ -63,7 +63,7 @@ U najmanju ruku, pravite ili povezujete:
 
 Zato glasovni agent deluje jednostavno dok ne naiđe na stvarne klijente. Glasovni agent postaje produkcijski softver u trenutku kada ga pozove prvi stvarni klijent.
 
-Sama infrastruktura može na papiru da izgleda jeftino. [Cenovnik za Twilio Voice](https://www.twilio.com/en-us/voice/pricing/us) navodi lokalne dolazne pozive u SAD po delovima centa po minutu, uz troškove broja telefona i dodataka. [Cenovnik za OpenAI API](https://openai.com/api/pricing/) objavljuje cene audio modela u realnom vremenu odvojeno od tekstualnih modela. Te cene su važne, ali nisu ceo račun.
+Sama infrastruktura može na papiru da izgleda jeftino. [Cenovnik za Twilio Voice](https://www.twilio.com/en-us/voice/pricing/us) navodi lokalne dolazne pozive u SAD po delovima centa po minutu, uz troškove broja telefona i dodataka. [Cenovnik za OpenAI API](https://openai.com/api/pricing/) objavljuje cene audio modela u realnom vremenu odvojeno od tekstualnih modela. Te cene su važne, ali nisu ceo račun. Za detaljan pregled gradnje na GPT-Live modelu, koji pokreće ChatGPT Voice, pročitajte naš vodič [kako napraviti AI recepcionera sa glasom ChatGPT-a](/sr/blog/how-to-build-an-ai-receptionist/).
 
 Veći trošak je obično ljudsko vreme oko sistema:
 

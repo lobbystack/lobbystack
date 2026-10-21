@@ -1,7 +1,7 @@
 import { isPaidSubscription } from "@lobbystack/shared";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
-import { and, eq, isNull, lt, ne, or, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
 
 import { billingAccounts, businesses, enqueueOutbox, numberTrials, onboardingNumberClaimEvents, phoneNumbers, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 
@@ -9,7 +9,7 @@ import { requireBusinessAdmin } from "../authz";
 import type { DomainContext } from "./context";
 import { activateNumberTrialInTransaction, failNumberTrialInTransaction, isNumberCountry, keepBusinessNumbersInTransaction, trialCountries, verifiedPhone, type NumberCountry } from "./numberTrials";
 import { normalizeOnboardingStage } from "./onboarding";
-import { resolveBusinessNumberMarket } from "./phoneNumberMarket";
+import { resolveBusinessNumberMarket, type BusinessNumberMarket } from "./phoneNumberMarket";
 
 export type NumberSelection = {
   countryCode: NumberCountry;
@@ -24,8 +24,12 @@ export type NumberSelection = {
   verifiedPhone?: string;
 };
 export type NumberInventoryProvider = { listAvailablePhoneNumbers(input: NumberSelection & { limit: number }): Promise<Array<{ phoneE164: string; locality?: string; region?: string; countryCode: string; capabilities: { sms: boolean; voice: boolean } }>> };
-type NumberClaimPurpose = "onboarding" | "replacement";
-type Offer = { v: 1; purpose: NumberClaimPurpose; businessId: string; userId: string; e164: string; countryCode: string; kind: NumberSelection["kind"]; capabilities: { sms: boolean; voice: true }; selection: NumberSelection; exp: number };
+export type NumberClaimPurpose = "onboarding" | "replacement";
+/** A searched number, signed for one person and one business so a claim can trust it. */
+export type NumberOffer = { v: 1; purpose: NumberClaimPurpose; businessId: string; userId: string; e164: string; countryCode: string; kind: NumberSelection["kind"]; capabilities: { sms: boolean; voice: true }; selection: NumberSelection; exp: number };
+type Offer = NumberOffer;
+
+const offerLifetimeMs = 5 * 60_000;
 
 function encode(value: unknown): string { return Buffer.from(JSON.stringify(value)).toString("base64url"); }
 function sign(encoded: string, secret: string): string { return createHmac("sha256", secret).update(encoded).digest("base64url"); }
@@ -33,7 +37,8 @@ function issueOffer(payload: Offer, secret: string): string { const encoded = en
 function numberClaimError(status: number, code: string, message: string): Error & { status: number; code: string } {
   return Object.assign(new Error(message), { status, code });
 }
-function verifyOffer(token: string, secret: string): Offer {
+/** Reads a signed offer. Throws number_offer_invalid or number_offer_expired. */
+export function readNumberOffer(token: string, secret: string): NumberOffer {
   const invalid = () => numberClaimError(400, "number_offer_invalid", "Invalid number claim token.");
   const [encoded, signature, extra] = token.split("."); if (!encoded || !signature || extra) throw invalid();
   const expected = Buffer.from(sign(encoded, secret)); const actual = Buffer.from(signature); if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) throw invalid();
@@ -81,38 +86,57 @@ function claimRefusal(error: unknown): Error | undefined {
   return undefined;
 }
 
-export async function searchBusinessNumberInventory(context: DomainContext, input: { userId: string; businessId: string; purpose?: NumberClaimPurpose; selection?: Partial<NumberSelection>; limit?: number; claimTokenSecret: string }, provider: NumberInventoryProvider) {
-  const purpose = input.purpose ?? "onboarding";
-  const { market, trial, countryFixed, smsRequired } = await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
-    await requireBusinessAdmin(tx, input);
-    const business = (await tx.select({ stage: businesses.onboardingStage, timezone: businesses.timezone, deploymentMode: businesses.deploymentMode, replacementUsedAt: businesses.phoneNumberReplacementUsedAt }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1))[0];
-    const billing = (await tx.select({ plan: billingAccounts.plan, state: billingAccounts.subscriptionState }).from(billingAccounts).where(eq(billingAccounts.businessId, input.businessId)).limit(1))[0];
-    if (!business) throw numberClaimError(404, "not_found", "Workspace not found.");
-    const onboardingStage = normalizeOnboardingStage(business.stage);
-    if (purpose === "onboarding" && !["phone_number", "attribution", "complete"].includes(onboardingStage)) throw refused("invalid_onboarding_stage");
-    if (purpose === "replacement") {
-      if (business.replacementUsedAt) throw refused("replacement_already_used");
-      const active = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"), isNull(phoneNumbers.reclaimScheduledAt))).limit(1);
-      if (!active.length) throw refused("active_number_required");
-    }
-    const verified = await verifiedPhone(tx, input);
-    // The verified phone's country decides the number's country.
-    const requested = (verified?.countryCode ?? input.selection?.countryCode)?.trim().toUpperCase();
-    if (requested && !isNumberCountry(requested)) throw numberClaimError(400, "unsupported_country", "Phone numbers aren't available in this country yet.");
-    let trial: { verifiedPhone: string } | undefined;
-    if (business.deploymentMode === "cloud" && (!billing || !isPaidSubscription(billing.plan, billing.state))) {
-      // Without a paid plan, a number is a free trial: during onboarding, with a
-      // verified phone in a trial country, once per business.
-      if (purpose !== "onboarding") throw refused("dedicated_number_requires_paid_plan");
-      if (!verified) throw refused("phone_verification_required");
-      if (!(trialCountries() as string[]).includes(verified.countryCode)) throw refused("dedicated_number_requires_paid_plan");
-      const used = await tx.select({ id: numberTrials.id }).from(numberTrials).where(and(eq(numberTrials.businessId, input.businessId), ne(numberTrials.status, "failed"))).limit(1);
-      if (used.length) throw refused("trial_already_used");
-      trial = { verifiedPhone: verified.phone };
-    }
-    // Hosted businesses text from the shared sender; a self-hosted one texts from this number.
-    return { market: resolveBusinessNumberMarket({ selection: requested ? { ...input.selection, countryCode: requested } : input.selection, timezone: business.timezone }), trial, countryFixed: Boolean(verified), smsRequired: business.deploymentMode !== "cloud" };
-  });
+/** verifiedPhone for a worker transaction, which can't read users' phones. */
+async function apiVerifiedPhone(tx: DatabaseTransaction, input: { userId: string; businessId: string }): Promise<{ phone: string; countryCode: string } | null> {
+  const row = (await tx.execute<{ phone: string; country_code: string }>(sql`select phone, country_code from app.resolve_api_verified_phone(${input.businessId}::uuid, ${input.userId}::uuid)`)).rows[0];
+  return row ? { phone: row.phone, countryCode: row.country_code.toUpperCase() } : null;
+}
+
+/** What a business may pick a number for now, and where to search. */
+export type NumberEligibility = { market: BusinessNumberMarket; trial: { verifiedPhone: string } | undefined; countryFixed: boolean; smsRequired: boolean };
+
+/**
+ * Checks that the business may pick a number for this purpose now, as the
+ * person picking: the onboarding stage, the one replacement, and the paid-plan
+ * rule, under which a cloud business without a paid plan gets a free trial
+ * number during onboarding when this person verified a phone in a trial
+ * country. Throws the claim refusals the dashboard shows. The API runs in a
+ * worker transaction and skips the onboarding stage order.
+ */
+export async function numberEligibilityInTransaction(tx: DatabaseTransaction, input: { userId: string; businessId: string; purpose: NumberClaimPurpose; selection?: Partial<NumberSelection> | undefined; via: "dashboard" | "api" }): Promise<NumberEligibility> {
+  const { purpose } = input;
+  const business = (await tx.select({ stage: businesses.onboardingStage, timezone: businesses.timezone, deploymentMode: businesses.deploymentMode, replacementUsedAt: businesses.phoneNumberReplacementUsedAt }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1))[0];
+  const billing = (await tx.select({ plan: billingAccounts.plan, state: billingAccounts.subscriptionState }).from(billingAccounts).where(eq(billingAccounts.businessId, input.businessId)).limit(1))[0];
+  if (!business) throw numberClaimError(404, "not_found", "Workspace not found.");
+  const onboardingStage = normalizeOnboardingStage(business.stage);
+  if (input.via === "dashboard" && purpose === "onboarding" && !["phone_number", "attribution", "complete"].includes(onboardingStage)) throw refused("invalid_onboarding_stage");
+  if (purpose === "replacement") {
+    if (business.replacementUsedAt) throw refused("replacement_already_used");
+    const active = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"), isNull(phoneNumbers.reclaimScheduledAt))).limit(1);
+    if (!active.length) throw refused("active_number_required");
+  }
+  const verified = input.via === "dashboard" ? await verifiedPhone(tx, input) : await apiVerifiedPhone(tx, input);
+  // The verified phone's country decides the number's country.
+  const requested = (verified?.countryCode ?? input.selection?.countryCode)?.trim().toUpperCase();
+  if (requested && !isNumberCountry(requested)) throw numberClaimError(400, "unsupported_country", "Phone numbers aren't available in this country yet.");
+  let trial: { verifiedPhone: string } | undefined;
+  if (business.deploymentMode === "cloud" && (!billing || !isPaidSubscription(billing.plan, billing.state))) {
+    // Without a paid plan, a number is a free trial: during onboarding, with a
+    // verified phone in a trial country, once per business.
+    if (purpose !== "onboarding") throw refused("dedicated_number_requires_paid_plan");
+    if (!verified) throw refused("phone_verification_required");
+    if (!(trialCountries() as string[]).includes(verified.countryCode)) throw refused("dedicated_number_requires_paid_plan");
+    const used = await tx.select({ id: numberTrials.id }).from(numberTrials).where(and(eq(numberTrials.businessId, input.businessId), ne(numberTrials.status, "failed"))).limit(1);
+    if (used.length) throw refused("trial_already_used");
+    trial = { verifiedPhone: verified.phone };
+  }
+  // Hosted businesses text from the shared sender; a self-hosted one texts from this number.
+  return { market: resolveBusinessNumberMarket({ selection: requested ? { ...input.selection, countryCode: requested } : input.selection, timezone: business.timezone }), trial, countryFixed: Boolean(verified), smsRequired: business.deploymentMode !== "cloud" };
+}
+
+/** Searches the provider where the business may pick a number and signs an offer for each, for this person and business only. */
+export async function offerBusinessNumbers(input: { userId: string; businessId: string; purpose: NumberClaimPurpose; eligibility: NumberEligibility; selection?: Partial<NumberSelection> | undefined; limit?: number | undefined; claimTokenSecret: string }, provider: NumberInventoryProvider) {
+  const { market, trial, smsRequired } = input.eligibility;
   const countryCode = market.countryCode;
   if (!isNumberCountry(countryCode)) throw numberClaimError(400, "unsupported_country", "Phone numbers aren't available in this country yet.");
   // LobbyStack's UK and Australian registrations cover mobile numbers; local
@@ -120,17 +144,28 @@ export async function searchBusinessNumberInventory(context: DomainContext, inpu
   const kind: NumberSelection["kind"] = countryCode === "GB" || countryCode === "AU" ? "mobile" : countryCode === "NZ" ? "local" : input.selection?.kind ?? "local";
   const selection: NumberSelection = { countryCode, kind, ...(input.selection?.areaCode ? { areaCode: input.selection.areaCode.replace(/\D/g, "") } : {}), ...(input.selection?.city ? { city: input.selection.city.trim() } : {}), ...(input.selection?.regionCode ? { regionCode: input.selection.regionCode.trim() } : {}), ...(input.selection?.postalCode ? { postalCode: input.selection.postalCode.trim() } : {}) };
   const limit = Math.max(1, Math.min(20, Math.trunc(input.limit ?? 10)));
-  const numbers = (await provider.listAvailablePhoneNumbers({ ...selection, limit, ...(smsRequired ? { sms: true } : {}) })).filter(number => number.capabilities.voice && (!smsRequired || number.capabilities.sms)).slice(0, limit).map(number => {
+  const exp = Date.now() + offerLifetimeMs;
+  return (await provider.listAvailablePhoneNumbers({ ...selection, limit, ...(smsRequired ? { sms: true } : {}) })).filter(number => number.capabilities.voice && (!smsRequired || number.capabilities.sms)).slice(0, limit).map(number => {
     const offered: NumberSelection = { ...selection, sms: number.capabilities.sms, ...(trial ? { trial: true, verifiedPhone: trial.verifiedPhone } : {}) };
-    return { ...number, claimToken: issueOffer({ v: 1, purpose, businessId: input.businessId, userId: input.userId, e164: number.phoneE164, countryCode: number.countryCode, kind, capabilities: { sms: number.capabilities.sms, voice: true }, selection: offered, exp: Date.now() + 5 * 60_000 }, input.claimTokenSecret) };
+    return { ...number, kind, trial: Boolean(trial), claimToken: issueOffer({ v: 1, purpose: input.purpose, businessId: input.businessId, userId: input.userId, e164: number.phoneE164, countryCode: number.countryCode, kind, capabilities: { sms: number.capabilities.sms, voice: true }, selection: offered, exp }, input.claimTokenSecret), expiresAt: new Date(exp) };
   });
+}
+
+export async function searchBusinessNumberInventory(context: DomainContext, input: { userId: string; businessId: string; purpose?: NumberClaimPurpose; selection?: Partial<NumberSelection>; limit?: number; claimTokenSecret: string }, provider: NumberInventoryProvider) {
+  const purpose = input.purpose ?? "onboarding";
+  const eligibility = await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
+    await requireBusinessAdmin(tx, input);
+    return await numberEligibilityInTransaction(tx, { userId: input.userId, businessId: input.businessId, purpose, selection: input.selection, via: "dashboard" });
+  });
+  const numbers = (await offerBusinessNumbers({ userId: input.userId, businessId: input.businessId, purpose, eligibility, selection: input.selection, limit: input.limit, claimTokenSecret: input.claimTokenSecret }, provider))
+    .map(({ kind: _kind, trial: _trial, expiresAt: _expiresAt, ...number }) => number);
   // countryFixed: the verified phone picked the country, so the chooser shouldn't offer others.
-  return { market, numbers, trial: Boolean(trial), countryFixed };
+  return { market: eligibility.market, numbers, trial: Boolean(eligibility.trial), countryFixed: eligibility.countryFixed };
 }
 
 /** The signed-in user's verified phone and the country they picked for it, or null. */
 export async function reserveOnboardingNumberClaim(context: DomainContext, input: { userId: string; businessId: string; claimToken: string; claimTokenSecret: string; idempotencyKey: string; ipHash?: string | null }): Promise<string> {
-  const offer = verifyOffer(input.claimToken, input.claimTokenSecret);
+  const offer = readNumberOffer(input.claimToken, input.claimTokenSecret);
   if (offer.purpose !== "onboarding" || offer.businessId !== input.businessId || offer.userId !== input.userId) throw numberClaimError(400, "number_offer_invalid", "Number claim token does not belong to this onboarding flow.");
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
@@ -146,7 +181,7 @@ export async function reserveOnboardingNumberClaim(context: DomainContext, input
 }
 
 export async function reserveReplacementNumberClaim(context: DomainContext, input: { userId: string; businessId: string; claimToken: string; claimTokenSecret: string; idempotencyKey: string }): Promise<string> {
-  const offer = verifyOffer(input.claimToken, input.claimTokenSecret);
+  const offer = readNumberOffer(input.claimToken, input.claimTokenSecret);
   if (offer.purpose !== "replacement" || offer.businessId !== input.businessId || offer.userId !== input.userId) throw numberClaimError(400, "number_offer_invalid", "Number claim token does not belong to this replacement flow.");
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
@@ -157,6 +192,66 @@ export async function reserveReplacementNumberClaim(context: DomainContext, inpu
     await enqueueOutbox(tx, { topic: "phoneNumber.provision", businessId: input.businessId, aggregateType: "number_claim", aggregateId: claimId, dedupeKey: `phone-claim:${claimId}:provision`, payload: { claimId } });
     return claimId;
   }).catch((error: unknown) => { throw claimRefusal(error) ?? error; });
+}
+
+/** The lock every number claim for the business takes, so claims and releases take turns. Keyed as the claim functions key it. */
+export async function lockBusinessNumberClaims(tx: DatabaseTransaction, businessId: string): Promise<void> {
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended('phone-claim:' || ${businessId}::uuid::text, 0))`);
+}
+
+/**
+ * Fails the business's claims that no worker will finish, by the ages the
+ * claim functions apply before a new claim: a reservation not taken up within
+ * 15 minutes, and provisioning with no progress for 30. The worker skips a
+ * failed claim, so none is bought late. Then does what failNumberProvisioning
+ * does after a failed purchase: a new number's business goes back to picking
+ * one (its trial isn't used up), and a replacement frees its reservation.
+ */
+export async function expireAbandonedNumberClaimsInTransaction(tx: DatabaseTransaction, businessId: string): Promise<void> {
+  const claims = onboardingNumberClaimEvents;
+  const abandoned = or(and(eq(claims.status, "reserved"), lte(claims.reservedAt, sql`now() - interval '15 minutes'`)), and(eq(claims.status, "provisioning"), lte(claims.updatedAt, sql`now() - interval '30 minutes'`)));
+  const expired: Array<{ id: string; purpose: string }> = [];
+  for (const [purpose, message] of [["onboarding", "Number claim reservation expired."], ["replacement", "Number replacement reservation expired."]] as const) {
+    expired.push(...await tx.update(claims)
+      .set({ status: "failed", completedAt: sql`now()`, lastError: sql`CASE WHEN ${claims.status} = 'reserved' THEN ${message}::text ELSE 'Number provisioning stalled.' END`, updatedAt: sql`now()` })
+      .where(and(eq(claims.businessId, businessId), eq(claims.purpose, purpose), abandoned))
+      .returning({ id: claims.id, purpose: claims.purpose }));
+  }
+  const onboarding = expired.filter((claim) => claim.purpose === "onboarding").map((claim) => claim.id);
+  if (onboarding.length) {
+    await tx.update(businesses).set({ onboardingStage: "phone_number", updatedAt: new Date() }).where(and(eq(businesses.id, businessId), eq(businesses.onboardingStage, "phone_number_claiming")));
+    await tx.update(numberTrials).set({ status: "failed", updatedAt: new Date() }).where(and(eq(numberTrials.businessId, businessId), eq(numberTrials.status, "reserved"), inArray(numberTrials.claimId, onboarding)));
+  }
+  for (const claim of expired.filter((claim) => claim.purpose === "replacement")) {
+    await tx.update(businesses).set({ phoneNumberReplacementReservedAt: null, updatedAt: new Date() }).where(and(eq(businesses.id, businessId), sql`${businesses.phoneNumberReplacementReservedAt} = (SELECT reserved_at FROM onboarding_number_claim_events WHERE id = ${claim.id}::uuid)`));
+  }
+}
+
+/**
+ * Reserves a number for an API caller and queues its purchase, inside the
+ * caller's worker transaction, through app.reserve_api_number_claim: the
+ * dashboard's claim rules, trial numbers and paid-plan rule included, without
+ * the onboarding stage order. The caller has checked the offer. A platform
+ * key acts for many businesses as one account, so its claim limits count the
+ * business's claims; a trial is still once per person and phone.
+ *
+ * The dashboard's once per network in 30 days doesn't apply: integrations
+ * such as Zapier, Make or a partner's backend claim for many customers from
+ * the same addresses, so after one trial the rest would be refused. The
+ * function gets no network hash, and the trial records none.
+ */
+export async function reserveApiNumberClaimInTransaction(tx: DatabaseTransaction, input: { businessId: string; userId: string; offer: NumberOffer; claimToken: string; replacingPhoneNumberId: string | null; quotaByBusiness: boolean; requestKey: string }): Promise<string> {
+  const tokenHash = createHash("sha256").update(input.claimToken).digest("hex");
+  let result;
+  try {
+    result = await tx.execute(sql`SELECT app.reserve_api_number_claim(${input.businessId}::uuid, ${input.userId}::uuid, ${input.offer.purpose}::text, ${input.replacingPhoneNumberId}::uuid, ${input.offer.e164}::text, ${JSON.stringify(input.offer.selection)}::jsonb, ${tokenHash}::text, ${input.requestKey}::text, NULL::text, ${input.quotaByBusiness}::boolean) AS id`);
+  } catch (error) {
+    throw claimRefusal(error) ?? error;
+  }
+  const claimId = String((result.rows[0] as { id?: unknown } | undefined)?.id ?? "");
+  if (!claimId) throw new Error("Number claim could not be reserved.");
+  await enqueueOutbox(tx, { topic: "phoneNumber.provision", businessId: input.businessId, aggregateType: "number_claim", aggregateId: claimId, dedupeKey: `phone-claim:${claimId}:provision`, payload: { claimId } });
+  return claimId;
 }
 
 export async function getOnboardingNumberClaim(context: DomainContext, input: { userId: string; businessId: string; claimId: string }) {
@@ -208,7 +303,8 @@ export async function failNumberProvisioning(context: DomainContext, input: { bu
     const claim = (await tx.update(onboardingNumberClaimEvents).set({ status: input.unavailable ? "unavailable" : "failed", lastError: input.unavailable ? "The selected number is no longer available." : "Number provisioning failed.", completedAt: new Date(), updatedAt: new Date() }).where(and(eq(onboardingNumberClaimEvents.id, input.claimId), eq(onboardingNumberClaimEvents.businessId, input.businessId))).returning({ purpose: onboardingNumberClaimEvents.purpose }))[0];
     if (claim?.purpose === "replacement") await tx.update(businesses).set({ phoneNumberReplacementReservedAt: null, updatedAt: new Date() }).where(and(eq(businesses.id, input.businessId), sql`${businesses.phoneNumberReplacementReservedAt} = (SELECT reserved_at FROM onboarding_number_claim_events WHERE id = ${input.claimId}::uuid)`));
     else if (claim) {
-      await tx.update(businesses).set({ onboardingStage: sql`CASE WHEN ${businesses.onboardingStage} IN ('attribution', 'complete') THEN ${businesses.onboardingStage} ELSE 'phone_number' END`, updatedAt: new Date() }).where(eq(businesses.id, input.businessId));
+      // Back to picking a number, from claiming one only: an API claim leaves a business on an earlier step where it is.
+      await tx.update(businesses).set({ onboardingStage: "phone_number", updatedAt: new Date() }).where(and(eq(businesses.id, input.businessId), eq(businesses.onboardingStage, "phone_number_claiming")));
       await failNumberTrialInTransaction(tx, { businessId: input.businessId, claimId: input.claimId });
     }
   });

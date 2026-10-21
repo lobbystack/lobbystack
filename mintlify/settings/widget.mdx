@@ -5,7 +5,7 @@ sidebarTitle: "Website widget"
 contentType: "How-to"
 ---
 
-The **Settings** > **Widget** page creates and manages keys for the receptionist widget. Visitors can chat, leave contact details, and start a browser call from the widget.
+The **Website widget** page in the sidebar creates and manages keys for the receptionist widget. Visitors can chat, leave contact details, and start a browser call from the widget.
 
 <Note>
   Website chat is restricted and isn't part of the hosted plans. New widget keys are off by default. On a self-hosted deployment, set `WIDGET_KEY_ISSUANCE_ENABLED=true` to create them. Existing keys keep working.
@@ -14,8 +14,8 @@ The **Settings** > **Widget** page creates and manages keys for the receptionist
 ## Configure the widget
 
 <Steps>
-  <Step title="Open Widget settings">
-    Go to **Settings** > **Widget**.
+  <Step title="Open the widget page">
+    Select **Website widget** in the sidebar, then **Add a widget**. To change an existing widget, select **Edit** on its card.
   </Step>
   <Step title="Configure its appearance">
     Choose the color, position, title, subtitle, greeting, and language behavior.
@@ -23,11 +23,11 @@ The **Settings** > **Widget** page creates and manages keys for the receptionist
   <Step title="Configure lead capture">
     Enable the lead form, choose required contact fields, and decide whether it appears before chat.
   </Step>
-  <Step title="Set allowed websites">
-    Enter each exact public origin that can embed the widget, such as `https://www.example.com`.
+  <Step title="List your websites">
+    In **Websites**, enter each address where the chat should appear, such as `https://www.example.com`. Separate addresses with commas.
   </Step>
-  <Step title="Copy the installation snippet">
-    Copy the generated loader snippet and add it before the closing `</body>` tag on your website.
+  <Step title="Add the code to your website">
+    Select **Copy code** and paste it before the closing `</body>` tag on your website.
   </Step>
 </Steps>
 
@@ -37,9 +37,26 @@ LobbyStack signs widget sessions and checks the visitor's parent origin against 
 
 Use an HTTPS website in production. Keep `WIDGET_SESSION_SECRET` and other signing credentials on the server.
 
-## Manage widget keys
+## Live chat with your team
 
-Each key has its own origin allowlist and configuration. You can edit an active key, pause it temporarily, or revoke it permanently. Revoking a key stops every embed that uses it.
+You can let someone from your team join a website chat. Turn on **Let visitors chat with your team** on a widget. It's off until you turn it on.
+
+During your opening hours, or at any time if you haven't set any, a visitor who asks for a person in the chat waits for your team:
+
+1. The receptionist tells the visitor it let the team know, and stops answering.
+2. Your team gets a **Visitor asking for a person** alert, and the chat shows **Visitor waiting** in [Messages](/dashboard/messages).
+3. The first person who replies or clicks **Join chat** has the chat. The visitor sees the first name on their profile.
+4. If nobody joins within 3 minutes, the receptionist takes the chat back and asks the visitor for their name and number, so someone can call them back.
+
+Turn the alert on or off for email and SMS on the **Website widget** page.
+
+Outside opening hours, on browser calls, and when live chat is off, the receptionist offers to take a message so your team can call the visitor back. Callback requests appear in the dashboard like other messages.
+
+Website chats and browser calls can't be transferred to a phone line, so the receptionist never says it's connecting the visitor. On browser calls, and in chats with live chat off, it also gives the visitor your business phone number when you've set a **Default transfer number**. The visitor can call that number and ask for a person. The receptionist follows your transfer rule: if transfers are only for urgent issues, it gives the number for urgent matters, and if transfers are off, it gives no number.
+
+## Manage your widgets
+
+Each widget has its own websites and settings. From a widget's card, you can edit it, pause it, or remove it. Removing a widget stops the chat on every website that uses it, and you can't undo it.
 
 ## Verify the installation
 

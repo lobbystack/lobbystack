@@ -1,5 +1,4 @@
 {
-  "appName": "LobbyStack",
   "accessibility": {
     "close": "Fermer",
     "toggleSidebar": "Afficher ou masquer la barre latérale",
@@ -73,7 +72,7 @@
     "title": "Envoyer un commentaire",
     "description": "Dites-nous ce qui améliorerait ce tableau de bord.",
     "label": "Message de feedback",
-    "placeholder": "Une idée pour améliorer LobbyStack ? Dites-le à l’équipe.",
+    "placeholder": "Une idée pour améliorer {{appName}} ? Dites-le à l’équipe.",
     "characterCount": "{{count}} / {{max}} caractères",
     "helpText": "Besoin d’aide ?",
     "helpCenter": "Centre d’aide",
@@ -127,7 +126,7 @@
       "microphoneNotFound": "Aucun microphone n’a été trouvé sur cet appareil.",
       "microphoneInUse": "Le microphone est déjà utilisé par une autre application.",
       "gatewayTimeout": "L’appel a mis trop de temps à se connecter.",
-      "gatewayUnreachable": "Cette page ne peut pas joindre LobbyStack pour lancer l’appel.",
+      "gatewayUnreachable": "Cette page ne peut pas joindre {{appName}} pour lancer l’appel.",
       "connectionDropped": "La connexion vocale a été interrompue.",
       "browserNoMicrophone": "Ce navigateur ne prend pas en charge les appels avec microphone.",
       "browserNoWebRtc": "Ce navigateur ne prend pas en charge les appels vocaux en direct.",

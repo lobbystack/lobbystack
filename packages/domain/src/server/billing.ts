@@ -1,7 +1,7 @@
 import { and, desc, eq, gt, inArray, like, lt, or, sql } from "drizzle-orm";
 
 import { billingAccounts, billingCheckoutRequests, billingTransactions, billingUsageEvents, businesses, enqueueOutbox, providerEvents, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { billingErrorCodes, billingPlanCatalog, DEFAULT_WEB_CALL_MAX_DURATION_MS, isPaidSubscription, MAX_WEB_CALL_MAX_DURATION_MS, type BillingPlanSlug } from "@lobbystack/shared";
+import { billingErrorCodes, billingPlanCatalog, DEFAULT_WEB_CALL_MAX_DURATION_MS, isPaidSubscription, liveSubscriptionStates, MAX_WEB_CALL_MAX_DURATION_MS, type BillingPlanSlug } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
 import type { DomainContext } from "./context";
@@ -9,7 +9,7 @@ import { recordAffiliateCommissionInTransaction } from "./affiliates";
 import { keepBusinessNumbersInTransaction, queuePlanCancelNoticeInTransaction, scheduleNumberReleaseInTransaction } from "./numberTrials";
 import { recordProductEventInTransaction } from "./productEvents";
 import { requireBusinessAdmin } from "../authz";
-import { correctUsageInTransaction, enqueueUsageSyncInTransaction, getUsageStatusInTransaction, getVoiceSecondsLeftInTransaction, loadBillingContext, reserveUsageInTransaction } from "./usage";
+import { correctUsageInTransaction, enqueueUsageSyncInTransaction, getUsageStatusInTransaction, getVoiceSecondsLeftInTransaction, loadBillingContext, readUsageStatusInTransaction, readVoiceSecondsLeftInTransaction, reserveUsageInTransaction } from "./usage";
 
 export type BillingCheckoutTarget = "starter" | "pro";
 export type BillingInterval = "monthly" | "annual";
@@ -26,12 +26,8 @@ export function normalizeWebCallMaxDurationMs(value: number | undefined): number
   return Math.min(Math.floor(value), MAX_WEB_CALL_MAX_DURATION_MS);
 }
 
-async function loadWebVoiceBillingAllowance(
-  tx: DatabaseTransaction,
-  input: { businessId: string; maxDurationMs?: number },
-): Promise<WebVoiceBillingAllowance> {
-  const { plan, seconds } = await getVoiceSecondsLeftInTransaction(tx, { businessId: input.businessId });
-  const maxDurationMs = Math.floor(Math.min(normalizeWebCallMaxDurationMs(input.maxDurationMs), seconds * 1_000));
+function webVoiceBillingAllowance({ plan, seconds }: { plan: BillingPlanSlug; seconds: number }, requestedMs: number | undefined): WebVoiceBillingAllowance {
+  const maxDurationMs = Math.floor(Math.min(normalizeWebCallMaxDurationMs(requestedMs), seconds * 1_000));
   return {
     allowed: maxDurationMs >= 1,
     errorCode: maxDurationMs >= 1 ? null : billingErrorCodes.voiceLimitReached,
@@ -44,14 +40,15 @@ export async function getWebVoiceBillingAllowance(
   context: DomainContext,
   input: { businessId: string; maxDurationMs?: number },
 ): Promise<WebVoiceBillingAllowance> {
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => await loadWebVoiceBillingAllowance(tx, input));
+  // Decides whether to offer a call without the usage lock; the call's reservation counts again.
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => webVoiceBillingAllowance(await readVoiceSecondsLeftInTransaction(tx, { businessId: input.businessId }), input.maxDurationMs));
 }
 
 export async function reserveWebVoiceUsageInTransaction(
   tx: DatabaseTransaction,
   input: { businessId: string; callId: string; maxDurationMs?: number },
 ): Promise<WebVoiceBillingAllowance> {
-  const allowance = await loadWebVoiceBillingAllowance(tx, input);
+  const allowance = webVoiceBillingAllowance(await getVoiceSecondsLeftInTransaction(tx, { businessId: input.businessId }), input.maxDurationMs);
   if (!allowance.allowed) return allowance;
   if (allowance.plan === "self_host") return allowance;
   const reservation = await reserveUsageInTransaction(tx, { businessId: input.businessId, usageKind: "voice_seconds", sourceKey: `voice:${input.callId}`, quantity: allowance.maxDurationMs / 1_000 });
@@ -82,7 +79,8 @@ export async function getWidgetChatAllowance(
   input: { businessId: string },
 ): Promise<WidgetChatBillingAllowance> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const status = await getUsageStatusInTransaction(tx, { businessId: input.businessId });
+    // Decides whether to offer the chat without writing; each chat's reservation counts again.
+    const status = await readUsageStatusInTransaction(tx, { businessId: input.businessId });
     const entitlement = billingPlanCatalog[status.plan];
     if (entitlement.chatAiTokensIncluded === null || entitlement.overagesBillable) {
       return { allowed: true, errorCode: null, plan: status.plan };
@@ -121,44 +119,125 @@ export async function createBillingCheckoutRequest(
 ): Promise<string> {
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    // Two tabs asking at once would both see no open checkout without this.
-    await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`billing-checkout:${input.businessId}`}, 0))`);
-    const account = (await tx.select({ plan: billingAccounts.plan, subscriptionState: billingAccounts.subscriptionState }).from(billingAccounts).where(eq(billingAccounts.businessId, input.businessId)).limit(1))[0];
-    if (isPaidSubscription(account?.plan, account?.subscriptionState)) {
-      throw Object.assign(new Error("This workspace already has a paid plan. Change it from Manage subscription."), { status: 409, code: billingErrorCodes.subscriptionActive });
-    }
-    const open = (await tx.select({ id: billingCheckoutRequests.id, requestedByUserId: billingCheckoutRequests.requestedByUserId, target: billingCheckoutRequests.target, billingInterval: billingCheckoutRequests.billingInterval })
-      .from(billingCheckoutRequests)
-      .where(and(eq(billingCheckoutRequests.businessId, input.businessId), inArray(billingCheckoutRequests.status, ["pending", "processing", "ready"]), gt(billingCheckoutRequests.createdAt, new Date(Date.now() - openCheckoutWindowMs))))
-      .orderBy(desc(billingCheckoutRequests.createdAt))
-      .limit(1))[0];
-    if (open) {
-      if (open.requestedByUserId !== input.userId) throw Object.assign(new Error("A checkout is already open for this workspace."), { status: 409, code: billingErrorCodes.checkoutInProgress });
-      if (open.target === input.target && open.billingInterval === input.billingInterval) return open.id;
-      // The same person picking another plan, such as after Polar's back arrow, replaces their own checkout.
-      // The old Polar session stays open, but Polar allows one active subscription per customer
-      // (keep "Allow multiple subscriptions" off), so paying in both tabs can't start two.
-      await tx.update(billingCheckoutRequests).set({ status: "superseded", updatedAt: new Date() }).where(and(eq(billingCheckoutRequests.id, open.id), eq(billingCheckoutRequests.businessId, input.businessId)));
-    }
-    await tx.insert(billingAccounts).values({ businessId: input.businessId, billingKey: `business:${input.businessId}` }).onConflictDoNothing({ target: billingAccounts.businessId });
-    const [request] = await tx.insert(billingCheckoutRequests).values({
-      businessId: input.businessId,
-      requestedByUserId: input.userId,
-      target: input.target,
-      billingInterval: input.billingInterval,
-      status: "pending",
-    }).returning({ id: billingCheckoutRequests.id });
-    if (!request) throw new Error("Billing checkout request could not be created.");
-    await enqueueOutbox(tx, {
-      topic: "billing.createCheckout",
-      businessId: input.businessId,
-      aggregateType: "billing_checkout_request",
-      aggregateId: request.id,
-      dedupeKey: `billing-checkout:${request.id}`,
-      payload: { requestId: request.id },
-    });
-    return request.id;
+    return await createBillingCheckoutRequestInTransaction(tx, input);
   });
+}
+
+/**
+ * Queues a Polar checkout for a plan in the name of the person asking, whose
+ * email Polar fills in. A business that already pays, or is on a managed plan
+ * (the operator bills it, so a Polar subscription would bill it twice), is
+ * refused. Callers authorize first.
+ */
+export async function createBillingCheckoutRequestInTransaction(
+  tx: DatabaseTransaction,
+  input: { userId: string; businessId: string; target: BillingCheckoutTarget; billingInterval: BillingInterval },
+): Promise<string> {
+  // Two tabs asking at once would both see no open checkout without this.
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`billing-checkout:${input.businessId}`}, 0))`);
+  // The lock a managed plan takes, so a checkout and a managed plan can't both start at once.
+  await lockBillingAccount(tx, input.businessId);
+  const account = (await tx.select({ source: billingAccounts.source, plan: billingAccounts.plan, subscriptionState: billingAccounts.subscriptionState }).from(billingAccounts).where(eq(billingAccounts.businessId, input.businessId)).limit(1))[0];
+  if (isManagedBillingAccount(account)) throw Object.assign(new Error("This business is on a managed plan, so LobbyStack bills it directly."), { status: 409 });
+  if (isPaidSubscription(account?.plan, account?.subscriptionState)) {
+    throw Object.assign(new Error("This workspace already has a paid plan. Change it from Manage subscription."), { status: 409, code: billingErrorCodes.subscriptionActive });
+  }
+  const open = (await tx.select({ id: billingCheckoutRequests.id, requestedByUserId: billingCheckoutRequests.requestedByUserId, target: billingCheckoutRequests.target, billingInterval: billingCheckoutRequests.billingInterval })
+    .from(billingCheckoutRequests)
+    .where(and(eq(billingCheckoutRequests.businessId, input.businessId), inArray(billingCheckoutRequests.status, ["pending", "processing", "ready"]), gt(billingCheckoutRequests.createdAt, new Date(Date.now() - openCheckoutWindowMs))))
+    .orderBy(desc(billingCheckoutRequests.createdAt))
+    .limit(1))[0];
+  if (open) {
+    if (open.requestedByUserId !== input.userId) throw Object.assign(new Error("A checkout is already open for this workspace."), { status: 409, code: billingErrorCodes.checkoutInProgress });
+    if (open.target === input.target && open.billingInterval === input.billingInterval) return open.id;
+    // The same person picking another plan, such as after Polar's back arrow, replaces their own checkout.
+    // The old Polar session stays open, but Polar allows one active subscription per customer
+    // (keep "Allow multiple subscriptions" off), so paying in both tabs can't start two.
+    await tx.update(billingCheckoutRequests).set({ status: "superseded", updatedAt: new Date() }).where(and(eq(billingCheckoutRequests.id, open.id), eq(billingCheckoutRequests.businessId, input.businessId)));
+  }
+  await tx.insert(billingAccounts).values({ businessId: input.businessId, billingKey: `business:${input.businessId}` }).onConflictDoNothing({ target: billingAccounts.businessId });
+  const [request] = await tx.insert(billingCheckoutRequests).values({
+    businessId: input.businessId,
+    requestedByUserId: input.userId,
+    target: input.target,
+    billingInterval: input.billingInterval,
+    status: "pending",
+  }).returning({ id: billingCheckoutRequests.id });
+  if (!request) throw new Error("Billing checkout request could not be created.");
+  await enqueueOutbox(tx, {
+    topic: "billing.createCheckout",
+    businessId: input.businessId,
+    aggregateType: "billing_checkout_request",
+    aggregateId: request.id,
+    dedupeKey: `billing-checkout:${request.id}`,
+    payload: { requestId: request.id },
+  });
+  return request.id;
+}
+
+/**
+ * A billing account whose plan the LobbyStack operator runs outside Polar and
+ * bills directly. Polar events don't change it unless the business starts a
+ * live Polar subscription, which then takes over.
+ */
+export const MANAGED_BILLING_SOURCE = "managed";
+
+function isLiveSubscriptionState(state: string | null | undefined): boolean {
+  return (liveSubscriptionStates as readonly string[]).includes(state ?? "");
+}
+
+/** Whether a billing account is on a managed plan now. An ended managed plan keeps its source, for the finance export, but isn't live. */
+export function isManagedBillingAccount(account: { source?: string | null; subscriptionState: string | null } | null | undefined): boolean {
+  return account?.source === MANAGED_BILLING_SOURCE && isLiveSubscriptionState(account.subscriptionState);
+}
+
+/** Billing account changes take this lock, the same one Polar reconciliation takes, so the two can't interleave. */
+async function lockBillingAccount(tx: DatabaseTransaction, businessId: string): Promise<void> {
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`billing-reconcile:${businessId}`}, 0))`);
+}
+
+/**
+ * Puts a business on the enterprise plan outside Polar, which unlocks what a
+ * paid plan unlocks while the operator bills the business directly. A business
+ * with a live Polar subscription, for any product, is refused, so no one pays
+ * twice. A spending cap left from an earlier Starter or Pro plan is cleared,
+ * because on enterprise a cap leaves calls nothing to reserve. Callers check
+ * that an operator asked.
+ */
+export async function setManagedPlanInTransaction(tx: DatabaseTransaction, input: { businessId: string }): Promise<"set" | "unchanged" | "paid_through_polar"> {
+  await lockBillingAccount(tx, input.businessId);
+  const [account] = await tx.select({ source: billingAccounts.source, plan: billingAccounts.plan, subscriptionState: billingAccounts.subscriptionState, overageSpendingCapCents: billingAccounts.overageSpendingCapCents }).from(billingAccounts).where(eq(billingAccounts.businessId, input.businessId)).limit(1);
+  if (isManagedBillingAccount(account) && account?.plan === "enterprise" && account.overageSpendingCapCents === null) return "unchanged";
+  if (account && account.source !== MANAGED_BILLING_SOURCE && isLiveSubscriptionState(account.subscriptionState)) return "paid_through_polar";
+  const now = new Date();
+  const managed = { source: MANAGED_BILLING_SOURCE, plan: "enterprise", subscriptionState: "active", billingInterval: null, subscriptionId: null, currentPeriodStart: now, currentPeriodEnd: null, overageSpendingCapCents: null };
+  await tx.insert(billingAccounts).values({ businessId: input.businessId, billingKey: `business:${input.businessId}`, ...managed }).onConflictDoUpdate({ target: billingAccounts.businessId, set: { ...managed, updatedAt: now } });
+  // Checkouts Polar hasn't made a page for yet would sell a plan the operator now bills, so they stop here.
+  await tx.update(billingCheckoutRequests).set({ status: "canceled", error: "The business moved to a managed plan.", updatedAt: now }).where(and(eq(billingCheckoutRequests.businessId, input.businessId), inArray(billingCheckoutRequests.status, ["pending", "processing", "error"])));
+  // A managed plan is a paid plan: a trial number becomes the business's number, and a scheduled release is called off.
+  await keepBusinessNumbersInTransaction(tx, { businessId: input.businessId, now });
+  await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "billing_account", aggregateId: input.businessId, dedupeKey: `billing:${input.businessId}:managed:${now.getTime()}`, payload: { type: "billing.updated", entityId: input.businessId } });
+  return "set";
+}
+
+/**
+ * Ends a business's managed plan, which puts it on the free plan. The account
+ * keeps its managed source and enterprise plan, now canceled, so the finance
+ * export still shows the managed period and when it ended. False when the
+ * business has no managed plan. Callers check that an operator asked.
+ */
+export async function endManagedPlanInTransaction(tx: DatabaseTransaction, input: { businessId: string }): Promise<boolean> {
+  await lockBillingAccount(tx, input.businessId);
+  const now = new Date();
+  const ended = await tx.update(billingAccounts)
+    .set({ subscriptionState: "canceled", currentPeriodEnd: now, updatedAt: now })
+    .where(and(eq(billingAccounts.businessId, input.businessId), eq(billingAccounts.source, MANAGED_BILLING_SOURCE), inArray(billingAccounts.subscriptionState, [...liveSubscriptionStates])))
+    .returning({ id: billingAccounts.id });
+  if (!ended.length) return false;
+  // As when a paid plan ends: the numbers stay 30 more days, then go.
+  await scheduleNumberReleaseInTransaction(tx, { businessId: input.businessId, now });
+  await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "billing_account", aggregateId: input.businessId, dedupeKey: `billing:${input.businessId}:managed-ended:${now.getTime()}`, payload: { type: "billing.updated", entityId: input.businessId } });
+  return true;
 }
 
 export async function loadBillingCheckoutRequest(
@@ -278,21 +357,29 @@ export async function setOverageSpendingCap(
 ): Promise<{ overageSpendingCapCents: number | null; overageSpendCents: number; overageSpendingCapReached: boolean }> {
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    if (input.capCents !== null && (!Number.isSafeInteger(input.capCents) || input.capCents < 0)) {
-      throw new Error("Overage spending cap must be a non-negative whole number of cents.");
-    }
-    const current = await getUsageStatusInTransaction(tx, { businessId: input.businessId });
-    if (current.plan !== "starter" && current.plan !== "pro") {
-      throw new Error("Overage spending caps are available on Starter and Pro plans.");
-    }
-    const rows = await tx.update(billingAccounts)
-      .set({ overageSpendingCapCents: input.capCents, updatedAt: new Date() })
-      .where(eq(billingAccounts.businessId, input.businessId))
-      .returning({ id: billingAccounts.id });
-    if (!rows[0]) throw new Error("A billing account is required to set an overage spending cap.");
-    const status = await getUsageStatusInTransaction(tx, { businessId: input.businessId });
-    return { overageSpendingCapCents: input.capCents, overageSpendCents: status.overageSpendCents, overageSpendingCapReached: status.overageSpendingCapReached };
+    return await setOverageSpendingCapInTransaction(tx, input);
   });
+}
+
+/** Sets or clears the cap on a Starter or Pro plan's overage spend this month. Callers authorize first. */
+export async function setOverageSpendingCapInTransaction(
+  tx: DatabaseTransaction,
+  input: { businessId: string; capCents: number | null },
+): Promise<{ overageSpendingCapCents: number | null; overageSpendCents: number; overageSpendingCapReached: boolean }> {
+  if (input.capCents !== null && (!Number.isSafeInteger(input.capCents) || input.capCents < 0)) {
+    throw new Error("Overage spending cap must be a non-negative whole number of cents.");
+  }
+  const current = await getUsageStatusInTransaction(tx, { businessId: input.businessId });
+  if (current.plan !== "starter" && current.plan !== "pro") {
+    throw new Error("Overage spending caps are available on Starter and Pro plans.");
+  }
+  const rows = await tx.update(billingAccounts)
+    .set({ overageSpendingCapCents: input.capCents, updatedAt: new Date() })
+    .where(eq(billingAccounts.businessId, input.businessId))
+    .returning({ id: billingAccounts.id });
+  if (!rows[0]) throw new Error("A billing account is required to set an overage spending cap.");
+  const status = await getUsageStatusInTransaction(tx, { businessId: input.businessId });
+  return { overageSpendingCapCents: input.capCents, overageSpendCents: status.overageSpendCents, overageSpendingCapReached: status.overageSpendingCapReached };
 }
 
 export async function reserveAlertSmsUsage(
@@ -484,6 +571,7 @@ export async function reconcileBillingProviderEvent(
       plan: billingAccounts.plan,
       subscriptionState: billingAccounts.subscriptionState,
       billingInterval: billingAccounts.billingInterval,
+      source: billingAccounts.source,
     }).from(billingAccounts).where(eq(billingAccounts.businessId, input.businessId)).limit(1))[0];
     const billingKey = stringField(transactionPayload, "billingKey", "externalCustomerId", "customerId") ?? stringField(payload, "billingKey", "externalCustomerId", "customerId") ?? stringField(customer, "id", "externalId") ?? existing?.billingKey;
     if (billingKey) {
@@ -503,7 +591,16 @@ export async function reconcileBillingProviderEvent(
       const stale = modifiedAt !== undefined && (await tx.select({ id: providerEvents.id }).from(providerEvents)
         .where(and(eq(providerEvents.businessId, input.businessId), eq(providerEvents.status, "processed"), sql`${providerEvents.payload}->>'subscriptionModifiedAt' > ${modifiedAt}`))
         .limit(1)).length > 0;
-      const subscriptionFields = stale ? {} : {
+      // An account whose plan the operator managed, now or before, changes only when the business
+      // starts a live Starter or Pro subscription in Polar, which then takes over. Every other event,
+      // such as a late cancellation of an older subscription or a product this deployment doesn't
+      // map to a plan, leaves the account as the operator set it: a live managed plan stays live,
+      // and an ended one keeps its enterprise plan from turning live again without a price.
+      const managedSource = existing?.source === MANAGED_BILLING_SOURCE;
+      const takesOver = managedSource && (plan === "starter" || plan === "pro") && isLiveSubscriptionState(subscriptionState);
+      const keepsManagedPlan = managedSource && !takesOver;
+      const subscriptionFields = stale || keepsManagedPlan ? {} : {
+        ...(takesOver ? { source: "polar" } : {}),
         ...(subscriptionId ? { subscriptionId } : {}),
         ...(plan ? { plan } : {}),
         ...(billingInterval ? { billingInterval } : {}),
@@ -511,7 +608,8 @@ export async function reconcileBillingProviderEvent(
         ...(currentPeriodStart ? { currentPeriodStart } : {}),
         ...(currentPeriodEnd ? { currentPeriodEnd } : {}),
       };
-      startedSubscription = stale ? null : detectSubscriptionStart(existing, {
+      // A takeover starts a Polar subscription even though the managed plan already counted as paid.
+      startedSubscription = stale || keepsManagedPlan ? null : detectSubscriptionStart(takesOver ? { plan: existing?.plan ?? null, subscriptionState: null } : existing, {
         plan: plan ?? existing?.plan ?? null,
         subscriptionState: subscriptionState ?? existing?.subscriptionState ?? null,
         billingInterval: billingInterval ?? existing?.billingInterval ?? null,
@@ -530,7 +628,8 @@ export async function reconcileBillingProviderEvent(
           updatedAt: new Date(),
         },
       });
-      if (!stale) {
+      // A managed plan the event left alone keeps its numbers as they are.
+      if (!stale && !keepsManagedPlan) {
         // A live paid plan keeps the business's numbers, including a trial number.
         // When a paid plan ends, the numbers stay 30 more days, then go.
         const wasPaid = isPaidSubscription(existing?.plan ?? null, existing?.subscriptionState ?? null);

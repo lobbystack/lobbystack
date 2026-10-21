@@ -1,9 +1,9 @@
-import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { getActiveOnboardingState, resolveOnboardingRoute } from "@lobbystack/domain";
-import { RootDocument, appMetadata } from "@/app/root-document";
+import { isWidgetKeyIssuanceEnabled } from "@lobbystack/shared";
+import { RootDocument } from "@/app/root-document";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { getSession } from "@/lib/auth";
 import { getAppDatabase } from "@/lib/api-helpers";
@@ -13,7 +13,7 @@ import { DASHBOARD_NAMESPACES } from "@/lib/route-namespaces";
 import "../globals.css";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = appMetadata;
+export { generateBrandingMetadata as generateMetadata } from "@/app/root-document";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const requestHeaders = await headers();
@@ -27,6 +27,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <RootDocument locale={locale} localeSource={source} namespaces={DASHBOARD_NAMESPACES}>
       <DashboardShell
         sidebarOpen={sidebarOpen}
+        widgetsEnabled={isWidgetKeyIssuanceEnabled(process.env)}
         user={{
           email: session.user.email ?? "",
           name: session.user.name ?? session.user.email ?? "",

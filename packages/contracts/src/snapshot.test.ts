@@ -10,6 +10,10 @@ describe("voice policy snapshot contract", () => {
     expect(parsed.appointmentChangePolicy).toEqual(policy);
     expect(parsed.transferPolicy.mode).toBe("on_urgent");
   });
+  it("keeps the keypad PIN mode, so calls ask for the caller's PIN", () => {
+    const policy = { enabled: true, allowCancel: true, allowReschedule: true, verificationMode: "passcode_required" };
+    expect(snapshotSchema.parse({ ...snapshot, appointmentChangePolicy: policy }).appointmentChangePolicy).toEqual(policy);
+  });
   it("keeps the booking mode so browser calls don't offer bookings the backend won't make", () => {
     expect(snapshotSchema.parse({ ...snapshot, bookingMode: "request" }).bookingMode).toBe("request");
   });

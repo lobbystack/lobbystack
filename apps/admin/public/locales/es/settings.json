@@ -23,78 +23,84 @@
   },
   "widget": {
     "title": "Widget del sitio web",
-    "description": "Inserte el widget de chat en su sitio web.",
+    "description": "Permita que los visitantes de su sitio web chateen con su recepcionista.",
     "created": {
-      "title": "Clave del widget creada",
-      "description": "Copie esta clave ahora. No volverá a verla.",
+      "title": "Su widget está listo",
+      "description": "Puede volver a copiar este código en cualquier momento desde la configuración del widget, más abajo.",
       "copy": "Copiar",
       "copied": "Copiado",
-      "copySnippet": "Copiar código de inserción",
-      "hint": "Agregue el código a cualquier página de un origen permitido. El widget se carga automáticamente.",
+      "copySnippet": "Copiar código",
+      "hint": "Pegue el código antes de la etiqueta </body> de su sitio web. El chat aparece en los sitios web que indicó.",
       "done": "Listo"
     },
     "create": {
-      "title": "Crear una clave de widget",
-      "description": "Cada clave pertenece a este espacio de trabajo y tiene su propia lista de orígenes permitidos.",
-      "action": "Crear clave de widget"
+      "title": "Agregar un widget",
+      "description": "Cada widget tiene su propio aspecto y su propia lista de sitios web.",
+      "action": "Crear widget"
     },
     "restricted": {
-      "title": "Los nuevos widgets del sitio web aún no están disponibles",
-      "description": "Todavía no emitimos nuevos widgets de chat para sitios web. Los widgets existentes siguen funcionando y aún puede editarlos o pausarlos abajo."
+      "title": "Todavía no puede agregar widgets",
+      "description": "El chat del sitio web está en acceso limitado. Sus widgets actuales siguen funcionando y puede editarlos o pausarlos."
     },
     "fields": {
-      "label": "Etiqueta",
+      "label": "Nombre",
       "labelPlaceholder": "Sitio web principal",
-      "origins": "Orígenes permitidos",
+      "origins": "Sitios web",
       "color": "Color de acento",
       "position": "Posición",
       "title": "Título",
       "titlePlaceholder": "Chatee con nosotros",
       "subtitle": "Subtítulo",
-      "subtitlePlaceholder": "Respondemos en pocos minutos",
-      "greeting": "Saludo",
-      "greetingPlaceholder": "Hola. ¿En qué podemos ayudarle?",
+      "subtitlePlaceholder": "Pregunte por horarios, precios o citas",
+      "greeting": "Primer mensaje",
+      "greetingPlaceholder": "Hola, ¿en qué podemos ayudarle hoy?",
       "localeOverride": "Idioma",
       "leadEnabled": "Pedir a los visitantes sus datos de contacto",
       "requireEmail": "Exigir correo electrónico",
-      "requirePhone": "Exigir teléfono",
-      "showBeforeChat": "Pedir antes del chat"
+      "requirePhone": "Exigir número de teléfono",
+      "showBeforeChat": "Preguntar antes de empezar el chat",
+      "liveChat": "Permitir que los visitantes chateen con su equipo",
+      "liveChatHint": "Cuando un visitante pide hablar con una persona durante el horario de atención, su equipo recibe una alerta y puede responder desde Mensajes. Si nadie se une en 3 minutos, la recepcionista ofrece tomar un mensaje."
     },
     "positions": {
       "bottomRight": "Abajo a la derecha",
-      "bottomLeft": "Abajo a la izquierda",
-      "bottomCenter": "Abajo al centro"
+      "bottomLeft": "Abajo a la izquierda"
     },
     "locales": {
-      "visitor": "Idioma del visitante",
+      "visitor": "Usar el idioma del visitante",
       "english": "Inglés",
       "french": "Francés",
       "spanish": "Español",
       "serbian": "Serbio"
     },
     "leadCapture": {
-      "title": "Formulario de contacto",
+      "title": "Datos de contacto",
       "enabled": "Activado"
     },
     "status": {
       "active": "Activo",
       "disabled": "En pausa",
-      "revoked": "Revocado"
+      "revoked": "Eliminado"
     },
     "keys": {
-      "title": "Claves del widget",
+      "title": "Sus widgets",
       "fallbackBusiness": "Espacio de trabajo activo",
       "refresh": "Actualizar",
-      "loading": "Cargando claves del widget...",
-      "unavailable": "Las claves del widget no están disponibles.",
-      "empty": "Aún no hay claves de widget.",
+      "loading": "Cargando sus widgets…",
+      "unavailable": "No pudimos cargar sus widgets. Actualice la página para intentarlo de nuevo.",
+      "empty": "Todavía no hay widgets",
       "untitled": "Widget sin nombre",
       "pause": "Pausar",
       "resume": "Reanudar",
-      "revoke": "Revocar",
-      "revokeConfirm": "¿Revocar esta clave de widget? Las inserciones existentes dejarán de funcionar.",
+      "revoke": "Eliminar",
+      "revokeConfirm": "¿Eliminar este widget? El chat desaparecerá de todos los sitios web que lo usan.",
       "save": "Guardar",
-      "lastUsed": "Último uso: {{date}}"
+      "saved": "Guardado",
+      "appearanceHint": "Los cambios de color y posición llegan a su sitio en unos dos minutos.",
+      "snippet": "Código para su sitio web",
+      "snippetCopied": "Código copiado",
+      "noSnippet": "No podemos mostrar el código de este widget antiguo. Agregue un widget nuevo para obtener un código que pueda copiar en cualquier momento.",
+      "lastUsed": "Última actividad: {{date}}"
     }
   },
   "billing": {
@@ -337,7 +343,7 @@
         },
         "forward": {
           "title": "Desvíe la línea de su negocio a este número",
-          "description": "Sus clientes siguen marcando el número que conocen. Su operador desvía esas llamadas a su número de LobbyStack.",
+          "description": "Sus clientes siguen marcando el número que conocen. Su operador desvía esas llamadas a su número de {{appName}}.",
           "action": "Guía de desvío de llamadas"
         },
         "transfer": {
@@ -426,7 +432,7 @@
     },
     "telemetry": {
       "label": "Compartir datos de telemetría",
-      "description": "Ayúdenos a mejorar LobbyStack compartiendo datos anónimos de uso y errores.",
+      "description": "Ayúdenos a mejorar {{appName}} compartiendo datos anónimos de uso y errores.",
       "saveFailed": "No pudimos guardar su preferencia de telemetría. Inténtelo de nuevo."
     }
   },
@@ -447,7 +453,7 @@
     "google": {
       "sheetTitle": "Google Calendar",
       "sheetDescription": "Conecte un Google Calendar y elija qué calendario recibe las reservas.",
-      "privacyNoticeText": "Al conectar Google Calendar, LobbyStack puede leer la disponibilidad de su calendario y crear, actualizar o eliminar citas en el calendario que seleccione.",
+      "privacyNoticeText": "Al conectar Google Calendar, {{appName}} puede leer la disponibilidad de su calendario y crear, actualizar o eliminar citas en el calendario que seleccione.",
       "privacyPolicyLinkText": "Política de privacidad",
       "staffLabel": "Miembro del equipo",
       "selectStaff": "Elija un miembro del equipo",
@@ -608,7 +614,8 @@
       "joinedOn": "Se unió el {{date}}",
       "invitedOn": "Invitado el {{date}}",
       "status": {
-        "pending": "Pendiente"
+        "pending": "Pendiente",
+        "handover": "Entrega el negocio"
       },
       "actions": {
         "moreOptions": "Más opciones",
@@ -816,9 +823,13 @@
         "title": "Nuevo mensaje del chat del sitio web",
         "description": "Cuando un visitante envía un mensaje desde el widget de su sitio web. Recibe como máximo una alerta por conversación al día."
       },
+      "liveChatRequest": {
+        "title": "Visitante que pide una persona",
+        "description": "Cuando un visitante de su sitio pide hablar con alguien de su equipo. Responda desde Mensajes en 3 minutos para unirse al chat."
+      },
       "webhookDisabled": {
         "title": "Endpoint de webhook desactivado",
-        "description": "Cuando LobbyStack deja de enviar eventos a un endpoint de webhook porque todas las entregas fallaron durante aproximadamente un día."
+        "description": "Cuando {{appName}} deja de enviar eventos a un endpoint de webhook porque todas las entregas fallaron durante aproximadamente un día."
       }
     },
     "systemIssues": {
@@ -872,7 +883,7 @@
   },
   "apiKeys": {
     "title": "Claves de API",
-    "description": "Use una clave para conectar su propio código u otra aplicación a la API de LobbyStack.",
+    "description": "Use una clave para conectar su propio código u otra aplicación a la API de {{appName}}.",
     "empty": "Aún no hay claves de API.",
     "neverUsed": "Nunca",
     "createdBy": "{{date}} por {{name}}",
@@ -909,28 +920,32 @@
     "revoke": {
       "action": "Revocar",
       "title": "¿Revocar esta clave de API?",
-      "description": "Todo lo que use {{name}} dejará de funcionar de inmediato. Esta acción no se puede deshacer. LobbyStack también desactiva los webhooks que creó esta clave.",
+      "description": "Todo lo que use {{name}} dejará de funcionar de inmediato. Esta acción no se puede deshacer. {{appName}} también desactiva los webhooks que creó esta clave.",
       "confirm": "Revocar clave",
       "cancel": "Cancelar",
       "done": "Clave de API revocada",
       "failed": "No pudimos revocar la clave. Inténtelo de nuevo."
     },
     "scopes": {
-      "business_read": "Leer los datos, el horario y los servicios del negocio",
-      "business_write": "Actualizar los datos y el horario del negocio",
+      "business_read": "Leer los datos, el horario, los servicios, y la configuración y las reglas de la recepcionista del negocio",
+      "business_write": "Actualizar los datos, el horario, los servicios, y la configuración y las reglas de la recepcionista del negocio, incluido el número al que se transfieren las llamadas",
       "calls_read": "Leer llamadas, resúmenes y transcripciones",
       "contacts_read": "Leer contactos",
       "contacts_write": "Crear y actualizar contactos",
       "appointments_read": "Leer citas y horarios disponibles",
       "appointments_write": "Reservar, cancelar y reprogramar citas",
       "messages_read": "Leer los mensajes que tomó la recepcionista",
-      "knowledge_write": "Agregar entradas de conocimiento y preguntas frecuentes",
+      "knowledge_read": "Leer entradas de conocimiento, preguntas frecuentes, sitios web y archivos",
+      "knowledge_write": "Agregar, editar y eliminar entradas de conocimiento, preguntas frecuentes, sitios web y archivos",
+      "billing_manage": "Ver el plan, fijar el límite de gasto e iniciar pagos",
+      "phone_numbers_manage": "Buscar, comprar, reemplazar y liberar números de teléfono",
+      "team_manage": "Invitar y quitar miembros del equipo, cambiar roles y entregar el negocio",
       "webhooks_manage": "Crear y eliminar endpoints de webhook"
     }
   },
   "webhooks": {
     "title": "Webhooks",
-    "description": "LobbyStack envía un HTTPS POST a su URL cuando ocurre algo, como una llamada finalizada o una nueva reserva. Cada solicitud está firmada para que pueda comprobar que proviene de nosotros.",
+    "description": "{{appName}} envía un HTTPS POST a su URL cuando ocurre algo, como una llamada finalizada o una nueva reserva. Cada solicitud está firmada para que pueda comprobar que proviene de nosotros.",
     "empty": "Aún no hay endpoints de webhook.",
     "enabledLabel": "Enviar eventos a este endpoint",
     "restricted": {
@@ -964,19 +979,19 @@
     "create": {
       "action": "Agregar endpoint",
       "title": "Agregar un endpoint de webhook",
-      "description": "Elija adónde envía LobbyStack los eventos y qué eventos envía.",
+      "description": "Elija adónde envía {{appName}} los eventos y qué eventos envía.",
       "submit": "Agregar endpoint"
     },
     "edit": {
       "action": "Editar",
       "title": "Editar endpoint de webhook",
-      "description": "Los cambios se aplican al próximo evento que envíe LobbyStack.",
+      "description": "Los cambios se aplican al próximo evento que envíe {{appName}}.",
       "submit": "Guardar"
     },
     "delete": {
       "action": "Eliminar",
       "title": "¿Eliminar este endpoint?",
-      "description": "LobbyStack dejará de enviar eventos a {{url}} y eliminará su registro de entregas.",
+      "description": "{{appName}} dejará de enviar eventos a {{url}} y eliminará su registro de entregas.",
       "confirm": "Eliminar endpoint",
       "done": "Endpoint eliminado"
     },
@@ -1023,8 +1038,8 @@
   },
   "connectedApps": {
     "title": "Aplicaciones conectadas",
-    "description": "Asistentes de IA como Claude o ChatGPT con los que alguien inició sesión en LobbyStack. Cada uno funciona solo para este negocio, con el acceso que se aprobó.",
-    "empty": "Aún no hay aplicaciones conectadas. Para conectar una, agregue LobbyStack en la configuración del asistente e inicie sesión.",
+    "description": "Asistentes de IA como Claude o ChatGPT con los que alguien inició sesión en {{appName}}. Cada uno funciona solo para este negocio, con el acceso que se aprobó.",
+    "empty": "Aún no hay aplicaciones conectadas. Para conectar una, agregue {{appName}} en la configuración del asistente e inicie sesión.",
     "neverUsed": "Nunca",
     "unnamed": "Aplicación sin nombre",
     "grantedBy": "{{date}} por {{name}}",

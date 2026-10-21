@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 
-import { getCachedBusinessSnapshot, getWebVoiceBillingAllowance, getWidgetChatAllowance, registerWidgetVisitor } from "@lobbystack/domain";
+import { getCachedBusinessSnapshot, getWebVoiceBillingAllowance, getWidgetChatAllowance } from "@lobbystack/domain";
 
 import { asApiResponse } from "@/lib/api-helpers";
 import { createWorkerDomainContext } from "@/lib/domain-context";
 import { resolveWidgetSessionAccess } from "@/lib/widget-access";
-import { requestIpHash, touchWidgetKeyLastUsed } from "@/lib/widget-keys";
+import { requestIpHash } from "@/lib/widget-keys";
 import { enforceWidgetRateLimits } from "@/lib/widget-policy";
 
 export const runtime = "nodejs";
@@ -17,14 +17,11 @@ export async function GET(request: Request) {
     if (!access.ok) return access.response;
     const { session } = access;
     const visitorId = session.visitorId ?? "";
-    const customerOrigin = session.origin ?? "";
     const rate = await enforceWidgetRateLimits({ businessId: session.businessId, widgetKeyId: session.widgetKeyId, ...(visitorId ? { visitorId } : {}), ...(requestIpHash(request) ? { ipHash: requestIpHash(request) } : {}), operation: "config" });
     if (!rate.allowed) return NextResponse.json({ error: "Rate limit reached.", code: rate.code }, { status: rate.status });
 
+    // The session request already saved the visitor and the key's last use.
     const context = createWorkerDomainContext();
-    if (visitorId) await registerWidgetVisitor(context, { businessId: session.businessId, visitorId, metadata: { userAgent: request.headers.get("user-agent") ?? undefined, ...(customerOrigin ? { pageUrl: customerOrigin } : {}) } });
-    await touchWidgetKeyLastUsed({ businessId: session.businessId, widgetKeyId: session.widgetKeyId });
-
     const [snapshot, chatBilling, voiceBilling] = await Promise.all([
       getCachedBusinessSnapshot(context, { businessId: session.businessId }),
       getWidgetChatAllowance(context, { businessId: session.businessId }),

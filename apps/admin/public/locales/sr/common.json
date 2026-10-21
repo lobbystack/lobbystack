@@ -1,5 +1,4 @@
 {
-  "appName": "LobbyStack",
   "accessibility": {
     "close": "Zatvori",
     "toggleSidebar": "Prikaži/sakrij bočnu traku",
@@ -73,7 +72,7 @@
     "title": "Pošaljite povratne informacije",
     "description": "Recite nam šta bi poboljšalo ovu kontrolnu tablu.",
     "label": "Poruka",
-    "placeholder": "Imate ideju kako da poboljšamo LobbyStack? Javite timu.",
+    "placeholder": "Imate ideju kako da poboljšamo {{appName}}? Javite timu.",
     "characterCount": "{{count}} / {{max}} znakova",
     "helpText": "Potrebna Vam je pomoć?",
     "helpCenter": "Centar za pomoć",
@@ -127,7 +126,7 @@
       "microphoneNotFound": "Na ovom uređaju nije pronađen mikrofon.",
       "microphoneInUse": "Mikrofon već koristi druga aplikacija.",
       "gatewayTimeout": "Povezivanje poziva je trajalo predugo.",
-      "gatewayUnreachable": "Ova stranica ne može da se poveže sa servisom LobbyStack da bi započela poziv.",
+      "gatewayUnreachable": "Ova stranica ne može da se poveže sa servisom {{appName}} da bi započela poziv.",
       "connectionDropped": "Glasovna veza je prekinuta.",
       "browserNoMicrophone": "Ovaj pregledač ne podržava pozive preko mikrofona.",
       "browserNoWebRtc": "Ovaj pregledač ne podržava glasovne pozive uživo.",

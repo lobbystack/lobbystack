@@ -384,9 +384,20 @@
       "label": "Dozvoli AI pomeranje",
       "hint": "Recepcioner može da pomeri potvrđen budući termin nakon provere slobodnih termina."
     },
-    "requireOtp": {
-      "label": "Traži jednokratni kod",
-      "hint": "Pošalji kod pre svakog otkazivanja ili pomeranja."
+    "verification": {
+      "label": "Provera pozivaoca",
+      "options": {
+        "phone_match_and_facts": "Broj telefona i detalji termina",
+        "otp_required": "Jednokratni kod SMS-om",
+        "passcode_required": "PIN na tastaturi",
+        "operator_only": "Vaš tim pravi izmene"
+      },
+      "descriptions": {
+        "phone_match_and_facts": "Pozivalac mora da zove sa broja sa kog je termin zakazan i da kaže vreme ili uslugu termina.",
+        "otp_required": "Pozivalac takođe pročita jednokratni kod poslat SMS-om na taj broj pre svakog otkazivanja ili pomeranja.",
+        "passcode_required": "Pozivalac takođe ukuca na tastaturi telefona PIN sačuvan na svom kontaktu. Zahtev pozivaoca bez PIN-a prosleđuje se vašem timu. PIN podesite na kartici Detalji svakog kontakta.",
+        "operator_only": "Recepcioner ne menja termine. Zahteve prosleđuje vašem timu."
+      }
     }
   },
   "actions": {

@@ -1,6 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { classifySmsConsentUpdate, classifySmsKeywordReply, normalizeSmsKeyword } from "./sms";
+import type { Database } from "@lobbystack/db";
+
+import { classifySmsConsentUpdate, classifySmsKeywordReply, normalizeSmsKeyword, receiveSharedSenderSms, sharedSenderHelpReply } from "./sms";
 
 describe("SMS consent classifiers", () => {
   it("normalizes keywords to alphanumeric uppercase", () => {
@@ -24,5 +26,32 @@ describe("SMS consent classifiers", () => {
     expect(classifySmsKeywordReply({ body: "start" })?.kind).toBe("start");
     expect(classifySmsKeywordReply({ body: "stop" })).toBeNull();
     expect(classifySmsKeywordReply({ body: "hello" })).toBeNull();
+  });
+});
+
+describe("SMS HELP replies", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("keep LobbyStack's registered wording when the deployment sets no links", () => {
+    expect(classifySmsKeywordReply({ body: "help" })?.body).toBe("LobbyStack: For help, contact hello@lobbystack.com or visit https://lobbystack.com. Reply STOP to opt out.");
+    expect(sharedSenderHelpReply()).toBe("LobbyStack: For help with an appointment, call the business you booked with. For anything else, email hello@lobbystack.com. Reply STOP to opt out.");
+  });
+
+  it("give the deployment's own address and website", () => {
+    vi.stubEnv("NEXT_PUBLIC_LANDING_SITE_URL", "https://acme.example");
+    vi.stubEnv("NEXT_PUBLIC_CONTACT_EMAIL", "support@acme.example");
+    expect(classifySmsKeywordReply({ body: "HELP" })?.body).toBe("LobbyStack: For help, contact support@acme.example or visit https://acme.example. Reply STOP to opt out.");
+    expect(sharedSenderHelpReply()).toBe("LobbyStack: For help with an appointment, call the business you booked with. For anything else, email support@acme.example. Reply STOP to opt out.");
+  });
+
+  it("name the deployment on the shared sender too", async () => {
+    vi.stubEnv("BRAND_APP_NAME", "");
+    const db = { select: () => ({ from: () => ({ limit: async () => [{ appName: "Acme Desk", logoVersion: null }] }) }) } as unknown as Database;
+    expect(await receiveSharedSenderSms({ db }, { from: "+14165550123", body: "help" })).toEqual({
+      reply: "Acme Desk: For help with an appointment, call the business you booked with. For anything else, email hello@lobbystack.com. Reply STOP to opt out.",
+      contactsChanged: 0,
+    });
   });
 });

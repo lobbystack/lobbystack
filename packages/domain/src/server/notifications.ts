@@ -354,47 +354,71 @@ export async function enableOperatorSmsAlertsWithConsent(tx: DatabaseTransaction
   await tx.insert(smsConsentEvents).values({ businessId: input.businessId, phone: input.phone, recipientType: "operator", action: "operator_alert_consent_granted", source: "operator_phone_verification" });
 }
 
-export async function setNotificationPreferences(
-  context: DomainContext,
-  input: { userId: string; businessId: string; emailEnabled: boolean; smsEnabled: boolean; eventPreferences: OperatorNotificationEventPreferences; dailySummaryEnabled?: boolean; dailySummarySendTime?: string | null; smsConsent?: boolean },
-): Promise<void> {
+type NotificationPreferencesChange = { userId: string; businessId: string; emailEnabled: boolean; smsEnabled: boolean; eventPreferences: OperatorNotificationEventPreferences; dailySummaryEnabled?: boolean; dailySummarySendTime?: string | null; smsConsent?: boolean };
+
+export async function setNotificationPreferences(context: DomainContext, input: NotificationPreferencesChange): Promise<void> {
+  await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
+    await requireBusinessMembership(tx, input);
+    await saveNotificationPreferencesInTransaction(tx, input);
+  });
+}
+
+function assertDailySummary(input: { dailySummaryEnabled?: boolean; dailySummarySendTime?: string | null }): void {
   assertDailySummaryTime(input.dailySummarySendTime);
   if (input.dailySummaryEnabled && !input.dailySummarySendTime) {
     throw new Error("A daily summary send time is required when daily summaries are enabled.");
   }
-  await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
-    await requireBusinessMembership(tx, input);
-    const currentUser = (await tx.select({ phone: users.phone }).from(users).where(eq(users.id, input.userId)).limit(1))[0];
-    const previous = (await tx.select({ smsConsentGrantedAt: operatorNotificationPreferences.smsConsentGrantedAt, smsConsentRevokedAt: operatorNotificationPreferences.smsConsentRevokedAt, smsConsentDisclosureVersion: operatorNotificationPreferences.smsConsentDisclosureVersion, smsConsentPhone: operatorNotificationPreferences.smsConsentPhone }).from(operatorNotificationPreferences).where(and(eq(operatorNotificationPreferences.businessId, input.businessId), eq(operatorNotificationPreferences.userId, input.userId))).limit(1))[0];
-    const existingConsent = hasOperatorSmsConsent(previous, currentUser?.phone);
-    if ((input.smsEnabled || Object.values(input.eventPreferences).some(event => event.sms)) && input.smsConsent !== false && input.smsConsent !== true && !existingConsent) throw new Error("SMS notification consent is required before enabling SMS alerts.");
-    const consentChanged = input.smsConsent !== undefined && Boolean(input.smsConsent) !== existingConsent;
-    const consentNow = input.smsConsent === true ? new Date() : input.smsConsent === false ? new Date() : undefined;
-    await tx.insert(operatorNotificationPreferences).values({
-      businessId: input.businessId,
-      userId: input.userId,
-      emailEnabled: input.emailEnabled,
-      smsEnabled: input.smsEnabled,
-      eventPreferences: input.eventPreferences,
-      dailySummaryEnabled: input.dailySummaryEnabled ?? false,
-      dailySummarySendTime: input.dailySummarySendTime ?? null,
-      ...(input.smsConsent === true ? { smsConsentGrantedAt: consentNow, smsConsentDisclosureVersion: OPERATOR_SMS_DISCLOSURE_VERSION, smsConsentPhone: currentUser?.phone ?? null } : {}),
-      ...(input.smsConsent === false ? { smsConsentRevokedAt: consentNow } : {}),
-      ...(input.smsConsent !== undefined ? { smsConsentSource: "operator_settings" } : {}),
-    }).onConflictDoUpdate({
-      target: [operatorNotificationPreferences.businessId, operatorNotificationPreferences.userId],
-      set: { emailEnabled: input.emailEnabled, smsEnabled: input.smsEnabled, eventPreferences: input.eventPreferences, dailySummaryEnabled: input.dailySummaryEnabled ?? false, dailySummarySendTime: input.dailySummarySendTime ?? null, ...(input.smsConsent === true ? { smsConsentGrantedAt: consentNow, smsConsentRevokedAt: null, smsConsentDisclosureVersion: OPERATOR_SMS_DISCLOSURE_VERSION, smsConsentPhone: currentUser?.phone ?? null } : {}), ...(input.smsConsent === false ? { smsConsentRevokedAt: consentNow } : {}), ...(input.smsConsent !== undefined ? { smsConsentSource: "operator_settings" } : {}), updatedAt: new Date() },
-    });
-    if (consentChanged && consentNow && currentUser?.phone) await tx.insert(smsConsentEvents).values({ businessId: input.businessId, phone: currentUser.phone, recipientType: "operator", action: input.smsConsent ? "operator_alert_consent_granted" : "operator_alert_consent_revoked", source: "operator_settings" });
-  });
 }
 
-export const operatorNotificationEventKeys = ["voiceMessage", "pausedSms", "smsFailed", "calendarSync", "transferFailed", "aiReplyFailed", "widgetChat", "webhookDisabled"] as const;
+/**
+ * Saves one person's alerts for a business, in a transaction acting as them.
+ * Texts need their consent, given with this change or before it.
+ */
+export async function saveNotificationPreferencesInTransaction(tx: DatabaseTransaction, input: NotificationPreferencesChange): Promise<void> {
+  assertDailySummary(input);
+  const currentUser = (await tx.select({ phone: users.phone }).from(users).where(eq(users.id, input.userId)).limit(1))[0];
+  const previous = (await tx.select({ smsEnabled: operatorNotificationPreferences.smsEnabled, eventPreferences: operatorNotificationPreferences.eventPreferences, smsConsentGrantedAt: operatorNotificationPreferences.smsConsentGrantedAt, smsConsentRevokedAt: operatorNotificationPreferences.smsConsentRevokedAt, smsConsentDisclosureVersion: operatorNotificationPreferences.smsConsentDisclosureVersion, smsConsentPhone: operatorNotificationPreferences.smsConsentPhone }).from(operatorNotificationPreferences).where(and(eq(operatorNotificationPreferences.businessId, input.businessId), eq(operatorNotificationPreferences.userId, input.userId))).limit(1))[0];
+  const existingConsent = hasOperatorSmsConsent(previous, currentUser?.phone);
+  // Turning a text on needs consent; keeping one the person saved before doesn't, since none is sent without it.
+  const previousEvents = { ...defaultOperatorNotificationEventPreferences(), ...previous?.eventPreferences } as OperatorNotificationEventPreferences;
+  const turnsTextOn = (input.smsEnabled && !previous?.smsEnabled) || operatorNotificationEventKeys.some((key) => input.eventPreferences[key]?.sms && !previousEvents[key]?.sms);
+  if (turnsTextOn && input.smsConsent === undefined && !existingConsent) throw new Error("SMS notification consent is required before enabling SMS alerts.");
+  const consentChanged = input.smsConsent !== undefined && Boolean(input.smsConsent) !== existingConsent;
+  const consentNow = input.smsConsent === true ? new Date() : input.smsConsent === false ? new Date() : undefined;
+  await tx.insert(operatorNotificationPreferences).values({
+    businessId: input.businessId,
+    userId: input.userId,
+    emailEnabled: input.emailEnabled,
+    smsEnabled: input.smsEnabled,
+    eventPreferences: input.eventPreferences,
+    dailySummaryEnabled: input.dailySummaryEnabled ?? false,
+    dailySummarySendTime: input.dailySummarySendTime ?? null,
+    ...(input.smsConsent === true ? { smsConsentGrantedAt: consentNow, smsConsentDisclosureVersion: OPERATOR_SMS_DISCLOSURE_VERSION, smsConsentPhone: currentUser?.phone ?? null } : {}),
+    ...(input.smsConsent === false ? { smsConsentRevokedAt: consentNow } : {}),
+    ...(input.smsConsent !== undefined ? { smsConsentSource: "operator_settings" } : {}),
+  }).onConflictDoUpdate({
+    target: [operatorNotificationPreferences.businessId, operatorNotificationPreferences.userId],
+    set: { emailEnabled: input.emailEnabled, smsEnabled: input.smsEnabled, eventPreferences: input.eventPreferences, dailySummaryEnabled: input.dailySummaryEnabled ?? false, dailySummarySendTime: input.dailySummarySendTime ?? null, ...(input.smsConsent === true ? { smsConsentGrantedAt: consentNow, smsConsentRevokedAt: null, smsConsentDisclosureVersion: OPERATOR_SMS_DISCLOSURE_VERSION, smsConsentPhone: currentUser?.phone ?? null } : {}), ...(input.smsConsent === false ? { smsConsentRevokedAt: consentNow } : {}), ...(input.smsConsent !== undefined ? { smsConsentSource: "operator_settings" } : {}), updatedAt: new Date() },
+  });
+  if (consentChanged && consentNow && currentUser?.phone) await tx.insert(smsConsentEvents).values({ businessId: input.businessId, phone: currentUser.phone, recipientType: "operator", action: input.smsConsent ? "operator_alert_consent_granted" : "operator_alert_consent_revoked", source: "operator_settings" });
+}
+
+export const operatorNotificationEventKeys = ["voiceMessage", "pausedSms", "smsFailed", "calendarSync", "transferFailed", "aiReplyFailed", "widgetChat", "liveChatRequest", "webhookDisabled"] as const;
 export type OperatorNotificationEventKey = (typeof operatorNotificationEventKeys)[number];
 export type OperatorNotificationEventPreferences = Record<OperatorNotificationEventKey, { email: boolean; sms: boolean }>;
 
 export function defaultOperatorNotificationEventPreferences(): OperatorNotificationEventPreferences {
   return Object.fromEntries(operatorNotificationEventKeys.map((key) => [key, { email: true, sms: false }])) as OperatorNotificationEventPreferences;
+}
+
+/** Event preferences from a request body: an event without both switches keeps its default. */
+export function normalizeOperatorNotificationEventPreferences(value: unknown): OperatorNotificationEventPreferences {
+  const defaults = defaultOperatorNotificationEventPreferences();
+  const raw = typeof value === "object" && value !== null ? value as Record<string, unknown> : {};
+  return Object.fromEntries(operatorNotificationEventKeys.map((key) => {
+    const event = raw[key] as { email?: unknown; sms?: unknown } | null | undefined;
+    return [key, typeof event === "object" && event !== null && typeof event.email === "boolean" && typeof event.sms === "boolean" ? { email: event.email, sms: event.sms } : defaults[key]];
+  })) as OperatorNotificationEventPreferences;
 }
 
 const dailySummaryTimePattern = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
@@ -406,6 +430,7 @@ const dailySummaryLabels: Record<OperatorNotificationEventKey, string> = {
   transferFailed: "Transfer failures",
   aiReplyFailed: "AI reply failures",
   widgetChat: "Website chat messages",
+  liveChatRequest: "Website visitors asking for a person",
   webhookDisabled: "Webhook endpoints turned off",
 };
 
@@ -426,22 +451,39 @@ function buildDailySummary(input: { businessName: string; date: string; counts: 
   };
 }
 
-export async function getNotificationPreferences(context: DomainContext, input: { userId: string; businessId: string; phoneVerified?: boolean }): Promise<{ emailEnabled: boolean; smsEnabled: boolean; smsConsent: boolean; eventPreferences: OperatorNotificationEventPreferences; dailySummaryEnabled: boolean; dailySummarySendTime: string | null; canUseSms: boolean; smsUnavailableReason: "phone_unverified" | "sender_missing" | null }> {
+export type NotificationPreferences = { emailEnabled: boolean; smsEnabled: boolean; smsConsent: boolean; eventPreferences: OperatorNotificationEventPreferences; dailySummaryEnabled: boolean; dailySummarySendTime: string | null; canUseSms: boolean; smsUnavailableReason: "phone_unverified" | "sender_missing" | null };
+
+export async function getNotificationPreferences(context: DomainContext, input: { userId: string; businessId: string; phoneVerified?: boolean }): Promise<NotificationPreferences> {
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessMembership(tx, input);
-    const row = (await tx.select().from(operatorNotificationPreferences).where(and(eq(operatorNotificationPreferences.businessId, input.businessId), eq(operatorNotificationPreferences.userId, input.userId))).limit(1))[0];
-    const phone = (await tx.select({ phone: users.phone }).from(users).where(eq(users.id, input.userId)).limit(1))[0]?.phone;
-    const sender = await resolveSmsSender(tx, input.businessId);
-    const phoneVerified = input.phoneVerified === true;
-    const canUseSms = phoneVerified && Boolean(sender);
-    // A missing sender blocks SMS for everyone, so report it ahead of the operator's own phone.
-    const channelState = { canUseSms, smsUnavailableReason: !sender ? "sender_missing" as const : phoneVerified ? null : "phone_unverified" as const };
-    const smsConsent = hasOperatorSmsConsent(row, phone);
-    const canSendSms = canUseSms && smsConsent;
-    const storedEvents = { ...defaultOperatorNotificationEventPreferences(), ...row?.eventPreferences } as OperatorNotificationEventPreferences;
-    const eventPreferences = canSendSms ? storedEvents : Object.fromEntries(Object.entries(storedEvents).map(([key, value]) => [key, { ...value, sms: false }])) as OperatorNotificationEventPreferences;
-    return { emailEnabled: row?.emailEnabled ?? true, smsEnabled: canSendSms && Boolean(row?.smsEnabled), smsConsent, eventPreferences, dailySummaryEnabled: row?.dailySummaryEnabled ?? false, dailySummarySendTime: row?.dailySummarySendTime ?? null, ...channelState };
+    return await loadNotificationPreferencesInTransaction(tx, input);
   });
+}
+
+/**
+ * What one person saved for a business, texts included even while they can't
+ * be sent, with defaults for anything never saved. Locks the saved row, so a
+ * save from elsewhere waits for this transaction.
+ */
+export async function loadSavedNotificationPreferencesInTransaction(tx: DatabaseTransaction, input: { userId: string; businessId: string }): Promise<{ emailEnabled: boolean; smsEnabled: boolean; eventPreferences: OperatorNotificationEventPreferences; dailySummaryEnabled: boolean; dailySummarySendTime: string | null }> {
+  const row = (await tx.select({ emailEnabled: operatorNotificationPreferences.emailEnabled, smsEnabled: operatorNotificationPreferences.smsEnabled, eventPreferences: operatorNotificationPreferences.eventPreferences, dailySummaryEnabled: operatorNotificationPreferences.dailySummaryEnabled, dailySummarySendTime: operatorNotificationPreferences.dailySummarySendTime }).from(operatorNotificationPreferences).where(and(eq(operatorNotificationPreferences.businessId, input.businessId), eq(operatorNotificationPreferences.userId, input.userId))).limit(1).for("update"))[0];
+  return { emailEnabled: row?.emailEnabled ?? true, smsEnabled: row?.smsEnabled ?? false, eventPreferences: normalizeOperatorNotificationEventPreferences(row?.eventPreferences), dailySummaryEnabled: row?.dailySummaryEnabled ?? false, dailySummarySendTime: row?.dailySummarySendTime ?? null };
+}
+
+/** One person's alerts for a business, as they apply: texts read as off until they can be sent. */
+export async function loadNotificationPreferencesInTransaction(tx: DatabaseTransaction, input: { userId: string; businessId: string; phoneVerified?: boolean }): Promise<NotificationPreferences> {
+  const row = (await tx.select().from(operatorNotificationPreferences).where(and(eq(operatorNotificationPreferences.businessId, input.businessId), eq(operatorNotificationPreferences.userId, input.userId))).limit(1))[0];
+  const phone = (await tx.select({ phone: users.phone }).from(users).where(eq(users.id, input.userId)).limit(1))[0]?.phone;
+  const sender = await resolveSmsSender(tx, input.businessId);
+  const phoneVerified = input.phoneVerified === true;
+  const canUseSms = phoneVerified && Boolean(sender);
+  // A missing sender blocks SMS for everyone, so report it ahead of the operator's own phone.
+  const channelState = { canUseSms, smsUnavailableReason: !sender ? "sender_missing" as const : phoneVerified ? null : "phone_unverified" as const };
+  const smsConsent = hasOperatorSmsConsent(row, phone);
+  const canSendSms = canUseSms && smsConsent;
+  const storedEvents = { ...defaultOperatorNotificationEventPreferences(), ...row?.eventPreferences } as OperatorNotificationEventPreferences;
+  const eventPreferences = canSendSms ? storedEvents : Object.fromEntries(Object.entries(storedEvents).map(([key, value]) => [key, { ...value, sms: false }])) as OperatorNotificationEventPreferences;
+  return { emailEnabled: row?.emailEnabled ?? true, smsEnabled: canSendSms && Boolean(row?.smsEnabled), smsConsent, eventPreferences, dailySummaryEnabled: row?.dailySummaryEnabled ?? false, dailySummarySendTime: row?.dailySummarySendTime ?? null, ...channelState };
 }
 
 export async function queueDailyOperatorSummaries(context: DomainContext, input: { businessId: string; now?: Date }): Promise<{ eligible: number; queued: number }> {

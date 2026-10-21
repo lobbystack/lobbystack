@@ -35,9 +35,11 @@ function canonicalJson(value: unknown): string {
  * Hashes a request body by its JSON value, ignoring key order and whitespace,
  * so the REST API (raw body text) and the MCP server (tool arguments mapped to
  * the REST body) produce the same hash for the same request. A string that is
- * not valid JSON is hashed as its raw text.
+ * not valid JSON is hashed as its raw text. An operation on one resource also
+ * passes its path, so the same key and body sent to another resource is a
+ * different request.
  */
-export function idempotencyRequestHash(body: unknown): string {
+export function idempotencyRequestHash(body: unknown, path?: string): string {
   let value = body;
   if (typeof body === "string") {
     try {
@@ -46,7 +48,7 @@ export function idempotencyRequestHash(body: unknown): string {
       value = { raw: body };
     }
   }
-  return createHash("sha256").update(canonicalJson(value)).digest("hex");
+  return createHash("sha256").update(canonicalJson(path === undefined ? value : { path, body: value })).digest("hex");
 }
 
 export function validateIdempotencyKey(value: string | null): string | null {

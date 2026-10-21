@@ -66,7 +66,7 @@ describe("buildAppointmentChangePolicyForSave", () => {
       buildAppointmentChangePolicyForSave({
         allowCancel: true,
         allowReschedule: false,
-        requireOtp: false,
+        verificationMode: "phone_match_and_facts",
       }),
     ).toEqual({
       enabled: true,
@@ -76,12 +76,12 @@ describe("buildAppointmentChangePolicyForSave", () => {
     });
   });
 
-  it("stores OTP-required mode when the stricter verification toggle is enabled", () => {
+  it("stores the verification mode the operator picked", () => {
     expect(
       buildAppointmentChangePolicyForSave({
         allowCancel: true,
         allowReschedule: true,
-        requireOtp: true,
+        verificationMode: "otp_required",
       }),
     ).toEqual({
       enabled: true,
@@ -96,13 +96,28 @@ describe("buildAppointmentChangePolicyForSave", () => {
       buildAppointmentChangePolicyForSave({
         allowCancel: false,
         allowReschedule: false,
-        requireOtp: true,
+        verificationMode: "otp_required",
       }),
     ).toEqual({
       enabled: false,
       allowCancel: false,
       allowReschedule: false,
       verificationMode: "otp_required",
+    });
+  });
+
+  it("stores the keypad PIN mode", () => {
+    expect(
+      buildAppointmentChangePolicyForSave({
+        allowCancel: true,
+        allowReschedule: false,
+        verificationMode: "passcode_required",
+      }),
+    ).toEqual({
+      enabled: true,
+      allowCancel: true,
+      allowReschedule: false,
+      verificationMode: "passcode_required",
     });
   });
 });
@@ -139,6 +154,52 @@ describe("AgentBasicSettingsPage saves", () => {
       { businessId: "business", appointmentChangePolicy: { enabled: true, allowCancel: false, allowReschedule: true, verificationMode: "phone_match_and_facts" } },
       { businessId: "business", locale: "fr" },
     ]);
+    client.clear();
+  });
+
+  it("saves the keypad PIN check picked for appointment changes", async () => {
+    const patches: unknown[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method === "PATCH") {
+        patches.push(JSON.parse(String(init.body)));
+        return Response.json({ profile: {} });
+      }
+      return Response.json({
+        business: { defaultLocale: "en" },
+        profile: { greeting: "Thanks for calling.", summary: "Clinic", summarySource: "operator", transferNumber: null, transferMode: "on_request", appointmentChangePolicy: { enabled: true, allowCancel: true, allowReschedule: false, verificationMode: "otp_required" }, bookingMode: "instant" },
+      });
+    }));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><AgentBasicSettingsPage businessId="business" canManageTenant /></QueryClientProvider>);
+
+    const user = userEvent.setup();
+    const select = await screen.findByRole("combobox", { name: "agent:appointmentChanges.verification.label" });
+    await waitFor(() => expect(select.textContent).toContain("agent:appointmentChanges.verification.options.otp_required"));
+    await waitFor(() => expect(select.hasAttribute("data-disabled")).toBe(false));
+    await user.click(select);
+    expect(screen.queryByRole("option", { name: "agent:appointmentChanges.verification.options.operator_only" })).toBeNull();
+    await user.click(await screen.findByRole("option", { name: "agent:appointmentChanges.verification.options.passcode_required" }));
+    await waitFor(() => expect(patches).toHaveLength(1));
+
+    expect(patches).toEqual([
+      { businessId: "business", appointmentChangePolicy: { enabled: true, allowCancel: true, allowReschedule: false, verificationMode: "passcode_required" } },
+    ]);
+    expect(screen.getByText("agent:appointmentChanges.verification.descriptions.passcode_required")).toBeTruthy();
+    client.clear();
+  });
+
+  it("keeps showing operator-only checks set through the API", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({
+      business: { defaultLocale: "en" },
+      profile: { greeting: "Thanks for calling.", summary: "Clinic", summarySource: "operator", transferNumber: null, transferMode: "on_request", appointmentChangePolicy: { enabled: true, allowCancel: true, allowReschedule: true, verificationMode: "operator_only" }, bookingMode: "instant" },
+    })));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><AgentBasicSettingsPage businessId="business" canManageTenant /></QueryClientProvider>);
+
+    const select = await screen.findByRole("combobox", { name: "agent:appointmentChanges.verification.label" });
+    await waitFor(() => expect(select.textContent).toContain("agent:appointmentChanges.verification.options.operator_only"));
+    await userEvent.click(select);
+    expect(await screen.findByRole("option", { name: "agent:appointmentChanges.verification.options.operator_only" })).toBeTruthy();
     client.clear();
   });
 });

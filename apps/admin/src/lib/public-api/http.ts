@@ -3,38 +3,78 @@ import { NextResponse } from "next/server";
 import {
   bearerToken,
   idempotencyRequestHash,
+  isPlatformKeyToken,
   PublicApiError,
+  requirePlatformBusinessAccess,
   resolveApiKey,
+  resolvePlatformKey,
+  resolvePlatformKeyOwner,
   runIdempotent,
   touchApiKeyLastUsed,
   validateIdempotencyKey,
   type ApiKeyCaller,
   type DomainContext,
+  type PlatformKeyAccess,
+  type PlatformKeyCaller,
   type ResolvedApiKey,
+  type ResolvedPlatformKey,
 } from "@lobbystack/domain";
-import { apiOperations, isUuid, parseApiInput, type ApiErrorCode, type ApiOperationId } from "@lobbystack/shared";
+import { BUSINESS_HEADER, apiOperations, isUuid, parseApiInput, type ApiErrorCode, type ApiOperation, type ApiOperationId } from "@lobbystack/shared";
 
 import { runAfterResponse } from "../after-response";
 import { createWorkerDomainContext } from "../domain-context";
 import { reportServerError } from "../error-reporting";
 import { enforceApiRateLimit, type RateLimitDecision } from "./rate-limit";
 
-// Request pipeline for /api/v1: bearer key -> scope -> rate limit ->
-// idempotency -> handler -> `{ data }` or `{ error: { code, message } }`.
-// The key itself is never logged; logs and audit rows carry the key id.
+// Request pipeline for /api/v1: bearer key -> scope -> business -> rate limit
+// -> idempotency -> handler -> `{ data }` or `{ error: { code, message } }`.
+// A per-business key (lsk_) acts on its own business. A platform key (lsp_)
+// acts on the business in the LobbyStack-Business header, as its owner, and
+// alone may call the few operations that act on no one business, such as
+// POST /businesses. Keys are never logged: logs and audit rows carry the key
+// id, plus a platform key's partner.
+
+/** The key a request presented. Both kinds carry scopes. */
+export type ApiCredential = ({ kind: "api_key" } & ResolvedApiKey) | ({ kind: "platform_key" } & ResolvedPlatformKey);
+
+/** Who a REST request acts as. OAuth grant callers come only from the MCP server. */
+export type RestApiCaller = ApiKeyCaller | PlatformKeyCaller;
 
 export type ApiHandlerInput = {
   request: Request;
-  caller: ApiKeyCaller;
+  caller: RestApiCaller;
   context: DomainContext;
-  key: ResolvedApiKey;
+  credential: ApiCredential;
 };
 
-export type ApiResult = { status?: number; body: unknown };
+/** For operations whose business is optional (GET /me): a platform key sent without the header has no caller. */
+export type OptionalBusinessHandlerInput = Omit<ApiHandlerInput, "caller"> & { caller: RestApiCaller | null };
+
+/**
+ * For operations that act on no one business, which only platform keys may
+ * call. The handler gets the key, the account it acts as and, when the
+ * operation takes one, the Idempotency-Key to apply itself.
+ */
+export type PlatformHandlerInput = {
+  request: Request;
+  context: DomainContext;
+  credential: { kind: "platform_key" } & ResolvedPlatformKey;
+  actingUserId: string;
+  idempotencyKey: string | null;
+};
+
+type HandlerInputFor<Id extends ApiOperationId> = (typeof apiOperations)[Id] extends { business: "none" }
+  ? PlatformHandlerInput
+  : (typeof apiOperations)[Id] extends { business: "optional" } ? OptionalBusinessHandlerInput : ApiHandlerInput;
+
+export type ApiResult = { status?: number; body: unknown; headers?: Record<string, string> };
 
 type Dependencies = {
   resolveKey?: (key: string) => Promise<ResolvedApiKey | null>;
-  rateLimit?: (apiKeyId: string) => Promise<RateLimitDecision>;
+  resolvePlatformKey?: (key: string) => ResolvedPlatformKey | null;
+  resolvePlatformOwner?: (ownerEmail: string) => Promise<string | null>;
+  requirePlatformBusiness?: (input: { businessId: string; partnerId: string; access: PlatformKeyAccess }) => Promise<void>;
+  rateLimit?: (principalId: string) => Promise<RateLimitDecision>;
   context?: () => DomainContext;
   runIdempotent?: typeof runIdempotent;
 };
@@ -50,13 +90,17 @@ export function methodNotAllowed(allowed: readonly string[]): () => Response {
   return () => apiError(405, "method_not_allowed", `This endpoint supports ${allowed.join(", ")}.`, { headers: { Allow: allow } });
 }
 
+function missingIdempotencyKey(): NextResponse {
+  return apiError(400, "invalid_request", "Send an Idempotency-Key header with this request, so a retry can't do it twice.", { details: [{ path: "Idempotency-Key", message: "Required." }] });
+}
+
 function rateLimitHeaders(decision: RateLimitDecision): Record<string, string> {
   if (!("limit" in decision)) return {};
   return { "X-RateLimit-Limit": String(decision.limit), "X-RateLimit-Remaining": String(decision.remaining), "X-RateLimit-Reset": String(decision.resetAt) };
 }
 
 function errorResponse(error: unknown, operationId: string): NextResponse {
-  if (error instanceof PublicApiError) return apiError(error.status, error.code, error.message, error.details ? { details: error.details } : {});
+  if (error instanceof PublicApiError) return apiError(error.status, error.code, error.message, { ...(error.details ? { details: error.details } : {}), ...(error.headers ? { headers: error.headers } : {}) });
   const status = typeof error === "object" && error !== null && "status" in error && typeof error.status === "number" ? error.status : 500;
   if (status === 403) return apiError(403, "forbidden", "This API key cannot do that.");
   if (status === 404) return apiError(404, "not_found", error instanceof Error ? error.message : "Not found.");
@@ -100,43 +144,102 @@ export function uuidParam(value: string | undefined, name: string): string {
   return value;
 }
 
-export async function handleApiRequest(request: Request, operationId: ApiOperationId, handler: (input: ApiHandlerInput) => Promise<ApiResult>, dependencies: Dependencies = {}): Promise<NextResponse> {
-  const operation = apiOperations[operationId];
+export async function handleApiRequest<Id extends ApiOperationId>(request: Request, operationId: Id, handler: (input: HandlerInputFor<Id>) => Promise<ApiResult>, dependencies: Dependencies = {}): Promise<NextResponse> {
+  const operation: ApiOperation = apiOperations[operationId];
   const started = Date.now();
   let status = 500;
-  let key: ResolvedApiKey | null = null;
+  // Ids only, for the request log: never the key.
+  let logFields: Record<string, string> = {};
   try {
     const token = bearerToken(request.headers.get("authorization"));
     if (!token) return (status = 401, apiError(401, "unauthorized", "Send an API key as Authorization: Bearer <key>.", { headers: { "WWW-Authenticate": "Bearer" } }));
     const context = (dependencies.context ?? createWorkerDomainContext)();
-    key = await (dependencies.resolveKey ?? ((value) => resolveApiKey(context, value)))(token);
-    if (!key) return (status = 401, apiError(401, "unauthorized", "The API key is invalid or has been revoked.", { headers: { "WWW-Authenticate": "Bearer" } }));
-    if (operation.scope && !key.scopes.includes(operation.scope)) return (status = 403, apiError(403, "insufficient_scope", `This API key needs the ${operation.scope} scope.`));
 
-    const limit = await (dependencies.rateLimit ?? enforceApiRateLimit)(key.apiKeyId);
+    let credential: ApiCredential;
+    if (isPlatformKeyToken(token)) {
+      // A malformed PLATFORM_API_KEYS throws here, which answers 500 and reports it.
+      const platformKey = (dependencies.resolvePlatformKey ?? resolvePlatformKey)(token);
+      if (!platformKey) return (status = 401, apiError(401, "unauthorized", "The API key is invalid or has been revoked.", { headers: { "WWW-Authenticate": "Bearer" } }));
+      credential = { kind: "platform_key", ...platformKey };
+      logFields = { platform_key_id: platformKey.platformKeyId, partner_id: platformKey.partnerId };
+    } else {
+      const key = await (dependencies.resolveKey ?? ((value) => resolveApiKey(context, value)))(token);
+      if (!key) return (status = 401, apiError(401, "unauthorized", "The API key is invalid or has been revoked.", { headers: { "WWW-Authenticate": "Bearer" } }));
+      credential = { kind: "api_key", ...key };
+      logFields = { api_key_id: key.apiKeyId, business_id: key.businessId };
+    }
+    if (operation.scope && !credential.scopes.includes(operation.scope)) return (status = 403, apiError(403, "insufficient_scope", `This API key needs the ${operation.scope} scope.`));
+    const businessless = operation.business === "none";
+    if (businessless && credential.kind !== "platform_key") return (status = 403, apiError(403, "forbidden", "Only platform keys can call this endpoint."));
+
+    // An operation that acts on no one business ignores the header.
+    const header = businessless ? undefined : request.headers.get(BUSINESS_HEADER)?.trim() || undefined;
+    if (header !== undefined && !isUuid(header)) return (status = 400, apiError(400, "invalid_request", `${BUSINESS_HEADER} must be a business id.`, { details: [{ path: BUSINESS_HEADER, message: "Must be a UUID." }] }));
+    const requestedBusinessId = header?.toLowerCase();
+    if (credential.kind === "api_key" && requestedBusinessId !== undefined && requestedBusinessId !== credential.businessId.toLowerCase()) {
+      return (status = 403, apiError(403, "forbidden", `This API key belongs to another business. Leave out the ${BUSINESS_HEADER} header, or send this key's own business id.`));
+    }
+    if (credential.kind === "platform_key") {
+      if (requestedBusinessId !== undefined) logFields.business_id = requestedBusinessId;
+      else if (!operation.business) return (status = 400, apiError(400, "business_required", `A platform key must name the business to act on in the ${BUSINESS_HEADER} header.`));
+    }
+    const principalId = credential.kind === "platform_key" ? `platform:${credential.platformKeyId}` : credential.apiKeyId;
+    const limit = await (dependencies.rateLimit ?? enforceApiRateLimit)(principalId);
     if (!limit.allowed) {
       if (limit.reason === "unavailable") return (status = 503, apiError(503, "rate_limit_unavailable", "The API is temporarily unavailable. Retry shortly.", { headers: { "Retry-After": "5" } }));
       return (status = 429, apiError(429, "rate_limited", `Too many requests. Retry in ${limit.retryAfterSeconds} seconds.`, { headers: { ...rateLimitHeaders(limit), "Retry-After": String(limit.retryAfterSeconds) } }));
     }
     const headers = rateLimitHeaders(limit);
-    const caller: ApiKeyCaller = { businessId: key.businessId, apiKeyId: key.apiKeyId };
-    const resolvedKey = key;
-    runAfterResponse(async () => { await touchApiKeyLastUsed(context, caller).catch(() => undefined); });
 
-    const idempotencyKey = "idempotent" in operation && operation.idempotent ? validateIdempotencyKey(request.headers.get("idempotency-key")) : null;
-    if (!idempotencyKey) {
-      const result = await handler({ request, caller, context, key: resolvedKey });
+    let caller: RestApiCaller | null;
+    if (credential.kind === "platform_key") {
+      const actingUserId = await (dependencies.resolvePlatformOwner ?? ((email) => resolvePlatformKeyOwner(context, email)))(credential.ownerEmail);
+      if (!actingUserId) return (status = 403, apiError(403, "key_owner_inactive", "This platform key's owner_email has no verified LobbyStack account. Sign up with that email and verify it, or change owner_email in PLATFORM_API_KEYS."));
+      if (businessless) {
+        // The operation applies the Idempotency-Key itself: there is no business to keep the record under.
+        const idempotencyKey = operation.idempotent ? validateIdempotencyKey(request.headers.get("idempotency-key")) : null;
+        if (operation.idempotent === "required" && !idempotencyKey) return (status = 400, missingIdempotencyKey());
+        const result = await handler({ request, context, credential, actingUserId, idempotencyKey } as HandlerInputFor<Id>);
+        status = result.status ?? operation.status;
+        return NextResponse.json(result.body, { status, headers: { ...headers, ...result.headers } });
+      }
+      if (requestedBusinessId === undefined) {
+        caller = null;
+      } else {
+        await (dependencies.requirePlatformBusiness ?? ((input) => requirePlatformBusinessAccess(context, input)))({ businessId: requestedBusinessId, partnerId: credential.partnerId, access: credential.access });
+        caller = { businessId: requestedBusinessId, platformKeyId: credential.platformKeyId, partnerId: credential.partnerId, actingUserId, actor: "platform_key" };
+      }
+    } else {
+      const keyCaller: ApiKeyCaller = { businessId: credential.businessId, apiKeyId: credential.apiKeyId };
+      caller = keyCaller;
+      runAfterResponse(async () => { await touchApiKeyLastUsed(context, keyCaller).catch(() => undefined); });
+    }
+    // Every operation but GET /me needs a business, and the checks above refuse a request without one.
+    const run = (input: Omit<ApiHandlerInput, "caller"> & { caller: RestApiCaller | null }) => handler(input as HandlerInputFor<Id>);
+
+    const idempotencyKey = operation.idempotent ? validateIdempotencyKey(request.headers.get("idempotency-key")) : null;
+    if (operation.idempotent === "required" && !idempotencyKey) return (status = 400, missingIdempotencyKey());
+    if (!idempotencyKey || !caller) {
+      const result = await run({ request, caller, context, credential });
       status = result.status ?? operation.status;
-      return NextResponse.json(result.body, { status, headers });
+      return NextResponse.json(result.body, { status, headers: { ...headers, ...result.headers } });
     }
 
-    // Hash the body so a reused key with a different request is rejected.
+    // Hash the body so a reused key with a different request is rejected. An
+    // operation on one resource, such as POST /phone-numbers/{phone_number_id}/replace,
+    // hashes its path too, so the same key sent to another resource is rejected.
     const raw = await request.clone().text();
-    const scope = { businessId: key.businessId, apiKeyId: key.apiKeyId, operation: operationId, key: idempotencyKey };
+    const requestPath = operation.path.includes("{") ? new URL(request.url).pathname.toLowerCase() : undefined;
+    // Records are unique per scope and key. A platform key acts on many
+    // businesses, so its scope names the business too; otherwise one key's
+    // Idempotency-Key on business A would block the same value on business B.
+    const idempotencyPrincipal = credential.kind === "platform_key" ? `${principalId}:${caller.businessId}` : principalId;
+    const scope = { businessId: caller.businessId, apiKeyId: idempotencyPrincipal, operation: operationId, key: idempotencyKey };
+    const idempotentCaller = caller;
     // The handler runs on the same transaction that stores the key, so the
     // mutation and its stored response commit together or not at all.
-    const outcome = await (dependencies.runIdempotent ?? runIdempotent)(context, scope, idempotencyRequestHash(raw), async (transactional) => {
-      const result = await handler({ request, caller, context: transactional, key: resolvedKey });
+    const outcome = await (dependencies.runIdempotent ?? runIdempotent)(context, scope, idempotencyRequestHash(raw, requestPath), async (transactional) => {
+      const result = await run({ request, caller: idempotentCaller, context: transactional, credential });
       // Stored as JSON text so a replay matches the first response byte for byte.
       return { status: result.status ?? operation.status, body: JSON.stringify(result.body) };
     });
@@ -148,7 +251,7 @@ export async function handleApiRequest(request: Request, operationId: ApiOperati
     status = response.status;
     return response;
   } finally {
-    console.info(JSON.stringify({ event: "public_api.request", operation: operationId, status, duration_ms: Date.now() - started, ...(key ? { api_key_id: key.apiKeyId, business_id: key.businessId } : {}) }));
+    console.info(JSON.stringify({ event: "public_api.request", operation: operationId, status, duration_ms: Date.now() - started, ...logFields }));
   }
 }
 

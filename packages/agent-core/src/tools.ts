@@ -11,17 +11,19 @@ import {
   lookupCallerAppointments,
   requestCancellationForCaller,
   recordTextConsentForCaller,
+  requestTeamForWidgetChat,
   rescheduleForCaller,
   resolveEmployee,
   searchKnowledgeEvidence,
   takeMessageForStaff,
   verifyCallerChangeCode,
+  verifyCallerChangePasscode,
   verifyCallerForChange,
   type DomainContext,
   type SmsConsentOnFile,
   type UnavailableReason,
 } from "@lobbystack/domain";
-import { isTransferPermitted, type BusinessContextSnapshot } from "@lobbystack/shared";
+import { isBusinessOpen, isTransferPermitted, type BusinessContextSnapshot, type RuntimeLocale } from "@lobbystack/shared";
 import { tool, type ToolSet } from "ai";
 import { DateTime } from "luxon";
 import { z } from "zod";
@@ -32,6 +34,24 @@ import { receptionistCapabilities, type ToolName } from "./capabilities";
 /** Where the conversation happens. Phone calls know the caller's number. */
 export type AgentChannel = "voice" | "web_voice" | "web_chat";
 
+/**
+ * What came of a PIN the caller typed on the keypad. "accepted" verifies the
+ * change; "retry" means it didn't match and the caller can type it again;
+ * "failed" means the change can't be verified on this call.
+ */
+export type KeypadPasscodeOutcome = {
+  status: "accepted" | "retry" | "failed";
+  /** Tries left on this call, when the caller can try again. */
+  attemptsLeft?: number;
+  /** Why the PIN wasn't accepted, as plain facts. */
+  reason?: string;
+  /** What the next request's agent sees, with the ids it needs to make the change. */
+  result: object;
+};
+
+/** Checks the digits the caller typed. Only the call controller sees them. */
+export type KeypadPasscodeCheck = (passcode: string) => Promise<KeypadPasscodeOutcome>;
+
 /** Live-call controls the agent can use. Only phone calls provide them. */
 export type CallControl = {
   /**
@@ -41,6 +61,13 @@ export type CallControl = {
    */
   transfer?(destination: string): Promise<boolean>;
   hangup(reason: "caller_finished" | "spam" | "abuse"): Promise<void>;
+  /**
+   * Phone calls only. Starts taking a PIN on the keypad: the digits the caller
+   * types next go to `check`, never to the transcript or the agent, and the
+   * voice model hears the outcome. Resolves false when the call can't take
+   * one, for example because it's ending.
+   */
+  collectPasscode?(check: KeypadPasscodeCheck): Promise<boolean>;
 };
 
 export type AgentToolContext = {
@@ -54,6 +81,13 @@ export type AgentToolContext = {
   callControl?: CallControl;
   /** Prospect demos only answer questions and take messages: no booking, no transfers. */
   intakeOnly?: boolean;
+  /**
+   * Website chats whose widget has live chat on: the visitor can ask for
+   * someone from the team to join. `locale` is the chat's language, for what
+   * the receptionist says if nobody joins in time. `onTeamRequested` hears
+   * when the team was asked.
+   */
+  liveChat?: { locale: RuntimeLocale; onTeamRequested?: () => void };
 };
 
 // A plural always counts ("fee" finds "fees"). Other endings only count for terms of four
@@ -408,21 +442,42 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
       execute: async (input) => withConsentOnFile(await verifyCallerForChange(domain, {
         businessId,
         callerPhone,
+        // An accepted keypad PIN counts only on this call.
+        ...(context.callId ? { callId: context.callId } : {}),
         action: input.action,
         ...(input.appointmentStartsAt ? { appointmentStartsAt: input.appointmentStartsAt } : {}),
         ...(input.serviceName ? { serviceName: input.serviceName } : {}),
       })),
     });
-    tools.sendAppointmentChangeOtp = tool({
-      description: "Text the caller a one-time code when verifyAppointmentForChange says a code is required.",
-      inputSchema: z.object({ verificationId: z.string() }),
-      execute: async ({ verificationId }) => await issueAppointmentChangeOtp(domain, { businessId, verificationId }),
-    });
-    tools.verifyAppointmentChangeOtp = tool({
-      description: "Check the one-time code the caller reads back.",
-      inputSchema: z.object({ verificationId: z.string(), code: z.string() }),
-      execute: async ({ verificationId, code }) => withConsentOnFile(await verifyCallerChangeCode(domain, { businessId, verificationId, code })),
-    });
+    const collectPasscode = context.callControl?.collectPasscode?.bind(context.callControl);
+    if (offered("requestKeypadPasscode") && collectPasscode) {
+      // The caller types the PIN on the keypad, which only the call controller
+      // hears, so the PIN never reaches the agent, the voice model or the transcript.
+      tools.requestKeypadPasscode = tool({
+        description: "Start the keypad PIN check when verifyAppointmentForChange says a PIN is required. The caller types their PIN on the phone keypad; you never see it, and the result comes in a later request.",
+        inputSchema: z.object({ verificationId: z.string() }),
+        execute: async ({ verificationId }) => {
+          const started = await collectPasscode(async (passcode) => {
+            const result = withConsentOnFile(await verifyCallerChangePasscode(domain, { businessId, verificationId, passcode }));
+            const status = result.ok ? "accepted" : result.status === "passcode_pending" ? "retry" : "failed";
+            return { status, result, ...(result.attemptsLeft !== undefined ? { attemptsLeft: result.attemptsLeft } : {}), ...(result.reason ? { reason: result.reason } : {}) };
+          });
+          return started ? { ok: true, waitingForKeypad: true } : { ok: false, reason: "The call can't take a PIN right now, so the change can't be verified." };
+        },
+      });
+    }
+    if (offered("sendAppointmentChangeOtp")) {
+      tools.sendAppointmentChangeOtp = tool({
+        description: "Text the caller a one-time code when verifyAppointmentForChange says a code is required.",
+        inputSchema: z.object({ verificationId: z.string() }),
+        execute: async ({ verificationId }) => await issueAppointmentChangeOtp(domain, { businessId, verificationId }),
+      });
+      tools.verifyAppointmentChangeOtp = tool({
+        description: "Check the one-time code the caller reads back.",
+        inputSchema: z.object({ verificationId: z.string(), code: z.string() }),
+        execute: async ({ verificationId, code }) => withConsentOnFile(await verifyCallerChangeCode(domain, { businessId, verificationId, code })),
+      });
+    }
     if (offered("cancelAppointment")) {
       tools.cancelAppointment = tool({
         description: "Cancel the verified appointment. Only after the caller explicitly confirms they want it cancelled now.",
@@ -477,6 +532,27 @@ export function createReceptionistTools(context: AgentToolContext): ToolSet {
           ...(context.conversationId ? { conversationId: context.conversationId } : {}),
         });
         return { ...saved, cancelled: false, status: "The request is saved for the team. The appointment is still booked until the team cancels it." };
+      },
+    });
+  }
+
+  // A website chat with live chat on brings a person into the chat instead of transferring.
+  const liveChat = context.liveChat;
+  const conversationId = context.conversationId;
+  if (offered("requestTeamMember") && liveChat && conversationId) {
+    tools.requestTeamMember = tool({
+      description: "Ask someone from the team to join this chat, when the visitor asks for a person or a rule says to transfer them. The team gets an alert and replies in this chat. Only works during opening hours, or at any time when the business has set none.",
+      inputSchema: z.object({ reason: z.string().optional().describe("What the visitor needs, in a few words, for the team's alert.") }),
+      execute: async ({ reason }) => {
+        if (snapshot.hours.length && !isBusinessOpen(snapshot)) return { ok: false, reason: "It's outside opening hours, so nobody from the team can join the chat now." };
+        const outcome = await requestTeamForWidgetChat(domain, { businessId, conversationId, locale: liveChat.locale, ...(reason?.trim() ? { reason } : {}) });
+        if (outcome.ok) {
+          liveChat.onTeamRequested?.();
+          return { ok: true, status: `The team was alerted. Someone should join this chat within ${outcome.waitMinutes} minutes. If nobody does, the chat comes back to you and the visitor is asked for a name and number for a callback.` };
+        }
+        return outcome.reason === "team_has_chat"
+          ? { ok: false, reason: "The team already has this chat, or was already asked to join it." }
+          : { ok: false, reason: "The team couldn't be asked to join this chat." };
       },
     });
   }
