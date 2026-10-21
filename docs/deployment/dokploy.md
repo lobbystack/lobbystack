@@ -81,7 +81,7 @@ Staging's files stay in the Railway bucket `parity-certification-ec5lxi` until i
 Cloudflare proxies every hostname, and the server admits ports 80 and 443 from Cloudflare's published ranges only:
 
 - **IPv4:** Docker publishes Traefik's ports through its own iptables rules, which bypass `ufw`. The `lobbystack-cf-firewall.service` unit runs `/usr/local/sbin/lobbystack-cf-firewall.sh` after Docker starts. The script sends new connections on ports 80 and 443 from `ens3` through the `LS-CF-ORIGIN` chain, which drops any source outside Cloudflare.
-- **IPv6:** traffic reaches Traefik through `docker-proxy`, which `ufw` filters. `ufw` has one allow rule per Cloudflare range, commented `cloudflare`.
+- **IPv6:** traffic reaches Traefik through `docker-proxy`, which `ufw` filters. For each Cloudflare range, IPv4 and IPv6, `ufw` allows TCP 80 and 443 and UDP 443, in rules commented `cloudflare`.
 - **SSH** stays open on port 22.
 
 When Cloudflare changes its ranges, which the [Cloudflare IP ranges API](https://api.cloudflare.com/client/v4/ips) lists, update both the script and the `ufw` rules, then run `sudo systemctl restart lobbystack-cf-firewall`.
