@@ -10,8 +10,8 @@ describe("the website widget's page", () => {
   it("leaves PostHog and the saved language preference out of the widget's download", async () => {
     await expect(import("./layout")).resolves.toHaveProperty("default");
     await expect(import("./embed/[key]/page")).resolves.toHaveProperty("default");
-    // The app's error pages are in every page's download.
-    await expect(import("../error")).resolves.toHaveProperty("default");
+    // The widget's error page, and the global one every page downloads.
+    await expect(import("./error")).resolves.toHaveProperty("default");
     await expect(import("../global-error")).resolves.toHaveProperty("default");
   });
 

@@ -17,7 +17,10 @@ import {
   readCookieConsent,
   writeCookieConsent,
 } from "@/marketing/lib/cookie-consent"
-import { localizePath, type Locale } from "@/marketing/i18n"
+// Narrow imports: the "@/marketing/i18n" index brings every localized page's
+// copy with it, and this banner is in every page's download.
+import type { Locale } from "@/marketing/i18n/config"
+import { localizePath } from "@/marketing/i18n/routes"
 
 const bannerCopy = {
   en: {
