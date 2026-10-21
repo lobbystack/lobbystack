@@ -2,7 +2,7 @@ const MARKDOWN_TOKEN_COUNT = "120"
 const CONTENT_SIGNAL = "ai-train=yes, search=yes, ai-input=yes"
 const CANONICAL_HOST = "lobbystack.com"
 const WWW_HOST = "www.lobbystack.com"
-const PAGES_HOST = "lobbystack-landing.pages.dev"
+const PAGES_HOST = "lobbystack-site.pages.dev"
 const DEFAULT_LOCALE = "en"
 // Keep in sync with SUPPORTED_LOCALES in src/i18n/config.ts.
 const SUPPORTED_LOCALES = ["en", "fr", "es", "sr"]

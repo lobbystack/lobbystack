@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest"
 import { onRequest } from "./_middleware.js"
 
 describe("canonical host redirects", () => {
-  it.each(["www.lobbystack.com", "lobbystack-landing.pages.dev"])(
+  it.each(["www.lobbystack.com", "lobbystack-site.pages.dev"])(
     "redirects %s to the canonical host",
     async (hostname) => {
       const next = vi.fn()
