@@ -2,9 +2,9 @@
 
 ## Project structure
 
-- `apps/admin/`: Next.js operator dashboard, authentication, and HTTP API. Hosts the embeddable widget API (`/api/widget/*`), the loader (`/embed.js`), and the widget iframe app (`/embed/[key]`) in addition to the dashboard.
+- `apps/admin/`: Next.js operator dashboard, authentication, and HTTP API. Hosts the embeddable widget API (`/api/widget/*`), the loader (`/embed.js`), and the widget iframe app (`/embed/[key]`) in addition to the dashboard. On the hosts in `MARKETING_HOSTS` it serves the marketing site instead, from `app/(marketing)`, `src/marketing` and `content/`; read `docs/deployment/marketing-site.md` before you change its proxy, routes or build steps.
 - `apps/worker/`: asynchronous jobs, transactional outbox dispatch, and GPT-Live calls. The admin asks it to attach to each session at `/internal/live/attach`; it answers delegated requests, saves transcripts, and finishes the call. Phone calls reach GPT-Live through a Twilio Elastic SIP trunk; see `docs/voice/runtime.md`.
-- `apps/landing/`: public marketing site.
+- `apps/landing/`: the Astro marketing site Cloudflare Pages serves until `lobbystack.com` moves to the admin. Make site changes in the admin's copy.
 - `packages/db/`: Drizzle schema, PostgreSQL migrations, role-specific clients, and RLS helpers.
 - `packages/domain/`: durable business logic shared by admin and worker runtimes. Widget conversations use the `web_chat` channel and key on `widget_visitor_id` (no phone required).
 - `packages/agent-core/`: the receptionist agent (AI SDK `ToolLoopAgent`) shared by website chat and calls, its tools, and the GPT-Live session config and call controller.
@@ -28,7 +28,7 @@
 
 ## Next.js MCP server
 
-`.mcp.json` registers `next-devtools`, a Model Context Protocol (MCP) server from the `next-devtools-mcp` package. It works with `apps/admin`, the only Next.js app. `apps/landing` runs on Astro, so the server doesn't cover it. Use it like this:
+`.mcp.json` registers `next-devtools`, a Model Context Protocol (MCP) server from the `next-devtools-mcp` package. It works with `apps/admin`, the only Next.js app, marketing site included. Use it like this:
 
 - Call `nextjs_docs` before you write Next.js code or answer a Next.js question, then read the guide it points to in `apps/admin/node_modules/next/dist/docs/`. Those docs match the installed Next.js version, so use them over memory or web results.
 - Start the admin dev server with `pnpm dev:admin` or `pnpm dev`. It listens on `ADMIN_PORT`, which defaults to 3000.
