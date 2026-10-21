@@ -12,8 +12,8 @@ const publicRoutes = [
   "reset-password",
   "signup",
 ] as const;
-// The marketing site's 404 catch-all is its one route rendered per request.
-const marketingDynamicRoutes = new Set(["/site/[locale]/[...missing]"]);
+// The marketing site renders its 404 catch-all and IndexNow key file per request.
+const marketingDynamicRoutes = new Set(["/site/[locale]/[...missing]", "/site/[locale]/indexnow-key.txt"]);
 
 const nextDir = path.resolve(process.cwd(), "apps/admin/.next");
 const manifest = JSON.parse(await readFile(path.join(nextDir, "prerender-manifest.json"), "utf8")) as {

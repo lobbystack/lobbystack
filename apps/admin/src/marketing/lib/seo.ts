@@ -45,20 +45,20 @@ export type FaqItem = {
 }
 
 export type PageSeo = {
-  title?: string
-  description?: string
-  canonicalPath?: string
-  noindex?: boolean
-  image?: string
-  imageAlt?: string
-  imageWidth?: number
-  imageHeight?: number
-  type?: "website" | "article"
-  publishedTime?: string
-  modifiedTime?: string
-  author?: string
-  jsonLd?: JsonLd[]
-  locale?: Locale
+  title?: string | undefined
+  description?: string | undefined
+  canonicalPath?: string | undefined
+  noindex?: boolean | undefined
+  image?: string | undefined
+  imageAlt?: string | undefined
+  imageWidth?: number | undefined
+  imageHeight?: number | undefined
+  type?: "website" | "article" | undefined
+  publishedTime?: string | undefined
+  modifiedTime?: string | undefined
+  author?: string | undefined
+  jsonLd?: JsonLd[] | undefined
+  locale?: Locale | undefined
 }
 
 export const absoluteUrl = (path = "/") => new URL(path, SITE_URL).toString()
@@ -119,7 +119,7 @@ export const schemaGraph = (items: JsonLd[] = []): JsonLd => {
 }
 
 type LocaleInput = {
-  locale?: Locale
+  locale?: Locale | undefined
 }
 
 const localeLanguage = (locale: LocaleInput["locale"] = DEFAULT_LOCALE) =>
@@ -191,9 +191,9 @@ export const webPageJsonLd = ({
   title: string
   description: string
   path: string
-  image?: string
+  image?: string | undefined
   type?: "WebPage" | "CollectionPage"
-  locale?: Locale
+  locale?: Locale | undefined
 }): JsonLd => {
   const url = absoluteUrl(normalizedPath(path))
 
@@ -230,7 +230,7 @@ export const faqPageJsonLd = ({
 }: {
   path: string
   faqs: FaqItem[]
-  locale?: Locale
+  locale?: Locale | undefined
 }): JsonLd => {
   const url = absoluteUrl(normalizedPath(path))
 
@@ -377,10 +377,10 @@ export const imageObjectJsonLd = ({
   height = OG_IMAGE_HEIGHT,
 }: {
   path: string
-  image?: string
+  image?: string | undefined
   alt: string
-  width?: number
-  height?: number
+  width?: number | undefined
+  height?: number | undefined
 }): JsonLd => {
   const imagePath = image ?? ogImagePath(path)
 
@@ -457,13 +457,13 @@ export const blogPostingJsonLd = ({
   title: string
   description: string
   path: string
-  image?: string
+  image?: string | undefined
   author: string
   publishedTime: string
   modifiedTime: string
-  articleBody?: string
-  category?: string
-  locale?: Locale
+  articleBody?: string | undefined
+  category?: string | undefined
+  locale?: Locale | undefined
 }): JsonLd => {
   const url = absoluteUrl(normalizedPath(path))
   const imagePath = image ?? ogImagePath(path)

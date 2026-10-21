@@ -5,6 +5,7 @@ import { DEFAULT_LOCALE } from "@/lib/locale";
 import { localeFromCookieHeader, negotiateLocale } from "@/lib/locale-request";
 
 import { marketingSecurityHeaders } from "../../security-headers";
+import { MARKETING_REDIRECTS, assetCacheControl, marketingResponseHeaders } from "./response-headers";
 import {
   MARKETING_ROUTE_PREFIX,
   canonicalMarketingPathname,
@@ -23,9 +24,14 @@ const PAGE_CACHE_CONTROL = "public, max-age=0, must-revalidate";
 
 type Env = Readonly<Record<string, string | undefined>>;
 
-function withMarketingHeaders(response: NextResponse, env: Env, cacheControl?: string): NextResponse {
+function withMarketingHeaders(response: NextResponse, env: Env, cacheControl?: string, pathname?: string): NextResponse {
   for (const [name, value] of Object.entries(marketingSecurityHeaders(env as Record<string, string | undefined>))) {
     response.headers.set(name, value);
+  }
+  if (pathname !== undefined) {
+    for (const [name, value] of Object.entries(marketingResponseHeaders(pathname, splitMarketingPath(pathname).rest))) {
+      response.headers.set(name, value);
+    }
   }
   if (env.NODE_ENV === "production") response.headers.set("Strict-Transport-Security", MARKETING_HSTS);
   if (cacheControl) response.headers.set("Cache-Control", cacheControl);
@@ -96,11 +102,16 @@ export function marketingProxy(request: NextRequest, env: Env = process.env): Ne
   }
   if (hostname !== hosts.canonical) return null;
 
+  const retired = MARKETING_REDIRECTS[canonicalMarketingPathname(pathname)];
+  if (retired) {
+    return withMarketingHeaders(NextResponse.redirect(withPathname(url, retired), 301), env, "public, max-age=3600", pathname);
+  }
+
   const route = resolveMarketingRoute(pathname, env.INDEXNOW_KEY);
-  if (route.kind === "asset") return withMarketingHeaders(NextResponse.next(), env);
+  if (route.kind === "asset") return withMarketingHeaders(NextResponse.next(), env, assetCacheControl(pathname), pathname);
   if (route.kind === "redirect") {
     const target = withPathname(url, route.location);
-    return withMarketingHeaders(NextResponse.redirect(target, 301), env, "public, max-age=3600");
+    return withMarketingHeaders(NextResponse.redirect(target, 301), env, "public, max-age=3600", pathname);
   }
 
   const readsPage = request.method === "GET" || request.method === "HEAD";
@@ -113,7 +124,7 @@ export function marketingProxy(request: NextRequest, env: Env = process.env): Ne
     });
     if (locale !== DEFAULT_LOCALE) {
       const target = withPathname(url, localizeMarketingPath(canonicalMarketingPathname(pathname), locale));
-      const response = withMarketingHeaders(NextResponse.redirect(target, 302), env, "private, no-store");
+      const response = withMarketingHeaders(NextResponse.redirect(target, 302), env, "private, no-store", pathname);
       response.headers.set("Vary", "Accept-Language, Cookie");
       return response;
     }
@@ -121,12 +132,14 @@ export function marketingProxy(request: NextRequest, env: Env = process.env): Ne
 
   const { locale, rest } = splitMarketingPath(pathname);
   if (readsPage && rest === "/" && wantsMarkdown(request)) {
-    const response = withMarketingHeaders(rewriteTo(request, `${MARKETING_ROUTE_PREFIX}/${locale}/md/index`), env, PAGE_CACHE_CONTROL);
+    const response = withMarketingHeaders(rewriteTo(request, `${MARKETING_ROUTE_PREFIX}/${locale}/md/index`), env, PAGE_CACHE_CONTROL, pathname);
     response.headers.set("Vary", "Accept");
     return response;
   }
 
-  const response = withMarketingHeaders(rewriteTo(request, route.internalPath), env, PAGE_CACHE_CONTROL);
+  // Social cards never change under the same URL; everything else revalidates.
+  const cacheControl = /^\/og\/.+\.jpg$/.test(pathname) ? "public, max-age=31536000, immutable" : PAGE_CACHE_CONTROL;
+  const response = withMarketingHeaders(rewriteTo(request, route.internalPath), env, cacheControl, pathname);
   if (negotiable) response.headers.set("Vary", "Accept-Language, Cookie");
   return response;
 }

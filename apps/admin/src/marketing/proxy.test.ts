@@ -163,3 +163,38 @@ describe("homepage Markdown negotiation", () => {
     expect(response?.headers.get("vary")).toBe("Accept");
   });
 });
+
+describe("headers and redirects from the Pages site", () => {
+  it("links the discovery resources and the page's Markdown twin", () => {
+    const pricing = visit("https://lobbystack.com/pricing/", { "accept-language": "en" })
+    expect(pricing?.headers.get("link")).toMatch(/^<\/pricing\.md>; rel="alternate"; type="text\/markdown", <\/\.well-known\/api-catalog>; rel="api-catalog"/)
+    expect(pricing?.headers.get("content-signal")).toBe("ai-train=yes, search=yes, ai-input=yes")
+    expect(pricing?.headers.get("no-vary-search")).toContain('"utm_source"')
+    expect(pricing?.headers.get("x-robots-tag")).toBeNull()
+    expect(visit("https://lobbystack.com/fr/pricing/")?.headers.get("link")).toMatch(/^<\/\.well-known\/api-catalog>/)
+  })
+
+  it.each(["/privacy/", "/sr/terms/", "/search/", "/pricing.md", "/schema/page.json", "/schemamap.xml", "/.well-known/api-catalog"])(
+    "keeps %s out of search results",
+    (pathname) => {
+      expect(visit(`https://lobbystack.com${pathname}`, { "accept-language": "en" })?.headers.get("x-robots-tag")).toBe("noindex, follow")
+    }
+  )
+
+  it("caches social cards and images", () => {
+    expect(visit("https://lobbystack.com/og/pricing.jpg")?.headers.get("cache-control")).toBe("public, max-age=31536000, immutable")
+    expect(visit("https://lobbystack.com/illustrations/hero.webp")?.headers.get("cache-control")).toBe("public, max-age=604800")
+    expect(visit("https://lobbystack.com/webmcp.js")?.headers.get("cache-control")).toBe("public, max-age=3600")
+  })
+
+  it.each([
+    ["/comparison", "/blog/"],
+    ["/fr/comparison/", "/fr/blog/"],
+    ["/compare/ai-receptionist-vs-voicemail", "/blog/ai-receptionist-vs-voicemail/"],
+    ["/blog/fintech-documentation-scales/", "/blog/"],
+  ])("sends the retired %s to %s", (from, to) => {
+    const response = visit(`https://lobbystack.com${from}`)
+    expect(response?.status).toBe(301)
+    expect(response?.headers.get("location")).toBe(`https://lobbystack.com${to}`)
+  })
+})

@@ -74,7 +74,8 @@ function loadCollection<Schema extends z.ZodType>(name: string, schema: Schema):
       }
       return {
         id,
-        body: match ? source.slice(match[0].length) : source,
+        // Astro dropped the blank lines between the frontmatter and the body.
+        body: (match ? source.slice(match[0].length) : source).replace(/^(?:\r?\n)+/, ""),
         filePath: path.relative(process.cwd(), file).split(path.sep).join("/"),
         data: parsed.data,
       }
