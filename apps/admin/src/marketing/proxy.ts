@@ -128,7 +128,13 @@ export function marketingProxy(request: NextRequest, env: Env = process.env): Ne
   }
 
   const route = resolveMarketingRoute(pathname, env.INDEXNOW_KEY);
-  if (route.kind === "asset") return withMarketingHeaders(NextResponse.next(), env, assetCacheControl(pathname), pathname);
+  if (route.kind === "asset") {
+    const cacheControl = assetCacheControl(pathname);
+    const response = withMarketingHeaders(NextResponse.next(), env, cacheControl, pathname);
+    // Pagefind's loader, UI and wasm keep their names from build to build, so
+    // the edge keeps them like pages and each release purges them.
+    return pathname.startsWith("/pagefind/") && !cacheControl ? cachedAtEdge(response) : response;
+  }
   if (route.kind === "redirect") {
     const target = withPathname(url, route.location);
     return withMarketingHeaders(NextResponse.redirect(target, 301), env, "public, max-age=3600", pathname);

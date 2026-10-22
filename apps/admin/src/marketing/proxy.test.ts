@@ -205,6 +205,23 @@ describe("headers and redirects from the Pages site", () => {
     }
   )
 
+  it("caches the search index for good and its loader like a page", () => {
+    for (const pathname of ["/pagefind/fragment/en_11c0ebb.pf_fragment", "/pagefind/index/en_35798bb.pf_index", "/pagefind/pagefind.en_477d279c50.pf_meta"]) {
+      const response = visit(`https://lobbystack.com${pathname}`)
+      expect(response?.headers.get("cache-control")).toBe("public, max-age=31536000, immutable")
+      expect(response?.headers.get("cloudflare-cdn-cache-control")).toBeNull()
+    }
+    for (const pathname of ["/pagefind/pagefind.js", "/pagefind/pagefind-entry.json", "/pagefind/wasm.en.pagefind"]) {
+      expect(visit(`https://lobbystack.com${pathname}`)?.headers.get("cloudflare-cdn-cache-control")).toBe("max-age=300, stale-while-revalidate=86400")
+    }
+  })
+
+  it("sends /favicon.ico to the SVG icon", () => {
+    const response = visit("https://lobbystack.com/favicon.ico")
+    expect(response?.status).toBe(301)
+    expect(response?.headers.get("location")).toBe("https://lobbystack.com/favicon.svg")
+  })
+
   it("lets Cloudflare keep the homepage's Markdown twin", () => {
     const response = visit("https://lobbystack.com/", { accept: "text/markdown", "accept-language": "en" })
     expect(response?.headers.get("cloudflare-cdn-cache-control")).toBe("max-age=300, stale-while-revalidate=86400")

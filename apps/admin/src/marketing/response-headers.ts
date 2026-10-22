@@ -43,6 +43,10 @@ function isNoindexResponse(pathname: string, rest: string): boolean {
 /** Cache lifetimes for the site's static files in public/. */
 export function assetCacheControl(pathname: string): string | undefined {
   if (pathname.startsWith("/_next/static/")) return undefined
+  // Pagefind names its index, fragments and metadata after their content.
+  if (/^\/pagefind\/(fragment|index|filter)\//.test(pathname) || /^\/pagefind\/pagefind\.[^/]+\.pf_meta$/.test(pathname)) {
+    return "public, max-age=31536000, immutable"
+  }
   if (pathname === "/webmcp.js") return "public, max-age=3600"
   if (pathname.startsWith("/illustrations/") || pathname.startsWith("/screenshots/")) return "public, max-age=604800"
   if (/\.(svg|webp)$/.test(pathname)) return "public, max-age=604800"
@@ -66,6 +70,8 @@ export function marketingResponseHeaders(pathname: string, rest: string): Record
 
 /** Retired URLs and where they went, keyed by path with its trailing slash. */
 export const MARKETING_REDIRECTS: Record<string, string> = {
+  // Browsers and crawlers ask for it whether or not a page links it.
+  "/favicon.ico": "/favicon.svg",
   "/comparison/": "/blog/",
   "/fr/comparison/": "/fr/blog/",
   "/compare/ai-receptionist-vs-virtual-receptionist/": "/blog/ai-receptionist-vs-virtual-receptionist/",
