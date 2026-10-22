@@ -21,4 +21,10 @@ describe("billing permissions", () => {
   it("does not offer unconfigured provider actions", () => {
     expect(billingAccess("business_owner", paidAccount, false)).toEqual({ hasBillingManagementAccess: true, hasCustomerPortalAccess: false, hasCheckoutAccess: false });
   });
+  it("sells and manages nothing through Polar for a managed plan, which LobbyStack bills directly", () => {
+    const managed = { customerId: "customer", subscriptionId: null, plan: "enterprise", subscriptionState: "active", source: "managed" };
+    expect(billingAccess("business_owner", managed, true)).toEqual({ hasBillingManagementAccess: true, hasCustomerPortalAccess: false, hasCheckoutAccess: false });
+    // Once the managed plan ends, the business can buy a plan again.
+    expect(billingAccess("business_owner", { ...managed, subscriptionState: "canceled" }, true)).toMatchObject({ hasCheckoutAccess: true });
+  });
 });

@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
 
+import { BrandMark } from "@/components/brand-mark";
 import { resolveLocale } from "@/lib/locale";
-import { localizeMarketingHref } from "@/lib/marketing-site-url";
+import { privacyHref, termsHref } from "@/lib/marketing-site-url";
 import { cn } from "@/lib/utils";
-import { versionedAssetUrl } from "@/lib/versioned-assets";
 
 type OnboardingShellProps = {
   /** Shown above the title. */
@@ -21,8 +21,13 @@ type OnboardingShellProps = {
   onSignOut?: () => void;
 };
 
-/** Onboarding routes after sign-up (step 1), keyed by path. */
+/**
+ * Onboarding routes after sign-up (step 1), keyed by path. The brand step
+ * comes before the business only for a deployment's first owner, so it shares
+ * step 2 and the progress dots keep linking that step to the business.
+ */
 export const onboardingRoutes = {
+  "/onboarding/brand": { key: "brand", step: 2, width: "md" },
   "/onboarding/business": { key: "businessName", step: 2, width: "md" },
   "/onboarding/website": { key: "website", step: 3, width: "md" },
   "/onboarding/knowledge": { key: "knowledge", step: 4, width: "lg" },
@@ -49,10 +54,7 @@ export function ReplacementOnboardingShell({ icon, eyebrow, title, description, 
       ) : null}
       <main className="flex flex-1 flex-col items-center px-6 py-12">
         <div className={cn("my-auto flex w-full flex-col items-center", widths[width])}>
-          <div aria-label="LobbyStack" className="flex w-full items-center justify-center gap-2.5">
-            <img alt="" aria-hidden="true" className="size-6 select-none dark:invert" draggable={false} src={versionedAssetUrl("/brand/logo-icon.svg")} />
-            <span className="font-heading text-xl font-semibold leading-none text-foreground">LobbyStack</span>
-          </div>
+          <BrandMark />
           <div className="mt-10 flex w-full flex-col items-center gap-4 text-center">
             {icon}
             {eyebrow ? <span className="inline-flex items-center rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">{eyebrow}</span> : null}
@@ -83,9 +85,9 @@ export function ReplacementOnboardingShell({ icon, eyebrow, title, description, 
           </nav>
         ) : null}
         {legalFooter ?? <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <a className="hover:text-foreground" href={localizeMarketingHref(marketingLocale, "/terms")} rel="noreferrer" target="_blank">{t("shell.terms")}</a>
+          <a className="hover:text-foreground" href={termsHref(marketingLocale)} rel="noreferrer" target="_blank">{t("shell.terms")}</a>
           <span aria-hidden="true">·</span>
-          <a className="hover:text-foreground" href={localizeMarketingHref(marketingLocale, "/privacy")} rel="noreferrer" target="_blank">{t("shell.privacy")}</a>
+          <a className="hover:text-foreground" href={privacyHref(marketingLocale)} rel="noreferrer" target="_blank">{t("shell.privacy")}</a>
         </div>}
       </footer>
     </div>

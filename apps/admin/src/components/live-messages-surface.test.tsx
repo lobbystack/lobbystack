@@ -88,3 +88,36 @@ describe("messages inbox paging", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/messages?conversationId=older", expect.anything());
   });
 });
+
+describe("a website visitor waiting for a person", () => {
+  it("is marked in the list, and Join chat takes the chat for the team", async () => {
+    const waiting = { id: "m1", conversationId: "conversation-1", contactName: null, contactPhone: null, visitorName: "Ada Visitor", visitorEmail: null, channel: "web_chat", automationState: "human_handoff", teamRequestedAt: "2026-09-01T12:00:00Z", body: "Can I talk to someone?", direction: "inbound", status: "delivered", createdAt: "2026-09-01T12:00:00Z" };
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+    clients.push(client);
+    client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true }] });
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => init?.method === "PATCH" ? Response.json({ ok: true }) : Response.json({ messages: [waiting], hasNext: false }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<QueryClientProvider client={client}><LiveMessagesSurface /></QueryClientProvider>);
+
+    await userEvent.click(await screen.findByRole("button", { name: /Ada Visitor.*page\.waitingBadge/ }));
+    expect(screen.getByText("page.waitingTitle")).toBeTruthy();
+    expect(screen.getByText("page.waitingDescription")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "page.joinChat" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/messages?businessId=business", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ conversationId: "conversation-1", automationState: "human_handoff" }) })));
+    expect(screen.getByRole("button", { name: "page.automationResumeAi" })).toBeTruthy();
+  });
+
+  it("isn't marked once someone from the team has the chat", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+    clients.push(client);
+    client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true }] });
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ messages: [{ id: "m1", conversationId: "conversation-1", contactName: null, contactPhone: null, visitorName: "Ada Visitor", visitorEmail: null, channel: "web_chat", automationState: "human_handoff", teamRequestedAt: null, body: "Thanks!", direction: "inbound", status: "delivered", createdAt: "2026-09-01T12:00:00Z" }], hasNext: false })));
+    render(<QueryClientProvider client={client}><LiveMessagesSurface /></QueryClientProvider>);
+
+    await userEvent.click(await screen.findByRole("button", { name: /Ada Visitor/ }));
+    expect(screen.queryByText("page.waitingBadge")).toBeNull();
+    expect(screen.queryByRole("button", { name: "page.joinChat" })).toBeNull();
+    expect(screen.getByText("page.automationHumanHandoff")).toBeTruthy();
+  });
+});

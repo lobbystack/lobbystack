@@ -5,6 +5,9 @@ import { canVisitOnboardingStage, getActiveOnboardingState, numberStepRedirect, 
 
 import { getAppDatabase } from "./api-helpers";
 import { getSession } from "./auth";
+import { initialBrandingFields, type InitialBrandingFields } from "./onboarding-branding";
+
+const BRAND_ROUTE = "/onboarding/brand";
 
 const routeStages: Record<string, OnboardingStage> = {
   "/onboarding/business": "create_business",
@@ -23,10 +26,21 @@ export async function requireOnboardingStage(pathname: string, options: { allowC
   const state = await getActiveOnboardingState(getAppDatabase().db, session.user.id);
   const expected = routeStages[pathname];
   if (!expected) redirect(resolveOnboardingRoute(state.stage));
+  // A fresh self-hosted deployment's first owner names it before naming their business.
+  if (expected === "create_business" && state.businessId === null && await initialBrandingFields(session.user.id)) redirect(BRAND_ROUTE);
   if (options.allowCreate && expected === "create_business" && state.businessId === null) return;
   if (!canVisitOnboardingStage(state.stage, expected)) redirect(resolveOnboardingRoute(state.stage));
   if (expected === "phone_number" && state.businessId) {
     const elsewhere = await numberStepRedirect({ db: getAppDatabase().db }, { userId: session.user.id, businessId: state.businessId, finished: state.stage === "complete" });
     if (elsewhere) redirect(elsewhere);
   }
+}
+
+/** The brand step's fields, or a redirect to the person's current step when the step doesn't apply to them. */
+export async function requireBrandStep(): Promise<InitialBrandingFields> {
+  const session = await getSession(new Headers(await headers()));
+  if (!session) redirect("/login");
+  const fields = await initialBrandingFields(session.user.id);
+  if (fields) return fields;
+  redirect(resolveOnboardingRoute((await getActiveOnboardingState(getAppDatabase().db, session.user.id)).stage));
 }

@@ -35,6 +35,45 @@ export function securityHeaders(env: Record<string, string | undefined> = proces
   };
 }
 
+function originOf(value: string | undefined): string | undefined {
+  try {
+    return value ? new URL(value).origin : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * The marketing site's policy. Its hero voice demo calls the dashboard host's
+ * live-call API, and Cloudflare Web Analytics loads its beacon from its own origin.
+ */
+export function marketingSecurityHeaders(env: Record<string, string | undefined> = process.env): Record<string, string> {
+  const posthogOrigin = posthogSources(env).join(" ");
+  const callOrigins = Array.from(new Set(
+    [originOf(env.APP_BASE_URL) ?? "https://app.lobbystack.com", originOf(env.NEXT_PUBLIC_LIVE_CALL_ENDPOINT)].filter(Boolean),
+  )).join(" ");
+  return {
+    "Content-Security-Policy": [
+      "default-src 'self'",
+      "base-uri 'self'",
+      "frame-ancestors 'none'",
+      "object-src 'none'",
+      `script-src 'self' 'unsafe-inline'${env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""} https://static.cloudflareinsights.com ${posthogOrigin}`,
+      "style-src 'self' 'unsafe-inline'",
+      `img-src 'self' data: ${posthogOrigin}`,
+      `connect-src 'self' ${callOrigins} https://cloudflareinsights.com ${posthogOrigin}`,
+      "font-src 'self' data:",
+      "form-action 'self'",
+      "media-src 'self' blob:",
+      "worker-src 'self' blob:",
+    ].join("; "),
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Permissions-Policy": "camera=(), microphone=(self), geolocation=()",
+  };
+}
+
 /** The same policy set, but frameable across origins and without the DENY framing header. */
 export function embeddableSecurityHeaders(env: Record<string, string | undefined> = process.env): Record<string, string> {
   const base = securityHeaders(env);
@@ -44,6 +83,20 @@ export function embeddableSecurityHeaders(env: Record<string, string | undefined
     ...rest,
     "Content-Security-Policy": csp.replace("frame-ancestors 'none'", "frame-ancestors *"),
   };
+}
+
+/**
+ * The logo onboarding saved may be an SVG, and an SVG opened on its own is a
+ * document. Serve it with no script, no requests and a sandbox, whichever of
+ * the proxy, next.config.ts or the route sets the header last.
+ */
+export const BRAND_LOGO_SECURITY_HEADERS: Record<string, string> = {
+  "Content-Security-Policy": "default-src 'none'; img-src data:; style-src 'unsafe-inline'; sandbox",
+  "X-Content-Type-Options": "nosniff",
+};
+
+export function brandLogoSecurityHeaders(env: Record<string, string | undefined> = process.env): Record<string, string> {
+  return { ...securityHeaders(env), ...BRAND_LOGO_SECURITY_HEADERS };
 }
 
 /** Header records converted to the shape the next.config.ts headers array expects. */

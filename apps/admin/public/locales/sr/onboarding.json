@@ -16,6 +16,28 @@
     "statusDescription": "Radni prostor ćete moći da koristite kada administrator završi početno podešavanje. Podešavanja mogu da menjaju samo vlasnici firme i administratori.",
     "goToWorkspace": "Idi u radni prostor"
   },
+  "brand": {
+    "title": "Prilagodite ovu aplikaciju",
+    "description": "Vi prvi podešavate ovu instalaciju, pa birate naziv i logo koje svi vide kada se prijave i koriste kontrolnu tablu.",
+    "nameLabel": "Naziv aplikacije",
+    "nameHint": "Najviše 40 znakova. Zamenjuje naziv {{appName}} na svakoj stranici i na kartici pregledača.",
+    "logoLabel": "Logo",
+    "logoChoose": "Izaberite logo",
+    "logoChange": "Izaberite drugi",
+    "logoRemove": "Ukloni",
+    "logoHint": "Kvadratna slika u formatu PNG, JPEG, WebP ili SVG, do 256 KB. Prikazuje se pored naziva i kao ikonica kartice pregledača.",
+    "preview": "Pregled",
+    "continue": "Nastavi",
+    "saving": "Čuvanje...",
+    "skip": "Preskoči i zadrži naziv {{appName}}",
+    "errors": {
+      "appName": "Izaberite naziv od najviše 40 znakova.",
+      "logoType": "Izaberite sliku u formatu PNG, JPEG, WebP ili SVG. SVG ne sme da sadrži skripte.",
+      "logoSize": "Izaberite logo od najviše 256 KB.",
+      "closed": "Naziv i logo ove instalacije više ne mogu da se biraju ovde.",
+      "failed": "Nismo mogli da sačuvamo naziv i logo. Pokušajte ponovo."
+    }
+  },
   "businessName": {
     "title": "Za početak, kako se zove Vaša firma?",
     "description": "",
@@ -47,7 +69,7 @@
     "submitFailed": "Trenutno ne možemo da sačuvamo firmu. Pokušajte ponovo."
   },
   "website": {
-    "title": "Sada ćemo obučiti LobbyStack pomoću Vašeg sajta",
+    "title": "Sada ćemo obučiti {{appName}} pomoću Vašeg sajta",
     "description": "",
     "label": "Sajt",
     "placeholder": "mojafirma.rs",
@@ -185,7 +207,7 @@
     "continue": "Nastavi"
   },
   "attribution": {
-    "title": "Kako ste čuli za LobbyStack?",
+    "title": "Kako ste čuli za {{appName}}?",
     "description": "Tako znamo šta funkcioniše.",
     "options": {
       "ai_assistant": "ChatGPT, Claude i sl.",

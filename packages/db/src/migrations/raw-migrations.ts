@@ -111,6 +111,21 @@ export const SCHEMA_MIGRATIONS = [
   "0105_staff_hours_and_time_off.sql",
   "0106_summary_regenerate_status.sql",
   "0107_service_price.sql",
+  "0108_service_discount.sql",
+  "0109_widget_key_value.sql",
+  "0110_widget_live_chat.sql",
+  "0111_contact_passcodes.sql",
+  "0112_appointment_change_verification_call.sql",
+  "0113_deployment_branding.sql",
+  "0114_platform_api_keys.sql",
+  "0115_platform_business_listing.sql",
+  "0116_api_number_claims.sql",
+  "0117_ownership_claims.sql",
+  "0118_webhook_platform_key_creator.sql",
+  "0119_messages_sent_by_user_index.sql",
+  "0120_validate_messages_sent_by_user.sql",
+  "0121_api_number_claim_stage.sql",
+  "0122_conversation_team_joined_at.sql",
 ] as const;
 
 const CONCURRENT_INDEX_DIRECTIVE = /^-- lobbystack:concurrent-index ([a-z][a-z0-9_]*)$/m;

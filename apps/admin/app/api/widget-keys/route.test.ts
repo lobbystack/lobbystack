@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ insert: vi.fn(), select: vi.fn(), update: vi.fn() }));
+const mocks = vi.hoisted(() => ({ insert: vi.fn(), values: vi.fn(), select: vi.fn(), update: vi.fn() }));
 
 vi.mock("@/lib/operator-request", () => import("@/lib/operator-request.fake"));
 
 import { fakeOperator, resetFakeOperator } from "@/lib/operator-request.fake";
-import { PATCH, POST } from "./route";
+import { GET, PATCH, POST } from "./route";
 
 beforeEach(() => {
   resetFakeOperator();
@@ -17,8 +17,7 @@ const request = (body: Record<string, unknown> = {}) => new Request("https://adm
 describe("widget key issuance gate", () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    mocks.insert.mockReturnValue({
-      values: () => ({
+    mocks.values.mockReturnValue({
         returning: async () => [{
           id: "00000000-0000-4000-8000-000000000001",
           status: "active",
@@ -28,8 +27,8 @@ describe("widget key issuance gate", () => {
           lastUsedAt: null,
           createdAt: new Date("2026-01-01T00:00:00.000Z"),
         }],
-      }),
     });
+    mocks.insert.mockReturnValue({ values: mocks.values });
   });
   afterEach(() => {
     vi.unstubAllEnvs();
@@ -47,8 +46,11 @@ describe("widget key issuance gate", () => {
     vi.stubEnv("WIDGET_KEY_ISSUANCE_ENABLED", "true");
     const response = await POST(request({ allowedOrigins: ["https://business.test"] }));
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ ok: true });
+    const body = await response.json() as { ok: boolean; key: { key: string } };
+    expect(body).toMatchObject({ ok: true });
     expect(mocks.insert).toHaveBeenCalledTimes(1);
+    // The key is kept beside its hash so the dashboard can show the snippet again.
+    expect(mocks.values).toHaveBeenCalledWith(expect.objectContaining({ keyValue: body.key.key }));
   });
 
   it("refuses an origin without https:// instead of saving one no browser sends", async () => {
@@ -57,6 +59,20 @@ describe("widget key issuance gate", () => {
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({ code: "invalid_origin" });
     expect(mocks.insert).not.toHaveBeenCalled();
+  });
+});
+
+describe("widget key listing", () => {
+  it("returns each key so its snippet can be copied again, except revoked and older keys", async () => {
+    const row = { status: "active", label: null, allowedOrigins: [], config: {}, lastUsedAt: null, createdAt: new Date("2026-01-01T00:00:00.000Z") };
+    mocks.select.mockReturnValue({ from: () => ({ where: () => ({ orderBy: async () => [
+      { ...row, id: "00000000-0000-4000-8000-000000000001", keyValue: "wk_live_one" },
+      { ...row, id: "00000000-0000-4000-8000-000000000002", keyValue: "wk_live_two", status: "revoked" },
+      { ...row, id: "00000000-0000-4000-8000-000000000003", keyValue: null },
+    ] }) }) });
+    const response = await GET(new Request("https://admin.test/api/widget-keys"));
+    const { keys } = await response.json() as { keys: Array<{ key: string | null }> };
+    expect(keys.map((key) => key.key)).toEqual(["wk_live_one", null, null]);
   });
 });
 

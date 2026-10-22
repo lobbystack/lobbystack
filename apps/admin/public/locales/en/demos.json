@@ -32,7 +32,7 @@
     "claimed": {
       "title": "This demo has already been claimed",
       "titleWithBusiness": "The demo for {{businessName}} has already been claimed",
-      "description": "This receptionist is now owned by a LobbyStack account."
+      "description": "This receptionist is now owned by a {{appName}} account."
     }
   },
   "claim": {

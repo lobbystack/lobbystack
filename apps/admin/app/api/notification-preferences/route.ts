@@ -1,33 +1,22 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
 
-import { users } from "@lobbystack/db";
-import { defaultOperatorNotificationEventPreferences, getNotificationPreferences, operatorNotificationEventKeys, setNotificationPreferences, type OperatorNotificationEventPreferences } from "@lobbystack/domain";
+import { getNotificationPreferences, normalizeOperatorNotificationEventPreferences, setNotificationPreferences } from "@lobbystack/domain";
 import { jsonError } from "@/lib/api-helpers";
-import { getAuthDatabase } from "@/lib/auth";
 import { operatorRoute } from "@/lib/operator-request";
+import { hasVerifiedPhone } from "@/lib/verified-phone";
 
 export const dynamic = "force-dynamic";
 
-export const GET = operatorRoute(async ({ userId, businessId, domain }) => {
-  const user = (await getAuthDatabase().db.select({ phone: users.phone, phoneVerifiedAt: users.phoneVerifiedAt }).from(users).where(eq(users.id, userId)).limit(1))[0];
-  return NextResponse.json(await getNotificationPreferences(domain, { userId, businessId, phoneVerified: Boolean(user?.phone && user.phoneVerifiedAt) }));
-});
+export const GET = operatorRoute(async ({ userId, businessId, domain }) => NextResponse.json(await getNotificationPreferences(domain, { userId, businessId, phoneVerified: await hasVerifiedPhone(userId) })));
 
 export const PUT = operatorRoute(async ({ userId, businessId, body, domain }) => {
   if (typeof body.emailEnabled !== "boolean" || typeof body.smsEnabled !== "boolean") return jsonError("Valid notification preferences are required.", 400);
-  const defaults = defaultOperatorNotificationEventPreferences();
-  const rawEvents = typeof body.eventPreferences === "object" && body.eventPreferences !== null ? body.eventPreferences as Record<string, unknown> : {};
-  const eventPreferences = Object.fromEntries(operatorNotificationEventKeys.map((key) => {
-    const value = rawEvents[key];
-    return [key, typeof value === "object" && value !== null && typeof (value as { email?: unknown }).email === "boolean" && typeof (value as { sms?: unknown }).sms === "boolean" ? value : defaults[key]];
-  })) as OperatorNotificationEventPreferences;
+  const eventPreferences = normalizeOperatorNotificationEventPreferences(body.eventPreferences);
   const dailySummaryEnabled = body.dailySummaryEnabled === true;
   const dailySummarySendTime = typeof body.dailySummarySendTime === "string" && body.dailySummarySendTime ? body.dailySummarySendTime : null;
   if (dailySummaryEnabled && (!dailySummarySendTime || !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(dailySummarySendTime))) return jsonError("A valid daily summary time is required.", 400);
   if (body.smsEnabled || Object.values(eventPreferences).some(event => event.sms)) {
-    const [user] = await getAuthDatabase().db.select({ phone: users.phone, phoneVerifiedAt: users.phoneVerifiedAt }).from(users).where(eq(users.id, userId));
-    const current = await getNotificationPreferences(domain, { userId, businessId, phoneVerified: Boolean(user?.phone && user.phoneVerifiedAt) });
+    const current = await getNotificationPreferences(domain, { userId, businessId, phoneVerified: await hasVerifiedPhone(userId) });
     if (!current.canUseSms) return NextResponse.json({ error: current.smsUnavailableReason === "sender_missing" ? "An alert SMS sender is required for SMS notifications." : "Verify your phone before enabling SMS notifications." }, { status: 400 });
   }
   await setNotificationPreferences(domain, { userId, businessId, emailEnabled: body.emailEnabled, smsEnabled: body.smsEnabled, eventPreferences, dailySummaryEnabled, dailySummarySendTime, ...(typeof body.smsConsent === "boolean" ? { smsConsent: body.smsConsent } : {}) });

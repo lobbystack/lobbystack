@@ -404,6 +404,8 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
             throw new APIError("BAD_REQUEST", { code: "INVALID_PASSWORD", message: "Invalid password" });
           }
         }
+        // A new password ends every other session, whatever the client asked for.
+        if (ctx.path === "/change-password") return { context: { body: { ...ctx.body, revokeOtherSessions: true } } };
         if (ctx.path !== "/sign-up/email") {
           return;
         }

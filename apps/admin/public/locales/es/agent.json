@@ -108,7 +108,8 @@
         "from": "desde {{amount}}",
         "range": "{{min}} – {{max}}",
         "inPerson": "Se fija en persona",
-        "none": "Sin definir"
+        "none": "Sin definir",
+        "discounted": "{{price}} (−{{percent}} %)"
       },
       "duplicated": "Servicio duplicado.",
       "duplicateFailed": "No se pudo duplicar el servicio.",
@@ -184,8 +185,12 @@
           "errors": {
             "invalid": "Escriba un precio, por ejemplo 3.500 o 12,50.",
             "rangeIncomplete": "Escriba el precio mínimo y el máximo.",
-            "rangeOrder": "El precio máximo debe ser mayor que el mínimo."
-          }
+            "rangeOrder": "El precio máximo debe ser mayor que el mínimo.",
+            "discountInvalid": "Escriba un descuento de 0 a 100 %."
+          },
+          "discount": "Descuento",
+          "discountPercent": "Porcentaje de descuento",
+          "discountPreview": "Los clientes pagan {{price}} en lugar de {{regular}}."
         },
         "active": {
           "label": "Reservable",
@@ -379,9 +384,20 @@
       "label": "Permitir reprogramación por IA",
       "hint": "Permita que la recepcionista cambie una cita futura verificada después de comprobar la disponibilidad."
     },
-    "requireOtp": {
-      "label": "Exigir código de un solo uso",
-      "hint": "Enviar un código antes de cualquier cancelación o reprogramación."
+    "verification": {
+      "label": "Verificación de quien llama",
+      "options": {
+        "phone_match_and_facts": "Número de teléfono y datos de la cita",
+        "otp_required": "Código de un solo uso por SMS",
+        "passcode_required": "PIN en el teclado",
+        "operator_only": "Su equipo hace los cambios"
+      },
+      "descriptions": {
+        "phone_match_and_facts": "Quien llama debe hacerlo desde el número con el que se reservó la cita y decir su hora o servicio.",
+        "otp_required": "Además, debe leer un código de un solo uso enviado por SMS a ese número antes de cualquier cancelación o reprogramación.",
+        "passcode_required": "Además, debe marcar en el teclado del teléfono el PIN guardado en su contacto. Si no tiene PIN, su solicitud pasa a su equipo. Configure los PIN en la pestaña Detalles de cada contacto.",
+        "operator_only": "La recepcionista no cambia citas. Pasa las solicitudes a su equipo."
+      }
     }
   },
   "actions": {

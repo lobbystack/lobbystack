@@ -2,6 +2,7 @@
 
 import { type FormEvent, useState } from "react";
 
+import { brandLinks, contactEmailFor } from "@lobbystack/shared";
 import { CircleQuestionMarkIcon, MessageSquare } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -37,6 +38,7 @@ type FeedbackWidgetProps = {
 
 export function DashboardFeedbackWidget({ businessId, className }: FeedbackWidgetProps) {
   const { t } = useTranslation("common");
+  const links = brandLinks();
   async function submitFeedback(payload: { businessId?: string; message: string; pagePath: string; userAgent: string }) {
     const response = await fetch("/api/feedback", {
       method: "POST",
@@ -126,13 +128,13 @@ export function DashboardFeedbackWidget({ businessId, className }: FeedbackWidge
               <div className="flex items-center justify-between gap-3">
                 <p className="min-w-0 text-sm text-muted-foreground">
                   {t("feedback.helpText")}{" "}
-                  <a className="text-primary underline underline-offset-4" href="mailto:support@lobbystack.com">
+                  <a className="text-primary underline underline-offset-4" href={`mailto:${contactEmailFor(links, "support")}`}>
                     {t("feedback.contactLink")}
                   </a>{" "}
                   {t("feedback.helpTextSeparator")}{" "}
                   <a
                     className="text-primary underline underline-offset-4"
-                    href="https://docs.lobbystack.com"
+                    href={links.docsUrl}
                     rel="noreferrer"
                     target="_blank"
                   >
@@ -158,7 +160,7 @@ export function DashboardFeedbackWidget({ businessId, className }: FeedbackWidge
               render={
                 <a
                   aria-label={t("feedback.helpCenter")}
-                  href="https://docs.lobbystack.com"
+                  href={links.docsUrl}
                   rel="noreferrer"
                   target="_blank"
                 />

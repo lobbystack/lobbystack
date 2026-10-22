@@ -1,6 +1,6 @@
 import { canTextNumber, normalizeAppointmentChangePolicy, normalizeBookingMode, type BookingMode, type BusinessContextSnapshot } from "@lobbystack/shared";
 
-import type { AgentToolContext } from "./tools";
+import type { AgentChannel, AgentToolContext } from "./tools";
 
 /**
  * What a call keeps from a tool's result for its next request:
@@ -27,10 +27,12 @@ const TOOL_USE = {
   verifyAppointmentForChange: { kind: "other", progress: "checked the caller's identity" },
   sendAppointmentChangeOtp: { kind: "other", progress: "sent a verification code" },
   verifyAppointmentChangeOtp: { kind: "other", progress: "checked the verification code" },
+  requestKeypadPasscode: { kind: "other", progress: "started the keypad PIN check" },
   cancelAppointment: { kind: "action", progress: "tried to cancel the appointment" },
   rescheduleAppointment: { kind: "action", progress: "tried to reschedule the appointment" },
   requestAppointmentCancellation: { kind: "action", progress: "tried to save the cancellation request" },
   transferCall: { kind: "action", progress: "tried to transfer the call" },
+  requestTeamMember: { kind: "action", progress: "tried to ask the team to join the chat" },
   // Not an action: a call goes on after the caller called the hangup off, and the next request may end it again.
   endCall: { kind: "other", progress: "tried to end the call" },
 } satisfies Record<string, { kind: ToolKind; progress: string }>;
@@ -43,7 +45,7 @@ export function toolUse(name: string): { kind: ToolKind; progress: string } {
 }
 
 /** What the decision reads from a conversation: the same fields the tools get. */
-export type Conversation = Pick<AgentToolContext, "channel" | "callerPhone" | "callId" | "intakeOnly" | "callControl">;
+export type Conversation = Pick<AgentToolContext, "channel" | "callerPhone" | "callId" | "intakeOnly" | "callControl" | "conversationId" | "liveChat">;
 
 export type Capabilities = {
   /** The tools the agent gets. */
@@ -62,6 +64,10 @@ export type Capabilities = {
    * call's list covers a call from the number an appointment was booked with.
    */
   live: string[];
+  /** What GPT-Live does when the caller asks for a person on a browser call, which can't be transferred. Empty on a phone call. */
+  livePersonRule: string;
+  /** How GPT-Live asks for a keypad PIN on a phone call to a business that requires one. Empty otherwise. */
+  liveKeypadPinRule: string;
 };
 
 const BOOKING_GUIDANCE: Record<BookingMode, string> = {
@@ -69,6 +75,52 @@ const BOOKING_GUIDANCE: Record<BookingMode, string> = {
   request: "You don't book directly. Collect the service, the caller's preferred day and time, their name and callback number, then use requestAppointment. Tell the caller the team will confirm the time.",
   off: "You don't book appointments. If the caller wants one, take a message so the team can follow up.",
 };
+
+// A website chat with live chat on: someone from the team can join the chat
+// itself, during opening hours. When nobody can, the visitor gets a callback.
+const LIVE_CHAT_GUIDANCE = [
+  "Someone from the team can join this website chat, but the chat can't be transferred to a phone call.",
+  "When the visitor asks for a person, or a rule says to transfer them, call requestTeamMember right away with what they need. It checks whether anyone can join now.",
+  "When it succeeds, tell the visitor you've let the team know, someone will reply here shortly, and they can keep writing meanwhile. Never say or suggest someone has already joined.",
+  "When it says nobody can join, offer to take a message so someone from the team calls them back: get their name and the best number to reach them, then save it with takeMessage.",
+  "Never say or suggest the visitor is being transferred or connected to a phone call.",
+].join(" ");
+
+// Whether a phone call to the business can be put through to a person, under its transfer rule.
+function takesTransfers(snapshot: BusinessContextSnapshot): boolean {
+  return Boolean(snapshot.transferPolicy.transferNumber) && snapshot.transferPolicy.mode !== "never";
+}
+
+// Where someone on a browser call or a website chat can reach a person: the
+// business's number, when a phone call there can be put through under its
+// transfer rule. Otherwise nobody can be reached live.
+function personFromWeb(snapshot: BusinessContextSnapshot): string {
+  const phone = snapshot.contactChannels?.phoneNumber;
+  if (!phone || !takesTransfers(snapshot)) return "tell them you can't connect them with anyone from here";
+  switch (snapshot.transferPolicy.mode) {
+    case "on_urgent": return `tell them that for something urgent they can call ${phone} and ask for a person`;
+    case "during_business_hours": return `tell them they can call ${phone} during opening hours and ask for a person`;
+    default: return `tell them they can call ${phone} and ask for a person`;
+  }
+}
+
+/**
+ * What to do when someone on a browser call or a website chat asks for a
+ * person: neither can be transferred, so they get the number to call and the
+ * offer of a callback. The business's rules and instructions are written for
+ * phone calls and often say to transfer. `live` words it for GPT-Live, which
+ * hands the callback request to the agent.
+ */
+function webPersonRule(snapshot: BusinessContextSnapshot, channel: Exclude<AgentChannel, "voice">, live = false): string {
+  const who = channel === "web_chat" ? "visitor" : "caller";
+  return [
+    channel === "web_chat"
+      ? "This website chat can't be transferred: you can't connect the visitor to a person or bring anyone else into the chat."
+      : "This call is in the caller's web browser, not on a phone line, so it can't be transferred: you can't connect the caller to a person or put anyone else on the call.",
+    `Never say or suggest the ${who} is being transferred or connected to someone, even when a business rule or instruction says to transfer.`,
+    `When the ${who} asks for a person, or a rule says to transfer them, ${personFromWeb(snapshot)}, and offer to take a message so someone from the team calls them back${live ? "." : ": get their name and the best number to reach them, then save it with takeMessage."}`,
+  ].join(" ");
+}
 
 // Instant booking only offers times inside the opening hours, so without them
 // nothing is bookable.
@@ -80,6 +132,15 @@ const NO_HOURS_GUIDANCE = "The business hasn't set its opening hours yet, so you
 const SAVE_TEXT_ANSWER = "Whenever the caller says whether they want texts, save their answer with recordTextPreference, even after the booking or cancellation is done. Their answer on this call replaces smsConsentOnFile: a no means no texts, even when it was subscribed. Only an answer about texts counts: a yes to a time or to booking isn't a yes to texts, and a no to texts isn't a no to the appointment. Once the caller answers, tell them whether they'll get texts only after recordTextPreference has saved it.";
 const BOOKING_TEXT_GUIDANCE = "On a phone call, findAvailability returns smsConsentOnFile, the caller's earlier answer about texts from this business. When it's not_asked, or missing, ask together with the time you offer, in the language of the call: \"Can I text this number with your appointment confirmation and reminder? Message and data rates may apply. Reply STOP to opt out or HELP for help.\" When it's subscribed, don't ask: tell the caller they'll get a confirmation text. When it's declined or opted_out, don't ask and don't mention texts.";
 const CANCELLATION_TEXT_GUIDANCE = "Once verifyAppointmentForChange or verifyAppointmentChangeOtp verifies a cancellation, its result has smsConsentOnFile. When it's not_asked, ask once, together with the final confirmation and in the language of the call: \"Can I text this number to confirm the cancellation? Message and data rates may apply. Reply STOP to opt out or HELP for help.\" When it's subscribed, don't ask: tell the caller they'll get a text confirming the cancellation. When it's declined or opted_out, don't ask and don't mention texts.";
+// With a keypad PIN, the caller confirms right after the PIN, before the agent
+// knows their answer about texts, so the question follows the cancellation.
+const PIN_CANCELLATION_TEXT_GUIDANCE = "Once the keypad PIN check accepts a cancellation, its result has smsConsentOnFile. When it's not_asked, ask once, right after cancelling and in the language of the call: \"Can I text this number to confirm the cancellation? Message and data rates may apply. Reply STOP to opt out or HELP for help.\" When it's subscribed, don't ask: tell the caller they'll get a text confirming the cancellation. When it's declined or opted_out, don't ask and don't mention texts.";
+
+// The business requires a PIN typed on the keypad. Only the call controller
+// sees the digits; the agent learns the outcome in a later request.
+const KEYPAD_PIN_GUIDANCE = "This business also requires the caller's PIN before any change. When verifyAppointmentForChange says a PIN is required, start the check with requestKeypadPasscode. The caller types the PIN on their phone keypad and the call checks it, so you never see it: never ask for the PIN aloud, and never accept one the caller says. The outcome appears under \"Keypad PIN check in this call\" in a later request. Once it's accepted, make the change when the caller confirms, with the verificationId and appointmentId it gives, and don't ask for the PIN again. When the check fails, or the caller has no PIN or it's locked, don't make the change: for a cancellation, save the request with requestAppointmentCancellation as above, and for anything else, offer to take a message.";
+// GPT-Live never hears keypad presses: the worker checks the PIN and tells it the outcome.
+const LIVE_KEYPAD_PIN_RULE = "When a backend result says the caller has to type their PIN on the keypad, ask them to type it on their phone keypad and press the pound key, then wait quietly while they do. Never ask them to say their PIN. If they say digits aloud, don't repeat them: ask them to use the keypad instead. You'll be told whether the PIN was accepted; until then, don't say it was.";
 
 function employeeGuidance(snapshot: BusinessContextSnapshot, booking: BookingMode): string {
   if (!snapshot.employees?.length || booking === "off") return "";
@@ -104,11 +165,14 @@ export function receptionistCapabilities(snapshot: BusinessContextSnapshot, conv
   const selfService = booking !== "off" && changePolicy.enabled && changePolicy.verificationMode !== "operator_only";
   const cancels = selfService && changePolicy.allowCancel;
   const reschedules = selfService && changePolicy.allowReschedule && booking === "instant";
+  // The business may also require a PIN typed on the keypad, which only a
+  // phone call's controls can take.
+  const keypadPin = changePolicy.verificationMode === "passcode_required";
   // The transfer tool still checks the rules for each request, such as on_urgent.
-  const transfers = !intakeOnly && Boolean(snapshot.transferPolicy.transferNumber) && snapshot.transferPolicy.mode !== "never";
+  const transfers = !intakeOnly && takesTransfers(snapshot);
   const callerTextable = channel === "voice" && canTextNumber(snapshot.contactChannels?.smsNumber, callerPhone);
   // Browser calls and website chats have no trusted caller number.
-  const changes = Boolean(callerPhone) && (cancels || reschedules);
+  const changes = Boolean(callerPhone) && (cancels || reschedules) && (!keypadPin || Boolean(callControl?.collectPasscode));
   const offered: Record<ToolName, boolean> = {
     getBusinessHours: true,
     getBusinessServices: true,
@@ -120,8 +184,9 @@ export function receptionistCapabilities(snapshot: BusinessContextSnapshot, conv
     requestAppointment: booking === "request",
     lookupAppointmentForChange: changes,
     verifyAppointmentForChange: changes,
-    sendAppointmentChangeOtp: changes,
-    verifyAppointmentChangeOtp: changes,
+    sendAppointmentChangeOtp: changes && !keypadPin,
+    verifyAppointmentChangeOtp: changes && !keypadPin,
+    requestKeypadPasscode: changes && keypadPin,
     cancelAppointment: changes && cancels,
     rescheduleAppointment: changes && reschedules,
     // Offered next to cancelAppointment too, for an appointment the caller's
@@ -129,6 +194,8 @@ export function receptionistCapabilities(snapshot: BusinessContextSnapshot, conv
     requestAppointmentCancellation: booking !== "off",
     // Only phone calls can transfer.
     transferCall: Boolean(callControl?.transfer) && transfers,
+    // Website chats whose widget lets the team join: requestTeamMember checks the opening hours when it's used.
+    requestTeamMember: channel === "web_chat" && Boolean(conversation.liveChat && conversation.conversationId) && !intakeOnly,
     endCall: Boolean(callControl),
   };
   const voice = channel !== "web_chat";
@@ -150,9 +217,10 @@ export function receptionistCapabilities(snapshot: BusinessContextSnapshot, conv
         : offered.cancelAppointment
           ? [
             "To verify an appointment the caller wants to change, you need its time or its service, not their name. When verification fails because the caller hasn't said either yet, ask for it and verify again. When it still fails with the time or service, or the caller isn't calling from the number it was booked with, don't take a message: ask for the name it's booked under and its date, time and service, save the request with requestAppointmentCancellation, and tell the caller the team will take care of the cancellation. Never say or suggest the appointment is already cancelled.",
-            callerTextable ? CANCELLATION_TEXT_GUIDANCE : "This business can't text the caller's number, so don't offer or mention a text about a cancellation.",
+            callerTextable ? (keypadPin ? PIN_CANCELLATION_TEXT_GUIDANCE : CANCELLATION_TEXT_GUIDANCE) : "This business can't text the caller's number, so don't offer or mention a text about a cancellation.",
           ].join("\n\n")
           : `You can't cancel appointments ${voice ? "on this call" : "in this chat"}. When the caller asks to cancel one, tell them that plainly and that the team will take care of the cancellation. Ask for the name it's booked under and its date, time and service, then save the request with requestAppointmentCancellation. Never say or suggest the appointment is already cancelled.`,
+      offered.requestKeypadPasscode ? KEYPAD_PIN_GUIDANCE : "",
       offered.bookAppointment
         ? snapshot.hours.length
           ? "When a booking tool says a time isn't available, tell the caller the reason it gives. Say a time is taken only when the tool says it's already booked."
@@ -167,6 +235,10 @@ export function receptionistCapabilities(snapshot: BusinessContextSnapshot, conv
         : "",
       // Once, for the booking and the cancellation question alike.
       offered.recordTextPreference ? SAVE_TEXT_ANSWER : "",
+      // With live chat on, someone from the team can join the chat instead.
+      offered.requestTeamMember
+        ? LIVE_CHAT_GUIDANCE
+        : channel === "voice" ? "Transfer to a person only when the transfer rules allow it; otherwise offer to take a message." : webPersonRule(snapshot, channel),
       offered.transferCall && phone && snapshot.employees?.length
         ? "When the caller asks to speak with a specific employee, pass that employee's name as employeeName to transferCall."
         : "",
@@ -185,9 +257,11 @@ export function receptionistCapabilities(snapshot: BusinessContextSnapshot, conv
       booking === "off"
         ? ""
         : changeVerbs
-          ? `- Appointment changes: ${changeVerbs} an appointment when the call comes from the phone number it was booked with. ${cancels ? "When it can't find or verify the appointment, as on a call from another number, the backend passes a cancellation request to the team, and the appointment stays booked until the team cancels it." : "The backend passes a cancellation request to the team, and the appointment stays booked until the team cancels it."}`
-          : "- Appointment cancellations: the backend passes a cancellation request to the team. The appointment stays booked until the team cancels it.",
-      "- Messages: take a message for the team.",
+          ? `- Appointment changes: ${changeVerbs} an appointment when the call comes from the phone number it was booked with${keypadPin ? " and the caller types their PIN on the phone keypad" : ""}. ${cancels ? `When it can't find or verify the appointment, as on a call from another number${keypadPin ? " or without the PIN" : ""}, the backend passes a cancellation request to the team, and the appointment stays booked until the team cancels it.` : "The backend passes a cancellation request to the team, and the appointment stays booked until the team cancels it."}`
+          : phone
+            ? "- Appointment cancellations: the backend passes a cancellation request to the team. The appointment stays booked until the team cancels it."
+            : "- Appointment cancellations: a browser call has no phone number to identify the caller, so the backend passes a cancellation request to the team. The appointment stays booked until the team cancels it.",
+      phone ? "- Messages: take a message for the team." : "- Messages: take a message for the team, such as a request to be called back.",
       phone && transfers
         ? snapshot.employees?.length
           ? "- Transfers: connect the caller to a person, or to an employee they ask for by name, when the business allows it."
@@ -195,5 +269,8 @@ export function receptionistCapabilities(snapshot: BusinessContextSnapshot, conv
         : "",
       "- Ending the call: hang up when the caller is done, or on a spam or abusive call.",
     ].filter(Boolean),
+    // After the business's own rules and instructions, which may say to transfer.
+    livePersonRule: channel === "web_voice" ? webPersonRule(snapshot, channel, true) : "",
+    liveKeypadPinRule: changeVerbs && keypadPin ? LIVE_KEYPAD_PIN_RULE : "",
   };
 }

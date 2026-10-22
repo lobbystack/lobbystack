@@ -13,6 +13,9 @@ import { v1 } from "../public-api/routes";
 import { createLobbyStackMcpHttpHandler } from "./handler";
 
 vi.mock("../error-reporting", () => ({ reportServerError: vi.fn(async () => undefined) }));
+// The phone number routes' server-only modules, which these tests never reach.
+vi.mock("../twilio-provider", () => ({ getTwilioProvider: vi.fn(), getNumberClaimTokenSecret: vi.fn() }));
+vi.mock("../phone-number-search-limit", () => ({ checkPhoneNumberSearchLimit: vi.fn() }));
 // The REST routes use the app's context factory; point it at the test worker pool.
 const shared = vi.hoisted(() => ({ context: undefined as undefined | (() => unknown) }));
 vi.mock("../domain-context", () => ({ createWorkerDomainContext: () => { if (!shared.context) throw new Error("No test database."); return shared.context(); } }));

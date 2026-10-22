@@ -2,12 +2,13 @@ import { createHmac, randomBytes } from "node:crypto";
 
 import { and, desc, eq, isNull, lt, or, sql } from "drizzle-orm";
 
-import { apiKeys, auditLogs, users, webhookEndpoints, withBusinessTransaction } from "@lobbystack/db";
-import { API_KEY_PREFIX, apiKeyScopes, isApiKeyScope, type ApiKeyScope } from "@lobbystack/shared";
+import { apiKeys, auditLogs, users, withBusinessTransaction } from "@lobbystack/db";
+import { API_KEY_PREFIX, businessApiKeyScopes, isApiKeyScope, isBusinessApiKeyScope, isPlatformOnlyScope, type ApiKeyScope, type BusinessApiKeyScope } from "@lobbystack/shared";
 
 import { requireBusinessAdmin } from "../../authz";
 import type { DomainContext } from "../context";
 import { invalidRequest } from "./errors";
+import { disableWebhookEndpointsInTransaction } from "./webhooks";
 
 // Keys look like lsk_<8 hex id>_<32 url-safe characters>. The first part is
 // the prefix people see in the dashboard. The database stores only an
@@ -58,12 +59,14 @@ export function bearerToken(header: string | null | undefined): string | null {
 }
 
 
-export function normalizeScopes(value: unknown): ApiKeyScope[] {
+export function normalizeScopes(value: unknown): BusinessApiKeyScope[] {
   if (!Array.isArray(value) || value.length === 0) throw invalidRequest("Choose at least one scope.");
   const unknown = value.filter((scope) => !isApiKeyScope(scope));
   if (unknown.length) throw invalidRequest(`Unknown scopes: ${unknown.map(String).join(", ")}.`);
+  const platformOnly = value.filter(isPlatformOnlyScope);
+  if (platformOnly.length) throw invalidRequest(`Only platform keys can hold ${platformOnly.join(", ")}.`);
   // Keep the canonical order so stored keys compare cleanly.
-  return apiKeyScopes.filter((scope) => value.includes(scope));
+  return businessApiKeyScopes.filter((scope) => value.includes(scope));
 }
 
 export type ApiKeyRecord = {
@@ -82,7 +85,7 @@ function serializeApiKey(row: { id: string; name: string; prefix: string; scopes
     id: row.id,
     name: row.name,
     prefix: row.prefix,
-    scopes: row.scopes.filter(isApiKeyScope),
+    scopes: row.scopes.filter(isBusinessApiKeyScope),
     createdAt: row.createdAt.toISOString(),
     createdBy: row.createdByUserId ? { userId: row.createdByUserId, name: row.createdByName, email: row.createdByEmail } : null,
     lastUsedAt: row.lastUsedAt?.toISOString() ?? null,
@@ -141,8 +144,8 @@ export async function revokeApiKey(context: DomainContext, input: { userId: stri
     const now = new Date();
     await tx.update(apiKeys).set({ revokedAt: now, revokedByUserId: input.userId, updatedAt: now }).where(eq(apiKeys.id, existing.id));
     // Webhooks the key registered stop too, so a leaked key can't keep receiving data.
-    const disabled = await tx.update(webhookEndpoints).set({ status: "disabled", disabledReason: "manual", disabledAt: now, updatedAt: now }).where(and(eq(webhookEndpoints.businessId, input.businessId), eq(webhookEndpoints.createdByApiKeyId, existing.id), eq(webhookEndpoints.status, "enabled"))).returning({ id: webhookEndpoints.id });
-    await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: input.userId, eventType: "api_key.revoked", entityType: "api_key", entityId: existing.id, payload: { prefix: existing.prefix, disabledWebhookEndpointIds: disabled.map((row) => row.id) } });
+    const disabled = await disableWebhookEndpointsInTransaction(tx, { businessId: input.businessId, createdByApiKeyIds: [existing.id], now });
+    await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: input.userId, eventType: "api_key.revoked", entityType: "api_key", entityId: existing.id, payload: { prefix: existing.prefix, disabledWebhookEndpointIds: disabled } });
     return true;
   });
 }
@@ -159,7 +162,8 @@ export async function resolveApiKey(context: DomainContext, key: string): Promis
   const result = await context.db.execute<{ business_id: string; api_key_id: string; scopes: unknown }>(sql`select business_id, api_key_id, scopes from app.resolve_api_key(${hashApiKey(key)})`);
   const row = result.rows[0];
   if (!row) return null;
-  return { businessId: row.business_id, apiKeyId: row.api_key_id, scopes: Array.isArray(row.scopes) ? row.scopes.filter(isApiKeyScope) : [] };
+  // A per-business key never acts with a platform-only scope, even if a row holds one.
+  return { businessId: row.business_id, apiKeyId: row.api_key_id, scopes: Array.isArray(row.scopes) ? row.scopes.filter(isBusinessApiKeyScope) : [] };
 }
 
 /** Records use at most once a minute per key so busy integrations do not write on every request. */

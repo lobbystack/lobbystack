@@ -10,6 +10,24 @@ After restore, run `pnpm db:check`, `VERIFY_RLS_BEHAVIOR=true pnpm db:verify-rls
 
 Run `REPLACEMENT_COMPOSE_PROJECT=lobbystack_restore_drill CONFIRM_REPLACEMENT_RESTORE_DRILL=1 pnpm replacement:restore-drill` against a disposable stack. The drill deletes and restores a database row and a file from the active storage provider. It retains the backup under `.tmp/` for inspection.
 
+## Back up the Dokploy deployment
+
+The commands above target a Docker Compose stack. Dokploy runs LobbyStack's own production and backs it up to the `dokploy-backup` R2 bucket on its own schedule:
+
+- **Postgres:** a compressed dump of the `lobbystack` database every 6 hours. Dokploy keeps the latest 28 under `lobbystack-postgres-cxrhzf/lobbystack-postgres-production/`.
+- **Dokploy:** its own database and settings every day at 04:30 UTC, the latest 14 under `.../dokploy-web-server/`. This backup holds every service's environment variables, including `ENCRYPTION_KEY`, so treat the bucket as secret.
+
+Uploaded files live in the R2 bucket `lobbystack-production`, which has no separate copy. Redis and staging have no scheduled backup: PostgreSQL and R2 hold production's durable state, and staging holds test data only. See [Deploy LobbyStack on Dokploy](../deployment/dokploy.md#backups).
+
+To restore production's database from a dump:
+
+1. Set `LOBBYSTACK_MAINTENANCE_MODE=true` on the production admin and worker in Dokploy and redeploy both.
+2. In Dokploy, open the production Postgres service, go to **Backups**, and restore the dump you want. Alternatively, download it from R2 and pipe it through `gunzip` into `psql` inside the Postgres container.
+3. Run the migrator's `migrate` schedule. It reapplies role logins and runs `check` and `verify-rls`.
+4. Set `LOBBYSTACK_MAINTENANCE_MODE=false` on the admin and worker and redeploy them.
+
+To rebuild after losing the server, install Dokploy on a new one, restore the **Web Server** backup, then restore Postgres from its latest dump. The box's private image registry goes with the server, so build and push the images again before you deploy the apps. Redis starts empty, so jobs waiting in the old Redis are lost, and pending outbox messages publish again from PostgreSQL.
+
 ## Restore limits
 
 This runbook recovers PostgreSQL and storage state. It does not restore routing, provider endpoints, sessions, rejected webhooks, or in-flight calls and messages.

@@ -9,12 +9,9 @@ import { parseArgs } from "node:util";
 
 import twilio from "twilio";
 
-import { findScenarios, OPENING } from "./scenarios";
+import { findScenarios } from "./scenarios";
+import { callTwiml } from "./twiml";
 
-const VOICE = "Polly.Joanna-Neural";
-const GREETING_WAIT_S = 6;
-const ANSWER_WAIT_S = 12;
-const FINAL_SILENCE_S = 40;
 const DONE = new Set(["completed", "busy", "failed", "no-answer", "canceled"]);
 
 const { values } = parseArgs({
@@ -31,21 +28,8 @@ if (!values.from || !values.to) throw new Error("Pass --from (a number on that T
 const client = twilio(accountSid, authToken);
 
 for (const scenario of findScenarios(values.scenario)) {
-  const twiml = new twilio.twiml.VoiceResponse();
-  twiml.pause({ length: GREETING_WAIT_S });
-  twiml.say({ voice: VOICE }, OPENING);
-  twiml.pause({ length: ANSWER_WAIT_S });
-  let pausesS = GREETING_WAIT_S + ANSWER_WAIT_S + FINAL_SILENCE_S;
-  for (const line of scenario.lines) {
-    // TwiML pauses are whole seconds.
-    const pauseS = Math.round((line.pauseMs ?? 0) / 1000);
-    if (pauseS > 0) twiml.pause({ length: pauseS });
-    pausesS += pauseS;
-    twiml.say({ voice: VOICE }, line.text);
-  }
-  twiml.pause({ length: FINAL_SILENCE_S });
-
-  const call = await client.calls.create({ from: values.from, to: values.to, twiml: twiml.toString() });
+  const { twiml, silenceS } = callTwiml(scenario);
+  const call = await client.calls.create({ from: values.from, to: values.to, twiml });
   let status = call.status as string;
   let duration = 0;
   while (!DONE.has(status)) {
@@ -55,7 +39,7 @@ for (const scenario of findScenarios(values.scenario)) {
     duration = Number(fetched.duration ?? 0);
   }
   // The script's silences alone outlast a call the receptionist ended.
-  const hungUp = status === "completed" && duration < pausesS;
+  const hungUp = status === "completed" && duration < silenceS;
   const passed = scenario.expect === "ends" ? hungUp : status === "completed" && !hungUp;
   console.log(`${passed ? "PASS" : "FAIL"} ${scenario.name.padEnd(17)} ${call.sid} ${status} ${duration} s, ${hungUp ? "the receptionist hung up" : "the script hung up"}`);
 }

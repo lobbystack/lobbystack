@@ -16,6 +16,28 @@
     "statusDescription": "You will be able to use the workspace once an admin completes onboarding. Setup changes are limited to business owners and admins.",
     "goToWorkspace": "Go to workspace"
   },
+  "brand": {
+    "title": "Make this app your own",
+    "description": "You're the first to set up this deployment, so you choose the name and logo everyone sees when they sign in and use the dashboard.",
+    "nameLabel": "App name",
+    "nameHint": "Up to 40 characters. It replaces {{appName}} on every page and in the browser tab.",
+    "logoLabel": "Logo",
+    "logoChoose": "Choose a logo",
+    "logoChange": "Choose another",
+    "logoRemove": "Remove",
+    "logoHint": "A square PNG, JPEG, WebP or SVG up to 256 KB. It appears beside the name and as the browser tab icon.",
+    "preview": "Preview",
+    "continue": "Continue",
+    "saving": "Saving...",
+    "skip": "Skip and keep {{appName}}",
+    "errors": {
+      "appName": "Choose a name of 40 characters or fewer.",
+      "logoType": "Choose a PNG, JPEG, WebP or SVG image. An SVG can't contain scripts.",
+      "logoSize": "Choose a logo of 256 KB or less.",
+      "closed": "The name and logo for this deployment can no longer be chosen here.",
+      "failed": "We couldn't save the name and logo. Please try again."
+    }
+  },
   "businessName": {
     "title": "First, what is the name of your business?",
     "description": "",
@@ -47,7 +69,7 @@
     "submitFailed": "We couldn't save that business right now. Please try again."
   },
   "website": {
-    "title": "Now let's train LobbyStack on your website",
+    "title": "Now let's train {{appName}} on your website",
     "description": "",
     "label": "Website",
     "placeholder": "yourcompany.com",
@@ -184,7 +206,7 @@
     "continue": "Continue"
   },
   "attribution": {
-    "title": "How did you hear about LobbyStack?",
+    "title": "How did you hear about {{appName}}?",
     "description": "It helps us focus on what's working.",
     "options": {
       "ai_assistant": "ChatGPT, Claude, etc.",

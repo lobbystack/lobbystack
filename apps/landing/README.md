@@ -17,7 +17,7 @@ pnpm landing:preview
 
 The site initializes PostHog from `src/lib/posthog.ts` when `PUBLIC_POSTHOG_ENABLED=true` and `PUBLIC_POSTHOG_KEY` is present.
 
-Production should use the first-party Cloudflare Pages proxy:
+Production sends analytics through the first-party hostname `ts.lobbystack.com`:
 
 ```ini
 PUBLIC_POSTHOG_ENABLED=true
@@ -26,7 +26,7 @@ PUBLIC_POSTHOG_HOST=https://ts.lobbystack.com
 PUBLIC_POSTHOG_UI_HOST=https://us.posthog.com
 ```
 
-Attach `ts.lobbystack.com` to the same Cloudflare Pages project. Requests on that hostname are handled by `functions/_middleware.js` and forwarded to the correct PostHog US ingestion or asset host. Keep preview deployments disabled unless actively validating analytics.
+`ts.lobbystack.com` is a DNS-only CNAME record for PostHog's managed reverse proxy, which forwards requests to PostHog's US ingestion and asset hosts. Keep preview deployments off unless you are validating analytics. [Deploy the landing site on Cloudflare Pages](../../docs/deployment/landing-cloudflare-pages.md) covers the Pages project and its settings.
 
 ## Add a component
 

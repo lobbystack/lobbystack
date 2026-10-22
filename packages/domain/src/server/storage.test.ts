@@ -9,7 +9,9 @@ vi.mock("@lobbystack/db", async (original) => ({
 
 import { calls, storageObjects } from "@lobbystack/db";
 
-import { deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, persistCallRecording } from "./storage";
+import { KNOWLEDGE_UPLOAD_MAX_BYTES } from "@lobbystack/shared";
+
+import { deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, persistCallRecording, planUpload } from "./storage";
 
 function thenable(resolve: () => unknown[]) {
   const node: Record<string, unknown> = {};
@@ -178,5 +180,21 @@ describe("persistCallRecording", () => {
     expect(storage.putObject).toHaveBeenCalledOnce();
     expect(inserts).toEqual([{ table: storageObjects, values: expect.objectContaining({ status: "pending", expiresAt: expect.any(Date) }) }]);
     expect(updates.map((update) => update.table)).toEqual([calls]);
+  });
+});
+
+describe("planUpload", () => {
+  const request = { businessId: "business", purpose: "knowledge", contentType: "application/pdf", length: 10, checksum: "checksum" };
+
+  it("names the stored object after its file, safe to use as a storage key", () => {
+    expect(planUpload({ ...request, fileName: "Price list (2026).pdf" }).key).toMatch(/^business\/knowledge\/[0-9a-f-]{36}\/Price_list__2026_\.pdf$/);
+    expect(planUpload({ ...request, fileName: "..notes.txt" }).key).toMatch(/\/\.\.notes\.txt$/);
+    // A name of only dots would be a path step, not a file.
+    for (const fileName of [".", "..", "..."]) expect(planUpload({ ...request, fileName }).key).toMatch(/\/[0-9a-f-]{36}\/file$/);
+  });
+
+  it("takes knowledge documents up to the shared size limit", () => {
+    expect(planUpload({ ...request, fileName: "big.pdf", length: KNOWLEDGE_UPLOAD_MAX_BYTES }).objectId).toEqual(expect.any(String));
+    expect(() => planUpload({ ...request, fileName: "big.pdf", length: KNOWLEDGE_UPLOAD_MAX_BYTES + 1 })).toThrow("Documents must be 10 MB or smaller.");
   });
 });

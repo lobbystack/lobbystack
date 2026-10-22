@@ -38,11 +38,43 @@ If the receptionist cannot confirm the appointment confidently, it will not make
   LobbyStack helps you apply consistent confirmation steps, but it does not replace your own legal or privacy review. Configure the level of verification that fits your business, region, and appointment type.
 </Note>
 
-## Add a one-time code for stricter verification
+## Choose how callers are verified
 
-For businesses that want extra assurance, you can require a one-time code before the AI changes an appointment.
+For businesses that want extra assurance, **Caller verification** adds a check before the AI changes an appointment:
 
-With one-time code verification turned on, the receptionist sends a code to the customer and waits for the correct code before canceling or rescheduling. This is useful when appointments are sensitive, high-value, or subject to stricter internal policies.
+| Option | What the caller does |
+| --- | --- |
+| **Phone number and booking details** | Calls from the number the appointment was booked with and says its time or service. This is the default. |
+| **Texted one-time code** | Also reads back a code the receptionist texts to that number. |
+| **Keypad PIN** | Also types a PIN on the phone keypad. Your team sets each customer's PIN, and no text is needed. |
+
+A stricter check is useful when appointments are sensitive, high-value, or subject to stricter internal policies.
+
+### Set up keypad PINs
+
+With **Keypad PIN** selected, the receptionist asks the caller to type their PIN on the phone keypad and press the pound key (#). The PIN never reaches the AI or the call transcript, and the receptionist won't accept a PIN that's said aloud.
+
+<Steps>
+  <Step title="Open the contact">
+    In the dashboard sidebar, go to **Contacts** and open the customer.
+  </Step>
+  <Step title="Set the PIN">
+    On the **Details** tab, under **Keypad PIN**, select **Set PIN**. Type 4 to 8 digits, or select **Generate**, then save.
+  </Step>
+  <Step title="Give the PIN to the customer">
+    LobbyStack stores the PIN securely and can't show it again. If the customer forgets it, set a new one.
+  </Step>
+</Steps>
+
+To give PINs to many customers at once, use the [command line](/api/cli) or the [API](/api/overview). `lobbystack contacts generate-pins --all` makes up a PIN for every contact that has a phone number and no PIN, and shows each PIN this one time. `lobbystack contacts set-pins` sets PINs you choose. In the API, these are `POST /contacts/passcodes/generate` and `POST /contacts/passcodes`.
+
+A caller can try their PIN 3 times on each change. After 5 wrong PINs in a row, even across calls, the PIN is locked and the contact shows it as locked. Setting a new PIN unlocks it.
+
+Callers without a PIN, or with a locked one, can't change appointments by phone. The receptionist passes their cancellation request to your team instead.
+
+<Warning>
+  On a self-hosted LobbyStack, PINs are checked with the server's `OTP_HASH_SECRET` (or `ENCRYPTION_KEY` when it isn't set). If that secret changes, every saved PIN stops working and has to be set again.
+</Warning>
 
 ## Automatic calendar updates
 
@@ -58,7 +90,7 @@ For rescheduling, LobbyStack checks availability before offering a new time. If 
 
 ## Turn appointment changes on or off
 
-You control whether the receptionist can cancel, reschedule, or require a one-time code.
+You control whether the receptionist can cancel or reschedule, and how it verifies callers.
 
 <Steps>
   <Step title="Open AI settings">
@@ -71,7 +103,7 @@ You control whether the receptionist can cancel, reschedule, or require a one-ti
     Turn cancellation and rescheduling on or off.
   </Step>
   <Step title="Choose verification strength">
-    Turn on **Require one-time code before changing appointments** if you want stricter verification.
+    Pick an option in **Caller verification** if you want stricter verification.
   </Step>
   <Step title="Save">
     Save your changes.
@@ -85,7 +117,7 @@ For the best customer experience:
 - Add clear service entries so customers can describe what they booked.
 - Connect Google Calendar so LobbyStack can check availability and sync changes.
 - Keep your transfer number up to date for cases that need human review.
-- Use one-time code verification for sensitive or high-value appointments.
+- Use a texted one-time code or a keypad PIN for sensitive or high-value appointments.
 
 <CardGroup cols={2}>
   <Card title="Configure services" icon="calendar-check" href="/agent/services">

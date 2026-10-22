@@ -38,11 +38,43 @@ Si la recepcionista no puede confirmar la cita con seguridad, no hace el cambio 
   LobbyStack le ayuda a aplicar pasos de confirmación coherentes, pero no sustituye su propia revisión legal o de privacidad. Configure el nivel de verificación que corresponda a su negocio, su región y su tipo de cita.
 </Note>
 
-## Añadir un código de un solo uso para una verificación más estricta
+## Elegir cómo se verifica a quien llama
 
-Si su negocio quiere más garantías, puede exigir un código de un solo uso antes de que la IA modifique una cita.
+Si su negocio quiere más garantías, **Verificación de quien llama** añade un paso antes de que la IA modifique una cita:
 
-Con la verificación por código de un solo uso activada, la recepcionista envía un código al cliente y espera a recibir el código correcto antes de cancelar o reprogramar. Resulta útil cuando las citas son delicadas, de alto valor o están sujetas a políticas internas más estrictas.
+| Opción | Qué hace quien llama |
+| --- | --- |
+| **Número de teléfono y datos de la cita** | Llama desde el número con el que se reservó la cita y dice su hora o servicio. Es la opción predeterminada. |
+| **Código de un solo uso por SMS** | Además, lee un código que la recepcionista envía por SMS a ese número. |
+| **PIN en el teclado** | Además, marca un PIN en el teclado del teléfono. Su equipo configura el PIN de cada cliente, sin enviar SMS. |
+
+Una verificación más estricta resulta útil cuando las citas son delicadas, de alto valor o están sujetas a políticas internas más estrictas.
+
+### Configurar los PIN
+
+Con **PIN en el teclado**, la recepcionista pide a quien llama que marque su PIN en el teclado del teléfono y pulse la tecla almohadilla (#). El PIN nunca llega a la IA ni a la transcripción de la llamada, y la recepcionista no acepta un PIN dicho en voz alta.
+
+<Steps>
+  <Step title="Abra el contacto">
+    En la barra lateral del panel, vaya a **Contactos** y abra el cliente.
+  </Step>
+  <Step title="Configure el PIN">
+    En la pestaña **Detalles**, en **PIN del teclado**, seleccione **Configurar PIN**. Escriba de 4 a 8 dígitos, o seleccione **Generar**, y guarde.
+  </Step>
+  <Step title="Comparta el PIN con el cliente">
+    LobbyStack guarda el PIN de forma segura y no puede volver a mostrarlo. Si el cliente lo olvida, configure uno nuevo.
+  </Step>
+</Steps>
+
+Para dar un PIN a muchos clientes a la vez, use la [línea de comandos](/es/api/cli) o la [API](/es/api/overview). `lobbystack contacts generate-pins --all` crea un PIN para cada contacto que tiene número de teléfono y no tiene PIN, y muestra cada PIN solo esta vez. `lobbystack contacts set-pins` configura los PIN que usted elija. En la API, son `POST /contacts/passcodes/generate` y `POST /contacts/passcodes`.
+
+Quien llama puede intentar su PIN 3 veces en cada cambio. Tras 5 PIN incorrectos seguidos, incluso en llamadas distintas, el PIN se bloquea y el contacto lo muestra como bloqueado. Configurar un PIN nuevo lo desbloquea.
+
+Si quien llama no tiene PIN, o lo tiene bloqueado, no puede cambiar citas por teléfono. En su lugar, la recepcionista pasa su solicitud de cancelación a su equipo.
+
+<Warning>
+  En una instalación autoalojada de LobbyStack, los PIN se comprueban con el `OTP_HASH_SECRET` del servidor (o `ENCRYPTION_KEY` si no está configurado). Si ese secreto cambia, todos los PIN guardados dejan de funcionar y hay que configurarlos de nuevo.
+</Warning>
 
 ## Actualizaciones automáticas del calendario
 
@@ -58,7 +90,7 @@ En las reprogramaciones, LobbyStack comprueba la disponibilidad antes de ofrecer
 
 ## Activar o desactivar los cambios de citas
 
-Usted decide si la recepcionista puede cancelar, reprogramar o exigir un código de un solo uso.
+Usted decide si la recepcionista puede cancelar o reprogramar citas, y cómo verifica a quien llama.
 
 <Steps>
   <Step title="Abra Ajustes de IA">
@@ -71,7 +103,7 @@ Usted decide si la recepcionista puede cancelar, reprogramar o exigir un código
     Active o desactive la cancelación y la reprogramación.
   </Step>
   <Step title="Elija el nivel de verificación">
-    Active **Exigir código de un solo uso** si quiere una verificación más estricta.
+    Elija una opción en **Verificación de quien llama** si quiere una verificación más estricta.
   </Step>
   <Step title="Guarde">
     Guarde sus cambios.
@@ -85,7 +117,7 @@ Para ofrecer la mejor experiencia a sus clientes:
 - Añada entradas de servicios claras para que sus clientes puedan describir lo que reservaron.
 - Conecte Google Calendar para que LobbyStack pueda comprobar la disponibilidad y sincronizar los cambios.
 - Mantenga actualizado su número de transferencia para los casos que necesitan revisión de una persona.
-- Use la verificación por código de un solo uso para citas delicadas o de alto valor.
+- Use un código de un solo uso por SMS o un PIN en el teclado para citas delicadas o de alto valor.
 
 <CardGroup cols={2}>
   <Card title="Configure los servicios" icon="calendar-check" href="/es/agent/services">

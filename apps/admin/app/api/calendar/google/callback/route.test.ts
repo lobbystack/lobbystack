@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-const mocks = vi.hoisted(() => ({ session: vi.fn(), consume: vi.fn(), exchange: vi.fn(), connect: vi.fn(), report: vi.fn(), rate: vi.fn() }));
-vi.mock("@lobbystack/domain", () => ({ connectCalendar: mocks.connect }));
+const mocks = vi.hoisted(() => ({ session: vi.fn(), consume: vi.fn(), exchange: vi.fn(), connect: vi.fn(), switchWorkspace: vi.fn(), report: vi.fn(), rate: vi.fn() }));
+vi.mock("@lobbystack/domain", () => ({ connectCalendar: mocks.connect, switchWorkspace: mocks.switchWorkspace }));
 vi.mock("@lobbystack/providers", () => ({ GoogleCalendarProvider: class {
   exchangeCode = mocks.exchange;
   async getAccount() { return { id: "account", email: "owner@example.invalid" }; }
@@ -27,6 +27,7 @@ beforeEach(() => {
   mocks.consume.mockResolvedValue(true);
   mocks.exchange.mockResolvedValue({ accessToken: "token", expiresIn: 3600 });
   mocks.rate.mockResolvedValue({ allowed: true });
+  mocks.switchWorkspace.mockResolvedValue(undefined);
 });
 afterEach(() => vi.unstubAllEnvs());
 const callback = (state: string, query = "code=code") => new Request(`https://app.example.test/api/calendar/google/callback?state=${encodeURIComponent(state)}&${query}`);
@@ -60,6 +61,15 @@ it("consumes denied authorization without calling the provider", async () => {
   expect(response.headers.get("location")).toContain("status=error");
   expect(mocks.consume).toHaveBeenCalledTimes(1);
   expect(mocks.exchange).not.toHaveBeenCalled();
+  expect(mocks.switchWorkspace).not.toHaveBeenCalled();
+});
+
+it("opens the business it connected, and succeeds even when it can't", async () => {
+  expect((await GET(callback(createCalendarOAuthState({ userId: "user-1", businessId: "business" })))).headers.get("location")).toContain("status=success");
+  expect(mocks.switchWorkspace).toHaveBeenCalledWith({}, { userId: "user-1", businessId: "business" });
+  expect(mocks.connect.mock.invocationCallOrder[0]).toBeLessThan(mocks.switchWorkspace.mock.invocationCallOrder[0]!);
+  mocks.switchWorkspace.mockRejectedValueOnce(new Error("Membership required."));
+  expect((await GET(callback(createCalendarOAuthState({ userId: "user-1", businessId: "business" })))).headers.get("location")).toContain("status=success");
 });
 
 it("rate limits the unauthenticated entry before state, session, or consumption work", async () => {

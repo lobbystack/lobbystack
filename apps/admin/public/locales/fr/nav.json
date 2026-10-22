@@ -1,6 +1,10 @@
 {
   "items": {
     "home": "Accueil",
+    "appointments": "Rendez-vous",
+    "newCount_one": "{{count}} nouvelle réservation",
+    "newCount_many": "{{count}} nouvelles réservations",
+    "newCount_other": "{{count}} nouvelles réservations",
     "calls": "Appels",
     "messages": "Messages",
     "agent": "Agent",

@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { createI18nInstance, loadRouteNamespaces, missingNamespaces } from "./i18n";
+import { createI18nInstance, loadRouteNamespaces, missingNamespaces, setI18nAppName } from "./i18n";
 import { TranslationNetworkError, isTranslationNetworkError } from "./lib/translation-network-error";
 
 afterEach(() => vi.unstubAllGlobals());
@@ -119,4 +119,18 @@ it("treats a load as a network failure when both languages lose their connection
   } finally {
     vi.useRealTimers();
   }
+});
+
+it("names the deployment in every string and tells components when the name changes", () => {
+  const resources = { onboarding: { title: "How did you hear about {{appName}}?" } };
+  expect(createI18nInstance({ locale: "en", resources }).t("onboarding:title")).toBe("How did you hear about LobbyStack?");
+  const instance = createI18nInstance({ locale: "en", resources, appName: "Acme Desk" });
+  expect(instance.t("onboarding:title")).toBe("How did you hear about Acme Desk?");
+  const listener = vi.fn();
+  instance.on("appNameChanged", listener);
+  setI18nAppName(instance, "Hello Desk");
+  setI18nAppName(instance, "Hello Desk");
+  expect(listener).toHaveBeenCalledTimes(1);
+  expect(instance.t("onboarding:title")).toBe("How did you hear about Hello Desk?");
+  expect(instance.t("onboarding:title", { appName: "Other" })).toBe("How did you hear about Other?");
 });

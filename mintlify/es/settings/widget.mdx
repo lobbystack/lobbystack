@@ -5,7 +5,7 @@ sidebarTitle: "Widget del sitio web"
 contentType: "How-to"
 ---
 
-La página **Configuración** > **Widget del sitio web** crea y gestiona las claves del widget de la recepcionista. Desde el widget, los visitantes pueden chatear, dejar sus datos de contacto e iniciar una llamada desde el navegador.
+La página **Widget del sitio web**, en el menú lateral, crea y gestiona las claves del widget de la recepcionista. Desde el widget, los visitantes pueden chatear, dejar sus datos de contacto e iniciar una llamada desde el navegador.
 
 <Note>
   El chat del sitio web tiene acceso restringido y no forma parte de los planes alojados. Las nuevas claves del widget están desactivadas de forma predeterminada. En una implementación autoalojada, defina `WIDGET_KEY_ISSUANCE_ENABLED=true` para crearlas. Las claves existentes siguen funcionando.
@@ -14,8 +14,8 @@ La página **Configuración** > **Widget del sitio web** crea y gestiona las cla
 ## Configure el widget
 
 <Steps>
-  <Step title="Abra la configuración del widget">
-    Vaya a **Configuración** > **Widget del sitio web**.
+  <Step title="Abra la página del widget">
+    Seleccione **Widget del sitio web** en el menú lateral y luego **Agregar un widget**. Para cambiar un widget existente, seleccione **Editar** en su tarjeta.
   </Step>
   <Step title="Configure su apariencia">
     Elija el color, la posición, el título, el subtítulo, el saludo y el comportamiento del idioma.
@@ -23,11 +23,11 @@ La página **Configuración** > **Widget del sitio web** crea y gestiona las cla
   <Step title="Configure la captación de clientes potenciales">
     Active el formulario de contacto, elija los campos obligatorios y decida si aparece antes del chat.
   </Step>
-  <Step title="Defina los sitios web permitidos">
-    Introduzca cada origen público exacto que puede integrar el widget, como `https://www.example.com`.
+  <Step title="Indique sus sitios web">
+    En **Sitios web**, introduzca cada dirección donde debe aparecer el chat, como `https://www.example.com`. Separe las direcciones con comas.
   </Step>
-  <Step title="Copie el fragmento de instalación">
-    Copie el fragmento de carga generado y agréguelo antes de la etiqueta de cierre `</body>` de su sitio web.
+  <Step title="Agregue el código a su sitio web">
+    Seleccione **Copiar código** y péguelo antes de la etiqueta de cierre `</body>` de su sitio web.
   </Step>
 </Steps>
 
@@ -37,9 +37,26 @@ LobbyStack firma las sesiones del widget y, antes de iniciar una llamada, compru
 
 Use un sitio web con HTTPS en producción. Mantenga `WIDGET_SESSION_SECRET` y las demás credenciales de firma en el servidor.
 
-## Gestione las claves del widget
+## Chat en vivo con su equipo
 
-Cada clave tiene su propia lista de orígenes permitidos y su propia configuración. Puede editar una clave activa, pausarla temporalmente o revocarla de forma permanente. Al revocar una clave, deja de funcionar en todos los sitios donde está integrada.
+Puede permitir que alguien de su equipo se una a un chat del sitio web. Active **Permitir que los visitantes chateen con su equipo** en un widget. Está desactivado hasta que usted lo active.
+
+Durante su horario de atención, o en cualquier momento si no definió ninguno, un visitante que pide hablar con una persona en el chat espera a su equipo:
+
+1. La recepcionista le dice al visitante que avisó al equipo y deja de responder.
+2. Su equipo recibe una alerta **Visitante que pide una persona**, y el chat muestra **Visitante esperando** en [Mensajes](/es/dashboard/messages).
+3. La primera persona que responde o hace clic en **Unirse al chat** se queda con el chat. El visitante ve el nombre de pila de su perfil.
+4. Si nadie se une en 3 minutos, la recepcionista retoma el chat y le pide al visitante su nombre y su número, para que alguien le devuelva la llamada.
+
+Active o desactive esta alerta por correo electrónico y por SMS en la página **Widget del sitio web**.
+
+Fuera del horario de atención, en las llamadas desde el navegador y cuando el chat en vivo está desactivado, la recepcionista ofrece tomar un mensaje para que su equipo le devuelva la llamada al visitante. Las solicitudes de devolución de llamada aparecen en el panel como los demás mensajes.
+
+Los chats del sitio web y las llamadas desde el navegador no se pueden transferir a una línea telefónica, así que la recepcionista nunca dice que está comunicando al visitante. En las llamadas desde el navegador, y en los chats con el chat en vivo desactivado, también le da al visitante el número de teléfono de su empresa si definió un **Número de transferencia predeterminado**. El visitante puede llamar a ese número y pedir hablar con una persona. La recepcionista sigue su regla de transferencia: si las transferencias son solo para urgencias, da el número para asuntos urgentes, y si las transferencias están desactivadas, no da ningún número.
+
+## Gestione sus widgets
+
+Cada widget tiene sus propios sitios web y su propia configuración. Desde la tarjeta de un widget, puede editarlo, pausarlo o eliminarlo. Al eliminar un widget, el chat deja de funcionar en todos los sitios web que lo usan, y no se puede deshacer.
 
 ## Verifique la instalación
 

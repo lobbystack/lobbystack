@@ -15,6 +15,26 @@ describe("PolarBillingProvider", () => {
     expect(fetchMock).toHaveBeenCalledWith("https://polar.example/v1/events/ingest", expect.objectContaining({ method: "POST", signal: expect.any(AbortSignal) }));
     expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1].body))).toEqual({ events: [{ name: "billing.voice_minutes", external_customer_id: "business:1", external_id: "voice:call-1", timestamp: "2026-09-08T00:00:00.000Z", metadata: { quantity: 1.5, businessId: "1", usageKind: "voice_seconds" } }] });
   });
+  it("opens the customer portal as the customer's owner member, which Polar requires for team customers", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ items: [{ id: "member-1" }] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ customer_portal_url: "https://polar.example/portal" }) });
+    vi.stubGlobal("fetch", fetchMock);
+    const provider = new PolarBillingProvider({ accessToken: "token", organizationId: "organization", baseUrl: "https://polar.example" });
+    await expect(provider.createCustomerPortalSession({ customerId: "customer-1", returnUrl: "https://app.example/settings/plan" })).resolves.toEqual({ url: "https://polar.example/portal" });
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("https://polar.example/v1/customers/customer-1/members?role=owner&limit=1");
+    expect(fetchMock).toHaveBeenLastCalledWith("https://polar.example/v1/customer-sessions/", expect.objectContaining({ method: "POST" }));
+    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1].body))).toEqual({ customer_id: "customer-1", member_id: "member-1", return_url: "https://app.example/settings/plan" });
+  });
+  it("lets Polar pick the member when the customer lists no owner", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ items: [] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ customer_portal_url: "https://polar.example/portal" }) });
+    vi.stubGlobal("fetch", fetchMock);
+    const provider = new PolarBillingProvider({ accessToken: "token", organizationId: "organization", baseUrl: "https://polar.example" });
+    await provider.createCustomerPortalSession({ customerId: "customer-1", returnUrl: "https://app.example/settings/plan" });
+    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1].body))).toEqual({ customer_id: "customer-1", return_url: "https://app.example/settings/plan" });
+  });
   it("creates a checkout with the current Polar product-session payload", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ id: "checkout-1", url: "https://polar.example/checkout-1" }) });
     vi.stubGlobal("fetch", fetchMock);

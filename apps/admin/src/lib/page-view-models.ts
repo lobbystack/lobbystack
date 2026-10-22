@@ -79,6 +79,8 @@ export type TeamInvitationViewModel = {
   email: string;
   role: string;
   status: string;
+  /** A claim link: accepting it hands the business over to the invitee. */
+  transfersOwnership?: boolean;
   expiresAt: string;
   invitedAt: string;
 };

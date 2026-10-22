@@ -4,7 +4,7 @@ import { enqueueOutbox, withBusinessTransaction, type DatabaseTransaction } from
 import { agentRules, businesses, businessHours, closures, phoneNumbers, receptionistProfiles, services, staff, staffServiceAssignments } from "@lobbystack/db";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
-import { servicePriceTypes, type ServicePriceType } from "@lobbystack/shared";
+import { isDiscountPercent, servicePriceTypes, type ServicePriceType } from "@lobbystack/shared";
 import { normalizeClosures, normalizeHoursWindows, sameHoursWindows } from "../hours";
 import { writeBusinessHoursInTransaction } from "./businessHours";
 import type { DomainContext } from "./context";
@@ -22,7 +22,7 @@ export async function listCatalog(
       tx.select().from(closures).where(and(eq(closures.businessId, input.businessId), isNull(closures.staffId))).orderBy(asc(closures.startsAt)),
       tx.select().from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"))).orderBy(asc(phoneNumbers.e164)),
       tx.select().from(receptionistProfiles).where(eq(receptionistProfiles.businessId, input.businessId)).limit(1),
-      tx.select().from(agentRules).where(eq(agentRules.businessId, input.businessId)).orderBy(asc(agentRules.sortOrder)),
+      tx.select().from(agentRules).where(eq(agentRules.businessId, input.businessId)).orderBy(asc(agentRules.sortOrder), asc(agentRules.createdAt), asc(agentRules.id)),
     ]);
     const limit = Math.min(Math.max(Math.trunc(input.limit ?? 100), 1), 100);
     const offset = Math.max(Math.trunc(input.offset ?? 0), 0);
@@ -43,7 +43,7 @@ export async function listCatalog(
  * clears them). A range's upper bound must be above its lower one. Fields left
  * out aren't checked.
  */
-function assertServiceFields(input: { name?: string | undefined; slug?: string | undefined; durationMinutes?: number | undefined; description?: string | null | undefined; active?: boolean | undefined; priceType?: ServicePriceType | undefined; priceMinor?: number | null | undefined; priceMaxMinor?: number | null | undefined }): void {
+function assertServiceFields(input: { name?: string | undefined; slug?: string | undefined; durationMinutes?: number | undefined; description?: string | null | undefined; active?: boolean | undefined; priceType?: ServicePriceType | undefined; priceMinor?: number | null | undefined; priceMaxMinor?: number | null | undefined; discountPercent?: number | undefined }): void {
   const invalid = (field: string) => Object.assign(new Error(`${field} is invalid.`), { status: 400 });
   const text = (value: unknown, maxLength: number) => typeof value === "string" && value.trim().length > 0 && value.trim().length <= maxLength;
   const amount = (value: number) => Number.isSafeInteger(value) && value >= 0 && value <= 1_000_000_000_000;
@@ -55,68 +55,87 @@ function assertServiceFields(input: { name?: string | undefined; slug?: string |
   if (input.priceType !== undefined && !(servicePriceTypes as readonly unknown[]).includes(input.priceType)) throw invalid("priceType");
   if (input.priceMinor != null && !amount(input.priceMinor)) throw invalid("priceMinor");
   if (input.priceMaxMinor != null && !(amount(input.priceMaxMinor) && (input.priceMinor == null || input.priceMaxMinor > input.priceMinor))) throw invalid("priceMaxMinor");
+  if (input.discountPercent !== undefined && !isDiscountPercent(input.discountPercent)) throw invalid("discountPercent");
 }
 
-// Only a range keeps an upper bound, and a price set in person keeps no amount.
-function priceColumns(input: { priceType?: ServicePriceType | undefined; priceMinor?: number | null | undefined; priceMaxMinor?: number | null | undefined }) {
-  if (input.priceType === undefined) return {};
+// Only a range keeps an upper bound, and a price set in person keeps no amount or discount.
+function priceColumns(input: { priceType?: ServicePriceType | undefined; priceMinor?: number | null | undefined; priceMaxMinor?: number | null | undefined; discountPercent?: number | undefined }) {
+  if (input.priceType === undefined) return input.discountPercent === undefined ? {} : { discountPercent: input.discountPercent };
   return {
     priceType: input.priceType,
     priceMinor: input.priceType === "in_person" ? null : input.priceMinor ?? null,
     priceMaxMinor: input.priceType === "range" ? input.priceMaxMinor ?? null : null,
+    ...(input.priceType === "in_person" ? { discountPercent: 0 } : input.discountPercent === undefined ? {} : { discountPercent: input.discountPercent }),
   };
 }
 
 export async function createService(
   context: DomainContext,
-  input: { userId: string; businessId: string; name: string; slug: string; durationMinutes: number; description?: string; active?: boolean; priceType?: ServicePriceType; priceMinor?: number | null; priceMaxMinor?: number | null },
+  input: { userId: string; businessId: string; name: string; slug: string; durationMinutes: number; description?: string; active?: boolean; priceType?: ServicePriceType; priceMinor?: number | null; priceMaxMinor?: number | null; discountPercent?: number },
 ): Promise<string> {
   assertServiceFields(input);
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    const [service] = await tx.insert(services).values({
-      businessId: input.businessId,
-      name: input.name.trim(),
-      slug: input.slug.trim().toLowerCase(),
-      durationMinutes: input.durationMinutes,
-      description: input.description?.trim(),
-      ...priceColumns({ ...input, priceType: input.priceType ?? "fixed" }),
-      active: input.active ?? true,
-    }).returning({ id: services.id });
-    if (!service) {
-      throw new Error("Service could not be created.");
-    }
-    await enqueueOutbox(tx, {
-      topic: "snapshot.refresh",
-      businessId: input.businessId,
-      aggregateType: "service",
-      aggregateId: service.id,
-      dedupeKey: `service:${service.id}:snapshot:${Date.now()}`,
-      payload: { businessId: input.businessId, reason: "service_created" },
-    });
-    return service.id;
+    return (await insertServiceInTransaction(tx, input)).id;
   });
+}
+
+/** Adds a service and refreshes the receptionist snapshot. Callers authorize first. */
+export async function insertServiceInTransaction(
+  tx: DatabaseTransaction,
+  input: { businessId: string; name: string; slug: string; durationMinutes: number; description?: string | undefined; active?: boolean | undefined; priceType?: ServicePriceType | undefined; priceMinor?: number | null | undefined; priceMaxMinor?: number | null | undefined },
+): Promise<typeof services.$inferSelect> {
+  const [service] = await tx.insert(services).values({
+    businessId: input.businessId,
+    name: input.name.trim(),
+    slug: input.slug.trim().toLowerCase(),
+    durationMinutes: input.durationMinutes,
+    description: input.description?.trim(),
+    ...priceColumns({ ...input, priceType: input.priceType ?? "fixed" }),
+    active: input.active ?? true,
+  }).returning();
+  if (!service) {
+    throw new Error("Service could not be created.");
+  }
+  await enqueueOutbox(tx, {
+    topic: "snapshot.refresh",
+    businessId: input.businessId,
+    aggregateType: "service",
+    aggregateId: service.id,
+    dedupeKey: `service:${service.id}:snapshot:${Date.now()}`,
+    payload: { businessId: input.businessId, reason: "service_created" },
+  });
+  return service;
 }
 
 export async function updateService(
   context: DomainContext,
-  input: { userId: string; businessId: string; serviceId: string; name?: string; slug?: string; durationMinutes?: number; description?: string | null; active?: boolean; priceType?: ServicePriceType; priceMinor?: number | null; priceMaxMinor?: number | null },
+  input: { userId: string; businessId: string; serviceId: string; name?: string; slug?: string; durationMinutes?: number; description?: string | null; active?: boolean; priceType?: ServicePriceType; priceMinor?: number | null; priceMaxMinor?: number | null; discountPercent?: number },
 ): Promise<void> {
   assertServiceFields(input);
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    const [service] = await tx.update(services).set({
-      ...(input.name !== undefined ? { name: input.name.trim() } : {}),
-      ...(input.slug !== undefined ? { slug: input.slug.trim().toLowerCase() } : {}),
-      durationMinutes: input.durationMinutes,
-      description: typeof input.description === "string" ? input.description.trim() : input.description,
-      ...priceColumns(input),
-      active: input.active,
-      updatedAt: new Date(),
-    }).where(and(eq(services.id, input.serviceId), eq(services.businessId, input.businessId), isNull(services.deletedAt))).returning({ id: services.id });
-    if (!service) throw Object.assign(new Error("Service not found."), { status: 404 });
-    await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "service", aggregateId: service.id, dedupeKey: `service:${service.id}:snapshot:${Date.now()}`, payload: { businessId: input.businessId, reason: "service_updated" } });
+    if (!await updateServiceInTransaction(tx, input)) throw Object.assign(new Error("Service not found."), { status: 404 });
   });
+}
+
+/** Changes the fields given on a service that isn't deleted and refreshes the snapshot. Null when there is no such service. Callers authorize first. */
+export async function updateServiceInTransaction(
+  tx: DatabaseTransaction,
+  input: { businessId: string; serviceId: string; name?: string | undefined; slug?: string | undefined; durationMinutes?: number | undefined; description?: string | null | undefined; active?: boolean | undefined; priceType?: ServicePriceType | undefined; priceMinor?: number | null | undefined; priceMaxMinor?: number | null | undefined },
+): Promise<typeof services.$inferSelect | null> {
+  const [service] = await tx.update(services).set({
+    ...(input.name !== undefined ? { name: input.name.trim() } : {}),
+    ...(input.slug !== undefined ? { slug: input.slug.trim().toLowerCase() } : {}),
+    durationMinutes: input.durationMinutes,
+    description: typeof input.description === "string" ? input.description.trim() : input.description,
+    ...priceColumns(input),
+    active: input.active,
+    updatedAt: new Date(),
+  }).where(and(eq(services.id, input.serviceId), eq(services.businessId, input.businessId), isNull(services.deletedAt))).returning();
+  if (!service) return null;
+  await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "service", aggregateId: service.id, dedupeKey: `service:${service.id}:snapshot:${Date.now()}`, payload: { businessId: input.businessId, reason: "service_updated" } });
+  return service;
 }
 
 /**
@@ -130,12 +149,40 @@ export async function deleteService(
 ): Promise<void> {
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    const now = new Date();
-    const [service] = await tx.update(services).set({ active: false, deletedAt: now, updatedAt: now }).where(and(eq(services.id, input.serviceId), eq(services.businessId, input.businessId), isNull(services.deletedAt))).returning({ id: services.id });
-    if (!service) throw Object.assign(new Error("Service not found."), { status: 404 });
-    await tx.delete(staffServiceAssignments).where(and(eq(staffServiceAssignments.businessId, input.businessId), eq(staffServiceAssignments.serviceId, service.id)));
-    await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "service", aggregateId: service.id, dedupeKey: `service:${service.id}:snapshot:${Date.now()}`, payload: { businessId: input.businessId, reason: "service_deleted" } });
+    if (!await deleteServiceInTransaction(tx, input)) throw Object.assign(new Error("Service not found."), { status: 404 });
   });
+}
+
+/** Marks a service deleted, as deleteService explains, and drops its staff. False when there is no such service. Callers authorize first. */
+export async function deleteServiceInTransaction(tx: DatabaseTransaction, input: { businessId: string; serviceId: string }): Promise<boolean> {
+  const now = new Date();
+  const [service] = await tx.update(services).set({ active: false, deletedAt: now, updatedAt: now }).where(and(eq(services.id, input.serviceId), eq(services.businessId, input.businessId), isNull(services.deletedAt))).returning({ id: services.id });
+  if (!service) return false;
+  await tx.delete(staffServiceAssignments).where(and(eq(staffServiceAssignments.businessId, input.businessId), eq(staffServiceAssignments.serviceId, service.id)));
+  await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "service", aggregateId: service.id, dedupeKey: `service:${service.id}:snapshot:${Date.now()}`, payload: { businessId: input.businessId, reason: "service_deleted" } });
+  return true;
+}
+
+/**
+ * Makes these staff members the only ones who take the service; an empty list
+ * opens it to every active staff member again. Refreshes the snapshot when the
+ * assignments change. Callers authorize first and check the service exists.
+ * Lists the ids that aren't staff of this business, and changes nothing then.
+ */
+export async function replaceServiceStaffInTransaction(tx: DatabaseTransaction, input: { businessId: string; serviceId: string; staffIds: readonly string[] }): Promise<{ unknownStaffIds: string[]; changed: boolean }> {
+  // Ids come back from the database in lowercase, so compare them that way.
+  const wanted = [...new Set(input.staffIds.map((id) => id.toLowerCase()))];
+  const known = wanted.length ? (await tx.select({ id: staff.id }).from(staff).where(and(eq(staff.businessId, input.businessId), inArray(staff.id, wanted)))).map((row) => row.id) : [];
+  const unknownStaffIds = wanted.filter((id) => !known.includes(id));
+  if (unknownStaffIds.length) return { unknownStaffIds, changed: false };
+  const current = (await tx.select({ staffId: staffServiceAssignments.staffId }).from(staffServiceAssignments).where(and(eq(staffServiceAssignments.businessId, input.businessId), eq(staffServiceAssignments.serviceId, input.serviceId)))).map((row) => row.staffId);
+  const removed = current.filter((id) => !wanted.includes(id));
+  const added = wanted.filter((id) => !current.includes(id));
+  if (!removed.length && !added.length) return { unknownStaffIds: [], changed: false };
+  if (removed.length) await tx.delete(staffServiceAssignments).where(and(eq(staffServiceAssignments.businessId, input.businessId), eq(staffServiceAssignments.serviceId, input.serviceId), inArray(staffServiceAssignments.staffId, removed)));
+  if (added.length) await tx.insert(staffServiceAssignments).values(added.map((staffId) => ({ businessId: input.businessId, serviceId: input.serviceId, staffId }))).onConflictDoNothing();
+  await enqueueOutbox(tx, { topic: "snapshot.refresh", businessId: input.businessId, aggregateType: "service", aggregateId: input.serviceId, dedupeKey: `service:${input.serviceId}:staff:${Date.now()}`, payload: { businessId: input.businessId, reason: "assignment_updated" } });
+  return { unknownStaffIds: [], changed: true };
 }
 
 export async function assignStaffToService(

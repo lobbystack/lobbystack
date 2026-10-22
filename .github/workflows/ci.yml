@@ -34,8 +34,16 @@ jobs:
       - run: pnpm --filter @lobbystack/admin --filter @lobbystack/landing lint
       - run: pnpm telemetry:coverage
       - run: pnpm build
+      - name: Validate the marketing site's SEO
+        run: pnpm --filter @lobbystack/admin marketing:validate
       - name: Verify the committed embed loader matches the build
         run: git diff --exit-code -- apps/admin/public/embed/embed.js
+      - name: Check the lobbystack CLI bundle runs with plain node
+        run: |
+          node packages/cli/dist/bin.js --help > /dev/null
+          status=0
+          XDG_CONFIG_HOME="$(mktemp -d)" node packages/cli/dist/bin.js whoami || status=$?
+          test "$status" -eq 3
       - run: pnpm test
       - run: pnpm replacement:telemetry
       - name: Validate Compose config
@@ -160,60 +168,20 @@ jobs:
         run: |
           node -e 'const results = JSON.parse(process.env.RESULTS); if (Object.values(results).some(job => job.result !== "success")) process.exit(1);'
 
-  migrate-production:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+  # Ships each main commit to Dokploy production once every check above and
+  # the post-merge certification passed. It runs only on lobbystack/lobbystack
+  # with the repository variable DOKPLOY_AUTO_RELEASE set to "true", so a fork
+  # skips it. docs/deployment/dokploy-release.md explains the release.
+  release-production:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'lobbystack/lobbystack' && vars.DOKPLOY_AUTO_RELEASE == 'true'
     needs: [validate, replacement]
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    environment: production
-    concurrency:
-      group: production-migrations
-      cancel-in-progress: false
     permissions:
-      # Write moves the production branch in the last step.
-      contents: write
-    env:
-      RAILWAY_PROJECT_ID: af0a130e-7b02-4fc0-94ef-b0ac45a0a0a6
-      RAILWAY_ENVIRONMENT: production
-      RAILWAY_SERVICE: migrator
-    steps:
-      # Keep the write-scoped token off disk; only the release step gets it.
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-      # No lockfile pins the CLI's own dependencies, so apply the same 3-day
-      # cooldown as pnpm's minimumReleaseAge.
-      - name: Install Railway CLI
-        run: npm install --global @railway/cli@5.57.9 --before="$(date -u -d '3 days ago' +%F)"
-      - name: Verify release is current
-        run: |
-          remote_sha="$(git ls-remote origin refs/heads/main | cut -f1)"
-          if [[ "$remote_sha" != "$GITHUB_SHA" ]]; then
-            echo "::error::Skipping superseded release ${GITHUB_SHA}; main is ${remote_sha}."
-            exit 1
-          fi
-      - name: Run production migrations
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_PRODUCTION_TOKEN }}
-        run: >-
-          railway up
-          --ci
-          --project "$RAILWAY_PROJECT_ID"
-          --environment "$RAILWAY_ENVIRONMENT"
-          --service "$RAILWAY_SERVICE"
-          --message "GitHub ${GITHUB_SHA}"
-      - name: Confirm release is current
-        run: |
-          remote_sha="$(git ls-remote origin refs/heads/main | cut -f1)"
-          if [[ "$remote_sha" != "$GITHUB_SHA" ]]; then
-            echo "::error::Blocking superseded release ${GITHUB_SHA}; main is ${remote_sha}."
-            exit 1
-          fi
-      # Railway deploys admin and worker from the production branch. Moving it
-      # here releases this commit only after every check and migration passed.
-      - name: Release admin and worker
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: >-
-          gh api --method PATCH "repos/${GITHUB_REPOSITORY}/git/refs/heads/production"
-          -f sha="$GITHUB_SHA" -F force=true
+      contents: read
+      packages: write
+    uses: ./.github/workflows/dokploy-release.yml
+    with:
+      environment: production
+      ref: ${{ github.sha }}
+      # A newer push to main releases itself, so an older run steps aside.
+      extra-args: --skip-superseded
+    secrets: inherit

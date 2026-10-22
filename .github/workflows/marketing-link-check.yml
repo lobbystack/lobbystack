@@ -1,0 +1,82 @@
+name: Marketing link check
+
+on:
+  push:
+    paths:
+      - "apps/admin/src/marketing/**"
+      - "apps/admin/app/(marketing)/**"
+      - "apps/admin/content/**"
+      - "apps/admin/public/**"
+      - "apps/admin/scripts/marketing/**"
+      - ".github/workflows/marketing-link-check.yml"
+  schedule:
+    - cron: "17 10 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: marketing-links-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lychee:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.30.3
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Builds the admin and its marketing snapshot in apps/admin/.marketing-dist.
+      - run: pnpm --filter @lobbystack/admin... build
+      - run: pnpm --filter @lobbystack/admin marketing:validate
+      - name: Serve the marketing snapshot
+        run: |
+          npx --yes serve apps/admin/.marketing-dist -l 4173 &
+          for _ in $(seq 1 30); do
+            curl -sf http://127.0.0.1:4173/ > /dev/null && exit 0
+            sleep 1
+          done
+          echo "Marketing snapshot server failed to start"
+          exit 1
+      - uses: lycheeverse/lychee-action@v2
+        with:
+          args: >-
+            --verbose
+            --no-progress
+            --base-url http://127.0.0.1:4173
+            --remap '^https://lobbystack\.com(.*) http://127.0.0.1:4173$1'
+            --exclude '^https://app\.lobbystack\.com/'
+            --exclude '^http://localhost:3000/api/voice/live/'
+            --exclude '^https://theresanaiforthat\.com/ai/lobbystack/'
+            --exclude '(?i)^https://www\.bls\.gov/ooh/office-and-administrative-support/receptionists\.htm$'
+            --exclude '^https://answeringservicecare\.com/'
+            --exclude '^https://answeringservicesus\.com/'
+            --exclude '^https://www\.trustpilot\.com/review/'
+            --exclude '^https://github\.com/lobbystack/lobbystack(/|$)'
+            --exclude '^https://consumer\.ftc\.gov/'
+            --exclude '^https://(help|www)\.getjobber\.com/'
+            --exclude '^https://support\.grasshopper\.com/'
+            --exclude '^https://www\.spectrum\.com/'
+            --exclude '^https://www\.t-mobile\.com/'
+            --exclude '^https://www\.telus\.com/'
+            --exclude '^https://www\.myphoneflow\.com/'
+            --exclude '^https://business\.comcast\.com/'
+            --exclude '^https://www\.hhs\.gov/hipaa/for-professionals/special-topics/health-information-technology/cloud-computing/$'
+            --exclude '^https://openai\.com/api/pricing/$'
+            --exclude '^https://help\.openai\.com/'
+            --exclude '^https://www\.openai\.fm/'
+            --exclude '^https://www\.bloomberg\.com/'
+            --exclude '^https://www\.twilio\.com/'
+            --exclude '^https://www\.ftc\.gov/'
+            './apps/admin/src/marketing/**/*.tsx'
+            './apps/admin/content/**/*.md'
+            './apps/admin/content/llms.txt'
+          fail: true

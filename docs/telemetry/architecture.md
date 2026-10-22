@@ -36,7 +36,7 @@ Telemetry must not contain transcripts, message bodies, phone numbers, email add
 
 ## Product analytics and session replay
 
-The landing page records sessions after cookie consent. The admin dashboard records operator sessions only when the active business has telemetry enabled, and never on authentication, prospect demo, or widget routes (`/login`, `/signup`, `/forgot-password`, `/reset-password/*`, `/confirm-email-change`, `/accept-invite`, `/claim-demo`, `/demo/*`, `/demos`, `/embed/*`). `ProductAnalytics` owns that decision; `apps/admin/instrumentation-client.ts` initializes the SDK opted out so nothing is collected before the decision is made.
+The landing page records sessions after cookie consent. The admin dashboard records operator sessions only when the active business has telemetry enabled, and never on authentication, prospect demo, or widget routes (`/login`, `/signup`, `/forgot-password`, `/reset-password/*`, `/confirm-email-change`, `/accept-invite`, `/claim-demo`, `/demo/*`, `/demos`, `/embed/*`). `ProductAnalytics` owns that decision. Loading it starts the SDK opted out (`apps/admin/src/lib/client-analytics.ts`), so nothing is collected before the decision is made. The widget's page never loads `ProductAnalytics`, so visitors on a business's website don't download PostHog at all.
 
 Masking happens in the browser, because PostHog privacy controls run before data leaves the page and `before_send` cannot redact recorded payloads. Mask caller and contact text with the `ph-mask` class and block whole elements with `ph-no-capture` when an attribute carries personal data, such as the signed URL of a call recording or a contact's `title` tooltip. Both are honored by the SDK defaults.
 

@@ -1,6 +1,9 @@
 {
   "items": {
     "home": "Home",
+    "appointments": "Appointments",
+    "newCount_one": "{{count}} new booking",
+    "newCount_other": "{{count}} new bookings",
     "calls": "Calls",
     "messages": "Messages",
     "agent": "Agent",

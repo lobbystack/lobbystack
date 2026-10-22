@@ -3,6 +3,7 @@ import { and, asc, count, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm
 import { appointments, calls, contacts, conversations, enqueueOutbox, messages, services, staff, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
+import { contactPasscodeStatusInTransaction } from "./contactPasscodes";
 import type { DomainContext } from "./context";
 
 /**
@@ -98,11 +99,11 @@ export async function getContactDetail(
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessMembership(tx, input);
     const found = (await tx.select({ contact: contacts, channels: contactChannelsSql(input.businessId) }).from(contacts).where(and(eq(contacts.id, input.contactId), eq(contacts.businessId, input.businessId))).limit(1))[0];
-    if (!found) return { contact: null, channels: [], calls: [], messages: [], appointments: [], activityCounts: { calls: 0, messages: 0, appointments: 0, conversations: 0 } };
+    if (!found) return { contact: null, channels: [], passcode: null, calls: [], messages: [], appointments: [], activityCounts: { calls: 0, messages: 0, appointments: 0, conversations: 0 } };
     const { contact, channels } = found;
     const contactConversationIds = contactConversationIdsSql(input.businessId, sql`${input.contactId}::uuid`);
     const contactMessages = and(eq(messages.businessId, input.businessId), sql`${messages.conversationId} in ${contactConversationIds}`);
-    const [recentCalls, recentMessages, recentAppointments, callCount, messageCount, appointmentCount, conversationCount] = await Promise.all([
+    const [recentCalls, recentMessages, recentAppointments, callCount, messageCount, appointmentCount, conversationCount, passcode] = await Promise.all([
       tx.select({ id: calls.id, status: calls.status, disposition: calls.disposition, transport: calls.transport, startedAt: calls.startedAt, endedAt: calls.endedAt, providerDurationSeconds: calls.providerDurationSeconds }).from(calls).where(and(eq(calls.businessId, input.businessId), eq(calls.contactId, input.contactId))).orderBy(desc(calls.startedAt)).limit(25),
       tx.select({ id: messages.id, conversationId: messages.conversationId, direction: messages.direction, channel: messages.channel, body: messages.body, status: messages.status, createdAt: messages.createdAt }).from(messages).where(contactMessages).orderBy(desc(messages.createdAt)).limit(50),
       tx.select({ id: appointments.id, startsAt: appointments.startsAt, endsAt: appointments.endsAt, timezone: appointments.timezone, status: appointments.status, sourceChannel: appointments.sourceChannel, calendarSyncState: appointments.calendarSyncState, serviceName: services.name, staffName: staff.name }).from(appointments).innerJoin(services, and(eq(services.id, appointments.serviceId), eq(services.businessId, input.businessId))).innerJoin(staff, and(eq(staff.id, appointments.staffId), eq(staff.businessId, input.businessId))).where(and(eq(appointments.businessId, input.businessId), eq(appointments.contactId, input.contactId))).orderBy(desc(appointments.startsAt)).limit(25),
@@ -110,8 +111,10 @@ export async function getContactDetail(
       tx.select({ count: count() }).from(messages).where(contactMessages),
       tx.select({ count: count() }).from(appointments).where(and(eq(appointments.businessId, input.businessId), eq(appointments.contactId, input.contactId))),
       tx.select({ count: count() }).from(conversations).where(and(eq(conversations.businessId, input.businessId), sql`${conversations.id} in ${contactConversationIds}`)),
+      // Whether the contact has a keypad PIN, never the PIN or its hash.
+      contactPasscodeStatusInTransaction(tx, { businessId: input.businessId, contactId: input.contactId }),
     ]);
-    return { contact, channels, calls: recentCalls, messages: recentMessages, appointments: recentAppointments, activityCounts: { calls: Number(callCount[0]?.count ?? 0), messages: Number(messageCount[0]?.count ?? 0), appointments: Number(appointmentCount[0]?.count ?? 0), conversations: Number(conversationCount[0]?.count ?? 0) } };
+    return { contact, channels, passcode, calls: recentCalls, messages: recentMessages, appointments: recentAppointments, activityCounts: { calls: Number(callCount[0]?.count ?? 0), messages: Number(messageCount[0]?.count ?? 0), appointments: Number(appointmentCount[0]?.count ?? 0), conversations: Number(conversationCount[0]?.count ?? 0) } };
   });
 }
 

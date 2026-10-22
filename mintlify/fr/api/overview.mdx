@@ -53,7 +53,7 @@ La réponse place la ressource dans `data` :
 - Les identifiants sont des UUID et ne changent jamais.
 - Les horodatages suivent la norme ISO 8601 en UTC, par exemple `2026-09-29T13:30:00.000Z`. Le corps des requêtes accepte aussi un décalage numérique comme `-04:00`.
 - Les listes renvoient `data`, `next_cursor` et `has_more`. Consultez [Requêtes et erreurs](/fr/api/requests).
-- Chaque clé appartient à une seule entreprise. Vous ne transmettez jamais d'identifiant d'entreprise.
+- Une clé API du tableau de bord appartient à une seule entreprise, donc vous ne transmettez pas d'identifiant d'entreprise. Une [clé de plateforme](/fr/api/authentication#clés-de-plateforme) nomme l'entreprise dans l'en-tête `LobbyStack-Business`.
 
 ## OpenAPI
 

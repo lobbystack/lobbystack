@@ -108,7 +108,8 @@
         "from": "à partir de {{amount}}",
         "range": "{{min}} – {{max}}",
         "inPerson": "Fixé sur place",
-        "none": "Non défini"
+        "none": "Non défini",
+        "discounted": "{{price}} (−{{percent}} %)"
       },
       "duplicated": "Service dupliqué.",
       "duplicateFailed": "Impossible de dupliquer le service.",
@@ -184,8 +185,12 @@
           "errors": {
             "invalid": "Saisissez un prix, par exemple 3 500 ou 12,50.",
             "rangeIncomplete": "Saisissez le prix minimum et le prix maximum.",
-            "rangeOrder": "Le prix maximum doit être supérieur au prix minimum."
-          }
+            "rangeOrder": "Le prix maximum doit être supérieur au prix minimum.",
+            "discountInvalid": "Saisissez une remise de 0 à 100 %."
+          },
+          "discount": "Remise",
+          "discountPercent": "Pourcentage de remise",
+          "discountPreview": "Les clients paient {{price}} au lieu de {{regular}}."
         },
         "active": {
           "label": "Réservable",
@@ -379,9 +384,20 @@
       "label": "Autoriser les deplacements IA",
       "hint": "Permettre a la receptionniste de deplacer un rendez-vous verifie apres verification des disponibilites."
     },
-    "requireOtp": {
-      "label": "Exiger un code unique",
-      "hint": "Envoyer un code avant toute annulation ou modification."
+    "verification": {
+      "label": "Vérification de l'appelant",
+      "options": {
+        "phone_match_and_facts": "Numéro de téléphone et détails du rendez-vous",
+        "otp_required": "Code unique par SMS",
+        "passcode_required": "Code PIN sur le clavier",
+        "operator_only": "Votre équipe fait les modifications"
+      },
+      "descriptions": {
+        "phone_match_and_facts": "L'appelant doit appeler du numéro utilisé pour réserver et indiquer l'heure ou le service du rendez-vous.",
+        "otp_required": "L'appelant doit aussi lire un code unique envoyé par SMS à ce numéro avant toute annulation ou modification.",
+        "passcode_required": "L'appelant doit aussi saisir sur le clavier de son téléphone le code PIN enregistré sur sa fiche contact. Sans code PIN, sa demande est transmise à votre équipe. Définissez les codes PIN dans l'onglet Détails de chaque contact.",
+        "operator_only": "La réceptionniste ne modifie pas les rendez-vous. Elle transmet les demandes à votre équipe."
+      }
     }
   },
   "actions": {

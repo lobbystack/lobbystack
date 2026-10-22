@@ -63,7 +63,7 @@ Como mínimo, tendrá que desarrollar o conectar:
 
 Por eso un agente telefónico parece un proyecto acotado hasta que se encuentra con clientes reales. Un agente telefónico es software en producción desde el momento en que lo llama un cliente real.
 
-La infraestructura básica puede parecer barata sobre el papel. Los [precios de Twilio Voice](https://www.twilio.com/en-us/voice/pricing/us) indican que las llamadas entrantes locales en EE. UU. cuestan fracciones de centavo por minuto, más el costo del número de teléfono y de los complementos. Los [precios de la API de OpenAI](https://openai.com/api/pricing/) publican el precio de los modelos de audio en tiempo real por separado de los modelos de texto. Esas tarifas importan, pero no son toda la factura.
+La infraestructura básica puede parecer barata sobre el papel. Los [precios de Twilio Voice](https://www.twilio.com/en-us/voice/pricing/us) indican que las llamadas entrantes locales en EE. UU. cuestan fracciones de centavo por minuto, más el costo del número de teléfono y de los complementos. Los [precios de la API de OpenAI](https://openai.com/api/pricing/) publican el precio de los modelos de audio en tiempo real por separado de los modelos de texto. Esas tarifas importan, pero no son toda la factura. Para ver paso a paso un proyecto sobre GPT-Live, el modelo de ChatGPT Voice, lea nuestra guía para [crear una recepcionista virtual con la voz de ChatGPT](/es/blog/how-to-build-an-ai-receptionist/).
 
 El costo mayor suele ser el tiempo de las personas que rodean al sistema:
 

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { and, count, desc, eq, inArray, lt, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNotNull, lt, or, sql } from "drizzle-orm";
 
 import { auditLogs, enqueueOutbox, idempotencyKeys, webhookDeliveries, webhookDeliveryAttempts, webhookEndpoints, webhookEvents, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import {
@@ -32,8 +32,11 @@ const emitFailures = meter.createCounter("lobbystack.webhooks.emit_failures", { 
 const deliveryAttempts = meter.createCounter("lobbystack.webhooks.delivery_attempts", { unit: "{attempt}" });
 const endpointsDisabled = meter.createCounter("lobbystack.webhooks.endpoints_disabled", { unit: "{endpoint}" });
 
-/** Who is managing an endpoint: a signed-in owner or admin, or an API key with webhooks:manage. */
-export type WebhookManager = { kind: "operator"; userId: string } | { kind: "api_key"; apiKeyId: string };
+/** Who is managing an endpoint: a signed-in owner or admin, or an API key or platform key with webhooks:manage. */
+export type WebhookManager =
+  | { kind: "operator"; userId: string }
+  | { kind: "api_key"; apiKeyId: string }
+  | { kind: "platform_key"; platformKeyId: string; partnerId: string; actingUserId: string };
 
 async function asManager<T>(context: DomainContext, businessId: string, manager: WebhookManager, callback: (tx: DatabaseTransaction) => Promise<T>): Promise<T> {
   if (manager.kind === "operator") {
@@ -46,7 +49,9 @@ async function asManager<T>(context: DomainContext, businessId: string, manager:
 }
 
 function auditActor(manager: WebhookManager) {
-  return manager.kind === "operator" ? { actorUserId: manager.userId, payload: { actor: "operator" } } : { actorUserId: null, payload: { actor: "api_key", apiKeyId: manager.apiKeyId } };
+  if (manager.kind === "operator") return { actorUserId: manager.userId, payload: { actor: "operator" } };
+  if (manager.kind === "platform_key") return { actorUserId: null, payload: { actor: "platform_key", platformKeyId: manager.platformKeyId, partnerId: manager.partnerId, actingUserId: manager.actingUserId } };
+  return { actorUserId: null, payload: { actor: "api_key", apiKeyId: manager.apiKeyId } };
 }
 
 function normalizeEvents(events: readonly string[]): WebhookEventType[] {
@@ -96,7 +101,8 @@ export async function createWebhookEndpoint(
       events,
       encryptedSecret: encryptWebhookSecret(secret),
       ...(input.description?.trim() ? { description: input.description.trim().slice(0, 200) } : {}),
-      ...(input.manager.kind === "operator" ? { createdByUserId: input.manager.userId } : { createdByApiKeyId: input.manager.apiKeyId }),
+      // A platform key has no api_keys row, so the endpoint names the PLATFORM_API_KEYS entry.
+      ...(input.manager.kind === "operator" ? { createdByUserId: input.manager.userId } : input.manager.kind === "api_key" ? { createdByApiKeyId: input.manager.apiKeyId } : { createdByPlatformKeyId: input.manager.platformKeyId }),
     }).returning();
     if (!row) throw new Error("The webhook endpoint could not be created.");
     const actor = auditActor(input.manager);
@@ -117,6 +123,9 @@ export async function updateWebhookEndpoint(
     if (events !== undefined) patch.events = events;
     if (input.description !== undefined) patch.description = input.description?.trim() ? input.description.trim().slice(0, 200) : null;
     if (input.status === "enabled") Object.assign(patch, { status: "enabled", disabledReason: null, disabledAt: null, consecutiveFailures: 0 });
+    // A platform key that turns a disabled endpoint of another platform key back on answers for it from then on,
+    // so the endpoint isn't turned off again when the admin restarts without the key that made it.
+    if (input.status === "enabled" && input.manager.kind === "platform_key") Object.assign(patch, { createdByPlatformKeyId: sql`CASE WHEN ${webhookEndpoints.status} = 'disabled' AND ${webhookEndpoints.createdByPlatformKeyId} IS NOT NULL THEN ${input.manager.platformKeyId}::uuid ELSE ${webhookEndpoints.createdByPlatformKeyId} END` });
     if (input.status === "disabled") Object.assign(patch, { status: "disabled", disabledReason: "manual", disabledAt: new Date() });
     const [row] = await tx.update(webhookEndpoints).set(patch).where(and(eq(webhookEndpoints.businessId, input.businessId), eq(webhookEndpoints.id, input.endpointId))).returning();
     if (!row) throw notFound("Webhook endpoint");
@@ -124,6 +133,36 @@ export async function updateWebhookEndpoint(
     await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: actor.actorUserId, eventType: "webhook_endpoint.updated", entityType: "webhook_endpoint", entityId: row.id, payload: { ...actor.payload, fields: Object.keys(patch).filter((key) => key !== "updatedAt") } });
     return detail(row);
   });
+}
+
+/**
+ * Turns off the business's enabled endpoints that any of the given API keys,
+ * the given person or, with createdByPlatformKeys, any platform key created,
+ * so they stop receiving the business's data, and returns their ids. Revoking
+ * a key and handing a business over both use it.
+ */
+export async function disableWebhookEndpointsInTransaction(tx: DatabaseTransaction, input: { businessId: string; createdByApiKeyIds?: readonly string[]; createdByUserId?: string; createdByPlatformKeys?: boolean; now?: Date }): Promise<string[]> {
+  const creators = [
+    ...(input.createdByApiKeyIds?.length ? [inArray(webhookEndpoints.createdByApiKeyId, [...input.createdByApiKeyIds])] : []),
+    ...(input.createdByUserId ? [eq(webhookEndpoints.createdByUserId, input.createdByUserId)] : []),
+    ...(input.createdByPlatformKeys ? [isNotNull(webhookEndpoints.createdByPlatformKeyId)] : []),
+  ];
+  if (!creators.length) return [];
+  const now = input.now ?? new Date();
+  const disabled = await tx.update(webhookEndpoints).set({ status: "disabled", disabledReason: "manual", disabledAt: now, updatedAt: now }).where(and(eq(webhookEndpoints.businessId, input.businessId), eq(webhookEndpoints.status, "enabled"), or(...creators))).returning({ id: webhookEndpoints.id });
+  return disabled.map((row) => row.id);
+}
+
+/**
+ * Turns off every business's endpoints that a platform key no longer in
+ * PLATFORM_API_KEYS set up, and returns how many. The admin runs it when it
+ * starts, because only the admin reads PLATFORM_API_KEYS and removing a key
+ * means restarting it.
+ */
+export async function disableRemovedPlatformKeyWebhooks(context: DomainContext, input: { configuredPlatformKeyIds: readonly string[] }): Promise<number> {
+  const ids = `{${input.configuredPlatformKeyIds.join(",")}}`;
+  const result = await withBusinessTransaction(context.db, { actorType: "worker" }, async (tx) => await tx.execute<{ disabled: number }>(sql`select app.disable_removed_platform_key_webhooks(${ids}::uuid[]) as disabled`));
+  return Number(result.rows[0]?.disabled ?? 0);
 }
 
 export async function deleteWebhookEndpoint(context: DomainContext, input: { businessId: string; manager: WebhookManager; endpointId: string }): Promise<void> {

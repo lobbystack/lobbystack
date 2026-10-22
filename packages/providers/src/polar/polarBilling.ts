@@ -28,8 +28,12 @@ export class PolarBillingProvider {
     await this.request("/v1/events/ingest", { method: "POST", body: JSON.stringify({ events: [{ name: input.eventName, external_customer_id: input.externalCustomerId, external_id: input.idempotencyKey, timestamp: input.timestamp, metadata: { quantity: input.quantity, businessId: input.businessId, usageKind: input.usageKind } }] }) });
   }
 
-  async createCustomerPortalSession(input: { externalCustomerId: string; returnUrl: string }): Promise<{ url: string }> {
-    const result = await this.request<{ customer_portal_url: string }>("/v1/customer-sessions/", { method: "POST", body: JSON.stringify({ external_customer_id: input.externalCustomerId, return_url: input.returnUrl }) });
+  // Polar's own customer ID, because an account migrated from Convex can carry a different external ID.
+  async createCustomerPortalSession(input: { customerId: string; returnUrl: string }): Promise<{ url: string }> {
+    // Polar requires a member for team customers, which every account migrated from Convex is; the owner manages billing.
+    const owners = await this.request<{ items: Array<{ id: string }> }>(`/v1/customers/${encodeURIComponent(input.customerId)}/members?role=owner&limit=1`);
+    const memberId = owners.items[0]?.id;
+    const result = await this.request<{ customer_portal_url: string }>("/v1/customer-sessions/", { method: "POST", body: JSON.stringify({ customer_id: input.customerId, ...(memberId ? { member_id: memberId } : {}), return_url: input.returnUrl }) });
     return { url: result.customer_portal_url };
   }
 

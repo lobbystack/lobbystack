@@ -1,4 +1,4 @@
-import { deploymentModes } from "@lobbystack/shared";
+import { parseDeploymentMode } from "@lobbystack/shared";
 import type { DeploymentMode } from "@lobbystack/telemetry";
 
 /**
@@ -8,6 +8,5 @@ import type { DeploymentMode } from "@lobbystack/telemetry";
  * build-time value fell back to "development" in production.
  */
 export function runtimeDeploymentMode(env: Record<string, string | undefined> = process.env): DeploymentMode {
-  const value = env.DEPLOYMENT_MODE?.trim();
-  return deploymentModes.find(mode => mode === value) ?? "development";
+  return parseDeploymentMode(env.DEPLOYMENT_MODE) ?? "development";
 }

@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 
 import { publicAssetVersion } from "./asset-version";
 import { releaseVersion } from "./src/lib/release-version";
-import { embeddableSecurityHeaders, securityHeaders, toNextHeaderList } from "./security-headers";
+import { brandLogoSecurityHeaders, embeddableSecurityHeaders, securityHeaders, toNextHeaderList } from "./security-headers";
 
 // One release identifies the build everywhere: browser error reports, the source
 // maps uploaded to PostHog, and the deployment ID below.
@@ -19,7 +19,11 @@ const nextConfig: NextConfig = {
   // asset URL, so each deploy's chunks are fetched fresh.
   ...(serviceVersion === "development" ? {} : { deploymentId: serviceVersion }),
   // Extra hosts (e.g. an ngrok tunnel) that may load dev-only resources such as HMR.
-  allowedDevOrigins: (process.env.ALLOWED_DEV_ORIGINS ?? "").split(",").map((host) => host.trim()).filter(Boolean),
+  // The marketing hosts (lobbystack.localhost in development) count as extra hosts too.
+  allowedDevOrigins: [process.env.ALLOWED_DEV_ORIGINS, process.env.MARKETING_HOSTS]
+    .flatMap((hosts) => (hosts ?? "").split(","))
+    .map((host) => host.trim())
+    .filter(Boolean),
   experimental: {
     preloadEntriesOnStart: false,
     requestInsights: process.env.NODE_ENV === "development",
@@ -34,6 +38,22 @@ const nextConfig: NextConfig = {
     // deployment variable that can stay unchanged across deploys.
     NEXT_PUBLIC_ASSET_VERSION: publicAssetVersion(resolve(process.cwd(), "public"), serviceVersion),
     NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT: process.env.RAILWAY_ENVIRONMENT_NAME ?? process.env.NODE_ENV ?? "development",
+    // Where the dashboard's outside links go (packages/shared/src/brandLinks.ts),
+    // fixed at build even when unset, so a value set only at run time can't make
+    // the server render a link the browser then disagrees with.
+    NEXT_PUBLIC_LANDING_SITE_URL: process.env.NEXT_PUBLIC_LANDING_SITE_URL ?? "",
+    NEXT_PUBLIC_TERMS_URL: process.env.NEXT_PUBLIC_TERMS_URL ?? "",
+    NEXT_PUBLIC_PRIVACY_URL: process.env.NEXT_PUBLIC_PRIVACY_URL ?? "",
+    NEXT_PUBLIC_DOCS_SITE_URL: process.env.NEXT_PUBLIC_DOCS_SITE_URL ?? "",
+    NEXT_PUBLIC_CONTACT_EMAIL: process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "",
+    // The marketing site's sign-in links and voice demo. Its pages and islands
+    // are prerendered, so these are fixed at build like the links above.
+    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL ?? "",
+    NEXT_PUBLIC_LIVE_CALL_ENDPOINT: process.env.NEXT_PUBLIC_LIVE_CALL_ENDPOINT ?? "",
+    NEXT_PUBLIC_WEB_CALL_BUSINESS_SLUG: process.env.NEXT_PUBLIC_WEB_CALL_BUSINESS_SLUG ?? "",
+    // Whether the build includes the marketing site (src/marketing/build.ts).
+    // Dockerfile.admin sets MARKETING_SITE=false unless a release asks for it.
+    MARKETING_SITE_BUILT: process.env.MARKETING_SITE === "false" ? "false" : "true",
     // No NEXT_PUBLIC_DEPLOYMENT_MODE: browser telemetry gets the mode from the
     // server at runtime (src/lib/deployment-mode.ts).
   },
@@ -70,21 +90,31 @@ const nextConfig: NextConfig = {
     },
   },
   poweredByHeader: false,
+  // The proxy owns trailing slashes: marketing pages keep them, dashboard and API paths drop them.
+  skipTrailingSlashRedirect: true,
   async headers() {
     // The iframe document routes own their own framing policy: the global DENY
     // header must not be stamped on top of the embeddable CSP.
     const embeddable = toNextHeaderList(embeddableSecurityHeaders());
     const immutableAssetCache = [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }];
     const embedLoaderCache = [{ key: "Cache-Control", value: "public, max-age=600, s-maxage=3600, stale-while-revalidate=86400" }];
+    // A loader for one key carries the bubble look saved in the dashboard, so edits must reach websites quickly.
+    const keyedEmbedLoaderCache = [{ key: "Cache-Control", value: "public, max-age=60, s-maxage=60" }];
     return [
       { source: "/locales/:path*", headers: immutableAssetCache },
       { source: "/brand/:path*", headers: immutableAssetCache },
       { source: "/lobbystack-logo.svg", headers: immutableAssetCache },
       { source: "/embed/embed.js", headers: immutableAssetCache },
-      { source: "/((?!embed\\.js|embed/).*)", headers: toNextHeaderList(securityHeaders()) },
-      { source: "/embed.js", headers: [...embeddable, ...embedLoaderCache] },
+      { source: "/((?!embed\\.js|embed/|api/branding/logo$).*)", headers: toNextHeaderList(securityHeaders()) },
+      { source: "/api/branding/logo", headers: toNextHeaderList(brandLogoSecurityHeaders()) },
+      { source: "/embed.js", missing: [{ type: "query", key: "key" }], headers: [...embeddable, ...embedLoaderCache] },
+      { source: "/embed.js", has: [{ type: "query", key: "key" }], headers: [...embeddable, ...keyedEmbedLoaderCache] },
       { source: "/embed/:key*", headers: embeddable },
     ];
+  },
+  async redirects() {
+    // The widget page moved out of Settings; keep old bookmarks and alert links working.
+    return [{ source: "/settings/widget", destination: "/widget", permanent: true }];
   },
 };
 

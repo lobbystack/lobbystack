@@ -5,13 +5,16 @@ export class PublicApiError extends Error {
   readonly status: number;
   readonly code: ApiErrorCode;
   readonly details: Array<{ path: string; message: string }> | undefined;
+  /** Response headers, such as Retry-After on a 429. */
+  readonly headers: Record<string, string> | undefined;
 
-  constructor(status: number, code: ApiErrorCode, message: string, details?: Array<{ path: string; message: string }>) {
+  constructor(status: number, code: ApiErrorCode, message: string, details?: Array<{ path: string; message: string }>, headers?: Record<string, string>) {
     super(message);
     this.name = "PublicApiError";
     this.status = status;
     this.code = code;
     this.details = details;
+    this.headers = headers;
   }
 }
 

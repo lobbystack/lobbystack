@@ -1,8 +1,25 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { defaultWidgetConfig, widgetConfigSchema } from "@lobbystack/shared";
 
-import { createWidgetSessionToken, hashWidgetKey, isAllowedWidgetOrigin, normalizeOrigin, normalizeAllowedOrigins, requestIpHash, serializeWidgetKeyConfig, verifyWidgetSessionToken } from "./widget-keys";
+const lookups = vi.hoisted(() => ({
+  keys: [] as Array<{ business_id: string; widget_key_id: string }>,
+  rows: [] as Array<{ config: unknown; defaultLocale: string }>,
+}));
+
+vi.mock("./api-helpers", () => ({
+  getWorkerDatabase: () => ({ db: { execute: async () => ({ rows: lookups.keys }) } }),
+}));
+vi.mock("@lobbystack/db", async (importOriginal) => {
+  // The key's row, read through a transaction's select chain.
+  const query = { from: () => query, innerJoin: () => query, where: () => query, limit: async () => lookups.rows };
+  return {
+    ...(await importOriginal<typeof import("@lobbystack/db")>()),
+    withBusinessTransaction: async (_db: unknown, _context: unknown, run: (tx: unknown) => unknown) => await run({ select: () => query }),
+  };
+});
+
+import { createWidgetSessionToken, hashWidgetKey, isAllowedWidgetOrigin, loadWidgetAppearance, normalizeOrigin, normalizeAllowedOrigins, requestIpHash, serializeWidgetKeyConfig, verifyWidgetSessionToken } from "./widget-keys";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -87,5 +104,38 @@ describe("widget key hashing and origin policy", () => {
     });
     expect(verifyWidgetSessionToken(expired.token)).toBeNull();
     expect(verifyWidgetSessionToken(`${expired.token.slice(0, -1)}x`)).toBeNull();
+  });
+});
+
+describe("what the loader takes from the dashboard", () => {
+  beforeEach(() => {
+    lookups.keys = [{ business_id: "00000000-0000-4000-8000-000000000011", widget_key_id: "00000000-0000-4000-8000-000000000010" }];
+  });
+
+  it("sends the business's language along with the bubble look", async () => {
+    lookups.rows = [{ config: { color: "#112233" }, defaultLocale: "fr" }];
+    await expect(loadWidgetAppearance("wk_live_abc")).resolves.toEqual({ color: "#112233", locale: "fr" });
+  });
+
+  it("sends the language the key sets over the business's", async () => {
+    lookups.rows = [{ config: { localeOverride: "es", position: "bottom-left" }, defaultLocale: "fr" }];
+    await expect(loadWidgetAppearance("wk_live_abc")).resolves.toEqual({ position: "bottom-left", locale: "es" });
+  });
+
+  it("sends English for an English-speaking business", async () => {
+    lookups.rows = [{ config: {}, defaultLocale: "en" }];
+    await expect(loadWidgetAppearance("wk_live_abc")).resolves.toEqual({ locale: "en" });
+  });
+
+  it("sends Serbian for a Serbian business, and English for a caller language the widget doesn't show", async () => {
+    lookups.rows = [{ config: {}, defaultLocale: "sr" }];
+    await expect(loadWidgetAppearance("wk_live_abc")).resolves.toEqual({ locale: "sr" });
+    lookups.rows = [{ config: {}, defaultLocale: "de" }];
+    await expect(loadWidgetAppearance("wk_live_abc")).resolves.toEqual({ locale: "en" });
+  });
+
+  it("sends nothing for an unknown key", async () => {
+    lookups.keys = [];
+    await expect(loadWidgetAppearance("wk_live_unknown")).resolves.toBeNull();
   });
 });

@@ -1,6 +1,9 @@
 # syntax=docker/dockerfile:1.7
 FROM node:26-bookworm-slim@sha256:662933cf47f013bc8e4beb31a6116448427a82057ba7c42c97e4c5ba766504c2 AS build
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
+# The marketing site's social cards are drawn at build time with text in Arial.
+# fontconfig's aliases map it to Liberation Sans, as on the machine that built
+# them for Cloudflare Pages; without them the text falls back to a monospace font.
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates fontconfig fonts-liberation && rm -rf /var/lib/apt/lists/*
 
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
@@ -34,6 +37,33 @@ ARG S3_FORCE_PATH_STYLE
 RUN pnpm --filter @lobbystack/embed build && node scripts/copy-widget-embed.mjs
 ARG POSTHOG_SOURCEMAP_API_KEY
 ARG POSTHOG_PROJECT_ID=266281
+# The admin reads these at run time. At build time they let the prerendered
+# sign-in pages show the name and logo without asking the server first.
+ARG BRAND_APP_NAME
+ARG BRAND_LOGO_URL
+# The cloud ignores saved branding, so its prerendered pages show the logo at once.
+ARG DEPLOYMENT_MODE
+# Where the admin's outside links go: the website, the terms and privacy pages,
+# the docs, and the one contact address. Next.js writes them into the build, so
+# changing one takes a rebuild. Unset or empty links to LobbyStack's.
+ARG NEXT_PUBLIC_LANDING_SITE_URL
+ARG NEXT_PUBLIC_TERMS_URL
+ARG NEXT_PUBLIC_PRIVACY_URL
+ARG NEXT_PUBLIC_DOCS_SITE_URL
+ARG NEXT_PUBLIC_CONTACT_EMAIL
+# The marketing site the admin serves on MARKETING_HOSTS. Images leave it out
+# unless MARKETING_SITE=true, so self-hosted images skip its 300 prerendered
+# pages, social cards and search index. Its pages are built ahead of time, so
+# the dashboard origin for its sign-in links, the voice demo's endpoint and
+# business, and the search engines' verification tokens go in here too.
+ARG MARKETING_SITE=false
+ARG NEXT_PUBLIC_APP_URL
+ARG NEXT_PUBLIC_LIVE_CALL_ENDPOINT
+ARG NEXT_PUBLIC_WEB_CALL_BUSINESS_SLUG
+ARG GOOGLE_SITE_VERIFICATION
+ARG BING_SITE_VERIFICATION
+# Production only: the build submits the pages it changes to IndexNow.
+ARG INDEXNOW_KEY
 RUN pnpm --filter @lobbystack/admin... build
 RUN mkdir -p /prod && cp -R /app/apps/admin/.next/static /prod/admin-static && \
     find /prod/admin-static -type f -name '*.map' -delete

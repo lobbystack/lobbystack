@@ -17,6 +17,7 @@ node_modules
 .replacement-backups/
 .firecrawl/
 .prospect-demos/
+.platform-keys/
 apps/landing/.astro
 apps/landing/.wrangler
 apps/landing/dist
@@ -34,3 +35,8 @@ security_best_practices_report.md
 mintlify/.atlas-analysis.json
 
 apps/web/vite.tailscale.config.ts
+
+# Marketing site build output: the prerendered snapshot and its search index
+apps/admin/.marketing-dist
+apps/admin/public/pagefind
+apps/admin/public/marketing-sitemaps

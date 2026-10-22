@@ -27,7 +27,13 @@ describe("billing portal route", () => {
     const response = await POST(new Request("http://localhost:3000/api/billing/portal?businessId=business", { method: "POST" }));
     expect(response.status).toBe(200);
     expect(fakeOperator.transactions).toEqual([{ minimumRole: "business_admin" }]);
-    expect(fixture.portal).toHaveBeenCalledWith({ externalCustomerId: "tenant-billing-key", returnUrl: "http://localhost:3000/settings/plan" });
+    expect(fixture.portal).toHaveBeenCalledWith({ customerId: "customer", returnUrl: "http://localhost:3000/settings/plan" });
+  });
+  it("opens no Polar portal for a managed plan, which LobbyStack bills directly", async () => {
+    fixture.account = { source: "managed", billingKey: "tenant-billing-key", customerId: "customer", subscriptionId: null, plan: "enterprise", subscriptionState: "active" };
+    const response = await POST(new Request("http://localhost:3000/api/billing/portal?businessId=business", { method: "POST" }));
+    expect(response.status).toBe(409);
+    expect(fixture.portal).not.toHaveBeenCalled();
   });
   it("rejects a customer without billing history before calling the provider", async () => {
     fixture.account = null;

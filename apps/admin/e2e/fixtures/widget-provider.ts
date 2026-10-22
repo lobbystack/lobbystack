@@ -35,7 +35,8 @@ export async function startWidgetProvider(): Promise<{ server: Server; requests:
     const url = new URL(request.url ?? "/", "http://localhost:18090");
     if (url.pathname === "/widget-host") {
       const key = url.searchParams.get("key") ?? "";
-      if (!/^[a-z0-9-]+$/.test(key)) { response.writeHead(400).end(); return; }
+      // Dashboard keys look like `wk_live_<base64url>`; seeded test keys are lowercase with dashes.
+      if (!/^[A-Za-z0-9_-]+$/.test(key)) { response.writeHead(400).end(); return; }
       response.setHeader("content-type", "text/html");
       const adminOrigin = new URL(process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000").origin;
       response.end(`<!doctype html><html lang="en"><head><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><h1>Disposable widget host</h1><script src="${adminOrigin}/embed.js" data-base-url="${adminOrigin}" data-widget-key="${key}"></script></body></html>`);

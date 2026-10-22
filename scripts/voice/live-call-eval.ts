@@ -4,18 +4,18 @@
 // that runs on calls. Agent tools that need the database fail, as they would
 // with the database down. See docs/voice/testing.md.
 //
-// OPENAI_API_KEY=... pnpm voice:eval [--scenario <name>]... [--runs <n>] [--concurrency <n>] [--snapshot <file.json>] [--locale <code>]
+// OPENAI_API_KEY=... pnpm voice:eval [--scenario <name>]... [--runs <n>] [--concurrency <n>] [--snapshot <file.json>] [--locale <code>] [--browser]
 
 import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 
-import { buildPhoneSessionConfig, callerIsDone, createAgentModel, createReceptionistAgent, LiveCallController, liveDelegationEnvironment, type CallControl, type LiveCallSummary } from "@lobbystack/agent-core";
+import { buildBrowserSessionConfig, buildPhoneSessionConfig, callerIsDone, createAgentModel, createReceptionistAgent, LiveCallController, liveDelegationEnvironment, type CallControl, type LiveCallSummary } from "@lobbystack/agent-core";
 import { defaultGreeting, demoSnapshot, isRuntimeLocale, runtimeLocales, type BusinessContextSnapshot } from "@lobbystack/shared";
 import OpenAI from "openai";
 import type { SidebandWS } from "openai/resources/live/sideband/ws";
 import { LiveWS } from "openai/resources/live/ws";
 
-import { callerLine, findScenarios, OPENING, type CallScenario } from "./scenarios";
+import { callerLine, findScenarios, OPENING } from "./scenarios";
 
 const RATE = 24_000;
 const CHUNK_MS = 100;
@@ -37,6 +37,8 @@ const { values } = parseArgs({
     concurrency: { type: "string", default: "4" },
     snapshot: { type: "string" },
     locale: { type: "string" },
+    // A browser call, as from the website widget: its own instructions, and full-band audio.
+    browser: { type: "boolean", default: false },
   },
 });
 if (!process.env.OPENAI_API_KEY) throw new Error("Set OPENAI_API_KEY.");
@@ -44,7 +46,15 @@ const locale = values.locale ?? "en";
 if (!isRuntimeLocale(locale)) throw new Error(`--locale must be one of ${runtimeLocales.join(", ")}.`);
 // The caller speaks the call's language: --locale's, or English.
 const opening = callerLine(OPENING, locale);
-const scenarios = findScenarios(values.scenario).map((scenario) => ({ ...scenario, lines: scenario.lines.map((line) => ({ ...line, text: callerLine(line.text, locale) })) }));
+// The eval sends speech only, so it refuses a scenario that presses keys.
+const scenarios = findScenarios(values.scenario).map((scenario) => ({
+  ...scenario,
+  lines: scenario.lines.map((line) => {
+    if (!("text" in line)) throw new Error(`The eval can't press phone keys. Run ${scenario.name} with pnpm voice:call.`);
+    return { ...line, text: callerLine(line.text, locale) };
+  }),
+}));
+type Scenario = (typeof scenarios)[number];
 const loaded: BusinessContextSnapshot = values.snapshot ? JSON.parse(readFileSync(values.snapshot, "utf8")) : demoSnapshot;
 // --locale opens the call in that language, with its default greeting.
 const snapshot: BusinessContextSnapshot = values.locale ? { ...loaded, defaultLocale: locale, greeting: defaultGreeting(loaded.displayName, locale) } : loaded;
@@ -83,12 +93,23 @@ function phoneLine(pcm: Buffer): Buffer {
 
 async function speak(text: string): Promise<Buffer> {
   const response = await client.audio.speech.create({ model: "gpt-4o-mini-tts", voice: "alloy", input: text, response_format: "pcm" });
-  return phoneLine(Buffer.from(await response.arrayBuffer()));
+  const pcm = Buffer.from(await response.arrayBuffer());
+  return values.browser ? pcm : phoneLine(pcm);
 }
 
-type RunResult = { scenario: CallScenario; passed: boolean; greetedAfterMs?: number; greetingCommands: number; ended: boolean; endedAfterMs?: number; handOvers: string[]; checks: boolean[]; goodbyes: number; opened: string[]; replies: string[]; error?: string };
+// The call's session, with WebSocket audio instead of SIP or WebRTC.
+function sessionConfig() {
+  if (values.browser) {
+    const { store: _store, client: _client, ...session } = buildBrowserSessionConfig(snapshot);
+    return session;
+  }
+  const { type: _type, store: _store, ...session } = buildPhoneSessionConfig(snapshot);
+  return session;
+}
 
-async function run(scenario: CallScenario, audio: Map<string, Buffer>, agentModel: NonNullable<typeof model>): Promise<RunResult> {
+type RunResult = { scenario: Scenario; passed: boolean; greetedAfterMs?: number; greetingCommands: number; ended: boolean; endedAfterMs?: number; handOvers: string[]; checks: boolean[]; goodbyes: number; opened: string[]; replies: string[]; forbidden?: string; error?: string };
+
+async function run(scenario: Scenario, audio: Map<string, Buffer>, agentModel: NonNullable<typeof model>): Promise<RunResult> {
   const ws = new LiveWS(client);
   let sessionMs = 0;
   let queue = Buffer.alloc(0);
@@ -132,7 +153,7 @@ async function run(scenario: CallScenario, audio: Map<string, Buffer>, agentMode
   };
   const agent = createReceptionistAgent({
     model: agentModel,
-    context: { domain: { db: {} as never }, snapshot, channel: "voice", callId: "eval", callControl },
+    context: { domain: { db: {} as never }, snapshot, channel: values.browser ? "web_voice" : "voice", callId: "eval", callControl },
     directToolAnswers: true,
   });
   const closed = new Promise<LiveCallSummary>((resolve) => {
@@ -154,8 +175,7 @@ async function run(scenario: CallScenario, audio: Map<string, Buffer>, agentMode
     ws.on("session.started", () => resolve());
     ws.on("error", (error) => reject(new Error(error.error?.error.message ?? error.message)));
   });
-  // The phone call's session, with WebSocket audio instead of SIP.
-  const { type: _type, store: _store, ...session } = buildPhoneSessionConfig(snapshot);
+  const session = sessionConfig();
   ws.send({ type: "session.start", session: { ...session, audio: { ...session.audio, format: { type: "audio/pcm", rate: RATE } } } as never });
 
   const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -198,8 +218,9 @@ async function run(scenario: CallScenario, audio: Map<string, Buffer>, agentMode
     }
     const goodbyes = replies.filter((line) => GOODBYE.test(line)).length;
     const endedAfterMs = ended === undefined ? undefined : Math.max(0, ended - lastLineAt);
-    const passed = scenario.expect === "ends" ? ended !== undefined : ended === undefined;
-    return { scenario, passed, ...(greetedAfterMs !== undefined ? { greetedAfterMs } : {}), greetingCommands, ended: ended !== undefined, ...(endedAfterMs !== undefined ? { endedAfterMs } : {}), handOvers, checks, goodbyes, opened, replies };
+    const forbidden = scenario.mustNotSay ? replies.find((line) => scenario.mustNotSay!.test(line)) : undefined;
+    const passed = (scenario.expect === "ends" ? ended !== undefined : ended === undefined) && forbidden === undefined;
+    return { scenario, passed, ...(greetedAfterMs !== undefined ? { greetedAfterMs } : {}), greetingCommands, ended: ended !== undefined, ...(endedAfterMs !== undefined ? { endedAfterMs } : {}), handOvers, checks, goodbyes, opened, replies, ...(forbidden ? { forbidden } : {}) };
   } catch (error) {
     return { scenario, passed: false, ...(greetedAfterMs !== undefined ? { greetedAfterMs } : {}), greetingCommands, ended: false, handOvers, checks, goodbyes: 0, opened, replies, error: error instanceof Error ? error.message : String(error) };
   } finally {
@@ -219,7 +240,7 @@ await Promise.all(Array.from({ length: Math.min(Number(values.concurrency), jobs
     const result = await run(jobs[next++]!, audio, model);
     results.push(result);
     const greeting = `${result.greetedAfterMs === undefined ? "no greeting in 15 s" : `greeted at ${(result.greetedAfterMs / 1000).toFixed(1)} s`}${result.greetingCommands ? ` after ${result.greetingCommands} command${result.greetingCommands > 1 ? "s" : ""}` : ""}`;
-    const outcome = result.error ? `error: ${result.error}` : result.ended ? `ended ${((result.endedAfterMs ?? 0) / 1000).toFixed(1)} s after the caller` : "still open";
+    const outcome = `${result.error ? `error: ${result.error}` : result.ended ? `ended ${((result.endedAfterMs ?? 0) / 1000).toFixed(1)} s after the caller` : "still open"}${result.forbidden ? ` | said what it mustn't: "${result.forbidden}"` : ""}`;
     console.log(`${result.passed ? "PASS" : "FAIL"} ${result.scenario.name.padEnd(17)} ${greeting} | ${outcome} | hand-overs: ${result.handOvers.join(", ") || "none"} | checks: ${result.checks.map((done) => (done ? "done" : "continue")).join(", ") || "none"} | goodbyes: ${result.goodbyes} | opened: ${result.opened.map((line) => `"${line.trim()}"`).join(" / ")} | receptionist: ${result.replies.map((line) => `"${line}"`).join(" / ")}`);
   }
 }));

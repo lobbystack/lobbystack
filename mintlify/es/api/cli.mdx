@@ -1,0 +1,189 @@
+---
+title: "Incorpore un negocio desde la línea de comandos"
+description: "Describa un negocio en un solo archivo y deje que el comando lobbystack configure su conocimiento, su recepcionista, su plan, su número de teléfono y su propietario."
+sidebarTitle: "Línea de comandos"
+contentType: "How-to"
+---
+
+El comando `lobbystack` trabaja con LobbyStack a través de la [API](/es/api/overview). `lobbystack onboard` lee un archivo que describe un negocio y hace que el negocio coincida con él. Crea el negocio, agrega su conocimiento, configura la recepcionista y los servicios, elige un plan, reserva un número de teléfono y envía al propietario un enlace para hacerse cargo. Cuando cambia el archivo y lo ejecuta de nuevo, solo cambia lo que difiere.
+
+## Instale el comando
+
+El comando forma parte del [repositorio de LobbyStack](https://github.com/lobbystack/lobbystack). Necesita Node.js 26 y pnpm 10.
+
+```bash
+git clone https://github.com/lobbystack/lobbystack.git
+cd lobbystack
+pnpm install
+pnpm --filter "@lobbystack/cli..." build
+```
+
+El resultado es un solo archivo, `packages/cli/dist/bin.js`, que se ejecuta solo con Node.js. Cópielo donde quiera o cree un alias:
+
+```bash
+alias lobbystack="node $PWD/packages/cli/dist/bin.js"
+```
+
+## Inicie sesión
+
+`lobbystack login` comprueba una clave y la guarda, con la dirección del panel, como un perfil:
+
+```bash
+lobbystack login --url https://app.lobbystack.com --key-stdin < key.txt
+```
+
+`--key-stdin` mantiene la clave fuera del historial de su shell. En un despliegue autoalojado, use su `APP_BASE_URL`. `lobbystack whoami` muestra la clave en uso y su negocio.
+
+La clave que use decide lo que `onboard` puede hacer:
+
+- **Una clave de API** de **Configuración** > **Claves de API** configura su propio negocio, siempre que el negocio ya tenga el nombre del manifiesto o que el manifiesto indique su ID. Dele `business:read`, `business:write`, `knowledge:read` y `knowledge:write`, además de `billing:manage` para un plan, `phone_numbers:manage` para un número y `team:manage` para entregar el negocio, algo que solo puede hacer una clave creada por un propietario. Consulte [Autenticación](/es/api/authentication).
+- **Una clave de plataforma** crea negocios nuevos. Quien opera el despliegue crea las claves de plataforma; consulte [Claves de plataforma](/es/api/authentication#claves-de-plataforma). La clave de un operador, que llega a todos los negocios, también puede dar a un negocio un plan y un número. La de un socio no puede: el propietario paga ambos, y cuando reclama el negocio, la clave del socio ya no llega a él. Deje `plan` y `phone_number` fuera del manifiesto de un socio: el propietario los elige en el panel. La clave de un socio también deja al propietario la lectura completa de un sitio.
+
+En un script o en CI, defina `LOBBYSTACK_URL` y `LOBBYSTACK_API_KEY` en lugar de iniciar sesión.
+
+## Describa el negocio
+
+Escriba el negocio en un archivo YAML o JSON, como `acme.yaml`. Todas las secciones salvo `business` son opcionales:
+
+```yaml acme.yaml
+business:
+  name: Acme Plumbing
+  timezone: America/Toronto
+  locale: en
+  website_url: https://acmeplumbing.ca
+  hours:
+    - { day: mon, open: "08:00", close: "17:00" }
+    - { day: tue, open: "08:00", close: "17:00" }
+knowledge:
+  websites: [https://acmeplumbing.ca]
+  read_full_site: true
+  files:
+    - ./docs/price-list.pdf
+    - path: ./docs/service-area.md
+      title: Where we work
+  faqs:
+    - question: Do you take emergency calls?
+      answer: Yes, 24/7 for existing customers.
+receptionist:
+  greeting: Thanks for calling Acme Plumbing, how can I help?
+  transfer_mode: on_urgent
+  transfer_number: "+14165550100"
+  booking_mode: request
+services:
+  - name: Drain cleaning
+    duration_minutes: 60
+rules:
+  - title: Gas leaks
+    content: If a caller smells gas, tell them to leave the building and call the gas company.
+plan:
+  checkout: { plan: pro, interval: monthly }
+phone_number: { country: CA, area_code: "416" }
+owner:
+  email: owner@acmeplumbing.ca
+```
+
+<Warning>
+  Ponga las horas y los números de teléfono entre comillas. Dentro de la forma `{ ... }` de YAML, una coma empieza el campo siguiente, así que escriba el texto que lleva una coma en la forma con sangría, como la pregunta frecuente de arriba.
+</Warning>
+
+| Sección | Qué define |
+| --- | --- |
+| `business` | `name` y `timezone` son obligatorios. `locale` (`en` o `fr`), `website_url`, `business_type` y `slug` son opcionales. `hours` enumera los horarios de la semana por `day`, `open` y `close`, y reemplaza los horarios que tenía el negocio. `id` configura un negocio que ya existe en lugar de crear uno. |
+| `receptionist` | Los campos de `PATCH /receptionist`, como `greeting`, `tone`, `transfer_mode`, `transfer_number` y `booking_mode`. |
+| `services` | Los campos de `POST /services`. Un servicio con el mismo nombre se actualiza en lugar de agregarse otra vez. |
+| `rules` | Los campos de `POST /rules`. Una regla con el mismo título se actualiza. |
+| `knowledge.websites` | Los sitios que lee la recepcionista. La primera lectura toma una muestra de cada sitio. |
+| `knowledge.read_full_site` | `true` espera esa muestra y luego lee el resto de cada sitio. |
+| `knowledge.files` | Archivos PDF, Word, de texto, Markdown, JPEG, PNG, WebP o TIFF de hasta 10 MB, como rutas dentro de la carpeta del manifiesto. Dé a una entrada `path`, `title` y `tags` para nombrarla. |
+| `knowledge.faqs` | Preguntas y respuestas. Una pregunta frecuente con la misma pregunta recibe la respuesta nueva. |
+| `knowledge.texts` | Notas con un `title` y un `content`. Una nota con el mismo título recibe el contenido nuevo. |
+| `plan` | `checkout` con un `plan` (`starter` o `pro`) y un `interval` (`monthly` o `annual`). O `managed: true` para un plan que se factura fuera de Polar, que solo la clave de plataforma de un operador puede definir. |
+| `phone_number` | Los campos de `POST /phone-numbers/search`: `country`, `kind`, `area_code`, `city`, `region` y `postal_code`. El comando reserva el primer número que ofrece la búsqueda. |
+| `onboarding` | La incorporación termina cuando ya no le falta nada, salvo con la clave de un socio, que la deja abierta para el propietario. `skip_number: true` la termina sin número, `complete` indica si termina, y `source` registra de dónde vino el negocio. |
+| `owner` | El `email` de la persona que será propietaria del negocio. Recibe un enlace para reclamarlo. |
+
+El comando nunca elimina lo que el archivo omite. Para quitar un servicio, una regla o un conocimiento, use el panel o los otros comandos de `lobbystack`.
+
+## Revise los cambios antes
+
+`--plan` muestra lo que cambiaría una ejecución, sin cambiar nada:
+
+```bash
+lobbystack onboard acme.yaml --plan
+```
+
+```text
+business       would create Acme Plumbing
+receptionist   would set up
+services       would set up
+rules          would set up
+knowledge      would set up
+plan           would set up
+phone number   would set up
+owner          would set up
+
+Nothing was changed: that's what a run would do.
+```
+
+Un error en el archivo, o un documento que falta o que está fuera de la carpeta del manifiesto, detiene el comando antes de que cambie nada. El mensaje indica dónde está el error, como `services[0].duration_minutes`.
+
+## Ejecútelo
+
+```bash
+lobbystack onboard acme.yaml
+```
+
+Cada línea dice lo que hizo un paso:
+
+```text
+business       created      Acme Plumbing (75795511-9ee2-4cb2-a89d-f173ec1dd82d). Keep acme.state.json with the manifest, or put id: 75795511-9ee2-4cb2-a89d-f173ec1dd82d under business in it.
+details        updated      hours
+receptionist   updated      greeting, transfer_mode, transfer_number, booking_mode
+services       added        Drain cleaning
+websites       added        https://acmeplumbing.ca (reading a sample of its pages)
+files          uploaded     docs/price-list.pdf
+```
+
+Un pago y un número de teléfono cuestan dinero, así que el comando pregunta antes de iniciar cualquiera de los dos. Pase `--yes` para omitir las preguntas, lo que necesita un script: sin una terminal donde preguntar, el comando se detiene.
+
+Para configurar un negocio que ya existe, ponga su ID en `business.id`. `--business <id>` también funciona cuando el negocio ya tiene el nombre del manifiesto. El comando ignora `LOBBYSTACK_BUSINESS` y el negocio guardado en un perfil, para que un manifiesto nuevo nunca caiga en uno de ellos por error.
+
+El enlace de reclamación sale cuando todo lo demás está hecho, o antes del pago cuando la clave de un operador configura un plan que paga el propietario. Cuando el propietario lo acepta, la clave de un socio y la clave de API que lo envió ya no llegan al negocio, y una nueva ejecución lo indica. La clave de un operador sigue llegando.
+
+### Cuando la ejecución espera a alguien
+
+Algunos pasos necesitan a una persona. El comando hace todo lo demás, muestra lo que espera y termina con el código `4`:
+
+- **Un pago.** El comando muestra el enlace de pago: envíelo a quien paga. Hasta que el plan esté pagado, el negocio conserva su plan actual. El número de teléfono, los documentos que no caben en el plan gratuito y la lectura completa de un sitio esperan el plan de pago. Una página de pago de más de una hora puede haber caducado: una ejecución en una terminal, sin `--yes`, ofrece crear una nueva.
+- **La reclamación del propietario.** Con la clave de un operador, el propietario del negocio paga su plan, así que el enlace de reclamación sale antes del pago. La página de pago se crea en la primera ejecución después de que el propietario acepte el enlace.
+
+Ejecute el mismo comando de nuevo cuando la persona termine. Un pago puede comprar un plan para un negocio gratuito, o pasar de Starter a Pro. Los demás cambios de plan, como pasar de Pro a Starter o cambiar el intervalo de facturación, se hacen en el portal de facturación: el comando los indica y sigue.
+
+## Ejecútelo de nuevo
+
+Ejecute el comando de nuevo cada vez que cambie el archivo, o después de que falle una ejecución. Cada paso compara primero el negocio con el archivo y solo cambia lo que difiere, así que un negocio que ya coincide no recibe cambios.
+
+El comando guarda los ID que crea en un archivo de estado junto al manifiesto, como `acme.state.json`. Conserve ese archivo con el manifiesto:
+
+- Después de un fallo, la siguiente ejecución continúa donde se detuvo la anterior. Envía las mismas solicitudes otra vez, así que recupera el negocio, el número o la página de pago que ya creó en lugar de crear otros.
+- Los archivos se suben una sola vez. Cuando cambia el contenido, el título o las etiquetas de un archivo, la siguiente ejecución sube la versión nueva y elimina la anterior. Un archivo que mueve dentro de la carpeta conserva su subida.
+- Un documento o un sitio que no se pudo leer se vuelve a leer una vez en la siguiente ejecución. Si falla igual otra vez, el comando lo indica, y `lobbystack knowledge retry <id>` lo vuelve a leer cuando el problema esté resuelto.
+- Un archivo de estado creado para un panel se rechaza en otro. Pase `--state <path>` para tener uno por panel.
+
+Sin un archivo de estado, una clave de plataforma no crea un negocio si ya incorporó uno con el mismo nombre. Ponga el ID de ese negocio en `business.id` para configurarlo, o dé otro nombre al negocio nuevo. Cuando su propietario reclama un negocio, `GET /businesses` deja de listarlo, incluso para la clave de un operador, así que conserve el archivo de estado o copie en `business.id` el ID que muestra la primera ejecución.
+
+## Códigos de salida
+
+| Código | Significado |
+| --- | --- |
+| `0` | El negocio coincide con el archivo. |
+| `1` | La API o la red fallaron, o falló la reserva de un número o la lectura de un sitio. Ejecútelo de nuevo más tarde. |
+| `2` | El archivo o una opción necesita cambios, o se respondió que no a una pregunta o no se pudo preguntar: pase `--yes` en los scripts. |
+| `3` | LobbyStack rechazó la clave, o a la clave le falta un permiso. |
+| `4` | Sin terminar: lo demás espera un pago o la reclamación del propietario. |
+
+`--json` muestra en su lugar el ID del negocio, el archivo de estado, cada cambio y lo que espera la ejecución, en JSON.
+
+## Otros comandos
+
+`lobbystack` tiene un comando para cada endpoint de la API, agrupados como la API: `lobbystack services list`, `lobbystack knowledge upload`, `lobbystack numbers search`, etc. `lobbystack --help` enumera los grupos, y `--help` después de cualquier comando enumera sus opciones.

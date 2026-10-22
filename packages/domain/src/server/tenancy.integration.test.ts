@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { businesses, businessHours, businessInvitations, businessMemberships, createDatabaseClient, services, staff, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { findAvailability } from "./booking";
 import { acceptInvitation, createBusiness, inviteMember, listUserBusinesses, previewInvitation, removeMember, revokeInvitation, updateBusinessInTransaction } from "./tenancy";
@@ -75,6 +75,26 @@ describe.skipIf(!client)("createBusiness", () => {
       const slots = await findAvailability({ db: tx as unknown as Database }, { businessId, serviceId: service!.id, startsAt: "2030-01-08T14:00:00.000Z" });
       expect(slots.length).toBeGreaterThan(0);
     });
+  });
+
+  it("gives a new business the self-hosted mode on a self-hosted server, and cloud otherwise", async () => {
+    for (const [env, expected] of [["self_hosted_standard", "self_hosted_standard"], ["cloud", "cloud"], ["development", "cloud"], ["", "cloud"], ["production", "cloud"]] as const) {
+      vi.stubEnv("DEPLOYMENT_MODE", env);
+      try {
+        await rollbackTest(async (tx) => {
+          const userId = randomUUID();
+          const email = `${userId}@example.invalid`;
+          await tx.insert(users).values({ id: userId, email, normalizedEmail: email, name: "Sam Owner" });
+          await tx.execute(sql`set local role lobbystack_app`);
+          const { businessId } = await createBusiness({ db: tx as unknown as Database }, { userId, name: "Northside Plumbing", timezone: "America/Toronto", businessType: "service_company" });
+          await tx.execute(sql`reset role`);
+          const [business] = await tx.select({ deploymentMode: businesses.deploymentMode }).from(businesses).where(eq(businesses.id, businessId));
+          expect(business?.deploymentMode).toBe(expected);
+        });
+      } finally {
+        vi.unstubAllEnvs();
+      }
+    }
   });
 
   it("lists each business with its settings in one query", async () => {

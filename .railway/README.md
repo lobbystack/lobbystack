@@ -1,5 +1,7 @@
 # Railway infrastructure
 
+LobbyStack's own production and staging moved to Dokploy on 2026-10-21 ([Deploy LobbyStack on Dokploy](../docs/deployment/dokploy.md)). `railway.ts` now describes the frozen Railway project that stays as a rollback until 2026-11-04: production's admin runs in maintenance mode, and its worker and every staging service are stopped. Don't run `railway config apply` against it. A plan would redeploy the stopped services and undo the freeze. The self-hosting template below is unaffected.
+
 `railway.ts` owns the resources for the LobbyStack project (`lobbystack`, id `af0a130e-7b02-4fc0-94ef-b0ac45a0a0a6`) in the `staging` and `production` environments. It rejects any other project or environment. It uses the pinned `railway/iac` software development kit (SDK), not legacy per-service Config as Code.
 
 Link the target environment before you plan:
@@ -24,13 +26,9 @@ Change these values only when you mean to. The setting applies on the next deplo
 
 ## Production application releases
 
-The production `admin` and `worker` services deploy from the `production` branch of `lobbystack/lobbystack`. Railway builds each affected service from its Dockerfile and watch patterns as soon as that branch moves, without waiting on GitHub checks.
+Production no longer releases through Railway. The `migrate-production` CI job and the `production` branch fed the Railway services, and nothing there reaches users now. See [Deploy LobbyStack on Dokploy](../docs/deployment/dokploy.md) for how releases work.
 
-Only CI moves `production`. On every push to `main`, the `migrate-production` job starts after every other CI job passes, including the Replacement Platform checks that CI calls. It uploads that exact checkout to the `migrator`, which has no GitHub source, and waits for the run-once migration to succeed. Its last step points `production` at the same commit, which releases admin and worker. If `main` moved on in the meantime, the job stops and the newer commit's run releases both. Dependabot's jobs play no part, so a failed one can't block a release.
-
-Store a production project token in the GitHub `production` environment as `RAILWAY_PRODUCTION_TOKEN`. Restrict that environment to the `main` branch. Do not store database credentials in GitHub; the migrator reads its preserved variables from Railway.
-
-To pause automatic application releases, disable **Auto Deploy** on both services. A failed check or migration leaves `production` where it was, so the previous deployments keep running. For an application regression, roll each affected service back to its previous successful Railway deployment, or point `production` at an earlier commit. Keep migrations backward-compatible with that version.
+## Definition notes
 
 The definition pins Redis to `redis:7-alpine`. The Redis helper in the importer selected version 8 during the first preview; reject that upgrade in an infrastructure import.
 

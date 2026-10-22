@@ -18,7 +18,28 @@ Use `.env.example` as the source of truth. Store production values in your deplo
 | `LOBBYSTACK_<ROLE>_DATABASE_URL` | Optional. Overrides the built connection string for one role, for example to use a different host. |
 | `BETTER_AUTH_SECRET` | Better Auth signing secret. Use at least 32 random characters. |
 | `ENCRYPTION_KEY` | Encrypts stored application credentials. |
-| `OTP_HASH_SECRET` | Hashes one-time verification codes. |
+| `OTP_HASH_SECRET` | Hashes one-time verification codes and callers' keypad PINs. Set the same value on the admin and the worker. Changing it makes every saved PIN stop working. |
+
+## Branding
+
+Set these on the admin. Each one wins over the name and logo that the deployment's first owner chooses during onboarding, so leave them empty to let that owner choose. Give them to the admin build as well, as Docker build arguments with the same names, so the prerendered sign-in pages show them without first asking the server.
+
+| Variable | Purpose |
+| --- | --- |
+| `BRAND_APP_NAME` | The name the dashboard shows instead of LobbyStack, up to 40 characters. It appears in the browser tab, above the sign-in and onboarding pages, and in dashboard text. |
+| `BRAND_LOGO_URL` | The logo shown beside the name and as the browser tab icon. Use an `https://` URL or a path on the dashboard, such as `/brand/logo.svg`. Without a logo, a renamed deployment shows its name on its own. |
+
+The dashboard's links to pages outside it come from five more variables. Next.js writes them into the admin build, so pass them as Docker build arguments with the same names, and rebuild after changing one. Leave one unset or empty to link to LobbyStack's page.
+
+| Variable | Purpose |
+| --- | --- |
+| `NEXT_PUBLIC_LANDING_SITE_URL` | Your website, such as `https://example.com`. The public demo page links to it, and the SMS HELP reply gives it. Without their own variables, the terms and privacy links open `/terms` and `/privacy` there. |
+| `NEXT_PUBLIC_TERMS_URL` | Your terms of service, linked under the sign-up form, at the foot of onboarding, and from the affiliate program. |
+| `NEXT_PUBLIC_PRIVACY_URL` | Your privacy policy, linked under the sign-up form and at the foot of onboarding. |
+| `NEXT_PUBLIC_DOCS_SITE_URL` | Your docs, linked from the dashboard's feedback panel and the MCP server's metadata. |
+| `NEXT_PUBLIC_CONTACT_EMAIL` | The one address people write to: the feedback panel's contact link, the Enterprise plan's contact button, and the SMS HELP replies. |
+
+The SMS HELP reply opens with the app name. Emails, the API, and other text messages still say LobbyStack.
 
 ## Internal services
 
@@ -62,6 +83,7 @@ Local storage fits a single-host deployment. Use S3 when the admin and worker ru
 | Variable | Purpose |
 | --- | --- |
 | `PUBLIC_API_RATE_LIMIT_PER_MINUTE` | Requests per minute for each API key on `/api/v1`. Defaults to `120`. Set it on the admin. The limit uses `REDIS_URL`; in production, requests fail with `503` when Redis is unreachable. |
+| `PLATFORM_API_KEYS` | Platform keys (`lsp_...`) that onboard and manage businesses on `/api/v1`, as a JSON array. Each entry names its partner, the verified account it acts as (`owner_email`), and whether it can reach every business (`"access": "all"`) or only the ones its partner onboarded. `pnpm platform-key:create` makes a key and prints its entry; the entry stores only a hash of the key. A key with `"access": "all"` and its owner account are root credentials: they reach every business. Set it on the admin. Leave it empty for none. |
 | `ENCRYPTION_KEY` | Also encrypts webhook signing secrets and keys the HMAC that stores API key hashes. Set the same value on the admin and the worker, or the worker can't sign deliveries. Changing it invalidates every API key and webhook secret. |
 
 Webhook deliveries refuse private, loopback, link-local and cloud metadata addresses on every deployment, including self-hosted ones. Point endpoints at a public HTTPS URL. Plain `http://` URLs work only when `NODE_ENV=development`.

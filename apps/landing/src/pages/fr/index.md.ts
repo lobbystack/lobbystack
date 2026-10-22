@@ -26,7 +26,7 @@ LobbyStack est un réceptionniste IA open source pour les petites entreprises qu
 - Solutions : ${absoluteUrl("/fr/solutions/")}
 - Calculateur : ${absoluteUrl("/fr/missed-call-revenue-calculator/")}
 - Blog : ${absoluteUrl("/fr/blog/")}
-- GitLab : https://gitlab.com/lobbystack-group/lobbystack
+- GitHub : https://github.com/lobbystack/lobbystack
 `
 
 export const GET: APIRoute = () =>

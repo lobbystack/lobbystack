@@ -85,7 +85,7 @@ LobbyStack je open-source projekat pod MIT licencom. Možete ga pokretati sami i
 
 ### Da li je ovo isti model kao ChatGPT Voice?
 
-GPT-Live-1 je model koji ChatGPT Voice podrazumevano koristi za plaćene korisnike. LobbyStack ga povezuje sa Vašom firmom kroz delegiranje, pa može da proveri Vaš kalendar i zakaže termine, što ChatGPT sam ne može da uradi za Vaše klijente.
+GPT-Live-1 je model koji ChatGPT Voice podrazumevano koristi za plaćene korisnike. LobbyStack ga povezuje sa Vašom firmom kroz delegiranje, pa može da proveri Vaš kalendar i zakaže termine, što ChatGPT sam ne može da uradi za Vaše klijente. API ne nudi imena glasova iz ChatGPT aplikacije: naša [lista OpenAI glasova](/sr/blog/openai-voices/) pokazuje koje glasove nudi, a naš vodič [kako napraviti AI recepcionera](/sr/blog/how-to-build-an-ai-receptionist/) poredi načine da GPT-Live povežete sa telefonskom linijom.
 
 ### Šta je AI glasovni agent?
 

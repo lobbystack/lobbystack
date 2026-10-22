@@ -49,6 +49,7 @@ for (const path of [
   "docker-compose.yml",
   ".github/workflows/replacement-platform.yml",
   ".railway/railway.ts",
+  "docs/deployment/dokploy.md",
   "docs/deployment/railway.md",
   "docs/operations/alerts.md",
   "docs/operations/backup-restore.md",

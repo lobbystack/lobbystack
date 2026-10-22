@@ -11,6 +11,8 @@ The canonical stack provides a Next.js admin/backend, a worker that also runs GP
 5. Use `docker compose --env-file .env -f docker-compose.yml --profile development up mailpit` for local email inspection.
 6. Set `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_HEADERS` when you want direct export to an OTLP-compatible backend.
 
+To run the admin and worker from source with breakpoints, set up on Windows, or take real calls on a local stack, see [Run and debug LobbyStack on your desktop](voice/local-debugging.md).
+
 Keep each `LOBBYSTACK_*_DATABASE_URL` password synchronized with its matching `LOBBYSTACK_*_PASSWORD` value. The Postgres init script creates the least-privilege runtime roles from those variables.
 
 Shell variables take precedence over values from `--env-file`. Unset stale replacement variables or run Compose from a clean environment when switching between local stacks.
@@ -65,7 +67,7 @@ Run `REPLACEMENT_COMPOSE_PROJECT=lobbystack_restore_drill CONFIRM_REPLACEMENT_RE
 
 ## Deploy the cloud services
 
-Railway runs separate `admin`, `worker`, `postgres`, `redis`, and bucket services. Set `WORKER_INTERNAL_URL` on admin to the worker's private URL so it can hand calls to the worker. [The voice runtime](voice/runtime.md) lists the GPT-Live variables and the SIP trunk setup. Keep `INTERNAL_SERVICE_SECRET`, database URLs, Better Auth secrets, provider credentials, and S3 credentials in Railway variables, never in the repository.
+Production and staging run on Dokploy, on one server behind Cloudflare, with separate `admin`, `worker`, `migrator`, Postgres and Redis services in each environment and files in Cloudflare R2. Set `WORKER_INTERNAL_URL` on admin to the worker's Dokploy app name so it can hand calls to the worker. [The voice runtime](voice/runtime.md) lists the GPT-Live variables and the SIP trunk setup. Keep `INTERNAL_SERVICE_SECRET`, database URLs, Better Auth secrets, provider credentials, and S3 credentials in Dokploy's environment settings, never in the repository. [Deploy LobbyStack on Dokploy](deployment/dokploy.md) covers the services, their settings and backups.
 
 Build runtime images with `SERVICE_VERSION` set to the deployed Git SHA. Configure telemetry retention and sampling in the OTLP backend.
 
@@ -73,4 +75,4 @@ The replacement stack implements non-AI usage metering for voice seconds, alert/
 
 The worker reports usage to Polar as events and puts the amount in `metadata.quantity`. In Polar, create one meter per event name that sums `quantity`: `billing.voice_minutes`, `billing.alert_sms_segments`, and `billing.outbound_call_attempts`. LobbyStack reads no meter ID variables.
 
-Use `docs/deployment/railway.md` for Railway service configuration, `docs/operations/backup-restore.md` for recovery, `docs/operations/alerts.md` for critical alert response, `docs/validation/certification-runbook.md` for the staging exit gate, `docs/validation/readiness-implementation-2026-09-12.md` for current implementation scope, and `docs/validation/production-readiness.md` for the blocked production plan.
+Use `docs/deployment/dokploy.md` for the Dokploy services, `docs/deployment/railway.md` for the Railway self-hosting setup, `docs/operations/backup-restore.md` for recovery, `docs/operations/alerts.md` for critical alert response, `docs/validation/certification-runbook.md` for the staging exit gate, `docs/validation/readiness-implementation-2026-09-12.md` for current implementation scope, and `docs/validation/production-readiness.md` for the blocked production plan.

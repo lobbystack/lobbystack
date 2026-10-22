@@ -6,7 +6,7 @@ import { normalizeAppointmentChangePolicy } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
 import { BookingUnavailableError, type UnavailableReason } from "../availability";
-import { createAppointmentChangeVerification, verifyAppointmentChangeOtp } from "./appointmentChanges";
+import { createAppointmentChangeVerification, verifyAppointmentChangeOtp, verifyAppointmentChangePasscode } from "./appointmentChanges";
 import { matchServiceName, personNamesMatch, serviceNamesMatch } from "./appointmentFacts";
 import { bookAppointment, cancelAppointmentForCaller, findOpeningsInTransaction, rescheduleAppointmentForCaller, type ApiAudit } from "./booking";
 import { recordCallOutcomeInTransaction } from "./callOutcome";
@@ -169,17 +169,27 @@ export async function lookupCallerAppointments(context: DomainContext, input: { 
  */
 export async function verifyCallerForChange(
   context: DomainContext,
-  input: { businessId: string; callerPhone: string; action: "cancel" | "reschedule"; appointmentId?: string; appointmentStartsAt?: string; serviceName?: string },
+  input: { businessId: string; callerPhone: string; callId?: string; action: "cancel" | "reschedule"; appointmentId?: string; appointmentStartsAt?: string; serviceName?: string },
 ) {
   const verification = await createAppointmentChangeVerification(context, input);
   if (!verification) return { ok: false as const, verified: false, reason: "The appointment could not be verified." };
-  const verified = verification.status === "otp_verified" || verification.status === "facts_verified";
-  return { ok: true as const, verified, requiresOtp: !verified, verificationId: verification.verificationId, appointmentId: verification.appointmentId, status: verification.status, ...(verified && input.action === "cancel" ? { smsConsentOnFile: verification.smsConsent } : {}) };
+  // The appointment matched, but the business requires a keypad PIN the caller can't give.
+  if (verification.status === "passcode_missing") return { ok: false as const, verified: false, status: verification.status, reason: "The caller has no keypad PIN, so the change can't be verified on this call. Someone at the business can set one up." };
+  if (verification.status === "passcode_locked") return { ok: false as const, verified: false, status: verification.status, reason: "The caller's keypad PIN is locked after too many wrong tries, so the change can't be verified on this call. Someone at the business can set a new PIN." };
+  const verified = verification.status === "otp_verified" || verification.status === "facts_verified" || verification.status === "passcode_verified";
+  const requiresPasscode = verification.status === "passcode_pending";
+  return { ok: true as const, verified, requiresOtp: !verified && !requiresPasscode, ...(requiresPasscode ? { requiresPasscode } : {}), verificationId: verification.verificationId, appointmentId: verification.appointmentId, status: verification.status, ...(verified && input.action === "cancel" ? { smsConsentOnFile: verification.smsConsent } : {}) };
 }
 
 /** Checks the one-time code the caller reads back. Once it matches for a cancellation, it says whether the caller gets texts, as verifyCallerForChange does. */
 export async function verifyCallerChangeCode(context: DomainContext, input: { businessId: string; verificationId: string; code: string }) {
   const { smsConsent, ...result } = await verifyAppointmentChangeOtp(context, input);
+  return result.ok && smsConsent ? { ...result, smsConsentOnFile: smsConsent } : result;
+}
+
+/** Checks the PIN the caller typed on the keypad. Once it matches for a cancellation, it says whether the caller gets texts, as verifyCallerForChange does. */
+export async function verifyCallerChangePasscode(context: DomainContext, input: { businessId: string; verificationId: string; passcode: string }) {
+  const { smsConsent, ...result } = await verifyAppointmentChangePasscode(context, input);
   return result.ok && smsConsent ? { ...result, smsConsentOnFile: smsConsent } : result;
 }
 

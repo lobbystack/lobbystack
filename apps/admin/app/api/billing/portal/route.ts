@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 
 import { billingAccounts } from "@lobbystack/db";
 import { PolarBillingProvider } from "@lobbystack/providers";
-import { hasBillingCustomerPortal } from "@lobbystack/domain";
+import { hasBillingCustomerPortal, isManagedBillingAccount } from "@lobbystack/domain";
 import { jsonError } from "@/lib/api-helpers";
 import { operatorRoute } from "@/lib/operator-request";
 
@@ -13,8 +13,10 @@ export const POST = operatorRoute(async ({ request, businessId, transaction }) =
   const token = process.env.POLAR_ACCESS_TOKEN;
   const organizationId = process.env.POLAR_ORGANIZATION_ID;
   if (!token || !organizationId) throw new Error("Billing customer portal is not configured.");
-  const account = await transaction(async (tx) => (await tx.select({ billingKey: billingAccounts.billingKey, customerId: billingAccounts.customerId, subscriptionId: billingAccounts.subscriptionId, plan: billingAccounts.plan, subscriptionState: billingAccounts.subscriptionState }).from(billingAccounts).where(eq(billingAccounts.businessId, businessId)).limit(1))[0] ?? null, { minimumRole: "business_admin" });
-  if (!account || !hasBillingCustomerPortal(account)) return jsonError("A billing customer with subscription history is required before opening the customer portal.", 409);
+  const account = await transaction(async (tx) => (await tx.select({ source: billingAccounts.source, customerId: billingAccounts.customerId, subscriptionId: billingAccounts.subscriptionId, plan: billingAccounts.plan, subscriptionState: billingAccounts.subscriptionState }).from(billingAccounts).where(eq(billingAccounts.businessId, businessId)).limit(1))[0] ?? null, { minimumRole: "business_admin" });
+  if (!account?.customerId || !hasBillingCustomerPortal(account)) return jsonError("A billing customer with subscription history is required before opening the customer portal.", 409);
+  // LobbyStack bills a managed plan directly, so Polar has nothing for its customer to manage.
+  if (isManagedBillingAccount(account)) return jsonError("This business is on a managed plan, so LobbyStack bills it directly.", 409);
   const provider = new PolarBillingProvider({ accessToken: token, organizationId, ...(process.env.POLAR_API_BASE_URL ? { baseUrl: process.env.POLAR_API_BASE_URL } : {}) });
-  return NextResponse.json(await provider.createCustomerPortalSession({ externalCustomerId: account.billingKey, returnUrl: `${process.env.APP_BASE_URL ?? new URL(request.url).origin}/settings/plan` }));
+  return NextResponse.json(await provider.createCustomerPortalSession({ customerId: account.customerId, returnUrl: `${process.env.APP_BASE_URL ?? new URL(request.url).origin}/settings/plan` }));
 });

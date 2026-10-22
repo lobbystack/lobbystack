@@ -7,8 +7,10 @@ import {
   index,
   integer,
   jsonb,
+  numeric,
   pgTable,
   primaryKey,
+  smallint,
   text,
   timestamp,
   uniqueIndex,
@@ -35,6 +37,12 @@ const vector = customType<{ data: number[]; driverData: string }>({
   fromDriver(value) {
     const raw = String(value).replace(/^\[/, "").replace(/\]$/, "");
     return raw.length === 0 ? [] : raw.split(",").map(Number);
+  },
+});
+
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType() {
+    return "bytea";
   },
 });
 
@@ -175,6 +183,8 @@ export const businessInvitations = pgTable(
     tokenHash: text("token_hash").notNull(),
     status: varchar("status", { length: 32 }).default("pending").notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    // A claim link: accepting it makes the invitee an owner and takes the inviter off the team.
+    transfersOwnership: boolean("transfers_ownership").default(false).notNull(),
     acceptedByUserId: uuid("accepted_by_user_id").references(() => users.id),
     acceptedAt: timestamp("accepted_at", { withTimezone: true }),
     ...timestamps,
@@ -250,6 +260,8 @@ export const services = pgTable(
     priceMinor: bigint("price_minor", { mode: "number" }),
     priceMaxMinor: bigint("price_max_minor", { mode: "number" }),
     priceType: varchar("price_type", { length: 16 }).$type<"fixed" | "from" | "range" | "in_person">().default("fixed").notNull(),
+    /** Percent off every amount, 0 for none; up to two decimals. */
+    discountPercent: numeric("discount_percent", { precision: 5, scale: 2, mode: "number" }).default(0).notNull(),
     active: boolean("active").default(true).notNull(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     ...legacyId,
@@ -422,12 +434,30 @@ export const contacts = pgTable(
   (table) => [uniqueIndex("contacts_business_phone_unique").on(table.businessId, table.phone).where(sql`${table.phone} is not null`), index("contacts_business_email_idx").on(table.businessId, table.email)],
 );
 
+// A contact's keypad PIN for appointment changes, kept apart so the contact row never carries it.
+export const contactPasscodes = pgTable(
+  "contact_passcodes",
+  {
+    contactId: uuid("contact_id").primaryKey().references(() => contacts.id, { onDelete: "cascade" }),
+    businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+    passcodeHash: text("passcode_hash").notNull(),
+    // Wrong PINs in a row, across calls. Reaching the limit sets lockedAt until a new PIN is set.
+    failedAttempts: integer("failed_attempts").default(0).notNull(),
+    lockedAt: timestamp("locked_at", { withTimezone: true }),
+    setAt: timestamp("set_at", { withTimezone: true }).defaultNow().notNull(),
+    ...timestamps,
+  },
+  (table) => [index("contact_passcodes_business_idx").on(table.businessId)],
+);
+
 export const widgetKeys = pgTable(
   "widget_keys",
   {
     id: uuid("id").defaultRandom().primaryKey(),
     businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
     keyHash: text("key_hash").notNull(),
+    // The key itself, which is public, so the dashboard can show its snippet again. Null on older keys.
+    keyValue: text("key_value"),
     label: varchar("label", { length: 120 }),
     status: varchar("status", { length: 32 }).default("active").notNull(),
     allowedOrigins: jsonb("allowed_origins").$type<string[]>().notNull().default([]),
@@ -492,6 +522,10 @@ export const conversations = pgTable(
     automationState: varchar("automation_state", { length: 32 }).default("ai_active").notNull(),
     automationPausedAt: timestamp("automation_paused_at", { withTimezone: true }),
     automationPausedByUserId: uuid("automation_paused_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    // A website visitor asked for a person and is waiting for someone from the team to join.
+    teamRequestedAt: timestamp("team_requested_at", { withTimezone: true }),
+    // A team member joined the chat after the visitor asked for a person. Only such a chat goes back to the receptionist when the team goes quiet in it.
+    teamJoinedAt: timestamp("team_joined_at", { withTimezone: true }),
     summary: text("summary"),
     currentIntent: text("current_intent"),
     locale: varchar("locale", { length: 8 }),
@@ -542,6 +576,8 @@ export const messages = pgTable(
     status: varchar("status", { length: 32 }).default("pending").notNull(),
     providerStatus: varchar("provider_status", { length: 64 }),
     senderRole: varchar("sender_role", { length: 32 }),
+    // The team member who wrote it, so a website chat can show their name.
+    sentByUserId: uuid("sent_by_user_id").references(() => users.id, { onDelete: "set null" }),
     aiGenerated: boolean("ai_generated").default(false).notNull(),
     media: jsonb("media").$type<Array<Record<string, unknown>>>(),
     revision: integer("revision").default(0).notNull(),
@@ -553,6 +589,7 @@ export const messages = pgTable(
     uniqueIndex("messages_provider_id_unique").on(table.providerMessageId),
     index("messages_business_idx").on(table.businessId, table.createdAt),
     index("messages_conversation_idx").on(table.conversationId, table.createdAt),
+    index("messages_sent_by_user_idx").on(table.sentByUserId).where(sql`${table.sentByUserId} is not null`),
   ],
 );
 
@@ -679,6 +716,8 @@ export const appointmentChangeVerifications = pgTable(
     appointmentId: uuid("appointment_id").notNull().references(() => appointments.id, { onDelete: "cascade" }),
     contactId: uuid("contact_id").notNull().references(() => contacts.id),
     callerPhone: varchar("caller_phone", { length: 32 }).notNull(),
+    // The call it was made on: a keypad PIN accepted on a call counts only on that call.
+    callId: uuid("call_id").references(() => calls.id, { onDelete: "set null" }),
     action: varchar("action", { length: 32 }).notNull(),
     status: varchar("status", { length: 32 }).default("pending").notNull(),
     codeHash: text("code_hash"),
@@ -1367,6 +1406,35 @@ export const apiKeys = pgTable(
   ],
 );
 
+// The app name and logo the deployment shows in place of LobbyStack, chosen
+// once in onboarding. One row at most; BRAND_APP_NAME and BRAND_LOGO_URL win
+// over it. Only app.save_initial_branding writes it.
+export const deploymentBranding = pgTable("deployment_branding", {
+  id: smallint("id").default(1).primaryKey(),
+  appName: text("app_name"),
+  logo: bytea("logo"),
+  logoContentType: varchar("logo_content_type", { length: 32 }),
+  logoVersion: text("logo_version").generatedAlwaysAs(sql`encode(sha256(logo), 'hex')`),
+  savedByUserId: uuid("saved_by_user_id").references(() => users.id, { onDelete: "set null" }),
+  ...timestamps,
+});
+
+// Platform keys live in the PLATFORM_API_KEYS environment variable, not in a
+// table. A partner's keys reach the businesses linked to the partner here.
+export const platformPartnerBusinesses = pgTable(
+  "platform_partner_businesses",
+  {
+    businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+    partnerId: varchar("partner_id", { length: 40 }).notNull(),
+    createdByPlatformKeyId: uuid("created_by_platform_key_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.businessId, table.partnerId] }),
+    index("platform_partner_businesses_partner_idx").on(table.partnerId, table.createdAt),
+  ],
+);
+
 export const webhookEndpoints = pgTable(
   "webhook_endpoints",
   {
@@ -1380,6 +1448,8 @@ export const webhookEndpoints = pgTable(
     disabledReason: varchar("disabled_reason", { length: 16 }),
     createdByUserId: uuid("created_by_user_id").references(() => users.id, { onDelete: "set null" }),
     createdByApiKeyId: uuid("created_by_api_key_id").references(() => apiKeys.id, { onDelete: "set null" }),
+    // The PLATFORM_API_KEYS entry that created the endpoint or turned it back on. Keys are not rows, so no foreign key.
+    createdByPlatformKeyId: uuid("created_by_platform_key_id"),
     consecutiveFailures: integer("consecutive_failures").default(0).notNull(),
     lastSuccessAt: timestamp("last_success_at", { withTimezone: true }),
     lastFailureAt: timestamp("last_failure_at", { withTimezone: true }),
@@ -1662,6 +1732,7 @@ export const allTenantTables = [
   unitEconomicsEvents,
   unitEconomicsRollups,
   apiKeys,
+  platformPartnerBusinesses,
   webhookEndpoints,
   webhookEvents,
   webhookDeliveries,
@@ -1732,6 +1803,8 @@ export const schema = {
   unitEconomicsEvents,
   unitEconomicsRollups,
   apiKeys,
+  deploymentBranding,
+  platformPartnerBusinesses,
   webhookEndpoints,
   webhookEvents,
   webhookDeliveries,

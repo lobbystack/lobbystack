@@ -1,10 +1,10 @@
 {
   "eyebrow": "Affiliate program",
   "title": "Affiliate program",
-  "description": "Share LobbyStack with operators and agencies. We track referrals, commissions, and monthly PayPal payouts from here.",
+  "description": "Share {{appName}} with operators and agencies. We track referrals, commissions, and monthly PayPal payouts from here.",
   "referral": {
     "title": "Referral link",
-    "description": "Share this link anywhere you recommend LobbyStack.",
+    "description": "Share this link anywhere you recommend {{appName}}.",
     "active": "Active",
     "copy": "Copy link",
     "code": "Referral code: {{code}}"
@@ -49,7 +49,7 @@
     },
     "resources": {
       "title": "Use accurate claims",
-      "description": "Describe LobbyStack honestly and disclose that you may earn a commission."
+      "description": "Describe {{appName}} honestly and disclose that you may earn a commission."
     },
     "receive": {
       "title": "Receive earnings",
@@ -105,7 +105,7 @@
     },
     "method": {
       "question": "How are payouts sent?",
-      "answer": "LobbyStack pays affiliates through PayPal using the PayPal email saved in settings."
+      "answer": "{{appName}} pays affiliates through PayPal using the PayPal email saved in settings."
     },
     "refunds": {
       "question": "What happens after a refund?",

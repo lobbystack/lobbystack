@@ -2,14 +2,15 @@
 
 ## Project structure
 
-- `apps/admin/`: Next.js operator dashboard, authentication, and HTTP API. Hosts the embeddable widget API (`/api/widget/*`), the loader (`/embed.js`), and the widget iframe app (`/embed/[key]`) in addition to the dashboard.
+- `apps/admin/`: Next.js operator dashboard, authentication, and HTTP API. Hosts the embeddable widget API (`/api/widget/*`), the loader (`/embed.js`), and the widget iframe app (`/embed/[key]`) in addition to the dashboard. On the hosts in `MARKETING_HOSTS` it serves the marketing site instead, from `app/(marketing)`, `src/marketing` and `content/`; read `docs/deployment/marketing-site.md` before you change its proxy, routes or build steps.
 - `apps/worker/`: asynchronous jobs, transactional outbox dispatch, and GPT-Live calls. The admin asks it to attach to each session at `/internal/live/attach`; it answers delegated requests, saves transcripts, and finishes the call. Phone calls reach GPT-Live through a Twilio Elastic SIP trunk; see `docs/voice/runtime.md`.
-- `apps/landing/`: public marketing site.
+- `apps/landing/`: the Astro marketing site Cloudflare Pages serves until `lobbystack.com` moves to the admin. Make site changes in the admin's copy.
 - `packages/db/`: Drizzle schema, PostgreSQL migrations, role-specific clients, and RLS helpers.
 - `packages/domain/`: durable business logic shared by admin and worker runtimes. Widget conversations use the `web_chat` channel and key on `widget_visitor_id` (no phone required).
 - `packages/agent-core/`: the receptionist agent (AI SDK `ToolLoopAgent`) shared by website chat and calls, its tools, and the GPT-Live session config and call controller.
 - `packages/providers/`: provider adapters (Twilio, embeddings, calendars, email). Text AI goes through the agent core: set `AI_CHAT_*` (`API_KEY`, `BASE_URL`, `MODEL`, `PROVIDER_NAME`, `REASONING_EFFORT`). On OpenAI the default is `gpt-6-luna` on high reasoning through the Responses API, except that GPT-Live delegation runs on low reasoning (`AI_DELEGATION_MODEL`, `AI_DELEGATION_REASONING_EFFORT`); other OpenAI-compatible endpoints use chat completions. `AI_EMBEDDING_*` configures embeddings. The key falls back to `OPENAI_API_KEY`.
 - `packages/embed/`: Vite bundle producing the IIFE widget loader (`dist/embed.js`, served at `/embed.js`, copied into `apps/admin/public/embed/` by `scripts/copy-widget-embed.mjs`).
+- `packages/cli/`: the `lobbystack` command. It works only through the v1 HTTP API, never the database, and takes its request and response types from the operation registry in `packages/shared/src/publicApi/operations.ts`. `mintlify/api/cli.mdx`, with its `fr/` and `es/` copies, documents `lobbystack onboard` and its manifest, so change them along with `packages/cli/src/onboard.ts` and `manifest.ts`.
 - `packages/`: shared contracts, jobs, providers, telemetry, and test helpers.
 - `docker/`, `docker-compose.yml`, and `scripts/`: local infrastructure, operations, and certification tooling.
 
@@ -23,10 +24,11 @@
 - `pnpm test`: run all Vitest suites.
 - `pnpm build`: build every workspace package and app (also copies the embed loader into the admin standalone output).
 - `pnpm widget:embed:build`: rebuild `packages/embed` and copy the loader into `apps/admin/public/embed/`.
+- `pnpm lobbystack <command>`: run the CLI from source. `pnpm lobbystack login --url <dashboard URL> --key <API key>` saves a profile in `~/.config/lobbystack/config.json`. For a platform key, `pnpm platform-key:create --name <name> --partner <partner> --owner-email <email>` writes the key to `.platform-keys/<prefix>.json` and prints its `PLATFORM_API_KEYS` entry. The key gets an API key's scopes; add `--create-businesses` or `--create-users` for the platform-only ones.
 
 ## Next.js MCP server
 
-`.mcp.json` registers `next-devtools`, a Model Context Protocol (MCP) server from the `next-devtools-mcp` package. It works with `apps/admin`, the only Next.js app. `apps/landing` runs on Astro, so the server doesn't cover it. Use it like this:
+`.mcp.json` registers `next-devtools`, a Model Context Protocol (MCP) server from the `next-devtools-mcp` package. It works with `apps/admin`, the only Next.js app, marketing site included. Use it like this:
 
 - Call `nextjs_docs` before you write Next.js code or answer a Next.js question, then read the guide it points to in `apps/admin/node_modules/next/dist/docs/`. Those docs match the installed Next.js version, so use them over memory or web results.
 - Start the admin dev server with `pnpm dev:admin` or `pnpm dev`. It listens on `ADMIN_PORT`, which defaults to 3000.

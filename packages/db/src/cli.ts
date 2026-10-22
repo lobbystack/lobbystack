@@ -154,6 +154,13 @@ async function main(): Promise<void> {
             ('lobbystack_app', 'prospect_demos', 'SELECT'),
             ('lobbystack_worker', 'prospect_demos', 'SELECT'),
             ('lobbystack_readonly', 'prospect_demos', 'SELECT')
+            ,('lobbystack_app', 'deployment_branding', 'SELECT')
+            ,('lobbystack_worker', 'deployment_branding', 'SELECT')
+            ,('lobbystack_readonly', 'deployment_branding', 'SELECT')
+            ,('lobbystack_worker', 'platform_partner_businesses', 'SELECT')
+            ,('lobbystack_worker', 'platform_partner_businesses', 'INSERT')
+            ,('lobbystack_worker', 'platform_partner_businesses', 'DELETE')
+            ,('lobbystack_app', 'platform_partner_businesses', 'SELECT')
             ,('lobbystack_finance_export', 'businesses', 'SELECT')
             ,('lobbystack_finance_export', 'billing_accounts', 'SELECT')
             ,('lobbystack_finance_export', 'calls', 'SELECT')
@@ -200,10 +207,18 @@ async function main(): Promise<void> {
             ('lobbystack_worker', 'app.resolve_business_by_widget_key(text)'),
             ('lobbystack_app', 'app.resolve_api_key(text)'),
             ('lobbystack_worker', 'app.resolve_api_key(text)'),
+            ('lobbystack_worker', 'app.resolve_platform_key_owner(text)'),
+            ('lobbystack_worker', 'app.list_platform_partner_businesses(text, timestamptz, uuid, integer)'),
+            ('lobbystack_worker', 'app.reserve_api_number_claim(uuid, uuid, text, uuid, text, jsonb, text, text, text, boolean)'),
+            ('lobbystack_worker', 'app.resolve_api_verified_phone(uuid, uuid)'),
             ('lobbystack_worker', 'app.resolve_oauth_access_token(text)'),
             ('lobbystack_worker', 'app.touch_oauth_grant(text)'),
             ('lobbystack_app', 'app.list_oauth_grantors(uuid)'),
             ('lobbystack_app', 'app.list_business_members(uuid)'),
+            ('lobbystack_app', 'app.can_save_initial_branding()'),
+            ('lobbystack_app', 'app.save_initial_branding(text, bytea, text)'),
+            ('lobbystack_app', 'app.finish_business_handover(uuid, uuid)'),
+            ('lobbystack_worker', 'app.disable_removed_platform_key_webhooks(uuid[])'),
             ('lobbystack_worker', 'app.list_open_live_call_businesses(timestamptz, timestamptz)'),
             ('lobbystack_dispatcher', 'app.list_scheduler_businesses()'),
             ('lobbystack_dispatcher', 'app.list_summary_backfill_businesses()'),

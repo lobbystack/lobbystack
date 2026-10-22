@@ -30,6 +30,11 @@ describe("agent settings validation", () => {
     expect((await patch({ locale })).status).toBe(200);
     expect(fixture.update).toHaveBeenCalledWith(expect.objectContaining({ defaultLocale: locale }));
   });
+  it("names the field that is wrong, with the same message as before the rules moved to the domain", async () => {
+    expect(await (await patch({ greeting: "" })).json()).toEqual({ error: "greeting is invalid." });
+    expect(await (await patch({ bookingMode: "later" })).json()).toEqual({ error: "bookingMode is invalid." });
+    expect(await (await patch({})).json()).toEqual({ error: "At least one profile field is required." });
+  });
   it("persists locale-only changes and refreshes the live-call snapshot", async () => {
     expect((await patch({ locale: "fr" })).status).toBe(200);
     expect(fixture.update).toHaveBeenCalledWith(expect.objectContaining({ defaultLocale: "fr" }));
@@ -43,6 +48,11 @@ describe("agent settings validation", () => {
   it("persists the typed appointment policy without unrecognized properties", async () => {
     const policy = { enabled: true, allowCancel: false, allowReschedule: true, verificationMode: "otp_required" };
     expect((await patch({ appointmentChangePolicy: { ...policy, arbitrary: "discard" } })).status).toBe(200);
+    expect(fixture.insert).toHaveBeenCalledWith(expect.objectContaining({ appointmentChangePolicy: policy }));
+  });
+  it("saves the keypad PIN check", async () => {
+    const policy = { enabled: true, allowCancel: true, allowReschedule: true, verificationMode: "passcode_required" };
+    expect((await patch({ appointmentChangePolicy: policy })).status).toBe(200);
     expect(fixture.insert).toHaveBeenCalledWith(expect.objectContaining({ appointmentChangePolicy: policy }));
   });
   it("marks a summary a person writes so AI never replaces it", async () => {

@@ -23,78 +23,84 @@
   },
   "widget": {
     "title": "Website widget",
-    "description": "Embed the chat widget on your website.",
+    "description": "Let website visitors chat with your receptionist.",
     "created": {
-      "title": "Widget key created",
-      "description": "Copy this key now. You will not see it again.",
+      "title": "Your widget is ready",
+      "description": "You can copy this snippet again any time from the widget's settings below.",
       "copy": "Copy",
       "copied": "Copied",
-      "copySnippet": "Copy embed snippet",
-      "hint": "Add the snippet to any page on an allowed origin. The widget loads automatically.",
+      "copySnippet": "Copy code",
+      "hint": "Paste the code before the closing </body> tag on your website. The chat appears on the websites you listed.",
       "done": "Done"
     },
     "create": {
-      "title": "Create a widget key",
-      "description": "Each key belongs to this workspace and has its own list of allowed origins.",
-      "action": "Create widget key"
+      "title": "Add a widget",
+      "description": "Each widget has its own look and its own list of websites.",
+      "action": "Create widget"
     },
     "restricted": {
-      "title": "New website widgets are not available yet",
-      "description": "We do not issue new website chat widgets yet. Existing widgets keep working, and you can still edit or pause them below."
+      "title": "You can't add new widgets yet",
+      "description": "Website chat is in limited release. Your existing widgets keep working, and you can still edit or pause them."
     },
     "fields": {
-      "label": "Label",
+      "label": "Name",
       "labelPlaceholder": "Main website",
-      "origins": "Allowed origins",
+      "origins": "Websites",
       "color": "Accent color",
       "position": "Position",
       "title": "Title",
       "titlePlaceholder": "Chat with us",
       "subtitle": "Subtitle",
-      "subtitlePlaceholder": "We reply within a few minutes",
-      "greeting": "Greeting",
-      "greetingPlaceholder": "Hi there. How can we help?",
+      "subtitlePlaceholder": "Ask about hours, prices or booking",
+      "greeting": "First message",
+      "greetingPlaceholder": "Hi, what can we help you with today?",
       "localeOverride": "Language",
       "leadEnabled": "Ask visitors for their contact details",
-      "requireEmail": "Require email",
-      "requirePhone": "Require phone",
-      "showBeforeChat": "Ask before chat"
+      "requireEmail": "Require an email address",
+      "requirePhone": "Require a phone number",
+      "showBeforeChat": "Ask before the chat starts",
+      "liveChat": "Let visitors chat with your team",
+      "liveChatHint": "When a visitor asks for a person during opening hours, your team gets an alert and can reply from Messages. If nobody joins within 3 minutes, the receptionist offers to take a message."
     },
     "positions": {
       "bottomRight": "Bottom right",
-      "bottomLeft": "Bottom left",
-      "bottomCenter": "Bottom center"
+      "bottomLeft": "Bottom left"
     },
     "locales": {
-      "visitor": "Visitor's language",
+      "visitor": "Match the visitor's language",
       "english": "English",
       "french": "French",
       "spanish": "Spanish",
       "serbian": "Serbian"
     },
     "leadCapture": {
-      "title": "Lead form",
-      "enabled": "Enabled"
+      "title": "Contact details",
+      "enabled": "On"
     },
     "status": {
       "active": "Active",
       "disabled": "Paused",
-      "revoked": "Revoked"
+      "revoked": "Removed"
     },
     "keys": {
-      "title": "Widget keys",
+      "title": "Your widgets",
       "fallbackBusiness": "Active workspace",
       "refresh": "Refresh",
-      "loading": "Loading widget keys...",
-      "unavailable": "Widget keys are unavailable.",
-      "empty": "No widget keys yet.",
+      "loading": "Loading your widgets…",
+      "unavailable": "We couldn't load your widgets. Refresh the page to try again.",
+      "empty": "No widgets yet",
       "untitled": "Untitled widget",
       "pause": "Pause",
       "resume": "Resume",
-      "revoke": "Revoke",
-      "revokeConfirm": "Revoke this widget key? Existing embeds will stop working.",
+      "revoke": "Remove",
+      "revokeConfirm": "Remove this widget? The chat disappears from every website that uses it.",
       "save": "Save",
-      "lastUsed": "Last used {{date}}"
+      "saved": "Saved",
+      "appearanceHint": "Color and position changes reach your website within about two minutes.",
+      "snippet": "Code for your website",
+      "snippetCopied": "Code copied",
+      "noSnippet": "We can't show the code for this older widget. Add a new widget to get code you can copy any time.",
+      "lastUsed": "Last active {{date}}"
     }
   },
   "billing": {
@@ -333,7 +339,7 @@
         },
         "forward": {
           "title": "Forward your business line to it",
-          "description": "Callers keep dialing the number they know. Your phone carrier forwards those calls to your LobbyStack number.",
+          "description": "Callers keep dialing the number they know. Your phone carrier forwards those calls to your {{appName}} number.",
           "action": "Call forwarding guide"
         },
         "transfer": {
@@ -422,7 +428,7 @@
     },
     "telemetry": {
       "label": "Share telemetry data",
-      "description": "Help us improve LobbyStack by sharing anonymized usage and error data.",
+      "description": "Help us improve {{appName}} by sharing anonymized usage and error data.",
       "saveFailed": "We couldn’t save your telemetry preference. Please try again."
     }
   },
@@ -443,7 +449,7 @@
     "google": {
       "sheetTitle": "Google Calendar",
       "sheetDescription": "Connect a Google Calendar and choose which calendar receives bookings.",
-      "privacyNoticeText": "Connecting Google Calendar lets LobbyStack read your calendar availability and create, update, or delete appointment events on the calendar you select.",
+      "privacyNoticeText": "Connecting Google Calendar lets {{appName}} read your calendar availability and create, update, or delete appointment events on the calendar you select.",
       "privacyPolicyLinkText": "Privacy Policy",
       "staffLabel": "Team member",
       "selectStaff": "Choose a team member",
@@ -604,7 +610,8 @@
       "joinedOn": "Joined on {{date}}",
       "invitedOn": "Invited on {{date}}",
       "status": {
-        "pending": "Pending"
+        "pending": "Pending",
+        "handover": "Hands over the business"
       },
       "actions": {
         "moreOptions": "More options",
@@ -812,9 +819,13 @@
         "title": "New website chat message",
         "description": "When a visitor sends a message through your website widget. You get at most one alert per chat each day."
       },
+      "liveChatRequest": {
+        "title": "Visitor asking for a person",
+        "description": "When a website visitor asks to talk with someone from your team. Reply from Messages within 3 minutes to join the chat."
+      },
       "webhookDisabled": {
         "title": "Webhook endpoint turned off",
-        "description": "When LobbyStack stops sending events to a webhook endpoint because every delivery failed for about a day."
+        "description": "When {{appName}} stops sending events to a webhook endpoint because every delivery failed for about a day."
       }
     },
     "systemIssues": {
@@ -868,7 +879,7 @@
   },
   "apiKeys": {
     "title": "API keys",
-    "description": "Use a key to connect your own code or another app to the LobbyStack API.",
+    "description": "Use a key to connect your own code or another app to the {{appName}} API.",
     "empty": "No API keys yet.",
     "neverUsed": "Never",
     "createdBy": "{{date}} by {{name}}",
@@ -905,28 +916,32 @@
     "revoke": {
       "action": "Revoke",
       "title": "Revoke this API key?",
-      "description": "Anything that uses {{name}} stops working right away. You can't undo this. LobbyStack also turns off the webhooks this key created.",
+      "description": "Anything that uses {{name}} stops working right away. You can't undo this. {{appName}} also turns off the webhooks this key created.",
       "confirm": "Revoke key",
       "cancel": "Cancel",
       "done": "API key revoked",
       "failed": "We couldn't revoke the key. Try again."
     },
     "scopes": {
-      "business_read": "Read business details, hours and services",
-      "business_write": "Update business details and hours",
+      "business_read": "Read business details, hours, services, and receptionist settings and rules",
+      "business_write": "Update business details, hours, services, and receptionist settings and rules, including where calls are transferred",
       "calls_read": "Read calls, summaries and transcripts",
       "contacts_read": "Read contacts",
       "contacts_write": "Create and update contacts",
       "appointments_read": "Read appointments and open times",
       "appointments_write": "Book, cancel and reschedule appointments",
       "messages_read": "Read messages the receptionist took",
-      "knowledge_write": "Add knowledge entries and FAQs",
+      "knowledge_read": "Read knowledge entries, FAQs, websites and files",
+      "knowledge_write": "Add, edit and delete knowledge entries, FAQs, websites and files",
+      "billing_manage": "See the plan, set the spending cap and start checkouts",
+      "phone_numbers_manage": "Find, buy, replace and release phone numbers",
+      "team_manage": "Invite and remove team members, change roles and hand the business over",
       "webhooks_manage": "Create and delete webhook endpoints"
     }
   },
   "webhooks": {
     "title": "Webhooks",
-    "description": "LobbyStack sends an HTTPS POST to your URL when something happens, such as a finished call or a new booking. Each request is signed so you can check it came from us.",
+    "description": "{{appName}} sends an HTTPS POST to your URL when something happens, such as a finished call or a new booking. Each request is signed so you can check it came from us.",
     "empty": "No webhook endpoints yet.",
     "enabledLabel": "Send events to this endpoint",
     "restricted": {
@@ -960,19 +975,19 @@
     "create": {
       "action": "Add endpoint",
       "title": "Add a webhook endpoint",
-      "description": "Choose where LobbyStack sends events and which events to send.",
+      "description": "Choose where {{appName}} sends events and which events to send.",
       "submit": "Add endpoint"
     },
     "edit": {
       "action": "Edit",
       "title": "Edit webhook endpoint",
-      "description": "Changes apply to the next event LobbyStack sends.",
+      "description": "Changes apply to the next event {{appName}} sends.",
       "submit": "Save"
     },
     "delete": {
       "action": "Delete",
       "title": "Delete this endpoint?",
-      "description": "LobbyStack stops sending events to {{url}} and deletes its delivery log.",
+      "description": "{{appName}} stops sending events to {{url}} and deletes its delivery log.",
       "confirm": "Delete endpoint",
       "done": "Endpoint deleted"
     },
@@ -1019,8 +1034,8 @@
   },
   "connectedApps": {
     "title": "Connected apps",
-    "description": "AI assistants such as Claude or ChatGPT that someone signed in to LobbyStack. Each one works for this business only, with the access they approved.",
-    "empty": "No connected apps yet. To connect one, add LobbyStack in the assistant's settings and sign in.",
+    "description": "AI assistants such as Claude or ChatGPT that someone signed in to {{appName}}. Each one works for this business only, with the access they approved.",
+    "empty": "No connected apps yet. To connect one, add {{appName}} in the assistant's settings and sign in.",
     "neverUsed": "Never",
     "unnamed": "Unnamed app",
     "grantedBy": "{{date}} by {{name}}",

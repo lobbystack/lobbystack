@@ -63,7 +63,7 @@ Dans la pratique, vous devez construire ou assembler :
 
 C'est pour cela qu'un agent téléphonique semble simple jusqu'au moment où il rencontre les vrais clients. Dès qu'un client réel l'utilise, ce n'est plus une démo : c'est un logiciel de production.
 
-Les coûts d'infrastructure peuvent paraître faibles sur une page de tarifs. [Twilio Voice](https://www.twilio.com/en-us/voice/pricing/us) publie des tarifs à la minute pour les appels, les numéros, les enregistrements et les flux média. [OpenAI](https://openai.com/api/pricing/) publie aussi des prix pour les modèles temps réel et audio. Ces montants comptent, mais ils ne sont qu'une partie de la facture.
+Les coûts d'infrastructure peuvent paraître faibles sur une page de tarifs. [Twilio Voice](https://www.twilio.com/en-us/voice/pricing/us) publie des tarifs à la minute pour les appels, les numéros, les enregistrements et les flux média. [OpenAI](https://openai.com/api/pricing/) publie aussi des prix pour les modèles temps réel et audio. Ces montants comptent, mais ils ne sont qu'une partie de la facture. Pour le détail d'un projet construit sur GPT-Live, le modèle de ChatGPT Voice, lisez notre guide pour [créer un réceptionniste IA avec la voix de ChatGPT](/fr/blog/how-to-build-an-ai-receptionist/).
 
 Le coût le plus important est souvent le temps humain autour du système :
 

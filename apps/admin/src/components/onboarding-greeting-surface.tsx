@@ -12,7 +12,7 @@ import { useTranslation } from "react-i18next";
 import { getSafeOnboardingErrorMessage } from "@/lib/onboarding-errors";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useTelemetry } from "@/components/product-analytics";
 import { currentWebsiteImport, isWebsiteImportRunning, WebsiteImportProgress, type WebsiteImportSummary } from "./website-import-progress";
@@ -84,9 +84,10 @@ export function OnboardingGreetingSurface() {
       <FieldGroup className="gap-4">
         <Field>
           <FieldLabel htmlFor="onboarding-caller-language">{t("greeting.language")}</FieldLabel>
-          <NativeSelect className="w-full" id="onboarding-caller-language" onChange={(event) => setLocale(event.target.value as RuntimeLocale)} value={locale}>
-            {runtimeLocales.map((code) => <NativeSelectOption key={code} value={code}>{t(`common:callerLanguage.${code}`)}</NativeSelectOption>)}
-          </NativeSelect>
+          <Select items={runtimeLocales.map((code) => ({ value: code, label: t(`common:callerLanguage.${code}`) }))} onValueChange={(value) => { if (value) setLocale(value as RuntimeLocale); }} value={locale}>
+            <SelectTrigger className="w-full" id="onboarding-caller-language"><SelectValue /></SelectTrigger>
+            <SelectContent><SelectGroup>{runtimeLocales.map((code) => <SelectItem key={code} value={code}>{t(`common:callerLanguage.${code}`)}</SelectItem>)}</SelectGroup></SelectContent>
+          </Select>
         </Field>
         <Field>
           <FieldLabel htmlFor="onboarding-greeting">{t("greeting.label")}</FieldLabel>

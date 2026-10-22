@@ -206,6 +206,22 @@ describe.skipIf(!client)("operator contact and channel data under operator RLS",
       });
     });
   });
+
+  it("lists appointments that ended in the last month before the ones still to come", async () => {
+    await rollbackTest(async (tx) => {
+      const { db, businessId, userId, ids } = await seed(tx);
+      await tx.execute(sql`reset role`);
+      const [upcoming] = await tx.select().from(appointments).where(eq(appointments.businessId, businessId));
+      const daysAgo = (days: number) => new Date(Date.now() - days * 86_400_000);
+      const booking = (id: string, startsAt: Date) => ({ id, businessId, contactId: ids.named, staffId: upcoming!.staffId, serviceId: upcoming!.serviceId, startsAt, endsAt: new Date(startsAt.getTime() + 30 * 60_000), timezone: "UTC", sourceChannel: "voice" });
+      const [recent, old] = [randomUUID(), randomUUID()];
+      await tx.insert(appointments).values([booking(recent, daysAgo(2)), booking(old, daysAgo(40))]);
+      await tx.execute(sql`set local role lobbystack_app`);
+      await withBusinessTransaction(db, { businessId, userId, actorType: "operator" }, async (appTx) => {
+        expect((await listCurrentAppointments(appTx, businessId, new Date())).map((row) => row.id)).toEqual([recent, upcoming!.id]);
+      });
+    });
+  });
 });
 
 /** A business with an owner; widget calls run as the worker role and dashboard reads as the app role. */

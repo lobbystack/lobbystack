@@ -5,9 +5,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export const GET = v1.listServices;
+export const POST = v1.createService;
 
-const notAllowed = methodNotAllowed(["GET"]);
-export const POST = notAllowed;
+const notAllowed = methodNotAllowed(["GET", "POST"]);
 export const PATCH = notAllowed;
 export const PUT = notAllowed;
 export const DELETE = notAllowed;

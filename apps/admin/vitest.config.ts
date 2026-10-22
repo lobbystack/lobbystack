@@ -9,6 +9,8 @@ export default defineConfig({
   resolve: {
     alias: {
       "@lobbystack/shared/product-capabilities": `${root}/packages/shared/src/product-capabilities.ts`,
+      "@lobbystack/shared/plan-cards": `${root}/packages/shared/src/planCards.ts`,
+      "@lobbystack/shared/plan-comparison": `${root}/packages/shared/src/planComparison.ts`,
       "@lobbystack/shared": `${root}/packages/shared/src/index.ts`,
       "@lobbystack/contracts": `${root}/packages/contracts/src/index.ts`,
       "@lobbystack/db": `${root}/packages/db/src/index.ts`,

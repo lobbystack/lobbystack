@@ -5,7 +5,7 @@ sidebarTitle: "Widget de site Web"
 contentType: "How-to"
 ---
 
-La page **Réglages** > **Widget de site web** crée et gère les clés du widget de réceptionniste. Depuis le widget, les visiteurs peuvent clavarder, laisser leurs coordonnées et lancer un appel depuis leur navigateur.
+La page **Widget de site web**, dans le menu latéral, crée et gère les clés du widget de réceptionniste. Depuis le widget, les visiteurs peuvent clavarder, laisser leurs coordonnées et lancer un appel depuis leur navigateur.
 
 <Note>
   Le clavardage sur le site Web est restreint et ne fait pas partie des forfaits hébergés. La création de nouvelles clés de widget est désactivée par défaut. Sur un déploiement auto-hébergé, définissez `WIDGET_KEY_ISSUANCE_ENABLED=true` pour en créer. Les clés existantes continuent de fonctionner.
@@ -14,8 +14,8 @@ La page **Réglages** > **Widget de site web** crée et gère les clés du widge
 ## Configurer le widget
 
 <Steps>
-  <Step title="Ouvrir les réglages du widget">
-    Allez dans **Réglages** > **Widget de site web**.
+  <Step title="Ouvrir la page du widget">
+    Sélectionnez **Widget de site web** dans le menu latéral, puis **Ajouter un widget**. Pour changer un widget existant, sélectionnez **Modifier** sur sa carte.
   </Step>
   <Step title="Configurer son apparence">
     Choisissez la couleur, la position, le titre, le sous-titre, le message d'accueil et le comportement de langue.
@@ -23,11 +23,11 @@ La page **Réglages** > **Widget de site web** crée et gère les clés du widge
   <Step title="Configurer la collecte de prospects">
     Activez le formulaire de contact, choisissez les champs obligatoires et décidez s'il s'affiche avant le clavardage.
   </Step>
-  <Step title="Définir les sites Web autorisés">
-    Entrez chaque origine publique exacte qui peut intégrer le widget, par exemple `https://www.example.com`.
+  <Step title="Indiquer vos sites Web">
+    Dans **Sites Web**, entrez chaque adresse où le clavardage doit apparaître, par exemple `https://www.example.com`. Séparez les adresses par des virgules.
   </Step>
-  <Step title="Copier l'extrait d'installation">
-    Copiez l'extrait de chargement généré et ajoutez-le avant la balise de fermeture `</body>` de votre site Web.
+  <Step title="Ajouter le code à votre site">
+    Sélectionnez **Copier le code** et collez-le avant la balise de fermeture `</body>` de votre site Web.
   </Step>
 </Steps>
 
@@ -37,9 +37,26 @@ LobbyStack signe les sessions du widget et compare l'origine de la page parente 
 
 Utilisez un site Web en HTTPS en production. Gardez `WIDGET_SESSION_SECRET` et les autres identifiants de signature sur le serveur.
 
-## Gérer les clés du widget
+## Clavardage en direct avec votre équipe
 
-Chaque clé a sa propre liste d'origines autorisées et sa propre configuration. Vous pouvez modifier une clé active, la suspendre temporairement ou la révoquer définitivement. La révocation d'une clé arrête toutes les intégrations qui l'utilisent.
+Vous pouvez permettre à quelqu'un de votre équipe de rejoindre un clavardage du site Web. Activez **Permettre aux visiteurs de clavarder avec votre équipe** sur un widget. L'option reste désactivée tant que vous ne l'activez pas.
+
+Pendant vos heures d'ouverture, ou en tout temps si vous n'en avez pas défini, un visiteur qui demande à parler à quelqu'un dans le clavardage attend votre équipe :
+
+1. La réceptionniste dit au visiteur qu'elle a prévenu l'équipe, puis cesse de répondre.
+2. Votre équipe reçoit une alerte **Visiteur qui demande une personne**, et le clavardage affiche **Visiteur en attente** dans [Messages](/fr/dashboard/messages).
+3. La première personne qui répond ou clique sur **Rejoindre le clavardage** prend le clavardage. Le visiteur voit le prénom inscrit à son profil.
+4. Si personne ne se joint dans les 3 minutes, la réceptionniste reprend le clavardage et demande au visiteur son nom et son numéro, pour que quelqu'un le rappelle.
+
+Activez ou désactivez cette alerte par courriel et par SMS sur la page **Widget de site web**.
+
+En dehors des heures d'ouverture, pendant les appels depuis le navigateur et quand le clavardage en direct est désactivé, la réceptionniste propose de prendre un message pour que votre équipe rappelle le visiteur. Les demandes de rappel apparaissent dans le tableau de bord comme les autres messages.
+
+Les clavardages du site Web et les appels depuis le navigateur ne peuvent pas être transférés vers une ligne téléphonique, donc la réceptionniste ne dit jamais qu'elle met le visiteur en relation. Pendant les appels depuis le navigateur, et dans les clavardages où le clavardage en direct est désactivé, elle donne aussi au visiteur le numéro de téléphone de votre entreprise si vous avez défini un **Numéro de transfert par défaut**. Le visiteur peut appeler ce numéro et demander à parler à quelqu'un. La réceptionniste suit votre règle de transfert : si les transferts sont réservés aux urgences, elle donne le numéro pour les urgences, et si les transferts sont désactivés, elle ne donne aucun numéro.
+
+## Gérer vos widgets
+
+Chaque widget a ses propres sites Web et ses propres réglages. Depuis la carte d'un widget, vous pouvez le modifier, le mettre en pause ou le retirer. Retirer un widget arrête le clavardage sur tous les sites qui l'utilisent, et cette action est irréversible.
 
 ## Vérifier l'installation
 

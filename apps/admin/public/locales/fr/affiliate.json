@@ -1,10 +1,10 @@
 {
   "eyebrow": "Programme d'affiliation",
   "title": "Programme d'affiliation",
-  "description": "Partagez LobbyStack avec des opérateurs et agences. Nous suivons les parrainages, commissions et paiements PayPal mensuels ici.",
+  "description": "Partagez {{appName}} avec des opérateurs et agences. Nous suivons les parrainages, commissions et paiements PayPal mensuels ici.",
   "referral": {
     "title": "Lien de parrainage",
-    "description": "Partagez ce lien partout où vous recommandez LobbyStack.",
+    "description": "Partagez ce lien partout où vous recommandez {{appName}}.",
     "active": "Actif",
     "copy": "Copier le lien",
     "code": "Code de parrainage : {{code}}"
@@ -45,11 +45,11 @@
   "quickstart": {
     "share": {
       "title": "Partagez votre lien",
-      "description": "Utilisez votre lien LobbyStack dans vos publications, infolettres, sites web et recommandations directes."
+      "description": "Utilisez votre lien de parrainage dans vos publications, infolettres, sites web et recommandations directes."
     },
     "resources": {
       "title": "Utilisez des affirmations exactes",
-      "description": "Décrivez LobbyStack honnêtement et indiquez que vous pouvez gagner une commission."
+      "description": "Décrivez {{appName}} honnêtement et indiquez que vous pouvez gagner une commission."
     },
     "receive": {
       "title": "Recevez vos revenus",
@@ -105,7 +105,7 @@
     },
     "method": {
       "question": "Comment les paiements sont-ils envoyés ?",
-      "answer": "LobbyStack paie les affiliés via PayPal avec le courriel PayPal enregistré."
+      "answer": "{{appName}} paie les affiliés via PayPal avec le courriel PayPal enregistré."
     },
     "refunds": {
       "question": "Que se passe-t-il après un remboursement ?",

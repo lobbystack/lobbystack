@@ -17,7 +17,7 @@ export const GET = operatorRoute(async ({ businessId, transaction }) => NextResp
   const [members, invitations] = await Promise.all([
     // RLS hides other users' rows from the app role, so read members through this function.
     tx.execute<{ joinedAt: string }>(sql`select membership_id as "membershipId", user_id as "userId", name, email, role, status, joined_at as "joinedAt" from app.list_business_members(${businessId}::uuid)`),
-    tx.select({ invitationId: businessInvitations.id, email: businessInvitations.email, role: businessInvitations.role, status: businessInvitations.status, expiresAt: businessInvitations.expiresAt, invitedAt: businessInvitations.createdAt }).from(businessInvitations).where(eq(businessInvitations.businessId, businessId)),
+    tx.select({ invitationId: businessInvitations.id, email: businessInvitations.email, role: businessInvitations.role, status: businessInvitations.status, transfersOwnership: businessInvitations.transfersOwnership, expiresAt: businessInvitations.expiresAt, invitedAt: businessInvitations.createdAt }).from(businessInvitations).where(eq(businessInvitations.businessId, businessId)),
   ]);
   // Raw queries return Postgres timestamp text, which Safari's Date can't parse; send ISO like invitedAt.
   return { members: members.rows.map((member) => ({ ...member, joinedAt: new Date(member.joinedAt).toISOString() })), invitations };

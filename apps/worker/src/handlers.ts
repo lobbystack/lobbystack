@@ -4,7 +4,7 @@ import { and, eq, inArray, isNull, lte, ne, or } from "drizzle-orm";
 
 import { hasSummarizableTranscript, type BusinessHoursExtractor, type BusinessSummarizer, type CallSummarizer } from "@lobbystack/agent-core";
 import { realtimeEventSchema, type JobEnvelope } from "@lobbystack/contracts";
-import { getPolarMeteredUsagePayload, intlLocale, type BillingUsageKind } from "@lobbystack/shared";
+import { getPolarMeteredUsagePayload, intlLocale, normalizeRuntimeLocale, type BillingUsageKind } from "@lobbystack/shared";
 import { appointments, calls, contacts, enqueueOutbox, knowledgeChunks, knowledgeDocuments, messages, notifications, phoneNumbers, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database } from "@lobbystack/db";
 import { enqueueKnowledgeDerivedRefresh, finishBusinessSummaryRegenerate, loadBusinessHoursInput, loadBusinessSummaryInput, markBusinessHoursChecked, resetGeneratedBusinessSummary, saveGeneratedBusinessHours, saveGeneratedBusinessSummary, type SummaryRegenerateOutcome } from "@lobbystack/domain";
 import { billingCheckoutLeaseEndsAt, checkKnowledgeStorageLimit, claimBillingCheckoutRequest, countPublishableOutboxMessages, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteSentProductEventsBefore, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markKnowledgeDocumentFailed, markProductEventsSent, reconcileBillingProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, runPrivacyRetentionSweep, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, chunkText, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type GeneratedCallSummary, type OnboardingFollowupSender } from "@lobbystack/domain";
@@ -12,6 +12,7 @@ import { deliverOutbound, markFeedbackEmailFailed, markFeedbackEmailSent, queueD
 import { claimNumberProvisioning, completeNumberProvisioning, desiredNumberRouting, failNumberProvisioning, loadNumberReleaseEmail, loadNumberTrialEmail, numberProvisioningLeaseEndsAt, sharedSmsSender, sweepNumberReleases, sweepNumberTrial } from "@lobbystack/domain";
 import { createWebhookSender, processWebhookDelivery, pruneApiHistory, type WebhookSender } from "@lobbystack/domain";
 import { LIVE_RECORDING_ATTEMPTS, listBusinessesWithOpenLiveCalls, listOpenLiveCalls, liveCallHasRecording, persistCallRecording, retryLiveCallRecording, type OpenLiveCall } from "@lobbystack/domain";
+import { expireTeamRequest } from "@lobbystack/domain";
 import type { DomainContext } from "@lobbystack/domain";
 import { numberReleaseEmailSubject, numberTrialEmailSubject, type SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
 import type { RuntimeStorageProvider } from "@lobbystack/providers/storage/provider";
@@ -375,13 +376,13 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       return await deleteReleasedCalendarEvent(dependencies, { businessId: businessIdOrThrow(job), appointmentId: String(job.payload.appointmentId ?? ""), connectionId: String(job.payload.connectionId ?? ""), calendarId: String(job.payload.calendarId ?? ""), eventId: String(job.payload.eventId ?? "") });
     case "email.send":
       if (!dependencies.email) {
-        if (["verify_email", "password_reset", "existing_account"].includes(String(job.payload.template))) {
+        if (["verify_email", "password_reset", "existing_account", "account_setup"].includes(String(job.payload.template))) {
           throw new Error("Authentication email delivery requires SMTP configuration.");
         }
         return { status: "skipped" };
       }
       {
-        const template = job.payload.template === "existing_account" || job.payload.template === "verify_email" || job.payload.template === "password_reset" || job.payload.template === "invitation" || job.payload.template === "operator_alert" || job.payload.template === "feedback_submission" || job.payload.template === "onboarding_followup"
+        const template = job.payload.template === "existing_account" || job.payload.template === "account_setup" || job.payload.template === "verify_email" || job.payload.template === "password_reset" || job.payload.template === "invitation" || job.payload.template === "operator_alert" || job.payload.template === "feedback_submission" || job.payload.template === "onboarding_followup"
           ? job.payload.template
           : "operator_alert";
         const variables = typeof job.payload.variables === "object" && job.payload.variables !== null
@@ -603,6 +604,15 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       const generated = await generateCallSummary(dependencies, { businessId, callId });
       const result = await finalizeConversationSession(dependencies.domain, { businessId, callId, ...(generated ? { generated } : {}) });
       return { status: result.finalized ? "completed" : "skipped", entityId: result.sessionId ?? callId };
+    }
+    case "conversation.expireTeamRequest": {
+      // A website visitor asked for a person: hand the chat back to the receptionist if nobody joined.
+      const conversationId = String(job.payload.conversationId ?? "");
+      const requestedAt = new Date(String(job.payload.requestedAt ?? ""));
+      if (!conversationId || !Number.isFinite(requestedAt.getTime())) return { status: "skipped" };
+      const businessId = businessIdOrThrow(job);
+      const result = await expireTeamRequest(dependencies.domain, { businessId, conversationId, requestedAt, locale: normalizeRuntimeLocale(typeof job.payload.locale === "string" ? job.payload.locale : undefined) });
+      return { status: result.expired ? "completed" : "skipped", entityId: conversationId };
     }
     case "privacy.scrubMessage": {
       const businessId = businessIdOrThrow(job);

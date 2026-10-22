@@ -3,6 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../domain-context", () => ({ createWorkerDomainContext: () => ({ db: {} }) }));
 vi.mock("../error-reporting", () => ({ reportServerError: vi.fn(async () => undefined) }));
+// CI runs these tests with a real Redis, where every file's requests share one key's per-minute budget; the limiter has its own tests.
+vi.mock("../public-api/rate-limit", async (importOriginal) => ({ ...(await importOriginal<typeof import("../public-api/rate-limit")>()), enforceApiRateLimit: vi.fn(async () => ({ allowed: true, limit: 120, remaining: 119, resetAt: Math.ceil(Date.now() / 60_000) * 60 })) }));
+// The phone number routes' server-only modules, which these tests never reach.
+vi.mock("../twilio-provider", () => ({ getTwilioProvider: vi.fn(), getNumberClaimTokenSecret: vi.fn(), requestIpHash: vi.fn() }));
+vi.mock("../phone-number-search-limit", () => ({ checkPhoneNumberSearchLimit: vi.fn() }));
 
 const idempotency = vi.hoisted(() => ({ store: new Map<string, { hash: string; response: { status: number; body: unknown } }>() }));
 // REST routes call these directly; the MCP tools get fakes through dependencies.
@@ -70,14 +75,14 @@ function keyWith(scopes: ApiKeyScope[]): string {
   return secret;
 }
 
-const business = { id: businessA, name: "Maple Dental", timezone: "America/Toronto", locale: "en", website_url: null, booking_mode: "instant", hours: [{ day: "monday", open: "09:00", close: "17:00" }], created_at: at, updated_at: at };
-const service = { id, name: "Cleaning", description: null, duration_minutes: 30, created_at: at, updated_at: at };
+const business = { id: businessA, name: "Maple Dental", timezone: "America/Toronto", locale: "en", website_url: null, business_type: "service_company", onboarding_stage: "complete", booking_mode: "instant", hours: [{ day: "monday", open: "09:00", close: "17:00" }], created_at: at, updated_at: at };
+const service = { id, name: "Cleaning", slug: "cleaning", description: null, duration_minutes: 30, active: true, staff_ids: [], created_at: at, updated_at: at };
 const staffMember = { id, name: "Sam", active: true, timezone: "America/Toronto", service_ids: [id], created_at: at, updated_at: at };
 const call = { id, channel: "phone", status: "completed", outcome: "message_taken", summary: "Wants a callback.", end_reason: "completed", contact_id: id, caller_name: "Ana", caller_phone: "+14165550134", duration_seconds: 42, recording_available: false, started_at: at, ended_at: later, created_at: at };
-const contact = { id, name: "Ana", phone: "+14165550134", email: null, locale: "en", timezone: null, created_at: at, updated_at: at };
+const contact = { id, name: "Ana", phone: "+14165550134", email: null, locale: "en", timezone: null, passcode: null, created_at: at, updated_at: at };
 const appointment = { id, status: "confirmed", starts_at: at, ends_at: later, timezone: "America/Toronto", service_id: id, service_name: "Cleaning", staff_id: id, staff_name: "Sam", contact_id: id, contact_name: "Ana", contact_phone: "+14165550134", source: "api", calendar_sync_status: "pending", created_at: at, updated_at: at };
 const message = { id, status: "open", title: "Callback", body: "Please call back.", caller_name: "Ana", callback_phone: "+14165550134", urgency: "normal", callback_window: null, channel: "voice", call_id: id, created_at: at, updated_at: at };
-const knowledge = { id, type: "faq", title: "Do you park?", content: "Yes, behind the building.", created_at: at };
+const knowledge = { id, type: "faq", title: "Do you park?", content: "Yes, behind the building.", tags: [], priority: 0, active: true, created_at: at, updated_at: at };
 const page = <T>(data: T[]) => ({ data, next_cursor: null, has_more: false });
 
 function fakeOperations(): McpOperations {
@@ -169,6 +174,22 @@ describe("MCP authentication", () => {
     const response = await handler(post({ authorization: "Bearer lsk_00000000_revoked" }));
     expect(response.status).toBe(401);
     expect(response.headers.get("www-authenticate")).toContain('error="invalid_token"');
+  });
+
+  it("refuses platform keys, which have no MCP access", async () => {
+    const { generatePlatformKey } = await import("../../../../../packages/domain/src/server/publicApi/platformKeys");
+    const { resolveApiKey } = await import("../../../../../packages/domain/src/server/publicApi/apiKeys");
+    const { key, entry } = generatePlatformKey({ name: "AlloPlace CLI", partner: "alloplace", ownerEmail: "ops@alloplace.example", access: "all" });
+    vi.stubEnv("PLATFORM_API_KEYS", JSON.stringify([entry]));
+    try {
+      // The real resolver: a platform key never matches the per-business key format, so no database lookup happens.
+      const realHandler = createLobbyStackMcpHttpHandler({ resolveKey: async (value) => await resolveApiKey({ db: {} } as never, value), touchKey: async () => undefined, rateLimit, operations });
+      const response = await realHandler(post({ authorization: `Bearer ${key}` }));
+      expect(response.status).toBe(401);
+      expect(response.headers.get("www-authenticate")).toContain('error="invalid_token"');
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it("rejects a key whose scopes cover no tool", async () => {

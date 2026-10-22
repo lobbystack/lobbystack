@@ -1,5 +1,5 @@
 import discordIcon from "@iconify-icons/logos/discord-icon"
-import gitlab from "@iconify-icons/logos/gitlab-icon"
+import { GithubIcon } from "@/components/GithubIcon"
 import { Icon } from "@iconify/react/offline"
 import { Separator } from "@/components/ui/separator"
 import {
@@ -128,7 +128,7 @@ const footerSections = (locale: Locale) => {
           label: copy.affiliateProgram,
           href: "/affiliate-program/",
         },
-        { label: "GitLab", href: "https://gitlab.com/lobbystack-group/lobbystack" },
+        { label: "GitHub", href: "https://github.com/lobbystack/lobbystack" },
         { label: "Discord", href: "https://discord.gg/WKX4wCTTpJ" },
       ],
     },
@@ -182,14 +182,14 @@ export function Footer({ locale = "en", path }: FooterProps) {
 
           <div className="flex items-center gap-4">
             <a
-              href="https://gitlab.com/lobbystack-group/lobbystack"
+              href="https://github.com/lobbystack/lobbystack"
               className="text-muted-foreground transition-colors hover:text-foreground"
-              aria-label="GitLab"
+              aria-label="GitHub"
               data-ph-capture-attribute-section="footer_social"
               data-ph-capture-attribute-action="view_github"
-              data-ph-capture-attribute-destination="https://gitlab.com/lobbystack-group/lobbystack"
+              data-ph-capture-attribute-destination="https://github.com/lobbystack/lobbystack"
             >
-              <Icon icon={gitlab} className="size-5" id="footer-gitlab" ssr />
+              <GithubIcon className="size-5" />
             </a>
             <a
               href="https://discord.gg/WKX4wCTTpJ"

@@ -72,6 +72,9 @@ export const SMS_EVENT_NAMES = [
   "sms.delivery_failed",
   "sms.provider_cost_recorded",
   "conversation.automation_paused",
+  "conversation.team_requested",
+  "conversation.team_joined",
+  "conversation.team_request_expired",
 ] as const;
 
 export const APPOINTMENT_EVENT_NAMES = [
@@ -436,6 +439,24 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
     "provider",
   ],
   "conversation.automation_paused": [
+    "businessId",
+    "deploymentMode",
+    "conversationId",
+    "channel",
+  ],
+  "conversation.team_requested": [
+    "businessId",
+    "deploymentMode",
+    "conversationId",
+    "channel",
+  ],
+  "conversation.team_joined": [
+    "businessId",
+    "deploymentMode",
+    "conversationId",
+    "channel",
+  ],
+  "conversation.team_request_expired": [
     "businessId",
     "deploymentMode",
     "conversationId",

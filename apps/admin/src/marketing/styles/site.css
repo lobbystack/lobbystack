@@ -1,0 +1,715 @@
+/* The marketing site's stylesheet. It scans only marketing sources, so the
+   dashboard's utilities and its slate overrides in app/globals.css stay out. */
+@import "tailwindcss" source(none);
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+@source "../";
+@source "../../../app/(marketing)";
+@source "../../../../../packages/web-voice/src";
+
+:root {
+  --font-geist: "Geist Variable";
+  --font-geist-mono: "Geist Mono Variable";
+}
+
+@theme inline {
+  --font-heading: var(--font-geist), sans-serif;
+  --font-sans: var(--font-geist), sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  /* Motion: strong ease-out for entrances and presses, iOS sheet curve for
+     surfaces that slide in from an edge. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply scroll-smooth font-sans;
+    interpolate-size: allow-keywords;
+  }
+
+  a,
+  button,
+  summary {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p,
+  li {
+    text-wrap: pretty;
+  }
+
+  :target {
+    scroll-margin-block: 6rem;
+  }
+}
+
+.skip-link {
+  @apply fixed top-3 left-3 z-[100] -translate-y-16 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-transform focus-visible:translate-y-0 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none;
+}
+
+/* Staggered reveal animations */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.5s var(--ease-out) both;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease both;
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.5s var(--ease-out) both;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Stagger steps for reveals. Kept short so the whole hero lands in well
+   under a second and never holds content back from someone ready to read. */
+.stagger-1 {
+  animation-delay: 60ms;
+}
+.stagger-2 {
+  animation-delay: 120ms;
+}
+.stagger-3 {
+  animation-delay: 180ms;
+}
+.stagger-4 {
+  animation-delay: 240ms;
+}
+.stagger-5 {
+  animation-delay: 300ms;
+}
+
+/* Elements that swap in place (a price, a status pill). Only the entrance
+   animates; the blur blends old and new so it reads as one morphing value. */
+.swap-in {
+  transition:
+    opacity 200ms var(--ease-out),
+    filter 200ms var(--ease-out),
+    transform 200ms var(--ease-out);
+
+  @starting-style {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translateY(4px);
+  }
+}
+
+/* Translucent chrome that content scrolls under. The bottom edge only
+   appears once something is actually underneath it. */
+.site-header {
+  background-color: oklch(1 0 0 / 72%);
+  backdrop-filter: blur(20px) saturate(180%);
+}
+
+@supports (animation-timeline: scroll()) {
+  .site-header {
+    border-bottom-color: transparent;
+    animation: header-edge linear both;
+    animation-timeline: scroll();
+    animation-range: 0 48px;
+  }
+}
+
+@keyframes header-edge {
+  to {
+    border-bottom-color: oklch(0.922 0 0 / 60%);
+  }
+}
+
+/* Popovers grow out of the control that opened them. These live inside
+   <details>, whose content never passes through display: none, so the
+   entrance is keyed to [open] rather than @starting-style. Closing removes
+   the content at once, which is the fast exit we want. */
+@keyframes popover-in {
+  from {
+    opacity: 0;
+    scale: 0.97;
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+details[open] > .nav-popover {
+  animation: popover-in 180ms var(--ease-out);
+}
+
+details[open] > .mobile-menu-sheet {
+  animation: sheet-in 240ms var(--ease-drawer);
+}
+
+/* Disclosure panels open by height instead of snapping. Browsers without
+   ::details-content keep the native instant toggle. */
+.disclosure::details-content {
+  block-size: 0;
+  overflow-y: clip;
+  transition:
+    block-size 240ms var(--ease-out),
+    content-visibility 240ms allow-discrete;
+}
+
+.disclosure[open]::details-content {
+  block-size: auto;
+}
+
+.cookie-sheet {
+  transition:
+    opacity 400ms var(--ease-drawer),
+    transform 400ms var(--ease-drawer);
+
+  @starting-style {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+
+/* Browser mockup frame */
+.browser-frame {
+  border-radius: 12px;
+  border: 1px solid oklch(0.922 0 0);
+  box-shadow:
+    0 1px 3px oklch(0 0 0 / 4%),
+    0 8px 32px oklch(0 0 0 / 6%),
+    0 24px 60px oklch(0 0 0 / 4%);
+  overflow: hidden;
+  background: oklch(1 0 0);
+}
+
+.browser-frame-bar {
+  height: 40px;
+  background: oklch(0.975 0 0);
+  border-bottom: 1px solid oklch(0.922 0 0);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 8px;
+}
+
+.browser-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: oklch(0.9 0 0);
+}
+
+/* Section spacing */
+.section-spacing {
+  @apply py-12 md:py-16 lg:py-20;
+}
+
+/* Tracking tightens as size grows: what reads as crisp at 64px crowds the
+   letters together at 36px. */
+.display-heading {
+  @apply font-heading text-4xl leading-[1.05] font-medium tracking-[-0.04em] md:text-5xl md:tracking-[-0.05em] lg:text-[4rem] lg:tracking-[-0.055em];
+}
+
+.display-heading-compact {
+  @apply font-heading text-4xl leading-[1.05] font-medium tracking-[-0.04em] md:text-5xl md:tracking-[-0.05em] lg:text-[3.5rem] lg:tracking-[-0.055em];
+}
+
+.section-heading {
+  @apply font-heading text-3xl leading-[1.08] font-medium tracking-[-0.035em] md:text-4xl md:tracking-[-0.04em] lg:text-[2.75rem] lg:tracking-[-0.045em];
+}
+
+.section-intro {
+  @apply mt-4 max-w-[65ch] text-base leading-relaxed text-muted-foreground md:text-lg;
+}
+
+.card-heading {
+  @apply font-heading text-2xl leading-tight font-medium tracking-[-0.035em];
+}
+
+.body-copy {
+  @apply text-base leading-relaxed text-muted-foreground;
+}
+
+.fine-print {
+  @apply text-xs leading-relaxed text-muted-foreground;
+}
+
+.legal-copy {
+  @apply space-y-10 text-sm leading-7 text-muted-foreground md:text-base;
+}
+
+.legal-copy section {
+  @apply scroll-mt-24;
+}
+
+.legal-copy h2 {
+  @apply text-2xl font-semibold tracking-tight text-foreground;
+}
+
+.legal-copy h3 {
+  @apply mt-6 text-lg font-semibold tracking-tight text-foreground;
+}
+
+.legal-copy p {
+  @apply mt-4;
+}
+
+.legal-copy ul {
+  @apply mt-4 list-disc space-y-2 pl-5;
+}
+
+.legal-copy li {
+  @apply pl-1;
+}
+
+.legal-copy a {
+  @apply font-medium text-foreground underline underline-offset-4;
+}
+
+.legal-copy strong {
+  @apply font-semibold text-foreground;
+}
+
+.legal-copy table {
+  @apply w-full min-w-[760px] border-separate border-spacing-0 overflow-hidden rounded-xl border border-border/70 text-left text-sm;
+}
+
+.legal-copy th,
+.legal-copy td {
+  @apply border-b border-border/60 px-4 py-3 align-top;
+}
+
+.legal-copy th {
+  @apply bg-muted/50 font-semibold text-foreground;
+}
+
+.legal-copy tbody tr:last-child td {
+  @apply border-b-0;
+}
+
+.blog-copy {
+  @apply text-base leading-8 text-foreground md:text-lg md:leading-9;
+}
+
+.display-heading,
+.display-heading-compact,
+.section-heading,
+.section-intro,
+.card-heading,
+.body-copy,
+.legal-copy,
+.blog-copy {
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
+}
+
+.blog-copy > * + * {
+  @apply mt-6;
+}
+
+.blog-copy h2 {
+  @apply mt-14 font-heading text-3xl leading-tight font-semibold tracking-tight text-foreground md:text-4xl;
+}
+
+.blog-copy h3 {
+  @apply mt-10 font-heading text-2xl leading-tight font-semibold tracking-tight text-foreground;
+}
+
+.blog-copy p {
+  @apply max-w-3xl;
+}
+
+.blog-copy a {
+  @apply font-medium text-foreground underline underline-offset-4 transition-colors hover:text-primary;
+}
+
+.blog-copy strong {
+  @apply font-semibold text-foreground;
+}
+
+.blog-copy ul,
+.blog-copy ol {
+  @apply max-w-3xl space-y-3 pl-6;
+}
+
+.blog-copy ul {
+  @apply list-disc;
+}
+
+.blog-copy ol {
+  @apply list-decimal;
+}
+
+.blog-copy li {
+  @apply pl-1;
+}
+
+.blog-copy blockquote {
+  @apply max-w-3xl rounded-2xl border border-border/70 bg-muted/30 px-6 py-5 text-xl leading-9 font-medium text-foreground italic;
+}
+
+.blog-copy table {
+  @apply my-10 block w-full max-w-4xl overflow-x-auto rounded-xl border border-border/70 text-left text-sm leading-6 md:text-base;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.blog-copy thead {
+  @apply bg-muted/50 text-foreground;
+}
+
+.blog-copy th,
+.blog-copy td {
+  @apply min-w-40 px-4 py-3 align-top;
+}
+
+.blog-copy th {
+  @apply font-semibold;
+}
+
+.blog-copy td {
+  @apply border-t border-border/70 text-foreground;
+}
+
+.blog-copy th + th,
+.blog-copy td + td {
+  @apply border-l border-border/70;
+}
+
+.blog-copy tbody tr:nth-child(even) {
+  @apply bg-muted/20;
+}
+
+/* Reduced motion keeps feedback but drops travel: reveals become short
+   cross-fades, and anything that slides or scales settles in place. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    /* Only non-spatial properties may transition. Presses, arrow nudges and
+       icon rotations still apply, but snap instead of moving. */
+    transition-property:
+      color, background-color, border-color, outline-color,
+      text-decoration-color, fill, stroke, opacity, box-shadow !important;
+  }
+
+  .animate-fade-up,
+  .animate-slide-in-left {
+    animation: fade-in 200ms ease both !important;
+  }
+
+  details[open] > .nav-popover,
+  details[open] > .mobile-menu-sheet {
+    animation: fade-in 150ms ease !important;
+  }
+
+  .swap-in,
+  .cookie-sheet {
+    transition-property: opacity;
+    transition-duration: 150ms;
+
+    @starting-style {
+      filter: none;
+      transform: none;
+      scale: 1;
+    }
+  }
+
+  .disclosure::details-content {
+    transition: none;
+  }
+
+  .site-header {
+    animation: none;
+    border-bottom-color: oklch(0.922 0 0 / 60%);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .site-header,
+  .cookie-sheet > * {
+    background-color: var(--background);
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .site-header {
+    background-color: var(--background);
+    border-bottom-color: var(--foreground);
+  }
+}
+
+.blog-copy hr {
+  @apply my-12 border-border;
+}
+
+.changelog-copy {
+  @apply text-base leading-8 text-foreground md:text-lg md:leading-9;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
+}
+
+.changelog-copy > * + * {
+  @apply mt-6;
+}
+
+.changelog-copy h2 {
+  @apply mt-12 font-heading text-2xl leading-tight font-semibold tracking-tight text-foreground md:text-3xl;
+}
+
+.changelog-copy h3 {
+  @apply mt-10 font-heading text-xl leading-tight font-semibold tracking-tight text-foreground md:text-2xl;
+}
+
+.changelog-copy p {
+  @apply max-w-3xl;
+}
+
+.changelog-copy a {
+  @apply font-medium text-foreground underline underline-offset-4 transition-colors hover:text-primary;
+}
+
+.changelog-copy strong {
+  @apply font-semibold text-foreground;
+}
+
+.changelog-copy ul,
+.changelog-copy ol {
+  @apply max-w-3xl space-y-3 pl-6;
+}
+
+.changelog-copy ul {
+  @apply list-disc;
+}
+
+.changelog-copy ol {
+  @apply list-decimal;
+}
+
+.changelog-copy li {
+  @apply pl-1;
+}
+
+.changelog-copy blockquote {
+  @apply max-w-3xl rounded-2xl border border-border/70 bg-muted/30 px-6 py-5 text-xl leading-9 font-medium text-foreground italic;
+}
+
+.changelog-copy hr {
+  @apply my-12 border-border;
+}
+
+/* Voice demo particle animations */
+@keyframes ringRotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes haloSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes dotPulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.75);
+  }
+}
+
+@keyframes pulse-subtle {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.03);
+  }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 1.6s ease-in-out infinite;
+}
+
+.voice-aura-outer-ring {
+  width: 72%;
+  height: 72%;
+  border: 1px solid oklch(0 0 0 / 6%);
+}
+
+.voice-aura-outer-ring-active {
+  animation: ringRotate 12s linear infinite;
+}
+
+.voice-aura-button {
+  background: radial-gradient(
+    circle at 35% 35%,
+    oklch(0.34 0 0) 0%,
+    oklch(0.19 0 0) 50%,
+    oklch(0.12 0 0) 100%
+  );
+  box-shadow:
+    inset 0 0 0 1px oklch(1 0 0 / 8%),
+    0 20px 64px oklch(0 0 0 / 25%),
+    0 6px 20px oklch(0 0 0 / 15%);
+}
+
+.voice-aura-button-highlight {
+  background: linear-gradient(
+    180deg,
+    oklch(1 0 0 / 10%) 0%,
+    oklch(1 0 0 / 0%) 40%
+  );
+}

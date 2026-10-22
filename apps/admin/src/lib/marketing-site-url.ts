@@ -1,38 +1,11 @@
-import { isInterfaceLocale } from "@lobbystack/shared";
+import { LOBBYSTACK_SITE_URL, brandLinks, isInterfaceLocale } from "@lobbystack/shared";
+
+import { translatedBasePaths } from "@/marketing/i18n/translated-base-paths";
 
 import { DEFAULT_LOCALE, type SupportedLocale } from "./locale";
 
-const LANDING_SITE_URL =
-  process.env.NEXT_PUBLIC_LANDING_SITE_URL?.replace(/\/$/, "") ??
-  "https://lobbystack.com";
-
-const translatedBasePaths = new Set([
-  "/",
-  "/features/",
-  "/pricing/",
-  "/solutions/",
-  "/solutions/ai-phone-answering/",
-  "/solutions/ai-appointment-scheduler/",
-  "/solutions/ai-receptionist-for-home-services/",
-  "/missed-call-revenue-calculator/",
-  "/blog/",
-  "/changelog/",
-  "/blog/ai-receptionist-vs-virtual-receptionist/",
-  "/blog/lobbystack-is-live/",
-  "/blog/ai-receptionist-savings/",
-  "/blog/how-to-choose-an-ai-receptionist/",
-  "/blog/build-or-buy-ai-receptionist/",
-  "/blog/open-source-ai-receptionist-stack/",
-  "/blog/best-open-source-ai-phone-answering-services/",
-  "/blog/ai-receptionist-workflows/",
-  "/blog/ai-receptionist-affiliate-program/",
-  "/affiliate-program/",
-  "/docs/api/",
-  "/privacy/",
-  "/cookie-policy/",
-  "/terms/",
-  "/search/",
-]);
+// The pages the marketing site has in every locale, from the site's own list.
+const translatedPaths = new Set<string>(translatedBasePaths);
 
 export type MarketingLocale = SupportedLocale;
 
@@ -67,7 +40,7 @@ export function localizeMarketingPath(
   if (locale === DEFAULT_LOCALE) {
     return basePath;
   }
-  if (!translatedBasePaths.has(basePath)) {
+  if (!translatedPaths.has(basePath)) {
     return basePath;
   }
   if (basePath === "/") {
@@ -99,10 +72,35 @@ export function localizeMarketingHref(
     return href;
   }
 
+  const { siteUrl } = brandLinks();
+  // Another site keeps the path as it is: only LobbyStack's has these pages
+  // under /fr/, /es/ and /sr/. A site served under a path keeps that path.
+  if (siteUrl !== LOBBYSTACK_SITE_URL) {
+    return new URL(href.replace(/^\/+/, ""), `${siteUrl}/`).toString();
+  }
+
   const suffixStart = href.search(/[?#]/);
   const pathname = suffixStart === -1 ? href : href.slice(0, suffixStart);
   const suffix = suffixStart === -1 ? "" : href.slice(suffixStart);
   const localizedPath = localizeMarketingPath(locale, pathname || "/");
 
-  return new URL(`${localizedPath}${suffix}`, LANDING_SITE_URL).toString();
+  return new URL(`${localizedPath}${suffix}`, siteUrl).toString();
+}
+
+/** The terms of service: the deployment's own page, else /terms on its site. */
+export function termsHref(locale: MarketingLocale): string {
+  return brandLinks().termsUrl ?? localizeMarketingHref(locale, "/terms");
+}
+
+/** The privacy policy: the deployment's own page, else /privacy on its site. */
+export function privacyHref(locale: MarketingLocale): string {
+  return brandLinks().privacyUrl ?? localizeMarketingHref(locale, "/privacy");
+}
+
+/**
+ * The affiliate program's terms. The deployment's own terms page opens at the
+ * top, since only LobbyStack's is known to have an #affiliate-program section.
+ */
+export function affiliateTermsHref(locale: MarketingLocale): string {
+  return brandLinks().termsUrl ?? localizeMarketingHref(locale, "/terms/#affiliate-program");
 }

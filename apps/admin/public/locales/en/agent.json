@@ -108,7 +108,8 @@
         "from": "from {{amount}}",
         "range": "{{min}} – {{max}}",
         "inPerson": "Set in person",
-        "none": "Not set"
+        "none": "Not set",
+        "discounted": "{{price}} (−{{percent}}%)"
       },
       "duplicated": "Service duplicated.",
       "duplicateFailed": "Couldn't duplicate the service.",
@@ -184,8 +185,12 @@
           "errors": {
             "invalid": "Enter a price, such as 3,500 or 12.50.",
             "rangeIncomplete": "Enter both the lowest and the highest price.",
-            "rangeOrder": "The highest price must be more than the lowest."
-          }
+            "rangeOrder": "The highest price must be more than the lowest.",
+            "discountInvalid": "Enter a discount from 0 to 100%."
+          },
+          "discount": "Discount",
+          "discountPercent": "Discount percentage",
+          "discountPreview": "Customers pay {{price}} instead of {{regular}}."
         },
         "active": {
           "label": "Bookable",
@@ -379,9 +384,20 @@
       "label": "Allow AI rescheduling",
       "hint": "Let the receptionist move a verified future appointment after availability is checked."
     },
-    "requireOtp": {
-      "label": "Require one-time code",
-      "hint": "Send a code before any cancellation or reschedule."
+    "verification": {
+      "label": "Caller verification",
+      "options": {
+        "phone_match_and_facts": "Phone number and booking details",
+        "otp_required": "Texted one-time code",
+        "passcode_required": "Keypad PIN",
+        "operator_only": "Your team makes changes"
+      },
+      "descriptions": {
+        "phone_match_and_facts": "Callers must call from the number the appointment was booked with and say its time or service.",
+        "otp_required": "Callers also read back a one-time code texted to that number before any cancellation or reschedule.",
+        "passcode_required": "Callers also type the PIN saved on their contact on the phone keypad. Callers without a PIN are passed to your team. Set PINs on each contact's Details tab.",
+        "operator_only": "The receptionist doesn't change appointments. It passes requests to your team."
+      }
     }
   },
   "actions": {

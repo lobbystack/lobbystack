@@ -1,0 +1,289 @@
+import { absoluteUrl, breadcrumbJsonLd, organizationJsonLd } from "@/marketing/lib/seo"
+import type { MarketingPageSeo } from "@/marketing/seo/page-seo"
+
+// Ported from apps/landing/src/pages/cookie-policy.astro.
+const updatedAt = "September 26, 2026"
+const cookieRows = [
+  {
+    category: "Necessary",
+    source: "LobbyStack",
+    name: "lobbystack.cookieConsent.v1",
+    duration: "Until cleared by the user",
+    purpose: "Stores whether you accepted or rejected optional analytics cookies.",
+    storage: "Local storage on lobbystack.com",
+  },
+  {
+    category: "Necessary",
+    source: "LobbyStack",
+    name: "lobbystack.webVoiceVisitorId",
+    duration: "Until cleared by the user",
+    purpose:
+      "Helps connect web voice demo sessions when you choose to start a browser-based call.",
+    storage: "Local storage on lobbystack.com",
+  },
+  {
+    category: "Necessary",
+    source: "LobbyStack",
+    name: "lobbystack.locale",
+    duration: "1 year",
+    purpose:
+      "Remembers the language you pick in the footer, so we show you that language on your next visit.",
+    storage: "Cookie on lobbystack.com",
+  },
+  {
+    category: "Necessary",
+    source: "Cloudflare",
+    name: "__cf_bm, cf_clearance, _cfuvid, or similar",
+    duration: "Session to 1 year, depending on the cookie",
+    purpose:
+      "Supports security, bot detection, traffic routing, and abuse prevention.",
+    storage: "Cookie on lobbystack.com or Cloudflare-managed domains",
+  },
+  {
+    category: "Analytics and performance",
+    source: "PostHog",
+    name: "posthog*, ph_*, and related PostHog identifiers",
+    duration: "Varies by identifier and browser settings",
+    purpose:
+      "Measures page views, CTA clicks, feature usage, errors, and site performance after you accept optional cookies.",
+    storage: "Cookie or local storage on lobbystack.com",
+  },
+  {
+    category: "Analytics and performance",
+    source: "PostHog",
+    name: "Session replay metadata",
+    duration: "Varies by session and browser settings",
+    purpose:
+      "Helps us understand usability issues after consent. Inputs are configured to be masked.",
+    storage: "Browser storage and PostHog service",
+  },
+]
+
+export function cookiePolicySeoEn(): MarketingPageSeo {
+  return {
+    title: "Cookie Policy - LobbyStack",
+    description:
+      "Cookie Policy for LobbyStack, including necessary cookies, analytics storage, browser controls, and cookie preferences.",
+    canonicalPath: "/cookie-policy/",
+    locale: "en",
+    noindex: true,
+    jsonLd: [
+      organizationJsonLd(),
+      breadcrumbJsonLd([
+        { name: "Home", path: "/" },
+        { name: "Cookie Policy", path: "/cookie-policy/" },
+      ]),
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "@id": absoluteUrl("/cookie-policy/#webpage"),
+        name: "Cookie Policy - LobbyStack",
+        url: absoluteUrl("/cookie-policy/"),
+        description:
+          "Cookie Policy for LobbyStack, including necessary cookies, analytics storage, browser controls, and cookie preferences.",
+      },
+    ],
+  }
+}
+
+export function CookiePolicyMainEn() {
+  return (
+    <main id="main-content" tabIndex={-1} className="bg-background text-foreground">
+      <section className="border-b border-border/60">
+        <div className="mx-auto max-w-4xl px-6 py-16 md:py-20">
+          <p className="text-sm font-medium text-muted-foreground">
+            Last updated: {updatedAt}
+          </p>
+          <h1 className="mt-4 text-4xl font-semibold tracking-tight md:text-5xl">
+            Cookie Policy
+          </h1>
+          <p
+            className="mt-6 max-w-3xl text-base leading-7 text-muted-foreground md:text-lg"
+          >
+            This Cookie Policy explains how Lobbystack Inc. ("LobbyStack," "we,"
+            "our," or "us") uses cookies and similar technologies when you visit
+            our website or interact with LobbyStack services.
+          </p>
+          <p className="mt-4 max-w-3xl text-sm leading-6 text-muted-foreground">
+            This page is provided for transparency and should be read together
+            with our <a className="underline" href="/privacy/">Privacy Policy</a>.
+          </p>
+        </div>
+      </section>
+
+      <section
+        className="mx-auto grid max-w-6xl gap-10 px-6 py-12 md:grid-cols-[220px_1fr] md:py-16"
+      >
+        <aside className="hidden md:block">
+          <nav className="sticky top-8 space-y-2 text-sm text-muted-foreground">
+            <a className="block hover:text-foreground" href="#overview">Overview</a>
+            <a className="block hover:text-foreground" href="#types">Types</a>
+            <a className="block hover:text-foreground" href="#cookies">Cookies</a>
+            <a className="block hover:text-foreground" href="#necessary">Necessary</a>
+            <a className="block hover:text-foreground" href="#analytics">Analytics</a>
+            <a className="block hover:text-foreground" href="#dashboard">Dashboard and widget</a>
+            <a className="block hover:text-foreground" href="#manage">Manage</a>
+            <a className="block hover:text-foreground" href="#changes">Changes</a>
+            <a className="block hover:text-foreground" href="#contact">Contact</a>
+          </nav>
+        </aside>
+
+        <article className="legal-copy max-w-none">
+          <section id="overview">
+            <h2>1. Overview</h2>
+            <p>
+              Cookies are small files or identifiers stored on your browser or
+              device. Similar technologies include local storage, pixels, web
+              beacons, SDK identifiers, and browser or device identifiers. We use
+              "cookies" in this policy to refer to these technologies together.
+            </p>
+            <p>
+              We use cookies to run this site, keep it secure, and, with your
+              consent, understand how visitors use it. We set optional analytics
+              and performance cookies only after you accept them.
+            </p>
+          </section>
+
+          <section id="types">
+            <h2>2. Types of cookies and similar technologies</h2>
+            <h3>First-party technologies</h3>
+            <p>
+              First-party cookies and local storage are set by LobbyStack on our
+              own domains. They can remember your cookie choice, support basic
+              website functionality, and help operate features you choose to use.
+            </p>
+            <h3>Third-party technologies</h3>
+            <p>
+              Third-party technologies are provided by service providers that help
+              us operate, secure, analyze, or improve the website and service.
+              Some third-party services may process information according to their
+              own policies.
+            </p>
+          </section>
+
+          <section id="cookies">
+            <h2>3. Cookies and storage we use</h2>
+            <p>
+              The specific cookies and similar technologies we use may vary based
+              on your browser, region, privacy choices, and the pages or features
+              you use.
+            </p>
+            <div className="mt-6 overflow-x-auto">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Category</th>
+                    <th>Source</th>
+                    <th>Name or pattern</th>
+                    <th>Duration</th>
+                    <th>Purpose</th>
+                    <th>Domain or storage</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {
+                    cookieRows.map((row) => (
+                      <tr key={row.name}>
+                        <td>{row.category}</td>
+                        <td>{row.source}</td>
+                        <td>{row.name}</td>
+                        <td>{row.duration}</td>
+                        <td>{row.purpose}</td>
+                        <td>{row.storage}</td>
+                      </tr>
+                    ))
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section id="necessary">
+            <h2>4. Necessary cookies</h2>
+            <p>
+              Necessary cookies and similar storage are required for basic site
+              functionality, security, abuse prevention, remembering your privacy
+              choice, and operating features you choose to use. They cannot be
+              turned off through LobbyStack's cookie banner.
+            </p>
+          </section>
+
+          <section id="analytics">
+            <h2>5. Analytics and performance cookies</h2>
+            <p>
+              Before you make a choice, we count page views with PostHog without
+              storing anything on your device. This count lives in page memory
+              only. It creates no visitor profile, and session recording and
+              automatic click tracking stay off.
+            </p>
+            <p>
+              If you select <strong>Accept all</strong>, PostHog stores
+              identifiers in cookies and local storage so we can understand how
+              visitors use the site, including page views, clicks, errors, feature
+              use, and performance. PostHog also records sessions, with form
+              inputs and values marked sensitive masked.
+            </p>
+            <p>
+              If you select <strong>Reject non-essential</strong>, we stop PostHog
+              on the site, clear the identifiers it stored, and set no analytics
+              cookies.
+            </p>
+          </section>
+
+          <section id="dashboard">
+            <h2>6. The dashboard and website widget</h2>
+            <p>
+              When you sign in to the LobbyStack dashboard, we set necessary
+              cookies that keep you signed in and protect your account. The
+              dashboard uses PostHog product analytics only while product
+              analytics is turned on in your settings, and never on pages marked
+              sensitive.
+            </p>
+            <p>
+              When a business places the LobbyStack chat and call widget on its
+              website, the widget stores a random visitor identifier in local
+              storage (<strong>lobbystack.visitorId.*</strong>) so a conversation
+              can continue across pages. That business is responsible for any
+              cookie notice or consent its website requires.
+            </p>
+          </section>
+
+          <section id="manage">
+            <h2>7. Managing cookies</h2>
+            <p>
+              You can choose <strong>Accept all</strong> or
+              <strong>Reject non-essential</strong> in the cookie banner. You can
+              reopen the banner later using the
+              <strong>Cookie preferences</strong> control in the footer.
+            </p>
+            <p>
+              Your choice is specific to the browser and device you use. You can
+              also delete or block cookies and local storage through your browser
+              settings. Blocking all cookies may affect some website or service
+              functionality, but rejecting non-essential cookies does not block
+              access to the public website.
+            </p>
+          </section>
+
+          <section id="changes">
+            <h2>8. Changes to this policy</h2>
+            <p>
+              We may update this Cookie Policy from time to time as our website,
+              service providers, or cookie practices change. The date at the top
+              of this page shows when it was last updated.
+            </p>
+          </section>
+
+          <section id="contact">
+            <h2>9. Contact us</h2>
+            <p>
+              Send questions about this Cookie Policy or our privacy practices
+              to Lobbystack Inc. at
+              <a href="mailto:support@lobbystack.com">support@lobbystack.com</a>.
+            </p>
+          </section>
+        </article>
+      </section>
+    </main>
+  )
+}

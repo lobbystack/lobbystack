@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
-import { appointments, businessMemberships, businesses, contacts, createDatabaseClient, services, staff, staffServiceAssignments, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { appointments, businessMemberships, businesses, contacts, createDatabaseClient, outboxMessages, services, staff, staffServiceAssignments, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
 import { assignStaffToService, createService, deleteService, listCatalog, updateService } from "./catalog";
 
@@ -66,6 +66,17 @@ describe.skipIf(!client)("service deletion under operator RLS", () => {
       await expect(updateService({ db }, { userId, businessId, serviceId, active: true })).rejects.toMatchObject({ status: 404 });
       await expect(deleteService({ db }, { userId, businessId, serviceId })).rejects.toMatchObject({ status: 404 });
       await expect(assignStaffToService({ db }, { userId, businessId, staffId, serviceId })).rejects.toMatchObject({ status: 404 });
+    });
+  });
+
+  it("changes a service's fields and refreshes the receptionist snapshot", async () => {
+    await rollbackTest(async (tx) => {
+      const { db, businessId, userId, serviceId } = await seed(tx);
+      await updateService({ db }, { userId, businessId, serviceId, name: "Drain jetting", durationMinutes: 45, description: "High pressure." });
+      const [row] = await tx.select({ name: services.name, durationMinutes: services.durationMinutes, description: services.description }).from(services).where(eq(services.id, serviceId));
+      expect(row).toEqual({ name: "Drain jetting", durationMinutes: 45, description: "High pressure." });
+      const refreshes = await tx.select({ payload: outboxMessages.payload }).from(outboxMessages).where(and(eq(outboxMessages.topic, "snapshot.refresh"), eq(outboxMessages.aggregateId, serviceId)));
+      expect(refreshes).toContainEqual({ payload: expect.objectContaining({ reason: "service_updated" }) });
     });
   });
 

@@ -1,4 +1,5 @@
 import type { LiveCallEnd } from "@lobbystack/domain";
+import { CONTACT_PASSCODE_MAX_LENGTH, CONTACT_PASSCODE_MIN_LENGTH } from "@lobbystack/shared";
 import type { LanguageModelUsage } from "ai";
 import type OpenAI from "openai";
 import type { DelegationCreatedEvent } from "openai/resources/live/live";
@@ -6,6 +7,7 @@ import { SidebandWS } from "openai/resources/live/sideband/ws";
 
 import type { ReceptionistAgent } from "../agent";
 import { toolUse } from "../capabilities";
+import type { KeypadPasscodeCheck, KeypadPasscodeOutcome } from "../tools";
 import { CALL_ENDING, DIRECT_ANSWER_TOOLS, directToolAnswer, fitToAppend, type DirectAnswerStep } from "./directAnswer";
 import { greetingCommand } from "./greeting";
 import { LiveLatencyTracker, type LiveCallLatency } from "./latency";
@@ -131,6 +133,12 @@ export type LiveCallSetup = {
    * words keep the call going.
    */
   callerDone?: (conversation: string, abortSignal: AbortSignal) => Promise<boolean>;
+  /**
+   * The business takes PINs on the keypad, so key presses reach the transcript
+   * as "[pressed a key]", without the key: a PIN typed before the receptionist
+   * asks for it stays out of the transcript too.
+   */
+  maskKeypad?: boolean;
 };
 
 export type LiveCallControllerOptions = {
@@ -238,11 +246,18 @@ const DURATION_WRAP_UP_LEAD_MS = 30_000;
 // goodbye, and asks again this often after a failure until the goodbye starts.
 const TOP_UP_LEAD_MS = 60_000;
 const TOP_UP_RETRY_MS = 10_000;
-// An accepted REFER ends OpenAI's leg, so session.closed follows. A caller
-// still on the session this long after it means the transfer didn't happen.
-const TRANSFER_OUTCOME_MS = 30_000;
+// An accepted REFER ends OpenAI's leg, so session.closed follows. Twilio
+// closes it only 32 seconds after the destination answers, because OpenAI
+// doesn't hang up on Twilio's NOTIFY, and the destination may ring first.
+// A caller still on the session this long after it means the transfer didn't happen.
+const TRANSFER_OUTCOME_MS = 70_000;
 // Actions the next request sees, newest last.
 const MAX_REMEMBERED_ACTIONS = 10;
+// A PIN typed on the keypad ends at the pound key, at the longest PIN length,
+// or this long after the last key once it's as long as the shortest PIN.
+const PASSCODE_KEY_GAP_MS = 6_000;
+// With no key for this long, the keypad stops taking a PIN.
+const PASSCODE_IDLE_MS = 60_000;
 
 // The facts GPT-Live receives when a request fails. Its instructions say what to do then.
 const FAILED_ANSWER = "The backend couldn't complete this request.";
@@ -255,6 +270,16 @@ const WRAP_UP: Record<LiveCallWrapUp, string> = {
   service_restart: "The phone service is restarting, so the call has to end now. In the language of the conversation, apologize briefly, ask the caller to call back in a minute, and say goodbye.",
 };
 const TRANSFER_FAILED = "The transfer to a person didn't go through. In the language of the conversation, tell the caller briefly and offer to take a message so the team can call them back.";
+
+// What GPT-Live hears once the caller has typed a PIN, since it never hears key presses.
+function passcodeCommand(outcome: KeypadPasscodeOutcome): string {
+  if (outcome.status === "accepted") return "The caller typed their PIN on the keypad and it was accepted. In the language of the conversation, tell them briefly, then ask whether to go ahead with the change they asked for.";
+  if (outcome.status === "retry") {
+    const left = outcome.attemptsLeft;
+    return `The PIN the caller typed on the keypad didn't match${left ? `, and they have ${left} more ${left === 1 ? "try" : "tries"}` : ""}. In the language of the conversation, tell them briefly and ask them to type it again, then press the pound key.`;
+  }
+  return ["The PIN the caller typed on the keypad wasn't accepted.", outcome.reason ?? "", "In the language of the conversation, tell them briefly and offer to pass their request to the team."].filter(Boolean).join(" ");
+}
 
 type PendingAppend = { kind: "greeting" | "answer" | "update" | "wrap_up"; delegationId?: string };
 // A hangup waiting for the caller to be done. afterMs is where the request
@@ -351,6 +376,12 @@ export class LiveCallController {
   private unheardResults: string[] = [];
   private readonly completedActions: string[] = [];
   private latestLookup: string | undefined;
+  // A PIN the caller is typing on the keypad, and the latest check's result,
+  // which the next request sees.
+  private passcode: { check: KeypadPasscodeCheck; digits: string; checking: boolean; timer?: ReturnType<typeof setTimeout> } | undefined;
+  private passcodeChecks = 0;
+  private latestPasscode: string | undefined;
+  private maskKeypad = false;
   // The session timeline, to tell when the receptionist's audio has played out.
   private timelineOrigin: number | undefined;
   // The receptionist's speech, from output transcript text: where it ends on
@@ -389,7 +420,10 @@ export class LiveCallController {
   constructor(private readonly options: LiveCallControllerOptions) {
     this.ready = Promise.resolve(options.setup);
     // A failed setup ends the call; the worker reports it.
-    this.ready.then((setup) => { this.callerDone = setup.callerDone; }, () => this.endSession());
+    this.ready.then((setup) => {
+      this.callerDone = setup.callerDone;
+      this.maskKeypad = setup.maskKeypad === true;
+    }, () => this.endSession());
   }
 
   start(): void {
@@ -446,12 +480,16 @@ export class LiveCallController {
       if (chunk.voice) this.inputAudio.loudSamples += chunk.samples;
     });
     // A keypad press reaches only the sideband, with no timeline position. It
-    // counts as caller input, so the next request's agent sees it.
+    // counts as caller input, so the next request's agent sees it, unless it's
+    // part of a PIN: then only its check sees it.
     untyped.on<{ event?: unknown }>("transport.dtmf.received", (event) => {
-      if (typeof event.event === "string" && event.event) {
-        const now = this.timelineNow();
-        this.appendTranscript("caller", ` [pressed ${event.event}]`, now, now);
+      if (typeof event.event !== "string" || !event.event) return;
+      if (this.passcode) {
+        this.passcodeKey(this.passcode, event.event);
+        return;
       }
+      const now = this.timelineNow();
+      this.appendTranscript("caller", this.maskKeypad ? " [pressed a key]" : ` [pressed ${event.event}]`, now, now);
     });
     // OpenAI documents these for outbound SIP legs. A REFER makes the carrier
     // dial one, so after a REFER they report whether the destination answered.
@@ -855,6 +893,70 @@ export class LiveCallController {
     return this.whenFinished;
   }
 
+  /**
+   * Takes the next PIN the caller types on the keypad for `check`. The digits
+   * stay out of the transcript and the next request, and GPT-Live, which never
+   * hears key presses, is told the outcome. A PIN ends at the pound key, at
+   * the longest PIN length, or PASSCODE_KEY_GAP_MS after the last key once it's
+   * long enough; star starts it over. A PIN that didn't match can be typed
+   * again. Returns false once the call is ending.
+   */
+  collectPasscode(check: KeypadPasscodeCheck): boolean {
+    if (this.ending || this.finished) return false;
+    clearTimeout(this.passcode?.timer);
+    this.passcode = { check, digits: "", checking: false };
+    this.schedulePasscodeEnd(this.passcode);
+    return true;
+  }
+
+  private passcodeKey(passcode: NonNullable<LiveCallController["passcode"]>, key: string): void {
+    this.resetSilenceTimer();
+    // Keys pressed while the PIN is being checked don't count.
+    if (passcode.checking) return;
+    if (key === "*") passcode.digits = "";
+    if (key === "#" && passcode.digits) return void this.checkPasscode(passcode);
+    if (/^[0-9]$/.test(key)) {
+      passcode.digits += key;
+      if (passcode.digits.length >= CONTACT_PASSCODE_MAX_LENGTH) return void this.checkPasscode(passcode);
+    }
+    this.schedulePasscodeEnd(passcode);
+  }
+
+  // A PIN as long as the shortest one is checked after a pause; anything
+  // shorter, or nothing at all, stops the keypad taking a PIN after a long one.
+  private schedulePasscodeEnd(passcode: NonNullable<LiveCallController["passcode"]>): void {
+    clearTimeout(passcode.timer);
+    const complete = passcode.digits.length >= CONTACT_PASSCODE_MIN_LENGTH;
+    passcode.timer = setTimeout(() => {
+      if (this.passcode !== passcode || passcode.checking) return;
+      if (complete) void this.checkPasscode(passcode);
+      else this.passcode = undefined;
+    }, complete ? PASSCODE_KEY_GAP_MS : PASSCODE_IDLE_MS);
+  }
+
+  private async checkPasscode(passcode: NonNullable<LiveCallController["passcode"]>): Promise<void> {
+    clearTimeout(passcode.timer);
+    passcode.checking = true;
+    const digits = passcode.digits;
+    passcode.digits = "";
+    const now = this.timelineNow();
+    this.appendTranscript("caller", " [typed a PIN]", now, now);
+    let outcome: KeypadPasscodeOutcome;
+    try {
+      outcome = await passcode.check(digits);
+    } catch (error) {
+      console.error(`[live] ${this.options.sessionId} keypad PIN check failed`, error instanceof Error ? error.message : error);
+      outcome = { status: "failed", reason: "The PIN couldn't be checked.", result: { ok: false, reason: "The PIN couldn't be checked." } };
+    }
+    passcode.checking = false;
+    // The agent started a new check meanwhile, or the call is ending.
+    if (this.passcode !== passcode || this.ending || this.finished) return;
+    this.latestPasscode = fitToAppend(JSON.stringify(outcome.result));
+    if (outcome.status === "retry") this.schedulePasscodeEnd(passcode);
+    else this.passcode = undefined;
+    this.send({ type: "session.instructions.append", delegation_id: null, content: passcodeCommand(outcome), event_id: `passcode_${++this.passcodeChecks}` });
+  }
+
   /** False while a transfer is under way or the call is ending, so the worker reserves no transfer attempt. */
   canTransfer(): boolean {
     return !this.transfer && !this.ending && !this.finished;
@@ -999,6 +1101,7 @@ export class LiveCallController {
       earlier.length ? `Answers already given in this call:\n${earlier.join("\n")}` : "",
       this.completedActions.length ? `Actions already taken in this call, with their results. Don't repeat them; change them if the caller changed their request:\n${this.completedActions.join("\n")}` : "",
       this.latestLookup ? `Latest lookup in this call. Reuse it while it still answers the request:\n${this.latestLookup}` : "",
+      this.latestPasscode ? `Keypad PIN check in this call. The caller typed the PIN on the keypad, so it isn't in the conversation:\n${this.latestPasscode}` : "",
       this.unheardResults.length ? `Results of earlier requests the caller hasn't heard, because they asked something else first. Include them if they still matter:\n${this.unheardResults.map((result) => `- ${result}`).join("\n")}` : "",
       "The voice model handed you the caller's most recent request. Handle that request; earlier requests are already answered. Return the relevant facts, the request's current status, and the next step.",
     ].filter(Boolean).join("\n\n");
@@ -1175,7 +1278,8 @@ export class LiveCallController {
     // never heard from the session leaves the decision to its worker.
     const leaveSession = detached || (this.options.firstEventTimeoutMs !== undefined && !this.sessionAlive);
     if (!sessionClosed && !this.finalizeTimer && !leaveSession) this.endWithoutSideband();
-    for (const timer of [this.silenceTimer, this.durationTimer, this.topUpTimer, this.greetingTimer, this.finalizeTimer, this.firstEventTimer, this.transferTimer]) clearTimeout(timer);
+    for (const timer of [this.silenceTimer, this.durationTimer, this.topUpTimer, this.greetingTimer, this.finalizeTimer, this.firstEventTimer, this.transferTimer, this.passcode?.timer]) clearTimeout(timer);
+    this.passcode = undefined;
     this.abort.abort();
     this.socket?.close({ code: 1000, reason: "session finished" });
     // The new owner saves the transcript from here, under its own numbering.

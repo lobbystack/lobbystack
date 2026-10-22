@@ -1,11 +1,12 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 
-import { and, eq, gt, inArray, lt, or } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, lt, or } from "drizzle-orm";
 
 import { appointmentChangeVerifications, appointments, auditLogs, contacts, enqueueOutbox, receptionistProfiles, services, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { canTextNumber, normalizeAppointmentChangePolicy } from "@lobbystack/shared";
+import { canTextNumber, normalizeAppointmentChangePolicy, type AppointmentChangeVerificationMode } from "@lobbystack/shared";
 
 import { appointmentTimesMatch, serviceNamesMatch, substantiveServiceNameFactMatches } from "./appointmentFacts";
+import { checkContactPasscodeInTransaction, contactPasscodeUsableInTransaction } from "./contactPasscodes";
 import { smsConsentOnFile, type SmsConsentOnFile } from "./contactSmsConsent";
 import { resolveSmsSender } from "./smsSender";
 
@@ -15,6 +16,9 @@ import { VERIFICATION_CODE_TTL_MS, newVerificationCode, verificationCodeSecret }
 const OTP_TTL_MS = VERIFICATION_CODE_TTL_MS;
 const OTP_MAX_ATTEMPTS = 5;
 const OTP_SEND_LEASE_MS = 5 * 60_000;
+// Tries at the keypad PIN for one change. Wrong PINs also count toward the
+// contact's lock, which holds across calls.
+const PASSCODE_MAX_ATTEMPTS = 3;
 
 function hashOtp(code: string): string {
   return createHash("sha256").update(`${verificationCodeSecret()}:${code}`).digest("hex");
@@ -32,7 +36,7 @@ async function auditAppointmentChange(tx: DatabaseTransaction, input: { business
 
 export async function createAppointmentChangeVerification(
   context: DomainContext,
-  input: { businessId: string; appointmentId?: string; callerPhone: string; action: "cancel" | "reschedule"; appointmentStartsAt?: string; serviceName?: string },
+  input: { businessId: string; appointmentId?: string; callerPhone: string; callId?: string; action: "cancel" | "reschedule"; appointmentStartsAt?: string; serviceName?: string },
 ): Promise<{ verificationId: string; appointmentId: string; contactId: string; status: string; expiresAt: string; smsConsent: SmsConsentOnFile } | null> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const profile = (await tx.select({ policy: receptionistProfiles.appointmentChangePolicy }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, input.businessId)).limit(1))[0];
@@ -55,12 +59,28 @@ export async function createAppointmentChangeVerification(
     });
     if (matches.length !== 1) return null;
     const appointment = matches[0]!;
-    await tx.update(appointmentChangeVerifications).set({ status: "superseded", updatedAt: now }).where(and(eq(appointmentChangeVerifications.businessId, input.businessId), eq(appointmentChangeVerifications.appointmentId, appointment.id), eq(appointmentChangeVerifications.callerPhone, input.callerPhone), inArray(appointmentChangeVerifications.status, ["pending", "facts_verified", "otp_verified", "otp_pending", "otp_queued", "otp_sent"])));
-    const expiresAt = new Date(now.getTime() + OTP_TTL_MS);
-    const status = policy.verificationMode === "otp_required" ? "otp_pending" : "facts_verified";
-    const [verification] = await tx.insert(appointmentChangeVerifications).values({ businessId: input.businessId, appointmentId: appointment.id, contactId: appointment.contactId, callerPhone: input.callerPhone, action: input.action, status, expiresAt, attemptCount: 0 }).returning({ id: appointmentChangeVerifications.id });
+    let status = policy.verificationMode === "otp_required" ? "otp_pending" : "facts_verified";
+    let expiresAt = new Date(now.getTime() + OTP_TTL_MS);
+    if (policy.verificationMode === "passcode_required") {
+      // A PIN accepted for this appointment counts until it expires, but only
+      // on the call it was typed on: verifying again, or for the other change,
+      // doesn't ask for it twice. A later call from the same number, which a
+      // spoofed caller ID can make, types it again.
+      const accepted = input.callId ? (await tx.select({ id: appointmentChangeVerifications.id, action: appointmentChangeVerifications.action, expiresAt: appointmentChangeVerifications.expiresAt }).from(appointmentChangeVerifications).where(and(eq(appointmentChangeVerifications.businessId, input.businessId), eq(appointmentChangeVerifications.appointmentId, appointment.id), eq(appointmentChangeVerifications.callerPhone, input.callerPhone), eq(appointmentChangeVerifications.callId, input.callId), eq(appointmentChangeVerifications.status, "passcode_verified"), gt(appointmentChangeVerifications.expiresAt, now))).orderBy(desc(appointmentChangeVerifications.createdAt)).limit(1))[0] : undefined;
+      if (accepted?.action === input.action) return { verificationId: accepted.id, appointmentId: appointment.id, contactId: appointment.contactId, status: "passcode_verified", expiresAt: accepted.expiresAt.toISOString(), smsConsent: smsConsentOnFile(appointment) };
+      if (accepted) {
+        status = "passcode_verified";
+        expiresAt = accepted.expiresAt;
+      } else {
+        // A contact without a PIN, or whose PIN is locked, can't verify on a call.
+        const passcode = await contactPasscodeUsableInTransaction(tx, { businessId: input.businessId, contactId: appointment.contactId });
+        status = passcode === "usable" ? "passcode_pending" : `passcode_${passcode}`;
+      }
+    }
+    await tx.update(appointmentChangeVerifications).set({ status: "superseded", updatedAt: now }).where(and(eq(appointmentChangeVerifications.businessId, input.businessId), eq(appointmentChangeVerifications.appointmentId, appointment.id), eq(appointmentChangeVerifications.callerPhone, input.callerPhone), inArray(appointmentChangeVerifications.status, ["pending", "facts_verified", "otp_verified", "otp_pending", "otp_queued", "otp_sent", "passcode_pending", "passcode_verified"])));
+    const [verification] = await tx.insert(appointmentChangeVerifications).values({ businessId: input.businessId, appointmentId: appointment.id, contactId: appointment.contactId, callerPhone: input.callerPhone, callId: input.callId ?? null, action: input.action, status, expiresAt, attemptCount: 0 }).returning({ id: appointmentChangeVerifications.id });
     if (!verification) throw new Error("Appointment change verification could not be created.");
-    await auditAppointmentChange(tx, { businessId: input.businessId, appointmentId: appointment.id, verificationId: verification.id, eventType: "appointment_change.verification_created", payload: { action: input.action } });
+    await auditAppointmentChange(tx, { businessId: input.businessId, appointmentId: appointment.id, verificationId: verification.id, eventType: "appointment_change.verification_created", payload: { action: input.action, ...(status.startsWith("passcode_") ? { status } : {}) } });
     return { verificationId: verification.id, appointmentId: appointment.id, contactId: appointment.contactId, status, expiresAt: expiresAt.toISOString(), smsConsent: smsConsentOnFile(appointment) };
   });
 }
@@ -79,6 +99,7 @@ export async function issueAppointmentChangeOtp(
       return { ok: false, status: "expired", reason: "The verification session has expired." };
     }
     if (current.attemptCount >= OTP_MAX_ATTEMPTS) return { ok: false, status: "failed", reason: "Too many verification attempts." };
+    if (current.status.startsWith("passcode_")) return { ok: false, status: current.status, reason: "This change needs the caller's keypad PIN, not a texted code." };
     // The code comes from the number that sends the business's other texts.
     // A toll-free sender can't reach a number outside North America, and a
     // caller who texted STOP to it gets nothing from it.
@@ -182,6 +203,68 @@ export async function verifyAppointmentChangeOtp(
   });
 }
 
+/**
+ * Checks a PIN the caller typed on the keypad for a passcode_pending change.
+ * Each change allows PASSCODE_MAX_ATTEMPTS tries, and wrong PINs also count
+ * toward the contact's lock. Once the PIN matches, a cancellation's result says
+ * whether the caller gets texts, as verifyAppointmentChangeOtp does.
+ */
+export async function verifyAppointmentChangePasscode(
+  context: DomainContext,
+  input: { businessId: string; verificationId: string; passcode: string },
+): Promise<{ ok: boolean; status: string; verificationId: string; appointmentId?: string; action?: string; attemptsLeft?: number; reason?: string; smsConsent?: SmsConsentOnFile }> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const current = (await tx.select({ id: appointmentChangeVerifications.id, appointmentId: appointmentChangeVerifications.appointmentId, contactId: appointmentChangeVerifications.contactId, action: appointmentChangeVerifications.action, status: appointmentChangeVerifications.status, expiresAt: appointmentChangeVerifications.expiresAt, attemptCount: appointmentChangeVerifications.attemptCount }).from(appointmentChangeVerifications).where(and(eq(appointmentChangeVerifications.id, input.verificationId), eq(appointmentChangeVerifications.businessId, input.businessId))).limit(1).for("update"))[0];
+    if (!current) return { ok: false, status: "missing", verificationId: input.verificationId, reason: "The verification session was not found." };
+    const now = new Date();
+    const change = { verificationId: current.id, appointmentId: current.appointmentId, action: current.action };
+    const audit = (eventType: string, payload?: Record<string, unknown>) => auditAppointmentChange(tx, { businessId: input.businessId, appointmentId: current.appointmentId, verificationId: current.id, eventType, ...(payload ? { payload } : {}) });
+    if (current.expiresAt <= now || ["expired", "superseded", "used"].includes(current.status)) {
+      await tx.update(appointmentChangeVerifications).set({ status: "expired", updatedAt: now }).where(eq(appointmentChangeVerifications.id, current.id));
+      await audit("appointment_change.verification_expired");
+      return { ok: false, status: "expired", ...change, reason: "The verification session has expired. Verify the appointment again." };
+    }
+    if (current.status === "passcode_verified") return { ok: true, status: "passcode_verified", ...change };
+    if (current.status !== "passcode_pending") return { ok: false, status: current.status, ...change, reason: "This change doesn't take a keypad PIN." };
+    const checked = await checkContactPasscodeInTransaction(tx, { businessId: input.businessId, contactId: current.contactId, passcode: input.passcode });
+    const attemptCount = current.attemptCount + 1;
+    if (checked.status === "missing" || (checked.status === "locked" && !checked.justLocked)) {
+      const status = `passcode_${checked.status}`;
+      await tx.update(appointmentChangeVerifications).set({ status, updatedAt: now }).where(eq(appointmentChangeVerifications.id, current.id));
+      await audit(`appointment_change.${status}`);
+      return { ok: false, status, ...change, reason: checked.status === "missing" ? "The caller has no keypad PIN, so the change can't be verified on this call." : "The caller's keypad PIN is locked after too many wrong tries, so the change can't be verified on this call. Someone at the business can set a new PIN." };
+    }
+    if (checked.status === "locked") {
+      await tx.update(appointmentChangeVerifications).set({ status: "passcode_locked", attemptCount, updatedAt: now }).where(eq(appointmentChangeVerifications.id, current.id));
+      await audit("appointment_change.passcode_locked", { attemptCount });
+      return { ok: false, status: "passcode_locked", ...change, reason: "The PIN didn't match, and too many wrong tries locked it, so the change can't be verified on this call. Someone at the business can set a new PIN." };
+    }
+    if (checked.status === "rejected") {
+      const status = attemptCount >= PASSCODE_MAX_ATTEMPTS ? "failed" : "passcode_pending";
+      await tx.update(appointmentChangeVerifications).set({ status, attemptCount, updatedAt: now }).where(eq(appointmentChangeVerifications.id, current.id));
+      await audit("appointment_change.passcode_rejected", { attemptCount });
+      return status === "failed"
+        ? { ok: false, status, ...change, attemptsLeft: 0, reason: "The PIN didn't match, and there are no tries left on this call." }
+        : { ok: false, status, ...change, attemptsLeft: PASSCODE_MAX_ATTEMPTS - attemptCount, reason: "The PIN didn't match." };
+    }
+    await tx.update(appointmentChangeVerifications).set({ status: "passcode_verified", attemptCount, updatedAt: now }).where(eq(appointmentChangeVerifications.id, current.id));
+    await audit("appointment_change.passcode_verified");
+    if (current.action !== "cancel") return { ok: true, status: "passcode_verified", ...change };
+    // Verified now, so the agent may learn whether the caller gets a cancellation text.
+    const contact = (await tx.select({ smsConsentStatus: contacts.smsConsentStatus, operatorBlockedAt: contacts.operatorBlockedAt }).from(contacts).where(and(eq(contacts.id, current.contactId), eq(contacts.businessId, input.businessId))).limit(1))[0];
+    return { ok: true, status: "passcode_verified", ...change, smsConsent: smsConsentOnFile(contact) };
+  });
+}
+
+// The verifications each mode accepts. A stricter check passes a looser mode,
+// so a change verified before the business switched modes still goes through.
+const VERIFIED_STATUSES: Record<AppointmentChangeVerificationMode, string[]> = {
+  phone_match_and_facts: ["facts_verified", "otp_verified", "passcode_verified"],
+  otp_required: ["otp_verified"],
+  passcode_required: ["passcode_verified"],
+  operator_only: [],
+};
+
 export async function consumeAppointmentChangeVerificationInTransaction(
   tx: DatabaseTransaction,
   input: { businessId: string; verificationId: string; appointmentId: string; callerPhone: string; action: "cancel" | "reschedule" },
@@ -189,7 +272,7 @@ export async function consumeAppointmentChangeVerificationInTransaction(
   const profile = (await tx.select({ policy: receptionistProfiles.appointmentChangePolicy }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, input.businessId)).limit(1).for("share"))[0];
   const policy = normalizeAppointmentChangePolicy(profile?.policy);
   if (!policy.enabled || policy.verificationMode === "operator_only" || (input.action === "cancel" ? !policy.allowCancel : !policy.allowReschedule)) return false;
-  const rows = await tx.update(appointmentChangeVerifications).set({ status: "used", updatedAt: new Date() }).where(and(eq(appointmentChangeVerifications.id, input.verificationId), eq(appointmentChangeVerifications.businessId, input.businessId), eq(appointmentChangeVerifications.appointmentId, input.appointmentId), eq(appointmentChangeVerifications.callerPhone, input.callerPhone), eq(appointmentChangeVerifications.action, input.action), inArray(appointmentChangeVerifications.status, policy.verificationMode === "otp_required" ? ["otp_verified"] : ["facts_verified", "otp_verified"]), gt(appointmentChangeVerifications.expiresAt, new Date()))).returning({ id: appointmentChangeVerifications.id });
+  const rows = await tx.update(appointmentChangeVerifications).set({ status: "used", updatedAt: new Date() }).where(and(eq(appointmentChangeVerifications.id, input.verificationId), eq(appointmentChangeVerifications.businessId, input.businessId), eq(appointmentChangeVerifications.appointmentId, input.appointmentId), eq(appointmentChangeVerifications.callerPhone, input.callerPhone), eq(appointmentChangeVerifications.action, input.action), inArray(appointmentChangeVerifications.status, VERIFIED_STATUSES[policy.verificationMode]), gt(appointmentChangeVerifications.expiresAt, new Date()))).returning({ id: appointmentChangeVerifications.id });
   if (rows.length > 0) await auditAppointmentChange(tx, { businessId: input.businessId, appointmentId: input.appointmentId, verificationId: input.verificationId, eventType: "appointment_change.verification_consumed", payload: { action: input.action } });
   return rows.length > 0;
 }

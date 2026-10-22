@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ createVerification: vi.fn(), verifyOtp: vi.fn(), cancelForCaller: vi.fn() }));
-vi.mock("./appointmentChanges", () => ({ createAppointmentChangeVerification: mocks.createVerification, verifyAppointmentChangeOtp: mocks.verifyOtp }));
+const mocks = vi.hoisted(() => ({ createVerification: vi.fn(), verifyOtp: vi.fn(), verifyPasscode: vi.fn(), cancelForCaller: vi.fn() }));
+vi.mock("./appointmentChanges", () => ({ createAppointmentChangeVerification: mocks.createVerification, verifyAppointmentChangeOtp: mocks.verifyOtp, verifyAppointmentChangePasscode: mocks.verifyPasscode }));
 vi.mock("./booking", () => ({ bookAppointment: vi.fn(), findAvailability: vi.fn(), checkAvailability: vi.fn(), cancelAppointmentForCaller: mocks.cancelForCaller, rescheduleAppointmentForCaller: vi.fn() }));
 
 import { contacts, smsConsentEvents, type DatabaseTransaction } from "@lobbystack/db";
 
 import { recordSmsConsentAnswerInTransaction, smsConsentOnFile, type SmsConsentAnswer } from "./contactSmsConsent";
-import { cancelForCaller, verifyCallerChangeCode, verifyCallerForChange } from "./receptionistActions";
+import { cancelForCaller, verifyCallerChangeCode, verifyCallerChangePasscode, verifyCallerForChange } from "./receptionistActions";
 
 const context = { db: {} as never };
 
@@ -91,5 +91,33 @@ describe("the answer on file during a self-service cancellation", () => {
     mocks.cancelForCaller.mockResolvedValueOnce({ appointmentId: "apt_1", serviceId: "svc_1", startsAt: new Date("2030-01-08T15:00:00Z"), endsAt: new Date("2030-01-08T15:30:00Z"), smsConsentOnFile: "subscribed" });
     await expect(cancelForCaller(context, { businessId: "biz_1", callerPhone: "+14165550100", appointmentId: "apt_1", verificationId: "ver_1", finalConfirmation: true })).resolves.toEqual({ ok: true, appointmentId: "apt_1", startsAt: "2030-01-08T15:00:00.000Z", status: "canceled", smsConsentOnFile: "subscribed" });
     expect(mocks.cancelForCaller).toHaveBeenCalledWith(context, { businessId: "biz_1", appointmentId: "apt_1", callerPhone: "+14165550100", verificationId: "ver_1" });
+  });
+});
+
+describe("verifying a change with a keypad PIN", () => {
+  const verify = (action: "cancel" | "reschedule" = "cancel") => verifyCallerForChange(context, { businessId: "biz_1", callerPhone: "+14165550100", action, serviceName: "Cut" });
+  const verification = (status: string) => ({ verificationId: "ver_1", appointmentId: "apt_1", contactId: "contact_1", status, expiresAt: "", smsConsent: "subscribed" });
+
+  it("asks for the PIN rather than a texted code, and keeps the answer on file until it matches", async () => {
+    mocks.createVerification.mockResolvedValueOnce(verification("passcode_pending"));
+    await expect(verify()).resolves.toEqual({ ok: true, verified: false, requiresOtp: false, requiresPasscode: true, verificationId: "ver_1", appointmentId: "apt_1", status: "passcode_pending" });
+  });
+
+  it("counts a PIN already accepted on this call", async () => {
+    mocks.createVerification.mockResolvedValueOnce(verification("passcode_verified"));
+    await expect(verify()).resolves.toEqual({ ok: true, verified: true, requiresOtp: false, verificationId: "ver_1", appointmentId: "apt_1", status: "passcode_verified", smsConsentOnFile: "subscribed" });
+  });
+
+  it.each(["passcode_missing", "passcode_locked"])("refuses the change when the caller's PIN is %s", async (status) => {
+    mocks.createVerification.mockResolvedValueOnce(verification(status));
+    await expect(verify()).resolves.toMatchObject({ ok: false, verified: false, status, reason: expect.stringContaining("can't be verified on this call") });
+  });
+
+  it("gives the answer on file with a matching PIN, and not with a wrong one", async () => {
+    mocks.verifyPasscode.mockResolvedValueOnce({ ok: true, status: "passcode_verified", verificationId: "ver_1", appointmentId: "apt_1", action: "cancel", smsConsent: "declined" });
+    await expect(verifyCallerChangePasscode(context, { businessId: "biz_1", verificationId: "ver_1", passcode: "480613" })).resolves.toEqual({ ok: true, status: "passcode_verified", verificationId: "ver_1", appointmentId: "apt_1", action: "cancel", smsConsentOnFile: "declined" });
+    expect(mocks.verifyPasscode).toHaveBeenCalledWith(context, { businessId: "biz_1", verificationId: "ver_1", passcode: "480613" });
+    mocks.verifyPasscode.mockResolvedValueOnce({ ok: false, status: "passcode_pending", verificationId: "ver_1", attemptsLeft: 2, reason: "The PIN didn't match." });
+    await expect(verifyCallerChangePasscode(context, { businessId: "biz_1", verificationId: "ver_1", passcode: "111222" })).resolves.toEqual({ ok: false, status: "passcode_pending", verificationId: "ver_1", attemptsLeft: 2, reason: "The PIN didn't match." });
   });
 });

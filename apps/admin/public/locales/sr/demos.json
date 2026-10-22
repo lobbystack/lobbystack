@@ -32,7 +32,7 @@
     "claimed": {
       "title": "Ovaj demo je već preuzet",
       "titleWithBusiness": "Demo za {{businessName}} je već preuzet",
-      "description": "Ovaj recepcioner sada pripada jednom LobbyStack nalogu."
+      "description": "Ovaj recepcioner sada pripada jednom {{appName}} nalogu."
     }
   },
   "claim": {

@@ -29,7 +29,7 @@ LobbyStack je AI recepcioner otvorenog koda za male firme koje zavise od poziva,
 - Partnerski program: ${absoluteUrl("/sr/affiliate-program/")}
 - Kalkulator: ${absoluteUrl("/sr/missed-call-revenue-calculator/")}
 - Blog: ${absoluteUrl("/sr/blog/")}
-- GitLab: https://gitlab.com/lobbystack-group/lobbystack
+- GitHub: https://github.com/lobbystack/lobbystack
 `
 
 export const GET: APIRoute = () =>

@@ -6,6 +6,14 @@ import { createReceptionistTools, type AgentToolContext } from "./tools";
 
 export type ReceptionistAgent = ToolLoopAgent<never, ToolSet>;
 
+/**
+ * Website chat's cap on each model step's output, so no reply runs long even
+ * when a visitor talks the model past its instructions. OpenAI counts
+ * reasoning tokens toward it, so it leaves room for high reasoning; the
+ * instructions keep the visible reply to about 100 words.
+ */
+export const WEB_CHAT_MAX_OUTPUT_TOKENS = 4_000;
+
 export function createReceptionistAgent(input: {
   model: LanguageModel;
   context: AgentToolContext;
@@ -25,5 +33,6 @@ export function createReceptionistAgent(input: {
     instructions: [buildAgentInstructions(input.context.snapshot, input.context), input.extraInstructions].filter(Boolean).join("\n\n"),
     tools: createReceptionistTools(input.context),
     stopWhen,
+    ...(input.context.channel === "web_chat" ? { maxOutputTokens: WEB_CHAT_MAX_OUTPUT_TOKENS } : {}),
   });
 }

@@ -6,7 +6,7 @@ import { Sparkles } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { requestJson } from "@/lib/request-json";
-import { intlLocale, isTransferCountry, normalizeBookingMode, runtimeLocales, type AppointmentChangePolicy, type BookingMode, type RuntimeLocale } from "@lobbystack/shared";
+import { appointmentChangeVerificationModes, intlLocale, isTransferCountry, normalizeBookingMode, runtimeLocales, type AppointmentChangePolicy, type AppointmentChangeVerificationMode, type BookingMode, type RuntimeLocale } from "@lobbystack/shared";
 import type { Country } from "react-phone-number-input/input";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -80,18 +80,26 @@ export function resolveTransferNumberForSave({
 export function buildAppointmentChangePolicyForSave({
   allowCancel,
   allowReschedule,
-  requireOtp,
+  verificationMode,
 }: {
   allowCancel: boolean;
   allowReschedule: boolean;
-  requireOtp: boolean;
+  verificationMode: AppointmentChangeVerificationMode;
 }): AppointmentChangePolicy {
   return {
     enabled: allowCancel || allowReschedule,
     allowCancel,
     allowReschedule,
-    verificationMode: requireOtp ? "otp_required" : "phone_match_and_facts",
+    verificationMode,
   };
+}
+
+// The checks the dashboard offers. A business saved as operator_only keeps
+// that option in the select while it's the saved mode.
+const offeredVerificationModes: AppointmentChangeVerificationMode[] = ["phone_match_and_facts", "otp_required", "passcode_required"];
+
+function savedVerificationMode(value: unknown): AppointmentChangeVerificationMode {
+  return (appointmentChangeVerificationModes as readonly unknown[]).includes(value) ? value as AppointmentChangeVerificationMode : "phone_match_and_facts";
 }
 
 export function AgentBasicSettingsPage({
@@ -198,7 +206,7 @@ export function AgentBasicSettingsPage({
   const selectedTransferCountry = countries.find((option) => option.code === transferCountry);
   const [allowAppointmentCancel, setAllowAppointmentCancel] = useState(true);
   const [allowAppointmentReschedule, setAllowAppointmentReschedule] = useState(true);
-  const [requireAppointmentChangeOtp, setRequireAppointmentChangeOtp] = useState(false);
+  const [appointmentChangeVerification, setAppointmentChangeVerification] = useState<AppointmentChangeVerificationMode>("phone_match_and_facts");
   const [bookingMode, setBookingMode] = useState<BookingMode>("instant");
   const [isBookingModeSaving, setIsBookingModeSaving] = useState(false);
   const [transferStatus, setTransferStatus] = useState<string | null>(null);
@@ -224,10 +232,9 @@ export function AgentBasicSettingsPage({
     const appointmentChangePolicy = profile.appointmentChangePolicy as AppointmentChangePolicy | null;
     setAllowAppointmentCancel(appointmentChangePolicy?.allowCancel ?? true);
     setAllowAppointmentReschedule(appointmentChangePolicy?.allowReschedule ?? true);
-    setRequireAppointmentChangeOtp(
-      appointmentChangePolicy?.verificationMode === "otp_required",
-    );
+    setAppointmentChangeVerification(savedVerificationMode(appointmentChangePolicy?.verificationMode));
   }, [configuration]);
+  const verificationChoices = offeredVerificationModes.includes(appointmentChangeVerification) ? offeredVerificationModes : [...offeredVerificationModes, appointmentChangeVerification];
 
   // The saved number's country, else the locale's.
   const savedTransferNumber = configuration?.profile?.transferNumber;
@@ -313,11 +320,11 @@ export function AgentBasicSettingsPage({
   async function saveAppointmentChangePolicy({
     allowCancel = allowAppointmentCancel,
     allowReschedule = allowAppointmentReschedule,
-    requireOtp = requireAppointmentChangeOtp,
+    verificationMode = appointmentChangeVerification,
   }: {
     allowCancel?: boolean;
     allowReschedule?: boolean;
-    requireOtp?: boolean;
+    verificationMode?: AppointmentChangeVerificationMode;
   } = {}): Promise<void> {
     if (!canManageTenant || !persistedProfile) {
       return;
@@ -330,7 +337,7 @@ export function AgentBasicSettingsPage({
         appointmentChangePolicy: buildAppointmentChangePolicyForSave({
           allowCancel,
           allowReschedule,
-          requireOtp,
+          verificationMode,
         }),
       });
       telemetry.track("web.agent.settings_saved", { businessId, setting: "appointment_change_policy" });
@@ -829,24 +836,32 @@ export function AgentBasicSettingsPage({
               variant="default"
             >
               <ItemContent>
-                <ItemTitle>{t("agent:appointmentChanges.requireOtp.label")}</ItemTitle>
+                <ItemTitle>{t("agent:appointmentChanges.verification.label")}</ItemTitle>
                 <ItemDescription>
-                  {t("agent:appointmentChanges.requireOtp.hint")}
+                  {t(`agent:appointmentChanges.verification.descriptions.${appointmentChangeVerification}`)}
                 </ItemDescription>
               </ItemContent>
-              <ItemActions>
+              <ItemActions className="w-full sm:w-auto">
                 {isLoadingConfiguration ? (
-                  <Skeleton className="h-5 w-8 rounded-full" />
+                  <Skeleton className="h-10 w-full rounded-md sm:w-56" />
                 ) : (
-                  <Switch
-                    aria-label={t("agent:appointmentChanges.requireOtp.label")}
-                    checked={requireAppointmentChangeOtp}
+                  <Select
                     disabled={isAppointmentChangeSaving || !persistedProfile || !canManageTenant}
-                    onCheckedChange={(checked) => {
-                      setRequireAppointmentChangeOtp(checked);
-                      void saveAppointmentChangePolicy({ requireOtp: checked });
+                    items={verificationChoices.map((mode) => ({ value: mode, label: t(`agent:appointmentChanges.verification.options.${mode}`) }))}
+                    onValueChange={(value) => {
+                      const nextMode = savedVerificationMode(value);
+                      setAppointmentChangeVerification(nextMode);
+                      void saveAppointmentChangePolicy({ verificationMode: nextMode });
                     }}
-                  />
+                    value={appointmentChangeVerification}
+                  >
+                    <SelectTrigger aria-label={t("agent:appointmentChanges.verification.label")} className="w-full sm:w-56" id="agent-appointment-change-verification" loading={isAppointmentChangeSaving}><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {verificationChoices.map((mode) => <SelectItem key={mode} value={mode}>{t(`agent:appointmentChanges.verification.options.${mode}`)}</SelectItem>)}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
                 )}
               </ItemActions>
             </Item>

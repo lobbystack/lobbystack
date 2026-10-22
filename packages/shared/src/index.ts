@@ -4,6 +4,11 @@ export { isMaintenanceMode } from "./maintenance";
 export { interfaceLocaleTags, interfaceLocales, intlLocale, isInterfaceLocale, isRuntimeLocale, normalizeInterfaceLocale, normalizeRuntimeLocale, runtimeLocaleName, runtimeLocales } from "./locales";
 export type { InterfaceLocale, RuntimeLocale } from "./locales";
 import { interfaceLocales, runtimeLocales, type InterfaceLocale, type RuntimeLocale } from "./locales";
+import { appointmentChangeVerificationModes, bookingModes, transferModes } from "./receptionist";
+import { WIDGET_COLOR_PATTERN, widgetPositionSchema, type WidgetPosition } from "./widget";
+export * from "./receptionist";
+export * from "./branding";
+export * from "./brandLinks";
 export { isCertificationMode, assertCertificationRecipient, assertCertificationOperationAllowed, assertCertificationCalendar, assertCertificationBillingSandbox } from "./certification";
 
 export type DeploymentMode = "cloud" | "self_hosted_standard" | "development";
@@ -13,6 +18,12 @@ export const deploymentModes = [
   "self_hosted_standard",
   "development",
 ] as const satisfies ReadonlyArray<DeploymentMode>;
+
+/** The deployment mode a DEPLOYMENT_MODE value names, or undefined when it names none. */
+export function parseDeploymentMode(value: string | undefined): DeploymentMode | undefined {
+  const trimmed = value?.trim();
+  return deploymentModes.find((mode) => mode === trimmed);
+}
 
 export const DEFAULT_WEB_CALL_MAX_DURATION_MS = 5 * 60 * 1000;
 export const MAX_WEB_CALL_MAX_DURATION_MS = 30 * 60 * 1000;
@@ -82,19 +93,30 @@ export type ServicePriceType = (typeof servicePriceTypes)[number];
 /**
  * A service's price, in whole numbers of the currency's smallest unit: a fixed
  * price, a starting price, a range, or set in person once the business knows
- * the customer (no amount).
+ * the customer (no amount). discountPercent (above 0, up to 100) comes off every amount.
  */
 export type ServicePrice =
-  | { type: "fixed" | "from"; amountMinor: number; currency: string }
-  | { type: "range"; amountMinor: number; maxAmountMinor: number; currency: string }
+  | { type: "fixed" | "from"; amountMinor: number; currency: string; discountPercent?: number }
+  | { type: "range"; amountMinor: number; maxAmountMinor: number; currency: string; discountPercent?: number }
   | { type: "in_person" };
 
 /** A service's stored price columns as a price, or undefined when the business hasn't set one. */
-export function servicePriceFromColumns(row: { priceType: ServicePriceType; priceMinor: number | null; priceMaxMinor: number | null }, currency: string): ServicePrice | undefined {
+export function servicePriceFromColumns(row: { priceType: ServicePriceType; priceMinor: number | null; priceMaxMinor: number | null; discountPercent?: number }, currency: string): ServicePrice | undefined {
   if (row.priceType === "in_person") return { type: "in_person" };
   if (row.priceMinor === null) return undefined;
-  if (row.priceType === "range") return row.priceMaxMinor === null ? undefined : { type: "range", amountMinor: row.priceMinor, maxAmountMinor: row.priceMaxMinor, currency };
-  return { type: row.priceType, amountMinor: row.priceMinor, currency };
+  const discount = row.discountPercent ? { discountPercent: row.discountPercent } : {};
+  if (row.priceType === "range") return row.priceMaxMinor === null ? undefined : { type: "range", amountMinor: row.priceMinor, maxAmountMinor: row.priceMaxMinor, currency, ...discount };
+  return { type: row.priceType, amountMinor: row.priceMinor, currency, ...discount };
+}
+
+/** An amount after a percentage discount, rounded to the currency's smallest unit. */
+export function discountedAmount(amountMinor: number, discountPercent: number): number {
+  return Math.round(amountMinor * (100 - discountPercent) / 100);
+}
+
+/** A discount from 0 to 100 percent, with at most two decimal places. */
+export function isDiscountPercent(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 100 && Math.abs(Math.round(value * 100) - value * 100) < 1e-9;
 }
 
 let currencyCodes: Set<string> | undefined;
@@ -116,9 +138,9 @@ export function currencyFractionDigits(currency: string): number {
   return THREE_DECIMAL_CURRENCIES.has(currency) ? 3 : 2;
 }
 
-export type ServicePriceLabels = { from: (amount: string) => string; range: (min: string, max: string) => string; inPerson: string };
+export type ServicePriceLabels = { from: (amount: string) => string; range: (min: string, max: string) => string; inPerson: string; discounted: (regular: string, percent: number, discounted: string) => string };
 
-const ENGLISH_PRICE_LABELS: ServicePriceLabels = { from: (amount) => `from ${amount}`, range: (min, max) => `${min} to ${max}`, inPerson: "set in person" };
+const ENGLISH_PRICE_LABELS: ServicePriceLabels = { from: (amount) => `from ${amount}`, range: (min, max) => `${min} to ${max}`, inPerson: "set in person", discounted: (regular, percent, discounted) => `${discounted} after a ${percent}% discount (regular ${regular})` };
 
 /** An amount in the currency's smallest unit, as "RSD 700" in the given locale. */
 export function formatPriceAmount(amountMinor: number, currency: string, locale = "en"): string {
@@ -126,13 +148,20 @@ export function formatPriceAmount(amountMinor: number, currency: string, locale 
   return new Intl.NumberFormat(locale, { style: "currency", currency, currencyDisplay: "code", minimumFractionDigits: amountMinor % 10 ** digits === 0 ? 0 : digits, maximumFractionDigits: digits }).format(amountMinor / 10 ** digits).replace(/[\u00a0\u202f]/gu, " ");
 }
 
-/** "RSD 700", "from RSD 700", "RSD 700 to RSD 1,000" or "set in person", in the given locale. */
+/**
+ * "RSD 700", "from RSD 700", "RSD 700 to RSD 1,000" or "set in person", in the
+ * given locale. A discounted price gives the price after the discount, the
+ * discount and the regular price.
+ */
 export function formatServicePrice(price: ServicePrice, locale = "en", labels: ServicePriceLabels = ENGLISH_PRICE_LABELS): string {
   if (price.type === "in_person") return labels.inPerson;
-  const amount = formatPriceAmount(price.amountMinor, price.currency, locale);
-  if (price.type === "from") return labels.from(amount);
-  if (price.type === "range") return labels.range(amount, formatPriceAmount(price.maxAmountMinor, price.currency, locale));
-  return amount;
+  const describe = (percent: number) => {
+    const amount = formatPriceAmount(discountedAmount(price.amountMinor, percent), price.currency, locale);
+    if (price.type === "from") return labels.from(amount);
+    if (price.type === "range") return labels.range(amount, formatPriceAmount(discountedAmount(price.maxAmountMinor, percent), price.currency, locale));
+    return amount;
+  };
+  return price.discountPercent ? labels.discounted(describe(0), price.discountPercent, describe(price.discountPercent)) : describe(0);
 }
 
 const TIMEZONE_CURRENCIES: Record<string, string> = {
@@ -152,14 +181,11 @@ export function defaultCurrencyForTimezone(timezone: string): string {
 export type SnapshotEmployee = { name: string; services?: string[]; hours?: HoursWindow[]; timeOff?: Array<{ startsOn: string; endsOn: string }> };
 
 export type TransferPolicy = {
-  mode: "never" | "always" | "on_request" | "on_urgent" | "during_business_hours";
+  mode: (typeof transferModes)[number];
   transferNumber?: string;
 };
 
-export type AppointmentChangeVerificationMode =
-  | "phone_match_and_facts"
-  | "otp_required"
-  | "operator_only";
+export type AppointmentChangeVerificationMode = (typeof appointmentChangeVerificationModes)[number];
 
 export type AppointmentChangePolicy = {
   enabled: boolean;
@@ -207,7 +233,7 @@ export function isDefaultGreeting(greeting: string, businessName: string, locale
 export function normalizeAppointmentChangePolicy(value: unknown): AppointmentChangePolicy {
   if (value == null) return { ...defaultAppointmentChangePolicy };
   const policy = value as Partial<AppointmentChangePolicy>;
-  if (typeof policy.enabled === "boolean" && typeof policy.allowCancel === "boolean" && typeof policy.allowReschedule === "boolean" && ["phone_match_and_facts", "otp_required", "operator_only"].includes(policy.verificationMode ?? "")) {
+  if (typeof policy.enabled === "boolean" && typeof policy.allowCancel === "boolean" && typeof policy.allowReschedule === "boolean" && (appointmentChangeVerificationModes as readonly string[]).includes(policy.verificationMode ?? "")) {
     return { enabled: policy.enabled, allowCancel: policy.allowCancel, allowReschedule: policy.allowReschedule, verificationMode: policy.verificationMode! };
   }
   return { enabled: false, allowCancel: false, allowReschedule: false, verificationMode: "operator_only" };
@@ -229,11 +255,11 @@ export type AgentRuleSummary = {
 };
 
 /** How the agent handles appointment requests. */
-export type BookingMode = "off" | "request" | "instant";
+export type BookingMode = (typeof bookingModes)[number];
 
 /** Unknown or missing values keep today's behavior: book directly. */
 export function normalizeBookingMode(value: string | null | undefined): BookingMode {
-  return value === "off" || value === "request" ? value : "instant";
+  return (bookingModes as readonly string[]).includes(value ?? "") ? value as BookingMode : "instant";
 }
 
 export type BusinessContextSnapshot = {
@@ -363,13 +389,30 @@ export const demoSnapshot: BusinessContextSnapshot = {
 };
 
 // Website chat widget contracts.
-export type WidgetPosition = "bottom-right" | "bottom-left" | "bottom-center";
+export { normalizeWidgetOrigin, WIDGET_COLOR_PATTERN, widgetEmbedSnippet, widgetPositions, widgetPositionSchema, type WidgetPosition } from "./widget";
+
+/**
+ * What the loader takes from the dashboard: the bubble look the key's config
+ * sets, and the language the chat opens in.
+ */
+export type WidgetAppearance = { color?: string; position?: WidgetPosition; locale?: InterfaceLocale };
+
+/** The global the keyed loader fills before its own code runs, one entry per widget key. */
+export const WIDGET_APPEARANCE_GLOBAL = "__lobbyStackWidgetAppearance";
 
 export type WidgetLeadFormConfig = {
   enabled: boolean;
   requirePhone?: boolean;
   requireEmail?: boolean;
   showBeforeChat?: boolean;
+};
+
+/**
+ * Live chat with the team: during opening hours, a visitor who asks for a
+ * person gets someone from the team in the chat, who replies from Messages.
+ */
+export type WidgetLiveChatConfig = {
+  enabled: boolean;
 };
 
 export type WidgetConfig = {
@@ -380,18 +423,14 @@ export type WidgetConfig = {
   greeting?: string;
   localeOverride?: InterfaceLocale;
   leadForm?: WidgetLeadFormConfig;
+  liveChat?: WidgetLiveChatConfig;
 };
-
-export const widgetPositions = [
-  "bottom-right",
-  "bottom-left",
-  "bottom-center",
-] as const satisfies ReadonlyArray<WidgetPosition>;
 
 export const defaultWidgetConfig: WidgetConfig = {
   position: "bottom-right",
   title: "",
   leadForm: { enabled: false, requirePhone: false, requireEmail: false, showBeforeChat: false },
+  liveChat: { enabled: false },
 };
 
 export const widgetLeadFormConfigSchema = z.object({
@@ -402,13 +441,14 @@ export const widgetLeadFormConfigSchema = z.object({
 });
 
 export const widgetConfigSchema = z.object({
-  color: z.string().regex(/^#[0-9a-fA-F]{3,8}$/).optional(),
-  position: z.enum(widgetPositions).optional(),
+  color: z.string().regex(WIDGET_COLOR_PATTERN).optional(),
+  position: widgetPositionSchema.optional(),
   title: z.string().max(160).optional(),
   subtitle: z.string().max(320).optional(),
   greeting: z.string().max(400).optional(),
   localeOverride: z.enum(interfaceLocales).optional(),
   leadForm: widgetLeadFormConfigSchema.optional(),
+  liveChat: z.object({ enabled: z.boolean() }).optional(),
 });
 
 export const widgetSessionRequestSchema = z.object({
@@ -480,7 +520,7 @@ export * from "./planComparison";
 export { normalizeAuthEmail } from "./auth";
 export { assertProductionSecrets } from "./productionSecrets";
 
-export { isTransferPermitted, normalizeTransferMode } from "./transferPolicy";
+export { isBusinessOpen, isTransferPermitted, normalizeTransferMode } from "./transferPolicy";
 export { isTransferCountry, isTransferPhone, TRANSFER_COUNTRY_CALLING_CODES, type TransferCountry } from "./transferCountries";
 
 export { OPERATOR_SMS_ACCEPTED_DISCLOSURE_VERSIONS, OPERATOR_SMS_DISCLOSURE_TEXT, OPERATOR_SMS_DISCLOSURE_VERSION } from "./operatorSmsConsent";

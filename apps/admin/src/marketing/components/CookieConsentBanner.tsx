@@ -1,0 +1,183 @@
+"use client"
+
+import { useEffect, useState } from "react"
+
+import { Button } from "@/marketing/components/ui/button"
+import {
+  Item,
+  ItemActions,
+  ItemContent,
+  ItemDescription,
+  ItemTitle,
+} from "@/marketing/components/ui/item"
+import {
+  COOKIE_PREFERENCES_TRIGGER_SELECTOR,
+  clearPostHogClientStorage,
+  hasDeclinedAnalytics,
+  readCookieConsent,
+  writeCookieConsent,
+} from "@/marketing/lib/cookie-consent"
+// Narrow imports: the "@/marketing/i18n" index brings every localized page's
+// copy with it, and this banner is in every page's download.
+import type { Locale } from "@/marketing/i18n/config"
+import { localizePath } from "@/marketing/i18n/routes"
+
+const bannerCopy = {
+  en: {
+    title: "Cookie settings",
+    description:
+      "We use cookies to help this site function, understand service usage, and support marketing efforts.",
+    privacyPrefix: "Read our",
+    privacyLink: "Cookie Policy",
+    privacySuffix: ".",
+    reject: "Reject non-essential",
+    accept: "Accept all",
+  },
+  fr: {
+    title: "Paramètres des cookies",
+    description:
+      "Nous utilisons des cookies et des identifiants similaires pour faire fonctionner le site et, avec votre accord, mesurer son utilisation.",
+    privacyPrefix: "Consultez notre",
+    privacyLink: "Politique relative aux cookies",
+    privacySuffix: ".",
+    reject: "Refuser le non essentiel",
+    accept: "Tout accepter",
+  },
+  es: {
+    title: "Configuración de cookies",
+    description:
+      "Usamos cookies para que este sitio funcione, entender cómo se usa el servicio y apoyar nuestro marketing.",
+    privacyPrefix: "Lea nuestra",
+    privacyLink: "Política de cookies",
+    privacySuffix: ".",
+    reject: "Rechazar las no esenciales",
+    accept: "Aceptar todo",
+  },
+  sr: {
+    title: "Podešavanja kolačića",
+    description:
+      "Koristimo kolačiće da bi sajt radio, da bismo razumeli kako se usluga koristi i za potrebe marketinga.",
+    privacyPrefix: "Pročitajte našu",
+    privacyLink: "Politiku kolačića",
+    privacySuffix: ".",
+    reject: "Odbij neobavezne",
+    accept: "Prihvati sve",
+  },
+} satisfies Record<Locale, Record<string, string>>
+
+let postHogModuleLoaded = false
+
+type CookieConsentBannerProps = {
+  locale?: Locale
+}
+
+export function CookieConsentBanner({
+  locale = "en",
+}: CookieConsentBannerProps) {
+  const [isVisible, setIsVisible] = useState(false)
+  const copy = bannerCopy[locale]
+
+  useEffect(() => {
+    const storedConsent = readCookieConsent()
+    const visibilityTimer = storedConsent
+      ? undefined
+      : window.setTimeout(() => setIsVisible(true), 0)
+
+    // Loading the module is what starts PostHog, in whichever mode the stored
+    // consent implies: anonymous and cookieless while the banner is unanswered,
+    // full tracking once accepted. An undecided visitor is only counted if the
+    // import actually happens, so this cannot be gated on acceptance.
+    if (!hasDeclinedAnalytics()) {
+      void startPostHog()
+    }
+
+    const handlePreferencesClick = (event: MouseEvent) => {
+      const target = event.target
+
+      if (
+        target instanceof Element &&
+        target.closest(COOKIE_PREFERENCES_TRIGGER_SELECTOR)
+      ) {
+        event.preventDefault()
+        setIsVisible(true)
+      }
+    }
+
+    document.addEventListener("click", handlePreferencesClick)
+    return () => {
+      if (visibilityTimer !== undefined) {
+        window.clearTimeout(visibilityTimer)
+      }
+      document.removeEventListener("click", handlePreferencesClick)
+    }
+  }, [])
+
+  const rejectNonEssential = () => {
+    writeCookieConsent(false)
+    clearPostHogClientStorage()
+    void disablePostHog()
+    setIsVisible(false)
+  }
+
+  const acceptAll = () => {
+    writeCookieConsent(true)
+    setIsVisible(false)
+    void initializePostHog()
+  }
+
+  if (!isVisible) {
+    return null
+  }
+
+  return (
+    <aside
+      aria-label={copy.title}
+      className="cookie-sheet fixed right-0 bottom-0 left-0 z-50 px-4 pb-4 sm:right-6 sm:bottom-6 sm:left-auto sm:w-[28rem] sm:px-0 sm:pb-0"
+    >
+      <Item
+        variant="outline"
+        className="gap-5 rounded-2xl border-border/70 bg-background/95 p-5 shadow-2xl shadow-foreground/10 backdrop-blur-xl"
+      >
+        <ItemContent className="gap-3">
+          <ItemTitle className="text-base">{copy.title}</ItemTitle>
+          <ItemDescription className="line-clamp-none">
+            {copy.description} {copy.privacyPrefix}{" "}
+            <a href={localizePath(locale, "/cookie-policy/")}>
+              {copy.privacyLink}
+            </a>
+            {copy.privacySuffix}
+          </ItemDescription>
+        </ItemContent>
+
+        <ItemActions className="w-full flex-col items-stretch gap-2 sm:flex-row sm:justify-end">
+          <Button variant="outline" onClick={rejectNonEssential} type="button">
+            {copy.reject}
+          </Button>
+          <Button onClick={acceptAll} type="button">
+            {copy.accept}
+          </Button>
+        </ItemActions>
+      </Item>
+    </aside>
+  )
+}
+
+async function startPostHog() {
+  await import("@/marketing/lib/posthog")
+  postHogModuleLoaded = true
+}
+
+async function initializePostHog() {
+  const { initializePostHog } = await import("@/marketing/lib/posthog")
+  postHogModuleLoaded = true
+  initializePostHog()
+}
+
+async function disablePostHog() {
+  if (!postHogModuleLoaded) {
+    return
+  }
+
+  const { disablePostHog } = await import("@/marketing/lib/posthog")
+  disablePostHog()
+}

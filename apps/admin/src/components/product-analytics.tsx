@@ -8,10 +8,15 @@ import { createBrowserTelemetry, type BrowserTelemetry } from "@lobbystack/telem
 import type { DeploymentMode, TelemetryEventName } from "@lobbystack/telemetry";
 import { selectActiveBusiness } from "@/lib/active-business";
 import { consumeAuthSuccess } from "@/lib/auth-success-analytics";
+import { initializeClientAnalytics } from "@/lib/client-analytics";
 import { consumePendingOnboardingBusiness } from "@/lib/onboarding-analytics";
 import { consumePendingWorkspaceSwitch } from "@/lib/workspace-analytics";
 import { requestJson } from "@/lib/request-json";
 import { isPublicRoutePath, stripLocalePrefix } from "@/lib/locale-path";
+
+// Every page but the website widget loads this module, and PostHog with it,
+// before it renders.
+initializeClientAnalytics();
 
 const SENSITIVE_APP_ROUTE_PATTERN = /^\/(demos|embed)(\/|$)/;
 

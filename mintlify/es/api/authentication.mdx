@@ -5,7 +5,7 @@ sidebarTitle: "Autenticación"
 contentType: "How-to"
 ---
 
-Cada solicitud necesita una clave de API de un negocio. Los propietarios y administradores crean y revocan las claves en el panel. Las mismas claves conectan asistentes de IA a través del [servidor MCP](/es/ai/mcp).
+Cada solicitud necesita una clave. Una clave de API del panel actúa sobre un solo negocio, y una [clave de plataforma](#claves-de-plataforma) sobre varios. Los propietarios y administradores crean y revocan las claves de API en el panel. Las claves de API, pero no las de plataforma, también conectan asistentes de IA a través del [servidor MCP](/es/ai/mcp).
 
 ## Cree una clave
 
@@ -59,18 +59,53 @@ Cada endpoint, salvo `GET /me`, requiere un permiso (scope). Una clave sin ese p
 
 | Permiso | Permite |
 | --- | --- |
-| `business:read` | `GET /business`, `GET /services`, `GET /staff` |
-| `business:write` | `PATCH /business` |
+| `business:read` | `GET /business`, `GET /services`, `GET /staff`, `GET /receptionist`, `GET /rules`, `GET /onboarding`, `GET /widget-keys`, `GET /calendars`, `GET /calendars/{connection_id}/calendars`, `GET /notification-preferences` |
+| `business:write` | `PATCH /business`, `PATCH /receptionist`, `POST /services`, `PATCH` y `DELETE` en `/services/{service_id}`, `POST /rules`, `PATCH` y `DELETE` en `/rules/{rule_id}`, `POST /rules/reorder`, `PATCH /onboarding`, `POST /onboarding/complete`, `POST /widget-keys`, `PATCH /widget-keys/{widget_key_id}`, `POST /calendars/google/connect`, `PATCH` y `DELETE` en `/calendars/{connection_id}`, `PATCH /notification-preferences` |
 | `calls:read` | `GET /calls`, `GET /calls/{call_id}` |
 | `contacts:read` | `GET /contacts`, `GET /contacts/{contact_id}` |
-| `contacts:write` | `POST /contacts`, `PATCH /contacts/{contact_id}` |
+| `contacts:write` | `POST /contacts`, `PATCH /contacts/{contact_id}`, `POST /contacts/passcodes`, `POST /contacts/passcodes/generate` |
 | `appointments:read` | `GET /appointments`, `GET /appointments/{appointment_id}`, `GET /availability` |
 | `appointments:write` | `POST /appointments`, `POST /appointments/{appointment_id}/cancel`, `POST /appointments/{appointment_id}/reschedule` |
 | `messages:read` | `GET /messages` |
-| `knowledge:write` | `POST /knowledge` |
+| `knowledge:read` | `GET /knowledge`, `GET /knowledge/{entry_id}`, `GET /knowledge/sources`, `GET /knowledge/sources/{source_id}` |
+| `knowledge:write` | `POST /knowledge`, `PATCH` y `DELETE` en `/knowledge/{entry_id}`, `POST /knowledge/sources`, `PATCH` y `DELETE` en `/knowledge/sources/{source_id}`, `POST /knowledge/sources/{source_id}/expand`, `/retry` y `/cancel`, `POST /knowledge/uploads` y `POST /knowledge/uploads/{upload_id}/complete` |
+| `billing:manage` | `GET` y `PATCH /billing`, `POST /billing/checkout`, `GET /billing/checkout/{checkout_id}` y, con la clave de plataforma de un operador, `POST` y `DELETE /billing/managed-plan` |
+| `phone_numbers:manage` | `GET /phone-numbers`, `POST /phone-numbers/search`, `POST /phone-numbers/claims`, `GET /phone-numbers/claims/{claim_id}`, `DELETE /phone-numbers/{phone_number_id}` y `POST /phone-numbers/{phone_number_id}/replace` |
+| `team:manage` | `GET /team`, `POST /team/invitations`, `DELETE /team/invitations/{invitation_id}`, `PATCH` y `DELETE` en `/team/members/{membership_id}`, `POST /team/claim-link` |
 | `webhooks:manage` | `GET`, `POST`, `PATCH` y `DELETE` en `/webhooks`, y `POST /webhooks/{webhook_id}/test` |
 
 Para suscribir un endpoint a un evento o cambiar su URL, su clave también necesita el permiso de lectura de ese evento. Por ejemplo, `call.completed` requiere `calls:read`, y la tabla de eventos de la página [Webhooks](/es/api/webhooks) indica los demás.
+
+## Claves de plataforma
+
+Una clave de plataforma (`lsp_...`) incorpora y gestiona muchos negocios, mientras que una clave de API actúa sobre uno solo. Los socios las usan para configurar los negocios de sus clientes, por ejemplo con [`lobbystack onboard`](/es/api/cli).
+
+Quien opera el despliegue crea las claves de plataforma; el panel no tiene una página para ellas. En un despliegue autoalojado, `pnpm platform-key:create` escribe una clave nueva en `.platform-keys/<prefix>.json` e imprime su entrada para [`PLATFORM_API_KEYS`](/es/self-hosting/environment-variables). Cada entrada define:
+
+- El socio al que pertenece la clave.
+- La cuenta verificada de LobbyStack en cuyo nombre actúa la clave (`owner_email`), que es la propietaria de los negocios que crea.
+- Si la clave llega a todos los negocios (`"access": "all"`, la clave de un operador; pase `--access all`) o, de forma predeterminada, solo a los que incorporó su socio.
+- Sus permisos. Salvo que usted indique algunos, una clave nueva recibe los permisos que puede tener una clave API. `POST /businesses` necesita `businesses:create` y `POST /users` necesita `users:create`. Solo las claves de plataforma pueden tener estos dos, y una clave nueva los recibe solo si usted pasa `--create-businesses` o `--create-users`. `GET /businesses` necesita `business:read`.
+
+<Warning>
+Una clave con `"access": "all"` actúa en nombre de la cuenta de su `owner_email` en todos los negocios del despliegue, sin formar parte de ningún equipo, y puede leerlos y cambiarlos todos. Esa clave, y esa cuenta con su contraseña, sus sesiones y su bandeja de entrada, son credenciales raíz. Déselas a la menor cantidad de personas posible, proteja la contraseña de la cuenta como la de la base de datos y quite la entrada de la clave de `PLATFORM_API_KEYS` si alguna se filtra. `pnpm platform-key:create --access all` muestra la misma advertencia.
+</Warning>
+
+Cuando el admin se reinicia sin la entrada de una clave en `PLATFORM_API_KEYS`, las solicitudes con esa clave fallan y LobbyStack desactiva los endpoints de webhook que creó la clave. Para conservar uno, vuelva a activarlo con otra de sus claves de plataforma.
+
+`POST /businesses` crea un negocio, y `GET /businesses` lista los que incorporó el socio. Las demás solicitudes indican su negocio en el encabezado `LobbyStack-Business`:
+
+```bash
+curl https://app.lobbystack.com/api/v1/services \
+  -H "Authorization: Bearer $LOBBYSTACK_PLATFORM_KEY" \
+  -H "LobbyStack-Business: 75795511-9ee2-4cb2-a89d-f173ec1dd82d"
+```
+
+Sin ese encabezado, la solicitud devuelve `400` con el código `business_required`. Un negocio al que la clave no puede llegar devuelve `404`. `GET /me` funciona sin el encabezado y muestra el socio y el acceso de la clave.
+
+`POST /team/claim-link` entrega un negocio a su propietario. Cuando lo acepta, la clave de un socio ya no llega al negocio, mientras que la de un operador sigue llegando. En ambos casos, `GET /businesses` deja de listarlo. LobbyStack también desactiva los endpoints de webhook del negocio que creó una clave de plataforma, la cuenta que envió el enlace o las claves API de esa cuenta.
+
+Solo una cuenta de LobbyStack verificada puede aceptar un enlace de reclamación, y la página del enlace permite que un propietario sin cuenta se registre primero. Para invitarlo antes, `POST /users` envía a la dirección un enlace de registro, o un enlace para iniciar sesión si la dirección ya tiene una cuenta. Nunca crea una cuenta: el propietario se registra con su propia contraseña o con Google. La respuesta es la misma en los dos casos, así que usted no puede saber quién tiene una cuenta. Una clave de plataforma puede invitar a 50 direcciones al día.
 
 ## Revoque una clave
 

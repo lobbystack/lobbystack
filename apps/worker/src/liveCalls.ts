@@ -1,7 +1,7 @@
 import { randomUUID, timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-import { callerIsDone, closeLiveSession, createAgentModel, createReceptionistAgent, LiveCallController, liveDelegationEnvironment, WRAP_UP_MAX_MS, type AgentChannel, type CallControl, type LiveCallSetup, type LiveCallSummary } from "@lobbystack/agent-core";
+import { callerIsDone, closeLiveSession, createAgentModel, createReceptionistAgent, LiveCallController, liveDelegationEnvironment, WRAP_UP_MAX_MS, type AgentChannel, type CallControl, type KeypadPasscodeCheck, type LiveCallSetup, type LiveCallSummary } from "@lobbystack/agent-core";
 import {
   blockLiveCaller,
   checkNumberTrialMinutes,
@@ -18,7 +18,7 @@ import {
   type OpenLiveCall,
 } from "@lobbystack/domain";
 import { renewVoicePresenceGateway, updateVoicePresence } from "@lobbystack/jobs";
-import { MAX_PHONE_CALL_MS } from "@lobbystack/shared";
+import { MAX_PHONE_CALL_MS, normalizeAppointmentChangePolicy } from "@lobbystack/shared";
 import OpenAI from "openai";
 
 import { recordLiveCallLatency, recordLiveDelegation, recordLiveDelegationGeneration } from "./liveCallTelemetry";
@@ -423,6 +423,8 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
           // False when the call started ending meanwhile, so GPT-Live doesn't announce a transfer.
           return controller.transferAfterAnnouncement(`tel:${destination}`);
         },
+        // Keypad presses reach only this sideband, so the controller takes the PIN.
+        collectPasscode: async (check: KeypadPasscodeCheck) => controller?.collectPasscode(check) ?? false,
       } : {}),
     };
     // In order, so a quick answer never lands before the referral it follows.
@@ -452,7 +454,7 @@ export function createLiveCallHandler(input: { domain: DomainContext; attachLock
       };
       // A recovered call, or one with a saved transcript, is already under
       // way, so the greeting fallback must not fire.
-      return { agent, callerDone, ...(recovery || saved > 0 ? {} : { greeting: snapshot.greeting }) };
+      return { agent, callerDone, ...(phone && normalizeAppointmentChangePolicy(snapshot.appointmentChangePolicy).verificationMode === "passcode_required" ? { maskKeypad: true } : {}), ...(recovery || saved > 0 ? {} : { greeting: snapshot.greeting }) };
     });
 
     const finish = async (summary: LiveCallSummary) => {

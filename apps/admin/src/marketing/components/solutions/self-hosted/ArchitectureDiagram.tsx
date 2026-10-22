@@ -1,0 +1,88 @@
+// Matches the services in docker-compose.yml and the data flow in
+// mintlify/self-hosting/overview.mdx.
+const apps = [
+  { name: "Dashboard", detail: "Admin app and API" },
+  { name: "Worker", detail: "Runs calls and background jobs" },
+]
+const data = [
+  { name: "PostgreSQL", detail: "Calls, contacts, settings" },
+  { name: "Redis", detail: "Queues and rate limits" },
+  { name: "Storage", detail: "Recordings and documents" },
+]
+
+export function ArchitectureDiagram() {
+  return (
+    <figure aria-label="How a call moves through a self-hosted LobbyStack">
+      <div className="flex flex-col lg:flex-row lg:items-center">
+        {/* Outside, left. Twilio and OpenAI share the only box in the row's
+            flow, so the tool line meets its edge; Caller sits above it. */}
+        <div className="flex flex-col lg:relative lg:w-44 lg:shrink-0">
+          <div className="flex flex-col lg:absolute lg:inset-x-0 lg:bottom-full">
+            <div className="rounded-xl border border-border/70 bg-background px-4 py-3">
+              <p className="text-sm font-medium text-foreground">Caller</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">Dials your business number</p>
+            </div>
+            <span className="mx-auto block h-6 w-px bg-border" aria-hidden="true"></span>
+          </div>
+          <div className="rounded-xl border border-border/70 bg-background px-4 py-3">
+            <p className="text-sm font-medium text-foreground">Twilio + OpenAI</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">GPT-Live answers the call from your accounts</p>
+          </div>
+        </div>
+
+        <div className="relative flex h-12 items-center justify-center lg:h-auto lg:min-w-24 lg:flex-1">
+          <span className="block h-full w-px bg-border lg:h-px lg:w-full" aria-hidden="true"></span>
+          <span className="absolute left-1/2 ml-3 text-[11px] whitespace-nowrap text-muted-foreground lg:bottom-2 lg:left-auto lg:ml-0">
+            Bookings and messages
+          </span>
+        </div>
+
+        {/* Your server */}
+        <div className="rounded-[1.35rem] border border-dashed border-foreground/35 bg-muted/30 p-4 md:p-5 lg:w-[50%] lg:shrink-0">
+          <p className="flex items-baseline justify-between gap-4 px-1">
+            <span className="text-sm font-semibold text-foreground">Your server</span>
+            <span className="font-mono text-xs text-muted-foreground">docker compose</span>
+          </p>
+          <div className="mt-4 rounded-xl border border-border/70 bg-background px-4 py-2.5 text-center text-sm">
+            <span className="font-medium text-foreground">Caddy</span>{" "}
+            <span className="text-muted-foreground"> · Routes your dashboard domain</span>
+          </div>
+          <ul className="mt-3 grid gap-3 sm:grid-cols-2">
+            {apps.map((service) => (
+              <li key={service.name} className="rounded-xl border border-border/70 bg-background px-4 py-3">
+                <p className="text-sm font-medium text-foreground">{service.name}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{service.detail}</p>
+              </li>
+            ))}
+          </ul>
+          <ul className="mt-3 grid gap-3 sm:grid-cols-3">
+            {data.map((service) => (
+              <li key={service.name} className="rounded-xl border border-foreground/15 bg-foreground/[0.04] px-4 py-3">
+                <p className="text-sm font-medium text-foreground">{service.name}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{service.detail}</p>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-4 px-1 text-xs text-muted-foreground">
+            Recordings, transcripts, and customer records stay in the bottom row.
+          </p>
+        </div>
+
+        <div className="relative flex h-12 items-center justify-center lg:h-auto lg:min-w-24 lg:flex-1">
+          <span className="block h-full w-px bg-border lg:h-px lg:w-full" aria-hidden="true"></span>
+          <span className="absolute left-1/2 ml-3 text-[11px] whitespace-nowrap text-muted-foreground lg:bottom-2 lg:left-auto lg:ml-0">
+            If you connect them
+          </span>
+        </div>
+
+        {/* Outside, right. Optional services the worker and dashboard call. */}
+        <div className="flex flex-col lg:w-44 lg:shrink-0">
+          <div className="rounded-xl border border-dashed border-border px-4 py-3">
+            <p className="text-sm font-medium text-foreground">Optional</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">Google Calendar, email, analytics, and website import</p>
+          </div>
+        </div>
+      </div>
+    </figure>
+  )
+}

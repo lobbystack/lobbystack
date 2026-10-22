@@ -6,6 +6,7 @@ import { requestJson } from "@/lib/request-json";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useStepNavigation } from "@/lib/use-step-navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { brandLinks, contactEmailFor } from "@lobbystack/shared";
 import { ArrowRight, Check, LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { planCards, billingErrorCodes } from "@lobbystack/shared";
@@ -95,7 +96,7 @@ export function OnboardingPlanSurface() {
       telemetry.track("web.onboarding.plan_checkout_started", { businessId: business.businessId, plan });
       startCheckout.mutate(plan);
     }
-    else window.location.assign(`mailto:hello@lobbystack.ai?subject=${encodeURIComponent(t("plan.enterpriseSubject"))}`);
+    else window.location.assign(`mailto:${contactEmailFor(brandLinks(), "sales")}?subject=${encodeURIComponent(t("plan.enterpriseSubject"))}`);
   }
 
   return (

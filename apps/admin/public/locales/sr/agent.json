@@ -108,7 +108,8 @@
         "from": "od {{amount}}",
         "range": "{{min}} – {{max}}",
         "inPerson": "Određuje se na licu mesta",
-        "none": "Nije postavljena"
+        "none": "Nije postavljena",
+        "discounted": "{{price}} (−{{percent}}%)"
       },
       "duplicated": "Usluga je duplirana.",
       "duplicateFailed": "Usluga nije duplirana.",
@@ -184,8 +185,12 @@
           "errors": {
             "invalid": "Unesite cenu, na primer 3.500 ili 12,50.",
             "rangeIncomplete": "Unesite i najnižu i najvišu cenu.",
-            "rangeOrder": "Najviša cena mora biti veća od najniže."
-          }
+            "rangeOrder": "Najviša cena mora biti veća od najniže.",
+            "discountInvalid": "Unesite popust od 0 do 100%."
+          },
+          "discount": "Popust",
+          "discountPercent": "Procenat popusta",
+          "discountPreview": "Klijenti plaćaju {{price}} umesto {{regular}}."
         },
         "active": {
           "label": "Može se zakazati",
@@ -379,9 +384,20 @@
       "label": "Dozvoli AI pomeranje",
       "hint": "Recepcioner može da pomeri potvrđen budući termin nakon provere slobodnih termina."
     },
-    "requireOtp": {
-      "label": "Traži jednokratni kod",
-      "hint": "Pošalji kod pre svakog otkazivanja ili pomeranja."
+    "verification": {
+      "label": "Provera pozivaoca",
+      "options": {
+        "phone_match_and_facts": "Broj telefona i detalji termina",
+        "otp_required": "Jednokratni kod SMS-om",
+        "passcode_required": "PIN na tastaturi",
+        "operator_only": "Vaš tim pravi izmene"
+      },
+      "descriptions": {
+        "phone_match_and_facts": "Pozivalac mora da zove sa broja sa kog je termin zakazan i da kaže vreme ili uslugu termina.",
+        "otp_required": "Pozivalac takođe pročita jednokratni kod poslat SMS-om na taj broj pre svakog otkazivanja ili pomeranja.",
+        "passcode_required": "Pozivalac takođe ukuca na tastaturi telefona PIN sačuvan na svom kontaktu. Zahtev pozivaoca bez PIN-a prosleđuje se vašem timu. PIN podesite na kartici Detalji svakog kontakta.",
+        "operator_only": "Recepcioner ne menja termine. Zahteve prosleđuje vašem timu."
+      }
     }
   },
   "actions": {

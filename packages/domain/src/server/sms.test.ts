@@ -18,10 +18,13 @@ const businessId = "business-1";
 let selects: unknown[][];
 let orderBys: SQL[][];
 let wheres: SQL[];
+/** Rows the fake transaction inserted, in order. */
+let inserts: Array<Record<string, unknown>>;
 
 beforeEach(() => {
   vi.stubEnv("CONTENT_RETENTION_ENABLED", "false");
-  selects = []; orderBys = []; wheres = [];
+  vi.stubEnv("BRAND_APP_NAME", "");
+  selects = []; orderBys = []; wheres = []; inserts = [];
   const chain = {
     from: () => chain, innerJoin: () => chain, where: (condition: SQL) => { wheres.push(condition); return chain; },
     orderBy: (...columns: SQL[]) => { orderBys.push(columns); return chain; },
@@ -29,7 +32,7 @@ beforeEach(() => {
   };
   const tx = {
     select: () => chain,
-    insert: () => ({ values: () => { const inserted = { onConflictDoNothing: () => inserted, returning: async () => [{ id: "created-1" }] }; return inserted; } }),
+    insert: () => ({ values: (row: Record<string, unknown>) => { inserts.push(row); const inserted = { onConflictDoNothing: () => inserted, returning: async () => [{ id: "created-1" }] }; return inserted; } }),
     update: () => ({ set: () => ({ where: async () => [] }) }),
   };
   mocks.transaction.mockImplementation(async (_db, _scope, run) => run(tx));
@@ -67,6 +70,29 @@ describe("new text alerts", () => {
     }
     // The alert's unique event key drops the second text's alert.
     expect(mocks.alert.mock.calls.map(([, alert]) => alert.eventKey)).toEqual(["pausedSms:conversation-1:2030-01-01T10", "pausedSms:conversation-1:2030-01-01T10", "pausedSms:conversation-1:2030-01-01T11"]);
+  });
+});
+
+describe("HELP replies", () => {
+  const help = async (branding: unknown[]) => {
+    // The contact, the open conversation and its session, then the saved branding.
+    selects = [[{ id: "contact-1", smsConsentStatus: "subscribed", operatorBlockedAt: null }], [{ id: "conversation-1", automationState: "ai_active" }], [{ id: "session-1" }], branding];
+    await receiveInboundSms(context, { businessId, providerMessageId: `SM${Math.random()}`, from: "+14165550123", to: "+14165550100", body: "HELP", payload: {} });
+    return inserts.find((row) => row.providerStatus === "compliance_reply")?.body;
+  };
+
+  it("keeps LobbyStack's registered wording when the deployment has no name of its own", async () => {
+    expect(await help([])).toBe("LobbyStack: For help, contact hello@lobbystack.com or visit https://lobbystack.com. Reply STOP to opt out.");
+  });
+
+  it("names the deployment its first owner chose", async () => {
+    expect(await help([{ appName: "Acme Desk", logoVersion: null }])).toBe("Acme Desk: For help, contact hello@lobbystack.com or visit https://lobbystack.com. Reply STOP to opt out.");
+  });
+
+  it("prefers BRAND_APP_NAME without reading the database", async () => {
+    vi.stubEnv("BRAND_APP_NAME", "Front Desk");
+    expect(await help([{ appName: "Acme Desk", logoVersion: null }])).toBe("Front Desk: For help, contact hello@lobbystack.com or visit https://lobbystack.com. Reply STOP to opt out.");
+    expect(selects).toEqual([[{ appName: "Acme Desk", logoVersion: null }]]);
   });
 });
 

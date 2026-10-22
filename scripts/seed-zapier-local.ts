@@ -25,7 +25,7 @@ async function main(): Promise<void> {
     throw new Error("seed-zapier-local only writes to a database on localhost.");
   }
   const { apiKeys, businessHours, businesses, createDatabaseClient, receptionistProfiles, services, staff, webhookDeliveries, webhookEndpoints, webhookEvents } = await import("@lobbystack/db");
-  const { apiKeyScopes } = await import("@lobbystack/shared");
+  const { businessApiKeyScopes } = await import("@lobbystack/shared");
   const { hashApiKey } = await import("@lobbystack/domain");
   const database = createDatabaseClient("lobbystack_migrator", { DATABASE_URL: raw });
   try {
@@ -65,7 +65,7 @@ async function main(): Promise<void> {
     });
     await database.db.delete(apiKeys).where(inArray(apiKeys.prefix, [PREFIX, NARROW_PREFIX]));
     await database.db.insert(apiKeys).values([
-      { businessId, name: "Zapier local test", prefix: PREFIX, keyHash: hashApiKey(ZAPIER_LOCAL_API_KEY), scopes: [...apiKeyScopes] },
+      { businessId, name: "Zapier local test", prefix: PREFIX, keyHash: hashApiKey(ZAPIER_LOCAL_API_KEY), scopes: [...businessApiKeyScopes] },
       { businessId, name: "Zapier local test (knowledge only)", prefix: NARROW_PREFIX, keyHash: hashApiKey(ZAPIER_LOCAL_NARROW_API_KEY), scopes: ["knowledge:write"] },
     ]);
     console.log(JSON.stringify({ status: "seeded", businessId, keyPrefix: PREFIX }));
