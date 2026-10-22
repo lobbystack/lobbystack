@@ -71,6 +71,7 @@ jobs:
             --exclude '^https://openai\.com/api/pricing/$'
             --exclude '^https://help\.openai\.com/'
             --exclude '^https://www\.openai\.fm/'
+            --exclude '^https://www\.bloomberg\.com/'
             --exclude '^https://www\.twilio\.com/'
             --exclude '^https://www\.ftc\.gov/'
             './apps/landing/src/**/*.astro'
