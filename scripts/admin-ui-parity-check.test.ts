@@ -19,6 +19,7 @@ describe("currentPageRoutes", () => {
       "apps/admin/app/(public)/[locale]/login/page.tsx",
       "apps/admin/app/(sensitive)/[locale]/reset-password/[token]/page.tsx",
       "apps/admin/app/(dashboard)/settings/page.tsx",
+      "apps/admin/app/(marketing)/site/[locale]/(pages)/pricing/page.tsx",
     ];
     await Promise.all(routes.map(async (route) => {
       const path = join(root, route);
