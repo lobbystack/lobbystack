@@ -197,7 +197,7 @@ export function LiveOverviewSurface() {
                       <p className="type-body-muted min-w-0 truncate">{appointment.serviceName ?? t("home.upcoming.unknownService")}</p>
                       <p className="type-body-muted text-right">{formatDateTime(appointment.startsAt, i18n.language, { hour: "numeric", minute: "2-digit", timeZone: appointment.timezone })}</p>
                       <p className="type-body-muted min-w-0 truncate">{appointment.employeeName ? t("home.upcoming.employee", { name: appointment.employeeName }) : null}</p>
-                      <div className="flex justify-end"><CancelAppointmentButton appointment={{ ...appointment, contactName }} /></div>
+                      <div className="flex justify-end"><CancelAppointmentButton appointment={{ ...appointment, contactName }} variant="destructive" /></div>
                     </div>
                     {index < summary.data.upcoming.length - 1 ? <Separator className="mt-4" /> : null}
                   </div>;
