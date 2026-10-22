@@ -4,7 +4,7 @@ import { ArrowUpRight } from "lucide-react"
 const steps: Array<{ title: string; body?: string; command?: string }> = [
   {
     title: "Clone the repository",
-    command: "git clone https://gitlab.com/lobbystack-group/lobbystack.git && cd lobbystack",
+    command: "git clone https://github.com/lobbystack/lobbystack.git && cd lobbystack",
   },
   {
     title: "Generate secrets",

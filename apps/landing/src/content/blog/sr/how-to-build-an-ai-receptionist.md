@@ -59,7 +59,7 @@ Za telefonske pozive pišete:
 
 [Stranica modela GPT-Live-1](https://developers.openai.com/api/docs/models/gpt-live-1) naplaćuje glasovne sesije $0.05 po minutu, obračunato po sekundi. Model na serveru i njegovi alati plaćaju se posebno, po redovnim cenama. Besplatni nivo API-ja nema pristup GPT-Live modelu, a nivo Build dozvoljava 50 istovremenih poziva.
 
-Ovaj put Vam daje punu kontrolu, i nijedna platforma ne uzima deo cene po minutu. Ostavlja Vam i svaki granični slučaj. Primer iz naših logova: GPT-Live čeka da pozivalac progovori prvi, pa svaki poziv počinjemo komandom za pozdrav. Od 3. do 8. oktobra 2026. pozdravio je na osnovu te komande u 24 od 40 poziva u kojima je zvuk bio povezan. Naše [beleške o glasovnom sistemu](https://gitlab.com/lobbystack-group/lobbystack/-/blob/main/docs/voice/runtime.md) opisuju ponovne pokušaje koje smo dodali za ostale pozive.
+Ovaj put Vam daje punu kontrolu, i nijedna platforma ne uzima deo cene po minutu. Ostavlja Vam i svaki granični slučaj. Primer iz naših logova: GPT-Live čeka da pozivalac progovori prvi, pa svaki poziv počinjemo komandom za pozdrav. Od 3. do 8. oktobra 2026. pozdravio je na osnovu te komande u 24 od 40 poziva u kojima je zvuk bio povezan. Naše [beleške o glasovnom sistemu](https://github.com/lobbystack/lobbystack/blob/main/docs/voice/runtime.md) opisuju ponovne pokušaje koje smo dodali za ostale pozive.
 
 ## Opcija 2: povežite GPT-Live sa brojem telefona
 
@@ -130,8 +130,8 @@ Da probate bez plaćanja, LobbyStack paket Free Vam daje 30 minuta razgovora mes
 Mi pravimo LobbyStack, pa ovaj deo čitajte imajući to u vidu. Za recepcionera sa zvukom ChatGPT-a, to je opcija koja Vam štedi najviše posla:
 
 - **Radi na modelu koji pokreće ChatGPT Voice.** Svaki poziv koristi `gpt-live-1` sa podrazumevanim OpenAI glasom, `marin`. Ne koristi nijedan od devet glasova iz ChatGPT aplikacije, jer ih API ne nudi.
-- **Glas je jedan red koda.** Na sopstvenoj instalaciji promenite `DEFAULT_VOICE` u [`packages/agent-core/src/live/session.ts`](https://gitlab.com/lobbystack-group/lobbystack/-/blob/main/packages/agent-core/src/live/session.ts) u bilo koji GPT-Live glas. Hostovani nalozi koriste `marin`; panel za sada nema izbor glasa.
-- **Otvorenog je koda, pod MIT licencom.** Pročitajte [licencu](https://gitlab.com/lobbystack-group/lobbystack/-/blob/main/LICENSE), forkujte kod, promenite uputstva ili ga preprodajte.
+- **Glas je jedan red koda.** Na sopstvenoj instalaciji promenite `DEFAULT_VOICE` u [`packages/agent-core/src/live/session.ts`](https://github.com/lobbystack/lobbystack/blob/main/packages/agent-core/src/live/session.ts) u bilo koji GPT-Live glas. Hostovani nalozi koriste `marin`; panel za sada nema izbor glasa.
+- **Otvorenog je koda, pod MIT licencom.** Pročitajte [licencu](https://github.com/lobbystack/lobbystack/blob/main/LICENSE), forkujte kod, promenite uputstva ili ga preprodajte.
 - **Postavlja se jednim dugmetom na Railway-ju.** [LobbyStack šablon za Railway](https://railway.com/deploy/lobbystack) postavlja admin, worker, servis za migracije, PostgreSQL, Redis i bucket za skladištenje. Railway generiše sve tajne ključeve i lozinke baza. Vi unosite OpenAI API ključ i Twilio pristupne podatke.
 
 Probni pozivi u pregledaču rade čim se postavljanje završi. Email, telefonski pozivi, uvoz sajta i Google kalendar traže dodatna podešavanja. Za telefon Vam trebaju OpenAI webhook, sa njegovom tajnom na adminu, i Twilio Elastic SIP trunk, sa njegovim ID-jem na workeru. [Vodič za hostovanje na sopstvenom serveru](https://docs.lobbystack.com/self-hosting/overview) opisuje oba koraka, a [Docker Compose vodič](https://docs.lobbystack.com/self-hosting/docker-compose) pokriva Vaše servere. Oba vodiča su na engleskom.

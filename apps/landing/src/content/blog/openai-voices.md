@@ -125,7 +125,7 @@ Pick by listening, with your own script. Some practical checks:
 - **Test on a phone.** Call audio sounds thinner than a laptop speaker, so judge the voice over a real call.
 - **Plan for one voice per call.** GPT-Live fixes the voice for the session, so it can't change mid-call.
 
-LobbyStack, our AI receptionist, runs every call on `gpt-live-1` with the default `marin` voice. If you self-host it, change `DEFAULT_VOICE` in [`packages/agent-core/src/live/session.ts`](https://gitlab.com/lobbystack-group/lobbystack/-/blob/main/packages/agent-core/src/live/session.ts) to any GPT-Live voice. The code is [open source under the MIT license](/solutions/open-source-ai-receptionist/). Hosted accounts use `marin`; the dashboard has no voice picker today.
+LobbyStack, our AI receptionist, runs every call on `gpt-live-1` with the default `marin` voice. If you self-host it, change `DEFAULT_VOICE` in [`packages/agent-core/src/live/session.ts`](https://github.com/lobbystack/lobbystack/blob/main/packages/agent-core/src/live/session.ts) to any GPT-Live voice. The code is [open source under the MIT license](/solutions/open-source-ai-receptionist/). Hosted accounts use `marin`; the dashboard has no voice picker today.
 
 ## OpenAI voice questions
 

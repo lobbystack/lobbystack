@@ -17,7 +17,7 @@
     openApi: `${siteUrl}/openapi.json`,
     skills: `${siteUrl}/.well-known/agent-skills/index.json`,
     llms: `${siteUrl}/llms.txt`,
-    gitlab: "https://gitlab.com/lobbystack-group/lobbystack",
+    github: "https://github.com/lobbystack/lobbystack",
   }
 
   const tools = [
@@ -69,7 +69,7 @@
             { label: "OpenAPI", url: urls.openApi },
             { label: "Agent skills", url: urls.skills },
             { label: "LLM context", url: urls.llms },
-            { label: "GitLab", url: urls.gitlab },
+            { label: "GitHub", url: urls.github },
           ],
           legal: [
             { label: "Privacy", url: `${siteUrl}/privacy/` },

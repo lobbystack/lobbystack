@@ -60,7 +60,7 @@ For phone calls, you write:
 
 OpenAI's [GPT-Live-1 model page](https://developers.openai.com/api/docs/models/gpt-live-1) prices voice sessions at $0.05 a minute, billed per second. The backend model and its tools cost extra at their normal rates. The API's Free usage tier can't use GPT-Live, and the Build tier allows 50 calls at once.
 
-This path gives you full control, and no platform takes a cut of the per-minute price. It also hands you every edge case. One example from our own logs: GPT-Live waits for the caller to speak first, so we start each call with a greeting command. From October 3 to 8, 2026, it greeted from that command on 24 of 40 calls that connected audio. Our [voice runtime notes](https://gitlab.com/lobbystack-group/lobbystack/-/blob/main/docs/voice/runtime.md) explain the retries we added for the other calls.
+This path gives you full control, and no platform takes a cut of the per-minute price. It also hands you every edge case. One example from our own logs: GPT-Live waits for the caller to speak first, so we start each call with a greeting command. From October 3 to 8, 2026, it greeted from that command on 24 of 40 calls that connected audio. Our [voice runtime notes](https://github.com/lobbystack/lobbystack/blob/main/docs/voice/runtime.md) explain the retries we added for the other calls.
 
 ## Option 2: Connect GPT-Live to a phone number
 
@@ -131,8 +131,8 @@ To try one without paying, LobbyStack's Free plan gives you 30 voice minutes a m
 We build LobbyStack, so weigh this section with that in mind. For a receptionist with the ChatGPT sound, it removes the most work:
 
 - **It runs on the model behind ChatGPT Voice.** Every call uses `gpt-live-1` with OpenAI's default voice, `marin`. It doesn't use one of the nine ChatGPT app voices, because the API doesn't offer them.
-- **The voice is one line of code.** On your own install, change `DEFAULT_VOICE` in [`packages/agent-core/src/live/session.ts`](https://gitlab.com/lobbystack-group/lobbystack/-/blob/main/packages/agent-core/src/live/session.ts) to any GPT-Live voice. Hosted accounts use `marin`; the dashboard has no voice picker today.
-- **It's open source under the MIT license.** Read the [license](https://gitlab.com/lobbystack-group/lobbystack/-/blob/main/LICENSE), fork the code, change the prompts or resell it.
+- **The voice is one line of code.** On your own install, change `DEFAULT_VOICE` in [`packages/agent-core/src/live/session.ts`](https://github.com/lobbystack/lobbystack/blob/main/packages/agent-core/src/live/session.ts) to any GPT-Live voice. Hosted accounts use `marin`; the dashboard has no voice picker today.
+- **It's open source under the MIT license.** Read the [license](https://github.com/lobbystack/lobbystack/blob/main/LICENSE), fork the code, change the prompts or resell it.
 - **It deploys from one button on Railway.** The [LobbyStack Railway template](https://railway.com/deploy/lobbystack) deploys the admin, the worker, a migration service, PostgreSQL, Redis and a storage bucket. Railway generates every secret and database password. You paste an OpenAI API key and your Twilio credentials.
 
 Browser test calls work as soon as the deploy finishes. Email, phone calls, website import and Google Calendar need more setup. For phone calls, that means an OpenAI webhook, with its secret on the admin, and a Twilio Elastic SIP trunk, with its ID on the worker. The [self-hosting guide](https://docs.lobbystack.com/self-hosting/overview) walks through both, and a [Docker Compose guide](https://docs.lobbystack.com/self-hosting/docker-compose) covers your own servers.

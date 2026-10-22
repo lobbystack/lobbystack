@@ -125,7 +125,7 @@ Birajte slušanjem, sa sopstvenim tekstom. Nekoliko korisnih provera:
 - **Testirajte telefonom.** Zvuk poziva je tanji od zvučnika na laptopu, pa glas ocenite u pravom pozivu.
 - **Računajte na jedan glas po pozivu.** GPT-Live zaključava glas za sesiju; ne menja se usred poziva.
 
-LobbyStack, naš AI recepcioner, vodi svaki poziv na `gpt-live-1` modelu sa podrazumevanim glasom `marin`. Ako ga hostujete sami, promenite `DEFAULT_VOICE` u [`packages/agent-core/src/live/session.ts`](https://gitlab.com/lobbystack-group/lobbystack/-/blob/main/packages/agent-core/src/live/session.ts) u bilo koji GPT-Live glas. Kod je [otvoren, pod MIT licencom](/sr/solutions/open-source-ai-receptionist/). Hostovani nalozi koriste `marin`; panel za sada nema izbor glasa.
+LobbyStack, naš AI recepcioner, vodi svaki poziv na `gpt-live-1` modelu sa podrazumevanim glasom `marin`. Ako ga hostujete sami, promenite `DEFAULT_VOICE` u [`packages/agent-core/src/live/session.ts`](https://github.com/lobbystack/lobbystack/blob/main/packages/agent-core/src/live/session.ts) u bilo koji GPT-Live glas. Kod je [otvoren, pod MIT licencom](/sr/solutions/open-source-ai-receptionist/). Hostovani nalozi koriste `marin`; panel za sada nema izbor glasa.
 
 ## Pitanja o OpenAI glasovima
 

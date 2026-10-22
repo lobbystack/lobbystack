@@ -125,7 +125,7 @@ Elija escuchando, con su propio guion. Algunas pruebas útiles:
 - **Pruebe por teléfono.** El audio de una llamada suena más delgado que el altavoz de una computadora, así que juzgue la voz en una llamada real.
 - **Cuente con una voz por llamada.** GPT-Live fija la voz para la sesión; no cambia a mitad de la llamada.
 
-LobbyStack, nuestra recepcionista con IA, atiende cada llamada con `gpt-live-1` y la voz predeterminada, `marin`. Si la aloja usted, cambie `DEFAULT_VOICE` en [`packages/agent-core/src/live/session.ts`](https://gitlab.com/lobbystack-group/lobbystack/-/blob/main/packages/agent-core/src/live/session.ts) por cualquier voz de GPT-Live. El código es [de código abierto con licencia MIT](/es/solutions/open-source-ai-receptionist/). Las cuentas alojadas usan `marin`; el panel no tiene selector de voz por ahora.
+LobbyStack, nuestra recepcionista con IA, atiende cada llamada con `gpt-live-1` y la voz predeterminada, `marin`. Si la aloja usted, cambie `DEFAULT_VOICE` en [`packages/agent-core/src/live/session.ts`](https://github.com/lobbystack/lobbystack/blob/main/packages/agent-core/src/live/session.ts) por cualquier voz de GPT-Live. El código es [de código abierto con licencia MIT](/es/solutions/open-source-ai-receptionist/). Las cuentas alojadas usan `marin`; el panel no tiene selector de voz por ahora.
 
 ## Preguntas sobre las voces de OpenAI
 

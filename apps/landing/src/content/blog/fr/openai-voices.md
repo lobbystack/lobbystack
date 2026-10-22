@@ -124,7 +124,7 @@ Choisissez à l'écoute, avec votre propre texte. Quelques vérifications utiles
 - **Testez au téléphone.** Le son d'un appel est plus mince que celui d'un haut-parleur d'ordinateur : jugez la voix sur un vrai appel.
 - **Prévoyez une voix par appel.** GPT-Live fixe la voix pour la session ; elle ne change pas en cours d'appel.
 
-LobbyStack, notre réceptionniste IA, fait tourner chaque appel sur `gpt-live-1` avec la voix par défaut, `marin`. En auto-hébergement, remplacez `DEFAULT_VOICE` dans [`packages/agent-core/src/live/session.ts`](https://gitlab.com/lobbystack-group/lobbystack/-/blob/main/packages/agent-core/src/live/session.ts) par n'importe quelle voix GPT-Live. Le code est [open source sous licence MIT](/fr/solutions/open-source-ai-receptionist/). Les comptes hébergés utilisent `marin` ; le tableau de bord n'a pas de sélecteur de voix pour l'instant.
+LobbyStack, notre réceptionniste IA, fait tourner chaque appel sur `gpt-live-1` avec la voix par défaut, `marin`. En auto-hébergement, remplacez `DEFAULT_VOICE` dans [`packages/agent-core/src/live/session.ts`](https://github.com/lobbystack/lobbystack/blob/main/packages/agent-core/src/live/session.ts) par n'importe quelle voix GPT-Live. Le code est [open source sous licence MIT](/fr/solutions/open-source-ai-receptionist/). Les comptes hébergés utilisent `marin` ; le tableau de bord n'a pas de sélecteur de voix pour l'instant.
 
 ## Questions sur les voix OpenAI
 

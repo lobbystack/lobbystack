@@ -2,7 +2,7 @@ import { Check, Copy } from "lucide-react"
 
 import { CopyCommandButtons } from "@/marketing/components/solutions/self-hosted/CopyCommandButtons"
 
-const command = "git clone https://gitlab.com/lobbystack-group/lobbystack.git"
+const command = "git clone https://github.com/lobbystack/lobbystack.git"
 
 export function InstallCommand() {
   return (

@@ -169,7 +169,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
         title: "Pourquoi le produit est open source",
         body: "Les flux téléphoniques utilisent des données client, des règles de réservation et des politiques d’escalade. Une équipe doit pouvoir vérifier ces décisions plutôt que dépendre d’une boîte noire.",
         points: [
-          "Examiner le code, le modèle de déploiement et les limites de données sur GitLab",
+          "Examiner le code, le modèle de déploiement et les limites de données sur GitHub",
           "Commencer dans le cloud puis auto-héberger lorsque les besoins changent",
           "Conserver une voie de sortie face au verrouillage fournisseur",
         ],
@@ -197,7 +197,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
     relatedLinks: [
       { label: "Fonctionnalités", href: "/features/" },
       { label: "Documentation publique", href: "/docs/api/" },
-      { label: "GitLab", href: "https://gitlab.com/lobbystack-group/lobbystack" },
+      { label: "GitHub", href: "https://github.com/lobbystack/lobbystack" },
     ],
     ctaHeading: "Répondez à chaque appel sans surcharger votre équipe",
     ctaBody:
@@ -648,8 +648,8 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
       faqHeading: "Questions sur l’auto-hébergement de LobbyStack",
       relatedLinks: [
         {
-          label: "Code source sur GitLab",
-          href: "https://gitlab.com/lobbystack-group/lobbystack",
+          label: "Code source sur GitHub",
+          href: "https://github.com/lobbystack/lobbystack",
         },
         { label: "Documentation publique", href: "/docs/api/" },
         {
@@ -662,8 +662,8 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
         "Consultez le code, la licence et la documentation avant de choisir entre le cloud géré et l’auto-hébergement.",
       ctaPrimaryLabel: "Lire la documentation",
       ctaPrimaryHref: "/docs/api/",
-      ctaSecondaryLabel: "Voir sur GitLab",
-      ctaSecondaryHref: "https://gitlab.com/lobbystack-group/lobbystack",
+      ctaSecondaryLabel: "Voir sur GitHub",
+      ctaSecondaryHref: "https://github.com/lobbystack/lobbystack",
     }
   ),
 
@@ -1323,7 +1323,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
           points: [
             "Code de prise d’appel et de routage consultable",
             "Limites de données et fournisseurs visibles",
-            "Problèmes et changements suivis publiquement sur GitLab",
+            "Problèmes et changements suivis publiquement sur GitHub",
           ],
         },
         {
@@ -1392,8 +1392,8 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
       ctaHeading: "Examinez le code avant de confier vos appels au système",
       ctaBody:
         "Consultez le dépôt sous licence MIT, la documentation et les options de déploiement de LobbyStack.",
-      ctaPrimaryLabel: "Voir sur GitLab",
-      ctaPrimaryHref: "https://gitlab.com/lobbystack-group/lobbystack",
+      ctaPrimaryLabel: "Voir sur GitHub",
+      ctaPrimaryHref: "https://github.com/lobbystack/lobbystack",
       ctaSecondaryLabel: "Lire la documentation",
       ctaSecondaryHref: "/docs/api/",
     }

@@ -177,7 +177,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         title: "Por qué lo creamos de código abierto",
         body: "Los flujos telefónicos trabajan con datos de clientes, reglas de reserva y políticas de escalamiento. Los equipos deberían poder revisar cómo se toman esas decisiones en lugar de confiar en una caja negra.",
         points: [
-          "Revise en GitLab el código con licencia MIT, el modelo de despliegue y los límites de los datos",
+          "Revise en GitHub el código con licencia MIT, el modelo de despliegue y los límites de los datos",
           "Empiece en LobbyStack Cloud y pase al autoalojamiento cuando su equipo necesite más control",
           "Evite depender de un proveedor en la capa que atiende a cada persona que llama",
         ],
@@ -205,7 +205,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
     relatedLinks: [
       { label: "Funciones", href: "/features/" },
       { label: "Documentación pública", href: "/docs/api/" },
-      { label: "GitLab", href: "https://gitlab.com/lobbystack-group/lobbystack" },
+      { label: "GitHub", href: "https://github.com/lobbystack/lobbystack" },
     ],
     ctaHeading: "Responda cada llamada sin sobrecargar a su equipo",
     ctaBody:
@@ -719,7 +719,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
           question:
             "¿Cómo funcionan las actualizaciones en un despliegue autoalojado?",
           answer:
-            "Usted descarga los cambios del repositorio de GitLab, revisa el registro de cambios y las notas de migración, y vuelve a desplegar con su propio proceso de publicación. Fije la versión que ya probó en lugar de desplegar automáticamente cada cambio del proyecto original.",
+            "Usted descarga los cambios del repositorio de GitHub, revisa el registro de cambios y las notas de migración, y vuelve a desplegar con su propio proceso de publicación. Fije la versión que ya probó en lugar de desplegar automáticamente cada cambio del proyecto original.",
         },
         {
           question:
@@ -730,7 +730,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "¿Ofrecen soporte para instalaciones autoalojadas?",
           answer:
-            "Empiece por la documentación del repositorio y el registro público de incidencias en GitLab. Para preguntas que no corresponden a una incidencia pública, contacte al equipo de LobbyStack en la dirección de soporte que aparece en el sitio.",
+            "Empiece por la documentación del repositorio y el registro público de incidencias en GitHub. Para preguntas que no corresponden a una incidencia pública, contacte al equipo de LobbyStack en la dirección de soporte que aparece en el sitio.",
         },
         {
           question:
@@ -746,7 +746,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
       ],
       faqHeading: "Preguntas sobre la recepcionista con IA autoalojada",
       relatedLinks: [
-        { label: "GitLab", href: "https://gitlab.com/lobbystack-group/lobbystack" },
+        { label: "GitHub", href: "https://github.com/lobbystack/lobbystack" },
         { label: "Documentación de la API", href: "/docs/api/" },
         pricingLink,
       ],
@@ -755,8 +755,8 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         "La guía de autoalojamiento explica los servicios, las cuentas de proveedores y las copias de seguridad que tendrá que administrar. La guía de Docker Compose describe un despliegue en un solo servidor.",
       ctaPrimaryLabel: "Leer la guía de autoalojamiento",
       ctaPrimaryHref: "https://docs.lobbystack.com/self-hosting/overview",
-      ctaSecondaryLabel: "Ver en GitLab",
-      ctaSecondaryHref: "https://gitlab.com/lobbystack-group/lobbystack",
+      ctaSecondaryLabel: "Ver en GitHub",
+      ctaSecondaryHref: "https://github.com/lobbystack/lobbystack",
     }
   ),
 
@@ -1833,7 +1833,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "¿Dónde encuentro el código fuente?",
           answer:
-            "El código fuente de LobbyStack está en GitLab, en gitlab.com/lobbystack-group/lobbystack. Puede revisarlo, abrir incidencias y contribuir cambios.",
+            "El código fuente de LobbyStack está en GitHub, en github.com/lobbystack/lobbystack. Puede revisarlo, abrir incidencias y contribuir cambios.",
         },
       ],
       faqHeading: "Preguntas sobre la recepcionista con IA de código abierto",
@@ -1842,7 +1842,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
           label: "Despliegue autoalojado",
           href: "/solutions/self-hosted-ai-receptionist/",
         },
-        { label: "GitLab", href: "https://gitlab.com/lobbystack-group/lobbystack" },
+        { label: "GitHub", href: "https://github.com/lobbystack/lobbystack" },
         { label: "Documentación de la API", href: "/docs/api/" },
         pricingLink,
       ],
@@ -1850,8 +1850,8 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         "Revise, personalice y despliegue una recepcionista con IA que puede verificar",
       ctaBody:
         "LobbyStack es de código abierto para que pueda auditar la lógica de las llamadas, modificar el flujo de trabajo y desplegarla en su propia infraestructura. Sin cajas negras. Sin dependencia de un proveedor.",
-      ctaPrimaryLabel: "Ver en GitLab",
-      ctaPrimaryHref: "https://gitlab.com/lobbystack-group/lobbystack",
+      ctaPrimaryLabel: "Ver en GitHub",
+      ctaPrimaryHref: "https://github.com/lobbystack/lobbystack",
       ctaSecondaryLabel: "Leer la documentación de despliegue",
       ctaSecondaryHref: "/docs/api/",
     }
