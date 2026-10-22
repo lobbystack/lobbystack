@@ -2,9 +2,9 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
-// Same as the services and rules tables: a narrow column that scrolls with the rest.
 const DATA_TABLE_ROW_ACTIONS_COLGROUP_CLASS = "w-12";
-const DATA_TABLE_ROW_ACTIONS_CELL_CLASS = "text-right";
+// Below xl the table scrolls sideways, so the actions stay pinned to the right edge where people can reach them.
+const DATA_TABLE_ROW_ACTIONS_CELL_CLASS = "text-right max-xl:sticky max-xl:right-0 max-xl:bg-card";
 
 function DataTableRowActions({
   children,
