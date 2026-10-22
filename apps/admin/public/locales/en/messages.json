@@ -33,6 +33,8 @@
     "automationUpdateFailed": "Couldn't update the handoff state.",
     "filterAll": "All",
     "filterWeb": "Web",
+    "filterInstagram": "Instagram",
+    "instagramSubtitle": "Instagram direct message",
     "filterSms": "SMS",
     "takeOver": "Take over",
     "waitingBadge": "Wants a person",

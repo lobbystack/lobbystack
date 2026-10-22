@@ -105,6 +105,7 @@ export const AI_EVENT_NAMES = ["$ai_generation"] as const;
 export const INTEGRATION_EVENT_NAMES = [
   "integration.calendar_connected",
   "integration.calendar_sync_failed",
+  "integration.instagram_connected",
 ] as const;
 
 export const WORKFLOW_EVENT_NAMES = [
@@ -498,6 +499,7 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
     "provider",
     "scope",
   ],
+  "integration.instagram_connected": ["businessId", "deploymentMode"],
   "integration.calendar_sync_failed": [
     "businessId",
     "deploymentMode",

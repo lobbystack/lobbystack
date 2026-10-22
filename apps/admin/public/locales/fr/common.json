@@ -45,10 +45,12 @@
     "sms": "SMS",
     "webChat": "Clavardage du site",
     "dashboard": "Tableau de bord",
-    "api": "API"
+    "api": "API",
+    "instagram": "Instagram"
   },
   "contactFallback": {
     "phoneCaller": "Appelant par téléphone",
+    "instagramUser": "Utilisateur Instagram",
     "webCaller": "Appelant web",
     "websiteVisitor": "Visiteur du site",
     "unknown": "Contact inconnu"

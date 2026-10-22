@@ -121,7 +121,7 @@ export async function getOrCreateConversation(
   });
 }
 
-type MessageInput = { businessId: string; conversationId: string; body: string; direction: "inbound" | "outbound"; channel: "sms" | "dashboard" | "web_chat"; providerMessageId?: string; aiGenerated?: boolean; userId?: string };
+type MessageInput = { businessId: string; conversationId: string; body: string; direction: "inbound" | "outbound"; channel: "sms" | "dashboard" | "web_chat" | "instagram"; providerMessageId?: string; aiGenerated?: boolean; userId?: string };
 
 /**
  * Saves a message in the caller's transaction and queues its realtime update
@@ -165,6 +165,16 @@ export async function insertMessageInTransaction(tx: DatabaseTransaction, input:
       payload: { messageId: message.id },
     });
   }
+  if (input.direction === "outbound" && input.channel === "instagram") {
+    await enqueueOutbox(tx, {
+      topic: "instagram.send",
+      businessId: input.businessId,
+      aggregateType: "message",
+      aggregateId: message.id,
+      dedupeKey: `message:${message.id}:send`,
+      payload: { messageId: message.id },
+    });
+  }
   return message.id;
 }
 
@@ -172,8 +182,8 @@ export async function appendMessage(
   context: DomainContext,
   input: MessageInput & { operatorAlert?: { eventKind: OperatorNotificationEventKey; subject: string; body: string } },
 ): Promise<string> {
-  // A team member who writes in a website chat takes it over, so the AI stops answering alongside them.
-  const takesOver = input.userId !== undefined && input.direction === "outbound" && input.channel === "web_chat";
+  // A team member who writes in a website or Instagram chat takes it over, so the AI stops answering alongside them.
+  const takesOver = input.userId !== undefined && input.direction === "outbound" && (input.channel === "web_chat" || input.channel === "instagram");
   const { messageId, takeOver } = await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: input.userId ? "operator" : "worker" }, async (tx) => {
     if (input.userId) {
       await requireBusinessMembership(tx, { userId: input.userId, businessId: input.businessId, minimumRole: "scheduler" });

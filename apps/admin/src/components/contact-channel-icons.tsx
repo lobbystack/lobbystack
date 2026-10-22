@@ -1,6 +1,6 @@
 "use client";
 
-import { MessageSquare, MessagesSquare, MonitorSmartphone, Phone, type LucideIcon } from "lucide-react";
+import { MessageCircle, MessageSquare, MessagesSquare, MonitorSmartphone, Phone, type LucideIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -12,6 +12,7 @@ export const CONTACT_CHANNEL_ICONS: Record<ContactChannel, LucideIcon> = {
   web_call: MonitorSmartphone,
   sms: MessageSquare,
   web_chat: MessagesSquare,
+  instagram: MessageCircle,
 };
 
 /** One icon per channel the contact used, each with an accessible name and a tooltip. */

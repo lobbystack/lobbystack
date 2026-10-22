@@ -33,6 +33,8 @@
     "automationUpdateFailed": "No se pudo actualizar el estado de la atención humana.",
     "filterAll": "Todos",
     "filterWeb": "Web",
+    "filterInstagram": "Instagram",
+    "instagramSubtitle": "Mensaje directo de Instagram",
     "filterSms": "SMS",
     "takeOver": "Tomar el control",
     "waitingBadge": "Pide una persona",

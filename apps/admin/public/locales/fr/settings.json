@@ -507,6 +507,10 @@
       "zapier": {
         "title": "Zapier",
         "description": "Reliez les appels, les réservations et les contacts à des milliers d'applications."
+      },
+      "instagram": {
+        "title": "Instagram",
+        "description": "Répondez aux messages privés Instagram avec les mêmes connaissances que votre réceptionniste."
       }
     },
     "status": {
@@ -521,6 +525,16 @@
       "connectedCalendars": "Calendriers connectés",
       "openIssues": "Problèmes ouverts",
       "syncedAppointments": "Rendez-vous synchronisés"
+    },
+    "instagram": {
+      "connectedSuccess": "Instagram est connecté. Votre réceptionniste répond désormais aux messages privés.",
+      "connectFailed": "Impossible de connecter Instagram. Veuillez réessayer.",
+      "accountInUse": "Ce compte Instagram est déjà connecté à un autre espace de travail.",
+      "disconnectedSuccess": "Instagram est déconnecté.",
+      "disconnect": "Déconnecter",
+      "reconnect": "Reconnecter",
+      "connectedAs": "Répond aux messages privés en tant que @{{username}}.",
+      "notConfigured": "Instagram n'est pas encore configuré sur ce serveur."
     }
   },
   "profile": {

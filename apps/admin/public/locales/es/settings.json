@@ -507,6 +507,10 @@
       "zapier": {
         "title": "Zapier",
         "description": "Conecte llamadas, reservas y contactos con miles de aplicaciones."
+      },
+      "instagram": {
+        "title": "Instagram",
+        "description": "Responda a los mensajes directos de Instagram con los mismos conocimientos que su recepcionista."
       }
     },
     "status": {
@@ -521,6 +525,16 @@
       "connectedCalendars": "Calendarios conectados",
       "openIssues": "Problemas de sincronización abiertos",
       "syncedAppointments": "Citas sincronizadas"
+    },
+    "instagram": {
+      "connectedSuccess": "Instagram está conectado. Su recepcionista ahora responde a los mensajes directos.",
+      "connectFailed": "No se pudo conectar Instagram. Inténtelo de nuevo.",
+      "accountInUse": "Esta cuenta de Instagram ya está conectada a otro espacio de trabajo.",
+      "disconnectedSuccess": "Instagram desconectado.",
+      "disconnect": "Desconectar",
+      "reconnect": "Volver a conectar",
+      "connectedAs": "Responde a los mensajes directos como @{{username}}.",
+      "notConfigured": "Instagram aún no está configurado en este servidor."
     }
   },
   "profile": {

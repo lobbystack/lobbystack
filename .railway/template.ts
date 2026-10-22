@@ -130,6 +130,11 @@ export default defineRailway((ctx) => {
       GOOGLE_CLIENT_ID: preserve(),
       GOOGLE_CLIENT_SECRET: preserve(),
       GOOGLE_REDIRECT_URI: "${{APP_BASE_URL}}/api/calendar/google/callback",
+      // Optional user input for Instagram direct messages: a Meta app with Instagram Business Login.
+      INSTAGRAM_APP_ID: preserve(),
+      INSTAGRAM_APP_SECRET: preserve(),
+      INSTAGRAM_REDIRECT_URI: "${{APP_BASE_URL}}/api/integrations/instagram/callback",
+      INSTAGRAM_WEBHOOK_VERIFY_TOKEN: preserve(),
       // Other role URLs are built from DATABASE_URL and the role passwords (packages/db roleDatabaseUrl).
       DATABASE_URL: roleUrl("lobbystack_app", "LOBBYSTACK_APP_PASSWORD"),
       LOBBYSTACK_AUTH_PASSWORD: "${{Postgres.LOBBYSTACK_AUTH_PASSWORD}}",
@@ -181,6 +186,9 @@ export default defineRailway((ctx) => {
       GOOGLE_CLIENT_ID: "${{admin.GOOGLE_CLIENT_ID}}",
       GOOGLE_CLIENT_SECRET: "${{admin.GOOGLE_CLIENT_SECRET}}",
       GOOGLE_REDIRECT_URI: "${{admin.GOOGLE_REDIRECT_URI}}",
+      // Instagram replies and token refresh use the same Meta app as admin.
+      INSTAGRAM_APP_ID: "${{admin.INSTAGRAM_APP_ID}}",
+      INSTAGRAM_APP_SECRET: "${{admin.INSTAGRAM_APP_SECRET}}",
       DATABASE_URL: roleUrl("lobbystack_worker", "LOBBYSTACK_WORKER_PASSWORD"),
       LOBBYSTACK_DISPATCHER_PASSWORD: "${{Postgres.LOBBYSTACK_DISPATCHER_PASSWORD}}",
       ENCRYPTION_KEY: "${{admin.ENCRYPTION_KEY}}",

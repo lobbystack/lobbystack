@@ -1,4 +1,4 @@
-import { and, desc, eq, ilike, ne, or, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, notInArray, or, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { contacts, conversations, messages, widgetVisitors } from "@lobbystack/db";
@@ -29,7 +29,7 @@ export const GET = operatorRoute(async ({ request, businessId, transaction }) =>
     const latest = tx.select({ id: messages.id, body: messages.body, direction: messages.direction, status: messages.status, createdAt: messages.createdAt }).from(messages).where(eq(messages.conversationId, conversations.id)).orderBy(desc(messages.createdAt)).limit(1).as("latest");
     const rows = await tx.select({ id: latest.id, ...conversationFields, body: latest.body, direction: latest.direction, status: latest.status, createdAt: latest.createdAt }).from(conversations).innerJoinLateral(latest, sql`true`).leftJoin(contacts, eq(conversations.contactId, contacts.id)).leftJoin(widgetVisitors, eq(conversations.widgetVisitorId, widgetVisitors.id)).where(and(
       eq(conversations.businessId, businessId),
-      channel === "web_chat" ? eq(conversations.channel, "web_chat") : channel === "sms" ? ne(conversations.channel, "web_chat") : undefined,
+      channel === "web_chat" || channel === "instagram" ? eq(conversations.channel, channel) : channel === "sms" ? notInArray(conversations.channel, ["web_chat", "instagram"]) : undefined,
       search ? or(...[contacts.name, contacts.phone, widgetVisitors.name, widgetVisitors.email, latest.body].map((column) => ilike(column, `%${search}%`))) : undefined,
     )).orderBy(desc(latest.createdAt), desc(conversations.id)).limit(limit + 1).offset(offset);
     return { messages: rows.slice(0, limit), hasNext: rows.length > limit };
@@ -37,7 +37,7 @@ export const GET = operatorRoute(async ({ request, businessId, transaction }) =>
 });
 
 export const POST = operatorRoute(async ({ userId, businessId, body: input, domain }) => {
-  const body = input as { conversationId?: string; body?: string; channel?: "sms" | "dashboard" | "web_chat" };
+  const body = input as { conversationId?: string; body?: string; channel?: "sms" | "dashboard" | "web_chat" | "instagram" };
   if (!body.conversationId || !body.body) return jsonError("conversationId and body are required.", 400);
   return NextResponse.json({ messageId: await appendMessage(domain, { businessId, conversationId: body.conversationId, body: body.body, direction: "outbound", channel: body.channel ?? "dashboard", userId }) }, { status: 201 });
 });

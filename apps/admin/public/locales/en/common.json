@@ -39,10 +39,12 @@
     "sms": "SMS",
     "webChat": "Website chat",
     "dashboard": "Dashboard",
-    "api": "API"
+    "api": "API",
+    "instagram": "Instagram"
   },
   "contactFallback": {
     "phoneCaller": "Phone caller",
+    "instagramUser": "Instagram user",
     "webCaller": "Web caller",
     "websiteVisitor": "Website visitor",
     "unknown": "Unknown contact"

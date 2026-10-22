@@ -45,10 +45,12 @@
     "sms": "SMS",
     "webChat": "Čet na sajtu",
     "dashboard": "Kontrolna tabla",
-    "api": "API"
+    "api": "API",
+    "instagram": "Instagram"
   },
   "contactFallback": {
     "phoneCaller": "Pozivalac telefonom",
+    "instagramUser": "Korisnik Instagrama",
     "webCaller": "Pozivalac preko veba",
     "websiteVisitor": "Posetilac sajta",
     "unknown": "Nepoznat kontakt"

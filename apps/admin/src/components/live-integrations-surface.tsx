@@ -16,6 +16,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldLabel } from "@/components/ui/field";
+import { InstagramIntegrationCard } from "@/components/instagram-integration-card";
 import { PageHeader } from "@/components/page-header";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -83,7 +84,7 @@ export function LiveIntegrationsSurface() {
           {integrations.isLoading ? <Skeleton className="h-9 w-24 rounded-md" /> : <Button disabled={!canManage} onClick={() => google ? setDialogOpen(true) : void connect()} size="sm" type="button" variant="outline" className={connected ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800/60 dark:bg-emerald-950/30 dark:text-emerald-300" : undefined}>{connected ? t("integrations.actions.connected") : syncing ? t("integrations.status.syncing") : google ? t("integrations.google.reconnect") : t("integrations.actions.connect")}</Button>}
         </div></div>
         <div className="flex flex-col gap-1"><h2 className="type-section-title text-lg">{t("integrations.cards.google.title")}</h2><p className="type-body-muted line-clamp-2">{t("integrations.cards.google.description")}</p></div>
-      </li><li className={`${surfaceClassName} p-4`}>
+      </li><InstagramIntegrationCard businessId={business?.businessId} canManage={canManage} /><li className={`${surfaceClassName} p-4`}>
         <div className="mb-8 flex items-center justify-between gap-3"><div className="flex size-10 shrink-0 items-center justify-center"><Webhook aria-hidden="true" className="size-7" /></div><Button disabled={!canManage} nativeButton={false} render={<Link href="/integrations/webhooks" />} size="sm" variant="outline">{t("integrations.actions.manage")}</Button></div>
         <div className="flex flex-col gap-1"><h2 className="type-section-title text-lg">{t("integrations.cards.webhooks.title")}</h2><p className="type-body-muted line-clamp-2">{t("integrations.cards.webhooks.description")}</p></div>
       </li><li className={`${surfaceClassName} p-4`}>

@@ -21,6 +21,7 @@ import type OpenAI from "openai";
 import { extractDocumentTextInThread, type OcrRecorder } from "./documentExtraction";
 import { isLivePrototypeEnabled, type LiveRecoveryOutcome } from "./liveCalls";
 import { deleteReleasedCalendarEvent, reconcileBusinessCalendar, syncAppointmentCalendar, type CalendarOperations } from "./calendarJobs";
+import { refreshInstagramToken, replyToInstagramMessage, sendInstagramMessage, type InstagramOperations } from "./instagramJobs";
 import { getMeter } from "@lobbystack/telemetry/node";
 import { bucketOutboxBacklog, getPostHogDistinctIdForBusinessSystem, redactTelemetryProperties, type TelemetryProperties } from "@lobbystack/telemetry";
 
@@ -62,6 +63,8 @@ export type WorkerDependencies = {
   embeddings?: { fingerprint?: string; embed(values: string[], onUsage?: (usage: DurableAiUsage) => Promise<void> | void): Promise<number[][]> };
   crawler?: { crawl(input: { url: string; limit?: number }): Promise<Array<{ url: string; title?: string; markdown?: string }>> };
   calendar?: CalendarOperations;
+  /** Sends Instagram direct messages. Without it, Instagram replies are marked failed. */
+  instagram?: InstagramOperations;
   productAnalytics?: { capture(events: Array<{ event: string; distinctId: string; properties: Record<string, unknown>; timestamp: string }>): Promise<void> };
   realtime?: Redis;
   /** Downloads OpenAI's stored recording of a GPT-Live session. */
@@ -407,6 +410,12 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       return { status: "completed" };
     case "sms.send":
       return await deliverOutbound(dependencies.domain, dependencies, { kind: "message", businessId: businessIdOrThrow(job), messageId: String(job.payload.messageId ?? "") }, execution);
+    case "instagram.reply":
+      return await replyToInstagramMessage(dependencies.domain, job);
+    case "instagram.send":
+      return await sendInstagramMessage(dependencies.domain, job, dependencies.instagram, execution);
+    case "instagram.refreshToken":
+      return await refreshInstagramToken(dependencies.domain, job, dependencies.instagram);
     case "appointment.sendChangeOtp":
       return await deliverOutbound(dependencies.domain, dependencies, { kind: "changeCode", businessId: businessIdOrThrow(job), verificationId: String(job.payload.verificationId ?? ""), code: String(job.payload.code ?? ""), to: String(job.payload.to ?? ""), from: String(job.payload.from ?? "") }, execution);
     case "sms.syncPrice": {

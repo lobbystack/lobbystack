@@ -4,6 +4,7 @@ export * from "./crawling/firecrawl";
 export * from "./crawling/urlSafety";
 export * from "./email/smtp";
 export * from "./google/calendar";
+export * from "./instagram/instagram";
 export * from "./polar/polarBilling";
 export * from "./polar/webhook";
 export * from "./storage/s3";

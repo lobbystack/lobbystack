@@ -39,6 +39,7 @@ describe("channel labels", () => {
     expect(getContactChannels(["web_chat", "voice", "dashboard", "web_voice", "voice", null])).toEqual(["phone_call", "web_call", "web_chat"]);
     expect(normalizeChannel(" WEB_VOICE ")).toBe("web_call");
     expect(normalizeChannel("unknown")).toBeNull();
+    expect(getContactChannels(["instagram", "sms"])).toEqual(["sms", "instagram"]);
   });
 
   it("treats older plain web transports as web calls, without catching website chat", async () => {
@@ -74,6 +75,7 @@ describe("contact display names", () => {
     expect(getContactDisplayName({ channels: ["web_chat"] }, "en", t)).toBe("Website visitor");
     expect(getContactDisplayName({ channels: ["web_voice", "web_chat"] }, "en", t)).toBe("Website visitor");
     expect(getContactDisplayName({ phone: "anonymous", channels: ["voice"] }, "en", t)).toBe("Phone caller");
+    expect(getContactDisplayName({ channels: ["instagram"] }, "en", t)).toBe("Instagram user");
     expect(getContactDisplayName({ channels: ["web_voice"] }, "fr", await translator("fr"))).toBe("Appelant web");
   });
 

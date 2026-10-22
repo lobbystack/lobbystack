@@ -201,6 +201,10 @@ export const queueForJobType = {
   "sms.send": "critical",
   "appointment.sendChangeOtp": "critical",
   "sms.syncPrice": "critical",
+  // The receptionist's answer to an Instagram direct message, then its delivery.
+  "instagram.reply": "critical",
+  "instagram.send": "critical",
+  "instagram.refreshToken": "maintenance",
   "call.syncPrice": "critical",
   "call.saveRecording": "default",
   "live.recoverOrphans": "critical",

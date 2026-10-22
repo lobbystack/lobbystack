@@ -36,6 +36,8 @@
     "smsReplyBlocked": "Vous ne pouvez pas envoyer de SMS à ce contact. Il s'est désabonné, il est bloqué, ou il ne vous a pas écrit et n'a pas accepté les SMS.",
     "filterAll": "Tous",
     "filterWeb": "Web",
+    "filterInstagram": "Instagram",
+    "instagramSubtitle": "Message privé Instagram",
     "filterSms": "SMS",
     "takeOver": "Prendre en charge",
     "waitingBadge": "Demande une personne",

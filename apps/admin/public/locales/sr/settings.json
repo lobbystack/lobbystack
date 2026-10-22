@@ -507,6 +507,10 @@
       "zapier": {
         "title": "Zapier",
         "description": "Povežite pozive, zakazivanja i kontakte sa hiljadama aplikacija."
+      },
+      "instagram": {
+        "title": "Instagram",
+        "description": "Odgovarajte na direktne poruke na Instagramu sa istim znanjem kao vaša recepcionerka."
       }
     },
     "status": {
@@ -521,6 +525,16 @@
       "connectedCalendars": "Povezani kalendari",
       "openIssues": "Otvoreni problemi sinhronizacije",
       "syncedAppointments": "Sinhronizovani termini"
+    },
+    "instagram": {
+      "connectedSuccess": "Instagram je povezan. Vaša recepcionerka sada odgovara na direktne poruke.",
+      "connectFailed": "Povezivanje Instagrama nije uspelo. Pokušajte ponovo.",
+      "accountInUse": "Ovaj Instagram nalog je već povezan sa drugim radnim prostorom.",
+      "disconnectedSuccess": "Instagram je isključen.",
+      "disconnect": "Isključi",
+      "reconnect": "Ponovo poveži",
+      "connectedAs": "Odgovara na direktne poruke kao @{{username}}.",
+      "notConfigured": "Instagram još nije podešen na ovom serveru."
     }
   },
   "profile": {

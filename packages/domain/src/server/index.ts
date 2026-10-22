@@ -16,6 +16,7 @@ export * from "./contactPasscodes";
 export * from "./contactSmsConsent";
 export * from "./context";
 export * from "./conversations";
+export * from "./instagram";
 export * from "./demos";
 export * from "./feedback";
 export * from "./employees";

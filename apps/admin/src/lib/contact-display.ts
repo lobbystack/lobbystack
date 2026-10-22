@@ -1,7 +1,7 @@
 import { formatPhoneNumberDisplay } from "./phone";
 
 /** Channels a contact can use to reach the business, in display order. */
-export const CONTACT_CHANNELS = ["phone_call", "web_call", "sms", "web_chat"] as const;
+export const CONTACT_CHANNELS = ["phone_call", "web_call", "sms", "web_chat", "instagram"] as const;
 export type ContactChannel = (typeof CONTACT_CHANNELS)[number];
 
 /** Every channel the dashboard can label, including where staff or integrations booked. */
@@ -31,6 +31,7 @@ const CHANNEL_ALIASES: Record<string, DisplayChannel> = {
   sms: "sms",
   web_chat: "web_chat",
   widget: "web_chat",
+  instagram: "instagram",
   dashboard: "dashboard",
   operator: "dashboard",
   api: "api",
@@ -41,6 +42,7 @@ const CHANNEL_LABEL_KEYS: Record<DisplayChannel, string> = {
   web_call: "common:channels.webCall",
   sms: "common:channels.sms",
   web_chat: "common:channels.webChat",
+  instagram: "common:channels.instagram",
   dashboard: "common:channels.dashboard",
   api: "common:channels.api",
 };
@@ -97,6 +99,7 @@ export function getContactDisplayName(contact: ContactIdentity, locale: string, 
   if (channels.includes("web_chat")) return t("common:contactFallback.websiteVisitor");
   if (channels.includes("web_call")) return t("common:contactFallback.webCaller");
   if (channels.includes("phone_call")) return t("common:contactFallback.phoneCaller");
+  if (channels.includes("instagram")) return t("common:contactFallback.instagramUser");
   return t("common:contactFallback.unknown");
 }
 

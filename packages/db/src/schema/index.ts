@@ -428,10 +428,12 @@ export const contacts = pgTable(
     // The status a STOP to the shared sender replaced, which START restores.
     smsConsentStatusBeforeOptOut: varchar("sms_consent_status_before_opt_out", { length: 32 }),
     operatorBlockedAt: timestamp("operator_blocked_at", { withTimezone: true }),
+    // The Instagram-scoped ID of someone who messaged the business on Instagram.
+    instagramUserId: text("instagram_user_id"),
     ...legacyId,
     ...timestamps,
   },
-  (table) => [uniqueIndex("contacts_business_phone_unique").on(table.businessId, table.phone).where(sql`${table.phone} is not null`), index("contacts_business_email_idx").on(table.businessId, table.email)],
+  (table) => [uniqueIndex("contacts_business_phone_unique").on(table.businessId, table.phone).where(sql`${table.phone} is not null`), index("contacts_business_email_idx").on(table.businessId, table.email), uniqueIndex("contacts_business_instagram_unique").on(table.businessId, table.instagramUserId).where(sql`${table.instagramUserId} is not null`)],
 );
 
 // A contact's keypad PIN for appointment changes, kept apart so the contact row never carries it.
@@ -878,6 +880,25 @@ export const calendarConnections = pgTable(
     ...timestamps,
   },
   (table) => [uniqueIndex("calendar_connections_business_provider_account_unique").on(table.businessId, table.provider, table.externalAccountId), index("calendar_connections_business_idx").on(table.businessId, table.status)],
+);
+
+// A business's connected Instagram professional account, whose direct messages the receptionist answers.
+export const instagramAccounts = pgTable(
+  "instagram_accounts",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+    connectedByUserId: uuid("connected_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    instagramUserId: text("instagram_user_id").notNull(),
+    username: text("username"),
+    // The long-lived Instagram User access token, encrypted with ENCRYPTION_KEY.
+    encryptedAccessToken: text("encrypted_access_token").notNull(),
+    tokenExpiresAt: timestamp("token_expires_at", { withTimezone: true }).notNull(),
+    status: varchar("status", { length: 32 }).default("connected").notNull(),
+    lastError: text("last_error"),
+    ...timestamps,
+  },
+  (table) => [uniqueIndex("instagram_accounts_instagram_user_unique").on(table.instagramUserId), uniqueIndex("instagram_accounts_business_unique").on(table.businessId)],
 );
 
 export const calendarBusyBlocks = pgTable(

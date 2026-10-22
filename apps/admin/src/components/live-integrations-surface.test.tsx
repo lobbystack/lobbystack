@@ -68,7 +68,9 @@ describe("original integration permissions and setup navigation", () => {
   it("does not request administrator calendar connections for viewers", () => {
     const fetchMock = setup("viewer");
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(screen.getByRole("button", { name: "integrations.actions.connect" }).hasAttribute("disabled")).toBe(true);
+    const connectButtons = screen.getAllByRole("button", { name: "integrations.actions.connect" });
+    expect(connectButtons).toHaveLength(2);
+    for (const button of connectButtons) expect(button.hasAttribute("disabled")).toBe(true);
   });
   it("opens the calendar dialog and consumes only the setup parameter", async () => {
     route.search = new URLSearchParams("setup=calendar&keep=value");

@@ -33,6 +33,8 @@
     "automationUpdateFailed": "Nije moguće ažurirati status preuzimanja.",
     "filterAll": "Sve",
     "filterWeb": "Veb",
+    "filterInstagram": "Instagram",
+    "instagramSubtitle": "Direktna poruka na Instagramu",
     "filterSms": "SMS",
     "takeOver": "Preuzmi",
     "waitingBadge": "Traži osobu",

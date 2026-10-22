@@ -126,6 +126,7 @@ export const SCHEMA_MIGRATIONS = [
   "0120_validate_messages_sent_by_user.sql",
   "0121_api_number_claim_stage.sql",
   "0122_conversation_team_joined_at.sql",
+  "0123_instagram_messaging.sql",
 ] as const;
 
 const CONCURRENT_INDEX_DIRECTIVE = /^-- lobbystack:concurrent-index ([a-z][a-z0-9_]*)$/m;

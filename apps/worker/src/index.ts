@@ -7,6 +7,8 @@ import { createEmbeddingProvider } from "@lobbystack/providers/ai/embeddingProvi
 import { FirecrawlProvider } from "@lobbystack/providers/crawling/firecrawl";
 import { SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
 import { GoogleCalendarProvider } from "@lobbystack/providers/google/calendar";
+import { InstagramProvider } from "@lobbystack/providers/instagram/instagram";
+import { SecretBox } from "@lobbystack/providers/crypto/secretBox";
 import { PolarBillingProvider } from "@lobbystack/providers/polar/polarBilling";
 import { createStorageProvider } from "@lobbystack/providers/storage/provider";
 import { TwilioProvider } from "@lobbystack/providers/twilio/twilioProvider";
@@ -85,6 +87,20 @@ function createCalendarProvider(): GoogleCalendarProvider | undefined {
   return clientId && clientSecret && redirectUri ? new GoogleCalendarProvider({ clientId, clientSecret, redirectUri }) : undefined;
 }
 
+// Sending needs the app's ID and secret and the key the tokens are encrypted with.
+function createInstagramOperations(): WorkerDependencies["instagram"] {
+  const appId = process.env.INSTAGRAM_APP_ID;
+  const appSecret = process.env.INSTAGRAM_APP_SECRET;
+  const encryptionKey = process.env.ENCRYPTION_KEY;
+  if (!appId || !appSecret || !encryptionKey) return undefined;
+  const box = new SecretBox(encryptionKey);
+  return {
+    provider: new InstagramProvider({ appId, appSecret, redirectUri: process.env.INSTAGRAM_REDIRECT_URI ?? "" }),
+    decryptToken: (value) => box.decrypt(value),
+    encryptToken: (value) => box.encrypt(value),
+  };
+}
+
 function createProductAnalytics(): WorkerDependencies["productAnalytics"] {
   const apiKey = process.env.POSTHOG_API_KEY;
   if (!apiKey) return undefined;
@@ -146,6 +162,7 @@ async function main(): Promise<void> {
   const polar = createPolarProvider();
   const crawler = createCrawlerProvider();
   const calendar = createCalendarProvider();
+  const instagram = createInstagramOperations();
   const productAnalytics = createProductAnalytics();
   const callSummarizer = createCallSummarizer();
   const businessSummarizer = createBusinessSummarizer();
@@ -157,6 +174,7 @@ async function main(): Promise<void> {
     domain: { db: database.db, snapshotCache: getWorkerSnapshotCache(), ...(embeddings ? { embeddings } : {}) },
     realtime,
     ...(calendar ? { calendar } : {}),
+    ...(instagram ? { instagram } : {}),
     ...(crawler ? { crawler } : {}),
     ...(productAnalytics ? { productAnalytics } : {}),
     ...(callSummarizer ? { callSummarizer } : {}),

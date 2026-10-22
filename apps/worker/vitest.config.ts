@@ -17,6 +17,7 @@ export default defineConfig({
       "@lobbystack/providers/crypto/secretBox": `${root}/packages/providers/src/crypto/secretBox.ts`,
       "@lobbystack/providers/email/smtp": `${root}/packages/providers/src/email/smtp.ts`,
       "@lobbystack/providers/google/calendar": `${root}/packages/providers/src/google/calendar.ts`,
+      "@lobbystack/providers/instagram/instagram": `${root}/packages/providers/src/instagram/instagram.ts`,
       "@lobbystack/providers/polar/polarBilling": `${root}/packages/providers/src/polar/polarBilling.ts`,
       "@lobbystack/providers/storage/provider": `${root}/packages/providers/src/storage/provider.ts`,
       "@lobbystack/providers/twilio/twilioProvider": `${root}/packages/providers/src/twilio/twilioProvider.ts`,
