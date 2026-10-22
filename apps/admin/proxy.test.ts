@@ -6,10 +6,11 @@ import { config, proxy } from "./proxy";
 afterEach(() => vi.unstubAllEnvs());
 
 it("skips known assets but retains proxy checks for application paths with extensions", () => {
-  for (const url of ["/locales/en/auth.json", "/brand/logo-icon.svg", "/_next/static/chunk.js", "/favicon.ico"]) {
+  for (const url of ["/locales/en/auth.json", "/brand/logo-icon.svg", "/_next/static/chunk.js"]) {
     expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url })).toBe(false);
   }
-  for (const url of ["/api/contacts/contact.svg", "/embed.js", "/embed/key.svg", "/en/reset-password/token.txt", "/en/login"]) {
+  // /favicon.ico goes through so the marketing proxy can redirect it to the SVG icon.
+  for (const url of ["/favicon.ico", "/api/contacts/contact.svg", "/embed.js", "/embed/key.svg", "/en/reset-password/token.txt", "/en/login"]) {
     expect(unstable_doesMiddlewareMatch({ config, nextConfig: {}, url })).toBe(true);
   }
 });

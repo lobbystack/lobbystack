@@ -213,5 +213,5 @@ export function proxy(request: NextRequest) {
 export const config = {
   // Ordinary public assets keep the headers configured in next.config.ts without
   // paying for a proxy execution on every request.
-  matcher: ["/((?!_next/static|_next/image|favicon\\.ico$|locales/|brand/|lobbystack-logo\\.svg$).*)"],
+  matcher: ["/((?!_next/static|_next/image|locales/|brand/|lobbystack-logo\\.svg$).*)"],
 };
