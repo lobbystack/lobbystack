@@ -1,14 +1,14 @@
 // Releases one commit to a Dokploy environment. It builds the migrator, worker
 // and admin images for linux/amd64 that the registry doesn't hold yet, pushes
-// them to GitLab's container registry, then points each Dokploy application at
+// them to ghcr.io, then points each Dokploy application at
 // the new tag. It runs the `migrate` schedule before it deploys the worker and
 // then the admin, checks /api/health/ready, and stops at the first failure.
-// GitLab CI runs it on every merge to main (.gitlab-ci.yml); you can run it
-// from your machine too.
+// GitHub Actions runs it after every merge to main (.github/workflows/ci.yml
+// and dokploy-release.yml); you can run it from your machine too.
 //
 // Usage: pnpm release:dokploy [ref] [--env <name>] [--tag <tag>] [--allow-older] [--build-only] [--skip-superseded]
 //
-//   ref                Commit to release. Defaults to the tip of GitLab main.
+//   ref                Commit to release. Defaults to the tip of GitHub main.
 //   --env <name>       Dokploy environment: production (the default) or staging.
 //   --tag <tag>        Image tag. Defaults to the first 8 characters of the commit.
 //                      Pass a new one, such as 911ca1f9-r2, to rebuild a commit
@@ -18,7 +18,7 @@
 //   --skip-superseded  Exit successfully, without releasing, when main has
 //                      moved past the commit. CI uses it.
 //
-// Needs DOKPLOY_API_KEY, Docker, and `docker login registry.gitlab.com` when
+// Needs DOKPLOY_API_KEY, Docker, and `docker login ghcr.io` when
 // it has images to push. See docs/deployment/dokploy-release.md.
 import { spawn } from "node:child_process";
 import { mkdtemp, rm } from "node:fs/promises";
@@ -32,8 +32,8 @@ export type Service = (typeof SERVICES)[number];
 
 export const HOST = {
   dokployUrl: "https://deploy.lobbystack.com",
-  registry: "registry.gitlab.com/lobbystack-group/lobbystack",
-  gitRemote: "https://gitlab.com/lobbystack-group/lobbystack.git",
+  registry: "ghcr.io/lobbystack/lobbystack",
+  gitRemote: "https://github.com/lobbystack/lobbystack.git",
   branch: "main",
 };
 
@@ -44,7 +44,7 @@ export type Target = {
   healthUrl: string;
   migrateScheduleId: string;
   applicationIds: Record<Service, string>;
-  /** Ship only the tip of GitLab main. Staging takes any commit, so you can try a branch before you merge it. */
+  /** Ship only the tip of GitHub main. Staging takes any commit, so you can try a branch before you merge it. */
   requireMain: boolean;
 };
 
@@ -316,7 +316,7 @@ async function deploymentLog(config: Config, deploymentId: string, tail: number)
 
 // --- Release steps -----------------------------------------------------------------
 
-/** Fetches GitLab main without touching any local branch and returns its tip. */
+/** Fetches GitHub main without touching any local branch and returns its tip. */
 async function fetchTip(config: Config, root: string): Promise<string> {
   await run("git", ["-C", root, "fetch", "--quiet", "--no-tags", config.gitRemote, `refs/heads/${config.branch}`], { capture: true });
   return (await run("git", ["-C", root, "rev-parse", "FETCH_HEAD"], { capture: true })).trim();
@@ -329,7 +329,7 @@ async function checkReleasable(config: Config, root: string, sha: string, option
   const onMain = sha === tip || (await run("git", ["-C", root, "merge-base", "--is-ancestor", sha, tip], { capture: true }).then(() => true, () => false));
   const action = supersededAction(sha, tip, onMain, options);
   if (action !== "refuse") return action;
-  if (!onMain) throw new Error(`${sha.slice(0, 12)} isn't on GitLab ${config.branch}. Merge it first.`);
+  if (!onMain) throw new Error(`${sha.slice(0, 12)} isn't on GitHub ${config.branch}. Merge it first.`);
   throw new Error(`${config.branch} has moved on to ${tip.slice(0, 12)}. Release that instead, or pass --allow-older to ship ${sha.slice(0, 12)}.`);
 }
 
@@ -392,9 +392,9 @@ async function buildAndPush(root: string, sha: string, services: Service[], imag
 }
 
 /**
- * GitLab hands CI jobs the `gitlab-deploy-token` deploy token. When it exists,
- * Dokploy pulls with it, which a private registry needs. Otherwise the
- * application keeps whatever credentials it has.
+ * When CI_DEPLOY_USER and CI_DEPLOY_PASSWORD are set, Dokploy pulls with them,
+ * which a private registry needs. Otherwise the application keeps whatever
+ * credentials it has; the public ghcr.io images need none.
  */
 function pullCredentials(app: Application, image: string) {
   const username = process.env.CI_DEPLOY_USER;
@@ -522,7 +522,7 @@ async function main() {
 
   const root = (await run("git", ["rev-parse", "--show-toplevel"], { capture: true })).trim();
   if (!options.buildOnly) await checkOtherEnvironmentsStopped(config);
-  step(config.requireMain ? `Checking the commit against GitLab ${config.branch}` : "Resolving the commit");
+  step(config.requireMain ? `Checking the commit against GitHub ${config.branch}` : "Resolving the commit");
   const sha = (await run("git", ["-C", root, "rev-parse", "--verify", `${options.ref ?? (await fetchTip(config, root))}^{commit}`], { capture: true })).trim();
   if ((await checkReleasable(config, root, sha, options)) === "skip") {
     console.log(`    Skipping ${sha.slice(0, 12)}: ${config.branch} has moved on, and its own pipeline releases it.`);

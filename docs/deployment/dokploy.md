@@ -43,10 +43,10 @@ Keep these settings when you change a service:
 
 ## Images and releases
 
-GitLab CI builds the images on GitLab's runners and pushes them to the project's public container registry, tagged with the commit's first 8 characters:
+GitHub Actions builds the images on GitHub's runners and pushes them to public packages on ghcr.io, tagged with the commit's first 8 characters:
 
-- `registry.gitlab.com/lobbystack-group/lobbystack/migrator:<tag>` and `worker:<tag>`, shared by both environments
-- `registry.gitlab.com/lobbystack-group/lobbystack/admin:<tag>` for production and `admin:<tag>-staging` for staging
+- `ghcr.io/lobbystack/lobbystack/migrator:<tag>` and `worker:<tag>`, shared by both environments
+- `ghcr.io/lobbystack/lobbystack/admin:<tag>` for production and `admin:<tag>-staging` for staging
 
 Each environment gets its own admin image because Next.js writes some settings into it at build time: the Turnstile and PostHog settings, `DEPLOYMENT_MODE`, the brand and link settings, and the `S3_*` settings, since the content security policy names the storage origin. The release reads these build arguments from the admin's environment in Dokploy, so change them there and release again.
 

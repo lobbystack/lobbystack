@@ -171,7 +171,7 @@ Then move production:
 3. In Cloudflare DNS, replace the proxied CNAME records for `lobbystack.com` and `www.lobbystack.com`, which point at `lobbystack-site.pages.dev`, with proxied A records for `40.160.96.129`.
 4. Remove both domains from the `lobbystack-site` Pages project, so Pages stops claiming them. Then check that the A records from step 3 are still in place.
 5. Add `lobbystack.com` and `www.lobbystack.com` to the Cache Rule's hosts, and [check the cache](#check-the-cache).
-6. Set `CLOUDFLARE_CACHE_PURGE_TOKEN` in GitLab, so each release [purges the cache](#purge-the-cache-after-each-release).
+6. Set `CLOUDFLARE_CACHE_PURGE_TOKEN` as a secret in the repository's `production` and `staging` environments on GitHub, so each release [purges the cache](#purge-the-cache-after-each-release).
 7. Run the parity script against `https://lobbystack.com`. For `--reference`, use the address of the project's latest deployment, `deployment_id.lobbystack-site.pages.dev`; the project redirects its main `lobbystack-site.pages.dev` hostname to `lobbystack.com`.
 8. Watch the admin's memory in Dokploy for a day. Production runs without a memory cap.
 

@@ -1,0 +1,78 @@
+name: Release to Dokploy
+
+# Builds the runtime images, pushes them to ghcr.io and releases them to an
+# environment on Dokploy with scripts/dokploy-release.ts
+# (docs/deployment/dokploy-release.md). CI calls it for production after every
+# check on a main commit passes; run it by hand for staging or a manual release.
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        default: production
+      ref:
+        type: string
+        default: ""
+      extra-args:
+        type: string
+        default: ""
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        options: [staging, production]
+        default: staging
+      ref:
+        description: Commit to release. Leave empty for the tip of main.
+        type: string
+        default: ""
+      build-only:
+        description: Build and push the images, then stop.
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    # Longer than the script's own waits added up, so a stuck release still
+    # reports what Dokploy points at before GitHub stops it.
+    timeout-minutes: 120
+    environment:
+      name: ${{ inputs.environment }}
+      url: ${{ inputs.environment == 'production' && 'https://app.lobbystack.com' || 'https://staging.lobbystack.com' }}
+    # One release per environment at a time, and never cancel one halfway.
+    concurrency:
+      group: dokploy-${{ inputs.environment }}
+      cancel-in-progress: false
+    steps:
+      # The release checks the commit against main's history.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+      - name: Log in to ghcr.io
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: echo "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+      - name: Release
+        env:
+          DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
+          CLOUDFLARE_CACHE_PURGE_TOKEN: ${{ secrets.CLOUDFLARE_CACHE_PURGE_TOKEN }}
+          ENVIRONMENT: ${{ inputs.environment }}
+          REF: ${{ inputs.ref }}
+          EXTRA_ARGS: ${{ inputs.extra-args }}
+          BUILD_ONLY: ${{ inputs.build-only && '--build-only' || '' }}
+        run: |
+          args=(--env "$ENVIRONMENT")
+          [[ -n "$REF" ]] && args=("$REF" "${args[@]}")
+          # Word splitting is intended: each holds whole flags or nothing.
+          # shellcheck disable=SC2206
+          args+=($EXTRA_ARGS $BUILD_ONLY)
+          node scripts/dokploy-release.ts "${args[@]}"

@@ -43,18 +43,18 @@ describe("dokploy release", () => {
     expect(marketingHosts({})).toEqual([]);
   });
 
-  it("names images in GitLab's registry, with an admin per environment", () => {
-    const registry = "registry.gitlab.com/lobbystack-group/lobbystack";
+  it("names images in the registry, with an admin per environment", () => {
+    const registry = "ghcr.io/lobbystack/lobbystack";
     expect(imageName(registry, "admin", "911ca1f9", "production")).toBe(`${registry}/admin:911ca1f9`);
     expect(imageName(registry, "admin", "911ca1f9", "staging")).toBe(`${registry}/admin:911ca1f9-staging`);
     expect(imageName(registry, "worker", "911ca1f9", "staging")).toBe(`${registry}/worker:911ca1f9`);
   });
 
   it("treats only a not-found answer from the registry as a missing image", () => {
-    expect(isMissingManifest("docker manifest exited with 1: no such manifest: registry.gitlab.com/x/admin:abc")).toBe(true);
+    expect(isMissingManifest("docker manifest exited with 1: no such manifest: ghcr.io/x/admin:abc")).toBe(true);
     expect(isMissingManifest("manifest unknown: manifest unknown")).toBe(true);
     expect(isMissingManifest("unauthorized: authentication required")).toBe(false);
-    expect(isMissingManifest("Get \"https://registry.gitlab.com/v2/\": net/http: TLS handshake timeout")).toBe(false);
+    expect(isMissingManifest("Get \"https://ghcr.io/v2/\": net/http: TLS handshake timeout")).toBe(false);
   });
 
   it("releases the tip of main and skips or refuses anything older", () => {

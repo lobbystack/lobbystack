@@ -1,6 +1,6 @@
 # Move LobbyStack from Railway to Dokploy
 
-**Status:** done on 2026-10-21. The [Dokploy cutover record](dokploy-cutover-record.md) lists what happened and how it differed from this plan, and [Deploy LobbyStack on Dokploy](../deployment/dokploy.md) describes the running setup. Phase 1, the release path, is done except for the first production release from GitLab CI. Moving staging's files to R2 is still open.
+**Status:** done on 2026-10-21. The [Dokploy cutover record](dokploy-cutover-record.md) lists what happened and how it differed from this plan, and [Deploy LobbyStack on Dokploy](../deployment/dokploy.md) describes the running setup. Phase 1, the release path, is done: releases ran on GitLab CI from 2026-10-21 and moved back to GitHub Actions on 2026-10-22, when the GitHub account was recovered. Moving staging's files to R2 is still open.
 
 This plan moves production and staging from Railway to the Dokploy host at `deploy.lobbystack.com`, which also keeps running the Dokploy panel and `openseo`. Production keeps `app.lobbystack.com`, so Twilio, Polar, OpenAI and Google keep their webhook and redirect URLs. The cutover takes one maintenance window of about 30 minutes, and phone calls fail during it. Railway stays frozen for 14 days as the rollback target.
 
@@ -34,7 +34,7 @@ Dokploy v0.30.8 runs on an OVH VPS in Virginia (`vps-569f1528.vps.ovh.us`, `40.1
 
 ## Phase 1: Code and CI
 
-The GitHub remote is no longer reachable, so releases run on GitLab CI and push to GitLab's container registry instead of GHCR. [The Dokploy release guide](../deployment/dokploy-release.md) describes them.
+While the GitHub remote was unreachable, releases ran on GitLab CI and pushed to GitLab's container registry. They now run on GitHub Actions and push to GHCR. [The Dokploy release guide](../deployment/dokploy-release.md) describes them.
 
 Ship these changes in one pull request before you touch infrastructure. None of them changes how Railway deploys:
 
