@@ -1,0 +1,63 @@
+---
+title: "Responder mensajes directos de Instagram"
+description: "Conecte la cuenta de Instagram de su negocio para que su recepcionista con IA responda sus mensajes directos con los conocimientos que usa en las llamadas."
+sidebarTitle: "Instagram"
+contentType: "How-to"
+---
+
+Conecte Instagram, y su recepcionista con IA responde los mensajes directos que la gente envía a la cuenta de Instagram de su negocio. Usa los conocimientos, las reglas, los servicios y los empleados que usa en las llamadas y en el chat del sitio, y puede reservar citas.
+
+<Note>
+  Necesita una cuenta profesional de Instagram: una cuenta de empresa o de creador. Una cuenta personal no puede conectarse.
+</Note>
+
+## Conectar Instagram
+
+<Steps>
+  <Step title="Abrir Integraciones">
+    En el panel, abra **Gestionar** > **Integraciones**.
+  </Step>
+  <Step title="Iniciar la conexión">
+    Busque **Instagram** y haga clic en **Conectar**. Solo los propietarios y los administradores pueden conectarlo.
+  </Step>
+  <Step title="Autorizar Instagram">
+    Inicie sesión en la cuenta de Instagram y apruebe el acceso a su perfil y sus mensajes.
+  </Step>
+  <Step title="Revisar la tarjeta">
+    De vuelta en LobbyStack, la tarjeta muestra la cuenta por la que responde su recepcionista.
+  </Step>
+</Steps>
+
+Un negocio de LobbyStack responde por una sola cuenta de Instagram, y una cuenta de Instagram pertenece a un solo negocio. Si otro negocio ya conectó la cuenta, LobbyStack le indica que está en uso.
+
+## Qué responde su recepcionista
+
+- Responde en el idioma del último mensaje de la persona.
+- No responde a un mensaje que solo cierra la conversación, como «ok», «gracias» o un emoji.
+- Responde dentro de las 24 horas posteriores al último mensaje de la persona. Instagram no permite que un negocio responda después.
+- Tras 8 respuestas en 10 minutos, pausa la conversación y avisa a su equipo. Ese ritmo suele significar que el asistente de otro negocio le está respondiendo.
+
+## Responder usted
+
+Las conversaciones de Instagram aparecen en **Mensajes** con un icono de Instagram, y el filtro **Instagram** muestra solo esas. Cuando usted responde en una conversación, toma el control, y la recepcionista deja de responderla. Haga clic en **Reanudar IA** para devolvérsela.
+
+Cada persona que escribe a su cuenta aparece en **Contactos** como usuario de Instagram. Instagram no comparte su nombre ni su número de teléfono.
+
+## Volver a conectar o desconectar
+
+El acceso a Instagram dura 60 días, y LobbyStack lo renueva antes de que venza. Si Instagram deja de aceptarlo, la tarjeta indica que hay que volver a conectar, y su equipo recibe un aviso. Haga clic en **Volver a conectar** y autorice Instagram de nuevo.
+
+Para dejar de responder mensajes de Instagram, haga clic en **Desconectar** en la tarjeta. Las conversaciones ya recibidas siguen en **Mensajes**.
+
+## Autoalojamiento
+
+La tarjeta de Instagram solo aparece si su servidor tiene una aplicación de Meta. Cree una con el producto Instagram e Instagram Business Login, y defina estas variables en el admin y el worker:
+
+| Variable | Valor |
+| --- | --- |
+| `INSTAGRAM_APP_ID` | El ID de aplicación de Instagram de la aplicación de Meta |
+| `INSTAGRAM_APP_SECRET` | La clave secreta de aplicación de Instagram de la aplicación de Meta |
+| `INSTAGRAM_REDIRECT_URI` | `APP_BASE_URL` seguido de `/api/integrations/instagram/callback`, agregado también a los URI de redirección OAuth de la aplicación. Solo el admin. |
+| `INSTAGRAM_WEBHOOK_VERIFY_TOKEN` | Una cadena aleatoria que también escribe en los ajustes de webhook de la aplicación. Solo el admin. |
+
+En la aplicación de Meta, defina la URL de devolución de llamada del webhook como `APP_BASE_URL` seguido de `/api/webhooks/instagram`, y suscríbase al campo `messages`. Antes de que otros negocios aparte del suyo puedan conectarse, Meta tiene que aprobar el permiso `instagram_business_manage_messages` de la aplicación mediante App Review.

@@ -1,0 +1,63 @@
+---
+title: "Answer Instagram direct messages"
+description: "Connect your business's Instagram account so your AI receptionist replies to its direct messages with the knowledge it uses on calls."
+sidebarTitle: "Instagram"
+contentType: "How-to"
+---
+
+Connect Instagram, and your AI receptionist replies to the direct messages people send your business's Instagram account. It uses the knowledge, rules, services and employees it uses on calls and in the website chat, and it can book appointments.
+
+<Note>
+  You need an Instagram professional account: a business or creator account. A personal account can't connect.
+</Note>
+
+## Connect Instagram
+
+<Steps>
+  <Step title="Open Integrations">
+    In the dashboard, open **Manage** > **Integrations**.
+  </Step>
+  <Step title="Start the connection">
+    Find **Instagram** and click **Connect**. Only owners and admins can connect it.
+  </Step>
+  <Step title="Authorize Instagram">
+    Log in to the Instagram account and approve access to its profile and messages.
+  </Step>
+  <Step title="Check the card">
+    Back in LobbyStack, the card shows the account your receptionist answers for.
+  </Step>
+</Steps>
+
+A LobbyStack business answers one Instagram account, and an Instagram account belongs to one business. If another business already connected the account, LobbyStack tells you it's in use.
+
+## What your receptionist answers
+
+- It replies in the language of the person's latest message.
+- It doesn't reply to a message that only closes the conversation, such as "ok", "thanks" or an emoji.
+- It replies within 24 hours of the person's last message. Instagram doesn't let a business reply after that.
+- After 8 replies in 10 minutes, it pauses the conversation and alerts your team. That pattern usually means another business's assistant is answering back.
+
+## Reply yourself
+
+Instagram conversations appear in **Messages** with an Instagram icon, and the **Instagram** filter shows only them. When you reply in a conversation, you take it over, and the receptionist stops answering it. Click **Resume AI** to hand it back.
+
+Each person who messages your account appears in **Contacts** as an Instagram user. Instagram doesn't share their name or phone number.
+
+## Reconnect or disconnect
+
+Instagram access lasts 60 days, and LobbyStack renews it before it runs out. If Instagram stops accepting it, the card shows that reconnect is required, and your team gets an alert. Click **Reconnect** and authorize Instagram again.
+
+To stop answering Instagram messages, click **Disconnect** on the card. Conversations you already received stay in **Messages**.
+
+## Self-hosting
+
+The Instagram card appears only when your server has a Meta app. Create one with the Instagram product and Instagram Business Login, then set these variables on the admin and the worker:
+
+| Variable | Value |
+| --- | --- |
+| `INSTAGRAM_APP_ID` | The Meta app's Instagram app ID |
+| `INSTAGRAM_APP_SECRET` | The Meta app's Instagram app secret |
+| `INSTAGRAM_REDIRECT_URI` | `APP_BASE_URL` followed by `/api/integrations/instagram/callback`, also added to the app's OAuth redirect URIs. The admin only. |
+| `INSTAGRAM_WEBHOOK_VERIFY_TOKEN` | A random string you also enter in the app's webhook settings. The admin only. |
+
+In the Meta app, set the webhook callback URL to `APP_BASE_URL` followed by `/api/webhooks/instagram`, and subscribe to the `messages` field. Before businesses other than your own can connect, Meta has to approve the app's `instagram_business_manage_messages` permission through App Review.

@@ -116,6 +116,7 @@
               "dashboard/analytics",
               "integrations/overview",
               "integrations/google-calendar",
+              "integrations/instagram",
               "integrations/sms",
               "integrations/webhooks",
               {
@@ -244,6 +245,7 @@
               "fr/dashboard/analytics",
               "fr/integrations/overview",
               "fr/integrations/google-calendar",
+              "fr/integrations/instagram",
               "fr/integrations/sms",
               "fr/integrations/webhooks",
               {
@@ -375,6 +377,7 @@
               "es/dashboard/analytics",
               "es/integrations/overview",
               "es/integrations/google-calendar",
+              "es/integrations/instagram",
               "es/integrations/sms",
               "es/integrations/webhooks",
               {
