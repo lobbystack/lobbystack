@@ -67,10 +67,19 @@ describe("original integration permissions and setup navigation", () => {
   });
   it("does not request administrator calendar connections for viewers", () => {
     const fetchMock = setup("viewer");
-    expect(fetchMock).not.toHaveBeenCalled();
-    const connectButtons = screen.getAllByRole("button", { name: "integrations.actions.connect" });
-    expect(connectButtons).toHaveLength(2);
-    for (const button of connectButtons) expect(button.hasAttribute("disabled")).toBe(true);
+    // Only the Instagram card asks, and only whether Instagram is set up.
+    expect((fetchMock.mock.calls as unknown as Array<[unknown]>).every(([url]) => String(url).startsWith("/api/integrations/instagram?"))).toBe(true);
+    expect(screen.getByRole("button", { name: "integrations.actions.connect" }).hasAttribute("disabled")).toBe(true);
+  });
+  it("hides the Instagram card until the server has a Meta app", async () => {
+    const fetchMock = setup("business_admin", { configured: false, account: null } as Partial<IntegrationsViewModel>);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("/api/integrations/instagram?"), expect.anything()));
+    expect(screen.queryByText("integrations.cards.instagram.title")).toBeNull();
+  });
+  it("shows the Instagram card to every member once Instagram is set up", async () => {
+    setup("viewer", { configured: true, account: null } as Partial<IntegrationsViewModel>);
+    expect(await screen.findByText("integrations.cards.instagram.title")).toBeTruthy();
+    for (const button of screen.getAllByRole("button", { name: "integrations.actions.connect" })) expect(button.hasAttribute("disabled")).toBe(true);
   });
   it("opens the calendar dialog and consumes only the setup parameter", async () => {
     route.search = new URLSearchParams("setup=calendar&keep=value");

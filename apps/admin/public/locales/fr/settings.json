@@ -533,8 +533,7 @@
       "disconnectedSuccess": "Instagram est déconnecté.",
       "disconnect": "Déconnecter",
       "reconnect": "Reconnecter",
-      "connectedAs": "Répond aux messages privés en tant que @{{username}}.",
-      "notConfigured": "Instagram n'est pas encore configuré sur ce serveur."
+      "connectedAs": "Répond aux messages privés en tant que @{{username}}."
     }
   },
   "profile": {

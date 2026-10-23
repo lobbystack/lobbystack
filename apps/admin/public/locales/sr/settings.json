@@ -533,8 +533,7 @@
       "disconnectedSuccess": "Instagram je isključen.",
       "disconnect": "Isključi",
       "reconnect": "Ponovo poveži",
-      "connectedAs": "Odgovara na direktne poruke kao @{{username}}.",
-      "notConfigured": "Instagram još nije podešen na ovom serveru."
+      "connectedAs": "Odgovara na direktne poruke kao @{{username}}."
     }
   },
   "profile": {

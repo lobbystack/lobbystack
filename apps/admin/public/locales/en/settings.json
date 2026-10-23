@@ -529,8 +529,7 @@
       "disconnectedSuccess": "Instagram disconnected.",
       "disconnect": "Disconnect",
       "reconnect": "Reconnect",
-      "connectedAs": "Replying to direct messages as @{{username}}.",
-      "notConfigured": "Instagram isn't set up on this server yet."
+      "connectedAs": "Replying to direct messages as @{{username}}."
     }
   },
   "profile": {

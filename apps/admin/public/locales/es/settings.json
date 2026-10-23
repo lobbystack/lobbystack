@@ -533,8 +533,7 @@
       "disconnectedSuccess": "Instagram desconectado.",
       "disconnect": "Desconectar",
       "reconnect": "Volver a conectar",
-      "connectedAs": "Responde a los mensajes directos como @{{username}}.",
-      "notConfigured": "Instagram aún no está configurado en este servidor."
+      "connectedAs": "Responde a los mensajes directos como @{{username}}."
     }
   },
   "profile": {
