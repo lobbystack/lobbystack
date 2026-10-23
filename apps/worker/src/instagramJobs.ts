@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { createAgentModel, createReceptionistAgent, describeAgentUsage } from "@lobbystack/agent-core";
 import type { JobEnvelope } from "@lobbystack/contracts";
 import { withBusinessTransaction } from "@lobbystack/db";
-import { claimInstagramDelivery, finishInstagramDelivery, getCachedBusinessSnapshot, loadInstagramReplyContext, recordAiGenerationEvent, refreshBusinessSnapshot, refreshInstagramTokenIfDue, reserveWidgetChatUsageInTransaction, saveInstagramReply, type DomainContext } from "@lobbystack/domain";
+import { claimInstagramDelivery, finishInstagramDelivery, getCachedBusinessSnapshot, loadInstagramReplyContext, recordAiGenerationEvent, recordInstagramPartSent, refreshBusinessSnapshot, refreshInstagramTokenIfDue, releaseInstagramDelivery, reserveWidgetChatUsageInTransaction, saveInstagramReply, type DomainContext } from "@lobbystack/domain";
 import { InstagramApiError, splitInstagramText, type InstagramProvider } from "@lobbystack/providers/instagram/instagram";
 import { normalizeRuntimeLocale, runtimeLocaleName } from "@lobbystack/shared";
 
@@ -88,10 +88,13 @@ export async function sendInstagramMessage(domain: DomainContext, job: JobEnvelo
   }
   const accessToken = operations.decryptToken(delivery.encryptedAccessToken);
   try {
-    let firstMessageId: string | undefined;
-    for (const part of splitInstagramText(delivery.body)) {
-      const sent = await operations.provider.sendTextMessage({ accessToken, instagramUserId: delivery.instagramUserId, recipientId: delivery.recipientId, text: part });
+    let firstMessageId = delivery.providerMessageId ?? undefined;
+    const parts = splitInstagramText(delivery.body);
+    // A retry picks up after the pieces an earlier attempt already sent.
+    for (let index = delivery.partsSent; index < parts.length; index += 1) {
+      const sent = await operations.provider.sendTextMessage({ accessToken, instagramUserId: delivery.instagramUserId, recipientId: delivery.recipientId, text: parts[index]! });
       firstMessageId ??= sent.messageId;
+      if (index < parts.length - 1) await recordInstagramPartSent(domain, { businessId, messageId, partsSent: index + 1, providerMessageId: firstMessageId });
     }
     if (!firstMessageId) {
       await finishInstagramDelivery(domain, { businessId, messageId, status: "failed", reason: "instagram_empty_message" });
@@ -105,6 +108,8 @@ export async function sendInstagramMessage(domain: DomainContext, job: JobEnvelo
       await finishInstagramDelivery(domain, { businessId, messageId, status: "failed", reason: apiError?.reconnectRequired ? "instagram_reconnect_required" : `instagram_error${apiError?.code !== undefined ? `_${apiError.code}` : ""}`, reconnectRequired: apiError?.reconnectRequired === true });
       return { status: "skipped", entityId: messageId };
     }
+    // The retry comes within seconds, long before the claim would lapse.
+    await releaseInstagramDelivery(domain, { businessId, messageId });
     throw error;
   }
 }

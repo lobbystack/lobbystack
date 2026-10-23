@@ -171,18 +171,38 @@ export type InstagramDelivery = { accessToken: string; instagramUserId: string; 
  * already sent, or held by another run. Returns what the send needs, with the
  * token still encrypted.
  */
-export async function claimInstagramDelivery(context: DomainContext, input: { businessId: string; messageId: string }): Promise<{ encryptedAccessToken: string; instagramUserId: string; recipientId: string; body: string } | { blocked: "no_account" | "no_recipient" } | null> {
+export async function claimInstagramDelivery(context: DomainContext, input: { businessId: string; messageId: string }): Promise<{ encryptedAccessToken: string; instagramUserId: string; recipientId: string; body: string; partsSent: number; providerMessageId: string | null } | { blocked: "no_account" | "no_recipient" } | null> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const staleBefore = new Date(Date.now() - INSTAGRAM_DELIVERY_LEASE_MS);
     const [claimed] = await tx.update(messages).set({ status: "sending", revision: sql`${messages.revision} + 1`, updatedAt: new Date() })
       .where(and(eq(messages.id, input.messageId), eq(messages.businessId, input.businessId), eq(messages.direction, "outbound"), eq(messages.channel, "instagram"), or(eq(messages.status, "queued"), and(eq(messages.status, "sending"), lt(messages.updatedAt, staleBefore)))))
-      .returning({ body: messages.body, conversationId: messages.conversationId });
+      .returning({ body: messages.body, conversationId: messages.conversationId, providerStatus: messages.providerStatus, providerMessageId: messages.providerMessageId });
     if (!claimed) return null;
+    const partsSent = Number(/^partial:(\d+)$/.exec(claimed.providerStatus ?? "")?.[1] ?? 0);
     const [recipient] = await tx.select({ instagramUserId: contacts.instagramUserId }).from(conversations).innerJoin(contacts, eq(contacts.id, conversations.contactId)).where(and(eq(conversations.id, claimed.conversationId), eq(conversations.businessId, input.businessId))).limit(1);
     const [account] = await tx.select({ encryptedAccessToken: instagramAccounts.encryptedAccessToken, instagramUserId: instagramAccounts.instagramUserId, status: instagramAccounts.status }).from(instagramAccounts).where(eq(instagramAccounts.businessId, input.businessId)).limit(1);
     if (!account || account.status !== "connected") return { blocked: "no_account" };
     if (!recipient?.instagramUserId) return { blocked: "no_recipient" };
-    return { encryptedAccessToken: account.encryptedAccessToken, instagramUserId: account.instagramUserId, recipientId: recipient.instagramUserId, body: claimed.body };
+    return { encryptedAccessToken: account.encryptedAccessToken, instagramUserId: account.instagramUserId, recipientId: recipient.instagramUserId, body: claimed.body, partsSent, providerMessageId: claimed.providerMessageId };
+  });
+}
+
+/**
+ * Notes that one more piece of a long reply went out, so a retry sends only
+ * the rest. It also renews the claim.
+ */
+export async function recordInstagramPartSent(context: DomainContext, input: { businessId: string; messageId: string; partsSent: number; providerMessageId: string }): Promise<void> {
+  await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    await tx.update(messages).set({ providerStatus: `partial:${input.partsSent}`, providerMessageId: sql`coalesce(${messages.providerMessageId}, ${input.providerMessageId})`, updatedAt: new Date() })
+      .where(and(eq(messages.id, input.messageId), eq(messages.businessId, input.businessId), eq(messages.status, "sending")));
+  });
+}
+
+/** Hands a claimed message back after a send that may work on retry, so the retry can claim it again. */
+export async function releaseInstagramDelivery(context: DomainContext, input: { businessId: string; messageId: string }): Promise<void> {
+  await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    await tx.update(messages).set({ status: "queued", updatedAt: new Date() })
+      .where(and(eq(messages.id, input.messageId), eq(messages.businessId, input.businessId), eq(messages.status, "sending")));
   });
 }
 
