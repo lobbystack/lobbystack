@@ -380,7 +380,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
 
   return (
     <header className="site-header sticky top-0 z-50 w-full border-b border-border/60">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
+      <div className="mx-auto flex h-16 max-w-site items-center justify-between px-6">
         {/* Logo */}
         <a
           href={localizePath(locale, "/")}

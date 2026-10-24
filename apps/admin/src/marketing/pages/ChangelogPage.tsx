@@ -141,7 +141,7 @@ export async function ChangelogPage({ locale }: { locale: Locale }) {
 
       <main id="main-content" className="min-h-screen bg-background text-foreground">
         <header className="bg-muted/20 px-6 pt-20 pb-16 text-center md:pt-28 md:pb-20">
-          <div className="mx-auto max-w-7xl">
+          <div className="mx-auto max-w-site">
             <h1 className="display-heading mx-auto max-w-[15ch]">
               {pageCopy[locale].h1}
             </h1>
@@ -151,7 +151,7 @@ export async function ChangelogPage({ locale }: { locale: Locale }) {
           </div>
         </header>
 
-        <section className="mx-auto max-w-7xl px-6 pt-16 pb-24 md:pt-20 md:pb-32">
+        <section className="mx-auto max-w-site px-6 pt-16 pb-24 md:pt-20 md:pb-32">
           <div className="space-y-20 md:space-y-24">
             {renderedEntries.map(({ entry, content }, index) => {
               const anchorId = changelogAnchorId(entry)

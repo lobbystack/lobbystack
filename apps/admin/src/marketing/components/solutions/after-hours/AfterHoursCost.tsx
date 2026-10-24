@@ -19,7 +19,7 @@ const plans = [
 export function AfterHoursCost() {
   return (
     <section className="border-t border-border/40 py-20 md:py-28" id="cost">
-      <div className="mx-auto grid max-w-7xl gap-12 px-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-16">
+      <div className="mx-auto grid max-w-site gap-12 px-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-16">
         <div>
           <h2 className="section-heading">What an after-hours answering service costs</h2>
           <p className="section-intro">

@@ -242,7 +242,7 @@ export function PricingSection({ locale = "en" }: PricingSectionProps) {
       </section>
 
       {/* ── Tier cards ── */}
-      <section className="mx-auto max-w-7xl px-6 pt-8 pb-8 md:pt-10 md:pb-10 lg:pt-12 lg:pb-12">
+      <section className="mx-auto max-w-site px-6 pt-8 pb-8 md:pt-10 md:pb-10 lg:pt-12 lg:pb-12">
         <div className="animate-fade-up mb-8 flex justify-center stagger-3">
           <div
             aria-label={copy.billingLabel}

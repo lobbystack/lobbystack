@@ -449,7 +449,7 @@ export function CalculatorPage({ locale }: { locale: Locale }) {
       <Navbar locale={locale} />
 
       <main id="main-content">
-        <section className="mx-auto max-w-7xl px-4 pt-24 pb-8 sm:pt-32 sm:pb-12">
+        <section className="mx-auto max-w-site px-4 pt-24 pb-8 sm:pt-32 sm:pb-12">
           <div className="max-w-3xl">
             <h1 className="mb-6 text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
               {t.h1}

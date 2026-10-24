@@ -164,7 +164,7 @@ export function Footer({ locale = "en", path }: FooterProps) {
 
   return (
     <footer className="border-t border-border/60 bg-background">
-      <div className="mx-auto max-w-7xl px-6 pt-16">
+      <div className="mx-auto max-w-site px-6 pt-16">
         <div className="mb-12 flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
           <a
             href={localizePath(locale, "/")}
@@ -233,7 +233,7 @@ export function Footer({ locale = "en", path }: FooterProps) {
 
       <Separator className="my-8" />
 
-      <div className="mx-auto max-w-7xl px-6 pb-8">
+      <div className="mx-auto max-w-site px-6 pb-8">
         <div className="flex flex-col items-center justify-between gap-4 text-xs text-muted-foreground md:flex-row">
           <p>
             © {new Date().getFullYear()} LobbyStack. {copy.rights}

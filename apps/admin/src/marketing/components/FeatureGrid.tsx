@@ -167,7 +167,7 @@ export function FeatureGrid({ locale = "en" }: FeatureGridProps) {
 
   return (
     <section className="section-spacing" id="features">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-site px-6">
         {/* Section heading, centered */}
         <div className="mx-auto mb-10 max-w-2xl text-center md:mb-12">
           <h2 className="section-heading">

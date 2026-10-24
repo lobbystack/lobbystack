@@ -282,7 +282,7 @@ export async function BlogIndexPage({ locale }: { locale: Locale }) {
         className="min-h-screen bg-background pb-24 text-foreground"
       >
         <header className="px-6 pt-24 pb-16 text-center">
-          <div className="mx-auto max-w-7xl">
+          <div className="mx-auto max-w-site">
             <h1 className="display-heading">{pageCopy[locale].h1}</h1>
             <p className="body-copy mx-auto mt-6 max-w-[65ch] md:text-lg">
               {pageCopy[locale].intro}
@@ -290,7 +290,7 @@ export async function BlogIndexPage({ locale }: { locale: Locale }) {
           </div>
         </header>
 
-        <div className="mx-auto max-w-7xl px-6">
+        <div className="mx-auto max-w-site px-6">
           {featuredPost && (
             <section className="mb-16">
               <a href={blogPath(featuredPost, locale)} className="group block">
@@ -384,7 +384,7 @@ export async function BlogIndexPage({ locale }: { locale: Locale }) {
           </section>
         </div>
 
-        <section className="mx-auto max-w-7xl px-6 pb-24">
+        <section className="mx-auto max-w-site px-6 pb-24">
           <h2 className="section-heading">{pageCopy[locale].topicsHeading}</h2>
           <div className="mt-8 grid gap-6 md:grid-cols-2">
             {pageCopy[locale].topics.map((topic) => (

@@ -9,7 +9,7 @@ type AfterTheCallProps = {
 export function AfterTheCall({ details }: AfterTheCallProps) {
   return (
     <section className="border-t border-border/40 bg-muted/15 py-20 md:py-28" id="intake">
-      <div className="mx-auto grid max-w-7xl gap-12 px-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center">
+      <div className="mx-auto grid max-w-site gap-12 px-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-center">
         <div>
           <h2 className="section-heading">What LobbyStack asks {details.noun} callers</h2>
           <p className="section-intro">
@@ -30,10 +30,10 @@ export function AfterTheCall({ details }: AfterTheCallProps) {
 
         <figure className="overflow-hidden rounded-[1.35rem] border border-border/70 bg-background">
           <img
-            src="/screenshots/dashboard.webp"
+            src="/screenshots/dashboard-home.webp"
             alt="LobbyStack dashboard Home page with monthly calls, follow-ups, upcoming appointments, and recent calls"
-            width="3020"
-            height="1898"
+            width="2560"
+            height="1920"
             className="h-auto w-full"
             loading="lazy"
             decoding="async"

@@ -570,7 +570,7 @@ export function SolutionsIndexPage({ locale }: { locale: Locale }) {
       <PageJsonLd seo={seo} />
       <Navbar locale={locale} />
       <main id="main-content" tabIndex={-1} className="min-h-screen bg-background text-foreground">
-        <section className="mx-auto max-w-7xl px-6 py-20 md:py-28">
+        <section className="mx-auto max-w-site px-6 py-20 md:py-28">
           <div className="mx-auto max-w-3xl text-center">
             <h1 className="display-heading">{pageCopy.h1}</h1>
             <p className="body-copy mx-auto mt-6 max-w-[65ch] md:text-lg">{pageCopy.intro}</p>
@@ -602,7 +602,7 @@ export function SolutionsIndexPage({ locale }: { locale: Locale }) {
         </section>
 
         <section className="border-t border-border/40 bg-muted/15 py-20 md:py-24">
-          <div className="mx-auto max-w-7xl px-6">
+          <div className="mx-auto max-w-site px-6">
             <h2 className="section-heading text-center">{pageCopy.tradeHeading}</h2>
             <p className="body-copy mx-auto mt-6 max-w-[58ch] text-center">{pageCopy.tradeIntro}</p>
             <div className="mt-12 flex flex-wrap justify-center gap-3">
@@ -626,7 +626,7 @@ export function SolutionsIndexPage({ locale }: { locale: Locale }) {
         </section>
 
         <section className="py-20 md:py-24">
-          <div className="mx-auto max-w-7xl px-6">
+          <div className="mx-auto max-w-site px-6">
             <h2 className="section-heading text-center">{pageCopy.comparisonsHeading}</h2>
             <p className="body-copy mx-auto mt-6 max-w-[58ch] text-center">{pageCopy.comparisonsIntro}</p>
             <div className="mx-auto mt-12 grid max-w-3xl gap-6">
@@ -649,7 +649,7 @@ export function SolutionsIndexPage({ locale }: { locale: Locale }) {
         </section>
 
         <section className="border-t border-border/40 bg-muted/15 py-20 md:py-24">
-          <div className="mx-auto grid max-w-7xl gap-10 px-6 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
+          <div className="mx-auto grid max-w-site gap-10 px-6 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
             <div>
               <h2 className="section-heading text-left">{pageCopy.workflowHeading}</h2>
               <p className="body-copy mt-5 max-w-[58ch]">{pageCopy.workflowBody}</p>

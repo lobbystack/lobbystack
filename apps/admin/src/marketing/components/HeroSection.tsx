@@ -51,7 +51,7 @@ export function HeroSection({ children, locale = "en" }: HeroSectionProps) {
       className="relative grid min-h-[calc(100svh-4rem)] items-center overflow-hidden"
       id="hero"
     >
-      <div className="mx-auto w-full max-w-7xl px-6 pt-14 pb-10 md:pt-10 md:pb-20 lg:pt-12 lg:pb-24">
+      <div className="mx-auto w-full max-w-site px-6 pt-14 pb-10 md:pt-10 md:pb-20 lg:pt-12 lg:pb-24">
         <div className="grid min-w-0 items-center gap-6 md:gap-12 xl:grid-cols-2 xl:gap-16">
           <div className="max-w-3xl min-w-0 text-left">
             <h1 className="animate-fade-up display-heading">

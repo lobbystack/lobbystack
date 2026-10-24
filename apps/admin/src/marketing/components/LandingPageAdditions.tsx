@@ -672,7 +672,7 @@ export function ProductExtensionSection({ locale = "en" }: LocalizedProps) {
 
   return (
     <section className="px-0 pt-0 pb-12 md:pb-16 lg:pb-20" id="missed-calls">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-site px-6">
         <div className="mb-10 max-w-3xl">
           <h2 className="section-heading">{sectionCopy.extension.heading}</h2>
           <p className="section-intro mt-4">{sectionCopy.extension.body}</p>
@@ -727,7 +727,7 @@ function ConnectedReceptionistSection({ locale = "en" }: LocalizedProps) {
 
   return (
     <section className="section-spacing" id="how-it-works">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-site px-6">
         <div className="grid overflow-hidden rounded-[1.35rem] border border-border/70 bg-background lg:grid-cols-[1.18fr_0.82fr]">
           <div className="min-h-[360px] overflow-hidden border-b border-border/70 bg-[#F4F4F2] md:min-h-[460px] lg:border-r lg:border-b-0">
             <img
@@ -768,7 +768,7 @@ function QualityToolsSection({ locale = "en" }: LocalizedProps) {
 
   return (
     <section className="section-spacing" id="phone-tools">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-site px-6">
         <div className="max-w-3xl">
           <h2 className="section-heading">{sectionCopy.heading}</h2>
           <p className="section-intro">{sectionCopy.body}</p>
@@ -825,7 +825,7 @@ function WorkflowSection({ locale = "en" }: LocalizedProps) {
 
   return (
     <section className="section-spacing" id="workflow">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-site px-6">
         <div className="max-w-3xl">
           <h2 className="section-heading">{sectionCopy.heading}</h2>
           <p className="section-intro">{sectionCopy.body}</p>
@@ -868,21 +868,36 @@ function ControlOwnershipSection({ locale = "en" }: LocalizedProps) {
 
   return (
     <section className="section-spacing" id="control">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-site px-6">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="section-heading">{sectionCopy.heading}</h2>
           <p className="section-intro mx-auto">{sectionCopy.body}</p>
         </div>
 
-        <div className="mt-14 overflow-hidden rounded-[1.35rem] border border-border/70 bg-background">
-          <img
-            src="/screenshots/dashboard.webp"
-            alt={sectionCopy.imageAlt}
-            width={3020}
-            height={1898}
-            className="w-full"
-            loading="lazy"
-            decoding="async"
+        {/* The panel clips the bottom of the window, and the fade hides
+            where the cut lands, so the crop reads as intentional. */}
+        <div className="relative mt-14 overflow-hidden rounded-[1.35rem] border border-border/70 bg-muted px-3 pt-3 sm:px-8 sm:pt-8 lg:px-14 lg:pt-14">
+          <div className="browser-frame mx-auto max-w-5xl rounded-b-none border-b-0">
+            <div className="browser-frame-bar" aria-hidden="true">
+              <span className="browser-dot" />
+              <span className="browser-dot" />
+              <span className="browser-dot" />
+            </div>
+            <div className="aspect-[16/11] overflow-hidden">
+              <img
+                src="/screenshots/dashboard-home.webp"
+                alt={sectionCopy.imageAlt}
+                width={2560}
+                height={1920}
+                className="block h-auto w-full"
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
+          </div>
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-1/4 bg-linear-to-t from-muted to-transparent"
           />
         </div>
 
@@ -918,7 +933,7 @@ function PricingPreviewSection({ locale = "en" }: LocalizedProps) {
 
   return (
     <section className="section-spacing" id="pricing-preview">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-site px-6">
         <div className="max-w-3xl">
           <h2 className="section-heading">{sectionCopy.heading}</h2>
           <p className="section-intro">{sectionCopy.body}</p>
@@ -982,7 +997,7 @@ function OpenSourceSection({ locale = "en" }: LocalizedProps) {
 
   return (
     <section className="section-spacing" id="open-source">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-site px-6">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="section-heading">{sectionCopy.heading}</h2>
           <p className="section-intro mx-auto">{sectionCopy.body}</p>
