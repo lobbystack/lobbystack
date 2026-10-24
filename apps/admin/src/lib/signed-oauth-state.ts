@@ -12,14 +12,14 @@ function sign(domain: string, value: string): string {
 }
 
 /** A v1 token carrying `payload`, signed under `domain`. Throws `unconfigured` when there is no secret. */
-export function signOAuthToken(domain: string, payload: Record<string, unknown>, unconfigured: string): string {
+export function signOAuthPayload(domain: string, payload: Record<string, unknown>, unconfigured: string): string {
   if (!oauthSigningSecret()) throw new Error(unconfigured);
   const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
   return `v1.${encoded}.${sign(domain, `v1.${encoded}`)}`;
 }
 
 /** The payload of a v1 token signed under `domain`, or null. */
-export function verifyOAuthToken(domain: string, value: string): Record<string, unknown> | null {
+export function verifyOAuthPayload(domain: string, value: string): Record<string, unknown> | null {
   if (value.length > 2048) return null;
   const parts = value.split(".");
   if (parts.length !== 3) return null;
@@ -36,7 +36,7 @@ export function verifyOAuthToken(domain: string, value: string): Record<string, 
 }
 
 /** A fresh nonce, and an issue time within the lifetime and not ahead of the clock by more than 30 seconds. */
-export function oauthTokenCurrent(payload: Record<string, unknown>, lifetimeMs: number): boolean {
+export function oauthPayloadCurrent(payload: Record<string, unknown>, lifetimeMs: number): boolean {
   const { nonce, issuedAt } = payload;
   return typeof nonce === "string" && /^[a-f0-9-]{36}$/i.test(nonce) && typeof issuedAt === "number" && Number.isFinite(issuedAt) && Date.now() - issuedAt <= lifetimeMs && issuedAt <= Date.now() + 30_000;
 }

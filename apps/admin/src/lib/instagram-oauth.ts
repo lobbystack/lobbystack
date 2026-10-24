@@ -8,7 +8,7 @@ import { InstagramProvider } from "@lobbystack/providers";
 
 import { getAuthDatabase } from "./auth";
 import { enforceFixedWindow, fixedWindowLimit, type FixedWindowLimit } from "./fixed-window-limit";
-import { oauthStateDigest, oauthTokenCurrent, signOAuthToken, verifyOAuthToken } from "./signed-oauth-state";
+import { oauthStateDigest, oauthPayloadCurrent, signOAuthPayload, verifyOAuthPayload } from "./signed-oauth-state";
 
 type InstagramOAuthState = { userId: string; businessId: string; issuedAt: number; nonce: string };
 
@@ -31,12 +31,12 @@ export function instagramConfigured(): boolean {
 const UNCONFIGURED = "Instagram OAuth signing is not configured.";
 
 export function createInstagramOAuthState(input: { userId: string; businessId: string }): string {
-  return signOAuthToken("instagram:state", { ...input, issuedAt: Date.now(), nonce: randomUUID() }, UNCONFIGURED);
+  return signOAuthPayload("instagram:state", { ...input, issuedAt: Date.now(), nonce: randomUUID() }, UNCONFIGURED);
 }
 
 export function verifyInstagramOAuthState(value: string): InstagramOAuthState | null {
-  const state = verifyOAuthToken("instagram:state", value);
-  if (!state || typeof state.userId !== "string" || !state.userId || typeof state.businessId !== "string" || !state.businessId || !oauthTokenCurrent(state, STATE_LIFETIME_MS)) return null;
+  const state = verifyOAuthPayload("instagram:state", value);
+  if (!state || typeof state.userId !== "string" || !state.userId || typeof state.businessId !== "string" || !state.businessId || !oauthPayloadCurrent(state, STATE_LIFETIME_MS)) return null;
   return state as InstagramOAuthState;
 }
 

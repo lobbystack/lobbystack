@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { oauthSigningSecret, oauthStateDigest, oauthTokenCurrent, signOAuthToken, verifyOAuthToken } from "./signed-oauth-state";
+import { oauthSigningSecret, oauthStateDigest, oauthPayloadCurrent, signOAuthPayload, verifyOAuthPayload } from "./signed-oauth-state";
 
 type CalendarOAuthState = { userId: string; businessId: string; issuedAt: number; nonce: string };
 type CalendarConnectLinkToken = { businessId: string; issuedAt: number; nonce: string };
@@ -22,12 +22,12 @@ export function createCalendarOAuthState(input: Omit<CalendarOAuthState, "issued
 
 // Each kind signs under its own domain, so an OAuth state never passes as a link, or a link as a state.
 function signed(kind: TokenKind, payload: Record<string, unknown>): string {
-  return signOAuthToken(`google-calendar:${kind}`, payload, UNCONFIGURED);
+  return signOAuthPayload(`google-calendar:${kind}`, payload, UNCONFIGURED);
 }
 
 /** The payload of a v1 token of this kind with a valid signature, or null. */
 function verified(kind: TokenKind, value: string): Record<string, unknown> | null {
-  return verifyOAuthToken(`google-calendar:${kind}`, value);
+  return verifyOAuthPayload(`google-calendar:${kind}`, value);
 }
 
 /** Domain-separated lookup digest; never persist the bearer value. */
@@ -39,7 +39,7 @@ export function verifyCalendarOAuthState(value: string): CalendarOAuthState | nu
   // Cutover intentionally rejects old unversioned states (10-minute lifetime).
   // Users restart authorization; do not restore a public scrypt fallback.
   const state = verified("state", value);
-  if (!state || typeof state.userId !== "string" || !state.userId || typeof state.businessId !== "string" || !state.businessId || !oauthTokenCurrent(state, 10 * 60_000)) return null;
+  if (!state || typeof state.userId !== "string" || !state.userId || typeof state.businessId !== "string" || !state.businessId || !oauthPayloadCurrent(state, 10 * 60_000)) return null;
   return state as CalendarOAuthState;
 }
 
@@ -58,6 +58,6 @@ export function createCalendarConnectLink(input: { origin: string; businessId: s
 
 export function verifyCalendarConnectLinkToken(value: string): CalendarConnectLinkToken | null {
   const link = verified("link", value);
-  if (!link || typeof link.businessId !== "string" || !link.businessId || !oauthTokenCurrent(link, CALENDAR_CONNECT_LINK_LIFETIME_MS)) return null;
+  if (!link || typeof link.businessId !== "string" || !link.businessId || !oauthPayloadCurrent(link, CALENDAR_CONNECT_LINK_LIFETIME_MS)) return null;
   return link as CalendarConnectLinkToken;
 }
