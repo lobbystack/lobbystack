@@ -1,6 +1,17 @@
 ## Summary
 
-- 
+What changed and why:
+-
+
+## Acceptance criteria
+
+All of the following must be completed before this PR gets merged:
+- [ ]
+
+## How to test
+
+Steps to reproduce:
+1.
 
 ## Testing
 
@@ -10,5 +21,5 @@
 
 ## Docs
 
-- [ ] docs updated if architecture or behavior changed
-- [ ] ADR updated or added if needed
+- [ ] Docs updated if architecture or behavior changed.
+- [ ] Architecture Decision Record (ADR) updated or added if needed.
