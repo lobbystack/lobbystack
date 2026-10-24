@@ -1,6 +1,6 @@
 # How partners resell LobbyStack
 
-A partner resells LobbyStack to businesses under its own brand, domain, and bills. This page records what v1 of the partner program does, as decided on 2026-10-24. Nothing is built yet. [`GLOSSARY.md`](../GLOSSARY.md) defines the terms, and [the white-label research](../research/white-label-reseller-programs.md) compares 30 competitors.
+A partner resells LobbyStack to businesses under its own brand, domain, and bills. This page records what v1 of the partner program does, as decided on 2026-10-24. Nothing is built yet. [`GLOSSARY.md`](../GLOSSARY.md) defines the terms, and [the white-label research](../research/white-label-reseller-programs.md) compares 30 competitors. [Build the partner program](white-label-build-plan.md) lays out the work in phases.
 
 ## Terms
 

@@ -14,3 +14,4 @@ This directory documents LobbyStack’s current architecture, operations, provid
 - `platform.md`: Local stack, service checks, and deployment
 - `branding.md`: A deployment's own app name and logo, and the places that still show LobbyStack's brand
 - `white-label.md`: How partners resell LobbyStack under their own brand, as decided for v1
+- `white-label-build-plan.md`: The phases that build the partner program, and what ships first
