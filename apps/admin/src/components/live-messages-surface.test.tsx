@@ -21,12 +21,13 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); clients.forEach((client) => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
 
-function setup() {
+function setup(options: { instagramConfigured?: boolean } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true }] });
   const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     if (String(url).startsWith("/api/messages") && init?.method === "POST") return Response.json({ ok: true });
+    if (String(url).startsWith("/api/integrations/instagram")) return Response.json({ configured: options.instagramConfigured ?? false, account: null });
     if (String(url).startsWith("/api/messages")) return Response.json({ messages: [{ id: "m1", conversationId: "conversation-1", contactName: "Ada Caller", contactPhone: "+14155550100", visitorName: null, visitorEmail: null, channel: "sms", automationState: "ai_active", body: "Hello there", direction: "inbound", status: "delivered", createdAt: "2026-09-01T12:00:00Z" }] });
     return Response.json({});
   });
@@ -60,6 +61,20 @@ describe("messages telemetry", () => {
     await userEvent.click(screen.getByRole("button", { name: "page.send" }));
     await waitFor(() => expect(toastError).toHaveBeenCalledWith("page.smsReplyBlocked"));
     expect(screen.getByDisplayValue("On my way")).toBeTruthy();
+  });
+});
+
+describe("messages channel filters", () => {
+  it("hides the Instagram filter until the server has a Meta app", async () => {
+    setup();
+    await screen.findByRole("button", { name: /Ada Caller/ });
+    expect(screen.queryByRole("button", { name: "page.filterInstagram" })).toBeNull();
+    expect(screen.getByRole("button", { name: "page.filterSms" })).toBeTruthy();
+  });
+
+  it("shows the Instagram filter once Instagram is set up", async () => {
+    setup({ instagramConfigured: true });
+    expect(await screen.findByRole("button", { name: "page.filterInstagram" })).toBeTruthy();
   });
 });
 

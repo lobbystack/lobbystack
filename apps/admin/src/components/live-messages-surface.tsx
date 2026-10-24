@@ -2,6 +2,7 @@
 
 import { requestJson } from "@/lib/request-json";
 import { useActiveBusiness } from "@/hooks/use-active-business";
+import { useInstagramStatus } from "@/hooks/use-instagram-status";
 import { subscribeRealtimeQuery } from "@/lib/realtime-query";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
@@ -56,6 +57,9 @@ export function LiveMessagesSurface() {
   const [draft, setDraft] = useState("");
   const [channelFilter, setChannelFilter] = useState<"all" | "web_chat" | "instagram" | "sms">("all");
   const { business } = useActiveBusiness();
+  // The Instagram filter shows once the server has a Meta app, like the Integrations card.
+  const instagramOffered = useInstagramStatus(business?.businessId).data?.configured === true;
+  const channelFilters = instagramOffered ? (["all", "web_chat", "instagram", "sms"] as const) : (["all", "web_chat", "sms"] as const);
   const query = search.trim();
   // Both keys sit under ["messages", businessId], so realtime and mutation invalidations refresh the list and the open thread.
   const latestMessages = useInfiniteQuery({
@@ -123,7 +127,7 @@ export function LiveMessagesSurface() {
         <div className="sticky top-0 z-10 -mx-4 flex flex-col gap-3 bg-background px-4 py-2 sm:static sm:z-auto sm:mx-0 sm:p-0">
           <PageHeader className="py-0" title={t("page.title")} />
           <div className="flex items-center gap-1">
-            {(["all", "web_chat", "instagram", "sms"] as const).map((key) => <Button key={key} size="sm" variant={channelFilter === key ? "secondary" : "ghost"} className="px-2.5 text-xs" onClick={() => setChannelFilter(key)}>{key === "all" ? t("page.filterAll") : key === "web_chat" ? t("page.filterWeb") : key === "instagram" ? t("page.filterInstagram") : t("page.filterSms")}</Button>)}
+            {channelFilters.map((key) => <Button key={key} size="sm" variant={channelFilter === key ? "secondary" : "ghost"} className="px-2.5 text-xs" onClick={() => setChannelFilter(key)}>{key === "all" ? t("page.filterAll") : key === "web_chat" ? t("page.filterWeb") : key === "instagram" ? t("page.filterInstagram") : t("page.filterSms")}</Button>)}
           </div>
           <div className="relative"><SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" /><Input aria-label={t("page.searchPlaceholder")} className="pl-10" onChange={(event) => setSearch(event.target.value)} placeholder={t("page.searchPlaceholder")} value={search} /></div>
         </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -10,9 +10,8 @@ import { Icon } from "@iconify/react/offline";
 
 import { Button } from "@/components/ui/button";
 import { surfaceClassName } from "@/components/ui/surface";
+import { instagramStatusQueryKey, useInstagramStatus } from "@/hooks/use-instagram-status";
 import { requestJson } from "@/lib/request-json";
-
-type InstagramStatus = { configured: boolean; account: { username: string | null; status: string; connectedAt: string } | null };
 
 // The logo ships in near-black, which vanishes on the dark theme.
 const instagramGlyph = { ...instagramIcon, body: instagramIcon.body.replaceAll("#0a0a08", "currentColor") };
@@ -22,8 +21,8 @@ export function InstagramIntegrationCard({ businessId, canManage }: { businessId
   const searchParams = useSearchParams();
   const handledCallback = useRef<string | null>(null);
   const queryClient = useQueryClient();
-  const queryKey = ["integrations", "instagram", businessId];
-  const status = useQuery({ queryKey, queryFn: () => requestJson<InstagramStatus>(`/api/integrations/instagram?businessId=${encodeURIComponent(businessId!)}`), enabled: Boolean(businessId) });
+  const queryKey = instagramStatusQueryKey(businessId);
+  const status = useInstagramStatus(businessId);
   const account = status.data?.account ?? null;
   const connected = account?.status === "connected";
 
