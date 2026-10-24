@@ -181,14 +181,23 @@ LobbyStack already has some of the pieces:
 
 The "Still branded" table in the branding doc lists every place outside the dashboard that still says LobbyStack: emails, SMS START replies, AI placeholder text, API titles and Twilio friendly names. A per-partner brand has to reach each of them.
 
-## Open questions for the build
+## Decisions
 
-1. **Who bills the end client?** Leaving client billing to the agency is the simplest to build, and echowin, RingReady and now Synthflow work that way. Agencies trained on GoHighLevel expect rebilling through Stripe Connect, while LobbyStack bills through Polar.
-2. **Pricing model.** Choose between fee plus included minutes plus overage (Trillet, Autocalls), a per-client fee that falls with tier (VoiceAI Connect), and a published reseller price below direct (RingReady). Whichever you pick, agencies will compare their retail price with LobbyStack's $30 and $100 direct plans.
-3. **Self-serve or application.** Trillet, echowin, Autocalls and RingReady take signups. Frontdesk, Dialzara, Newo, Vida and Synthflow screen partners first.
-4. **Branding in the first version.** The baseline is logo, colors, name, subdomain and login page. Branded email is the most common premium feature.
-5. **Custom domains on the cloud.** The cloud runs behind Cloudflare ([platform doc](../docs/platform.md)), so Cloudflare for SaaS custom hostnames is one way to serve partner subdomains with TLS.
-6. **Data boundary.** Decide what a partner can see in a client's account (calls, transcripts, recordings) and whether opening it is audited, as Famulor does.
+We decided these on 2026-10-24. In LobbyStack's terms, an agency is a white-label partner and its clients are businesses ([glossary](../GLOSSARY.md)).
+
+- **Billing**: the partner connects its own Stripe account through Stripe Connect. Stripe bills each business in the partner's name, and LobbyStack bills the partner through Polar. [ADR 0009](../docs/adr/0009-partners-bill-through-their-own-stripe.md) records why.
+- **Pricing structure**: tiers in the style of [Firecrawl's pricing](https://www.firecrawl.dev/pricing). Each tier has a monthly fee and a pool of voice minutes and chat conversations. All of the partner's businesses share the pool, and the number of businesses has no limit. Concurrent calls rise with the tier. A free tier needs no card, and overage is pay as you go up to a monthly cap the partner sets.
+- **Units**: minutes and chat conversations, each with its own overage rate, like today's Starter and Pro. Alert and reminder SMS are included up to a fair-use cap, because LobbyStack writes every one of them.
+- **Entry price**: the entry tier costs about what direct plans cost per minute, and minutes get cheaper at higher tiers. A single business then gains nothing by signing up as a partner.
+- **Signup**: self-serve at launch. Partners sign up without an application. v1 therefore needs a trial, card checks, and limits on how many numbers and businesses a new partner can create.
+- **Branding in v1**: name, logo, favicon, and brand color; a custom subdomain with automatic TLS; branded sign-in and dashboard; and the partner's terms, privacy, and support links. Emails go out under the partner's name from a neutral domain LobbyStack owns. The partner's own sending domain comes later.
+
+Still open:
+
+- Tier prices and allowances. Set them after reading cost per voice minute and per chat from the unit economics rollups (`unitEconomics.ts` in `packages/domain`).
+- How the cloud serves partner subdomains with TLS. The cloud runs behind Cloudflare ([platform doc](../docs/platform.md)), so Cloudflare for SaaS custom hostnames is one option.
+- What a partner can see inside a business's account, and whether opening it is audited, as Famulor does.
+- The shared toll-free SMS number's HELP and START replies name LobbyStack in carrier-registered wording ([`sms.ts`](../packages/domain/src/server/sms.ts#L19)). A partner's businesses would still send them.
 
 ## Competitor details
 
