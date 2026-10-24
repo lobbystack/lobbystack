@@ -18,14 +18,23 @@ The code, the docs, and the dashboard all use these words:
 The host bills each partner through Polar ([ADR 0009](adr/0009-partners-bill-through-their-own-stripe.md)):
 
 - A tier has a monthly fee and a pool of voice minutes and chat conversations. A partner can have any number of businesses.
+- Annual billing takes 20% off, as it does on direct plans.
 - Alert texts and transfer attempts don't use the pool, up to a fair-use cap.
 - The entry tier costs about what direct plans cost per minute, and higher tiers cost less per minute. A single business gains nothing by signing up as a partner.
 - Each tier includes some phone numbers. Extra numbers cost what the host pays for them.
+- Overage costs less per minute and per chat on higher tiers.
 - Pool overage is on by default and bills pay as you go, up to a monthly cap the partner sets. The partner can turn overage off.
-- No tier limits concurrent calls, because a cap on an inbound receptionist sends callers to a busy signal. Each partner has one high safety cap, and the host raises it on request.
+- Tiers don't limit simultaneous calls, because a cap on an inbound receptionist sends callers to a busy signal.
 - The free tier needs no card. It includes one 14-day number trial per partner, ever, with the same 30 minutes and rules as direct Free.
 
-Tier prices, pool sizes, and included numbers aren't set yet. They depend on the cost per minute and per chat in the unit economics rollups (`packages/domain/src/server/unitEconomics.ts`).
+LobbyStack's cloud sells these tiers:
+
+| Tier | Monthly price | Pool | Numbers | Minute overage | Chat overage |
+| --- | --- | --- | --- | --- | --- |
+| Free | $0 | 30 minutes, 50 chats | 1 trial number | Off | Off |
+| Starter | $49 | 250 minutes, 1,000 chats | 2 | $0.20 | $0.02 |
+| Growth | $199 | 1,300 minutes, 5,000 chats | 10 | $0.15 | $0.015 |
+| Scale | $499 | 4,000 minutes, 10,000 chats | 25 | $0.12 | $0.01 |
 
 ## What a business pays its partner
 
@@ -118,7 +127,7 @@ Every business, direct or partner, texts from the host's verified toll-free numb
 - HELP and STOP replies name the host and the business.
 - Every other text names only the business.
 
-This adds the opt-in confirmation that direct businesses lack today.
+Direct businesses already work this way, except STOP, which still gets Twilio's default reply.
 
 ## Compliance
 
@@ -133,9 +142,18 @@ Every partner feature works on any deployment. Each piece turns on when the host
 - **A partner base domain**: partners get default subdomains, and their emails go out from it. Without it, each partner needs a custom domain.
 - **On-demand TLS in the proxy**: partners' custom domains get certificates. Self-hosted Compose already runs Caddy, which can issue them.
 
-## Still open
+On LobbyStack's cloud:
 
-- Tier prices, pool sizes, and how many numbers each tier includes
-- How the cloud issues TLS for partner domains
-- The neutral domain's name
-- After v1: partner-wide webhooks, annual packages, public business signup, revenue and margin reports, and Google sign-in on partner domains
+- The partner base domain is `receptionistportal.com`. It's its own Cloudflare zone, with a wildcard record that points at the same server as the dashboard.
+- Partners' custom domains go through Cloudflare for SaaS. A partner points a CNAME at LobbyStack, and Cloudflare issues the certificate. The first 100 custom domains are free, and each one after that costs $0.10.
+- Traefik has one catch-all route that sends every partner hostname to the admin.
+
+## After v1
+
+These wait until v1 ships:
+
+- Partner-wide webhooks
+- Annual packages
+- Public business signup
+- Revenue and margin reports
+- Google sign-in on partner domains

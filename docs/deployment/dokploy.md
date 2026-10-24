@@ -1,6 +1,6 @@
 # Deploy LobbyStack on Dokploy
 
-LobbyStack's production and staging run on Dokploy at `deploy.lobbystack.com`, on one OVH VPS-1 in Virginia with 2 vCores, 4 GB of RAM and a 40 GB disk. Cloudflare proxies every hostname, and the server accepts web traffic from Cloudflare only. Production moved here from Railway on 2026-10-21; the [Dokploy cutover record](../operations/dokploy-cutover-record.md) lists what changed.
+LobbyStack's production and staging run on Dokploy at `deploy.lobbystack.com`, on one OVH VPS in Virginia with 4 vCores and 8 GB of RAM. Cloudflare proxies every hostname, and the server accepts web traffic from Cloudflare only. Production moved here from Railway on 2026-10-21; the [Dokploy cutover record](../operations/dokploy-cutover-record.md) lists what changed.
 
 ## Hostnames
 
