@@ -9,7 +9,7 @@ ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN npm install --global pnpm@10.30.3
+RUN npm install --global pnpm@12.15.0
 WORKDIR /app
 COPY pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY patches ./patches

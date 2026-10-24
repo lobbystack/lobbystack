@@ -96,6 +96,9 @@ const sitemapAlternateLinks = (url) => {
 // https://astro.build/config
 export default defineConfig({
   site: SITE_URL,
+  server: {
+    port: Number(process.env.LANDING_PORT) || 4321,
+  },
   devToolbar: {
     enabled: false,
   },

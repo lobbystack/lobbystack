@@ -95,9 +95,13 @@ patchedDependencies:
 
 allowBuilds:
   '@posthog/cli': false
+  # Install analytics only.
+  '@scarf/scarf': false
   core-js: true
   esbuild: true
   keytar: false
+  # Optional native speed-up; msgpackr falls back to JavaScript.
+  msgpackr-extract: false
   msw: true
   protobufjs: true
   puppeteer: false

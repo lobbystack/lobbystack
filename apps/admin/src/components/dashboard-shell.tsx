@@ -177,9 +177,12 @@ function ReplacementSidebar({ user, widgetsEnabled }: Pick<DashboardShellProps, 
 
 function AnimatedNavigationIcon({ icon: Icon, hovered }: { icon: typeof HomeIcon; hovered: boolean }) {
   const iconRef = useRef<{ startAnimation: () => void; stopAnimation: () => void } | null>(null);
+  const wasHovered = useRef(false);
   useEffect(() => {
     if (hovered) iconRef.current?.startAnimation();
-    else iconRef.current?.stopAnimation();
+    // An icon that never animated is already at rest, and has no opacity yet to animate back from.
+    else if (wasHovered.current) iconRef.current?.stopAnimation();
+    wasHovered.current = hovered;
   }, [hovered]);
   return <Icon ref={iconRef} className="size-4 shrink-0 [&_svg]:size-4" size={16} />;
 }

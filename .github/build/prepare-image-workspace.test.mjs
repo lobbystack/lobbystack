@@ -19,7 +19,11 @@ test("image projection preserves the lockfile and excludes local tooling", () =>
     assert(!lock.includes("\n      next-devtools-mcp:\n"));
     assert(!lock.includes("\n      railway:\n"));
     assert(lock.includes("\n  apps/admin:\n"));
-    assert.equal(lock.split("\npackages:\n")[1], readFileSync("pnpm-lock.yaml", "utf8").split("\npackages:\n")[1]);
+    const original = readFileSync("pnpm-lock.yaml", "utf8");
+    // pnpm 12 locks pnpm itself in a leading document, which has its own packages section.
+    const pnpmDocument = original.startsWith("---\n") ? original.slice(0, original.indexOf("\n---\n", 4) + 5) : "";
+    assert(lock.startsWith(pnpmDocument));
+    assert.equal(lock.split("\npackages:\n").at(-1), original.split("\npackages:\n").at(-1));
     if (process.env.VERIFY_IMAGE_FETCH === "1") {
       execFileSync("pnpm", ["fetch", "--offline", "--ignore-scripts"], { cwd: directory, stdio: "pipe" });
     }
