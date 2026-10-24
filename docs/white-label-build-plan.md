@@ -2,7 +2,7 @@
 
 This plan builds v1 of the partner program that [How partners resell LobbyStack](white-label.md) describes, in five phases. Each phase ships on its own and leaves the product working. Phase 1 ships first: partners on a subdomain of the partner base domain, with their businesses billed outside LobbyStack and no pool limit. That's the setup a deployment gets without Stripe Connect or tier products, so self-hosted deployments can use it as soon as it ships. On the cloud, partner signup stays invite-only until phase 2 bills tiers.
 
-Planned on 2026-10-24 from the code as it stood at commit `0b69a018`. Nothing is built yet.
+Planned on 2026-10-24 from the code as it stood at commit `49765094`. Nothing is built yet.
 
 ## Phase 0: groundwork
 
@@ -104,7 +104,7 @@ Partners pay the host for a tier through Polar, and the pool limits their busine
 - Update `partner_usage_months` as usage happens. Replaying every business's events on each reservation won't scale.
 - Calls reserve even when the business has no limit, because the pool may have one. Chat gets a rate at both levels.
 - Report pool overage minutes, pool overage chats, and extra numbers to Polar meters, sending only the overage.
-- When the pool runs out with overage off, or the partner reaches its cap, raise `voice_limit_reached`. Calls then forward as commit `ca080eb3` set up.
+- When the pool runs out with overage off, or the partner reaches its cap, raise `voice_limit_reached`. Calls then forward as commit `c5dd718e` set up.
 - Send alerts at 80% and 100% to the partner's owners and admins.
 - Phone numbers: count active numbers across the partner's businesses in `app.reserve_api_number_claim` (migration 0121), under a partner lock, against the tier's included numbers. Apply claim quotas per partner, so creating businesses can't get around them.
 - The free tier gets its pool, no overage, and one trial number per partner.
