@@ -7,6 +7,8 @@ type AppAuthLinkOptions = {
   returnTo?: string
   // The dashboard keeps it through signup and offers it first when upgrading.
   plan?: "starter" | "pro"
+  // The signup page starts Google sign-in as soon as it loads.
+  google?: boolean
 }
 
 // The dashboard serves its public auth pages under a locale prefix
@@ -15,12 +17,13 @@ type AppAuthLinkOptions = {
 function appAuthUrl(
   page: "login" | "signup",
   locale: Locale,
-  { source, returnTo, plan }: AppAuthLinkOptions = {}
+  { source, returnTo, plan, google }: AppAuthLinkOptions = {}
 ) {
   const url = new URL(`/${locale}/${page}`, APP_ORIGIN)
   if (source) url.searchParams.set("source", source)
   if (returnTo) url.searchParams.set("returnTo", returnTo)
   if (plan) url.searchParams.set("plan", plan)
+  if (google) url.searchParams.set("provider", "google")
   return url.toString()
 }
 

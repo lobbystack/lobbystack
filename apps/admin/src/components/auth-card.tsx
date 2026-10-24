@@ -66,7 +66,19 @@ export function AuthCard({ mode, google = false }: { mode: "login" | "signup"; g
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [turnstileResetKey, setTurnstileResetKey] = useState(0);
   const pendingChallengeSubmit = useRef(false);
+  const autoGoogleStarted = useRef(false);
   const login = mode === "login";
+
+  // The marketing site's "Sign up with Google" button links here with
+  // ?provider=google, since Google sign-in has to start from this origin.
+  useEffect(() => {
+    if (!google || autoGoogleStarted.current) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("provider") !== "google" || params.get("error")) return;
+    autoGoogleStarted.current = true;
+    void continueWithGoogle();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once on arrival
+  }, [google]);
 
   useEffect(() => {
     if (mode !== "login") return;
@@ -140,7 +152,7 @@ export function AuthCard({ mode, google = false }: { mode: "login" | "signup"; g
     setGoogleLoading(true);
     try {
       const params = new URLSearchParams(window.location.search);
-      for (const stale of ["google", "error", "error_description"]) params.delete(stale);
+      for (const stale of ["google", "provider", "error", "error_description"]) params.delete(stale);
       // Google returns to this page with every query param (returnTo, source, plan). The marker
       // tells GuestAuthCard which event to record; Better Auth picks the signup one for new users.
       const back = (marker?: "login" | "signup") => {
