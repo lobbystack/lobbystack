@@ -7,8 +7,8 @@ import { CookiePolicyMainFr, cookiePolicySeoFr } from "@/marketing/pages/cookie-
 import { CookiePolicyMainSr, cookiePolicySeoSr } from "@/marketing/pages/cookie-policy/sr"
 import { PageJsonLd, type MarketingPageSeo } from "@/marketing/seo/page-seo"
 
-// Each locale's cookie policy was its own Astro page, so each keeps its own
-// copy and markup under ./cookie-policy/.
+// Each locale's cookie policy keeps its own copy and markup under
+// ./cookie-policy/.
 const pages = {
   en: { seo: cookiePolicySeoEn, Main: CookiePolicyMainEn },
   fr: { seo: cookiePolicySeoFr, Main: CookiePolicyMainFr },

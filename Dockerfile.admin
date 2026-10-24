@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1.7
 FROM node:26.12.1-bookworm-slim@sha256:28147155d47dc31abe0a46e0d12b59b2fb3d0a2dcc5dc65fce76a074180b16fe AS build
 # The marketing site's social cards are drawn at build time with text in Arial.
-# fontconfig's aliases map it to Liberation Sans, as on the machine that built
-# them for Cloudflare Pages; without them the text falls back to a monospace font.
+# fontconfig's aliases map it to Liberation Sans; without them the text falls
+# back to a monospace font.
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates fontconfig fonts-liberation && rm -rf /var/lib/apt/lists/*
 
 ENV PNPM_HOME=/pnpm

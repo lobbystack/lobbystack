@@ -4,7 +4,7 @@ import { blogCollection, changelogCollection } from "./collections"
 import { renderMarkdown } from "./markdown"
 
 describe("renderMarkdown", () => {
-  it("gives headings the ids the Astro site linked to", async () => {
+  it("gives headings github-slugger ids, numbering repeats", async () => {
     const html = await renderMarkdown("## What does it cost?\n\n## What does it cost?\n")
     expect(html).toContain('<h2 id="what-does-it-cost">')
     expect(html).toContain('<h2 id="what-does-it-cost-1">')
@@ -15,7 +15,7 @@ describe("renderMarkdown", () => {
     expect(html).toBe('<pre class="language-text" data-language="text"><code class="language-text">Hello</code></pre>')
   })
 
-  it("aligns table columns with an inline style, as Astro did", async () => {
+  it("aligns table columns with an inline style", async () => {
     const html = await renderMarkdown("| Plan | Price |\n| --- | ---: |\n| Free | $0 |\n")
     expect(html).toContain('<td style="text-align: right">$0</td>')
   })

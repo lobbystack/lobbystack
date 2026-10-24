@@ -28,7 +28,7 @@ Purpose: source notes for a LobbyStack blog post about the new affiliate program
 Local source files inspected:
 
 - `packages/domain/src/server/affiliates.ts`
-- `apps/landing/src/pages/terms.astro`
+- `apps/admin/src/marketing/lib/legal/terms-en.ts`
 - `apps/admin/public/locales/en/affiliate.json`
 - `apps/admin/app/api/affiliate/route.ts`
 - `README.md`

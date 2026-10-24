@@ -1,6 +1,6 @@
 # Serve lobbystack.com from the admin app
 
-The admin app serves the marketing site on every hostname listed in `MARKETING_HOSTS`, and the dashboard on every other hostname. This guide explains how requests reach the marketing pages, how to run and check them, and how `lobbystack.com` moved from Cloudflare Pages to the admin.
+The admin app serves the marketing site on every hostname listed in `MARKETING_HOSTS`, and the dashboard on every other hostname. This guide explains how requests reach the marketing pages, how to run and check them, how Cloudflare caches them, and how to roll back a bad release.
 
 ## How a request reaches a marketing page
 
@@ -69,22 +69,13 @@ The marketing pages are built ahead of time, so the admin image needs their sett
 
 The demo call leaves the marketing host for `app.lobbystack.com`, so the admin's `WEB_CALL_ALLOWED_ORIGINS` must keep listing `https://lobbystack.com` and `https://www.lobbystack.com`.
 
-## Check a build against the live site
+## Check a build
 
 Validate the snapshot. The validator checks the sitemaps, titles, descriptions, canonical URLs, hreflang links, headings, JSON-LD and internal links of every indexable page:
 
 ```bash
 pnpm --filter @lobbystack/admin marketing:validate
 ```
-
-Then compare the build with the live site. `--sitemap` checks every URL in the reference site's sitemap; pass paths instead to check a few:
-
-```bash
-node apps/admin/scripts/marketing/parity.mjs \
-  http://lobbystack.localhost:13099 --sitemap
-```
-
-The script compares status, title, description, canonical URL, robots, Open Graph and hreflang tags, JSON-LD types, headings and the text of `<main>`. On the first run, 278 of 288 pages matched. The 10 trade solution pages differ by one space that the Astro build dropped in "a plumbing business".
 
 ## Cache pages at Cloudflare's edge
 
@@ -125,7 +116,7 @@ Give the rule these settings:
 - **Edge TTL:** Use cache-control header if present, bypass cache if not.
 - **Browser TTL:** Respect origin TTL. The zone's Browser Cache TTL of 4 hours otherwise replaces the pages' `max-age=0`, and a visitor who picks a language in the switcher keeps getting the old page from their browser.
 
-On staging, list only `staging-www.lobbystack.com` in the first line of the expression. Add the production hosts when you move production.
+On staging, list only `staging-www.lobbystack.com` in the first line of the expression.
 
 ### Purge the cache after each release
 
@@ -154,31 +145,6 @@ A request that names French shows `DYNAMIC`, because it skipped the cache:
 curl -sI -H "Accept-Language: fr" https://lobbystack.com/pricing/ | grep -i cf-cache-status
 ```
 
-## Move lobbystack.com to the admin
-
-`lobbystack.com` already runs on the admin. These steps record how it moved, and you can reuse them to move another domain.
-
-Try the move on staging first, with a hostname of its own. Cloudflare's universal certificate covers one level of subdomain, so use `staging-www.lobbystack.com`, not `www.staging.lobbystack.com`.
-
-1. Add a proxied A record for `staging-www.lobbystack.com` pointing at `40.160.96.129`.
-2. Build and release a staging admin image with `MARKETING_SITE=true` and `NEXT_PUBLIC_LANDING_SITE_URL=https://staging-www.lobbystack.com`, following [Release a commit to Dokploy](dokploy-release.md). That origin makes the staging `robots.txt` disallow crawling.
-3. On the staging admin app in Dokploy, add the domain `staging-www.lobbystack.com` on port 3000 with a Let's Encrypt certificate, and set `MARKETING_HOSTS=staging-www.lobbystack.com`.
-4. [Create the Cache Rule](#create-the-cache-rule) with `staging-www.lobbystack.com` as its only host, then [check the cache](#check-the-cache) on that host.
-5. Run the parity script with `https://staging-www.lobbystack.com` as the candidate.
-
-Then move production:
-
-1. Release a production admin image built with the production values from the table above.
-2. On the production admin app in Dokploy, add the domains `lobbystack.com` and `www.lobbystack.com` on port 3000 with Let's Encrypt certificates, and set `MARKETING_HOSTS=lobbystack.com,www.lobbystack.com` and `INDEXNOW_KEY`.
-3. In Cloudflare DNS, replace the proxied CNAME records for `lobbystack.com` and `www.lobbystack.com`, which point at `lobbystack-site.pages.dev`, with proxied A records for `40.160.96.129`.
-4. Remove both domains from the `lobbystack-site` Pages project, so Pages stops claiming them. Then check that the A records from step 3 are still in place.
-5. Add `lobbystack.com` and `www.lobbystack.com` to the Cache Rule's hosts, and [check the cache](#check-the-cache).
-6. Set `CLOUDFLARE_CACHE_PURGE_TOKEN` as a secret in the repository's `production` and `staging` environments on GitHub, so each release [purges the cache](#purge-the-cache-after-each-release).
-7. Run the parity script against `https://lobbystack.com`. For `--reference`, use the address of the project's latest deployment, `deployment_id.lobbystack-site.pages.dev`; the project redirects its main `lobbystack-site.pages.dev` hostname to `lobbystack.com`.
-8. Watch the admin's memory in Dokploy for a day. Production runs without a memory cap.
-
-Let's Encrypt validates each new domain through Cloudflare over HTTP, so the certificates are issued only after step 3 sends the domains to the server. Cloudflare serves its own certificate to visitors in the meantime.
-
 ## Roll back a bad release
 
-The repository no longer contains `apps/landing`, so the `lobbystack-site` Pages project has nothing to build. To undo a bad marketing release, release the previous admin image as [Roll back to the previous release](dokploy-release.md#roll-back-to-the-previous-release) describes. Then [purge the cache](#purge-the-cache-after-each-release) so Cloudflare stops serving the bad pages.
+To undo a bad marketing release, release the previous admin image as [Roll back to the previous release](dokploy-release.md#roll-back-to-the-previous-release) describes. Then [purge the cache](#purge-the-cache-after-each-release) so Cloudflare stops serving the bad pages.

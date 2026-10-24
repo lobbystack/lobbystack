@@ -57,7 +57,7 @@ const sourceFiles = (directory: string): string[] =>
     const path = `${directory}/${entry}`
     if (statSync(path).isDirectory()) return sourceFiles(path)
     if (entry.endsWith(".test.ts") || entry.endsWith(".test.tsx")) return []
-    return /\.(astro|js|ts|tsx|md)$/.test(entry) ? [path] : []
+    return /\.(js|ts|tsx|md)$/.test(entry) ? [path] : []
   })
 
 describe("competitor comparison blog collection", () => {

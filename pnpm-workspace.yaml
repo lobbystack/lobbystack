@@ -8,7 +8,6 @@ packages:
 minimumReleaseAge: 4320
 
 overrides:
-  "@astrojs/rss": ^4.0.19
   "@auth/core": ^0.41.3
   "@babel/core": ^7.29.6
   "@grpc/grpc-js": ^1.14.5
@@ -22,7 +21,6 @@ overrides:
   "@opentelemetry/sdk-node": ^0.222.0
   "@puppeteer/browsers": ^3.2.2
   "@xmldom/xmldom": ^0.8.15
-  astro: ^7.3.5
   axios: ^1.20.0
   adm-zip: ^0.6.1
   basic-ftp: ^5.3.1

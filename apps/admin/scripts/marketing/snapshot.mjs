@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Copies the marketing site's prerendered output from .next/server/app/site
-// into .marketing-dist/ under its public URLs, the layout the Astro build had
-// in dist/: /fr/pricing/ becomes fr/pricing/index.html and the /pricing.md
+// into .marketing-dist/ under its public URLs: /fr/pricing/ becomes
+// fr/pricing/index.html and the /pricing.md
 // twin becomes pricing.md. Pagefind indexes it, and the SEO validator and the
 // link checker read it.
 import { copyFileSync, cpSync, existsSync, mkdirSync, readdirSync, rmSync } from "node:fs"

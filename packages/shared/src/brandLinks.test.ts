@@ -19,7 +19,7 @@ describe("normalizeSiteUrl", () => {
   it("keeps http and https sites without the trailing slash", () => {
     expect(normalizeSiteUrl(" https://acme.example/ ")).toBe("https://acme.example");
     expect(normalizeSiteUrl("https://Example.com/docs/")).toBe("https://example.com/docs");
-    expect(normalizeSiteUrl("http://localhost:4321")).toBe("http://localhost:4321");
+    expect(normalizeSiteUrl("http://localhost:13000")).toBe("http://localhost:13000");
   });
 
   it("refuses values a path can't be added to", () => {

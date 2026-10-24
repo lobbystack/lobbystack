@@ -8,8 +8,7 @@ import { Navbar } from "@/marketing/components/Navbar"
 import { PricingSection } from "@/marketing/components/PricingSection"
 import type { Locale } from "@/marketing/i18n/config"
 
-// The React sections that make up src/components/pages/HomePage.astro and
-// PricingPage.astro, in page order.
+// The sections that make up the home and pricing pages, in page order.
 const pages = {
   home: (locale: Locale) => (
     <>

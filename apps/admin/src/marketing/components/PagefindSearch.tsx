@@ -1,8 +1,7 @@
 // Port of astro-pagefind's Search.astro: a <pagefind-config> element, the
-// <pagefind-searchbox> web component, and Pagefind's component UI. The Astro
-// build bundled @pagefind/component-ui; here the same script and stylesheet
-// load at runtime from the Pagefind bundle that the index build writes to
-// /pagefind/.
+// <pagefind-searchbox> web component, and Pagefind's component UI. Its script
+// and stylesheet load at runtime from the Pagefind bundle that the index build
+// writes to /pagefind/.
 const bundlePath = "/pagefind/"
 
 type PagefindSearchProps = {
@@ -12,8 +11,8 @@ type PagefindSearchProps = {
   configOptions?: Record<string, unknown>
 }
 
-// Astro writes every option as a string attribute (true becomes "true"), and
-// leaves out undefined ones.
+// Writes every option as a string attribute (true becomes "true"), and leaves
+// out undefined ones.
 function attributes(options: Record<string, unknown>) {
   return Object.entries(options)
     .filter(([, value]) => value !== undefined)

@@ -1,7 +1,6 @@
 import { absoluteUrl, breadcrumbJsonLd, organizationJsonLd } from "@/marketing/lib/seo"
 import type { MarketingPageSeo } from "@/marketing/seo/page-seo"
 
-// Ported from apps/landing/src/pages/sr/cookie-policy.astro.
 const updatedAt = "26. septembar 2026."
 const cookieRows = [
   {

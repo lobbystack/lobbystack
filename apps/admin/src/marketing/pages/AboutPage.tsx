@@ -2,8 +2,7 @@ import { SeoLandingPage, seoLandingPageSeo } from "@/marketing/components/SeoLan
 import type { Locale } from "@/marketing/i18n"
 import { getLocalizedSeoLandingPage } from "@/marketing/lib/localized-seo-landing-pages"
 
-// English renders the shared /about/ page (pages/about.astro); French, Spanish
-// and Serbian render their translation through the [...slug] catch-all.
+// Each locale renders its own translation of the shared /about/ page.
 function aboutPage(locale: Locale) {
   const page = getLocalizedSeoLandingPage(locale, "/about/")
   if (!page) throw new Error(`Missing /about/ SEO landing page for ${locale}`)

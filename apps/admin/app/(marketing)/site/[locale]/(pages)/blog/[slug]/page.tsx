@@ -9,7 +9,7 @@ import { marketingStaticParams } from "@/marketing/build";
 
 type BlogPostParams = { params: Promise<{ locale: string; slug: string }> };
 
-// Only the posts written in this locale, as Astro's getStaticPaths built them.
+// Only the posts written in this locale.
 export const dynamicParams = false;
 
 export async function generateStaticParams({ params }: { params: { locale: string } }) {

@@ -53,7 +53,7 @@ pnpm dev
 - Compose takes the database passwords and ports from `.env`: Postgres listens on `127.0.0.1:15433` and Redis on `127.0.0.1:16380`.
 - Run `pnpm db:migrate` again after you pull new migrations.
 - The admin loads `@lobbystack/telemetry` from its build output, so on a fresh clone it fails with `Can't resolve '@lobbystack/telemetry/node'` until you build it. Build it again after you pull changes to `packages/telemetry`.
-- `pnpm dev` starts the admin on port 13000, the worker on 13002, and the landing site on 4321. Each restarts or reloads when you save a file it uses.
+- `pnpm dev` starts the admin on port 13000 and the worker on 13002. Each restarts or reloads when you save a file it uses.
 
 Both `http://localhost:13000/api/health/ready` and `http://localhost:13002/health/ready` should answer with `"ok":true`.
 

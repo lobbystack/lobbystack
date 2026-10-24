@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Writes the marketing sitemaps from the pages the build prerendered, the way
-// @astrojs/sitemap did on the Astro site: every page except the noindex ones,
+// Writes the marketing sitemaps from the pages the build prerendered: every
+// page except the noindex ones,
 // with hreflang links for translated pages, split into a blog sitemap and a
 // site sitemap. Run after scripts/marketing/snapshot.mjs. The files go to
 // public/marketing-sitemaps/, where the marketing proxy serves them as
@@ -31,8 +31,8 @@ const stripLocale = (pathname) => {
 }
 const localize = (locale, basePath) => (locale === "en" ? basePath : `/${locale}${basePath === "/" ? "/" : basePath}`)
 
-// Every page shares one date, as on the Astro site, whose builds ran on a
-// shallow clone: the date of the commit being built, or now without git.
+// Every page shares one date, because builds run on a shallow clone: the date
+// of the commit being built, or now without git.
 function lastmod() {
   if (process.env.MARKETING_LASTMOD) return new Date(process.env.MARKETING_LASTMOD).toISOString()
   try {

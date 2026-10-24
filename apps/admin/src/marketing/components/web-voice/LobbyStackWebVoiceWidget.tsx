@@ -24,8 +24,7 @@ function capturePosthog(
 }
 
 function getEndpoint() {
-  // A new name, so an old PUBLIC_WEB_CALL_ENDPOINT or NEXT_PUBLIC_WEB_CALL_ENDPOINT from before GPT-Live
-  // can't override it.
+  // A new name, so an old NEXT_PUBLIC_WEB_CALL_ENDPOINT from before GPT-Live can't override it.
   if (process.env.NEXT_PUBLIC_LIVE_CALL_ENDPOINT) {
     return process.env.NEXT_PUBLIC_LIVE_CALL_ENDPOINT
   }
