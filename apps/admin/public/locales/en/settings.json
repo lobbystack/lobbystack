@@ -526,7 +526,7 @@
       "connectedSuccess": "Instagram connected. Your receptionist now replies to direct messages.",
       "connectFailed": "Instagram couldn't be connected. Please try again.",
       "accountInUse": "This Instagram account is already connected to another workspace.",
-      "permissionMissing": "Connect Instagram again and allow access to your messages.",
+      "permissionMissing": "Your receptionist needs access to your Instagram messages. Connect again and allow it.",
       "disconnectedSuccess": "Instagram disconnected.",
       "disconnect": "Disconnect",
       "reconnect": "Reconnect",

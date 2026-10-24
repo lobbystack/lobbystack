@@ -530,7 +530,7 @@
       "connectedSuccess": "Instagram je povezan. Vaša recepcionerka sada odgovara na direktne poruke.",
       "connectFailed": "Povezivanje Instagrama nije uspelo. Pokušajte ponovo.",
       "accountInUse": "Ovaj Instagram nalog je već povezan sa drugim radnim prostorom.",
-      "permissionMissing": "Ponovo povežite Instagram i dozvolite pristup porukama.",
+      "permissionMissing": "Vašoj recepcionerki je potreban pristup porukama na Instagramu. Ponovo povežite Instagram i dozvolite pristup.",
       "disconnectedSuccess": "Instagram je isključen.",
       "disconnect": "Isključi",
       "reconnect": "Ponovo poveži",
