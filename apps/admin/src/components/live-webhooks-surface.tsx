@@ -61,7 +61,8 @@ function EndpointForm({ initial, onSubmit, pending, submitLabel, onCancel }: { i
   const [description, setDescription] = useState(initial?.description ?? "");
   const [events, setEvents] = useState<WebhookEventType[]>(initial?.events ?? [...webhookEventTypes]);
   return (
-    <>
+    <div className="flex min-h-0 flex-col gap-6">
+      <div className="-m-1 min-h-0 overflow-x-hidden overflow-y-auto p-1">
       <FieldGroup>
         <Field>
           <FieldLabel htmlFor="webhook-url">{t("webhooks.form.urlLabel")}</FieldLabel>
@@ -85,11 +86,12 @@ function EndpointForm({ initial, onSubmit, pending, submitLabel, onCancel }: { i
           ))}
         </fieldset>
       </FieldGroup>
+      </div>
       <DialogFooter>
         <Button onClick={onCancel} variant="outline">{t("webhooks.form.cancel")}</Button>
         <Button disabled={!url.trim() || events.length === 0 || pending} onClick={() => onSubmit({ url: url.trim(), description: description.trim(), events })}>{submitLabel}</Button>
       </DialogFooter>
-    </>
+    </div>
   );
 }
 
@@ -232,7 +234,7 @@ export function LiveWebhooksSurface() {
       )}
 
       <Dialog onOpenChange={(open) => { if (!open) setDialog(null); }} open={dialog !== null}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className={dialog?.mode === "secret" ? "sm:max-w-lg" : "max-h-[calc(100svh-2rem)] grid-rows-[auto_minmax(0,1fr)] sm:max-w-lg"}>
           {dialog?.mode === "secret" ? (
             <>
               <DialogHeader><DialogTitle>{dialog.title}</DialogTitle><DialogDescription>{t("webhooks.secret.description")}</DialogDescription></DialogHeader>

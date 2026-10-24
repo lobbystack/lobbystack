@@ -460,7 +460,7 @@
       "chooseStaffFirst": "Izaberite člana tima čiji Google Calendar želite da povežete.",
       "connect": "Poveži Google",
       "connecting": "Preusmeravanje...",
-      "reconnect": "Ponovo poveži Google",
+      "reconnect": "Ponovo poveži",
       "disconnect": "Prekini vezu",
       "disconnecting": "Prekidanje veze...",
       "disconnectedSuccess": "Veza sa servisom Google Calendar je prekinuta.",
@@ -534,7 +534,10 @@
       "disconnectedSuccess": "Instagram je isključen.",
       "disconnect": "Isključi",
       "reconnect": "Ponovo poveži",
-      "connectedAs": "Odgovara na direktne poruke kao @{{username}}."
+      "connectedAs": "Odgovara na direktne poruke kao @{{username}}.",
+      "dialogDescription": "Vaša recepcionerka odgovara na direktne poruke poslate ovom nalogu.",
+      "accountLabel": "Instagram nalog",
+      "reconnectDescription": "Instagram više ne prihvata pristup vaše recepcionerke. Ponovo povežite nalog da biste nastavili da odgovarate na poruke."
     }
   },
   "profile": {

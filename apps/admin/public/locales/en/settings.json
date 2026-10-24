@@ -456,7 +456,7 @@
       "chooseStaffFirst": "Choose the team member whose Google Calendar you want to connect.",
       "connect": "Connect Google",
       "connecting": "Redirecting...",
-      "reconnect": "Reconnect Google",
+      "reconnect": "Reconnect",
       "disconnect": "Disconnect",
       "disconnecting": "Disconnecting...",
       "disconnectedSuccess": "Google Calendar disconnected.",
@@ -530,7 +530,10 @@
       "disconnectedSuccess": "Instagram disconnected.",
       "disconnect": "Disconnect",
       "reconnect": "Reconnect",
-      "connectedAs": "Replying to direct messages as @{{username}}."
+      "connectedAs": "Replying to direct messages as @{{username}}.",
+      "dialogDescription": "Your receptionist answers direct messages sent to this account.",
+      "accountLabel": "Instagram account",
+      "reconnectDescription": "Instagram stopped accepting your receptionist's access. Reconnect the account to keep answering messages."
     }
   },
   "profile": {

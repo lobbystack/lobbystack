@@ -460,7 +460,7 @@
       "chooseStaffFirst": "Elija el miembro del equipo cuyo Google Calendar desea conectar.",
       "connect": "Conectar Google",
       "connecting": "Redirigiendo...",
-      "reconnect": "Volver a conectar Google",
+      "reconnect": "Volver a conectar",
       "disconnect": "Desconectar",
       "disconnecting": "Desconectando...",
       "disconnectedSuccess": "Google Calendar desconectado.",
@@ -534,7 +534,10 @@
       "disconnectedSuccess": "Instagram desconectado.",
       "disconnect": "Desconectar",
       "reconnect": "Volver a conectar",
-      "connectedAs": "Responde a los mensajes directos como @{{username}}."
+      "connectedAs": "Responde a los mensajes directos como @{{username}}.",
+      "dialogDescription": "Su recepcionista responde a los mensajes directos que recibe esta cuenta.",
+      "accountLabel": "Cuenta de Instagram",
+      "reconnectDescription": "Instagram dejó de aceptar el acceso de su recepcionista. Vuelva a conectar la cuenta para seguir respondiendo a los mensajes."
     }
   },
   "profile": {

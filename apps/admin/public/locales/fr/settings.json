@@ -460,8 +460,8 @@
       "chooseStaffFirst": "Choisissez le membre de l'équipe dont vous voulez connecter le Google Calendar.",
       "connect": "Connecter Google",
       "connecting": "Redirection...",
-      "reconnect": "Reconnecter Google",
-      "disconnect": "Déconnecter Google",
+      "reconnect": "Reconnecter",
+      "disconnect": "Déconnecter",
       "disconnecting": "Déconnexion...",
       "connectedSuccess": "Google Calendar a bien été connecté.",
       "disconnectedSuccess": "Google Calendar a bien été déconnecté.",
@@ -534,7 +534,10 @@
       "disconnectedSuccess": "Instagram est déconnecté.",
       "disconnect": "Déconnecter",
       "reconnect": "Reconnecter",
-      "connectedAs": "Répond aux messages privés en tant que @{{username}}."
+      "connectedAs": "Répond aux messages privés en tant que @{{username}}.",
+      "dialogDescription": "Votre réceptionniste répond aux messages privés envoyés à ce compte.",
+      "accountLabel": "Compte Instagram",
+      "reconnectDescription": "Instagram n'accepte plus l'accès de votre réceptionniste. Reconnectez le compte pour continuer à répondre aux messages."
     }
   },
   "profile": {
