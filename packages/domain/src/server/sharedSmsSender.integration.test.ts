@@ -12,7 +12,8 @@ import type { SmsConsentAnswer } from "./contactSmsConsent";
 import { refreshBusinessSnapshot } from "./knowledge";
 import { CANCELLATION_CONFIRMATION, defaultOperatorNotificationEventPreferences, queueOperatorAlert, resolveNotificationDelivery } from "./notifications";
 import { createAppointmentForApi } from "./publicApi/operations";
-import { receiveSharedSenderSms, sharedSenderHelpReply, SHARED_SENDER_START_REPLY } from "./sms";
+import { receiveSharedSenderSms, sharedSenderHelpReply, sharedSenderStartReply } from "./sms";
+import { claimSmsOptInConfirmation } from "./smsOptIn";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
 const testUrl = process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL;
@@ -128,7 +129,14 @@ async function seed(tx: DatabaseTransaction, options: { selfHosted: boolean }) {
     // Every event in the test's one transaction has the same timestamp, so compare them as a set.
     return { status: row?.status ?? null, source: row?.source ?? null, events: events.map((event) => `${event.action} ${event.source}`).sort() };
   };
-  return { businessId, ownNumber, book, bookByApi, addContact, deliver, operatorCancel, operatorAlertSender, changeCode, snapshotSmsNumber, consent };
+  /** Takes the contact's opt-in confirmation, as the worker does right before it sends it. */
+  const claimOptIn = async (contactPhone: string) => {
+    await asOwner(tx);
+    const [contact] = await tx.select({ id: contacts.id }).from(contacts).where(and(eq(contacts.businessId, businessId), eq(contacts.phone, contactPhone)));
+    await asWorker(tx);
+    return await claimSmsOptInConfirmation({ db }, { businessId, contactId: contact!.id });
+  };
+  return { businessId, ownNumber, book, bookByApi, addContact, deliver, operatorCancel, operatorAlertSender, changeCode, snapshotSmsNumber, consent, claimOptIn };
 }
 
 /** A text from this phone to the shared sender, applied as the webhook applies it. */
@@ -216,7 +224,8 @@ describe.skipIf(!client)("STOP and START to the shared sender", () => {
       // Queued texts stop at delivery.
       expect(await subscribedAt.deliver(appointmentId, "appointment_reminder")).toMatchObject({ kind: "skipped" });
 
-      expect(await textShared(tx, customer, "START")).toEqual({ reply: SHARED_SENDER_START_REPLY, contactsChanged: 3 });
+      // Only the business the customer agreed to texts from will text them again.
+      expect(await textShared(tx, customer, "START")).toEqual({ reply: sharedSenderStartReply({ businessNames: ["Javor"] }), contactsChanged: 3 });
       expect(await subscribedAt.consent(customer)).toMatchObject({ status: "subscribed", source: "shared_sender:START" });
       expect(await declinedAt.consent(customer)).toMatchObject({ status: "declined", events: ["opt_out_cleared shared_sender:START", "opted_out shared_sender:STOP", "reminder_consent_declined appointment_booking"] });
       expect(await neverAskedAt.consent(customer)).toMatchObject({ status: null, events: ["opt_out_cleared shared_sender:START", "opted_out shared_sender:STOP"] });
@@ -255,7 +264,9 @@ describe.skipIf(!client)("STOP and START to the shared sender", () => {
       const customer = phone();
       const business = await seed(tx, { selfHosted: false });
       await business.book(customer, "agreed");
-      expect(await textShared(tx, customer, "help")).toEqual({ reply: sharedSenderHelpReply(), contactsChanged: 0 });
+      expect(await textShared(tx, customer, "help")).toEqual({ reply: sharedSenderHelpReply({ businessNames: ["Javor"] }), contactsChanged: 0 });
+      // A phone no business texts gets the host's reply alone.
+      expect(await textShared(tx, phone(), "help")).toEqual({ reply: sharedSenderHelpReply(), contactsChanged: 0 });
       expect(await textShared(tx, customer, "Can I move my appointment?")).toEqual({ reply: null, contactsChanged: 0 });
       expect(await business.consent(customer)).toMatchObject({ status: "subscribed" });
     });
@@ -275,6 +286,44 @@ describe.skipIf(!client)("STOP and START to the shared sender", () => {
       await asApp(tx);
       await expect(tx.transaction(async (inner) => await inner.execute(sql`select app.list_businesses_by_contact_phone(${customer})`))).rejects.toThrow();
       await asOwner(tx);
+    });
+  });
+});
+
+describe.skipIf(!client)("the opt-in confirmation", () => {
+  const confirmation = "LobbyStack sends appointment texts for Javor. Msg frequency varies. Msg & data rates may apply. Reply STOP to opt out or HELP for help.";
+
+  it("goes before a customer's first text from each business, once", async () => {
+    vi.stubEnv("TWILIO_ALERT_SMS_FROM", SHARED);
+    await rollbackTest(async (tx) => {
+      const customer = phone();
+      const first = await seed(tx, { selfHosted: false });
+      const second = await seed(tx, { selfHosted: false });
+      const appointmentId = await first.book(customer, "agreed");
+      expect(await first.deliver(appointmentId, "booking_confirmation")).toMatchObject({ kind: "ready", delivery: { optIn: { body: confirmation } } });
+      expect(await first.claimOptIn(customer)).toBeInstanceOf(Date);
+      expect(await first.claimOptIn(customer)).toBeNull();
+      const reminder = await first.deliver(appointmentId, "appointment_reminder");
+      expect(reminder).toMatchObject({ kind: "ready" });
+      expect(reminder).not.toHaveProperty("delivery.optIn");
+      // Another business confirms its own opt-in.
+      expect(await second.deliver(await second.book(customer, "agreed"), "booking_confirmation")).toMatchObject({ kind: "ready", delivery: { optIn: { body: confirmation } } });
+    });
+  });
+
+  it("goes out again after STOP and a later yes, and not after START, whose reply confirms it", async () => {
+    vi.stubEnv("TWILIO_ALERT_SMS_FROM", SHARED);
+    await rollbackTest(async (tx) => {
+      const customer = phone();
+      const business = await seed(tx, { selfHosted: false });
+      const appointmentId = await business.book(customer, "agreed");
+      await business.claimOptIn(customer);
+      await textShared(tx, customer, "STOP");
+      await textShared(tx, customer, "START");
+      expect(await business.deliver(appointmentId, "appointment_reminder")).not.toHaveProperty("delivery.optIn");
+      await business.book(customer, "declined");
+      const later = await business.book(customer, "agreed");
+      expect(await business.deliver(later, "booking_confirmation")).toMatchObject({ kind: "ready", delivery: { optIn: { body: confirmation } } });
     });
   });
 });

@@ -41,7 +41,8 @@ export async function recordSmsConsentAnswerInTransaction(
   if (!input.answer || input.answer === "not_asked" || current === "opted_out") return current;
   const status = input.answer === "agreed" ? "subscribed" : "declined";
   const now = new Date();
-  await tx.update(contacts).set({ smsConsentStatus: status, smsConsentSource: input.source, smsConsentUpdatedAt: now, updatedAt: now }).where(and(eq(contacts.id, input.contactId), eq(contacts.businessId, input.businessId)));
+  // A no clears the opt-in confirmation, so a later yes gets a new one. A repeated yes keeps it.
+  await tx.update(contacts).set({ smsConsentStatus: status, smsConsentSource: input.source, smsConsentUpdatedAt: now, ...(status === "declined" ? { smsOptInConfirmedAt: null } : {}), updatedAt: now }).where(and(eq(contacts.id, input.contactId), eq(contacts.businessId, input.businessId)));
   await tx.insert(smsConsentEvents).values({ businessId: input.businessId, contactId: input.contactId, phone: input.phone, recipientType: "contact", action: status === "subscribed" ? "reminder_consent_granted" : "reminder_consent_declined", source: input.source });
   return status;
 }

@@ -1471,6 +1471,7 @@ export async function updateContactForApi(context: DomainContext, caller: ApiCal
       const consent = input.phone !== undefined ? {
         smsConsentStatus: sql<string | null>`case when ${contacts.phone} is distinct from ${input.phone} and ${contacts.smsConsentStatus} = 'subscribed' then null else ${contacts.smsConsentStatus} end`,
         smsConsentUpdatedAt: sql<Date | null>`case when ${contacts.phone} is distinct from ${input.phone} then now() else ${contacts.smsConsentUpdatedAt} end`,
+        smsOptInConfirmedAt: sql<Date | null>`case when ${contacts.phone} is distinct from ${input.phone} then null else ${contacts.smsOptInConfirmedAt} end`,
       } : {};
       const [row] = await tx.update(contacts).set({ ...patch, ...consent, updatedAt: new Date() }).where(and(eq(contacts.businessId, caller.businessId), eq(contacts.id, contactId))).returning({ id: contacts.id });
       if (!row) throw notFound("Contact");

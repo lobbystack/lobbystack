@@ -427,6 +427,8 @@ export const contacts = pgTable(
     smsConsentSource: varchar("sms_consent_source", { length: 64 }),
     // The status a STOP to the shared sender replaced, which START restores.
     smsConsentStatusBeforeOptOut: varchar("sms_consent_status_before_opt_out", { length: 32 }),
+    // When the opt-in confirmation went out for the current yes to texts. Null until it does.
+    smsOptInConfirmedAt: timestamp("sms_opt_in_confirmed_at", { withTimezone: true }),
     operatorBlockedAt: timestamp("operator_blocked_at", { withTimezone: true }),
     // The Instagram-scoped ID of someone who messaged the business on Instagram.
     instagramUserId: text("instagram_user_id"),

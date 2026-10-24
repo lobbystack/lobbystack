@@ -19,14 +19,16 @@ export function newVerificationCode(): string {
   return String(randomInt(0, 1_000_000)).padStart(6, "0");
 }
 
-const verificationCodeMessages: Record<InterfaceLocale, (code: string, minutes: number) => string> = {
-  en: (code, minutes) => `LobbyStack verification code: ${code}. It expires in ${minutes} minutes.`,
-  fr: (code, minutes) => `Code de vérification LobbyStack : ${code}. Il expire dans ${minutes} minutes.`,
-  es: (code, minutes) => `Código de verificación de LobbyStack: ${code}. Caduca en ${minutes} minutos.`,
-  sr: (code, minutes) => `LobbyStack kod za potvrdu: ${code}. Ističe za ${minutes} minuta.`,
+// The sender comes first, as in every other text: the business for a
+// customer's appointment-change code, the host for an operator's own phone.
+const verificationCodeMessages: Record<InterfaceLocale, (sender: string, code: string, minutes: number) => string> = {
+  en: (sender, code, minutes) => `${sender}: your verification code is ${code}. It expires in ${minutes} minutes.`,
+  fr: (sender, code, minutes) => `${sender} : votre code de vérification est ${code}. Il expire dans ${minutes} minutes.`,
+  es: (sender, code, minutes) => `${sender}: su código de verificación es ${code}. Caduca en ${minutes} minutos.`,
+  sr: (sender, code, minutes) => `${sender}: vaš kod za potvrdu je ${code}. Ističe za ${minutes} minuta.`,
 };
 
-/** The text that carries a verification code, in the recipient's language. */
-export function verificationCodeSmsBody(code: string, locale: InterfaceLocale = "en"): string {
-  return verificationCodeMessages[locale](code, Math.round(VERIFICATION_CODE_TTL_MS / 60_000));
+/** The text that carries a verification code, named for its sender and in the recipient's language. */
+export function verificationCodeSmsBody(input: { code: string; sender: string; locale?: InterfaceLocale }): string {
+  return verificationCodeMessages[input.locale ?? "en"](input.sender, input.code, Math.round(VERIFICATION_CODE_TTL_MS / 60_000));
 }

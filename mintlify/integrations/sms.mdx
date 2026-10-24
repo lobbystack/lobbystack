@@ -37,15 +37,17 @@ When a customer books by phone, the AI receptionist asks for verbal SMS consent 
 
 The disclosure is:
 
-> Can I text this number with your appointment confirmation and reminder? Message and data rates may apply. Reply STOP to opt out or HELP for help.
+> Can Example Business text this number with your appointment confirmation and reminder? Message and data rates may apply. Reply STOP to opt out or HELP for help.
 
 If the caller says yes, LobbyStack records the opt-in and sends appointment SMS for that phone number.
+
+Your business's first text to that customer confirms the opt-in. It names LobbyStack and your business, and it goes out right before the first appointment text or code. A customer who says no, replies `STOP`, or changes numbers and then agrees again gets a new confirmation. On a self-hosted LobbyStack, the confirmation and the `HELP` and `START` replies use your deployment's name.
 
 If the caller says no, the appointment is still booked and no appointment SMS is sent.
 
 When a caller cancels an appointment and hasn't answered the question before, the receptionist asks:
 
-> Can I text this number to confirm the cancellation? Message and data rates may apply. Reply STOP to opt out or HELP for help.
+> Can Example Business text this number to confirm the cancellation? Message and data rates may apply. Reply STOP to opt out or HELP for help.
 
 A caller who already answered isn't asked again: LobbyStack follows their earlier answer.
 
@@ -65,11 +67,19 @@ Operators can disable SMS alerts later in notification settings.
 
 ## Example messages
 
-Every appointment text ends with the rates notice and the `STOP` and `HELP` instructions, in the customer's language.
+The opt-in confirmation, your business's first text to each customer who agreed:
+
+> LobbyStack sends appointment texts for Example Business. Msg frequency varies. Msg & data rates may apply. Reply STOP to opt out or HELP for help.
+
+Later texts name only your business. Every appointment text ends with the rates notice and the `STOP` and `HELP` instructions, in the customer's language.
 
 Appointment confirmation:
 
 > Example Business: Your haircut appointment is confirmed for May 24 at 2:00 PM. Msg & data rates may apply. Reply STOP to opt out or HELP for help.
+
+Appointment-change code:
+
+> Example Business: your verification code is 123456. It expires in 10 minutes.
 
 Operator alert:
 
@@ -77,13 +87,17 @@ Operator alert:
 
 ## Opt-out and help
 
-A customer who replies `STOP` to the shared toll-free number gets no more texts from it, from any business. Twilio blocks the number from texting that phone. LobbyStack marks the phone as opted out at every business that has it as a contact, so no business queues texts to it.
+A customer who replies `STOP` to the shared toll-free number gets no more texts from it, from any business. Twilio sends the reply to `STOP` and blocks the number from texting that phone. LobbyStack marks the phone as opted out at every business that has it as a contact, so no business queues texts to it.
 
-A customer who replies `START` or `SUBSCRIBE` can get texts again. Each business goes back to the customer's earlier answer. A customer who agreed to a business's texts gets them again, and a customer who declined stays declined.
+A customer who replies `START` or `SUBSCRIBE` can get texts again. Each business goes back to the customer's earlier answer. A customer who agreed to a business's texts gets them again, and a customer who declined stays declined. The reply names the businesses that will text the customer again:
+
+> LobbyStack: You can get appointment texts from Example Business again. Msg frequency varies. Msg & data rates may apply. Reply HELP for help or STOP to opt out.
 
 A customer who replies `STOP` to your business number opts out of your business's texts only. `START` to that number subscribes them again.
 
-Recipients can reply `HELP` for support information.
+Recipients can reply `HELP` for support information. On the shared number, the reply names LobbyStack and the businesses that text that phone:
+
+> LobbyStack sends appointment texts for Example Business. For help with an appointment, call Example Business. For anything else, email hello@lobbystack.com. Reply STOP to opt out.
 
 For help, contact [hello@lobbystack.com](mailto:hello@lobbystack.com) or visit [https://lobbystack.com](https://lobbystack.com).
 

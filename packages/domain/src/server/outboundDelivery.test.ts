@@ -7,6 +7,8 @@ const rows = vi.hoisted(() => ({
   notifications: { claimNotificationDelivery: vi.fn(), notificationLeaseEndsAt: vi.fn(), resolveNotificationDelivery: vi.fn(), markNotificationSent: vi.fn(), transitionProcessingNotification: vi.fn(), claimOperatorNotificationDelivery: vi.fn(), operatorNotificationLeaseEndsAt: vi.fn(), loadOperatorNotificationDelivery: vi.fn(), markOperatorNotificationSent: vi.fn(), markOperatorNotificationSkipped: vi.fn(), releaseOperatorNotificationDelivery: vi.fn() },
   usage: { reserveAlertSmsUsage: vi.fn(), correctAlertSmsUsage: vi.fn(), enqueueBillingUsageSync: vi.fn() },
   events: { recordProductEventBestEffort: vi.fn() },
+  optIn: { claimSmsOptInConfirmation: vi.fn(), releaseSmsOptInConfirmation: vi.fn() },
+  branding: { deploymentAppName: vi.fn() },
 }));
 vi.mock("./sms", () => rows.sms);
 vi.mock("./appointmentChanges", () => rows.changeCode);
@@ -14,6 +16,8 @@ vi.mock("./phoneVerification", () => rows.code);
 vi.mock("./notifications", () => rows.notifications);
 vi.mock("./billing", () => rows.usage);
 vi.mock("./productEvents", () => rows.events);
+vi.mock("./smsOptIn", () => rows.optIn);
+vi.mock("./branding", () => rows.branding);
 
 import { deliverOutbound, type OutboundDelivery } from "./outboundDelivery";
 
@@ -22,7 +26,7 @@ const businessId = "business-1";
 const leaseEnds = new Date("2030-01-01T00:10:00Z");
 const twilioError = (code: number) => Object.assign(new Error(`Twilio error ${code}`), { code, status: 400 });
 const smsTarget = { to: "+14165550123", from: "+14165550100" };
-const { sms, changeCode, code, notifications, usage } = rows;
+const { sms, changeCode, code, notifications, usage, optIn } = rows;
 
 function providers() {
   return { twilio: { sendSms: vi.fn().mockResolvedValue({ providerMessageId: "SM1" }) }, email: { sendTemplate: vi.fn().mockResolvedValue({ messageId: "email-1" }) } };
@@ -42,7 +46,7 @@ const kinds = {
   },
   changeCode: {
     delivery: { kind: "changeCode", businessId, verificationId: "verification-1", code: "123456", ...smsTarget } satisfies OutboundDelivery,
-    ready: () => { changeCode.claimAppointmentChangeOtp.mockResolvedValue(true); changeCode.loadAppointmentChangeOtpTarget.mockResolvedValue({ ...smsTarget, code: "123456" }); },
+    ready: () => { changeCode.claimAppointmentChangeOtp.mockResolvedValue(true); changeCode.loadAppointmentChangeOtpTarget.mockResolvedValue({ ...smsTarget, code: "123456", businessName: "Axum Barbershop", locale: "en" }); },
     held: () => changeCode.claimAppointmentChangeOtp.mockResolvedValue(false),
     leaseEnds: changeCode.appointmentChangeOtpLeaseEndsAt,
     mark: changeCode.markAppointmentChangeOtpSent,
@@ -90,6 +94,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   usage.reserveAlertSmsUsage.mockResolvedValue({ allowed: true, usageEventId: "usage-1" });
   usage.correctAlertSmsUsage.mockResolvedValue("usage-1");
+  rows.branding.deploymentAppName.mockResolvedValue("LobbyStack");
 });
 afterEach(() => { vi.useRealTimers(); vi.unstubAllEnvs(); });
 
@@ -224,7 +229,7 @@ describe("codes", () => {
     kinds.verificationCode.ready(); usage.correctAlertSmsUsage.mockResolvedValue("usage-final");
     const sender = providers();
     await expect(deliverOutbound(context, sender, { ...kinds.verificationCode.delivery, locale: "fr" })).resolves.toEqual({ status: "completed", entityId: "attempt-1" });
-    expect(sender.twilio.sendSms).toHaveBeenCalledWith({ ...smsTarget, body: "Code de vérification LobbyStack : 482913. Il expire dans 10 minutes." });
+    expect(sender.twilio.sendSms).toHaveBeenCalledWith({ ...smsTarget, body: "LobbyStack : votre code de vérification est 482913. Il expire dans 10 minutes." });
     expect(usage.reserveAlertSmsUsage).toHaveBeenCalledWith(context, { businessId, sourceKey: "alert_sms:phone_verification:attempt-1", estimatedSegments: 1 });
     // No status callback reports segments for a code, so the estimate is final.
     expect(usage.correctAlertSmsUsage).toHaveBeenCalledWith(context, { businessId, sourceKey: "alert_sms:phone_verification:attempt-1", segments: 1 });
@@ -236,7 +241,7 @@ describe("codes", () => {
     const alertSms = vi.fn().mockResolvedValue({ providerMessageId: "SMalert" });
     const sender = { ...providers(), twilioAlerts: { from: smsTarget.from, sendSms: alertSms } };
     await expect(deliverOutbound(context, sender, kinds.changeCode.delivery)).resolves.toEqual({ status: "completed", entityId: "verification-1" });
-    expect(alertSms).toHaveBeenCalledWith({ ...smsTarget, body: "LobbyStack verification code: 123456. It expires in 10 minutes." });
+    expect(alertSms).toHaveBeenCalledWith({ ...smsTarget, body: "Axum Barbershop: your verification code is 123456. It expires in 10 minutes." });
     expect(sender.twilio.sendSms).not.toHaveBeenCalled();
   });
 });
@@ -278,5 +283,73 @@ describe("notifications", () => {
     const sender = providers(); sender.twilio.sendSms.mockRejectedValue(new Error("provider unavailable"));
     await expect(deliverOutbound(context, sender, kinds[kind].delivery, { isFinalAttempt: false })).rejects.toThrow("provider unavailable");
     expect(rows.events.recordProductEventBestEffort).toHaveBeenCalledWith(context, expect.objectContaining({ name: "notification.delivery_failed", businessId, properties }));
+  });
+});
+
+describe("the opt-in confirmation", () => {
+  const confirmation = { contactId: "contact-1", body: "LobbyStack sends appointment texts for Axum Barbershop. Msg frequency varies. Msg & data rates may apply. Reply STOP to opt out or HELP for help." };
+  const claimedAt = new Date("2030-01-01T00:00:00Z");
+  const optInKey = `alert_sms:opt_in:contact-1:${claimedAt.getTime()}`;
+  function readyWithOptIn() {
+    notifications.claimNotificationDelivery.mockResolvedValue(true);
+    notifications.resolveNotificationDelivery.mockResolvedValue({ kind: "ready", delivery: { notificationId: "notification-1", businessId, channel: "sms", kind: "booking_confirmation", relatedId: "appointment-1", ...smsTarget, subject: "Appointment confirmed", body: "Axum Barbershop: your haircut appointment is confirmed.", optIn: confirmation } });
+  }
+
+  it("goes out first, from the same number, and is billed on its own", async () => {
+    readyWithOptIn(); optIn.claimSmsOptInConfirmation.mockResolvedValue(claimedAt);
+    const sender = providers();
+    await expect(deliverOutbound(context, sender, kinds.notification.delivery)).resolves.toMatchObject({ status: "completed" });
+    expect(sender.twilio.sendSms.mock.calls.map(([input]) => input.body)).toEqual([confirmation.body, "Axum Barbershop: your haircut appointment is confirmed."]);
+    expect(sender.twilio.sendSms).toHaveBeenNthCalledWith(1, { ...smsTarget, body: confirmation.body });
+    expect(optIn.claimSmsOptInConfirmation).toHaveBeenCalledWith(context, { businessId, contactId: "contact-1" });
+    expect(usage.reserveAlertSmsUsage).toHaveBeenCalledWith(context, { businessId, sourceKey: optInKey, estimatedSegments: 1 });
+    expect(usage.correctAlertSmsUsage).toHaveBeenCalledWith(context, { businessId, sourceKey: optInKey, segments: 1 });
+    expect(optIn.releaseSmsOptInConfirmation).not.toHaveBeenCalled();
+  });
+
+  it("stays out when another send already took it", async () => {
+    readyWithOptIn(); optIn.claimSmsOptInConfirmation.mockResolvedValue(null);
+    const sender = providers();
+    await deliverOutbound(context, sender, kinds.notification.delivery);
+    expect(sender.twilio.sendSms).toHaveBeenCalledOnce();
+    expect(usage.reserveAlertSmsUsage).not.toHaveBeenCalledWith(context, expect.objectContaining({ sourceKey: optInKey }));
+  });
+
+  it("goes back with its usage when it fails, and the text waits for it", async () => {
+    readyWithOptIn(); optIn.claimSmsOptInConfirmation.mockResolvedValue(claimedAt);
+    const sender = providers(); sender.twilio.sendSms.mockRejectedValueOnce(new Error("socket hang up"));
+    await expect(deliverOutbound(context, sender, kinds.notification.delivery, { isFinalAttempt: false })).rejects.toThrow("socket hang up");
+    expect(sender.twilio.sendSms).toHaveBeenCalledOnce();
+    expect(optIn.releaseSmsOptInConfirmation).toHaveBeenCalledWith(context, { businessId, contactId: "contact-1", claimedAt });
+    expect(usage.correctAlertSmsUsage).toHaveBeenCalledWith(context, { businessId, sourceKey: optInKey, segments: 0 });
+    expect(kinds.notification.released()).toBe(true);
+  });
+
+  it("stays sent when the text after it fails, so the retry sends only the text", async () => {
+    readyWithOptIn(); optIn.claimSmsOptInConfirmation.mockResolvedValue(claimedAt);
+    const sender = providers(); sender.twilio.sendSms.mockResolvedValueOnce({ providerMessageId: "SM0" }).mockRejectedValueOnce(new Error("socket hang up"));
+    await expect(deliverOutbound(context, sender, kinds.notification.delivery, { isFinalAttempt: false })).rejects.toThrow("socket hang up");
+    expect(optIn.releaseSmsOptInConfirmation).not.toHaveBeenCalled();
+    expect(usage.correctAlertSmsUsage).toHaveBeenCalledWith(context, { businessId, sourceKey: optInKey, segments: 1 });
+  });
+
+  it("holds back the text when the quota can't cover the confirmation", async () => {
+    readyWithOptIn(); optIn.claimSmsOptInConfirmation.mockResolvedValue(claimedAt);
+    usage.reserveAlertSmsUsage.mockResolvedValueOnce({ allowed: false, errorCode: "alert_sms_limit_reached" });
+    const sender = providers();
+    await expect(deliverOutbound(context, sender, kinds.notification.delivery)).resolves.toMatchObject({ status: "skipped" });
+    expect(sender.twilio.sendSms).not.toHaveBeenCalled();
+    expect(optIn.releaseSmsOptInConfirmation).toHaveBeenCalledWith(context, { businessId, contactId: "contact-1", claimedAt });
+    expect(kinds.notification.closed()).toBe(true);
+  });
+
+  it("goes before an unmetered change code too", async () => {
+    kinds.changeCode.ready();
+    changeCode.loadAppointmentChangeOtpTarget.mockResolvedValue({ ...smsTarget, code: "123456", businessName: "Axum Barbershop", locale: "en", optIn: confirmation });
+    optIn.claimSmsOptInConfirmation.mockResolvedValue(claimedAt);
+    const sender = providers();
+    await deliverOutbound(context, sender, kinds.changeCode.delivery);
+    expect(sender.twilio.sendSms.mock.calls.map(([input]) => input.body)).toEqual([confirmation.body, "Axum Barbershop: your verification code is 123456. It expires in 10 minutes."]);
+    expect(usage.reserveAlertSmsUsage).not.toHaveBeenCalled();
   });
 });

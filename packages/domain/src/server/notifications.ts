@@ -6,6 +6,7 @@ import { isTerminalTwilioMessageStatus, mapTwilioStatusToNotificationStatus, sho
 import { appointments, businesses, contacts, enqueueOutbox, notifications, operatorNotificationDeliveries, outboxMessages, operatorNotificationPreferences, services, smsConsentEvents, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 
 import { requireBusinessMembership } from "../authz";
+import { deploymentAppName } from "./branding";
 import type { DomainContext } from "./context";
 import { resolveSmsSender } from "./smsSender";
 import { correctUsageInTransaction, enqueueUsageSyncInTransaction } from "./usage";
@@ -65,6 +66,8 @@ export type NotificationDelivery = {
   from?: string;
   subject: string;
   body: string;
+  /** The opt-in confirmation to send first, when this is the contact's first text since they said yes. */
+  optIn?: SmsOptInConfirmation;
 };
 
 export type NotificationDeliveryResolution =
@@ -122,6 +125,41 @@ export const SMS_OPT_OUT_FOOTER: Record<InterfaceLocale, string> = {
   es: "Pueden aplicarse tarifas de mensajes y datos. Responda STOP para darse de baja o HELP para obtener ayuda.",
   sr: "Mogu se naplatiti poruke i prenos podataka. Odgovorite STOP za odjavu ili HELP za informacije.",
 };
+
+/**
+ * The opt-in confirmation a delivery sends before its own text: the first
+ * text a business sends a customer who agreed to texts. It names the host,
+ * the verified sender, and the business; every later text names only the
+ * business (docs/white-label.md, "Texts"). See smsOptIn.ts.
+ */
+export type SmsOptInConfirmation = { contactId: string; body: string };
+
+// GSM-7 only, like the opt-out footer that follows.
+const SMS_OPT_IN_INTRO: Record<InterfaceLocale, (hostName: string, businessName: string) => string> = {
+  en: (host, business) => `${host} sends appointment texts for ${business}. Msg frequency varies.`,
+  fr: (host, business) => `${host} envoie les textos de rendez-vous de ${business}. Fréquence variable.`,
+  es: (host, business) => `${host}: mensajes de citas de ${business}. Frecuencia variable.`,
+  sr: (host, business) => `${host}: poruke o terminima za ${business}. Broj poruka varira.`,
+};
+
+/** The opt-in confirmation, in the customer's language. */
+export function smsOptInConfirmationBody(input: { locale: InterfaceLocale; hostName: string; businessName: string }): string {
+  return `${SMS_OPT_IN_INTRO[input.locale](input.hostName, input.businessName)} ${SMS_OPT_OUT_FOOTER[input.locale]}`;
+}
+
+/**
+ * The confirmation a text to this contact needs first, or undefined when the
+ * contact got one for their current yes, never said yes, or is blocked.
+ */
+export async function smsOptInConfirmationInTransaction(tx: DatabaseTransaction, input: { businessId: string; contactId: string }): Promise<SmsOptInConfirmation | undefined> {
+  const row = (await tx.select({ status: contacts.smsConsentStatus, confirmedAt: contacts.smsOptInConfirmedAt, blockedAt: contacts.operatorBlockedAt, locale: contacts.preferredLocale, businessName: businesses.name, defaultLocale: businesses.defaultLocale })
+    .from(contacts)
+    .innerJoin(businesses, eq(businesses.id, contacts.businessId))
+    .where(and(eq(contacts.id, input.contactId), eq(contacts.businessId, input.businessId)))
+    .limit(1))[0];
+  if (!row || row.status !== "subscribed" || row.confirmedAt || row.blockedAt) return undefined;
+  return { contactId: input.contactId, body: smsOptInConfirmationBody({ locale: localeFor(row.locale ?? row.defaultLocale), hostName: await deploymentAppName(tx), businessName: row.businessName }) };
+}
 
 export function buildAppointmentNotification(input: {
   kind: string;
@@ -229,6 +267,7 @@ export async function resolveNotificationDelivery(
       businessName: businesses.name,
       defaultLocale: businesses.defaultLocale,
       serviceName: services.name,
+      contactId: contacts.id,
       contactPhone: contacts.phone,
       contactEmail: contacts.email,
       contactLocale: contacts.preferredLocale,
@@ -265,6 +304,7 @@ export async function resolveNotificationDelivery(
       startsAt: row.startsAt,
       timezone: row.timezone,
     });
+    const optIn = row.channel === "sms" ? await smsOptInConfirmationInTransaction(tx, { businessId: input.businessId, contactId: row.contactId }) : undefined;
     return {
       kind: "ready",
       delivery: {
@@ -277,6 +317,7 @@ export async function resolveNotificationDelivery(
         ...(row.channel === "sms" && senderPhone ? { from: senderPhone } : {}),
         subject: message.subject,
         body: message.body,
+        ...(optIn ? { optIn } : {}),
       },
     };
   });

@@ -3,11 +3,13 @@ import { normalizeInterfaceLocale, permanentSmsErrorCode } from "@lobbystack/sha
 
 import { appointmentChangeOtpLeaseEndsAt, claimAppointmentChangeOtp, loadAppointmentChangeOtpTarget, markAppointmentChangeOtpSent, releaseAppointmentChangeOtp } from "./appointmentChanges";
 import { correctAlertSmsUsage, enqueueBillingUsageSync, reserveAlertSmsUsage } from "./billing";
+import { deploymentAppName } from "./branding";
 import type { DomainContext } from "./context";
 import { claimNotificationDelivery, claimOperatorNotificationDelivery, loadOperatorNotificationDelivery, markNotificationSent, markOperatorNotificationSent, markOperatorNotificationSkipped, notificationLeaseEndsAt, operatorNotificationLeaseEndsAt, releaseOperatorNotificationDelivery, resolveNotificationDelivery, transitionProcessingNotification } from "./notifications";
 import { issueOperatorPhoneVerificationCode, markOperatorPhoneVerificationCodeSent, releaseOperatorPhoneVerificationCodeSend } from "./phoneVerification";
 import { recordProductEventBestEffort } from "./productEvents";
 import { claimSmsDelivery, failSmsDelivery, loadSmsDeliveryTarget, markSmsSent, releaseSmsDelivery, smsDeliveryLeaseEndsAt } from "./sms";
+import { claimSmsOptInConfirmation, releaseSmsOptInConfirmation } from "./smsOptIn";
 import { estimateSmsSegments } from "./usage";
 import { verificationCodeSmsBody } from "./verificationCode";
 
@@ -42,7 +44,8 @@ type StatusCallbackIds = { messageId?: string; notificationId?: string; operator
 type FailureEvent = { kind: string; appointmentId?: string };
 
 type Outgoing = { body: string; failureEvent?: FailureEvent } & (
-  | { channel: "sms"; to: string; from: string; callback?: StatusCallbackIds; usageSourceKey?: string }
+  // optIn: the opt-in confirmation to send first, when this is the contact's first text since they said yes.
+  | { channel: "sms"; to: string; from: string; callback?: StatusCallbackIds; usageSourceKey?: string; optIn?: { contactId: string; body: string } }
   | { channel: "email"; to: string; subject: string; idempotencyKey: string }
 );
 
@@ -68,6 +71,10 @@ type Lease = {
  * Once the provider accepts the message nothing hands the row back or gives
  * back its usage. Recording the send is retried, because a row left unmarked
  * goes out again once its lease ends.
+ *
+ * A customer's first text since they agreed to texts follows the opt-in
+ * confirmation, sent just before it from the same number. The confirmation
+ * counts once: a retry after the text failed doesn't send it again.
  */
 export async function deliverOutbound(context: DomainContext, providers: OutboundProviders, delivery: OutboundDelivery, execution: { isFinalAttempt?: boolean } = {}): Promise<DeliveryOutcome> {
   const lease = leaseFor(context, delivery);
@@ -81,16 +88,22 @@ export async function deliverOutbound(context: DomainContext, providers: Outboun
   if (!outgoing) return skipped;
   const { businessId } = delivery;
   const statusCallback = outgoing.channel === "sms" && outgoing.callback ? twilioStatusCallback(outgoing.callback) : undefined;
-  const send = providerSend(providers, outgoing, statusCallback);
+  const send = providerSend(providers, outgoing);
   if (!send) {
     await lease.close("skipped", `${outgoing.channel === "sms" ? "SMS" : "Email"} delivery is not configured.`);
     return skipped;
   }
   const usageSourceKey = outgoing.channel === "sms" ? outgoing.usageSourceKey : undefined;
+  const optIn = outgoing.channel === "sms" && outgoing.optIn ? await claimOptIn(context, { businessId, ...outgoing.optIn, metered: Boolean(usageSourceKey) }) : undefined;
+  if (optIn && "denied" in optIn) {
+    await lease.close("skipped", optIn.denied);
+    return skipped;
+  }
   let usageEventId: string | undefined;
   if (usageSourceKey) {
     const reservation = await reserveAlertSmsUsage(context, { businessId, sourceKey: usageSourceKey, estimatedSegments: estimateSmsSegments(outgoing.body) });
     if (!reservation.allowed) {
+      await optIn?.release();
       await lease.close("skipped", reservation.errorCode ?? "Alert SMS quota reached.");
       return skipped;
     }
@@ -98,10 +111,14 @@ export async function deliverOutbound(context: DomainContext, providers: Outboun
   }
   let providerMessageId: string;
   try {
-    providerMessageId = await send();
+    if (optIn) await optIn.send(send);
+    providerMessageId = await send(outgoing.body, statusCallback);
   } catch (error) {
-    // Nothing went out, so the usage and the row go back.
+    // Nothing went out, so the usage and the row go back. A confirmation that
+    // went out before the failure stays sent.
     if (outgoing.failureEvent) await recordProductEventBestEffort(context, { name: "notification.delivery_failed", businessId, distinctId: getPostHogDistinctIdForBusinessSystem(businessId), actorType: "worker", properties: { kind: outgoing.failureEvent.kind, ...(outgoing.failureEvent.appointmentId ? { appointmentId: outgoing.failureEvent.appointmentId } : {}) } });
+    if (optIn && !optIn.sent) await optIn.release().catch(() => undefined);
+    if (optIn?.sent) await optIn.bill().catch(() => undefined);
     if (usageSourceKey && usageEventId) await correctAlertSmsUsage(context, { businessId, sourceKey: usageSourceKey, segments: 0 }).catch(() => undefined);
     const permanentCode = outgoing.channel === "sms" ? permanentSmsErrorCode(error) : undefined;
     if (permanentCode) {
@@ -128,22 +145,74 @@ export async function deliverOutbound(context: DomainContext, providers: Outboun
     const finalUsageEventId = await correctAlertSmsUsage(context, { businessId, sourceKey: usageSourceKey, segments: estimateSmsSegments(outgoing.body) });
     await enqueueBillingUsageSync(context, { businessId, usageEventId: finalUsageEventId });
   }
+  await optIn?.bill();
   return { status: "completed", entityId: lease.id };
+}
+
+type SendText = (body: string, statusCallback?: string) => Promise<string>;
+
+type ClaimedOptIn = {
+  sent: boolean;
+  send(sendText: SendText): Promise<void>;
+  /** Hands the confirmation back for the next text, with its usage, when it didn't go out. */
+  release(): Promise<void>;
+  /** Bills the confirmation that went out at its estimate: it has no status callback. */
+  bill(): Promise<void>;
+};
+
+/**
+ * Takes the contact's opt-in confirmation for this send, with its own alert
+ * SMS usage when the text it comes before is metered. Undefined when another
+ * send took it or the contact no longer needs one; denied when the quota
+ * can't cover it, so the text doesn't go out without it.
+ */
+async function claimOptIn(context: DomainContext, input: { businessId: string; contactId: string; body: string; metered: boolean }): Promise<ClaimedOptIn | { denied: string } | undefined> {
+  const { businessId, contactId, body } = input;
+  const claimedAt = await claimSmsOptInConfirmation(context, { businessId, contactId });
+  if (!claimedAt) return undefined;
+  const sourceKey = input.metered ? `alert_sms:opt_in:${contactId}:${claimedAt.getTime()}` : undefined;
+  let usageEventId: string | undefined;
+  if (sourceKey) {
+    const reservation = await reserveAlertSmsUsage(context, { businessId, sourceKey, estimatedSegments: estimateSmsSegments(body) });
+    if (!reservation.allowed) {
+      await releaseSmsOptInConfirmation(context, { businessId, contactId, claimedAt });
+      return { denied: reservation.errorCode ?? "Alert SMS quota reached." };
+    }
+    usageEventId = reservation.usageEventId;
+  }
+  const claimed: ClaimedOptIn = {
+    sent: false,
+    send: async (sendText) => {
+      await sendText(body);
+      claimed.sent = true;
+    },
+    release: async () => {
+      if (sourceKey && usageEventId) await correctAlertSmsUsage(context, { businessId, sourceKey, segments: 0 }).catch(() => undefined);
+      await releaseSmsOptInConfirmation(context, { businessId, contactId, claimedAt });
+    },
+    bill: async () => {
+      if (!sourceKey || !usageEventId) return;
+      const finalUsageEventId = await correctAlertSmsUsage(context, { businessId, sourceKey, segments: estimateSmsSegments(body) });
+      await enqueueBillingUsageSync(context, { businessId, usageEventId: finalUsageEventId });
+    },
+  };
+  return claimed;
 }
 
 /**
  * The provider call for this message, or undefined when nothing can send it.
- * The shared sender, which texts operator alerts and cloud customers'
+ * An SMS call takes the body, so the opt-in confirmation can go out through it
+ * too. The shared sender, which texts operator alerts and cloud customers'
  * appointment texts and codes, goes through the alert account that owns it;
  * any other number through the default account.
  */
-function providerSend(providers: OutboundProviders, outgoing: Outgoing, statusCallback: string | undefined): (() => Promise<string>) | undefined {
+function providerSend(providers: OutboundProviders, outgoing: Outgoing): SendText | undefined {
   if (outgoing.channel === "email") {
     const email = providers.email;
     return email && (async () => (await email.sendTemplate({ template: "operator_alert", to: outgoing.to, subject: outgoing.subject, variables: { message: outgoing.body }, idempotencyKey: outgoing.idempotencyKey })).messageId);
   }
   const sms = !outgoing.from ? undefined : providers.twilioAlerts?.from === outgoing.from ? providers.twilioAlerts : providers.twilio;
-  return sms && (async () => (await sms.sendSms({ to: outgoing.to, from: outgoing.from, body: outgoing.body, ...(statusCallback ? { statusCallback } : {}) })).providerMessageId);
+  return sms && (async (body, statusCallback) => (await sms.sendSms({ to: outgoing.to, from: outgoing.from, body, ...(statusCallback ? { statusCallback } : {}) })).providerMessageId);
 }
 
 function twilioStatusCallback(ids: StatusCallbackIds): string | undefined {
@@ -176,7 +245,7 @@ function messageLease(context: DomainContext, input: { businessId: string; messa
     heldUntil: () => smsDeliveryLeaseEndsAt(context, ids),
     load: async () => {
       const target = await loadSmsDeliveryTarget(context.db, ids);
-      if (target && "to" in target) return { channel: "sms", to: target.to, from: target.from, body: target.body, callback: { messageId: input.messageId } };
+      if (target && "to" in target) return { channel: "sms", to: target.to, from: target.from, body: target.body, callback: { messageId: input.messageId }, ...(target.optIn ? { optIn: target.optIn } : {}) };
       await failSmsDelivery(context, { ...ids, reason: target?.blocked ?? "missing" });
       return null;
     },
@@ -197,7 +266,7 @@ function changeCodeLease(context: DomainContext, input: { businessId: string; ve
     heldUntil: () => appointmentChangeOtpLeaseEndsAt(context, ids),
     load: async () => {
       const target = await loadAppointmentChangeOtpTarget(context, { ...ids, to: input.to, from: input.from, code: input.code });
-      if (target) return { channel: "sms", to: target.to, from: target.from, body: verificationCodeSmsBody(target.code) };
+      if (target) return { channel: "sms", to: target.to, from: target.from, body: verificationCodeSmsBody({ code: target.code, sender: target.businessName, locale: target.locale }), ...(target.optIn ? { optIn: target.optIn } : {}) };
       await releaseAppointmentChangeOtp(context, ids);
       return null;
     },
@@ -221,7 +290,8 @@ function verificationCodeLease(context: DomainContext, input: { businessId: stri
       channel: "sms",
       to: issued.to,
       from: issued.from,
-      body: verificationCodeSmsBody(issued.code, normalizeInterfaceLocale(input.locale ?? "") ?? "en"),
+      // The operator agreed to the host's alerts, so the code names the host.
+      body: verificationCodeSmsBody({ code: issued.code, sender: await deploymentAppName(context.db), locale: normalizeInterfaceLocale(input.locale ?? "") ?? "en" }),
       // The code goes out from the alert sender, so it counts against the alert SMS quota.
       usageSourceKey: `alert_sms:phone_verification:${input.attemptId}`,
     },
@@ -246,7 +316,7 @@ function notificationLease(context: DomainContext, input: { businessId: string; 
       const delivery = resolution.delivery;
       const failureEvent = { kind: delivery.kind, ...(delivery.relatedId ? { appointmentId: delivery.relatedId } : {}) };
       if (delivery.channel === "email") return { channel: "email", to: delivery.to, subject: delivery.subject, body: delivery.body, idempotencyKey: `notification:${input.notificationId}`, failureEvent };
-      return { channel: "sms", to: delivery.to, from: delivery.from ?? "", body: delivery.body, callback: { notificationId: input.notificationId }, usageSourceKey: `alert_sms:notification:${input.notificationId}`, failureEvent };
+      return { channel: "sms", to: delivery.to, from: delivery.from ?? "", body: delivery.body, callback: { notificationId: input.notificationId }, usageSourceKey: `alert_sms:notification:${input.notificationId}`, failureEvent, ...(delivery.optIn ? { optIn: delivery.optIn } : {}) };
     },
     markSent: (providerMessageId) => markNotificationSent(context, { ...ids, providerMessageId }),
     release: () => transitionProcessingNotification(context, ids, "pending"),

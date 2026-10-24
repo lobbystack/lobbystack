@@ -135,11 +135,13 @@ const NO_HOURS_GUIDANCE = "The business hasn't set its opening hours yet, so you
 // the agent asks. A caller answers once; after that the agent follows it. The
 // answer has its own tool because GPT-Live may ask only after the booking.
 const SAVE_TEXT_ANSWER = "Whenever the caller says whether they want texts, save their answer with recordTextPreference, even after the booking or cancellation is done. Their answer on this call replaces smsConsentOnFile: a no means no texts, even when it was subscribed. Only an answer about texts counts: a yes to a time or to booking isn't a yes to texts, and a no to texts isn't a no to the appointment. Once the caller answers, tell them whether they'll get texts only after recordTextPreference has saved it.";
-const BOOKING_TEXT_GUIDANCE = "On a phone call, findAvailability returns smsConsentOnFile, the caller's earlier answer about texts from this business. When it's not_asked, or missing, ask together with the time you offer, in the language of the call: \"Can I text this number with your appointment confirmation and reminder? Message and data rates may apply. Reply STOP to opt out or HELP for help.\" When it's subscribed, don't ask: tell the caller they'll get a confirmation text. When it's declined or opted_out, don't ask and don't mention texts.";
-const CANCELLATION_TEXT_GUIDANCE = "Once verifyAppointmentForChange or verifyAppointmentChangeOtp verifies a cancellation, its result has smsConsentOnFile. When it's not_asked, ask once, together with the final confirmation and in the language of the call: \"Can I text this number to confirm the cancellation? Message and data rates may apply. Reply STOP to opt out or HELP for help.\" When it's subscribed, don't ask: tell the caller they'll get a text confirming the cancellation. When it's declined or opted_out, don't ask and don't mention texts.";
+// The question names the business: the caller agrees to texts from it, which
+// the shared number sends for every business (docs/white-label.md, "Texts").
+const bookingTextGuidance = (businessName: string) => `On a phone call, findAvailability returns smsConsentOnFile, the caller's earlier answer about texts from this business. When it's not_asked, or missing, ask together with the time you offer, in the language of the call: "Can ${businessName} text this number with your appointment confirmation and reminder? Message and data rates may apply. Reply STOP to opt out or HELP for help." When it's subscribed, don't ask: tell the caller they'll get a confirmation text. When it's declined or opted_out, don't ask and don't mention texts.`;
+const cancellationTextGuidance = (businessName: string) => `Once verifyAppointmentForChange or verifyAppointmentChangeOtp verifies a cancellation, its result has smsConsentOnFile. When it's not_asked, ask once, together with the final confirmation and in the language of the call: "Can ${businessName} text this number to confirm the cancellation? Message and data rates may apply. Reply STOP to opt out or HELP for help." When it's subscribed, don't ask: tell the caller they'll get a text confirming the cancellation. When it's declined or opted_out, don't ask and don't mention texts.`;
 // With a keypad PIN, the caller confirms right after the PIN, before the agent
 // knows their answer about texts, so the question follows the cancellation.
-const PIN_CANCELLATION_TEXT_GUIDANCE = "Once the keypad PIN check accepts a cancellation, its result has smsConsentOnFile. When it's not_asked, ask once, right after cancelling and in the language of the call: \"Can I text this number to confirm the cancellation? Message and data rates may apply. Reply STOP to opt out or HELP for help.\" When it's subscribed, don't ask: tell the caller they'll get a text confirming the cancellation. When it's declined or opted_out, don't ask and don't mention texts.";
+const pinCancellationTextGuidance = (businessName: string) => `Once the keypad PIN check accepts a cancellation, its result has smsConsentOnFile. When it's not_asked, ask once, right after cancelling and in the language of the call: "Can ${businessName} text this number to confirm the cancellation? Message and data rates may apply. Reply STOP to opt out or HELP for help." When it's subscribed, don't ask: tell the caller they'll get a text confirming the cancellation. When it's declined or opted_out, don't ask and don't mention texts.`;
 
 // The business requires a PIN typed on the keypad. Only the call controller
 // sees the digits; the agent learns the outcome in a later request.
@@ -222,7 +224,7 @@ export function receptionistCapabilities(snapshot: BusinessContextSnapshot, conv
         : offered.cancelAppointment
           ? [
             "To verify an appointment the caller wants to change, you need its time or its service, not their name. When verification fails because the caller hasn't said either yet, ask for it and verify again. When it still fails with the time or service, or the caller isn't calling from the number it was booked with, don't take a message: ask for the name it's booked under and its date, time and service, save the request with requestAppointmentCancellation, and tell the caller the team will take care of the cancellation. Never say or suggest the appointment is already cancelled.",
-            callerTextable ? (keypadPin ? PIN_CANCELLATION_TEXT_GUIDANCE : CANCELLATION_TEXT_GUIDANCE) : "This business can't text the caller's number, so don't offer or mention a text about a cancellation.",
+            callerTextable ? (keypadPin ? pinCancellationTextGuidance : cancellationTextGuidance)(snapshot.displayName) : "This business can't text the caller's number, so don't offer or mention a text about a cancellation.",
           ].join("\n\n")
           : `You can't cancel appointments ${voice ? "on this call" : "in this chat"}. When the caller asks to cancel one, tell them that plainly and that the team will take care of the cancellation. Ask for the name it's booked under and its date, time and service, then save the request with requestAppointmentCancellation. Never say or suggest the appointment is already cancelled.`,
       offered.requestKeypadPasscode ? KEYPAD_PIN_GUIDANCE : "",
@@ -233,7 +235,7 @@ export function receptionistCapabilities(snapshot: BusinessContextSnapshot, conv
         : "",
       offered.bookAppointment
         ? callerTextable
-          ? BOOKING_TEXT_GUIDANCE
+          ? bookingTextGuidance(snapshot.displayName)
           : channel === "voice"
             ? "This business can't text the caller's number, so don't offer a text confirmation or reminder."
             : "Texts can only be set up on a phone call, so don't offer or promise a text confirmation or reminder."

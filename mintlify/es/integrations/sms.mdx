@@ -37,15 +37,17 @@ Cuando un cliente reserva por teléfono, la recepcionista con IA le pide su cons
 
 El aviso es:
 
-> ¿Puedo enviarle a este número un mensaje de texto con la confirmación y el recordatorio de su cita? Pueden aplicarse tarifas de mensajes y datos. Responda STOP para darse de baja o HELP para obtener ayuda.
+> ¿Puede Example Business enviarle a este número un mensaje de texto con la confirmación y el recordatorio de su cita? Pueden aplicarse tarifas de mensajes y datos. Responda STOP para darse de baja o HELP para obtener ayuda.
 
 Si la persona que llama acepta, LobbyStack registra la aceptación y envía los SMS de la cita a ese número de teléfono.
+
+El primer SMS de su negocio a ese cliente confirma la aceptación. Nombra a LobbyStack y a su negocio, y sale justo antes del primer SMS de la cita o del primer código. Un cliente que no acepta, responde `STOP` o cambia de número, y luego vuelve a aceptar, recibe una nueva confirmación. En una instalación autoalojada de LobbyStack, la confirmación y las respuestas a `HELP` y `START` usan el nombre de su implementación.
 
 Si la persona que llama no acepta, la cita se reserva igualmente y no se envía ningún SMS de la cita.
 
 Cuando alguien cancela una cita por teléfono y nunca ha respondido a la pregunta, la recepcionista pregunta:
 
-> ¿Puedo enviarle un mensaje de texto a este número para confirmar la cancelación? Pueden aplicarse tarifas de mensajes y datos. Responda STOP para darse de baja o HELP para obtener ayuda.
+> ¿Puede Example Business enviarle un mensaje de texto a este número para confirmar la cancelación? Pueden aplicarse tarifas de mensajes y datos. Responda STOP para darse de baja o HELP para obtener ayuda.
 
 A quien ya respondió no se le vuelve a preguntar: LobbyStack sigue su respuesta anterior.
 
@@ -65,11 +67,19 @@ Los operadores pueden desactivar las alertas por SMS más adelante en la configu
 
 ## Mensajes de ejemplo
 
-Cada SMS de una cita termina con el aviso sobre tarifas y las instrucciones de `STOP` y `HELP`, en el idioma del cliente.
+La confirmación de la aceptación, el primer SMS de su negocio a cada cliente que aceptó:
+
+> LobbyStack: mensajes de citas de Example Business. Frecuencia variable. Pueden aplicarse tarifas de mensajes y datos. Responda STOP para darse de baja o HELP para obtener ayuda.
+
+Los SMS siguientes nombran solo a su negocio. Cada SMS de una cita termina con el aviso sobre tarifas y las instrucciones de `STOP` y `HELP`, en el idioma del cliente.
 
 Confirmación de cita:
 
 > Example Business: Su cita de corte de cabello está confirmada para el 24 de mayo a las 2:00 p. m. Pueden aplicarse tarifas de mensajes y datos. Responda STOP para darse de baja o HELP para obtener ayuda.
+
+Código para cambiar una cita:
+
+> Example Business: su código de verificación es 123456. Caduca en 10 minutos.
 
 Alerta para operadores:
 
@@ -77,13 +87,17 @@ Alerta para operadores:
 
 ## Baja y ayuda
 
-Un cliente que responde `STOP` al número gratuito compartido deja de recibir SMS de ese número, de cualquier negocio. Twilio impide que el número le escriba a ese teléfono. LobbyStack marca el teléfono como dado de baja en cada negocio que lo tiene como contacto, para que ningún negocio le prepare SMS.
+Un cliente que responde `STOP` al número gratuito compartido deja de recibir SMS de ese número, de cualquier negocio. Twilio envía la respuesta a `STOP` e impide que el número le escriba a ese teléfono. LobbyStack marca el teléfono como dado de baja en cada negocio que lo tiene como contacto, para que ningún negocio le prepare SMS.
 
-Un cliente que responde `START` o `SUBSCRIBE` puede volver a recibir SMS. Cada negocio vuelve a la respuesta que el cliente le había dado. Un cliente que había aceptado los SMS de un negocio los vuelve a recibir, y uno que los había rechazado sigue sin recibirlos.
+Un cliente que responde `START` o `SUBSCRIBE` puede volver a recibir SMS. Cada negocio vuelve a la respuesta que el cliente le había dado. Un cliente que había aceptado los SMS de un negocio los vuelve a recibir, y uno que los había rechazado sigue sin recibirlos. La respuesta, en inglés, nombra los negocios que le volverán a escribir:
+
+> LobbyStack: You can get appointment texts from Example Business again. Msg frequency varies. Msg & data rates may apply. Reply HELP for help or STOP to opt out.
 
 Un cliente que responde `STOP` al número de su negocio se da de baja solo de los SMS de su negocio. `START` a ese número lo vuelve a suscribir.
 
-Los destinatarios pueden responder `HELP` para obtener información de asistencia.
+Los destinatarios pueden responder `HELP` para obtener información de asistencia. En el número compartido, la respuesta, en inglés, nombra a LobbyStack y a los negocios que le escriben a ese teléfono:
+
+> LobbyStack sends appointment texts for Example Business. For help with an appointment, call Example Business. For anything else, email hello@lobbystack.com. Reply STOP to opt out.
 
 Para obtener ayuda, escriba a [hello@lobbystack.com](mailto:hello@lobbystack.com) o visite [https://lobbystack.com](https://lobbystack.com).
 

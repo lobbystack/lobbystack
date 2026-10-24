@@ -1,13 +1,13 @@
 import { and, eq, gt, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
 
-import { contacts, conversationSessions, conversations, enqueueOutbox, messages, providerEvents, smsConsentEvents, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { businesses, contacts, conversationSessions, conversations, enqueueOutbox, messages, providerEvents, smsConsentEvents, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { DEFAULT_APP_NAME, brandLinks, contactEmailFor, isTerminalTwilioMessageStatus, mapTwilioStatusToMessageStatus, normalizeTwilioMessageStatus, shouldApplyMessageStatusTransition } from "@lobbystack/shared";
 
 import { deploymentAppName } from "./branding";
 import { findOrCreateContactByPhone } from "./contacts";
 import type { DomainContext } from "./context";
 import { contentExpiryForPlan, isContentRetentionEnabled, resolveBusinessBillingPlan } from "./contentRetentionPolicy";
-import { queueOperatorAlertInTransaction } from "./notifications";
+import { queueOperatorAlertInTransaction, smsOptInConfirmationInTransaction, type SmsOptInConfirmation } from "./notifications";
 import { emitWebhookEventInTransaction } from "./publicApi/webhooks";
 import { businessSmsNumber } from "./smsSender";
 import { recordUnitEconomicsEventInTransaction } from "./unitEconomics";
@@ -16,10 +16,9 @@ import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 const SMS_STOP_KEYWORDS = new Set(["STOP", "STOPALL", "UNSUBSCRIBE", "END", "QUIT", "CANCEL"]);
 const SMS_START_KEYWORDS = new Set(["START", "UNSTOP", "SUBSCRIBE"]);
 const SMS_HELP_KEYWORDS = new Set(["HELP"]);
-const SMS_START_REPLY = "LobbyStack: You are subscribed again. Reply HELP for help or STOP to opt out.";
 
 export type SmsConsentUpdate = { status: "subscribed" | "opted_out"; source: string };
-export type SmsKeywordReply = { body: string; kind: "help" | "start" };
+export type SmsKeywordReply = { kind: "help" | "start" };
 
 export function normalizeSmsKeyword(value: string): string {
   return value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -37,32 +36,63 @@ export function classifySmsConsentUpdate(input: { body: string; optOutType?: str
   return null;
 }
 
+// HELP and START replies name the host, the deployment's verified sender, and
+// the business or businesses that text the number (docs/white-label.md,
+// "Texts"). STOP gets Twilio's own reply: Twilio blocks every text to a phone
+// once it sends STOP. A START reply that names a business also gives the
+// frequency and rates, so it confirms the opt-in itself.
+
+/** The businesses a reply names: "A", "A and B", "A, B, and C", or "A, B, and 2 other businesses". */
+export function smsBusinessList(names: readonly string[]): string {
+  const shown = names.length > 3 ? [...names.slice(0, 2), `${names.length - 2} other businesses`] : names;
+  return new Intl.ListFormat("en", { style: "long", type: "conjunction" }).format(shown);
+}
+
 /**
- * The HELP reply, named for the deployment and with its own address and
- * website when it sets them (see docs/branding.md). Unbranded, it keeps the
- * wording LobbyStack registered with carriers.
+ * The HELP reply from a business's own number, with the deployment's address
+ * and website when it sets them (see docs/branding.md).
  */
-export function smsHelpReply(appName: string = DEFAULT_APP_NAME): string {
+export function smsHelpReply(input: { appName?: string; businessName: string }): string {
   const links = brandLinks();
-  return `${appName}: For help, contact ${contactEmailFor(links, "sms")} or visit ${links.siteUrl}. Reply STOP to opt out.`;
+  return `${input.appName ?? DEFAULT_APP_NAME} sends appointment texts for ${input.businessName}. For help, contact ${contactEmailFor(links, "sms")} or visit ${links.siteUrl}. Reply STOP to opt out.`;
+}
+
+/** The START reply from a business's own number. */
+export function smsStartReply(input: { appName?: string; businessName: string }): string {
+  return `${input.appName ?? DEFAULT_APP_NAME}: You can get appointment texts from ${input.businessName} again. Msg frequency varies. Msg & data rates may apply. Reply HELP for help or STOP to opt out.`;
 }
 
 export function classifySmsKeywordReply(input: { body: string; optOutType?: string }): SmsKeywordReply | null {
   const normalizedOptOutType = input.optOutType?.trim().toUpperCase();
   const normalizedBody = normalizeSmsKeyword(input.body ?? "");
   const keyword = normalizedOptOutType || normalizedBody;
-  if (SMS_HELP_KEYWORDS.has(keyword)) return { body: smsHelpReply(), kind: "help" };
-  if (SMS_START_KEYWORDS.has(keyword)) return { body: SMS_START_REPLY, kind: "start" };
+  if (SMS_HELP_KEYWORDS.has(keyword)) return { kind: "help" };
+  if (SMS_START_KEYWORDS.has(keyword)) return { kind: "start" };
   return null;
 }
 
 /** Marks a contact's consent status as set by a text to the shared sender: "shared_sender:STOP". */
 const SHARED_SENDER_SOURCE = "shared_sender";
-/** The shared sender's HELP reply, named for the deployment and with its own address when it sets one. */
-export function sharedSenderHelpReply(appName: string = DEFAULT_APP_NAME): string {
-  return `${appName}: For help with an appointment, call the business you booked with. For anything else, email ${contactEmailFor(brandLinks(), "sms")}. Reply STOP to opt out.`;
+
+/**
+ * The shared sender's HELP reply. It names the businesses that text this
+ * phone, most recent first, and only the host when none does.
+ */
+export function sharedSenderHelpReply(input: { appName?: string; businessNames?: readonly string[] } = {}): string {
+  const appName = input.appName ?? DEFAULT_APP_NAME;
+  const names = input.businessNames ?? [];
+  const email = contactEmailFor(brandLinks(), "sms");
+  if (!names.length) return `${appName}: For help with an appointment, call the business you booked with. For anything else, email ${email}. Reply STOP to opt out.`;
+  return `${appName} sends appointment texts for ${smsBusinessList(names)}. For help with an appointment, call ${names.length === 1 ? names[0] : "the business you booked with"}. For anything else, email ${email}. Reply STOP to opt out.`;
 }
-export const SHARED_SENDER_START_REPLY = "LobbyStack: You can get texts from this number again. Reply HELP for help or STOP to opt out.";
+
+/** The shared sender's START reply, naming the businesses that text this phone again. */
+export function sharedSenderStartReply(input: { appName?: string; businessNames?: readonly string[] } = {}): string {
+  const appName = input.appName ?? DEFAULT_APP_NAME;
+  const names = input.businessNames ?? [];
+  if (!names.length) return `${appName}: You can get texts from this number again. Reply HELP for help or STOP to opt out.`;
+  return `${appName}: You can get appointment texts from ${smsBusinessList(names)} again. Msg frequency varies. Msg & data rates may apply. Reply HELP for help or STOP to opt out.`;
+}
 
 /**
  * Handles a text a phone sent to the shared sender, the number that texts for
@@ -84,28 +114,50 @@ export async function receiveSharedSenderSms(
 ): Promise<{ reply: string | null; contactsChanged: number }> {
   const consentUpdate = classifySmsConsentUpdate(input);
   const keywordReply = classifySmsKeywordReply(input);
-  const reply = keywordReply?.kind === "help" ? sharedSenderHelpReply(await deploymentAppName(context.db)) : keywordReply?.kind === "start" ? SHARED_SENDER_START_REPLY : null;
-  if (!consentUpdate) return { reply, contactsChanged: 0 };
-  // "keyword:STOP" or "twilio_opt_out:STOP" becomes "shared_sender:STOP".
-  const source = `${SHARED_SENDER_SOURCE}:${consentUpdate.source.slice(consentUpdate.source.indexOf(":") + 1)}`;
+  if (!consentUpdate && !keywordReply) return { reply: null, contactsChanged: 0 };
   const listed = await withBusinessTransaction(context.db, { actorType: "worker" }, async (tx) => await tx.execute<{ business_id: string }>(sql`select app.list_businesses_by_contact_phone(${input.from}) as business_id`));
+  const businessIds = listed.rows.map((row) => row.business_id);
   let contactsChanged = 0;
-  // One transaction per business, so each change runs under that business's
-  // RLS context. Both changes are idempotent, so a retried webhook finishes
-  // any business a failure skipped.
-  for (const { business_id: businessId } of listed.rows) {
-    contactsChanged += await withBusinessTransaction(context.db, { businessId, actorType: "worker" }, async (tx) => consentUpdate.status === "opted_out"
-      ? await optOutForSharedSender(tx, { businessId, phone: input.from, source })
-      : await restoreAfterSharedSenderOptOut(tx, { businessId, phone: input.from, source }));
+  if (consentUpdate) {
+    // "keyword:STOP" or "twilio_opt_out:STOP" becomes "shared_sender:STOP".
+    const source = `${SHARED_SENDER_SOURCE}:${consentUpdate.source.slice(consentUpdate.source.indexOf(":") + 1)}`;
+    // One transaction per business, so each change runs under that business's
+    // RLS context. Both changes are idempotent, so a retried webhook finishes
+    // any business a failure skipped.
+    for (const businessId of businessIds) {
+      contactsChanged += await withBusinessTransaction(context.db, { businessId, actorType: "worker" }, async (tx) => consentUpdate.status === "opted_out"
+        ? await optOutForSharedSender(tx, { businessId, phone: input.from, source })
+        : await restoreAfterSharedSenderOptOut(tx, { businessId, phone: input.from, source }));
+    }
   }
-  return { reply, contactsChanged };
+  if (!keywordReply) return { reply: null, contactsChanged };
+  const replyInput = { appName: await deploymentAppName(context.db), businessNames: await businessesTextingPhone(context, { businessIds, phone: input.from }) };
+  return { reply: keywordReply.kind === "help" ? sharedSenderHelpReply(replyInput) : sharedSenderStartReply(replyInput), contactsChanged };
+}
+
+/**
+ * The names of the businesses that text this phone from the shared sender:
+ * those with a contact at it who agreed to texts and isn't blocked. The most
+ * recent opt-in comes first.
+ */
+async function businessesTextingPhone(context: DomainContext, input: { businessIds: readonly string[]; phone: string }): Promise<string[]> {
+  const found: Array<{ name: string; since: number }> = [];
+  for (const businessId of input.businessIds) {
+    const row = await withBusinessTransaction(context.db, { businessId, actorType: "worker" }, async (tx) => (await tx.select({ name: businesses.name, confirmedAt: contacts.smsOptInConfirmedAt, consentUpdatedAt: contacts.smsConsentUpdatedAt })
+      .from(contacts)
+      .innerJoin(businesses, eq(businesses.id, contacts.businessId))
+      .where(and(eq(contacts.businessId, businessId), eq(contacts.phone, input.phone), eq(contacts.smsConsentStatus, "subscribed"), isNull(contacts.operatorBlockedAt)))
+      .limit(1))[0]);
+    if (row) found.push({ name: row.name, since: (row.confirmedAt ?? row.consentUpdatedAt)?.getTime() ?? 0 });
+  }
+  return found.sort((a, b) => b.since - a.since).map((business) => business.name);
 }
 
 async function optOutForSharedSender(tx: DatabaseTransaction, input: { businessId: string; phone: string; source: string }): Promise<number> {
   const now = new Date();
   // SET reads the row as it was, so the old status is what gets kept.
   const changed = await tx.update(contacts)
-    .set({ smsConsentStatusBeforeOptOut: sql`${contacts.smsConsentStatus}`, smsConsentStatus: "opted_out", smsConsentSource: input.source, smsConsentUpdatedAt: now, updatedAt: now })
+    .set({ smsConsentStatusBeforeOptOut: sql`${contacts.smsConsentStatus}`, smsConsentStatus: "opted_out", smsConsentSource: input.source, smsConsentUpdatedAt: now, smsOptInConfirmedAt: null, updatedAt: now })
     .where(and(eq(contacts.businessId, input.businessId), eq(contacts.phone, input.phone), or(isNull(contacts.smsConsentStatus), ne(contacts.smsConsentStatus, "opted_out"))))
     .returning({ id: contacts.id });
   for (const contact of changed) await tx.insert(smsConsentEvents).values({ businessId: input.businessId, contactId: contact.id, phone: input.phone, recipientType: "contact", action: "opted_out", source: input.source });
@@ -115,7 +167,8 @@ async function optOutForSharedSender(tx: DatabaseTransaction, input: { businessI
 async function restoreAfterSharedSenderOptOut(tx: DatabaseTransaction, input: { businessId: string; phone: string; source: string }): Promise<number> {
   const now = new Date();
   const restored = await tx.update(contacts)
-    .set({ smsConsentStatus: sql`${contacts.smsConsentStatusBeforeOptOut}`, smsConsentStatusBeforeOptOut: null, smsConsentSource: input.source, smsConsentUpdatedAt: now, updatedAt: now })
+    // The START reply names the business, so it confirms a restored opt-in.
+    .set({ smsConsentStatus: sql`${contacts.smsConsentStatusBeforeOptOut}`, smsConsentStatusBeforeOptOut: null, smsConsentSource: input.source, smsConsentUpdatedAt: now, smsOptInConfirmedAt: sql`case when ${contacts.smsConsentStatusBeforeOptOut} = 'subscribed' then now() end`, updatedAt: now })
     .where(and(eq(contacts.businessId, input.businessId), eq(contacts.phone, input.phone), eq(contacts.smsConsentStatus, "opted_out"), sql`starts_with(${contacts.smsConsentSource}, ${`${SHARED_SENDER_SOURCE}:`})`))
     .returning({ id: contacts.id, status: contacts.smsConsentStatus });
   for (const contact of restored) await tx.insert(smsConsentEvents).values({ businessId: input.businessId, contactId: contact.id, phone: input.phone, recipientType: "contact", action: contact.status === "subscribed" ? "resubscribed" : "opt_out_cleared", source: input.source });
@@ -158,13 +211,16 @@ export async function receiveInboundSms(
     const keywordReply = classifySmsKeywordReply({ body: input.body, ...(optOutType !== undefined ? { optOutType } : {}) });
     if (consentUpdate) {
       const now = new Date();
-      await tx.update(contacts).set({ smsConsentStatus: consentUpdate.status, smsConsentSource: consentUpdate.source, smsConsentUpdatedAt: now, updatedAt: now }).where(and(eq(contacts.id, contact.id), eq(contacts.businessId, input.businessId)));
+      // STOP clears the opt-in confirmation. START's reply confirms the opt-in itself.
+      const confirmedAt = consentUpdate.status === "subscribed" && !contact.operatorBlockedAt ? now : null;
+      await tx.update(contacts).set({ smsConsentStatus: consentUpdate.status, smsConsentSource: consentUpdate.source, smsConsentUpdatedAt: now, smsOptInConfirmedAt: confirmedAt, updatedAt: now }).where(and(eq(contacts.id, contact.id), eq(contacts.businessId, input.businessId)));
       await tx.insert(smsConsentEvents).values({ businessId: input.businessId, contactId: contact.id, phone: input.from, recipientType: "contact", action: consentUpdate.status === "opted_out" ? "opted_out" : "resubscribed", source: consentUpdate.source });
     }
     const optedOut = Boolean(contact.operatorBlockedAt) || consentUpdate?.status === "opted_out" || (contact.smsConsentStatus === "opted_out" && !consentUpdate);
     if (keywordReply && !optedOut) {
-      // The deployment's name is read only when a HELP reply goes out.
-      const body = keywordReply.kind === "help" ? smsHelpReply(await deploymentAppName(tx)) : keywordReply.body;
+      const business = (await tx.select({ name: businesses.name }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1))[0];
+      const replyInput = { appName: await deploymentAppName(tx), businessName: business?.name ?? "" };
+      const body = keywordReply.kind === "help" ? smsHelpReply(replyInput) : smsStartReply(replyInput);
       const [replyMessage] = await tx.insert(messages).values({ businessId: input.businessId, conversationId: conversation.id, conversationSessionId: session.id, direction: "outbound", channel: "sms", body, contentExpiresAt, aiGenerated: false, status: "queued", providerStatus: "compliance_reply" }).returning({ id: messages.id });
       if (replyMessage) {
         await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "message", aggregateId: replyMessage.id, dedupeKey: `message:${replyMessage.id}:created`, payload: { type: "message.upserted", entityId: replyMessage.id, conversationId: conversation.id } });
@@ -224,8 +280,8 @@ export function smsReplyBlockedReason(reach: SmsReach, complianceReply = false):
   return reach.customerTexted && reach.smsConsentStatus !== "opted_out" ? null : "sms_consent";
 }
 
-async function loadSmsReach(tx: DatabaseTransaction, input: { businessId: string; conversationId: string }): Promise<SmsReach> {
-  const contact = (await tx.select({ phone: contacts.phone, operatorBlockedAt: contacts.operatorBlockedAt, smsConsentStatus: contacts.smsConsentStatus, smsConsentUpdatedAt: contacts.smsConsentUpdatedAt })
+async function loadSmsReach(tx: DatabaseTransaction, input: { businessId: string; conversationId: string }): Promise<SmsReach & { contactId: string | null }> {
+  const contact = (await tx.select({ id: contacts.id, phone: contacts.phone, operatorBlockedAt: contacts.operatorBlockedAt, smsConsentStatus: contacts.smsConsentStatus, smsConsentUpdatedAt: contacts.smsConsentUpdatedAt })
     .from(conversations)
     .innerJoin(contacts, and(eq(contacts.id, conversations.contactId), eq(contacts.businessId, input.businessId)))
     .where(and(eq(conversations.id, input.conversationId), eq(conversations.businessId, input.businessId)))
@@ -233,7 +289,7 @@ async function loadSmsReach(tx: DatabaseTransaction, input: { businessId: string
   // Only a text since the number or consent last changed counts: an earlier one may have come from the old number.
   const since = contact?.smsConsentUpdatedAt ? gt(messages.createdAt, contact.smsConsentUpdatedAt) : undefined;
   const inbound = await tx.select({ id: messages.id }).from(messages).where(and(eq(messages.businessId, input.businessId), eq(messages.conversationId, input.conversationId), eq(messages.direction, "inbound"), eq(messages.channel, "sms"), since)).limit(1);
-  return { phone: contact?.phone ?? null, operatorBlockedAt: contact?.operatorBlockedAt ?? null, smsConsentStatus: contact?.smsConsentStatus ?? null, customerTexted: inbound.length > 0, from: await businessSmsNumber(tx, input.businessId) };
+  return { contactId: contact?.id ?? null, phone: contact?.phone ?? null, operatorBlockedAt: contact?.operatorBlockedAt ?? null, smsConsentStatus: contact?.smsConsentStatus ?? null, customerTexted: inbound.length > 0, from: await businessSmsNumber(tx, input.businessId) };
 }
 
 /** Why an operator's SMS reply in this conversation can't go out, or null. The worker checks the same rule again before it sends. */
@@ -241,8 +297,13 @@ export async function smsReplyBlockedInTransaction(tx: DatabaseTransaction, inpu
   return smsReplyBlockedReason(await loadSmsReach(tx, input));
 }
 
-/** What to send for a queued text, why it can't go out, or null when no such text is waiting. */
-export async function loadSmsDeliveryTarget(db: Database, input: { businessId: string; messageId: string }): Promise<{ to: string; from: string; body: string } | { blocked: SmsReplyBlockedReason } | null> {
+/**
+ * What to send for a queued text, why it can't go out, or null when no such
+ * text is waiting. A reply to a customer who agreed to texts and hasn't had
+ * one yet comes after the opt-in confirmation; a STOP, START or HELP reply
+ * never does.
+ */
+export async function loadSmsDeliveryTarget(db: Database, input: { businessId: string; messageId: string }): Promise<{ to: string; from: string; body: string; optIn?: SmsOptInConfirmation } | { blocked: SmsReplyBlockedReason } | null> {
   return await withBusinessTransaction(db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const message = (await tx.select({ conversationId: messages.conversationId, body: messages.body, providerStatus: messages.providerStatus })
       .from(messages)
@@ -250,8 +311,11 @@ export async function loadSmsDeliveryTarget(db: Database, input: { businessId: s
       .limit(1))[0];
     if (!message) return null;
     const reach = await loadSmsReach(tx, { businessId: input.businessId, conversationId: message.conversationId });
-    const blocked = smsReplyBlockedReason(reach, message.providerStatus === "compliance_reply");
-    return blocked || !reach.phone || !reach.from ? { blocked: blocked ?? "sms_unreachable" } : { to: reach.phone, from: reach.from, body: message.body };
+    const complianceReply = message.providerStatus === "compliance_reply";
+    const blocked = smsReplyBlockedReason(reach, complianceReply);
+    if (blocked || !reach.phone || !reach.from) return { blocked: blocked ?? "sms_unreachable" };
+    const optIn = !complianceReply && reach.contactId ? await smsOptInConfirmationInTransaction(tx, { businessId: input.businessId, contactId: reach.contactId }) : undefined;
+    return { to: reach.phone, from: reach.from, body: message.body, ...(optIn ? { optIn } : {}) };
   });
 }
 

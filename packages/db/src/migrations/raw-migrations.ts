@@ -127,6 +127,7 @@ export const SCHEMA_MIGRATIONS = [
   "0121_api_number_claim_stage.sql",
   "0122_conversation_team_joined_at.sql",
   "0123_instagram_messaging.sql",
+  "0124_sms_opt_in_confirmation.sql",
   "0125_owner_verified_phone.sql",
 ] as const;
 

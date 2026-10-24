@@ -73,26 +73,30 @@ describe("new text alerts", () => {
   });
 });
 
-describe("HELP replies", () => {
-  const help = async (branding: unknown[]) => {
-    // The contact, the open conversation and its session, then the saved branding.
-    selects = [[{ id: "contact-1", smsConsentStatus: "subscribed", operatorBlockedAt: null }], [{ id: "conversation-1", automationState: "ai_active" }], [{ id: "session-1" }], branding];
-    await receiveInboundSms(context, { businessId, providerMessageId: `SM${Math.random()}`, from: "+14165550123", to: "+14165550100", body: "HELP", payload: {} });
+describe("HELP and START replies", () => {
+  const reply = async (body: string, branding: unknown[]) => {
+    // The contact, the open conversation and its session, the business, then the saved branding.
+    selects = [[{ id: "contact-1", smsConsentStatus: "subscribed", operatorBlockedAt: null }], [{ id: "conversation-1", automationState: "ai_active" }], [{ id: "session-1" }], [{ name: "Axum Barbershop" }], branding];
+    await receiveInboundSms(context, { businessId, providerMessageId: `SM${Math.random()}`, from: "+14165550123", to: "+14165550100", body, payload: {} });
     return inserts.find((row) => row.providerStatus === "compliance_reply")?.body;
   };
 
-  it("keeps LobbyStack's registered wording when the deployment has no name of its own", async () => {
-    expect(await help([])).toBe("LobbyStack: For help, contact hello@lobbystack.com or visit https://lobbystack.com. Reply STOP to opt out.");
+  it("names LobbyStack and the business when the deployment has no name of its own", async () => {
+    expect(await reply("HELP", [])).toBe("LobbyStack sends appointment texts for Axum Barbershop. For help, contact hello@lobbystack.com or visit https://lobbystack.com. Reply STOP to opt out.");
   });
 
   it("names the deployment its first owner chose", async () => {
-    expect(await help([{ appName: "Acme Desk", logoVersion: null }])).toBe("Acme Desk: For help, contact hello@lobbystack.com or visit https://lobbystack.com. Reply STOP to opt out.");
+    expect(await reply("HELP", [{ appName: "Acme Desk", logoVersion: null }])).toBe("Acme Desk sends appointment texts for Axum Barbershop. For help, contact hello@lobbystack.com or visit https://lobbystack.com. Reply STOP to opt out.");
   });
 
   it("prefers BRAND_APP_NAME without reading the database", async () => {
     vi.stubEnv("BRAND_APP_NAME", "Front Desk");
-    expect(await help([{ appName: "Acme Desk", logoVersion: null }])).toBe("Front Desk: For help, contact hello@lobbystack.com or visit https://lobbystack.com. Reply STOP to opt out.");
+    expect(await reply("HELP", [{ appName: "Acme Desk", logoVersion: null }])).toBe("Front Desk sends appointment texts for Axum Barbershop. For help, contact hello@lobbystack.com or visit https://lobbystack.com. Reply STOP to opt out.");
     expect(selects).toEqual([[{ appName: "Acme Desk", logoVersion: null }]]);
+  });
+
+  it("confirms the opt-in on START, naming the business", async () => {
+    expect(await reply("START", [])).toBe("LobbyStack: You can get appointment texts from Axum Barbershop again. Msg frequency varies. Msg & data rates may apply. Reply HELP for help or STOP to opt out.");
   });
 });
 

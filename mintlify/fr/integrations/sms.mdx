@@ -37,15 +37,17 @@ Quand un client réserve par téléphone, le réceptionniste IA lui demande un c
 
 Le message d'information est :
 
-> Puis-je envoyer à ce numéro un texto de confirmation et un rappel pour votre rendez-vous ? Des frais de messagerie et de données peuvent s'appliquer. Répondez STOP pour vous désabonner ou HELP pour obtenir de l'aide.
+> Entreprise Exemple peut-elle envoyer à ce numéro un texto de confirmation et un rappel pour votre rendez-vous ? Des frais de messagerie et de données peuvent s'appliquer. Répondez STOP pour vous désabonner ou HELP pour obtenir de l'aide.
 
 Si l'appelant accepte, LobbyStack enregistre son consentement et envoie les SMS de rendez-vous à ce numéro de téléphone.
+
+Le premier texto de votre entreprise à ce client confirme son consentement. Il nomme LobbyStack et votre entreprise, et il part juste avant le premier texto de rendez-vous ou le premier code. Un client qui refuse, répond `STOP` ou change de numéro, puis accepte de nouveau, reçoit une nouvelle confirmation. Sur une installation autohébergée de LobbyStack, la confirmation et les réponses à `HELP` et `START` utilisent le nom de votre déploiement.
 
 Si l'appelant refuse, le rendez-vous est quand même réservé et aucun SMS de rendez-vous n'est envoyé.
 
 Quand un appelant annule un rendez-vous et n'a jamais répondu à la question, la réceptionniste demande :
 
-> Puis-je envoyer un texto à ce numéro pour confirmer l'annulation? Des frais de messagerie et de données peuvent s'appliquer. Répondez STOP pour vous désabonner ou HELP pour obtenir de l'aide.
+> Entreprise Exemple peut-elle envoyer un texto à ce numéro pour confirmer l'annulation ? Des frais de messagerie et de données peuvent s'appliquer. Répondez STOP pour vous désabonner ou HELP pour obtenir de l'aide.
 
 Un appelant qui a déjà répondu ne se fait pas redemander : LobbyStack suit sa réponse précédente.
 
@@ -65,11 +67,19 @@ Les opérateurs peuvent désactiver les alertes SMS plus tard dans les réglages
 
 ## Exemples de messages
 
-Chaque texto de rendez-vous se termine par l'avis sur les frais et les instructions `STOP` et `HELP`, dans la langue du client.
+La confirmation du consentement, le premier texto de votre entreprise à chaque client qui a accepté :
+
+> LobbyStack envoie les textos de rendez-vous de Entreprise Exemple. Fréquence variable. Des frais de messagerie et de données peuvent s'appliquer. Répondez STOP pour vous désabonner ou HELP pour obtenir de l'aide.
+
+Les textos suivants nomment seulement votre entreprise. Chaque texto de rendez-vous se termine par l'avis sur les frais et les instructions `STOP` et `HELP`, dans la langue du client.
 
 Confirmation de rendez-vous :
 
 > Entreprise Exemple : Votre rendez-vous pour une coupe de cheveux est confirmé le 24 mai à 14 h. Des frais de messagerie et de données peuvent s'appliquer. Répondez STOP pour vous désabonner ou HELP pour obtenir de l'aide.
+
+Code pour modifier un rendez-vous :
+
+> Entreprise Exemple : votre code de vérification est 123456. Il expire dans 10 minutes.
 
 Alerte pour un opérateur :
 
@@ -77,13 +87,17 @@ Alerte pour un opérateur :
 
 ## Désabonnement et aide
 
-Un client qui répond `STOP` au numéro sans frais partagé ne reçoit plus aucun texto de ce numéro, de la part d'aucune entreprise. Twilio empêche le numéro d'écrire à ce téléphone. LobbyStack marque le téléphone comme désabonné dans chaque entreprise qui l'a comme contact, pour qu'aucune entreprise ne lui prépare de textos.
+Un client qui répond `STOP` au numéro sans frais partagé ne reçoit plus aucun texto de ce numéro, de la part d'aucune entreprise. Twilio envoie la réponse à `STOP` et empêche le numéro d'écrire à ce téléphone. LobbyStack marque le téléphone comme désabonné dans chaque entreprise qui l'a comme contact, pour qu'aucune entreprise ne lui prépare de textos.
 
-Un client qui répond `START` ou `SUBSCRIBE` peut de nouveau recevoir des textos. Chaque entreprise reprend la réponse que le client lui avait donnée. Un client qui avait accepté les textos d'une entreprise les reçoit de nouveau, et un client qui les avait refusés reste sans textos.
+Un client qui répond `START` ou `SUBSCRIBE` peut de nouveau recevoir des textos. Chaque entreprise reprend la réponse que le client lui avait donnée. Un client qui avait accepté les textos d'une entreprise les reçoit de nouveau, et un client qui les avait refusés reste sans textos. La réponse, en anglais, nomme les entreprises qui lui enverront de nouveau des textos :
+
+> LobbyStack: You can get appointment texts from Example Business again. Msg frequency varies. Msg & data rates may apply. Reply HELP for help or STOP to opt out.
 
 Un client qui répond `STOP` à votre numéro d'entreprise se désabonne seulement des textos de votre entreprise. `START` à ce numéro le réabonne.
 
-Les destinataires peuvent répondre `HELP` pour obtenir les coordonnées du support.
+Les destinataires peuvent répondre `HELP` pour obtenir les coordonnées du support. Sur le numéro partagé, la réponse, en anglais, nomme LobbyStack et les entreprises qui écrivent à ce téléphone :
+
+> LobbyStack sends appointment texts for Example Business. For help with an appointment, call Example Business. For anything else, email hello@lobbystack.com. Reply STOP to opt out.
 
 Pour obtenir de l'aide, écrivez à [hello@lobbystack.com](mailto:hello@lobbystack.com) ou consultez [https://lobbystack.com](https://lobbystack.com).
 

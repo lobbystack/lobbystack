@@ -205,7 +205,7 @@ export async function cancelForCaller(
 }
 
 /**
- * Records the caller's answer to "Can I text this number?", given at any point
+ * Records the caller's answer to "Can {business} text this number?", given at any point
  * of a phone call, for the call's own number. Texts queued during the call wait
  * for it to end, so delivery follows this answer. Returns the answer on file
  * afterwards, or null when the call isn't this caller's.
