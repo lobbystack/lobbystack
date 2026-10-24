@@ -172,6 +172,23 @@ describe("POST /api/webhooks/openai/live", () => {
     expect(mocks.accept).not.toHaveBeenCalled();
   });
 
+  it("hands a call over its plan's limit to the trunk's forwarding fallback, without recording it", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => undefined);
+    mocks.execute.mockResolvedValue({ rows: [{ business_id: "biz_1", position: 1 }] });
+    mocks.snapshot.mockResolvedValue({ businessId: "biz_1" });
+    mocks.markNumberTrialMinutesExhausted.mockResolvedValue(false);
+    mocks.startLivePhoneCall.mockRejectedValue(Object.assign(new Error("Out of minutes."), { code: "voice_limit_reached" }));
+    mocks.unwrap.mockResolvedValue({ type: "live.transport.incoming", created_at: Math.floor(Date.now() / 1000), data: { session_id: "live_1", sip_headers: [{ name: "Diversion", value: "<sip:+15815550100@example.com>" }] } });
+
+    const response = await POST(new Request("https://admin.lobbystack.test/api/webhooks/openai/live", { method: "POST", body: "{}" }));
+
+    expect(response.status).toBe(200);
+    // Twilio fails over on 503 but never on 486, which would leave the caller a busy signal.
+    expect(mocks.reject).toHaveBeenCalledWith("live_1", { status_code: 503 });
+    expect(mocks.accept).not.toHaveBeenCalled();
+    expect(mocks.finishLiveCall).not.toHaveBeenCalled();
+  });
+
   it("turns a trial out of minutes over to forwarding when its limit stops a call", async () => {
     vi.spyOn(console, "info").mockImplementation(() => undefined);
     mocks.execute.mockResolvedValue({ rows: [{ business_id: "biz_1", position: 1 }] });
@@ -183,7 +200,7 @@ describe("POST /api/webhooks/openai/live", () => {
 
     expect(response.status).toBe(200);
     expect(mocks.markNumberTrialMinutesExhausted).toHaveBeenCalledWith(expect.anything(), { businessId: "biz_1" });
-    expect(mocks.reject).toHaveBeenCalledWith("live_1", { status_code: 486 });
+    expect(mocks.reject).toHaveBeenCalledWith("live_1", { status_code: 503 });
   });
 
   it("leaves an already answered call alone when a retried delivery can't load the snapshot", async () => {

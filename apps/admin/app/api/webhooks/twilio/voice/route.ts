@@ -16,9 +16,11 @@ function twiml(verb: string): NextResponse {
 }
 
 /**
- * Twilio asks here what to do with a call to a number that's off the SIP
- * trunk. A trial out of minutes forwards the call to the owner, with the
- * caller's own caller ID; any other call goes unanswered.
+ * Twilio asks here what to do with a call the receptionist won't answer: a
+ * call to a number that's off the SIP trunk, or, as the trunk's disaster
+ * recovery URL, a call GPT-Live refused because the plan is out of minutes.
+ * resolveNumberFallback picks where to forward it, with the caller's own
+ * caller ID; a call with nowhere to go gets a busy signal.
  */
 export async function POST(request: Request) {
   try {
@@ -30,11 +32,18 @@ export async function POST(request: Request) {
     if (!validateTwilioSignature({ authToken, signatureHeader: request.headers.get("x-twilio-signature"), url: resolveTwilioWebhookUrl(request.url, publicUrl), params })) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
-    const to = params.To ?? "";
-    const businessId = (await getAppDatabase().db.execute<{ business_id: string | null }>(sql`select app.resolve_business_by_phone(${to}) as business_id`)).rows[0]?.business_id;
-    if (!businessId) return twiml('<Reject reason="busy"/>');
-    const fallback = await resolveNumberFallback(createWorkerDomainContext(), { businessId, e164: to });
-    if (fallback.action === "forward" && E164_PATTERN.test(fallback.to)) return twiml(`<Dial>${fallback.to}</Dial>`);
+    // A trunk failover may address the call to the trunk's SIP URI rather than
+    // the dialled number, so try each number Twilio sends, in this order.
+    const dialled = [...new Set([params.To, params.Called].filter((phone): phone is string => Boolean(phone && E164_PATTERN.test(phone))))];
+    let routed: { businessId: string; to: string } | undefined;
+    for (const to of dialled) {
+      const businessId = (await getAppDatabase().db.execute<{ business_id: string | null }>(sql`select app.resolve_business_by_phone(${to}) as business_id`)).rows[0]?.business_id;
+      if (businessId) { routed = { businessId, to }; break; }
+    }
+    if (!routed) return twiml('<Reject reason="busy"/>');
+    const fallback = await resolveNumberFallback(createWorkerDomainContext(), { businessId: routed.businessId, e164: routed.to });
+    // A line that forwards its missed calls here would send this call straight back.
+    if (fallback.action === "forward" && E164_PATTERN.test(fallback.to) && fallback.to !== params.ForwardedFrom) return twiml(`<Dial>${fallback.to}</Dial>`);
     return twiml('<Reject reason="busy"/>');
   } catch {
     return new NextResponse("Temporary webhook failure.", { status: 500 });

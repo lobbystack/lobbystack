@@ -116,6 +116,38 @@ describe.skipIf(!testUrl)("free trial numbers against dedicated PostgreSQL roles
     });
   });
 
+  it("forwards a paid business's refused calls to its transfer number, then the owner's verified phone, and rejects with neither", async () => {
+    await rollbackTest(async (tx) => {
+      const userId = randomUUID();
+      await tx.insert(users).values({ id: userId, email: `${userId}@example.invalid`, normalizedEmail: `${userId}@example.invalid`, name: "Sam Lee", phone: ownerPhone });
+      await tx.execute(sql`set local role lobbystack_app`);
+      const { businessId } = await createBusiness({ db: tx as unknown as Database }, { userId, name: "Capped clinic", timezone: "America/Toronto", businessType: "test" });
+      await tx.execute(sql`reset role`);
+      const number = "+14165550124";
+      await tx.insert(phoneNumbers).values({ businessId, e164: number, providerPhoneId: `PN${randomUUID().replaceAll("-", "")}` });
+      const fallback = () => as(tx, "lobbystack_worker", db => resolveNumberFallback({ db }, { businessId, e164: number }));
+      const setTransfer = (transferNumber: string | null) => tx.update(receptionistProfiles).set({ transferNumber }).where(eq(receptionistProfiles.businessId, businessId));
+
+      // An owner phone nobody verified is never a forward.
+      await setTransfer(null);
+      expect(await fallback()).toEqual({ action: "reject" });
+
+      await tx.update(users).set({ phoneVerifiedAt: new Date() }).where(eq(users.id, userId));
+      expect(await fallback()).toEqual({ action: "forward", to: ownerPhone });
+
+      await setTransfer("+14165550199");
+      expect(await fallback()).toEqual({ action: "forward", to: "+14165550199" });
+
+      // A transfer number that is the dialled number itself would loop, so the owner's phone takes it.
+      await setTransfer(number);
+      expect(await fallback()).toEqual({ action: "forward", to: ownerPhone });
+
+      // The worker reads the owner's phone only for the business its transaction is bound to.
+      const other = await as(tx, "lobbystack_worker", db => withBusinessTransaction(db, { businessId: randomUUID(), actorType: "worker" }, async inner => (await inner.execute<{ phone: string | null }>(sql`select app.resolve_business_owner_verified_phone(${businessId}::uuid) as phone`)).rows[0]?.phone));
+      expect(other).toBeNull();
+    });
+  });
+
   it("converts a trial whose number finishes buying after the owner paid", async () => {
     await rollbackTest(async (tx) => {
       const userId = randomUUID();

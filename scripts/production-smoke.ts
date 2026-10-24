@@ -10,6 +10,8 @@ export type SmokeConfig = {
   /** The Twilio SIP trunk that carries calls to GPT-Live. Unset means any trunk. */
   expectedTrunkSid?: string;
   expectedSmsUrl: string;
+  /** Where the trunk fails a call over when GPT-Live refuses it, so the caller is forwarded. */
+  expectedFallbackUrl: string;
   loginEmail?: string;
   loginPassword?: string;
   enableCall: boolean;
@@ -60,6 +62,7 @@ export function buildConfig(source: NodeJS.ProcessEnv = process.env): SmokeConfi
     expectedNumbers: parseList(source.SMOKE_EXPECTED_NUMBERS ?? "+12136686869,+18446562290"),
     ...(source.TWILIO_SIP_TRUNK_SID?.trim() ? { expectedTrunkSid: source.TWILIO_SIP_TRUNK_SID.trim() } : {}),
     expectedSmsUrl: trimTrailingSlash(source.SMOKE_EXPECTED_SMS_URL ?? `${adminBaseUrl}/api/webhooks/twilio/sms`),
+    expectedFallbackUrl: `${adminBaseUrl}/api/webhooks/twilio/voice`,
     ...(source.SMOKE_LOGIN_EMAIL ? { loginEmail: source.SMOKE_LOGIN_EMAIL } : {}),
     ...(source.SMOKE_LOGIN_PASSWORD ? { loginPassword: source.SMOKE_LOGIN_PASSWORD } : {}),
     enableCall: source.SMOKE_ENABLE_CALL === "1" || source.SMOKE_ENABLE_CALL === "true",
@@ -110,6 +113,22 @@ async function auditTwilioNumbers(config: SmokeConfig): Promise<SmokeCheck[]> {
     }
     return { name: `twilio ${number}`, ok: true, detail: "SIP trunk and sms webhook match" };
   });
+}
+
+/**
+ * A call over its plan's limit is refused with SIP 503, and the trunk forwards
+ * it through its disaster recovery URL. Without that URL the caller hears an error.
+ */
+async function auditTrunkFallback(config: SmokeConfig): Promise<SmokeCheck> {
+  const name = "twilio trunk fallback";
+  if (!config.expectedTrunkSid) return { name, ok: false, detail: "TWILIO_SIP_TRUNK_SID must be set" };
+  const response = await fetch(`https://trunking.twilio.com/v1/Trunks/${config.expectedTrunkSid}`, { headers: { authorization: twilioAuthorization(config) }, signal: AbortSignal.timeout(15_000) });
+  if (!response.ok) return { name, ok: false, detail: `Twilio API returned ${response.status}` };
+  const trunk = await response.json() as { disaster_recovery_url: string | null; disaster_recovery_method: string | null };
+  if (!webhookMatches(trunk.disaster_recovery_url, config.expectedFallbackUrl) || trunk.disaster_recovery_method !== "POST") {
+    return { name, ok: false, detail: `disaster recovery URL is ${trunk.disaster_recovery_method ?? ""} ${trunk.disaster_recovery_url ?? "(unset)"}, expected POST ${config.expectedFallbackUrl}` };
+  }
+  return { name, ok: true, detail: "disaster recovery URL forwards refused calls" };
 }
 
 async function checkSignInEndpoint(config: SmokeConfig): Promise<SmokeCheck> {
@@ -173,6 +192,7 @@ async function main(): Promise<void> {
   const checks: SmokeCheck[] = [
     ...(await Promise.all(healthTargets.map((target) => checkHealth(target.name, new URL(target.path, target.baseUrl).toString())))),
     ...(await auditTwilioNumbers(config)),
+    await auditTrunkFallback(config),
     await checkSignInEndpoint(config),
   ];
   if (config.enableCall) {

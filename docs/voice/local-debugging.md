@@ -271,7 +271,7 @@ A phone call keeps running while you're paused:
 | The webhook answers 400 `Invalid signature.` to real calls in the ngrok inspector | `OPENAI_WEBHOOK_SECRET` is your deployment's secret, not the local endpoint's |
 | The check request answers 500 instead of `Invalid signature.` | The admin has no `OPENAI_API_KEY`. Add it and restart `pnpm dev` |
 | The local admin logs `incoming call for a number this deployment doesn't serve` for your test call | The number isn't in the local `phone_numbers` table, or isn't `active` |
-| A busy signal | The local business is a cloud business whose minutes ran out, or whose trial number ended (SIP 486). Only businesses created with `DEPLOYMENT_MODE=self_hosted_standard` have unlimited minutes |
+| A busy signal | The local business is a cloud business whose trial number ended (SIP 486), or whose minutes ran out. A call out of minutes fails over to the trunk's disaster recovery URL, which points at your deployment, and your deployment doesn't know your local number. Only businesses created with `DEPLOYMENT_MODE=self_hosted_standard` have unlimited minutes |
 | The call never connects, and the local admin logs `no published snapshot for incoming call` | The worker hasn't published the business's snapshot. Check that the worker is running, then save an AI setting |
 | The SMS webhook answers 401 | `TWILIO_SMS_WEBHOOK_URL` doesn't exactly match the number's URL in Twilio, or the auth token belongs to another account |
 | Texts never reach the tunnel although the number's URL is right | The number belongs to a Messaging Service, whose own incoming-message setting applies |

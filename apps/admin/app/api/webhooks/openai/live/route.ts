@@ -128,10 +128,13 @@ async function answerCall(client: LiveClient, input: { sessionId: string; busine
   if (started.status === "rejected") {
     const error: unknown = started.reason;
     if (error !== null && typeof error === "object" && "code" in error && error.code === "voice_limit_reached") {
-      // 486 Busy Here: the caller hears a busy signal rather than an answer
-      // the business can't pay for. A trial number forwards later calls to the owner.
+      // 503 makes the Twilio trunk fail over to its disaster recovery URL,
+      // /api/webhooks/twilio/voice, which forwards the call to the transfer
+      // number or the owner's verified phone, and gives a busy signal only
+      // when there's neither. Twilio never fails over on 486 or 6xx. A trial
+      // number also moves off the trunk so later calls forward directly.
       await markNumberTrialMinutesExhausted(domain, { businessId: input.businessId }).catch((cause: unknown) => console.error("[live] couldn't switch the trial number to forwarding", cause instanceof Error ? cause.message : cause));
-      await client.live.sessions.reject(input.sessionId, { status_code: 486 });
+      await client.live.sessions.reject(input.sessionId, { status_code: 503 });
       return new NextResponse(null, { status: 200 });
     }
     throw error;

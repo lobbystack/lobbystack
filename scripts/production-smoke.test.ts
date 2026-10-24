@@ -38,6 +38,7 @@ describe("production smoke helpers", () => {
     expect(config.adminBaseUrl).toBe("https://app.lobbystack.com");
     expect(config.expectedTrunkSid).toBeUndefined();
     expect(config.expectedSmsUrl).toBe("https://app.lobbystack.com/api/webhooks/twilio/sms");
+    expect(config.expectedFallbackUrl).toBe("https://app.lobbystack.com/api/webhooks/twilio/voice");
     expect(config.expectedNumbers).toEqual(["+12136686869", "+18446562290"]);
     expect(config.enableCall).toBe(false);
   });
@@ -51,6 +52,7 @@ describe("production smoke helpers", () => {
       TWILIO_AUTH_TOKEN: "token",
     });
     expect(config.adminBaseUrl).toBe("https://staging.example.com");
+    expect(config.expectedFallbackUrl).toBe("https://staging.example.com/api/webhooks/twilio/voice");
     expect(config.expectedNumbers).toEqual(["+15550000001"]);
     expect(config.enableCall).toBe(true);
     expect(config.twilioAccountSid).toBe("ACtest");

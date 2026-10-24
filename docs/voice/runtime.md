@@ -86,7 +86,7 @@ A Twilio Elastic SIP trunk sends calls for its numbers to your OpenAI project's 
 
 1. OpenAI sends a `live.transport.incoming` webhook to `/api/webhooks/openai/live` on the admin app.
 2. The admin finds the business from the dialled number. It tries each number in the SIP `Diversion` headers in order, then `To` and `P-Called-Party-ID`, and uses the first one that belongs to a business. On a forwarded call, the first `Diversion` can hold the business's old line.
-3. The admin records the call and reserves minutes for it while it loads the business snapshot. A call reserves 5 minutes, or what the plan has left when that's less, and the worker adds more as the call runs. Calls share what's left, so the free plan's 30 minutes let six calls start at once. An unlimited plan reserves nothing. The admin rejects the call with SIP 486 (busy) when the plan is out of minutes, and 603 when the caller is blocked.
+3. The admin records the call and reserves minutes for it while it loads the business snapshot. A call reserves 5 minutes, or what the plan has left when that's less, and the worker adds more as the call runs. Calls share what's left, so the free plan's 30 minutes let six calls start at once. An unlimited plan reserves nothing. The admin rejects the call with SIP 503 when the plan is out of minutes or at its overage cap, so the trunk forwards it (see [Calls the receptionist can't take](#calls-the-receptionist-cant-take)). It rejects with 603 when the caller is blocked, and 486 (busy) when the number's trial ended.
 4. The admin accepts the call with the business's instructions, then asks the worker to attach. It passes the reserved length as the call's limit, or no limit on an unlimited plan.
 5. The worker opens the sideband, then loads the business, speaks the greeting, and handles the call until it ends.
 
@@ -95,6 +95,20 @@ OpenAI delivers the webhook again when the admin doesn't answer it, for example 
 The caller hears ringing until step 4. The admin logs `live.incoming` with the milliseconds from the webhook's arrival to each step (`lookupMs`, `recordMs`, `acceptMs`, `attachMs`) and `eventAgeMs`, a rough delivery delay with one-second precision. `routedBy` names the header whose number picked the business.
 
 A caller who withholds their number gets a new contact with no number, the same as a browser caller. The agent can't block that contact. The worker also skips the call's Twilio price lookup. The trunk carries every business's calls, so a match on start time alone could pick another business's call.
+
+### Calls the receptionist can't take
+
+A business out of minutes, on Free or at a Starter or Pro overage cap, still gets its calls. The admin rejects the GPT-Live session with SIP 503 before accepting it, and the trunk fails the call over to its disaster recovery URL, `/api/webhooks/twilio/voice`. That route asks `resolveNumberFallback` in `packages/domain` where the call goes, and answers with `<Dial>`:
+
+1. The business's default transfer number.
+2. Otherwise, the owner's verified mobile. During a number trial, that's the trial's verified phone.
+3. With neither, `<Reject reason="busy"/>`, and the caller hears a busy signal.
+
+The route skips a forward to the dialled number itself, and to the line in Twilio's `ForwardedFrom`, because a line that forwards its missed calls to LobbyStack would send the call straight back. A trial number that runs out also moves off the trunk, so later calls reach the same route as its voice URL.
+
+Twilio fails over to the next origination URI, and then to the disaster recovery URL, on any final error except 2xx, 400, 404, 405, 410, 416, 482, 484, 486, and 6xx ([Twilio](https://www.twilio.com/docs/sip-trunking)). That's why the limit uses 503 and not 486. The other 503 rejections, a missing snapshot or a failed setup, reach the same forward. The function takes only a business and a number, so a white-label partner's businesses can reuse it.
+
+Forwarding never accepts the GPT-Live session, so it uses no OpenAI audio and no plan minutes or transfer attempts, and the call gets no call record. Twilio bills the call at Programmable Voice rates instead of trunking rates: the inbound minutes on the number plus the outbound `<Dial>` leg, for as long as the forwarded call lasts. On 2026-10-24, US rates were $0.0085 a minute to receive on a local number ($0.0220 toll-free) and $0.0140 a minute to call out ([Twilio US voice pricing](https://www.twilio.com/en-us/voice/pricing/us)), about $0.023 a minute in all. Twilio may still bill a few seconds of the refused trunk leg.
 
 ## Follow a browser call
 
@@ -258,7 +272,7 @@ The worker listens on its health port for `/internal/live/attach`. Keep that por
 The phone path needs an OpenAI project with SIP enabled and a Twilio account. To connect them:
 
 1. In the OpenAI dashboard, add a webhook for `live.transport.incoming` that points to `https://your_app_domain/api/webhooks/openai/live`, and set its secret as `OPENAI_WEBHOOK_SECRET` on the admin.
-2. In Twilio, create an Elastic SIP trunk with the origination URI `sip:your_openai_project_id@sip.api.openai.com;transport=tls`, and set its transfer mode to allow transfers to any number.
+2. In Twilio, create an Elastic SIP trunk with the origination URI `sip:your_openai_project_id@sip.api.openai.com;transport=tls`, and set its transfer mode to allow transfers to any number. Under **Origination**, set the disaster recovery URL to `https://your_app_domain/api/webhooks/twilio/voice` with `POST`. Without it, a business out of minutes leaves its callers with an error instead of forwarding them. `scripts/production-smoke.ts` checks this URL.
 3. Set `TWILIO_SIP_TRUNK_SID` on the worker. New numbers join the trunk when you provision them, and provisioning fails without it.
 4. Move each existing number onto the trunk with `scripts/operations/move-number-to-gpt-live.ts`.
 

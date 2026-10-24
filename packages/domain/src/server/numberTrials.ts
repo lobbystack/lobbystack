@@ -261,20 +261,28 @@ export async function checkNumberTrialMinutes(context: DomainContext, input: { b
 }
 
 /**
- * What an off-trunk number does with a call: a trial out of minutes forwards
- * it to the owner; an ended trial lets it go unanswered, as if the number were
- * gone.
+ * Where a call goes when the receptionist doesn't take it: a trial number out
+ * of minutes, or any number whose plan is out of minutes or at its overage cap
+ * (the trunk fails the call over to /api/webhooks/twilio/voice). It forwards
+ * to the business's transfer number, or else the owner's verified phone, and
+ * rejects only when neither exists. An ended trial lets the call go
+ * unanswered, as if the number were gone. Forwarding uses no AI minutes, so it
+ * doesn't depend on the plan.
  */
 export async function resolveNumberFallback(context: DomainContext, input: { businessId: string; e164: string }): Promise<{ action: "forward"; to: string } | { action: "reject" }> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const row = (await tx.select({ status: numberTrials.status, minutesExhaustedAt: numberTrials.minutesExhaustedAt, verifiedPhone: numberTrials.verifiedPhone, transferNumber: receptionistProfiles.transferNumber })
-      .from(numberTrials)
-      .innerJoin(phoneNumbers, eq(phoneNumbers.id, numberTrials.phoneNumberId))
-      .leftJoin(receptionistProfiles, eq(receptionistProfiles.businessId, numberTrials.businessId))
-      .where(and(eq(numberTrials.businessId, input.businessId), eq(phoneNumbers.e164, input.e164), eq(phoneNumbers.status, "active")))
+    const row = (await tx.select({ trialStatus: numberTrials.status, trialPhone: numberTrials.verifiedPhone, transferNumber: receptionistProfiles.transferNumber })
+      .from(phoneNumbers)
+      .leftJoin(numberTrials, and(eq(numberTrials.phoneNumberId, phoneNumbers.id), inArray(numberTrials.status, ["active", "ended"])))
+      .leftJoin(receptionistProfiles, eq(receptionistProfiles.businessId, phoneNumbers.businessId))
+      .where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.e164, input.e164), eq(phoneNumbers.status, "active")))
       .limit(1))[0];
-    if (row?.status === "active" && row.minutesExhaustedAt) return { action: "forward", to: row.transferNumber?.trim() || row.verifiedPhone };
-    return { action: "reject" };
+    if (!row || row.trialStatus === "ended") return { action: "reject" };
+    // A trial transfers only to the verified phone, so it never needs the owner lookup.
+    const ownerPhone = row.trialStatus === "active" ? row.trialPhone : (await tx.execute<{ phone: string | null }>(sql`select app.resolve_business_owner_verified_phone(${input.businessId}::uuid) as phone`)).rows[0]?.phone;
+    // Forwarding a call back to the number it came in on would loop.
+    const to = [row.transferNumber?.trim(), ownerPhone].find((phone): phone is string => Boolean(phone && E164.test(phone) && isTransferPhone(phone) && phone !== input.e164));
+    return to ? { action: "forward", to } : { action: "reject" };
   });
 }
 
