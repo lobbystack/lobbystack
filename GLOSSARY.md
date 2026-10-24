@@ -13,8 +13,16 @@ A company that sets up and runs businesses on LobbyStack and owns its relationsh
 _Avoid_: Reseller, agency
 
 **White-label partner**:
-A partner whose businesses see the partner's brand, domain, and bills instead of LobbyStack's.
+A partner that keeps the businesses it sets up and shows them its own brand, domain, and bills instead of LobbyStack's.
 _Avoid_: Agency, white-label agency
+
+**Claim**:
+A business's owner taking it over from the partner that set it up, through a claim link. The owner then pays LobbyStack.
+_Avoid_: Handoff, transfer
+
+**Release**:
+A white-label partner giving one of its businesses to that business's owner, who then pays LobbyStack directly.
+_Avoid_: Transfer, offboarding
 
 **Affiliate**:
 A person who refers businesses to LobbyStack for a commission. An affiliate never manages the businesses it refers.

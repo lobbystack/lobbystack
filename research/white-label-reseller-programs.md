@@ -192,6 +192,8 @@ We decided these on 2026-10-24. In LobbyStack's terms, an agency is a white-labe
 - **Entry price**: the entry tier costs about what direct plans cost per minute, and minutes get cheaper at higher tiers. A single business then gains nothing by signing up as a partner.
 - **Signup**: self-serve at launch. Partners sign up without an application. v1 therefore needs a trial, card checks, and limits on how many numbers and businesses a new partner can create.
 - **Branding in v1**: name, logo, favicon, and brand color; a custom subdomain with automatic TLS; branded sign-in and dashboard; and the partner's terms, privacy, and support links. Emails go out under the partner's name from a neutral domain LobbyStack owns. The partner's own sending domain comes later.
+- **Agency keys**: agencies make platform keys in their dashboard. The keys reach only the agency's businesses and use today's Platform endpoints and `lobbystack onboard`. Keys that reach every business stay in `PLATFORM_API_KEYS` for LobbyStack. [ADR 0010](../docs/adr/0010-white-label-partners-make-their-own-platform-keys.md) records why.
+- **Leaving an agency**: the business belongs to the agency. Only the agency can release it to its client, who then pays LobbyStack directly, or delete it.
 
 Still open:
 
