@@ -18,9 +18,6 @@ node_modules
 .firecrawl/
 .prospect-demos/
 .platform-keys/
-apps/landing/.astro
-apps/landing/.wrangler
-apps/landing/dist
 **/.next/
 *.tsbuildinfo
 test-results/

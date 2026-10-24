@@ -6,7 +6,7 @@
 #
 # Usage: scripts/release-local.sh [ref]    (default: HEAD)
 #
-# Not covered: CodeQL and the landing link check, which only run on GitHub.
+# Not covered: CodeQL and the marketing link check, which only run on GitHub.
 set -euo pipefail
 
 ROOT="$(git rev-parse --show-toplevel)"
@@ -50,7 +50,7 @@ docker exec "$PG" psql -U postgres -qc "create database lobbystack_test"
 step pnpm install --frozen-lockfile
 step pnpm test:build-config
 step pnpm typecheck
-step pnpm --filter @lobbystack/admin --filter @lobbystack/landing lint
+step pnpm --filter @lobbystack/admin lint
 step pnpm telemetry:coverage
 step pnpm build
 step git diff --exit-code -- apps/admin/public/embed/embed.js

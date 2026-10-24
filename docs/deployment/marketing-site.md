@@ -1,16 +1,16 @@
 # Serve lobbystack.com from the admin app
 
-The admin app serves the marketing site on every hostname listed in `MARKETING_HOSTS`, and the dashboard on every other hostname. This guide explains how requests reach the marketing pages, how to run and check them, and how to move `lobbystack.com` from Cloudflare Pages to the admin and back. Until that move, Cloudflare Pages keeps serving `lobbystack.com` from `apps/landing`, as [Deploy the landing site on Cloudflare Pages](landing-cloudflare-pages.md) describes.
+The admin app serves the marketing site on every hostname listed in `MARKETING_HOSTS`, and the dashboard on every other hostname. This guide explains how requests reach the marketing pages, how to run and check them, and how `lobbystack.com` moved from Cloudflare Pages to the admin.
 
 ## How a request reaches a marketing page
 
 The proxy in `apps/admin/proxy.ts` hands requests for a marketing host to `apps/admin/src/marketing/proxy.ts`, which does the following:
 
 - Redirects every other host in `MARKETING_HOSTS` to the first one, so `www.lobbystack.com` goes to `lobbystack.com`.
-- Adds the trailing slash to page URLs with a 301, as the Astro site did.
+- Adds the trailing slash to page URLs with a 301, so URLs keep the form search engines already index.
 - Sends a visitor whose language cookie or browser prefers French, Spanish or Serbian from an English page to the same page in that language with a 302. Crawlers always get the page they asked for.
 - Rewrites the URL to the internal route under `app/(marketing)/site/[locale]`. `/fr/pricing/` renders `/site/fr/pricing`, and English pages render under `/site/en`.
-- Sends the headers and redirects that `apps/landing/public/_headers` and `_redirects` defined, from `src/marketing/response-headers.ts`.
+- Sends the site's response headers and redirects, which `src/marketing/response-headers.ts` defines.
 
 The dashboard host answers `/site/*` with a 404, so the marketing pages exist only on the marketing hosts.
 
@@ -77,7 +77,7 @@ Validate the snapshot. The validator checks the sitemaps, titles, descriptions, 
 pnpm --filter @lobbystack/admin marketing:validate
 ```
 
-Then compare the build with the site it replaces. `--sitemap` checks every URL in the reference site's sitemap; pass paths instead to check a few:
+Then compare the build with the live site. `--sitemap` checks every URL in the reference site's sitemap; pass paths instead to check a few:
 
 ```bash
 node apps/admin/scripts/marketing/parity.mjs \
@@ -156,6 +156,8 @@ curl -sI -H "Accept-Language: fr" https://lobbystack.com/pricing/ | grep -i cf-c
 
 ## Move lobbystack.com to the admin
 
+`lobbystack.com` already runs on the admin. These steps record how it moved, and you can reuse them to move another domain.
+
 Try the move on staging first, with a hostname of its own. Cloudflare's universal certificate covers one level of subdomain, so use `staging-www.lobbystack.com`, not `www.staging.lobbystack.com`.
 
 1. Add a proxied A record for `staging-www.lobbystack.com` pointing at `40.160.96.129`.
@@ -177,6 +179,6 @@ Then move production:
 
 Let's Encrypt validates each new domain through Cloudflare over HTTP, so the certificates are issued only after step 3 sends the domains to the server. Cloudflare serves its own certificate to visitors in the meantime.
 
-## Roll back to Cloudflare Pages
+## Roll back a bad release
 
-Remove `lobbystack.com` and `www.lobbystack.com` from the Cache Rule and [purge them](#purge-the-cache-after-each-release), so Cloudflare stops serving the admin's pages. Then point both records back at `lobbystack-site.pages.dev` as proxied CNAME records, and add both domains to the `lobbystack-site` project again. The project keeps building from `apps/landing` until that app is removed, so it serves the latest content.
+The repository no longer contains `apps/landing`, so the `lobbystack-site` Pages project has nothing to build. To undo a bad marketing release, release the previous admin image as [Roll back to the previous release](dokploy-release.md#roll-back-to-the-previous-release) describes. Then [purge the cache](#purge-the-cache-after-each-release) so Cloudflare stops serving the bad pages.

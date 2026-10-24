@@ -31,7 +31,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:build-config
       - run: pnpm typecheck
-      - run: pnpm --filter @lobbystack/admin --filter @lobbystack/landing lint
+      - run: pnpm --filter @lobbystack/admin lint
       - run: pnpm telemetry:coverage
       - run: pnpm build
       - name: Validate the marketing site's SEO
