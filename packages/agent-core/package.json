@@ -20,7 +20,7 @@
     "luxon": "^3.7.2",
     "openai": "^7.28.0",
     "ws": "^8.22.0",
-    "zod": "^4.6.5"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@types/luxon": "^3.7.6",

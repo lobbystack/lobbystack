@@ -19,7 +19,7 @@
     "@lobbystack/telemetry": "workspace:*",
     "drizzle-orm": "^0.45.3",
     "luxon": "^3.7.2",
-    "zod": "^4.6.5"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@types/luxon": "^3.7.6"
