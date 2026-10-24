@@ -13,3 +13,4 @@ This directory documents LobbyStack’s current architecture, operations, provid
 - `validation/`: Release certification, contract checks, the [production-readiness matrix](validation/production-readiness.md), the [current implementation validation report](validation/readiness-implementation-2026-09-12.md), and the [query-plan remediation report](validation/query-plan-remediation.md)
 - `platform.md`: Local stack, service checks, and deployment
 - `branding.md`: A deployment's own app name and logo, and the places that still show LobbyStack's brand
+- `white-label.md`: How partners resell LobbyStack under their own brand, as decided for v1

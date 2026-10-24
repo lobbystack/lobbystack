@@ -183,24 +183,19 @@ The "Still branded" table in the branding doc lists every place outside the dash
 
 ## Decisions
 
-We decided these on 2026-10-24. In LobbyStack's terms, an agency is a white-label partner and its clients are businesses ([glossary](../GLOSSARY.md)).
+We used this research to decide v1 of the partner program on 2026-10-24. [How partners resell LobbyStack](../docs/white-label.md) records the decisions. [ADR 0009](../docs/adr/0009-partners-bill-through-their-own-stripe.md) covers billing, and [ADR 0010](../docs/adr/0010-partners-make-their-own-platform-keys.md) covers platform keys. The [glossary](../GLOSSARY.md) settles the terms: this report's agencies are partners, and their clients are businesses.
 
-- **Billing**: the partner connects its own Stripe account through Stripe Connect. Stripe bills each business in the partner's name, and LobbyStack bills the partner through Polar. [ADR 0009](../docs/adr/0009-partners-bill-through-their-own-stripe.md) records why.
-- **Pricing structure**: tiers in the style of [Firecrawl's pricing](https://www.firecrawl.dev/pricing). Each tier has a monthly fee and a pool of voice minutes and chat conversations. All of the partner's businesses share the pool, and the number of businesses has no limit. A free tier needs no card and, like direct Free, includes no phone number, so it can't receive real calls. Overage is pay as you go up to a monthly cap the partner sets.
-- **Concurrent calls**: no limit by tier. A cap on an inbound receptionist sends the extra caller to a busy signal. Each partner gets one high safety cap that protects shared capacity, and LobbyStack raises it on request.
-- **Units**: minutes and chat conversations, each with its own overage rate, like today's Starter and Pro. Alert and reminder SMS are included up to a fair-use cap, because LobbyStack writes every one of them.
-- **Entry price**: the entry tier costs about what direct plans cost per minute, and minutes get cheaper at higher tiers. A single business then gains nothing by signing up as a partner.
-- **Signup**: self-serve at launch. Partners sign up without an application. v1 therefore needs a trial, card checks, and limits on how many numbers and businesses a new partner can create.
-- **Branding in v1**: name, logo, favicon, and brand color; a custom subdomain with automatic TLS; branded sign-in and dashboard; and the partner's terms, privacy, and support links. Emails go out under the partner's name from a neutral domain LobbyStack owns. The partner's own sending domain comes later.
-- **Agency keys**: agencies make platform keys in their dashboard. The keys reach only the agency's businesses and use today's Platform endpoints and `lobbystack onboard`. Keys that reach every business stay in `PLATFORM_API_KEYS` for LobbyStack. [ADR 0010](../docs/adr/0010-white-label-partners-make-their-own-platform-keys.md) records why.
-- **Leaving an agency**: the business belongs to the agency. Only the agency can release it to its client, who then pays LobbyStack directly, or delete it.
+## SMS sender rules
 
-Still open:
+Checked 2026-10-24. LobbyStack's cloud texts for every business from one toll-free number that Twilio verified under LobbyStack's brand.
 
-- Tier prices and allowances. Set them after reading cost per voice minute and per chat from the unit economics rollups (`unitEconomics.ts` in `packages/domain`).
-- How the cloud serves partner subdomains with TLS. The cloud runs behind Cloudflare ([platform doc](../docs/platform.md)), so Cloudflare for SaaS custom hostnames is one option.
-- What a partner can see inside a business's account, and whether opening it is audited, as Famulor does.
-- The shared toll-free SMS number's HELP and START replies name LobbyStack in carrier-registered wording ([`sms.ts`](../packages/domain/src/server/sms.ts#L19)). A partner's businesses would still send them.
+- Twilio says a toll-free number used for messaging "must map 1:1 to a single business" ([error 30478](https://www.twilio.com/docs/api/errors/30478)). One number can serve many businesses only when the platform runs the whole opt-in and writes every message ([Twilio ISV guide](https://help.twilio.com/articles/13263383206299-Toll-Free-Verification-for-ISVs), [error 30479](https://www.twilio.com/docs/api/errors/30479)).
+- Twilio's checklist asks for the business name in every message. It also asks for the verified brand in the opt-in confirmation and in HELP and STOP replies ([Twilio onboarding guide](https://help.twilio.com/articles/13264118705051)).
+- CTIA requires an opt-in confirmation before any other text in a recurring program. It must give the program name, help, opt-out, frequency, and fees ([CTIA Messaging Principles, §5.1.2.1](https://api.ctia.org/wp-content/uploads/2023/05/230523-CTIA-Messaging-Principles-and-Best-Practices-FINAL.pdf)). CTIA's short code handbook, which Twilio cites for toll-free, asks for the brand name in HELP and STOP replies too ([Short Code Handbook v1.9, §3.4](https://api.ctia.org/wp-content/uploads/2024/01/CTIA-Short-Code-Monitoring-Handbook-v1.9-FINAL.pdf)).
+- Fresha follows this pattern. Its first text names Fresha as the booking platform for the business, and the next text names only the business. Its terms have customers consent to texts from Fresha ([Fresha terms](https://terms.fresha.com/terms-service)). Its pages don't say whether the first text goes out once per phone number or every time.
+- Rewording HELP or START counts as a content change and needs no new verification. Changing who the sender is does, and a number can't send while its verification is pending ([Twilio console guide](https://www.twilio.com/docs/messaging/compliance/toll-free/console-onboarding), [Twilio help](https://help.twilio.com/articles/5377174717595)).
+- A sender per business would let every text name only the business. The options are a toll-free number verified to the business ($2.15 a month, 3 to 5 business days) or a 10DLC brand and campaign ($19.50 once, $1.50 to $10 a month, 10 to 15 days for the campaign) ([Twilio SMS pricing](https://www.twilio.com/en-us/sms/pricing/us), [10DLC fees](https://help.twilio.com/articles/1260803965530-What-pricing-and-fees-are-associated-with-the-A2P-10DLC-service-), [10DLC quickstart](https://www.twilio.com/docs/messaging/compliance/a2p-10dlc/quickstart)). We chose to keep the one verified number.
+- Today's texts have gaps for direct businesses too. The verbal consent script names no business ([`capabilities.ts`](../packages/agent-core/src/capabilities.ts#L138-L142)), no opt-in confirmation goes out, and appointment-change codes say "LobbyStack verification code" ([`verificationCode.ts`](../packages/domain/src/server/verificationCode.ts#L23)).
 
 ## Competitor details
 
