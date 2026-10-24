@@ -9,6 +9,7 @@
     "marketing:postbuild": "node scripts/marketing/postbuild.mjs",
     "marketing:validate": "node scripts/marketing/validate-seo.mjs",
     "start": "next start",
+    "pretypecheck": "pnpm --filter @lobbystack/shared build",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
     "test": "vitest run --passWithNoTests",
