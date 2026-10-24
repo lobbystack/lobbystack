@@ -12949,6 +12949,7 @@
                   "voice",
                   "web_voice",
                   "web_chat",
+                  "instagram",
                   "sms"
                 ]
               },
@@ -16705,6 +16706,7 @@
                       "voice",
                       "web_voice",
                       "web_chat",
+                      "instagram",
                       "sms"
                     ]
                   },

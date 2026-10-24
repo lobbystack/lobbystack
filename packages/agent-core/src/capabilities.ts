@@ -1,4 +1,4 @@
-import { canTextNumber, normalizeAppointmentChangePolicy, normalizeBookingMode, type BookingMode, type BusinessContextSnapshot } from "@lobbystack/shared";
+import { canTextNumber, isTextChatChannel, normalizeAppointmentChangePolicy, normalizeBookingMode, type BookingMode, type BusinessContextSnapshot } from "@lobbystack/shared";
 
 import type { AgentChannel, AgentToolContext } from "./tools";
 
@@ -112,13 +112,18 @@ function personFromWeb(snapshot: BusinessContextSnapshot): string {
  * hands the callback request to the agent.
  */
 function webPersonRule(snapshot: BusinessContextSnapshot, channel: Exclude<AgentChannel, "voice">, live = false): string {
-  const who = channel === "web_chat" ? "visitor" : "caller";
+  const who = channel === "web_chat" ? "visitor" : channel === "instagram" ? "person" : "caller";
   return [
     channel === "web_chat"
       ? "This website chat can't be transferred: you can't connect the visitor to a person or bring anyone else into the chat."
-      : "This call is in the caller's web browser, not on a phone line, so it can't be transferred: you can't connect the caller to a person or put anyone else on the call.",
+      : channel === "instagram"
+        ? "This Instagram chat can't be transferred: you can't connect the person to someone from the team or bring anyone else into the chat."
+        : "This call is in the caller's web browser, not on a phone line, so it can't be transferred: you can't connect the caller to a person or put anyone else on the call.",
     `Never say or suggest the ${who} is being transferred or connected to someone, even when a business rule or instruction says to transfer.`,
-    `When the ${who} asks for a person, or a rule says to transfer them, ${personFromWeb(snapshot)}, and offer to take a message so someone from the team calls them back${live ? "." : ": get their name and the best number to reach them, then save it with takeMessage."}`,
+    channel === "instagram"
+      // The team can answer in the same conversation, so a phone number is optional.
+      ? `When the ${who} asks for a person, or a rule says to transfer them, ${personFromWeb(snapshot)}, and offer to take a message so someone from the team replies here: get their name, and a phone number only if they'd rather be called, then save it with takeMessage.`
+      : `When the ${who} asks for a person, or a rule says to transfer them, ${personFromWeb(snapshot)}, and offer to take a message so someone from the team calls them back${live ? "." : ": get their name and the best number to reach them, then save it with takeMessage."}`,
   ].join(" ");
 }
 
@@ -198,7 +203,7 @@ export function receptionistCapabilities(snapshot: BusinessContextSnapshot, conv
     requestTeamMember: channel === "web_chat" && Boolean(conversation.liveChat && conversation.conversationId) && !intakeOnly,
     endCall: Boolean(callControl),
   };
-  const voice = channel !== "web_chat";
+  const voice = !isTextChatChannel(channel);
   // GPT-Live's list. Live calls are phone or browser calls, and every one can be ended.
   const phone = channel === "voice";
   const changeVerbs = phone ? [reschedules ? "reschedule" : "", cancels ? "cancel" : ""].filter(Boolean).join(" or ") : "";

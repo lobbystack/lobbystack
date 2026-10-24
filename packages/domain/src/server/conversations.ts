@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, gt, isNull, sql } from "drizzle-orm";
 
 import { businesses, calls, contacts, conversations, conversationSessions, enqueueOutbox, messages, transcripts, widgetVisitors, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { isTextChatChannel } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
 import { requireBusinessMembership } from "../authz";
@@ -183,7 +184,7 @@ export async function appendMessage(
   input: MessageInput & { operatorAlert?: { eventKind: OperatorNotificationEventKey; subject: string; body: string } },
 ): Promise<string> {
   // A team member who writes in a website or Instagram chat takes it over, so the AI stops answering alongside them.
-  const takesOver = input.userId !== undefined && input.direction === "outbound" && (input.channel === "web_chat" || input.channel === "instagram");
+  const takesOver = input.userId !== undefined && input.direction === "outbound" && isTextChatChannel(input.channel);
   const { messageId, takeOver } = await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: input.userId ? "operator" : "worker" }, async (tx) => {
     if (input.userId) {
       await requireBusinessMembership(tx, { userId: input.userId, businessId: input.businessId, minimumRole: "scheduler" });

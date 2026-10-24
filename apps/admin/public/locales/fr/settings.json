@@ -530,6 +530,7 @@
       "connectedSuccess": "Instagram est connecté. Votre réceptionniste répond désormais aux messages privés.",
       "connectFailed": "Impossible de connecter Instagram. Veuillez réessayer.",
       "accountInUse": "Ce compte Instagram est déjà connecté à un autre espace de travail.",
+      "permissionMissing": "Connectez Instagram à nouveau et autorisez l'accès à vos messages.",
       "disconnectedSuccess": "Instagram est déconnecté.",
       "disconnect": "Déconnecter",
       "reconnect": "Reconnecter",

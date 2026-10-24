@@ -19,6 +19,7 @@
     "blockedComposerHint": "Unblock the contact from Contacts before sending a new SMS reply.",
     "composerPlaceholder": "Type your message...",
     "composerPlaceholderSms": "Reply via SMS...",
+    "composerPlaceholderInstagram": "Reply on Instagram...",
     "composerPlaceholderWeb": "Reply via Web...",
     "automationAiActive": "AI Active",
     "automationHumanHandoff": "Pause AI",

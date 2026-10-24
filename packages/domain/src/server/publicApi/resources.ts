@@ -417,7 +417,7 @@ const messageColumns = {
 type MessageRow = { id: string; status: string; title: string; body: string; metadata: Record<string, unknown> | null; relatedCallId: string | null; expired: boolean; createdAt: Date; updatedAt: Date };
 
 const urgencies = new Set(["low", "normal", "urgent"]);
-const messageChannels = new Set(["voice", "web_voice", "web_chat", "sms"]);
+const messageChannels = new Set(["voice", "web_voice", "web_chat", "instagram", "sms"]);
 
 function text(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;

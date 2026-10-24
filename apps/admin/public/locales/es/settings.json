@@ -530,6 +530,7 @@
       "connectedSuccess": "Instagram está conectado. Su recepcionista ahora responde a los mensajes directos.",
       "connectFailed": "No se pudo conectar Instagram. Inténtelo de nuevo.",
       "accountInUse": "Esta cuenta de Instagram ya está conectada a otro espacio de trabajo.",
+      "permissionMissing": "Vuelva a conectar Instagram y permita el acceso a sus mensajes.",
       "disconnectedSuccess": "Instagram desconectado.",
       "disconnect": "Desconectar",
       "reconnect": "Volver a conectar",

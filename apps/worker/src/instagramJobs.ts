@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { createAgentModel, createReceptionistAgent, describeAgentUsage } from "@lobbystack/agent-core";
 import type { JobEnvelope } from "@lobbystack/contracts";
 import { withBusinessTransaction } from "@lobbystack/db";
-import { claimInstagramDelivery, finishInstagramDelivery, getCachedBusinessSnapshot, loadInstagramReplyContext, recordAiGenerationEvent, recordInstagramPartSent, refreshBusinessSnapshot, refreshInstagramTokenIfDue, releaseInstagramDelivery, reserveWidgetChatUsageInTransaction, saveInstagramReply, type DomainContext } from "@lobbystack/domain";
+import { claimInstagramDelivery, finishInstagramDelivery, getCachedBusinessSnapshot, instagramDeliveryLeaseEndsAt, loadInstagramReplyContext, recordAiGenerationEvent, recordInstagramPartSent, refreshBusinessSnapshot, refreshInstagramTokenIfDue, releaseInstagramDelivery, reserveWidgetChatUsageInTransaction, saveInstagramReply, type DomainContext } from "@lobbystack/domain";
 import { InstagramApiError, splitInstagramText, type InstagramProvider } from "@lobbystack/providers/instagram/instagram";
 import { normalizeRuntimeLocale, runtimeLocaleName } from "@lobbystack/shared";
 
@@ -15,9 +15,10 @@ export type InstagramOperations = {
   encryptToken: (value: string) => string;
 };
 
-type JobResult = { status: "completed" | "skipped"; entityId?: string };
+type JobResult = { status: "completed" | "skipped"; entityId?: string } | { status: "deferred"; entityId: string; retryAt: Date };
 
 const NO_REPLY = "NO_REPLY";
+const NO_REPLY_MARKER = new RegExp(`\\b${NO_REPLY}\\b`, "gi");
 
 // Instagram is a text chat like the website's, with its own limits: plain text, and short.
 const INSTAGRAM_INSTRUCTIONS = [
@@ -46,27 +47,38 @@ export async function replyToInstagramMessage(domain: DomainContext, job: JobEnv
   const agent = createReceptionistAgent({
     model,
     // A text conversation, so it gets the website chat's knowledge, tools and booking.
-    context: { domain, snapshot, channel: "web_chat", conversationId },
+    context: { domain, snapshot, channel: "instagram", conversationId },
     extraInstructions: `${INSTAGRAM_INSTRUCTIONS} Reply in the language of the person's latest message; if it's unclear, use ${runtimeLocaleName(locale)}.`,
   });
   const traceId = randomUUID();
   const startedAt = performance.now();
   try {
     const result = await agent.generate({ messages: reply.history.slice(-20).map((row) => ({ role: row.direction === "inbound" ? "user" as const : "assistant" as const, content: row.body })) });
-    const text = result.text.trim();
-    if (!text) throw new Error("The AI assistant returned an empty reply.");
-    if (new RegExp(`^\\W*${NO_REPLY}\\W*$`, "i").test(text)) {
+    if (!result.text.trim()) throw new Error("The AI assistant returned an empty reply.");
+    const text = instagramReplyText(result.text);
+    if (!text) {
       void recordAiGenerationEvent(domain, { businessId, operation: "instagram.reply", conversationId, traceId, isStreaming: false, ...describeAgentUsage(result.usage, performance.now() - startedAt) }).catch(() => undefined);
       return { status: "skipped", entityId: messageId };
     }
-    const savedId = await saveInstagramReply(domain, { businessId, conversationId, body: text });
+    const savedId = await saveInstagramReply(domain, { businessId, conversationId, answeringMessageId: messageId, body: text });
     void recordAiGenerationEvent(domain, { businessId, operation: "instagram.reply", conversationId, ...(savedId ? { messageId: savedId } : {}), traceId, isStreaming: false, ...describeAgentUsage(result.usage, performance.now() - startedAt) }).catch(() => undefined);
-    return { status: "completed", entityId: savedId ?? messageId };
+    // Null when the team took over or a newer message arrived while the reply was written.
+    return savedId ? { status: "completed", entityId: savedId } : { status: "skipped", entityId: messageId };
   } catch (error) {
     // Only a stable category: provider errors can quote the conversation.
     void recordAiGenerationEvent(domain, { businessId, operation: "instagram.reply", conversationId, traceId, provider: "unknown", model: "unknown", latencyMs: performance.now() - startedAt, isStreaming: false, isError: true, error: "generation_failed" }).catch(() => undefined);
     throw error;
   }
+}
+
+/**
+ * The reply to send, or null when the model chose not to answer. The NO_REPLY
+ * marker never goes out, even when the model wrote it after some text.
+ */
+export function instagramReplyText(output: string): string | null {
+  const raw = output.trim();
+  const text = raw.replace(NO_REPLY_MARKER, "").trim();
+  return text === raw || /[\p{L}\p{N}]/u.test(text) ? text : null;
 }
 
 export async function sendInstagramMessage(domain: DomainContext, job: JobEnvelope, operations: InstagramOperations | undefined, execution: { isFinalAttempt?: boolean } = {}): Promise<JobResult> {
@@ -79,38 +91,55 @@ export async function sendInstagramMessage(domain: DomainContext, job: JobEnvelo
     if (claimed) await finishInstagramDelivery(domain, { businessId, messageId, status: "failed", reason: "instagram_not_configured" });
     return { status: "skipped", entityId: messageId };
   }
-  await refreshInstagramTokenIfDue(domain, { businessId, decryptToken: operations.decryptToken, encryptToken: operations.encryptToken, refreshAccessToken: (token) => operations.provider.refreshAccessToken(token) });
+  // The daily instagram.refreshToken job keeps the token current, so a send never waits on a refresh.
   const delivery = await claimInstagramDelivery(domain, { businessId, messageId });
-  if (!delivery) return { status: "skipped", entityId: messageId };
+  if (!delivery) {
+    // A worker killed mid-send leaves the message held. Run again once the hold lapses instead of dropping it.
+    const leaseEndsAt = await instagramDeliveryLeaseEndsAt(domain, { businessId, messageId });
+    return leaseEndsAt ? { status: "deferred", entityId: messageId, retryAt: leaseEndsAt } : { status: "skipped", entityId: messageId };
+  }
   if ("blocked" in delivery) {
     await finishInstagramDelivery(domain, { businessId, messageId, status: "failed", reason: delivery.blocked === "no_account" ? "instagram_disconnected" : "instagram_no_recipient" });
     return { status: "skipped", entityId: messageId };
   }
-  const accessToken = operations.decryptToken(delivery.encryptedAccessToken);
-  try {
-    let firstMessageId = delivery.providerMessageId ?? undefined;
-    const parts = splitInstagramText(delivery.body);
-    // A retry picks up after the pieces an earlier attempt already sent.
-    for (let index = delivery.partsSent; index < parts.length; index += 1) {
-      const sent = await operations.provider.sendTextMessage({ accessToken, instagramUserId: delivery.instagramUserId, recipientId: delivery.recipientId, text: parts[index]! });
-      firstMessageId ??= sent.messageId;
-      if (index < parts.length - 1) await recordInstagramPartSent(domain, { businessId, messageId, partsSent: index + 1, providerMessageId: firstMessageId });
+  let firstMessageId = delivery.providerMessageId ?? undefined;
+  const parts = splitInstagramText(delivery.body);
+  // A retry picks up after the pieces an earlier attempt already sent.
+  for (let index = delivery.partsSent; index < parts.length; index += 1) {
+    let sent: { messageId: string };
+    try {
+      sent = await operations.provider.sendTextMessage({ accessToken: operations.decryptToken(delivery.encryptedAccessToken), instagramUserId: delivery.instagramUserId, recipientId: delivery.recipientId, text: parts[index]! });
+    } catch (error) {
+      const apiError = error instanceof InstagramApiError ? error : undefined;
+      if (apiError?.permanent || execution.isFinalAttempt) {
+        await finishInstagramDelivery(domain, { businessId, messageId, status: "failed", reason: apiError?.reconnectRequired ? "instagram_reconnect_required" : `instagram_error${apiError?.code !== undefined ? `_${apiError.code}` : ""}`, reconnectRequired: apiError?.reconnectRequired === true });
+        return { status: "skipped", entityId: messageId };
+      }
+      // The retry comes within seconds, long before the claim would lapse.
+      await releaseInstagramDelivery(domain, { businessId, messageId });
+      throw error;
     }
-    if (!firstMessageId) {
-      await finishInstagramDelivery(domain, { businessId, messageId, status: "failed", reason: "instagram_empty_message" });
-      return { status: "skipped", entityId: messageId };
+    firstMessageId ??= sent.messageId;
+    if (index < parts.length - 1) await recordAfterSend(() => recordInstagramPartSent(domain, { businessId, messageId, partsSent: index + 1, providerMessageId: firstMessageId! }));
+  }
+  if (!firstMessageId) {
+    await finishInstagramDelivery(domain, { businessId, messageId, status: "failed", reason: "instagram_empty_message" });
+    return { status: "skipped", entityId: messageId };
+  }
+  await recordAfterSend(() => finishInstagramDelivery(domain, { businessId, messageId, status: "sent", providerMessageId: firstMessageId! }));
+  return { status: "completed", entityId: messageId };
+}
+
+// Instagram already has the piece, so a failed write is tried again here.
+// Handing the message back instead would send the piece twice.
+async function recordAfterSend(write: () => Promise<void>): Promise<void> {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return await write();
+    } catch (error) {
+      if (attempt >= 3) throw error;
+      await new Promise((resolve) => setTimeout(resolve, attempt * 250));
     }
-    await finishInstagramDelivery(domain, { businessId, messageId, status: "sent", providerMessageId: firstMessageId });
-    return { status: "completed", entityId: messageId };
-  } catch (error) {
-    const apiError = error instanceof InstagramApiError ? error : undefined;
-    if (apiError?.permanent || execution.isFinalAttempt) {
-      await finishInstagramDelivery(domain, { businessId, messageId, status: "failed", reason: apiError?.reconnectRequired ? "instagram_reconnect_required" : `instagram_error${apiError?.code !== undefined ? `_${apiError.code}` : ""}`, reconnectRequired: apiError?.reconnectRequired === true });
-      return { status: "skipped", entityId: messageId };
-    }
-    // The retry comes within seconds, long before the claim would lapse.
-    await releaseInstagramDelivery(domain, { businessId, messageId });
-    throw error;
   }
 }
 

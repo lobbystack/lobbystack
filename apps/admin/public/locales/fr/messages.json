@@ -19,6 +19,7 @@
     "blockedComposerHint": "Débloquez le contact depuis Contacts avant d'envoyer une nouvelle réponse SMS.",
     "composerPlaceholder": "Tapez votre message...",
     "composerPlaceholderSms": "Répondre par SMS...",
+    "composerPlaceholderInstagram": "Répondre sur Instagram...",
     "composerPlaceholderWeb": "Répondre via le web...",
     "automationAiActive": "IA active",
     "automationHumanHandoff": "Mettre l'IA en pause",

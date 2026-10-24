@@ -1,4 +1,4 @@
-import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
+import { randomUUID } from "node:crypto";
 
 import { normalizeIP } from "@better-auth/core/utils/ip";
 import { and, eq, gt } from "drizzle-orm";
@@ -8,6 +8,7 @@ import { InstagramProvider } from "@lobbystack/providers";
 
 import { getAuthDatabase } from "./auth";
 import { enforceFixedWindow, fixedWindowLimit, type FixedWindowLimit } from "./fixed-window-limit";
+import { oauthStateDigest, oauthTokenCurrent, signOAuthToken, verifyOAuthToken } from "./signed-oauth-state";
 
 type InstagramOAuthState = { userId: string; businessId: string; issuedAt: number; nonce: string };
 
@@ -27,40 +28,19 @@ export function instagramConfigured(): boolean {
   return Boolean(process.env.INSTAGRAM_APP_ID && process.env.INSTAGRAM_APP_SECRET && process.env.INSTAGRAM_REDIRECT_URI && process.env.ENCRYPTION_KEY);
 }
 
-function secret(): string {
-  return process.env.BETTER_AUTH_SECRET ?? process.env.INTERNAL_SERVICE_SECRET ?? "";
-}
-
-// Signed under its own domain, so a Google Calendar state never passes as an Instagram one.
-function sign(value: string): string {
-  return createHmac("sha256", secret()).update(`instagram:state:${value}`).digest("base64url");
-}
+const UNCONFIGURED = "Instagram OAuth signing is not configured.";
 
 export function createInstagramOAuthState(input: { userId: string; businessId: string }): string {
-  if (!secret()) throw new Error("Instagram OAuth signing is not configured.");
-  const encoded = Buffer.from(JSON.stringify({ ...input, issuedAt: Date.now(), nonce: randomUUID() })).toString("base64url");
-  return `v1.${encoded}.${sign(`v1.${encoded}`)}`;
+  return signOAuthToken("instagram:state", { ...input, issuedAt: Date.now(), nonce: randomUUID() }, UNCONFIGURED);
 }
 
 export function verifyInstagramOAuthState(value: string): InstagramOAuthState | null {
-  if (value.length > 2048 || !secret()) return null;
-  const [version, encoded, signature, ...rest] = value.split(".");
-  if (rest.length || version !== "v1" || !encoded || !/^[A-Za-z0-9_-]+$/.test(encoded) || !signature || !/^[A-Za-z0-9_-]{43}$/.test(signature)) return null;
-  const expected = sign(`${version}.${encoded}`);
-  if (!timingSafeEqual(Buffer.from(expected), Buffer.from(signature))) return null;
-  try {
-    const payload = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8")) as Partial<InstagramOAuthState>;
-    const { userId, businessId, issuedAt, nonce } = payload;
-    if (typeof userId !== "string" || !userId || typeof businessId !== "string" || !businessId || typeof nonce !== "string" || typeof issuedAt !== "number") return null;
-    if (Date.now() - issuedAt > STATE_LIFETIME_MS || issuedAt > Date.now() + 30_000) return null;
-    return { userId, businessId, issuedAt, nonce };
-  } catch {
-    return null;
-  }
+  const state = verifyOAuthToken("instagram:state", value);
+  if (!state || typeof state.userId !== "string" || !state.userId || typeof state.businessId !== "string" || !state.businessId || !oauthTokenCurrent(state, STATE_LIFETIME_MS)) return null;
+  return state as InstagramOAuthState;
 }
 
-// Only a digest of the state is stored, never the bearer value.
-const identifier = (state: string) => `instagram:${createHmac("sha256", secret()).update(`instagram:lookup:${state}`).digest("hex")}`;
+const identifier = (state: string) => `instagram:${oauthStateDigest("instagram", state, UNCONFIGURED)}`;
 
 export async function storeInstagramOAuthState(state: string): Promise<void> {
   const parsed = verifyInstagramOAuthState(state);

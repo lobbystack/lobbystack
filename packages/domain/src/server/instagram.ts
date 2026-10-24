@@ -1,9 +1,9 @@
-import { and, desc, eq, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, or, sql } from "drizzle-orm";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
-import { auditLogs, contacts, conversations, enqueueOutbox, instagramAccounts, messages, providerEvents, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { auditLogs, contacts, conversations, conversationSessions, enqueueOutbox, instagramAccounts, messages, providerEvents, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 
-import { requireBusinessAdmin } from "../authz";
+import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
 import { insertMessageInTransaction } from "./conversations";
 import { queueOperatorAlertInTransaction } from "./notifications";
@@ -17,16 +17,20 @@ export const INSTAGRAM_TOKEN_REFRESH_BEFORE_MS = 14 * 24 * 60 * 60_000;
 // Instagram only refreshes a token that is at least a day old.
 const INSTAGRAM_TOKEN_MIN_AGE_MS = 24 * 60 * 60_000;
 const INSTAGRAM_DELIVERY_LEASE_MS = 10 * 60_000;
-/** More receptionist replies than this in the window means another bot is probably answering back. */
-export const INSTAGRAM_AI_REPLY_LIMIT = 8;
-export const INSTAGRAM_AI_REPLY_WINDOW_MS = 10 * 60_000;
+/**
+ * This many receptionist replies in the window means another bot is probably
+ * answering back: a loop replies every few seconds, while a person asking
+ * quick follow-ups takes far longer between messages.
+ */
+export const INSTAGRAM_AI_REPLY_LIMIT = 15;
+export const INSTAGRAM_AI_REPLY_WINDOW_MS = 5 * 60_000;
 
 export type InstagramAccountStatus = { username: string | null; instagramUserId: string; status: string; lastError: string | null; tokenExpiresAt: Date; connectedAt: Date };
 
-/** The business's connected Instagram account, without its token. Owners and admins only. */
+/** The business's connected Instagram account, without its token. Any member can see it; only owners and admins change it. */
 export async function getInstagramAccount(context: DomainContext, input: { userId: string; businessId: string }): Promise<InstagramAccountStatus | null> {
   return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
-    await requireBusinessAdmin(tx, input);
+    await requireBusinessMembership(tx, input);
     const [row] = await tx.select({ username: instagramAccounts.username, instagramUserId: instagramAccounts.instagramUserId, status: instagramAccounts.status, lastError: instagramAccounts.lastError, tokenExpiresAt: instagramAccounts.tokenExpiresAt, connectedAt: instagramAccounts.createdAt })
       .from(instagramAccounts).where(eq(instagramAccounts.businessId, input.businessId)).limit(1);
     return row ?? null;
@@ -48,6 +52,8 @@ export async function connectInstagramAccount(
   await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
     const now = new Date();
+    const [previous] = await tx.select({ instagramUserId: instagramAccounts.instagramUserId }).from(instagramAccounts).where(eq(instagramAccounts.businessId, input.businessId)).limit(1).for("update");
+    if (previous && previous.instagramUserId !== input.instagramUserId) await closeInstagramConversationsInTransaction(tx, input.businessId, now);
     const values = { connectedByUserId: input.userId, instagramUserId: input.instagramUserId, username: input.username ?? null, encryptedAccessToken: input.encryptedAccessToken, tokenExpiresAt: input.tokenExpiresAt, status: "connected", lastError: null, updatedAt: now };
     await tx.insert(instagramAccounts).values({ businessId: input.businessId, ...values })
       .onConflictDoUpdate({ target: instagramAccounts.businessId, set: values });
@@ -70,9 +76,29 @@ export async function disconnectInstagramAccount(context: DomainContext, input: 
   return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
     const removed = await tx.delete(instagramAccounts).where(eq(instagramAccounts.businessId, input.businessId)).returning({ instagramUserId: instagramAccounts.instagramUserId });
-    if (removed[0]) await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: input.userId, eventType: "instagram_account.disconnected", entityType: "instagram_account", entityId: null, payload: { instagramUserId: removed[0].instagramUserId } });
+    if (removed[0]) {
+      await closeInstagramConversationsInTransaction(tx, input.businessId, new Date());
+      await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: input.userId, eventType: "instagram_account.disconnected", entityType: "instagram_account", entityId: null, payload: { instagramUserId: removed[0].instagramUserId } });
+    }
     return removed.length > 0;
   });
+}
+
+/**
+ * Closes the business's open Instagram conversations when its account is
+ * removed or replaced. Their sender IDs belong to that account, so a reply
+ * through another account's token would go to the wrong place. The person's
+ * next message, to whichever account they write to, opens a new conversation.
+ */
+async function closeInstagramConversationsInTransaction(tx: DatabaseTransaction, businessId: string, now: Date): Promise<void> {
+  const closed = await tx.update(conversations).set({ status: "closed", updatedAt: now })
+    .where(and(eq(conversations.businessId, businessId), eq(conversations.channel, "instagram"), eq(conversations.status, "open"))).returning({ id: conversations.id });
+  if (!closed.length) return;
+  await tx.update(conversationSessions).set({ status: "closed", closedAt: now, updatedAt: now })
+    .where(and(eq(conversationSessions.businessId, businessId), inArray(conversationSessions.conversationId, closed.map((conversation) => conversation.id)), eq(conversationSessions.status, "open")));
+  for (const conversation of closed) {
+    await enqueueOutbox(tx, { topic: "realtime.publish", businessId, aggregateType: "conversation", aggregateId: conversation.id, dedupeKey: `conversation:${conversation.id}:instagram-closed:${now.getTime()}`, payload: { type: "conversation.updated", entityId: conversation.id } });
+  }
 }
 
 /** The business whose connected Instagram account received a message, or null. */
@@ -136,16 +162,10 @@ export type InstagramReplyContext = {
  */
 export async function loadInstagramReplyContext(context: DomainContext, input: { businessId: string; conversationId: string; messageId: string; now?: Date }): Promise<InstagramReplyContext | null> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    const [conversation] = await tx.select({ automationState: conversations.automationState, channel: conversations.channel, contactBlockedAt: contacts.operatorBlockedAt })
-      .from(conversations).leftJoin(contacts, eq(contacts.id, conversations.contactId))
-      .where(and(eq(conversations.id, input.conversationId), eq(conversations.businessId, input.businessId))).limit(1).for("update", { of: conversations });
-    if (!conversation || conversation.channel !== "instagram" || conversation.automationState !== "ai_active" || conversation.contactBlockedAt) return null;
+    if (!await stillAnsweringInTransaction(tx, input)) return null;
     const rows = await tx.select({ id: messages.id, direction: messages.direction, body: messages.body, aiGenerated: messages.aiGenerated, createdAt: messages.createdAt }).from(messages)
       .where(and(eq(messages.businessId, input.businessId), eq(messages.conversationId, input.conversationId))).orderBy(desc(messages.createdAt)).limit(40);
-    const latestInbound = rows.find((row) => row.direction === "inbound");
-    if (!latestInbound || latestInbound.id !== input.messageId) return null;
-    // The newest message is the person's, unless a reply already went out after it.
-    if (rows[0]?.id !== input.messageId) return null;
+    const latestInbound = rows[0]!;
     const now = input.now ?? new Date();
     if (now.getTime() - latestInbound.createdAt.getTime() > INSTAGRAM_REPLY_WINDOW_MS) return null;
     const recentAiReplies = rows.filter((row) => row.direction === "outbound" && row.aiGenerated && now.getTime() - row.createdAt.getTime() <= INSTAGRAM_AI_REPLY_WINDOW_MS).length;
@@ -159,9 +179,33 @@ export async function loadInstagramReplyContext(context: DomainContext, input: {
   });
 }
 
-/** Saves the receptionist's reply and queues it for Instagram. */
-export async function saveInstagramReply(context: DomainContext, input: { businessId: string; conversationId: string; body: string }): Promise<string | null> {
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => await insertMessageInTransaction(tx, { businessId: input.businessId, conversationId: input.conversationId, body: input.body, direction: "outbound", channel: "instagram", aiGenerated: true }));
+/**
+ * Whether the receptionist still answers `messageId`: the conversation is an
+ * open Instagram one it handles, the contact isn't blocked, and that message is
+ * still the newest. A newer message has its own job, which answers them
+ * together, and a reply that went out after it already answered it. Locks the
+ * conversation, so the answer holds until the transaction ends.
+ */
+async function stillAnsweringInTransaction(tx: DatabaseTransaction, input: { businessId: string; conversationId: string; messageId: string }): Promise<boolean> {
+  const [conversation] = await tx.select({ automationState: conversations.automationState, channel: conversations.channel, status: conversations.status, contactBlockedAt: contacts.operatorBlockedAt })
+    .from(conversations).leftJoin(contacts, eq(contacts.id, conversations.contactId))
+    .where(and(eq(conversations.id, input.conversationId), eq(conversations.businessId, input.businessId))).limit(1).for("update", { of: conversations });
+  if (!conversation || conversation.channel !== "instagram" || conversation.status !== "open" || conversation.automationState !== "ai_active" || conversation.contactBlockedAt) return false;
+  const [latest] = await tx.select({ id: messages.id, direction: messages.direction }).from(messages)
+    .where(and(eq(messages.businessId, input.businessId), eq(messages.conversationId, input.conversationId))).orderBy(desc(messages.createdAt)).limit(1);
+  return latest?.id === input.messageId && latest.direction === "inbound";
+}
+
+/**
+ * Saves the receptionist's reply to `answeringMessageId` and queues it for
+ * Instagram, or returns null when, while the reply was written, the team took
+ * the conversation over or a newer message arrived.
+ */
+export async function saveInstagramReply(context: DomainContext, input: { businessId: string; conversationId: string; answeringMessageId: string; body: string }): Promise<string | null> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    if (!await stillAnsweringInTransaction(tx, { businessId: input.businessId, conversationId: input.conversationId, messageId: input.answeringMessageId })) return null;
+    return await insertMessageInTransaction(tx, { businessId: input.businessId, conversationId: input.conversationId, body: input.body, direction: "outbound", channel: "instagram", aiGenerated: true });
+  });
 }
 
 export type InstagramDelivery = { accessToken: string; instagramUserId: string; recipientId: string; body: string };
@@ -179,11 +223,20 @@ export async function claimInstagramDelivery(context: DomainContext, input: { bu
       .returning({ body: messages.body, conversationId: messages.conversationId, providerStatus: messages.providerStatus, providerMessageId: messages.providerMessageId });
     if (!claimed) return null;
     const partsSent = Number(/^partial:(\d+)$/.exec(claimed.providerStatus ?? "")?.[1] ?? 0);
-    const [recipient] = await tx.select({ instagramUserId: contacts.instagramUserId }).from(conversations).innerJoin(contacts, eq(contacts.id, conversations.contactId)).where(and(eq(conversations.id, claimed.conversationId), eq(conversations.businessId, input.businessId))).limit(1);
+    const [recipient] = await tx.select({ instagramUserId: contacts.instagramUserId, conversationStatus: conversations.status }).from(conversations).innerJoin(contacts, eq(contacts.id, conversations.contactId)).where(and(eq(conversations.id, claimed.conversationId), eq(conversations.businessId, input.businessId))).limit(1);
     const [account] = await tx.select({ encryptedAccessToken: instagramAccounts.encryptedAccessToken, instagramUserId: instagramAccounts.instagramUserId, status: instagramAccounts.status }).from(instagramAccounts).where(eq(instagramAccounts.businessId, input.businessId)).limit(1);
-    if (!account || account.status !== "connected") return { blocked: "no_account" };
+    // A closed conversation belonged to an account that was disconnected or replaced.
+    if (!account || account.status !== "connected" || recipient?.conversationStatus === "closed") return { blocked: "no_account" };
     if (!recipient?.instagramUserId) return { blocked: "no_recipient" };
     return { encryptedAccessToken: account.encryptedAccessToken, instagramUserId: account.instagramUserId, recipientId: recipient.instagramUserId, body: claimed.body, partsSent, providerMessageId: claimed.providerMessageId };
+  });
+}
+
+/** When a send holds this message, the time its claim lapses and another run may take it. */
+export async function instagramDeliveryLeaseEndsAt(context: DomainContext, input: { businessId: string; messageId: string }): Promise<Date | null> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const row = (await tx.select({ updatedAt: messages.updatedAt }).from(messages).where(and(eq(messages.id, input.messageId), eq(messages.businessId, input.businessId), eq(messages.direction, "outbound"), eq(messages.channel, "instagram"), eq(messages.status, "sending"))).limit(1))[0];
+    return row ? new Date(row.updatedAt.getTime() + INSTAGRAM_DELIVERY_LEASE_MS) : null;
   });
 }
 
@@ -226,30 +279,34 @@ export async function finishInstagramDelivery(
 
 /**
  * Refreshes the account's token when it has less than two weeks left, so an
- * account that gets no messages for a while doesn't lapse. Returns the token
- * to use, still encrypted. A token Instagram refuses marks the account for
- * reconnecting.
+ * account that gets no messages for a while doesn't lapse. A token Instagram
+ * refuses marks the account for reconnecting. Instagram is called outside any
+ * transaction, and the result is saved only if nothing replaced the token
+ * meanwhile, such as the owner connecting again.
  */
 export async function refreshInstagramTokenIfDue(
   context: DomainContext,
   input: { businessId: string; now?: Date; decryptToken: (value: string) => string; encryptToken: (value: string) => string; refreshAccessToken: (token: string) => Promise<{ accessToken: string; expiresIn: number }> },
 ): Promise<"refreshed" | "current" | "none" | "reconnect_required"> {
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    // Serializes refreshes for the account.
-    const [account] = await tx.select().from(instagramAccounts).where(eq(instagramAccounts.businessId, input.businessId)).limit(1).for("update");
-    if (!account || account.status !== "connected") return "none";
-    const now = input.now ?? new Date();
-    if (account.tokenExpiresAt.getTime() - now.getTime() > INSTAGRAM_TOKEN_REFRESH_BEFORE_MS) return "current";
-    if (now.getTime() - account.updatedAt.getTime() < INSTAGRAM_TOKEN_MIN_AGE_MS && account.tokenExpiresAt.getTime() > now.getTime()) return "current";
-    try {
-      const refreshed = await input.refreshAccessToken(input.decryptToken(account.encryptedAccessToken));
-      await tx.update(instagramAccounts).set({ encryptedAccessToken: input.encryptToken(refreshed.accessToken), tokenExpiresAt: new Date(now.getTime() + refreshed.expiresIn * 1000), lastError: null, updatedAt: now }).where(eq(instagramAccounts.id, account.id));
-      return "refreshed";
-    } catch (error) {
-      if (!(error as { reconnectRequired?: boolean }).reconnectRequired && account.tokenExpiresAt.getTime() > now.getTime()) throw error;
-      await tx.update(instagramAccounts).set({ status: "reconnect_required", lastError: "Instagram authorization expired. Connect the account again.", updatedAt: now }).where(eq(instagramAccounts.id, account.id));
+  const scope = { businessId: input.businessId, actorType: "worker" as const };
+  const [account] = await withBusinessTransaction(context.db, scope, async (tx) => await tx.select().from(instagramAccounts).where(eq(instagramAccounts.businessId, input.businessId)).limit(1));
+  if (!account || account.status !== "connected") return "none";
+  const now = input.now ?? new Date();
+  if (account.tokenExpiresAt.getTime() - now.getTime() > INSTAGRAM_TOKEN_REFRESH_BEFORE_MS) return "current";
+  if (now.getTime() - account.updatedAt.getTime() < INSTAGRAM_TOKEN_MIN_AGE_MS && account.tokenExpiresAt.getTime() > now.getTime()) return "current";
+  const unchanged = and(eq(instagramAccounts.id, account.id), eq(instagramAccounts.encryptedAccessToken, account.encryptedAccessToken), eq(instagramAccounts.status, "connected"));
+  let refreshed: { accessToken: string; expiresIn: number };
+  try {
+    refreshed = await input.refreshAccessToken(input.decryptToken(account.encryptedAccessToken));
+  } catch (error) {
+    if (!(error as { reconnectRequired?: boolean }).reconnectRequired && account.tokenExpiresAt.getTime() > now.getTime()) throw error;
+    return await withBusinessTransaction(context.db, scope, async (tx) => {
+      const [marked] = await tx.update(instagramAccounts).set({ status: "reconnect_required", lastError: "Instagram authorization expired. Connect the account again.", updatedAt: now }).where(unchanged).returning({ id: instagramAccounts.id });
+      if (!marked) return "current";
       await queueOperatorAlertInTransaction(tx, { businessId: input.businessId, eventKind: "aiReplyFailed", eventKey: `instagram-reconnect:${account.id}:${now.toISOString().slice(0, 10)}`, subject: "Reconnect Instagram", body: "Instagram stopped accepting the receptionist's access. Open Integrations and connect Instagram again." });
       return "reconnect_required";
-    }
-  });
+    });
+  }
+  const saved = await withBusinessTransaction(context.db, scope, async (tx) => await tx.update(instagramAccounts).set({ encryptedAccessToken: input.encryptToken(refreshed.accessToken), tokenExpiresAt: new Date(now.getTime() + refreshed.expiresIn * 1000), lastError: null, updatedAt: now }).where(unchanged).returning({ id: instagramAccounts.id }));
+  return saved.length ? "refreshed" : "current";
 }

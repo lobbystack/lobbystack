@@ -32,7 +32,7 @@ import { serviceFacts, upcomingClosures, weeklyHours } from "./businessFacts";
 import { receptionistCapabilities, type ToolName } from "./capabilities";
 
 /** Where the conversation happens. Phone calls know the caller's number. */
-export type AgentChannel = "voice" | "web_voice" | "web_chat";
+export type AgentChannel = "voice" | "web_voice" | "web_chat" | "instagram";
 
 /**
  * What came of a PIN the caller typed on the keypad. "accepted" verifies the

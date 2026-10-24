@@ -33,6 +33,7 @@ export function InstagramIntegrationCard({ businessId, canManage }: { businessId
     handledCallback.current = result;
     if (result === "success") { toast.success(t("integrations.instagram.connectedSuccess")); void queryClient.invalidateQueries({ queryKey: ["integrations", "instagram"] }); }
     else if (result === "in_use") toast.error(t("integrations.instagram.accountInUse"));
+    else if (result === "missing_permission") toast.error(t("integrations.instagram.permissionMissing"));
     else toast.error(t("integrations.instagram.connectFailed"));
   }, [queryClient, searchParams, t]);
 

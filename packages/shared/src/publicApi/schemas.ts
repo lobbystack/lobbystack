@@ -647,7 +647,7 @@ export const apiMessageSchema = z.object({
   callback_phone: z.string().nullable(),
   urgency: z.enum(["low", "normal", "urgent"]).nullable(),
   callback_window: z.string().nullable(),
-  channel: z.enum(["voice", "web_voice", "web_chat", "sms"]).nullable(),
+  channel: z.enum(["voice", "web_voice", "web_chat", "instagram", "sms"]).nullable(),
   call_id: id.nullable(),
   created_at: timestamp,
   updated_at: timestamp,

@@ -1,4 +1,4 @@
-import { normalizeBookingMode, normalizeRuntimeLocale, runtimeLocaleName, type BusinessContextSnapshot, type SnapshotEmployee } from "@lobbystack/shared";
+import { isTextChatChannel, normalizeBookingMode, normalizeRuntimeLocale, runtimeLocaleName, type BusinessContextSnapshot, type SnapshotEmployee } from "@lobbystack/shared";
 import { countKnowledgeTokens } from "@lobbystack/domain";
 import { DateTime } from "luxon";
 
@@ -66,13 +66,13 @@ function topicRule(snapshot: BusinessContextSnapshot, decline: string): string {
 // GPT-Live, so its reply is spoken to the caller by the live model.
 export function buildAgentInstructions(snapshot: BusinessContextSnapshot, conversation: Conversation): string {
   const now = DateTime.now().setZone(snapshot.timezone);
-  const voice = conversation.channel !== "web_chat";
+  const voice = !isTextChatChannel(conversation.channel);
   const capabilities = receptionistCapabilities(snapshot, conversation);
   return [
     `You are the receptionist for ${snapshot.displayName}. You represent this business, not the software platform.`,
     voice
       ? "You are helping a live voice model that is talking with the caller. It hands you the caller's requests and chooses how to say your result. Transcripts can contain mistakes, unfinished phrases, and later corrections. Use the latest context and verified records. If a needed detail is still unclear, ask for that detail instead of guessing."
-      : "You are chatting with a website visitor. Reply in short, plain paragraphs. Keep each reply to a few sentences and under about 100 words, even when listing services or hours.",
+      : `You are chatting with ${conversation.channel === "instagram" ? "someone who messaged the business on Instagram" : "a website visitor"}. Reply in short, plain paragraphs. Keep each reply to a few sentences and under about 100 words, even when listing services or hours.`,
     topicRule(snapshot, `Say in one sentence that you can only help with questions about ${snapshot.displayName}, and mention something you can help with.`),
     voice
       ? "Return the relevant facts, the request's current status, and the next step, in a few short plain sentences with no markdown, lists or URLs. Report an action as complete only after the tool confirms success. If the outcome is unclear, say so and what needs to be checked. When it helps the caller, give the next step that moves them forward, such as offering to book, a detail you still need, or asking whether they need anything else."
@@ -138,7 +138,7 @@ const LIVE_PRICE_GUIDANCE = "A service's price, when the business set one, is li
 
 // Facts from the call's snapshot, so GPT-Live answers them itself instead of
 // delegating and leaving the caller in silence.
-function liveBusinessFacts(snapshot: BusinessContextSnapshot, channel: Exclude<AgentChannel, "web_chat">, now: DateTime): string[] {
+function liveBusinessFacts(snapshot: BusinessContextSnapshot, channel: Extract<AgentChannel, "voice" | "web_voice">, now: DateTime): string[] {
   const timezone = snapshot.timezone;
   const closures = upcomingClosures(snapshot, now).slice(0, LIVE_MAX_CLOSURES);
   const allServices = serviceFacts(snapshot);
@@ -184,7 +184,7 @@ export function liveLanguage(snapshot: BusinessContextSnapshot): string {
 // Instructions for GPT-Live itself, in the structure OpenAI's GPT-Live
 // prompting guide recommends: personality, backchannels, interruptions, then
 // a delegation policy listing the backend's capabilities on this channel.
-export function buildLiveInstructions(snapshot: BusinessContextSnapshot, channel: Exclude<AgentChannel, "web_chat">, now: DateTime = DateTime.now()): string {
+export function buildLiveInstructions(snapshot: BusinessContextSnapshot, channel: Extract<AgentChannel, "voice" | "web_voice">, now: DateTime = DateTime.now()): string {
   const phone = channel === "voice";
   const capabilities = receptionistCapabilities(snapshot, { channel });
   const rules = (snapshot.rules ?? []).slice().sort((left, right) => left.order - right.order);

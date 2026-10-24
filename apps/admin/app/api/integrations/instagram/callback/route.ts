@@ -11,7 +11,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  const destination = (status: "success" | "error" | "in_use") => NextResponse.redirect(new URL(`/integrations?instagram=${status}`, process.env.APP_BASE_URL ?? request.url));
+  const destination = (status: "success" | "error" | "in_use" | "missing_permission") => NextResponse.redirect(new URL(`/integrations?instagram=${status}`, process.env.APP_BASE_URL ?? request.url));
   try {
     const url = new URL(request.url);
     const code = url.searchParams.get("code");
@@ -31,6 +31,8 @@ export async function GET(request: Request) {
     if (!encryptionKey) throw new Error("Instagram token encryption is not configured.");
     const provider = instagramProvider();
     const token = await provider.exchangeCode(code);
+    // The person can untick messaging on Instagram's consent screen, and then nothing could be answered.
+    if (token.permissions.length && !token.permissions.includes("instagram_business_manage_messages")) return destination("missing_permission");
     const account = await provider.getAccount(token.accessToken);
     await provider.subscribeToMessages({ accessToken: token.accessToken, instagramUserId: account.instagramUserId });
     await connectInstagramAccount(createDomainContext(), {

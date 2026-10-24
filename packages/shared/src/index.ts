@@ -7,6 +7,7 @@ import { interfaceLocales, runtimeLocales, type InterfaceLocale, type RuntimeLoc
 import { appointmentChangeVerificationModes, bookingModes, transferModes } from "./receptionist";
 import { WIDGET_COLOR_PATTERN, widgetPositionSchema, type WidgetPosition } from "./widget";
 export * from "./receptionist";
+export * from "./chatChannels";
 export * from "./branding";
 export * from "./brandLinks";
 export { isCertificationMode, assertCertificationRecipient, assertCertificationOperationAllowed, assertCertificationCalendar, assertCertificationBillingSandbox } from "./certification";

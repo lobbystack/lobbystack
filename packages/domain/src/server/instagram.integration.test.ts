@@ -50,15 +50,20 @@ async function seedExchange(tx: DatabaseTransaction, replies: number, at: (index
     const inbound = await receive(index);
     await stamp(inbound.messageId, at(index));
     conversationId ||= (await tx.select({ id: conversations.id }).from(conversations).where(eq(conversations.businessId, businessId)).limit(1))[0]!.id;
-    const reply = await asWorker(tx, (db) => saveInstagramReply({ db }, { businessId, conversationId, body: `Sure, which day? (${index})` }));
+    const reply = await asWorker(tx, (db) => saveInstagramReply({ db }, { businessId, conversationId, answeringMessageId: inbound.messageId!, body: `Sure, which day? (${index})` }));
     await stamp(reply, new Date(at(index).getTime() + 500));
   }
   const latest = await receive(replies);
   await stamp(latest.messageId, new Date());
   conversationId ||= (await tx.select({ id: conversations.id }).from(conversations).where(eq(conversations.businessId, businessId)).limit(1))[0]!.id;
   const load = () => asWorker(tx, (db) => loadInstagramReplyContext({ db }, { businessId, conversationId, messageId: latest.messageId! }));
+  const save = () => asWorker(tx, (db) => saveInstagramReply({ db }, { businessId, conversationId, answeringMessageId: latest.messageId!, body: "Sure, which day?" }));
+  const receiveNewer = async () => {
+    const newer = await receive(replies + 1);
+    await stamp(newer.messageId, new Date(Date.now() + 1_000));
+  };
   const state = async () => (await tx.select({ state: conversations.automationState }).from(conversations).where(eq(conversations.id, conversationId)))[0]?.state;
-  return { businessId, conversationId, load, state };
+  return { businessId, conversationId, load, save, receiveNewer, state };
 }
 
 /** One round a second, all within the last minute. */
@@ -81,6 +86,26 @@ describe.skipIf(!testUrl)("Instagram reply limit against PostgreSQL under produc
 
       expect(await exchange.load()).not.toBeNull();
       expect(await exchange.state()).toBe("ai_active");
+    });
+  });
+
+  it("drops a reply when the team took the conversation over while it was written", async () => {
+    await rollbackTest(async (tx) => {
+      const exchange = await seedExchange(tx, 0, recently);
+      expect(await exchange.load()).not.toBeNull();
+      await tx.update(conversations).set({ automationState: "human_handoff" }).where(eq(conversations.id, exchange.conversationId));
+
+      expect(await exchange.save()).toBeNull();
+    });
+  });
+
+  it("drops a reply when a newer message arrived while it was written", async () => {
+    await rollbackTest(async (tx) => {
+      const exchange = await seedExchange(tx, 0, recently);
+      expect(await exchange.load()).not.toBeNull();
+      await exchange.receiveNewer();
+
+      expect(await exchange.save()).toBeNull();
     });
   });
 
