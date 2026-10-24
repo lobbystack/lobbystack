@@ -33,7 +33,7 @@ overrides:
   "fflate@>=0.8.0 <0.8.3": ^0.8.3
   browserslist: ^4.28.7
   devalue: ^5.9.3
-  dompurify: ^3.4.16
+  dompurify: ^3.4.17
   drizzle-orm: ^0.45.3
   engine.io: ^6.6.10
   esbuild: ^0.28.1
