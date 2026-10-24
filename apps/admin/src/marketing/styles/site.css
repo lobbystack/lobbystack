@@ -9,6 +9,8 @@
 @source "../../../app/(marketing)";
 @source "../../../../../packages/web-voice/src";
 
+@custom-variant dark (&:is(.dark *));
+
 :root {
   --font-geist: "Geist Variable";
   --font-geist-mono: "Geist Mono Variable";
@@ -96,6 +98,36 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+}
+
+/* Matches the dashboard's dark palette in app/theme.css. */
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: var(--background);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
 }
 
 @layer base {
@@ -230,7 +262,7 @@
 /* Translucent chrome that content scrolls under. The bottom edge only
    appears once something is actually underneath it. */
 .site-header {
-  background-color: oklch(1 0 0 / 72%);
+  background-color: color-mix(in oklch, var(--background) 72%, transparent);
   backdrop-filter: blur(20px) saturate(180%);
 }
 
@@ -245,7 +277,7 @@
 
 @keyframes header-edge {
   to {
-    border-bottom-color: oklch(0.922 0 0 / 60%);
+    border-bottom-color: color-mix(in oklch, var(--border) 60%, transparent);
   }
 }
 
@@ -303,19 +335,19 @@ details[open] > .mobile-menu-sheet {
 /* Browser mockup frame */
 .browser-frame {
   border-radius: 12px;
-  border: 1px solid oklch(0.922 0 0);
+  border: 1px solid var(--border);
   box-shadow:
     0 1px 3px oklch(0 0 0 / 4%),
     0 8px 32px oklch(0 0 0 / 6%),
     0 24px 60px oklch(0 0 0 / 4%);
   overflow: hidden;
-  background: oklch(1 0 0);
+  background: var(--background);
 }
 
 .browser-frame-bar {
   height: 40px;
   background: oklch(0.975 0 0);
-  border-bottom: 1px solid oklch(0.922 0 0);
+  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   padding: 0 16px;
@@ -327,6 +359,31 @@ details[open] > .mobile-menu-sheet {
   height: 12px;
   border-radius: 50%;
   background: oklch(0.9 0 0);
+}
+
+.dark .browser-frame-bar {
+  background: var(--muted);
+}
+
+.dark .browser-dot {
+  background: oklch(0.371 0 0);
+}
+
+/* Sections that hard-code light surfaces follow the theme in dark mode. */
+.dark :is(.bg-\[\#F4F4F2\], .bg-\[\#FAF8F6\]) {
+  background-color: var(--muted);
+}
+
+.dark .border-\[\#E4DCD1\] {
+  border-color: var(--border);
+}
+
+.dark .bg-emerald-100 {
+  background-color: oklch(0.696 0.17 162.48 / 15%);
+}
+
+.dark :is(.text-emerald-600, .text-emerald-700) {
+  color: oklch(0.765 0.177 163.223);
 }
 
 /* Section spacing */
@@ -559,7 +616,7 @@ details[open] > .mobile-menu-sheet {
 
   .site-header {
     animation: none;
-    border-bottom-color: oklch(0.922 0 0 / 60%);
+    border-bottom-color: color-mix(in oklch, var(--border) 60%, transparent);
   }
 }
 

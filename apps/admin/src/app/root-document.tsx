@@ -4,6 +4,7 @@ import type { BrandingSnapshot } from "@/lib/branding-snapshot";
 import { resourcesForRoute } from "@/lib/i18n-resources";
 import { localeTag, type SupportedLocale } from "@/lib/locale";
 import type { LocaleSource } from "@/lib/locale-request";
+import { themeCookieScript } from "@/lib/theme-cookie";
 
 export { brandingMetadata, generateBrandingMetadata } from "./app-metadata";
 
@@ -28,6 +29,9 @@ export async function RootDocument({
   const shown = branding ?? brandingSnapshot(await loadBranding());
   return (
     <html lang={localeTag(locale)} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeCookieScript }} />
+      </head>
       <body>
         <Providers
           branding={shown}

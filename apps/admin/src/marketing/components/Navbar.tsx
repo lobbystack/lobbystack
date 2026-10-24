@@ -1,6 +1,7 @@
 import { buttonVariants } from "@/marketing/components/ui/button"
 import { appLoginUrl, appSignupUrl } from "@/marketing/lib/app-links"
 import { GithubIcon } from "@/marketing/components/GithubIcon"
+import { ThemeToggle } from "@/marketing/components/ThemeToggle"
 import { localizeHref, localizePath, type Locale } from "@/marketing/i18n"
 import { cn } from "@/marketing/lib/utils"
 import {
@@ -69,6 +70,7 @@ const labels = {
     affiliateProgram: "Affiliate Program",
     navigationMenu: "Navigation menu",
     mobileNavigation: "Mobile navigation",
+    toggleTheme: "Toggle dark mode",
   },
   fr: {
     solutions: "Solutions",
@@ -85,6 +87,7 @@ const labels = {
     affiliateProgram: "Programme d'affiliation",
     navigationMenu: "Menu de navigation",
     mobileNavigation: "Navigation mobile",
+    toggleTheme: "Activer ou désactiver le mode sombre",
   },
   es: {
     solutions: "Soluciones",
@@ -101,6 +104,7 @@ const labels = {
     affiliateProgram: "Programa de afiliados",
     navigationMenu: "Menú de navegación",
     mobileNavigation: "Navegación móvil",
+    toggleTheme: "Activar o desactivar el modo oscuro",
   },
   sr: {
     solutions: "Rešenja",
@@ -117,6 +121,7 @@ const labels = {
     affiliateProgram: "Partnerski program",
     navigationMenu: "Meni za navigaciju",
     mobileNavigation: "Mobilna navigacija",
+    toggleTheme: "Uključi ili isključi tamni režim",
   },
 } satisfies Record<Locale, Record<string, string>>
 
@@ -392,7 +397,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
             width={155}
             height={43}
             decoding="async"
-            className="h-7 w-auto"
+            className="h-7 w-auto dark:invert"
           />
         </a>
 
@@ -509,6 +514,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
 
         {/* Desktop CTAs */}
         <div className="hidden items-center gap-1 md:flex">
+          <ThemeToggle label={copy.toggleTheme} />
           <a
             href="https://github.com/lobbystack/lobbystack"
             target="_blank"
@@ -540,6 +546,8 @@ export function Navbar({ locale = "en" }: NavbarProps) {
           </a>
         </div>
 
+        <div className="flex items-center gap-1 md:hidden">
+        <ThemeToggle label={copy.toggleTheme} />
         <details className="group/mobile-menu md:hidden">
           <summary
             className="inline-flex size-9 cursor-pointer list-none items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none [&::-webkit-details-marker]:hidden"
@@ -693,6 +701,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
             </div>
           </div>
         </details>
+        </div>
       </div>
     </header>
   )

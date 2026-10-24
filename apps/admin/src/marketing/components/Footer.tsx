@@ -176,7 +176,7 @@ export function Footer({ locale = "en", path }: FooterProps) {
               width={155}
               height={43}
               decoding="async"
-              className="h-7 w-auto"
+              className="h-7 w-auto dark:invert"
             />
           </a>
 

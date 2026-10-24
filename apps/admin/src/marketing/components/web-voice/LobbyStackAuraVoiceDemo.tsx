@@ -1,6 +1,7 @@
 "use client"
 
 import { ArrowRight, Phone, PhoneOff } from "lucide-react"
+import { useSyncExternalStore } from "react"
 import {
   AuraVoiceOrb,
   useWebVoiceCall,
@@ -10,6 +11,7 @@ import {
 } from "@lobbystack/web-voice"
 
 import { Button, buttonVariants } from "@/marketing/components/ui/button"
+import { useTheme } from "@/components/theme-provider"
 import { appSignupUrl } from "@/marketing/lib/app-links"
 import { cn } from "@/marketing/lib/utils"
 import type { Locale } from "@/marketing/i18n"
@@ -210,6 +212,8 @@ function landingEventName(event: WebVoiceCallEvent) {
     : `landing.web_voice_call_${event}`
 }
 
+const subscribeNever = () => () => {}
+
 export function LobbyStackAuraVoiceDemo({
   locale = "en",
   businessSlug,
@@ -230,6 +234,9 @@ export function LobbyStackAuraVoiceDemo({
   })
   const { status, muted, errorKey, startCall, endCall, isCallActive } = call
   const errors = errorCopy[locale]
+  const { resolvedTheme } = useTheme()
+  // The server can't know the theme, so the first client render must match its light markup.
+  const hydrated = useSyncExternalStore(subscribeNever, () => true, () => false)
 
   return (
     <div className="mx-auto flex w-full min-w-0 flex-col items-center text-center">
@@ -241,6 +248,7 @@ export function LobbyStackAuraVoiceDemo({
             : statusLabels[locale][status]
         }
         buttonLabel={getButtonLabel(status, muted, locale)}
+        auraTone={hydrated && resolvedTheme === "dark" ? "dark" : "light"}
         pressMotion="subtle"
       >
         {/* Controls */}

@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 
 import { CookieConsentBanner } from "@/marketing/components/CookieConsentBanner";
 import { SiteBehaviors } from "@/marketing/components/SiteBehaviors";
+import { ThemeProvider } from "@/components/theme-provider";
+import { themeCookieScript } from "@/lib/theme-cookie";
 import { SUPPORTED_LOCALES, isLocale, localeMeta, type Locale } from "@/marketing/i18n";
 import "@/marketing/styles/site.css";
 import { marketingStaticParams } from "@/marketing/build";
@@ -44,19 +46,22 @@ export default async function MarketingLayout({
   if (!isLocale(locale)) notFound();
   const meta = localeMeta[locale];
   return (
-    <html lang={meta.tag} dir={meta.dir}>
+    <html lang={meta.tag} dir={meta.dir} suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: themeCookieScript }} />
         <link rel="sitemap" href="/sitemap-index.xml" />
         <link rel="alternate" type="application/rss+xml" href="/feed.xml" title="LobbyStack RSS feed" />
         <link rel="nlweb" href="/.well-known/api-catalog" />
       </head>
       <body className="antialiased">
-        <a href="#main-content" className="skip-link">
-          {skipLabels[locale]}
-        </a>
-        {children}
-        <CookieConsentBanner locale={locale} />
-        <SiteBehaviors />
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <a href="#main-content" className="skip-link">
+            {skipLabels[locale]}
+          </a>
+          {children}
+          <CookieConsentBanner locale={locale} />
+          <SiteBehaviors />
+        </ThemeProvider>
         <script src="/webmcp.js" defer />
       </body>
     </html>
