@@ -264,6 +264,16 @@ describe.skipIf(!client)("team membership", () => {
     });
   });
 
+  it("queues an invitation under the business's brand, for the worker to read when it sends", async () => {
+    await rollbackTest(async (tx) => {
+      const { context, businessId, people: [owner] } = await seedTeam(tx, ["Ana"]);
+      const { invitationId } = await inviteMember(context, { userId: owner!.id, businessId, email: "new@example.invalid", role: "viewer" });
+      await tx.execute(sql`reset role`);
+      const [email] = await tx.select({ payload: outboxMessages.payload }).from(outboxMessages).where(and(eq(outboxMessages.topic, "email.send"), eq(outboxMessages.aggregateId, invitationId)));
+      expect(email?.payload).toMatchObject({ template: "invitation", email: "new@example.invalid", brand: { kind: "business", businessId }, replyTo: null });
+    });
+  });
+
   it("refuses a viewer who invites, removes a member or revokes an invitation", async () => {
     await rollbackTest(async (tx) => {
       const { context, businessId, people: [owner, viewer, admin], invite, accept, listMembers } = await seedTeam(tx, ["Ana", "Vic", "Ben"]);

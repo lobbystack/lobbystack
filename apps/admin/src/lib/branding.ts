@@ -1,68 +1,78 @@
-import { getSavedBranding } from "@lobbystack/domain";
-import { parseDeploymentMode, readBrandingEnvironment, resolveBranding, type Branding, type BrandingEnvironment } from "@lobbystack/shared";
+import { headers } from "next/headers";
+import { notFound } from "next/navigation";
+import { forgetCachedBrands, hostBrandFromEnvironment, resolveHostBrand } from "@lobbystack/domain";
+import { HOST_EMAIL_BRAND, emailBrandReferenceFor, parseDeploymentMode, readBrandingEnvironment, type Brand, type EmailBrandReference } from "@lobbystack/shared";
 
-import { getAppDatabase } from "./api-helpers";
 import type { BrandingSnapshot } from "./branding-snapshot";
+import { getDatabase } from "./databases";
 import { reportServerError } from "./error-reporting";
 
-// Long enough to spare the database a read on every page, short enough that
-// another admin instance soon shows what onboarding saved.
-const BRANDING_CACHE_MS = 30_000;
 const FAILURE_REPORT_INTERVAL_MS = 60_000;
 
-let cached: { promise: Promise<Branding>; expiresAt: number } | undefined;
 let lastFailureReportAt = 0;
-let warnedInvalidEnvironment = false;
-
-function environmentBranding(environment: Record<string, string | undefined>): BrandingEnvironment {
-  const branding = readBrandingEnvironment(environment);
-  if (branding.invalid.length && !warnedInvalidEnvironment) {
-    warnedInvalidEnvironment = true;
-    console.warn(`[branding] Ignoring ${branding.invalid.join(" and ")}: a name must be 1 to 40 visible characters and a logo an https URL or a path starting with /.`);
-  }
-  return branding;
-}
-
-// The cloud never takes a saved choice (onboarding refuses it there), so only the environment counts.
-function ignoresSavedBranding(environment: Record<string, string | undefined>): boolean {
-  return parseDeploymentMode(environment.DEPLOYMENT_MODE) === "cloud";
-}
-
-async function readBranding(): Promise<Branding> {
-  const environment = environmentBranding(process.env);
-  // The database can't change a field the environment sets, so skip it when both are set.
-  const saved = (environment.appName && environment.logoUrl) || ignoresSavedBranding(process.env) ? null : await getSavedBranding(getAppDatabase().db);
-  return resolveBranding({ environment, saved });
-}
 
 /**
- * The deployment's name and logo: BRAND_APP_NAME and BRAND_LOGO_URL, then what
- * onboarding saved, then LobbyStack. When the database can't be read, pages
- * still render with the environment's choice.
+ * The brand this hostname shows, or null when no brand answers for it. When
+ * the database can't say, the environment's host brand stands in, and the
+ * failure is reported at most once a minute.
  */
-export async function loadBranding(): Promise<Branding> {
-  const now = Date.now();
-  if (!cached || cached.expiresAt <= now) cached = { promise: readBranding(), expiresAt: now + BRANDING_CACHE_MS };
-  const entry = cached;
+async function brandForHost(host: string): Promise<Brand | null> {
   try {
-    return await entry.promise;
+    return await resolveHostBrand({ db: getDatabase("lobbystack_app").db }, host);
   } catch (error) {
-    if (cached === entry) cached = undefined;
+    const now = Date.now();
     if (now - lastFailureReportAt >= FAILURE_REPORT_INTERVAL_MS) {
       lastFailureReportAt = now;
       void reportServerError(error, { operation: "load_branding" });
     }
-    return resolveBranding({ environment: environmentBranding(process.env), saved: null });
+    return hostBrandFromEnvironment();
   }
 }
 
-/** Drops the cached branding, so the next page shows what was just saved. */
-export function forgetCachedBranding(): void {
-  cached = undefined;
+/**
+ * The brand of the request being answered, from its Host header, or null for
+ * a hostname no brand answers for: the caller answers that with a 404. The
+ * admin runs as a standalone server, so a route's request.url carries the
+ * address it listens on rather than the one the visitor used. Pass the
+ * request in a route handler; a server component reads the header itself, so
+ * a prerendered page must pass its branding instead of calling this.
+ */
+export async function loadRequestBrand(request?: Request): Promise<Brand | null> {
+  const host = (request ? request.headers : await headers()).get("host") ?? "";
+  return await brandForHost(host);
 }
 
-export function brandingSnapshot(branding: Pick<Branding, "appName" | "logoUrl">): BrandingSnapshot {
-  return { appName: branding.appName, logoUrl: branding.logoUrl, final: true };
+/** The request's brand in a server component, which answers a hostname no brand answers for with a 404. */
+export async function requireRequestBrand(): Promise<Brand> {
+  const brand = await loadRequestBrand();
+  if (!brand) notFound();
+  return brand;
+}
+
+/**
+ * The brand reference for an email sent while answering a request, such as a
+ * sign-up code: the request's brand. Outside a request, as in a script, it's
+ * the host's.
+ */
+export async function loadRequestEmailBrand(): Promise<EmailBrandReference> {
+  let host: string;
+  try {
+    host = (await headers()).get("host") ?? "";
+  } catch {
+    return HOST_EMAIL_BRAND;
+  }
+  const brand = await brandForHost(host);
+  if (!brand) throw new Error("No brand answers for this hostname.");
+  return emailBrandReferenceFor(brand);
+}
+
+/** Drops the cached brands, so the next page shows what was just saved. */
+export function forgetCachedBranding(): void {
+  forgetCachedBrands();
+}
+
+export function brandingSnapshot(brand: Pick<Brand, "name" | "logoUrl">): BrandingSnapshot {
+  return { appName: brand.name, logoUrl: brand.logoUrl, final: true };
 }
 
 /**
@@ -71,7 +81,8 @@ export function brandingSnapshot(branding: Pick<Branding, "appName" | "logoUrl">
  * cloud, which never reads a saved choice.
  */
 export function buildTimeBrandingSnapshot(environment: Record<string, string | undefined> = process.env): BrandingSnapshot {
-  const fromEnvironment = environmentBranding(environment);
-  const branding = resolveBranding({ environment: fromEnvironment, saved: null });
-  return { appName: branding.appName, logoUrl: branding.logoUrl, final: Boolean(fromEnvironment.appName && fromEnvironment.logoUrl) || ignoresSavedBranding(environment) };
+  const brand = hostBrandFromEnvironment(environment);
+  const fromEnvironment = readBrandingEnvironment(environment);
+  const final = Boolean(fromEnvironment.appName && fromEnvironment.logoUrl) || parseDeploymentMode(environment.DEPLOYMENT_MODE) === "cloud";
+  return { appName: brand.name, logoUrl: brand.logoUrl, final };
 }

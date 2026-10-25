@@ -1,7 +1,12 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const fixture = vi.hoisted(() => ({ logo: vi.fn() }));
-vi.mock("@lobbystack/domain", () => ({ getSavedBrandLogo: fixture.logo }));
+const fixture = vi.hoisted(() => ({
+  logo: vi.fn(),
+  brand: { kind: "host", partnerId: null, name: "Acme Desk", logoUrl: "/api/branding/logo?v=abc" },
+  requestBrand: vi.fn(),
+}));
+vi.mock("@lobbystack/domain", () => ({ brandLogo: fixture.logo }));
+vi.mock("@/lib/branding", () => ({ loadRequestBrand: fixture.requestBrand }));
 vi.mock("@/lib/api-helpers", () => ({
   getAppDatabase: () => ({ db: {} }),
   asApiResponse: () => Response.json({ error: "Request failed." }, { status: 500 }),
@@ -11,9 +16,28 @@ import { GET } from "./route";
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
+beforeEach(() => { fixture.requestBrand.mockResolvedValue(fixture.brand); });
 afterEach(() => { vi.clearAllMocks(); });
 
 describe("saved logo route", () => {
+  it("serves the logo of the brand the request's hostname shows", async () => {
+    fixture.logo.mockResolvedValue({ bytes: PNG, contentType: "image/png", version: "abc" });
+    const request = new Request("http://0.0.0.0:3000/api/branding/logo?v=abc", { headers: { host: "desk.example.test" } });
+    expect((await GET(request)).status).toBe(200);
+    // Every hostname gets the host brand until partners have domains, so these
+    // calls stand in for a logo that differs by host.
+    expect(fixture.requestBrand).toHaveBeenCalledWith(request);
+    expect(fixture.logo).toHaveBeenCalledWith({ db: {} }, fixture.brand);
+  });
+
+  it("serves no logo for a hostname no brand answers for", async () => {
+    fixture.requestBrand.mockResolvedValueOnce(null);
+    const response = await GET(new Request("http://0.0.0.0:3000/api/branding/logo?v=abc", { headers: { host: "unknown.example" } }));
+    expect(response.status).toBe(404);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(fixture.logo).not.toHaveBeenCalled();
+  });
+
   it("lets browsers keep the logo for good only at its versioned URL", async () => {
     fixture.logo.mockResolvedValue({ bytes: PNG, contentType: "image/png", version: "abc" });
     const versioned = await GET(new Request("http://localhost/api/branding/logo?v=abc"));

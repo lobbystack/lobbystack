@@ -14,6 +14,8 @@ vi.mock("better-auth", () => ({ betterAuth: (config: unknown) => {
 vi.mock("better-auth/api", async importOriginal => ({ ...await importOriginal<typeof import("better-auth/api")>(), createAuthMiddleware: (handler: unknown) => handler }));
 vi.mock("better-auth/adapters/drizzle", () => ({ drizzleAdapter: mocks.adapter }));
 vi.mock("./turnstile", () => ({ verifyTurnstile: mocks.challenge }));
+// The brand of the request that asks for the email: a partner's, which no request has yet.
+vi.mock("./branding", () => ({ loadRequestEmailBrand: async () => ({ kind: "partner", partnerId: "partner-1" }) }));
 vi.mock("./email-verification-policy", async importOriginal => ({ ...await importOriginal<typeof import("./email-verification-policy")>(), assertEmailVerificationSendAllowed: mocks.allowed }));
 vi.mock("./databases", () => {
   const db = {
@@ -69,6 +71,29 @@ it("sends a localized sign-in reminder for a verified duplicate signup", async (
   expect(mocks.createOtp).not.toHaveBeenCalled();
   expect(mocks.allowed).toHaveBeenCalledOnce();
   expect(mocks.enqueue).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ payload: expect.objectContaining({ template: "existing_account", variables: expect.objectContaining({ locale: "fr", signInUrl: expect.stringContaining("/fr/login") }) }) }));
+});
+
+it("queues every auth email under the request's brand, for the worker to write its subject under, with the brand's Reply-To", async () => {
+  vi.stubEnv("APP_BASE_URL", "https://desk.example.test");
+  const { getAuth, issueEmailVerificationCode } = await import("./auth"); getAuth();
+  await issueEmailVerificationCode("owner@example.invalid");
+  mocks.select.mockResolvedValue([{ id: "user-1", preferredLocale: "sr" }]);
+  await mocks.config.emailAndPassword.onExistingUserSignUp({ user: { id: "user-1", email: "owner@example.invalid", emailVerified: true } });
+  await mocks.config.plugins.find((plugin: { id?: string }) => plugin.id === "email-otp").options.sendVerificationOTP({ email: "owner@example.invalid", otp: "654321", type: "forget-password" });
+  await mocks.config.emailAndPassword.sendResetPassword({ user: { id: "user-1", email: "owner@example.invalid" }, url: "https://desk.example.test/reset-password?token=t" });
+  await mocks.config.user.changeEmail.sendChangeEmailConfirmation({ user: { id: "user-1", email: "owner@example.invalid" }, newEmail: "new@example.invalid", url: "https://desk.example.test/api/auth/verify-email?token=t" });
+  const payloads = mocks.enqueue.mock.calls.map((call) => call[1].payload);
+  expect(payloads.map((payload) => [payload.template, payload.variables])).toEqual([
+    ["verify_email", { code: expect.any(String) }],
+    ["existing_account", { locale: "sr", signInUrl: "https://desk.example.test/sr/login", resetUrl: "https://desk.example.test/sr/forgot-password" }],
+    ["password_reset", { code: "654321" }],
+    ["password_reset", { url: "https://desk.example.test/reset-password?token=t" }],
+    ["verify_email", { url: "https://desk.example.test/api/auth/verify-email?token=t", purpose: "email_change" }],
+  ]);
+  for (const payload of payloads) {
+    expect(payload).toMatchObject({ brand: { kind: "partner", partnerId: "partner-1" }, replyTo: null });
+    expect(payload).not.toHaveProperty("subject");
+  }
 });
 
 it("sends a verification code for an unverified duplicate signup", async () => {

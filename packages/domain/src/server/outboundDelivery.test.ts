@@ -9,6 +9,7 @@ const rows = vi.hoisted(() => ({
   events: { recordProductEventBestEffort: vi.fn() },
   optIn: { claimSmsOptInConfirmation: vi.fn(), releaseSmsOptInConfirmation: vi.fn() },
   branding: { deploymentAppName: vi.fn() },
+  brands: { brandForBusiness: vi.fn() },
 }));
 vi.mock("./sms", () => rows.sms);
 vi.mock("./appointmentChanges", () => rows.changeCode);
@@ -18,6 +19,7 @@ vi.mock("./billing", () => rows.usage);
 vi.mock("./productEvents", () => rows.events);
 vi.mock("./smsOptIn", () => rows.optIn);
 vi.mock("./branding", () => rows.branding);
+vi.mock("./brands", async (importOriginal) => ({ ...await importOriginal<typeof import("./brands")>(), ...rows.brands }));
 
 import { deliverOutbound, type OutboundDelivery } from "./outboundDelivery";
 
@@ -265,12 +267,16 @@ describe("notifications", () => {
     expect(usage.enqueueBillingUsageSync).toHaveBeenCalledWith(context, { businessId, usageEventId: "usage-1" });
   });
 
-  it("emails an operator alert once per delivery", async () => {
+  it("emails an operator alert once per delivery, under the business's brand", async () => {
+    const brand = { kind: "host", partnerId: null, name: "Acme Desk", logoUrl: null, faviconUrl: null, color: null, origin: "https://desk.example.test", links: { website: null, terms: null, privacy: null, support: null }, email: { fromName: "Acme Desk", fromAddress: "no-reply@desk.example.test", replyTo: "help@desk.example.test" } };
+    rows.brands.brandForBusiness.mockResolvedValue(brand);
     notifications.claimOperatorNotificationDelivery.mockResolvedValue(true);
     notifications.loadOperatorNotificationDelivery.mockResolvedValue({ id: "delivery-1", eventKind: "voiceMessage", channel: "email", destination: "operator@example.test", sender: null, subject: "New message", body: "A caller left a message." });
     const sender = providers();
     await expect(deliverOutbound(context, sender, kinds.operatorNotification.delivery)).resolves.toEqual({ status: "completed", entityId: "delivery-1" });
-    expect(sender.email.sendTemplate).toHaveBeenCalledWith({ template: "operator_alert", to: "operator@example.test", subject: "New message", variables: { message: "A caller left a message." }, idempotencyKey: "operator-notification:delivery-1" });
+    expect(sender.email.sendTemplate).toHaveBeenCalledWith({ template: "operator_alert", to: "operator@example.test", subject: "New message", variables: { message: "A caller left a message." }, brand, replyTo: "help@desk.example.test", idempotencyKey: "operator-notification:delivery-1" });
+    // Every business gets the host brand until partners have brands, so this call stands in for a brand that differs by business.
+    expect(rows.brands.brandForBusiness).toHaveBeenCalledWith(context, businessId);
     expect(notifications.markOperatorNotificationSent).toHaveBeenCalledWith(context, { businessId, deliveryId: "delivery-1", providerMessageId: "email-1" });
     expect(usage.reserveAlertSmsUsage).not.toHaveBeenCalled();
   });

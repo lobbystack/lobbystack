@@ -4,7 +4,7 @@ import { and, eq, gt, isNull, ne, or, sql } from "drizzle-orm";
 
 import { enqueueOutbox, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { apiKeys, businesses, businessInvitations, businessMemberships, closures, receptionistProfiles, services, staff, users } from "@lobbystack/db";
-import { currencyFractionDigits, defaultAppointmentChangePolicy, defaultCurrencyForTimezone, defaultGreeting, isCurrencyCode, isDefaultGreeting, normalizeAuthEmail, normalizeRuntimeLocale, parseDeploymentMode } from "@lobbystack/shared";
+import { currencyFractionDigits, defaultAppointmentChangePolicy, defaultCurrencyForTimezone, defaultGreeting, isCurrencyCode, isDefaultGreeting, normalizeAuthEmail, normalizeRuntimeLocale, parseDeploymentMode, type EmailBrandReference } from "@lobbystack/shared";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import { enqueueBusinessSummaryRefresh } from "./businessSummary";
@@ -316,7 +316,9 @@ export async function insertInvitationInTransaction(
     aggregateType: "business_invitation",
     aggregateId: invitationId,
     dedupeKey: `invitation:${invitationId}:send`,
-    payload: { invitationId, email: input.normalizedEmail, token, template: "invitation", url: invitationUrl(token) },
+    // The worker writes the email under the business's brand when it sends,
+    // and puts the link on that brand's origin.
+    payload: { invitationId, email: input.normalizedEmail, token, template: "invitation", url: invitationUrl(token), brand: { kind: "business", businessId: input.businessId } satisfies EmailBrandReference, replyTo: null },
   });
   return { invitationId, token, expiresAt };
 }

@@ -7,6 +7,8 @@ import type { JobEnvelope } from "@lobbystack/contracts";
 import { billingCheckoutLeaseEndsAt, claimBillingCheckoutRequest, countPublishableOutboxMessages, deleteCallRecordingForRetention, deleteSentProductEventsBefore, deliverOutbound, expireProspectDemos, generateAffiliatePayoutRun, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, loadLiveCallForPricing, recordCallProviderPricing, recordProductEvent, recordSmsProviderPricing, reconcileBillingProviderEvent, runPrivacyRetentionSweep } from "@lobbystack/domain";
 import { queueDailyOperatorSummaries, queueOnboardingFollowupEmail } from "@lobbystack/domain";
 import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning, numberProvisioningLeaseEndsAt } from "@lobbystack/domain";
+import { brandForEmail, forgetCachedBrands, loadNumberReleaseEmail, type Brand } from "@lobbystack/domain";
+import { SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
 
 vi.mock("@lobbystack/domain", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@lobbystack/domain")>();
@@ -38,13 +40,24 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
     recordSmsProviderPricing: vi.fn(),
     reconcileBillingProviderEvent: vi.fn(),
     runPrivacyRetentionSweep: vi.fn(),
+    brandForEmail: vi.fn(actual.brandForEmail),
+    loadNumberReleaseEmail: vi.fn(),
   };
 });
 
 afterEach(() => {
   vi.clearAllMocks();
+  vi.restoreAllMocks();
   vi.unstubAllEnvs();
+  // Back to the real brand lookup, with nothing cached, for the next test.
+  vi.mocked(brandForEmail).mockReset();
+  forgetCachedBrands();
 });
+
+/** A database whose deployment_branding row holds this saved name, as the worker role reads it. */
+function savedBranding(appName: string | null) {
+  return { select: () => ({ from: () => ({ limit: async () => (appName ? [{ appName, logoVersion: "abc" }] : []) }) }) } as never;
+}
 
 import { handleJob } from "./handlers";
 
@@ -108,6 +121,96 @@ describe("worker handlers", () => {
     await expect(handleJob(job, { domain, email: { sendTemplate: vi.fn() }, onboardingFollowupSender: sender })).resolves.toEqual({ status: "skipped", entityId: businessId });
     await expect(handleJob({ ...job, payload: {} }, { domain, email: { sendTemplate: vi.fn() }, onboardingFollowupSender: sender })).rejects.toThrow("Invalid onboarding follow-up payload.");
   });
+  it("sends an email queued before payloads carried a brand exactly as one queued under a brand, LobbyStack included", async () => {
+    vi.stubEnv("APP_BASE_URL", "https://app.example.test");
+    vi.stubEnv("EMAIL_REPLY_TO", "support@example.test");
+    const warn = vi.spyOn(console, "warn");
+    const sendMail = vi.fn().mockResolvedValue({ messageId: "provider-id" });
+    const email = new SmtpEmailProvider({ host: "localhost", port: 1025, secure: false, username: "", password: "", from: "LobbyStack <no-reply@example.test>" }, { sendMail } as never);
+    const send = (payload: Record<string, unknown>) => handleJob({ jobId: randomUUID(), businessId: null, type: "email.send", queue: "default", payload, trace: {}, idempotencyKey: "auth-email:verification-code:user:1", scheduled: false }, { domain: { db: savedBranding("Saved Desk") }, email });
+    // Before: each producer wrote the subject. Now: the worker writes it under the brand.
+    const pairs = [
+      [{ template: "verify_email", to: "owner@example.test", subject: "Your LobbyStack verification code", variables: { code: "123456" } }, { template: "verify_email", to: "owner@example.test", variables: { code: "123456" }, brand: { kind: "host" }, replyTo: null }],
+      [{ invitationId: "i-1", email: "teammate@example.test", token: "t", template: "invitation", url: "https://app.example.test/accept-invite?token=t" }, { invitationId: "i-1", email: "teammate@example.test", token: "t", template: "invitation", url: "https://app.example.test/accept-invite?token=t", brand: { kind: "business", businessId: randomUUID() }, replyTo: null }],
+      [{ template: "verify_email", to: "owner@example.test", subject: "Confirm your LobbyStack email change", variables: { url: "https://app.example.test/api/auth/verify-email?token=t" } }, { template: "verify_email", to: "owner@example.test", variables: { url: "https://app.example.test/api/auth/verify-email?token=t", purpose: "email_change" }, brand: { kind: "host" }, replyTo: null }],
+      [{ template: "onboarding_followup", to: "owner@example.test", from: "Raphael <raphael@lobbystack.com>", subject: "How'd you like LobbyStack?", variables: { locale: "fr", firstName: "", businessName: "Clinique", senderName: "Raphael" } }, { template: "onboarding_followup", to: "owner@example.test", from: "Raphael <raphael@lobbystack.com>", subject: "How'd you like LobbyStack?", variables: { locale: "fr", firstName: "", businessName: "Clinique", senderName: "Raphael" }, brand: { kind: "host" }, replyTo: null }],
+    ] as const;
+    for (const [legacy, branded] of pairs) {
+      await send(legacy);
+      await send(branded);
+    }
+    const sent = sendMail.mock.calls.map((call) => call[0]);
+    for (let index = 0; index < sent.length; index += 2) expect(sent[index + 1]).toEqual(sent[index]);
+    const [code, , invitation, , change, , followup] = sent;
+    expect(code).toMatchObject({ from: "LobbyStack <no-reply@example.test>", replyTo: "support@example.test", subject: "Your LobbyStack verification code", text: "Your LobbyStack email verification code is: 123456. It expires in 10 minutes." });
+    expect(code.html).toContain('aria-label="LobbyStack"');
+    expect(invitation).toMatchObject({ to: "teammate@example.test", subject: "LobbyStack notification", text: "You have been invited to join LobbyStack. Accept the invitation here: https://app.example.test/accept-invite?token=t" });
+    expect(change.subject).toBe("Confirm your LobbyStack email change");
+    // Replies to the founder check-in reach the founder, not the shared inbox.
+    expect(followup.from).toBe("Raphael <raphael@lobbystack.com>");
+    expect(followup.replyTo).toBeUndefined();
+    // The saved branding was read, and the deployment's own name stays out of the host's emails.
+    for (const message of sent) expect(JSON.stringify(message)).not.toContain("Saved Desk");
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it("writes an email under the brand it reads when it sends: name, links, sender and Reply-To", async () => {
+    const businessId = randomUUID();
+    const partner: Brand = { kind: "partner", partnerId: "partner-1", name: "Bright Desk", logoUrl: null, faviconUrl: null, color: null, origin: "https://bright.example.test", links: { website: null, terms: null, privacy: null, support: null }, email: { fromName: "Bright Desk", fromAddress: "no-reply@bright.example.test", replyTo: "help@bright.example.test" } };
+    vi.mocked(brandForEmail).mockResolvedValue(partner);
+    const sendMail = vi.fn().mockResolvedValue({ messageId: "provider-id" });
+    const email = new SmtpEmailProvider({ host: "localhost", port: 1025, secure: false, username: "", password: "", from: "LobbyStack <no-reply@example.test>" }, { sendMail } as never);
+    const send = (payload: Record<string, unknown>) => handleJob({ jobId: randomUUID(), businessId, type: "email.send", queue: "default", payload, trace: {}, idempotencyKey: randomUUID(), scheduled: false }, { domain: { db: undefined as never }, email });
+    // Queued with the host's link; the business's brand moved since.
+    await send({ invitationId: randomUUID(), email: "teammate@example.test", token: "t", template: "invitation", url: "https://app.example.test/accept-invite?token=t", brand: { kind: "business", businessId }, replyTo: null });
+    expect(sendMail.mock.lastCall?.[0]).toMatchObject({
+      from: '"Bright Desk" <no-reply@bright.example.test>',
+      replyTo: "help@bright.example.test",
+      subject: "Bright Desk notification",
+      text: "You have been invited to join Bright Desk. Accept the invitation here: https://bright.example.test/accept-invite?token=t",
+    });
+    await send({ template: "operator_alert", to: "operator@example.test", subject: "Alert", variables: { message: "Hi" }, brand: { kind: "business", businessId }, replyTo: "owner@example.test" });
+    expect(sendMail.mock.lastCall?.[0]).toMatchObject({ replyTo: "owner@example.test", text: "Hi" });
+  });
+
+  it("refuses a brand reference it can't read rather than sending under the host brand", async () => {
+    const sendTemplate = vi.fn().mockResolvedValue({ messageId: "provider-id" });
+    const send = (brand: unknown) => handleJob({ jobId: randomUUID(), businessId: null, type: "email.send", queue: "default", payload: { template: "verify_email", to: "owner@example.test", variables: { code: "1" }, brand, replyTo: null }, trace: {}, idempotencyKey: randomUUID(), scheduled: false }, { domain: { db: savedBranding(null) }, email: { sendTemplate } });
+    await expect(send({ kind: "business" })).rejects.toThrow("Unknown email brand");
+    await expect(send({ kind: "reseller", resellerId: "r-1" })).rejects.toThrow("Unknown email brand");
+    expect(sendTemplate).not.toHaveBeenCalled();
+  });
+
+  it("keeps an email under a business's brand queued while the brand can't be read, and sends a host email under the environment's", async () => {
+    vi.stubEnv("BRAND_APP_NAME", "Front Desk");
+    vi.mocked(brandForEmail).mockRejectedValue(new Error("database unavailable"));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const sendTemplate = vi.fn().mockResolvedValue({ messageId: "provider-id" });
+    const businessId = randomUUID();
+    const send = (brand: unknown) => handleJob({ jobId: randomUUID(), businessId, type: "email.send", queue: "default", payload: { template: "operator_alert", to: "operator@example.test", subject: "Alert", variables: { message: "Hi" }, brand, replyTo: null }, trace: {}, idempotencyKey: randomUUID(), scheduled: false }, { domain: { db: undefined as never }, email: { sendTemplate } });
+    await expect(send({ kind: "business", businessId })).rejects.toThrow("database unavailable");
+    await expect(send({ kind: "partner", partnerId: "partner-1" })).rejects.toThrow("database unavailable");
+    expect(sendTemplate).not.toHaveBeenCalled();
+    await expect(send({ kind: "host" })).resolves.toEqual({ status: "completed" });
+    expect(sendTemplate).toHaveBeenCalledWith(expect.objectContaining({ brand: expect.objectContaining({ kind: "host", name: "Front Desk" }) }));
+    expect(warn).toHaveBeenCalledOnce();
+    warn.mockRestore();
+  });
+
+  it("links a number release email to the plan page on the host brand's origin, from the founder", async () => {
+    vi.stubEnv("APP_BASE_URL", "https://app.example.test/");
+    const businessId = randomUUID(); const phoneNumberId = randomUUID();
+    vi.mocked(loadNumberReleaseEmail).mockResolvedValue({ to: "owner@example.test", locale: "en", firstName: "Sam", number: "+14165550199", timezone: "UTC" } as never);
+    const sendMail = vi.fn().mockResolvedValue({ messageId: "provider-id" });
+    const email = new SmtpEmailProvider({ host: "localhost", port: 1025, secure: false, username: "", password: "", from: "LobbyStack <no-reply@example.test>" }, { sendMail } as never);
+    const sender = { from: "Raphael from LobbyStack <raphael@lobbystack.com>", name: "Raphael" };
+    await handleJob({ jobId: randomUUID(), businessId, type: "phoneNumber.releaseEmail", queue: "default", payload: { phoneNumberId, kind: "release_soon", releaseAt: "2026-11-08T00:00:00.000Z" }, trace: {}, idempotencyKey: randomUUID(), scheduled: false }, { domain: { db: savedBranding("Saved Desk") }, email, onboardingFollowupSender: sender });
+    const sent = sendMail.mock.lastCall?.[0];
+    expect(sent).toMatchObject({ from: sender.from, subject: "We release +14165550199 on November 8" });
+    expect(sent.text).toContain("Keep my number: https://app.example.test/settings/plan\n\nRaphael");
+    expect(sent).not.toHaveProperty("replyTo");
+  });
+
   it("sends onboarding follow-up email from the founder sender", async () => {
     const sendTemplate = vi.fn().mockResolvedValue({ messageId: "provider-id" });
     const payload = { template: "onboarding_followup", to: "owner@example.test", from: "Raphael <raphael@lobbystack.com>", subject: "How'd you like LobbyStack?", variables: { businessName: "Acme" } };

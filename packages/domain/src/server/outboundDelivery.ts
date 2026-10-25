@@ -1,9 +1,10 @@
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
-import { normalizeInterfaceLocale, permanentSmsErrorCode } from "@lobbystack/shared";
+import { emailSender, normalizeInterfaceLocale, permanentSmsErrorCode, type EmailBrand } from "@lobbystack/shared";
 
 import { appointmentChangeOtpLeaseEndsAt, claimAppointmentChangeOtp, loadAppointmentChangeOtpTarget, markAppointmentChangeOtpSent, releaseAppointmentChangeOtp } from "./appointmentChanges";
 import { correctAlertSmsUsage, enqueueBillingUsageSync, reserveAlertSmsUsage } from "./billing";
 import { deploymentAppName } from "./branding";
+import { brandForBusiness } from "./brands";
 import type { DomainContext } from "./context";
 import { claimNotificationDelivery, claimOperatorNotificationDelivery, loadOperatorNotificationDelivery, markNotificationSent, markOperatorNotificationSent, markOperatorNotificationSkipped, notificationLeaseEndsAt, operatorNotificationLeaseEndsAt, releaseOperatorNotificationDelivery, resolveNotificationDelivery, transitionProcessingNotification } from "./notifications";
 import { issueOperatorPhoneVerificationCode, markOperatorPhoneVerificationCodeSent, releaseOperatorPhoneVerificationCodeSend } from "./phoneVerification";
@@ -14,7 +15,7 @@ import { estimateSmsSegments } from "./usage";
 import { verificationCodeSmsBody } from "./verificationCode";
 
 type SmsProvider = { sendSms(input: { to: string; from: string; body: string; statusCallback?: string }): Promise<{ providerMessageId: string }> };
-type EmailProvider = { sendTemplate(input: { template: "operator_alert"; to: string; subject: string; variables: { message: string }; idempotencyKey: string }): Promise<{ messageId: string }> };
+type EmailProvider = { sendTemplate(input: { template: "operator_alert"; to: string; subject: string; variables: { message: string }; brand: EmailBrand; idempotencyKey: string; from?: string; replyTo?: string }): Promise<{ messageId: string }> };
 
 /** The adapters a delivery goes out through: Twilio and SMTP in production, fakes in tests. */
 export type OutboundProviders = {
@@ -88,7 +89,7 @@ export async function deliverOutbound(context: DomainContext, providers: Outboun
   if (!outgoing) return skipped;
   const { businessId } = delivery;
   const statusCallback = outgoing.channel === "sms" && outgoing.callback ? twilioStatusCallback(outgoing.callback) : undefined;
-  const send = providerSend(providers, outgoing);
+  const send = providerSend(context, providers, outgoing, businessId);
   if (!send) {
     await lease.close("skipped", `${outgoing.channel === "sms" ? "SMS" : "Email"} delivery is not configured.`);
     return skipped;
@@ -206,10 +207,16 @@ async function claimOptIn(context: DomainContext, input: { businessId: string; c
  * appointment texts and codes, goes through the alert account that owns it;
  * any other number through the default account.
  */
-function providerSend(providers: OutboundProviders, outgoing: Outgoing): SendText | undefined {
+function providerSend(context: DomainContext, providers: OutboundProviders, outgoing: Outgoing, businessId: string): SendText | undefined {
   if (outgoing.channel === "email") {
     const email = providers.email;
-    return email && (async () => (await email.sendTemplate({ template: "operator_alert", to: outgoing.to, subject: outgoing.subject, variables: { message: outgoing.body }, idempotencyKey: outgoing.idempotencyKey })).messageId);
+    // An alert belongs to its business: the delivery row holds the business,
+    // which stands in for a queued brand, and its brand is read when the email
+    // goes out, with that brand's Reply-To.
+    return email && (async () => {
+      const brand = await brandForBusiness(context, businessId);
+      return (await email.sendTemplate({ template: "operator_alert", to: outgoing.to, subject: outgoing.subject, variables: { message: outgoing.body }, brand, idempotencyKey: outgoing.idempotencyKey, ...emailSender(brand, {}) })).messageId;
+    });
   }
   const sms = !outgoing.from ? undefined : providers.twilioAlerts?.from === outgoing.from ? providers.twilioAlerts : providers.twilio;
   return sms && (async (body, statusCallback) => (await sms.sendSms({ to: outgoing.to, from: outgoing.from, body, ...(statusCallback ? { statusCallback } : {}) })).providerMessageId);

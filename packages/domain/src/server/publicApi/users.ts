@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { eq } from "drizzle-orm";
 
 import { enqueueOutbox, users, withBusinessTransaction, type Database } from "@lobbystack/db";
-import { normalizeAuthEmail, normalizeInterfaceLocale, type ApiUserCreate, type ApiUserInvitation, type InterfaceLocale } from "@lobbystack/shared";
+import { HOST_EMAIL_BRAND, normalizeAuthEmail, normalizeInterfaceLocale, type ApiUserCreate, type ApiUserInvitation } from "@lobbystack/shared";
 
 import { isSingleEmailAddress } from "../tenancy";
 import { invalidRequest } from "./errors";
@@ -17,20 +17,8 @@ import type { ResolvedPlatformKey } from "./platformKeys";
 // account gets a sign-in link instead, and the caller gets the same answer
 // either way, so the endpoint can't tell anyone who has an account.
 
-const SETUP_SUBJECTS: Record<InterfaceLocale, string> = {
-  en: "Make your LobbyStack account",
-  fr: "Créez votre compte LobbyStack",
-  es: "Cree su cuenta de LobbyStack",
-  sr: "Napravite svoj LobbyStack nalog",
-};
-
-// The subjects of the email sign-up sends to an address that already has an account.
-const EXISTING_ACCOUNT_SUBJECTS: Record<InterfaceLocale, string> = {
-  en: "You already have a LobbyStack account",
-  fr: "Votre compte LobbyStack existe déjà",
-  es: "Ya tiene una cuenta de LobbyStack",
-  sr: "Već imate LobbyStack nalog",
-};
+// The emails go out under the host brand, whose dashboard the person signs up
+// or in on. The worker writes their subjects under that brand when it sends.
 
 function digest(value: string): string {
   return createHash("sha256").update(value).digest("hex");
@@ -58,9 +46,9 @@ export async function inviteUserForApi(databases: { auth: Database; app: Databas
   let payload: Record<string, unknown>;
   if (account) {
     const accountLocale = normalizeInterfaceLocale(account.preferredLocale) ?? "en";
-    payload = { template: "existing_account", to: email, subject: EXISTING_ACCOUNT_SUBJECTS[accountLocale], variables: { locale: accountLocale, signInUrl: new URL(`/${accountLocale}/login`, input.appBaseUrl).href, resetUrl: new URL(`/${accountLocale}/forgot-password`, input.appBaseUrl).href } };
+    payload = { template: "existing_account", to: email, variables: { locale: accountLocale, signInUrl: new URL(`/${accountLocale}/login`, input.appBaseUrl).href, resetUrl: new URL(`/${accountLocale}/forgot-password`, input.appBaseUrl).href }, brand: HOST_EMAIL_BRAND, replyTo: null };
   } else {
-    payload = { template: "account_setup", to: email, subject: SETUP_SUBJECTS[locale], variables: { locale, email, url: new URL(`/${locale}/signup`, input.appBaseUrl).href } };
+    payload = { template: "account_setup", to: email, variables: { locale, email, url: new URL(`/${locale}/signup`, input.appBaseUrl).href }, brand: HOST_EMAIL_BRAND, replyTo: null };
   }
   await withBusinessTransaction(databases.app, { actorType: "system" }, async (tx) => {
     await enqueueOutbox(tx, { topic: "email.send", aggregateType: "auth_email", ...(account ? { aggregateId: account.id } : {}), dedupeKey, payload });

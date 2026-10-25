@@ -1,5 +1,5 @@
 import { BaseProviders } from "@/app/base-providers";
-import { brandingSnapshot, loadBranding } from "@/lib/branding";
+import { brandingSnapshot, requireRequestBrand } from "@/lib/branding";
 import { resourcesForRoute } from "@/lib/i18n-resources";
 import { localeTag, type SupportedLocale } from "@/lib/locale";
 
@@ -22,7 +22,7 @@ export async function WidgetDocument({
     <html lang={localeTag(locale)} suppressHydrationWarning>
       <body>
         {/* The chat is drawn in light colors only; a dark system theme would turn its white panel near-black under dark text. */}
-        <BaseProviders branding={brandingSnapshot(await loadBranding())} forcedTheme="light" initialLocale={locale} initialResources={resourcesForRoute(locale, namespaces)}>
+        <BaseProviders branding={brandingSnapshot(await requireRequestBrand())} forcedTheme="light" initialLocale={locale} initialResources={resourcesForRoute(locale, namespaces)}>
           {children}
         </BaseProviders>
       </body>

@@ -33,7 +33,7 @@ vi.mock("@/components/appearance-provider", () => ({ AppearanceProvider: ({ chil
 vi.mock("@/components/replacement-locale-provider", () => ({ LocaleProvider: ({ children }: { children: ReactNode }) => children }));
 vi.mock("@/components/product-analytics", () => ({ ProductAnalytics: ({ children }: { children?: ReactNode }) => children }));
 vi.mock("@/components/ui/sonner", () => ({ Toaster: () => null }));
-vi.mock("@/lib/branding", () => ({ loadBranding: async () => ({ appName: "LobbyStack", logoUrl: null }), brandingSnapshot: (branding: object) => ({ ...branding, final: true }) }));
+vi.mock("@/lib/branding", () => ({ requireRequestBrand: async () => ({ name: "LobbyStack", logoUrl: null }), brandingSnapshot: (brand: { name: string; logoUrl: string | null }) => ({ appName: brand.name, logoUrl: brand.logoUrl, final: true }) }));
 vi.mock("@/lib/i18n-resources", () => ({ resourcesForRoute: () => ({ common: {} }) }));
 vi.mock("@/lib/browser-error-reporting", () => ({ captureBrowserError: (...args: unknown[]) => state.capture(...args) }));
 

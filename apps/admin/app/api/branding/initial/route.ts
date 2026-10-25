@@ -3,7 +3,7 @@ import { saveInitialBranding } from "@lobbystack/domain";
 import { MAX_BRAND_LOGO_BYTES, readBrandingEnvironment } from "@lobbystack/shared";
 
 import { asApiResponse, getAppDatabase, jsonError, requireApiSession } from "@/lib/api-helpers";
-import { forgetCachedBranding, loadBranding } from "@/lib/branding";
+import { forgetCachedBranding, loadRequestBrand } from "@/lib/branding";
 import { runtimeDeploymentMode } from "@/lib/deployment-mode";
 
 export const runtime = "nodejs";
@@ -64,8 +64,9 @@ export async function POST(request: Request) {
       logo: environment.logoUrl || !logo ? null : Buffer.from(logo, "base64"),
     });
     forgetCachedBranding();
-    const branding = await loadBranding();
-    return NextResponse.json({ appName: branding.appName, logoUrl: branding.logoUrl });
+    const brand = await loadRequestBrand(request);
+    if (!brand) throw jsonError("Not found.", 404, "unknown_host");
+    return NextResponse.json({ appName: brand.name, logoUrl: brand.logoUrl });
   } catch (error) {
     return asApiResponse(error);
   }

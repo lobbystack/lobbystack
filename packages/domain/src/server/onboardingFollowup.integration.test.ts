@@ -86,6 +86,9 @@ describe.skipIf(!testUrl)("onboarding follow-up email against dedicated PostgreS
         from: sender.from,
         subject: "Qu'avez-vous pensé de LobbyStack ?",
         variables: { locale: "fr", firstName: "Sam", senderName: "Raphael" },
+        // The host's own email. It has the founder's sender, so replies reach the founder.
+        brand: { kind: "host" },
+        replyTo: null,
       });
     });
   });

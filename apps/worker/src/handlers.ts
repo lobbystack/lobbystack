@@ -4,7 +4,7 @@ import { and, eq, inArray, isNull, lte, ne, or } from "drizzle-orm";
 
 import { hasSummarizableTranscript, type BusinessHoursExtractor, type BusinessSummarizer, type CallSummarizer } from "@lobbystack/agent-core";
 import { realtimeEventSchema, type JobEnvelope } from "@lobbystack/contracts";
-import { getPolarMeteredUsagePayload, intlLocale, normalizeRuntimeLocale, type BillingUsageKind } from "@lobbystack/shared";
+import { HOST_EMAIL_BRAND, emailSender, getPolarMeteredUsagePayload, intlLocale, normalizeRuntimeLocale, parseEmailBrandReference, type BillingUsageKind, type EmailBrandReference } from "@lobbystack/shared";
 import { appointments, calls, contacts, enqueueOutbox, knowledgeChunks, knowledgeDocuments, messages, notifications, phoneNumbers, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database } from "@lobbystack/db";
 import { enqueueKnowledgeDerivedRefresh, finishBusinessSummaryRegenerate, loadBusinessHoursInput, loadBusinessSummaryInput, markBusinessHoursChecked, resetGeneratedBusinessSummary, saveGeneratedBusinessHours, saveGeneratedBusinessSummary, type SummaryRegenerateOutcome } from "@lobbystack/domain";
 import { billingCheckoutLeaseEndsAt, checkKnowledgeStorageLimit, claimBillingCheckoutRequest, countPublishableOutboxMessages, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteSentProductEventsBefore, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markKnowledgeDocumentFailed, markProductEventsSent, reconcileBillingProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, runPrivacyRetentionSweep, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, chunkText, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type GeneratedCallSummary, type OnboardingFollowupSender } from "@lobbystack/domain";
@@ -13,6 +13,7 @@ import { claimNumberProvisioning, completeNumberProvisioning, desiredNumberRouti
 import { createWebhookSender, processWebhookDelivery, pruneApiHistory, type WebhookSender } from "@lobbystack/domain";
 import { LIVE_RECORDING_ATTEMPTS, listBusinessesWithOpenLiveCalls, listOpenLiveCalls, liveCallHasRecording, persistCallRecording, retryLiveCallRecording, type OpenLiveCall } from "@lobbystack/domain";
 import { expireTeamRequest } from "@lobbystack/domain";
+import { brandForEmail, hostBrandFromEnvironment } from "@lobbystack/domain";
 import type { DomainContext } from "@lobbystack/domain";
 import { numberReleaseEmailSubject, numberTrialEmailSubject, type SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
 import type { RuntimeStorageProvider } from "@lobbystack/providers/storage/provider";
@@ -94,6 +95,29 @@ export type JobResult = { status: "completed" | "skipped"; entityId?: string } |
 // before the lease ends. Run it again once the lease ends instead of dropping it.
 function retryAfterLease(leaseEndsAt: Date | null, entityId: string): JobResult {
   return leaseEndsAt ? { status: "deferred", entityId, retryAt: leaseEndsAt } : { status: "skipped", entityId };
+}
+
+const BRAND_FAILURE_LOG_INTERVAL_MS = 60_000;
+let lastBrandFailureLogAt = 0;
+
+/**
+ * The brand an email goes out under, read when it's sent. When the host's
+ * saved branding can't be read, a host email still goes out under the brand
+ * the environment sets, as pages do; an email under a business's or a
+ * partner's brand waits for the database instead of going out under the wrong one.
+ */
+async function emailBrand(domain: DomainContext, reference: EmailBrandReference) {
+  try {
+    return await brandForEmail(domain, reference);
+  } catch (error) {
+    if (reference.kind !== "host") throw error;
+    const now = Date.now();
+    if (now - lastBrandFailureLogAt >= BRAND_FAILURE_LOG_INTERVAL_MS) {
+      lastBrandFailureLogAt = now;
+      console.warn("[worker] Sending under the environment's branding: the saved branding could not be read.", error instanceof Error ? error.message : error);
+    }
+    return hostBrandFromEnvironment();
+  }
 }
 
 function businessIdOrThrow(job: JobEnvelope): string {
@@ -393,13 +417,20 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
           : { message: String(job.payload.message ?? ""), url: String(job.payload.url ?? "") };
         const feedbackSubmissionId = typeof job.payload.feedbackSubmissionId === "string" ? job.payload.feedbackSubmissionId : undefined;
         try {
+          // An email queued before payloads carried a brand goes out under the host's.
+          const brand = await emailBrand(dependencies.domain, parseEmailBrandReference(job.payload.brand));
           const sent = await dependencies.email.sendTemplate({
             template,
             to: String(job.payload.to ?? job.payload.email ?? ""),
-            subject: String(job.payload.subject ?? "LobbyStack notification"),
+            // Without a subject of its own, the template writes one under the brand.
+            ...(job.payload.subject === undefined || job.payload.subject === null ? {} : { subject: String(job.payload.subject) }),
             variables,
+            brand,
             idempotencyKey: job.idempotencyKey,
-            ...(typeof job.payload.from === "string" && job.payload.from ? { from: job.payload.from } : {}),
+            ...emailSender(brand, {
+              from: typeof job.payload.from === "string" ? job.payload.from : null,
+              replyTo: typeof job.payload.replyTo === "string" ? job.payload.replyTo : null,
+            }),
           });
           if (feedbackSubmissionId) await markFeedbackEmailSent(dependencies.domain, { feedbackSubmissionId, ...(businessId ? { businessId } : {}), providerMessageId: sent.messageId });
         } catch (error) {
@@ -784,6 +815,9 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       if (!dependencies.email || !dependencies.onboardingFollowupSender) return { status: "skipped", entityId: phoneNumberId };
       const content = await loadNumberReleaseEmail(dependencies.domain, { businessId, phoneNumberId });
       if (!content) return { status: "skipped", entityId: phoneNumberId };
+      // The host's own email, with the host's prices, from the founder. A
+      // partner's businesses never get it, so its job carries no brand.
+      const brand = await emailBrand(dependencies.domain, HOST_EMAIL_BRAND);
       const date = (value: unknown) => (typeof value === "string" ? new Intl.DateTimeFormat(intlLocale(content.locale), { month: "long", day: "numeric", timeZone: content.timezone }).format(new Date(value)) : "");
       const variables = {
         kind,
@@ -792,10 +826,10 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         number: content.number,
         periodEnd: date(job.payload.periodEnd),
         releaseDate: date(job.payload.releaseAt),
-        url: `${(process.env.APP_BASE_URL ?? "http://localhost:3000").replace(/\/$/, "")}/settings/plan`,
+        url: `${brand.origin}/settings/plan`,
         senderName: dependencies.onboardingFollowupSender.name,
       };
-      await dependencies.email.sendTemplate({ template: "number_release", to: content.to, from: dependencies.onboardingFollowupSender.from, subject: numberReleaseEmailSubject(variables), variables, idempotencyKey: job.idempotencyKey });
+      await dependencies.email.sendTemplate({ template: "number_release", to: content.to, subject: numberReleaseEmailSubject(variables), variables, brand, idempotencyKey: job.idempotencyKey, ...emailSender(brand, { from: dependencies.onboardingFollowupSender.from }) });
       return { status: "completed", entityId: `${phoneNumberId}:${kind}` };
     }
     case "numberTrial.sendEmail": {
@@ -806,6 +840,9 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       if (!trialId || (kind !== "day10" && kind !== "day13" && kind !== "ended" && kind !== "minutes_out")) throw new Error("Invalid number trial email payload.");
       const content = await loadNumberTrialEmail(dependencies.domain, { businessId, trialId, email: kind });
       if (!content) return { status: "skipped", entityId: trialId };
+      // The host's own email, with the host's prices, from the founder. A
+      // partner's businesses never get it, so its job carries no brand.
+      const brand = await emailBrand(dependencies.domain, HOST_EMAIL_BRAND);
       const endDate = content.endsAt
         // The trial's last day is the day before endsAt, which is midnight that ends it.
         ? new Intl.DateTimeFormat(intlLocale(content.locale), { month: "long", day: "numeric", timeZone: content.timezone }).format(new Date(content.endsAt.getTime() - 1))
@@ -819,10 +856,10 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         forwardTo: content.forwardTo ?? "",
         endDate,
         calls: String(content.callsAnswered),
-        url: `${(process.env.APP_BASE_URL ?? "http://localhost:3000").replace(/\/$/, "")}/settings/plan`,
+        url: `${brand.origin}/settings/plan`,
         senderName: dependencies.onboardingFollowupSender.name,
       };
-      await dependencies.email.sendTemplate({ template: "number_trial", to: content.to, from: dependencies.onboardingFollowupSender.from, subject: numberTrialEmailSubject(variables), variables, idempotencyKey: job.idempotencyKey });
+      await dependencies.email.sendTemplate({ template: "number_trial", to: content.to, subject: numberTrialEmailSubject(variables), variables, brand, idempotencyKey: job.idempotencyKey, ...emailSender(brand, { from: dependencies.onboardingFollowupSender.from }) });
       return { status: "completed", entityId: `${trialId}:${kind}` };
     }
     case "prospectDemo.expire": {

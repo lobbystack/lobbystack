@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 
 import { businesses, enqueueOutbox, feedbackSubmissions, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { HOST_EMAIL_BRAND } from "@lobbystack/shared";
 
 import { requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
@@ -66,6 +67,9 @@ export async function submitFeedback(
           to: recipientEmail,
           subject: `LobbyStack feedback from ${safeSubjectText(businessName ?? user.name ?? user.email)}`,
           variables: { body: message },
+          // Feedback reaches the host's own inbox, whichever brand the sender uses.
+          brand: HOST_EMAIL_BRAND,
+          replyTo: null,
         },
       });
     }

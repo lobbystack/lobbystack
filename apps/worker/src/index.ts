@@ -1,6 +1,6 @@
 import { assertDatabaseRole, businesses, createDatabaseClient, databaseHealthCheck, enqueueOutbox, listReembedBusinesses, listSchedulerBusinesses, listSummaryBackfillBusinesses, withBusinessTransaction, withDispatcherTransaction } from "@lobbystack/db";
 import { createBusinessHoursExtractor, createBusinessSummarizer, createCallSummarizer } from "@lobbystack/agent-core";
-import { assertProductionSecrets, isMaintenanceMode } from "@lobbystack/shared";
+import { DEFAULT_EMAIL_FROM, assertProductionSecrets, isMaintenanceMode } from "@lobbystack/shared";
 import type { OnboardingFollowupSender } from "@lobbystack/domain";
 import { createQueue, createRedisConnection, createWorkerOptions, enqueueJob, isKnownJobType, jobQueues, type JobEnvelope, type JobQueue } from "@lobbystack/jobs";
 import { createEmbeddingProvider } from "@lobbystack/providers/ai/embeddingProvider";
@@ -39,8 +39,8 @@ function createEmailProvider(): SmtpEmailProvider | undefined {
     secure: process.env.SMTP_SECURE === "true",
     username: process.env.SMTP_USERNAME ?? "",
     password: process.env.SMTP_PASSWORD ?? "",
-    from: process.env.EMAIL_FROM || "LobbyStack <no-reply@localhost>",
-    ...(process.env.EMAIL_REPLY_TO ? { replyTo: process.env.EMAIL_REPLY_TO } : {}),
+    from: process.env.EMAIL_FROM || DEFAULT_EMAIL_FROM,
+    // EMAIL_REPLY_TO is the host brand's Reply-To, which the handlers pass per email.
   });
 }
 

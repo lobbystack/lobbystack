@@ -50,7 +50,7 @@ describe.skipIf(!testUrl)("POST /users", () => {
     const idempotencyKey = `owner-${randomUUID()}`;
     expect(await invite(` ${email.toUpperCase()} `, idempotencyKey, "es")).toEqual({ email, locale: "es" });
     expect(await accountsWith(email)).toEqual([]);
-    expect(await queued(email)).toEqual([{ template: "account_setup", to: email, subject: "Cree su cuenta de LobbyStack", variables: { locale: "es", email, url: "https://app.example.com/es/signup" }, aggregateId: null }]);
+    expect(await queued(email)).toEqual([{ template: "account_setup", to: email, variables: { locale: "es", email, url: "https://app.example.com/es/signup" }, brand: { kind: "host" }, replyTo: null, aggregateId: null }]);
     // A retry of the same request sends nothing more.
     await invite(email, idempotencyKey, "es");
     expect(await queued(email)).toHaveLength(1);
@@ -71,6 +71,6 @@ describe.skipIf(!testUrl)("POST /users", () => {
     const [after] = await admin!.db.select().from(users).where(eq(users.id, account!.id));
     expect(after).toEqual(account);
     expect(await accountsWith(email)).toHaveLength(1);
-    expect(await queued(email)).toEqual([{ template: "existing_account", to: email, subject: "Votre compte LobbyStack existe déjà", variables: { locale: "fr", signInUrl: "https://app.example.com/fr/login", resetUrl: "https://app.example.com/fr/forgot-password" }, aggregateId: account!.id }]);
+    expect(await queued(email)).toEqual([{ template: "existing_account", to: email, variables: { locale: "fr", signInUrl: "https://app.example.com/fr/login", resetUrl: "https://app.example.com/fr/forgot-password" }, brand: { kind: "host" }, replyTo: null, aggregateId: account!.id }]);
   });
 });

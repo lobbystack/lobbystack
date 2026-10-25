@@ -1,5 +1,5 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
-import { normalizeInterfaceLocale, type InterfaceLocale } from "@lobbystack/shared";
+import { HOST_EMAIL_BRAND, normalizeInterfaceLocale, type InterfaceLocale } from "@lobbystack/shared";
 
 import { businesses, enqueueOutbox, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
@@ -274,6 +274,10 @@ export async function queueOnboardingFollowupEmail(
         from: input.sender.from,
         subject: ONBOARDING_FOLLOWUP_SUBJECTS[locale],
         variables: { locale, firstName, businessName: recipient.business_name, senderName: input.sender.name },
+        // The founder writes as the host. With a sender of its own, the email
+        // takes replies at that sender, so it sets no Reply-To.
+        brand: HOST_EMAIL_BRAND,
+        replyTo: null,
       },
     });
     return true;

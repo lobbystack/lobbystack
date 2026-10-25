@@ -4,6 +4,7 @@ export * from "./activation";
 export * from "./billing";
 export * from "./billingAccess";
 export * from "./branding";
+export * from "./brands";
 export * from "./analytics";
 export * from "./booking";
 export * from "./businessHours";

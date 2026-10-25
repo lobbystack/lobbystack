@@ -8,7 +8,7 @@ vi.mock("@/lib/api-helpers", () => ({
   jsonError: (message: string, status = 400, code?: string) => Response.json({ error: message, ...(code ? { code } : {}) }, { status }),
   asApiResponse: (error: unknown) => error instanceof Response ? error : Response.json({ error: "Request failed." }, { status: (error as { status?: number }).status ?? 500 }),
 }));
-vi.mock("@/lib/branding", () => ({ forgetCachedBranding: fixture.forget, loadBranding: fixture.load }));
+vi.mock("@/lib/branding", () => ({ forgetCachedBranding: fixture.forget, loadRequestBrand: fixture.load }));
 
 import { POST } from "./route";
 
@@ -20,7 +20,7 @@ function post(body: string, headers: Record<string, string> = {}) {
 
 beforeEach(() => {
   fixture.save.mockResolvedValue(undefined);
-  fixture.load.mockResolvedValue({ appName: "Acme Desk", logoUrl: "/api/branding/logo?v=abc" });
+  fixture.load.mockResolvedValue({ name: "Acme Desk", logoUrl: "/api/branding/logo?v=abc" });
 });
 afterEach(() => { vi.unstubAllEnvs(); vi.clearAllMocks(); });
 

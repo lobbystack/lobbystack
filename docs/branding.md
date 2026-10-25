@@ -104,14 +104,39 @@ Next.js writes `NEXT_PUBLIC_` variables into the admin's build, both the browser
 ## How it works
 
 - `packages/shared/src/branding.ts`: the variable names, the limits, the order of precedence (`resolveBranding`), and the logo type check (`brandLogoContentType`).
+- `packages/shared/src/brand.ts`: the `Brand` type, the host brand built from the name, logo, outside links, `APP_BASE_URL`, `EMAIL_FROM`, and `EMAIL_REPLY_TO`, and the brand reference queued emails carry.
 - `packages/db/migrations/0113_deployment_branding.sql`: the one-row table and the two functions. Every runtime role can read the table, but only `app.save_initial_branding()` writes to it. Row level security is forced on it.
 - `packages/domain/src/server/branding.ts`: reads and saves the branding, and resolves the name text messages use.
-- `apps/admin/src/lib/branding.ts`: loads the branding for each render with a 30-second cache. If the database can't be read, pages fall back to the environment and the default, and the error is reported at most once a minute.
+- `packages/domain/src/server/brands.ts`: answers which brand a hostname (`resolveHostBrand`), a business (`brandForBusiness`), or a queued email (`brandForEmail`) shows, with a 30-second cache per process. Every hostname and every business gets the host brand. Text messages never ask it, so they keep the host's name.
+- `apps/admin/src/lib/branding.ts`: loads the brand of each request from its `Host` header, because the standalone server's request URL holds the address it listens on. A hostname no brand answers for gets a 404. If the database can't be read, pages fall back to the environment and the default, and the admin reports the error at most once a minute.
 - Routes:
-  - `GET /api/branding` returns `{ appName, logoUrl }` and is never cached.
-  - `GET /api/branding/logo` serves the saved logo. Its URL carries the logo's SHA-256 (`?v=`), so browsers can keep it for good.
+  - `GET /api/branding` returns `{ appName, logoUrl }` for the request's hostname and is never cached.
+  - `GET /api/branding/logo` serves the saved logo of the request's brand. Its URL carries the logo's SHA-256 (`?v=`), so browsers can keep it for good.
   - `POST /api/branding/initial` saves the onboarding choice.
 - `BrandingProvider` (`apps/admin/src/components/branding-provider.tsx`) gives the name and logo to every component. It sets the `{{appName}}` i18n variable, and it keeps the tab's title and icon in step when they differ from what the server rendered.
+
+### How an email gets its brand
+
+Each `email.send` payload names its brand in `brand` and its Reply-To in `replyTo`. The `brand` value is one of these:
+
+- `{ "kind": "business", "businessId": "…" }` for an email about a business, such as an invitation.
+- The brand of the request that sends the email, such as a sign-up code: `{ "kind": "partner", "partnerId": "…" }`, or `{ "kind": "host" }` until partners have domains.
+- `{ "kind": "host" }` for the host's own emails: dashboard feedback and the founder check-in.
+
+The worker reads the brand when it sends, so a brand change reaches emails still in the queue. It sends a payload with no `brand` under the host brand. A payload whose `brand` it can't read stays in the queue. When the worker can't read the saved branding, it sends a host email under the environment's choice and holds an email under any other brand until the database answers.
+
+`packages/providers/src/email/smtp.ts` writes three things under the email's brand:
+
+- **Subject**: the template writes it when the payload names none. Sign-up, verification, password reset, email change, invitation, and platform-key sign-up emails name none.
+- **Name and logo**: the host's emails keep LobbyStack and its mark whatever the deployment's branding, as [Still branded](#still-branded) lists.
+- **Dashboard links**: producers queue whole links, and the worker keeps each link's path and query on the brand's origin.
+
+`emailSender` in `packages/shared/src/brand.ts` picks the sender and Reply-To. The host sends from `EMAIL_FROM` exactly as written, with `EMAIL_REPLY_TO` as the Reply-To. A `replyTo` of `null` means the brand's own. The founder check-in and the number trial and release emails have a sender of their own, so replies go to that sender.
+
+Two kinds of email carry no `brand`:
+
+- **Number trial and release emails**: they hold the host's prices and come from the founder. A partner's businesses never get them, so the worker sends them under the host brand.
+- **Operator alerts**: they come from delivery rows, which hold the business. The worker sends each one under its business's brand.
 
 ### Prerendered pages
 
@@ -134,7 +159,7 @@ These places still say LobbyStack or link to lobbystack.com. Variables marked "p
 
 | Area | Where | Proposed setting |
 | --- | --- | --- |
-| Email subjects and bodies | `apps/admin/src/lib/auth.ts` (verification, password reset, email change, existing account); `packages/providers/src/email/smtp.ts` (templates, the inline 48×48 logo, founder sign-offs); `packages/domain/src/server/onboarding.ts`, `publicApi/users.ts`, `feedback.ts`; the worker's default subject "LobbyStack notification", which invitations use | The worker reads the same branding as the admin. The email header uses the logo at `APP_BASE_URL` + `/api/branding/logo`. |
+| Email subjects and bodies | `packages/providers/src/email/smtp.ts`: `shownBrand` keeps LobbyStack's name and the inline 48×48 mark for the host brand, and the founder sign-offs, feedback, and trial and release emails say LobbyStack; `packages/domain/src/server/onboarding.ts` and `feedback.ts` write the founder check-in and feedback subjects; the default subject "LobbyStack notification", which invitations use | Let `shownBrand` pass the host brand through, as it does a partner's, and give the worker `BRAND_APP_NAME` and `BRAND_LOGO_URL`. The worker already reads the saved choice, and the email header then uses the logo at `APP_BASE_URL` + `/api/branding/logo`. |
 | Email sender | `EMAIL_FROM` (an existing variable; defaults to `LobbyStack <no-reply@…>`) | Already configurable. Default the display name to the app name. |
 | Operator alert emails | `packages/domain/src/server/calendar.ts`, `publicApi/webhooks.ts` | The app name. |
 | SMS | The "LobbyStack:" opening of the START replies in `packages/domain/src/server/sms.ts`; the verification code text in `verificationCode.ts`, which is also sent to callers who change an appointment, in English only | The app name, as the HELP replies already use. The replies are part of the registered A2P 10DLC campaign, so update the campaign when they change. |

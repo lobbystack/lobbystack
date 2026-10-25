@@ -1,0 +1,1255 @@
+[
+  {
+    "name": "existing_account en",
+    "input": {
+      "template": "existing_account",
+      "to": "owner@example.test",
+      "subject": "You already have a LobbyStack account",
+      "variables": {
+        "locale": "en",
+        "signInUrl": "https://app.example.test/en/login",
+        "resetUrl": "https://app.example.test/en/forgot-password"
+      },
+      "idempotencyKey": "existing:en"
+    },
+    "sent": {
+      "from": "LobbyStack <no-reply@example.test>",
+      "replyTo": "support@example.test",
+      "to": "owner@example.test",
+      "subject": "You already have a LobbyStack account",
+      "text": "You already have a LobbyStack account. Sign in to continue: https://app.example.test/en/login. Forgot your password? https://app.example.test/en/forgot-password. If you did not request an account, ignore this email.",
+      "messageId": "<92f7c122d5053b9ed83a6ddd2f9bf0d2fea08844efd2fc94f826c55170f40d4a@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "account_setup en",
+    "input": {
+      "template": "account_setup",
+      "to": "owner@example.test",
+      "subject": "Make your LobbyStack account",
+      "variables": {
+        "locale": "en",
+        "email": "owner@example.test",
+        "url": "https://app.example.test/en/signup"
+      },
+      "idempotencyKey": "setup:en"
+    },
+    "sent": {
+      "from": "LobbyStack <no-reply@example.test>",
+      "replyTo": "support@example.test",
+      "to": "owner@example.test",
+      "subject": "Make your LobbyStack account",
+      "text": "You were invited to make a LobbyStack account with owner@example.test. Make it here, with this address: https://app.example.test/en/signup. If you weren't expecting this, ignore this email.",
+      "messageId": "<68234d5735c9a3e255bfc0f72bf76685e903b140117c9d2c5da31632c2c20916@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "onboarding_followup en",
+    "input": {
+      "template": "onboarding_followup",
+      "to": "owner@example.test",
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "subject": "How'd you like LobbyStack?",
+      "variables": {
+        "locale": "en",
+        "firstName": "Sam",
+        "businessName": "Acme Dental",
+        "senderName": "Raphael"
+      },
+      "idempotencyKey": "followup:en"
+    },
+    "sent": {
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "to": "owner@example.test",
+      "subject": "How'd you like LobbyStack?",
+      "text": "Hi Sam,\n\nI'm Raphael, the founder of LobbyStack. You set up a receptionist for Acme Dental yesterday. Thanks for giving it a try.\n\nI'd love to hear what you thought:\n\n1. Did you like it? What worked, and what felt off?\n2. What should we improve?\n3. Do you plan to use it for real, with your own phone number? If not, what's stopping you?\n\nYou can reply to this email, and two lines would be plenty!\n\nThanks again,\nRaphael\nFounder, LobbyStack",
+      "messageId": "<7131d0b3c4813d4f44e29a71a6ed72b5bf1d55a8bcab256d5cd69f6e9d575d47@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "number_trial day10 en",
+    "input": {
+      "template": "number_trial",
+      "to": "owner@example.test",
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "subject": "trial day10 en",
+      "variables": {
+        "kind": "day10",
+        "locale": "en",
+        "firstName": "Sam",
+        "businessName": "Acme Dental",
+        "trialNumber": "+1 416 555 0199",
+        "forwardTo": "+1 416 555 0123",
+        "endDate": "October 9",
+        "calls": "3",
+        "url": "https://app.example.test/settings/plan",
+        "senderName": "Raphael"
+      },
+      "idempotencyKey": "trial:day10:en"
+    },
+    "sent": {
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "to": "owner@example.test",
+      "subject": "trial day10 en",
+      "text": "Hi Sam,\n\nYour free trial ends on October 9.\n\nSo far your receptionist has answered 3 calls for Acme Dental.\n\nWhen it ends, your receptionist stops answering +1 416 555 0199 and we release the number. Choose a plan to keep it. Starter is $30 a month for 150 minutes.\n\nKeep my number: https://app.example.test/settings/plan\n\nRaphael",
+      "messageId": "<08995491f744136a62d7b2779b4a9b6f155c0b067bf34c7f6957933e00aec6eb@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "number_trial day13 en",
+    "input": {
+      "template": "number_trial",
+      "to": "owner@example.test",
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "subject": "trial day13 en",
+      "variables": {
+        "kind": "day13",
+        "locale": "en",
+        "firstName": "Sam",
+        "businessName": "Acme Dental",
+        "trialNumber": "+1 416 555 0199",
+        "forwardTo": "+1 416 555 0123",
+        "endDate": "October 9",
+        "calls": "3",
+        "url": "https://app.example.test/settings/plan",
+        "senderName": "Raphael"
+      },
+      "idempotencyKey": "trial:day13:en"
+    },
+    "sent": {
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "to": "owner@example.test",
+      "subject": "trial day13 en",
+      "text": "Hi Sam,\n\nYour free trial ends at midnight tomorrow.\n\nSo far your receptionist has answered 3 calls for Acme Dental.\n\nAfter that, calls to +1 416 555 0199 go unanswered and we release the number. Keep it for $30 a month with Starter.\n\nKeep my number: https://app.example.test/settings/plan\n\nRaphael",
+      "messageId": "<c6c1a1e9a0ecda367147b67bc6065082d757bcc0349b54bd4888e7203406f3d1@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "number_trial ended en",
+    "input": {
+      "template": "number_trial",
+      "to": "owner@example.test",
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "subject": "trial ended en",
+      "variables": {
+        "kind": "ended",
+        "locale": "en",
+        "firstName": "Sam",
+        "businessName": "Acme Dental",
+        "trialNumber": "+1 416 555 0199",
+        "forwardTo": "+1 416 555 0123",
+        "endDate": "October 9",
+        "calls": "3",
+        "url": "https://app.example.test/settings/plan",
+        "senderName": "Raphael"
+      },
+      "idempotencyKey": "trial:ended:en"
+    },
+    "sent": {
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "to": "owner@example.test",
+      "subject": "trial ended en",
+      "text": "Hi Sam,\n\nYour 14-day trial ended yesterday, so your receptionist stopped answering +1 416 555 0199. We're releasing the number. Subscribe now if you want to keep it. Starter is $30 a month for 150 minutes.\n\nKeep my number: https://app.example.test/settings/plan\n\nRaphael",
+      "messageId": "<d3b7bbd578c44d8e57de9c6483d8e31455a0d13da5f11abb8d8cad506a2e664e@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "number_trial minutes_out en",
+    "input": {
+      "template": "number_trial",
+      "to": "owner@example.test",
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "subject": "trial minutes_out en",
+      "variables": {
+        "kind": "minutes_out",
+        "locale": "en",
+        "firstName": "Sam",
+        "businessName": "Acme Dental",
+        "trialNumber": "+1 416 555 0199",
+        "forwardTo": "+1 416 555 0123",
+        "endDate": "October 9",
+        "calls": "3",
+        "url": "https://app.example.test/settings/plan",
+        "senderName": "Raphael"
+      },
+      "idempotencyKey": "trial:minutes_out:en"
+    },
+    "sent": {
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "to": "owner@example.test",
+      "subject": "trial minutes_out en",
+      "text": "Hi Sam,\n\nAcme Dental used its 30 free minutes, so your receptionist stopped answering +1 416 555 0199. Calls now ring +1 416 555 0123. Upgrade now to get your receptionist back. Starter is $30 a month for 150 minutes, and you keep your number.\n\nGet my receptionist back: https://app.example.test/settings/plan\n\nRaphael",
+      "messageId": "<f54c8effae31f3b0449c6a66f3d8a67c29393c13791270184388814576392130@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "number_release canceled en",
+    "input": {
+      "template": "number_release",
+      "to": "owner@example.test",
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "subject": "release canceled en",
+      "variables": {
+        "kind": "canceled",
+        "locale": "en",
+        "firstName": "",
+        "number": "+1 416 555 0199",
+        "periodEnd": "October 9",
+        "releaseDate": "November 8",
+        "url": "https://app.example.test/settings/plan",
+        "senderName": "Raphael"
+      },
+      "idempotencyKey": "release:canceled:en"
+    },
+    "sent": {
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "to": "owner@example.test",
+      "subject": "release canceled en",
+      "text": "Hi,\n\nYour plan stays active until October 9. After that, we keep +1 416 555 0199 for 30 days, until November 8, then release it. Resubscribe before then to keep it.\n\nKeep my number: https://app.example.test/settings/plan\n\nRaphael",
+      "messageId": "<87b549f730c526de8d932b8a37c7881435f4081d7a314c8faf3927698079cac6@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "number_release release_soon en",
+    "input": {
+      "template": "number_release",
+      "to": "owner@example.test",
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "subject": "release release_soon en",
+      "variables": {
+        "kind": "release_soon",
+        "locale": "en",
+        "firstName": "",
+        "number": "+1 416 555 0199",
+        "periodEnd": "October 9",
+        "releaseDate": "November 8",
+        "url": "https://app.example.test/settings/plan",
+        "senderName": "Raphael"
+      },
+      "idempotencyKey": "release:release_soon:en"
+    },
+    "sent": {
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "to": "owner@example.test",
+      "subject": "release release_soon en",
+      "text": "Hi,\n\nYour plan ended, and we keep numbers for 30 days. +1 416 555 0199 goes on November 8. Resubscribe before then to keep it.\n\nKeep my number: https://app.example.test/settings/plan\n\nRaphael",
+      "messageId": "<19c6d02c00afc427d1063b5e987f98e0be2ccc5754620e126f2be9471eabccdf@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "existing_account fr",
+    "input": {
+      "template": "existing_account",
+      "to": "owner@example.test",
+      "subject": "Votre compte LobbyStack existe déjà",
+      "variables": {
+        "locale": "fr",
+        "signInUrl": "https://app.example.test/fr/login",
+        "resetUrl": "https://app.example.test/fr/forgot-password"
+      },
+      "idempotencyKey": "existing:fr"
+    },
+    "sent": {
+      "from": "LobbyStack <no-reply@example.test>",
+      "replyTo": "support@example.test",
+      "to": "owner@example.test",
+      "subject": "Votre compte LobbyStack existe déjà",
+      "text": "Vous avez déjà un compte LobbyStack. Connectez-vous pour continuer : https://app.example.test/fr/login. Mot de passe oublié ? https://app.example.test/fr/forgot-password. Si vous n’avez pas demandé la création d’un compte, ignorez cet e-mail.",
+      "messageId": "<9167deea2c2c46a9d05ef80a108c775be75bd5d301892b5b213e328c1f38c2de@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "account_setup fr",
+    "input": {
+      "template": "account_setup",
+      "to": "owner@example.test",
+      "subject": "Créez votre compte LobbyStack",
+      "variables": {
+        "locale": "fr",
+        "email": "owner@example.test",
+        "url": "https://app.example.test/fr/signup"
+      },
+      "idempotencyKey": "setup:fr"
+    },
+    "sent": {
+      "from": "LobbyStack <no-reply@example.test>",
+      "replyTo": "support@example.test",
+      "to": "owner@example.test",
+      "subject": "Créez votre compte LobbyStack",
+      "text": "On vous a invité à créer un compte LobbyStack avec l’adresse owner@example.test. Créez-le ici, avec cette adresse : https://app.example.test/fr/signup. Si vous ne l’attendiez pas, ignorez cet e-mail.",
+      "messageId": "<2d310ea78de33ac014ca3ca9e71b5d71942daaa6debfb5939cb3119f4f221570@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "onboarding_followup fr",
+    "input": {
+      "template": "onboarding_followup",
+      "to": "owner@example.test",
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "subject": "Qu'avez-vous pensé de LobbyStack ?",
+      "variables": {
+        "locale": "fr",
+        "firstName": "Sam",
+        "businessName": "Acme Dental",
+        "senderName": "Raphael"
+      },
+      "idempotencyKey": "followup:fr"
+    },
+    "sent": {
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "to": "owner@example.test",
+      "subject": "Qu'avez-vous pensé de LobbyStack ?",
+      "text": "Bonjour Sam,\n\nJe suis Raphael, le fondateur de LobbyStack. Vous avez configuré une réceptionniste pour Acme Dental hier. Merci de l'avoir essayée.\n\nJ'aimerais savoir ce que vous en avez pensé :\n\n1. Avez-vous aimé l'expérience ? Qu'est-ce qui a bien fonctionné, et qu'est-ce qui clochait ?\n2. Que devrions-nous améliorer ?\n3. Comptez-vous l'utiliser pour vrai, avec votre propre numéro de téléphone ? Sinon, qu'est-ce qui vous en empêche ?\n\nVous pouvez répondre à ce courriel, et deux lignes suffiraient !\n\nMerci encore,\nRaphael\nFondateur, LobbyStack",
+      "messageId": "<e0fb2779c5d80a75cef52876f787a33f48bb71a5d77a1f51d95eb5cd00baf04c@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "number_trial day10 fr",
+    "input": {
+      "template": "number_trial",
+      "to": "owner@example.test",
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "subject": "trial day10 fr",
+      "variables": {
+        "kind": "day10",
+        "locale": "fr",
+        "firstName": "Sam",
+        "businessName": "Acme Dental",
+        "trialNumber": "+1 416 555 0199",
+        "forwardTo": "+1 416 555 0123",
+        "endDate": "October 9",
+        "calls": "3",
+        "url": "https://app.example.test/settings/plan",
+        "senderName": "Raphael"
+      },
+      "idempotencyKey": "trial:day10:fr"
+    },
+    "sent": {
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "to": "owner@example.test",
+      "subject": "trial day10 fr",
+      "text": "Bonjour Sam,\n\nVotre essai gratuit se termine le October 9.\n\nVotre réceptionniste a déjà répondu à 3 appels pour Acme Dental.\n\nÀ la fin de l'essai, votre réceptionniste cesse de répondre au +1 416 555 0199 et nous libérons le numéro. Choisissez un forfait pour le garder. Starter coûte 30 $ par mois pour 150 minutes.\n\nGarder mon numéro: https://app.example.test/settings/plan\n\nRaphael",
+      "messageId": "<73c230074b07702a4ff60a88453caa065812eae997865de30b7c07f08ea8deff@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "number_trial day13 fr",
+    "input": {
+      "template": "number_trial",
+      "to": "owner@example.test",
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "subject": "trial day13 fr",
+      "variables": {
+        "kind": "day13",
+        "locale": "fr",
+        "firstName": "Sam",
+        "businessName": "Acme Dental",
+        "trialNumber": "+1 416 555 0199",
+        "forwardTo": "+1 416 555 0123",
+        "endDate": "October 9",
+        "calls": "3",
+        "url": "https://app.example.test/settings/plan",
+        "senderName": "Raphael"
+      },
+      "idempotencyKey": "trial:day13:fr"
+    },
+    "sent": {
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "to": "owner@example.test",
+      "subject": "trial day13 fr",
+      "text": "Bonjour Sam,\n\nVotre essai gratuit se termine demain à minuit.\n\nVotre réceptionniste a déjà répondu à 3 appels pour Acme Dental.\n\nEnsuite, les appels au +1 416 555 0199 restent sans réponse et nous libérons le numéro. Gardez-le pour 30 $ par mois avec Starter.\n\nGarder mon numéro: https://app.example.test/settings/plan\n\nRaphael",
+      "messageId": "<97410c467078162fbc65689e23b6fd1c2f560a56d4aa3cab95242f1a8f79f611@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "number_trial ended fr",
+    "input": {
+      "template": "number_trial",
+      "to": "owner@example.test",
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "subject": "trial ended fr",
+      "variables": {
+        "kind": "ended",
+        "locale": "fr",
+        "firstName": "Sam",
+        "businessName": "Acme Dental",
+        "trialNumber": "+1 416 555 0199",
+        "forwardTo": "+1 416 555 0123",
+        "endDate": "October 9",
+        "calls": "3",
+        "url": "https://app.example.test/settings/plan",
+        "senderName": "Raphael"
+      },
+      "idempotencyKey": "trial:ended:fr"
+    },
+    "sent": {
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "to": "owner@example.test",
+      "subject": "trial ended fr",
+      "text": "Bonjour Sam,\n\nVotre essai de 14 jours s'est terminé hier, alors votre réceptionniste ne répond plus au +1 416 555 0199. Nous libérons le numéro. Abonnez-vous dès maintenant si vous voulez le garder. Starter coûte 30 $ par mois pour 150 minutes.\n\nGarder mon numéro: https://app.example.test/settings/plan\n\nRaphael",
+      "messageId": "<efa0c237844d8a4af495503109118154fd22742021eb4d8345e2e0d4e5b23433@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "number_trial minutes_out fr",
+    "input": {
+      "template": "number_trial",
+      "to": "owner@example.test",
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "subject": "trial minutes_out fr",
+      "variables": {
+        "kind": "minutes_out",
+        "locale": "fr",
+        "firstName": "Sam",
+        "businessName": "Acme Dental",
+        "trialNumber": "+1 416 555 0199",
+        "forwardTo": "+1 416 555 0123",
+        "endDate": "October 9",
+        "calls": "3",
+        "url": "https://app.example.test/settings/plan",
+        "senderName": "Raphael"
+      },
+      "idempotencyKey": "trial:minutes_out:fr"
+    },
+    "sent": {
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "to": "owner@example.test",
+      "subject": "trial minutes_out fr",
+      "text": "Bonjour Sam,\n\nAcme Dental a utilisé ses 30 minutes gratuites, alors votre réceptionniste ne répond plus au +1 416 555 0199. Les appels sonnent maintenant au +1 416 555 0123. Passez à un forfait payant pour retrouver votre réceptionniste. Starter coûte 30 $ par mois pour 150 minutes, et vous gardez votre numéro.\n\nRetrouver ma réceptionniste: https://app.example.test/settings/plan\n\nRaphael",
+      "messageId": "<bd3a1a547843163d485de93f51ff4dac0cfca05d7e82820e76bc96f79abdfe97@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "number_release canceled fr",
+    "input": {
+      "template": "number_release",
+      "to": "owner@example.test",
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "subject": "release canceled fr",
+      "variables": {
+        "kind": "canceled",
+        "locale": "fr",
+        "firstName": "",
+        "number": "+1 416 555 0199",
+        "periodEnd": "October 9",
+        "releaseDate": "November 8",
+        "url": "https://app.example.test/settings/plan",
+        "senderName": "Raphael"
+      },
+      "idempotencyKey": "release:canceled:fr"
+    },
+    "sent": {
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "to": "owner@example.test",
+      "subject": "release canceled fr",
+      "text": "Bonjour,\n\nVotre forfait reste actif jusqu'au October 9. Nous gardons ensuite le +1 416 555 0199 pendant 30 jours, jusqu'au November 8, puis nous le libérons. Réabonnez-vous d'ici là pour le garder.\n\nGarder mon numéro: https://app.example.test/settings/plan\n\nRaphael",
+      "messageId": "<e9f19a47b0dfdf307be90f3277e632d6263d696e9c4bbb4c80f4839780322bbf@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "number_release release_soon fr",
+    "input": {
+      "template": "number_release",
+      "to": "owner@example.test",
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "subject": "release release_soon fr",
+      "variables": {
+        "kind": "release_soon",
+        "locale": "fr",
+        "firstName": "",
+        "number": "+1 416 555 0199",
+        "periodEnd": "October 9",
+        "releaseDate": "November 8",
+        "url": "https://app.example.test/settings/plan",
+        "senderName": "Raphael"
+      },
+      "idempotencyKey": "release:release_soon:fr"
+    },
+    "sent": {
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "to": "owner@example.test",
+      "subject": "release release_soon fr",
+      "text": "Bonjour,\n\nVotre forfait est terminé, et nous gardons les numéros pendant 30 jours. Le +1 416 555 0199 sera libéré le November 8. Réabonnez-vous d'ici là pour le garder.\n\nGarder mon numéro: https://app.example.test/settings/plan\n\nRaphael",
+      "messageId": "<4307306a7e509a3ac0a6d357eaeb66f85e2cd3d4f1b11e82110fc4fa6ac1c166@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "existing_account es",
+    "input": {
+      "template": "existing_account",
+      "to": "owner@example.test",
+      "subject": "Ya tiene una cuenta de LobbyStack",
+      "variables": {
+        "locale": "es",
+        "signInUrl": "https://app.example.test/es/login",
+        "resetUrl": "https://app.example.test/es/forgot-password"
+      },
+      "idempotencyKey": "existing:es"
+    },
+    "sent": {
+      "from": "LobbyStack <no-reply@example.test>",
+      "replyTo": "support@example.test",
+      "to": "owner@example.test",
+      "subject": "Ya tiene una cuenta de LobbyStack",
+      "text": "Ya tiene una cuenta de LobbyStack. Inicie sesión para continuar: https://app.example.test/es/login. ¿Olvidó su contraseña? https://app.example.test/es/forgot-password. Si no solicitó una cuenta, ignore este correo.",
+      "messageId": "<7f77a90ace1d406c9c4d8457ffa0d73431ad8eb6f8f5e3dcfd3955eb45eed21b@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "account_setup es",
+    "input": {
+      "template": "account_setup",
+      "to": "owner@example.test",
+      "subject": "Cree su cuenta de LobbyStack",
+      "variables": {
+        "locale": "es",
+        "email": "owner@example.test",
+        "url": "https://app.example.test/es/signup"
+      },
+      "idempotencyKey": "setup:es"
+    },
+    "sent": {
+      "from": "LobbyStack <no-reply@example.test>",
+      "replyTo": "support@example.test",
+      "to": "owner@example.test",
+      "subject": "Cree su cuenta de LobbyStack",
+      "text": "Le invitaron a crear una cuenta de LobbyStack con la dirección owner@example.test. Créela aquí, con esta dirección: https://app.example.test/es/signup. Si no lo esperaba, ignore este correo.",
+      "messageId": "<977f846469edc92c02b815e20b2f8e5189067995f2deb0194ca5298784d6f3d0@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "onboarding_followup es",
+    "input": {
+      "template": "onboarding_followup",
+      "to": "owner@example.test",
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "subject": "¿Qué le pareció LobbyStack?",
+      "variables": {
+        "locale": "es",
+        "firstName": "Sam",
+        "businessName": "Acme Dental",
+        "senderName": "Raphael"
+      },
+      "idempotencyKey": "followup:es"
+    },
+    "sent": {
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "to": "owner@example.test",
+      "subject": "¿Qué le pareció LobbyStack?",
+      "text": "Hola, Sam:\n\nSoy Raphael, fundador de LobbyStack. Ayer configuró una recepcionista para Acme Dental. Gracias por probarla.\n\nMe encantaría saber qué le pareció:\n\n1. ¿Le gustó? ¿Qué funcionó bien y qué no le convenció?\n2. ¿Qué deberíamos mejorar?\n3. ¿Piensa usarla de verdad, con su propio número de teléfono? Si no, ¿qué se lo impide?\n\nPuede responder a este correo. ¡Con dos líneas basta!\n\nGracias de nuevo,\nRaphael\nFundador, LobbyStack",
+      "messageId": "<5e4ae7a4e3d19f6c9abafd1bdeba011ba9eb3582537eeb6e4230fe06d07fe859@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "number_trial day10 es",
+    "input": {
+      "template": "number_trial",
+      "to": "owner@example.test",
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "subject": "trial day10 es",
+      "variables": {
+        "kind": "day10",
+        "locale": "es",
+        "firstName": "Sam",
+        "businessName": "Acme Dental",
+        "trialNumber": "+1 416 555 0199",
+        "forwardTo": "+1 416 555 0123",
+        "endDate": "October 9",
+        "calls": "3",
+        "url": "https://app.example.test/settings/plan",
+        "senderName": "Raphael"
+      },
+      "idempotencyKey": "trial:day10:es"
+    },
+    "sent": {
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "to": "owner@example.test",
+      "subject": "trial day10 es",
+      "text": "Hola, Sam:\n\nSu prueba gratuita termina el October 9.\n\nSu recepcionista ya contestó 3 llamadas para Acme Dental.\n\nCuando termine la prueba, su recepcionista dejará de contestar el +1 416 555 0199 y liberaremos el número. Elija un plan para conservarlo. Starter cuesta 30 USD al mes por 150 minutos.\n\nConservar mi número: https://app.example.test/settings/plan\n\nRaphael",
+      "messageId": "<6cc585bfa90d765178432eb79ac54f1b5c89e080390b6588b87569053605ce74@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "number_trial day13 es",
+    "input": {
+      "template": "number_trial",
+      "to": "owner@example.test",
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "subject": "trial day13 es",
+      "variables": {
+        "kind": "day13",
+        "locale": "es",
+        "firstName": "Sam",
+        "businessName": "Acme Dental",
+        "trialNumber": "+1 416 555 0199",
+        "forwardTo": "+1 416 555 0123",
+        "endDate": "October 9",
+        "calls": "3",
+        "url": "https://app.example.test/settings/plan",
+        "senderName": "Raphael"
+      },
+      "idempotencyKey": "trial:day13:es"
+    },
+    "sent": {
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "to": "owner@example.test",
+      "subject": "trial day13 es",
+      "text": "Hola, Sam:\n\nSu prueba gratuita termina mañana a medianoche.\n\nSu recepcionista ya contestó 3 llamadas para Acme Dental.\n\nDespués, las llamadas al +1 416 555 0199 quedarán sin respuesta y liberaremos el número. Consérvelo por 30 USD al mes con Starter.\n\nConservar mi número: https://app.example.test/settings/plan\n\nRaphael",
+      "messageId": "<c1af8bfc9453c271c2f04229ed61d48c8b25d2f6007180c7762f2f7deaf4938d@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "number_trial ended es",
+    "input": {
+      "template": "number_trial",
+      "to": "owner@example.test",
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "subject": "trial ended es",
+      "variables": {
+        "kind": "ended",
+        "locale": "es",
+        "firstName": "Sam",
+        "businessName": "Acme Dental",
+        "trialNumber": "+1 416 555 0199",
+        "forwardTo": "+1 416 555 0123",
+        "endDate": "October 9",
+        "calls": "3",
+        "url": "https://app.example.test/settings/plan",
+        "senderName": "Raphael"
+      },
+      "idempotencyKey": "trial:ended:es"
+    },
+    "sent": {
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "to": "owner@example.test",
+      "subject": "trial ended es",
+      "text": "Hola, Sam:\n\nSu prueba de 14 días terminó ayer, así que su recepcionista dejó de contestar el +1 416 555 0199. Estamos liberando el número. Suscríbase ahora si quiere conservarlo. Starter cuesta 30 USD al mes por 150 minutos.\n\nConservar mi número: https://app.example.test/settings/plan\n\nRaphael",
+      "messageId": "<ed2b79ff244a75b446f0e56a41a97dd519de8ec9dd72d0294c753afd6ccf411a@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "number_trial minutes_out es",
+    "input": {
+      "template": "number_trial",
+      "to": "owner@example.test",
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "subject": "trial minutes_out es",
+      "variables": {
+        "kind": "minutes_out",
+        "locale": "es",
+        "firstName": "Sam",
+        "businessName": "Acme Dental",
+        "trialNumber": "+1 416 555 0199",
+        "forwardTo": "+1 416 555 0123",
+        "endDate": "October 9",
+        "calls": "3",
+        "url": "https://app.example.test/settings/plan",
+        "senderName": "Raphael"
+      },
+      "idempotencyKey": "trial:minutes_out:es"
+    },
+    "sent": {
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "to": "owner@example.test",
+      "subject": "trial minutes_out es",
+      "text": "Hola, Sam:\n\nAcme Dental usó sus 30 minutos gratuitos, así que su recepcionista dejó de contestar el +1 416 555 0199. Las llamadas ahora suenan en el +1 416 555 0123. Mejore su plan ahora para recuperar a su recepcionista. Starter cuesta 30 USD al mes por 150 minutos, y conserva su número.\n\nRecuperar a mi recepcionista: https://app.example.test/settings/plan\n\nRaphael",
+      "messageId": "<cd3a19fda62c75396da520b4838daa91f1a3d70da4c59ca9225df5bba20bc573@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "number_release canceled es",
+    "input": {
+      "template": "number_release",
+      "to": "owner@example.test",
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "subject": "release canceled es",
+      "variables": {
+        "kind": "canceled",
+        "locale": "es",
+        "firstName": "",
+        "number": "+1 416 555 0199",
+        "periodEnd": "October 9",
+        "releaseDate": "November 8",
+        "url": "https://app.example.test/settings/plan",
+        "senderName": "Raphael"
+      },
+      "idempotencyKey": "release:canceled:es"
+    },
+    "sent": {
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "to": "owner@example.test",
+      "subject": "release canceled es",
+      "text": "Hola:\n\nSu plan sigue activo hasta el October 9. Después conservamos el +1 416 555 0199 durante 30 días, hasta el November 8, y luego lo liberamos. Vuelva a suscribirse antes para conservarlo.\n\nConservar mi número: https://app.example.test/settings/plan\n\nRaphael",
+      "messageId": "<037f1b89fa07d337d0081d2737a32e6b7977b2fd4f0ccffacc4c089ae7390123@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "number_release release_soon es",
+    "input": {
+      "template": "number_release",
+      "to": "owner@example.test",
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "subject": "release release_soon es",
+      "variables": {
+        "kind": "release_soon",
+        "locale": "es",
+        "firstName": "",
+        "number": "+1 416 555 0199",
+        "periodEnd": "October 9",
+        "releaseDate": "November 8",
+        "url": "https://app.example.test/settings/plan",
+        "senderName": "Raphael"
+      },
+      "idempotencyKey": "release:release_soon:es"
+    },
+    "sent": {
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "to": "owner@example.test",
+      "subject": "release release_soon es",
+      "text": "Hola:\n\nSu plan terminó, y conservamos los números durante 30 días. El +1 416 555 0199 se liberará el November 8. Vuelva a suscribirse antes para conservarlo.\n\nConservar mi número: https://app.example.test/settings/plan\n\nRaphael",
+      "messageId": "<796f80e66adc12348cda7f0a608e3dd815c99abb55516955b9d83bf1ea045187@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "existing_account sr",
+    "input": {
+      "template": "existing_account",
+      "to": "owner@example.test",
+      "subject": "Već imate LobbyStack nalog",
+      "variables": {
+        "locale": "sr",
+        "signInUrl": "https://app.example.test/sr/login",
+        "resetUrl": "https://app.example.test/sr/forgot-password"
+      },
+      "idempotencyKey": "existing:sr"
+    },
+    "sent": {
+      "from": "LobbyStack <no-reply@example.test>",
+      "replyTo": "support@example.test",
+      "to": "owner@example.test",
+      "subject": "Već imate LobbyStack nalog",
+      "text": "Već imate LobbyStack nalog. Prijavite se da biste nastavili: https://app.example.test/sr/login. Zaboravili ste lozinku? https://app.example.test/sr/forgot-password. Ako niste zatražili nalog, zanemarite ovaj imejl.",
+      "messageId": "<919047515b41194ba8d1fb76434bc6d6c9621b17f82138cae661d4f3f0ccebd1@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "account_setup sr",
+    "input": {
+      "template": "account_setup",
+      "to": "owner@example.test",
+      "subject": "Napravite svoj LobbyStack nalog",
+      "variables": {
+        "locale": "sr",
+        "email": "owner@example.test",
+        "url": "https://app.example.test/sr/signup"
+      },
+      "idempotencyKey": "setup:sr"
+    },
+    "sent": {
+      "from": "LobbyStack <no-reply@example.test>",
+      "replyTo": "support@example.test",
+      "to": "owner@example.test",
+      "subject": "Napravite svoj LobbyStack nalog",
+      "text": "Pozvani ste da napravite LobbyStack nalog sa adresom owner@example.test. Napravite ga ovde, sa ovom adresom: https://app.example.test/sr/signup. Ako ovo niste očekivali, zanemarite ovaj imejl.",
+      "messageId": "<e77dbbdd96f7aa21486e35f53a4d6f367e202a9fce441bebba8edb0eaa914078@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "onboarding_followup sr",
+    "input": {
+      "template": "onboarding_followup",
+      "to": "owner@example.test",
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "subject": "Kako Vam se dopao LobbyStack?",
+      "variables": {
+        "locale": "sr",
+        "firstName": "Sam",
+        "businessName": "Acme Dental",
+        "senderName": "Raphael"
+      },
+      "idempotencyKey": "followup:sr"
+    },
+    "sent": {
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "to": "owner@example.test",
+      "subject": "Kako Vam se dopao LobbyStack?",
+      "text": "Zdravo, Sam,\n\nJa sam Raphael, osnivač LobbyStacka. Juče ste podesili recepcionera za Acme Dental. Hvala što ste ga isprobali.\n\nVoleo bih da čujem Vaše utiske:\n\n1. Da li Vam se dopao? Šta je dobro radilo, a šta Vam nije delovalo kako treba?\n2. Šta bi trebalo da poboljšamo?\n3. Da li planirate da ga zaista koristite, sa svojim brojem telefona? Ako ne, šta Vas sprečava?\n\nMožete da odgovorite na ovaj imejl, i dva reda su sasvim dovoljna!\n\nHvala još jednom,\nRaphael\nOsnivač, LobbyStack",
+      "messageId": "<906ce8c5cd55d6638e70670f47bc19c86242a9c7381f955bf3736f9616e44465@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "number_trial day10 sr",
+    "input": {
+      "template": "number_trial",
+      "to": "owner@example.test",
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "subject": "trial day10 sr",
+      "variables": {
+        "kind": "day10",
+        "locale": "sr",
+        "firstName": "Sam",
+        "businessName": "Acme Dental",
+        "trialNumber": "+1 416 555 0199",
+        "forwardTo": "+1 416 555 0123",
+        "endDate": "October 9",
+        "calls": "3",
+        "url": "https://app.example.test/settings/plan",
+        "senderName": "Raphael"
+      },
+      "idempotencyKey": "trial:day10:sr"
+    },
+    "sent": {
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "to": "owner@example.test",
+      "subject": "trial day10 sr",
+      "text": "Zdravo, Sam,\n\nVaša besplatna proba ističe October 9.\n\nVaš recepcioner je već odgovorio na 3 poziva za Acme Dental.\n\nKada proba istekne, recepcioner prestaje da odgovara na +1 416 555 0199 i mi oslobađamo broj. Izaberite paket da biste ga zadržali. Starter košta 30 USD mesečno za 150 minuta.\n\nZadrži moj broj: https://app.example.test/settings/plan\n\nRaphael",
+      "messageId": "<7d9b37870e9f9dc00d3e38c9a9afb9a4e76d51054ac73461b8f41d6fe70f07d4@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "number_trial day13 sr",
+    "input": {
+      "template": "number_trial",
+      "to": "owner@example.test",
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "subject": "trial day13 sr",
+      "variables": {
+        "kind": "day13",
+        "locale": "sr",
+        "firstName": "Sam",
+        "businessName": "Acme Dental",
+        "trialNumber": "+1 416 555 0199",
+        "forwardTo": "+1 416 555 0123",
+        "endDate": "October 9",
+        "calls": "3",
+        "url": "https://app.example.test/settings/plan",
+        "senderName": "Raphael"
+      },
+      "idempotencyKey": "trial:day13:sr"
+    },
+    "sent": {
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "to": "owner@example.test",
+      "subject": "trial day13 sr",
+      "text": "Zdravo, Sam,\n\nVaša besplatna proba ističe sutra u ponoć.\n\nVaš recepcioner je već odgovorio na 3 poziva za Acme Dental.\n\nNakon toga, pozivi na +1 416 555 0199 ostaju bez odgovora i mi oslobađamo broj. Zadržite ga za 30 USD mesečno uz Starter.\n\nZadrži moj broj: https://app.example.test/settings/plan\n\nRaphael",
+      "messageId": "<30dbbf8630f2b432011ba956b4892d34c3ca26e56dbff8a35d9ce9f9ad794b45@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "number_trial ended sr",
+    "input": {
+      "template": "number_trial",
+      "to": "owner@example.test",
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "subject": "trial ended sr",
+      "variables": {
+        "kind": "ended",
+        "locale": "sr",
+        "firstName": "Sam",
+        "businessName": "Acme Dental",
+        "trialNumber": "+1 416 555 0199",
+        "forwardTo": "+1 416 555 0123",
+        "endDate": "October 9",
+        "calls": "3",
+        "url": "https://app.example.test/settings/plan",
+        "senderName": "Raphael"
+      },
+      "idempotencyKey": "trial:ended:sr"
+    },
+    "sent": {
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "to": "owner@example.test",
+      "subject": "trial ended sr",
+      "text": "Zdravo, Sam,\n\nVaša proba od 14 dana istekla je juče, pa recepcioner više ne odgovara na +1 416 555 0199. Oslobađamo broj. Pretplatite se sada ako želite da ga zadržite. Starter košta 30 USD mesečno za 150 minuta.\n\nZadrži moj broj: https://app.example.test/settings/plan\n\nRaphael",
+      "messageId": "<2cab05625847a960d0609d019e43ee4630c11ec603227d593bdd1e122fc082fa@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "number_trial minutes_out sr",
+    "input": {
+      "template": "number_trial",
+      "to": "owner@example.test",
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "subject": "trial minutes_out sr",
+      "variables": {
+        "kind": "minutes_out",
+        "locale": "sr",
+        "firstName": "Sam",
+        "businessName": "Acme Dental",
+        "trialNumber": "+1 416 555 0199",
+        "forwardTo": "+1 416 555 0123",
+        "endDate": "October 9",
+        "calls": "3",
+        "url": "https://app.example.test/settings/plan",
+        "senderName": "Raphael"
+      },
+      "idempotencyKey": "trial:minutes_out:sr"
+    },
+    "sent": {
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "to": "owner@example.test",
+      "subject": "trial minutes_out sr",
+      "text": "Zdravo, Sam,\n\nAcme Dental je potrošio 30 besplatnih minuta, pa recepcioner više ne odgovara na +1 416 555 0199. Pozivi sada zvone na +1 416 555 0123. Pređite na plaćeni paket da biste vratili recepcionera. Starter košta 30 USD mesečno za 150 minuta, a broj ostaje Vaš.\n\nVrati mog recepcionera: https://app.example.test/settings/plan\n\nRaphael",
+      "messageId": "<9cfe6b34899badc6129307a718baad458704be8e538d48ed576ac9de8c1b9818@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "number_release canceled sr",
+    "input": {
+      "template": "number_release",
+      "to": "owner@example.test",
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "subject": "release canceled sr",
+      "variables": {
+        "kind": "canceled",
+        "locale": "sr",
+        "firstName": "",
+        "number": "+1 416 555 0199",
+        "periodEnd": "October 9",
+        "releaseDate": "November 8",
+        "url": "https://app.example.test/settings/plan",
+        "senderName": "Raphael"
+      },
+      "idempotencyKey": "release:canceled:sr"
+    },
+    "sent": {
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "to": "owner@example.test",
+      "subject": "release canceled sr",
+      "text": "Zdravo,\n\nVaš paket je aktivan do October 9. Nakon toga čuvamo broj +1 416 555 0199 još 30 dana, do November 8, a zatim ga oslobađamo. Obnovite pretplatu do tada da biste ga zadržali.\n\nZadrži moj broj: https://app.example.test/settings/plan\n\nRaphael",
+      "messageId": "<01962c6a75ae0c2a038cf063b8a95f13914f8e93116a6b80db9c4b3ed75886a4@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "number_release release_soon sr",
+    "input": {
+      "template": "number_release",
+      "to": "owner@example.test",
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "subject": "release release_soon sr",
+      "variables": {
+        "kind": "release_soon",
+        "locale": "sr",
+        "firstName": "",
+        "number": "+1 416 555 0199",
+        "periodEnd": "October 9",
+        "releaseDate": "November 8",
+        "url": "https://app.example.test/settings/plan",
+        "senderName": "Raphael"
+      },
+      "idempotencyKey": "release:release_soon:sr"
+    },
+    "sent": {
+      "from": "Raphael from LobbyStack <raphael@lobbystack.com>",
+      "to": "owner@example.test",
+      "subject": "release release_soon sr",
+      "text": "Zdravo,\n\nVaš paket je istekao, a brojeve čuvamo 30 dana. Broj +1 416 555 0199 oslobađamo November 8. Obnovite pretplatu do tada da biste ga zadržali.\n\nZadrži moj broj: https://app.example.test/settings/plan\n\nRaphael",
+      "messageId": "<e05e1daf8ce2f1bfff7543e0bba9508327c6c2c64ea3da13575ef4921cf37498@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "onboarding_followup en without a first name",
+    "input": {
+      "template": "onboarding_followup",
+      "to": "owner@example.test",
+      "from": "Raphael <raphael@lobbystack.com>",
+      "subject": "How'd you like LobbyStack?",
+      "variables": {
+        "locale": "en",
+        "firstName": "",
+        "businessName": "Acme Dental",
+        "senderName": "Raphael"
+      }
+    },
+    "sent": {
+      "from": "Raphael <raphael@lobbystack.com>",
+      "to": "owner@example.test",
+      "subject": "How'd you like LobbyStack?",
+      "text": "Hi,\n\nI'm Raphael, the founder of LobbyStack. You set up a receptionist for Acme Dental yesterday. Thanks for giving it a try.\n\nI'd love to hear what you thought:\n\n1. Did you like it? What worked, and what felt off?\n2. What should we improve?\n3. Do you plan to use it for real, with your own phone number? If not, what's stopping you?\n\nYou can reply to this email, and two lines would be plenty!\n\nThanks again,\nRaphael\nFounder, LobbyStack"
+    }
+  },
+  {
+    "name": "number_trial day10 en with one call",
+    "input": {
+      "template": "number_trial",
+      "to": "owner@example.test",
+      "subject": "trial",
+      "variables": {
+        "kind": "day10",
+        "locale": "en",
+        "firstName": "",
+        "businessName": "Acme Dental",
+        "trialNumber": "+1 416 555 0199",
+        "forwardTo": "",
+        "endDate": "October 9",
+        "calls": "1",
+        "url": "https://app.example.test/settings/plan"
+      }
+    },
+    "sent": {
+      "from": "LobbyStack <no-reply@example.test>",
+      "replyTo": "support@example.test",
+      "to": "owner@example.test",
+      "subject": "trial",
+      "text": "Hi,\n\nYour free trial ends on October 9.\n\nSo far your receptionist has answered 1 call for Acme Dental.\n\nWhen it ends, your receptionist stops answering +1 416 555 0199 and we release the number. Choose a plan to keep it. Starter is $30 a month for 150 minutes.\n\nKeep my number: https://app.example.test/settings/plan\n\nLobbyStack"
+    }
+  },
+  {
+    "name": "number_trial day13 fr with no calls",
+    "input": {
+      "template": "number_trial",
+      "to": "owner@example.test",
+      "subject": "trial",
+      "variables": {
+        "kind": "day13",
+        "locale": "fr",
+        "firstName": "",
+        "businessName": "Acme Dental",
+        "trialNumber": "+1 416 555 0199",
+        "forwardTo": "",
+        "endDate": "",
+        "calls": "0",
+        "url": "https://app.example.test/settings/plan"
+      }
+    },
+    "sent": {
+      "from": "LobbyStack <no-reply@example.test>",
+      "replyTo": "support@example.test",
+      "to": "owner@example.test",
+      "subject": "trial",
+      "text": "Bonjour,\n\nVotre essai gratuit se termine demain à minuit.\n\nEnsuite, les appels au +1 416 555 0199 restent sans réponse et nous libérons le numéro. Gardez-le pour 30 $ par mois avec Starter.\n\nGarder mon numéro: https://app.example.test/settings/plan\n\nLobbyStack"
+    }
+  },
+  {
+    "name": "number_release without a sender name",
+    "input": {
+      "template": "number_release",
+      "to": "owner@example.test",
+      "subject": "release",
+      "variables": {
+        "kind": "release_soon",
+        "locale": "en",
+        "number": "+1 416 555 0199",
+        "periodEnd": "",
+        "releaseDate": "November 8",
+        "url": "https://app.example.test/settings/plan"
+      }
+    },
+    "sent": {
+      "from": "LobbyStack <no-reply@example.test>",
+      "replyTo": "support@example.test",
+      "to": "owner@example.test",
+      "subject": "release",
+      "text": "Hi,\n\nYour plan ended, and we keep numbers for 30 days. +1 416 555 0199 goes on November 8. Resubscribe before then to keep it.\n\nKeep my number: https://app.example.test/settings/plan\n\nLobbyStack"
+    }
+  },
+  {
+    "name": "verify_email code",
+    "input": {
+      "template": "verify_email",
+      "to": "owner@example.test",
+      "subject": "Your LobbyStack verification code",
+      "variables": {
+        "code": "123456"
+      },
+      "idempotencyKey": "auth-email:verification-code:user:issuance"
+    },
+    "sent": {
+      "from": "LobbyStack <no-reply@example.test>",
+      "replyTo": "support@example.test",
+      "to": "owner@example.test",
+      "subject": "Your LobbyStack verification code",
+      "text": "Your LobbyStack email verification code is: 123456. It expires in 10 minutes.",
+      "html": "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"utf-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n    <meta name=\"color-scheme\" content=\"light\" />\n    <meta name=\"supported-color-schemes\" content=\"light\" />\n    <title>Your LobbyStack verification code</title>\n    <style>\n      :root { color-scheme: light; }\n      @media only screen and (max-width: 620px) {\n        .email-container { width: 100% !important; padding: 24px 16px !important; }\n      }\n    </style>\n  </head>\n  <body style=\"margin:0;padding:0;background-color:#F3F4F6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;\">\n    <table role=\"presentation\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"100%\">\n      <tr>\n        <td align=\"center\" style=\"padding:48px 16px;\">\n          <table role=\"presentation\" class=\"email-container\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"600\" style=\"width:600px;max-width:600px;background-color:#FFFFFF;border-radius:24px;padding:48px;\">\n            <tr>\n              <td align=\"center\" style=\"padding-bottom:32px;\">\n                <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"48\" height=\"48\" viewBox=\"-30 -30 278 291\" role=\"img\" aria-label=\"LobbyStack\"><g transform=\"translate(0.000000,231.000000) scale(0.100000,-0.100000)\" fill=\"#0B0B0D\" stroke=\"none\"><path d=\"M968 2280 c-42 -16 -195 -79 -340 -141 -144 -62 -317 -133 -383 -159 -90 -36 -130 -58 -162 -88 -85 -82 -78 2 -81 -976 -3 -968 -6 -916 63 -916 19 0 54 9 77 20 24 10 147 62 273 114 338 138 342 140 365 178 20 32 20 48 20 763 0 702 1 731 19 761 12 19 34 37 54 43 33 11 54 4 398 -133 267 -107 370 -152 387 -171 26 -31 23 42 25 -725 l2 -673 c0 -50 8 -86 19 -86 11 -12 31 -21 47 -21 24 0 296 106 358 140 11 5 30 27 43 47 l23 38 l0 654 0 836 -27 46 c-48 81 -77 98 -404 233 -170 71 -371 155 -447 187 -165 71 -208 75 -329 29z\"/></g></svg>\n              </td>\n            </tr>\n            <tr>\n              <td>\n                <h1 style=\"margin:0 0 24px;font-size:28px;font-weight:600;line-height:1.25;color:#0B0B0D;text-align:center;\">Verify your email address</h1><p style=\"margin:0 0 24px;font-size:16px;line-height:1.6;color:#3D3D3D;text-align:center;\">Enter this verification code to finish setting up your LobbyStack account.</p><p style=\"margin:0 0 24px;padding:16px 24px;background-color:#F3F4F6;border-radius:16px;font-size:32px;font-weight:600;line-height:1.25;letter-spacing:8px;color:#0B0B0D;text-align:center;\">123456</p><p style=\"margin:0 0 12px;font-size:14px;line-height:1.5;color:#6B7280;text-align:center;\">This code expires in 10 minutes.</p><p style=\"margin:0;font-size:14px;line-height:1.5;color:#6B7280;text-align:center;\">If you did not request this code, you can safely ignore this email.</p>\n              </td>\n            </tr>\n          </table>\n        </td>\n      </tr>\n    </table>\n  </body>\n</html>",
+      "messageId": "<ee180a837fcaf8b2db977cfc83217acecf57cf86f7853ec0233aa37c88a5fd79@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "verify_email escaped code",
+    "input": {
+      "template": "verify_email",
+      "to": "owner@example.test",
+      "subject": "Verify <email>",
+      "variables": {
+        "code": "12<345"
+      }
+    },
+    "sent": {
+      "from": "LobbyStack <no-reply@example.test>",
+      "replyTo": "support@example.test",
+      "to": "owner@example.test",
+      "subject": "Verify <email>",
+      "text": "Your LobbyStack email verification code is: 12<345. It expires in 10 minutes.",
+      "html": "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"utf-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n    <meta name=\"color-scheme\" content=\"light\" />\n    <meta name=\"supported-color-schemes\" content=\"light\" />\n    <title>Verify &lt;email&gt;</title>\n    <style>\n      :root { color-scheme: light; }\n      @media only screen and (max-width: 620px) {\n        .email-container { width: 100% !important; padding: 24px 16px !important; }\n      }\n    </style>\n  </head>\n  <body style=\"margin:0;padding:0;background-color:#F3F4F6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;\">\n    <table role=\"presentation\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"100%\">\n      <tr>\n        <td align=\"center\" style=\"padding:48px 16px;\">\n          <table role=\"presentation\" class=\"email-container\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"600\" style=\"width:600px;max-width:600px;background-color:#FFFFFF;border-radius:24px;padding:48px;\">\n            <tr>\n              <td align=\"center\" style=\"padding-bottom:32px;\">\n                <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"48\" height=\"48\" viewBox=\"-30 -30 278 291\" role=\"img\" aria-label=\"LobbyStack\"><g transform=\"translate(0.000000,231.000000) scale(0.100000,-0.100000)\" fill=\"#0B0B0D\" stroke=\"none\"><path d=\"M968 2280 c-42 -16 -195 -79 -340 -141 -144 -62 -317 -133 -383 -159 -90 -36 -130 -58 -162 -88 -85 -82 -78 2 -81 -976 -3 -968 -6 -916 63 -916 19 0 54 9 77 20 24 10 147 62 273 114 338 138 342 140 365 178 20 32 20 48 20 763 0 702 1 731 19 761 12 19 34 37 54 43 33 11 54 4 398 -133 267 -107 370 -152 387 -171 26 -31 23 42 25 -725 l2 -673 c0 -50 8 -86 19 -86 11 -12 31 -21 47 -21 24 0 296 106 358 140 11 5 30 27 43 47 l23 38 l0 654 0 836 -27 46 c-48 81 -77 98 -404 233 -170 71 -371 155 -447 187 -165 71 -208 75 -329 29z\"/></g></svg>\n              </td>\n            </tr>\n            <tr>\n              <td>\n                <h1 style=\"margin:0 0 24px;font-size:28px;font-weight:600;line-height:1.25;color:#0B0B0D;text-align:center;\">Verify your email address</h1><p style=\"margin:0 0 24px;font-size:16px;line-height:1.6;color:#3D3D3D;text-align:center;\">Enter this verification code to finish setting up your LobbyStack account.</p><p style=\"margin:0 0 24px;padding:16px 24px;background-color:#F3F4F6;border-radius:16px;font-size:32px;font-weight:600;line-height:1.25;letter-spacing:8px;color:#0B0B0D;text-align:center;\">12&lt;345</p><p style=\"margin:0 0 12px;font-size:14px;line-height:1.5;color:#6B7280;text-align:center;\">This code expires in 10 minutes.</p><p style=\"margin:0;font-size:14px;line-height:1.5;color:#6B7280;text-align:center;\">If you did not request this code, you can safely ignore this email.</p>\n              </td>\n            </tr>\n          </table>\n        </td>\n      </tr>\n    </table>\n  </body>\n</html>"
+    }
+  },
+  {
+    "name": "verify_email link",
+    "input": {
+      "template": "verify_email",
+      "to": "owner@example.test",
+      "subject": "Verify your LobbyStack email",
+      "variables": {
+        "url": "https://app.example.test/en/confirm-email-change?token=t&email=owner%40example.test"
+      },
+      "idempotencyKey": "auth-email:verification:user:hash"
+    },
+    "sent": {
+      "from": "LobbyStack <no-reply@example.test>",
+      "replyTo": "support@example.test",
+      "to": "owner@example.test",
+      "subject": "Verify your LobbyStack email",
+      "text": "Verify your LobbyStack email address using this link: https://app.example.test/en/confirm-email-change?token=t&email=owner%40example.test",
+      "messageId": "<a7be24dd14c9a4cc9f6c8e55eb8156f3747c25bfbb579613a539e36220aac887@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "verify_email email change link",
+    "input": {
+      "template": "verify_email",
+      "to": "owner@example.test",
+      "subject": "Confirm your LobbyStack email change",
+      "variables": {
+        "url": "https://app.example.test/api/auth/verify-email?token=t"
+      }
+    },
+    "sent": {
+      "from": "LobbyStack <no-reply@example.test>",
+      "replyTo": "support@example.test",
+      "to": "owner@example.test",
+      "subject": "Confirm your LobbyStack email change",
+      "text": "Verify your LobbyStack email address using this link: https://app.example.test/api/auth/verify-email?token=t"
+    }
+  },
+  {
+    "name": "password_reset code",
+    "input": {
+      "template": "password_reset",
+      "to": "owner@example.test",
+      "subject": "Reset your LobbyStack password",
+      "variables": {
+        "code": "654321"
+      },
+      "idempotencyKey": "auth-reset-code:user:x"
+    },
+    "sent": {
+      "from": "LobbyStack <no-reply@example.test>",
+      "replyTo": "support@example.test",
+      "to": "owner@example.test",
+      "subject": "Reset your LobbyStack password",
+      "text": "Your LobbyStack password reset code is: 654321. It expires in 10 minutes.",
+      "messageId": "<bf0afb67a72684cfd016a14fbedc04b59a465a974a532c745dbfe8e8621b0b5a@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "password_reset link",
+    "input": {
+      "template": "password_reset",
+      "to": "owner@example.test",
+      "subject": "Reset your LobbyStack password",
+      "variables": {
+        "url": "https://app.example.test/reset-password?token=t"
+      }
+    },
+    "sent": {
+      "from": "LobbyStack <no-reply@example.test>",
+      "replyTo": "support@example.test",
+      "to": "owner@example.test",
+      "subject": "Reset your LobbyStack password",
+      "text": "Reset your LobbyStack password using this link: https://app.example.test/reset-password?token=t"
+    }
+  },
+  {
+    "name": "invitation",
+    "input": {
+      "template": "invitation",
+      "to": "teammate@example.test",
+      "subject": "LobbyStack notification",
+      "variables": {
+        "message": "",
+        "url": "https://app.example.test/accept-invite?token=abc"
+      },
+      "idempotencyKey": "invitation:x:send"
+    },
+    "sent": {
+      "from": "LobbyStack <no-reply@example.test>",
+      "replyTo": "support@example.test",
+      "to": "teammate@example.test",
+      "subject": "LobbyStack notification",
+      "text": "You have been invited to join LobbyStack. Accept the invitation here: https://app.example.test/accept-invite?token=abc",
+      "messageId": "<1af8bd6e10e45eba10f5685bf73955849635fcb851f542157d20edd8bb36a8c6@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "operator_alert",
+    "input": {
+      "template": "operator_alert",
+      "to": "operator@example.test",
+      "subject": "New message",
+      "variables": {
+        "message": "A caller left a message."
+      },
+      "idempotencyKey": "operator-notification:delivery-1"
+    },
+    "sent": {
+      "from": "LobbyStack <no-reply@example.test>",
+      "replyTo": "support@example.test",
+      "to": "operator@example.test",
+      "subject": "New message",
+      "text": "A caller left a message.",
+      "messageId": "<ffaa0eb559fa4b4342455e06287d92175fe6c92c179ab79487a8106c851c3882@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "operator_alert without a message",
+    "input": {
+      "template": "operator_alert",
+      "to": "operator@example.test",
+      "subject": "Alert",
+      "variables": {}
+    },
+    "sent": {
+      "from": "LobbyStack <no-reply@example.test>",
+      "replyTo": "support@example.test",
+      "to": "operator@example.test",
+      "subject": "Alert",
+      "text": "LobbyStack operator notification"
+    }
+  },
+  {
+    "name": "feedback_submission",
+    "input": {
+      "template": "feedback_submission",
+      "to": "feedback@example.test",
+      "subject": "LobbyStack feedback from Acme Dental",
+      "variables": {
+        "body": "The calendar page is slow."
+      },
+      "idempotencyKey": "feedback:x:email"
+    },
+    "sent": {
+      "from": "LobbyStack <no-reply@example.test>",
+      "replyTo": "support@example.test",
+      "to": "feedback@example.test",
+      "subject": "LobbyStack feedback from Acme Dental",
+      "text": "The calendar page is slow.",
+      "messageId": "<6988d499ed48df6fbcf928655abb006adc079b4f99df48aefa37054807194d01@mail.lobbystack.internal>"
+    }
+  },
+  {
+    "name": "feedback_submission without a body",
+    "input": {
+      "template": "feedback_submission",
+      "to": "feedback@example.test",
+      "subject": "Feedback",
+      "variables": {}
+    },
+    "sent": {
+      "from": "LobbyStack <no-reply@example.test>",
+      "replyTo": "support@example.test",
+      "to": "feedback@example.test",
+      "subject": "Feedback",
+      "text": "LobbyStack dashboard feedback"
+    }
+  }
+]

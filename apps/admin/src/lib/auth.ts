@@ -11,8 +11,9 @@ import { assertDatabaseRole, enqueueOutbox, withBusinessTransaction } from "@lob
 import { accounts, sessions, users, verifications } from "@lobbystack/db";
 
 import { configuredAppOrigins } from "./app-origins";
+import { loadRequestEmailBrand } from "./branding";
 import { getDatabase } from "./databases";
-import { SUPPORTED_LOCALES, resolveLocale, type SupportedLocale } from "./locale";
+import { SUPPORTED_LOCALES, resolveLocale } from "./locale";
 import { ensureMcpResource, isDisabledOAuthEndpoint, mcpOAuthPlugins, needsMcpResource, oauthProviderSchema, registrationWithApplicationType } from "./oauth-provider";
 import { hashReplacementPassword, isLegacyScryptHash, meetsPasswordRequirements, verifyLegacyPassword } from "./password";
 import { readyRedis } from "./redis";
@@ -38,13 +39,6 @@ function assertAuthDatabaseRoles(): Promise<void> {
   );
   return databaseRolesReady;
 }
-
-const EXISTING_ACCOUNT_SUBJECTS: Record<SupportedLocale, string> = {
-  en: "You already have a LobbyStack account",
-  fr: "Votre compte LobbyStack existe déjà",
-  es: "Ya tiene una cuenta de LobbyStack",
-  sr: "Već imate LobbyStack nalog",
-};
 
 const enabledEmailOtpPaths = new Set([
   "/email-otp/request-password-reset",
@@ -109,10 +103,15 @@ function getAuthSecondaryStorage() {
   };
 }
 
-/** Queues one auth email through the transactional outbox. */
+/**
+ * Queues one auth email through the transactional outbox, under the brand of
+ * the request that asked for it. The worker writes its subject, text and
+ * links under that brand when it sends, with the brand's Reply-To.
+ */
 async function enqueueAuthEmailOutbox(input: { userId: string; dedupeKey: string; payload: Record<string, unknown> }): Promise<void> {
+  const payload = { ...input.payload, brand: await loadRequestEmailBrand(), replyTo: null };
   await withBusinessTransaction(getEmailDatabase().db, { actorType: "system" }, async (tx) => {
-    await enqueueOutbox(tx, { topic: "email.send", aggregateType: "auth_email", aggregateId: input.userId, dedupeKey: input.dedupeKey, payload: input.payload });
+    await enqueueOutbox(tx, { topic: "email.send", aggregateType: "auth_email", aggregateId: input.userId, dedupeKey: input.dedupeKey, payload });
   });
 }
 
@@ -123,19 +122,14 @@ async function enqueueAuthEmail(input: {
   url: string;
 }): Promise<void> {
   const urlHash = createHash("sha256").update(input.url).digest("hex");
-  const subject = input.purpose === "verification"
-    ? "Verify your LobbyStack email"
-    : input.purpose === "password_reset"
-      ? "Reset your LobbyStack password"
-      : "Confirm your LobbyStack email change";
   await enqueueAuthEmailOutbox({
     userId: input.userId,
     dedupeKey: `auth-email:${input.purpose}:${input.userId}:${urlHash}`,
     payload: {
       template: input.purpose === "verification" ? "verify_email" : input.purpose === "password_reset" ? "password_reset" : "verify_email",
       to: input.email,
-      subject,
-      variables: { url: input.url },
+      // An email change shares the verification template; its subject says what it confirms.
+      variables: input.purpose === "email_change" ? { url: input.url, purpose: "email_change" } : { url: input.url },
     },
   });
 }
@@ -147,7 +141,6 @@ async function enqueueEmailVerificationCode(input: { userId: string; email: stri
     payload: {
       template: "verify_email",
       to: input.email,
-      subject: "Your LobbyStack verification code",
       variables: { code: input.otp },
     },
   });
@@ -243,7 +236,7 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
         await enqueueAuthEmailOutbox({
           userId: user.id,
           dedupeKey: `auth-reset-code:${user.id}:${randomUUID()}`,
-          payload: { template: "password_reset", to: email, subject: "Reset your LobbyStack password", variables: { code: otp } },
+          payload: { template: "password_reset", to: email, variables: { code: otp } },
         });
       },
     })],
@@ -283,7 +276,6 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
             userId: user.id,
             dedupeKey: `auth-existing-account:${user.id}:${randomUUID()}`,
             payload: { template: "existing_account", to: user.email,
-              subject: EXISTING_ACCOUNT_SUBJECTS[locale],
               variables: { locale, signInUrl: new URL(`/${locale}/login`, base).href, resetUrl: new URL(`/${locale}/forgot-password`, base).href } },
           });
         } catch (error) {

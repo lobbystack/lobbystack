@@ -1,19 +1,22 @@
-import { getSavedBrandLogo } from "@lobbystack/domain";
+import { brandLogo } from "@lobbystack/domain";
 
 import { asApiResponse, getAppDatabase } from "@/lib/api-helpers";
+import { loadRequestBrand } from "@/lib/branding";
 import { BRAND_LOGO_SECURITY_HEADERS } from "../../../../security-headers";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * The logo the deployment's first owner uploaded in onboarding. The URL pages
- * use carries the logo's digest, so a browser may keep that response for good.
+ * The saved logo of the brand this hostname shows: for the host, the one the
+ * deployment's first owner uploaded in onboarding. The URL pages use carries
+ * the logo's digest, so a browser may keep that response for good.
  */
 export async function GET(request: Request) {
-  let logo: Awaited<ReturnType<typeof getSavedBrandLogo>>;
+  let logo: Awaited<ReturnType<typeof brandLogo>>;
   try {
-    logo = await getSavedBrandLogo(getAppDatabase().db);
+    const brand = await loadRequestBrand(request);
+    logo = brand && await brandLogo({ db: getAppDatabase().db }, brand);
   } catch (error) {
     const response = asApiResponse(error);
     response.headers.set("cache-control", "no-store");
