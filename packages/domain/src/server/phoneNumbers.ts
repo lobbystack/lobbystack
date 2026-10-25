@@ -1,12 +1,12 @@
-import { isPaidSubscription } from "@lobbystack/shared";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 import { and, eq, inArray, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
 
-import { billingAccounts, businesses, enqueueOutbox, numberTrials, onboardingNumberClaimEvents, phoneNumbers, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { businesses, enqueueOutbox, numberTrials, onboardingNumberClaimEvents, phoneNumbers, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 
 import { requireBusinessAdmin } from "../authz";
 import type { DomainContext } from "./context";
+import { loadEntitlement } from "./entitlement";
 import { activateNumberTrialInTransaction, failNumberTrialInTransaction, isNumberCountry, keepBusinessNumbersInTransaction, trialCountries, verifiedPhone, type NumberCountry } from "./numberTrials";
 import { normalizeOnboardingStage } from "./onboarding";
 import { resolveBusinessNumberMarket, type BusinessNumberMarket } from "./phoneNumberMarket";
@@ -98,15 +98,15 @@ export type NumberEligibility = { market: BusinessNumberMarket; trial: { verifie
 /**
  * Checks that the business may pick a number for this purpose now, as the
  * person picking: the onboarding stage, the one replacement, and the paid-plan
- * rule, under which a cloud business without a paid plan gets a free trial
- * number during onboarding when this person verified a phone in a trial
+ * rule, under which a cloud business without a live entitlement gets a free
+ * trial number during onboarding when this person verified a phone in a trial
  * country. Throws the claim refusals the dashboard shows. The API runs in a
  * worker transaction and skips the onboarding stage order.
  */
 export async function numberEligibilityInTransaction(tx: DatabaseTransaction, input: { userId: string; businessId: string; purpose: NumberClaimPurpose; selection?: Partial<NumberSelection> | undefined; via: "dashboard" | "api" }): Promise<NumberEligibility> {
   const { purpose } = input;
   const business = (await tx.select({ stage: businesses.onboardingStage, timezone: businesses.timezone, deploymentMode: businesses.deploymentMode, replacementUsedAt: businesses.phoneNumberReplacementUsedAt }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1))[0];
-  const billing = (await tx.select({ plan: billingAccounts.plan, state: billingAccounts.subscriptionState }).from(billingAccounts).where(eq(billingAccounts.businessId, input.businessId)).limit(1))[0];
+  const entitlement = await loadEntitlement(tx, input.businessId);
   if (!business) throw numberClaimError(404, "not_found", "Workspace not found.");
   const onboardingStage = normalizeOnboardingStage(business.stage);
   if (input.via === "dashboard" && purpose === "onboarding" && !["phone_number", "attribution", "complete"].includes(onboardingStage)) throw refused("invalid_onboarding_stage");
@@ -120,7 +120,7 @@ export async function numberEligibilityInTransaction(tx: DatabaseTransaction, in
   const requested = (verified?.countryCode ?? input.selection?.countryCode)?.trim().toUpperCase();
   if (requested && !isNumberCountry(requested)) throw numberClaimError(400, "unsupported_country", "Phone numbers aren't available in this country yet.");
   let trial: { verifiedPhone: string } | undefined;
-  if (business.deploymentMode === "cloud" && (!billing || !isPaidSubscription(billing.plan, billing.state))) {
+  if (business.deploymentMode === "cloud" && !entitlement.live) {
     // Without a paid plan, a number is a free trial: during onboarding, with a
     // verified phone in a trial country, once per business.
     if (purpose !== "onboarding") throw refused("dedicated_number_requires_paid_plan");
@@ -291,8 +291,7 @@ export async function completeNumberProvisioning(context: DomainContext, input: 
       await tx.update(businesses).set({ onboardingStage: sql`CASE WHEN ${businesses.onboardingStage} = 'complete' THEN 'complete' ELSE 'attribution' END`, updatedAt: new Date() }).where(eq(businesses.id, input.businessId));
       const activated = await activateNumberTrialInTransaction(tx, { businessId: input.businessId, claimId: input.claimId, phoneNumberId: number.id });
       // The owner may have paid while we bought the number: that payment found no trial to convert, so convert it now.
-      const billing = activated ? (await tx.select({ plan: billingAccounts.plan, state: billingAccounts.subscriptionState }).from(billingAccounts).where(eq(billingAccounts.businessId, input.businessId)).limit(1))[0] : undefined;
-      if (billing && isPaidSubscription(billing.plan, billing.state)) await keepBusinessNumbersInTransaction(tx, { businessId: input.businessId });
+      if (activated && (await loadEntitlement(tx, input.businessId)).live) await keepBusinessNumbersInTransaction(tx, { businessId: input.businessId });
     }
     return number.id;
   });

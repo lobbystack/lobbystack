@@ -18,6 +18,7 @@ export * from "./context";
 export * from "./conversations";
 export * from "./instagram";
 export * from "./demos";
+export { effectiveBillingPlan, loadEntitlement } from "./entitlement";
 export * from "./feedback";
 export * from "./employees";
 export * from "./knowledge";

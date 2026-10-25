@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { billingPlanCatalog } from "@lobbystack/shared";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -48,7 +47,7 @@ export function LivePhoneNumberSettingsSurface() {
   const billing = useQuery({ queryKey: ["billing", businessId], enabled: Boolean(businessId), queryFn: () => requestJson<BillingUsageViewModel>(`/api/billing?businessId=${encodeURIComponent(businessId)}`) });
   const primaryPhoneNumber = numbers.data ? numbers.data.phoneNumbers.find(number => number.status === "active" && !number.reclaimScheduledAt) ?? numbers.data.phoneNumbers[0] ?? null : undefined;
   const phoneNumberReplacementUsedAt = numbers.data?.replacement.usedAt;
-  const billingStatus = billing.data ? { includedBusinessNumbers: billingPlanCatalog[billing.data.effectivePlan].includedBusinessNumbers, phoneNumberReclaimScheduledAt: null } : null;
+  const billingStatus = billing.data ? { includedBusinessNumbers: billing.data.entitlement.includedNumbers, phoneNumberReclaimScheduledAt: null } : null;
   const isReplacement = Boolean(primaryPhoneNumber);
   const numberApi = useMemo(() => phoneNumberChooserApi(isReplacement), [isReplacement]);
   const displayPhoneNumber = primaryPhoneNumber

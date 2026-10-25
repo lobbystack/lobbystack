@@ -1,11 +1,12 @@
 import { and, desc, eq, gt, inArray, like, lt, or, sql } from "drizzle-orm";
 
 import { billingAccounts, billingCheckoutRequests, billingTransactions, billingUsageEvents, businesses, enqueueOutbox, providerEvents, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { billingErrorCodes, billingPlanCatalog, DEFAULT_WEB_CALL_MAX_DURATION_MS, isPaidSubscription, liveSubscriptionStates, MAX_WEB_CALL_MAX_DURATION_MS, type BillingPlanSlug } from "@lobbystack/shared";
+import { billingErrorCodes, DEFAULT_WEB_CALL_MAX_DURATION_MS, hasLiveEntitlement, liveSubscriptionStates, MAX_WEB_CALL_MAX_DURATION_MS, type BillingPlanSlug } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
 import type { DomainContext } from "./context";
 import { recordAffiliateCommissionInTransaction } from "./affiliates";
+import { loadEntitlement } from "./entitlement";
 import { keepBusinessNumbersInTransaction, queuePlanCancelNoticeInTransaction, scheduleNumberReleaseInTransaction } from "./numberTrials";
 import { recordProductEventInTransaction } from "./productEvents";
 import { requireBusinessAdmin } from "../authz";
@@ -48,9 +49,11 @@ export async function reserveWebVoiceUsageInTransaction(
   tx: DatabaseTransaction,
   input: { businessId: string; callId: string; maxDurationMs?: number },
 ): Promise<WebVoiceBillingAllowance> {
-  const allowance = webVoiceBillingAllowance(await getVoiceSecondsLeftInTransaction(tx, { businessId: input.businessId }), input.maxDurationMs);
+  const left = await getVoiceSecondsLeftInTransaction(tx, { businessId: input.businessId });
+  const allowance = webVoiceBillingAllowance(left, input.maxDurationMs);
   if (!allowance.allowed) return allowance;
-  if (allowance.plan === "self_host") return allowance;
+  // A self-hosted server has no limit to reserve against.
+  if (left.entitlement.source === "unlimited") return allowance;
   const reservation = await reserveUsageInTransaction(tx, { businessId: input.businessId, usageKind: "voice_seconds", sourceKey: `voice:${input.callId}`, quantity: allowance.maxDurationMs / 1_000 });
   if (!reservation.allowed) {
     return { allowed: false, errorCode: billingErrorCodes.voiceLimitReached, maxDurationMs: 0, plan: allowance.plan };
@@ -81,11 +84,11 @@ export async function getWidgetChatAllowance(
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     // Decides whether to offer the chat without writing; each chat's reservation counts again.
     const status = await readUsageStatusInTransaction(tx, { businessId: input.businessId });
-    const entitlement = billingPlanCatalog[status.plan];
-    if (entitlement.chatAiTokensIncluded === null || entitlement.overagesBillable) {
+    const { allowance, overage } = await loadEntitlement(tx, input.businessId);
+    if (allowance.chats === null || overage.enabled) {
       return { allowed: true, errorCode: null, plan: status.plan };
     }
-    if (status.chatAiBlocked || Math.max(0, entitlement.chatAiTokensIncluded - status.chatAiTokensUsed) < 1) {
+    if (status.chatAiBlocked || Math.max(0, allowance.chats - status.chatAiTokensUsed) < 1) {
       return { allowed: false, errorCode: billingErrorCodes.chatAiLimitReached, plan: status.plan };
     }
     return { allowed: true, errorCode: null, plan: status.plan };
@@ -96,8 +99,8 @@ export async function reserveWidgetChatUsageInTransaction(
   tx: DatabaseTransaction,
   input: { businessId: string; conversationId: string },
 ): Promise<WidgetChatBillingAllowance> {
-  const { plan } = await loadBillingContext(tx, input.businessId);
-  if (billingPlanCatalog[plan].chatAiTokensIncluded !== null) {
+  const { plan, entitlement } = await loadBillingContext(tx, input.businessId);
+  if (entitlement.allowance.chats !== null) {
     const reservation = await reserveUsageInTransaction(tx, { businessId: input.businessId, usageKind: "chat_ai_tokens", sourceKey: `chat:${input.conversationId}`, quantity: 1 });
     if (!reservation.allowed) return { allowed: false, errorCode: billingErrorCodes.chatAiLimitReached, plan };
   }
@@ -139,7 +142,7 @@ export async function createBillingCheckoutRequestInTransaction(
   await lockBillingAccount(tx, input.businessId);
   const account = (await tx.select({ source: billingAccounts.source, plan: billingAccounts.plan, subscriptionState: billingAccounts.subscriptionState }).from(billingAccounts).where(eq(billingAccounts.businessId, input.businessId)).limit(1))[0];
   if (isManagedBillingAccount(account)) throw Object.assign(new Error("This business is on a managed plan, so LobbyStack bills it directly."), { status: 409 });
-  if (isPaidSubscription(account?.plan, account?.subscriptionState)) {
+  if ((await loadEntitlement(tx, input.businessId)).live) {
     throw Object.assign(new Error("This workspace already has a paid plan. Change it from Manage subscription."), { status: 409, code: billingErrorCodes.subscriptionActive });
   }
   const open = (await tx.select({ id: billingCheckoutRequests.id, requestedByUserId: billingCheckoutRequests.requestedByUserId, target: billingCheckoutRequests.target, billingInterval: billingCheckoutRequests.billingInterval })
@@ -537,8 +540,8 @@ export function detectSubscriptionStart(
   previous: { plan: string | null; subscriptionState: string | null } | undefined,
   next: { plan: string | null; subscriptionState: string | null; billingInterval: string | null },
 ): SubscriptionStart | null {
-  if (!isPaidSubscription(next.plan, next.subscriptionState)) return null;
-  if (isPaidSubscription(previous?.plan ?? null, previous?.subscriptionState ?? null)) return null;
+  if (!hasLiveEntitlement(next)) return null;
+  if (hasLiveEntitlement(previous)) return null;
   return { plan: next.plan!, billingInterval: next.billingInterval, previousPlan: previous?.plan ?? null };
 }
 
@@ -632,8 +635,8 @@ export async function reconcileBillingProviderEvent(
       if (!stale && !keepsManagedPlan) {
         // A live paid plan keeps the business's numbers, including a trial number.
         // When a paid plan ends, the numbers stay 30 more days, then go.
-        const wasPaid = isPaidSubscription(existing?.plan ?? null, existing?.subscriptionState ?? null);
-        const isPaid = isPaidSubscription(plan ?? existing?.plan ?? null, subscriptionState ?? existing?.subscriptionState ?? null);
+        const wasPaid = hasLiveEntitlement(existing);
+        const isPaid = hasLiveEntitlement({ plan: plan ?? existing?.plan ?? null, subscriptionState: subscriptionState ?? existing?.subscriptionState ?? null });
         if (isPaid) await keepBusinessNumbersInTransaction(tx, { businessId: input.businessId });
         else if (wasPaid) await scheduleNumberReleaseInTransaction(tx, { businessId: input.businessId });
         // Polar sends subscription.canceled when the owner cancels at the end of the period, while the plan is still live.

@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { billingPlanCatalog, isPaidSubscription, type BillingPlanSlug } from "@lobbystack/shared";
 
+import type { BillingUsageViewModel } from "@/lib/page-view-models";
 import { requestJson } from "@/lib/request-json";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { PageHeader } from "@/components/page-header";
@@ -20,7 +20,7 @@ import { useOpenUpgradePlanDialog } from "./upgrade-plan-dialog-context";
 import { BookingWithoutHoursAlert, needsHoursForBooking, useBusinessHours } from "./business-hours-section";
 
 type StepId = "fullScan" | "sources" | "testCall" | "phoneNumber";
-type Billing = { account: { plan: string | null; subscriptionState: string | null } | null };
+type Billing = Pick<BillingUsageViewModel, "entitlement">;
 type Step = { id: StepId; name: string; description: string; status: string; documentId?: string | null };
 const order: StepId[] = ["fullScan", "sources", "testCall", "phoneNumber"];
 /** The call and the deeper read both happen in place, so they have no route. */
@@ -50,11 +50,9 @@ export function LiveSetupGuideSurface() {
   });
   // Instant booking with no opening hours books nothing, so say so above the steps.
   const hours = useBusinessHours(canManage ? business?.businessId ?? "" : "");
-  const rawPlan = billing.data?.account?.plan;
-  const plan: BillingPlanSlug = rawPlan === "self_hosted_standard" || rawPlan === "self_host" ? "self_host" : isPaidSubscription(rawPlan, billing.data?.account?.subscriptionState) ? rawPlan as BillingPlanSlug : "free_cloud";
-  // A plan without an included number can't claim one, so the number page
-  // would only send them on to the plan picker.
-  const needsPlanForNumber = Boolean(billing.data) && billingPlanCatalog[plan].includedBusinessNumbers === 0;
+  // A business whose entitlement includes no number can't claim one, so the
+  // number page would only send them on to the plan picker.
+  const needsPlanForNumber = billing.data?.entitlement.includedNumbers === 0;
   const steps = useMemo(() => order.map((id) => setup.data?.steps.find((step) => step.id === id) ?? { id, name: id, description: "", status: "complete" }), [setup.data?.steps]);
   const active = steps.find((step) => step.status === "needs setup")?.id ?? order[0]!;
   const [openStep, setOpenStep] = useState<StepId>(active);

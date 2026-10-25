@@ -1,11 +1,12 @@
 import { DateTime } from "luxon";
 import { and, desc, eq, gt, gte, inArray, isNull, lte, ne, sql } from "drizzle-orm";
 
-import { billingAccounts, businesses, calls, enqueueOutbox, numberTrials, numberWaitlist, onboardingPhoneVerifications, phoneNumbers, receptionistProfiles, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { isPaidSubscription, isTransferPhone, normalizeInterfaceLocale, type InterfaceLocale } from "@lobbystack/shared";
+import { businesses, calls, enqueueOutbox, numberTrials, numberWaitlist, onboardingPhoneVerifications, phoneNumbers, receptionistProfiles, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { isTransferPhone, normalizeInterfaceLocale, type InterfaceLocale } from "@lobbystack/shared";
 
 import { hasMinimumRole, requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
+import { loadEntitlement } from "./entitlement";
 import { sharedSmsSender } from "./smsSender";
 import { getVoiceSecondsLeftInTransaction } from "./usage";
 
@@ -317,8 +318,7 @@ export async function verifiedPhone(tx: DatabaseTransaction, input: { userId: st
 // enforces once per user, phone and network; when it refuses, the number step offers the plans.
 async function trialAvailableInTransaction(tx: DatabaseTransaction, input: { userId: string; businessId: string }): Promise<boolean> {
   const business = (await tx.select({ deploymentMode: businesses.deploymentMode }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1))[0];
-  const billing = (await tx.select({ plan: billingAccounts.plan, state: billingAccounts.subscriptionState }).from(billingAccounts).where(eq(billingAccounts.businessId, input.businessId)).limit(1))[0];
-  if (business?.deploymentMode !== "cloud" || (billing && isPaidSubscription(billing.plan, billing.state))) return false;
+  if (business?.deploymentMode !== "cloud" || (await loadEntitlement(tx, input.businessId)).live) return false;
   const number = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), inArray(phoneNumbers.status, ["active", "provisioning"]))).limit(1);
   // The same once-per-workspace, per-user and per-phone rule the claim enforces.
   const used = await tx.execute(sql`SELECT app.number_trial_used(${input.businessId}::uuid, ${input.userId}::uuid) AS used`);
@@ -339,8 +339,7 @@ export async function numberStepRedirect(context: DomainContext, input: { userId
     const number = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), inArray(phoneNumbers.status, ["active", "provisioning"]))).limit(1);
     if (number.length) return input.finished ? "/" : null;
     const business = (await tx.select({ deploymentMode: businesses.deploymentMode }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1))[0];
-    const billing = (await tx.select({ plan: billingAccounts.plan, state: billingAccounts.subscriptionState }).from(billingAccounts).where(eq(billingAccounts.businessId, input.businessId)).limit(1))[0];
-    if (business?.deploymentMode !== "cloud" || (billing && isPaidSubscription(billing.plan, billing.state))) return null;
+    if (business?.deploymentMode !== "cloud" || (await loadEntitlement(tx, input.businessId)).live) return null;
     return await verifiedPhone(tx, input) ? null : "/onboarding/verify-phone";
   });
 }

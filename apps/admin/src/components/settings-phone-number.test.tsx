@@ -3,6 +3,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { planEntitlement, type BillingPlanSlug } from "@lobbystack/shared";
 import { LivePhoneNumberSettingsSurface } from "./live-phone-number-settings-surface";
 
 const actions = vi.hoisted(() => ({ upgrade: vi.fn(), navigate: vi.fn() }));
@@ -17,7 +18,7 @@ function setup(plan: string, role = "business_owner", usedAt: string | null = nu
   clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role }] });
   client.setQueryData(["phone-numbers", "business"], { phoneNumbers: primary ? [{ id: "phone", e164: "+14165550100", status: "active", reclaimScheduledAt }] : [], replacement: { usedAt, activeClaim: pending ? { id: "claim", status: "provisioning" } : null } });
-  client.setQueryData(["billing", "business"], { effectivePlan: plan, account: { plan } });
+  client.setQueryData(["billing", "business"], { effectivePlan: plan, entitlement: planEntitlement(plan as BillingPlanSlug), account: { plan } });
   const fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
     if (input.includes("/claim/claim?")) return Response.json({ claim: { status: "claimed", phoneNumberId: "claimed-phone", requestedE164: "+14165550200" } });
     if (input.includes("/claim?")) return Response.json({ claimId: "claim" });

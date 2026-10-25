@@ -1,9 +1,15 @@
 import { describe, expect, it } from "vitest";
 
+import { planEntitlement, type BillingPlanSlug } from "@lobbystack/shared";
+
 import { reserveWebVoiceUsageInTransaction } from "./billing";
-import { billableQuantityForEvent, effectiveBillingPlan, estimateSmsSegments, periodKeyFor, replayEvents, reserveUsageInTransaction, voiceSecondsLeft } from "./usage";
+import { effectiveBillingPlan } from "./entitlement";
+import { billableQuantityForEvent, estimateSmsSegments, periodKeyFor, replayEvents, reserveUsageInTransaction, voiceSecondsLeft } from "./usage";
 
 const event = (sourceKey: string, usageKind: string, quantity: number, isFinal: boolean, minute: number, billingInterval = "annual") => ({ sourceKey, usageKind, quantity, isFinal, planAtRecordTime: "starter", billingIntervalAtRecordTime: billingInterval, createdAt: new Date(Date.UTC(2026, 8, 1, 0, minute)) });
+
+/** A business on this plan, with the plan's catalog entitlement. */
+const onPlan = (plan: BillingPlanSlug) => ({ plan, entitlement: planEntitlement(plan) });
 
 /** A transaction whose selects return these row sets in order and whose writes succeed. */
 function fakeTx(selects: unknown[][]) {
@@ -19,7 +25,7 @@ const starterWithCap = (): unknown[][] => [[{ deploymentMode: "cloud" }], [{ pla
 describe("overage spend and annual billing", () => {
   it("never counts website chats as overage spend", () => {
     const chats = Array.from({ length: 60 }, (_, index) => event(`chat:${index}`, "chat_ai_tokens", 1, true, index, "monthly"));
-    const replay = replayEvents(chats, "starter");
+    const replay = replayEvents(chats, onPlan("starter"));
     expect(replay.usage.chat_ai_tokens).toBe(60);
     expect(replay.rawSpendCents).toBe(0);
   });
@@ -30,11 +36,25 @@ describe("overage spend and annual billing", () => {
     const used = event("voice:used", "voice_seconds", 8_900, true, 0);
     const widget = event("voice:widget", "voice_seconds", 300, false, 1);
     const phone = event("voice:phone", "voice_seconds", 120, true, 2);
-    expect(billableQuantityForEvent([used, widget], phone, "starter")).toBe(20);
+    expect(billableQuantityForEvent([used, widget], phone, onPlan("starter"))).toBe(20);
     const widgetEnded = { ...widget, quantity: 30, isFinal: true };
-    expect(billableQuantityForEvent([used, phone], widgetEnded, "starter")).toBe(30);
+    expect(billableQuantityForEvent([used, phone], widgetEnded, onPlan("starter"))).toBe(30);
     // A repeat correction of the phone call keeps the 20 it already billed.
-    expect(billableQuantityForEvent([used, widgetEnded], phone, "starter", { quantity: 120, billableQuantity: 20 })).toBe(20);
+    expect(billableQuantityForEvent([used, widgetEnded], phone, onPlan("starter"), { quantity: 120, billableQuantity: 20 })).toBe(20);
+  });
+
+  it("prices usage on the current plan by the business's entitlement, and usage on another plan by that plan's terms", () => {
+    // Starter's 50 included texts, at 5 cents each past them instead of the catalog's 2.
+    const starter = planEntitlement("starter", { live: true, capMinor: 1_000 });
+    const current = { plan: "starter" as const, entitlement: { ...starter, overage: { ...starter.overage, rates: { ...starter.overage.rates, alertSms: 5 } } } };
+    const texts = (planAtRecordTime: string | null) => ({ ...event("sms:used", "alert_sms_segments", 60, true, 0, "monthly"), planAtRecordTime });
+    expect(replayEvents([texts("starter")], current).rawSpendCents).toBe(50);
+    // An event that recorded no plan counts as the current one.
+    expect(replayEvents([texts(null)], current).rawSpendCents).toBe(50);
+    // Free bills no overage, whatever the business is on now.
+    expect(replayEvents([texts("free_cloud")], current).rawSpendCents).toBe(0);
+    // The cap leaves the included seconds plus what $9.50 more pays for at the catalog's 20 cents a minute.
+    expect(voiceSecondsLeft(current.entitlement, replayEvents([texts("starter")], current))).toBe(9_000 + 2_850);
   });
 
   it("lets a paid plan's website chat start once spend has passed the cap", async () => {
@@ -48,13 +68,13 @@ describe("overage spend and annual billing", () => {
 });
 
 describe("voice seconds left", () => {
-  const capped = { plan: "starter" as const, capCents: 1_000 };
+  const capped = planEntitlement("starter", { live: true, capMinor: 1_000 });
 
   it("gives phone and browser calls the same seconds within a cent of the cap", async () => {
     // 2,998 seconds past Starter's 9,000 at 20 cents a minute: $9.9933 of the $10 cap.
     const used = event("voice:used", "voice_seconds", 11_998, true, 0, "monthly");
-    expect(voiceSecondsLeft(capped, replayEvents([used], "starter"))).toBe(2);
-    const spendAfter = (seconds: number) => replayEvents([used, event("voice:next", "voice_seconds", seconds, false, 1, "monthly")], "starter").rawSpendCents;
+    expect(voiceSecondsLeft(capped, replayEvents([used], onPlan("starter")))).toBe(2);
+    const spendAfter = (seconds: number) => replayEvents([used, event("voice:next", "voice_seconds", seconds, false, 1, "monthly")], onPlan("starter")).rawSpendCents;
     expect(spendAfter(2)).toBeLessThanOrEqual(1_000);
     expect(spendAfter(3)).toBeGreaterThan(1_000);
 
@@ -68,15 +88,15 @@ describe("voice seconds left", () => {
     const voice = event("voice:used", "voice_seconds", 8_000, true, 0, "monthly");
     const texts = (segments: number) => event("sms:used", "alert_sms_segments", segments, true, 1, "monthly");
     // 500 texts past the 50 included at 2 cents each: exactly the $10 cap.
-    expect(voiceSecondsLeft(capped, replayEvents([voice, texts(550)], "starter"))).toBe(1_000);
-    expect(voiceSecondsLeft(capped, replayEvents([voice, texts(551)], "starter"))).toBe(0);
+    expect(voiceSecondsLeft(capped, replayEvents([voice, texts(550)], onPlan("starter")))).toBe(1_000);
+    expect(voiceSecondsLeft(capped, replayEvents([voice, texts(551)], onPlan("starter")))).toBe(0);
   });
 
   it("never runs out on a plan without a voice limit, even with a cap set", () => {
-    const replay = replayEvents([], "enterprise");
-    expect(voiceSecondsLeft({ plan: "enterprise", capCents: 1_000 }, replay)).toBe(Number.POSITIVE_INFINITY);
-    expect(voiceSecondsLeft({ plan: "self_host", capCents: null }, replay)).toBe(Number.POSITIVE_INFINITY);
-    expect(voiceSecondsLeft({ plan: "pro", capCents: null }, replay)).toBe(Number.POSITIVE_INFINITY);
+    const replay = replayEvents([], onPlan("enterprise"));
+    expect(voiceSecondsLeft(planEntitlement("enterprise", { live: true, capMinor: 1_000 }), replay)).toBe(Number.POSITIVE_INFINITY);
+    expect(voiceSecondsLeft(planEntitlement("self_host"), replay)).toBe(Number.POSITIVE_INFINITY);
+    expect(voiceSecondsLeft(planEntitlement("pro", { live: true, capMinor: null }), replay)).toBe(Number.POSITIVE_INFINITY);
   });
 });
 

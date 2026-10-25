@@ -839,6 +839,10 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
       // No billing account yet: the free plan, which has no cap.
       expect(await getBillingForApi(context, caller)).toMatchObject({ plan: "free_cloud", managed: false, spending_cap_cents: null, overage_spend_cents: 0, spending_cap_reached: false });
       await expectApiError(updateBillingForApi(context, caller, { spending_cap_cents: 1_000 }), 409, "conflict");
+      // A self-hosted server's business has no limit, so it has no plan to buy.
+      await admin!.db.update(businesses).set({ deploymentMode: "self_hosted_standard" }).where(eq(businesses.id, businessId));
+      await expectApiError(createCheckoutForApi(context, caller, { plan: "starter", interval: "monthly" }, { available: true }), 409, "conflict");
+      await admin!.db.update(businesses).set({ deploymentMode: "cloud" }).where(eq(businesses.id, businessId));
 
       // A Starter plan that lapsed left a cap behind. The managed plan clears it, or calls would have nothing to reserve.
       await admin!.db.insert(billingAccounts).values({ businessId, billingKey: `business:${businessId}`, plan: "starter", subscriptionState: "canceled", billingInterval: "monthly", overageSpendingCapCents: 500 });
@@ -1240,6 +1244,10 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
       await admin!.db.insert(billingAccounts).values({ businessId, billingKey: `business:${businessId}`, plan: "pro", subscriptionState: "active", billingInterval: "monthly" });
       expect(await getOnboardingForApi(context, caller)).toMatchObject({ missing: ["phone_number"] });
       expect(await status()).toMatchObject({ plan: "done", phone_number: "missing" });
+      // A self-hosted server sells no plan, so the same live account there leaves the plan skipped and the number optional.
+      await admin!.db.update(businesses).set({ deploymentMode: "self_hosted_standard" }).where(eq(businesses.id, businessId));
+      expect(await getOnboardingForApi(context, caller)).toMatchObject({ missing: [], checklist: expect.arrayContaining([{ id: "plan", status: "skipped", required: false }, { id: "phone_number", status: "missing", required: false }]) });
+      await admin!.db.update(businesses).set({ deploymentMode: "cloud" }).where(eq(businesses.id, businessId));
       const early = await completeOnboardingForApi(context, caller, {}).then(() => null, (error: unknown) => error);
       expect(early).toBeInstanceOf(PublicApiError);
       expect(early).toMatchObject({ status: 409, code: "conflict", details: [{ path: "phone_number", message: expect.stringContaining("skip_number") }] });

@@ -5,6 +5,7 @@ import { and, desc, eq, sql } from "drizzle-orm";
 import { billingAccounts, billingTransactions, billingUsageEvents, billingUsageMonths } from "@lobbystack/db";
 import { billingAccess, getKnowledgeStorageUsageBytes, loadBillingContext, scheduledSubscriptionEndInTransaction, setOverageSpendingCap } from "@lobbystack/domain";
 import { jsonError } from "@/lib/api-helpers";
+import type { BillingUsageViewModel } from "@/lib/page-view-models";
 import { operatorRoute } from "@/lib/operator-request";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +19,7 @@ export const GET = operatorRoute(async ({ businessId, transaction }) => NextResp
   const incompleteUsage = await tx.select({ count: sql<number>`count(*)` }).from(billingUsageEvents).where(and(eq(billingUsageEvents.businessId, businessId), eq(billingUsageEvents.periodKey, periodKey), eq(billingUsageEvents.isFinal, false)));
   const knowledgeStorageBytesUsed = await getKnowledgeStorageUsageBytes(tx, businessId);
   // The plan the server enforces: a canceled Pro subscription still stores plan "pro".
-  const { plan: effectivePlan } = await loadBillingContext(tx, businessId);
+  const { plan: effectivePlan, entitlement } = await loadBillingContext(tx, businessId);
   const month = usageMonth[0];
   const cap = account[0]?.overageSpendingCapCents ?? null;
   const permissions = billingAccess(role, account[0] ?? null, Boolean(process.env.POLAR_ACCESS_TOKEN && process.env.POLAR_ORGANIZATION_ID));
@@ -30,7 +31,9 @@ export const GET = operatorRoute(async ({ businessId, transaction }) => NextResp
   }
   const availableCheckoutPlans = (["starter", "pro"] as const).filter(plan => availableCheckoutIntervals[plan].length > 0);
   const planEndsAt = effectivePlan === "starter" || effectivePlan === "pro" ? await scheduledSubscriptionEndInTransaction(tx, businessId) : null;
-  return { availableCheckoutPlans, availableCheckoutIntervals, account: account[0] ?? null, effectivePlan, planEndsAt, knowledgeStorageBytesUsed, permissions, checkoutAvailable: permissions.hasCheckoutAccess, widgetIssuanceEnabled: isWidgetKeyIssuanceEnabled(process.env), usage, usageStatus: month ? { ...month, usageComplete: Number(incompleteUsage[0]?.count ?? 0) === 0, overageSpendingCapCents: cap, overageSpendingCapReached: cap !== null && month.overageSpendCents > 0 && month.overageSpendCents >= cap } : null, transactions: permissions.hasBillingManagementAccess ? transactions : [] };
+  const response = { availableCheckoutPlans, availableCheckoutIntervals, account: account[0] ?? null, effectivePlan, entitlement, planEndsAt, knowledgeStorageBytesUsed, permissions, checkoutAvailable: permissions.hasCheckoutAccess, widgetIssuanceEnabled: isWidgetKeyIssuanceEnabled(process.env), usage, usageStatus: month ? { ...month, usageComplete: Number(incompleteUsage[0]?.count ?? 0) === 0, overageSpendingCapCents: cap, overageSpendingCapReached: cap !== null && month.overageSpendCents > 0 && month.overageSpendCents >= cap } : null, transactions: permissions.hasBillingManagementAccess ? transactions : [] };
+  // The browser reads this as a BillingUsageViewModel; the number pages need the entitlement.
+  return response satisfies Pick<BillingUsageViewModel, "effectivePlan" | "entitlement">;
 })));
 
 export const POST = operatorRoute(async ({ userId, businessId, body, domain }) => {

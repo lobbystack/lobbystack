@@ -215,6 +215,7 @@ async function main(): Promise<void> {
             ('lobbystack_worker', 'app.touch_oauth_grant(text)'),
             ('lobbystack_app', 'app.list_oauth_grantors(uuid)'),
             ('lobbystack_app', 'app.list_business_members(uuid)'),
+            ('lobbystack_app', 'app.count_owned_direct_businesses(uuid)'),
             ('lobbystack_app', 'app.can_save_initial_branding()'),
             ('lobbystack_app', 'app.save_initial_branding(text, bytea, text)'),
             ('lobbystack_app', 'app.finish_business_handover(uuid, uuid)'),

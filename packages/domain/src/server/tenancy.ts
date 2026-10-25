@@ -30,7 +30,7 @@ function cleanSlug(slug: string): string {
   return result;
 }
 
-// Each business adds recurring worker jobs, so one account cannot create them without bound.
+// Each business adds recurring worker jobs, so one account can own at most this many direct businesses. A partner's businesses count against its tier.
 const maxOwnedBusinesses = 10;
 
 /**
@@ -72,7 +72,8 @@ export async function createBusiness(
   }, async (tx) => {
     // Lock the user row so concurrent creates by the same account count each other.
     await tx.select({ id: users.id }).from(users).where(eq(users.id, input.userId)).for("update");
-    const owned = await tx.execute<{ count: number }>(sql`select count(*)::int as count from app.list_user_businesses(${input.userId}) where role = 'business_owner'`);
+    // Row-level security shows this transaction only the new business, so the database counts the rest.
+    const owned = await tx.execute<{ count: number }>(sql`select app.count_owned_direct_businesses(${input.userId}::uuid) as count`);
     if ((owned.rows[0]?.count ?? 0) >= maxOwnedBusinesses) {
       throw Object.assign(new Error(`Too many workspaces. One account can own up to ${maxOwnedBusinesses}.`), { status: 403 });
     }
@@ -83,6 +84,24 @@ export async function createBusiness(
 }
 
 /**
+ * Creates a business that has no owner yet, such as one a partner sets up
+ * before it invites the owner. The business gets the staff member, receptionist
+ * profile and first snapshot every business gets. It counts toward no
+ * account's cap and becomes no one's active business. No route calls this yet.
+ */
+export async function createOwnerlessBusiness(
+  context: DomainContext,
+  input: Omit<CreateBusinessInput, "userId">,
+): Promise<{ businessId: string }> {
+  const timezone = requireIanaTimeZone(input.timezone);
+  if (input.slug !== undefined) cleanSlug(input.slug);
+  const businessId = randomUUID();
+  return await withBusinessTransaction(context.db, { businessId, actorType: "system" }, async (tx) => await insertOwnerlessBusinessInTransaction(tx, { businessId, name: input.name, slug: input.slug, timezone, businessType: input.businessType, deploymentMode: input.deploymentMode }));
+}
+
+type NewBusiness = { businessId: string; name: string; slug?: string | undefined; timezone: string; businessType: string; deploymentMode?: string | undefined; defaultLocale?: string | undefined; websiteUrl?: string | undefined };
+
+/**
  * Inserts a business with what every new business needs: its owner, the staff
  * member that stands for it, a receptionist profile, and its first snapshot.
  * The transaction must be scoped to businessId, and timezone must already be
@@ -91,8 +110,21 @@ export async function createBusiness(
  */
 export async function insertBusinessInTransaction(
   tx: DatabaseTransaction,
-  input: { businessId: string; userId: string; name: string; slug?: string | undefined; timezone: string; businessType: string; deploymentMode?: string | undefined; defaultLocale?: string | undefined; websiteUrl?: string | undefined },
+  input: NewBusiness & { userId: string },
 ): Promise<{ businessId: string; membershipId: string }> {
+  const { membershipId } = await insertBusinessRowsInTransaction(tx, input, input.userId);
+  return { businessId: input.businessId, membershipId };
+}
+
+/** The same without an owner. The transaction must be scoped to businessId as the system or worker actor. */
+export async function insertOwnerlessBusinessInTransaction(tx: DatabaseTransaction, input: NewBusiness): Promise<{ businessId: string }> {
+  await insertBusinessRowsInTransaction(tx, input, null);
+  return { businessId: input.businessId };
+}
+
+async function insertBusinessRowsInTransaction(tx: DatabaseTransaction, input: NewBusiness, ownerUserId: string): Promise<{ membershipId: string }>;
+async function insertBusinessRowsInTransaction(tx: DatabaseTransaction, input: NewBusiness, ownerUserId: null): Promise<{ membershipId: null }>;
+async function insertBusinessRowsInTransaction(tx: DatabaseTransaction, input: NewBusiness, ownerUserId: string | null): Promise<{ membershipId: string | null }> {
   const { businessId, timezone } = input;
   const name = input.name.trim();
   const generatedSlug = name.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 96).replace(/-$/, "") || "business";
@@ -121,14 +153,18 @@ export async function insertBusinessInTransaction(
   if (!business) {
     throw new Error("Business could not be created.");
   }
-  const [membership] = await tx.insert(businessMemberships).values({
-    businessId,
-    userId: input.userId,
-    role: "business_owner",
-    status: "active",
-  }).returning({ id: businessMemberships.id });
-  if (!membership) {
-    throw new Error("Business owner membership could not be created.");
+  let membershipId: string | null = null;
+  if (ownerUserId !== null) {
+    const [membership] = await tx.insert(businessMemberships).values({
+      businessId,
+      userId: ownerUserId,
+      role: "business_owner",
+      status: "active",
+    }).returning({ id: businessMemberships.id });
+    if (!membership) {
+      throw new Error("Business owner membership could not be created.");
+    }
+    membershipId = membership.id;
   }
   // Booking assigns every appointment to a staff member. Businesses that don't
   // manage a team get one hidden member that stands for the business itself.
@@ -152,7 +188,7 @@ export async function insertBusinessInTransaction(
     dedupeKey: `business:${businessId}:snapshot:initial`,
     payload: { businessId, reason: "business_created" },
   });
-  return { businessId, membershipId: membership.id };
+  return { membershipId };
 }
 
 export async function listUserBusinesses(

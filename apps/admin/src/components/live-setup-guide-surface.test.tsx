@@ -3,6 +3,7 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { planEntitlement, type Entitlement } from "@lobbystack/shared";
 import { LiveSetupGuideSurface } from "./live-setup-guide-surface";
 const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
 const launcher = vi.hoisted(() => {
@@ -21,12 +22,12 @@ vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string, opti
 const order = ["fullScan", "sources", "testCall", "phoneNumber"];
 const clients: QueryClient[] = [];
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
-function setup(completed: string[] = [], skipped: string[] = [], plan: { plan: string; subscriptionState: string | null } = { plan: "starter", subscriptionState: "active" }) {
+function setup(completed: string[] = [], skipped: string[] = [], entitlement: Entitlement = planEntitlement("starter", { live: true, capMinor: null })) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true, role: "business_owner" }] });
   const steps = order.map(id => ({ id, documentId: id === "fullScan" ? "doc_1" : null, status: completed.includes(id) ? "complete" : skipped.includes(id) ? "skipped" : "needs setup" }));
   client.setQueryData(["setup", "business"], { steps });
-  client.setQueryData(["billing", "business"], { account: plan });
+  client.setQueryData(["billing", "business"], { entitlement });
   const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
     if (init?.method === "PATCH") { const { stepId } = JSON.parse(String(init.body)); steps.find(step => step.id === stepId)!.status = "skipped"; }
     return Response.json({ steps });
@@ -74,11 +75,15 @@ describe("original setup guide interactions", () => {
     expect(router.push).toHaveBeenCalledWith(target);
     expect(openUpgradePlanDialog).not.toHaveBeenCalled();
   });
-  it.each([
-    ["the free plan", { plan: "free_cloud", subscriptionState: null }],
-    ["a cancelled paid plan", { plan: "starter", subscriptionState: "canceled" }],
-  ])("opens the plan picker for a number on %s", async (_label, plan) => {
-    setup(order.slice(0, order.indexOf("phoneNumber")), [], plan);
+  it("opens the number page on a self-hosted server, whose numbers have no limit", async () => {
+    setup(order.slice(0, order.indexOf("phoneNumber")), [], planEntitlement("self_host"));
+    await userEvent.click(screen.getByRole("button", { name: "sidebar.setupGuide.stepActions.phoneNumber" }));
+    expect(router.push).toHaveBeenCalledWith("/settings/phone-number");
+    expect(openUpgradePlanDialog).not.toHaveBeenCalled();
+  });
+  // The server gives a cancelled paid plan the free plan's entitlement too.
+  it("opens the plan picker for a number on the free plan", async () => {
+    setup(order.slice(0, order.indexOf("phoneNumber")), [], planEntitlement("free_cloud"));
     await userEvent.click(screen.getByRole("button", { name: "sidebar.setupGuide.stepActions.phoneNumber" }));
     expect(openUpgradePlanDialog).toHaveBeenCalledTimes(1);
     expect(router.push).not.toHaveBeenCalled();

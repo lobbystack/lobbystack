@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ withBusinessTransaction: vi.fn(), enqueueOutbox: vi.fn(), requireBusinessAdmin: vi.fn() }));
+import { planEntitlement, type Entitlement } from "@lobbystack/shared";
+
+const mocks = vi.hoisted(() => ({ withBusinessTransaction: vi.fn(), enqueueOutbox: vi.fn(), requireBusinessAdmin: vi.fn(), loadEntitlement: vi.fn() }));
 
 vi.mock("@lobbystack/db", async (original) => ({
   ...(await original<typeof import("@lobbystack/db")>()),
@@ -8,6 +10,7 @@ vi.mock("@lobbystack/db", async (original) => ({
   enqueueOutbox: mocks.enqueueOutbox,
 }));
 vi.mock("../authz", () => ({ requireBusinessAdmin: mocks.requireBusinessAdmin }));
+vi.mock("./entitlement", () => ({ loadEntitlement: mocks.loadEntitlement }));
 
 import { reserveOnboardingNumberClaim, reserveReplacementNumberClaim, searchBusinessNumberInventory } from "./phoneNumbers";
 
@@ -22,8 +25,16 @@ function chain(rows: unknown[]) {
   return node;
 }
 
+/** The business holds this entitlement. */
+function entitled(entitlement: Entitlement) {
+  mocks.loadEntitlement.mockResolvedValue(entitlement);
+}
+
+// Selects in order: the business, then what the purpose needs. A self-hosted business has no limit; a cloud one here is on Free.
 function setup(execute: () => unknown = () => ({ rows: [{ id: "claim-1" }] }), business: Record<string, unknown> = {}) {
-  const selects = [[{ stage: "complete", timezone: "America/Toronto", deploymentMode: "self_hosted_standard", replacementUsedAt: null, ...business }], [], [{ id: "number-1" }]];
+  const row = { stage: "complete", timezone: "America/Toronto", deploymentMode: "self_hosted_standard", replacementUsedAt: null, ...business };
+  entitled(planEntitlement(row.deploymentMode === "cloud" ? "free_cloud" : "self_host"));
+  const selects = [[row], [{ id: "number-1" }]];
   const tx = { select: () => chain(selects.shift() ?? []), execute: vi.fn(async () => await execute()) };
   mocks.withBusinessTransaction.mockImplementation(async (_db: unknown, _scope: unknown, callback: (tx: unknown) => unknown) => await callback(tx));
   return tx;
@@ -48,7 +59,8 @@ describe("searchBusinessNumberInventory", () => {
   ];
 
   it("offers a hosted business numbers that take calls, texting or not, up to the limit", async () => {
-    const selects = [[{ stage: "complete", timezone: "America/Toronto", deploymentMode: "cloud", replacementUsedAt: null }], [{ plan: "starter", state: "active" }], []];
+    entitled(planEntitlement("starter", { live: true, capMinor: null }));
+    const selects = [[{ stage: "complete", timezone: "America/Toronto", deploymentMode: "cloud", replacementUsedAt: null }], []];
     mocks.withBusinessTransaction.mockImplementation(async (_db: unknown, _scope: unknown, callback: (tx: unknown) => unknown) => await callback({ select: () => chain(selects.shift() ?? []) }));
     const listAvailablePhoneNumbers = vi.fn(async () => inventory);
     const result = await searchBusinessNumberInventory(context, { ...scope, limit: 2 }, { listAvailablePhoneNumbers });
@@ -94,9 +106,10 @@ describe("searchBusinessNumberInventory", () => {
   });
 
   describe("free trial numbers", () => {
-    // Selects in order: business, billing (none), the user's verified phone, its approved attempt, then trials.
+    // A business on Free. Selects in order: the business, the user's verified phone, its approved attempt, then trials.
     function trialSetup(countryCode: string, trials: unknown[] = []) {
-      const selects = [[{ stage: "phone_number", timezone: "America/Toronto", deploymentMode: "cloud", replacementUsedAt: null }], [], [{ phone: "+14165550123" }], [{ countryCode }], trials];
+      entitled(planEntitlement("free_cloud"));
+      const selects = [[{ stage: "phone_number", timezone: "America/Toronto", deploymentMode: "cloud", replacementUsedAt: null }], [{ phone: "+14165550123" }], [{ countryCode }], trials];
       mocks.withBusinessTransaction.mockImplementation(async (_db: unknown, _scope: unknown, callback: (tx: unknown) => unknown) => await callback({ select: () => chain(selects.shift() ?? []) }));
     }
 

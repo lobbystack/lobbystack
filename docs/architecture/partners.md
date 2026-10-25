@@ -163,10 +163,10 @@ Entitlement replaces checks of a plan's slug. It tells every caller what a busin
 
 ```ts
 type Entitlement = {
-  live: boolean;                        // may take calls and chats at all
+  live: boolean;                        // on a live paid plan or package: dedicated numbers and paid features
   source: "plan" | "package" | "billed_outside" | "unlimited";
   allowance: { voiceSeconds: number | null; chats: number | null; alertSms: number | null; outboundAttempts: number | null };
-  overage: { enabled: boolean; currency: string; rates: { voiceMinute: number; chat: number }; capMinor: number | null };
+  overage: { enabled: boolean; currency: string; rates: { voiceMinute: number; chat: number; alertSms: number; outboundAttempt: number }; capMinor: number | null };
   poolPartnerId: string | null;         // usage also draws on this partner's pool
   includedNumbers: number | null;
 };
@@ -174,8 +174,10 @@ type Entitlement = {
 loadEntitlement(tx, businessId: string): Promise<Entitlement>
 ```
 
-- A direct business gets its plan from the plan catalog, as today. A partner business gets its package, or no limit when it's billed outside LobbyStack. It is `live` only while its Stripe subscription is live (unless billed outside) and its partner's tier is live or in its first 30 days after ending.
-- `hasLiveEntitlement` is `loadEntitlement(...).live`, and it replaces `isPaidSubscription` in TypeScript. The SQL copies of that check in the number-claim migrations call one SQL function that applies the same rule.
+- A direct business gets its plan from the plan catalog, as today. A self-hosted server's businesses get `source: "unlimited"`. A partner business gets its package, or no limit when it's billed outside LobbyStack. It is `live` only while its Stripe subscription is live (unless billed outside) and its partner's tier is live or in its first 30 days after ending.
+- A direct business that isn't `live` still answers within its Free allowance. A partner business that isn't `live` gets an allowance of 0, so usage metering refuses its calls and chats the way it refuses any business at its limit: calls forward and chat shows its "can't reply" message.
+- `hasLiveEntitlement(account)` in `packages/shared` answers `live` from a billing account. The browser and the Polar reconcile use it on account snapshots. For a business's own account, it matches `loadEntitlement(...).live`. It replaces `isPaidSubscription` in TypeScript. The number-claim SQL calls `app.has_live_entitlement(business_id)`, which applies the same rule.
+- Direct Starter and Pro plans charge alert texts and outbound attempts against the cap. `rates` carries `alertSms` and `outboundAttempt` for them, beside the minute and chat rates.
 - Amounts are in the minor unit of `currency`, so caps work in a partner's currency.
 
 ## Usage metering

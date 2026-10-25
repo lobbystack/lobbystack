@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { brandLinks, contactEmailFor, isPaidSubscription, type BillingInterval, type BillingPlanSlug, type HostedCheckoutPlanIntervals } from "@lobbystack/shared";
+import { brandLinks, contactEmailFor, hasLiveEntitlement, type BillingInterval, type BillingPlanSlug, type HostedCheckoutPlanIntervals } from "@lobbystack/shared";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { requestJson } from "@/lib/request-json";
 import { selectActiveBusiness } from "@/lib/active-business";
@@ -77,7 +77,7 @@ export function LiveUpgradePlanProvider({ children }: { children: ReactNode }) {
   const rawPlan = billing.data?.account?.plan;
   // A cancelled or lapsed tier is not the plan someone is on, and marking its
   // card as current leaves them unable to start the tier they just lost.
-  const plan: BillingPlanSlug = rawPlan === "self_hosted_standard" || rawPlan === "self_host" ? "self_host" : isPaidSubscription(rawPlan, billing.data?.account?.subscriptionState) ? rawPlan as BillingPlanSlug : "free_cloud";
+  const plan: BillingPlanSlug = rawPlan === "self_hosted_standard" || rawPlan === "self_host" ? "self_host" : hasLiveEntitlement({ plan: rawPlan ?? null, subscriptionState: billing.data?.account?.subscriptionState ?? null }) ? rawPlan as BillingPlanSlug : "free_cloud";
   const pending = mutation.isPending && mutation.variables.businessId === businessId || checkout?.businessId === businessId;
   // The picker only renders once billing loads. If that request fails, an open flag alone
   // would hold the survey off for the rest of the visit.

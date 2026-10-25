@@ -47,9 +47,77 @@ export type BillingUsageKind = (typeof billingUsageKinds)[number];
  */
 export const liveSubscriptionStates = ["active", "trialing", "past_due"] as const;
 
-/** A billable plan on a live subscription: the gate for numbers and paid prompts. */
-export function isPaidSubscription(plan: string | null | undefined, state: string | null | undefined): boolean {
-  return ["starter", "pro", "enterprise"].includes(plan ?? "") && (liveSubscriptionStates as readonly string[]).includes(state ?? "");
+/**
+ * What a business may use right now. loadEntitlement in packages/domain gives a
+ * business's, and every check that once asked for a paid plan reads it. Amounts
+ * are in the minor unit of `overage.currency`.
+ */
+export type Entitlement = {
+  /**
+   * For a direct business: its billing account holds a paid plan (Starter, Pro
+   * or Enterprise) on a live subscription, past_due included, whatever the
+   * deployment mode. That's the answer the paid-plan check gave, and the
+   * checks for dedicated numbers and paid features read it. Callers that treat
+   * a self-hosted server differently also check `source`.
+   */
+  live: boolean;
+  /** Where the terms come from. Direct businesses get "plan", or "unlimited" on a self-hosted server. */
+  source: "plan" | "package" | "billed_outside" | "unlimited";
+  /** Included each month. Null means no limit. */
+  allowance: { voiceSeconds: number | null; chats: number | null; alertSms: number | null; outboundAttempts: number | null };
+  /** Usage past the allowance, billed per unit at these rates until the spend reaches the cap. */
+  overage: { enabled: boolean; currency: string; rates: { voiceMinute: number; chat: number; alertSms: number; outboundAttempt: number }; capMinor: number | null };
+  /** The partner whose pool the usage also draws on. Direct businesses have none. */
+  poolPartnerId: string | null;
+  /** Dedicated numbers the business may hold. Null means no limit. */
+  includedNumbers: number | null;
+};
+
+/** The billing account fields that decide whether an entitlement is live. */
+export type EntitlementAccount = { plan: string | null; subscriptionState: string | null };
+
+/**
+ * Whether a billing account holds a live entitlement: a plan the catalog marks
+ * paid, on a live subscription. Ignores the deployment mode, as the paid-plan
+ * check it replaces did. app.has_live_entitlement applies the same rule in the
+ * number-claim SQL.
+ */
+export function hasLiveEntitlement(account: EntitlementAccount | null | undefined): boolean {
+  if (!account || !isBillingPlanSlug(account.plan) || !billingPlanCatalog[account.plan].paid) return false;
+  return (liveSubscriptionStates as readonly string[]).includes(account.subscriptionState ?? "");
+}
+
+/**
+ * A direct plan's entitlement, from the plan catalog. `live` and the cap come
+ * from the business's billing account; amounts are US cents.
+ */
+export function planEntitlement(plan: BillingPlanSlug, account: { live: boolean; capMinor: number | null } = { live: false, capMinor: null }): Entitlement {
+  const terms = billingPlanCatalog[plan];
+  return {
+    live: account.live,
+    // A plan the host doesn't bill, which only a self-hosted server has, has no limit.
+    source: terms.hostedBilling ? "plan" : "unlimited",
+    allowance: {
+      voiceSeconds: terms.voiceSecondsIncluded,
+      chats: terms.chatAiTokensIncluded,
+      alertSms: terms.alertSmsSegmentsIncluded,
+      outboundAttempts: terms.outboundCallAttemptsIncluded,
+    },
+    overage: {
+      enabled: terms.overagesBillable,
+      currency: "USD",
+      rates: {
+        voiceMinute: terms.voiceOverageRatePerMinuteCents ?? 0,
+        // Polar never bills website chats, so a plan's chats add no spend and never use the cap.
+        chat: 0,
+        alertSms: terms.alertSmsOverageRatePerSegmentCents ?? 0,
+        outboundAttempt: terms.outboundCallAttemptOverageRateCents ?? 0,
+      },
+      capMinor: account.capMinor,
+    },
+    poolPartnerId: null,
+    includedNumbers: terms.includedBusinessNumbers,
+  };
 }
 
 export const billingTransactionKinds = ["order", "refund"] as const;
@@ -80,6 +148,7 @@ export const billingMeterEventNames = {
 export const billingPlanCatalog = {
   self_host: {
     hostedBilling: false,
+    paid: false,
     monthlyChargeCents: 0,
     annualChargeCents: null,
     annualEffectiveMonthlyChargeCents: null,
@@ -96,6 +165,7 @@ export const billingPlanCatalog = {
   },
   free_cloud: {
     hostedBilling: true,
+    paid: false,
     monthlyChargeCents: 0,
     annualChargeCents: null,
     annualEffectiveMonthlyChargeCents: null,
@@ -112,6 +182,7 @@ export const billingPlanCatalog = {
   },
   starter: {
     hostedBilling: true,
+    paid: true,
     monthlyChargeCents: 3_000,
     annualChargeCents: 28_800,
     annualEffectiveMonthlyChargeCents: 2_400,
@@ -128,6 +199,7 @@ export const billingPlanCatalog = {
   },
   pro: {
     hostedBilling: true,
+    paid: true,
     monthlyChargeCents: 10_000,
     annualChargeCents: 96_000,
     annualEffectiveMonthlyChargeCents: 8_000,
@@ -144,6 +216,7 @@ export const billingPlanCatalog = {
   },
   enterprise: {
     hostedBilling: true,
+    paid: true,
     monthlyChargeCents: null,
     annualChargeCents: null,
     annualEffectiveMonthlyChargeCents: null,
@@ -162,6 +235,8 @@ export const billingPlanCatalog = {
   BillingPlanSlug,
   {
     hostedBilling: boolean;
+    /** A business pays for the plan, so it holds a live entitlement only while its subscription is live. */
+    paid: boolean;
     monthlyChargeCents: number | null;
     annualChargeCents: number | null;
     annualEffectiveMonthlyChargeCents: number | null;

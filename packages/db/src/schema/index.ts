@@ -145,6 +145,8 @@ export const businesses = pgTable(
     hoursSource: varchar("hours_source", { length: 16 }).$type<"none" | "generated" | "operator">().default("none").notNull(),
     hoursFingerprint: varchar("hours_fingerprint", { length: 64 }),
     hoursGeneratedAt: timestamp("hours_generated_at", { withTimezone: true }),
+    // The partner that resells this business, or null for a direct business. Migration 0127 adds it without a foreign key until partners exist.
+    partnerId: uuid("partner_id"),
     ...legacyId,
     ...timestamps,
   },

@@ -1,4 +1,4 @@
-import type { BillingPlanSlug } from "@lobbystack/shared";
+import type { BillingPlanSlug, Entitlement } from "@lobbystack/shared";
 import type { AnalyticsChannelCounts } from "./analytics-channels";
 
 export type WorkspaceViewModel = {
@@ -98,6 +98,8 @@ export type PhoneNumberViewModel = {
 export type BillingUsageViewModel = {
   knowledgeStorageBytesUsed: number;
   effectivePlan: BillingPlanSlug;
+  // What the business may use now, as the server enforces it.
+  entitlement: Entitlement;
   account: {
     plan: string | null;
     billingInterval: string | null;

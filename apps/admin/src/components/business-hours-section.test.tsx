@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { planEntitlement } from "@lobbystack/shared";
 
 import { BusinessHoursSection, closuresForSave, HOURS_EDITOR_HREF, windowsForSave } from "./business-hours-section";
 import { AgentBasicSettingsPage } from "./live-agent-basic-settings-surface";
@@ -42,7 +43,7 @@ function stubFetch(initial: Hours, profile: Record<string, unknown> = {}) {
       return Response.json(state);
     }
     if (url.startsWith("/api/setup")) return Response.json({ steps: [] });
-    if (url.startsWith("/api/billing")) return Response.json({ account: null });
+    if (url.startsWith("/api/billing")) return Response.json({ account: null, entitlement: planEntitlement("free_cloud") });
     return Response.json({ business: { defaultLocale: "en" }, profile: { greeting: "Hi", summary: "", summarySource: "placeholder", transferNumber: null, transferMode: "none", appointmentChangePolicy: null, bookingMode: state.bookingMode, ...profile } });
   });
   vi.stubGlobal("fetch", fetchMock);

@@ -103,6 +103,7 @@ import { deleteServiceInTransaction, insertServiceInTransaction, replaceBusiness
 import { NUMBER_BEING_REPLACED_MESSAGE, schedulePhoneNumberReleaseInTransaction } from "../compliance";
 import { ContactPasscodeHashesBusyError, hashContactPasscodes, removeContactPasscodesInTransaction, saveContactPasscodesInTransaction } from "../contactPasscodes";
 import type { DomainContext } from "../context";
+import { loadEntitlement } from "../entitlement";
 import { cancelKnowledgeDocumentInTransaction, createKnowledgeDocumentInTransaction, createKnowledgeSnippetInTransaction, deleteKnowledgeDocumentInTransaction, deleteKnowledgeSnippetInTransaction, expandWebsiteCrawlInTransaction, KnowledgeStorageLimitError, ONBOARDING_CRAWL_PAGE_LIMIT, retryKnowledgeDocumentInTransaction, setKnowledgeDocumentActiveInTransaction, updateKnowledgeSnippetInTransaction } from "../knowledge";
 import { normalizeWebsiteSourceUrl } from "../knowledgeUrl";
 import { normalizeOnboardingStage, scheduleOnboardingFollowupInTransaction } from "../onboarding";
@@ -317,14 +318,14 @@ export async function updateBusinessForApi(context: DomainContext, caller: ApiCa
 
 /** The plan in force, as the server enforces it, and this month's overage spend against the cap. */
 async function loadBilling(tx: DatabaseTransaction, businessId: string): Promise<ApiBilling> {
-  const { plan, capCents } = await loadBillingContext(tx, businessId);
+  const { plan, entitlement } = await loadBillingContext(tx, businessId);
   const [account] = await tx.select({ source: billingAccounts.source, subscriptionState: billingAccounts.subscriptionState, billingInterval: billingAccounts.billingInterval, currentPeriodEnd: billingAccounts.currentPeriodEnd }).from(billingAccounts).where(eq(billingAccounts.businessId, businessId)).limit(1);
   const periodKey = new Date().toISOString().slice(0, 7);
   const [month] = await tx.select({ overageSpendCents: billingUsageMonths.overageSpendCents }).from(billingUsageMonths).where(and(eq(billingUsageMonths.businessId, businessId), eq(billingUsageMonths.periodKey, periodKey))).limit(1);
   const spend = month?.overageSpendCents ?? 0;
   // Interval, period and cap belong to a Starter or Pro subscription; an older one's values don't carry over.
   const paid = plan === "starter" || plan === "pro";
-  const cap = paid ? capCents : null;
+  const cap = paid ? entitlement.overage.capMinor : null;
   return {
     plan,
     managed: isManagedBillingAccount(account),
@@ -344,9 +345,9 @@ export async function getBillingForApi(context: DomainContext, caller: ApiCaller
 /** Sets or removes the overage cap. Only Starter and Pro plans have one; sending the cap it already has changes nothing. */
 export async function updateBillingForApi(context: DomainContext, caller: ApiCaller, input: ApiBillingUpdate): Promise<ApiBilling> {
   return await inBusiness(context, caller, async (tx) => {
-    const { plan, capCents } = await loadBillingContext(tx, caller.businessId);
+    const { plan, entitlement } = await loadBillingContext(tx, caller.businessId);
     if (plan !== "starter" && plan !== "pro") throw conflict("Spending caps are available on Starter and Pro plans.");
-    if (input.spending_cap_cents !== capCents) {
+    if (input.spending_cap_cents !== entitlement.overage.capMinor) {
       await setOverageSpendingCapInTransaction(tx, { businessId: caller.businessId, capCents: input.spending_cap_cents });
       await audit(tx, caller, { eventType: "api.billing.updated", entityType: "billing_account", entityId: caller.businessId, payload: { spendingCapCents: input.spending_cap_cents } });
     }
@@ -401,8 +402,9 @@ export async function createCheckoutForApi(context: DomainContext, caller: ApiCa
   return await inBusiness(context, caller, async (tx) => {
     const [account] = await tx.select({ source: billingAccounts.source, subscriptionState: billingAccounts.subscriptionState }).from(billingAccounts).where(eq(billingAccounts.businessId, caller.businessId)).limit(1);
     if (isManagedBillingAccount(account)) throw conflict("This business is on a managed plan, so LobbyStack bills it directly.");
-    const { plan: current } = await loadBillingContext(tx, caller.businessId);
-    if (current !== "free_cloud") throw conflict("This business already pays for a plan. Change it in the billing portal.");
+    // Only a business on the free plan buys one: a self-hosted server's businesses have no limit to buy off.
+    const entitlement = await loadEntitlement(tx, caller.businessId);
+    if (entitlement.live || entitlement.source === "unlimited") throw conflict("This business already pays for a plan. Change it in the billing portal.");
     let checkoutId: string;
     try {
       checkoutId = await createBillingCheckoutRequestInTransaction(tx, { userId, businessId: caller.businessId, target: input.plan, billingInterval: input.interval });
@@ -634,8 +636,9 @@ async function loadOnboarding(tx: DatabaseTransaction, businessId: string): Prom
   const [indexed] = await tx.select({ count: count() }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, businessId), eq(knowledgeDocuments.status, "indexed")));
   const [entries] = await tx.select({ count: count() }).from(knowledgeSnippets).where(and(eq(knowledgeSnippets.businessId, businessId), eq(knowledgeSnippets.active, true)));
   const { steps } = await loadSetupGuideInTransaction(tx, businessId);
-  const { plan } = await loadBillingContext(tx, businessId);
-  const paid = plan === "starter" || plan === "pro" || plan === "enterprise";
+  // The plan step is done once the business holds a live entitlement. A self-hosted server sells no plan.
+  const entitlement = await loadEntitlement(tx, businessId);
+  const paid = entitlement.live && entitlement.source !== "unlimited";
   const answeredCall = await hasAnsweredPhoneCall(tx, businessId);
   const item = (id: ApiOnboardingItem, done: boolean, skipped: boolean, required: boolean) => ({ id, status: done ? "done" as const : skipped ? "skipped" as const : "missing" as const, required });
   const checklist = [

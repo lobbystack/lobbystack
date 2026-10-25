@@ -9,7 +9,28 @@ import {
   contentRetentionDaysForPlan,
   getKnowledgeStorageLimitBytes,
   getPolarMeteredUsagePayload,
+  hasLiveEntitlement,
+  planEntitlement,
 } from "./billing";
+
+describe("direct plan entitlements", () => {
+  it("holds a live entitlement only on a paid plan whose subscription is live", () => {
+    for (const plan of ["starter", "pro", "enterprise"]) {
+      for (const subscriptionState of ["active", "trialing", "past_due"]) expect(hasLiveEntitlement({ plan, subscriptionState })).toBe(true);
+      for (const subscriptionState of ["canceled", "revoked", "incomplete", null]) expect(hasLiveEntitlement({ plan, subscriptionState })).toBe(false);
+    }
+    for (const plan of ["free_cloud", "self_host", "self_hosted_standard", "legacy_plan", null]) expect(hasLiveEntitlement({ plan, subscriptionState: "active" })).toBe(false);
+    expect(hasLiveEntitlement(null)).toBe(false);
+  });
+
+  it("takes each plan's allowance, overage rates and numbers from the catalog", () => {
+    expect(planEntitlement("free_cloud")).toMatchObject({ source: "plan", allowance: { voiceSeconds: 1_800, chats: 5, alertSms: 10, outboundAttempts: 2 }, overage: { enabled: false }, includedNumbers: 0 });
+    expect(planEntitlement("starter", { live: true, capMinor: 1_000 })).toMatchObject({ live: true, overage: { enabled: true, currency: "USD", rates: { voiceMinute: 20, chat: 0, alertSms: 2, outboundAttempt: 2 }, capMinor: 1_000 }, includedNumbers: 1 });
+    expect(planEntitlement("pro").overage.rates).toEqual({ voiceMinute: 18, chat: 0, alertSms: 2, outboundAttempt: 2 });
+    expect(planEntitlement("enterprise")).toMatchObject({ source: "plan", allowance: { voiceSeconds: null, chats: null, alertSms: null, outboundAttempts: null }, overage: { enabled: true }, includedNumbers: null });
+    expect(planEntitlement("self_host")).toMatchObject({ source: "unlimited", overage: { enabled: false }, includedNumbers: null, poolPartnerId: null });
+  });
+});
 
 describe("knowledge storage limits", () => {
   it("matches the configured plan allowances", () => {
