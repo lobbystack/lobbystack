@@ -40,3 +40,6 @@ apps/web/vite.tailscale.config.ts
 apps/admin/.marketing-dist
 apps/admin/public/pagefind
 apps/admin/public/marketing-sitemaps
+
+# Local agent tickets and scratch notes; never committed
+.scratch/
