@@ -4,6 +4,8 @@ This directory documents LobbyStack’s current architecture, operations, provid
 
 - `architecture/`: Runtime boundaries and data flow
 - `adr/`: Architecture decision records
+- `specs/`: Feature specs ready to build, with their status
+- `agents/`: Where agents file specs and how they mark them
 - `knowledge/`: Knowledge ingestion and retrieval
 - `telemetry/`: Event contracts, key performance indicators, and validation
 - `voice/`: How GPT-Live calls run, how to set up the phone path, and how to run and debug the stack on your desktop with Docker
