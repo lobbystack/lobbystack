@@ -1,6 +1,6 @@
 # How partners resell LobbyStack
 
-A partner resells LobbyStack to businesses under its own brand, domain, and bills. This page records what v1 of the partner program does, as decided on 2026-10-24. Nothing is built yet. [`GLOSSARY.md`](../GLOSSARY.md) defines the terms, and [the white-label research](../research/white-label-reseller-programs.md) compares 30 competitors. [Build the partner program](white-label-build-plan.md) lays out the work in phases.
+A partner resells LobbyStack to businesses under its own brand, domain, and bills. This page records what v1 of the partner program does, as decided on 2026-10-24. Nothing is built yet. [`GLOSSARY.md`](../GLOSSARY.md) defines the terms, and [the white-label research](../research/white-label-reseller-programs.md) compares 30 competitors. [Build the partner program](white-label-build-plan.md) lays out the work in phases, and [the partner architecture](architecture/partners.md) defines its modules.
 
 ## Terms
 
@@ -57,7 +57,7 @@ When the partner's pool runs out with overage off, or the partner reaches its ow
 - Partners sign up themselves, without an application.
 - A partner's team has three roles. Owners manage Polar billing and the Stripe connection, and can delete the partner. Admins manage businesses, packages, branding, the domain, keys, and the team. Members work inside businesses.
 - The partner console is part of the same app. Staff open it from the partner's domain or the host's.
-- Partner staff can open any of the partner's businesses with full access, without joining its team. Each time they open one, the business's audit log records who did it.
+- Partner members can open any of the partner's businesses with full access, without joining its team. Each time they open one, the business's audit log records who did it.
 
 The console has these pages in v1:
 

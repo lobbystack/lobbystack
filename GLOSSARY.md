@@ -14,6 +14,10 @@ _Avoid_: Client, tenant, customer
 A company that resells LobbyStack to businesses under its own brand, domain, and bills. It keeps the businesses it sets up.
 _Avoid_: Agency, reseller, white-label partner
 
+**Partner member**:
+A person on a partner's team, as its owner, an admin, or a member.
+_Avoid_: Partner staff, agency user
+
 **Host**:
 The company that runs a LobbyStack deployment: LobbyStack on its cloud, or a self-hoster on its own. The host's brand appears on its main domain and is the verified sender of its texts.
 _Avoid_: Operator, platform, deployment owner

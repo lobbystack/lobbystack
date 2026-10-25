@@ -1,6 +1,6 @@
 # Build the partner program
 
-This plan builds v1 of the partner program that [How partners resell LobbyStack](white-label.md) describes, in five phases. Each phase ships on its own and leaves the product working. Phase 1 ships first: partners on a subdomain of the partner base domain, with their businesses billed outside LobbyStack and no pool limit. That's the setup a deployment gets without Stripe Connect or tier products, so self-hosted deployments can use it as soon as it ships. On the cloud, partner signup stays invite-only until phase 2 bills tiers.
+This plan builds v1 of the partner program that [How partners resell LobbyStack](white-label.md) describes, in five phases. Each phase ships on its own and leaves the product working. [The partner architecture](architecture/partners.md) defines the modules and interfaces the phases build. Phase 1 ships first: partners on a subdomain of the partner base domain, with their businesses billed outside LobbyStack and no pool limit. That's the setup a deployment gets without Stripe Connect or tier products, so self-hosted deployments can use it as soon as it ships. On the cloud, partner signup stays invite-only until phase 2 bills tiers.
 
 Planned on 2026-10-24 from the code as it stood at commit `49765094`. Nothing is built yet.
 
@@ -38,14 +38,14 @@ This phase ships first. A partner signs up, brands its console, and creates busi
 | `partner_members` | Partner, user, role (owner, admin, or member), and status |
 | `partner_domains` | Hostname (unique), partner, kind (subdomain or custom), and verification state |
 | `businesses.partner_id`, `businesses.partner_access_level` | The business's partner, and the access level of its own operators: full or activity |
-| `partner_business_opens` | Partner staff member, business, and expiry. Each open also writes `audit_logs`. |
+| `partner_business_opens` | Partner member, business, and expiry. Each open also writes `audit_logs`. |
 | `user_active_businesses` | The active business per user and brand, replacing the global `users.active_business_id` |
 
 **Row-level security:**
 
 - Add a SECURITY DEFINER `app.has_partner_access(business_id)`. It's true when the current user is active on the business's partner and has an unexpired open of that business.
 - Make `app.has_business_membership` return true for partner access too, so every tenant policy picks it up.
-- Update the functions that join `business_memberships` themselves: migrations 0006, 0023, 0027, 0044, 0060, 0069, 0075, 0079, 0090, 0101, 0113, and 0125. Keep the team list (`app.list_business_members`) members-only, so partner staff never appear on a business's team.
+- Update the functions that join `business_memberships` themselves: migrations 0006, 0023, 0027, 0044, 0060, 0069, 0075, 0079, 0090, 0101, 0113, and 0125. Keep the team list (`app.list_business_members`) to the business's own operators, so partner members never appear on a business's team.
 - Replace `requireBusinessMembership` with an access check that returns the role and how the person got access. Call it from `forBusiness` in `apps/admin/src/lib/operator-request.ts`.
 
 **Hostnames:**
@@ -162,7 +162,7 @@ The parts of this phase are independent and can run in parallel.
 
 **Prospect demos:**
 
-- Add `partner_id` to `prospect_demos`, and authorize partner staff by role instead of `PROSPECT_DEMO_OPERATOR_EMAIL`.
+- Add `partner_id` to `prospect_demos`, and authorize partner members by role instead of `PROSPECT_DEMO_OPERATOR_EMAIL`.
 - Build the demo prompt from the brand name (`demos.ts:197`).
 - Claiming a partner demo keeps the business with the partner, on its domain, at its access level. Demo usage draws on the pool.
 - Add the console's Demos page, reusing `LiveDemosSurface`.
