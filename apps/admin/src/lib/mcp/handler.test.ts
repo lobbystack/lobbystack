@@ -179,7 +179,7 @@ describe("MCP authentication", () => {
   it("refuses platform keys, which have no MCP access", async () => {
     const { generatePlatformKey } = await import("../../../../../packages/domain/src/server/publicApi/platformKeys");
     const { resolveApiKey } = await import("../../../../../packages/domain/src/server/publicApi/apiKeys");
-    const { key, entry } = generatePlatformKey({ name: "AlloPlace CLI", partner: "alloplace", ownerEmail: "ops@alloplace.example", access: "all" });
+    const { key, entry } = generatePlatformKey({ name: "AlloPlace CLI", group: "alloplace", ownerEmail: "ops@alloplace.example", access: "all" });
     vi.stubEnv("PLATFORM_API_KEYS", JSON.stringify([entry]));
     try {
       // The real resolver: a platform key never matches the per-business key format, so no database lookup happens.

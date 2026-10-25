@@ -8,7 +8,7 @@ import { exitCodes } from "./errors";
 import { main } from "./main";
 
 const business = "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5f";
-const platformMe = { api_key: { id: "0b7c1d2e-3f40-4a51-8b62-7c83d94ea5b6", name: "AlloPlace CLI", prefix: "lsp_1a2b3c4d", scopes: ["business:read", "businesses:create"], created_at: "2026-10-11T12:00:00.000Z" }, business: null, platform: { partner: "alloplace", access: "partner" } };
+const platformMe = { api_key: { id: "0b7c1d2e-3f40-4a51-8b62-7c83d94ea5b6", name: "AlloPlace CLI", prefix: "lsp_1a2b3c4d", scopes: ["business:read", "businesses:create"], created_at: "2026-10-11T12:00:00.000Z" }, business: null, platform: { group: "alloplace", partner: "alloplace", access: "partner" } };
 const key = "lsp_1a2b3c4d_abcdefghijklmnopqrstuvwxyzABCDEF";
 
 let dir: string;
@@ -74,8 +74,11 @@ describe("lobbystack", () => {
     const whoami = await run(["whoami"], { fetch });
     expect(whoami.code).toBe(exitCodes.ok);
     expect(whoami.out).toMatch(/Profile:\s+default \(https:\/\/app\.example\.com\)/);
-    expect(whoami.out).toMatch(/Partner:\s+alloplace, access to its own businesses/);
+    expect(whoami.out).toMatch(/Group:\s+alloplace, access to its own businesses/);
     expect(whoami.out).toMatch(/Scopes:\s+business:read, businesses:create/);
+    // A server from before the rename sends only partner.
+    const older = api(() => ({ status: 200, body: { data: { ...platformMe, platform: { partner: "alloplace", access: "partner" } } } }));
+    expect((await run(["whoami"], { fetch: older })).out).toMatch(/Group:\s+alloplace, access to its own businesses/);
     expect(JSON.parse((await run(["whoami", "--json"], { fetch })).out)).toMatchObject({ profile: "default", api_key: { prefix: "lsp_1a2b3c4d" } });
     // --business reaches the API as the LobbyStack-Business header.
     await run(["whoami", "--business", business], { fetch });

@@ -38,7 +38,7 @@ describe('authentication', () => {
   });
 
   it('refuses a platform key, which has no business of its own', async () => {
-    const platform = { api_key: { ...me.api_key, prefix: 'lsp_1a2b3c4d' }, business: null, platform: { partner: 'alloplace', access: 'all' } };
+    const platform = { api_key: { ...me.api_key, prefix: 'lsp_1a2b3c4d' }, business: null, platform: { group: 'alloplace', partner: 'alloplace', access: 'all' } };
     api().get('/me').reply(200, { data: platform });
     await expect(appTester(App.authentication.test, bundleWith())).rejects.toThrow(/platform key/);
   });

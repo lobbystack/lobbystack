@@ -1,7 +1,8 @@
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 
-import { generatePlatformKey, parsePlatformKeys, rootCredentialWarning, type PlatformKeyAccess } from "../packages/domain/src/server/publicApi/platformKeys";
+import { generatePlatformKey, parsePlatformKeys, rootCredentialWarning, type PlatformKeyAccess, type PlatformKeyEntry } from "../packages/domain/src/server/publicApi/platformKeys";
 import { writePrivateJson } from "./lib/private-artifact";
 
 // Makes a platform API key for PLATFORM_API_KEYS. No database access: the key
@@ -10,11 +11,12 @@ import { writePrivateJson } from "./lib/private-artifact";
 
 function printUsage(): void {
   console.log(`Usage:
-  pnpm platform-key:create --name "AlloPlace CLI" --partner alloplace --owner-email ops@example.com [--create-businesses] [--create-users] [--access all] [--scope business:read --scope business:write]
+  pnpm platform-key:create --name "AlloPlace CLI" --group alloplace --owner-email ops@example.com [--create-businesses] [--create-users] [--access all] [--scope business:read --scope business:write]
 
-  --partner            Who the key belongs to: 1 to 40 lowercase letters, digits or hyphens. Audit rows and logs record it.
+  --group              The group the key belongs to: 1 to 40 lowercase letters, digits or hyphens. Keys in the same group
+                       reach the same businesses. Audit rows and logs record it.
   --owner-email        The LobbyStack account the key acts as. It must sign up and verify this email before the key works.
-  --access             partner (default): only businesses this partner onboards. all: every business, as the owner account,
+  --access             group (default): only businesses this group's keys onboard. all: every business, as the owner account,
                        which makes the key and that account root credentials.
   --create-businesses  Also grant businesses:create, so the key can make businesses with POST /businesses.
   --create-users       Also grant users:create, so the key can email sign-up invitations with POST /users.
@@ -27,13 +29,22 @@ in the environment so the printed value keeps the existing keys.
 `);
 }
 
-async function main(): Promise<void> {
+export type PlatformKeyCommand =
+  | { kind: "usage"; exitCode: 0 | 1 }
+  | { kind: "key"; key: string; entry: PlatformKeyEntry; existing: unknown[] };
+
+/**
+ * Reads the command line, checks the admin's current PLATFORM_API_KEYS and
+ * makes the key. existing holds the current entries as they are, so the
+ * printed value never rewrites an entry that still says partner.
+ */
+export function createPlatformKey(args: string[], existingRaw: string): PlatformKeyCommand {
   const { values } = parseArgs({
-    args: process.argv.slice(2),
+    args,
     strict: true,
     options: {
       name: { type: "string" },
-      partner: { type: "string" },
+      group: { type: "string" },
       "owner-email": { type: "string" },
       access: { type: "string" },
       scope: { type: "string", multiple: true },
@@ -42,31 +53,34 @@ async function main(): Promise<void> {
       help: { type: "boolean", short: "h" },
     },
   });
-  if (values.help) {
-    printUsage();
-    return;
-  }
-  if (!values.name || !values.partner || !values["owner-email"]) {
-    printUsage();
-    process.exitCode = 1;
-    return;
-  }
-  if (values.access !== undefined && values.access !== "partner" && values.access !== "all") throw new Error("--access must be partner or all.");
+  if (values.help) return { kind: "usage", exitCode: 0 };
+  if (!values.name || !values.group || !values["owner-email"]) return { kind: "usage", exitCode: 1 };
+  if (values.access !== undefined && values.access !== "group" && values.access !== "all") throw new Error("--access must be group or all.");
   if (values.scope?.length && (values["create-businesses"] || values["create-users"])) throw new Error("--create-businesses and --create-users add to the default scopes. With --scope, list businesses:create or users:create there instead.");
 
   // Check the current value first, so a broken PLATFORM_API_KEYS is never extended.
-  const existingRaw = process.env.PLATFORM_API_KEYS?.trim() ?? "";
   parsePlatformKeys(existingRaw);
   const existing = existingRaw ? JSON.parse(existingRaw) as unknown[] : [];
 
   const { key, entry } = generatePlatformKey({
     name: values.name,
-    partner: values.partner,
+    group: values.group,
     ownerEmail: values["owner-email"],
     ...(values.access ? { access: values.access as PlatformKeyAccess } : {}),
     ...(values.scope?.length ? { scopes: values.scope } : {}),
     platformScopes: [...(values["create-businesses"] ? ["businesses:create" as const] : []), ...(values["create-users"] ? ["users:create" as const] : [])],
   });
+  return { kind: "key", key, entry, existing };
+}
+
+async function main(): Promise<void> {
+  const command = createPlatformKey(process.argv.slice(2), process.env.PLATFORM_API_KEYS?.trim() ?? "");
+  if (command.kind === "usage") {
+    printUsage();
+    process.exitCode = command.exitCode;
+    return;
+  }
+  const { key, entry, existing } = command;
 
   const secretFile = join(process.cwd(), ".platform-keys", `${entry.prefix}.json`);
   await writePrivateJson(secretFile, { key, entry });
@@ -76,6 +90,8 @@ async function main(): Promise<void> {
   console.log(`Key written to ${secretFile}. Send it to its holder securely, then delete the file.\n`);
   console.log("New entry:");
   console.log(JSON.stringify(entry, null, 2));
+  // The entry names its group in group, which admins from before the rename refuse.
+  console.log("\nAn admin from before the group rename refuses this entry, and with it every key in PLATFORM_API_KEYS. Update the admin before you add it.");
   if (existing.length) {
     console.log(`\nSet PLATFORM_API_KEYS on the admin to its ${existing.length} current ${existing.length === 1 ? "entry" : "entries"} plus this one:`);
   } else {
@@ -85,7 +101,9 @@ async function main(): Promise<void> {
   console.log(JSON.stringify([...existing, entry]));
 }
 
-void main().catch((error) => {
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exitCode = 1;
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  void main().catch((error) => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  });
+}

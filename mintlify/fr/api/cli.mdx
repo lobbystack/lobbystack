@@ -37,7 +37,7 @@ lobbystack login --url https://app.lobbystack.com --key-stdin < key.txt
 La clé que vous utilisez détermine ce que `onboard` peut faire :
 
 - **Une clé API** de **Réglages** > **Clés API** configure sa propre entreprise, à condition que l'entreprise porte déjà le nom du manifeste ou que le manifeste donne son ID. Donnez-lui `business:read`, `business:write`, `knowledge:read` et `knowledge:write`, plus `billing:manage` pour un forfait, `phone_numbers:manage` pour un numéro et `team:manage` pour remettre l'entreprise, ce que seule une clé créée par un propriétaire peut faire. Consultez [Authentification](/fr/api/authentication).
-- **Une clé de plateforme** crée de nouvelles entreprises. C'est l'exploitant du déploiement qui les crée ; consultez [Clés de plateforme](/fr/api/authentication#clés-de-plateforme). La clé d'un exploitant, qui atteint toutes les entreprises, peut aussi donner à une entreprise un forfait et un numéro. Celle d'un partenaire ne le peut pas : le propriétaire paie les deux, et une fois qu'il a réclamé l'entreprise, la clé du partenaire ne l'atteint plus. Laissez `plan` et `phone_number` hors du manifeste d'un partenaire : le propriétaire les choisit dans le tableau de bord. La clé d'un partenaire laisse aussi au propriétaire la lecture complète d'un site.
+- **Une clé de plateforme** crée de nouvelles entreprises. La personne qui gère le déploiement les crée ; consultez [Clés de plateforme](/fr/api/authentication#clés-de-plateforme). Une clé qui a accès à toutes les entreprises peut aussi donner à une entreprise un forfait et un numéro. Une clé avec un accès de groupe ne le peut pas : le propriétaire paie les deux, et une fois qu'il a réclamé l'entreprise, la clé ne l'atteint plus. Laissez `plan` et `phone_number` hors de son manifeste : le propriétaire les choisit dans le tableau de bord. Une clé avec un accès de groupe laisse aussi au propriétaire la lecture complète d'un site.
 
 Dans un script ou une CI, définissez `LOBBYSTACK_URL` et `LOBBYSTACK_API_KEY` au lieu de vous connecter.
 
@@ -97,9 +97,9 @@ owner:
 | `knowledge.files` | Des fichiers PDF, Word, texte, Markdown, JPEG, PNG, WebP ou TIFF jusqu'à 10 Mo, sous forme de chemins dans le dossier du manifeste. Donnez à une entrée `path`, `title` et `tags` pour la nommer. |
 | `knowledge.faqs` | Des questions et leurs réponses. Une FAQ avec la même question reçoit la nouvelle réponse. |
 | `knowledge.texts` | Des notes avec un `title` et un `content`. Une note du même titre reçoit le nouveau contenu. |
-| `plan` | `checkout` avec un `plan` (`starter` ou `pro`) et un `interval` (`monthly` ou `annual`). Ou `managed: true` pour un forfait facturé hors de Polar, que seule la clé de plateforme d'un exploitant peut définir. |
+| `plan` | `checkout` avec un `plan` (`starter` ou `pro`) et un `interval` (`monthly` ou `annual`). Ou `managed: true` pour un forfait facturé hors de Polar, que seule une clé de plateforme qui a accès à toutes les entreprises peut définir. |
 | `phone_number` | Les champs de `POST /phone-numbers/search` : `country`, `kind`, `area_code`, `city`, `region` et `postal_code`. La commande réserve le premier numéro que la recherche propose. |
-| `onboarding` | L'intégration se termine dès qu'il ne lui manque plus rien, sauf avec la clé d'un partenaire, qui la laisse ouverte pour le propriétaire. `skip_number: true` la termine sans numéro, `complete` indique si elle se termine, et `source` indique d'où vient l'entreprise. |
+| `onboarding` | L'intégration se termine dès qu'il ne lui manque plus rien, sauf si la clé a un accès de groupe : elle reste alors ouverte pour le propriétaire. `skip_number: true` la termine sans numéro, `complete` indique si elle se termine, et `source` indique d'où vient l'entreprise. |
 | `owner` | L'`email` de la personne qui sera propriétaire de l'entreprise. Elle reçoit un lien pour la réclamer. |
 
 La commande ne supprime jamais ce que le fichier omet. Pour retirer un service, une règle ou une connaissance, utilisez le tableau de bord ou les autres commandes `lobbystack`.
@@ -148,14 +148,14 @@ Un paiement et un numéro de téléphone coûtent de l'argent, donc la commande 
 
 Pour configurer une entreprise qui existe déjà, mettez son ID dans `business.id`. `--business <id>` fonctionne aussi quand l'entreprise porte déjà le nom du manifeste. La commande ignore `LOBBYSTACK_BUSINESS` et l'entreprise enregistrée dans un profil, pour qu'un nouveau manifeste n'atterrisse jamais sur l'une d'elles par erreur.
 
-Le lien de réclamation part une fois tout le reste terminé, ou avant le paiement quand la clé d'un exploitant configure un forfait que le propriétaire paie. Quand le propriétaire l'accepte, la clé d'un partenaire et la clé API qui l'a envoyé n'atteignent plus l'entreprise, et une nouvelle exécution le signale. La clé d'un exploitant l'atteint toujours.
+Le lien de réclamation part une fois tout le reste terminé, ou avant le paiement quand une clé qui a accès à toutes les entreprises configure un forfait que le propriétaire paie. Quand le propriétaire l'accepte, une clé avec un accès de groupe et la clé API qui l'a envoyé n'atteignent plus l'entreprise, et une nouvelle exécution le signale. Une clé qui a accès à toutes les entreprises l'atteint toujours.
 
 ### Quand l'exécution attend quelqu'un
 
 Certaines étapes demandent une personne. La commande fait tout le reste, affiche ce qu'elle attend et se termine avec le code `4` :
 
 - **Un paiement.** La commande affiche le lien de paiement : envoyez-le à la personne qui paie. Tant que le forfait n'est pas payé, l'entreprise garde son forfait actuel. Le numéro de téléphone, les documents pour lesquels le forfait gratuit n'a pas de place et la lecture complète d'un site attendent le forfait payant. Une page de paiement de plus d'une heure a peut-être expiré : une exécution dans un terminal, sans `--yes`, propose d'en créer une nouvelle.
-- **La réclamation du propriétaire.** Avec la clé d'un exploitant, c'est le propriétaire de l'entreprise qui paie son forfait, donc le lien de réclamation part avant le paiement. La page de paiement est créée à la première exécution après que le propriétaire a accepté le lien.
+- **La réclamation du propriétaire.** Avec une clé qui a accès à toutes les entreprises, c'est le propriétaire de l'entreprise qui paie son forfait, donc le lien de réclamation part avant le paiement. La page de paiement est créée à la première exécution après que le propriétaire a accepté le lien.
 
 Relancez la même commande une fois que la personne a terminé. Un paiement peut acheter un forfait pour une entreprise gratuite, ou passer de Starter à Pro. Les autres changements de forfait, comme passer de Pro à Starter ou changer d'intervalle de facturation, se font dans le portail de facturation : la commande les signale et continue.
 
@@ -170,7 +170,7 @@ La commande garde les ID qu'elle crée dans un fichier d'état à côté du mani
 - Un document ou un site qui n'a pas pu être lu est relu une fois à l'exécution suivante. S'il échoue de la même façon, la commande le signale, et `lobbystack knowledge retry <id>` le relit une fois le problème réglé.
 - Un fichier d'état créé pour un tableau de bord est refusé sur un autre. Passez `--state <path>` pour en garder un par tableau de bord.
 
-Sans fichier d'état, une clé de plateforme ne crée pas d'entreprise si vous en avez déjà intégré une du même nom. Mettez l'ID de cette entreprise dans `business.id` pour la configurer, ou donnez un autre nom à la nouvelle. Une fois l'entreprise réclamée par son propriétaire, `GET /businesses` ne la liste plus, même pour la clé d'un exploitant : conservez donc le fichier d'état, ou copiez dans `business.id` l'ID qu'affiche la première exécution.
+Sans fichier d'état, une clé de plateforme ne crée pas d'entreprise si vous en avez déjà intégré une du même nom. Mettez l'ID de cette entreprise dans `business.id` pour la configurer, ou donnez un autre nom à la nouvelle. Une fois l'entreprise réclamée par son propriétaire, `GET /businesses` ne la liste plus, même pour une clé qui a accès à toutes les entreprises : conservez donc le fichier d'état, ou copiez dans `business.id` l'ID qu'affiche la première exécution.
 
 ## Codes de sortie
 

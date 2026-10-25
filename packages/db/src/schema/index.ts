@@ -1443,18 +1443,18 @@ export const deploymentBranding = pgTable("deployment_branding", {
 });
 
 // Platform keys live in the PLATFORM_API_KEYS environment variable, not in a
-// table. A partner's keys reach the businesses linked to the partner here.
-export const platformPartnerBusinesses = pgTable(
-  "platform_partner_businesses",
+// table. A key with group access reaches the businesses linked to its group here.
+export const platformKeyBusinesses = pgTable(
+  "platform_key_businesses",
   {
     businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
-    partnerId: varchar("partner_id", { length: 40 }).notNull(),
+    groupId: varchar("group_id", { length: 40 }).notNull(),
     createdByPlatformKeyId: uuid("created_by_platform_key_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
-    primaryKey({ columns: [table.businessId, table.partnerId] }),
-    index("platform_partner_businesses_partner_idx").on(table.partnerId, table.createdAt),
+    primaryKey({ columns: [table.businessId, table.groupId] }),
+    index("platform_key_businesses_group_idx").on(table.groupId, table.createdAt),
   ],
 );
 
@@ -1755,7 +1755,7 @@ export const allTenantTables = [
   unitEconomicsEvents,
   unitEconomicsRollups,
   apiKeys,
-  platformPartnerBusinesses,
+  platformKeyBusinesses,
   webhookEndpoints,
   webhookEvents,
   webhookDeliveries,
@@ -1827,7 +1827,7 @@ export const schema = {
   unitEconomicsRollups,
   apiKeys,
   deploymentBranding,
-  platformPartnerBusinesses,
+  platformKeyBusinesses,
   webhookEndpoints,
   webhookEvents,
   webhookDeliveries,

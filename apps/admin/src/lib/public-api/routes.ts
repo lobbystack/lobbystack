@@ -166,7 +166,7 @@ function requireEventScopes(credential: ApiCredential, events: readonly WebhookE
 }
 
 function webhookManager(caller: RestApiCaller): WebhookManager {
-  if (caller.platformKeyId !== undefined) return { kind: "platform_key", platformKeyId: caller.platformKeyId, partnerId: caller.partnerId, actingUserId: caller.actingUserId };
+  if (caller.platformKeyId !== undefined) return { kind: "platform_key", platformKeyId: caller.platformKeyId, groupId: caller.groupId, actingUserId: caller.actingUserId };
   return { kind: "api_key", apiKeyId: caller.apiKeyId };
 }
 
@@ -295,7 +295,7 @@ export const v1 = {
     const { assertEmailVerificationSendAllowed, EmailVerificationRateLimitError } = await import("../email-verification-policy");
     try {
       // The dashboard's limits per recipient, kept apart from verification codes so invitations can't hold up the person's own sign-up.
-      // The key's daily limit above stands in for the per-IP one: every request from a partner's server shares an address.
+      // The key's daily limit above stands in for the per-IP one: every request from the key holder's server shares an address.
       await assertEmailVerificationSendAllowed({ email: invitation.email, scope: "account-setup" });
     } catch (error) {
       if (!(error instanceof EmailVerificationRateLimitError)) throw error;
@@ -304,7 +304,7 @@ export const v1 = {
     }
     return { body: data(await inviteUserForApi({ auth: getAuthDatabase().db, app: getDatabase("lobbystack_app").db }, { key: credential, idempotencyKey, body, appBaseUrl })) };
   }),
-  listBusinesses: (request: Request) => handleApiRequest(request, "listBusinesses", async ({ context, credential }) => ({ body: await listBusinessesForApi(context, { partnerId: credential.partnerId, ...pageQuery(request) }) })),
+  listBusinesses: (request: Request) => handleApiRequest(request, "listBusinesses", async ({ context, credential }) => ({ body: await listBusinessesForApi(context, { groupId: credential.group, ...pageQuery(request) }) })),
   getBilling: (request: Request) => handleApiRequest(request, "getBilling", async ({ context, caller }) => ({ body: data(await getBillingForApi(context, caller)) })),
   updateBilling: (request: Request) => handleApiRequest(request, "updateBilling", async ({ context, caller }) => ({ body: data(await updateBillingForApi(context, caller, await readApiBody(request, apiBillingUpdateSchema))) })),
   createCheckout: (request: Request) => handleApiRequest(request, "createCheckout", async ({ context, caller }) => {
@@ -345,7 +345,7 @@ export const v1 = {
   updateOnboarding: (request: Request) => handleApiRequest(request, "updateOnboarding", async ({ context, caller }) => ({ body: data(await updateOnboardingForApi(context, caller, await readApiBody(request, apiOnboardingUpdateSchema))) })),
   completeOnboarding: (request: Request) => handleApiRequest(request, "completeOnboarding", async ({ context, caller }) => {
     const body = await readApiBody(request, apiOnboardingCompleteSchema);
-    // A partner onboarding businesses must not credit them to an affiliate code.
+    // A platform key onboarding businesses must not credit them to an affiliate code.
     if (body.referral_code !== undefined && caller.platformKeyId !== undefined) throw new PublicApiError(400, "invalid_request", "A platform key can't credit a referral. The business's owner can, with an API key they created.", [{ path: "referral_code", message: "Not accepted with a platform key." }]);
     // Affiliate attribution runs as the system actor, which only the app's database role can be, as in the dashboard.
     const attribution = body.referral_code !== undefined ? { context: createDomainContext(), referredUserId: await resolveActingUserId(context, caller) } : undefined;

@@ -3,33 +3,43 @@ import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypt
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import { businesses, platformPartnerBusinesses, withBusinessTransaction } from "@lobbystack/db";
+import { businesses, platformKeyBusinesses, withBusinessTransaction } from "@lobbystack/db";
 import { PLATFORM_API_KEY_PREFIX, apiKeyScopes, businessApiKeyScopes, type ApiKeyScope, type PlatformOnlyScope } from "@lobbystack/shared";
 
 import type { DomainContext } from "../context";
 import { notFound } from "./errors";
 
-// Platform keys onboard and manage businesses for LobbyStack and its partners.
-// They are set in the admin's PLATFORM_API_KEYS environment variable as a JSON
-// array, never in the database, so no dashboard user can create one. Each
-// entry keeps the SHA-256 of its key, not the key. A key carries 192 random
-// bits, so a pepper or a slow hash would add nothing, and the hashes stay valid
-// when ENCRYPTION_KEY changes. Keys look like lsp_<8 hex id>_<32 url-safe
+// Platform keys onboard and manage businesses for the host. They are set in
+// the admin's PLATFORM_API_KEYS environment variable as a JSON array, never in
+// the database, so no dashboard user can create one. Each entry keeps the
+// SHA-256 of its key, not the key. A key carries 192 random bits, so a pepper
+// or a slow hash would add nothing, and the hashes stay valid when
+// ENCRYPTION_KEY changes. Keys look like lsp_<8 hex id>_<32 url-safe
 // characters>; `pnpm platform-key:create` makes one and prints its entry.
+//
+// Each entry names its group, and a key with group access reaches the
+// businesses its group's keys created. Entries made before ADR 0010 call the
+// group `partner` and the access `partner`; both still work.
 
 const KEY_PATTERN = /^lsp_[0-9a-f]{8}_[A-Za-z0-9_-]{32}$/;
 const PREFIX_LENGTH = PLATFORM_API_KEY_PREFIX.length + 8;
 
-export type PlatformKeyAccess = "partner" | "all";
+export type PlatformKeyAccess = "group" | "all";
+
+const groupSlug = z.string().regex(/^[a-z0-9][a-z0-9-]{0,39}$/, "Use 1 to 40 lowercase letters, digits or hyphens.");
 
 const entrySchema = z.strictObject({
   id: z.uuid(),
   prefix: z.string().regex(/^lsp_[0-9a-f]{8}$/, "Use the prefix printed with the key, lsp_ and 8 hex characters."),
   hash: z.string().regex(/^[0-9a-f]{64}$/, "Use the 64-character SHA-256 hex printed with the key."),
   name: z.string().trim().min(1).max(120),
-  partner: z.string().regex(/^[a-z0-9][a-z0-9-]{0,39}$/, "Use 1 to 40 lowercase letters, digits or hyphens."),
+  // partner is the old name for group. An entry sets exactly one of them,
+  // which parsePlatformKeys checks.
+  group: groupSlug.optional(),
+  partner: groupSlug.optional(),
   owner_email: z.email(),
-  access: z.enum(["partner", "all"]).default("partner"),
+  // "partner" is the old name for "group".
+  access: z.enum(["group", "all", "partner"]).default("group"),
   // Required, so a key never gains a scope added after it was made.
   scopes: z.array(z.enum(apiKeyScopes)).min(1),
   created_at: z.iso.datetime({ offset: true }),
@@ -43,8 +53,8 @@ export type ResolvedPlatformKey = {
   platformKeyId: string;
   prefix: string;
   name: string;
-  /** Who the key belongs to. Audit rows and request logs carry it. */
-  partnerId: string;
+  /** The group the key belongs to. Audit rows and request logs carry it. */
+  group: string;
   /** The LobbyStack account the key acts as. */
   ownerEmail: string;
   access: PlatformKeyAccess;
@@ -95,14 +105,17 @@ export function parsePlatformKeys(raw: string | undefined): PlatformKey[] {
       throw new PlatformKeyConfigError(`PLATFORM_API_KEYS entry ${index} is invalid: check ${fields.join(", ")}.`);
     }
     const entry = parsed.data;
+    if (entry.group !== undefined && entry.partner !== undefined) throw new PlatformKeyConfigError(`PLATFORM_API_KEYS entry ${index} sets both group and partner, the old name for group. Remove partner.`);
+    const group = entry.group ?? entry.partner;
+    if (group === undefined) throw new PlatformKeyConfigError(`PLATFORM_API_KEYS entry ${index} is invalid: check group.`);
     return {
       platformKeyId: entry.id,
       prefix: entry.prefix,
       hash: entry.hash,
       name: entry.name,
-      partnerId: entry.partner,
+      group,
       ownerEmail: entry.owner_email,
-      access: entry.access,
+      access: entry.access === "all" ? "all" : "group",
       // Canonical order, like per-business keys.
       scopes: apiKeyScopes.filter((scope) => entry.scopes.includes(scope)),
       createdAt: new Date(entry.created_at).toISOString(),
@@ -149,7 +162,7 @@ export function resolvePlatformKey(token: string, environment: Readonly<Record<s
  * scopes named in platformScopes: creating businesses and inviting owners are
  * granted only on purpose.
  */
-export function generatePlatformKey(input: { name: string; partner: string; ownerEmail: string; access?: PlatformKeyAccess; scopes?: readonly string[]; platformScopes?: readonly PlatformOnlyScope[]; now?: Date }): { key: string; entry: PlatformKeyEntry } {
+export function generatePlatformKey(input: { name: string; group: string; ownerEmail: string; access?: PlatformKeyAccess; scopes?: readonly string[]; platformScopes?: readonly PlatformOnlyScope[]; now?: Date }): { key: string; entry: PlatformKeyEntry } {
   const shortId = randomBytes(4).toString("hex");
   const key = `${PLATFORM_API_KEY_PREFIX}${shortId}_${randomBytes(24).toString("base64url")}`;
   const candidate = {
@@ -157,9 +170,9 @@ export function generatePlatformKey(input: { name: string; partner: string; owne
     prefix: `${PLATFORM_API_KEY_PREFIX}${shortId}`,
     hash: hashPlatformKey(key),
     name: input.name.trim(),
-    partner: input.partner.trim(),
+    group: input.group.trim(),
     owner_email: input.ownerEmail.trim(),
-    access: input.access ?? "partner",
+    access: input.access ?? "group",
     scopes: input.scopes?.length ? [...input.scopes] : [...businessApiKeyScopes, ...(input.platformScopes ?? [])],
     created_at: (input.now ?? new Date()).toISOString(),
   };
@@ -171,7 +184,7 @@ export function generatePlatformKey(input: { name: string; partner: string; owne
 /**
  * The warning pnpm platform-key:create prints with a key whose access is "all": it acts as its owner
  * on every business without being on any team, so the key and the owner's
- * account are root credentials for the deployment. Null for a partner's key.
+ * account are root credentials for the deployment. Null for a key with group access.
  */
 export function rootCredentialWarning(entry: { access?: string | undefined; owner_email: string }): string | null {
   if (entry.access !== "all") return null;
@@ -190,24 +203,24 @@ export async function resolvePlatformKeyOwner(context: DomainContext, ownerEmail
 
 /**
  * Checks that a platform key may act on a business. The business must be
- * active, and a partner key also needs the business linked to its partner.
+ * active, and a key with group access also needs the business linked to its group.
  * Every refusal is the same "Business not found", so a key can't tell a
  * business it may not touch from one that doesn't exist.
  */
-export async function requirePlatformBusinessAccess(context: DomainContext, input: { businessId: string; partnerId: string; access: PlatformKeyAccess }): Promise<void> {
+export async function requirePlatformBusinessAccess(context: DomainContext, input: { businessId: string; groupId: string; access: PlatformKeyAccess }): Promise<void> {
   await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const [business] = await tx.select({ status: businesses.status }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1);
     if (!business || business.status !== "active") throw notFound("Business");
     // An operator's key reaches every active business as its owner, with no membership: a root credential (see rootCredentialWarning).
     if (input.access === "all") return;
-    const [link] = await tx.select({ businessId: platformPartnerBusinesses.businessId }).from(platformPartnerBusinesses).where(and(eq(platformPartnerBusinesses.businessId, input.businessId), eq(platformPartnerBusinesses.partnerId, input.partnerId))).limit(1);
+    const [link] = await tx.select({ businessId: platformKeyBusinesses.businessId }).from(platformKeyBusinesses).where(and(eq(platformKeyBusinesses.businessId, input.businessId), eq(platformKeyBusinesses.groupId, input.groupId))).limit(1);
     if (!link) throw notFound("Business");
   });
 }
 
-/** Lets a partner's platform keys act on a business. Linking twice is a no-op. */
-export async function linkPlatformPartnerBusiness(context: DomainContext, input: { businessId: string; partnerId: string; platformKeyId: string }): Promise<void> {
+/** Lets a group's platform keys act on a business. Linking twice is a no-op. */
+export async function linkPlatformKeyBusiness(context: DomainContext, input: { businessId: string; groupId: string; platformKeyId: string }): Promise<void> {
   await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
-    await tx.insert(platformPartnerBusinesses).values({ businessId: input.businessId, partnerId: input.partnerId, createdByPlatformKeyId: input.platformKeyId }).onConflictDoNothing();
+    await tx.insert(platformKeyBusinesses).values({ businessId: input.businessId, groupId: input.groupId, createdByPlatformKeyId: input.platformKeyId }).onConflictDoNothing();
   });
 }

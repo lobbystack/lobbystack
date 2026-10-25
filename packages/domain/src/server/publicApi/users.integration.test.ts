@@ -38,7 +38,7 @@ afterAll(async () => {
 });
 
 describe.skipIf(!testUrl)("POST /users", () => {
-  const { key, entry } = generatePlatformKey({ name: "AlloPlace CLI", partner: "alloplace", ownerEmail: "ops@alloplace.example" });
+  const { key, entry } = generatePlatformKey({ name: "AlloPlace CLI", group: "alloplace", ownerEmail: "ops@alloplace.example" });
   const resolved = () => resolvePlatformKey(key, { PLATFORM_API_KEYS: JSON.stringify([entry]) })!;
   const invite = async (email: string, idempotencyKey = `owner-${randomUUID()}`, locale?: "en" | "fr" | "es" | "sr") => await inviteUserForApi({ auth: auth!.db, app: app!.db }, { key: resolved(), idempotencyKey, body: { email, ...(locale ? { locale } : {}) }, appBaseUrl: "https://app.example.com" });
   const queued = async (email: string) => (await admin!.db.select({ payload: outboxMessages.payload, aggregateId: outboxMessages.aggregateId }).from(outboxMessages).where(and(eq(outboxMessages.topic, "email.send"), eq(sql`${outboxMessages.payload}->>'to'`, email)))).map((row) => ({ ...row.payload, aggregateId: row.aggregateId }));

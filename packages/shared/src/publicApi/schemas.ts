@@ -71,8 +71,10 @@ export const apiMeSchema = z.object({
   }),
   business: z.object({ id, name: z.string() }).nullable().describe("The business the key acts on. Always set for a per-business key. For a platform key, the business in the LobbyStack-Business header, or null when the request has none."),
   platform: z.object({
-    partner: z.string().describe("Who the platform key belongs to, as set in PLATFORM_API_KEYS."),
-    access: z.enum(["partner", "all"]).describe("all: the key can act on every business. partner: only on businesses its partner onboarded."),
+    group: z.string().describe("The group the platform key belongs to, as set in PLATFORM_API_KEYS. Keys in the same group reach the same businesses."),
+    partner: z.string().meta({ deprecated: true, description: "Deprecated: the old name for group, with the same value. Read group instead." }),
+    // v1 only changes additively, so group access keeps the value it shipped with.
+    access: z.enum(["partner", "all"]).describe("all: the key can act on every business. partner: group access, only on the businesses its group's keys onboarded. A PLATFORM_API_KEYS entry with \"access\": \"group\" reports partner here."),
   }).optional().describe("Present only for a platform key."),
 }).describe("The API key making the request and the business it acts on.");
 
@@ -442,7 +444,7 @@ export const apiOnboardingUpdateSchema = z.strictObject({
 
 export const apiOnboardingCompleteSchema = z.strictObject({
   source: z.string().trim().max(120).optional().describe("How the business heard about LobbyStack."),
-  referral_code: z.string().trim().min(1).max(64).optional().describe("An affiliate's referral code. Not accepted from a platform key, or for a business a partner onboarded."),
+  referral_code: z.string().trim().min(1).max(64).optional().describe("An affiliate's referral code. Not accepted from a platform key, or for a business a platform key onboarded."),
   skip_number: z.boolean().optional().describe("true finishes a paid plan's onboarding without a phone number."),
 });
 
@@ -463,7 +465,7 @@ export const apiBusinessSummarySchema = z.object({
   website_url: z.string().nullable(),
   onboarding_stage: z.string().describe("Where the business is in onboarding, for example website, phone_number or complete."),
   created_at: timestamp,
-}).describe("A business the platform key's partner onboarded.");
+}).describe("A business the platform key's group onboarded.");
 
 export const apiUserCreateSchema = z.strictObject({
   email: teamEmail.describe("The owner's email."),

@@ -4,7 +4,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { DateTime } from "luxon";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { agentRules, apiKeys, appointments, auditLogs, billingAccounts, billingCheckoutRequests, businesses, businessHours, businessMemberships, calendarBusyBlocks, calendarConnections, calls, contacts, conversations, createDatabaseClient, idempotencyKeys, inboxItems, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, numberTrials, onboardingNumberClaimEvents, onboardingPhoneVerifications, operatorNotificationDeliveries, operatorNotificationPreferences, outboxMessages, phoneNumbers, platformPartnerBusinesses, receptionistProfiles, services, staff, staffServiceAssignments, storageObjects, users, webhookDeliveries, webhookDeliveryAttempts, webhookEndpoints, webhookEvents, websiteIngestionJobs, widgetKeys } from "@lobbystack/db";
+import { agentRules, apiKeys, appointments, auditLogs, billingAccounts, billingCheckoutRequests, businesses, businessHours, businessMemberships, calendarBusyBlocks, calendarConnections, calls, contacts, conversations, createDatabaseClient, idempotencyKeys, inboxItems, knowledgeChunks, knowledgeDocuments, knowledgeSnippets, numberTrials, onboardingNumberClaimEvents, onboardingPhoneVerifications, operatorNotificationDeliveries, operatorNotificationPreferences, outboxMessages, phoneNumbers, platformKeyBusinesses, receptionistProfiles, services, staff, staffServiceAssignments, storageObjects, users, webhookDeliveries, webhookDeliveryAttempts, webhookEndpoints, webhookEvents, websiteIngestionJobs, widgetKeys } from "@lobbystack/db";
 import { apiAppointmentSchema, apiBillingSchema, apiBusinessSchema, apiCalendarConnectionSchema, apiCallSchema, apiCheckoutSchema, apiKnowledgeEntrySchema, apiKnowledgeSourceSchema, apiNotificationPreferencesSchema, apiOnboardingSchema, apiPhoneNumberClaimSchema, apiPhoneNumberOfferSchema, apiPhoneNumberSchema, apiReceptionistSchema, apiRuleSchema, apiServiceSchema, apiStaffSchema, apiTeamSchema, apiWidgetKeyCreatedSchema, defaultGreeting, OPERATOR_SMS_DISCLOSURE_VERSION, WEBHOOK_MAX_ATTEMPTS } from "@lobbystack/shared";
 
 import { finalizeConversationSession } from "../conversations";
@@ -15,10 +15,10 @@ import { acceptInvitation } from "../tenancy";
 import { createVoiceFollowUpTask } from "../voice";
 import { generateApiKey, resolveApiKey, revokeApiKey } from "./apiKeys";
 import { runIdempotent } from "./idempotency";
-import { cancelAppointmentForApi, cancelKnowledgeSourceForApi, claimPhoneNumberForApi, completeKnowledgeUploadForApi, completeOnboardingForApi, createAppointmentForApi, createCalendarConnectLinkForApi, createCheckoutForApi, createClaimLinkForApi, createContactForApi, createKnowledgeEntryForApi, createKnowledgeSourceForApi, createKnowledgeUploadForApi, createRuleForApi, createServiceForApi, createTeamInvitationForApi, createWidgetKeyForApi, deleteCalendarConnectionForApi, deleteKnowledgeEntryForApi, deleteKnowledgeSourceForApi, deleteRuleForApi, deleteServiceForApi, endManagedPlanForApi, expandKnowledgeSourceForApi, getAvailabilityForApi, getBillingForApi, getCheckoutForApi, getContactForApi, getKnowledgeEntryForApi, getKnowledgeSourceForApi, getMeForApi, getNotificationPreferencesForApi, getOnboardingForApi, getPhoneNumberClaimForApi, getReceptionistForApi, getTeamForApi, listAccountCalendarsForApi, listAppointmentsForApi, listCalendarConnectionsForApi, listContactsForApi, listKnowledgeEntriesForApi, listKnowledgeSourcesForApi, listPhoneNumbersForApi, listRulesForApi, listServicesForApi, listStaffForApi, listWidgetKeysForApi, releasePhoneNumberForApi, removeTeamMemberForApi, reorderRulesForApi, rescheduleAppointmentForApi, retryKnowledgeSourceForApi, revokeTeamInvitationForApi, searchPhoneNumbersForApi, setManagedPlanForApi, updateBillingForApi, updateBusinessForApi, updateCalendarConnectionForApi, updateContactForApi, updateKnowledgeEntryForApi, updateKnowledgeSourceForApi, updateNotificationPreferencesForApi, updateOnboardingForApi, updateReceptionistForApi, updateRuleForApi, updateServiceForApi, updateTeamMemberForApi, updateWidgetKeyForApi, type ApiCaller, type ApiKeyCaller, type PlatformKeyCaller } from "./operations";
+import { cancelAppointmentForApi, cancelKnowledgeSourceForApi, claimPhoneNumberForApi, completeKnowledgeUploadForApi, completeOnboardingForApi, createAppointmentForApi, createCalendarConnectLinkForApi, createCheckoutForApi, createClaimLinkForApi, createContactForApi, createKnowledgeEntryForApi, createKnowledgeSourceForApi, createKnowledgeUploadForApi, createRuleForApi, createServiceForApi, createTeamInvitationForApi, createWidgetKeyForApi, deleteCalendarConnectionForApi, deleteKnowledgeEntryForApi, deleteKnowledgeSourceForApi, deleteRuleForApi, deleteServiceForApi, endManagedPlanForApi, expandKnowledgeSourceForApi, getAvailabilityForApi, getBillingForApi, getCheckoutForApi, getContactForApi, getKnowledgeEntryForApi, getKnowledgeSourceForApi, getMeForApi, getNotificationPreferencesForApi, getOnboardingForApi, getPhoneNumberClaimForApi, getReceptionistForApi, getTeamForApi, listAccountCalendarsForApi, listAppointmentsForApi, listBusinessesForApi, listCalendarConnectionsForApi, listContactsForApi, listKnowledgeEntriesForApi, listKnowledgeSourcesForApi, listPhoneNumbersForApi, listRulesForApi, listServicesForApi, listStaffForApi, listWidgetKeysForApi, releasePhoneNumberForApi, removeTeamMemberForApi, reorderRulesForApi, rescheduleAppointmentForApi, retryKnowledgeSourceForApi, revokeTeamInvitationForApi, searchPhoneNumbersForApi, setManagedPlanForApi, updateBillingForApi, updateBusinessForApi, updateCalendarConnectionForApi, updateContactForApi, updateKnowledgeEntryForApi, updateKnowledgeSourceForApi, updateNotificationPreferencesForApi, updateOnboardingForApi, updateReceptionistForApi, updateRuleForApi, updateServiceForApi, updateTeamMemberForApi, updateWidgetKeyForApi, type ApiCaller, type ApiKeyCaller, type PlatformKeyCaller } from "./operations";
 import { PublicApiError } from "./errors";
 import { requirePlatformBusinessAccess } from "./platformKeys";
-import { createWebhookEndpoint, disableRemovedPlatformKeyWebhooks, processWebhookDelivery, pruneApiHistory, updateWebhookEndpoint, type WebhookManager } from "./webhooks";
+import { createWebhookEndpoint, deleteWebhookEndpoint, disableRemovedPlatformKeyWebhooks, processWebhookDelivery, pruneApiHistory, rotateWebhookSecret, updateWebhookEndpoint, type WebhookManager } from "./webhooks";
 import { encryptWebhookSecret } from "./webhookTransport";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
@@ -831,7 +831,7 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
     const [key] = await admin!.db.insert(apiKeys).values({ businessId, name: "billing", prefix: generated.prefix, keyHash: generated.keyHash, scopes: ["billing:manage"], createdByUserId: ownerId }).returning({ id: apiKeys.id });
     const caller: ApiKeyCaller = { businessId, apiKeyId: key!.id };
     // An operator's platform key acts as its owner.
-    const operator: PlatformKeyCaller = { businessId, platformKeyId: randomUUID(), partnerId: "lobbystack", actingUserId: ownerId, actor: "platform_key" };
+    const operator: PlatformKeyCaller = { businessId, platformKeyId: randomUUID(), groupId: "lobbystack", actingUserId: ownerId, actor: "platform_key" };
     const audited = async (eventType: string) => (await admin!.db.select({ id: auditLogs.id }).from(auditLogs).where(and(eq(auditLogs.businessId, businessId), eq(auditLogs.eventType, eventType)))).length;
     const account = async () => (await admin!.db.select({ source: billingAccounts.source, plan: billingAccounts.plan, subscriptionState: billingAccounts.subscriptionState, cap: billingAccounts.overageSpendingCapCents }).from(billingAccounts).where(eq(billingAccounts.businessId, businessId)))[0];
     const payer = async (checkoutId: string) => (await admin!.db.select({ userId: billingCheckoutRequests.requestedByUserId }).from(billingCheckoutRequests).where(eq(billingCheckoutRequests.id, checkoutId)))[0]?.userId;
@@ -995,12 +995,12 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
         expect(await admin!.db.select({ ipHash: numberTrials.ipHash }).from(numberTrials).where(eq(numberTrials.businessId, businessId))).toEqual([{ ipHash: null }]);
       }
       // A key acts as one person, who gets one trial: a platform key's second business pays for its number.
-      const partner = await person();
-      const platform = (businessId: string): PlatformKeyCaller => ({ businessId, platformKeyId: randomUUID(), partnerId: "acme", actingUserId: partner.personId, actor: "platform_key" });
-      const firstBusiness = await trialBusiness(partner);
-      expect(await claimTrial(platform(firstBusiness), partner.personId)).toMatchObject({ status: "pending" });
-      const secondBusiness = await trialBusiness(partner);
-      await expectApiError(claimTrial(platform(secondBusiness), partner.personId), 409, "conflict");
+      const keyOwner = await person();
+      const platform = (businessId: string): PlatformKeyCaller => ({ businessId, platformKeyId: randomUUID(), groupId: "acme", actingUserId: keyOwner.personId, actor: "platform_key" });
+      const firstBusiness = await trialBusiness(keyOwner);
+      expect(await claimTrial(platform(firstBusiness), keyOwner.personId)).toMatchObject({ status: "pending" });
+      const secondBusiness = await trialBusiness(keyOwner);
+      await expectApiError(claimTrial(platform(secondBusiness), keyOwner.personId), 409, "conflict");
       expect(await admin!.db.select({ id: numberTrials.id }).from(numberTrials).where(eq(numberTrials.businessId, secondBusiness))).toEqual([]);
     } finally {
       await admin!.db.delete(outboxMessages).where(inArray(outboxMessages.businessId, businessIds));
@@ -1141,7 +1141,7 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
       expect(await getPhoneNumberClaimForApi(context, caller, claimId)).toMatchObject({ status: "failed" });
     };
     try {
-      // A partner's business still on its website step stays there through a claim, and after one that fails or is abandoned.
+      // A platform key's business still on its website step stays there through a claim, and after one that fails or is abandoned.
       const first = await claim();
       expect(await stage()).toBe("website");
       await failed(first.id);
@@ -1270,26 +1270,26 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
 
   it("credits no referral and sends no founder's check-in for a business someone else onboarded", async () => {
     const context = { db: worker!.db };
-    const partnerBusinessId = randomUUID();
+    const groupBusinessId = randomUUID();
     const operatorBusinessId = randomUUID();
-    for (const [id, label] of [[partnerBusinessId, "partner"], [operatorBusinessId, "operator"]] as const) {
+    for (const [id, label] of [[groupBusinessId, "group"], [operatorBusinessId, "operator"]] as const) {
       await admin!.db.insert(businesses).values({ id, slug: `api-onboarding-${label}-${id}`, name: `Onboarded by ${label}`, timezone: "UTC", businessType: "test" });
     }
-    await admin!.db.insert(platformPartnerBusinesses).values({ businessId: partnerBusinessId, partnerId: "acme" });
+    await admin!.db.insert(platformKeyBusinesses).values({ businessId: groupBusinessId, groupId: "acme" });
     const followUps = async (businessId: string) => (await admin!.db.select({ id: outboxMessages.id }).from(outboxMessages).where(and(eq(outboxMessages.businessId, businessId), eq(outboxMessages.topic, "onboarding.sendFollowup")))).length;
     try {
-      // A partner's business: even a key of the business's own can't credit a referral, and its check-in would reach the partner.
-      const keyCaller: ApiKeyCaller = { businessId: partnerBusinessId, apiKeyId: randomUUID() };
+      // A business a group's platform keys onboarded: even a key of the business's own can't credit a referral, and its check-in would reach the key's account.
+      const keyCaller: ApiKeyCaller = { businessId: groupBusinessId, apiKeyId: randomUUID() };
       await expectApiError(completeOnboardingForApi(context, keyCaller, { referral_code: "friend" }, { attribution: { context, referredUserId: ownerId } }), 400, "invalid_request");
       expect(await completeOnboardingForApi(context, keyCaller, {})).toMatchObject({ stage: "complete", complete: true });
-      expect(await followUps(partnerBusinessId)).toBe(0);
+      expect(await followUps(groupBusinessId)).toBe(0);
       // A business an operator's platform key finished.
-      const platform: PlatformKeyCaller = { businessId: operatorBusinessId, platformKeyId: randomUUID(), partnerId: "lobbystack", actingUserId: ownerId, actor: "platform_key" };
+      const platform: PlatformKeyCaller = { businessId: operatorBusinessId, platformKeyId: randomUUID(), groupId: "lobbystack", actingUserId: ownerId, actor: "platform_key" };
       expect(await completeOnboardingForApi(context, platform, {})).toMatchObject({ stage: "complete", complete: true });
       expect(await followUps(operatorBusinessId)).toBe(0);
     } finally {
-      await admin!.db.delete(outboxMessages).where(inArray(outboxMessages.businessId, [partnerBusinessId, operatorBusinessId]));
-      await admin!.db.delete(businesses).where(inArray(businesses.id, [partnerBusinessId, operatorBusinessId]));
+      await admin!.db.delete(outboxMessages).where(inArray(outboxMessages.businessId, [groupBusinessId, operatorBusinessId]));
+      await admin!.db.delete(businesses).where(inArray(businesses.id, [groupBusinessId, operatorBusinessId]));
     }
   });
 
@@ -1306,7 +1306,7 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
     // Two statements, so the owner joined first.
     await admin!.db.insert(businessMemberships).values({ businessId, userId: ownerId, role: "business_owner" });
     await admin!.db.insert(businessMemberships).values({ businessId, userId: viewerId, role: "viewer" });
-    const platform: PlatformKeyCaller = { businessId, platformKeyId: randomUUID(), partnerId: "lobbystack", actingUserId: ownerId, actor: "platform_key" };
+    const platform: PlatformKeyCaller = { businessId, platformKeyId: randomUUID(), groupId: "lobbystack", actingUserId: ownerId, actor: "platform_key" };
     const audited = async (eventType: string) => (await admin!.db.select({ id: auditLogs.id }).from(auditLogs).where(and(eq(auditLogs.businessId, businessId), eq(auditLogs.eventType, eventType)))).length;
     try {
       const team = await getTeamForApi(context, platform);
@@ -1347,17 +1347,24 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
       expect(link.invitation).toMatchObject({ email: customerEmail, role: "business_owner", status: "pending", transfers_ownership: true });
       expect((await getTeamForApi(context, platform)).invitations.map((open) => open.id)).toEqual([link.invitation.id]);
 
-      // A partner onboarded the business, and the operator's account made an API key for it.
-      await admin!.db.insert(platformPartnerBusinesses).values({ businessId, partnerId: "acme" });
+      // A group's platform key onboarded the business, and the operator's account made an API key for it.
+      await admin!.db.insert(platformKeyBusinesses).values({ businessId, groupId: "acme" });
       const generated = generateApiKey();
       const [operatorKey] = await admin!.db.insert(apiKeys).values({ businessId, name: "operator", prefix: generated.prefix, keyHash: generated.keyHash, scopes: ["business:read"], createdByUserId: ownerId }).returning({ id: apiKeys.id });
-      const partnerAccess = () => requirePlatformBusinessAccess(context, { businessId, partnerId: "acme", access: "partner" });
-      await partnerAccess();
+      const groupAccess = () => requirePlatformBusinessAccess(context, { businessId, groupId: "acme", access: "group" });
+      const listed = async () => (await listBusinessesForApi(context, { groupId: "acme", limit: 100 })).data.map((business) => business.id);
+      await groupAccess();
+      expect(await listed()).toContain(businessId);
 
       // The owner accepts it in the dashboard: the business is theirs and opens for them, and the operator loses its access.
       expect(await accept(link.url)).toEqual({ businessId, role: "business_owner" });
       expect((await admin!.db.select({ active: users.activeBusinessId }).from(users).where(eq(users.id, customerId)))[0]?.active).toBe(businessId);
-      await expectApiError(partnerAccess(), 404, "not_found");
+      // The claim removes the link, so the group's keys lose the business and GET /businesses stops listing it.
+      expect(await admin!.db.select({ groupId: platformKeyBusinesses.groupId }).from(platformKeyBusinesses).where(eq(platformKeyBusinesses.businessId, businessId))).toEqual([]);
+      await expectApiError(groupAccess(), 404, "not_found");
+      expect(await listed()).not.toContain(businessId);
+      // A key with access to every business still reaches it.
+      await requirePlatformBusinessAccess(context, { businessId, groupId: "lobbystack", access: "all" });
       expect((await admin!.db.select({ revokedAt: apiKeys.revokedAt }).from(apiKeys).where(eq(apiKeys.id, operatorKey!.id)))[0]?.revokedAt).toBeInstanceOf(Date);
       const handedOver = await getTeamForApi(context, platform);
       expect(handedOver.members.map((member) => [member.user_id, member.role]).sort()).toEqual([[customerId, "business_owner"], [viewerId, "scheduler"]].sort());
@@ -1573,7 +1580,7 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
     await admin!.db.insert(businesses).values({ id: businessId, slug: `api-number-limits-${businessId}`, name: "Number limits", timezone: "America/Toronto", businessType: "test" });
     await admin!.db.insert(billingAccounts).values({ businessId, billingKey: `business:${businessId}`, source: "managed", plan: "enterprise", subscriptionState: "active" });
     const keyCaller: ApiKeyCaller = { businessId, apiKeyId: randomUUID() };
-    const platform: PlatformKeyCaller = { businessId, platformKeyId: randomUUID(), partnerId: "lobbystack", actingUserId: userId, actor: "platform_key" };
+    const platform: PlatformKeyCaller = { businessId, platformKeyId: randomUUID(), groupId: "lobbystack", actingUserId: userId, actor: "platform_key" };
     const phoneNumber = testNumber();
     const inventory = { listAvailablePhoneNumbers: async () => [{ phoneE164: phoneNumber, countryCode: "CA", capabilities: { sms: true, voice: true } }] };
     const claimAs = async (caller: ApiCaller) => {
@@ -1642,7 +1649,7 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
     await admin!.db.insert(businesses).values({ id: businessId, slug: `api-handover-hooks-${businessId}`, name: "Handover webhooks", timezone: "UTC", businessType: "test" });
     await admin!.db.insert(businessMemberships).values({ businessId, userId: ownerId, role: "business_owner" });
     await admin!.db.insert(businessMemberships).values({ businessId, userId: adminId, role: "business_admin" });
-    const platform: PlatformKeyCaller = { businessId, platformKeyId: randomUUID(), partnerId: "lobbystack", actingUserId: ownerId, actor: "platform_key" };
+    const platform: PlatformKeyCaller = { businessId, platformKeyId: randomUUID(), groupId: "lobbystack", actingUserId: ownerId, actor: "platform_key" };
     const key = async (createdByUserId: string) => {
       const generated = generateApiKey();
       return (await admin!.db.insert(apiKeys).values({ businessId, name: "hooks", prefix: generated.prefix, keyHash: generated.keyHash, scopes: ["webhooks:manage", "calls:read"], createdByUserId }).returning({ id: apiKeys.id }))[0]!.id;
@@ -1654,12 +1661,12 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
       // The admin stays on the team, so what they set up keeps working.
       const byAdminKey = await hook({ kind: "api_key", apiKeyId: await key(adminId) }, "admin-key");
       const byAdmin = await hook({ kind: "operator", userId: adminId }, "admin");
-      // So does any platform key's: the partner's keys lose the business with the handover.
-      const byPartner = await hook({ kind: "platform_key", platformKeyId: randomUUID(), partnerId: "acme", actingUserId: ownerId }, "partner");
+      // So does any platform key's: the group's keys lose the business with the handover.
+      const byGroup = await hook({ kind: "platform_key", platformKeyId: randomUUID(), groupId: "acme", actingUserId: ownerId }, "group");
       const link = await createClaimLinkForApi(context, platform, { email: customerEmail }, { userId: ownerId });
       await acceptInvitation({ db: app!.db }, { userId: customerId, tokenHash: createHash("sha256").update(new URL(link.url).searchParams.get("token")!).digest("hex"), email: customerEmail, emailVerified: true });
       const rows = await admin!.db.select({ id: webhookEndpoints.id, status: webhookEndpoints.status }).from(webhookEndpoints).where(eq(webhookEndpoints.businessId, businessId));
-      expect(Object.fromEntries(rows.map((row) => [row.id, row.status]))).toEqual({ [bySenderKey]: "disabled", [bySender]: "disabled", [byAdminKey]: "enabled", [byAdmin]: "enabled", [byPartner]: "disabled" });
+      expect(Object.fromEntries(rows.map((row) => [row.id, row.status]))).toEqual({ [bySenderKey]: "disabled", [bySender]: "disabled", [byAdminKey]: "enabled", [byAdmin]: "enabled", [byGroup]: "disabled" });
     } finally {
       await admin!.db.delete(outboxMessages).where(eq(outboxMessages.businessId, businessId));
       await admin!.db.delete(businesses).where(eq(businesses.id, businessId));
@@ -1671,12 +1678,12 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
     const context = { db: worker!.db };
     const kept = randomUUID();
     const removed = randomUUID();
-    const partner = (platformKeyId: string): WebhookManager => ({ kind: "platform_key", platformKeyId, partnerId: "acme", actingUserId: ownerId });
+    const groupKey = (platformKeyId: string): WebhookManager => ({ kind: "platform_key", platformKeyId, groupId: "acme", actingUserId: ownerId });
     const hook = async (businessId: string, manager: WebhookManager, host: string) => (await createWebhookEndpoint(manager.kind === "operator" ? { db: app!.db } : context, { businessId, manager, url: `https://${host}.example.com/hook`, events: ["contact.created"] })).endpoint.id;
     const status = async (ids: string[]) => Object.fromEntries((await admin!.db.select({ id: webhookEndpoints.id, status: webhookEndpoints.status }).from(webhookEndpoints).where(inArray(webhookEndpoints.id, ids))).map((row) => [row.id, row.status]));
-    const byKept = await hook(a.businessId, partner(kept), "kept");
-    const byRemoved = await hook(a.businessId, partner(removed), "removed");
-    const byRemovedElsewhere = await hook(b.businessId, partner(removed), "removed-b");
+    const byKept = await hook(a.businessId, groupKey(kept), "kept");
+    const byRemoved = await hook(a.businessId, groupKey(removed), "removed");
+    const byRemovedElsewhere = await hook(b.businessId, groupKey(removed), "removed-b");
     const byOwner = await hook(a.businessId, { kind: "operator", userId: ownerId }, "owner-a");
     const ids = [byKept, byRemoved, byRemovedElsewhere, byOwner];
     expect((await admin!.db.select({ platformKeyId: webhookEndpoints.createdByPlatformKeyId }).from(webhookEndpoints).where(eq(webhookEndpoints.id, byRemoved)))[0]?.platformKeyId).toBe(removed);
@@ -1691,8 +1698,8 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
       expect(await processWebhookDelivery(context, { businessId: a.businessId, deliveryId: queued!.id, attempt: 1, send })).toEqual({ outcome: "skipped", endpointDisabled: false });
       expect(send).not.toHaveBeenCalled();
 
-      // The partner's other key turns one back on and answers for it, so the next start leaves it on.
-      await updateWebhookEndpoint(context, { businessId: a.businessId, manager: partner(kept), endpointId: byRemoved, status: "enabled" });
+      // The group's other key turns one back on and answers for it, so the next start leaves it on.
+      await updateWebhookEndpoint(context, { businessId: a.businessId, manager: groupKey(kept), endpointId: byRemoved, status: "enabled" });
       expect(await disableRemovedPlatformKeyWebhooks(context, { configuredPlatformKeyIds: [kept] })).toBe(0);
       expect(await status(ids)).toMatchObject({ [byRemoved]: "enabled", [byKept]: "enabled" });
       // With no platform keys configured, none of their webhooks deliver.
@@ -1702,6 +1709,28 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
       await expect(app!.db.execute(sql`select app.disable_removed_platform_key_webhooks('{}'::uuid[])`)).rejects.toThrow();
     } finally {
       await admin!.db.delete(webhookEndpoints).where(inArray(webhookEndpoints.id, ids));
+    }
+  });
+
+  it("audits a platform key's webhook changes with the key, its group and its owner", async () => {
+    const context = { db: worker!.db };
+    const platformKeyId = randomUUID();
+    const manager: WebhookManager = { kind: "platform_key", platformKeyId, groupId: "acme", actingUserId: ownerId };
+    const actor = { actor: "platform_key", platformKeyId, groupId: "acme", actingUserId: ownerId };
+    const { endpoint } = await createWebhookEndpoint(context, { businessId: a.businessId, manager, url: "https://group-audit.example.com/hook", events: ["contact.created"] });
+    try {
+      await updateWebhookEndpoint(context, { businessId: a.businessId, manager, endpointId: endpoint.id, description: "Group audit" });
+      await rotateWebhookSecret(context, { businessId: a.businessId, manager, endpointId: endpoint.id });
+      await deleteWebhookEndpoint(context, { businessId: a.businessId, manager, endpointId: endpoint.id });
+      const rows = await admin!.db.select({ eventType: auditLogs.eventType, actorUserId: auditLogs.actorUserId, payload: auditLogs.payload }).from(auditLogs).where(eq(auditLogs.entityId, endpoint.id));
+      expect(Object.fromEntries(rows.map((row) => [row.eventType, row]))).toEqual({
+        "webhook_endpoint.created": { eventType: "webhook_endpoint.created", actorUserId: null, payload: { ...actor, events: ["contact.created"] } },
+        "webhook_endpoint.updated": { eventType: "webhook_endpoint.updated", actorUserId: null, payload: { ...actor, fields: ["description"] } },
+        "webhook_endpoint.secret_rotated": { eventType: "webhook_endpoint.secret_rotated", actorUserId: null, payload: actor },
+        "webhook_endpoint.deleted": { eventType: "webhook_endpoint.deleted", actorUserId: null, payload: actor },
+      });
+    } finally {
+      await admin!.db.delete(webhookEndpoints).where(eq(webhookEndpoints.id, endpoint.id));
     }
   });
 });

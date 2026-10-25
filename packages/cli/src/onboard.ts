@@ -90,11 +90,11 @@ type Run = {
   /** Acts on the business once there is one. */
   client: Client;
   /**
-   * The key's reach. An operator's platform key ("all") keeps reaching a
-   * business after its owner claims it; a partner's ("partner") and the
-   * business's own key don't.
+   * The key's reach. A platform key with access to every business ("all")
+   * keeps reaching a business after its owner claims it; one with group
+   * access ("group") and the business's own key don't.
    */
-  access: "all" | "partner" | "business";
+  access: "all" | "group" | "business";
   state: OnboardState;
   statePath: string;
   /** The business's plan, when the key may read it. */
@@ -196,8 +196,8 @@ function namedBusiness(values: Values): string | undefined {
 /** Refuses, before anything changes, what the manifest asks for that this key can never do. */
 function checkKey(run: Run): void {
   const { plan, phone_number: phoneNumber } = run.manifest;
-  if (run.access === "partner" && (plan || phoneNumber)) {
-    throw new CliError("A partner's platform key can't buy a plan or a number: the business's owner pays for them, and once they claim the business your key can't reach it. Leave plan and phone_number out of the manifest, and the owner picks both in the dashboard after claiming it.");
+  if (run.access === "group" && (plan || phoneNumber)) {
+    throw new CliError("A platform key with group access can't buy a plan or a number: the business's owner pays for them, and once they claim the business your key can't reach it. Leave plan and phone_number out of the manifest, and the owner picks both in the dashboard after claiming it.");
   }
   if (plan && "managed" in plan && run.access !== "all") throw new CliError("Only an operator's platform key, one with access to every business, can set a managed plan. Use plan.checkout, or leave plan out.");
 }
@@ -215,7 +215,7 @@ async function ensureBusiness(run: Run, make: (business?: string) => Client, nam
   const given = sources.flatMap(([source, id]) => (id ? [[source, id.toLowerCase()] as const] : []));
   const disagreeing = given.find(([, id]) => id !== given[0]![1]);
   if (disagreeing) throw new CliError(`${given[0]![0]} names business ${given[0]![1]}, and ${disagreeing[0]} names ${disagreeing[1]}. Make them the same, or pass --state with another file.`);
-  // Accepting a claim link revokes the keys of the account that sent it, and takes the business away from a partner's platform key.
+  // Accepting a claim link revokes the keys of the account that sent it, and takes the business away from a platform key with group access.
   const handedOver = (error: ApiError) => new CliError(`${run.state.handed_over_to} has a claim link for this business, and this key can't reach it any more (${error.message}), most likely because they accepted it. Its owner manages it in the dashboard now.`, exitCodes.auth);
   let me;
   try {
@@ -224,7 +224,8 @@ async function ensureBusiness(run: Run, make: (business?: string) => Client, nam
     if (run.state.handed_over_to && businessKey && error instanceof ApiError && error.status === 401) throw handedOver(error);
     throw error;
   }
-  run.access = me.platform ? me.platform.access : "business";
+  // GET /me reports group access as "partner" in v1.
+  run.access = me.platform ? (me.platform.access === "all" ? "all" : "group") : "business";
   checkKey(run);
   // A per-business key sets up its own business; only a platform key makes one.
   const id = given[0]?.[1] ?? (me.platform ? undefined : me.business?.id);
@@ -233,7 +234,7 @@ async function ensureBusiness(run: Run, make: (business?: string) => Client, nam
     try {
       business = (await make(id).call("getBusiness")).data;
     } catch (error) {
-      if (run.state.handed_over_to && run.access === "partner" && error instanceof ApiError && error.status === 404) throw handedOver(error);
+      if (run.state.handed_over_to && run.access === "group" && error instanceof ApiError && error.status === 404) throw handedOver(error);
       throw error;
     }
     // With nothing but --business or the key itself to say which business this is, the wrong profile or a typo would rename another business and fill it with this manifest.
@@ -248,7 +249,7 @@ async function ensureBusiness(run: Run, make: (business?: string) => Client, nam
     return id;
   }
   if (fresh) {
-    // With no state file to say which business is this one, a business the partner already onboarded under this name most likely is.
+    // With no state file to say which business is this one, a business the key's group already onboarded under this name most likely is.
     const onboarded = await listAll(async (cursor) => await root.call("listBusinesses", { query: cursor ? { cursor } : {} }));
     const same = onboarded.find((business) => sameName(business.name, wanted.name));
     if (same) throw new CliError(`You already onboarded ${String(same.name)} (${String(same.id)}), and there's no state file to say it's this one. To set it up, put id: ${String(same.id)} under business in the manifest. To make another business, give it another name.`);
@@ -265,7 +266,7 @@ async function ensureBusiness(run: Run, make: (business?: string) => Client, nam
   })).data;
   run.state.business_id = created.id;
   await run.save();
-  // Once the owner claims it, a partner can't see the business to find it again.
+  // Once the owner claims it, GET /businesses stops listing the business, so a rerun can't find it again.
   run.log({ step: "business", action: "created", detail: `${created.name} (${created.id}). Keep ${basename(run.statePath)} with the manifest, or put id: ${created.id} under business in it.` });
   return created.id;
 }
@@ -566,8 +567,8 @@ async function syncKnowledge(run: Run): Promise<void> {
     }
     // Every page read is billed, and a free plan has little room for them, so the full read waits for the paid plan.
     if (run.planPending) { run.log({ step: "full site", action: "waiting", detail: `${String(website.url)}: for the paid plan` }); continue; }
-    // A partner's business stays on the free plan until its owner picks one, after which only the owner can read the rest.
-    if (run.access === "partner") { run.log({ step: "full site", action: "skipped", detail: `${String(website.url)}: the owner reads the whole site from the dashboard once they pick a plan` }); continue; }
+    // A business a key with group access sets up stays on the free plan until its owner picks one, after which only the owner can read the rest.
+    if (run.access === "group") { run.log({ step: "full site", action: "skipped", detail: `${String(website.url)}: the owner reads the whole site from the dashboard once they pick a plan` }); continue; }
     if (run.plan) { run.log({ step: "full site", action: "would read", detail: String(website.url) }); continue; }
     // The whole site is read after the sample, so wait for the sample first.
     run.log({ step: "full site", action: "waiting", detail: `for the first read of ${String(website.url)}` });
@@ -755,8 +756,8 @@ async function completeOnboarding(run: Run): Promise<void> {
   const wanted = run.manifest.onboarding;
   if (wanted?.complete === false) return;
   if (run.waiting.length) return run.log({ step: "onboarding", action: "waiting", detail: "for the steps above" });
-  // A partner's key can't pick a plan or a number, so the owner finds those steps open in the dashboard.
-  if (run.access === "partner" && wanted?.complete !== true) return run.log({ step: "onboarding", action: "left open", detail: "for the owner to pick a plan and a number after claiming it" });
+  // A key with group access can't pick a plan or a number, so the owner finds those steps open in the dashboard.
+  if (run.access === "group" && wanted?.complete !== true) return run.log({ step: "onboarding", action: "left open", detail: "for the owner to pick a plan and a number after claiming it" });
   const current = (await run.client.call("getOnboarding")).data;
   if (current.complete) return run.log({ step: "onboarding", action: "unchanged", detail: "complete" });
   const missing = current.missing.filter((item) => !(item === "phone_number" && wanted?.skip_number));
@@ -853,7 +854,7 @@ export const onboard: Command = {
         if (run.billing && manifest.plan) await syncCheckout(run, run.billing);
         await syncPhoneNumber(run, run.billing);
         await completeOnboarding(run);
-        // Once the owner accepts, the business's own key, and a partner's, can't reach it, so nothing could finish or retry what's left: the hand-over waits for it.
+        // Once the owner accepts, the business's own key, and one with group access, can't reach it, so nothing could finish or retry what's left: the hand-over waits for it.
         if (run.access !== "all" && manifest.owner && (run.waiting.length || run.failed.length)) run.log({ step: "owner", action: "waiting", detail: "for the steps above" });
         else await handOver(run);
         await run.save();

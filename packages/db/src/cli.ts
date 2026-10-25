@@ -157,10 +157,10 @@ async function main(): Promise<void> {
             ,('lobbystack_app', 'deployment_branding', 'SELECT')
             ,('lobbystack_worker', 'deployment_branding', 'SELECT')
             ,('lobbystack_readonly', 'deployment_branding', 'SELECT')
-            ,('lobbystack_worker', 'platform_partner_businesses', 'SELECT')
-            ,('lobbystack_worker', 'platform_partner_businesses', 'INSERT')
-            ,('lobbystack_worker', 'platform_partner_businesses', 'DELETE')
-            ,('lobbystack_app', 'platform_partner_businesses', 'SELECT')
+            ,('lobbystack_worker', 'platform_key_businesses', 'SELECT')
+            ,('lobbystack_worker', 'platform_key_businesses', 'INSERT')
+            ,('lobbystack_worker', 'platform_key_businesses', 'DELETE')
+            ,('lobbystack_app', 'platform_key_businesses', 'SELECT')
             ,('lobbystack_finance_export', 'businesses', 'SELECT')
             ,('lobbystack_finance_export', 'billing_accounts', 'SELECT')
             ,('lobbystack_finance_export', 'calls', 'SELECT')
@@ -208,7 +208,7 @@ async function main(): Promise<void> {
             ('lobbystack_app', 'app.resolve_api_key(text)'),
             ('lobbystack_worker', 'app.resolve_api_key(text)'),
             ('lobbystack_worker', 'app.resolve_platform_key_owner(text)'),
-            ('lobbystack_worker', 'app.list_platform_partner_businesses(text, timestamptz, uuid, integer)'),
+            ('lobbystack_worker', 'app.list_platform_key_businesses(text, timestamptz, uuid, integer)'),
             ('lobbystack_worker', 'app.reserve_api_number_claim(uuid, uuid, text, uuid, text, jsonb, text, text, text, boolean)'),
             ('lobbystack_worker', 'app.resolve_api_verified_phone(uuid, uuid)'),
             ('lobbystack_worker', 'app.resolve_oauth_access_token(text)'),

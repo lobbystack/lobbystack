@@ -10,8 +10,8 @@ vi.mock("./databases", () => ({ getDatabase: (role: string) => ({ db: role }) })
 import { generatePlatformKey } from "../../../../packages/domain/src/server/publicApi/platformKeys";
 import { disableRemovedPlatformKeyWebhooksAtStartup } from "./platform-key-webhooks";
 
-const first = generatePlatformKey({ name: "Alloplace", partner: "alloplace", ownerEmail: "ops@alloplace.example" }).entry;
-const second = generatePlatformKey({ name: "Operator", partner: "lobbystack", ownerEmail: "ops@lobbystack.example", access: "all" }).entry;
+const first = generatePlatformKey({ name: "Alloplace", group: "alloplace", ownerEmail: "ops@alloplace.example" }).entry;
+const second = generatePlatformKey({ name: "Operator", group: "lobbystack", ownerEmail: "ops@lobbystack.example", access: "all" }).entry;
 const started = (environment: Record<string, string | undefined>, phase?: string) => ({ runtime: "nodejs", phase, environment: { NODE_ENV: "production", ...environment } });
 
 describe("turning off removed platform keys' webhooks at startup", () => {
@@ -26,6 +26,14 @@ describe("turning off removed platform keys' webhooks at startup", () => {
     expect(await disableRemovedPlatformKeyWebhooksAtStartup(started({ PLATFORM_API_KEYS: JSON.stringify([first, second]) }))).toBe(3);
     expect(sweep).toHaveBeenCalledWith({ db: "lobbystack_worker" }, { configuredPlatformKeyIds: [first.id, second.id] });
     expect(logged).toHaveBeenCalledWith(JSON.stringify({ event: "platform_key_webhooks.disabled", count: 3 }));
+  });
+
+  it("keeps the webhooks of an entry written before the rename, next to new ones", async () => {
+    const { group: _group, ...rest } = generatePlatformKey({ name: "Legacy", group: "alloplace", ownerEmail: "ops@alloplace.example" }).entry;
+    const legacy = { ...rest, partner: "alloplace", access: "partner" };
+    vi.spyOn(console, "info").mockImplementation(() => undefined);
+    await disableRemovedPlatformKeyWebhooksAtStartup(started({ PLATFORM_API_KEYS: JSON.stringify([legacy, first]) }));
+    expect(sweep).toHaveBeenCalledWith(expect.anything(), { configuredPlatformKeyIds: [legacy.id, first.id] });
   });
 
   it("turns off every platform key's webhooks when none is configured", async () => {

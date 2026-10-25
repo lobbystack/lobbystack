@@ -37,7 +37,7 @@ lobbystack login --url https://app.lobbystack.com --key-stdin < key.txt
 Which key you use decides what `onboard` can do:
 
 - **An API key** from **Settings** > **API keys** sets up its own business, as long as the business already has the manifest's name or the manifest gives its ID. Give it `business:read`, `business:write`, `knowledge:read` and `knowledge:write`, plus `billing:manage` for a plan, `phone_numbers:manage` for a number and `team:manage` to hand the business over, which only a key an owner created can do. See [Authentication](/api/authentication).
-- **A platform key** creates new businesses. Whoever runs the deployment makes platform keys; see [Platform keys](/api/authentication#platform-keys). An operator's key, which reaches every business, can also give a business a plan and a number. A partner's key can't: the owner pays for both, and once they claim the business, a partner's key can't reach it. Leave `plan` and `phone_number` out of a partner's manifest, and the owner picks them in the dashboard. A partner's key also leaves the full read of a website to the owner.
+- **A platform key** creates new businesses. Whoever runs the deployment makes platform keys; see [Platform keys](/api/authentication#platform-keys). A key with access to every business can also give a business a plan and a number. A key with group access can't: the owner pays for both, and once they claim the business, the key can't reach it. Leave `plan` and `phone_number` out of its manifest, and the owner picks them in the dashboard. A key with group access also leaves the full read of a website to the owner.
 
 In a script or CI, set `LOBBYSTACK_URL` and `LOBBYSTACK_API_KEY` instead of signing in.
 
@@ -97,9 +97,9 @@ owner:
 | `knowledge.files` | PDF, Word, text, Markdown, JPEG, PNG, WebP or TIFF files up to 10 MB, as paths inside the manifest's folder. Give an entry `path`, `title` and `tags` to name it. |
 | `knowledge.faqs` | Questions and answers. An FAQ with the same question gets the new answer. |
 | `knowledge.texts` | Notes with a `title` and `content`. A note with the same title gets the new content. |
-| `plan` | `checkout` with a `plan` (`starter` or `pro`) and an `interval` (`monthly` or `annual`). Or `managed: true` for a plan billed outside Polar, which only an operator's platform key can set. |
+| `plan` | `checkout` with a `plan` (`starter` or `pro`) and an `interval` (`monthly` or `annual`). Or `managed: true` for a plan billed outside Polar, which only a platform key with access to every business can set. |
 | `phone_number` | The fields of `POST /phone-numbers/search`: `country`, `kind`, `area_code`, `city`, `region` and `postal_code`. The command claims the first number the search offers. |
-| `onboarding` | Onboarding finishes once nothing it needs is missing, except with a partner's key, which leaves it open for the owner. `skip_number: true` finishes it without a number, `complete` sets whether it finishes, and `source` records where the business came from. |
+| `onboarding` | Onboarding finishes once nothing it needs is missing, unless the key has group access: then it stays open for the owner. `skip_number: true` finishes it without a number, `complete` sets whether it finishes, and `source` records where the business came from. |
 | `owner` | The `email` of the person who will own the business. They get a link to claim it. |
 
 The command never deletes what the file leaves out. To remove a service, a rule or knowledge, use the dashboard or the other `lobbystack` commands.
@@ -148,14 +148,14 @@ A checkout and a phone number cost money, so the command asks before it starts e
 
 To set up a business that already exists, put its ID in `business.id`. `--business <id>` works too when the business already has the manifest's name. The command ignores `LOBBYSTACK_BUSINESS` and a profile's saved business, so a new manifest never lands on one by mistake.
 
-The claim link goes out once everything else is done, or before the checkout when an operator's key sets up a plan the owner pays for. When the owner accepts it, a partner's key and the API key that sent it can't reach the business any more, and a rerun says so. An operator's key still can.
+The claim link goes out once everything else is done, or before the checkout when a key with access to every business sets up a plan the owner pays for. When the owner accepts it, a key with group access and the API key that sent it can't reach the business any more, and a rerun says so. A key with access to every business still can.
 
 ### When the run waits on someone
 
 Some steps need a person. The command does everything else, prints what it's waiting for, and exits with code `4`:
 
 - **A payment.** The command prints the checkout link: send it to whoever pays. Until the plan is paid, the business keeps its current plan. The phone number, documents the free plan has no room for, and the full read of a website wait for the paid plan. A checkout page more than an hour old may have run out: a run in a terminal, without `--yes`, offers to start a new one.
-- **The owner's claim.** With an operator's key, the business's owner pays for its plan, so the claim link goes out before the checkout. The checkout starts on the first run after the owner accepts the link.
+- **The owner's claim.** With a key that has access to every business, the business's owner pays for its plan, so the claim link goes out before the checkout. The checkout starts on the first run after the owner accepts the link.
 
 Run the same command again once the person is done. A checkout can buy a plan for a free business, or move Starter to Pro. Other plan changes, such as Pro to Starter or another billing interval, happen in the billing portal: the command reports them and carries on.
 
@@ -170,7 +170,7 @@ The command keeps the IDs it makes in a state file next to the manifest, such as
 - A document or website that couldn't be read is read once more on the next run. If it fails the same way again, the command reports it, and `lobbystack knowledge retry <id>` reads it again once it's fixed.
 - A state file made against one dashboard is refused against another. Pass `--state <path>` to keep one per dashboard.
 
-Without a state file, a platform key won't create a business when you already onboarded one with the same name. Put that business's ID in `business.id` to set it up, or give the new business another name. Once its owner claims a business, `GET /businesses` stops listing it, even for an operator's key, so keep the state file, or copy the ID the first run prints into `business.id`.
+Without a state file, a platform key won't create a business when you already onboarded one with the same name. Put that business's ID in `business.id` to set it up, or give the new business another name. Once its owner claims a business, `GET /businesses` stops listing it, even for a key with access to every business, so keep the state file, or copy the ID the first run prints into `business.id`.
 
 ## Exit codes
 

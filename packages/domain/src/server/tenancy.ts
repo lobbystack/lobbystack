@@ -344,12 +344,12 @@ export async function acceptInvitation(
       // The business is theirs now, so the account that set it up loses its access:
       // its place on the team, the invitations it sent (it holds their links), its
       // API keys for the business, the webhooks those keys, the account or any
-      // platform key set up, and any partner's platform-key link to it.
+      // platform key set up, and any platform key group's link to it.
       if (invitation.invitedByUserId !== input.userId) {
         await tx.update(businessMemberships).set({ status: "removed", updatedAt: new Date() }).where(and(eq(businessMemberships.businessId, invitation.businessId), eq(businessMemberships.userId, invitation.invitedByUserId), eq(businessMemberships.status, "active")));
         await tx.update(businessInvitations).set({ status: "revoked", updatedAt: new Date() }).where(and(eq(businessInvitations.businessId, invitation.businessId), eq(businessInvitations.invitedByUserId, invitation.invitedByUserId), eq(businessInvitations.status, "pending")));
         const revokedKeys = await tx.update(apiKeys).set({ revokedAt: new Date(), revokedByUserId: input.userId, updatedAt: new Date() }).where(and(eq(apiKeys.businessId, invitation.businessId), eq(apiKeys.createdByUserId, invitation.invitedByUserId), isNull(apiKeys.revokedAt))).returning({ id: apiKeys.id });
-        // Otherwise the sender, or the partner whose platform keys set the business up, would keep
+        // Otherwise the sender, or the group whose platform keys set the business up, would keep
         // receiving the new owner's calls, contacts, appointments and messages.
         await disableWebhookEndpointsInTransaction(tx, { businessId: invitation.businessId, createdByApiKeyIds: revokedKeys.map((key) => key.id), createdByUserId: invitation.invitedByUserId, createdByPlatformKeys: true });
         await tx.execute(sql`select app.finish_business_handover(${invitation.businessId}::uuid, ${invitation.invitedByUserId}::uuid)`);

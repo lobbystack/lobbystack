@@ -401,7 +401,7 @@
       "post": {
         "operationId": "createBusiness",
         "summary": "Create a business",
-        "description": "Platform keys only. Creates a business owned by the account in the key's owner_email, and lets every key of the same partner act on it. Idempotency-Key is required: a retry with the same value returns the business it created, however much later, and a different body with that value is a 422.",
+        "description": "Platform keys only. Creates a business owned by the account in the key's owner_email, and lets every key in the same group act on it. Idempotency-Key is required: a retry with the same value returns the business it created, however much later, and a different body with that value is a 422.",
         "tags": [
           "Platform"
         ],
@@ -525,7 +525,7 @@
       "get": {
         "operationId": "listBusinesses",
         "summary": "List onboarded businesses",
-        "description": "Platform keys only. Lists the active businesses the key's partner onboarded, newest first.",
+        "description": "Platform keys only. Lists the active businesses the key's group onboarded, newest first.",
         "tags": [
           "Platform"
         ],
@@ -3408,7 +3408,7 @@
       "post": {
         "operationId": "completeOnboarding",
         "summary": "Finish onboarding",
-        "description": "Finishes onboarding, so the dashboard opens on the business instead of its onboarding steps. On a paid plan, until the business has a phone number, a skipped phone_number step or skip_number, it's a 409 whose details list what's missing. Finishing a business that is already complete changes nothing. referral_code isn't accepted from a platform key, or for a business a partner onboarded.",
+        "description": "Finishes onboarding, so the dashboard opens on the business instead of its onboarding steps. On a paid plan, until the business has a phone number, a skipped phone_number step or skip_number, it's a 409 whose details list what's missing. Finishing a business that is already complete changes nothing. referral_code isn't accepted from a platform key, or for a business a platform key onboarded.",
         "tags": [
           "Onboarding"
         ],
@@ -11475,9 +11475,14 @@
             "description": "Present only for a platform key.",
             "type": "object",
             "properties": {
+              "group": {
+                "type": "string",
+                "description": "The group the platform key belongs to, as set in PLATFORM_API_KEYS. Keys in the same group reach the same businesses."
+              },
               "partner": {
                 "type": "string",
-                "description": "Who the platform key belongs to, as set in PLATFORM_API_KEYS."
+                "deprecated": true,
+                "description": "Deprecated: the old name for group, with the same value. Read group instead."
               },
               "access": {
                 "type": "string",
@@ -11485,10 +11490,11 @@
                   "partner",
                   "all"
                 ],
-                "description": "all: the key can act on every business. partner: only on businesses its partner onboarded."
+                "description": "all: the key can act on every business. partner: group access, only on the businesses its group's keys onboarded. A PLATFORM_API_KEYS entry with \"access\": \"group\" reports partner here."
               }
             },
             "required": [
+              "group",
               "partner",
               "access"
             ],
@@ -11789,7 +11795,7 @@
           "created_at"
         ],
         "additionalProperties": false,
-        "description": "A business the platform key's partner onboarded."
+        "description": "A business the platform key's group onboarded."
       },
       "UserInvitation": {
         "type": "object",
@@ -14635,7 +14641,7 @@
             "maxLength": 120
           },
           "referral_code": {
-            "description": "An affiliate's referral code. Not accepted from a platform key, or for a business a partner onboarded.",
+            "description": "An affiliate's referral code. Not accepted from a platform key, or for a business a platform key onboarded.",
             "type": "string",
             "minLength": 1,
             "maxLength": 64

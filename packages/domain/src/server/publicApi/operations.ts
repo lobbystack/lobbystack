@@ -3,7 +3,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { and, asc, count, desc, eq, inArray, isNotNull, isNull, ne, notExists, sql } from "drizzle-orm";
 import { DateTime } from "luxon";
 
-import { agentRules, apiKeys, appointments, auditLogs, billingAccounts, billingCheckoutRequests, billingUsageMonths, businesses, businessInvitations, businessMemberships, calendarConnections, contactPasscodes, contacts, knowledgeDocuments, knowledgeSnippets, phoneNumbers, platformPartnerBusinesses, receptionistProfiles, services, storageObjects, users, websiteIngestionJobs, widgetKeys, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { agentRules, apiKeys, appointments, auditLogs, billingAccounts, billingCheckoutRequests, billingUsageMonths, businesses, businessInvitations, businessMemberships, calendarConnections, contactPasscodes, contacts, knowledgeDocuments, knowledgeSnippets, phoneNumbers, platformKeyBusinesses, receptionistProfiles, services, storageObjects, users, websiteIngestionJobs, widgetKeys, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import {
   CONTACT_PASSCODE_DEFAULT_LENGTH,
   CONTACT_PASSCODE_HASHES_PER_CALLER,
@@ -174,9 +174,9 @@ export type OAuthGrantCaller = { businessId: string; grantId: string; userId: st
 /**
  * A REST request authenticated with a platform key from PLATFORM_API_KEYS. It
  * acts on the business in the LobbyStack-Business header, as the account the
- * key's owner_email names. The partner travels with it for attribution.
+ * key's owner_email names. The key's group travels with it for attribution.
  */
-export type PlatformKeyCaller = { businessId: string; platformKeyId: string; partnerId: string; actingUserId: string; apiKeyId?: undefined; grantId?: undefined; userId?: undefined; actor: "platform_key" };
+export type PlatformKeyCaller = { businessId: string; platformKeyId: string; groupId: string; actingUserId: string; apiKeyId?: undefined; grantId?: undefined; userId?: undefined; actor: "platform_key" };
 export type ApiCaller = ApiKeyCaller | OAuthGrantCaller | PlatformKeyCaller;
 
 /**
@@ -192,12 +192,14 @@ export function callerPrincipalId(caller: ApiCaller): string {
 
 /**
  * Audit fields for a change made by a caller. The key or grant id is recorded,
- * never a secret. A platform key also records its partner and the account it
- * acts as, so every change traces back to who made it.
+ * never a secret. A platform key also records its group and the account it
+ * acts as, so every change traces back to who made it. Rows written before
+ * ADR 0010 name the group partnerId, so a reader that needs the group falls
+ * back to it.
  */
 export function callerAudit(caller: ApiCaller): ApiAudit {
   if (caller.grantId !== undefined) return { actorUserId: caller.userId, payload: { actor: "mcp", grantId: caller.grantId } };
-  if (caller.platformKeyId !== undefined) return { actorUserId: null, payload: { actor: "platform_key", platformKeyId: caller.platformKeyId, partnerId: caller.partnerId, actingUserId: caller.actingUserId } };
+  if (caller.platformKeyId !== undefined) return { actorUserId: null, payload: { actor: "platform_key", platformKeyId: caller.platformKeyId, groupId: caller.groupId, actingUserId: caller.actingUserId } };
   return { actorUserId: null, payload: { actor: caller.actor ?? "api_key", apiKeyId: caller.apiKeyId } };
 }
 
@@ -264,7 +266,7 @@ export async function getMeForApi(context: DomainContext, caller: ApiKeyCaller):
   });
 }
 
-/** GET /me for a platform key: the key, its partner and access, and the business in the header, if any. */
+/** GET /me for a platform key: the key, its group and access, and the business in the header, if any. */
 export async function getPlatformMeForApi(context: DomainContext, key: ResolvedPlatformKey, caller: PlatformKeyCaller | null): Promise<ApiMe> {
   let business: ApiMe["business"] = null;
   if (caller) {
@@ -276,7 +278,9 @@ export async function getPlatformMeForApi(context: DomainContext, key: ResolvedP
   return {
     api_key: { id: key.platformKeyId, name: key.name, prefix: key.prefix, scopes: key.scopes, created_at: key.createdAt },
     business,
-    platform: { partner: key.partnerId, access: key.access },
+    // /api/v1 only changes additively, so GET /me keeps the names it shipped
+    // with: partner repeats the group, and group access reads "partner".
+    platform: { group: key.group, partner: key.group, access: key.access === "all" ? "all" : "partner" },
   };
 }
 
@@ -682,14 +686,14 @@ export async function completeOnboardingForApi(context: DomainContext, caller: A
     const missing = onboarding.missing.filter((id) => !(id === "phone_number" && input.skip_number));
     return missing.length ? new PublicApiError(409, "conflict", `The business isn't ready to finish onboarding. Missing: ${missing.join(", ")}.`, missing.map((id) => ({ path: id, message: onboardingHints[id] }))) : null;
   };
-  const { onboarding: before, partnerOnboarded } = await inBusiness(context, caller, async (tx) => ({
+  const { onboarding: before, platformKeyOnboarded } = await inBusiness(context, caller, async (tx) => ({
     onboarding: await loadOnboarding(tx, caller.businessId),
-    partnerOnboarded: (await tx.select({ businessId: platformPartnerBusinesses.businessId }).from(platformPartnerBusinesses).where(eq(platformPartnerBusinesses.businessId, caller.businessId)).limit(1)).length > 0,
+    platformKeyOnboarded: (await tx.select({ businessId: platformKeyBusinesses.businessId }).from(platformKeyBusinesses).where(eq(platformKeyBusinesses.businessId, caller.businessId)).limit(1)).length > 0,
   }));
   if (before.complete) return before;
-  // A business a partner onboarded came through the partner, whose own account
-  // owns it, so no affiliate is credited with it, whichever key asks.
-  if (input.referral_code && partnerOnboarded) throw invalidRequest("A business a partner onboarded can't credit a referral.", [{ path: "referral_code", message: "Not accepted for a business a partner onboarded." }]);
+  // A business a platform key onboarded came through the key's group, whose
+  // own account owns it, so no affiliate is credited with it, whichever key asks.
+  if (input.referral_code && platformKeyOnboarded) throw invalidRequest("A business a platform key onboarded can't credit a referral.", [{ path: "referral_code", message: "Not accepted for a business a platform key onboarded." }]);
   const notReady = refusal(before);
   if (notReady) throw notReady;
   if (input.referral_code && options.attribution) await attributeBusiness(options.attribution.context, { businessId: caller.businessId, referredUserId: options.attribution.referredUserId, referralCode: input.referral_code, source: "referral_link" });
@@ -703,8 +707,8 @@ export async function completeOnboardingForApi(context: DomainContext, caller: A
     const completedAt = new Date();
     await tx.update(businesses).set({ onboardingAttribution: source, onboardingStage: "complete", updatedAt: completedAt }).where(eq(businesses.id, caller.businessId));
     // The founder's check-in is for people who set up their own business. It
-    // goes to the first owner, which for a partner's business is the partner's account.
-    if (caller.platformKeyId === undefined && !partnerOnboarded) await scheduleOnboardingFollowupInTransaction(tx, caller.businessId, completedAt);
+    // goes to the first owner, which for a business a platform key onboarded is the key's account.
+    if (caller.platformKeyId === undefined && !platformKeyOnboarded) await scheduleOnboardingFollowupInTransaction(tx, caller.businessId, completedAt);
     await audit(tx, caller, { eventType: "api.onboarding.completed", entityType: "business", entityId: caller.businessId, payload: { skipNumber: Boolean(input.skip_number), ...(source ? { source } : {}) } });
     return await loadOnboarding(tx, caller.businessId);
   });
@@ -712,7 +716,7 @@ export async function completeOnboardingForApi(context: DomainContext, caller: A
 
 // Team. People join through invitations they accept with a verified account
 // for the invited email; a claim link is an owner invitation that also takes
-// the account that sent it off the team, which is how an operator or partner
+// the account that sent it off the team, which is how a platform key's account
 // hands over a business it set up.
 
 type TeamInvitationRow = { id: string; email: string; role: string; transfersOwnership: boolean; expiresAt: Date; createdAt: Date };
@@ -1229,7 +1233,7 @@ export function platformBusinessId(platformKeyId: string, idempotencyKey: string
 
 /**
  * Creates a business for a platform key. The key's owner owns it until the
- * customer claims it, and every key of the key's partner may act on it. The
+ * customer claims it, and every key in the key's group may act on it. The
  * Idempotency-Key decides the business id, so a retry returns the business it
  * made, and a different body with the same key is idempotency_key_reused.
  * The audit row keeps the request's hash for that check.
@@ -1241,14 +1245,14 @@ export async function createBusinessForApi(
   const timezone = ianaTimeZone(input.body.timezone);
   if (!timezone) throw invalidRequest("timezone is not a valid IANA time zone.", [{ path: "timezone", message: "Use an IANA time zone such as America/Toronto." }]);
   const businessId = platformBusinessId(input.key.platformKeyId, input.idempotencyKey);
-  const caller: PlatformKeyCaller = { businessId, platformKeyId: input.key.platformKeyId, partnerId: input.key.partnerId, actingUserId: input.actingUserId, actor: "platform_key" };
+  const caller: PlatformKeyCaller = { businessId, platformKeyId: input.key.platformKeyId, groupId: input.key.group, actingUserId: input.actingUserId, actor: "platform_key" };
   const created = async (): Promise<ApiBusiness | null> => await inBusiness(context, caller, async (tx) => {
     const [row] = await tx.select({ payload: auditLogs.payload }).from(auditLogs).where(and(eq(auditLogs.businessId, businessId), eq(auditLogs.eventType, "api.business.created"))).limit(1);
     if (!row) return null;
     if ((row.payload as { requestHash?: unknown } | null)?.requestHash !== input.requestHash) throw new PublicApiError(422, "idempotency_key_reused", "This Idempotency-Key was used with a different request body.");
-    // A business since suspended or unlinked from the partner is gone for this key, as on every other endpoint.
+    // A business since suspended or unlinked from the group is gone for this key, as on every other endpoint.
     const [business] = await tx.select({ status: businesses.status }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
-    const [link] = await tx.select({ businessId: platformPartnerBusinesses.businessId }).from(platformPartnerBusinesses).where(and(eq(platformPartnerBusinesses.businessId, businessId), eq(platformPartnerBusinesses.partnerId, input.key.partnerId))).limit(1);
+    const [link] = await tx.select({ businessId: platformKeyBusinesses.businessId }).from(platformKeyBusinesses).where(and(eq(platformKeyBusinesses.businessId, businessId), eq(platformKeyBusinesses.groupId, input.key.group))).limit(1);
     if (business?.status !== "active" || !link) throw notFound("Business");
     return await loadBusinessResource(tx, businessId);
   });
@@ -1258,7 +1262,7 @@ export async function createBusinessForApi(
   try {
     const business = await inBusiness(context, caller, async (tx) => {
       await insertBusinessInTransaction(tx, { businessId, userId: input.actingUserId, name: input.body.name, slug: input.body.slug, timezone, businessType: input.body.business_type ?? "service_company", defaultLocale: input.body.locale, websiteUrl: input.body.website_url });
-      await tx.insert(platformPartnerBusinesses).values({ businessId, partnerId: input.key.partnerId, createdByPlatformKeyId: input.key.platformKeyId });
+      await tx.insert(platformKeyBusinesses).values({ businessId, groupId: input.key.group, createdByPlatformKeyId: input.key.platformKeyId });
       await audit(tx, caller, { eventType: "api.business.created", entityType: "business", entityId: businessId, payload: { requestHash: input.requestHash } });
       return await loadBusinessResource(tx, businessId);
     });
@@ -1273,12 +1277,12 @@ export async function createBusinessForApi(
   }
 }
 
-/** The active businesses a partner onboarded, newest first. */
-export async function listBusinessesForApi(context: DomainContext, input: { partnerId: string } & PageRequest): Promise<Page<ApiBusinessSummary>> {
+/** The active businesses a group's platform keys onboarded, newest first. */
+export async function listBusinessesForApi(context: DomainContext, input: { groupId: string } & PageRequest): Promise<Page<ApiBusinessSummary>> {
   const limit = pageSize(input.limit);
   const cursor = decodeCursor(input.cursor);
-  // The links and businesses are tenant-isolated, so a resolver reads one partner's page.
-  const rows = await withBusinessTransaction(context.db, { actorType: "worker" }, async (tx) => (await tx.execute<{ business_id: string; name: string; timezone: string; default_locale: string; website_url: string | null; onboarding_stage: string; created_at: Date | string }>(sql`select business_id, name, timezone, default_locale, website_url, onboarding_stage, created_at from app.list_platform_partner_businesses(${input.partnerId}, ${cursor?.at.toISOString() ?? null}::timestamptz, ${cursor?.id ?? null}::uuid, ${limit + 1}::int)`)).rows);
+  // The links and businesses are tenant-isolated, so a resolver reads one group's page.
+  const rows = await withBusinessTransaction(context.db, { actorType: "worker" }, async (tx) => (await tx.execute<{ business_id: string; name: string; timezone: string; default_locale: string; website_url: string | null; onboarding_stage: string; created_at: Date | string }>(sql`select business_id, name, timezone, default_locale, website_url, onboarding_stage, created_at from app.list_platform_key_businesses(${input.groupId}, ${cursor?.at.toISOString() ?? null}::timestamptz, ${cursor?.id ?? null}::uuid, ${limit + 1}::int)`)).rows);
   return toPage(rows, limit, (row) => ({
     id: row.business_id,
     name: row.name,

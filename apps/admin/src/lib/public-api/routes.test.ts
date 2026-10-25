@@ -533,7 +533,7 @@ describe("services", () => {
 describe("billing", () => {
   const billing = { plan: "free_cloud", managed: false, subscription_state: null, billing_interval: null, current_period_end: null, spending_cap_cents: null, overage_spend_cents: 0, spending_cap_reached: false };
   const checkoutId = "3f0f6f2e-7c1a-4b8e-9a5d-2c3b4a5d6e7f";
-  const platformKey = () => generatePlatformKey({ name: "Operator", partner: "lobbystack", ownerEmail: "ops@example.com", access: "all" });
+  const platformKey = () => generatePlatformKey({ name: "Operator", group: "lobbystack", ownerEmail: "ops@example.com", access: "all" });
 
   it("reads the plan and sets the spending cap", async () => {
     domain.getBillingForApi.mockResolvedValue(billing);
@@ -570,13 +570,13 @@ describe("billing", () => {
     // A per-business key, even with billing:manage, is refused.
     expect((await v1.setManagedPlan(call("/billing/managed-plan", { method: "POST", body: JSON.stringify({ plan: "enterprise" }) }))).status).toBe(403);
     expect((await v1.endManagedPlan(call("/billing/managed-plan", { method: "DELETE" }))).status).toBe(403);
-    // So is a partner's platform key.
-    const partner = generatePlatformKey({ name: "Partner", partner: "acme", ownerEmail: "ops@acme.example", access: "partner" });
+    // So is a platform key with group access.
+    const groupKey = generatePlatformKey({ name: "Acme", group: "acme", ownerEmail: "ops@acme.example", access: "group" });
     const operator = platformKey();
-    vi.stubEnv("PLATFORM_API_KEYS", JSON.stringify([partner.entry, operator.entry]));
+    vi.stubEnv("PLATFORM_API_KEYS", JSON.stringify([groupKey.entry, operator.entry]));
     try {
       const asKey = (key: string, init: RequestInit = {}) => new Request("https://app.example.com/api/v1/billing/managed-plan", { ...init, headers: { authorization: `Bearer ${key}`, "LobbyStack-Business": "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5f" } });
-      expect((await v1.setManagedPlan(asKey(partner.key, { method: "POST", body: JSON.stringify({ plan: "enterprise" }) }))).status).toBe(403);
+      expect((await v1.setManagedPlan(asKey(groupKey.key, { method: "POST", body: JSON.stringify({ plan: "enterprise" }) }))).status).toBe(403);
       domain.setManagedPlanForApi.mockResolvedValue({ ...billing, plan: "enterprise", managed: true });
       const set = await v1.setManagedPlan(asKey(operator.key, { method: "POST", body: JSON.stringify({ plan: "enterprise" }) }));
       expect(set.status).toBe(200);
@@ -725,10 +725,10 @@ describe("onboarding", () => {
   });
 
   it("keeps platform keys from crediting referrals", async () => {
-    const partner = generatePlatformKey({ name: "Partner", partner: "acme", ownerEmail: "ops@acme.example", access: "partner" });
-    vi.stubEnv("PLATFORM_API_KEYS", JSON.stringify([partner.entry]));
+    const groupKey = generatePlatformKey({ name: "Acme", group: "acme", ownerEmail: "ops@acme.example", access: "group" });
+    vi.stubEnv("PLATFORM_API_KEYS", JSON.stringify([groupKey.entry]));
     try {
-      const response = await v1.completeOnboarding(new Request("https://app.example.com/api/v1/onboarding/complete", { method: "POST", headers: { authorization: `Bearer ${partner.key}`, "LobbyStack-Business": "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5f" }, body: JSON.stringify({ referral_code: "acme" }) }));
+      const response = await v1.completeOnboarding(new Request("https://app.example.com/api/v1/onboarding/complete", { method: "POST", headers: { authorization: `Bearer ${groupKey.key}`, "LobbyStack-Business": "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5f" }, body: JSON.stringify({ referral_code: "acme" }) }));
       expect(response.status).toBe(400);
       expect(await response.json()).toMatchObject({ error: { code: "invalid_request", details: [{ path: "referral_code" }] } });
     } finally {
@@ -1161,19 +1161,19 @@ describe("webhook event scopes", () => {
 describe("platform keys on v1 routes", () => {
   const businessId = "9e8d7c6b-5a49-4382-a716-1f2e3d4c5b6a";
   const ownerId = "0b7c1d2e-3f40-4a51-8b62-7c83d94ea5b6";
-  const { key, entry } = generatePlatformKey({ name: "AlloPlace CLI", partner: "alloplace", ownerEmail: "ops@alloplace.example", access: "all", platformScopes: ["businesses:create", "users:create"] });
+  const { key, entry } = generatePlatformKey({ name: "AlloPlace CLI", group: "alloplace", ownerEmail: "ops@alloplace.example", access: "all", platformScopes: ["businesses:create", "users:create"] });
   const platformCall = (path: string, init: RequestInit = {}) => new Request(`https://app.example.com/api/v1${path}`, { ...init, headers: { authorization: `Bearer ${key}`, ...(init.headers ?? {}) } });
 
   beforeEach(() => { vi.stubEnv("PLATFORM_API_KEYS", JSON.stringify([entry])); });
   afterEach(() => { vi.unstubAllEnvs(); });
 
-  it("answers GET /me without a business, showing the key's partner and access", async () => {
-    const me = { api_key: { id: entry.id, name: "AlloPlace CLI", prefix: entry.prefix, scopes: [], created_at: entry.created_at }, business: null, platform: { partner: "alloplace", access: "all" } };
+  it("answers GET /me without a business, showing the key's group and access", async () => {
+    const me = { api_key: { id: entry.id, name: "AlloPlace CLI", prefix: entry.prefix, scopes: [], created_at: entry.created_at }, business: null, platform: { group: "alloplace", partner: "alloplace", access: "all" } };
     domain.getPlatformMeForApi.mockResolvedValue(me);
     const response = await v1.getMe(platformCall("/me"));
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ data: me });
-    expect(domain.getPlatformMeForApi).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ kind: "platform_key", platformKeyId: entry.id, partnerId: "alloplace", access: "all" }), null);
+    expect(domain.getPlatformMeForApi).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ kind: "platform_key", platformKeyId: entry.id, group: "alloplace", access: "all" }), null);
     expect(domain.resolveApiKey).not.toHaveBeenCalled();
     expect(domain.requirePlatformBusinessAccess).not.toHaveBeenCalled();
   });
@@ -1182,14 +1182,14 @@ describe("platform keys on v1 routes", () => {
     domain.getPlatformMeForApi.mockResolvedValue({});
     const response = await v1.getMe(platformCall("/me", { headers: { "LobbyStack-Business": businessId } }));
     expect(response.status).toBe(200);
-    expect(domain.requirePlatformBusinessAccess).toHaveBeenCalledWith(expect.anything(), { businessId, partnerId: "alloplace", access: "all" });
-    expect(domain.getPlatformMeForApi).toHaveBeenCalledWith(expect.anything(), expect.anything(), { businessId, platformKeyId: entry.id, partnerId: "alloplace", actingUserId: ownerId, actor: "platform_key" });
+    expect(domain.requirePlatformBusinessAccess).toHaveBeenCalledWith(expect.anything(), { businessId, groupId: "alloplace", access: "all" });
+    expect(domain.getPlatformMeForApi).toHaveBeenCalledWith(expect.anything(), expect.anything(), { businessId, platformKeyId: entry.id, groupId: "alloplace", actingUserId: ownerId, actor: "platform_key" });
   });
 
   it("acts on the header's business on every other route", async () => {
     const response = await v1.listStaff(platformCall("/staff", { headers: { "LobbyStack-Business": businessId } }));
     expect(response.status).toBe(200);
-    expect(domain.listStaffForApi).toHaveBeenCalledWith(expect.anything(), { businessId, platformKeyId: entry.id, partnerId: "alloplace", actingUserId: ownerId, actor: "platform_key" });
+    expect(domain.listStaffForApi).toHaveBeenCalledWith(expect.anything(), { businessId, platformKeyId: entry.id, groupId: "alloplace", actingUserId: ownerId, actor: "platform_key" });
     const missing = await v1.listStaff(platformCall("/staff"));
     expect(missing.status).toBe(400);
     expect(await missing.json()).toMatchObject({ error: { code: "business_required" } });
@@ -1200,7 +1200,7 @@ describe("platform keys on v1 routes", () => {
     domain.createWebhookEndpoint.mockResolvedValue({ endpoint, secret: "whsec_x" });
     const response = await v1.createWebhook(platformCall("/webhooks", { method: "POST", headers: { "LobbyStack-Business": businessId }, body: JSON.stringify({ url: "https://vendor.example.com/h", events: ["call.completed"] }) }));
     expect(response.status).toBe(201);
-    expect(domain.createWebhookEndpoint).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ businessId, manager: { kind: "platform_key", platformKeyId: entry.id, partnerId: "alloplace", actingUserId: ownerId } }));
+    expect(domain.createWebhookEndpoint).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ businessId, manager: { kind: "platform_key", platformKeyId: entry.id, groupId: "alloplace", actingUserId: ownerId } }));
   });
 
   it("refuses a platform key that is not configured", async () => {
@@ -1275,7 +1275,7 @@ describe("platform keys on v1 routes", () => {
       expect(await response.json()).toEqual({ data: business });
       expect(response.headers.get("idempotent-replayed")).toBeNull();
       expect(domain.createBusinessForApi).toHaveBeenCalledWith(expect.anything(), {
-        key: expect.objectContaining({ kind: "platform_key", platformKeyId: entry.id, partnerId: "alloplace" }),
+        key: expect.objectContaining({ kind: "platform_key", platformKeyId: entry.id, group: "alloplace" }),
         actingUserId: ownerId,
         idempotencyKey: "onboard-acme",
         requestHash: expect.stringMatching(/^[0-9a-f]{64}$/),
@@ -1317,11 +1317,25 @@ describe("platform keys on v1 routes", () => {
     });
   });
 
-  it("lists the businesses the key's partner onboarded, a page at a time", async () => {
+  it("lists the businesses the key's group onboarded, a page at a time", async () => {
     domain.listBusinessesForApi.mockResolvedValue({ data: [], next_cursor: null, has_more: false });
     const response = await v1.listBusinesses(platformCall("/businesses?limit=10&cursor=abc"));
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ data: [], next_cursor: null, has_more: false });
-    expect(domain.listBusinessesForApi).toHaveBeenCalledWith(expect.anything(), { partnerId: "alloplace", limit: 10, cursor: "abc" });
+    expect(domain.listBusinessesForApi).toHaveBeenCalledWith(expect.anything(), { groupId: "alloplace", limit: 10, cursor: "abc" });
+  });
+
+  it("reads an entry written before the rename as its group, with group access", async () => {
+    const legacy = generatePlatformKey({ name: "AlloPlace legacy", group: "alloplace", ownerEmail: "ops@alloplace.example", platformScopes: ["businesses:create"] });
+    const { group: _group, ...rest } = legacy.entry;
+    vi.stubEnv("PLATFORM_API_KEYS", JSON.stringify([{ ...rest, partner: "alloplace", access: "partner" }, entry]));
+    const legacyCall = (path: string, init: RequestInit = {}) => new Request(`https://app.example.com/api/v1${path}`, { ...init, headers: { authorization: `Bearer ${legacy.key}`, ...(init.headers ?? {}) } });
+    domain.getPlatformMeForApi.mockResolvedValue({});
+    expect((await v1.getMe(legacyCall("/me", { headers: { "LobbyStack-Business": businessId } }))).status).toBe(200);
+    expect(domain.requirePlatformBusinessAccess).toHaveBeenCalledWith(expect.anything(), { businessId, groupId: "alloplace", access: "group" });
+    expect(domain.getPlatformMeForApi).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ platformKeyId: legacy.entry.id, group: "alloplace", access: "group" }), { businessId, platformKeyId: legacy.entry.id, groupId: "alloplace", actingUserId: ownerId, actor: "platform_key" });
+    domain.listBusinessesForApi.mockResolvedValue({ data: [], next_cursor: null, has_more: false });
+    expect((await v1.listBusinesses(legacyCall("/businesses"))).status).toBe(200);
+    expect(domain.listBusinessesForApi).toHaveBeenCalledWith(expect.anything(), { groupId: "alloplace" });
   });
 });

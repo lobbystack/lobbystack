@@ -24,7 +24,7 @@
 - `pnpm test`: run all Vitest suites.
 - `pnpm build`: build every workspace package and app (also copies the embed loader into the admin standalone output).
 - `pnpm widget:embed:build`: rebuild `packages/embed` and copy the loader into `apps/admin/public/embed/`.
-- `pnpm lobbystack <command>`: run the CLI from source. `pnpm lobbystack login --url <dashboard URL> --key <API key>` saves a profile in `~/.config/lobbystack/config.json`. For a platform key, `pnpm platform-key:create --name <name> --partner <partner> --owner-email <email>` writes the key to `.platform-keys/<prefix>.json` and prints its `PLATFORM_API_KEYS` entry. The key gets an API key's scopes; add `--create-businesses` or `--create-users` for the platform-only ones.
+- `pnpm lobbystack <command>`: run the CLI from source. `pnpm lobbystack login --url <dashboard URL> --key <API key>` saves a profile in `~/.config/lobbystack/config.json`. For a platform key, `pnpm platform-key:create --name <name> --group <group> --owner-email <email>` writes the key to `.platform-keys/<prefix>.json` and prints its `PLATFORM_API_KEYS` entry. The key gets an API key's scopes; add `--create-businesses` or `--create-users` for the platform-only ones.
 
 ## Next.js MCP server
 

@@ -32,7 +32,7 @@ import { enforceApiRateLimit, type RateLimitDecision } from "./rate-limit";
 // acts on the business in the LobbyStack-Business header, as its owner, and
 // alone may call the few operations that act on no one business, such as
 // POST /businesses. Keys are never logged: logs and audit rows carry the key
-// id, plus a platform key's partner.
+// id, plus a platform key's group.
 
 /** The key a request presented. Both kinds carry scopes. */
 export type ApiCredential = ({ kind: "api_key" } & ResolvedApiKey) | ({ kind: "platform_key" } & ResolvedPlatformKey);
@@ -73,7 +73,7 @@ type Dependencies = {
   resolveKey?: (key: string) => Promise<ResolvedApiKey | null>;
   resolvePlatformKey?: (key: string) => ResolvedPlatformKey | null;
   resolvePlatformOwner?: (ownerEmail: string) => Promise<string | null>;
-  requirePlatformBusiness?: (input: { businessId: string; partnerId: string; access: PlatformKeyAccess }) => Promise<void>;
+  requirePlatformBusiness?: (input: { businessId: string; groupId: string; access: PlatformKeyAccess }) => Promise<void>;
   rateLimit?: (principalId: string) => Promise<RateLimitDecision>;
   context?: () => DomainContext;
   runIdempotent?: typeof runIdempotent;
@@ -161,7 +161,7 @@ export async function handleApiRequest<Id extends ApiOperationId>(request: Reque
       const platformKey = (dependencies.resolvePlatformKey ?? resolvePlatformKey)(token);
       if (!platformKey) return (status = 401, apiError(401, "unauthorized", "The API key is invalid or has been revoked.", { headers: { "WWW-Authenticate": "Bearer" } }));
       credential = { kind: "platform_key", ...platformKey };
-      logFields = { platform_key_id: platformKey.platformKeyId, partner_id: platformKey.partnerId };
+      logFields = { platform_key_id: platformKey.platformKeyId, group_id: platformKey.group };
     } else {
       const key = await (dependencies.resolveKey ?? ((value) => resolveApiKey(context, value)))(token);
       if (!key) return (status = 401, apiError(401, "unauthorized", "The API key is invalid or has been revoked.", { headers: { "WWW-Authenticate": "Bearer" } }));
@@ -206,8 +206,8 @@ export async function handleApiRequest<Id extends ApiOperationId>(request: Reque
       if (requestedBusinessId === undefined) {
         caller = null;
       } else {
-        await (dependencies.requirePlatformBusiness ?? ((input) => requirePlatformBusinessAccess(context, input)))({ businessId: requestedBusinessId, partnerId: credential.partnerId, access: credential.access });
-        caller = { businessId: requestedBusinessId, platformKeyId: credential.platformKeyId, partnerId: credential.partnerId, actingUserId, actor: "platform_key" };
+        await (dependencies.requirePlatformBusiness ?? ((input) => requirePlatformBusinessAccess(context, input)))({ businessId: requestedBusinessId, groupId: credential.group, access: credential.access });
+        caller = { businessId: requestedBusinessId, platformKeyId: credential.platformKeyId, groupId: credential.group, actingUserId, actor: "platform_key" };
       }
     } else {
       const keyCaller: ApiKeyCaller = { businessId: credential.businessId, apiKeyId: credential.apiKeyId };

@@ -36,7 +36,7 @@ const endpointsDisabled = meter.createCounter("lobbystack.webhooks.endpoints_dis
 export type WebhookManager =
   | { kind: "operator"; userId: string }
   | { kind: "api_key"; apiKeyId: string }
-  | { kind: "platform_key"; platformKeyId: string; partnerId: string; actingUserId: string };
+  | { kind: "platform_key"; platformKeyId: string; groupId: string; actingUserId: string };
 
 async function asManager<T>(context: DomainContext, businessId: string, manager: WebhookManager, callback: (tx: DatabaseTransaction) => Promise<T>): Promise<T> {
   if (manager.kind === "operator") {
@@ -50,7 +50,7 @@ async function asManager<T>(context: DomainContext, businessId: string, manager:
 
 function auditActor(manager: WebhookManager) {
   if (manager.kind === "operator") return { actorUserId: manager.userId, payload: { actor: "operator" } };
-  if (manager.kind === "platform_key") return { actorUserId: null, payload: { actor: "platform_key", platformKeyId: manager.platformKeyId, partnerId: manager.partnerId, actingUserId: manager.actingUserId } };
+  if (manager.kind === "platform_key") return { actorUserId: null, payload: { actor: "platform_key", platformKeyId: manager.platformKeyId, groupId: manager.groupId, actingUserId: manager.actingUserId } };
   return { actorUserId: null, payload: { actor: "api_key", apiKeyId: manager.apiKeyId } };
 }
 

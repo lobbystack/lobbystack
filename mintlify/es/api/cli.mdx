@@ -37,7 +37,7 @@ lobbystack login --url https://app.lobbystack.com --key-stdin < key.txt
 La clave que use decide lo que `onboard` puede hacer:
 
 - **Una clave de API** de **Configuración** > **Claves de API** configura su propio negocio, siempre que el negocio ya tenga el nombre del manifiesto o que el manifiesto indique su ID. Dele `business:read`, `business:write`, `knowledge:read` y `knowledge:write`, además de `billing:manage` para un plan, `phone_numbers:manage` para un número y `team:manage` para entregar el negocio, algo que solo puede hacer una clave creada por un propietario. Consulte [Autenticación](/es/api/authentication).
-- **Una clave de plataforma** crea negocios nuevos. Quien opera el despliegue crea las claves de plataforma; consulte [Claves de plataforma](/es/api/authentication#claves-de-plataforma). La clave de un operador, que llega a todos los negocios, también puede dar a un negocio un plan y un número. La de un socio no puede: el propietario paga ambos, y cuando reclama el negocio, la clave del socio ya no llega a él. Deje `plan` y `phone_number` fuera del manifiesto de un socio: el propietario los elige en el panel. La clave de un socio también deja al propietario la lectura completa de un sitio.
+- **Una clave de plataforma** crea negocios nuevos. Quien opera el despliegue crea las claves de plataforma; consulte [Claves de plataforma](/es/api/authentication#claves-de-plataforma). Una clave con acceso a todos los negocios también puede dar a un negocio un plan y un número. Una clave con acceso de grupo no puede: el propietario paga ambos, y cuando reclama el negocio, la clave ya no llega a él. Deje `plan` y `phone_number` fuera de su manifiesto: el propietario los elige en el panel. Una clave con acceso de grupo también deja al propietario la lectura completa de un sitio.
 
 En un script o en CI, defina `LOBBYSTACK_URL` y `LOBBYSTACK_API_KEY` en lugar de iniciar sesión.
 
@@ -97,9 +97,9 @@ owner:
 | `knowledge.files` | Archivos PDF, Word, de texto, Markdown, JPEG, PNG, WebP o TIFF de hasta 10 MB, como rutas dentro de la carpeta del manifiesto. Dé a una entrada `path`, `title` y `tags` para nombrarla. |
 | `knowledge.faqs` | Preguntas y respuestas. Una pregunta frecuente con la misma pregunta recibe la respuesta nueva. |
 | `knowledge.texts` | Notas con un `title` y un `content`. Una nota con el mismo título recibe el contenido nuevo. |
-| `plan` | `checkout` con un `plan` (`starter` o `pro`) y un `interval` (`monthly` o `annual`). O `managed: true` para un plan que se factura fuera de Polar, que solo la clave de plataforma de un operador puede definir. |
+| `plan` | `checkout` con un `plan` (`starter` o `pro`) y un `interval` (`monthly` o `annual`). O `managed: true` para un plan que se factura fuera de Polar, que solo una clave de plataforma con acceso a todos los negocios puede definir. |
 | `phone_number` | Los campos de `POST /phone-numbers/search`: `country`, `kind`, `area_code`, `city`, `region` y `postal_code`. El comando reserva el primer número que ofrece la búsqueda. |
-| `onboarding` | La incorporación termina cuando ya no le falta nada, salvo con la clave de un socio, que la deja abierta para el propietario. `skip_number: true` la termina sin número, `complete` indica si termina, y `source` registra de dónde vino el negocio. |
+| `onboarding` | La incorporación termina cuando ya no le falta nada, salvo si la clave tiene acceso de grupo: entonces queda abierta para el propietario. `skip_number: true` la termina sin número, `complete` indica si termina, y `source` registra de dónde vino el negocio. |
 | `owner` | El `email` de la persona que será propietaria del negocio. Recibe un enlace para reclamarlo. |
 
 El comando nunca elimina lo que el archivo omite. Para quitar un servicio, una regla o un conocimiento, use el panel o los otros comandos de `lobbystack`.
@@ -148,14 +148,14 @@ Un pago y un número de teléfono cuestan dinero, así que el comando pregunta a
 
 Para configurar un negocio que ya existe, ponga su ID en `business.id`. `--business <id>` también funciona cuando el negocio ya tiene el nombre del manifiesto. El comando ignora `LOBBYSTACK_BUSINESS` y el negocio guardado en un perfil, para que un manifiesto nuevo nunca caiga en uno de ellos por error.
 
-El enlace de reclamación sale cuando todo lo demás está hecho, o antes del pago cuando la clave de un operador configura un plan que paga el propietario. Cuando el propietario lo acepta, la clave de un socio y la clave de API que lo envió ya no llegan al negocio, y una nueva ejecución lo indica. La clave de un operador sigue llegando.
+El enlace de reclamación sale cuando todo lo demás está hecho, o antes del pago cuando una clave con acceso a todos los negocios configura un plan que paga el propietario. Cuando el propietario lo acepta, una clave con acceso de grupo y la clave de API que lo envió ya no llegan al negocio, y una nueva ejecución lo indica. Una clave con acceso a todos los negocios sigue llegando.
 
 ### Cuando la ejecución espera a alguien
 
 Algunos pasos necesitan a una persona. El comando hace todo lo demás, muestra lo que espera y termina con el código `4`:
 
 - **Un pago.** El comando muestra el enlace de pago: envíelo a quien paga. Hasta que el plan esté pagado, el negocio conserva su plan actual. El número de teléfono, los documentos que no caben en el plan gratuito y la lectura completa de un sitio esperan el plan de pago. Una página de pago de más de una hora puede haber caducado: una ejecución en una terminal, sin `--yes`, ofrece crear una nueva.
-- **La reclamación del propietario.** Con la clave de un operador, el propietario del negocio paga su plan, así que el enlace de reclamación sale antes del pago. La página de pago se crea en la primera ejecución después de que el propietario acepte el enlace.
+- **La reclamación del propietario.** Con una clave que tiene acceso a todos los negocios, el propietario del negocio paga su plan, así que el enlace de reclamación sale antes del pago. La página de pago se crea en la primera ejecución después de que el propietario acepte el enlace.
 
 Ejecute el mismo comando de nuevo cuando la persona termine. Un pago puede comprar un plan para un negocio gratuito, o pasar de Starter a Pro. Los demás cambios de plan, como pasar de Pro a Starter o cambiar el intervalo de facturación, se hacen en el portal de facturación: el comando los indica y sigue.
 
@@ -170,7 +170,7 @@ El comando guarda los ID que crea en un archivo de estado junto al manifiesto, c
 - Un documento o un sitio que no se pudo leer se vuelve a leer una vez en la siguiente ejecución. Si falla igual otra vez, el comando lo indica, y `lobbystack knowledge retry <id>` lo vuelve a leer cuando el problema esté resuelto.
 - Un archivo de estado creado para un panel se rechaza en otro. Pase `--state <path>` para tener uno por panel.
 
-Sin un archivo de estado, una clave de plataforma no crea un negocio si ya incorporó uno con el mismo nombre. Ponga el ID de ese negocio en `business.id` para configurarlo, o dé otro nombre al negocio nuevo. Cuando su propietario reclama un negocio, `GET /businesses` deja de listarlo, incluso para la clave de un operador, así que conserve el archivo de estado o copie en `business.id` el ID que muestra la primera ejecución.
+Sin un archivo de estado, una clave de plataforma no crea un negocio si ya incorporó uno con el mismo nombre. Ponga el ID de ese negocio en `business.id` para configurarlo, o dé otro nombre al negocio nuevo. Cuando su propietario reclama un negocio, `GET /businesses` deja de listarlo, incluso para una clave con acceso a todos los negocios, así que conserve el archivo de estado o copie en `business.id` el ID que muestra la primera ejecución.
 
 ## Códigos de salida
 
