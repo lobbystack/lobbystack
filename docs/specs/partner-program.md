@@ -228,7 +228,7 @@ The product decisions are settled in "How partners resell LobbyStack", the billi
 - the partner base domain
 - the Cloudflare for SaaS credentials, or Caddy's on-demand TLS
 
-Partner signup switches between open and invite. The cloud keeps it on invite until tier billing works.
+Partner signup switches between open and invite. The cloud defaults to invite until tier billing is configured, then to open. `PARTNER_SIGNUP` overrides either default.
 
 **Order of work.** Build in the five phases of "Build the partner program":
 

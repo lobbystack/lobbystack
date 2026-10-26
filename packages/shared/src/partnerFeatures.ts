@@ -84,8 +84,9 @@ function partnerBaseDomain(value: string | undefined): string | null {
 function partnerSignup(env: Record<string, string | undefined>): PartnerSignup {
   const setting = env.PARTNER_SIGNUP?.trim().toLowerCase();
   if (setting === "open" || setting === "invite") return setting;
-  // The cloud stays on invitations until it bills tiers; elsewhere anyone can sign up.
-  return env.DEPLOYMENT_MODE?.trim() === "cloud" ? "invite" : "open";
+  // The cloud stays on invitations until it bills tiers, so no partner signs
+  // up before it can pay for its pool. Elsewhere anyone can sign up.
+  return env.DEPLOYMENT_MODE?.trim() === "cloud" && !hasEveryTierProduct(env) ? "invite" : "open";
 }
 
 /** Every tier has a Polar product for each interval, and no two share one, so each subscription names one tier. */

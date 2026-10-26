@@ -11,9 +11,12 @@ describe("partner features", () => {
     expect(partnerFeatures({})).toEqual({ enabled: true, signup: "open", baseDomain: null, stripeConnect: false, tierBilling: false, customDomains: null, maxSimultaneousCalls: 30 });
   });
 
-  it("keeps signup on invitations on the cloud and open elsewhere, unless PARTNER_SIGNUP says otherwise", () => {
+  it("keeps signup on invitations on the cloud until it bills tiers and open elsewhere, unless PARTNER_SIGNUP says otherwise", () => {
     expect(partnerFeatures({ DEPLOYMENT_MODE: "cloud" }).signup).toBe("invite");
     expect(partnerFeatures({ DEPLOYMENT_MODE: " cloud " }).signup).toBe("invite");
+    expect(partnerFeatures({ DEPLOYMENT_MODE: "cloud", ...tierProducts }).signup).toBe("open");
+    expect(partnerFeatures({ DEPLOYMENT_MODE: "cloud", ...tierProducts, POLAR_PARTNER_SCALE_ANNUAL_PRODUCT_ID: " " }).signup).toBe("invite");
+    expect(partnerFeatures({ DEPLOYMENT_MODE: "cloud", ...tierProducts, PARTNER_SIGNUP: "invite" }).signup).toBe("invite");
     expect(partnerFeatures({ DEPLOYMENT_MODE: "self_hosted_standard" }).signup).toBe("open");
     expect(partnerFeatures({ DEPLOYMENT_MODE: "development" }).signup).toBe("open");
     expect(partnerFeatures({ DEPLOYMENT_MODE: "cloud", PARTNER_SIGNUP: "open" }).signup).toBe("open");
@@ -22,6 +25,7 @@ describe("partner features", () => {
 
   it("falls back to the default for a PARTNER_SIGNUP it doesn't know", () => {
     expect(partnerFeatures({ DEPLOYMENT_MODE: "cloud", PARTNER_SIGNUP: "anyone" }).signup).toBe("invite");
+    expect(partnerFeatures({ DEPLOYMENT_MODE: "cloud", ...tierProducts, PARTNER_SIGNUP: "anyone" }).signup).toBe("open");
     expect(partnerFeatures({ DEPLOYMENT_MODE: "self_hosted_standard", PARTNER_SIGNUP: "closed" }).signup).toBe("open");
   });
 
