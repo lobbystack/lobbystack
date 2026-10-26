@@ -35,6 +35,8 @@ const businessA = randomUUID();
 const businessB = randomUUID();
 const ownerId = randomUUID();
 const ownerEmail = `platform-owner-${ownerId}@example.invalid`;
+// Other suites also use platform-key groups, so this file's group is its own.
+const acme = `acme-${ownerId.slice(0, 8)}`;
 const unverifiedId = randomUUID();
 const unverifiedEmail = `platform-unverified-${unverifiedId}@example.invalid`;
 const memberId = randomUUID();
@@ -86,24 +88,24 @@ describe.skipIf(!testUrl)("platform keys against PostgreSQL with RLS", () => {
 
   it("lets a key with group access reach only the businesses linked to its group", async () => {
     const context = { db: worker!.db };
-    await expectApiError(requirePlatformBusinessAccess(context, { businessId: businessA, groupId: "acme", access: "group" }), 404, "not_found");
-    await linkPlatformKeyBusiness(context, { businessId: businessA, groupId: "acme", platformKeyId: randomUUID() });
+    await expectApiError(requirePlatformBusinessAccess(context, { businessId: businessA, groupId: acme, access: "group" }), 404, "not_found");
+    await linkPlatformKeyBusiness(context, { businessId: businessA, groupId: acme, platformKeyId: randomUUID() });
     // Linking again is a no-op.
-    await linkPlatformKeyBusiness(context, { businessId: businessA, groupId: "acme", platformKeyId: randomUUID() });
-    await requirePlatformBusinessAccess(context, { businessId: businessA, groupId: "acme", access: "group" });
-    await expectApiError(requirePlatformBusinessAccess(context, { businessId: businessB, groupId: "acme", access: "group" }), 404, "not_found");
+    await linkPlatformKeyBusiness(context, { businessId: businessA, groupId: acme, platformKeyId: randomUUID() });
+    await requirePlatformBusinessAccess(context, { businessId: businessA, groupId: acme, access: "group" });
+    await expectApiError(requirePlatformBusinessAccess(context, { businessId: businessB, groupId: acme, access: "group" }), 404, "not_found");
     await expectApiError(requirePlatformBusinessAccess(context, { businessId: businessA, groupId: "other", access: "group" }), 404, "not_found");
-    await expectApiError(requirePlatformBusinessAccess(context, { businessId: randomUUID(), groupId: "acme", access: "all" }), 404, "not_found");
+    await expectApiError(requirePlatformBusinessAccess(context, { businessId: randomUUID(), groupId: acme, access: "all" }), 404, "not_found");
   });
 
   it("lets an entry written before the rename reach the same businesses as one written after", async () => {
     const context = { db: worker!.db };
-    const legacy = generatePlatformKey({ name: "Acme legacy", group: "acme", ownerEmail });
-    const renamed = generatePlatformKey({ name: "Acme renamed", group: "acme", ownerEmail });
+    const legacy = generatePlatformKey({ name: "Acme legacy", group: acme, ownerEmail });
+    const renamed = generatePlatformKey({ name: "Acme renamed", group: acme, ownerEmail });
     const { group: _group, ...rest } = legacy.entry;
-    const environment = { PLATFORM_API_KEYS: JSON.stringify([{ ...rest, partner: "acme", access: "partner" }, renamed.entry]) };
+    const environment = { PLATFORM_API_KEYS: JSON.stringify([{ ...rest, partner: acme, access: "partner" }, renamed.entry]) };
     const keys = [resolveConfiguredPlatformKey(legacy.key, environment)!, resolveConfiguredPlatformKey(renamed.key, environment)!];
-    expect(keys.map((key) => [key.group, key.access])).toEqual([["acme", "group"], ["acme", "group"]]);
+    expect(keys.map((key) => [key.group, key.access])).toEqual([[acme, "group"], [acme, "group"]]);
     for (const key of keys) {
       await requirePlatformBusinessAccess(context, { businessId: businessA, groupId: key.group, access: key.access });
       await expectApiError(requirePlatformBusinessAccess(context, { businessId: businessB, groupId: key.group, access: key.access }), 404, "not_found");
@@ -157,7 +159,7 @@ describe.skipIf(!testUrl)("platform keys against PostgreSQL with RLS", () => {
       await tx.execute(sql`select set_config('app.business_id', ${businessA}, true), set_config('app.user_id', ${memberId}, true), set_config('app.actor_type', 'operator', true)`);
       return await tx.select({ groupId: platformKeyBusinesses.groupId }).from(platformKeyBusinesses).where(eq(platformKeyBusinesses.businessId, businessA));
     });
-    expect(visible).toEqual([{ groupId: "acme" }]);
+    expect(visible).toEqual([{ groupId: acme }]);
     // Someone off the team sees nothing.
     const outsider = await app!.db.transaction(async (tx) => {
       await tx.execute(sql`select set_config('app.business_id', ${businessA}, true), set_config('app.user_id', ${ownerId}, true), set_config('app.actor_type', 'operator', true)`);
@@ -178,31 +180,31 @@ describe.skipIf(!testUrl)("platform keys against PostgreSQL with RLS", () => {
   });
 
   it("reports the platform key, its group and the header's business on GET /me", async () => {
-    const { key, entry } = generatePlatformKey({ name: "Acme onboarding", group: "acme", ownerEmail });
+    const { key, entry } = generatePlatformKey({ name: "Acme onboarding", group: acme, ownerEmail });
     const resolved = resolveConfiguredPlatformKey(key, { PLATFORM_API_KEYS: JSON.stringify([entry]) })!;
-    const caller: PlatformKeyCaller = { businessId: businessA, platformKeyId: resolved.platformKeyId, groupId: "acme", actingUserId: ownerId, actor: "platform_key" };
+    const caller: PlatformKeyCaller = { businessId: businessA, platformKeyId: resolved.platformKeyId, groupId: acme, actingUserId: ownerId, actor: "platform_key" };
     const context = { db: worker!.db };
     expect(await getPlatformMeForApi(context, resolved, caller)).toEqual({
       api_key: { id: entry.id, name: "Acme onboarding", prefix: entry.prefix, scopes: resolved.scopes, created_at: entry.created_at },
       business: { id: businessA, name: "Acme Business" },
       // v1 only changes additively: partner and the access value keep their old names.
-      platform: { group: "acme", partner: "acme", access: "partner", partner_id: null },
+      platform: { group: acme, partner: acme, access: "partner", partner_id: null },
     });
     expect((await getPlatformMeForApi(context, resolved, null)).business).toBeNull();
     // An entry written before the rename reports the same.
     const { group: _group, ...rest } = entry;
-    const legacy = resolveConfiguredPlatformKey(key, { PLATFORM_API_KEYS: JSON.stringify([{ ...rest, partner: "acme", access: "partner" }]) })!;
-    expect((await getPlatformMeForApi(context, legacy, null)).platform).toEqual({ group: "acme", partner: "acme", access: "partner", partner_id: null });
+    const legacy = resolveConfiguredPlatformKey(key, { PLATFORM_API_KEYS: JSON.stringify([{ ...rest, partner: acme, access: "partner" }]) })!;
+    expect((await getPlatformMeForApi(context, legacy, null)).platform).toEqual({ group: acme, partner: acme, access: "partner", partner_id: null });
     const all = resolveConfiguredPlatformKey(key, { PLATFORM_API_KEYS: JSON.stringify([{ ...entry, access: "all" }]) })!;
-    expect((await getPlatformMeForApi(context, all, null)).platform).toEqual({ group: "acme", partner: "acme", access: "all", partner_id: null });
+    expect((await getPlatformMeForApi(context, all, null)).platform).toEqual({ group: acme, partner: acme, access: "all", partner_id: null });
   });
 
   it("audits a platform key's change with the key, its group and its owner", async () => {
     const platformKeyId = randomUUID();
-    const caller: PlatformKeyCaller = { businessId: businessA, platformKeyId, groupId: "acme", actingUserId: ownerId, actor: "platform_key" };
+    const caller: PlatformKeyCaller = { businessId: businessA, platformKeyId, groupId: acme, actingUserId: ownerId, actor: "platform_key" };
     const entry = await createKnowledgeEntryForApi({ db: worker!.db }, caller, { type: "faq", question: "Do you park?", answer: "Yes, behind the building." });
     const [row] = await admin!.db.select({ actorUserId: auditLogs.actorUserId, payload: auditLogs.payload }).from(auditLogs).where(and(eq(auditLogs.businessId, businessA), eq(auditLogs.entityId, entry.id)));
-    expect(row).toEqual({ actorUserId: null, payload: { actor: "platform_key", platformKeyId, groupId: "acme", actingUserId: ownerId, type: "faq" } });
+    expect(row).toEqual({ actorUserId: null, payload: { actor: "platform_key", platformKeyId, groupId: acme, actingUserId: ownerId, type: "faq" } });
   });
 
   it("keeps a platform key's Idempotency-Keys apart per business", async () => {
@@ -223,7 +225,7 @@ describe.skipIf(!testUrl)("platform keys against PostgreSQL with RLS", () => {
   });
 
   describe("businesses created by a platform key", () => {
-    const { key, entry } = generatePlatformKey({ name: "Acme onboarding", group: "acme", ownerEmail });
+    const { key, entry } = generatePlatformKey({ name: "Acme onboarding", group: acme, ownerEmail });
     const resolved = () => resolveConfiguredPlatformKey(key, { PLATFORM_API_KEYS: JSON.stringify([entry]) })!;
     const create = (idempotencyKey: string, body: Parameters<typeof createBusinessForApi>[1]["body"], requestHash = `hash-${idempotencyKey}`) =>
       createBusinessForApi({ db: worker!.db }, { key: resolved(), actingUserId: ownerId, idempotencyKey, requestHash, body });
@@ -236,14 +238,14 @@ describe.skipIf(!testUrl)("platform keys against PostgreSQL with RLS", () => {
       expect(result.business).toMatchObject({ id: platformBusinessId(entry.id, idempotencyKey), name: "Acme Plumbing", timezone: "America/Toronto", locale: "fr", website_url: "https://acme.example", business_type: "service_company", onboarding_stage: "website" });
       const businessId = result.business.id;
       expect(await admin!.db.select({ userId: businessMemberships.userId, role: businessMemberships.role }).from(businessMemberships).where(eq(businessMemberships.businessId, businessId))).toEqual([{ userId: ownerId, role: "business_owner" }]);
-      expect(await admin!.db.select({ groupId: platformKeyBusinesses.groupId, createdBy: platformKeyBusinesses.createdByPlatformKeyId }).from(platformKeyBusinesses).where(eq(platformKeyBusinesses.businessId, businessId))).toEqual([{ groupId: "acme", createdBy: entry.id }]);
+      expect(await admin!.db.select({ groupId: platformKeyBusinesses.groupId, createdBy: platformKeyBusinesses.createdByPlatformKeyId }).from(platformKeyBusinesses).where(eq(platformKeyBusinesses.businessId, businessId))).toEqual([{ groupId: acme, createdBy: entry.id }]);
       expect(await admin!.db.select({ id: staff.id }).from(staff).where(eq(staff.businessId, businessId))).toHaveLength(1);
       expect(await admin!.db.select({ id: receptionistProfiles.businessId }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, businessId))).toHaveLength(1);
       const [audit] = await admin!.db.select({ payload: auditLogs.payload }).from(auditLogs).where(and(eq(auditLogs.businessId, businessId), eq(auditLogs.eventType, "api.business.created")));
-      expect(audit?.payload).toEqual({ actor: "platform_key", platformKeyId: entry.id, groupId: "acme", actingUserId: ownerId, requestHash: `hash-${idempotencyKey}` });
+      expect(audit?.payload).toEqual({ actor: "platform_key", platformKeyId: entry.id, groupId: acme, actingUserId: ownerId, requestHash: `hash-${idempotencyKey}` });
       expect(await admin!.db.select({ topic: outboxMessages.topic }).from(outboxMessages).where(and(eq(outboxMessages.businessId, businessId), eq(outboxMessages.topic, "snapshot.refresh")))).not.toHaveLength(0);
       // The group's keys can act on it right away.
-      await requirePlatformBusinessAccess({ db: worker!.db }, { businessId, groupId: "acme", access: "group" });
+      await requirePlatformBusinessAccess({ db: worker!.db }, { businessId, groupId: acme, access: "group" });
     });
 
     it("returns the same business for a retry and refuses a different body with the same key", async () => {
@@ -304,12 +306,12 @@ describe.skipIf(!testUrl)("platform keys against PostgreSQL with RLS", () => {
       const seen: string[] = [];
       let cursor: string | undefined;
       do {
-        const page = await listBusinessesForApi({ db: worker!.db }, { groupId: "acme", limit: 1, ...(cursor ? { cursor } : {}) });
+        const page = await listBusinessesForApi({ db: worker!.db }, { groupId: acme, limit: 1, ...(cursor ? { cursor } : {}) });
         expect(page.data.length).toBeLessThanOrEqual(1);
         seen.push(...page.data.map((business) => business.id));
         cursor = page.next_cursor ?? undefined;
       } while (cursor);
-      const expected = await admin!.db.select({ id: businesses.id, createdAt: businesses.createdAt }).from(platformKeyBusinesses).innerJoin(businesses, eq(businesses.id, platformKeyBusinesses.businessId)).where(and(eq(platformKeyBusinesses.groupId, "acme"), eq(businesses.status, "active")));
+      const expected = await admin!.db.select({ id: businesses.id, createdAt: businesses.createdAt }).from(platformKeyBusinesses).innerJoin(businesses, eq(businesses.id, platformKeyBusinesses.businessId)).where(and(eq(platformKeyBusinesses.groupId, acme), eq(businesses.status, "active")));
       expect(seen).toEqual(expected.sort((x, y) => y.createdAt.getTime() - x.createdAt.getTime() || (y.id < x.id ? -1 : 1)).map((row) => row.id));
       expect(seen).not.toContain(other.business.id);
       expect(seen).not.toContain(suspended.business.id);
@@ -343,6 +345,6 @@ describe.skipIf(!testUrl)("platform keys against PostgreSQL with RLS", () => {
     await admin!.db.update(apiKeys).set({ createdByUserId: null }).where(eq(apiKeys.id, key!.id));
     await expectApiError(resolveActingUserId(context, caller), 403, "key_owner_inactive");
     // A platform key acts as its resolved owner without another lookup.
-    expect(await resolveActingUserId(context, { businessId: businessA, platformKeyId: randomUUID(), groupId: "acme", actingUserId: ownerId, actor: "platform_key" })).toBe(ownerId);
+    expect(await resolveActingUserId(context, { businessId: businessA, platformKeyId: randomUUID(), groupId: acme, actingUserId: ownerId, actor: "platform_key" })).toBe(ownerId);
   });
 });
