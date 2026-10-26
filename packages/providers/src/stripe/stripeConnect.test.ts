@@ -152,6 +152,12 @@ describe("the Stripe Connect adapter", () => {
       "metadata[lobbystack_package_id]": "pkg1",
       "subscription_data[metadata][lobbystack_business_id]": "b1",
       "subscription_data[metadata][lobbystack_package_id]": "pkg1",
+      // Renews on the 1st at 00:00 UTC, with a partial first month.
+      "subscription_data[billing_cycle_anchor_config][day_of_month]": "1",
+      "subscription_data[billing_cycle_anchor_config][hour]": "0",
+      "subscription_data[billing_cycle_anchor_config][minute]": "0",
+      "subscription_data[billing_cycle_anchor_config][second]": "0",
+      "subscription_data[proration_behavior]": "create_prorations",
       success_url: "https://acme.portal.test/accept-invite?token=t&checkout=complete",
       cancel_url: "https://acme.portal.test/accept-invite?token=t&checkout=canceled",
       locale: "auto",

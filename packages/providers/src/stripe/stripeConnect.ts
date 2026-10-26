@@ -332,7 +332,11 @@ export class StripeConnectAdapter implements StripeConnectProvider {
       ...(input.customerId ? { customer: input.customerId } : input.customerEmail ? { customer_email: input.customerEmail } : {}),
       client_reference_id: input.clientReferenceId,
       metadata: input.metadata,
-      subscription_data: { metadata: input.metadata },
+      // Every package renews at 00:00 UTC on the 1st, so each invoice covers the
+      // calendar month the business's overage cap counts. The first invoice
+      // charges the part of the month left, and Stripe works out the next 1st
+      // when the subscription starts, even when the payer finishes after it.
+      subscription_data: { metadata: input.metadata, billing_cycle_anchor_config: { day_of_month: 1, hour: 0, minute: 0, second: 0 }, proration_behavior: "create_prorations" },
       success_url: input.successUrl,
       cancel_url: input.cancelUrl,
       locale: "auto",

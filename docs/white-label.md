@@ -41,6 +41,7 @@ LobbyStack's cloud sells these tiers:
 A partner bills its businesses through its own Stripe account, connected with Stripe Connect ([ADR 0009](adr/0009-partners-bill-through-their-own-stripe.md)):
 
 - A package has a name, a monthly price, an optional one-time setup fee, and an allowance. It uses the currency of the partner's Stripe account.
+- Every package renews on the 1st of the month, in UTC. The first invoice charges the rest of that month, so each invoice covers the month the allowance and the overage cap count.
 - For each business, the partner turns overage on or off and sets the overage rate and a monthly cap in money.
 - A partner can mark a business "billed outside LobbyStack". Its usage still draws on the pool, and Stripe charges it nothing.
 
