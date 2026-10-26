@@ -14,7 +14,8 @@
     "team": "Team",
     "stripe": "Stripe",
     "apiKeys": "API keys",
-    "billing": "Billing"
+    "billing": "Billing",
+    "settings": "Settings"
   },
   "roles": {
     "owner": "Owner",
@@ -754,6 +755,18 @@
       "description": "That was 90 days after your tier ended. You're on Free now, and businesses you add work as they do on Free.",
       "owner": "To pay for a tier again, choose one on the Billing page.",
       "admin": "Ask an owner if you need a paid tier again."
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "description": "Settings that apply to everyone on your team.",
+    "loadFailed": "We couldn't load your settings. Refresh to try again.",
+    "saved": "Settings saved.",
+    "membersCantEdit": "Only owners and admins can change these settings.",
+    "telemetry": {
+      "label": "Share telemetry data",
+      "description": "Share anonymized usage and error data from your team's use of the console to help improve it. Each business's dashboard follows its own setting.",
+      "saveFailed": "We couldn't save your telemetry setting. Try again."
     }
   },
   "signup": {

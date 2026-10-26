@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Building2, Check, ChevronsUpDown, Contrast, CreditCard, KeyRound, LayoutTemplate, LogOut, Package, Palette, Plus, Presentation, Receipt, Users } from "lucide-react";
+import { Building2, Check, ChevronsUpDown, Contrast, CreditCard, KeyRound, LayoutTemplate, LogOut, Package, Palette, Plus, Presentation, Receipt, Settings, Users } from "lucide-react";
 
 import type { PartnerRole } from "@lobbystack/shared";
 import { useBranding } from "@/components/branding-provider";
@@ -118,6 +118,7 @@ function PartnerNavigation({ billingPage, partnerId, role }: { billingPage: bool
     { href: `/partner/${partnerId}/api-keys`, label: t("nav.apiKeys"), icon: KeyRound },
     ...(role === "owner" ? [{ href: `/partner/${partnerId}/stripe`, label: t("nav.stripe"), icon: CreditCard }] : []),
     ...(billingPage && role === "owner" ? [{ href: `/partner/${partnerId}/billing`, label: t("nav.billing"), icon: Receipt }] : []),
+    { href: `/partner/${partnerId}/settings`, label: t("nav.settings"), icon: Settings },
   ];
   return (
     <SidebarGroup>

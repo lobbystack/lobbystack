@@ -607,6 +607,52 @@ export async function savePartnerBrand(context: DomainContext, actor: PartnerAct
   return settings;
 }
 
+/** A partner's settings as the console's Settings page shows them. */
+export type PartnerSettings = {
+  /** The actor's own role, read with the settings: only owners and admins can change them. */
+  role: PartnerRole;
+  /**
+   * Whether the console's pages share product telemetry with the host. It
+   * starts on, as a business's does, and a business's own pages follow the
+   * business's setting instead.
+   */
+  telemetryEnabled: boolean;
+};
+
+function settingsActor(actor: PartnerActor): PartnerMemberActor {
+  if (actor.kind !== "member") throw new AuthorizationError("Platform keys can't read or change a partner's settings.");
+  return actor;
+}
+
+async function readSettings(tx: DatabaseTransaction, member: PartnerMemberActor): Promise<PartnerSettings> {
+  const role = await currentRole(tx, member);
+  const [row] = await tx.select({ telemetryEnabled: partners.telemetryEnabled }).from(partners).where(eq(partners.id, member.partnerId)).limit(1);
+  if (!row) throw failure("Partner not found.", 404, "partner_not_found");
+  return { role, telemetryEnabled: row.telemetryEnabled };
+}
+
+/** The partner's settings for the console's Settings page and its telemetry consent. Anyone on the team can read them. */
+export async function getPartnerSettings(context: DomainContext, actor: PartnerActor): Promise<PartnerSettings> {
+  const member = settingsActor(actor);
+  return await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => await readSettings(tx, member));
+}
+
+/**
+ * Turns the console's telemetry on or off for the whole partner. Only owners
+ * and admins can, the same roles that change a business's setting.
+ */
+export async function savePartnerSettings(context: DomainContext, actor: PartnerActor, input: { telemetryEnabled: boolean }): Promise<PartnerSettings> {
+  const member = settingsActor(actor);
+  return await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => {
+    const role = await currentRole(tx, member);
+    if (role === "member") throw new AuthorizationError("Only owners and admins can change the partner's settings.");
+    const saved = await tx.update(partners).set({ telemetryEnabled: input.telemetryEnabled, updatedAt: new Date() }).where(eq(partners.id, member.partnerId)).returning({ id: partners.id });
+    // The role was just read, so nothing changed only when row-level security refused it.
+    if (saved.length === 0) throw new AuthorizationError("Only owners and admins can change the partner's settings.");
+    return await readSettings(tx, member);
+  });
+}
+
 /** A business in the partner's console. */
 export type PartnerBusiness = {
   businessId: string;

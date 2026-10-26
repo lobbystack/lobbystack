@@ -10,6 +10,7 @@ import {
   changePartnerMemberRole,
   createPartnerSignupInvitation,
   getPartnerBrandSettings,
+  getPartnerSettings,
   hashPartnerToken,
   invitePartnerMember,
   listPartnerTeam,
@@ -22,6 +23,7 @@ import {
   resolvePartnerActor,
   revokePartnerInvitation,
   savePartnerBrand,
+  savePartnerSettings,
   signUpPartner,
   type PartnerBrandInput,
   type PartnerMemberActor,
@@ -505,6 +507,43 @@ describe.skipIf(!client)("partner brand", () => {
       expect(await refused({ logo: new Uint8Array(256 * 1024 + 1) })).toEqual([413, "logo_too_large"]);
       // A short color and empty fields are fine.
       expect(await savePartnerBrand(context, ownerActor, { ...brandInput, color: "#ABC", termsUrl: null, privacyUrl: " ", supportEmail: null })).toMatchObject({ color: "#aabbcc", termsUrl: null, privacyUrl: null, supportEmail: null });
+    });
+  });
+});
+
+describe.skipIf(!client)("partner settings", () => {
+  it("starts a new partner with telemetry on, as a new business starts, and lets owners and admins turn it off and on", async () => {
+    await rollbackTest(async (tx) => {
+      const { context, ownerActor, actors: [admin] } = await partnerWithTeam(tx, ["admin"]);
+      expect(await getPartnerSettings(context, ownerActor)).toEqual({ role: "owner", telemetryEnabled: true });
+      expect(await savePartnerSettings(context, admin!, { telemetryEnabled: false })).toEqual({ role: "admin", telemetryEnabled: false });
+      expect(await getPartnerSettings(context, ownerActor)).toEqual({ role: "owner", telemetryEnabled: false });
+      expect(await savePartnerSettings(context, ownerActor, { telemetryEnabled: true })).toEqual({ role: "owner", telemetryEnabled: true });
+    });
+  });
+
+  it("shows members the setting but never lets them or a platform key change it, even with their own SQL", async () => {
+    await rollbackTest(async (tx) => {
+      const { context, partnerId, ownerActor, actors: [member] } = await partnerWithTeam(tx, ["member"]);
+      expect(await getPartnerSettings(context, member!)).toEqual({ role: "member", telemetryEnabled: true });
+      // The role it was resolved with doesn't matter: the database's does.
+      await expect(savePartnerSettings(context, { ...member!, role: "admin" }, { telemetryEnabled: false })).rejects.toMatchObject({ status: 403 });
+      const key = { kind: "key", partnerId, platformKeyId: randomUUID() } as const;
+      await expect(savePartnerSettings(context, key, { telemetryEnabled: false })).rejects.toMatchObject({ status: 403 });
+      await expect(getPartnerSettings(context, key)).rejects.toMatchObject({ status: 403 });
+      const direct = await withBusinessTransaction(context.db, { userId: member!.userId, actorType: "operator" }, async (inner) => await inner.execute(sql`update public.partners set telemetry_enabled = false where id = ${partnerId}::uuid returning id`));
+      expect(direct.rows).toEqual([]);
+      expect(await getPartnerSettings(context, ownerActor)).toEqual({ role: "owner", telemetryEnabled: true });
+    });
+  });
+
+  it("never shows one partner's setting to another partner's team", async () => {
+    await rollbackTest(async (tx) => {
+      const first = await partnerWithTeam(tx, []);
+      const second = await partnerWithTeam(tx, []);
+      await expect(getPartnerSettings(first.context, { ...first.ownerActor, partnerId: second.partnerId })).rejects.toMatchObject({ status: 403 });
+      await expect(savePartnerSettings(first.context, { ...first.ownerActor, partnerId: second.partnerId }, { telemetryEnabled: false })).rejects.toMatchObject({ status: 403 });
+      expect(await getPartnerSettings(second.context, second.ownerActor)).toEqual({ role: "owner", telemetryEnabled: true });
     });
   });
 });

@@ -14,7 +14,8 @@
     "team": "Tim",
     "stripe": "Stripe",
     "apiKeys": "API ključevi",
-    "billing": "Naplata"
+    "billing": "Naplata",
+    "settings": "Podešavanja"
   },
   "roles": {
     "owner": "Vlasnik",
@@ -766,6 +767,18 @@
       "description": "To je bilo 90 dana nakon što je vaš nivo istekao. Sada ste na nivou Besplatno, a firme koje dodate rade kao na tom nivou.",
       "owner": "Da biste ponovo platili nivo, izaberite ga na stranici Naplata.",
       "admin": "Zamolite vlasnika za plaćeni nivo ako vam ponovo zatreba."
+    }
+  },
+  "settings": {
+    "title": "Podešavanja",
+    "description": "Podešavanja koja važe za ceo vaš tim.",
+    "loadFailed": "Nismo uspeli da učitamo vaša podešavanja. Osvežite stranicu i pokušajte ponovo.",
+    "saved": "Podešavanja su sačuvana.",
+    "membersCantEdit": "Samo vlasnici i administratori mogu da menjaju ova podešavanja.",
+    "telemetry": {
+      "label": "Deli podatke telemetrije",
+      "description": "Delite anonimizovane podatke o korišćenju i greškama iz rada vašeg tima u konzoli, da biste pomogli da se ona poboljša. Kontrolna tabla svake firme prati sopstveno podešavanje.",
+      "saveFailed": "Nismo uspeli da sačuvamo podešavanje telemetrije. Pokušajte ponovo."
     }
   },
   "signup": {

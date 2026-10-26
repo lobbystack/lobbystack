@@ -13,9 +13,10 @@ const apiHost = process.env.NEXT_PUBLIC_POSTHOG_HOST?.trim() || DEFAULT_POSTHOG_
  * a partner's visitors never reach the host's analytics domain. The website
  * widget loads neither, so a visitor on a business's site doesn't download
  * PostHog. PostHog starts opted out and capture is only enabled for an
- * operator whose workspace has telemetry on, so nothing is collected before
- * that decision is made. Consent, session recording, and identity are
- * controlled by `ProductAnalytics`.
+ * operator whose workspace has telemetry on, or on the partner console, whose
+ * partner has, so nothing is collected before that decision is made.
+ * Consent, session recording, and identity are controlled by
+ * `ProductAnalytics`.
  */
 export function initializeClientAnalytics(): void {
   if (typeof window === "undefined" || !projectToken) return;
@@ -48,6 +49,13 @@ export function initializeClientAnalytics(): void {
         return event;
       },
     });
+    // PostHog stores an opt-in and starts opted in from it on the next page
+    // load, despite opt_out_capturing_by_default, and captures that page a
+    // tick later. Withdraw it first, so a page whose business or partner has
+    // telemetry off, such as the console after a business that has it on,
+    // sends nothing. ProductAnalytics opts in again where consent allows, and
+    // PostHog then captures the page once.
+    if (!posthog.has_opted_out_capturing()) posthog.opt_out_capturing();
   }
   sendBrowserErrorsTo(posthog);
 }

@@ -291,6 +291,7 @@ async function main(): Promise<void> {
             ('partners', 'privacy_url', true),
             ('partners', 'support_url', true),
             ('partners', 'support_email', true),
+            ('partners', 'telemetry_enabled', true),
             ('partners', 'updated_at', true),
             ('partners', 'slug', false),
             ('partners', 'status', false),
@@ -806,6 +807,11 @@ async function verifyRlsBehavior(client: ReturnType<typeof createDatabaseClient>
       const memberBrandUpdates = (await tx.execute(sql`update public.partners set brand_color = '#000000' where id = ${ids.business_a}::uuid returning id`)).rows.length;
       if (memberBrandUpdates !== 0) {
         throw new Error(`RLS partner brand check failed (a member changed ${memberBrandUpdates} partner).`);
+      }
+      // The same goes for the partner's telemetry setting.
+      const memberTelemetryUpdates = (await tx.execute(sql`update public.partners set telemetry_enabled = false where id = ${ids.business_a}::uuid returning id`)).rows.length;
+      if (memberTelemetryUpdates !== 0) {
+        throw new Error(`RLS partner telemetry check failed (a member changed ${memberTelemetryUpdates} partner).`);
       }
 
       await tx.execute(sql`select set_config('app.business_id', ${ids.business_b}, true)`);

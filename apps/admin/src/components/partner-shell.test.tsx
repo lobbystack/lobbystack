@@ -45,7 +45,7 @@ it("leaves partner signup out on a partner's host, which answers it with a 404",
   expect(screen.queryByRole("menuitem", { name: "shell.signUpAnother" })).toBeNull();
 });
 
-it("shows Templates and Demos to the whole team, Packages to owners and admins, and Stripe and Billing to owners only, the pages the server lets each role open", async () => {
+it("shows Templates, Demos and Settings to the whole team, Packages to owners and admins, and Stripe and Billing to owners only, the pages the server lets each role open", async () => {
   const pages = (role: "owner" | "admin" | "member", billingPage = false) => {
     const partner = { ...bright, role };
     render(
@@ -57,10 +57,10 @@ it("shows Templates and Demos to the whole team, Packages to owners and admins, 
     cleanup();
     return links;
   };
-  expect(pages("owner")).toEqual(["/partner/bright/businesses", "/partner/bright/templates", "/partner/bright/demos", "/partner/bright/packages", "/partner/bright/branding", "/partner/bright/team", "/partner/bright/api-keys", "/partner/bright/stripe"]);
-  expect(pages("owner", true)).toEqual(["/partner/bright/businesses", "/partner/bright/templates", "/partner/bright/demos", "/partner/bright/packages", "/partner/bright/branding", "/partner/bright/team", "/partner/bright/api-keys", "/partner/bright/stripe", "/partner/bright/billing"]);
-  expect(pages("admin")).toEqual(["/partner/bright/businesses", "/partner/bright/templates", "/partner/bright/demos", "/partner/bright/packages", "/partner/bright/branding", "/partner/bright/team", "/partner/bright/api-keys"]);
-  expect(pages("member")).toEqual(["/partner/bright/businesses", "/partner/bright/templates", "/partner/bright/demos", "/partner/bright/branding", "/partner/bright/team", "/partner/bright/api-keys"]);
+  expect(pages("owner")).toEqual(["/partner/bright/businesses", "/partner/bright/templates", "/partner/bright/demos", "/partner/bright/packages", "/partner/bright/branding", "/partner/bright/team", "/partner/bright/api-keys", "/partner/bright/stripe", "/partner/bright/settings"]);
+  expect(pages("owner", true)).toEqual(["/partner/bright/businesses", "/partner/bright/templates", "/partner/bright/demos", "/partner/bright/packages", "/partner/bright/branding", "/partner/bright/team", "/partner/bright/api-keys", "/partner/bright/stripe", "/partner/bright/billing", "/partner/bright/settings"]);
+  expect(pages("admin")).toEqual(["/partner/bright/businesses", "/partner/bright/templates", "/partner/bright/demos", "/partner/bright/packages", "/partner/bright/branding", "/partner/bright/team", "/partner/bright/api-keys", "/partner/bright/settings"]);
+  expect(pages("member")).toEqual(["/partner/bright/businesses", "/partner/bright/templates", "/partner/bright/demos", "/partner/bright/branding", "/partner/bright/team", "/partner/bright/api-keys", "/partner/bright/settings"]);
 });
 
 it("gives owners a Billing page when the deployment sells tiers or the host set the partner's pool, and no one else", () => {

@@ -14,7 +14,8 @@
     "team": "Equipo",
     "stripe": "Stripe",
     "apiKeys": "Claves de API",
-    "billing": "Facturación"
+    "billing": "Facturación",
+    "settings": "Configuración"
   },
   "roles": {
     "owner": "Propietario",
@@ -766,6 +767,18 @@
       "description": "Fue 90 días después de que terminó su nivel. Ahora está en Gratis, y los negocios que agregue funcionan como en Gratis.",
       "owner": "Para volver a pagar un nivel, elija uno en la página Facturación.",
       "admin": "Pida a un propietario un nivel de pago si lo vuelve a necesitar."
+    }
+  },
+  "settings": {
+    "title": "Configuración",
+    "description": "La configuración que se aplica a todo su equipo.",
+    "loadFailed": "No pudimos cargar su configuración. Actualice la página para intentarlo de nuevo.",
+    "saved": "Configuración guardada.",
+    "membersCantEdit": "Solo los propietarios y los administradores pueden cambiar esta configuración.",
+    "telemetry": {
+      "label": "Compartir datos de telemetría",
+      "description": "Comparta datos anónimos de uso y errores sobre cómo su equipo usa la consola, para ayudar a mejorarla. El panel de cada negocio sigue su propia configuración.",
+      "saveFailed": "No pudimos guardar su preferencia de telemetría. Inténtelo de nuevo."
     }
   },
   "signup": {

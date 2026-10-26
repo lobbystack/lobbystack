@@ -145,6 +145,8 @@ export const partners = pgTable(
     supportEmail: varchar("support_email", { length: 254 }),
     // When the partner's one 14-day trial number started, kept after the business that held it is deleted (migration 0154).
     numberTrialStartedAt: timestamp("number_trial_started_at", { withTimezone: true }),
+    // Whether the console shares product telemetry, as a business's telemetryEnabled does for its dashboard (migration 0160).
+    telemetryEnabled: boolean("telemetry_enabled").default(true).notNull(),
     ...timestamps,
   },
   (table) => [uniqueIndex("partners_slug_unique").on(table.slug)],

@@ -66,7 +66,7 @@ flowchart LR
 | Partner features | `packages/shared` | `partnerFeatures(env)` | Which configuration turns which feature on |
 | Brands | `packages/domain` | `resolveHostBrand`, `brandForBusiness` | Host parsing, domain lookup, caching, merging with the host brand |
 | Business access | `packages/domain` | `requireBusinessAccess`, `openPartnerBusiness` | Memberships, partner members, audited opens, access levels, brand matching |
-| Partner operations | `packages/domain` | Functions that take a `PartnerActor` | Owner-less businesses, invitations, release, delete, branding, team |
+| Partner operations | `packages/domain` | Functions that take a `PartnerActor` | Owner-less businesses, invitations, release, delete, branding, settings, team |
 | Entitlement | `packages/domain` | `loadEntitlement` | Plans, packages, billed-outside businesses, Stripe and tier state, grace periods |
 | Usage metering | `packages/domain` | `reserveUsage`, `extendUsage`, `correctUsage` | Allowances, pools, caps, lock order, sync jobs |
 | Partner lifecycle | `packages/domain` | `nextPartnerState`, `applyPartnerTransition`, `advancePartnerLifecycles`, `getPartnerLifecycle` | The 30-day and 90-day steps, and what each step does to businesses and numbers |
@@ -185,7 +185,8 @@ type PartnerActor =
 - `createPartnerBusiness` takes the package the business is sold, or none to bill it outside LobbyStack, and `setPartnerBusinessBilling` changes it until the business pays. Once the deployment can't hear that subscription end, after the partner disconnects its account or without Stripe Connect, the partner can change it again, and the change drops the subscription. Owners and admins see each business's package and payment status on the Businesses page. Members never see a business's billing, and the database sells a business only its own partner's packages.
 - `setPartnerBusinessOverage` sets a business's overage on its package: on or off, the minute and chat rates, and a monthly cap, or none, each a whole number of the package currency's minor unit. Owners and admins set it from the Businesses page through `PUT /api/partner/businesses/overage`, and the business's audit log records each change as `partner.business_overage_changed`. Overage starts off, and turning it off keeps the rates and the cap. A business billed outside LobbyStack has none, so the function refuses it with `billed_outside`, and a deployment without Stripe Connect with `stripe_not_configured`.
 - `billing_accounts` keeps the overage in `overage_enabled`, the two rates, `overage_cap_minor` and `overage_currency`, the package's currency when the partner set them (migration 0155). Terms in another currency than the business's package hold as off, so a business that moves to a package in another currency has no overage until the partner sets it again. Only the system actor writes these columns, as for the package, so a business's own operators can't raise their own cap. Releasing the business clears them.
-- Each function checks the actor's role itself. A member can work inside businesses and see their usage, an admin can also manage businesses (create, release and delete them), packages, templates, branding, domains, keys, and the team, and only an owner can manage billing, Stripe, owners, and deleting the partner. An admin can invite, change and remove admins and members, but only an owner can grant the owner role or change or remove an owner.
+- `getPartnerSettings` and `savePartnerSettings` back the console's Settings page through `GET` and `PATCH /api/partner/settings`. The page holds one setting, `partners.telemetry_enabled` (migration 0160), which works like `businesses.telemetry_enabled`: it starts on, everyone on the team sees it, and owners and admins change it, as a business's owners and admins change the business's. Platform keys can't read or change it. [Telemetry from the console](#telemetry-from-the-console) explains how the dashboard uses it.
+- Each function checks the actor's role itself. A member can work inside businesses and see their usage, an admin can also manage businesses (create, release and delete them), packages, templates, branding, domains, keys, settings, and the team, and only an owner can manage billing, Stripe, owners, and deleting the partner. An admin can invite, change and remove admins and members, but only an owner can grant the owner role or change or remove an owner.
 
 ## Entitlement
 
@@ -482,6 +483,24 @@ type TxtLookup = (name: string) => Promise<string[]>;
 1. An owner or admin of a partner's business clicks **Connect** on the partner's domain, or opens the Calendar connect link the v1 API returned. The start route signs the domain's origin into the OAuth state, and sends the person to Google or Instagram, through the host's apps.
 2. The provider sends the callback to the one redirect URI the host registered, on the host's domain. `routeOAuthCallback` in `apps/admin/src/lib/oauth-callback-host.ts` checks that the state's origin still resolves to a partner, and the callback redirects to the same path there, with the code and state.
 3. On the partner's domain, where the person's session lives, the callback checks the session, uses up the state, exchanges the code, and lands on that domain's integrations page.
+
+### Telemetry from the console
+
+PostHog never starts on a partner's domain, so only the console on the host's domain sends browser telemetry. `ProductAnalytics` in `apps/admin/src/components/product-analytics.tsx` picks whose setting gives consent from the page's path:
+
+- A console page, `/partner/<partnerId>/…`, asks `GET /api/partner/settings` for its partner's `telemetryEnabled`. The person's own business doesn't count there, whatever its setting says.
+- Partner signup, accepting a team invitation, and `/partner` belong to no partner yet, so they send nothing.
+- Every other page asks the active business's setting, as before. A partner member inside a business they opened is on a business page, so the business's setting applies.
+
+On a console page with consent, the dashboard identifies the person as `user:<userId>`, registers `partnerId` on every event, and drops the `businessId` property and business group a business page left behind. A business page drops `partnerId` the same way. The Settings page and `ProductAnalytics` share one query, so turning the setting off stops capture and session recording at once. PostHog keeps an opt-in across page loads, so `initializeClientAnalytics` withdraws it at startup: a console page reached from a business with telemetry on sends nothing until its partner's setting allows it.
+
+The signup event waits until the dashboard knows the new partner's setting:
+
+1. `/partner/signup` creates the partner, whose setting starts on, and queues `web.partner.signup_succeeded` in `sessionStorage` through `recordPendingPartnerSignup` in `apps/admin/src/lib/partner-analytics.ts`.
+2. The browser opens the new partner's Businesses page, which reads the partner's setting.
+3. With the setting on, `ProductAnalytics` sends the queued event, with the signup page as its `pathname`. With it off, it drops the event. A queued `web.auth.*` sign-in event follows the same rule on a console page.
+
+A queued event waits for its own partner's console and expires after a day, like the dashboard's other queued events. No server-side event belongs to a partner alone: `billing.package_subscription_started` names the partner but describes a business's subscription, so it follows that business's setting.
 
 ### A new business from the console
 

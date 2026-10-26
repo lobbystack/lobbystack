@@ -14,7 +14,8 @@
     "team": "Équipe",
     "stripe": "Stripe",
     "apiKeys": "Clés API",
-    "billing": "Facturation"
+    "billing": "Facturation",
+    "settings": "Réglages"
   },
   "roles": {
     "owner": "Propriétaire",
@@ -766,6 +767,18 @@
       "description": "C'était 90 jours après la fin de votre palier. Vous êtes maintenant sur Gratuit, et les entreprises que vous ajoutez fonctionnent comme sur Gratuit.",
       "owner": "Pour payer de nouveau un palier, choisissez-en un sur la page Facturation.",
       "admin": "Demandez à un propriétaire si vous avez de nouveau besoin d'un palier payant."
+    }
+  },
+  "settings": {
+    "title": "Réglages",
+    "description": "Les réglages qui s'appliquent à toute votre équipe.",
+    "loadFailed": "Impossible de charger vos réglages. Actualisez la page pour réessayer.",
+    "saved": "Réglages enregistrés.",
+    "membersCantEdit": "Seuls les propriétaires et les administrateurs peuvent modifier ces réglages.",
+    "telemetry": {
+      "label": "Partager les données de télémétrie",
+      "description": "Partagez des données d'utilisation et d'erreurs anonymisées sur l'utilisation de la console par votre équipe, pour aider à l'améliorer. Le tableau de bord de chaque entreprise suit son propre réglage.",
+      "saveFailed": "Impossible d'enregistrer votre préférence de télémétrie. Réessayez."
     }
   },
   "signup": {

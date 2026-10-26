@@ -7,7 +7,6 @@ import { useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
 import { partnerSlugFromName } from "@lobbystack/shared";
-import { useTelemetry } from "@/components/product-analytics";
 import { ReplacementOnboardingShell } from "@/components/replacement-onboarding-shell";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -16,6 +15,7 @@ import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@/
 import { useSignOut } from "@/hooks/use-sign-out";
 import { buildAuthPathWithReturnTo } from "@/lib/auth-return-to";
 import { resolveLocale } from "@/lib/locale";
+import { recordPendingPartnerSignup } from "@/lib/partner-analytics";
 import { requestJson } from "@/lib/request-json";
 
 /** Why the signup form can't be used, if it can't. */
@@ -63,7 +63,6 @@ export function PartnerSignupSurface({ baseDomain, blocked, invitation, invitedE
   const { t } = useTranslation("partner");
   const router = useRouter();
   const pathname = usePathname();
-  const telemetry = useTelemetry();
   const [name, setName] = useState("");
   const [subdomain, setSubdomain] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -73,7 +72,8 @@ export function PartnerSignupSurface({ baseDomain, blocked, invitation, invitedE
     // The address on screen is the one the partner gets, or signup refuses it as taken.
     mutationFn: () => requestJson<{ partnerId: string; subdomain: string | null }>("/api/partner/signup", { method: "POST", body: JSON.stringify({ name: name.trim(), ...(baseDomain ? { subdomain: shownSubdomain } : {}), ...(invitation ? { invitation } : {}) }) }),
     onSuccess: (result) => {
-      telemetry.track("web.partner.signup_succeeded", { partnerId: result.partnerId, pathname: pathname ?? "/partner/signup", invited: Boolean(invitation), subdomain: result.subdomain !== null });
+      // The new partner's console sends the event once its telemetry setting is known.
+      recordPendingPartnerSignup({ partnerId: result.partnerId, pathname: pathname ?? "/partner/signup", invited: Boolean(invitation), subdomain: result.subdomain !== null });
       router.replace(`/partner/${result.partnerId}/businesses`);
       router.refresh();
     },

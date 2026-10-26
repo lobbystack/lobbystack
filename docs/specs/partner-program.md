@@ -130,6 +130,11 @@ A partner signs up, puts its own brand on the product, and resells LobbyStack to
 80. As a self-hoster, I want my Caddy proxy to issue certificates for my partners' custom domains on demand, so that I don't manage certificates by hand.
 81. As a host, I want my host keys to keep reaching every business when they're set to do so, so that my own operations keep working.
 
+### Telemetry
+
+82. As a partner admin, I want to turn the console's telemetry off for my whole team, so that the host doesn't see how we use the console.
+83. As a host, I want a new partner's signup to reach my analytics while its telemetry is on, so that I can count partner signups that have no business yet.
+
 ## Implementation Decisions
 
 The product decisions are settled in "How partners resell LobbyStack", the billing design in ADR 0009, and the platform key design in ADR 0010. "Understand the partner program's architecture" defines the modules, their interfaces, and the data flows. This list summarizes the decisions an implementer must follow.
@@ -153,7 +158,7 @@ The product decisions are settled in "How partners resell LobbyStack", the billi
 **Schema.**
 
 - New tables:
-  - Partners, with their brand
+  - Partners, with their brand and telemetry setting
   - Partner members, with roles (owner, admin, member)
   - Partner domains, with kind and verification state
   - Audited partner opens
@@ -190,6 +195,7 @@ The product decisions are settled in "How partners resell LobbyStack", the billi
 - MCP, OAuth, the OpenAPI document, and provider webhooks stay on the host's domain.
 - Public pages that are prerendered today render per partner host and refresh when the partner's brand changes.
 - Browser analytics and uploads never send a partner's visitors to a host-named domain.
+- On the host's domain, the console's pages take telemetry consent from the partner's own setting, which starts on like a business's. A business's pages keep taking it from the business's setting, even while a partner member has the business open. Partner signup and invitation pages belong to no partner yet and send nothing, so signup's event waits for the new partner's console.
 
 **Billing.**
 
