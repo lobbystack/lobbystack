@@ -35,6 +35,10 @@ describe("route capabilities", () => {
     }
   });
 
+  it("lets a partner's business's owner reach its billing page at full access, apart from the host's billing", () => {
+    for (const path of ["/api/package-billing", "/api/package-billing/checkout", "/api/package-billing/portal"]) expect(routeCapability(path), path).toBe("activity");
+  });
+
   it("keeps billing, API keys and MCP apart from the rest of an owner's and admin's work", () => {
     expect(routeCapability("/api/billing/checkout")).toBe("billing");
     expect(routeCapability("/api/api-keys/x")).toBe("api_keys");

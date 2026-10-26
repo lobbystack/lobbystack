@@ -175,15 +175,15 @@ describe.skipIf(!client)("creating a partner's business", () => {
       expect(stored.business).toEqual({ name: "Harbor Dental", timezone: "America/Halifax", partnerId: acme.partnerId, accessLevel: "activity", onboardingStage: "verify_phone" });
       expect(stored.memberships).toEqual([]);
       expect(stored.invitations).toEqual([{ email: client!.email, role: "business_owner", transfersOwnership: false, invitedByUserId: acme.owner.userId }]);
-      expect(stored.audit).toEqual([{ eventType: "partner.business_created", actorUserId: acme.owner.userId, payload: { partnerId: acme.partnerId, accessLevel: "activity", ownerInvitationId: created.invitationId } }]);
+      expect(stored.audit).toEqual([{ eventType: "partner.business_created", actorUserId: acme.owner.userId, payload: { partnerId: acme.partnerId, accessLevel: "activity", packageId: null, ownerInvitationId: created.invitationId } }]);
       // The worker reads the business's brand when it sends, which is the partner's, and puts the link on the partner's domain.
       expect(stored.email).toMatchObject({ template: "invitation", email: client!.email, brand: { kind: "business", businessId: created.businessId } });
       expect(await brandForEmail(acme.context, stored.email!.brand as { kind: "business"; businessId: string })).toMatchObject({ kind: "partner", partnerId: acme.partnerId, name: "Acme Reception", origin: "https://acme-reception.portal.example.test" });
 
-      // Anyone on the partner's team sees it in the console, with its owner still invited.
-      const listed = [{ businessId: created.businessId, name: "Harbor Dental", accessLevel: "activity", onboardingStage: "verify_phone", createdAt: expect.stringMatching(/Z$/), owner: { email: client!.email, status: "invited", expiresAt: created.expiresAt.toISOString() }, usage: { periodKey: new Date().toISOString().slice(0, 7), voiceSeconds: 0, chats: 0 } }];
-      expect(await listPartnerBusinesses(acme.context, acme.ownerActor)).toEqual(listed);
-      expect(await listPartnerBusinesses(acme.context, acme.memberActor)).toEqual(listed);
+      // Anyone on the partner's team sees it in the console, with its owner still invited. Only owners and admins see how it's billed.
+      const listed = { businessId: created.businessId, name: "Harbor Dental", accessLevel: "activity", onboardingStage: "verify_phone", createdAt: expect.stringMatching(/Z$/), owner: { email: client!.email, status: "invited", expiresAt: created.expiresAt.toISOString() }, usage: { periodKey: new Date().toISOString().slice(0, 7), voiceSeconds: 0, chats: 0 } };
+      expect(await listPartnerBusinesses(acme.context, acme.ownerActor)).toEqual([{ ...listed, billing: { kind: "outside" } }]);
+      expect(await listPartnerBusinesses(acme.context, acme.memberActor)).toEqual([{ ...listed, billing: null }]);
       // The partner's people aren't on its team, so it isn't one of their own businesses anywhere.
       expect(await listUserBusinesses(acme.context.db, acme.owner.userId, acme.brand)).toEqual([]);
     });

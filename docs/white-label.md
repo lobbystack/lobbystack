@@ -74,9 +74,9 @@ The console has these pages in v1:
 ## Businesses under a partner
 
 - A person has one account across every brand. Each domain lists only its own brand's businesses.
-- The partner creates each business in the console and sends the owner a link. The link opens a Stripe checkout on the partner's domain, or sign-in for a business billed outside LobbyStack.
+- The partner creates each business in the console and sends the owner a link. The link opens on the partner's domain and sends the owner to Stripe Checkout on the partner's Stripe account, under the partner's name, or to sign-in for a business billed outside LobbyStack.
 - The partner gives each business one of two access levels. Full access has today's owner and admin powers, minus billing, API keys, and MCP. Activity only shows calls, chats, appointments, contacts, and messages.
-- The business's billing page opens the partner's Stripe customer portal. Its dashboard shows usage against its allowance, and only Stripe invoices show prices.
+- The business's billing page opens the partner's Stripe customer portal, at either access level, since the business pays the partner itself. Its dashboard shows usage against its allowance, and only Stripe invoices show prices.
 - Partners can save a business's setup as a template in the `lobbystack onboard` file format, then apply it to new businesses.
 - Partners can make prospect demos under their own brand.
 

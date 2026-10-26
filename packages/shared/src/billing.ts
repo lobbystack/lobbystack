@@ -59,10 +59,11 @@ export type Entitlement = {
    * deployment mode. That's the answer the paid-plan check gave, and the
    * checks for dedicated numbers and paid features read it. Callers that treat
    * a self-hosted server differently also check `source`. A partner's business
-   * billed outside LobbyStack is always live.
+   * billed outside LobbyStack is always live, and one on a package while its
+   * Stripe subscription is.
    */
   live: boolean;
-  /** Where the terms come from. Direct businesses get "plan", or "unlimited" on a self-hosted server. A partner's business gets "billed_outside" until packages arrive. */
+  /** Where the terms come from. Direct businesses get "plan", or "unlimited" on a self-hosted server. A partner's business gets "package", or "billed_outside" when it has none. */
   source: "plan" | "package" | "billed_outside" | "unlimited";
   /** Included each month. Null means no limit. */
   allowance: { voiceSeconds: number | null; chats: number | null; alertSms: number | null; outboundAttempts: number | null };
@@ -120,6 +121,35 @@ export function planEntitlement(plan: BillingPlanSlug, account: { live: boolean;
     },
     poolPartnerId: null,
     includedNumbers: terms.includedBusinessNumbers,
+  };
+}
+
+/** Whether a package's Stripe subscription is paying, past_due included, as a plan's is. */
+export function hasLivePackageSubscription(state: string | null | undefined): boolean {
+  return (liveSubscriptionStates as readonly string[]).includes(state ?? "");
+}
+
+/** The package terms a business's entitlement comes from. */
+export type PackageEntitlementTerms = { currency: string; voiceMinutes: number; chats: number };
+
+/**
+ * The entitlement of a partner's business on a package: the package's
+ * allowance of minutes and chats while its Stripe subscription is live, and
+ * nothing once it isn't, so calls forward and chat shows its message. Alert
+ * texts and transfer attempts, which a package doesn't sell, have no limit of
+ * their own. Overage stays off, and amounts are in the package's currency.
+ * Its usage also draws on the partner's pool.
+ */
+export function packageEntitlement(partnerId: string, terms: PackageEntitlementTerms, account: { live: boolean }): Entitlement {
+  return {
+    live: account.live,
+    source: "package",
+    allowance: account.live
+      ? { voiceSeconds: terms.voiceMinutes * 60, chats: terms.chats, alertSms: null, outboundAttempts: null }
+      : { voiceSeconds: 0, chats: 0, alertSms: 0, outboundAttempts: 0 },
+    overage: { enabled: false, currency: terms.currency, rates: { voiceMinute: 0, chat: 0, alertSms: 0, outboundAttempt: 0 }, capMinor: null },
+    poolPartnerId: partnerId,
+    includedNumbers: null,
   };
 }
 

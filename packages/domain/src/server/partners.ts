@@ -10,6 +10,7 @@ import {
   isPartnerAccessLevel,
   isPartnerRole,
   isPartnerSlug,
+  isUuid,
   MAX_BRAND_LOGO_BYTES,
   normalizeAuthEmail,
   normalizeBrandColor,
@@ -33,6 +34,7 @@ import { AuthorizationError } from "../authz";
 import { announceBrandChange } from "./brands";
 import type { DomainContext } from "./context";
 import { firstOnboardingStage } from "./onboarding";
+import { closeCheckoutQuietly, dropBusinessPackageInTransaction, listPartnerBusinessBillingIn, lockBusinessBillingAccount, setBusinessPackageInTransaction, type PartnerBusinessBilling } from "./packageBilling";
 import { lockBusinessNumberClaims } from "./phoneNumbers";
 import { lockActivePartnerPlatformKey } from "./publicApi/platformKeys";
 import { isSharedSmsSender } from "./smsSender";
@@ -601,6 +603,8 @@ export type PartnerBusiness = {
   owner: { email: string; status: "joined" } | { email: string; status: "invited"; expiresAt: string } | null;
   /** What it used this month, as usage metering counts it: voice seconds and chats. A month runs in UTC. */
   usage: { periodKey: string; voiceSeconds: number; chats: number };
+  /** What it's sold and whether it pays, for owners and admins. Null for members, who never see billing. */
+  billing: PartnerBusinessBilling | null;
 };
 
 export const PARTNER_BUSINESS_NAME_MAX_LENGTH = 120;
@@ -619,7 +623,9 @@ export async function listPartnerBusinesses(context: DomainContext, actor: Partn
   const member = businessesActor(actor);
   const periodKey = periodKeyFor();
   return await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => {
-    await currentRole(tx, member);
+    const role = await currentRole(tx, member);
+    // Members never see billing. Without Stripe Connect, every business is billed outside LobbyStack.
+    const billing = role === "member" ? null : context.stripeConnect ? await listPartnerBusinessBillingIn(tx, member.partnerId) : new Map<string, PartnerBusinessBilling>();
     // The partner's members aren't on its businesses' teams, so RLS shows them none; these functions answer instead.
     const rows = await tx.execute<{ businessId: string; name: string; accessLevel: PartnerAccessLevel; onboardingStage: string; createdAt: string; ownerEmail: string | null; invitedEmail: string | null; invitationExpiresAt: string | null }>(
       sql`select business_id as "businessId", name, access_level as "accessLevel", onboarding_stage as "onboardingStage", created_at as "createdAt", owner_email as "ownerEmail", invited_email as "invitedEmail", invitation_expires_at as "invitationExpiresAt" from app.list_partner_businesses(${member.partnerId}::uuid)`,
@@ -638,17 +644,20 @@ export async function listPartnerBusinesses(context: DomainContext, actor: Partn
       createdAt: iso(row.createdAt),
       owner: row.ownerEmail ? { email: row.ownerEmail, status: "joined" } : row.invitedEmail && row.invitationExpiresAt ? { email: row.invitedEmail, status: "invited", expiresAt: iso(row.invitationExpiresAt) } : null,
       usage: { periodKey, voiceSeconds: Number(usage.get(row.businessId)?.voiceSeconds ?? 0), chats: Number(usage.get(row.businessId)?.chats ?? 0) },
+      billing: billing ? billing.get(row.businessId) ?? { kind: "outside" } : null,
     }));
   });
 }
 
-/** What creating a partner's business takes. The console sends the first five; the v1 API's POST /businesses can send the rest. */
+/** What creating a partner's business takes. The console sends the first five and the package; the v1 API's POST /businesses can send the rest. */
 export type PartnerBusinessInput = {
   name: string;
   timezone: string;
   businessType: string;
   accessLevel: string;
   ownerEmail: string;
+  /** The package the business is sold, or null or absent to bill it outside LobbyStack. */
+  packageId?: string | null | undefined;
   slug?: string | undefined;
   defaultLocale?: string | undefined;
   websiteUrl?: string | undefined;
@@ -667,8 +676,10 @@ export type PartnerBusinessInput = {
  * and so can the partner's platform keys, which act as the partner, but only
  * once the partner has a domain for its businesses to open on: they show on
  * no other. It never counts toward the cap of 10 businesses an account can
- * own. The caller passes the app role's context, since only it can act as the
- * system.
+ * own. With a package, the owner's invitation opens a checkout on the
+ * partner's Stripe account; without one, the business is billed outside
+ * LobbyStack. The caller passes the app role's context, since only it can act
+ * as the system.
  */
 export async function createPartnerBusiness(
   context: DomainContext,
@@ -685,6 +696,8 @@ export async function createPartnerBusiness(
   if (!isPartnerAccessLevel(accessLevel)) throw failure("accessLevel must be full or activity.", 400, "invalid_access_level");
   const ownerEmail = normalizeAuthEmail(input.ownerEmail);
   if (!isSingleEmailAddress(ownerEmail)) throw failure("Enter one valid email address for the owner.", 400, "invalid_email");
+  const packageId = input.packageId ?? null;
+  if (packageId !== null && !isUuid(packageId)) throw failure("packageId must be a UUID, or null to bill the business outside LobbyStack.", 400, "invalid_package");
   const { baseDomain } = partnerFeatures(process.env);
   const businessId = input.businessId ?? randomUUID();
   const { partnerId } = actor;
@@ -701,11 +714,12 @@ export async function createPartnerBusiness(
     // At the activity level the partner sets the receptionist up, so the owner's onboarding starts at their phone.
     const partner = { partnerId, accessLevel };
     await insertOwnerlessBusinessInTransaction(tx, { businessId, name, slug: input.slug, timezone, businessType, defaultLocale: input.defaultLocale, websiteUrl: input.websiteUrl, partner, onboardingStage: firstOnboardingStage(partner) });
+    if (packageId) await setBusinessPackageInTransaction(tx, { businessId, partnerId, packageId, stripeConnect: Boolean(context.stripeConnect) });
     // The worker writes the email under the business's brand, the partner's, and puts its link on the partner's domain.
     // A key invites as the partner, with no person behind it.
     const { invitationId, expiresAt } = await insertInvitationInTransaction(tx, { businessId, normalizedEmail: ownerEmail, role: "business_owner", ...(actor.kind === "member" ? { invitedByUserId: actor.userId } : { invitedByPlatformKeyId: actor.platformKeyId }) });
     const by = actor.kind === "member" ? {} : { actor: "platform_key", platformKeyId: actor.platformKeyId, groupId: partnerId };
-    await tx.insert(auditLogs).values({ businessId, actorUserId: actor.kind === "member" ? actor.userId : null, eventType: "partner.business_created", entityType: "business", entityId: businessId, payload: { ...by, partnerId, accessLevel, ownerInvitationId: invitationId, ...(input.requestHash ? { requestHash: input.requestHash } : {}) } });
+    await tx.insert(auditLogs).values({ businessId, actorUserId: actor.kind === "member" ? actor.userId : null, eventType: "partner.business_created", entityType: "business", entityId: businessId, payload: { ...by, partnerId, accessLevel, packageId, ownerInvitationId: invitationId, ...(input.requestHash ? { requestHash: input.requestHash } : {}) } });
     return { businessId, invitationId, expiresAt, subdomainReserved: domain.changed };
   });
   if (created.subdomainReserved) await announceBrandChange(context, { kind: "partner", partnerId });
@@ -741,15 +755,19 @@ const FREE_PLAN_ACCOUNT = { plan: "free_cloud", subscriptionState: null, subscri
  * database forgets their opens of it, and the invitations to its team that
  * anyone off the team sent, such as the partner's people, stop working. None
  * of them is on its team, since they can't join it. Its audit log records who
- * released it. Only owners and admins can.
+ * released it. A business on one of the partner's packages leaves it, which
+ * waits while its subscription is live and the deployment would hear it end:
+ * the partner cancels it in Stripe first. Only owners and admins can.
  */
 export async function releaseBusiness(context: DomainContext, actor: PartnerActor, input: { businessId: string }): Promise<{ ownerUserId: string }> {
   const member = businessesActor(actor);
   // The business's own rows show only to the system actor, since the partner's people aren't on its team.
-  return await withBusinessTransaction(context.db, { userId: member.userId, businessId: input.businessId, actorType: "system" }, async (tx) => {
+  const released = await withBusinessTransaction(context.db, { userId: member.userId, businessId: input.businessId, actorType: "system" }, async (tx) => {
     if (await currentRole(tx, member) === "member") throw new AuthorizationError("Only owners and admins can release the partner's businesses.");
     // Team changes take this lock, so the owner can't leave while the business moves to them.
     await lockBusinessTeam(tx, input.businessId);
+    // The Connect webhook's writes take this before the business's row, so this does too.
+    await lockBusinessBillingAccount(tx, input.businessId);
     // Clearing the partner changes no key, so joining the team, which checks the business's key, doesn't wait on this.
     const partnerId = await lockPartnerBusiness(tx, member, input.businessId, "no key update");
     const [owner] = await tx.select({ userId: businessMemberships.userId }).from(businessMemberships)
@@ -757,14 +775,18 @@ export async function releaseBusiness(context: DomainContext, actor: PartnerActo
       .orderBy(asc(businessMemberships.createdAt), asc(businessMemberships.id))
       .limit(1);
     if (!owner) throw failure("The business's owner has to accept their invitation before you can release it.", 409, "owner_required");
+    // A direct business pays the host, so it keeps none of its partner's packages.
+    const closes = await dropBusinessPackageInTransaction(tx, { businessId: input.businessId, partnerId, stripeConnect: Boolean(context.stripeConnect) });
     // A direct business ignores the access level; it goes back to the default.
     await tx.update(businesses).set({ partnerId: null, partnerAccessLevel: "full", updatedAt: new Date() }).where(eq(businesses.id, input.businessId));
     const team = tx.select({ userId: businessMemberships.userId }).from(businessMemberships).where(and(eq(businessMemberships.businessId, input.businessId), eq(businessMemberships.status, "active")));
     await tx.update(businessInvitations).set({ status: "revoked", updatedAt: new Date() }).where(and(eq(businessInvitations.businessId, input.businessId), eq(businessInvitations.status, "pending"), notInArray(businessInvitations.invitedByUserId, team)));
     await tx.insert(billingAccounts).values({ businessId: input.businessId, billingKey: `business:${input.businessId}`, ...FREE_PLAN_ACCOUNT }).onConflictDoUpdate({ target: billingAccounts.businessId, set: { ...FREE_PLAN_ACCOUNT, updatedAt: new Date() } });
     await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: member.userId, eventType: "partner.business_released", entityType: "business", entityId: input.businessId, payload: { partnerId, ownerUserId: owner.userId } });
-    return { ownerUserId: owner.userId };
+    return { ownerUserId: owner.userId, closes };
   });
+  await closeCheckoutQuietly(context, released.closes);
+  return { ownerUserId: released.ownerUserId };
 }
 
 /** How many stored files one cleanup job deletes. */
@@ -777,15 +799,21 @@ const STORED_OBJECTS_PER_JOB = 500;
  * the files it stored. The emails and jobs it queued that haven't gone out
  * are dropped, so none reaches its people after it's gone. While a number is
  * still being bought for it, it's refused for now, since the purchase would
- * finish for a business that's gone. Only owners and admins can.
+ * finish for a business that's gone. So is a business whose package
+ * subscription is live while the deployment would hear it end: the partner
+ * cancels it in Stripe first. Only owners and admins can.
  */
 export async function deletePartnerBusiness(context: DomainContext, actor: PartnerActor, input: { businessId: string }): Promise<void> {
   const member = businessesActor(actor);
-  await withBusinessTransaction(context.db, { userId: member.userId, businessId: input.businessId, actorType: "system" }, async (tx) => {
+  const closes = await withBusinessTransaction(context.db, { userId: member.userId, businessId: input.businessId, actorType: "system" }, async (tx) => {
     if (await currentRole(tx, member) === "member") throw new AuthorizationError("Only owners and admins can delete the partner's businesses.");
     // Number claims take this lock, so none starts buying a number while the business goes.
     await lockBusinessNumberClaims(tx, input.businessId);
-    await lockPartnerBusiness(tx, member, input.businessId, "update");
+    // The Connect webhook's writes take this before the business's row, so this does too.
+    await lockBusinessBillingAccount(tx, input.businessId);
+    const partnerId = await lockPartnerBusiness(tx, member, input.businessId, "update");
+    // Nobody should keep paying for a business that's gone.
+    const checkout = await dropBusinessPackageInTransaction(tx, { businessId: input.businessId, partnerId, stripeConnect: Boolean(context.stripeConnect) });
     // RLS shows the partner's people none of the business's claims, so the database answers. A claim no worker will finish doesn't count.
     const claiming = (await tx.execute<{ busy: boolean }>(sql`select app.business_number_claim_in_progress(${input.businessId}::uuid) as busy`)).rows[0]?.busy === true;
     const [provisioning] = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "provisioning"))).limit(1);
@@ -817,5 +845,7 @@ export async function deletePartnerBusiness(context: DomainContext, actor: Partn
         payload: { objectKeys: stored.slice(start, start + STORED_OBJECTS_PER_JOB).map((object) => object.objectKey) },
       });
     }
+    return checkout;
   });
+  await closeCheckoutQuietly(context, closes);
 }

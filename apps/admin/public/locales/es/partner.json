@@ -7,8 +7,10 @@
   },
   "nav": {
     "businesses": "Negocios",
+    "packages": "Paquetes",
     "branding": "Marca y dominio",
     "team": "Equipo",
+    "stripe": "Stripe",
     "apiKeys": "Claves de API"
   },
   "roles": {
@@ -25,6 +27,7 @@
       "business": "Negocio",
       "owner": "Propietario",
       "access": "Acceso",
+      "billing": "Facturación",
       "minutes": "Minutos este mes",
       "chats": "Chats este mes",
       "actions": "Acciones"
@@ -105,6 +108,11 @@
         "full": "Su equipo gestiona la recepcionista: conocimiento, horarios, servicios y miembros del equipo. No ve la facturación, las claves de API ni MCP.",
         "activity": "Su equipo ve las llamadas, los chats, las citas, los contactos y los mensajes. Usted configura la recepcionista."
       },
+      "billingLabel": "Facturación",
+      "billing": {
+        "outside": "Usted factura a este negocio por su cuenta, y su propietario inicia sesión desde la invitación.",
+        "package": "Su propietario paga este paquete desde la invitación y luego inicia sesión."
+      },
       "submit": "Crear e invitar",
       "submitting": "Creando…",
       "created": "Creó {{name}} e invitó a {{email}}.",
@@ -117,6 +125,113 @@
         "ownerOnTeam": "Una persona de su equipo no puede ser propietaria de un negocio. Escriba el correo del cliente al que pertenece.",
         "failed": "No pudimos crear el negocio. Inténtelo de nuevo."
       }
+    },
+    "billing": {
+      "outside": "Lo factura usted",
+      "option": "{{name}}, {{amount}} al mes",
+      "status": {
+        "awaiting_payment": "Pago pendiente",
+        "active": "Pagando",
+        "past_due": "Pago fallido",
+        "inactive": "Sin pagar"
+      },
+      "change": "Cambiar",
+      "changeFor": "Cambiar la facturación de {{name}}",
+      "title": "Facturación de {{name}}",
+      "description": "Elija el paquete que este negocio le paga, o factúrelo usted.",
+      "outsideHint": "El negocio no paga nada con Stripe, y ningún paquete limita sus minutos ni chats.",
+      "packageHint": "Su propietario paga el paquete en la página de facturación del negocio, o desde la invitación si aún no se unió.",
+      "submit": "Guardar",
+      "saving": "Guardando…",
+      "saved": "Cambió la facturación de {{name}}.",
+      "errors": {
+        "subscriptionActive": "Este negocio paga su paquete con Stripe. Primero cancele su suscripción en su panel de Stripe.",
+        "packageGone": "Ese paquete ya no está a la venta. Elija otro.",
+        "notConnected": "Conecte su cuenta de Stripe antes de vender paquetes.",
+        "notConfigured": "Este panel todavía no puede vender paquetes.",
+        "failed": "No pudimos cambiar la facturación del negocio. Inténtelo de nuevo."
+      }
+    }
+  },
+  "packages": {
+    "title": "Paquetes",
+    "description": "Lo que vende a sus negocios: un precio mensual, una cuota de alta opcional y los minutos y chats que incluye cada mes.",
+    "loadFailed": "No pudimos cargar sus paquetes. Actualice para intentarlo de nuevo.",
+    "managersOnly": "Solo los propietarios y los administradores pueden ver los paquetes.",
+    "notConfigured": "Este panel todavía no puede conectar una cuenta de Stripe. Mientras tanto, usted factura a sus negocios por su cuenta.",
+    "connectFirst": {
+      "owner": "Conecte su cuenta de Stripe para vender paquetes.",
+      "admin": "Pida a un propietario que conecte su cuenta de Stripe para vender paquetes."
+    },
+    "notReady": "Stripe todavía no puede aceptar pagos en su cuenta. Puede crear paquetes ahora, y sus negocios podrán comprarlos cuando Stripe active los pagos.",
+    "disconnected": {
+      "owner": "Desconectó su cuenta de Stripe, así que sus paquetes ya no se pueden vender. Conecte una cuenta de nuevo para crear otros.",
+      "admin": "Su cuenta de Stripe está desconectada, así que sus paquetes ya no se pueden vender. Pida a un propietario que conecte una cuenta de nuevo."
+    },
+    "openStripe": "Abrir la página de Stripe",
+    "oldAccount": "Cuenta desconectada",
+    "createdOn": "Creado el {{date}}",
+    "perMonth": "{{amount}} al mes",
+    "setupFee": "{{amount}} de cuota de alta",
+    "noSetupFee": "Sin cuota de alta",
+    "minutes_one": "{{amount}} minuto",
+    "minutes_many": "{{amount}} minutos",
+    "minutes_other": "{{amount}} minutos",
+    "chats_one": "{{amount}} chat",
+    "chats_many": "{{amount}} chats",
+    "chats_other": "{{amount}} chats",
+    "moreOptions": "Más opciones para {{name}}",
+    "table": {
+      "package": "Paquete",
+      "price": "Precio",
+      "allowance": "Cada mes"
+    },
+    "empty": {
+      "title": "Todavía no hay paquetes",
+      "description": "Cree un paquete para que sus negocios lo compren."
+    },
+    "create": {
+      "action": "Crear paquete",
+      "title": "Crear un paquete",
+      "description": "Los negocios con este paquete le pagan este importe cada mes, en {{currency}}, y reciben estos minutos y chats.",
+      "nameLabel": "Nombre",
+      "namePlaceholder": "Recepción",
+      "priceLabel": "Precio mensual",
+      "setupFeeLabel": "Cuota de alta",
+      "optional": "Opcional",
+      "minutesLabel": "Minutos al mes",
+      "chatsLabel": "Chats al mes",
+      "fixedTerms": "Después no podrá cambiar el precio ni los minutos y chats, porque puede que algunos negocios ya los paguen. Sí podrá cambiar el nombre del paquete.",
+      "submit": "Crear paquete",
+      "submitting": "Creando…",
+      "created": "Creó {{name}}.",
+      "errors": {
+        "invalidName": "Escriba un nombre de hasta 80 caracteres.",
+        "invalidPrice": "Escriba un precio mensual mayor que cero.",
+        "invalidSetupFee": "Escriba una cuota de alta mayor que cero, o deje el campo vacío.",
+        "invalidAllowance": "Escriba los minutos y los chats como números enteros de 0 a 1.000.000.",
+        "notConnected": "Conecte su cuenta de Stripe antes de crear paquetes.",
+        "failed": "No pudimos crear el paquete. Inténtelo de nuevo."
+      }
+    },
+    "rename": {
+      "action": "Cambiar nombre",
+      "title": "Cambiar el nombre del paquete",
+      "description": "Stripe muestra el nuevo nombre en las facturas de sus negocios.",
+      "submit": "Guardar nombre",
+      "saving": "Guardando…",
+      "saved": "Nombre del paquete cambiado.",
+      "notConnected": "Solo puede cambiar el nombre de los paquetes de su cuenta de Stripe conectada.",
+      "failed": "No pudimos cambiar el nombre del paquete. Inténtelo de nuevo."
+    },
+    "archive": {
+      "action": "Dejar de vender",
+      "title": "¿Dejar de vender {{name}}?",
+      "description": "Los negocios nuevos ya no podrán comprarlo. Los que ya lo tienen lo conservan.",
+      "confirm": "Dejar de vender",
+      "cancel": "Cancelar",
+      "done": "{{name}} ya no está a la venta.",
+      "failed": "No pudimos retirar el paquete de la venta. Inténtelo de nuevo."
     }
   },
   "team": {
@@ -221,6 +336,66 @@
       "imageType": "Suba una imagen PNG, JPEG, WebP o SVG.",
       "imageSize": "Suba una imagen de 256 KB o menos.",
       "forbidden": "Solo los propietarios y los administradores pueden cambiar la marca."
+    }
+  },
+  "stripe": {
+    "title": "Stripe",
+    "description": "Sus negocios le pagan a través de su propia cuenta de Stripe. Stripe les envía las facturas y los recibos a su nombre.",
+    "loadFailed": "No pudimos cargar su conexión con Stripe. Actualice para intentarlo de nuevo.",
+    "ownersOnly": "Solo los propietarios pueden gestionar la conexión con Stripe.",
+    "opening": "Abriendo Stripe…",
+    "notConfigured": {
+      "title": "Todavía no hay pagos con Stripe",
+      "description": "Este panel todavía no puede conectar una cuenta de Stripe. Mientras tanto, usted factura a sus negocios por su cuenta."
+    },
+    "status": {
+      "notConnected": "Sin conectar",
+      "onboarding": "Configuración pendiente",
+      "restricted": "Pagos desactivados",
+      "active": "Conectada",
+      "disconnected": "Desconectada"
+    },
+    "connect": {
+      "title": "Conecte su cuenta de Stripe",
+      "description": "Stripe cobra a sus negocios en su nombre y le transfiere el dinero. Usted gestiona los reembolsos y las disputas en su panel de Stripe.",
+      "countryLabel": "País de su empresa",
+      "countryPlaceholder": "Elija un país",
+      "countryHelp": "Stripe fija el país de su cuenta al crearla, y después no podrá cambiarlo.",
+      "action": "Conectar Stripe"
+    },
+    "onboarding": {
+      "title": "Termine de configurar Stripe",
+      "description": "Stripe necesita algunos datos más antes de que su cuenta pueda aceptar pagos.",
+      "action": "Continuar en Stripe"
+    },
+    "restricted": {
+      "title": "Stripe todavía no puede aceptar pagos",
+      "description": "Stripe está revisando sus datos o necesita más. Abra Stripe para ver lo que falta.",
+      "action": "Abrir la configuración de Stripe"
+    },
+    "active": {
+      "title": "Su cuenta de Stripe está conectada",
+      "description": "Sus negocios le pagan en {{currency}}. Usted gestiona los reembolsos y las disputas en su panel de Stripe.",
+      "dashboard": "Abrir el panel de Stripe"
+    },
+    "disconnected": {
+      "title": "Desconectó Stripe",
+      "description": "Desconectó su cuenta en Stripe el {{date}}. Sus negocios no podrán comprar paquetes hasta que conecte una cuenta de nuevo.",
+      "action": "Volver a conectar Stripe"
+    },
+    "details": {
+      "account": "Cuenta",
+      "country": "País",
+      "currency": "Moneda",
+      "payouts": "Transferencias",
+      "payoutsOn": "Activadas",
+      "payoutsOff": "Desactivadas"
+    },
+    "errors": {
+      "failed": "No pudimos abrir Stripe. Inténtelo de nuevo.",
+      "invalidCountry": "Elija el país de su empresa.",
+      "notConfigured": "Este panel todavía no puede conectar una cuenta de Stripe.",
+      "changed": "Otra persona cambió la conexión con Stripe. Actualice e inténtelo de nuevo."
     }
   },
   "apiKeys": {

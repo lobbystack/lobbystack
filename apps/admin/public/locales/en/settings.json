@@ -15,6 +15,7 @@
     "appearance": "Preferences",
     "integrations": "Integrations",
     "billing": "Plan",
+    "subscription": "Billing",
     "usage": "Usage",
     "notifications": "Notifications",
     "widget": "Website widget",
@@ -354,6 +355,39 @@
       },
       "continue": "Continue setup",
       "dashboard": "Go to your dashboard"
+    }
+  },
+  "subscription": {
+    "loadFailed": "We couldn't load your billing. Refresh to try again.",
+    "outside": "{{appName}} bills you directly. Ask them about your bill.",
+    "packageTitle": "Your package",
+    "minutes_one": "{{amount}} minute",
+    "minutes_other": "{{amount}} minutes",
+    "chats_one": "{{amount}} chat",
+    "chats_other": "{{amount}} chats",
+    "allowance": "Each month includes {{minutes}} and {{chats}}.",
+    "status": {
+      "awaiting_payment": "Your receptionist starts answering calls and chats once you pay.",
+      "active": "Your subscription is active.",
+      "renews": "Your subscription renews on {{date}}.",
+      "past_due": "Your last payment failed, and Stripe will try again. Update your card to keep your receptionist answering.",
+      "inactive": "Your subscription ended, so your receptionist doesn't answer calls or chats. Subscribe again to turn it back on."
+    },
+    "badge": {
+      "awaiting_payment": "Awaiting payment",
+      "active": "Active",
+      "past_due": "Payment failed",
+      "inactive": "Ended"
+    },
+    "subscribe": "Subscribe",
+    "manage": "Manage billing",
+    "opening": "Opening…",
+    "manageHint": "Update your card, download invoices or cancel in Stripe's billing portal.",
+    "paid": "Payment received. Your receptionist starts answering in a moment.",
+    "errors": {
+      "portal": "The billing portal isn't available right now. Ask {{appName}} about it.",
+      "checkout": "We couldn't open the checkout. Try again.",
+      "unavailable": "{{appName}} can't take payments right now. Ask them about your bill."
     }
   },
   "phoneNumber": {

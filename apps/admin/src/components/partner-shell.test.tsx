@@ -44,3 +44,20 @@ it("leaves partner signup out on a partner's host, which answers it with a 404",
   expect(screen.getByRole("menuitem", { name: "Bright Desk" })).toBeTruthy();
   expect(screen.queryByRole("menuitem", { name: "shell.signUpAnother" })).toBeNull();
 });
+
+it("shows Packages to owners and admins and Stripe to owners only, the pages the server lets each role open", async () => {
+  const pages = (role: "owner" | "admin" | "member") => {
+    const partner = { ...bright, role };
+    render(
+      <BrandingProvider i18n={{ options: {} } as unknown as I18nextInstance} initial={{ appName: "LobbyStack", logoUrl: null, final: true }}>
+        <PartnerShell partner={partner} partners={[partner]} sidebarOpen user={{ email: "owner@example.test" }}><div /></PartnerShell>
+      </BrandingProvider>,
+    );
+    const links = screen.getAllByRole("link").map((link) => link.getAttribute("href")).filter((href) => href?.startsWith("/partner/"));
+    cleanup();
+    return links;
+  };
+  expect(pages("owner")).toEqual(["/partner/bright/businesses", "/partner/bright/packages", "/partner/bright/branding", "/partner/bright/team", "/partner/bright/api-keys", "/partner/bright/stripe"]);
+  expect(pages("admin")).toEqual(["/partner/bright/businesses", "/partner/bright/packages", "/partner/bright/branding", "/partner/bright/team", "/partner/bright/api-keys"]);
+  expect(pages("member")).toEqual(["/partner/bright/businesses", "/partner/bright/branding", "/partner/bright/team", "/partner/bright/api-keys"]);
+});

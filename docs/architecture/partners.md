@@ -151,6 +151,7 @@ openPartnerBusiness(context, input: { userId: string; businessId: string; partne
 - An open counts only while the business still belongs to the partner that opened it and the person is still on that partner's team. Releasing the business or removing the member ends the access at once.
 - `openPartnerBusiness` refuses a business of another partner, a direct business, and anyone off the partner's team. It answers each with a 404, like a business that doesn't exist. The console passes its own partner, so it can't open another partner's business either. The open also makes the business the person's active one on the partner's domains.
 - Through an open, a partner member gets full access whatever the business's access level: `activity`, `setup`, and `team`, never `billing`, `api_keys`, or `mcp`. The business's rules see an admin's role, so a partner member never takes an owner's place.
+- A partner open doesn't reach the business's Billing tab, where its own owners and admins pay the partner: `getPackageBilling`, `startPackageCheckout` and `openPackagePortal` check `requireTeamMembership`.
 - `app.has_business_membership` answers true for the business's own team or a partner open, so every tenant policy lets the open in. `app.has_team_membership` keeps the old answer for functions that act for the team only.
 - Partner members never join the team. `inviteMember` refuses an address on the business's partner's team, and `acceptInvitation` refuses anyone on it, with `partner_member_not_on_team`. `createPartnerBusiness` refuses an owner on the partner's team. `app.is_partner_member_email` answers the address check only for someone on that partner's team, so a business's own operators learn nothing of it.
 - `app.list_business_members` lists only the business's own operators, and alert recipients and owner lookups read only memberships. Only the team verifies a phone in the business, because a partner's business forwards calls to its owner's verified phone.
@@ -174,9 +175,13 @@ type PartnerActor =
 - `createPartnerBusiness` creates a business with no owner, links it to the partner at the access level the partner picks, optionally applies a template, and sends the owner an invitation under the partner's brand. The invitation is never a claim link. A partner's businesses open only on its own domains, so the function refuses until the partner has its subdomain. It never counts toward the cap of 10 businesses per account.
 - `listPartnerBusinesses` gives each business's minutes and chats this month, as usage metering counts them. Row-level security shows a partner member none of a business's rows, so `app.list_partner_business_usage` reads the month's counts for someone on the partner's team.
 - `releaseBusiness` needs an owner who accepted the invitation. It removes the partner, which leaves that person the owner, and puts the business on the host's Free plan. A trigger on `businesses.partner_id` then deletes the partner's opens of the business and the rows that remember it as someone's business on the partner's domains. Invitations to the business's team from anyone off the team, such as the partner's people, stop working. The audit log records the release as `partner.business_released`.
+- `releaseBusiness` also drops the business's package, by the rule `setPartnerBusinessBilling` follows. While the subscription is live and the deployment would hear it end, it refuses with `subscription_active` until the partner cancels the subscription in Stripe. It closes any open checkout.
 - `deletePartnerBusiness` deletes the business and every row that belongs to it, its audit log included. It drops the outbox messages that haven't gone out. The worker skips an email whose business no longer exists, through `app.business_exists`, so an email that already left the outbox doesn't reach its people under the host's brand either.
 - `deletePartnerBusiness` queues `phoneNumber.releaseDeleted` for each number the business held, and the worker releases each one with the provider. It skips the shared text sender, as a reclaim does. It also queues `privacy.deleteStoredObjects`, and the worker deletes the business's stored files. While a number is still being bought for the business, it refuses with `business_number_in_progress`, since the purchase would finish for a business that's gone.
-- `releaseBusiness` and `deletePartnerBusiness` take the team's or the number claims' advisory lock before the business's row lock, the order team changes and claims use.
+- `deletePartnerBusiness` refuses the same way while the business pays for a package through Stripe, and closes its open checkout, so its owner can't keep paying for a business that's gone.
+- `releaseBusiness` and `deletePartnerBusiness` take the team's or the number claims' advisory lock, then the billing account's, and only then the business's row lock. Team changes, claims and the Connect webhook lock in that order too.
+- The Stripe page's functions (`getPartnerStripeConnection`, `startPartnerStripeOnboarding`) let only owners connect Stripe. The Packages page's (`listPartnerPackages`, `createPartnerPackage`, `renamePartnerPackage`, `archivePartnerPackage`) let owners and admins sell packages in the connected account's currency. Members see neither, and the database keeps each package on its partner's own connected account.
+- `createPartnerBusiness` takes the package the business is sold, or none to bill it outside LobbyStack, and `setPartnerBusinessBilling` changes it until the business pays. Once the deployment can't hear that subscription end, after the partner disconnects its account or without Stripe Connect, the partner can change it again, and the change drops the subscription. Owners and admins see each business's package and payment status on the Businesses page. Members never see a business's billing, and the database sells a business only its own partner's packages.
 - Each function checks the actor's role itself. A member can work inside businesses and see their usage, an admin can also manage businesses (create, release and delete them), packages, branding, domains, keys, and the team, and only an owner can manage billing, Stripe, owners, and deleting the partner. An admin can invite, change and remove admins and members, but only an owner can grant the owner role or change or remove an owner.
 
 ## Entitlement
@@ -196,9 +201,9 @@ type Entitlement = {
 loadEntitlement(tx, businessId: string): Promise<Entitlement>
 ```
 
-- A direct business gets its plan from the plan catalog, as today. A self-hosted server's businesses get `source: "unlimited"`. A partner business gets its package, or no limit when it's billed outside LobbyStack. It is `live` only while its Stripe subscription is live (unless billed outside) and its partner's tier is live or in its first 30 days after ending. Until packages and tiers arrive, every partner business is billed outside LobbyStack and `live`, with no allowance or overage, and its partner as `poolPartnerId`. Tiers set how many numbers a partner's businesses hold, so until they count them, the cloud's number claims refuse a partner business.
+- A direct business gets its plan from the plan catalog, as today. A self-hosted server's businesses get `source: "unlimited"`. A partner business gets its package, or no limit when it's billed outside LobbyStack. It is `live` only while its Stripe subscription is live (unless billed outside) and its partner's tier is live or in its first 30 days after ending. A partner business with no package is billed outside LobbyStack, and so is every partner business on a deployment without Stripe Connect. Until tiers arrive, a business on a package is `live` while its Stripe subscription is `active`, `trialing` or `past_due`, with the package's minutes and chats and no overage, and every partner business has its partner as `poolPartnerId`. Tiers set how many numbers a partner's businesses hold, so until they count them, the cloud's number claims refuse a partner business.
 - A direct business that isn't `live` still answers within its Free allowance. A partner business that isn't `live` gets an allowance of 0, so usage metering refuses its calls and chats the way it refuses any business at its limit: calls forward and chat shows its "can't reply" message.
-- `hasLiveEntitlement(account)` in `packages/shared` answers `live` from a billing account. The browser and the Polar reconcile use it on account snapshots. For a business's own account, it matches `loadEntitlement(...).live`. It replaces `isPaidSubscription` in TypeScript. The number-claim SQL calls `app.has_live_entitlement(business_id)`, which applies the same rule.
+- `hasLiveEntitlement(account)` in `packages/shared` answers `live` from a billing account. The browser and the Polar reconcile use it on account snapshots. For a direct business's own account, it matches `loadEntitlement(...).live`. A partner business on a package gets `live` from `hasLivePackageSubscription(state)` on its Stripe subscription's state instead, and one billed outside LobbyStack is always live. It replaces `isPaidSubscription` in TypeScript. The number-claim SQL calls `app.has_live_entitlement(business_id)`, which applies the same rule, packages included. SQL can't read the deployment's configuration, so on a deployment without Stripe Connect it still asks a business on a package for its subscription; only the number claims ask it, and they refuse partner businesses on the cloud until tiers count numbers.
 - Direct Starter and Pro plans charge alert texts and outbound attempts against the cap. `rates` carries `alertSms` and `outboundAttempt` for them, beside the minute and chat rates.
 - Amounts are in the minor unit of `currency`, so caps work in a partner's currency.
 
@@ -283,12 +288,15 @@ Every outside service sits behind an interface in `packages/providers`. The work
 
 ```ts
 interface StripeConnectProvider {
-  createOnboardingLink(input: { accountId: string | null; returnUrl: string }): Promise<{ accountId: string; url: string }>;
-  upsertPackagePrice(accountId: string, pkg: PackageTerms): Promise<{ productId: string; priceId: string }>;
-  createCheckout(accountId: string, input: CheckoutInput): Promise<{ url: string }>;
+  createOnboardingLink(input: { accountId: string | null; country: string | null; idempotencyKey: string; returnUrl: string; refreshUrl: string; metadata: Record<string, string> }): Promise<{ accountId: string; url: string }>;
+  retrieveAccount(accountId: string): Promise<StripeConnectAccount>;
+  upsertPackagePrice(accountId: string, pkg: PackageTerms): Promise<{ productId: string; priceId: string; setupPriceId: string | null }>;
+  createCheckout(accountId: string, input: PackageCheckoutInput): Promise<{ sessionId: string; url: string; expiresAt: Date }>;
+  expireCheckout(accountId: string, sessionId: string): Promise<void>;
   createPortal(accountId: string, customerId: string, returnUrl: string): Promise<{ url: string }>;
+  retrieveSubscription(accountId: string, subscriptionId: string): Promise<StripeConnectSubscription>;
   reportOverage(accountId: string, input: { identifier: string; customerId: string; meter: "voice" | "chat"; quantity: number }): Promise<void>;
-  verifyWebhook(body: string, signature: string): StripeEvent;
+  verifyWebhook(body: string, signature: string): StripeConnectEvent;
 }
 
 interface CustomHostnameProvider {
@@ -298,6 +306,9 @@ interface CustomHostnameProvider {
 }
 ```
 
+- `StripeConnectProvider` has one production adapter, on Stripe's own SDK, and a fake in `packages/providers/src/stripe/fakeStripeConnect.ts` for tests. The adapter creates each partner's account with the full Stripe Dashboard, with Stripe collecting its fees from the partner and covering losses, as a standard account does. Stripe fixes an account's country when it creates it, so the console's Stripe page asks for the country first. Amounts stay in ISO 4217 minor units, and the adapter converts the few currencies Stripe counts differently.
+- `upsertPackagePrice` creates a package's product, its monthly price and its optional one-time setup fee price on the partner's account. Later calls only rename the product or take the package off sale: its price and allowance never change, since businesses may already pay them.
+- `createCheckout` opens a subscription Checkout on the partner's account for the package's monthly price and setup fee, with no application fee, so the subscription and its payments are direct charges. Its metadata names the business and the package, on the checkout and on the subscription it starts. A business that paid before checks out on its earlier customer, so the partner's customer portal keeps every invoice. `expireCheckout` closes a checkout nobody should pay any more, such as one for a package the partner since replaced.
 - `CustomHostnameProvider` has two production adapters. Cloudflare for SaaS serves the cloud. The Caddy adapter serves self-hosted deployments: it checks that the domain's DNS points at the deployment, and Caddy then asks `/api/tls/ask` before issuing a certificate.
 - The Polar provider keeps its interface. Tier billing uses `partner:<id>` as the customer's external id.
 - The email provider already takes a sender and a Reply-To per message. The worker fills them from `brandForBusiness`.
@@ -322,9 +333,9 @@ interface CustomHostnameProvider {
 
 ### Tier and package billing
 
-1. Polar's webhook and Stripe's Connect webhook store each event in `provider_events` and queue a reconcile.
+1. Polar's webhook stores each event in `provider_events` and queues a reconcile. Stripe's Connect webhook stores each event there too, then reconciles it in the same request. Stripe's account events name no business, so the Connect webhook applies them as it stores them: `account.updated` writes the account's state unless the deployment already holds newer news of it, and `account.application.deauthorized` marks the account disconnected. A partner that connects again gets a new account, and its packages stay on the account they were made on. Checkout, subscription and invoice events also apply as the webhook stores them: it reads the subscription back from Stripe, so events that arrive out of order or twice settle on Stripe's current answer.
 2. `reconcilePartnerTier` maps Polar's subscription to a `PartnerEvent` and runs it through `nextPartnerState` and `applyPartnerTransition`.
-3. `reconcilePackageSubscription` updates the business's billing account. `loadEntitlement` reads it on the next reservation.
+3. `reconcilePackageSubscription` updates the business's billing account, once the subscription's metadata names a business of the partner whose account sent the event and the package that business is on. A subscription for another package never makes the business live. A business tracks one subscription, and another replaces it only when it's live and the current one isn't. `loadEntitlement` reads the account on the next reservation.
 4. An hourly scheduler job sends `clock` events, which move partners from `ending` to `paused` and then to deletion.
 
 ### A custom domain
@@ -337,8 +348,8 @@ interface CustomHostnameProvider {
 ### A new business from the console
 
 1. The console calls `createPartnerBusiness`, which creates the owner-less business, applies the chosen template, and queues the invitation email.
-2. The owner opens the link on the partner's domain and pays at the Stripe checkout on the partner's account, or signs in when the business is billed outside LobbyStack.
-3. Stripe's webhook reconciles the subscription, and the business's entitlement goes live.
+2. The owner opens the link on the partner's domain. For a business on a package, the page names the package and its allowance and opens a Stripe Checkout on the partner's account, and Stripe brings the owner back to sign in. Only Stripe shows the price. Until the partner's account takes payments, the owner signs in first and pays later. A business billed outside LobbyStack goes straight to sign-in.
+3. Stripe's webhook reconciles the subscription, and the business's entitlement goes live. Later, at full access, the business's owners and admins open the partner's customer portal from **Settings → Billing**, or a new checkout once the subscription ended.
 4. The owner lands in the business. Their onboarding skips creating it, the number step and attribution, and ends once they verify their phone. At activity only, the phone is their only step.
 
 ## Where each module is tested

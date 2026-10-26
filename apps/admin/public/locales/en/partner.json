@@ -7,8 +7,10 @@
   },
   "nav": {
     "businesses": "Businesses",
+    "packages": "Packages",
     "branding": "Branding & domain",
     "team": "Team",
+    "stripe": "Stripe",
     "apiKeys": "API keys"
   },
   "roles": {
@@ -25,6 +27,7 @@
       "business": "Business",
       "owner": "Owner",
       "access": "Access",
+      "billing": "Billing",
       "minutes": "Minutes this month",
       "chats": "Chats this month",
       "actions": "Actions"
@@ -105,6 +108,11 @@
         "full": "Its team runs the receptionist: knowledge, hours, services and team members. They don't see billing, API keys or MCP.",
         "activity": "Its team sees calls, chats, appointments, contacts and messages. You set up the receptionist."
       },
+      "billingLabel": "Billing",
+      "billing": {
+        "outside": "You bill this business yourself, and its owner signs in from the invitation.",
+        "package": "Its owner pays for this package from the invitation, then signs in."
+      },
       "submit": "Create and invite",
       "submitting": "Creating…",
       "created": "You created {{name}} and invited {{email}}.",
@@ -117,6 +125,111 @@
         "ownerOnTeam": "Someone on your team can't own a business. Enter the email of the client who owns it.",
         "failed": "We couldn't create the business. Try again."
       }
+    },
+    "billing": {
+      "outside": "You bill it yourself",
+      "option": "{{name}}, {{amount}} a month",
+      "status": {
+        "awaiting_payment": "Awaiting payment",
+        "active": "Paying",
+        "past_due": "Payment failed",
+        "inactive": "Not paying"
+      },
+      "change": "Change",
+      "changeFor": "Change how {{name}} is billed",
+      "title": "Billing for {{name}}",
+      "description": "Pick the package this business pays you for, or bill it yourself.",
+      "outsideHint": "The business pays nothing through Stripe, and no package limits its minutes or chats.",
+      "packageHint": "Its owner pays for the package on the business's billing page, or from the invitation if they haven't joined yet.",
+      "submit": "Save",
+      "saving": "Saving…",
+      "saved": "You changed how {{name}} is billed.",
+      "errors": {
+        "subscriptionActive": "This business pays for its package through Stripe. Cancel its subscription in your Stripe Dashboard first.",
+        "packageGone": "That package isn't for sale anymore. Pick another.",
+        "notConnected": "Connect your Stripe account before you sell packages.",
+        "notConfigured": "This dashboard can't sell packages yet.",
+        "failed": "We couldn't change how the business is billed. Try again."
+      }
+    }
+  },
+  "packages": {
+    "title": "Packages",
+    "description": "What you sell your businesses: a monthly price, an optional setup fee, and the minutes and chats each month includes.",
+    "loadFailed": "We couldn't load your packages. Refresh to try again.",
+    "managersOnly": "Only owners and admins can see packages.",
+    "notConfigured": "This dashboard can't connect a Stripe account yet. Until it can, you bill your businesses yourself.",
+    "connectFirst": {
+      "owner": "Connect your Stripe account to sell packages.",
+      "admin": "Ask an owner to connect your Stripe account so you can sell packages."
+    },
+    "notReady": "Stripe can't take payments on your account yet. You can create packages now, and businesses can buy them once Stripe turns payments on.",
+    "disconnected": {
+      "owner": "You disconnected your Stripe account, so its packages can't sell. Connect an account again to create new ones.",
+      "admin": "Your Stripe account is disconnected, so its packages can't sell. Ask an owner to connect an account again."
+    },
+    "openStripe": "Open Stripe page",
+    "oldAccount": "Disconnected account",
+    "createdOn": "Created {{date}}",
+    "perMonth": "{{amount}} a month",
+    "setupFee": "{{amount}} setup fee",
+    "noSetupFee": "No setup fee",
+    "minutes_one": "{{amount}} minute",
+    "minutes_other": "{{amount}} minutes",
+    "chats_one": "{{amount}} chat",
+    "chats_other": "{{amount}} chats",
+    "moreOptions": "More options for {{name}}",
+    "table": {
+      "package": "Package",
+      "price": "Price",
+      "allowance": "Each month"
+    },
+    "empty": {
+      "title": "No packages yet",
+      "description": "Create a package for your businesses to buy."
+    },
+    "create": {
+      "action": "Create package",
+      "title": "Create a package",
+      "description": "Businesses on this package pay you this much each month, in {{currency}}, and get these minutes and chats.",
+      "nameLabel": "Name",
+      "namePlaceholder": "Front desk",
+      "priceLabel": "Monthly price",
+      "setupFeeLabel": "Setup fee",
+      "optional": "Optional",
+      "minutesLabel": "Minutes each month",
+      "chatsLabel": "Chats each month",
+      "fixedTerms": "You can't change the price or the minutes and chats later, because businesses may already pay for them. You can rename the package.",
+      "submit": "Create package",
+      "submitting": "Creating…",
+      "created": "You created {{name}}.",
+      "errors": {
+        "invalidName": "Enter a name of up to 80 characters.",
+        "invalidPrice": "Enter a monthly price above zero.",
+        "invalidSetupFee": "Enter a setup fee above zero, or leave it empty.",
+        "invalidAllowance": "Enter minutes and chats as whole numbers from 0 to 1,000,000.",
+        "notConnected": "Connect your Stripe account before you create packages.",
+        "failed": "We couldn't create the package. Try again."
+      }
+    },
+    "rename": {
+      "action": "Rename",
+      "title": "Rename package",
+      "description": "Stripe shows the new name on your businesses' invoices.",
+      "submit": "Save name",
+      "saving": "Saving…",
+      "saved": "Package renamed.",
+      "notConnected": "You can only rename packages on your connected Stripe account.",
+      "failed": "We couldn't rename the package. Try again."
+    },
+    "archive": {
+      "action": "Stop selling",
+      "title": "Stop selling {{name}}?",
+      "description": "New businesses can't buy it. Businesses already on it keep it.",
+      "confirm": "Stop selling",
+      "cancel": "Cancel",
+      "done": "{{name}} is off sale.",
+      "failed": "We couldn't take the package off sale. Try again."
     }
   },
   "team": {
@@ -221,6 +334,66 @@
       "imageType": "Upload a PNG, JPEG, WebP or SVG image.",
       "imageSize": "Upload an image of 256 KB or smaller.",
       "forbidden": "Only owners and admins can change the brand."
+    }
+  },
+  "stripe": {
+    "title": "Stripe",
+    "description": "Your businesses pay you through your own Stripe account. Stripe sends their invoices and receipts in your name.",
+    "loadFailed": "We couldn't load your Stripe connection. Refresh to try again.",
+    "ownersOnly": "Only owners can manage the Stripe connection.",
+    "opening": "Opening Stripe…",
+    "notConfigured": {
+      "title": "No Stripe payments yet",
+      "description": "This dashboard can't connect a Stripe account yet. Until it can, you bill your businesses yourself."
+    },
+    "status": {
+      "notConnected": "Not connected",
+      "onboarding": "Setup unfinished",
+      "restricted": "Payments off",
+      "active": "Connected",
+      "disconnected": "Disconnected"
+    },
+    "connect": {
+      "title": "Connect your Stripe account",
+      "description": "Stripe charges your businesses in your name and pays you out. You handle refunds and disputes in your Stripe Dashboard.",
+      "countryLabel": "Country of your business",
+      "countryPlaceholder": "Choose a country",
+      "countryHelp": "Stripe sets your account's country when it creates the account, and you can't change it later.",
+      "action": "Connect Stripe"
+    },
+    "onboarding": {
+      "title": "Finish setting up Stripe",
+      "description": "Stripe needs a few more details before your account can take payments.",
+      "action": "Continue on Stripe"
+    },
+    "restricted": {
+      "title": "Stripe can't take payments yet",
+      "description": "Stripe is checking your details or needs more of them. Open Stripe to see what's left.",
+      "action": "Open Stripe setup"
+    },
+    "active": {
+      "title": "Your Stripe account is connected",
+      "description": "Your businesses pay you in {{currency}}. You handle refunds and disputes in your Stripe Dashboard.",
+      "dashboard": "Open Stripe Dashboard"
+    },
+    "disconnected": {
+      "title": "You disconnected Stripe",
+      "description": "You disconnected your account in Stripe on {{date}}. Your businesses can't buy packages until you connect an account again.",
+      "action": "Connect Stripe again"
+    },
+    "details": {
+      "account": "Account",
+      "country": "Country",
+      "currency": "Currency",
+      "payouts": "Payouts",
+      "payoutsOn": "On",
+      "payoutsOff": "Off"
+    },
+    "errors": {
+      "failed": "We couldn't open Stripe. Try again.",
+      "invalidCountry": "Choose the country your business is in.",
+      "notConfigured": "This dashboard can't connect a Stripe account yet.",
+      "changed": "Someone else changed the Stripe connection. Refresh and try again."
     }
   },
   "apiKeys": {

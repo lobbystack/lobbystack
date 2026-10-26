@@ -7,7 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import type { PartnerAccessLevel } from "@lobbystack/shared";
+import { formatPriceAmount, type PackageSubscriptionStatus, type PartnerAccessLevel } from "@lobbystack/shared";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { PageHeader } from "@/components/page-header";
 import { useConsolePartner } from "@/components/partner-shell";
@@ -17,8 +17,9 @@ import { Button } from "@/components/ui/button";
 import { Combobox, ComboboxCollection, ComboboxContent, ComboboxEmpty, ComboboxGroup, ComboboxInput, ComboboxItem, ComboboxLabel, ComboboxList, ComboboxTrigger, ComboboxValue } from "@/components/ui/combobox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -26,6 +27,9 @@ import { intlLocale } from "@/lib/locale";
 import { requestJson } from "@/lib/request-json";
 import { availableTimeZones, groupTimeZones, isTimeZoneRegion, type TimeZoneOption } from "@/lib/time-zones";
 import { cn } from "@/lib/utils";
+
+/** What a business is sold, which only owners and admins see. */
+type BusinessBilling = { kind: "outside" } | { kind: "package"; packageId: string; packageName: string; status: PackageSubscriptionStatus };
 
 type PartnerBusiness = {
   businessId: string;
@@ -36,9 +40,31 @@ type PartnerBusiness = {
   owner: { email: string; status: "joined" } | { email: string; status: "invited"; expiresAt: string } | null;
   /** What it used this month: voice seconds and chats. */
   usage: { periodKey: string; voiceSeconds: number; chats: number };
+  billing: BusinessBilling | null;
 };
 
+/** A package for sale, as GET /api/partner/packages lists it. */
+type SellablePackage = { packageId: string; name: string; currency: string; monthlyPriceMinor: number; onConnectedAccount: boolean };
+type Packages = { stripe: { configured: boolean }; packages: SellablePackage[] };
+
 const ACCESS_LEVELS: PartnerAccessLevel[] = ["full", "activity"];
+
+/** The billing choice in the console: a package's id, or this for billed outside LobbyStack. */
+const BILLED_OUTSIDE = "outside";
+
+const BILLING_ERRORS: Record<string, string> = {
+  subscription_active: "businesses.billing.errors.subscriptionActive",
+  package_not_found: "businesses.billing.errors.packageGone",
+  stripe_not_connected: "businesses.billing.errors.notConnected",
+  stripe_not_configured: "businesses.billing.errors.notConfigured",
+};
+
+const STATUS_BADGE: Record<PackageSubscriptionStatus, string | undefined> = {
+  awaiting_payment: "border-amber-200 bg-amber-100 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/20 dark:text-amber-200",
+  active: undefined,
+  past_due: "border-destructive/30 bg-destructive/10 text-destructive",
+  inactive: undefined,
+};
 
 // Matches SelectTrigger, as the time zone picker in the receptionist's settings does.
 const COMBOBOX_TRIGGER_CLASS = "flex h-9 w-full min-w-0 items-center justify-between gap-1.5 rounded-4xl border border-input bg-input/30 px-3 py-2 text-sm whitespace-nowrap transition-colors outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 enabled:hover:bg-input/50";
@@ -72,14 +98,34 @@ function AccessLevelOptions({ value, onChange }: { value: PartnerAccessLevel; on
   );
 }
 
+/** Billed outside LobbyStack, or one of the partner's packages on its connected account. */
+function BillingSelect({ id, value, onChange, packages, current, disabled }: { id: string; value: string; onChange: (value: string) => void; packages: SellablePackage[]; current?: BusinessBilling | null; disabled?: boolean }) {
+  const { t, i18n } = useTranslation("partner");
+  const locale = intlLocale(i18n.language);
+  const items: Array<{ value: string; label: string; disabled?: boolean }> = [
+    { value: BILLED_OUTSIDE, label: t("businesses.billing.outside") },
+    ...packages.filter((item) => item.onConnectedAccount).map((item) => ({ value: item.packageId, label: t("businesses.billing.option", { name: item.name, amount: formatPriceAmount(item.monthlyPriceMinor, item.currency, locale) }) })),
+  ];
+  // A business keeps a package the partner stopped selling, which no other business can pick.
+  if (current?.kind === "package" && !items.some((item) => item.value === current.packageId)) items.push({ value: current.packageId, label: current.packageName, disabled: true });
+  return (
+    <Select disabled={disabled ?? false} items={items} onValueChange={(next) => { if (typeof next === "string") onChange(next); }} value={value}>
+      <SelectTrigger className="w-full" id={id}><SelectValue /></SelectTrigger>
+      <SelectContent><SelectGroup>{items.map((item) => <SelectItem disabled={item.disabled ?? false} key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectGroup></SelectContent>
+    </Select>
+  );
+}
+
 /**
  * The console's Businesses page. Everyone on the team sees the partner's
  * businesses with their owners and their minutes and chats this month, and
  * opens any of them to work inside it on the partner's domain; the business's
  * audit log records each open. Owners and admins create one, pick the access
- * level its own operators get, and invite its owner, who signs in on the
- * partner's domain. They also release a business to an owner who joined, or
- * delete it. The server enforces the same rules.
+ * level its own operators get and the package it pays for, or bill it
+ * outside LobbyStack, and invite its owner, who pays and signs in on the
+ * partner's domain. They also see and change each business's package,
+ * release a business to an owner who joined, or delete it. The server
+ * enforces the same rules.
  */
 export function PartnerBusinessesSurface() {
   const { t, i18n } = useTranslation("partner");
@@ -90,8 +136,16 @@ export function PartnerBusinessesSurface() {
   const queryKey = ["partner-businesses", partner.partnerId];
   const businesses = useQuery({ queryKey, queryFn: () => requestJson<{ businesses: PartnerBusiness[] }>(`/api/partner/businesses?partnerId=${encodeURIComponent(partner.partnerId)}`) });
   const canCreate = partner.role === "owner" || partner.role === "admin";
+  // Owners and admins pick each business's package. Without Stripe Connect, every business is billed outside LobbyStack.
+  const packages = useQuery({ queryKey: ["partner-packages", partner.partnerId], queryFn: () => requestJson<Packages>(`/api/partner/packages?partnerId=${encodeURIComponent(partner.partnerId)}`), enabled: canCreate });
+  const sellsPackages = canCreate && packages.data?.stripe.configured === true;
+  const sellable = packages.data?.packages ?? [];
 
   const [open, setOpen] = useState(false);
+  const [billing, setBilling] = useState(BILLED_OUTSIDE);
+  const [changing, setChanging] = useState<PartnerBusiness | null>(null);
+  const [newBilling, setNewBilling] = useState(BILLED_OUTSIDE);
+  const [billingError, setBillingError] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [ownerEmail, setOwnerEmail] = useState("");
   const [timezone, setTimezone] = useState(browserTimeZone);
@@ -107,7 +161,7 @@ export function PartnerBusinessesSurface() {
   const formatDate = (value: string) => new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(new Date(value));
   const formatMinutes = (seconds: number) => new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(Math.round((seconds / 60) * 10) / 10);
   const formatCount = (count: number) => new Intl.NumberFormat(locale).format(count);
-  const reset = () => { setName(""); setOwnerEmail(""); setTimezone(browserTimeZone()); setAccessLevel("full"); setError(null); };
+  const reset = () => { setName(""); setOwnerEmail(""); setTimezone(browserTimeZone()); setAccessLevel("full"); setBilling(BILLED_OUTSIDE); setError(null); };
 
   // A partner's business shows only on the partner's domains, so its dashboard opens there; from the host's domain the person signs in again.
   const openBusiness = useMutation({
@@ -128,7 +182,7 @@ export function PartnerBusinessesSurface() {
       toast.success(t("businesses.release.released", { name: business.name, email: business.owner?.email ?? "" }));
       await queryClient.invalidateQueries({ queryKey });
     },
-    onError: (cause: Error & { code?: string }, business) => { toast.error(t(cause.code === "owner_required" ? "businesses.release.errors.ownerRequired" : "businesses.release.errors.failed", { name: business.name })); },
+    onError: (cause: Error & { code?: string }, business) => { toast.error(t(cause.code === "owner_required" ? "businesses.release.errors.ownerRequired" : cause.code === "subscription_active" ? "businesses.billing.errors.subscriptionActive" : "businesses.release.errors.failed", { name: business.name })); },
   });
   const remove = useMutation({
     mutationFn: (business: PartnerBusiness) => requestJson("/api/partner/businesses", { method: "DELETE", body: JSON.stringify({ partnerId: partner.partnerId, businessId: business.businessId }) }),
@@ -137,12 +191,12 @@ export function PartnerBusinessesSurface() {
       toast.success(t("businesses.delete.deleted", { name: business.name }));
       await queryClient.invalidateQueries({ queryKey });
     },
-    onError: (cause: Error & { code?: string }, business) => { toast.error(t(cause.code === "business_number_in_progress" ? "businesses.delete.errors.numberInProgress" : "businesses.delete.errors.failed", { name: business.name })); },
+    onError: (cause: Error & { code?: string }, business) => { toast.error(t(cause.code === "business_number_in_progress" ? "businesses.delete.errors.numberInProgress" : cause.code === "subscription_active" ? "businesses.billing.errors.subscriptionActive" : "businesses.delete.errors.failed", { name: business.name })); },
   });
   const busy = openBusiness.isPending || release.isPending || remove.isPending;
 
   const create = useMutation({
-    mutationFn: () => requestJson<{ businessId: string }>("/api/partner/businesses", { method: "POST", body: JSON.stringify({ partnerId: partner.partnerId, name: name.trim(), timezone, accessLevel, ownerEmail: ownerEmail.trim() }) }),
+    mutationFn: () => requestJson<{ businessId: string }>("/api/partner/businesses", { method: "POST", body: JSON.stringify({ partnerId: partner.partnerId, name: name.trim(), timezone, accessLevel, ownerEmail: ownerEmail.trim(), packageId: billing === BILLED_OUTSIDE ? null : billing }) }),
     onSuccess: async (created) => {
       telemetry.track("web.partner.business_created", { partnerId: partner.partnerId, businessId: created.businessId, accessLevel, pathname: pathname ?? "/partner" });
       await queryClient.invalidateQueries({ queryKey });
@@ -158,10 +212,22 @@ export function PartnerBusinessesSurface() {
         partner_domain_required: "businesses.create.errors.domainRequired",
         owner_on_partner_team: "businesses.create.errors.ownerOnTeam",
         rate_limited: "businesses.create.errors.rateLimited",
+        ...BILLING_ERRORS,
       };
       setError(t(messages[cause.code ?? ""] ?? "businesses.create.errors.failed"));
     },
   });
+
+  const changeBilling = useMutation({
+    mutationFn: (target: PartnerBusiness) => requestJson<{ billing: BusinessBilling }>("/api/partner/businesses/billing", { method: "PUT", body: JSON.stringify({ partnerId: partner.partnerId, businessId: target.businessId, packageId: newBilling === BILLED_OUTSIDE ? null : newBilling }) }),
+    onSuccess: async (_result, target) => {
+      await queryClient.invalidateQueries({ queryKey });
+      toast.success(t("businesses.billing.saved", { name: target.name }));
+      setChanging(null);
+    },
+    onError: (cause: Error & { code?: string }) => setBillingError(t(BILLING_ERRORS[cause.code ?? ""] ?? "businesses.billing.errors.failed")),
+  });
+  const billingValue = (business: PartnerBusiness) => business.billing?.kind === "package" ? business.billing.packageId : BILLED_OUTSIDE;
 
   const createDialog = canCreate ? (
     <Dialog onOpenChange={(next) => { setOpen(next); if (!next) reset(); }} open={open}>
@@ -211,6 +277,13 @@ export function PartnerBusinessesSurface() {
               <FieldLabel>{t("businesses.create.accessLabel")}</FieldLabel>
               <AccessLevelOptions onChange={setAccessLevel} value={accessLevel} />
             </Field>
+            {sellsPackages ? (
+              <Field>
+                <FieldLabel htmlFor="partner-business-billing">{t("businesses.create.billingLabel")}</FieldLabel>
+                <BillingSelect id="partner-business-billing" onChange={setBilling} packages={sellable} value={billing} />
+                <FieldDescription>{t(billing === BILLED_OUTSIDE ? "businesses.create.billing.outside" : "businesses.create.billing.package")}</FieldDescription>
+              </Field>
+            ) : null}
           </FieldGroup>
           {error ? <p className="text-sm text-destructive" role="alert">{error}</p> : null}
           <DialogFooter>
@@ -248,6 +321,7 @@ export function PartnerBusinessesSurface() {
                 <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("businesses.table.business")}</TableHead>
                 <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("businesses.table.owner")}</TableHead>
                 <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("businesses.table.access")}</TableHead>
+                {canCreate ? <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("businesses.table.billing")}</TableHead> : null}
                 <TableHead className="h-12 px-6 text-right text-sm font-medium text-foreground">{t("businesses.table.minutes")}</TableHead>
                 <TableHead className="h-12 px-6 text-right text-sm font-medium text-foreground">{t("businesses.table.chats")}</TableHead>
                 <TableHead className="h-12 px-6"><span className="sr-only">{t("businesses.table.actions")}</span></TableHead>
@@ -274,6 +348,17 @@ export function PartnerBusinessesSurface() {
                       ) : <p className="text-sm text-muted-foreground">{t("businesses.owner.none")}</p>}
                     </TableCell>
                     <TableCell className="px-6 py-5"><Badge variant="secondary">{t(`businesses.access.${business.accessLevel}`)}</Badge></TableCell>
+                    {canCreate ? (
+                      <TableCell className="px-6 py-5 whitespace-normal [overflow-wrap:anywhere]">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {business.billing?.kind === "package" ? <>
+                            <p className="text-sm">{business.billing.packageName}</p>
+                            <Badge className={STATUS_BADGE[business.billing.status]} variant={business.billing.status === "active" ? "secondary" : "outline"}>{t(`businesses.billing.status.${business.billing.status}`)}</Badge>
+                          </> : <p className="text-sm text-muted-foreground">{t("businesses.billing.outside")}</p>}
+                          {sellsPackages ? <Button aria-label={t("businesses.billing.changeFor", { name: business.name })} onClick={() => { setChanging(business); setNewBilling(billingValue(business)); setBillingError(null); }} size="sm" variant="ghost">{t("businesses.billing.change")}</Button> : null}
+                        </div>
+                      </TableCell>
+                    ) : null}
                     <TableCell className="px-6 py-5 text-right text-sm tabular-nums">{formatMinutes(business.usage.voiceSeconds)}</TableCell>
                     <TableCell className="px-6 py-5 text-right text-sm tabular-nums">{formatCount(business.usage.chats)}</TableCell>
                     <TableCell className="px-6 py-5">
@@ -322,6 +407,25 @@ export function PartnerBusinessesSurface() {
           title={t(`businesses.${confirming.action}.title`, { name: confirming.business.name })}
         />
       ) : null}
+      <Dialog onOpenChange={(next) => { if (!next) setChanging(null); }} open={changing !== null}>
+        <DialogContent>
+          <form className="flex flex-col gap-6" onSubmit={(event) => { event.preventDefault(); if (changing && !changeBilling.isPending) { setBillingError(null); changeBilling.mutate(changing); } }}>
+            <DialogHeader>
+              <DialogTitle>{t("businesses.billing.title", { name: changing?.name ?? "" })}</DialogTitle>
+              <DialogDescription>{t("businesses.billing.description")}</DialogDescription>
+            </DialogHeader>
+            <Field>
+              <FieldLabel htmlFor="partner-business-change-billing">{t("businesses.create.billingLabel")}</FieldLabel>
+              <BillingSelect current={changing?.billing ?? null} disabled={changeBilling.isPending} id="partner-business-change-billing" onChange={setNewBilling} packages={sellable} value={newBilling} />
+              <FieldDescription>{t(newBilling === BILLED_OUTSIDE ? "businesses.billing.outsideHint" : "businesses.billing.packageHint")}</FieldDescription>
+            </Field>
+            {billingError ? <p className="text-sm text-destructive" role="alert">{billingError}</p> : null}
+            <DialogFooter>
+              <Button disabled={changeBilling.isPending || (changing !== null && newBilling === billingValue(changing))} loading={changeBilling.isPending} loadingLabel={t("businesses.billing.saving")} type="submit">{t("businesses.billing.submit")}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

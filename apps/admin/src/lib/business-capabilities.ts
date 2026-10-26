@@ -35,6 +35,8 @@ const routeCapabilities: ReadonlyArray<readonly [prefix: string, capability: Cap
   ["/api/onboarding/numbers", "activity"],
   ["/api/onboarding/phone-verification", "activity"],
   ["/api/onboarding/stage", "activity"],
+  // A partner's business's billing page, where its owner pays the partner. It isn't the host's billing, and the domain lets only owners and admins in.
+  ["/api/package-billing", "activity"],
   ["/api/phone-numbers", "setup"],
   ["/api/preferences/appearance", "activity"],
   ["/api/realtime", "activity"],

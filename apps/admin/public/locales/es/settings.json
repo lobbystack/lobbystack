@@ -15,6 +15,7 @@
     "appearance": "Preferencias",
     "integrations": "Integraciones",
     "billing": "Plan",
+    "subscription": "Facturación",
     "usage": "Uso",
     "notifications": "Notificaciones",
     "widget": "Widget del sitio web",
@@ -358,6 +359,41 @@
       },
       "continue": "Continuar la configuración",
       "dashboard": "Ir al panel"
+    }
+  },
+  "subscription": {
+    "loadFailed": "No pudimos cargar su facturación. Actualice la página para intentarlo de nuevo.",
+    "outside": "{{appName}} le factura directamente. Consúlteles sobre su factura.",
+    "packageTitle": "Su paquete",
+    "minutes_one": "{{amount}} minuto",
+    "minutes_many": "{{amount}} minutos",
+    "minutes_other": "{{amount}} minutos",
+    "chats_one": "{{amount}} chat",
+    "chats_many": "{{amount}} chats",
+    "chats_other": "{{amount}} chats",
+    "allowance": "Cada mes incluye {{minutes}} y {{chats}}.",
+    "status": {
+      "awaiting_payment": "Su recepcionista empieza a atender llamadas y chats en cuanto pague.",
+      "active": "Su suscripción está activa.",
+      "renews": "Su suscripción se renueva el {{date}}.",
+      "past_due": "Su último pago falló y Stripe lo volverá a intentar. Actualice su tarjeta para que su recepcionista siga atendiendo.",
+      "inactive": "Su suscripción terminó, así que su recepcionista no atiende llamadas ni chats. Suscríbase de nuevo para reactivarla."
+    },
+    "badge": {
+      "awaiting_payment": "Pago pendiente",
+      "active": "Activa",
+      "past_due": "Pago fallido",
+      "inactive": "Terminada"
+    },
+    "subscribe": "Suscribirse",
+    "manage": "Administrar facturación",
+    "opening": "Abriendo…",
+    "manageHint": "Actualice su tarjeta, descargue facturas o cancele en el portal de facturación de Stripe.",
+    "paid": "Recibimos su pago. Su recepcionista empieza a atender en un momento.",
+    "errors": {
+      "portal": "El portal de facturación no está disponible en este momento. Consulte a {{appName}}.",
+      "checkout": "No pudimos abrir el pago. Inténtelo de nuevo.",
+      "unavailable": "{{appName}} no puede recibir pagos en este momento. Consúlteles sobre su factura."
     }
   },
   "phoneNumber": {

@@ -13,7 +13,7 @@ The host bills each partner through Polar each month. The bill covers the tier f
 A partner connects its Stripe account through Stripe Connect. The deployment then creates these on that account as direct charges:
 
 - The packages the partner defines: a monthly price, an optional setup fee, and an allowance
-- Each business's subscription to a package, which the business starts at a checkout on the partner's domain
+- Each business's subscription to a package, which the business starts from a link on the partner's domain, at a Stripe Checkout in the partner's name
 - Each business's overage charges
 
 Stripe sends invoices and receipts in the partner's name, charges cards, and retries failed payments. The partner handles refunds and disputes in its own Stripe dashboard. The host never holds a business's payment. Businesses that buy a plan from the host keep paying it through Polar.

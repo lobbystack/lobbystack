@@ -122,7 +122,7 @@ Partners bill their businesses through Stripe Connect ([ADR 0009](adr/0009-partn
 | --- | --- |
 | `partner_stripe_accounts` | The connected account, its state, and its currency |
 | `partner_packages` | Name, monthly price, setup fee, allowance, and the Stripe product and price on the connected account |
-| `billing_accounts` columns | `partner_id`, `package_id`, `billed_outside`, `overage_enabled`, rates in minor units, cap, Stripe customer, and subscription |
+| `billing_accounts` columns | `package_id`, where none means billed outside LobbyStack, the Stripe account, customer, subscription and its state, the open checkout, `overage_enabled`, rates in minor units, and cap. The business's partner stays on `businesses.partner_id`. |
 | `billing_usage_events` columns | The package terms at record time, and separate Polar and Stripe sync status |
 
 **Code:**
@@ -130,8 +130,8 @@ Partners bill their businesses through Stripe Connect ([ADR 0009](adr/0009-partn
 - Add a Stripe client to `packages/providers` that sends the `Stripe-Account` header, and `STRIPE_CONNECT_SECRET_KEY` and `STRIPE_CONNECT_WEBHOOK_SECRET`. Without them, every partner business is billed outside LobbyStack.
 - Connect onboarding from the console's Stripe page.
 - Create a Checkout Session on the connected account for the business's package, opened from the invitation link on the partner's domain. Open the Stripe customer portal from the business's billing page.
-- Add a Connect webhook route that stores events as provider `stripe` and queues a reconcile. It handles checkout completion, subscription changes, failed payments, account updates, and deauthorization.
-- Extend `hasLiveEntitlement`: billed outside LobbyStack, or a live Stripe subscription, and the partner's tier live or in its 30 days.
+- Add a Connect webhook route that stores events as provider `stripe` and reconciles each one in the request. It handles checkout completion, subscription changes, failed payments, account updates, and deauthorization. Account updates and deauthorization name no business, so the route applies them as it stores them. For checkout, subscription and invoice events, it reads the subscription back from Stripe first.
+- Extend `live` for partner businesses: billed outside LobbyStack, or a live Stripe subscription (`hasLivePackageSubscription`), and the partner's tier live or in its 30 days. `hasLiveEntitlement` keeps answering for direct businesses.
 - Add `billing.syncStripeUsage`, queued wherever Polar syncs are queued. It sends overage as Stripe meter events on the connected account, with the source key as the identifier.
 - Caps work in the package's currency, not in US cents.
 - Console pages: Packages and Stripe. Each business gets its package, overage switch, rate, and cap.

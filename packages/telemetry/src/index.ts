@@ -14,6 +14,8 @@ export const WEB_EVENT_NAMES = [
   "web.partner.business_opened",
   "web.partner.business_released",
   "web.partner.business_deleted",
+  "web.partner.stripe_onboarding_started",
+  "web.partner.package_created",
   "web.page.home_viewed",
   "web.page.calls_viewed",
   "web.page.call_detail_viewed",
@@ -122,6 +124,7 @@ export const WORKFLOW_EVENT_NAMES = [
 export const BILLING_EVENT_NAMES = [
   "billing.subscription_started",
   "billing.subscription_canceled",
+  "billing.package_subscription_started",
 ] as const;
 
 export const OPERATIONS_EVENT_NAMES = [
@@ -246,6 +249,10 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "web.partner.business_opened": ["deploymentMode", "partnerId", "businessId", "pathname"],
   "web.partner.business_released": ["deploymentMode", "partnerId", "businessId", "pathname"],
   "web.partner.business_deleted": ["deploymentMode", "partnerId", "businessId", "pathname"],
+  // resumed: the partner already had an account and continued its onboarding, instead of connecting a new one.
+  "web.partner.stripe_onboarding_started": ["deploymentMode", "partnerId", "resumed", "pathname"],
+  // currency: the connected account's, which the package is priced in. setupFee: whether it charges one.
+  "web.partner.package_created": ["deploymentMode", "partnerId", "packageId", "currency", "setupFee", "pathname"],
   "web.page.home_viewed": ["businessId", "deploymentMode", "pathname"],
   "web.page.calls_viewed": ["businessId", "deploymentMode", "pathname"],
   "web.page.call_detail_viewed": ["businessId", "deploymentMode", "pathname"],
@@ -348,6 +355,8 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "billing.subscription_started": ["businessId", "plan", "billingInterval", "previousPlan"],
   // reason: the operator's answer in the cancel dialog, or "none" when they skipped it.
   "billing.subscription_canceled": ["businessId", "plan", "reason"],
+  // A partner's business started paying for its package on the partner's Stripe. currency: the package's. Never the price.
+  "billing.package_subscription_started": ["businessId", "partnerId", "packageId", "currency"],
   "voice.call_started": [
     "businessId",
     "deploymentMode",

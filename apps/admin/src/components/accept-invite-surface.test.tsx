@@ -90,3 +90,65 @@ it("tells someone on the business's partner's team that they work in it from the
   expect(spies.success).not.toHaveBeenCalled();
   expect(spies.replace).not.toHaveBeenCalled();
 });
+
+const frontDesk = { packageName: "Front desk", allowance: { voiceMinutes: 300, chats: 1000 }, status: "awaiting_payment", canPay: true };
+
+it("opens the package's checkout on the partner's account before the owner signs in", async () => {
+  spies.partner = { faviconUrl: null, color: null, links: { terms: null, privacy: null, support: null } };
+  window.history.replaceState({}, "", "/accept-invite?token=fixture-token");
+  // Stripe's checkout opens on another site; a hash on this page stands in for it, since jsdom only follows those.
+  const checkoutUrl = `${window.location.href}#stripe-checkout`;
+  const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+    if (url.includes("get-session")) return Response.json({});
+    if (url === "/api/team/accept/checkout") return Response.json({ url: checkoutUrl });
+    return Response.json({ invitation: { businessName: "Harbor Dental", email: "owner@example.invalid", expired: false, status: "pending", payment: frontDesk } });
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  render(<AcceptInviteSurface />);
+  await screen.findByText("Front desk");
+  await screen.findByText("acceptInvite.payment.subtitle");
+  // Only Stripe's checkout shows the price.
+  expect(document.body.textContent).not.toMatch(/acceptInvite\.payment\.(perMonth|setupFee)|149/);
+  // Signing in comes after paying.
+  expect(screen.queryByRole("link", { name: "acceptInvite.signIn" })).toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "acceptInvite.payment.pay" }));
+  await waitFor(() => expect(window.location.hash).toBe("#stripe-checkout"));
+  expect(fetchMock).toHaveBeenCalledWith("/api/team/accept/checkout", expect.objectContaining({ method: "POST", body: JSON.stringify({ token: "fixture-token" }) }));
+});
+
+it("signs the owner in once Stripe sends them back paid, and keeps the paid state through sign-in", async () => {
+  window.history.replaceState({}, "", "/accept-invite?token=fixture-token&checkout=complete");
+  vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+    if (url.includes("get-session")) return Response.json({});
+    return Response.json({ invitation: { businessName: "Harbor Dental", email: "owner@example.invalid", expired: false, status: "pending", payment: frontDesk } });
+  }));
+  render(<AcceptInviteSurface />);
+  await screen.findByText("acceptInvite.payment.paid");
+  expect(screen.queryByRole("button", { name: "acceptInvite.payment.pay" })).toBeNull();
+  const signIn = await screen.findByRole("link", { name: "acceptInvite.signIn" });
+  expect(decodeURIComponent(signIn.getAttribute("href") ?? "")).toContain("checkout=complete");
+});
+
+it("says so when the partner can't take payments", async () => {
+  window.history.replaceState({}, "", "/accept-invite?token=fixture-token");
+  vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+    if (url.includes("get-session")) return Response.json({});
+    if (url === "/api/team/accept/checkout") return Response.json({ error: "No payments", code: "payments_unavailable" }, { status: 409 });
+    return Response.json({ invitation: { businessName: "Harbor Dental", email: "owner@example.invalid", expired: false, status: "pending", payment: frontDesk } });
+  }));
+  render(<AcceptInviteSurface />);
+  await userEvent.click(await screen.findByRole("button", { name: "acceptInvite.payment.pay" }));
+  await screen.findByText("acceptInvite.payment.unavailable");
+});
+
+it("lets the owner sign in first while the partner's package can't be paid for yet", async () => {
+  window.history.replaceState({}, "", "/accept-invite?token=fixture-token");
+  vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+    if (url.includes("get-session")) return Response.json({});
+    return Response.json({ invitation: { businessName: "Harbor Dental", email: "owner@example.invalid", expired: false, status: "pending", payment: { ...frontDesk, canPay: false } } });
+  }));
+  render(<AcceptInviteSurface />);
+  expect(await screen.findByRole("link", { name: "acceptInvite.signIn" })).toBeTruthy();
+  expect(screen.getByText("acceptInvite.subtitle")).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "acceptInvite.payment.pay" })).toBeNull();
+});

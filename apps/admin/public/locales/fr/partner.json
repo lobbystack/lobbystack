@@ -7,8 +7,10 @@
   },
   "nav": {
     "businesses": "Entreprises",
+    "packages": "Formules",
     "branding": "Image de marque et domaine",
     "team": "Équipe",
+    "stripe": "Stripe",
     "apiKeys": "Clés API"
   },
   "roles": {
@@ -25,6 +27,7 @@
       "business": "Entreprise",
       "owner": "Propriétaire",
       "access": "Accès",
+      "billing": "Facturation",
       "minutes": "Minutes ce mois-ci",
       "chats": "Discussions ce mois-ci",
       "actions": "Actions"
@@ -105,6 +108,11 @@
         "full": "Son équipe gère la réceptionniste : connaissances, heures, services et membres de l'équipe. Elle ne voit ni la facturation, ni les clés d'API, ni MCP.",
         "activity": "Son équipe voit les appels, les clavardages, les rendez-vous, les contacts et les messages. Vous configurez la réceptionniste."
       },
+      "billingLabel": "Facturation",
+      "billing": {
+        "outside": "Vous facturez cette entreprise vous-même, et son propriétaire se connecte depuis l'invitation.",
+        "package": "Son propriétaire paie cette formule depuis l'invitation, puis se connecte."
+      },
       "submit": "Créer et inviter",
       "submitting": "Création…",
       "created": "Vous avez créé {{name}} et invité {{email}}.",
@@ -117,6 +125,113 @@
         "ownerOnTeam": "Une personne de votre équipe ne peut pas être propriétaire d'une entreprise. Entrez le courriel du client à qui elle appartient.",
         "failed": "Impossible de créer l'entreprise. Réessayez."
       }
+    },
+    "billing": {
+      "outside": "Vous la facturez vous-même",
+      "option": "{{name}}, {{amount}} par mois",
+      "status": {
+        "awaiting_payment": "Paiement en attente",
+        "active": "Payant",
+        "past_due": "Paiement échoué",
+        "inactive": "Non payant"
+      },
+      "change": "Modifier",
+      "changeFor": "Modifier la facturation de {{name}}",
+      "title": "Facturation de {{name}}",
+      "description": "Choisissez la formule que cette entreprise vous paie, ou facturez-la vous-même.",
+      "outsideHint": "L'entreprise ne paie rien avec Stripe, et aucune formule ne limite ses minutes ni ses clavardages.",
+      "packageHint": "Son propriétaire paie la formule sur la page de facturation de l'entreprise, ou depuis l'invitation s'il ne l'a pas encore acceptée.",
+      "submit": "Enregistrer",
+      "saving": "Enregistrement…",
+      "saved": "Vous avez modifié la facturation de {{name}}.",
+      "errors": {
+        "subscriptionActive": "Cette entreprise paie sa formule avec Stripe. Annulez d'abord son abonnement dans votre tableau de bord Stripe.",
+        "packageGone": "Cette formule n'est plus en vente. Choisissez-en une autre.",
+        "notConnected": "Connectez votre compte Stripe avant de vendre des formules.",
+        "notConfigured": "Ce tableau de bord ne peut pas encore vendre de formules.",
+        "failed": "Impossible de modifier la facturation de l'entreprise. Réessayez."
+      }
+    }
+  },
+  "packages": {
+    "title": "Formules",
+    "description": "Ce que vous vendez à vos entreprises : un prix mensuel, des frais d'installation facultatifs, et les minutes et clavardages compris chaque mois.",
+    "loadFailed": "Impossible de charger vos formules. Actualisez pour réessayer.",
+    "managersOnly": "Seuls les propriétaires et les administrateurs peuvent voir les formules.",
+    "notConfigured": "Ce tableau de bord ne peut pas encore connecter de compte Stripe. D'ici là, vous facturez vos entreprises vous-même.",
+    "connectFirst": {
+      "owner": "Connectez votre compte Stripe pour vendre des formules.",
+      "admin": "Demandez à un propriétaire de connecter votre compte Stripe pour vendre des formules."
+    },
+    "notReady": "Stripe ne peut pas encore accepter de paiements sur votre compte. Vous pouvez créer des formules maintenant, et vos entreprises pourront les acheter dès que Stripe activera les paiements.",
+    "disconnected": {
+      "owner": "Vous avez déconnecté votre compte Stripe : ses formules ne peuvent plus être vendues. Connectez un compte de nouveau pour en créer d'autres.",
+      "admin": "Votre compte Stripe est déconnecté : ses formules ne peuvent plus être vendues. Demandez à un propriétaire de connecter un compte de nouveau."
+    },
+    "openStripe": "Ouvrir la page Stripe",
+    "oldAccount": "Compte déconnecté",
+    "createdOn": "Créé le {{date}}",
+    "perMonth": "{{amount}} par mois",
+    "setupFee": "{{amount}} de frais d'installation",
+    "noSetupFee": "Sans frais d'installation",
+    "minutes_one": "{{amount}} minute",
+    "minutes_many": "{{amount}} minutes",
+    "minutes_other": "{{amount}} minutes",
+    "chats_one": "{{amount}} clavardage",
+    "chats_many": "{{amount}} clavardages",
+    "chats_other": "{{amount}} clavardages",
+    "moreOptions": "Plus d'options pour {{name}}",
+    "table": {
+      "package": "Formule",
+      "price": "Prix",
+      "allowance": "Chaque mois"
+    },
+    "empty": {
+      "title": "Aucune formule pour l'instant",
+      "description": "Créez une formule que vos entreprises pourront acheter."
+    },
+    "create": {
+      "action": "Créer une formule",
+      "title": "Créer une formule",
+      "description": "Les entreprises sur cette formule vous paient ce montant chaque mois, en {{currency}}, et reçoivent ces minutes et clavardages.",
+      "nameLabel": "Nom",
+      "namePlaceholder": "Accueil",
+      "priceLabel": "Prix mensuel",
+      "setupFeeLabel": "Frais d'installation",
+      "optional": "Facultatif",
+      "minutesLabel": "Minutes par mois",
+      "chatsLabel": "Clavardages par mois",
+      "fixedTerms": "Vous ne pourrez plus changer le prix ni les minutes et clavardages, car des entreprises les paient peut-être déjà. Vous pourrez renommer la formule.",
+      "submit": "Créer la formule",
+      "submitting": "Création…",
+      "created": "Vous avez créé {{name}}.",
+      "errors": {
+        "invalidName": "Entrez un nom de 80 caractères au maximum.",
+        "invalidPrice": "Entrez un prix mensuel supérieur à zéro.",
+        "invalidSetupFee": "Entrez des frais d'installation supérieurs à zéro, ou laissez le champ vide.",
+        "invalidAllowance": "Entrez les minutes et les clavardages en nombres entiers de 0 à 1 000 000.",
+        "notConnected": "Connectez votre compte Stripe avant de créer des formules.",
+        "failed": "Impossible de créer la formule. Réessayez."
+      }
+    },
+    "rename": {
+      "action": "Renommer",
+      "title": "Renommer la formule",
+      "description": "Stripe affiche le nouveau nom sur les factures de vos entreprises.",
+      "submit": "Enregistrer le nom",
+      "saving": "Enregistrement…",
+      "saved": "Formule renommée.",
+      "notConnected": "Vous ne pouvez renommer que les formules de votre compte Stripe connecté.",
+      "failed": "Impossible de renommer la formule. Réessayez."
+    },
+    "archive": {
+      "action": "Arrêter la vente",
+      "title": "Arrêter la vente de {{name}} ?",
+      "description": "Les nouvelles entreprises ne pourront plus l'acheter. Celles qui l'ont déjà la gardent.",
+      "confirm": "Arrêter la vente",
+      "cancel": "Annuler",
+      "done": "{{name}} n'est plus en vente.",
+      "failed": "Impossible d'arrêter la vente de la formule. Réessayez."
     }
   },
   "team": {
@@ -221,6 +336,66 @@
       "imageType": "Téléversez une image PNG, JPEG, WebP ou SVG.",
       "imageSize": "Téléversez une image de 256 Ko ou moins.",
       "forbidden": "Seuls les propriétaires et les administrateurs peuvent modifier l'image de marque."
+    }
+  },
+  "stripe": {
+    "title": "Stripe",
+    "description": "Vos entreprises vous paient par votre propre compte Stripe. Stripe leur envoie les factures et les reçus à votre nom.",
+    "loadFailed": "Impossible de charger votre connexion Stripe. Actualisez pour réessayer.",
+    "ownersOnly": "Seuls les propriétaires peuvent gérer la connexion Stripe.",
+    "opening": "Ouverture de Stripe…",
+    "notConfigured": {
+      "title": "Pas encore de paiements Stripe",
+      "description": "Ce tableau de bord ne peut pas encore connecter de compte Stripe. D'ici là, vous facturez vos entreprises vous-même."
+    },
+    "status": {
+      "notConnected": "Non connecté",
+      "onboarding": "Configuration à terminer",
+      "restricted": "Paiements désactivés",
+      "active": "Connecté",
+      "disconnected": "Déconnecté"
+    },
+    "connect": {
+      "title": "Connectez votre compte Stripe",
+      "description": "Stripe facture vos entreprises à votre nom et vous verse l'argent. Vous gérez les remboursements et les litiges dans votre tableau de bord Stripe.",
+      "countryLabel": "Pays de votre entreprise",
+      "countryPlaceholder": "Choisissez un pays",
+      "countryHelp": "Stripe fixe le pays de votre compte à sa création, et vous ne pourrez plus le changer.",
+      "action": "Connecter Stripe"
+    },
+    "onboarding": {
+      "title": "Terminez la configuration de Stripe",
+      "description": "Stripe a besoin de quelques détails de plus avant que votre compte puisse accepter des paiements.",
+      "action": "Continuer sur Stripe"
+    },
+    "restricted": {
+      "title": "Stripe ne peut pas encore accepter de paiements",
+      "description": "Stripe vérifie vos renseignements ou en demande d'autres. Ouvrez Stripe pour voir ce qu'il reste à faire.",
+      "action": "Ouvrir la configuration Stripe"
+    },
+    "active": {
+      "title": "Votre compte Stripe est connecté",
+      "description": "Vos entreprises vous paient en {{currency}}. Vous gérez les remboursements et les litiges dans votre tableau de bord Stripe.",
+      "dashboard": "Ouvrir le tableau de bord Stripe"
+    },
+    "disconnected": {
+      "title": "Vous avez déconnecté Stripe",
+      "description": "Vous avez déconnecté votre compte dans Stripe le {{date}}. Vos entreprises ne pourront pas acheter de formules tant que vous ne connecterez pas un compte de nouveau.",
+      "action": "Reconnecter Stripe"
+    },
+    "details": {
+      "account": "Compte",
+      "country": "Pays",
+      "currency": "Devise",
+      "payouts": "Versements",
+      "payoutsOn": "Activés",
+      "payoutsOff": "Désactivés"
+    },
+    "errors": {
+      "failed": "Impossible d'ouvrir Stripe. Réessayez.",
+      "invalidCountry": "Choisissez le pays de votre entreprise.",
+      "notConfigured": "Ce tableau de bord ne peut pas encore connecter de compte Stripe.",
+      "changed": "Quelqu'un d'autre a modifié la connexion Stripe. Actualisez et réessayez."
     }
   },
   "apiKeys": {

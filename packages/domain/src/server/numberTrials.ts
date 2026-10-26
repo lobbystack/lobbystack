@@ -318,11 +318,18 @@ export async function verifiedPhone(tx: DatabaseTransaction, input: { userId: st
   return attempt ? { phone: user.phone, countryCode: attempt.countryCode.toUpperCase() } : null;
 }
 
+/** Whether the host's free trial and plans are for this business: a cloud business that doesn't pay yet, and never a partner's, which pays its partner. */
+async function offersHostTrialInTransaction(tx: DatabaseTransaction, businessId: string): Promise<boolean> {
+  const business = (await tx.select({ deploymentMode: businesses.deploymentMode }).from(businesses).where(eq(businesses.id, businessId)).limit(1))[0];
+  if (business?.deploymentMode !== "cloud") return false;
+  const entitlement = await loadEntitlement(tx, businessId);
+  return !entitlement.live && !entitlement.poolPartnerId;
+}
+
 // The workspace checks the number search makes before it offers a trial. The claim itself also
 // enforces once per user, phone and network; when it refuses, the number step offers the plans.
 async function trialAvailableInTransaction(tx: DatabaseTransaction, input: { userId: string; businessId: string }): Promise<boolean> {
-  const business = (await tx.select({ deploymentMode: businesses.deploymentMode }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1))[0];
-  if (business?.deploymentMode !== "cloud" || (await loadEntitlement(tx, input.businessId)).live) return false;
+  if (!await offersHostTrialInTransaction(tx, input.businessId)) return false;
   const number = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), inArray(phoneNumbers.status, ["active", "provisioning"]))).limit(1);
   // The same once-per-workspace, per-user and per-phone rule the claim enforces.
   const used = await tx.execute(sql`SELECT app.number_trial_used(${input.businessId}::uuid, ${input.userId}::uuid) AS used`);
@@ -342,8 +349,7 @@ export async function numberStepRedirect(context: DomainContext, input: { userId
     await requireBusinessMembership(tx, input);
     const number = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), inArray(phoneNumbers.status, ["active", "provisioning"]))).limit(1);
     if (number.length) return input.finished ? "/" : null;
-    const business = (await tx.select({ deploymentMode: businesses.deploymentMode }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1))[0];
-    if (business?.deploymentMode !== "cloud" || (await loadEntitlement(tx, input.businessId)).live) return null;
+    if (!await offersHostTrialInTransaction(tx, input.businessId)) return null;
     return await verifiedPhone(tx, input) ? null : "/onboarding/verify-phone";
   });
 }

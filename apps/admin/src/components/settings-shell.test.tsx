@@ -37,4 +37,23 @@ describe("original settings route shell", () => {
     expect(tabs(["activity", "setup", "team"])).toEqual(["/settings/usage", "/settings/team", "/settings/phone-number", "/settings/appearance", "/settings/notifications"]);
     expect(tabs(["activity"])).toEqual(["/settings/usage", "/settings/appearance", "/settings/notifications"]);
   });
+  it("shows a partner's business's owners and admins the billing tab where they pay the partner, at either access level", () => {
+    route.pathname = "/settings/subscription";
+    const tabs = (role: string, partnerAccessLevel: "full" | "activity" | null, via: "membership" | "partner" = "membership") => {
+      const client = new QueryClient({ defaultOptions: { queries: { enabled: false } } });
+      const capabilities = partnerAccessLevel === null ? undefined : partnerAccessLevel === "full" ? ["activity", "setup", "team"] as const : ["activity"] as const;
+      client.setQueryData(["businesses"], { businesses: [{ businessId: "business", name: "Harbor Dental", slug: "harbor", role, active: true, partnerAccessLevel, via, ...(capabilities ? { capabilities: [...capabilities] } : {}) }] });
+      const view = render(<QueryClientProvider client={client}><BusinessCapabilitiesProvider initial={capabilities ?? ["activity", "setup", "team", "billing", "api_keys", "mcp"]}><SettingsShell><p>Settings content</p></SettingsShell></BusinessCapabilitiesProvider></QueryClientProvider>);
+      const paths = screen.getAllByRole("link").map(link => link.getAttribute("href"));
+      view.unmount();
+      return paths;
+    };
+    expect(tabs("business_owner", "activity")).toEqual(["/settings/usage", "/settings/subscription", "/settings/appearance", "/settings/notifications"]);
+    expect(tabs("business_admin", "full")).toEqual(["/settings/usage", "/settings/subscription", "/settings/team", "/settings/phone-number", "/settings/appearance", "/settings/notifications"]);
+    expect(tabs("viewer", "full")).not.toContain("/settings/subscription");
+    // Someone from the partner who opened the business acts as an admin there, but it isn't theirs to pay.
+    expect(tabs("business_admin", "full", "partner")).not.toContain("/settings/subscription");
+    // A direct business pays the host on its plan tab.
+    expect(tabs("business_owner", null)).not.toContain("/settings/subscription");
+  });
 });

@@ -360,6 +360,54 @@ export const partnerSignupInvitations = pgTable(
   (table) => [uniqueIndex("partner_signup_invitations_token_hash_unique").on(table.tokenHash)],
 );
 
+// A partner's connected Stripe account (migration 0141), as the Connect webhook last described it.
+export const partnerStripeAccounts = pgTable(
+  "partner_stripe_accounts",
+  {
+    partnerId: uuid("partner_id").primaryKey().references(() => partners.id, { onDelete: "cascade" }),
+    stripeAccountId: varchar("stripe_account_id", { length: 255 }).notNull(),
+    country: varchar("country", { length: 2 }),
+    // The account's default currency, uppercase: its packages are priced in it.
+    currency: varchar("currency", { length: 3 }),
+    detailsSubmitted: boolean("details_submitted").default(false).notNull(),
+    chargesEnabled: boolean("charges_enabled").default(false).notNull(),
+    payoutsEnabled: boolean("payouts_enabled").default(false).notNull(),
+    disabledReason: varchar("disabled_reason", { length: 120 }),
+    // Set when the partner disconnects the account in Stripe. Connecting again makes a new account.
+    disconnectedAt: timestamp("disconnected_at", { withTimezone: true }),
+    // When Stripe last described the account, so late news never overwrites newer news.
+    syncedAt: timestamp("synced_at", { withTimezone: true }),
+    connectedByUserId: uuid("connected_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    ...timestamps,
+  },
+  (table) => [uniqueIndex("partner_stripe_accounts_account_unique").on(table.stripeAccountId)],
+);
+
+// What a partner sells its businesses (migration 0141): a monthly price, an
+// optional setup fee and an allowance, with the product and prices on the
+// connected account named here. Only the name and archivedAt change.
+export const partnerPackages = pgTable(
+  "partner_packages",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    partnerId: uuid("partner_id").notNull().references(() => partners.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    currency: varchar("currency", { length: 3 }).notNull(),
+    monthlyPriceMinor: integer("monthly_price_minor").notNull(),
+    setupFeeMinor: integer("setup_fee_minor"),
+    voiceMinutes: integer("voice_minutes").notNull(),
+    chats: integer("chats").notNull(),
+    stripeAccountId: varchar("stripe_account_id", { length: 255 }).notNull(),
+    stripeProductId: varchar("stripe_product_id", { length: 255 }).notNull(),
+    stripePriceId: varchar("stripe_price_id", { length: 255 }).notNull(),
+    stripeSetupPriceId: varchar("stripe_setup_price_id", { length: 255 }),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    ...timestamps,
+  },
+  (table) => [index("partner_packages_partner_idx").on(table.partnerId, table.createdAt)],
+);
+
 export const prospectDemos = pgTable(
   "prospect_demos",
   {
@@ -1157,6 +1205,22 @@ export const billingAccounts = pgTable(
     currentPeriodStart: timestamp("current_period_start", { withTimezone: true }),
     currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
     overageSpendingCapCents: integer("overage_spending_cap_cents"),
+    // A partner's business (migration 0142): the package its partner sells it,
+    // or null when the partner bills it outside LobbyStack, and its
+    // subscription on the partner's Stripe account. Only the system actor
+    // writes these.
+    packageId: uuid("package_id").references(() => partnerPackages.id, { onDelete: "set null" }),
+    stripeAccountId: varchar("stripe_account_id", { length: 255 }),
+    stripeCustomerId: varchar("stripe_customer_id", { length: 255 }),
+    stripeSubscriptionId: varchar("stripe_subscription_id", { length: 255 }),
+    stripeSubscriptionState: varchar("stripe_subscription_state", { length: 32 }),
+    stripeCurrentPeriodEnd: timestamp("stripe_current_period_end", { withTimezone: true }),
+    // When the subscription was last read from Stripe, so a late read never overwrites a newer one.
+    stripeSyncedAt: timestamp("stripe_synced_at", { withTimezone: true }),
+    // The open checkout the business was sent to, reused so two clicks can't start two subscriptions.
+    stripeCheckoutSessionId: varchar("stripe_checkout_session_id", { length: 255 }),
+    stripeCheckoutUrl: text("stripe_checkout_url"),
+    stripeCheckoutExpiresAt: timestamp("stripe_checkout_expires_at", { withTimezone: true }),
     ...legacyId,
     ...timestamps,
   },
@@ -1937,6 +2001,8 @@ export const schema = {
   partnerDomains,
   partnerPlatformKeys,
   partnerSignupInvitations,
+  partnerStripeAccounts,
+  partnerPackages,
   businesses,
   userActiveBusinesses,
   partnerBusinessOpens,

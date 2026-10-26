@@ -15,6 +15,7 @@
     "appearance": "Préférences",
     "integrations": "Intégrations",
     "billing": "Forfait",
+    "subscription": "Facturation",
     "usage": "Utilisation",
     "notifications": "Notifications",
     "widget": "Widget de site web",
@@ -358,6 +359,41 @@
       },
       "continue": "Continuer la configuration",
       "dashboard": "Aller au tableau de bord"
+    }
+  },
+  "subscription": {
+    "loadFailed": "Impossible de charger votre facturation. Actualisez la page pour réessayer.",
+    "outside": "{{appName}} vous facture directement. Posez-lui vos questions sur votre facture.",
+    "packageTitle": "Votre formule",
+    "minutes_one": "{{amount}} minute",
+    "minutes_many": "{{amount}} minutes",
+    "minutes_other": "{{amount}} minutes",
+    "chats_one": "{{amount}} clavardage",
+    "chats_many": "{{amount}} clavardages",
+    "chats_other": "{{amount}} clavardages",
+    "allowance": "Chaque mois comprend {{minutes}} et {{chats}}.",
+    "status": {
+      "awaiting_payment": "Votre réceptionniste répond aux appels et aux clavardages dès que vous payez.",
+      "active": "Votre abonnement est actif.",
+      "renews": "Votre abonnement se renouvelle le {{date}}.",
+      "past_due": "Votre dernier paiement a échoué, et Stripe va réessayer. Mettez à jour votre carte pour que votre réceptionniste continue de répondre.",
+      "inactive": "Votre abonnement a pris fin, donc votre réceptionniste ne répond plus aux appels ni aux clavardages. Abonnez-vous de nouveau pour le réactiver."
+    },
+    "badge": {
+      "awaiting_payment": "Paiement en attente",
+      "active": "Actif",
+      "past_due": "Paiement échoué",
+      "inactive": "Terminé"
+    },
+    "subscribe": "S'abonner",
+    "manage": "Gérer la facturation",
+    "opening": "Ouverture…",
+    "manageHint": "Mettez à jour votre carte, téléchargez vos factures ou annulez dans le portail de facturation de Stripe.",
+    "paid": "Paiement reçu. Votre réceptionniste commence à répondre dans un instant.",
+    "errors": {
+      "portal": "Le portail de facturation n'est pas disponible pour le moment. Contactez {{appName}}.",
+      "checkout": "Impossible d'ouvrir le paiement. Réessayez.",
+      "unavailable": "{{appName}} ne peut pas recevoir de paiements pour le moment. Contactez-les au sujet de votre facture."
     }
   },
   "phoneNumber": {

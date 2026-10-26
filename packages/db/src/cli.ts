@@ -183,6 +183,13 @@ async function main(): Promise<void> {
             ,('lobbystack_app', 'partner_business_opens', 'SELECT')
             ,('lobbystack_app', 'partner_business_opens', 'INSERT')
             ,('lobbystack_readonly', 'partner_business_opens', 'SELECT')
+            ,('lobbystack_app', 'partner_stripe_accounts', 'SELECT')
+            ,('lobbystack_app', 'partner_stripe_accounts', 'INSERT')
+            ,('lobbystack_app', 'partner_packages', 'SELECT')
+            ,('lobbystack_app', 'partner_packages', 'INSERT')
+            ,('lobbystack_readonly', 'partner_stripe_accounts', 'SELECT')
+            ,('lobbystack_readonly', 'partner_packages', 'SELECT')
+            ,('lobbystack_worker', 'partner_packages', 'SELECT')
             ,('lobbystack_finance_export', 'businesses', 'SELECT')
             ,('lobbystack_finance_export', 'billing_accounts', 'SELECT')
             ,('lobbystack_finance_export', 'calls', 'SELECT')
@@ -208,7 +215,8 @@ async function main(): Promise<void> {
         // role, and no partner changes its slug. A partner's platform key can only
         // be revoked. A person's active business on a partner's domains moves only
         // to another of that partner's businesses, and opening a partner's business
-        // again only moves the open's times.
+        // again only moves the open's times. A package's price, allowance and Stripe
+        // objects never change once made.
         const partnerUpdateGrantFailures = await migrator.db.execute<{ table_name: string; column_name: string; granted: boolean }>(sql`
           select expected.table_name, expected.column_name, expected.granted
           from (values
@@ -273,7 +281,32 @@ async function main(): Promise<void> {
             ('partner_business_opens', 'expires_at', true),
             ('partner_business_opens', 'business_id', false),
             ('partner_business_opens', 'user_id', false),
-            ('partner_business_opens', 'partner_id', false)
+            ('partner_business_opens', 'partner_id', false),
+            ('partner_stripe_accounts', 'stripe_account_id', true),
+            ('partner_stripe_accounts', 'country', true),
+            ('partner_stripe_accounts', 'currency', true),
+            ('partner_stripe_accounts', 'details_submitted', true),
+            ('partner_stripe_accounts', 'charges_enabled', true),
+            ('partner_stripe_accounts', 'payouts_enabled', true),
+            ('partner_stripe_accounts', 'disabled_reason', true),
+            ('partner_stripe_accounts', 'disconnected_at', true),
+            ('partner_stripe_accounts', 'synced_at', true),
+            ('partner_stripe_accounts', 'connected_by_user_id', true),
+            ('partner_stripe_accounts', 'updated_at', true),
+            ('partner_stripe_accounts', 'partner_id', false),
+            ('partner_packages', 'name', true),
+            ('partner_packages', 'archived_at', true),
+            ('partner_packages', 'updated_at', true),
+            ('partner_packages', 'partner_id', false),
+            ('partner_packages', 'currency', false),
+            ('partner_packages', 'monthly_price_minor', false),
+            ('partner_packages', 'setup_fee_minor', false),
+            ('partner_packages', 'voice_minutes', false),
+            ('partner_packages', 'chats', false),
+            ('partner_packages', 'stripe_account_id', false),
+            ('partner_packages', 'stripe_product_id', false),
+            ('partner_packages', 'stripe_price_id', false),
+            ('partner_packages', 'stripe_setup_price_id', false)
           ) as expected(table_name, column_name, granted)
           where has_column_privilege('lobbystack_app', 'public.' || expected.table_name, expected.column_name, 'UPDATE') <> expected.granted
         `);
@@ -321,6 +354,7 @@ async function main(): Promise<void> {
             ('lobbystack_app', 'app.is_partner_member_email(uuid, text)'),
             ('lobbystack_app', 'app.business_number_claim_in_progress(uuid)'),
             ('lobbystack_worker', 'app.business_exists(uuid)'),
+            ('lobbystack_app', 'app.list_partner_business_billing(uuid)'),
             ('lobbystack_app', 'app.partner_role(uuid)'),
             ('lobbystack_worker', 'app.partner_role(uuid)'),
             ('lobbystack_readonly', 'app.partner_role(uuid)'),

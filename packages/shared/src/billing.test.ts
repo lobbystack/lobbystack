@@ -11,6 +11,8 @@ import {
   getKnowledgeStorageLimitBytes,
   getPolarMeteredUsagePayload,
   hasLiveEntitlement,
+  hasLivePackageSubscription,
+  packageEntitlement,
   planEntitlement,
 } from "./billing";
 
@@ -172,5 +174,29 @@ describe("a partner business billed outside LobbyStack", () => {
       poolPartnerId: "partner-1",
       includedNumbers: null,
     });
+  });
+});
+
+describe("a partner business on a package", () => {
+  const frontDesk = { currency: "CAD", voiceMinutes: 300, chats: 1000 };
+
+  it("gets the package's minutes and chats while its subscription is live, in the package's currency, with no overage", () => {
+    expect(packageEntitlement("partner-1", frontDesk, { live: true })).toEqual({
+      live: true,
+      source: "package",
+      allowance: { voiceSeconds: 18_000, chats: 1000, alertSms: null, outboundAttempts: null },
+      overage: { enabled: false, currency: "CAD", rates: { voiceMinute: 0, chat: 0, alertSms: 0, outboundAttempt: 0 }, capMinor: null },
+      poolPartnerId: "partner-1",
+      includedNumbers: null,
+    });
+  });
+
+  it("gets nothing once its subscription isn't live, so calls forward and chat shows its message", () => {
+    expect(packageEntitlement("partner-1", frontDesk, { live: false })).toMatchObject({ live: false, source: "package", allowance: { voiceSeconds: 0, chats: 0, alertSms: 0, outboundAttempts: 0 }, poolPartnerId: "partner-1" });
+  });
+
+  it("counts a subscription live as a plan's is, past_due included", () => {
+    for (const state of ["active", "trialing", "past_due"]) expect(hasLivePackageSubscription(state)).toBe(true);
+    for (const state of ["incomplete", "incomplete_expired", "canceled", "unpaid", "paused", null, undefined]) expect(hasLivePackageSubscription(state)).toBe(false);
   });
 });

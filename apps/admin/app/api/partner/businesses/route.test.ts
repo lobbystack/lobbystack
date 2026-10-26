@@ -35,7 +35,14 @@ it("creates a business at the access level the partner picked and invites its ow
   const response = await call(POST, "POST", valid);
   expect(response.status).toBe(201);
   expect(await response.json()).toEqual({ businessId: "business", invitationId: "invitation", expiresAt: "2026-11-02T00:00:00.000Z" });
-  expect(fixture.create).toHaveBeenCalledWith(expect.anything(), actor, { name: "Harbor Dental", timezone: "America/Toronto", businessType: "service_company", accessLevel: "activity", ownerEmail: "owner@example.com" });
+  expect(fixture.create).toHaveBeenCalledWith(expect.anything(), actor, { name: "Harbor Dental", timezone: "America/Toronto", businessType: "service_company", accessLevel: "activity", ownerEmail: "owner@example.com", packageId: null });
+});
+
+it("sells the new business the package the partner picked", async () => {
+  fixture.create.mockResolvedValue({ businessId: "business", invitationId: "invitation", expiresAt: new Date("2026-11-02T00:00:00.000Z") });
+  const packageId = "0c6d6c9e-3f0a-4a51-9a3b-2a4a3c7b9d10";
+  expect((await call(POST, "POST", { ...valid, packageId })).status).toBe(201);
+  expect(fixture.create).toHaveBeenCalledWith(expect.anything(), actor, expect.objectContaining({ packageId }));
 });
 
 it.each([
@@ -44,6 +51,7 @@ it.each([
   [{ accessLevel: 3 }, "invalid_access_level"],
   [{ ownerEmail: "" }, "invalid_email"],
   [{ businessType: 7 }, "invalid_business_type"],
+  [{ packageId: 7 }, "invalid_package"],
 ])("answers bad input %j with 400 before creating anything", async (change, code) => {
   const response = await call(POST, "POST", { ...valid, ...change });
   expect(response.status).toBe(400);

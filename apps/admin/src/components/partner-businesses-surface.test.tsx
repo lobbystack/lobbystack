@@ -10,6 +10,7 @@ const fixture = vi.hoisted(() => ({
   partner: { partnerId: "partner", name: "Bright Desk", role: "admin" as "owner" | "admin" | "member" },
   telemetry: null as ReturnType<typeof createRecordedBrowserTelemetry> | null,
   toast: { success: vi.fn(), error: vi.fn() },
+  packages: { stripe: { configured: false }, packages: [] as unknown[] },
 }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en" }, t: (key: string) => key }) }));
 vi.mock("next/navigation", () => ({ usePathname: () => "/partner/partner/businesses" }));
@@ -22,12 +23,16 @@ import { PartnerBusinessesSurface } from "./partner-businesses-surface";
 const harbor = { businessId: "harbor", name: "Harbor Dental", accessLevel: "full", onboardingStage: "website", createdAt: "2026-10-20T12:00:00.000Z", owner: { email: "owner@harbor.test", status: "joined" }, usage: { periodKey: "2026-10", voiceSeconds: 750, chats: 1234 } };
 const pier = { businessId: "pier", name: "Pier Clinic", accessLevel: "activity", onboardingStage: "verify_phone", createdAt: "2026-10-21T12:00:00.000Z", owner: { email: "owner@pier.test", status: "invited", expiresAt: "2099-01-01T00:00:00.000Z" }, usage: { periodKey: "2026-10", voiceSeconds: 0, chats: 0 } };
 
-beforeEach(() => { fixture.telemetry = createRecordedBrowserTelemetry(); });
+beforeEach(() => {
+  fixture.telemetry = createRecordedBrowserTelemetry();
+  fixture.packages = { stripe: { configured: false }, packages: [] };
+});
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.clearAllMocks(); });
 
 function renderAs(role: "owner" | "admin" | "member", respond: (url: string, init?: RequestInit) => Response) {
   fixture.partner = { ...fixture.partner, role };
-  const fetchMock = vi.fn(async (url: string, init?: RequestInit) => respond(url, init));
+  // Owners and admins also read the packages they can sell.
+  const fetchMock = vi.fn(async (url: string, init?: RequestInit) => url.startsWith("/api/partner/packages") ? Response.json(fixture.packages) : respond(url, init));
   vi.stubGlobal("fetch", fetchMock);
   render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })}><PartnerBusinessesSurface /></QueryClientProvider>);
   return fetchMock;
@@ -125,6 +130,18 @@ describe("the partner console's Businesses page", () => {
     expect(fixture.telemetry!.events).toEqual([]);
   });
 
+  it("says a business that pays for its package through Stripe waits for its subscription to end before it's released", async () => {
+    renderAs("owner", (url, init) => init?.method === "POST" && url === "/api/partner/businesses/release"
+      ? Response.json({ error: "This business pays for its package through Stripe.", code: "subscription_active" }, { status: 409 })
+      : Response.json({ businesses: [harbor] }));
+    await userEvent.click(await screen.findByRole("button", { name: "businesses.actions.more" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "businesses.release.action" }));
+    await userEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "businesses.release.confirm" }));
+    await waitFor(() => expect(fixture.toast.error).toHaveBeenCalledWith("businesses.billing.errors.subscriptionActive"));
+    expect(screen.getByText("Harbor Dental")).toBeTruthy();
+    expect(fixture.telemetry!.events).toEqual([]);
+  });
+
   it("tells a member who sees no businesses that owners and admins create them", async () => {
     renderAs("member", () => Response.json({ businesses: [] }));
     expect(await screen.findByText("businesses.empty.memberDescription")).toBeTruthy();
@@ -149,7 +166,9 @@ describe("the partner console's Businesses page", () => {
     await waitFor(() => fixture.telemetry!.expectEvent("web.partner.business_created", { partnerId: "partner", businessId: "pier", accessLevel: "activity", pathname: "/partner/partner/businesses" }));
     const post = fetchMock.mock.calls.find(([, init]) => init?.method === "POST");
     expect(post?.[0]).toBe("/api/partner/businesses");
-    expect(JSON.parse(String(post?.[1]?.body))).toEqual({ partnerId: "partner", name: "Pier Clinic", timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC", accessLevel: "activity", ownerEmail: "owner@pier.test" });
+    // Without Stripe Connect, the business is billed outside LobbyStack.
+    expect(JSON.parse(String(post?.[1]?.body))).toEqual({ partnerId: "partner", name: "Pier Clinic", timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC", accessLevel: "activity", ownerEmail: "owner@pier.test", packageId: null });
+    expect(screen.queryByLabelText("businesses.create.billingLabel")).toBeNull();
     expect(fixture.toast.success).toHaveBeenCalledWith("businesses.create.created");
     expect(await screen.findByText("Pier Clinic")).toBeTruthy();
   });
@@ -204,5 +223,54 @@ describe("the partner console's Businesses page", () => {
     await userEvent.click(screen.getByRole("button", { name: "businesses.create.submit" }));
     expect((await screen.findByRole("alert")).textContent).toBe("businesses.create.errors.ownerOnTeam");
     expect(fixture.telemetry!.events).toEqual([]);
+  });
+
+  it("shows owners and admins what each business pays, and members nothing of it", async () => {
+    const billed = [{ ...harbor, billing: { kind: "package", packageId: "front-desk", packageName: "Front desk", status: "past_due" } }, { ...pier, billing: { kind: "outside" } }];
+    renderAs("owner", () => Response.json({ businesses: billed }));
+    const rows = await screen.findAllByRole("row");
+    expect(within(rows[0]!).getByText("businesses.table.billing")).toBeTruthy();
+    expect(within(rows[1]!).getByText("Front desk")).toBeTruthy();
+    expect(within(rows[1]!).getByText("businesses.billing.status.past_due")).toBeTruthy();
+    expect(within(rows[2]!).getByText("businesses.billing.outside")).toBeTruthy();
+    cleanup();
+
+    renderAs("member", () => Response.json({ businesses: [{ ...harbor, billing: null }] }));
+    const memberRows = await screen.findAllByRole("row");
+    expect(within(memberRows[0]!).queryByText("businesses.table.billing")).toBeNull();
+  });
+
+  it("sells a new business one of the partner's packages", async () => {
+    fixture.packages = { stripe: { configured: true }, packages: [{ packageId: "front-desk", name: "Front desk", currency: "CAD", monthlyPriceMinor: 14900, onConnectedAccount: true }] };
+    const fetchMock = renderAs("admin", (_url, init) => init?.method === "POST"
+      ? Response.json({ businessId: "pier", invitationId: "invitation", expiresAt: "2026-11-02T00:00:00.000Z" }, { status: 201 })
+      : Response.json({ businesses: [] }));
+    await screen.findByText("businesses.empty.title");
+    await userEvent.click(screen.getByRole("button", { name: "businesses.create.action" }));
+    await userEvent.type(await screen.findByLabelText("businesses.create.nameLabel"), "Pier Clinic");
+    await userEvent.type(screen.getByLabelText("businesses.create.ownerLabel"), "owner@pier.test");
+    expect(screen.getByText("businesses.create.billing.outside")).toBeTruthy();
+    await userEvent.click(screen.getByLabelText("businesses.create.billingLabel"));
+    await userEvent.click(await screen.findByRole("option", { name: "businesses.billing.option" }));
+    expect(await screen.findByText("businesses.create.billing.package")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "businesses.create.submit" }));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([, init]) => init?.method === "POST")).toBe(true));
+    const post = fetchMock.mock.calls.find(([, init]) => init?.method === "POST");
+    expect(JSON.parse(String(post?.[1]?.body))).toMatchObject({ name: "Pier Clinic", packageId: "front-desk" });
+  });
+
+  it("changes how a business is billed, and says why it can't while the business pays", async () => {
+    fixture.packages = { stripe: { configured: true }, packages: [{ packageId: "front-desk", name: "Front desk", currency: "CAD", monthlyPriceMinor: 14900, onConnectedAccount: true }] };
+    const fetchMock = renderAs("owner", (_url, init) => init?.method === "PUT"
+      ? Response.json({ error: "This business pays for its package through Stripe.", code: "subscription_active" }, { status: 409 })
+      : Response.json({ businesses: [{ ...harbor, billing: { kind: "package", packageId: "front-desk", packageName: "Front desk", status: "active" } }] }));
+    await userEvent.click(await screen.findByRole("button", { name: "businesses.billing.changeFor" }));
+    await userEvent.click(await screen.findByLabelText("businesses.create.billingLabel"));
+    await userEvent.click(await screen.findByRole("option", { name: "businesses.billing.outside" }));
+    await userEvent.click(screen.getByRole("button", { name: "businesses.billing.submit" }));
+    expect((await screen.findByRole("alert")).textContent).toBe("businesses.billing.errors.subscriptionActive");
+    const put = fetchMock.mock.calls.find(([, init]) => init?.method === "PUT");
+    expect(put?.[0]).toBe("/api/partner/businesses/billing");
+    expect(JSON.parse(String(put?.[1]?.body))).toEqual({ partnerId: "partner", businessId: "harbor", packageId: null });
   });
 });

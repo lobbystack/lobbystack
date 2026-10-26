@@ -11,6 +11,7 @@ import { accessCapabilities, brandPartnerId, businessShowsOnBrand, capabilityNam
 import { enqueueBusinessSummaryRefresh } from "./businessSummary";
 import type { DomainContext } from "./context";
 import type { OnboardingStage } from "./onboarding";
+import { invitationOfferInTransaction, type InvitationPayment } from "./packageBilling";
 import { disableWebhookEndpointsInTransaction } from "./publicApi/webhooks";
 
 export type BusinessRole = "business_owner" | "business_admin" | "scheduler" | "viewer";
@@ -557,10 +558,15 @@ export function partnerBusinessNotClaimable(): Error {
   return Object.assign(new Error("You can't claim a partner's business. Its partner can release it to its owner."), { status: 409, code: "partner_business_not_claimable" });
 }
 
+/**
+ * What an invitation's link shows before its recipient signs in. An
+ * invitation to own a partner's business on a package also names the
+ * package and says whether it's paid, since the link opens its checkout.
+ */
 export async function previewInvitation(
   context: DomainContext,
   input: { tokenHash: string },
-): Promise<{ businessName: string; email: string; expired: boolean; status: string } | null> {
+): Promise<{ businessName: string; email: string; expired: boolean; status: string; payment: InvitationPayment | null } | null> {
   const resolved = await context.db.execute<{ business_id: string }>(sql`select app.resolve_business_by_invitation(${input.tokenHash}) as business_id`);
   const businessId = resolved.rows[0]?.business_id;
   if (!businessId) return null;
@@ -570,9 +576,13 @@ export async function previewInvitation(
       email: businessInvitations.email,
       expiresAt: businessInvitations.expiresAt,
       status: businessInvitations.status,
+      role: businessInvitations.role,
+      transfersOwnership: businessInvitations.transfersOwnership,
     }).from(businessInvitations).innerJoin(businesses, eq(businesses.id, businessInvitations.businessId)).where(and(eq(businessInvitations.tokenHash, input.tokenHash), eq(businessInvitations.businessId, businessId))).limit(1);
     const invitation = rows[0];
-    return invitation ? { businessName: invitation.businessName, email: invitation.email, expired: invitation.expiresAt <= new Date(), status: invitation.status } : null;
+    if (!invitation) return null;
+    const payment = await invitationOfferInTransaction(tx, { businessId, role: invitation.role, transfersOwnership: invitation.transfersOwnership, stripeConnect: Boolean(context.stripeConnect) });
+    return { businessName: invitation.businessName, email: invitation.email, expired: invitation.expiresAt <= new Date(), status: invitation.status, payment };
   });
 }
 

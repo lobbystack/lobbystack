@@ -87,7 +87,7 @@ A partner signs up, puts its own brand on the product, and resells LobbyStack to
 46. As a partner admin, I want to turn overage on or off for each business, so that some clients pay a fixed monthly amount and others pay for extra usage.
 47. As a partner admin, I want to set each business's overage rate and a monthly overage cap in money, so that no client gets a surprise bill.
 48. As a partner admin, I want to mark a business "billed outside LobbyStack", so that I can serve comped clients, annual contracts, or clients I bill another way.
-49. As a business owner invited by a partner, I want to pay at a checkout on my partner's domain, so that I subscribe to my partner, not to an unfamiliar company.
+49. As a business owner invited by a partner, I want to pay from my partner's domain at a checkout in my partner's name, so that I subscribe to my partner, not to an unfamiliar company.
 50. As a business owner at a partner, I want invoices and receipts in my partner's name from Stripe, so that my bookkeeping shows who I actually pay.
 51. As a business owner at a partner, I want my billing page to open my partner's Stripe customer portal, so that I can update my card and download invoices.
 52. As a partner admin, I want Stripe to retry failed payments, so that I don't chase every declined card myself.
@@ -166,7 +166,7 @@ The product decisions are settled in "How partners resell LobbyStack", the billi
   - Platform keys made in the console
   - Business templates
 - New columns on businesses: the partner and the access level.
-- New billing account fields: partner, package, billed outside, overage switch, rates in minor units, cap, and Stripe customer and subscription.
+- New billing account fields: package (none means billed outside LobbyStack), overage switch, rates in minor units, cap, and Stripe customer and subscription.
 - Usage events record the terms in force when they happened, with separate sync status for Polar and Stripe.
 - Number trials gain a partner, with at most one trial per partner.
 - The platform key link table and its grouping column are renamed from "partner" to "group". The old field and access value stay accepted as aliases.

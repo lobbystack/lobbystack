@@ -30,6 +30,8 @@ const pageCapabilities: ReadonlyArray<readonly [prefix: string, capability: Capa
   // Every operator sees the minutes and chats used against the allowance. A business with billing also sees its plan's meters there.
   ["/settings/usage", "activity"],
   ["/settings/plan", "billing"],
+  // A partner's business's billing page, where its owner pays the partner. The Settings menu shows it only on a partner's business.
+  ["/settings/subscription", "activity"],
   ["/settings/api-keys", "api_keys"],
   ["/settings/connected-apps", "mcp"],
 ];

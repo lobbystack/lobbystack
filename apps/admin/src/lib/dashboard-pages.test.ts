@@ -28,6 +28,10 @@ describe("dashboard pages", () => {
     }
   });
 
+  it("opens a partner's business's billing page at full access, apart from the host's plan page", () => {
+    expect(pageCapability("/settings/subscription")).toBe("activity");
+  });
+
   it("needs setup for a page it doesn't list, and matches whole path segments only", () => {
     expect(pageCapability("/something-new")).toBe("setup");
     expect(pageCapability("/callsign")).toBe("setup");

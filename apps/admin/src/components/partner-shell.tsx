@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Building2, Check, ChevronsUpDown, Contrast, KeyRound, LogOut, Palette, Plus, Users } from "lucide-react";
+import { Building2, Check, ChevronsUpDown, Contrast, CreditCard, KeyRound, LogOut, Package, Palette, Plus, Users } from "lucide-react";
 
 import type { PartnerRole } from "@lobbystack/shared";
 import { useBranding } from "@/components/branding-provider";
@@ -52,7 +52,7 @@ type PartnerShellProps = {
   user: { email: string };
 };
 
-/** The partner console's frame: the partner switcher, Businesses, Branding & domain, Team and API keys, and the account menu. */
+/** The partner console's frame: the partner switcher, its pages for the person's role, and the account menu. */
 export function PartnerShell({ children, partner, partners, sidebarOpen, user }: PartnerShellProps) {
   const { t } = useTranslation(["partner", "common"]);
   const pathname = usePathname();
@@ -78,7 +78,7 @@ export function PartnerShell({ children, partner, partners, sidebarOpen, user }:
               <PartnerSwitcher partner={partner} partners={partners} />
             </SidebarHeader>
             <SidebarContent>
-              <PartnerNavigation partnerId={partner.partnerId} />
+              <PartnerNavigation partnerId={partner.partnerId} role={partner.role} />
             </SidebarContent>
             <SidebarFooter>
               <PartnerUserMenu email={user.email} />
@@ -100,16 +100,19 @@ export function PartnerShell({ children, partner, partners, sidebarOpen, user }:
   );
 }
 
-function PartnerNavigation({ partnerId }: { partnerId: string }) {
+function PartnerNavigation({ partnerId, role }: { partnerId: string; role: PartnerRole }) {
   const { t } = useTranslation("partner");
   const pathname = usePathname();
   const router = useRouter();
   const { isMobile, setOpenMobile } = useSidebar();
+  // Members don't see prices or the Stripe connection, and only owners manage Stripe. The server refuses the same.
   const items = [
     { href: `/partner/${partnerId}/businesses`, label: t("nav.businesses"), icon: Building2 },
+    ...(role === "member" ? [] : [{ href: `/partner/${partnerId}/packages`, label: t("nav.packages"), icon: Package }]),
     { href: `/partner/${partnerId}/branding`, label: t("nav.branding"), icon: Palette },
     { href: `/partner/${partnerId}/team`, label: t("nav.team"), icon: Users },
     { href: `/partner/${partnerId}/api-keys`, label: t("nav.apiKeys"), icon: KeyRound },
+    ...(role === "owner" ? [{ href: `/partner/${partnerId}/stripe`, label: t("nav.stripe"), icon: CreditCard }] : []),
   ];
   return (
     <SidebarGroup>

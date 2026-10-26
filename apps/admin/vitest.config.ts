@@ -21,6 +21,8 @@ export default defineConfig({
       "@lobbystack/providers/crawling/urlSafety": `${root}/packages/providers/src/crawling/urlSafety.ts`,
       "@lobbystack/providers/crypto/secretBox": `${root}/packages/providers/src/crypto/secretBox.ts`,
       "@lobbystack/providers/storage/provider": `${root}/packages/providers/src/storage/provider.ts`,
+      "@lobbystack/providers/stripe/stripeConnect": `${root}/packages/providers/src/stripe/stripeConnect.ts`,
+      "@lobbystack/providers/stripe/fakeStripeConnect": `${root}/packages/providers/src/stripe/fakeStripeConnect.ts`,
       "@lobbystack/providers/twilio/webhookSecurity": `${root}/packages/providers/src/twilio/webhookSecurity.ts`,
       "@lobbystack/telemetry/node": `${root}/packages/telemetry/src/node.ts`,
       "@lobbystack/telemetry/browser": `${root}/packages/telemetry/src/browser.ts`,

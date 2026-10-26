@@ -7,8 +7,10 @@
   },
   "nav": {
     "businesses": "Firme",
+    "packages": "Ponude",
     "branding": "Brend i domen",
     "team": "Tim",
+    "stripe": "Stripe",
     "apiKeys": "API ključevi"
   },
   "roles": {
@@ -25,6 +27,7 @@
       "business": "Firma",
       "owner": "Vlasnik",
       "access": "Pristup",
+      "billing": "Naplata",
       "minutes": "Minuti ovog meseca",
       "chats": "Četovi ovog meseca",
       "actions": "Radnje"
@@ -105,6 +108,11 @@
         "full": "Njen tim upravlja recepcionerom: znanjem, radnim vremenom, uslugama i članovima tima. Ne vidi naplatu, API ključeve ni MCP.",
         "activity": "Njen tim vidi pozive, četove, termine, kontakte i poruke. Vi podešavate recepcionera."
       },
+      "billingLabel": "Naplata",
+      "billing": {
+        "outside": "Ovoj firmi sami naplaćujete, a vlasnik se prijavljuje preko pozivnice.",
+        "package": "Vlasnik plaća ovu ponudu preko pozivnice, pa se prijavljuje."
+      },
       "submit": "Napravi i pozovi",
       "submitting": "Pravljenje…",
       "created": "Napravili ste firmu {{name}} i pozvali {{email}}.",
@@ -117,6 +125,113 @@
         "ownerOnTeam": "Neko iz vašeg tima ne može da bude vlasnik firme. Unesite imejl klijenta čija je firma.",
         "failed": "Nismo uspeli da napravimo firmu. Pokušajte ponovo."
       }
+    },
+    "billing": {
+      "outside": "Sami naplaćujete",
+      "option": "{{name}}, {{amount}} mesečno",
+      "status": {
+        "awaiting_payment": "Čeka uplatu",
+        "active": "Plaća",
+        "past_due": "Uplata nije prošla",
+        "inactive": "Ne plaća"
+      },
+      "change": "Promeni",
+      "changeFor": "Promenite naplatu za firmu {{name}}",
+      "title": "Naplata za firmu {{name}}",
+      "description": "Izaberite ponudu koju Vam ova firma plaća ili joj sami naplaćujte.",
+      "outsideHint": "Firma ništa ne plaća preko Stripe-a, a nijedna ponuda ne ograničava njene minute i četove.",
+      "packageHint": "Vlasnik plaća ponudu na stranici za naplatu firme, ili preko pozivnice ako se još nije pridružio.",
+      "submit": "Sačuvaj",
+      "saving": "Čuvamo…",
+      "saved": "Promenili ste naplatu za firmu {{name}}.",
+      "errors": {
+        "subscriptionActive": "Ova firma plaća ponudu preko Stripe-a. Prvo otkažite njenu pretplatu u Stripe kontrolnoj tabli.",
+        "packageGone": "Ta ponuda se više ne prodaje. Izaberite drugu.",
+        "notConnected": "Povežite Stripe nalog pre nego što počnete da prodajete ponude.",
+        "notConfigured": "Ova kontrolna tabla još ne može da prodaje ponude.",
+        "failed": "Nismo mogli da promenimo naplatu firme. Pokušajte ponovo."
+      }
+    }
+  },
+  "packages": {
+    "title": "Ponude",
+    "description": "Ono što prodajete svojim firmama: mesečna cena, opciona naknada za aktivaciju i minuti i četovi koje svaki mesec uključuje.",
+    "loadFailed": "Nismo uspeli da učitamo vaše ponude. Osvežite stranicu i pokušajte ponovo.",
+    "managersOnly": "Samo vlasnici i administratori mogu da vide ponude.",
+    "notConfigured": "Ova kontrolna tabla još ne može da poveže Stripe nalog. Do tada sami naplaćujete svojim firmama.",
+    "connectFirst": {
+      "owner": "Povežite svoj Stripe nalog da biste prodavali ponude.",
+      "admin": "Zamolite vlasnika da poveže vaš Stripe nalog kako biste prodavali ponude."
+    },
+    "notReady": "Stripe još ne može da prima uplate na vaš nalog. Ponude možete da napravite sada, a firme će moći da ih kupe kada Stripe uključi uplate.",
+    "disconnected": {
+      "owner": "Prekinuli ste vezu sa svojim Stripe nalogom, pa se njegove ponude više ne mogu prodavati. Ponovo povežite nalog da biste napravili nove.",
+      "admin": "Veza sa vašim Stripe nalogom je prekinuta, pa se njegove ponude više ne mogu prodavati. Zamolite vlasnika da ponovo poveže nalog."
+    },
+    "openStripe": "Otvori Stripe stranicu",
+    "oldAccount": "Nalog bez veze",
+    "createdOn": "Napravljen {{date}}",
+    "perMonth": "{{amount}} mesečno",
+    "setupFee": "Aktivacija: {{amount}}",
+    "noSetupFee": "Bez naknade za aktivaciju",
+    "minutes_one": "{{amount}} minut",
+    "minutes_few": "{{amount}} minuta",
+    "minutes_other": "{{amount}} minuta",
+    "chats_one": "{{amount}} čet",
+    "chats_few": "{{amount}} četa",
+    "chats_other": "{{amount}} četova",
+    "moreOptions": "Još opcija za {{name}}",
+    "table": {
+      "package": "Ponuda",
+      "price": "Cena",
+      "allowance": "Svakog meseca"
+    },
+    "empty": {
+      "title": "Još nema ponuda",
+      "description": "Napravite ponudu koju vaše firme mogu da kupe."
+    },
+    "create": {
+      "action": "Napravi ponudu",
+      "title": "Napravite ponudu",
+      "description": "Firme sa ovom ponudom vam plaćaju ovaj iznos svakog meseca, u valuti {{currency}}, i dobijaju ove minute i četove.",
+      "nameLabel": "Naziv",
+      "namePlaceholder": "Recepcija",
+      "priceLabel": "Mesečna cena",
+      "setupFeeLabel": "Naknada za aktivaciju",
+      "optional": "Opciono",
+      "minutesLabel": "Minuti mesečno",
+      "chatsLabel": "Četovi mesečno",
+      "fixedTerms": "Kasnije ne možete da promenite cenu ni minute i četove, jer ih firme možda već plaćaju. Naziv ponude možete da promenite.",
+      "submit": "Napravi ponudu",
+      "submitting": "Pravimo…",
+      "created": "Napravili ste {{name}}.",
+      "errors": {
+        "invalidName": "Unesite naziv do 80 znakova.",
+        "invalidPrice": "Unesite mesečnu cenu veću od nule.",
+        "invalidSetupFee": "Unesite naknadu za aktivaciju veću od nule ili ostavite polje prazno.",
+        "invalidAllowance": "Unesite minute i četove kao cele brojeve od 0 do 1.000.000.",
+        "notConnected": "Povežite svoj Stripe nalog pre nego što napravite ponude.",
+        "failed": "Nismo uspeli da napravimo ponudu. Pokušajte ponovo."
+      }
+    },
+    "rename": {
+      "action": "Preimenuj",
+      "title": "Preimenujte ponudu",
+      "description": "Stripe prikazuje novi naziv na računima vaših firmi.",
+      "submit": "Sačuvaj naziv",
+      "saving": "Čuvamo…",
+      "saved": "Ponuda je preimenovana.",
+      "notConnected": "Možete da preimenujete samo ponude na povezanom Stripe nalogu.",
+      "failed": "Nismo uspeli da preimenujemo ponudu. Pokušajte ponovo."
+    },
+    "archive": {
+      "action": "Prestani sa prodajom",
+      "title": "Prestati sa prodajom ponude {{name}}?",
+      "description": "Nove firme više neće moći da je kupe. Firme koje je već imaju zadržavaju je.",
+      "confirm": "Prestani sa prodajom",
+      "cancel": "Otkaži",
+      "done": "Ponuda {{name}} više nije u prodaji.",
+      "failed": "Nismo uspeli da povučemo ponudu iz prodaje. Pokušajte ponovo."
     }
   },
   "team": {
@@ -221,6 +336,66 @@
       "imageType": "Otpremite PNG, JPEG, WebP ili SVG sliku.",
       "imageSize": "Otpremite sliku od 256 KB ili manje.",
       "forbidden": "Samo vlasnici i administratori mogu da menjaju brend."
+    }
+  },
+  "stripe": {
+    "title": "Stripe",
+    "description": "Vaše firme vam plaćaju preko vašeg Stripe naloga. Stripe im šalje račune i potvrde u vaše ime.",
+    "loadFailed": "Nismo uspeli da učitamo vašu Stripe vezu. Osvežite stranicu i pokušajte ponovo.",
+    "ownersOnly": "Samo vlasnici mogu da upravljaju Stripe vezom.",
+    "opening": "Otvaramo Stripe…",
+    "notConfigured": {
+      "title": "Stripe uplate još nisu dostupne",
+      "description": "Ova kontrolna tabla još ne može da poveže Stripe nalog. Do tada sami naplaćujete svojim firmama."
+    },
+    "status": {
+      "notConnected": "Nije povezan",
+      "onboarding": "Podešavanje nije završeno",
+      "restricted": "Uplate isključene",
+      "active": "Povezan",
+      "disconnected": "Veza prekinuta"
+    },
+    "connect": {
+      "title": "Povežite svoj Stripe nalog",
+      "description": "Stripe naplaćuje vašim firmama u vaše ime i isplaćuje vam novac. Povraćaje i sporove rešavate u svojoj Stripe kontrolnoj tabli.",
+      "countryLabel": "Zemlja vaše firme",
+      "countryPlaceholder": "Izaberite zemlju",
+      "countryHelp": "Stripe određuje zemlju naloga kada ga napravi i kasnije je ne možete promeniti.",
+      "action": "Poveži Stripe"
+    },
+    "onboarding": {
+      "title": "Završite podešavanje Stripe naloga",
+      "description": "Stripe-u treba još nekoliko podataka pre nego što vaš nalog može da prima uplate.",
+      "action": "Nastavi na Stripe-u"
+    },
+    "restricted": {
+      "title": "Stripe još ne može da prima uplate",
+      "description": "Stripe proverava vaše podatke ili traži još neke. Otvorite Stripe da vidite šta je preostalo.",
+      "action": "Otvori Stripe podešavanje"
+    },
+    "active": {
+      "title": "Vaš Stripe nalog je povezan",
+      "description": "Vaše firme vam plaćaju u valuti {{currency}}. Povraćaje i sporove rešavate u svojoj Stripe kontrolnoj tabli.",
+      "dashboard": "Otvori Stripe kontrolnu tablu"
+    },
+    "disconnected": {
+      "title": "Prekinuli ste vezu sa Stripe-om",
+      "description": "Prekinuli ste vezu sa svojim nalogom na Stripe-u {{date}}. Vaše firme ne mogu da kupuju ponude dok ponovo ne povežete nalog.",
+      "action": "Ponovo poveži Stripe"
+    },
+    "details": {
+      "account": "Nalog",
+      "country": "Zemlja",
+      "currency": "Valuta",
+      "payouts": "Isplate",
+      "payoutsOn": "Uključene",
+      "payoutsOff": "Isključene"
+    },
+    "errors": {
+      "failed": "Nismo uspeli da otvorimo Stripe. Pokušajte ponovo.",
+      "invalidCountry": "Izaberite zemlju u kojoj je vaša firma.",
+      "notConfigured": "Ova kontrolna tabla još ne može da poveže Stripe nalog.",
+      "changed": "Neko drugi je promenio Stripe vezu. Osvežite stranicu i pokušajte ponovo."
     }
   },
   "apiKeys": {

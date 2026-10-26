@@ -288,7 +288,7 @@ describe.skipIf(!testUrl)("platform keys partners make, against PostgreSQL with 
       const [email] = await asMigrator(tx, async () => await tx.select({ payload: outboxMessages.payload }).from(outboxMessages).where(and(eq(outboxMessages.aggregateId, invitation!.id), eq(outboxMessages.topic, "email.send"))));
       expect(email?.payload).toMatchObject({ template: "invitation", email: client!.email, brand: { kind: "business", businessId } });
       const [audit] = await asMigrator(tx, async () => await tx.select({ actorUserId: auditLogs.actorUserId, payload: auditLogs.payload }).from(auditLogs).where(and(eq(auditLogs.businessId, businessId), eq(auditLogs.eventType, "partner.business_created"))));
-      expect(audit).toEqual({ actorUserId: null, payload: { actor: "platform_key", platformKeyId: platformKey.id, groupId: acme.partnerId, partnerId: acme.partnerId, accessLevel: "activity", ownerInvitationId: invitation!.id, requestHash: sha256(JSON.stringify(body)) } });
+      expect(audit).toEqual({ actorUserId: null, payload: { actor: "platform_key", platformKeyId: platformKey.id, groupId: acme.partnerId, partnerId: acme.partnerId, accessLevel: "activity", packageId: null, ownerInvitationId: invitation!.id, requestHash: sha256(JSON.stringify(body)) } });
       // The key reaches it, and lists it with the console's businesses.
       await asWorker(tx, async () => { await requirePlatformBusinessAccess(acme.context, { businessId, ...platformKeyReach(resolved) }); });
       expect(await asWorker(tx, async () => (await listBusinessesForApi(acme.context, { groupId: resolved.group, limit: 100 })).data.map((business) => business.id))).toEqual([businessId]);

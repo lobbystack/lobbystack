@@ -24,8 +24,10 @@ export const GET = operatorRoute(async ({ businessId, transaction }) => NextResp
     deploymentMode: business?.deploymentMode ?? "cloud",
     plan: account?.plan ?? "free_cloud",
     // A live paid plan can still lack a number: the onboarding number step
-    // can be skipped, and those operators need claiming, not checkout.
-    paidPlanLive: entitlement.live,
+    // can be skipped, and those operators need claiming, not checkout. A
+    // partner's business never buys the host's plan, so it goes to claiming
+    // too, paid or not.
+    paidPlanLive: entitlement.live || entitlement.poolPartnerId !== null,
     hasDedicatedNumber: Boolean(number),
     completedWebCalls,
     websiteImport: ingestion ? { status: ingestion.status, websiteUrl: ingestion.websiteUrl, importedCount: ingestion.importedCount, indexedCount: ingestion.indexedCount } : null,
