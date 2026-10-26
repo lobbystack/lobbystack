@@ -343,9 +343,9 @@ const copy = {
   },
   sr: {
     hero: {
-      headingPrefix: "Postanite",
+      headingPrefix: "Preporučite",
       headingAccent: "LobbyStack",
-      headingSuffix: "partner",
+      headingSuffix: "i zaradite",
       subhead:
         "Preporučite hostovane LobbyStack pakete drugim firmama i zaradite 20% njihovih uplata tokom 12 meseci. Preporučeni klijenti štede 5% kada se registruju preko Vašeg linka.",
       cta: "Pridružite se programu",
@@ -378,12 +378,12 @@ const copy = {
         heading: "Kako funkcioniše",
         steps: [
           <>
-            Prijavite se i otvorite <strong>Partnerski program</strong> preko
+            Prijavite se i otvorite <strong>Program preporuka</strong> preko
             ikonice poklona u gornjem desnom uglu.
           </>,
           <>
-            Dodajte svoju <strong>PayPal e-adresu</strong> u podešavanjima
-            partnerskog programa za isplate.
+            Dodajte svoju <strong>PayPal e-adresu</strong> za isplate u
+            podešavanjima programa preporuka.
           </>,
           "Delite svoj link za preporuke u biltenima, na sajtovima, u video snimcima i kroz direktne preporuke.",
           "Pratite klikove, preporuke, provizije na čekanju i isplate na kontrolnoj tabli.",
@@ -445,7 +445,7 @@ const copy = {
       ],
       footerPrefix: "Imate pitanja? Pišite na",
       footerMiddle: "ili pročitajte",
-      footerDocsLabel: "dokumentaciju partnerskog programa",
+      footerDocsLabel: "dokumentaciju programa preporuka",
     },
   },
 } satisfies Record<

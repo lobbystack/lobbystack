@@ -18,13 +18,13 @@ const pageTitles: Record<Locale, string> = {
   en: "Affiliate Program",
   fr: "Programme d'affiliation",
   es: "Programa de afiliados",
-  sr: "Partnerski program",
+  sr: "Program preporuka",
 }
 const imageAlts: Record<Locale, string> = {
   en: "LobbyStack Affiliate Program",
   fr: "Programme d'affiliation LobbyStack",
   es: "Programa de afiliados de LobbyStack",
-  sr: "LobbyStack partnerski program",
+  sr: "LobbyStack program preporuka",
 }
 const affiliateOgImage =
   "/illustrations/open-source-ai-receptionist-affiliate-program-hero.webp"

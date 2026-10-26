@@ -26,7 +26,7 @@ LobbyStack uključuje i zakazivanje, predaju razgovora čoveku, SMS obaveštenja
 | Srednji paket | $99 za 220 minuta | $100 za 500 minuta |
 | Zakazivanje i preusmeravanje uz najavu | Od paketa od $99 | Podržani tokovi rada recepcije |
 | SMS | Poseban dodatak od $19 mesečno plus potrošnja | SMS obaveštenja uključena u Starter i Pro |
-| Opcije za agencije | Ponude za agencije i white-label | Otvoreni kod, partnerski program, samostalno hostovanje |
+| Opcije za agencije | Ponude za agencije i white-label | Otvoreni kod, program preporuka, samostalno hostovanje |
 | API | Viši paketi | Izvorni kod |
 | Primena | Hostovano | Upravljani cloud ili samostalno hostovanje |
 
@@ -46,7 +46,7 @@ Dialzara prodaje više od jednog paketa za recepciju. Njen javni sajt odvaja AI 
 
 Paketi za dolazne pozive reklamiraju snimke, rezimee, obaveštenja, otpremanje znanja, preusmeravanja, sinhronizaciju kalendara, pozive na više jezika, Make, Zapier i API pristup na višim paketima.
 
-LobbyStack nudi partnerski program, upravljanu cloud verziju i stek otvorenog koda. Agencija može da preporuči hostovani proizvod ili da vodi sopstvenu instalaciju, ali samostalno hostovanje zahteva tehničko osoblje.
+LobbyStack nudi program preporuka, upravljanu cloud verziju i stek otvorenog koda. Agencija može da preporuči hostovani proizvod ili da vodi sopstvenu instalaciju, ali samostalno hostovanje zahteva tehničko osoblje.
 
 ## Uporedite paket sa funkcijama koje su Vam potrebne
 
@@ -103,7 +103,7 @@ Izaberite LobbyStack za 150 minuta po ceni od $30 ili 500 po ceni od $100, uz na
 
 - [Dialzara cene](https://dialzara.com/pricing)
 - [LobbyStack cene](/sr/pricing/)
-- [LobbyStack partnerski program](/sr/blog/ai-receptionist-affiliate-program/)
+- [LobbyStack program preporuka](/sr/blog/ai-receptionist-affiliate-program/)
 - [LobbyStack GitHub repozitorijum](https://github.com/lobbystack/lobbystack)
 
 ## Zaključak

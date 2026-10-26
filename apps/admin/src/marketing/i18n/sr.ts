@@ -98,7 +98,7 @@ export const sr = {
         "Pretražite LobbyStack stranice, članke sa bloga, resurse o proizvodu, cene i javnu dokumentaciju za AI agente.",
     },
     "/affiliate-program/": {
-      title: "LobbyStack partnerski program | 20% provizije",
+      title: "LobbyStack program preporuka | 20% provizije",
       description:
         "Preporučite hostovane LobbyStack pakete i zaradite 20% njihovih uplata tokom 12 meseci. Preporučeni klijenti štede 5% pri registraciji. Mesečne isplate preko PayPal-a.",
     },

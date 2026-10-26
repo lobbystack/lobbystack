@@ -128,7 +128,7 @@ const SR_FAQS: AffiliateProgramFaq[] = [
   {
     question: "Kako da počnem?",
     answer:
-      "Prijavite se, otvorite Partnerski program na kontrolnoj tabli, dodajte svoju PayPal e-adresu i podelite link.",
+      "Prijavite se, otvorite Program preporuka na kontrolnoj tabli, dodajte svoju PayPal e-adresu i podelite link.",
   },
   {
     question: "Da li se računaju registracije za samostalno hostovanje?",

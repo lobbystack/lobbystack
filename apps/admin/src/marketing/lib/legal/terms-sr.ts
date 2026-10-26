@@ -170,13 +170,13 @@ export const termsSr: LegalDocument = {
     },
     {
       id: "affiliate-program",
-      nav: "Partnerski program",
-      title: "13. Partnerski program",
+      nav: "Program preporuka",
+      title: "13. Program preporuka",
       blocks: [
-        `13.1 LobbyStack može nuditi partnerski program u okviru kog se isplaćuju provizije za preporuku novih klijenata. Ako učestvujete, ovaj odeljak se primenjuje pored ostalih odredbi ovih Uslova.`,
-        `13.2 Osim ako Usluga ne navodi drugačije, partneri koji ispunjavaju uslove ostvaruju proviziju od 20% na kvalifikovana plaćanja koja preporučeni klijent izvrši tokom prvih 12 meseci nakon pripisivanja. Preporuke pratimo putem linkova ili kodova koje obezbeđujemo. Naše evidencije su odlučujuće za pripisivanje, ispunjenost uslova i iznose provizija.`,
+        `13.1 LobbyStack može nuditi program preporuka u okviru kog se isplaćuju provizije za preporuku novih klijenata. Ako učestvujete, ovaj odeljak se primenjuje pored ostalih odredbi ovih Uslova.`,
+        `13.2 Osim ako Usluga ne navodi drugačije, preporučioci koji ispunjavaju uslove ostvaruju proviziju od 20% na kvalifikovana plaćanja koja preporučeni klijent izvrši tokom prvih 12 meseci nakon pripisivanja. Preporuke pratimo putem linkova ili kodova koje obezbeđujemo. Naše evidencije su odlučujuće za pripisivanje, ispunjenost uslova i iznose provizija.`,
         `13.3 Provizije podležu periodu zadržavanja od 30 dana. Provizija postaje plativa tek kada plaćanje preporučenog klijenta prođe taj period bez povraćaja novca, osporavanja transakcije (chargeback), spora, storniranja, knjižnog odobrenja ili otkazivanja. Možemo poništiti, umanjiti, zadržati ili stornirati neisplaćene provizije za plaćanja ili preporuke koje ne ispunjavaju uslove.`,
-        `13.4 Partnerima isplaćujemo provizije putem usluge PayPal, na PayPal imejl adresu sačuvanu na partnerskoj kontrolnoj tabli. Minimalni iznos isplate je 100 USD u neisplaćenim provizijama koje ispunjavaju uslove. Vreme isplate može varirati u zavisnosti od provere, provere prevara, dostupnosti pružaoca usluga obrade plaćanja i tačnosti podataka za isplatu. Odgovorni ste za svoje poreze, prijavljivanje, naknade, konverziju valute i svoj platni nalog.`,
+        `13.4 Preporučiocima isplaćujemo provizije putem usluge PayPal, na PayPal imejl adresu sačuvanu na kontrolnoj tabli programa preporuka. Minimalni iznos isplate je 100 USD u neisplaćenim provizijama koje ispunjavaju uslove. Vreme isplate može varirati u zavisnosti od provere, provere prevara, dostupnosti pružaoca usluga obrade plaćanja i tačnosti podataka za isplatu. Odgovorni ste za svoje poreze, prijavljivanje, naknade, konverziju valute i svoj platni nalog.`,
         `13.5 Ne smete preporučivati sami sebe, otvarati lažne naloge, iznositi obmanjujuće tvrdnje, slati neželjene poruke, lažno se predstavljati kao LobbyStack, licitirati za žigove kompanije LobbyStack ili slične pojmove u plaćenoj pretrazi, objavljivati lažne recenzije, zloupotrebljavati popuste, generisati veštački saobraćaj ili promovisati LobbyStack na način kojim se krše zakon, pravila platformi ili ovi Uslovi. Kada preporučujete LobbyStack, morate jasno navesti da za to možete dobiti naknadu.`,
         `13.6 Možemo odbiti, suspendovati ili okončati Vaše učešće i zadržati neisplaćene provizije u slučaju prevare, zloupotrebe, neusklađenosti ili rizika. Možemo u bilo kom trenutku izmeniti, privremeno obustaviti ili ukinuti program, njegove stope, pravila pripisivanja, periode zadržavanja, pragove za isplatu ili načine isplate, u skladu sa važećim propisima.`,
       ],

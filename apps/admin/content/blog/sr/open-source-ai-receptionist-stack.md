@@ -124,7 +124,7 @@ To nije način da izbegnete održavanje. Telefonske sisteme i dalje treba testir
 
 To je način da preskočite mesece tehničke infrastrukture proizvoda pre nego što se posvetite poslovnim tokovima.
 
-Ako prvo upoređujete open-source opcije za odgovaranje na pozive, pogledajte vodič za [najbolje open-source AI servise za odgovaranje na pozive](/sr/blog/best-open-source-ai-phone-answering-services/). Agencijama koje postavljaju sistem za klijente može biti zanimljiv i [LobbyStack partnerski program](/sr/blog/ai-receptionist-affiliate-program/). Za dizajn tokova rada, pogledajte [tokovi rada AI recepcionera bez dijagrama toka](/sr/blog/ai-receptionist-workflows/).
+Ako prvo upoređujete open-source opcije za odgovaranje na pozive, pogledajte vodič za [najbolje open-source AI servise za odgovaranje na pozive](/sr/blog/best-open-source-ai-phone-answering-services/). Agencijama koje postavljaju sistem za klijente može biti zanimljiv i [LobbyStack program preporuka](/sr/blog/ai-receptionist-affiliate-program/). Za dizajn tokova rada, pogledajte [tokovi rada AI recepcionera bez dijagrama toka](/sr/blog/ai-receptionist-workflows/).
 
 ## Isprobajte ga ili ga hostujte sami
 

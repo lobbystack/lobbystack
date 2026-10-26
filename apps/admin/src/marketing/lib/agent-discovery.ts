@@ -702,12 +702,12 @@ Agencias, consultores, creadores y operadores que recomiendan herramientas a peq
 
   if (locale === "sr") {
     return `---
-title: LobbyStack partnerski program | Provizija od 20%
-description: Javni pregled LobbyStack partnerskog programa.
+title: LobbyStack program preporuka | Provizija od 20%
+description: Javni pregled LobbyStack programa preporuka.
 url: ${absoluteUrl("/sr/affiliate-program/")}
 ---
 
-# LobbyStack partnerski program
+# LobbyStack program preporuka
 
 Preporučite hostovane LobbyStack pakete klijentima koji plaćaju i zaradite proviziju.
 
@@ -729,7 +729,7 @@ Proviziju zarađujete samo na uplatama za hostovane LobbyStack pakete. Samostaln
 
 ## Kako da počnete
 
-1. Prijavite se i otvorite stranicu partnerskog programa na kontrolnoj tabli.
+1. Prijavite se i otvorite stranicu programa preporuka na kontrolnoj tabli.
 2. Dodajte svoju PayPal e-adresu.
 3. Podelite link sa firmama kojima treba bolje pokrivanje telefona i zakazivanje termina.
 

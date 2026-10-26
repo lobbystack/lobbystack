@@ -114,7 +114,7 @@ const labels = {
     changelog: "Dnevnik izmena",
     helpCenter: "Centar za pomoć",
     calculator: "Kalkulator propuštenih poziva",
-    affiliateProgram: "Partnerski program",
+    affiliateProgram: "Program preporuka",
     navigationMenu: "Meni za navigaciju",
     mobileNavigation: "Mobilna navigacija",
   },

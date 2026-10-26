@@ -1,6 +1,6 @@
 {
-  "eyebrow": "Partnerski program",
-  "title": "Partnerski program",
+  "eyebrow": "Program preporuka",
+  "title": "Program preporuka",
   "description": "Preporučite {{appName}} firmama i agencijama. Ovde pratimo preporuke, provizije i mesečne isplate preko PayPal-a.",
   "referral": {
     "title": "Link za preporuku",
@@ -105,7 +105,7 @@
     },
     "method": {
       "question": "Kako se šalju isplate?",
-      "answer": "{{appName}} isplaćuje partnere preko PayPal-a, na PayPal imejl sačuvan u podešavanjima."
+      "answer": "{{appName}} isplaćuje preporučioce preko PayPal-a, na PayPal imejl sačuvan u podešavanjima."
     },
     "refunds": {
       "question": "Šta se dešava nakon povraćaja novca?",
@@ -113,7 +113,7 @@
     }
   },
   "toast": {
-    "profileFailed": "Nije moguće pripremiti Vašu partnersku kontrolnu tablu.",
+    "profileFailed": "Nije moguće pripremiti Vašu kontrolnu tablu programa preporuka.",
     "copied": "Link za preporuku je kopiran.",
     "paypalSaved": "PayPal imejl je sačuvan.",
     "paypalFailed": "Nije moguće sačuvati PayPal imejl."

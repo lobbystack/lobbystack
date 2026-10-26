@@ -16,7 +16,7 @@ const faqSectionCopy = {
     description: "Comisiones, pagos y reglas del programa.",
   },
   sr: {
-    title: "Pitanja o partnerskom programu",
+    title: "Pitanja o programu preporuka",
     description: "Provizije, isplate i pravila programa.",
   },
 } satisfies Record<Locale, { title: string; description: string }>

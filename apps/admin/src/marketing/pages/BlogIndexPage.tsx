@@ -212,7 +212,7 @@ const pageCopy = {
         href: "/sr/blog/ai-receptionist-workflows/",
       },
       {
-        title: "Partnerski program",
+        title: "Program preporuka",
         body: "Ostvarite stalnu proviziju preporučujući AI recepcionera otvorenog koda agencijama, konsultantima i lokalnim firmama.",
         href: "/sr/blog/ai-receptionist-affiliate-program/",
       },

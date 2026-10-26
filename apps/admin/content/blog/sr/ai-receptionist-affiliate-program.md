@@ -1,5 +1,5 @@
 ---
-title: "Zaradite 20% uz LobbyStack partnerski program"
+title: "Zaradite 20% uz LobbyStack program preporuka"
 description: "Uporedite partnerske programe za AI recepcionere i saznajte zašto agencije, konsultanti, kreatori i stručnjaci za lokalne firme mogu da ostvare ponavljajući prihod uz LobbyStack."
 pubDate: 2026-07-07T09:00:00-04:00
 author: "LobbyStack tim"
@@ -18,11 +18,11 @@ Većina tih pozivalaca ne čeka. Zovu sledeću firmu.
 
 Zato su [AI recepcioneri](/sr/features/) postali praktičan proizvod za preporuku. Problem je očigledan, vrednost je jasna, a klijent ne mora da menja ceo poslovni sistem da bi počeo.
 
-[LobbyStack partnerski program](/sr/affiliate-program/) Vam daje direktan način da ostvarite ponavljajući prihod tako što pomažete firmama da se jave na više poziva, prikupe više potencijalnih klijenata i zakažu više termina.
+[LobbyStack program preporuka](/sr/affiliate-program/) Vam daje direktan način da ostvarite ponavljajući prihod tako što pomažete firmama da se jave na više poziva, prikupe više potencijalnih klijenata i zakažu više termina.
 
-## Šta je LobbyStack partnerski program?
+## Šta je LobbyStack program preporuka?
 
-LobbyStack partnerski program Vam isplaćuje **proviziju od 20% tokom prvih 12 meseci** kada se klijent registruje preko Vaše preporuke. Preporučeni klijenti dobijaju i **5% popusta** kada preko Vašeg partnerskog linka počnu da koriste odgovarajući hostovani LobbyStack paket.
+LobbyStack program preporuka Vam isplaćuje **proviziju od 20% tokom prvih 12 meseci** kada se klijent registruje preko Vaše preporuke. Preporučeni klijenti dobijaju i **5% popusta** kada preko Vašeg linka za preporuku počnu da koriste odgovarajući hostovani LobbyStack paket.
 
 Preporučujete LobbyStack firmama kojima treba bolja telefonska pokrivenost. Kada postanu klijenti koji plaćaju, dobijate ponavljajuću proviziju dok god su pretplaćeni tokom prve godine.
 
@@ -129,7 +129,7 @@ Možete da ga promovišete:
 * lokalnim uslužnim firmama
 * timovima koji rade po zakazivanju
 
-To partnerima daje više prostora da nađu klijente.
+To preporučiocima daje više prostora da nađu klijente.
 
 Ako je jedna niša previše konkurentna, izaberite drugu. Ako Vašu publiku čine lokalne firme, pružaoci usluga, agencije, osnivači ili ljudi koji vode poslovanje, postoji mnogo uglova koje možete da iskoristite.
 
@@ -151,7 +151,7 @@ Proizvodi za AI recepcionere mogu da postanu skupi kako potrošnja raste.
 
 LobbyStack je namenjen malim firmama kojima je potrebna stvarna pokrivenost poziva bez zapošljavanja recepcionera sa punim radnim vremenom ili plaćanja tradicionalne usluge javljanja.
 
-Tako razgovor o partnerstvu ostaje konkretan.
+Tako razgovor o preporuci ostaje konkretan.
 
 Ne prodajete samo automatizaciju. Pomažete firmama da dobiju veću pokrivenost po ceni koju mogu da opravdaju.
 
@@ -185,7 +185,7 @@ Ne trebaju Vam hiljade preporuka da bi se program isplatio.
 
 Nekoliko dobrih klijenata može da postane značajan ponavljajući prihod.
 
-## Ko treba da se pridruži LobbyStack partnerskom programu?
+## Ko treba da se pridruži LobbyStack programu preporuka?
 
 Program je dobar izbor za ljude koji već razgovaraju s firmama o rastu, poslovanju, marketingu, korisničkom iskustvu ili automatizaciji.
 
@@ -235,7 +235,7 @@ Zato je dobar proizvod za automatizaciju prvog kontakta, koji možete da preporu
 
 ### Kreatori i autori biltena
 
-Ako Vašu publiku čine preduzetnici, vlasnici lokalnih firmi, agencije ili kupci AI alata, LobbyStack je dobar partnerski proizvod jer je slučaj upotrebe konkretan.
+Ako Vašu publiku čine preduzetnici, vlasnici lokalnih firmi, agencije ili kupci AI alata, LobbyStack je dobar proizvod za preporuku jer je slučaj upotrebe konkretan.
 
 Možete da pišete ili snimate sadržaj kao što je:
 
@@ -325,11 +325,11 @@ Neki partnerski programi nude veće procente provizije.
 
 LobbyStack je izabrao održivu strukturu usklađenu s dugoročnim klijentima.
 
-Provizija od 20% tokom 12 meseci partnerima daje ponavljajuću zaradu, a proizvod ostaje pristupačan malim firmama koje ga koriste.
+Provizija od 20% tokom 12 meseci preporučiocima daje ponavljajuću zaradu, a proizvod ostaje pristupačan malim firmama koje ga koriste.
 
 To je važno.
 
-Partnerski program ne treba da nagrađuje samo onoga ko promoviše. Treba da podrži i iskustvo klijenta. Ako je ekonomija previše agresivna, proizvod može da postane preskup, da obeća previše ili da se gura pogrešnim kupcima.
+Program preporuka ne treba da nagrađuje samo onoga ko promoviše. Treba da podrži i iskustvo klijenta. Ako je ekonomija previše agresivna, proizvod može da postane preskup, da obeća previše ili da se gura pogrešnim kupcima.
 
 LobbyStack je namenjen preporučivanju stvarnim firmama sa stvarnim problemima s telefonom.
 
@@ -337,7 +337,7 @@ Cilj nije pompa.
 
 Cilj je proizvod koji klijenti nastavljaju da koriste.
 
-## Zašto je open source važan za partnere
+## Zašto je open source važan za preporučioce
 
 Kada preporučujete softver, iza njega stavljate svoj ugled.
 
@@ -357,7 +357,7 @@ Open source omogućava klijentima da pregledaju LobbyStack pre nego što mu pove
 
 ## Šta Vam pomaže da prodate LobbyStack?
 
-Dobrom partnerskom proizvodu treba više od stope provizije.
+Dobrom proizvodu za preporuku treba više od stope provizije.
 
 Treba mu jasan razlog za kupovinu.
 
@@ -372,9 +372,9 @@ LobbyStack ih ima nekoliko:
 * proizvod je open source
 * klijenti nisu zarobljeni u zatvorenom modelu jednog dobavljača
 
-Ta kombinacija čini LobbyStack dobrim izborom za partnere koji žele da promovišu nešto korisno, praktično i lako za objašnjavanje.
+Ta kombinacija čini LobbyStack dobrim izborom za preporučioce koji žele da promovišu nešto korisno, praktično i lako za objašnjavanje.
 
-## Primeri partnerskih uglova koje možete da koristite
+## Primeri uglova za preporuku koje možete da koristite
 
 Evo nekoliko ideja za pozicioniranje.
 
@@ -400,9 +400,9 @@ Evo nekoliko ideja za pozicioniranje.
 
 ## Česta pitanja
 
-### Šta je LobbyStack partnerski program?
+### Šta je LobbyStack program preporuka?
 
-LobbyStack partnerski program Vam omogućava da zaradite proviziju tako što preporučujete klijente koji plaćaju LobbyStack. Dobijate proviziju od 20% tokom prvih 12 meseci pretplate svakog preporučenog klijenta.
+LobbyStack program preporuka Vam omogućava da zaradite proviziju tako što preporučujete klijente koji plaćaju LobbyStack. Dobijate proviziju od 20% tokom prvih 12 meseci pretplate svakog preporučenog klijenta.
 
 ### Koliko mogu da zaradim?
 
@@ -410,7 +410,7 @@ Vaša zarada zavisi od broja klijenata koje preporučite, paketa koje izaberu i 
 
 ### Da li preporučeni klijenti dobijaju popust?
 
-Da. Preporučeni klijenti dobijaju 5% popusta kada preko Vašeg partnerskog linka počnu da koriste odgovarajući hostovani LobbyStack paket. Klijent štedi novac, a Vi dobijate proviziju od 20% tokom prvih 12 meseci ako postane klijent koji plaća.
+Da. Preporučeni klijenti dobijaju 5% popusta kada preko Vašeg linka za preporuku počnu da koriste odgovarajući hostovani LobbyStack paket. Klijent štedi novac, a Vi dobijate proviziju od 20% tokom prvih 12 meseci ako postane klijent koji plaća.
 
 ### Da li je LobbyStack open source?
 
@@ -428,13 +428,13 @@ LobbyStack je dobar izbor za agencije, konsultante, kreatore, veb dizajnere, SEO
 
 Najbolje preporuke su firme koje propuštaju pozive, zakazuju termine, obrađuju zahteve za ponude, primaju pozive van radnog vremena ili stalno odgovaraju na ista pitanja. To uključuje kućne usluge, salone, klinike, stomatološke ordinacije, izvođače radova i mnoge lokalne uslužne firme.
 
-### Da li je ovo samo za tehnički potkovane partnere?
+### Da li je ovo samo za tehnički potkovane preporučioce?
 
 Ne. LobbyStack je lako objasniti vlasnicima firmi koji nisu tehnički potkovani. Ne morate sami da pravite AI recepcionera. Dovoljno je da upoznate firme s proizvodom koji rešava problem koji već razumeju.
 
 ### Da li je LobbyStack bolji od drugih partnerskih programa za AI recepcionere?
 
-LobbyStack možda nema uvek najveći oglašeni procenat provizije, ali ima snažnu kombinaciju ponavljajućih provizija, široke privlačnosti za male i srednje firme, jasnog pozicioniranja i fleksibilnosti koju donosi open source. Zato je dobar izbor za partnere koji žele da preporuče praktičnog AI recepcionera bez zaključavanja klijenata u zatvorenu platformu.
+LobbyStack možda nema uvek najveći oglašeni procenat provizije, ali ima snažnu kombinaciju ponavljajućih provizija, široke privlačnosti za male i srednje firme, jasnog pozicioniranja i fleksibilnosti koju donosi open source. Zato je dobar izbor za ljude koji žele da preporuče praktičnog AI recepcionera bez zaključavanja klijenata u zatvorenu platformu.
 
 ## Počnite da zarađujete uz LobbyStack
 
@@ -444,8 +444,8 @@ Firme žele da se brže javljaju, prikupe više potencijalnih klijenata, zakažu
 
 LobbyStack to omogućava uz open-source AI recepcionera napravljenog za stvarne telefonske radne tokove.
 
-Ako već dopirete do vlasnika firmi, agencija, konsultanata, ljudi koji vode poslovanje ili lokalnih pružalaca usluga, LobbyStack partnerski program Vam daje direktan način da te odnose pretvorite u ponavljajući prihod.
+Ako već dopirete do vlasnika firmi, agencija, konsultanata, ljudi koji vode poslovanje ili lokalnih pružalaca usluga, LobbyStack program preporuka Vam daje direktan način da te odnose pretvorite u ponavljajući prihod.
 
-[Pridružite se LobbyStack partnerskom programu](/sr/affiliate-program/) i počnite da zarađujete proviziju od 20% tokom 12 meseci za svakog klijenta kog preporučite.
+[Pridružite se LobbyStack programu preporuka](/sr/affiliate-program/) i počnite da zarađujete proviziju od 20% tokom 12 meseci za svakog klijenta kog preporučite.
 
 Ako želite da upoznate proizvod pre nego što ga preporučite, pročitajte [pregled open-source sistema za AI recepcionera](/sr/blog/open-source-ai-receptionist-stack/) i tekst o tome [kako izabrati AI recepcionera](/sr/blog/how-to-choose-an-ai-receptionist/).

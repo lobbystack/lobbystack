@@ -85,7 +85,7 @@ const footerCopy = {
     helpCenter: "Centar za pomoć",
     blog: "Blog",
     calculator: "Kalkulator propuštenih poziva",
-    affiliateProgram: "Partnerski program",
+    affiliateProgram: "Program preporuka",
     company: "Kompanija",
     about: "O nama",
     contact: "Kontakt",
