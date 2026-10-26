@@ -11484,13 +11484,22 @@
                 "deprecated": true,
                 "description": "Deprecated: the old name for group, with the same value. Read group instead."
               },
+              "reach": {
+                "type": "string",
+                "enum": [
+                  "group",
+                  "all"
+                ],
+                "description": "all: the key can act on every business. group: only on the businesses its group's keys onboarded."
+              },
               "access": {
                 "type": "string",
                 "enum": [
                   "partner",
                   "all"
                 ],
-                "description": "all: the key can act on every business. partner: group access, only on the businesses its group's keys onboarded. A PLATFORM_API_KEYS entry with \"access\": \"group\" reports partner here."
+                "deprecated": true,
+                "description": "Deprecated: the old name for reach, with partner in place of group. Read reach instead."
               },
               "partner_id": {
                 "anyOf": [
@@ -11509,6 +11518,7 @@
             "required": [
               "group",
               "partner",
+              "reach",
               "access",
               "partner_id"
             ],

@@ -66,8 +66,8 @@ export const whoami: Command = {
     print(output, { profile: connection.profile, url: connection.url, ...me }, () => formatFields([
       ["Profile", connection.profile ? `${connection.profile} (${connection.url})` : `LOBBYSTACK_URL and LOBBYSTACK_API_KEY (${connection.url})`],
       ["API key", `${me.api_key.name} (${me.api_key.prefix})`],
-      // A server from before the rename sends only partner, the old name for group. A partner's key has the partner as its group.
-      ...(me.platform?.partner_id ? [["Partner", `${me.platform.partner_id}, access to the partner's businesses`] as const] : me.platform ? [["Group", `${me.platform.group ?? me.platform.partner}, access to ${me.platform.access === "all" ? "every business" : "its own businesses"}`] as const] : []),
+      // A server from before the renames sends only partner, the old name for group, and access, the old name for reach. A partner's key has the partner as its group.
+      ...(me.platform?.partner_id ? [["Partner", `${me.platform.partner_id}, access to the partner's businesses`] as const] : me.platform ? [["Group", `${me.platform.group ?? me.platform.partner}, access to ${(me.platform.reach ?? me.platform.access) === "all" ? "every business" : "its own businesses"}`] as const] : []),
       ["Business", me.business ? `${me.business.name} (${me.business.id})` : "none"],
       ["Scopes", me.api_key.scopes],
     ]));

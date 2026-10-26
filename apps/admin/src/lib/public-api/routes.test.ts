@@ -1175,7 +1175,7 @@ describe("platform keys on v1 routes", () => {
   afterEach(() => { vi.unstubAllEnvs(); });
 
   it("answers GET /me without a business, showing the key's group and access", async () => {
-    const me = { api_key: { id: entry.id, name: "AlloPlace CLI", prefix: entry.prefix, scopes: [], created_at: entry.created_at }, business: null, platform: { group: "alloplace", partner: "alloplace", access: "all" } };
+    const me = { api_key: { id: entry.id, name: "AlloPlace CLI", prefix: entry.prefix, scopes: [], created_at: entry.created_at }, business: null, platform: { group: "alloplace", partner: "alloplace", reach: "all", access: "all" } };
     domain.getPlatformMeForApi.mockResolvedValue(me);
     const response = await v1.getMe(platformCall("/me"));
     expect(response.status).toBe(200);

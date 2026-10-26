@@ -127,7 +127,7 @@ curl https://app.lobbystack.com/api/v1/services \
   -H "LobbyStack-Business: 75795511-9ee2-4cb2-a89d-f173ec1dd82d"
 ```
 
-Without the header, the request returns `400` with the code `business_required`. A business the key can't reach returns `404`. `GET /me` works without the header and shows the key's group and access in `platform`. API v1 keeps its original names there: `platform.partner` repeats `platform.group`, and `platform.access` reads `partner` for a key with group access. For a partner's key, `platform.partner_id` names the partner, which is also the key's group. It's `null` for the host's keys.
+Without the header, the request returns `400` with the code `business_required`. A business the key can't reach returns `404`. `GET /me` works without the header and shows the key's group and reach in `platform`. `platform.reach` is `group` for a key with group access and `all` for a key that reaches every business. API v1 keeps the older names as well: `platform.partner` repeats `platform.group`, and `platform.access` repeats `platform.reach` but reads `partner` for group access. For a partner's key, `platform.partner_id` names the partner, which is also the key's group. It's `null` for the host's keys.
 
 `POST /team/claim-link` hands a business to its owner. Once they accept, a key with group access no longer reaches it, and a key with access to every business still does. Either way, `GET /businesses` stops listing it. LobbyStack also turns off the business's webhook endpoints that a platform key, the account that sent the link, or that account's API keys created. A partner's business stays with the partner, so `POST /team/claim-link` returns `409` for one. Only the partner can release it to its owner.
 

@@ -227,8 +227,8 @@ async function ensureBusiness(run: Run, make: (business?: string) => Client, nam
     if (run.state.handed_over_to && businessKey && error instanceof ApiError && error.status === 401) throw handedOver(error);
     throw error;
   }
-  // GET /me reports group access as "partner" in v1, and names the partner of a partner's key.
-  run.access = me.platform ? (me.platform.partner_id ? "partner" : me.platform.access === "all" ? "all" : "group") : "business";
+  // GET /me names the partner of a partner's key. A server from before reach sends only access, which reads "partner" for group access.
+  run.access = me.platform ? (me.platform.partner_id ? "partner" : (me.platform.reach ?? me.platform.access) === "all" ? "all" : "group") : "business";
   checkKey(run);
   // A per-business key sets up its own business; only a platform key makes one.
   const id = given[0]?.[1] ?? (me.platform ? undefined : me.business?.id);

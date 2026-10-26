@@ -314,8 +314,9 @@ export async function getPlatformMeForApi(context: DomainContext, key: ResolvedP
     api_key: { id: key.platformKeyId, name: key.name, prefix: key.prefix, scopes: key.scopes, created_at: key.createdAt },
     business,
     // /api/v1 only changes additively, so GET /me keeps the names it shipped
-    // with: partner repeats the group, and group access reads "partner".
-    platform: { group: key.group, partner: key.group, access: key.access === "all" ? "all" : "partner", partner_id: key.partnerId ?? null },
+    // with: partner repeats the group, and access repeats reach with group
+    // access reading "partner".
+    platform: { group: key.group, partner: key.group, reach: key.access === "all" ? "all" : "group", access: key.access === "all" ? "all" : "partner", partner_id: key.partnerId ?? null },
   };
 }
 

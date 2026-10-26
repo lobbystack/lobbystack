@@ -188,15 +188,15 @@ describe.skipIf(!testUrl)("platform keys against PostgreSQL with RLS", () => {
       api_key: { id: entry.id, name: "Acme onboarding", prefix: entry.prefix, scopes: resolved.scopes, created_at: entry.created_at },
       business: { id: businessA, name: "Acme Business" },
       // v1 only changes additively: partner and the access value keep their old names.
-      platform: { group: acme, partner: acme, access: "partner", partner_id: null },
+      platform: { group: acme, partner: acme, reach: "group", access: "partner", partner_id: null },
     });
     expect((await getPlatformMeForApi(context, resolved, null)).business).toBeNull();
     // An entry written before the rename reports the same.
     const { group: _group, ...rest } = entry;
     const legacy = resolveConfiguredPlatformKey(key, { PLATFORM_API_KEYS: JSON.stringify([{ ...rest, partner: acme, access: "partner" }]) })!;
-    expect((await getPlatformMeForApi(context, legacy, null)).platform).toEqual({ group: acme, partner: acme, access: "partner", partner_id: null });
+    expect((await getPlatformMeForApi(context, legacy, null)).platform).toEqual({ group: acme, partner: acme, reach: "group", access: "partner", partner_id: null });
     const all = resolveConfiguredPlatformKey(key, { PLATFORM_API_KEYS: JSON.stringify([{ ...entry, access: "all" }]) })!;
-    expect((await getPlatformMeForApi(context, all, null)).platform).toEqual({ group: acme, partner: acme, access: "all", partner_id: null });
+    expect((await getPlatformMeForApi(context, all, null)).platform).toEqual({ group: acme, partner: acme, reach: "all", access: "all", partner_id: null });
   });
 
   it("audits a platform key's change with the key, its group and its owner", async () => {

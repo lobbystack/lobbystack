@@ -8,7 +8,7 @@ import { exitCodes } from "./errors";
 import { main } from "./main";
 
 const business = "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5f";
-const platformMe = { api_key: { id: "0b7c1d2e-3f40-4a51-8b62-7c83d94ea5b6", name: "AlloPlace CLI", prefix: "lsp_1a2b3c4d", scopes: ["business:read", "businesses:create"], created_at: "2026-10-11T12:00:00.000Z" }, business: null, platform: { group: "alloplace", partner: "alloplace", access: "partner" } };
+const platformMe = { api_key: { id: "0b7c1d2e-3f40-4a51-8b62-7c83d94ea5b6", name: "AlloPlace CLI", prefix: "lsp_1a2b3c4d", scopes: ["business:read", "businesses:create"], created_at: "2026-10-11T12:00:00.000Z" }, business: null, platform: { group: "alloplace", partner: "alloplace", reach: "group", access: "partner" } };
 const key = "lsp_1a2b3c4d_abcdefghijklmnopqrstuvwxyzABCDEF";
 
 let dir: string;
@@ -76,12 +76,12 @@ describe("lobbystack", () => {
     expect(whoami.out).toMatch(/Profile:\s+default \(https:\/\/app\.example\.com\)/);
     expect(whoami.out).toMatch(/Group:\s+alloplace, access to its own businesses/);
     expect(whoami.out).toMatch(/Scopes:\s+business:read, businesses:create/);
-    // A server from before the rename sends only partner.
+    // A server from before the renames sends only partner and access.
     const older = api(() => ({ status: 200, body: { data: { ...platformMe, platform: { partner: "alloplace", access: "partner" } } } }));
     expect((await run(["whoami"], { fetch: older })).out).toMatch(/Group:\s+alloplace, access to its own businesses/);
     // A partner's key has the partner as its group.
     const partnerId = "3c2b1a09-8f7e-4d6c-9b5a-4f3e2d1c0b9a";
-    const partnerPlatformKey = api(() => ({ status: 200, body: { data: { ...platformMe, platform: { group: partnerId, partner: partnerId, access: "partner", partner_id: partnerId } } } }));
+    const partnerPlatformKey = api(() => ({ status: 200, body: { data: { ...platformMe, platform: { group: partnerId, partner: partnerId, reach: "group", access: "partner", partner_id: partnerId } } } }));
     const partnerOut = (await run(["whoami"], { fetch: partnerPlatformKey })).out;
     expect(partnerOut).toMatch(new RegExp(`Partner:\\s+${partnerId}, access to the partner's businesses`));
     expect(partnerOut).not.toContain("Group:");

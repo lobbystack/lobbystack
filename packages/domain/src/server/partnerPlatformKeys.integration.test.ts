@@ -269,7 +269,7 @@ describe.skipIf(!testUrl)("platform keys partners make, against PostgreSQL with 
       const [client] = await people(tx, 1);
       const { key, platformKey } = await createPartnerPlatformKey(acme.context, acme.adminActor, { name: "Onboarding", scopes: ["businesses:create", "business:read"] });
       const resolved = (await asWorker(tx, async () => await resolvePlatformKey(acme.context, key, {}))) as PartnerPlatformKey;
-      expect((await asWorker(tx, async () => await getPlatformMeForApi(acme.context, resolved, null))).platform).toEqual({ group: acme.partnerId, partner: acme.partnerId, access: "partner", partner_id: acme.partnerId });
+      expect((await asWorker(tx, async () => await getPlatformMeForApi(acme.context, resolved, null))).platform).toEqual({ group: acme.partnerId, partner: acme.partnerId, reach: "group", access: "partner", partner_id: acme.partnerId });
       const body = { name: "Harbor Dental", timezone: "America/Halifax", locale: "fr", website_url: "https://harbor.example", business_type: "dental", owner_email: client!.email, access_level: "activity" } as const;
       const create = (input: { idempotencyKey: string; body: Record<string, unknown> }, beforeCreate?: () => Promise<void>) => createPartnerBusinessForApi(acme.context, { key: resolved, idempotencyKey: input.idempotencyKey, requestHash: sha256(JSON.stringify(input.body)), body: input.body as never }, { beforeCreate });
       let checked = 0;

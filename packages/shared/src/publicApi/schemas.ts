@@ -74,8 +74,9 @@ export const apiMeSchema = z.object({
   platform: z.object({
     group: z.string().describe("The group the platform key belongs to, as set in PLATFORM_API_KEYS. Keys in the same group reach the same businesses."),
     partner: z.string().meta({ deprecated: true, description: "Deprecated: the old name for group, with the same value. Read group instead." }),
-    // v1 only changes additively, so group access keeps the value it shipped with.
-    access: z.enum(["partner", "all"]).describe("all: the key can act on every business. partner: group access, only on the businesses its group's keys onboarded. A PLATFORM_API_KEYS entry with \"access\": \"group\" reports partner here."),
+    reach: z.enum(["group", "all"]).describe("all: the key can act on every business. group: only on the businesses its group's keys onboarded."),
+    // v1 only changes additively, so access keeps the value it shipped with for group access.
+    access: z.enum(["partner", "all"]).meta({ deprecated: true, description: "Deprecated: the old name for reach, with partner in place of group. Read reach instead." }),
     partner_id: id.nullable().describe("For a key a partner made in its console, the partner, which is also the key's group: the key reaches the partner's businesses. null for the host's keys in PLATFORM_API_KEYS."),
   }).optional().describe("Present only for a platform key."),
 }).describe("The API key making the request and the business it acts on.");
