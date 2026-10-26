@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 
+import { useBranding } from "./branding-provider";
 import { ReplacementOnboardingShell } from "./replacement-onboarding-shell";
 import { Button } from "./ui/button";
 import { useSignOut } from "@/hooks/use-sign-out";
@@ -29,6 +30,9 @@ export function AcceptInviteSurface() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [wrongAccount, setWrongAccount] = useState(false);
   const signOut = useSignOut();
+  // A partner's domain opens only the partner's businesses, whose team page an activity-only operator can't open.
+  const { partner } = useBranding();
+  const signedInHome = partner ? "/" : "/settings/team";
 
   useEffect(() => {
     const nextToken = new URLSearchParams(window.location.search).get("token")?.trim() ?? "";
@@ -65,8 +69,10 @@ export function AcceptInviteSurface() {
         return;
       }
       if (!response.ok) throw new Error();
+      const joined = await response.json().catch(() => null) as { partnerId?: string | null } | null;
       toast.success(t("acceptInvite.success", { businessName: invitation?.businessName ?? t("acceptInvite.workspaceFallback") }));
-      router.replace("/settings/team");
+      // Someone joining a partner's business, such as its owner, lands in it, and onboarding starts there if it hasn't finished.
+      router.replace(joined?.partnerId ? "/" : "/settings/team");
       router.refresh();
     } catch {
       setErrorMessage(t("acceptInvite.failed"));
@@ -85,6 +91,6 @@ export function AcceptInviteSurface() {
       <Button className="h-11 w-full" role="link" nativeButton={false} render={<Link href={loginHref} />}>{t("acceptInvite.signIn")}</Button>
       <Button className="h-11 w-full" role="link" nativeButton={false} render={<Link href={signupHref} />} variant="outline">{t("acceptInvite.createAccount")}</Button>
     </div>}
-    <p className="text-center text-sm"><Link className="font-medium text-foreground underline-offset-4 hover:underline" href={isAuthenticated ? "/settings/team" : localizePublicPath("/login", locale)}>{isAuthenticated ? t("acceptInvite.backToSettings") : t("acceptInvite.backToLogin")}</Link></p>
+    <p className="text-center text-sm"><Link className="font-medium text-foreground underline-offset-4 hover:underline" href={isAuthenticated ? signedInHome : localizePublicPath("/login", locale)}>{isAuthenticated ? t(partner ? "acceptInvite.backToDashboard" : "acceptInvite.backToSettings") : t("acceptInvite.backToLogin")}</Link></p>
   </div></ReplacementOnboardingShell></div>;
 }

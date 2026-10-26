@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { billingAccounts, businesses, businessMemberships, createDatabaseClient, knowledgeDocuments, users, withBusinessTransaction } from "@lobbystack/db";
-import { advanceOnboardingStage, createKnowledgeDocument, getActiveOnboardingState } from "@lobbystack/domain";
+import { advanceOnboardingStage, createKnowledgeDocument, getActiveOnboardingState, HOST_BRAND_SCOPE } from "@lobbystack/domain";
 
 function assert(value: unknown, message: string): asserts value { if (!value) throw new Error(message); }
 async function denied(action: () => Promise<unknown>, message: string) {
@@ -27,7 +27,7 @@ try {
   await advanceOnboardingStage(context, { ...actor, to: "greeting" });
   // Greeting leads to the test call: owners hear their agent before anything else is asked of them.
   await advanceOnboardingStage(context, { ...actor, to: "test_call" });
-  assert((await getActiveOnboardingState(app.db, userId)).stage === "test_call", "Greeting did not advance to the test call.");
+  assert((await getActiveOnboardingState(app.db, userId, HOST_BRAND_SCOPE)).stage === "test_call", "Greeting did not advance to the test call.");
   await advanceOnboardingStage(context, { ...actor, to: "knowledge" });
   await createKnowledgeDocument(context, website);
   business = await withBusinessTransaction(app.db, { ...actor, actorType: "operator" }, async (tx) => (await tx.select().from(businesses).where(eq(businesses.id, businessId)))[0]);
@@ -43,12 +43,12 @@ try {
     await tx.update(businesses).set({ onboardingStage: "phone_number" }).where(eq(businesses.id, businessId));
   });
   // A free business picks a trial number, so the number step no longer sends it back to plans.
-  assert((await getActiveOnboardingState(app.db, userId)).stage === "phone_number", "A free-plan number stage was sent away from the number step.");
+  assert((await getActiveOnboardingState(app.db, userId, HOST_BRAND_SCOPE)).stage === "phone_number", "A free-plan number stage was sent away from the number step.");
   // Retired stages resume at the nearest step that still exists.
   await withBusinessTransaction(worker.db, { businessId, actorType: "worker" }, tx => tx.update(businesses).set({ onboardingStage: "verify_phone_code" }).where(eq(businesses.id, businessId)));
-  assert((await getActiveOnboardingState(app.db, userId)).stage === "verify_phone", "The retired code stage did not resume at phone verification.");
+  assert((await getActiveOnboardingState(app.db, userId, HOST_BRAND_SCOPE)).stage === "verify_phone", "The retired code stage did not resume at phone verification.");
   await withBusinessTransaction(worker.db, { businessId, actorType: "worker" }, tx => tx.update(businesses).set({ onboardingStage: "plan" }).where(eq(businesses.id, businessId)));
-  assert((await getActiveOnboardingState(app.db, userId)).stage === "test_call", "The retired plan stage did not resume at the test call.");
+  assert((await getActiveOnboardingState(app.db, userId, HOST_BRAND_SCOPE)).stage === "test_call", "The retired plan stage did not resume at the test call.");
   await advanceOnboardingStage(context, { ...actor, to: "verify_phone" });
   business = await withBusinessTransaction(app.db, { ...actor, actorType: "operator" }, async (tx) => (await tx.select().from(businesses).where(eq(businesses.id, businessId)))[0]);
   assert(business?.onboardingStage === "verify_phone", "Advancing from the retired plan stage did not reach phone verification.");
@@ -56,7 +56,7 @@ try {
     await tx.update(billingAccounts).set({ plan: "free_cloud" }).where(eq(billingAccounts.businessId, businessId));
     await tx.update(businesses).set({ onboardingStage: "complete" }).where(eq(businesses.id, businessId));
   });
-  assert((await getActiveOnboardingState(app.db, userId)).stage === "complete", "Completed free onboarding was regressed.");
+  assert((await getActiveOnboardingState(app.db, userId, HOST_BRAND_SCOPE)).stage === "complete", "Completed free onboarding was regressed.");
   console.log(JSON.stringify({ freeNumberStagePreserved: true, completedFreeStagePreserved: true, websiteAndStageAtomic: true, concurrentImportDeduplication: true, greetingAdvancesToTestCall: true, retiredStagesResume: true, revisitsPreserveProgress: true, viewerDenied: true, invalidUrlDenied: true }));
 } finally {
   await withBusinessTransaction(worker.db, { businessId, actorType: "worker" }, async (tx) => tx.delete(businesses).where(eq(businesses.id, businessId)));

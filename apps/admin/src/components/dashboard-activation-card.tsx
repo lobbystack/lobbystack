@@ -17,6 +17,7 @@ import { Button } from "./ui/button";
 import { Surface } from "./ui/surface";
 import { useOpenUpgradePlanDialog } from "./upgrade-plan-dialog-context";
 import { isWebsiteImportRunning, websiteImportHost, WebsiteImportProgress, type WebsiteImportSummary } from "./website-import-progress";
+import { useBusinessCan } from "@/components/business-capabilities-provider";
 
 type Activation = {
   deploymentMode: string;
@@ -71,10 +72,12 @@ export function DashboardActivationCard({ businessId }: { businessId: string | u
   const openNumberStep = useOpenNumberStep();
   const canStartTestCall = useSyncExternalStore(subscribeTestCallStarter, () => getTestCallStarter() !== null, () => false);
   const callSettleInterval = useCallSettleRefetch();
+  // Each next step here is setup, which an activity-only business leaves to its partner.
+  const canSetUp = useBusinessCan()("setup");
 
   const activation = useQuery({
     queryKey: ["activation", businessId],
-    enabled: Boolean(businessId),
+    enabled: Boolean(businessId) && canSetUp,
     queryFn: () => getActivation(businessId!),
     refetchInterval: query => {
       if (isWebsiteImportRunning(query.state.data?.websiteImport)) return 2500;
@@ -84,7 +87,7 @@ export function DashboardActivationCard({ businessId }: { businessId: string | u
   });
 
   // The same request as the trial banner, so the two share one cached answer.
-  const trial = useQuery({ queryKey: ["number-trial", businessId], enabled: Boolean(businessId), queryFn: () => requestJson<{ trial: { status: string; e164?: string } }>(`/api/number-trial?businessId=${encodeURIComponent(businessId!)}`) });
+  const trial = useQuery({ queryKey: ["number-trial", businessId], enabled: Boolean(businessId) && canSetUp, queryFn: () => requestJson<{ trial: { status: string; e164?: string } }>(`/api/number-trial?businessId=${encodeURIComponent(businessId!)}`) });
   const trialNumber = trial.data?.trial?.status === "active" ? trial.data.trial.e164 ?? null : null;
   const trialAvailable = trial.data?.trial?.status === "available";
 
@@ -119,7 +122,7 @@ export function DashboardActivationCard({ businessId }: { businessId: string | u
     openUpgradePlanDialog();
   }, [businessId, openUpgradePlanDialog, telemetry]);
 
-  if (!businessId || !data || !eligible) return null;
+  if (!businessId || !canSetUp || !data || !eligible) return null;
 
   if (isWebsiteImportRunning(data.websiteImport)) {
     return <WebsiteImportProgress job={data.websiteImport!} />;

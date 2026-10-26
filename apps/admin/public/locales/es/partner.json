@@ -17,9 +17,67 @@
   },
   "businesses": {
     "title": "Negocios",
+    "description": "Los negocios que usted revende. Sus propietarios inician sesión en la dirección de su panel.",
+    "loadFailed": "No pudimos cargar sus negocios. Actualice la página para intentarlo de nuevo.",
+    "createdOn": "Creado el {{date}}",
+    "table": {
+      "business": "Negocio",
+      "owner": "Propietario",
+      "access": "Acceso"
+    },
+    "owner": {
+      "invited": "Invitación enviada",
+      "expired": "Invitación vencida",
+      "none": "Todavía sin propietario"
+    },
+    "access": {
+      "full": "Acceso completo",
+      "activity": "Solo actividad"
+    },
     "empty": {
       "title": "Aún no hay negocios",
-      "description": "Aquí aparecerán los negocios que configure."
+      "description": "Cree un negocio e invite a su propietario.",
+      "memberDescription": "Los propietarios y administradores de su socio crean los negocios aquí."
+    },
+    "create": {
+      "action": "Crear negocio",
+      "title": "Crear un negocio",
+      "description": "Su propietario recibe un correo de {{partnerName}} con un enlace para iniciar sesión.",
+      "nameLabel": "Nombre del negocio",
+      "namePlaceholder": "Clínica Dental del Puerto",
+      "ownerLabel": "Correo del propietario",
+      "ownerPlaceholder": "propietario@negocio.com",
+      "timezoneLabel": "Zona horaria",
+      "timezoneSearch": "Buscar zonas horarias…",
+      "timezoneNoResults": "No se encontraron zonas horarias.",
+      "timezoneRegions": {
+        "africa": "África",
+        "america": "América",
+        "antarctica": "Antártida",
+        "arctic": "Ártico",
+        "asia": "Asia",
+        "atlantic": "Atlántico",
+        "australia": "Australia",
+        "europe": "Europa",
+        "indian": "Océano Índico",
+        "pacific": "Pacífico"
+      },
+      "accessLabel": "Lo que puede usar su equipo",
+      "access": {
+        "full": "Su equipo gestiona la recepcionista: conocimiento, horarios, servicios y miembros del equipo. No ve la facturación, las claves de API ni MCP.",
+        "activity": "Su equipo ve las llamadas, los chats, las citas, los contactos y los mensajes. Usted configura la recepcionista."
+      },
+      "submit": "Crear e invitar",
+      "submitting": "Creando…",
+      "created": "Creó {{name}} e invitó a {{email}}.",
+      "errors": {
+        "invalidName": "Escriba el nombre del negocio, de hasta 120 caracteres.",
+        "invalidEmail": "Escriba una sola dirección de correo válida para el propietario.",
+        "invalidTimezone": "Elija una zona horaria.",
+        "domainRequired": "Necesita una dirección de panel antes de crear un negocio. Pida a {{appName}} que configure una.",
+        "rateLimited": "Creó demasiados negocios. Inténtelo de nuevo en una hora.",
+        "failed": "No pudimos crear el negocio. Inténtelo de nuevo."
+      }
     }
   },
   "team": {

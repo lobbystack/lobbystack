@@ -4,6 +4,7 @@ import { auditLogs, oauthAccessTokens, oauthClients, oauthConsents, oauthRefresh
 import { isApiKeyScope, type ApiKeyScope } from "@lobbystack/shared";
 
 import { hasMinimumRole, requireBusinessAdmin } from "../../authz";
+import { HOST_BRAND_SCOPE } from "../businessAccess";
 import type { DomainContext } from "../context";
 import { listUserBusinesses } from "../tenancy";
 
@@ -103,8 +104,12 @@ export async function recordOAuthGrantApproved(context: DomainContext, input: { 
   });
 }
 
-/** Businesses the user may connect an MCP client to: those where they are an owner or admin. */
+/**
+ * Businesses the user may connect an MCP client to: those where they are an
+ * owner or admin. MCP stays on the host's domain and a partner's businesses
+ * never get it, so only direct businesses count.
+ */
 export async function listGrantableBusinesses(db: Database, userId: string): Promise<Array<{ businessId: string; name: string; role: string; active: boolean }>> {
-  const businesses = await listUserBusinesses(db, userId);
+  const businesses = await listUserBusinesses(db, userId, HOST_BRAND_SCOPE);
   return businesses.filter((business) => hasMinimumRole(business.role, "business_admin")).map((business) => ({ businessId: business.businessId, name: business.name, role: business.role, active: business.active }));
 }

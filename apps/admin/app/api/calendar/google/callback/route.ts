@@ -9,6 +9,7 @@ import { verifyCalendarOAuthState } from "@/lib/google-calendar-oauth";
 import { googleCalendarProvider } from "@/lib/google-calendar-provider";
 import { enforceCalendarOAuthRateLimits } from "@/lib/google-calendar-oauth-limit";
 import { consumeCalendarOAuthState } from "@/lib/google-calendar-oauth-store";
+import { requestBrandScope } from "@/lib/request-brand";
 import { trustedClientIp } from "@/lib/trusted-client-ip";
 
 export const runtime = "nodejs";
@@ -55,7 +56,7 @@ export async function GET(request: Request) {
     });
     // The integrations page shows the active business, so open the one just connected: a link from
     // POST /v1/calendars/google/connect may start from another. The connection stands either way.
-    await switchWorkspace(createDomainContext(), { userId: verified.userId, businessId: verified.businessId }).catch(() => undefined);
+    await switchWorkspace(createDomainContext(), { userId: verified.userId, businessId: verified.businessId, brand: requestBrandScope(request.headers) }).catch(() => undefined);
     return destination("success");
   } catch (error) {
     asApiResponse(error); // Retain the existing sanitized operational reporting.

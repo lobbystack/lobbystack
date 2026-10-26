@@ -24,7 +24,9 @@ type CheckResult = { approved: boolean; status: string; remainingAttempts?: numb
 /**
  * The "verify you're real" step. The owner's mobile and the country they pick
  * for it decide where their number comes from. In a country without numbers
- * they can join the waitlist and carry on without one.
+ * they can join the waitlist and carry on without one. A partner's business
+ * gets its numbers from its partner, so verifying finishes its owner's
+ * onboarding, and the host offers no waitlist there.
  */
 export function OnboardingVerifyPhoneSurface() {
   const { i18n, t } = useTranslation("onboarding");
@@ -32,6 +34,9 @@ export function OnboardingVerifyPhoneSurface() {
   const telemetry = useTelemetry();
   const queryClient = useQueryClient();
   const { business } = useActiveBusiness();
+  const partnerBusiness = Boolean(business?.partnerAccessLevel);
+  // Where the owner goes once the phone is done: the number step, or for a partner's business, the dashboard.
+  const next = partnerBusiness ? { stage: "complete", route: "/" } : { stage: "phone_number", route: "/onboarding/number" };
   const locale = i18n.resolvedLanguage ?? i18n.language;
   const options = useMemo(() => getPhoneCountryOptions(locale), [locale]);
   const numbers = useQuery({ queryKey: ["onboarding-number-countries", business?.businessId], enabled: Boolean(business), queryFn: () => requestJson<NumberCountries>(`/api/onboarding/numbers?businessId=${encodeURIComponent(business!.businessId)}`) });
@@ -42,7 +47,7 @@ export function OnboardingVerifyPhoneSurface() {
   const [error, setError] = useState<string | null>(null);
   const [joined, setJoined] = useState(false);
   const submittedCode = useRef("");
-  useEffect(() => { prefetch("/onboarding/number"); }, [prefetch]);
+  useEffect(() => { prefetch(next.route); }, [prefetch, next.route]);
   // Start on the country the business's time zone points to, else the browser's region.
   useEffect(() => {
     if (country || !numbers.data) return;
@@ -64,7 +69,7 @@ export function OnboardingVerifyPhoneSurface() {
       if (result.approved) {
         if (business) telemetry.track("web.onboarding.phone_verified", { businessId: business.businessId, countryCode: country ?? "" });
         await queryClient.invalidateQueries({ queryKey: ["businesses"] });
-        navigate("/onboarding/number");
+        navigate(next.route);
         return;
       }
       setError(result.status === "invalid" && result.remainingAttempts !== undefined ? t("verifyPhone.code.invalid", { count: result.remainingAttempts }) : result.status === "expired" ? t("verifyPhone.code.expired") : t("verifyPhone.code.locked"));
@@ -79,15 +84,15 @@ export function OnboardingVerifyPhoneSurface() {
     meta: { inlineError: true },
   });
   const skip = useMutation({
-    mutationFn: () => requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: "attribution" }) }),
-    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["businesses"] }); navigate("/onboarding/attribution"); },
+    mutationFn: () => requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: partnerBusiness ? "complete" : "attribution" }) }),
+    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["businesses"] }); navigate(partnerBusiness ? "/" : "/onboarding/attribution"); },
     onError: (cause) => setError(getSafeOnboardingErrorMessage(cause, t, "verifyPhone.unavailable.failed")),
     meta: { inlineError: true },
   });
-  // A self-hosted install has no free trial to guard, so it goes straight to the number step.
+  // A self-hosted install has no free trial to guard, so it goes straight to the number step, or finishes a partner's business.
   const passOn = useMutation({
-    mutationFn: () => requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: "phone_number" }) }),
-    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["businesses"] }); navigate("/onboarding/number"); },
+    mutationFn: () => requestJson(`/api/onboarding/stage?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ to: next.stage }) }),
+    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: ["businesses"] }); navigate(next.route); },
   });
   const passOnNeeded = numbers.data?.verifyPhone === false;
   useEffect(() => { if (passOnNeeded && passOn.isIdle) passOn.mutate(); }, [passOnNeeded, passOn]);
@@ -141,17 +146,24 @@ export function OnboardingVerifyPhoneSurface() {
           {sellsNumbers ? <FieldDescription>{t("verifyPhone.hint")}</FieldDescription> : null}
         </Field>
         {sellsNumbers ? null : (
-          <div className="flex flex-col gap-3 rounded-xl border border-border p-4 text-left">
-            <p className="text-sm font-medium text-foreground">{t("verifyPhone.unavailable.title", { country: countryName })}</p>
-            <p className="text-sm text-muted-foreground">{t("verifyPhone.unavailable.body", { country: countryName })}</p>
-            {joined ? <p className="text-sm text-foreground">{t("verifyPhone.unavailable.joined")}</p> : <Button disabled={waitlist.isPending || !business} onClick={() => waitlist.mutate()} type="button" variant="outline">{t("verifyPhone.unavailable.notify")}</Button>}
-          </div>
+          partnerBusiness ? (
+            <div className="flex flex-col gap-3 rounded-xl border border-border p-4 text-left">
+              <p className="text-sm font-medium text-foreground">{t("verifyPhone.unavailable.partnerTitle", { country: countryName })}</p>
+              <p className="text-sm text-muted-foreground">{t("verifyPhone.unavailable.partnerBody")}</p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3 rounded-xl border border-border p-4 text-left">
+              <p className="text-sm font-medium text-foreground">{t("verifyPhone.unavailable.title", { country: countryName })}</p>
+              <p className="text-sm text-muted-foreground">{t("verifyPhone.unavailable.body", { country: countryName })}</p>
+              {joined ? <p className="text-sm text-foreground">{t("verifyPhone.unavailable.joined")}</p> : <Button disabled={waitlist.isPending || !business} onClick={() => waitlist.mutate()} type="button" variant="outline">{t("verifyPhone.unavailable.notify")}</Button>}
+            </div>
+          )
         )}
         {error ? <FieldError>{error}</FieldError> : null}
         {sellsNumbers ? (
           <Button className="mt-2 h-11 w-full" disabled={!business || phone.trim().length === 0 || send.isPending || navigating} type="submit">{send.isPending ? <><LoaderCircle className="size-4 animate-spin" />{t("verifyPhone.sending")}</> : t("verifyPhone.sendCode")}</Button>
         ) : (
-          <Button className="mt-2 h-11 w-full" disabled={!business || skip.isPending || navigating} onClick={() => skip.mutate()} type="button">{t("verifyPhone.unavailable.continue")}</Button>
+          <Button className="mt-2 h-11 w-full" disabled={!business || skip.isPending || navigating} onClick={() => skip.mutate()} type="button">{t(partnerBusiness ? "verifyPhone.unavailable.partnerContinue" : "verifyPhone.unavailable.continue")}</Button>
         )}
       </FieldGroup>
     </form>

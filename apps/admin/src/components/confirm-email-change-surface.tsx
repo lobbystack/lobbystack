@@ -52,6 +52,6 @@ export function ConfirmEmailChangeSurface() {
     {statusMessage ? <p className="text-center text-sm text-muted-foreground">{statusMessage}</p> : null}
     {errorMessage ? <p className="text-center text-sm text-destructive">{errorMessage}</p> : null}
     <form className="flex flex-col" onSubmit={submit}><Button className="h-11 w-full" disabled={!valid || isSubmitting || statusMessage !== null} type="submit">{isSubmitting ? t("confirmEmailChange.submitting") : t("confirmEmailChange.submit")}</Button></form>
-    <p className="text-center text-sm"><Link className="font-medium text-foreground underline-offset-4 hover:underline" href={isAuthenticated ? "/settings/usage" : loginPath}>{isAuthenticated ? t("confirmEmailChange.backToSettings") : t("confirmEmailChange.backToLogin")}</Link></p>
+    <p className="text-center text-sm"><Link className="font-medium text-foreground underline-offset-4 hover:underline" href={isAuthenticated ? "/settings" : loginPath}>{isAuthenticated ? t("confirmEmailChange.backToSettings") : t("confirmEmailChange.backToLogin")}</Link></p>
   </div></ReplacementOnboardingShell></div>;
 }

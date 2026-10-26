@@ -17,9 +17,67 @@
   },
   "businesses": {
     "title": "Businesses",
+    "description": "The businesses you resell. Their owners sign in at your dashboard address.",
+    "loadFailed": "We couldn't load your businesses. Refresh to try again.",
+    "createdOn": "Created {{date}}",
+    "table": {
+      "business": "Business",
+      "owner": "Owner",
+      "access": "Access"
+    },
+    "owner": {
+      "invited": "Invited",
+      "expired": "Invitation expired",
+      "none": "No owner yet"
+    },
+    "access": {
+      "full": "Full access",
+      "activity": "Activity only"
+    },
     "empty": {
       "title": "No businesses yet",
-      "description": "The businesses you set up will show here."
+      "description": "Create a business and invite its owner.",
+      "memberDescription": "Your partner's owners and admins create businesses here."
+    },
+    "create": {
+      "action": "Create business",
+      "title": "Create a business",
+      "description": "Its owner gets an email from {{partnerName}} with a link to sign in.",
+      "nameLabel": "Business name",
+      "namePlaceholder": "Harbor Dental",
+      "ownerLabel": "Owner's email",
+      "ownerPlaceholder": "owner@business.com",
+      "timezoneLabel": "Time zone",
+      "timezoneSearch": "Search time zones…",
+      "timezoneNoResults": "No time zones found.",
+      "timezoneRegions": {
+        "africa": "Africa",
+        "america": "Americas",
+        "antarctica": "Antarctica",
+        "arctic": "Arctic",
+        "asia": "Asia",
+        "atlantic": "Atlantic",
+        "australia": "Australia",
+        "europe": "Europe",
+        "indian": "Indian Ocean",
+        "pacific": "Pacific"
+      },
+      "accessLabel": "What its team can use",
+      "access": {
+        "full": "Its team runs the receptionist: knowledge, hours, services and team members. They don't see billing, API keys or MCP.",
+        "activity": "Its team sees calls, chats, appointments, contacts and messages. You set up the receptionist."
+      },
+      "submit": "Create and invite",
+      "submitting": "Creating…",
+      "created": "You created {{name}} and invited {{email}}.",
+      "errors": {
+        "invalidName": "Enter the business's name, up to 120 characters.",
+        "invalidEmail": "Enter one valid email address for the owner.",
+        "invalidTimezone": "Pick a time zone.",
+        "domainRequired": "You need a dashboard address before you can create a business. Ask {{appName}} to set one up.",
+        "rateLimited": "You created too many businesses. Try again in an hour.",
+        "failed": "We couldn't create the business. Try again."
+      }
     }
   },
   "team": {

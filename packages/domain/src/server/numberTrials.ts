@@ -7,6 +7,7 @@ import { isTransferPhone, normalizeInterfaceLocale, type InterfaceLocale } from 
 import { hasMinimumRole, requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import type { DomainContext } from "./context";
 import { loadEntitlement } from "./entitlement";
+import { businessGetsHostEmails } from "./hostEmails";
 import { sharedSmsSender } from "./smsSender";
 import { getVoiceSecondsLeftInTransaction } from "./usage";
 
@@ -154,8 +155,9 @@ export async function scheduleNumberReleaseInTransaction(tx: DatabaseTransaction
     .where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"), isNull(phoneNumbers.reclaimScheduledAt), ...(shared ? [ne(phoneNumbers.e164, shared)] : [])));
 }
 
-/** The owner canceled at the end of the period: tell them when the plan ends and when we release the number. */
+/** The owner canceled at the end of the period: tell them when the plan ends and when we release the number. A partner's business never gets the host's notice. */
 export async function queuePlanCancelNoticeInTransaction(tx: DatabaseTransaction, input: { businessId: string; periodEnd: Date }): Promise<void> {
+  if (!await businessGetsHostEmails(tx, input.businessId)) return;
   const number = (await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"), isNull(phoneNumbers.reclaimScheduledAt))).limit(1))[0];
   if (!number) return;
   const releaseAt = new Date(input.periodEnd.getTime() + NUMBER_RELEASE_GRACE_DAYS * 86_400_000);
@@ -169,10 +171,11 @@ export async function queuePlanCancelNoticeInTransaction(tx: DatabaseTransaction
   });
 }
 
-/** Three days before we release a number whose plan ended, remind the owner. */
+/** Three days before we release a number whose plan ended, remind the owner. A partner's business never gets the host's reminder. */
 export async function sweepNumberReleases(context: DomainContext, input: { businessId: string; now?: Date }): Promise<number> {
   const now = input.now ?? new Date();
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    if (!await businessGetsHostEmails(tx, input.businessId)) return 0;
     const due = await tx.select({ id: phoneNumbers.id, reclaimScheduledAt: phoneNumbers.reclaimScheduledAt }).from(phoneNumbers)
       .where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"), eq(phoneNumbers.reclaimReason, "subscription_ended"), lte(phoneNumbers.reclaimScheduledAt, new Date(now.getTime() + 3 * 86_400_000)), gt(phoneNumbers.reclaimScheduledAt, now)));
     for (const number of due) {
@@ -183,9 +186,10 @@ export async function sweepNumberReleases(context: DomainContext, input: { busin
   });
 }
 
-/** The facts a release email needs. Null when the number was released or kept, or the owner is gone. */
+/** The facts a release email needs. Null when the number was released or kept, the owner is gone, or it's a partner's business. */
 export async function loadNumberReleaseEmail(context: DomainContext, input: { businessId: string; phoneNumberId: string }): Promise<{ to: string; locale: InterfaceLocale; firstName: string; businessName: string; number: string; timezone: string } | null> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    if (!await businessGetsHostEmails(tx, input.businessId)) return null;
     const number = (await tx.select({ e164: phoneNumbers.e164, timezone: businesses.timezone }).from(phoneNumbers).innerJoin(businesses, eq(businesses.id, phoneNumbers.businessId))
       .where(and(eq(phoneNumbers.id, input.phoneNumberId), eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"))).limit(1))[0];
     if (!number) return null;
@@ -395,21 +399,23 @@ export async function sweepNumberTrial(context: DomainContext, input: { business
     // Only the latest due reminder goes out: an owner who signs up late in the
     // window gets one email, not a backlog.
     const latest = due.filter((email) => !sent[email] && now >= numberTrialEmailDueAt(email, trial.endsAt!, trial.timezone)).at(-1);
-    if (latest) {
-      await queueTrialEmail(tx, { businessId: input.businessId, trialId: trial.id, email: latest, now });
-      emails.push(latest);
-    }
+    if (latest && await queueTrialEmail(tx, { businessId: input.businessId, trialId: trial.id, email: latest, now })) emails.push(latest);
     return { ended, emails };
   });
 }
 
-/** Queues one trial email to the owner, once per trial. The worker renders the copy in the owner's language. */
-async function queueTrialEmail(tx: DatabaseTransaction, input: { businessId: string; trialId: string; email: TrialEmail; now: Date }): Promise<void> {
+/**
+ * Queues one trial email to the owner, once per trial. The worker renders the
+ * copy in the owner's language. A partner's business never gets one. Returns
+ * whether it queued the email.
+ */
+async function queueTrialEmail(tx: DatabaseTransaction, input: { businessId: string; trialId: string; email: TrialEmail; now: Date }): Promise<boolean> {
+  if (!await businessGetsHostEmails(tx, input.businessId)) return false;
   const claimed = await tx.update(numberTrials)
     .set({ emailsSent: sql`${numberTrials.emailsSent} || jsonb_build_object(${input.email}::text, ${input.now.toISOString()}::text)`, updatedAt: input.now })
     .where(and(eq(numberTrials.id, input.trialId), sql`(${numberTrials.emailsSent} ->> ${input.email}) IS NULL`))
     .returning({ id: numberTrials.id });
-  if (!claimed.length) return;
+  if (!claimed.length) return false;
   await enqueueOutbox(tx, {
     topic: "numberTrial.sendEmail",
     businessId: input.businessId,
@@ -418,6 +424,7 @@ async function queueTrialEmail(tx: DatabaseTransaction, input: { businessId: str
     dedupeKey: `number-trial:${input.trialId}:email:${input.email}`,
     payload: { trialId: input.trialId, email: input.email },
   });
+  return true;
 }
 
 export type NumberTrialEmailContent = {
@@ -434,9 +441,10 @@ export type NumberTrialEmailContent = {
   callsAnswered: number;
 };
 
-/** The facts a trial email needs, read by the worker when it sends one. Null when the trial or its owner is gone. */
+/** The facts a trial email needs, read by the worker when it sends one. Null when the trial or its owner is gone, or it's a partner's business. */
 export async function loadNumberTrialEmail(context: DomainContext, input: { businessId: string; trialId: string; email: TrialEmail }): Promise<NumberTrialEmailContent | null> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    if (!await businessGetsHostEmails(tx, input.businessId)) return null;
     const trial = (await tx.select({ e164: phoneNumbers.e164, verifiedPhone: numberTrials.verifiedPhone, transferNumber: receptionistProfiles.transferNumber, status: numberTrials.status, startedAt: numberTrials.startedAt, endsAt: numberTrials.endsAt, timezone: businesses.timezone })
       .from(numberTrials)
       .innerJoin(phoneNumbers, eq(phoneNumbers.id, numberTrials.phoneNumberId))
@@ -466,12 +474,17 @@ export async function loadNumberTrialEmail(context: DomainContext, input: { busi
   });
 }
 
-/** An owner in a country without numbers asks to hear when numbers arrive there. */
+/**
+ * An owner in a country without numbers asks to hear when numbers arrive
+ * there. That's the host contacting them, so a partner's business, which
+ * gets its numbers from its partner, can't join.
+ */
 export async function joinNumberWaitlist(context: DomainContext, input: { userId: string; businessId: string; countryCode: string }): Promise<void> {
   const countryCode = input.countryCode.trim().toUpperCase();
   if (!/^[A-Z]{2}$/.test(countryCode)) throw Object.assign(new Error("Pick a country."), { status: 400, code: "country_invalid" });
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
+    if (!await businessGetsHostEmails(tx, input.businessId)) throw Object.assign(new Error("This business gets its phone numbers from its partner."), { status: 409, code: "partner_business" });
     await tx.insert(numberWaitlist).values({ businessId: input.businessId, userId: input.userId, countryCode }).onConflictDoNothing({ target: [numberWaitlist.businessId, numberWaitlist.countryCode] });
   });
 }

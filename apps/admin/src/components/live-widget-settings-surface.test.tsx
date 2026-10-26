@@ -19,10 +19,11 @@ function setup(issuanceEnabled: boolean, keys: Array<Record<string, unknown>> = 
   clients.push(client);
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business", name: "Acme", active: true }] });
   const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
-    if (url.includes("/api/billing")) return Response.json({ account: { plan: "starter" }, widgetIssuanceEnabled: issuanceEnabled });
+    // A partner's business has no billing, so the page must not need it.
+    if (url.includes("/api/billing")) return Response.json({ error: "You can't do that in this business." }, { status: 403 });
     if (url.includes("/api/widget-keys") && init?.method === "POST") return Response.json({ ok: true, key: { id: "created", key: "wk_live_created" } });
     if (url.includes("/api/widget-keys") && init?.method === "PATCH") return Response.json({ ok: true });
-    if (url.includes("/api/widget-keys")) return Response.json({ keys });
+    if (url.includes("/api/widget-keys")) return Response.json({ keys, issuanceEnabled });
     return Response.json({ businesses: [{ businessId: "business", name: "Acme", active: true }] });
   });
   vi.stubGlobal("fetch", fetchMock);
@@ -31,7 +32,7 @@ function setup(issuanceEnabled: boolean, keys: Array<Record<string, unknown>> = 
     const call = fetchMock.mock.calls.find(([, init]) => init?.method === method);
     return call ? JSON.parse(String(call[1]!.body)) as Record<string, unknown> & { config: Record<string, unknown> } : undefined;
   };
-  return { user: userEvent.setup(), sent };
+  return { user: userEvent.setup(), sent, fetchMock };
 }
 
 afterEach(() => {
@@ -55,6 +56,13 @@ describe("website widget issuance restriction", () => {
     expect(await screen.findByRole("button", { name: "widget:manage.newKey" })).toBeTruthy();
     expect(screen.getByText("widget:manage.emptyDescription")).toBeTruthy();
     expect(screen.queryByText("widget.restricted.title")).toBeNull();
+  });
+
+  it("offers a new key at a business without billing, such as a partner's at full access, from the key list alone", async () => {
+    const { fetchMock } = setup(true, [savedKey]);
+    expect(await screen.findByRole("button", { name: "widget:manage.newKey" })).toBeTruthy();
+    expect(screen.queryByText("widget.restricted.title")).toBeNull();
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/api/billing"))).toBe(false);
   });
 });
 

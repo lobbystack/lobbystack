@@ -8,6 +8,8 @@ import { GiftIcon } from "lucide-react";
 
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useBranding } from "./branding-provider";
+import { useBusinessCan } from "./business-capabilities-provider";
 import { MOBILE_UTILITY_SLOT_ID } from "./site-header";
 import { Button } from "./ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
@@ -19,33 +21,41 @@ import { DashboardAbandonIntent } from "./dashboard-abandon-intent";
 export function DashboardUtilityBar() {
   const { t } = useTranslation("nav");
   const { business } = useActiveBusiness();
+  const can = useBusinessCan();
+  // The host's affiliate program stays on the host's domain: a partner's businesses never get the host's marketing.
+  const { partner } = useBranding();
   const isMobile = useIsMobile();
   const [mobileSlot, setMobileSlot] = useState<HTMLElement | null>(null);
   useEffect(() => { setMobileSlot(isMobile ? document.getElementById(MOBILE_UTILITY_SLOT_ID) : null); }, [isMobile]);
   if (!business) return null;
   const items = (
     <>
-        <DashboardTestCallWidget className="pointer-events-auto md:flex" businessId={business.businessId} businessSlug={business.slug} />
-        {/* mr is smaller than ml because the icon button's own padding adds the rest of the visible gap. */}
-        <span aria-hidden="true" className="ml-3 mr-2.5 hidden h-4 w-px bg-border md:block" />
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                aria-label={t("items.affiliate")}
-                role="link"
-                className="pointer-events-auto text-sidebar-foreground hover:bg-transparent hover:text-sidebar-accent-foreground"
-                nativeButton={false}
-                render={<Link href="/affiliate" />}
-                size="icon-xs"
-                variant="ghost"
-              />
-            }
-          >
-            <GiftIcon className="size-[18px] -translate-x-px" strokeWidth={1.75} />
-          </TooltipTrigger>
-          <TooltipContent>{t("items.affiliate")}</TooltipContent>
-        </Tooltip>
+        {/* The test call tries out the receptionist's setup, which an activity-only business leaves to its partner. */}
+        {can("setup") ? <>
+          <DashboardTestCallWidget className="pointer-events-auto md:flex" businessId={business.businessId} businessSlug={business.slug} />
+          {/* mr is smaller than ml because the icon button's own padding adds the rest of the visible gap. */}
+          <span aria-hidden="true" className="ml-3 mr-2.5 hidden h-4 w-px bg-border md:block" />
+        </> : null}
+        {partner ? null : (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  aria-label={t("items.affiliate")}
+                  role="link"
+                  className="pointer-events-auto text-sidebar-foreground hover:bg-transparent hover:text-sidebar-accent-foreground"
+                  nativeButton={false}
+                  render={<Link href="/affiliate" />}
+                  size="icon-xs"
+                  variant="ghost"
+                />
+              }
+            >
+              <GiftIcon className="size-[18px] -translate-x-px" strokeWidth={1.75} />
+            </TooltipTrigger>
+            <TooltipContent>{t("items.affiliate")}</TooltipContent>
+          </Tooltip>
+        )}
         <DashboardFeedbackWidget className="pointer-events-auto flex" businessId={business.businessId} />
     </>
   );

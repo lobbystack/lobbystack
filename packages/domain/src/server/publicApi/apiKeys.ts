@@ -6,6 +6,7 @@ import { apiKeys, auditLogs, users, withBusinessTransaction } from "@lobbystack/
 import { API_KEY_PREFIX, businessApiKeyScopes, isApiKeyScope, isBusinessApiKeyScope, isPlatformOnlyScope, type ApiKeyScope, type BusinessApiKeyScope } from "@lobbystack/shared";
 
 import { requireBusinessAdmin } from "../../authz";
+import { requireBusinessCapability } from "../businessAccess";
 import type { DomainContext } from "../context";
 import { invalidRequest } from "./errors";
 import { disableWebhookEndpointsInTransaction } from "./webhooks";
@@ -116,6 +117,8 @@ export async function createApiKey(
   const scopes = normalizeScopes(input.scopes);
   return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
+    // A partner's business gets no API keys of its own; its partner's platform keys reach it.
+    await requireBusinessCapability(tx, { businessId: input.businessId, capability: "api_keys" });
     const generated = generateApiKey();
     const [row] = await tx.insert(apiKeys).values({ businessId: input.businessId, name, prefix: generated.prefix, keyHash: generated.keyHash, scopes, createdByUserId: input.userId }).returning({ id: apiKeys.id });
     if (!row) throw new Error("The API key could not be created.");

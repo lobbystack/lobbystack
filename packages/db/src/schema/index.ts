@@ -174,6 +174,8 @@ export const businesses = pgTable(
     hoursGeneratedAt: timestamp("hours_generated_at", { withTimezone: true }),
     // The partner that resells this business, or null for a direct business. A direct business never gets one.
     partnerId: uuid("partner_id").references(() => partners.id),
+    // What a partner's business lets its own operators do: full, or activity only. Direct businesses ignore it, and only the system actor changes it.
+    partnerAccessLevel: varchar("partner_access_level", { length: 16 }).$type<"full" | "activity">().default("full").notNull(),
     ...legacyId,
     ...timestamps,
   },
@@ -278,6 +280,21 @@ export const partnerDomains = pgTable(
   (table) => [
     uniqueIndex("partner_domains_hostname_unique").on(table.hostname),
     uniqueIndex("partner_domains_one_subdomain").on(table.partnerId).where(sql`${table.kind} = 'subdomain'`),
+  ],
+);
+
+// The business a person last worked in on each partner's domains. The host's own domain keeps users.activeBusinessId.
+export const userActiveBusinesses = pgTable(
+  "user_active_businesses",
+  {
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    partnerId: uuid("partner_id").notNull().references(() => partners.id, { onDelete: "cascade" }),
+    businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.partnerId] }),
+    index("user_active_businesses_business_idx").on(table.businessId),
   ],
 );
 
@@ -1876,6 +1893,7 @@ export const schema = {
   partnerDomains,
   partnerSignupInvitations,
   businesses,
+  userActiveBusinesses,
   businessMemberships,
   businessInvitations,
   prospectDemos,

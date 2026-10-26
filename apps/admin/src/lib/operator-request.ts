@@ -1,18 +1,21 @@
-import { eq } from "drizzle-orm";
-
 import type { AuthzRole } from "@lobbystack/contracts";
-import { users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { requireBusinessMembership, type DomainContext } from "@lobbystack/domain";
+import { withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { readActiveBusinessId, requireBusinessAccess, type BusinessAccess, type DomainContext } from "@lobbystack/domain";
 import { isUuid } from "@lobbystack/shared";
 
 import { asApiResponse, jsonError, requireApiSession } from "./api-helpers";
 import type { Session } from "./auth";
+import { requestPathCapability } from "./business-capabilities";
 import { createDomainContext } from "./domain-context";
+import { requestBrandScope } from "./request-brand";
 
 // What an operator route handler gets: the verified session, the JSON body,
 // the business the request acts on, and the domain context. A thrown error
-// becomes a response through asApiResponse. Authorization stays in the
-// domain: the operation a route calls checks membership, or `transaction` does.
+// becomes a response through asApiResponse. Before any handler runs, the
+// person's access to the business is checked on the request's brand: a
+// business shows only on its own brand's domains, and the route's capability
+// must be one the business gives them. Role rules stay in the domain: the
+// operation a route calls checks them, or `transaction` does.
 
 /** A signed-in user's request. */
 export type SignedInRequest = {
@@ -28,9 +31,11 @@ export type SignedInRequest = {
 
 /** A signed-in user's request that acts on one business. */
 export type OperatorRequest = Omit<SignedInRequest, "businessId"> & {
-  /** The business the request names, or else the user's active business. */
+  /** The business the request names, or else the user's active business on the request's brand. */
   businessId: string;
-  /** Runs the callback in the business's transaction once the user's membership, and minimum role, check out. */
+  /** The person's access to the business, checked before the handler ran. */
+  access: BusinessAccess;
+  /** Runs the callback in the business's transaction once the user's access, and minimum role, check out again. */
   transaction<T>(callback: (tx: DatabaseTransaction, role: AuthzRole) => Promise<T>, options?: { minimumRole?: AuthzRole }): Promise<T>;
 };
 
@@ -91,14 +96,19 @@ async function signIn(request: Request, options: RouteOptions = {}): Promise<Sig
 
 async function forBusiness(user: SignedInRequest): Promise<OperatorRequest> {
   const { userId, domain } = user;
-  const businessId = user.businessId ?? await withBusinessTransaction(domain.db, { userId, actorType: "operator" }, async (tx) =>
-    (await tx.select({ activeBusinessId: users.activeBusinessId }).from(users).where(eq(users.id, userId)).limit(1))[0]?.activeBusinessId ?? null);
+  const brand = requestBrandScope(user.request.headers);
+  const capability = requestPathCapability(new URL(user.request.url).pathname);
+  if (!capability) throw jsonError("The request path is invalid.", 400, "invalid_path");
+  const businessId = user.businessId ?? await readActiveBusinessId(domain.db, { userId, brand });
   if (!businessId) throw jsonError("A businessId is required.", 400, "business_required");
+  // Many handlers call a domain operation without `transaction`, so the brand and capability are checked here first.
+  const access = await withBusinessTransaction(domain.db, { userId, businessId, actorType: "operator" }, async (tx) => await requireBusinessAccess(tx, { userId, businessId, brand, capability }));
   return {
     ...user,
     businessId,
+    access,
     transaction: (callback, options = {}) => withBusinessTransaction(domain.db, { userId, businessId, actorType: "operator" }, async (tx) => {
-      const { role } = await requireBusinessMembership(tx, { userId, businessId, ...(options.minimumRole ? { minimumRole: options.minimumRole } : {}) });
+      const { role } = await requireBusinessAccess(tx, { userId, businessId, brand, capability, minimumRole: options.minimumRole });
       return await callback(tx, role);
     }),
   };

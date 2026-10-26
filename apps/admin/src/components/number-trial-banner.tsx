@@ -5,6 +5,7 @@ import { Clock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
+import { useBusinessCan } from "@/components/business-capabilities-provider";
 import { useOpenUpgradePlanDialog } from "@/components/upgrade-plan-dialog-context";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
@@ -22,8 +23,10 @@ export function NumberTrialBanner() {
   const { t } = useTranslation("common");
   const openUpgrade = useOpenUpgradePlanDialog();
   const { business } = useActiveBusiness();
-  const trial = useQuery({ queryKey: ["number-trial", business?.businessId], enabled: Boolean(business), refetchInterval: 5 * 60_000, queryFn: () => requestJson<{ trial: TrialState }>(`/api/number-trial?businessId=${encodeURIComponent(business!.businessId)}`) });
-  const state = trial.data?.trial;
+  // Keeping the number takes one of the host's plans, so a business without billing, such as a partner's, never shows it.
+  const can = useBusinessCan();
+  const trial = useQuery({ queryKey: ["number-trial", business?.businessId], enabled: Boolean(business) && can("billing"), refetchInterval: 5 * 60_000, queryFn: () => requestJson<{ trial: TrialState }>(`/api/number-trial?businessId=${encodeURIComponent(business!.businessId)}`) });
+  const state = can("billing") ? trial.data?.trial : undefined;
   if (!state || state.status === "none" || state.status === "available" || state.status === "over") return null;
   // The countdown waits for the last week; running out of minutes shows at once, since calls already go to the owner.
   if (state.status === "active" && state.daysLeft > 7 && !(state.minutesExhausted && state.forwardTo)) return null;

@@ -6,6 +6,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 import { businessMemberships, businesses, createDatabaseClient, prospectDemos, users, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
+import { HOST_BRAND_SCOPE } from "./businessAccess";
 import { claimProspectDemo, createProspectDemo, expireProspectDemos, getProspectDemoStatus, listProspectDemos, revokeProspectDemo } from "./demos";
 import { getActiveOnboardingState } from "./onboarding";
 import { createBusiness, listUserBusinesses, switchWorkspace } from "./tenancy";
@@ -76,7 +77,7 @@ async function demoRow(tx: DatabaseTransaction, demoId: string) {
 }
 
 async function switcherBusinessIds(tx: DatabaseTransaction, userId: string) {
-  return (await asApp(tx, () => listUserBusinesses(asDb(tx), userId))).map((row) => row.businessId);
+  return (await asApp(tx, () => listUserBusinesses(asDb(tx), userId, HOST_BRAND_SCOPE))).map((row) => row.businessId);
 }
 
 describe.skipIf(!testUrl)("prospect demo operator membership against dedicated PostgreSQL roles", () => {
@@ -84,7 +85,7 @@ describe.skipIf(!testUrl)("prospect demo operator membership against dedicated P
     await rollbackTest(async (tx) => {
       const { operatorUserId, ownBusinessId } = await operatorWithWorkspace(tx);
       const demo = await createDemo(tx, operatorUserId);
-      await asApp(tx, () => switchWorkspace({ db: asDb(tx) }, { userId: operatorUserId, businessId: demo.businessId }));
+      await asApp(tx, () => switchWorkspace({ db: asDb(tx) }, { userId: operatorUserId, businessId: demo.businessId, brand: HOST_BRAND_SCOPE }));
       expect(await switcherBusinessIds(tx, operatorUserId)).toContain(demo.businessId);
 
       await asApp(tx, () => revokeProspectDemo({ db: asDb(tx) }, { operatorUserId, demoId: demo.demoId }));
@@ -93,7 +94,7 @@ describe.skipIf(!testUrl)("prospect demo operator membership against dedicated P
       expect(await membership(tx, ownBusinessId, operatorUserId)).toMatchObject({ status: "active" });
       expect(await activeBusinessId(tx, operatorUserId)).toBeNull();
       expect(await switcherBusinessIds(tx, operatorUserId)).toEqual([ownBusinessId]);
-      expect(await asApp(tx, () => getActiveOnboardingState(asDb(tx), operatorUserId))).toEqual({ businessId: ownBusinessId, stage: "website" });
+      expect(await asApp(tx, () => getActiveOnboardingState(asDb(tx), operatorUserId, HOST_BRAND_SCOPE))).toMatchObject({ businessId: ownBusinessId, stage: "website" });
 
       const listed = await asApp(tx, () => listProspectDemos({ db: asDb(tx) }, operatorUserId));
       expect(listed.map((row) => [row.demoId, row.status])).toEqual([[demo.demoId, "revoked"]]);
@@ -111,7 +112,7 @@ describe.skipIf(!testUrl)("prospect demo operator membership against dedicated P
       const { operatorUserId, ownBusinessId } = await operatorWithWorkspace(tx);
       const expiring = await createDemo(tx, operatorUserId);
       const live = await createDemo(tx, operatorUserId);
-      await asApp(tx, () => switchWorkspace({ db: asDb(tx) }, { userId: operatorUserId, businessId: expiring.businessId }));
+      await asApp(tx, () => switchWorkspace({ db: asDb(tx) }, { userId: operatorUserId, businessId: expiring.businessId, brand: HOST_BRAND_SCOPE }));
       await tx.update(prospectDemos).set({ expiresAt: new Date(Date.now() - 60_000) }).where(eq(prospectDemos.id, expiring.demoId));
 
       // Past expiry but not yet swept, the demo already drops out of the switcher.
@@ -145,7 +146,7 @@ describe.skipIf(!testUrl)("prospect demo operator membership against dedicated P
       const claimantUserId = await insertUser(tx);
       const demo = await createDemo(tx, operatorUserId);
       await tx.update(prospectDemos).set({ status: "active", publishedAt: new Date() }).where(eq(prospectDemos.id, demo.demoId));
-      await asApp(tx, () => switchWorkspace({ db: asDb(tx) }, { userId: operatorUserId, businessId: demo.businessId }));
+      await asApp(tx, () => switchWorkspace({ db: asDb(tx) }, { userId: operatorUserId, businessId: demo.businessId, brand: HOST_BRAND_SCOPE }));
 
       const claimed = await asApp(tx, () => claimProspectDemo({ db: asDb(tx) }, { userId: claimantUserId, token: demo.token }));
 

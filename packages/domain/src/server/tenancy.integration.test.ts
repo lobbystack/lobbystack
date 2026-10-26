@@ -4,6 +4,7 @@ import { afterAll, describe, expect, it, vi } from "vitest";
 import { businesses, businessHours, businessInvitations, businessMemberships, createDatabaseClient, outboxMessages, partners, receptionistProfiles, services, staff, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { defaultGreeting } from "@lobbystack/shared";
 import { findAvailability } from "./booking";
+import { HOST_BRAND_SCOPE } from "./businessAccess";
 import { acceptInvitation, createBusiness, createOwnerlessBusiness, insertOwnerlessBusinessInTransaction, inviteMember, listUserBusinesses, previewInvitation, removeMember, revokeInvitation, updateBusinessInTransaction } from "./tenancy";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
@@ -108,8 +109,8 @@ describe.skipIf(!client)("createBusiness", () => {
       const first = await createBusiness({ db }, { userId, name: "Alpha Dental", timezone: "America/Toronto", businessType: "clinic" });
       const second = await createBusiness({ db }, { userId, name: "Beta Plumbing", timezone: "Europe/Belgrade", businessType: "service_company" });
 
-      expect(await listUserBusinesses(db, userId)).toEqual([
-        expect.objectContaining({ businessId: first.businessId, role: "business_owner", active: false, timezone: "America/Toronto", businessType: "clinic", defaultLocale: "en", websiteUrl: null, onboardingStage: "website", createdAt: expect.stringMatching(/Z$/) }),
+      expect(await listUserBusinesses(db, userId, HOST_BRAND_SCOPE)).toEqual([
+        expect.objectContaining({ businessId: first.businessId, role: "business_owner", active: false, timezone: "America/Toronto", businessType: "clinic", defaultLocale: "en", websiteUrl: null, onboardingStage: "website", createdAt: expect.stringMatching(/Z$/), partnerAccessLevel: null, capabilities: ["activity", "setup", "team", "billing", "api_keys", "mcp"] }),
         expect.objectContaining({ businessId: second.businessId, active: true, timezone: "Europe/Belgrade", businessType: "service_company" }),
       ]);
     });
@@ -148,7 +149,9 @@ describe.skipIf(!client)("createBusiness", () => {
         await createBusiness(context, { userId, name: `Shop ${index}`, timezone: "UTC", businessType: "test" });
       }
       await expect(createBusiness(context, { userId, name: "Shop 11", timezone: "UTC", businessType: "test" })).rejects.toMatchObject({ status: 403, message: "Too many workspaces. One account can own up to 10." });
-      expect(await listUserBusinesses(context.db, userId)).toHaveLength(13);
+      // Each brand's domains list only its own businesses.
+      expect(await listUserBusinesses(context.db, userId, HOST_BRAND_SCOPE)).toHaveLength(10);
+      expect(await listUserBusinesses(context.db, userId, { kind: "partner", partnerId })).toHaveLength(3);
     });
   });
 
@@ -319,7 +322,7 @@ describe.skipIf(!client)("team membership", () => {
     await rollbackTest(async (tx) => {
       const { businessId, people: [owner, admin], invite, accept } = await seedTeam(tx, ["Ana", "Ben"]);
       await accept(admin!, await invite(owner!.id, admin!.email, "business_admin"));
-      await expect(accept(owner!, await invite(admin!.id, owner!.email, "viewer"))).resolves.toEqual({ businessId, role: "business_owner" });
+      await expect(accept(owner!, await invite(admin!.id, owner!.email, "viewer"))).resolves.toEqual({ businessId, role: "business_owner", partnerId: null });
       await tx.execute(sql`reset role`);
       const [membership] = await tx.select({ role: businessMemberships.role, status: businessMemberships.status }).from(businessMemberships).where(and(eq(businessMemberships.businessId, businessId), eq(businessMemberships.userId, owner!.id)));
       expect(membership).toEqual({ role: "business_owner", status: "active" });

@@ -64,6 +64,7 @@ describe("widget key issuance gate", () => {
 
 describe("widget key listing", () => {
   it("returns each key so its snippet can be copied again, except revoked and older keys", async () => {
+    vi.stubEnv("WIDGET_KEY_ISSUANCE_ENABLED", "true");
     const row = { status: "active", label: null, allowedOrigins: [], config: {}, lastUsedAt: null, createdAt: new Date("2026-01-01T00:00:00.000Z") };
     mocks.select.mockReturnValue({ from: () => ({ where: () => ({ orderBy: async () => [
       { ...row, id: "00000000-0000-4000-8000-000000000001", keyValue: "wk_live_one" },
@@ -71,8 +72,11 @@ describe("widget key listing", () => {
       { ...row, id: "00000000-0000-4000-8000-000000000003", keyValue: null },
     ] }) }) });
     const response = await GET(new Request("https://admin.test/api/widget-keys"));
-    const { keys } = await response.json() as { keys: Array<{ key: string | null }> };
+    const { keys, issuanceEnabled } = await response.json() as { keys: Array<{ key: string | null }>; issuanceEnabled: boolean };
     expect(keys.map((key) => key.key)).toEqual(["wk_live_one", null, null]);
+    // The widget page reads this instead of billing, which a partner's business doesn't have.
+    expect(issuanceEnabled).toBe(true);
+    vi.unstubAllEnvs();
   });
 });
 

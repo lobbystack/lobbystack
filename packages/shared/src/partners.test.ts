@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isPartnerSlug, normalizeBrandColor, normalizePartnerName } from "./partners";
+import { isPartnerAccessLevel, isPartnerSlug, normalizeBrandColor, normalizePartnerName } from "./partners";
 
 describe("a partner's brand fields", () => {
   it("keeps a name of up to 80 visible characters, with whitespace collapsed", () => {
@@ -18,5 +18,13 @@ describe("a partner's brand fields", () => {
   it("keeps slugs to DNS labels the host doesn't keep for itself", () => {
     expect(isPartnerSlug("acme")).toBe(true);
     for (const value of ["ac", "www", "xn--acme", "-acme", "Acme"]) expect(isPartnerSlug(value), value).toBe(false);
+  });
+});
+
+describe("a partner business's access level", () => {
+  it("is full or activity", () => {
+    expect(isPartnerAccessLevel("full")).toBe(true);
+    expect(isPartnerAccessLevel("activity")).toBe(true);
+    for (const value of ["admin", "Full", "", null, 1]) expect(isPartnerAccessLevel(value), String(value)).toBe(false);
   });
 });

@@ -153,7 +153,10 @@
       "notify": "Javite mi kada budu dostupni",
       "joined": "Važi. Pisaćemo Vam.",
       "continue": "Nastavi bez broja",
-      "failed": "Nešto nije u redu. Pokušajte ponovo."
+      "failed": "Nešto nije u redu. Pokušajte ponovo.",
+      "partnerTitle": "Još ne možemo da potvrdimo telefone u ovoj zemlji ({{country}}).",
+      "partnerBody": "Podešavanje možete da završite bez potvrđenog telefona.",
+      "partnerContinue": "Nastavi"
     }
   },
   "greeting": {
@@ -261,5 +264,10 @@
     "continue": "Nastavi",
     "continuing": "Nastavljanje...",
     "continueFailed": "Trenutno ne možemo da nastavimo. Pokušajte ponovo."
+  },
+  "noBusinesses": {
+    "title": "Ovde još nemate firmu",
+    "description": "{{appName}} još nije dodao {{email}} u firmu. Zamolite ih da Vas pozovu, pa otvorite link iz njihovog imejla.",
+    "switchAccount": "Prijavite se drugim nalogom"
   }
 }

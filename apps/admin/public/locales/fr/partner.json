@@ -17,9 +17,67 @@
   },
   "businesses": {
     "title": "Entreprises",
+    "description": "Les entreprises que vous revendez. Leurs propriétaires se connectent à l'adresse de votre tableau de bord.",
+    "loadFailed": "Impossible de charger vos entreprises. Actualisez la page pour réessayer.",
+    "createdOn": "Créée le {{date}}",
+    "table": {
+      "business": "Entreprise",
+      "owner": "Propriétaire",
+      "access": "Accès"
+    },
+    "owner": {
+      "invited": "Invitation envoyée",
+      "expired": "Invitation expirée",
+      "none": "Aucun propriétaire pour l'instant"
+    },
+    "access": {
+      "full": "Accès complet",
+      "activity": "Activité seulement"
+    },
     "empty": {
       "title": "Aucune entreprise pour l'instant",
-      "description": "Les entreprises que vous configurez s'afficheront ici."
+      "description": "Créez une entreprise et invitez son propriétaire.",
+      "memberDescription": "Les propriétaires et administrateurs de votre partenaire créent les entreprises ici."
+    },
+    "create": {
+      "action": "Créer une entreprise",
+      "title": "Créer une entreprise",
+      "description": "Son propriétaire reçoit un courriel de {{partnerName}} avec un lien pour se connecter.",
+      "nameLabel": "Nom de l'entreprise",
+      "namePlaceholder": "Clinique dentaire du Port",
+      "ownerLabel": "Courriel du propriétaire",
+      "ownerPlaceholder": "proprietaire@entreprise.com",
+      "timezoneLabel": "Fuseau horaire",
+      "timezoneSearch": "Rechercher un fuseau horaire…",
+      "timezoneNoResults": "Aucun fuseau horaire trouvé.",
+      "timezoneRegions": {
+        "africa": "Afrique",
+        "america": "Amériques",
+        "antarctica": "Antarctique",
+        "arctic": "Arctique",
+        "asia": "Asie",
+        "atlantic": "Atlantique",
+        "australia": "Australie",
+        "europe": "Europe",
+        "indian": "Océan Indien",
+        "pacific": "Pacifique"
+      },
+      "accessLabel": "Ce que son équipe peut utiliser",
+      "access": {
+        "full": "Son équipe gère la réceptionniste : connaissances, heures, services et membres de l'équipe. Elle ne voit ni la facturation, ni les clés d'API, ni MCP.",
+        "activity": "Son équipe voit les appels, les clavardages, les rendez-vous, les contacts et les messages. Vous configurez la réceptionniste."
+      },
+      "submit": "Créer et inviter",
+      "submitting": "Création…",
+      "created": "Vous avez créé {{name}} et invité {{email}}.",
+      "errors": {
+        "invalidName": "Entrez le nom de l'entreprise, jusqu'à 120 caractères.",
+        "invalidEmail": "Entrez une seule adresse courriel valide pour le propriétaire.",
+        "invalidTimezone": "Choisissez un fuseau horaire.",
+        "domainRequired": "Il vous faut une adresse de tableau de bord avant de créer une entreprise. Demandez à {{appName}} d'en configurer une.",
+        "rateLimited": "Vous avez créé trop d'entreprises. Réessayez dans une heure.",
+        "failed": "Impossible de créer l'entreprise. Réessayez."
+      }
     }
   },
   "team": {

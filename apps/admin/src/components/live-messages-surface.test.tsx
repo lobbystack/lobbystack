@@ -27,8 +27,9 @@ function setup(options: { instagramConfigured?: boolean } = {}) {
   client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true }] });
   const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
     if (String(url).startsWith("/api/messages") && init?.method === "POST") return Response.json({ ok: true });
-    if (String(url).startsWith("/api/integrations/instagram")) return Response.json({ configured: options.instagramConfigured ?? false, account: null });
-    if (String(url).startsWith("/api/messages")) return Response.json({ messages: [{ id: "m1", conversationId: "conversation-1", contactName: "Ada Caller", contactPhone: "+14155550100", visitorName: null, visitorEmail: null, channel: "sms", automationState: "ai_active", body: "Hello there", direction: "inbound", status: "delivered", createdAt: "2026-09-01T12:00:00Z" }] });
+    // An activity-only business can't read the setup-only Integrations routes, so the inbox must not need them.
+    if (String(url).startsWith("/api/integrations")) return Response.json({ error: "You can't do that in this business." }, { status: 403 });
+    if (String(url).startsWith("/api/messages")) return Response.json({ instagramOffered: options.instagramConfigured ?? false, messages: [{ id: "m1", conversationId: "conversation-1", contactName: "Ada Caller", contactPhone: "+14155550100", visitorName: null, visitorEmail: null, channel: "sms", automationState: "ai_active", body: "Hello there", direction: "inbound", status: "delivered", createdAt: "2026-09-01T12:00:00Z" }] });
     return Response.json({});
   });
   vi.stubGlobal("fetch", fetchMock);
@@ -72,9 +73,10 @@ describe("messages channel filters", () => {
     expect(screen.getByRole("button", { name: "page.filterSms" })).toBeTruthy();
   });
 
-  it("shows the Instagram filter once Instagram is set up", async () => {
-    setup({ instagramConfigured: true });
+  it("shows the Instagram filter once Instagram is set up, from the inbox alone, as an activity-only business sees it", async () => {
+    const fetchMock = setup({ instagramConfigured: true });
     expect(await screen.findByRole("button", { name: "page.filterInstagram" })).toBeTruthy();
+    expect(fetchMock.mock.calls.some(([url]) => String(url).startsWith("/api/integrations"))).toBe(false);
   });
 });
 

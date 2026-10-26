@@ -153,7 +153,10 @@
       "notify": "Avísenme cuando estén disponibles",
       "joined": "Listo. Le escribiremos.",
       "continue": "Continuar sin número",
-      "failed": "Algo salió mal. Inténtelo de nuevo."
+      "failed": "Algo salió mal. Inténtelo de nuevo.",
+      "partnerTitle": "Todavía no podemos verificar teléfonos en este país ({{country}}).",
+      "partnerBody": "Puede terminar la configuración sin un teléfono verificado.",
+      "partnerContinue": "Continuar"
     }
   },
   "greeting": {
@@ -261,5 +264,10 @@
     "continue": "Continuar",
     "continuing": "Continuando...",
     "continueFailed": "No pudimos continuar en este momento. Inténtelo de nuevo."
+  },
+  "noBusinesses": {
+    "title": "Todavía no hay ningún negocio aquí",
+    "description": "{{appName}} aún no agregó {{email}} a un negocio. Pídale que lo invite y abra el enlace de su correo.",
+    "switchAccount": "Iniciar sesión con otra cuenta"
   }
 }

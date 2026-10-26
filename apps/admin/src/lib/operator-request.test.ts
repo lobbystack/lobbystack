@@ -5,7 +5,9 @@ import { z } from "zod";
 const fixture = vi.hoisted(() => ({
   session: null as unknown,
   activeBusinessId: null as string | null,
-  memberships: [] as Array<{ role: string }>,
+  /** The active business on the partner's domains. */
+  partnerActiveBusinessId: null as string | null,
+  memberships: [] as Array<{ role: string; partnerId: string | null; accessLevel: "full" | "activity" }>,
   transactions: [] as unknown[],
   report: vi.fn(),
 }));
@@ -14,12 +16,14 @@ vi.mock("./error-reporting", () => ({ reportServerError: fixture.report }));
 vi.mock("./domain-context", () => ({ createDomainContext: () => ({ db: "app" }) }));
 vi.mock("@lobbystack/db", async (original) => {
   const db = await original<typeof import("@lobbystack/db")>();
-  // Each transaction here runs one query: the user's active business, or their membership.
-  const tx = { select: () => ({ from: (table: unknown) => ({ where: () => ({ limit: async () => table === db.users ? [{ activeBusinessId: fixture.activeBusinessId }] : fixture.memberships }) }) }) };
+  // Each transaction here runs one query: the user's active business on a brand, or their membership and the business's partner and access level.
+  const rows = async (table: unknown) => table === db.users ? [{ activeBusinessId: fixture.activeBusinessId }] : table === db.userActiveBusinesses ? (fixture.partnerActiveBusinessId ? [{ businessId: fixture.partnerActiveBusinessId }] : []) : fixture.memberships;
+  const tx = { select: () => ({ from: (table: unknown) => ({ where: () => ({ limit: () => rows(table) }), innerJoin: () => ({ where: () => ({ limit: () => rows(table) }) }) }) }) };
   return { ...db, withBusinessTransaction: async (_db: unknown, context: unknown, callback: (tx: unknown) => unknown) => { fixture.transactions.push(context); return await callback(tx); } };
 });
 
 import { operatorRoute, signedInRoute, type OperatorRequest, type SignedInRequest } from "./operator-request";
+import { setBrandHeaders } from "./request-brand";
 
 const businessId = "7d1f5a52-2f0e-4a4c-9a55-0c8a4c1b2f10";
 const otherBusinessId = "0b6f8c1e-3a2d-4e5f-8a9b-1c2d3e4f5a6b";
@@ -32,7 +36,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   fixture.session = { user: { id: "user-1" }, session: { id: "session-1", userId: "user-1", expiresAt: new Date(0) } };
   fixture.activeBusinessId = null;
-  fixture.memberships = [{ role: "viewer" }];
+  fixture.partnerActiveBusinessId = null;
+  fixture.memberships = [{ role: "viewer", partnerId: null, accessLevel: "full" }];
   fixture.transactions = [];
 });
 
@@ -40,8 +45,16 @@ describe("operatorRoute", () => {
   it("hands the handler the session, the business the query names, the body and the domain context", async () => {
     const response = await post({ note: "hi" }, `?businessId=${businessId}`);
     expect(response.status).toBe(200);
-    expect(seen).toHaveBeenCalledWith(expect.objectContaining({ userId: "user-1", businessId, body: { note: "hi" }, domain: { db: "app" } }));
-    expect(fixture.transactions).toEqual([]);
+    expect(seen).toHaveBeenCalledWith(expect.objectContaining({ userId: "user-1", businessId, body: { note: "hi" }, domain: { db: "app" }, access: expect.objectContaining({ businessId, role: "viewer", partnerId: null }) }));
+    // The person's access to the business is checked once before the handler runs.
+    expect(fixture.transactions).toEqual([{ userId: "user-1", businessId, actorType: "operator" }]);
+  });
+
+  it("answers 403 before the handler runs to a user who isn't a member", async () => {
+    fixture.memberships = [];
+    const response = await post({}, `?businessId=${businessId}`);
+    expect(response.status).toBe(403);
+    expect(seen).not.toHaveBeenCalled();
   });
 
   it("answers 401 without a session", async () => {
@@ -107,7 +120,7 @@ describe("operatorRoute transactions", () => {
   it("runs in the business's transaction with the member's role", async () => {
     const response = await call(read(), `?businessId=${businessId}`);
     await expect(response.json()).resolves.toEqual({ role: "viewer" });
-    expect(fixture.transactions).toEqual([{ userId: "user-1", businessId, actorType: "operator" }]);
+    expect(fixture.transactions).toEqual([{ userId: "user-1", businessId, actorType: "operator" }, { userId: "user-1", businessId, actorType: "operator" }]);
   });
 
   it("answers 403 to a user who isn't a member", async () => {
@@ -119,6 +132,79 @@ describe("operatorRoute transactions", () => {
 
   it("answers 403 to a member below the minimum role", async () => {
     expect((await call(read("business_admin"), `?businessId=${businessId}`)).status).toBe(403);
+  });
+});
+
+describe("operator routes on each brand's domain", () => {
+  const partnerId = "5a0f6c7e-1d2b-4c3a-9e8f-7a6b5c4d3e2f";
+  const otherPartnerId = "6b1a7d8f-2e3c-4d4b-8f9a-8b7c6d5e4f3a";
+  const echoAt = (path: string, headers: Headers, query = `?businessId=${businessId}`) => echo(new Request(`https://app.example.test${path}${query}`, { headers }));
+  const host = () => setBrandHeaders(new Headers(), { kind: "host" });
+  const partnerHost = (id = partnerId) => setBrandHeaders(new Headers(), { kind: "partner", partnerId: id, origin: "https://acme.portal.example.test" });
+  const partnerBusiness = (accessLevel: "full" | "activity", role = "business_owner") => { fixture.memberships = [{ role, partnerId, accessLevel }]; };
+
+  it("opens a direct business only on the host's domain, and a partner's business only on that partner's", async () => {
+    expect((await echoAt("/api/calls", host())).status).toBe(200);
+    expect((await echoAt("/api/calls", partnerHost())).status).toBe(403);
+    partnerBusiness("full");
+    expect((await echoAt("/api/calls", partnerHost())).status).toBe(200);
+    expect((await echoAt("/api/calls", host())).status).toBe(403);
+    expect((await echoAt("/api/calls", partnerHost(otherPartnerId))).status).toBe(403);
+    // A request the proxy resolved to no brand gets the host's.
+    expect((await echoAt("/api/calls", new Headers())).status).toBe(403);
+    // Only the two requests on the business's own brand reached the handler.
+    expect(seen).toHaveBeenCalledTimes(2);
+  });
+
+  it("acts on the active business of the request's brand when the request names none", async () => {
+    partnerBusiness("full");
+    fixture.activeBusinessId = otherBusinessId;
+    fixture.partnerActiveBusinessId = businessId;
+    await expect((await echoAt("/api/calls", partnerHost(), "")).json()).resolves.toEqual({ businessId });
+    fixture.partnerActiveBusinessId = null;
+    expect((await echoAt("/api/calls", partnerHost(), "")).status).toBe(400);
+  });
+
+  it("enforces an activity-only business on the server: activity routes answer, setup, team, billing, API keys and MCP don't", async () => {
+    partnerBusiness("activity");
+    for (const path of ["/api/calls", "/api/messages", "/api/appointments", "/api/contacts/c1", "/api/dashboard", "/api/realtime", "/api/onboarding/phone-verification"]) {
+      expect((await echoAt(path, partnerHost())).status, path).toBe(200);
+    }
+    for (const path of ["/api/knowledge", "/api/agent", "/api/hours", "/api/team", "/api/billing", "/api/api-keys", "/api/oauth-grants", "/api/webhook-endpoints", "/api/unlisted"]) {
+      const response = await echoAt(path, partnerHost());
+      expect(response.status, path).toBe(403);
+      await expect(response.json()).resolves.toMatchObject({ code: "forbidden" });
+    }
+  });
+
+  it("gives a full-access business today's owner and admin routes except billing, API keys and MCP", async () => {
+    partnerBusiness("full");
+    for (const path of ["/api/calls", "/api/knowledge", "/api/agent", "/api/team", "/api/phone-numbers"]) {
+      expect((await echoAt(path, partnerHost())).status, path).toBe(200);
+    }
+    for (const path of ["/api/billing", "/api/billing/checkout", "/api/api-keys", "/api/oauth-grants", "/api/webhook-endpoints"]) {
+      expect((await echoAt(path, partnerHost())).status, path).toBe(403);
+    }
+  });
+
+  it("reads the capability from the route a percent-encoded path reaches, and refuses a path that doesn't decode", async () => {
+    partnerBusiness("full");
+    for (const path of ["/api/%62illing", "/api/%77ebhook-endpoints", "/api/api%2Dkeys", "/api/%6Fauth-grants/x"]) {
+      expect((await echoAt(path, partnerHost())).status, path).toBe(403);
+    }
+    expect((await echoAt("/api/%6Bnowledge", partnerHost())).status).toBe(200);
+    const malformed = await echoAt("/api/%E0%A4%A", partnerHost());
+    expect(malformed.status).toBe(400);
+    await expect(malformed.json()).resolves.toMatchObject({ code: "invalid_path" });
+    expect(seen).toHaveBeenCalledOnce();
+  });
+
+  it("checks the route's capability again in each transaction", async () => {
+    partnerBusiness("full", "business_admin");
+    const read = operatorRoute(async ({ transaction }) => NextResponse.json(await transaction(async (_tx, role) => ({ role }), { minimumRole: "business_admin" })));
+    const response = await read(new Request(`https://app.example.test/api/knowledge?businessId=${businessId}`, { headers: partnerHost() }));
+    await expect(response.json()).resolves.toEqual({ role: "business_admin" });
+    expect(fixture.transactions).toHaveLength(2);
   });
 });
 

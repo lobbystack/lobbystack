@@ -136,8 +136,13 @@ requireBusinessAccess(tx, input: { userId: string; businessId: string; brand: Br
 openPartnerBusiness(context, input: { userId: string; businessId: string }): Promise<{ expiresAt: Date }>
 ```
 
-- `requireBusinessAccess` refuses a business whose brand differs from the request's brand, so a business never shows on another brand's domain. It replaces `requireBusinessMembership` in `forBusiness`.
+- `requireBusinessAccess` refuses a business whose brand differs from the request's brand, so a business never shows on another brand's domain. A business of another brand gets the same refusal as one the person isn't on. It replaces `requireBusinessMembership` in `forBusiness`.
 - An operator of a partner business gets `activity` at the activity-only level, and `activity`, `setup`, and `team` at full access. They never get `billing`, `api_keys`, or `mcp`.
+- Each operator route in the admin needs one capability, from the table in `apps/admin/src/lib/business-capabilities.ts`. `forBusiness` checks the brand and the capability before the handler runs, matching the decoded path, and a route missing from the table needs `setup`.
+- The functions behind Polar checkout, the overage cap, operator API keys, webhooks managed from the dashboard, and MCP tokens refuse a partner business too, whatever brand the request came from. MCP's consent screen lists only direct businesses.
+- The dashboard remembers, per brand, the business a person last opened on that brand's domains.
+- The dashboard hides each page the business doesn't give the person, from the table in `apps/admin/src/lib/dashboard-pages.ts`. The workspace list carries each business's capabilities for it.
+- On a partner's domain, a signed-in person with no business there gets a "no businesses" page instead of onboarding, since that domain makes no direct business.
 - A partner member reaches a business only after `openPartnerBusiness`. That writes the open with its expiry and an `audit_logs` row in one transaction. In the database, `app.has_partner_access(business_id)` checks the same open, so RLS and the application agree.
 - Direct businesses keep today's rules for each role.
 - Callers check capabilities, never roles. Adding a role or an access level changes this module only.
@@ -153,7 +158,7 @@ type PartnerActor =
 ```
 
 - The console's routes live under `/api/partner/*` in the admin and call these functions directly, the way the dashboard's operator routes call domain functions today. The v1 public API's Platform endpoints call the same functions for keys that belong to a partner.
-- `createPartnerBusiness` creates a business with no owner, links it to the partner, optionally applies a template, and sends the owner an invitation under the partner's brand. It never counts toward the cap of 10 businesses per account.
+- `createPartnerBusiness` creates a business with no owner, links it to the partner at the access level the partner picks, optionally applies a template, and sends the owner an invitation under the partner's brand. The invitation is never a claim link. A partner's businesses open only on its own domains, so the function refuses until the partner has its subdomain. It never counts toward the cap of 10 businesses per account.
 - `releaseBusiness` needs an owner who accepted the invitation. It makes that person the owner, removes the partner, and puts the business on the host's Free plan.
 - Each function checks the actor's role itself. A member can work inside businesses, an admin can also manage businesses, packages, branding, domains, keys, and the team, and only an owner can manage billing, Stripe, owners, and deleting the partner. An admin can invite, change and remove admins and members, but only an owner can grant the owner role or change or remove an owner.
 
@@ -174,7 +179,7 @@ type Entitlement = {
 loadEntitlement(tx, businessId: string): Promise<Entitlement>
 ```
 
-- A direct business gets its plan from the plan catalog, as today. A self-hosted server's businesses get `source: "unlimited"`. A partner business gets its package, or no limit when it's billed outside LobbyStack. It is `live` only while its Stripe subscription is live (unless billed outside) and its partner's tier is live or in its first 30 days after ending.
+- A direct business gets its plan from the plan catalog, as today. A self-hosted server's businesses get `source: "unlimited"`. A partner business gets its package, or no limit when it's billed outside LobbyStack. It is `live` only while its Stripe subscription is live (unless billed outside) and its partner's tier is live or in its first 30 days after ending. Until packages and tiers arrive, every partner business is billed outside LobbyStack and `live`, with no allowance or overage, and its partner as `poolPartnerId`. Tiers set how many numbers a partner's businesses hold, so until they count them, the cloud's number claims refuse a partner business.
 - A direct business that isn't `live` still answers within its Free allowance. A partner business that isn't `live` gets an allowance of 0, so usage metering refuses its calls and chats the way it refuses any business at its limit: calls forward and chat shows its "can't reply" message.
 - `hasLiveEntitlement(account)` in `packages/shared` answers `live` from a billing account. The browser and the Polar reconcile use it on account snapshots. For a business's own account, it matches `loadEntitlement(...).live`. It replaces `isPaidSubscription` in TypeScript. The number-claim SQL calls `app.has_live_entitlement(business_id)`, which applies the same rule.
 - Direct Starter and Pro plans charge alert texts and outbound attempts against the cap. `rates` carries `alertSms` and `outboundAttempt` for them, beside the minute and chat rates.
@@ -309,6 +314,7 @@ interface CustomHostnameProvider {
 1. The console calls `createPartnerBusiness`, which creates the owner-less business, applies the chosen template, and queues the invitation email.
 2. The owner opens the link on the partner's domain and pays at the Stripe checkout on the partner's account, or signs in when the business is billed outside LobbyStack.
 3. Stripe's webhook reconciles the subscription, and the business's entitlement goes live.
+4. The owner lands in the business. Their onboarding skips creating it, the number step and attribution, and ends once they verify their phone. At activity only, the phone is their only step.
 
 ## Where each module is tested
 

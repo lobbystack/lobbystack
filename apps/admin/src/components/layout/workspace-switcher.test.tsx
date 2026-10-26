@@ -7,6 +7,8 @@ import { WorkspaceSwitcher } from "./workspace-switcher";
 import { SidebarProvider } from "@/components/ui/sidebar";
 const router = vi.hoisted(() => ({ refresh: vi.fn() }));
 const pendingAnalytics = vi.hoisted(() => ({ record: vi.fn() }));
+const branding = vi.hoisted(() => ({ partner: null as null | object }));
+vi.mock("@/components/branding-provider", () => ({ useBranding: () => ({ partner: branding.partner }) }));
 vi.mock("@/lib/workspace-analytics", () => ({ recordPendingWorkspaceSwitch: pendingAnalytics.record }));
 vi.mock("next/navigation", () => ({ useRouter: () => router }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en-US" }, t: (key: string) => key }) }));
@@ -14,7 +16,7 @@ const clients: QueryClient[] = [];
 beforeEach(() => {
   vi.stubGlobal("matchMedia", vi.fn(query => ({ matches: false, media: query, addEventListener: vi.fn(), removeEventListener: vi.fn() })));
 });
-afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
+afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; branding.partner = null; vi.unstubAllGlobals(); vi.clearAllMocks(); });
 function setup(name = "Tim Hortons", loading = false) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
   const businesses = [{ businessId: "business-1", name, active: true }, { businessId: "business-2", name: "Acme Clinic", active: false }];
@@ -30,6 +32,22 @@ function setup(name = "Tim Hortons", loading = false) {
   const view = render(<QueryClientProvider client={client}><SidebarProvider><WorkspaceSwitcher /></SidebarProvider></QueryClientProvider>);
   return { ...view, client, fetchMock };
 }
+describe("on a partner's domain", () => {
+  it("offers a new workspace on the host's domain", async () => {
+    setup();
+    await userEvent.click(screen.getByRole("button", { name: /Tim Hortons/ }));
+    expect(await screen.findByRole("menuitem", { name: /sidebar\.createBusiness/ })).toBeTruthy();
+  });
+
+  it("offers no new workspace, since the partner creates its businesses from its console", async () => {
+    branding.partner = { faviconUrl: null, color: null, links: { terms: null, privacy: null, support: null } };
+    setup();
+    await userEvent.click(screen.getByRole("button", { name: /Tim Hortons/ }));
+    expect(await screen.findByRole("menuitem", { name: /Acme Clinic/ })).toBeTruthy();
+    expect(screen.queryByRole("menuitem", { name: /sidebar\.createBusiness/ })).toBeNull();
+  });
+});
+
 describe("original workspace switcher behavior", () => {
   it("masks business names in analytics replay", async () => {
     setup();

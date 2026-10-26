@@ -10,6 +10,23 @@ import { useSignOut } from "@/hooks/use-sign-out";
 import { NestedPageSurfaceProvider } from "@/components/page-surface";
 import { onboardingRoutes as routes, ReplacementOnboardingShell } from "@/components/replacement-onboarding-shell";
 
+// A partner's business skips creating it, the number and attribution, and at
+// the activity level everything but the owner's phone, as onboardingSteps in
+// packages/domain decides. The dots then count only the owner's own steps.
+const PARTNER_ROUTES = ["/onboarding/website", "/onboarding/knowledge", "/onboarding/greeting", "/onboarding/test-call", "/onboarding/verify-phone"] as const;
+const STAGE_ROUTES: Record<string, string> = { website: "/onboarding/website", knowledge: "/onboarding/knowledge", greeting: "/onboarding/greeting", test_call: "/onboarding/test-call", verify_phone: "/onboarding/verify-phone" };
+
+type Progress = { current: number; navigableUntil?: number; total: number; routes?: readonly string[] } | null;
+
+/** The step dots for a partner's business, or null at the activity level, whose owner has one step. */
+function partnerProgress(pathname: string, stage: string | undefined, accessLevel: "full" | "activity"): Progress {
+  if (accessLevel === "activity") return null;
+  const current = PARTNER_ROUTES.indexOf(pathname as (typeof PARTNER_ROUTES)[number]) + 1;
+  if (current === 0) return null;
+  const reached = stage === "complete" ? PARTNER_ROUTES.length : PARTNER_ROUTES.indexOf((STAGE_ROUTES[stage ?? ""] ?? "") as (typeof PARTNER_ROUTES)[number]) + 1;
+  return { current, total: PARTNER_ROUTES.length, routes: PARTNER_ROUTES, ...(reached > 0 ? { navigableUntil: reached } : {}) };
+}
+
 export function OnboardingRouteShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { t } = useTranslation("onboarding");
@@ -26,7 +43,7 @@ export function OnboardingRouteShell({ children }: { children: React.ReactNode }
     <ReplacementOnboardingShell
       description={showDescription ? t(`${route.key}.description`) : ""}
       onSignOut={() => void signOut()}
-      progress={{ current: route.step, ...(navigableUntil === undefined ? {} : { navigableUntil }), total: 9 }}
+      progress={business?.partnerAccessLevel ? partnerProgress(pathname, stage, business.partnerAccessLevel) : { current: route.step, ...(navigableUntil === undefined ? {} : { navigableUntil }), total: 9 }}
       title={t(selectedNumber ? "number.selectedTitle" : `${route.key}.title`)}
       width={route.key === "number" && (!phones.data || hasPrimaryNumber) ? "md" : route.width}
     >

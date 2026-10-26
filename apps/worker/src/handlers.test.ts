@@ -7,7 +7,7 @@ import type { JobEnvelope } from "@lobbystack/contracts";
 import { billingCheckoutLeaseEndsAt, claimBillingCheckoutRequest, countPublishableOutboxMessages, deleteCallRecordingForRetention, deleteSentProductEventsBefore, deliverOutbound, expireProspectDemos, generateAffiliatePayoutRun, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, loadLiveCallForPricing, recordCallProviderPricing, recordProductEvent, recordSmsProviderPricing, reconcileBillingProviderEvent, runPrivacyRetentionSweep } from "@lobbystack/domain";
 import { queueDailyOperatorSummaries, queueOnboardingFollowupEmail } from "@lobbystack/domain";
 import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning, numberProvisioningLeaseEndsAt } from "@lobbystack/domain";
-import { brandForEmail, forgetCachedBrands, loadNumberReleaseEmail, type Brand } from "@lobbystack/domain";
+import { brandForEmail, businessGetsHostEmails, forgetCachedBrands, loadNumberReleaseEmail, type Brand } from "@lobbystack/domain";
 import { SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
 
 vi.mock("@lobbystack/domain", async (importOriginal) => {
@@ -42,6 +42,8 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
     runPrivacyRetentionSweep: vi.fn(),
     brandForEmail: vi.fn(actual.brandForEmail),
     loadNumberReleaseEmail: vi.fn(),
+    // Every business here is direct unless a test says otherwise.
+    businessGetsHostEmails: vi.fn(async () => true),
   };
 });
 
@@ -244,6 +246,20 @@ describe("worker handlers", () => {
     const payload = { template: "onboarding_followup", to: "owner@example.test", from: "Raphael <raphael@lobbystack.com>", subject: "How'd you like LobbyStack?", variables: { businessName: "Acme" } };
     await handleJob({ jobId: randomUUID(), businessId: randomUUID(), type: "email.send", queue: "default", payload, trace: {}, idempotencyKey: "onboarding-followup:x:email", scheduled: false }, { domain: { db: undefined as never }, email: { sendTemplate } });
     expect(sendTemplate).toHaveBeenCalledWith(expect.objectContaining({ template: "onboarding_followup", to: "owner@example.test", from: "Raphael <raphael@lobbystack.com>" }));
+  });
+
+  it("never sends the founder's check-in to a partner's business, even one queued already, while its own emails still go", async () => {
+    const sendTemplate = vi.fn().mockResolvedValue({ messageId: "provider-id" });
+    const businessId = randomUUID();
+    const db = "worker-db" as never;
+    vi.mocked(businessGetsHostEmails).mockResolvedValueOnce(false);
+    vi.mocked(brandForEmail).mockResolvedValue({ kind: "partner", partnerId: randomUUID(), name: "Acme Reception", logoUrl: null, faviconUrl: null, color: null, origin: "https://acme.portal.example.test", links: { website: null, terms: null, privacy: null, support: null }, email: { fromName: "Acme Reception", fromAddress: "no-reply@portal.example.test", replyTo: null } });
+    const send = (payload: Record<string, unknown>) => handleJob({ jobId: randomUUID(), businessId, type: "email.send", queue: "default", payload, trace: {}, idempotencyKey: randomUUID(), scheduled: false }, { domain: { db }, email: { sendTemplate } });
+    await expect(send({ template: "onboarding_followup", to: "owner@example.test", from: "Raphael <raphael@lobbystack.com>", subject: "How'd you like LobbyStack?", variables: { businessName: "Harbor Dental" }, brand: { kind: "host" }, replyTo: null })).resolves.toMatchObject({ status: "skipped" });
+    expect(businessGetsHostEmails).toHaveBeenCalledWith(db, businessId);
+    expect(sendTemplate).not.toHaveBeenCalled();
+    await send({ template: "operator_alert", to: "owner@example.test", subject: "Missed call", variables: { message: "Call back +14165550100." }, brand: { kind: "business", businessId }, replyTo: null });
+    expect(sendTemplate).toHaveBeenCalledWith(expect.objectContaining({ template: "operator_alert", to: "owner@example.test" }));
   });
   it("reconciles an owned Twilio number and puts it on the SIP trunk", async () => {
     const businessId = randomUUID(); const claimId = randomUUID(); const phoneNumberId = randomUUID(); const domain = { db: undefined as never };

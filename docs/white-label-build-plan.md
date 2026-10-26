@@ -39,7 +39,7 @@ This phase ships first. A partner signs up, brands its console, and creates busi
 | `partner_domains` | Hostname (unique), partner, kind (subdomain or custom), and verification state |
 | `businesses.partner_id`, `businesses.partner_access_level` | The business's partner, and the access level of its own operators: full or activity |
 | `partner_business_opens` | Partner member, business, and expiry. Each open also writes `audit_logs`. |
-| `user_active_businesses` | The active business per user and brand, replacing the global `users.active_business_id` |
+| `user_active_businesses` | The active business per user on each partner's domain. The host's domain keeps `users.active_business_id` |
 
 **Row-level security:**
 

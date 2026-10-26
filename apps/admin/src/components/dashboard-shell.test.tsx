@@ -22,9 +22,9 @@ beforeEach(() => {
   window.localStorage.clear();
 });
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
-function setup(role = "business_owner", widgetsEnabled = false, appointments: Array<Record<string, unknown>> = []) {
+function setup(role = "business_owner", widgetsEnabled = false, appointments: Array<Record<string, unknown>> = [], capabilities?: string[]) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } }); clients.push(client);
-  client.setQueryData(["businesses"], { businesses: [{ businessId: "business", name: "Tenant name", active: true, role }] });
+  client.setQueryData(["businesses"], { businesses: [{ businessId: "business", name: "Tenant name", active: true, role, ...(capabilities ? { capabilities } : {}) }] });
   client.setQueryData(["billing", "business"], { account: null, permissions: { hasCheckoutAccess: false }, availableCheckoutPlans: [], availableCheckoutIntervals: { starter: [], pro: [] } });
   client.setQueryData(["phone-numbers", "business"], { phoneNumbers: [] });
   client.setQueryData(["setup", "business"], { steps: [] });
@@ -83,5 +83,42 @@ describe("original shared navigation", () => {
       view.navigate(href!);
       await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     }
+  });
+});
+
+describe("a partner's business", () => {
+  const links = () => screen.getAllByRole("link").map(link => link.getAttribute("href"));
+
+  it("at full access, leaves billing, API keys and MCP out of the menu", () => {
+    setup("business_owner", true, [], ["activity", "setup", "team"]);
+    expect(links()).toEqual(["#dashboard-main-content", "/", "/appointments", "/calls", "/messages", "/contacts", "/agent", "/agent/knowledge", "/agent/services", "/agent/employees", "/agent/rules", "/analytics", "/integrations", "/widget", "/settings/team"]);
+    expect(screen.getByText("Page content")).toBeTruthy();
+  });
+
+  it("at activity only, shows calls, chats, appointments, contacts and messages, and the person's own settings", () => {
+    const view = setup("business_owner", true, [], ["activity"]);
+    expect(links()).toEqual(["#dashboard-main-content", "/", "/appointments", "/calls", "/messages", "/contacts", "/settings/appearance"]);
+    expect(screen.queryByText("nav:sidebar.agent")).toBeNull();
+    view.navigate("/settings/notifications");
+    expect(screen.getByRole("link", { name: "nav:items.settings" }).hasAttribute("data-active")).toBe(true);
+  });
+
+  it("sends a page the business doesn't allow back Home without showing it", async () => {
+    const view = setup("business_owner", false, [], ["activity", "setup", "team"]);
+    view.navigate("/settings/plan");
+    expect(screen.queryByText("Page content")).toBeNull();
+    await waitFor(() => expect(route.router.replace).toHaveBeenCalledWith("/"));
+    route.router.replace.mockClear();
+    view.navigate("/agent/knowledge");
+    expect(screen.getByText("Page content")).toBeTruthy();
+    expect(route.router.replace).not.toHaveBeenCalled();
+  });
+});
+
+describe("before the workspace list loads", () => {
+  it("hides what the business the server opened leaves out", () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity, enabled: false } } }); clients.push(client);
+    render(<QueryClientProvider client={client}><DashboardShell capabilities={["activity"]} user={{ email: "operator@example.invalid", name: "Operator" }}><p>Page content</p></DashboardShell></QueryClientProvider>);
+    expect(screen.getAllByRole("link").map(link => link.getAttribute("href"))).toEqual(["#dashboard-main-content", "/", "/appointments", "/calls", "/contacts", "/settings/appearance"]);
   });
 });

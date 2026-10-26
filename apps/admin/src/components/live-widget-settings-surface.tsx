@@ -44,7 +44,7 @@ type WidgetPosition = "bottom-right" | "bottom-left";
 type WidgetKeyConfig = { color?: string; position?: WidgetPosition; title?: string; subtitle?: string; greeting?: string; localeOverride?: InterfaceLocale; leadForm?: { enabled?: boolean; requirePhone?: boolean; requireEmail?: boolean; showBeforeChat?: boolean }; liveChat?: { enabled: boolean } };
 // `key` is null for revoked keys and for keys created before keys were kept.
 type WidgetKeyRecord = { id: string; key: string | null; label: string | null; status: "active" | "disabled" | "revoked"; allowedOrigins: string[]; config: WidgetKeyConfig; lastUsedAt: string | null; createdAt: string };
-type KeysResponse = { keys: WidgetKeyRecord[] };
+type KeysResponse = { keys: WidgetKeyRecord[]; issuanceEnabled?: boolean };
 type CreatedKey = { id: string; key: string } | null;
 /** What the form edits. Text fields stay untrimmed while the operator types. */
 type WidgetDraft = { label: string; origins: string; color: string; position: WidgetPosition; title: string; subtitle: string; greeting: string; localeOverride: "" | InterfaceLocale; leadEnabled: boolean; leadRequireEmail: boolean; leadRequirePhone: boolean; leadShowBeforeChat: boolean; liveChatEnabled: boolean };
@@ -112,7 +112,7 @@ export function LiveWidgetSettingsSurface() {
   const [createdKey, setCreatedKey] = useState<CreatedKey>(null);
   const [revoking, setRevoking] = useState<WidgetKeyRecord | null>(null);
   const { businesses, business } = useActiveBusiness();
-  const billing = useQuery({ queryKey: ["billing", business?.businessId], queryFn: () => requestJson<{ widgetIssuanceEnabled?: boolean }>(`/api/billing?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business?.businessId) });
+  // The key list says whether new keys can be made, so the page works for a business without billing, such as a partner's.
   const keys = useQuery({ queryKey: ["widget-keys", business?.businessId], queryFn: () => requestJson<KeysResponse>(`/api/widget-keys?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business?.businessId) });
   const refreshKeys = () => queryClient.invalidateQueries({ queryKey: ["widget-keys", business?.businessId] });
 
@@ -146,7 +146,7 @@ export function LiveWidgetSettingsSurface() {
   // Revoked keys go last: they only stay listed as a record.
   const rows = (keys.data?.keys ?? []).toSorted((a, b) => Number(a.status === "revoked") - Number(b.status === "revoked"));
   const embedOrigin = typeof window !== "undefined" ? window.location.origin : "";
-  const issuanceEnabled = billing.data?.widgetIssuanceEnabled === true;
+  const issuanceEnabled = keys.data?.issuanceEnabled === true;
   const locale = i18n.resolvedLanguage ?? i18n.language;
   const keyName = (row: WidgetKeyRecord) => row.label || t("widget.keys.untitled");
   const openCreate = () => { create.reset(); setCreatedKey(null); setEditing({ mode: "create" }); };
@@ -155,7 +155,7 @@ export function LiveWidgetSettingsSurface() {
 
   return (
     <PageSurface title={t("widget.title")}>
-      {!issuanceEnabled && billing.isSuccess ? (
+      {!issuanceEnabled && keys.isSuccess ? (
         <Alert>
           <AlertTitle>{t("widget.restricted.title")}</AlertTitle>
           <AlertDescription>{t("widget.restricted.description")}</AlertDescription>

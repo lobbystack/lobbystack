@@ -23,6 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { useBusinessCan } from "./business-capabilities-provider";
 
 type TestCallWidgetProps = {
   businessId?: string;
@@ -45,7 +46,9 @@ export function DashboardTestCallWidget({
   const voiceControlsRef = useRef<WebVoiceControls | null>(null);
   // Onboarding renders this widget too, where no plan dialog is mounted.
   const openUpgradePlanDialog = useUpgradePlanDialogOpener();
-  const billing = useQuery({ queryKey: ["billing", businessId], enabled: Boolean(businessId), queryFn: () => requestJson<{ effectivePlan: string }>(`/api/billing?businessId=${encodeURIComponent(businessId!)}`) });
+  // Only a business with billing gets an upgrade offer when the test call runs out.
+  const can = useBusinessCan();
+  const billing = useQuery({ queryKey: ["billing", businessId], enabled: Boolean(businessId) && can("billing"), queryFn: () => requestJson<{ effectivePlan: string }>(`/api/billing?businessId=${encodeURIComponent(businessId!)}`) });
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {

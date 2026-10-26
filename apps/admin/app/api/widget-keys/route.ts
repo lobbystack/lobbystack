@@ -35,10 +35,12 @@ function parseConfig(value: unknown): Record<string, unknown> {
   return parsed.data as unknown as Record<string, unknown>;
 }
 
+// The list also says whether this server makes new keys, so the widget page
+// needs no billing to know it: a partner's business has none.
 export const GET = operatorRoute(async ({ businessId, transaction }) => NextResponse.json(await transaction(async (tx) => {
   const rows = await tx.select().from(widgetKeys).where(eq(widgetKeys.businessId, businessId)).orderBy(desc(widgetKeys.createdAt));
   // The key is public (it sits in the website's script tag), so the dashboard can show its snippet again. Older keys kept only a hash.
-  return { keys: rows.map((row) => ({ ...serializeWidgetKeyConfig(row), key: row.status === "revoked" ? null : row.keyValue })) };
+  return { keys: rows.map((row) => ({ ...serializeWidgetKeyConfig(row), key: row.status === "revoked" ? null : row.keyValue })), issuanceEnabled: isWidgetKeyIssuanceEnabled(process.env) };
 })));
 
 export const POST = operatorRoute(async ({ businessId, body: input, transaction }) => NextResponse.json(await transaction(async (tx) => {

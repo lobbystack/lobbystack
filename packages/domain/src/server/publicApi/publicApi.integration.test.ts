@@ -1365,7 +1365,7 @@ describe.skipIf(!testUrl)("public API against PostgreSQL with RLS", () => {
       expect(await listed()).toContain(businessId);
 
       // The owner accepts it in the dashboard: the business is theirs and opens for them, and the operator loses its access.
-      expect(await accept(link.url)).toEqual({ businessId, role: "business_owner" });
+      expect(await accept(link.url)).toEqual({ businessId, role: "business_owner", partnerId: null });
       expect((await admin!.db.select({ active: users.activeBusinessId }).from(users).where(eq(users.id, customerId)))[0]?.active).toBe(businessId);
       // The claim removes the link, so the group's keys lose the business and GET /businesses stops listing it.
       expect(await admin!.db.select({ groupId: platformKeyBusinesses.groupId }).from(platformKeyBusinesses).where(eq(platformKeyBusinesses.businessId, businessId))).toEqual([]);

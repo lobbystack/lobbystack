@@ -116,7 +116,7 @@ import { loadBillingContext } from "../usage";
 import { defaultReceptionistProfile, saveReceptionistProfileInTransaction, type ReceptionistProfilePatch } from "../receptionistProfile";
 import { deleteAgentRuleInTransaction, insertAgentRuleInTransaction, listAgentRulesInTransaction, lockAgentRulesInTransaction, reorderAgentRulesInTransaction, updateAgentRuleInTransaction } from "../rules";
 import { insertWidgetKeyInTransaction, updateWidgetKeyInTransaction, type WidgetKeyPatch } from "../widgetKeys";
-import { ianaTimeZone, insertBusinessInTransaction, insertInvitationInTransaction, invitationUrl, isSingleEmailAddress, lockBusinessTeam, removeMemberInTransaction, revokeInvitationInTransaction, updateBusinessInTransaction, updateMemberRoleInTransaction } from "../tenancy";
+import { ianaTimeZone, insertBusinessInTransaction, insertInvitationInTransaction, invitationUrl, isSingleEmailAddress, lockBusinessTeam, partnerBusinessNotClaimable, removeMemberInTransaction, revokeInvitationInTransaction, updateBusinessInTransaction, updateMemberRoleInTransaction } from "../tenancy";
 import { conflict, invalidRequest, notFound, PublicApiError } from "./errors";
 import type { ResolvedPlatformKey } from "./platformKeys";
 import {
@@ -466,6 +466,7 @@ const numberRefusalMessages: Record<string, string> = {
   number_claim_rate_limited: "Too many numbers were claimed in the last hour. Try again later.",
   daily_claim_quota_reached: "Too many numbers were claimed today. Try again tomorrow.",
   monthly_claim_quota_reached: "Too many numbers were claimed in the last 30 days. Try again later.",
+  partner_numbers_unavailable: "A partner's business can't get a phone number on this server yet.",
 };
 
 // The claim limits know only that a window is full, so Retry-After is its length, at most a day.
@@ -813,7 +814,13 @@ export async function createClaimLinkForApi(context: DomainContext, caller: ApiC
   const normalizedEmail = teamEmail(input.email);
   const owns = async (tx: DatabaseTransaction) => (await tx.select({ role: businessMemberships.role }).from(businessMemberships).where(and(eq(businessMemberships.businessId, caller.businessId), eq(businessMemberships.userId, options.userId), eq(businessMemberships.status, "active"))).limit(1))[0]?.role === "business_owner";
   const notOwner = () => conflict("Only an owner can hand the business over, and the account this key acts as doesn't own it.");
-  if (!await inBusiness(context, caller, owns)) throw notOwner();
+  const standing = await inBusiness(context, caller, async (tx) => ({
+    partnerId: (await tx.select({ partnerId: businesses.partnerId }).from(businesses).where(eq(businesses.id, caller.businessId)).limit(1))[0]?.partnerId ?? null,
+    owner: await owns(tx),
+  }));
+  // A partner's business stays with its partner, which can release it to its owner.
+  if (standing.partnerId) throw conflict(partnerBusinessNotClaimable().message);
+  if (!standing.owner) throw notOwner();
   await options.beforeSend?.();
   return await inBusiness(context, caller, async (tx) => {
     await lockBusinessTeam(tx, caller.businessId);

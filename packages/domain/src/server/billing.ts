@@ -6,6 +6,7 @@ import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
 import type { DomainContext } from "./context";
 import { recordAffiliateCommissionInTransaction } from "./affiliates";
+import { requireBusinessCapability } from "./businessAccess";
 import { loadEntitlement } from "./entitlement";
 import { keepBusinessNumbersInTransaction, queuePlanCancelNoticeInTransaction, scheduleNumberReleaseInTransaction } from "./numberTrials";
 import { recordProductEventInTransaction } from "./productEvents";
@@ -140,6 +141,8 @@ export async function createBillingCheckoutRequestInTransaction(
   await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`billing-checkout:${input.businessId}`}, 0))`);
   // The lock a managed plan takes, so a checkout and a managed plan can't both start at once.
   await lockBillingAccount(tx, input.businessId);
+  // A partner's business pays its partner, never the host through Polar.
+  await requireBusinessCapability(tx, { businessId: input.businessId, capability: "billing" });
   const account = (await tx.select({ source: billingAccounts.source, plan: billingAccounts.plan, subscriptionState: billingAccounts.subscriptionState }).from(billingAccounts).where(eq(billingAccounts.businessId, input.businessId)).limit(1))[0];
   if (isManagedBillingAccount(account)) throw Object.assign(new Error("This business is on a managed plan, so LobbyStack bills it directly."), { status: 409 });
   if ((await loadEntitlement(tx, input.businessId)).live) {
@@ -360,6 +363,8 @@ export async function setOverageSpendingCap(
 ): Promise<{ overageSpendingCapCents: number | null; overageSpendCents: number; overageSpendingCapReached: boolean }> {
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
+    // A partner's business has no billing with the host, whatever route asked.
+    await requireBusinessCapability(tx, { businessId: input.businessId, capability: "billing" });
     return await setOverageSpendingCapInTransaction(tx, input);
   });
 }

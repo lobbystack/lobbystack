@@ -20,6 +20,7 @@ import {
 import { getMeter, recordException } from "@lobbystack/telemetry/node";
 
 import { requireBusinessAdmin } from "../../authz";
+import { requireBusinessCapability } from "../businessAccess";
 import type { DomainContext } from "../context";
 import { queueOperatorAlertInTransaction } from "../notifications";
 import { conflict, invalidRequest, notFound } from "./errors";
@@ -42,6 +43,8 @@ async function asManager<T>(context: DomainContext, businessId: string, manager:
   if (manager.kind === "operator") {
     return await withBusinessTransaction(context.db, { userId: manager.userId, businessId, actorType: "operator" }, async (tx) => {
       await requireBusinessAdmin(tx, { userId: manager.userId, businessId });
+      // A partner's business gives its own operators no webhooks, which go with API keys, whatever route asked.
+      await requireBusinessCapability(tx, { businessId, capability: "api_keys" });
       return await callback(tx);
     });
   }

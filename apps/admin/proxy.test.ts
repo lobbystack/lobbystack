@@ -413,7 +413,7 @@ describe("what reaches the admin on other hostnames", () => {
 });
 
 describe("a partner's host", () => {
-  it("keeps MCP, OAuth, the OpenAPI document, webhooks and partner signup on the host's domain", async () => {
+  it("keeps MCP, OAuth, the OpenAPI document, webhooks, partner signup and the affiliate program on the host's domain", async () => {
     hostWithPartners();
     for (const [path, method] of [
       ["/api/mcp", "POST"],
@@ -430,6 +430,10 @@ describe("a partner's host", () => {
       ["/partner/signup", "GET"],
       ["/api/partner/signup", "POST"],
       ["/api/branding/initial", "POST"],
+      ["/affiliate", "GET"],
+      ["/api/affiliate", "GET"],
+      ["/api/affiliate", "PATCH"],
+      ["/api/affiliate/click", "POST"],
     ] as const) {
       const partner = await visit(`https://bright.portal.example.test${path}`, { method, headers: { origin: "https://bright.portal.example.test" } });
       expect(partner.status, `${method} ${path} on a partner's host`).toBe(404);

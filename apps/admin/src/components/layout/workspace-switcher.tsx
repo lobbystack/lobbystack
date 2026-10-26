@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
 import { Check, ChevronsUpDown, Plus } from "lucide-react";
 import { useActiveBusiness } from "@/hooks/use-active-business";
+import { useBranding } from "@/components/branding-provider";
 import { SidebarTeamSkeleton } from "@/components/loading-skeletons";
 import { recordPendingWorkspaceSwitch } from "@/lib/workspace-analytics";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -18,6 +19,8 @@ export function WorkspaceSwitcher() {
   const { t } = useTranslation("nav");
   const { isMobile } = useSidebar();
   const { businesses, business: active } = useActiveBusiness();
+  // A partner's domain makes no direct business: the partner creates its businesses from its console.
+  const { partner } = useBranding();
   const [switching, setSwitching] = useState(false);
 
   async function selectBusiness(businessId: string) {
@@ -72,11 +75,13 @@ export function WorkspaceSwitcher() {
                 </DropdownMenuItem>
               ))}
             </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="gap-2.5 px-3 py-2" render={<Link href="/onboarding/business?create=true" />}>
-              <Plus className="size-4" />
-              {t("sidebar.createBusiness")}
-            </DropdownMenuItem>
+            {partner ? null : <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="gap-2.5 px-3 py-2" render={<Link href="/onboarding/business?create=true" />}>
+                <Plus className="size-4" />
+                {t("sidebar.createBusiness")}
+              </DropdownMenuItem>
+            </>}
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

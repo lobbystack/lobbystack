@@ -1,6 +1,6 @@
 import type { AuthzRole } from "@lobbystack/contracts";
 import type { DatabaseTransaction } from "@lobbystack/db";
-import type { DomainContext } from "@lobbystack/domain";
+import type { BusinessAccess, Capability, DomainContext } from "@lobbystack/domain";
 
 import { asApiResponse, jsonError } from "./api-helpers";
 import type { OperatorRequest, RouteOptions, SignedInRequest } from "./operator-request";
@@ -21,6 +21,8 @@ const defaults = () => ({
   /** What transaction() hands its callback. */
   tx: {} as unknown,
   role: "business_owner" as AuthzRole,
+  /** The capabilities the business gives the operator: all of them, as a direct business does. */
+  capabilities: ["activity", "setup", "team", "billing", "api_keys", "mcp"] as Capability[],
   /** Thrown by transaction(), the way a failed membership check is. */
   denied: undefined as unknown,
   /** The options of each transaction() call. */
@@ -36,7 +38,8 @@ export function resetFakeOperator(): void {
 async function operator(request: Request, options: RouteOptions = {}): Promise<OperatorRequest> {
   const text = await request.text();
   if (options.maxBodyBytes !== undefined && Buffer.byteLength(text) > options.maxBodyBytes) throw jsonError("The request body is too large.", 413, "body_too_large");
-  const { userId, businessId, domain, email, emailVerified } = fakeOperator;
+  const { userId, businessId, domain, email, emailVerified, role, capabilities } = fakeOperator;
+  const access: BusinessAccess = { businessId, via: "membership", role, partnerId: null, accessLevel: null, can: (capability) => capabilities.includes(capability) };
   return {
     request,
     session: { user: { id: userId, email, emailVerified }, session: { id: "session", userId, expiresAt: new Date(0) } },
@@ -44,6 +47,7 @@ async function operator(request: Request, options: RouteOptions = {}): Promise<O
     businessId,
     body: text ? JSON.parse(text) as Record<string, unknown> : {},
     domain,
+    access,
     transaction: async (callback, options) => {
       fakeOperator.transactions.push(options);
       if (fakeOperator.denied) throw fakeOperator.denied;

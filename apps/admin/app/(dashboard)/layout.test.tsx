@@ -2,10 +2,10 @@ import type { ReactElement } from "react";
 import { beforeEach, expect, it, vi } from "vitest";
 
 vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => undefined }), headers: async () => fixture.headers }));
-const fixture = vi.hoisted(() => ({ onboarding: { stage: "complete", businessId: "business" as string | null }, partners: [] as Array<{ partnerId: string }>, headers: new Headers() }));
+const fixture = vi.hoisted(() => ({ onboarding: { stage: "complete", businessId: "business" as string | null }, partners: [] as Array<{ partnerId: string }>, businesses: [] as Array<{ businessId: string; capabilities: string[] }>, opened: null as string[] | null, headers: new Headers() }));
 // Next's redirect throws, so nothing after it runs.
 vi.mock("next/navigation", () => ({ redirect: vi.fn((to: string) => { throw Object.assign(new Error("NEXT_REDIRECT"), { to }); }) }));
-vi.mock("@lobbystack/domain", () => ({ getActiveOnboardingState: async () => fixture.onboarding, listUserPartners: async () => fixture.partners, resolveOnboardingRoute: () => "/onboarding/business" }));
+vi.mock("@lobbystack/domain", () => ({ capabilityNames: ["activity", "setup", "team", "billing", "api_keys", "mcp"], getActiveOnboardingState: async () => fixture.onboarding, listUserPartners: async () => fixture.partners, listUserBusinesses: async () => fixture.businesses, readBusinessCapabilities: async () => fixture.opened, resolveOnboardingRoute: (stage: string) => stage === "website" ? "/onboarding/website" : "/onboarding/business" }));
 vi.mock("@/lib/auth", () => ({ getSession: async () => ({ user: { id: "user", email: "owner@example.com", name: "Owner" } }) }));
 vi.mock("@/lib/api-helpers", () => ({ getAppDatabase: () => ({ db: {} }) }));
 vi.mock("@/app/root-document", () => ({ RootDocument: () => null, generateBrandingMetadata: async () => ({}) }));
@@ -29,6 +29,8 @@ it("ships every section's translations, so client navigation never requests one"
 beforeEach(() => {
   fixture.onboarding = { stage: "complete", businessId: "business" };
   fixture.partners = [];
+  fixture.businesses = [{ businessId: "business", capabilities: ["activity", "setup", "team", "billing", "api_keys", "mcp"] }];
+  fixture.opened = null;
   fixture.headers = new Headers({ "x-lobbystack-brand": "host" });
 });
 
@@ -60,4 +62,31 @@ it("on a partner's host, links to the console and sends someone there only for t
   expect(await shell()).toBe(true);
   fixture.onboarding = { stage: "create_business", businessId: null };
   await expect(DashboardLayout({ children: null })).rejects.toMatchObject({ to: "/partner" });
+});
+
+it("on a partner's host, shows someone with no business there the no-businesses page instead of the host's onboarding", async () => {
+  fixture.headers = new Headers({ "x-lobbystack-brand": "partner:5b1f6c43-34a5-4a8e-9a43-6c1f8d5f1c11", "x-lobbystack-brand-origin": "https://bright.portal.example.test" });
+  fixture.onboarding = { stage: "create_business", businessId: null };
+  await expect(DashboardLayout({ children: null })).rejects.toMatchObject({ to: "/no-businesses" });
+  // Someone with a business there onboards in it as usual.
+  fixture.onboarding = { stage: "website", businessId: "business" };
+  await expect(DashboardLayout({ children: null })).rejects.toMatchObject({ to: "/onboarding/website" });
+});
+
+it("renders the dashboard with what the open business lets the person use", async () => {
+  const capabilities = async () => ((await DashboardLayout({ children: null })) as ReactElement<{ children: ReactElement<{ capabilities: string[] }> }>).props.children.props.capabilities;
+  expect(await capabilities()).toEqual(["activity", "setup", "team", "billing", "api_keys", "mcp"]);
+  fixture.businesses = [{ businessId: "other", capabilities: ["activity", "setup", "team"] }, { businessId: "business", capabilities: ["activity"] }];
+  expect(await capabilities()).toEqual(["activity"]);
+});
+
+it("reads what the open business allows from the business itself when the workspace list leaves it out, so the dashboard never hides every page", async () => {
+  const capabilities = async () => ((await DashboardLayout({ children: null })) as ReactElement<{ children: ReactElement<{ capabilities: string[] }> }>).props.children.props.capabilities;
+  // The list leaves out a business that's no longer active, such as a suspended one.
+  fixture.businesses = [];
+  fixture.opened = ["activity"];
+  expect(await capabilities()).toEqual(["activity"]);
+  // A business the person can't read at all keeps today's dashboard, and the server still refuses what it must.
+  fixture.opened = null;
+  expect(await capabilities()).toEqual(["activity", "setup", "team", "billing", "api_keys", "mcp"]);
 });

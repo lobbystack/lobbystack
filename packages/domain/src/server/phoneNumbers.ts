@@ -69,6 +69,8 @@ const claimRefusals: Record<string, [status: number, message: string]> = {
   trial_ip_limited: [429, "A free trial already started from this network in the last 30 days. Choose a plan to get a number."],
   trial_not_needed: [409, "Your plan already includes a number. Search again to pick one."],
   trial_not_available: [409, "A free trial number isn't available for this workspace. Choose a plan to get a number."],
+  // The guard on onboarding_number_claim_events (migration 0135).
+  partner_numbers_unavailable: [409, "Phone numbers aren't available for this business yet."],
 };
 
 function refused(reason: string): Error {
@@ -108,6 +110,9 @@ export async function numberEligibilityInTransaction(tx: DatabaseTransaction, in
   const business = (await tx.select({ stage: businesses.onboardingStage, timezone: businesses.timezone, deploymentMode: businesses.deploymentMode, replacementUsedAt: businesses.phoneNumberReplacementUsedAt }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1))[0];
   const entitlement = await loadEntitlement(tx, input.businessId);
   if (!business) throw numberClaimError(404, "not_found", "Workspace not found.");
+  // A partner's tier sets how many numbers its businesses hold, and tiers
+  // don't count them yet, so the cloud buys a partner's business none.
+  if (business.deploymentMode === "cloud" && entitlement.poolPartnerId) throw refused("partner_numbers_unavailable");
   const onboardingStage = normalizeOnboardingStage(business.stage);
   if (input.via === "dashboard" && purpose === "onboarding" && !["phone_number", "attribution", "complete"].includes(onboardingStage)) throw refused("invalid_onboarding_stage");
   if (purpose === "replacement") {
@@ -309,6 +314,7 @@ export async function failNumberProvisioning(context: DomainContext, input: { bu
   });
 }
 
+// A partner's business has no number step or attribution, so only a direct business skips to attribution.
 export async function skipOnboardingNumber(context: DomainContext, input: { userId: string; businessId: string }): Promise<void> {
-  await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => { await requireBusinessAdmin(tx, input); const changed = await tx.update(businesses).set({ onboardingStage: "attribution", updatedAt: new Date() }).where(and(eq(businesses.id, input.businessId), or(eq(businesses.onboardingStage, "verify_phone"), eq(businesses.onboardingStage, "phone_number")))).returning({ id: businesses.id }); if (!changed.length) { const [business] = await tx.select({ stage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, input.businessId)); if (!["attribution", "complete"].includes(business?.stage ?? "")) throw numberClaimError(409, "invalid_onboarding_stage", "Number selection cannot be skipped at this onboarding stage."); } });
+  await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => { await requireBusinessAdmin(tx, input); const changed = await tx.update(businesses).set({ onboardingStage: "attribution", updatedAt: new Date() }).where(and(eq(businesses.id, input.businessId), isNull(businesses.partnerId), or(eq(businesses.onboardingStage, "verify_phone"), eq(businesses.onboardingStage, "phone_number")))).returning({ id: businesses.id }); if (!changed.length) { const [business] = await tx.select({ stage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, input.businessId)); if (!["attribution", "complete"].includes(business?.stage ?? "")) throw numberClaimError(409, "invalid_onboarding_stage", "Number selection cannot be skipped at this onboarding stage."); } });
 }

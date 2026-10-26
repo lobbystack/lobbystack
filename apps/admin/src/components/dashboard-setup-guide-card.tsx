@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 
 import { requestJson } from "@/lib/request-json";
 import { useActiveBusiness } from "@/hooks/use-active-business";
+import { useBusinessCan } from "./business-capabilities-provider";
 import { Button } from "./ui/button";
 import { cn } from "@/lib/utils";
 
@@ -15,7 +16,9 @@ type SetupStep = { name: string; status: string };
 export function DashboardSetupGuideCard({ onNavigate }: { onNavigate?: () => void } = {}) {
   const { t } = useTranslation("nav");
   const { business } = useActiveBusiness();
-  const canManage = Boolean(business && ["business_owner", "business_admin"].includes(business.role));
+  const can = useBusinessCan();
+  // The guide walks through setup, which an activity-only business leaves to its partner.
+  const canManage = Boolean(business && ["business_owner", "business_admin"].includes(business.role)) && can("setup");
   const setup = useQuery({
     queryKey: ["setup", business?.businessId],
     queryFn: () => requestJson<{ steps: SetupStep[] }>(`/api/setup?businessId=${encodeURIComponent(business!.businessId)}`),

@@ -66,7 +66,8 @@ it("consumes denied authorization without calling the provider", async () => {
 
 it("opens the business it connected, and succeeds even when it can't", async () => {
   expect((await GET(callback(createCalendarOAuthState({ userId: "user-1", businessId: "business" })))).headers.get("location")).toContain("status=success");
-  expect(mocks.switchWorkspace).toHaveBeenCalledWith({}, { userId: "user-1", businessId: "business" });
+  // The callback lands on the host's domain, which opens only direct businesses.
+  expect(mocks.switchWorkspace).toHaveBeenCalledWith({}, { userId: "user-1", businessId: "business", brand: { kind: "host" } });
   expect(mocks.connect.mock.invocationCallOrder[0]).toBeLessThan(mocks.switchWorkspace.mock.invocationCallOrder[0]!);
   mocks.switchWorkspace.mockRejectedValueOnce(new Error("Membership required."));
   expect((await GET(callback(createCalendarOAuthState({ userId: "user-1", businessId: "business" })))).headers.get("location")).toContain("status=success");

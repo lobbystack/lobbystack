@@ -1,6 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import type { Capability } from "@lobbystack/domain";
+import type { PartnerAccessLevel } from "@lobbystack/shared";
 import { selectActiveBusiness } from "@/lib/active-business";
 import { requestJson } from "@/lib/request-json";
 
@@ -17,6 +19,10 @@ export type Business = {
   websiteUrl?: string | null;
   onboardingStage?: string;
   createdAt?: string;
+  /** The access level a partner's business gives its operators, or null for a direct business. */
+  partnerAccessLevel?: PartnerAccessLevel | null;
+  /** What the business lets its operators do, before their role's rules. */
+  capabilities?: Capability[];
 };
 
 /** Loads the operator's workspaces and picks the server-selected active one. */

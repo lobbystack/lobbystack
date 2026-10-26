@@ -106,3 +106,20 @@ export function partnerRequestOrigin(headers: Headers): string | null {
   const resolved = readResolvedBrand(headers);
   return resolved?.kind === "partner" ? resolved.origin : null;
 }
+
+/**
+ * The brand whose businesses a request lists and opens: the partner's on its
+ * host, and the host's on the host's domain. A request the proxy resolved to
+ * no brand gets the host's, so it can never reach a partner's business.
+ */
+export function requestBrandScope(headers: Headers): { kind: "host" } | { kind: "partner"; partnerId: string } {
+  const resolved = readResolvedBrand(headers);
+  return resolved?.kind === "partner" ? { kind: "partner", partnerId: resolved.partnerId } : { kind: "host" };
+}
+
+/**
+ * On a partner's host, where a signed-in person with no business there
+ * lands instead of the host's onboarding, since a partner's domain makes no
+ * direct business.
+ */
+export const NO_BUSINESSES_PATH = "/no-businesses";

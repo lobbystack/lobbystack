@@ -1249,6 +1249,18 @@
       "comparison": "port-baseline"
     },
     {
+      "path": "/partner/[partnerId]/businesses",
+      "state": "default",
+      "fixtureState": "operator",
+      "comparison": "port-baseline"
+    },
+    {
+      "path": "/no-businesses",
+      "state": "default",
+      "fixtureState": "operator",
+      "comparison": "port-baseline"
+    },
+    {
       "path": "/partner/[partnerId]/branding",
       "state": "default",
       "fixtureState": "operator",

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  billedOutsideEntitlement,
   billableVoiceSeconds,
   billingPlanCatalog,
   billingMeterEventNames,
@@ -158,5 +159,18 @@ describe("billableVoiceSeconds with provider rounding", () => {
 
   it("still exempts spam regardless of the measured time", () => {
     expect(billableVoiceSeconds(300, "spam_ended", 299.5)).toBe(0);
+  });
+});
+
+describe("a partner business billed outside LobbyStack", () => {
+  it("is live, with no allowance, overage or number limit, and draws on its partner's pool", () => {
+    expect(billedOutsideEntitlement("partner-1")).toEqual({
+      live: true,
+      source: "billed_outside",
+      allowance: { voiceSeconds: null, chats: null, alertSms: null, outboundAttempts: null },
+      overage: { enabled: false, currency: "USD", rates: { voiceMinute: 0, chat: 0, alertSms: 0, outboundAttempt: 0 }, capMinor: null },
+      poolPartnerId: "partner-1",
+      includedNumbers: null,
+    });
   });
 });

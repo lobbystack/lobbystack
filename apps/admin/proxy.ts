@@ -57,8 +57,9 @@ const anyHostPrefixes = ["/api/health/", "/api/webhooks/", "/api/internal/"];
 const healthCheckPrefixes = ["/api/health/"];
 
 // What stays on the host's domain: MCP and its OAuth server, the OpenAPI
-// document, provider webhooks, the host's own brand step, and partner signup.
-// A partner's host answers them with a 404.
+// document, provider webhooks, the host's own brand step, partner signup, and
+// the host's affiliate program, since a partner's businesses never get the
+// host's marketing. A partner's host answers them with a 404.
 const hostOnlyPrefixes = [
   "/api/mcp",
   "/.well-known/",
@@ -73,6 +74,8 @@ const hostOnlyPrefixes = [
   "/api/branding/initial",
   "/partner/signup",
   "/api/partner/signup",
+  "/affiliate",
+  "/api/affiliate",
 ];
 
 function isHostOnlyPath(pathname: string): boolean {

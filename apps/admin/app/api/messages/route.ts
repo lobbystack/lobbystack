@@ -5,13 +5,19 @@ import { contacts, conversations, messages, widgetVisitors } from "@lobbystack/d
 import { appendMessage, setAutomationState } from "@lobbystack/domain";
 import { isTextChatChannel, isUuid, TEXT_CHAT_CHANNELS } from "@lobbystack/shared";
 import { jsonError } from "@/lib/api-helpers";
+import { instagramConfigured } from "@/lib/instagram-oauth";
 import { operatorRoute } from "@/lib/operator-request";
 
 export const dynamic = "force-dynamic";
 
 const conversationFields = { conversationId: conversations.id, contactName: contacts.name, contactPhone: contacts.phone, visitorName: widgetVisitors.name, visitorEmail: widgetVisitors.email, channel: conversations.channel, automationState: conversations.automationState, teamRequestedAt: conversations.teamRequestedAt };
 
-/** Without conversationId: one row per conversation (its latest message), newest first, paged. With it: that thread. */
+/**
+ * Without conversationId: one row per conversation (its latest message),
+ * newest first, paged, and whether this server offers Instagram, which the
+ * inbox's filters follow. Messages are activity, so the inbox needs nothing
+ * from the setup-only Integrations routes. With it: that thread.
+ */
 export const GET = operatorRoute(async ({ request, businessId, transaction }) => {
   const url = new URL(request.url);
   const conversationId = url.searchParams.get("conversationId");
@@ -32,7 +38,7 @@ export const GET = operatorRoute(async ({ request, businessId, transaction }) =>
       isTextChatChannel(channel) ? eq(conversations.channel, channel) : channel === "sms" ? notInArray(conversations.channel, [...TEXT_CHAT_CHANNELS]) : undefined,
       search ? or(...[contacts.name, contacts.phone, widgetVisitors.name, widgetVisitors.email, latest.body].map((column) => ilike(column, `%${search}%`))) : undefined,
     )).orderBy(desc(latest.createdAt), desc(conversations.id)).limit(limit + 1).offset(offset);
-    return { messages: rows.slice(0, limit), hasNext: rows.length > limit };
+    return { messages: rows.slice(0, limit), hasNext: rows.length > limit, instagramOffered: instagramConfigured() };
   }));
 });
 

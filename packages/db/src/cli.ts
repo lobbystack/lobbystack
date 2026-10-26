@@ -173,6 +173,10 @@ async function main(): Promise<void> {
             ,('lobbystack_app', 'partner_signup_invitations', 'INSERT')
             ,('lobbystack_readonly', 'partners', 'SELECT')
             ,('lobbystack_readonly', 'partner_members', 'SELECT')
+            ,('lobbystack_app', 'user_active_businesses', 'SELECT')
+            ,('lobbystack_app', 'user_active_businesses', 'INSERT')
+            ,('lobbystack_app', 'user_active_businesses', 'DELETE')
+            ,('lobbystack_readonly', 'user_active_businesses', 'SELECT')
             ,('lobbystack_finance_export', 'businesses', 'SELECT')
             ,('lobbystack_finance_export', 'billing_accounts', 'SELECT')
             ,('lobbystack_finance_export', 'calls', 'SELECT')
@@ -195,7 +199,8 @@ async function main(): Promise<void> {
         }
         // The app role updates partner rows only through the columns partner
         // operations write, so no row moves to another partner, person, sender or
-        // role, and no partner changes its slug.
+        // role, and no partner changes its slug. A person's active business on a
+        // partner's domains moves only to another of that partner's businesses.
         const partnerUpdateGrantFailures = await migrator.db.execute<{ table_name: string; column_name: string; granted: boolean }>(sql`
           select expected.table_name, expected.column_name, expected.granted
           from (values
@@ -240,7 +245,11 @@ async function main(): Promise<void> {
             ('partner_domains', 'verified_at', true),
             ('partner_domains', 'updated_at', true),
             ('partner_domains', 'partner_id', false),
-            ('partner_domains', 'kind', false)
+            ('partner_domains', 'kind', false),
+            ('user_active_businesses', 'business_id', true),
+            ('user_active_businesses', 'updated_at', true),
+            ('user_active_businesses', 'user_id', false),
+            ('user_active_businesses', 'partner_id', false)
           ) as expected(table_name, column_name, granted)
           where has_column_privilege('lobbystack_app', 'public.' || expected.table_name, expected.column_name, 'UPDATE') <> expected.granted
         `);
@@ -282,6 +291,8 @@ async function main(): Promise<void> {
             ('lobbystack_app', 'app.list_oauth_grantors(uuid)'),
             ('lobbystack_app', 'app.list_business_members(uuid)'),
             ('lobbystack_app', 'app.count_owned_direct_businesses(uuid)'),
+            ('lobbystack_app', 'app.list_user_businesses(uuid)'),
+            ('lobbystack_app', 'app.list_partner_businesses(uuid)'),
             ('lobbystack_app', 'app.partner_role(uuid)'),
             ('lobbystack_worker', 'app.partner_role(uuid)'),
             ('lobbystack_readonly', 'app.partner_role(uuid)'),

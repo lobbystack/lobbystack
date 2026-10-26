@@ -16,7 +16,7 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-function renderShell(progress: { current: number; navigableUntil?: number; total: number }) {
+function renderShell(progress: { current: number; navigableUntil?: number; total: number; routes?: readonly string[] }) {
   return render(
       <OnboardingShell progress={progress} title="Step title">
         <div>Step body</div>
@@ -26,6 +26,14 @@ function renderShell(progress: { current: number; navigableUntil?: number; total
 }
 
 describe("OnboardingShell", () => {
+  it("links each step to the page the owner's onboarding names, when it skips some", () => {
+    renderShell({ current: 2, navigableUntil: 3, total: 3, routes: ["/onboarding/website", "/onboarding/test-call", "/onboarding/verify-phone"] });
+
+    expect(screen.getAllByRole("listitem")).toHaveLength(3);
+    expect(screen.getByRole("link", { name: "Go to onboarding step 1" }).getAttribute("href")).toBe("/onboarding/website");
+    expect(screen.getByRole("link", { name: "Go to onboarding step 3" }).getAttribute("href")).toBe("/onboarding/verify-phone");
+  });
+
   it("renders the nine-step progress, with the test call and phone steps before the number", () => {
     renderShell({ current: 9, navigableUntil: 9, total: 9 });
 

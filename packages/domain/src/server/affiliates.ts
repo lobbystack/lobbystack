@@ -1,6 +1,6 @@
 import { and, eq, gte, inArray, lte, sql } from "drizzle-orm";
 
-import { affiliateAttributions, affiliateClicks, affiliateCommissions, affiliatePayoutItems, affiliatePayoutRuns, affiliateProfileStats, affiliateProfiles, affiliateVoidedSources, users, withBusinessTransaction, withDispatcherTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { affiliateAttributions, affiliateClicks, affiliateCommissions, affiliatePayoutItems, affiliatePayoutRuns, affiliateProfileStats, affiliateProfiles, affiliateVoidedSources, businesses, users, withBusinessTransaction, withDispatcherTransaction, type DatabaseTransaction } from "@lobbystack/db";
 
 import type { DomainContext } from "./context";
 
@@ -55,6 +55,9 @@ export async function attributeBusiness(
   const referralCode = normalizeAffiliateReferralCode(input.referralCode);
   if (!referralCode) return null;
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "system" }, async (tx) => {
+    // The host's affiliates refer the host's own businesses. A partner's business belongs to its partner and never joins the host's affiliate program.
+    const business = (await tx.select({ partnerId: businesses.partnerId }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1))[0];
+    if (business?.partnerId) return null;
     const profile = (await tx.select({ id: affiliateProfiles.id, userId: affiliateProfiles.userId, referralCode: affiliateProfiles.referralCode }).from(affiliateProfiles).where(and(eq(affiliateProfiles.referralCode, referralCode), eq(affiliateProfiles.status, "active"))).limit(1))[0];
     // Affiliates cannot earn commission on their own workspaces.
     if (!profile || profile.userId === input.referredUserId) return null;

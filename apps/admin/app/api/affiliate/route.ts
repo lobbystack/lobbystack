@@ -5,10 +5,19 @@ import { affiliateAttributions, affiliateClicks, affiliateCommissions, affiliate
 import { normalizeAffiliateReferralCode } from "@lobbystack/domain";
 import { jsonError } from "@/lib/api-helpers";
 import { signedInRoute } from "@/lib/operator-request";
+import { requestBrandScope } from "@/lib/request-brand";
 
 export const dynamic = "force-dynamic";
 
-export const GET = signedInRoute(async ({ session, domain }) => NextResponse.json(await withBusinessTransaction(domain.db, { userId: session.user.id, actorType: "operator" }, async (tx) => {
+// The host's affiliate program stays on the host's domain, since a partner's
+// businesses never get the host's marketing. The proxy answers it with a 404
+// on a partner's host; this keeps a request that got past it from enrolling
+// anyone there.
+function offPartnerHost(request: Request): Response | null {
+  return requestBrandScope(request.headers).kind === "partner" ? jsonError("Not found.", 404, "not_found") : null;
+}
+
+export const GET = signedInRoute(async ({ request, session, domain }) => offPartnerHost(request) ?? NextResponse.json(await withBusinessTransaction(domain.db, { userId: session.user.id, actorType: "operator" }, async (tx) => {
   let profile = (await tx.select({ id: affiliateProfiles.id, referralCode: affiliateProfiles.referralCode, status: affiliateProfiles.status, payoutEmail: affiliateProfiles.payoutEmail }).from(affiliateProfiles).where(eq(affiliateProfiles.userId, session.user.id)).limit(1))[0];
   if (!profile) {
     const preferred = session.user.name ?? session.user.email?.split("@")[0] ?? `user-${session.user.id.slice(-8)}`;
@@ -37,7 +46,9 @@ export const GET = signedInRoute(async ({ session, domain }) => NextResponse.jso
   return { profile: { ...profile, referralLink: `${siteUrl}/signup?via=${encodeURIComponent(profile.referralCode)}` }, stats: stats[0] ?? { clickCount: 0, referralCount: 0, conversionCount: 0, pendingCommissionCents: 0, paidCommissionCents: 0 }, clicks, attributions, commissions, payouts };
 })));
 
-export const PATCH = signedInRoute(async ({ session, body, domain }) => {
+export const PATCH = signedInRoute(async ({ request, session, body, domain }) => {
+  const refused = offPartnerHost(request);
+  if (refused) return refused;
   const payoutEmail = typeof body.payoutEmail === "string" ? body.payoutEmail.trim().toLowerCase() : "";
   if (!payoutEmail || !/^[^\s@]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+$/.test(payoutEmail)) {
     return jsonError("A valid payout email is required.", 400);

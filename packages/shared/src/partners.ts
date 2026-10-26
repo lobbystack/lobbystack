@@ -64,3 +64,16 @@ export function normalizeBrandColor(value: unknown): string | null {
   if (/^#[0-9a-f]{6}$/.test(color)) return color;
   return /^#[0-9a-f]{3}$/.test(color) ? `#${[...color.slice(1)].map((digit) => digit + digit).join("")}` : null;
 }
+
+/**
+ * What a partner's business lets its own operators do. Full access is today's
+ * owner and admin work, minus billing, API keys and MCP. Activity only shows
+ * calls, chats, appointments, contacts and messages.
+ */
+export type PartnerAccessLevel = "full" | "activity";
+
+export const partnerAccessLevels = ["full", "activity"] as const satisfies ReadonlyArray<PartnerAccessLevel>;
+
+export function isPartnerAccessLevel(value: unknown): value is PartnerAccessLevel {
+  return typeof value === "string" && (partnerAccessLevels as readonly string[]).includes(value);
+}

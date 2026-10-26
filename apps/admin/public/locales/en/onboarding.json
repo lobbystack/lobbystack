@@ -152,7 +152,10 @@
       "notify": "Email me when they're available",
       "joined": "Done. We'll email you.",
       "continue": "Continue without a number",
-      "failed": "Something went wrong. Try again."
+      "failed": "Something went wrong. Try again.",
+      "partnerTitle": "We can't verify phones in this country yet ({{country}}).",
+      "partnerBody": "You can finish setup without a verified phone.",
+      "partnerContinue": "Continue"
     }
   },
   "greeting": {
@@ -260,5 +263,10 @@
     "continue": "Continue",
     "continuing": "Continuing...",
     "continueFailed": "We couldn't continue right now. Please try again."
+  },
+  "noBusinesses": {
+    "title": "No business here yet",
+    "description": "{{appName}} hasn't added {{email}} to a business. Ask them to invite you, then open the link in their email.",
+    "switchAccount": "Sign in with another account"
   }
 }

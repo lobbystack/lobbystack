@@ -1,11 +1,14 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
-import { HOST_EMAIL_BRAND, normalizeInterfaceLocale, type InterfaceLocale } from "@lobbystack/shared";
+import { HOST_EMAIL_BRAND, normalizeInterfaceLocale, type InterfaceLocale, type PartnerAccessLevel } from "@lobbystack/shared";
 
-import { businesses, enqueueOutbox, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { businesses, enqueueOutbox, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
 import { requireBusinessAdmin } from "../authz";
 import type { DomainContext } from "./context";
 import { attributeBusiness } from "./affiliates";
+import { businessShowsOnBrand, type BrandScope } from "./businessAccess";
+import { businessGetsHostEmails } from "./hostEmails";
+import { readActiveBusinessIdInTransaction } from "./tenancy";
 
 const ONBOARDING_FOLLOWUP_SUBJECTS: Record<InterfaceLocale, string> = {
   en: "How'd you like LobbyStack?",
@@ -68,6 +71,43 @@ const transitions: Record<OnboardingStage, readonly OnboardingStage[]> = {
   complete: [],
 };
 
+// A partner's business skips what the host does for its direct businesses:
+// the partner created it and gives it its numbers, and the host asks its
+// owner no attribution. The owner still verifies their phone, because calls
+// forward to it, and that finishes onboarding. At the activity level the
+// partner sets the receptionist up, so the phone is the owner's only step.
+const partnerTransitions: Record<OnboardingStage, readonly OnboardingStage[]> = {
+  ...transitions,
+  verify_phone: ["complete"],
+  phone_number: ["complete"],
+  phone_number_claiming: ["complete"],
+  attribution: ["complete"],
+};
+
+const directSteps: readonly OnboardingStage[] = ["create_business", "website", "knowledge", "greeting", "test_call", "verify_phone", "phone_number", "attribution"];
+const partnerSteps: readonly OnboardingStage[] = ["website", "knowledge", "greeting", "test_call", "verify_phone"];
+const activitySteps: readonly OnboardingStage[] = ["verify_phone"];
+
+/** Who a business belongs to, as onboarding sees it: the host directly, or a partner at an access level. */
+export type OnboardingBusiness = { partnerId: string | null; accessLevel: PartnerAccessLevel };
+
+/**
+ * The stages a business's owner goes through, in order. Without a business
+ * yet, they're a direct owner's, who starts by creating one.
+ */
+export function onboardingSteps(business: OnboardingBusiness | null): readonly OnboardingStage[] {
+  if (!business?.partnerId) return directSteps;
+  return business.accessLevel === "activity" ? activitySteps : partnerSteps;
+}
+
+/**
+ * The stage a new business starts at, since creating it is done: its
+ * website, or its owner's phone for an activity-only partner business.
+ */
+export function firstOnboardingStage(business: OnboardingBusiness): OnboardingStage {
+  return onboardingSteps(business).find((stage) => stage !== "create_business")!;
+}
+
 // The plan step left onboarding: plans now come after the owner has heard
 // their agent. A workspace parked on it, or on the second screen of the old
 // phone verification, resumes at the nearest step that still exists.
@@ -87,8 +127,8 @@ export function resolveOnboardingRoute(stage: string | null | undefined): string
   return stageRoutes[normalizeOnboardingStage(stage ?? "create_business")];
 }
 
-export function isValidOnboardingTransition(from: OnboardingStage, to: OnboardingStage): boolean {
-  return transitions[from].includes(to);
+export function isValidOnboardingTransition(from: OnboardingStage, to: OnboardingStage, business: Pick<OnboardingBusiness, "partnerId"> = { partnerId: null }): boolean {
+  return (business.partnerId ? partnerTransitions : transitions)[from].includes(to);
 }
 
 export function canVisitOnboardingStage(current: OnboardingStage, target: OnboardingStage): boolean {
@@ -100,43 +140,57 @@ export function selectPreferredMembership<T extends { role: string }>(rows: read
   return rows.find((row) => row.role !== "viewer") ?? rows[0];
 }
 
+/** Where the person stands in onboarding: the business, its stage, and the stages its owner goes through. */
+export type OnboardingState = { businessId: string | null; stage: OnboardingStage; steps: readonly OnboardingStage[] };
+
+// Null for a business the person can't open on this brand's domains.
 async function onboardingStateForBusiness(
   tx: DatabaseTransaction,
   businessId: string,
-): Promise<{ businessId: string; stage: OnboardingStage } | null> {
+  brand: BrandScope,
+): Promise<OnboardingState | null> {
   await tx.execute(sql`select set_config('app.business_id', ${businessId}, true)`);
-  const business = (await tx.select({ onboardingStage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, businessId)).limit(1))[0];
-  if (!business) return null;
-  return { businessId, stage: normalizeOnboardingStage(business.onboardingStage) };
+  const business = (await tx.select({ onboardingStage: businesses.onboardingStage, partnerId: businesses.partnerId, accessLevel: businesses.partnerAccessLevel }).from(businesses).where(eq(businesses.id, businessId)).limit(1))[0];
+  if (!business || !businessShowsOnBrand(business.partnerId, brand)) return null;
+  return { businessId, stage: normalizeOnboardingStage(business.onboardingStage), steps: onboardingSteps(business) };
 }
 
+/**
+ * Where the person stands in onboarding on this brand's domains: the business
+ * they work in there, its stage and the stages its owner goes through, or
+ * create_business when they have no business there. A partner's businesses
+ * count only on that partner's domains, and direct businesses only on the
+ * host's.
+ */
 export async function getActiveOnboardingState(
   db: Database,
   userId: string,
-): Promise<{ businessId: string | null; stage: OnboardingStage }> {
+  brand: BrandScope,
+): Promise<OnboardingState> {
   return await withBusinessTransaction(db, { userId, actorType: "operator" }, async (tx) => {
-    const user = (await tx.select({ activeBusinessId: users.activeBusinessId }).from(users).where(eq(users.id, userId)).limit(1))[0];
-    if (user?.activeBusinessId) {
-      const active = await onboardingStateForBusiness(tx, user.activeBusinessId);
+    const activeBusinessId = await readActiveBusinessIdInTransaction(tx, { userId, brand });
+    if (activeBusinessId) {
+      const active = await onboardingStateForBusiness(tx, activeBusinessId, brand);
       if (active) return active;
     }
-    // The stored active business is missing, or its membership is no longer
-    // active (for example, removed after the legacy import). Fall back to an
-    // active membership so onboarding still resolves a stage instead of
-    // dead-ending on create_business and looping on the first step.
-    const memberships = await tx.execute<{ business_id: string; role: string }>(sql`select business_id, role from app.list_user_businesses(${userId})`);
-    const preferred = selectPreferredMembership(memberships.rows ?? []);
+    // The stored active business is missing, belongs to another brand, or its
+    // membership is no longer active (for example, removed after the legacy
+    // import). Fall back to an active membership so onboarding still resolves
+    // a stage instead of dead-ending on create_business and looping on the
+    // first step.
+    const memberships = (await tx.execute<{ business_id: string; role: string; partner_id: string | null }>(sql`select business_id, role, partner_id from app.list_user_businesses(${userId})`)).rows.filter((row) => businessShowsOnBrand(row.partner_id, brand));
+    const preferred = selectPreferredMembership(memberships);
     if (preferred) {
-      const fallback = await onboardingStateForBusiness(tx, String(preferred.business_id));
+      const fallback = await onboardingStateForBusiness(tx, String(preferred.business_id), brand);
       if (fallback) return fallback;
     }
-    return { businessId: null, stage: "create_business" };
+    return { businessId: null, stage: "create_business", steps: onboardingSteps(null) };
   });
 }
 
 export async function advanceOnboardingStageInTransaction(
   tx: DatabaseTransaction,
-  input: { userId: string; businessId: string; from: OnboardingStage; to: OnboardingStage },
+  input: { userId: string; businessId: string; from: OnboardingStage; to: OnboardingStage; partnerId?: string | null },
 ): Promise<void> {
   await requireBusinessAdmin(tx, input);
   await moveOnboardingStageInTransaction(tx, input);
@@ -145,9 +199,9 @@ export async function advanceOnboardingStageInTransaction(
 /** Moves a business to the next onboarding stage. The caller has already checked who may do that. */
 export async function moveOnboardingStageInTransaction(
   tx: DatabaseTransaction,
-  input: { businessId: string; from: OnboardingStage; to: OnboardingStage },
+  input: { businessId: string; from: OnboardingStage; to: OnboardingStage; partnerId?: string | null },
 ): Promise<void> {
-  if (!isValidOnboardingTransition(input.from, input.to)) {
+  if (!isValidOnboardingTransition(input.from, input.to, { partnerId: input.partnerId ?? null })) {
     throw new Error(`Invalid onboarding transition from ${input.from} to ${input.to}.`);
   }
   const changed = await tx.update(businesses)
@@ -168,8 +222,10 @@ export async function advanceOnboardingStage(
 ): Promise<void> {
   await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessAdmin(tx, input);
-    const current = (await tx.select({ onboardingStage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1).for("update"))[0];
+    const current = (await tx.select({ onboardingStage: businesses.onboardingStage, partnerId: businesses.partnerId }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1).for("update"))[0];
     if (!current) throw new Error("Business onboarding state was not found.");
+    // A direct business finishes only through attribution, which also schedules the founder's check-in.
+    if (input.to === "complete" && !current.partnerId) throw Object.assign(new Error("A valid next onboarding stage is required."), { status: 400, code: "invalid_onboarding_stage" });
     const currentStage = normalizeOnboardingStage(current.onboardingStage);
     // Repair a legacy verification stage before reading or advancing it so the
     // conditional stage write below still matches the persisted value.
@@ -180,7 +236,7 @@ export async function advanceOnboardingStage(
     }
     // Revisiting an earlier form must never move durable onboarding progress backwards.
     if (canVisitOnboardingStage(currentStage, input.to)) return;
-    await advanceOnboardingStageInTransaction(tx, { ...input, from: currentStage });
+    await advanceOnboardingStageInTransaction(tx, { ...input, from: currentStage, partnerId: current.partnerId });
   });
 }
 
@@ -220,8 +276,9 @@ export async function submitOnboardingAttribution(
   });
 }
 
-/** Schedules the founder's check-in a day after onboarding finished. */
+/** Schedules the founder's check-in a day after onboarding finished. A partner's business never gets it. */
 export async function scheduleOnboardingFollowupInTransaction(tx: DatabaseTransaction, businessId: string, completedAt: Date): Promise<void> {
+  if (!await businessGetsHostEmails(tx, businessId)) return;
   // The dedupe key keeps a revisited attribution form from scheduling a second check-in.
   await enqueueOutbox(tx, {
     topic: "onboarding.sendFollowup",
@@ -245,14 +302,15 @@ export type OnboardingFollowupSender = {
 
 /**
  * Queues the founder check-in email for a business that finished onboarding,
- * unless its owner has come back since or shares the sender's email domain.
- * Returns whether an email was queued.
+ * unless its owner has come back since or shares the sender's email domain,
+ * or it's a partner's business. Returns whether an email was queued.
  */
 export async function queueOnboardingFollowupEmail(
   context: DomainContext,
   input: { businessId: string; completedAt: Date; sender: OnboardingFollowupSender },
 ): Promise<boolean> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    if (!await businessGetsHostEmails(tx, input.businessId)) return false;
     const result = await tx.execute<{ user_id: string; email: string; name: string | null; preferred_locale: string; business_name: string }>(
       sql`select user_id, email, name, preferred_locale, business_name from app.resolve_onboarding_followup_recipient(${input.businessId}::uuid, ${input.completedAt.toISOString()}::timestamptz)`,
     );

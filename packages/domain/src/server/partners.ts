@@ -2,11 +2,12 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 
 import { and, asc, eq, isNull, or, sql } from "drizzle-orm";
 
-import { enqueueOutbox, partnerDomains, partnerInvitations, partnerMembers, partners, partnerSignupInvitations, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { auditLogs, enqueueOutbox, partnerDomains, partnerInvitations, partnerMembers, partners, partnerSignupInvitations, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import {
   brandLogoContentType,
   currentPartnerSubdomain,
   hostDomainHostnames,
+  isPartnerAccessLevel,
   isPartnerRole,
   isPartnerSlug,
   MAX_BRAND_LOGO_BYTES,
@@ -24,19 +25,21 @@ import {
   partnerSlugFromName,
   type BrandImage,
   type EmailBrandReference,
+  type PartnerAccessLevel,
   type PartnerRole,
 } from "@lobbystack/shared";
 
 import { AuthorizationError } from "../authz";
 import { announceBrandChange } from "./brands";
 import type { DomainContext } from "./context";
-import { isSingleEmailAddress } from "./tenancy";
+import { firstOnboardingStage } from "./onboarding";
+import { ianaTimeZone, insertInvitationInTransaction, insertOwnerlessBusinessInTransaction, isSingleEmailAddress } from "./tenancy";
 
 // Partner operations: what the partner console, and later a partner's
 // platform keys, can do. Each function checks the actor's role itself, so
 // every entry point gets the same rules. A member works inside the partner's
-// businesses, an admin also runs the team, and only an owner grants or takes
-// away the owner role.
+// businesses, an admin also creates businesses and runs the team, and only an
+// owner grants or takes away the owner role.
 
 /** Who acts on a partner: one of its members, or one of its platform keys. */
 export type PartnerActor =
@@ -580,4 +583,90 @@ export async function savePartnerBrand(context: DomainContext, actor: PartnerAct
   });
   await announceBrandChange(context, { kind: "partner", partnerId: member.partnerId });
   return settings;
+}
+
+/** A business in the partner's console. */
+export type PartnerBusiness = {
+  businessId: string;
+  name: string;
+  accessLevel: PartnerAccessLevel;
+  onboardingStage: string;
+  createdAt: string;
+  /** Its owner once they joined, the person invited to own it while that invitation waits, or null for neither. */
+  owner: { email: string; status: "joined" } | { email: string; status: "invited"; expiresAt: string } | null;
+};
+
+export const PARTNER_BUSINESS_NAME_MAX_LENGTH = 120;
+
+function businessesActor(actor: PartnerActor): PartnerMemberActor {
+  if (actor.kind !== "member") throw new AuthorizationError("Platform keys can't manage a partner's businesses.");
+  return actor;
+}
+
+/** The partner's businesses, by name, with each one's owner or the invitation to own it. Anyone on the team can read them. */
+export async function listPartnerBusinesses(context: DomainContext, actor: PartnerActor): Promise<PartnerBusiness[]> {
+  const member = businessesActor(actor);
+  return await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => {
+    await currentRole(tx, member);
+    // The partner's members aren't on its businesses' teams, so RLS shows them none; this function answers instead.
+    const rows = await tx.execute<{ businessId: string; name: string; accessLevel: PartnerAccessLevel; onboardingStage: string; createdAt: string; ownerEmail: string | null; invitedEmail: string | null; invitationExpiresAt: string | null }>(
+      sql`select business_id as "businessId", name, access_level as "accessLevel", onboarding_stage as "onboardingStage", created_at as "createdAt", owner_email as "ownerEmail", invited_email as "invitedEmail", invitation_expires_at as "invitationExpiresAt" from app.list_partner_businesses(${member.partnerId}::uuid)`,
+    );
+    // Raw queries return Postgres timestamp text, which Safari's Date can't parse.
+    const iso = (value: string) => new Date(value).toISOString();
+    return rows.rows.map((row) => ({
+      businessId: row.businessId,
+      name: row.name,
+      accessLevel: row.accessLevel,
+      onboardingStage: row.onboardingStage,
+      createdAt: iso(row.createdAt),
+      owner: row.ownerEmail ? { email: row.ownerEmail, status: "joined" } : row.invitedEmail && row.invitationExpiresAt ? { email: row.invitedEmail, status: "invited", expiresAt: iso(row.invitationExpiresAt) } : null,
+    }));
+  });
+}
+
+/**
+ * Creates a business for one of the partner's clients: with no owner yet,
+ * linked to the partner, at the access level its own operators get. It also
+ * invites the owner by email under the partner's brand. Accepting on the
+ * partner's domain makes them the owner; the invitation is never a claim link,
+ * so the business stays with the partner. Only owners and admins can create
+ * one, and only once the partner has a domain for its businesses to open on:
+ * they show on no other. It never counts toward the cap of 10 businesses an
+ * account can own.
+ */
+export async function createPartnerBusiness(
+  context: DomainContext,
+  actor: PartnerActor,
+  input: { name: string; timezone: string; businessType: string; accessLevel: string; ownerEmail: string },
+): Promise<{ businessId: string; invitationId: string; expiresAt: Date }> {
+  const member = businessesActor(actor);
+  const name = input.name.replace(/\s+/g, " ").trim();
+  if (!name || name.length > PARTNER_BUSINESS_NAME_MAX_LENGTH) throw failure(`Enter the business's name, up to ${PARTNER_BUSINESS_NAME_MAX_LENGTH} characters.`, 400, "invalid_name");
+  const timezone = ianaTimeZone(input.timezone);
+  if (!timezone) throw failure("timezone must be an IANA time zone, such as America/Toronto.", 400, "invalid_timezone");
+  const businessType = input.businessType.trim();
+  if (!businessType || businessType.length > 64) throw failure("Choose the kind of business.", 400, "invalid_business_type");
+  const accessLevel = input.accessLevel;
+  if (!isPartnerAccessLevel(accessLevel)) throw failure("accessLevel must be full or activity.", 400, "invalid_access_level");
+  const ownerEmail = normalizeAuthEmail(input.ownerEmail);
+  if (!isSingleEmailAddress(ownerEmail)) throw failure("Enter one valid email address for the owner.", 400, "invalid_email");
+  const { baseDomain } = partnerFeatures(process.env);
+  const businessId = randomUUID();
+
+  const created = await withBusinessTransaction(context.db, { userId: member.userId, businessId, actorType: "system" }, async (tx) => {
+    if (await currentRole(tx, member) === "member") throw new AuthorizationError("Only owners and admins can create the partner's businesses.");
+    // A partner that signed up while the deployment had no base domain gets its subdomain now, if it can.
+    const domain = baseDomain ? await reserveSubdomainIn(tx, member.partnerId, baseDomain) : { subdomain: null, changed: false };
+    if (!domain.subdomain) throw failure("You need your own domain before you can create a business.", 409, "partner_domain_required");
+    // At the activity level the partner sets the receptionist up, so the owner's onboarding starts at their phone.
+    const partner = { partnerId: member.partnerId, accessLevel };
+    await insertOwnerlessBusinessInTransaction(tx, { businessId, name, timezone, businessType, partner, onboardingStage: firstOnboardingStage(partner) });
+    // The worker writes the email under the business's brand, the partner's, and puts its link on the partner's domain.
+    const { invitationId, expiresAt } = await insertInvitationInTransaction(tx, { businessId, invitedByUserId: member.userId, normalizedEmail: ownerEmail, role: "business_owner" });
+    await tx.insert(auditLogs).values({ businessId, actorUserId: member.userId, eventType: "partner.business_created", entityType: "business", entityId: businessId, payload: { partnerId: member.partnerId, accessLevel, ownerInvitationId: invitationId } });
+    return { businessId, invitationId, expiresAt, subdomainReserved: domain.changed };
+  });
+  if (created.subdomainReserved) await announceBrandChange(context, { kind: "partner", partnerId: member.partnerId });
+  return { businessId: created.businessId, invitationId: created.invitationId, expiresAt: created.expiresAt };
 }

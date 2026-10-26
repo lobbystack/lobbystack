@@ -10,6 +10,7 @@ export const WEB_EVENT_NAMES = [
   "web.auth.signup_succeeded",
   "web.workspace.business_switched",
   "web.partner.signup_succeeded",
+  "web.partner.business_created",
   "web.page.home_viewed",
   "web.page.calls_viewed",
   "web.page.call_detail_viewed",
@@ -237,6 +238,8 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   ],
   // invited: signed up with the host's invitation. subdomain: signup reserved one.
   "web.partner.signup_succeeded": ["deploymentMode", "partnerId", "pathname", "invited", "subdomain"],
+  // accessLevel: what the new business's own operators get, full or activity.
+  "web.partner.business_created": ["deploymentMode", "partnerId", "businessId", "accessLevel", "pathname"],
   "web.page.home_viewed": ["businessId", "deploymentMode", "pathname"],
   "web.page.calls_viewed": ["businessId", "deploymentMode", "pathname"],
   "web.page.call_detail_viewed": ["businessId", "deploymentMode", "pathname"],

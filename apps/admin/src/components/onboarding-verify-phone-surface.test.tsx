@@ -16,12 +16,13 @@ const clients: QueryClient[] = [];
 beforeEach(() => { telemetryRef.current = createRecordedBrowserTelemetry(); navigation.push.mockReset(); Object.defineProperty(document, "elementFromPoint", { configurable: true, value: () => null }); vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} unobserve() {} }); });
 afterEach(() => { cleanup(); clients.forEach(client => client.clear()); clients.length = 0; vi.unstubAllGlobals(); vi.clearAllMocks(); });
 
-function setup(suggestedCountry: string, verifyPhone = true) {
+function setup(suggestedCountry: string, verifyPhone = true, partnerAccessLevel: "full" | "activity" | null = null) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   clients.push(client);
-  client.setQueryData(["businesses"], { businesses: [{ businessId: "business", active: true }] });
+  const businesses = [{ businessId: "business", active: true, partnerAccessLevel }];
+  client.setQueryData(["businesses"], { businesses });
   const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
-    if (url === "/api/businesses") return Response.json({ businesses: [{ businessId: "business", active: true }] });
+    if (url === "/api/businesses") return Response.json({ businesses });
     if (url.startsWith("/api/onboarding/numbers") && !init?.method) return Response.json({ countries: ["US", "CA"], trialCountries: ["US", "CA"], suggestedCountry, verifyPhone });
     if (url.startsWith("/api/onboarding/phone-verification/check")) return Response.json({ approved: true, status: "approved" });
     if (url.startsWith("/api/onboarding/phone-verification")) return Response.json({ attemptId: "attempt-1", phoneE164: "+14165550123" }, { status: 202 });
@@ -61,5 +62,33 @@ describe("onboarding phone verification", () => {
     const stage = fetchMock.mock.calls.find(([url]) => String(url).startsWith("/api/onboarding/stage?"));
     expect(JSON.parse(String(stage?.[1]?.body))).toEqual({ to: "phone_number" });
     expect(fetchMock.mock.calls.some(([url]) => String(url).startsWith("/api/onboarding/phone-verification"))).toBe(false);
+  });
+
+  describe("at a partner's business", () => {
+    it("finishes the owner's onboarding once the phone is verified, with no number step", async () => {
+      setup("CA", true, "full");
+      await userEvent.type(await screen.findByLabelText("verifyPhone.fields.mobileNumber"), "4165550123");
+      await userEvent.click(screen.getByRole("button", { name: "verifyPhone.sendCode" }));
+      await userEvent.type(await screen.findByRole("textbox"), "123456");
+      await waitFor(() => expect(navigation.push).toHaveBeenCalledWith("/"));
+      expect(navigation.push).not.toHaveBeenCalledWith("/onboarding/number");
+    });
+
+    it("offers no waitlist where phones can't be verified, and finishes without one", async () => {
+      const fetchMock = setup("FR", true, "activity");
+      await screen.findByText("verifyPhone.unavailable.partnerTitle");
+      expect(screen.queryByRole("button", { name: "verifyPhone.unavailable.notify" })).toBeNull();
+      await userEvent.click(screen.getByRole("button", { name: "verifyPhone.unavailable.partnerContinue" }));
+      await waitFor(() => expect(navigation.push).toHaveBeenCalledWith("/"));
+      const stage = fetchMock.mock.calls.find(([url]) => String(url).startsWith("/api/onboarding/stage?"));
+      expect(JSON.parse(String(stage?.[1]?.body))).toEqual({ to: "complete" });
+    });
+
+    it("finishes on a self-hosted install, which verifies no phones", async () => {
+      const fetchMock = setup("CA", false, "full");
+      await waitFor(() => expect(navigation.push).toHaveBeenCalledWith("/"));
+      const stage = fetchMock.mock.calls.find(([url]) => String(url).startsWith("/api/onboarding/stage?"));
+      expect(JSON.parse(String(stage?.[1]?.body))).toEqual({ to: "complete" });
+    });
   });
 });

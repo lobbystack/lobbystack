@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { canVisitOnboardingStage, isOnboardingStage, isValidOnboardingTransition, normalizeOnboardingStage, resolveOnboardingRoute, selectPreferredMembership } from "./onboarding";
+import { canVisitOnboardingStage, firstOnboardingStage, isOnboardingStage, isValidOnboardingTransition, normalizeOnboardingStage, onboardingSteps, resolveOnboardingRoute, selectPreferredMembership } from "./onboarding";
 
 describe("onboarding stages", () => {
   it("maps persisted stages to their dedicated routes", () => {
@@ -28,6 +28,22 @@ describe("onboarding stages", () => {
     expect(isValidOnboardingTransition("test_call", "phone_number")).toBe(false);
     expect(isValidOnboardingTransition("greeting", "knowledge")).toBe(false);
     expect(isValidOnboardingTransition("complete", "website")).toBe(false);
+  });
+
+  it("skips the business, the number and attribution for a partner's business, and finishes at the owner's phone", () => {
+    const partner = { partnerId: "partner", accessLevel: "full" } as const;
+    expect(onboardingSteps(null)).toEqual(["create_business", "website", "knowledge", "greeting", "test_call", "verify_phone", "phone_number", "attribution"]);
+    expect(onboardingSteps({ partnerId: null, accessLevel: "activity" })).toEqual(onboardingSteps(null));
+    expect(onboardingSteps(partner)).toEqual(["website", "knowledge", "greeting", "test_call", "verify_phone"]);
+    expect(onboardingSteps({ ...partner, accessLevel: "activity" })).toEqual(["verify_phone"]);
+    expect(firstOnboardingStage({ partnerId: null, accessLevel: "full" })).toBe("website");
+    expect(firstOnboardingStage(partner)).toBe("website");
+    expect(firstOnboardingStage({ ...partner, accessLevel: "activity" })).toBe("verify_phone");
+    expect(isValidOnboardingTransition("verify_phone", "complete", partner)).toBe(true);
+    expect(isValidOnboardingTransition("verify_phone", "phone_number", partner)).toBe(false);
+    expect(isValidOnboardingTransition("verify_phone", "attribution", partner)).toBe(false);
+    expect(isValidOnboardingTransition("verify_phone", "complete")).toBe(false);
+    expect(isValidOnboardingTransition("test_call", "verify_phone", partner)).toBe(true);
   });
 
   it("rejects unknown persisted values", () => {

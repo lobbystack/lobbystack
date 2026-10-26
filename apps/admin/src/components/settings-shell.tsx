@@ -4,13 +4,17 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslation } from "react-i18next";
 
+import { useBusinessCan } from "@/components/business-capabilities-provider";
 import { NestedPageSurfaceProvider } from "@/components/page-surface";
 import { PageHeader } from "@/components/page-header";
+import { pageCapability } from "@/lib/dashboard-pages";
 import { cn } from "@/lib/utils";
 
 export function SettingsShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { t } = useTranslation("settings");
+  const can = useBusinessCan();
+  // Only the tabs the business lets the person open: a partner's business has no billing, API keys or MCP.
   const items = [
     { label: t("sections.usage"), href: "/settings/usage" },
     { label: t("sections.billing"), href: "/settings/plan" },
@@ -20,7 +24,7 @@ export function SettingsShell({ children }: { children: React.ReactNode }) {
     { label: t("sections.notifications"), href: "/settings/notifications" },
     { label: t("sections.apiKeys"), href: "/settings/api-keys" },
     { label: t("sections.connectedApps"), href: "/settings/connected-apps" },
-  ];
+  ].filter((item) => can(pageCapability(item.href)));
   return (
     <section className="flex flex-1 flex-col gap-6">
       <PageHeader title={t("header.title")} />

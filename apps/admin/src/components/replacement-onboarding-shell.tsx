@@ -16,7 +16,8 @@ type OnboardingShellProps = {
   eyebrow?: string;
   title: string;
   description?: React.ReactNode;
-  progress?: { current: number; navigableUntil?: number; total: number } | null;
+  /** The step dots. `routes` names the page of each step when the owner's onboarding skips some, as a partner's business does. */
+  progress?: { current: number; navigableUntil?: number; total: number; routes?: readonly string[] } | null;
   width?: "sm" | "md" | "lg" | "xl" | "wide";
   children: React.ReactNode;
   legalFooter?: React.ReactNode;
@@ -82,7 +83,7 @@ export function ReplacementOnboardingShell({ icon, eyebrow, title, description, 
                   const active = step === progress.current;
                   const completed = step < progress.current;
                   const canNavigate = step <= (progress.navigableUntil ?? progress.current);
-                  const href = !active && canNavigate ? progressRoutes[step] : undefined;
+                  const href = !active && canNavigate ? (progress.routes ? progress.routes[step - 1] : progressRoutes[step]) : undefined;
                   const className = cn(
                     "h-1.5 rounded-full transition-all",
                     active ? "w-6 bg-foreground" : "w-1.5",

@@ -58,10 +58,11 @@ export type Entitlement = {
    * or Enterprise) on a live subscription, past_due included, whatever the
    * deployment mode. That's the answer the paid-plan check gave, and the
    * checks for dedicated numbers and paid features read it. Callers that treat
-   * a self-hosted server differently also check `source`.
+   * a self-hosted server differently also check `source`. A partner's business
+   * billed outside LobbyStack is always live.
    */
   live: boolean;
-  /** Where the terms come from. Direct businesses get "plan", or "unlimited" on a self-hosted server. */
+  /** Where the terms come from. Direct businesses get "plan", or "unlimited" on a self-hosted server. A partner's business gets "billed_outside" until packages arrive. */
   source: "plan" | "package" | "billed_outside" | "unlimited";
   /** Included each month. Null means no limit. */
   allowance: { voiceSeconds: number | null; chats: number | null; alertSms: number | null; outboundAttempts: number | null };
@@ -80,7 +81,9 @@ export type EntitlementAccount = { plan: string | null; subscriptionState: strin
  * Whether a billing account holds a live entitlement: a plan the catalog marks
  * paid, on a live subscription. Ignores the deployment mode, as the paid-plan
  * check it replaces did. app.has_live_entitlement applies the same rule in the
- * number-claim SQL.
+ * number-claim SQL. A partner's business billed outside LobbyStack is live
+ * whatever its account holds; loadEntitlement and app.has_live_entitlement
+ * both say so, since they know the business.
  */
 export function hasLiveEntitlement(account: EntitlementAccount | null | undefined): boolean {
   if (!account || !isBillingPlanSlug(account.plan) || !billingPlanCatalog[account.plan].paid) return false;
@@ -117,6 +120,23 @@ export function planEntitlement(plan: BillingPlanSlug, account: { live: boolean;
     },
     poolPartnerId: null,
     includedNumbers: terms.includedBusinessNumbers,
+  };
+}
+
+/**
+ * The entitlement of a partner's business billed outside LobbyStack: the
+ * partner bills it however it likes, so the host sets it no allowance, no
+ * overage and no number limit, and it's live. Its usage still draws on the
+ * partner's pool, which nothing limits until tiers do.
+ */
+export function billedOutsideEntitlement(partnerId: string): Entitlement {
+  return {
+    live: true,
+    source: "billed_outside",
+    allowance: { voiceSeconds: null, chats: null, alertSms: null, outboundAttempts: null },
+    overage: { enabled: false, currency: "USD", rates: { voiceMinute: 0, chat: 0, alertSms: 0, outboundAttempt: 0 }, capMinor: null },
+    poolPartnerId: partnerId,
+    includedNumbers: null,
   };
 }
 

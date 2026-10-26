@@ -2,7 +2,6 @@
 
 import { requestJson } from "@/lib/request-json";
 import { useActiveBusiness } from "@/hooks/use-active-business";
-import { useInstagramStatus } from "@/hooks/use-instagram-status";
 import { subscribeRealtimeQuery } from "@/lib/realtime-query";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
@@ -57,20 +56,21 @@ export function LiveMessagesSurface() {
   const [draft, setDraft] = useState("");
   const [channelFilter, setChannelFilter] = useState<"all" | "web_chat" | "instagram" | "sms">("all");
   const { business } = useActiveBusiness();
-  // The Instagram filter shows once the server has a Meta app, like the Integrations card.
-  const instagramOffered = useInstagramStatus(business?.businessId).data?.configured === true;
-  const channelFilters = instagramOffered ? (["all", "web_chat", "instagram", "sms"] as const) : (["all", "web_chat", "sms"] as const);
   const query = search.trim();
   // Both keys sit under ["messages", businessId], so realtime and mutation invalidations refresh the list and the open thread.
   const latestMessages = useInfiniteQuery({
     queryKey: ["messages", business?.businessId, "list", channelFilter, query],
-    queryFn: ({ pageParam }) => requestJson<{ messages: Message[]; hasNext: boolean }>(`/api/messages?limit=${PAGE_SIZE}&offset=${pageParam}&channel=${channelFilter}&search=${encodeURIComponent(query)}`),
+    queryFn: ({ pageParam }) => requestJson<{ messages: Message[]; hasNext: boolean; instagramOffered?: boolean }>(`/api/messages?limit=${PAGE_SIZE}&offset=${pageParam}&channel=${channelFilter}&search=${encodeURIComponent(query)}`),
     initialPageParam: 0,
     getNextPageParam: (lastPage, pages) => lastPage.hasNext ? pages.length * PAGE_SIZE : undefined,
     // Keeps the open thread visible while a new search or filter loads.
     placeholderData: keepPreviousData,
     enabled: Boolean(business),
   });
+  // The Instagram filter shows once the server has a Meta app, like the Integrations card. The list says so,
+  // because an activity-only business, which a partner may give its operators, can't read the Integrations routes.
+  const instagramOffered = latestMessages.data?.pages[0]?.instagramOffered === true;
+  const channelFilters = instagramOffered ? (["all", "web_chat", "instagram", "sms"] as const) : (["all", "web_chat", "sms"] as const);
   const thread = useQuery({
     queryKey: ["messages", business?.businessId, "thread", selectedId],
     queryFn: () => requestJson<{ messages: Message[] }>(`/api/messages?conversationId=${encodeURIComponent(selectedId!)}`),

@@ -17,9 +17,67 @@
   },
   "businesses": {
     "title": "Firme",
+    "description": "Firme kojima preprodajete uslugu. Njihovi vlasnici se prijavljuju na adresi vaše kontrolne table.",
+    "loadFailed": "Nismo uspeli da učitamo vaše firme. Osvežite stranicu i pokušajte ponovo.",
+    "createdOn": "Napravljena {{date}}",
+    "table": {
+      "business": "Firma",
+      "owner": "Vlasnik",
+      "access": "Pristup"
+    },
+    "owner": {
+      "invited": "Poziv poslat",
+      "expired": "Poziv je istekao",
+      "none": "Još nema vlasnika"
+    },
+    "access": {
+      "full": "Pun pristup",
+      "activity": "Samo aktivnost"
+    },
     "empty": {
       "title": "Još nema firmi",
-      "description": "Ovde će se prikazati firme koje podesite."
+      "description": "Napravite firmu i pozovite njenog vlasnika.",
+      "memberDescription": "Vlasnici i administratori vašeg partnera ovde prave firme."
+    },
+    "create": {
+      "action": "Napravi firmu",
+      "title": "Napravite firmu",
+      "description": "Vlasnik dobija imejl od {{partnerName}} sa linkom za prijavu.",
+      "nameLabel": "Naziv firme",
+      "namePlaceholder": "Stomatološka ordinacija Luka",
+      "ownerLabel": "Imejl vlasnika",
+      "ownerPlaceholder": "vlasnik@firma.com",
+      "timezoneLabel": "Vremenska zona",
+      "timezoneSearch": "Pretraži vremenske zone…",
+      "timezoneNoResults": "Nije pronađena nijedna vremenska zona.",
+      "timezoneRegions": {
+        "africa": "Afrika",
+        "america": "Amerika",
+        "antarctica": "Antarktik",
+        "arctic": "Arktik",
+        "asia": "Azija",
+        "atlantic": "Atlantik",
+        "australia": "Australija",
+        "europe": "Evropa",
+        "indian": "Indijski okean",
+        "pacific": "Pacifik"
+      },
+      "accessLabel": "Šta njen tim može da koristi",
+      "access": {
+        "full": "Njen tim upravlja recepcionerom: znanjem, radnim vremenom, uslugama i članovima tima. Ne vidi naplatu, API ključeve ni MCP.",
+        "activity": "Njen tim vidi pozive, četove, termine, kontakte i poruke. Vi podešavate recepcionera."
+      },
+      "submit": "Napravi i pozovi",
+      "submitting": "Pravljenje…",
+      "created": "Napravili ste firmu {{name}} i pozvali {{email}}.",
+      "errors": {
+        "invalidName": "Unesite naziv firme, do 120 znakova.",
+        "invalidEmail": "Unesite jednu ispravnu imejl adresu vlasnika.",
+        "invalidTimezone": "Izaberite vremensku zonu.",
+        "domainRequired": "Potrebna vam je adresa kontrolne table pre nego što napravite firmu. Zatražite od servisa {{appName}} da je podesi.",
+        "rateLimited": "Napravili ste previše firmi. Pokušajte ponovo za sat vremena.",
+        "failed": "Nismo uspeli da napravimo firmu. Pokušajte ponovo."
+      }
     }
   },
   "team": {
