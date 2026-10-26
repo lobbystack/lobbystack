@@ -37,7 +37,8 @@ lobbystack login --url https://app.lobbystack.com --key-stdin < key.txt
 La clé que vous utilisez détermine ce que `onboard` peut faire :
 
 - **Une clé API** de **Réglages** > **Clés API** configure sa propre entreprise, à condition que l'entreprise porte déjà le nom du manifeste ou que le manifeste donne son ID. Donnez-lui `business:read`, `business:write`, `knowledge:read` et `knowledge:write`, plus `billing:manage` pour un forfait, `phone_numbers:manage` pour un numéro et `team:manage` pour remettre l'entreprise, ce que seule une clé créée par un propriétaire peut faire. Consultez [Authentification](/fr/api/authentication).
-- **Une clé de plateforme** crée de nouvelles entreprises. La personne qui gère le déploiement les crée ; consultez [Clés de plateforme](/fr/api/authentication#clés-de-plateforme). Une clé qui a accès à toutes les entreprises peut aussi donner à une entreprise un forfait et un numéro. Une clé avec un accès de groupe ne le peut pas : le propriétaire paie les deux, et une fois qu'il a réclamé l'entreprise, la clé ne l'atteint plus. Laissez `plan` et `phone_number` hors de son manifeste : le propriétaire les choisit dans le tableau de bord. Une clé avec un accès de groupe laisse aussi au propriétaire la lecture complète d'un site.
+- **Une clé de plateforme de l'hôte** crée de nouvelles entreprises. La personne qui gère le déploiement crée ces clés ; consultez [Clés de plateforme](/fr/api/authentication#clés-de-plateforme). Une clé qui a accès à toutes les entreprises peut aussi donner à une entreprise un forfait et un numéro. Une clé avec un accès de groupe ne le peut pas : le propriétaire paie les deux, et une fois qu'il a réclamé l'entreprise, la clé ne l'atteint plus. Laissez `plan` et `phone_number` hors de son manifeste : le propriétaire les choisit dans le tableau de bord. Une clé avec un accès de groupe laisse aussi au propriétaire la lecture complète d'un site.
+- **Une clé de plateforme de partenaire**, créée dans la page **Clés API** de la console partenaire, crée des entreprises pour le partenaire. Donnez-lui `businesses:create`, `business:read`, `business:write`, `knowledge:read`, `knowledge:write` et `team:manage`. Son manifeste doit contenir `owner` : le partenaire invite le propriétaire en créant l'entreprise. `business.access_level` définit ce que l'équipe de l'entreprise peut utiliser. Laissez `plan` et `phone_number` hors du manifeste : les entreprises d'un partenaire n'achètent pas les forfaits de l'hôte, et la clé ne peut pas réserver de numéros.
 
 Dans un script ou une CI, définissez `LOBBYSTACK_URL` et `LOBBYSTACK_API_KEY` au lieu de vous connecter.
 
@@ -88,7 +89,7 @@ owner:
 
 | Section | Ce qu'elle définit |
 | --- | --- |
-| `business` | `name` et `timezone` sont obligatoires. `locale` (`en` ou `fr`), `website_url`, `business_type` et `slug` sont facultatifs. `hours` liste les plages d'ouverture de la semaine par `day`, `open` et `close`, et remplace les heures que l'entreprise avait. `id` configure une entreprise qui existe déjà au lieu d'en créer une. |
+| `business` | `name` et `timezone` sont obligatoires. `locale` (`en` ou `fr`), `website_url`, `business_type` et `slug` sont facultatifs. `hours` liste les plages d'ouverture de la semaine par `day`, `open` et `close`, et remplace les heures que l'entreprise avait. `id` configure une entreprise qui existe déjà au lieu d'en créer une. Avec la clé de plateforme d'un partenaire, `access_level` définit ce que l'équipe de l'entreprise peut utiliser quand la clé la crée : `full`, la valeur par défaut, ou `activity`. |
 | `receptionist` | Les champs de `PATCH /receptionist`, comme `greeting`, `tone`, `transfer_mode`, `transfer_number` et `booking_mode`. |
 | `services` | Les champs de `POST /services`. Un service du même nom est mis à jour au lieu d'être ajouté de nouveau. |
 | `rules` | Les champs de `POST /rules`. Une règle du même titre est mise à jour. |
@@ -99,8 +100,8 @@ owner:
 | `knowledge.texts` | Des notes avec un `title` et un `content`. Une note du même titre reçoit le nouveau contenu. |
 | `plan` | `checkout` avec un `plan` (`starter` ou `pro`) et un `interval` (`monthly` ou `annual`). Ou `managed: true` pour un forfait facturé hors de Polar, que seule une clé de plateforme qui a accès à toutes les entreprises peut définir. |
 | `phone_number` | Les champs de `POST /phone-numbers/search` : `country`, `kind`, `area_code`, `city`, `region` et `postal_code`. La commande réserve le premier numéro que la recherche propose. |
-| `onboarding` | L'intégration se termine dès qu'il ne lui manque plus rien, sauf si la clé a un accès de groupe : elle reste alors ouverte pour le propriétaire. `skip_number: true` la termine sans numéro, `complete` indique si elle se termine, et `source` indique d'où vient l'entreprise. |
-| `owner` | L'`email` de la personne qui sera propriétaire de l'entreprise. Elle reçoit un lien pour la réclamer. |
+| `onboarding` | L'intégration se termine dès qu'il ne lui manque plus rien, sauf si la clé a un accès de groupe ou appartient à un partenaire : elle reste alors ouverte pour le propriétaire. `skip_number: true` la termine sans numéro, `complete` indique si elle se termine, et `source` indique d'où vient l'entreprise. |
+| `owner` | L'`email` de la personne qui sera propriétaire de l'entreprise. Elle reçoit un lien pour la réclamer. Avec la clé de plateforme d'un partenaire, elle reçoit plutôt une invitation à se connecter sur le tableau de bord du partenaire, envoyée quand la clé crée l'entreprise. |
 
 La commande ne supprime jamais ce que le fichier omet. Pour retirer un service, une règle ou une connaissance, utilisez le tableau de bord ou les autres commandes `lobbystack`.
 
@@ -149,6 +150,8 @@ Un paiement et un numéro de téléphone coûtent de l'argent, donc la commande 
 Pour configurer une entreprise qui existe déjà, mettez son ID dans `business.id`. `--business <id>` fonctionne aussi quand l'entreprise porte déjà le nom du manifeste. La commande ignore `LOBBYSTACK_BUSINESS` et l'entreprise enregistrée dans un profil, pour qu'un nouveau manifeste n'atterrisse jamais sur l'une d'elles par erreur.
 
 Le lien de réclamation part une fois tout le reste terminé, ou avant le paiement quand une clé qui a accès à toutes les entreprises configure un forfait que le propriétaire paie. Quand le propriétaire l'accepte, une clé avec un accès de groupe et la clé API qui l'a envoyé n'atteignent plus l'entreprise, et une nouvelle exécution le signale. Une clé qui a accès à toutes les entreprises l'atteint toujours.
+
+La clé de plateforme d'un partenaire n'envoie jamais de lien de réclamation, parce que l'entreprise reste chez le partenaire. Elle invite le propriétaire en créant l'entreprise, et les exécutions suivantes vérifient seulement que le propriétaire l'a rejointe ou a encore son invitation. Elle atteint toujours l'entreprise après l'arrivée du propriétaire.
 
 ### Quand l'exécution attend quelqu'un
 

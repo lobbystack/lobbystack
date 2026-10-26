@@ -79,6 +79,12 @@ describe("lobbystack", () => {
     // A server from before the rename sends only partner.
     const older = api(() => ({ status: 200, body: { data: { ...platformMe, platform: { partner: "alloplace", access: "partner" } } } }));
     expect((await run(["whoami"], { fetch: older })).out).toMatch(/Group:\s+alloplace, access to its own businesses/);
+    // A partner's key has the partner as its group.
+    const partnerId = "3c2b1a09-8f7e-4d6c-9b5a-4f3e2d1c0b9a";
+    const partnerPlatformKey = api(() => ({ status: 200, body: { data: { ...platformMe, platform: { group: partnerId, partner: partnerId, access: "partner", partner_id: partnerId } } } }));
+    const partnerOut = (await run(["whoami"], { fetch: partnerPlatformKey })).out;
+    expect(partnerOut).toMatch(new RegExp(`Partner:\\s+${partnerId}, access to the partner's businesses`));
+    expect(partnerOut).not.toContain("Group:");
     expect(JSON.parse((await run(["whoami", "--json"], { fetch })).out)).toMatchObject({ profile: "default", api_key: { prefix: "lsp_1a2b3c4d" } });
     // --business reaches the API as the LobbyStack-Business header.
     await run(["whoami", "--business", business], { fetch });

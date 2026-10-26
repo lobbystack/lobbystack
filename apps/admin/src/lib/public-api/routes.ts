@@ -1,4 +1,6 @@
 import {
+  brandForBusiness,
+  brandForHostReference,
   cancelAppointmentForApi,
   cancelKnowledgeSourceForApi,
   claimPhoneNumberForApi,
@@ -6,6 +8,7 @@ import {
   completeKnowledgeUploadForApi,
   createAppointmentForApi,
   createBusinessForApi,
+  createPartnerBusinessForApi,
   invitedUserEmail,
   inviteUserForApi,
   createCalendarConnectLinkForApi,
@@ -63,6 +66,7 @@ import {
   listWidgetKeysForApi,
   listWebhookEndpoints,
   PublicApiError,
+  refusePartnerPlatformKey,
   releasePhoneNumberForApi,
   removeTeamMemberForApi,
   reorderRulesForApi,
@@ -89,6 +93,7 @@ import {
   updateWidgetKeyForApi,
   updateWebhookEndpoint,
   type CalendarAccess,
+  type DomainContext,
   type WebhookEndpointDetail,
   type WebhookManager,
 } from "@lobbystack/domain";
@@ -166,6 +171,7 @@ function requireEventScopes(credential: ApiCredential, events: readonly WebhookE
 }
 
 function webhookManager(caller: RestApiCaller): WebhookManager {
+  if (caller.platformKeyId !== undefined && caller.partnerId !== undefined) return { kind: "platform_key", platformKeyId: caller.platformKeyId, groupId: caller.groupId, partnerId: caller.partnerId };
   if (caller.platformKeyId !== undefined) return { kind: "platform_key", platformKeyId: caller.platformKeyId, groupId: caller.groupId, actingUserId: caller.actingUserId };
   return { kind: "api_key", apiKeyId: caller.apiKeyId };
 }
@@ -175,9 +181,31 @@ function checkoutAvailable(plan: "starter" | "pro", interval: "monthly" | "annua
   return Boolean(process.env.POLAR_ACCESS_TOKEN && process.env.POLAR_ORGANIZATION_ID && process.env[`POLAR_${plan.toUpperCase()}_${interval.toUpperCase()}_PRODUCT_ID`]);
 }
 
-/** A managed plan bypasses Polar, so only the operator's own platform keys, with access to every business, may set one. */
+/** A managed plan bypasses Polar, so only the host's own platform keys, with access to every business, may set one. A partner's key never has that access. */
 function requireOperatorKey(credential: ApiCredential): void {
+  if (credential.kind === "platform_key") refusePartnerPlatformKey(credential, "managed_plan");
   if (credential.kind !== "platform_key" || credential.access !== "all") throw new PublicApiError(403, "forbidden", "Only an operator's platform key, one with access to every business, can manage a plan outside Polar.");
+}
+
+/**
+ * Each business a partner's key creates emails its owner an invitation, so
+ * the partner's keys together create at most as many an hour as one person
+ * can from the console. The limit counts against the partner, since a partner
+ * can make as many keys as it likes.
+ */
+async function requirePartnerBusinessCreationAllowed(partnerId: string): Promise<void> {
+  const result = await enforceFixedWindow([fixedWindowLimit("partner-business-create", "partner-hour", partnerId, 30, 60 * 60, "rate_limit_partner_hour")]);
+  if (result.allowed) return;
+  if (result.status === 503) throw new PublicApiError(503, "rate_limit_unavailable", "Creating businesses is unavailable for a moment. Retry shortly.", undefined, { "Retry-After": "5" });
+  // The limit counts in fixed one-hour windows.
+  const retryAfter = 3_600 - (Math.floor(Date.now() / 1_000) % 3_600);
+  throw new PublicApiError(429, "rate_limited", `Too many new businesses. A partner's platform keys can create 30 businesses an hour between them. Retry in ${retryAfter} seconds.`, undefined, { "Retry-After": String(retryAfter) });
+}
+
+/** A host's key acts as the account its owner_email names, which the pipeline resolved. */
+function requireActingUser(actingUserId: string | null): string {
+  if (!actingUserId) throw new Error("A host's platform key acts as its owner, so it always has an account.");
+  return actingUserId;
 }
 
 /** A key searches numbers as the account it acts as, so its searches count against that account's dashboard limit. */
@@ -200,20 +228,41 @@ async function requireInvitationAllowed(userId: string): Promise<void> {
   throw new PublicApiError(429, "rate_limited", `Too many invitations. The account this key acts as can invite 20 people an hour. Retry in ${retryAfter} seconds.`, undefined, { "Retry-After": String(retryAfter) });
 }
 
-/** A platform key can invite PLATFORM_USER_INVITATIONS_PER_DAY addresses a day through POST /users. */
-async function requireUserInvitationAllowed(platformKeyId: string): Promise<void> {
-  const result = await enforceFixedWindow([fixedWindowLimit("platform-user-invitations", "key-day", platformKeyId, PLATFORM_USER_INVITATIONS_PER_DAY, 86_400, "rate_limit_key_day")]);
+/**
+ * A partner's key has no account to count against, so its invitations count
+ * against the partner, at the same 20 an hour, shared by all its keys.
+ */
+async function requirePartnerInvitationAllowed(partnerId: string): Promise<void> {
+  const result = await enforceFixedWindow([fixedWindowLimit("team-invite", "partner-hour", partnerId, 20, 60 * 60, "rate_limit_partner_hour")]);
+  if (result.allowed) return;
+  if (result.status === 503) throw new PublicApiError(503, "rate_limit_unavailable", "Invitations are unavailable for a moment. Retry shortly.", undefined, { "Retry-After": "5" });
+  const retryAfter = 3_600 - (Math.floor(Date.now() / 1_000) % 3_600);
+  throw new PublicApiError(429, "rate_limited", `Too many invitations. A partner's platform keys can invite 20 people an hour between them. Retry in ${retryAfter} seconds.`, undefined, { "Retry-After": String(retryAfter) });
+}
+
+/**
+ * A platform key can invite PLATFORM_USER_INVITATIONS_PER_DAY addresses a day
+ * through POST /users. The host sets its own keys, so each counts alone. A
+ * partner can make as many keys as it likes, so its keys share one count.
+ */
+async function requireUserInvitationAllowed(credential: { platformKeyId: string; partnerId?: string | undefined }): Promise<void> {
+  const limit = credential.partnerId === undefined
+    ? fixedWindowLimit("platform-user-invitations", "key-day", credential.platformKeyId, PLATFORM_USER_INVITATIONS_PER_DAY, 86_400, "rate_limit_key_day")
+    : fixedWindowLimit("platform-user-invitations", "partner-day", credential.partnerId, PLATFORM_USER_INVITATIONS_PER_DAY, 86_400, "rate_limit_partner_day");
+  const result = await enforceFixedWindow([limit]);
   if (result.allowed) return;
   if (result.status === 503) throw new PublicApiError(503, "rate_limit_unavailable", "Invitations are unavailable for a moment. Retry shortly.", undefined, { "Retry-After": "5" });
   // The limit counts in fixed one-day windows.
   const retryAfter = 86_400 - (Math.floor(Date.now() / 1_000) % 86_400);
-  throw new PublicApiError(429, "rate_limited", `Too many invitations. A platform key can invite ${PLATFORM_USER_INVITATIONS_PER_DAY} addresses a day. Retry in ${retryAfter} seconds.`, undefined, { "Retry-After": String(retryAfter) });
+  const who = credential.partnerId === undefined ? "A platform key" : "A partner's platform keys";
+  throw new PublicApiError(429, "rate_limited", `Too many invitations. ${who} can invite ${PLATFORM_USER_INVITATIONS_PER_DAY} addresses a day${credential.partnerId === undefined ? "" : " between them"}. Retry in ${retryAfter} seconds.`, undefined, { "Retry-After": String(retryAfter) });
 }
 
 /**
- * The dashboard's public address, from APP_BASE_URL only. Setup emails, the
- * widget's script tag and calendar links point there, so a request can't aim
- * them at another host through its Host header. Without it, they fail.
+ * The host's dashboard address, from APP_BASE_URL only. A direct business's
+ * setup emails, widget script tag and calendar links point there, so a
+ * request can't aim them at another host through its Host header. Without
+ * it, they fail.
  */
 function appOrigin(): string {
   const configured = process.env.APP_BASE_URL?.trim();
@@ -225,6 +274,23 @@ function appOrigin(): string {
   }
   if (!url || !["https:", "http:"].includes(url.protocol)) throw new Error("APP_BASE_URL must be set to the dashboard's address before the API can send links.");
   return url.origin;
+}
+
+/**
+ * Where a business's dashboard links point: its partner's domain for a
+ * partner's business, the only one it opens on, and APP_BASE_URL otherwise.
+ * Either way the address comes from the deployment, never the request.
+ */
+async function businessOrigin(context: DomainContext, businessId: string): Promise<string> {
+  const brand = await brandForBusiness(context, businessId);
+  return brand.kind === "partner" ? brand.origin : appOrigin();
+}
+
+/** The dashboard address of a partner, for a partner's key that names no business. */
+async function partnerOrigin(context: DomainContext, partnerId: string): Promise<string> {
+  const brand = await brandForHostReference(context, { kind: "partner", partnerId });
+  if (!brand) throw new Error(`Partner ${partnerId} was not found for its platform key.`);
+  return brand.origin;
 }
 
 const googleCalendarUnavailable = () => new PublicApiError(403, "forbidden", "Google Calendar isn't available on this deployment.");
@@ -282,15 +348,20 @@ export const v1 = {
   createBusiness: (request: Request) => handleApiRequest(request, "createBusiness", async ({ context, credential, actingUserId, idempotencyKey }) => {
     if (!idempotencyKey) throw new Error("POST /businesses requires an Idempotency-Key.");
     const body = await readApiBody(request, apiBusinessCreateSchema);
-    const result = await createBusinessForApi(context, { key: credential, actingUserId, idempotencyKey, requestHash: idempotencyRequestHash(body), body });
+    const requestHash = idempotencyRequestHash(body);
+    // A partner's key creates a business of the partner through the console's own operation, which acts as the system: only the app role can.
+    const result = credential.partnerId !== undefined
+      ? await createPartnerBusinessForApi(createDomainContext(), { key: credential, idempotencyKey, requestHash, body }, { beforeCreate: () => requirePartnerBusinessCreationAllowed(credential.partnerId) })
+      : await createBusinessForApi(context, { key: credential, actingUserId: requireActingUser(actingUserId), idempotencyKey, requestHash, body });
     return { body: data(result.business), ...(result.replayed ? { headers: { "Idempotent-Replayed": "true" } } : {}) };
   }),
-  createUser: (request: Request) => handleApiRequest(request, "createUser", async ({ credential, idempotencyKey }) => {
+  createUser: (request: Request) => handleApiRequest(request, "createUser", async ({ context, credential, idempotencyKey }) => {
     if (!idempotencyKey) throw new Error("POST /users requires an Idempotency-Key.");
-    const appBaseUrl = appOrigin();
+    // A partner's key invites people to the partner's dashboard, under its brand.
+    const appBaseUrl = credential.partnerId === undefined ? appOrigin() : await partnerOrigin(context, credential.partnerId);
     const body = await readApiBody(request, apiUserCreateSchema);
     const invitation = { email: invitedUserEmail(body), locale: body.locale ?? "en" };
-    await requireUserInvitationAllowed(credential.platformKeyId);
+    await requireUserInvitationAllowed(credential);
     // A server-only module, loaded when used as auth.ts loads it.
     const { assertEmailVerificationSendAllowed, EmailVerificationRateLimitError } = await import("../email-verification-policy");
     try {
@@ -304,10 +375,12 @@ export const v1 = {
     }
     return { body: data(await inviteUserForApi({ auth: getAuthDatabase().db, app: getDatabase("lobbystack_app").db }, { key: credential, idempotencyKey, body, appBaseUrl })) };
   }),
+  // A partner's group holds every business of the partner, so its keys list them all.
   listBusinesses: (request: Request) => handleApiRequest(request, "listBusinesses", async ({ context, credential }) => ({ body: await listBusinessesForApi(context, { groupId: credential.group, ...pageQuery(request) }) })),
   getBilling: (request: Request) => handleApiRequest(request, "getBilling", async ({ context, caller }) => ({ body: data(await getBillingForApi(context, caller)) })),
   updateBilling: (request: Request) => handleApiRequest(request, "updateBilling", async ({ context, caller }) => ({ body: data(await updateBillingForApi(context, caller, await readApiBody(request, apiBillingUpdateSchema))) })),
   createCheckout: (request: Request) => handleApiRequest(request, "createCheckout", async ({ context, caller }) => {
+    refusePartnerPlatformKey(caller, "checkout");
     const body = await readApiBody(request, apiCheckoutCreateSchema);
     return { body: data(await createCheckoutForApi(context, caller, body, { available: checkoutAvailable(body.plan, body.interval) })) };
   }),
@@ -354,6 +427,11 @@ export const v1 = {
   getTeam: (request: Request) => handleApiRequest(request, "getTeam", async ({ context, caller }) => ({ body: data(await getTeamForApi(context, caller)) })),
   createTeamInvitation: (request: Request) => handleApiRequest(request, "createTeamInvitation", async ({ context, caller }) => {
     const body = await readApiBody(request, apiTeamInvitationCreateSchema);
+    // A partner's key invites as the partner, so its invitations count against the partner.
+    if (caller.platformKeyId !== undefined && caller.partnerId !== undefined) {
+      const { platformKeyId, partnerId } = caller;
+      return { body: data(await createTeamInvitationForApi(context, caller, body, { platformKeyId, beforeSend: () => requirePartnerInvitationAllowed(partnerId) })) };
+    }
     const userId = await resolveActingUserId(context, caller);
     return { body: data(await createTeamInvitationForApi(context, caller, body, { userId, beforeSend: () => requireInvitationAllowed(userId) })) };
   }),
@@ -372,6 +450,7 @@ export const v1 = {
     return { body: data({ id: membershipId, deleted: true }) };
   }),
   createClaimLink: (request: Request) => handleApiRequest(request, "createClaimLink", async ({ context, caller }) => {
+    refusePartnerPlatformKey(caller, "claim_link");
     const body = await readApiBody(request, apiClaimLinkCreateSchema);
     const userId = await resolveActingUserId(context, caller);
     return { body: data(await createClaimLinkForApi(context, caller, body, { userId, beforeSend: () => requireInvitationAllowed(userId) })) };
@@ -379,7 +458,8 @@ export const v1 = {
   listWidgetKeys: (request: Request) => handleApiRequest(request, "listWidgetKeys", async ({ context, caller }) => ({ body: { data: await listWidgetKeysForApi(context, caller), next_cursor: null, has_more: false } })),
   createWidgetKey: (request: Request) => handleApiRequest(request, "createWidgetKey", async ({ context, caller }) => {
     if (!isWidgetKeyIssuanceEnabled(process.env)) throw new PublicApiError(403, "forbidden", "Website chat widgets aren't available on this deployment yet.");
-    return { body: data(await createWidgetKeyForApi(context, caller, await readApiBody(request, apiWidgetKeyCreateSchema), { appOrigin: appOrigin() })) };
+    const input = await readApiBody(request, apiWidgetKeyCreateSchema);
+    return { body: data(await createWidgetKeyForApi(context, caller, input, { appOrigin: await businessOrigin(context, caller.businessId) })) };
   }),
   updateWidgetKey: (request: Request, { params }: Params<"widget_key_id">) => handleApiRequest(request, "updateWidgetKey", async ({ context, caller }) => {
     const widgetKeyId = uuidParam((await params).widget_key_id, "widget_key_id");
@@ -402,7 +482,7 @@ export const v1 = {
   createCalendarConnectLink: (request: Request) => handleApiRequest(request, "createCalendarConnectLink", async ({ context, caller }) => {
     requireGoogleCalendar();
     if (!calendarSigningConfigured()) throw googleCalendarUnavailable();
-    const origin = appOrigin();
+    const origin = await businessOrigin(context, caller.businessId);
     return { body: data(await createCalendarConnectLinkForApi(context, caller, { link: ({ businessId }) => createCalendarConnectLink({ origin, businessId }) })) };
   }),
   listCalendarConnections: (request: Request) => handleApiRequest(request, "listCalendarConnections", async ({ context, caller }) => ({ body: { data: await listCalendarConnectionsForApi(context, caller), next_cursor: null, has_more: false } })),

@@ -78,9 +78,31 @@ To subscribe an endpoint to an event or change its URL, your key also needs the 
 
 ## Platform keys
 
-A platform key (`lsp_...`) onboards and manages many businesses, where an API key works on one. You can use one to set up the businesses you serve, for example with [`lobbystack onboard`](/api/cli).
+A platform key (`lsp_...`) onboards and manages many businesses, where an API key works on one. You can use one to set up the businesses you serve, for example with [`lobbystack onboard`](/api/cli). A partner makes its own platform keys in its partner console. The host, whoever runs the deployment, sets the rest in `PLATFORM_API_KEYS`.
 
-Whoever runs the deployment makes platform keys; the dashboard has no page for them. On a self-hosted deployment, `pnpm platform-key:create` writes a new key to `.platform-keys/<prefix>.json` and prints its entry for [`PLATFORM_API_KEYS`](/self-hosting/environment-variables). Each entry sets:
+### Make a partner's platform key
+
+<Steps>
+  <Step title="Open API keys">
+    In the partner console, go to **API keys**. Only the partner's owners and admins can make and revoke keys.
+  </Step>
+  <Step title="Name the key and pick its access">
+    Select only the scopes the tool needs. `POST /businesses` needs `businesses:create`, and `POST /users` needs `users:create`.
+  </Step>
+  <Step title="Copy the key">
+    The console shows the full key once. LobbyStack keeps only a hash, so nobody can show the key again.
+  </Step>
+</Steps>
+
+A partner's key acts as the partner, so it keeps working when the person who made it leaves the team. It reaches the partner's active businesses, including the ones the console created, and no others. It can't start a Polar checkout, set a managed plan or create a claim link. It can't search for or claim phone numbers, or read or change alert preferences, because those act as a person.
+
+`POST /businesses` with a partner's key creates a business of the partner, with no owner yet. Name the owner in `owner_email`, and the partner emails them an invitation to sign in on its dashboard. `access_level` sets what the business's own team can use: `full`, the default, or `activity`. A partner's platform keys can create 30 businesses an hour between them. The invitations it sends through `POST /team/invitations` and `POST /users` come from the partner and link to its dashboard.
+
+The links the API returns for a partner's business, such as a widget's script tag or a calendar connect link, point at the partner's dashboard too.
+
+### Make a host's key
+
+The dashboard has no page for the host's keys. On a self-hosted deployment, `pnpm platform-key:create` writes a new key to `.platform-keys/<prefix>.json` and prints its entry for [`PLATFORM_API_KEYS`](/self-hosting/environment-variables). Each entry sets:
 
 - The group the key belongs to (`group`; pass `--group`). Keys in the same group reach the same businesses.
 - The verified LobbyStack account the key acts as (`owner_email`), which owns the businesses the key creates.
@@ -95,7 +117,9 @@ A key with `"access": "all"` acts as its `owner_email` account on every business
 
 Once the admin restarts without a key's entry in `PLATFORM_API_KEYS`, requests with that key fail, and LobbyStack turns off the webhook endpoints the key created. To keep one, turn it back on with another of your platform keys.
 
-`POST /businesses` creates a business, and `GET /businesses` lists the ones the key's group onboarded. Every other request names its business in the `LobbyStack-Business` header:
+### Use a platform key
+
+`POST /businesses` creates a business. `GET /businesses` lists the ones the key's group onboarded, or for a partner's key, every business of the partner. Every other request names its business in the `LobbyStack-Business` header:
 
 ```bash
 curl https://app.lobbystack.com/api/v1/services \
@@ -103,7 +127,7 @@ curl https://app.lobbystack.com/api/v1/services \
   -H "LobbyStack-Business: 75795511-9ee2-4cb2-a89d-f173ec1dd82d"
 ```
 
-Without the header, the request returns `400` with the code `business_required`. A business the key can't reach returns `404`. `GET /me` works without the header and shows the key's group and access in `platform`. API v1 keeps its original names there: `platform.partner` repeats `platform.group`, and `platform.access` reads `partner` for a key with group access.
+Without the header, the request returns `400` with the code `business_required`. A business the key can't reach returns `404`. `GET /me` works without the header and shows the key's group and access in `platform`. API v1 keeps its original names there: `platform.partner` repeats `platform.group`, and `platform.access` reads `partner` for a key with group access. For a partner's key, `platform.partner_id` names the partner, which is also the key's group. It's `null` for the host's keys.
 
 `POST /team/claim-link` hands a business to its owner. Once they accept, a key with group access no longer reaches it, and a key with access to every business still does. Either way, `GET /businesses` stops listing it. LobbyStack also turns off the business's webhook endpoints that a platform key, the account that sent the link, or that account's API keys created. A partner's business stays with the partner, so `POST /team/claim-link` returns `409` for one. Only the partner can release it to its owner.
 
@@ -114,6 +138,8 @@ Only a verified LobbyStack account can accept a claim link, and the link's page 
 On **Settings** > **API keys**, click **Revoke** next to the key. Requests with it fail right away, and you can't undo it. Create a new key if you still need access.
 
 LobbyStack also turns off the webhook endpoints the key created. To keep one, turn it back on from the **Webhooks** card in **Integrations**.
+
+To revoke a partner's platform key, click **Revoke** next to it on the partner console's **API keys** page. Requests with it fail right away. LobbyStack turns off the webhook endpoints the key created on every business, and revokes the team invitations the key sent that nobody has accepted. Owners the key invited when it created their business can still accept.
 
 ## Rate limits
 

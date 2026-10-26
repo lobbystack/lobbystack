@@ -6,8 +6,11 @@ import { shouldAssertAdminDatabaseRoles, type AdminStartupContext } from "./star
 /**
  * Turns off the webhooks that platform keys no longer in PLATFORM_API_KEYS set
  * up. The admin runs this when it starts: the worker delivers webhooks but
- * doesn't read PLATFORM_API_KEYS, and removing a key restarts the admin.
- * Returns how many endpoints it turned off, or null when it didn't run.
+ * doesn't read PLATFORM_API_KEYS, and removing a key restarts the admin. Keys
+ * partners made in their consoles aren't in PLATFORM_API_KEYS; the database
+ * keeps their webhooks while they aren't revoked, and revoking one turns its
+ * webhooks off at once. Returns how many endpoints it turned off, or null
+ * when it didn't run.
  */
 export async function disableRemovedPlatformKeyWebhooksAtStartup(
   context: AdminStartupContext = {

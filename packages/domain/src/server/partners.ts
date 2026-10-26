@@ -34,15 +34,17 @@ import { announceBrandChange } from "./brands";
 import type { DomainContext } from "./context";
 import { firstOnboardingStage } from "./onboarding";
 import { lockBusinessNumberClaims } from "./phoneNumbers";
+import { lockActivePartnerPlatformKey } from "./publicApi/platformKeys";
 import { isSharedSmsSender } from "./smsSender";
 import { ianaTimeZone, insertInvitationInTransaction, insertOwnerlessBusinessInTransaction, isPartnerMemberEmail, isSingleEmailAddress, lockBusinessTeam } from "./tenancy";
 import { periodKeyFor } from "./usage";
 
-// Partner operations: what the partner console, and later a partner's
-// platform keys, can do. Each function checks the actor's role itself, so
-// every entry point gets the same rules. A member works inside the partner's
-// businesses, an admin also creates businesses and runs the team, and only an
-// owner grants or takes away the owner role.
+// Partner operations: what the partner console and a partner's platform
+// keys can do. Each function checks the actor's role itself, so every entry
+// point gets the same rules. A member works inside the partner's businesses,
+// an admin also creates businesses and runs the team, and only an owner grants
+// or takes away the owner role. A key acts as the partner: it creates
+// businesses, and manages nothing about the partner itself.
 
 /** Who acts on a partner: one of its members, or one of its platform keys. */
 export type PartnerActor =
@@ -640,22 +642,39 @@ export async function listPartnerBusinesses(context: DomainContext, actor: Partn
   });
 }
 
+/** What creating a partner's business takes. The console sends the first five; the v1 API's POST /businesses can send the rest. */
+export type PartnerBusinessInput = {
+  name: string;
+  timezone: string;
+  businessType: string;
+  accessLevel: string;
+  ownerEmail: string;
+  slug?: string | undefined;
+  defaultLocale?: string | undefined;
+  websiteUrl?: string | undefined;
+  /** The business's id, which the API derives from the key and its Idempotency-Key so a retry finds the same business. A new one by default. */
+  businessId?: string | undefined;
+  /** The API's hash of the request, kept on the audit row so a retry with the same Idempotency-Key can tell a different body apart. */
+  requestHash?: string | undefined;
+};
+
 /**
  * Creates a business for one of the partner's clients: with no owner yet,
  * linked to the partner, at the access level its own operators get. It also
  * invites the owner by email under the partner's brand. Accepting on the
  * partner's domain makes them the owner; the invitation is never a claim link,
- * so the business stays with the partner. Only owners and admins can create
- * one, and only once the partner has a domain for its businesses to open on:
- * they show on no other. It never counts toward the cap of 10 businesses an
- * account can own.
+ * so the business stays with the partner. Owners and admins can create one,
+ * and so can the partner's platform keys, which act as the partner, but only
+ * once the partner has a domain for its businesses to open on: they show on
+ * no other. It never counts toward the cap of 10 businesses an account can
+ * own. The caller passes the app role's context, since only it can act as the
+ * system.
  */
 export async function createPartnerBusiness(
   context: DomainContext,
   actor: PartnerActor,
-  input: { name: string; timezone: string; businessType: string; accessLevel: string; ownerEmail: string },
+  input: PartnerBusinessInput,
 ): Promise<{ businessId: string; invitationId: string; expiresAt: Date }> {
-  const member = businessesActor(actor);
   const name = input.name.replace(/\s+/g, " ").trim();
   if (!name || name.length > PARTNER_BUSINESS_NAME_MAX_LENGTH) throw failure(`Enter the business's name, up to ${PARTNER_BUSINESS_NAME_MAX_LENGTH} characters.`, 400, "invalid_name");
   const timezone = ianaTimeZone(input.timezone);
@@ -667,24 +686,29 @@ export async function createPartnerBusiness(
   const ownerEmail = normalizeAuthEmail(input.ownerEmail);
   if (!isSingleEmailAddress(ownerEmail)) throw failure("Enter one valid email address for the owner.", 400, "invalid_email");
   const { baseDomain } = partnerFeatures(process.env);
-  const businessId = randomUUID();
+  const businessId = input.businessId ?? randomUUID();
+  const { partnerId } = actor;
 
-  const created = await withBusinessTransaction(context.db, { userId: member.userId, businessId, actorType: "system" }, async (tx) => {
-    if (await currentRole(tx, member) === "member") throw new AuthorizationError("Only owners and admins can create the partner's businesses.");
+  const created = await withBusinessTransaction(context.db, { ...(actor.kind === "member" ? { userId: actor.userId } : {}), businessId, actorType: "system" }, async (tx) => {
+    if (actor.kind === "member" && await currentRole(tx, actor) === "member") throw new AuthorizationError("Only owners and admins can create the partner's businesses.");
+    // Revoking a key waits for a business it's creating, so the owner's invitation is never sent by a key revoked first.
+    if (actor.kind === "key") await lockActivePartnerPlatformKey(tx, actor.platformKeyId);
     // The partner's people work in its businesses through opens, never on their teams, so none of them owns one.
-    if (await isPartnerMemberEmail(tx, { partnerId: member.partnerId, normalizedEmail: ownerEmail })) throw failure("The owner can't be someone on your team. Your team works in the business from the console.", 409, "owner_on_partner_team");
+    if (await isPartnerMemberEmail(tx, { partnerId: actor.partnerId, normalizedEmail: ownerEmail })) throw failure("The owner can't be someone on your team. Your team works in the business from the console.", 409, "owner_on_partner_team");
     // A partner that signed up while the deployment had no base domain gets its subdomain now, if it can.
-    const domain = baseDomain ? await reserveSubdomainIn(tx, member.partnerId, baseDomain) : { subdomain: null, changed: false };
+    const domain = baseDomain ? await reserveSubdomainIn(tx, partnerId, baseDomain) : { subdomain: null, changed: false };
     if (!domain.subdomain) throw failure("You need your own domain before you can create a business.", 409, "partner_domain_required");
     // At the activity level the partner sets the receptionist up, so the owner's onboarding starts at their phone.
-    const partner = { partnerId: member.partnerId, accessLevel };
-    await insertOwnerlessBusinessInTransaction(tx, { businessId, name, timezone, businessType, partner, onboardingStage: firstOnboardingStage(partner) });
+    const partner = { partnerId, accessLevel };
+    await insertOwnerlessBusinessInTransaction(tx, { businessId, name, slug: input.slug, timezone, businessType, defaultLocale: input.defaultLocale, websiteUrl: input.websiteUrl, partner, onboardingStage: firstOnboardingStage(partner) });
     // The worker writes the email under the business's brand, the partner's, and puts its link on the partner's domain.
-    const { invitationId, expiresAt } = await insertInvitationInTransaction(tx, { businessId, invitedByUserId: member.userId, normalizedEmail: ownerEmail, role: "business_owner" });
-    await tx.insert(auditLogs).values({ businessId, actorUserId: member.userId, eventType: "partner.business_created", entityType: "business", entityId: businessId, payload: { partnerId: member.partnerId, accessLevel, ownerInvitationId: invitationId } });
+    // A key invites as the partner, with no person behind it.
+    const { invitationId, expiresAt } = await insertInvitationInTransaction(tx, { businessId, normalizedEmail: ownerEmail, role: "business_owner", ...(actor.kind === "member" ? { invitedByUserId: actor.userId } : { invitedByPlatformKeyId: actor.platformKeyId }) });
+    const by = actor.kind === "member" ? {} : { actor: "platform_key", platformKeyId: actor.platformKeyId, groupId: partnerId };
+    await tx.insert(auditLogs).values({ businessId, actorUserId: actor.kind === "member" ? actor.userId : null, eventType: "partner.business_created", entityType: "business", entityId: businessId, payload: { ...by, partnerId, accessLevel, ownerInvitationId: invitationId, ...(input.requestHash ? { requestHash: input.requestHash } : {}) } });
     return { businessId, invitationId, expiresAt, subdomainReserved: domain.changed };
   });
-  if (created.subdomainReserved) await announceBrandChange(context, { kind: "partner", partnerId: member.partnerId });
+  if (created.subdomainReserved) await announceBrandChange(context, { kind: "partner", partnerId });
   return { businessId: created.businessId, invitationId: created.invitationId, expiresAt: created.expiresAt };
 }
 

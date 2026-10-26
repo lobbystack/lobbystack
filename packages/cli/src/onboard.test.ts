@@ -45,9 +45,16 @@ owner: { email: owner@acmeplumbing.ca }
 `;
 const checkoutYaml = manifestYaml.replace("plan: { managed: true }", "plan: { checkout: { plan: pro, interval: monthly } }");
 const groupYaml = manifestYaml.replace("plan: { managed: true }\n", "").replace('phone_number: { country: CA, area_code: "416" }\n', "");
+// A partner's key picks what the business's own team can use, and invites its owner as it creates it.
+const partnerYaml = groupYaml.replace("  locale: en\n", "  locale: en\n  access_level: activity\n");
+const PARTNER = "3c2b1a09-8f7e-4d6c-9b5a-4f3e2d1c0b9a";
 
-/** A platform key's access; "partner" is group access on a server from before the rename, which sends no group. */
-type Mode = { key: "platform"; access: "group" | "all" | "partner" } | { key: "business" };
+/**
+ * A platform key's access; "partner" is group access on a server from before
+ * the rename, which sends no group. { key: "partner" } is a key a partner made
+ * in its console, which reaches the partner's businesses.
+ */
+type Mode = { key: "platform"; access: "group" | "all" | "partner" } | { key: "partner" } | { key: "business" };
 
 /**
  * A fake API that keeps what it's told, so a second run sees the first run's
@@ -86,7 +93,10 @@ function fakeWorld(mode: Mode = { key: "platform", access: "all" }) {
     claims: new Map<string, Row>(),
     offers: new Map<string, number>(),
     onboarding: { complete: false },
-    team: { members: [{ id: id(), email: KEY_OWNER, role: "business_owner" }] as Row[], invitations: [] as Row[] },
+    // A partner's business has no owner until the one it invites accepts.
+    team: { members: mode.key === "partner" ? [] : [{ id: id(), email: KEY_OWNER, role: "business_owner" }] as Row[], invitations: [] as Row[] },
+    /** What POST /businesses was sent. */
+    created: [] as Row[],
     idempotency: new Map<string, { body: string; status: number; reply: unknown }>(),
     writes: [] as string[],
     /** Requests whose next answer is lost after the work is done, as when the connection drops. */
@@ -131,16 +141,27 @@ function fakeWorld(mode: Mode = { key: "platform", access: "all" }) {
     } else if (route !== "GET /me" && route !== "GET /businesses" && route !== "POST /businesses" && (header !== BUSINESS || !reachable)) {
       return error(404, "not_found", "Business not found.");
     }
-    if (route === "GET /me") return ok(mode.key === "business" ? { api_key: { id: id(), name: "Setup", prefix: "lsk_1a2b3c4d", scopes: [], created_at: "2026-10-12T00:00:00.000Z" }, business: { id: BUSINESS, name: world.business.name } } : { api_key: { id: id(), name: "Acme", prefix: "lsp_1a2b3c4d", scopes: [], created_at: "2026-10-12T00:00:00.000Z" }, business: header ? { id: BUSINESS, name: world.business.name } : null, platform: mode.access === "partner" ? { partner: "acme", access: "partner" } : { group: "acme", partner: "acme", access: mode.access === "all" ? "all" : "partner" } });
+    if (route === "GET /me") {
+      if (mode.key === "partner") return ok({ api_key: { id: id(), name: "Acme Agency", prefix: "lsp_1a2b3c4d", scopes: [], created_at: "2026-10-26T00:00:00.000Z" }, business: header ? { id: BUSINESS, name: world.business.name } : null, platform: { group: PARTNER, partner: PARTNER, access: "partner", partner_id: PARTNER } });
+      return ok(mode.key === "business" ? { api_key: { id: id(), name: "Setup", prefix: "lsk_1a2b3c4d", scopes: [], created_at: "2026-10-12T00:00:00.000Z" }, business: { id: BUSINESS, name: world.business.name } } : { api_key: { id: id(), name: "Acme", prefix: "lsp_1a2b3c4d", scopes: [], created_at: "2026-10-12T00:00:00.000Z" }, business: header ? { id: BUSINESS, name: world.business.name } : null, platform: mode.access === "partner" ? { partner: "acme", access: "partner" } : { group: "acme", partner: "acme", access: mode.access === "all" ? "all" : "partner" } });
+    }
     if (route === "GET /businesses") return page(world.businesses.filter(() => reachable).map((business) => ({ id: business, name: world.business.name, timezone: world.business.timezone, locale: "en", website_url: null, onboarding_stage: "website", created_at: "2026-10-12T00:00:00.000Z" })));
     if (route === "POST /businesses") {
+      world.created.push(body!);
+      if (mode.key === "partner") {
+        if (!body!.owner_email) return error(400, "invalid_request", "A partner's platform key invites the business's owner as it creates the business, so send owner_email.", [{ path: "owner_email", message: "Required with a partner's platform key." }]);
+        world.team.invitations.push({ id: id(), email: body!.owner_email, role: "business_owner", status: "pending", transfers_ownership: false });
+      } else if (body!.owner_email !== undefined || body!.access_level !== undefined) {
+        return error(400, "invalid_request", "owner_email and access_level are only for a partner's platform key.");
+      }
+      const { owner_email: _owner, access_level: _access, ...fields } = body!;
       if (world.businesses.length) {
         // A new key makes a second business.
         world.businesses.push(id());
         return ok({ ...world.business, id: world.businesses.at(-1) }, 201);
       }
       world.businesses.push(BUSINESS);
-      Object.assign(world.business, body, { hours: [] });
+      Object.assign(world.business, fields, { hours: [] });
       return ok(world.business, 201);
     }
     if (route === "GET /business") return ok(world.business);
@@ -244,6 +265,7 @@ function fakeWorld(mode: Mode = { key: "platform", access: "all" }) {
     }
     if (route === "GET /team") return ok(world.team);
     if (route === "POST /team/claim-link") {
+      if (mode.key === "partner") return error(403, "forbidden", "A partner's platform key can't create claim links.");
       if (mode.key === "platform" && !world.team.members.some((member) => member.email === KEY_OWNER && member.role === "business_owner")) return error(409, "conflict", "The account this key acts as doesn't own the business.");
       world.team.invitations = world.team.invitations.filter((invitation) => !invitation.transfers_ownership);
       const invitation = { id: id(), email: body!.email, role: "business_owner", status: "pending", transfers_ownership: true };
@@ -436,6 +458,62 @@ describe("lobbystack onboard", () => {
     const after = await onboard([], fetch);
     expect(after.code).toBe(exitCodes.auth);
     expect(after.err).toContain("owner@acmeplumbing.ca has a claim link for this business, and this key can't reach it any more");
+  });
+
+  it("with a partner's key, creates the business with its owner's invitation, sets it up, and keeps it with the partner", async () => {
+    const { world, fetch } = fakeWorld({ key: "partner" });
+    await writeFile(manifest, partnerYaml);
+    const done = await onboard(["--yes"], fetch);
+    expect(done.code).toBe(exitCodes.ok);
+    expect(world.created).toEqual([expect.objectContaining({ name: "Acme Plumbing", owner_email: "owner@acmeplumbing.ca", access_level: "activity" })]);
+    expect(done.out).toContain("owner          invited      owner@acmeplumbing.ca, who signs in on your dashboard");
+    // The partner's business is billed by the partner, so the whole site is read now.
+    expect(done.out).toContain("full site      reading      https://acmeplumbing.ca");
+    expect(done.out).toContain("onboarding     left open    for the owner to finish when they first sign in");
+    expect(world.writes).not.toContain("POST /team/claim-link");
+    expect(world.writes).not.toContain("POST /onboarding/complete");
+    expect(done.out).toContain("The business matches the manifest.");
+
+    // A rerun changes nothing, and finds the owner's invitation.
+    world.writes.length = 0;
+    const again = await onboard([], fetch);
+    expect(again.code).toBe(exitCodes.ok);
+    expect(again.out).toContain(`business       found        Acme Plumbing (${BUSINESS})`);
+    expect(again.out).toContain("owner          unchanged    owner@acmeplumbing.ca has an invitation");
+    expect(world.writes).toEqual([]);
+
+    // Once the owner accepts, the business stays with the partner and the key still reaches it.
+    world.team = { members: [{ id: "member", email: "owner@acmeplumbing.ca", role: "business_owner" }], invitations: [] };
+    expect((await onboard([], fetch)).out).toContain("owner          unchanged    owner@acmeplumbing.ca owns it");
+  });
+
+  it("with a partner's key, refuses a plan, a number or a business without its owner before anything changes", async () => {
+    const { world, fetch } = fakeWorld({ key: "partner" });
+    expect(await onboard(["--yes"], fetch)).toMatchObject({ code: exitCodes.invalid, err: expect.stringContaining("A partner's businesses don't buy the host's plans") });
+    await writeFile(manifest, partnerYaml.replace("owner: { email: owner@acmeplumbing.ca }\n", 'phone_number: { country: CA, area_code: "416" }\n'));
+    expect(await onboard(["--yes"], fetch)).toMatchObject({ code: exitCodes.invalid, err: expect.stringContaining("A partner's platform key can't claim phone numbers") });
+    await writeFile(manifest, partnerYaml.replace("owner: { email: owner@acmeplumbing.ca }\n", ""));
+    expect(await onboard(["--yes", "--plan"], fetch)).toMatchObject({ code: exitCodes.invalid, err: expect.stringContaining("A partner's platform key invites the business's owner as it creates the business. Add owner to the manifest.") });
+    expect(world.writes).toEqual([]);
+  });
+
+  it("with a partner's key, says when the owner of a business it didn't create isn't invited", async () => {
+    const { world, fetch } = fakeWorld({ key: "partner" });
+    world.businesses.push(BUSINESS);
+    await writeFile(manifest, partnerYaml.replace("  name: Acme Plumbing\n", `  name: Acme Plumbing\n  id: ${BUSINESS}\n`));
+    const done = await onboard(["--yes"], fetch);
+    expect(done.code).toBe(exitCodes.ok);
+    expect(done.out).toContain("owner          differs      owner@acmeplumbing.ca isn't invited");
+    expect(done.out).toContain("owner@acmeplumbing.ca doesn't own the business and has no invitation to. A partner's key invites the owner only when it creates the business.");
+    expect(world.writes).not.toContain("POST /businesses");
+    expect(world.writes).not.toContain("POST /team/claim-link");
+  });
+
+  it("leaves business.access_level to a partner's key", async () => {
+    const { world, fetch } = fakeWorld({ key: "platform", access: "group" });
+    await writeFile(manifest, partnerYaml);
+    expect(await onboard(["--yes"], fetch)).toMatchObject({ code: exitCodes.invalid, err: expect.stringContaining("business.access_level is only for a partner's platform key") });
+    expect(world.writes).toEqual([]);
   });
 
   it("with a business's own key, sets up that business and hands it over last", async () => {

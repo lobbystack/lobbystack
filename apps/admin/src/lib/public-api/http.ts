@@ -4,6 +4,7 @@ import {
   bearerToken,
   idempotencyRequestHash,
   isPlatformKeyToken,
+  platformKeyReach,
   PublicApiError,
   requirePlatformBusinessAccess,
   resolveApiKey,
@@ -11,11 +12,12 @@ import {
   resolvePlatformKeyOwner,
   runIdempotent,
   touchApiKeyLastUsed,
+  touchPlatformKeyLastUsed,
   validateIdempotencyKey,
   type ApiKeyCaller,
   type DomainContext,
-  type PlatformKeyAccess,
   type PlatformKeyCaller,
+  type PlatformKeyReach,
   type ResolvedApiKey,
   type ResolvedPlatformKey,
 } from "@lobbystack/domain";
@@ -29,9 +31,11 @@ import { enforceApiRateLimit, type RateLimitDecision } from "./rate-limit";
 // Request pipeline for /api/v1: bearer key -> scope -> business -> rate limit
 // -> idempotency -> handler -> `{ data }` or `{ error: { code, message } }`.
 // A per-business key (lsk_) acts on its own business. A platform key (lsp_)
-// acts on the business in the LobbyStack-Business header, as its owner, and
-// alone may call the few operations that act on no one business, such as
-// POST /businesses. Keys are never logged: logs and audit rows carry the key
+// acts on the business in the LobbyStack-Business header, and alone may call
+// the few operations that act on no one business, such as POST /businesses.
+// A host's platform key, from PLATFORM_API_KEYS, acts as its owner. A key a
+// partner made in its console acts as the partner, on the partner's
+// businesses only. Keys are never logged: logs and audit rows carry the key
 // id, plus a platform key's group.
 
 /** The key a request presented. Both kinds carry scopes. */
@@ -52,14 +56,15 @@ export type OptionalBusinessHandlerInput = Omit<ApiHandlerInput, "caller"> & { c
 
 /**
  * For operations that act on no one business, which only platform keys may
- * call. The handler gets the key, the account it acts as and, when the
- * operation takes one, the Idempotency-Key to apply itself.
+ * call. The handler gets the key, the account a host's key acts as (null for
+ * a partner's key, which acts as the partner) and, when the operation takes
+ * one, the Idempotency-Key to apply itself.
  */
 export type PlatformHandlerInput = {
   request: Request;
   context: DomainContext;
   credential: { kind: "platform_key" } & ResolvedPlatformKey;
-  actingUserId: string;
+  actingUserId: string | null;
   idempotencyKey: string | null;
 };
 
@@ -71,9 +76,10 @@ export type ApiResult = { status?: number; body: unknown; headers?: Record<strin
 
 type Dependencies = {
   resolveKey?: (key: string) => Promise<ResolvedApiKey | null>;
-  resolvePlatformKey?: (key: string) => ResolvedPlatformKey | null;
+  resolvePlatformKey?: (key: string) => Promise<ResolvedPlatformKey | null> | ResolvedPlatformKey | null;
   resolvePlatformOwner?: (ownerEmail: string) => Promise<string | null>;
-  requirePlatformBusiness?: (input: { businessId: string; groupId: string; access: PlatformKeyAccess }) => Promise<void>;
+  requirePlatformBusiness?: (input: { businessId: string } & PlatformKeyReach) => Promise<void>;
+  touchPlatformKey?: (key: ResolvedPlatformKey) => Promise<void>;
   rateLimit?: (principalId: string) => Promise<RateLimitDecision>;
   context?: () => DomainContext;
   runIdempotent?: typeof runIdempotent;
@@ -157,11 +163,12 @@ export async function handleApiRequest<Id extends ApiOperationId>(request: Reque
 
     let credential: ApiCredential;
     if (isPlatformKeyToken(token)) {
-      // A malformed PLATFORM_API_KEYS throws here, which answers 500 and reports it.
-      const platformKey = (dependencies.resolvePlatformKey ?? resolvePlatformKey)(token);
+      // PLATFORM_API_KEYS first, then the keys partners made. A malformed
+      // PLATFORM_API_KEYS throws here, which answers 500 and reports it.
+      const platformKey = await (dependencies.resolvePlatformKey ?? ((value) => resolvePlatformKey(context, value)))(token);
       if (!platformKey) return (status = 401, apiError(401, "unauthorized", "The API key is invalid or has been revoked.", { headers: { "WWW-Authenticate": "Bearer" } }));
       credential = { kind: "platform_key", ...platformKey };
-      logFields = { platform_key_id: platformKey.platformKeyId, group_id: platformKey.group };
+      logFields = { platform_key_id: platformKey.platformKeyId, group_id: platformKey.group, ...(platformKey.partnerId !== undefined ? { partner_id: platformKey.partnerId } : {}) };
     } else {
       const key = await (dependencies.resolveKey ?? ((value) => resolveApiKey(context, value)))(token);
       if (!key) return (status = 401, apiError(401, "unauthorized", "The API key is invalid or has been revoked.", { headers: { "WWW-Authenticate": "Bearer" } }));
@@ -193,8 +200,18 @@ export async function handleApiRequest<Id extends ApiOperationId>(request: Reque
 
     let caller: RestApiCaller | null;
     if (credential.kind === "platform_key") {
-      const actingUserId = await (dependencies.resolvePlatformOwner ?? ((email) => resolvePlatformKeyOwner(context, email)))(credential.ownerEmail);
-      if (!actingUserId) return (status = 403, apiError(403, "key_owner_inactive", "This platform key's owner_email has no verified LobbyStack account. Sign up with that email and verify it, or change owner_email in PLATFORM_API_KEYS."));
+      const platformKey = credential;
+      // A host's key acts as its owner's account. A partner's key acts as the partner, so it has no account to look up.
+      let identity: { actingUserId: string } | { partnerId: string };
+      if (platformKey.partnerId === undefined) {
+        const ownerId = await (dependencies.resolvePlatformOwner ?? ((email) => resolvePlatformKeyOwner(context, email)))(platformKey.ownerEmail);
+        if (!ownerId) return (status = 403, apiError(403, "key_owner_inactive", "This platform key's owner_email has no verified LobbyStack account. Sign up with that email and verify it, or change owner_email in PLATFORM_API_KEYS."));
+        identity = { actingUserId: ownerId };
+      } else {
+        identity = { partnerId: platformKey.partnerId };
+        runAfterResponse(async () => { await (dependencies.touchPlatformKey ?? ((key) => touchPlatformKeyLastUsed(context, key)))(platformKey).catch(() => undefined); });
+      }
+      const actingUserId = "actingUserId" in identity ? identity.actingUserId : null;
       if (businessless) {
         // The operation applies the Idempotency-Key itself: there is no business to keep the record under.
         const idempotencyKey = operation.idempotent ? validateIdempotencyKey(request.headers.get("idempotency-key")) : null;
@@ -206,8 +223,8 @@ export async function handleApiRequest<Id extends ApiOperationId>(request: Reque
       if (requestedBusinessId === undefined) {
         caller = null;
       } else {
-        await (dependencies.requirePlatformBusiness ?? ((input) => requirePlatformBusinessAccess(context, input)))({ businessId: requestedBusinessId, groupId: credential.group, access: credential.access });
-        caller = { businessId: requestedBusinessId, platformKeyId: credential.platformKeyId, groupId: credential.group, actingUserId, actor: "platform_key" };
+        await (dependencies.requirePlatformBusiness ?? ((input) => requirePlatformBusinessAccess(context, input)))({ businessId: requestedBusinessId, ...platformKeyReach(platformKey) });
+        caller = { businessId: requestedBusinessId, platformKeyId: platformKey.platformKeyId, groupId: platformKey.group, ...identity, actor: "platform_key" };
       }
     } else {
       const keyCaller: ApiKeyCaller = { businessId: credential.businessId, apiKeyId: credential.apiKeyId };

@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { eq } from "drizzle-orm";
 
 import { enqueueOutbox, users, withBusinessTransaction, type Database } from "@lobbystack/db";
-import { HOST_EMAIL_BRAND, normalizeAuthEmail, normalizeInterfaceLocale, type ApiUserCreate, type ApiUserInvitation } from "@lobbystack/shared";
+import { HOST_EMAIL_BRAND, normalizeAuthEmail, normalizeInterfaceLocale, type ApiUserCreate, type ApiUserInvitation, type EmailBrandReference } from "@lobbystack/shared";
 
 import { isSingleEmailAddress } from "../tenancy";
 import { invalidRequest } from "./errors";
@@ -18,7 +18,9 @@ import type { ResolvedPlatformKey } from "./platformKeys";
 // either way, so the endpoint can't tell anyone who has an account.
 
 // The emails go out under the host brand, whose dashboard the person signs up
-// or in on. The worker writes their subjects under that brand when it sends.
+// or in on, or under the partner's brand for a partner's key, whose links go
+// to the partner's dashboard. The worker writes their subjects under that
+// brand when it sends.
 
 function digest(value: string): string {
   return createHash("sha256").update(value).digest("hex");
@@ -35,20 +37,23 @@ export function invitedUserEmail(body: ApiUserCreate): string {
  * Emails a sign-up link to an address with no account, or a sign-in link in
  * the account's own language to one that has an account, and changes no
  * account. The outbox dedupes on the key, the Idempotency-Key and the
- * address, so a retry sends nothing more. Callers check the send limits first.
- * Reads accounts with the auth role and queues email with the app role.
+ * address, so a retry sends nothing more. Callers check the send limits first,
+ * and pass the dashboard address of the key's brand: the partner's for a
+ * partner's key. Reads accounts with the auth role and queues email with the
+ * app role.
  */
 export async function inviteUserForApi(databases: { auth: Database; app: Database }, input: { key: ResolvedPlatformKey; idempotencyKey: string; body: ApiUserCreate; appBaseUrl: string }): Promise<ApiUserInvitation> {
   const email = invitedUserEmail(input.body);
   const locale = input.body.locale ?? "en";
   const [account] = await databases.auth.select({ id: users.id, preferredLocale: users.preferredLocale }).from(users).where(eq(users.normalizedEmail, email)).limit(1);
   const dedupeKey = `platform-user-invitation:${input.key.platformKeyId}:${digest(`${input.idempotencyKey}\n${email}`)}`;
+  const brand: EmailBrandReference = input.key.partnerId === undefined ? HOST_EMAIL_BRAND : { kind: "partner", partnerId: input.key.partnerId };
   let payload: Record<string, unknown>;
   if (account) {
     const accountLocale = normalizeInterfaceLocale(account.preferredLocale) ?? "en";
-    payload = { template: "existing_account", to: email, variables: { locale: accountLocale, signInUrl: new URL(`/${accountLocale}/login`, input.appBaseUrl).href, resetUrl: new URL(`/${accountLocale}/forgot-password`, input.appBaseUrl).href }, brand: HOST_EMAIL_BRAND, replyTo: null };
+    payload = { template: "existing_account", to: email, variables: { locale: accountLocale, signInUrl: new URL(`/${accountLocale}/login`, input.appBaseUrl).href, resetUrl: new URL(`/${accountLocale}/forgot-password`, input.appBaseUrl).href }, brand, replyTo: null };
   } else {
-    payload = { template: "account_setup", to: email, variables: { locale, email, url: new URL(`/${locale}/signup`, input.appBaseUrl).href }, brand: HOST_EMAIL_BRAND, replyTo: null };
+    payload = { template: "account_setup", to: email, variables: { locale, email, url: new URL(`/${locale}/signup`, input.appBaseUrl).href }, brand, replyTo: null };
   }
   await withBusinessTransaction(databases.app, { actorType: "system" }, async (tx) => {
     await enqueueOutbox(tx, { topic: "email.send", aggregateType: "auth_email", ...(account ? { aggregateId: account.id } : {}), dedupeKey, payload });

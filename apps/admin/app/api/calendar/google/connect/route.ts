@@ -7,6 +7,7 @@ import { enforceCalendarOAuthRateLimits } from "@/lib/google-calendar-oauth-limi
 import { storeCalendarOAuthState } from "@/lib/google-calendar-oauth-store";
 import { googleCalendarProvider } from "@/lib/google-calendar-provider";
 import { requireOperator } from "@/lib/operator-request";
+import { partnerRequestOrigin } from "@/lib/request-brand";
 import { trustedClientIp } from "@/lib/trusted-client-ip";
 
 export const runtime = "nodejs";
@@ -17,10 +18,12 @@ export const dynamic = "force-dynamic";
  * signed-out visitor to sign in first, checks they are an owner or admin of
  * the link's business, and sends them to Google as the integrations page's
  * Connect button does. Nothing changes until they agree there; the callback
- * then connects the calendar and opens that business.
+ * then connects the calendar and opens that business. A partner's business
+ * gets its link on the partner's domain, the only one it opens on, so sign-in
+ * and errors stay on the domain the link was opened on.
  */
 export async function GET(request: Request) {
-  const appUrl = (path: string) => new URL(path, process.env.APP_BASE_URL ?? request.url);
+  const appUrl = (path: string) => new URL(path, partnerRequestOrigin(request.headers) ?? process.env.APP_BASE_URL ?? request.url);
   const failed = () => NextResponse.redirect(appUrl("/integrations?calendar=google&status=error"));
   try {
     const url = new URL(request.url);

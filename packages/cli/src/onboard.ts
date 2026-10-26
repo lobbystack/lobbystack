@@ -92,9 +92,11 @@ type Run = {
   /**
    * The key's reach. A platform key with access to every business ("all")
    * keeps reaching a business after its owner claims it; one with group
-   * access ("group") and the business's own key don't.
+   * access ("group") and the business's own key don't. A partner's key
+   * ("partner") reaches the partner's businesses, which nobody claims: they
+   * stay with the partner.
    */
-  access: "all" | "group" | "business";
+  access: "all" | "group" | "partner" | "business";
   state: OnboardState;
   statePath: string;
   /** The business's plan, when the key may read it. */
@@ -196,6 +198,9 @@ function namedBusiness(values: Values): string | undefined {
 /** Refuses, before anything changes, what the manifest asks for that this key can never do. */
 function checkKey(run: Run): void {
   const { plan, phone_number: phoneNumber } = run.manifest;
+  if (run.manifest.business.access_level !== undefined && run.access !== "partner") throw new CliError("business.access_level is only for a partner's platform key, which sets what the business's own team can use. Leave it out of the manifest.");
+  if (run.access === "partner" && plan) throw new CliError("A partner's businesses don't buy the host's plans, so a partner's key can't pick one. Leave plan out of the manifest.");
+  if (run.access === "partner" && phoneNumber) throw new CliError("A partner's platform key can't claim phone numbers. Leave phone_number out of the manifest.");
   if (run.access === "group" && (plan || phoneNumber)) {
     throw new CliError("A platform key with group access can't buy a plan or a number: the business's owner pays for them, and once they claim the business your key can't reach it. Leave plan and phone_number out of the manifest, and the owner picks both in the dashboard after claiming it.");
   }
@@ -224,8 +229,8 @@ async function ensureBusiness(run: Run, make: (business?: string) => Client, nam
     if (run.state.handed_over_to && businessKey && error instanceof ApiError && error.status === 401) throw handedOver(error);
     throw error;
   }
-  // GET /me reports group access as "partner" in v1.
-  run.access = me.platform ? (me.platform.access === "all" ? "all" : "group") : "business";
+  // GET /me reports group access as "partner" in v1, and names the partner of a partner's key.
+  run.access = me.platform ? (me.platform.partner_id ? "partner" : me.platform.access === "all" ? "all" : "group") : "business";
   checkKey(run);
   // A per-business key sets up its own business; only a platform key makes one.
   const id = given[0]?.[1] ?? (me.platform ? undefined : me.business?.id);
@@ -254,6 +259,9 @@ async function ensureBusiness(run: Run, make: (business?: string) => Client, nam
     const same = onboarded.find((business) => sameName(business.name, wanted.name));
     if (same) throw new CliError(`You already onboarded ${String(same.name)} (${String(same.id)}), and there's no state file to say it's this one. To set it up, put id: ${String(same.id)} under business in the manifest. To make another business, give it another name.`);
   }
+  // A partner's key invites the owner as it creates the business, and can't later.
+  const owner = run.access === "partner" ? run.manifest.owner?.email : undefined;
+  if (run.access === "partner" && !owner) throw new CliError("A partner's platform key invites the business's owner as it creates the business. Add owner to the manifest.");
   if (run.plan) {
     run.log({ step: "business", action: "would create", detail: wanted.name });
     return undefined;
@@ -261,13 +269,17 @@ async function ensureBusiness(run: Run, make: (business?: string) => Client, nam
   // The run id is on disk before the business exists, so a rerun after a crash sends the same key and gets the same business.
   await run.save();
   const created = (await root.call("createBusiness", {
-    body: { name: wanted.name, timezone: wanted.timezone, ...(wanted.locale ? { locale: wanted.locale } : {}), ...(wanted.website_url ? { website_url: wanted.website_url } : {}), ...(wanted.business_type ? { business_type: wanted.business_type } : {}), ...(wanted.slug ? { slug: wanted.slug } : {}) },
+    body: { name: wanted.name, timezone: wanted.timezone, ...(wanted.locale ? { locale: wanted.locale } : {}), ...(wanted.website_url ? { website_url: wanted.website_url } : {}), ...(wanted.business_type ? { business_type: wanted.business_type } : {}), ...(wanted.slug ? { slug: wanted.slug } : {}), ...(owner ? { owner_email: owner } : {}), ...(wanted.access_level ? { access_level: wanted.access_level } : {}) },
     idempotencyKey: `onboard-${run.state.run_id}-business`,
   })).data;
   run.state.business_id = created.id;
   await run.save();
   // Once the owner claims it, GET /businesses stops listing the business, so a rerun can't find it again.
   run.log({ step: "business", action: "created", detail: `${created.name} (${created.id}). Keep ${basename(run.statePath)} with the manifest, or put id: ${created.id} under business in it.` });
+  if (owner) {
+    run.handedOver = true;
+    run.log({ step: "owner", action: "invited", detail: `${owner}, who signs in on your dashboard` });
+  }
   return created.id;
 }
 
@@ -595,11 +607,28 @@ async function ownsBusiness(run: Run, email: string): Promise<boolean> {
   return team.members.some((member) => member.role === "business_owner" && sameName(member.email, email));
 }
 
+/**
+ * A partner's business stays with the partner, and its owner was invited when
+ * the business was made, so this only checks that they own it or still have
+ * that invitation.
+ */
+async function checkPartnerOwner(run: Run, email: string): Promise<void> {
+  const team = (await run.client.call("getTeam")).data;
+  if (team.members.some((member) => member.role === "business_owner" && sameName(member.email, email))) return run.log({ step: "owner", action: "unchanged", detail: `${email} owns it` });
+  const invitation = team.invitations.find((candidate) => candidate.role === "business_owner" && !candidate.transfers_ownership && sameName(candidate.email, email));
+  if (invitation?.status === "pending") return run.log({ step: "owner", action: "unchanged", detail: `${email} has an invitation` });
+  run.log({ step: "owner", action: "differs", detail: invitation ? `${email}'s invitation expired` : `${email} isn't invited` });
+  run.notes.push(invitation
+    ? `${email}'s invitation to own the business expired before they accepted it. A partner's key invites the owner only when it creates the business.`
+    : `${email} doesn't own the business and has no invitation to. A partner's key invites the owner only when it creates the business.`);
+}
+
 /** Sends the owner a claim link, unless they own the business or have one already. */
 async function handOver(run: Run): Promise<void> {
   const owner = run.manifest.owner;
   if (!owner || run.handedOver) return;
   run.handedOver = true;
+  if (run.access === "partner") return await checkPartnerOwner(run, owner.email);
   const team = (await run.client.call("getTeam")).data;
   const step = `owner:${nameKey(owner.email)}`;
   if (team.members.some((member) => member.role === "business_owner" && sameName(member.email, owner.email))) {
@@ -758,6 +787,8 @@ async function completeOnboarding(run: Run): Promise<void> {
   if (run.waiting.length) return run.log({ step: "onboarding", action: "waiting", detail: "for the steps above" });
   // A key with group access can't pick a plan or a number, so the owner finds those steps open in the dashboard.
   if (run.access === "group" && wanted?.complete !== true) return run.log({ step: "onboarding", action: "left open", detail: "for the owner to pick a plan and a number after claiming it" });
+  // A partner's business ends its owner's onboarding once they verify their phone, the first time they sign in.
+  if (run.access === "partner" && wanted?.complete !== true) return run.log({ step: "onboarding", action: "left open", detail: "for the owner to finish when they first sign in" });
   const current = (await run.client.call("getOnboarding")).data;
   if (current.complete) return run.log({ step: "onboarding", action: "unchanged", detail: "complete" });
   const missing = current.missing.filter((item) => !(item === "phone_number" && wanted?.skip_number));
@@ -782,7 +813,7 @@ export const onboard: Command = {
   notes: [
     "The business is the one in the state file, business.id in the manifest or --business, which have to agree.",
     "LOBBYSTACK_BUSINESS and a profile's business are never used. With none of them, a platform key makes the",
-    "business and a per-business key sets up its own.",
+    "business and a per-business key sets up its own. A partner's key invites the owner as it makes the business.",
     "",
     "Exit codes: 0 the business matches the manifest. 4 not finished: the rest waits on a payment or the owner's",
     "claim, so run it again once that's done. 1, 2 and 3 as for every command.",
@@ -855,7 +886,8 @@ export const onboard: Command = {
         await syncPhoneNumber(run, run.billing);
         await completeOnboarding(run);
         // Once the owner accepts, the business's own key, and one with group access, can't reach it, so nothing could finish or retry what's left: the hand-over waits for it.
-        if (run.access !== "all" && manifest.owner && (run.waiting.length || run.failed.length)) run.log({ step: "owner", action: "waiting", detail: "for the steps above" });
+        // A partner's key keeps its businesses, and only checks on the owner.
+        if ((run.access === "group" || run.access === "business") && manifest.owner && (run.waiting.length || run.failed.length)) run.log({ step: "owner", action: "waiting", detail: "for the steps above" });
         else await handOver(run);
         await run.save();
       }

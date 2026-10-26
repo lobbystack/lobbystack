@@ -9,7 +9,7 @@ import { generateApiKey, resolveApiKey } from "./apiKeys";
 import { PublicApiError } from "./errors";
 import { runIdempotent } from "./idempotency";
 import { createBusinessForApi, createContactForApi, createKnowledgeEntryForApi, getPlatformMeForApi, listBusinessesForApi, platformBusinessId, resolveActingUserId, type ApiKeyCaller, type PlatformKeyCaller } from "./operations";
-import { generatePlatformKey, linkPlatformKeyBusiness, requirePlatformBusinessAccess, resolvePlatformKey, resolvePlatformKeyOwner } from "./platformKeys";
+import { generatePlatformKey, linkPlatformKeyBusiness, requirePlatformBusinessAccess, resolveConfiguredPlatformKey, resolvePlatformKeyOwner } from "./platformKeys";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
 const testUrl = process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL;
@@ -102,7 +102,7 @@ describe.skipIf(!testUrl)("platform keys against PostgreSQL with RLS", () => {
     const renamed = generatePlatformKey({ name: "Acme renamed", group: "acme", ownerEmail });
     const { group: _group, ...rest } = legacy.entry;
     const environment = { PLATFORM_API_KEYS: JSON.stringify([{ ...rest, partner: "acme", access: "partner" }, renamed.entry]) };
-    const keys = [resolvePlatformKey(legacy.key, environment)!, resolvePlatformKey(renamed.key, environment)!];
+    const keys = [resolveConfiguredPlatformKey(legacy.key, environment)!, resolveConfiguredPlatformKey(renamed.key, environment)!];
     expect(keys.map((key) => [key.group, key.access])).toEqual([["acme", "group"], ["acme", "group"]]);
     for (const key of keys) {
       await requirePlatformBusinessAccess(context, { businessId: businessA, groupId: key.group, access: key.access });
@@ -179,22 +179,22 @@ describe.skipIf(!testUrl)("platform keys against PostgreSQL with RLS", () => {
 
   it("reports the platform key, its group and the header's business on GET /me", async () => {
     const { key, entry } = generatePlatformKey({ name: "Acme onboarding", group: "acme", ownerEmail });
-    const resolved = resolvePlatformKey(key, { PLATFORM_API_KEYS: JSON.stringify([entry]) })!;
+    const resolved = resolveConfiguredPlatformKey(key, { PLATFORM_API_KEYS: JSON.stringify([entry]) })!;
     const caller: PlatformKeyCaller = { businessId: businessA, platformKeyId: resolved.platformKeyId, groupId: "acme", actingUserId: ownerId, actor: "platform_key" };
     const context = { db: worker!.db };
     expect(await getPlatformMeForApi(context, resolved, caller)).toEqual({
       api_key: { id: entry.id, name: "Acme onboarding", prefix: entry.prefix, scopes: resolved.scopes, created_at: entry.created_at },
       business: { id: businessA, name: "Acme Business" },
       // v1 only changes additively: partner and the access value keep their old names.
-      platform: { group: "acme", partner: "acme", access: "partner" },
+      platform: { group: "acme", partner: "acme", access: "partner", partner_id: null },
     });
     expect((await getPlatformMeForApi(context, resolved, null)).business).toBeNull();
     // An entry written before the rename reports the same.
     const { group: _group, ...rest } = entry;
-    const legacy = resolvePlatformKey(key, { PLATFORM_API_KEYS: JSON.stringify([{ ...rest, partner: "acme", access: "partner" }]) })!;
-    expect((await getPlatformMeForApi(context, legacy, null)).platform).toEqual({ group: "acme", partner: "acme", access: "partner" });
-    const all = resolvePlatformKey(key, { PLATFORM_API_KEYS: JSON.stringify([{ ...entry, access: "all" }]) })!;
-    expect((await getPlatformMeForApi(context, all, null)).platform).toEqual({ group: "acme", partner: "acme", access: "all" });
+    const legacy = resolveConfiguredPlatformKey(key, { PLATFORM_API_KEYS: JSON.stringify([{ ...rest, partner: "acme", access: "partner" }]) })!;
+    expect((await getPlatformMeForApi(context, legacy, null)).platform).toEqual({ group: "acme", partner: "acme", access: "partner", partner_id: null });
+    const all = resolveConfiguredPlatformKey(key, { PLATFORM_API_KEYS: JSON.stringify([{ ...entry, access: "all" }]) })!;
+    expect((await getPlatformMeForApi(context, all, null)).platform).toEqual({ group: "acme", partner: "acme", access: "all", partner_id: null });
   });
 
   it("audits a platform key's change with the key, its group and its owner", async () => {
@@ -224,7 +224,7 @@ describe.skipIf(!testUrl)("platform keys against PostgreSQL with RLS", () => {
 
   describe("businesses created by a platform key", () => {
     const { key, entry } = generatePlatformKey({ name: "Acme onboarding", group: "acme", ownerEmail });
-    const resolved = () => resolvePlatformKey(key, { PLATFORM_API_KEYS: JSON.stringify([entry]) })!;
+    const resolved = () => resolveConfiguredPlatformKey(key, { PLATFORM_API_KEYS: JSON.stringify([entry]) })!;
     const create = (idempotencyKey: string, body: Parameters<typeof createBusinessForApi>[1]["body"], requestHash = `hash-${idempotencyKey}`) =>
       createBusinessForApi({ db: worker!.db }, { key: resolved(), actingUserId: ownerId, idempotencyKey, requestHash, body });
 
@@ -295,7 +295,7 @@ describe.skipIf(!testUrl)("platform keys against PostgreSQL with RLS", () => {
 
     it("lists only the group's active businesses, newest first, a page at a time", async () => {
       const otherKey = generatePlatformKey({ name: "Other onboarding", group: "other", ownerEmail });
-      const other = await createBusinessForApi({ db: worker!.db }, { key: resolvePlatformKey(otherKey.key, { PLATFORM_API_KEYS: JSON.stringify([otherKey.entry]) })!, actingUserId: ownerId, idempotencyKey: `other-${randomUUID()}`, requestHash: "h", body: { name: "Other Group Co", timezone: "UTC" } });
+      const other = await createBusinessForApi({ db: worker!.db }, { key: resolveConfiguredPlatformKey(otherKey.key, { PLATFORM_API_KEYS: JSON.stringify([otherKey.entry]) })!, actingUserId: ownerId, idempotencyKey: `other-${randomUUID()}`, requestHash: "h", body: { name: "Other Group Co", timezone: "UTC" } });
       createdBusinessIds.push(other.business.id);
       const suspended = await create(`suspended-${randomUUID()}`, { name: "Closed Shop", timezone: "UTC" });
       createdBusinessIds.push(suspended.business.id);

@@ -401,7 +401,7 @@
       "post": {
         "operationId": "createBusiness",
         "summary": "Create a business",
-        "description": "Platform keys only. Creates a business owned by the account in the key's owner_email, and lets every key in the same group act on it. Idempotency-Key is required: a retry with the same value returns the business it created, however much later, and a different body with that value is a 422.",
+        "description": "Platform keys only. A host's key creates a business owned by the account in the key's owner_email, and lets every key in the same group act on it. A partner's key creates a business of the partner with no owner yet, at the access_level you pick, and the partner emails owner_email an invitation to own it. Idempotency-Key is required: a retry with the same value returns the business it created, however much later, and a different body with that value is a 422.",
         "tags": [
           "Platform"
         ],
@@ -525,7 +525,7 @@
       "get": {
         "operationId": "listBusinesses",
         "summary": "List onboarded businesses",
-        "description": "Platform keys only. Lists the active businesses the key's group onboarded, newest first.",
+        "description": "Platform keys only. Lists the active businesses the key's group onboarded, newest first. A partner's key lists every active business of the partner, including the ones its console created.",
         "tags": [
           "Platform"
         ],
@@ -644,7 +644,7 @@
       "post": {
         "operationId": "createUser",
         "summary": "Invite an owner to make an account",
-        "description": "Platform keys only. Emails the address a link to sign up, so an owner with no LobbyStack account can make one and then accept your claim link. If the address already has an account, LobbyStack emails it a link to sign in instead and changes nothing. The answer is the same either way, so it never tells you whether someone has an account. No account exists until the person signs up, with a password or with Google. Idempotency-Key is required: a retry of the same request sends nothing more. One platform key can invite 50 addresses a day; past that it gets a 429.",
+        "description": "Platform keys only. Emails the address a link to sign up, so an owner with no LobbyStack account can make one and then accept your claim link. With a partner's key, the email comes from the partner and links to its dashboard. If the address already has an account, LobbyStack emails it a link to sign in instead and changes nothing. The answer is the same either way, so it never tells you whether someone has an account. No account exists until the person signs up, with a password or with Google. Idempotency-Key is required: a retry of the same request sends nothing more. One platform key can invite 50 addresses a day, and a partner's platform keys can invite 50 between them; past that the key gets a 429.",
         "tags": [
           "Platform"
         ],
@@ -3638,7 +3638,7 @@
       "post": {
         "operationId": "createTeamInvitation",
         "summary": "Invite someone",
-        "description": "Emails an invitation to join the team, which the invitee accepts with a verified LobbyStack account for that email within 7 days. It sends an email, so Idempotency-Key is required, and the account the key acts as can invite 20 people an hour, counted with its dashboard invitations.",
+        "description": "Emails an invitation to join the team, which the invitee accepts with a verified LobbyStack account for that email within 7 days. It sends an email, so Idempotency-Key is required, and the account the key acts as can invite 20 people an hour, counted with its dashboard invitations. A partner's platform keys invite as the partner, and can invite 20 people an hour between them.",
         "tags": [
           "Team"
         ],
@@ -11491,12 +11491,26 @@
                   "all"
                 ],
                 "description": "all: the key can act on every business. partner: group access, only on the businesses its group's keys onboarded. A PLATFORM_API_KEYS entry with \"access\": \"group\" reports partner here."
+              },
+              "partner_id": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Stable identifier (UUID)."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "For a key a partner made in its console, the partner, which is also the key's group: the key reaches the partner's businesses. null for the host's keys in PLATFORM_API_KEYS."
               }
             },
             "required": [
               "group",
               "partner",
-              "access"
+              "access",
+              "partner_id"
             ],
             "additionalProperties": false
           }
@@ -11742,6 +11756,20 @@
             "type": "string",
             "maxLength": 2000,
             "format": "uri"
+          },
+          "owner_email": {
+            "description": "Required with a partner's platform key, and refused with the host's. The partner emails this address an invitation to own the business and sign in on the partner's dashboard.",
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 320
+          },
+          "access_level": {
+            "description": "Only with a partner's platform key: what the business's own team can use. full, the default, lets them run the receptionist, its knowledge, hours, services and team, without billing, API keys or MCP. activity shows them calls, chats, appointments, contacts and messages, and the partner sets up the receptionist.",
+            "type": "string",
+            "enum": [
+              "full",
+              "activity"
+            ]
           }
         },
         "required": [
@@ -11795,7 +11823,7 @@
           "created_at"
         ],
         "additionalProperties": false,
-        "description": "A business the platform key's group onboarded."
+        "description": "A business the platform key's group onboarded, or for a partner's key, a business of the partner."
       },
       "UserInvitation": {
         "type": "object",

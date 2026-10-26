@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { KeyRound } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -10,6 +10,7 @@ import { offeredApiKeyScopes, type ApiKeyScope } from "@lobbystack/shared";
 
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
+import { PageHeader } from "@/components/page-header";
 import { SecretReveal } from "@/components/secret-reveal";
 import { SectionBlock } from "@/components/section-block";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -25,7 +26,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { requestJson } from "@/lib/request-json";
 import { intlLocale } from "@/lib/locale";
 
-type ApiKeyRecord = {
+/** A key as an API keys page lists it: a business's own key, or a partner's platform key. */
+export type ApiKeyRecord = {
   id: string;
   name: string;
   prefix: string;
@@ -38,31 +40,71 @@ type ApiKeyRecord = {
 
 const scopeKey = (scope: ApiKeyScope) => scope.replace(":", "_");
 
-export function LiveApiKeysSurface() {
-  const { i18n, t } = useTranslation("settings");
+const DEFAULT_SCOPES: ApiKeyScope[] = ["calls:read", "contacts:read", "appointments:read", "messages:read", "business:read"];
+
+/** Where an API keys page reads, makes and revokes its keys. */
+export type ApiKeysSource = {
+  queryKey: readonly unknown[];
+  list: () => Promise<ApiKeyRecord[]>;
+  create: (input: { name: string; scopes: ApiKeyScope[] }) => Promise<{ key: string; record: ApiKeyRecord }>;
+  revoke: (record: ApiKeyRecord) => Promise<unknown>;
+};
+
+type ApiKeysSurfaceProps = {
+  /** The translations the page reads its apiKeys.* copy from. */
+  namespace: "settings" | "partner";
+  /** A section of Settings, or a page of its own, as in the partner console. */
+  layout: "section" | "page";
+  /** Whether the page waits on something before it knows who may manage keys. */
+  loading: boolean;
+  canManage: boolean;
+  scopes: readonly ApiKeyScope[];
+  source: ApiKeysSource;
+};
+
+function ApiKeysFrame({ layout, title, description, action, children }: { layout: ApiKeysSurfaceProps["layout"]; title: string; description: string; action: ReactNode; children: ReactNode }) {
+  if (layout === "section") return <SectionBlock action={action} description={description} title={title}>{children}</SectionBlock>;
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-1">
+        <PageHeader actions={action} title={title} />
+        <p className="text-sm text-muted-foreground">{description}</p>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+/**
+ * An API keys page: the keys with their scopes and last use, a dialog that
+ * makes a key and shows it once, and revoking with a confirmation. Settings
+ * uses it for a business's own keys and the partner console for a partner's
+ * platform keys; each passes where its keys live and who may manage them, and
+ * the server holds the same rules.
+ */
+export function ApiKeysSurface({ namespace, layout, loading, canManage, scopes: offeredScopes, source }: ApiKeysSurfaceProps) {
+  const { i18n, t } = useTranslation(namespace);
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState("");
-  const [scopes, setScopes] = useState<ApiKeyScope[]>(["calls:read", "contacts:read", "appointments:read", "messages:read", "business:read"]);
+  const [scopes, setScopes] = useState<ApiKeyScope[]>(DEFAULT_SCOPES);
   const [created, setCreated] = useState<{ key: string; name: string } | null>(null);
   const [revoking, setRevoking] = useState<ApiKeyRecord | null>(null);
-  const { businesses, business } = useActiveBusiness();
-  const canManage = business ? ["business_owner", "business_admin"].includes(business.role) : false;
-  const keys = useQuery({ queryKey: ["api-keys", business?.businessId], queryFn: () => requestJson<{ keys: ApiKeyRecord[] }>(`/api/api-keys?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business?.businessId && canManage) });
+  const keys = useQuery({ queryKey: source.queryKey, queryFn: source.list, enabled: canManage && !loading });
   const formatDate = (value: string) => new Intl.DateTimeFormat(intlLocale(i18n.resolvedLanguage ?? i18n.language), { dateStyle: "medium" }).format(new Date(value));
 
   const create = useMutation({
-    mutationFn: () => requestJson<{ key: string; apiKey: ApiKeyRecord }>(`/api/api-keys?businessId=${encodeURIComponent(business!.businessId)}`, { method: "POST", body: JSON.stringify({ name: name.trim(), scopes }) }),
+    mutationFn: () => source.create({ name: name.trim(), scopes }),
     onSuccess: async (result) => {
-      setCreated({ key: result.key, name: result.apiKey.name });
+      setCreated({ key: result.key, name: result.record.name });
       setName("");
-      await queryClient.invalidateQueries({ queryKey: ["api-keys", business?.businessId] });
+      await queryClient.invalidateQueries({ queryKey: source.queryKey });
     },
     onError: (error) => toast.error(error.message),
   });
   const revoke = useMutation({
-    mutationFn: (key: ApiKeyRecord) => requestJson(`/api/api-keys/${encodeURIComponent(key.id)}?businessId=${encodeURIComponent(business!.businessId)}`, { method: "DELETE" }),
-    onSuccess: async () => { toast.success(t("apiKeys.revoke.done")); await queryClient.invalidateQueries({ queryKey: ["api-keys", business?.businessId] }); },
+    mutationFn: (key: ApiKeyRecord) => source.revoke(key),
+    onSuccess: async () => { toast.success(t("apiKeys.revoke.done")); await queryClient.invalidateQueries({ queryKey: source.queryKey }); },
     onError: () => toast.error(t("apiKeys.revoke.failed")),
   });
 
@@ -71,15 +113,16 @@ export function LiveApiKeysSurface() {
     if (!open) setCreated(null);
   }
 
-  if (businesses.isLoading) return <Skeleton className="h-64 w-full rounded-xl" />;
+  if (loading) return <Skeleton className="h-64 w-full rounded-xl" />;
   if (!canManage) return <Alert><AlertTitle>{t("apiKeys.restricted.title")}</AlertTitle><AlertDescription>{t("apiKeys.restricted.description")}</AlertDescription></Alert>;
 
-  const rows = keys.data?.keys ?? [];
+  const rows = keys.data ?? [];
   return (
     <>
-      <SectionBlock
+      <ApiKeysFrame
         action={<Button onClick={() => setCreateOpen(true)} size="sm"><KeyRound data-icon="inline-start" />{t("apiKeys.create.action")}</Button>}
         description={t("apiKeys.description")}
+        layout={layout}
         title={t("apiKeys.title")}
       >
         <Surface>
@@ -124,17 +167,18 @@ export function LiveApiKeysSurface() {
             </div>
           )}
         </Surface>
-      </SectionBlock>
+      </ApiKeysFrame>
 
       <Dialog onOpenChange={closeCreate} open={createOpen}>
-        <DialogContent className="sm:max-w-lg">
+        {/* The scope list is taller than a laptop's screen, so the dialog scrolls. */}
+        <DialogContent className="max-h-[calc(100svh-2rem)] overflow-y-auto sm:max-w-lg">
           {created ? (
             <>
               <DialogHeader>
                 <DialogTitle>{t("apiKeys.created.title", { name: created.name })}</DialogTitle>
                 <DialogDescription>{t("apiKeys.created.description")}</DialogDescription>
               </DialogHeader>
-              <SecretReveal value={created.key} warning={t("apiKeys.created.warning")} />
+              <SecretReveal namespace={namespace} value={created.key} warning={t("apiKeys.created.warning")} />
               <DialogFooter><Button onClick={() => closeCreate(false)}>{t("apiKeys.created.done")}</Button></DialogFooter>
             </>
           ) : (
@@ -150,7 +194,7 @@ export function LiveApiKeysSurface() {
                 </Field>
                 <fieldset className="flex flex-col gap-3">
                   <legend className="mb-2 text-sm font-medium">{t("apiKeys.create.scopesLabel")}</legend>
-                  {offeredApiKeyScopes.map((scope) => (
+                  {offeredScopes.map((scope) => (
                     <div className="flex items-start gap-3 text-sm" key={scope}>
                       <Checkbox
                         checked={scopes.includes(scope)}
@@ -186,5 +230,31 @@ export function LiveApiKeysSurface() {
         title={t("apiKeys.revoke.title")}
       />
     </>
+  );
+}
+
+/** Settings > API keys: the active business's own keys, which only its owners and admins manage. */
+export function LiveApiKeysSurface() {
+  const { businesses, business } = useActiveBusiness();
+  const canManage = business ? ["business_owner", "business_admin"].includes(business.role) : false;
+  const businessId = business?.businessId;
+  const query = () => `businessId=${encodeURIComponent(businessId!)}`;
+  return (
+    <ApiKeysSurface
+      canManage={canManage}
+      layout="section"
+      loading={businesses.isLoading}
+      namespace="settings"
+      scopes={offeredApiKeyScopes}
+      source={{
+        queryKey: ["api-keys", businessId],
+        list: async () => (await requestJson<{ keys: ApiKeyRecord[] }>(`/api/api-keys?${query()}`)).keys,
+        create: async (input) => {
+          const result = await requestJson<{ key: string; apiKey: ApiKeyRecord }>(`/api/api-keys?${query()}`, { method: "POST", body: JSON.stringify(input) });
+          return { key: result.key, record: result.apiKey };
+        },
+        revoke: (key) => requestJson(`/api/api-keys/${encodeURIComponent(key.id)}?${query()}`, { method: "DELETE" }),
+      }}
+    />
   );
 }

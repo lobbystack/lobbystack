@@ -8,7 +8,8 @@
   "nav": {
     "businesses": "Businesses",
     "branding": "Branding & domain",
-    "team": "Team"
+    "team": "Team",
+    "apiKeys": "API keys"
   },
   "roles": {
     "owner": "Owner",
@@ -221,6 +222,74 @@
       "imageSize": "Upload an image of 256 KB or smaller.",
       "forbidden": "Only owners and admins can change the brand."
     }
+  },
+  "apiKeys": {
+    "title": "API keys",
+    "description": "Your code uses a platform key to create your businesses and set them up through the API. A key works on your businesses and no others.",
+    "empty": "No platform keys yet.",
+    "neverUsed": "Never",
+    "createdBy": "{{date}} by {{name}}",
+    "revoked": "Revoked {{date}}",
+    "restricted": {
+      "title": "Only owners and admins can manage platform keys",
+      "description": "Ask an owner or admin on your team to create a key for you."
+    },
+    "columns": {
+      "name": "Name",
+      "key": "Key",
+      "scopes": "Access",
+      "created": "Created",
+      "lastUsed": "Last used",
+      "actions": "Actions"
+    },
+    "create": {
+      "action": "Create platform key",
+      "title": "Create a platform key",
+      "description": "Give the key a name you'll recognize and allow only the access it needs.",
+      "nameLabel": "Name",
+      "namePlaceholder": "Client onboarding",
+      "scopesLabel": "Access",
+      "cancel": "Cancel",
+      "submit": "Create key",
+      "creating": "Creating…"
+    },
+    "created": {
+      "title": "{{name}} is ready",
+      "description": "Copy the key and store it in a password manager or your tool's settings.",
+      "warning": "You won't see this key again. If you lose it, revoke it and create a new one.",
+      "done": "Done"
+    },
+    "revoke": {
+      "action": "Revoke",
+      "title": "Revoke this platform key?",
+      "description": "Anything that uses {{name}} stops working right away. Its webhooks turn off, and nobody can accept the team invitations it sent. Owners it invited can still join their businesses. You can't undo this.",
+      "confirm": "Revoke key",
+      "cancel": "Cancel",
+      "done": "Platform key revoked",
+      "failed": "We couldn't revoke the key. Try again."
+    },
+    "scopes": {
+      "business_read": "Read business details, hours, services, and receptionist settings and rules",
+      "business_write": "Update business details, hours, services, and receptionist settings and rules, including where calls are transferred",
+      "calls_read": "Read calls, summaries and transcripts",
+      "contacts_read": "Read contacts",
+      "contacts_write": "Create and update contacts",
+      "appointments_read": "Read appointments and open times",
+      "appointments_write": "Book, cancel and reschedule appointments",
+      "messages_read": "Read messages the receptionist took",
+      "knowledge_read": "Read knowledge entries, FAQs, websites and files",
+      "knowledge_write": "Add, edit and delete knowledge entries, FAQs, websites and files",
+      "billing_manage": "See the plan",
+      "phone_numbers_manage": "See and release phone numbers",
+      "team_manage": "Invite and remove team members and change roles",
+      "webhooks_manage": "Create and delete webhook endpoints",
+      "businesses_create": "Create businesses and invite their owners",
+      "users_create": "Invite owners to make an account"
+    }
+  },
+  "secretReveal": {
+    "copy": "Copy",
+    "copied": "Copied"
   },
   "signup": {
     "title": "Sign up as a partner",

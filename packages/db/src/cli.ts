@@ -173,6 +173,9 @@ async function main(): Promise<void> {
             ,('lobbystack_app', 'partner_signup_invitations', 'INSERT')
             ,('lobbystack_readonly', 'partners', 'SELECT')
             ,('lobbystack_readonly', 'partner_members', 'SELECT')
+            ,('lobbystack_app', 'partner_platform_keys', 'SELECT')
+            ,('lobbystack_app', 'partner_platform_keys', 'INSERT')
+            ,('lobbystack_readonly', 'partner_platform_keys', 'SELECT')
             ,('lobbystack_app', 'user_active_businesses', 'SELECT')
             ,('lobbystack_app', 'user_active_businesses', 'INSERT')
             ,('lobbystack_app', 'user_active_businesses', 'DELETE')
@@ -202,9 +205,10 @@ async function main(): Promise<void> {
         }
         // The app role updates partner rows only through the columns partner
         // operations write, so no row moves to another partner, person, sender or
-        // role, and no partner changes its slug. A person's active business on a
-        // partner's domains moves only to another of that partner's businesses,
-        // and opening a partner's business again only moves the open's times.
+        // role, and no partner changes its slug. A partner's platform key can only
+        // be revoked. A person's active business on a partner's domains moves only
+        // to another of that partner's businesses, and opening a partner's business
+        // again only moves the open's times.
         const partnerUpdateGrantFailures = await migrator.db.execute<{ table_name: string; column_name: string; granted: boolean }>(sql`
           select expected.table_name, expected.column_name, expected.granted
           from (values
@@ -250,6 +254,17 @@ async function main(): Promise<void> {
             ('partner_domains', 'updated_at', true),
             ('partner_domains', 'partner_id', false),
             ('partner_domains', 'kind', false),
+            ('partner_platform_keys', 'revoked_at', true),
+            ('partner_platform_keys', 'revoked_by_user_id', true),
+            ('partner_platform_keys', 'updated_at', true),
+            ('partner_platform_keys', 'partner_id', false),
+            ('partner_platform_keys', 'name', false),
+            ('partner_platform_keys', 'prefix', false),
+            ('partner_platform_keys', 'key_hash', false),
+            ('partner_platform_keys', 'access', false),
+            ('partner_platform_keys', 'scopes', false),
+            ('partner_platform_keys', 'created_by_user_id', false),
+            ('partner_platform_keys', 'last_used_at', false),
             ('user_active_businesses', 'business_id', true),
             ('user_active_businesses', 'updated_at', true),
             ('user_active_businesses', 'user_id', false),
@@ -326,6 +341,12 @@ async function main(): Promise<void> {
             ('lobbystack_app', 'app.save_initial_branding(text, bytea, text)'),
             ('lobbystack_app', 'app.finish_business_handover(uuid, uuid)'),
             ('lobbystack_worker', 'app.disable_removed_platform_key_webhooks(uuid[])'),
+            ('lobbystack_worker', 'app.resolve_partner_platform_key(text)'),
+            ('lobbystack_worker', 'app.touch_partner_platform_key(uuid)'),
+            ('lobbystack_worker', 'app.lock_active_partner_platform_key(uuid)'),
+            ('lobbystack_app', 'app.lock_active_partner_platform_key(uuid)'),
+            ('lobbystack_app', 'app.disable_revoked_partner_platform_key_webhooks(uuid)'),
+            ('lobbystack_app', 'app.revoke_partner_platform_key_invitations(uuid)'),
             ('lobbystack_worker', 'app.list_open_live_call_businesses(timestamptz, timestamptz)'),
             ('lobbystack_dispatcher', 'app.list_scheduler_businesses()'),
             ('lobbystack_dispatcher', 'app.list_summary_backfill_businesses()'),

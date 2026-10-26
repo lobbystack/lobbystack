@@ -194,7 +194,7 @@ describe.skipIf(!client)("creating a partner's business", () => {
       const acme = await partner(tx, "Acme Reception");
       const valid = { name: "Harbor Dental", timezone: "America/Toronto", businessType: "dental", accessLevel: "full", ownerEmail: "owner@example.invalid" };
       await expect(createPartnerBusiness(acme.context, acme.memberActor, valid)).rejects.toMatchObject({ status: 403 });
-      await expect(createPartnerBusiness(acme.context, { kind: "key", partnerId: acme.partnerId, platformKeyId: randomUUID() }, valid)).rejects.toMatchObject({ status: 403 });
+      // A partner's platform key creates businesses as the partner; partnerPlatformKeys.integration.test.ts covers it.
       await expect(createPartnerBusiness(acme.context, acme.ownerActor, { ...valid, accessLevel: "admin" })).rejects.toMatchObject({ status: 400, code: "invalid_access_level" });
       await expect(createPartnerBusiness(acme.context, acme.ownerActor, { ...valid, ownerEmail: "a@example.invalid, b@example.invalid" })).rejects.toMatchObject({ status: 400, code: "invalid_email" });
       await expect(createPartnerBusiness(acme.context, acme.ownerActor, { ...valid, timezone: "+05:00" })).rejects.toMatchObject({ status: 400, code: "invalid_timezone" });

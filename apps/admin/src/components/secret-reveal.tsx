@@ -7,9 +7,13 @@ import { useTranslation } from "react-i18next";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 
-/** Shows a secret that the server returns only once, with a copy button. */
-export function SecretReveal({ value, warning }: { value: string; warning: string }) {
-  const { t } = useTranslation("settings");
+/**
+ * Shows a secret that the server returns only once, with a copy button. Its
+ * labels come from secretReveal.* in the namespace the page loads: Settings
+ * by default, or the partner console's.
+ */
+export function SecretReveal({ value, warning, namespace = "settings" }: { value: string; warning: string; namespace?: "settings" | "partner" }) {
+  const { t } = useTranslation(namespace);
   const [copied, setCopied] = useState(false);
   return (
     <div className="flex flex-col gap-3">

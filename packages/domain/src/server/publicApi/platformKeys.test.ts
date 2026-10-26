@@ -1,10 +1,11 @@
 import { createHash } from "node:crypto";
 
 import { apiKeyScopes, businessApiKeyScopes, isUuid } from "@lobbystack/shared";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { callerAudit, callerPrincipalId, platformBusinessId, type PlatformKeyCaller } from "./operations";
-import { generatePlatformKey, isPlatformKeyToken, isWellFormedPlatformKey, parsePlatformKeys, PlatformKeyConfigError, resolvePlatformKey, rootCredentialWarning } from "./platformKeys";
+import { PublicApiError } from "./errors";
+import { generatePlatformKey, isPlatformKeyToken, isWellFormedPlatformKey, newPlatformKeySecret, normalizePlatformKeyScopes, parsePlatformKeys, PlatformKeyConfigError, platformKeyReach, refusePartnerPlatformKey, resolveConfiguredPlatformKey, resolvePlatformKey, rootCredentialWarning, type PartnerPlatformKey } from "./platformKeys";
 
 function environment(...entries: unknown[]) {
   return { PLATFORM_API_KEYS: JSON.stringify(entries) };
@@ -35,7 +36,7 @@ describe("platform keys", () => {
     const { key, entry } = generatePlatformKey({ name: "Acme", group: "acme", ownerEmail: "ops@acme.example", scopes: ["business:read", "businesses:create"] });
     const other = generatePlatformKey({ name: "Other", group: "other", ownerEmail: "ops@other.example" });
     const env = environment(entry, other.entry);
-    expect(resolvePlatformKey(key, env)).toEqual({
+    expect(resolveConfiguredPlatformKey(key, env)).toEqual({
       platformKeyId: entry.id,
       prefix: entry.prefix,
       name: "Acme",
@@ -46,11 +47,11 @@ describe("platform keys", () => {
       createdAt: entry.created_at,
     });
     // Same prefix, different secret.
-    expect(resolvePlatformKey(`${entry.prefix}_${"A".repeat(32)}`, env)).toBeNull();
+    expect(resolveConfiguredPlatformKey(`${entry.prefix}_${"A".repeat(32)}`, env)).toBeNull();
     // A well-formed key nobody configured.
-    expect(resolvePlatformKey(`lsp_00000000_${"A".repeat(32)}`, env)).toBeNull();
-    expect(resolvePlatformKey("lsp_short", env)).toBeNull();
-    expect(resolvePlatformKey(key, {})).toBeNull();
+    expect(resolveConfiguredPlatformKey(`lsp_00000000_${"A".repeat(32)}`, env)).toBeNull();
+    expect(resolveConfiguredPlatformKey("lsp_short", env)).toBeNull();
+    expect(resolveConfiguredPlatformKey(key, {})).toBeNull();
   });
 
   it("defaults to group access and a business key's scopes, with platform-only scopes granted only when asked for", () => {
@@ -109,17 +110,17 @@ describe("platform keys", () => {
     const { key, entry } = generatePlatformKey({ name: "AlloPlace CLI", group: "alloplace", ownerEmail: "ops@alloplace.example" });
     const { group: _group, ...rest } = entry;
     const legacy = { ...rest, partner: "alloplace", access: "partner" };
-    const renamed = resolvePlatformKey(key, environment(entry));
+    const renamed = resolveConfiguredPlatformKey(key, environment(entry));
     expect(renamed).toMatchObject({ group: "alloplace", access: "group" });
     // The same group and access, so the key reaches the same businesses.
-    expect(resolvePlatformKey(key, environment(legacy))).toEqual(renamed);
+    expect(resolveConfiguredPlatformKey(key, environment(legacy))).toEqual(renamed);
     // Without access, an old entry defaults to the group, as before.
     const { access: _access, ...noAccess } = legacy;
-    expect(resolvePlatformKey(key, environment(noAccess))).toEqual(renamed);
+    expect(resolveConfiguredPlatformKey(key, environment(noAccess))).toEqual(renamed);
     // The field and the access value are separate aliases.
-    expect(resolvePlatformKey(key, environment({ ...rest, partner: "alloplace", access: "group" }))).toEqual(renamed);
-    expect(resolvePlatformKey(key, environment({ ...entry, access: "partner" }))).toEqual(renamed);
-    expect(resolvePlatformKey(key, environment({ ...legacy, access: "all" }))).toMatchObject({ group: "alloplace", access: "all" });
+    expect(resolveConfiguredPlatformKey(key, environment({ ...rest, partner: "alloplace", access: "group" }))).toEqual(renamed);
+    expect(resolveConfiguredPlatformKey(key, environment({ ...entry, access: "partner" }))).toEqual(renamed);
+    expect(resolveConfiguredPlatformKey(key, environment({ ...legacy, access: "all" }))).toMatchObject({ group: "alloplace", access: "all" });
   });
 
   it("reads a value that mixes old and new entries, as pnpm platform-key:create prints after the rename", () => {
@@ -168,5 +169,60 @@ describe("platform keys", () => {
     expect(callerPrincipalId(caller)).toBe("platform:8b0c3f8e-1d2a-4b5c-9e6f-7a8b9c0d1e2f");
     expect(callerAudit(caller)).toEqual({ actorUserId: null, payload: { actor: "platform_key", platformKeyId: caller.platformKeyId, groupId: "acme", actingUserId: caller.actingUserId } });
     expect(callerPrincipalId({ businessId: caller.businessId, apiKeyId: "k1" })).toBe("k1");
+  });
+
+  it("attributes a partner's key to the key and the partner, which is also its group", () => {
+    const partnerId = "3c2b1a09-8f7e-4d6c-9b5a-4f3e2d1c0b9a";
+    const caller: PlatformKeyCaller = { businessId: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5f", platformKeyId: "8b0c3f8e-1d2a-4b5c-9e6f-7a8b9c0d1e2f", groupId: partnerId, partnerId, actor: "platform_key" };
+    expect(callerPrincipalId(caller)).toBe("platform:8b0c3f8e-1d2a-4b5c-9e6f-7a8b9c0d1e2f");
+    expect(callerAudit(caller)).toEqual({ actorUserId: null, payload: { actor: "platform_key", platformKeyId: caller.platformKeyId, groupId: partnerId, partnerId } });
+  });
+
+  it("makes a partner's keys in the same lsp_ format, keeping only the SHA-256", () => {
+    const { key, prefix, hash } = newPlatformKeySecret();
+    expect(isWellFormedPlatformKey(key)).toBe(true);
+    expect(key.startsWith(`${prefix}_`)).toBe(true);
+    expect(hash).toBe(createHash("sha256").update(key).digest("hex"));
+    expect(newPlatformKeySecret().key).not.toBe(key);
+  });
+
+  it("takes a non-empty list of known scopes for a new key, in canonical order, platform-only ones included", () => {
+    expect(normalizePlatformKeyScopes(["users:create", "business:read", "business:read"])).toEqual(["business:read", "users:create"]);
+    expect(normalizePlatformKeyScopes([...apiKeyScopes].reverse())).toEqual([...apiKeyScopes]);
+    for (const value of [[], ["root"], ["business:read", 7], "business:read", null, undefined]) expect(normalizePlatformKeyScopes(value)).toBeNull();
+  });
+
+  it("lets a partner's key reach its partner's group, and a host's key its group or every business", () => {
+    const { key, entry } = generatePlatformKey({ name: "Host", group: "acme", ownerEmail: "ops@acme.example", access: "all" });
+    expect(platformKeyReach(resolveConfiguredPlatformKey(key, environment(entry))!)).toEqual({ groupId: "acme", access: "all" });
+    expect(platformKeyReach(resolveConfiguredPlatformKey(key, environment({ ...entry, access: "group" }))!)).toEqual({ groupId: "acme", access: "group" });
+    const partner: PartnerPlatformKey = { platformKeyId: entry.id, prefix: entry.prefix, name: "Partner", group: "p1", partnerId: "p1", access: "group", scopes: ["business:read"], createdAt: entry.created_at };
+    expect(platformKeyReach(partner)).toEqual({ groupId: "p1", access: "group", partnerId: "p1" });
+  });
+
+  it("refuses a partner's key what only the host's keys may do, and lets every other caller through", () => {
+    for (const operation of ["checkout", "claim_link", "managed_plan"] as const) {
+      const error = (() => { try { refusePartnerPlatformKey({ partnerId: "p1" }, operation); } catch (caught) { return caught; } return null; })();
+      expect(error).toBeInstanceOf(PublicApiError);
+      expect(error).toMatchObject({ status: 403, code: "forbidden" });
+      expect(() => refusePartnerPlatformKey({}, operation)).not.toThrow();
+      expect(() => refusePartnerPlatformKey({ partnerId: undefined }, operation)).not.toThrow();
+    }
+  });
+
+  it("answers a host's key from PLATFORM_API_KEYS without asking the database", async () => {
+    const { key, entry } = generatePlatformKey({ name: "Host", group: "acme", ownerEmail: "ops@acme.example" });
+    const execute = vi.fn(async () => ({ rows: [] }));
+    const context = { db: { execute } } as unknown as Parameters<typeof resolvePlatformKey>[0];
+    expect(await resolvePlatformKey(context, key, environment(entry))).toMatchObject({ platformKeyId: entry.id, ownerEmail: "ops@acme.example" });
+    expect(execute).not.toHaveBeenCalled();
+    // Nothing that isn't a well-formed key reaches the database either.
+    expect(await resolvePlatformKey(context, "lsp_short", environment(entry))).toBeNull();
+    expect(execute).not.toHaveBeenCalled();
+    // A key that isn't in PLATFORM_API_KEYS is looked up by its hash only.
+    const other = newPlatformKeySecret();
+    expect(await resolvePlatformKey(context, other.key, environment(entry))).toBeNull();
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(execute.mock.calls)).not.toContain(other.key);
   });
 });

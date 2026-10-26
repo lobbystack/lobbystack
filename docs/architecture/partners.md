@@ -247,17 +247,23 @@ applyPartnerTransition(context, partnerId: string, next: { state: PartnerState; 
 ```ts
 resolvePlatformKey(context, token: string): Promise<ResolvedPlatformKey | null>
 
-type ResolvedPlatformKey = {
-  platformKeyId: string;
-  group: string;
-  owner: { kind: "host"; ownerEmail: string; access: "group" | "all" } | { kind: "partner"; partnerId: string };
-  scopes: ApiKeyScope[];
-};
+type ResolvedPlatformKey = { platformKeyId: string; prefix: string; name: string; group: string; scopes: ApiKeyScope[]; createdAt: string } & (
+  | { ownerEmail: string; access: "group" | "all" }       // the host's, from PLATFORM_API_KEYS
+  | { partnerId: string; access: "group" }                 // a partner's, from partner_platform_keys
+);
 ```
 
-- The module checks `PLATFORM_API_KEYS` first, then the database. It accepts the old `partner` field and access value as aliases ([ADR 0010](../adr/0010-partners-make-their-own-platform-keys.md)).
-- A key that belongs to a partner becomes a `PartnerActor` with `kind: "key"`. It can never have `access: "all"`, managed plans, claim links, or Polar checkout, and the database enforces the first with a CHECK.
-- The startup webhook cleanup asks this module for the active key ids from both sources.
+- The module checks `PLATFORM_API_KEYS` first, then `partner_platform_keys`, which keeps only each key's SHA-256. It accepts the old `partner` field and access value as aliases ([ADR 0010](../adr/0010-partners-make-their-own-platform-keys.md)).
+- A partner's key uses the partner as its group. Each business of the partner joins that group in `platform_key_businesses` when it's made, whether the console or a key made it, and leaves it when it leaves the partner. The database refuses to link any other business to a partner's group. A partner's key therefore reaches and lists businesses through its group, as a host's key does, and also checks that the business is still its partner's.
+- A partner's key acts as the partner. Its v1 caller carries the partner instead of an account, and partner operations see it as a `PartnerActor` with `kind: "key"`. It can never have `access: "all"`, managed plans, claim links, or Polar checkout, and the database enforces the first with a CHECK.
+- `createPartnerPlatformKey`, `listPartnerPlatformKeys`, and `revokePartnerPlatformKey` are partner operations for owners and admins. The console's API keys page calls them through `/api/partner/platform-keys`.
+- Revoking a key, in the same transaction, turns off the webhook endpoints it set up and revokes the team invitations it sent that nobody accepted. The owner invitations it sent as it created businesses stay, since the console can't send another. A request with a partner's key holds a share lock on the key's row while it creates a webhook endpoint, an invitation or a business, so a revoke waits for it and catches what it wrote.
+- The startup webhook cleanup passes the ids in `PLATFORM_API_KEYS`. In the same statement, the database keeps the endpoints of a partner's key while the key isn't revoked and still reaches the business.
+- `POST /businesses` with a partner's key calls `createPartnerBusiness` with the key as the actor, on the app role, since only it can act as the system. The request names the owner in `owner_email` and the access level in `access_level`. The Idempotency-Key decides the business's id, as it does for a host's key.
+- A partner's key invites people as the partner: the owner when it creates a business, and staff through `POST /team/invitations`. Those invitations carry `invited_by_platform_key_id` and no person. A claim link always names the account that sent it. `POST /users` sends its email under the partner's brand.
+- A partner can make as many keys as it likes, so the limits on what its keys send count against the partner: 30 new businesses an hour, 20 team invitations an hour, and the daily `POST /users` invitations.
+- Operations that act as a person stay closed to a partner's key: number search and claims, and reading or changing alert preferences.
+- Links in API responses point at the business's own dashboard: the widget's script tag and the calendar connect link use the partner's origin for a partner's business, and `APP_BASE_URL` for a direct one. The connect route keeps a signed-out visitor's sign-in and its errors on the domain it was opened on. Google's callback still returns to the host's domain, and moves to the partner's with the custom domains work.
 
 ## Business templates
 

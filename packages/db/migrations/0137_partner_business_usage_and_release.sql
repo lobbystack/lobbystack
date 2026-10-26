@@ -34,7 +34,7 @@ GRANT EXECUTE ON FUNCTION app.list_partner_business_usage(uuid, text) TO lobbyst
 
 -- When a business leaves its partner, which only releasing it does (0135),
 -- the database forgets what the partner's people kept of it: their opens of
--- it (0140), which no longer count, and the rows that make it the business
+-- it (0136), which no longer count, and the rows that make it the business
 -- they work in on the partner's domains (0132), which the partner's domains
 -- no longer show. The audit log keeps every open. The app role reads and
 -- deletes only its own remembered business and deletes no open, so this runs

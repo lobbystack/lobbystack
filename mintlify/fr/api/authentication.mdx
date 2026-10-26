@@ -78,9 +78,31 @@ Pour abonner un point de terminaison à un événement ou changer son URL, votre
 
 ## Clés de plateforme
 
-Une clé de plateforme (`lsp_...`) intègre et gère de nombreuses entreprises, alors qu'une clé API agit sur une seule. Vous pouvez vous en servir pour configurer les entreprises dont vous vous occupez, par exemple avec [`lobbystack onboard`](/fr/api/cli).
+Une clé de plateforme (`lsp_...`) intègre et gère de nombreuses entreprises, alors qu'une clé API agit sur une seule. Vous pouvez vous en servir pour configurer les entreprises dont vous vous occupez, par exemple avec [`lobbystack onboard`](/fr/api/cli). Un partenaire crée ses propres clés de plateforme dans sa console partenaire. L'hôte, c'est-à-dire la personne qui gère le déploiement, définit les autres dans `PLATFORM_API_KEYS`.
 
-La personne qui gère le déploiement crée les clés de plateforme ; le tableau de bord n'a pas de page pour elles. Sur un déploiement auto-hébergé, `pnpm platform-key:create` écrit une nouvelle clé dans `.platform-keys/<prefix>.json` et affiche son entrée pour [`PLATFORM_API_KEYS`](/fr/self-hosting/environment-variables). Chaque entrée définit :
+### Créer la clé de plateforme d'un partenaire
+
+<Steps>
+  <Step title="Ouvrir Clés API">
+    Dans la console partenaire, allez dans **Clés API**. Seuls les propriétaires et les administrateurs du partenaire créent et révoquent des clés.
+  </Step>
+  <Step title="Nommer la clé et choisir son accès">
+    Sélectionnez seulement les portées dont l'outil a besoin. `POST /businesses` nécessite `businesses:create`, et `POST /users` nécessite `users:create`.
+  </Step>
+  <Step title="Copier la clé">
+    La console affiche la clé complète une seule fois. LobbyStack n'en garde qu'un hachage, donc personne ne peut la réafficher.
+  </Step>
+</Steps>
+
+La clé de plateforme d'un partenaire agit au nom du partenaire : elle continue de fonctionner quand la personne qui l'a créée quitte l'équipe. Elle atteint les entreprises actives du partenaire, y compris celles créées depuis la console, et aucune autre. Elle ne peut pas lancer de paiement Polar, définir un forfait géré ni créer de lien de réclamation. Elle ne peut pas non plus rechercher ou réserver de numéros de téléphone, ni consulter ou modifier les préférences d'alertes, parce que ces actions se font au nom d'une personne.
+
+Avec la clé de plateforme d'un partenaire, `POST /businesses` crée une entreprise du partenaire, encore sans propriétaire. Indiquez le propriétaire dans `owner_email` : le partenaire lui envoie par courriel une invitation à se connecter sur son tableau de bord. `access_level` définit ce que l'équipe de l'entreprise peut utiliser : `full`, la valeur par défaut, ou `activity`. Les clés de plateforme d'un partenaire peuvent créer 30 entreprises par heure au total. Les invitations qu'elle envoie par `POST /team/invitations` et `POST /users` viennent du partenaire et mènent à son tableau de bord.
+
+Les liens que l'API renvoie pour l'entreprise d'un partenaire, comme la balise de script d'un widget ou un lien de connexion d'agenda, mènent eux aussi au tableau de bord du partenaire.
+
+### Créer une clé de l'hôte
+
+Le tableau de bord n'a pas de page pour les clés de l'hôte. Sur un déploiement auto-hébergé, `pnpm platform-key:create` écrit une nouvelle clé dans `.platform-keys/<prefix>.json` et affiche son entrée pour [`PLATFORM_API_KEYS`](/fr/self-hosting/environment-variables). Chaque entrée définit :
 
 - Le groupe auquel appartient la clé (`group` ; passez `--group`). Les clés d'un même groupe atteignent les mêmes entreprises.
 - Le compte LobbyStack vérifié au nom duquel la clé agit (`owner_email`), qui possède les entreprises qu'elle crée.
@@ -95,7 +117,9 @@ Une clé avec `"access": "all"` agit au nom du compte de son `owner_email` sur t
 
 Une fois que l'admin redémarre sans l'entrée d'une clé dans `PLATFORM_API_KEYS`, les requêtes avec cette clé échouent, et LobbyStack désactive les points de terminaison webhook que la clé a créés. Pour en garder un, réactivez-le avec une autre de vos clés de plateforme.
 
-`POST /businesses` crée une entreprise, et `GET /businesses` liste celles que le groupe de la clé a intégrées. Toutes les autres requêtes nomment leur entreprise dans l'en-tête `LobbyStack-Business` :
+### Utiliser une clé de plateforme
+
+`POST /businesses` crée une entreprise. `GET /businesses` liste celles que le groupe de la clé a intégrées ou, pour la clé de plateforme d'un partenaire, toutes les entreprises du partenaire. Toutes les autres requêtes nomment leur entreprise dans l'en-tête `LobbyStack-Business` :
 
 ```bash
 curl https://app.lobbystack.com/api/v1/services \
@@ -103,7 +127,7 @@ curl https://app.lobbystack.com/api/v1/services \
   -H "LobbyStack-Business: 75795511-9ee2-4cb2-a89d-f173ec1dd82d"
 ```
 
-Sans cet en-tête, la requête renvoie `400` avec le code `business_required`. Une entreprise que la clé ne peut pas atteindre renvoie `404`. `GET /me` fonctionne sans l'en-tête et affiche le groupe et l'accès de la clé dans `platform`. L'API v1 y garde ses noms d'origine : `platform.partner` répète `platform.group`, et `platform.access` vaut `partner` pour une clé avec un accès de groupe.
+Sans cet en-tête, la requête renvoie `400` avec le code `business_required`. Une entreprise que la clé ne peut pas atteindre renvoie `404`. `GET /me` fonctionne sans l'en-tête et affiche le groupe et l'accès de la clé dans `platform`. L'API v1 y garde ses noms d'origine : `platform.partner` répète `platform.group`, et `platform.access` vaut `partner` pour une clé avec un accès de groupe. Pour la clé de plateforme d'un partenaire, `platform.partner_id` nomme le partenaire, qui est aussi le groupe de la clé. Il vaut `null` pour les clés de l'hôte.
 
 `POST /team/claim-link` remet une entreprise à son propriétaire. Une fois qu'il l'accepte, une clé avec un accès de groupe n'atteint plus l'entreprise, alors qu'une clé qui a accès à toutes les entreprises l'atteint toujours. Dans les deux cas, `GET /businesses` ne la liste plus. LobbyStack désactive aussi les points de terminaison webhook de l'entreprise créés par une clé de plateforme, par le compte qui a envoyé le lien ou par les clés API de ce compte. L'entreprise d'un partenaire reste chez ce partenaire : `POST /team/claim-link` renvoie donc `409` pour elle. Seul le partenaire peut la céder à son propriétaire.
 
@@ -114,6 +138,8 @@ Seul un compte LobbyStack vérifié peut accepter un lien de réclamation, et la
 Dans **Réglages** > **Clés API**, cliquez sur **Révoquer** à côté de la clé. Les requêtes qui l'utilisent échouent immédiatement, et vous ne pouvez pas annuler cette action. Créez une nouvelle clé si vous avez encore besoin d'accès.
 
 LobbyStack désactive aussi les points de terminaison webhook que la clé a créés. Pour en garder un, réactivez-le depuis la carte **Webhooks** dans **Intégrations**.
+
+Pour révoquer une clé de plateforme d'un partenaire, cliquez sur **Révoquer** à côté d'elle dans la page **Clés API** de la console partenaire. Les requêtes qui l'utilisent échouent immédiatement. LobbyStack désactive les points de terminaison webhook qu'elle a créés sur toutes les entreprises, et révoque les invitations d'équipe qu'elle a envoyées et que personne n'a encore acceptées. Les propriétaires qu'elle a invités en créant leur entreprise peuvent toujours accepter.
 
 ## Limites de débit
 

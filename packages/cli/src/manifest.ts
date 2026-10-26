@@ -41,7 +41,8 @@ export function websiteKey(value: string): string {
 export const nameKey = (value: string) => value.trim().toLowerCase();
 
 export const manifestSchema = z.strictObject({
-  business: apiBusinessCreateSchema.extend({
+  // The owner gets their own section, which a partner's key sends as owner_email.
+  business: apiBusinessCreateSchema.omit({ owner_email: true }).extend({
     id: z.uuid().optional(),
     hours: z.array(hoursWindow).max(28).optional(),
   }),

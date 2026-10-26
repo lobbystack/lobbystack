@@ -107,6 +107,7 @@ import { loadEntitlement } from "../entitlement";
 import { cancelKnowledgeDocumentInTransaction, createKnowledgeDocumentInTransaction, createKnowledgeSnippetInTransaction, deleteKnowledgeDocumentInTransaction, deleteKnowledgeSnippetInTransaction, expandWebsiteCrawlInTransaction, KnowledgeStorageLimitError, ONBOARDING_CRAWL_PAGE_LIMIT, retryKnowledgeDocumentInTransaction, setKnowledgeDocumentActiveInTransaction, updateKnowledgeSnippetInTransaction } from "../knowledge";
 import { normalizeWebsiteSourceUrl } from "../knowledgeUrl";
 import { normalizeOnboardingStage, scheduleOnboardingFollowupInTransaction } from "../onboarding";
+import { createPartnerBusiness } from "../partners";
 import { loadNotificationPreferencesInTransaction, loadSavedNotificationPreferencesInTransaction, saveNotificationPreferencesInTransaction } from "../notifications";
 import { completeUploadInTransaction, insertPendingUploadInTransaction, planUpload, type StorageProvider } from "../storage";
 import { bookForCaller } from "../receptionistActions";
@@ -118,7 +119,7 @@ import { deleteAgentRuleInTransaction, insertAgentRuleInTransaction, listAgentRu
 import { insertWidgetKeyInTransaction, updateWidgetKeyInTransaction, type WidgetKeyPatch } from "../widgetKeys";
 import { ianaTimeZone, insertBusinessInTransaction, insertInvitationInTransaction, invitationUrl, isSingleEmailAddress, lockBusinessTeam, partnerBusinessNotClaimable, removeMemberInTransaction, revokeInvitationInTransaction, updateBusinessInTransaction, updateMemberRoleInTransaction } from "../tenancy";
 import { conflict, invalidRequest, notFound, PublicApiError } from "./errors";
-import type { ResolvedPlatformKey } from "./platformKeys";
+import { lockActivePartnerPlatformKey, refusePartnerPlatformKey, type HostPlatformKey, type PartnerPlatformKey, type ResolvedPlatformKey } from "./platformKeys";
 import {
   clockToMinutes,
   decodeCursor,
@@ -169,15 +170,18 @@ import { emitWebhookEventInTransaction } from "./webhooks";
  */
 export type ApiActor = "api_key" | "mcp";
 /** A request authenticated with an API key, through REST or MCP. */
-export type ApiKeyCaller = { businessId: string; apiKeyId: string; grantId?: undefined; userId?: undefined; platformKeyId?: undefined; actor?: ApiActor | undefined };
+export type ApiKeyCaller = { businessId: string; apiKeyId: string; grantId?: undefined; userId?: undefined; platformKeyId?: undefined; partnerId?: undefined; actor?: ApiActor | undefined };
 /** An MCP request authenticated with an OAuth access token: the grant is the owner's consent for one client and business. */
-export type OAuthGrantCaller = { businessId: string; grantId: string; userId: string; apiKeyId?: undefined; platformKeyId?: undefined; actor: "mcp" };
+export type OAuthGrantCaller = { businessId: string; grantId: string; userId: string; apiKeyId?: undefined; platformKeyId?: undefined; partnerId?: undefined; actor: "mcp" };
 /**
- * A REST request authenticated with a platform key from PLATFORM_API_KEYS. It
- * acts on the business in the LobbyStack-Business header, as the account the
- * key's owner_email names. The key's group travels with it for attribution.
+ * A REST request authenticated with a platform key. It acts on the business
+ * in the LobbyStack-Business header. A host's key from PLATFORM_API_KEYS acts
+ * as the account its owner_email names. A key a partner made in its console
+ * acts as the partner, which has no account, so it has no acting user. The
+ * key's group travels with it for attribution.
  */
-export type PlatformKeyCaller = { businessId: string; platformKeyId: string; groupId: string; actingUserId: string; apiKeyId?: undefined; grantId?: undefined; userId?: undefined; actor: "platform_key" };
+export type PlatformKeyCaller = { businessId: string; platformKeyId: string; groupId: string; apiKeyId?: undefined; grantId?: undefined; userId?: undefined; actor: "platform_key" }
+  & ({ actingUserId: string; partnerId?: undefined } | { partnerId: string; actingUserId?: undefined });
 export type ApiCaller = ApiKeyCaller | OAuthGrantCaller | PlatformKeyCaller;
 
 /**
@@ -194,25 +198,30 @@ export function callerPrincipalId(caller: ApiCaller): string {
 /**
  * Audit fields for a change made by a caller. The key or grant id is recorded,
  * never a secret. A platform key also records its group and the account it
- * acts as, so every change traces back to who made it. Rows written before
- * ADR 0010 name the group partnerId, so a reader that needs the group falls
- * back to it.
+ * acts as, or for a partner's key the partner, so every change traces back to
+ * who made it. Rows written before ADR 0010 name the group partnerId, so a
+ * reader that needs the group falls back to it; a partner's key writes both
+ * groupId and partnerId.
  */
 export function callerAudit(caller: ApiCaller): ApiAudit {
   if (caller.grantId !== undefined) return { actorUserId: caller.userId, payload: { actor: "mcp", grantId: caller.grantId } };
+  if (caller.platformKeyId !== undefined && caller.partnerId !== undefined) return { actorUserId: null, payload: { actor: "platform_key", platformKeyId: caller.platformKeyId, groupId: caller.groupId, partnerId: caller.partnerId } };
   if (caller.platformKeyId !== undefined) return { actorUserId: null, payload: { actor: "platform_key", platformKeyId: caller.platformKeyId, groupId: caller.groupId, actingUserId: caller.actingUserId } };
   return { actorUserId: null, payload: { actor: caller.actor ?? "api_key", apiKeyId: caller.apiKeyId } };
 }
 
 /**
  * The person an API call acts for, for operations that need one, such as
- * number claims, checkout and invites. A platform key acts as its
+ * number claims, checkout and invites. A host's platform key acts as its
  * owner and an OAuth grant as the user who granted it. A per-business key acts
  * as the person who created it, but only while they are still an owner or
  * admin of the business; otherwise the call is refused with key_owner_inactive.
+ * A partner's platform key acts as the partner, which has no account, so it's
+ * refused.
  */
 export async function resolveActingUserId(context: DomainContext, caller: ApiCaller): Promise<string> {
   if (caller.grantId !== undefined) return caller.userId;
+  if (caller.platformKeyId !== undefined && caller.partnerId !== undefined) throw partnerPlatformKeyActsAsPartner();
   if (caller.platformKeyId !== undefined) return caller.actingUserId;
   const { apiKeyId } = caller;
   return await inBusiness(context, caller, async (tx) => {
@@ -232,6 +241,19 @@ export async function resolveActingUserId(context: DomainContext, caller: ApiCal
 
 function keyOwnerInactive(): PublicApiError {
   return new PublicApiError(403, "key_owner_inactive", "This API key's creator is no longer an owner or admin of the business, so the key can't do this. Create a new key.");
+}
+
+function partnerPlatformKeyActsAsPartner(): PublicApiError {
+  return new PublicApiError(403, "forbidden", "This platform key acts as its partner, which has no LobbyStack account, so it can't do this.");
+}
+
+/**
+ * Refuses a per-business key whose creator is no longer an owner or admin of
+ * the business, for operations only owners and admins do in the dashboard.
+ * Grants and platform keys pass.
+ */
+async function requireKeyOwnerActive(context: DomainContext, caller: ApiCaller): Promise<void> {
+  if (caller.apiKeyId !== undefined) await resolveActingUserId(context, caller);
 }
 
 async function inBusiness<T>(context: DomainContext, caller: ApiCaller, callback: (tx: DatabaseTransaction) => Promise<T>): Promise<T> {
@@ -282,7 +304,7 @@ export async function getPlatformMeForApi(context: DomainContext, key: ResolvedP
     business,
     // /api/v1 only changes additively, so GET /me keeps the names it shipped
     // with: partner repeats the group, and group access reads "partner".
-    platform: { group: key.group, partner: key.group, access: key.access === "all" ? "all" : "partner" },
+    platform: { group: key.group, partner: key.group, access: key.access === "all" ? "all" : "partner", partner_id: key.partnerId ?? null },
   };
 }
 
@@ -386,6 +408,7 @@ async function loadCheckout(tx: DatabaseTransaction, businessId: string, checkou
  */
 async function checkoutPayerId(context: DomainContext, caller: ApiCaller): Promise<string> {
   if (caller.platformKeyId === undefined) return await resolveActingUserId(context, caller);
+  if (caller.partnerId !== undefined) throw partnerPlatformKeyActsAsPartner();
   const [owner] = await inBusiness(context, caller, async (tx) => await tx.select({ userId: businessMemberships.userId }).from(businessMemberships).where(and(eq(businessMemberships.businessId, caller.businessId), eq(businessMemberships.role, "business_owner"), eq(businessMemberships.status, "active"), ne(businessMemberships.userId, caller.actingUserId))).orderBy(asc(businessMemberships.createdAt)).limit(1));
   if (!owner) throw conflict("Only the business's own owner can pay for a plan, and this business hasn't been claimed yet. Send the claim link first, or give it a managed plan.");
   return owner.userId;
@@ -398,6 +421,7 @@ async function checkoutPayerId(context: DomainContext, caller: ApiCaller): Promi
  * sells the plan and interval.
  */
 export async function createCheckoutForApi(context: DomainContext, caller: ApiCaller, input: ApiCheckoutCreate, options: { available: boolean }): Promise<ApiCheckout> {
+  refusePartnerPlatformKey(caller, "checkout");
   if (!options.available) throw conflict("This deployment doesn't sell that plan and interval.");
   const userId = await checkoutPayerId(context, caller);
   return await inBusiness(context, caller, async (tx) => {
@@ -423,8 +447,9 @@ export async function getCheckoutForApi(context: DomainContext, caller: ApiCalle
   return await inBusiness(context, caller, async (tx) => await loadCheckout(tx, caller.businessId, checkoutId));
 }
 
-/** Puts the business on the managed enterprise plan. Callers check that an operator's platform key asked. */
+/** Puts the business on the managed enterprise plan. Callers check that an operator's platform key asked; a partner's key is refused here too. */
 export async function setManagedPlanForApi(context: DomainContext, caller: ApiCaller): Promise<ApiBilling> {
+  refusePartnerPlatformKey(caller, "managed_plan");
   return await inBusiness(context, caller, async (tx) => {
     const outcome = await setManagedPlanInTransaction(tx, { businessId: caller.businessId });
     if (outcome === "paid_through_polar") throw conflict("This business pays through Polar. Cancel that subscription before giving it a managed plan.");
@@ -433,8 +458,9 @@ export async function setManagedPlanForApi(context: DomainContext, caller: ApiCa
   });
 }
 
-/** Moves the business off its managed plan, back to the free plan. Callers check that an operator's platform key asked. */
+/** Moves the business off its managed plan, back to the free plan. Callers check that an operator's platform key asked; a partner's key is refused here too. */
 export async function endManagedPlanForApi(context: DomainContext, caller: ApiCaller): Promise<ApiBilling> {
+  refusePartnerPlatformKey(caller, "managed_plan");
   return await inBusiness(context, caller, async (tx) => {
     if (!await endManagedPlanInTransaction(tx, { businessId: caller.businessId })) throw notFound("Managed plan");
     await audit(tx, caller, { eventType: "api.billing.managed_plan_ended", entityType: "billing_account", entityId: caller.businessId });
@@ -766,11 +792,19 @@ export async function getTeamForApi(context: DomainContext, caller: ApiCaller): 
  * the request is valid, just before the email is queued, so a refused one
  * uses up no invitation limit.
  */
-export async function createTeamInvitationForApi(context: DomainContext, caller: ApiCaller, input: ApiTeamInvitationCreate, options: { userId: string; beforeSend?: (() => Promise<void>) | undefined }): Promise<ApiTeamInvitation> {
+/**
+ * Invites someone to the business's team. The person the caller acts as
+ * sends it, or for a partner's platform key, the key itself: it acts as the
+ * partner, which has no account.
+ */
+export async function createTeamInvitationForApi(context: DomainContext, caller: ApiCaller, input: ApiTeamInvitationCreate, options: ({ userId: string; platformKeyId?: undefined } | { platformKeyId: string; userId?: undefined }) & { beforeSend?: (() => Promise<void>) | undefined }): Promise<ApiTeamInvitation> {
   const normalizedEmail = teamEmail(input.email);
   await options.beforeSend?.();
   return await inBusiness(context, caller, async (tx) => {
-    const { invitationId } = await insertInvitationInTransaction(tx, { businessId: caller.businessId, invitedByUserId: options.userId, normalizedEmail, role: input.role });
+    const inviter = options.userId !== undefined ? { invitedByUserId: options.userId } : { invitedByPlatformKeyId: options.platformKeyId };
+    // Revoking the key waits for this invitation, then revokes it too.
+    if (inviter.invitedByPlatformKeyId !== undefined) await lockActivePartnerPlatformKey(tx, inviter.invitedByPlatformKeyId);
+    const { invitationId } = await insertInvitationInTransaction(tx, { businessId: caller.businessId, normalizedEmail, role: input.role, ...inviter });
     await audit(tx, caller, { eventType: "api.team.invitation_created", entityType: "business_invitation", entityId: invitationId, payload: { role: input.role } });
     const [row] = await tx.select(teamInvitationColumns).from(businessInvitations).where(eq(businessInvitations.id, invitationId)).limit(1);
     return serializeTeamInvitation(row!);
@@ -812,6 +846,8 @@ export async function removeTeamMemberForApi(context: DomainContext, caller: Api
  * own the business. A new claim link revokes the open one.
  */
 export async function createClaimLinkForApi(context: DomainContext, caller: ApiCaller, input: ApiClaimLinkCreate, options: { userId: string; beforeSend?: (() => Promise<void>) | undefined }): Promise<ApiClaimLink> {
+  // A partner keeps its businesses, so its keys never hand one over.
+  refusePartnerPlatformKey(caller, "claim_link");
   const normalizedEmail = teamEmail(input.email);
   const owns = async (tx: DatabaseTransaction) => (await tx.select({ role: businessMemberships.role }).from(businessMemberships).where(and(eq(businessMemberships.businessId, caller.businessId), eq(businessMemberships.userId, options.userId), eq(businessMemberships.status, "active"))).limit(1))[0]?.role === "business_owner";
   const notOwner = () => conflict("Only an owner can hand the business over, and the account this key acts as doesn't own it.");
@@ -1251,8 +1287,10 @@ export function platformBusinessId(platformKeyId: string, idempotencyKey: string
  */
 export async function createBusinessForApi(
   context: DomainContext,
-  input: { key: ResolvedPlatformKey; actingUserId: string; idempotencyKey: string; requestHash: string; body: ApiBusinessCreate },
+  input: { key: HostPlatformKey; actingUserId: string; idempotencyKey: string; requestHash: string; body: ApiBusinessCreate },
 ): Promise<{ business: ApiBusiness; replayed: boolean }> {
+  const partnerOnly = (["owner_email", "access_level"] as const).filter((field) => input.body[field] !== undefined);
+  if (partnerOnly.length) throw invalidRequest(`${partnerOnly.join(" and ")} ${partnerOnly.length > 1 ? "are" : "is"} only for a partner's platform key. The account in this key's owner_email owns the business it creates.`, partnerOnly.map((path) => ({ path, message: "Not accepted with the host's platform key." })));
   const timezone = ianaTimeZone(input.body.timezone);
   if (!timezone) throw invalidRequest("timezone is not a valid IANA time zone.", [{ path: "timezone", message: "Use an IANA time zone such as America/Toronto." }]);
   const businessId = platformBusinessId(input.key.platformKeyId, input.idempotencyKey);
@@ -1288,7 +1326,81 @@ export async function createBusinessForApi(
   }
 }
 
-/** The active businesses a group's platform keys onboarded, newest first. */
+// What createPartnerBusiness refuses, by the field of POST /businesses at fault.
+const partnerBusinessFields: Record<string, string> = { invalid_name: "name", invalid_timezone: "timezone", invalid_business_type: "business_type", invalid_access_level: "access_level", invalid_email: "owner_email" };
+
+/**
+ * Creates a business of the partner for one of its platform keys, through
+ * the partner operation the console uses: with no owner yet, at the access
+ * level the request picks, and with an invitation the partner emails to
+ * owner_email. As for a host's key, the Idempotency-Key decides the business
+ * id, so a retry returns the business it made, and a different body with the
+ * same key is idempotency_key_reused. The audit row keeps the request's hash
+ * for that check. Pass the app role's context: only it can act as the system,
+ * as creating a business needs. beforeCreate runs only when a new business is
+ * about to be made, so callers check their limits there.
+ */
+export async function createPartnerBusinessForApi(
+  context: DomainContext,
+  input: { key: PartnerPlatformKey; idempotencyKey: string; requestHash: string; body: ApiBusinessCreate },
+  options: { beforeCreate?: (() => Promise<void>) | undefined } = {},
+): Promise<{ business: ApiBusiness; replayed: boolean }> {
+  const { body, key } = input;
+  if (body.owner_email === undefined) throw invalidRequest("A partner's platform key invites the business's owner as it creates the business, so send owner_email.", [{ path: "owner_email", message: "Required with a partner's platform key." }]);
+  const timezone = ianaTimeZone(body.timezone);
+  if (!timezone) throw invalidRequest("timezone is not a valid IANA time zone.", [{ path: "timezone", message: "Use an IANA time zone such as America/Toronto." }]);
+  const businessId = platformBusinessId(key.platformKeyId, input.idempotencyKey);
+  const inBusinessAsSystem = async <T>(run: (tx: DatabaseTransaction) => Promise<T>) => await withBusinessTransaction(context.db, { businessId, actorType: "system" }, run);
+  const created = async (): Promise<ApiBusiness | null> => await inBusinessAsSystem(async (tx) => {
+    const [row] = await tx.select({ payload: auditLogs.payload }).from(auditLogs).where(and(eq(auditLogs.businessId, businessId), eq(auditLogs.eventType, "partner.business_created"))).limit(1);
+    if (!row) return null;
+    if ((row.payload as { requestHash?: unknown } | null)?.requestHash !== input.requestHash) throw new PublicApiError(422, "idempotency_key_reused", "This Idempotency-Key was used with a different request body.");
+    // A business since suspended, deleted or released is gone for this key, as on every other endpoint.
+    const [business] = await tx.select({ status: businesses.status, partnerId: businesses.partnerId }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
+    if (business?.status !== "active" || business.partnerId !== key.partnerId) throw notFound("Business");
+    return await loadBusinessResource(tx, businessId);
+  });
+
+  const existing = await created();
+  if (existing) return { business: existing, replayed: true };
+  // A replay sends no email, so only a new business counts against the caller's limit.
+  await options.beforeCreate?.();
+  try {
+    await createPartnerBusiness(context, { kind: "key", partnerId: key.partnerId, platformKeyId: key.platformKeyId }, {
+      businessId,
+      name: body.name,
+      timezone,
+      businessType: body.business_type ?? "service_company",
+      accessLevel: body.access_level ?? "full",
+      ownerEmail: body.owner_email,
+      slug: body.slug,
+      defaultLocale: body.locale,
+      websiteUrl: body.website_url,
+      requestHash: input.requestHash,
+    });
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      // A retry that ran at the same time created it first.
+      const raced = await created();
+      if (raced) return { business: raced, replayed: true };
+      throw conflict("Another business already uses this slug.");
+    }
+    const code = typeof error === "object" && error !== null && "code" in error ? String(error.code) : "";
+    if (code === "partner_domain_required") throw conflict("The partner needs a dashboard address of its own before it can create a business. Its businesses open only there.");
+    const field = partnerBusinessFields[code];
+    if (field && error instanceof Error) throw invalidRequest(error.message, [{ path: field, message: error.message }]);
+    throw error;
+  }
+  const business = await inBusinessAsSystem(async (tx) => await loadBusinessResource(tx, businessId));
+  if (!business) throw new Error("The new business could not be read back.");
+  return { business, replayed: false };
+}
+
+/**
+ * The active businesses linked to a platform key's group, newest first. A
+ * partner's keys have the partner as their group, which holds every business
+ * of the partner, whether the console or a key made it.
+ */
 export async function listBusinessesForApi(context: DomainContext, input: { groupId: string } & PageRequest): Promise<Page<ApiBusinessSummary>> {
   const limit = pageSize(input.limit);
   const cursor = decodeCursor(input.cursor);
@@ -1553,7 +1665,7 @@ export async function setContactPasscodesForApi(context: DomainContext, caller: 
   const contactIds = distinctContactIds(input.passcodes.map((entry) => entry.contact_id), path);
   const weak = input.passcodes.flatMap((entry, index) => (entry.passcode === null || (isContactPasscode(entry.passcode) && !isGuessableContactPasscode(entry.passcode)) ? [] : [{ path: `passcodes.${index}.passcode`, message: `Use ${CONTACT_PASSCODE_MIN_LENGTH} to ${CONTACT_PASSCODE_MAX_LENGTH} digits that aren't easy to guess.` }]));
   if (weak.length) throw invalidRequest("Some PINs can't be used.", weak);
-  await resolveActingUserId(context, caller);
+  await requireKeyOwnerActive(context, caller);
   await inBusiness(context, caller, async (tx) => await requireContacts(tx, caller.businessId, contactIds, path, false));
   const toSet = input.passcodes.flatMap((entry, index) => (entry.passcode === null ? [] : [{ contactId: contactIds[index]!, passcode: entry.passcode }]));
   const toRemove = input.passcodes.flatMap((entry, index) => (entry.passcode === null ? [contactIds[index]!] : []));
@@ -1579,7 +1691,7 @@ export async function generateContactPasscodesForApi(context: DomainContext, cal
   const path = (index: number) => `contact_ids.${index}`;
   const named = input.contact_ids ? distinctContactIds(input.contact_ids, path) : undefined;
   const length = input.length ?? CONTACT_PASSCODE_DEFAULT_LENGTH;
-  await resolveActingUserId(context, caller);
+  await requireKeyOwnerActive(context, caller);
   const contactIds = await inBusiness(context, caller, async (tx) => {
     if (!named) return (await tx.select({ id: contacts.id }).from(contacts).where(lacksPasscode(tx, caller.businessId)).orderBy(asc(contacts.createdAt), asc(contacts.id)).limit(CONTACT_PASSCODES_MAX_PER_REQUEST)).map((row) => row.id);
     await requireContacts(tx, caller.businessId, named, path, false);

@@ -24,6 +24,10 @@ const domain = vi.hoisted(() => ({
   getMeForApi: vi.fn(),
   getPlatformMeForApi: vi.fn(),
   createBusinessForApi: vi.fn(),
+  createPartnerBusinessForApi: vi.fn(),
+  // A direct business's brand, unless a test says the business is a partner's.
+  brandForBusiness: vi.fn(async (_context: unknown, _businessId: string): Promise<{ kind: "host" | "partner"; origin: string }> => ({ kind: "host", origin: "https://host-brand.example" })),
+  brandForHostReference: vi.fn(async (_context: unknown, _reference: unknown): Promise<{ kind: "partner"; origin: string } | null> => null),
   invitedUserEmail: vi.fn((body: { email: string }) => body.email.trim().toLowerCase()),
   inviteUserForApi: vi.fn(),
   listBusinessesForApi: vi.fn(),
@@ -96,7 +100,9 @@ const numbers = vi.hoisted(() => ({
 }));
 
 const appContext = vi.hoisted(() => ({ db: "app" }));
-vi.mock("../domain-context", () => ({ createWorkerDomainContext: () => ({ db: {} }), createDomainContext: () => appContext }));
+// The worker database the API resolves a partner's platform key in. It knows no key unless a test says so.
+const workerDatabase = vi.hoisted(() => ({ execute: vi.fn(async (_query: unknown): Promise<{ rows: unknown[] }> => ({ rows: [] })) }));
+vi.mock("../domain-context", () => ({ createWorkerDomainContext: () => ({ db: workerDatabase }), createDomainContext: () => appContext }));
 vi.mock("../error-reporting", () => ({ reportServerError: vi.fn() }));
 vi.mock("../storage", () => ({ getStorageProvider: () => storageProvider }));
 // CI runs these tests with a real Redis, where every file's requests share one key's per-minute budget; the limiter has its own tests.
@@ -119,7 +125,7 @@ vi.mock("@lobbystack/domain", async () => ({
   ...domain,
 }));
 
-import { generatePlatformKey } from "@lobbystack/domain";
+import { generatePlatformKey, newPlatformKeySecret } from "@lobbystack/domain";
 
 import { verifyCalendarConnectLinkToken } from "../google-calendar-oauth";
 import { v1 } from "./routes";
@@ -141,6 +147,7 @@ function call(path: string, init: RequestInit = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  domain.brandForBusiness.mockResolvedValue({ kind: "host", origin: "https://host-brand.example" });
   domain.resolveApiKey.mockResolvedValue({ businessId: "5d0bd9a4-7e1c-4a51-9a50-8e1b2c3d4e5f", apiKeyId: "0b7c1d2e-3f40-4a51-8b62-7c83d94ea5b6", scopes: everyScope });
 });
 
@@ -1337,5 +1344,188 @@ describe("platform keys on v1 routes", () => {
     domain.listBusinessesForApi.mockResolvedValue({ data: [], next_cursor: null, has_more: false });
     expect((await v1.listBusinesses(legacyCall("/businesses"))).status).toBe(200);
     expect(domain.listBusinessesForApi).toHaveBeenCalledWith(expect.anything(), { groupId: "alloplace" });
+  });
+});
+
+describe("a partner's platform keys on v1 routes", () => {
+  const businessId = "9e8d7c6b-5a49-4382-a716-1f2e3d4c5b6a";
+  const partnerId = "3c2b1a09-8f7e-4d6c-9b5a-4f3e2d1c0b9a";
+  const platformKeyId = "6d5c4b3a-2918-4f7e-8d6c-5b4a39281706";
+  const { key, prefix } = newPlatformKeySecret();
+  const caller = { businessId, platformKeyId, groupId: partnerId, partnerId, actor: "platform_key" };
+  const partnerCall = (path: string, init: RequestInit = {}) => new Request(`https://app.example.com/api/v1${path}`, { ...init, headers: { authorization: `Bearer ${key}`, "LobbyStack-Business": businessId, ...(init.headers ?? {}) } });
+
+  beforeEach(() => {
+    // PLATFORM_API_KEYS doesn't have it, so the database answers for it.
+    vi.stubEnv("PLATFORM_API_KEYS", "");
+    workerDatabase.execute.mockResolvedValue({ rows: [{ platform_key_id: platformKeyId, partner_id: partnerId, prefix, name: "Acme Zapier", scopes: everyScope, created_at: "2026-10-26T12:00:00.000Z" }] });
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    workerDatabase.execute.mockReset();
+    workerDatabase.execute.mockResolvedValue({ rows: [] });
+  });
+
+  it("acts as the partner on the partner's businesses, with no account behind it", async () => {
+    const response = await v1.listStaff(partnerCall("/staff"));
+    expect(response.status).toBe(200);
+    expect(domain.requirePlatformBusinessAccess).toHaveBeenCalledWith(expect.anything(), { businessId, groupId: partnerId, access: "group", partnerId });
+    expect(domain.listStaffForApi).toHaveBeenCalledWith(expect.anything(), caller);
+    expect(domain.resolvePlatformKeyOwner).not.toHaveBeenCalled();
+  });
+
+  it("answers 401 for a partner's key the database doesn't know or has revoked", async () => {
+    workerDatabase.execute.mockResolvedValue({ rows: [] });
+    const response = await v1.listStaff(partnerCall("/staff"));
+    expect(response.status).toBe(401);
+    expect(domain.listStaffForApi).not.toHaveBeenCalled();
+  });
+
+  it("lists the businesses in the partner's group, which holds every business of the partner", async () => {
+    domain.listBusinessesForApi.mockResolvedValue({ data: [], next_cursor: null, has_more: false });
+    const response = await v1.listBusinesses(partnerCall("/businesses?limit=5"));
+    expect(response.status).toBe(200);
+    expect(domain.listBusinessesForApi).toHaveBeenCalledWith(expect.anything(), { groupId: partnerId, limit: 5 });
+  });
+
+  it("manages webhooks as the partner's key", async () => {
+    const endpoint = { id: "06d9c0dc-f18a-4cc6-a987-ac4963c87113", url: "https://hooks.example.com/a", description: null, events: ["call.completed"], status: "enabled", disabled_reason: null, created_at: "2026-09-27T12:00:00.000Z", updated_at: "2026-09-27T12:00:00.000Z" };
+    domain.createWebhookEndpoint.mockResolvedValue({ endpoint, secret: "whsec_x" });
+    const response = await v1.createWebhook(partnerCall("/webhooks", { method: "POST", body: JSON.stringify({ url: "https://vendor.example.com/h", events: ["call.completed"] }) }));
+    expect(response.status).toBe(201);
+    expect(domain.createWebhookEndpoint).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ businessId, manager: { kind: "platform_key", platformKeyId, groupId: partnerId, partnerId } }));
+  });
+
+  it.each([
+    ["POST /billing/managed-plan", () => v1.setManagedPlan(partnerCall("/billing/managed-plan", { method: "POST", body: JSON.stringify({ plan: "enterprise" }) })), domain.setManagedPlanForApi],
+    ["DELETE /billing/managed-plan", () => v1.endManagedPlan(partnerCall("/billing/managed-plan", { method: "DELETE" })), domain.endManagedPlanForApi],
+    ["POST /team/claim-link", () => v1.createClaimLink(partnerCall("/team/claim-link", { method: "POST", body: JSON.stringify({ email: "owner@example.com" }) })), domain.createClaimLinkForApi],
+    ["POST /billing/checkout", () => v1.createCheckout(partnerCall("/billing/checkout", { method: "POST", body: JSON.stringify({ plan: "starter", interval: "monthly" }) })), domain.createCheckoutForApi],
+  ] as const)("refuses %s with 403 before anything happens", async (_name, run, operation) => {
+    const response = await run();
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({ error: { code: "forbidden" } });
+    expect(operation).not.toHaveBeenCalled();
+    expect(domain.resolveActingUserId).not.toHaveBeenCalled();
+    expect(invites.limit).not.toHaveBeenCalled();
+  });
+
+  describe("POST /businesses", () => {
+    const created = { id: "4a3b2c1d-0e9f-4a8b-9c7d-6e5f4a3b2c1d", name: "Harbor Dental", timezone: "America/Halifax", locale: "en", website_url: null, business_type: "service_company", onboarding_stage: "website", booking_mode: "request", hours: [], created_at: "2026-10-26T12:00:00.000Z", updated_at: "2026-10-26T12:00:00.000Z" };
+    const post = (body: unknown) => v1.createBusiness(partnerCall("/businesses", { method: "POST", headers: { "Idempotency-Key": "onboard-harbor" }, body: JSON.stringify(body) }));
+
+    it("creates a business of the partner with the app role, and counts only a new one against the partner's hourly limit", async () => {
+      domain.createPartnerBusinessForApi.mockImplementation(async (_context: unknown, _input: unknown, options: { beforeCreate?: () => Promise<void> }) => {
+        await options.beforeCreate?.();
+        return { business: created, replayed: false };
+      });
+      const response = await post({ name: "Harbor Dental", timezone: "America/Halifax", owner_email: "owner@harbor.example", access_level: "activity" });
+      expect(response.status).toBe(201);
+      expect(await response.json()).toEqual({ data: created });
+      expect(domain.createPartnerBusinessForApi).toHaveBeenCalledWith(appContext, {
+        key: expect.objectContaining({ kind: "platform_key", platformKeyId, partnerId }),
+        idempotencyKey: "onboard-harbor",
+        requestHash: expect.stringMatching(/^[0-9a-f]{64}$/),
+        body: { name: "Harbor Dental", timezone: "America/Halifax", owner_email: "owner@harbor.example", access_level: "activity" },
+      }, { beforeCreate: expect.any(Function) });
+      expect(invites.limit).toHaveBeenCalledWith([["partner-business-create", "partner-hour", partnerId, 30, 3_600, "rate_limit_partner_hour"]]);
+      expect(domain.createBusinessForApi).not.toHaveBeenCalled();
+      expect(domain.resolvePlatformKeyOwner).not.toHaveBeenCalled();
+    });
+
+    it("answers 429 once the partner's keys created their hour's businesses", async () => {
+      invites.limit.mockResolvedValueOnce({ allowed: false, status: 429, reason: "rate_limit_partner_hour" });
+      domain.createPartnerBusinessForApi.mockImplementation(async (_context: unknown, _input: unknown, options: { beforeCreate?: () => Promise<void> }) => {
+        await options.beforeCreate?.();
+        return { business: created, replayed: false };
+      });
+      const response = await post({ name: "Harbor Dental", timezone: "America/Halifax", owner_email: "owner@harbor.example" });
+      expect(response.status).toBe(429);
+      expect(await response.json()).toMatchObject({ error: { code: "rate_limited" } });
+      expect(response.headers.get("retry-after")).toMatch(/^\d+$/);
+    });
+
+    it("marks a replayed creation", async () => {
+      domain.createPartnerBusinessForApi.mockResolvedValue({ business: created, replayed: true });
+      const response = await post({ name: "Harbor Dental", timezone: "America/Halifax", owner_email: "owner@harbor.example" });
+      expect(response.status).toBe(201);
+      expect(response.headers.get("idempotent-replayed")).toBe("true");
+    });
+  });
+
+  it("invites team members as the key, counting them against the partner's hourly limit", async () => {
+    domain.createTeamInvitationForApi.mockImplementation(async (_context: unknown, _caller: unknown, _body: unknown, options: { beforeSend?: () => Promise<void> }) => {
+      await options.beforeSend?.();
+      return { id: "invitation" };
+    });
+    const response = await v1.createTeamInvitation(partnerCall("/team/invitations", { method: "POST", headers: { "Idempotency-Key": "invite-front" }, body: JSON.stringify({ email: "front@harbor.example", role: "scheduler" }) }));
+    expect(response.status).toBe(201);
+    expect(domain.createTeamInvitationForApi).toHaveBeenCalledWith(expect.anything(), caller, { email: "front@harbor.example", role: "scheduler" }, { platformKeyId, beforeSend: expect.any(Function) });
+    expect(invites.limit).toHaveBeenCalledWith([["team-invite", "partner-hour", partnerId, 20, 3_600, "rate_limit_partner_hour"]]);
+    expect(domain.resolveActingUserId).not.toHaveBeenCalled();
+  });
+
+  it("invites an owner to make an account under the partner's brand, with links to the partner's dashboard", async () => {
+    vi.stubEnv("APP_BASE_URL", "https://app.lobbystack.example");
+    domain.brandForHostReference.mockResolvedValue({ kind: "partner", origin: "https://acme.portal.example" });
+    domain.inviteUserForApi.mockResolvedValue({ email: "owner@harbor.example", locale: "en" });
+    const response = await v1.createUser(partnerCall("/users", { method: "POST", headers: { "Idempotency-Key": "owner-harbor" }, body: JSON.stringify({ email: "owner@harbor.example" }) }));
+    expect(response.status).toBe(202);
+    expect(domain.brandForHostReference).toHaveBeenCalledWith(expect.anything(), { kind: "partner", partnerId });
+    expect(domain.inviteUserForApi).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ key: expect.objectContaining({ partnerId }), appBaseUrl: "https://acme.portal.example" }));
+    expect(invites.limit).toHaveBeenCalledWith([["platform-user-invitations", "partner-day", partnerId, PLATFORM_USER_INVITATIONS_PER_DAY, 86_400, "rate_limit_partner_day"]]);
+  });
+
+  it("counts every key of a partner in the same windows, so another key doesn't add to the limits", async () => {
+    const second = { ...newPlatformKeySecret(), platformKeyId: "8f7e6d5c-4b3a-4291-8e7d-6c5b4a392817" };
+    const keys = [{ token: key, prefix, platformKeyId }, { token: second.key, prefix: second.prefix, platformKeyId: second.platformKeyId }];
+    domain.createPartnerBusinessForApi.mockImplementation(async (_context: unknown, _input: unknown, options: { beforeCreate?: () => Promise<void> }) => {
+      await options.beforeCreate?.();
+      return { business: { id: businessId }, replayed: false };
+    });
+    domain.createTeamInvitationForApi.mockImplementation(async (_context: unknown, _caller: unknown, _body: unknown, options: { beforeSend?: () => Promise<void> }) => {
+      await options.beforeSend?.();
+      return { id: "invitation" };
+    });
+    domain.inviteUserForApi.mockResolvedValue({ email: "owner@harbor.example", locale: "en" });
+    domain.brandForHostReference.mockResolvedValue({ kind: "partner", origin: "https://acme.portal.example" });
+    for (const used of keys) {
+      workerDatabase.execute.mockResolvedValue({ rows: [{ platform_key_id: used.platformKeyId, partner_id: partnerId, prefix: used.prefix, name: "Acme key", scopes: everyScope, created_at: "2026-10-26T12:00:00.000Z" }] });
+      const as = (path: string, init: RequestInit) => new Request(`https://app.example.com/api/v1${path}`, { ...init, headers: { authorization: `Bearer ${used.token}`, "LobbyStack-Business": businessId, ...(init.headers ?? {}) } });
+      expect((await v1.createBusiness(as("/businesses", { method: "POST", headers: { "Idempotency-Key": `onboard-${used.platformKeyId}` }, body: JSON.stringify({ name: "Harbor Dental", timezone: "UTC", owner_email: "owner@harbor.example" }) }))).status).toBe(201);
+      expect((await v1.createTeamInvitation(as("/team/invitations", { method: "POST", headers: { "Idempotency-Key": `invite-${used.platformKeyId}` }, body: JSON.stringify({ email: "front@harbor.example", role: "scheduler" }) }))).status).toBe(201);
+      expect((await v1.createUser(as("/users", { method: "POST", headers: { "Idempotency-Key": `user-${used.platformKeyId}` }, body: JSON.stringify({ email: "owner@harbor.example" }) }))).status).toBe(202);
+    }
+    const windows = invites.limit.mock.calls.map((call) => {
+      const [[namespace, name, counted]] = (call as unknown as [[[string, string, string]]])[0];
+      return `${namespace}:${name}:${counted}`;
+    });
+    expect(windows).toEqual([
+      `partner-business-create:partner-hour:${partnerId}`,
+      `team-invite:partner-hour:${partnerId}`,
+      `platform-user-invitations:partner-day:${partnerId}`,
+      `partner-business-create:partner-hour:${partnerId}`,
+      `team-invite:partner-hour:${partnerId}`,
+      `platform-user-invitations:partner-day:${partnerId}`,
+    ]);
+  });
+
+  it("puts a partner business's widget script tag and calendar link on the partner's domain", async () => {
+    vi.stubEnv("APP_BASE_URL", "https://app.lobbystack.example");
+    vi.stubEnv("WIDGET_KEY_ISSUANCE_ENABLED", "true");
+    for (const [name, value] of Object.entries({ GOOGLE_CLIENT_ID: "client", GOOGLE_CLIENT_SECRET: "secret", GOOGLE_REDIRECT_URI: "https://app.lobbystack.example/api/calendar/google/callback", ENCRYPTION_KEY: "calendar-test-key", BETTER_AUTH_SECRET: "link-test-secret" })) vi.stubEnv(name, value);
+    domain.brandForBusiness.mockResolvedValue({ kind: "partner", origin: "https://acme.portal.example" });
+    domain.createWidgetKeyForApi.mockResolvedValue({ id: "7b8c9d0e-1f2a-4b3c-8d4e-5f6a7b8c9d0e", key: "wk_live_x", embed_snippet: "<script></script>" });
+    expect((await v1.createWidgetKey(partnerCall("/widget-keys", { method: "POST", body: JSON.stringify({ allowed_origins: ["https://harbor.example"] }) }))).status).toBe(201);
+    expect(domain.createWidgetKeyForApi).toHaveBeenCalledWith(expect.anything(), caller, { allowed_origins: ["https://harbor.example"] }, { appOrigin: "https://acme.portal.example" });
+    domain.createCalendarConnectLinkForApi.mockImplementation(async (_context: unknown, _caller: unknown, options: { link: (input: { businessId: string }) => { url: string; expiresAt: Date } }) => {
+      const { url, expiresAt } = options.link({ businessId });
+      return { url, expires_at: expiresAt.toISOString() };
+    });
+    const link = await v1.createCalendarConnectLink(partnerCall("/calendars/google/connect", { method: "POST" }));
+    expect(link.status).toBe(201);
+    const url = new URL(((await link.json()) as { data: { url: string } }).data.url);
+    expect(`${url.origin}${url.pathname}`).toBe("https://acme.portal.example/api/calendar/google/connect");
+    expect(domain.brandForBusiness).toHaveBeenCalledWith(expect.anything(), businessId);
   });
 });

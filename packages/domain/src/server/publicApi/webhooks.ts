@@ -24,6 +24,7 @@ import { requireBusinessCapability } from "../businessAccess";
 import type { DomainContext } from "../context";
 import { queueOperatorAlertInTransaction } from "../notifications";
 import { conflict, invalidRequest, notFound } from "./errors";
+import { lockActivePartnerPlatformKey } from "./platformKeys";
 import { loadAppointmentResource, loadCallResource, loadContactResource, loadMessageResource, serializeWebhookEndpoint } from "./resources";
 import { assertWebhookUrlAllowed } from "./webhookNetwork";
 import { decryptWebhookSecret, encryptWebhookSecret, generateWebhookSecret, type WebhookSender } from "./webhookTransport";
@@ -33,11 +34,15 @@ const emitFailures = meter.createCounter("lobbystack.webhooks.emit_failures", { 
 const deliveryAttempts = meter.createCounter("lobbystack.webhooks.delivery_attempts", { unit: "{attempt}" });
 const endpointsDisabled = meter.createCounter("lobbystack.webhooks.endpoints_disabled", { unit: "{endpoint}" });
 
-/** Who is managing an endpoint: a signed-in owner or admin, or an API key or platform key with webhooks:manage. */
+/**
+ * Who is managing an endpoint: a signed-in owner or admin, or an API key or
+ * platform key with webhooks:manage. A host's platform key acts as its
+ * owner's account, and a partner's as the partner.
+ */
 export type WebhookManager =
   | { kind: "operator"; userId: string }
   | { kind: "api_key"; apiKeyId: string }
-  | { kind: "platform_key"; platformKeyId: string; groupId: string; actingUserId: string };
+  | ({ kind: "platform_key"; platformKeyId: string; groupId: string } & ({ actingUserId: string; partnerId?: undefined } | { partnerId: string; actingUserId?: undefined }));
 
 async function asManager<T>(context: DomainContext, businessId: string, manager: WebhookManager, callback: (tx: DatabaseTransaction) => Promise<T>): Promise<T> {
   if (manager.kind === "operator") {
@@ -48,11 +53,16 @@ async function asManager<T>(context: DomainContext, businessId: string, manager:
       return await callback(tx);
     });
   }
-  return await withBusinessTransaction(context.db, { businessId, actorType: "worker" }, callback);
+  return await withBusinessTransaction(context.db, { businessId, actorType: "worker" }, async (tx) => {
+    // Revoking a partner's key waits for this transaction, then turns off any endpoint it created or turned back on.
+    if (manager.kind === "platform_key" && manager.partnerId !== undefined) await lockActivePartnerPlatformKey(tx, manager.platformKeyId);
+    return await callback(tx);
+  });
 }
 
 function auditActor(manager: WebhookManager) {
   if (manager.kind === "operator") return { actorUserId: manager.userId, payload: { actor: "operator" } };
+  if (manager.kind === "platform_key" && manager.partnerId !== undefined) return { actorUserId: null, payload: { actor: "platform_key", platformKeyId: manager.platformKeyId, groupId: manager.groupId, partnerId: manager.partnerId } };
   if (manager.kind === "platform_key") return { actorUserId: null, payload: { actor: "platform_key", platformKeyId: manager.platformKeyId, groupId: manager.groupId, actingUserId: manager.actingUserId } };
   return { actorUserId: null, payload: { actor: "api_key", apiKeyId: manager.apiKeyId } };
 }
@@ -104,7 +114,7 @@ export async function createWebhookEndpoint(
       events,
       encryptedSecret: encryptWebhookSecret(secret),
       ...(input.description?.trim() ? { description: input.description.trim().slice(0, 200) } : {}),
-      // A platform key has no api_keys row, so the endpoint names the PLATFORM_API_KEYS entry.
+      // A platform key has no api_keys row, so the endpoint names the PLATFORM_API_KEYS entry or the partner's key.
       ...(input.manager.kind === "operator" ? { createdByUserId: input.manager.userId } : input.manager.kind === "api_key" ? { createdByApiKeyId: input.manager.apiKeyId } : { createdByPlatformKeyId: input.manager.platformKeyId }),
     }).returning();
     if (!row) throw new Error("The webhook endpoint could not be created.");
@@ -160,7 +170,9 @@ export async function disableWebhookEndpointsInTransaction(tx: DatabaseTransacti
  * Turns off every business's endpoints that a platform key no longer in
  * PLATFORM_API_KEYS set up, and returns how many. The admin runs it when it
  * starts, because only the admin reads PLATFORM_API_KEYS and removing a key
- * means restarting it.
+ * means restarting it. A key a partner made keeps its endpoints on its
+ * partner's businesses while it isn't revoked; the database checks that
+ * itself, so configuredPlatformKeyIds lists only PLATFORM_API_KEYS.
  */
 export async function disableRemovedPlatformKeyWebhooks(context: DomainContext, input: { configuredPlatformKeyIds: readonly string[] }): Promise<number> {
   const ids = `{${input.configuredPlatformKeyIds.join(",")}}`;

@@ -8,7 +8,8 @@
   "nav": {
     "businesses": "Firme",
     "branding": "Brend i domen",
-    "team": "Tim"
+    "team": "Tim",
+    "apiKeys": "API ključevi"
   },
   "roles": {
     "owner": "Vlasnik",
@@ -221,6 +222,74 @@
       "imageSize": "Otpremite sliku od 256 KB ili manje.",
       "forbidden": "Samo vlasnici i administratori mogu da menjaju brend."
     }
+  },
+  "apiKeys": {
+    "title": "API ključevi",
+    "description": "Vaš kod koristi ključ platforme da kreira Vaše firme i podesi ih preko API-ja. Ključ radi na Vašim firmama i ni na jednoj drugoj.",
+    "empty": "Još nema ključeva platforme.",
+    "neverUsed": "Nikad",
+    "createdBy": "{{date}}, korisnik {{name}}",
+    "revoked": "Opozvan {{date}}",
+    "restricted": {
+      "title": "Samo vlasnici i administratori mogu da upravljaju ključevima platforme",
+      "description": "Zamolite vlasnika ili administratora iz Vašeg tima da kreira ključ za Vas."
+    },
+    "columns": {
+      "name": "Naziv",
+      "key": "Ključ",
+      "scopes": "Pristup",
+      "created": "Kreiran",
+      "lastUsed": "Poslednja upotreba",
+      "actions": "Radnje"
+    },
+    "create": {
+      "action": "Kreiraj ključ platforme",
+      "title": "Kreirajte ključ platforme",
+      "description": "Dajte ključu naziv koji ćete prepoznati i dozvolite samo pristup koji mu je potreban.",
+      "nameLabel": "Naziv",
+      "namePlaceholder": "Uvođenje klijenata",
+      "scopesLabel": "Pristup",
+      "cancel": "Otkaži",
+      "submit": "Kreiraj ključ",
+      "creating": "Kreiranje…"
+    },
+    "created": {
+      "title": "Ključ {{name}} je spreman",
+      "description": "Kopirajte ključ i sačuvajte ga u menadžeru lozinki ili u podešavanjima svog alata.",
+      "warning": "Ovaj ključ više nećete videti. Ako ga izgubite, opozovite ga i kreirajte novi.",
+      "done": "Gotovo"
+    },
+    "revoke": {
+      "action": "Opozovi",
+      "title": "Opozvati ovaj ključ platforme?",
+      "description": "Sve što koristi {{name}} odmah prestaje da radi. Njegovi webhookovi se isključuju, i niko više ne može da prihvati pozive u tim koje je poslao. Vlasnici koje je pozvao i dalje mogu da se pridruže svojim firmama. Ovo ne može da se poništi.",
+      "confirm": "Opozovi ključ",
+      "cancel": "Otkaži",
+      "done": "Ključ platforme je opozvan",
+      "failed": "Nismo uspeli da opozovemo ključ. Pokušajte ponovo."
+    },
+    "scopes": {
+      "business_read": "Čitanje podataka o firmi, radnog vremena, usluga, kao i podešavanja i pravila recepcionera",
+      "business_write": "Izmena podataka o firmi, radnog vremena, usluga, kao i podešavanja i pravila recepcionera, uključujući broj na koji se pozivi prebacuju",
+      "calls_read": "Čitanje poziva, rezimea i transkripata",
+      "contacts_read": "Čitanje kontakata",
+      "contacts_write": "Kreiranje i izmena kontakata",
+      "appointments_read": "Čitanje zakazanih i slobodnih termina",
+      "appointments_write": "Zakazivanje, otkazivanje i pomeranje termina",
+      "messages_read": "Čitanje poruka koje je primio recepcioner",
+      "knowledge_read": "Čitanje unosa u znanje, čestih pitanja, veb-sajtova i fajlova",
+      "knowledge_write": "Dodavanje, izmena i brisanje unosa u znanje, čestih pitanja, veb-sajtova i fajlova",
+      "billing_manage": "Pregled plana",
+      "phone_numbers_manage": "Pregled i oslobađanje brojeva telefona",
+      "team_manage": "Pozivanje i uklanjanje članova tima i promena uloga",
+      "webhooks_manage": "Kreiranje i brisanje webhook endpointa",
+      "businesses_create": "Kreiranje firmi i pozivanje njihovih vlasnika",
+      "users_create": "Pozivanje vlasnika da otvore nalog"
+    }
+  },
+  "secretReveal": {
+    "copy": "Kopiraj",
+    "copied": "Kopirano"
   },
   "signup": {
     "title": "Registrujte se kao partner",

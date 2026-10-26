@@ -8,7 +8,8 @@
   "nav": {
     "businesses": "Entreprises",
     "branding": "Image de marque et domaine",
-    "team": "Équipe"
+    "team": "Équipe",
+    "apiKeys": "Clés API"
   },
   "roles": {
     "owner": "Propriétaire",
@@ -221,6 +222,74 @@
       "imageSize": "Téléversez une image de 256 Ko ou moins.",
       "forbidden": "Seuls les propriétaires et les administrateurs peuvent modifier l'image de marque."
     }
+  },
+  "apiKeys": {
+    "title": "Clés API",
+    "description": "Votre code utilise une clé de plateforme pour créer vos entreprises et les configurer par l'API. Une clé fonctionne sur vos entreprises et aucune autre.",
+    "empty": "Aucune clé de plateforme pour l'instant.",
+    "neverUsed": "Jamais",
+    "createdBy": "{{date}} par {{name}}",
+    "revoked": "Révoquée le {{date}}",
+    "restricted": {
+      "title": "Seuls les propriétaires et les administrateurs gèrent les clés de plateforme",
+      "description": "Demandez à un propriétaire ou à un administrateur de votre équipe de créer une clé pour vous."
+    },
+    "columns": {
+      "name": "Nom",
+      "key": "Clé",
+      "scopes": "Accès",
+      "created": "Créée",
+      "lastUsed": "Dernière utilisation",
+      "actions": "Actions"
+    },
+    "create": {
+      "action": "Créer une clé de plateforme",
+      "title": "Créer une clé de plateforme",
+      "description": "Donnez à la clé un nom que vous reconnaîtrez et n'autorisez que l'accès dont elle a besoin.",
+      "nameLabel": "Nom",
+      "namePlaceholder": "Intégration des clients",
+      "scopesLabel": "Accès",
+      "cancel": "Annuler",
+      "submit": "Créer la clé",
+      "creating": "Création…"
+    },
+    "created": {
+      "title": "{{name}} est prête",
+      "description": "Copiez la clé et conservez-la dans un gestionnaire de mots de passe ou dans les réglages de votre outil.",
+      "warning": "Vous ne reverrez plus cette clé. Si vous la perdez, révoquez-la et créez-en une autre.",
+      "done": "Terminé"
+    },
+    "revoke": {
+      "action": "Révoquer",
+      "title": "Révoquer cette clé de plateforme?",
+      "description": "Tout ce qui utilise {{name}} cesse de fonctionner immédiatement. Ses webhooks se désactivent, et personne ne peut plus accepter les invitations d'équipe qu'elle a envoyées. Les propriétaires qu'elle a invités peuvent toujours rejoindre leur entreprise. Cette action est définitive.",
+      "confirm": "Révoquer la clé",
+      "cancel": "Annuler",
+      "done": "Clé de plateforme révoquée",
+      "failed": "Impossible de révoquer la clé. Réessayez."
+    },
+    "scopes": {
+      "business_read": "Lire les informations, les heures, les services, ainsi que les réglages et les règles de la réceptionniste de l'entreprise",
+      "business_write": "Modifier les informations, les heures, les services, ainsi que les réglages et les règles de la réceptionniste de l'entreprise, y compris le numéro de transfert des appels",
+      "calls_read": "Lire les appels, les résumés et les transcriptions",
+      "contacts_read": "Lire les contacts",
+      "contacts_write": "Créer et modifier des contacts",
+      "appointments_read": "Lire les rendez-vous et les plages libres",
+      "appointments_write": "Réserver, annuler et déplacer des rendez-vous",
+      "messages_read": "Lire les messages pris par la réceptionniste",
+      "knowledge_read": "Lire les entrées de connaissances, les FAQ, les sites web et les fichiers",
+      "knowledge_write": "Ajouter, modifier et supprimer des entrées de connaissances, des FAQ, des sites web et des fichiers",
+      "billing_manage": "Voir le forfait",
+      "phone_numbers_manage": "Voir et libérer des numéros de téléphone",
+      "team_manage": "Inviter et retirer des membres de l'équipe et changer les rôles",
+      "webhooks_manage": "Créer et supprimer des points de terminaison webhook",
+      "businesses_create": "Créer des entreprises et inviter leurs propriétaires",
+      "users_create": "Inviter des propriétaires à créer un compte"
+    }
+  },
+  "secretReveal": {
+    "copy": "Copier",
+    "copied": "Copié"
   },
   "signup": {
     "title": "Devenir partenaire",

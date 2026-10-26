@@ -388,10 +388,15 @@ export function invitationUrl(token: string): string {
   return `${process.env.APP_BASE_URL ?? "http://localhost"}/accept-invite?token=${encodeURIComponent(token)}`;
 }
 
-/** Records an invitation the caller may send and queues its email. The email must already be normalized and valid. */
+/**
+ * Records an invitation the caller may send and queues its email. The email
+ * must already be normalized and valid. A person sends it, or a partner's
+ * platform key, which acts as the partner and has no account; a claim link
+ * always has a person behind it.
+ */
 export async function insertInvitationInTransaction(
   tx: DatabaseTransaction,
-  input: { businessId: string; invitedByUserId: string; normalizedEmail: string; role: BusinessRole; transfersOwnership?: boolean },
+  input: { businessId: string; normalizedEmail: string; role: BusinessRole; transfersOwnership?: boolean } & ({ invitedByUserId: string; invitedByPlatformKeyId?: undefined } | { invitedByPlatformKeyId: string; invitedByUserId?: undefined; transfersOwnership?: false }),
 ): Promise<{ invitationId: string; token: string; expiresAt: Date }> {
   const token = randomBytes(32).toString("base64url");
   const tokenHash = createHash("sha256").update(token).digest("hex");
@@ -400,7 +405,8 @@ export async function insertInvitationInTransaction(
   await tx.insert(businessInvitations).values({
     id: invitationId,
     businessId: input.businessId,
-    invitedByUserId: input.invitedByUserId,
+    invitedByUserId: input.invitedByUserId ?? null,
+    invitedByPlatformKeyId: input.invitedByPlatformKeyId ?? null,
     email: input.normalizedEmail,
     normalizedEmail: input.normalizedEmail,
     role: input.role,
@@ -492,10 +498,13 @@ export async function acceptInvitation(
       const [partnerMember] = await tx.select({ id: partnerMembers.id }).from(partnerMembers).where(and(eq(partnerMembers.partnerId, partnerId), eq(partnerMembers.userId, input.userId), eq(partnerMembers.status, "active"))).limit(1);
       if (partnerMember) throw partnerMemberNotOnTeam();
     }
-    // Only an owner can hand the business over, and the sender may have stopped being one since.
-    if (invitation.transfersOwnership && invitation.invitedByUserId !== input.userId) {
-      const [sender] = await tx.select({ role: businessMemberships.role }).from(businessMemberships).where(and(eq(businessMemberships.businessId, invitation.businessId), eq(businessMemberships.userId, invitation.invitedByUserId), eq(businessMemberships.status, "active"))).limit(1);
-      if (sender?.role !== "business_owner") throw Object.assign(new Error("This claim link no longer works. Ask whoever sent it for a new one."), { status: 409 });
+    // Only an owner can hand the business over, and the sender may have stopped being one since. The database keeps a claim link's sender.
+    const senderUserId = invitation.invitedByUserId;
+    const staleClaimLink = () => Object.assign(new Error("This claim link no longer works. Ask whoever sent it for a new one."), { status: 409 });
+    if (invitation.transfersOwnership && senderUserId === null) throw staleClaimLink();
+    if (invitation.transfersOwnership && senderUserId !== null && senderUserId !== input.userId) {
+      const [sender] = await tx.select({ role: businessMemberships.role }).from(businessMemberships).where(and(eq(businessMemberships.businessId, invitation.businessId), eq(businessMemberships.userId, senderUserId), eq(businessMemberships.status, "active"))).limit(1);
+      if (sender?.role !== "business_owner") throw staleClaimLink();
     }
     // Claim the invitation before joining, so a second accept of the same token fails.
     const [claimed] = await tx.update(businessInvitations).set({ status: "accepted", acceptedByUserId: input.userId, acceptedAt: new Date(), updatedAt: new Date() }).where(and(eq(businessInvitations.id, invitation.id), eq(businessInvitations.status, "pending"))).returning({ id: businessInvitations.id });
@@ -512,14 +521,14 @@ export async function acceptInvitation(
       // its place on the team, the invitations it sent (it holds their links), its
       // API keys for the business, the webhooks those keys, the account or any
       // platform key set up, and any platform key group's link to it.
-      if (invitation.invitedByUserId !== input.userId) {
-        await tx.update(businessMemberships).set({ status: "removed", updatedAt: new Date() }).where(and(eq(businessMemberships.businessId, invitation.businessId), eq(businessMemberships.userId, invitation.invitedByUserId), eq(businessMemberships.status, "active")));
-        await tx.update(businessInvitations).set({ status: "revoked", updatedAt: new Date() }).where(and(eq(businessInvitations.businessId, invitation.businessId), eq(businessInvitations.invitedByUserId, invitation.invitedByUserId), eq(businessInvitations.status, "pending")));
-        const revokedKeys = await tx.update(apiKeys).set({ revokedAt: new Date(), revokedByUserId: input.userId, updatedAt: new Date() }).where(and(eq(apiKeys.businessId, invitation.businessId), eq(apiKeys.createdByUserId, invitation.invitedByUserId), isNull(apiKeys.revokedAt))).returning({ id: apiKeys.id });
+      if (senderUserId !== null && senderUserId !== input.userId) {
+        await tx.update(businessMemberships).set({ status: "removed", updatedAt: new Date() }).where(and(eq(businessMemberships.businessId, invitation.businessId), eq(businessMemberships.userId, senderUserId), eq(businessMemberships.status, "active")));
+        await tx.update(businessInvitations).set({ status: "revoked", updatedAt: new Date() }).where(and(eq(businessInvitations.businessId, invitation.businessId), eq(businessInvitations.invitedByUserId, senderUserId), eq(businessInvitations.status, "pending")));
+        const revokedKeys = await tx.update(apiKeys).set({ revokedAt: new Date(), revokedByUserId: input.userId, updatedAt: new Date() }).where(and(eq(apiKeys.businessId, invitation.businessId), eq(apiKeys.createdByUserId, senderUserId), isNull(apiKeys.revokedAt))).returning({ id: apiKeys.id });
         // Otherwise the sender, or the group whose platform keys set the business up, would keep
         // receiving the new owner's calls, contacts, appointments and messages.
-        await disableWebhookEndpointsInTransaction(tx, { businessId: invitation.businessId, createdByApiKeyIds: revokedKeys.map((key) => key.id), createdByUserId: invitation.invitedByUserId, createdByPlatformKeys: true });
-        await tx.execute(sql`select app.finish_business_handover(${invitation.businessId}::uuid, ${invitation.invitedByUserId}::uuid)`);
+        await disableWebhookEndpointsInTransaction(tx, { businessId: invitation.businessId, createdByApiKeyIds: revokedKeys.map((key) => key.id), createdByUserId: senderUserId, createdByPlatformKeys: true });
+        await tx.execute(sql`select app.finish_business_handover(${invitation.businessId}::uuid, ${senderUserId}::uuid)`);
       }
       // As with a claimed prospect demo, the dashboard opens on the business they now own.
       await tx.update(users).set({ activeBusinessId: invitation.businessId, updatedAt: new Date() }).where(eq(users.id, input.userId));

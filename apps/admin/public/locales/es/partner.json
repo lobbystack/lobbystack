@@ -8,7 +8,8 @@
   "nav": {
     "businesses": "Negocios",
     "branding": "Marca y dominio",
-    "team": "Equipo"
+    "team": "Equipo",
+    "apiKeys": "Claves de API"
   },
   "roles": {
     "owner": "Propietario",
@@ -221,6 +222,74 @@
       "imageSize": "Suba una imagen de 256 KB o menos.",
       "forbidden": "Solo los propietarios y los administradores pueden cambiar la marca."
     }
+  },
+  "apiKeys": {
+    "title": "Claves de API",
+    "description": "Su código usa una clave de plataforma para crear sus negocios y configurarlos mediante la API. Una clave funciona en sus negocios y en ningún otro.",
+    "empty": "Aún no hay claves de plataforma.",
+    "neverUsed": "Nunca",
+    "createdBy": "{{date}} por {{name}}",
+    "revoked": "Revocada el {{date}}",
+    "restricted": {
+      "title": "Solo los propietarios y administradores pueden gestionar las claves de plataforma",
+      "description": "Pida a un propietario o administrador de su equipo que cree una clave para usted."
+    },
+    "columns": {
+      "name": "Nombre",
+      "key": "Clave",
+      "scopes": "Acceso",
+      "created": "Creada",
+      "lastUsed": "Último uso",
+      "actions": "Acciones"
+    },
+    "create": {
+      "action": "Crear clave de plataforma",
+      "title": "Crear una clave de plataforma",
+      "description": "Dele a la clave un nombre que pueda reconocer y permita solo el acceso que necesita.",
+      "nameLabel": "Nombre",
+      "namePlaceholder": "Alta de clientes",
+      "scopesLabel": "Acceso",
+      "cancel": "Cancelar",
+      "submit": "Crear clave",
+      "creating": "Creando…"
+    },
+    "created": {
+      "title": "{{name}} está lista",
+      "description": "Copie la clave y guárdela en un gestor de contraseñas o en la configuración de su herramienta.",
+      "warning": "No volverá a ver esta clave. Si la pierde, revóquela y cree una nueva.",
+      "done": "Listo"
+    },
+    "revoke": {
+      "action": "Revocar",
+      "title": "¿Revocar esta clave de plataforma?",
+      "description": "Todo lo que use {{name}} dejará de funcionar de inmediato. Sus webhooks se desactivan y nadie podrá aceptar las invitaciones de equipo que envió. Los propietarios a los que invitó aún pueden unirse a su negocio. Esta acción no se puede deshacer.",
+      "confirm": "Revocar clave",
+      "cancel": "Cancelar",
+      "done": "Clave de plataforma revocada",
+      "failed": "No pudimos revocar la clave. Inténtelo de nuevo."
+    },
+    "scopes": {
+      "business_read": "Leer los datos, el horario, los servicios, y la configuración y las reglas de la recepcionista del negocio",
+      "business_write": "Actualizar los datos, el horario, los servicios, y la configuración y las reglas de la recepcionista del negocio, incluido el número al que se transfieren las llamadas",
+      "calls_read": "Leer llamadas, resúmenes y transcripciones",
+      "contacts_read": "Leer contactos",
+      "contacts_write": "Crear y actualizar contactos",
+      "appointments_read": "Leer citas y horarios disponibles",
+      "appointments_write": "Reservar, cancelar y reprogramar citas",
+      "messages_read": "Leer los mensajes que tomó la recepcionista",
+      "knowledge_read": "Leer entradas de conocimiento, preguntas frecuentes, sitios web y archivos",
+      "knowledge_write": "Agregar, editar y eliminar entradas de conocimiento, preguntas frecuentes, sitios web y archivos",
+      "billing_manage": "Ver el plan",
+      "phone_numbers_manage": "Ver y liberar números de teléfono",
+      "team_manage": "Invitar y quitar miembros del equipo y cambiar roles",
+      "webhooks_manage": "Crear y eliminar endpoints de webhook",
+      "businesses_create": "Crear negocios e invitar a sus propietarios",
+      "users_create": "Invitar a propietarios a crear una cuenta"
+    }
+  },
+  "secretReveal": {
+    "copy": "Copiar",
+    "copied": "Copiado"
   },
   "signup": {
     "title": "Regístrese como socio",

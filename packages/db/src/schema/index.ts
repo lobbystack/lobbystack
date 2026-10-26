@@ -208,7 +208,9 @@ export const businessInvitations = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
-    invitedByUserId: uuid("invited_by_user_id").notNull().references(() => users.id),
+    // Null when a partner's platform key invited them as the partner; a claim link always names its sender.
+    invitedByUserId: uuid("invited_by_user_id").references(() => users.id),
+    invitedByPlatformKeyId: uuid("invited_by_platform_key_id"),
     email: text("email").notNull(),
     normalizedEmail: text("normalized_email").notNull(),
     role: varchar("role", { length: 32 }).notNull(),
@@ -298,7 +300,7 @@ export const userActiveBusinesses = pgTable(
   ],
 );
 
-// A partner member's open of one of the partner's businesses (migration 0140): until it expires, they work inside the
+// A partner member's open of one of the partner's businesses (migration 0136): until it expires, they work inside the
 // business without joining its team. Opening again moves the times forward; the business's audit log keeps every open.
 export const partnerBusinessOpens = pgTable(
   "partner_business_opens",
@@ -312,6 +314,31 @@ export const partnerBusinessOpens = pgTable(
   (table) => [
     primaryKey({ columns: [table.businessId, table.userId] }),
     index("partner_business_opens_user_idx").on(table.userId, table.expiresAt),
+  ],
+);
+
+// The platform keys a partner made in its console. Each acts as the partner and keeps only its key's SHA-256.
+export const partnerPlatformKeys = pgTable(
+  "partner_platform_keys",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    partnerId: uuid("partner_id").notNull().references(() => partners.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 120 }).notNull(),
+    prefix: varchar("prefix", { length: 12 }).notNull(),
+    keyHash: text("key_hash").notNull(),
+    // Always "group": a CHECK refuses "all", which would reach every business on the deployment.
+    access: varchar("access", { length: 16 }).$type<"group">().default("group").notNull(),
+    scopes: jsonb("scopes").$type<string[]>().notNull(),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    revokedByUserId: uuid("revoked_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("partner_platform_keys_prefix_unique").on(table.prefix),
+    uniqueIndex("partner_platform_keys_key_hash_unique").on(table.keyHash),
+    index("partner_platform_keys_partner_created_idx").on(table.partnerId, table.createdAt),
   ],
 );
 
@@ -1908,6 +1935,7 @@ export const schema = {
   partnerMembers,
   partnerInvitations,
   partnerDomains,
+  partnerPlatformKeys,
   partnerSignupInvitations,
   businesses,
   userActiveBusinesses,

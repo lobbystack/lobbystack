@@ -77,3 +77,14 @@ it("sends back anyone who isn't an owner or admin, or is over the limits, withou
   expect(mocks.state).not.toHaveBeenCalled();
   expect(mocks.store).not.toHaveBeenCalled();
 });
+
+it("keeps a link opened on a partner's domain there, for sign-in and for errors", async () => {
+  const partnerOrigin = "https://acme.portal.example.test";
+  const openOnPartner = () => GET(new Request(`${partnerOrigin}/api/calendar/google/connect?businessId=${businessId}&token=signed-link`, { headers: { "x-lobbystack-brand": "partner:3c2b1a09-8f7e-4d6c-9b5a-4f3e2d1c0b9a", "x-lobbystack-brand-origin": partnerOrigin } }));
+  mocks.operator.mockRejectedValueOnce(Response.json({ error: "Authentication required.", code: "unauthorized" }, { status: 401 }));
+  const login = new URL((await openOnPartner()).headers.get("location")!);
+  expect(`${login.origin}${login.pathname}`).toBe(`${partnerOrigin}/login`);
+  expect(login.searchParams.get("returnTo")).toBe(`/api/calendar/google/connect?businessId=${businessId}&token=signed-link`);
+  mocks.verifyLink.mockReturnValueOnce(null);
+  expect((await openOnPartner()).headers.get("location")).toBe(`${partnerOrigin}/integrations?calendar=google&status=error`);
+});

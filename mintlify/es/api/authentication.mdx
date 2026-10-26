@@ -78,9 +78,31 @@ Para suscribir un endpoint a un evento o cambiar su URL, su clave también neces
 
 ## Claves de plataforma
 
-Una clave de plataforma (`lsp_...`) incorpora y gestiona muchos negocios, mientras que una clave de API actúa sobre uno solo. Puede usarlas para configurar los negocios que atiende, por ejemplo con [`lobbystack onboard`](/es/api/cli).
+Una clave de plataforma (`lsp_...`) incorpora y gestiona muchos negocios, mientras que una clave de API actúa sobre uno solo. Puede usarlas para configurar los negocios que atiende, por ejemplo con [`lobbystack onboard`](/es/api/cli). Un socio crea sus propias claves de plataforma en su consola de socios. El anfitrión, es decir, quien opera el despliegue, define las demás en `PLATFORM_API_KEYS`.
 
-Quien opera el despliegue crea las claves de plataforma; el panel no tiene una página para ellas. En un despliegue autoalojado, `pnpm platform-key:create` escribe una clave nueva en `.platform-keys/<prefix>.json` e imprime su entrada para [`PLATFORM_API_KEYS`](/es/self-hosting/environment-variables). Cada entrada define:
+### Cree la clave de plataforma de un socio
+
+<Steps>
+  <Step title="Abra Claves de API">
+    En la consola de socios, vaya a **Claves de API**. Solo los propietarios y administradores del socio pueden crear y revocar claves.
+  </Step>
+  <Step title="Ponga nombre a la clave y elija su acceso">
+    Seleccione solo los permisos que necesita la herramienta. `POST /businesses` necesita `businesses:create`, y `POST /users` necesita `users:create`.
+  </Step>
+  <Step title="Copie la clave">
+    La consola muestra la clave completa una sola vez. LobbyStack guarda solo un hash, así que nadie puede volver a mostrarla.
+  </Step>
+</Steps>
+
+La clave de plataforma de un socio actúa en nombre del socio, así que sigue funcionando cuando la persona que la creó deja el equipo. Llega a los negocios activos del socio, incluidos los que se crearon desde la consola, y a ningún otro. No puede iniciar un pago de Polar, fijar un plan gestionado ni crear un enlace de reclamación. Tampoco puede buscar ni reservar números de teléfono, ni consultar o cambiar las preferencias de alertas, porque esas acciones se hacen en nombre de una persona.
+
+Con la clave de plataforma de un socio, `POST /businesses` crea un negocio del socio, todavía sin propietario. Indique el propietario en `owner_email`, y el socio le envía por correo una invitación para iniciar sesión en su panel. `access_level` define lo que puede usar el equipo del negocio: `full`, el valor predeterminado, o `activity`. Las claves de plataforma de un socio pueden crear 30 negocios por hora en total. Las invitaciones que envía con `POST /team/invitations` y `POST /users` llegan del socio y llevan a su panel.
+
+Los enlaces que devuelve la API para el negocio de un socio, como la etiqueta de script de un widget o un enlace para conectar un calendario, también llevan al panel del socio.
+
+### Cree una clave del anfitrión
+
+El panel no tiene una página para las claves del anfitrión. En un despliegue autoalojado, `pnpm platform-key:create` escribe una clave nueva en `.platform-keys/<prefix>.json` e imprime su entrada para [`PLATFORM_API_KEYS`](/es/self-hosting/environment-variables). Cada entrada define:
 
 - El grupo al que pertenece la clave (`group`; pase `--group`). Las claves de un mismo grupo llegan a los mismos negocios.
 - La cuenta verificada de LobbyStack en cuyo nombre actúa la clave (`owner_email`), que es la propietaria de los negocios que crea.
@@ -95,7 +117,9 @@ Una clave con `"access": "all"` actúa en nombre de la cuenta de su `owner_email
 
 Cuando el admin se reinicia sin la entrada de una clave en `PLATFORM_API_KEYS`, las solicitudes con esa clave fallan y LobbyStack desactiva los endpoints de webhook que creó la clave. Para conservar uno, vuelva a activarlo con otra de sus claves de plataforma.
 
-`POST /businesses` crea un negocio, y `GET /businesses` lista los que incorporó el grupo de la clave. Las demás solicitudes indican su negocio en el encabezado `LobbyStack-Business`:
+### Use una clave de plataforma
+
+`POST /businesses` crea un negocio. `GET /businesses` lista los que incorporó el grupo de la clave o, para la clave de plataforma de un socio, todos los negocios del socio. Las demás solicitudes indican su negocio en el encabezado `LobbyStack-Business`:
 
 ```bash
 curl https://app.lobbystack.com/api/v1/services \
@@ -103,7 +127,7 @@ curl https://app.lobbystack.com/api/v1/services \
   -H "LobbyStack-Business: 75795511-9ee2-4cb2-a89d-f173ec1dd82d"
 ```
 
-Sin ese encabezado, la solicitud devuelve `400` con el código `business_required`. Un negocio al que la clave no puede llegar devuelve `404`. `GET /me` funciona sin el encabezado y muestra el grupo y el acceso de la clave en `platform`. La API v1 conserva ahí sus nombres originales: `platform.partner` repite `platform.group`, y `platform.access` vale `partner` para una clave con acceso de grupo.
+Sin ese encabezado, la solicitud devuelve `400` con el código `business_required`. Un negocio al que la clave no puede llegar devuelve `404`. `GET /me` funciona sin el encabezado y muestra el grupo y el acceso de la clave en `platform`. La API v1 conserva ahí sus nombres originales: `platform.partner` repite `platform.group`, y `platform.access` vale `partner` para una clave con acceso de grupo. Para la clave de plataforma de un socio, `platform.partner_id` indica el socio, que también es el grupo de la clave. Vale `null` para las claves del anfitrión.
 
 `POST /team/claim-link` entrega un negocio a su propietario. Cuando lo acepta, una clave con acceso de grupo ya no llega al negocio, mientras que una clave con acceso a todos los negocios sigue llegando. En ambos casos, `GET /businesses` deja de listarlo. LobbyStack también desactiva los endpoints de webhook del negocio que creó una clave de plataforma, la cuenta que envió el enlace o las claves API de esa cuenta. El negocio de un socio se queda con ese socio, así que `POST /team/claim-link` devuelve `409` para él. Solo el socio puede cedérselo a su propietario.
 
@@ -114,6 +138,8 @@ Solo una cuenta de LobbyStack verificada puede aceptar un enlace de reclamación
 En **Configuración** > **Claves de API**, haga clic en **Revocar** junto a la clave. Las solicitudes que la usen fallan de inmediato, y no se puede deshacer. Cree una nueva clave si todavía necesita acceso.
 
 LobbyStack también desactiva los endpoints de webhook que creó la clave. Para conservar uno, vuelva a activarlo desde la tarjeta **Webhooks** en **Integraciones**.
+
+Para revocar una clave de plataforma de un socio, haga clic en **Revocar** junto a ella en la página **Claves de API** de la consola de socios. Las solicitudes que la usen fallan de inmediato. LobbyStack desactiva los endpoints de webhook que creó en todos los negocios, y revoca las invitaciones de equipo que envió y que nadie ha aceptado todavía. Los propietarios a los que invitó al crear su negocio aún pueden aceptar.
 
 ## Límites de frecuencia
 

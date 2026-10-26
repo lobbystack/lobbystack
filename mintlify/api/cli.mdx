@@ -37,7 +37,8 @@ lobbystack login --url https://app.lobbystack.com --key-stdin < key.txt
 Which key you use decides what `onboard` can do:
 
 - **An API key** from **Settings** > **API keys** sets up its own business, as long as the business already has the manifest's name or the manifest gives its ID. Give it `business:read`, `business:write`, `knowledge:read` and `knowledge:write`, plus `billing:manage` for a plan, `phone_numbers:manage` for a number and `team:manage` to hand the business over, which only a key an owner created can do. See [Authentication](/api/authentication).
-- **A platform key** creates new businesses. Whoever runs the deployment makes platform keys; see [Platform keys](/api/authentication#platform-keys). A key with access to every business can also give a business a plan and a number. A key with group access can't: the owner pays for both, and once they claim the business, the key can't reach it. Leave `plan` and `phone_number` out of its manifest, and the owner picks them in the dashboard. A key with group access also leaves the full read of a website to the owner.
+- **A host's platform key** creates new businesses. Whoever runs the deployment makes these keys; see [Platform keys](/api/authentication#platform-keys). A key with access to every business can also give a business a plan and a number. A key with group access can't: the owner pays for both, and once they claim the business, the key can't reach it. Leave `plan` and `phone_number` out of its manifest, and the owner picks them in the dashboard. A key with group access also leaves the full read of a website to the owner.
+- **A partner's platform key**, from the partner console's **API keys** page, creates businesses for the partner. Give it `businesses:create`, `business:read`, `business:write`, `knowledge:read`, `knowledge:write` and `team:manage`. Its manifest needs `owner`: the partner invites the owner as it creates the business. `business.access_level` sets what the business's own team can use. Leave `plan` and `phone_number` out, because a partner's businesses don't buy the host's plans and the key can't claim numbers.
 
 In a script or CI, set `LOBBYSTACK_URL` and `LOBBYSTACK_API_KEY` instead of signing in.
 
@@ -88,7 +89,7 @@ owner:
 
 | Section | What it sets |
 | --- | --- |
-| `business` | `name` and `timezone` are required. `locale` (`en` or `fr`), `website_url`, `business_type` and `slug` are optional. `hours` lists the week's open windows by `day`, `open` and `close`, and replaces the hours the business had. `id` sets up a business that already exists instead of creating one. |
+| `business` | `name` and `timezone` are required. `locale` (`en` or `fr`), `website_url`, `business_type` and `slug` are optional. `hours` lists the week's open windows by `day`, `open` and `close`, and replaces the hours the business had. `id` sets up a business that already exists instead of creating one. With a partner's key, `access_level` sets what the business's own team can use when the key creates it: `full`, the default, or `activity`. |
 | `receptionist` | The fields of `PATCH /receptionist`, such as `greeting`, `tone`, `transfer_mode`, `transfer_number` and `booking_mode`. |
 | `services` | The fields of `POST /services`. A service with the same name is updated instead of added again. |
 | `rules` | The fields of `POST /rules`. A rule with the same title is updated. |
@@ -99,8 +100,8 @@ owner:
 | `knowledge.texts` | Notes with a `title` and `content`. A note with the same title gets the new content. |
 | `plan` | `checkout` with a `plan` (`starter` or `pro`) and an `interval` (`monthly` or `annual`). Or `managed: true` for a plan billed outside Polar, which only a platform key with access to every business can set. |
 | `phone_number` | The fields of `POST /phone-numbers/search`: `country`, `kind`, `area_code`, `city`, `region` and `postal_code`. The command claims the first number the search offers. |
-| `onboarding` | Onboarding finishes once nothing it needs is missing, unless the key has group access: then it stays open for the owner. `skip_number: true` finishes it without a number, `complete` sets whether it finishes, and `source` records where the business came from. |
-| `owner` | The `email` of the person who will own the business. They get a link to claim it. |
+| `onboarding` | Onboarding finishes once nothing it needs is missing, unless the key has group access or belongs to a partner: then it stays open for the owner. `skip_number: true` finishes it without a number, `complete` sets whether it finishes, and `source` records where the business came from. |
+| `owner` | The `email` of the person who will own the business. They get a link to claim it. With a partner's key, they get an invitation to sign in on the partner's dashboard instead, sent as the key creates the business. |
 
 The command never deletes what the file leaves out. To remove a service, a rule or knowledge, use the dashboard or the other `lobbystack` commands.
 
@@ -149,6 +150,8 @@ A checkout and a phone number cost money, so the command asks before it starts e
 To set up a business that already exists, put its ID in `business.id`. `--business <id>` works too when the business already has the manifest's name. The command ignores `LOBBYSTACK_BUSINESS` and a profile's saved business, so a new manifest never lands on one by mistake.
 
 The claim link goes out once everything else is done, or before the checkout when a key with access to every business sets up a plan the owner pays for. When the owner accepts it, a key with group access and the API key that sent it can't reach the business any more, and a rerun says so. A key with access to every business still can.
+
+A partner's key never sends a claim link, because the business stays with the partner. It invites the owner as it creates the business, and later runs only check that the owner joined or still has the invitation. A partner's key keeps reaching the business after the owner joins.
 
 ### When the run waits on someone
 

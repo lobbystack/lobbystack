@@ -33,6 +33,7 @@ export * from "./onboarding";
 export * from "./operatorActivity";
 export * from "./outbox";
 export * from "./partners";
+export * from "./partnerPlatformKeys";
 export * from "./outboundDelivery";
 export * from "./phoneVerification";
 export { verificationCodeSmsBody } from "./verificationCode";

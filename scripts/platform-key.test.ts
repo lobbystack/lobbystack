@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("@lobbystack/db", async () => ({ ...(await import("../packages/db/src/schema/index")), withBusinessTransaction: vi.fn() }));
 vi.mock("@lobbystack/shared", async () => await import("../packages/shared/src/index"));
 
-import { generatePlatformKey, parsePlatformKeys, resolvePlatformKey } from "../packages/domain/src/server/publicApi/platformKeys";
+import { generatePlatformKey, parsePlatformKeys, resolveConfiguredPlatformKey } from "../packages/domain/src/server/publicApi/platformKeys";
 import { createPlatformKey } from "./platform-key";
 
 const required = ["--name", "Acme CLI", "--group", "acme", "--owner-email", "ops@acme.example"];
@@ -16,7 +16,7 @@ describe("pnpm platform-key:create", () => {
     expect(command.entry).toMatchObject({ name: "Acme CLI", group: "acme", owner_email: "ops@acme.example", access: "group" });
     expect(command.entry).not.toHaveProperty("partner");
     expect(command.existing).toEqual([]);
-    expect(resolvePlatformKey(command.key, { PLATFORM_API_KEYS: JSON.stringify([command.entry]) })).toMatchObject({ group: "acme", access: "group" });
+    expect(resolveConfiguredPlatformKey(command.key, { PLATFORM_API_KEYS: JSON.stringify([command.entry]) })).toMatchObject({ group: "acme", access: "group" });
 
     const all = createPlatformKey([...required, "--access", "all"], "");
     expect(all.kind === "key" && all.entry.access).toBe("all");

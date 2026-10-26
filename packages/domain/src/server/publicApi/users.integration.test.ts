@@ -5,7 +5,7 @@ import { afterAll, describe, expect, it } from "vitest";
 
 import { createDatabaseClient, outboxMessages, users } from "@lobbystack/db";
 
-import { generatePlatformKey, resolvePlatformKey, resolvePlatformKeyOwner } from "./platformKeys";
+import { generatePlatformKey, resolveConfiguredPlatformKey, resolvePlatformKeyOwner } from "./platformKeys";
 import { inviteUserForApi } from "./users";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
@@ -39,7 +39,7 @@ afterAll(async () => {
 
 describe.skipIf(!testUrl)("POST /users", () => {
   const { key, entry } = generatePlatformKey({ name: "AlloPlace CLI", group: "alloplace", ownerEmail: "ops@alloplace.example" });
-  const resolved = () => resolvePlatformKey(key, { PLATFORM_API_KEYS: JSON.stringify([entry]) })!;
+  const resolved = () => resolveConfiguredPlatformKey(key, { PLATFORM_API_KEYS: JSON.stringify([entry]) })!;
   const invite = async (email: string, idempotencyKey = `owner-${randomUUID()}`, locale?: "en" | "fr" | "es" | "sr") => await inviteUserForApi({ auth: auth!.db, app: app!.db }, { key: resolved(), idempotencyKey, body: { email, ...(locale ? { locale } : {}) }, appBaseUrl: "https://app.example.com" });
   const queued = async (email: string) => (await admin!.db.select({ payload: outboxMessages.payload, aggregateId: outboxMessages.aggregateId }).from(outboxMessages).where(and(eq(outboxMessages.topic, "email.send"), eq(sql`${outboxMessages.payload}->>'to'`, email)))).map((row) => ({ ...row.payload, aggregateId: row.aggregateId }));
   const accountsWith = async (email: string) => await admin!.db.select({ id: users.id }).from(users).where(eq(users.normalizedEmail, email));
@@ -72,5 +72,14 @@ describe.skipIf(!testUrl)("POST /users", () => {
     expect(after).toEqual(account);
     expect(await accountsWith(email)).toHaveLength(1);
     expect(await queued(email)).toEqual([{ template: "existing_account", to: email, variables: { locale: "fr", signInUrl: "https://app.example.com/fr/login", resetUrl: "https://app.example.com/fr/forgot-password" }, brand: { kind: "host" }, replyTo: null, aggregateId: account!.id }]);
+  });
+
+  it("emails under the partner's brand, with links to its dashboard, for a partner's key", async () => {
+    const email = `owner-${randomUUID()}@example.invalid`;
+    emails.push(email);
+    const partnerId = randomUUID();
+    const partnerPlatformKey = { platformKeyId: randomUUID(), prefix: "lsp_0a1b2c3d", name: "Acme onboarding", group: partnerId, partnerId, access: "group" as const, scopes: ["users:create" as const], createdAt: new Date().toISOString() };
+    await inviteUserForApi({ auth: auth!.db, app: app!.db }, { key: partnerPlatformKey, idempotencyKey: `owner-${randomUUID()}`, body: { email }, appBaseUrl: "https://acme.portal.example" });
+    expect(await queued(email)).toEqual([{ template: "account_setup", to: email, variables: { locale: "en", email, url: "https://acme.portal.example/en/signup" }, brand: { kind: "partner", partnerId }, replyTo: null, aggregateId: null }]);
   });
 });

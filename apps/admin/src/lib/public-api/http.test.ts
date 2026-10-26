@@ -18,7 +18,7 @@ vi.mock("@lobbystack/domain", async () => ({
   ...domain,
 }));
 
-import { generatePlatformKey, PlatformKeyConfigError, PublicApiError, type ResolvedApiKey, type ResolvedPlatformKey } from "@lobbystack/domain";
+import { generatePlatformKey, PlatformKeyConfigError, PublicApiError, type PartnerPlatformKey, type ResolvedApiKey, type ResolvedPlatformKey } from "@lobbystack/domain";
 
 import { handleApiRequest } from "./http";
 
@@ -316,6 +316,15 @@ describe("platform keys in the v1 request pipeline", () => {
     }
   });
 
+  it("asks the database for a key that isn't in PLATFORM_API_KEYS, and answers 401 when it has none", async () => {
+    const execute = vi.fn(async () => ({ rows: [] }));
+    const { resolvePlatformKey: _resolve, ...dependencies } = platform();
+    const response = await handleApiRequest(request("/contacts", { headers: { authorization: `Bearer ${token}`, "LobbyStack-Business": businessB } }), "listContacts", vi.fn(), { ...dependencies, context: () => ({ db: { execute } } as never) });
+    expect(response.status).toBe(401);
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(dependencies.resolvePlatformOwner).not.toHaveBeenCalled();
+  });
+
   it("keeps serving per-business keys when PLATFORM_API_KEYS is malformed", async () => {
     vi.stubEnv("PLATFORM_API_KEYS", "{not json");
     try {
@@ -324,5 +333,71 @@ describe("platform keys in the v1 request pipeline", () => {
     } finally {
       vi.unstubAllEnvs();
     }
+  });
+});
+
+describe("a partner's platform keys in the v1 request pipeline", () => {
+  const token = `lsp_5e6f7a8b_${"y".repeat(32)}`;
+  const partnerId = "3c2b1a09-8f7e-4d6c-9b5a-4f3e2d1c0b9a";
+  const partnerPlatformKey: PartnerPlatformKey = { platformKeyId: "6d5c4b3a-2918-4f7e-8d6c-5b4a39281706", prefix: "lsp_5e6f7a8b", name: "Acme Zapier", group: partnerId, partnerId, access: "group", scopes: ["contacts:read", "businesses:create"], createdAt: "2026-10-26T12:00:00.000Z" };
+
+  function partner() {
+    return {
+      resolveKey: vi.fn(async () => { throw new Error("A platform key must not reach the per-business key lookup."); }),
+      resolvePlatformKey: vi.fn(async () => partnerPlatformKey),
+      resolvePlatformOwner: vi.fn(async () => { throw new Error("A partner's key acts as the partner and has no owner_email."); }),
+      requirePlatformBusiness: vi.fn(async () => undefined),
+      touchPlatformKey: vi.fn(async () => undefined),
+      rateLimit: vi.fn(allow),
+    };
+  }
+
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it("acts on the header's business as the partner, within the partner's businesses, and records the key's use", async () => {
+    const dependencies = partner();
+    const handler = vi.fn(async (_input: unknown) => ({ body: { data: [] } }));
+    const log = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    try {
+      const response = await handleApiRequest(request("/contacts", { headers: { authorization: `Bearer ${token}`, "LobbyStack-Business": businessB } }), "listContacts", handler, dependencies);
+      expect(response.status).toBe(200);
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ caller: { businessId: businessB, platformKeyId: partnerPlatformKey.platformKeyId, groupId: partnerId, partnerId, actor: "platform_key" } }));
+      expect(dependencies.requirePlatformBusiness).toHaveBeenCalledWith({ businessId: businessB, groupId: partnerId, access: "group", partnerId });
+      expect(dependencies.resolvePlatformOwner).not.toHaveBeenCalled();
+      expect(dependencies.rateLimit).toHaveBeenCalledWith(`platform:${partnerPlatformKey.platformKeyId}`);
+      await vi.waitFor(() => expect(dependencies.touchPlatformKey).toHaveBeenCalledWith(expect.objectContaining({ platformKeyId: partnerPlatformKey.platformKeyId, partnerId })));
+      const line = log.mock.calls.map(([value]) => String(value)).find((value) => value.includes("public_api.request"));
+      expect(JSON.parse(line!)).toMatchObject({ platform_key_id: partnerPlatformKey.platformKeyId, group_id: partnerId, partner_id: partnerId, business_id: businessB });
+      expect(line).not.toContain(token);
+    } finally {
+      log.mockRestore();
+    }
+  });
+
+  it("answers 404 for a business outside the partner", async () => {
+    const dependencies = { ...partner(), requirePlatformBusiness: vi.fn(async () => { throw new PublicApiError(404, "not_found", "Business not found."); }) };
+    const handler = vi.fn();
+    const response = await handleApiRequest(request("/contacts", { headers: { authorization: `Bearer ${token}`, "LobbyStack-Business": businessA } }), "listContacts", handler, dependencies);
+    expect(response.status).toBe(404);
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it("gives a business-less operation the key and no acting account", async () => {
+    const dependencies = partner();
+    const handler = vi.fn(async (_input: unknown) => ({ status: 201, body: { data: { id: "b1" } } }));
+    const response = await handleApiRequest(request("/businesses", { method: "POST", body: "{}", headers: { authorization: `Bearer ${token}`, "idempotency-key": "onboard-acme" } }), "createBusiness", handler, dependencies);
+    expect(response.status).toBe(201);
+    expect(handler).toHaveBeenCalledWith(expect.objectContaining({ actingUserId: null, idempotencyKey: "onboard-acme", credential: expect.objectContaining({ kind: "platform_key", partnerId }) }));
+    expect(dependencies.requirePlatformBusiness).not.toHaveBeenCalled();
+  });
+
+  it("answers 401 once the key is revoked", async () => {
+    const dependencies = { ...partner(), resolvePlatformKey: vi.fn(async () => null) };
+    const handler = vi.fn();
+    const response = await handleApiRequest(request("/contacts", { headers: { authorization: `Bearer ${token}`, "LobbyStack-Business": businessB } }), "listContacts", handler, dependencies);
+    expect(response.status).toBe(401);
+    expect(await response.json()).toMatchObject({ error: { code: "unauthorized", message: "The API key is invalid or has been revoked." } });
+    expect(handler).not.toHaveBeenCalled();
+    expect(dependencies.touchPlatformKey).not.toHaveBeenCalled();
   });
 });

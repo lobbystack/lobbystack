@@ -41,13 +41,17 @@ export async function tempDir(): Promise<{ path: string; remove(): Promise<void>
   return { path, remove: () => rm(path, { recursive: true, force: true }) };
 }
 
-/** Runs the CLI against the fake API, logged in through the environment unless env says otherwise. */
-export async function runCli(argv: string[], options: { fetch?: typeof fetch; env?: NodeJS.ProcessEnv; configHome?: string } = {}) {
+/**
+ * Runs the CLI against the fake API, or any fetch such as the admin's own
+ * route handlers, logged in through the environment unless env says otherwise.
+ */
+export async function runCli(argv: string[], options: { fetch?: typeof fetch; env?: Record<string, string | undefined>; configHome?: string } = {}) {
   const out: string[] = [];
   const err: string[] = [];
   const code = await main({
     argv,
-    env: { XDG_CONFIG_HOME: options.configHome ?? join(tmpdir(), "lobbystack-cli-unused"), LOBBYSTACK_URL: "https://app.example.com", LOBBYSTACK_API_KEY: KEY, LOBBYSTACK_BUSINESS: BUSINESS, ...options.env },
+    // Next.js types NODE_ENV as required, so the admin's tests see a ProcessEnv only through this cast.
+    env: { XDG_CONFIG_HOME: options.configHome ?? join(tmpdir(), "lobbystack-cli-unused"), LOBBYSTACK_URL: "https://app.example.com", LOBBYSTACK_API_KEY: KEY, LOBBYSTACK_BUSINESS: BUSINESS, ...options.env } as unknown as NodeJS.ProcessEnv,
     out: (text) => out.push(text),
     err: (text) => err.push(text),
     sleep: async () => undefined,
