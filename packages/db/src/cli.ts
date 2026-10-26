@@ -177,6 +177,9 @@ async function main(): Promise<void> {
             ,('lobbystack_app', 'user_active_businesses', 'INSERT')
             ,('lobbystack_app', 'user_active_businesses', 'DELETE')
             ,('lobbystack_readonly', 'user_active_businesses', 'SELECT')
+            ,('lobbystack_app', 'partner_business_opens', 'SELECT')
+            ,('lobbystack_app', 'partner_business_opens', 'INSERT')
+            ,('lobbystack_readonly', 'partner_business_opens', 'SELECT')
             ,('lobbystack_finance_export', 'businesses', 'SELECT')
             ,('lobbystack_finance_export', 'billing_accounts', 'SELECT')
             ,('lobbystack_finance_export', 'calls', 'SELECT')
@@ -200,7 +203,8 @@ async function main(): Promise<void> {
         // The app role updates partner rows only through the columns partner
         // operations write, so no row moves to another partner, person, sender or
         // role, and no partner changes its slug. A person's active business on a
-        // partner's domains moves only to another of that partner's businesses.
+        // partner's domains moves only to another of that partner's businesses,
+        // and opening a partner's business again only moves the open's times.
         const partnerUpdateGrantFailures = await migrator.db.execute<{ table_name: string; column_name: string; granted: boolean }>(sql`
           select expected.table_name, expected.column_name, expected.granted
           from (values
@@ -249,7 +253,12 @@ async function main(): Promise<void> {
             ('user_active_businesses', 'business_id', true),
             ('user_active_businesses', 'updated_at', true),
             ('user_active_businesses', 'user_id', false),
-            ('user_active_businesses', 'partner_id', false)
+            ('user_active_businesses', 'partner_id', false),
+            ('partner_business_opens', 'opened_at', true),
+            ('partner_business_opens', 'expires_at', true),
+            ('partner_business_opens', 'business_id', false),
+            ('partner_business_opens', 'user_id', false),
+            ('partner_business_opens', 'partner_id', false)
           ) as expected(table_name, column_name, granted)
           where has_column_privilege('lobbystack_app', 'public.' || expected.table_name, expected.column_name, 'UPDATE') <> expected.granted
         `);
@@ -293,6 +302,10 @@ async function main(): Promise<void> {
             ('lobbystack_app', 'app.count_owned_direct_businesses(uuid)'),
             ('lobbystack_app', 'app.list_user_businesses(uuid)'),
             ('lobbystack_app', 'app.list_partner_businesses(uuid)'),
+            ('lobbystack_app', 'app.list_partner_business_usage(uuid, text)'),
+            ('lobbystack_app', 'app.is_partner_member_email(uuid, text)'),
+            ('lobbystack_app', 'app.business_number_claim_in_progress(uuid)'),
+            ('lobbystack_worker', 'app.business_exists(uuid)'),
             ('lobbystack_app', 'app.partner_role(uuid)'),
             ('lobbystack_worker', 'app.partner_role(uuid)'),
             ('lobbystack_readonly', 'app.partner_role(uuid)'),
@@ -302,6 +315,12 @@ async function main(): Promise<void> {
             ('lobbystack_app', 'app.partner_brand_image(uuid, text)'),
             ('lobbystack_app', 'app.partner_for_host(text)'),
             ('lobbystack_app', 'app.business_partner(uuid)'),
+            ('lobbystack_app', 'app.partner_access_role(uuid)'),
+            ('lobbystack_worker', 'app.partner_access_role(uuid)'),
+            ('lobbystack_dispatcher', 'app.partner_access_role(uuid)'),
+            ('lobbystack_app', 'app.has_partner_access(uuid)'),
+            ('lobbystack_worker', 'app.has_partner_access(uuid)'),
+            ('lobbystack_app', 'app.has_team_membership(uuid)'),
             ('lobbystack_worker', 'app.business_partner(uuid)'),
             ('lobbystack_app', 'app.can_save_initial_branding()'),
             ('lobbystack_app', 'app.save_initial_branding(text, bytea, text)'),
@@ -456,8 +475,9 @@ async function verifyRlsBehavior(client: ReturnType<typeof createDatabaseClient>
     const ids = (await tx.execute<{
       business_a: string;
       business_b: string;
+      business_c: string;
       user_id: string;
-    }>(sql`select gen_random_uuid() as business_a, gen_random_uuid() as business_b, gen_random_uuid() as user_id`)).rows[0];
+    }>(sql`select gen_random_uuid() as business_a, gen_random_uuid() as business_b, gen_random_uuid() as business_c, gen_random_uuid() as user_id`)).rows[0];
     if (!ids) throw new Error("Could not create RLS verification identifiers.");
 
     await tx.execute(sql`
@@ -483,6 +503,11 @@ async function verifyRlsBehavior(client: ReturnType<typeof createDatabaseClient>
     await tx.execute(sql`
       insert into public.partner_members (partner_id, user_id, role)
       values (${ids.business_a}::uuid, ${ids.user_id}::uuid, 'member')
+    `);
+    // A business of partner A, whose team the user is on without being on the business's.
+    await tx.execute(sql`
+      insert into public.businesses (id, slug, name, timezone, business_type, partner_id)
+      values (${ids.business_c}::uuid, ${`rls-c-${ids.business_c}`}, 'RLS Verification C', 'UTC', 'test', ${ids.business_a}::uuid)
     `);
     await tx.execute(sql`
       insert into public.services (business_id, name, slug, duration_minutes)
@@ -518,6 +543,30 @@ async function verifyRlsBehavior(client: ReturnType<typeof createDatabaseClient>
         throw new Error(`RLS cross-tenant check failed (unauthorized business count=${unauthorizedBusiness}).`);
       }
 
+      // A partner member reaches a partner's business only while they hold an open of it.
+      await tx.execute(sql`select set_config('app.business_id', ${ids.business_c}, true)`);
+      const unopenedBusiness = (await tx.execute<{ count: string }>(sql`select count(*)::text as count from public.businesses`)).rows[0]?.count;
+      await tx.execute(sql.raw("reset role"));
+      await tx.execute(sql`
+        insert into public.partner_business_opens (business_id, user_id, partner_id, expires_at)
+        values (${ids.business_c}::uuid, ${ids.user_id}::uuid, ${ids.business_a}::uuid, now() + interval '1 hour')
+      `);
+      await tx.execute(sql.raw("set local role lobbystack_app"));
+      const openedBusiness = (await tx.execute<{ count: string }>(sql`select count(*)::text as count from public.businesses`)).rows[0]?.count;
+      if (unopenedBusiness !== "0" || openedBusiness !== "1") {
+        throw new Error(`RLS partner open check failed (before open=${unopenedBusiness ?? "missing"}, after=${openedBusiness ?? "missing"}).`);
+      }
+      // Releasing the business forgets the partner's opens of it, so the member reaches nothing in it again.
+      await tx.execute(sql.raw("reset role"));
+      await tx.execute(sql`update public.businesses set partner_id = null where id = ${ids.business_c}::uuid`);
+      const keptOpens = (await tx.execute<{ count: string }>(sql`select count(*)::text as count from public.partner_business_opens where business_id = ${ids.business_c}::uuid`)).rows[0]?.count;
+      await tx.execute(sql.raw("set local role lobbystack_app"));
+      const releasedBusiness = (await tx.execute<{ count: string }>(sql`select count(*)::text as count from public.businesses`)).rows[0]?.count;
+      if (keptOpens !== "0" || releasedBusiness !== "0") {
+        throw new Error(`RLS partner release check failed (opens kept=${keptOpens ?? "missing"}, visible after release=${releasedBusiness ?? "missing"}).`);
+      }
+      await tx.execute(sql`select set_config('app.business_id', ${ids.business_b}, true)`);
+
       await tx.execute(sql`select set_config('app.actor_type', 'worker', true)`);
       const spoofedWorkerServices = (await tx.execute<{ count: string }>(sql`select count(*)::text as count from public.services where business_id = ${ids.business_b}::uuid`)).rows[0]?.count;
       await tx.execute(sql`select set_config('app.actor_type', 'dispatcher', true)`);
@@ -534,7 +583,7 @@ async function verifyRlsBehavior(client: ReturnType<typeof createDatabaseClient>
       }
     } finally {
       await tx.execute(sql.raw("reset role"));
-      await tx.execute(sql`delete from public.businesses where id in (${ids.business_a}::uuid, ${ids.business_b}::uuid)`);
+      await tx.execute(sql`delete from public.businesses where id in (${ids.business_a}::uuid, ${ids.business_b}::uuid, ${ids.business_c}::uuid)`);
       await tx.execute(sql`delete from public.partners where id in (${ids.business_a}::uuid, ${ids.business_b}::uuid)`);
       await tx.execute(sql`delete from public.users where id = ${ids.user_id}::uuid`);
     }

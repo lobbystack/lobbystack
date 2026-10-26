@@ -92,7 +92,7 @@ import {
   type ApiWidgetKeyUpdate,
 } from "@lobbystack/shared";
 
-import { AuthorizationError, requireBusinessAdmin, requireBusinessMembership } from "../../authz";
+import { AuthorizationError, requireTeamMembership } from "../../authz";
 import { hasAnsweredPhoneCall, loadSetupGuideInTransaction, setupGuideStepIds, updateSetupGuideSkippedStepsInTransaction, type SetupGuideStepId } from "../activation";
 import { attributeBusiness } from "../affiliates";
 import { createBillingCheckoutRequestInTransaction, endManagedPlanInTransaction, isManagedBillingAccount, setManagedPlanInTransaction, setOverageSpendingCapInTransaction } from "../billing";
@@ -220,7 +220,8 @@ export async function resolveActingUserId(context: DomainContext, caller: ApiCal
     const userId = key?.createdByUserId;
     if (!userId) throw keyOwnerInactive();
     try {
-      await requireBusinessAdmin(tx, { userId, businessId: caller.businessId });
+      // The key's creator must still be on the team: a partner open never stands in for them.
+      await requireTeamMembership(tx, { userId, businessId: caller.businessId, minimumRole: "business_admin" });
     } catch (error) {
       if (error instanceof AuthorizationError) throw keyOwnerInactive();
       throw error;
@@ -1023,7 +1024,7 @@ export async function deleteCalendarConnectionForApi(context: DomainContext, cal
 async function asTeamMember<T>(context: DomainContext, caller: ApiCaller, userId: string, run: (tx: DatabaseTransaction) => Promise<T>): Promise<T> {
   return await withBusinessTransaction(context.db, { userId, businessId: caller.businessId, actorType: "operator" }, async (tx) => {
     try {
-      await requireBusinessMembership(tx, { userId, businessId: caller.businessId });
+      await requireTeamMembership(tx, { userId, businessId: caller.businessId });
     } catch (error) {
       if (error instanceof AuthorizationError) throw conflict("The account this key acts as isn't on the business's team, so it gets no alerts about it.");
       throw error;

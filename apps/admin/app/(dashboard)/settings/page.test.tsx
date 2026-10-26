@@ -15,7 +15,7 @@ it("opens Usage on the host's domain, whose direct businesses give every tab", a
   await expect(SettingsPage()).rejects.toMatchObject({ to: "/settings/usage" });
 });
 
-it("on a partner's host, opens the first tab the business allows, since it has no Usage tab", async () => {
+it("on a partner's host, opens the first tab the business allows", async () => {
   fixture.headers = new Headers({ "x-lobbystack-brand": "partner:5b1f6c43-34a5-4a8e-9a43-6c1f8d5f1c11", "x-lobbystack-brand-origin": "https://bright.portal.example.test" });
   expect(((await SettingsPage()) as ReactElement).type).toBe(FirstSettingsTab);
 });

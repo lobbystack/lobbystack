@@ -17,13 +17,16 @@
   },
   "businesses": {
     "title": "Businesses",
-    "description": "The businesses you resell. Their owners sign in at your dashboard address.",
+    "description": "The businesses you resell, with their minutes and chats this month. Their owners sign in at your dashboard address. Each business's audit log records who on your team opens it.",
     "loadFailed": "We couldn't load your businesses. Refresh to try again.",
     "createdOn": "Created {{date}}",
     "table": {
       "business": "Business",
       "owner": "Owner",
-      "access": "Access"
+      "access": "Access",
+      "minutes": "Minutes this month",
+      "chats": "Chats this month",
+      "actions": "Actions"
     },
     "owner": {
       "invited": "Invited",
@@ -33,6 +36,40 @@
     "access": {
       "full": "Full access",
       "activity": "Activity only"
+    },
+    "open": {
+      "action": "Open",
+      "label": "Open {{name}}",
+      "opening": "Opening",
+      "failed": "We couldn't open {{name}}. Try again."
+    },
+    "actions": {
+      "more": "More actions for {{name}}"
+    },
+    "confirm": {
+      "cancel": "Cancel"
+    },
+    "release": {
+      "action": "Release to owner",
+      "title": "Release {{name}}?",
+      "description": "{{email}} keeps {{name}} and its receptionist on the Free plan and takes over its billing. It leaves your console, and your team can't open it anymore.",
+      "confirm": "Release business",
+      "released": "You released {{name}} to {{email}}.",
+      "errors": {
+        "ownerRequired": "{{name}} has no owner yet. Its owner has to accept their invitation first.",
+        "failed": "We couldn't release {{name}}. Try again."
+      }
+    },
+    "delete": {
+      "action": "Delete",
+      "title": "Delete {{name}}?",
+      "description": "You'll erase {{name}} with its calls, chats, contacts, appointments and settings, and give up its phone number. Its owner and team lose access, and you can't undo it.",
+      "confirm": "Delete business",
+      "deleted": "You deleted {{name}}.",
+      "errors": {
+        "numberInProgress": "We're still setting up {{name}}'s phone number. Try again in a few minutes.",
+        "failed": "We couldn't delete {{name}}. Try again."
+      }
     },
     "empty": {
       "title": "No businesses yet",
@@ -76,6 +113,7 @@
         "invalidTimezone": "Pick a time zone.",
         "domainRequired": "You need a dashboard address before you can create a business. Ask {{appName}} to set one up.",
         "rateLimited": "You created too many businesses. Try again in an hour.",
+        "ownerOnTeam": "Someone on your team can't own a business. Enter the email of the client who owns it.",
         "failed": "We couldn't create the business. Try again."
       }
     }

@@ -17,13 +17,16 @@
   },
   "businesses": {
     "title": "Firme",
-    "description": "Firme kojima preprodajete uslugu. Njihovi vlasnici se prijavljuju na adresi vaše kontrolne table.",
+    "description": "Firme kojima preprodajete uslugu, sa njihovim minutima i četovima ovog meseca. Njihovi vlasnici se prijavljuju na adresi vaše kontrolne table. Dnevnik revizije svake firme beleži ko iz vašeg tima je otvara.",
     "loadFailed": "Nismo uspeli da učitamo vaše firme. Osvežite stranicu i pokušajte ponovo.",
     "createdOn": "Napravljena {{date}}",
     "table": {
       "business": "Firma",
       "owner": "Vlasnik",
-      "access": "Pristup"
+      "access": "Pristup",
+      "minutes": "Minuti ovog meseca",
+      "chats": "Četovi ovog meseca",
+      "actions": "Radnje"
     },
     "owner": {
       "invited": "Poziv poslat",
@@ -33,6 +36,40 @@
     "access": {
       "full": "Pun pristup",
       "activity": "Samo aktivnost"
+    },
+    "open": {
+      "action": "Otvori",
+      "label": "Otvori {{name}}",
+      "opening": "Otvaranje",
+      "failed": "Nismo uspeli da otvorimo {{name}}. Pokušajte ponovo."
+    },
+    "actions": {
+      "more": "Još radnji za {{name}}"
+    },
+    "confirm": {
+      "cancel": "Otkaži"
+    },
+    "release": {
+      "action": "Predaj vlasniku",
+      "title": "Predati {{name}}?",
+      "description": "{{email}} zadržava {{name}} i njenu recepcionerku na Free paketu i preuzima njeno plaćanje. Firma napušta vašu konzolu i vaš tim više ne može da je otvori.",
+      "confirm": "Predaj firmu",
+      "released": "Predali ste {{name}} vlasniku {{email}}.",
+      "errors": {
+        "ownerRequired": "{{name}} još nema vlasnika. Vlasnik prvo mora da prihvati poziv.",
+        "failed": "Nismo uspeli da predamo {{name}}. Pokušajte ponovo."
+      }
+    },
+    "delete": {
+      "action": "Obriši",
+      "title": "Obrisati {{name}}?",
+      "description": "Obrisaćete {{name}} sa pozivima, četovima, kontaktima, terminima i podešavanjima i odreći se njenog broja telefona. Vlasnik i tim gube pristup, a ovo ne možete da poništite.",
+      "confirm": "Obriši firmu",
+      "deleted": "Obrisali ste {{name}}.",
+      "errors": {
+        "numberInProgress": "Još podešavamo broj telefona firme {{name}}. Pokušajte ponovo za nekoliko minuta.",
+        "failed": "Nismo uspeli da obrišemo {{name}}. Pokušajte ponovo."
+      }
     },
     "empty": {
       "title": "Još nema firmi",
@@ -76,6 +113,7 @@
         "invalidTimezone": "Izaberite vremensku zonu.",
         "domainRequired": "Potrebna vam je adresa kontrolne table pre nego što napravite firmu. Zatražite od servisa {{appName}} da je podesi.",
         "rateLimited": "Napravili ste previše firmi. Pokušajte ponovo za sat vremena.",
+        "ownerOnTeam": "Neko iz vašeg tima ne može da bude vlasnik firme. Unesite imejl klijenta čija je firma.",
         "failed": "Nismo uspeli da napravimo firmu. Pokušajte ponovo."
       }
     }

@@ -3,11 +3,11 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { and, eq, gt, isNull, ne, or, sql } from "drizzle-orm";
 
 import { enqueueOutbox, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
-import { apiKeys, businesses, businessInvitations, businessMemberships, closures, receptionistProfiles, services, staff, userActiveBusinesses, users } from "@lobbystack/db";
+import { apiKeys, businesses, businessInvitations, businessMemberships, closures, partnerMembers, receptionistProfiles, services, staff, userActiveBusinesses, users } from "@lobbystack/db";
 import { currencyFractionDigits, defaultAppointmentChangePolicy, defaultCurrencyForTimezone, defaultGreeting, isCurrencyCode, isDefaultGreeting, normalizeAuthEmail, normalizeRuntimeLocale, parseDeploymentMode, type EmailBrandReference, type PartnerAccessLevel } from "@lobbystack/shared";
 
 import { requireBusinessAdmin } from "../authz";
-import { brandPartnerId, businessCapabilities, businessShowsOnBrand, requireBusinessAccess, type BrandScope, type Capability } from "./businessAccess";
+import { accessCapabilities, brandPartnerId, businessShowsOnBrand, capabilityNames, readBusinessAccess, requireBusinessAccess, type BrandScope, type BusinessAccessVia, type Capability } from "./businessAccess";
 import { enqueueBusinessSummaryRefresh } from "./businessSummary";
 import type { DomainContext } from "./context";
 import type { OnboardingStage } from "./onboarding";
@@ -254,26 +254,30 @@ export type UserBusiness = {
   createdAt: string;
   /** The access level a partner's business gives its own operators, or null for a direct business. */
   partnerAccessLevel: PartnerAccessLevel | null;
-  /** What the business lets its operators do, before their role's rules. The dashboard hides the rest. */
+  /** How the person reaches the business: on its team, or through an open as a member of its partner. */
+  via: BusinessAccessVia;
+  /** What the business lets the person do, before their role's rules. The dashboard hides the rest. */
   capabilities: Capability[];
 };
 
 /**
- * The businesses the person is on the team of that show on this brand's
- * domains, with the one they work in there marked active: their direct
- * businesses on the host's domain, and a partner's businesses only on that
- * partner's.
+ * The businesses that show on this brand's domains which the person is on
+ * the team of, or holds an open of as a member of their partner, with the one
+ * they work in there marked active: their direct businesses on the host's
+ * domain, and a partner's businesses only on that partner's. Through an open
+ * the role is an admin's.
  */
 export async function listUserBusinesses(db: Database, userId: string, brand: BrandScope): Promise<UserBusiness[]> {
   return await withBusinessTransaction(db, { userId, actorType: "operator" }, async (tx) => {
     const active = await readActiveBusinessIdInTransaction(tx, { userId, brand });
-    const rows = await tx.execute<Omit<UserBusiness, "active" | "createdAt" | "partnerAccessLevel" | "capabilities"> & { createdAt: Date; partnerId: string | null; accessLevel: PartnerAccessLevel }>(sql`select business_id as "businessId", name, slug, role, timezone, business_type as "businessType", default_locale as "defaultLocale", website_url as "websiteUrl", onboarding_stage as "onboardingStage", created_at as "createdAt", partner_id as "partnerId", partner_access_level as "accessLevel" from app.list_user_businesses(${userId})`);
-    return rows.rows.filter((row) => businessShowsOnBrand(row.partnerId, brand)).map(({ partnerId, accessLevel, ...row }) => ({
+    const rows = await tx.execute<Omit<UserBusiness, "active" | "createdAt" | "partnerAccessLevel" | "via" | "capabilities"> & { createdAt: Date; partnerId: string | null; accessLevel: PartnerAccessLevel; via: BusinessAccessVia }>(sql`select business_id as "businessId", name, slug, role, timezone, business_type as "businessType", default_locale as "defaultLocale", website_url as "websiteUrl", onboarding_stage as "onboardingStage", created_at as "createdAt", partner_id as "partnerId", partner_access_level as "accessLevel", access_via as "via" from app.list_user_businesses(${userId})`);
+    return rows.rows.filter((row) => businessShowsOnBrand(row.partnerId, brand)).map(({ partnerId, accessLevel, via, ...row }) => ({
       ...row,
       active: row.businessId === active,
       createdAt: new Date(row.createdAt).toISOString(),
       partnerAccessLevel: partnerId ? accessLevel : null,
-      capabilities: [...businessCapabilities({ partnerId, accessLevel })],
+      via,
+      capabilities: [...accessCapabilities({ partnerId, accessLevel }, via)],
     }));
   });
 }
@@ -331,15 +335,16 @@ export async function updateBusinessInTransaction(
 }
 
 /**
- * What a business gives its own operators, before their role's rules, read
- * as the person: everything for a direct business, less for a partner's. Null
- * when they can't read the business. The dashboard uses it for a business
- * the workspace list leaves out, such as one no longer active.
+ * What a business gives the person, before their role's rules: everything
+ * for a direct business, less for a partner's, and full access through a
+ * partner open. Null when they can't reach the business. The dashboard uses
+ * it for a business the workspace list leaves out, such as one no longer
+ * active.
  */
 export async function readBusinessCapabilities(db: Database, input: { userId: string; businessId: string }): Promise<Capability[] | null> {
   return await withBusinessTransaction(db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
-    const [business] = await tx.select({ partnerId: businesses.partnerId, accessLevel: businesses.partnerAccessLevel }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1);
-    return business ? [...businessCapabilities(business)] : null;
+    const access = await readBusinessAccess(tx, input);
+    return access ? capabilityNames.filter((capability) => access.can(capability)) : null;
   });
 }
 
@@ -416,6 +421,26 @@ export async function insertInvitationInTransaction(
   return { invitationId, token, expiresAt };
 }
 
+/**
+ * The refusal of someone on a business's partner's team joining the
+ * business's team. They work in it through opens, which its audit log records
+ * and which end when they leave the partner or the partner releases it, so
+ * the team list holds only the business's own operators.
+ */
+export function partnerMemberNotOnTeam(): Error {
+  return Object.assign(new Error("People on the business's partner's team work in it from the partner's console, so they can't join its team."), { status: 409, code: "partner_member_not_on_team" });
+}
+
+/**
+ * Whether this address belongs to someone on the partner's team. The
+ * database answers only someone on that team, and false for anyone else, so
+ * a business's own operators learn nothing of the partner's team.
+ */
+export async function isPartnerMemberEmail(tx: DatabaseTransaction, input: { partnerId: string; normalizedEmail: string }): Promise<boolean> {
+  const rows = await tx.execute<{ found: boolean }>(sql`select app.is_partner_member_email(${input.partnerId}::uuid, ${input.normalizedEmail}) as found`);
+  return rows.rows[0]?.found === true;
+}
+
 export async function inviteMember(
   context: DomainContext,
   input: { userId: string; businessId: string; email: string; role: BusinessRole },
@@ -430,6 +455,9 @@ export async function inviteMember(
     actorType: "operator",
   }, async (tx) => {
     await requireBusinessAdmin(tx, { userId: input.userId, businessId: input.businessId });
+    // A partner member can't put themselves or their colleagues on the team through an open. Accepting checks it too.
+    const [business] = await tx.select({ partnerId: businesses.partnerId }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1);
+    if (business?.partnerId && await isPartnerMemberEmail(tx, { partnerId: business.partnerId, normalizedEmail })) throw partnerMemberNotOnTeam();
     const { invitationId, token } = await insertInvitationInTransaction(tx, { businessId: input.businessId, invitedByUserId: input.userId, normalizedEmail, role: input.role });
     return { invitationId, token };
   });
@@ -459,6 +487,11 @@ export async function acceptInvitation(
     const partnerId = (await tx.select({ partnerId: businesses.partnerId }).from(businesses).where(eq(businesses.id, invitation.businessId)).limit(1))[0]?.partnerId ?? null;
     // A partner's business stays with its partner, which can release it to its owner. No claim link hands it over.
     if (invitation.transfersOwnership && partnerId) throw partnerBusinessNotClaimable();
+    // Whoever sent the invitation, someone on the business's partner's team never joins its team.
+    if (partnerId) {
+      const [partnerMember] = await tx.select({ id: partnerMembers.id }).from(partnerMembers).where(and(eq(partnerMembers.partnerId, partnerId), eq(partnerMembers.userId, input.userId), eq(partnerMembers.status, "active"))).limit(1);
+      if (partnerMember) throw partnerMemberNotOnTeam();
+    }
     // Only an owner can hand the business over, and the sender may have stopped being one since.
     if (invitation.transfersOwnership && invitation.invitedByUserId !== input.userId) {
       const [sender] = await tx.select({ role: businessMemberships.role }).from(businessMemberships).where(and(eq(businessMemberships.businessId, invitation.businessId), eq(businessMemberships.userId, invitation.invitedByUserId), eq(businessMemberships.status, "active"))).limit(1);

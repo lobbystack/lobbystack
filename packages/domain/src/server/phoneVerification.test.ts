@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   withBusinessTransaction: vi.fn(),
   enqueueOutbox: vi.fn(),
-  requireBusinessMembership: vi.fn(),
+  requireTeamMembership: vi.fn(),
   resolveSmsSender: vi.fn(),
   enableOperatorSmsAlertsWithConsent: vi.fn(),
 }));
@@ -13,7 +13,7 @@ vi.mock("@lobbystack/db", async (original) => ({
   withBusinessTransaction: mocks.withBusinessTransaction,
   enqueueOutbox: mocks.enqueueOutbox,
 }));
-vi.mock("../authz", () => ({ requireBusinessMembership: mocks.requireBusinessMembership }));
+vi.mock("../authz", () => ({ requireTeamMembership: mocks.requireTeamMembership }));
 vi.mock("./notifications", () => ({ enableOperatorSmsAlertsWithConsent: mocks.enableOperatorSmsAlertsWithConsent }));
 vi.mock("./smsSender", () => ({ resolveSmsSender: mocks.resolveSmsSender }));
 
@@ -61,7 +61,7 @@ function setup(config: { selects?: unknown[][]; updates?: unknown[][]; execute?:
 
 beforeEach(() => {
   vi.stubEnv("OTP_HASH_SECRET", secret);
-  mocks.requireBusinessMembership.mockResolvedValue({ role: "viewer" });
+  mocks.requireTeamMembership.mockResolvedValue({ role: "viewer" });
   mocks.resolveSmsSender.mockResolvedValue("+14165550100");
 });
 
@@ -121,7 +121,7 @@ describe("startOperatorPhoneVerification", () => {
   it("replaces open attempts, reserves a rate-limited attempt, and queues only its id", async () => {
     const { sets, executed } = setup({ execute: async () => ({ rows: [{ id: "attempt-9" }] }) });
     await expect(startOperatorPhoneVerification(context, input)).resolves.toEqual({ attemptId: "attempt-9" });
-    expect(mocks.requireBusinessMembership).toHaveBeenCalled();
+    expect(mocks.requireTeamMembership).toHaveBeenCalled();
     expect(sets[0]).toMatchObject({ status: "canceled", codeHash: null });
     expect(executed[0]).toContain("reserve_phone_verification_attempt");
     expect(mocks.enqueueOutbox).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ topic: "phoneVerification.sendCode", businessId: "business-1", payload: { attemptId: "attempt-9", locale: "en" } }));

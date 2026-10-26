@@ -1,8 +1,8 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 
-import { and, asc, eq, isNull, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, ne, notInArray, or, sql } from "drizzle-orm";
 
-import { auditLogs, enqueueOutbox, partnerDomains, partnerInvitations, partnerMembers, partners, partnerSignupInvitations, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { auditLogs, billingAccounts, businesses, businessInvitations, businessMemberships, enqueueOutbox, outboxMessages, partnerDomains, partnerInvitations, partnerMembers, partners, partnerSignupInvitations, phoneNumbers, storageObjects, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import {
   brandLogoContentType,
   currentPartnerSubdomain,
@@ -33,7 +33,10 @@ import { AuthorizationError } from "../authz";
 import { announceBrandChange } from "./brands";
 import type { DomainContext } from "./context";
 import { firstOnboardingStage } from "./onboarding";
-import { ianaTimeZone, insertInvitationInTransaction, insertOwnerlessBusinessInTransaction, isSingleEmailAddress } from "./tenancy";
+import { lockBusinessNumberClaims } from "./phoneNumbers";
+import { isSharedSmsSender } from "./smsSender";
+import { ianaTimeZone, insertInvitationInTransaction, insertOwnerlessBusinessInTransaction, isPartnerMemberEmail, isSingleEmailAddress, lockBusinessTeam } from "./tenancy";
+import { periodKeyFor } from "./usage";
 
 // Partner operations: what the partner console, and later a partner's
 // platform keys, can do. Each function checks the actor's role itself, so
@@ -594,6 +597,8 @@ export type PartnerBusiness = {
   createdAt: string;
   /** Its owner once they joined, the person invited to own it while that invitation waits, or null for neither. */
   owner: { email: string; status: "joined" } | { email: string; status: "invited"; expiresAt: string } | null;
+  /** What it used this month, as usage metering counts it: voice seconds and chats. A month runs in UTC. */
+  usage: { periodKey: string; voiceSeconds: number; chats: number };
 };
 
 export const PARTNER_BUSINESS_NAME_MAX_LENGTH = 120;
@@ -603,15 +608,24 @@ function businessesActor(actor: PartnerActor): PartnerMemberActor {
   return actor;
 }
 
-/** The partner's businesses, by name, with each one's owner or the invitation to own it. Anyone on the team can read them. */
+/**
+ * The partner's businesses, by name, with each one's owner or the invitation
+ * to own it, and its minutes and chats this month. Anyone on the team can
+ * read them.
+ */
 export async function listPartnerBusinesses(context: DomainContext, actor: PartnerActor): Promise<PartnerBusiness[]> {
   const member = businessesActor(actor);
+  const periodKey = periodKeyFor();
   return await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => {
     await currentRole(tx, member);
-    // The partner's members aren't on its businesses' teams, so RLS shows them none; this function answers instead.
+    // The partner's members aren't on its businesses' teams, so RLS shows them none; these functions answer instead.
     const rows = await tx.execute<{ businessId: string; name: string; accessLevel: PartnerAccessLevel; onboardingStage: string; createdAt: string; ownerEmail: string | null; invitedEmail: string | null; invitationExpiresAt: string | null }>(
       sql`select business_id as "businessId", name, access_level as "accessLevel", onboarding_stage as "onboardingStage", created_at as "createdAt", owner_email as "ownerEmail", invited_email as "invitedEmail", invitation_expires_at as "invitationExpiresAt" from app.list_partner_businesses(${member.partnerId}::uuid)`,
     );
+    const used = await tx.execute<{ businessId: string; voiceSeconds: number; chats: number }>(
+      sql`select business_id as "businessId", voice_seconds_used as "voiceSeconds", chats_used as "chats" from app.list_partner_business_usage(${member.partnerId}::uuid, ${periodKey})`,
+    );
+    const usage = new Map(used.rows.map((row) => [row.businessId, row]));
     // Raw queries return Postgres timestamp text, which Safari's Date can't parse.
     const iso = (value: string) => new Date(value).toISOString();
     return rows.rows.map((row) => ({
@@ -621,6 +635,7 @@ export async function listPartnerBusinesses(context: DomainContext, actor: Partn
       onboardingStage: row.onboardingStage,
       createdAt: iso(row.createdAt),
       owner: row.ownerEmail ? { email: row.ownerEmail, status: "joined" } : row.invitedEmail && row.invitationExpiresAt ? { email: row.invitedEmail, status: "invited", expiresAt: iso(row.invitationExpiresAt) } : null,
+      usage: { periodKey, voiceSeconds: Number(usage.get(row.businessId)?.voiceSeconds ?? 0), chats: Number(usage.get(row.businessId)?.chats ?? 0) },
     }));
   });
 }
@@ -656,6 +671,8 @@ export async function createPartnerBusiness(
 
   const created = await withBusinessTransaction(context.db, { userId: member.userId, businessId, actorType: "system" }, async (tx) => {
     if (await currentRole(tx, member) === "member") throw new AuthorizationError("Only owners and admins can create the partner's businesses.");
+    // The partner's people work in its businesses through opens, never on their teams, so none of them owns one.
+    if (await isPartnerMemberEmail(tx, { partnerId: member.partnerId, normalizedEmail: ownerEmail })) throw failure("The owner can't be someone on your team. Your team works in the business from the console.", 409, "owner_on_partner_team");
     // A partner that signed up while the deployment had no base domain gets its subdomain now, if it can.
     const domain = baseDomain ? await reserveSubdomainIn(tx, member.partnerId, baseDomain) : { subdomain: null, changed: false };
     if (!domain.subdomain) throw failure("You need your own domain before you can create a business.", 409, "partner_domain_required");
@@ -669,4 +686,112 @@ export async function createPartnerBusiness(
   });
   if (created.subdomainReserved) await announceBrandChange(context, { kind: "partner", partnerId: member.partnerId });
   return { businessId: created.businessId, invitationId: created.invitationId, expiresAt: created.expiresAt };
+}
+
+function businessNotFound(): Error {
+  return failure("Business not found.", 404, "business_not_found");
+}
+
+/**
+ * Locks the business and checks it's one of the partner's, returning the
+ * partner as the database spells it. Another partner's business, a direct
+ * one, or one no longer active answers as one that doesn't exist. The
+ * transaction must be the system actor's, scoped to the business. Take any
+ * advisory lock first: the team's and the number claims' lock holders write
+ * rows that point at the business, which waits on this row lock.
+ */
+async function lockPartnerBusiness(tx: DatabaseTransaction, member: PartnerMemberActor, businessId: string, strength: "update" | "no key update"): Promise<string> {
+  const [business] = await tx.select({ partnerId: businesses.partnerId, status: businesses.status }).from(businesses).where(eq(businesses.id, businessId)).limit(1).for(strength);
+  if (business?.status !== "active" || !business.partnerId || business.partnerId !== member.partnerId.toLowerCase()) throw businessNotFound();
+  return business.partnerId;
+}
+
+/** The host's Free plan, as a billing account holds it: no paid plan, subscription or spending cap. */
+const FREE_PLAN_ACCOUNT = { plan: "free_cloud", subscriptionState: null, subscriptionId: null, billingInterval: null, currentPeriodStart: null, currentPeriodEnd: null, overageSpendingCapCents: null };
+
+/**
+ * Releases one of the partner's businesses to its owner, who keeps it as a
+ * direct business on the host's Free plan and pays the host from then on. It
+ * needs an owner who accepted the invitation. The business leaves the console
+ * and the partner's domains. The partner's people lose it at once: the
+ * database forgets their opens of it, and the invitations to its team that
+ * anyone off the team sent, such as the partner's people, stop working. None
+ * of them is on its team, since they can't join it. Its audit log records who
+ * released it. Only owners and admins can.
+ */
+export async function releaseBusiness(context: DomainContext, actor: PartnerActor, input: { businessId: string }): Promise<{ ownerUserId: string }> {
+  const member = businessesActor(actor);
+  // The business's own rows show only to the system actor, since the partner's people aren't on its team.
+  return await withBusinessTransaction(context.db, { userId: member.userId, businessId: input.businessId, actorType: "system" }, async (tx) => {
+    if (await currentRole(tx, member) === "member") throw new AuthorizationError("Only owners and admins can release the partner's businesses.");
+    // Team changes take this lock, so the owner can't leave while the business moves to them.
+    await lockBusinessTeam(tx, input.businessId);
+    // Clearing the partner changes no key, so joining the team, which checks the business's key, doesn't wait on this.
+    const partnerId = await lockPartnerBusiness(tx, member, input.businessId, "no key update");
+    const [owner] = await tx.select({ userId: businessMemberships.userId }).from(businessMemberships)
+      .where(and(eq(businessMemberships.businessId, input.businessId), eq(businessMemberships.role, "business_owner"), eq(businessMemberships.status, "active")))
+      .orderBy(asc(businessMemberships.createdAt), asc(businessMemberships.id))
+      .limit(1);
+    if (!owner) throw failure("The business's owner has to accept their invitation before you can release it.", 409, "owner_required");
+    // A direct business ignores the access level; it goes back to the default.
+    await tx.update(businesses).set({ partnerId: null, partnerAccessLevel: "full", updatedAt: new Date() }).where(eq(businesses.id, input.businessId));
+    const team = tx.select({ userId: businessMemberships.userId }).from(businessMemberships).where(and(eq(businessMemberships.businessId, input.businessId), eq(businessMemberships.status, "active")));
+    await tx.update(businessInvitations).set({ status: "revoked", updatedAt: new Date() }).where(and(eq(businessInvitations.businessId, input.businessId), eq(businessInvitations.status, "pending"), notInArray(businessInvitations.invitedByUserId, team)));
+    await tx.insert(billingAccounts).values({ businessId: input.businessId, billingKey: `business:${input.businessId}`, ...FREE_PLAN_ACCOUNT }).onConflictDoUpdate({ target: billingAccounts.businessId, set: { ...FREE_PLAN_ACCOUNT, updatedAt: new Date() } });
+    await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: member.userId, eventType: "partner.business_released", entityType: "business", entityId: input.businessId, payload: { partnerId, ownerUserId: owner.userId } });
+    return { ownerUserId: owner.userId };
+  });
+}
+
+/** How many stored files one cleanup job deletes. */
+const STORED_OBJECTS_PER_JOB = 500;
+
+/**
+ * Deletes one of the partner's businesses with everything in it: its team,
+ * calls, chats, contacts, appointments, knowledge and settings, its audit log
+ * included. The worker then releases the phone numbers it held and deletes
+ * the files it stored. The emails and jobs it queued that haven't gone out
+ * are dropped, so none reaches its people after it's gone. While a number is
+ * still being bought for it, it's refused for now, since the purchase would
+ * finish for a business that's gone. Only owners and admins can.
+ */
+export async function deletePartnerBusiness(context: DomainContext, actor: PartnerActor, input: { businessId: string }): Promise<void> {
+  const member = businessesActor(actor);
+  await withBusinessTransaction(context.db, { userId: member.userId, businessId: input.businessId, actorType: "system" }, async (tx) => {
+    if (await currentRole(tx, member) === "member") throw new AuthorizationError("Only owners and admins can delete the partner's businesses.");
+    // Number claims take this lock, so none starts buying a number while the business goes.
+    await lockBusinessNumberClaims(tx, input.businessId);
+    await lockPartnerBusiness(tx, member, input.businessId, "update");
+    // RLS shows the partner's people none of the business's claims, so the database answers. A claim no worker will finish doesn't count.
+    const claiming = (await tx.execute<{ busy: boolean }>(sql`select app.business_number_claim_in_progress(${input.businessId}::uuid) as busy`)).rows[0]?.busy === true;
+    const [provisioning] = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "provisioning"))).limit(1);
+    if (claiming || provisioning) throw failure("The business's phone number is still being set up. Try again in a few minutes.", 409, "business_number_in_progress");
+    // A number being released already is released again, in case that release fails once the business is gone.
+    const held = await tx.select({ id: phoneNumbers.id, e164: phoneNumbers.e164, providerPhoneId: phoneNumbers.providerPhoneId }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), inArray(phoneNumbers.status, ["active", "reclaiming"])));
+    const stored = await tx.select({ objectKey: storageObjects.objectKey }).from(storageObjects).where(and(eq(storageObjects.businessId, input.businessId), ne(storageObjects.status, "deleted")));
+    // An invitation or alert sent after the business is gone would go out under the host's brand.
+    await tx.delete(outboxMessages).where(and(eq(outboxMessages.businessId, input.businessId), isNull(outboxMessages.publishedAt)));
+    await tx.delete(businesses).where(eq(businesses.id, input.businessId));
+    // The business is gone, so these jobs belong to none.
+    for (const number of held) {
+      // The shared sender texts for every business, so it stays, as a reclaim leaves it.
+      if (!number.providerPhoneId || isSharedSmsSender(number.e164)) continue;
+      await enqueueOutbox(tx, {
+        topic: "phoneNumber.releaseDeleted",
+        aggregateType: "phone_number",
+        aggregateId: number.id,
+        dedupeKey: `phone-number:${number.id}:release-deleted`,
+        payload: { providerPhoneId: number.providerPhoneId, e164: number.e164 },
+      });
+    }
+    for (let start = 0; start < stored.length; start += STORED_OBJECTS_PER_JOB) {
+      await enqueueOutbox(tx, {
+        topic: "privacy.deleteStoredObjects",
+        aggregateType: "business",
+        aggregateId: input.businessId,
+        dedupeKey: `business:${input.businessId}:delete-stored-objects:${start}`,
+        payload: { objectKeys: stored.slice(start, start + STORED_OBJECTS_PER_JOB).map((object) => object.objectKey) },
+      });
+    }
+  });
 }

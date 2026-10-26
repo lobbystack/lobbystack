@@ -1,12 +1,12 @@
 import { beforeEach, expect, it, vi } from "vitest";
 
-const fixture = vi.hoisted(() => ({ resolve: vi.fn(), list: vi.fn(), create: vi.fn(), limit: vi.fn() }));
+const fixture = vi.hoisted(() => ({ resolve: vi.fn(), list: vi.fn(), create: vi.fn(), remove: vi.fn(), limit: vi.fn() }));
 vi.mock("@/lib/operator-request", () => import("@/lib/operator-request.fake"));
 vi.mock("@/lib/fixed-window-limit", () => ({ enforceFixedWindow: fixture.limit, fixedWindowLimit: () => ({}) }));
-vi.mock("@lobbystack/domain", () => ({ resolvePartnerActor: fixture.resolve, listPartnerBusinesses: fixture.list, createPartnerBusiness: fixture.create }));
+vi.mock("@lobbystack/domain", () => ({ resolvePartnerActor: fixture.resolve, listPartnerBusinesses: fixture.list, createPartnerBusiness: fixture.create, deletePartnerBusiness: fixture.remove }));
 
-import { resetFakeOperator } from "@/lib/operator-request.fake";
-import { GET, POST } from "./route";
+import { fakeOperator, resetFakeOperator } from "@/lib/operator-request.fake";
+import { DELETE, GET, POST } from "./route";
 
 const partnerId = "5b1f6c43-34a5-4a8e-9a43-6c1f8d5f1c11";
 const actor = { kind: "member", partnerId, userId: "user", role: "admin" };
@@ -73,4 +73,26 @@ it("acts only on the partner whose host the request came in on", async () => {
   expect(response.status).toBe(404);
   expect(fixture.resolve).not.toHaveBeenCalled();
   expect(fixture.create).not.toHaveBeenCalled();
+});
+
+it("deletes a business through the partner operation, which checks the actor's role", async () => {
+  fakeOperator.businessId = "7c2e8d54-45b6-4b9f-8b54-7d2a9e6a2d22";
+  fixture.remove.mockResolvedValue(undefined);
+  const response = await call(DELETE, "DELETE", { partnerId, businessId: fakeOperator.businessId });
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({ ok: true });
+  expect(fixture.remove).toHaveBeenCalledWith(expect.anything(), actor, { businessId: fakeOperator.businessId });
+
+  fixture.remove.mockRejectedValueOnce(Object.assign(new Error("The business's phone number is still being set up. Try again in a few minutes."), { status: 409, code: "business_number_in_progress" }));
+  const holding = await call(DELETE, "DELETE", { partnerId, businessId: fakeOperator.businessId });
+  expect(holding.status).toBe(409);
+  expect(await holding.json()).toMatchObject({ code: "business_number_in_progress" });
+});
+
+it("needs a business to delete", async () => {
+  fakeOperator.businessId = undefined as unknown as string;
+  const response = await call(DELETE, "DELETE", { partnerId });
+  expect(response.status).toBe(400);
+  expect(await response.json()).toMatchObject({ code: "business_required" });
+  expect(fixture.remove).not.toHaveBeenCalled();
 });

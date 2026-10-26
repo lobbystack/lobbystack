@@ -5,7 +5,7 @@ import { and, eq, inArray, isNotNull, lt, ne, or, sql } from "drizzle-orm";
 import { canTextNumber, type InterfaceLocale } from "@lobbystack/shared";
 import { enqueueOutbox, onboardingPhoneVerifications, withBusinessTransaction } from "@lobbystack/db";
 
-import { requireBusinessMembership } from "../authz";
+import { requireTeamMembership } from "../authz";
 import type { DomainContext } from "./context";
 import { enableOperatorSmsAlertsWithConsent } from "./notifications";
 import { isNumberCountry } from "./numberTrials";
@@ -18,7 +18,9 @@ import { VERIFICATION_CODE_TTL_MS, newVerificationCode, verificationCodeSecret }
 // phone each hour, 30 seconds between codes to one phone). The worker
 // generates each code and texts it from the alert SMS sender; only a keyed
 // hash is stored. app.complete_phone_verification then sets users.phone and
-// users.phone_verified_at.
+// users.phone_verified_at. Only the business's own team verifies a phone in
+// it, never a partner member who opened it: alerts go to the team, and a
+// partner's business forwards calls to its owner's verified phone.
 
 export const PHONE_VERIFICATION_CODE_TTL_MS = VERIFICATION_CODE_TTL_MS;
 export const PHONE_VERIFICATION_MAX_CHECKS = 5;
@@ -93,7 +95,7 @@ export async function startOperatorPhoneVerification(
   const fingerprint = createHash("sha256").update(`${input.userId}:${input.phoneE164}`).digest("hex");
   try {
     return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
-      await requireBusinessMembership(tx, input);
+      await requireTeamMembership(tx, input);
       const sender = await resolveSmsSender(tx, input.businessId);
       if (!sender) throw phoneVerificationError(409, "sms_sender_missing", "An alert SMS sender is required for SMS notifications.");
       if (!canTextNumber(sender, input.phoneE164)) throw phoneVerificationError(422, "phone_unreachable", "The alert SMS sender can't text this number.");
@@ -124,7 +126,7 @@ export async function getOperatorPhoneVerification(
 ): Promise<{ id: string; status: OperatorPhoneVerificationStatus; expiresAt: Date } | null> {
   const now = input.now ?? new Date();
   return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
-    await requireBusinessMembership(tx, input);
+    await requireTeamMembership(tx, input);
     const row = (await tx.select({ id: onboardingPhoneVerifications.id, status: onboardingPhoneVerifications.status, expiresAt: onboardingPhoneVerifications.expiresAt })
       .from(onboardingPhoneVerifications)
       .where(and(eq(onboardingPhoneVerifications.id, input.attemptId), eq(onboardingPhoneVerifications.businessId, input.businessId), eq(onboardingPhoneVerifications.userId, input.userId)))
@@ -150,7 +152,7 @@ export async function checkOperatorPhoneVerificationCode(
   if (!CODE_PATTERN.test(code)) throw phoneVerificationError(400, "verification_code_invalid", "Enter the 6-digit code.");
   const now = input.now ?? new Date();
   return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
-    await requireBusinessMembership(tx, input);
+    await requireTeamMembership(tx, input);
     const scope = and(eq(onboardingPhoneVerifications.id, input.attemptId), eq(onboardingPhoneVerifications.businessId, input.businessId), eq(onboardingPhoneVerifications.userId, input.userId));
     const attempt = (await tx.select({ id: onboardingPhoneVerifications.id, phoneE164: onboardingPhoneVerifications.phoneE164, status: onboardingPhoneVerifications.status, expiresAt: onboardingPhoneVerifications.expiresAt, attemptCount: onboardingPhoneVerifications.attemptCount, codeHash: onboardingPhoneVerifications.codeHash })
       .from(onboardingPhoneVerifications).where(scope).limit(1).for("update"))[0];
@@ -250,7 +252,7 @@ export async function startOnboardingPhoneVerification(
   let attemptId: string;
   try {
     attemptId = await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
-      await requireBusinessMembership(tx, input);
+      await requireTeamMembership(tx, input);
       const result = await tx.execute(sql`SELECT app.reserve_phone_verification_attempt(${input.businessId}::uuid, ${input.userId}::uuid, ${input.phoneE164}, ${countryCode}, ${null}, ${fingerprint}) AS id`);
       const id = String((result.rows[0] as { id?: unknown } | undefined)?.id ?? "");
       if (!id) throw new Error("Phone verification could not be reserved.");
@@ -309,7 +311,7 @@ export async function checkOnboardingPhoneVerificationCode(
   const scope = and(eq(onboardingPhoneVerifications.id, input.attemptId), eq(onboardingPhoneVerifications.businessId, input.businessId), eq(onboardingPhoneVerifications.userId, input.userId));
   // Count the check before calling Twilio, so parallel guesses can't get past the limit.
   const attempt = await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "operator" }, async (tx) => {
-    await requireBusinessMembership(tx, input);
+    await requireTeamMembership(tx, input);
     const row = (await tx.select({ phoneE164: onboardingPhoneVerifications.phoneE164, status: onboardingPhoneVerifications.status, expiresAt: onboardingPhoneVerifications.expiresAt, attemptCount: onboardingPhoneVerifications.attemptCount, providerVerificationId: onboardingPhoneVerifications.providerVerificationId })
       .from(onboardingPhoneVerifications).where(scope).limit(1).for("update"))[0];
     if (!row || row.status !== "pending" || !row.providerVerificationId) return { outcome: { status: "unavailable" } as const };

@@ -127,13 +127,16 @@ Business access decides whether a person may act in a business, and what they ma
 type BusinessAccess = {
   businessId: string;
   via: "membership" | "partner";
-  role: "business_owner" | "business_admin" | "scheduler" | "viewer" | "partner_owner" | "partner_admin" | "partner_member";
+  role: "business_owner" | "business_admin" | "scheduler" | "viewer"; // an admin's through a partner open
+  partnerRole: "owner" | "admin" | "member" | null;                    // set through a partner open
+  partnerId: string | null;
+  accessLevel: "full" | "activity" | null;
   can: (capability: Capability) => boolean;
 };
 type Capability = "activity" | "setup" | "team" | "billing" | "api_keys" | "mcp";
 
 requireBusinessAccess(tx, input: { userId: string; businessId: string; brand: Brand }): Promise<BusinessAccess>
-openPartnerBusiness(context, input: { userId: string; businessId: string }): Promise<{ expiresAt: Date }>
+openPartnerBusiness(context, input: { userId: string; businessId: string; partnerId?: string }): Promise<{ expiresAt: Date }>
 ```
 
 - `requireBusinessAccess` refuses a business whose brand differs from the request's brand, so a business never shows on another brand's domain. A business of another brand gets the same refusal as one the person isn't on. It replaces `requireBusinessMembership` in `forBusiness`.
@@ -144,6 +147,16 @@ openPartnerBusiness(context, input: { userId: string; businessId: string }): Pro
 - The dashboard hides each page the business doesn't give the person, from the table in `apps/admin/src/lib/dashboard-pages.ts`. The workspace list carries each business's capabilities for it.
 - On a partner's domain, a signed-in person with no business there gets a "no businesses" page instead of onboarding, since that domain makes no direct business.
 - A partner member reaches a business only after `openPartnerBusiness`. That writes the open with its expiry and an `audit_logs` row in one transaction. In the database, `app.has_partner_access(business_id)` checks the same open, so RLS and the application agree.
+- An open lasts 8 hours, and opening again starts the time over. The `partner_business_opens` table keeps one row per person and business, and the audit log gets a `partner.business_opened` row for every open, naming who opened it, when, and until when.
+- An open counts only while the business still belongs to the partner that opened it and the person is still on that partner's team. Releasing the business or removing the member ends the access at once.
+- `openPartnerBusiness` refuses a business of another partner, a direct business, and anyone off the partner's team. It answers each with a 404, like a business that doesn't exist. The console passes its own partner, so it can't open another partner's business either. The open also makes the business the person's active one on the partner's domains.
+- Through an open, a partner member gets full access whatever the business's access level: `activity`, `setup`, and `team`, never `billing`, `api_keys`, or `mcp`. The business's rules see an admin's role, so a partner member never takes an owner's place.
+- `app.has_business_membership` answers true for the business's own team or a partner open, so every tenant policy lets the open in. `app.has_team_membership` keeps the old answer for functions that act for the team only.
+- Partner members never join the team. `inviteMember` refuses an address on the business's partner's team, and `acceptInvitation` refuses anyone on it, with `partner_member_not_on_team`. `createPartnerBusiness` refuses an owner on the partner's team. `app.is_partner_member_email` answers the address check only for someone on that partner's team, so a business's own operators learn nothing of it.
+- `app.list_business_members` lists only the business's own operators, and alert recipients and owner lookups read only memberships. Only the team verifies a phone in the business, because a partner's business forwards calls to its owner's verified phone.
+- `requireBusinessMembership` counts a partner open as an admin's role, and `requireTeamMembership` counts only the team. Every runtime role may call `app.partner_access_role`, which answers only for the current person, so the check works on the worker's connection too. A per-business API key acts for its creator only while they're on the team.
+- The workspace list includes the businesses a person has open, with `via: "partner"`. Onboarding belongs to the owner, so a partner member who opens a business goes straight to its dashboard.
+- The scheduler counts an open in the last 30 days as use, so a business the partner sets up before its owner joins gets its jobs.
 - Direct businesses keep today's rules for each role.
 - Callers check capabilities, never roles. Adding a role or an access level changes this module only.
 
@@ -159,8 +172,12 @@ type PartnerActor =
 
 - The console's routes live under `/api/partner/*` in the admin and call these functions directly, the way the dashboard's operator routes call domain functions today. The v1 public API's Platform endpoints call the same functions for keys that belong to a partner.
 - `createPartnerBusiness` creates a business with no owner, links it to the partner at the access level the partner picks, optionally applies a template, and sends the owner an invitation under the partner's brand. The invitation is never a claim link. A partner's businesses open only on its own domains, so the function refuses until the partner has its subdomain. It never counts toward the cap of 10 businesses per account.
-- `releaseBusiness` needs an owner who accepted the invitation. It makes that person the owner, removes the partner, and puts the business on the host's Free plan.
-- Each function checks the actor's role itself. A member can work inside businesses, an admin can also manage businesses, packages, branding, domains, keys, and the team, and only an owner can manage billing, Stripe, owners, and deleting the partner. An admin can invite, change and remove admins and members, but only an owner can grant the owner role or change or remove an owner.
+- `listPartnerBusinesses` gives each business's minutes and chats this month, as usage metering counts them. Row-level security shows a partner member none of a business's rows, so `app.list_partner_business_usage` reads the month's counts for someone on the partner's team.
+- `releaseBusiness` needs an owner who accepted the invitation. It removes the partner, which leaves that person the owner, and puts the business on the host's Free plan. A trigger on `businesses.partner_id` then deletes the partner's opens of the business and the rows that remember it as someone's business on the partner's domains. Invitations to the business's team from anyone off the team, such as the partner's people, stop working. The audit log records the release as `partner.business_released`.
+- `deletePartnerBusiness` deletes the business and every row that belongs to it, its audit log included. It drops the outbox messages that haven't gone out. The worker skips an email whose business no longer exists, through `app.business_exists`, so an email that already left the outbox doesn't reach its people under the host's brand either.
+- `deletePartnerBusiness` queues `phoneNumber.releaseDeleted` for each number the business held, and the worker releases each one with the provider. It skips the shared text sender, as a reclaim does. It also queues `privacy.deleteStoredObjects`, and the worker deletes the business's stored files. While a number is still being bought for the business, it refuses with `business_number_in_progress`, since the purchase would finish for a business that's gone.
+- `releaseBusiness` and `deletePartnerBusiness` take the team's or the number claims' advisory lock before the business's row lock, the order team changes and claims use.
+- Each function checks the actor's role itself. A member can work inside businesses and see their usage, an admin can also manage businesses (create, release and delete them), packages, branding, domains, keys, and the team, and only an owner can manage billing, Stripe, owners, and deleting the partner. An admin can invite, change and remove admins and members, but only an owner can grant the owner role or change or remove an owner.
 
 ## Entitlement
 
@@ -204,6 +221,8 @@ type Reservation =
 - Every reservation stays idempotent per `sourceKey`, as today.
 - The module records, on each usage event, the terms in force at the time. A sync job therefore never re-reads a package that changed later.
 - Callers in calls, web calls, chat, alert texts, and transfers don't change. Running out still raises `voice_limit_reached`, so calls forward the way commit `c5dd718e` set up.
+- A partner's business records each chat even when it has no allowance, since its chats draw on the pool and the console shows them.
+- Every operator sees the business's minutes and chats against its allowance on Settings > Usage. `readAllowanceUsageInTransaction` behind `/api/usage` reads them, needs only `activity`, and carries no prices or spend. A business with billing also sees its plan's meters there.
 
 ## Partner lifecycle
 

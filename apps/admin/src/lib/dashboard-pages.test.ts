@@ -11,15 +11,14 @@ const levels: Record<"direct" | "full" | "activity", readonly Capability[]> = {
 };
 
 describe("dashboard pages", () => {
-  it("puts calls, chats, appointments, contacts and messages under activity, with Home and the person's own settings", () => {
-    for (const path of ["/", "/calls", "/calls/x", "/appointments", "/contacts/x", "/messages", "/settings/account", "/settings/appearance", "/settings/notifications"]) {
+  it("puts calls, chats, appointments, contacts, messages and usage under activity, with Home and the person's own settings", () => {
+    for (const path of ["/", "/calls", "/calls/x", "/appointments", "/contacts/x", "/messages", "/settings/usage", "/settings/account", "/settings/appearance", "/settings/notifications"]) {
       expect(pageCapability(path), path).toBe("activity");
     }
   });
 
   it("keeps billing, API keys and MCP apart from the rest of an owner's and admin's work", () => {
     expect(pageCapability("/settings/plan")).toBe("billing");
-    expect(pageCapability("/settings/usage")).toBe("billing");
     expect(pageCapability("/settings/api-keys")).toBe("api_keys");
     expect(pageCapability("/integrations/webhooks")).toBe("api_keys");
     expect(pageCapability("/settings/connected-apps")).toBe("mcp");
@@ -39,9 +38,10 @@ describe("dashboard pages", () => {
     expect(pageCapability("/settings/something-new")).toBe("setup");
   });
 
-  it("opens Settings on the first tab each access level allows", () => {
+  it("opens Settings on Usage at every access level, since every operator sees the business's usage", () => {
     expect(firstSettingsPage((capability) => levels.direct.includes(capability))).toBe("/settings/usage");
-    expect(firstSettingsPage((capability) => levels.full.includes(capability))).toBe("/settings/team");
-    expect(firstSettingsPage((capability) => levels.activity.includes(capability))).toBe("/settings/appearance");
+    expect(firstSettingsPage((capability) => levels.full.includes(capability))).toBe("/settings/usage");
+    expect(firstSettingsPage((capability) => levels.activity.includes(capability))).toBe("/settings/usage");
+    expect(firstSettingsPage(() => false)).toBe("/settings/account");
   });
 });

@@ -181,7 +181,7 @@ describe.skipIf(!client)("creating a partner's business", () => {
       expect(await brandForEmail(acme.context, stored.email!.brand as { kind: "business"; businessId: string })).toMatchObject({ kind: "partner", partnerId: acme.partnerId, name: "Acme Reception", origin: "https://acme-reception.portal.example.test" });
 
       // Anyone on the partner's team sees it in the console, with its owner still invited.
-      const listed = [{ businessId: created.businessId, name: "Harbor Dental", accessLevel: "activity", onboardingStage: "verify_phone", createdAt: expect.stringMatching(/Z$/), owner: { email: client!.email, status: "invited", expiresAt: created.expiresAt.toISOString() } }];
+      const listed = [{ businessId: created.businessId, name: "Harbor Dental", accessLevel: "activity", onboardingStage: "verify_phone", createdAt: expect.stringMatching(/Z$/), owner: { email: client!.email, status: "invited", expiresAt: created.expiresAt.toISOString() }, usage: { periodKey: new Date().toISOString().slice(0, 7), voiceSeconds: 0, chats: 0 } }];
       expect(await listPartnerBusinesses(acme.context, acme.ownerActor)).toEqual(listed);
       expect(await listPartnerBusinesses(acme.context, acme.memberActor)).toEqual(listed);
       // The partner's people aren't on its team, so it isn't one of their own businesses anywhere.

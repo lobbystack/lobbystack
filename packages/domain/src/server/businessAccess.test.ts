@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { brandPartnerId, businessCapabilities, businessShowsOnBrand, HOST_BRAND_SCOPE } from "./businessAccess";
+import { accessCapabilities, brandPartnerId, businessCapabilities, businessShowsOnBrand, HOST_BRAND_SCOPE } from "./businessAccess";
 
 const partnerId = "5a0f6c7e-1d2b-4c3a-9e8f-7a6b5c4d3e2f";
 
@@ -11,6 +11,15 @@ describe("business capabilities", () => {
     expect([...businessCapabilities({ partnerId: null, accessLevel: "activity" })]).toEqual(["activity", "setup", "team", "billing", "api_keys", "mcp"]);
     expect([...businessCapabilities({ partnerId, accessLevel: "full" })]).toEqual(["activity", "setup", "team"]);
     expect([...businessCapabilities({ partnerId, accessLevel: "activity" })]).toEqual(["activity"]);
+  });
+});
+
+describe("access capabilities", () => {
+  it("gives a partner open full access whatever the business's level, and the team what the business gives it", () => {
+    expect([...accessCapabilities({ partnerId, accessLevel: "activity" }, "partner")]).toEqual(["activity", "setup", "team"]);
+    expect([...accessCapabilities({ partnerId, accessLevel: "full" }, "partner")]).toEqual(["activity", "setup", "team"]);
+    expect([...accessCapabilities({ partnerId, accessLevel: "activity" }, "membership")]).toEqual(["activity"]);
+    expect([...accessCapabilities({ partnerId: null, accessLevel: "full" }, "membership")]).toEqual(["activity", "setup", "team", "billing", "api_keys", "mcp"]);
   });
 });
 

@@ -7,7 +7,7 @@ import type { JobEnvelope } from "@lobbystack/contracts";
 import { billingCheckoutLeaseEndsAt, claimBillingCheckoutRequest, countPublishableOutboxMessages, deleteCallRecordingForRetention, deleteSentProductEventsBefore, deliverOutbound, expireProspectDemos, generateAffiliatePayoutRun, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, loadLiveCallForPricing, recordCallProviderPricing, recordProductEvent, recordSmsProviderPricing, reconcileBillingProviderEvent, runPrivacyRetentionSweep } from "@lobbystack/domain";
 import { queueDailyOperatorSummaries, queueOnboardingFollowupEmail } from "@lobbystack/domain";
 import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning, numberProvisioningLeaseEndsAt } from "@lobbystack/domain";
-import { brandForEmail, businessGetsHostEmails, forgetCachedBrands, loadNumberReleaseEmail, type Brand } from "@lobbystack/domain";
+import { brandForEmail, businessExists, businessGetsHostEmails, forgetCachedBrands, loadNumberReleaseEmail, type Brand } from "@lobbystack/domain";
 import { SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
 
 vi.mock("@lobbystack/domain", async (importOriginal) => {
@@ -44,6 +44,8 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
     loadNumberReleaseEmail: vi.fn(),
     // Every business here is direct unless a test says otherwise.
     businessGetsHostEmails: vi.fn(async () => true),
+    // And still exists.
+    businessExists: vi.fn(async () => true),
   };
 });
 
@@ -201,6 +203,19 @@ describe("worker handlers", () => {
     await send();
     expect(sendMail.mock.lastCall?.[0].text).toBe("You have been invited to join Bright Desk. Accept the invitation here: https://app.example.test/partner/accept-invite?token=t");
     expect(sendMail.mock.lastCall?.[0].replyTo).toBeUndefined();
+  });
+
+  it("drops an email queued for a business deleted since, rather than sending it under the host brand", async () => {
+    const sendTemplate = vi.fn().mockResolvedValue({ messageId: "provider-id" });
+    const businessId = randomUUID();
+    vi.mocked(businessExists).mockResolvedValueOnce(false).mockResolvedValueOnce(false);
+    const send = (input: { jobBusinessId: string | null; brand: unknown }) => handleJob({ jobId: randomUUID(), businessId: input.jobBusinessId, type: "email.send", queue: "default", payload: { invitationId: randomUUID(), email: "owner@example.test", token: "t", template: "invitation", url: "https://app.example.test/accept-invite?token=t", brand: input.brand, replyTo: null }, trace: {}, idempotencyKey: randomUUID(), scheduled: false }, { domain: { db: undefined as never }, email: { sendTemplate } });
+    // The owner invitation a partner's business queued, under the business's brand, and an email about it under the host's.
+    await expect(send({ jobBusinessId: businessId, brand: { kind: "business", businessId } })).resolves.toEqual({ status: "skipped", entityId: businessId });
+    await expect(send({ jobBusinessId: businessId, brand: { kind: "host" } })).resolves.toEqual({ status: "skipped", entityId: businessId });
+    expect(vi.mocked(businessExists).mock.calls).toEqual([[undefined, businessId], [undefined, businessId]]);
+    expect(brandForEmail).not.toHaveBeenCalled();
+    expect(sendTemplate).not.toHaveBeenCalled();
   });
 
   it("refuses a brand reference it can't read rather than sending under the host brand", async () => {
@@ -403,6 +418,58 @@ describe("worker handlers", () => {
 
     expect(result).toEqual({ status: "skipped", entityId: callId });
     expect(deleteCallRecordingForRetention).toHaveBeenCalledWith(domain, { businessId, callId, objectId }, storage);
+  });
+
+  it("deletes the files a deleted business stored, and runs again for the ones it couldn't", async () => {
+    const domain = { db: undefined as never };
+    const objectKeys = ["business/knowledge/menu.pdf", "business/recording/call.wav", "business/knowledge/hours.pdf"];
+    const kept = new Set(objectKeys);
+    let unavailable = true;
+    const storage = {
+      deleteObject: vi.fn(async ({ key }: { key: string }) => {
+        if (key.endsWith("call.wav") && unavailable) {
+          unavailable = false;
+          throw new Error("Storage is unavailable.");
+        }
+        kept.delete(key);
+      }),
+      headObject: vi.fn(async ({ key }: { key: string }) => (kept.has(key) ? { length: 1, contentType: "application/pdf" } : null)),
+    } as never;
+    // The business is gone, so the job names none.
+    const job: JobEnvelope = { jobId: randomUUID(), type: "privacy.deleteStoredObjects", queue: "maintenance", businessId: null, payload: { objectKeys }, trace: {}, idempotencyKey: `business:${randomUUID()}:delete-stored-objects:0`, scheduled: false };
+
+    await expect(handleJob(job, { domain, storage })).rejects.toThrow("Storage is unavailable.");
+    expect([...kept]).toEqual(["business/recording/call.wav"]);
+    expect(await handleJob(job, { domain, storage })).toEqual({ status: "completed", entityId: "3" });
+    expect(kept.size).toBe(0);
+    expect(await handleJob({ ...job, payload: { objectKeys: [] } }, { domain, storage })).toEqual({ status: "skipped", entityId: "0" });
+    expect(await handleJob(job, { domain })).toEqual({ status: "skipped", entityId: "3" });
+  });
+
+  it("releases the numbers a deleted business held with the provider, but never the shared sender", async () => {
+    vi.stubEnv("TWILIO_ALERT_SMS_FROM", "+14165550000");
+    const domain = { db: undefined as never };
+    const owned = new Set(["PN1", "PN2", "PN3"]);
+    const releasePhoneNumber = vi.fn(async ({ providerPhoneId }: { providerPhoneId: string }) => {
+      // Twilio answers 404 for a number the account no longer has.
+      if (!owned.delete(providerPhoneId)) throw Object.assign(new Error("The requested resource was not found"), { status: 404, code: 20404 });
+    });
+    const twilio = { sendSms: vi.fn(), releasePhoneNumber } as never;
+    // The business is gone, so the job names none.
+    const job = (payload: Record<string, unknown>): JobEnvelope => ({ jobId: randomUUID(), type: "phoneNumber.releaseDeleted", queue: "maintenance", businessId: null, payload, trace: {}, idempotencyKey: `phone-number:${randomUUID()}:release-deleted`, scheduled: false });
+
+    expect(await handleJob(job({ providerPhoneId: "PN1", e164: "+14165550101" }), { domain, twilio })).toEqual({ status: "completed", entityId: "PN1" });
+    // Run again, or after a reclaim got there first, it finds the number released already.
+    expect(await handleJob(job({ providerPhoneId: "PN1", e164: "+14165550101" }), { domain, twilio })).toEqual({ status: "skipped", entityId: "PN1" });
+    expect(await handleJob(job({ providerPhoneId: "PN2", e164: "+14165550000" }), { domain, twilio })).toEqual({ status: "skipped", entityId: "PN2" });
+    expect(owned.has("PN2")).toBe(true);
+    // Any other failure, or a worker that can't release numbers, runs the job again.
+    releasePhoneNumber.mockRejectedValueOnce(new Error("Twilio is unavailable."));
+    await expect(handleJob(job({ providerPhoneId: "PN3", e164: "+14165550103" }), { domain, twilio })).rejects.toThrow("Twilio is unavailable.");
+    await expect(handleJob(job({ providerPhoneId: "PN3", e164: "+14165550103" }), { domain })).rejects.toThrow("Twilio phone-number release is not configured.");
+    expect(await handleJob(job({ providerPhoneId: "PN3", e164: "+14165550103" }), { domain, twilio })).toEqual({ status: "completed", entityId: "PN3" });
+    expect(await handleJob(job({}), { domain, twilio })).toEqual({ status: "skipped", entityId: "" });
+    expect(owned).toEqual(new Set(["PN2"]));
   });
 
   it("queues a bounded continuation when expired product events remain", async () => {

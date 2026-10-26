@@ -34,7 +34,7 @@ describe("original settings route shell", () => {
       view.unmount();
       return paths;
     };
-    expect(tabs(["activity", "setup", "team"])).toEqual(["/settings/team", "/settings/phone-number", "/settings/appearance", "/settings/notifications"]);
-    expect(tabs(["activity"])).toEqual(["/settings/appearance", "/settings/notifications"]);
+    expect(tabs(["activity", "setup", "team"])).toEqual(["/settings/usage", "/settings/team", "/settings/phone-number", "/settings/appearance", "/settings/notifications"]);
+    expect(tabs(["activity"])).toEqual(["/settings/usage", "/settings/appearance", "/settings/notifications"]);
   });
 });

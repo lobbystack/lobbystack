@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 
-import { createPartnerBusiness, listPartnerBusinesses } from "@lobbystack/domain";
+import { createPartnerBusiness, deletePartnerBusiness, listPartnerBusinesses } from "@lobbystack/domain";
 import { jsonError } from "@/lib/api-helpers";
 import { enforceFixedWindow, fixedWindowLimit } from "@/lib/fixed-window-limit";
 import { partnerRoute } from "@/lib/partner-request";
 
 export const dynamic = "force-dynamic";
 
-// The partner console's Businesses page. Creating a business goes through a
-// partner operation, which checks the actor's role itself.
+// The partner console's Businesses page. Creating and deleting a business go
+// through partner operations, which check the actor's role themselves.
 
 export const GET = partnerRoute(async ({ actor, domain }) => NextResponse.json({ businesses: await listPartnerBusinesses(domain, actor) }));
 
@@ -30,4 +30,10 @@ export const POST = partnerRoute(async ({ actor, userId, body, domain }) => {
     ownerEmail: body.ownerEmail,
   });
   return NextResponse.json(created, { status: 201 });
+});
+
+export const DELETE = partnerRoute(async ({ actor, businessId, domain }) => {
+  if (!businessId) return jsonError("businessId is required.", 400, "business_required");
+  await deletePartnerBusiness(domain, actor, { businessId });
+  return NextResponse.json({ ok: true });
 });

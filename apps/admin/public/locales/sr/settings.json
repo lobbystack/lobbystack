@@ -199,11 +199,13 @@
     },
     "usage": {
       "title": "Uključena potrošnja",
+      "allowanceTitle": "Potrošnja ovog meseca",
       "description": "Resetuje se {{resetAt}}.",
       "paygTitle": "Plaćanje po potrošnji",
       "paygDescription": "Dodatna potrošnja koja se naplaćuje u ovom periodu. Resetuje se {{resetAt}}.",
       "knowledgeTitle": "Baza znanja",
       "voiceTitle": "Minuti razgovora",
+      "chatsTitle": "Četovi",
       "voiceValue": "Iskorišćeno minuta: {{minutes}}",
       "voiceRemaining": "Preostalo minuta: {{minutes}}",
       "alertSmsTitle": "SMS upozorenja",
@@ -230,10 +232,12 @@
         "voice": "min",
         "outboundAttempts": "pokušaja",
         "segments": "segmenata",
-        "storage": "MB"
+        "storage": "MB",
+        "chats": "četova"
       },
       "unavailable": "Podaci o potrošnji nisu dostupni.",
-      "customAllowance": "Iskorišćeno: {{used}} {{unit}} · Prilagođeni iznos"
+      "customAllowance": "Iskorišćeno: {{used}} {{unit}} · Prilagođeni iznos",
+      "noLimit": "Iskorišćeno: {{used}} {{unit}} · Bez ograničenja"
     },
     "spendingCap": {
       "title": "Mesečni limit potrošnje",
@@ -659,6 +663,7 @@
       "sent": "Poziv je poslat na {{email}}.",
       "errors": {
         "invalidEmail": "Unesite ispravnu imejl adresu.",
+        "partnerMember": "{{email}} je u timu partnera ove firme. Radi ovde iz partnerske konzole, pa ne može da se pridruži timu.",
         "failed": "Nismo uspeli da pošaljemo poziv. Pokušajte ponovo."
       }
     },

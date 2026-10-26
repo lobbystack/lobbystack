@@ -12,8 +12,9 @@ afterEach(() => { cleanup(); fixture.replace.mockClear(); });
 
 it.each([
   [["activity", "setup", "team", "billing", "api_keys", "mcp"], "/settings/usage"],
-  [["activity", "setup", "team"], "/settings/team"],
-  [["activity"], "/settings/appearance"],
+  [["activity", "setup", "team"], "/settings/usage"],
+  [["activity"], "/settings/usage"],
+  [[], "/settings/account"],
 ])("opens the first Settings tab the business gives the person (%j)", (capabilities, tab) => {
   fixture.capabilities = capabilities;
   render(<FirstSettingsTab />);

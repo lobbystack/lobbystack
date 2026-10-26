@@ -265,6 +265,33 @@ export async function readUsageStatusInTransaction(tx: DatabaseTransaction, inpu
   return usageStatusFrom({ periodKey, billing, events });
 }
 
+/**
+ * A business's minutes and chats this month against its allowance, as its own
+ * dashboard shows them to every operator. It carries no prices or spend: a
+ * partner's business sees prices only on its partner's invoices. A null
+ * allowance has no limit, as for a partner's business billed outside
+ * LobbyStack.
+ */
+export type AllowanceUsage = {
+  periodKey: string;
+  /** When the month's usage starts over: the first of next month, in UTC, as periods run. */
+  resetsAt: string;
+  voiceSeconds: { used: number; included: number | null; blocked: boolean };
+  chats: { used: number; included: number | null; blocked: boolean };
+};
+
+/** The business's usage this month against loadEntitlement's allowance, read without the period lock. */
+export async function readAllowanceUsageInTransaction(tx: DatabaseTransaction, input: { businessId: string; now?: Date | undefined }): Promise<AllowanceUsage> {
+  const now = input.now ?? new Date();
+  const status = await readUsageStatusInTransaction(tx, { businessId: input.businessId, periodKey: periodKeyFor(now) });
+  return {
+    periodKey: status.periodKey,
+    resetsAt: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toISOString(),
+    voiceSeconds: { used: status.voiceSecondsUsed, included: status.voiceSecondsIncluded, blocked: status.voiceBlocked },
+    chats: { used: status.chatAiTokensUsed, included: status.chatAiTokensIncluded, blocked: status.chatAiBlocked },
+  };
+}
+
 export async function reserveUsageInTransaction(tx: DatabaseTransaction, input: { businessId: string; usageKind: NonAiBillingUsageKind; sourceKey: string; quantity?: number | undefined; recordedAt?: Date | undefined }): Promise<UsageReservationResult> {
   const recordedAt = input.recordedAt ?? new Date();
   const periodKey = periodKeyFor(recordedAt);

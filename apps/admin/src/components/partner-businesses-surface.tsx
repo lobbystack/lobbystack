@@ -1,13 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Building2 } from "lucide-react";
+import { Building2, MoreHorizontal, Trash2, UserRoundCheck } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import type { PartnerAccessLevel } from "@lobbystack/shared";
+import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { PageHeader } from "@/components/page-header";
 import { useConsolePartner } from "@/components/partner-shell";
 import { useTelemetry } from "@/components/product-analytics";
@@ -15,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Combobox, ComboboxCollection, ComboboxContent, ComboboxEmpty, ComboboxGroup, ComboboxInput, ComboboxItem, ComboboxLabel, ComboboxList, ComboboxTrigger, ComboboxValue } from "@/components/ui/combobox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -32,6 +34,8 @@ type PartnerBusiness = {
   onboardingStage: string;
   createdAt: string;
   owner: { email: string; status: "joined" } | { email: string; status: "invited"; expiresAt: string } | null;
+  /** What it used this month: voice seconds and chats. */
+  usage: { periodKey: string; voiceSeconds: number; chats: number };
 };
 
 const ACCESS_LEVELS: PartnerAccessLevel[] = ["full", "activity"];
@@ -70,9 +74,12 @@ function AccessLevelOptions({ value, onChange }: { value: PartnerAccessLevel; on
 
 /**
  * The console's Businesses page. Everyone on the team sees the partner's
- * businesses with their owners; owners and admins create one, pick the
- * access level its own operators get, and invite its owner, who signs in on
- * the partner's domain. The server enforces the same rules.
+ * businesses with their owners and their minutes and chats this month, and
+ * opens any of them to work inside it on the partner's domain; the business's
+ * audit log records each open. Owners and admins create one, pick the access
+ * level its own operators get, and invite its owner, who signs in on the
+ * partner's domain. They also release a business to an owner who joined, or
+ * delete it. The server enforces the same rules.
  */
 export function PartnerBusinessesSurface() {
   const { t, i18n } = useTranslation("partner");
@@ -98,7 +105,41 @@ export function PartnerBusinessesSurface() {
     items: group.zones,
   })), [t, timeZoneGroups]);
   const formatDate = (value: string) => new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(new Date(value));
+  const formatMinutes = (seconds: number) => new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(Math.round((seconds / 60) * 10) / 10);
+  const formatCount = (count: number) => new Intl.NumberFormat(locale).format(count);
   const reset = () => { setName(""); setOwnerEmail(""); setTimezone(browserTimeZone()); setAccessLevel("full"); setError(null); };
+
+  // A partner's business shows only on the partner's domains, so its dashboard opens there; from the host's domain the person signs in again.
+  const openBusiness = useMutation({
+    mutationFn: (business: PartnerBusiness) => requestJson<{ expiresAt: string; url: string }>("/api/partner/businesses/open", { method: "POST", body: JSON.stringify({ partnerId: partner.partnerId, businessId: business.businessId }) }),
+    onSuccess: (opened, business) => {
+      telemetry.track("web.partner.business_opened", { partnerId: partner.partnerId, businessId: business.businessId, pathname: pathname ?? "/partner" });
+      window.location.assign(opened.url);
+    },
+    onError: (_cause, business) => { toast.error(t("businesses.open.failed", { name: business.name })); },
+  });
+
+  // The business a confirmation dialog asks about, and what it would do.
+  const [confirming, setConfirming] = useState<{ action: "release" | "delete"; business: PartnerBusiness } | null>(null);
+  const release = useMutation({
+    mutationFn: (business: PartnerBusiness) => requestJson("/api/partner/businesses/release", { method: "POST", body: JSON.stringify({ partnerId: partner.partnerId, businessId: business.businessId }) }),
+    onSuccess: async (_result, business) => {
+      telemetry.track("web.partner.business_released", { partnerId: partner.partnerId, businessId: business.businessId, pathname: pathname ?? "/partner" });
+      toast.success(t("businesses.release.released", { name: business.name, email: business.owner?.email ?? "" }));
+      await queryClient.invalidateQueries({ queryKey });
+    },
+    onError: (cause: Error & { code?: string }, business) => { toast.error(t(cause.code === "owner_required" ? "businesses.release.errors.ownerRequired" : "businesses.release.errors.failed", { name: business.name })); },
+  });
+  const remove = useMutation({
+    mutationFn: (business: PartnerBusiness) => requestJson("/api/partner/businesses", { method: "DELETE", body: JSON.stringify({ partnerId: partner.partnerId, businessId: business.businessId }) }),
+    onSuccess: async (_result, business) => {
+      telemetry.track("web.partner.business_deleted", { partnerId: partner.partnerId, businessId: business.businessId, pathname: pathname ?? "/partner" });
+      toast.success(t("businesses.delete.deleted", { name: business.name }));
+      await queryClient.invalidateQueries({ queryKey });
+    },
+    onError: (cause: Error & { code?: string }, business) => { toast.error(t(cause.code === "business_number_in_progress" ? "businesses.delete.errors.numberInProgress" : "businesses.delete.errors.failed", { name: business.name })); },
+  });
+  const busy = openBusiness.isPending || release.isPending || remove.isPending;
 
   const create = useMutation({
     mutationFn: () => requestJson<{ businessId: string }>("/api/partner/businesses", { method: "POST", body: JSON.stringify({ partnerId: partner.partnerId, name: name.trim(), timezone, accessLevel, ownerEmail: ownerEmail.trim() }) }),
@@ -115,6 +156,7 @@ export function PartnerBusinessesSurface() {
         invalid_email: "businesses.create.errors.invalidEmail",
         invalid_timezone: "businesses.create.errors.invalidTimezone",
         partner_domain_required: "businesses.create.errors.domainRequired",
+        owner_on_partner_team: "businesses.create.errors.ownerOnTeam",
         rate_limited: "businesses.create.errors.rateLimited",
       };
       setError(t(messages[cause.code ?? ""] ?? "businesses.create.errors.failed"));
@@ -206,6 +248,9 @@ export function PartnerBusinessesSurface() {
                 <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("businesses.table.business")}</TableHead>
                 <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("businesses.table.owner")}</TableHead>
                 <TableHead className="h-12 px-6 text-sm font-medium text-foreground">{t("businesses.table.access")}</TableHead>
+                <TableHead className="h-12 px-6 text-right text-sm font-medium text-foreground">{t("businesses.table.minutes")}</TableHead>
+                <TableHead className="h-12 px-6 text-right text-sm font-medium text-foreground">{t("businesses.table.chats")}</TableHead>
+                <TableHead className="h-12 px-6"><span className="sr-only">{t("businesses.table.actions")}</span></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -229,6 +274,34 @@ export function PartnerBusinessesSurface() {
                       ) : <p className="text-sm text-muted-foreground">{t("businesses.owner.none")}</p>}
                     </TableCell>
                     <TableCell className="px-6 py-5"><Badge variant="secondary">{t(`businesses.access.${business.accessLevel}`)}</Badge></TableCell>
+                    <TableCell className="px-6 py-5 text-right text-sm tabular-nums">{formatMinutes(business.usage.voiceSeconds)}</TableCell>
+                    <TableCell className="px-6 py-5 text-right text-sm tabular-nums">{formatCount(business.usage.chats)}</TableCell>
+                    <TableCell className="px-6 py-5">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          aria-label={t("businesses.open.label", { name: business.name })}
+                          disabled={busy}
+                          loading={openBusiness.isPending && openBusiness.variables?.businessId === business.businessId}
+                          loadingLabel={t("businesses.open.opening")}
+                          onClick={() => openBusiness.mutate(business)}
+                          size="sm"
+                          variant="outline"
+                        >
+                          {t("businesses.open.action")}
+                        </Button>
+                        {canCreate ? (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger render={<Button aria-label={t("businesses.actions.more", { name: business.name })} disabled={busy} size="icon-sm" variant="ghost"><MoreHorizontal /></Button>} />
+                            <DropdownMenuContent align="end">
+                              {/* Releasing needs an owner who accepted the invitation; the server checks it too. */}
+                              <DropdownMenuItem disabled={owner?.status !== "joined"} onClick={() => setConfirming({ action: "release", business })}><UserRoundCheck />{t("businesses.release.action")}</DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => setConfirming({ action: "delete", business })} variant="destructive"><Trash2 />{t("businesses.delete.action")}</DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        ) : null}
+                      </div>
+                    </TableCell>
                   </TableRow>
                 );
               })}
@@ -236,6 +309,19 @@ export function PartnerBusinessesSurface() {
           </Table>
         </Surface>
       )}
+      {confirming ? (
+        <ConfirmActionDialog
+          cancelLabel={t("businesses.confirm.cancel")}
+          confirmLabel={t(`businesses.${confirming.action}.confirm`)}
+          confirmVariant={confirming.action === "delete" ? "destructive" : "default"}
+          description={t(`businesses.${confirming.action}.description`, { name: confirming.business.name, email: confirming.business.owner?.email ?? "" })}
+          onConfirm={async () => { await (confirming.action === "release" ? release : remove).mutateAsync(confirming.business); }}
+          onOpenChange={(next) => { if (!next) setConfirming(null); }}
+          open
+          pending={release.isPending || remove.isPending}
+          title={t(`businesses.${confirming.action}.title`, { name: confirming.business.name })}
+        />
+      ) : null}
     </div>
   );
 }

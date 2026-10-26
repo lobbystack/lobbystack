@@ -199,11 +199,13 @@
     },
     "usage": {
       "title": "Uso incluido",
+      "allowanceTitle": "Uso de este mes",
       "description": "Se reinicia el {{resetAt}}.",
       "paygTitle": "Uso de pago por consumo",
       "paygDescription": "Uso facturable adicional en este período. Se reinicia el {{resetAt}}.",
       "knowledgeTitle": "Base de conocimiento",
       "voiceTitle": "Minutos de voz",
+      "chatsTitle": "Chats",
       "voiceValue": "{{minutes}} minutos usados",
       "voiceRemaining": "{{minutes}} minutos restantes",
       "alertSmsTitle": "Alertas por SMS",
@@ -230,10 +232,12 @@
         "voice": "min",
         "outboundAttempts": "intentos",
         "segments": "segmentos",
-        "storage": "MB"
+        "storage": "MB",
+        "chats": "chats"
       },
       "unavailable": "Los datos de uso no están disponibles.",
-      "customAllowance": "{{used}} {{unit}} usados · Volumen personalizado"
+      "customAllowance": "{{used}} {{unit}} usados · Volumen personalizado",
+      "noLimit": "{{used}} {{unit}} usados · Sin límite"
     },
     "spendingCap": {
       "title": "Límite de gasto mensual",
@@ -659,6 +663,7 @@
       "sent": "Invitación enviada a {{email}}.",
       "errors": {
         "invalidEmail": "Introduzca un correo electrónico válido.",
+        "partnerMember": "{{email}} forma parte del equipo del socio de este negocio. Trabaja aquí desde la consola de socios, así que no puede unirse al equipo.",
         "failed": "No pudimos enviar esa invitación. Inténtelo de nuevo."
       }
     },

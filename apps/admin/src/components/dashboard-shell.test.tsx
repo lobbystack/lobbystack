@@ -91,13 +91,13 @@ describe("a partner's business", () => {
 
   it("at full access, leaves billing, API keys and MCP out of the menu", () => {
     setup("business_owner", true, [], ["activity", "setup", "team"]);
-    expect(links()).toEqual(["#dashboard-main-content", "/", "/appointments", "/calls", "/messages", "/contacts", "/agent", "/agent/knowledge", "/agent/services", "/agent/employees", "/agent/rules", "/analytics", "/integrations", "/widget", "/settings/team"]);
+    expect(links()).toEqual(["#dashboard-main-content", "/", "/appointments", "/calls", "/messages", "/contacts", "/agent", "/agent/knowledge", "/agent/services", "/agent/employees", "/agent/rules", "/analytics", "/integrations", "/widget", "/settings/usage"]);
     expect(screen.getByText("Page content")).toBeTruthy();
   });
 
-  it("at activity only, shows calls, chats, appointments, contacts and messages, and the person's own settings", () => {
+  it("at activity only, shows calls, chats, appointments, contacts and messages, and Settings opens on its usage", () => {
     const view = setup("business_owner", true, [], ["activity"]);
-    expect(links()).toEqual(["#dashboard-main-content", "/", "/appointments", "/calls", "/messages", "/contacts", "/settings/appearance"]);
+    expect(links()).toEqual(["#dashboard-main-content", "/", "/appointments", "/calls", "/messages", "/contacts", "/settings/usage"]);
     expect(screen.queryByText("nav:sidebar.agent")).toBeNull();
     view.navigate("/settings/notifications");
     expect(screen.getByRole("link", { name: "nav:items.settings" }).hasAttribute("data-active")).toBe(true);
@@ -119,6 +119,6 @@ describe("before the workspace list loads", () => {
   it("hides what the business the server opened leaves out", () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity, enabled: false } } }); clients.push(client);
     render(<QueryClientProvider client={client}><DashboardShell capabilities={["activity"]} user={{ email: "operator@example.invalid", name: "Operator" }}><p>Page content</p></DashboardShell></QueryClientProvider>);
-    expect(screen.getAllByRole("link").map(link => link.getAttribute("href"))).toEqual(["#dashboard-main-content", "/", "/appointments", "/calls", "/contacts", "/settings/appearance"]);
+    expect(screen.getAllByRole("link").map(link => link.getAttribute("href"))).toEqual(["#dashboard-main-content", "/", "/appointments", "/calls", "/contacts", "/settings/usage"]);
   });
 });

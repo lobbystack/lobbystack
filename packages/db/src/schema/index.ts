@@ -298,6 +298,23 @@ export const userActiveBusinesses = pgTable(
   ],
 );
 
+// A partner member's open of one of the partner's businesses (migration 0140): until it expires, they work inside the
+// business without joining its team. Opening again moves the times forward; the business's audit log keeps every open.
+export const partnerBusinessOpens = pgTable(
+  "partner_business_opens",
+  {
+    businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    partnerId: uuid("partner_id").notNull().references(() => partners.id, { onDelete: "cascade" }),
+    openedAt: timestamp("opened_at", { withTimezone: true }).defaultNow().notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.businessId, table.userId] }),
+    index("partner_business_opens_user_idx").on(table.userId, table.expiresAt),
+  ],
+);
+
 // The host's invitations to sign up as a partner while signup is invite-only.
 export const partnerSignupInvitations = pgTable(
   "partner_signup_invitations",
@@ -1894,6 +1911,7 @@ export const schema = {
   partnerSignupInvitations,
   businesses,
   userActiveBusinesses,
+  partnerBusinessOpens,
   businessMemberships,
   businessInvitations,
   prospectDemos,

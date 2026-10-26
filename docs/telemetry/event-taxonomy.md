@@ -18,6 +18,9 @@ Do not duplicate ownership between runtimes unless there is a specific analytics
 - `web.workspace.business_switched`
 - `web.partner.signup_succeeded`: someone signed a company up as a partner at `/partner/signup`. It carries `partnerId`, `invited` (whether they used the host's signup invitation) and `subdomain` (whether signup reserved a subdomain of the partner base domain). Like every web event, the dashboard sends it only while the person's active business has telemetry on. A partner member with no business of their own sends nothing.
 - `web.partner.business_created`: an owner or admin created a business on the console's Businesses page. It carries `partnerId`, `businessId` (the new business) and `accessLevel` (`full` or `activity`). The same rule applies: it needs an active business with telemetry on, and a partner's domain never sends it.
+- `web.partner.business_opened`: someone on a partner's team opened one of its businesses from the console's Businesses page, just before the browser goes to its dashboard. It carries `partnerId` and `businessId` (the business opened). The business's audit log records the same open as `partner.business_opened`. The same rule applies.
+- `web.partner.business_released`: an owner or admin released one of the partner's businesses to its owner from the console's Businesses page, once the server accepted it. It carries `partnerId` and `businessId` (the business released). The business's audit log records the same release as `partner.business_released`. The same rule applies.
+- `web.partner.business_deleted`: an owner or admin deleted one of the partner's businesses from the console's Businesses page, once the server accepted it. It carries `partnerId` and `businessId` (the business deleted, which no longer exists). The same rule applies.
 - `web.page.home_viewed`
 - `web.page.calls_viewed`
 - `web.page.call_detail_viewed`

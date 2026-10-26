@@ -39,7 +39,7 @@ async function operator(request: Request, options: RouteOptions = {}): Promise<O
   const text = await request.text();
   if (options.maxBodyBytes !== undefined && Buffer.byteLength(text) > options.maxBodyBytes) throw jsonError("The request body is too large.", 413, "body_too_large");
   const { userId, businessId, domain, email, emailVerified, role, capabilities } = fakeOperator;
-  const access: BusinessAccess = { businessId, via: "membership", role, partnerId: null, accessLevel: null, can: (capability) => capabilities.includes(capability) };
+  const access: BusinessAccess = { businessId, via: "membership", role, partnerRole: null, partnerId: null, accessLevel: null, can: (capability) => capabilities.includes(capability) };
   return {
     request,
     session: { user: { id: userId, email, emailVerified }, session: { id: "session", userId, expiresAt: new Date(0) } },

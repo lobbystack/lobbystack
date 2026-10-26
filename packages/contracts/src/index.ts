@@ -228,9 +228,13 @@ export const queueForJobType = {
   "privacy.scrubMessage": "maintenance",
   "privacy.deleteRecording": "maintenance",
   "privacy.cleanupPendingUpload": "maintenance",
+  // The files a deleted business stored.
+  "privacy.deleteStoredObjects": "maintenance",
   "phoneVerification.sendCode": "critical",
   "phoneNumber.provision": "critical",
   "phoneNumber.reclaim": "maintenance",
+  // The numbers a deleted business held, released with the provider.
+  "phoneNumber.releaseDeleted": "maintenance",
   // Moves a number between the receptionist and the forward-or-reject fallback; callers notice a delay.
   "phoneNumber.route": "critical",
   "numberTrial.sweep": "maintenance",

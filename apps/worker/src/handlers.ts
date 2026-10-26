@@ -7,13 +7,13 @@ import { realtimeEventSchema, type JobEnvelope } from "@lobbystack/contracts";
 import { HOST_EMAIL_BRAND, emailSender, getPolarMeteredUsagePayload, intlLocale, normalizeRuntimeLocale, parseEmailBrandReference, type BillingUsageKind, type EmailBrandReference } from "@lobbystack/shared";
 import { appointments, calls, contacts, enqueueOutbox, knowledgeChunks, knowledgeDocuments, messages, notifications, phoneNumbers, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database } from "@lobbystack/db";
 import { enqueueKnowledgeDerivedRefresh, finishBusinessSummaryRegenerate, loadBusinessHoursInput, loadBusinessSummaryInput, markBusinessHoursChecked, resetGeneratedBusinessSummary, saveGeneratedBusinessHours, saveGeneratedBusinessSummary, type SummaryRegenerateOutcome } from "@lobbystack/domain";
-import { billingCheckoutLeaseEndsAt, checkKnowledgeStorageLimit, claimBillingCheckoutRequest, countPublishableOutboxMessages, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteSentProductEventsBefore, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markKnowledgeDocumentFailed, markProductEventsSent, reconcileBillingProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, runPrivacyRetentionSweep, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, chunkText, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type GeneratedCallSummary, type OnboardingFollowupSender } from "@lobbystack/domain";
+import { billingCheckoutLeaseEndsAt, checkKnowledgeStorageLimit, claimBillingCheckoutRequest, countPublishableOutboxMessages, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteStoredObjects, deleteSentProductEventsBefore, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markKnowledgeDocumentFailed, markProductEventsSent, reconcileBillingProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, runPrivacyRetentionSweep, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, chunkText, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type GeneratedCallSummary, type OnboardingFollowupSender } from "@lobbystack/domain";
 import { deliverOutbound, markFeedbackEmailFailed, markFeedbackEmailSent, queueDailyOperatorSummaries, refreshUnitEconomicsMonth } from "@lobbystack/domain";
-import { claimNumberProvisioning, completeNumberProvisioning, desiredNumberRouting, failNumberProvisioning, loadNumberReleaseEmail, loadNumberTrialEmail, numberProvisioningLeaseEndsAt, sharedSmsSender, sweepNumberReleases, sweepNumberTrial } from "@lobbystack/domain";
+import { claimNumberProvisioning, completeNumberProvisioning, desiredNumberRouting, failNumberProvisioning, isSharedSmsSender, loadNumberReleaseEmail, loadNumberTrialEmail, numberProvisioningLeaseEndsAt, sharedSmsSender, sweepNumberReleases, sweepNumberTrial } from "@lobbystack/domain";
 import { createWebhookSender, processWebhookDelivery, pruneApiHistory, type WebhookSender } from "@lobbystack/domain";
 import { LIVE_RECORDING_ATTEMPTS, listBusinessesWithOpenLiveCalls, listOpenLiveCalls, liveCallHasRecording, persistCallRecording, retryLiveCallRecording, type OpenLiveCall } from "@lobbystack/domain";
 import { expireTeamRequest } from "@lobbystack/domain";
-import { brandForEmail, businessGetsHostEmails, hostBrandFromEnvironment, isHostOnlyEmailTemplate } from "@lobbystack/domain";
+import { brandForEmail, businessExists, businessGetsHostEmails, hostBrandFromEnvironment, isHostOnlyEmailTemplate } from "@lobbystack/domain";
 import type { DomainContext } from "@lobbystack/domain";
 import { numberReleaseEmailSubject, numberTrialEmailSubject, type SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
 import type { RuntimeStorageProvider } from "@lobbystack/providers/storage/provider";
@@ -420,7 +420,11 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         if (businessId && isHostOnlyEmailTemplate(template) && !await businessGetsHostEmails(dependencies.domain.db, businessId)) return { status: "skipped", entityId: businessId };
         try {
           // An email queued before payloads carried a brand goes out under the host's.
-          const brand = await emailBrand(dependencies.domain, parseEmailBrandReference(job.payload.brand));
+          const reference = parseEmailBrandReference(job.payload.brand);
+          // A business deleted after it queued this email has no one left to write to, and its brand went with it.
+          const about = reference.kind === "business" ? reference.businessId : businessId;
+          if (about && !await businessExists(dependencies.domain.db, about)) return { status: "skipped", entityId: about };
+          const brand = await emailBrand(dependencies.domain, reference);
           const sent = await dependencies.email.sendTemplate({
             template,
             to: String(job.payload.to ?? job.payload.email ?? ""),
@@ -705,6 +709,13 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       const deleted = await deleteCallRecordingForRetention(dependencies.domain, input, dependencies.storage);
       return { status: deleted ? "completed" : "skipped", entityId: callId };
     }
+    case "privacy.deleteStoredObjects": {
+      // Queued when a business is deleted, so the job names no business.
+      const objectKeys = Array.isArray(job.payload.objectKeys) ? job.payload.objectKeys.filter((key): key is string => typeof key === "string" && key.length > 0) : [];
+      if (!dependencies.storage || objectKeys.length === 0) return { status: "skipped", entityId: String(objectKeys.length) };
+      const deleted = await deleteStoredObjects(dependencies.storage, objectKeys);
+      return { status: "completed", entityId: String(deleted) };
+    }
     case "privacy.cleanupPendingUpload": {
       if (!dependencies.storage) return { status: "skipped", entityId: businessIdOrThrow(job) };
       const deleted = await deleteExpiredObjectsForBusiness(dependencies.domain, { businessId: businessIdOrThrow(job) }, dependencies.storage);
@@ -787,6 +798,23 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         });
         throw error;
       }
+    }
+    case "phoneNumber.releaseDeleted": {
+      // Queued when a business is deleted, so the job names no business and its number has no row left.
+      const providerPhoneId = typeof job.payload.providerPhoneId === "string" ? job.payload.providerPhoneId : "";
+      const e164 = typeof job.payload.e164 === "string" ? job.payload.e164 : null;
+      if (!providerPhoneId) return { status: "skipped", entityId: "" };
+      // Every hosted business texts from the shared sender, so it's never released.
+      if (isSharedSmsSender(e164)) return { status: "skipped", entityId: providerPhoneId };
+      if (!dependencies.twilio?.releasePhoneNumber) throw new Error("Twilio phone-number release is not configured.");
+      try {
+        await dependencies.twilio.releasePhoneNumber({ providerPhoneId });
+      } catch (error) {
+        // A number the provider no longer has is released already, such as by a reclaim that was under way.
+        if ((error as { status?: unknown } | null)?.status !== 404) throw error;
+        return { status: "skipped", entityId: providerPhoneId };
+      }
+      return { status: "completed", entityId: providerPhoneId };
     }
     case "phoneNumber.route": {
       const businessId = businessIdOrThrow(job);

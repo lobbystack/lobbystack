@@ -139,6 +139,8 @@ export const SCHEMA_MIGRATIONS = [
   "0133_validate_partner_access_level.sql",
   "0134_partner_owner_onboarding.sql",
   "0135_partner_business_guards.sql",
+  "0136_partner_business_opens.sql",
+  "0137_partner_business_usage_and_release.sql",
 ] as const;
 
 const CONCURRENT_INDEX_DIRECTIVE = /^-- lobbystack:concurrent-index ([a-z][a-z0-9_]*)$/m;

@@ -199,11 +199,13 @@
     },
     "usage": {
       "title": "Included usage",
+      "allowanceTitle": "Usage this month",
       "description": "Resets on {{resetAt}}.",
       "paygTitle": "Pay-as-you-go usage",
       "paygDescription": "Additional billable usage in this period. Resets on {{resetAt}}.",
       "knowledgeTitle": "Knowledge base",
       "voiceTitle": "Voice minutes",
+      "chatsTitle": "Chats",
       "voiceValue": "{{minutes}} minutes used",
       "voiceRemaining": "{{minutes}} minutes remaining",
       "alertSmsTitle": "SMS alerts",
@@ -230,10 +232,12 @@
         "voice": "min",
         "outboundAttempts": "attempts",
         "segments": "segments",
-        "storage": "MB"
+        "storage": "MB",
+        "chats": "chats"
       },
       "unavailable": "Usage data is unavailable.",
-      "customAllowance": "{{used}} {{unit}} used · Custom allowance"
+      "customAllowance": "{{used}} {{unit}} used · Custom allowance",
+      "noLimit": "{{used}} {{unit}} used · No limit"
     },
     "spendingCap": {
       "title": "Monthly spending cap",
@@ -655,6 +659,7 @@
       "sent": "Invitation sent to {{email}}.",
       "errors": {
         "invalidEmail": "Enter a valid email address.",
+        "partnerMember": "{{email}} is on this business's partner team. They work here from the partner console, so they can't join the team.",
         "failed": "We couldn't send that invitation. Please try again."
       }
     },

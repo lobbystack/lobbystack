@@ -8,6 +8,8 @@ const fixture = vi.hoisted(() => ({
   /** The active business on the partner's domains. */
   partnerActiveBusinessId: null as string | null,
   memberships: [] as Array<{ role: string; partnerId: string | null; accessLevel: "full" | "activity" }>,
+  /** The business as a partner member who isn't on its team reads it, with their role on the partner while their open lasts. */
+  opened: [] as Array<{ partnerId: string | null; accessLevel: "full" | "activity"; partnerRole: string | null }>,
   transactions: [] as unknown[],
   report: vi.fn(),
 }));
@@ -16,8 +18,9 @@ vi.mock("./error-reporting", () => ({ reportServerError: fixture.report }));
 vi.mock("./domain-context", () => ({ createDomainContext: () => ({ db: "app" }) }));
 vi.mock("@lobbystack/db", async (original) => {
   const db = await original<typeof import("@lobbystack/db")>();
-  // Each transaction here runs one query: the user's active business on a brand, or their membership and the business's partner and access level.
-  const rows = async (table: unknown) => table === db.users ? [{ activeBusinessId: fixture.activeBusinessId }] : table === db.userActiveBusinesses ? (fixture.partnerActiveBusinessId ? [{ businessId: fixture.partnerActiveBusinessId }] : []) : fixture.memberships;
+  // Each transaction here reads the user's active business on a brand, or their membership and the business's partner and access level, and without
+  // a membership the business with the person's partner open of it.
+  const rows = async (table: unknown) => table === db.users ? [{ activeBusinessId: fixture.activeBusinessId }] : table === db.userActiveBusinesses ? (fixture.partnerActiveBusinessId ? [{ businessId: fixture.partnerActiveBusinessId }] : []) : table === db.businesses ? fixture.opened : fixture.memberships;
   const tx = { select: () => ({ from: (table: unknown) => ({ where: () => ({ limit: () => rows(table) }), innerJoin: () => ({ where: () => ({ limit: () => rows(table) }) }) }) }) };
   return { ...db, withBusinessTransaction: async (_db: unknown, context: unknown, callback: (tx: unknown) => unknown) => { fixture.transactions.push(context); return await callback(tx); } };
 });
@@ -38,6 +41,7 @@ beforeEach(() => {
   fixture.activeBusinessId = null;
   fixture.partnerActiveBusinessId = null;
   fixture.memberships = [{ role: "viewer", partnerId: null, accessLevel: "full" }];
+  fixture.opened = [];
   fixture.transactions = [];
 });
 
@@ -197,6 +201,23 @@ describe("operator routes on each brand's domain", () => {
     expect(malformed.status).toBe(400);
     await expect(malformed.json()).resolves.toMatchObject({ code: "invalid_path" });
     expect(seen).toHaveBeenCalledOnce();
+  });
+
+  it("lets a partner member who opened the business in on the partner's domain with full access whatever its level, and nowhere else", async () => {
+    fixture.memberships = [];
+    fixture.opened = [{ partnerId, accessLevel: "activity", partnerRole: "member" }];
+    for (const path of ["/api/calls", "/api/knowledge", "/api/agent", "/api/team"]) {
+      expect((await echoAt(path, partnerHost())).status, path).toBe(200);
+    }
+    expect(seen).toHaveBeenLastCalledWith(expect.objectContaining({ access: expect.objectContaining({ via: "partner", role: "business_admin", partnerRole: "member", partnerId, accessLevel: "activity" }) }));
+    for (const path of ["/api/billing", "/api/api-keys", "/api/oauth-grants", "/api/webhook-endpoints"]) {
+      expect((await echoAt(path, partnerHost())).status, path).toBe(403);
+    }
+    expect((await echoAt("/api/calls", host())).status).toBe(403);
+    expect((await echoAt("/api/calls", partnerHost(otherPartnerId))).status).toBe(403);
+    // Without an open, or once it runs out, the database answers no partner role.
+    fixture.opened = [{ partnerId, accessLevel: "full", partnerRole: null }];
+    expect((await echoAt("/api/calls", partnerHost())).status).toBe(403);
   });
 
   it("checks the route's capability again in each transaction", async () => {

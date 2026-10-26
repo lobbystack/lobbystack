@@ -17,13 +17,16 @@
   },
   "businesses": {
     "title": "Negocios",
-    "description": "Los negocios que usted revende. Sus propietarios inician sesión en la dirección de su panel.",
+    "description": "Los negocios que usted revende, con sus minutos y chats de este mes. Sus propietarios inician sesión en la dirección de su panel. El registro de auditoría de cada negocio indica quién de su equipo lo abre.",
     "loadFailed": "No pudimos cargar sus negocios. Actualice la página para intentarlo de nuevo.",
     "createdOn": "Creado el {{date}}",
     "table": {
       "business": "Negocio",
       "owner": "Propietario",
-      "access": "Acceso"
+      "access": "Acceso",
+      "minutes": "Minutos este mes",
+      "chats": "Chats este mes",
+      "actions": "Acciones"
     },
     "owner": {
       "invited": "Invitación enviada",
@@ -33,6 +36,40 @@
     "access": {
       "full": "Acceso completo",
       "activity": "Solo actividad"
+    },
+    "open": {
+      "action": "Abrir",
+      "label": "Abrir {{name}}",
+      "opening": "Abriendo",
+      "failed": "No pudimos abrir {{name}}. Inténtelo de nuevo."
+    },
+    "actions": {
+      "more": "Más acciones para {{name}}"
+    },
+    "confirm": {
+      "cancel": "Cancelar"
+    },
+    "release": {
+      "action": "Ceder al propietario",
+      "title": "¿Ceder {{name}}?",
+      "description": "{{email}} conserva {{name}} y su recepcionista en el plan Free y se encarga de su facturación. El negocio sale de su consola y su equipo ya no puede abrirlo.",
+      "confirm": "Ceder negocio",
+      "released": "Usted cedió {{name}} a {{email}}.",
+      "errors": {
+        "ownerRequired": "{{name}} todavía no tiene propietario. Su propietario debe aceptar primero la invitación.",
+        "failed": "No pudimos ceder {{name}}. Inténtelo de nuevo."
+      }
+    },
+    "delete": {
+      "action": "Eliminar",
+      "title": "¿Eliminar {{name}}?",
+      "description": "Va a borrar {{name}} con sus llamadas, chats, contactos, citas y ajustes, y a renunciar a su número de teléfono. Su propietario y su equipo pierden el acceso, y no podrá deshacerlo.",
+      "confirm": "Eliminar negocio",
+      "deleted": "Usted eliminó {{name}}.",
+      "errors": {
+        "numberInProgress": "Todavía estamos configurando el número de teléfono de {{name}}. Inténtelo de nuevo en unos minutos.",
+        "failed": "No pudimos eliminar {{name}}. Inténtelo de nuevo."
+      }
     },
     "empty": {
       "title": "Aún no hay negocios",
@@ -76,6 +113,7 @@
         "invalidTimezone": "Elija una zona horaria.",
         "domainRequired": "Necesita una dirección de panel antes de crear un negocio. Pida a {{appName}} que configure una.",
         "rateLimited": "Creó demasiados negocios. Inténtelo de nuevo en una hora.",
+        "ownerOnTeam": "Una persona de su equipo no puede ser propietaria de un negocio. Escriba el correo del cliente al que pertenece.",
         "failed": "No pudimos crear el negocio. Inténtelo de nuevo."
       }
     }

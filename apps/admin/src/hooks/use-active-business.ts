@@ -21,7 +21,9 @@ export type Business = {
   createdAt?: string;
   /** The access level a partner's business gives its operators, or null for a direct business. */
   partnerAccessLevel?: PartnerAccessLevel | null;
-  /** What the business lets its operators do, before their role's rules. */
+  /** How the person reaches the business: on its team, or through an open as a member of its partner. */
+  via?: "membership" | "partner";
+  /** What the business lets the person do, before their role's rules. */
   capabilities?: Capability[];
 };
 

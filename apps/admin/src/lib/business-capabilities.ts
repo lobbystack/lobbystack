@@ -42,6 +42,8 @@ const routeCapabilities: ReadonlyArray<readonly [prefix: string, capability: Cap
   ["/api/setup", "setup"],
   ["/api/team", "team"],
   ["/api/uploads", "setup"],
+  // Minutes and chats against the allowance, without the plan's prices.
+  ["/api/usage", "activity"],
   // The dashboard's test call.
   ["/api/voice", "setup"],
   ["/api/webhook-deliveries", "api_keys"],

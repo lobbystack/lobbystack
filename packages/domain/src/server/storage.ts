@@ -269,6 +269,29 @@ async function claimExpiredObjectsForDeletion(
   return [...uploads, ...retained];
 }
 
+/**
+ * Deletes stored files by key, such as the files of a business that was
+ * deleted, whose rows went with it. A key that's already gone counts as
+ * deleted, so running again is safe. It tries every key and then throws the
+ * first failure, so the job runs again for the keys left. Returns how many
+ * it deleted.
+ */
+export async function deleteStoredObjects(storage: StorageProvider, objectKeys: readonly string[]): Promise<number> {
+  const failures: unknown[] = [];
+  let deleted = 0;
+  for (const key of objectKeys) {
+    try {
+      await storage.deleteObject({ key });
+      if (await storage.headObject({ key })) throw new Error(`Storage object is still present after deletion: ${key}`);
+      deleted += 1;
+    } catch (error) {
+      failures.push(error);
+    }
+  }
+  if (failures.length) throw failures[0];
+  return deleted;
+}
+
 export async function deleteExpiredObjectsForBusiness(
   context: DomainContext,
   input: { businessId: string },

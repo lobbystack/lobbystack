@@ -101,7 +101,8 @@ export async function reserveWidgetChatUsageInTransaction(
   input: { businessId: string; conversationId: string },
 ): Promise<WidgetChatBillingAllowance> {
   const { plan, entitlement } = await loadBillingContext(tx, input.businessId);
-  if (entitlement.allowance.chats !== null) {
+  // A partner's business counts its chats with no allowance too: they draw on its partner's pool, and the console shows them.
+  if (entitlement.allowance.chats !== null || entitlement.poolPartnerId !== null) {
     const reservation = await reserveUsageInTransaction(tx, { businessId: input.businessId, usageKind: "chat_ai_tokens", sourceKey: `chat:${input.conversationId}`, quantity: 1 });
     if (!reservation.allowed) return { allowed: false, errorCode: billingErrorCodes.chatAiLimitReached, plan };
   }

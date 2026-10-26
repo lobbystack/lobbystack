@@ -17,13 +17,16 @@
   },
   "businesses": {
     "title": "Entreprises",
-    "description": "Les entreprises que vous revendez. Leurs propriétaires se connectent à l'adresse de votre tableau de bord.",
+    "description": "Les entreprises que vous revendez, avec leurs minutes et leurs discussions du mois. Leurs propriétaires se connectent à l'adresse de votre tableau de bord. Le journal d'audit de chaque entreprise indique qui, dans votre équipe, l'ouvre.",
     "loadFailed": "Impossible de charger vos entreprises. Actualisez la page pour réessayer.",
     "createdOn": "Créée le {{date}}",
     "table": {
       "business": "Entreprise",
       "owner": "Propriétaire",
-      "access": "Accès"
+      "access": "Accès",
+      "minutes": "Minutes ce mois-ci",
+      "chats": "Discussions ce mois-ci",
+      "actions": "Actions"
     },
     "owner": {
       "invited": "Invitation envoyée",
@@ -33,6 +36,40 @@
     "access": {
       "full": "Accès complet",
       "activity": "Activité seulement"
+    },
+    "open": {
+      "action": "Ouvrir",
+      "label": "Ouvrir {{name}}",
+      "opening": "Ouverture",
+      "failed": "Impossible d'ouvrir {{name}}. Réessayez."
+    },
+    "actions": {
+      "more": "Plus d'actions pour {{name}}"
+    },
+    "confirm": {
+      "cancel": "Annuler"
+    },
+    "release": {
+      "action": "Céder au propriétaire",
+      "title": "Céder {{name}} ?",
+      "description": "{{email}} garde {{name}} et sa réceptionniste sur le forfait gratuit, et s'occupe de sa facturation. L'entreprise quitte votre console, et votre équipe ne peut plus l'ouvrir.",
+      "confirm": "Céder l'entreprise",
+      "released": "Vous avez cédé {{name}} à {{email}}.",
+      "errors": {
+        "ownerRequired": "{{name}} n'a pas encore de propriétaire. Son propriétaire doit d'abord accepter son invitation.",
+        "failed": "Impossible de céder {{name}}. Réessayez."
+      }
+    },
+    "delete": {
+      "action": "Supprimer",
+      "title": "Supprimer {{name}} ?",
+      "description": "Vous allez effacer {{name}} avec ses appels, discussions, contacts, rendez-vous et réglages, et renoncer à son numéro de téléphone. Son propriétaire et son équipe perdent l'accès, et vous ne pourrez pas annuler.",
+      "confirm": "Supprimer l'entreprise",
+      "deleted": "Vous avez supprimé {{name}}.",
+      "errors": {
+        "numberInProgress": "Nous configurons encore le numéro de téléphone de {{name}}. Réessayez dans quelques minutes.",
+        "failed": "Impossible de supprimer {{name}}. Réessayez."
+      }
     },
     "empty": {
       "title": "Aucune entreprise pour l'instant",
@@ -76,6 +113,7 @@
         "invalidTimezone": "Choisissez un fuseau horaire.",
         "domainRequired": "Il vous faut une adresse de tableau de bord avant de créer une entreprise. Demandez à {{appName}} d'en configurer une.",
         "rateLimited": "Vous avez créé trop d'entreprises. Réessayez dans une heure.",
+        "ownerOnTeam": "Une personne de votre équipe ne peut pas être propriétaire d'une entreprise. Entrez le courriel du client à qui elle appartient.",
         "failed": "Impossible de créer l'entreprise. Réessayez."
       }
     }

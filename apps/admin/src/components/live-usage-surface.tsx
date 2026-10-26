@@ -4,6 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { billingPlanCatalog } from "@lobbystack/shared";
 
+import type { AllowanceUsage } from "@lobbystack/domain";
+import { useBusinessCan } from "@/components/business-capabilities-provider";
 import { useActiveBusiness } from "@/hooks/use-active-business";
 import type { BillingUsageViewModel } from "@/lib/page-view-models";
 import { requestJson } from "@/lib/request-json";
@@ -13,7 +15,17 @@ import { Surface } from "@/components/ui/surface";
 import { Button } from "@/components/ui/button";
 import { intlLocale } from "@/lib/locale";
 
+/**
+ * Settings > Usage. A business with billing shows its plan's meters, as
+ * before. A partner's business has no billing, so it shows its minutes and
+ * chats this month against its allowance, without the host's plans or prices.
+ */
 export function LiveUsageSurface() {
+  const can = useBusinessCan();
+  return can("billing") ? <PlanUsageSurface /> : <AllowanceUsageSurface />;
+}
+
+function PlanUsageSurface() {
   const { i18n, t } = useTranslation("settings");
   const { businesses, business } = useActiveBusiness();
   const billing = useQuery({ queryKey: ["billing", business?.businessId], queryFn: () => requestJson<BillingUsageViewModel>(`/api/billing?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business?.businessId) });
@@ -46,10 +58,25 @@ export function LiveUsageSurface() {
   </></Surface></SectionBlock></div>;
 }
 
-function UsageMeter({ label, used, included, unit, blocked, showUsedUnit = false }: { label: string; used: number; included: number | null; unit: string; blocked: boolean; showUsedUnit?: boolean }) {
+function AllowanceUsageSurface() {
   const { i18n, t } = useTranslation("settings");
-  const percentage = included && included > 0 ? Math.min(100, (used / included) * 100) : 0;
-  return <div className="border-b border-border px-6 py-5 last:border-b-0"><div className="flex flex-col gap-2"><div className="flex items-center justify-between gap-4"><span className="text-[15px] font-medium leading-6">{label}</span><span className="text-[15px] leading-6 text-muted-foreground tabular-nums">{included === null ? t("billing.usage.customAllowance", { used: used.toLocaleString(intlLocale(i18n.language)), unit }) : <>{used.toLocaleString(intlLocale(i18n.language))}{showUsedUnit ? ` ${unit}` : ""} / {included.toLocaleString(intlLocale(i18n.language))} {unit}</>}</span></div>{included !== null && included > 0 ? <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary"><div className={blocked ? "h-full rounded-full bg-destructive" : "h-full rounded-full bg-foreground transition-all duration-700"} style={{ width: `${percentage}%` }} /></div> : null}{blocked ? <span className="text-sm leading-6 text-destructive">{t("billing.usage.blockedDescription")}</span> : null}</div></div>;
+  const { businesses, business } = useActiveBusiness();
+  const usage = useQuery({ queryKey: ["usage", business?.businessId], queryFn: () => requestJson<AllowanceUsage>(`/api/usage?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business?.businessId) });
+  if (businesses.isLoading || usage.isLoading) return <UsageSkeleton rows={2} />;
+  if (businesses.isError || usage.isError || !usage.data) return <Surface className="flex flex-col items-start gap-4 p-6"><p role="alert">{t("billing.usage.unavailable")}</p><Button variant="outline" onClick={() => { if (businesses.isError || !business) void businesses.refetch(); else void usage.refetch(); }}>{t("billing.actions.retry")}</Button></Surface>;
+  const { voiceSeconds, chats, resetsAt } = usage.data;
+  // Periods run in UTC, so the reset day is read in UTC too.
+  const description = t("billing.usage.description", { resetAt: new Intl.DateTimeFormat(intlLocale(i18n.language), { month: "long", day: "numeric", timeZone: "UTC" }).format(new Date(resetsAt)) });
+  return <div className="flex w-full flex-col gap-10"><SectionBlock description={description} title={t("billing.usage.allowanceTitle")}><Surface className="p-0"><>
+    <UsageMeter blocked={voiceSeconds.blocked} included={voiceSeconds.included === null ? null : voiceSeconds.included / 60} label={t("billing.usage.voiceTitle")} noLimit unit={t("billing.usage.units.voice")} used={Math.round((voiceSeconds.used / 60) * 10) / 10} />
+    <UsageMeter blocked={chats.blocked} included={chats.included} label={t("billing.usage.chatsTitle")} noLimit unit={t("billing.usage.units.chats")} used={chats.used} />
+  </></Surface></SectionBlock></div>;
 }
 
-function UsageSkeleton() { return <div className="flex flex-col gap-3"><div className="space-y-2"><Skeleton className="h-5 w-32" /><Skeleton className="h-4 w-44" /></div><Surface>{Array.from({ length: 4 }).map((_, index) => <div className="space-y-2 border-b px-6 py-5 last:border-b-0" key={index}><div className="flex justify-between"><Skeleton className="h-5 w-32" /><Skeleton className="h-5 w-24" /></div><Skeleton className="h-1.5 w-full rounded-full" /></div>)}</Surface></div>; }
+function UsageMeter({ label, used, included, unit, blocked, showUsedUnit = false, noLimit = false }: { label: string; used: number; included: number | null; unit: string; blocked: boolean; showUsedUnit?: boolean; noLimit?: boolean }) {
+  const { i18n, t } = useTranslation("settings");
+  const percentage = included && included > 0 ? Math.min(100, (used / included) * 100) : 0;
+  return <div className="border-b border-border px-6 py-5 last:border-b-0"><div className="flex flex-col gap-2"><div className="flex items-center justify-between gap-4"><span className="text-[15px] font-medium leading-6">{label}</span><span className="text-[15px] leading-6 text-muted-foreground tabular-nums">{included === null ? t(noLimit ? "billing.usage.noLimit" : "billing.usage.customAllowance", { used: used.toLocaleString(intlLocale(i18n.language)), unit }) : <>{used.toLocaleString(intlLocale(i18n.language))}{showUsedUnit ? ` ${unit}` : ""} / {included.toLocaleString(intlLocale(i18n.language))} {unit}</>}</span></div>{included !== null && included > 0 ? <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary"><div className={blocked ? "h-full rounded-full bg-destructive" : "h-full rounded-full bg-foreground transition-all duration-700"} style={{ width: `${percentage}%` }} /></div> : null}{blocked ? <span className="text-sm leading-6 text-destructive">{t("billing.usage.blockedDescription")}</span> : null}</div></div>;
+}
+
+function UsageSkeleton({ rows = 4 }: { rows?: number }) { return <div className="flex flex-col gap-3"><div className="space-y-2"><Skeleton className="h-5 w-32" /><Skeleton className="h-4 w-44" /></div><Surface>{Array.from({ length: rows }).map((_, index) => <div className="space-y-2 border-b px-6 py-5 last:border-b-0" key={index}><div className="flex justify-between"><Skeleton className="h-5 w-32" /><Skeleton className="h-5 w-24" /></div><Skeleton className="h-1.5 w-full rounded-full" /></div>)}</Surface></div>; }

@@ -68,7 +68,16 @@ export function AcceptInviteSurface() {
         setIsSubmitting(false);
         return;
       }
-      if (!response.ok) throw new Error();
+      if (!response.ok) {
+        // Someone on the business's partner's team works in it through the partner console instead of joining.
+        const refused = await response.json().catch(() => null) as { code?: string } | null;
+        if (refused?.code === "partner_member_not_on_team") {
+          setErrorMessage(t("acceptInvite.partnerMember", { businessName: invitation?.businessName ?? t("acceptInvite.workspaceFallback") }));
+          setIsSubmitting(false);
+          return;
+        }
+        throw new Error();
+      }
       const joined = await response.json().catch(() => null) as { partnerId?: string | null } | null;
       toast.success(t("acceptInvite.success", { businessName: invitation?.businessName ?? t("acceptInvite.workspaceFallback") }));
       // Someone joining a partner's business, such as its owner, lands in it, and onboarding starts there if it hasn't finished.

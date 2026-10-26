@@ -73,3 +73,20 @@ it("explains a 403 and lets the user sign in with the invited account", async ()
   await waitFor(() => expect(spies.replace).toHaveBeenCalledWith(expect.stringContaining("/login?returnTo=")));
   expect(fetchMock).toHaveBeenCalledWith("/api/auth/sign-out", expect.objectContaining({ method: "POST" }));
 });
+
+it("tells someone on the business's partner's team that they work in it from the partner console", async () => {
+  spies.partner = { faviconUrl: null, color: null, links: { terms: null, privacy: null, support: null } };
+  window.history.replaceState({}, "", "/accept-invite?token=fixture-token");
+  vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
+    if (url.includes("get-session")) return Response.json({ user: { id: "fixture" } });
+    if (init?.method === "POST") return Response.json({ error: "People on the business's partner's team work in it from the partner's console, so they can't join its team.", code: "partner_member_not_on_team" }, { status: 409 });
+    return Response.json({ invitation: { businessName: "Harbor Dental", email: "member@example.invalid", expired: false, status: "pending" } });
+  }));
+  render(<AcceptInviteSurface />);
+  const submit = await screen.findByRole("button", { name: "acceptInvite.submit" });
+  await waitFor(() => expect(submit.hasAttribute("disabled")).toBe(false));
+  await userEvent.click(submit);
+  await screen.findByText("acceptInvite.partnerMember");
+  expect(spies.success).not.toHaveBeenCalled();
+  expect(spies.replace).not.toHaveBeenCalled();
+});

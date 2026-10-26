@@ -6,7 +6,7 @@ import { businesses, enqueueOutbox, withBusinessTransaction, type Database, type
 import { requireBusinessAdmin } from "../authz";
 import type { DomainContext } from "./context";
 import { attributeBusiness } from "./affiliates";
-import { businessShowsOnBrand, type BrandScope } from "./businessAccess";
+import { businessShowsOnBrand, readBusinessAccess, type BrandScope } from "./businessAccess";
 import { businessGetsHostEmails } from "./hostEmails";
 import { readActiveBusinessIdInTransaction } from "./tenancy";
 
@@ -146,12 +146,15 @@ export type OnboardingState = { businessId: string | null; stage: OnboardingStag
 // Null for a business the person can't open on this brand's domains.
 async function onboardingStateForBusiness(
   tx: DatabaseTransaction,
-  businessId: string,
+  input: { userId: string; businessId: string },
   brand: BrandScope,
 ): Promise<OnboardingState | null> {
+  const { businessId } = input;
   await tx.execute(sql`select set_config('app.business_id', ${businessId}, true)`);
   const business = (await tx.select({ onboardingStage: businesses.onboardingStage, partnerId: businesses.partnerId, accessLevel: businesses.partnerAccessLevel }).from(businesses).where(eq(businesses.id, businessId)).limit(1))[0];
   if (!business || !businessShowsOnBrand(business.partnerId, brand)) return null;
+  // Onboarding is the owner's. A partner member who opened the business goes straight to its dashboard.
+  if ((await readBusinessAccess(tx, input))?.via === "partner") return { businessId, stage: "complete", steps: [] };
   return { businessId, stage: normalizeOnboardingStage(business.onboardingStage), steps: onboardingSteps(business) };
 }
 
@@ -170,18 +173,18 @@ export async function getActiveOnboardingState(
   return await withBusinessTransaction(db, { userId, actorType: "operator" }, async (tx) => {
     const activeBusinessId = await readActiveBusinessIdInTransaction(tx, { userId, brand });
     if (activeBusinessId) {
-      const active = await onboardingStateForBusiness(tx, activeBusinessId, brand);
+      const active = await onboardingStateForBusiness(tx, { userId, businessId: activeBusinessId }, brand);
       if (active) return active;
     }
     // The stored active business is missing, belongs to another brand, or its
     // membership is no longer active (for example, removed after the legacy
-    // import). Fall back to an active membership so onboarding still resolves
-    // a stage instead of dead-ending on create_business and looping on the
-    // first step.
-    const memberships = (await tx.execute<{ business_id: string; role: string; partner_id: string | null }>(sql`select business_id, role, partner_id from app.list_user_businesses(${userId})`)).rows.filter((row) => businessShowsOnBrand(row.partner_id, brand));
-    const preferred = selectPreferredMembership(memberships);
+    // import), or the partner open that reached it expired. Fall back to an
+    // active membership, then an open, so onboarding still resolves a stage
+    // instead of dead-ending on create_business and looping on the first step.
+    const memberships = (await tx.execute<{ business_id: string; role: string; partner_id: string | null; access_via: string }>(sql`select business_id, role, partner_id, access_via from app.list_user_businesses(${userId})`)).rows.filter((row) => businessShowsOnBrand(row.partner_id, brand));
+    const preferred = selectPreferredMembership(memberships.filter((row) => row.access_via === "membership")) ?? selectPreferredMembership(memberships);
     if (preferred) {
-      const fallback = await onboardingStateForBusiness(tx, String(preferred.business_id), brand);
+      const fallback = await onboardingStateForBusiness(tx, { userId, businessId: String(preferred.business_id) }, brand);
       if (fallback) return fallback;
     }
     return { businessId: null, stage: "create_business", steps: onboardingSteps(null) };

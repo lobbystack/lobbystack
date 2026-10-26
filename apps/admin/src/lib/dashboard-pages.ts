@@ -3,8 +3,8 @@ import type { Capability } from "@lobbystack/domain";
 // What each dashboard page needs the active business to give the person, so
 // the dashboard hides what a partner business's access level leaves out:
 // billing, API keys and MCP at full access, and everything but calls, chats,
-// appointments, contacts and messages at activity only. The server enforces
-// the same for every route through business-capabilities.ts. Direct
+// appointments, contacts, messages and usage at activity only. The server
+// enforces the same for every route through business-capabilities.ts. Direct
 // businesses give every capability, so their dashboard is unchanged.
 
 const pageCapabilities: ReadonlyArray<readonly [prefix: string, capability: Capability]> = [
@@ -27,8 +27,8 @@ const pageCapabilities: ReadonlyArray<readonly [prefix: string, capability: Capa
   ["/widget", "setup"],
   ["/settings/phone-number", "setup"],
   ["/settings/team", "team"],
-  // Usage reads the business's billing account.
-  ["/settings/usage", "billing"],
+  // Every operator sees the minutes and chats used against the allowance. A business with billing also sees its plan's meters there.
+  ["/settings/usage", "activity"],
   ["/settings/plan", "billing"],
   ["/settings/api-keys", "api_keys"],
   ["/settings/connected-apps", "mcp"],

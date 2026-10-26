@@ -30,7 +30,7 @@ describe("route capabilities", () => {
   });
 
   it("puts calls, chats, appointments, contacts and messages under activity, with what every operator needs to land in the business", () => {
-    for (const path of ["/api/calls", "/api/calls/x/recording", "/api/messages", "/api/appointments/x/cancel", "/api/contacts/x/passcode", "/api/dashboard", "/api/realtime", "/api/notification-preferences", "/api/preferences/appearance", "/api/account/phone-verification/check", "/api/onboarding/numbers", "/api/onboarding/phone-verification", "/api/onboarding/stage"]) {
+    for (const path of ["/api/calls", "/api/calls/x/recording", "/api/messages", "/api/appointments/x/cancel", "/api/contacts/x/passcode", "/api/dashboard", "/api/realtime", "/api/notification-preferences", "/api/preferences/appearance", "/api/account/phone-verification/check", "/api/onboarding/numbers", "/api/onboarding/phone-verification", "/api/onboarding/stage", "/api/usage"]) {
       expect(routeCapability(path), path).toBe("activity");
     }
   });

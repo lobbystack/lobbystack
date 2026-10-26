@@ -336,7 +336,10 @@ describe.skipIf(!testUrl)("platform keys against PostgreSQL with RLS", () => {
     expect(await resolveActingUserId(context, caller)).toBe(memberId);
     await admin!.db.update(businessMemberships).set({ role: "viewer" }).where(and(eq(businessMemberships.businessId, businessA), eq(businessMemberships.userId, memberId)));
     await expectApiError(resolveActingUserId(context, caller), 403, "key_owner_inactive");
-    await admin!.db.update(businessMemberships).set({ role: "business_owner" }).where(and(eq(businessMemberships.businessId, businessA), eq(businessMemberships.userId, memberId)));
+    // A creator taken off the team gets the same answer on the worker's connection, which also asks about partner opens.
+    await admin!.db.update(businessMemberships).set({ role: "business_owner", status: "removed" }).where(and(eq(businessMemberships.businessId, businessA), eq(businessMemberships.userId, memberId)));
+    await expectApiError(resolveActingUserId(context, caller), 403, "key_owner_inactive");
+    await admin!.db.update(businessMemberships).set({ status: "active" }).where(and(eq(businessMemberships.businessId, businessA), eq(businessMemberships.userId, memberId)));
     await admin!.db.update(apiKeys).set({ createdByUserId: null }).where(eq(apiKeys.id, key!.id));
     await expectApiError(resolveActingUserId(context, caller), 403, "key_owner_inactive");
     // A platform key acts as its resolved owner without another lookup.
