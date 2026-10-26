@@ -5,11 +5,12 @@ const fixture = vi.hoisted(() => ({
   headers: new Headers(),
   session: { user: { id: "user", email: "owner@example.test" } } as { user: { id: string; email: string } } | null,
   partners: [] as Array<{ partnerId: string; name: string; slug: string; role: "owner" | "admin" | "member"; subdomain: string | null }>,
+  billingPage: vi.fn(async (_context: unknown, _input: { userId: string; partnerId: string }) => false),
 }));
 vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => undefined }), headers: async () => fixture.headers }));
 // Next's redirect throws, so nothing after it runs.
 vi.mock("next/navigation", () => ({ redirect: vi.fn((to: string) => { throw Object.assign(new Error("NEXT_REDIRECT"), { to }); }) }));
-vi.mock("@lobbystack/domain", () => ({ listUserPartners: async () => fixture.partners }));
+vi.mock("@lobbystack/domain", () => ({ listUserPartners: async () => fixture.partners, partnerHasBillingPage: fixture.billingPage }));
 vi.mock("@/lib/auth", () => ({ getSession: async () => fixture.session }));
 vi.mock("@/lib/api-helpers", () => ({ getAppDatabase: () => ({ db: {} }) }));
 vi.mock("@/components/partner-shell", () => ({ PartnerShell: () => null }));
@@ -22,6 +23,7 @@ const OTHER = "0d6f9c1e-2b7a-4c55-8f0e-3a9b1d2c4e5f";
 const open = (partnerId: string) => PartnerConsoleLayout({ children: null, params: Promise.resolve({ partnerId }) });
 
 beforeEach(() => {
+  fixture.billingPage.mockClear();
   fixture.headers = new Headers({ "x-lobbystack-brand": "host", "x-lobbystack-pathname": `/partner/${PARTNER}/team` });
   fixture.session = { user: { id: "user", email: "owner@example.test" } };
   fixture.partners = [
@@ -37,11 +39,15 @@ it("opens the console of a partner the person is on the team of, with their role
   expect(shell.props.user).toEqual({ email: "owner@example.test" });
 });
 
-it("tells the shell whether the deployment sells tiers, which decides whether owners see Billing", async () => {
-  expect(((await open(PARTNER)) as ReactElement<{ tierBilling: boolean }>).props.tierBilling).toBe(false);
-  for (const tier of ["STARTER", "GROWTH", "SCALE"]) for (const interval of ["MONTHLY", "ANNUAL"]) vi.stubEnv(`POLAR_PARTNER_${tier}_${interval}_PRODUCT_ID`, `prod_${tier}_${interval}`);
-  expect(((await open(PARTNER)) as ReactElement<{ tierBilling: boolean }>).props.tierBilling).toBe(true);
-  vi.unstubAllEnvs();
+it("gives an owner the Billing page when the partner has one, and asks nothing for an admin or a member", async () => {
+  const billingPage = async () => ((await open(PARTNER)) as ReactElement<{ billingPage: boolean }>).props.billingPage;
+  expect(await billingPage()).toBe(false);
+  expect(fixture.billingPage).not.toHaveBeenCalled();
+  fixture.partners = fixture.partners.map((partner) => partner.partnerId === PARTNER ? { ...partner, role: "owner" } : partner);
+  expect(await billingPage()).toBe(false);
+  fixture.billingPage.mockResolvedValueOnce(true);
+  expect(await billingPage()).toBe(true);
+  expect(fixture.billingPage).toHaveBeenLastCalledWith(expect.anything(), { userId: "user", partnerId: PARTNER });
 });
 
 it("sends anyone off the partner's team back to /partner, whether the id is someone else's or not an id at all", async () => {

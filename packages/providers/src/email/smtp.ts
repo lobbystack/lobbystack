@@ -196,7 +196,9 @@ type PoolAlertCopy = { subject: string; lines: string[]; action: string };
 /**
  * The host's alert to a partner's owners and admins at 80% or 100% of its
  * pool's minutes or chats, or of its overage cap. What happens past the pool
- * depends on `overage`: on, off by the owner's switch, or none on Free.
+ * depends on `overage`: on, off by the owner's switch, or none on Free or on
+ * a pool the host set. When `pool` is `host`, the deployment sells no tiers,
+ * so the alert asks the partner to contact the host instead of picking one.
  * The domain formats the counts, amounts and month in the reader's language.
  */
 function partnerPoolAlertCopy(v: Record<string, string>): PoolAlertCopy {
@@ -209,11 +211,12 @@ function partnerPoolAlertCopy(v: Record<string, string>): PoolAlertCopy {
   const included = v.included ?? "";
   const month = v.month ?? "";
   const cap = v.cap ?? "";
+  const host = v.pool === "host";
   // What the owner can do next, from where the pool stands.
-  const choice = kind === "cap" || (on && capped) ? "raise" : on ? "tier" : v.overage === "off" ? "enable" : "pay";
+  const choice = host ? "host" : kind === "cap" || (on && capped) ? "raise" : on ? "tier" : v.overage === "off" ? "enable" : "pay";
   if (v.locale === "fr") {
     const upTo = capped ? `, jusqu'à votre plafond de ${cap}` : "";
-    const action = { raise: "Relevez votre plafond ou choisissez un palier supérieur sur la page Facturation", tier: "Choisissez un palier supérieur sur la page Facturation", enable: "Activez le dépassement ou choisissez un palier supérieur sur la page Facturation", pay: "Choisissez un palier payant et sa réserve plus grande sur la page Facturation" }[choice];
+    const action = { raise: "Relevez votre plafond ou choisissez un palier supérieur sur la page Facturation", tier: "Choisissez un palier supérieur sur la page Facturation", enable: "Activez le dépassement ou choisissez un palier supérieur sur la page Facturation", pay: "Choisissez un palier payant et sa réserve plus grande sur la page Facturation", host: "Consultez l'utilisation du mois sur la page Facturation" }[choice];
     if (kind === "cap") {
       return full
         ? { subject: "Vous avez atteint votre plafond de dépassement", lines: [`Le dépassement de votre réserve en ${month} a atteint votre plafond de ${included}.`, "Jusqu'au mois prochain, ou jusqu'à ce que vous releviez le plafond, les appels vont au numéro de transfert de chaque entreprise ou au téléphone de son propriétaire, et le clavardage du site ne répond plus."], action }
@@ -224,11 +227,11 @@ function partnerPoolAlertCopy(v: Record<string, string>): PoolAlertCopy {
     const past = kind === "minutes"
       ? on ? `${full ? "Elles" : "Au-delà de la réserve, elles"} continuent de répondre aux appels, et vous payez chaque minute supplémentaire au tarif de dépassement de votre palier${upTo}.` : full ? "Jusqu'au mois prochain, les appels vont au numéro de transfert de chaque entreprise ou au téléphone de son propriétaire." : "Une fois la réserve épuisée, les appels iront au numéro de transfert de chaque entreprise ou au téléphone de son propriétaire jusqu'au mois prochain."
       : on ? `${full ? "Elles" : "Au-delà de la réserve, elles"} continuent de répondre sur leur site, et vous payez chaque clavardage supplémentaire au tarif de dépassement de votre palier${upTo}.` : full ? "Jusqu'au mois prochain, le clavardage de leur site ne répond plus." : "Une fois la réserve épuisée, le clavardage de leur site cessera de répondre jusqu'au mois prochain.";
-    return { subject: full ? `Vos entreprises ont utilisé ${kind === "minutes" ? "toutes les minutes" : "tous les clavardages"} du mois` : `Vos entreprises ont utilisé 80 % des ${noun} du mois`, lines: [first, past], action };
+    return { subject: full ? `Vos entreprises ont utilisé ${kind === "minutes" ? "toutes les minutes" : "tous les clavardages"} du mois` : `Vos entreprises ont utilisé 80 % des ${noun} du mois`, lines: [first, past, ...(host ? ["Nous fixons votre réserve. Contactez-nous pour la modifier."] : [])], action };
   }
   if (v.locale === "es") {
     const upTo = capped ? `, hasta su límite de ${cap}` : "";
-    const action = { raise: "Suba su límite o elija un nivel mayor en la página Facturación", tier: "Elija un nivel mayor en la página Facturación", enable: "Active el excedente o elija un nivel mayor en la página Facturación", pay: "Elija un nivel de pago, con una bolsa más grande, en la página Facturación" }[choice];
+    const action = { raise: "Suba su límite o elija un nivel mayor en la página Facturación", tier: "Elija un nivel mayor en la página Facturación", enable: "Active el excedente o elija un nivel mayor en la página Facturación", pay: "Elija un nivel de pago, con una bolsa más grande, en la página Facturación", host: "Consulte el uso del mes en la página Facturación" }[choice];
     if (kind === "cap") {
       return full
         ? { subject: "Llegó a su límite de excedente", lines: [`El excedente de su bolsa de ${month} llegó a su límite de ${included}.`, "Hasta el próximo mes, o hasta que suba el límite, las llamadas se desvían al número de transferencia de cada negocio o al teléfono de su propietario, y el chat del sitio deja de responder."], action }
@@ -239,11 +242,11 @@ function partnerPoolAlertCopy(v: Record<string, string>): PoolAlertCopy {
     const past = kind === "minutes"
       ? on ? `${full ? "Siguen" : "Pasada la bolsa, siguen"} contestando llamadas, y usted paga cada minuto adicional a la tarifa de excedente de su nivel${upTo}.` : full ? "Hasta el próximo mes, las llamadas se desvían al número de transferencia de cada negocio o al teléfono de su propietario." : "Cuando se agote la bolsa, las llamadas se desviarán al número de transferencia de cada negocio o al teléfono de su propietario hasta el próximo mes."
       : on ? `${full ? "Siguen" : "Pasada la bolsa, siguen"} respondiendo en su sitio, y usted paga cada chat adicional a la tarifa de excedente de su nivel${upTo}.` : full ? "Hasta el próximo mes, el chat de su sitio deja de responder." : "Cuando se agote la bolsa, el chat de su sitio dejará de responder hasta el próximo mes.";
-    return { subject: full ? `Sus negocios usaron todos los ${noun} del mes` : `Sus negocios usaron el 80 % de los ${noun} del mes`, lines: [first, past], action };
+    return { subject: full ? `Sus negocios usaron todos los ${noun} del mes` : `Sus negocios usaron el 80 % de los ${noun} del mes`, lines: [first, past, ...(host ? ["Nosotros fijamos su bolsa. Contáctenos para cambiarla."] : [])], action };
   }
   if (v.locale === "sr") {
     const upTo = capped ? `, do Vašeg limita od ${cap}` : "";
-    const action = { raise: "Povećajte limit ili izaberite veći nivo na stranici Naplata", tier: "Izaberite veći nivo na stranici Naplata", enable: "Uključite prekoračenje ili izaberite veći nivo na stranici Naplata", pay: "Izaberite plaćeni nivo, sa većim fondom, na stranici Naplata" }[choice];
+    const action = { raise: "Povećajte limit ili izaberite veći nivo na stranici Naplata", tier: "Izaberite veći nivo na stranici Naplata", enable: "Uključite prekoračenje ili izaberite veći nivo na stranici Naplata", pay: "Izaberite plaćeni nivo, sa većim fondom, na stranici Naplata", host: "Pogledajte potrošnju za ovaj mesec na stranici Naplata" }[choice];
     if (kind === "cap") {
       return full
         ? { subject: "Dostigli ste limit prekoračenja", lines: [`Prekoračenje Vašeg fonda za ${month} dostiglo je Vaš limit od ${included}.`, "Do sledećeg meseca, ili dok ne povećate limit, pozivi idu na broj za prebacivanje svake firme ili na telefon njenog vlasnika, a čet na sajtu ne odgovara."], action }
@@ -254,10 +257,10 @@ function partnerPoolAlertCopy(v: Record<string, string>): PoolAlertCopy {
     const past = kind === "minutes"
       ? on ? `${full ? "Nastavljaju" : "Kada potroše fond, nastavljaju"} da odgovaraju na pozive, a Vi plaćate svaki dodatni minut po ceni prekoračenja Vašeg nivoa${upTo}.` : full ? "Do sledećeg meseca, pozivi idu na broj za prebacivanje svake firme ili na telefon njenog vlasnika." : "Kada potroše fond, pozivi će ići na broj za prebacivanje svake firme ili na telefon njenog vlasnika do sledećeg meseca."
       : on ? `${full ? "Nastavljaju" : "Kada potroše fond, nastavljaju"} da odgovaraju na sajtu, a Vi plaćate svaki dodatni čet po ceni prekoračenja Vašeg nivoa${upTo}.` : full ? "Do sledećeg meseca, čet na njihovom sajtu ne odgovara." : "Kada potroše fond, čet na njihovom sajtu će prestati da odgovara do sledećeg meseca.";
-    return { subject: full ? `Vaše firme su potrošile sve ${kind === "minutes" ? "minute" : "četove"} ovog meseca` : `Vaše firme su potrošile 80% ${noun} ovog meseca`, lines: [first, past], action };
+    return { subject: full ? `Vaše firme su potrošile sve ${kind === "minutes" ? "minute" : "četove"} ovog meseca` : `Vaše firme su potrošile 80% ${noun} ovog meseca`, lines: [first, past, ...(host ? ["Mi određujemo Vaš fond. Javite nam se da biste ga promenili."] : [])], action };
   }
   const upTo = capped ? `, up to your ${cap} cap` : "";
-  const action = { raise: "Raise your cap or pick a bigger tier on the Billing page", tier: "Pick a bigger tier on the Billing page", enable: "Turn on overage or pick a bigger tier on the Billing page", pay: "Pick a paid tier, with a bigger pool, on the Billing page" }[choice];
+  const action = { raise: "Raise your cap or pick a bigger tier on the Billing page", tier: "Pick a bigger tier on the Billing page", enable: "Turn on overage or pick a bigger tier on the Billing page", pay: "Pick a paid tier, with a bigger pool, on the Billing page", host: "See this month's usage on the Billing page" }[choice];
   if (kind === "cap") {
     return full
       ? { subject: "You reached your overage cap", lines: [`Your pool's overage for ${month} reached your ${included} cap.`, "Until next month, or until you raise the cap, calls forward to each business's transfer number or its owner's phone, and website chat stops replying."], action }
@@ -268,7 +271,7 @@ function partnerPoolAlertCopy(v: Record<string, string>): PoolAlertCopy {
   const past = kind === "minutes"
     ? on ? `${full ? "They" : "Past the pool, they"} keep answering calls, and you pay your tier's overage rate for each extra minute${upTo}.` : full ? "Until next month, calls forward to each business's transfer number or its owner's phone." : "Once the pool runs out, calls will forward to each business's transfer number or its owner's phone until next month."
     : on ? `${full ? "They" : "Past the pool, they"} keep replying on their websites, and you pay your tier's overage rate for each extra chat${upTo}.` : full ? "Until next month, their website chat stops replying." : "Once the pool runs out, their website chat will stop replying until next month.";
-  return { subject: full ? `Your businesses used all of this month's ${kind === "minutes" ? "minutes" : "chats"}` : `Your businesses used 80% of this month's ${kind === "minutes" ? "minutes" : "chats"}`, lines: [first, past], action };
+  return { subject: full ? `Your businesses used all of this month's ${kind === "minutes" ? "minutes" : "chats"}` : `Your businesses used 80% of this month's ${kind === "minutes" ? "minutes" : "chats"}`, lines: [first, past, ...(host ? ["We set your pool. Contact us to change it."] : [])], action };
 }
 
 function partnerPoolAlertBody(variables: Record<string, string>, brand: EmailBrand): string {

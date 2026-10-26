@@ -363,6 +363,8 @@ async function main(): Promise<void> {
             ('partner_billing_accounts', 'included_numbers', false),
             ('partner_billing_accounts', 'pool_overage_enabled', false),
             ('partner_billing_accounts', 'pool_overage_cap_cents', false),
+            ('partner_billing_accounts', 'host_pool_voice_seconds', false),
+            ('partner_billing_accounts', 'host_pool_chats', false),
             ('business_templates', 'partner_id', false),
             ('business_templates', 'manifest', false),
             ('business_template_files', 'partner_id', false),
@@ -490,6 +492,9 @@ async function main(): Promise<void> {
             ('lobbystack_app', 'app.lock_partner_pool(uuid, text)', false),
             ('lobbystack_app', 'app.record_partner_pool_usage(uuid, text, double precision, double precision, double precision, double precision, double precision, double precision)', false),
             ('lobbystack_worker', 'app.set_partner_pool_overage(uuid, boolean, integer)', false),
+            -- The host sets a partner's pool from its own tooling, as the system actor on the app role; the worker never does.
+            ('lobbystack_app', 'app.set_partner_host_pool(uuid, integer, integer)', true),
+            ('lobbystack_worker', 'app.set_partner_host_pool(uuid, integer, integer)', false),
             ('lobbystack_app', 'app.can_use_partner_pool(uuid, text)', false),
             ('lobbystack_worker', 'app.can_use_partner_pool(uuid, text)', false),
             ('lobbystack_worker', 'app.claim_partner_pool_alerts(uuid, text, text[])', true),

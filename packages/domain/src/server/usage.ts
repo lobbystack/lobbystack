@@ -1,7 +1,7 @@
 import { and, asc, eq, isNotNull, sql } from "drizzle-orm";
 
 import { billingUsageEvents, billingUsageMonths, calls, enqueueOutbox, type DatabaseTransaction } from "@lobbystack/db";
-import { billingErrorCodes, billingPlanSlugs, isBillingPlanSlug, MAX_PHONE_CALL_MS, partnerFeatures, PHONE_RESERVATION_SLICE_SECONDS, planEntitlement, type BillingPlanSlug, type Entitlement } from "@lobbystack/shared";
+import { billingErrorCodes, billingPlanSlugs, isBillingPlanSlug, MAX_PHONE_CALL_MS, PHONE_RESERVATION_SLICE_SECONDS, planEntitlement, type BillingPlanSlug, type Entitlement } from "@lobbystack/shared";
 
 import { queueBusinessAllowanceAlertsInTransaction } from "./businessAllowanceAlerts";
 import { loadBusinessBilling, type BusinessBilling } from "./entitlement";
@@ -366,14 +366,14 @@ async function refreshUsageMonth(tx: DatabaseTransaction, input: { businessId: s
 
 /**
  * The voice seconds a business can use now: what it has left, or what its
- * partner's pool has left when that's fewer. Without tier billing nothing
- * limits the pool, so there's no pool to read.
+ * partner's pool has left when that's fewer. Without tier billing, only a
+ * pool the host set limits it.
  */
 async function voiceSecondsLeftNow(tx: DatabaseTransaction, input: { businessId: string; periodKey: string; lockPool: boolean }): Promise<{ plan: BillingPlanSlug; entitlement: Entitlement; seconds: number }> {
   const billing = await loadBillingContext(tx, input.businessId);
   const seconds = voiceSecondsLeft(billing.entitlement, replayEvents(await loadEvents(tx, input.businessId, input.periodKey, billing), billing));
   const partnerId = billing.entitlement.poolPartnerId;
-  if (!partnerId || !partnerFeatures(process.env).tierBilling) return { plan: billing.plan, entitlement: billing.entitlement, seconds };
+  if (!partnerId) return { plan: billing.plan, entitlement: billing.entitlement, seconds };
   const pool = input.lockPool ? await lockPartnerPoolInTransaction(tx, { partnerId, periodKey: input.periodKey }) : await readPartnerPoolInTransaction(tx, { partnerId, periodKey: input.periodKey });
   return { plan: billing.plan, entitlement: billing.entitlement, seconds: Math.min(seconds, poolLeft(pool, "voice_seconds")) };
 }
@@ -394,9 +394,9 @@ export async function readVoiceSecondsLeftInTransaction(tx: DatabaseTransaction,
  * The voice seconds a business has left by the calls that ended, leaving out
  * what open calls hold, since those seconds come back when the calls end. A
  * partner's business counts its pool the same way, and `pooled` says whether
- * a pool counted. A partner's trial number forwards for good only once these
- * run out: calls its partner's other businesses hold open can refuse one of
- * its calls for now, but don't use up its minutes.
+ * a pool limited its minutes. A partner's trial number forwards for good only
+ * once these run out: calls its partner's other businesses hold open can
+ * refuse one of its calls for now, but don't use up its minutes.
  */
 export async function readEndedVoiceSecondsLeftInTransaction(tx: DatabaseTransaction, input: { businessId: string; periodKey?: string }): Promise<{ seconds: number; pooled: boolean }> {
   const periodKey = input.periodKey ?? periodKeyFor();
@@ -404,8 +404,9 @@ export async function readEndedVoiceSecondsLeftInTransaction(tx: DatabaseTransac
   const ended = (await loadEvents(tx, input.businessId, periodKey, billing)).filter((event) => event.isFinal);
   const seconds = voiceSecondsLeft(billing.entitlement, replayEvents(ended, billing));
   const partnerId = billing.entitlement.poolPartnerId;
-  if (!partnerId || !partnerFeatures(process.env).tierBilling) return { seconds, pooled: false };
+  if (!partnerId) return { seconds, pooled: false };
   const pool = await readPartnerPoolInTransaction(tx, { partnerId, periodKey });
+  if (pool.terms.voiceSeconds === null) return { seconds, pooled: false };
   const settled: PoolState = { ...pool, month: { ...pool.month, voiceSecondsUsed: pool.month.voiceSecondsFinal } };
   return { seconds: Math.min(seconds, poolLeft(settled, "voice_seconds")), pooled: true };
 }

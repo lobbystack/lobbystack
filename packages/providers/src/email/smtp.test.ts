@@ -351,6 +351,17 @@ describe("a partner's pool alert", () => {
     for (let index = 0; index < 4; index++) expect(sent(index).text).not.toContain("Front Desk");
   });
 
+  it("asks the owner to contact the host about a pool the host set, with no tier or overage to pick, in their language", async () => {
+    const { provider, sent } = capture();
+    for (const locale of ["en", "fr", "es", "sr"]) await send(provider, alert({ locale, kind: "minutes", threshold: "80", used: "400", included: "500", pool: "host", overage: "none", cap: "" }));
+    expect(sent(0).subject).toBe("Your businesses used 80% of this month's minutes");
+    expect(sent(0).text).toBe(["Hi Ana,", "", "Acme Reception's businesses used 400 of the 500 minutes in your pool for October.", "", "Once the pool runs out, calls will forward to each business's transfer number or its owner's phone until next month.", "", "We set your pool. Contact us to change it.", "", `See this month's usage on the Billing page: ${url}`, "", "LobbyStack"].join("\n"));
+    expect(sent(1).text).toContain("Nous fixons votre réserve. Contactez-nous pour la modifier.");
+    expect(sent(2).text).toContain("Nosotros fijamos su bolsa. Contáctenos para cambiarla.");
+    expect(sent(3).text).toContain("Mi određujemo Vaš fond. Javite nam se da biste ga promenili.");
+    for (let index = 0; index < 4; index++) expect(sent(index).text).not.toMatch(/tier|palier|nivel|nivo|overage|dépassement|excedente|prekoračenj/i);
+  });
+
   it("writes every alert in the owner's language", async () => {
     const { provider, sent } = capture();
     const kinds = [["minutes", "80"], ["minutes", "100"], ["chats", "80"], ["chats", "100"], ["cap", "80"], ["cap", "100"]] as const;

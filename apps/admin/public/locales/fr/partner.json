@@ -683,7 +683,12 @@
       "title": "Ce mois-ci",
       "description": "Les minutes et les clavardages que vos entreprises ont pris dans votre réserve commune. Votre réserve repart à zéro le {{resetsAt}}.",
       "minutes": "Minutes",
-      "chats": "Clavardages"
+      "chats": "Clavardages",
+      "noLimit": "{{used}}, sans limite"
+    },
+    "hostPool": {
+      "description": "Nous fixons les minutes et les clavardages que vos entreprises partagent chaque mois.",
+      "limit": "Une fois la réserve épuisée, les appels vont au numéro de transfert de chaque entreprise ou au téléphone de son propriétaire, et le clavardage du site ne répond plus jusqu'à ce que votre réserve reparte à zéro. Pour modifier votre réserve, contactez-nous."
     },
     "overage": {
       "title": "Dépassement",

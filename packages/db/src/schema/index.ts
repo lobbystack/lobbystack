@@ -1346,6 +1346,9 @@ export const partnerBillingAccounts = pgTable(
     // Pool overage, on unless an owner turns it off, and its monthly cap in US cents. Null means no cap (migration 0153).
     poolOverageEnabled: boolean("pool_overage_enabled").default(true).notNull(),
     poolOverageCapCents: integer("pool_overage_cap_cents"),
+    // The pool the host set while the deployment bills no tiers, each kind null for no limit (migration 0158).
+    hostPoolVoiceSeconds: integer("host_pool_voice_seconds"),
+    hostPoolChats: integer("host_pool_chats"),
     ...timestamps,
   },
   (table) => [uniqueIndex("partner_billing_accounts_partner_unique").on(table.partnerId), uniqueIndex("partner_billing_accounts_billing_key_unique").on(table.billingKey)],

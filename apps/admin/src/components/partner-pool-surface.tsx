@@ -24,24 +24,27 @@ function periodResetsAt(periodKey: string): Date {
   return new Date(Date.UTC(year, month, 1));
 }
 
-function Meter({ label, used, included }: { label: string; used: number; included: number }) {
-  const { i18n } = useTranslation("partner");
+/** Use against what the pool includes. A pool the host set may leave a kind with no limit, which shows the use alone. */
+function Meter({ label, used, included }: { label: string; used: number; included: number | null }) {
+  const { t, i18n } = useTranslation("partner");
   const count = (value: number) => new Intl.NumberFormat(intlLocale(i18n.language)).format(value);
   return (
     <div className="flex flex-col gap-2 border-b border-border px-6 py-5 last:border-b-0">
       <div className="flex items-center justify-between gap-4 text-[15px] leading-6">
         <span className="font-medium">{label}</span>
-        <span className="tabular-nums text-muted-foreground">{count(used)} / {count(included)}</span>
+        <span className="tabular-nums text-muted-foreground">{included === null ? t("billing.pool.noLimit", { used: count(used) }) : `${count(used)} / ${count(included)}`}</span>
       </div>
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
-        <div className="h-full rounded-full bg-foreground transition-all duration-700" style={{ width: `${included > 0 ? Math.min(100, (used / included) * 100) : 100}%` }} />
-      </div>
+      {included === null ? null : (
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
+          <div className="h-full rounded-full bg-foreground transition-all duration-700" style={{ width: `${included > 0 ? Math.min(100, (used / included) * 100) : 100}%` }} />
+        </div>
+      )}
     </div>
   );
 }
 
 /** What the partner's businesses used of the pool this month, against what the pool includes. */
-export function PoolUsageSection({ usage, pool }: { usage: PoolUsage; pool: { voiceSeconds: number; chats: number } }) {
+export function PoolUsageSection({ usage, pool }: { usage: PoolUsage; pool: { voiceSeconds: number | null; chats: number | null } }) {
   const { t, i18n } = useTranslation("partner");
   const resetsAt = new Intl.DateTimeFormat(intlLocale(i18n.language), { month: "long", day: "numeric", timeZone: "UTC" }).format(periodResetsAt(usage.periodKey));
   return (
@@ -51,7 +54,7 @@ export function PoolUsageSection({ usage, pool }: { usage: PoolUsage; pool: { vo
         <p className="text-sm text-muted-foreground">{t("billing.pool.description", { resetsAt })}</p>
       </div>
       <Surface className="p-0">
-        <Meter included={Math.floor(pool.voiceSeconds / 60)} label={t("billing.pool.minutes")} used={Math.ceil(usage.voiceSecondsUsed / 60)} />
+        <Meter included={pool.voiceSeconds === null ? null : Math.floor(pool.voiceSeconds / 60)} label={t("billing.pool.minutes")} used={Math.ceil(usage.voiceSecondsUsed / 60)} />
         <Meter included={pool.chats} label={t("billing.pool.chats")} used={usage.chatsUsed} />
       </Surface>
     </section>

@@ -162,6 +162,21 @@ describe("the partner console's Billing page", () => {
     expect(pool.textContent).toContain("4,100 / 5,000");
   });
 
+  it("shows this month's use of the pool the host set where the dashboard sells no tier, with no tier, price or overage", async () => {
+    // The host limited minutes to 500 and left chats with no limit.
+    const hostPool = { ...free, billed: false, pool: { voiceSeconds: 30_000, chats: null }, poolUsage: { periodKey: "2026-10", voiceSecondsUsed: 12_030, chatsUsed: 4_100, overageSpendCents: 0 }, numbersCounted: false, trialNumber: null };
+    renderWith({ "GET /api/partner/billing": () => hostPool });
+    const pool = await screen.findByRole("region", { name: "billing.pool.title" });
+    expect(pool.textContent).toContain("201 / 500");
+    expect(pool.textContent).toContain("billing.pool.noLimit");
+    expect(pool.querySelectorAll(".bg-secondary")).toHaveLength(1);
+    expect(screen.getByText("billing.hostPool.description")).toBeTruthy();
+    expect(screen.getByText("billing.hostPool.limit")).toBeTruthy();
+    for (const hidden of ["billing.description", "billing.unavailable", "billing.current.title", "billing.current.free", "billing.overage.title", "billing.choose.title"]) expect(screen.queryByText(hidden)).toBeNull();
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(document.body.textContent).not.toContain("$");
+  });
+
   it("explains that Free has no overage, with nothing to change", async () => {
     renderWith({ "GET /api/partner/billing": () => free });
     expect(await screen.findByText("billing.overage.free")).toBeTruthy();

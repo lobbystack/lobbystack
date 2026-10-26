@@ -1,10 +1,11 @@
-import { and, desc, eq, gt, inArray, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNotNull, lt, or, sql } from "drizzle-orm";
 
-import { enqueueOutbox, partnerBillingAccounts, partnerCheckoutRequests, partnerMembers, partners, providerEvents, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { enqueueOutbox, partnerBillingAccounts, partnerCheckoutRequests, partnerDomains, partnerMembers, partners, providerEvents, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import {
   billingErrorCodes,
   isBillingInterval,
   isPaidPartnerTierSlug,
+  isUuid,
   parseDeploymentMode,
   partnerFeatures,
   partnerTierCatalog,
@@ -26,8 +27,10 @@ import { periodKeyFor } from "./usage";
 // partner's owners start a checkout. The worker creates the checkout with
 // Polar, and reconciles Polar's events for the partner's customer
 // (partner:<partner id>) into its billing account. A partner Polar never
-// billed is on Free. Without tier products in Polar, the host bills no tier
-// and the partner's pool has no limit.
+// billed is on Free. Without tier products in Polar, the host bills no tier,
+// and the partner's pool has no limit unless the host sets one with
+// `pnpm partner-pool:set`. Nothing prices overage then, so that pool is the
+// limit, with no overage and no cap.
 
 /** The external id of the partner's Polar customer. */
 export function partnerBillingKey(partnerId: string): string {
@@ -36,15 +39,20 @@ export function partnerBillingKey(partnerId: string): string {
 
 /** The tier a partner holds, and what it gives the partner's businesses between them. */
 export type PartnerTier = {
-  /** Whether this deployment bills partners for tiers. Without it, the pool has no limit. */
+  /** Whether this deployment bills partners for tiers. Without it, only a pool the host set limits the businesses. */
   billed: boolean;
   /** A paid tier while its subscription is live, and Free otherwise. */
   tier: PartnerTierSlug;
   billingInterval: BillingInterval | null;
   /** Polar's state of the tier's subscription, or null for a partner Polar never billed. */
   subscriptionState: string | null;
-  /** The voice seconds and chats the businesses share each month, or null for no limit. */
-  pool: { voiceSeconds: number; chats: number } | null;
+  /**
+   * The voice seconds and chats the businesses share each month, or null for
+   * no limit. While the deployment bills tiers, it's the tier's and limits
+   * both. Otherwise it's the pool the host set, where a null kind has no
+   * limit, and null when the host set none.
+   */
+  pool: { voiceSeconds: number | null; chats: number | null } | null;
   /** Phone numbers the businesses hold between them before extra numbers cost more. */
   includedNumbers: number;
   /** 14-day trial numbers the partner gets, ever. */
@@ -64,10 +72,19 @@ const accountColumns = {
   includedNumbers: partnerBillingAccounts.includedNumbers,
   poolOverageEnabled: partnerBillingAccounts.poolOverageEnabled,
   poolOverageCapCents: partnerBillingAccounts.poolOverageCapCents,
+  hostPoolVoiceSeconds: partnerBillingAccounts.hostPoolVoiceSeconds,
+  hostPoolChats: partnerBillingAccounts.hostPoolChats,
 };
 
 async function readAccount(tx: DatabaseTransaction, partnerId: string) {
   return (await tx.select(accountColumns).from(partnerBillingAccounts).where(eq(partnerBillingAccounts.partnerId, partnerId)).limit(1))[0];
+}
+
+/** The pool the host set, while the deployment bills no tiers, or null when it set none. */
+function hostPoolOf(account: Awaited<ReturnType<typeof readAccount>>): PartnerTier["pool"] {
+  const voiceSeconds = account?.hostPoolVoiceSeconds ?? null;
+  const chats = account?.hostPoolChats ?? null;
+  return voiceSeconds === null && chats === null ? null : { voiceSeconds, chats };
 }
 
 function tierOf(account: Awaited<ReturnType<typeof readAccount>>): PartnerTier {
@@ -80,7 +97,7 @@ function tierOf(account: Awaited<ReturnType<typeof readAccount>>): PartnerTier {
     tier,
     billingInterval: tier === "free" ? null : account?.billingInterval ?? null,
     subscriptionState: account?.subscriptionState ?? null,
-    pool: billed ? { voiceSeconds: account?.poolVoiceSeconds ?? terms.poolVoiceSeconds, chats: account?.poolChats ?? terms.poolChats } : null,
+    pool: billed ? { voiceSeconds: account?.poolVoiceSeconds ?? terms.poolVoiceSeconds, chats: account?.poolChats ?? terms.poolChats } : hostPoolOf(account),
     includedNumbers: account?.includedNumbers ?? terms.includedNumbers,
     trialNumbers: terms.trialNumbers,
   };
@@ -130,9 +147,10 @@ export type PartnerBilling = PartnerTier & {
   numbersCounted: boolean;
   /**
    * What the businesses used of the pool this month, and what its overage
-   * costs so far in US cents, or null while the deployment bills no tiers.
-   * Minutes count the calls that ended, as the pool's alerts do: what open
-   * calls hold comes back when they end.
+   * costs so far in US cents, or null while nothing limits the pool: the
+   * deployment bills no tiers and the host set no pool. Minutes count the
+   * calls that ended, as the pool's alerts do: what open calls hold comes
+   * back when they end.
    */
   poolUsage: { periodKey: string; voiceSecondsUsed: number; chatsUsed: number; overageSpendCents: number } | null;
   /**
@@ -164,7 +182,7 @@ export async function getPartnerBilling(context: DomainContext, actor: PartnerAc
     const tier = tierOf(account);
     const numbers = await loadPartnerNumberStanding(tx, member.partnerId);
     const periodKey = periodKeyFor();
-    const pool = tier.billed ? await readPartnerPoolInTransaction(tx, { partnerId: member.partnerId, periodKey }) : null;
+    const pool = tier.pool ? await readPartnerPoolInTransaction(tx, { partnerId: member.partnerId, periodKey }) : null;
     return {
       ...tier,
       currentPeriodEnd: tier.tier === "free" ? null : account?.currentPeriodEnd?.toISOString() ?? null,
@@ -208,6 +226,90 @@ export async function setPartnerPoolOverage(context: DomainContext, actor: Partn
     const account = await readAccount(tx, member.partnerId);
     return poolOverageOf(account, tierOf(account));
   });
+}
+
+/**
+ * Whether the console gives the partner's owners its Billing page: while the
+ * deployment bills tiers, or once the host set the partner's pool. The
+ * person must be on the partner's team; anyone else reads no account, so
+ * gets false.
+ */
+export async function partnerHasBillingPage(context: DomainContext, input: { userId: string; partnerId: string }): Promise<boolean> {
+  if (partnerFeatures(process.env).tierBilling) return true;
+  return await withBusinessTransaction(context.db, { userId: input.userId, actorType: "operator" }, async (tx) => hostPoolOf(await readAccount(tx, input.partnerId)) !== null);
+}
+
+/** A partner as the host names it to set its pool, and the pool it has now. */
+export type PartnerHostPool = { partnerId: string; name: string; slug: string; pool: { voiceSeconds: number | null; chats: number | null } };
+
+// The host's pool columns are Postgres integers.
+const MAX_POOL_VALUE = 2_147_483_647;
+
+/** The partner a host names: its id, its slug (its subdomain's first label), or one of its domains. */
+async function findPartner(tx: DatabaseTransaction, reference: string): Promise<{ id: string; name: string; slug: string } | undefined> {
+  const value = reference.trim().toLowerCase();
+  const columns = { id: partners.id, name: partners.name, slug: partners.slug };
+  const id = isUuid(value) ? value : null;
+  if (id) return (await tx.select(columns).from(partners).where(eq(partners.id, id)).limit(1))[0];
+  if (!value.includes(".")) return (await tx.select(columns).from(partners).where(eq(partners.slug, value)).limit(1))[0];
+  // A partner's own domain names it only once verified, since other partners may claim it until then.
+  return (await tx.select(columns).from(partnerDomains).innerJoin(partners, eq(partners.id, partnerDomains.partnerId))
+    .where(and(eq(partnerDomains.hostname, value), or(eq(partnerDomains.kind, "subdomain"), isNotNull(partnerDomains.verifiedAt))))
+    .limit(1))[0];
+}
+
+/** Whether a database error is this message raised by a function. */
+function raised(error: unknown, message: string): boolean {
+  for (let current: unknown = error, depth = 0; current && typeof current === "object" && depth < 4; current = (current as { cause?: unknown }).cause, depth += 1) {
+    if ((current as { message?: unknown }).message === message) return true;
+  }
+  return false;
+}
+
+function poolCount(value: unknown, name: string, max: number): number | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0 || value > max) throw failure(`${name} must be a whole number from 0 to ${max}.`, 400, "invalid_host_pool");
+  return value;
+}
+
+/**
+ * The host sets a partner's pool on a deployment that bills no tiers: the
+ * voice minutes and website chats its businesses share each month. A kind
+ * the host leaves out keeps what it had, and `clear` removes both limits.
+ * Nothing prices overage without tier billing, so the businesses stop at the
+ * pool: calls forward and website chat shows its "can't reply" message. The
+ * pool applies from the next reservation, and its alerts go to the partner's
+ * owners and admins at 80% and 100%.
+ *
+ * Only the host's own tooling calls this, as the system actor. While the
+ * deployment bills tiers, by this process's settings or as the worker last
+ * recorded them, each partner's tier sets its pool, so this refuses a limit
+ * and still clears one.
+ */
+export async function setPartnerHostPool(context: DomainContext, input: { partner: string; voiceMinutes?: unknown; chats?: unknown; clear?: boolean }): Promise<PartnerHostPool> {
+  const minutes = poolCount(input.voiceMinutes, "minutes", Math.floor(MAX_POOL_VALUE / 60));
+  const chats = poolCount(input.chats, "chats", MAX_POOL_VALUE);
+  if (input.clear ? minutes !== undefined || chats !== undefined : minutes === undefined && chats === undefined) {
+    throw failure("Set minutes, chats or both, or clear the pool.", 400, "invalid_host_pool");
+  }
+  const tierBilling = () => failure("This deployment bills partners for tiers, so each partner's tier sets its pool.", 409, "tier_billing_on");
+  if (!input.clear && partnerFeatures(process.env).tierBilling) throw tierBilling();
+  try {
+    return await withBusinessTransaction(context.db, { actorType: "system" }, async (tx) => {
+      const partner = await findPartner(tx, input.partner);
+      if (!partner) throw failure(`No partner has the id, subdomain or domain ${input.partner.trim()}.`, 404, "partner_not_found");
+      await lockPartnerBilling(tx, partner.id);
+      const current = await readAccount(tx, partner.id);
+      const pool = input.clear
+        ? { voiceSeconds: null, chats: null }
+        : { voiceSeconds: minutes === undefined ? current?.hostPoolVoiceSeconds ?? null : minutes * 60, chats: chats === undefined ? current?.hostPoolChats ?? null : chats };
+      await tx.execute(sql`select app.set_partner_host_pool(${partner.id}::uuid, ${pool.voiceSeconds}::integer, ${pool.chats}::integer)`);
+      return { partnerId: partner.id, name: partner.name, slug: partner.slug, pool };
+    });
+  } catch (error) {
+    if (raised(error, "tier_billing_on")) throw tierBilling();
+    throw error;
+  }
 }
 
 /** Polar's customer for the partner, whose portal changes, cancels or pays for its tier. Only owners open it. */

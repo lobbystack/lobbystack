@@ -41,7 +41,7 @@ What a partner buys from the host: a monthly fee and a pool.
 _Avoid_: Plan, partner plan
 
 **Pool**:
-The minutes and chats a partner's tier includes each month, shared by all the partner's businesses.
+The minutes and chats a partner's tier includes each month, shared by all the partner's businesses. On a deployment that bills no tiers, the host sets the pool, or leaves it with no limit.
 _Avoid_: Credits, allowance
 
 **Package**:

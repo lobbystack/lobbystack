@@ -49,13 +49,13 @@ type PartnerShellProps = {
   /** Every partner whose console opens here, for the switcher: on a partner's host, only that partner. */
   partners: ConsolePartner[];
   sidebarOpen: boolean;
-  /** Whether the deployment bills partners for tiers, so owners get the Billing page. */
-  tierBilling?: boolean;
+  /** Whether owners get the Billing page: while the deployment bills partners for tiers, or once the host set the partner's pool. */
+  billingPage?: boolean;
   user: { email: string };
 };
 
 /** The partner console's frame: the partner switcher, its pages for the person's role, and the account menu. */
-export function PartnerShell({ children, partner, partners, sidebarOpen, tierBilling = false, user }: PartnerShellProps) {
+export function PartnerShell({ billingPage = false, children, partner, partners, sidebarOpen, user }: PartnerShellProps) {
   const { t } = useTranslation(["partner", "common"]);
   const pathname = usePathname();
   const contentScrollRef = useRef<HTMLElement>(null);
@@ -80,7 +80,7 @@ export function PartnerShell({ children, partner, partners, sidebarOpen, tierBil
               <PartnerSwitcher partner={partner} partners={partners} />
             </SidebarHeader>
             <SidebarContent>
-              <PartnerNavigation partnerId={partner.partnerId} role={partner.role} tierBilling={tierBilling} />
+              <PartnerNavigation billingPage={billingPage} partnerId={partner.partnerId} role={partner.role} />
             </SidebarContent>
             <SidebarFooter>
               <PartnerUserMenu email={user.email} />
@@ -102,12 +102,12 @@ export function PartnerShell({ children, partner, partners, sidebarOpen, tierBil
   );
 }
 
-function PartnerNavigation({ partnerId, role, tierBilling }: { partnerId: string; role: PartnerRole; tierBilling: boolean }) {
+function PartnerNavigation({ billingPage, partnerId, role }: { billingPage: boolean; partnerId: string; role: PartnerRole }) {
   const { t } = useTranslation("partner");
   const pathname = usePathname();
   const router = useRouter();
   const { isMobile, setOpenMobile } = useSidebar();
-  // Members don't see prices or the Stripe connection, and only owners manage Stripe and, while the deployment bills tiers, the partner's tier. The server refuses the same.
+  // Members don't see prices or the Stripe connection, and only owners manage Stripe and see Billing: the partner's tier while the deployment bills tiers, or the pool the host set. The server refuses the same.
   const items = [
     { href: `/partner/${partnerId}/businesses`, label: t("nav.businesses"), icon: Building2 },
     { href: `/partner/${partnerId}/templates`, label: t("nav.templates"), icon: LayoutTemplate },
@@ -117,7 +117,7 @@ function PartnerNavigation({ partnerId, role, tierBilling }: { partnerId: string
     { href: `/partner/${partnerId}/team`, label: t("nav.team"), icon: Users },
     { href: `/partner/${partnerId}/api-keys`, label: t("nav.apiKeys"), icon: KeyRound },
     ...(role === "owner" ? [{ href: `/partner/${partnerId}/stripe`, label: t("nav.stripe"), icon: CreditCard }] : []),
-    ...(tierBilling && role === "owner" ? [{ href: `/partner/${partnerId}/billing`, label: t("nav.billing"), icon: Receipt }] : []),
+    ...(billingPage && role === "owner" ? [{ href: `/partner/${partnerId}/billing`, label: t("nav.billing"), icon: Receipt }] : []),
   ];
   return (
     <SidebarGroup>

@@ -139,7 +139,7 @@ The partner agreement makes each partner responsible for its businesses' legal d
 Every partner feature works on any deployment. Each piece turns on when the host configures what it needs:
 
 - **Stripe Connect**: packages bill on partners' Stripe accounts. Without it, every partner business is billed outside LobbyStack.
-- **Tier products in Polar**: partners pay for tiers. Without them, pools are unlimited unless the host sets a pool and cap for a partner.
+- **Tier products in Polar**: partners pay for tiers. Without them, a partner's pool has no limit unless the host sets one with `pnpm partner-pool:set`. Nothing prices overage then, so the pool is the limit: no overage and no cap. At the pool, the partner's businesses fall back as an exhausted pool does. The partner's owners and admins get alerts at 80% and 100%.
 - **A partner base domain**: partners get default subdomains, and their emails go out from it. Without it, each partner needs a custom domain.
 - **On-demand TLS in the proxy**: partners' custom domains get certificates. Self-hosted Compose already runs Caddy, which can issue them.
 

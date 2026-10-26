@@ -27,7 +27,7 @@ Use `starter` or `pro` for checkout, with monthly or annual billing. The checkou
 
 ## Create the partner tier products
 
-Partners pay you for a tier from the console's **Billing** page. Create one recurring product for each tier and interval, and copy its ID into the matching variable. Partners can buy a tier only when all six are set, each to its own product. Until then, partners pay you no tier, and nothing limits their pools or their phone numbers.
+Partners pay you for a tier from the console's **Billing** page. Create one recurring product for each tier and interval, and copy its ID into the matching variable. Partners can buy a tier only when all six are set, each to its own product. Until then, partners pay you no tier, and nothing limits their phone numbers. Their pools have no limit unless you set one for a partner with `pnpm partner-pool:set`, and that pool bills no overage.
 
 | Product | Price | Environment variable |
 | --- | --- | --- |

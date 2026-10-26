@@ -391,7 +391,8 @@ describe.skipIf(!client)("billing a partner's business", () => {
       const inBusiness = <T>(id: string, run: (inner: DatabaseTransaction) => Promise<T>) => withBusinessTransaction(acme.context.db, { userId: owner!.userId, businessId: id, actorType: "operator" }, run);
       expect(await inBusiness(businessId, (inner) => loadEntitlement(inner, businessId))).toEqual(billedOutsideEntitlement(acme.partnerId));
       expect(await inBusiness(businessId, (inner) => loadEntitlement(inner, businessId))).toMatchObject({ live: true, source: "billed_outside", allowance: { voiceSeconds: null, chats: null, alertSms: null, outboundAttempts: null }, overage: { enabled: false }, poolPartnerId: acme.partnerId });
-      expect((await inBusiness(businessId, (inner) => readVoiceSecondsLeftInTransaction(inner, { businessId }))).seconds).toBe(Number.POSITIVE_INFINITY);
+      // Calls read what's left as the worker does, which can reach the partner's pool. The host set no pool, so nothing limits it.
+      expect((await asWorker(tx, async () => await withBusinessTransaction(acme.context.db, { businessId, actorType: "worker" }, (inner) => readVoiceSecondsLeftInTransaction(inner, { businessId })))).seconds).toBe(Number.POSITIVE_INFINITY);
       expect(await inBusiness(direct, (inner) => loadEntitlement(inner, direct))).toMatchObject({ live: false, source: "plan", allowance: { voiceSeconds: 1_800 } });
       const live = async (id: string) => (await asMigrator(tx, async () => await tx.execute<{ live: boolean }>(sql`select app.has_live_entitlement(${id}::uuid) as live`))).rows[0]?.live;
       expect(await live(businessId)).toBe(true);

@@ -10,7 +10,8 @@ import type { PoolChange, PoolMonth, PoolState } from "./partnerPool";
 // the host's brand: the partner is the host's customer. Usage metering checks
 // after each change to the pool's counts, under the pool's lock. Each alert
 // goes out once a month, and again only when the pool or the cap it measured
-// changes size, since its key names that size.
+// changes size, since its key names that size. A pool the host set, on a
+// deployment that bills no tiers, alerts the same way at its own size.
 
 export type PoolAlertKind = "minutes" | "chats" | "cap";
 
@@ -53,7 +54,8 @@ function monthAfter(month: PoolMonth, change: PoolChange): PoolMonth {
  * What an alert measures, rounded as the console's Billing page rounds it:
  * minutes of calls that ended against the pool's whole minutes, chats
  * against its chats, and overage cents against the cap. Null when nothing
- * limits it: no tier billing, overage off or unbilled, or no cap.
+ * limits it: no tier billing and no pool the host set, overage off or
+ * unbilled, or no cap.
  */
 function measure(terms: PoolState["terms"], month: PoolMonth, kind: PoolAlertKind): { used: number; limit: number } | null {
   if (kind === "minutes") return terms.voiceSeconds ? { used: Math.max(0, Math.ceil(month.voiceSecondsFinal / 60 - EPSILON)), limit: Math.floor(terms.voiceSeconds / 60) } : null;
@@ -109,8 +111,10 @@ function alertVariables(state: PoolState, month: PoolMonth, alert: PoolAlert, re
     threshold: String(alert.threshold),
     used: alert.kind === "cap" ? money(measured.used) : count(measured.used),
     included: alert.kind === "cap" ? money(measured.limit) : count(measured.limit),
-    // Whether usage past the pool keeps answering: on, off by the owner's switch, or none on a tier without overage.
-    overage: overage.enabled ? "on" : partnerTierCatalog[state.terms.tier].overagesBillable ? "off" : "none",
+    // Who set the pool: the tier, or the host on a deployment that bills no tiers, where the partner can't pick a tier.
+    pool: state.terms.source === "host" ? "host" : "tier",
+    // Whether usage past the pool keeps answering: on, off by the owner's switch, or none on a tier or a host's pool without overage.
+    overage: overage.enabled ? "on" : state.terms.source === "tier" && partnerTierCatalog[state.terms.tier].overagesBillable ? "off" : "none",
     cap: overage.enabled && overage.capCents !== null ? money(overage.capCents) : "",
     month: new Intl.DateTimeFormat(intlLocale(locale), { month: "long", timeZone: "UTC" }).format(new Date(`${state.periodKey}-01T00:00:00.000Z`)),
     url: billingUrl(state.partnerId),

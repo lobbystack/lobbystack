@@ -46,11 +46,11 @@ it("leaves partner signup out on a partner's host, which answers it with a 404",
 });
 
 it("shows Templates and Demos to the whole team, Packages to owners and admins, and Stripe and Billing to owners only, the pages the server lets each role open", async () => {
-  const pages = (role: "owner" | "admin" | "member", tierBilling = false) => {
+  const pages = (role: "owner" | "admin" | "member", billingPage = false) => {
     const partner = { ...bright, role };
     render(
       <BrandingProvider i18n={{ options: {} } as unknown as I18nextInstance} initial={{ appName: "LobbyStack", logoUrl: null, final: true }}>
-        <PartnerShell partner={partner} partners={[partner]} sidebarOpen tierBilling={tierBilling} user={{ email: "owner@example.test" }}><div /></PartnerShell>
+        <PartnerShell partner={partner} partners={[partner]} sidebarOpen billingPage={billingPage} user={{ email: "owner@example.test" }}><div /></PartnerShell>
       </BrandingProvider>,
     );
     const links = screen.getAllByRole("link").map((link) => link.getAttribute("href")).filter((href) => href?.startsWith("/partner/"));
@@ -63,11 +63,11 @@ it("shows Templates and Demos to the whole team, Packages to owners and admins, 
   expect(pages("member")).toEqual(["/partner/bright/businesses", "/partner/bright/templates", "/partner/bright/demos", "/partner/bright/branding", "/partner/bright/team", "/partner/bright/api-keys"]);
 });
 
-it("gives owners a Billing page when the deployment sells tiers, and no one else", () => {
-  const navigation = (partner: ConsolePartner, tierBilling: boolean) => {
+it("gives owners a Billing page when the deployment sells tiers or the host set the partner's pool, and no one else", () => {
+  const navigation = (partner: ConsolePartner, billingPage: boolean) => {
     render(
       <BrandingProvider i18n={{ options: {} } as unknown as I18nextInstance} initial={{ appName: "LobbyStack", logoUrl: null, final: true }}>
-        <PartnerShell partner={partner} partners={[partner]} sidebarOpen tierBilling={tierBilling} user={{ email: "owner@example.test" }}><div /></PartnerShell>
+        <PartnerShell partner={partner} partners={[partner]} sidebarOpen billingPage={billingPage} user={{ email: "owner@example.test" }}><div /></PartnerShell>
       </BrandingProvider>,
     );
     const billing = screen.queryByRole("link", { name: "nav.billing" });

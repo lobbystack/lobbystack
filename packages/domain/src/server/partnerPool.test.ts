@@ -4,7 +4,7 @@ import { PARTNER_MAX_SIMULTANEOUS_CALLS, partnerMaxSimultaneousCalls, poolChange
 import { poolAlertsDue } from "./partnerPoolAlerts";
 
 // Growth: 78,000 seconds and 5,000 chats, then 15 cents a minute and 1.5 cents a chat.
-const growth: PoolTerms = { partnerId: "partner", tier: "growth", voiceSeconds: 78_000, chats: 5_000, overage: { enabled: true, capCents: null, rates: { voiceMinute: 15, chat: 1.5 } } };
+const growth: PoolTerms = { partnerId: "partner", tier: "growth", source: "tier", voiceSeconds: 78_000, chats: 5_000, overage: { enabled: true, capCents: null, rates: { voiceMinute: 15, chat: 1.5 } } };
 const empty: PoolMonth = { voiceSecondsUsed: 0, voiceSecondsFinal: 0, chatsUsed: 0, overageVoiceSeconds: 0, overageChats: 0, overageSpendCents: 0, alertsSent: {} };
 
 function pool(terms: Partial<PoolTerms> & { capCents?: number | null; enabled?: boolean } = {}, month: Partial<PoolMonth> = {}): PoolState {
@@ -37,6 +37,13 @@ describe("what a pool has left", () => {
     expect(poolSpendCents(open)).toBe(150);
     expect(poolLeft(open, "voice_seconds")).toBe(600);
     expect(poolLeft(open, "chat_ai_tokens")).toBe(100);
+  });
+
+  it("stops at a pool the host set, with no overage, and leaves a kind it didn't set with no limit", () => {
+    const host = pool({ source: "host", tier: "free", voiceSeconds: 600, chats: null, enabled: false, capCents: null }, { voiceSecondsUsed: 500, chatsUsed: 1e6 });
+    expect(poolLeft(host, "voice_seconds")).toBe(100);
+    expect(poolLeft(host, "chat_ai_tokens")).toBe(Number.POSITIVE_INFINITY);
+    expect(poolLeft({ ...host, month: { ...host.month, voiceSecondsUsed: 700 } }, "voice_seconds")).toBe(0);
   });
 
   it("has nothing left at the cap or past it", () => {
@@ -104,7 +111,12 @@ describe("the alerts a change makes due", () => {
     expect(poolAlertsDue(pool({ capCents: null }, { overageSpendCents: 1e6 }), { ...none, overageSpendCents: 100 })).toEqual([]);
   });
 
-  it("has nothing to measure while the deployment bills no tiers", () => {
+  it("measures a pool the host set at its own size, with no cap to measure", () => {
+    const host = pool({ source: "host", tier: "free", voiceSeconds: 600, chats: 5, enabled: false, capCents: null }, { voiceSecondsFinal: 420, overageSpendCents: 0 });
+    expect(poolAlertsDue(host, { ...none, voiceSecondsFinal: 60 })).toEqual([{ kind: "minutes", threshold: 80, key: "minutes:80:600", covers: [] }]);
+  });
+
+  it("has nothing to measure while the deployment bills no tiers and the host set no pool", () => {
     expect(poolAlertsDue(pool({ voiceSeconds: null, chats: null }, { voiceSecondsFinal: 1e9, chatsUsed: 1e9 }), { ...none, voiceSecondsFinal: 60, chats: 1 })).toEqual([]);
   });
 });

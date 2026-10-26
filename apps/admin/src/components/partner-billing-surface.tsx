@@ -27,7 +27,8 @@ type Billing = {
   tier: PartnerTierSlug;
   billingInterval: BillingInterval | null;
   subscriptionState: string | null;
-  pool: { voiceSeconds: number; chats: number } | null;
+  /** The tier's pool, or without tier billing the one the host set, where a null kind has no limit. */
+  pool: { voiceSeconds: number | null; chats: number | null } | null;
   includedNumbers: number;
   trialNumbers: number;
   currentPeriodEnd: string | null;
@@ -121,7 +122,9 @@ const CHECKOUT_ERRORS: Record<string, string> = {
  * businesses between them. A partner on Free picks a paid tier and pays at a
  * Polar checkout; a paying partner manages its tier in Polar's customer
  * portal. Owners see the pool's use this month and set its overage and cap.
- * The server enforces the same rules.
+ * On a deployment that bills no tiers, owners see only this month's use of
+ * the pool the host set, with no prices, tiers or overage. The server
+ * enforces the same rules.
  */
 export function PartnerBillingSurface() {
   const { t, i18n } = useTranslation("partner");
@@ -208,7 +211,7 @@ export function PartnerBillingSurface() {
   const header = (
     <div className="flex flex-col gap-1">
       <PageHeader title={t("billing.title")} />
-      <p className="text-sm text-muted-foreground">{t("billing.description")}</p>
+      <p className="text-sm text-muted-foreground">{t(billing.data && !billing.data.billed && billing.data.pool ? "billing.hostPool.description" : "billing.description")}</p>
     </div>
   );
   if (!isOwner) return <div className="flex flex-col gap-6">{header}<Surface className="px-6 py-8"><p className="text-sm text-muted-foreground">{t("billing.ownersOnly")}</p></Surface></div>;
@@ -216,7 +219,17 @@ export function PartnerBillingSurface() {
   if (billing.isError || !billing.data) return <div className="flex flex-col gap-6">{header}<Surface className="px-6 py-8"><p className="text-sm text-muted-foreground" role="alert">{t("billing.loadFailed")}</p></Surface></div>;
 
   const current = billing.data;
-  if (!current.billed) return <div className="flex flex-col gap-6">{header}<Surface className="px-6 py-8"><p className="text-sm text-muted-foreground">{t("billing.unavailable")}</p></Surface></div>;
+  if (!current.billed) {
+    // Without tier billing, the host may set the pool. Nothing prices usage past it, so the page shows no tier, price or overage.
+    if (!current.pool || !current.poolUsage) return <div className="flex flex-col gap-6">{header}<Surface className="px-6 py-8"><p className="text-sm text-muted-foreground">{t("billing.unavailable")}</p></Surface></div>;
+    return (
+      <div className="flex flex-col gap-6">
+        {header}
+        <PoolUsageSection pool={current.pool} usage={current.poolUsage} />
+        <Surface className="px-6 py-5"><p className="text-sm text-muted-foreground">{t("billing.hostPool.limit")}</p></Surface>
+      </div>
+    );
+  }
   const date = (value: string) => formatDateTime(value, i18n.language, { month: "short", day: "numeric", year: "numeric" });
   const busy = start.isPending || pending !== null;
 

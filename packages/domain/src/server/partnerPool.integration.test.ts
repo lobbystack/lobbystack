@@ -2,13 +2,13 @@ import { randomUUID } from "node:crypto";
 
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { billingAccounts, billingUsageEvents, businesses, calls, createDatabaseClient, numberTrials, outboxMessages, partnerBillingAccounts, partnerMembers, partnerPackages, partners, partnerStripeAccounts, partnerUsageMonths, phoneNumbers, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { billingAccounts, billingUsageEvents, businesses, calls, createDatabaseClient, numberTrials, outboxMessages, partnerBillingAccounts, partnerDomains, partnerMembers, partnerPackages, partners, partnerStripeAccounts, partnerTierBilling, partnerUsageMonths, phoneNumbers, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { partnerTierCatalog, type PartnerTierSlug } from "@lobbystack/shared";
 
 import { getWebVoiceBillingAllowance, getWidgetChatAllowance, loadPoolUsageEvent, reserveWebVoiceUsageInTransaction, reserveWidgetChatUsageInTransaction } from "./billing";
 import { startLivePhoneCall } from "./liveCalls";
 import { checkNumberTrialMinutes, markNumberTrialMinutesExhausted } from "./numberTrials";
-import { getPartnerBilling, setPartnerPoolOverage } from "./partnerBilling";
+import { getPartnerBilling, partnerHasBillingPage, setPartnerHostPool, setPartnerPoolOverage } from "./partnerBilling";
 import { PARTNER_MAX_SIMULTANEOUS_CALLS } from "./partnerPool";
 import { deletePartnerBusiness } from "./partners";
 import { correctUsageInTransaction, enqueueUsageSyncInTransaction, extendPhoneReservationInTransaction, periodKeyFor, reserveUsageInTransaction } from "./usage";
@@ -307,6 +307,7 @@ describe.skipIf(!client)("a partner's pool", () => {
       const pool = (tier: PartnerTierSlug) => ({
         partnerId: acme.partnerId,
         tier,
+        source: "tier",
         voiceSeconds: partnerTierCatalog[tier].poolVoiceSeconds,
         chats: partnerTierCatalog[tier].poolChats,
         overage: { enabled: true, capCents: 5_000, rates: { voiceMinute: partnerTierCatalog[tier].voiceOverageRatePerMinuteCents, chat: partnerTierCatalog[tier].chatOverageRatePerChatCents } },
@@ -529,6 +530,161 @@ describe.skipIf(!client)("alerts on a partner's pool", () => {
       const [desk] = unbilled.businessIds as [string];
       await finishedCall(tx, desk, 5_000);
       expect(await alertEmails(tx, unbilled.partnerId)).toEqual([]);
+    });
+  });
+});
+
+describe.skipIf(!client)("a pool the host sets without tier billing", () => {
+  /** The host sets the partner's pool, as `pnpm partner-pool:set` does on the app role. */
+  async function hostSets(tx: DatabaseTransaction, input: Parameters<typeof setPartnerHostPool>[1]) {
+    return await asApp(tx, async (db) => await setPartnerHostPool({ db }, input));
+  }
+
+  /** The pool alert emails queued for the partner. */
+  async function alertVariables(tx: DatabaseTransaction, partnerId: string): Promise<Array<Record<string, string>>> {
+    const rows = await tx.select({ payload: outboxMessages.payload }).from(outboxMessages).where(and(eq(outboxMessages.aggregateId, partnerId), eq(outboxMessages.topic, "email.send")));
+    return rows.map((row) => (row.payload as { variables: Record<string, string> }).variables);
+  }
+
+  it("stops the businesses at the pool the host set, with no overage, and leaves a kind it didn't set with no limit", async () => {
+    await rollbackTest(async (tx) => {
+      const acme = await seedPartner(tx, { tier: "free", businesses: 2 });
+      const [harbor, cedar] = acme.businessIds as [string, string];
+      const slug = `pool-${acme.partnerId.slice(0, 8)}`;
+      expect(await hostSets(tx, { partner: slug, voiceMinutes: 10 })).toEqual({ partnerId: acme.partnerId, name: "Pool Reception", slug, pool: { voiceSeconds: 600, chats: null } });
+
+      // Harbor used 500 of the pool's 600 seconds, so Cedar's call gets the last 100, and then the pool refuses calls of any kind.
+      await finishedCall(tx, harbor, 500);
+      expect(await phoneCall(tx, cedar)).toMatchObject({ allowed: true, quantity: 100 });
+      expect(await phoneCall(tx, harbor)).toMatchObject({ allowed: false, errorCode: "voice_limit_reached" });
+      expect(await asWorkerRole(tx, async (db) => await getWebVoiceBillingAllowance({ db }, { businessId: cedar }))).toMatchObject({ allowed: false, errorCode: "voice_limit_reached" });
+      // A call that ran past the pool costs the partner nothing: nothing prices overage without tier billing.
+      const over = await finishedCall(tx, cedar, 120);
+      expect(await usageEvent(tx, cedar, over)).toMatchObject({
+        poolPartnerId: acme.partnerId,
+        poolOverageQuantity: 0,
+        poolOverageCents: 0,
+        syncStatus: "skipped",
+        termsAtRecordTime: { pool: { partnerId: acme.partnerId, tier: "free", source: "host", voiceSeconds: 600, chats: null, overage: { enabled: false, capCents: null, rates: { voiceMinute: 0, chat: 0 } } } },
+      });
+
+      // Chats have no limit, past Free's 50.
+      for (let index = 0; index < 51; index++) expect(await websiteChat(tx, harbor)).toMatchObject({ allowed: true });
+      // The host limits chats too, and the minutes stay as they were.
+      expect(await hostSets(tx, { partner: acme.partnerId, chats: 52 })).toMatchObject({ pool: { voiceSeconds: 600, chats: 52 } });
+      expect(await websiteChat(tx, cedar)).toMatchObject({ allowed: true });
+      expect(await asWorkerRole(tx, async (db) => await getWidgetChatAllowance({ db }, { businessId: harbor }))).toMatchObject({ allowed: false, errorCode: "chat_ai_limit_reached" });
+      expect(await websiteChat(tx, harbor)).toMatchObject({ allowed: false, errorCode: "chat_ai_limit_reached" });
+      expect(await poolCounts(tx, acme.partnerId)).toMatchObject({ voiceSecondsFinal: 620, chatsUsed: 52, overageVoiceSeconds: 0, overageChats: 0, overageSpendCents: 0 });
+
+      // Cleared, nothing limits the pool again.
+      expect(await hostSets(tx, { partner: acme.partnerId, clear: true })).toMatchObject({ pool: { voiceSeconds: null, chats: null } });
+      expect(await phoneCall(tx, harbor)).toMatchObject({ allowed: true, quantity: 300 });
+      expect(await websiteChat(tx, harbor)).toMatchObject({ allowed: true });
+    });
+  });
+
+  it("gives way to the tier's pool while the deployment bills tiers", async () => {
+    await rollbackTest(async (tx) => {
+      const acme = await seedPartner(tx, { tier: "free", businesses: 1 });
+      const [harbor] = acme.businessIds as [string];
+      await hostSets(tx, { partner: acme.partnerId, voiceMinutes: 100, chats: 1_000 });
+      // With tier products, the partner is on Free, whose 1,800 seconds run out first.
+      sellTiers();
+      await finishedCall(tx, harbor, 1_800);
+      expect(await phoneCall(tx, harbor)).toMatchObject({ allowed: false, errorCode: "voice_limit_reached" });
+      expect(await asApp(tx, async (db) => await getPartnerBilling({ db }, { kind: "member", partnerId: acme.partnerId, userId: acme.ownerId, role: "owner" }))).toMatchObject({ billed: true, pool: { voiceSeconds: 1_800, chats: 50 } });
+      // Without them, the host's 6,000 seconds apply.
+      for (const name of Object.keys(TIER_PRODUCTS)) vi.stubEnv(name, "");
+      expect(await phoneCall(tx, harbor)).toMatchObject({ allowed: true, quantity: 300 });
+    });
+  });
+
+  it("names the partner by its id, its slug or one of its domains, and refuses what it can't set", async () => {
+    await rollbackTest(async (tx) => {
+      // Other suites write the deployment's one tier billing row in transactions they roll back, behind this lock.
+      await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended('test:partner_tier_billing', 0))`);
+      const acme = await seedPartner(tx, { tier: "free", businesses: 1 });
+      const [harbor] = acme.businessIds as [string];
+      await tx.insert(partnerDomains).values([
+        { partnerId: acme.partnerId, hostname: `acme-${acme.partnerId}.portal.example.test`, kind: "subdomain", verifiedAt: new Date() },
+        { partnerId: acme.partnerId, hostname: `desk-${acme.partnerId}.acme.example.test`, kind: "custom" },
+      ]);
+      // A subdomain names the partner. Its own domain does only once verified, since other partners may claim it until then.
+      expect(await hostSets(tx, { partner: ` ACME-${acme.partnerId.toUpperCase()}.portal.example.test `, voiceMinutes: 0 })).toMatchObject({ partnerId: acme.partnerId, pool: { voiceSeconds: 0, chats: null } });
+      expect(await refusal(hostSets(tx, { partner: `desk-${acme.partnerId}.acme.example.test`, chats: 5 }))).toMatchObject({ status: 404, code: "partner_not_found" });
+      await tx.update(partnerDomains).set({ verifiedAt: new Date() }).where(and(eq(partnerDomains.partnerId, acme.partnerId), eq(partnerDomains.kind, "custom")));
+      expect(await hostSets(tx, { partner: `desk-${acme.partnerId}.acme.example.test`, chats: 5 })).toMatchObject({ pool: { voiceSeconds: 0, chats: 5 } });
+      expect(await refusal(hostSets(tx, { partner: "nobody-here", chats: 5 }))).toMatchObject({ status: 404, code: "partner_not_found" });
+      expect(await refusal(hostSets(tx, { partner: randomUUID(), chats: 5 }))).toMatchObject({ status: 404, code: "partner_not_found" });
+      // A pool of 0 minutes forwards every call.
+      expect(await phoneCall(tx, harbor)).toMatchObject({ allowed: false, errorCode: "voice_limit_reached" });
+
+      for (const input of [{ voiceMinutes: -1 }, { voiceMinutes: 1.5 }, { voiceMinutes: "5" }, { voiceMinutes: 35_791_395 }, { chats: 2_147_483_648 }, {}, { clear: true, chats: 5 }]) {
+        expect(await refusal(hostSets(tx, { partner: acme.partnerId, ...input }))).toMatchObject({ status: 400, code: "invalid_host_pool" });
+      }
+      // Only the host's own tooling sets the pool: not an owner on the console, and not the worker.
+      expect(await refusal(asApp(tx, async (db) => await withBusinessTransaction(db, { userId: acme.ownerId, actorType: "operator" }, async (inner) => await inner.execute(sql`select app.set_partner_host_pool(${acme.partnerId}::uuid, null, null)`))))).toMatchObject({ code: "42501", message: "host_only" });
+      expect(await refusal(asWorker(tx, harbor, async (inner) => await inner.execute(sql`select app.set_partner_host_pool(${acme.partnerId}::uuid, null, null)`)))).toMatchObject({ code: "42501" });
+      expect(await refusal(asApp(tx, async (db) => await withBusinessTransaction(db, { userId: acme.ownerId, actorType: "operator" }, async (inner) => await inner.update(partnerBillingAccounts).set({ hostPoolVoiceSeconds: 60_000 }).where(eq(partnerBillingAccounts.partnerId, acme.partnerId)))))).toMatchObject({ code: "42501" });
+
+      // While the deployment bills tiers, the tier sets the pool: a limit is refused, and clearing one still works.
+      sellTiers();
+      expect(await refusal(hostSets(tx, { partner: acme.partnerId, voiceMinutes: 500 }))).toMatchObject({ status: 409, code: "tier_billing_on" });
+      for (const name of Object.keys(TIER_PRODUCTS)) vi.stubEnv(name, "");
+      // The worker last started with tier products, though this process has none.
+      await tx.insert(partnerTierBilling).values({ id: 1, enabled: true }).onConflictDoUpdate({ target: partnerTierBilling.id, set: { enabled: true } });
+      expect(await refusal(hostSets(tx, { partner: acme.partnerId, voiceMinutes: 500 }))).toMatchObject({ status: 409, code: "tier_billing_on" });
+      expect(await hostSets(tx, { partner: acme.partnerId, clear: true })).toMatchObject({ pool: { voiceSeconds: null, chats: null } });
+      expect(await tx.select({ voiceSeconds: partnerBillingAccounts.hostPoolVoiceSeconds, chats: partnerBillingAccounts.hostPoolChats, tierPool: partnerBillingAccounts.poolVoiceSeconds }).from(partnerBillingAccounts).where(eq(partnerBillingAccounts.partnerId, acme.partnerId))).toEqual([{ voiceSeconds: null, chats: null, tierPool: 1_800 }]);
+    });
+  });
+
+  it("shows owners the pool's use on the Billing page, with no overage, once the host set it", async () => {
+    await rollbackTest(async (tx) => {
+      const acme = await seedPartner(tx, { tier: "free", businesses: 1 });
+      const [harbor] = acme.businessIds as [string];
+      const owner = { kind: "member" as const, partnerId: acme.partnerId, userId: acme.ownerId, role: "owner" as const };
+      const billingPage = (userId: string) => asApp(tx, async (db) => await partnerHasBillingPage({ db }, { userId, partnerId: acme.partnerId }));
+      expect(await billingPage(acme.ownerId)).toBe(false);
+      expect(await asApp(tx, async (db) => await getPartnerBilling({ db }, owner))).toMatchObject({ billed: false, pool: null, poolUsage: null });
+
+      await hostSets(tx, { partner: acme.partnerId, voiceMinutes: 500 });
+      await finishedCall(tx, harbor, 90);
+      await websiteChat(tx, harbor);
+      expect(await billingPage(acme.ownerId)).toBe(true);
+      // Someone off the partner's team reads no account.
+      const other = await seedPartner(tx, { tier: "free", businesses: 1 });
+      expect(await billingPage(other.ownerId)).toBe(false);
+      expect(await asApp(tx, async (db) => await getPartnerBilling({ db }, owner))).toMatchObject({
+        billed: false,
+        tier: "free",
+        pool: { voiceSeconds: 30_000, chats: null },
+        poolUsage: { periodKey: periodKeyFor(), voiceSecondsUsed: 90, chatsUsed: 1, overageSpendCents: 0 },
+        poolOverage: { billed: false },
+        trialNumber: null,
+      });
+      // The owner still can't turn on overage: nothing prices it.
+      expect(await asApp(tx, async (db) => await refusal(setPartnerPoolOverage({ db }, owner, { enabled: true, capCents: null })))).toMatchObject({ status: 409, code: "tier_billing_unavailable" });
+    });
+  });
+
+  it("emails the partner's owners and admins at 80% and 100% of it, with no tier to pick", async () => {
+    await rollbackTest(async (tx) => {
+      vi.stubEnv("APP_BASE_URL", "https://desk.example.test");
+      const acme = await seedPartner(tx, { tier: "free", businesses: 1 });
+      const [harbor] = acme.businessIds as [string];
+      await hostSets(tx, { partner: acme.partnerId, voiceMinutes: 10, chats: 5 });
+      // 7 minutes is under 80% of 10, and a call that takes the businesses to 8 reaches it.
+      await finishedCall(tx, harbor, 410);
+      expect(await alertVariables(tx, acme.partnerId)).toEqual([]);
+      await finishedCall(tx, harbor, 60);
+      const at80 = await alertVariables(tx, acme.partnerId);
+      expect(at80).toHaveLength(2);
+      expect(at80[0]).toMatchObject({ kind: "minutes", threshold: "80", used: "8", included: "10", pool: "host", overage: "none", cap: "", url: `https://desk.example.test/partner/${acme.partnerId}/billing` });
+      await finishedCall(tx, harbor, 120);
+      for (let index = 0; index < 5; index++) await websiteChat(tx, harbor);
+      expect((await alertVariables(tx, acme.partnerId)).map((variables) => `${variables.kind} ${variables.threshold} ${variables.pool}`).sort()).toEqual(["chats 100 host", "chats 100 host", "chats 80 host", "chats 80 host", "minutes 100 host", "minutes 100 host", "minutes 80 host", "minutes 80 host"]);
     });
   });
 });

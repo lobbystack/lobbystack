@@ -17,6 +17,7 @@ import {
   partnerCheckoutLeaseEndsAt,
   reconcilePartnerTier,
   recordPartnerPolarEvent,
+  setPartnerHostPool,
   setPartnerPoolOverage,
 } from "./partnerBilling";
 import { recordPartnerTierBilling } from "./partnerNumbers";
@@ -299,6 +300,25 @@ describe.skipIf(!client)("a partner's tier", () => {
       expect(await partnerBillingPortalCustomer(acme.context, acme.ownerActor)).toEqual({ customerId: "cus_1" });
       // A partner whose tier is live changes it in Polar's portal, not at a second checkout.
       expect(await refusal(createPartnerTierCheckout(acme.context, acme.ownerActor, { tier: "scale", billingInterval: "monthly", returnOrigin: CONSOLE }))).toMatchObject({ status: 409, code: "subscription_active" });
+    });
+  });
+
+  it("keeps the pool the host set when it reconciles a tier, and uses the tier's pool while the deployment bills tiers", async () => {
+    await rollbackTest(async (tx) => {
+      const acme = await partner(tx, "Acme Reception");
+      // The host set a pool while it sold no tiers.
+      await setPartnerHostPool(acme.context, { partner: acme.partnerId, voiceMinutes: 10, chats: 20 });
+      expect(await getPartnerBilling(acme.context, acme.ownerActor)).toMatchObject({ billed: false, tier: "free", pool: { voiceSeconds: 600, chats: 20 } });
+
+      // It starts selling tiers, and the partner pays for Growth: the tier's pool applies, and the reconcile leaves the host's alone.
+      sellTiers();
+      await deliver(tx, acme.partnerId, "subscription.active", subscriptionEvent(acme.partnerId, { status: "active", tier: "growth", modifiedAt: "2026-10-01T00:00:01.000Z" }));
+      expect(await getPartnerBilling(acme.context, acme.ownerActor)).toMatchObject({ billed: true, tier: "growth", pool: { voiceSeconds: 78_000, chats: 5_000 } });
+      expect(await asMigrator(tx, async () => await tx.select({ poolVoiceSeconds: partnerBillingAccounts.poolVoiceSeconds, hostPoolVoiceSeconds: partnerBillingAccounts.hostPoolVoiceSeconds, hostPoolChats: partnerBillingAccounts.hostPoolChats }).from(partnerBillingAccounts).where(eq(partnerBillingAccounts.partnerId, acme.partnerId)))).toEqual([{ poolVoiceSeconds: 78_000, hostPoolVoiceSeconds: 600, hostPoolChats: 20 }]);
+
+      // Back without tier products, the host's pool applies again.
+      for (const name of Object.keys(TIER_PRODUCTS)) vi.stubEnv(name, "");
+      expect(await getPartnerBilling(acme.context, acme.ownerActor)).toMatchObject({ billed: false, pool: { voiceSeconds: 600, chats: 20 } });
     });
   });
 

@@ -4,11 +4,12 @@ import type { DatabaseTransaction } from "@lobbystack/db";
 import { MAX_PHONE_CALL_MS, PARTNER_MAX_SIMULTANEOUS_CALLS_DEFAULT, partnerFeatures, partnerTierCatalog, partnerTierInForce, type PartnerTierSlug } from "@lobbystack/shared";
 
 // A partner's pool: the voice minutes and website chats its tier includes
-// each month, shared by all its businesses. Usage metering reaches it from a
-// business's transaction, after the business's own lock, through the
-// functions of migration 0153, since that transaction can't read the
-// partner's other businesses. The pool keeps running counts, which each
-// reservation, top-up and correction moves by what it changed.
+// each month, shared by all its businesses. A deployment that bills no tiers
+// uses the pool its host set for the partner, or none. Usage metering
+// reaches it from a business's transaction, after the business's own lock,
+// through the functions of migrations 0153 and 0158, since that transaction
+// can't read the partner's other businesses. The pool keeps running counts,
+// which each reservation, top-up and correction moves by what it changed.
 
 /** The usage that draws on a partner's pool. Alert texts and transfer attempts don't. */
 export type PoolUsageKind = "voice_seconds" | "chat_ai_tokens";
@@ -22,7 +23,15 @@ export type PoolTerms = {
   partnerId: string;
   /** The tier in force: a paid tier while its subscription is live, and Free otherwise. */
   tier: PartnerTierSlug;
-  /** Voice seconds and chats the businesses share each month. Null means no limit, as on a deployment that bills no tiers. */
+  /**
+   * Who sets the pool: the tier in force while the deployment bills tiers,
+   * and the host otherwise. Events recorded before migration 0158 don't name it.
+   */
+  source: "tier" | "host";
+  /**
+   * Voice seconds and chats the businesses share each month. Null means no
+   * limit, as on a deployment that bills no tiers until the host sets a pool.
+   */
   voiceSeconds: number | null;
   chats: number | null;
   /**
@@ -57,6 +66,8 @@ type PoolRow = {
   pool_chats: number | null;
   overage_enabled: boolean;
   overage_cap_cents: number | null;
+  host_pool_voice_seconds: number | null;
+  host_pool_chats: number | null;
   voice_seconds_used: number;
   voice_seconds_final: number;
   chats_used: number;
@@ -67,17 +78,23 @@ type PoolRow = {
 };
 
 /**
- * The pool of the tier in force, as the worker last reconciled it, or none
- * when the deployment bills no tiers. A partner Polar never billed is on
- * Free. The rates come from the tier catalog.
+ * The pool of the tier in force, as the worker last reconciled it. A partner
+ * Polar never billed is on Free. The rates come from the tier catalog.
+ *
+ * A deployment that bills no tiers uses the pool the host set instead, each
+ * kind with no limit until the host sets one. Nothing prices usage past it
+ * there, so it has no overage and no cap: the businesses stop at the pool.
  */
 function poolTerms(partnerId: string, row: PoolRow): PoolTerms {
   const tier = partnerTierInForce({ tier: row.tier, subscriptionState: row.subscription_state });
-  if (!partnerFeatures(process.env).tierBilling) return { partnerId, tier, voiceSeconds: null, chats: null, overage: { enabled: false, capCents: null, rates: { voiceMinute: 0, chat: 0 } } };
+  if (!partnerFeatures(process.env).tierBilling) {
+    return { partnerId, tier, source: "host", voiceSeconds: row.host_pool_voice_seconds ?? null, chats: row.host_pool_chats ?? null, overage: { enabled: false, capCents: null, rates: { voiceMinute: 0, chat: 0 } } };
+  }
   const terms = partnerTierCatalog[tier];
   return {
     partnerId,
     tier,
+    source: "tier",
     voiceSeconds: row.pool_voice_seconds ?? terms.poolVoiceSeconds,
     chats: row.pool_chats ?? terms.poolChats,
     overage: {
@@ -181,8 +198,9 @@ export function poolSpendCents(state: PoolState): number {
 /**
  * What the pool has left of a kind this month: what it still includes, plus
  * what the cap still pays for at the tier's rate. Infinity when nothing
- * limits it: no tier billing, or overage with no cap. With overage off,
- * only what it includes. Past the cap, nothing.
+ * limits it: no tier billing and no pool the host set, or overage with no
+ * cap. With overage off, as for a pool the host set, only what it includes.
+ * Past the cap, nothing.
  */
 export function poolLeft(state: PoolState, kind: PoolUsageKind): number {
   const { terms, month } = state;

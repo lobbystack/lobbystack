@@ -683,7 +683,12 @@
       "title": "Este mes",
       "description": "Los minutos y los chats que sus negocios usaron de su bolsa compartida. Su bolsa se reinicia el {{resetsAt}}.",
       "minutes": "Minutos",
-      "chats": "Chats"
+      "chats": "Chats",
+      "noLimit": "{{used}}, sin límite"
+    },
+    "hostPool": {
+      "description": "Nosotros fijamos los minutos y los chats que sus negocios comparten cada mes.",
+      "limit": "Cuando se agota la bolsa, las llamadas se desvían al número de transferencia de cada negocio o al teléfono de su propietario, y el chat del sitio deja de responder hasta que su bolsa se reinicie. Para cambiar su bolsa, contáctenos."
     },
     "overage": {
       "title": "Excedente",

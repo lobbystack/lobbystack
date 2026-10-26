@@ -108,7 +108,7 @@ A partner signs up, puts its own brand on the product, and resells LobbyStack to
 64. As a partner owner whose tier ends, I want my businesses to keep answering for 30 days, so that I have time to fix billing or release my clients.
 65. As a partner owner, I want to release businesses during those 30 days, so that my clients can keep their receptionists if I stop reselling.
 66. As a host, I want a partner's businesses to pause after those 30 days and to be deleted 90 days after the tier ended, so that unpaid partners don't keep running.
-67. As a self-hoster without tier products configured, I want partners to have no pool limit unless I set one, so that I can run partners on my own terms.
+67. As a self-hoster without tier products configured, I want partners to have no pool limit unless I set one, so that I can run partners on my own terms. Built: the host sets or clears a partner's pool with `pnpm partner-pool:set`, and that pool is the limit, with no overage and no cap.
 
 ### Callers, website visitors, and text recipients
 
@@ -196,6 +196,7 @@ The product decisions are settled in "How partners resell LobbyStack", the billi
 - One usage sync job reports a business's overage to its partner's Stripe and a pool's overage to Polar. Each report sends only the overage.
 - Reserving usage locks the business first and the pool second, every time, and grants the smaller of what each has left.
 - Running out of a business's allowance, a pool, or a cap raises the existing voice limit. Calls then forward the way direct plans already do.
+- Without tier billing, the host can set each partner's pool. Nothing prices overage there, so that pool is the limit, with no overage and no cap.
 
 **Tiers on the cloud.**
 

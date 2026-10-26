@@ -1,7 +1,7 @@
 import { and, desc, eq, gt, inArray, isNotNull, like, lt, or, sql } from "drizzle-orm";
 
 import { billingAccounts, billingCheckoutRequests, billingTransactions, billingUsageEvents, businesses, enqueueOutbox, partnerBillingAccounts, providerEvents, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { billingErrorCodes, DEFAULT_WEB_CALL_MAX_DURATION_MS, hasLiveEntitlement, liveSubscriptionStates, MAX_WEB_CALL_MAX_DURATION_MS, partnerFeatures, type BillingPlanSlug } from "@lobbystack/shared";
+import { billingErrorCodes, DEFAULT_WEB_CALL_MAX_DURATION_MS, hasLiveEntitlement, liveSubscriptionStates, MAX_WEB_CALL_MAX_DURATION_MS, type BillingPlanSlug } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
 import type { DomainContext } from "./context";
@@ -90,8 +90,8 @@ export async function getWidgetChatAllowance(
     const refused = { allowed: false, errorCode: billingErrorCodes.chatAiLimitReached, plan: status.plan };
     // Past its allowance, a chat needs overage, and room under the cap when a package prices it.
     if (allowance.chats !== null && (status.chatAiBlocked || (!overage.enabled && Math.max(0, allowance.chats - status.chatAiTokensUsed) < 1))) return refused;
-    // A partner's business also needs a chat left in its partner's pool, which only tier billing limits.
-    if (poolPartnerId && partnerFeatures(process.env).tierBilling && poolLeft(await readPartnerPoolInTransaction(tx, { partnerId: poolPartnerId, periodKey: periodKeyFor() }), "chat_ai_tokens") < 1) return refused;
+    // A partner's business also needs a chat left in its partner's pool: its tier's, or the one its host set.
+    if (poolPartnerId && poolLeft(await readPartnerPoolInTransaction(tx, { partnerId: poolPartnerId, periodKey: periodKeyFor() }), "chat_ai_tokens") < 1) return refused;
     return { allowed: true, errorCode: null, plan: status.plan };
   });
 }

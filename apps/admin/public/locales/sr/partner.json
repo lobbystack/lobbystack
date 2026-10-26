@@ -683,7 +683,12 @@
       "title": "Ovog meseca",
       "description": "Minuti i četovi koje su vaše firme iskoristile iz zajedničkog fonda. Fond počinje ispočetka {{resetsAt}}.",
       "minutes": "Minuti",
-      "chats": "Četovi"
+      "chats": "Četovi",
+      "noLimit": "{{used}}, bez ograničenja"
+    },
+    "hostPool": {
+      "description": "Mi određujemo minute i četove koje vaše firme dele svakog meseca.",
+      "limit": "Kada potroše fond, pozivi idu na broj za prebacivanje svake firme ili na telefon njenog vlasnika, a čet na sajtu ne odgovara dok fond ne počne ispočetka. Da biste promenili fond, javite nam se."
     },
     "overage": {
       "title": "Prekoračenje",

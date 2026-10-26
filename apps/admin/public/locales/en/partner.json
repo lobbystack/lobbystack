@@ -671,7 +671,12 @@
       "title": "This month",
       "description": "Minutes and chats your businesses used from your pool. Your pool starts over on {{resetsAt}}.",
       "minutes": "Minutes",
-      "chats": "Chats"
+      "chats": "Chats",
+      "noLimit": "{{used}}, no limit"
+    },
+    "hostPool": {
+      "description": "We set the minutes and chats your businesses share each month.",
+      "limit": "At the pool, calls forward to each business's transfer number or its owner's phone, and website chat stops replying until your pool starts over. To change your pool, contact us."
     },
     "overage": {
       "title": "Overage",
