@@ -2,14 +2,14 @@ import { createHash, randomUUID } from "node:crypto";
 
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { auditLogs, businesses, businessInvitations, businessMemberships, createDatabaseClient, listSchedulerBusinesses, outboxMessages, partnerBusinessOpens, partnerMembers, services, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { auditLogs, businesses, businessInvitations, businessMemberships, createDatabaseClient, listSchedulerBusinesses, onboardingPhoneVerifications, outboxMessages, partnerBusinessOpens, partnerMembers, services, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import type { PartnerAccessLevel } from "@lobbystack/shared";
 
 import { forgetCachedBrands } from "./brands";
 import { capabilityNames, HOST_BRAND_SCOPE, openPartnerBusiness, PARTNER_OPEN_LIFETIME_MS, requireBusinessAccess, type BrandScope, type Capability } from "./businessAccess";
 import { getActiveOnboardingState } from "./onboarding";
 import { acceptPartnerInvitation, createPartnerBusiness, hashPartnerToken, invitePartnerMember, removePartnerMember, signUpPartner, type PartnerMemberActor } from "./partners";
-import { startOperatorPhoneVerification } from "./phoneVerification";
+import { startOnboardingPhoneVerification, startOperatorPhoneVerification } from "./phoneVerification";
 import { createApiKey } from "./publicApi/apiKeys";
 import { acceptInvitation, createBusiness, inviteMember, listUserBusinesses, readActiveBusinessId, readBusinessCapabilities, switchWorkspace, updateBusiness } from "./tenancy";
 
@@ -350,7 +350,7 @@ describe.skipIf(!client)("the business's own team", () => {
     });
   });
 
-  it("keeps verifying a phone to the business's own team", async () => {
+  it("keeps alert phones and the owner's onboarding to the business's own team, and lets a partner member verify only for its partner's trial", async () => {
     await rollbackTest(async (tx) => {
       const acme = await partner(tx, "Acme Reception");
       const [client] = await people(tx, 1);
@@ -358,14 +358,32 @@ describe.skipIf(!client)("the business's own team", () => {
       const member = { userId: acme.member.userId, businessId };
       await openPartnerBusiness(acme.context, member);
 
-      // Verifying would set the member's phone, and here it would also finish the owner's onboarding.
+      // SMS alerts go to the team, so the member can't verify a phone for them.
       await expect(startOperatorPhoneVerification(acme.context, { ...member, phoneE164: "+14165550123", countryCode: "CA" })).rejects.toMatchObject(notHere);
-      const reserve = (userId: string) => asSession(tx, "lobbystack_app", async () => await withBusinessTransaction(acme.context.db, { userId, businessId, actorType: "operator" }, async (inner) => await inner.execute(sql`select app.reserve_phone_verification_attempt(${businessId}::uuid, ${userId}::uuid, ${"+14165550123"}, ${"CA"}, ${null}, ${randomUUID()}) as id`)));
-      expect(await refusal(reserve(acme.member.userId))).toMatchObject({ code: "42501", message: "forbidden" });
-      const complete = asSession(tx, "lobbystack_app", async () => await withBusinessTransaction(acme.context.db, { ...member, actorType: "operator" }, async (inner) => await inner.execute(sql`select app.complete_phone_verification(${businessId}::uuid, ${acme.member.userId}::uuid, ${randomUUID()}::uuid, ${"approved"})`)));
-      expect(await refusal(complete)).toMatchObject({ code: "42501", message: "forbidden" });
-      // The business's owner still verifies theirs.
-      expect((await reserve(client!.userId)).rows).toEqual([{ id: expect.any(String) }]);
+      // The phone step lets the member in only while the business is offered its partner's trial number. This one isn't: its owner hasn't finished onboarding.
+      const verify = { lookupLineType: async () => "mobile", sendCode: async () => ({ sid: "VE-test" }), checkCode: async () => "approved" };
+      await expect(asSession(tx, "lobbystack_app", async () => await startOnboardingPhoneVerification(acme.context, { ...member, phoneE164: "+14165550123", countryCode: "CA" }, verify))).rejects.toMatchObject(notHere);
+
+      // The database lets the open verify the member's own phone, and the application decides when. It never finishes the owner's onboarding.
+      const reserve = (userId: string, phone: string) => asSession(tx, "lobbystack_app", async () => (await withBusinessTransaction(acme.context.db, { userId, businessId, actorType: "operator" }, async (inner) => await inner.execute<{ id: string }>(sql`select app.reserve_phone_verification_attempt(${businessId}::uuid, ${userId}::uuid, ${phone}, ${"CA"}, ${null}, ${randomUUID()}) as id`))).rows[0]!.id);
+      const complete = (userId: string, attemptId: string) => asSession(tx, "lobbystack_app", async () => (await withBusinessTransaction(acme.context.db, { userId, businessId, actorType: "operator" }, async (inner) => await inner.execute<{ approved: boolean }>(sql`select app.complete_phone_verification(${businessId}::uuid, ${userId}::uuid, ${attemptId}::uuid, ${"approved"}) as approved`))).rows[0]!.approved);
+      const pending = async (attemptId: string) => await asMigrator(tx, async () => await tx.update(onboardingPhoneVerifications).set({ status: "pending" }).where(eq(onboardingPhoneVerifications.id, attemptId)));
+      const stage = async () => await asMigrator(tx, async () => (await tx.select({ stage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, businessId)))[0]!.stage);
+      const memberAttempt = await reserve(acme.member.userId, "+14165550123");
+      await pending(memberAttempt);
+      expect(await complete(acme.member.userId, memberAttempt)).toBe(true);
+      expect(await asMigrator(tx, async () => (await tx.select({ phone: users.phone }).from(users).where(eq(users.id, acme.member.userId)))[0])).toEqual({ phone: "+14165550123" });
+      expect(await stage()).toBe("verify_phone");
+
+      // The business's owner still verifies theirs, which finishes their onboarding.
+      const ownerAttempt = await reserve(client!.userId, "+14165550124");
+      await pending(ownerAttempt);
+      expect(await complete(client!.userId, ownerAttempt)).toBe(true);
+      expect(await stage()).toBe("complete");
+
+      // Once the member's open runs out, the database refuses them too.
+      await expireOpen(tx, member);
+      expect(await refusal(reserve(acme.member.userId, "+14165550125"))).toMatchObject({ code: "42501", message: "forbidden" });
     });
   });
 });

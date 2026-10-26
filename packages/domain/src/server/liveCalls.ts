@@ -133,11 +133,11 @@ export async function saveLiveCallTurn(context: DomainContext, input: { business
  * Reserves a transfer attempt before the call is referred. Returns false when
  * the plan has no attempts left, for a number in a country Twilio can't call
  * (one saved before the country rule), or during a free number trial for any
- * number but the owner's verified phone, so the agent can take a message instead.
+ * number but the mobile its claimer verified, so the agent can take a message instead.
  */
 export async function prepareLiveCallTransfer(context: DomainContext, input: { businessId: string; callId: string; destination: string }): Promise<boolean> {
   if (!isTransferPhone(input.destination)) return false;
-  // The last check before a number is dialed, whoever chose it: during a free number trial, only the owner's verified phone.
+  // The last check before a number is dialed, whoever chose it: during a free number trial, only the mobile its claimer verified.
   const trialPhone = await trialTransferNumber(context, input);
   if (trialPhone && input.destination !== trialPhone) return false;
   await setTransferState(context, { businessId: input.businessId, callId: input.callId, transferState: "requested" });

@@ -103,7 +103,7 @@ A partner signs up, puts its own brand on the product, and resells LobbyStack to
 59. As a partner owner, I want to set a monthly cap on my pool overage or turn it off, so that my bill never exceeds what I planned.
 60. As a partner owner, I want overage to cost less per minute and per chat on higher tiers, so that growing pays off.
 61. As a partner owner, I want my tier to include phone numbers and extra numbers billed at the host's cost, so that I can give every client a number without a markup.
-62. As a partner on the free tier, I want one 14-day trial number, so that I can show a prospect a real call.
+62. As a partner on the free tier, I want one 14-day trial number that my team or the business's owner can claim, so that I can show a prospect a real call.
 63. As a partner owner, I want alerts at 80% and 100% of my pool and my cap, so that I can upgrade or raise my cap in time.
 64. As a partner owner whose tier ends, I want my businesses to keep answering for 30 days, so that I have time to fix billing or release my clients.
 65. As a partner owner, I want to release businesses during those 30 days, so that my clients can keep their receptionists if I stop reselling.
@@ -169,12 +169,14 @@ The product decisions are settled in "How partners resell LobbyStack", the billi
 - New billing account fields: package (none means billed outside LobbyStack), overage switch, rates in minor units, cap, and Stripe customer and subscription.
 - Usage events record the terms in force when they happened, with separate sync status for Polar and Stripe.
 - Number trials gain a partner, with at most one trial per partner.
+- Number claims record whether a partner member made them, so only the partner's claim quotas count a partner member's claims.
 - The platform key link table and its grouping column are renamed from "partner" to "group". The old field and access value stay accepted as aliases.
 - Every table enables and forces row-level security.
 
 **Access and security.**
 
 - A partner member reaches a business only through an audited open. The database checks the same open the application does, so RLS and the application agree.
+- A partner member verifies their own mobile in a business only to claim the partner's trial number. Their verification never finishes the owner's onboarding, and SMS alerts stay with the business's own team.
 - The team list stays limited to the business's own operators.
 - Claim links are refused for partner businesses.
 - A business on one brand never appears on another brand's domain.

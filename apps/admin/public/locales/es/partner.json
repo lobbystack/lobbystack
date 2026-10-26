@@ -676,7 +676,7 @@
       "extra_other": "Números de teléfono en uso: {{held}}. Paga {{count}} números adicionales a precio de costo cada mes."
     },
     "trial": {
-      "available": "El propietario de uno de sus negocios puede solicitar su número de prueba de 14 días en la configuración de número de teléfono de ese negocio, una vez que verifique su móvil.",
+      "available": "Su equipo o el propietario de uno de sus negocios puede solicitar su número de prueba de 14 días en la configuración de número de teléfono de ese negocio. La persona que lo solicita verifica primero su móvil, y las llamadas de la prueba se transfieren a ese móvil.",
       "used": "Ya usó su número de prueba de 14 días."
     },
     "pool": {

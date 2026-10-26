@@ -422,6 +422,41 @@
     "partnerTierRequired": {
       "description": "El socio de este negocio necesita pagar un nivel para agregar números de teléfono."
     },
+    "partnerNumbersUnavailable": {
+      "description": "Los números de teléfono todavía no están disponibles para este negocio."
+    },
+    "trialPhone": {
+      "title": "Verifique su número de móvil",
+      "description": "Durante la prueba de 14 días, el recepcionista solo transfiere llamadas a este móvil.",
+      "fields": {
+        "mobileNumber": "Número de móvil",
+        "country": "País"
+      },
+      "hint": "Use un móvil que reciba SMS. Los números de internet no funcionan.",
+      "sendCode": "Enviarme un código",
+      "sending": "Enviando…",
+      "errors": {
+        "voip": "Use su número de móvil. Los números de internet no se pueden verificar.",
+        "notMobile": "Use un número de móvil que reciba SMS.",
+        "countryMismatch": "Este número no es del país que eligió.",
+        "invalidNumber": "Escriba un número de móvil válido.",
+        "rateLimited": "Demasiados códigos. Espere un momento y vuelva a intentarlo.",
+        "sendFailed": "No pudimos enviar el código. Inténtelo de nuevo."
+      },
+      "code": {
+        "sentTo": "Escriba el código de 6 dígitos que enviamos al {{phone}}.",
+        "label": "Código de verificación",
+        "checking": "Comprobando…",
+        "invalid_one": "Ese código no funcionó. Le queda {{count}} intento.",
+        "invalid_many": "Ese código no funcionó. Le quedan {{count}} intentos.",
+        "invalid_other": "Ese código no funcionó. Le quedan {{count}} intentos.",
+        "expired": "Este código caducó. Pida uno nuevo.",
+        "locked": "Demasiados intentos. Pida un código nuevo.",
+        "failed": "No pudimos comprobar el código. Inténtelo de nuevo.",
+        "resend": "Enviar un código nuevo",
+        "changeNumber": "Usar otro número"
+      }
+    },
     "actions": {
       "requestChange": "Solicitar cambio",
       "getNumber": "Obtener número"

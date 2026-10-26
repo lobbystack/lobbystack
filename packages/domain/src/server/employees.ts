@@ -230,7 +230,7 @@ export async function listBookableEmployees(tx: DatabaseTransaction, businessId:
  * Matches a name the caller gave to one employee: an exact match, else a
  * single partial match, with the active services they do and their time off
  * that hasn't ended. During a free number trial, calls transfer only to the
- * owner's verified phone, so an employee's own number comes back null then.
+ * mobile its claimer verified, so an employee's own number comes back null then.
  */
 export async function resolveEmployee(context: DomainContext, input: { businessId: string; name: string }) {
   const wanted = input.name.trim().toLowerCase();

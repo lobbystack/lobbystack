@@ -422,6 +422,41 @@
     "partnerTierRequired": {
       "description": "Partner ove firme mora da plaća nivo da bi dodao brojeve telefona."
     },
+    "partnerNumbersUnavailable": {
+      "description": "Brojevi telefona još nisu dostupni za ovu firmu."
+    },
+    "trialPhone": {
+      "title": "Potvrdite broj mobilnog telefona",
+      "description": "Tokom probe od 14 dana recepcioner prebacuje pozive samo na ovaj mobilni.",
+      "fields": {
+        "mobileNumber": "Broj mobilnog telefona",
+        "country": "Zemlja"
+      },
+      "hint": "Koristite mobilni koji prima SMS poruke. Internet brojevi ne rade.",
+      "sendCode": "Pošalji mi kôd",
+      "sending": "Slanje…",
+      "errors": {
+        "voip": "Koristite broj mobilnog telefona. Internet brojevi ne mogu da se potvrde.",
+        "notMobile": "Koristite broj mobilnog telefona koji prima SMS poruke.",
+        "countryMismatch": "Ovaj broj nije iz zemlje koju ste izabrali.",
+        "invalidNumber": "Unesite ispravan broj mobilnog telefona.",
+        "rateLimited": "Previše kodova. Sačekajte malo i pokušajte ponovo.",
+        "sendFailed": "Nismo mogli da pošaljemo kôd. Pokušajte ponovo."
+      },
+      "code": {
+        "sentTo": "Unesite šestocifreni kôd koji smo poslali na {{phone}}.",
+        "label": "Kôd za potvrdu",
+        "checking": "Proveravamo…",
+        "invalid_one": "Taj kôd nije ispravan. Ostao Vam je {{count}} pokušaj.",
+        "invalid_few": "Taj kôd nije ispravan. Ostala su Vam {{count}} pokušaja.",
+        "invalid_other": "Taj kôd nije ispravan. Ostalo Vam je {{count}} pokušaja.",
+        "expired": "Kôd je istekao. Zatražite novi.",
+        "locked": "Previše pokušaja. Zatražite novi kôd.",
+        "failed": "Nismo mogli da proverimo kôd. Pokušajte ponovo.",
+        "resend": "Pošalji novi kôd",
+        "changeNumber": "Koristi drugi broj"
+      }
+    },
     "actions": {
       "requestChange": "Zatraži promenu",
       "getNumber": "Nabavi broj"

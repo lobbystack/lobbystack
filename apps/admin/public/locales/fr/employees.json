@@ -53,7 +53,7 @@
         "hint": "Facultatif. Les appelants qui demandent cet employé sont transférés ici ; sinon, ils joignent le numéro de transfert de l'entreprise.",
         "invalid": "Saisissez un numéro de téléphone valide.",
         "exists": "Un employé avec ce numéro de téléphone existe déjà.",
-        "trialLocked": "Pendant votre essai gratuit, les appels ne peuvent être transférés qu'au numéro mobile que vous avez vérifié.",
+        "trialLocked": "Pendant l'essai gratuit, les appels ne peuvent être transférés qu'au mobile de la personne qui a demandé l'essai.",
         "countryUnsupported": "Votre réceptionniste ne peut pas encore transférer d'appels vers ce pays."
       },
       "services": {

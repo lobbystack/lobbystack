@@ -63,7 +63,8 @@ export function numberTrialEmailDueAt(email: Exclude<TrialEmail, "minutes_out">,
 /**
  * Starts the trial clock when the worker has bought the trial number. The
  * number is scheduled for release when its paid month runs out, and calls
- * transfer only to the owner's verified phone while the trial lasts.
+ * transfer only to the verified mobile of whoever claimed the trial while it
+ * lasts: the owner, an admin, or a partner member who opened the business.
  */
 export async function activateNumberTrialInTransaction(
   tx: DatabaseTransaction,
@@ -85,7 +86,7 @@ export async function activateNumberTrialInTransaction(
   return true;
 }
 
-/** During a trial, calls transfer only to the owner's verified phone. That phone, or null when there's no trial. */
+/** During a trial, calls transfer only to the mobile its claimer verified. That phone, or null when there's no trial. */
 export async function trialTransferNumberInTransaction(tx: DatabaseTransaction, input: { businessId: string }): Promise<string | null> {
   const trial = (await tx.select({ verifiedPhone: numberTrials.verifiedPhone }).from(numberTrials).where(and(eq(numberTrials.businessId, input.businessId), inArray(numberTrials.status, ["reserved", "active", "ended"]))).limit(1))[0];
   return trial?.verifiedPhone ?? null;
@@ -101,13 +102,13 @@ const E164 = /^\+[1-9]\d{6,14}$/;
 /**
  * The rules for every number the receptionist transfers calls to, the
  * business's and each employee's: an E.164 number in a country Twilio lets us
- * call and, during a free number trial, only the owner's verified phone.
+ * call and, during a free number trial, only the mobile its claimer verified.
  */
 export async function assertTransferNumberAllowed(tx: DatabaseTransaction, input: { businessId: string; phone: string }): Promise<void> {
   if (!E164.test(input.phone)) throw Object.assign(new Error("Enter a valid phone number."), { status: 400, code: "transfer_number_invalid" });
   if (!isTransferPhone(input.phone)) throw Object.assign(new Error("Your receptionist can't transfer calls to this country yet."), { status: 400, code: "transfer_country_unsupported" });
   const trialPhone = await trialTransferNumberInTransaction(tx, input);
-  if (trialPhone && input.phone !== trialPhone) throw Object.assign(new Error("During your free trial, calls can only transfer to the mobile number you verified."), { status: 409, code: "trial_transfer_locked" });
+  if (trialPhone && input.phone !== trialPhone) throw Object.assign(new Error("During the free trial, calls can only transfer to the mobile of the person who claimed the trial."), { status: 409, code: "trial_transfer_locked" });
 }
 
 /** A failed purchase doesn't use up the trial. */

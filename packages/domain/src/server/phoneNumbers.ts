@@ -8,7 +8,7 @@ import { requireBusinessAdmin } from "../authz";
 import type { DomainContext } from "./context";
 import { loadEntitlement } from "./entitlement";
 import { activateNumberTrialInTransaction, failNumberTrialInTransaction, isNumberCountry, keepBusinessNumbersInTransaction, trialCountries, trialNumberPaidForInTransaction, verifiedPhone, type NumberCountry } from "./numberTrials";
-import { normalizeOnboardingStage } from "./onboarding";
+import { normalizeOnboardingStage, NUMBER_CLAIM_STAGES } from "./onboarding";
 import { loadPartnerNumberStanding, newPartnerNumberRefusal, numberCountsForPartnerInTransaction, partnerTrialOffered, recordPartnerNumberCostInTransaction, unclaimedPartnerDemoInTransaction } from "./partnerNumbers";
 import { resolveBusinessNumberMarket, type BusinessNumberMarket } from "./phoneNumberMarket";
 
@@ -127,7 +127,7 @@ export async function numberEligibilityInTransaction(tx: DatabaseTransaction, in
     if (refusal && !partnerTrial) throw refused(refusal);
   }
   const onboardingStage = normalizeOnboardingStage(business.stage);
-  if (input.via === "dashboard" && purpose === "onboarding" && !["phone_number", "attribution", "complete"].includes(onboardingStage)) throw refused("invalid_onboarding_stage");
+  if (input.via === "dashboard" && purpose === "onboarding" && !NUMBER_CLAIM_STAGES.includes(onboardingStage)) throw refused("invalid_onboarding_stage");
   if (purpose === "replacement") {
     if (business.replacementUsedAt) throw refused("replacement_already_used");
     const active = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"), isNull(phoneNumbers.reclaimScheduledAt))).limit(1);

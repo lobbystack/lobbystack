@@ -61,6 +61,11 @@ export function getSafeOnboardingErrorMessage(
     return t("number.partnerTierRequired");
   }
 
+  // No tier the partner could pay for would help, as on the cloud without tier billing.
+  if (code === "partner_numbers_unavailable") {
+    return t("number.partnerNumbersUnavailable");
+  }
+
   if (includesAny(message, ["Trial accounts can only buy eligible trial numbers"])) {
     return t("number.trialAccountPurchaseLimit");
   }

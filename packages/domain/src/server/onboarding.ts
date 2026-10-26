@@ -84,7 +84,14 @@ const partnerTransitions: Record<OnboardingStage, readonly OnboardingStage[]> = 
   attribution: ["complete"],
 };
 
-const directSteps: readonly OnboardingStage[] = ["create_business", "website", "knowledge", "greeting", "test_call", "verify_phone", "phone_number", "attribution"];
+/**
+ * The stages at which the dashboard claims a business a new number, as
+ * app.reserve_trial_number_claim does: from the number step on. A partner's
+ * business has no number step, so its claims wait for its owner's onboarding.
+ */
+export const NUMBER_CLAIM_STAGES: readonly OnboardingStage[] = ["phone_number", "attribution", "complete"];
+
+const directSteps: readonly OnboardingStage[] =["create_business", "website", "knowledge", "greeting", "test_call", "verify_phone", "phone_number", "attribution"];
 const partnerSteps: readonly OnboardingStage[] = ["website", "knowledge", "greeting", "test_call", "verify_phone"];
 const activitySteps: readonly OnboardingStage[] = ["verify_phone"];
 

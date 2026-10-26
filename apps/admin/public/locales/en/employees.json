@@ -53,7 +53,7 @@
         "hint": "Optional. Callers who ask for this employee are transferred here; without it, they reach the business's transfer number.",
         "invalid": "Enter a valid phone number.",
         "exists": "An employee with this phone number already exists.",
-        "trialLocked": "During your free trial, calls can only transfer to the mobile number you verified.",
+        "trialLocked": "During the free trial, calls can only transfer to the mobile of the person who claimed the trial.",
         "countryUnsupported": "Your receptionist can't transfer calls to this country yet."
       },
       "services": {

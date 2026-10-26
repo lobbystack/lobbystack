@@ -11,6 +11,7 @@ import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemTitle }
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBusinessCan } from "./business-capabilities-provider";
 import { PhoneNumberChooser, phoneNumberChooserApi, type ClaimResult } from "./phone-number-chooser";
+import { TrialPhoneVerification } from "./trial-phone-verification";
 import { useOpenUpgradePlanDialog } from "./upgrade-plan-dialog-context";
 import { useOpenNumberStep } from "@/lib/number-step";
 import { formatPhoneNumberDisplay } from "@/lib/phone";
@@ -22,8 +23,12 @@ type NumbersResponse = {
   phoneNumbers: PhoneNumberViewModel[];
   activeClaim?: { id: string; status: string } | null;
   replacement: { usedAt: string | null; activeClaim?: { id: string; status: string } | null };
-  /** For a partner's business, whether its partner's tier lets it get a new number now, and whether that number is its partner's 14-day trial; null for a direct business. */
-  partnerNumbers?: { available: boolean; trial?: boolean } | null;
+  /**
+   * For a partner's business, whether its partner's tier lets it get a new number now, whether that number is its partner's
+   * 14-day trial, and why it can't get one; null for a direct business. With the trial, whether this person verified a mobile
+   * in the business, which the trial needs.
+   */
+  partnerNumbers?: { available: boolean; trial?: boolean; refusal?: string | null; phoneVerified?: boolean } | null;
 };
 function getSettingsPhoneNumberErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message.trim().length > 0) {
@@ -69,7 +74,13 @@ export function LivePhoneNumberSettingsSurface() {
     ? partnerNumbers.available || hasPhoneNumber
     : billingStatus != null &&
       (billingStatus.includedBusinessNumbers === null || billingStatus.includedBusinessNumbers > 0);
-  const partnerTierRequired = Boolean(partnerNumbers) && !canClaimDedicatedNumber;
+  // A paid tier gets the business a number only when its partner's tier refused one. Otherwise no number is available yet,
+  // as on the cloud without tier billing, or before the owner finishes onboarding.
+  const partnerNumberMessage = Boolean(partnerNumbers) && !canClaimDedicatedNumber
+    ? partnerNumbers?.refusal === "partner_number_limit_reached" ? "phoneNumber.partnerTierRequired.description" : "phoneNumber.partnerNumbersUnavailable.description"
+    : null;
+  // The partner's trial number transfers calls only to the claimer's verified mobile, so the dialog asks for it first.
+  const needsTrialPhone = Boolean(partnerNumbers?.trial && partnerNumbers.phoneVerified === false && !hasPhoneNumber);
   // A trial number's release date isn't the owner's deadline: the trial banner says when it ends,
   // and keeping or changing the number takes a paid plan.
   const isTrialNumber = primaryPhoneNumber?.reclaimReason === "trial";
@@ -132,8 +143,8 @@ export function LivePhoneNumberSettingsSurface() {
                 <p className="text-[15px] leading-6 text-muted-foreground">
                   {offersFreeTrial || partnerNumbers?.trial
                     ? t("phoneNumber.freeTrial.description")
-                    : partnerTierRequired
-                    ? t("phoneNumber.partnerTierRequired.description")
+                    : partnerNumberMessage
+                    ? t(partnerNumberMessage)
                     : showPaidPlanRequired
                     ? t("phoneNumber.requiresPaidPlan.description")
                     : t("phoneNumber.current.empty")}
@@ -176,24 +187,35 @@ export function LivePhoneNumberSettingsSurface() {
                       <DialogHeader>
                         <DialogTitle>
                           {t(
-                            hasPhoneNumber
+                            needsTrialPhone
+                              ? "phoneNumber.trialPhone.title"
+                              : hasPhoneNumber
                               ? "phoneNumber.dialog.title"
                               : "phoneNumber.dialog.getNumberTitle",
                           )}
                         </DialogTitle>
                         <DialogDescription>
                           {t(
-                            hasPhoneNumber
+                            needsTrialPhone
+                              ? "phoneNumber.trialPhone.description"
+                              : hasPhoneNumber
                               ? "phoneNumber.dialog.description"
                               : "phoneNumber.dialog.getNumberDescription",
                           )}
                         </DialogDescription>
                       </DialogHeader>
-                      {isDialogOpen ? (
+                      {isDialogOpen && needsTrialPhone ? (
+                        <TrialPhoneVerification businessId={businessId} onVerified={() => queryClient.invalidateQueries({ queryKey: ["phone-numbers", businessId] })} />
+                      ) : isDialogOpen ? (
                         <PhoneNumberChooser
                           businessId={businessId}
                           claimNumber={numberApi.claimNumber}
-                          getErrorMessage={(error, fallback) => (error as { code?: string } | null)?.code === "partner_number_limit_reached" ? t("phoneNumber.partnerTierRequired.description") : getSettingsPhoneNumberErrorMessage(error, fallback)}
+                          getErrorMessage={(error, fallback) => {
+                            const code = (error as { code?: string } | null)?.code;
+                            if (code === "partner_number_limit_reached") return t("phoneNumber.partnerTierRequired.description");
+                            if (code === "partner_numbers_unavailable") return t("phoneNumber.partnerNumbersUnavailable.description");
+                            return getSettingsPhoneNumberErrorMessage(error, fallback);
+                          }}
                           getInitialNumberSuggestion={numberApi.getInitialNumberSuggestion}
                           labels={{
                             countryLabel: t("phoneNumber.picker.countryLabel"),

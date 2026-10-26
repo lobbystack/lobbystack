@@ -4,6 +4,7 @@ import { businesses, partnerNumberCharges, partnerTierBilling, prospectDemos, wi
 
 import type { DomainContext } from "./context";
 import { loadEntitlement } from "./entitlement";
+import { normalizeOnboardingStage, NUMBER_CLAIM_STAGES } from "./onboarding";
 
 // A partner's tier sets how many phone numbers its businesses hold between
 // them. While the deployment bills tiers, on the cloud or self-hosted, the
@@ -75,21 +76,40 @@ export async function unclaimedPartnerDemoInTransaction(tx: DatabaseTransaction,
   return Boolean(demo);
 }
 
+/** Whether a partner's business can get a new number now, and if not, why. */
+export type PartnerNumberAvailability = {
+  available: boolean;
+  /** Whether the number it can get is its partner's 14-day trial. */
+  trial: boolean;
+  /**
+   * The claim's refusal when it can't get one, or null when it can. Only
+   * `partner_number_limit_reached` goes away with a paid tier. The cloud
+   * without tier billing refuses with `partner_numbers_unavailable`, and a
+   * business whose owner hasn't finished onboarding with
+   * `invalid_onboarding_stage`.
+   */
+  refusal: "partner_numbers_unavailable" | "partner_number_limit_reached" | "invalid_onboarding_stage" | null;
+};
+
 /**
  * Whether a partner's business can get a new number now, for the dashboard's
  * phone settings, which a partner's business reaches without the billing
  * capability, and whether that number is its partner's trial. The trial goes
  * only to a business that's live, so never to one paused with its partner's
- * other businesses, and never to a demo nobody claimed. Null for a direct
- * business, whose plan decides. The number search and the claim check the
- * same.
+ * other businesses, and never to a demo nobody claimed. A partner member
+ * reaches the business before its owner finishes onboarding, when the claims
+ * still refuse it a number. Null for a direct business, whose plan decides.
+ * The number search and the claim check the same.
  */
-export async function partnerNumberAvailabilityInTransaction(tx: DatabaseTransaction, businessId: string): Promise<{ available: boolean; trial: boolean } | null> {
-  const [business] = await tx.select({ partnerId: businesses.partnerId, deploymentMode: businesses.deploymentMode }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
+export async function partnerNumberAvailabilityInTransaction(tx: DatabaseTransaction, businessId: string): Promise<PartnerNumberAvailability | null> {
+  const [business] = await tx.select({ partnerId: businesses.partnerId, deploymentMode: businesses.deploymentMode, onboardingStage: businesses.onboardingStage }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
   if (!business?.partnerId) return null;
   const standing = await loadPartnerNumberStanding(tx, business.partnerId);
+  const refusal = newPartnerNumberRefusal(standing, business.deploymentMode);
+  if (refusal === "partner_numbers_unavailable") return { available: false, trial: false, refusal };
+  if (!NUMBER_CLAIM_STAGES.includes(normalizeOnboardingStage(business.onboardingStage))) return { available: false, trial: false, refusal: "invalid_onboarding_stage" };
   const trial = partnerTrialOffered(standing, business.deploymentMode) && (await loadEntitlement(tx, businessId)).live && !await unclaimedPartnerDemoInTransaction(tx, businessId);
-  return { available: trial || newPartnerNumberRefusal(standing, business.deploymentMode) === null, trial };
+  return trial || refusal === null ? { available: true, trial, refusal: null } : { available: false, trial: false, refusal };
 }
 
 /**

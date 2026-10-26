@@ -133,7 +133,7 @@ export async function saveReceptionistProfileInTransaction(
   input: { businessId: string; businessName: string; locale?: RuntimeLocale | undefined; patch: ReceptionistProfilePatch; regenerateSummary?: boolean | undefined },
 ): Promise<typeof receptionistProfiles.$inferSelect | null> {
   const { businessId, patch } = input;
-  // An E.164 number in a country Twilio can call and, during a free trial, only the owner's verified phone. Employees' numbers follow the same rules.
+  // An E.164 number in a country Twilio can call and, during a free trial, only the mobile its claimer verified. Employees' numbers follow the same rules.
   if (patch.transferNumber) await assertTransferNumberAllowed(tx, { businessId, phone: patch.transferNumber });
   const defaults = defaultReceptionistProfile(input.businessName, input.locale);
   const [profile] = await tx.insert(receptionistProfiles).values({

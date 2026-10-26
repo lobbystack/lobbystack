@@ -202,6 +202,7 @@
     "claimFailed": "Impossible de provisionner ce numéro. Réessayez.",
     "claimRateLimited": "Vous avez essayé plusieurs numéros. Attendez un peu avant de réessayer.",
     "partnerTierRequired": "Le partenaire de cette entreprise doit payer un palier pour ajouter des numéros de téléphone.",
+    "partnerNumbersUnavailable": "Les numéros de téléphone ne sont pas encore disponibles pour cette entreprise.",
     "offerExpired": "Cette offre a expiré. Relancez la recherche et choisissez un numéro.",
     "trialAccountPurchaseLimit": "Ce compte Twilio ne peut pas encore acheter ce numéro. Les comptes d'essai ne peuvent acheter que des numéros admissibles; libérez un numéro existant ou mettez le compte à niveau, puis réessayez.",
     "skipFailed": "Impossible d'ignorer cette étape maintenant. Réessayez.",

@@ -202,6 +202,7 @@
     "claimFailed": "No pudimos activar ese número. Inténtelo de nuevo.",
     "claimRateLimited": "Ha probado varios números. Espere un momento antes de volver a intentarlo.",
     "partnerTierRequired": "El socio de este negocio necesita pagar un nivel para agregar números de teléfono.",
+    "partnerNumbersUnavailable": "Los números de teléfono todavía no están disponibles para este negocio.",
     "offerExpired": "Esta oferta caducó. Vuelva a buscar y elija un número.",
     "trialAccountPurchaseLimit": "Esta cuenta de Twilio aún no puede comprar ese número. Las cuentas de prueba solo pueden comprar números de prueba elegibles; libere un número existente o mejore la cuenta y vuelva a intentarlo.",
     "skipFailed": "No pudimos omitir este paso en este momento. Inténtelo de nuevo.",

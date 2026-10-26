@@ -676,7 +676,7 @@
       "extra_other": "Brojeva telefona u upotrebi: {{held}}. Svakog meseca plaćate {{count}} dodatnih brojeva po našoj ceni koštanja."
     },
     "trial": {
-      "available": "Vlasnik jedne od vaših firmi može da preuzme vaš probni broj na 14 dana u podešavanjima broja telefona te firme, kada potvrdi svoj mobilni.",
+      "available": "Vaš tim ili vlasnik jedne od vaših firmi može da preuzme vaš probni broj na 14 dana u podešavanjima broja telefona te firme. Osoba koja ga preuzme prvo potvrdi svoj mobilni, a pozivi tokom probe idu na taj mobilni.",
       "used": "Iskoristili ste probni broj na 14 dana."
     },
     "pool": {

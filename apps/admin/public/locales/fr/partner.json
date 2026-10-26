@@ -676,7 +676,7 @@
       "extra_other": "Numéros de téléphone utilisés : {{held}}. Vous payez {{count}} numéros supplémentaires au prix coûtant chaque mois."
     },
     "trial": {
-      "available": "Le propriétaire d'une de vos entreprises peut demander votre numéro d'essai de 14 jours dans les paramètres de numéro de téléphone de cette entreprise, une fois son mobile vérifié.",
+      "available": "Votre équipe ou le propriétaire d'une de vos entreprises peut demander votre numéro d'essai de 14 jours dans les paramètres de numéro de téléphone de cette entreprise. La personne qui le demande vérifie d'abord son mobile, et les appels de l'essai sont transférés vers ce mobile.",
       "used": "Vous avez utilisé votre numéro d'essai de 14 jours."
     },
     "pool": {

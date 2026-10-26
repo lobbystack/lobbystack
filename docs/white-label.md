@@ -25,7 +25,7 @@ The host bills each partner through Polar ([ADR 0009](adr/0009-partners-bill-thr
 - Overage costs less per minute and per chat on higher tiers.
 - Pool overage is on by default and bills pay as you go, up to a monthly cap the partner sets. The partner can turn overage off.
 - Tiers don't limit simultaneous calls, because a cap on an inbound receptionist sends callers to a busy signal.
-- The free tier needs no card. It includes one 14-day number trial per partner, ever, with the same 30 minutes and rules as direct Free.
+- The free tier needs no card. It includes one 14-day number trial per partner, ever, with the same 30 minutes and rules as direct Free. The business's owner or a partner member working in the business can claim it after verifying their own mobile, and the trial's calls transfer to that mobile.
 
 LobbyStack's cloud sells these tiers:
 
@@ -59,6 +59,7 @@ When the partner's pool runs out with overage off, or the partner reaches its ow
 - A partner's team has three roles. Owners manage Polar billing and the Stripe connection, and can delete the partner. Admins manage businesses, packages, branding, the domain, keys, and the team's admins and members. Only owners can make someone an owner, change an owner's role, or remove an owner, and the partner always keeps one. Members work inside businesses.
 - The partner console is part of the same app. Staff open it from the partner's domain or the host's.
 - Partner members can open any of the partner's businesses with full access, without joining its team. Each time they open one, the business's audit log records who did it.
+- Phone numbers that partner members claim inside a business count only against the partner's claim quotas.
 
 The console has these pages in v1:
 

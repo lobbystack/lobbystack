@@ -664,7 +664,7 @@
       "extra_other": "Phone numbers in use: {{held}}. You pay for {{count}} extra numbers at our cost each month."
     },
     "trial": {
-      "available": "The owner of one of your businesses can claim your 14-day trial number in that business's phone number settings, once they verify their mobile.",
+      "available": "Your team or the owner of one of your businesses can claim your 14-day trial number in that business's phone number settings. The person who claims it verifies their mobile first, and the trial's calls go to that mobile.",
       "used": "You've used your 14-day trial number."
     },
     "pool": {
