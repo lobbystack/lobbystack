@@ -46,6 +46,9 @@ describe("the partner console's Businesses page", () => {
     expect(fetchMock).toHaveBeenCalledWith("/api/partner/businesses?partnerId=partner", expect.anything());
     expect(within(rows[1]!).getByText("Harbor Dental")).toBeTruthy();
     expect(within(rows[1]!).getByText("owner@harbor.test")).toBeTruthy();
+    // Session replay masks each business's name and its owner's email.
+    expect(within(rows[1]!).getByText("Harbor Dental").className).toContain("ph-mask");
+    expect(within(rows[1]!).getByText("owner@harbor.test").className).toContain("ph-mask");
     expect(within(rows[1]!).getByText("businesses.access.full")).toBeTruthy();
     expect(within(rows[2]!).getByText("businesses.owner.invited")).toBeTruthy();
     expect(within(rows[2]!).getByText("businesses.access.activity")).toBeTruthy();

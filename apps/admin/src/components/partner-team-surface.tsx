@@ -176,7 +176,7 @@ export function PartnerTeamSurface() {
                   <TableRow className="hover:bg-transparent" key={row.kind === "member" ? row.memberId : row.invitationId}>
                     <TableCell className="px-6 py-5 whitespace-normal [overflow-wrap:anywhere]">
                       <div className="flex flex-col gap-1">
-                        <p className="text-sm">{row.kind === "member" && row.name ? `${row.name} · ${row.email}` : row.email}</p>
+                        <p className="ph-mask text-sm">{row.kind === "member" && row.name ? `${row.name} · ${row.email}` : row.email}</p>
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="text-sm text-muted-foreground">{t(row.kind === "member" ? "team.joinedOn" : "team.invitedOn", { date: formatDate(row.kind === "member" ? row.joinedAt : row.invitedAt) })}</p>
                           {row.kind === "invitation" ? <Badge className={expired ? undefined : "border-amber-200 bg-amber-100 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/20 dark:text-amber-200"} variant="outline">{t(expired ? "team.status.expired" : "team.status.pending")}</Badge> : null}

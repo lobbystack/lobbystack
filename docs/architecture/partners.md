@@ -492,6 +492,8 @@ PostHog never starts on a partner's domain, so only the console on the host's do
 - Partner signup, accepting a team invitation, and `/partner` belong to no partner yet, so they send nothing.
 - Every other page asks the active business's setting, as before. A partner member inside a business they opened is on a business page, so the business's setting applies.
 
+Session replay masks what names the partner's clients and team on console pages, as the dashboard masks contacts: business names and owner emails on the Businesses page, names and emails on the Team page, and partner names in the switcher (`ph-mask`).
+
 On a console page with consent, the dashboard identifies the person as `user:<userId>`, registers `partnerId` on every event, and drops the `businessId` property and business group a business page left behind. A business page drops `partnerId` the same way. The Settings page and `ProductAnalytics` share one query, so turning the setting off stops capture and session recording at once. PostHog keeps an opt-in across page loads, so `initializeClientAnalytics` withdraws it at startup: a console page reached from a business with telemetry on sends nothing until its partner's setting allows it.
 
 The signup event waits until the dashboard knows the new partner's setting:

@@ -171,7 +171,7 @@ function PartnerSwitcher({ partner, partners }: { partner: ConsolePartner; partn
           >
             <ItemMedia><Initial value={partner.name} /></ItemMedia>
             <ItemContent className="min-w-0">
-              <ItemTitle className="w-full truncate text-left font-medium">{partner.name}</ItemTitle>
+              <ItemTitle className="ph-mask w-full truncate text-left font-medium">{partner.name}</ItemTitle>
             </ItemContent>
             <ItemActions><ChevronsUpDown className="size-4 text-muted-foreground" /></ItemActions>
           </DropdownMenuTrigger>
@@ -180,7 +180,7 @@ function PartnerSwitcher({ partner, partners }: { partner: ConsolePartner; partn
               {partners.map((option) => (
                 <DropdownMenuItem className="gap-2.5 px-3 py-2" key={option.partnerId} render={<Link href={`/partner/${option.partnerId}/businesses`} />}>
                   {option.partnerId === partner.partnerId ? <Check className="size-4" /> : <span className="size-4" />}
-                  <span className="truncate">{option.name}</span>
+                  <span className="ph-mask truncate">{option.name}</span>
                 </DropdownMenuItem>
               ))}
             </DropdownMenuGroup>

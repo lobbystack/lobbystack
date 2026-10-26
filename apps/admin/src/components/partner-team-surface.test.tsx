@@ -34,6 +34,8 @@ describe("the partner console's Team page", () => {
   it("shows a member the team with no way to change it", async () => {
     const fetchMock = renderAs("member");
     await screen.findByText("olive@example.test", { exact: false });
+    // Session replay masks each person's name and email.
+    expect(screen.getByText("max@example.test").className).toContain("ph-mask");
     expect(fetchMock).toHaveBeenCalledWith("/api/partner/team?partnerId=partner", expect.anything());
     expect(screen.queryByRole("button", { name: "team.invite.action" })).toBeNull();
     expect(screen.queryAllByRole("button", { name: "team.actions.moreOptions" })).toEqual([]);

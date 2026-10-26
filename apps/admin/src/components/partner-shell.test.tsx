@@ -34,6 +34,12 @@ async function openSwitcher(branding: BrandingSnapshot) {
   await screen.findByRole("menu");
 }
 
+it("masks partner names in the switcher for session replay", async () => {
+  await openSwitcher({ appName: "LobbyStack", logoUrl: null, final: true });
+  expect(screen.getByRole("menuitem", { name: /Bright Desk/ }).querySelector("span.truncate")?.className).toContain("ph-mask");
+  expect(screen.getAllByText("Bright Desk").every((node) => node.closest(".ph-mask"))).toBe(true);
+});
+
 it("offers partner signup on the host's domain", async () => {
   await openSwitcher({ appName: "LobbyStack", logoUrl: null, final: true });
   expect(screen.getByRole("menuitem", { name: "shell.signUpAnother" }).getAttribute("href")).toBe("/partner/signup");

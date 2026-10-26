@@ -449,14 +449,14 @@ export function PartnerBusinessesSurface() {
                   <TableRow className="hover:bg-transparent" key={business.businessId}>
                     <TableCell className="px-6 py-5 whitespace-normal [overflow-wrap:anywhere]">
                       <div className="flex flex-col gap-1">
-                        <p className="text-sm font-medium">{business.name}</p>
+                        <p className="ph-mask text-sm font-medium">{business.name}</p>
                         <p className="text-sm text-muted-foreground">{t("businesses.createdOn", { date: formatDate(business.createdAt) })}</p>
                       </div>
                     </TableCell>
                     <TableCell className="px-6 py-5 whitespace-normal [overflow-wrap:anywhere]">
                       {owner ? (
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-sm">{owner.email}</p>
+                          <p className="ph-mask text-sm">{owner.email}</p>
                           {owner.status === "invited" ? <Badge className={expired ? undefined : "border-amber-200 bg-amber-100 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/20 dark:text-amber-200"} variant="outline">{t(expired ? "businesses.owner.expired" : "businesses.owner.invited")}</Badge> : null}
                         </div>
                       ) : <p className="text-sm text-muted-foreground">{t("businesses.owner.none")}</p>}
