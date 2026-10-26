@@ -19,7 +19,8 @@ export type StorageProvider = {
 };
 
 export type BinaryStorageProvider = StorageProvider & {
-  putObject(input: { key: string; body: Uint8Array; contentType: string }): Promise<void>;
+  /** A checksum, the SHA-256 in base64, is kept with the object, so headObject returns it. */
+  putObject(input: { key: string; body: Uint8Array; contentType: string; checksum?: string }): Promise<void>;
 };
 
 export async function createUpload(
@@ -43,9 +44,19 @@ export function planUpload(input: { businessId: string; purpose: string; fileNam
   if (input.purpose === "knowledge" && !input.checksum) throw new Error("Knowledge uploads require a SHA-256 checksum.");
   if (input.purpose === "knowledge" && input.length > KNOWLEDGE_UPLOAD_MAX_BYTES) throw new Error("Documents must be 10 MB or smaller.");
   const objectId = randomUUID();
-  const name = input.fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+  return { objectId, key: uploadObjectKey(input.businessId, input.purpose, objectId, input.fileName) };
+}
+
+/** Where an upload's bytes are stored: under the business and purpose, in a folder of the object's own, with the file's name made safe for a path. */
+export function uploadObjectKey(businessId: string, purpose: string, objectId: string, fileName: string): string {
+  return `${businessId}/${purpose}/${objectId}/${storageFileName(fileName)}`;
+}
+
+/** A file's name as a storage key's last step: letters, digits, dots, hyphens and underscores. */
+export function storageFileName(fileName: string): string {
+  const name = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
   // A name of only dots, such as "..", would be read as a path step rather than a file.
-  return { objectId, key: `${input.businessId}/${input.purpose}/${objectId}/${/^\.*$/.test(name) ? "file" : name}` };
+  return /^\.*$/.test(name) ? "file" : name;
 }
 
 /** Records an upload that waits for its bytes. Unfinished uploads expire after a day. */

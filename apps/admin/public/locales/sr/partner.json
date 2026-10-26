@@ -7,6 +7,8 @@
   },
   "nav": {
     "businesses": "Firme",
+    "templates": "Šabloni",
+    "demos": "Demoi",
     "packages": "Ponude",
     "branding": "Brend i domen",
     "team": "Tim",
@@ -49,7 +51,8 @@
       "failed": "Nismo uspeli da otvorimo {{name}}. Pokušajte ponovo."
     },
     "actions": {
-      "more": "Još radnji za {{name}}"
+      "more": "Još radnji za {{name}}",
+      "saveTemplate": "Sačuvaj kao šablon"
     },
     "confirm": {
       "cancel": "Otkaži"
@@ -114,6 +117,9 @@
         "outside": "Ovoj firmi sami naplaćujete, a vlasnik se prijavljuje preko pozivnice.",
         "package": "Vlasnik plaća ovu ponudu preko pozivnice, pa se prijavljuje."
       },
+      "templateLabel": "Šablon",
+      "noTemplate": "Bez šablona",
+      "templateHelp": "Firma dobija podešavanja šablona, sa nazivom i vremenskom zonom koje ovde unesete. Čitamo deo svakog sajta iz šablona. Otvorite firmu da pročitate ostatak.",
       "submit": "Napravi i pozovi",
       "submitting": "Pravljenje…",
       "created": "Napravili ste firmu {{name}} i pozvali {{email}}.",
@@ -124,7 +130,9 @@
         "domainRequired": "Potrebna vam je adresa kontrolne table pre nego što napravite firmu. Zatražite od servisa {{appName}} da je podesi.",
         "rateLimited": "Napravili ste previše firmi. Pokušajte ponovo za sat vremena.",
         "ownerOnTeam": "Neko iz vašeg tima ne može da bude vlasnik firme. Unesite imejl klijenta čija je firma.",
-        "failed": "Nismo uspeli da napravimo firmu. Pokušajte ponovo."
+        "failed": "Nismo uspeli da napravimo firmu. Pokušajte ponovo.",
+        "templateFailed": "Nismo uspeli da podesimo firmu iz tog šablona, pa je nismo napravili. Pokušajte ponovo ili izaberite drugi šablon.",
+        "templateNotFound": "Neko je obrisao taj šablon. Izaberite drugi."
       }
     },
     "billing": {
@@ -233,6 +241,75 @@
       "cancel": "Otkaži",
       "done": "Ponuda {{name}} više nije u prodaji.",
       "failed": "Nismo uspeli da povučemo ponudu iz prodaje. Pokušajte ponovo."
+    }
+  },
+  "templates": {
+    "title": "Šabloni",
+    "description": "Šablon kopira podešavanja recepcionera, radno vreme, usluge, pravila, znanje i dokumente firme. Njen naziv, sajt, brojevi telefona, paket i vlasnik ostaju uz firmu. Izaberite šablon kada pravite firmu da bi počela sa tim podešavanjima.",
+    "loadFailed": "Nismo uspeli da učitamo vaše šablone. Osvežite stranicu i pokušajte ponovo.",
+    "savedOn": "Sačuvan {{date}}",
+    "table": {
+      "template": "Šablon",
+      "contents": "Šta podešava",
+      "actions": "Radnje"
+    },
+    "contents": {
+      "receptionist": "Podešavanja recepcionera",
+      "hours": "Radno vreme",
+      "services_one": "{{count}} usluga",
+      "services_few": "{{count}} usluge",
+      "services_other": "{{count}} usluga",
+      "rules_one": "{{count}} pravilo",
+      "rules_few": "{{count}} pravila",
+      "rules_other": "{{count}} pravila",
+      "websites_one": "{{count}} veb-sajt",
+      "websites_few": "{{count}} veb-sajta",
+      "websites_other": "{{count}} veb-sajtova",
+      "files_one": "{{count}} dokument",
+      "files_few": "{{count}} dokumenta",
+      "files_other": "{{count}} dokumenata",
+      "faqs_one": "{{count}} često pitanje",
+      "faqs_few": "{{count}} česta pitanja",
+      "faqs_other": "{{count}} čestih pitanja",
+      "texts_one": "{{count}} tekst",
+      "texts_few": "{{count}} teksta",
+      "texts_other": "{{count}} tekstova"
+    },
+    "empty": {
+      "title": "Još nema šablona",
+      "description": "Sačuvajte kao šablon firmu koju ste podesili, pa ga izaberite kada pravite sledeću.",
+      "memberDescription": "Vlasnici i administratori vašeg partnera ovde čuvaju šablone."
+    },
+    "save": {
+      "action": "Sačuvaj šablon",
+      "title": "Sačuvajte šablon",
+      "description": "Čuvate kopiju podešavanja i dokumenata firme. Ako kasnije promenite firmu, šablon ostaje isti.",
+      "businessLabel": "Firma",
+      "businessPlaceholder": "Izaberite firmu",
+      "noBusinesses": "Prvo napravite firmu, pa ovde sačuvajte njena podešavanja.",
+      "nameLabel": "Naziv šablona",
+      "namePlaceholder": "Stomatološka ordinacija",
+      "submit": "Sačuvaj šablon",
+      "submitting": "Čuvanje…",
+      "saved": "Sačuvali ste šablon {{name}}.",
+      "errors": {
+        "invalidName": "Unesite naziv šablona, do 120 znakova.",
+        "invalid": "Ova firma ima podešavanje koje šablon ne može da sačuva, na primer pravilo duže od 4.000 znakova. Skratite ga u firmi, pa sačuvajte ponovo.",
+        "fileMismatch": "Jedan dokument ove firme se ne poklapa sa sačuvanom kopijom. Ponovo ga otpremite u firmu, pa sačuvajte ponovo.",
+        "rateLimited": "Sačuvali ste previše šablona. Pokušajte ponovo za sat vremena.",
+        "failed": "Nismo uspeli da sačuvamo šablon. Pokušajte ponovo."
+      }
+    },
+    "actions": {
+      "more": "Još radnji za {{name}}"
+    },
+    "delete": {
+      "action": "Obriši",
+      "title": "Obrisati {{name}}?",
+      "description": "Više nećete moći da pravite firme iz šablona {{name}}. Firme koje ste napravili iz njega zadržavaju svoja podešavanja.",
+      "confirm": "Obriši šablon",
+      "deleted": "Obrisali ste {{name}}.",
+      "failed": "Nismo uspeli da obrišemo {{name}}. Pokušajte ponovo."
     }
   },
   "team": {

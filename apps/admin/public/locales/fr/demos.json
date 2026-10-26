@@ -91,6 +91,25 @@
       "rotate": "Impossible de renouveler le lien de la démo. Veuillez réessayer.",
       "publish": "Impossible de publier la démo. Veuillez réessayer.",
       "revoke": "Impossible de révoquer la démo. Veuillez réessayer."
+    },
+    "partner": {
+      "description": "Montrez à un prospect sa propre réceptionniste avant qu'il achète. Chaque démo s'ouvre sur votre domaine, sous votre marque.",
+      "prepareDescription": "La démo reste privée pendant que nous lisons le site Web du prospect.",
+      "empty": "Aucune démo pour l'instant. Entrez le site Web d'un prospect pour en créer une.",
+      "accessLabel": "Accès une fois que le prospect l'a réclamée",
+      "usage": "Minutes ce mois-ci : {{minutes}} · Discussions ce mois-ci : {{chats}}",
+      "open": "Ouvrir",
+      "delete": "Supprimer",
+      "deleteTitle": "Supprimer la démo de {{name}} ?",
+      "deleteDescription": "Vous allez effacer la démo avec ses appels et ses discussions. Vous ne pourrez pas annuler.",
+      "deleteConfirm": "Supprimer la démo",
+      "cancel": "Annuler",
+      "errors": {
+        "domainRequired": "Il vous faut une adresse de tableau de bord avant de créer une démo. Demandez à {{appName}} d'en configurer une.",
+        "rateLimited": "Vous avez créé trop de démos. Réessayez dans une heure.",
+        "open": "Impossible d'ouvrir la démo. Réessayez.",
+        "delete": "Impossible de supprimer la démo. Réessayez."
+      }
     }
   }
 }

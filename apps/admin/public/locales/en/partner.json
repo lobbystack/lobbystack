@@ -7,6 +7,8 @@
   },
   "nav": {
     "businesses": "Businesses",
+    "templates": "Templates",
+    "demos": "Demos",
     "packages": "Packages",
     "branding": "Branding & domain",
     "team": "Team",
@@ -49,7 +51,8 @@
       "failed": "We couldn't open {{name}}. Try again."
     },
     "actions": {
-      "more": "More actions for {{name}}"
+      "more": "More actions for {{name}}",
+      "saveTemplate": "Save as template"
     },
     "confirm": {
       "cancel": "Cancel"
@@ -114,6 +117,9 @@
         "outside": "You bill this business yourself, and its owner signs in from the invitation.",
         "package": "Its owner pays for this package from the invitation, then signs in."
       },
+      "templateLabel": "Template",
+      "noTemplate": "No template",
+      "templateHelp": "The business gets the template's setup, with the name and time zone you enter here. We read a sample of each website the template lists. Open the business to read the rest.",
       "submit": "Create and invite",
       "submitting": "Creating…",
       "created": "You created {{name}} and invited {{email}}.",
@@ -124,7 +130,9 @@
         "domainRequired": "You need a dashboard address before you can create a business. Ask {{appName}} to set one up.",
         "rateLimited": "You created too many businesses. Try again in an hour.",
         "ownerOnTeam": "Someone on your team can't own a business. Enter the email of the client who owns it.",
-        "failed": "We couldn't create the business. Try again."
+        "failed": "We couldn't create the business. Try again.",
+        "templateFailed": "We couldn't set the business up from that template, so we didn't create it. Try again, or pick another template.",
+        "templateNotFound": "Someone deleted that template. Pick another one."
       }
     },
     "billing": {
@@ -231,6 +239,69 @@
       "cancel": "Cancel",
       "done": "{{name}} is off sale.",
       "failed": "We couldn't take the package off sale. Try again."
+    }
+  },
+  "templates": {
+    "title": "Templates",
+    "description": "A template copies a business's receptionist settings, hours, services, rules, knowledge and documents. Its name, website, phone numbers, plan and owner stay with the business. Pick a template when you create a business to start it with that setup.",
+    "loadFailed": "We couldn't load your templates. Refresh to try again.",
+    "savedOn": "Saved {{date}}",
+    "table": {
+      "template": "Template",
+      "contents": "What it sets up",
+      "actions": "Actions"
+    },
+    "contents": {
+      "receptionist": "Receptionist settings",
+      "hours": "Hours",
+      "services_one": "{{count}} service",
+      "services_other": "{{count}} services",
+      "rules_one": "{{count}} rule",
+      "rules_other": "{{count}} rules",
+      "websites_one": "{{count}} website",
+      "websites_other": "{{count}} websites",
+      "files_one": "{{count}} document",
+      "files_other": "{{count}} documents",
+      "faqs_one": "{{count}} FAQ",
+      "faqs_other": "{{count}} FAQs",
+      "texts_one": "{{count}} text",
+      "texts_other": "{{count}} texts"
+    },
+    "empty": {
+      "title": "No templates yet",
+      "description": "Save a business you've set up as a template, then pick it when you create the next business.",
+      "memberDescription": "Your partner's owners and admins save templates here."
+    },
+    "save": {
+      "action": "Save a template",
+      "title": "Save a template",
+      "description": "You keep a copy of the business's setup and documents. Changing the business later leaves the template as it is.",
+      "businessLabel": "Business",
+      "businessPlaceholder": "Choose a business",
+      "noBusinesses": "Create a business first, then save its setup here.",
+      "nameLabel": "Template name",
+      "namePlaceholder": "Dental clinic",
+      "submit": "Save template",
+      "submitting": "Saving…",
+      "saved": "You saved {{name}}.",
+      "errors": {
+        "invalidName": "Enter the template's name, up to 120 characters.",
+        "invalid": "This business has a setting a template can't hold, such as a rule longer than 4,000 characters. Shorten it in the business, then save again.",
+        "fileMismatch": "A document in this business doesn't match its stored copy. Upload it to the business again, then save again.",
+        "rateLimited": "You saved too many templates. Try again in an hour.",
+        "failed": "We couldn't save the template. Try again."
+      }
+    },
+    "actions": {
+      "more": "More actions for {{name}}"
+    },
+    "delete": {
+      "action": "Delete",
+      "title": "Delete {{name}}?",
+      "description": "You can't start businesses from {{name}} anymore. Businesses you created from it keep their setup.",
+      "confirm": "Delete template",
+      "deleted": "You deleted {{name}}.",
+      "failed": "We couldn't delete {{name}}. Try again."
     }
   },
   "team": {

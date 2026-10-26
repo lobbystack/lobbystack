@@ -208,6 +208,14 @@ async function main(): Promise<void> {
             ,('lobbystack_readonly', 'partner_tier_billing', 'SELECT')
             ,('lobbystack_worker', 'provider_events', 'SELECT')
             ,('lobbystack_worker', 'provider_events', 'UPDATE')
+            ,('lobbystack_app', 'business_templates', 'SELECT')
+            ,('lobbystack_app', 'business_templates', 'INSERT')
+            ,('lobbystack_app', 'business_templates', 'DELETE')
+            ,('lobbystack_app', 'business_template_files', 'SELECT')
+            ,('lobbystack_app', 'business_template_files', 'INSERT')
+            ,('lobbystack_app', 'business_template_files', 'DELETE')
+            ,('lobbystack_readonly', 'business_templates', 'SELECT')
+            ,('lobbystack_readonly', 'business_template_files', 'SELECT')
             ,('lobbystack_finance_export', 'businesses', 'SELECT')
             ,('lobbystack_finance_export', 'billing_accounts', 'SELECT')
             ,('lobbystack_finance_export', 'calls', 'SELECT')
@@ -234,7 +242,7 @@ async function main(): Promise<void> {
         // be revoked. A person's active business on a partner's domains moves only
         // to another of that partner's businesses, and opening a partner's business
         // again only moves the open's times. A package's price, allowance and Stripe
-        // objects never change once made.
+        // objects never change once made, and a saved template never changes.
         const partnerUpdateGrantFailures = await migrator.db.execute<{ table_name: string; column_name: string; granted: boolean }>(sql`
           select expected.table_name, expected.column_name, expected.granted
           from (values
@@ -335,7 +343,11 @@ async function main(): Promise<void> {
             ('partner_billing_accounts', 'tier', false),
             ('partner_billing_accounts', 'subscription_state', false),
             ('partner_billing_accounts', 'pool_voice_seconds', false),
-            ('partner_billing_accounts', 'included_numbers', false)
+            ('partner_billing_accounts', 'included_numbers', false),
+            ('business_templates', 'partner_id', false),
+            ('business_templates', 'manifest', false),
+            ('business_template_files', 'partner_id', false),
+            ('business_template_files', 'object_key', false)
           ) as expected(table_name, column_name, granted)
           where has_column_privilege('lobbystack_app', 'public.' || expected.table_name, expected.column_name, 'UPDATE') <> expected.granted
         `);

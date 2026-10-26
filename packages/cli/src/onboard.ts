@@ -2,23 +2,25 @@ import { randomUUID } from "node:crypto";
 import { readFile, rename, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, join, resolve } from "node:path";
 
-import { isUuid, ONBOARDING_CRAWL_PAGE_LIMIT, weekdays } from "@lobbystack/shared";
+import { applyBusinessDetails, applyKnowledgeEntries, applyReceptionist, applyRules, applyServices, applyWebsites, isUnreadableSource, isUuid, ONBOARDING_CRAWL_PAGE_LIMIT, sameName, sameValue, sourceFailureReason, type ApiKnowledgeSource, type SetupRun } from "@lobbystack/shared";
 
 import { createClient, type Client } from "./client";
 import { stringValue, type Command, type CommandContext, type Values } from "./command";
 import { ApiError, CliError, exitCodes, type ExitCode } from "./errors";
-import { nameKey, readManifest, readManifestFiles, websiteKey, type Manifest, type ManifestFile } from "./manifest";
+import { nameKey, readManifest, readManifestFiles, type Manifest, type ManifestFile } from "./manifest";
 import { defaultSleep, listAll, waitUntilDone, type Row } from "./operations";
+import { httpSetupPort } from "./setupPort";
 import { completeUpload, uploadKnowledgeFile } from "./upload";
 import { userAgent } from "./version";
 import { checkoutWait, claimWait, sourceWait } from "./waits";
 
 // lobbystack onboard acme.yaml: one file describes a business, and each run
 // makes the business match it. Every step reads first and changes only what
-// differs. What a run makes, and the key of each request whose answer it
-// hasn't saved yet, go to a state file next to the manifest before the next
-// step, so a rerun after a failure picks up where it stopped and a rerun
-// after success changes nothing.
+// differs; the steps a partner's templates share live in packages/shared. What
+// a run makes, and the key of each request whose answer it hasn't saved yet,
+// go to a state file next to the manifest before the next step, so a rerun
+// after a failure picks up where it stopped and a rerun after success changes
+// nothing.
 
 /** What a run made, and the requests it sent but hasn't seen land. */
 export type OnboardState = {
@@ -118,22 +120,7 @@ type Run = {
   handedOver: boolean;
 };
 
-const sameName = (left: unknown, right: string) => typeof left === "string" && nameKey(left) === nameKey(right);
-
-function sameValue(left: unknown, right: unknown): boolean {
-  if (Array.isArray(left) && Array.isArray(right)) return left.length === right.length && left.every((item, index) => sameValue(item, right[index]));
-  if (left && right && typeof left === "object" && typeof right === "object") {
-    const keys = Object.keys(left as Row);
-    return keys.every((key) => sameValue((left as Row)[key], (right as Row)[key]));
-  }
-  return left === right;
-}
-
 const sameTags = (left: readonly string[] | undefined, right: readonly string[] | undefined) => sameValue([...(left ?? [])].sort(), [...(right ?? [])].sort());
-
-function sortedHours(hours: ReadonlyArray<{ day: string; open: string; close: string }>) {
-  return [...hours].sort((left, right) => weekdays.indexOf(left.day as never) - weekdays.indexOf(right.day as never) || left.open.localeCompare(right.open)).map(({ day, open, close }) => ({ day, open, close }));
-}
 
 function fail(run: Run, reason: string): void {
   if (!run.failed.includes(reason)) run.failed.push(reason);
@@ -175,12 +162,23 @@ async function sendOnce<T>(run: Run, step: string, send: (key: string) => Promis
   }
 }
 
-/** Logs a step's changes, and makes them unless --plan. */
-async function apply(run: Run, step: string, fields: string[], change: () => Promise<void>): Promise<void> {
-  if (!fields.length) return run.log({ step, action: "unchanged", detail: "" });
-  if (run.plan) return run.log({ step, action: "would update", detail: fields.join(", ") });
-  await change();
-  run.log({ step, action: "updated", detail: fields.join(", ") });
+/**
+ * The run as the shared setup steps see it: the API on the run's business,
+ * --plan, the log, and an Idempotency-Key saved before each request that
+ * makes something, with the state saved once it's made.
+ */
+function setupRun(run: Run): SetupRun {
+  return {
+    port: httpSetupPort(run.client),
+    plan: run.plan,
+    log: run.log,
+    async create(step, make) {
+      const made = await sendOnce(run, step, make);
+      await run.save();
+      return made;
+    },
+    found(step) { delete run.state.keys[step]; },
+  };
 }
 
 /**
@@ -283,18 +281,6 @@ async function ensureBusiness(run: Run, make: (business?: string) => Client, nam
   return created.id;
 }
 
-async function syncBusinessDetails(run: Run): Promise<void> {
-  const wanted = run.manifest.business;
-  const current = (await run.client.call("getBusiness")).data;
-  const changes: Row = {};
-  for (const field of ["name", "timezone", "locale", "business_type"] as const) {
-    if (wanted[field] !== undefined && wanted[field] !== current[field]) changes[field] = wanted[field];
-  }
-  if (wanted.website_url !== undefined && !(current.website_url && websiteKey(wanted.website_url) === websiteKey(current.website_url))) changes.website_url = wanted.website_url;
-  if (wanted.hours && !sameValue(sortedHours(wanted.hours), sortedHours(current.hours))) changes.hours = sortedHours(wanted.hours);
-  await apply(run, "details", Object.keys(changes), async () => { await run.client.call("updateBusiness", { body: changes }); });
-}
-
 const paidPlans = new Set(["starter", "pro", "enterprise", "self_host"]);
 const hasPaidPlan = (billing: Billing) => billing.managed || paidPlans.has(billing.plan);
 
@@ -321,76 +307,6 @@ async function syncManagedPlan(run: Run, billing: Billing): Promise<Billing> {
   return updated;
 }
 
-async function syncReceptionist(run: Run): Promise<void> {
-  const wanted = run.manifest.receptionist;
-  if (!wanted) return;
-  const current = (await run.client.call("getReceptionist")).data as Row;
-  const changes = Object.fromEntries(Object.entries(wanted).filter(([field, value]) => value !== undefined && !sameValue(value, current[field])));
-  await apply(run, "receptionist", Object.keys(changes), async () => { await run.client.call("updateReceptionist", { body: changes }); });
-}
-
-async function syncServices(run: Run): Promise<void> {
-  const wanted = run.manifest.services;
-  if (!wanted?.length) return;
-  const current = (await run.client.call("listServices", { query: { include_inactive: true } })).data as Row[];
-  for (const service of wanted) {
-    const step = `service:${nameKey(service.name)}`;
-    const existing = current.find((row) => sameName(row.name, service.name));
-    if (!existing) {
-      if (run.plan) { run.log({ step: "services", action: "would add", detail: service.name }); continue; }
-      await sendOnce(run, step, async (key) => await run.client.call("createService", { body: service, idempotencyKey: key }));
-      await run.save();
-      run.log({ step: "services", action: "added", detail: service.name });
-      continue;
-    }
-    delete run.state.keys[step];
-    const changes = Object.fromEntries(Object.entries(service).filter(([field, value]) => {
-      if (field === "staff_ids") return !sameValue([...(value as string[])].sort(), [...((existing.staff_ids as string[] | undefined) ?? [])].sort());
-      return !sameValue(value, existing[field]);
-    }));
-    await apply(run, `service ${service.name}`, Object.keys(changes), async () => { await run.client.call("updateService", { params: { service_id: String(existing.id) }, body: changes }); });
-  }
-}
-
-async function syncRules(run: Run): Promise<void> {
-  const wanted = run.manifest.rules;
-  if (!wanted?.length) return;
-  const current = (await run.client.call("listRules")).data as Row[];
-  for (const rule of wanted) {
-    const step = `rule:${nameKey(rule.title)}`;
-    const existing = current.find((row) => sameName(row.title, rule.title));
-    if (!existing) {
-      if (run.plan) { run.log({ step: "rules", action: "would add", detail: rule.title }); continue; }
-      await sendOnce(run, step, async (key) => await run.client.call("createRule", { body: rule, idempotencyKey: key }));
-      await run.save();
-      run.log({ step: "rules", action: "added", detail: rule.title });
-      continue;
-    }
-    delete run.state.keys[step];
-    const changes = Object.fromEntries(Object.entries(rule).filter(([field, value]) => !sameValue(value, existing[field])));
-    await apply(run, `rule ${rule.title}`, Object.keys(changes), async () => { await run.client.call("updateRule", { params: { rule_id: String(existing.id) }, body: changes }); });
-  }
-}
-
-async function syncEntries(run: Run, type: "faq" | "text", wanted: ReadonlyArray<{ title: string; content: string }>): Promise<void> {
-  if (!wanted.length) return;
-  const current = await listAll(async (cursor) => await run.client.call("listKnowledgeEntries", { query: { type, ...(cursor ? { cursor } : {}) } }));
-  const steps = type === "faq" ? "FAQs" : "texts";
-  for (const entry of wanted) {
-    const step = `${type}:${nameKey(entry.title)}`;
-    const existing = current.find((row) => sameName(row.title, entry.title));
-    if (!existing) {
-      if (run.plan) { run.log({ step: steps, action: "would add", detail: entry.title }); continue; }
-      await sendOnce(run, step, async (key) => await run.client.call("createKnowledgeEntry", { body: type === "faq" ? { type, question: entry.title, answer: entry.content } : { type, title: entry.title, content: entry.content }, idempotencyKey: key }));
-      await run.save();
-      run.log({ step: steps, action: "added", detail: entry.title });
-      continue;
-    }
-    delete run.state.keys[step];
-    await apply(run, `${type === "faq" ? "FAQ" : "text"} ${entry.title}`, existing.content === entry.content ? [] : [type === "faq" ? "answer" : "content"], async () => { await run.client.call("updateKnowledgeEntry", { params: { entry_id: String(existing.id) }, body: { content: entry.content } }); });
-  }
-}
-
 /** Deletes the earlier copies of changed documents; one that fails stays in the state file for the next run. */
 async function deleteReplaced(run: Run): Promise<void> {
   if (run.plan) return;
@@ -408,9 +324,6 @@ async function deleteReplaced(run: Run): Promise<void> {
   }
 }
 
-const unreadable = (source: Row | undefined) => source?.status === "error" || source?.status === "cancelled";
-const failureReason = (source: Row) => (typeof source.error === "string" && source.error ? source.error : `reading it was ${String(source.status)}`);
-
 /**
  * Reads a source that failed again, once for each failure: the same reason
  * on the same plan is reported instead, so a document that can't be read
@@ -419,7 +332,7 @@ const failureReason = (source: Row) => (typeof source.error === "string" && sour
  */
 async function retryOnce(run: Run, source: Row, label: string): Promise<Row | undefined> {
   const id = String(source.id);
-  const reason = failureReason(source);
+  const reason = sourceFailureReason(source);
   const attempt = `${run.billing?.plan ?? ""}: ${reason}`;
   if (source.status === "cancelled" || run.state.retried[id] === attempt) {
     run.notes.push(`${label} couldn't be read: ${reason.replace(/\.$/, "")}. lobbystack knowledge retry ${id} reads it again.`);
@@ -481,11 +394,11 @@ async function syncFiles(run: Run): Promise<void> {
     }
     if (known && known.sha256 === file.sha256 && known.title === file.title && sameTags(known.tags, file.tags)) {
       const source = sources.get(known.source_id);
-      if (!unreadable(source)) {
+      if (!isUnreadableSource(source)) {
         run.log({ step: "files", action: "unchanged", detail: file.path });
         continue;
       }
-      const reason = failureReason(source!);
+      const reason = sourceFailureReason(source!);
       // The free plan's room for text runs out while a document is read, so it's read again once the plan is paid.
       if (run.planPending) { run.log({ step: "files", action: "waiting", detail: `${file.path}: ${reason}` }); continue; }
       const retried = await retryOnce(run, source!, file.path);
@@ -541,35 +454,19 @@ async function syncFiles(run: Run): Promise<void> {
 async function syncKnowledge(run: Run): Promise<void> {
   const knowledge = run.manifest.knowledge;
   if (!knowledge && !run.state.replaced.length) return;
-  const websites: Row[] = [];
-  if (knowledge?.websites?.length) {
-    const sources = await listAll(async (cursor) => await run.client.call("listKnowledgeSources", { query: { type: "website", ...(cursor ? { cursor } : {}) } }));
-    for (const url of knowledge.websites) {
-      const existing = sources.find((source) => typeof source.url === "string" && websiteKey(source.url) === websiteKey(url));
-      if (existing && unreadable(existing)) {
-        const reason = failureReason(existing);
-        // A site's first read can fail on the free plan's room too, so it's read again once the plan is paid.
-        if (run.planPending) { run.log({ step: "websites", action: "waiting", detail: `${url}: ${reason}` }); continue; }
-        const retried = await retryOnce(run, existing, url);
-        run.log({ step: "websites", action: retried ? (run.plan ? "would retry" : "retrying") : "not read", detail: `${url}: ${reason}` });
-        if (retried) websites.push(retried);
-        continue;
-      }
-      if (existing) {
-        websites.push(existing);
-        run.log({ step: "websites", action: "unchanged", detail: url });
-        continue;
-      }
-      if (run.plan) { run.log({ step: "websites", action: "would add", detail: url }); continue; }
-      // Adding a site that's already a source returns that source, so this is safe to repeat.
-      const source = (await run.client.call("createKnowledgeSource", { body: { type: "website", url } })).data as Row;
-      websites.push(source);
-      run.log({ step: "websites", action: "added", detail: `${url} (reading a sample of its pages)` });
-    }
-  }
+  const websites = await applyWebsites(setupRun(run), knowledge?.websites, {
+    async unreadable(existing, url) {
+      const reason = sourceFailureReason(existing);
+      // A site's first read can fail on the free plan's room too, so it's read again once the plan is paid.
+      if (run.planPending) { run.log({ step: "websites", action: "waiting", detail: `${url}: ${reason}` }); return undefined; }
+      const retried = await retryOnce(run, existing, url);
+      run.log({ step: "websites", action: retried ? (run.plan ? "would retry" : "retrying") : "not read", detail: `${url}: ${reason}` });
+      return retried as ApiKnowledgeSource | undefined;
+    },
+  });
   await syncFiles(run);
-  await syncEntries(run, "faq", (knowledge?.faqs ?? []).map((faq) => ({ title: faq.question, content: faq.answer })));
-  await syncEntries(run, "text", knowledge?.texts ?? []);
+  await applyKnowledgeEntries(setupRun(run), "faq", (knowledge?.faqs ?? []).map((faq) => ({ title: faq.question, content: faq.answer })));
+  await applyKnowledgeEntries(setupRun(run), "text", knowledge?.texts ?? []);
   if (!knowledge?.read_full_site) return;
   for (const website of websites) {
     // The full read raises the site's page limit past the sample's, which is how a rerun, or a business read in full from the dashboard, knows it's done.
@@ -585,7 +482,7 @@ async function syncKnowledge(run: Run): Promise<void> {
     // The whole site is read after the sample, so wait for the sample first.
     run.log({ step: "full site", action: "waiting", detail: `for the first read of ${String(website.url)}` });
     try {
-      const sample = await waitUntilDone(run.client, sourceWait, website, run.sleep);
+      const sample = await waitUntilDone(run.client, sourceWait, website as Row, run.sleep);
       const failure = sourceWait.failed(sample);
       if (failure) {
         const again = run.state.retried[String(website.id)] ? `lobbystack knowledge retry ${String(website.id)} reads it again` : "the next run reads it again";
@@ -867,7 +764,7 @@ export const onboard: Command = {
         }
       } else {
         run.client = make(businessId);
-        await syncBusinessDetails(run);
+        await applyBusinessDetails(setupRun(run), manifest.business);
         // The plan decides what can happen now. Only a manifest with a plan needs a key that may read it.
         run.billing = manifest.plan
           ? (await run.client.call("getBilling")).data as Billing
@@ -876,9 +773,9 @@ export const onboard: Command = {
           run.billing = await syncManagedPlan(run, run.billing);
           run.planPending = checkoutNeeded(manifest, run.billing);
         }
-        await syncReceptionist(run);
-        await syncServices(run);
-        await syncRules(run);
+        await applyReceptionist(setupRun(run), manifest.receptionist);
+        await applyServices(setupRun(run), manifest.services);
+        await applyRules(setupRun(run), manifest.rules);
         await syncKnowledge(run);
         // An operator's checkout goes to the business's owner, so the claim link goes out first; the operator's key keeps reaching the business.
         if (run.access === "all" && run.planPending) await handOver(run);

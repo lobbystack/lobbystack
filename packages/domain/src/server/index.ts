@@ -6,6 +6,7 @@ export * from "./billingAccess";
 export * from "./branding";
 export * from "./brands";
 export * from "./businessAccess";
+export * from "./businessTemplates";
 export * from "./analytics";
 export * from "./booking";
 export * from "./businessHours";

@@ -71,7 +71,8 @@ flowchart LR
 | Usage metering | `packages/domain` | `reserveUsage`, `extendUsage`, `correctUsage` | Allowances, pools, caps, lock order, sync jobs |
 | Partner lifecycle | `packages/domain` | `nextPartnerState`, `applyPartnerTransition` | The 30-day and 90-day steps, and what each step does to businesses and numbers |
 | Platform keys | `packages/domain` | `resolvePlatformKey` | Environment and database key sources, groups, what each key may do |
-| Business templates | `packages/domain` | `exportBusinessTemplate`, `applyBusinessTemplate` | Reading a setup, comparing, and changing only what differs |
+| Business templates | `packages/shared` and `packages/domain` | `applyBusinessTemplate`, `exportBusinessTemplate`, `saveBusinessTemplate` | Reading a setup, comparing, changing only what differs, and the copies of a template's documents |
+| Prospect demos | `packages/domain` | `createPartnerDemo`, `listPartnerDemos`, `claimProspectDemo` | The host's demos and a partner's, the brand a demo names and opens on, and what claiming one keeps |
 | Billing reconcile | `packages/domain` | `reconcilePartnerTier`, `reconcilePackageSubscription` | Ordering, stale snapshots, and mapping provider states |
 | Stripe Connect | `packages/providers` | `StripeConnectProvider` | The Stripe API and the `Stripe-Account` header |
 | Custom hostnames | `packages/providers` | `CustomHostnameProvider` | Cloudflare for SaaS, or Caddy with a DNS check |
@@ -173,7 +174,7 @@ type PartnerActor =
 
 - The console's routes live under `/api/partner/*` in the admin and call these functions directly, the way the dashboard's operator routes call domain functions today. The v1 public API's Platform endpoints call the same functions for keys that belong to a partner.
 - `createPartnerBusiness` creates a business with no owner, links it to the partner at the access level the partner picks, optionally applies a template, and sends the owner an invitation under the partner's brand. The invitation is never a claim link. A partner's businesses open only on its own domains, so the function refuses until the partner has its subdomain. It never counts toward the cap of 10 businesses per account.
-- `listPartnerBusinesses` gives each business's minutes and chats this month, as usage metering counts them. Row-level security shows a partner member none of a business's rows, so `app.list_partner_business_usage` reads the month's counts for someone on the partner's team.
+- `listPartnerBusinesses` gives each business's minutes and chats this month, as usage metering counts them. Row-level security shows a partner member none of a business's rows, so `app.list_partner_business_usage` reads the month's counts for someone on the partner's team. It leaves out the prospect demos nobody has claimed, which the Demos page lists instead.
 - `releaseBusiness` needs an owner who accepted the invitation. It removes the partner, which leaves that person the owner, and puts the business on the host's Free plan. A trigger on `businesses.partner_id` then deletes the partner's opens of the business and the rows that remember it as someone's business on the partner's domains. Invitations to the business's team from anyone off the team, such as the partner's people, stop working. The audit log records the release as `partner.business_released`.
 - `releaseBusiness` also drops the business's package, by the rule `setPartnerBusinessBilling` follows. While the subscription is live and the deployment would hear it end, it refuses with `subscription_active` until the partner cancels the subscription in Stripe. It closes any open checkout.
 - `deletePartnerBusiness` deletes the business and every row that belongs to it, its audit log included. It drops the outbox messages that haven't gone out. The worker skips an email whose business no longer exists, through `app.business_exists`, so an email that already left the outbox doesn't reach its people under the host's brand either.
@@ -182,7 +183,7 @@ type PartnerActor =
 - `releaseBusiness` and `deletePartnerBusiness` take the team's or the number claims' advisory lock, then the billing account's, and only then the business's row lock. Team changes, claims and the Connect webhook lock in that order too.
 - The Stripe page's functions (`getPartnerStripeConnection`, `startPartnerStripeOnboarding`) let only owners connect Stripe. The Packages page's (`listPartnerPackages`, `createPartnerPackage`, `renamePartnerPackage`, `archivePartnerPackage`) let owners and admins sell packages in the connected account's currency. Members see neither, and the database keeps each package on its partner's own connected account.
 - `createPartnerBusiness` takes the package the business is sold, or none to bill it outside LobbyStack, and `setPartnerBusinessBilling` changes it until the business pays. Once the deployment can't hear that subscription end, after the partner disconnects its account or without Stripe Connect, the partner can change it again, and the change drops the subscription. Owners and admins see each business's package and payment status on the Businesses page. Members never see a business's billing, and the database sells a business only its own partner's packages.
-- Each function checks the actor's role itself. A member can work inside businesses and see their usage, an admin can also manage businesses (create, release and delete them), packages, branding, domains, keys, and the team, and only an owner can manage billing, Stripe, owners, and deleting the partner. An admin can invite, change and remove admins and members, but only an owner can grant the owner role or change or remove an owner.
+- Each function checks the actor's role itself. A member can work inside businesses and see their usage, an admin can also manage businesses (create, release and delete them), packages, templates, branding, domains, keys, and the team, and only an owner can manage billing, Stripe, owners, and deleting the partner. An admin can invite, change and remove admins and members, but only an owner can grant the owner role or change or remove an owner.
 
 ## Entitlement
 
@@ -298,15 +299,56 @@ type ResolvedPlatformKey = { platformKeyId: string; prefix: string; name: string
 
 ## Business templates
 
-Templates reuse the `lobbystack onboard` file format.
+Templates reuse the `lobbystack onboard` file format. A template is a manifest without the parts that belong to one business.
 
 ```ts
+// packages/shared
+applyBusinessTemplate(port: BusinessSetupPort, template: BusinessTemplate, options?: { plan?: boolean }): Promise<ApplyResult>
+
+// packages/domain
 exportBusinessTemplate(context, actor: PartnerActor, businessId: string): Promise<BusinessTemplate>
-applyBusinessTemplate(port: BusinessSetupPort, template: BusinessTemplate): Promise<ApplyResult>
+saveBusinessTemplate(context, actor: PartnerActor, input: { businessId: string; name: string }, dependencies: { storage }): Promise<PartnerTemplate>
+listBusinessTemplates(context, actor: PartnerActor): Promise<PartnerTemplate[]>
+deleteBusinessTemplate(context, actor: PartnerActor, input: { templateId: string }): Promise<void>
 ```
 
-- `BusinessSetupPort` has two adapters. The admin's adapter calls the domain's `*ForApi` functions in-process. The CLI's adapter calls the v1 API over HTTP. One compare-then-change implementation serves both, moved out of the CLI's `onboard.ts`.
-- The manifest schema moves to `packages/shared`, without its local file reading.
+- `packages/shared/src/businessSetup.ts` holds the manifest schema, `businessTemplateSchema`, the `BusinessSetupPort` interface, and the compare-then-change steps that `lobbystack onboard` used to keep in `onboard.ts`: business details, receptionist, services, rules, websites, FAQs and texts. The schema has no local file reading; `packages/cli/src/manifest.ts` reads the file and checks it against the schema.
+- The port has two adapters. The CLI's, in `packages/cli/src/setupPort.ts`, calls the v1 API over HTTP. The domain's `inProcessSetupPort` calls the same `*ForApi` operations in-process, as a `PartnerMemberCaller`, so the business's audit log names the partner member. That caller acts for the partner, as a partner's key does, so the operations refuse it a Polar checkout, a claim link and a managed plan. The CLI calls the steps one by one, because it puts its plan, documents, number and claim link between them, and its behavior didn't change. The console calls `applyBusinessTemplate`, which runs the steps in onboard's order.
+- A template leaves out the business's id and slug, plan, phone number, transfer number, owner, onboarding, access level and the staff who take each service. It also leaves out entries, websites and documents the business turned off, the greeting written for the business's name, and a summary no person wrote. A setup the format can't hold, such as a rule longer than calls read, is refused with `template_invalid`.
+- The business's own website describes that business only, so a template leaves out `website_url` and every website source on the same host, ignoring a leading `www.`. A website source on another host stays. A template also leaves out the booking policy and voice and text instructions a prospect demo writes for itself while they're unchanged.
+- Saving or exporting a template reads the business without an open, so the business's audit log gets a `partner.business_setup_exported` row in the same transaction as the read. It names the partner member and their role, and the template's id and name when the read was for a save.
+- `business_templates` keeps each template under its partner, and `business_template_files` keeps a stored copy of each document, so a template outlives the business it came from. Anyone on the partner's team reads them, and owners and admins save and delete them. Row-level security checks `app.partner_role` on every statement, and a template never changes once saved. Deleting a template queues `privacy.deleteStoredObjects` for its copies.
+- `createPartnerBusiness` takes an optional `templateId` and the worker's context, because the `*ForApi` operations run as `lobbystack_worker`. It applies the template after it creates the business and before it invites the owner. The business keeps the name and time zone the console sent. If the template can't be applied, the function deletes the business and answers `template_failed`, so the owner never hears of a business that isn't set up. It also deletes the business when the invitation fails after the template was applied. This cleanup skips the role check, since nobody else knows of the business, and a cleanup that fails is logged. That business then shows on the Businesses page with no owner, where an owner or admin can delete it.
+- Only someone on the partner's team reads its templates, so `createPartnerBusiness` refuses a template from a platform key, and `POST /businesses` takes none. The console can send a package and a template together. The function sets the package when it creates the business, and the cleanup after a failed template deletes the package with the business.
+- Applying doesn't wait for a website's sample read, so a template with `read_full_site` leaves the full read for the business's Knowledge page.
+
+## Prospect demos
+
+A partner's team makes prospect demos from the console under the partner's brand. A partner's demo is one of its businesses from the start, so it follows the rules of the host's demos and of the partner's businesses at once.
+
+```ts
+createPartnerDemo(context, actor: PartnerActor, input: { name: string; websiteUrl: string; accessLevel?: PartnerAccessLevel; greeting?: string; suggestedPrompts?: string[] }): Promise<{ demoId: string; businessId: string; token: string; url: string }>
+listPartnerDemos(context, actor: PartnerActor): Promise<PartnerDemo[]>
+publishPartnerDemo(context, actor: PartnerActor, input: { demoId: string; token: string }): Promise<{ status: "active"; expiresAt: Date }>
+rotatePartnerDemoToken(context, actor: PartnerActor, input: { demoId: string }): Promise<{ token: string; url: string }>
+revokePartnerDemo(context, actor: PartnerActor, input: { demoId: string }): Promise<void>
+deletePartnerDemo(context, actor: PartnerActor, input: { demoId: string }): Promise<void>
+claimProspectDemo(context, input: { userId: string; token: string; brand: BrandScope }): Promise<{ businessId: string; status: "claimed" | "already_claimed" }>
+```
+
+- Anyone on the partner's team makes, publishes, rotates and turns off the partner's demos: owners, admins and members alike. Only owners and admins pick a demo's access level and delete a demo, as they do for any of the partner's businesses. The host's demo operator, whom `PROSPECT_DEMO_OPERATOR_EMAIL` names, keeps managing the host's demos. `prospect_demos.partner_id` records the partner whose team made a demo, and the host operator's resolvers leave those demos out.
+- The demo's business belongs to the partner and has no owner. It gets full access, unless an owner or admin picks activity only. A member who asks for activity only is refused with a 403. The partner's people work in it through opens, as in any of the partner's businesses, and the Demos page opens it the way the Businesses page opens a business.
+- The demo's receptionist instructions name the brand that made the demo, from `brandForHostReference`: the partner's name for a partner's demo, and the host brand's for the host's own demos.
+- A partner's demo link opens on the partner's domain, so making one needs the partner's subdomain, as creating a business does, and fails with `partner_domain_required` without it. The demo page's preview, its web call, and claiming each answer a token from another brand's demo as they answer an unknown one.
+- A partner's demo calls count like those of any of the partner's businesses. The web call route marks them billable, so usage metering reserves and records their minutes under the business's entitlement, whose pool is the partner's. The Demos page shows each demo's minutes and chats this month. The host's own demos still don't count against minutes.
+- A partner's demo has no package, so it's billed outside LobbyStack and draws on the partner's pool like any of its businesses. Once someone claims it, its row on the Businesses page shows its billing, and an owner or admin can sell it a package there. Its numbers follow the partner's [number rules](#phone-numbers), so it never gets the host's free trial number.
+- The demo's business joins the partner's group in `platform_key_businesses` when it's made, as every business of the partner does. The partner's platform keys reach and list it, claimed or not, and a release takes it out of the group.
+- Claiming a partner's demo on the partner's domain makes the prospect its owner, and the business stays with the partner at its access level. The owner's onboarding starts where an owner the partner invited would, and their dashboard opens on the business on the partner's domains. Someone on the partner's team can't claim it (`partner_member_not_on_team`). Only the partner hands the business over, by releasing it.
+- Claiming a partner's demo also gives its receptionist the booking policy and voice and text instructions a new business gets, wherever the demo's own are unchanged, and refreshes the snapshot. At activity only the owner can't edit them, and real calls must not hear they're a demo. A setting someone on the team changed during the demo stays. The host's own demos keep today's claim.
+- Publishing, rotating, turning off and deleting a demo lock its row first, as a claim does. A claim that finishes first leaves them with a claimed demo, which they refuse with `demo_claimed`, so none of them writes over a claim.
+- A demo nobody has claimed stays off the Businesses page, and a claimed one moves there with its owner. Its owner joined by claiming it, so an owner or admin can release it there like a business whose owner accepted the invitation. A demo whose business the partner released leaves the Demos page.
+- `deletePartnerDemo` deletes a closed demo nobody claimed, together with its business, as `deletePartnerBusiness` does. A demo is closed once someone turned it off or it passed its expiry, before the hourly sweep turns it off. It refuses a demo still open with `demo_open` and a claimed one with `demo_claimed`, since a claimed demo is deleted from the Businesses page. Like `deletePartnerBusiness`, it drops any package the business has and closes its open checkout. `app.list_partner_prospect_demos` answers both pages, only for someone on the partner's team.
+- The console's Demos page is the host's `LiveDemosSurface` on the routes under `/api/partner/demos`.
 
 ## Providers
 
@@ -374,7 +416,7 @@ interface CustomHostnameProvider {
 
 ### A new business from the console
 
-1. The console calls `createPartnerBusiness`, which creates the owner-less business, applies the chosen template, and queues the invitation email.
+1. The console calls `createPartnerBusiness`, which creates the owner-less business, applies the chosen template, and then queues the invitation email.
 2. The owner opens the link on the partner's domain. For a business on a package, the page names the package and its allowance and opens a Stripe Checkout on the partner's account, and Stripe brings the owner back to sign in. Only Stripe shows the price. Until the partner's account takes payments, the owner signs in first and pays later. A business billed outside LobbyStack goes straight to sign-in.
 3. Stripe's webhook reconciles the subscription, and the business's entitlement goes live. Later, at full access, the business's owners and admins open the partner's customer portal from **Settings → Billing**, or a new checkout once the subscription ended.
 4. The owner lands in the business. Their onboarding skips creating it, the number step and attribution, and ends once they verify their phone. At activity only, the phone is their only step.
@@ -383,7 +425,7 @@ interface CustomHostnameProvider {
 
 The partner program uses three test seams, from highest to lowest:
 
-- **Domain functions against PostgreSQL**, with the real runtime roles and RLS: business access and audited opens, brands, partner operations, entitlement, usage metering and pools, platform keys, templates, number claims, and lifecycle transitions. The existing `*.integration.test.ts` files are prior art.
+- **Domain functions against PostgreSQL**, with the real runtime roles and RLS: business access and audited opens, brands, partner operations, entitlement, usage metering and pools, platform keys, templates, prospect demos, number claims, and lifecycle transitions. The existing `*.integration.test.ts` files are prior art.
 - **The admin's request pipeline**: host resolution in the proxy, sign-in and CSRF on partner domains, branded pages, refused hosts, and the TLS ask route. The existing route handler and proxy tests are prior art.
 - **Provider interfaces with fakes**: the worker's billing sync, Polar and Stripe webhooks and reconcile, and custom hostname provisioning. The worker's `handleJob` tests, which pass a fake Polar, are prior art.
 

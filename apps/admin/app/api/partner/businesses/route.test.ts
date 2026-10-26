@@ -3,6 +3,8 @@ import { beforeEach, expect, it, vi } from "vitest";
 const fixture = vi.hoisted(() => ({ resolve: vi.fn(), list: vi.fn(), create: vi.fn(), remove: vi.fn(), limit: vi.fn() }));
 vi.mock("@/lib/operator-request", () => import("@/lib/operator-request.fake"));
 vi.mock("@/lib/fixed-window-limit", () => ({ enforceFixedWindow: fixture.limit, fixedWindowLimit: () => ({}) }));
+vi.mock("@/lib/domain-context", () => ({ createWorkerDomainContext: () => ({ db: "worker" }) }));
+vi.mock("@/lib/storage", () => ({ getStorageProvider: () => ({ kind: "storage" }) }));
 vi.mock("@lobbystack/domain", () => ({ resolvePartnerActor: fixture.resolve, listPartnerBusinesses: fixture.list, createPartnerBusiness: fixture.create, deletePartnerBusiness: fixture.remove }));
 
 import { fakeOperator, resetFakeOperator } from "@/lib/operator-request.fake";
@@ -45,7 +47,28 @@ it("sells the new business the package the partner picked", async () => {
   expect(fixture.create).toHaveBeenCalledWith(expect.anything(), actor, expect.objectContaining({ packageId }));
 });
 
+it("applies the template the partner picked, with the worker's context and storage", async () => {
+  fixture.create.mockResolvedValue({ businessId: "business", invitationId: "invitation", expiresAt: new Date("2026-11-02T00:00:00.000Z") });
+  const templateId = "1e6c2f4a-8b3d-4c7e-9f10-2a3b4c5d6e7f";
+  expect((await call(POST, "POST", { ...valid, templateId })).status).toBe(201);
+  expect(fixture.create).toHaveBeenCalledWith(expect.anything(), actor, { name: "Harbor Dental", timezone: "America/Toronto", businessType: "service_company", accessLevel: "activity", ownerEmail: "owner@example.com", packageId: null, templateId }, { worker: { db: "worker" }, storage: { kind: "storage" } });
+
+  fixture.create.mockRejectedValueOnce(Object.assign(new Error("The template couldn't set up the business, so it wasn't created: x"), { status: 409, code: "template_failed" }));
+  const failed = await call(POST, "POST", { ...valid, templateId });
+  expect(failed.status).toBe(409);
+  expect(await failed.json()).toMatchObject({ code: "template_failed" });
+});
+
+it("sells a package and applies a template to the same new business", async () => {
+  fixture.create.mockResolvedValue({ businessId: "business", invitationId: "invitation", expiresAt: new Date("2026-11-02T00:00:00.000Z") });
+  const packageId = "0c6d6c9e-3f0a-4a51-9a3b-2a4a3c7b9d10";
+  const templateId = "1e6c2f4a-8b3d-4c7e-9f10-2a3b4c5d6e7f";
+  expect((await call(POST, "POST", { ...valid, packageId, templateId })).status).toBe(201);
+  expect(fixture.create).toHaveBeenCalledWith(expect.objectContaining({ stripeConnect: null }), actor, expect.objectContaining({ packageId, templateId }), { worker: { db: "worker" }, storage: { kind: "storage" } });
+});
+
 it.each([
+  [{ templateId: "dental" }, "invalid_template"],
   [{ name: " " }, "invalid_name"],
   [{ timezone: undefined }, "invalid_timezone"],
   [{ accessLevel: 3 }, "invalid_access_level"],

@@ -122,7 +122,7 @@ function offerFrom(pkg: PackageRow, account: AccountRow | null): PackageOffer {
 const NO_CHECKOUT = { stripeCheckoutUrl: null, stripeCheckoutExpiresAt: null } as const;
 
 /** A checkout someone may still pay, which a change to the business's billing must close. */
-type OpenCheckout = { accountId: string; sessionId: string };
+export type OpenCheckout = { accountId: string; sessionId: string };
 
 function openCheckoutOf(account: AccountRow | null, partnerAccount: StripeAccountRow | null): OpenCheckout | null {
   if (!account?.stripeCheckoutSessionId || !account.stripeCheckoutUrl || !account.stripeCheckoutExpiresAt || account.stripeCheckoutExpiresAt <= new Date()) return null;

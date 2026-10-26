@@ -7,6 +7,8 @@
   },
   "nav": {
     "businesses": "Entreprises",
+    "templates": "Modèles",
+    "demos": "Démos",
     "packages": "Formules",
     "branding": "Image de marque et domaine",
     "team": "Équipe",
@@ -49,7 +51,8 @@
       "failed": "Impossible d'ouvrir {{name}}. Réessayez."
     },
     "actions": {
-      "more": "Plus d'actions pour {{name}}"
+      "more": "Plus d'actions pour {{name}}",
+      "saveTemplate": "Enregistrer comme modèle"
     },
     "confirm": {
       "cancel": "Annuler"
@@ -114,6 +117,9 @@
         "outside": "Vous facturez cette entreprise vous-même, et son propriétaire se connecte depuis l'invitation.",
         "package": "Son propriétaire paie cette formule depuis l'invitation, puis se connecte."
       },
+      "templateLabel": "Modèle",
+      "noTemplate": "Aucun modèle",
+      "templateHelp": "L'entreprise reçoit les réglages du modèle, avec le nom et le fuseau horaire que vous entrez ici. Nous lisons un échantillon de chaque site Web du modèle. Ouvrez l'entreprise pour lire le reste.",
       "submit": "Créer et inviter",
       "submitting": "Création…",
       "created": "Vous avez créé {{name}} et invité {{email}}.",
@@ -124,7 +130,9 @@
         "domainRequired": "Il vous faut une adresse de tableau de bord avant de créer une entreprise. Demandez à {{appName}} d'en configurer une.",
         "rateLimited": "Vous avez créé trop d'entreprises. Réessayez dans une heure.",
         "ownerOnTeam": "Une personne de votre équipe ne peut pas être propriétaire d'une entreprise. Entrez le courriel du client à qui elle appartient.",
-        "failed": "Impossible de créer l'entreprise. Réessayez."
+        "failed": "Impossible de créer l'entreprise. Réessayez.",
+        "templateFailed": "Impossible de configurer l'entreprise avec ce modèle, alors nous ne l'avons pas créée. Réessayez ou choisissez un autre modèle.",
+        "templateNotFound": "Quelqu'un a supprimé ce modèle. Choisissez-en un autre."
       }
     },
     "billing": {
@@ -233,6 +241,75 @@
       "cancel": "Annuler",
       "done": "{{name}} n'est plus en vente.",
       "failed": "Impossible d'arrêter la vente de la formule. Réessayez."
+    }
+  },
+  "templates": {
+    "title": "Modèles",
+    "description": "Un modèle copie les réglages de la réceptionniste, les heures, les services, les règles, les connaissances et les documents d'une entreprise. Son nom, son site Web, ses numéros de téléphone, son forfait et son propriétaire restent avec l'entreprise. Choisissez un modèle quand vous créez une entreprise pour qu'elle démarre avec ces réglages.",
+    "loadFailed": "Impossible de charger vos modèles. Actualisez la page pour réessayer.",
+    "savedOn": "Enregistré le {{date}}",
+    "table": {
+      "template": "Modèle",
+      "contents": "Ce qu'il configure",
+      "actions": "Actions"
+    },
+    "contents": {
+      "receptionist": "Réglages de la réceptionniste",
+      "hours": "Heures",
+      "services_one": "{{count}} service",
+      "services_many": "{{count}} services",
+      "services_other": "{{count}} services",
+      "rules_one": "{{count}} règle",
+      "rules_many": "{{count}} règles",
+      "rules_other": "{{count}} règles",
+      "websites_one": "{{count}} site Web",
+      "websites_many": "{{count}} sites Web",
+      "websites_other": "{{count}} sites Web",
+      "files_one": "{{count}} document",
+      "files_many": "{{count}} documents",
+      "files_other": "{{count}} documents",
+      "faqs_one": "{{count}} FAQ",
+      "faqs_many": "{{count}} FAQ",
+      "faqs_other": "{{count}} FAQ",
+      "texts_one": "{{count}} texte",
+      "texts_many": "{{count}} textes",
+      "texts_other": "{{count}} textes"
+    },
+    "empty": {
+      "title": "Aucun modèle pour l'instant",
+      "description": "Enregistrez comme modèle une entreprise que vous avez configurée, puis choisissez-le quand vous créez la suivante.",
+      "memberDescription": "Les propriétaires et administrateurs de votre partenaire enregistrent les modèles ici."
+    },
+    "save": {
+      "action": "Enregistrer un modèle",
+      "title": "Enregistrer un modèle",
+      "description": "Vous gardez une copie des réglages et des documents de l'entreprise. Si vous modifiez l'entreprise plus tard, le modèle reste tel quel.",
+      "businessLabel": "Entreprise",
+      "businessPlaceholder": "Choisissez une entreprise",
+      "noBusinesses": "Créez d'abord une entreprise, puis enregistrez ses réglages ici.",
+      "nameLabel": "Nom du modèle",
+      "namePlaceholder": "Clinique dentaire",
+      "submit": "Enregistrer le modèle",
+      "submitting": "Enregistrement…",
+      "saved": "Vous avez enregistré {{name}}.",
+      "errors": {
+        "invalidName": "Entrez le nom du modèle, jusqu'à 120 caractères.",
+        "invalid": "Cette entreprise a un réglage qu'un modèle ne peut pas contenir, comme une règle de plus de 4 000 caractères. Raccourcissez-le dans l'entreprise, puis réessayez.",
+        "fileMismatch": "Un document de cette entreprise ne correspond pas à sa copie enregistrée. Téléversez-le de nouveau dans l'entreprise, puis réessayez.",
+        "rateLimited": "Vous avez enregistré trop de modèles. Réessayez dans une heure.",
+        "failed": "Impossible d'enregistrer le modèle. Réessayez."
+      }
+    },
+    "actions": {
+      "more": "Plus d'actions pour {{name}}"
+    },
+    "delete": {
+      "action": "Supprimer",
+      "title": "Supprimer {{name}} ?",
+      "description": "Vous ne pourrez plus créer d'entreprises à partir de {{name}}. Les entreprises que vous avez créées avec ce modèle gardent leurs réglages.",
+      "confirm": "Supprimer le modèle",
+      "deleted": "Vous avez supprimé {{name}}.",
+      "failed": "Impossible de supprimer {{name}}. Réessayez."
     }
   },
   "team": {

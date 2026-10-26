@@ -119,7 +119,7 @@ Dashboard test calls, the website widget, prospect demos, and the landing site d
 3. creates the GPT-Live session, records the call, and asks the worker to attach
 4. returns OpenAI's answer so the browser connects its audio
 
-The browser can only close the session. It can't change instructions or answer delegations. Before it sends its WebRTC offer, the browser waits for ICE candidate gathering to finish, for up to 10 seconds. When the caller hangs up, it sends `session.close` and mutes the microphone. It keeps the connection open until `session.closed` arrives, for up to 15 seconds. Prospect demos don't count against minutes, and their agent can only answer questions and take messages.
+The browser can only close the session. It can't change instructions or answer delegations. Before it sends its WebRTC offer, the browser waits for ICE candidate gathering to finish, for up to 10 seconds. When the caller hangs up, it sends `session.close` and mutes the microphone. It keeps the connection open until `session.closed` arrives, for up to 15 seconds. The host's own prospect demos don't count against minutes. A partner's demo is one of the partner's businesses, so its calls count like theirs. Every demo's agent can only answer questions and take messages.
 
 ## What the worker does during a call
 

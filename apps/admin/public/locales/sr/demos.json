@@ -91,6 +91,25 @@
       "rotate": "Nije moguće promeniti demo link. Pokušajte ponovo.",
       "publish": "Nije moguće objaviti demo. Pokušajte ponovo.",
       "revoke": "Nije moguće opozvati demo. Pokušajte ponovo."
+    },
+    "partner": {
+      "description": "Pokažite potencijalnom klijentu njegovog recepcionera pre nego što kupi. Svaki demo se otvara na vašem domenu, pod vašim brendom.",
+      "prepareDescription": "Demo je privatan dok čitamo sajt potencijalnog klijenta.",
+      "empty": "Još nema demoa. Unesite sajt potencijalnog klijenta da napravite jedan.",
+      "accessLabel": "Pristup kada ga potencijalni klijent preuzme",
+      "usage": "Minuti ovog meseca: {{minutes}} · Četovi ovog meseca: {{chats}}",
+      "open": "Otvori",
+      "delete": "Obriši",
+      "deleteTitle": "Obrisati demo za {{name}}?",
+      "deleteDescription": "Obrisaćete demo sa njegovim pozivima i četovima. Ovo ne možete da poništite.",
+      "deleteConfirm": "Obriši demo",
+      "cancel": "Otkaži",
+      "errors": {
+        "domainRequired": "Potrebna vam je adresa kontrolne table pre nego što napravite demo. Zatražite od servisa {{appName}} da je podesi.",
+        "rateLimited": "Napravili ste previše demoa. Pokušajte ponovo za sat vremena.",
+        "open": "Nismo uspeli da otvorimo demo. Pokušajte ponovo.",
+        "delete": "Nismo uspeli da obrišemo demo. Pokušajte ponovo."
+      }
     }
   }
 }

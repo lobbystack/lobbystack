@@ -95,7 +95,7 @@ export async function POST(request: Request) {
     // The caller hears nothing until this request returns, so these two
     // independent reads run together.
     const [billing, snapshot] = await Promise.all([
-      access.prospectDemoId ? undefined : getWebVoiceBillingAllowance(domain, { businessId: access.businessId, ...(maxDurationMs ? { maxDurationMs } : {}) }),
+      access.billable ? getWebVoiceBillingAllowance(domain, { businessId: access.businessId, ...(maxDurationMs ? { maxDurationMs } : {}) }) : undefined,
       loadSnapshot(domain, access.businessId),
     ]);
     timing.mark("checks");
@@ -116,7 +116,7 @@ export async function POST(request: Request) {
         businessId: access.businessId,
         sessionId,
         widgetId: access.widgetId,
-        billable: !access.prospectDemoId,
+        billable: access.billable,
         ...(maxDurationMs ? { maxDurationMs } : {}),
         ...(access.prospectDemoId ? { sessionPurpose: "prospect_demo", prospectDemoId: access.prospectDemoId } : {}),
         // Prospect demos keep no page URL.

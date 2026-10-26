@@ -91,6 +91,25 @@
       "rotate": "No se pudo renovar el enlace de la demo. Inténtelo de nuevo.",
       "publish": "No se pudo publicar la demo. Inténtelo de nuevo.",
       "revoke": "No se pudo revocar la demo. Inténtelo de nuevo."
+    },
+    "partner": {
+      "description": "Muestre a un cliente potencial su propia recepcionista antes de que compre. Cada demo se abre en su dominio, con su marca.",
+      "prepareDescription": "La demo es privada mientras leemos el sitio web del cliente potencial.",
+      "empty": "Aún no hay demos. Escriba el sitio web de un cliente potencial para crear una.",
+      "accessLabel": "Acceso cuando el cliente potencial la reclame",
+      "usage": "Minutos este mes: {{minutes}} · Chats este mes: {{chats}}",
+      "open": "Abrir",
+      "delete": "Eliminar",
+      "deleteTitle": "¿Eliminar la demo de {{name}}?",
+      "deleteDescription": "Va a borrar la demo con sus llamadas y chats. No podrá deshacerlo.",
+      "deleteConfirm": "Eliminar demo",
+      "cancel": "Cancelar",
+      "errors": {
+        "domainRequired": "Necesita una dirección de panel antes de crear una demo. Pida a {{appName}} que configure una.",
+        "rateLimited": "Creó demasiadas demos. Inténtelo de nuevo en una hora.",
+        "open": "No pudimos abrir la demo. Inténtelo de nuevo.",
+        "delete": "No pudimos eliminar la demo. Inténtelo de nuevo."
+      }
     }
   }
 }

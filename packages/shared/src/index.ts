@@ -15,6 +15,7 @@ export * from "./hosts";
 export * from "./partnerFeatures";
 export * from "./partners";
 export * from "./partnerStripe";
+export * from "./businessSetup";
 export { isCertificationMode, assertCertificationRecipient, assertCertificationOperationAllowed, assertCertificationCalendar, assertCertificationBillingSandbox } from "./certification";
 
 export type DeploymentMode = "cloud" | "self_hosted_standard" | "development";

@@ -7,6 +7,8 @@
   },
   "nav": {
     "businesses": "Negocios",
+    "templates": "Plantillas",
+    "demos": "Demos",
     "packages": "Paquetes",
     "branding": "Marca y dominio",
     "team": "Equipo",
@@ -49,7 +51,8 @@
       "failed": "No pudimos abrir {{name}}. Inténtelo de nuevo."
     },
     "actions": {
-      "more": "Más acciones para {{name}}"
+      "more": "Más acciones para {{name}}",
+      "saveTemplate": "Guardar como plantilla"
     },
     "confirm": {
       "cancel": "Cancelar"
@@ -114,6 +117,9 @@
         "outside": "Usted factura a este negocio por su cuenta, y su propietario inicia sesión desde la invitación.",
         "package": "Su propietario paga este paquete desde la invitación y luego inicia sesión."
       },
+      "templateLabel": "Plantilla",
+      "noTemplate": "Sin plantilla",
+      "templateHelp": "El negocio recibe la configuración de la plantilla, con el nombre y la zona horaria que escriba aquí. Leemos una parte de cada sitio web de la plantilla. Abra el negocio para leer el resto.",
       "submit": "Crear e invitar",
       "submitting": "Creando…",
       "created": "Creó {{name}} e invitó a {{email}}.",
@@ -124,7 +130,9 @@
         "domainRequired": "Necesita una dirección de panel antes de crear un negocio. Pida a {{appName}} que configure una.",
         "rateLimited": "Creó demasiados negocios. Inténtelo de nuevo en una hora.",
         "ownerOnTeam": "Una persona de su equipo no puede ser propietaria de un negocio. Escriba el correo del cliente al que pertenece.",
-        "failed": "No pudimos crear el negocio. Inténtelo de nuevo."
+        "failed": "No pudimos crear el negocio. Inténtelo de nuevo.",
+        "templateFailed": "No pudimos configurar el negocio con esa plantilla, así que no lo creamos. Inténtelo de nuevo o elija otra plantilla.",
+        "templateNotFound": "Alguien eliminó esa plantilla. Elija otra."
       }
     },
     "billing": {
@@ -233,6 +241,75 @@
       "cancel": "Cancelar",
       "done": "{{name}} ya no está a la venta.",
       "failed": "No pudimos retirar el paquete de la venta. Inténtelo de nuevo."
+    }
+  },
+  "templates": {
+    "title": "Plantillas",
+    "description": "Una plantilla copia los ajustes de la recepcionista, los horarios, los servicios, las reglas, el conocimiento y los documentos de un negocio. Su nombre, su sitio web, sus números de teléfono, su plan y su propietario se quedan con el negocio. Elija una plantilla al crear un negocio para que empiece con esa configuración.",
+    "loadFailed": "No pudimos cargar sus plantillas. Actualice la página para intentarlo de nuevo.",
+    "savedOn": "Guardada el {{date}}",
+    "table": {
+      "template": "Plantilla",
+      "contents": "Lo que configura",
+      "actions": "Acciones"
+    },
+    "contents": {
+      "receptionist": "Ajustes de la recepcionista",
+      "hours": "Horarios",
+      "services_one": "{{count}} servicio",
+      "services_many": "{{count}} servicios",
+      "services_other": "{{count}} servicios",
+      "rules_one": "{{count}} regla",
+      "rules_many": "{{count}} reglas",
+      "rules_other": "{{count}} reglas",
+      "websites_one": "{{count}} sitio web",
+      "websites_many": "{{count}} sitios web",
+      "websites_other": "{{count}} sitios web",
+      "files_one": "{{count}} documento",
+      "files_many": "{{count}} documentos",
+      "files_other": "{{count}} documentos",
+      "faqs_one": "{{count}} pregunta frecuente",
+      "faqs_many": "{{count}} preguntas frecuentes",
+      "faqs_other": "{{count}} preguntas frecuentes",
+      "texts_one": "{{count}} texto",
+      "texts_many": "{{count}} textos",
+      "texts_other": "{{count}} textos"
+    },
+    "empty": {
+      "title": "Aún no hay plantillas",
+      "description": "Guarde como plantilla un negocio que ya configuró y elíjala cuando cree el siguiente.",
+      "memberDescription": "Los propietarios y administradores de su socio guardan las plantillas aquí."
+    },
+    "save": {
+      "action": "Guardar una plantilla",
+      "title": "Guardar una plantilla",
+      "description": "Usted conserva una copia de la configuración y los documentos del negocio. Si cambia el negocio después, la plantilla queda igual.",
+      "businessLabel": "Negocio",
+      "businessPlaceholder": "Elija un negocio",
+      "noBusinesses": "Primero cree un negocio y luego guarde su configuración aquí.",
+      "nameLabel": "Nombre de la plantilla",
+      "namePlaceholder": "Clínica dental",
+      "submit": "Guardar plantilla",
+      "submitting": "Guardando…",
+      "saved": "Usted guardó {{name}}.",
+      "errors": {
+        "invalidName": "Escriba el nombre de la plantilla, de hasta 120 caracteres.",
+        "invalid": "Este negocio tiene un ajuste que una plantilla no puede guardar, como una regla de más de 4000 caracteres. Acórtelo en el negocio y vuelva a guardar.",
+        "fileMismatch": "Un documento de este negocio no coincide con su copia guardada. Súbalo de nuevo al negocio y vuelva a guardar.",
+        "rateLimited": "Guardó demasiadas plantillas. Inténtelo de nuevo en una hora.",
+        "failed": "No pudimos guardar la plantilla. Inténtelo de nuevo."
+      }
+    },
+    "actions": {
+      "more": "Más acciones para {{name}}"
+    },
+    "delete": {
+      "action": "Eliminar",
+      "title": "¿Eliminar {{name}}?",
+      "description": "Ya no podrá crear negocios a partir de {{name}}. Los negocios que creó con ella conservan su configuración.",
+      "confirm": "Eliminar plantilla",
+      "deleted": "Usted eliminó {{name}}.",
+      "failed": "No pudimos eliminar {{name}}. Inténtelo de nuevo."
     }
   },
   "team": {

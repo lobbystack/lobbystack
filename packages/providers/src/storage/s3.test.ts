@@ -1,4 +1,4 @@
-import { GetBucketCorsCommand, HeadObjectCommand, PutBucketCorsCommand, S3Client, type CORSRule } from "@aws-sdk/client-s3";
+import { GetBucketCorsCommand, HeadObjectCommand, PutBucketCorsCommand, PutObjectCommand, S3Client, type CORSRule } from "@aws-sdk/client-s3";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createStorageProvider } from "./provider";
@@ -99,5 +99,18 @@ describe("S3StorageProvider headObject", () => {
     });
 
     await expect(storage().headObject({ key: upload.key })).resolves.toEqual({ length: 4, contentType: "application/pdf", checksum: "abc=" });
+  });
+});
+
+describe("S3StorageProvider putObject", () => {
+  it("sends the checksum it's given, so headObject returns it and an upload completed from the copy checks out", async () => {
+    const send = stubSend();
+    const body = new Uint8Array([1, 2, 3, 4]);
+
+    await storage().putObject({ key: upload.key, body, contentType: "application/pdf", checksum: "abc=" });
+    await storage().putObject({ key: upload.key, body, contentType: "application/pdf" });
+
+    const puts = send.mock.calls.map(([command]) => command).filter((command) => command instanceof PutObjectCommand).map((command) => (command as PutObjectCommand).input);
+    expect(puts.map((input) => input.ChecksumSHA256)).toEqual(["abc=", undefined]);
   });
 });

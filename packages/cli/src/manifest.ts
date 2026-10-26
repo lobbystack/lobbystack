@@ -1,89 +1,22 @@
 import { readFile, realpath } from "node:fs/promises";
 import { basename, extname, isAbsolute, relative, resolve, sep } from "node:path";
 
-import { apiBusinessCreateSchema, apiPhoneNumberSearchSchema, apiReceptionistUpdateSchema, apiRuleCreateSchema, apiServiceCreateSchema, weekdays } from "@lobbystack/shared";
+import { onboardManifestSchema, type OnboardManifest } from "@lobbystack/shared";
 import { parse as parseYaml } from "yaml";
-import { z } from "zod";
+import type { z } from "zod";
 
 import { CliError } from "./errors";
 import { readUploadFile, type UploadFile } from "./upload";
 
-// The file lobbystack onboard reads: a business and everything set up for it.
-// Its sections take the API's own request schemas, so the manifest takes what
-// the endpoints take, and a mistake shows before anything changes.
+// The file lobbystack onboard reads, from the path given. The schema lives in
+// packages/shared with the logic that applies it, which the partner console
+// uses for templates as well.
 
-const dayNames = new Map<string, (typeof weekdays)[number]>([...weekdays.map((day) => [day, day] as const), ...weekdays.map((day) => [day.slice(0, 3), day] as const)]);
-const clock = z.string().regex(/^(?:(?:[01]\d|2[0-3]):[0-5]\d|24:00)$/, "Use 24-hour HH:MM in quotes, such as \"08:00\".");
-const hoursWindow = z.strictObject({
-  day: z.string().transform((value, context) => {
-    const day = dayNames.get(value.trim().toLowerCase());
-    if (!day) context.addIssue({ code: "custom", message: "Use a day such as mon or monday." });
-    return day ?? "monday";
-  }),
-  open: clock,
-  close: clock,
-});
-const fileEntry = z.union([z.string().trim().min(1), z.strictObject({ path: z.string().trim().min(1), title: z.string().trim().min(1).max(1_000).optional(), tags: z.array(z.string().trim().min(1)).optional() })]);
+export { nameKey, websiteKey } from "@lobbystack/shared";
 
-/** The address the API keeps for a website: https unless it says otherwise, without a trailing slash, query or fragment. */
-export function websiteKey(value: string): string {
-  const trimmed = value.trim();
-  try {
-    // As the API reads it, a colon before a digit starts a port, as in example.com:8080, not a scheme.
-    const url = new URL(/^[a-z][a-z0-9+.-]*:(?!\d)/i.test(trimmed) ? trimmed : `https://${trimmed}`);
-    return `${url.origin}${url.pathname.replace(/\/+$/, "")}`;
-  } catch {
-    return trimmed;
-  }
-}
+export const manifestSchema = onboardManifestSchema;
 
-/** The text a name is found by on a rerun. */
-export const nameKey = (value: string) => value.trim().toLowerCase();
-
-export const manifestSchema = z.strictObject({
-  // The owner gets their own section, which a partner's key sends as owner_email.
-  business: apiBusinessCreateSchema.omit({ owner_email: true }).extend({
-    id: z.uuid().optional(),
-    hours: z.array(hoursWindow).max(28).optional(),
-  }),
-  receptionist: apiReceptionistUpdateSchema.refine((receptionist) => receptionist.regenerate_summary === undefined, {
-    path: ["regenerate_summary"],
-    message: "It isn't a setting, so every run would write a new summary. Run lobbystack receptionist set --regenerate-summary once instead.",
-  }).optional(),
-  services: z.array(apiServiceCreateSchema).optional(),
-  rules: z.array(apiRuleCreateSchema).optional(),
-  knowledge: z.strictObject({
-    websites: z.array(z.string().trim().min(1)).optional(),
-    read_full_site: z.boolean().optional(),
-    files: z.array(fileEntry).optional(),
-    faqs: z.array(z.strictObject({ question: z.string().trim().min(1).max(300), answer: z.string().trim().min(1).max(20_000) })).optional(),
-    texts: z.array(z.strictObject({ title: z.string().trim().min(1).max(300), content: z.string().trim().min(1).max(20_000) })).optional(),
-  }).optional(),
-  plan: z.union([
-    z.strictObject({ managed: z.literal(true) }),
-    z.strictObject({ checkout: z.strictObject({ plan: z.enum(["starter", "pro"]), interval: z.enum(["monthly", "annual"]) }) }),
-  ]).optional(),
-  phone_number: apiPhoneNumberSearchSchema.omit({ limit: true, replaces: true }).optional(),
-  onboarding: z.strictObject({ complete: z.boolean().optional(), skip_number: z.boolean().optional(), source: z.string().trim().min(1).max(120).optional() }).optional(),
-  owner: z.strictObject({ email: z.string().trim().min(3).max(320) }).optional(),
-}).superRefine((manifest, context) => {
-  // A rerun finds each entry again by its name, so two entries with one name would be one.
-  const unique = <T>(items: readonly T[] | undefined, key: (item: T) => string, path: (index: number) => PropertyKey[]) => {
-    const seen = new Map<string, number>();
-    items?.forEach((item, index) => {
-      const first = seen.get(key(item));
-      if (first === undefined) seen.set(key(item), index);
-      else context.addIssue({ code: "custom", path: path(index), message: `It repeats entry ${first}. Give each entry its own name, or remove one.` });
-    });
-  };
-  unique(manifest.services, (service) => nameKey(service.name), (index) => ["services", index, "name"]);
-  unique(manifest.rules, (rule) => nameKey(rule.title), (index) => ["rules", index, "title"]);
-  unique(manifest.knowledge?.websites, websiteKey, (index) => ["knowledge", "websites", index]);
-  unique(manifest.knowledge?.faqs, (faq) => nameKey(faq.question), (index) => ["knowledge", "faqs", index, "question"]);
-  unique(manifest.knowledge?.texts, (text) => nameKey(text.title), (index) => ["knowledge", "texts", index, "title"]);
-});
-
-export type Manifest = z.infer<typeof manifestSchema>;
+export type Manifest = OnboardManifest;
 
 function issuePath(path: ReadonlyArray<PropertyKey>): string {
   return path.reduce<string>((text, part) => (typeof part === "number" ? `${text}[${part}]` : text ? `${text}.${String(part)}` : String(part)), "") || "(the file)";

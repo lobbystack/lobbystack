@@ -90,6 +90,25 @@
       "rotate": "Unable to rotate the demo link. Please try again.",
       "publish": "Unable to publish the demo. Please try again.",
       "revoke": "Unable to revoke the demo. Please try again."
+    },
+    "partner": {
+      "description": "Show a prospect their own receptionist before they buy. Each demo opens on your domain under your brand.",
+      "prepareDescription": "The demo stays private while we read the prospect's website.",
+      "empty": "No demos yet. Enter a prospect's website to make one.",
+      "accessLabel": "Access once the prospect claims it",
+      "usage": "Minutes this month: {{minutes}} · Chats this month: {{chats}}",
+      "open": "Open",
+      "delete": "Delete",
+      "deleteTitle": "Delete the {{name}} demo?",
+      "deleteDescription": "You'll erase the demo and its calls and chats. You can't undo it.",
+      "deleteConfirm": "Delete demo",
+      "cancel": "Cancel",
+      "errors": {
+        "domainRequired": "You need a dashboard address before you can make a demo. Ask {{appName}} to set one up.",
+        "rateLimited": "You made too many demos. Try again in an hour.",
+        "open": "We couldn't open the demo. Try again.",
+        "delete": "We couldn't delete the demo. Try again."
+      }
     }
   }
 }

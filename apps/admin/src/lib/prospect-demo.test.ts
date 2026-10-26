@@ -45,6 +45,21 @@ describe("prospect demo web voice access", () => {
       businessId: "business-a",
       mode: "prospect_demo",
       prospectDemoId: "demo-a",
+      partnerId: null,
+    });
+  });
+
+  it("says which partner a partner's demo belongs to, so the call checks its brand and counts its minutes", async () => {
+    mocks.execute
+      .mockResolvedValueOnce({ rows: [{ business_id: "business-a" }] })
+      .mockResolvedValueOnce({ rows: [{ business_id: "business-a", prospect_demo_id: "demo-a", partner_id: "partner-a" }] });
+
+    await expect(resolveWebVoiceAccess({ businessSlug: "business", prospectDemoToken: "sample-token" })).resolves.toEqual({
+      allowed: true,
+      businessId: "business-a",
+      mode: "prospect_demo",
+      prospectDemoId: "demo-a",
+      partnerId: "partner-a",
     });
   });
 

@@ -1273,6 +1273,30 @@
       "comparison": "port-baseline"
     },
     {
+      "path": "/partner/[partnerId]/templates",
+      "state": "empty",
+      "fixtureState": "operator",
+      "comparison": "port-baseline"
+    },
+    {
+      "path": "/partner/[partnerId]/templates",
+      "state": "default",
+      "fixtureState": "operator",
+      "comparison": "port-baseline"
+    },
+    {
+      "path": "/partner/[partnerId]/demos",
+      "state": "empty",
+      "fixtureState": "operator",
+      "comparison": "port-baseline"
+    },
+    {
+      "path": "/partner/[partnerId]/demos",
+      "state": "populated",
+      "fixtureState": "operator",
+      "comparison": "port-baseline"
+    },
+    {
       "path": "/partner/[partnerId]/packages",
       "state": "default",
       "fixtureState": "operator",

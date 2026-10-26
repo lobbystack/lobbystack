@@ -68,6 +68,7 @@ The admin caches the branding for 30 seconds. Saving it in onboarding also tells
 - The browser tab's title and icon on every admin page: the dashboard, sign-in and sign-up, onboarding, and the website widget's frame.
 - The logo and name above the sign-in, sign-up, password reset, invitation, email change, verification, OAuth consent, and onboarding pages.
 - The header of the public demo page.
+- The instructions of a prospect demo's receptionist, which name the brand that made the demo.
 - Every dashboard string in all four languages that used to say LobbyStack: 22 strings, which now use the `{{appName}}` i18n variable.
 - The opening of the SMS HELP replies, such as `Acme Desk: For help, contact …`. Text messages read the name the same way the admin does, from `BRAND_APP_NAME` and then the saved choice (`deploymentAppName()` in `packages/domain/src/server/branding.ts`).
 
@@ -157,6 +158,8 @@ A partner's business gets its partner's brand from `brandForBusiness`, and a dir
 Every page on a partner's host shows the partner's brand: the tab's title and favicon, the logo and name above sign-in and onboarding, the `{{appName}}` variable in dashboard text, and the website widget's frame. The partner's color replaces the dashboard's primary color, with light or dark text on it, whichever reads better. The terms, privacy, and support links come from the partner, and its pages leave out any link it didn't set. Sign-in, sign-up, and onboarding list them below the form, and the dashboard's account menu lists them too. Sign-up shows its agreement line only when the partner set both terms and privacy links. The dashboard leaves out the host's Help Center and docs links, since partners have no docs of their own.
 
 On a partner's host, the partner console opens only that partner. `/partner` goes to its console, and anyone off its team gets a 404 there, since partner signup stays on the host's domain. Another partner's console sends the visitor back to `/partner`, the switcher lists no other partner, and `/api/partner/*` answers 404 for any other partner. The dashboard's account menu links to the console only for that partner's team.
+
+A partner's prospect demos open on its host too, at `/demo`, under its brand. Their receptionist names the partner, never the host. The page's header shows the partner's logo with no link, since the host's site is the only one it could open, and leaves out the host's free trial. The demo page, its web call, and claiming the demo answer a token from another brand's demo as they answer an unknown one, on the host's domain and on every partner's host.
 
 A partner's pages never send its visitors to a host-named domain:
 
@@ -265,7 +268,7 @@ These places still say LobbyStack or link to lobbystack.com. Variables marked "p
 | Operator alert emails | `packages/domain/src/server/calendar.ts`, `publicApi/webhooks.ts` | The app name. |
 | SMS | The "LobbyStack:" opening of the START replies in `packages/domain/src/server/sms.ts`; the verification code text in `verificationCode.ts`, which is also sent to callers who change an appointment, in English only | The app name, as the HELP replies already use. The replies are part of the registered A2P 10DLC campaign, so update the campaign when they change. |
 | Referral links | `apps/admin/app/api/affiliate/route.ts` falls back to `https://app.lobbystack.com` | `SITE_URL` already overrides it. |
-| AI and voice text | The prospect demo instructions (`packages/domain/src/server/demos.ts`); the placeholder summary "… uses LobbyStack to answer calls." (`tenancy.ts`, `businessSummary.ts`), which `agent-core/src/businessFacts.ts` and migration 0074 detect by its wording; the MCP server's title and instructions (`apps/admin/src/lib/mcp/server.ts`) | The app name. The placeholder detection has to keep matching the old wording. |
+| AI and voice text | The placeholder summary "… uses LobbyStack to answer calls." (`tenancy.ts`, `businessSummary.ts`), which `agent-core/src/businessFacts.ts` and migration 0074 detect by its wording; the MCP server's title and instructions (`apps/admin/src/lib/mcp/server.ts`) | The app name. The placeholder detection has to keep matching the old wording. |
 | API and OAuth | The OpenAPI title "LobbyStack API" and descriptions such as "LobbyStack Cloud" (`packages/shared/src/publicApi/`); API error messages; the webhook test event; the `LobbyStack-Webhooks` and `LobbyStack-OAuth` user agents; the OAuth resource name and realm (`apps/admin/src/lib/mcp/oauth-config.ts`, `oauth-provider.ts`) | The app name, except the user agents. |
 | Website widget | The `window.LobbyStack` global, the `lobby-widget-*` classes, and the default color `#0f766e` (`packages/embed`, built into `apps/admin/public/embed/embed.js`) | Keep `window.LobbyStack` as an alias, because customers' sites may call it. `BRAND_ACCENT_COLOR` (proposed) for the default color. |
 | Twilio | Numbers get the friendly name `LobbyStack <business id>` (`apps/worker/src/handlers.ts`) | The app name. Only the Twilio console shows it. |

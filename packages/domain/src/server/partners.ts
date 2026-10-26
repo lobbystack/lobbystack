@@ -32,9 +32,10 @@ import {
 
 import { AuthorizationError } from "../authz";
 import { announceBrandChange } from "./brands";
+import { applyStoredBusinessTemplate, loadBusinessTemplateInTransaction, type BusinessSetupDependencies } from "./businessTemplates";
 import type { DomainContext } from "./context";
 import { firstOnboardingStage } from "./onboarding";
-import { closeCheckoutQuietly, dropBusinessPackageInTransaction, listPartnerBusinessBillingIn, lockBusinessBillingAccount, setBusinessPackageInTransaction, type PartnerBusinessBilling } from "./packageBilling";
+import { closeCheckoutQuietly, dropBusinessPackageInTransaction, listPartnerBusinessBillingIn, lockBusinessBillingAccount, setBusinessPackageInTransaction, type OpenCheckout, type PartnerBusinessBilling } from "./packageBilling";
 import { lockBusinessNumberClaims } from "./phoneNumbers";
 import { lockActivePartnerPlatformKey } from "./publicApi/platformKeys";
 import { isSharedSmsSender } from "./smsSender";
@@ -450,8 +451,12 @@ function brandImage(bytes: Uint8Array | null, image: BrandImage): { bytes: Buffe
   return { bytes: Buffer.from(bytes), contentType };
 }
 
-/** Reserves the partner's subdomain inside a system transaction. Returns it, and whether anything was written. */
-async function reserveSubdomainIn(tx: DatabaseTransaction, partnerId: string, baseDomain: string): Promise<{ subdomain: string | null; changed: boolean }> {
+/**
+ * Reserves the partner's subdomain inside a system transaction. Returns it,
+ * and whether anything was written, which the caller announces as a brand
+ * change once the transaction commits.
+ */
+export async function reserveSubdomainIn(tx: DatabaseTransaction, partnerId: string, baseDomain: string): Promise<{ subdomain: string | null; changed: boolean }> {
   const [partner] = await tx.select({ slug: partners.slug }).from(partners).where(eq(partners.id, partnerId)).limit(1);
   if (!partner) return { subdomain: null, changed: false };
   const hostname = `${partner.slug}.${baseDomain}`;
@@ -617,7 +622,8 @@ function businessesActor(actor: PartnerActor): PartnerMemberActor {
 /**
  * The partner's businesses, by name, with each one's owner or the invitation
  * to own it, and its minutes and chats this month. Anyone on the team can
- * read them.
+ * read them. A prospect demo shows on the Demos page instead until someone
+ * claims it.
  */
 export async function listPartnerBusinesses(context: DomainContext, actor: PartnerActor): Promise<PartnerBusiness[]> {
   const member = businessesActor(actor);
@@ -630,13 +636,15 @@ export async function listPartnerBusinesses(context: DomainContext, actor: Partn
     const rows = await tx.execute<{ businessId: string; name: string; accessLevel: PartnerAccessLevel; onboardingStage: string; createdAt: string; ownerEmail: string | null; invitedEmail: string | null; invitationExpiresAt: string | null }>(
       sql`select business_id as "businessId", name, access_level as "accessLevel", onboarding_stage as "onboardingStage", created_at as "createdAt", owner_email as "ownerEmail", invited_email as "invitedEmail", invitation_expires_at as "invitationExpiresAt" from app.list_partner_businesses(${member.partnerId}::uuid)`,
     );
+    const demos = await tx.execute<{ businessId: string }>(sql`select business_id as "businessId" from app.list_partner_prospect_demos(${member.partnerId}::uuid) where status <> 'claimed'`);
+    const unclaimedDemos = new Set(demos.rows.map((row) => row.businessId));
     const used = await tx.execute<{ businessId: string; voiceSeconds: number; chats: number }>(
       sql`select business_id as "businessId", voice_seconds_used as "voiceSeconds", chats_used as "chats" from app.list_partner_business_usage(${member.partnerId}::uuid, ${periodKey})`,
     );
     const usage = new Map(used.rows.map((row) => [row.businessId, row]));
     // Raw queries return Postgres timestamp text, which Safari's Date can't parse.
     const iso = (value: string) => new Date(value).toISOString();
-    return rows.rows.map((row) => ({
+    return rows.rows.filter((row) => !unclaimedDemos.has(row.businessId)).map((row) => ({
       businessId: row.businessId,
       name: row.name,
       accessLevel: row.accessLevel,
@@ -649,7 +657,7 @@ export async function listPartnerBusinesses(context: DomainContext, actor: Partn
   });
 }
 
-/** What creating a partner's business takes. The console sends the first five and the package; the v1 API's POST /businesses can send the rest. */
+/** What creating a partner's business takes. The console sends the first five, the package and the template; the v1 API's POST /businesses can send the rest but the template. */
 export type PartnerBusinessInput = {
   name: string;
   timezone: string;
@@ -665,6 +673,8 @@ export type PartnerBusinessInput = {
   businessId?: string | undefined;
   /** The API's hash of the request, kept on the audit row so a retry with the same Idempotency-Key can tell a different body apart. */
   requestHash?: string | undefined;
+  /** One of the partner's templates to start the business from. Only someone on the partner's team can apply one. */
+  templateId?: string | undefined;
 };
 
 /**
@@ -680,11 +690,19 @@ export type PartnerBusinessInput = {
  * partner's Stripe account; without one, the business is billed outside
  * LobbyStack. The caller passes the app role's context, since only it can act
  * as the system.
+ *
+ * With one of the partner's templates, the business starts with its setup,
+ * apart from the name and time zone given here. The invitation then waits
+ * until the template is applied. A template that can't be applied, or an
+ * invitation that then fails, leaves no business behind, so the owner never
+ * hears of one that isn't set up. Only someone on the partner's team reads
+ * its templates, so a platform key can't apply one.
  */
 export async function createPartnerBusiness(
   context: DomainContext,
   actor: PartnerActor,
   input: PartnerBusinessInput,
+  setup?: BusinessSetupDependencies,
 ): Promise<{ businessId: string; invitationId: string; expiresAt: Date }> {
   const name = input.name.replace(/\s+/g, " ").trim();
   if (!name || name.length > PARTNER_BUSINESS_NAME_MAX_LENGTH) throw failure(`Enter the business's name, up to ${PARTNER_BUSINESS_NAME_MAX_LENGTH} characters.`, 400, "invalid_name");
@@ -698,16 +716,27 @@ export async function createPartnerBusiness(
   if (!isSingleEmailAddress(ownerEmail)) throw failure("Enter one valid email address for the owner.", 400, "invalid_email");
   const packageId = input.packageId ?? null;
   if (packageId !== null && !isUuid(packageId)) throw failure("packageId must be a UUID, or null to bill the business outside LobbyStack.", 400, "invalid_package");
+  const applier = input.templateId === undefined ? null : templateApplier(actor);
+  if (applier && !setup) throw new Error("Applying a template needs the worker's context and storage.");
   const { baseDomain } = partnerFeatures(process.env);
   const businessId = input.businessId ?? randomUUID();
   const { partnerId } = actor;
 
+  // The worker writes the email under the business's brand, the partner's, and puts its link on the partner's domain.
+  // A key invites as the partner, with no person behind it.
+  const invite = async (tx: DatabaseTransaction, templateId: string | null) => {
+    const { invitationId, expiresAt } = await insertInvitationInTransaction(tx, { businessId, normalizedEmail: ownerEmail, role: "business_owner", ...(actor.kind === "member" ? { invitedByUserId: actor.userId } : { invitedByPlatformKeyId: actor.platformKeyId }) });
+    const by = actor.kind === "member" ? {} : { actor: "platform_key", platformKeyId: actor.platformKeyId, groupId: partnerId };
+    await tx.insert(auditLogs).values({ businessId, actorUserId: actor.kind === "member" ? actor.userId : null, eventType: "partner.business_created", entityType: "business", entityId: businessId, payload: { ...by, partnerId, accessLevel, packageId, ownerInvitationId: invitationId, ...(templateId ? { templateId } : {}), ...(input.requestHash ? { requestHash: input.requestHash } : {}) } });
+    return { invitationId, expiresAt };
+  };
   const created = await withBusinessTransaction(context.db, { ...(actor.kind === "member" ? { userId: actor.userId } : {}), businessId, actorType: "system" }, async (tx) => {
     if (actor.kind === "member" && await currentRole(tx, actor) === "member") throw new AuthorizationError("Only owners and admins can create the partner's businesses.");
     // Revoking a key waits for a business it's creating, so the owner's invitation is never sent by a key revoked first.
     if (actor.kind === "key") await lockActivePartnerPlatformKey(tx, actor.platformKeyId);
     // The partner's people work in its businesses through opens, never on their teams, so none of them owns one.
     if (await isPartnerMemberEmail(tx, { partnerId: actor.partnerId, normalizedEmail: ownerEmail })) throw failure("The owner can't be someone on your team. Your team works in the business from the console.", 409, "owner_on_partner_team");
+    const template = input.templateId === undefined ? null : await loadBusinessTemplateInTransaction(tx, { partnerId, templateId: input.templateId });
     // A partner that signed up while the deployment had no base domain gets its subdomain now, if it can.
     const domain = baseDomain ? await reserveSubdomainIn(tx, partnerId, baseDomain) : { subdomain: null, changed: false };
     if (!domain.subdomain) throw failure("You need your own domain before you can create a business.", 409, "partner_domain_required");
@@ -715,15 +744,58 @@ export async function createPartnerBusiness(
     const partner = { partnerId, accessLevel };
     await insertOwnerlessBusinessInTransaction(tx, { businessId, name, slug: input.slug, timezone, businessType, defaultLocale: input.defaultLocale, websiteUrl: input.websiteUrl, partner, onboardingStage: firstOnboardingStage(partner) });
     if (packageId) await setBusinessPackageInTransaction(tx, { businessId, partnerId, packageId, stripeConnect: Boolean(context.stripeConnect) });
-    // The worker writes the email under the business's brand, the partner's, and puts its link on the partner's domain.
-    // A key invites as the partner, with no person behind it.
-    const { invitationId, expiresAt } = await insertInvitationInTransaction(tx, { businessId, normalizedEmail: ownerEmail, role: "business_owner", ...(actor.kind === "member" ? { invitedByUserId: actor.userId } : { invitedByPlatformKeyId: actor.platformKeyId }) });
-    const by = actor.kind === "member" ? {} : { actor: "platform_key", platformKeyId: actor.platformKeyId, groupId: partnerId };
-    await tx.insert(auditLogs).values({ businessId, actorUserId: actor.kind === "member" ? actor.userId : null, eventType: "partner.business_created", entityType: "business", entityId: businessId, payload: { ...by, partnerId, accessLevel, packageId, ownerInvitationId: invitationId, ...(input.requestHash ? { requestHash: input.requestHash } : {}) } });
-    return { businessId, invitationId, expiresAt, subdomainReserved: domain.changed };
+    return { template, invitation: template ? null : await invite(tx, null), subdomainReserved: domain.changed };
   });
   if (created.subdomainReserved) await announceBrandChange(context, { kind: "partner", partnerId });
-  return { businessId: created.businessId, invitationId: created.invitationId, expiresAt: created.expiresAt };
+  if (created.invitation) return { businessId, ...created.invitation };
+
+  // Only a member gets here: a key asking for a template was refused above.
+  const template = created.template!;
+  const member = applier!;
+  let applied = false;
+  try {
+    await applyStoredBusinessTemplate(setup!, { partnerId, userId: member.userId, businessId, template, keep: { name, timezone } });
+    applied = true;
+    const invitation = await withBusinessTransaction(context.db, { userId: member.userId, businessId, actorType: "system" }, async (tx) => {
+      // Someone on the team may have deleted it while the template was applied.
+      await lockPartnerBusiness(tx, member, businessId, "no key update");
+      return await invite(tx, template.templateId);
+    });
+    return { businessId, ...invitation };
+  } catch (error) {
+    // The business has no owner and no invitation yet, so nobody but the partner knew of it.
+    await removeUnfinishedBusiness(context, member, businessId);
+    const status = errorStatus(error);
+    if (applied || status >= 500) throw error;
+    throw Object.assign(failure(`The template couldn't set up the business, so it wasn't created: ${(error as Error).message}`, 409, "template_failed"), { cause: error });
+  }
+}
+
+/** Who applies a template to a new business: someone on the partner's team, since only they read its templates. */
+function templateApplier(actor: PartnerActor): PartnerMemberActor {
+  if (actor.kind !== "member") throw new AuthorizationError("Platform keys can't apply a partner's templates.");
+  return actor;
+}
+
+function errorStatus(error: unknown): number {
+  return typeof error === "object" && error !== null && "status" in error && typeof error.status === "number" ? error.status : 500;
+}
+
+/**
+ * Deletes a business createPartnerBusiness made but couldn't finish, whatever
+ * the member's role is by now, since nobody else knows of it. One someone on
+ * the team deleted already is left alone. A business that can't be deleted
+ * is logged, since the caller reports what went wrong first, and it stays on
+ * the Businesses page with no owner, where an owner or admin can delete it.
+ */
+async function removeUnfinishedBusiness(context: DomainContext, member: PartnerMemberActor, businessId: string): Promise<void> {
+  try {
+    const closes = await withBusinessTransaction(context.db, { userId: member.userId, businessId, actorType: "system" }, async (tx) => await deletePartnerBusinessInTransaction(tx, member, businessId, { stripeConnect: Boolean(context.stripeConnect) }));
+    await closeCheckoutQuietly(context, closes);
+  } catch (error) {
+    if (errorStatus(error) === 404) return;
+    console.error("[partner-business] unfinished business not deleted", businessId, error instanceof Error ? error.message : error);
+  }
 }
 
 function businessNotFound(): Error {
@@ -807,45 +879,55 @@ export async function deletePartnerBusiness(context: DomainContext, actor: Partn
   const member = businessesActor(actor);
   const closes = await withBusinessTransaction(context.db, { userId: member.userId, businessId: input.businessId, actorType: "system" }, async (tx) => {
     if (await currentRole(tx, member) === "member") throw new AuthorizationError("Only owners and admins can delete the partner's businesses.");
-    // Number claims take this lock, so none starts buying a number while the business goes.
-    await lockBusinessNumberClaims(tx, input.businessId);
-    // The Connect webhook's writes take this before the business's row, so this does too.
-    await lockBusinessBillingAccount(tx, input.businessId);
-    const partnerId = await lockPartnerBusiness(tx, member, input.businessId, "update");
-    // Nobody should keep paying for a business that's gone.
-    const checkout = await dropBusinessPackageInTransaction(tx, { businessId: input.businessId, partnerId, stripeConnect: Boolean(context.stripeConnect) });
-    // RLS shows the partner's people none of the business's claims, so the database answers. A claim no worker will finish doesn't count.
-    const claiming = (await tx.execute<{ busy: boolean }>(sql`select app.business_number_claim_in_progress(${input.businessId}::uuid) as busy`)).rows[0]?.busy === true;
-    const [provisioning] = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "provisioning"))).limit(1);
-    if (claiming || provisioning) throw failure("The business's phone number is still being set up. Try again in a few minutes.", 409, "business_number_in_progress");
-    // A number being released already is released again, in case that release fails once the business is gone.
-    const held = await tx.select({ id: phoneNumbers.id, e164: phoneNumbers.e164, providerPhoneId: phoneNumbers.providerPhoneId }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), inArray(phoneNumbers.status, ["active", "reclaiming"])));
-    const stored = await tx.select({ objectKey: storageObjects.objectKey }).from(storageObjects).where(and(eq(storageObjects.businessId, input.businessId), ne(storageObjects.status, "deleted")));
-    // An invitation or alert sent after the business is gone would go out under the host's brand.
-    await tx.delete(outboxMessages).where(and(eq(outboxMessages.businessId, input.businessId), isNull(outboxMessages.publishedAt)));
-    await tx.delete(businesses).where(eq(businesses.id, input.businessId));
-    // The business is gone, so these jobs belong to none.
-    for (const number of held) {
-      // The shared sender texts for every business, so it stays, as a reclaim leaves it.
-      if (!number.providerPhoneId || isSharedSmsSender(number.e164)) continue;
-      await enqueueOutbox(tx, {
-        topic: "phoneNumber.releaseDeleted",
-        aggregateType: "phone_number",
-        aggregateId: number.id,
-        dedupeKey: `phone-number:${number.id}:release-deleted`,
-        payload: { providerPhoneId: number.providerPhoneId, e164: number.e164 },
-      });
-    }
-    for (let start = 0; start < stored.length; start += STORED_OBJECTS_PER_JOB) {
-      await enqueueOutbox(tx, {
-        topic: "privacy.deleteStoredObjects",
-        aggregateType: "business",
-        aggregateId: input.businessId,
-        dedupeKey: `business:${input.businessId}:delete-stored-objects:${start}`,
-        payload: { objectKeys: stored.slice(start, start + STORED_OBJECTS_PER_JOB).map((object) => object.objectKey) },
-      });
-    }
-    return checkout;
+    return await deletePartnerBusinessInTransaction(tx, member, input.businessId, { stripeConnect: Boolean(context.stripeConnect) });
   });
   await closeCheckoutQuietly(context, closes);
+}
+
+/**
+ * Deletes one of the partner's businesses as deletePartnerBusiness does, once
+ * the caller has checked who may, and returns the package checkout to close
+ * once the transaction commits. The transaction must be the system actor's,
+ * scoped to the business, and hold no row lock on the business yet.
+ */
+export async function deletePartnerBusinessInTransaction(tx: DatabaseTransaction, member: PartnerMemberActor, businessId: string, options: { stripeConnect: boolean }): Promise<OpenCheckout | null> {
+  // Number claims take this lock, so none starts buying a number while the business goes.
+  await lockBusinessNumberClaims(tx, businessId);
+  // The Connect webhook's writes take this before the business's row, so this does too.
+  await lockBusinessBillingAccount(tx, businessId);
+  const partnerId = await lockPartnerBusiness(tx, member, businessId, "update");
+  // Nobody should keep paying for a business that's gone.
+  const checkout = await dropBusinessPackageInTransaction(tx, { businessId, partnerId, stripeConnect: options.stripeConnect });
+  // RLS shows the partner's people none of the business's claims, so the database answers. A claim no worker will finish doesn't count.
+  const claiming = (await tx.execute<{ busy: boolean }>(sql`select app.business_number_claim_in_progress(${businessId}::uuid) as busy`)).rows[0]?.busy === true;
+  const [provisioning] = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "provisioning"))).limit(1);
+  if (claiming || provisioning) throw failure("The business's phone number is still being set up. Try again in a few minutes.", 409, "business_number_in_progress");
+  // A number being released already is released again, in case that release fails once the business is gone.
+  const held = await tx.select({ id: phoneNumbers.id, e164: phoneNumbers.e164, providerPhoneId: phoneNumbers.providerPhoneId }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), inArray(phoneNumbers.status, ["active", "reclaiming"])));
+  const stored = await tx.select({ objectKey: storageObjects.objectKey }).from(storageObjects).where(and(eq(storageObjects.businessId, businessId), ne(storageObjects.status, "deleted")));
+  // An invitation or alert sent after the business is gone would go out under the host's brand.
+  await tx.delete(outboxMessages).where(and(eq(outboxMessages.businessId, businessId), isNull(outboxMessages.publishedAt)));
+  await tx.delete(businesses).where(eq(businesses.id, businessId));
+  // The business is gone, so these jobs belong to none.
+  for (const number of held) {
+    // The shared sender texts for every business, so it stays, as a reclaim leaves it.
+    if (!number.providerPhoneId || isSharedSmsSender(number.e164)) continue;
+    await enqueueOutbox(tx, {
+      topic: "phoneNumber.releaseDeleted",
+      aggregateType: "phone_number",
+      aggregateId: number.id,
+      dedupeKey: `phone-number:${number.id}:release-deleted`,
+      payload: { providerPhoneId: number.providerPhoneId, e164: number.e164 },
+    });
+  }
+  for (let start = 0; start < stored.length; start += STORED_OBJECTS_PER_JOB) {
+    await enqueueOutbox(tx, {
+      topic: "privacy.deleteStoredObjects",
+      aggregateType: "business",
+      aggregateId: businessId,
+      dedupeKey: `business:${businessId}:delete-stored-objects:${start}`,
+      payload: { objectKeys: stored.slice(start, start + STORED_OBJECTS_PER_JOB).map((object) => object.objectKey) },
+    });
+  }
+  return checkout;
 }

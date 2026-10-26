@@ -133,9 +133,10 @@ export class S3StorageProvider {
     };
   }
 
-  async putObject(input: { key: string; body: Uint8Array; contentType: string }): Promise<void> {
+  /** Stores the bytes. A checksum, the SHA-256 in base64, is checked by S3 and kept, so headObject returns it. */
+  async putObject(input: { key: string; body: Uint8Array; contentType: string; checksum?: string }): Promise<void> {
     await this.ensureBucket();
-    await this.run("put", async () => { await this.client.send(new PutObjectCommand({ Bucket: this.bucket, Key: input.key, Body: input.body, ContentType: input.contentType, ContentLength: input.body.byteLength })); });
+    await this.run("put", async () => { await this.client.send(new PutObjectCommand({ Bucket: this.bucket, Key: input.key, Body: input.body, ContentType: input.contentType, ContentLength: input.body.byteLength, ...(input.checksum ? { ChecksumSHA256: input.checksum } : {}) })); });
   }
 
   async headObject(input: { key: string }): Promise<{ length: number; contentType: string; checksum?: string } | null> {

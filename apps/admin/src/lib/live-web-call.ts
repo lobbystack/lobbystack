@@ -3,13 +3,13 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { eq } from "drizzle-orm";
 
 import { widgetKeys, withBusinessTransaction } from "@lobbystack/db";
-import { bearerToken } from "@lobbystack/domain";
+import { bearerToken, businessShowsOnBrand } from "@lobbystack/domain";
 import { DASHBOARD_TEST_CALL_WIDGET_ID, PROSPECT_DEMO_WIDGET_ID } from "@lobbystack/shared";
 
 import { getWorkerDatabase } from "./api-helpers";
 import { requireOperator } from "./operator-request";
 import { resolveWebVoiceAccess } from "./prospect-demo";
-import { trustedRequestOrigins } from "./request-brand";
+import { requestBrandScope, trustedRequestOrigins } from "./request-brand";
 import { isAllowedWidgetOrigin, normalizeOrigin, verifyWidgetSessionToken } from "./widget-keys";
 
 function endTokenSecret(): string {
@@ -51,6 +51,12 @@ export type LiveWebCallAccess = {
   visitorId?: string;
   dashboardTestCall: boolean;
   prospectDemoId?: string;
+  /**
+   * Whether the call counts against the business's minutes. Only the host's
+   * own prospect demos don't: a partner's demo is one of its businesses, and
+   * its calls count like theirs.
+   */
+  billable: boolean;
 };
 
 export type LiveWebCallDenied = { status: number; code: string };
@@ -98,7 +104,7 @@ export async function resolveLiveWebCallAccess(request: Request, body: LiveWebCa
     const { businessId, transaction } = await requireOperator(request);
     await transaction(async () => undefined, { minimumRole: "business_admin" });
     // Rate limits count per origin, so record the trusted origin the call came from.
-    return { businessId, origin: callerOrigin, widgetId: body.widgetId, dashboardTestCall: true, ...(body.visitorId ? { visitorId: body.visitorId } : {}) };
+    return { businessId, origin: callerOrigin, widgetId: body.widgetId, dashboardTestCall: true, billable: true, ...(body.visitorId ? { visitorId: body.visitorId } : {}) };
   }
 
   const bearer = bearerToken(request.headers.get("authorization"));
@@ -108,14 +114,16 @@ export async function resolveLiveWebCallAccess(request: Request, body: LiveWebCa
     if (!token || !parentOrigin || token.origin !== normalizeOrigin(parentOrigin) || (body.visitorId && token.visitorId !== body.visitorId)) return { status: 403, code: "widget_session_invalid" };
     const key = await withBusinessTransaction(getWorkerDatabase().db, { businessId: token.businessId, actorType: "worker" }, async (tx) => (await tx.select({ status: widgetKeys.status, allowedOrigins: widgetKeys.allowedOrigins }).from(widgetKeys).where(eq(widgetKeys.id, token.widgetKeyId)).limit(1))[0]);
     if (!key || key.status !== "active" || !isAllowedWidgetOrigin(token.origin, key.allowedOrigins, { allowAdminOrigin: false, allowLocalhost: false })) return { status: 403, code: "widget_origin_denied" };
-    return { businessId: token.businessId, origin: token.origin, widgetId: WIDGET_VOICE_ID, visitorId: token.visitorId, dashboardTestCall: false };
+    return { businessId: token.businessId, origin: token.origin, widgetId: WIDGET_VOICE_ID, visitorId: token.visitorId, dashboardTestCall: false, billable: true };
   }
 
   if (body.prospectDemoToken && body.businessSlug) {
     const access = await resolveWebVoiceAccess({ businessSlug: body.businessSlug, prospectDemoToken: body.prospectDemoToken });
     if (!access.allowed) return { status: access.status, code: access.reason };
     if (access.mode !== "prospect_demo") return { status: 403, code: "invalid" };
-    return { businessId: access.businessId, origin: appOrigin, widgetId: PROSPECT_DEMO_WIDGET_ID, prospectDemoId: access.prospectDemoId, dashboardTestCall: false, ...(body.visitorId ? { visitorId: body.visitorId } : {}) };
+    // A demo shows only on its own brand's domains, as its preview does.
+    if (!businessShowsOnBrand(access.partnerId, requestBrandScope(request.headers))) return { status: 403, code: "invalid" };
+    return { businessId: access.businessId, origin: appOrigin, widgetId: PROSPECT_DEMO_WIDGET_ID, prospectDemoId: access.prospectDemoId, dashboardTestCall: false, billable: Boolean(access.partnerId), ...(body.visitorId ? { visitorId: body.visitorId } : {}) };
   }
 
   const publicSlug = process.env.WEB_CALL_PUBLIC_BUSINESS_SLUG;
@@ -123,7 +131,7 @@ export async function resolveLiveWebCallAccess(request: Request, body: LiveWebCa
   if (publicSlug && body.businessSlug === publicSlug && origin && allowedPublicOrigins().includes(normalizeOrigin(origin))) {
     const access = await resolveWebVoiceAccess({ businessSlug: publicSlug });
     if (!access.allowed) return { status: access.status, code: access.reason };
-    return { businessId: access.businessId, origin: normalizeOrigin(origin), widgetId: body.widgetId, dashboardTestCall: false, ...(body.visitorId ? { visitorId: body.visitorId } : {}) };
+    return { businessId: access.businessId, origin: normalizeOrigin(origin), widgetId: body.widgetId, dashboardTestCall: false, billable: true, ...(body.visitorId ? { visitorId: body.visitorId } : {}) };
   }
 
   return { status: 403, code: "web_voice_authorization_required" };

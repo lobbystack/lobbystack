@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Building2, MoreHorizontal, Trash2, UserRoundCheck } from "lucide-react";
+import { Building2, LayoutTemplate, MoreHorizontal, Trash2, UserRoundCheck } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -9,8 +9,10 @@ import { toast } from "sonner";
 
 import { formatPriceAmount, type PackageSubscriptionStatus, type PartnerAccessLevel } from "@lobbystack/shared";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
+import { AccessLevelOptions } from "@/components/partner-access-level-options";
 import { PageHeader } from "@/components/page-header";
 import { useConsolePartner } from "@/components/partner-shell";
+import { fetchPartnerTemplates, partnerTemplatesQueryKey, SaveTemplateDialog } from "@/components/partner-templates-surface";
 import { useTelemetry } from "@/components/product-analytics";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,7 +28,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { intlLocale } from "@/lib/locale";
 import { requestJson } from "@/lib/request-json";
 import { availableTimeZones, groupTimeZones, isTimeZoneRegion, type TimeZoneOption } from "@/lib/time-zones";
-import { cn } from "@/lib/utils";
 
 /** What a business is sold, which only owners and admins see. */
 type BusinessBilling = { kind: "outside" } | { kind: "package"; packageId: string; packageName: string; status: PackageSubscriptionStatus };
@@ -47,7 +48,8 @@ type PartnerBusiness = {
 type SellablePackage = { packageId: string; name: string; currency: string; monthlyPriceMinor: number; onConnectedAccount: boolean };
 type Packages = { stripe: { configured: boolean }; packages: SellablePackage[] };
 
-const ACCESS_LEVELS: PartnerAccessLevel[] = ["full", "activity"];
+/** The template picker's value for a business that starts with nothing set up. */
+const NO_TEMPLATE = "none";
 
 /** The billing choice in the console: a package's id, or this for billed outside LobbyStack. */
 const BILLED_OUTSIDE = "outside";
@@ -78,26 +80,6 @@ function browserTimeZone(): string {
   }
 }
 
-function AccessLevelOptions({ value, onChange }: { value: PartnerAccessLevel; onChange: (level: PartnerAccessLevel) => void }) {
-  const { t } = useTranslation("partner");
-  return (
-    <div className="flex flex-col gap-3" role="radiogroup">
-      {ACCESS_LEVELS.map((level) => {
-        const selected = value === level;
-        return (
-          <button aria-checked={selected} className="flex w-full items-start gap-3 py-1 text-left" key={level} onClick={() => onChange(level)} role="radio" type="button">
-            <span className={cn("mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border", selected ? "border-foreground" : "border-muted-foreground")}>{selected ? <span className="size-2 rounded-full bg-foreground" /> : null}</span>
-            <span className="flex min-w-0 flex-col gap-1">
-              <span className="text-sm font-medium">{t(`businesses.access.${level}`)}</span>
-              <span className="text-sm leading-6 text-muted-foreground">{t(`businesses.create.access.${level}`)}</span>
-            </span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 /** Billed outside LobbyStack, or one of the partner's packages on its connected account. */
 function BillingSelect({ id, value, onChange, packages, current, disabled }: { id: string; value: string; onChange: (value: string) => void; packages: SellablePackage[]; current?: BusinessBilling | null; disabled?: boolean }) {
   const { t, i18n } = useTranslation("partner");
@@ -123,9 +105,10 @@ function BillingSelect({ id, value, onChange, packages, current, disabled }: { i
  * audit log records each open. Owners and admins create one, pick the access
  * level its own operators get and the package it pays for, or bill it
  * outside LobbyStack, and invite its owner, who pays and signs in on the
- * partner's domain. They also see and change each business's package,
- * release a business to an owner who joined, or delete it. The server
- * enforces the same rules.
+ * partner's domain. They can start it from one of the partner's templates.
+ * They also see and change each business's package, save a business's setup
+ * as a template, release a business to an owner who joined, or delete it.
+ * The server enforces the same rules.
  */
 export function PartnerBusinessesSurface() {
   const { t, i18n } = useTranslation("partner");
@@ -150,7 +133,10 @@ export function PartnerBusinessesSurface() {
   const [ownerEmail, setOwnerEmail] = useState("");
   const [timezone, setTimezone] = useState(browserTimeZone);
   const [accessLevel, setAccessLevel] = useState<PartnerAccessLevel>("full");
+  const [templateId, setTemplateId] = useState(NO_TEMPLATE);
   const [error, setError] = useState<string | null>(null);
+  const templates = useQuery({ queryKey: partnerTemplatesQueryKey(partner.partnerId), queryFn: () => fetchPartnerTemplates(partner.partnerId), enabled: open });
+  const templateOptions = [{ value: NO_TEMPLATE, label: t("businesses.create.noTemplate") }, ...(templates.data ?? []).map((template) => ({ value: template.templateId, label: template.name }))];
   const locale = intlLocale(i18n.language);
   const timeZoneGroups = useMemo(() => open ? groupTimeZones(availableTimeZones(timezone), locale) : [], [open, timezone, locale]);
   const timeZoneItems = useMemo(() => timeZoneGroups.map((group) => ({
@@ -161,7 +147,7 @@ export function PartnerBusinessesSurface() {
   const formatDate = (value: string) => new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(new Date(value));
   const formatMinutes = (seconds: number) => new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(Math.round((seconds / 60) * 10) / 10);
   const formatCount = (count: number) => new Intl.NumberFormat(locale).format(count);
-  const reset = () => { setName(""); setOwnerEmail(""); setTimezone(browserTimeZone()); setAccessLevel("full"); setBilling(BILLED_OUTSIDE); setError(null); };
+  const reset = () => { setName(""); setOwnerEmail(""); setTimezone(browserTimeZone()); setAccessLevel("full"); setBilling(BILLED_OUTSIDE); setTemplateId(NO_TEMPLATE); setError(null); };
 
   // A partner's business shows only on the partner's domains, so its dashboard opens there; from the host's domain the person signs in again.
   const openBusiness = useMutation({
@@ -175,6 +161,8 @@ export function PartnerBusinessesSurface() {
 
   // The business a confirmation dialog asks about, and what it would do.
   const [confirming, setConfirming] = useState<{ action: "release" | "delete"; business: PartnerBusiness } | null>(null);
+  // The business the Save as template dialog saves, kept while the dialog closes.
+  const [templateSource, setTemplateSource] = useState<{ open: boolean; business?: PartnerBusiness }>({ open: false });
   const release = useMutation({
     mutationFn: (business: PartnerBusiness) => requestJson("/api/partner/businesses/release", { method: "POST", body: JSON.stringify({ partnerId: partner.partnerId, businessId: business.businessId }) }),
     onSuccess: async (_result, business) => {
@@ -196,7 +184,7 @@ export function PartnerBusinessesSurface() {
   const busy = openBusiness.isPending || release.isPending || remove.isPending;
 
   const create = useMutation({
-    mutationFn: () => requestJson<{ businessId: string }>("/api/partner/businesses", { method: "POST", body: JSON.stringify({ partnerId: partner.partnerId, name: name.trim(), timezone, accessLevel, ownerEmail: ownerEmail.trim(), packageId: billing === BILLED_OUTSIDE ? null : billing }) }),
+    mutationFn: () => requestJson<{ businessId: string }>("/api/partner/businesses", { method: "POST", body: JSON.stringify({ partnerId: partner.partnerId, name: name.trim(), timezone, accessLevel, ownerEmail: ownerEmail.trim(), packageId: billing === BILLED_OUTSIDE ? null : billing, ...(templateId === NO_TEMPLATE ? {} : { templateId }) }) }),
     onSuccess: async (created) => {
       telemetry.track("web.partner.business_created", { partnerId: partner.partnerId, businessId: created.businessId, accessLevel, pathname: pathname ?? "/partner" });
       await queryClient.invalidateQueries({ queryKey });
@@ -212,6 +200,8 @@ export function PartnerBusinessesSurface() {
         partner_domain_required: "businesses.create.errors.domainRequired",
         owner_on_partner_team: "businesses.create.errors.ownerOnTeam",
         rate_limited: "businesses.create.errors.rateLimited",
+        template_failed: "businesses.create.errors.templateFailed",
+        template_not_found: "businesses.create.errors.templateNotFound",
         ...BILLING_ERRORS,
       };
       setError(t(messages[cause.code ?? ""] ?? "businesses.create.errors.failed"));
@@ -282,6 +272,16 @@ export function PartnerBusinessesSurface() {
                 <FieldLabel htmlFor="partner-business-billing">{t("businesses.create.billingLabel")}</FieldLabel>
                 <BillingSelect id="partner-business-billing" onChange={setBilling} packages={sellable} value={billing} />
                 <FieldDescription>{t(billing === BILLED_OUTSIDE ? "businesses.create.billing.outside" : "businesses.create.billing.package")}</FieldDescription>
+              </Field>
+            ) : null}
+            {templates.data?.length ? (
+              <Field>
+                <FieldLabel htmlFor="partner-business-template">{t("businesses.create.templateLabel")}</FieldLabel>
+                <Select items={templateOptions} onValueChange={(value) => setTemplateId(typeof value === "string" ? value : NO_TEMPLATE)} value={templateId}>
+                  <SelectTrigger aria-label={t("businesses.create.templateLabel")} className="w-full" id="partner-business-template"><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectGroup>{templateOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectGroup></SelectContent>
+                </Select>
+                {templateId === NO_TEMPLATE ? null : <FieldDescription>{t("businesses.create.templateHelp")}</FieldDescription>}
               </Field>
             ) : null}
           </FieldGroup>
@@ -378,6 +378,7 @@ export function PartnerBusinessesSurface() {
                           <DropdownMenu>
                             <DropdownMenuTrigger render={<Button aria-label={t("businesses.actions.more", { name: business.name })} disabled={busy} size="icon-sm" variant="ghost"><MoreHorizontal /></Button>} />
                             <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => setTemplateSource({ open: true, business })}><LayoutTemplate />{t("businesses.actions.saveTemplate")}</DropdownMenuItem>
                               {/* Releasing needs an owner who accepted the invitation; the server checks it too. */}
                               <DropdownMenuItem disabled={owner?.status !== "joined"} onClick={() => setConfirming({ action: "release", business })}><UserRoundCheck />{t("businesses.release.action")}</DropdownMenuItem>
                               <DropdownMenuSeparator />
@@ -394,6 +395,7 @@ export function PartnerBusinessesSurface() {
           </Table>
         </Surface>
       )}
+      {canCreate && templateSource.business ? <SaveTemplateDialog business={templateSource.business} onOpenChange={(next) => setTemplateSource((current) => ({ ...current, open: next }))} open={templateSource.open} /> : null}
       {confirming ? (
         <ConfirmActionDialog
           cancelLabel={t("businesses.confirm.cancel")}

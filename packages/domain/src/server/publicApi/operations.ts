@@ -182,14 +182,24 @@ export type OAuthGrantCaller = { businessId: string; grantId: string; userId: st
  */
 export type PlatformKeyCaller = { businessId: string; platformKeyId: string; groupId: string; apiKeyId?: undefined; grantId?: undefined; userId?: undefined; actor: "platform_key" }
   & ({ actingUserId: string; partnerId?: undefined } | { partnerId: string; actingUserId?: undefined });
-export type ApiCaller = ApiKeyCaller | OAuthGrantCaller | PlatformKeyCaller;
+/**
+ * Someone on a partner's team setting up one of its businesses from the
+ * console, such as applying a template, which runs these operations
+ * in-process. The partner operation checks their role and the business first.
+ * Unlike a partner's platform key, they act as themself. Like one, they act
+ * for the partner, so what only the host's keys may do refuses them too.
+ */
+export type PartnerMemberCaller = { businessId: string; partnerId: string; userId: string; apiKeyId?: undefined; grantId?: undefined; platformKeyId?: undefined; actor: "partner_member" };
+export type ApiCaller = ApiKeyCaller | OAuthGrantCaller | PlatformKeyCaller | PartnerMemberCaller;
 
 /**
  * The id that owns rate limits and idempotency records for a caller. API keys
  * keep their bare id, so REST and MCP requests with one key share them; OAuth
- * grants and platform keys are prefixed so they can never collide with a key id.
+ * grants, platform keys and partner members are prefixed so they can never
+ * collide with a key id.
  */
 export function callerPrincipalId(caller: ApiCaller): string {
+  if (caller.actor === "partner_member") return `partner_member:${caller.partnerId}:${caller.userId}`;
   if (caller.grantId !== undefined) return `grant:${caller.grantId}`;
   if (caller.platformKeyId !== undefined) return `platform:${caller.platformKeyId}`;
   return caller.apiKeyId;
@@ -204,6 +214,7 @@ export function callerPrincipalId(caller: ApiCaller): string {
  * groupId and partnerId.
  */
 export function callerAudit(caller: ApiCaller): ApiAudit {
+  if (caller.actor === "partner_member") return { actorUserId: caller.userId, payload: { actor: "partner_member", partnerId: caller.partnerId } };
   if (caller.grantId !== undefined) return { actorUserId: caller.userId, payload: { actor: "mcp", grantId: caller.grantId } };
   if (caller.platformKeyId !== undefined && caller.partnerId !== undefined) return { actorUserId: null, payload: { actor: "platform_key", platformKeyId: caller.platformKeyId, groupId: caller.groupId, partnerId: caller.partnerId } };
   if (caller.platformKeyId !== undefined) return { actorUserId: null, payload: { actor: "platform_key", platformKeyId: caller.platformKeyId, groupId: caller.groupId, actingUserId: caller.actingUserId } };
@@ -213,14 +224,14 @@ export function callerAudit(caller: ApiCaller): ApiAudit {
 /**
  * The person an API call acts for, for operations that need one, such as
  * number claims, checkout and invites. A host's platform key acts as its
- * owner and an OAuth grant as the user who granted it. A per-business key acts
- * as the person who created it, but only while they are still an owner or
- * admin of the business; otherwise the call is refused with key_owner_inactive.
- * A partner's platform key acts as the partner, which has no account, so it's
- * refused.
+ * owner, an OAuth grant as the user who granted it, and a partner member as
+ * themself. A per-business key acts as the person who created it, but only
+ * while they are still an owner or admin of the business; otherwise the call
+ * is refused with key_owner_inactive. A partner's platform key acts as the
+ * partner, which has no account, so it's refused.
  */
 export async function resolveActingUserId(context: DomainContext, caller: ApiCaller): Promise<string> {
-  if (caller.grantId !== undefined) return caller.userId;
+  if (caller.actor === "partner_member" || caller.grantId !== undefined) return caller.userId;
   if (caller.platformKeyId !== undefined && caller.partnerId !== undefined) throw partnerPlatformKeyActsAsPartner();
   if (caller.platformKeyId !== undefined) return caller.actingUserId;
   const { apiKeyId } = caller;

@@ -12,10 +12,11 @@ export const PUBLIC_ROUTE_NAMESPACES = ["common", "auth", "onboarding", "demos",
 export const DASHBOARD_NAMESPACES = ["common", "nav", "settings", "agent", "dashboard", "calls", "contacts", "employees", "messages", "inbox", "knowledge", "affiliate", "demos", "widget"];
 
 /**
- * The partner console's namespaces: its own, the account menu's, and the
- * shell its signup and invitation pages share with onboarding.
+ * The partner console's namespaces: its own, the account menu's, the shell
+ * its signup and invitation pages share with onboarding, and the demo page's
+ * its Demos page shares with the host's.
  */
-export const PARTNER_NAMESPACES = ["common", "nav", "onboarding", "partner"];
+export const PARTNER_NAMESPACES = ["common", "nav", "onboarding", "partner", "demos"];
 
 export function routeNamespaces(pathname: string): string[] {
   const section = stripLocalePrefix(pathname).split("/")[1] ?? "";

@@ -217,7 +217,8 @@ const partnerPlatformKeyRefusals: Record<HostOnlyPlatformOperation, string> = {
 /**
  * Refuses a key a partner made what only the host's keys may do: start a
  * Polar checkout, create a claim link, or manage a plan outside Polar (ADR
- * 0010). Takes a key or the caller it became; anything else passes.
+ * 0010). Takes a key or the caller it became. A partner member's caller,
+ * which acts for the partner too, is refused the same; anything else passes.
  */
 export function refusePartnerPlatformKey(subject: { partnerId?: string | undefined }, operation: HostOnlyPlatformOperation): void {
   if (subject.partnerId !== undefined) throw new PublicApiError(403, "forbidden", partnerPlatformKeyRefusals[operation]);

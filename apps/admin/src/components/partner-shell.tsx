@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Building2, Check, ChevronsUpDown, Contrast, CreditCard, KeyRound, LogOut, Package, Palette, Plus, Receipt, Users } from "lucide-react";
+import { Building2, Check, ChevronsUpDown, Contrast, CreditCard, KeyRound, LayoutTemplate, LogOut, Package, Palette, Plus, Presentation, Receipt, Users } from "lucide-react";
 
 import type { PartnerRole } from "@lobbystack/shared";
 import { useBranding } from "@/components/branding-provider";
@@ -110,6 +110,8 @@ function PartnerNavigation({ partnerId, role, tierBilling }: { partnerId: string
   // Members don't see prices or the Stripe connection, and only owners manage Stripe and, while the deployment bills tiers, the partner's tier. The server refuses the same.
   const items = [
     { href: `/partner/${partnerId}/businesses`, label: t("nav.businesses"), icon: Building2 },
+    { href: `/partner/${partnerId}/templates`, label: t("nav.templates"), icon: LayoutTemplate },
+    { href: `/partner/${partnerId}/demos`, label: t("nav.demos"), icon: Presentation },
     ...(role === "member" ? [] : [{ href: `/partner/${partnerId}/packages`, label: t("nav.packages"), icon: Package }]),
     { href: `/partner/${partnerId}/branding`, label: t("nav.branding"), icon: Palette },
     { href: `/partner/${partnerId}/team`, label: t("nav.team"), icon: Users },

@@ -17,6 +17,11 @@ export const WEB_EVENT_NAMES = [
   "web.partner.stripe_onboarding_started",
   "web.partner.package_created",
   "web.partner.tier_started",
+  "web.partner.template_saved",
+  "web.partner.template_deleted",
+  "web.partner.demo_created",
+  "web.partner.demo_published",
+  "web.partner.demo_revoked",
   "web.page.home_viewed",
   "web.page.calls_viewed",
   "web.page.call_detail_viewed",
@@ -256,6 +261,13 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "web.partner.package_created": ["deploymentMode", "partnerId", "packageId", "currency", "setupFee", "pathname"],
   // tier: starter, growth or scale. billingInterval: monthly or annual.
   "web.partner.tier_started": ["deploymentMode", "partnerId", "tier", "billingInterval", "pathname"],
+  // businessId: the business whose setup the template was saved from.
+  "web.partner.template_saved": ["deploymentMode", "partnerId", "templateId", "businessId", "pathname"],
+  "web.partner.template_deleted": ["deploymentMode", "partnerId", "templateId", "pathname"],
+  // businessId: the demo's business, which is one of the partner's.
+  "web.partner.demo_created": ["deploymentMode", "partnerId", "prospectDemoId", "businessId", "accessLevel", "pathname"],
+  "web.partner.demo_published": ["deploymentMode", "partnerId", "prospectDemoId", "businessId", "pathname"],
+  "web.partner.demo_revoked": ["deploymentMode", "partnerId", "prospectDemoId", "businessId", "pathname"],
   "web.page.home_viewed": ["businessId", "deploymentMode", "pathname"],
   "web.page.calls_viewed": ["businessId", "deploymentMode", "pathname"],
   "web.page.call_detail_viewed": ["businessId", "deploymentMode", "pathname"],

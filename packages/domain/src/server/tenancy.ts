@@ -138,6 +138,13 @@ export async function insertOwnerlessBusinessInTransaction(tx: DatabaseTransacti
   return { businessId: input.businessId };
 }
 
+/** How a new business's receptionist books and answers calls and texts until someone changes it. */
+export const NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS = {
+  bookingPolicy: "Only confirm a booking after availability is checked.",
+  voiceInstructions: "Sound calm, confident, and concise. Escalate urgent requests to a human when policy requires it.",
+  smsInstructions: "Keep replies concise and friendly. Ask one follow-up question at a time.",
+} as const;
+
 async function insertBusinessRowsInTransaction(tx: DatabaseTransaction, input: NewBusiness, ownerUserId: string): Promise<{ membershipId: string }>;
 async function insertBusinessRowsInTransaction(tx: DatabaseTransaction, input: NewBusiness, ownerUserId: null): Promise<{ membershipId: null }>;
 async function insertBusinessRowsInTransaction(tx: DatabaseTransaction, input: NewBusiness, ownerUserId: string | null): Promise<{ membershipId: string | null }> {
@@ -191,9 +198,7 @@ async function insertBusinessRowsInTransaction(tx: DatabaseTransaction, input: N
     greeting: defaultGreeting(name),
     tone: "warm and direct",
     summary: `${name} uses LobbyStack to answer calls.`,
-    bookingPolicy: "Only confirm a booking after availability is checked.",
-    voiceInstructions: "Sound calm, confident, and concise. Escalate urgent requests to a human when policy requires it.",
-    smsInstructions: "Keep replies concise and friendly. Ask one follow-up question at a time.",
+    ...NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS,
     transferMode: "on_request",
     appointmentChangePolicy: defaultAppointmentChangePolicy,
   });
@@ -230,7 +235,7 @@ export async function readActiveBusinessId(db: Database, input: { userId: string
  * domains: a direct business on the host's, a partner's on that partner's.
  * The transaction acts as the person.
  */
-async function rememberActiveBusinessInTransaction(tx: DatabaseTransaction, input: { userId: string; businessId: string; partnerId: string | null }): Promise<void> {
+export async function rememberActiveBusinessInTransaction(tx: DatabaseTransaction, input: { userId: string; businessId: string; partnerId: string | null }): Promise<void> {
   if (!input.partnerId) {
     await tx.update(users).set({ activeBusinessId: input.businessId, updatedAt: new Date() }).where(eq(users.id, input.userId));
     return;

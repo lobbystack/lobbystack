@@ -97,9 +97,19 @@ describe("resolveLiveWebCallAccess", () => {
     await expect(resolveLiveWebCallAccess(request({ authorization: "Bearer token", "x-widget-parent-origin": "https://client.example" }), { sdp: "v=0", widgetId: "lobbystack-widget" })).resolves.toEqual({ status: 403, code: "widget_origin_denied" });
   });
 
-  it("runs prospect demos under their demo", async () => {
-    mocks.resolveWebVoiceAccess.mockResolvedValue({ allowed: true, businessId: "biz_3", mode: "prospect_demo", prospectDemoId: "demo_1" });
-    await expect(resolveLiveWebCallAccess(request(), { sdp: "v=0", widgetId: "lobbystack-prospect-demo", businessSlug: "acme", prospectDemoToken: "secret" })).resolves.toMatchObject({ businessId: "biz_3", prospectDemoId: "demo_1" });
+  it("runs prospect demos under their demo, without counting the host's demos against minutes", async () => {
+    mocks.resolveWebVoiceAccess.mockResolvedValue({ allowed: true, businessId: "biz_3", mode: "prospect_demo", prospectDemoId: "demo_1", partnerId: null });
+    await expect(resolveLiveWebCallAccess(request(), { sdp: "v=0", widgetId: "lobbystack-prospect-demo", businessSlug: "acme", prospectDemoToken: "secret" })).resolves.toMatchObject({ businessId: "biz_3", prospectDemoId: "demo_1", billable: false });
+  });
+
+  it("counts a partner's demo against its minutes on the partner's host, and refuses each brand's demo on the other's", async () => {
+    const partnerId = "5b1f6c43-34a5-4a8e-9a43-6c1f8d5f1c11";
+    const demo = { sdp: "v=0", widgetId: "lobbystack-prospect-demo", businessSlug: "acme", prospectDemoToken: "secret" };
+    mocks.resolveWebVoiceAccess.mockResolvedValue({ allowed: true, businessId: "biz_3", mode: "prospect_demo", prospectDemoId: "demo_1", partnerId });
+    await expect(resolveLiveWebCallAccess(request({}, partnerBrand), demo)).resolves.toMatchObject({ businessId: "biz_3", prospectDemoId: "demo_1", origin: partnerOrigin, billable: true });
+    await expect(resolveLiveWebCallAccess(request(), demo)).resolves.toEqual({ status: 403, code: "invalid" });
+    mocks.resolveWebVoiceAccess.mockResolvedValue({ allowed: true, businessId: "biz_3", mode: "prospect_demo", prospectDemoId: "demo_1", partnerId: null });
+    await expect(resolveLiveWebCallAccess(request({}, partnerBrand), demo)).resolves.toEqual({ status: 403, code: "invalid" });
   });
 
   it("allows the landing demo only from an allowed origin", async () => {

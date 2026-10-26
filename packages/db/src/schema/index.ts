@@ -4,6 +4,7 @@ import {
   bigint,
   boolean,
   doublePrecision,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -342,6 +343,45 @@ export const partnerPlatformKeys = pgTable(
   ],
 );
 
+// A partner's templates (migration 0148): a business's setup in the lobbystack onboard file format, which the
+// partner starts new businesses from. Saved once, never changed.
+export const businessTemplates = pgTable(
+  "business_templates",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    partnerId: uuid("partner_id").notNull().references(() => partners.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    manifest: jsonb("manifest").$type<Record<string, unknown>>().notNull(),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    ...timestamps,
+  },
+  (table) => [
+    index("business_templates_partner_idx").on(table.partnerId, table.createdAt),
+    uniqueIndex("business_templates_id_partner_unique").on(table.id, table.partnerId),
+  ],
+);
+
+// The stored copy of each document a template lists. Its partner is the template's, as a key on both keeps it.
+export const businessTemplateFiles = pgTable(
+  "business_template_files",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    templateId: uuid("template_id").notNull(),
+    partnerId: uuid("partner_id").notNull(),
+    path: text("path").notNull(),
+    objectKey: text("object_key").notNull(),
+    contentType: varchar("content_type", { length: 255 }).notNull(),
+    contentLength: integer("content_length").notNull(),
+    checksum: text("checksum").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    foreignKey({ columns: [table.templateId, table.partnerId], foreignColumns: [businessTemplates.id, businessTemplates.partnerId] }).onDelete("cascade"),
+    uniqueIndex("business_template_files_path_unique").on(table.templateId, table.path),
+    uniqueIndex("business_template_files_object_key_unique").on(table.objectKey),
+  ],
+);
+
 // The host's invitations to sign up as a partner while signup is invite-only.
 export const partnerSignupInvitations = pgTable(
   "partner_signup_invitations",
@@ -428,6 +468,8 @@ export const prospectDemos = pgTable(
     publishedAt: timestamp("published_at", { withTimezone: true }),
     claimedAt: timestamp("claimed_at", { withTimezone: true }),
     claimedByUserId: uuid("claimed_by_user_id").references(() => users.id),
+    // The partner whose team made the demo, or null for the host's own.
+    partnerId: uuid("partner_id").references(() => partners.id, { onDelete: "set null" }),
     ...legacyId,
     ...timestamps,
   },
@@ -435,6 +477,7 @@ export const prospectDemos = pgTable(
     uniqueIndex("prospect_demos_token_hash_unique").on(table.tokenHash),
     uniqueIndex("prospect_demos_business_unique").on(table.businessId),
     index("prospect_demos_status_expires_idx").on(table.status, table.expiresAt),
+    index("prospect_demos_partner_idx").on(table.partnerId, table.createdAt).where(sql`${table.partnerId} is not null`),
   ],
 );
 
@@ -2087,6 +2130,8 @@ export const schema = {
   businesses,
   userActiveBusinesses,
   partnerBusinessOpens,
+  businessTemplates,
+  businessTemplateFiles,
   businessMemberships,
   businessInvitations,
   prospectDemos,

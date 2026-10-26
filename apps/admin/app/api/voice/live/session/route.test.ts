@@ -62,7 +62,7 @@ beforeEach(() => {
 
 describe("POST /api/voice/live/session", () => {
   it("records a prospect demo call as intake-only and unbilled", async () => {
-    mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://admin.lobbystack.test", widgetId: "lobbystack-prospect-demo", prospectDemoId: "demo_1", dashboardTestCall: false });
+    mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://admin.lobbystack.test", widgetId: "lobbystack-prospect-demo", prospectDemoId: "demo_1", dashboardTestCall: false, billable: false });
     const response = await start("lobbystack-prospect-demo", { businessSlug: "acme", prospectDemoToken: "secret" });
     expect(response.status).toBe(201);
     expect(mocks.allowance).not.toHaveBeenCalled();
@@ -71,8 +71,22 @@ describe("POST /api/voice/live/session", () => {
     expect(mocks.attach).toHaveBeenCalledWith(expect.objectContaining({ sessionId: "live_1", callId: "call_1", channel: "web_voice", intakeOnly: true, maxDurationMs: 120_000 }));
   });
 
+  it("counts a partner's demo call against its minutes, as any of the partner's businesses' calls count", async () => {
+    mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://bright.portal.lobbystack.test", widgetId: "lobbystack-prospect-demo", prospectDemoId: "demo_1", dashboardTestCall: false, billable: true });
+    const response = await start("lobbystack-prospect-demo", { businessSlug: "acme", prospectDemoToken: "secret" });
+    expect(response.status).toBe(201);
+    expect(mocks.allowance).toHaveBeenCalledWith(expect.anything(), { businessId: "biz_1" });
+    expect(mocks.startLiveWebCall).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ billable: true, sessionPurpose: "prospect_demo", prospectDemoId: "demo_1" }));
+    // It stays a demo: intake only, with its demo telemetry.
+    expect(mocks.attach).toHaveBeenCalledWith(expect.objectContaining({ intakeOnly: true }));
+    expect(mocks.recordProspectDemoCallStarted).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ prospectDemoId: "demo_1" }));
+
+    mocks.allowance.mockResolvedValue({ allowed: false, errorCode: "voice_limit_reached" });
+    expect((await start("lobbystack-prospect-demo", { businessSlug: "acme", prospectDemoToken: "secret" })).status).toBe(402);
+  });
+
   it("stops before creating a session when the plan is out of minutes", async () => {
-    mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://admin.lobbystack.test", widgetId: "lobbystack-dashboard-test-call", dashboardTestCall: true });
+    mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://admin.lobbystack.test", widgetId: "lobbystack-dashboard-test-call", dashboardTestCall: true, billable: true });
     mocks.allowance.mockResolvedValue({ allowed: false, errorCode: "voice_limit_reached" });
     const response = await start("lobbystack-dashboard-test-call");
     expect(response.status).toBe(402);
@@ -80,7 +94,7 @@ describe("POST /api/voice/live/session", () => {
   });
 
   it("keeps rate-limited callers away from the database", async () => {
-    mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://client.example", widgetId: "lobbystack-widget", dashboardTestCall: false });
+    mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://client.example", widgetId: "lobbystack-widget", dashboardTestCall: false, billable: true });
     mocks.rateLimit.mockResolvedValue({ allowed: false, status: 429, code: "web_voice_rate_limited" });
     const response = await start("lobbystack-widget");
     expect(response.status).toBe(429);
@@ -90,7 +104,7 @@ describe("POST /api/voice/live/session", () => {
   });
 
   it("closes the session and records OpenAI's setup charge when the worker can't take it", async () => {
-    mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://admin.lobbystack.test", widgetId: "lobbystack-prospect-demo", prospectDemoId: "demo_1", dashboardTestCall: false });
+    mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://admin.lobbystack.test", widgetId: "lobbystack-prospect-demo", prospectDemoId: "demo_1", dashboardTestCall: false, billable: false });
     mocks.attach.mockRejectedValue(new Error("Worker attach failed with status 500."));
     const response = await start("lobbystack-prospect-demo", { businessSlug: "acme", prospectDemoToken: "secret" });
     expect(response.status).toBe(500);
@@ -103,7 +117,7 @@ describe("POST /api/voice/live/session", () => {
 
   it("falls back to OpenAI's hangup when the worker can't close the session either", async () => {
     vi.spyOn(console, "error").mockImplementation(() => undefined);
-    mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://admin.lobbystack.test", widgetId: "lobbystack-prospect-demo", prospectDemoId: "demo_1", dashboardTestCall: false });
+    mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://admin.lobbystack.test", widgetId: "lobbystack-prospect-demo", prospectDemoId: "demo_1", dashboardTestCall: false, billable: false });
     mocks.attach.mockRejectedValue(new Error("Worker attach failed with status 500."));
     mocks.hangup.mockRejectedValue(new Error("Worker end failed with status 500."));
     const response = await start("lobbystack-prospect-demo", { businessSlug: "acme", prospectDemoToken: "secret" });
@@ -112,7 +126,7 @@ describe("POST /api/voice/live/session", () => {
   });
 
   it("builds the snapshot of a business that has none yet, and refuses the call when that fails", async () => {
-    mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://admin.lobbystack.test", widgetId: "lobbystack-dashboard-test-call", dashboardTestCall: true });
+    mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://admin.lobbystack.test", widgetId: "lobbystack-dashboard-test-call", dashboardTestCall: true, billable: true });
     mocks.snapshot.mockResolvedValueOnce(null).mockResolvedValueOnce(snapshot);
     expect((await start("lobbystack-dashboard-test-call")).status).toBe(201);
     expect(mocks.refreshSnapshot).toHaveBeenCalledWith(expect.anything(), { businessId: "biz_1" });
@@ -122,7 +136,7 @@ describe("POST /api/voice/live/session", () => {
   });
 
   it("refuses widget voice for a business without a phone number", async () => {
-    mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://client.example", widgetId: "lobbystack-widget", dashboardTestCall: false });
+    mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://client.example", widgetId: "lobbystack-widget", dashboardTestCall: false, billable: true });
     mocks.snapshot.mockResolvedValue({ ...snapshot, contactChannels: {} });
     const response = await start("lobbystack-widget");
     expect(response.status).toBe(403);
@@ -130,13 +144,13 @@ describe("POST /api/voice/live/session", () => {
   });
 
   it("passes the WebRTC offer to OpenAI unchanged", async () => {
-    mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://admin.lobbystack.test", widgetId: "lobbystack-dashboard-test-call", dashboardTestCall: true });
+    mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://admin.lobbystack.test", widgetId: "lobbystack-dashboard-test-call", dashboardTestCall: true, billable: true });
     await start("lobbystack-dashboard-test-call");
     expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ transport: { type: "webrtc", sdp: "v=0\r\n" } }));
   });
 
   it("returns the end token only the starting browser gets", async () => {
-    mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://admin.lobbystack.test", widgetId: "lobbystack-dashboard-test-call", dashboardTestCall: true });
+    mocks.access.mockResolvedValue({ businessId: "biz_1", origin: "https://admin.lobbystack.test", widgetId: "lobbystack-dashboard-test-call", dashboardTestCall: true, billable: true });
     const response = await start("lobbystack-dashboard-test-call");
     await expect(response.json()).resolves.toMatchObject({ sessionId: "live_1", endToken: "token-for-live_1", sdp: "answer" });
   });

@@ -212,6 +212,55 @@ describe("the partner console's Businesses page", () => {
     expect(fixture.telemetry!.events).toEqual([]);
   });
 
+  it("starts a business from the template the admin picks, and says when the template couldn't set it up", async () => {
+    const dental = { templateId: "dental", name: "Dental clinic", createdAt: "2026-10-20T12:00:00.000Z", template: { business: { name: "Harbor Dental", timezone: "America/Toronto" } } };
+    let posts = 0;
+    const fetchMock = renderAs("admin", (url, init) => {
+      if (init?.method === "POST") {
+        posts += 1;
+        return posts === 1
+          ? Response.json({ error: "The template couldn't set up the business, so it wasn't created.", code: "template_failed" }, { status: 409 })
+          : Response.json({ businessId: "pier", invitationId: "invitation", expiresAt: "2026-11-02T00:00:00.000Z" }, { status: 201 });
+      }
+      return url.startsWith("/api/partner/templates") ? Response.json({ templates: [dental] }) : Response.json({ businesses: [] });
+    });
+    await screen.findByText("businesses.empty.title");
+    await userEvent.click(screen.getByRole("button", { name: "businesses.create.action" }));
+    await userEvent.type(await screen.findByLabelText("businesses.create.nameLabel"), "Pier Clinic");
+    await userEvent.type(screen.getByLabelText("businesses.create.ownerLabel"), "owner@pier.test");
+    await userEvent.click(await screen.findByRole("combobox", { name: "businesses.create.templateLabel" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Dental clinic" }));
+    expect(screen.getByText("businesses.create.templateHelp")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "businesses.create.submit" }));
+    expect((await screen.findByRole("alert")).textContent).toBe("businesses.create.errors.templateFailed");
+    expect(fixture.telemetry!.events).toEqual([]);
+
+    await userEvent.click(screen.getByRole("button", { name: "businesses.create.submit" }));
+    await waitFor(() => fixture.telemetry!.expectEvent("web.partner.business_created", { partnerId: "partner", businessId: "pier", accessLevel: "full", pathname: "/partner/partner/businesses" }));
+    const sent = fetchMock.mock.calls.filter(([, init]) => init?.method === "POST").map(([, init]) => JSON.parse(String(init?.body)) as Record<string, unknown>);
+    expect(sent.map((body) => body.templateId)).toEqual(["dental", "dental"]);
+  });
+
+  it("saves a business as a template from its row, under its name, and records web.partner.template_saved", async () => {
+    const fetchMock = renderAs("owner", (url, init) => {
+      if (init?.method === "POST" && url === "/api/partner/templates") return Response.json({ templateId: "dental", name: "Harbor Dental", createdAt: "2026-10-26T00:00:00.000Z", template: {} }, { status: 201 });
+      return Response.json({ businesses: [harbor, pier] });
+    });
+    const [harborActions] = await screen.findAllByRole("button", { name: "businesses.actions.more" });
+    await userEvent.click(harborActions!);
+    await userEvent.click(await screen.findByRole("menuitem", { name: "businesses.actions.saveTemplate" }));
+    const dialog = await screen.findByRole("dialog");
+    // The row names the business, so the dialog doesn't ask which.
+    expect(within(dialog).queryByRole("combobox")).toBeNull();
+    expect((within(dialog).getByLabelText("templates.save.nameLabel") as HTMLInputElement).value).toBe("Harbor Dental");
+    await userEvent.click(within(dialog).getByRole("button", { name: "templates.save.submit" }));
+
+    await waitFor(() => fixture.telemetry!.expectEvent("web.partner.template_saved", { partnerId: "partner", templateId: "dental", businessId: "harbor", pathname: "/partner/partner/businesses" }));
+    const post = fetchMock.mock.calls.find(([url, init]) => init?.method === "POST" && url === "/api/partner/templates");
+    expect(JSON.parse(String(post?.[1]?.body))).toEqual({ partnerId: "partner", businessId: "harbor", name: "Harbor Dental" });
+    expect(fixture.toast.success).toHaveBeenCalledWith("templates.save.saved");
+  });
+
   it("says when the owner entered is someone on the partner's team", async () => {
     renderAs("admin", (_url, init) => init?.method === "POST"
       ? Response.json({ error: "The owner can't be someone on your team. Your team works in the business from the console.", code: "owner_on_partner_team" }, { status: 409 })
@@ -257,6 +306,26 @@ describe("the partner console's Businesses page", () => {
     await waitFor(() => expect(fetchMock.mock.calls.some(([, init]) => init?.method === "POST")).toBe(true));
     const post = fetchMock.mock.calls.find(([, init]) => init?.method === "POST");
     expect(JSON.parse(String(post?.[1]?.body))).toMatchObject({ name: "Pier Clinic", packageId: "front-desk" });
+  });
+
+  it("sells a new business a package and starts it from a template at once", async () => {
+    fixture.packages = { stripe: { configured: true }, packages: [{ packageId: "front-desk", name: "Front desk", currency: "CAD", monthlyPriceMinor: 14900, onConnectedAccount: true }] };
+    const dental = { templateId: "dental", name: "Dental clinic", createdAt: "2026-10-20T12:00:00.000Z", template: { business: { name: "Harbor Dental", timezone: "America/Toronto" } } };
+    const fetchMock = renderAs("admin", (url, init) => init?.method === "POST"
+      ? Response.json({ businessId: "pier", invitationId: "invitation", expiresAt: "2026-11-02T00:00:00.000Z" }, { status: 201 })
+      : url.startsWith("/api/partner/templates") ? Response.json({ templates: [dental] }) : Response.json({ businesses: [] }));
+    await screen.findByText("businesses.empty.title");
+    await userEvent.click(screen.getByRole("button", { name: "businesses.create.action" }));
+    await userEvent.type(await screen.findByLabelText("businesses.create.nameLabel"), "Pier Clinic");
+    await userEvent.type(screen.getByLabelText("businesses.create.ownerLabel"), "owner@pier.test");
+    await userEvent.click(screen.getByLabelText("businesses.create.billingLabel"));
+    await userEvent.click(await screen.findByRole("option", { name: "businesses.billing.option" }));
+    await userEvent.click(await screen.findByRole("combobox", { name: "businesses.create.templateLabel" }));
+    await userEvent.click(await screen.findByRole("option", { name: "Dental clinic" }));
+    await userEvent.click(screen.getByRole("button", { name: "businesses.create.submit" }));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([, init]) => init?.method === "POST")).toBe(true));
+    const post = fetchMock.mock.calls.find(([, init]) => init?.method === "POST");
+    expect(JSON.parse(String(post?.[1]?.body))).toMatchObject({ name: "Pier Clinic", packageId: "front-desk", templateId: "dental" });
   });
 
   it("changes how a business is billed, and says why it can't while the business pays", async () => {
