@@ -90,17 +90,19 @@ function withPathname(url: URL | string, pathname: string): URL {
 
 // Rewrites keep the server's own origin. A rewrite to the visitor's host is an
 // external rewrite: Next.js would fetch it over HTTP and run this proxy again.
-function rewriteTo(request: NextRequest, pathname: string): NextResponse {
-  return NextResponse.rewrite(withPathname(request.url, pathname));
+function rewriteTo(request: NextRequest, pathname: string, requestHeaders: Headers | undefined): NextResponse {
+  return NextResponse.rewrite(withPathname(request.url, pathname), requestHeaders ? { request: { headers: requestHeaders } } : undefined);
 }
+
+let warnedUnbuilt = false;
 
 /**
  * Serves the marketing site on the hosts named in `MARKETING_HOSTS`, and
- * returns null for every other host so the dashboard proxy handles it.
+ * returns null for every other host so the dashboard proxy handles it. The
+ * pages it serves get `requestHeaders` in place of the visitor's, so the
+ * dashboard proxy decides what reaches them.
  */
-let warnedUnbuilt = false;
-
-export function marketingProxy(request: NextRequest, env: Env = process.env): NextResponse | null {
+export function marketingProxy(request: NextRequest, env: Env = process.env, requestHeaders?: Headers): NextResponse | null {
   const hosts = marketingHosts(env);
   if (!hosts) return null;
   if (!marketingSiteBuilt()) {
@@ -130,7 +132,7 @@ export function marketingProxy(request: NextRequest, env: Env = process.env): Ne
   const route = resolveMarketingRoute(pathname, env.INDEXNOW_KEY);
   if (route.kind === "asset") {
     const cacheControl = assetCacheControl(pathname);
-    const response = withMarketingHeaders(NextResponse.next(), env, cacheControl, pathname);
+    const response = withMarketingHeaders(NextResponse.next(requestHeaders ? { request: { headers: requestHeaders } } : undefined), env, cacheControl, pathname);
     // Pagefind's loader, UI and wasm keep their names from build to build, so
     // the edge keeps them like pages and each release purges them.
     return pathname.startsWith("/pagefind/") && !cacheControl ? cachedAtEdge(response) : response;
@@ -158,16 +160,16 @@ export function marketingProxy(request: NextRequest, env: Env = process.env): Ne
 
   const { locale, rest } = splitMarketingPath(pathname);
   if (readsPage && rest === "/" && wantsMarkdown(request)) {
-    const response = cachedAtEdge(withMarketingHeaders(rewriteTo(request, `${MARKETING_ROUTE_PREFIX}/${locale}/md/index`), env, PAGE_CACHE_CONTROL, pathname));
+    const response = cachedAtEdge(withMarketingHeaders(rewriteTo(request, `${MARKETING_ROUTE_PREFIX}/${locale}/md/index`, requestHeaders), env, PAGE_CACHE_CONTROL, pathname));
     response.headers.set("Vary", "Accept");
     return response;
   }
 
   // Social cards never change under the same URL; everything else revalidates.
   if (/^\/og\/.+\.jpg$/.test(pathname)) {
-    return withMarketingHeaders(rewriteTo(request, route.internalPath), env, "public, max-age=31536000, immutable", pathname);
+    return withMarketingHeaders(rewriteTo(request, route.internalPath, requestHeaders), env, "public, max-age=31536000, immutable", pathname);
   }
-  const response = cachedAtEdge(withMarketingHeaders(rewriteTo(request, route.internalPath), env, PAGE_CACHE_CONTROL, pathname));
+  const response = cachedAtEdge(withMarketingHeaders(rewriteTo(request, route.internalPath, requestHeaders), env, PAGE_CACHE_CONTROL, pathname));
   if (negotiable) response.headers.set("Vary", "Accept-Language, Cookie");
   return response;
 }

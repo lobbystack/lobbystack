@@ -32,3 +32,14 @@ it("rejects missing, tampered, cross-origin, different-email and expired proof",
   vi.advanceTimersByTime(600_000);
   expect(hasVerificationFlow(request(cookie), "owner@example.test")).toBe(false);
 });
+
+it("accepts proof on a partner's host only from the origin the proxy resolved it on", () => {
+  const { cookie } = proof();
+  const partner = { "x-lobbystack-brand": "partner:5b1f6c43-34a5-4a8e-9a43-6c1f8d5f1c11", "x-lobbystack-brand-origin": "https://bright.portal.example.test" };
+  const onPartner = (origin: string, brand: Record<string, string> = partner) => new Request("http://0.0.0.0:3000/api/auth/email-otp/send-verification-otp", { headers: { cookie, origin, ...brand } });
+  expect(hasVerificationFlow(onPartner("https://bright.portal.example.test"), "owner@example.test")).toBe(true);
+  // The host's own origin is another site there.
+  expect(hasVerificationFlow(onPartner("https://app.example.test"), "owner@example.test")).toBe(false);
+  // Without the proxy's say, a partner's origin is just another site.
+  expect(hasVerificationFlow(onPartner("https://bright.portal.example.test", {}), "owner@example.test")).toBe(false);
+});

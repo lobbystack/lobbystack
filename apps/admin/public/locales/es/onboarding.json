@@ -2,7 +2,8 @@
   "shell": {
     "signOut": "Cerrar sesión",
     "terms": "Términos",
-    "privacy": "Privacidad"
+    "privacy": "Privacidad",
+    "support": "Soporte"
   },
   "errors": {
     "tooManyBusinesses": "Ya es propietario de 10 espacios de trabajo, el límite para una cuenta."

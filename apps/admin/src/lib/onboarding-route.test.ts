@@ -3,9 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const fixture = vi.hoisted(() => ({
   state: { businessId: null as string | null, stage: "create_business" },
   canSave: vi.fn(),
+  // The brand the proxy resolved the request to.
+  headers: new Headers({ "x-lobbystack-brand": "host" }),
 }));
 
-vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
+vi.mock("next/headers", () => ({ headers: async () => fixture.headers }));
 vi.mock("next/navigation", () => ({ redirect: (path: string) => { throw new Error(`redirect:${path}`); } }));
 vi.mock("./auth", () => ({ getSession: async () => ({ user: { id: "owner" } }) }));
 vi.mock("./api-helpers", () => ({ getAppDatabase: () => ({ db: {} }) }));
@@ -25,6 +27,7 @@ import { requireBrandStep, requireOnboardingStage } from "./onboarding-route";
 
 beforeEach(() => {
   fixture.state = { businessId: null, stage: "create_business" };
+  fixture.headers = new Headers({ "x-lobbystack-brand": "host" });
   fixture.canSave.mockResolvedValue(true);
   vi.stubEnv("DEPLOYMENT_MODE", "self_hosted_standard");
   vi.stubEnv("BRAND_APP_NAME", "");
@@ -46,6 +49,13 @@ describe("brand step", () => {
 
   it("never shows on the cloud", async () => {
     vi.stubEnv("DEPLOYMENT_MODE", "cloud");
+    await expect(requireOnboardingStage("/onboarding/business")).resolves.toBeUndefined();
+    await expect(requireBrandStep()).rejects.toThrow("redirect:/onboarding/business");
+    expect(fixture.canSave).not.toHaveBeenCalled();
+  });
+
+  it("never shows on a partner's host, since it names the host's deployment", async () => {
+    fixture.headers = new Headers({ "x-lobbystack-brand": "partner:7b0c5a43-62c4-4a51-9d0e-6f6f0e0d9a11", "x-lobbystack-brand-origin": "https://acme.portal.test" });
     await expect(requireOnboardingStage("/onboarding/business")).resolves.toBeUndefined();
     await expect(requireBrandStep()).rejects.toThrow("redirect:/onboarding/business");
     expect(fixture.canSave).not.toHaveBeenCalled();

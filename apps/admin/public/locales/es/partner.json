@@ -7,6 +7,7 @@
   },
   "nav": {
     "businesses": "Negocios",
+    "branding": "Marca y dominio",
     "team": "Equipo"
   },
   "roles": {
@@ -69,6 +70,60 @@
       "removeFailed": "No pudimos quitar a esa persona. Inténtelo de nuevo.",
       "revokeFailed": "No pudimos cancelar esa invitación. Inténtelo de nuevo.",
       "finalOwner": "Su cuenta de socio necesita al menos un propietario."
+    }
+  },
+  "branding": {
+    "title": "Marca y dominio",
+    "description": "Lo que sus negocios ven en la dirección de su panel, en la pestaña del navegador y en sus correos.",
+    "loadFailed": "No pudimos cargar su marca. Actualice la página para intentarlo de nuevo.",
+    "membersCantEdit": "Solo los propietarios y los administradores pueden cambiar la marca.",
+    "domain": {
+      "title": "Dirección del panel",
+      "open": "Abrir",
+      "none": "Todavía no tiene una dirección propia. Pida a {{appName}} que configure una."
+    },
+    "brand": {
+      "title": "Marca"
+    },
+    "nameLabel": "Nombre",
+    "nameHelp": "Sus negocios lo ven en la pestaña del navegador, sobre el inicio de sesión y como remitente de sus correos.",
+    "logoLabel": "Logotipo",
+    "logoHelp": "Aparece sobre el inicio de sesión y en sus correos. PNG, JPEG, WebP o SVG, de hasta 256 KB.",
+    "faviconLabel": "Favicon",
+    "faviconHelp": "El icono de la pestaña del navegador. Sin favicon, la pestaña muestra su logotipo.",
+    "imageChoose": "Elegir una imagen",
+    "imageChange": "Cambiar imagen",
+    "logoRemove": "Quitar logotipo",
+    "faviconRemove": "Quitar favicon",
+    "colorLabel": "Color de la marca",
+    "colorPick": "Elegir el color de la marca",
+    "colorHelp": "Un código hexadecimal, como #0f766e.",
+    "links": {
+      "title": "Enlaces",
+      "description": "Su página de inicio de sesión y su panel enlazan a estas páginas. Deje un campo vacío para ocultar su enlace.",
+      "termsUrl": "Términos del servicio",
+      "termsUrlPlaceholder": "https://empresa.com/terminos",
+      "privacyUrl": "Política de privacidad",
+      "privacyUrlPlaceholder": "https://empresa.com/privacidad",
+      "supportUrl": "Página de soporte",
+      "supportUrlPlaceholder": "https://empresa.com/soporte",
+      "supportEmail": "Correo de soporte",
+      "supportEmailPlaceholder": "soporte@empresa.com",
+      "supportEmailHelp": "Las respuestas a sus correos llegan aquí. Sin página de soporte, su enlace de soporte abre esta dirección."
+    },
+    "preview": "Vista previa",
+    "save": "Guardar marca",
+    "saving": "Guardando…",
+    "saved": "Marca guardada.",
+    "errors": {
+      "failed": "No pudimos guardar su marca. Inténtelo de nuevo.",
+      "name": "Escriba un nombre de hasta 80 caracteres.",
+      "color": "Escriba el color como código hexadecimal, como #0f766e.",
+      "link": "Escriba cada enlace como una dirección web completa que empiece por https://.",
+      "supportEmail": "Escriba una sola dirección de correo válida.",
+      "imageType": "Suba una imagen PNG, JPEG, WebP o SVG.",
+      "imageSize": "Suba una imagen de 256 KB o menos.",
+      "forbidden": "Solo los propietarios y los administradores pueden cambiar la marca."
     }
   },
   "signup": {

@@ -1,9 +1,12 @@
-// The brand a page, a route or an email shows. Today every one shows the
-// host brand, built from deployment branding; partners bring brands of their
-// own later. packages/domain resolves which brand applies (brands.ts).
+// The brand a page, a route or an email shows: the host brand, built from
+// deployment branding, or a partner's brand, built from what the partner saved
+// on the console's Branding & domain page. packages/domain resolves which
+// brand applies (brands.ts).
 
 import { brandLinks, contactEmailFor, type BrandLinks } from "./brandLinks";
-import { readBrandingEnvironment, resolveBranding, type SavedBranding } from "./branding";
+import { BRAND_LOGO_PATH, readBrandingEnvironment, resolveBranding, type SavedBranding } from "./branding";
+import { partnerSubdomainLabel } from "./hosts";
+import { partnerFeatures } from "./partnerFeatures";
 
 export type Brand = {
   kind: "host" | "partner";
@@ -110,5 +113,94 @@ export function hostBrand(input: { environment: Record<string, string | undefine
       support: `mailto:${contactEmailFor(links, "support")}`,
     },
     email: { fromName: sender.name || branding.appName, fromAddress: sender.address, replyTo: environment.EMAIL_REPLY_TO?.trim() || null },
+  };
+}
+
+/** A partner's brand as the database keeps it (app.partner_brand). */
+export type PartnerBrandRecord = {
+  partnerId: string;
+  name: string;
+  /** The hostname of its verified subdomain, such as acme.receptionistportal.com, or null for none. */
+  subdomain: string | null;
+  /** A digest of each saved image, so its URL changes whenever the image does, or null for none saved. */
+  logoVersion: string | null;
+  faviconVersion: string | null;
+  color: string | null;
+  termsUrl: string | null;
+  privacyUrl: string | null;
+  supportUrl: string | null;
+  /** Where replies to its emails go, and its support link when it has no support page. */
+  supportEmail: string | null;
+};
+
+export type BrandImage = "logo" | "favicon";
+
+/**
+ * The URL of a partner's saved logo or favicon. It names the partner, so it
+ * shows the same image on the host's domain, in the console, as on the
+ * partner's own, and it carries the image's digest, so browsers may cache it
+ * for good.
+ */
+export function partnerBrandImageUrl(partnerId: string, image: BrandImage, version: string): string {
+  const query = new URLSearchParams({ partner: partnerId, ...(image === "favicon" ? { image } : {}), v: version });
+  return `${BRAND_LOGO_PATH}?${query.toString()}`;
+}
+
+function appOrigin(environment: Record<string, string | undefined>): URL {
+  try {
+    return new URL(environment.APP_BASE_URL?.trim() || DEFAULT_ORIGIN);
+  } catch {
+    return new URL(DEFAULT_ORIGIN);
+  }
+}
+
+/**
+ * The partner's subdomain when it's still directly under the partner base
+ * domain, or null. A subdomain left from an earlier base domain doesn't count.
+ */
+export function currentPartnerSubdomain(subdomain: string | null, environment: Record<string, string | undefined>): string | null {
+  const { baseDomain } = partnerFeatures(environment);
+  return subdomain && baseDomain && partnerSubdomainLabel(subdomain, baseDomain) ? subdomain : null;
+}
+
+/**
+ * Where a partner's dashboard lives: its subdomain, with the scheme and port
+ * of APP_BASE_URL, so http://acme.partners.localhost:13000 in development and
+ * https://acme.receptionistportal.com on the cloud. A partner with no current
+ * subdomain has only the host's origin.
+ */
+export function partnerOrigin(subdomain: string | null, environment: Record<string, string | undefined>): string {
+  const app = appOrigin(environment);
+  const current = currentPartnerSubdomain(subdomain, environment);
+  return current ? `${app.protocol}//${current}${app.port ? `:${app.port}` : ""}` : app.origin;
+}
+
+/**
+ * A partner's brand: its name, images, color and links, its origin on its
+ * subdomain, and emails from no-reply@ the partner base domain (or the host's
+ * address without one) under its name, with its support email as Reply-To.
+ * What the partner leaves unset stays empty: a partner's pages never show the
+ * host's logo or links in its place.
+ */
+export function partnerBrand(input: { environment: Record<string, string | undefined>; partner: PartnerBrandRecord }): Brand {
+  const { environment, partner } = input;
+  const { baseDomain } = partnerFeatures(environment);
+  const logoUrl = partner.logoVersion ? partnerBrandImageUrl(partner.partnerId, "logo", partner.logoVersion) : null;
+  const sender = parseEmailSender(environment.EMAIL_FROM?.trim() || DEFAULT_EMAIL_FROM);
+  return {
+    kind: "partner",
+    partnerId: partner.partnerId,
+    name: partner.name,
+    logoUrl,
+    faviconUrl: partner.faviconVersion ? partnerBrandImageUrl(partner.partnerId, "favicon", partner.faviconVersion) : logoUrl,
+    color: partner.color,
+    origin: partnerOrigin(partner.subdomain, environment),
+    links: {
+      website: null,
+      terms: partner.termsUrl,
+      privacy: partner.privacyUrl,
+      support: partner.supportUrl ?? (partner.supportEmail ? `mailto:${partner.supportEmail}` : null),
+    },
+    email: { fromName: partner.name, fromAddress: baseDomain ? `no-reply@${baseDomain}` : sender.address, replyTo: partner.supportEmail },
   };
 }

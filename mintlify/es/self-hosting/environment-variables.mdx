@@ -95,7 +95,7 @@ Los socios revenden su despliegue a los negocios que atienden, con su propia mar
 | Variable | Función |
 | --- | --- |
 | `PARTNER_SIGNUP` | Quién puede registrarse como socio en `/partner/signup`: `open` permite registrarse a cualquier persona con sesión iniciada, e `invite` exige un enlace de registro. `pnpm partner-invite:create --email owner@acme.example` escribe un enlace que funciona una vez, para ese correo verificado, durante 7 días. El valor predeterminado es `invite` cuando `DEPLOYMENT_MODE` es `cloud`, y `open` en los demás casos. |
-| `PARTNER_BASE_DOMAIN` | El dominio del que sus socios reciben subdominios, como `receptionistportal.com`. El registro reserva uno para cada socio nuevo, como `acme.receptionistportal.com`. Los correos propios de un socio, como las invitaciones a su equipo, salen con su nombre desde `no-reply@` ese dominio, así que su proveedor de correo debe aceptar ese remitente. Sin esta variable, salen desde la dirección de `EMAIL_FROM`. |
+| `PARTNER_BASE_DOMAIN` | El dominio del que sus socios reciben subdominios, como `receptionistportal.com`. El registro reserva uno para cada socio nuevo, como `acme.receptionistportal.com`, y el admin reserva uno al iniciarse para cada socio que se registró antes de que usted la definiera. En esos subdominios, las personas se registran e inician sesión con la marca del socio, con correo y contraseña. Los correos propios de un socio, como las invitaciones a su equipo, salen con su nombre desde `no-reply@` ese dominio, así que su proveedor de correo debe aceptar ese remitente. Sin esta variable, los correos de un socio salen desde la dirección de `EMAIL_FROM`. Las respuestas llegan al correo de soporte que el socio define en su página **Marca y dominio**. |
 
 ## Observabilidad
 

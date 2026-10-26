@@ -3,6 +3,9 @@ import type { NextRequest } from "next/server";
 import { BRAND_LOGO_PATH, isMaintenanceMode, normalizeInterfaceLocale } from "@lobbystack/shared";
 
 import { configuredAppOrigins } from "@/lib/app-origins";
+import { resolveRequestHost } from "@/lib/host-resolution";
+import { PARTNER_SITE_CACHE_CONTROL, isPartnerSitePath, partnerSitePath } from "@/lib/partner-site";
+import { setBrandHeaders, withoutBrandHeaders, type ResolvedBrand } from "@/lib/request-brand";
 import { marketingProxy } from "@/marketing/proxy";
 import { MARKETING_ROUTE_PREFIX } from "@/marketing/routing";
 import { LOCALE_COOKIE, LOCALE_COOKIE_MAX_AGE_SECONDS, localeTag } from "@/lib/locale";
@@ -12,6 +15,7 @@ import {
   isTokenBearingRoute,
   localeFromPathname,
   localizePublicPath,
+  stripLocalePrefix,
 } from "@/lib/locale-path";
 import {
   LOCALE_HEADER,
@@ -35,6 +39,60 @@ const csrfExemptPaths = new Set(["/api/storage/local"]);
 
 function isWebhookPath(pathname: string): boolean {
   return pathname.startsWith("/api/webhooks/");
+}
+
+function hasPrefix(pathname: string, prefixes: readonly string[]): boolean {
+  return prefixes.some((prefix) => prefix.endsWith("/") ? pathname.startsWith(prefix) : pathname === prefix || pathname.startsWith(`${prefix}/`));
+}
+
+// Machines reach these on whatever hostname they were given: Docker and Compose
+// health checks call 127.0.0.1, providers call the webhook URLs they were
+// configured with (an ngrok tunnel in development), and the finance export
+// authenticates with its own token. They answer on hosts no brand answers for,
+// and render no brand.
+const anyHostPrefixes = ["/api/health/", "/api/webhooks/", "/api/internal/"];
+// Health checks never wait on the database to learn a hostname's brand: a
+// probe that did would fail, and get the container replaced, whenever the
+// database is slow.
+const healthCheckPrefixes = ["/api/health/"];
+
+// What stays on the host's domain: MCP and its OAuth server, the OpenAPI
+// document, provider webhooks, the host's own brand step, and partner signup.
+// A partner's host answers them with a 404.
+const hostOnlyPrefixes = [
+  "/api/mcp",
+  "/.well-known/",
+  "/oauth",
+  "/api/oauth",
+  "/api/auth/oauth2/",
+  "/api/auth/admin/oauth2/",
+  "/api/auth/.well-known/",
+  "/api/v1/openapi.json",
+  "/api/webhooks/",
+  "/api/internal/",
+  "/api/branding/initial",
+  "/partner/signup",
+  "/api/partner/signup",
+];
+
+function isHostOnlyPath(pathname: string): boolean {
+  // The OAuth consent page also answers under each locale, as /fr/oauth/consent.
+  return hasPrefix(pathname, hostOnlyPrefixes) || (localeFromPathname(pathname) !== null && hasPrefix(stripLocalePrefix(pathname), ["/oauth"]));
+}
+
+function notFoundResponse(headers: Record<string, string>): NextResponse {
+  return new NextResponse("Not found.", { status: 404, headers: { ...headers, "Cache-Control": "private, no-store" } });
+}
+
+const RESOLUTION_REPORT_INTERVAL_MS = 60_000;
+let lastResolutionReportAt = 0;
+
+/** Reports that the database couldn't say which brand a hostname has, at most once a minute. */
+function reportResolutionFailure(error: unknown): void {
+  const now = Date.now();
+  if (now - lastResolutionReportAt < RESOLUTION_REPORT_INTERVAL_MS) return;
+  lastResolutionReportAt = now;
+  void import("@/lib/error-reporting").then(({ reportServerError }) => reportServerError(error, { operation: "resolve_host_brand" })).catch(() => undefined);
 }
 
 function isMaintenanceHealthProbe(pathname: string, method: string): boolean {
@@ -94,12 +152,15 @@ function cacheControlForRequest(pathname: string, searchParams: URLSearchParams)
   return undefined;
 }
 
-// Same list Better Auth trusts, plus the request's own origin.
-function configuredOrigins(request: NextRequest): Set<string> {
+// On the host's domain, the same list Better Auth trusts plus the request's own
+// origin. On a partner's host, only the origin the proxy resolved it on.
+function trustedCsrfOrigins(request: NextRequest, resolved: ResolvedBrand | null): Set<string> {
+  if (!resolved) return new Set();
+  if (resolved.kind === "partner") return new Set([resolved.origin]);
   return new Set([request.nextUrl.origin, ...configuredAppOrigins(process.env, [], true)]);
 }
 
-function hasValidCsrfOrigin(request: NextRequest): boolean {
+function hasValidCsrfOrigin(request: NextRequest, resolved: ResolvedBrand | null): boolean {
   const origin = request.headers.get("origin") ?? (() => {
     const referer = request.headers.get("referer");
     if (!referer) return null;
@@ -109,16 +170,39 @@ function hasValidCsrfOrigin(request: NextRequest): boolean {
       return null;
     }
   })();
-  return origin !== null && configuredOrigins(request).has(origin.replace(/\/$/, ""));
+  return origin !== null && trustedCsrfOrigins(request, resolved).has(origin.replace(/\/$/, ""));
 }
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
+  // A client's copy of the brand headers never reaches a page or route: every
+  // branch below forwards these headers, or the proxy's own over them.
+  const forwardedHeaders = withoutBrandHeaders(request.headers);
+
   // The marketing hosts get their own routing, headers, and trailing slashes.
-  const marketing = marketingProxy(request);
+  // They're the host's own domain.
+  const marketing = marketingProxy(request, process.env, setBrandHeaders(new Headers(forwardedHeaders), { kind: "host" }));
   if (marketing) return marketing;
 
   const { pathname } = request.nextUrl;
   const headers = isEmbeddablePath(pathname) ? embeddableSecurityHeaders() : pathname === BRAND_LOGO_PATH ? brandLogoSecurityHeaders() : securityHeaders();
+
+  // The standalone server builds request.url from the address it listens on,
+  // so the visitor's hostname comes from the Host header.
+  const anyHost = hasPrefix(pathname, anyHostPrefixes);
+  let resolved: ResolvedBrand | null = null;
+  if (!hasPrefix(pathname, healthCheckPrefixes)) {
+    try {
+      resolved = await resolveRequestHost(request.headers.get("host") ?? request.nextUrl.host);
+    } catch (error) {
+      reportResolutionFailure(error);
+      // Without the database, a hostname that isn't the host's may be a
+      // partner's: answer nothing under the wrong brand.
+      if (!anyHost) return maintenanceResponse(headers);
+    }
+  }
+  // Nobody can point a domain at this deployment and get the dashboard under it.
+  if (!resolved && !anyHost) return notFoundResponse(headers);
+  if (resolved?.kind === "partner" && isHostOnlyPath(pathname)) return notFoundResponse(headers);
 
   const isApiRequest = pathname.startsWith("/api/");
   if (isMaintenanceMode(process.env) && (isWebhookPath(pathname) || (isApiRequest && !isMaintenanceHealthProbe(pathname, request.method)) || stateChangingMethods.has(request.method))) {
@@ -127,9 +211,10 @@ export function proxy(request: NextRequest) {
     return maintenanceResponse(headers);
   }
 
-  // The marketing site's internal routes only answer on its own hosts.
-  if (pathname === MARKETING_ROUTE_PREFIX || pathname.startsWith(`${MARKETING_ROUTE_PREFIX}/`)) {
-    return new NextResponse("Not found.", { status: 404, headers: { ...headers, "Cache-Control": "private, no-store" } });
+  // The marketing site's internal routes only answer on its own hosts, and
+  // partner pages only through the rewrite below.
+  if (pathname === MARKETING_ROUTE_PREFIX || pathname.startsWith(`${MARKETING_ROUTE_PREFIX}/`) || isPartnerSitePath(pathname)) {
+    return notFoundResponse(headers);
   }
 
   // next.config.ts skips Next.js' own trailing-slash redirect because marketing
@@ -190,15 +275,25 @@ export function proxy(request: NextRequest) {
     : pathLocale && isPublicRoutePath(pathname)
       ? { locale: pathLocale, source: "path" }
       : negotiatedLocale;
-  const requestHeaders = new Headers(request.headers);
+  const requestHeaders = setBrandHeaders(forwardedHeaders, resolved);
   requestHeaders.set(LOCALE_HEADER, locale.locale);
   requestHeaders.set(LOCALE_SOURCE_HEADER, locale.source);
   requestHeaders.set(PATHNAME_HEADER, pathname);
 
+  // A build can't know a partner's brand, so on a partner's host the pages the
+  // host prerenders come from the partner's own copy, kept for the cache window.
+  const partnerPage = resolved?.kind === "partner" ? partnerSitePath(resolved.partnerId, pathname) : null;
+  if (partnerPage) {
+    const target = new URL(request.url);
+    target.pathname = partnerPage;
+    const cacheControl = isTokenBearingRoute(pathname, request.nextUrl.searchParams) ? "private, no-store" : PARTNER_SITE_CACHE_CONTROL;
+    return applyResponsePolicy(NextResponse.rewrite(target, { request: { headers: requestHeaders } }), request, headers, locale, cacheControl);
+  }
+
   const response = NextResponse.next({ request: { headers: requestHeaders } });
   applyResponsePolicy(response, request, headers, locale, cacheControlForRequest(pathname, request.nextUrl.searchParams));
 
-  if (stateChangingMethods.has(request.method) && pathname.startsWith("/api/") && !csrfExemptPaths.has(pathname) && !csrfExemptPrefixes.some((prefix) => pathname.startsWith(prefix)) && !hasValidCsrfOrigin(request)) {
+  if (stateChangingMethods.has(request.method) && pathname.startsWith("/api/") && !csrfExemptPaths.has(pathname) && !csrfExemptPrefixes.some((prefix) => pathname.startsWith(prefix)) && !hasValidCsrfOrigin(request, resolved)) {
     return applyResponsePolicy(
       NextResponse.json({ error: "CSRF origin validation failed." }, { status: 403 }),
       request,

@@ -193,8 +193,9 @@ async function main(): Promise<void> {
         if (affiliateUserGrantFailures.rows.length > 0) {
           throw new Error(`Affiliate worker user grant verification failed for: ${affiliateUserGrantFailures.rows.map((row) => row.column_name).join(", ")}`);
         }
-        // The app role updates partner team rows only through the columns partner
-        // operations write, so no row moves to another partner, person, sender or role.
+        // The app role updates partner rows only through the columns partner
+        // operations write, so no row moves to another partner, person, sender or
+        // role, and no partner changes its slug.
         const partnerUpdateGrantFailures = await migrator.db.execute<{ table_name: string; column_name: string; granted: boolean }>(sql`
           select expected.table_name, expected.column_name, expected.granted
           from (values
@@ -220,7 +221,26 @@ async function main(): Promise<void> {
             ('partner_signup_invitations', 'updated_at', true),
             ('partner_signup_invitations', 'token_hash', false),
             ('partner_signup_invitations', 'normalized_email', false),
-            ('partner_signup_invitations', 'expires_at', false)
+            ('partner_signup_invitations', 'expires_at', false),
+            ('partners', 'name', true),
+            ('partners', 'logo', true),
+            ('partners', 'logo_content_type', true),
+            ('partners', 'favicon', true),
+            ('partners', 'favicon_content_type', true),
+            ('partners', 'brand_color', true),
+            ('partners', 'terms_url', true),
+            ('partners', 'privacy_url', true),
+            ('partners', 'support_url', true),
+            ('partners', 'support_email', true),
+            ('partners', 'updated_at', true),
+            ('partners', 'slug', false),
+            ('partners', 'status', false),
+            ('partners', 'created_by_user_id', false),
+            ('partner_domains', 'hostname', true),
+            ('partner_domains', 'verified_at', true),
+            ('partner_domains', 'updated_at', true),
+            ('partner_domains', 'partner_id', false),
+            ('partner_domains', 'kind', false)
           ) as expected(table_name, column_name, granted)
           where has_column_privilege('lobbystack_app', 'public.' || expected.table_name, expected.column_name, 'UPDATE') <> expected.granted
         `);
@@ -268,6 +288,10 @@ async function main(): Promise<void> {
             ('lobbystack_app', 'app.list_partner_members(uuid)'),
             ('lobbystack_app', 'app.partner_brand(uuid)'),
             ('lobbystack_worker', 'app.partner_brand(uuid)'),
+            ('lobbystack_app', 'app.partner_brand_image(uuid, text)'),
+            ('lobbystack_app', 'app.partner_for_host(text)'),
+            ('lobbystack_app', 'app.business_partner(uuid)'),
+            ('lobbystack_worker', 'app.business_partner(uuid)'),
             ('lobbystack_app', 'app.can_save_initial_branding()'),
             ('lobbystack_app', 'app.save_initial_branding(text, bytea, text)'),
             ('lobbystack_app', 'app.finish_business_handover(uuid, uuid)'),
@@ -470,6 +494,11 @@ async function verifyRlsBehavior(client: ReturnType<typeof createDatabaseClient>
       const partners = (await tx.execute<{ id: string }>(sql`select id::text from public.partners where id in (${ids.business_a}::uuid, ${ids.business_b}::uuid)`)).rows.map((row) => row.id);
       if (partners.length !== 1 || partners[0] !== ids.business_a) {
         throw new Error(`RLS partner isolation check failed (visible=${partners.length}).`);
+      }
+      // A partner's members see its brand, but only owners and admins change it.
+      const memberBrandUpdates = (await tx.execute(sql`update public.partners set brand_color = '#000000' where id = ${ids.business_a}::uuid returning id`)).rows.length;
+      if (memberBrandUpdates !== 0) {
+        throw new Error(`RLS partner brand check failed (a member changed ${memberBrandUpdates} partner).`);
       }
 
       await tx.execute(sql`select set_config('app.business_id', ${ids.business_b}, true)`);

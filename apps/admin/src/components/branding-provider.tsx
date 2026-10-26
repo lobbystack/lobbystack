@@ -4,11 +4,13 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { i18n as I18nextInstance } from "i18next";
 
 import { setI18nAppName } from "@/i18n";
-import { BRANDING_API_PATH, DEFAULT_BRANDING_SNAPSHOT, brandLogoSrc, parseBrandingResponse, type BrandingSnapshot } from "@/lib/branding-snapshot";
+import { BRANDING_API_PATH, DEFAULT_BRANDING_SNAPSHOT, brandLogoSrc, parseBrandingResponse, type BrandingSnapshot, type PartnerBranding } from "@/lib/branding-snapshot";
 
 type BrandingContextValue = {
   appName: string;
   logoUrl: string | null;
+  /** On a partner's pages, the partner's icon, color and links; null on the host's. */
+  partner: PartnerBranding | null;
   /** False while a prerendered page is still asking the server for the name and logo. */
   ready: boolean;
   /** Shows a name and logo the browser just saved, before the next server render. */
@@ -18,6 +20,7 @@ type BrandingContextValue = {
 const BrandingContext = createContext<BrandingContextValue>({
   appName: DEFAULT_BRANDING_SNAPSHOT.appName,
   logoUrl: DEFAULT_BRANDING_SNAPSHOT.logoUrl,
+  partner: null,
   ready: true,
   setBranding: () => undefined,
 });
@@ -101,6 +104,8 @@ export function BrandingProvider({ initial, i18n, children }: { initial: Brandin
   const setBranding = useCallback((branding: Pick<BrandingSnapshot, "appName" | "logoUrl">) => {
     setShown({ appName: branding.appName, logoUrl: branding.logoUrl, ready: true });
   }, []);
-  const value = useMemo(() => ({ ...shown, setBranding }), [shown, setBranding]);
+  // A page's brand is the host's or one partner's for as long as it's open, so the partner's part never changes.
+  const partner = initial.partner ?? null;
+  const value = useMemo(() => ({ ...shown, partner, setBranding }), [shown, partner, setBranding]);
   return <BrandingContext.Provider value={value}>{children}</BrandingContext.Provider>;
 }

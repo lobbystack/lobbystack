@@ -1,9 +1,29 @@
+import { headers } from "next/headers";
+
+import { partnerRequestOrigin } from "./request-brand";
+
 const TURNSTILE_SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
 type TurnstileResponse = {
   success?: boolean;
   "error-codes"?: string[];
+  /** The hostname of the page the challenge was solved on. */
+  hostname?: string;
 };
+
+/**
+ * On a partner's host, the hostname the proxy resolved the request on, which
+ * the challenge must have been solved on too. Null on the host's domain, and
+ * outside a request.
+ */
+async function partnerHostname(): Promise<string | null> {
+  try {
+    const origin = partnerRequestOrigin(await headers());
+    return origin ? new URL(origin).hostname : null;
+  } catch {
+    return null;
+  }
+}
 
 function isLocalApp(): boolean {
   const baseUrl = process.env.APP_BASE_URL?.trim();
@@ -38,6 +58,12 @@ export async function verifyTurnstile(input: { token?: unknown; remoteIp?: strin
   }
   const outcome = (await response.json()) as TurnstileResponse;
   if (outcome.success !== true) {
+    throw new Error("Turnstile verification failed.");
+  }
+  // The widget's hostname list covers every partner's subdomain, so a token
+  // solved on one partner's host counts only on that same host.
+  const expected = await partnerHostname();
+  if (expected && outcome.hostname?.toLowerCase() !== expected) {
     throw new Error("Turnstile verification failed.");
   }
 }

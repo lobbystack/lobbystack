@@ -1,5 +1,7 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
+import { partnerRequestOrigin } from "./request-brand";
+
 const cookieName = "lobbystack.verification-flow";
 const lifetimeSeconds = 600;
 
@@ -26,9 +28,10 @@ export function attachVerificationFlow(response: Response, email: string): void 
 }
 
 export function hasVerificationFlow(request: Request, email: string): boolean {
-  // Cookie proof is usable only by a same-origin browser request.
+  // Cookie proof is usable only by a same-origin browser request: from the
+  // host's own origin, or from a partner's host once the proxy resolved it.
   const origin = request.headers.get("origin");
-  const expectedOrigin = new URL(process.env.APP_BASE_URL ?? request.url).origin;
+  const expectedOrigin = partnerRequestOrigin(request.headers) ?? new URL(process.env.APP_BASE_URL ?? request.url).origin;
   if (origin !== expectedOrigin) return false;
   const value = request.headers.get("cookie")?.split(";").map(part => part.trim()).find(part => part.startsWith(`${cookieName}=`))?.slice(cookieName.length + 1);
   if (!value) return false;

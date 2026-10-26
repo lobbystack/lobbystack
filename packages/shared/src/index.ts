@@ -11,6 +11,7 @@ export * from "./chatChannels";
 export * from "./branding";
 export * from "./brandLinks";
 export * from "./brand";
+export * from "./hosts";
 export * from "./partnerFeatures";
 export * from "./partners";
 export { isCertificationMode, assertCertificationRecipient, assertCertificationOperationAllowed, assertCertificationCalendar, assertCertificationBillingSandbox } from "./certification";

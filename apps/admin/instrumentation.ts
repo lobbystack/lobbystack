@@ -27,6 +27,14 @@ export async function register(): Promise<void> {
     const { reportServerError } = await import("./src/lib/error-reporting");
     await reportServerError(error, { operation: "startup.disable_removed_platform_key_webhooks" });
   }
+  const { reserveMissingPartnerSubdomainsAtStartup } = await import("./src/lib/partner-subdomains");
+  try {
+    await reserveMissingPartnerSubdomainsAtStartup();
+  } catch (error) {
+    // Each partner's Branding & domain page reserves its own subdomain too.
+    const { reportServerError } = await import("./src/lib/error-reporting");
+    await reportServerError(error, { operation: "startup.reserve_partner_subdomains" });
+  }
 }
 
 export const onRequestError: import("next").Instrumentation.onRequestError = async (error, request, context) => {

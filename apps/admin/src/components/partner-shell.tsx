@@ -4,9 +4,10 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Building2, Check, ChevronsUpDown, Contrast, LogOut, Plus, Users } from "lucide-react";
+import { Building2, Check, ChevronsUpDown, Contrast, LogOut, Palette, Plus, Users } from "lucide-react";
 
 import type { PartnerRole } from "@lobbystack/shared";
+import { useBranding } from "@/components/branding-provider";
 import { Main } from "@/components/layout/main";
 import { SiteHeader } from "@/components/site-header";
 import { useTheme } from "@/components/theme-provider";
@@ -45,13 +46,13 @@ export function useConsolePartner(): ConsolePartner {
 type PartnerShellProps = {
   children: React.ReactNode;
   partner: ConsolePartner;
-  /** Every partner the person is on the team of, for the switcher. */
+  /** Every partner whose console opens here, for the switcher: on a partner's host, only that partner. */
   partners: ConsolePartner[];
   sidebarOpen: boolean;
   user: { email: string };
 };
 
-/** The partner console's frame: the partner switcher, Businesses and Team, and the account menu. */
+/** The partner console's frame: the partner switcher, Businesses, Branding & domain and Team, and the account menu. */
 export function PartnerShell({ children, partner, partners, sidebarOpen, user }: PartnerShellProps) {
   const { t } = useTranslation(["partner", "common"]);
   const pathname = usePathname();
@@ -106,6 +107,7 @@ function PartnerNavigation({ partnerId }: { partnerId: string }) {
   const { isMobile, setOpenMobile } = useSidebar();
   const items = [
     { href: `/partner/${partnerId}/businesses`, label: t("nav.businesses"), icon: Building2 },
+    { href: `/partner/${partnerId}/branding`, label: t("nav.branding"), icon: Palette },
     { href: `/partner/${partnerId}/team`, label: t("nav.team"), icon: Users },
   ];
   return (
@@ -141,6 +143,8 @@ function Initial({ value }: { value: string }) {
 function PartnerSwitcher({ partner, partners }: { partner: ConsolePartner; partners: ConsolePartner[] }) {
   const { t } = useTranslation("partner");
   const { isMobile } = useSidebar();
+  // Partner signup stays on the host's domain, so a partner's host doesn't offer it.
+  const onPartnerHost = useBranding().partner !== null;
   return (
     <SidebarMenu className="group-data-[collapsible=icon]:hidden">
       <SidebarMenuItem>
@@ -170,11 +174,13 @@ function PartnerSwitcher({ partner, partners }: { partner: ConsolePartner; partn
                 </DropdownMenuItem>
               ))}
             </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="gap-2.5 px-3 py-2" render={<Link href="/partner/signup" />}>
-              <Plus className="size-4" />
-              {t("shell.signUpAnother")}
-            </DropdownMenuItem>
+            {onPartnerHost ? null : <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="gap-2.5 px-3 py-2" render={<Link href="/partner/signup" />}>
+                <Plus className="size-4" />
+                {t("shell.signUpAnother")}
+              </DropdownMenuItem>
+            </>}
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

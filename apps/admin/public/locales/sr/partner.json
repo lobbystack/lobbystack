@@ -7,6 +7,7 @@
   },
   "nav": {
     "businesses": "Firme",
+    "branding": "Brend i domen",
     "team": "Tim"
   },
   "roles": {
@@ -69,6 +70,60 @@
       "removeFailed": "Nismo uspeli da uklonimo tu osobu. Pokušajte ponovo.",
       "revokeFailed": "Nismo uspeli da otkažemo taj poziv. Pokušajte ponovo.",
       "finalOwner": "Partner mora da ima bar jednog vlasnika."
+    }
+  },
+  "branding": {
+    "title": "Brend i domen",
+    "description": "Ono što vaše firme vide na adresi vaše kontrolne table, na kartici pregledača i u vašim imejlovima.",
+    "loadFailed": "Nismo uspeli da učitamo vaš brend. Osvežite stranicu i pokušajte ponovo.",
+    "membersCantEdit": "Samo vlasnici i administratori mogu da menjaju brend.",
+    "domain": {
+      "title": "Adresa kontrolne table",
+      "open": "Otvori",
+      "none": "Još nemate svoju adresu. Zatražite od servisa {{appName}} da je podesi."
+    },
+    "brand": {
+      "title": "Brend"
+    },
+    "nameLabel": "Naziv",
+    "nameHelp": "Vaše firme ga vide na kartici pregledača, iznad prijave i kao pošiljaoca vaših imejlova.",
+    "logoLabel": "Logo",
+    "logoHelp": "Prikazuje se iznad prijave i u vašim imejlovima. PNG, JPEG, WebP ili SVG, do 256 KB.",
+    "faviconLabel": "Favikon",
+    "faviconHelp": "Ikonica na kartici pregledača. Bez nje, kartica prikazuje vaš logo.",
+    "imageChoose": "Izaberite sliku",
+    "imageChange": "Promenite sliku",
+    "logoRemove": "Ukloni logo",
+    "faviconRemove": "Ukloni favikon",
+    "colorLabel": "Boja brenda",
+    "colorPick": "Izaberite boju brenda",
+    "colorHelp": "Heksadecimalni kod, na primer #0f766e.",
+    "links": {
+      "title": "Linkovi",
+      "description": "Vaša stranica za prijavu i kontrolna tabla vode na ove stranice. Ostavite polje prazno da sakrijete njegov link.",
+      "termsUrl": "Uslovi korišćenja",
+      "termsUrlPlaceholder": "https://firma.com/uslovi",
+      "privacyUrl": "Politika privatnosti",
+      "privacyUrlPlaceholder": "https://firma.com/privatnost",
+      "supportUrl": "Stranica podrške",
+      "supportUrlPlaceholder": "https://firma.com/podrska",
+      "supportEmail": "Imejl podrške",
+      "supportEmailPlaceholder": "podrska@firma.com",
+      "supportEmailHelp": "Odgovori na vaše imejlove stižu ovde. Bez stranice podrške, vaš link podrške otvara ovu adresu."
+    },
+    "preview": "Pregled",
+    "save": "Sačuvaj brend",
+    "saving": "Čuvanje…",
+    "saved": "Brend je sačuvan.",
+    "errors": {
+      "failed": "Nismo uspeli da sačuvamo vaš brend. Pokušajte ponovo.",
+      "name": "Unesite naziv do 80 znakova.",
+      "color": "Unesite boju kao heksadecimalni kod, na primer #0f766e.",
+      "link": "Unesite svaki link kao punu veb adresu koja počinje sa https://.",
+      "supportEmail": "Unesite jednu ispravnu imejl adresu.",
+      "imageType": "Otpremite PNG, JPEG, WebP ili SVG sliku.",
+      "imageSize": "Otpremite sliku od 256 KB ili manje.",
+      "forbidden": "Samo vlasnici i administratori mogu da menjaju brend."
     }
   },
   "signup": {

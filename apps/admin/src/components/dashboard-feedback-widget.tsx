@@ -27,6 +27,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useBranding } from "@/components/branding-provider";
 import { cn } from "@/lib/utils";
 
 const MAX_FEEDBACK_MESSAGE_LENGTH = 2_000;
@@ -39,6 +40,11 @@ type FeedbackWidgetProps = {
 export function DashboardFeedbackWidget({ businessId, className }: FeedbackWidgetProps) {
   const { t } = useTranslation("common");
   const links = brandLinks();
+  // On a partner's pages, the partner's support link. A partner that set none
+  // gets no help line, and none gets the host's docs, which partners don't have.
+  const { partner } = useBranding();
+  const supportHref = partner ? partner.links.support : `mailto:${contactEmailFor(links, "support")}`;
+  const docsHref = partner ? null : links.docsUrl;
   async function submitFeedback(payload: { businessId?: string; message: string; pagePath: string; userAgent: string }) {
     const response = await fetch("/api/feedback", {
       method: "POST",
@@ -126,21 +132,23 @@ export function DashboardFeedbackWidget({ businessId, className }: FeedbackWidge
                 </Field>
               </FieldGroup>
               <div className="flex items-center justify-between gap-3">
-                <p className="min-w-0 text-sm text-muted-foreground">
+                {supportHref ? <p className="min-w-0 text-sm text-muted-foreground">
                   {t("feedback.helpText")}{" "}
-                  <a className="text-primary underline underline-offset-4" href={`mailto:${contactEmailFor(links, "support")}`}>
+                  <a className="text-primary underline underline-offset-4" href={supportHref} {...(supportHref.startsWith("mailto:") ? {} : { rel: "noreferrer", target: "_blank" })}>
                     {t("feedback.contactLink")}
-                  </a>{" "}
-                  {t("feedback.helpTextSeparator")}{" "}
-                  <a
-                    className="text-primary underline underline-offset-4"
-                    href={links.docsUrl}
-                    rel="noreferrer"
-                    target="_blank"
-                  >
-                    {t("feedback.docsLink")}
                   </a>
-                </p>
+                  {docsHref ? <>
+                    {" "}{t("feedback.helpTextSeparator")}{" "}
+                    <a
+                      className="text-primary underline underline-offset-4"
+                      href={docsHref}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      {t("feedback.docsLink")}
+                    </a>
+                  </> : null}
+                </p> : <span />}
                 <Button disabled={!canSubmit} size="sm" type="submit">
                   {t("feedback.submit")}
                 </Button>
@@ -149,7 +157,7 @@ export function DashboardFeedbackWidget({ businessId, className }: FeedbackWidge
           </PopoverContent>
         </Popover>
       </Tooltip>
-      <Tooltip>
+      {docsHref ? <Tooltip>
         <TooltipTrigger
           render={
             <Button
@@ -160,7 +168,7 @@ export function DashboardFeedbackWidget({ businessId, className }: FeedbackWidge
               render={
                 <a
                   aria-label={t("feedback.helpCenter")}
-                  href={links.docsUrl}
+                  href={docsHref}
                   rel="noreferrer"
                   target="_blank"
                 />
@@ -173,7 +181,7 @@ export function DashboardFeedbackWidget({ businessId, className }: FeedbackWidge
           <CircleQuestionMarkIcon className="size-[18px]" strokeWidth={1.75} />
         </TooltipTrigger>
         <TooltipContent>{t("feedback.helpCenter")}</TooltipContent>
-      </Tooltip>
+      </Tooltip> : null}
     </div>
   );
 }

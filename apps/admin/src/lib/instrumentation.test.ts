@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DatabaseClient, DatabaseRole } from "@lobbystack/db";
 
-const mocks = vi.hoisted(() => ({ getDatabase: vi.fn(), disableRemovedPlatformKeyWebhooks: vi.fn(async (): Promise<number | null> => 0), reportServerError: vi.fn(async () => undefined) }));
+const mocks = vi.hoisted(() => ({ getDatabase: vi.fn(), disableRemovedPlatformKeyWebhooks: vi.fn(async (): Promise<number | null> => 0), reservePartnerSubdomains: vi.fn(async (): Promise<number | null> => 0), reportServerError: vi.fn(async () => undefined) }));
 
 vi.mock("@lobbystack/telemetry/node", async (importOriginal) => ({
   ...await importOriginal<typeof import("@lobbystack/telemetry/node")>(),
@@ -11,6 +11,7 @@ vi.mock("@lobbystack/telemetry/node", async (importOriginal) => ({
 }));
 vi.mock("@/lib/databases", () => ({ getDatabase: mocks.getDatabase }));
 vi.mock("@/lib/platform-key-webhooks", () => ({ disableRemovedPlatformKeyWebhooksAtStartup: mocks.disableRemovedPlatformKeyWebhooks }));
+vi.mock("@/lib/partner-subdomains", () => ({ reserveMissingPartnerSubdomainsAtStartup: mocks.reservePartnerSubdomains }));
 vi.mock("@/lib/error-reporting", () => ({ reportServerError: mocks.reportServerError }));
 
 import { register } from "../../instrumentation";
@@ -81,6 +82,15 @@ describe("production database role startup validation", () => {
     mocks.disableRemovedPlatformKeyWebhooks.mockRejectedValueOnce(failure);
     await expect(register()).resolves.toBeUndefined();
     expect(mocks.reportServerError).toHaveBeenCalledWith(failure, { operation: "startup.disable_removed_platform_key_webhooks" });
+  });
+
+  it("reserves the subdomains partners lack, and starts even if that fails", async () => {
+    await expect(register()).resolves.toBeUndefined();
+    expect(mocks.reservePartnerSubdomains).toHaveBeenCalledTimes(1);
+    const failure = new Error("connection refused");
+    mocks.reservePartnerSubdomains.mockRejectedValueOnce(failure);
+    await expect(register()).resolves.toBeUndefined();
+    expect(mocks.reportServerError).toHaveBeenCalledWith(failure, { operation: "startup.reserve_partner_subdomains" });
   });
 
   it("rejects startup when a runtime role resolves to the privileged base role", async () => {

@@ -36,8 +36,33 @@ export type OperatorRequest = Omit<SignedInRequest, "businessId"> & {
 
 type Route<Params> = (request: Request, context?: { params: Promise<Params> }) => Promise<Response>;
 
-async function readBody(request: Request): Promise<Record<string, unknown>> {
-  const text = await request.text();
+export type RouteOptions = {
+  /** The largest body the route reads, in bytes. A larger one gets a 413 before it fills memory. */
+  maxBodyBytes?: number;
+};
+
+/** The body's text, read no further than the limit. */
+async function readTextWithin(request: Request, maxBytes: number): Promise<string> {
+  const tooLarge = () => jsonError("The request body is too large.", 413, "body_too_large");
+  if (Number(request.headers.get("content-length") ?? 0) > maxBytes) throw tooLarge();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  const reader = request.body?.getReader();
+  while (reader) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > maxBytes) {
+      await reader.cancel();
+      throw tooLarge();
+    }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks).toString("utf8");
+}
+
+async function readBody(request: Request, maxBytes?: number): Promise<Record<string, unknown>> {
+  const text = maxBytes === undefined ? await request.text() : await readTextWithin(request, maxBytes);
   if (!text.trim()) return {};
   let body: unknown;
   try {
@@ -58,9 +83,9 @@ function namedBusinessId(request: Request, body: Record<string, unknown>): strin
   return named[0];
 }
 
-async function signIn(request: Request): Promise<SignedInRequest> {
+async function signIn(request: Request, options: RouteOptions = {}): Promise<SignedInRequest> {
   const session = await requireApiSession(request);
-  const body = await readBody(request);
+  const body = await readBody(request, options.maxBodyBytes);
   return { request, session, userId: session.user.id, body, businessId: namedBusinessId(request, body), domain: createDomainContext() };
 }
 
@@ -90,8 +115,8 @@ function route<Input, Params>(resolve: (request: Request) => Promise<Input>, han
 }
 
 /** A route any signed-in user can call, such as their account or their list of businesses. */
-export function signedInRoute<Params = object>(handler: (user: SignedInRequest, params: Params) => Promise<Response>): Route<Params> {
-  return route(signIn, handler);
+export function signedInRoute<Params = object>(handler: (user: SignedInRequest, params: Params) => Promise<Response>, options: RouteOptions = {}): Route<Params> {
+  return route((request) => signIn(request, options), handler);
 }
 
 /** A route that acts on one business. */

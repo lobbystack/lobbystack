@@ -55,8 +55,9 @@ afterEach(() => {
 });
 
 /** A database whose deployment_branding row holds this saved name, as the worker role reads it. */
+/** The worker role's database: deployment_branding's saved row, and businesses with no partner. */
 function savedBranding(appName: string | null) {
-  return { select: () => ({ from: () => ({ limit: async () => (appName ? [{ appName, logoVersion: "abc" }] : []) }) }) } as never;
+  return { select: () => ({ from: () => ({ limit: async () => (appName ? [{ appName, logoVersion: "abc" }] : []) }) }), execute: async () => ({ rows: [{ partner_id: null }] }) } as never;
 }
 
 import { handleJob } from "./handlers";
@@ -173,22 +174,30 @@ describe("worker handlers", () => {
     expect(sendMail.mock.lastCall?.[0]).toMatchObject({ replyTo: "owner@example.test", text: "Hi" });
   });
 
-  it("sends a partner's team invitation under the partner's name, from the partner base domain, linking to the host's domain", async () => {
+  it("sends a partner's team invitation under the partner's name, from the partner base domain, linking to its subdomain", async () => {
     vi.stubEnv("APP_BASE_URL", "https://app.example.test");
     vi.stubEnv("PARTNER_BASE_DOMAIN", "portal.example.test");
     const partnerId = randomUUID();
-    const execute = vi.fn().mockResolvedValue({ rows: [{ name: "Bright Desk" }] });
+    const row = { name: "Bright Desk", slug: "bright", subdomain: "bright.portal.example.test", logo_version: null, favicon_version: null, brand_color: null, terms_url: null, privacy_url: null, support_url: null, support_email: "help@bright.example.test" };
+    const execute = vi.fn().mockResolvedValue({ rows: [row] });
     const db = { select: () => ({ from: () => ({ limit: async () => [] }) }), execute } as never;
     const sendMail = vi.fn().mockResolvedValue({ messageId: "provider-id" });
     const email = new SmtpEmailProvider({ host: "localhost", port: 1025, secure: false, username: "", password: "", from: "LobbyStack <no-reply@example.test>" }, { sendMail } as never);
-    // The payload invitePartnerMember queues: no business, and the partner's brand.
-    await handleJob({ jobId: randomUUID(), businessId: null, type: "email.send", queue: "default", payload: { invitationId: randomUUID(), email: "teammate@example.test", template: "invitation", url: "https://app.example.test/partner/accept-invite?token=t", brand: { kind: "partner", partnerId }, replyTo: null }, trace: {}, idempotencyKey: randomUUID(), scheduled: false }, { domain: { db }, email });
+    // The payload invitePartnerMember queues: no business, the partner's brand, and a link on the host's domain.
+    const send = () => handleJob({ jobId: randomUUID(), businessId: null, type: "email.send", queue: "default", payload: { invitationId: randomUUID(), email: "teammate@example.test", template: "invitation", url: "https://app.example.test/partner/accept-invite?token=t", brand: { kind: "partner", partnerId }, replyTo: null }, trace: {}, idempotencyKey: randomUUID(), scheduled: false }, { domain: { db }, email });
+    await send();
     expect(sendMail.mock.lastCall?.[0]).toMatchObject({
       to: "teammate@example.test",
       from: '"Bright Desk" <no-reply@portal.example.test>',
+      replyTo: "help@bright.example.test",
       subject: "Bright Desk notification",
-      text: "You have been invited to join Bright Desk. Accept the invitation here: https://app.example.test/partner/accept-invite?token=t",
+      text: "You have been invited to join Bright Desk. Accept the invitation here: https://bright.portal.example.test/partner/accept-invite?token=t",
     });
+    // A partner with no subdomain yet keeps the host's domain, and no Reply-To without a support email.
+    forgetCachedBrands();
+    execute.mockResolvedValue({ rows: [{ ...row, subdomain: null, support_email: null }] });
+    await send();
+    expect(sendMail.mock.lastCall?.[0].text).toBe("You have been invited to join Bright Desk. Accept the invitation here: https://app.example.test/partner/accept-invite?token=t");
     expect(sendMail.mock.lastCall?.[0].replyTo).toBeUndefined();
   });
 

@@ -7,6 +7,7 @@
   },
   "nav": {
     "businesses": "Businesses",
+    "branding": "Branding & domain",
     "team": "Team"
   },
   "roles": {
@@ -69,6 +70,60 @@
       "removeFailed": "We couldn't remove them. Try again.",
       "revokeFailed": "We couldn't cancel that invitation. Try again.",
       "finalOwner": "Your partner needs at least one owner."
+    }
+  },
+  "branding": {
+    "title": "Branding & domain",
+    "description": "What your businesses see on your dashboard address, in the browser tab and in your emails.",
+    "loadFailed": "We couldn't load your brand. Refresh to try again.",
+    "membersCantEdit": "Only owners and admins can change the brand.",
+    "domain": {
+      "title": "Dashboard address",
+      "open": "Open",
+      "none": "You don't have an address of your own yet. Ask {{appName}} to set one up."
+    },
+    "brand": {
+      "title": "Brand"
+    },
+    "nameLabel": "Name",
+    "nameHelp": "Your businesses see it in the browser tab, above sign-in and as the sender of your emails.",
+    "logoLabel": "Logo",
+    "logoHelp": "Shown above sign-in and in your emails. PNG, JPEG, WebP or SVG, up to 256 KB.",
+    "faviconLabel": "Favicon",
+    "faviconHelp": "The icon in the browser tab. Without one, the tab shows your logo.",
+    "imageChoose": "Choose an image",
+    "imageChange": "Change image",
+    "logoRemove": "Remove logo",
+    "faviconRemove": "Remove favicon",
+    "colorLabel": "Brand color",
+    "colorPick": "Pick a brand color",
+    "colorHelp": "A hex code, such as #0f766e.",
+    "links": {
+      "title": "Links",
+      "description": "Your sign-in page and dashboard link to these. Leave a field empty to hide its link.",
+      "termsUrl": "Terms of service",
+      "termsUrlPlaceholder": "https://company.com/terms",
+      "privacyUrl": "Privacy policy",
+      "privacyUrlPlaceholder": "https://company.com/privacy",
+      "supportUrl": "Support page",
+      "supportUrlPlaceholder": "https://company.com/support",
+      "supportEmail": "Support email",
+      "supportEmailPlaceholder": "support@company.com",
+      "supportEmailHelp": "Replies to your emails go here. Without a support page, your support link opens this address."
+    },
+    "preview": "Preview",
+    "save": "Save brand",
+    "saving": "Saving…",
+    "saved": "Brand saved.",
+    "errors": {
+      "failed": "We couldn't save your brand. Try again.",
+      "name": "Enter a name of up to 80 characters.",
+      "color": "Enter the color as a hex code, such as #0f766e.",
+      "link": "Enter each link as a full web address that starts with https://.",
+      "supportEmail": "Enter one valid email address.",
+      "imageType": "Upload a PNG, JPEG, WebP or SVG image.",
+      "imageSize": "Upload an image of 256 KB or smaller.",
+      "forbidden": "Only owners and admins can change the brand."
     }
   },
   "signup": {

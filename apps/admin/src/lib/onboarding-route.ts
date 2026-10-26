@@ -21,13 +21,14 @@ const routeStages: Record<string, OnboardingStage> = {
 };
 
 export async function requireOnboardingStage(pathname: string, options: { allowCreate?: boolean } = {}): Promise<void> {
-  const session = await getSession(new Headers(await headers()));
+  const requestHeaders = new Headers(await headers());
+  const session = await getSession(requestHeaders);
   if (!session) redirect("/login");
   const state = await getActiveOnboardingState(getAppDatabase().db, session.user.id);
   const expected = routeStages[pathname];
   if (!expected) redirect(resolveOnboardingRoute(state.stage));
   // A fresh self-hosted deployment's first owner names it before naming their business.
-  if (expected === "create_business" && state.businessId === null && await initialBrandingFields(session.user.id)) redirect(BRAND_ROUTE);
+  if (expected === "create_business" && state.businessId === null && await initialBrandingFields(session.user.id, requestHeaders)) redirect(BRAND_ROUTE);
   if (options.allowCreate && expected === "create_business" && state.businessId === null) return;
   if (!canVisitOnboardingStage(state.stage, expected)) redirect(resolveOnboardingRoute(state.stage));
   if (expected === "phone_number" && state.businessId) {
@@ -38,9 +39,10 @@ export async function requireOnboardingStage(pathname: string, options: { allowC
 
 /** The brand step's fields, or a redirect to the person's current step when the step doesn't apply to them. */
 export async function requireBrandStep(): Promise<InitialBrandingFields> {
-  const session = await getSession(new Headers(await headers()));
+  const requestHeaders = new Headers(await headers());
+  const session = await getSession(requestHeaders);
   if (!session) redirect("/login");
-  const fields = await initialBrandingFields(session.user.id);
+  const fields = await initialBrandingFields(session.user.id, requestHeaders);
   if (fields) return fields;
   redirect(resolveOnboardingRoute((await getActiveOnboardingState(getAppDatabase().db, session.user.id)).stage));
 }

@@ -5,6 +5,7 @@ import { getAuth } from "./auth";
 import { createDomainContext } from "./domain-context";
 import { oauthIssuer } from "./mcp/oauth-config";
 import { withSelectedBusiness } from "./oauth-provider";
+import { setBrandHeaders } from "./request-brand";
 
 // The consent screen's decision: approve for one business with a subset of
 // the requested scopes, or deny. Better Auth verifies the signed
@@ -64,7 +65,8 @@ export async function decideConsent(input: { userId: string; headers: Headers; d
  * Calls Better Auth's /oauth2/consent through its HTTP handler, in process.
  * The endpoint needs a real Request (it re-runs authorization), which a direct
  * auth.api call doesn't provide. The person's cookies come along, so the
- * session is theirs.
+ * session is theirs. The consent page answers only on the host's domain, so
+ * the call carries the host brand, as the proxy would have set it.
  */
 async function callConsentEndpoint(input: { body: { accept: boolean; scope?: string; oauth_query: string }; headers: Headers }): Promise<unknown> {
   const headers = new Headers({ "content-type": "application/json", accept: "application/json" });
@@ -74,6 +76,7 @@ async function callConsentEndpoint(input: { body: { accept: boolean; scope?: str
   }
   const origin = oauthIssuer().replace(/\/api\/auth$/, "");
   headers.set("origin", origin);
+  setBrandHeaders(headers, { kind: "host" });
   const response = await getAuth().handler(new Request(`${oauthIssuer()}/oauth2/consent`, { method: "POST", headers, body: JSON.stringify(input.body) }));
   const body = await response.json().catch(() => null) as Record<string, unknown> | null;
   if (!response.ok) throw Object.assign(new Error("The consent endpoint rejected the request."), { statusCode: response.status, body });

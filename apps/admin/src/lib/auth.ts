@@ -1,4 +1,4 @@
-import { betterAuth } from "better-auth";
+import { betterAuth, type BetterAuthOptions, type BetterAuthPlugin } from "better-auth";
 import { emailOTP } from "better-auth/plugins/email-otp";
 import { APIError, createAuthMiddleware, getOAuthState } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
@@ -9,6 +9,7 @@ import { and, eq, isNotNull, sql } from "drizzle-orm";
 
 import { assertDatabaseRole, enqueueOutbox, withBusinessTransaction } from "@lobbystack/db";
 import { accounts, sessions, users, verifications } from "@lobbystack/db";
+import { partnerFeatures } from "@lobbystack/shared";
 
 import { configuredAppOrigins } from "./app-origins";
 import { loadRequestEmailBrand } from "./branding";
@@ -17,6 +18,7 @@ import { SUPPORTED_LOCALES, resolveLocale } from "./locale";
 import { ensureMcpResource, isDisabledOAuthEndpoint, mcpOAuthPlugins, needsMcpResource, oauthProviderSchema, registrationWithApplicationType } from "./oauth-provider";
 import { hashReplacementPassword, isLegacyScryptHash, meetsPasswordRequirements, verifyLegacyPassword } from "./password";
 import { readyRedis } from "./redis";
+import { partnerRequestOrigin, readResolvedBrand } from "./request-brand";
 import { trustedClientIp, trustedClientIpFromHeaders, trustedClientIpHeader } from "./trusted-client-ip";
 import { verifyTurnstile } from "./turnstile";
 
@@ -61,6 +63,81 @@ function googleOAuthClient() {
 
 export function googleSignInEnabled(): boolean {
   return googleOAuthClient() !== null;
+}
+
+/**
+ * Whether a request may sign in with Google: only on the host's domain, as
+ * the proxy resolved it. A partner's host offers email and password only,
+ * since Google's consent screen would name the host's app.
+ */
+export function googleSignInAllowed(headers: Headers): boolean {
+  return googleSignInEnabled() && readResolvedBrand(headers)?.kind === "host";
+}
+
+// Better Auth's paths that start or finish a sign-in with Google, or link a Google account.
+const socialSignInPaths = new Set(["/sign-in/social", "/link-social", "/callback/:id"]);
+
+const DEFAULT_APP_ORIGIN = "http://localhost:3000";
+
+/**
+ * Where Better Auth builds its links: APP_BASE_URL, whatever hostname of the
+ * host's domain the request came in on, as it always has. With a partner base
+ * domain, a request on one of its subdomains gets them on that subdomain
+ * instead, with APP_BASE_URL's scheme, so a partner's reset and email change
+ * links lead back to the partner's host.
+ */
+export function authBaseURL(env: Readonly<Record<string, string | undefined>> = process.env): NonNullable<BetterAuthOptions["baseURL"]> {
+  const fallback = env.APP_BASE_URL ?? DEFAULT_APP_ORIGIN;
+  const baseDomain = partnerFeatures(env).baseDomain;
+  if (!baseDomain) return fallback;
+  let protocol: "http" | "https" = "http";
+  try {
+    protocol = new URL(fallback).protocol === "https:" ? "https" : "http";
+  } catch {
+    // Better Auth refuses an unreadable APP_BASE_URL itself.
+  }
+  // The Host header keeps a port, as acme.partners.localhost:13000 does in development.
+  return { allowedHosts: [`*.${baseDomain}`, `*.${baseDomain}:*`], fallback, protocol };
+}
+
+/**
+ * The origins Better Auth trusts for a request, as the proxy resolved it: the
+ * host's configured origins on the host's domain, only the partner's own
+ * origin on a partner's host, and none for a request the proxy resolved no
+ * brand for. Better Auth asks without a request when it starts, and gets the
+ * host's.
+ */
+export function authTrustedOrigins(request?: Request, env: Readonly<Record<string, string | undefined>> = process.env): string[] {
+  const resolved = request ? readResolvedBrand(request.headers) : { kind: "host" as const };
+  if (!resolved) return [];
+  if (resolved.kind === "partner") return [resolved.origin];
+  const origins = configuredAppOrigins(env, [], true);
+  return origins.length > 0 ? origins : [DEFAULT_APP_ORIGIN];
+}
+
+/**
+ * Better Auth trusts every host its baseURL can resolve to, so with a partner
+ * base domain it would trust every partner's subdomain on every request.
+ * Before it checks a request's Origin and callback URLs, this narrows what the
+ * request trusts back to what the proxy resolved, so one partner's host never
+ * trusts another's.
+ */
+function resolvedOriginsOnly(): BetterAuthPlugin {
+  return {
+    id: "lobbystack-resolved-origins",
+    onRequest: async (request, ctx) => {
+      ctx.trustedOrigins = authTrustedOrigins(request);
+    },
+  };
+}
+
+/**
+ * The origin of the links an auth email carries: the partner's host the proxy
+ * resolved the request to, or APP_BASE_URL on the host's domain and outside a
+ * request.
+ */
+function authLinkOrigin(request?: Request): string {
+  return (request ? partnerRequestOrigin(request.headers) : null) ?? process.env.APP_BASE_URL ?? DEFAULT_APP_ORIGIN;
 }
 
 export function getAuthDatabase() {
@@ -204,15 +281,14 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
   const trustedIpHeader = trustedClientIpHeader();
   const database = getAuthDatabase();
   const secondaryStorage = getAuthSecondaryStorage();
-  const trustedOrigins = configuredAppOrigins(process.env, [], true);
   const google = googleOAuthClient();
   return betterAuth({
     database: drizzleAdapter(adapterDatabase ?? database.db, {
       provider: "pg",
       schema: { user: users, session: sessions, account: accounts, verification: verifications, ...oauthProviderSchema },
     }),
-    baseURL: process.env.APP_BASE_URL ?? "http://localhost:3000",
-    trustedOrigins: trustedOrigins.length > 0 ? trustedOrigins : ["http://localhost:3000"],
+    baseURL: authBaseURL(),
+    trustedOrigins: authTrustedOrigins,
     secret: process.env.BETTER_AUTH_SECRET ?? process.env.SESSION_ENCRYPTION_KEY ?? "development-only-change-me",
     ...(secondaryStorage ? { secondaryStorage } : {}),
     advanced: {
@@ -224,7 +300,7 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
       // the shared per-path bucket rather than trusting a spoofable value.
       ...(trustedIpHeader ? { ipAddress: { ipAddressHeaders: [trustedIpHeader] } } : {}),
     },
-    plugins: [...mcpOAuthPlugins(), emailOTP({
+    plugins: [resolvedOriginsOnly(), ...mcpOAuthPlugins(), emailOTP({
       disableSignUp: true,
       storeOTP: "hashed",
       expiresIn: 600,
@@ -271,7 +347,7 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
           await assertEmailVerificationSendAllowed({ email: user.email, ...(remoteIp ? { remoteIp } : {}) });
           const stored = (await database.db.select({ preferredLocale: users.preferredLocale }).from(users).where(eq(users.id, user.id)).limit(1))[0];
           const locale = resolveLocale(stored?.preferredLocale);
-          const base = process.env.APP_BASE_URL ?? "http://localhost:3000";
+          const base = authLinkOrigin(request);
           await enqueueAuthEmailOutbox({
             userId: user.id,
             dedupeKey: `auth-existing-account:${user.id}:${randomUUID()}`,
@@ -311,7 +387,7 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
         // Keep the link callback for the existing two-address email-change flow.
         const verificationUrl = new URL(url);
         const recipientLocale = resolveLocale(storedUser.preferredLocale);
-        const confirmationUrl = new URL(`/${recipientLocale}/confirm-email-change`, process.env.APP_BASE_URL ?? "http://localhost:3000");
+        const confirmationUrl = new URL(`/${recipientLocale}/confirm-email-change`, authLinkOrigin(request));
         confirmationUrl.searchParams.set("token", verificationUrl.searchParams.get("token") ?? "");
         confirmationUrl.searchParams.set("email", user.email);
         await enqueueAuthEmail({ purpose: "verification", userId: user.id, email: user.email, url: confirmationUrl.toString() });
@@ -365,6 +441,9 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
         // have a route path. They remain callable from trusted application
         // code while every unapproved public OTP route is rejected.
         if (isDisabledAuthEmailEndpoint(ctx.path) || isDisabledOAuthEndpoint(ctx.path)) {
+          throw new APIError("NOT_FOUND", { message: "Endpoint not enabled." });
+        }
+        if (ctx.path && socialSignInPaths.has(ctx.path) && !(ctx.headers && readResolvedBrand(ctx.headers)?.kind === "host")) {
           throw new APIError("NOT_FOUND", { message: "Endpoint not enabled." });
         }
         if (needsMcpResource(ctx.path)) await ensureMcpResource(database.db);

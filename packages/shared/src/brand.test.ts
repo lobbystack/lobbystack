@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { HOST_EMAIL_BRAND, emailBrandReferenceFor, emailSender, hostBrand, parseEmailBrandReference, parseEmailSender, type Brand } from "./brand";
+import { HOST_EMAIL_BRAND, emailBrandReferenceFor, emailSender, hostBrand, parseEmailBrandReference, parseEmailSender, partnerBrand, partnerOrigin, type Brand, type PartnerBrandRecord } from "./brand";
 import { resolveBrandLinks } from "./brandLinks";
 
 describe("the host brand", () => {
@@ -91,5 +91,50 @@ describe("an email's sender and Reply-To", () => {
     expect(emailSender(host, { replyTo: "owner@example.test" })).toEqual({ replyTo: "owner@example.test" });
     expect(emailSender(host, { from: "Raphael <raphael@example.test>", replyTo: null })).toEqual({ from: "Raphael <raphael@example.test>" });
     expect(emailSender(partner, { from: "Raphael <raphael@example.test>", replyTo: "raphael@example.test" })).toEqual({ from: "Raphael <raphael@example.test>", replyTo: "raphael@example.test" });
+  });
+});
+
+describe("a partner's brand", () => {
+  const record: PartnerBrandRecord = {
+    partnerId: "5b1f6c43-34a5-4a8e-9a43-6c1f8d5f1c11",
+    name: "Bright Desk",
+    subdomain: "bright.portal.example.test",
+    logoVersion: "abc",
+    faviconVersion: null,
+    color: "#0f766e",
+    termsUrl: "https://bright.example.test/terms",
+    privacyUrl: null,
+    supportUrl: null,
+    supportEmail: "help@bright.example.test",
+  };
+  const environment = { APP_BASE_URL: "https://desk.example.test", PARTNER_BASE_DOMAIN: "portal.example.test", EMAIL_FROM: "Desk <no-reply@desk.example.test>" };
+
+  it("lives on its subdomain, sends from the partner base domain and takes replies at its support email", () => {
+    expect(partnerBrand({ environment, partner: record })).toEqual({
+      kind: "partner",
+      partnerId: record.partnerId,
+      name: "Bright Desk",
+      logoUrl: `/api/branding/logo?partner=${record.partnerId}&v=abc`,
+      // With no favicon of its own, the tab shows the logo.
+      faviconUrl: `/api/branding/logo?partner=${record.partnerId}&v=abc`,
+      color: "#0f766e",
+      origin: "https://bright.portal.example.test",
+      links: { website: null, terms: "https://bright.example.test/terms", privacy: null, support: "mailto:help@bright.example.test" },
+      email: { fromName: "Bright Desk", fromAddress: "no-reply@portal.example.test", replyTo: "help@bright.example.test" },
+    });
+  });
+
+  it("leaves what the partner didn't set empty, never the host's", () => {
+    const bare = partnerBrand({ environment, partner: { ...record, logoVersion: null, color: null, termsUrl: null, supportEmail: null } });
+    expect(bare).toMatchObject({ logoUrl: null, faviconUrl: null, color: null, links: { website: null, terms: null, privacy: null, support: null }, email: { replyTo: null } });
+    expect(partnerBrand({ environment, partner: { ...record, supportUrl: "https://help.bright.example.test/" } }).links.support).toBe("https://help.bright.example.test/");
+  });
+
+  it("takes APP_BASE_URL's scheme and port, and the host's origin and sender without a current subdomain", () => {
+    expect(partnerOrigin("bright.partners.localhost", { APP_BASE_URL: "http://localhost:13000", PARTNER_BASE_DOMAIN: "partners.localhost" })).toBe("http://bright.partners.localhost:13000");
+    const elsewhere = partnerBrand({ environment: { ...environment, PARTNER_BASE_DOMAIN: "" }, partner: record });
+    expect(elsewhere).toMatchObject({ origin: "https://desk.example.test", email: { fromAddress: "no-reply@desk.example.test" } });
+    expect(partnerOrigin("bright.old.example.test", environment)).toBe("https://desk.example.test");
+    expect(partnerOrigin(null, environment)).toBe("https://desk.example.test");
   });
 });

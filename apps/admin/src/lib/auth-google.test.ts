@@ -12,9 +12,13 @@ vi.mock("@lobbystack/db", async importOriginal => ({ ...await importOriginal<typ
 
 const base = "http://localhost:3000";
 const page = "/fr/signup?returnTo=%2Fagent&source=calculator";
+// What the proxy sets on the host's domain, and on a partner's subdomain.
+const hostBrand = { "x-lobbystack-brand": "host" };
+const partnerOrigin = "http://acme.partners.localhost:3000";
+const partnerBrand = { host: "acme.partners.localhost:3000", "x-lobbystack-brand": "partner:7b0c5a43-62c4-4a51-9d0e-6f6f0e0d9a11", "x-lobbystack-brand-origin": partnerOrigin };
 // Better Auth keeps rate limits in one process-wide map, so each request gets its own client.
 let client = 0;
-const clientHeaders = () => ({ "content-type": "application/json", "x-real-ip": `198.51.100.${++client}` });
+const clientHeaders = (brand: Record<string, string> = hostBrand) => ({ "content-type": "application/json", "x-real-ip": `198.51.100.${++client}`, ...brand });
 
 function idToken(claims: Record<string, unknown>): string {
   const part = (value: unknown) => Buffer.from(JSON.stringify(value)).toString("base64url");
@@ -33,7 +37,7 @@ async function signInWithGoogle(account: { sub: string; email: string; email_ver
   const authorize = new URL((await start.json() as { url: string }).url);
   vi.stubGlobal("fetch", vi.fn(async () => Response.json({ access_token: "access", id_token: idToken({ ...account, name: "Owner" }), token_type: "Bearer", expires_in: 3600, scope: "openid https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile" })));
   const cookie = start.headers.getSetCookie().map(value => value.split(";")[0]).join("; ");
-  const callback = await auth.handler(new Request(`${base}/api/auth/callback/google?code=fixture&state=${authorize.searchParams.get("state")}`, { headers: { cookie } }));
+  const callback = await auth.handler(new Request(`${base}/api/auth/callback/google?code=fixture&state=${authorize.searchParams.get("state")}`, { headers: { cookie, ...hostBrand } }));
   return { authorize, callback };
 }
 
@@ -104,4 +108,36 @@ it("turns Google off without the Calendar OAuth client", async () => {
   const { getAuth, googleSignInEnabled } = await import("./auth");
   expect(googleSignInEnabled()).toBe(false);
   expect(getAuth().options.socialProviders).toBeUndefined();
+});
+
+it("keeps Google off a partner's host, where only email and password sign in", async () => {
+  vi.stubEnv("PARTNER_BASE_DOMAIN", "partners.localhost");
+  const { getAuth } = await import("./auth");
+  const auth = getAuth() as { handler: (request: Request) => Promise<Response> };
+  const start = await auth.handler(new Request(`${partnerOrigin}/api/auth/sign-in/social`, {
+    method: "POST",
+    headers: { ...clientHeaders(partnerBrand), origin: partnerOrigin },
+    body: JSON.stringify({ provider: "google", callbackURL: "/en/login" }),
+  }));
+  expect(start.status).toBe(404);
+  // A Google answer that reaches a partner's host goes no further either.
+  const callback = await auth.handler(new Request(`${partnerOrigin}/api/auth/callback/google?code=fixture&state=forged`, { headers: partnerBrand }));
+  expect(callback.status).toBe(404);
+  const link = await auth.handler(new Request(`${partnerOrigin}/api/auth/link-social`, { method: "POST", headers: { ...clientHeaders(partnerBrand), origin: partnerOrigin }, body: JSON.stringify({ provider: "google" }) }));
+  expect(link.status).toBe(404);
+  // A request the proxy resolved no brand for doesn't get Google either.
+  const unresolved = await auth.handler(new Request(`${base}/api/auth/sign-in/social`, { method: "POST", headers: clientHeaders({}), body: JSON.stringify({ provider: "google", callbackURL: "/en/login" }) }));
+  expect(unresolved.status).toBe(404);
+  expect(store.tables.user).toEqual([]);
+});
+
+it("offers Google on the host's domain only", async () => {
+  const { GET } = await import("../../app/api/auth/providers/route");
+  const providers = async (headers: Record<string, string>) => await (GET(new Request(`${base}/api/auth/providers`, { headers })) as Response).json();
+  expect(await providers(hostBrand)).toEqual({ google: true });
+  expect(await providers(partnerBrand)).toEqual({ google: false });
+  expect(await providers({})).toEqual({ google: false });
+  // Without the OAuth client, the host's domain doesn't offer it either.
+  vi.stubEnv("GOOGLE_CLIENT_SECRET", "");
+  expect(await providers(hostBrand)).toEqual({ google: false });
 });

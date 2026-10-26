@@ -49,7 +49,7 @@ Définissez `FIRECRAWL_API_KEY` sur le service `worker`. Sans elle, l'import de 
 
 Dans Google Cloud, activez l'API Google Calendar et créez un client OAuth pour une application Web. Ajoutez `https://votre_domaine_admin/api/calendar/google/callback` comme URI de redirection autorisée. Définissez `GOOGLE_CLIENT_ID` et `GOOGLE_CLIENT_SECRET` sur le service `admin`. Le modèle remplit `GOOGLE_REDIRECT_URI`, et le worker lit les trois valeurs depuis l'admin.
 
-Une fois ces deux valeurs définies, les pages de connexion et d'inscription proposent aussi **Continuer avec Google**. Ajoutez `https://votre_domaine_admin/api/auth/callback/google` au même client OAuth comme deuxième URI de redirection autorisée.
+Une fois ces deux valeurs définies, les pages de connexion et d'inscription proposent aussi **Continuer avec Google**. Ajoutez `https://votre_domaine_admin/api/auth/callback/google` au même client OAuth comme deuxième URI de redirection autorisée. Les sous-domaines de vos partenaires ne le proposent pas : on s'y connecte par courriel et mot de passe.
 
 #### Utilisez un domaine personnalisé
 
@@ -59,6 +59,8 @@ Ajoutez le domaine au service `admin`, puis donnez à `APP_BASE_URL` sur le serv
 - `APP_BASE_URL`, `TWILIO_STATUS_CALLBACK_URL` et `GOOGLE_REDIRECT_URI` sur le service `worker`
 
 Un déploiement issu d'une ancienne version du modèle contient le domaine Railway écrit dans chacune de ces variables, alors modifiez-les toutes. Faites ensuite pointer le webhook OpenAI et les deux URI de redirection Google vers le nouveau domaine. Les numéros de téléphone provisionnés avant le changement gardent leurs anciennes URL de SMS et de rappel de statut dans Twilio jusqu'à ce que vous les y mettiez à jour.
+
+Le tableau de bord ne répond que sur le nom d'hôte de `APP_BASE_URL`, les origines exactes de `AUTH_TRUSTED_ORIGINS` et les domaines de vos partenaires. Après le changement, le domaine Railway reçoit donc une erreur 404. Pour le garder, ajoutez son origine à `AUTH_TRUSTED_ORIGINS`. Un motif comme `https://*.example.com` ne rend aucun nom d'hôte accessible : ajoutez chaque nom d'hôte comme une origine distincte. Les vérifications d'état et les webhooks des fournisseurs répondent sur n'importe quel nom d'hôte.
 
 ## Base officielle
 

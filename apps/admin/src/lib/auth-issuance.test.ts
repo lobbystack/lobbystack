@@ -57,11 +57,40 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllEnvs());
 
-it("passes wildcard trusted origins through to Better Auth next to APP_BASE_URL", async () => {
+it("passes wildcard trusted origins through to Better Auth next to APP_BASE_URL on the host's domain", async () => {
   vi.stubEnv("APP_BASE_URL", "https://app.example.test/");
   vi.stubEnv("AUTH_TRUSTED_ORIGINS", " *.example.test , https://app.example.test, myapp://callback,not a url");
   const { getAuth } = await import("./auth"); getAuth();
-  expect(mocks.config.trustedOrigins).toEqual(["https://app.example.test", "*.example.test", "myapp://callback", "not a url"]);
+  const host = ["https://app.example.test", "*.example.test", "myapp://callback", "not a url"];
+  expect(mocks.config.trustedOrigins(new Request("https://app.example.test/api/auth/sign-in/email", { headers: { "x-lobbystack-brand": "host" } }))).toEqual(host);
+  // Better Auth asks without a request when it starts.
+  expect(mocks.config.trustedOrigins()).toEqual(host);
+});
+
+it("trusts only the partner's own origin on its host, and nothing on a host the proxy resolved no brand for", async () => {
+  vi.stubEnv("APP_BASE_URL", "https://app.example.test");
+  vi.stubEnv("AUTH_TRUSTED_ORIGINS", "*.example.test");
+  const { getAuth } = await import("./auth"); getAuth();
+  const partner = new Request("https://acme.portal.test/api/auth/sign-in/email", { headers: {
+    "x-lobbystack-brand": "partner:7b0c5a43-62c4-4a51-9d0e-6f6f0e0d9a11",
+    "x-lobbystack-brand-origin": "https://acme.portal.test",
+  } });
+  expect(mocks.config.trustedOrigins(partner)).toEqual(["https://acme.portal.test"]);
+  expect(mocks.config.trustedOrigins(new Request("https://unknown.test/api/auth/sign-in/email"))).toEqual([]);
+});
+
+it("builds links on APP_BASE_URL, or on a partner's subdomain once a partner base domain is set", async () => {
+  vi.stubEnv("APP_BASE_URL", "https://app.example.test");
+  const { authBaseURL } = await import("./auth");
+  expect(authBaseURL()).toBe("https://app.example.test");
+  vi.stubEnv("PARTNER_BASE_DOMAIN", "Portal.Test.");
+  // Every other hostname of the host's domain falls back to APP_BASE_URL, so the OAuth issuer stays put.
+  expect(authBaseURL()).toEqual({ allowedHosts: ["*.portal.test", "*.portal.test:*"], fallback: "https://app.example.test", protocol: "https" });
+  vi.stubEnv("APP_BASE_URL", "http://localhost:13000");
+  vi.stubEnv("PARTNER_BASE_DOMAIN", "partners.localhost");
+  expect(authBaseURL()).toMatchObject({ allowedHosts: ["*.partners.localhost", "*.partners.localhost:*"], protocol: "http" });
+  vi.stubEnv("PARTNER_BASE_DOMAIN", "https://not-a-hostname");
+  expect(authBaseURL()).toBe("http://localhost:13000");
 });
 
 it("sends a localized sign-in reminder for a verified duplicate signup", async () => {
@@ -94,6 +123,23 @@ it("queues every auth email under the request's brand, for the worker to write i
     expect(payload).toMatchObject({ brand: { kind: "partner", partnerId: "partner-1" }, replyTo: null });
     expect(payload).not.toHaveProperty("subject");
   }
+});
+
+it("links a partner's auth emails to the partner's host the proxy resolved", async () => {
+  vi.stubEnv("APP_BASE_URL", "https://app.example.test");
+  const { getAuth } = await import("./auth"); getAuth();
+  const partner = { "x-lobbystack-brand": "partner:7b0c5a43-62c4-4a51-9d0e-6f6f0e0d9a11", "x-lobbystack-brand-origin": "https://acme.portal.test" };
+  mocks.select.mockResolvedValue([{ email: "owner@example.invalid", preferredLocale: "fr" }]);
+  await mocks.config.emailAndPassword.onExistingUserSignUp({ user: { id: "user-1", email: "owner@example.invalid", emailVerified: true } }, new Request("https://acme.portal.test/api/auth/sign-up/email", { headers: partner }));
+  await mocks.config.emailVerification.sendVerificationEmail(
+    { user: { id: "user-1", email: "new@example.invalid" }, url: "https://acme.portal.test/api/auth/verify-email?token=t" },
+    new Request("https://acme.portal.test/api/auth/verify-email?token=c", { headers: partner }),
+  );
+  const variables = mocks.enqueue.mock.calls.map((call) => call[1].payload.variables);
+  expect(variables).toEqual([
+    { locale: "fr", signInUrl: "https://acme.portal.test/fr/login", resetUrl: "https://acme.portal.test/fr/forgot-password" },
+    { url: "https://acme.portal.test/fr/confirm-email-change?token=t&email=new%40example.invalid" },
+  ]);
 });
 
 it("sends a verification code for an unverified duplicate signup", async () => {

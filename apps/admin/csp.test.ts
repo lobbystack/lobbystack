@@ -13,10 +13,11 @@ it("allows recording fetch and playback in both emitted policies", async () => {
   vi.stubEnv("S3_ENDPOINT", "https://t3.storageapi.dev");
   vi.stubEnv("S3_FORCE_PATH_STYLE", "false");
   vi.stubEnv("NEXT_PUBLIC_POSTHOG_HOST", "https://ts.lobbystack.com");
+  vi.stubEnv("APP_BASE_URL", "https://dashboard.example");
   const headers = await nextConfig.headers!();
   const policies = [
     headers.flatMap(rule => rule.headers).find(header => header.key === "Content-Security-Policy")?.value,
-    proxy(new NextRequest("https://dashboard.example/calls")).headers.get("Content-Security-Policy"),
+    (await proxy(new NextRequest("https://dashboard.example/calls"))).headers.get("Content-Security-Policy"),
   ];
   for (const policy of policies) {
     expect(policy).toBeTruthy();

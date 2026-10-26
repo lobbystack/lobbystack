@@ -21,13 +21,16 @@ type VisualRoute = {
 // The marketing site is no dashboard port: scripts/verify-admin-prerender.ts
 // and the marketing:validate script check its pages.
 const MARKETING_ROUTE_GROUP = `(marketing)${sep}`;
+// A partner's copies of the public pages re-export the /[locale] pages listed
+// already, under the partner's brand (apps/admin/src/lib/partner-site.ts).
+const PARTNER_SITE_ROUTE_GROUP = `(partner-site)${sep}`;
 
 export async function currentPageRoutes(root: string): Promise<string[]> {
   const appRoot = resolve(root, "apps/admin/app");
   const files = await readdir(appRoot, { recursive: true });
   return files
     .filter((file) => file.endsWith(`${sep}page.tsx`) || file === "page.tsx")
-    .filter((file) => !file.startsWith(MARKETING_ROUTE_GROUP))
+    .filter((file) => !file.startsWith(MARKETING_ROUTE_GROUP) && !file.startsWith(PARTNER_SITE_ROUTE_GROUP))
     .map((file) => relative(appRoot, resolve(appRoot, file)).split(sep))
     .map((parts) => parts.slice(0, -1).filter((part) => !/^\(.+\)$/.test(part)))
     .map((parts) => parts.length === 0 ? "/" : `/${parts.join("/")}`)

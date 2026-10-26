@@ -42,3 +42,25 @@ export function partnerSlugFromName(name: string): string {
   const slug = name.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, PARTNER_SLUG_MAX_LENGTH).replace(/-+$/, "");
   return isPartnerSlug(slug) ? slug : "";
 }
+
+// Control, format and line separator characters, bidirectional overrides among
+// them, would let a name rearrange or hide the text around it in titles and emails.
+const UNSAFE_NAME_CHARACTERS = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u;
+
+/** A partner's name as its brand shows it: 1 to 80 visible characters, whitespace collapsed, or null when the value can't be one. */
+export function normalizePartnerName(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const name = value.normalize("NFC").replace(/\s+/g, " ").trim();
+  return name && name.length <= PARTNER_NAME_MAX_LENGTH && !UNSAFE_NAME_CHARACTERS.test(name) ? name : null;
+}
+
+/** The longest terms, privacy or support link a partner's brand keeps. */
+export const PARTNER_LINK_MAX_LENGTH = 2048;
+
+/** A brand color as #rrggbb in lowercase, from #rgb or #rrggbb in either case, or null when the value is neither. */
+export function normalizeBrandColor(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const color = value.trim().toLowerCase();
+  if (/^#[0-9a-f]{6}$/.test(color)) return color;
+  return /^#[0-9a-f]{3}$/.test(color) ? `#${[...color.slice(1)].map((digit) => digit + digit).join("")}` : null;
+}

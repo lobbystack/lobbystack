@@ -14,7 +14,7 @@ import { bookAppointment, cancelAppointment } from "./booking";
 import { appendMessage } from "./conversations";
 import { receiveInboundSms } from "./sms";
 import { runPrivacyRetentionSweep } from "./privacy";
-import { EXPIRED_UPLOAD_STATUS, deleteExpiredObjectsForBusiness, persistCallRecording } from "./storage";
+import { EXPIRED_UPLOAD_STATUS, deleteExpiredObjectsForBusiness, pendingUploadTarget, persistCallRecording } from "./storage";
 import { completeCall, upsertTranscript } from "./voice";
 import { chunkText, indexDocumentText } from "./knowledge";
 import { loadBusinessSummaryInput, saveGeneratedBusinessSummary } from "./businessSummary";
@@ -912,6 +912,35 @@ describe.skipIf(!testUrl)("reliability against dedicated PostgreSQL roles", () =
       for (const orphan of [replaced, abandoned]) {
         expect(byId.get(orphan)).toMatchObject({ status: "pending", expiresAt: new Date(createdAt.getTime() + 24 * 60 * 60_000) });
       }
+    });
+  });
+
+  it("hands a partner host's upload relay a pending upload only under the access creating it took", async () => {
+    await rollbackTest(async (tx) => {
+      const businessId = randomUUID();
+      const [owner, viewer, outsider] = [randomUUID(), randomUUID(), randomUUID()];
+      const [knowledge, attachment, expired, ready] = [randomUUID(), randomUUID(), randomUUID(), randomUUID()];
+      await tx.insert(users).values([owner, viewer, outsider].map((id) => ({ id, email: `${id}@example.invalid`, normalizedEmail: `${id}@example.invalid` })));
+      await tx.insert(businesses).values({ id: businessId, slug: businessId, name: "Upload relay test", timezone: "UTC", businessType: "test" });
+      await tx.insert(businessMemberships).values([{ businessId, userId: owner, role: "business_owner" }, { businessId, userId: viewer, role: "viewer" }]);
+      const later = new Date(Date.now() + 60 * 60_000);
+      await tx.insert(storageObjects).values([
+        { id: knowledge, businessId, objectKey: `${businessId}/knowledge/${knowledge}/doc.pdf`, purpose: "knowledge", fileName: "doc.pdf", contentType: "application/pdf", contentLength: 4, checksum: "c3VtCg==", status: "pending", expiresAt: later },
+        { id: attachment, businessId, objectKey: `${businessId}/attachment/${attachment}/note.txt`, purpose: "attachment", fileName: "note.txt", contentType: "text/plain", contentLength: 3, status: "pending", expiresAt: later },
+        { id: expired, businessId, objectKey: `${businessId}/knowledge/${expired}/old.pdf`, purpose: "knowledge", fileName: "old.pdf", contentType: "application/pdf", contentLength: 4, checksum: "c3VtCg==", status: "pending", expiresAt: new Date(Date.now() - 60_000) },
+        { id: ready, businessId, objectKey: `${businessId}/knowledge/${ready}/done.pdf`, purpose: "knowledge", fileName: "done.pdf", contentType: "application/pdf", contentLength: 4, checksum: "c3VtCg==", status: "ready" },
+      ]);
+      await tx.execute(sql`set local role lobbystack_app`);
+      const context = { db: tx as unknown as Database };
+
+      expect(await pendingUploadTarget(context, { userId: owner, businessId, objectId: knowledge })).toEqual({ key: `${businessId}/knowledge/${knowledge}/doc.pdf`, contentType: "application/pdf", length: 4, checksum: "c3VtCg==" });
+      // A knowledge document needs an admin, as creating it did; other uploads any member.
+      await expect(pendingUploadTarget(context, { userId: viewer, businessId, objectId: knowledge })).rejects.toThrow();
+      expect(await pendingUploadTarget(context, { userId: viewer, businessId, objectId: attachment })).toEqual({ key: `${businessId}/attachment/${attachment}/note.txt`, contentType: "text/plain", length: 3 });
+      await expect(pendingUploadTarget(context, { userId: outsider, businessId, objectId: attachment })).rejects.toThrow();
+      // An expired or finished upload takes no more bytes.
+      expect(await pendingUploadTarget(context, { userId: owner, businessId, objectId: expired })).toBeNull();
+      expect(await pendingUploadTarget(context, { userId: owner, businessId, objectId: ready })).toBeNull();
     });
   });
 

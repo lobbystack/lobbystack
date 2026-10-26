@@ -1,7 +1,7 @@
 import { assertDatabaseRole, businesses, createDatabaseClient, databaseHealthCheck, enqueueOutbox, listReembedBusinesses, listSchedulerBusinesses, listSummaryBackfillBusinesses, withBusinessTransaction, withDispatcherTransaction } from "@lobbystack/db";
 import { createBusinessHoursExtractor, createBusinessSummarizer, createCallSummarizer } from "@lobbystack/agent-core";
 import { DEFAULT_EMAIL_FROM, assertProductionSecrets, isMaintenanceMode, partnerFeatureWarnings } from "@lobbystack/shared";
-import type { OnboardingFollowupSender } from "@lobbystack/domain";
+import { listenForBrandChanges, type OnboardingFollowupSender } from "@lobbystack/domain";
 import { createQueue, createRedisConnection, createWorkerOptions, enqueueJob, isKnownJobType, jobQueues, type JobEnvelope, type JobQueue } from "@lobbystack/jobs";
 import { createEmbeddingProvider } from "@lobbystack/providers/ai/embeddingProvider";
 import { FirecrawlProvider } from "@lobbystack/providers/crawling/firecrawl";
@@ -140,6 +140,9 @@ async function main(): Promise<void> {
   const dispatcherDatabase = createDatabaseClient("lobbystack_dispatcher");
   await Promise.all([assertDatabaseRole(database), assertDatabaseRole(dispatcherDatabase)]);
   const realtime = createRedisConnection({ prefix: process.env.REDIS_PREFIX ?? "lobbystack" });
+  // A partner's saved brand reaches emails at once rather than when the brand cache runs out.
+  const brandChanges = createRedisConnection({ prefix: process.env.REDIS_PREFIX ?? "lobbystack" });
+  listenForBrandChanges(brandChanges).catch((error: unknown) => console.warn(JSON.stringify({ event: "brand_changes.listen_failed", message: redactOtelExceptionText(error instanceof Error ? error.message : String(error)) })));
   const queues = new Map<JobQueue, ReturnType<typeof createQueue>>();
   for (const queueName of jobQueues) {
     const queue = createQueue(queueName);
@@ -332,7 +335,7 @@ async function main(): Promise<void> {
     // drain timeout. Both still need Redis, the database pools and the HTTP
     // server (for /internal/live/end), so those close after.
     await Promise.allSettled([liveCalls.drain(liveDrainTimeoutMs()), dispatchLoop, ...workers.map((worker) => worker.close())]);
-    await Promise.allSettled([...[...queues.values()].map((queue) => queue.close()), realtime.quit(), database.pool.end(), dispatcherDatabase.pool.end(), new Promise<void>((resolve) => health.close(() => resolve())), shutdownTelemetry()]);
+    await Promise.allSettled([...[...queues.values()].map((queue) => queue.close()), realtime.quit(), brandChanges.quit(), database.pool.end(), dispatcherDatabase.pool.end(), new Promise<void>((resolve) => health.close(() => resolve())), shutdownTelemetry()]);
   };
   process.once("SIGINT", () => void shutdown().finally(() => process.exit(0)));
   process.once("SIGTERM", () => void shutdown().finally(() => process.exit(0)));

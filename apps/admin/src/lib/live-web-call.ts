@@ -7,9 +7,9 @@ import { bearerToken } from "@lobbystack/domain";
 import { DASHBOARD_TEST_CALL_WIDGET_ID, PROSPECT_DEMO_WIDGET_ID } from "@lobbystack/shared";
 
 import { getWorkerDatabase } from "./api-helpers";
-import { configuredAppOrigins } from "./app-origins";
 import { requireOperator } from "./operator-request";
 import { resolveWebVoiceAccess } from "./prospect-demo";
+import { trustedRequestOrigins } from "./request-brand";
 import { isAllowedWidgetOrigin, normalizeOrigin, verifyWidgetSessionToken } from "./widget-keys";
 
 function endTokenSecret(): string {
@@ -82,10 +82,11 @@ export function publicCallCorsHeaders(origin: string | null): Record<string, str
  * token), and the landing site's public demo business (an allowed origin).
  */
 export async function resolveLiveWebCallAccess(request: Request, body: LiveWebCallRequest): Promise<LiveWebCallAccess | LiveWebCallDenied> {
-  // The dashboard's own origins, from configuration. Behind a proxy the request
-  // URL can carry an internal host, and an origin derived from the request would
-  // also let a DNS-rebinding page pass, so only configured origins count.
-  const trusted = configuredAppOrigins();
+  // The dashboard's own origins: the configured ones on the host's domain, or
+  // a partner's host once the proxy resolved it. Behind a proxy the request
+  // URL can carry an internal host, and an origin derived from the request
+  // would also let a DNS-rebinding page pass, so neither counts.
+  const trusted = trustedRequestOrigins(request.headers);
   const appOrigin = trusted[0] ?? new URL(request.url).origin;
 
   if (body.widgetId === DASHBOARD_TEST_CALL_WIDGET_ID) {

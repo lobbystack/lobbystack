@@ -7,6 +7,7 @@
   },
   "nav": {
     "businesses": "Entreprises",
+    "branding": "Image de marque et domaine",
     "team": "Équipe"
   },
   "roles": {
@@ -69,6 +70,60 @@
       "removeFailed": "Impossible de retirer cette personne. Réessayez.",
       "revokeFailed": "Impossible d'annuler cette invitation. Réessayez.",
       "finalOwner": "Votre partenaire doit garder au moins un propriétaire."
+    }
+  },
+  "branding": {
+    "title": "Image de marque et domaine",
+    "description": "Ce que vos entreprises voient à l'adresse de votre tableau de bord, dans l'onglet du navigateur et dans vos courriels.",
+    "loadFailed": "Impossible de charger votre image de marque. Actualisez la page pour réessayer.",
+    "membersCantEdit": "Seuls les propriétaires et les administrateurs peuvent modifier l'image de marque.",
+    "domain": {
+      "title": "Adresse du tableau de bord",
+      "open": "Ouvrir",
+      "none": "Vous n'avez pas encore d'adresse à vous. Demandez à {{appName}} d'en configurer une."
+    },
+    "brand": {
+      "title": "Marque"
+    },
+    "nameLabel": "Nom",
+    "nameHelp": "Vos entreprises le voient dans l'onglet du navigateur, au-dessus de la connexion et comme expéditeur de vos courriels.",
+    "logoLabel": "Logo",
+    "logoHelp": "Affiché au-dessus de la connexion et dans vos courriels. PNG, JPEG, WebP ou SVG, jusqu'à 256 Ko.",
+    "faviconLabel": "Favicon",
+    "faviconHelp": "L'icône de l'onglet du navigateur. Sans favicon, l'onglet affiche votre logo.",
+    "imageChoose": "Choisir une image",
+    "imageChange": "Changer l'image",
+    "logoRemove": "Retirer le logo",
+    "faviconRemove": "Retirer le favicon",
+    "colorLabel": "Couleur de la marque",
+    "colorPick": "Choisir la couleur de la marque",
+    "colorHelp": "Un code hexadécimal, comme #0f766e.",
+    "links": {
+      "title": "Liens",
+      "description": "Votre page de connexion et votre tableau de bord pointent vers ces liens. Laissez un champ vide pour masquer son lien.",
+      "termsUrl": "Conditions d'utilisation",
+      "termsUrlPlaceholder": "https://entreprise.com/conditions",
+      "privacyUrl": "Politique de confidentialité",
+      "privacyUrlPlaceholder": "https://entreprise.com/confidentialite",
+      "supportUrl": "Page d'assistance",
+      "supportUrlPlaceholder": "https://entreprise.com/assistance",
+      "supportEmail": "Courriel d'assistance",
+      "supportEmailPlaceholder": "assistance@entreprise.com",
+      "supportEmailHelp": "Les réponses à vos courriels arrivent à cette adresse. Sans page d'assistance, votre lien d'assistance ouvre cette adresse."
+    },
+    "preview": "Aperçu",
+    "save": "Enregistrer la marque",
+    "saving": "Enregistrement…",
+    "saved": "Marque enregistrée.",
+    "errors": {
+      "failed": "Impossible d'enregistrer votre marque. Réessayez.",
+      "name": "Entrez un nom de 80 caractères au maximum.",
+      "color": "Entrez la couleur sous forme de code hexadécimal, comme #0f766e.",
+      "link": "Entrez chaque lien sous forme d'adresse web complète commençant par https://.",
+      "supportEmail": "Entrez une seule adresse courriel valide.",
+      "imageType": "Téléversez une image PNG, JPEG, WebP ou SVG.",
+      "imageSize": "Téléversez une image de 256 Ko ou moins.",
+      "forbidden": "Seuls les propriétaires et les administrateurs peuvent modifier l'image de marque."
     }
   },
   "signup": {

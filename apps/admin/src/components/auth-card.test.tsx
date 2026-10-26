@@ -2,7 +2,10 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { i18n as I18nextInstance } from "i18next";
+import type { PartnerBranding } from "@/lib/branding-snapshot";
 import { AuthCard } from "./auth-card";
+import { BrandingProvider } from "./branding-provider";
 const analytics = vi.hoisted(() => ({ record: vi.fn() }));
 const navigation = vi.hoisted(() => ({ replace: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => navigation }));
@@ -224,5 +227,37 @@ describe("Continue with Google", () => {
     await userEvent.click(screen.getByRole("button", { name: "google.continue" }));
     expect(await screen.findByText("errors.googleFailed")).toBeTruthy();
     expect((screen.getByRole("button", { name: "google.continue" }) as HTMLButtonElement).disabled).toBe(false);
+  });
+});
+
+describe("the sign-up agreement line", () => {
+  // react-i18next is mocked above, so the provider gets an instance with no interpolation to set.
+  const onPartnerHost = (links: PartnerBranding["links"]) => render(
+    <BrandingProvider i18n={{ options: {} } as unknown as I18nextInstance} initial={{ appName: "Bright Desk", logoUrl: null, final: true, partner: { faviconUrl: null, color: null, links } }}>
+      <AuthCard mode="signup" />
+    </BrandingProvider>,
+  );
+
+  it("links to a partner's own terms and privacy on its host", () => {
+    onPartnerHost({ terms: "https://bright.example.test/terms", privacy: "https://bright.example.test/privacy", support: null });
+    expect(screen.getByText("signup.legal.prefix", { exact: false })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "signup.legal.terms" }).getAttribute("href")).toBe("https://bright.example.test/terms");
+    expect(screen.getByRole("link", { name: "signup.legal.privacy" }).getAttribute("href")).toBe("https://bright.example.test/privacy");
+  });
+
+  it.each([
+    ["terms", { terms: null, privacy: "https://bright.example.test/privacy", support: null }],
+    ["privacy", { terms: "https://bright.example.test/terms", privacy: null, support: null }],
+  ] as const)("leaves the line out when a partner set no %s link", (_missing, links) => {
+    onPartnerHost(links);
+    expect(screen.queryByText("signup.legal.prefix", { exact: false })).toBeNull();
+    expect(screen.queryByRole("link", { name: "signup.legal.terms" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "signup.legal.privacy" })).toBeNull();
+  });
+
+  it("keeps the host's terms and privacy on the host's domain", () => {
+    render(<AuthCard mode="signup" />);
+    expect(screen.getByRole("link", { name: "signup.legal.terms" }).getAttribute("href")).toMatch(/^https:\/\/lobbystack\.com\/(en\/)?terms\/$/);
+    expect(screen.getByRole("link", { name: "signup.legal.privacy" }).getAttribute("href")).toMatch(/^https:\/\/lobbystack\.com\/(en\/)?privacy\/$/);
   });
 });

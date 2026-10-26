@@ -1249,6 +1249,12 @@
       "comparison": "port-baseline"
     },
     {
+      "path": "/partner/[partnerId]/branding",
+      "state": "default",
+      "fixtureState": "operator",
+      "comparison": "port-baseline"
+    },
+    {
       "path": "/partner/[partnerId]/team",
       "state": "default",
       "fixtureState": "operator",

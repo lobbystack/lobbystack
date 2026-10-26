@@ -53,6 +53,31 @@ export async function insertPendingUploadInTransaction(tx: DatabaseTransaction, 
   await tx.insert(storageObjects).values({ id: input.objectId, businessId: input.businessId, objectKey: input.key, purpose: input.purpose, fileName: input.fileName, contentType: input.contentType, contentLength: input.length, checksum: input.checksum, status: "pending", expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) });
 }
 
+/**
+ * The pending upload a route sends a browser's file on to storage for, when
+ * the browser can't reach storage itself: a partner's host can't, since the
+ * bucket accepts browser uploads from the host's origins only. It takes the
+ * access creating the upload took, and returns null when the upload isn't
+ * pending or has expired.
+ */
+export async function pendingUploadTarget(
+  context: DomainContext,
+  input: { userId: string; businessId: string; objectId: string },
+): Promise<{ key: string; contentType: string; length: number; checksum?: string } | null> {
+  return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
+    await requireBusinessMembership(tx, input);
+    const row = (await tx.select().from(storageObjects).where(and(
+      eq(storageObjects.id, input.objectId),
+      eq(storageObjects.businessId, input.businessId),
+      eq(storageObjects.status, "pending"),
+      or(isNull(storageObjects.expiresAt), gte(storageObjects.expiresAt, new Date())),
+    )).limit(1))[0];
+    if (!row || row.contentLength === null) return null;
+    if (row.purpose === "knowledge") await requireBusinessAdmin(tx, input);
+    return { key: row.objectKey, contentType: row.contentType, length: row.contentLength, ...(row.checksum ? { checksum: row.checksum } : {}) };
+  });
+}
+
 export async function finalizeUpload(
   context: DomainContext,
   input: { userId: string; businessId: string; objectId: string; length: number; contentType: string; title?: string | undefined; tags?: string[] | undefined; checksum?: string | undefined },

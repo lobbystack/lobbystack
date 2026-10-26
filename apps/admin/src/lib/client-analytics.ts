@@ -8,12 +8,14 @@ const projectToken = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
 const apiHost = process.env.NEXT_PUBLIC_POSTHOG_HOST?.trim() || DEFAULT_POSTHOG_HOST;
 
 /**
- * Starts PostHog in the browser, once. `ProductAnalytics` calls this as it
- * loads, before any page renders. The website widget never loads either, so a
- * visitor on a business's site doesn't download PostHog. PostHog starts opted
- * out and capture is only enabled for an operator whose workspace has
- * telemetry on, so nothing is collected before that decision is made. Consent,
- * session recording, and identity are controlled by `ProductAnalytics`.
+ * Starts PostHog in the browser, once. `ProductAnalytics` calls this on the
+ * host's pages, before the page below it renders, and never on a partner's, so
+ * a partner's visitors never reach the host's analytics domain. The website
+ * widget loads neither, so a visitor on a business's site doesn't download
+ * PostHog. PostHog starts opted out and capture is only enabled for an
+ * operator whose workspace has telemetry on, so nothing is collected before
+ * that decision is made. Consent, session recording, and identity are
+ * controlled by `ProductAnalytics`.
  */
 export function initializeClientAnalytics(): void {
   if (typeof window === "undefined" || !projectToken) return;

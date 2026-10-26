@@ -49,7 +49,7 @@ Configure `FIRECRAWL_API_KEY` en el servicio `worker`. Sin ella, la importación
 
 En Google Cloud, active la API de Google Calendar y cree un cliente OAuth para una aplicación web. Agregue `https://su_dominio_de_administracion/api/calendar/google/callback` como URI de redireccionamiento autorizado. Configure `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` en el servicio `admin`. La plantilla completa `GOOGLE_REDIRECT_URI`, y el worker lee los tres valores del servicio de administración.
 
-Con ambos valores configurados, las páginas de inicio de sesión y de registro también ofrecen **Continuar con Google**. Agregue `https://su_dominio_de_administracion/api/auth/callback/google` al mismo cliente OAuth como segundo URI de redireccionamiento autorizado.
+Con ambos valores configurados, las páginas de inicio de sesión y de registro también ofrecen **Continuar con Google**. Agregue `https://su_dominio_de_administracion/api/auth/callback/google` al mismo cliente OAuth como segundo URI de redireccionamiento autorizado. Los subdominios de sus socios no lo ofrecen: allí las personas inician sesión con correo y contraseña.
 
 #### Use un dominio personalizado
 
@@ -59,6 +59,8 @@ Agregue el dominio al servicio `admin` y luego configure `APP_BASE_URL` en el se
 - `APP_BASE_URL`, `TWILIO_STATUS_CALLBACK_URL` y `GOOGLE_REDIRECT_URI` en el servicio `worker`
 
 Una implementación creada con una versión anterior de la plantilla tiene el dominio de Railway escrito en cada una de estas variables, así que modifíquelas todas. Después, apunte el webhook de OpenAI y los dos URI de redireccionamiento de Google al nuevo dominio. Los números de teléfono que aprovisionó antes del cambio conservan en Twilio sus URL anteriores de SMS y de devolución de llamada de estado hasta que las actualice allí.
+
+El panel solo responde en el nombre de host de `APP_BASE_URL`, los orígenes exactos de `AUTH_TRUSTED_ORIGINS` y los dominios de sus socios. Después del cambio, el dominio de Railway recibe un error 404. Para conservarlo, agregue su origen a `AUTH_TRUSTED_ORIGINS`. Un patrón como `https://*.example.com` no hace accesible ningún nombre de host, así que agregue cada nombre de host como un origen propio. Las comprobaciones de estado y los webhooks de los proveedores responden en cualquier nombre de host.
 
 ## Base oficial
 

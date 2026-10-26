@@ -162,4 +162,17 @@ describe("signedInRoute", () => {
   it("still answers a malformed businessId with 400", async () => {
     expect((await call(user, "", { method: "POST", body: JSON.stringify({ businessId: "abc" }) })).status).toBe(400);
   });
+
+  it("reads no more of the body than the route allows, whatever the request claims its length is", async () => {
+    const capped = signedInRoute(async (input) => { seen(input); return NextResponse.json({ ok: true }); }, { maxBodyBytes: 32 });
+    expect((await call(capped, "", { method: "POST", body: JSON.stringify({ name: "short" }) })).status).toBe(200);
+    const claimed = await call(capped, "", { method: "POST", body: JSON.stringify({ name: "x" }), headers: { "content-length": "4096" } });
+    expect(claimed.status).toBe(413);
+    // A streamed body carries no length, so the read stops at the limit instead.
+    const stream = new ReadableStream({ start(controller) { controller.enqueue(new TextEncoder().encode(JSON.stringify({ name: "x".repeat(64) }))); controller.close(); } });
+    const streamed = await call(capped, "", { method: "POST", body: stream, duplex: "half" } as RequestInit);
+    expect(streamed.status).toBe(413);
+    expect(await streamed.json()).toMatchObject({ code: "body_too_large" });
+    expect(seen).toHaveBeenCalledOnce();
+  });
 });

@@ -2,7 +2,8 @@
   "shell": {
     "signOut": "Odjavi se",
     "terms": "Uslovi",
-    "privacy": "Privatnost"
+    "privacy": "Privatnost",
+    "support": "Podrška"
   },
   "errors": {
     "tooManyBusinesses": "Već posedujete 10 radnih prostora, što je ograničenje za jedan nalog."

@@ -38,7 +38,7 @@ A partner signs up, puts its own brand on the product, and resells LobbyStack to
 6. As a partner admin, I want to manage businesses, packages, branding, domains, keys, and the team, so that I can run the partner account without needing the owner.
 7. As a partner member, I want to work inside my partner's businesses without seeing billing or Stripe settings, so that I can support clients without handling money.
 8. As a partner owner, I want only owners to manage Polar billing, the Stripe connection, and deleting the partner, so that the riskiest actions stay with me.
-9. As a partner member, I want to sign in once and use the console from my partner's domain or the host's domain, so that I can work from either address.
+9. As a partner member, I want to use the console from my partner's domain or the host's domain with the same account, so that I can work from either address.
 10. As a person who works for two partners, I want one account with one password, so that I don't manage separate logins per brand.
 
 ### Branding and domains

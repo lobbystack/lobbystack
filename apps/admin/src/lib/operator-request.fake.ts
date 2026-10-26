@@ -2,8 +2,8 @@ import type { AuthzRole } from "@lobbystack/contracts";
 import type { DatabaseTransaction } from "@lobbystack/db";
 import type { DomainContext } from "@lobbystack/domain";
 
-import { asApiResponse } from "./api-helpers";
-import type { OperatorRequest, SignedInRequest } from "./operator-request";
+import { asApiResponse, jsonError } from "./api-helpers";
+import type { OperatorRequest, RouteOptions, SignedInRequest } from "./operator-request";
 
 // Stands in for ./operator-request in route tests, so a test drives a route's
 // own logic without a session or a database:
@@ -33,8 +33,9 @@ export function resetFakeOperator(): void {
   Object.assign(fakeOperator, defaults());
 }
 
-async function operator(request: Request): Promise<OperatorRequest> {
+async function operator(request: Request, options: RouteOptions = {}): Promise<OperatorRequest> {
   const text = await request.text();
+  if (options.maxBodyBytes !== undefined && Buffer.byteLength(text) > options.maxBodyBytes) throw jsonError("The request body is too large.", 413, "body_too_large");
   const { userId, businessId, domain, email, emailVerified } = fakeOperator;
   return {
     request,
@@ -61,8 +62,8 @@ function route<Input, Params>(resolve: (request: Request) => Promise<Input>, han
   };
 }
 
-export function signedInRoute<Params = object>(handler: (user: SignedInRequest, params: Params) => Promise<Response>) {
-  return route(operator, handler);
+export function signedInRoute<Params = object>(handler: (user: SignedInRequest, params: Params) => Promise<Response>, options: RouteOptions = {}) {
+  return route((request) => operator(request, options), handler);
 }
 
 export function operatorRoute<Params = object>(handler: (operator: OperatorRequest, params: Params) => Promise<Response>) {

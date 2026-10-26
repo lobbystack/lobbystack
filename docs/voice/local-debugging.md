@@ -217,7 +217,7 @@ TWILIO_STATUS_CALLBACK_URL=https://your-dev-domain.ngrok-free.app/api/webhooks/t
 - Keep `APP_BASE_URL` on localhost, so sign-in, links and recordings keep working there.
 - Leave `TWILIO_SIP_TRUNK_SID` empty. The worker then refuses to provision numbers, so claiming a number in the local dashboard can't buy one on the shared account. A number bought locally would also get a localhost SMS URL, because the worker builds it from `APP_BASE_URL`. The only other effect is that local calls skip the Twilio price lookup.
 - Run `pnpm dev` from the repo root. `pnpm dev:worker` on its own doesn't load the env files.
-- `ALLOWED_DEV_ORIGINS` only matters if you open the dashboard through the tunnel, which also means dropping the traffic policy. It takes the hostname alone, without `https://`. Webhooks don't need it, because Next.js only guards its own `/_next` dev resources.
+- `ALLOWED_DEV_ORIGINS` only matters if you open the dashboard through the tunnel, which also means dropping the traffic policy. It takes the hostname alone, without `https://`. Without it, the dashboard answers the tunnel's hostname with a 404. Webhooks don't need it, because the admin takes `/api/webhooks/*` on any hostname.
 
 ### Attach the number to a local business
 

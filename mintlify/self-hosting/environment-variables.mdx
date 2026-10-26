@@ -95,7 +95,7 @@ Partners resell your deployment to the businesses they serve, under their own br
 | Variable | Purpose |
 | --- | --- |
 | `PARTNER_SIGNUP` | Who can sign up as a partner at `/partner/signup`: `open` lets anyone signed in, and `invite` needs a signup link. `pnpm partner-invite:create --email owner@acme.example` writes a link that works once, for that verified email, for 7 days. Defaults to `invite` when `DEPLOYMENT_MODE` is `cloud`, and to `open` otherwise. |
-| `PARTNER_BASE_DOMAIN` | The domain your partners get subdomains of, such as `receptionistportal.com`. Signup reserves one for each new partner, such as `acme.receptionistportal.com`. A partner's own emails, such as invitations to its team, go out under its name from `no-reply@` that domain, so your email provider must accept that sender. Without it, they go out from the address in `EMAIL_FROM`. |
+| `PARTNER_BASE_DOMAIN` | The domain your partners get subdomains of, such as `receptionistportal.com`. Signup reserves one for each new partner, such as `acme.receptionistportal.com`, and the admin reserves one when it starts for each partner that signed up before you set it. People sign up and sign in on those subdomains under the partner's brand, with email and password. A partner's own emails, such as invitations to its team, go out under its name from `no-reply@` that domain, so your email provider must accept that sender. Without this variable, a partner's emails go out from the address in `EMAIL_FROM`. Replies go to the support email the partner sets on its **Branding & domain** page. |
 
 ## Observability
 

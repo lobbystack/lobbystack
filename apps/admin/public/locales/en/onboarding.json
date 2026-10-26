@@ -2,7 +2,8 @@
   "shell": {
     "signOut": "Sign out",
     "terms": "Terms",
-    "privacy": "Privacy"
+    "privacy": "Privacy",
+    "support": "Support"
   },
   "errors": {
     "tooManyBusinesses": "You already own 10 workspaces, the limit for one account."

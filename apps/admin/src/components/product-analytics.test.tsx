@@ -6,6 +6,10 @@ import { consumeAuthSuccess, recordAuthSuccess } from "@/lib/auth-success-analyt
 import { consumePendingOnboardingBusiness, recordPendingOnboardingBusiness } from "@/lib/onboarding-analytics";
 import { consumePendingWorkspaceSwitch, recordPendingWorkspaceSwitch } from "@/lib/workspace-analytics";
 import type { BrowserTelemetry } from "@lobbystack/telemetry/browser";
+import { createI18nInstance } from "@/i18n";
+import { initializeClientAnalytics } from "@/lib/client-analytics";
+import type { BrandingSnapshot } from "@/lib/branding-snapshot";
+import { BrandingProvider } from "./branding-provider";
 import { isSensitiveAnalyticsRoute, ProductAnalytics, useTelemetry } from "./product-analytics";
 
 const mocks = vi.hoisted(() => ({
@@ -28,6 +32,8 @@ const mocks = vi.hoisted(() => ({
 vi.mock("next/navigation", () => ({ usePathname: () => mocks.pathname }));
 vi.mock("posthog-js", () => ({ default: mocks.posthog }));
 vi.mock("@/lib/session-recorder", () => { mocks.recorderLoaded(); return {}; });
+// client-analytics.test.ts covers what starting PostHog does.
+vi.mock("@/lib/client-analytics", () => ({ initializeClientAnalytics: vi.fn() }));
 
 const clients: QueryClient[] = [];
 beforeEach(() => {
@@ -314,3 +320,39 @@ describe("queued analytics age", () => {
     expect(window.sessionStorage.length).toBe(0);
   });
 });
+
+describe("a partner's pages", () => {
+  const partnerPage: BrandingSnapshot = { appName: "Bright Desk", logoUrl: null, final: true, partner: { faviconUrl: null, color: null, links: { terms: null, privacy: null, support: null } } };
+
+  function renderUnder(branding: BrandingSnapshot) {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    clients.push(client);
+    const fetchMock = vi.fn(() => new Promise<Response>(() => {}));
+    vi.stubGlobal("fetch", fetchMock);
+    let telemetry: BrowserTelemetry | undefined;
+    function Probe() {
+      telemetry = useTelemetry();
+      return null;
+    }
+    const i18n = createI18nInstance({ locale: "en", appName: branding.appName, resources: {} });
+    render(<QueryClientProvider client={client}><BrandingProvider i18n={i18n} initial={branding}><ProductAnalytics><Probe /></ProductAnalytics></BrandingProvider></QueryClientProvider>);
+    return { fetchMock, telemetry: () => telemetry! };
+  }
+
+  it("never start PostHog or ask who is signed in, so visitors never reach the host's analytics domain", async () => {
+    const { fetchMock, telemetry } = renderUnder(partnerPage);
+    telemetry().track("web.page.calls_viewed", { businessId: "business", pathname: "/calls" });
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+    expect(initializeClientAnalytics).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(mocks.posthog.capture).not.toHaveBeenCalled();
+    expect(mocks.posthog.opt_out_capturing).not.toHaveBeenCalled();
+  });
+
+  it("leave the host's own pages starting it as before", async () => {
+    const { fetchMock } = renderUnder({ appName: "LobbyStack", logoUrl: null, final: true });
+    expect(initializeClientAnalytics).toHaveBeenCalled();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/auth/get-session", expect.anything()));
+  });
+});
+

@@ -4,11 +4,12 @@ import { eq, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createDatabaseClient, outboxMessages, partnerDomains, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
-import { brandForEmail, forgetCachedBrands } from "./brands";
+import { brandForEmail, brandLogo, forgetCachedBrands, resolveHostBrand, type BrandChange } from "./brands";
 import {
   acceptPartnerInvitation,
   changePartnerMemberRole,
   createPartnerSignupInvitation,
+  getPartnerBrandSettings,
   hashPartnerToken,
   invitePartnerMember,
   listPartnerTeam,
@@ -16,9 +17,13 @@ import {
   previewPartnerInvitation,
   previewPartnerSignupInvitation,
   removePartnerMember,
+  reserveMissingPartnerSubdomains,
+  reservePartnerSubdomain,
   resolvePartnerActor,
   revokePartnerInvitation,
+  savePartnerBrand,
   signUpPartner,
+  type PartnerBrandInput,
   type PartnerMemberActor,
 } from "./partners";
 
@@ -407,6 +412,158 @@ describe.skipIf(!client)("partner emails", () => {
       vi.stubEnv("PARTNER_BASE_DOMAIN", "portal.example.test");
       expect((await brandForEmail(context, { kind: "partner", partnerId })).email).toEqual({ fromName: partnerName, fromAddress: "no-reply@portal.example.test", replyTo: null });
       await expect(brandForEmail(context, { kind: "partner", partnerId: randomUUID() })).rejects.toThrow("was not found");
+    });
+  });
+});
+
+const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3, 4]);
+const svg = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1 1"><rect width="1" height="1"/></svg>');
+const unsafeSvg = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>');
+
+const brandInput: PartnerBrandInput = {
+  name: "  Bright   Desk ",
+  color: "#0F766E",
+  termsUrl: "https://bright.example.test/terms",
+  privacyUrl: "https://bright.example.test/privacy",
+  supportUrl: "",
+  supportEmail: " help@bright.example.test ",
+  logo: png,
+  favicon: svg,
+};
+
+describe.skipIf(!client)("partner brand", () => {
+  it("lets owners and admins save the name, images, color and links, which the partner's domain and emails show at once", async () => {
+    vi.stubEnv("PARTNER_BASE_DOMAIN", "portal.example.test");
+    await rollbackTest(async (tx) => {
+      const { context, partnerId, ownerActor, actors: [admin] } = await partnerWithTeam(tx, ["admin"]);
+      const subdomain = (await listUserPartners(context, ownerActor.userId))[0]!.subdomain!;
+      // The partner's domain shows the brand it had, which this process keeps cached until the save.
+      expect(await resolveHostBrand(context, subdomain)).toMatchObject({ kind: "partner", logoUrl: null, color: null });
+      const announced: BrandChange[] = [];
+      const saved = await savePartnerBrand({ ...context, brandChanges: { publish: async (change) => { announced.push(change); } } }, admin!, brandInput);
+      expect(saved).toEqual({
+        role: "admin",
+        name: "Bright Desk",
+        subdomain,
+        subdomainUrl: `https://${subdomain}`,
+        logoUrl: expect.stringMatching(new RegExp(`^/api/branding/logo\\?partner=${partnerId}&v=[0-9a-f]{64}$`)),
+        faviconUrl: expect.stringMatching(new RegExp(`^/api/branding/logo\\?partner=${partnerId}&image=favicon&v=[0-9a-f]{64}$`)),
+        color: "#0f766e",
+        termsUrl: "https://bright.example.test/terms",
+        privacyUrl: "https://bright.example.test/privacy",
+        supportUrl: null,
+        supportEmail: "help@bright.example.test",
+      });
+      // Every other process hears of it, and this one shows it without waiting for its cache.
+      expect(announced).toEqual([{ kind: "partner", partnerId }]);
+      expect(await resolveHostBrand(context, subdomain)).toMatchObject({ name: "Bright Desk", logoUrl: saved.logoUrl, faviconUrl: saved.faviconUrl, color: "#0f766e", links: { terms: "https://bright.example.test/terms", support: "mailto:help@bright.example.test" } });
+      expect((await brandForEmail(context, { kind: "partner", partnerId })).email).toEqual({ fromName: "Bright Desk", fromAddress: "no-reply@portal.example.test", replyTo: "help@bright.example.test" });
+      expect(new Uint8Array((await brandLogo(context, { kind: "partner", partnerId }))!.bytes)).toEqual(png);
+      expect(await brandLogo(context, { kind: "partner", partnerId }, "favicon")).toMatchObject({ contentType: "image/svg+xml" });
+      expect(await getPartnerBrandSettings(context, ownerActor)).toEqual({ ...saved, role: "owner" });
+
+      // The owner can save too. Images left out stay; images sent as null go.
+      const { logo: _left, ...withoutLogo } = brandInput;
+      const kept = await savePartnerBrand(context, ownerActor, { ...withoutLogo, name: "Bright Desk Co", color: null, supportUrl: "https://help.bright.example.test", favicon: null });
+      expect(kept).toMatchObject({ name: "Bright Desk Co", color: null, logoUrl: saved.logoUrl, faviconUrl: null, supportUrl: "https://help.bright.example.test/" });
+      expect(await brandLogo(context, { kind: "partner", partnerId }, "favicon")).toBeNull();
+      expect((await resolveHostBrand(context, subdomain))?.links.support).toBe("https://help.bright.example.test/");
+    });
+  });
+
+  it("shows members the brand but never lets them or a platform key change it, even with their own SQL", async () => {
+    await rollbackTest(async (tx) => {
+      const { context, partnerId, ownerActor, actors: [member] } = await partnerWithTeam(tx, ["member"]);
+      expect(await getPartnerBrandSettings(context, member!)).toMatchObject({ role: "member", name: expect.stringMatching(/^Partner /), subdomain: null, subdomainUrl: null, logoUrl: null });
+      // The role it was resolved with doesn't matter: the database's does.
+      await expect(savePartnerBrand(context, { ...member!, role: "admin" }, brandInput)).rejects.toMatchObject({ status: 403 });
+      await expect(savePartnerBrand(context, { kind: "key", partnerId, platformKeyId: randomUUID() }, brandInput)).rejects.toMatchObject({ status: 403 });
+      await expect(getPartnerBrandSettings(context, { kind: "key", partnerId, platformKeyId: randomUUID() })).rejects.toMatchObject({ status: 403 });
+      const direct = await withBusinessTransaction(context.db, { userId: member!.userId, actorType: "operator" }, async (inner) => await inner.execute(sql`update public.partners set name = 'Taken Over', brand_color = '#000000' where id = ${partnerId}::uuid returning id`));
+      expect(direct.rows).toEqual([]);
+      // Not even an owner can change the slug, and so the subdomain, through SQL.
+      const asOwner = await withBusinessTransaction(context.db, { userId: ownerActor.userId, actorType: "operator" }, async (inner) => await inner.execute(sql`update public.partners set slug = 'taken-over' where id = ${partnerId}::uuid`)).then(() => null, (error: { cause?: { code?: string } }) => error.cause?.code);
+      expect(asOwner).toBe("42501");
+      expect((await getPartnerBrandSettings(context, ownerActor)).name).toMatch(/^Partner /);
+    });
+  });
+
+  it("refuses a name, color, link, address or image it can't use", async () => {
+    await rollbackTest(async (tx) => {
+      const { context, ownerActor } = await partnerWithTeam(tx, []);
+      const refused = async (change: Partial<PartnerBrandInput>) => await savePartnerBrand(context, ownerActor, { ...brandInput, ...change }).then(() => null, (error: { status?: number; code?: string }) => [error.status, error.code]);
+      expect(await refused({ name: " " })).toEqual([400, "invalid_name"]);
+      expect(await refused({ name: "x".repeat(81) })).toEqual([400, "invalid_name"]);
+      expect(await refused({ name: "Bright\u202EDesk" })).toEqual([400, "invalid_name"]);
+      expect(await refused({ color: "teal" })).toEqual([400, "invalid_color"]);
+      expect(await refused({ termsUrl: "javascript:alert(1)" })).toEqual([400, "invalid_terms_url"]);
+      expect(await refused({ privacyUrl: "ftp://bright.example.test/privacy" })).toEqual([400, "invalid_privacy_url"]);
+      expect(await refused({ supportUrl: `https://bright.example.test/${"a".repeat(2048)}` })).toEqual([400, "invalid_support_url"]);
+      expect(await refused({ supportEmail: "help@bright, other@example.test" })).toEqual([400, "invalid_support_email"]);
+      expect(await refused({ logo: new TextEncoder().encode("not an image") })).toEqual([400, "invalid_logo"]);
+      expect(await refused({ favicon: unsafeSvg })).toEqual([400, "invalid_favicon"]);
+      expect(await refused({ logo: new Uint8Array(256 * 1024 + 1) })).toEqual([413, "logo_too_large"]);
+      // A short color and empty fields are fine.
+      expect(await savePartnerBrand(context, ownerActor, { ...brandInput, color: "#ABC", termsUrl: null, privacyUrl: " ", supportEmail: null })).toMatchObject({ color: "#aabbcc", termsUrl: null, privacyUrl: null, supportEmail: null });
+    });
+  });
+});
+
+describe.skipIf(!client)("partner subdomains", () => {
+  it("reserves the subdomain of a partner that signed up before the base domain was set, once the Branding page opens", async () => {
+    await rollbackTest(async (tx) => {
+      const { context, partnerId, ownerActor } = await partnerWithTeam(tx, []);
+      const slug = (await listUserPartners(context, ownerActor.userId))[0]!.slug;
+      expect((await getPartnerBrandSettings(context, ownerActor)).subdomain).toBeNull();
+      vi.stubEnv("PARTNER_BASE_DOMAIN", "portal.example.test");
+      // A visit before the reservation is cached as a miss; the reservation announces the change.
+      expect(await resolveHostBrand(context, `${slug}.portal.example.test`)).toBeNull();
+      const announced: BrandChange[] = [];
+      const settings = await getPartnerBrandSettings({ ...context, brandChanges: { publish: async (change) => { announced.push(change); } } }, ownerActor);
+      expect(settings).toMatchObject({ subdomain: `${slug}.portal.example.test`, subdomainUrl: `https://${slug}.portal.example.test` });
+      expect(announced).toEqual([{ kind: "partner", partnerId }]);
+      expect(await resolveHostBrand(context, `${slug}.portal.example.test`)).toMatchObject({ kind: "partner", partnerId });
+      expect((await listUserPartners(context, ownerActor.userId))[0]!.subdomain).toBe(`${slug}.portal.example.test`);
+      // Reserving again changes nothing.
+      expect(await reservePartnerSubdomain(context, partnerId)).toBe(`${slug}.portal.example.test`);
+    });
+  });
+
+  it("reserves every missing subdomain at startup, skipping the host's own hostnames and taken ones", async () => {
+    await rollbackTest(async (tx) => {
+      const people3 = await people(tx, 3);
+      const context = { db: tx as unknown as Database };
+      const free = await signUp(context, people3[0]!, "Free Desk", { subdomain: `free-${randomUUID().slice(0, 6)}` });
+      const hostLabel = await signUp(context, people3[1]!, "Desk Label", { subdomain: `desk-${randomUUID().slice(0, 6)}` });
+      const taken = await signUp(context, people3[2]!, "Taken Desk", { subdomain: `taken-${randomUUID().slice(0, 6)}` });
+      vi.stubEnv("PARTNER_BASE_DOMAIN", "portal.example.test");
+      vi.stubEnv("MARKETING_HOSTS", `${hostLabel.slug}.portal.example.test`);
+      await asMigrator(tx, async () => { await tx.insert(partnerDomains).values({ partnerId: free.partnerId, hostname: `${taken.slug}.portal.example.test`, kind: "custom", verifiedAt: new Date() }); });
+      expect(await reserveMissingPartnerSubdomains(context)).toBeGreaterThanOrEqual(1);
+      expect(await reservePartnerSubdomain(context, free.partnerId)).toBe(`${free.slug}.portal.example.test`);
+      expect(await reservePartnerSubdomain(context, hostLabel.partnerId)).toBeNull();
+      expect(await reservePartnerSubdomain(context, taken.partnerId)).toBeNull();
+      expect(await reservePartnerSubdomain(context, randomUUID())).toBeNull();
+      expect(await resolveHostBrand(context, `${hostLabel.slug}.portal.example.test`)).toMatchObject({ kind: "host" });
+      vi.stubEnv("PARTNER_BASE_DOMAIN", "");
+      expect(await reserveMissingPartnerSubdomains(context)).toBe(0);
+    });
+  });
+
+  it("moves a subdomain left under an earlier partner base domain to the current one", async () => {
+    vi.stubEnv("PARTNER_BASE_DOMAIN", "old.example.test");
+    await rollbackTest(async (tx) => {
+      const { context, partnerId, ownerActor } = await partnerWithTeam(tx, []);
+      const slug = (await listUserPartners(context, ownerActor.userId))[0]!.slug;
+      vi.stubEnv("PARTNER_BASE_DOMAIN", "portal.example.test");
+      expect((await getPartnerBrandSettings(context, ownerActor)).subdomain).toBe(`${slug}.portal.example.test`);
+      expect(await resolveHostBrand(context, `${slug}.portal.example.test`)).toMatchObject({ kind: "partner", partnerId });
+      expect(await resolveHostBrand(context, `${slug}.old.example.test`)).toBeNull();
+      const rows = await asMigrator(tx, async () => await tx.select({ hostname: partnerDomains.hostname }).from(partnerDomains).where(eq(partnerDomains.partnerId, partnerId)));
+      expect(rows).toEqual([{ hostname: `${slug}.portal.example.test` }]);
+      // Only the system actor moves a domain row.
+      const moved = await withBusinessTransaction(context.db, { userId: ownerActor.userId, actorType: "operator" }, async (inner) => await inner.execute(sql`update public.partner_domains set hostname = 'stolen.portal.example.test' where partner_id = ${partnerId}::uuid returning id`));
+      expect(moved.rows).toEqual([]);
     });
   });
 });

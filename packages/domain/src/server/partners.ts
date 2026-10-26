@@ -1,11 +1,34 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 
-import { and, asc, eq, or, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, or, sql } from "drizzle-orm";
 
 import { enqueueOutbox, partnerDomains, partnerInvitations, partnerMembers, partners, partnerSignupInvitations, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { isPartnerRole, isPartnerSlug, normalizeAuthEmail, PARTNER_NAME_MAX_LENGTH, PARTNER_SLUG_MAX_LENGTH, partnerFeatures, partnerSlugFromName, type EmailBrandReference, type PartnerRole } from "@lobbystack/shared";
+import {
+  brandLogoContentType,
+  currentPartnerSubdomain,
+  hostDomainHostnames,
+  isPartnerRole,
+  isPartnerSlug,
+  MAX_BRAND_LOGO_BYTES,
+  normalizeAuthEmail,
+  normalizeBrandColor,
+  normalizeEmailAddress,
+  normalizePageUrl,
+  normalizePartnerName,
+  PARTNER_LINK_MAX_LENGTH,
+  PARTNER_NAME_MAX_LENGTH,
+  PARTNER_SLUG_MAX_LENGTH,
+  partnerBrandImageUrl,
+  partnerFeatures,
+  partnerOrigin,
+  partnerSlugFromName,
+  type BrandImage,
+  type EmailBrandReference,
+  type PartnerRole,
+} from "@lobbystack/shared";
 
 import { AuthorizationError } from "../authz";
+import { announceBrandChange } from "./brands";
 import type { DomainContext } from "./context";
 import { isSingleEmailAddress } from "./tenancy";
 
@@ -39,6 +62,7 @@ function failure(message: string, status: number, code: string): Error {
 }
 
 const subdomainTaken = () => failure("That subdomain is taken. Choose another.", 409, "subdomain_taken");
+const invalidName = () => failure(`Enter the partner's name, up to ${PARTNER_NAME_MAX_LENGTH} characters.`, 400, "invalid_name");
 const invitationInvalid = () => failure("This invitation link is invalid or expired.", 409, "invitation_invalid");
 const wrongAccount = () => failure("Sign in with the verified email address this invitation was sent to.", 403, "wrong_account");
 
@@ -69,17 +93,11 @@ export function partnerSignupInvitationUrl(token: string): string {
 /**
  * The labels the host's own hostnames take directly under the partner base
  * domain, such as app for app.example.com under example.com, so no partner's
- * subdomain lands on them.
+ * subdomain lands on them. The host's own domain always gets the host brand.
  */
 function hostLabelsUnder(baseDomain: string): Set<string> {
-  const hosts = (process.env.MARKETING_HOSTS ?? "").split(",").map((host) => host.trim().toLowerCase()).filter(Boolean);
-  try {
-    if (process.env.APP_BASE_URL) hosts.push(new URL(process.env.APP_BASE_URL).hostname.toLowerCase());
-  } catch {
-    // An APP_BASE_URL that isn't a URL names no hostname to keep.
-  }
   const suffix = `.${baseDomain}`;
-  return new Set(hosts.filter((host) => host.endsWith(suffix)).map((host) => host.slice(0, -suffix.length).split(".").at(-1)!));
+  return new Set([...hostDomainHostnames(process.env)].filter((host) => host.endsWith(suffix)).map((host) => host.slice(0, -suffix.length).split(".").at(-1)!));
 }
 
 /**
@@ -160,8 +178,8 @@ export async function signUpPartner(
   context: DomainContext,
   input: { userId: string; email: string | null | undefined; emailVerified: boolean | null | undefined; name: string; subdomain?: string | undefined; invitationTokenHash?: string | undefined },
 ): Promise<{ partnerId: string; slug: string; subdomain: string | null }> {
-  const name = input.name.trim().replace(/\s+/g, " ");
-  if (!name || name.length > PARTNER_NAME_MAX_LENGTH) throw failure(`Enter the partner's name, up to ${PARTNER_NAME_MAX_LENGTH} characters.`, 400, "invalid_name");
+  const name = normalizePartnerName(input.name);
+  if (!name) throw invalidName();
   const chosen = input.subdomain?.trim().toLowerCase() || undefined;
   if (chosen !== undefined && !isPartnerSlug(chosen)) throw failure("A subdomain has 3 to 40 lowercase letters, digits and hyphens, and can't be one the host keeps.", 400, "invalid_subdomain");
   const features = partnerFeatures(process.env);
@@ -169,7 +187,7 @@ export async function signUpPartner(
   const hostLabels = features.baseDomain ? hostLabelsUnder(features.baseDomain) : new Set<string>();
   if (chosen && hostLabels.has(chosen)) throw subdomainTaken();
 
-  return await withBusinessTransaction(context.db, { userId: input.userId, actorType: "system" }, async (tx) => {
+  const signedUp = await withBusinessTransaction(context.db, { userId: input.userId, actorType: "system" }, async (tx) => {
     let invitationId: string | undefined;
     if (features.signup === "invite") {
       const [invitation] = await tx.select().from(partnerSignupInvitations).where(eq(partnerSignupInvitations.tokenHash, input.invitationTokenHash!)).limit(1).for("update");
@@ -205,6 +223,9 @@ export async function signUpPartner(
     }
     return { partnerId, slug, subdomain };
   });
+  // A process may have cached the new subdomain as a hostname nobody has.
+  if (signedUp.subdomain) await announceBrandChange(context, { kind: "partner", partnerId: signedUp.partnerId });
+  return signedUp;
 }
 
 /** What the signup page says about the host's invitation in its link, or null when the link names none. */
@@ -365,4 +386,198 @@ export async function acceptPartnerInvitation(
     const role = joined?.role ?? (await tx.select({ role: partnerMembers.role }).from(partnerMembers).where(and(eq(partnerMembers.partnerId, invitation.partnerId), eq(partnerMembers.userId, input.userId))).limit(1))[0]!.role;
     return { partnerId: invitation.partnerId, role };
   });
+}
+
+/** A partner's brand as the console's Branding & domain page shows it. */
+export type PartnerBrandSettings = {
+  /** The actor's own role, read with the brand: only owners and admins can save it. */
+  role: PartnerRole;
+  name: string;
+  /** The partner's subdomain under the current partner base domain, such as acme.receptionistportal.com, or null for none. */
+  subdomain: string | null;
+  /** Where its dashboard lives on that subdomain, or null without one. */
+  subdomainUrl: string | null;
+  logoUrl: string | null;
+  faviconUrl: string | null;
+  color: string | null;
+  termsUrl: string | null;
+  privacyUrl: string | null;
+  supportUrl: string | null;
+  supportEmail: string | null;
+};
+
+/** What the Branding & domain page saves. An image left undefined stays as it is, and null removes it. */
+export type PartnerBrandInput = {
+  name: string;
+  color: string | null;
+  termsUrl: string | null;
+  privacyUrl: string | null;
+  supportUrl: string | null;
+  supportEmail: string | null;
+  logo?: Uint8Array | null;
+  favicon?: Uint8Array | null;
+};
+
+function brandActor(actor: PartnerActor): PartnerMemberActor {
+  if (actor.kind !== "member") throw new AuthorizationError("Platform keys can't change a partner's brand.");
+  return actor;
+}
+
+/** A link a partner's brand keeps: an http or https page of at most 2048 characters, or null for an empty field. */
+function brandLink(value: string | null, field: "terms" | "privacy" | "support"): string | null {
+  if (value === null || !value.trim()) return null;
+  const link = normalizePageUrl(value);
+  if (!link || link.length > PARTNER_LINK_MAX_LENGTH) throw failure(`Enter the ${field} link as a full web address, such as https://example.com/${field}.`, 400, `invalid_${field}_url`);
+  return link;
+}
+
+/** An uploaded logo or favicon and its type, read from its bytes, or null to remove it. */
+function brandImage(bytes: Uint8Array | null, image: BrandImage): { bytes: Buffer; contentType: string } | null {
+  if (bytes === null || bytes.length === 0) return null;
+  if (bytes.length > MAX_BRAND_LOGO_BYTES) throw failure(`The ${image} must be 256 KB or smaller.`, 413, `${image}_too_large`);
+  const contentType = brandLogoContentType(bytes);
+  if (!contentType) throw failure("Upload a PNG, JPEG, WebP or SVG image.", 400, `invalid_${image}`);
+  return { bytes: Buffer.from(bytes), contentType };
+}
+
+/** Reserves the partner's subdomain inside a system transaction. Returns it, and whether anything was written. */
+async function reserveSubdomainIn(tx: DatabaseTransaction, partnerId: string, baseDomain: string): Promise<{ subdomain: string | null; changed: boolean }> {
+  const [partner] = await tx.select({ slug: partners.slug }).from(partners).where(eq(partners.id, partnerId)).limit(1);
+  if (!partner) return { subdomain: null, changed: false };
+  const hostname = `${partner.slug}.${baseDomain}`;
+  const [existing] = await tx.select({ id: partnerDomains.id, hostname: partnerDomains.hostname }).from(partnerDomains).where(and(eq(partnerDomains.partnerId, partnerId), eq(partnerDomains.kind, "subdomain"))).limit(1);
+  if (existing?.hostname === hostname) return { subdomain: hostname, changed: false };
+  // The host's own hostname, or another partner's domain, keeps the partner off it.
+  if (hostLabelsUnder(baseDomain).has(partner.slug)) return { subdomain: null, changed: false };
+  const [taken] = await tx.select({ id: partnerDomains.id }).from(partnerDomains).where(eq(partnerDomains.hostname, hostname)).limit(1);
+  if (taken) return { subdomain: null, changed: false };
+  if (existing) {
+    // A partner keeps one subdomain, so the one under an earlier base domain moves.
+    await tx.update(partnerDomains).set({ hostname, verifiedAt: new Date(), updatedAt: new Date() }).where(eq(partnerDomains.id, existing.id));
+    return { subdomain: hostname, changed: true };
+  }
+  const [reserved] = await tx.insert(partnerDomains).values({ partnerId, hostname, kind: "subdomain", verifiedAt: new Date() }).onConflictDoNothing().returning({ id: partnerDomains.id });
+  return { subdomain: reserved ? hostname : null, changed: Boolean(reserved) };
+}
+
+/**
+ * Reserves the partner's subdomain of the partner base domain when it has none
+ * there. A partner that signed up while PARTNER_BASE_DOMAIN was unset or
+ * invalid has none, and one whose subdomain sits under an earlier base domain
+ * moves to the current one. Returns the subdomain, or null when the deployment
+ * has no base domain, or the hostname is the host's own or another partner's.
+ */
+export async function reservePartnerSubdomain(context: DomainContext, partnerId: string): Promise<string | null> {
+  const { baseDomain } = partnerFeatures(process.env);
+  if (!baseDomain) return null;
+  const outcome = await withBusinessTransaction(context.db, { actorType: "system" }, async (tx) => await reserveSubdomainIn(tx, partnerId, baseDomain));
+  if (outcome.changed) await announceBrandChange(context, { kind: "partner", partnerId });
+  return outcome.subdomain;
+}
+
+/**
+ * Reserves a subdomain for every partner without one under the current
+ * partner base domain, as the admin does when it starts, since a new base
+ * domain takes a restart. Returns how many it reserved.
+ */
+export async function reserveMissingPartnerSubdomains(context: DomainContext): Promise<number> {
+  const { baseDomain } = partnerFeatures(process.env);
+  if (!baseDomain) return 0;
+  const missing = await withBusinessTransaction(context.db, { actorType: "system" }, async (tx) => await tx
+    .select({ partnerId: partners.id })
+    .from(partners)
+    .leftJoin(partnerDomains, and(eq(partnerDomains.partnerId, partners.id), eq(partnerDomains.kind, "subdomain"), eq(partnerDomains.hostname, sql`${partners.slug} || ${`.${baseDomain}`}`)))
+    .where(isNull(partnerDomains.id))
+    .orderBy(asc(partners.createdAt)));
+  let reserved = 0;
+  for (const { partnerId } of missing) {
+    if (await reservePartnerSubdomain(context, partnerId)) reserved += 1;
+  }
+  return reserved;
+}
+
+async function readBrandSettings(tx: DatabaseTransaction, member: PartnerMemberActor): Promise<PartnerBrandSettings> {
+  const role = await currentRole(tx, member);
+  const [row] = await tx
+    .select({
+      name: partners.name,
+      logoVersion: partners.logoVersion,
+      faviconVersion: partners.faviconVersion,
+      color: partners.brandColor,
+      termsUrl: partners.termsUrl,
+      privacyUrl: partners.privacyUrl,
+      supportUrl: partners.supportUrl,
+      supportEmail: partners.supportEmail,
+      subdomain: partnerDomains.hostname,
+    })
+    .from(partners)
+    .leftJoin(partnerDomains, and(eq(partnerDomains.partnerId, partners.id), eq(partnerDomains.kind, "subdomain")))
+    .where(eq(partners.id, member.partnerId))
+    .limit(1);
+  if (!row) throw failure("Partner not found.", 404, "partner_not_found");
+  const subdomain = currentPartnerSubdomain(row.subdomain, process.env);
+  return {
+    role,
+    name: row.name,
+    subdomain,
+    subdomainUrl: subdomain ? partnerOrigin(subdomain, process.env) : null,
+    logoUrl: row.logoVersion ? partnerBrandImageUrl(member.partnerId, "logo", row.logoVersion) : null,
+    faviconUrl: row.faviconVersion ? partnerBrandImageUrl(member.partnerId, "favicon", row.faviconVersion) : null,
+    color: row.color,
+    termsUrl: row.termsUrl,
+    privacyUrl: row.privacyUrl,
+    supportUrl: row.supportUrl,
+    supportEmail: row.supportEmail,
+  };
+}
+
+/**
+ * The partner's brand and subdomain for the Branding & domain page. Anyone on
+ * the team can read it. A partner with no subdomain under the current base
+ * domain gets one reserved first.
+ */
+export async function getPartnerBrandSettings(context: DomainContext, actor: PartnerActor): Promise<PartnerBrandSettings> {
+  const member = brandActor(actor);
+  const settings = await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => await readBrandSettings(tx, member));
+  if (settings.subdomain || !partnerFeatures(process.env).baseDomain) return settings;
+  if (!await reservePartnerSubdomain(context, member.partnerId)) return settings;
+  return await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => await readBrandSettings(tx, member));
+}
+
+/**
+ * Saves the partner's name and brand: its logo, favicon, color, and terms,
+ * privacy and support links, and the support email its emails take replies
+ * at. Only owners and admins can. Every process shows the change at once,
+ * and within the brand cache's 30 seconds when the announcement can't reach them.
+ */
+export async function savePartnerBrand(context: DomainContext, actor: PartnerActor, input: PartnerBrandInput): Promise<PartnerBrandSettings> {
+  const member = brandActor(actor);
+  const name = normalizePartnerName(input.name);
+  if (!name) throw invalidName();
+  const color = input.color === null || !input.color.trim() ? null : normalizeBrandColor(input.color);
+  if (input.color !== null && input.color.trim() && !color) throw failure("Enter the brand color as a hex code, such as #0f766e.", 400, "invalid_color");
+  const supportEmail = input.supportEmail === null || !input.supportEmail.trim() ? null : normalizeEmailAddress(input.supportEmail);
+  if (input.supportEmail !== null && input.supportEmail.trim() && !supportEmail) throw failure("Enter one valid support email address.", 400, "invalid_support_email");
+  const links = { termsUrl: brandLink(input.termsUrl, "terms"), privacyUrl: brandLink(input.privacyUrl, "privacy"), supportUrl: brandLink(input.supportUrl, "support") };
+  const logo = input.logo === undefined ? undefined : brandImage(input.logo, "logo");
+  const favicon = input.favicon === undefined ? undefined : brandImage(input.favicon, "favicon");
+
+  const settings = await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => {
+    const role = await currentRole(tx, member);
+    if (role === "member") throw new AuthorizationError("Only owners and admins can change the partner's brand.");
+    const saved = await tx.update(partners).set({
+      name,
+      brandColor: color,
+      ...links,
+      supportEmail,
+      ...(logo === undefined ? {} : { logo: logo?.bytes ?? null, logoContentType: logo?.contentType ?? null }),
+      ...(favicon === undefined ? {} : { favicon: favicon?.bytes ?? null, faviconContentType: favicon?.contentType ?? null }),
+      updatedAt: new Date(),
+    }).where(eq(partners.id, member.partnerId)).returning({ id: partners.id });
+    // The role was just read, so nothing changed only when row-level security refused it.
+    if (saved.length === 0) throw new AuthorizationError("Only owners and admins can change the partner's brand.");
+    return await readBrandSettings(tx, member);
+  });
+  await announceBrandChange(context, { kind: "partner", partnerId: member.partnerId });
+  return settings;
 }

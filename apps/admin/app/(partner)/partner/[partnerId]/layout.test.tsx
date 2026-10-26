@@ -2,10 +2,11 @@ import type { ReactElement } from "react";
 import { beforeEach, expect, it, vi } from "vitest";
 
 const fixture = vi.hoisted(() => ({
+  headers: new Headers(),
   session: { user: { id: "user", email: "owner@example.test" } } as { user: { id: string; email: string } } | null,
   partners: [] as Array<{ partnerId: string; name: string; slug: string; role: "owner" | "admin" | "member"; subdomain: string | null }>,
 }));
-vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => undefined }), headers: async () => new Headers({ "x-lobbystack-pathname": "/partner/5b1f6c43-34a5-4a8e-9a43-6c1f8d5f1c11/team" }) }));
+vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => undefined }), headers: async () => fixture.headers }));
 // Next's redirect throws, so nothing after it runs.
 vi.mock("next/navigation", () => ({ redirect: vi.fn((to: string) => { throw Object.assign(new Error("NEXT_REDIRECT"), { to }); }) }));
 vi.mock("@lobbystack/domain", () => ({ listUserPartners: async () => fixture.partners }));
@@ -21,6 +22,7 @@ const OTHER = "0d6f9c1e-2b7a-4c55-8f0e-3a9b1d2c4e5f";
 const open = (partnerId: string) => PartnerConsoleLayout({ children: null, params: Promise.resolve({ partnerId }) });
 
 beforeEach(() => {
+  fixture.headers = new Headers({ "x-lobbystack-brand": "host", "x-lobbystack-pathname": `/partner/${PARTNER}/team` });
   fixture.session = { user: { id: "user", email: "owner@example.test" } };
   fixture.partners = [
     { partnerId: PARTNER, name: "Bright Desk", slug: "bright-desk", role: "admin", subdomain: null },
@@ -45,4 +47,13 @@ it("sends a signed-out visitor to sign in, then back to the page they asked for"
   fixture.session = null;
   expect(PATHNAME_HEADER).toBe("x-lobbystack-pathname");
   await expect(open(PARTNER)).rejects.toMatchObject({ to: `/en/login?returnTo=${encodeURIComponent(`/partner/${PARTNER}/team`)}` });
+});
+
+it("opens only the host's partner on a partner's host, with no other partner in the switcher", async () => {
+  fixture.headers = new Headers({ "x-lobbystack-brand": `partner:${PARTNER}`, "x-lobbystack-brand-origin": "https://bright.portal.example.test", "x-lobbystack-pathname": `/partner/${PARTNER}/team` });
+  const shell = await open(PARTNER) as ReactElement<{ partner: unknown; partners: unknown[] }>;
+  expect(shell.props.partner).toEqual({ partnerId: PARTNER, name: "Bright Desk", role: "admin" });
+  expect(shell.props.partners).toEqual([{ partnerId: PARTNER, name: "Bright Desk", role: "admin" }]);
+  // The person's other partner opens only on the host's domain or its own host.
+  await expect(open(OTHER)).rejects.toMatchObject({ to: "/partner" });
 });

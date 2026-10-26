@@ -15,7 +15,7 @@ import { Turnstile } from "@/components/turnstile";
 import { recordAuthSuccess } from "@/lib/auth-success-analytics";
 import { resolveLocale } from "@/lib/locale";
 import { localizePublicPath } from "@/lib/locale-path";
-import { privacyHref, termsHref } from "@/lib/marketing-site-url";
+import { useBrandLinks } from "@/hooks/use-brand-links";
 import { cn } from "@/lib/utils";
 import { captureAffiliateReferralFromUrl, getAffiliateVisitorId } from "@/lib/affiliate-referral";
 
@@ -32,6 +32,7 @@ export function AuthCard({ mode, google = false }: { mode: "login" | "signup"; g
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
   const { t, i18n } = useTranslation("auth");
   const authLocale = resolveLocale(i18n.resolvedLanguage, i18n.language);
+  const links = useBrandLinks(authLocale);
   const [returnTo, setReturnTo] = useState<string | null>(null);
   const [signupSource, setSignupSource] = useState<"calculator" | null>(null);
   const [googleError, setGoogleError] = useState<string | null>(null);
@@ -301,13 +302,13 @@ export function AuthCard({ mode, google = false }: { mode: "login" | "signup"; g
     { label: t("signup.passwordCriteria.specialCharacter"), isMet: /[^A-Za-z0-9\s]/.test(password) },
   ];
   const isSignupReady = isEmailValid && passwordCriteria.every((criterion) => criterion.isMet);
-  const marketingLocale = resolveLocale(i18n.resolvedLanguage, i18n.language);
-  const legalFooter = !login ? (
+  // A partner that left out its terms or privacy page gets no agreement line.
+  const legalFooter = !login && links.terms && links.privacy ? (
     <p className="max-w-full text-center text-xs leading-5 text-muted-foreground sm:whitespace-nowrap">
       {t("signup.legal.prefix")} {" "}
-      <a className="underline underline-offset-4 hover:text-foreground" href={termsHref(marketingLocale)} rel="noreferrer" target="_blank">{t("signup.legal.terms")}</a>{" "}
+      <a className="underline underline-offset-4 hover:text-foreground" href={links.terms} rel="noreferrer" target="_blank">{t("signup.legal.terms")}</a>{" "}
       {t("signup.legal.and")} {" "}
-      <a className="underline underline-offset-4 hover:text-foreground" href={privacyHref(marketingLocale)} rel="noreferrer" target="_blank">{t("signup.legal.privacy")}</a>
+      <a className="underline underline-offset-4 hover:text-foreground" href={links.privacy} rel="noreferrer" target="_blank">{t("signup.legal.privacy")}</a>
       {t("signup.legal.suffix")}
     </p>
   ) : undefined;

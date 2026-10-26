@@ -24,10 +24,27 @@ describe("saved logo route", () => {
     fixture.logo.mockResolvedValue({ bytes: PNG, contentType: "image/png", version: "abc" });
     const request = new Request("http://0.0.0.0:3000/api/branding/logo?v=abc", { headers: { host: "desk.example.test" } });
     expect((await GET(request)).status).toBe(200);
-    // Every hostname gets the host brand until partners have domains, so these
-    // calls stand in for a logo that differs by host.
     expect(fixture.requestBrand).toHaveBeenCalledWith(request);
-    expect(fixture.logo).toHaveBeenCalledWith({ db: {} }, fixture.brand);
+    expect(fixture.logo).toHaveBeenCalledWith({ db: {} }, fixture.brand, "logo");
+  });
+
+  it("serves the logo or favicon of the partner the URL names, on any hostname", async () => {
+    const partnerId = "5b1f6c43-34a5-4a8e-9a43-6c1f8d5f1c11";
+    fixture.logo.mockResolvedValue({ bytes: PNG, contentType: "image/png", version: "def" });
+    const logo = await GET(new Request(`http://0.0.0.0:3000/api/branding/logo?partner=${partnerId}&v=def`, { headers: { host: "desk.example.test" } }));
+    expect(logo.status).toBe(200);
+    expect(logo.headers.get("cache-control")).toBe("public, max-age=31536000, immutable");
+    expect(logo.headers.get("content-security-policy")).toContain("sandbox");
+    expect(fixture.logo).toHaveBeenLastCalledWith({ db: {} }, { kind: "partner", partnerId }, "logo");
+    await GET(new Request(`http://0.0.0.0:3000/api/branding/logo?partner=${partnerId}&image=favicon&v=def`));
+    expect(fixture.logo).toHaveBeenLastCalledWith({ db: {} }, { kind: "partner", partnerId }, "favicon");
+    expect(fixture.requestBrand).not.toHaveBeenCalled();
+
+    fixture.logo.mockClear();
+    const malformed = await GET(new Request("http://0.0.0.0:3000/api/branding/logo?partner=acme&v=def"));
+    expect(malformed.status).toBe(404);
+    expect(malformed.headers.get("content-security-policy")).toContain("sandbox");
+    expect(fixture.logo).not.toHaveBeenCalled();
   });
 
   it("serves no logo for a hostname no brand answers for", async () => {

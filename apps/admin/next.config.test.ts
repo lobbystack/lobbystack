@@ -98,6 +98,17 @@ function dockerBuildStage() {
   return dockerfile.slice(0, dockerfile.indexOf(" AS runtime"));
 }
 
+describe("development hosts", () => {
+  it("lets partners' subdomains load development resources once partnerFeatures accepts the base domain", async () => {
+    for (const name of ["ALLOWED_DEV_ORIGINS", "MARKETING_HOSTS"]) vi.stubEnv(name, "");
+    expect((await loadConfig({ PARTNER_BASE_DOMAIN: " Partners.Localhost. " }) as NextConfig).allowedDevOrigins).toEqual(["*.partners.localhost"]);
+    // A value partnerFeatures ignores adds nothing.
+    for (const value of ["", "https://partners.localhost", "*.partners.localhost"]) {
+      expect((await loadConfig({ PARTNER_BASE_DOMAIN: value }) as NextConfig).allowedDevOrigins, value).toEqual([]);
+    }
+  });
+});
+
 describe("moved routes", () => {
   it("sends the old widget settings address to the widget page", async () => {
     const config = await loadConfig({}) as NextConfig;

@@ -7,9 +7,9 @@ import { brandLogoSrc } from "@/lib/branding-snapshot";
 import { cn } from "@/lib/utils";
 import { versionedAssetUrl } from "@/lib/versioned-assets";
 
-/** A logo beside a name, centered. Without a logo of its own, LobbyStack shows its mark and any other name stands alone. */
-export function BrandLockup({ appName, logoUrl, className }: { appName: string; logoUrl: string | null; className?: string | undefined }) {
-  const logo = brandLogoSrc({ appName, logoUrl });
+/** A logo beside a name, centered. Without a logo of its own, LobbyStack shows its mark and any other name, or any partner, stands alone. */
+export function BrandLockup({ appName, logoUrl, partner = false, className }: { appName: string; logoUrl: string | null; partner?: boolean; className?: string | undefined }) {
+  const logo = brandLogoSrc({ appName, logoUrl, partner });
   return (
     <div aria-label={appName} className={cn("flex w-full items-center justify-center gap-2.5", className)}>
       {logo ? <img alt="" aria-hidden="true" className={cn("h-6 w-auto max-w-24 select-none object-contain", logoUrl ? null : "dark:invert")} draggable={false} src={logo} /> : null}
@@ -20,10 +20,10 @@ export function BrandLockup({ appName, logoUrl, className }: { appName: string; 
 
 /** The deployment's logo and name, as sign-in and onboarding pages show them above their title. */
 export function BrandMark({ className }: { className?: string }) {
-  const { appName, logoUrl, ready } = useBranding();
+  const { appName, logoUrl, partner, ready } = useBranding();
   // Hold the space until a prerendered page knows the name, so it never flashes another one.
   if (!ready) return <div aria-hidden="true" className={cn("h-6 w-full", className)} />;
-  return <BrandLockup appName={appName} className={className} logoUrl={logoUrl} />;
+  return <BrandLockup appName={appName} className={className} logoUrl={logoUrl} partner={partner !== null} />;
 }
 
 /** The marketing header's logo: LobbyStack's wordmark, or the deployment's logo and name. */

@@ -1,11 +1,12 @@
 "use client";
 
-import { ChevronsUpDown, Contrast, Crown, Handshake, LogOut, User as UserIcon } from "lucide-react";
+import { ChevronsUpDown, Contrast, Crown, FileText, Handshake, LifeBuoy, LogOut, ShieldCheck, User as UserIcon } from "lucide-react";
 import { useTheme } from "./theme-provider";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import Link from "next/link";
 
+import { useBranding } from "@/components/branding-provider";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -45,6 +46,15 @@ export function NavUser({
   const { resolvedTheme, setTheme } = useTheme();
   const emailInitial = user.email.trim().charAt(0).toUpperCase() || "?";
   const toggleTheme = () => setTheme(resolvedTheme === "dark" ? "light" : "dark");
+  // On a partner's dashboard, the partner's own support, terms and privacy links, each only when it set one.
+  const { partner } = useBranding();
+  const partnerLinks = partner
+    ? [
+        { key: "support", href: partner.links.support, label: t("sidebar.support"), icon: LifeBuoy },
+        { key: "terms", href: partner.links.terms, label: t("sidebar.terms"), icon: FileText },
+        { key: "privacy", href: partner.links.privacy, label: t("sidebar.privacy"), icon: ShieldCheck },
+      ].filter((link): link is typeof link & { href: string } => Boolean(link.href))
+    : [];
 
   return (
     <SidebarMenu>
@@ -113,6 +123,19 @@ export function NavUser({
                 {t("sidebar.toggleTheme")}
               </DropdownMenuItem>
             </DropdownMenuGroup>
+            {partnerLinks.length ? (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  {partnerLinks.map((link) => (
+                    <DropdownMenuItem key={link.key} render={<a href={link.href} {...(link.href.startsWith("mailto:") ? {} : { rel: "noreferrer", target: "_blank" })} />}>
+                      <link.icon />
+                      {link.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuGroup>
+              </>
+            ) : null}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={onSignOut}

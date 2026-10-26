@@ -1,8 +1,8 @@
 import type { ReactElement } from "react";
 import { beforeEach, expect, it, vi } from "vitest";
 
-vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => undefined }), headers: async () => new Headers() }));
-const fixture = vi.hoisted(() => ({ onboarding: { stage: "complete", businessId: "business" as string | null }, partners: [] as Array<{ partnerId: string }> }));
+vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => undefined }), headers: async () => fixture.headers }));
+const fixture = vi.hoisted(() => ({ onboarding: { stage: "complete", businessId: "business" as string | null }, partners: [] as Array<{ partnerId: string }>, headers: new Headers() }));
 // Next's redirect throws, so nothing after it runs.
 vi.mock("next/navigation", () => ({ redirect: vi.fn((to: string) => { throw Object.assign(new Error("NEXT_REDIRECT"), { to }); }) }));
 vi.mock("@lobbystack/domain", () => ({ getActiveOnboardingState: async () => fixture.onboarding, listUserPartners: async () => fixture.partners, resolveOnboardingRoute: () => "/onboarding/business" }));
@@ -29,6 +29,7 @@ it("ships every section's translations, so client navigation never requests one"
 beforeEach(() => {
   fixture.onboarding = { stage: "complete", businessId: "business" };
   fixture.partners = [];
+  fixture.headers = new Headers({ "x-lobbystack-brand": "host" });
 });
 
 it("sends someone on a partner's team with no business of their own to the partner console", async () => {
@@ -47,4 +48,16 @@ it("links the account menu to the partner console only for someone on a partner'
   expect(await shell()).toBe(false);
   fixture.partners = [{ partnerId: "partner" }];
   expect(await shell()).toBe(true);
+});
+
+it("on a partner's host, links to the console and sends someone there only for that partner's team", async () => {
+  const PARTNER = "5b1f6c43-34a5-4a8e-9a43-6c1f8d5f1c11";
+  fixture.headers = new Headers({ "x-lobbystack-brand": `partner:${PARTNER}`, "x-lobbystack-brand-origin": "https://bright.portal.example.test" });
+  const shell = async () => ((await DashboardLayout({ children: null })) as ReactElement<{ children: ReactElement<{ partnerConsole: boolean }> }>).props.children.props.partnerConsole;
+  fixture.partners = [{ partnerId: "0d6f9c1e-2b7a-4c55-8f0e-3a9b1d2c4e5f" }];
+  expect(await shell()).toBe(false);
+  fixture.partners.push({ partnerId: PARTNER });
+  expect(await shell()).toBe(true);
+  fixture.onboarding = { stage: "create_business", businessId: null };
+  await expect(DashboardLayout({ children: null })).rejects.toMatchObject({ to: "/partner" });
 });

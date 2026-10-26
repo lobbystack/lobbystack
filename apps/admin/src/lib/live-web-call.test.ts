@@ -23,8 +23,12 @@ vi.mock("./widget-keys", async (original) => ({
 import { resolveLiveWebCallAccess } from "./live-web-call";
 
 const app = "https://admin.lobbystack.test";
-function request(headers: Record<string, string> = {}) {
-  return new Request(`${app}/api/voice/live/session`, { method: "POST", headers });
+// What the proxy passes on for the host's own domain, and for a partner's host.
+const hostBrand = { "x-lobbystack-brand": "host" };
+const partnerOrigin = "https://bright.portal.lobbystack.test";
+const partnerBrand = { "x-lobbystack-brand": "partner:5b1f6c43-34a5-4a8e-9a43-6c1f8d5f1c11", "x-lobbystack-brand-origin": partnerOrigin };
+function request(headers: Record<string, string> = {}, brand: Record<string, string> = hostBrand) {
+  return new Request(`${app}/api/voice/live/session`, { method: "POST", headers: { ...brand, ...headers } });
 }
 
 beforeEach(() => {
@@ -44,7 +48,7 @@ describe("resolveLiveWebCallAccess", () => {
 
   it("accepts the dashboard's origin when the proxy hands the app an internal URL", async () => {
     mocks.requireOperator.mockResolvedValue({ businessId: "biz_1", transaction: mocks.transaction });
-    const internal = new Request("http://[::]:3000/api/voice/live/session", { method: "POST", headers: { origin: app } });
+    const internal = new Request("http://[::]:3000/api/voice/live/session", { method: "POST", headers: { origin: app, ...hostBrand } });
     await expect(resolveLiveWebCallAccess(internal, { sdp: "v=0", widgetId: "lobbystack-dashboard-test-call" })).resolves.toMatchObject({ businessId: "biz_1", dashboardTestCall: true, origin: app });
   });
 
@@ -58,6 +62,17 @@ describe("resolveLiveWebCallAccess", () => {
     const rebound = new Request("https://evil.example/api/voice/live/session", { method: "POST", headers: { origin: "https://evil.example" } });
     await expect(resolveLiveWebCallAccess(rebound, { sdp: "v=0", widgetId: "lobbystack-dashboard-test-call" })).resolves.toEqual({ status: 403, code: "origin_denied" });
     expect(mocks.requireOperator).not.toHaveBeenCalled();
+  });
+
+  it("lets a test call start from a partner's host only once the proxy resolved the request to it", async () => {
+    mocks.requireOperator.mockResolvedValue({ businessId: "biz_1", transaction: mocks.transaction });
+    const testCall = { sdp: "v=0", widgetId: "lobbystack-dashboard-test-call" };
+    await expect(resolveLiveWebCallAccess(request({ origin: partnerOrigin }, partnerBrand), testCall)).resolves.toMatchObject({ businessId: "biz_1", dashboardTestCall: true, origin: partnerOrigin });
+    // On the partner's host the host's own origin is another site, and the other way round.
+    await expect(resolveLiveWebCallAccess(request({ origin: app }, partnerBrand), testCall)).resolves.toEqual({ status: 403, code: "origin_denied" });
+    await expect(resolveLiveWebCallAccess(request({ origin: partnerOrigin }), testCall)).resolves.toEqual({ status: 403, code: "origin_denied" });
+    // A request the proxy resolved no brand for trusts no origin at all.
+    await expect(resolveLiveWebCallAccess(request({ origin: app }, {}), testCall)).resolves.toEqual({ status: 403, code: "origin_denied" });
   });
 
   it("refuses a dashboard test call started from another site", async () => {

@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import posthog from "posthog-js";
 import { createBrowserTelemetry, type BrowserTelemetry } from "@lobbystack/telemetry/browser";
 import type { DeploymentMode, TelemetryEventName } from "@lobbystack/telemetry";
+import { useBranding } from "@/components/branding-provider";
 import { selectActiveBusiness } from "@/lib/active-business";
 import { consumeAuthSuccess } from "@/lib/auth-success-analytics";
 import { initializeClientAnalytics } from "@/lib/client-analytics";
@@ -13,10 +14,6 @@ import { consumePendingOnboardingBusiness } from "@/lib/onboarding-analytics";
 import { consumePendingWorkspaceSwitch } from "@/lib/workspace-analytics";
 import { requestJson } from "@/lib/request-json";
 import { isPublicRoutePath, stripLocalePrefix } from "@/lib/locale-path";
-
-// Every page but the website widget loads this module, and PostHog with it,
-// before it renders.
-initializeClientAnalytics();
 
 const SENSITIVE_APP_ROUTE_PATTERN = /^\/(demos|embed)(\/|$)/;
 
@@ -50,7 +47,12 @@ export function useTelemetry(): BrowserTelemetry {
 
 export function ProductAnalytics({ children }: { children?: ReactNode }) {
   const pathname = usePathname();
-  const projectToken = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
+  // A partner's pages never start PostHog, so its visitors' browsers never
+  // reach the host's analytics domain. Every other page but the website
+  // widget starts it here, before any page below renders.
+  const hostPage = useBranding().partner === null;
+  if (hostPage) initializeClientAnalytics();
+  const projectToken = hostPage ? process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN : undefined;
   const sensitive = isSensitiveAnalyticsRoute(pathname ?? "");
   const session = useQuery({ queryKey: ["product-analytics-session"], enabled: Boolean(projectToken) && !sensitive, retry: false, staleTime: 0, refetchOnMount: "always", queryFn: () => requestJson<{ user?: { id?: string } } | null>("/api/auth/get-session") });
   // Do not reuse a cached identity after a sign-out or a different user logs in.
@@ -78,11 +80,11 @@ export function ProductAnalytics({ children }: { children?: ReactNode }) {
   allowedRef.current = allowed;
   // The SDK initializes opted out, so no event is collected before the tenant
   // and route checks below grant consent.
-  if (!telemetryRef.current) telemetryRef.current = createBrowserTelemetry(posthog, { optedOut: true });
+  if (!telemetryRef.current) telemetryRef.current = createBrowserTelemetry(hostPage ? posthog : undefined, { optedOut: true });
 
   useEffect(() => {
     const telemetry = telemetryRef.current;
-    if (!telemetry) return;
+    if (!telemetry || !hostPage) return;
     if (!allowed) {
       // Drop an operator identity carried in from the previous page before
       // opting out, so a sensitive route cannot be attributed to the operator.
@@ -128,7 +130,7 @@ export function ProductAnalytics({ children }: { children?: ReactNode }) {
         $groups: { business: businessGroup },
       });
     }
-  }, [allowed, businessId, deploymentMode, pathname, preference.data?.telemetryEnabled, sensitive, userId]);
+  }, [allowed, businessId, deploymentMode, hostPage, pathname, preference.data?.telemetryEnabled, sensitive, userId]);
   useEffect(() => {
     if (!allowed || !pathname || !businessId) return;
     const event = resolvePageEvent(pathname);
