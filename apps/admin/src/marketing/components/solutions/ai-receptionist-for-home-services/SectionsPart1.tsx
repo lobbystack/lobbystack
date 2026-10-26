@@ -6,7 +6,7 @@ import { ArrowRight, Check, Clock, UserX, PhoneOff, Phone } from "lucide-react"
 export function Hero() {
   return (
     <section className="relative overflow-hidden" id="hero">
-      <div className="mx-auto max-w-7xl px-6 pt-16 pb-8 md:pt-20 md:pb-10 lg:pt-24 lg:pb-12">
+      <div className="mx-auto max-w-site px-6 pt-16 pb-8 md:pt-20 md:pb-10 lg:pt-24 lg:pb-12">
         <div className="mx-auto max-w-4xl text-center">
           <h1 className="animate-fade-up font-heading text-4xl leading-[1.1] font-medium tracking-tight stagger-1 md:text-5xl lg:text-[4rem]">
             Home services answering service that books jobs while your crew{" "}
@@ -68,7 +68,7 @@ export function Hero() {
 export function Problem() {
   return (
     <section className="section-spacing bg-muted/30" id="problem">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-site px-6">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="section-heading">
             Missed calls are missed jobs in home services
@@ -137,7 +137,7 @@ export function Solution() {
 
   return (
     <section className="section-spacing" id="solution">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-site px-6">
         <div className="grid gap-12 lg:grid-cols-[1fr_1fr] lg:items-center">
           <div>
             <h2 className="section-heading text-left">
@@ -234,7 +234,7 @@ export function UseCases() {
 
   return (
     <section className="section-spacing bg-background" id="use-cases">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-site px-6">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="section-heading">
             Use AI phone answering where missed calls hurt most
@@ -286,7 +286,7 @@ export function HowItWorks() {
 
   return (
     <section className="section-spacing" id="how-it-works">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-site px-6">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="section-heading">How LobbyStack answers your calls</h2>
         </div>
@@ -372,7 +372,7 @@ export function Comparison() {
 
   return (
     <section className="section-spacing bg-muted/30" id="comparison">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-site px-6">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="section-heading">
             Better phone coverage without another full-time hire

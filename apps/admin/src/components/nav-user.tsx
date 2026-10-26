@@ -42,9 +42,11 @@ export function NavUser({
 }: NavUserProps) {
   const { t } = useTranslation("nav");
   const [open, setOpen] = useState(false);
-  const { isMobile } = useSidebar();
+  const { isMobile, setOpenMobile } = useSidebar();
   const { resolvedTheme, setTheme } = useTheme();
   const emailInitial = user.email.trim().charAt(0).toUpperCase() || "?";
+  // The links below open another page, which leaves the mobile sidebar sheet covering it.
+  const closeMobileSidebar = () => { if (isMobile) setOpenMobile(false); };
   const toggleTheme = () => setTheme(resolvedTheme === "dark" ? "light" : "dark");
   // On a partner's dashboard, the partner's own support, terms and privacy links, each only when it set one.
   const { partner } = useBranding();
@@ -92,6 +94,7 @@ export function NavUser({
                           onClick: onUpgradeToPro,
                         }
                       : {
+                          onClick: closeMobileSidebar,
                           render: <Link href="/settings/plan" />,
                         })}
                   >
@@ -104,6 +107,7 @@ export function NavUser({
             ) : null}
             <DropdownMenuGroup>
               <DropdownMenuItem
+                onClick={closeMobileSidebar}
                 render={<Link href="/settings/account" />}
               >
                 <UserIcon />

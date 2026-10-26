@@ -58,7 +58,7 @@ export function SetupAndCompare({ details }: SetupAndCompareProps) {
 
   return (
     <>
-      <section className="mx-auto max-w-7xl px-6 py-20 md:py-28" id="setup">
+      <section className="mx-auto max-w-site px-6 py-20 md:py-28" id="setup">
         <h2 className="section-heading max-w-3xl">Set up LobbyStack in three steps</h2>
         <ol className="mt-12 grid gap-10 md:grid-cols-3 md:gap-8">
           {steps.map((step, index) => (
@@ -72,7 +72,7 @@ export function SetupAndCompare({ details }: SetupAndCompareProps) {
       </section>
 
       <section className="border-t border-border/40 py-20 md:py-28" id="ai-vs-live-answering">
-        <div className="mx-auto max-w-7xl px-6">
+        <div className="mx-auto max-w-site px-6">
           <div className="max-w-3xl">
             <h2 className="section-heading">AI and live {details.noun} answering services compared</h2>
             <p className="section-intro">

@@ -5,17 +5,22 @@ export const homeFaqs: FaqItem[] = [
   {
     question: "Can I customize my AI receptionist's greeting and tone?",
     answer:
-      "Yes. LobbyStack lets you customize the greeting, tone, business instructions, and call handling rules so your AI receptionist sounds aligned with your brand.",
+      "Yes. You set the greeting, tone, business instructions, and call handling rules, so your AI receptionist sounds like your business.",
   },
   {
     question: "What happens when a caller asks something unusual?",
     answer:
-      "You define the fallback behavior. LobbyStack can take a message for your team or transfer the caller to a person.",
+      "You decide. LobbyStack takes a message for your team or transfers the caller to a person.",
   },
   {
     question: "Can LobbyStack book appointments directly into my calendar?",
     answer:
-      "Yes. LobbyStack can check availability, offer appointment times, book the appointment, and send confirmation details to the caller.",
+      "Yes. LobbyStack checks availability, offers open times, books the appointment, and texts the caller a confirmation.",
+  },
+  {
+    question: "Which languages can callers speak?",
+    answer:
+      "Callers can talk to LobbyStack in 70+ languages. Each call opens in your default language: English, French, Spanish, Serbian, German, Brazilian Portuguese, Italian, or Dutch. If the caller asks to switch or speaks another language, the receptionist answers in that language.",
   },
   {
     question: "Can the AI receptionist send a call summary to my phone?",
@@ -25,7 +30,7 @@ export const homeFaqs: FaqItem[] = [
   {
     question: "What types of calls should still go to a human?",
     answer:
-      "LobbyStack is a strong fit for routine questions, bookings, intake, and lead qualification. Complex negotiations, sensitive situations, urgent cases, and specialized troubleshooting can be transferred to your team.",
+      "LobbyStack is a strong fit for routine questions, bookings, intake, and lead qualification. Transfer complex negotiations, sensitive situations, urgent cases, and specialized troubleshooting to your team.",
   },
   {
     question: "Is LobbyStack open source?",
@@ -35,12 +40,12 @@ export const homeFaqs: FaqItem[] = [
   {
     question: "How much does an AI receptionist cost?",
     answer:
-      "LobbyStack starts free with 30 voice minutes per month and a US or Canadian number free for 14 days. Paid plans begin at $30 per month for Starter and $100 per month for Pro, with usage-based overages. Enterprise pricing is available for higher volume and self-hosted support.",
+      "LobbyStack's free plan includes 30 voice minutes and a US or Canadian number for 14 days. Paid plans start at $30 per month for Starter and $100 per month for Pro, with usage-based overages. Enterprise pricing covers higher volume and self-hosted support.",
   },
   {
     question: "How is LobbyStack different from a call tree or voicemail?",
     answer:
-      "A call tree pushes callers through rigid menus, and voicemail asks them to wait for a callback. LobbyStack answers naturally, uses your business knowledge, can book appointments during the call, and saves a summary of each call for your team instead of a raw message.",
+      "A call tree pushes callers through rigid menus, and voicemail asks them to wait for a callback. LobbyStack answers naturally, uses your business knowledge, books appointments during the call, and saves a summary of each call for your team instead of a raw message.",
   },
 ]
 
@@ -49,18 +54,23 @@ export const homeFaqsFr: FaqItem[] = [
     question:
       "Puis-je personnaliser l'accueil et le ton de mon réceptionniste IA ?",
     answer:
-      "Oui. LobbyStack vous permet de personnaliser l'accueil, le ton, les consignes métier et les règles de traitement des appels afin que votre réceptionniste IA reste alignée avec votre marque.",
+      "Oui. Vous définissez l'accueil, le ton, les consignes métier et les règles de traitement des appels, pour que votre réceptionniste IA parle comme votre entreprise.",
   },
   {
     question:
       "Que se passe-t-il si un appelant demande quelque chose d'inhabituel ?",
     answer:
-      "Vous définissez le comportement de secours. LobbyStack peut prendre un message pour votre équipe ou transférer l'appelant à une personne.",
+      "Vous décidez. LobbyStack prend un message pour votre équipe ou transfère l'appelant à une personne.",
   },
   {
     question: "LobbyStack peut-il planifier directement dans mon calendrier ?",
     answer:
-      "Oui. LobbyStack peut vérifier les disponibilités, proposer des créneaux, planifier le rendez‑vous et envoyer les détails de confirmation à l'appelant.",
+      "Oui. LobbyStack vérifie les disponibilités, propose des créneaux, planifie le rendez‑vous et envoie une confirmation par SMS à l'appelant.",
+  },
+  {
+    question: "Dans quelles langues les appelants peuvent-ils parler ?",
+    answer:
+      "Les appelants peuvent parler à LobbyStack dans plus de 70 langues. Chaque appel commence dans votre langue par défaut : anglais, français, espagnol, serbe, allemand, portugais du Brésil, italien ou néerlandais. Si l'appelant demande à changer de langue ou en parle une autre, le réceptionniste lui répond dans cette langue.",
   },
   {
     question: "Le réceptionniste IA peut-il m'envoyer un résumé d'appel ?",
@@ -70,7 +80,7 @@ export const homeFaqsFr: FaqItem[] = [
   {
     question: "Quels appels doivent encore revenir à une personne ?",
     answer:
-      "LobbyStack convient très bien aux questions courantes, prises de rendez‑vous, collectes d'information et qualifications de prospects. Les négociations complexes, situations sensibles, cas urgents et dépannages spécialisés peuvent être transférés à votre équipe.",
+      "LobbyStack convient très bien aux questions courantes, prises de rendez‑vous, collectes d'information et qualifications de prospects. Transférez à votre équipe les négociations complexes, les situations sensibles, les cas urgents et les dépannages spécialisés.",
   },
   {
     question: "LobbyStack est-il open source ?",
@@ -80,13 +90,13 @@ export const homeFaqsFr: FaqItem[] = [
   {
     question: "Combien coûte un réceptionniste IA ?",
     answer:
-      "LobbyStack commence gratuitement avec 30 minutes vocales par mois et un numéro américain ou canadien gratuit pendant 14 jours. Les forfaits payants démarrent à 30 $/mois pour Starter et 100 $/mois pour Pro, avec des dépassements à l'usage. Enterprise est disponible pour les volumes plus élevés et l'accompagnement à l'auto-hébergement.",
+      "Le forfait gratuit de LobbyStack comprend 30 minutes vocales et un numéro américain ou canadien pendant 14 jours. Les forfaits payants démarrent à 30 $/mois pour Starter et 100 $/mois pour Pro, avec des dépassements à l'usage. Enterprise couvre les volumes plus élevés et l'accompagnement à l'auto-hébergement.",
   },
   {
     question:
       "En quoi LobbyStack diffère-t-il d'un menu téléphonique ou d'une messagerie vocale ?",
     answer:
-      "Un menu téléphonique impose des choix rigides, et la messagerie vocale demande à l'appelant d'attendre un rappel. LobbyStack répond naturellement, utilise vos connaissances d'entreprise, peut réserver pendant l'appel et enregistre pour votre équipe un résumé de chaque appel au lieu d'un simple message brut.",
+      "Un menu téléphonique impose des choix rigides, et la messagerie vocale demande à l'appelant d'attendre un rappel. LobbyStack répond naturellement, utilise vos connaissances d'entreprise, réserve pendant l'appel et enregistre pour votre équipe un résumé de chaque appel au lieu d'un simple message brut.",
   },
 ]
 
@@ -95,17 +105,22 @@ export const homeFaqsEs: FaqItem[] = [
     question:
       "¿Puedo personalizar el saludo y el tono de mi recepcionista con IA?",
     answer:
-      "Sí. LobbyStack le permite personalizar el saludo, el tono, las instrucciones del negocio y las reglas de atención de llamadas para que su recepcionista con IA suene acorde con su marca.",
+      "Sí. Usted define el saludo, el tono, las instrucciones del negocio y las reglas de atención de llamadas, para que su recepcionista con IA suene como su negocio.",
   },
   {
     question: "¿Qué ocurre si la persona que llama pregunta algo inusual?",
     answer:
-      "Usted define qué hacer en esos casos. LobbyStack puede tomar un mensaje para su equipo o transferir la llamada a una persona.",
+      "Usted decide. LobbyStack toma un mensaje para su equipo o transfiere la llamada a una persona.",
   },
   {
     question: "¿Puede LobbyStack reservar citas directamente en mi calendario?",
     answer:
-      "Sí. LobbyStack puede consultar la disponibilidad, ofrecer horarios, reservar la cita y enviar los detalles de confirmación a la persona que llama.",
+      "Sí. LobbyStack consulta la disponibilidad, ofrece horarios, reserva la cita y envía la confirmación por SMS a la persona que llama.",
+  },
+  {
+    question: "¿En qué idiomas pueden hablar quienes llaman?",
+    answer:
+      "Quienes llaman pueden hablar con LobbyStack en más de 70 idiomas. Cada llamada empieza en su idioma predeterminado: inglés, francés, español, serbio, alemán, portugués de Brasil, italiano o neerlandés. Si la persona pide cambiar de idioma o habla otro, la recepcionista le responde en ese idioma.",
   },
   {
     question:
@@ -116,7 +131,7 @@ export const homeFaqsEs: FaqItem[] = [
   {
     question: "¿Qué llamadas debería seguir atendiendo una persona?",
     answer:
-      "LobbyStack funciona muy bien para preguntas rutinarias, reservas, toma de datos y calificación de clientes potenciales. Las negociaciones complejas, las situaciones delicadas, los casos urgentes y el soporte técnico especializado se pueden transferir a su equipo.",
+      "LobbyStack funciona muy bien para preguntas rutinarias, reservas, toma de datos y calificación de clientes potenciales. Transfiera a su equipo las negociaciones complejas, las situaciones delicadas, los casos urgentes y el soporte técnico especializado.",
   },
   {
     question: "¿LobbyStack es de código abierto?",
@@ -126,13 +141,13 @@ export const homeFaqsEs: FaqItem[] = [
   {
     question: "¿Cuánto cuesta una recepcionista con IA?",
     answer:
-      "LobbyStack empieza gratis con 30 minutos de voz al mes y un número de EE. UU. o Canadá gratis durante 14 días. Los planes de pago empiezan en $30 al mes para Starter y $100 al mes para Pro, con cargos adicionales según el uso. Enterprise ofrece precios para mayor volumen y soporte de autoalojamiento.",
+      "El plan gratuito de LobbyStack incluye 30 minutos de voz y un número de EE. UU. o Canadá durante 14 días. Los planes de pago empiezan en $30 al mes para Starter y $100 al mes para Pro, con cargos adicionales según el uso. Enterprise ofrece precios para mayor volumen y soporte de autoalojamiento.",
   },
   {
     question:
       "¿En qué se diferencia LobbyStack de un menú telefónico o un buzón de voz?",
     answer:
-      "Un menú telefónico obliga a quien llama a pasar por opciones rígidas, y el buzón de voz le pide esperar a que le devuelvan la llamada. LobbyStack responde con naturalidad, usa el conocimiento de su negocio, puede reservar citas durante la llamada y guarda para su equipo un resumen de cada llamada en lugar de un simple mensaje.",
+      "Un menú telefónico obliga a quien llama a pasar por opciones rígidas, y el buzón de voz le pide esperar a que le devuelvan la llamada. LobbyStack responde con naturalidad, usa el conocimiento de su negocio, reserva citas durante la llamada y guarda para su equipo un resumen de cada llamada en lugar de un simple mensaje.",
   },
 ]
 
@@ -140,17 +155,22 @@ export const homeFaqsSr: FaqItem[] = [
   {
     question: "Mogu li da prilagodim pozdrav i ton svog AI recepcionera?",
     answer:
-      "Da. LobbyStack Vam omogućava da prilagodite pozdrav, ton, uputstva o poslovanju i pravila za obradu poziva, tako da AI recepcioner zvuči u skladu sa Vašim brendom.",
+      "Da. Vi određujete pozdrav, ton, uputstva o poslovanju i pravila za obradu poziva, tako da AI recepcioner zvuči kao Vaša firma.",
   },
   {
     question: "Šta se dešava kada pozivalac pita nešto neuobičajeno?",
     answer:
-      "Vi određujete šta se tada dešava. LobbyStack može da primi poruku za Vaš tim ili da preusmeri pozivaoca na čoveka.",
+      "Vi odlučujete. LobbyStack prima poruku za Vaš tim ili preusmerava pozivaoca na čoveka.",
   },
   {
     question: "Može li LobbyStack da zakazuje termine direktno u moj kalendar?",
     answer:
-      "Da. LobbyStack može da proveri slobodne termine, ponudi vreme, zakaže termin i pošalje pozivaocu potvrdu sa detaljima.",
+      "Da. LobbyStack proverava slobodne termine, nudi vreme, zakazuje termin i pozivaocu šalje potvrdu SMS porukom.",
+  },
+  {
+    question: "Na kojim jezicima pozivaoci mogu da govore?",
+    answer:
+      "Pozivaoci mogu da razgovaraju sa LobbyStack recepcionerom na više od 70 jezika. Svaki poziv počinje na Vašem podrazumevanom jeziku: engleskom, francuskom, španskom, srpskom, nemačkom, brazilskom portugalskom, italijanskom ili holandskom. Ako pozivalac zatraži drugi jezik ili govori nekim drugim jezikom, recepcioner mu odgovara na tom jeziku.",
   },
   {
     question: "Može li AI recepcioner da mi pošalje rezime poziva na telefon?",
@@ -160,7 +180,7 @@ export const homeFaqsSr: FaqItem[] = [
   {
     question: "Koji pozivi i dalje treba da idu čoveku?",
     answer:
-      "LobbyStack je odličan za rutinska pitanja, zakazivanje, prikupljanje podataka i procenu potencijalnih klijenata. Složeni pregovori, osetljive situacije, hitni slučajevi i specijalizovana tehnička podrška mogu se preusmeriti Vašem timu.",
+      "LobbyStack je odličan za rutinska pitanja, zakazivanje, prikupljanje podataka i procenu potencijalnih klijenata. Složene pregovore, osetljive situacije, hitne slučajeve i specijalizovanu tehničku podršku preusmerite Vašem timu.",
   },
   {
     question: "Da li je LobbyStack otvorenog koda?",
@@ -170,13 +190,13 @@ export const homeFaqsSr: FaqItem[] = [
   {
     question: "Koliko košta AI recepcioner?",
     answer:
-      "LobbyStack možete početi da koristite besplatno, sa 30 minuta razgovora mesečno i brojem iz SAD ili Kanade besplatno 14 dana. Plaćeni paketi počinju od $30 mesečno za Starter i $100 mesečno za Pro, uz dodatnu naplatu prema potrošnji. Enterprise cene su dostupne za veći obim poziva i podršku za samostalno hostovanje.",
+      "Besplatan LobbyStack paket uključuje 30 minuta razgovora i broj iz SAD ili Kanade tokom 14 dana. Plaćeni paketi počinju od $30 mesečno za Starter i $100 mesečno za Pro, uz dodatnu naplatu prema potrošnji. Enterprise cene su dostupne za veći obim poziva i podršku za samostalno hostovanje.",
   },
   {
     question:
       "Po čemu se LobbyStack razlikuje od glasovnog menija ili govorne pošte?",
     answer:
-      "Glasovni meni vodi pozivaoce kroz krute opcije, a govorna pošta traži od njih da čekaju povratni poziv. LobbyStack odgovara prirodno, koristi znanje o Vašoj firmi, može da zakaže termin tokom poziva i za Vaš tim čuva rezime svakog poziva umesto obične poruke.",
+      "Glasovni meni vodi pozivaoce kroz krute opcije, a govorna pošta traži od njih da čekaju povratni poziv. LobbyStack odgovara prirodno, koristi znanje o Vašoj firmi, zakazuje termin tokom poziva i za Vaš tim čuva rezime svakog poziva umesto obične poruke.",
   },
 ]
 

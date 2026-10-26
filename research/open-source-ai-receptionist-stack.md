@@ -82,6 +82,6 @@ Use the contrast carefully: assembling Retell, Vapi, n8n, or Zapier still leaves
 - mintlify/self-hosting/providers.mdx
 - docs/architecture/overview.md
 - docs/voice/runtime.md
-- apps/landing/src/lib/seo-landing-pages.ts
-- apps/landing/src/content/blog/*.md
+- apps/admin/src/marketing/lib/seo-landing-pages.ts
+- apps/admin/content/blog/*.md
 - apps/voice-gateway/src/realtime/toolExecutor.ts

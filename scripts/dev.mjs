@@ -14,10 +14,9 @@ for (const file of [".env.local", ".env"]) {
 const child = spawn(process.execPath, [
   `${root}/node_modules/concurrently/dist/bin/index.js`,
   "-n",
-  "admin,worker,landing",
+  "admin,worker",
   "pnpm dev:admin",
   "pnpm dev:worker",
-  "pnpm dev:landing",
 ], {
   cwd: root,
   env: process.env,

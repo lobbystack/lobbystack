@@ -1,4 +1,4 @@
-// One module per Markdown twin, ported from the Astro site's *.md.ts endpoints.
+// One module per Markdown twin.
 // Keys are the public path without the locale prefix or ".md": /fr/pricing.md is fr["pricing"].
 import type { Locale } from "@/marketing/i18n"
 import { blogCanonicalSlug, getBlogPosts } from "@/marketing/content/blog"

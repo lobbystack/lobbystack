@@ -21,8 +21,8 @@ function visitElements(node: Root | Element, visit: (element: Element) => void) 
   }
 }
 
-// Heading ids as Astro wrote them (github-slugger over the heading's text), so
-// links to #anchors in posts keep working.
+// Heading ids from github-slugger over the heading's text, so links to
+// #anchors in posts keep working.
 function rehypeHeadingIds() {
   return (tree: Root) => {
     const slugger = new GithubSlugger()
@@ -33,8 +33,8 @@ function rehypeHeadingIds() {
   }
 }
 
-// Astro's Prism output marks the <pre> with the fence's language too, and
-// drops the newline before </code>; the stylesheet and published pages match.
+// Marks the <pre> with the fence's language too, and drops the newline before
+// </code>, which the stylesheet expects.
 function rehypeCodeLanguage() {
   return (tree: Root) => {
     visitElements(tree, (element) => {
@@ -51,8 +51,8 @@ function rehypeCodeLanguage() {
   }
 }
 
-// Astro aligned table columns with an inline style; mdast-util-to-hast uses
-// the align attribute, which the stylesheet's text-align rules would override.
+// Aligns table columns with an inline style. mdast-util-to-hast uses the
+// align attribute, which the stylesheet's text-align rules would override.
 function rehypeTableAlignStyle() {
   return (tree: Root) => {
     visitElements(tree, (element) => {
@@ -73,7 +73,7 @@ const processor = unified()
   .use(rehypeTableAlignStyle)
   .use(rehypeStringify, { characterReferences: { useNamedReferences: true } })
 
-/** Renders a post's Markdown to HTML the way the Astro site did. */
+/** Renders a post's Markdown to HTML. */
 export async function renderMarkdown(markdown: string): Promise<string> {
   return String(await processor.process(markdown))
 }

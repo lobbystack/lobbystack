@@ -5,14 +5,14 @@ import { findChangedPages, isKeyFileLive, pageSignature } from "./indexnow"
 const page = ({
   title = "AI Receptionist for Plumbers | LobbyStack",
   body = "<h1>Plumbers</h1><p>Answers burst pipe calls.</p>",
-  image = '<img src="/_astro/missed-calls.Ab12Cd.webp?w=800" alt="Plumbing call">',
+  image = '<img src="/illustrations/missed-calls-booked-work.webp?w=800" alt="Plumbing call">',
   socialImage = "https://lobbystack.com/illustrations/missed-calls.webp",
   extra = "",
 } = {}) => `<!doctype html><html><head><title>${title}</title>
 <meta name="description" content="Plumbing calls answered.">
 <meta property="og:image" content="${socialImage}">
 <link rel="canonical" href="https://lobbystack.com/solutions/ai-receptionist-for-plumbers/">
-<script type="module" src="/_astro/page.${Math.random()}.js"></script>
+<script type="module" src="/_next/static/chunks/page.${Math.random()}.js"></script>
 </head><body><main>${body}${image}<a href="/pricing/">Pricing</a></main>${extra}</body></html>`
 
 const response = (body: string, ok = true) => ({
@@ -66,7 +66,7 @@ describe("pageSignature", () => {
     expect(
       pageSignature(
         page({
-          image: '<img src="/_astro/handoff.Xy98Zw.webp" alt="Plumbing call">',
+          image: '<img src="/illustrations/human-handoff.webp" alt="Plumbing call">',
         })
       )
     ).not.toBe(base)

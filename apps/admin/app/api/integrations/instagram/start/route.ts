@@ -17,5 +17,6 @@ export const GET = operatorRoute(async ({ request, userId, businessId, transacti
   // Instagram returns to the host's domain, which hands the callback back to a partner's host it started on.
   const state = createInstagramOAuthState({ userId, businessId, origin: partnerRequestOrigin(request.headers) });
   await storeInstagramOAuthState(state);
-  return NextResponse.json({ url: instagramProvider().buildAuthorizationUrl({ state }) });
+  const forceReauth = new URL(request.url).searchParams.get("switch") === "1";
+  return NextResponse.json({ url: instagramProvider().buildAuthorizationUrl({ state, forceReauth }) });
 });

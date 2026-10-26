@@ -103,9 +103,9 @@ export function LiveIntegrationsSurface() {
           </Select>
         </Field> : <Button disabled={!canManage} onClick={() => void connect()}>{t("integrations.google.connect")}</Button>}
       </div>
-      {google ? <DialogFooter className="m-0 flex-row justify-between rounded-b-xl border-t px-6 py-4 sm:justify-between">
-        <Button disabled={!canManage || update.isPending} onClick={() => update.mutate({ method: "DELETE" })} size="sm" variant="ghost"><Trash2 data-icon="inline-start" />{t("integrations.google.disconnect")}</Button>
-        <Button disabled={!canManage} onClick={() => void connect()} size="sm" variant={needsAttention && !connected && !syncing ? "default" : "outline"}>{t("integrations.google.reconnect")}</Button>
+      {google ? <DialogFooter className="m-0 rounded-b-xl border-t px-6 py-4">
+        <Button className="w-full sm:w-auto" disabled={!canManage || update.isPending} onClick={() => update.mutate({ method: "DELETE" })} size="sm" variant="destructive"><Trash2 data-icon="inline-start" />{t("integrations.google.disconnect")}</Button>
+        <Button className="w-full sm:w-auto" disabled={!canManage} onClick={() => void connect()} size="sm" variant={needsAttention && !connected && !syncing ? "default" : "outline"}>{t("integrations.google.reconnect")}</Button>
       </DialogFooter> : null}
     </DialogContent></Dialog>
   </>;

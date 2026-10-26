@@ -159,7 +159,7 @@ export function SeoLandingPage({ page, locale }: SeoLandingPageProps) {
       <Navbar locale={locale} />
       <main id="main-content" className="min-h-screen bg-background text-foreground">
         {/* Hero Section */}
-        <section className="mx-auto max-w-7xl px-6 pt-16 pb-0 md:pt-20 lg:pt-24">
+        <section className="mx-auto max-w-site px-6 pt-16 pb-0 md:pt-20 lg:pt-24">
           {isSelfHosted && (
             <SelfHostedHero h1={page.h1} intro={page.intro} guideHref={page.ctaPrimaryHref ?? "/docs/"} />
           )}
@@ -273,10 +273,10 @@ export function SeoLandingPage({ page, locale }: SeoLandingPageProps) {
           {isTradePage && (
             <figure className="mx-auto mb-16 max-w-5xl overflow-hidden rounded-2xl border border-border/60 bg-muted shadow-sm">
               <img
-                src="/screenshots/dashboard.webp"
+                src="/screenshots/dashboard-home.webp"
                 alt={t.dashboardAlt}
-                width="3020"
-                height="1898"
+                width="2560"
+                height="1920"
                 className="h-auto w-full"
                 loading="lazy"
                 decoding="async"
@@ -303,7 +303,7 @@ export function SeoLandingPage({ page, locale }: SeoLandingPageProps) {
         {isSelfHosted && (
           <>
             <section className="border-t border-border/40 py-20 md:py-28" id="architecture">
-              <div className="mx-auto max-w-7xl px-6">
+              <div className="mx-auto max-w-site px-6">
                 <div className="max-w-3xl">
                   <h2 className="section-heading">How a call moves through your server</h2>
                   <p className="section-intro">
@@ -323,7 +323,7 @@ export function SeoLandingPage({ page, locale }: SeoLandingPageProps) {
         {/* Alternating Solution Tour Sections */}
         {richLayout && (
           <section className="border-t border-border/40 py-20 md:py-28">
-            <div className="mx-auto max-w-7xl divide-y divide-border/60 px-6">
+            <div className="mx-auto max-w-site divide-y divide-border/60 px-6">
               {page.sections.map((section, index) => (
                 <div key={index} className="grid gap-6 py-12 first:pt-0 last:pb-0 lg:grid-cols-12 lg:gap-12">
                   <h2 className="font-heading text-2xl leading-[1.15] font-medium tracking-[-0.04em] md:text-3xl lg:col-span-5">
@@ -349,7 +349,7 @@ export function SeoLandingPage({ page, locale }: SeoLandingPageProps) {
         )}
         {!richLayout && (
           <section className="border-t border-border/40 bg-muted/15 py-20 md:py-28">
-            <div className="mx-auto max-w-7xl space-y-20 px-6 md:space-y-32">
+            <div className="mx-auto max-w-site space-y-20 px-6 md:space-y-32">
               {page.sections.map((section, index) => {
                 const isEven = index % 2 === 0
                 return (
@@ -440,7 +440,7 @@ export function SeoLandingPage({ page, locale }: SeoLandingPageProps) {
 
         {otherTrades.length > 0 && (
           <section className="border-t border-border/40 py-16">
-            <div className="mx-auto max-w-7xl px-6">
+            <div className="mx-auto max-w-site px-6">
               <h2 className="card-heading">Answering services for other trades</h2>
               <ul className="mt-6 grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
                 {otherTrades.map((trade) => (
@@ -459,7 +459,7 @@ export function SeoLandingPage({ page, locale }: SeoLandingPageProps) {
         )}
 
         {/* Related Resources Footer */}
-        <section className="relative mx-auto max-w-7xl px-6 py-12 before:absolute before:top-0 before:left-1/2 before:h-px before:w-screen before:-translate-x-1/2 before:bg-border/40">
+        <section className="relative mx-auto max-w-site px-6 py-12 before:absolute before:top-0 before:left-1/2 before:h-px before:w-screen before:-translate-x-1/2 before:bg-border/40">
           <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
             <h3 className="text-xs font-semibold tracking-wider text-muted-foreground">{copy.common.relatedResources}</h3>
             <div className="flex flex-wrap gap-3">

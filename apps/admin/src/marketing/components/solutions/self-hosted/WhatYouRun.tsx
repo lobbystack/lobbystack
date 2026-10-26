@@ -33,7 +33,7 @@ const requirements = [
 export function WhatYouRun() {
   return (
     <section className="border-t border-border/40 py-20 md:py-28" id="deploy">
-      <div className="mx-auto grid max-w-7xl gap-12 px-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)] lg:gap-16">
+      <div className="mx-auto grid max-w-site gap-12 px-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)] lg:gap-16">
         <div>
           <h2 className="section-heading">Deploy with Docker Compose</h2>
           <p className="section-intro">

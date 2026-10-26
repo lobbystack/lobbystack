@@ -517,7 +517,7 @@ export function AffiliateProgramHero({
 
   return (
     <section className="relative overflow-hidden" id="hero">
-      <div className="mx-auto max-w-7xl px-6 pt-16 pb-8 md:pt-20 md:pb-10 lg:pt-24 lg:pb-12">
+      <div className="mx-auto max-w-site px-6 pt-16 pb-8 md:pt-20 md:pb-10 lg:pt-24 lg:pb-12">
         <div className="mx-auto max-w-4xl text-center">
           <h1 className="display-heading">
             {t.headingPrefix}{" "}
@@ -556,7 +556,7 @@ export function AffiliateProgramBenefits({
 
   return (
     <section className="section-spacing" id="benefits">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-site px-6">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="section-heading">{t.heading}</h2>
         </div>
@@ -598,7 +598,7 @@ export function AffiliateProgramDetails({
 
   return (
     <section className="section-spacing bg-muted/30" id="details">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-site px-6">
         <div className="grid gap-16 lg:grid-cols-2">
           <div>
             <h2 className="section-heading">{t.howItWorks.heading}</h2>
@@ -631,7 +631,7 @@ export function AffiliateProgramGuidelines({
 
   return (
     <section className="section-spacing" id="guidelines">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-site px-6">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="section-heading">{t.heading}</h2>
         </div>

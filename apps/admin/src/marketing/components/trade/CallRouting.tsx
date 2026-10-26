@@ -30,7 +30,7 @@ export function CallRouting({ details, ...props }: CallRoutingProps) {
   } = props
 
   return (
-    <section className="mx-auto max-w-7xl px-6 py-20 md:py-28" id="call-handling">
+    <section className="mx-auto max-w-site px-6 py-20 md:py-28" id="call-handling">
       <div className="max-w-3xl">
         <h2 className="section-heading">What happens to each {details.noun} call</h2>
         <p className="section-intro">{intro}</p>

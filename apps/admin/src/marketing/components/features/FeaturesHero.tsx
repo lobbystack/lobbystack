@@ -105,7 +105,7 @@ export function FeaturesHero({ locale = "en" }: FeaturesHeroProps) {
 
   return (
     <section className="relative overflow-hidden" id="features-hero">
-      <div className="mx-auto max-w-7xl px-6 pt-16 md:pt-20 lg:pt-24">
+      <div className="mx-auto max-w-site px-6 pt-16 md:pt-20 lg:pt-24">
         {/* Hero copy */}
         <div className="mx-auto max-w-4xl text-center">
           <h1 className="animate-fade-up display-heading stagger-1">

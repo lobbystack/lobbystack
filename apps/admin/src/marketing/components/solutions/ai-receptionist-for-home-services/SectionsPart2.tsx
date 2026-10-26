@@ -28,7 +28,7 @@ export function BusinessFit() {
 
   return (
     <section className="section-spacing" id="business-fit">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-site px-6">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="section-heading">
             Built for the trades that run on phone calls
@@ -82,7 +82,7 @@ export function Capabilities() {
 
   return (
     <section className="section-spacing bg-muted/30" id="capabilities">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-site px-6">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="section-heading">
             What your AI receptionist can handle
@@ -112,7 +112,7 @@ export function Capabilities() {
 export function RevenueTieIn() {
   return (
     <section className="section-spacing bg-background" id="revenue-tie-in">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-site px-6">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="section-heading">
             Every missed call could be a $500 job
@@ -144,7 +144,7 @@ export function RevenueTieIn() {
 export function OpenSource() {
   return (
     <section className="section-spacing bg-muted/30" id="open-source">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-site px-6">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="section-heading">Open source and self-hosted ready</h2>
           <p className="section-intro">

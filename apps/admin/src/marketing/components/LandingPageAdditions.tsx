@@ -5,14 +5,14 @@ import { ArrowRight, Check, History, Pencil } from "lucide-react"
 const homeSectionsCopy = {
   en: {
     extension: {
-      heading: "Turn missed calls into booked work",
-      body: "LobbyStack captures what callers need, books appointments when they are ready, and transfers urgent calls to your team.",
+      heading: "Callers get an answer when your team can't pick up",
+      body: "LobbyStack picks up the calls you miss, so the caller books a time or leaves a message instead of calling the next company.",
     },
     extensionCards: [
       {
-        title: "Turn unanswered calls into booked work",
+        title: "Book the job while the caller is on the line",
         description:
-          "LobbyStack answers when your team cannot, captures what the caller needs, and helps them book or request a callback.",
+          "LobbyStack answers when your team can't, asks what the caller needs, and books an appointment or takes a callback request.",
         cta: "See how it works",
         href: "#how-it-works",
         image: "/illustrations/missed-calls-booked-work.webp",
@@ -23,8 +23,8 @@ const homeSectionsCopy = {
       {
         title: "Send the right calls to your team",
         description:
-          "LobbyStack can answer routine calls, take a message with the caller's details and reason, or transfer urgent calls to your team.",
-        cta: "Set routing rules",
+          "LobbyStack handles routine calls and transfers urgent ones to your team. For everything else, it takes a message with the caller's details and reason for calling.",
+        cta: "See what your team controls",
         href: "#control",
         image: "/illustrations/call-routing-team.webp",
         alt: "An incoming call next to three team members",
@@ -35,19 +35,19 @@ const homeSectionsCopy = {
     connected: {
       imageAlt:
         "Business knowledge sources connected to LobbyStack answer routing",
-      heading: "Answers from everything your business knows",
-      body: "Import your website, PDFs, documents, spreadsheets, service lists, policies, and FAQs so LobbyStack can answer with the same context your team uses every day.",
+      heading: "Answers from your website and documents",
+      body: "Import your website and upload PDFs, Word documents, and text files. Add your services, hours, and policies in the dashboard, and LobbyStack answers callers with the same details your team uses.",
     },
     quality: {
-      heading: "AI receptionist for teams who care about response quality",
-      body: "Cover the phone without giving up the details, judgment, and follow through that customers notice.",
+      heading: "Handle calls the way your best receptionist would",
+      body: "LobbyStack picks up when you can't, books appointments during the call, and hands urgent calls to a person.",
       learnMoreLabel: "Explore AI phone answering",
       learnMoreHref: "/solutions/ai-phone-answering/",
       toolCards: [
         {
           title: "A receptionist that picks up when you need it to",
           description:
-            "Let LobbyStack answer every call, or only step in when your team is busy, after hours, or unable to pick up.",
+            "Let LobbyStack answer every call, or only step in when your team is busy, after hours, or unable to pick up. It answers several calls at the same time.",
           image: "/illustrations/call-capture.webp",
           alt: "Incoming call routing to team members or LobbyStack when the team is unavailable",
           imageContainerClass: "bg-[#F4F4F2] aspect-[4/3]",
@@ -56,9 +56,9 @@ const homeSectionsCopy = {
           imageHeight: 2048,
         },
         {
-          title: "Appointments booked without the back-and-forth",
+          title: "Appointments booked without phone tag",
           description:
-            "Offer available times, confirm appointments, and send follow-up details without manual back-and-forth.",
+            "LobbyStack offers open times, confirms the appointment, and texts the caller the details.",
           image: "/illustrations/booking-flow.webp",
           alt: "LobbyStack offering available appointment times and confirming a booking with caller confirmation",
           imageContainerClass: "bg-[#F4F4F2] aspect-[4/3]",
@@ -93,7 +93,7 @@ const homeSectionsCopy = {
         {
           title: "Add your knowledge",
           description:
-            "Import your website, files, services, FAQs, hours, policies, and the details callers ask about most.",
+            "Import your website and files, then add your services, hours, and the questions callers ask most.",
         },
         {
           title: "Set the rules",
@@ -103,7 +103,7 @@ const homeSectionsCopy = {
         {
           title: "Go live",
           description:
-            "LobbyStack starts answering calls, helping customers, and sending confirmations and summaries automatically.",
+            "LobbyStack answers calls, texts booking confirmations, and saves a summary of every call.",
         },
       ],
     },
@@ -129,8 +129,8 @@ const homeSectionsCopy = {
     },
     pricing: {
       heading: "Start free. Upgrade when calls grow.",
-      body: "Try LobbyStack with included usage, then move to Starter or Pro when you are ready for production call coverage.",
-      badge: "Most Popular",
+      body: "Try LobbyStack free for 14 days, then move to Starter or Pro for a dedicated number and more minutes.",
+      badge: "Most popular",
       viewDetails: "View pricing details",
       note: "No credit card required to start.",
       plans: [
@@ -138,19 +138,19 @@ const homeSectionsCopy = {
           name: "Free",
           price: "$0",
           description:
-            "30 voice minutes and a US or Canadian number free for 14 days. No credit card required.",
+            "30 voice minutes and a US or Canadian number free for 14 days.",
         },
         {
           name: "Starter",
           price: "$30/mo",
           description:
-            "150 voice minutes, 50 alert SMS segments, 20 transfer attempts, and email support.",
+            "150 voice minutes, up to 50 text alerts, 20 transfer attempts, and email support.",
         },
         {
           name: "Pro",
           price: "$100/mo",
           description:
-            "500 voice minutes, 200 alert SMS segments, 100 transfer attempts, and priority email support.",
+            "500 voice minutes, up to 200 text alerts, 100 transfer attempts, and priority email support.",
         },
         {
           name: "Enterprise",
@@ -161,22 +161,22 @@ const homeSectionsCopy = {
       ],
     },
     openSource: {
-      heading: "Proudly open-source, self-hosted",
+      heading: "Open source. Host it yourself or use LobbyStack Cloud.",
       body: "Run LobbyStack on your own servers and keep call recordings and customer data in your own infrastructure.",
       cta: "View on GitHub",
-      selfHostedCta: "Self-Hosting Overview",
+      selfHostedCta: "Self-hosting overview",
     },
   },
   fr: {
     extension: {
-      heading: "Transformez les appels manqués en rendez‑vous",
-      body: "LobbyStack comprend le besoin de l'appelant, réserve quand la personne est prête et transfère les urgences à votre équipe.",
+      heading: "Vos appelants obtiennent une réponse quand votre équipe ne peut pas décrocher",
+      body: "LobbyStack prend les appels que vous manquez. L’appelant réserve un créneau ou laisse un message au lieu d’appeler l’entreprise suivante.",
     },
     extensionCards: [
       {
-        title: "Transformez les appels sans réponse en rendez‑vous",
+        title: "Fixez le rendez‑vous pendant que l’appelant est en ligne",
         description:
-          "LobbyStack répond quand votre équipe ne peut pas décrocher, comprend le besoin de l’appelant et l’aide à réserver ou à demander un rappel.",
+          "LobbyStack répond quand votre équipe ne peut pas, demande ce dont l’appelant a besoin et fixe un rendez‑vous ou note une demande de rappel.",
         cta: "Voir le fonctionnement",
         href: "#how-it-works",
         image: "/illustrations/missed-calls-booked-work.webp",
@@ -187,8 +187,8 @@ const homeSectionsCopy = {
       {
         title: "Envoyez les bons appels à votre équipe",
         description:
-          "LobbyStack traite les appels courants, prend un message avec les coordonnées et le motif de l’appel, ou transfère les appels urgents à votre équipe.",
-        cta: "Définir les règles",
+          "LobbyStack traite les appels courants et transfère les urgences à votre équipe. Pour le reste, il prend un message avec les coordonnées et le motif de l’appel.",
+        cta: "Voir ce que votre équipe contrôle",
         href: "#control",
         image: "/illustrations/call-routing-team.webp",
         alt: "Un appel entrant à côté de trois membres de l’équipe",
@@ -199,20 +199,19 @@ const homeSectionsCopy = {
     connected: {
       imageAlt:
         "Sources de connaissances métier connectées à la réception téléphonique LobbyStack",
-      heading: "Des réponses fondées sur ce que votre entreprise sait déjà",
-      body: "Importez votre site, vos PDF, documents, feuilles de calcul, services, politiques et FAQ pour que LobbyStack réponde avec le même contexte que votre équipe.",
+      heading: "Des réponses tirées de votre site et de vos documents",
+      body: "Importez votre site et ajoutez vos PDF, documents Word et fichiers texte. Indiquez vos services, horaires et politiques dans le tableau de bord, et LobbyStack répond aux appelants avec les mêmes informations que votre équipe.",
     },
     quality: {
-      heading:
-        "Un réceptionniste IA pour les équipes qui tiennent à la qualité des réponses",
-      body: "Couvrez le téléphone sans perdre les détails, le jugement et le suivi que vos clients remarquent.",
+      heading: "Traitez les appels comme le ferait votre meilleure réceptionniste",
+      body: "LobbyStack décroche quand vous ne pouvez pas, fixe les rendez‑vous pendant l’appel et passe les appels urgents à une personne.",
       learnMoreLabel: "Découvrir la réponse téléphonique IA",
       learnMoreHref: "/solutions/ai-phone-answering/",
       toolCards: [
         {
           title: "Une réceptionniste qui décroche quand vous en avez besoin",
           description:
-            "Laissez LobbyStack répondre à chaque appel, ou seulement prendre le relais quand votre équipe est occupée, fermée ou indisponible.",
+            "Laissez LobbyStack répondre à chaque appel, ou seulement prendre le relais quand votre équipe est occupée, fermée ou indisponible. Il répond à plusieurs appels en même temps.",
           image: "/illustrations/call-capture.webp",
           alt: "Routage d’appel entrant vers l’équipe ou LobbyStack quand l’équipe est indisponible",
           imageContainerClass: "bg-[#F4F4F2] aspect-[4/3]",
@@ -221,9 +220,9 @@ const homeSectionsCopy = {
           imageHeight: 2048,
         },
         {
-          title: "Des rendez‑vous pris sans allers-retours",
+          title: "Des rendez‑vous pris sans rappels à répétition",
           description:
-            "Proposez des créneaux disponibles, confirmez les rendez‑vous et envoyez les informations de suivi sans échanges manuels.",
+            "LobbyStack propose les créneaux libres, confirme le rendez‑vous et envoie les détails par SMS à l’appelant.",
           image: "/illustrations/booking-flow.webp",
           alt: "LobbyStack propose des créneaux disponibles et confirme un rendez‑vous avec envoi de confirmation à l’appelant",
           imageContainerClass: "bg-[#F4F4F2] aspect-[4/3]",
@@ -258,7 +257,7 @@ const homeSectionsCopy = {
         {
           title: "Ajoutez vos connaissances",
           description:
-            "Importez votre site, vos fichiers, vos services, vos FAQ, vos horaires, vos politiques et les détails que les appelants demandent souvent.",
+            "Importez votre site et vos fichiers, puis ajoutez vos services, vos horaires et les questions que les appelants posent le plus.",
         },
         {
           title: "Définissez les règles",
@@ -268,7 +267,7 @@ const homeSectionsCopy = {
         {
           title: "Passez en production",
           description:
-            "LobbyStack commence à répondre, aider les clients et envoyer confirmations et résumés automatiquement.",
+            "LobbyStack répond aux appels, envoie les confirmations de rendez‑vous par SMS et enregistre un résumé de chaque appel.",
         },
       ],
     },
@@ -295,7 +294,7 @@ const homeSectionsCopy = {
     pricing: {
       heading:
         "Commencez gratuitement. Passez au forfait supérieur quand les appels augmentent.",
-      body: "Essayez LobbyStack avec l’usage inclus, puis passez à Starter ou Pro quand vous êtes prêt à couvrir vos appels en production.",
+      body: "Essayez LobbyStack gratuitement pendant 14 jours, puis passez à Starter ou Pro pour obtenir un numéro dédié et plus de minutes.",
       badge: "Le plus populaire",
       viewDetails: "Voir le détail des tarifs",
       note: "Aucune carte bancaire requise pour commencer.",
@@ -304,19 +303,19 @@ const homeSectionsCopy = {
           name: "Free",
           price: "$0",
           description:
-            "30 minutes vocales et un numéro américain ou canadien gratuit pendant 14 jours. Aucune carte bancaire requise.",
+            "30 minutes vocales et un numéro américain ou canadien gratuit pendant 14 jours.",
         },
         {
           name: "Starter",
           price: "$30/mois",
           description:
-            "150 minutes vocales, 50 segments SMS d’alerte, 20 tentatives de transfert et support par courriel.",
+            "150 minutes vocales, jusqu’à 50 alertes SMS, 20 tentatives de transfert et support par courriel.",
         },
         {
           name: "Pro",
           price: "$100/mois",
           description:
-            "500 minutes vocales, 200 segments SMS d’alerte, 100 tentatives de transfert et support prioritaire par courriel.",
+            "500 minutes vocales, jusqu’à 200 alertes SMS, 100 tentatives de transfert et support prioritaire par courriel.",
         },
         {
           name: "Enterprise",
@@ -327,7 +326,7 @@ const homeSectionsCopy = {
       ],
     },
     openSource: {
-      heading: "Open source, prêt pour l'auto-hébergement",
+      heading: "Open source. Hébergez-le vous-même ou utilisez LobbyStack Cloud.",
       body: "Hébergez LobbyStack sur vos propres serveurs et gardez les enregistrements d’appels et les données client dans votre infrastructure.",
       cta: "Voir sur GitHub",
       selfHostedCta: "Aperçu de l'auto-hébergement",
@@ -335,14 +334,14 @@ const homeSectionsCopy = {
   },
   es: {
     extension: {
-      heading: "Convierta las llamadas perdidas en citas",
-      body: "LobbyStack recoge lo que necesita quien llama, reserva citas cuando la persona está lista y transfiere las llamadas urgentes a su equipo.",
+      heading: "Quienes llaman reciben respuesta cuando su equipo no puede contestar",
+      body: "LobbyStack atiende las llamadas que usted pierde. La persona reserva una hora o deja un mensaje en vez de llamar a la siguiente empresa.",
     },
     extensionCards: [
       {
-        title: "Convierta las llamadas sin respuesta en citas",
+        title: "Reserve el trabajo mientras la persona sigue en la línea",
         description:
-          "LobbyStack responde cuando su equipo no puede, recoge lo que necesita la persona que llama y la ayuda a reservar o a pedir que le devuelvan la llamada.",
+          "LobbyStack responde cuando su equipo no puede, pregunta qué necesita la persona que llama y reserva una cita o anota la solicitud de devolución de llamada.",
         cta: "Ver cómo funciona",
         href: "#how-it-works",
         image: "/illustrations/missed-calls-booked-work.webp",
@@ -353,8 +352,8 @@ const homeSectionsCopy = {
       {
         title: "Envíe las llamadas adecuadas a su equipo",
         description:
-          "LobbyStack puede atender llamadas rutinarias, tomar un mensaje con los datos de quien llama y el motivo, o transferir las llamadas urgentes a su equipo.",
-        cta: "Definir reglas",
+          "LobbyStack atiende las llamadas rutinarias y transfiere las urgentes a su equipo. Para lo demás, toma un mensaje con los datos de quien llama y el motivo.",
+        cta: "Vea lo que controla su equipo",
         href: "#control",
         image: "/illustrations/call-routing-team.webp",
         alt: "Una llamada entrante junto a tres miembros del equipo",
@@ -365,20 +364,19 @@ const homeSectionsCopy = {
     connected: {
       imageAlt:
         "Fuentes de conocimiento del negocio conectadas a las respuestas de LobbyStack",
-      heading: "Respuestas basadas en todo lo que sabe su negocio",
-      body: "Importe su sitio web, PDF, documentos, hojas de cálculo, listas de servicios, políticas y preguntas frecuentes para que LobbyStack responda con el mismo contexto que su equipo usa a diario.",
+      heading: "Respuestas basadas en su sitio web y sus documentos",
+      body: "Importe su sitio web y suba archivos PDF, documentos de Word y archivos de texto. Agregue sus servicios, horarios y políticas en el panel, y LobbyStack responderá con los mismos datos que usa su equipo.",
     },
     quality: {
-      heading:
-        "Recepcionista con IA para equipos que cuidan la calidad de sus respuestas",
-      body: "Cubra el teléfono sin renunciar a los detalles, el criterio y el seguimiento que sus clientes notan.",
+      heading: "Atienda las llamadas como lo haría su mejor recepcionista",
+      body: "LobbyStack contesta cuando usted no puede, reserva citas durante la llamada y pasa las llamadas urgentes a una persona.",
       learnMoreLabel: "Conozca la atención telefónica con IA",
       learnMoreHref: "/solutions/ai-phone-answering/",
       toolCards: [
         {
           title: "Una recepcionista que contesta cuando usted lo necesita",
           description:
-            "Deje que LobbyStack conteste todas las llamadas, o solo cuando su equipo esté ocupado, fuera de horario o no pueda atender.",
+            "Deje que LobbyStack conteste todas las llamadas, o solo cuando su equipo esté ocupado, fuera de horario o no pueda atender. Atiende varias llamadas al mismo tiempo.",
           image: "/illustrations/call-capture.webp",
           alt: "Llamada entrante dirigida a miembros del equipo o a LobbyStack cuando el equipo no está disponible",
           imageContainerClass: "bg-[#F4F4F2] aspect-[4/3]",
@@ -387,9 +385,9 @@ const homeSectionsCopy = {
           imageHeight: 2048,
         },
         {
-          title: "Citas reservadas sin idas y vueltas",
+          title: "Citas reservadas sin llamadas de ida y vuelta",
           description:
-            "Ofrezca horarios disponibles, confirme citas y envíe los detalles de seguimiento sin coordinarlo todo a mano.",
+            "LobbyStack ofrece horarios libres, confirma la cita y envía los detalles por SMS a la persona que llama.",
           image: "/illustrations/booking-flow.webp",
           alt: "LobbyStack ofrece horarios disponibles y confirma una reserva con la aprobación de la persona que llama",
           imageContainerClass: "bg-[#F4F4F2] aspect-[4/3]",
@@ -424,7 +422,7 @@ const homeSectionsCopy = {
         {
           title: "Añada su conocimiento",
           description:
-            "Importe su sitio web, archivos, servicios, preguntas frecuentes, horarios, políticas y los datos que más piden quienes llaman.",
+            "Importe su sitio web y sus archivos, y luego agregue sus servicios, horarios y las preguntas que más hacen quienes llaman.",
         },
         {
           title: "Defina las reglas",
@@ -434,7 +432,7 @@ const homeSectionsCopy = {
         {
           title: "Active el servicio",
           description:
-            "LobbyStack empieza a contestar llamadas, ayudar a sus clientes y enviar confirmaciones y resúmenes automáticamente.",
+            "LobbyStack contesta las llamadas, envía por SMS las confirmaciones de citas y guarda un resumen de cada llamada.",
         },
       ],
     },
@@ -460,7 +458,7 @@ const homeSectionsCopy = {
     },
     pricing: {
       heading: "Empiece gratis. Mejore su plan cuando crezcan las llamadas.",
-      body: "Pruebe LobbyStack con el uso incluido y pase a Starter o Pro cuando esté listo para atender sus llamadas reales.",
+      body: "Pruebe LobbyStack gratis durante 14 días y luego pase a Starter o Pro para tener un número dedicado y más minutos.",
       badge: "Más popular",
       viewDetails: "Ver detalles de precios",
       note: "No necesita tarjeta de crédito para empezar.",
@@ -469,19 +467,19 @@ const homeSectionsCopy = {
           name: "Free",
           price: "$0",
           description:
-            "30 minutos de voz y un número de EE. UU. o Canadá gratis durante 14 días. No necesita tarjeta de crédito.",
+            "30 minutos de voz y un número de EE. UU. o Canadá gratis durante 14 días.",
         },
         {
           name: "Starter",
           price: "$30/mes",
           description:
-            "150 minutos de voz, 50 segmentos de SMS de alerta, 20 intentos de transferencia y soporte por correo electrónico.",
+            "150 minutos de voz, hasta 50 alertas por SMS, 20 intentos de transferencia y soporte por correo electrónico.",
         },
         {
           name: "Pro",
           price: "$100/mes",
           description:
-            "500 minutos de voz, 200 segmentos de SMS de alerta, 100 intentos de transferencia y soporte prioritario por correo electrónico.",
+            "500 minutos de voz, hasta 200 alertas por SMS, 100 intentos de transferencia y soporte prioritario por correo electrónico.",
         },
         {
           name: "Enterprise",
@@ -492,7 +490,7 @@ const homeSectionsCopy = {
       ],
     },
     openSource: {
-      heading: "Orgullosamente de código abierto y autoalojado",
+      heading: "Código abierto. Alójelo usted mismo o use LobbyStack Cloud.",
       body: "Ejecute LobbyStack en sus propios servidores y guarde las grabaciones de llamadas y los datos de sus clientes en su propia infraestructura.",
       cta: "Ver en GitHub",
       selfHostedCta: "Sobre el autoalojamiento",
@@ -500,14 +498,14 @@ const homeSectionsCopy = {
   },
   sr: {
     extension: {
-      heading: "Pretvorite propuštene pozive u zakazane termine",
-      body: "LobbyStack beleži šta pozivaocima treba, zakazuje termine kada su spremni i hitne pozive preusmerava Vašem timu.",
+      heading: "Pozivaoci dobijaju odgovor i kada Vaš tim ne može da se javi",
+      body: "LobbyStack se javlja na pozive koje propustite. Pozivalac zakaže termin ili ostavi poruku umesto da pozove sledeću firmu.",
     },
     extensionCards: [
       {
-        title: "Pretvorite neodgovorene pozive u zakazane termine",
+        title: "Zakažite posao dok je pozivalac još na vezi",
         description:
-          "LobbyStack odgovara kada Vaš tim ne može, beleži šta pozivaocu treba i pomaže mu da zakaže termin ili zatraži povratni poziv.",
+          "LobbyStack se javlja kada Vaš tim ne može, pita šta pozivaocu treba i zakazuje termin ili beleži zahtev za povratni poziv.",
         cta: "Pogledajte kako radi",
         href: "#how-it-works",
         image: "/illustrations/missed-calls-booked-work.webp",
@@ -518,8 +516,8 @@ const homeSectionsCopy = {
       {
         title: "Pošaljite prave pozive svom timu",
         description:
-          "LobbyStack može da odgovori na rutinske pozive, primi poruku sa podacima pozivaoca i razlogom poziva ili preusmeri hitne pozive Vašem timu.",
-        cta: "Podesite pravila",
+          "LobbyStack obavlja rutinske pozive, a hitne preusmerava Vašem timu. Za sve ostalo prima poruku sa podacima pozivaoca i razlogom poziva.",
+        cta: "Pogledajte šta Vaš tim kontroliše",
         href: "#control",
         image: "/illustrations/call-routing-team.webp",
         alt: "Dolazni poziv pored tri člana tima",
@@ -529,19 +527,19 @@ const homeSectionsCopy = {
     ],
     connected: {
       imageAlt: "Izvori poslovnog znanja povezani sa LobbyStack odgovorima",
-      heading: "Odgovori iz svega što Vaša firma zna",
-      body: "Uvezite sajt, PDF fajlove, dokumente, tabele, spiskove usluga, pravila poslovanja i česta pitanja, da bi LobbyStack odgovarao sa istim kontekstom koji Vaš tim koristi svakog dana.",
+      heading: "Odgovori iz Vašeg sajta i dokumenata",
+      body: "Uvezite sajt i otpremite PDF, Word i tekstualne fajlove. Dodajte usluge, radno vreme i pravila poslovanja na kontrolnoj tabli, a LobbyStack pozivaocima odgovara sa istim podacima koje koristi Vaš tim.",
     },
     quality: {
-      heading: "AI recepcioner za timove kojima je stalo do kvaliteta odgovora",
-      body: "Neka telefon uvek bude pokriven, bez odricanja od detalja, dobre procene i doslednosti koje klijenti primećuju.",
+      heading: "Odgovarajte na pozive kao Vaš najbolji recepcioner",
+      body: "LobbyStack se javlja kada Vi ne možete, zakazuje termine tokom poziva i hitne pozive prebacuje na čoveka.",
       learnMoreLabel: "Saznajte više o AI odgovaranju na pozive",
       learnMoreHref: "/solutions/ai-phone-answering/",
       toolCards: [
         {
           title: "Recepcioner koji se javlja kada Vam zatreba",
           description:
-            "Neka LobbyStack odgovara na svaki poziv, ili neka uskoči samo kada je Vaš tim zauzet, van radnog vremena ili ne može da se javi.",
+            "Neka LobbyStack odgovara na svaki poziv, ili neka uskoči samo kada je Vaš tim zauzet, van radnog vremena ili ne može da se javi. Odgovara na više poziva istovremeno.",
           image: "/illustrations/call-capture.webp",
           alt: "Dolazni poziv se usmerava članovima tima ili na LobbyStack kada tim nije dostupan",
           imageContainerClass: "bg-[#F4F4F2] aspect-[4/3]",
@@ -550,9 +548,9 @@ const homeSectionsCopy = {
           imageHeight: 2048,
         },
         {
-          title: "Termini zakazani bez dogovaranja tamo-amo",
+          title: "Termini zakazani bez jurenja telefonom",
           description:
-            "Ponudite slobodne termine, potvrdite zakazivanje i pošaljite dalja uputstva bez ručnog dogovaranja.",
+            "LobbyStack nudi slobodne termine, potvrđuje zakazivanje i pozivaocu šalje detalje SMS porukom.",
           image: "/illustrations/booking-flow.webp",
           alt: "LobbyStack nudi slobodne termine i potvrđuje zakazivanje uz saglasnost pozivaoca",
           imageContainerClass: "bg-[#F4F4F2] aspect-[4/3]",
@@ -587,7 +585,7 @@ const homeSectionsCopy = {
         {
           title: "Dodajte znanje",
           description:
-            "Uvezite sajt, fajlove, usluge, česta pitanja, radno vreme, pravila poslovanja i podatke za koje pozivaoci najčešće pitaju.",
+            "Uvezite sajt i fajlove, pa dodajte usluge, radno vreme i pitanja koja pozivaoci najčešće postavljaju.",
         },
         {
           title: "Podesite pravila",
@@ -597,7 +595,7 @@ const homeSectionsCopy = {
         {
           title: "Pokrenite",
           description:
-            "LobbyStack počinje da odgovara na pozive, pomaže klijentima i automatski šalje potvrde i rezimee.",
+            "LobbyStack odgovara na pozive, šalje SMS potvrde termina i čuva rezime svakog poziva.",
         },
       ],
     },
@@ -623,7 +621,7 @@ const homeSectionsCopy = {
     },
     pricing: {
       heading: "Počnite besplatno. Pređite na veći paket kada pozivi porastu.",
-      body: "Isprobajte LobbyStack uz uključenu potrošnju, pa pređite na Starter ili Pro kada budete spremni da mu prepustite prave pozive.",
+      body: "Isprobajte LobbyStack besplatno 14 dana, pa pređite na Starter ili Pro za namenski broj i više minuta.",
       badge: "Najpopularniji",
       viewDetails: "Detalji o cenama",
       note: "Za početak nije potrebna kreditna kartica.",
@@ -632,19 +630,19 @@ const homeSectionsCopy = {
           name: "Free",
           price: "$0",
           description:
-            "30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana. Kreditna kartica nije potrebna.",
+            "30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana.",
         },
         {
           name: "Starter",
           price: "$30/mes.",
           description:
-            "150 minuta razgovora, 50 SMS segmenata za obaveštenja, 20 pokušaja preusmeravanja i podrška putem imejla.",
+            "150 minuta razgovora, do 50 SMS obaveštenja, 20 pokušaja preusmeravanja i podrška putem imejla.",
         },
         {
           name: "Pro",
           price: "$100/mes.",
           description:
-            "500 minuta razgovora, 200 SMS segmenata za obaveštenja, 100 pokušaja preusmeravanja i prioritetna podrška putem imejla.",
+            "500 minuta razgovora, do 200 SMS obaveštenja, 100 pokušaja preusmeravanja i prioritetna podrška putem imejla.",
         },
         {
           name: "Enterprise",
@@ -655,7 +653,7 @@ const homeSectionsCopy = {
       ],
     },
     openSource: {
-      heading: "Otvoreni kod, samostalno hostovanje",
+      heading: "Otvoreni kod. Hostujte ga sami ili koristite LobbyStack Cloud.",
       body: "Pokrenite LobbyStack na sopstvenim serverima i čuvajte snimke poziva i podatke klijenata u svojoj infrastrukturi.",
       cta: "Pogledajte na GitHubu",
       selfHostedCta: "O samostalnom hostovanju",
@@ -672,7 +670,7 @@ export function ProductExtensionSection({ locale = "en" }: LocalizedProps) {
 
   return (
     <section className="px-0 pt-0 pb-12 md:pb-16 lg:pb-20" id="missed-calls">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-site px-6">
         <div className="mb-10 max-w-3xl">
           <h2 className="section-heading">{sectionCopy.extension.heading}</h2>
           <p className="section-intro mt-4">{sectionCopy.extension.body}</p>
@@ -726,8 +724,8 @@ function ConnectedReceptionistSection({ locale = "en" }: LocalizedProps) {
   const sectionCopy = homeSectionsCopy[locale].connected
 
   return (
-    <section className="section-spacing" id="how-it-works">
-      <div className="mx-auto max-w-7xl px-6">
+    <section className="section-spacing" id="knowledge">
+      <div className="mx-auto max-w-site px-6">
         <div className="grid overflow-hidden rounded-[1.35rem] border border-border/70 bg-background lg:grid-cols-[1.18fr_0.82fr]">
           <div className="min-h-[360px] overflow-hidden border-b border-border/70 bg-[#F4F4F2] md:min-h-[460px] lg:border-r lg:border-b-0">
             <img
@@ -768,7 +766,7 @@ function QualityToolsSection({ locale = "en" }: LocalizedProps) {
 
   return (
     <section className="section-spacing" id="phone-tools">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-site px-6">
         <div className="max-w-3xl">
           <h2 className="section-heading">{sectionCopy.heading}</h2>
           <p className="section-intro">{sectionCopy.body}</p>
@@ -824,8 +822,8 @@ function WorkflowSection({ locale = "en" }: LocalizedProps) {
   const sectionCopy = homeSectionsCopy[locale].workflow
 
   return (
-    <section className="section-spacing" id="workflow">
-      <div className="mx-auto max-w-7xl px-6">
+    <section className="section-spacing" id="how-it-works">
+      <div className="mx-auto max-w-site px-6">
         <div className="max-w-3xl">
           <h2 className="section-heading">{sectionCopy.heading}</h2>
           <p className="section-intro">{sectionCopy.body}</p>
@@ -868,21 +866,36 @@ function ControlOwnershipSection({ locale = "en" }: LocalizedProps) {
 
   return (
     <section className="section-spacing" id="control">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-site px-6">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="section-heading">{sectionCopy.heading}</h2>
           <p className="section-intro mx-auto">{sectionCopy.body}</p>
         </div>
 
-        <div className="mt-14 overflow-hidden rounded-[1.35rem] border border-border/70 bg-background">
-          <img
-            src="/screenshots/dashboard.webp"
-            alt={sectionCopy.imageAlt}
-            width={3020}
-            height={1898}
-            className="w-full"
-            loading="lazy"
-            decoding="async"
+        {/* The panel clips the bottom of the window, and the fade hides
+            where the cut lands, so the crop reads as intentional. */}
+        <div className="relative mt-14 overflow-hidden rounded-[1.35rem] border border-border/70 bg-muted px-3 pt-3 sm:px-8 sm:pt-8 lg:px-14 lg:pt-14">
+          <div className="browser-frame mx-auto max-w-5xl rounded-b-none border-b-0">
+            <div className="browser-frame-bar" aria-hidden="true">
+              <span className="browser-dot" />
+              <span className="browser-dot" />
+              <span className="browser-dot" />
+            </div>
+            <div className="aspect-[16/11] overflow-hidden">
+              <img
+                src="/screenshots/dashboard-home.webp"
+                alt={sectionCopy.imageAlt}
+                width={2560}
+                height={1920}
+                className="block h-auto w-full"
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
+          </div>
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-1/4 bg-linear-to-t from-muted to-transparent"
           />
         </div>
 
@@ -918,7 +931,7 @@ function PricingPreviewSection({ locale = "en" }: LocalizedProps) {
 
   return (
     <section className="section-spacing" id="pricing-preview">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-site px-6">
         <div className="max-w-3xl">
           <h2 className="section-heading">{sectionCopy.heading}</h2>
           <p className="section-intro">{sectionCopy.body}</p>
@@ -982,7 +995,7 @@ function OpenSourceSection({ locale = "en" }: LocalizedProps) {
 
   return (
     <section className="section-spacing" id="open-source">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-site px-6">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="section-heading">{sectionCopy.heading}</h2>
           <p className="section-intro mx-auto">{sectionCopy.body}</p>

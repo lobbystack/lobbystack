@@ -11,14 +11,14 @@ const featureGridCopy = {
     headingStart: "Answer calls and book appointments",
     headingEmphasis: "while you work",
     intro:
-      "Answer questions, qualify new customers, book appointments, capture follow-up details, and transfer urgent calls to your team.",
+      "LobbyStack covers the four jobs your front desk does on the phone.",
     imageAlt:
       "LobbyStack AI receptionist capabilities: answers calls, books appointments, qualifies leads, transfers calls, and saves call summaries",
     features: [
       {
         title: "Answers your calls",
         description:
-          "LobbyStack can answer all your calls, or only when you're unavailable. It answers questions from your business information and collects what your team needs to follow up.",
+          "LobbyStack answers all your calls, or only the ones you can't take. It answers questions from your business information in 70+ languages and collects what your team needs to follow up.",
         icon: Phone,
       },
       {
@@ -36,7 +36,7 @@ const featureGridCopy = {
       {
         title: "Transfers when needed",
         description:
-          "When a customer needs a person, LobbyStack can transfer the call or take a clear message with the caller's details and reason for calling.",
+          "When a customer needs a person, LobbyStack transfers the call or takes a clear message with the caller's details and reason for calling.",
         icon: ArrowRightLeft,
       },
     ],
@@ -45,14 +45,14 @@ const featureGridCopy = {
     headingStart: "Répondez aux appels et planifiez les rendez‑vous",
     headingEmphasis: "pendant que vous travaillez",
     intro:
-      "Répondez aux questions, qualifiez les nouveaux clients, planifiez les rendez‑vous, collectez les informations utiles et transférez les appels urgents à votre équipe.",
+      "LobbyStack prend en charge les quatre tâches de votre accueil au téléphone.",
     imageAlt:
       "Fonctionnalités du réceptionniste IA LobbyStack : réponse aux appels, rendez‑vous, qualification, transferts et résumés",
     features: [
       {
         title: "Répond à vos appels",
         description:
-          "LobbyStack peut répondre à tous les appels ou seulement quand vous êtes indisponible. Il répond aux questions, collecte les détails importants et garde la conversation utile.",
+          "LobbyStack répond à tous vos appels ou seulement à ceux que vous ne pouvez pas prendre. Il répond aux questions dans plus de 70 langues à partir des informations de votre entreprise et note ce dont votre équipe a besoin pour le suivi.",
         icon: Phone,
       },
       {
@@ -79,14 +79,14 @@ const featureGridCopy = {
     headingStart: "Atienda llamadas y reserve citas",
     headingEmphasis: "mientras trabaja",
     intro:
-      "Responda preguntas, califique a nuevos clientes, reserve citas, tome los datos para el seguimiento y transfiera las llamadas urgentes a su equipo.",
+      "LobbyStack se encarga de las cuatro tareas que su recepción hace por teléfono.",
     imageAlt:
       "Funciones de la recepcionista con IA de LobbyStack: atiende llamadas, reserva citas, califica clientes potenciales, transfiere llamadas y guarda resúmenes",
     features: [
       {
         title: "Atiende sus llamadas",
         description:
-          "LobbyStack puede atender todas sus llamadas o solo cuando usted no está disponible. Responde preguntas con la información de su negocio y recoge lo que su equipo necesita para el seguimiento.",
+          "LobbyStack atiende todas sus llamadas o solo las que usted no puede tomar. Responde preguntas en más de 70 idiomas con la información de su negocio y recoge lo que su equipo necesita para el seguimiento.",
         icon: Phone,
       },
       {
@@ -104,7 +104,7 @@ const featureGridCopy = {
       {
         title: "Transfiere cuando hace falta",
         description:
-          "Cuando un cliente necesita hablar con una persona, LobbyStack puede transferir la llamada o tomar un mensaje claro con los datos de quien llama y el motivo.",
+          "Cuando un cliente necesita hablar con una persona, LobbyStack transfiere la llamada o toma un mensaje claro con los datos de quien llama y el motivo.",
         icon: ArrowRightLeft,
       },
     ],
@@ -113,14 +113,14 @@ const featureGridCopy = {
     headingStart: "Javljajte se na pozive i zakazujte termine",
     headingEmphasis: "dok radite",
     intro:
-      "Odgovarajte na pitanja, proveravajte nove klijente, zakazujte termine, beležite podatke za dalji kontakt i preusmeravajte hitne pozive Vašem timu.",
+      "LobbyStack obavlja četiri posla koja Vaša recepcija radi na telefonu.",
     imageAlt:
       "Funkcije LobbyStack AI recepcionera: javlja se na pozive, zakazuje termine, proverava potencijalne klijente, preusmerava pozive i čuva rezimee",
     features: [
       {
         title: "Javlja se na Vaše pozive",
         description:
-          "LobbyStack može da se javlja na sve Vaše pozive ili samo kada ste nedostupni. Odgovara na pitanja na osnovu podataka o Vašoj firmi i beleži ono što je Vašem timu potrebno za dalji kontakt.",
+          "LobbyStack se javlja na sve Vaše pozive ili samo na one koje Vi ne možete da preuzmete. Odgovara na pitanja na više od 70 jezika na osnovu podataka o Vašoj firmi i beleži ono što je Vašem timu potrebno za dalji kontakt.",
         icon: Phone,
       },
       {
@@ -138,7 +138,7 @@ const featureGridCopy = {
       {
         title: "Preusmerava kad zatreba",
         description:
-          "Kada klijentu treba živa osoba, LobbyStack može da preusmeri poziv ili da zapiše jasnu poruku sa podacima pozivaoca i razlogom poziva.",
+          "Kada klijentu treba živa osoba, LobbyStack preusmerava poziv ili zapisuje jasnu poruku sa podacima pozivaoca i razlogom poziva.",
         icon: ArrowRightLeft,
       },
     ],
@@ -167,7 +167,7 @@ export function FeatureGrid({ locale = "en" }: FeatureGridProps) {
 
   return (
     <section className="section-spacing" id="features">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-site px-6">
         {/* Section heading, centered */}
         <div className="mx-auto mb-10 max-w-2xl text-center md:mb-12">
           <h2 className="section-heading">

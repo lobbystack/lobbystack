@@ -1355,7 +1355,7 @@ export function FeatureWall({ locale = "en" }: FeatureWallProps) {
 
   return (
     <section className="section-spacing" id="feature-wall">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-site px-6">
         {/* Section intro */}
         <div className="mb-12 max-w-3xl md:mb-16">
           <h2 className="section-heading">{copy.heading}</h2>

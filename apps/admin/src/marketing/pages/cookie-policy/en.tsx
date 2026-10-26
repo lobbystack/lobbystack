@@ -1,7 +1,6 @@
 import { absoluteUrl, breadcrumbJsonLd, organizationJsonLd } from "@/marketing/lib/seo"
 import type { MarketingPageSeo } from "@/marketing/seo/page-seo"
 
-// Ported from apps/landing/src/pages/cookie-policy.astro.
 const updatedAt = "September 26, 2026"
 const cookieRows = [
   {
@@ -115,7 +114,7 @@ export function CookiePolicyMainEn() {
         className="mx-auto grid max-w-6xl gap-10 px-6 py-12 md:grid-cols-[220px_1fr] md:py-16"
       >
         <aside className="hidden md:block">
-          <nav className="sticky top-8 space-y-2 text-sm text-muted-foreground">
+          <nav className="sticky top-24 space-y-2 text-sm text-muted-foreground">
             <a className="block hover:text-foreground" href="#overview">Overview</a>
             <a className="block hover:text-foreground" href="#types">Types</a>
             <a className="block hover:text-foreground" href="#cookies">Cookies</a>

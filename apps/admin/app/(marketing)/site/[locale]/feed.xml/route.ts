@@ -13,8 +13,8 @@ export function generateStaticParams() {
 const escapeHtml = (value: string) =>
   value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-// The feed's own light Markdown conversion, kept from the Astro site so the
-// feed's content doesn't change with the move.
+// A light Markdown conversion for feed items: headings, lists and paragraphs
+// only, separate from the blog pages' renderer.
 const markdownToHtml = (markdown = "") =>
   markdown
     .split(/\n{2,}/)
@@ -34,7 +34,7 @@ const markdownToHtml = (markdown = "") =>
     })
     .join("\n");
 
-// Escapes text the way @astrojs/rss's XML builder did.
+// Escapes the five XML special characters, apostrophes and quotes included.
 const xml = (value: string) =>
   value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/'/g, "&apos;").replace(/"/g, "&quot;");
 

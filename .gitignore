@@ -19,9 +19,6 @@ node_modules
 .prospect-demos/
 .platform-keys/
 .partner-invites/
-apps/landing/.astro
-apps/landing/.wrangler
-apps/landing/dist
 **/.next/
 *.tsbuildinfo
 test-results/

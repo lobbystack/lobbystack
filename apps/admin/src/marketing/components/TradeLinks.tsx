@@ -229,7 +229,7 @@ export function TradeLinks({ locale = "en" }: { locale?: Locale }) {
   const copy = copyByLocale[locale]
   return (
     <section className="border-t border-border/40 py-20 md:py-28" id="by-trade">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-site px-6">
         <div className="max-w-3xl">
           <h2 className="section-heading">{copy.heading}</h2>
           <p className="section-intro">{copy.intro}</p>

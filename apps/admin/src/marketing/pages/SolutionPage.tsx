@@ -13,14 +13,13 @@ import {
   type BespokeSolutionKind,
 } from "@/marketing/pages/BespokeSolutionPage"
 
-// How Astro builds /solutions/<slug>/ in each locale:
+// How /solutions/<slug>/ renders in each locale:
 //
 // - The three solution pages with their own route folders render
 //   BespokeSolutionPage in English, and the translated shared page through
 //   SeoLandingPage in French, Spanish and Serbian.
-// - Every other solution page renders SeoLandingPage with that locale's data:
-//   English from solutions/[slug].astro (and four folders that render the same
-//   page), the other locales from the [...slug].astro catch-all.
+// - Every other solution page renders SeoLandingPage with that locale's data,
+//   through the [slug] route.
 
 const solutionPrefix = "/solutions/"
 

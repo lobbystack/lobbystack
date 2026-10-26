@@ -8,10 +8,14 @@ if (!process.argv.includes("--lockfile-only")) {
   writeFileSync("package.json", `${JSON.stringify(manifest, null, 2)}\n`);
 }
 
-// pnpm 10's lockfile has two-space importer keys and six-space dependency keys.
+// The lockfile has two-space importer keys and six-space dependency keys.
 // Keep resolution/snapshot records intact; fetch traverses the retained importers.
-const lock = readFileSync("pnpm-lock.yaml", "utf8");
-if (!lock.startsWith("lockfileVersion: '9.0'\n") || !lock.includes("\nimporters:\n")) {
+const raw = readFileSync("pnpm-lock.yaml", "utf8");
+// pnpm 12 writes a leading document that locks pnpm itself; only the project's document is projected.
+const projectStart = raw.startsWith("---\n") ? raw.indexOf("\n---\n", 4) + 5 : 0;
+const pnpmDocument = raw.slice(0, projectStart);
+const lock = raw.slice(projectStart);
+if (projectStart === 4 || !lock.startsWith("lockfileVersion: '9.0'\n") || !lock.includes("\nimporters:\n")) {
   throw new Error("Review image lockfile projection for the new pnpm lockfile format.");
 }
 let importer;
@@ -37,6 +41,6 @@ for (const line of lock.split("\n")) {
   }
   if (!skip) lines.push(line);
 }
-writeFileSync("pnpm-lock.yaml", lines.join("\n"));
+writeFileSync("pnpm-lock.yaml", pnpmDocument + lines.join("\n"));
 const workspace = readFileSync("pnpm-workspace.yaml", "utf8");
 writeFileSync("pnpm-workspace.yaml", workspace.replace(/^  - mintlify\n/m, ""));

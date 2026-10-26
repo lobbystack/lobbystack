@@ -6,9 +6,8 @@ import { z } from "zod"
 import { SUPPORTED_LOCALES } from "@/marketing/i18n/config"
 
 /**
- * The blog and changelog, read from apps/admin/content at build time. Entries
- * keep the shape of Astro's content collections ({ id, body, data }), so the
- * pages ported from the Astro site read them the same way.
+ * The blog and changelog, read from apps/admin/content at build time. Each
+ * entry is { id, body, data }.
  */
 export const CONTENT_ROOT = path.join(process.cwd(), "content")
 
@@ -74,7 +73,7 @@ function loadCollection<Schema extends z.ZodType>(name: string, schema: Schema):
       }
       return {
         id,
-        // Astro dropped the blank lines between the frontmatter and the body.
+        // Drops the blank lines between the frontmatter and the body.
         body: (match ? source.slice(match[0].length) : source).replace(/^(?:\r?\n)+/, ""),
         filePath: path.relative(process.cwd(), file).split(path.sep).join("/"),
         data: parsed.data,

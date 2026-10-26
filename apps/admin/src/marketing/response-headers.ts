@@ -1,7 +1,7 @@
 import { CONTENT_SIGNAL } from "@/marketing/lib/agent-discovery"
 
-// Ported from the Astro site's public/_headers and public/_redirects, which
-// Cloudflare Pages applied. The marketing proxy sends these now.
+// The marketing site's response headers and redirects. The marketing proxy
+// sends them.
 
 /** Discovery resources every response points to. */
 const DISCOVERY_LINKS = [

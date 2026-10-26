@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Tells IndexNow about the marketing pages this build changes, as the Astro
-// build did: it compares each built page with the live one on lobbystack.com
+// Tells IndexNow about the marketing pages this build changes: it compares
+// each built page with the live one on lobbystack.com
 // and submits only the ones that differ. It does nothing unless INDEXNOW_KEY
 // is set, so only production builds should set it. Run after
 // scripts/marketing/snapshot.mjs. Node strips the types from the module it imports.

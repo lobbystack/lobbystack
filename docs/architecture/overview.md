@@ -2,9 +2,8 @@
 
 LobbyStack is a TypeScript monorepo with three application runtimes:
 
-- `apps/admin/` serves the Next.js dashboard, authentication, and HTTP API. It also starts GPT-Live calls.
+- `apps/admin/` serves the Next.js dashboard, authentication, and HTTP API. It also starts GPT-Live calls and serves the public marketing site on the hosts in `MARKETING_HOSTS`.
 - `apps/worker/` processes queued work, dispatches the transactional outbox, and runs each GPT-Live call.
-- `apps/landing/` serves the public marketing site.
 
 PostgreSQL is the durable source of truth. `packages/db` owns schema, migrations, role-specific clients, and row-level security. `packages/domain` owns business operations shared by admin and worker runtimes. `packages/agent-core` holds the receptionist agent that website chat and calls share. Redis provides queues, rate limiting, and realtime coordination. S3-compatible storage holds recordings and uploaded documents.
 

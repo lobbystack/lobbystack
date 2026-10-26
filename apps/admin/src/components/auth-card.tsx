@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type SubmitEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { TriangleAlert } from "lucide-react";
 
@@ -64,10 +64,25 @@ export function AuthCard({ mode, google = false }: { mode: "login" | "signup"; g
   const [resendTurnstileResetKey, setResendTurnstileResetKey] = useState(0);
   const [hasBlurredEmail, setHasBlurredEmail] = useState(false);
   const [hasFocusedPassword, setHasFocusedPassword] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [turnstileResetKey, setTurnstileResetKey] = useState(0);
   const pendingChallengeSubmit = useRef(false);
+  const emailInputRef = useRef<HTMLInputElement>(null);
+  const passwordInputRef = useRef<HTMLInputElement>(null);
+  const autoGoogleStarted = useRef(false);
   const login = mode === "login";
+
+  // The marketing site's "Sign up with Google" button links here with
+  // ?provider=google, since Google sign-in has to start from this origin.
+  useEffect(() => {
+    if (!google || autoGoogleStarted.current) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("provider") !== "google" || params.get("error")) return;
+    autoGoogleStarted.current = true;
+    void continueWithGoogle();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once on arrival
+  }, [google]);
 
   useEffect(() => {
     if (mode !== "login") return;
@@ -94,10 +109,14 @@ export function AuthCard({ mode, google = false }: { mode: "login" | "signup"; g
     });
   }, [mode]);
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    if (mode === "signup" && !isSignupReady) return;
+    setSubmitted(true);
+    if (!isEmailValid || !password || isPasswordWeak) {
+      (isEmailValid ? passwordInputRef : emailInputRef).current?.focus();
+      return;
+    }
     if (mode === "signup" && turnstileSiteKey && !turnstileToken) {
       pendingChallengeSubmit.current = true;
       setError(t("errors.turnstileRequired"));
@@ -141,7 +160,7 @@ export function AuthCard({ mode, google = false }: { mode: "login" | "signup"; g
     setGoogleLoading(true);
     try {
       const params = new URLSearchParams(window.location.search);
-      for (const stale of ["google", "error", "error_description"]) params.delete(stale);
+      for (const stale of ["google", "provider", "error", "error_description"]) params.delete(stale);
       // Google returns to this page with every query param (returnTo, source, plan). The marker
       // tells GuestAuthCard which event to record; Better Auth picks the signup one for new users.
       const back = (marker?: "login" | "signup") => {
@@ -188,7 +207,7 @@ export function AuthCard({ mode, google = false }: { mode: "login" | "signup"; g
     }
   }
 
-  async function verifyEmail(event: FormEvent<HTMLFormElement>) {
+  async function verifyEmail(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     if (verificationCode.length !== 6 || verificationLoading || resendLoading) return;
     setVerificationError(null);
@@ -301,11 +320,15 @@ export function AuthCard({ mode, google = false }: { mode: "login" | "signup"; g
     { label: t("signup.passwordCriteria.number"), isMet: /\d/.test(password) },
     { label: t("signup.passwordCriteria.specialCharacter"), isMet: /[^A-Za-z0-9\s]/.test(password) },
   ];
-  const isSignupReady = isEmailValid && passwordCriteria.every((criterion) => criterion.isMet);
+  const isPasswordWeak = !login && !passwordCriteria.every((criterion) => criterion.isMet);
+  const emailError = !email.trim() ? (submitted ? "emailRequired" : null) : (submitted || hasBlurredEmail) && !isEmailValid ? "emailInvalid" : null;
+  const passwordError = submitted && !password ? "passwordRequired" : null;
+  const passwordInvalid = Boolean(passwordError) || (submitted && Boolean(password) && isPasswordWeak);
+  const invalidInputClassName = "border-destructive text-destructive focus-visible:border-destructive focus-visible:ring-destructive/20";
   // A partner that left out its terms or privacy page gets no agreement line.
-  const legalFooter = !login && links.terms && links.privacy ? (
+  const legalFooter = links.terms && links.privacy ? (
     <p className="max-w-full text-center text-xs leading-5 text-muted-foreground sm:whitespace-nowrap">
-      {t("signup.legal.prefix")} {" "}
+      {login ? t("login.legalPrefix") : t("signup.legal.prefix")} {" "}
       <a className="underline underline-offset-4 hover:text-foreground" href={links.terms} rel="noreferrer" target="_blank">{t("signup.legal.terms")}</a>{" "}
       {t("signup.legal.and")} {" "}
       <a className="underline underline-offset-4 hover:text-foreground" href={links.privacy} rel="noreferrer" target="_blank">{t("signup.legal.privacy")}</a>
@@ -322,16 +345,17 @@ export function AuthCard({ mode, google = false }: { mode: "login" | "signup"; g
           </div>
           <FieldSeparator>{t("google.or")}</FieldSeparator>
         </> : null}
-        <form onSubmit={submit}>
+        <form noValidate onSubmit={submit}>
           <FieldGroup className="gap-4">
-            <Field data-invalid={hasBlurredEmail && email.length > 0 && !isEmailValid ? true : undefined}><FieldLabel htmlFor="auth-email">{login ? t("login.email") : t("signup.email")}</FieldLabel><Input aria-invalid={hasBlurredEmail && email.length > 0 && !isEmailValid} autoComplete="email" className={cn("h-11", hasBlurredEmail && email.length > 0 && !isEmailValid && "border-destructive text-destructive focus-visible:border-destructive focus-visible:ring-destructive/20")} id="auth-email" onBlur={() => setHasBlurredEmail(true)} onChange={(event) => { setHasBlurredEmail(false); setEmail(event.target.value); }} placeholder={login ? t("login.emailPlaceholder") : t("signup.emailPlaceholder")} required type="email" value={email} />{hasBlurredEmail && email.length > 0 && !isEmailValid ? <FieldError className="flex items-center gap-2 font-medium"><TriangleAlert className="size-4 shrink-0" aria-hidden="true" /><span>{t(login ? "login.emailInvalid" : "signup.emailInvalid")}</span></FieldError> : null}</Field>
-            <Field>
+            <Field data-invalid={emailError ? true : undefined}><FieldLabel htmlFor="auth-email">{login ? t("login.email") : t("signup.email")}</FieldLabel><Input aria-describedby={emailError ? "auth-email-error" : undefined} aria-invalid={emailError ? true : undefined} autoComplete="email" className={cn("h-11", emailError && invalidInputClassName)} id="auth-email" onBlur={() => setHasBlurredEmail(true)} onChange={(event) => { setHasBlurredEmail(false); setEmail(event.target.value); }} placeholder={login ? t("login.emailPlaceholder") : t("signup.emailPlaceholder")} ref={emailInputRef} required type="email" value={email} />{emailError ? <FieldError className="flex items-center gap-2 font-medium" id="auth-email-error"><TriangleAlert className="size-4 shrink-0" aria-hidden="true" /><span>{t(`${login ? "login" : "signup"}.${emailError}`)}</span></FieldError> : null}</Field>
+            <Field data-invalid={passwordInvalid ? true : undefined}>
               <div className="flex items-center justify-between gap-3"><FieldLabel htmlFor="auth-password">{login ? t("login.password") : t("signup.password")}</FieldLabel>{login ? <Link className="text-xs font-medium text-muted-foreground hover:text-foreground" href={localizePublicPath("/forgot-password", authLocale)}>{t("login.forgotPassword")}</Link> : null}</div>
-              <Input autoComplete={login ? "current-password" : "new-password"} className="h-11" id="auth-password" minLength={8} onChange={(event) => setPassword(event.target.value)} onFocus={() => setHasFocusedPassword(true)} placeholder={login ? t("login.passwordPlaceholder") : t("signup.passwordPlaceholder")} required type="password" value={password} />
-              {!login && hasFocusedPassword ? <ul aria-live="polite" className="flex flex-col gap-1 pt-0.5 text-sm font-medium">{passwordCriteria.map((criterion) => <li className={cn("flex items-center gap-2", criterion.isMet ? "text-emerald-700" : "text-muted-foreground")} key={criterion.label}><span aria-hidden="true" className="w-3 text-center">{criterion.isMet ? "✓" : "×"}</span><span>{criterion.label}</span></li>)}</ul> : null}
+              <Input aria-describedby={passwordError ? "auth-password-error" : passwordInvalid ? "auth-password-criteria" : undefined} aria-invalid={passwordInvalid ? true : undefined} autoComplete={login ? "current-password" : "new-password"} className={cn("h-11", passwordInvalid && invalidInputClassName)} id="auth-password" minLength={8} onChange={(event) => setPassword(event.target.value)} onFocus={() => setHasFocusedPassword(true)} placeholder={login ? t("login.passwordPlaceholder") : t("signup.passwordPlaceholder")} ref={passwordInputRef} required type="password" value={password} />
+              {passwordError ? <FieldError className="flex items-center gap-2 font-medium" id="auth-password-error"><TriangleAlert className="size-4 shrink-0" aria-hidden="true" /><span>{t(`${login ? "login" : "signup"}.${passwordError}`)}</span></FieldError> : null}
+              {!login && hasFocusedPassword ? <ul aria-live="polite" className="flex flex-col gap-1 pt-0.5 text-sm font-medium" id="auth-password-criteria">{passwordCriteria.map((criterion) => <li className={cn("flex items-center gap-2", criterion.isMet ? "text-emerald-700" : passwordInvalid ? "text-destructive" : "text-muted-foreground")} key={criterion.label}><span aria-hidden="true" className="w-3 text-center">{criterion.isMet ? "✓" : "×"}</span><span>{criterion.label}</span></li>)}</ul> : null}
             </Field>
             {error ? <div className="flex flex-col gap-2 -mt-1"><FieldError>{error}</FieldError></div> : null}
-            <Button className="mt-2 h-11 w-full" disabled={!login && !isSignupReady} loading={loading} loadingLabel={login ? t("login.submitting") : t("signup.submitting")} type="submit">{login ? t("login.submit") : t("signup.submit")}</Button>
+            <Button className="mt-2 h-11 w-full" loading={loading} loadingLabel={login ? t("login.submitting") : t("signup.submitting")} type="submit">{login ? t("login.submit") : t("signup.submit")}</Button>
           </FieldGroup>
         </form>
         {!login && turnstileSiteKey ? <Turnstile key={turnstileResetKey} onError={() => { pendingChallengeSubmit.current = false; setTurnstileToken(null); setLoading(false); setError(t("errors.turnstileFailed")); }} onTokenChange={(token) => {

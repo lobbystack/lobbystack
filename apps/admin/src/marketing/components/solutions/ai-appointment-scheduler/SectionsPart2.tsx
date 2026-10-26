@@ -36,7 +36,7 @@ export function BusinessFit() {
 
   return (
     <section className="section-spacing" id="business-fit">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-site px-6">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="section-heading">
             Built for businesses that book by phone
@@ -116,7 +116,7 @@ export function Capabilities() {
 
   return (
     <section className="section-spacing bg-muted/30" id="capabilities">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-site px-6">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="section-heading">
             What your AI appointment scheduler can handle
@@ -197,7 +197,7 @@ export function OpenSource() {
       className="section-spacing bg-foreground text-background"
       id="open-source"
     >
-      <div className="mx-auto max-w-7xl px-6 py-8">
+      <div className="mx-auto max-w-site px-6 py-8">
         <div className="grid gap-12 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
           <div>
             <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">

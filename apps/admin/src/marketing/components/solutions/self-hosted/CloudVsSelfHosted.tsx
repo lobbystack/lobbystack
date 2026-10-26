@@ -41,7 +41,7 @@ const rows = [
 export function CloudVsSelfHosted() {
   return (
     <section className="border-t border-border/40 py-20 md:py-28" id="cloud-vs-self-hosted">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-site px-6">
         <div className="max-w-3xl">
           <h2 className="section-heading">LobbyStack Cloud or self-hosted</h2>
           <p className="section-intro">

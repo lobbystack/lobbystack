@@ -46,8 +46,8 @@ function resolved(seo: MarketingPageSeo) {
 }
 
 /**
- * The head tags the Astro layout's <Seo> component wrote: title, description,
- * canonical, robots, Open Graph, Twitter, hreflang, and the Markdown twin.
+ * A marketing page's head tags: title, description, canonical, robots, Open
+ * Graph, Twitter, hreflang, and the Markdown twin.
  */
 export function pageMetadata(seo: MarketingPageSeo): Metadata {
   const page = resolved(seo)

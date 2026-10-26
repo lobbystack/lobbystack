@@ -51,7 +51,7 @@ export default defineConfig([
   },
   {
     // The marketing site navigates with plain links, so each page is a full
-    // load as on the Astro site it replaced, and it serves images from public/ as they are.
+    // load, and it serves images from public/ as they are.
     files: ["src/marketing/**/*.{ts,tsx}", "app/(marketing)/**/*.{ts,tsx}"],
     rules: {
       "@next/next/no-html-link-for-pages": "off",

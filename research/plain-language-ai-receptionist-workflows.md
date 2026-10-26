@@ -122,7 +122,7 @@ Use these as factual anchors in the post or internal brief:
 - LobbyStack local source anchors:
   - `README.md`: open-source AI receptionist for calls, SMS, appointments, hosted cloud or self-hosted infrastructure.
   - `docs/voice/runtime.md`: narrow voice gateway for live call handling; PostgreSQL-backed domain services own tenant data, booking, knowledge, and durable workflows; the gateway loads a business snapshot once and calls the backend for authoritative operations.
-  - `apps/landing/src/components/features/FeatureWall.tsx`: "Build workflows with words, not flowcharts" and "Your business is not a flowchart."
+  - `apps/admin/src/marketing/components/features/FeatureWall.tsx`: "Build workflows with words, not flowcharts" and "Your business is not a flowchart."
   - `apps/admin/app/voice/[...segments]/route.ts`: voice tools include finding/checking availability, booking, lookup/verify appointment changes, OTP for appointment changes, cancel/reschedule appointment, search knowledge, and take message.
 
 ## Why workflow chains get brittle
