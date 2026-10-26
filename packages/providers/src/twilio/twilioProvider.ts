@@ -199,6 +199,23 @@ export class TwilioProvider {
     return { providerPhoneId: number.sid, e164: number.phoneNumber, ...(number.smsUrl ? { smsUrl: number.smsUrl } : {}) };
   }
 
+  /**
+   * What Twilio charges this account each month for a number of this kind in
+   * this country, in US cents: its current price, with any discount the
+   * account has. Throws when Twilio sells no number of the kind there, or
+   * prices it in another currency.
+   */
+  async getPhoneNumberMonthlyPrice(input: { countryCode: string; kind: "local" | "mobile" | "toll_free" }): Promise<{ monthlyCents: number }> {
+    const country = await this.client.pricing.v1.phoneNumbers.countries(input.countryCode.toUpperCase()).fetch();
+    const numberType = input.kind === "toll_free" ? "toll free" : input.kind;
+    const price = country.phoneNumberPrices?.find((entry) => entry.numberType?.toLowerCase() === numberType);
+    // The SDK passes Twilio's decimal strings through as they came.
+    const amount = finiteNumber(String(price?.currentPrice ?? price?.basePrice ?? ""));
+    if (amount === undefined || amount < 0) throw new Error(`Twilio has no monthly price for ${input.kind} numbers in ${input.countryCode.toUpperCase()}.`);
+    if (normalizedUnit(country.priceUnit) !== "usd") throw new Error(`Twilio prices numbers in ${input.countryCode.toUpperCase()} in ${country.priceUnit}, not US dollars.`);
+    return { monthlyCents: Math.round(amount * 100) };
+  }
+
   async findOwnedPhoneNumber(input: { e164: string }): Promise<{ providerPhoneId: string; e164: string; friendlyName?: string } | null> {
     const number = (await this.client.incomingPhoneNumbers.list({ phoneNumber: input.e164, limit: 1 }))[0];
     return number ? { providerPhoneId: number.sid, e164: number.phoneNumber, ...(number.friendlyName ? { friendlyName: number.friendlyName } : {}) } : null;

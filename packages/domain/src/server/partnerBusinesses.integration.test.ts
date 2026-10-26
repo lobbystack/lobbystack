@@ -13,6 +13,7 @@ import { loadEntitlement } from "./entitlement";
 import { listGrantableBusinesses } from "./oauth/grants";
 import { advanceOnboardingStage, getActiveOnboardingState, queueOnboardingFollowupEmail, scheduleOnboardingFollowupInTransaction } from "./onboarding";
 import { getNumberTrialState, joinNumberWaitlist, loadNumberReleaseEmail, loadNumberTrialEmail, queuePlanCancelNoticeInTransaction, sweepNumberReleases, sweepNumberTrial } from "./numberTrials";
+import { recordPartnerTierBilling } from "./partnerNumbers";
 import { searchBusinessNumberInventory, skipOnboardingNumber } from "./phoneNumbers";
 import { checkOnboardingPhoneVerificationCode, startOnboardingPhoneVerification } from "./phoneVerification";
 import { acceptPartnerInvitation, createPartnerBusiness, hashPartnerToken, invitePartnerMember, listPartnerBusinesses, signUpPartner, type PartnerMemberActor } from "./partners";
@@ -46,6 +47,16 @@ afterEach(() => {
   vi.unstubAllEnvs();
   forgetCachedBrands();
 });
+
+/**
+ * partner_tier_billing holds one row, and each test writes it in a transaction
+ * it rolls back, so suites running at once wait on each other's row. Every
+ * test that writes it takes this lock first, before it holds anything another
+ * suite could wait on, so those waits never deadlock.
+ */
+async function lockTierBilling(tx: DatabaseTransaction): Promise<void> {
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended('test:partner_tier_billing', 0))`);
+}
 
 async function rollbackTest(run: (tx: DatabaseTransaction) => Promise<void>) {
   const rollback = new Error("rollback test fixture");
@@ -390,8 +401,10 @@ describe.skipIf(!client)("billing a partner's business", () => {
 });
 
 describe.skipIf(!client)("phone numbers for a partner's business", () => {
-  it("on the cloud, buys it no number until tiers count them, from the number search, the dashboard's claim and the API's", async () => {
+  it("on a deployment that bills tiers, buys it no number while its partner's tier includes none, from the number search, the dashboard's claim and the API's", async () => {
     await rollbackTest(async (tx) => {
+      await lockTierBilling(tx);
+      await asWorker(tx, async () => await recordPartnerTierBilling({ db: tx as unknown as Database }, { enabled: true }));
       const acme = await partner(tx, "Acme Reception");
       const [owner] = await people(tx, 1);
       const context = acme.context;
@@ -404,15 +417,15 @@ describe.skipIf(!client)("phone numbers for a partner's business", () => {
       const inventory = { listAvailablePhoneNumbers: vi.fn(async () => [{ phoneE164: testNumber(), countryCode: "CA", capabilities: { sms: true, voice: true } }]) };
 
       // The search refuses before it offers a number.
-      expect(await refusal(searchBusinessNumberInventory(context, { userId: owner!.userId, businessId, claimTokenSecret: "test-secret" }, inventory))).toMatchObject({ status: 409, code: "partner_numbers_unavailable" });
+      expect(await refusal(searchBusinessNumberInventory(context, { userId: owner!.userId, businessId, claimTokenSecret: "test-secret" }, inventory))).toMatchObject({ status: 409, code: "partner_number_limit_reached" });
       expect(inventory.listAvailablePhoneNumbers).not.toHaveBeenCalled();
 
-      // A claim refuses whichever way it comes, while a direct business on Starter still gets its number.
+      // Its partner is on Free, which includes no number. A claim refuses whichever way it comes, while a direct business on Starter still gets its number.
       const claim = (id: string) => asAppSession(tx, async () => await withBusinessTransaction(context.db, { userId: owner!.userId, businessId: id, actorType: "operator" }, async (inner) => (await inner.execute<{ id: string }>(sql`select app.reserve_onboarding_number_claim(${id}::uuid, ${owner!.userId}::uuid, ${testNumber()}, '{}'::jsonb, ${randomUUID()}, ${randomUUID()}) as id`)).rows[0]?.id));
-      expect(await refusal(claim(businessId))).toMatchObject({ code: "P0001", message: "partner_numbers_unavailable" });
+      expect(await refusal(claim(businessId))).toMatchObject({ code: "P0001", message: "partner_number_limit_reached" });
       await expect(claim(direct)).resolves.toEqual(expect.any(String));
       const apiClaim = asWorker(tx, async () => await withBusinessTransaction(context.db, { businessId, actorType: "worker" }, async (inner) => await inner.execute(sql`select app.reserve_api_number_claim(${businessId}::uuid, ${owner!.userId}::uuid, 'onboarding', null, ${testNumber()}, '{}'::jsonb, ${randomUUID()}, ${randomUUID()}, null, true)`)));
-      expect(await refusal(apiClaim)).toMatchObject({ code: "P0001", message: "partner_numbers_unavailable" });
+      expect(await refusal(apiClaim)).toMatchObject({ code: "P0001", message: "partner_number_limit_reached" });
       // Its entitlement is live, so it has no free trial to claim either.
       const trialClaim = asAppSession(tx, async () => await withBusinessTransaction(context.db, { userId: owner!.userId, businessId, actorType: "operator" }, async (inner) => await inner.execute(sql`select app.reserve_trial_number_claim(${businessId}::uuid, ${owner!.userId}::uuid, ${testNumber()}, '{}'::jsonb, ${randomUUID()}, ${randomUUID()}, null)`)));
       expect(await refusal(trialClaim)).toMatchObject({ code: "P0001", message: "trial_not_needed" });

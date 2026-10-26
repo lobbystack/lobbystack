@@ -416,6 +416,9 @@
       "description": "Cambie a Starter o Pro para obtener un número local del negocio al que puedan llamar sus clientes.",
       "upgradeCta": "Ver planes"
     },
+    "partnerTierRequired": {
+      "description": "El socio de este negocio necesita pagar un nivel para agregar números de teléfono."
+    },
     "actions": {
       "requestChange": "Solicitar cambio",
       "getNumber": "Obtener número"

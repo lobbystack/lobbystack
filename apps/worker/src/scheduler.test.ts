@@ -18,7 +18,7 @@ describe("worker schedulers", () => {
 
     await configureSchedulers(queues, [{ id: "business-a", active: true }, { id: "business-b", active: true }]);
 
-    expect(upsertJobScheduler).toHaveBeenCalledTimes(25);
+    expect(upsertJobScheduler).toHaveBeenCalledTimes(26);
     const tenantCalls = upsertJobScheduler.mock.calls.filter((call) => call[2].data.businessId !== null);
     expect(tenantCalls).toHaveLength(22);
     expect(tenantCalls.filter((call) => call[2].data.type === "api.retention")).toHaveLength(2);
@@ -34,6 +34,10 @@ describe("worker schedulers", () => {
     expect(removeJobScheduler.mock.calls.map((call) => call[0])).toEqual(["live-orphan-recovery:business-a", "live-orphan-recovery:business-b"]);
     expect(upsertJobScheduler.mock.calls.find((call) => call[2].data.type === "affiliate.generatePayoutRun")?.[2].data).toEqual(expect.objectContaining({ businessId: null, recurring: true }));
     expect(upsertJobScheduler.mock.calls.find((call) => call[2].data.type === "prospectDemo.expire")?.[2].data).toEqual(expect.objectContaining({ businessId: null, recurring: true }));
+    // Partners' numbers are charged by one hourly job across every partner.
+    expect(upsertJobScheduler.mock.calls.filter((call) => call[2].data.type === "billing.chargePartnerNumbers").map((call) => [call[0], call[1], call[2].data.queue, call[2].data.businessId])).toEqual([
+      ["partner-number-charges", { every: 60 * 60_000 }, "maintenance", null],
+    ]);
   });
 
   it("drops the per-minute jobs of a dormant business, keeps its cleanup jobs and flushes its telemetry hourly", async () => {
@@ -97,7 +101,7 @@ describe("worker schedulers", () => {
     upsertJobScheduler.mockClear();
 
     await configureSchedulers(queues, [], applied);
-    expect(upsertJobScheduler.mock.calls.map((call) => call[0])).toEqual(["prospect-demo-expiry", "affiliate-payout", "live-orphan-recovery"]);
+    expect(upsertJobScheduler.mock.calls.map((call) => call[0])).toEqual(["prospect-demo-expiry", "affiliate-payout", "partner-number-charges", "live-orphan-recovery"]);
   });
 
   it("does not register tenant jobs when no businesses are available", async () => {
@@ -106,10 +110,11 @@ describe("worker schedulers", () => {
 
     await configureSchedulers(queues as never);
 
-    expect(upsertJobScheduler).toHaveBeenCalledTimes(2);
+    expect(upsertJobScheduler).toHaveBeenCalledTimes(3);
     expect(upsertJobScheduler.mock.calls.map((call) => call[2].data)).toEqual(expect.arrayContaining([
       expect.objectContaining({ type: "affiliate.generatePayoutRun", businessId: null }),
       expect.objectContaining({ type: "prospectDemo.expire", businessId: null }),
+      expect.objectContaining({ type: "billing.chargePartnerNumbers", businessId: null }),
     ]));
   });
 });

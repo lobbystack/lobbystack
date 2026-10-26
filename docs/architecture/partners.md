@@ -86,7 +86,7 @@ type PartnerFeatures = {
   signup: "open" | "invite";
   baseDomain: string | null;            // PARTNER_BASE_DOMAIN
   stripeConnect: boolean;               // keys and webhook secret present
-  tierBilling: boolean;                 // every POLAR_PARTNER_<TIER>_<INTERVAL>_PRODUCT_ID present
+  tierBilling: boolean;                 // every POLAR_PARTNER_<TIER>_<INTERVAL>_PRODUCT_ID present, each its own product
   customDomains: "cloudflare" | "caddy" | null;
 };
 ```
@@ -142,7 +142,7 @@ openPartnerBusiness(context, input: { userId: string; businessId: string; partne
 - `requireBusinessAccess` refuses a business whose brand differs from the request's brand, so a business never shows on another brand's domain. A business of another brand gets the same refusal as one the person isn't on. It replaces `requireBusinessMembership` in `forBusiness`.
 - An operator of a partner business gets `activity` at the activity-only level, and `activity`, `setup`, and `team` at full access. They never get `billing`, `api_keys`, or `mcp`.
 - Each operator route in the admin needs one capability, from the table in `apps/admin/src/lib/business-capabilities.ts`. `forBusiness` checks the brand and the capability before the handler runs, matching the decoded path, and a route missing from the table needs `setup`.
-- The functions behind Polar checkout, the overage cap, operator API keys, webhooks managed from the dashboard, and MCP tokens refuse a partner business too, whatever brand the request came from. MCP's consent screen lists only direct businesses.
+- The functions behind Polar checkout, managed plans, the overage cap, operator API keys, webhooks managed from the dashboard, and MCP tokens refuse a partner business too, whatever brand the request came from. MCP's consent screen lists only direct businesses.
 - The dashboard remembers, per brand, the business a person last opened on that brand's domains.
 - The dashboard hides each page the business doesn't give the person, from the table in `apps/admin/src/lib/dashboard-pages.ts`. The workspace list carries each business's capabilities for it.
 - On a partner's domain, a signed-in person with no business there gets a "no businesses" page instead of onboarding, since that domain makes no direct business.
@@ -201,9 +201,9 @@ type Entitlement = {
 loadEntitlement(tx, businessId: string): Promise<Entitlement>
 ```
 
-- A direct business gets its plan from the plan catalog, as today. A self-hosted server's businesses get `source: "unlimited"`. A partner business gets its package, or no limit when it's billed outside LobbyStack. It is `live` only while its Stripe subscription is live (unless billed outside) and its partner's tier is live or in its first 30 days after ending. A partner business with no package is billed outside LobbyStack, and so is every partner business on a deployment without Stripe Connect. Until tiers arrive, a business on a package is `live` while its Stripe subscription is `active`, `trialing` or `past_due`, with the package's minutes and chats and no overage, and every partner business has its partner as `poolPartnerId`. Tiers set how many numbers a partner's businesses hold, so until they count them, the cloud's number claims refuse a partner business.
+- A direct business gets its plan from the plan catalog, as today. A self-hosted server's businesses get `source: "unlimited"`. A partner business gets its package, or no limit when it's billed outside LobbyStack. It is `live` only while its Stripe subscription is live (unless billed outside) and its partner's tier is live or in its first 30 days after ending. A partner business with no package is billed outside LobbyStack, and so is every partner business on a deployment without Stripe Connect. Until its partner's tier counts toward `live`, a business on a package is `live` while its Stripe subscription is `active`, `trialing` or `past_due`, with the package's minutes and chats and no overage, and every partner business has its partner as `poolPartnerId`. Its partner's tier sets how many numbers the partner's businesses hold between them, as [Phone numbers](#phone-numbers) describes.
 - A direct business that isn't `live` still answers within its Free allowance. A partner business that isn't `live` gets an allowance of 0, so usage metering refuses its calls and chats the way it refuses any business at its limit: calls forward and chat shows its "can't reply" message.
-- `hasLiveEntitlement(account)` in `packages/shared` answers `live` from a billing account. The browser and the Polar reconcile use it on account snapshots. For a direct business's own account, it matches `loadEntitlement(...).live`. A partner business on a package gets `live` from `hasLivePackageSubscription(state)` on its Stripe subscription's state instead, and one billed outside LobbyStack is always live. It replaces `isPaidSubscription` in TypeScript. The number-claim SQL calls `app.has_live_entitlement(business_id)`, which applies the same rule, packages included. SQL can't read the deployment's configuration, so on a deployment without Stripe Connect it still asks a business on a package for its subscription; only the number claims ask it, and they refuse partner businesses on the cloud until tiers count numbers.
+- `hasLiveEntitlement(account)` in `packages/shared` answers `live` from a billing account. The browser and the Polar reconcile use it on account snapshots. For a direct business's own account, it matches `loadEntitlement(...).live`. A partner business on a package gets `live` from `hasLivePackageSubscription(state)` on its Stripe subscription's state instead, and one billed outside LobbyStack is always live. It replaces `isPaidSubscription` in TypeScript. The number-claim SQL calls `app.has_live_entitlement(business_id)`, which applies the same rule, packages included. SQL can't read the deployment's configuration, so on a deployment without Stripe Connect it still asks a business on a package for its subscription. Only the number claims ask it, so on the cloud such a business gets no new number until its subscription is live again.
 - Direct Starter and Pro plans charge alert texts and outbound attempts against the cap. `rates` carries `alertSms` and `outboundAttempt` for them, beside the minute and chat rates.
 - Amounts are in the minor unit of `currency`, so caps work in a partner's currency.
 
@@ -228,6 +228,32 @@ type Reservation =
 - Callers in calls, web calls, chat, alert texts, and transfers don't change. Running out still raises `voice_limit_reached`, so calls forward the way commit `c5dd718e` set up.
 - A partner's business records each chat even when it has no allowance, since its chats draw on the pool and the console shows them.
 - Every operator sees the business's minutes and chats against its allowance on Settings > Usage. `readAllowanceUsageInTransaction` behind `/api/usage` reads them, needs only `activity`, and carries no prices or spend. A business with billing also sees its plan's meters there.
+
+## Phone numbers
+
+A partner's tier sets how many phone numbers its businesses hold between them. Tier billing, as `partnerFeatures(...).tierBilling` decides, sets who counts them and who pays for the extra ones:
+
+| Deployment | Tier billing on | Tier billing off |
+|---|---|---|
+| Cloud | The claims count the partner's numbers against its tier, and the worker charges the partner for each one past the included ones. | The claims refuse every new number with `partner_numbers_unavailable`, since nobody would pay for it. A replacement for a number the business holds still goes through. |
+| Self-hosted | Same as the cloud. | No tier limit and no charges. The claim quotas still apply. |
+
+- Only the environment knows whether the deployment bills tiers, so the worker records it in `partner_tier_billing` when it starts and on each run of `billing.chargePartnerNumbers`. Until the worker first records it after migration 0147, the deployment bills no tiers, so the cloud refuses partners' new numbers.
+- Every claim, from onboarding, a replacement, a trial or the API, writes a row in `onboarding_number_claim_events`. A trigger on that table takes the partner's lock after the business's, so two of the partner's businesses claim in turn.
+- The partner holds its businesses' active numbers that aren't scheduled for release, plus the new numbers that claims are buying now.
+- While the deployment bills tiers, a claim for a new number past the tier's included numbers needs a paid tier. Free includes none, so a business of a Free partner gets no dedicated number until the per-partner trial arrives. A replacement adds no number, so the count skips it.
+- A partner's business never gets the host's free trial number. One that isn't `live`, such as a business whose package isn't paid, gets `partner_numbers_unavailable` from the number search and the claims on the cloud.
+- The claim quotas apply on every deployment:
+  - Each business makes at most 3 claims an hour.
+  - With tier billing, the partner's businesses share quotas sized from the tier in force. They buy up to the larger of 2 and the tier's included numbers a day, and the larger of 5 and twice those in 30 days. Scale, with 25 included numbers, buys up to 25 a day and 50 in 30 days.
+  - Without tier billing, the partner's businesses share 2 numbers a day and 5 in 30 days.
+- The shared quotas count the numbers bought in their window and the claims still buying one. Claiming from many new businesses at once doesn't get a partner past them.
+- `numberEligibilityInTransaction` reads the same count through `app.partner_number_standing` and applies the same rules through `newPartnerNumberRefusal`, so the number search refuses before it asks the carrier. A partner's business has no billing capability, so the dashboard's phone settings read `partnerNumberAvailabilityInTransaction` from `GET /api/phone-numbers` instead of the business's plan. The console's Billing page shows the count to the partner's owners.
+- Before it buys a number that counts against a partner's tier, the worker reads what Twilio charges the host for it each month, and stores that in `partner_number_charges`.
+- The hourly `billing.chargePartnerNumbers` job settles each month of each number. The partner's oldest numbers are the included ones. Each month of a number past them, on a paid tier, goes to Polar as a `billing.partner_extra_numbers` event under the partner's customer.
+- A number scheduled for release settles its months uncharged, so a cancelled release charges no month late. A released number, or one whose business left the partner, settles no more months.
+- When Polar refuses one of a partner's charges, that partner's charged months wait for the next run. Every other month still settles, and the job then fails with the count of charges that wait.
+- The Billing page shows each tier's price, pool and included numbers from `partnerTierCatalog` on every deployment, and the reconcile records the same pool and included numbers. A self-hoster's Polar products must charge the catalog's prices.
 
 ## Partner lifecycle
 
@@ -310,7 +336,8 @@ interface CustomHostnameProvider {
 - `upsertPackagePrice` creates a package's product, its monthly price and its optional one-time setup fee price on the partner's account. Later calls only rename the product or take the package off sale: its price and allowance never change, since businesses may already pay them.
 - `createCheckout` opens a subscription Checkout on the partner's account for the package's monthly price and setup fee, with no application fee, so the subscription and its payments are direct charges. Its metadata names the business and the package, on the checkout and on the subscription it starts. A business that paid before checks out on its earlier customer, so the partner's customer portal keeps every invoice. `expireCheckout` closes a checkout nobody should pay any more, such as one for a package the partner since replaced.
 - `CustomHostnameProvider` has two production adapters. Cloudflare for SaaS serves the cloud. The Caddy adapter serves self-hosted deployments: it checks that the domain's DNS points at the deployment, and Caddy then asks `/api/tls/ask` before issuing a certificate.
-- The Polar provider keeps its interface. Tier billing uses `partner:<id>` as the customer's external id.
+- The Polar provider keeps its interface. Tier billing uses `partner:<id>` as the customer's external id. The webhook route stores a partner's events with `provider_events.partner_id` and no business, and the worker reconciles them with no business in its context.
+- `loadPartnerTierInTransaction` answers what a partner's tier gives its businesses: the pool, or no limit when the deployment has no tier billing, the included numbers, and the trial numbers. Only owners start a tier's checkout, from the console's Billing page, and change or cancel it in Polar's customer portal.
 - The email provider already takes a sender and a Reply-To per message. The worker fills them from `brandForBusiness`.
 
 ## Data flows
@@ -334,7 +361,7 @@ interface CustomHostnameProvider {
 ### Tier and package billing
 
 1. Polar's webhook stores each event in `provider_events` and queues a reconcile. Stripe's Connect webhook stores each event there too, then reconciles it in the same request. Stripe's account events name no business, so the Connect webhook applies them as it stores them: `account.updated` writes the account's state unless the deployment already holds newer news of it, and `account.application.deauthorized` marks the account disconnected. A partner that connects again gets a new account, and its packages stay on the account they were made on. Checkout, subscription and invoice events also apply as the webhook stores them: it reads the subscription back from Stripe, so events that arrive out of order or twice settle on Stripe's current answer.
-2. `reconcilePartnerTier` maps Polar's subscription to a `PartnerEvent` and runs it through `nextPartnerState` and `applyPartnerTransition`.
+2. `reconcilePartnerTier` maps Polar's subscription to a `PartnerEvent` and runs it through `nextPartnerState` and `applyPartnerTransition`. Until the lifecycle arrives, it records the tier Polar sold and its subscription state in `partner_billing_accounts`, with the pool and included numbers of the tier in force: the paid tier while its subscription is live, past due included, and Free otherwise. An older snapshot of the subscription never overwrites a newer one.
 3. `reconcilePackageSubscription` updates the business's billing account, once the subscription's metadata names a business of the partner whose account sent the event and the package that business is on. A subscription for another package never makes the business live. A business tracks one subscription, and another replaces it only when it's live and the current one isn't. `loadEntitlement` reads the account on the next reservation.
 4. An hourly scheduler job sends `clock` events, which move partners from `ending` to `paused` and then to deletion.
 

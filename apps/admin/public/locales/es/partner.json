@@ -11,7 +11,8 @@
     "branding": "Marca y dominio",
     "team": "Equipo",
     "stripe": "Stripe",
-    "apiKeys": "Claves de API"
+    "apiKeys": "Claves de API",
+    "billing": "Facturación"
   },
   "roles": {
     "owner": "Propietario",
@@ -465,6 +466,78 @@
   "secretReveal": {
     "copy": "Copiar",
     "copied": "Copiado"
+  },
+  "billing": {
+    "title": "Facturación",
+    "description": "Su nivel fija los minutos y los chats que sus negocios comparten cada mes, y cuántos números de teléfono reciben.",
+    "loadFailed": "No pudimos cargar su facturación. Actualice la página para intentarlo de nuevo.",
+    "ownersOnly": "Solo los propietarios gestionan la facturación. Pida a uno de los propietarios de su socio que cambie su nivel.",
+    "unavailable": "No paga ningún nivel en este panel, así que nada limita los minutos, los chats ni los números de teléfono de sus negocios.",
+    "pastDue": "Su último pago falló. Actualice su tarjeta en Gestionar suscripción para conservar su nivel.",
+    "tiers": {
+      "free": "Gratis",
+      "starter": "Starter",
+      "growth": "Growth",
+      "scale": "Scale"
+    },
+    "intervals": {
+      "monthly": "Mensual",
+      "annual": "Anual"
+    },
+    "price": {
+      "perMonth": "al mes",
+      "billedMonthly": "Facturado cada mes",
+      "billedYearly": "{{price}} facturados cada año"
+    },
+    "terms": {
+      "minutes_one": "{{formatted}} minuto al mes",
+      "minutes_many": "{{formatted}} minutos al mes",
+      "minutes_other": "{{formatted}} minutos al mes",
+      "chats_one": "{{formatted}} chat al mes",
+      "chats_many": "{{formatted}} chats al mes",
+      "chats_other": "{{formatted}} chats al mes",
+      "numbers_one": "{{count}} número de teléfono",
+      "numbers_many": "{{count}} números de teléfono",
+      "numbers_other": "{{count}} números de teléfono",
+      "noNumbers": "Ningún número de teléfono",
+      "extraNumbers": "Números adicionales a precio de costo",
+      "overage": "Cada minuto adicional cuesta {{minute}}, y cada chat adicional {{chat}}",
+      "noOverage": "Sin minutos ni chats adicionales más allá de estos"
+    },
+    "current": {
+      "title": "Nivel actual",
+      "free": "No necesita tarjeta.",
+      "renewsOn": "Se renueva el {{date}}.",
+      "endsOn": "Termina el {{date}}. Conserva su nivel hasta entonces."
+    },
+    "numbers": {
+      "used": "Números de teléfono en uso: {{held}} de {{included}} incluidos.",
+      "extra_one": "Números de teléfono en uso: {{held}}. Paga {{count}} número adicional a precio de costo cada mes.",
+      "extra_many": "Números de teléfono en uso: {{held}}. Paga {{count}} números adicionales a precio de costo cada mes.",
+      "extra_other": "Números de teléfono en uso: {{held}}. Paga {{count}} números adicionales a precio de costo cada mes."
+    },
+    "choose": {
+      "title": "Elija un nivel",
+      "intervalLabel": "Periodo de facturación",
+      "annualDiscount": "Ahorre un 20 %",
+      "action": "Elegir {{tier}}",
+      "opening": "Abriendo el pago…"
+    },
+    "portal": {
+      "action": "Gestionar suscripción",
+      "opening": "Abriendo…"
+    },
+    "checkout": {
+      "confirming": "Pago recibido. Esta página se actualiza cuando su nivel esté listo.",
+      "done": "Ya está en el nivel {{tier}}."
+    },
+    "errors": {
+      "checkoutFailed": "No pudimos abrir el pago. Inténtelo de nuevo.",
+      "subscriptionActive": "Ya paga un nivel. Cámbielo en Gestionar suscripción.",
+      "checkoutInProgress": "Otro propietario tiene un pago abierto. Inténtelo de nuevo en 30 minutos.",
+      "unavailable": "No puede comprar un nivel en este panel.",
+      "portalFailed": "No pudimos abrir su suscripción. Inténtelo de nuevo."
+    }
   },
   "signup": {
     "title": "Regístrese como socio",

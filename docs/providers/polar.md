@@ -25,6 +25,38 @@ Copy your four recurring product IDs into the matching environment variables. Re
 
 Use `starter` or `pro` for checkout, with monthly or annual billing. The checkout worker ignores separate product IDs for AI-generated text messages.
 
+## Create the partner tier products
+
+Partners pay you for a tier from the console's **Billing** page. Create one recurring product for each tier and interval, and copy its ID into the matching variable. Partners can buy a tier only when all six are set, each to its own product. Until then, partners pay you no tier, and nothing limits their pools or their phone numbers.
+
+| Product | Price | Environment variable |
+| --- | --- | --- |
+| Partner Starter monthly | $49 each month | `POLAR_PARTNER_STARTER_MONTHLY_PRODUCT_ID` |
+| Partner Starter annual | $470.40 each year | `POLAR_PARTNER_STARTER_ANNUAL_PRODUCT_ID` |
+| Partner Growth monthly | $199 each month | `POLAR_PARTNER_GROWTH_MONTHLY_PRODUCT_ID` |
+| Partner Growth annual | $1,910.40 each year | `POLAR_PARTNER_GROWTH_ANNUAL_PRODUCT_ID` |
+| Partner Scale monthly | $499 each month | `POLAR_PARTNER_SCALE_MONTHLY_PRODUCT_ID` |
+| Partner Scale annual | $4,790.40 each year | `POLAR_PARTNER_SCALE_ANNUAL_PRODUCT_ID` |
+
+The **Billing** page shows these prices from `partnerTierCatalog` in `packages/shared/src/billing.ts`, so give your products the same ones. A partner that pays for no tier is on Free, which needs no product.
+
+A partner's Polar customer has the external ID `partner:<partner ID>`, never a business's. The webhook route stores its events with the partner, and the worker sets the partner's tier, subscription state, pool and included numbers from them. Keep "Allow multiple subscriptions" off, so a partner holds one tier at a time.
+
+## Charge partners for extra numbers
+
+Each tier includes some phone numbers. A partner on a paid tier can hold more. Each number past the included ones costs the partner what Twilio charges you for it each month. Your deployment counts and charges partners' numbers only while all six tier products are set. The worker records that when it starts, so restart it after you change them. Set up Polar to bill those charges:
+
+1. Create a meter that counts the `billing.partner_extra_numbers` event and sums its `quantity` metadata.
+2. Add a metered price for that meter to each of the six partner tier products, at $0.01 a unit.
+
+The worker reads a number's monthly price from Twilio's Pricing API before it buys a number that counts against a partner's tier. It stores the price in `partner_number_charges`. Each hour, the `billing.chargePartnerNumbers` job sends Polar one event for each month of each extra number, under the partner's customer:
+
+- **Which numbers are extra**: the partner's oldest numbers are the included ones.
+- **Quantity**: the number's monthly price, in US cents.
+- **`external_id`**: the number and the month, so Polar charges each month once.
+
+A partner on Free gets no number past its included ones, and Free includes none. Without the meter and its prices, Polar ingests the events and charges nothing for them. When Polar refuses a partner's event, the job retries that partner's charges on its next run and still settles everyone else's.
+
 ## Configure usage event ingestion
 
 The worker sends finalized paid-plan usage from `billing_usage_events` to Polar.
@@ -67,19 +99,28 @@ POLAR_STARTER_MONTHLY_PRODUCT_ID=your_starter_monthly_product_id
 POLAR_STARTER_ANNUAL_PRODUCT_ID=your_starter_annual_product_id
 POLAR_PRO_MONTHLY_PRODUCT_ID=your_pro_monthly_product_id
 POLAR_PRO_ANNUAL_PRODUCT_ID=your_pro_annual_product_id
+
+POLAR_PARTNER_STARTER_MONTHLY_PRODUCT_ID=your_partner_starter_monthly_product_id
+POLAR_PARTNER_STARTER_ANNUAL_PRODUCT_ID=your_partner_starter_annual_product_id
+POLAR_PARTNER_GROWTH_MONTHLY_PRODUCT_ID=your_partner_growth_monthly_product_id
+POLAR_PARTNER_GROWTH_ANNUAL_PRODUCT_ID=your_partner_growth_annual_product_id
+POLAR_PARTNER_SCALE_MONTHLY_PRODUCT_ID=your_partner_scale_monthly_product_id
+POLAR_PARTNER_SCALE_ANNUAL_PRODUCT_ID=your_partner_scale_annual_product_id
 ```
 
 Match `POLAR_API_BASE_URL` to the environment that issued the token, webhook secret, and product IDs.
 
 ## Route billing requests
 
-The Next.js app exposes four billing entry points.
+The Next.js app exposes these billing entry points:
 
 | Route | Purpose |
 | --- | --- |
 | `POST /api/billing/checkout` | Queue a Starter or Pro checkout request. Returns HTTP 409 while the business has a live paid plan or a checkout from the last 30 minutes. |
 | `POST /api/billing/portal` | Create a customer portal session for an active paid subscription. |
 | `POST /api/billing/cancel` | Cancel an active Starter or Pro subscription at the end of its billing period. |
+| `POST /api/partner/billing/checkout` | Queue a partner tier checkout for one of the partner's owners. Returns HTTP 409 while the partner's tier is live, while another owner's checkout from the last 30 minutes is open, or when the tier products aren't all set. |
+| `POST /api/partner/billing/portal` | Create a customer portal session for a partner's owner, to change or cancel the tier and update the card. |
 | `POST /api/webhooks/polar` | Verify and store Polar events for worker reconciliation. |
 
 Grant your token `subscriptions:write` access for the cancel route, which calls `PATCH /v1/subscriptions/{id}`.
@@ -101,6 +142,8 @@ Use this sequence to check where a checkout stops:
 5. Polar sends subscription and order events to the Next.js webhook route.
 6. The route stores each provider event once and enqueues `billing.reconcile`.
 7. The worker updates local subscription and transaction records.
+
+A partner's tier follows the same steps with its own records. The checkout request and the jobs name the partner instead of a business: `billing.createPartnerCheckout` creates the checkout, and `billing.reconcilePartner` updates `partner_billing_accounts`. Polar sends the owner back to the **Billing** page on the console's address they started from.
 
 The billing page reads PostgreSQL for plan, usage, spending-cap, and transaction data. It creates portal sessions on the server for billing administrators.
 
@@ -131,6 +174,8 @@ The webhook handler uses provider event IDs for idempotency. Do not insert billi
 Run these checks in the Polar sandbox before enabling production billing:
 
 - Confirm only business administrators can start checkout or open the portal.
+- Confirm only a partner's owners can start a tier checkout or open its portal, and that the partner's tier and pool follow each subscription change.
+- Give a partner on a paid tier one number more than its tier includes, and confirm Polar charges the partner that number's monthly price within the hour.
 - Complete monthly and annual checkout for Starter and Pro.
 - Confirm invalid webhook signatures receive an unauthorized response.
 - Confirm duplicate webhook deliveries create one provider event.

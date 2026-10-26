@@ -18,7 +18,13 @@ import { requestJson } from "@/lib/request-json";
 import type { BillingUsageViewModel, PhoneNumberViewModel } from "@/lib/page-view-models";
 import { formatDateTime } from "@/lib/locale";
 
-type NumbersResponse = { phoneNumbers: PhoneNumberViewModel[]; activeClaim?: { id: string; status: string } | null; replacement: { usedAt: string | null; activeClaim?: { id: string; status: string } | null } };
+type NumbersResponse = {
+  phoneNumbers: PhoneNumberViewModel[];
+  activeClaim?: { id: string; status: string } | null;
+  replacement: { usedAt: string | null; activeClaim?: { id: string; status: string } | null };
+  /** For a partner's business, whether its partner's tier lets it get a new number now; null for a direct business. */
+  partnerNumbers?: { available: boolean } | null;
+};
 function getSettingsPhoneNumberErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message.trim().length > 0) {
     return error.message;
@@ -50,6 +56,8 @@ export function LivePhoneNumberSettingsSurface() {
   const primaryPhoneNumber = numbers.data ? numbers.data.phoneNumbers.find(number => number.status === "active" && !number.reclaimScheduledAt) ?? numbers.data.phoneNumbers[0] ?? null : undefined;
   const phoneNumberReplacementUsedAt = numbers.data?.replacement.usedAt;
   const billingStatus = billing.data ? { includedBusinessNumbers: billing.data.entitlement.includedNumbers, phoneNumberReclaimScheduledAt: null } : null;
+  // A partner's business has no plan of its own: its partner's tier decides whether it gets a new number, and a replacement adds none.
+  const partnerNumbers = numbers.data?.partnerNumbers ?? null;
   const isReplacement = Boolean(primaryPhoneNumber);
   const numberApi = useMemo(() => phoneNumberChooserApi(isReplacement), [isReplacement]);
   const displayPhoneNumber = primaryPhoneNumber
@@ -57,9 +65,11 @@ export function LivePhoneNumberSettingsSurface() {
     : null;
   const hasPhoneNumber = Boolean(primaryPhoneNumber);
   const hasUsedPhoneNumberChange = Boolean(phoneNumberReplacementUsedAt);
-  const canClaimDedicatedNumber =
-    billingStatus != null &&
-    (billingStatus.includedBusinessNumbers === null || billingStatus.includedBusinessNumbers > 0);
+  const canClaimDedicatedNumber = partnerNumbers
+    ? partnerNumbers.available || hasPhoneNumber
+    : billingStatus != null &&
+      (billingStatus.includedBusinessNumbers === null || billingStatus.includedBusinessNumbers > 0);
+  const partnerTierRequired = Boolean(partnerNumbers) && !canClaimDedicatedNumber;
   // A trial number's release date isn't the owner's deadline: the trial banner says when it ends,
   // and keeping or changing the number takes a paid plan.
   const isTrialNumber = primaryPhoneNumber?.reclaimReason === "trial";
@@ -68,7 +78,7 @@ export function LivePhoneNumberSettingsSurface() {
     billingStatus?.phoneNumberReclaimScheduledAt ??
     null;
   const showReclaimBanner = Boolean(hasPhoneNumber && reclaimScheduledAt);
-  const showPaidPlanRequired = (!hasPhoneNumber || isTrialNumber) && billingStatus != null && !canClaimDedicatedNumber;
+  const showPaidPlanRequired = !partnerNumbers && (!hasPhoneNumber || isTrialNumber) && billingStatus != null && !canClaimDedicatedNumber;
   // Only a free workspace without a number can start a trial. The number step runs the claim, and offers the plans if the claim refuses.
   const trial = useQuery({ queryKey: ["number-trial", businessId], enabled: Boolean(businessId) && showPaidPlanRequired && !hasPhoneNumber, queryFn: () => requestJson<{ trial: { status: string } }>(`/api/number-trial?businessId=${encodeURIComponent(businessId)}`) });
   const offersFreeTrial = showPaidPlanRequired && !hasPhoneNumber && trial.data?.trial?.status === "available";
@@ -122,6 +132,8 @@ export function LivePhoneNumberSettingsSurface() {
                 <p className="text-[15px] leading-6 text-muted-foreground">
                   {offersFreeTrial
                     ? t("phoneNumber.freeTrial.description")
+                    : partnerTierRequired
+                    ? t("phoneNumber.partnerTierRequired.description")
                     : showPaidPlanRequired
                     ? t("phoneNumber.requiresPaidPlan.description")
                     : t("phoneNumber.current.empty")}
@@ -181,7 +193,7 @@ export function LivePhoneNumberSettingsSurface() {
                         <PhoneNumberChooser
                           businessId={businessId}
                           claimNumber={numberApi.claimNumber}
-                          getErrorMessage={getSettingsPhoneNumberErrorMessage}
+                          getErrorMessage={(error, fallback) => (error as { code?: string } | null)?.code === "partner_number_limit_reached" ? t("phoneNumber.partnerTierRequired.description") : getSettingsPhoneNumberErrorMessage(error, fallback)}
                           getInitialNumberSuggestion={numberApi.getInitialNumberSuggestion}
                           labels={{
                             countryLabel: t("phoneNumber.picker.countryLabel"),

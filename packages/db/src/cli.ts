@@ -190,6 +190,24 @@ async function main(): Promise<void> {
             ,('lobbystack_readonly', 'partner_stripe_accounts', 'SELECT')
             ,('lobbystack_readonly', 'partner_packages', 'SELECT')
             ,('lobbystack_worker', 'partner_packages', 'SELECT')
+            ,('lobbystack_app', 'partner_billing_accounts', 'SELECT')
+            ,('lobbystack_worker', 'partner_billing_accounts', 'SELECT')
+            ,('lobbystack_worker', 'partner_billing_accounts', 'INSERT')
+            ,('lobbystack_worker', 'partner_billing_accounts', 'UPDATE')
+            ,('lobbystack_readonly', 'partner_billing_accounts', 'SELECT')
+            ,('lobbystack_app', 'partner_checkout_requests', 'SELECT')
+            ,('lobbystack_app', 'partner_checkout_requests', 'INSERT')
+            ,('lobbystack_worker', 'partner_checkout_requests', 'SELECT')
+            ,('lobbystack_readonly', 'partner_checkout_requests', 'SELECT')
+            ,('lobbystack_worker', 'partner_number_charges', 'SELECT')
+            ,('lobbystack_worker', 'partner_number_charges', 'INSERT')
+            ,('lobbystack_readonly', 'partner_number_charges', 'SELECT')
+            ,('lobbystack_worker', 'partner_tier_billing', 'SELECT')
+            ,('lobbystack_worker', 'partner_tier_billing', 'INSERT')
+            ,('lobbystack_worker', 'partner_tier_billing', 'UPDATE')
+            ,('lobbystack_readonly', 'partner_tier_billing', 'SELECT')
+            ,('lobbystack_worker', 'provider_events', 'SELECT')
+            ,('lobbystack_worker', 'provider_events', 'UPDATE')
             ,('lobbystack_finance_export', 'businesses', 'SELECT')
             ,('lobbystack_finance_export', 'billing_accounts', 'SELECT')
             ,('lobbystack_finance_export', 'calls', 'SELECT')
@@ -306,12 +324,66 @@ async function main(): Promise<void> {
             ('partner_packages', 'stripe_account_id', false),
             ('partner_packages', 'stripe_product_id', false),
             ('partner_packages', 'stripe_price_id', false),
-            ('partner_packages', 'stripe_setup_price_id', false)
+            ('partner_packages', 'stripe_setup_price_id', false),
+            ('partner_checkout_requests', 'status', true),
+            ('partner_checkout_requests', 'updated_at', true),
+            ('partner_checkout_requests', 'partner_id', false),
+            ('partner_checkout_requests', 'requested_by_user_id', false),
+            ('partner_checkout_requests', 'tier', false),
+            ('partner_checkout_requests', 'return_origin', false),
+            ('partner_checkout_requests', 'checkout_url', false),
+            ('partner_billing_accounts', 'tier', false),
+            ('partner_billing_accounts', 'subscription_state', false),
+            ('partner_billing_accounts', 'pool_voice_seconds', false),
+            ('partner_billing_accounts', 'included_numbers', false)
           ) as expected(table_name, column_name, granted)
           where has_column_privilege('lobbystack_app', 'public.' || expected.table_name, expected.column_name, 'UPDATE') <> expected.granted
         `);
         if (partnerUpdateGrantFailures.rows.length > 0) {
           throw new Error(`Partner update grant verification failed for: ${partnerUpdateGrantFailures.rows.map((row) => `${row.table_name}.${row.column_name}:${row.granted ? "missing" : "unexpected"}`).join(", ")}`);
+        }
+        // The worker fills in a partner's checkout with Polar's page, and never
+        // moves it to another partner, person, tier or return address.
+        const partnerCheckoutWorkerGrantFailures = await migrator.db.execute<{ column_name: string; granted: boolean }>(sql`
+          select expected.column_name, expected.granted
+          from (values
+            ('status', true),
+            ('checkout_id', true),
+            ('checkout_url', true),
+            ('error', true),
+            ('updated_at', true),
+            ('partner_id', false),
+            ('requested_by_user_id', false),
+            ('tier', false),
+            ('billing_interval', false),
+            ('return_origin', false)
+          ) as expected(column_name, granted)
+          where has_column_privilege('lobbystack_worker', 'public.partner_checkout_requests', expected.column_name, 'UPDATE') <> expected.granted
+        `);
+        if (partnerCheckoutWorkerGrantFailures.rows.length > 0) {
+          throw new Error(`Partner checkout worker grant verification failed for: ${partnerCheckoutWorkerGrantFailures.rows.map((row) => `${row.column_name}:${row.granted ? "missing" : "unexpected"}`).join(", ")}`);
+        }
+        // The worker settles a partner number's months, and never moves the
+        // number to another partner or business or changes what it costs. The
+        // app never writes a number's cost at all.
+        const partnerNumberChargeGrantFailures = await migrator.db.execute<{ role_name: string; column_name: string; granted: boolean }>(sql`
+          select expected.role_name, expected.column_name, expected.granted
+          from (values
+            ('lobbystack_worker', 'months_settled', true),
+            ('lobbystack_worker', 'months_charged', true),
+            ('lobbystack_worker', 'updated_at', true),
+            ('lobbystack_worker', 'partner_id', false),
+            ('lobbystack_worker', 'business_id', false),
+            ('lobbystack_worker', 'phone_number_id', false),
+            ('lobbystack_worker', 'monthly_cost_cents', false),
+            ('lobbystack_worker', 'started_at', false),
+            ('lobbystack_app', 'months_settled', false),
+            ('lobbystack_app', 'monthly_cost_cents', false)
+          ) as expected(role_name, column_name, granted)
+          where has_column_privilege(expected.role_name, 'public.partner_number_charges', expected.column_name, 'UPDATE') <> expected.granted
+        `);
+        if (partnerNumberChargeGrantFailures.rows.length > 0) {
+          throw new Error(`Partner number charge grant verification failed for: ${partnerNumberChargeGrantFailures.rows.map((row) => `${row.role_name}:${row.column_name}:${row.granted ? "missing" : "unexpected"}`).join(", ")}`);
         }
         const demoResolverGrantFailures = await migrator.db.execute<{ role_name: string; function_name: string }>(sql`
           select role_name, function_name
@@ -371,6 +443,9 @@ async function main(): Promise<void> {
             ('lobbystack_worker', 'app.has_partner_access(uuid)'),
             ('lobbystack_app', 'app.has_team_membership(uuid)'),
             ('lobbystack_worker', 'app.business_partner(uuid)'),
+            ('lobbystack_app', 'app.partner_number_standing(uuid)'),
+            ('lobbystack_worker', 'app.partner_number_standing(uuid)'),
+            ('lobbystack_worker', 'app.due_partner_number_charges(timestamptz, integer, uuid[])'),
             ('lobbystack_app', 'app.can_save_initial_branding()'),
             ('lobbystack_app', 'app.save_initial_branding(text, bytea, text)'),
             ('lobbystack_app', 'app.finish_business_handover(uuid, uuid)'),

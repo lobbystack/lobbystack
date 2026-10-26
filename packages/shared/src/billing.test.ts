@@ -12,7 +12,11 @@ import {
   getPolarMeteredUsagePayload,
   hasLiveEntitlement,
   hasLivePackageSubscription,
+  isPaidPartnerTierSlug,
+  isPartnerTierSlug,
   packageEntitlement,
+  partnerTierCatalog,
+  partnerTierInForce,
   planEntitlement,
 } from "./billing";
 
@@ -32,6 +36,39 @@ describe("direct plan entitlements", () => {
     expect(planEntitlement("pro").overage.rates).toEqual({ voiceMinute: 18, chat: 0, alertSms: 2, outboundAttempt: 2 });
     expect(planEntitlement("enterprise")).toMatchObject({ source: "plan", allowance: { voiceSeconds: null, chats: null, alertSms: null, outboundAttempts: null }, overage: { enabled: true }, includedNumbers: null });
     expect(planEntitlement("self_host")).toMatchObject({ source: "unlimited", overage: { enabled: false }, includedNumbers: null, poolPartnerId: null });
+  });
+});
+
+describe("partner tiers", () => {
+  it("sells Free, Starter, Growth and Scale at the cloud's prices, pools and numbers", () => {
+    const minutes = (tier: keyof typeof partnerTierCatalog) => partnerTierCatalog[tier].poolVoiceSeconds / 60;
+    expect(Object.keys(partnerTierCatalog)).toEqual(["free", "starter", "growth", "scale"]);
+    expect([partnerTierCatalog.free.monthlyChargeCents, partnerTierCatalog.starter.monthlyChargeCents, partnerTierCatalog.growth.monthlyChargeCents, partnerTierCatalog.scale.monthlyChargeCents]).toEqual([0, 4_900, 19_900, 49_900]);
+    expect([minutes("free"), minutes("starter"), minutes("growth"), minutes("scale")]).toEqual([30, 250, 1_300, 4_000]);
+    expect([partnerTierCatalog.free.poolChats, partnerTierCatalog.starter.poolChats, partnerTierCatalog.growth.poolChats, partnerTierCatalog.scale.poolChats]).toEqual([50, 1_000, 5_000, 10_000]);
+    expect([partnerTierCatalog.free.includedNumbers, partnerTierCatalog.starter.includedNumbers, partnerTierCatalog.growth.includedNumbers, partnerTierCatalog.scale.includedNumbers]).toEqual([0, 2, 10, 25]);
+    expect(partnerTierCatalog.free).toMatchObject({ paid: false, trialNumbers: 1, overagesBillable: false, voiceOverageRatePerMinuteCents: null, chatOverageRatePerChatCents: null });
+    expect([partnerTierCatalog.starter, partnerTierCatalog.growth, partnerTierCatalog.scale].map((tier) => [tier.voiceOverageRatePerMinuteCents, tier.chatOverageRatePerChatCents])).toEqual([[20, 2], [15, 1.5], [12, 1]]);
+  });
+
+  it("takes 20% off each paid tier billed annually, as on direct plans", () => {
+    for (const tier of ["starter", "growth", "scale"] as const) {
+      const terms = partnerTierCatalog[tier];
+      expect(terms.annualChargeCents).toBe(terms.monthlyChargeCents * 12 * 0.8);
+      expect(terms.annualEffectiveMonthlyChargeCents).toBe(terms.annualChargeCents / 12);
+    }
+    expect(billingPlanCatalog.starter.annualChargeCents).toBe(billingPlanCatalog.starter.monthlyChargeCents * 12 * 0.8);
+  });
+
+  it("holds a paid tier only while its subscription is live, and Free otherwise", () => {
+    for (const tier of ["starter", "growth", "scale"]) {
+      for (const subscriptionState of ["active", "trialing", "past_due"]) expect(partnerTierInForce({ tier, subscriptionState })).toBe(tier);
+      for (const subscriptionState of ["canceled", "revoked", "incomplete", null]) expect(partnerTierInForce({ tier, subscriptionState })).toBe("free");
+    }
+    for (const tier of ["free", "pro", "enterprise", null]) expect(partnerTierInForce({ tier, subscriptionState: "active" })).toBe("free");
+    expect(partnerTierInForce(null)).toBe("free");
+    expect(isPartnerTierSlug("free") && isPaidPartnerTierSlug("growth")).toBe(true);
+    expect(isPaidPartnerTierSlug("free") || isPartnerTierSlug("pro")).toBe(false);
   });
 });
 

@@ -11,7 +11,8 @@
     "branding": "Brend i domen",
     "team": "Tim",
     "stripe": "Stripe",
-    "apiKeys": "API ključevi"
+    "apiKeys": "API ključevi",
+    "billing": "Naplata"
   },
   "roles": {
     "owner": "Vlasnik",
@@ -465,6 +466,78 @@
   "secretReveal": {
     "copy": "Kopiraj",
     "copied": "Kopirano"
+  },
+  "billing": {
+    "title": "Naplata",
+    "description": "Vaš nivo određuje minute i četove koje vaše firme dele svakog meseca, i koliko brojeva telefona dobijaju.",
+    "loadFailed": "Nismo uspeli da učitamo naplatu. Osvežite stranicu i pokušajte ponovo.",
+    "ownersOnly": "Samo vlasnici upravljaju naplatom. Zamolite nekog od vlasnika vašeg partnera da promeni nivo.",
+    "unavailable": "Na ovoj kontrolnoj tabli ne plaćate nivo, pa ništa ne ograničava minute, četove ni brojeve telefona vaših firmi.",
+    "pastDue": "Vaše poslednje plaćanje nije uspelo. Ažurirajte karticu u Upravljaj pretplatom da biste zadržali nivo.",
+    "tiers": {
+      "free": "Besplatno",
+      "starter": "Starter",
+      "growth": "Growth",
+      "scale": "Scale"
+    },
+    "intervals": {
+      "monthly": "Mesečno",
+      "annual": "Godišnje"
+    },
+    "price": {
+      "perMonth": "mesečno",
+      "billedMonthly": "Naplaćuje se mesečno",
+      "billedYearly": "{{price}} se naplaćuje godišnje"
+    },
+    "terms": {
+      "minutes_one": "{{formatted}} minut mesečno",
+      "minutes_few": "{{formatted}} minuta mesečno",
+      "minutes_other": "{{formatted}} minuta mesečno",
+      "chats_one": "{{formatted}} čet mesečno",
+      "chats_few": "{{formatted}} četa mesečno",
+      "chats_other": "{{formatted}} četova mesečno",
+      "numbers_one": "{{count}} broj telefona",
+      "numbers_few": "{{count}} broja telefona",
+      "numbers_other": "{{count}} brojeva telefona",
+      "noNumbers": "Bez brojeva telefona",
+      "extraNumbers": "Dodatni brojevi po našoj ceni koštanja",
+      "overage": "Svaki dodatni minut košta {{minute}}, a svaki dodatni čet {{chat}}",
+      "noOverage": "Bez dodatnih minuta i četova preko ovih"
+    },
+    "current": {
+      "title": "Trenutni nivo",
+      "free": "Kartica nije potrebna.",
+      "renewsOn": "Obnavlja se {{date}}.",
+      "endsOn": "Ističe {{date}}. Do tada zadržavate nivo."
+    },
+    "numbers": {
+      "used": "Brojeva telefona u upotrebi: {{held}} od {{included}} uključenih.",
+      "extra_one": "Brojeva telefona u upotrebi: {{held}}. Svakog meseca plaćate {{count}} dodatni broj po našoj ceni koštanja.",
+      "extra_few": "Brojeva telefona u upotrebi: {{held}}. Svakog meseca plaćate {{count}} dodatna broja po našoj ceni koštanja.",
+      "extra_other": "Brojeva telefona u upotrebi: {{held}}. Svakog meseca plaćate {{count}} dodatnih brojeva po našoj ceni koštanja."
+    },
+    "choose": {
+      "title": "Izaberite nivo",
+      "intervalLabel": "Period naplate",
+      "annualDiscount": "Uštedite 20%",
+      "action": "Izaberi {{tier}}",
+      "opening": "Otvaranje plaćanja…"
+    },
+    "portal": {
+      "action": "Upravljaj pretplatom",
+      "opening": "Otvaranje…"
+    },
+    "checkout": {
+      "confirming": "Plaćanje je primljeno. Ova stranica se osvežava kada vaš nivo bude spreman.",
+      "done": "Sada imate nivo {{tier}}."
+    },
+    "errors": {
+      "checkoutFailed": "Nismo uspeli da otvorimo plaćanje. Pokušajte ponovo.",
+      "subscriptionActive": "Već plaćate nivo. Promenite ga u Upravljaj pretplatom.",
+      "checkoutInProgress": "Drugi vlasnik ima otvoreno plaćanje. Pokušajte ponovo za 30 minuta.",
+      "unavailable": "Na ovoj kontrolnoj tabli ne možete da kupite nivo.",
+      "portalFailed": "Nismo uspeli da otvorimo vašu pretplatu. Pokušajte ponovo."
+    }
   },
   "signup": {
     "title": "Registrujte se kao partner",

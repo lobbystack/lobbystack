@@ -410,6 +410,9 @@
       "description": "Upgrade to Starter or Pro to claim a local business number callers can dial.",
       "upgradeCta": "View plans"
     },
+    "partnerTierRequired": {
+      "description": "This business's partner needs a paid tier to add phone numbers."
+    },
     "actions": {
       "requestChange": "Request change",
       "getNumber": "Get number"

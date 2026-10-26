@@ -1244,6 +1244,81 @@ export const billingCheckoutRequests = pgTable(
   (table) => [uniqueIndex("billing_checkout_requests_id_unique").on(table.id), index("billing_checkout_requests_business_status_idx").on(table.businessId, table.status, table.createdAt)],
 );
 
+// The tier a partner buys from the host through Polar, and the terms of the tier in force (migration 0144).
+export const partnerBillingAccounts = pgTable(
+  "partner_billing_accounts",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    partnerId: uuid("partner_id").notNull().references(() => partners.id, { onDelete: "cascade" }),
+    // partner:<partner id>, the external id of the partner's Polar customer.
+    billingKey: text("billing_key").notNull(),
+    customerId: text("customer_id"),
+    subscriptionId: text("subscription_id"),
+    tier: varchar("tier", { length: 16 }).$type<"free" | "starter" | "growth" | "scale">().default("free").notNull(),
+    billingInterval: varchar("billing_interval", { length: 16 }).$type<"monthly" | "annual">(),
+    subscriptionState: varchar("subscription_state", { length: 32 }),
+    currentPeriodStart: timestamp("current_period_start", { withTimezone: true }),
+    currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+    // When a canceled tier ends, while it runs to the end of its period. Null while it renews.
+    endsAt: timestamp("ends_at", { withTimezone: true }),
+    poolVoiceSeconds: integer("pool_voice_seconds").notNull(),
+    poolChats: integer("pool_chats").notNull(),
+    includedNumbers: integer("included_numbers").notNull(),
+    ...timestamps,
+  },
+  (table) => [uniqueIndex("partner_billing_accounts_partner_unique").on(table.partnerId), uniqueIndex("partner_billing_accounts_billing_key_unique").on(table.billingKey)],
+);
+
+// An owner's request for a Polar checkout of a tier, which the worker turns into a checkout page.
+export const partnerCheckoutRequests = pgTable(
+  "partner_checkout_requests",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    partnerId: uuid("partner_id").notNull().references(() => partners.id, { onDelete: "cascade" }),
+    requestedByUserId: uuid("requested_by_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    tier: varchar("tier", { length: 16 }).$type<"starter" | "growth" | "scale">().notNull(),
+    billingInterval: varchar("billing_interval", { length: 16 }).$type<"monthly" | "annual">().notNull(),
+    status: varchar("status", { length: 16 }).$type<"pending" | "processing" | "ready" | "error" | "superseded">().default("pending").notNull(),
+    // The console's origin the owner started from, where Polar sends them back.
+    returnOrigin: text("return_origin").notNull(),
+    checkoutId: text("checkout_id"),
+    checkoutUrl: text("checkout_url"),
+    error: text("error"),
+    ...timestamps,
+  },
+  (table) => [index("partner_checkout_requests_partner_status_idx").on(table.partnerId, table.status, table.createdAt)],
+);
+
+// Whether this deployment bills partners for tiers, as the worker last recorded it from the environment. At most one row (migration 0147).
+export const partnerTierBilling = pgTable("partner_tier_billing", {
+  id: smallint("id").default(1).primaryKey(),
+  enabled: boolean("enabled").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// What the host pays each month for a number a partner's business holds while the deployment bills tiers, and the months settled since (migration 0147).
+export const partnerNumberCharges = pgTable(
+  "partner_number_charges",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    partnerId: uuid("partner_id").notNull().references(() => partners.id, { onDelete: "cascade" }),
+    businessId: uuid("business_id").notNull().references(() => businesses.id, { onDelete: "cascade" }),
+    phoneNumberId: uuid("phone_number_id").notNull().references(() => phoneNumbers.id, { onDelete: "cascade" }),
+    // US cents a month, read from the carrier when the number was bought.
+    monthlyCostCents: integer("monthly_cost_cents").notNull(),
+    // The number's months run from here.
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+    monthsSettled: integer("months_settled").default(0).notNull(),
+    monthsCharged: integer("months_charged").default(0).notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("partner_number_charges_phone_number_unique").on(table.phoneNumberId),
+    index("partner_number_charges_partner_idx").on(table.partnerId),
+    index("partner_number_charges_business_idx").on(table.businessId),
+  ],
+);
+
 export const billingTransactions = pgTable(
   "billing_transactions",
   {
@@ -1519,11 +1594,17 @@ export const providerEvents = pgTable(
     providerEventId: varchar("provider_event_id", { length: 255 }).notNull(),
     eventType: varchar("event_type", { length: 160 }).notNull(),
     businessId: uuid("business_id").references(() => businesses.id, { onDelete: "set null" }),
+    // A Polar event for a partner's tier (migration 0144). An event belongs to a business or a partner, never both.
+    partnerId: uuid("partner_id").references(() => partners.id, { onDelete: "set null" }),
     payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
     status: varchar("status", { length: 32 }).default("received").notNull(),
     ...timestamps,
   },
-  (table) => [uniqueIndex("provider_events_provider_id_unique").on(table.provider, table.providerEventId), index("provider_events_business_idx").on(table.businessId, table.createdAt)],
+  (table) => [
+    uniqueIndex("provider_events_provider_id_unique").on(table.provider, table.providerEventId),
+    index("provider_events_business_idx").on(table.businessId, table.createdAt),
+    index("provider_events_partner_idx").on(table.partnerId, table.createdAt).where(sql`${table.partnerId} is not null`),
+  ],
 );
 
 export const outboxMessages = pgTable(
@@ -2043,6 +2124,10 @@ export const schema = {
   operatorNotificationDeliveries,
   billingAccounts,
   billingCheckoutRequests,
+  partnerBillingAccounts,
+  partnerCheckoutRequests,
+  partnerTierBilling,
+  partnerNumberCharges,
   billingTransactions,
   billingUsageEvents,
   billingUsageMonths,

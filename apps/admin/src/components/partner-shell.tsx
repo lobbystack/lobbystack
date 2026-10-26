@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Building2, Check, ChevronsUpDown, Contrast, CreditCard, KeyRound, LogOut, Package, Palette, Plus, Users } from "lucide-react";
+import { Building2, Check, ChevronsUpDown, Contrast, CreditCard, KeyRound, LogOut, Package, Palette, Plus, Receipt, Users } from "lucide-react";
 
 import type { PartnerRole } from "@lobbystack/shared";
 import { useBranding } from "@/components/branding-provider";
@@ -49,11 +49,13 @@ type PartnerShellProps = {
   /** Every partner whose console opens here, for the switcher: on a partner's host, only that partner. */
   partners: ConsolePartner[];
   sidebarOpen: boolean;
+  /** Whether the deployment bills partners for tiers, so owners get the Billing page. */
+  tierBilling?: boolean;
   user: { email: string };
 };
 
 /** The partner console's frame: the partner switcher, its pages for the person's role, and the account menu. */
-export function PartnerShell({ children, partner, partners, sidebarOpen, user }: PartnerShellProps) {
+export function PartnerShell({ children, partner, partners, sidebarOpen, tierBilling = false, user }: PartnerShellProps) {
   const { t } = useTranslation(["partner", "common"]);
   const pathname = usePathname();
   const contentScrollRef = useRef<HTMLElement>(null);
@@ -78,7 +80,7 @@ export function PartnerShell({ children, partner, partners, sidebarOpen, user }:
               <PartnerSwitcher partner={partner} partners={partners} />
             </SidebarHeader>
             <SidebarContent>
-              <PartnerNavigation partnerId={partner.partnerId} role={partner.role} />
+              <PartnerNavigation partnerId={partner.partnerId} role={partner.role} tierBilling={tierBilling} />
             </SidebarContent>
             <SidebarFooter>
               <PartnerUserMenu email={user.email} />
@@ -100,12 +102,12 @@ export function PartnerShell({ children, partner, partners, sidebarOpen, user }:
   );
 }
 
-function PartnerNavigation({ partnerId, role }: { partnerId: string; role: PartnerRole }) {
+function PartnerNavigation({ partnerId, role, tierBilling }: { partnerId: string; role: PartnerRole; tierBilling: boolean }) {
   const { t } = useTranslation("partner");
   const pathname = usePathname();
   const router = useRouter();
   const { isMobile, setOpenMobile } = useSidebar();
-  // Members don't see prices or the Stripe connection, and only owners manage Stripe. The server refuses the same.
+  // Members don't see prices or the Stripe connection, and only owners manage Stripe and, while the deployment bills tiers, the partner's tier. The server refuses the same.
   const items = [
     { href: `/partner/${partnerId}/businesses`, label: t("nav.businesses"), icon: Building2 },
     ...(role === "member" ? [] : [{ href: `/partner/${partnerId}/packages`, label: t("nav.packages"), icon: Package }]),
@@ -113,6 +115,7 @@ function PartnerNavigation({ partnerId, role }: { partnerId: string; role: Partn
     { href: `/partner/${partnerId}/team`, label: t("nav.team"), icon: Users },
     { href: `/partner/${partnerId}/api-keys`, label: t("nav.apiKeys"), icon: KeyRound },
     ...(role === "owner" ? [{ href: `/partner/${partnerId}/stripe`, label: t("nav.stripe"), icon: CreditCard }] : []),
+    ...(tierBilling && role === "owner" ? [{ href: `/partner/${partnerId}/billing`, label: t("nav.billing"), icon: Receipt }] : []),
   ];
   return (
     <SidebarGroup>

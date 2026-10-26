@@ -11,7 +11,8 @@
     "branding": "Branding & domain",
     "team": "Team",
     "stripe": "Stripe",
-    "apiKeys": "API keys"
+    "apiKeys": "API keys",
+    "billing": "Billing"
   },
   "roles": {
     "owner": "Owner",
@@ -463,6 +464,74 @@
   "secretReveal": {
     "copy": "Copy",
     "copied": "Copied"
+  },
+  "billing": {
+    "title": "Billing",
+    "description": "Your tier sets the minutes and chats your businesses share each month, and how many phone numbers they get.",
+    "loadFailed": "We couldn't load your billing. Refresh to try again.",
+    "ownersOnly": "Only owners manage billing. Ask one of your partner's owners to change your tier.",
+    "unavailable": "You don't pay for a tier on this dashboard, so nothing limits your businesses' minutes, chats or phone numbers.",
+    "pastDue": "Your last payment failed. Update your card from Manage subscription to keep your tier.",
+    "tiers": {
+      "free": "Free",
+      "starter": "Starter",
+      "growth": "Growth",
+      "scale": "Scale"
+    },
+    "intervals": {
+      "monthly": "Monthly",
+      "annual": "Annual"
+    },
+    "price": {
+      "perMonth": "a month",
+      "billedMonthly": "Billed monthly",
+      "billedYearly": "{{price}} billed yearly"
+    },
+    "terms": {
+      "minutes_one": "{{formatted}} minute a month",
+      "minutes_other": "{{formatted}} minutes a month",
+      "chats_one": "{{formatted}} chat a month",
+      "chats_other": "{{formatted}} chats a month",
+      "numbers_one": "{{count}} phone number",
+      "numbers_other": "{{count}} phone numbers",
+      "noNumbers": "No phone numbers",
+      "extraNumbers": "Extra numbers at our cost",
+      "overage": "Extra minutes cost {{minute}} each, and extra chats {{chat}}",
+      "noOverage": "No extra minutes or chats past these"
+    },
+    "current": {
+      "title": "Current tier",
+      "free": "No card needed.",
+      "renewsOn": "Renews on {{date}}.",
+      "endsOn": "Ends on {{date}}. You keep your tier until then."
+    },
+    "numbers": {
+      "used": "Phone numbers in use: {{held}} of {{included}} included.",
+      "extra_one": "Phone numbers in use: {{held}}. You pay for {{count}} extra number at our cost each month.",
+      "extra_other": "Phone numbers in use: {{held}}. You pay for {{count}} extra numbers at our cost each month."
+    },
+    "choose": {
+      "title": "Choose a tier",
+      "intervalLabel": "Billing interval",
+      "annualDiscount": "Save 20%",
+      "action": "Choose {{tier}}",
+      "opening": "Opening checkout…"
+    },
+    "portal": {
+      "action": "Manage subscription",
+      "opening": "Opening…"
+    },
+    "checkout": {
+      "confirming": "Payment received. This page updates when your tier is ready.",
+      "done": "You're on {{tier}}."
+    },
+    "errors": {
+      "checkoutFailed": "We couldn't open checkout. Try again.",
+      "subscriptionActive": "You already pay for a tier. Change it from Manage subscription.",
+      "checkoutInProgress": "Another owner has a checkout open. Try again in 30 minutes.",
+      "unavailable": "You can't buy a tier on this dashboard.",
+      "portalFailed": "We couldn't open your subscription. Try again."
+    }
   },
   "signup": {
     "title": "Sign up as a partner",

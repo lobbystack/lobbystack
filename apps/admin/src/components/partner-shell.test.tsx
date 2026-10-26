@@ -7,7 +7,7 @@ import type { i18n as I18nextInstance } from "i18next";
 
 import type { BrandingSnapshot } from "@/lib/branding-snapshot";
 import { BrandingProvider } from "./branding-provider";
-import { PartnerShell } from "./partner-shell";
+import { PartnerShell, type ConsolePartner } from "./partner-shell";
 
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en" }, t: (key: string) => key }) }));
 vi.mock("next/navigation", () => ({ usePathname: () => "/partner/bright/businesses", useRouter: () => ({ push: vi.fn() }) }));
@@ -45,12 +45,12 @@ it("leaves partner signup out on a partner's host, which answers it with a 404",
   expect(screen.queryByRole("menuitem", { name: "shell.signUpAnother" })).toBeNull();
 });
 
-it("shows Packages to owners and admins and Stripe to owners only, the pages the server lets each role open", async () => {
-  const pages = (role: "owner" | "admin" | "member") => {
+it("shows Packages to owners and admins, and Stripe and Billing to owners only, the pages the server lets each role open", async () => {
+  const pages = (role: "owner" | "admin" | "member", tierBilling = false) => {
     const partner = { ...bright, role };
     render(
       <BrandingProvider i18n={{ options: {} } as unknown as I18nextInstance} initial={{ appName: "LobbyStack", logoUrl: null, final: true }}>
-        <PartnerShell partner={partner} partners={[partner]} sidebarOpen user={{ email: "owner@example.test" }}><div /></PartnerShell>
+        <PartnerShell partner={partner} partners={[partner]} sidebarOpen tierBilling={tierBilling} user={{ email: "owner@example.test" }}><div /></PartnerShell>
       </BrandingProvider>,
     );
     const links = screen.getAllByRole("link").map((link) => link.getAttribute("href")).filter((href) => href?.startsWith("/partner/"));
@@ -58,6 +58,24 @@ it("shows Packages to owners and admins and Stripe to owners only, the pages the
     return links;
   };
   expect(pages("owner")).toEqual(["/partner/bright/businesses", "/partner/bright/packages", "/partner/bright/branding", "/partner/bright/team", "/partner/bright/api-keys", "/partner/bright/stripe"]);
+  expect(pages("owner", true)).toEqual(["/partner/bright/businesses", "/partner/bright/packages", "/partner/bright/branding", "/partner/bright/team", "/partner/bright/api-keys", "/partner/bright/stripe", "/partner/bright/billing"]);
   expect(pages("admin")).toEqual(["/partner/bright/businesses", "/partner/bright/packages", "/partner/bright/branding", "/partner/bright/team", "/partner/bright/api-keys"]);
   expect(pages("member")).toEqual(["/partner/bright/businesses", "/partner/bright/branding", "/partner/bright/team", "/partner/bright/api-keys"]);
+});
+
+it("gives owners a Billing page when the deployment sells tiers, and no one else", () => {
+  const navigation = (partner: ConsolePartner, tierBilling: boolean) => {
+    render(
+      <BrandingProvider i18n={{ options: {} } as unknown as I18nextInstance} initial={{ appName: "LobbyStack", logoUrl: null, final: true }}>
+        <PartnerShell partner={partner} partners={[partner]} sidebarOpen tierBilling={tierBilling} user={{ email: "owner@example.test" }}><div /></PartnerShell>
+      </BrandingProvider>,
+    );
+    const billing = screen.queryByRole("link", { name: "nav.billing" });
+    cleanup();
+    return billing?.getAttribute("href") ?? null;
+  };
+  expect(navigation({ ...bright, role: "owner" }, true)).toBe("/partner/bright/billing");
+  expect(navigation({ ...bright, role: "owner" }, false)).toBeNull();
+  expect(navigation({ ...bright, role: "admin" }, true)).toBeNull();
+  expect(navigation({ ...bright, role: "member" }, true)).toBeNull();
 });

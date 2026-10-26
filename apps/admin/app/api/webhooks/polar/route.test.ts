@@ -2,9 +2,10 @@ import { createHmac } from "node:crypto";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { afterEach, beforeEach, expect, it, vi, type MockInstance } from "vitest";
 
-const mocks = vi.hoisted(() => ({ lookup: vi.fn(), insert: vi.fn(), enqueue: vi.fn(), scope: vi.fn(), where: vi.fn() }));
+const mocks = vi.hoisted(() => ({ lookup: vi.fn(), insert: vi.fn(), enqueue: vi.fn(), scope: vi.fn(), where: vi.fn(), recordPartner: vi.fn() }));
 vi.mock("@lobbystack/providers", () => import("../../../../../../packages/providers/src/polar/webhook"));
-vi.mock("@/lib/api-helpers", () => ({ getDispatcherDatabase: () => ({ db: {} }), getWorkerDatabase: () => ({ db: {} }) }));
+vi.mock("@/lib/api-helpers", () => ({ getAppDatabase: () => ({ db: "app" }), getDispatcherDatabase: () => ({ db: {} }), getWorkerDatabase: () => ({ db: {} }) }));
+vi.mock("@lobbystack/domain", () => ({ recordPartnerPolarEvent: mocks.recordPartner }));
 vi.mock("@lobbystack/db", async importOriginal => ({
   ...await importOriginal<typeof import("@lobbystack/db")>(),
   withDispatcherTransaction: async (_db: unknown, callback: (tx: unknown) => unknown) => callback({ select: () => ({ from: () => ({ where: (condition: unknown) => { mocks.where(condition); return { limit: mocks.lookup }; } }) }) }),
@@ -90,6 +91,22 @@ it("resolves a migrated customer from metadata instead of dropping it", async ()
   expect(await (await POST(request(businessId, { body }))).json()).toEqual({ accepted: true, duplicate: false, eventId: "delivery-1" });
   expect(mocks.enqueue).toHaveBeenCalledTimes(1);
   expect(logged).not.toHaveBeenCalled();
+});
+
+it("stores a partner's tier events for the partner, with the tier its product sells, and never looks up a business", async () => {
+  const partnerId = "5b1f6c43-34a5-4a8e-9a43-6c1f8d5f1c11";
+  vi.stubEnv("POLAR_PARTNER_SCALE_MONTHLY_PRODUCT_ID", "scale_month");
+  const body = JSON.stringify({ type: "subscription.active", data: { id: "sub-1", status: "active", product_id: "scale_month", customer: { id: "cust-1", external_id: `partner:${partnerId}` } } });
+  mocks.recordPartner.mockResolvedValueOnce("stored").mockResolvedValueOnce("duplicate").mockResolvedValueOnce("unknown_partner");
+  expect(await (await POST(request(businessId, { body }))).json()).toEqual({ accepted: true, duplicate: false, eventId: "delivery-1" });
+  expect(mocks.recordPartner).toHaveBeenCalledWith({ db: "app" }, { partnerId, providerEventId: "delivery-1", eventType: "subscription.active", payload: expect.objectContaining({ billingKey: `partner:${partnerId}`, customerId: "cust-1", partnerTier: "scale", billingInterval: "monthly", subscriptionState: "active" }) });
+  expect(await (await POST(request(businessId, { body }))).json()).toEqual({ accepted: true, duplicate: true, eventId: "delivery-1" });
+  // A partner this deployment doesn't have leaves only the log line.
+  expect(await (await POST(request(businessId, { body }))).json()).toEqual({ accepted: true, ignored: true });
+  expect(unresolvedLogs()).toEqual([{ event: "ops.billing.webhook_unresolved", provider: "polar", eventType: "subscription.active", reason: "unknown_partner", partnerReference: `partner:${partnerId}` }]);
+  expect(mocks.lookup).not.toHaveBeenCalled();
+  expect(mocks.insert).not.toHaveBeenCalled();
+  expect(mocks.enqueue).not.toHaveBeenCalled();
 });
 
 it("rejects invalid, stale, missing, and unconfigured signatures before DB access", async () => {

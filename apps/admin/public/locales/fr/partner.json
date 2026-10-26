@@ -11,7 +11,8 @@
     "branding": "Image de marque et domaine",
     "team": "Équipe",
     "stripe": "Stripe",
-    "apiKeys": "Clés API"
+    "apiKeys": "Clés API",
+    "billing": "Facturation"
   },
   "roles": {
     "owner": "Propriétaire",
@@ -465,6 +466,78 @@
   "secretReveal": {
     "copy": "Copier",
     "copied": "Copié"
+  },
+  "billing": {
+    "title": "Facturation",
+    "description": "Votre palier fixe les minutes et les clavardages que vos entreprises partagent chaque mois, et le nombre de numéros de téléphone qu'elles obtiennent.",
+    "loadFailed": "Impossible de charger votre facturation. Actualisez la page pour réessayer.",
+    "ownersOnly": "Seuls les propriétaires gèrent la facturation. Demandez à l'un des propriétaires de votre partenaire de changer de palier.",
+    "unavailable": "Vous ne payez aucun palier sur ce tableau de bord : rien ne limite les minutes, les clavardages ni les numéros de téléphone de vos entreprises.",
+    "pastDue": "Votre dernier paiement a échoué. Mettez à jour votre carte dans Gérer l'abonnement pour garder votre palier.",
+    "tiers": {
+      "free": "Gratuit",
+      "starter": "Starter",
+      "growth": "Growth",
+      "scale": "Scale"
+    },
+    "intervals": {
+      "monthly": "Mensuel",
+      "annual": "Annuel"
+    },
+    "price": {
+      "perMonth": "par mois",
+      "billedMonthly": "Facturé chaque mois",
+      "billedYearly": "{{price}} facturés chaque année"
+    },
+    "terms": {
+      "minutes_one": "{{formatted}} minute par mois",
+      "minutes_many": "{{formatted}} minutes par mois",
+      "minutes_other": "{{formatted}} minutes par mois",
+      "chats_one": "{{formatted}} clavardage par mois",
+      "chats_many": "{{formatted}} clavardages par mois",
+      "chats_other": "{{formatted}} clavardages par mois",
+      "numbers_one": "{{count}} numéro de téléphone",
+      "numbers_many": "{{count}} numéros de téléphone",
+      "numbers_other": "{{count}} numéros de téléphone",
+      "noNumbers": "Aucun numéro de téléphone",
+      "extraNumbers": "Numéros supplémentaires au prix coûtant",
+      "overage": "Chaque minute supplémentaire coûte {{minute}}, et chaque clavardage supplémentaire {{chat}}",
+      "noOverage": "Aucune minute ni aucun clavardage au-delà"
+    },
+    "current": {
+      "title": "Palier actuel",
+      "free": "Aucune carte requise.",
+      "renewsOn": "Se renouvelle le {{date}}.",
+      "endsOn": "Prend fin le {{date}}. Vous gardez votre palier d'ici là."
+    },
+    "numbers": {
+      "used": "Numéros de téléphone utilisés : {{held}} sur {{included}} inclus.",
+      "extra_one": "Numéros de téléphone utilisés : {{held}}. Vous payez {{count}} numéro supplémentaire au prix coûtant chaque mois.",
+      "extra_many": "Numéros de téléphone utilisés : {{held}}. Vous payez {{count}} numéros supplémentaires au prix coûtant chaque mois.",
+      "extra_other": "Numéros de téléphone utilisés : {{held}}. Vous payez {{count}} numéros supplémentaires au prix coûtant chaque mois."
+    },
+    "choose": {
+      "title": "Choisir un palier",
+      "intervalLabel": "Période de facturation",
+      "annualDiscount": "Économisez 20 %",
+      "action": "Choisir {{tier}}",
+      "opening": "Ouverture du paiement…"
+    },
+    "portal": {
+      "action": "Gérer l'abonnement",
+      "opening": "Ouverture…"
+    },
+    "checkout": {
+      "confirming": "Paiement reçu. Cette page se met à jour dès que votre palier est prêt.",
+      "done": "Vous êtes maintenant sur le palier {{tier}}."
+    },
+    "errors": {
+      "checkoutFailed": "Impossible d'ouvrir le paiement. Réessayez.",
+      "subscriptionActive": "Vous payez déjà un palier. Changez-le dans Gérer l'abonnement.",
+      "checkoutInProgress": "Un autre propriétaire a un paiement en cours. Réessayez dans 30 minutes.",
+      "unavailable": "Vous ne pouvez pas acheter de palier sur ce tableau de bord.",
+      "portalFailed": "Impossible d'ouvrir votre abonnement. Réessayez."
+    }
   },
   "signup": {
     "title": "Devenir partenaire",

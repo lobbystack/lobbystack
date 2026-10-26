@@ -37,6 +37,13 @@ it("opens the console of a partner the person is on the team of, with their role
   expect(shell.props.user).toEqual({ email: "owner@example.test" });
 });
 
+it("tells the shell whether the deployment sells tiers, which decides whether owners see Billing", async () => {
+  expect(((await open(PARTNER)) as ReactElement<{ tierBilling: boolean }>).props.tierBilling).toBe(false);
+  for (const tier of ["STARTER", "GROWTH", "SCALE"]) for (const interval of ["MONTHLY", "ANNUAL"]) vi.stubEnv(`POLAR_PARTNER_${tier}_${interval}_PRODUCT_ID`, `prod_${tier}_${interval}`);
+  expect(((await open(PARTNER)) as ReactElement<{ tierBilling: boolean }>).props.tierBilling).toBe(true);
+  vi.unstubAllEnvs();
+});
+
 it("sends anyone off the partner's team back to /partner, whether the id is someone else's or not an id at all", async () => {
   fixture.partners = fixture.partners.filter((partner) => partner.partnerId !== PARTNER);
   await expect(open(PARTNER)).rejects.toMatchObject({ to: "/partner" });

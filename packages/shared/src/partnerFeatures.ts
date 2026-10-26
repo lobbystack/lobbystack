@@ -3,6 +3,8 @@
 // the partner environment variables. Each feature turns on only when its
 // configuration exists.
 
+import { billingIntervals, paidPartnerTierSlugs, type BillingInterval, type PaidPartnerTierSlug } from "./billing";
+
 export type PartnerSignup = "open" | "invite";
 
 export type PartnerFeatures = {
@@ -14,17 +16,40 @@ export type PartnerFeatures = {
   baseDomain: string | null;
   /** The Stripe Connect key and webhook secret are both set. */
   stripeConnect: boolean;
-  /** Every POLAR_PARTNER_<TIER>_<INTERVAL>_PRODUCT_ID is set. */
+  /**
+   * Every POLAR_PARTNER_<TIER>_<INTERVAL>_PRODUCT_ID is set, each to its own
+   * product, so partners buy tiers through Polar. Without it partners have no
+   * tier billing, and nothing limits their pools or phone numbers.
+   */
   tierBilling: boolean;
   /** What issues certificates for partners' own domains, or null when partners can't add one. */
   customDomains: "cloudflare" | "caddy" | null;
 };
 
-const PAID_PARTNER_TIERS = ["STARTER", "GROWTH", "SCALE"] as const;
-const BILLING_INTERVALS = ["MONTHLY", "ANNUAL"] as const;
-
 function isSet(value: string | undefined): boolean {
   return Boolean(value?.trim());
+}
+
+/** A partner tier's Polar product for one billing interval. */
+export type PartnerTierProduct = { tier: PaidPartnerTierSlug; billingInterval: BillingInterval; productId: string };
+
+/** The Polar products the host sells tiers with, from every POLAR_PARTNER_<TIER>_<INTERVAL>_PRODUCT_ID that's set. */
+export function partnerTierProducts(env: Record<string, string | undefined>): PartnerTierProduct[] {
+  return paidPartnerTierSlugs.flatMap((tier) => billingIntervals.flatMap((billingInterval) => {
+    const productId = env[`POLAR_PARTNER_${tier.toUpperCase()}_${billingInterval.toUpperCase()}_PRODUCT_ID`]?.trim();
+    return productId ? [{ tier, billingInterval, productId }] : [];
+  }));
+}
+
+/** The Polar product that sells a tier for a billing interval, or null when it isn't set. */
+export function partnerTierProductId(env: Record<string, string | undefined>, tier: PaidPartnerTierSlug, billingInterval: BillingInterval): string | null {
+  return partnerTierProducts(env).find((product) => product.tier === tier && product.billingInterval === billingInterval)?.productId ?? null;
+}
+
+/** The tier and interval a Polar product sells, or null for a product that sells no tier. */
+export function partnerTierForProduct(env: Record<string, string | undefined>, productId: string | null | undefined): Omit<PartnerTierProduct, "productId"> | null {
+  const product = productId ? partnerTierProducts(env).find((candidate) => candidate.productId === productId) : undefined;
+  return product ? { tier: product.tier, billingInterval: product.billingInterval } : null;
 }
 
 // A hostname of letters, digits and hyphens, such as receptionistportal.com
@@ -44,13 +69,19 @@ function partnerSignup(env: Record<string, string | undefined>): PartnerSignup {
   return env.DEPLOYMENT_MODE?.trim() === "cloud" ? "invite" : "open";
 }
 
+/** Every tier has a Polar product for each interval, and no two share one, so each subscription names one tier. */
+function hasEveryTierProduct(env: Record<string, string | undefined>): boolean {
+  const products = partnerTierProducts(env);
+  return products.length === paidPartnerTierSlugs.length * billingIntervals.length && new Set(products.map((product) => product.productId)).size === products.length;
+}
+
 export function partnerFeatures(env: Record<string, string | undefined>): PartnerFeatures {
   return {
     enabled: true,
     signup: partnerSignup(env),
     baseDomain: partnerBaseDomain(env.PARTNER_BASE_DOMAIN),
     stripeConnect: isSet(env.STRIPE_CONNECT_SECRET_KEY) && isSet(env.STRIPE_CONNECT_WEBHOOK_SECRET),
-    tierBilling: PAID_PARTNER_TIERS.every((tier) => BILLING_INTERVALS.every((interval) => isSet(env[`POLAR_PARTNER_${tier}_${interval}_PRODUCT_ID`]))),
+    tierBilling: hasEveryTierProduct(env),
     // Caddy's on-demand TLS has no setting of its own yet, so this never answers caddy.
     customDomains: isSet(env.CLOUDFLARE_SAAS_API_TOKEN) && isSet(env.CLOUDFLARE_SAAS_ZONE_ID) ? "cloudflare" : null,
   };
@@ -71,6 +102,13 @@ export function partnerFeatureWarnings(env: Record<string, string | undefined>):
   const signup = env.PARTNER_SIGNUP?.trim().toLowerCase();
   if (signup && signup !== "open" && signup !== "invite") {
     warnings.push(`PARTNER_SIGNUP is ignored: it takes open or invite, so signup stays ${partnerSignup(env)}.`);
+  }
+  const products = partnerTierProducts(env);
+  if (products.length > 0 && !hasEveryTierProduct(env)) {
+    const missing = paidPartnerTierSlugs.flatMap((tier) => billingIntervals.filter((interval) => !products.some((product) => product.tier === tier && product.billingInterval === interval)).map((interval) => `POLAR_PARTNER_${tier.toUpperCase()}_${interval.toUpperCase()}_PRODUCT_ID`));
+    warnings.push(missing.length > 0
+      ? `Partner tier billing is off: ${missing.join(", ")} ${missing.length === 1 ? "isn't" : "aren't"} set. Partners can't buy a tier, and nothing limits their pools or phone numbers, until every tier has a monthly and an annual product.`
+      : "Partner tier billing is off: two POLAR_PARTNER_*_PRODUCT_ID settings name the same product. Give each tier and interval its own product.");
   }
   return warnings;
 }

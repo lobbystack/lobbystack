@@ -7,14 +7,16 @@ const mocks = vi.hoisted(() => {
   const tollFreeList = vi.fn();
   const mobileList = vi.fn();
   const verificationCreate = vi.fn();
+  const countryPricing = vi.fn();
   const client = {
+    pricing: { v1: { phoneNumbers: { countries: vi.fn(() => ({ fetch: countryPricing })) } } },
     incomingPhoneNumbers,
     availablePhoneNumbers: vi.fn(() => ({ local: { list: localList }, mobile: { list: mobileList }, tollFree: { list: tollFreeList } })),
     verify: { v2: { services: vi.fn(() => ({ verifications: { create: verificationCreate } })) } },
     messages: Object.assign(vi.fn(), { create: vi.fn() }),
     calls: vi.fn(),
   };
-  return { client, incomingPhoneNumbers, numberResource, localList, mobileList, tollFreeList, verificationCreate };
+  return { client, incomingPhoneNumbers, numberResource, localList, mobileList, tollFreeList, verificationCreate, countryPricing };
 });
 
 vi.mock("twilio", () => ({ default: vi.fn(() => mocks.client) }));
@@ -92,6 +94,24 @@ describe("TwilioProvider phone provisioning", () => {
     expect(getTwilioProviderErrorCode({ code: 21422 })).toBe(21422);
     expect(getTwilioProviderErrorCode({ code: 21404 })).toBe(21404);
     expect(getTwilioProviderErrorCode({ code: 500 })).toBeUndefined();
+  });
+});
+
+describe("TwilioProvider number pricing", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("reads the account's current monthly price for the kind of number, in US cents", async () => {
+    mocks.countryPricing.mockResolvedValue({ priceUnit: "USD", phoneNumberPrices: [{ numberType: "local", basePrice: "3.40", currentPrice: "3.25" }, { numberType: "toll free", basePrice: "4.50", currentPrice: "4.50" }] });
+    await expect(provider().getPhoneNumberMonthlyPrice({ countryCode: "ca", kind: "local" })).resolves.toEqual({ monthlyCents: 325 });
+    expect(mocks.client.pricing.v1.phoneNumbers.countries).toHaveBeenCalledWith("CA");
+    await expect(provider().getPhoneNumberMonthlyPrice({ countryCode: "CA", kind: "toll_free" })).resolves.toEqual({ monthlyCents: 450 });
+  });
+
+  it("refuses a kind Twilio doesn't price there, or a price in another currency", async () => {
+    mocks.countryPricing.mockResolvedValue({ priceUnit: "USD", phoneNumberPrices: [{ numberType: "local", basePrice: "3.40", currentPrice: "3.40" }] });
+    await expect(provider().getPhoneNumberMonthlyPrice({ countryCode: "GB", kind: "mobile" })).rejects.toThrow("Twilio has no monthly price for mobile numbers in GB.");
+    mocks.countryPricing.mockResolvedValue({ priceUnit: "EUR", phoneNumberPrices: [{ numberType: "mobile", basePrice: "3.40", currentPrice: "3.40" }] });
+    await expect(provider().getPhoneNumberMonthlyPrice({ countryCode: "GB", kind: "mobile" })).rejects.toThrow("not US dollars");
   });
 });
 

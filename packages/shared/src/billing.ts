@@ -193,6 +193,8 @@ export const billingMeterEventNames = {
   outboundCallAttempts: "billing.outbound_call_attempts",
   aiSmsSegments: "billing.ai_sms_segments",
   chatAiTokens: "billing.chat_ai_tokens",
+  /** A month of a number a partner holds past its tier's included ones. The quantity is what the host pays for it, in US cents. */
+  partnerExtraNumbers: "billing.partner_extra_numbers",
 } as const;
 
 export const billingPlanCatalog = {
@@ -302,6 +304,123 @@ export const billingPlanCatalog = {
     outboundCallAttemptOverageRateCents: number | null;
   }
 >;
+
+/**
+ * The tiers a partner buys from the host: what it pays the host each month
+ * and the pool all its businesses share. Free needs no card. A partner on no
+ * live paid tier is on Free.
+ */
+export const partnerTierSlugs = ["free", "starter", "growth", "scale"] as const;
+export type PartnerTierSlug = (typeof partnerTierSlugs)[number];
+
+/** The tiers Polar sells, one product per billing interval each. */
+export const paidPartnerTierSlugs = ["starter", "growth", "scale"] as const;
+export type PaidPartnerTierSlug = (typeof paidPartnerTierSlugs)[number];
+
+export function isPartnerTierSlug(value: unknown): value is PartnerTierSlug {
+  return typeof value === "string" && (partnerTierSlugs as readonly string[]).includes(value);
+}
+
+export function isPaidPartnerTierSlug(value: unknown): value is PaidPartnerTierSlug {
+  return typeof value === "string" && (paidPartnerTierSlugs as readonly string[]).includes(value);
+}
+
+export function isBillingInterval(value: unknown): value is BillingInterval {
+  return typeof value === "string" && (billingIntervals as readonly string[]).includes(value);
+}
+
+/**
+ * LobbyStack's cloud tiers, from docs/white-label.md. Annual billing takes 20%
+ * off, as on direct plans. Prices and rates are US cents; a chat rate can hold
+ * half a cent, as Polar's metered prices can. Free includes no number of its
+ * own, only one 14-day trial number per partner, ever.
+ */
+export const partnerTierCatalog = {
+  free: {
+    paid: false,
+    monthlyChargeCents: 0,
+    annualChargeCents: null,
+    annualEffectiveMonthlyChargeCents: null,
+    poolVoiceSeconds: 1_800,
+    poolChats: 50,
+    includedNumbers: 0,
+    trialNumbers: 1,
+    overagesBillable: false,
+    voiceOverageRatePerMinuteCents: null,
+    chatOverageRatePerChatCents: null,
+  },
+  starter: {
+    paid: true,
+    monthlyChargeCents: 4_900,
+    annualChargeCents: 47_040,
+    annualEffectiveMonthlyChargeCents: 3_920,
+    poolVoiceSeconds: 15_000,
+    poolChats: 1_000,
+    includedNumbers: 2,
+    trialNumbers: 0,
+    overagesBillable: true,
+    voiceOverageRatePerMinuteCents: 20,
+    chatOverageRatePerChatCents: 2,
+  },
+  growth: {
+    paid: true,
+    monthlyChargeCents: 19_900,
+    annualChargeCents: 191_040,
+    annualEffectiveMonthlyChargeCents: 15_920,
+    poolVoiceSeconds: 78_000,
+    poolChats: 5_000,
+    includedNumbers: 10,
+    trialNumbers: 0,
+    overagesBillable: true,
+    voiceOverageRatePerMinuteCents: 15,
+    chatOverageRatePerChatCents: 1.5,
+  },
+  scale: {
+    paid: true,
+    monthlyChargeCents: 49_900,
+    annualChargeCents: 479_040,
+    annualEffectiveMonthlyChargeCents: 39_920,
+    poolVoiceSeconds: 240_000,
+    poolChats: 10_000,
+    includedNumbers: 25,
+    trialNumbers: 0,
+    overagesBillable: true,
+    voiceOverageRatePerMinuteCents: 12,
+    chatOverageRatePerChatCents: 1,
+  },
+} as const satisfies Record<
+  PartnerTierSlug,
+  {
+    /** The partner pays for the tier, so it holds it only while its Polar subscription is live. */
+    paid: boolean;
+    monthlyChargeCents: number;
+    annualChargeCents: number | null;
+    annualEffectiveMonthlyChargeCents: number | null;
+    /** The pool's voice minutes each month, in seconds, shared by all the partner's businesses. */
+    poolVoiceSeconds: number;
+    /** The pool's website chat conversations each month. */
+    poolChats: number;
+    /** Phone numbers the partner's businesses hold between them before extra numbers cost more. */
+    includedNumbers: number;
+    /** 14-day trial numbers the partner gets, ever. */
+    trialNumbers: number;
+    overagesBillable: boolean;
+    voiceOverageRatePerMinuteCents: number | null;
+    chatOverageRatePerChatCents: number | null;
+  }
+>;
+
+/** The Polar billing account fields that decide a partner's tier. */
+export type PartnerTierAccount = { tier: string | null; subscriptionState: string | null };
+
+/**
+ * The tier a partner holds now: a paid tier while its subscription is live,
+ * past_due included as on direct plans, and Free otherwise.
+ */
+export function partnerTierInForce(account: PartnerTierAccount | null | undefined): PartnerTierSlug {
+  if (!account || !isPaidPartnerTierSlug(account.tier)) return "free";
+  return (liveSubscriptionStates as readonly string[]).includes(account.subscriptionState ?? "") ? account.tier : "free";
+}
 
 export function getKnowledgeStorageLimitBytes(
   plan: BillingPlanSlug,

@@ -9,6 +9,7 @@ import type { DomainContext } from "./context";
 import { loadEntitlement } from "./entitlement";
 import { activateNumberTrialInTransaction, failNumberTrialInTransaction, isNumberCountry, keepBusinessNumbersInTransaction, trialCountries, verifiedPhone, type NumberCountry } from "./numberTrials";
 import { normalizeOnboardingStage } from "./onboarding";
+import { loadPartnerNumberStanding, newPartnerNumberRefusal, numberCountsForPartnerInTransaction, recordPartnerNumberCostInTransaction } from "./partnerNumbers";
 import { resolveBusinessNumberMarket, type BusinessNumberMarket } from "./phoneNumberMarket";
 
 export type NumberSelection = {
@@ -69,8 +70,9 @@ const claimRefusals: Record<string, [status: number, message: string]> = {
   trial_ip_limited: [429, "A free trial already started from this network in the last 30 days. Choose a plan to get a number."],
   trial_not_needed: [409, "Your plan already includes a number. Search again to pick one."],
   trial_not_available: [409, "A free trial number isn't available for this workspace. Choose a plan to get a number."],
-  // The guard on onboarding_number_claim_events (migration 0135).
+  // The partner check on onboarding_number_claim_events (migration 0147), which also counts the daily and 30-day quotas above across a partner's businesses.
   partner_numbers_unavailable: [409, "Phone numbers aren't available for this business yet."],
+  partner_number_limit_reached: [409, "This business's partner needs a paid tier for more phone numbers."],
 };
 
 function refused(reason: string): Error {
@@ -110,9 +112,15 @@ export async function numberEligibilityInTransaction(tx: DatabaseTransaction, in
   const business = (await tx.select({ stage: businesses.onboardingStage, timezone: businesses.timezone, deploymentMode: businesses.deploymentMode, replacementUsedAt: businesses.phoneNumberReplacementUsedAt }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1))[0];
   const entitlement = await loadEntitlement(tx, input.businessId);
   if (!business) throw numberClaimError(404, "not_found", "Workspace not found.");
-  // A partner's tier sets how many numbers its businesses hold, and tiers
-  // don't count them yet, so the cloud buys a partner's business none.
-  if (business.deploymentMode === "cloud" && entitlement.poolPartnerId) throw refused("partner_numbers_unavailable");
+  // While the deployment bills tiers, a partner's tier sets how many numbers
+  // its businesses hold between them. A paid tier pays for each one past those
+  // it includes, and any other tier gets none past them. Without tier billing,
+  // the cloud buys a partner's business no new number. The claim checks the
+  // same, under the partner's lock.
+  if (entitlement.poolPartnerId && purpose === "onboarding") {
+    const refusal = newPartnerNumberRefusal(await loadPartnerNumberStanding(tx, entitlement.poolPartnerId), business.deploymentMode);
+    if (refusal) throw refused(refusal);
+  }
   const onboardingStage = normalizeOnboardingStage(business.stage);
   if (input.via === "dashboard" && purpose === "onboarding" && !["phone_number", "attribution", "complete"].includes(onboardingStage)) throw refused("invalid_onboarding_stage");
   if (purpose === "replacement") {
@@ -126,6 +134,9 @@ export async function numberEligibilityInTransaction(tx: DatabaseTransaction, in
   if (requested && !isNumberCountry(requested)) throw numberClaimError(400, "unsupported_country", "Phone numbers aren't available in this country yet.");
   let trial: { verifiedPhone: string } | undefined;
   if (business.deploymentMode === "cloud" && !entitlement.live) {
+    // A partner's business that isn't live, such as one whose package isn't
+    // paid, pays its partner, so the host's plans and free trial aren't for it.
+    if (entitlement.poolPartnerId) throw refused("partner_numbers_unavailable");
     // Without a paid plan, a number is a free trial: during onboarding, with a
     // verified phone in a trial country, once per business.
     if (purpose !== "onboarding") throw refused("dedicated_number_requires_paid_plan");
@@ -265,8 +276,17 @@ export async function getOnboardingNumberClaim(context: DomainContext, input: { 
 
 const numberProvisioningLeaseMs = 10 * 60_000;
 
+/**
+ * Takes a claim for this worker to buy its number, or one whose earlier
+ * attempt died holding it. `countsForPartner` says the number counts against
+ * a partner's tier, so the worker reads what the host pays for it before
+ * buying it.
+ */
 export async function claimNumberProvisioning(context: DomainContext, input: { businessId: string; claimId: string }) {
-  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => (await tx.update(onboardingNumberClaimEvents).set({ status: "provisioning", attemptCount: sql`${onboardingNumberClaimEvents.attemptCount} + 1`, updatedAt: new Date() }).where(and(eq(onboardingNumberClaimEvents.id, input.claimId), eq(onboardingNumberClaimEvents.businessId, input.businessId), or(eq(onboardingNumberClaimEvents.status, "reserved"), and(eq(onboardingNumberClaimEvents.status, "provisioning"), lt(onboardingNumberClaimEvents.updatedAt, new Date(Date.now() - numberProvisioningLeaseMs)))))).returning({ id: onboardingNumberClaimEvents.id, e164: onboardingNumberClaimEvents.requestedE164, selection: onboardingNumberClaimEvents.selectionContext }))[0] ?? null);
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const claim = (await tx.update(onboardingNumberClaimEvents).set({ status: "provisioning", attemptCount: sql`${onboardingNumberClaimEvents.attemptCount} + 1`, updatedAt: new Date() }).where(and(eq(onboardingNumberClaimEvents.id, input.claimId), eq(onboardingNumberClaimEvents.businessId, input.businessId), or(eq(onboardingNumberClaimEvents.status, "reserved"), and(eq(onboardingNumberClaimEvents.status, "provisioning"), lt(onboardingNumberClaimEvents.updatedAt, new Date(Date.now() - numberProvisioningLeaseMs)))))).returning({ id: onboardingNumberClaimEvents.id, e164: onboardingNumberClaimEvents.requestedE164, selection: onboardingNumberClaimEvents.selectionContext }))[0];
+    return claim ? { ...claim, countsForPartner: await numberCountsForPartnerInTransaction(tx, input.businessId) } : null;
+  });
 }
 
 /** When a claim another attempt holds becomes reclaimable, or null when no attempt holds it. */
@@ -277,7 +297,12 @@ export async function numberProvisioningLeaseEndsAt(context: DomainContext, inpu
   });
 }
 
-export async function completeNumberProvisioning(context: DomainContext, input: { businessId: string; claimId: string; e164: string; providerPhoneId: string; voiceUrl: string; smsUrl: string }): Promise<string> {
+/**
+ * Stores the number the worker bought for a claim. `monthlyCostCents`, what
+ * the host pays for the number each month, is recorded for a number that
+ * counts against a partner's tier.
+ */
+export async function completeNumberProvisioning(context: DomainContext, input: { businessId: string; claimId: string; e164: string; providerPhoneId: string; voiceUrl: string; smsUrl: string; monthlyCostCents?: number | undefined }): Promise<string> {
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const existing = (await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(eq(phoneNumbers.providerPhoneId, input.providerPhoneId)).limit(1))[0];
     const offered = (await tx.select({ selection: onboardingNumberClaimEvents.selectionContext }).from(onboardingNumberClaimEvents).where(and(eq(onboardingNumberClaimEvents.id, input.claimId), eq(onboardingNumberClaimEvents.businessId, input.businessId))).limit(1))[0]?.selection;
@@ -285,6 +310,7 @@ export async function completeNumberProvisioning(context: DomainContext, input: 
     const smsEnabled = offered?.sms !== false;
     const [number] = existing ? [existing] : await tx.insert(phoneNumbers).values({ businessId: input.businessId, e164: input.e164, providerPhoneId: input.providerPhoneId, status: "active", voiceEnabled: true, smsEnabled, voiceWebhookStatus: "synced", voiceWebhookTargetUrl: input.voiceUrl, voiceWebhookLastSyncedAt: new Date(), smsWebhookStatus: "synced", smsWebhookTargetUrl: input.smsUrl, smsWebhookLastSyncedAt: new Date() }).returning({ id: phoneNumbers.id });
     if (!number) throw new Error("Provisioned number could not be persisted.");
+    if (input.monthlyCostCents !== undefined) await recordPartnerNumberCostInTransaction(tx, { businessId: input.businessId, phoneNumberId: number.id, monthlyCostCents: input.monthlyCostCents });
     const claim = (await tx.update(onboardingNumberClaimEvents).set({ status: "claimed", phoneNumberId: number.id, providerPhoneId: input.providerPhoneId, purchasedAt: new Date(), completedAt: new Date(), updatedAt: new Date() }).where(and(eq(onboardingNumberClaimEvents.id, input.claimId), eq(onboardingNumberClaimEvents.businessId, input.businessId), eq(onboardingNumberClaimEvents.status, "provisioning"))).returning({ purpose: onboardingNumberClaimEvents.purpose, replacingPhoneNumberId: onboardingNumberClaimEvents.replacingPhoneNumberId }))[0];
     if (!claim) throw new Error("Number claim is no longer awaiting provisioning.");
     if (claim.purpose === "replacement") {

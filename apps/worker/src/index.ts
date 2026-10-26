@@ -1,7 +1,7 @@
 import { assertDatabaseRole, businesses, createDatabaseClient, databaseHealthCheck, enqueueOutbox, listReembedBusinesses, listSchedulerBusinesses, listSummaryBackfillBusinesses, withBusinessTransaction, withDispatcherTransaction } from "@lobbystack/db";
 import { createBusinessHoursExtractor, createBusinessSummarizer, createCallSummarizer } from "@lobbystack/agent-core";
-import { DEFAULT_EMAIL_FROM, assertProductionSecrets, isMaintenanceMode, partnerFeatureWarnings } from "@lobbystack/shared";
-import { listenForBrandChanges, type OnboardingFollowupSender } from "@lobbystack/domain";
+import { DEFAULT_EMAIL_FROM, assertProductionSecrets, isMaintenanceMode, partnerFeatureWarnings, partnerFeatures } from "@lobbystack/shared";
+import { listenForBrandChanges, recordPartnerTierBilling, type OnboardingFollowupSender } from "@lobbystack/domain";
 import { createQueue, createRedisConnection, createWorkerOptions, enqueueJob, isKnownJobType, jobQueues, type JobEnvelope, type JobQueue } from "@lobbystack/jobs";
 import { createEmbeddingProvider } from "@lobbystack/providers/ai/embeddingProvider";
 import { FirecrawlProvider } from "@lobbystack/providers/crawling/firecrawl";
@@ -139,6 +139,8 @@ async function main(): Promise<void> {
   const database = createDatabaseClient("lobbystack_worker");
   const dispatcherDatabase = createDatabaseClient("lobbystack_dispatcher");
   await Promise.all([assertDatabaseRole(database), assertDatabaseRole(dispatcherDatabase)]);
+  // The number claims read whether this deployment bills tiers from the database, which only the environment knows.
+  await recordPartnerTierBilling({ db: database.db }, { enabled: partnerFeatures(process.env).tierBilling });
   const realtime = createRedisConnection({ prefix: process.env.REDIS_PREFIX ?? "lobbystack" });
   // A partner's saved brand reaches emails at once rather than when the brand cache runs out.
   const brandChanges = createRedisConnection({ prefix: process.env.REDIS_PREFIX ?? "lobbystack" });

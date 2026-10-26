@@ -38,6 +38,8 @@ export async function configureSchedulers(
   const desired: Schedule[] = [
     { queue: "maintenance", name: "prospect-demo-expiry", type: "prospectDemo.expire", every: 60 * 60_000, businessId: null },
     { queue: "maintenance", name: "affiliate-payout", type: "affiliate.generatePayoutRun", every: 24 * 60 * 60_000, businessId: null },
+    // A number a partner's business buys is charged within the hour, and again each month it's held.
+    { queue: "maintenance", name: "partner-number-charges", type: "billing.chargePartnerNumbers", every: 60 * 60_000, businessId: null },
     // A call whose worker died keeps talking with nobody answering, so look every minute.
     { queue: "critical", name: "live-orphan-recovery", type: "live.recoverOrphans", every: 60_000, businessId: null },
   ];

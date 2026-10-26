@@ -452,6 +452,7 @@ export async function setManagedPlanForApi(context: DomainContext, caller: ApiCa
   refusePartnerPlatformKey(caller, "managed_plan");
   return await inBusiness(context, caller, async (tx) => {
     const outcome = await setManagedPlanInTransaction(tx, { businessId: caller.businessId });
+    if (outcome === "partner_business") throw conflict("Its partner bills this business, so it can't have a managed plan.");
     if (outcome === "paid_through_polar") throw conflict("This business pays through Polar. Cancel that subscription before giving it a managed plan.");
     if (outcome === "set") await audit(tx, caller, { eventType: "api.billing.managed_plan_set", entityType: "billing_account", entityId: caller.businessId, payload: { plan: "enterprise" } });
     return await loadBilling(tx, caller.businessId);
@@ -494,6 +495,7 @@ const numberRefusalMessages: Record<string, string> = {
   daily_claim_quota_reached: "Too many numbers were claimed today. Try again tomorrow.",
   monthly_claim_quota_reached: "Too many numbers were claimed in the last 30 days. Try again later.",
   partner_numbers_unavailable: "A partner's business can't get a phone number on this server yet.",
+  partner_number_limit_reached: "This business's partner needs a paid tier for more phone numbers. Its owners choose one on the console's Billing page.",
 };
 
 // The claim limits know only that a window is full, so Retry-After is its length, at most a day.

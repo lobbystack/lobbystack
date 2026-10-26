@@ -23,6 +23,7 @@ Do not duplicate ownership between runtimes unless there is a specific analytics
 - `web.partner.business_deleted`: an owner or admin deleted one of the partner's businesses from the console's Businesses page, once the server accepted it. It carries `partnerId` and `businessId` (the business deleted, which no longer exists). The same rule applies.
 - `web.partner.stripe_onboarding_started`: an owner opened Stripe's onboarding from the console's Stripe page, by clicking or because Stripe sent them back with an expired link. It carries `partnerId` and `resumed` (`true` when the partner already had an account and continued its onboarding, `false` when the click connects a new account). The same rule applies: it needs an active business with telemetry on.
 - `web.partner.package_created`: an owner or admin created a package on the console's Packages page. It carries `partnerId`, `packageId`, `currency` (the connected account's, which the package is priced in) and `setupFee` (whether it charges one). It never carries the price. The same rule applies.
+- `web.partner.tier_started`: an owner paid for a tier at Polar's checkout, and the console's Billing page saw the partner's tier change to it. It carries `partnerId`, `tier` (`starter`, `growth` or `scale`) and `billingInterval` (`monthly` or `annual`). The same rule applies: it needs an active business with telemetry on, and a partner's domain never sends it.
 - `web.page.home_viewed`
 - `web.page.calls_viewed`
 - `web.page.call_detail_viewed`

@@ -2,7 +2,7 @@ import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 import { businesses, onboardingNumberClaimEvents, phoneNumbers } from "@lobbystack/db";
-import { schedulePhoneNumberRelease } from "@lobbystack/domain";
+import { partnerNumberAvailabilityInTransaction, schedulePhoneNumberRelease } from "@lobbystack/domain";
 import { jsonError } from "@/lib/api-helpers";
 import { operatorRoute } from "@/lib/operator-request";
 
@@ -15,6 +15,8 @@ export const GET = operatorRoute(async ({ userId, businessId, transaction }) => 
     phoneNumbers: await tx.select().from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "active"))).orderBy(asc(phoneNumbers.createdAt)),
     activeClaim: activeClaims[0] ?? null,
     replacement: { reservedAt: workspace[0]?.replacementReservedAt ?? null, usedAt: workspace[0]?.replacementUsedAt ?? null, activeClaim: activeClaims.find(claim => claim.purpose === "replacement") ?? null },
+    // A partner's business gets its numbers from its partner's tier, not a plan its billing page shows.
+    partnerNumbers: await partnerNumberAvailabilityInTransaction(tx, businessId),
   };
 })));
 

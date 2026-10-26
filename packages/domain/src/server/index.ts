@@ -36,6 +36,8 @@ export * from "./packageBilling";
 export * from "./partners";
 export * from "./partnerPlatformKeys";
 export * from "./partnerStripe";
+export * from "./partnerBilling";
+export * from "./partnerNumbers";
 export * from "./outboundDelivery";
 export * from "./phoneVerification";
 export { verificationCodeSmsBody } from "./verificationCode";

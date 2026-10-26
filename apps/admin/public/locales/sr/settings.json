@@ -416,6 +416,9 @@
       "description": "Pređite na Starter ili Pro da biste dobili lokalni poslovni broj koji pozivaoci mogu da pozovu.",
       "upgradeCta": "Pogledaj pakete"
     },
+    "partnerTierRequired": {
+      "description": "Partner ove firme mora da plaća nivo da bi dodao brojeve telefona."
+    },
     "actions": {
       "requestChange": "Zatraži promenu",
       "getNumber": "Nabavi broj"

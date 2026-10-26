@@ -4,7 +4,7 @@ import { and, eq, inArray, isNull, lte, ne, or } from "drizzle-orm";
 
 import { hasSummarizableTranscript, type BusinessHoursExtractor, type BusinessSummarizer, type CallSummarizer } from "@lobbystack/agent-core";
 import { realtimeEventSchema, type JobEnvelope } from "@lobbystack/contracts";
-import { HOST_EMAIL_BRAND, emailSender, getPolarMeteredUsagePayload, intlLocale, normalizeRuntimeLocale, parseEmailBrandReference, type BillingUsageKind, type EmailBrandReference } from "@lobbystack/shared";
+import { HOST_EMAIL_BRAND, billingMeterEventNames, emailSender, getPolarMeteredUsagePayload, intlLocale, isUuid, normalizeRuntimeLocale, parseEmailBrandReference, partnerFeatures, partnerTierProductId, type BillingUsageKind, type EmailBrandReference } from "@lobbystack/shared";
 import { appointments, calls, contacts, enqueueOutbox, knowledgeChunks, knowledgeDocuments, messages, notifications, phoneNumbers, storageObjects, websiteIngestionJobs, withBusinessTransaction, type Database } from "@lobbystack/db";
 import { enqueueKnowledgeDerivedRefresh, finishBusinessSummaryRegenerate, loadBusinessHoursInput, loadBusinessSummaryInput, markBusinessHoursChecked, resetGeneratedBusinessSummary, saveGeneratedBusinessHours, saveGeneratedBusinessSummary, type SummaryRegenerateOutcome } from "@lobbystack/domain";
 import { billingCheckoutLeaseEndsAt, checkKnowledgeStorageLimit, claimBillingCheckoutRequest, countPublishableOutboxMessages, deleteCallRecordingForRetention, deleteExpiredObjectsForBusiness, deleteStoredObjects, deleteSentProductEventsBefore, expireProspectDemos, finalizeConversationSession, loadCallSummaryInput, generateAffiliatePayoutRun, indexCrawledWebsitePage, indexDocumentText, loadBillingCheckoutRequest, loadBillingUsageEvent, loadPendingProductEvents, markBillingCheckoutCreated, markBillingCheckoutFailed, markBillingUsageSynced, markKnowledgeDocumentFailed, markProductEventsSent, reconcileBillingProviderEvent, recordAiGenerationEvent, recordCallProviderPricing, loadLiveCallForPricing, recordProductEvent, recordSmsProviderPricing, refreshBusinessSnapshot, runPrivacyRetentionSweep, updateNotificationDeliveryStatus, updateOperatorNotificationDeliveryStatus, chunkText, upsertWebsiteDocument, queueOnboardingFollowupEmail, type DurableAiUsage, type GeneratedCallSummary, type OnboardingFollowupSender } from "@lobbystack/domain";
@@ -13,6 +13,7 @@ import { claimNumberProvisioning, completeNumberProvisioning, desiredNumberRouti
 import { createWebhookSender, processWebhookDelivery, pruneApiHistory, type WebhookSender } from "@lobbystack/domain";
 import { LIVE_RECORDING_ATTEMPTS, listBusinessesWithOpenLiveCalls, listOpenLiveCalls, liveCallHasRecording, persistCallRecording, retryLiveCallRecording, type OpenLiveCall } from "@lobbystack/domain";
 import { expireTeamRequest } from "@lobbystack/domain";
+import { claimPartnerCheckoutRequest, loadPartnerCheckoutRequest, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerBillingKey, partnerCheckoutLeaseEndsAt, reconcilePartnerTier, settlePartnerNumberCharges } from "@lobbystack/domain";
 import { brandForEmail, businessExists, businessGetsHostEmails, hostBrandFromEnvironment, isHostOnlyEmailTemplate } from "@lobbystack/domain";
 import type { DomainContext } from "@lobbystack/domain";
 import { numberReleaseEmailSubject, numberTrialEmailSubject, type SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
@@ -58,7 +59,7 @@ export type WorkerDependencies = {
   domain: DomainContext;
   storage?: RuntimeStorageProvider;
   email?: Pick<SmtpEmailProvider, "sendTemplate">;
-  twilio?: Pick<TwilioProvider, "sendSms"> & Partial<Pick<TwilioProvider, "getMessagePricing" | "getCallPricing" | "findTrunkCall" | "releasePhoneNumber" | "verifyPhone" | "findOwnedPhoneNumber" | "purchasePhoneNumber" | "addNumberToSipTrunk" | "routeNumber">>;
+  twilio?: Pick<TwilioProvider, "sendSms"> & Partial<Pick<TwilioProvider, "getMessagePricing" | "getCallPricing" | "findTrunkCall" | "releasePhoneNumber" | "verifyPhone" | "findOwnedPhoneNumber" | "purchasePhoneNumber" | "addNumberToSipTrunk" | "routeNumber" | "getPhoneNumberMonthlyPrice">>;
   twilioAlerts?: Pick<TwilioProvider, "sendSms"> & { from: string };
   polar?: { recordUsage(input: { eventName: string; externalCustomerId: string; quantity: number; timestamp: string; idempotencyKey: string; businessId: string; usageKind: string }): Promise<void>; createCheckout?(input: { productId: string; customerEmail: string; externalCustomerId: string; successUrl: string; returnUrl: string; idempotencyKey?: string }): Promise<{ checkoutUrl: string; checkoutId: string }> };
   embeddings?: { fingerprint?: string; embed(values: string[], onUsage?: (usage: DurableAiUsage) => Promise<void> | void): Promise<number[][]> };
@@ -633,6 +634,72 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         throw error;
       }
     }
+    case "billing.createPartnerCheckout": {
+      // A partner's tier belongs to no business, so the job names the partner.
+      const partnerId = String(job.payload.partnerId ?? "");
+      const requestId = String(job.payload.requestId ?? "");
+      if (!isUuid(partnerId) || !isUuid(requestId)) return { status: "skipped", entityId: requestId };
+      const request = { partnerId, requestId };
+      if (!await claimPartnerCheckoutRequest(dependencies.domain, request)) return retryAfterLease(await partnerCheckoutLeaseEndsAt(dependencies.domain, request), requestId);
+      if (!dependencies.polar?.createCheckout) {
+        await markPartnerCheckoutFailed(dependencies.domain, { ...request, error: "Billing checkout provider is not configured." });
+        return { status: "skipped", entityId: requestId };
+      }
+      const checkoutRequest = await loadPartnerCheckoutRequest(dependencies.domain, request);
+      if (!checkoutRequest) return { status: "skipped", entityId: requestId };
+      const productId = partnerTierProductId(process.env, checkoutRequest.tier, checkoutRequest.billingInterval);
+      if (!productId) {
+        await markPartnerCheckoutFailed(dependencies.domain, { ...request, error: "The tier's Polar product is not configured." });
+        return { status: "skipped", entityId: requestId };
+      }
+      try {
+        const billingUrl = `${checkoutRequest.returnOrigin}/partner/${partnerId}/billing`;
+        const checkout = await dependencies.polar.createCheckout({
+          productId,
+          customerEmail: checkoutRequest.customerEmail,
+          externalCustomerId: checkoutRequest.externalCustomerId,
+          successUrl: `${billingUrl}?checkout=${encodeURIComponent(requestId)}`,
+          // Polar's back arrow: someone leaving checkout hasn't paid, so they land on the page they left.
+          returnUrl: billingUrl,
+          idempotencyKey: `partner-checkout:${requestId}`,
+        });
+        await markPartnerCheckoutCreated(dependencies.domain, { ...request, ...checkout });
+        return { status: "completed", entityId: requestId };
+      } catch (error) {
+        await markPartnerCheckoutFailed(dependencies.domain, { ...request, error: "Polar checkout creation failed." });
+        throw error;
+      }
+    }
+    case "billing.reconcilePartner": {
+      const partnerId = String(job.payload.partnerId ?? "");
+      const providerEventId = String(job.payload.providerEventId ?? "");
+      if (!isUuid(partnerId) || !isUuid(providerEventId)) return { status: "skipped", entityId: providerEventId };
+      const reconciled = await reconcilePartnerTier(dependencies.domain, { partnerId, providerEventId });
+      return { status: reconciled ? "completed" : "skipped", entityId: providerEventId };
+    }
+    case "billing.chargePartnerNumbers": {
+      // Polar charges a partner, under its own customer, what the host pays for each month of each number past its tier's included ones.
+      // A deployment that bills no tiers charges no month, so its months settle without Polar.
+      const tierBilling = partnerFeatures(process.env).tierBilling;
+      const polar = dependencies.polar;
+      if (tierBilling && !polar) return { status: "skipped" };
+      const result = await settlePartnerNumberCharges(dependencies.domain, {
+        tierBilling,
+        report: async (charge) => {
+          if (!polar) throw new Error("Polar isn't configured, so a partner's extra number can't be charged.");
+          await polar.recordUsage({
+            eventName: billingMeterEventNames.partnerExtraNumbers,
+            externalCustomerId: partnerBillingKey(charge.partnerId),
+            quantity: charge.amountCents,
+            timestamp: charge.periodStart.toISOString(),
+            idempotencyKey: charge.idempotencyKey,
+            businessId: charge.businessId,
+            usageKind: "partner_extra_number",
+          });
+        },
+      });
+      return { status: result.settled > 0 ? "completed" : "skipped", entityId: `${result.settled}:${result.charged}` };
+    }
     case "notification.dispatch": {
       const businessId = businessIdOrThrow(job);
       const operatorDeliveryId = String(job.payload.operatorDeliveryId ?? "");
@@ -737,6 +804,14 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       const smsUrl = `${baseUrl}/api/webhooks/twilio/sms`; const statusCallbackUrl = `${baseUrl}/api/webhooks/twilio/status`;
       let purchased = false; let providerPhoneId: string | undefined;
       try {
+        // A number that counts against a partner's tier costs the partner what the host pays for it, so read that before buying it.
+        let monthlyCostCents: number | undefined;
+        if (claim.countsForPartner) {
+          const kind = claim.selection?.kind;
+          if (!dependencies.twilio.getPhoneNumberMonthlyPrice) throw new Error("The Twilio provider can't read number prices.");
+          if (typeof claim.selection?.countryCode !== "string" || (kind !== "local" && kind !== "mobile" && kind !== "toll_free")) throw new Error("The number claim doesn't say which country and kind of number it buys.");
+          monthlyCostCents = (await dependencies.twilio.getPhoneNumberMonthlyPrice({ countryCode: claim.selection.countryCode, kind })).monthlyCents;
+        }
         const owned = await dependencies.twilio.findOwnedPhoneNumber({ e164: claim.e164 });
         if (owned) providerPhoneId = owned.providerPhoneId;
         else {
@@ -750,7 +825,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
           providerPhoneId = result.providerPhoneId; purchased = true;
         }
         await addNumberToSipTrunk({ trunkSid: sipTrunkSid, providerPhoneId });
-        const phoneNumberId = await completeNumberProvisioning(dependencies.domain, { businessId, claimId, e164: claim.e164, providerPhoneId, voiceUrl: `sip-trunk:${sipTrunkSid}`, smsUrl });
+        const phoneNumberId = await completeNumberProvisioning(dependencies.domain, { businessId, claimId, e164: claim.e164, providerPhoneId, voiceUrl: `sip-trunk:${sipTrunkSid}`, smsUrl, ...(monthlyCostCents !== undefined ? { monthlyCostCents } : {}) });
         return { status: "completed", entityId: phoneNumberId };
       } catch (error) {
         if (purchased && providerPhoneId && dependencies.twilio.releasePhoneNumber) await dependencies.twilio.releasePhoneNumber({ providerPhoneId }).catch(() => undefined);

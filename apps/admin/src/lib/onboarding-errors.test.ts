@@ -25,9 +25,10 @@ describe("getSafeOnboardingErrorMessage", () => {
     ).toBe("number.tooManySearches");
   });
 
-  it("maps an expired offer and the claim limits by code", () => {
+  it("maps an expired offer, the claim limits and a partner's tier limit by code", () => {
     expect(getSafeOnboardingErrorMessage(Object.assign(new Error("This number offer expired."), { code: "number_offer_expired" }), t, "number.claimFailed")).toBe("number.offerExpired");
     expect(getSafeOnboardingErrorMessage(Object.assign(new Error("Daily limit."), { code: "daily_claim_quota_reached" }), t, "number.claimFailed")).toBe("number.claimRateLimited");
+    expect(getSafeOnboardingErrorMessage(Object.assign(new Error("This business's partner needs a paid tier for more phone numbers."), { code: "partner_number_limit_reached" }), t, "number.searchFailed")).toBe("number.partnerTierRequired");
   });
 
   it("preserves actionable Twilio trial-account guidance", () => {

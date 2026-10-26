@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { auditLogs, billingAccounts, createDatabaseClient, outboxMessages, productEvents, providerEvents, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { auditLogs, billingAccounts, businesses, createDatabaseClient, outboxMessages, partnerBillingAccounts, productEvents, providerEvents, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { FakeStripeConnect } from "@lobbystack/providers/stripe/fakeStripeConnect";
 
 import { forgetCachedBrands } from "./brands";
@@ -11,6 +11,8 @@ import { loadEntitlement } from "./entitlement";
 import { getPackageBilling, openPackagePortal, setPartnerBusinessBilling, startInvitationCheckout, startPackageCheckout } from "./packageBilling";
 import { acceptPartnerInvitation, createPartnerBusiness, deletePartnerBusiness, hashPartnerToken, invitePartnerMember, listPartnerBusinesses, releaseBusiness, signUpPartner, type PartnerMemberActor } from "./partners";
 import { getNumberTrialState, numberStepRedirect } from "./numberTrials";
+import { recordPartnerTierBilling } from "./partnerNumbers";
+import { searchBusinessNumberInventory } from "./phoneNumbers";
 import { createPartnerPackage, recordStripeConnectEvent, startPartnerStripeOnboarding } from "./partnerStripe";
 import { acceptInvitation, createBusiness, inviteMember, previewInvitation } from "./tenancy";
 import { readVoiceSecondsLeftInTransaction, reserveUsageInTransaction } from "./usage";
@@ -40,6 +42,16 @@ afterEach(() => {
   vi.unstubAllEnvs();
   forgetCachedBrands();
 });
+
+/**
+ * partner_tier_billing holds one row, and each test writes it in a transaction
+ * it rolls back, so suites running at once wait on each other's row. Every
+ * test that writes it takes this lock first, before it holds anything another
+ * suite could wait on, so those waits never deadlock.
+ */
+async function lockTierBilling(tx: DatabaseTransaction): Promise<void> {
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended('test:partner_tier_billing', 0))`);
+}
 
 async function rollbackTest(run: (tx: DatabaseTransaction) => Promise<void>) {
   const rollback = new Error("rollback test fixture");
@@ -384,6 +396,36 @@ describe.skipIf(!client)("the package's subscription", () => {
       expect((await entitlementOf(tx, seller, sold.businessId)).entitlement.live).toBe(false);
       expect(await getNumberTrialState(seller.context, owner)).toEqual({ status: "none" });
       expect(await numberStepRedirect(seller.context, { ...owner, finished: false })).toBeNull();
+    });
+  });
+
+  it("buys a business that hasn't paid for its package no number, the host's free trial included, while its partner pays for a tier", async () => {
+    await rollbackTest(async (tx) => {
+      await lockTierBilling(tx);
+      const seller = await sellingPartner(tx);
+      const sold = await soldBusiness(tx, seller, { packageId: seller.frontDesk.packageId });
+      await acceptInvitation(seller.context, { userId: sold.owner.userId, tokenHash: sold.tokenHash, email: sold.owner.email, emailVerified: true });
+      const phone = `+1416${String(Math.floor(Math.random() * 10_000_000)).padStart(7, "0")}`;
+      await asMigrator(tx, async () => {
+        await tx.update(businesses).set({ onboardingStage: "phone_number" }).where(eq(businesses.id, sold.businessId));
+        await tx.update(users).set({ phone, phoneVerifiedAt: new Date() }).where(eq(users.id, sold.owner.userId));
+        // The partner pays for Scale, which counts its numbers and lets it hold more than it includes.
+        await tx.insert(partnerBillingAccounts).values({ partnerId: seller.partnerId, billingKey: `partner:${seller.partnerId}`, tier: "scale", billingInterval: "monthly", subscriptionState: "active", poolVoiceSeconds: 0, poolChats: 0, includedNumbers: 25 });
+      });
+      await asWorker(tx, async () => await recordPartnerTierBilling({ db: tx as unknown as Database }, { enabled: true }));
+      expect((await entitlementOf(tx, seller, sold.businessId)).entitlement.live).toBe(false);
+
+      // The search refuses before it asks the carrier, instead of offering the host's trial.
+      const inventory = { listAvailablePhoneNumbers: vi.fn(async () => [{ phoneE164: phone, countryCode: "CA", capabilities: { sms: true, voice: true } }]) };
+      expect(await refusal(searchBusinessNumberInventory(seller.context, { userId: sold.owner.userId, businessId: sold.businessId, claimTokenSecret: "test-secret" }, inventory))).toMatchObject({ status: 409, code: "partner_numbers_unavailable" });
+      expect(inventory.listAvailablePhoneNumbers).not.toHaveBeenCalled();
+
+      // The trial claim refuses it too.
+      await tx.execute(sql`set local session authorization lobbystack_app`);
+      const trialClaim = withBusinessTransaction(seller.context.db, { userId: sold.owner.userId, businessId: sold.businessId, actorType: "operator" }, async (inner) => await inner.execute(sql`select app.reserve_trial_number_claim(${sold.businessId}::uuid, ${sold.owner.userId}::uuid, ${phone}, ${JSON.stringify({ trial: true, verifiedPhone: phone })}::jsonb, ${randomUUID()}, ${randomUUID()}, null)`));
+      expect(await refusal(trialClaim)).toMatchObject({ code: "P0001", message: "partner_numbers_unavailable" });
+      await tx.execute(sql`reset session authorization`);
+      await tx.execute(sql`set local role lobbystack_app`);
     });
   });
 

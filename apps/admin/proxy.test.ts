@@ -56,12 +56,12 @@ it("rejects cross-origin API mutations even when a dynamic identifier has an ext
 });
 
 it("guards the partner console's changes against other origins, and keeps its pages out of shared caches", async () => {
-  for (const [path, method] of [["/api/partner/signup", "POST"], ["/api/partner/team", "POST"], ["/api/partner/team", "PATCH"], ["/api/partner/team", "DELETE"], ["/api/partner/team/accept", "POST"]] as const) {
+  for (const [path, method] of [["/api/partner/signup", "POST"], ["/api/partner/team", "POST"], ["/api/partner/team", "PATCH"], ["/api/partner/team", "DELETE"], ["/api/partner/team/accept", "POST"], ["/api/partner/billing/checkout", "POST"], ["/api/partner/billing/portal", "POST"]] as const) {
     expect((await visit(`http://localhost:3210${path}`, { method, headers: { origin: "https://untrusted.invalid" } })).status, `${method} ${path}`).toBe(403);
     expect((await visit(`http://localhost:3210${path}`, { method })).status, `${method} ${path} without an origin`).toBe(403);
     expect((await visit(`http://localhost:3210${path}`, { method, headers: { origin: "http://localhost:3210" } })).status, `${method} ${path} from the dashboard`).toBe(200);
   }
-  for (const path of ["/partner/signup?invitation=token", "/partner/accept-invite?token=token", "/partner/5b1f6c43-34a5-4a8e-9a43-6c1f8d5f1c11/team"]) {
+  for (const path of ["/partner/signup?invitation=token", "/partner/accept-invite?token=token", "/partner/5b1f6c43-34a5-4a8e-9a43-6c1f8d5f1c11/team", "/partner/5b1f6c43-34a5-4a8e-9a43-6c1f8d5f1c11/billing"]) {
     expect((await visit(`http://localhost:3210${path}`)).headers.get("cache-control"), path).toBe("private, no-store");
   }
 });

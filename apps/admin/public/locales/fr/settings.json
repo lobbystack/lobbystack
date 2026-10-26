@@ -416,6 +416,9 @@
       "description": "Passez à Starter ou Pro pour obtenir un numéro local que les appelants peuvent composer.",
       "upgradeCta": "Voir les forfaits"
     },
+    "partnerTierRequired": {
+      "description": "Le partenaire de cette entreprise doit payer un palier pour ajouter des numéros de téléphone."
+    },
     "actions": {
       "requestChange": "Demander un changement",
       "getNumber": "Obtenir un numéro"

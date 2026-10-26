@@ -3,8 +3,9 @@ import { eq } from "drizzle-orm";
 
 import { polarWebhookSchema } from "@lobbystack/contracts";
 import { businesses, enqueueOutbox, providerEvents, withBusinessTransaction, withDispatcherTransaction } from "@lobbystack/db";
+import { recordPartnerPolarEvent } from "@lobbystack/domain";
 import { verifyPolarWebhookSignature } from "@lobbystack/providers";
-import { getDispatcherDatabase, getWorkerDatabase } from "@/lib/api-helpers";
+import { getAppDatabase, getDispatcherDatabase, getWorkerDatabase } from "@/lib/api-helpers";
 import { normalizePolarEvent } from "@/lib/polar-event";
 
 export const runtime = "nodejs";
@@ -24,19 +25,20 @@ function validSignature(body: string, headers: Headers): boolean {
   }, secret);
 }
 
-// A webhook we cannot attribute to a business is dropped with a 200, which is
-// correct for Polar but leaves no trace of a subscription that never applied.
-// This log line is the only signal that a billing event went missing. It is not
-// a product event: product_events rows need a business, and this has none.
+// A webhook we cannot attribute to a business or a partner is dropped with a
+// 200, which is correct for Polar but leaves no trace of a subscription that
+// never applied. This log line is the only signal that a billing event went
+// missing. It is not a product event: product_events rows need a business,
+// and this has none.
 function recordUnresolvedWebhook(
-  input: { eventType: string; reason: "no_reference" | "unknown_business"; reference?: string },
+  input: { eventType: string; reason: "no_reference" | "unknown_business" | "unknown_partner"; reference?: string },
 ): void {
   console.error(JSON.stringify({
     event: "ops.billing.webhook_unresolved",
     provider: "polar",
     eventType: input.eventType,
     reason: input.reason,
-    ...(input.reference ? { businessReference: input.reference } : {}),
+    ...(input.reference ? { [input.reason === "unknown_partner" ? "partnerReference" : "businessReference"]: input.reference } : {}),
   }));
 }
 
@@ -55,6 +57,15 @@ export async function POST(request: Request) {
     const event = polarWebhookSchema.safeParse({ ...raw, id: request.headers.get("webhook-id") ?? raw.id });
     if (!event.success) return NextResponse.json({ error: "Invalid webhook." }, { status: 400 });
     const normalized = normalizePolarEvent(event.data.type, event.data.data);
+    // A partner's tier: its events belong to no business, so they're stored for the partner.
+    if (normalized.partnerId) {
+      const outcome = await recordPartnerPolarEvent({ db: getAppDatabase().db }, { partnerId: normalized.partnerId, providerEventId: event.data.id, eventType: event.data.type, payload: normalized.payload });
+      if (outcome === "unknown_partner") {
+        recordUnresolvedWebhook({ eventType: event.data.type, reason: "unknown_partner", reference: `partner:${normalized.partnerId}` });
+        return NextResponse.json({ accepted: true, ignored: true });
+      }
+      return NextResponse.json({ accepted: true, duplicate: outcome === "duplicate", eventId: event.data.id });
+    }
     // The live Polar organization also serves staging. UUID references are safe
     // everywhere; legacy Convex references are resolved only during production
     // cutover when the environment explicitly enables compatibility routing.

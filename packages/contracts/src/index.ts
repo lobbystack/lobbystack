@@ -212,6 +212,11 @@ export const queueForJobType = {
   "billing.reconcile": "default",
   "billing.refreshUnitEconomics": "maintenance",
   "billing.createCheckout": "critical",
+  // A partner's tier: its Polar checkout, then each Polar event for its customer.
+  "billing.createPartnerCheckout": "critical",
+  "billing.reconcilePartner": "default",
+  // Each month of a number a partner holds past its tier's included ones, charged to the partner in Polar.
+  "billing.chargePartnerNumbers": "maintenance",
   "calendar.syncAppointment": "default",
   "calendar.reconcileBusiness": "default",
   "calendar.deleteEvent": "default",

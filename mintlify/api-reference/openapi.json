@@ -2142,7 +2142,7 @@
       "post": {
         "operationId": "setManagedPlan",
         "summary": "Put the business on a managed plan",
-        "description": "Operator platform keys only; any other key gets a 403 forbidden. Puts the business on the enterprise plan outside Polar, which unlocks what a paid plan unlocks while the operator bills the business directly, and removes a spending cap left from an earlier plan. A business with a live Polar subscription is a 409. If the business later starts a Starter or Pro subscription in Polar, Polar takes over.",
+        "description": "Operator platform keys only; any other key gets a 403 forbidden. Puts the business on the enterprise plan outside Polar, which unlocks what a paid plan unlocks while the operator bills the business directly, and removes a spending cap left from an earlier plan. A business with a live Polar subscription is a 409, and so is a partner's business, which its partner bills. If the business later starts a Starter or Pro subscription in Polar, Polar takes over.",
         "tags": [
           "Billing"
         ],
@@ -2500,7 +2500,7 @@
       "post": {
         "operationId": "searchPhoneNumbers",
         "summary": "Find numbers to claim",
-        "description": "Searches the carrier for numbers that take calls; a self-hosted business gets only numbers that also take texts. Each offer expires after 5 minutes. On the cloud, a business on a paid plan gets numbers it buys. One without a paid plan gets free trial offers (trial: true) when the account the key acts as verified a mobile number for it in the dashboard, in a country with trials, and no trial was used; otherwise it gets a 409. The account a key acts as can search 20 times in 10 minutes; searches refused before that don't count. Send replaces to find a replacement for an active number; a business can replace its number once.",
+        "description": "Searches the carrier for numbers that take calls; a self-hosted business gets only numbers that also take texts. Each offer expires after 5 minutes. On the cloud, a business on a paid plan gets numbers it buys. One without a paid plan gets free trial offers (trial: true) when the account the key acts as verified a mobile number for it in the dashboard, in a country with trials, and no trial was used; otherwise it gets a 409. On a deployment that bills partners for tiers, a partner's business gets numbers it buys while its partner pays for a tier, and a 409 otherwise. The account a key acts as can search 20 times in 10 minutes; searches refused before that don't count. Send replaces to find a replacement for an active number; a business can replace its number once.",
         "tags": [
           "Phone numbers"
         ],
@@ -2640,7 +2640,7 @@
       "post": {
         "operationId": "createPhoneNumberClaim",
         "summary": "Claim a number",
-        "description": "Buys the offered number for the business and connects it to the receptionist. It costs money, so Idempotency-Key is required. Returns the claim at once; poll GET /phone-numbers/claims/{claim_id} until its status is claimed or failed. A business that already has a number, including one still being released, or another claim in progress gets a 409. Claims are limited to 3 an hour, 2 a day and 5 in 30 days, past which they are a 429. Platform keys count each business's claims; other keys count the claims of the account they act as. A trial offer starts the business's 14-day free trial. As in the dashboard, each business, account and verified phone gets one trial. The dashboard also allows one trial per network in 30 days, and the API doesn't: an integration claims for all of its customers from the same addresses.",
+        "description": "Buys the offered number for the business and connects it to the receptionist. It costs money, so Idempotency-Key is required. Returns the claim at once; poll GET /phone-numbers/claims/{claim_id} until its status is claimed or failed. A business that already has a number, including one still being released, or another claim in progress gets a 409. Claims are limited to 3 an hour, 2 a day and 5 in 30 days, past which they are a 429. Platform keys count each business's claims; other keys count the claims of the account they act as. A partner's businesses also share daily and 30-day limits, whichever key claims. They buy up to the larger of 2 and the numbers the partner's tier includes a day, and the larger of 5 and twice those in 30 days. A trial offer starts the business's 14-day free trial. As in the dashboard, each business, account and verified phone gets one trial. The dashboard also allows one trial per network in 30 days, and the API doesn't: an integration claims for all of its customers from the same addresses.",
         "tags": [
           "Phone numbers"
         ],

@@ -53,6 +53,24 @@ describe("Polar payload normalization", () => {
     expect(result.payload).toMatchObject({ subscriptionId: "sub_1", subscriptionState: "active", plan: "starter", billingInterval: "annual" });
   });
 
+  it("names the partner and the tier its subscription sells for a partner's customer, never a business or a plan", () => {
+    const partnerId = "22222222-2222-4222-8222-222222222222";
+    const env = { POLAR_PARTNER_GROWTH_ANNUAL_PRODUCT_ID: "growth_year", POLAR_PRO_ANNUAL_PRODUCT_ID: "growth_year" };
+    const result = normalizePolarEvent("subscription.active", { id: "sub_1", status: "active", product_id: "growth_year", modified_at: "2026-10-01T00:00:00Z", customer: { id: "cust_1", external_id: `partner:${partnerId}`, metadata: { externalCustomerId: `partner:${partnerId}` } } }, env);
+    expect(result).toMatchObject({ partnerId, businessId: undefined, businessReference: undefined });
+    expect(result.payload).toMatchObject({ billingKey: `partner:${partnerId}`, customerId: "cust_1", subscriptionId: "sub_1", subscriptionState: "active", partnerTier: "growth", billingInterval: "annual", subscriptionModifiedAt: "2026-10-01T00:00:00.000Z" });
+    expect(result.payload).not.toHaveProperty("plan");
+    // An order names its subscription's tier the same way; a product that sells no tier names none.
+    expect(normalizePolarEvent("order.paid", { id: "order_1", status: "paid", customer: { external_id: `partner:${partnerId}` }, subscription: { id: "sub_1", status: "active", product_id: "growth_year" } }, env).payload).toMatchObject({ partnerTier: "growth", subscriptionState: "active" });
+    expect(normalizePolarEvent("subscription.active", { product_id: "other", customer: { external_id: `partner:${partnerId}` } }, env).payload).not.toHaveProperty("partnerTier");
+  });
+
+  it("keeps a business's events with the business, and ignores a partner reference that isn't an id", () => {
+    const partnerId = "22222222-2222-4222-8222-222222222222";
+    expect(normalizePolarEvent("subscription.active", { customer: { external_id: `business:${businessId}`, metadata: { externalCustomerId: `partner:${partnerId}` } } })).toMatchObject({ businessId, partnerId: undefined });
+    expect(normalizePolarEvent("subscription.active", { customer: { external_id: "partner:acme" } })).toMatchObject({ businessId: undefined, partnerId: undefined, businessReference: "partner:acme" });
+  });
+
   it("does not take a plan from a checkout's product", () => {
     const result = normalizePolarEvent("checkout.updated", { id: "checkout_1", status: "open", product_id: "pro_month", customer: { external_id: `business:${businessId}` } }, { POLAR_PRO_MONTHLY_PRODUCT_ID: "pro_month" });
     expect(result.payload).not.toHaveProperty("plan");

@@ -1285,6 +1285,12 @@
       "comparison": "port-baseline"
     },
     {
+      "path": "/partner/[partnerId]/billing",
+      "state": "default",
+      "fixtureState": "operator",
+      "comparison": "port-baseline"
+    },
+    {
       "path": "/settings/subscription",
       "state": "default",
       "fixtureState": "operator",

@@ -8,6 +8,7 @@ import { billingCheckoutLeaseEndsAt, claimBillingCheckoutRequest, countPublishab
 import { queueDailyOperatorSummaries, queueOnboardingFollowupEmail } from "@lobbystack/domain";
 import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning, numberProvisioningLeaseEndsAt } from "@lobbystack/domain";
 import { brandForEmail, businessExists, businessGetsHostEmails, forgetCachedBrands, loadNumberReleaseEmail, type Brand } from "@lobbystack/domain";
+import { claimPartnerCheckoutRequest, loadPartnerCheckoutRequest, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerCheckoutLeaseEndsAt, reconcilePartnerTier, settlePartnerNumberCharges } from "@lobbystack/domain";
 import { SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
 
 vi.mock("@lobbystack/domain", async (importOriginal) => {
@@ -16,6 +17,13 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
     ...actual,
     billingCheckoutLeaseEndsAt: vi.fn(),
     claimBillingCheckoutRequest: vi.fn(),
+    claimPartnerCheckoutRequest: vi.fn(),
+    loadPartnerCheckoutRequest: vi.fn(),
+    markPartnerCheckoutCreated: vi.fn(),
+    markPartnerCheckoutFailed: vi.fn(),
+    partnerCheckoutLeaseEndsAt: vi.fn(),
+    reconcilePartnerTier: vi.fn(),
+    settlePartnerNumberCharges: vi.fn(),
     deliverOutbound: vi.fn(),
     expireProspectDemos: vi.fn(),
     generateAffiliatePayoutRun: vi.fn(),
@@ -280,7 +288,7 @@ describe("worker handlers", () => {
     const businessId = randomUUID(); const claimId = randomUUID(); const phoneNumberId = randomUUID(); const domain = { db: undefined as never };
     vi.stubEnv("APP_BASE_URL", "https://app.example.test");
     vi.stubEnv("TWILIO_SIP_TRUNK_SID", "TK123");
-    vi.mocked(claimNumberProvisioning).mockResolvedValue({ id: claimId, e164: "+14165550199", selection: { countryCode: "CA", kind: "local" } });
+    vi.mocked(claimNumberProvisioning).mockResolvedValue({ id: claimId, e164: "+14165550199", selection: { countryCode: "CA", kind: "local" }, countsForPartner: false });
     vi.mocked(completeNumberProvisioning).mockResolvedValue(phoneNumberId);
     const findOwnedPhoneNumber = vi.fn().mockResolvedValue({ providerPhoneId: "PN123", e164: "+14165550199" }); const purchasePhoneNumber = vi.fn();
     const addNumberToSipTrunk = vi.fn().mockResolvedValue(undefined);
@@ -295,7 +303,7 @@ describe("worker handlers", () => {
     const businessId = randomUUID(); const claimId = randomUUID(); const phoneNumberId = randomUUID(); const domain = { db: undefined as never };
     vi.stubEnv("APP_BASE_URL", "https://app.example.test/");
     vi.stubEnv("TWILIO_SIP_TRUNK_SID", "TK123");
-    vi.mocked(claimNumberProvisioning).mockResolvedValue({ id: claimId, e164: "+14165550199", selection: { countryCode: "CA", kind: "local" } });
+    vi.mocked(claimNumberProvisioning).mockResolvedValue({ id: claimId, e164: "+14165550199", selection: { countryCode: "CA", kind: "local" }, countsForPartner: false });
     vi.mocked(completeNumberProvisioning).mockResolvedValue(phoneNumberId);
     const findOwnedPhoneNumber = vi.fn().mockResolvedValue(null);
     const purchasePhoneNumber = vi.fn().mockResolvedValue({ providerPhoneId: "PN456", e164: "+14165550199" });
@@ -323,7 +331,7 @@ describe("worker handlers", () => {
     const twilio = { sendSms: vi.fn(), findOwnedPhoneNumber: vi.fn().mockResolvedValue(null), purchasePhoneNumber, addNumberToSipTrunk: vi.fn().mockResolvedValue(undefined) };
     for (const [countryCode, e164] of [["GB", "+447700900123"], ["AU", "+61491570006"]] as const) {
       const claimId = randomUUID();
-      vi.mocked(claimNumberProvisioning).mockResolvedValue({ id: claimId, e164, selection: { countryCode, kind: "mobile" } });
+      vi.mocked(claimNumberProvisioning).mockResolvedValue({ id: claimId, e164, selection: { countryCode, kind: "mobile" }, countsForPartner: false });
       await handleJob({ jobId: randomUUID(), type: "phoneNumber.provision", queue: "critical", businessId, payload: { claimId }, trace: {}, idempotencyKey: `claim:${claimId}`, scheduled: false }, { domain, twilio });
     }
     expect(purchasePhoneNumber).toHaveBeenNthCalledWith(1, expect.objectContaining({ e164: "+447700900123", bundleSid: "BUGB" }));
@@ -335,7 +343,7 @@ describe("worker handlers", () => {
     const businessId = randomUUID(); const claimId = randomUUID(); const domain = { db: undefined as never };
     vi.stubEnv("TWILIO_SIP_TRUNK_SID", "TK123");
     vi.stubEnv("TWILIO_GB_BUNDLE_SID", "");
-    vi.mocked(claimNumberProvisioning).mockResolvedValue({ id: claimId, e164: "+447700900123", selection: { countryCode: "GB", kind: "mobile" } });
+    vi.mocked(claimNumberProvisioning).mockResolvedValue({ id: claimId, e164: "+447700900123", selection: { countryCode: "GB", kind: "mobile" }, countsForPartner: false });
     const purchasePhoneNumber = vi.fn();
 
     await expect(handleJob({ jobId: randomUUID(), type: "phoneNumber.provision", queue: "critical", businessId, payload: { claimId }, trace: {}, idempotencyKey: `claim:${claimId}`, scheduled: false }, { domain, twilio: { sendSms: vi.fn(), findOwnedPhoneNumber: vi.fn().mockResolvedValue(null), purchasePhoneNumber, addNumberToSipTrunk: vi.fn() } })).rejects.toThrow("TWILIO_GB_BUNDLE_SID is required");
@@ -347,7 +355,7 @@ describe("worker handlers", () => {
     const businessId = randomUUID(); const claimId = randomUUID(); const domain = { db: undefined as never };
     vi.stubEnv("APP_BASE_URL", "https://app.example.test");
     vi.stubEnv("TWILIO_SIP_TRUNK_SID", "TK123");
-    vi.mocked(claimNumberProvisioning).mockResolvedValue({ id: claimId, e164: "+14165550199", selection: { countryCode: "CA", kind: "local" } });
+    vi.mocked(claimNumberProvisioning).mockResolvedValue({ id: claimId, e164: "+14165550199", selection: { countryCode: "CA", kind: "local" }, countsForPartner: false });
     const purchasePhoneNumber = vi.fn().mockResolvedValue({ providerPhoneId: "PN789", e164: "+14165550199" });
     const addNumberToSipTrunk = vi.fn().mockRejectedValue(new Error("trunk unavailable"));
     const releasePhoneNumber = vi.fn().mockResolvedValue(undefined);
@@ -355,6 +363,38 @@ describe("worker handlers", () => {
     await expect(handleJob({ jobId: randomUUID(), type: "phoneNumber.provision", queue: "critical", businessId, payload: { claimId }, trace: {}, idempotencyKey: `claim:${claimId}`, scheduled: false }, { domain, twilio: { sendSms: vi.fn(), findOwnedPhoneNumber: vi.fn().mockResolvedValue(null), purchasePhoneNumber, addNumberToSipTrunk, releasePhoneNumber } })).rejects.toThrow("trunk unavailable");
     expect(releasePhoneNumber).toHaveBeenCalledWith({ providerPhoneId: "PN789" });
     expect(failNumberProvisioning).toHaveBeenCalledWith(domain, expect.objectContaining({ businessId, claimId }));
+  });
+
+  it("reads what a partner's number costs before buying it, and records the cost with the number", async () => {
+    const businessId = randomUUID(); const claimId = randomUUID(); const phoneNumberId = randomUUID(); const domain = { db: undefined as never };
+    vi.stubEnv("APP_BASE_URL", "https://app.example.test");
+    vi.stubEnv("TWILIO_SIP_TRUNK_SID", "TK123");
+    vi.mocked(claimNumberProvisioning).mockResolvedValue({ id: claimId, e164: "+14165550199", selection: { countryCode: "CA", kind: "local" }, countsForPartner: true });
+    vi.mocked(completeNumberProvisioning).mockResolvedValue(phoneNumberId);
+    const calls: string[] = [];
+    const getPhoneNumberMonthlyPrice = vi.fn(async () => { calls.push("price"); return { monthlyCents: 325 }; });
+    const purchasePhoneNumber = vi.fn(async () => { calls.push("purchase"); return { providerPhoneId: "PN321", e164: "+14165550199" }; });
+
+    await expect(handleJob({ jobId: randomUUID(), type: "phoneNumber.provision", queue: "critical", businessId, payload: { claimId }, trace: {}, idempotencyKey: `claim:${claimId}`, scheduled: false }, { domain, twilio: { sendSms: vi.fn(), findOwnedPhoneNumber: vi.fn().mockResolvedValue(null), purchasePhoneNumber, addNumberToSipTrunk: vi.fn().mockResolvedValue(undefined), getPhoneNumberMonthlyPrice } })).resolves.toEqual({ status: "completed", entityId: phoneNumberId });
+    expect(getPhoneNumberMonthlyPrice).toHaveBeenCalledWith({ countryCode: "CA", kind: "local" });
+    expect(calls).toEqual(["price", "purchase"]);
+    expect(completeNumberProvisioning).toHaveBeenCalledWith(domain, expect.objectContaining({ businessId, claimId, providerPhoneId: "PN321", monthlyCostCents: 325 }));
+  });
+
+  it("buys no partner number whose cost it can't read, and fails the claim", async () => {
+    const businessId = randomUUID(); const claimId = randomUUID(); const domain = { db: undefined as never };
+    vi.stubEnv("APP_BASE_URL", "https://app.example.test");
+    vi.stubEnv("TWILIO_SIP_TRUNK_SID", "TK123");
+    vi.mocked(claimNumberProvisioning).mockResolvedValue({ id: claimId, e164: "+14165550199", selection: { countryCode: "CA", kind: "local" }, countsForPartner: true });
+    const purchasePhoneNumber = vi.fn();
+    const getPhoneNumberMonthlyPrice = vi.fn().mockRejectedValue(new Error("pricing unavailable"));
+
+    await expect(handleJob({ jobId: randomUUID(), type: "phoneNumber.provision", queue: "critical", businessId, payload: { claimId }, trace: {}, idempotencyKey: `claim:${claimId}`, scheduled: false }, { domain, twilio: { sendSms: vi.fn(), findOwnedPhoneNumber: vi.fn().mockResolvedValue(null), purchasePhoneNumber, addNumberToSipTrunk: vi.fn(), getPhoneNumberMonthlyPrice } })).rejects.toThrow("pricing unavailable");
+    // A Twilio provider that can't price numbers buys none for a partner either.
+    await expect(handleJob({ jobId: randomUUID(), type: "phoneNumber.provision", queue: "critical", businessId, payload: { claimId }, trace: {}, idempotencyKey: `claim:${claimId}`, scheduled: false }, { domain, twilio: { sendSms: vi.fn(), findOwnedPhoneNumber: vi.fn().mockResolvedValue(null), purchasePhoneNumber, addNumberToSipTrunk: vi.fn() } })).rejects.toThrow("can't read number prices");
+    expect(purchasePhoneNumber).not.toHaveBeenCalled();
+    expect(completeNumberProvisioning).not.toHaveBeenCalled();
+    expect(failNumberProvisioning).toHaveBeenCalledTimes(2);
   });
 
   it("retries a claim another attempt still holds once its lease ends", async () => {
@@ -638,6 +678,136 @@ describe("worker handlers", () => {
       returnUrl: "https://app.example/settings/plan",
     }));
     vi.unstubAllEnvs();
+  });
+
+  describe("a partner's tier", () => {
+    const partnerId = randomUUID();
+    const tierProducts = { POLAR_PARTNER_STARTER_MONTHLY_PRODUCT_ID: "prod_starter_monthly", POLAR_PARTNER_GROWTH_ANNUAL_PRODUCT_ID: "prod_growth_annual" };
+    const checkoutJob = (requestId: string): JobEnvelope => ({ jobId: randomUUID(), type: "billing.createPartnerCheckout", queue: "critical", businessId: null, payload: { partnerId, requestId }, trace: {}, idempotencyKey: `test:${randomUUID()}`, scheduled: false });
+    const checkoutRequest = (requestId: string) => ({ requestId, partnerId, tier: "growth" as const, billingInterval: "annual" as const, returnOrigin: "https://acme.portal.example.test", customerEmail: "owner@acme.example.test", externalCustomerId: `partner:${partnerId}` });
+
+    /** Polar, as the worker calls it: it records each checkout it's asked for and makes a page. */
+    function fakePolar(result: Promise<{ checkoutId: string; checkoutUrl: string }> = Promise.resolve({ checkoutId: "co_1", checkoutUrl: "https://polar.example.test/co_1" })) {
+      const checkouts: unknown[] = [];
+      return { checkouts, polar: { recordUsage: vi.fn(), createCheckout: async (input: unknown) => { checkouts.push(input); return await result; } } };
+    }
+
+    it("makes the tier's Polar checkout for the partner's customer, and sends the owner back to the console they started from", async () => {
+      const requestId = randomUUID();
+      const domain = { db: undefined as never };
+      for (const [name, value] of Object.entries(tierProducts)) vi.stubEnv(name, value);
+      vi.mocked(claimPartnerCheckoutRequest).mockResolvedValue(true);
+      vi.mocked(loadPartnerCheckoutRequest).mockResolvedValue(checkoutRequest(requestId));
+      vi.mocked(markPartnerCheckoutCreated).mockResolvedValue(true);
+      const { checkouts, polar } = fakePolar();
+
+      await expect(handleJob(checkoutJob(requestId), { domain, polar })).resolves.toEqual({ status: "completed", entityId: requestId });
+      expect(checkouts).toEqual([{
+        productId: "prod_growth_annual",
+        customerEmail: "owner@acme.example.test",
+        externalCustomerId: `partner:${partnerId}`,
+        successUrl: `https://acme.portal.example.test/partner/${partnerId}/billing?checkout=${requestId}`,
+        returnUrl: `https://acme.portal.example.test/partner/${partnerId}/billing`,
+        idempotencyKey: `partner-checkout:${requestId}`,
+      }]);
+      expect(markPartnerCheckoutCreated).toHaveBeenCalledWith(domain, { partnerId, requestId, checkoutId: "co_1", checkoutUrl: "https://polar.example.test/co_1" });
+      expect(markPartnerCheckoutFailed).not.toHaveBeenCalled();
+    });
+
+    it("fails the checkout when Polar refuses it, and lets the queue retry", async () => {
+      const requestId = randomUUID();
+      const domain = { db: undefined as never };
+      for (const [name, value] of Object.entries(tierProducts)) vi.stubEnv(name, value);
+      vi.mocked(claimPartnerCheckoutRequest).mockResolvedValue(true);
+      vi.mocked(loadPartnerCheckoutRequest).mockResolvedValue(checkoutRequest(requestId));
+      const { polar } = fakePolar(Promise.reject(new Error("Polar request failed with status 422.")));
+
+      await expect(handleJob(checkoutJob(requestId), { domain, polar })).rejects.toThrow("status 422");
+      expect(markPartnerCheckoutFailed).toHaveBeenCalledWith(domain, { partnerId, requestId, error: "Polar checkout creation failed." });
+      expect(markPartnerCheckoutCreated).not.toHaveBeenCalled();
+    });
+
+    it("fails the checkout without calling Polar when Polar or the tier's product isn't configured", async () => {
+      const domain = { db: undefined as never };
+      vi.mocked(claimPartnerCheckoutRequest).mockResolvedValue(true);
+      const withoutPolar = randomUUID();
+      await expect(handleJob(checkoutJob(withoutPolar), { domain })).resolves.toEqual({ status: "skipped", entityId: withoutPolar });
+      expect(markPartnerCheckoutFailed).toHaveBeenCalledWith(domain, { partnerId, requestId: withoutPolar, error: "Billing checkout provider is not configured." });
+
+      const withoutProduct = randomUUID();
+      vi.mocked(loadPartnerCheckoutRequest).mockResolvedValue(checkoutRequest(withoutProduct));
+      const { checkouts, polar } = fakePolar();
+      await expect(handleJob(checkoutJob(withoutProduct), { domain, polar })).resolves.toEqual({ status: "skipped", entityId: withoutProduct });
+      expect(checkouts).toEqual([]);
+      expect(markPartnerCheckoutFailed).toHaveBeenCalledWith(domain, { partnerId, requestId: withoutProduct, error: "The tier's Polar product is not configured." });
+    });
+
+    it("waits for a checkout another worker holds, and skips a job that names no partner", async () => {
+      const requestId = randomUUID();
+      const domain = { db: undefined as never };
+      const retryAt = new Date(Date.now() + 60_000);
+      vi.mocked(claimPartnerCheckoutRequest).mockResolvedValue(false);
+      vi.mocked(partnerCheckoutLeaseEndsAt).mockResolvedValue(retryAt);
+      const { checkouts, polar } = fakePolar();
+      await expect(handleJob(checkoutJob(requestId), { domain, polar })).resolves.toEqual({ status: "deferred", entityId: requestId, retryAt });
+      expect(partnerCheckoutLeaseEndsAt).toHaveBeenCalledWith(domain, { partnerId, requestId });
+      await expect(handleJob({ ...checkoutJob(requestId), payload: { requestId } }, { domain, polar })).resolves.toEqual({ status: "skipped", entityId: requestId });
+      expect(checkouts).toEqual([]);
+    });
+
+    it("reconciles a stored Polar event for the partner with no business in its context", async () => {
+      const providerEventId = randomUUID();
+      const domain = { db: undefined as never };
+      vi.mocked(reconcilePartnerTier).mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+      const job: JobEnvelope = { jobId: randomUUID(), type: "billing.reconcilePartner", queue: "default", businessId: null, payload: { partnerId, providerEventId }, trace: {}, idempotencyKey: `test:${randomUUID()}`, scheduled: false };
+      await expect(handleJob(job, { domain })).resolves.toEqual({ status: "completed", entityId: providerEventId });
+      await expect(handleJob(job, { domain })).resolves.toEqual({ status: "skipped", entityId: providerEventId });
+      expect(reconcilePartnerTier).toHaveBeenCalledWith(domain, { partnerId, providerEventId });
+    });
+  });
+
+  describe("a partner's numbers", () => {
+    const job: JobEnvelope = { jobId: randomUUID(), type: "billing.chargePartnerNumbers", queue: "maintenance", businessId: null, payload: {}, trace: {}, idempotencyKey: "partner-number-charges", scheduled: true, recurring: true };
+    /** Every partner tier product, so the deployment bills tiers. */
+    const billTiers = () => {
+      for (const tier of ["STARTER", "GROWTH", "SCALE"]) for (const interval of ["MONTHLY", "ANNUAL"]) vi.stubEnv(`POLAR_PARTNER_${tier}_${interval}_PRODUCT_ID`, `prod_${tier}_${interval}`);
+    };
+
+    it("reports each month a partner pays for to Polar, under the partner's customer, as what the host pays in cents", async () => {
+      billTiers();
+      const domain = { db: undefined as never };
+      const partnerId = randomUUID(); const businessId = randomUUID(); const chargeId = randomUUID();
+      const periodStart = new Date("2026-11-03T12:00:00.000Z");
+      vi.mocked(settlePartnerNumberCharges).mockImplementation(async (_domain, { report }) => {
+        await report({ chargeId, partnerId, businessId, month: 2, periodStart, amountCents: 325, idempotencyKey: `partner-number:${chargeId}:2` });
+        return { settled: 3, charged: 1 };
+      });
+      const recordUsage = vi.fn().mockResolvedValue(undefined);
+
+      await expect(handleJob(job, { domain, polar: { recordUsage } })).resolves.toEqual({ status: "completed", entityId: "3:1" });
+      expect(settlePartnerNumberCharges).toHaveBeenCalledWith(domain, expect.objectContaining({ tierBilling: true, report: expect.any(Function) }));
+      expect(recordUsage).toHaveBeenCalledWith({ eventName: "billing.partner_extra_numbers", externalCustomerId: `partner:${partnerId}`, quantity: 325, timestamp: "2026-11-03T12:00:00.000Z", idempotencyKey: `partner-number:${chargeId}:2`, businessId, usageKind: "partner_extra_number" });
+    });
+
+    it("lets a failed report fail the job, and charges nothing without Polar", async () => {
+      billTiers();
+      const domain = { db: undefined as never };
+      vi.mocked(settlePartnerNumberCharges).mockImplementation(async (_domain, { report }) => {
+        await report({ chargeId: randomUUID(), partnerId: randomUUID(), businessId: randomUUID(), month: 0, periodStart: new Date(), amountCents: 325, idempotencyKey: "partner-number:x:0" });
+        return { settled: 1, charged: 1 };
+      });
+      await expect(handleJob(job, { domain, polar: { recordUsage: vi.fn().mockRejectedValue(new Error("Polar request failed with status 503.")) } })).rejects.toThrow("status 503");
+      vi.mocked(settlePartnerNumberCharges).mockClear();
+      await expect(handleJob(job, { domain })).resolves.toEqual({ status: "skipped" });
+      expect(settlePartnerNumberCharges).not.toHaveBeenCalled();
+    });
+
+    it("settles months without Polar on a deployment that bills no tiers, which charges none of them", async () => {
+      const domain = { db: undefined as never };
+      vi.mocked(settlePartnerNumberCharges).mockResolvedValue({ settled: 2, charged: 0 });
+      await expect(handleJob(job, { domain })).resolves.toEqual({ status: "completed", entityId: "2:0" });
+      expect(settlePartnerNumberCharges).toHaveBeenCalledWith(domain, expect.objectContaining({ tierBilling: false }));
+    });
   });
 
   it("runs the global affiliate payout job without a business context", async () => {

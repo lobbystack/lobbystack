@@ -208,10 +208,13 @@ async function lockBillingAccount(tx: DatabaseTransaction, businessId: string): 
  * paid plan unlocks while the operator bills the business directly. A business
  * with a live Polar subscription, for any product, is refused, so no one pays
  * twice. A spending cap left from an earlier Starter or Pro plan is cleared,
- * because on enterprise a cap leaves calls nothing to reserve. Callers check
- * that an operator asked.
+ * because on enterprise a cap leaves calls nothing to reserve. A partner's
+ * business is refused too: its partner bills it, and the host bills the
+ * partner for its tier. Callers check that an operator asked.
  */
-export async function setManagedPlanInTransaction(tx: DatabaseTransaction, input: { businessId: string }): Promise<"set" | "unchanged" | "paid_through_polar"> {
+export async function setManagedPlanInTransaction(tx: DatabaseTransaction, input: { businessId: string }): Promise<"set" | "unchanged" | "paid_through_polar" | "partner_business"> {
+  const [business] = await tx.select({ partnerId: businesses.partnerId }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1);
+  if (business?.partnerId) return "partner_business";
   await lockBillingAccount(tx, input.businessId);
   const [account] = await tx.select({ source: billingAccounts.source, plan: billingAccounts.plan, subscriptionState: billingAccounts.subscriptionState, overageSpendingCapCents: billingAccounts.overageSpendingCapCents }).from(billingAccounts).where(eq(billingAccounts.businessId, input.businessId)).limit(1);
   if (isManagedBillingAccount(account) && account?.plan === "enterprise" && account.overageSpendingCapCents === null) return "unchanged";

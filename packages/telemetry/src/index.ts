@@ -16,6 +16,7 @@ export const WEB_EVENT_NAMES = [
   "web.partner.business_deleted",
   "web.partner.stripe_onboarding_started",
   "web.partner.package_created",
+  "web.partner.tier_started",
   "web.page.home_viewed",
   "web.page.calls_viewed",
   "web.page.call_detail_viewed",
@@ -253,6 +254,8 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
   "web.partner.stripe_onboarding_started": ["deploymentMode", "partnerId", "resumed", "pathname"],
   // currency: the connected account's, which the package is priced in. setupFee: whether it charges one.
   "web.partner.package_created": ["deploymentMode", "partnerId", "packageId", "currency", "setupFee", "pathname"],
+  // tier: starter, growth or scale. billingInterval: monthly or annual.
+  "web.partner.tier_started": ["deploymentMode", "partnerId", "tier", "billingInterval", "pathname"],
   "web.page.home_viewed": ["businessId", "deploymentMode", "pathname"],
   "web.page.calls_viewed": ["businessId", "deploymentMode", "pathname"],
   "web.page.call_detail_viewed": ["businessId", "deploymentMode", "pathname"],

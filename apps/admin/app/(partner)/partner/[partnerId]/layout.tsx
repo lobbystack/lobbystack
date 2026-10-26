@@ -2,7 +2,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { listUserPartners } from "@lobbystack/domain";
-import { isUuid } from "@lobbystack/shared";
+import { isUuid, partnerFeatures } from "@lobbystack/shared";
 import { PartnerShell } from "@/components/partner-shell";
 import { getAppDatabase } from "@/lib/api-helpers";
 import { getSession } from "@/lib/auth";
@@ -29,7 +29,7 @@ export default async function PartnerConsoleLayout({ children, params }: { child
   if (!partner) redirect("/partner");
   const sidebarOpen = (await cookies()).get("sidebar_state")?.value !== "false";
   return (
-    <PartnerShell partner={partner} partners={partners} sidebarOpen={sidebarOpen} user={{ email: session.user.email ?? "" }}>
+    <PartnerShell partner={partner} partners={partners} sidebarOpen={sidebarOpen} tierBilling={partnerFeatures(process.env).tierBilling} user={{ email: session.user.email ?? "" }}>
       {children}
     </PartnerShell>
   );

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { partnerFeatures, partnerFeatureWarnings } from "./partnerFeatures";
+import { partnerFeatures, partnerFeatureWarnings, partnerTierForProduct, partnerTierProductId, partnerTierProducts } from "./partnerFeatures";
 import { isPartnerSlug, partnerSlugFromName } from "./partners";
 
 const tierProducts = Object.fromEntries(["STARTER", "GROWTH", "SCALE"].flatMap((tier) => ["MONTHLY", "ANNUAL"].map((interval) => [`POLAR_PARTNER_${tier}_${interval}_PRODUCT_ID`, `prod_${tier}_${interval}`])));
@@ -43,6 +43,27 @@ describe("partner features", () => {
   });
 });
 
+describe("partner tier products", () => {
+  it("turns tier billing on only when every tier has its own monthly and annual product", () => {
+    expect(partnerFeatures(tierProducts).tierBilling).toBe(true);
+    const { POLAR_PARTNER_GROWTH_MONTHLY_PRODUCT_ID: _growth, ...missingOne } = tierProducts;
+    expect(partnerFeatures(missingOne).tierBilling).toBe(false);
+    // Two settings naming one product would leave a subscription's tier ambiguous.
+    expect(partnerFeatures({ ...tierProducts, POLAR_PARTNER_SCALE_ANNUAL_PRODUCT_ID: "prod_GROWTH_ANNUAL" }).tierBilling).toBe(false);
+    // The direct plans' products don't sell tiers.
+    expect(partnerFeatures({ POLAR_STARTER_MONTHLY_PRODUCT_ID: "prod_starter", POLAR_PRO_ANNUAL_PRODUCT_ID: "prod_pro" }).tierBilling).toBe(false);
+  });
+
+  it("finds the product for a tier and interval, and the tier and interval a product sells", () => {
+    expect(partnerTierProductId(tierProducts, "growth", "annual")).toBe("prod_GROWTH_ANNUAL");
+    expect(partnerTierProductId({ POLAR_PARTNER_STARTER_MONTHLY_PRODUCT_ID: " prod_1 " }, "starter", "monthly")).toBe("prod_1");
+    expect(partnerTierProductId({}, "starter", "monthly")).toBeNull();
+    expect(partnerTierForProduct(tierProducts, "prod_SCALE_MONTHLY")).toEqual({ tier: "scale", billingInterval: "monthly" });
+    for (const productId of ["prod_unknown", "", null, undefined]) expect(partnerTierForProduct(tierProducts, productId)).toBeNull();
+    expect(partnerTierProducts(tierProducts)).toHaveLength(6);
+  });
+});
+
 describe("partner feature warnings", () => {
   it("has nothing to say about settings that are unset or valid", () => {
     expect(partnerFeatureWarnings({})).toEqual([]);
@@ -55,6 +76,13 @@ describe("partner feature warnings", () => {
     expect(domain).toMatch(/^PARTNER_BASE_DOMAIN is ignored: "https:\/\/receptionistportal\.com"/);
     expect(partnerFeatureWarnings({ PARTNER_BASE_DOMAIN: "*.receptionistportal.com" })).toHaveLength(1);
     expect(partnerFeatureWarnings({ DEPLOYMENT_MODE: "cloud", PARTNER_SIGNUP: "anyone" })).toEqual(["PARTNER_SIGNUP is ignored: it takes open or invite, so signup stays invite."]);
+  });
+
+  it("says tier billing is off when only some tier products are set, or two share a product", () => {
+    expect(partnerFeatureWarnings(tierProducts)).toEqual([]);
+    const { POLAR_PARTNER_GROWTH_MONTHLY_PRODUCT_ID: _growth, POLAR_PARTNER_SCALE_ANNUAL_PRODUCT_ID: _scale, ...missingTwo } = tierProducts;
+    expect(partnerFeatureWarnings(missingTwo)).toEqual(["Partner tier billing is off: POLAR_PARTNER_GROWTH_MONTHLY_PRODUCT_ID, POLAR_PARTNER_SCALE_ANNUAL_PRODUCT_ID aren't set. Partners can't buy a tier, and nothing limits their pools or phone numbers, until every tier has a monthly and an annual product."]);
+    expect(partnerFeatureWarnings({ ...tierProducts, POLAR_PARTNER_SCALE_ANNUAL_PRODUCT_ID: "prod_GROWTH_ANNUAL" })).toEqual(["Partner tier billing is off: two POLAR_PARTNER_*_PRODUCT_ID settings name the same product. Give each tier and interval its own product."]);
   });
 });
 

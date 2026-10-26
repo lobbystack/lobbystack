@@ -57,6 +57,10 @@ export function getSafeOnboardingErrorMessage(
     return t("number.claimRateLimited");
   }
 
+  if (code === "partner_number_limit_reached") {
+    return t("number.partnerTierRequired");
+  }
+
   if (includesAny(message, ["Trial accounts can only buy eligible trial numbers"])) {
     return t("number.trialAccountPurchaseLimit");
   }

@@ -1,0 +1,419 @@
+import { and, desc, eq, gt, inArray, lt, or, sql } from "drizzle-orm";
+
+import { enqueueOutbox, partnerBillingAccounts, partnerCheckoutRequests, partnerMembers, partners, providerEvents, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import {
+  billingErrorCodes,
+  isBillingInterval,
+  isPaidPartnerTierSlug,
+  partnerFeatures,
+  partnerTierCatalog,
+  partnerTierInForce,
+  type BillingInterval,
+  type PaidPartnerTierSlug,
+  type PartnerTierSlug,
+} from "@lobbystack/shared";
+
+import { AuthorizationError } from "../authz";
+import type { DomainContext } from "./context";
+import { loadPartnerNumberStanding } from "./partnerNumbers";
+import type { PartnerActor, PartnerMemberActor } from "./partners";
+
+// A partner's tier: what it buys from the host through Polar. Only the
+// partner's owners start a checkout. The worker creates the checkout with
+// Polar, and reconciles Polar's events for the partner's customer
+// (partner:<partner id>) into its billing account. A partner Polar never
+// billed is on Free. Without tier products in Polar, the host bills no tier
+// and the partner's pool has no limit.
+
+/** The external id of the partner's Polar customer. */
+export function partnerBillingKey(partnerId: string): string {
+  return `partner:${partnerId}`;
+}
+
+/** The tier a partner holds, and what it gives the partner's businesses between them. */
+export type PartnerTier = {
+  /** Whether this deployment bills partners for tiers. Without it, the pool has no limit. */
+  billed: boolean;
+  /** A paid tier while its subscription is live, and Free otherwise. */
+  tier: PartnerTierSlug;
+  billingInterval: BillingInterval | null;
+  /** Polar's state of the tier's subscription, or null for a partner Polar never billed. */
+  subscriptionState: string | null;
+  /** The voice seconds and chats the businesses share each month, or null for no limit. */
+  pool: { voiceSeconds: number; chats: number } | null;
+  /** Phone numbers the businesses hold between them before extra numbers cost more. */
+  includedNumbers: number;
+  /** 14-day trial numbers the partner gets, ever. */
+  trialNumbers: number;
+};
+
+const accountColumns = {
+  tier: partnerBillingAccounts.tier,
+  billingInterval: partnerBillingAccounts.billingInterval,
+  subscriptionState: partnerBillingAccounts.subscriptionState,
+  customerId: partnerBillingAccounts.customerId,
+  subscriptionId: partnerBillingAccounts.subscriptionId,
+  currentPeriodEnd: partnerBillingAccounts.currentPeriodEnd,
+  endsAt: partnerBillingAccounts.endsAt,
+  poolVoiceSeconds: partnerBillingAccounts.poolVoiceSeconds,
+  poolChats: partnerBillingAccounts.poolChats,
+  includedNumbers: partnerBillingAccounts.includedNumbers,
+};
+
+async function readAccount(tx: DatabaseTransaction, partnerId: string) {
+  return (await tx.select(accountColumns).from(partnerBillingAccounts).where(eq(partnerBillingAccounts.partnerId, partnerId)).limit(1))[0];
+}
+
+function tierOf(account: Awaited<ReturnType<typeof readAccount>>): PartnerTier {
+  const tier = partnerTierInForce(account);
+  const terms = partnerTierCatalog[tier];
+  const billed = partnerFeatures(process.env).tierBilling;
+  // The account records the terms of the tier in force when the worker last reconciled it.
+  return {
+    billed,
+    tier,
+    billingInterval: tier === "free" ? null : account?.billingInterval ?? null,
+    subscriptionState: account?.subscriptionState ?? null,
+    pool: billed ? { voiceSeconds: account?.poolVoiceSeconds ?? terms.poolVoiceSeconds, chats: account?.poolChats ?? terms.poolChats } : null,
+    includedNumbers: account?.includedNumbers ?? terms.includedNumbers,
+    trialNumbers: terms.trialNumbers,
+  };
+}
+
+/**
+ * The partner's tier and what it gives its businesses. The caller's
+ * transaction must be able to read the partner's billing account: the worker,
+ * the system actor, or a member of the partner's team.
+ */
+export async function loadPartnerTierInTransaction(tx: DatabaseTransaction, partnerId: string): Promise<PartnerTier> {
+  return tierOf(await readAccount(tx, partnerId));
+}
+
+function failure(message: string, status: number, code: string): Error {
+  return Object.assign(new Error(message), { status, code });
+}
+
+function billingActor(actor: PartnerActor): PartnerMemberActor {
+  if (actor.kind !== "member") throw new AuthorizationError("Platform keys can't manage a partner's billing.");
+  return actor;
+}
+
+/** Refuses anyone who isn't an owner of the partner now, whatever role they arrived with. */
+async function requireOwner(tx: DatabaseTransaction, member: PartnerMemberActor): Promise<void> {
+  const [row] = await tx.select({ role: partnerMembers.role }).from(partnerMembers).where(and(eq(partnerMembers.partnerId, member.partnerId), eq(partnerMembers.userId, member.userId), eq(partnerMembers.status, "active"))).limit(1);
+  if (!row) throw new AuthorizationError("You aren't on this partner's team.");
+  if (row.role !== "owner") throw failure("Only owners manage the partner's billing.", 403, "owner_only");
+}
+
+/** The lock every change to a partner's billing takes: checkouts and reconciling Polar's events. */
+async function lockPartnerBilling(tx: DatabaseTransaction, partnerId: string): Promise<void> {
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended('partner-billing:' || ${partnerId}::uuid::text, 0))`);
+}
+
+/** The Billing page: the partner's tier and its subscription. Only owners read it. */
+export type PartnerBilling = PartnerTier & {
+  /** When the paid tier's current period ends, or null on Free. */
+  currentPeriodEnd: string | null;
+  /** When a tier the partner canceled ends, or null while it renews. */
+  endsAt: string | null;
+  /** Whether Polar's customer portal has a customer to open, to change, cancel or pay for the tier. */
+  hasCustomerPortal: boolean;
+  /** Phone numbers the partner's businesses hold between them. Each one past the included ones costs what the host pays for it. */
+  numbersHeld: number;
+  /** Whether the deployment counts those numbers against the tier and charges for extra ones, as it does while it bills tiers. */
+  numbersCounted: boolean;
+};
+
+export async function getPartnerBilling(context: DomainContext, actor: PartnerActor): Promise<PartnerBilling> {
+  const member = billingActor(actor);
+  return await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => {
+    await requireOwner(tx, member);
+    const account = await readAccount(tx, member.partnerId);
+    const tier = tierOf(account);
+    const numbers = await loadPartnerNumberStanding(tx, member.partnerId);
+    return {
+      ...tier,
+      currentPeriodEnd: tier.tier === "free" ? null : account?.currentPeriodEnd?.toISOString() ?? null,
+      endsAt: tier.tier === "free" ? null : account?.endsAt?.toISOString() ?? null,
+      hasCustomerPortal: Boolean(account?.customerId && account.subscriptionId),
+      numbersHeld: numbers.held,
+      numbersCounted: numbers.counted,
+    };
+  });
+}
+
+/** Polar's customer for the partner, whose portal changes, cancels or pays for its tier. Only owners open it. */
+export async function partnerBillingPortalCustomer(context: DomainContext, actor: PartnerActor): Promise<{ customerId: string }> {
+  const member = billingActor(actor);
+  return await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => {
+    await requireOwner(tx, member);
+    const account = await readAccount(tx, member.partnerId);
+    if (!account?.customerId || !account.subscriptionId) throw failure("Your partner has no tier in Polar to manage yet.", 409, "no_billing_customer");
+    return { customerId: account.customerId };
+  });
+}
+
+// We never learn that someone abandoned a Polar checkout, so one counts as
+// open for 30 minutes, as a direct business's does.
+const OPEN_CHECKOUT_WINDOW_MS = 30 * 60_000;
+const CHECKOUT_LEASE_MS = 10 * 60_000;
+
+/** An origin Polar can send the owner back to: http or https, with no path. */
+function returnOrigin(value: string): string {
+  try {
+    const url = new URL(value);
+    if ((url.protocol === "https:" || url.protocol === "http:") && url.origin === value) return value;
+  } catch {
+    // Not a URL.
+  }
+  throw new Error("The console's origin must be an http or https origin.");
+}
+
+/**
+ * Queues a Polar checkout for a paid tier, in the name of the owner asking,
+ * whose email Polar fills in. Polar sends them back to `returnOrigin`, the
+ * console's origin they started from. A partner whose tier is live changes
+ * it from Polar's customer portal instead, and only one person's checkout is
+ * open at a time. Asking again for the same checkout returns it, and asking
+ * for another tier replaces your own.
+ */
+export async function createPartnerTierCheckout(
+  context: DomainContext,
+  actor: PartnerActor,
+  input: { tier: string; billingInterval: string; returnOrigin: string },
+): Promise<{ requestId: string }> {
+  const member = billingActor(actor);
+  const { tier, billingInterval } = input;
+  if (!isPaidPartnerTierSlug(tier)) throw failure("tier must be starter, growth or scale.", 400, "invalid_tier");
+  if (!isBillingInterval(billingInterval)) throw failure("billingInterval must be monthly or annual.", 400, "invalid_interval");
+  const origin = returnOrigin(input.returnOrigin);
+  if (!partnerFeatures(process.env).tierBilling) throw failure("This deployment doesn't bill partners for tiers.", 409, "tier_billing_unavailable");
+
+  // The job belongs to no business, so it's queued as the system actor; the owner check comes first.
+  return await withBusinessTransaction(context.db, { userId: member.userId, actorType: "system" }, async (tx) => {
+    await lockPartnerBilling(tx, member.partnerId);
+    await requireOwner(tx, member);
+    if (tierOf(await readAccount(tx, member.partnerId)).tier !== "free") {
+      throw failure("Your partner already pays for a tier. Change it from Manage subscription.", 409, billingErrorCodes.subscriptionActive);
+    }
+    const [open] = await tx.select({ id: partnerCheckoutRequests.id, requestedByUserId: partnerCheckoutRequests.requestedByUserId, tier: partnerCheckoutRequests.tier, billingInterval: partnerCheckoutRequests.billingInterval, returnOrigin: partnerCheckoutRequests.returnOrigin })
+      .from(partnerCheckoutRequests)
+      .where(and(eq(partnerCheckoutRequests.partnerId, member.partnerId), inArray(partnerCheckoutRequests.status, ["pending", "processing", "ready"]), gt(partnerCheckoutRequests.createdAt, new Date(Date.now() - OPEN_CHECKOUT_WINDOW_MS))))
+      .orderBy(desc(partnerCheckoutRequests.createdAt))
+      .limit(1);
+    if (open) {
+      if (open.requestedByUserId !== member.userId) throw failure("Another owner's checkout is already open.", 409, billingErrorCodes.checkoutInProgress);
+      if (open.tier === tier && open.billingInterval === billingInterval && open.returnOrigin === origin) return { requestId: open.id };
+      // Polar allows one active subscription per customer, so paying in both tabs can't start two.
+      await tx.update(partnerCheckoutRequests).set({ status: "superseded", updatedAt: new Date() }).where(eq(partnerCheckoutRequests.id, open.id));
+    }
+    const [request] = await tx.insert(partnerCheckoutRequests).values({ partnerId: member.partnerId, requestedByUserId: member.userId, tier, billingInterval, returnOrigin: origin }).returning({ id: partnerCheckoutRequests.id });
+    if (!request) throw new Error("Partner checkout request could not be created.");
+    await enqueueOutbox(tx, {
+      topic: "billing.createPartnerCheckout",
+      aggregateType: "partner_checkout_request",
+      aggregateId: request.id,
+      dedupeKey: `partner-checkout:${request.id}`,
+      payload: { partnerId: member.partnerId, requestId: request.id },
+    });
+    return { requestId: request.id };
+  });
+}
+
+/** A checkout as the Billing page follows it. */
+export type PartnerTierCheckout = {
+  requestId: string;
+  tier: PaidPartnerTierSlug;
+  billingInterval: BillingInterval;
+  status: "pending" | "processing" | "ready" | "error" | "superseded";
+  checkoutUrl: string | null;
+  /** Whether the partner now holds the tier the checkout sold, once Polar's events have reconciled. */
+  synced: boolean;
+};
+
+export async function getPartnerTierCheckout(context: DomainContext, actor: PartnerActor, input: { requestId: string }): Promise<PartnerTierCheckout> {
+  const member = billingActor(actor);
+  return await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => {
+    await requireOwner(tx, member);
+    const [row] = await tx.select({ requestId: partnerCheckoutRequests.id, tier: partnerCheckoutRequests.tier, billingInterval: partnerCheckoutRequests.billingInterval, status: partnerCheckoutRequests.status, checkoutUrl: partnerCheckoutRequests.checkoutUrl })
+      .from(partnerCheckoutRequests)
+      .where(and(eq(partnerCheckoutRequests.id, input.requestId), eq(partnerCheckoutRequests.partnerId, member.partnerId)))
+      .limit(1);
+    if (!row) throw failure("Checkout not found.", 404, "not_found");
+    const tier = tierOf(await readAccount(tx, member.partnerId));
+    return { ...row, synced: tier.tier === row.tier && tier.billingInterval === row.billingInterval };
+  });
+}
+
+/** Takes a checkout for this worker, or one whose earlier run died holding it. */
+export async function claimPartnerCheckoutRequest(context: DomainContext, input: { partnerId: string; requestId: string }): Promise<boolean> {
+  return await withBusinessTransaction(context.db, { actorType: "worker" }, async (tx) => {
+    const staleBefore = new Date(Date.now() - CHECKOUT_LEASE_MS);
+    const rows = await tx.update(partnerCheckoutRequests).set({ status: "processing", error: null, updatedAt: new Date() }).where(and(
+      eq(partnerCheckoutRequests.id, input.requestId),
+      eq(partnerCheckoutRequests.partnerId, input.partnerId),
+      or(eq(partnerCheckoutRequests.status, "pending"), eq(partnerCheckoutRequests.status, "error"), and(eq(partnerCheckoutRequests.status, "processing"), lt(partnerCheckoutRequests.updatedAt, staleBefore))),
+    )).returning({ id: partnerCheckoutRequests.id });
+    return rows.length > 0;
+  });
+}
+
+/** When another run holds this checkout, the time its lease ends and it may be claimed again. */
+export async function partnerCheckoutLeaseEndsAt(context: DomainContext, input: { partnerId: string; requestId: string }): Promise<Date | null> {
+  return await withBusinessTransaction(context.db, { actorType: "worker" }, async (tx) => {
+    const [row] = await tx.select({ updatedAt: partnerCheckoutRequests.updatedAt }).from(partnerCheckoutRequests).where(and(eq(partnerCheckoutRequests.id, input.requestId), eq(partnerCheckoutRequests.partnerId, input.partnerId), eq(partnerCheckoutRequests.status, "processing"))).limit(1);
+    return row ? new Date(row.updatedAt.getTime() + CHECKOUT_LEASE_MS) : null;
+  });
+}
+
+/** What the worker sends Polar to make the checkout page. */
+export async function loadPartnerCheckoutRequest(context: DomainContext, input: { partnerId: string; requestId: string }): Promise<{
+  requestId: string;
+  partnerId: string;
+  tier: PaidPartnerTierSlug;
+  billingInterval: BillingInterval;
+  returnOrigin: string;
+  customerEmail: string;
+  externalCustomerId: string;
+} | null> {
+  return await withBusinessTransaction(context.db, { actorType: "worker" }, async (tx) => {
+    const [row] = await tx.select({ requestId: partnerCheckoutRequests.id, partnerId: partnerCheckoutRequests.partnerId, tier: partnerCheckoutRequests.tier, billingInterval: partnerCheckoutRequests.billingInterval, returnOrigin: partnerCheckoutRequests.returnOrigin, customerEmail: users.email })
+      .from(partnerCheckoutRequests)
+      .innerJoin(users, eq(users.id, partnerCheckoutRequests.requestedByUserId))
+      .where(and(eq(partnerCheckoutRequests.id, input.requestId), eq(partnerCheckoutRequests.partnerId, input.partnerId)))
+      .limit(1);
+    if (!row || !isPaidPartnerTierSlug(row.tier) || !isBillingInterval(row.billingInterval)) return null;
+    return { ...row, externalCustomerId: partnerBillingKey(row.partnerId) };
+  });
+}
+
+export async function markPartnerCheckoutCreated(context: DomainContext, input: { partnerId: string; requestId: string; checkoutId: string; checkoutUrl: string }): Promise<boolean> {
+  return await withBusinessTransaction(context.db, { actorType: "worker" }, async (tx) => {
+    const rows = await tx.update(partnerCheckoutRequests).set({ status: "ready", checkoutId: input.checkoutId, checkoutUrl: input.checkoutUrl, error: null, updatedAt: new Date() }).where(and(eq(partnerCheckoutRequests.id, input.requestId), eq(partnerCheckoutRequests.partnerId, input.partnerId), eq(partnerCheckoutRequests.status, "processing"))).returning({ id: partnerCheckoutRequests.id });
+    return rows.length > 0;
+  });
+}
+
+export async function markPartnerCheckoutFailed(context: DomainContext, input: { partnerId: string; requestId: string; error: string }): Promise<boolean> {
+  return await withBusinessTransaction(context.db, { actorType: "worker" }, async (tx) => {
+    const rows = await tx.update(partnerCheckoutRequests).set({ status: "error", error: input.error, updatedAt: new Date() }).where(and(eq(partnerCheckoutRequests.id, input.requestId), eq(partnerCheckoutRequests.partnerId, input.partnerId), eq(partnerCheckoutRequests.status, "processing"))).returning({ id: partnerCheckoutRequests.id });
+    return rows.length > 0;
+  });
+}
+
+/**
+ * Stores a signed Polar event for a partner's customer once, and queues its
+ * reconcile. An event for a partner this deployment doesn't have is dropped.
+ */
+export async function recordPartnerPolarEvent(
+  context: DomainContext,
+  input: { partnerId: string; providerEventId: string; eventType: string; payload: Record<string, unknown> },
+): Promise<"stored" | "duplicate" | "unknown_partner"> {
+  return await withBusinessTransaction(context.db, { actorType: "system" }, async (tx) => {
+    const [partner] = await tx.select({ id: partners.id }).from(partners).where(eq(partners.id, input.partnerId)).limit(1);
+    if (!partner) return "unknown_partner";
+    const [stored] = await tx.insert(providerEvents).values({ provider: "polar", providerEventId: input.providerEventId, eventType: input.eventType, partnerId: partner.id, payload: input.payload }).onConflictDoNothing().returning({ id: providerEvents.id });
+    if (!stored) return "duplicate";
+    await enqueueOutbox(tx, {
+      topic: "billing.reconcilePartner",
+      aggregateType: "provider_event",
+      aggregateId: stored.id,
+      dedupeKey: `provider-event:${input.providerEventId}:partner-billing`,
+      payload: { partnerId: partner.id, providerEventId: stored.id },
+    });
+    return "stored";
+  });
+}
+
+function record(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function text(source: Record<string, unknown>, ...keys: string[]): string | undefined {
+  for (const key of keys) {
+    const value = source[key];
+    if (typeof value === "string" && value.length > 0) return value;
+  }
+  return undefined;
+}
+
+function date(source: Record<string, unknown>, ...keys: string[]): Date | undefined {
+  const value = text(source, ...keys);
+  const parsed = value ? new Date(value) : undefined;
+  return parsed && !Number.isNaN(parsed.valueOf()) ? parsed : undefined;
+}
+
+/**
+ * Applies one of Polar's events for the partner's customer to its billing
+ * account: the tier Polar sold, its interval and subscription state, and the
+ * terms of the tier in force, which is Free unless a paid tier is live. An
+ * event older than one already applied leaves the subscription as it is, so
+ * a late retry can't roll it back. Returns false when the event isn't the
+ * partner's.
+ */
+export async function reconcilePartnerTier(context: DomainContext, input: { partnerId: string; providerEventId: string }): Promise<boolean> {
+  return await withBusinessTransaction(context.db, { actorType: "worker" }, async (tx) => {
+    // Polar can deliver several events for one checkout at once, such as subscription.active beside order.paid.
+    await lockPartnerBilling(tx, input.partnerId);
+    const [event] = await tx.select({ id: providerEvents.id, eventType: providerEvents.eventType, status: providerEvents.status, payload: providerEvents.payload })
+      .from(providerEvents)
+      .where(and(eq(providerEvents.id, input.providerEventId), eq(providerEvents.partnerId, input.partnerId)))
+      .limit(1);
+    if (!event) return false;
+    if (event.status === "processed") return true;
+
+    const payload = record(event.payload);
+    const isSubscription = event.eventType.startsWith("subscription.");
+    // An order carries its subscription nested; a subscription event is the subscription.
+    const subscription = isSubscription ? payload : record(payload.subscription);
+    const existing = (await tx.select({ ...accountColumns, currentPeriodStart: partnerBillingAccounts.currentPeriodStart }).from(partnerBillingAccounts).where(eq(partnerBillingAccounts.partnerId, input.partnerId)).limit(1))[0];
+    const customerId = text(payload, "customerId") ?? existing?.customerId ?? null;
+    // polar-event.ts names the tier only from a subscription's product. A product that sells no tier keeps the stored one.
+    const tier = isPaidPartnerTierSlug(payload.partnerTier) ? payload.partnerTier : undefined;
+    const billingInterval = tier && isBillingInterval(payload.billingInterval) ? payload.billingInterval : undefined;
+    const subscriptionState = text(payload, "subscriptionState") ?? (isSubscription ? text(payload, "status") ?? event.eventType.slice("subscription.".length) : undefined);
+    // Both sides are ISO strings polar-event.ts normalized, so text order is time order.
+    const modifiedAt = text(payload, "subscriptionModifiedAt");
+    const stale = modifiedAt !== undefined && (await tx.select({ id: providerEvents.id }).from(providerEvents)
+      .where(and(eq(providerEvents.partnerId, input.partnerId), eq(providerEvents.status, "processed"), sql`${providerEvents.payload}->>'subscriptionModifiedAt' > ${modifiedAt}`))
+      .limit(1)).length > 0;
+
+    const next = stale ? existing : {
+      tier: tier ?? existing?.tier ?? "free",
+      billingInterval: billingInterval ?? existing?.billingInterval ?? null,
+      subscriptionState: subscriptionState ?? existing?.subscriptionState ?? null,
+      subscriptionId: text(payload, "subscriptionId") ?? existing?.subscriptionId ?? null,
+      currentPeriodStart: date(subscription, "current_period_start", "currentPeriodStart") ?? existing?.currentPeriodStart ?? null,
+      currentPeriodEnd: date(subscription, "current_period_end", "currentPeriodEnd") ?? existing?.currentPeriodEnd ?? null,
+    };
+    const inForce = partnerTierInForce(next ?? null);
+    const terms = partnerTierCatalog[inForce];
+    // A snapshot of the subscription says whether it runs to the end of its period; an event without one leaves that as it was.
+    const snapshot = typeof subscription.cancel_at_period_end === "boolean";
+    const endsAt = !snapshot || stale ? existing?.endsAt ?? null : subscription.cancel_at_period_end === true && inForce !== "free" ? date(subscription, "ends_at", "current_period_end") ?? null : null;
+    const fields = stale && existing ? { customerId, updatedAt: new Date() } : {
+      customerId,
+      tier: next?.tier ?? "free",
+      billingInterval: next?.billingInterval ?? null,
+      subscriptionState: next?.subscriptionState ?? null,
+      subscriptionId: next?.subscriptionId ?? null,
+      currentPeriodStart: next?.currentPeriodStart ?? null,
+      currentPeriodEnd: next?.currentPeriodEnd ?? null,
+      endsAt,
+      poolVoiceSeconds: terms.poolVoiceSeconds,
+      poolChats: terms.poolChats,
+      includedNumbers: terms.includedNumbers,
+      updatedAt: new Date(),
+    };
+    await tx.insert(partnerBillingAccounts).values({
+      partnerId: input.partnerId,
+      billingKey: partnerBillingKey(input.partnerId),
+      poolVoiceSeconds: terms.poolVoiceSeconds,
+      poolChats: terms.poolChats,
+      includedNumbers: terms.includedNumbers,
+      ...fields,
+    }).onConflictDoUpdate({ target: partnerBillingAccounts.partnerId, set: fields });
+    await tx.update(providerEvents).set({ status: "processed", updatedAt: new Date() }).where(eq(providerEvents.id, event.id));
+    return true;
+  });
+}
