@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { jsonError } from "@/lib/api-helpers";
 import { createInstagramOAuthState, enforceInstagramOAuthRateLimits, instagramConfigured, instagramProvider, storeInstagramOAuthState } from "@/lib/instagram-oauth";
 import { operatorRoute } from "@/lib/operator-request";
+import { partnerRequestOrigin } from "@/lib/request-brand";
 import { trustedClientIp } from "@/lib/trusted-client-ip";
 
 export const runtime = "nodejs";
@@ -13,7 +14,8 @@ export const GET = operatorRoute(async ({ request, userId, businessId, transacti
   if (!instagramConfigured()) return jsonError("Instagram isn't set up on this server.", 503, "instagram_not_configured");
   const rate = await enforceInstagramOAuthRateLimits({ operation: "start", userId, businessId, ip: trustedClientIp(request) });
   if (!rate.allowed) return jsonError("Too many Instagram authorization attempts. Please try again later.", rate.status, "instagram_oauth_rate_limited");
-  const state = createInstagramOAuthState({ userId, businessId });
+  // Instagram returns to the host's domain, which hands the callback back to a partner's host it started on.
+  const state = createInstagramOAuthState({ userId, businessId, origin: partnerRequestOrigin(request.headers) });
   await storeInstagramOAuthState(state);
   return NextResponse.json({ url: instagramProvider().buildAuthorizationUrl({ state }) });
 });

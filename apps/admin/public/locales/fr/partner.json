@@ -370,7 +370,60 @@
     "domain": {
       "title": "Adresse du tableau de bord",
       "open": "Ouvrir",
-      "none": "Vous n'avez pas encore d'adresse à vous. Demandez à {{appName}} d'en configurer une."
+      "none": "Vous n'avez pas encore de sous-domaine. Demandez à {{appName}} d'en configurer un.",
+      "subdomainLabel": "Votre sous-domaine",
+      "own": {
+        "title": "Votre propre domaine",
+        "description": "Placez votre tableau de bord sur un sous-domaine de votre site, comme app.votreentreprise.com. Votre sous-domaine continue de fonctionner à côté.",
+        "label": "Domaine",
+        "placeholder": "app.votreentreprise.com",
+        "help": "Vous ajouterez ensuite deux enregistrements DNS chez votre fournisseur DNS.",
+        "connect": "Connecter le domaine",
+        "connecting": "Connexion…",
+        "added": "Domaine connecté. Ajoutez maintenant ses enregistrements DNS.",
+        "paidTier": "Votre propre domaine est inclus avec un niveau payant.",
+        "paidTierAskOwner": "Votre propre domaine est inclus avec un niveau payant. Un propriétaire peut en choisir un sur la page Facturation.",
+        "chooseTier": "Choisir un niveau",
+        "membersCantEdit": "Seuls les propriétaires et les administrateurs peuvent connecter un domaine.",
+        "status": {
+          "pending": "En attente du DNS",
+          "active": "Actif",
+          "failed": "Échec"
+        },
+        "settingUp": "Nous configurons votre domaine. Ses enregistrements DNS s'affichent ici d'ici une minute.",
+        "pendingHelp": "Ajoutez ces enregistrements chez votre fournisseur DNS. Nous les vérifions toutes les quelques minutes, et une modification DNS peut prendre quelques heures à nous parvenir.",
+        "activeHelp": "Votre tableau de bord et vos pages de connexion fonctionnent maintenant sur ce domaine.",
+        "failedHelp": "Nous n'avons pas pu configurer ce domaine. Retirez-le, vérifiez ses enregistrements DNS, puis connectez-le de nouveau.",
+        "takenHelp": "Un autre tableau de bord a connecté ce domaine en premier. Retirez-le ici pour en connecter un autre.",
+        "records": {
+          "type": "Type",
+          "name": "Nom",
+          "value": "Valeur",
+          "status": "État",
+          "verified": "Trouvé",
+          "waiting": "Pas encore trouvé",
+          "copy": "Copier",
+          "copied": "Copié"
+        },
+        "providerSays": "Votre fournisseur de certificats indique :",
+        "checkedAt": "Dernière vérification : {{time}}.",
+        "remove": "Retirer le domaine",
+        "removeTitle": "Retirer {{hostname}} ?",
+        "removeDescription": "Personne ne pourra plus ouvrir votre tableau de bord sur ce domaine. Vous pourrez le connecter de nouveau plus tard.",
+        "removed": "Domaine retiré.",
+        "cancel": "Annuler",
+        "errors": {
+          "invalid": "Entrez un sous-domaine de votre site, comme app.votreentreprise.com.",
+          "reserved": "Ce domaine appartient à {{appName}}. Entrez un sous-domaine de votre propre site.",
+          "taken": "Un autre tableau de bord utilise déjà ce domaine.",
+          "exists": "Retirez votre domaine actuel avant d'en connecter un autre.",
+          "paidTier": "Votre propre domaine est inclus avec un niveau payant.",
+          "unavailable": "{{appName}} ne peut pas connecter votre propre domaine.",
+          "forbidden": "Seuls les propriétaires et les administrateurs peuvent modifier votre domaine.",
+          "failed": "Nous n'avons pas pu enregistrer votre domaine. Réessayez.",
+          "loadFailed": "Nous n'avons pas pu charger vos adresses. Actualisez la page pour réessayer."
+        }
+      }
     },
     "brand": {
       "title": "Marque"

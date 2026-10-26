@@ -41,6 +41,21 @@ export function oauthPayloadCurrent(payload: Record<string, unknown>, lifetimeMs
   return typeof nonce === "string" && /^[a-f0-9-]{36}$/i.test(nonce) && typeof issuedAt === "number" && Number.isFinite(issuedAt) && Date.now() - issuedAt <= lifetimeMs && issuedAt <= Date.now() + 30_000;
 }
 
+/**
+ * Whether a state's `origin`, the partner's host a connection started on, is
+ * absent, as on the host's domain, or a plain http or https origin.
+ */
+export function oauthStartOriginValid(origin: unknown): origin is string | undefined {
+  if (origin === undefined) return true;
+  if (typeof origin !== "string") return false;
+  try {
+    const url = new URL(origin);
+    return (url.protocol === "https:" || url.protocol === "http:") && url.origin === origin;
+  } catch {
+    return false;
+  }
+}
+
 /** Lookup digest of an OAuth state under `prefix`, so only the digest is stored, never the bearer value. */
 export function oauthStateDigest(prefix: string, state: string, unconfigured: string): string {
   if (!oauthSigningSecret()) throw new Error(unconfigured);

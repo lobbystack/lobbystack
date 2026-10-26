@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
 
-import { oauthSigningSecret, oauthStateDigest, oauthPayloadCurrent, signOAuthPayload, verifyOAuthPayload } from "./signed-oauth-state";
+import { oauthSigningSecret, oauthStartOriginValid, oauthStateDigest, oauthPayloadCurrent, signOAuthPayload, verifyOAuthPayload } from "./signed-oauth-state";
 
-type CalendarOAuthState = { userId: string; businessId: string; issuedAt: number; nonce: string };
+/** `origin` names the partner's host the connection started on, and is absent on the host's domain. */
+type CalendarOAuthState = { userId: string; businessId: string; origin?: string; issuedAt: number; nonce: string };
 type CalendarConnectLinkToken = { businessId: string; issuedAt: number; nonce: string };
 type TokenKind = "state" | "link";
 
@@ -16,8 +17,10 @@ export function calendarSigningConfigured(): boolean {
   return Boolean(oauthSigningSecret());
 }
 
-export function createCalendarOAuthState(input: Omit<CalendarOAuthState, "issuedAt" | "nonce">): string {
-  return signed("state", { ...input, issuedAt: Date.now(), nonce: randomUUID() });
+/** A state for a connection started on the host's domain, or on the partner's host `origin` names, where its callback finishes. */
+export function createCalendarOAuthState(input: { userId: string; businessId: string; origin?: string | null }): string {
+  const { origin, ...rest } = input;
+  return signed("state", { ...rest, ...(origin ? { origin } : {}), issuedAt: Date.now(), nonce: randomUUID() });
 }
 
 // Each kind signs under its own domain, so an OAuth state never passes as a link, or a link as a state.
@@ -39,7 +42,7 @@ export function verifyCalendarOAuthState(value: string): CalendarOAuthState | nu
   // Cutover intentionally rejects old unversioned states (10-minute lifetime).
   // Users restart authorization; do not restore a public scrypt fallback.
   const state = verified("state", value);
-  if (!state || typeof state.userId !== "string" || !state.userId || typeof state.businessId !== "string" || !state.businessId || !oauthPayloadCurrent(state, 10 * 60_000)) return null;
+  if (!state || typeof state.userId !== "string" || !state.userId || typeof state.businessId !== "string" || !state.businessId || !oauthStartOriginValid(state.origin) || !oauthPayloadCurrent(state, 10 * 60_000)) return null;
   return state as CalendarOAuthState;
 }
 

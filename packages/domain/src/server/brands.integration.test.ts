@@ -112,6 +112,7 @@ beforeEach(() => {
   vi.stubEnv("APP_BASE_URL", "https://desk.example.test/");
   vi.stubEnv("CLOUDFLARE_SAAS_API_TOKEN", "");
   vi.stubEnv("CLOUDFLARE_SAAS_ZONE_ID", "");
+  vi.stubEnv("CADDY_ON_DEMAND_TLS", "");
   vi.stubEnv("DEPLOYMENT_MODE", "self_hosted_standard");
   vi.stubEnv("BRAND_APP_NAME", "");
   vi.stubEnv("BRAND_LOGO_URL", "");
@@ -284,7 +285,19 @@ describe.skipIf(!testUrl)("brands on a partner's domain", () => {
       await fixture.elsewhere(() => tx.insert(partnerDomains).values({ partnerId: fixture.partnerId, hostname: "app.bright.example.test", kind: "custom", verifiedAt: new Date() }));
       expect(await resolveHostBrand(fixture.context, "app.bright.example.test")).toBeNull();
       customDomainsOn();
+      // The partner's origin stays on its subdomain, where sign-up works, so its businesses' emails keep linking there.
       expect(await resolveHostBrand(fixture.context, "app.bright.example.test")).toMatchObject({ kind: "partner", partnerId: fixture.partnerId, origin: `https://${fixture.subdomain}` });
+      expect(await resolveHostBrand(fixture.context, fixture.subdomain)).toMatchObject({ kind: "partner", origin: `https://${fixture.subdomain}` });
+      // Caddy's on-demand TLS turns partners' own domains on as well.
+      vi.stubEnv("CLOUDFLARE_SAAS_API_TOKEN", "");
+      vi.stubEnv("CADDY_ON_DEMAND_TLS", "true");
+      forgetCachedBrands();
+      expect(await resolveHostBrand(fixture.context, "app.bright.example.test")).toMatchObject({ kind: "partner", partnerId: fixture.partnerId });
+      // Without a subdomain, the verified domain is where the partner's links go.
+      vi.stubEnv("PARTNER_BASE_DOMAIN", "");
+      forgetCachedBrands();
+      await fixture.as("lobbystack_worker");
+      expect(await brandForBusiness(fixture.context, fixture.partnerBusinessId)).toMatchObject({ origin: "https://app.bright.example.test" });
     });
   });
 

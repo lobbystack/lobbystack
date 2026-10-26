@@ -2,14 +2,16 @@ import type { SQL } from "drizzle-orm";
 
 // Stands in for the app role's database in tests of the brand pipeline, so a
 // test drives the real resolveHostBrand without PostgreSQL: deployment_branding
-// through the select chain, and the partner functions of migration 0131
-// through execute. brands.integration.test.ts covers the real functions.
+// through the select chain, and the partner functions of migrations 0131 and
+// 0152 through execute. brands.integration.test.ts covers the real functions.
 
 export type FakeBrandPartner = {
   partnerId: string;
   name: string;
   /** Its verified subdomain. */
   subdomain: string;
+  /** Its own domain, once verified. */
+  customDomain?: string | null;
   logoVersion?: string | null;
   color?: string | null;
   supportEmail?: string | null;
@@ -31,8 +33,8 @@ export function fakeBrandDatabase(input: { saved: () => Promise<Array<{ appName:
       const [param] = queryParams(query);
       const partners = await input.partners();
       if (text.includes("app.partner_for_host(")) {
-        const partner = partners.find((candidate) => candidate.subdomain === param);
-        return { rows: partner ? [{ partner_id: partner.partnerId, kind: "subdomain" }] : [] };
+        const partner = partners.find((candidate) => candidate.subdomain === param || candidate.customDomain === param);
+        return { rows: partner ? [{ partner_id: partner.partnerId, kind: partner.subdomain === param ? "subdomain" : "custom" }] : [] };
       }
       if (text.includes("app.partner_brand(")) {
         const partner = partners.find((candidate) => candidate.partnerId === param);
@@ -47,6 +49,7 @@ export function fakeBrandDatabase(input: { saved: () => Promise<Array<{ appName:
             privacy_url: null,
             support_url: null,
             support_email: partner.supportEmail ?? null,
+            custom_domain: partner.customDomain ?? null,
           }] : [],
         };
       }

@@ -1,0 +1,29 @@
+# HTTPS for a public self-hosted deployment: the dashboard and every
+# partner's domain, with certificates Caddy issues on demand. Before it
+# issues one, Caddy asks the admin at /api/tls/ask, which approves only the
+# host's own domain and partners' verified domains. docker-compose.tls.yml
+# mounts this file and publishes port 443. Set CADDY_ON_DEMAND_TLS=true on
+# the admin and the worker so partners can connect their own domains.
+{
+  on_demand_tls {
+    ask http://admin:3000/api/tls/ask
+  }
+}
+
+# Every name that reaches Caddy over HTTPS, once the admin approves it.
+https:// {
+  tls {
+    on_demand
+  }
+  reverse_proxy admin:3000
+}
+
+# Plain HTTP moves to HTTPS, except the live check Compose's healthcheck calls.
+http:// {
+  handle /api/health/live {
+    reverse_proxy admin:3000
+  }
+  handle {
+    redir https://{host}{uri} 308
+  }
+}

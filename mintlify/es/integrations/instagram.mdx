@@ -61,3 +61,5 @@ La tarjeta de Instagram solo aparece si su servidor tiene una aplicación de Met
 | `INSTAGRAM_WEBHOOK_VERIFY_TOKEN` | Una cadena aleatoria que también escribe en los ajustes de webhook de la aplicación. Solo el admin. |
 
 En la aplicación de Meta, defina la URL de devolución de llamada del webhook como `APP_BASE_URL` seguido de `/api/webhooks/instagram`, y suscríbase al campo `messages`. Antes de que otros negocios aparte del suyo puedan conectarse, Meta tiene que aprobar el permiso `instagram_business_manage_messages` de la aplicación mediante App Review.
+
+Los negocios de sus socios conectan Instagram en el dominio del socio con el mismo `INSTAGRAM_REDIRECT_URI`. Instagram devuelve a la persona a `APP_BASE_URL`, que la redirige al dominio del socio para terminar.

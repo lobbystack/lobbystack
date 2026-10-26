@@ -1,6 +1,6 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 
-import { and, asc, eq, inArray, isNull, ne, notInArray, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull, ne, notInArray, or, sql } from "drizzle-orm";
 
 import { auditLogs, billingAccounts, businesses, businessInvitations, businessMemberships, enqueueOutbox, outboxMessages, partnerDomains, partnerInvitations, partnerMembers, partners, partnerSignupInvitations, phoneNumbers, storageObjects, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import {
@@ -225,7 +225,10 @@ export async function signUpPartner(
     let subdomain: string | null = null;
     if (features.baseDomain) {
       subdomain = `${slug}.${features.baseDomain}`;
-      const [reserved] = await tx.insert(partnerDomains).values({ partnerId, hostname: subdomain, kind: "subdomain", verifiedAt: new Date() }).onConflictDoNothing({ target: partnerDomains.hostname }).returning({ id: partnerDomains.id });
+      // A hostname is unique only among verified domains, so a partner's pending claim on its own domain is looked for too.
+      const [claimed] = await tx.select({ id: partnerDomains.id }).from(partnerDomains).where(eq(partnerDomains.hostname, subdomain)).limit(1);
+      if (claimed) throw subdomainTaken();
+      const [reserved] = await tx.insert(partnerDomains).values({ partnerId, hostname: subdomain, kind: "subdomain", verifiedAt: new Date() }).onConflictDoNothing().returning({ id: partnerDomains.id });
       if (!reserved) throw subdomainTaken();
     }
     if (invitationId) {
@@ -449,6 +452,12 @@ function brandImage(bytes: Uint8Array | null, image: BrandImage): { bytes: Buffe
   const contentType = brandLogoContentType(bytes);
   if (!contentType) throw failure("Upload a PNG, JPEG, WebP or SVG image.", 400, `invalid_${image}`);
   return { bytes: Buffer.from(bytes), contentType };
+}
+
+/** Whether the partner's own domain is verified, so its businesses have somewhere to open without a subdomain. */
+async function hasVerifiedCustomDomain(tx: DatabaseTransaction, partnerId: string): Promise<boolean> {
+  const [domain] = await tx.select({ id: partnerDomains.id }).from(partnerDomains).where(and(eq(partnerDomains.partnerId, partnerId), eq(partnerDomains.kind, "custom"), isNotNull(partnerDomains.verifiedAt))).limit(1);
+  return Boolean(domain);
 }
 
 /**
@@ -684,8 +693,8 @@ export type PartnerBusinessInput = {
  * partner's domain makes them the owner; the invitation is never a claim link,
  * so the business stays with the partner. Owners and admins can create one,
  * and so can the partner's platform keys, which act as the partner, but only
- * once the partner has a domain for its businesses to open on: they show on
- * no other. It never counts toward the cap of 10 businesses an account can
+ * once the partner has a domain for its businesses to open on, its subdomain
+ * or its own verified domain: they show on no other. It never counts toward the cap of 10 businesses an account can
  * own. With a package, the owner's invitation opens a checkout on the
  * partner's Stripe account; without one, the business is billed outside
  * LobbyStack. The caller passes the app role's context, since only it can act
@@ -739,7 +748,7 @@ export async function createPartnerBusiness(
     const template = input.templateId === undefined ? null : await loadBusinessTemplateInTransaction(tx, { partnerId, templateId: input.templateId });
     // A partner that signed up while the deployment had no base domain gets its subdomain now, if it can.
     const domain = baseDomain ? await reserveSubdomainIn(tx, partnerId, baseDomain) : { subdomain: null, changed: false };
-    if (!domain.subdomain) throw failure("You need your own domain before you can create a business.", 409, "partner_domain_required");
+    if (!domain.subdomain && !await hasVerifiedCustomDomain(tx, partnerId)) throw failure("You need your own domain before you can create a business.", 409, "partner_domain_required");
     // At the activity level the partner sets the receptionist up, so the owner's onboarding starts at their phone.
     const partner = { partnerId, accessLevel };
     await insertOwnerlessBusinessInTransaction(tx, { businessId, name, slug: input.slug, timezone, businessType, defaultLocale: input.defaultLocale, websiteUrl: input.websiteUrl, partner, onboardingStage: firstOnboardingStage(partner) });

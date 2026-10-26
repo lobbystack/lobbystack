@@ -347,7 +347,8 @@ describe("what reaches the admin on other hostnames", () => {
       expect((await visit(url, { method: "HEAD" })).status, url).toBe(200);
     }
     expect((await visit("http://127.0.0.1:3000/calls")).status).toBe(404);
-    // Caddy's healthcheck asks for / with the host's own hostname.
+    // Caddy's healthcheck asks for the live check with the host's own hostname.
+    expect((await visit("http://127.0.0.1/api/health/live", { headers: { host: "app.example.test" } })).status).toBe(200);
     expect((await visit("http://127.0.0.1/", { headers: { host: "app.example.test" } })).status).toBe(200);
     // During maintenance a health check still answers on any hostname.
     vi.stubEnv("LOBBYSTACK_MAINTENANCE_MODE", "true");
@@ -412,6 +413,62 @@ describe("what reaches the admin on other hostnames", () => {
   });
 });
 
+describe("a partner's own domain", () => {
+  const ownDomain: FakeBrandPartner = { ...bright, customDomain: "app.bright.example" };
+
+  it("passes a partner's verified own domain on as that partner once the deployment issues its certificates", async () => {
+    hostWithPartners();
+    fixture.partners = [ownDomain, other];
+    // Without Cloudflare for SaaS or Caddy's on-demand TLS, no hostname outside the partner base domain is a partner's.
+    expect((await visit("https://app.bright.example/calls")).status).toBe(404);
+    for (const settings of [{ CADDY_ON_DEMAND_TLS: "true" }, { CLOUDFLARE_SAAS_API_TOKEN: "test-token", CLOUDFLARE_SAAS_ZONE_ID: "test-zone" }]) {
+      for (const [name, value] of Object.entries(settings)) vi.stubEnv(name, value);
+      forgetCachedBrands();
+      const response = await visit("https://app.bright.example/calls");
+      expect(response.status).toBe(200);
+      expect(forwarded(response, "x-lobbystack-brand")).toBe(`partner:${partnerId}`);
+      expect(forwarded(response, "x-lobbystack-brand-origin")).toBe("https://app.bright.example");
+      // Its subdomain keeps working beside it, and another hostname still gets the 404.
+      expect(forwarded(await visit("https://bright.portal.example.test/calls"), "x-lobbystack-brand-origin")).toBe("https://bright.portal.example.test");
+      expect((await visit("https://app.unknown.example/calls")).status).toBe(404);
+      vi.unstubAllEnvs();
+      hostWithPartners();
+      fixture.partners = [ownDomain, other];
+    }
+  });
+
+  it("accepts changes on a partner's own domain only from that domain's origin", async () => {
+    hostWithPartners();
+    vi.stubEnv("CADDY_ON_DEMAND_TLS", "true");
+    fixture.partners = [ownDomain, other];
+    const change = async (origin: string) => (await visit("https://app.bright.example/api/partner/team", { method: "POST", headers: { origin } })).status;
+    expect(await change("https://app.bright.example")).toBe(200);
+    for (const origin of ["https://bright.portal.example.test", "https://app.example.test", "https://other.portal.example.test"]) expect(await change(origin), origin).toBe(403);
+  });
+});
+
+describe("the TLS ask", () => {
+  it("reaches its route on the address Caddy calls, without resolving that address, and during maintenance", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    hostWithPartners();
+    vi.stubEnv("CADDY_ON_DEMAND_TLS", "true");
+    // Resolving Caddy's own address would wait on the database for nothing.
+    fixture.databaseHangs = true;
+    const waited = () => new Promise<never>((_, reject) => setTimeout(() => reject(new Error("waited on the database")), 1_000));
+    for (const maintenance of ["false", "true"]) {
+      vi.stubEnv("LOBBYSTACK_MAINTENANCE_MODE", maintenance);
+      for (const method of ["GET", "HEAD"]) {
+        const response = await Promise.race([visit("http://admin:3000/api/tls/ask?domain=app.bright.example", { method }), waited()]);
+        expect(response.status, `${method} in maintenance ${maintenance}`).toBe(200);
+        expect(response.headers.get("x-middleware-next"), `${method} in maintenance ${maintenance}`).toBe("1");
+        expect(forwarded(response, "x-lobbystack-brand")).toBeNull();
+      }
+    }
+    // Only reads: maintenance still refuses anything else on the path.
+    expect((await visit("http://admin:3000/api/tls/ask?domain=app.bright.example", { method: "POST" })).status).toBe(503);
+  });
+});
+
 describe("a partner's host", () => {
   it("keeps MCP, OAuth, the OpenAPI document, webhooks, partner signup and the affiliate program on the host's domain", async () => {
     hostWithPartners();
@@ -440,8 +497,9 @@ describe("a partner's host", () => {
       const host = await visit(`https://app.example.test${path}`, { method, headers: { origin: "https://app.example.test" } });
       expect(host.status, `${method} ${path} on the host's domain`).not.toBe(404);
     }
-    // The rest of the API, health checks and the partner console still answer there.
-    for (const path of ["/api/v1/me", "/api/health/live", "/api/branding", "/partner", "/api/mcp-servers"]) {
+    // The rest of the API, health checks and the partner console still answer there, and so do the
+    // Calendar and Instagram callbacks the host's domain hands on to a partner's host.
+    for (const path of ["/api/v1/me", "/api/health/live", "/api/branding", "/partner", "/api/mcp-servers", "/api/calendar/google/callback?code=c&state=s", "/api/integrations/instagram/callback?code=c&state=s"]) {
       expect((await visit(`https://bright.portal.example.test${path}`)).status, path).toBe(200);
     }
   });

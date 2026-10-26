@@ -370,7 +370,60 @@
     "domain": {
       "title": "Adresa kontrolne table",
       "open": "Otvori",
-      "none": "Još nemate svoju adresu. Zatražite od servisa {{appName}} da je podesi."
+      "none": "Još nemate poddomen. Zatražite od servisa {{appName}} da ga podesi.",
+      "subdomainLabel": "Vaš poddomen",
+      "own": {
+        "title": "Vaš sopstveni domen",
+        "description": "Postavite kontrolnu tablu na poddomen svog sajta, na primer app.vasafirma.com. Vaš poddomen i dalje radi pored njega.",
+        "label": "Domen",
+        "placeholder": "app.vasafirma.com",
+        "help": "Zatim ćete dodati dva DNS zapisa kod svog DNS dobavljača.",
+        "connect": "Poveži domen",
+        "connecting": "Povezujemo…",
+        "added": "Domen je povezan. Sada dodajte njegove DNS zapise.",
+        "paidTier": "Sopstveni domen dolazi uz plaćeni nivo.",
+        "paidTierAskOwner": "Sopstveni domen dolazi uz plaćeni nivo. Vlasnik ga može izabrati na stranici Naplata.",
+        "chooseTier": "Izaberite nivo",
+        "membersCantEdit": "Samo vlasnici i administratori mogu da povežu domen.",
+        "status": {
+          "pending": "Čeka DNS",
+          "active": "Aktivan",
+          "failed": "Neuspešno"
+        },
+        "settingUp": "Podešavamo vaš domen. Njegovi DNS zapisi pojaviće se ovde za minut.",
+        "pendingHelp": "Dodajte ove zapise kod svog DNS dobavljača. Proveravamo ih na svakih nekoliko minuta, a izmeni DNS-a može trebati nekoliko sati da stigne do nas.",
+        "activeHelp": "Vaša kontrolna tabla i stranice za prijavu sada rade na ovom domenu.",
+        "failedHelp": "Nismo uspeli da podesimo ovaj domen. Uklonite ga, proverite njegove DNS zapise, pa ga ponovo povežite.",
+        "takenHelp": "Druga kontrolna tabla je prva povezala ovaj domen. Uklonite ga ovde da biste povezali neki drugi.",
+        "records": {
+          "type": "Tip",
+          "name": "Naziv",
+          "value": "Vrednost",
+          "status": "Status",
+          "verified": "Pronađen",
+          "waiting": "Još nije pronađen",
+          "copy": "Kopiraj",
+          "copied": "Kopirano"
+        },
+        "providerSays": "Vaš dobavljač sertifikata javlja:",
+        "checkedAt": "Poslednja provera: {{time}}.",
+        "remove": "Ukloni domen",
+        "removeTitle": "Ukloniti {{hostname}}?",
+        "removeDescription": "Niko više neće moći da otvori vašu kontrolnu tablu na ovom domenu. Kasnije ga možete ponovo povezati.",
+        "removed": "Domen je uklonjen.",
+        "cancel": "Otkaži",
+        "errors": {
+          "invalid": "Unesite poddomen svog sajta, na primer app.vasafirma.com.",
+          "reserved": "Taj domen pripada servisu {{appName}}. Unesite poddomen svog sajta.",
+          "taken": "Druga kontrolna tabla već koristi taj domen.",
+          "exists": "Uklonite trenutni domen pre nego što povežete drugi.",
+          "paidTier": "Sopstveni domen dolazi uz plaćeni nivo.",
+          "unavailable": "{{appName}} ne može da poveže vaš sopstveni domen.",
+          "forbidden": "Samo vlasnici i administratori mogu da menjaju vaš domen.",
+          "failed": "Nismo uspeli da sačuvamo vaš domen. Pokušajte ponovo.",
+          "loadFailed": "Nismo uspeli da učitamo vaše adrese. Osvežite stranicu i pokušajte ponovo."
+        }
+      }
     },
     "brand": {
       "title": "Brend"

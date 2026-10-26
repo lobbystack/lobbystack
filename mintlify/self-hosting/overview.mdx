@@ -49,7 +49,9 @@ Set `FIRECRAWL_API_KEY` on the `worker` service. Without it, website import fail
 
 In Google Cloud, enable the Google Calendar API and create an OAuth client for a web application. Add `https://your_admin_domain/api/calendar/google/callback` as an authorized redirect URI. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` on the `admin` service. The template fills in `GOOGLE_REDIRECT_URI`, and the worker reads all three from the admin.
 
-With both values set, the sign-in and sign-up pages also offer **Continue with Google**. Add `https://your_admin_domain/api/auth/callback/google` to the same OAuth client as a second authorized redirect URI. Your partners' subdomains don't offer it: people sign in there with email and password.
+With both values set, the sign-in and sign-up pages also offer **Continue with Google**. Add `https://your_admin_domain/api/auth/callback/google` to the same OAuth client as a second authorized redirect URI. Your partners' domains don't offer it: people sign in there with email and password.
+
+Your partners' businesses connect their calendars on the partner's domain through the same `/api/calendar/google/callback` redirect URI. Google sends the person back to your admin domain, which passes them on to the partner's domain to finish.
 
 #### Use a custom domain
 
@@ -71,7 +73,7 @@ The repository's [`docker-compose.yml`](https://github.com/lobbystack/lobbystack
 - a persistent Docker volume for recordings and uploaded documents
 - the Next.js admin dashboard and HTTP API
 - the background worker and transactional outbox dispatcher, which also runs each GPT-Live call
-- Caddy to route the dashboard hostname over plain HTTP, behind the proxy or load balancer that terminates HTTPS
+- Caddy to route the dashboard hostname, over plain HTTP behind the proxy or load balancer that terminates HTTPS, or over HTTPS with certificates Caddy issues for your dashboard and your partners' domains
 
 LobbyStack does not add monitoring containers to the Compose stack. Server runtimes can send traces, metrics, and OpenTelemetry logs to a configured OTLP-compatible backend.
 

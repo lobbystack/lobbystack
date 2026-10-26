@@ -122,6 +122,8 @@ export type PartnerBrandRecord = {
   name: string;
   /** The hostname of its verified subdomain, such as acme.receptionistportal.com, or null for none. */
   subdomain: string | null;
+  /** The hostname of its own domain once verified, such as app.acmeagency.com, or null for none. */
+  customDomain?: string | null;
   /** A digest of each saved image, so its URL changes whenever the image does, or null for none saved. */
   logoVersion: string | null;
   faviconVersion: string | null;
@@ -176,8 +178,29 @@ export function partnerOrigin(subdomain: string | null, environment: Record<stri
 }
 
 /**
+ * Where a partner's own domain serves its dashboard, with the scheme and port
+ * of APP_BASE_URL, since TLS ends before the admin there too.
+ */
+export function customDomainOrigin(hostname: string, environment: Record<string, string | undefined>): string {
+  const app = appOrigin(environment);
+  return `${app.protocol}//${hostname}${app.port ? `:${app.port}` : ""}`;
+}
+
+/**
+ * Where a partner's brand sends people: its subdomain, as partnerOrigin builds
+ * it, which every partner gets and which sign-up works on everywhere. A partner
+ * with no current subdomain, as on a deployment without a partner base domain,
+ * uses its own domain once verified, while the deployment still serves
+ * partners' own domains. A partner with neither has the host's origin.
+ */
+export function partnerBrandOrigin(partner: Pick<PartnerBrandRecord, "subdomain" | "customDomain">, environment: Record<string, string | undefined>): string {
+  if (currentPartnerSubdomain(partner.subdomain, environment) || !partner.customDomain || !partnerFeatures(environment).customDomains) return partnerOrigin(partner.subdomain, environment);
+  return customDomainOrigin(partner.customDomain, environment);
+}
+
+/**
  * A partner's brand: its name, images, color and links, its origin on its
- * subdomain, and emails from no-reply@ the partner base domain (or the host's
+ * subdomain or its own domain, and emails from no-reply@ the partner base domain (or the host's
  * address without one) under its name, with its support email as Reply-To.
  * What the partner leaves unset stays empty: a partner's pages never show the
  * host's logo or links in its place.
@@ -194,7 +217,7 @@ export function partnerBrand(input: { environment: Record<string, string | undef
     logoUrl,
     faviconUrl: partner.faviconVersion ? partnerBrandImageUrl(partner.partnerId, "favicon", partner.faviconVersion) : logoUrl,
     color: partner.color,
-    origin: partnerOrigin(partner.subdomain, environment),
+    origin: partnerBrandOrigin(partner, environment),
     links: {
       website: null,
       terms: partner.termsUrl,

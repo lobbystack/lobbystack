@@ -9,6 +9,8 @@ import { queueDailyOperatorSummaries, queueOnboardingFollowupEmail } from "@lobb
 import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning, numberProvisioningLeaseEndsAt } from "@lobbystack/domain";
 import { brandForEmail, businessExists, businessGetsHostEmails, forgetCachedBrands, loadNumberReleaseEmail, type Brand } from "@lobbystack/domain";
 import { advancePartnerLifecycles, claimPartnerCheckoutRequest, loadPartnerCheckoutRequest, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerCheckoutLeaseEndsAt, PartnerLifecycleError, reconcilePartnerTier, settlePartnerNumberCharges } from "@lobbystack/domain";
+import { checkPartnerCustomDomains, provisionPartnerCustomDomain, removePartnerCustomHostname } from "@lobbystack/domain";
+import { FakeCustomHostnames, FakeTxtRecords } from "@lobbystack/providers/customHostnames/fakeCustomHostnames";
 import { SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
 
 vi.mock("@lobbystack/domain", async (importOriginal) => {
@@ -25,6 +27,9 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
     reconcilePartnerTier: vi.fn(),
     settlePartnerNumberCharges: vi.fn(),
     advancePartnerLifecycles: vi.fn(),
+    provisionPartnerCustomDomain: vi.fn(),
+    checkPartnerCustomDomains: vi.fn(),
+    removePartnerCustomHostname: vi.fn(),
     deliverOutbound: vi.fn(),
     expireProspectDemos: vi.fn(),
     generateAffiliatePayoutRun: vi.fn(),
@@ -764,6 +769,56 @@ describe("worker handlers", () => {
       await expect(handleJob(job, { domain })).resolves.toEqual({ status: "completed", entityId: providerEventId });
       await expect(handleJob(job, { domain })).resolves.toEqual({ status: "skipped", entityId: providerEventId });
       expect(reconcilePartnerTier).toHaveBeenCalledWith(domain, { partnerId, providerEventId });
+    });
+  });
+
+  describe("a partner's own domain", () => {
+    const domainJob = (type: "partnerDomain.provision" | "partnerDomain.check" | "partnerDomain.remove", payload: Record<string, unknown>): JobEnvelope => ({ jobId: randomUUID(), type, queue: type === "partnerDomain.provision" ? "default" : "maintenance", businessId: null, payload, trace: {}, idempotencyKey: `test:${randomUUID()}`, scheduled: type === "partnerDomain.check" });
+    const customDomainsWith = (kind: "cloudflare" | "caddy" = "cloudflare") => ({ hostnames: new FakeCustomHostnames(kind), lookupTxt: new FakeTxtRecords().lookup });
+
+    it("registers a partner's new domain with the provider this deployment uses, with no business in its context", async () => {
+      const domain = { db: undefined as never };
+      const customDomains = customDomainsWith("caddy");
+      const domainId = randomUUID();
+      vi.mocked(provisionPartnerCustomDomain).mockResolvedValueOnce("provisioned").mockResolvedValueOnce("skipped");
+      await expect(handleJob(domainJob("partnerDomain.provision", { partnerId: randomUUID(), domainId }), { domain, customDomains })).resolves.toEqual({ status: "completed", entityId: domainId });
+      expect(provisionPartnerCustomDomain).toHaveBeenCalledWith(domain, customDomains, { domainId });
+      await expect(handleJob(domainJob("partnerDomain.provision", { domainId }), { domain, customDomains })).resolves.toEqual({ status: "skipped", entityId: domainId });
+    });
+
+    it("skips every domain job when the deployment issues no certificates for partners' domains, and a job that names no domain", async () => {
+      const domain = { db: undefined as never };
+      await expect(handleJob(domainJob("partnerDomain.provision", { domainId: randomUUID() }), { domain })).resolves.toMatchObject({ status: "skipped" });
+      await expect(handleJob(domainJob("partnerDomain.check", {}), { domain })).resolves.toEqual({ status: "skipped" });
+      await expect(handleJob(domainJob("partnerDomain.remove", { hostname: "app.acme.example", provider: "cloudflare", providerHostnameId: "ch_1" }), { domain })).resolves.toMatchObject({ status: "skipped" });
+      await expect(handleJob(domainJob("partnerDomain.provision", { domainId: "not-a-uuid" }), { domain, customDomains: customDomainsWith() })).resolves.toMatchObject({ status: "skipped" });
+      expect(provisionPartnerCustomDomain).not.toHaveBeenCalled();
+      expect(checkPartnerCustomDomains).not.toHaveBeenCalled();
+      expect(removePartnerCustomHostname).not.toHaveBeenCalled();
+    });
+
+    it("checks the domains still waiting each minute, and fails the job only when nothing answered", async () => {
+      const domain = { db: undefined as never };
+      const customDomains = customDomainsWith();
+      vi.mocked(checkPartnerCustomDomains)
+        .mockResolvedValueOnce({ checked: 2, activated: 1, failed: 0, unanswered: 1 })
+        .mockResolvedValueOnce({ checked: 0, activated: 0, failed: 0, unanswered: 0 })
+        .mockRejectedValueOnce(new Error("couldn't answer for any of 2"));
+      await expect(handleJob(domainJob("partnerDomain.check", {}), { domain, customDomains })).resolves.toEqual({ status: "completed", entityId: "2:1:0:1" });
+      await expect(handleJob(domainJob("partnerDomain.check", {}), { domain, customDomains })).resolves.toEqual({ status: "skipped", entityId: "0:0:0:0" });
+      await expect(handleJob(domainJob("partnerDomain.check", {}), { domain, customDomains })).rejects.toThrow("couldn't answer");
+      expect(checkPartnerCustomDomains).toHaveBeenCalledWith(domain, customDomains);
+    });
+
+    it("removes a domain from the provider that set it up, and leaves one another provider set up alone", async () => {
+      const domain = { db: undefined as never };
+      const customDomains = customDomainsWith("cloudflare");
+      vi.mocked(removePartnerCustomHostname).mockResolvedValue("removed");
+      const payload = { partnerId: randomUUID(), hostname: "app.acme.example", provider: "cloudflare", providerHostnameId: "ch_1" };
+      await expect(handleJob(domainJob("partnerDomain.remove", payload), { domain, customDomains })).resolves.toEqual({ status: "completed", entityId: "ch_1" });
+      expect(removePartnerCustomHostname).toHaveBeenCalledWith(domain, customDomains.hostnames, { hostname: "app.acme.example", providerHostnameId: "ch_1" });
+      await expect(handleJob(domainJob("partnerDomain.remove", { ...payload, provider: "caddy" }), { domain, customDomains })).resolves.toEqual({ status: "skipped", entityId: "ch_1" });
+      expect(removePartnerCustomHostname).toHaveBeenCalledTimes(1);
     });
   });
 

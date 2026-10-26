@@ -88,7 +88,7 @@ type PartnerFeatures = {
   baseDomain: string | null;            // PARTNER_BASE_DOMAIN
   stripeConnect: boolean;               // keys and webhook secret present
   tierBilling: boolean;                 // every POLAR_PARTNER_<TIER>_<INTERVAL>_PRODUCT_ID present, each its own product
-  customDomains: "cloudflare" | "caddy" | null;
+  customDomains: "cloudflare" | "caddy" | null; // CLOUDFLARE_SAAS_API_TOKEN and CLOUDFLARE_SAAS_ZONE_ID, or CADDY_ON_DEMAND_TLS=true
 };
 ```
 
@@ -173,7 +173,7 @@ type PartnerActor =
 ```
 
 - The console's routes live under `/api/partner/*` in the admin and call these functions directly, the way the dashboard's operator routes call domain functions today. The v1 public API's Platform endpoints call the same functions for keys that belong to a partner.
-- `createPartnerBusiness` creates a business with no owner, links it to the partner at the access level the partner picks, optionally applies a template, and sends the owner an invitation under the partner's brand. The invitation is never a claim link. A partner's businesses open only on its own domains, so the function refuses until the partner has its subdomain. It never counts toward the cap of 10 businesses per account.
+- `createPartnerBusiness` creates a business with no owner, links it to the partner at the access level the partner picks, optionally applies a template, and sends the owner an invitation under the partner's brand. The invitation is never a claim link. A partner's businesses open only on its own domains, so the function refuses until the partner has its subdomain or a verified domain of its own. It never counts toward the cap of 10 businesses per account.
 - `listPartnerBusinesses` gives each business's minutes and chats this month, as usage metering counts them. Row-level security shows a partner member none of a business's rows, so `app.list_partner_business_usage` reads the month's counts for someone on the partner's team. It leaves out the prospect demos nobody has claimed, which the Demos page lists instead.
 - `releaseBusiness` needs an owner who accepted the invitation. It removes the partner, which leaves that person the owner, and puts the business on the host's Free plan. A trigger on `businesses.partner_id` then deletes the partner's opens of the business and the rows that remember it as someone's business on the partner's domains. Invitations to the business's team from anyone off the team, such as the partner's people, stop working. The audit log records the release as `partner.business_released`.
 - `releaseBusiness` also drops the business's package, by the rule `setPartnerBusinessBilling` follows. While the subscription is live and the deployment would hear it end, it refuses with `subscription_active` until the partner cancels the subscription in Stripe. It closes any open checkout.
@@ -311,7 +311,7 @@ type ResolvedPlatformKey = { platformKeyId: string; prefix: string; name: string
 - A partner's key invites people as the partner: the owner when it creates a business, and staff through `POST /team/invitations`. Those invitations carry `invited_by_platform_key_id` and no person. A claim link always names the account that sent it. `POST /users` sends its email under the partner's brand.
 - A partner can make as many keys as it likes, so the limits on what its keys send count against the partner: 30 new businesses an hour, 20 team invitations an hour, and the daily `POST /users` invitations.
 - Operations that act as a person stay closed to a partner's key: number search and claims, and reading or changing alert preferences.
-- Links in API responses point at the business's own dashboard: the widget's script tag and the calendar connect link use the partner's origin for a partner's business, and `APP_BASE_URL` for a direct one. The connect route keeps a signed-out visitor's sign-in and its errors on the domain it was opened on. Google's callback still returns to the host's domain, and moves to the partner's with the custom domains work.
+- Links in API responses point at the business's own dashboard: the widget's script tag and the calendar connect link use the partner's origin for a partner's business, and `APP_BASE_URL` for a direct one. The connect route keeps a signed-out visitor's sign-in, its errors and the finished connection on the domain it was opened on, as [A Calendar or Instagram connection on a partner's domain](#a-calendar-or-instagram-connection-on-a-partners-domain) describes.
 
 ## Business templates
 
@@ -384,16 +384,20 @@ interface StripeConnectProvider {
 }
 
 interface CustomHostnameProvider {
+  readonly kind: "cloudflare" | "caddy";
   create(hostname: string): Promise<{ id: string }>;
   status(id: string): Promise<{ state: "pending" | "active" | "failed"; records: DnsRecord[]; errors: string[] }>;
   remove(id: string): Promise<void>;
 }
+
+// The partner's proof that it controls its own domain: the TXT values at a DNS name.
+type TxtLookup = (name: string) => Promise<string[]>;
 ```
 
 - `StripeConnectProvider` has one production adapter, on Stripe's own SDK, and a fake in `packages/providers/src/stripe/fakeStripeConnect.ts` for tests. The adapter creates each partner's account with the full Stripe Dashboard, with Stripe collecting its fees from the partner and covering losses, as a standard account does. Stripe fixes an account's country when it creates it, so the console's Stripe page asks for the country first. Amounts stay in ISO 4217 minor units, and the adapter converts the few currencies Stripe counts differently.
 - `upsertPackagePrice` creates a package's product, its monthly price and its optional one-time setup fee price on the partner's account. Later calls only rename the product or take the package off sale: its price and allowance never change, since businesses may already pay them.
 - `createCheckout` opens a subscription Checkout on the partner's account for the package's monthly price and setup fee, with no application fee, so the subscription and its payments are direct charges. Its metadata names the business and the package, on the checkout and on the subscription it starts. A business that paid before checks out on its earlier customer, so the partner's customer portal keeps every invoice. `expireCheckout` closes a checkout nobody should pay any more, such as one for a package the partner since replaced.
-- `CustomHostnameProvider` has two production adapters. Cloudflare for SaaS serves the cloud. The Caddy adapter serves self-hosted deployments: it checks that the domain's DNS points at the deployment, and Caddy then asks `/api/tls/ask` before issuing a certificate.
+- `CustomHostnameProvider` has two production adapters in `packages/providers/src/customHostnames/customHostnames.ts`, and a fake beside them for tests. Cloudflare for SaaS serves the cloud: `create` registers a custom hostname with a DV certificate validated over HTTP, finds the one an earlier attempt or another partner's claim registered, and throws `CustomHostnameRefusedError` with Cloudflare's reasons when Cloudflare turns the hostname down. The Caddy adapter serves self-hosted deployments: it checks that every address the domain reaches is one of `PARTNER_DOMAIN_CNAME_TARGET`'s, and Caddy then asks `/api/tls/ask` before issuing a certificate. `kind` keeps a domain with the provider that set it up, so a deployment that changes provider leaves the other's domains alone. `systemTxtLookup` asks the system resolver for the partner's TXT record, and `FakeTxtRecords` stands in for it in tests.
 - The Polar provider keeps its interface. Tier billing uses `partner:<id>` as the customer's external id. The webhook route stores a partner's events with `provider_events.partner_id` and no business, and the worker reconciles them with no business in its context.
 - `loadPartnerTierInTransaction` answers what a partner's tier gives its businesses: the pool, or no limit when the deployment has no tier billing, the included numbers, and the trial numbers. Only owners start a tier's checkout, from the console's Billing page, and change or cancel it in Polar's customer portal.
 - The email provider already takes a sender and a Reply-To per message. The worker fills them from `brandForBusiness`.
@@ -425,10 +429,17 @@ interface CustomHostnameProvider {
 
 ### A custom domain
 
-1. A partner adds a domain in the console. The domain module stores it as pending and queues `partnerDomain.provision`.
-2. The worker calls `CustomHostnameProvider.create`, then a scheduler job polls `status` until the domain is active or failed. The console shows the DNS records to add.
-3. When the domain turns active, the module marks it verified and publishes a Redis message, and every admin process clears that host from the brand cache.
-4. From then on, `resolveHostBrand` returns the partner's brand for that host, and `/api/tls/ask` approves it.
+1. A partner's owner or admin adds a domain in the console, while the partner holds a paid tier or the deployment bills none. `addPartnerCustomDomain` in `packages/domain/src/server/partnerDomains.ts` stores it as pending, with a random verification token, and queues `partnerDomain.provision`. A partner has one domain of its own. Other partners may claim the same domain until one of them has it verified.
+2. The worker calls `CustomHostnameProvider.create` and checks the domain once. The scheduler's `partnerDomain.check` then polls `status`, and looks up the TXT record at `_domain-verification.<hostname>` through a `TxtLookup`, until the domain is active or failed: every minute in its first hour, every 5 minutes in its first day, and hourly after. The same job registers any domain whose provisioning job ran out of retries. The console shows the DNS records to add, whether each checks out, and the provider's reasons when it turns a domain down.
+3. When the provider says the domain is active and the TXT record holds the token, the worker marks it verified, marks every other claim on the hostname failed, and publishes a Redis message. Every admin process then clears that host from the brand cache.
+4. From then on, `resolveHostBrand` returns the partner's brand for that host, Better Auth builds links on it, and `/api/tls/ask` approves it. The partner's origin stays on its subdomain, where sign-up works, and moves to the domain only for a partner with no subdomain.
+5. Removing the domain publishes the same message and queues `partnerDomain.remove`, which removes the provider's hostname unless a partner's domain still holds it. Registering, verifying and removing a hostname each take a lock on it.
+
+### A Calendar or Instagram connection on a partner's domain
+
+1. An owner or admin of a partner's business clicks **Connect** on the partner's domain, or opens the Calendar connect link the v1 API returned. The start route signs the domain's origin into the OAuth state, and sends the person to Google or Instagram, through the host's apps.
+2. The provider sends the callback to the one redirect URI the host registered, on the host's domain. `routeOAuthCallback` in `apps/admin/src/lib/oauth-callback-host.ts` checks that the state's origin still resolves to a partner, and the callback redirects to the same path there, with the code and state.
+3. On the partner's domain, where the person's session lives, the callback checks the session, uses up the state, exchanges the code, and lands on that domain's integrations page.
 
 ### A new business from the console
 
@@ -442,7 +453,7 @@ interface CustomHostnameProvider {
 The partner program uses three test seams, from highest to lowest:
 
 - **Domain functions against PostgreSQL**, with the real runtime roles and RLS: business access and audited opens, brands, partner operations, entitlement, usage metering and pools, platform keys, templates, prospect demos, number claims, and lifecycle transitions. The existing `*.integration.test.ts` files are prior art.
-- **The admin's request pipeline**: host resolution in the proxy, sign-in and CSRF on partner domains, branded pages, refused hosts, and the TLS ask route. The existing route handler and proxy tests are prior art.
+- **The admin's request pipeline**: host resolution in the proxy, sign-in and CSRF on partner domains, branded pages, refused hosts, the TLS ask route, and Calendar and Instagram callbacks handed on to a partner's domain. The existing route handler and proxy tests are prior art.
 - **Provider interfaces with fakes**: the worker's billing sync, Polar and Stripe webhooks and reconcile, and custom hostname provisioning. The worker's `handleJob` tests, which pass a fake Polar, are prior art.
 
 `nextPartnerState` and `partnerFeatures` have no I/O, so their tests call them directly. Tests assert what a caller can observe through each interface, not tables or internal calls.

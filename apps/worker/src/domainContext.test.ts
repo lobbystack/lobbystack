@@ -13,6 +13,11 @@ describe("the worker's domain context", () => {
     expect(context.stripeConnect).toBeInstanceOf(StripeConnectAdapter);
   });
 
+  it("keeps the brand change publisher, so a partner's domain going live reaches every admin process", () => {
+    const brandChanges = { publish: async () => undefined };
+    expect(createWorkerDomainContext({ db, brandChanges }, {}).brandChanges).toBe(brandChanges);
+  });
+
   it("has no Stripe Connect client without both variables", () => {
     expect(createWorkerDomainContext({ db }, {})).not.toHaveProperty("stripeConnect");
     expect(createWorkerDomainContext({ db }, { STRIPE_CONNECT_SECRET_KEY: "sk_test_platform" })).not.toHaveProperty("stripeConnect");

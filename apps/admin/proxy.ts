@@ -50,11 +50,15 @@ function hasPrefix(pathname: string, prefixes: readonly string[]): boolean {
 // configured with (an ngrok tunnel in development), and the finance export
 // authenticates with its own token. They answer on hosts no brand answers for,
 // and render no brand.
-const anyHostPrefixes = ["/api/health/", "/api/webhooks/", "/api/internal/"];
+// A self-hosted deployment's Caddy asks /api/tls/ask whether to issue a
+// certificate, on the address Compose gives the admin.
+const TLS_ASK_PATH = "/api/tls/ask";
+const anyHostPrefixes = ["/api/health/", "/api/webhooks/", "/api/internal/", TLS_ASK_PATH];
 // Health checks never wait on the database to learn a hostname's brand: a
 // probe that did would fail, and get the container replaced, whenever the
-// database is slow.
-const healthCheckPrefixes = ["/api/health/"];
+// database is slow. Nor does the TLS ask, which looks up the name Caddy asks
+// about, never the address Caddy calls on.
+const unresolvedPrefixes = ["/api/health/", TLS_ASK_PATH];
 
 // What stays on the host's domain: MCP and its OAuth server, the OpenAPI
 // document, provider webhooks, the host's own brand step, partner signup, and
@@ -98,8 +102,10 @@ function reportResolutionFailure(error: unknown): void {
   void import("@/lib/error-reporting").then(({ reportServerError }) => reportServerError(error, { operation: "resolve_host_brand" })).catch(() => undefined);
 }
 
-function isMaintenanceHealthProbe(pathname: string, method: string): boolean {
-  return (method === "GET" || method === "HEAD") && (pathname === "/api/health/live" || pathname === "/api/health/ready");
+// What still answers during maintenance: health probes, and the TLS ask,
+// since Caddy can't serve a partner's new domain, or renew one, without it.
+function isMaintenanceExempt(pathname: string, method: string): boolean {
+  return (method === "GET" || method === "HEAD") && (pathname === "/api/health/live" || pathname === "/api/health/ready" || pathname === TLS_ASK_PATH);
 }
 
 function maintenanceResponse(headers: Record<string, string>): NextResponse {
@@ -193,7 +199,7 @@ export async function proxy(request: NextRequest) {
   // so the visitor's hostname comes from the Host header.
   const anyHost = hasPrefix(pathname, anyHostPrefixes);
   let resolved: ResolvedBrand | null = null;
-  if (!hasPrefix(pathname, healthCheckPrefixes)) {
+  if (!hasPrefix(pathname, unresolvedPrefixes)) {
     try {
       resolved = await resolveRequestHost(request.headers.get("host") ?? request.nextUrl.host);
     } catch (error) {
@@ -208,9 +214,9 @@ export async function proxy(request: NextRequest) {
   if (resolved?.kind === "partner" && isHostOnlyPath(pathname)) return notFoundResponse(headers);
 
   const isApiRequest = pathname.startsWith("/api/");
-  if (isMaintenanceMode(process.env) && (isWebhookPath(pathname) || (isApiRequest && !isMaintenanceHealthProbe(pathname, request.method)) || stateChangingMethods.has(request.method))) {
+  if (isMaintenanceMode(process.env) && (isWebhookPath(pathname) || (isApiRequest && !isMaintenanceExempt(pathname, request.method)) || stateChangingMethods.has(request.method))) {
     // Webhooks are rejected before their handlers can validate, enqueue, or acknowledge them.
-    // Health probes are the only API exemption: GET handlers can perform side effects.
+    // Health probes and the TLS ask are the only API exemptions: GET handlers can perform side effects.
     return maintenanceResponse(headers);
   }
 

@@ -123,10 +123,10 @@ The brand lives on `public.partners` (migration 0131). Owners and admins write i
 The admin's proxy (`apps/admin/proxy.ts`) resolves each request's `Host` header before any page or route runs. It ignores the header's case, a trailing dot, and the port:
 
 - **The host's own domain** gets the host brand, without a database read to decide it: the hostname in `APP_BASE_URL`, the plain origins in `AUTH_TRUSTED_ORIGINS`, and the hosts in `MARKETING_HOSTS`. Outside production, `localhost`, `127.0.0.1`, `[::1]`, and the hosts in `ALLOWED_DEV_ORIGINS` count too.
-- **A partner's subdomain** of `PARTNER_BASE_DOMAIN`, such as `acme.receptionistportal.com`, gets that partner's brand through `resolveHostBrand`. So does any other verified domain in the partner's `public.partner_domains` rows.
+- **A partner's subdomain** of `PARTNER_BASE_DOMAIN`, such as `acme.receptionistportal.com`, gets that partner's brand through `resolveHostBrand`. So does the partner's own domain, such as `app.acmeagency.com`, once the worker verified it and while the deployment issues certificates for partners' domains, as [A partner's own domain](#a-partners-own-domain) describes.
 - **Any other hostname** gets a plain `404 Not found.` for every page and route. A subdomain left under an earlier `PARTNER_BASE_DOMAIN` counts as any other hostname. Brands reads the database only for a subdomain directly under `PARTNER_BASE_DOMAIN`, or for any hostname once partners can add their own domains, so it refuses `127.0.0.1` in production or a made-up hostname without a database read.
 
-Health checks (`/api/health/*`), provider webhooks (`/api/webhooks/*`), and the finance export (`/api/internal/*`) answer on any hostname, because machines call them on the address they were given: `127.0.0.1:3000` for the Docker and Compose health checks, and an ngrok tunnel for webhooks in development. They render no brand. The proxy never resolves a health check's hostname, so a slow database can't fail a probe and get the container replaced.
+Health checks (`/api/health/*`), provider webhooks (`/api/webhooks/*`), the finance export (`/api/internal/*`), and Caddy's TLS ask (`/api/tls/ask`) answer on any hostname, because machines call them on the address they were given: `127.0.0.1:3000` for the Docker and Compose health checks, `admin:3000` for Compose's Caddy, and an ngrok tunnel for webhooks in development. They render no brand. The proxy never resolves a health check's or the TLS ask's hostname, so a slow database can't fail a probe and get the container replaced.
 
 When the database can't say whether a hostname belongs to a partner, the proxy answers `503`, so no page goes out under the wrong brand. The host's own domain never needs the database to resolve. When the admin can't read the host brand's saved choice, those pages fall back to the environment's.
 
@@ -147,7 +147,7 @@ The checks that trust a browser's origin read the same headers. On the host's do
 - The proxy's CSRF check on changes to `/api/*`.
 - The verification-code resend proof (`hasVerificationFlow`).
 - The dashboard's test call (`resolveLiveWebCallAccess`).
-- Turnstile, which accepts a token on a partner's host only when the visitor solved the challenge on that same hostname. List `PARTNER_BASE_DOMAIN` among the Turnstile widget's hostnames in Cloudflare, or partners' visitors can't solve it.
+- Turnstile, which accepts a token on a partner's host only when the visitor solved the challenge on that same hostname. List `PARTNER_BASE_DOMAIN` among the Turnstile widget's hostnames in Cloudflare, or partners' visitors can't solve it. Invitations link to the partner's subdomain, so sign-up works there. Add a partner's own domain to the list too if people should sign up on it.
 
 A partner's host answers a 404 for what stays on the host's domain: MCP (`/api/mcp`), the OAuth server and its `/.well-known/` documents (Better Auth's copies under `/api/auth/.well-known/` included), the OAuth consent pages, the OpenAPI document (`/api/v1/openapi.json`), provider webhooks, the finance export, the host's onboarding brand step (`POST /api/branding/initial`), and partner signup (`/partner/signup`).
 
@@ -171,21 +171,59 @@ A partner's pages never send its visitors to a host-named domain:
 People sign up, sign in, verify their email, reset their password, and change their email on a partner's host, under the partner's brand. Better Auth (`apps/admin/src/lib/auth.ts`) reads the brand headers the proxy set:
 
 - **Trusted origins**: a request on a partner's host trusts only that host's origin, both for its `Origin` header and for any callback URL it names. A request on the host's domain trusts `APP_BASE_URL` and `AUTH_TRUSTED_ORIGINS`, as before, and a request with no brand header trusts none. Better Auth adds every host it can build links on to the origins it trusts, so a small plugin narrows each request back to what the proxy resolved, and one partner's host never trusts another's.
-- **Links**: with `PARTNER_BASE_DOMAIN` set, Better Auth builds its links on the partner's subdomain for a request there, with the scheme of `APP_BASE_URL`. Every other hostname gets `APP_BASE_URL`, so the OAuth issuer stays put. The links the admin adds itself use the same origin: the sign-in and reset links sent to an address that already has an account, and the email change confirmation page. Sign-up verification and password reset codes carry no link.
+- **Links**: with `PARTNER_BASE_DOMAIN` set, Better Auth builds its links on the partner's subdomain for a request there, with the scheme of `APP_BASE_URL`. A partner's own domain joins the hosts Better Auth builds links on when the proxy resolves a request to it, and leaves 30 seconds after its last request, so a removed domain drops out once no process answers it. Every other hostname gets `APP_BASE_URL`, so the OAuth issuer stays put. The links the admin adds itself use the same origin: the sign-in and reset links sent to an address that already has an account, and the email change confirmation page. Sign-up verification and password reset codes carry no link.
 - **Sessions**: a session cookie belongs to the hostname that set it, so someone who works on a partner's host and on the host's domain signs in on each, with the same account and password.
 - **Google**: a partner's host offers email and password only, because Google's consent screen would name the host's app. `GET /api/auth/providers` answers `{ "google": false }` there, and Better Auth answers a 404 for `/api/auth/sign-in/social`, `/api/auth/link-social`, and `/api/auth/callback/google`. The host's domain keeps Google sign-in when `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are set.
 
 Code that calls Better Auth's handler itself, as the OAuth consent page does, sets the host's brand header the way the proxy would.
 
+### Calendar and Instagram on a partner's host
+
+People at a partner's businesses connect Google Calendar and Instagram on the partner's host, and the connection finishes there. Both go through the host's Google and Meta apps, which accept only the redirect URIs the host registered: `GOOGLE_REDIRECT_URI` and `INSTAGRAM_REDIRECT_URI`, on the host's domain. The person's session cookie belongs to the partner's host, so the host's domain hands each callback on to it:
+
+1. The start route (`/api/calendar/google/start`, `/api/calendar/google/connect` or `/api/integrations/instagram/start`) signs the partner's origin into the OAuth state, beside the person and the business. A state started on the host's domain names no origin.
+2. Google or Meta sends the person to the callback on the host's domain. The callback checks the state's signature and that its origin still resolves to a partner, then redirects to the same path on that origin, with the code and state unchanged. It reads no session and uses up nothing.
+3. On the partner's host, the callback checks that the session's person started the connection, uses up the state, exchanges the code, and lands on that host's integrations page. Calendar's callback also opens the business, under the partner's brand.
+
+A partner's host refuses a state signed on any other host, and the host's domain refuses one whose origin no partner answers any more, such as a domain its partner removed. Either answers 400, so an authorization code never goes to a domain the deployment stopped serving. When the database can't say, the host's domain answers 500 and hands nothing on, and the person can reload the page. The Calendar connect link that `POST /v1/calendars/google/connect` returns already opens on the partner's domain, so its connection finishes there too.
+
 ### A partner's origin and emails
 
-A partner's origin is its subdomain, with the scheme and port of `APP_BASE_URL`: `https://acme.receptionistportal.com` on the cloud, and `http://acme.partners.localhost:13000` in development. A partner with no subdomain under the current base domain has the host's origin. The worker moves every dashboard link in a partner's email to that origin, invitations to the partner's team included.
+A partner's origin is its subdomain, with the scheme and port of `APP_BASE_URL`: `https://acme.receptionistportal.com` on the cloud, and `http://acme.partners.localhost:13000` in development. The worker moves every dashboard link in a partner's email to that origin, invitations to the partner's team included.
+
+The origin stays on the subdomain after the partner connects its own domain. Sign-up needs a Turnstile token solved on the same hostname, and the widget's hostname list covers every subdomain through `PARTNER_BASE_DOMAIN`, while each partner's own domain needs a manual entry. A partner with no current subdomain, as on a deployment without `PARTNER_BASE_DOMAIN`, uses its own domain once the worker verified it, while the deployment still serves partners' own domains. A partner with neither has the host's origin.
 
 A partner's emails go out from `no-reply@` the partner base domain, under the partner's name and logo, with its support email as the Reply-To. Without a support email they have no Reply-To, and without `PARTNER_BASE_DOMAIN` they go out from the address in `EMAIL_FROM`.
 
 ### Partner subdomains
 
 Signup reserves `<slug>.<PARTNER_BASE_DOMAIN>` for each partner. A partner that signed up while `PARTNER_BASE_DOMAIN` was unset or unusable gets its subdomain when the admin next starts, or when someone opens its Branding & domain page. A partner whose subdomain sits under an earlier base domain moves to the current one the same way, since each partner keeps one subdomain. The admin skips a subdomain that's one of the host's own hostnames or another partner's domain, and the page then shows no address.
+
+### A partner's own domain
+
+A partner can show its dashboard on a subdomain of its own website, such as `app.acmeagency.com`, beside its subdomain of `PARTNER_BASE_DOMAIN`. Owners and admins connect it on the **Branding & domain** page, and members see it there. A partner has one domain of its own at a time. A deployment turns this on with one of these:
+
+- **Cloudflare for SaaS**: `CLOUDFLARE_SAAS_API_TOKEN` and `CLOUDFLARE_SAAS_ZONE_ID`, as on the cloud
+- **Caddy's on-demand TLS**: `CADDY_ON_DEMAND_TLS=true`, with Compose's Caddy serving `docker/caddy/Caddyfile.tls` through `docker-compose.tls.yml`
+
+Without either, the page leaves the domain out. While the deployment bills tiers, connecting a domain needs a paid tier: a Free partner's owners see a link to the **Billing** page instead. A deployment that bills no tiers lets any partner connect one.
+
+The domain must be a subdomain outside the host's own hostnames and outside `PARTNER_BASE_DOMAIN`, and no partner may have it verified. It goes through these steps:
+
+1. `addPartnerCustomDomain` saves it as pending in `public.partner_domains`, with a random verification token, and queues `partnerDomain.provision`.
+2. The worker registers it with the provider: a Cloudflare custom hostname with a certificate validated over HTTP, or nothing for Caddy. It then asks the provider about it once, and saves the DNS records the partner adds: a CNAME to `PARTNER_DOMAIN_CNAME_TARGET`, a TXT record at `_domain-verification.<hostname>` that holds the token, and any TXT record Cloudflare asks for.
+3. The `partnerDomain.check` job asks the provider and DNS again every minute in the domain's first hour, every 5 minutes in its first day, and hourly after that. Cloudflare's domain is ready when the hostname and its certificate are both active. Caddy's is ready when every address the domain reaches is one of the target's.
+4. Once the provider reports it ready and the TXT record holds the token, the worker marks the domain verified and publishes a brand change. Every process then answers the domain with the partner's brand, Better Auth builds links on it, and `/api/tls/ask` approves it.
+
+The TXT record proves the partner controls the domain. Anyone can point a CNAME at the deployment, and a domain someone else once connected may still point here, so the provider's answer alone never verifies a domain. Two partners can claim the same domain while neither has it verified, so a claim never keeps a domain from its owner. The first partner whose TXT record checks out gets the domain, and the worker marks every other claim on it failed. The page then tells that partner another dashboard connected the domain first.
+
+When the provider turns a domain down, as Cloudflare does for a name it won't serve, the page shows Cloudflare's reasons, and the `partnerDomain.check` job tries again on the same schedule. The job also registers any domain whose `partnerDomain.provision` job ran out of retries, so a provider outage never strands one. A domain the provider or DNS can't answer for waits its turn, and the job fails only when nothing answered.
+
+The page asks for the domain's state every 15 seconds while it waits, and shows each record with whether it checks out, and the provider's own error messages. When Cloudflare gives up on a domain, the page marks it failed, and the partner removes it and connects it again. Removing a domain announces a brand change, so every process stops answering it, and queues `partnerDomain.remove`, which removes the Cloudflare hostname unless a partner's domain still holds it. Registering, verifying and removing a hostname each hold a lock on it, so a removal never deletes a Cloudflare hostname that a new claim just reused.
+
+Only the worker marks a partner's own domain verified. The app role adds one only as pending, never changes one, and removes one as the system actor once the domain module checked the person's role. The worker reads and updates partners' own domains and no subdomain, through column grants that never move a domain to another partner or hostname or change its token.
+
+`/api/tls/ask?domain=<hostname>` answers Caddy before it issues a certificate. It approves the host's own domain without the database, and any hostname a brand answers for: a partner's subdomain, and a partner's verified own domain. Everything else gets a 404, and the route answers 503 when the database can't say, so Caddy asks again later. It answers during maintenance too, so renewals keep working.
 
 ### How a change reaches every process
 
@@ -200,8 +238,10 @@ Each admin and worker process caches brands for 30 seconds, including hostnames 
 - `packages/shared/src/hosts.ts`: which hostnames are the host's own domain. `partnerBrand()` in `brand.ts` builds a partner's brand from its saved fields.
 - `packages/domain/src/server/brands.ts`: answers which brand a hostname (`resolveHostBrand`), a business (`brandForBusiness`), or a queued email (`brandForEmail`) shows, as [Partner brands](#partner-brands) describes, with a 30-second cache per process and the Redis channel that clears it. Text messages never ask it, so they keep the host's name.
 - `packages/domain/src/server/partners.ts`: the Branding & domain page's read and save (`getPartnerBrandSettings`, `savePartnerBrand`), which check the partner member's role, and the subdomain reservation.
+- `packages/domain/src/server/partnerDomains.ts`: a partner's own domain, from the page's add and remove to the worker's provisioning and checks, as [A partner's own domain](#a-partners-own-domain) describes. `packages/providers/src/customHostnames/` holds the `CustomHostnameProvider` interface, its Cloudflare for SaaS and Caddy adapters, the TXT lookup, and the fakes its tests use. Migration 0152 adds the domain's provider, records, errors and verification token to `public.partner_domains`, and keeps a hostname unique among verified domains only.
 - `apps/admin/proxy.ts` and `apps/admin/src/lib/host-resolution.ts`: resolve each request's `Host` header, answer a hostname no brand answers for with a 404, and pass the brand on in the headers `apps/admin/src/lib/request-brand.ts` defines. The standalone server's request URL holds the address it listens on, so only the `Host` header says where the visitor was.
 - `apps/admin/src/lib/auth.ts`: Better Auth's base URL and trusted origins for each request, and Google sign-in on the host's domain only, as [Signing in on a partner's host](#signing-in-on-a-partners-host) describes.
+- `apps/admin/src/lib/oauth-callback-host.ts`: where a Google Calendar or Instagram callback goes, as [Calendar and Instagram on a partner's host](#calendar-and-instagram-on-a-partners-host) describes.
 - `apps/admin/src/lib/branding.ts`: loads the brand the proxy resolved for each request. If the database can't be read, pages on the host's own domain fall back to the environment and the default, and the admin reports the error at most once a minute.
 - `apps/admin/src/lib/partner-site.ts` and `apps/admin/app/(partner-site)`: each partner's copy of the prerendered public pages, as [Prerendered pages](#prerendered-pages) describes.
 - `apps/admin/src/lib/brand-changes.ts`: publishes brand changes to Redis, and listens for them in each copy of the brand cache.
@@ -210,6 +250,8 @@ Each admin and worker process caches brands for 30 seconds, including hostnames 
   - `GET /api/branding/logo` serves the saved logo of the request's brand, or with `?partner=` a partner's logo or favicon. Its URL carries the image's SHA-256 (`?v=`), so browsers can keep it for good.
   - `POST /api/branding/initial` saves the onboarding choice.
   - `GET` and `PUT /api/partner/branding` read and save a partner's brand for the console. A save also marks each of the partner's public pages to render again on its next visit.
+  - `GET`, `POST` and `DELETE /api/partner/domain` read a partner's addresses, and connect and remove its own domain.
+  - `GET /api/tls/ask` answers Caddy's on-demand TLS.
 - `BrandingProvider` (`apps/admin/src/components/branding-provider.tsx`) gives the name and logo to every component, and on a partner's pages the partner's favicon, color, and links. It sets the `{{appName}}` i18n variable, and it keeps the tab's title and icon in step when they differ from what the server rendered.
 
 ### How an email gets its brand

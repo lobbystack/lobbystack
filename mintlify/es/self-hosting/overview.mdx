@@ -49,7 +49,9 @@ Configure `FIRECRAWL_API_KEY` en el servicio `worker`. Sin ella, la importación
 
 En Google Cloud, active la API de Google Calendar y cree un cliente OAuth para una aplicación web. Agregue `https://su_dominio_de_administracion/api/calendar/google/callback` como URI de redireccionamiento autorizado. Configure `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` en el servicio `admin`. La plantilla completa `GOOGLE_REDIRECT_URI`, y el worker lee los tres valores del servicio de administración.
 
-Con ambos valores configurados, las páginas de inicio de sesión y de registro también ofrecen **Continuar con Google**. Agregue `https://su_dominio_de_administracion/api/auth/callback/google` al mismo cliente OAuth como segundo URI de redireccionamiento autorizado. Los subdominios de sus socios no lo ofrecen: allí las personas inician sesión con correo y contraseña.
+Con ambos valores configurados, las páginas de inicio de sesión y de registro también ofrecen **Continuar con Google**. Agregue `https://su_dominio_de_administracion/api/auth/callback/google` al mismo cliente OAuth como segundo URI de redireccionamiento autorizado. Los dominios de sus socios no lo ofrecen: allí las personas inician sesión con correo y contraseña.
+
+Los negocios de sus socios conectan su calendario en el dominio del socio con el mismo URI de redireccionamiento `/api/calendar/google/callback`. Google devuelve a la persona a su dominio de administración, que la redirige al dominio del socio para terminar.
 
 #### Use un dominio personalizado
 
@@ -71,7 +73,7 @@ El archivo [`docker-compose.yml`](https://github.com/lobbystack/lobbystack/blob/
 - un volumen persistente de Docker para las grabaciones y los documentos subidos
 - el panel de administración de Next.js y la API HTTP
 - el worker en segundo plano y el despachador de la bandeja de salida transaccional, que también ejecuta cada llamada de GPT-Live
-- Caddy para dirigir el nombre de host del panel por HTTP simple, detrás del proxy o balanceador de carga que termina HTTPS
+- Caddy para dirigir el nombre de host del panel, por HTTP simple detrás del proxy o balanceador de carga que termina HTTPS, o por HTTPS con los certificados que Caddy emite para su panel y los dominios de sus socios
 
 LobbyStack no agrega contenedores de monitoreo a la pila de Compose. Los entornos de ejecución del servidor pueden enviar trazas, métricas y registros de OpenTelemetry a un backend compatible con OTLP que usted configure.
 

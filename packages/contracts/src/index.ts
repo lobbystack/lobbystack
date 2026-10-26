@@ -219,6 +219,10 @@ export const queueForJobType = {
   "billing.chargePartnerNumbers": "maintenance",
   // The hourly clock that pauses a partner's businesses 30 days after its tier ends, and deletes them at 90.
   "partnerLifecycle.advance": "maintenance",
+  // A partner's own domain: registered with the custom hostname provider, checked until it's active, and removed.
+  "partnerDomain.provision": "default",
+  "partnerDomain.check": "maintenance",
+  "partnerDomain.remove": "maintenance",
   "calendar.syncAppointment": "default",
   "calendar.reconcileBusiness": "default",
   "calendar.deleteEvent": "default",

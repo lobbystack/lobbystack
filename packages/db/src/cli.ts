@@ -169,6 +169,8 @@ async function main(): Promise<void> {
             ,('lobbystack_app', 'partner_invitations', 'INSERT')
             ,('lobbystack_app', 'partner_domains', 'SELECT')
             ,('lobbystack_app', 'partner_domains', 'INSERT')
+            ,('lobbystack_app', 'partner_domains', 'DELETE')
+            ,('lobbystack_worker', 'partner_domains', 'SELECT')
             ,('lobbystack_app', 'partner_signup_invitations', 'SELECT')
             ,('lobbystack_app', 'partner_signup_invitations', 'INSERT')
             ,('lobbystack_readonly', 'partners', 'SELECT')
@@ -297,6 +299,11 @@ async function main(): Promise<void> {
             ('partner_domains', 'updated_at', true),
             ('partner_domains', 'partner_id', false),
             ('partner_domains', 'kind', false),
+            ('partner_domains', 'provider', false),
+            ('partner_domains', 'provider_hostname_id', false),
+            ('partner_domains', 'dns_records', false),
+            ('partner_domains', 'failed_at', false),
+            ('partner_domains', 'verification_token', false),
             ('partner_platform_keys', 'revoked_at', true),
             ('partner_platform_keys', 'revoked_by_user_id', true),
             ('partner_platform_keys', 'updated_at', true),
@@ -386,6 +393,30 @@ async function main(): Promise<void> {
         `);
         if (partnerCheckoutWorkerGrantFailures.rows.length > 0) {
           throw new Error(`Partner checkout worker grant verification failed for: ${partnerCheckoutWorkerGrantFailures.rows.map((row) => `${row.column_name}:${row.granted ? "missing" : "unexpected"}`).join(", ")}`);
+        }
+        // The worker records what the provider says of a partner's own domain,
+        // and never moves it to another partner, hostname, kind or provider,
+        // or changes the token the partner proves it controls the domain with.
+        const partnerDomainWorkerGrantFailures = await migrator.db.execute<{ column_name: string; granted: boolean }>(sql`
+          select expected.column_name, expected.granted
+          from (values
+            ('provider_hostname_id', true),
+            ('dns_records', true),
+            ('provider_errors', true),
+            ('checked_at', true),
+            ('verified_at', true),
+            ('failed_at', true),
+            ('updated_at', true),
+            ('partner_id', false),
+            ('hostname', false),
+            ('kind', false),
+            ('provider', false),
+            ('verification_token', false)
+          ) as expected(column_name, granted)
+          where has_column_privilege('lobbystack_worker', 'public.partner_domains', expected.column_name, 'UPDATE') <> expected.granted
+        `);
+        if (partnerDomainWorkerGrantFailures.rows.length > 0) {
+          throw new Error(`Partner domain worker grant verification failed for: ${partnerDomainWorkerGrantFailures.rows.map((row) => `${row.column_name}:${row.granted ? "missing" : "unexpected"}`).join(", ")}`);
         }
         // The worker settles a partner number's months, and never moves the
         // number to another partner or business or changes what it costs. The

@@ -61,3 +61,5 @@ La carte Instagram n'apparaît que si votre serveur a une application Meta. Cré
 | `INSTAGRAM_WEBHOOK_VERIFY_TOKEN` | Une chaîne aléatoire que vous saisissez aussi dans les réglages de webhook de l'application. L'admin seulement. |
 
 Dans l'application Meta, définissez l'URL de rappel du webhook sur `APP_BASE_URL` suivi de `/api/webhooks/instagram`, et abonnez-vous au champ `messages`. Avant que d'autres entreprises que la vôtre puissent se connecter, Meta doit approuver l'autorisation `instagram_business_manage_messages` de l'application par l'App Review.
+
+Les entreprises de vos partenaires connectent Instagram sur le domaine du partenaire avec la même `INSTAGRAM_REDIRECT_URI`. Instagram renvoie la personne vers `APP_BASE_URL`, qui la redirige vers le domaine du partenaire pour terminer.

@@ -94,3 +94,38 @@ it("builds Better Auth's reset links on the partner's subdomain, and on APP_BASE
   expect(followed.status).toBe(302);
   expect(followed.headers.get("location")).toMatch(new RegExp(`^${acme}/en/reset-password\\?token=`));
 });
+
+it("builds links on a partner's own domain once the proxy resolved it there, and with only Caddy's on-demand TLS turned on", async () => {
+  const own = "http://app.acme.example:3000";
+  const ownBrand = { host: "app.acme.example:3000", "x-lobbystack-brand": `partner:${partnerId}`, "x-lobbystack-brand-origin": own };
+  const now = new Date();
+  store.tables.user!.push({ id: "owner", name: "Owner", email: "owner@example.invalid", emailVerified: true, normalizedEmail: "owner@example.invalid", preferredLocale: "en", createdAt: now, updatedAt: now });
+  for (const baseDomain of ["partners.localhost", ""]) {
+    vi.resetModules();
+    vi.stubEnv("PARTNER_BASE_DOMAIN", baseDomain);
+    vi.stubEnv("CADDY_ON_DEMAND_TLS", "true");
+    store.queued = [];
+    expect((await post("/request-password-reset", ownBrand, own, { email: "owner@example.invalid", redirectTo: "/en/reset-password" })).status, baseDomain).toBe(200);
+    const [link] = store.queued.map(payload => (payload.variables as { url: string }).url);
+    expect(link, baseDomain).toMatch(new RegExp(`^${own}/api/auth/reset-password/[^/?]+\\?callbackURL=%2Fen%2Freset-password$`));
+    // The domain trusts only its own origin, as a subdomain does.
+    expect((await post("/sign-in/email", ownBrand, acme, { email: "nobody@example.invalid", password: "StrongPassword123!" })).status, baseDomain).toBe(403);
+  }
+});
+
+it("keeps a partner's own domain among Better Auth's hosts for the brand cache's window after its last request", async () => {
+  const { admitPartnerHost } = await import("./auth");
+  const allowedHosts = ["*.partners.localhost", "*.partners.localhost:*"];
+  const env = { PARTNER_BASE_DOMAIN: "partners.localhost" };
+  const own = new Headers({ "x-lobbystack-brand": `partner:${partnerId}`, "x-lobbystack-brand-origin": "https://app.acme.example" });
+  admitPartnerHost(allowedHosts, own, env, 0);
+  admitPartnerHost(allowedHosts, own, env, 10_000);
+  expect(allowedHosts).toEqual(["*.partners.localhost", "*.partners.localhost:*", "app.acme.example"]);
+  // A subdomain is already covered, and the host's domain is no partner's.
+  admitPartnerHost(allowedHosts, new Headers(acmeBrand), env, 20_000);
+  admitPartnerHost(allowedHosts, new Headers(hostBrand), env, 20_000);
+  expect(allowedHosts).toEqual(["*.partners.localhost", "*.partners.localhost:*", "app.acme.example"]);
+  // 30 seconds after its last request, the next request on any host drops it.
+  admitPartnerHost(allowedHosts, new Headers(hostBrand), env, 40_001);
+  expect(allowedHosts).toEqual(["*.partners.localhost", "*.partners.localhost:*"]);
+});

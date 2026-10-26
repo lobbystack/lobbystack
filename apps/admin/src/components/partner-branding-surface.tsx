@@ -1,17 +1,17 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import { ExternalLink, ImageUp, X } from "lucide-react";
+import { ImageUp, X } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 import { MAX_BRAND_LOGO_BYTES, PARTNER_NAME_MAX_LENGTH, brandLogoContentType, brandLogoContentTypes, normalizeBrandColor, type BrandImage, type PartnerRole } from "@lobbystack/shared";
 import { BrandLockup } from "@/components/brand-mark";
-import { useBranding } from "@/components/branding-provider";
 import { PageHeader } from "@/components/page-header";
+import { PartnerDomainSettings } from "@/components/partner-domain-settings";
 import { useConsolePartner } from "@/components/partner-shell";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend, FieldSet } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -130,8 +130,8 @@ function ImageField({ id, image, label, help, savedUrl, choice, disabled, onChan
 }
 
 /**
- * The console's Branding & domain page: the partner's subdomain, and the
- * name, logo, favicon, color and links its businesses see on it and in its
+ * The console's Branding & domain page: the partner's addresses, and the
+ * name, logo, favicon, color and links its businesses see on them and in its
  * emails. Owners and admins save it; members see it with no way to change it.
  * The server enforces the same rule.
  */
@@ -139,7 +139,6 @@ export function PartnerBrandingSurface() {
   const { t } = useTranslation("partner");
   const id = useId();
   const partner = useConsolePartner();
-  const { appName } = useBranding();
   const queryClient = useQueryClient();
   const queryKey = ["partner-branding", partner.partnerId];
   const settings = useQuery({ queryKey, queryFn: () => requestJson<BrandSettings>(`/api/partner/branding?partnerId=${encodeURIComponent(partner.partnerId)}`) });
@@ -209,27 +208,12 @@ export function PartnerBrandingSurface() {
         <PageHeader title={t("branding.title")} />
         <p className="text-sm text-muted-foreground">{t("branding.description")}</p>
       </div>
+      {/* Its own form and requests, beside the brand's. */}
+      <PartnerDomainSettings />
       {!data || !draft ? (
         <Surface className="flex flex-col gap-4 p-6"><Skeleton className="h-5 w-40" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></Surface>
       ) : (
         <form className="flex flex-col gap-6" noValidate onSubmit={submit}>
-          <Surface className="p-6">
-            <FieldSet>
-              <FieldLegend>{t("branding.domain.title")}</FieldLegend>
-              {data.subdomain && data.subdomainUrl ? (
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="font-mono text-sm [overflow-wrap:anywhere]" dir="ltr">{data.subdomain}</span>
-                  <a className={buttonVariants({ size: "sm", variant: "outline" })} href={data.subdomainUrl} rel="noopener noreferrer" target="_blank">
-                    <ExternalLink />
-                    {t("branding.domain.open")}
-                  </a>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">{t("branding.domain.none", { appName })}</p>
-              )}
-            </FieldSet>
-          </Surface>
-
           <Surface className="p-6">
             <FieldGroup className="gap-8">
               <FieldSet>

@@ -48,7 +48,7 @@ it("sends an owner or admin of the link's business to Google for that business",
   expect(mocks.operator).toHaveBeenCalledWith(expect.any(Request));
   expect(mocks.role).toHaveBeenCalledWith({ minimumRole: "business_admin" });
   expect(mocks.rate).toHaveBeenCalledWith({ operation: "start", userId: "user-1", businessId, ip: "203.0.113.10" });
-  expect(mocks.state).toHaveBeenCalledWith({ userId: "user-1", businessId });
+  expect(mocks.state).toHaveBeenCalledWith({ userId: "user-1", businessId, origin: null });
   expect(mocks.store).toHaveBeenCalledWith("signed-state");
 });
 
@@ -78,7 +78,7 @@ it("sends back anyone who isn't an owner or admin, or is over the limits, withou
   expect(mocks.store).not.toHaveBeenCalled();
 });
 
-it("keeps a link opened on a partner's domain there, for sign-in and for errors", async () => {
+it("keeps a link opened on a partner's domain there, for sign-in, errors and Google's callback", async () => {
   const partnerOrigin = "https://acme.portal.example.test";
   const openOnPartner = () => GET(new Request(`${partnerOrigin}/api/calendar/google/connect?businessId=${businessId}&token=signed-link`, { headers: { "x-lobbystack-brand": "partner:3c2b1a09-8f7e-4d6c-9b5a-4f3e2d1c0b9a", "x-lobbystack-brand-origin": partnerOrigin } }));
   mocks.operator.mockRejectedValueOnce(Response.json({ error: "Authentication required.", code: "unauthorized" }, { status: 401 }));
@@ -87,4 +87,7 @@ it("keeps a link opened on a partner's domain there, for sign-in and for errors"
   expect(login.searchParams.get("returnTo")).toBe(`/api/calendar/google/connect?businessId=${businessId}&token=signed-link`);
   mocks.verifyLink.mockReturnValueOnce(null);
   expect((await openOnPartner()).headers.get("location")).toBe(`${partnerOrigin}/integrations?calendar=google&status=error`);
+  // Signed in there, the state names the partner's domain, where Google's callback then finishes.
+  expect((await openOnPartner()).headers.get("location")).toBe("https://accounts.google.test/o/oauth2/v2/auth?state=signed-state");
+  expect(mocks.state).toHaveBeenCalledWith({ userId: "user-1", businessId, origin: partnerOrigin });
 });

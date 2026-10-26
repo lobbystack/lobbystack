@@ -42,6 +42,8 @@ export async function configureSchedulers(
     { queue: "maintenance", name: "partner-number-charges", type: "billing.chargePartnerNumbers", every: 60 * 60_000, businessId: null },
     // A partner's businesses pause within the hour once their 30 days after its tier ended are up, and the host deletes them within the hour at 90.
     { queue: "maintenance", name: "partner-lifecycle", type: "partnerLifecycle.advance", every: 60 * 60_000, businessId: null },
+    // A partner's new domain goes live within a minute of the provider activating it; older ones are checked less often.
+    { queue: "maintenance", name: "partner-domain-check", type: "partnerDomain.check", every: 60_000, businessId: null },
     // A call whose worker died keeps talking with nobody answering, so look every minute.
     { queue: "critical", name: "live-orphan-recovery", type: "live.recoverOrphans", every: 60_000, businessId: null },
   ];

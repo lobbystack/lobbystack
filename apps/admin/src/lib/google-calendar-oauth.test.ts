@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CALENDAR_CONNECT_LINK_LIFETIME_MS, createCalendarConnectLink, createCalendarOAuthState, verifyCalendarConnectLinkToken, verifyCalendarOAuthState } from "./google-calendar-oauth";
+import { signOAuthPayload } from "./signed-oauth-state";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -12,6 +13,17 @@ describe("Google Calendar OAuth state", () => {
     vi.stubEnv("BETTER_AUTH_SECRET", "oauth-test-secret");
     const state = createCalendarOAuthState({ userId: "user-1", businessId: "business-1" });
     expect(verifyCalendarOAuthState(state)).toMatchObject({ userId: "user-1", businessId: "business-1" });
+  });
+
+  it("names the partner's host a connection started on, and no host on the host's domain", () => {
+    vi.stubEnv("BETTER_AUTH_SECRET", "oauth-test-secret");
+    expect(verifyCalendarOAuthState(createCalendarOAuthState({ userId: "user-1", businessId: "business-1", origin: "https://app.acme.example" }))).toMatchObject({ origin: "https://app.acme.example" });
+    expect(verifyCalendarOAuthState(createCalendarOAuthState({ userId: "user-1", businessId: "business-1", origin: null }))).not.toHaveProperty("origin");
+    // A signed state whose origin isn't one is refused, so a callback never goes anywhere but an origin.
+    for (const origin of ["https://app.acme.example/path", "javascript:alert(1)", "app.acme.example", 42]) {
+      const state = signOAuthPayload("google-calendar:state", { userId: "user-1", businessId: "business-1", origin, issuedAt: Date.now(), nonce: "2f0c1d2e-3f40-4a51-8b62-7c83d94ea5b6" }, "unconfigured");
+      expect(verifyCalendarOAuthState(state), String(origin)).toBeNull();
+    }
   });
 
   it("rejects tampered state", () => {

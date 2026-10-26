@@ -44,6 +44,38 @@ La respuesta de disponibilidad del servicio de administración incluye comprobac
 
 LobbyStack no ejecuta contenedores de monitoreo. Los registros de la aplicación siguen disponibles mediante `docker compose logs`, y los endpoints de estado siguen funcionando.
 
+## Sirva HTTPS desde Caddy
+
+De forma predeterminada, el Caddy de Compose sirve `APP_HOSTNAME` por HTTP simple y no publica el puerto 443, para uso local o detrás de su propio proxy HTTPS. En un servidor público, Caddy puede servir HTTPS por sí mismo: `docker-compose.tls.yml` lo cambia a `docker/caddy/Caddyfile.tls` y publica el puerto 443. Defina estos valores en `.env`:
+
+```dotenv
+COMPOSE_FILE=docker-compose.yml:docker-compose.tls.yml
+HTTP_BIND_ADDRESS=0.0.0.0
+CADDY_ON_DEMAND_TLS=true
+```
+
+Con `COMPOSE_FILE`, cada comando `docker compose` usa los dos archivos. Apunte el nombre DNS del panel al servidor, abra los puertos 80 y 443, y reinicie la pila. Caddy obtiene el certificado de un nombre de host la primera vez que alguien lo visita. Antes, consulta al admin en `/api/tls/ask`, que solo aprueba estos nombres de host:
+
+- el nombre de host de `APP_BASE_URL`, los orígenes de `AUTH_TRUSTED_ORIGINS` y los hosts de `MARKETING_HOSTS`
+- los subdominios de `PARTNER_BASE_DOMAIN` de sus socios
+- los dominios que sus socios conectaron, una vez que el worker comprobó que su DNS apunta a su servidor y que su registro TXT está en su lugar
+
+Un dominio que otra persona apunte a su servidor no obtiene certificado. El admin responde a Caddy también durante el mantenimiento, para que los dominios nuevos de los socios y las renovaciones sigan funcionando.
+
+Con `CADDY_ON_DEMAND_TLS=true`, los socios conectan un subdominio de su propio sitio web en la página **Marca y dominio** de la consola. Mientras venda niveles de socio con los productos `POLAR_PARTNER_*`, un socio necesita un nivel de pago para hacerlo; si no, cualquier socio puede. La página muestra dos registros que agregar: un CNAME que apunta a [`PARTNER_DOMAIN_CNAME_TARGET`](/es/self-hosting/environment-variables#socios), y un registro TXT que demuestra que el socio controla el dominio. Deje `CADDY_ON_DEMAND_TLS` en `false` mientras su Caddy sirva HTTP simple, porque los dominios de los socios no obtendrían certificado.
+
+## Conecte los dominios de los socios con Cloudflare for SaaS
+
+Si el DNS de `PARTNER_BASE_DOMAIN` está en Cloudflare, los dominios propios de sus socios pueden pasar por Cloudflare for SaaS en lugar del TLS bajo demanda de Caddy. Cloudflare emite entonces el certificado de cada dominio, y el worker registra y comprueba cada dominio mediante la API de Cloudflare. Configúrelo una vez:
+
+1. En la zona de Cloudflare de `PARTNER_BASE_DOMAIN`, abra **SSL/TLS** > **Custom Hostnames** y active Cloudflare for SaaS.
+2. Agregue un registro DNS con proxy que apunte a su servidor, como `host.partners.example.com`, y agréguelo con **Add Fallback Origin** en la página **Custom Hostnames**.
+3. Cree un token de API con el permiso **Zone** > **SSL and Certificates** > **Edit** para esa zona.
+4. En `.env`, defina el token en `CLOUDFLARE_SAAS_API_TOKEN` y el ID de la zona en `CLOUDFLARE_SAAS_ZONE_ID`, y reinicie la pila.
+5. Configure el modo de cifrado SSL/TLS de la zona en **Full**. Cloudflare se conecta a su servidor con el dominio propio de cada socio, que su certificado de origen no cubre.
+
+Su servidor debe responder por HTTPS en el puerto 443 para cualquier nombre de host, y pasar cada solicitud al admin con su encabezado `Host`. Luego, los socios apuntan un registro CNAME al origen de respaldo, o a [`PARTNER_DOMAIN_CNAME_TARGET`](/es/self-hosting/environment-variables#socios) si lo define, y agregan el registro TXT que muestra su consola. Si define tanto Cloudflare for SaaS como `CADDY_ON_DEMAND_TLS`, el despliegue usa Cloudflare for SaaS.
+
 ## Elija un backend de almacenamiento
 
 El proveedor local predeterminado admite un solo host de Docker. Haga una copia de seguridad del volumen `storage_data` junto con PostgreSQL y restaure ambos desde el mismo punto de recuperación.

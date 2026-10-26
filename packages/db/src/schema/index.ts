@@ -278,11 +278,25 @@ export const partnerDomains = pgTable(
     hostname: varchar("hostname", { length: 253 }).notNull(),
     kind: varchar("kind", { length: 16 }).$type<"subdomain" | "custom">().notNull(),
     verifiedAt: timestamp("verified_at", { withTimezone: true }),
+    // A partner's own domain: the provider that set it up, its id there, and what the provider last said.
+    provider: varchar("provider", { length: 16 }).$type<"cloudflare" | "caddy">(),
+    providerHostnameId: text("provider_hostname_id"),
+    dnsRecords: jsonb("dns_records").$type<Array<{ type: "CNAME" | "TXT"; name: string; value: string; verified: boolean }>>().notNull().default([]),
+    providerErrors: jsonb("provider_errors").$type<string[]>().notNull().default([]),
+    checkedAt: timestamp("checked_at", { withTimezone: true }),
+    failedAt: timestamp("failed_at", { withTimezone: true }),
+    addedByUserId: uuid("added_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    // The value a partner's own domain publishes as a TXT record to prove the partner controls it.
+    verificationToken: varchar("verification_token", { length: 64 }).notNull().default(sql`replace(gen_random_uuid()::text, '-', '')`),
     ...timestamps,
   },
   (table) => [
-    uniqueIndex("partner_domains_hostname_unique").on(table.hostname),
+    // Partners' claims on the same domain of their own wait side by side until one is verified.
+    uniqueIndex("partner_domains_verified_hostname_unique").on(table.hostname).where(sql`${table.verifiedAt} IS NOT NULL OR ${table.kind} = 'subdomain'`),
+    index("partner_domains_hostname_idx").on(table.hostname),
     uniqueIndex("partner_domains_one_subdomain").on(table.partnerId).where(sql`${table.kind} = 'subdomain'`),
+    uniqueIndex("partner_domains_one_custom").on(table.partnerId).where(sql`${table.kind} = 'custom'`),
+    index("partner_domains_pending_custom_idx").on(table.checkedAt).where(sql`${table.kind} = 'custom' AND ${table.verifiedAt} IS NULL AND ${table.failedAt} IS NULL`),
   ],
 );
 

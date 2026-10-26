@@ -1,0 +1,14 @@
+# HTTPS from Compose's Caddy on a public server: the dashboard and every
+# partner's domain, with certificates Caddy issues on demand once the admin
+# approves each hostname at /api/tls/ask. Use it on top of docker-compose.yml,
+# with COMPOSE_FILE=docker-compose.yml:docker-compose.tls.yml in .env, and set
+# HTTP_BIND_ADDRESS=0.0.0.0 and CADDY_ON_DEMAND_TLS=true there too. Without
+# this file, the stack publishes no port 443, so it keeps running behind
+# another proxy that already holds the server's port 443.
+services:
+  caddy:
+    volumes:
+      - ./docker/caddy/Caddyfile.tls:/etc/caddy/Caddyfile:ro
+    ports:
+      - "${HTTP_BIND_ADDRESS:-127.0.0.1}:${HTTPS_PORT:-443}:443"
+      - "${HTTP_BIND_ADDRESS:-127.0.0.1}:${HTTPS_PORT:-443}:443/udp"

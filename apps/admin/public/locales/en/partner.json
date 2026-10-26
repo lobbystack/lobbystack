@@ -362,7 +362,60 @@
     "domain": {
       "title": "Dashboard address",
       "open": "Open",
-      "none": "You don't have an address of your own yet. Ask {{appName}} to set one up."
+      "none": "You don't have a subdomain yet. Ask {{appName}} to set one up.",
+      "subdomainLabel": "Your subdomain",
+      "own": {
+        "title": "Your own domain",
+        "description": "Put your dashboard on a subdomain of your website, such as app.yourcompany.com. Your subdomain keeps working beside it.",
+        "label": "Domain",
+        "placeholder": "app.yourcompany.com",
+        "help": "You'll add two DNS records at your DNS provider next.",
+        "connect": "Connect domain",
+        "connecting": "Connecting…",
+        "added": "Domain connected. Add its DNS records next.",
+        "paidTier": "Your own domain comes with a paid tier.",
+        "paidTierAskOwner": "Your own domain comes with a paid tier. An owner can choose one on the Billing page.",
+        "chooseTier": "Choose a tier",
+        "membersCantEdit": "Only owners and admins can connect a domain.",
+        "status": {
+          "pending": "Waiting for DNS",
+          "active": "Active",
+          "failed": "Failed"
+        },
+        "settingUp": "We're setting up your domain. Its DNS records show here within a minute.",
+        "pendingHelp": "Add these records at your DNS provider. We check for them every few minutes, and a DNS change can take a few hours to reach us.",
+        "activeHelp": "Your dashboard and sign-in pages work on this domain now.",
+        "failedHelp": "We couldn't set up this domain. Remove it, check its DNS records, then connect it again.",
+        "takenHelp": "Another dashboard connected this domain first. Remove it here to connect a different one.",
+        "records": {
+          "type": "Type",
+          "name": "Name",
+          "value": "Value",
+          "status": "Status",
+          "verified": "Found",
+          "waiting": "Not found yet",
+          "copy": "Copy",
+          "copied": "Copied"
+        },
+        "providerSays": "Your certificate provider reports:",
+        "checkedAt": "Last checked {{time}}.",
+        "remove": "Remove domain",
+        "removeTitle": "Remove {{hostname}}?",
+        "removeDescription": "People can no longer open your dashboard on this domain. You can connect it again later.",
+        "removed": "Domain removed.",
+        "cancel": "Cancel",
+        "errors": {
+          "invalid": "Enter a subdomain of your website, such as app.yourcompany.com.",
+          "reserved": "That domain belongs to {{appName}}. Enter a subdomain of your own website.",
+          "taken": "Another dashboard already uses that domain.",
+          "exists": "Remove your current domain before you connect another.",
+          "paidTier": "Your own domain comes with a paid tier.",
+          "unavailable": "{{appName}} can't connect your own domain.",
+          "forbidden": "Only owners and admins can change your domain.",
+          "failed": "We couldn't save your domain. Try again.",
+          "loadFailed": "We couldn't load your addresses. Refresh to try again."
+        }
+      }
     },
     "brand": {
       "title": "Brand"

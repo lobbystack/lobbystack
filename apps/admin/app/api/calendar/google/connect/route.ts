@@ -19,8 +19,8 @@ export const dynamic = "force-dynamic";
  * the link's business, and sends them to Google as the integrations page's
  * Connect button does. Nothing changes until they agree there; the callback
  * then connects the calendar and opens that business. A partner's business
- * gets its link on the partner's domain, the only one it opens on, so sign-in
- * and errors stay on the domain the link was opened on.
+ * gets its link on the partner's domain, the only one it opens on, so sign-in,
+ * errors and Google's callback stay on the domain the link was opened on.
  */
 export async function GET(request: Request) {
   const appUrl = (path: string) => new URL(path, partnerRequestOrigin(request.headers) ?? process.env.APP_BASE_URL ?? request.url);
@@ -40,7 +40,7 @@ export async function GET(request: Request) {
     }
     const rate = await enforceCalendarOAuthRateLimits({ operation: "start", userId: operator.userId, businessId: operator.businessId, ip: trustedClientIp(request) });
     if (!rate.allowed) return failed();
-    const state = createCalendarOAuthState(operator);
+    const state = createCalendarOAuthState({ ...operator, origin: partnerRequestOrigin(request.headers) });
     await storeCalendarOAuthState(state);
     return NextResponse.redirect(googleCalendarProvider().buildAuthorizationUrl({ state }));
   } catch (error) {

@@ -14,6 +14,7 @@ import { createWebhookSender, processWebhookDelivery, pruneApiHistory, type Webh
 import { LIVE_RECORDING_ATTEMPTS, listBusinessesWithOpenLiveCalls, listOpenLiveCalls, liveCallHasRecording, persistCallRecording, retryLiveCallRecording, type OpenLiveCall } from "@lobbystack/domain";
 import { expireTeamRequest } from "@lobbystack/domain";
 import { advancePartnerLifecycles, claimPartnerCheckoutRequest, loadPartnerCheckoutRequest, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerBillingKey, partnerCheckoutLeaseEndsAt, reconcilePartnerTier, settlePartnerNumberCharges } from "@lobbystack/domain";
+import { checkPartnerCustomDomains, provisionPartnerCustomDomain, removePartnerCustomHostname, type CustomDomainProviders } from "@lobbystack/domain";
 import { brandForEmail, businessExists, businessGetsHostEmails, hostBrandFromEnvironment, isHostOnlyEmailTemplate } from "@lobbystack/domain";
 import type { DomainContext } from "@lobbystack/domain";
 import { numberReleaseEmailSubject, numberTrialEmailSubject, type SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
@@ -62,6 +63,8 @@ export type WorkerDependencies = {
   twilio?: Pick<TwilioProvider, "sendSms"> & Partial<Pick<TwilioProvider, "getMessagePricing" | "getCallPricing" | "findTrunkCall" | "releasePhoneNumber" | "verifyPhone" | "findOwnedPhoneNumber" | "purchasePhoneNumber" | "addNumberToSipTrunk" | "routeNumber" | "getPhoneNumberMonthlyPrice">>;
   twilioAlerts?: Pick<TwilioProvider, "sendSms"> & { from: string };
   polar?: { recordUsage(input: { eventName: string; externalCustomerId: string; quantity: number; timestamp: string; idempotencyKey: string; businessId: string; usageKind: string }): Promise<void>; createCheckout?(input: { productId: string; customerEmail: string; externalCustomerId: string; successUrl: string; returnUrl: string; idempotencyKey?: string }): Promise<{ checkoutUrl: string; checkoutId: string }> };
+  /** Sets partners' own domains up: Cloudflare for SaaS or Caddy, as partnerFeatures decides, and DNS for partners' TXT records. Without it, their jobs are skipped. */
+  customDomains?: CustomDomainProviders;
   embeddings?: { fingerprint?: string; embed(values: string[], onUsage?: (usage: DurableAiUsage) => Promise<void> | void): Promise<number[][]> };
   crawler?: { crawl(input: { url: string; limit?: number }): Promise<Array<{ url: string; title?: string; markdown?: string }>> };
   calendar?: CalendarOperations;
@@ -704,6 +707,28 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       // The clock moves each partner whose tier ended on: its businesses pause after 30 days, and at 90 the host deletes them.
       const result = await advancePartnerLifecycles(dependencies.domain);
       return { status: result.moved > 0 || result.deleted > 0 ? "completed" : "skipped", entityId: `${result.moved}:${result.deleted}` };
+    }
+    case "partnerDomain.provision": {
+      // A partner's domain belongs to no business, so the job names it.
+      const domainId = String(job.payload.domainId ?? "");
+      if (!isUuid(domainId) || !dependencies.customDomains) return { status: "skipped", entityId: domainId };
+      const outcome = await provisionPartnerCustomDomain(dependencies.domain, dependencies.customDomains, { domainId });
+      return { status: outcome === "provisioned" ? "completed" : "skipped", entityId: domainId };
+    }
+    case "partnerDomain.check": {
+      if (!dependencies.customDomains) return { status: "skipped" };
+      // A domain the provider or DNS couldn't answer for waits for its next check; only a run where nothing answered fails.
+      const result = await checkPartnerCustomDomains(dependencies.domain, dependencies.customDomains);
+      return { status: result.checked > 0 ? "completed" : "skipped", entityId: `${result.checked}:${result.activated}:${result.failed}:${result.unanswered}` };
+    }
+    case "partnerDomain.remove": {
+      const hostname = String(job.payload.hostname ?? "");
+      const providerHostnameId = String(job.payload.providerHostnameId ?? "");
+      // A domain another provider set up stays with it: this deployment can't reach that provider any more.
+      const hostnames = dependencies.customDomains?.hostnames;
+      if (!hostname || !providerHostnameId || !hostnames || job.payload.provider !== hostnames.kind) return { status: "skipped", entityId: providerHostnameId };
+      const outcome = await removePartnerCustomHostname(dependencies.domain, hostnames, { hostname, providerHostnameId });
+      return { status: outcome === "removed" ? "completed" : "skipped", entityId: providerHostnameId };
     }
     case "notification.dispatch": {
       const businessId = businessIdOrThrow(job);

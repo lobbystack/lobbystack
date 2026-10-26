@@ -370,7 +370,60 @@
     "domain": {
       "title": "Dirección del panel",
       "open": "Abrir",
-      "none": "Todavía no tiene una dirección propia. Pida a {{appName}} que configure una."
+      "none": "Todavía no tiene un subdominio. Pida a {{appName}} que configure uno.",
+      "subdomainLabel": "Su subdominio",
+      "own": {
+        "title": "Su propio dominio",
+        "description": "Ponga su panel en un subdominio de su sitio web, como app.suempresa.com. Su subdominio sigue funcionando junto a él.",
+        "label": "Dominio",
+        "placeholder": "app.suempresa.com",
+        "help": "A continuación agregará dos registros DNS en su proveedor de DNS.",
+        "connect": "Conectar dominio",
+        "connecting": "Conectando…",
+        "added": "Dominio conectado. Ahora agregue sus registros DNS.",
+        "paidTier": "Su propio dominio viene con un nivel de pago.",
+        "paidTierAskOwner": "Su propio dominio viene con un nivel de pago. Un propietario puede elegir uno en la página Facturación.",
+        "chooseTier": "Elegir un nivel",
+        "membersCantEdit": "Solo los propietarios y administradores pueden conectar un dominio.",
+        "status": {
+          "pending": "Esperando el DNS",
+          "active": "Activo",
+          "failed": "Falló"
+        },
+        "settingUp": "Estamos configurando su dominio. Sus registros DNS aparecen aquí en un minuto.",
+        "pendingHelp": "Agregue estos registros en su proveedor de DNS. Los comprobamos cada pocos minutos, y un cambio de DNS puede tardar unas horas en llegarnos.",
+        "activeHelp": "Su panel y sus páginas de inicio de sesión funcionan ahora en este dominio.",
+        "failedHelp": "No pudimos configurar este dominio. Quítelo, revise sus registros DNS y vuelva a conectarlo.",
+        "takenHelp": "Otro panel conectó este dominio primero. Quítelo aquí para conectar otro.",
+        "records": {
+          "type": "Tipo",
+          "name": "Nombre",
+          "value": "Valor",
+          "status": "Estado",
+          "verified": "Encontrado",
+          "waiting": "Aún no encontrado",
+          "copy": "Copiar",
+          "copied": "Copiado"
+        },
+        "providerSays": "Su proveedor de certificados informa:",
+        "checkedAt": "Última comprobación: {{time}}.",
+        "remove": "Quitar dominio",
+        "removeTitle": "¿Quitar {{hostname}}?",
+        "removeDescription": "Nadie podrá volver a abrir su panel en este dominio. Puede volver a conectarlo más adelante.",
+        "removed": "Dominio quitado.",
+        "cancel": "Cancelar",
+        "errors": {
+          "invalid": "Ingrese un subdominio de su sitio web, como app.suempresa.com.",
+          "reserved": "Ese dominio pertenece a {{appName}}. Ingrese un subdominio de su propio sitio web.",
+          "taken": "Otro panel ya usa ese dominio.",
+          "exists": "Quite su dominio actual antes de conectar otro.",
+          "paidTier": "Su propio dominio viene con un nivel de pago.",
+          "unavailable": "{{appName}} no puede conectar su propio dominio.",
+          "forbidden": "Solo los propietarios y administradores pueden cambiar su dominio.",
+          "failed": "No pudimos guardar su dominio. Inténtelo de nuevo.",
+          "loadFailed": "No pudimos cargar sus direcciones. Actualice la página para intentarlo de nuevo."
+        }
+      }
     },
     "brand": {
       "title": "Marca"

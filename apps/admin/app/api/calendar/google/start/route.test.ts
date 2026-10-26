@@ -49,8 +49,16 @@ it("confirms membership before consuming quota and creating OAuth state", async 
   await expect(response.json()).resolves.toEqual({ url: expect.stringContaining("accounts.google.test") });
   expect(mocks.rate).toHaveBeenCalledWith({ operation: "start", userId: "user-1", businessId: "business-1", ip: "203.0.113.10" });
   expect(fakeOperator.transactions).toEqual([{ minimumRole: "business_admin" }]);
-  expect(mocks.state).toHaveBeenCalledWith({ userId: "user-1", businessId: "business-1" });
+  // On the host's domain the state names no partner's host, so Google's callback finishes there.
+  expect(mocks.state).toHaveBeenCalledWith({ userId: "user-1", businessId: "business-1", origin: null });
   expect(mocks.store).toHaveBeenCalledWith("signed-state");
+});
+
+it("signs a partner's host into the state, so Google's callback comes back to it", async () => {
+  const partnerOrigin = "https://app.acme.example";
+  const response = await GET(new Request(`${partnerOrigin}/api/calendar/google/start?businessId=business-1`, { headers: { "x-lobbystack-brand": "partner:3c2b1a09-8f7e-4d6c-9b5a-4f3e2d1c0b9a", "x-lobbystack-brand-origin": partnerOrigin } }));
+  expect(response.status).toBe(200);
+  expect(mocks.state).toHaveBeenCalledWith({ userId: "user-1", businessId: "business-1", origin: partnerOrigin });
 });
 
 it("returns the rate-limit status without creating or storing state", async () => {

@@ -15,6 +15,8 @@ export default defineConfig({
       "@lobbystack/providers/crawling/firecrawl": `${root}/packages/providers/src/crawling/firecrawl.ts`,
       "@lobbystack/providers/crawling/urlSafety": `${root}/packages/providers/src/crawling/urlSafety.ts`,
       "@lobbystack/providers/crypto/secretBox": `${root}/packages/providers/src/crypto/secretBox.ts`,
+      "@lobbystack/providers/customHostnames/customHostnames": `${root}/packages/providers/src/customHostnames/customHostnames.ts`,
+      "@lobbystack/providers/customHostnames/fakeCustomHostnames": `${root}/packages/providers/src/customHostnames/fakeCustomHostnames.ts`,
       "@lobbystack/providers/email/smtp": `${root}/packages/providers/src/email/smtp.ts`,
       "@lobbystack/providers/google/calendar": `${root}/packages/providers/src/google/calendar.ts`,
       "@lobbystack/providers/instagram/instagram": `${root}/packages/providers/src/instagram/instagram.ts`,

@@ -49,7 +49,9 @@ Définissez `FIRECRAWL_API_KEY` sur le service `worker`. Sans elle, l'import de 
 
 Dans Google Cloud, activez l'API Google Calendar et créez un client OAuth pour une application Web. Ajoutez `https://votre_domaine_admin/api/calendar/google/callback` comme URI de redirection autorisée. Définissez `GOOGLE_CLIENT_ID` et `GOOGLE_CLIENT_SECRET` sur le service `admin`. Le modèle remplit `GOOGLE_REDIRECT_URI`, et le worker lit les trois valeurs depuis l'admin.
 
-Une fois ces deux valeurs définies, les pages de connexion et d'inscription proposent aussi **Continuer avec Google**. Ajoutez `https://votre_domaine_admin/api/auth/callback/google` au même client OAuth comme deuxième URI de redirection autorisée. Les sous-domaines de vos partenaires ne le proposent pas : on s'y connecte par courriel et mot de passe.
+Une fois ces deux valeurs définies, les pages de connexion et d'inscription proposent aussi **Continuer avec Google**. Ajoutez `https://votre_domaine_admin/api/auth/callback/google` au même client OAuth comme deuxième URI de redirection autorisée. Les domaines de vos partenaires ne le proposent pas : on s'y connecte par courriel et mot de passe.
+
+Les entreprises de vos partenaires connectent leur agenda sur le domaine du partenaire avec la même URI de redirection `/api/calendar/google/callback`. Google renvoie la personne vers votre domaine admin, qui la redirige vers le domaine du partenaire pour terminer.
 
 #### Utilisez un domaine personnalisé
 
@@ -71,7 +73,7 @@ Le fichier [`docker-compose.yml`](https://github.com/lobbystack/lobbystack/blob/
 - un volume Docker persistant pour les enregistrements et les documents téléversés
 - le tableau de bord d'administration Next.js et l'API HTTP
 - le worker d'arrière-plan et le répartiteur de l'outbox transactionnelle, qui exécute aussi chaque appel GPT-Live
-- Caddy, qui achemine le nom d'hôte du tableau de bord en HTTP simple, derrière le proxy ou l'équilibreur de charge qui termine le HTTPS
+- Caddy, qui achemine le nom d'hôte du tableau de bord en HTTP simple, derrière le proxy ou l'équilibreur de charge qui termine le HTTPS, ou en HTTPS avec les certificats que Caddy émet pour votre tableau de bord et les domaines de vos partenaires
 
 LobbyStack n'ajoute pas de conteneurs de surveillance à la pile Compose. Les environnements d'exécution serveur peuvent envoyer des traces, des métriques et des journaux OpenTelemetry vers un backend compatible OTLP configuré.
 

@@ -44,6 +44,38 @@ La réponse de disponibilité de l'admin inclut des vérifications de PostgreSQL
 
 LobbyStack n'exécute pas de conteneurs de surveillance. Les journaux de l'application restent accessibles avec `docker compose logs`, et les points de terminaison de santé continuent de fonctionner.
 
+## Servir le HTTPS depuis Caddy
+
+Par défaut, le Caddy de Compose sert `APP_HOSTNAME` en HTTP simple et ne publie aucun port 443, pour un usage local ou derrière votre propre proxy HTTPS. Sur un serveur public, Caddy peut servir le HTTPS lui-même : `docker-compose.tls.yml` le fait passer à `docker/caddy/Caddyfile.tls` et publie le port 443. Définissez ces valeurs dans `.env` :
+
+```dotenv
+COMPOSE_FILE=docker-compose.yml:docker-compose.tls.yml
+HTTP_BIND_ADDRESS=0.0.0.0
+CADDY_ON_DEMAND_TLS=true
+```
+
+Avec `COMPOSE_FILE`, chaque commande `docker compose` utilise les deux fichiers. Faites pointer le nom DNS du tableau de bord vers le serveur, ouvrez les ports 80 et 443, puis redémarrez la pile. Caddy obtient le certificat d'un nom d'hôte à la première visite. Avant cela, il interroge l'admin à `/api/tls/ask`, qui n'approuve que ces noms d'hôte :
+
+- le nom d'hôte de `APP_BASE_URL`, les origines de `AUTH_TRUSTED_ORIGINS` et les hôtes de `MARKETING_HOSTS`
+- les sous-domaines de `PARTNER_BASE_DOMAIN` de vos partenaires
+- les domaines que vos partenaires ont connectés, une fois que le worker a constaté que leur DNS pointe vers votre serveur et que leur enregistrement TXT est en place
+
+Un domaine que quelqu'un d'autre fait pointer vers votre serveur n'obtient aucun certificat. L'admin répond à Caddy pendant la maintenance aussi, pour que les nouveaux domaines des partenaires et les renouvellements continuent de fonctionner.
+
+Avec `CADDY_ON_DEMAND_TLS=true`, les partenaires connectent un sous-domaine de leur propre site sur la page **Image de marque et domaine** de la console. Tant que vous vendez des niveaux de partenaire avec les produits `POLAR_PARTNER_*`, un partenaire a besoin d'un niveau payant pour cela ; sinon, tout partenaire le peut. La page indique deux enregistrements à ajouter : un CNAME qui pointe vers [`PARTNER_DOMAIN_CNAME_TARGET`](/fr/self-hosting/environment-variables#partenaires), et un enregistrement TXT qui prouve que le partenaire contrôle le domaine. Laissez `CADDY_ON_DEMAND_TLS` à `false` tant que votre Caddy sert du HTTP simple, car les domaines des partenaires n'obtiendraient aucun certificat.
+
+## Connecter les domaines des partenaires avec Cloudflare for SaaS
+
+Si le DNS de `PARTNER_BASE_DOMAIN` est chez Cloudflare, les domaines de vos partenaires peuvent passer par Cloudflare for SaaS au lieu du TLS à la demande de Caddy. Cloudflare émet alors le certificat de chaque domaine, et le worker enregistre et vérifie chaque domaine avec l'API de Cloudflare. Configurez-le une fois :
+
+1. Dans la zone Cloudflare de `PARTNER_BASE_DOMAIN`, ouvrez **SSL/TLS** > **Custom Hostnames** et activez Cloudflare for SaaS.
+2. Ajoutez un enregistrement DNS proxifié qui pointe vers votre serveur, comme `host.partners.example.com`, puis ajoutez-le avec **Add Fallback Origin** sur la page **Custom Hostnames**.
+3. Créez un jeton d'API avec l'autorisation **Zone** > **SSL and Certificates** > **Edit** pour cette zone.
+4. Dans `.env`, définissez le jeton dans `CLOUDFLARE_SAAS_API_TOKEN` et l'ID de la zone dans `CLOUDFLARE_SAAS_ZONE_ID`, puis redémarrez la pile.
+5. Réglez le mode de chiffrement SSL/TLS de la zone sur **Full**. Cloudflare se connecte à votre serveur avec le domaine de chaque partenaire, que votre certificat d'origine ne couvre pas.
+
+Votre serveur doit répondre en HTTPS sur le port 443 pour n'importe quel nom d'hôte, et transmettre chaque requête à l'admin avec son en-tête `Host`. Les partenaires font ensuite pointer un enregistrement CNAME vers l'origine de repli, ou vers [`PARTNER_DOMAIN_CNAME_TARGET`](/fr/self-hosting/environment-variables#partenaires) si vous la définissez, et ajoutent l'enregistrement TXT que leur console indique. Si Cloudflare for SaaS et `CADDY_ON_DEMAND_TLS` sont tous deux définis, le déploiement utilise Cloudflare for SaaS.
+
 ## Choisir un backend de stockage
 
 Le fournisseur local par défaut prend en charge un seul hôte Docker. Sauvegardez le volume `storage_data` en même temps que PostgreSQL et restaurez les deux à partir du même point de restauration.

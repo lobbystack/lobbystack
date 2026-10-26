@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { HOST_EMAIL_BRAND, emailBrandReferenceFor, emailSender, hostBrand, parseEmailBrandReference, parseEmailSender, partnerBrand, partnerOrigin, type Brand, type PartnerBrandRecord } from "./brand";
+import { HOST_EMAIL_BRAND, customDomainOrigin, emailBrandReferenceFor, emailSender, hostBrand, parseEmailBrandReference, parseEmailSender, partnerBrand, partnerBrandOrigin, partnerOrigin, type Brand, type PartnerBrandRecord } from "./brand";
 import { resolveBrandLinks } from "./brandLinks";
 
 describe("the host brand", () => {
@@ -136,5 +136,19 @@ describe("a partner's brand", () => {
     expect(elsewhere).toMatchObject({ origin: "https://desk.example.test", email: { fromAddress: "no-reply@desk.example.test" } });
     expect(partnerOrigin("bright.old.example.test", environment)).toBe("https://desk.example.test");
     expect(partnerOrigin(null, environment)).toBe("https://desk.example.test");
+  });
+
+  it("keeps its subdomain as its origin beside its own domain, and moves to its own domain only without a subdomain, while the deployment serves partners' domains", () => {
+    const cloudflare = { CLOUDFLARE_SAAS_API_TOKEN: "test-token", CLOUDFLARE_SAAS_ZONE_ID: "test-zone" };
+    // Sign-up and invitations keep working on the subdomain, which every Turnstile hostname list covers.
+    expect(partnerBrand({ environment: { ...environment, ...cloudflare }, partner: { ...record, customDomain: "app.bright.example.com" } }).origin).toBe("https://bright.portal.example.test");
+    expect(partnerBrand({ environment: { ...environment, ...cloudflare, PARTNER_BASE_DOMAIN: "" }, partner: { ...record, subdomain: null, customDomain: "app.bright.example.com" } }).origin).toBe("https://app.bright.example.com");
+    // A subdomain left under an earlier base domain doesn't count.
+    expect(partnerBrandOrigin({ subdomain: "bright.old.example.test", customDomain: "app.bright.example.com" }, { ...environment, ...cloudflare })).toBe("https://app.bright.example.com");
+    expect(partnerBrandOrigin({ subdomain: null, customDomain: "app.bright.example.com" }, { APP_BASE_URL: "http://localhost:13000", CADDY_ON_DEMAND_TLS: "true" })).toBe("http://app.bright.example.com:13000");
+    // A deployment that stopped serving partners' own domains sends nobody to one.
+    expect(partnerBrandOrigin({ subdomain: null, customDomain: "app.bright.example.com" }, { ...environment, PARTNER_BASE_DOMAIN: "" })).toBe("https://desk.example.test");
+    expect(partnerBrandOrigin({ subdomain: record.subdomain, customDomain: null }, environment)).toBe("https://bright.portal.example.test");
+    expect(customDomainOrigin("app.bright.example.com", { APP_BASE_URL: "http://localhost:13000" })).toBe("http://app.bright.example.com:13000");
   });
 });

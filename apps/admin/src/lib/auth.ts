@@ -84,20 +84,70 @@ const DEFAULT_APP_ORIGIN = "http://localhost:3000";
  * host's domain the request came in on, as it always has. With a partner base
  * domain, a request on one of its subdomains gets them on that subdomain
  * instead, with APP_BASE_URL's scheme, so a partner's reset and email change
- * links lead back to the partner's host.
+ * links lead back to the partner's host. A partner's own domain joins these
+ * hosts while requests reach it, as admitPartnerHost describes.
  */
 export function authBaseURL(env: Readonly<Record<string, string | undefined>> = process.env): NonNullable<BetterAuthOptions["baseURL"]> {
   const fallback = env.APP_BASE_URL ?? DEFAULT_APP_ORIGIN;
-  const baseDomain = partnerFeatures(env).baseDomain;
-  if (!baseDomain) return fallback;
+  const { baseDomain, customDomains } = partnerFeatures(env);
+  if (!baseDomain && !customDomains) return fallback;
   let protocol: "http" | "https" = "http";
+  let fallbackHost = "localhost";
   try {
-    protocol = new URL(fallback).protocol === "https:" ? "https" : "http";
+    const url = new URL(fallback);
+    protocol = url.protocol === "https:" ? "https" : "http";
+    fallbackHost = url.host;
   } catch {
     // Better Auth refuses an unreadable APP_BASE_URL itself.
   }
-  // The Host header keeps a port, as acme.partners.localhost:13000 does in development.
-  return { allowedHosts: [`*.${baseDomain}`, `*.${baseDomain}:*`], fallback, protocol };
+  // The Host header keeps a port, as acme.partners.localhost:13000 does in
+  // development. Better Auth needs one host at least: without a base domain,
+  // APP_BASE_URL's, which builds the same links as the fallback.
+  return { allowedHosts: baseDomain ? [`*.${baseDomain}`, `*.${baseDomain}:*`] : [fallbackHost], fallback, protocol };
+}
+
+// How long a partner's own domain stays among Better Auth's hosts after a
+// request on it: the brand cache's window, so a domain the partner removed
+// leaves once no process answers it any more.
+const ADMITTED_HOST_MS = 30_000;
+const MAX_ADMITTED_HOSTS = 1_000;
+/** For each list of Better Auth's hosts, the partners' own domains admitted to it, each with when it leaves. */
+const admittedHostsByList = new WeakMap<string[], Map<string, number>>();
+
+function withoutHost(allowedHosts: string[], host: string): void {
+  const index = allowedHosts.indexOf(host);
+  if (index >= 0) allowedHosts.splice(index, 1);
+}
+
+/**
+ * Lets Better Auth build links on a partner's own domain once the proxy
+ * resolved the request to it. The partner base domain's pattern covers every
+ * partner's subdomain, but partners' own domains come and go while the
+ * process runs, so each joins the hosts Better Auth checks a request's Host
+ * header against for a while after each request on it, and leaves after.
+ * Better Auth reads that list on every request, so changing it in place
+ * reaches the running instance. Exported for its test.
+ */
+export function admitPartnerHost(allowedHosts: string[], headers: Headers, env: Readonly<Record<string, string | undefined>> = process.env, now = Date.now()): void {
+  let admittedHosts = admittedHostsByList.get(allowedHosts);
+  if (!admittedHosts) admittedHostsByList.set(allowedHosts, admittedHosts = new Map());
+  for (const [host, leavesAt] of admittedHosts) {
+    if (leavesAt > now) continue;
+    admittedHosts.delete(host);
+    withoutHost(allowedHosts, host);
+  }
+  const resolved = readResolvedBrand(headers);
+  if (resolved?.kind !== "partner") return;
+  const origin = new URL(resolved.origin);
+  const { baseDomain } = partnerFeatures(env);
+  if (baseDomain && origin.hostname.endsWith(`.${baseDomain}`)) return;
+  if (!admittedHosts.delete(origin.host)) allowedHosts.push(origin.host);
+  admittedHosts.set(origin.host, now + ADMITTED_HOST_MS);
+  for (const oldest of admittedHosts.keys()) {
+    if (admittedHosts.size <= MAX_ADMITTED_HOSTS) break;
+    admittedHosts.delete(oldest);
+    withoutHost(allowedHosts, oldest);
+  }
 }
 
 /**
@@ -265,7 +315,19 @@ async function rehashLegacyPassword(userId: string, password: string): Promise<v
 }
 
 export function getAuth() {
-  return instance ??= createAuth();
+  if (instance) return instance;
+  const auth = createAuth();
+  const baseURL: unknown = (auth as { options?: { baseURL?: unknown } }).options?.baseURL;
+  // Every request reaches Better Auth through its handler, so that's where a partner's own domain joins its hosts.
+  if (baseURL && typeof baseURL === "object" && "allowedHosts" in baseURL && Array.isArray(baseURL.allowedHosts)) {
+    const allowedHosts = baseURL.allowedHosts as string[];
+    const handler = auth.handler;
+    auth.handler = async (request: Request) => {
+      admitPartnerHost(allowedHosts, request.headers);
+      return await handler(request);
+    };
+  }
+  return instance = auth;
 }
 
 function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {

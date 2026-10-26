@@ -44,6 +44,38 @@ The admin readiness response includes PostgreSQL, Redis, and storage checks. The
 
 LobbyStack does not run monitoring containers. Application logs remain available through `docker compose logs`, and the health endpoints continue to work.
 
+## Serve HTTPS from Caddy
+
+Compose's Caddy serves plain HTTP for `APP_HOSTNAME` by default and publishes no port 443, for local use or behind your own HTTPS proxy. On a public server, Caddy can serve HTTPS itself: `docker-compose.tls.yml` switches it to `docker/caddy/Caddyfile.tls` and publishes port 443. Set these values in `.env`:
+
+```dotenv
+COMPOSE_FILE=docker-compose.yml:docker-compose.tls.yml
+HTTP_BIND_ADDRESS=0.0.0.0
+CADDY_ON_DEMAND_TLS=true
+```
+
+`COMPOSE_FILE` makes every `docker compose` command use both files. Point the dashboard's DNS name at the server, open ports 80 and 443, and restart the stack. Caddy gets a certificate for a hostname the first time someone visits it. Before it does, it asks the admin at `/api/tls/ask`, which approves these hostnames only:
+
+- the hostname in `APP_BASE_URL`, the origins in `AUTH_TRUSTED_ORIGINS`, and the hosts in `MARKETING_HOSTS`
+- your partners' subdomains of `PARTNER_BASE_DOMAIN`
+- the domains your partners connected, once the worker found their DNS pointing at your server and their TXT record in place
+
+A domain someone else points at your server gets no certificate. The admin answers Caddy during maintenance too, so new partner domains and renewals keep working.
+
+With `CADDY_ON_DEMAND_TLS=true`, partners connect a subdomain of their own website on the console's **Branding & domain** page. While you sell partner tiers through the `POLAR_PARTNER_*` products, a partner needs a paid tier for it; otherwise any partner can. The page shows two records to add: a CNAME pointing at [`PARTNER_DOMAIN_CNAME_TARGET`](/self-hosting/environment-variables#partners), and a TXT record that proves the partner controls the domain. Leave `CADDY_ON_DEMAND_TLS` at `false` while your Caddy still serves plain HTTP, because partners' domains would get no certificate.
+
+## Connect partners' domains through Cloudflare for SaaS
+
+If the DNS of `PARTNER_BASE_DOMAIN` is on Cloudflare, your partners' own domains can go through Cloudflare for SaaS instead of Caddy's on-demand TLS. Cloudflare then issues each domain's certificate, and the worker registers and checks each domain through Cloudflare's API. Set it up once:
+
+1. In the Cloudflare zone of `PARTNER_BASE_DOMAIN`, open **SSL/TLS** > **Custom Hostnames** and enable Cloudflare for SaaS.
+2. Add a proxied DNS record that points at your server, such as `host.partners.example.com`, and add it with **Add Fallback Origin** on the **Custom Hostnames** page.
+3. Create an API token with the **Zone** > **SSL and Certificates** > **Edit** permission for that zone.
+4. In `.env`, set the token as `CLOUDFLARE_SAAS_API_TOKEN` and the zone's ID as `CLOUDFLARE_SAAS_ZONE_ID`, then restart the stack.
+5. Set the zone's SSL/TLS encryption mode to **Full**. Cloudflare connects to your server with each partner's own domain, which your origin certificate doesn't cover.
+
+Your server must answer HTTPS on port 443 for any hostname, and pass each request to the admin with its `Host` header. Partners then point a CNAME record at the fallback origin, or at [`PARTNER_DOMAIN_CNAME_TARGET`](/self-hosting/environment-variables#partners) when you set it, and add the TXT record their console shows. With both Cloudflare for SaaS and `CADDY_ON_DEMAND_TLS` set, the deployment uses Cloudflare for SaaS.
+
 ## Choose a storage backend
 
 The default local provider supports a single Docker host. Back up the `storage_data` volume with PostgreSQL and restore both from the same recovery point.

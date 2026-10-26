@@ -38,6 +38,7 @@ export * from "./partners";
 export * from "./partnerPlatformKeys";
 export * from "./partnerStripe";
 export * from "./partnerBilling";
+export * from "./partnerDomains";
 export * from "./partnerNumbers";
 export * from "./partnerLifecycle";
 export * from "./outboundDelivery";

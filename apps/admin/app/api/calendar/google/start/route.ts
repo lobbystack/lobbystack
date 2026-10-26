@@ -6,6 +6,7 @@ import { enforceCalendarOAuthRateLimits } from "@/lib/google-calendar-oauth-limi
 import { storeCalendarOAuthState } from "@/lib/google-calendar-oauth-store";
 import { googleCalendarProvider } from "@/lib/google-calendar-provider";
 import { operatorRoute } from "@/lib/operator-request";
+import { partnerRequestOrigin } from "@/lib/request-brand";
 import { trustedClientIp } from "@/lib/trusted-client-ip";
 
 export const runtime = "nodejs";
@@ -19,7 +20,8 @@ export const GET = operatorRoute(async ({ request, userId, businessId, transacti
     { operation: "start", userId, businessId, ip: trustedClientIp(request) },
   );
   if (!rate.allowed) return jsonError("Too many calendar authorization attempts. Please try again later.", rate.status, rate.code);
-  const state = createCalendarOAuthState({ userId, businessId });
+  // Google returns to the host's domain, which hands the callback back to a partner's host it started on.
+  const state = createCalendarOAuthState({ userId, businessId, origin: partnerRequestOrigin(request.headers) });
   await storeCalendarOAuthState(state);
   return NextResponse.json({ url: googleCalendarProvider().buildAuthorizationUrl({ state }) });
 });

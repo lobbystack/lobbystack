@@ -1,3 +1,6 @@
+# Plain HTTP for the dashboard's hostname, for local use or behind a proxy
+# that ends HTTPS. Caddyfile.tls serves HTTPS itself, partners' domains
+# included.
 {
   auto_https off
 }

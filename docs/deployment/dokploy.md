@@ -15,6 +15,8 @@ All four hostnames are proxied A records for `40.160.96.129`:
 
 Traefik on the server holds a Let's Encrypt certificate for each hostname, and the zone's SSL mode is Full. Let's Encrypt renews through Cloudflare with an HTTP challenge, so keep **Always Use HTTPS** off for the `lobbystack.com` zone. Turning it on stops the renewals.
 
+Partners' hostnames reach the same server through the `receptionistportal.com` zone and Cloudflare for SaaS, and a catch-all Traefik route sends them to the production admin. [Serve partners' domains](partner-domains.md) covers that setup.
+
 ## Services
 
 The `LobbyStack` Dokploy project has a `production` and a `staging` environment with the same five services. Dokploy adds a random suffix to each app name. Staging and production share one Docker network, so use the full app name in every connection string; a bare `postgres` could reach the other environment's database.

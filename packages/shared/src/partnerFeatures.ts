@@ -22,7 +22,11 @@ export type PartnerFeatures = {
    * tier billing, and nothing limits their pools or phone numbers.
    */
   tierBilling: boolean;
-  /** What issues certificates for partners' own domains, or null when partners can't add one. */
+  /**
+   * What issues certificates for partners' own domains: Cloudflare for SaaS
+   * on the cloud, or the host's Caddy with on-demand TLS. Null when partners
+   * can't add one.
+   */
   customDomains: "cloudflare" | "caddy" | null;
 };
 
@@ -75,6 +79,27 @@ function hasEveryTierProduct(env: Record<string, string | undefined>): boolean {
   return products.length === paidPartnerTierSlugs.length * billingIntervals.length && new Set(products.map((product) => product.productId)).size === products.length;
 }
 
+function hasCloudflareForSaas(env: Record<string, string | undefined>): boolean {
+  return isSet(env.CLOUDFLARE_SAAS_API_TOKEN) && isSet(env.CLOUDFLARE_SAAS_ZONE_ID);
+}
+
+/** CADDY_ON_DEMAND_TLS as a switch: true or false, or null for a value that's neither. Unset is false. */
+function caddyOnDemandTls(env: Record<string, string | undefined>): boolean | null {
+  const value = env.CADDY_ON_DEMAND_TLS?.trim().toLowerCase();
+  if (!value || value === "false") return false;
+  return value === "true" ? true : null;
+}
+
+/**
+ * What issues partners' certificates: Cloudflare for SaaS when its token and
+ * zone are set, which wins over Caddy, and otherwise Caddy's on-demand TLS
+ * when CADDY_ON_DEMAND_TLS says the host's Caddy asks the admin first.
+ */
+function customDomainIssuer(env: Record<string, string | undefined>): PartnerFeatures["customDomains"] {
+  if (hasCloudflareForSaas(env)) return "cloudflare";
+  return caddyOnDemandTls(env) ? "caddy" : null;
+}
+
 export function partnerFeatures(env: Record<string, string | undefined>): PartnerFeatures {
   return {
     enabled: true,
@@ -82,8 +107,7 @@ export function partnerFeatures(env: Record<string, string | undefined>): Partne
     baseDomain: partnerBaseDomain(env.PARTNER_BASE_DOMAIN),
     stripeConnect: isSet(env.STRIPE_CONNECT_SECRET_KEY) && isSet(env.STRIPE_CONNECT_WEBHOOK_SECRET),
     tierBilling: hasEveryTierProduct(env),
-    // Caddy's on-demand TLS has no setting of its own yet, so this never answers caddy.
-    customDomains: isSet(env.CLOUDFLARE_SAAS_API_TOKEN) && isSet(env.CLOUDFLARE_SAAS_ZONE_ID) ? "cloudflare" : null,
+    customDomains: customDomainIssuer(env),
   };
 }
 
@@ -102,6 +126,15 @@ export function partnerFeatureWarnings(env: Record<string, string | undefined>):
   const signup = env.PARTNER_SIGNUP?.trim().toLowerCase();
   if (signup && signup !== "open" && signup !== "invite") {
     warnings.push(`PARTNER_SIGNUP is ignored: it takes open or invite, so signup stays ${partnerSignup(env)}.`);
+  }
+  if (isSet(env.CLOUDFLARE_SAAS_API_TOKEN) !== isSet(env.CLOUDFLARE_SAAS_ZONE_ID)) {
+    warnings.push(`Cloudflare for SaaS is off: ${isSet(env.CLOUDFLARE_SAAS_API_TOKEN) ? "CLOUDFLARE_SAAS_ZONE_ID" : "CLOUDFLARE_SAAS_API_TOKEN"} isn't set. Partners can't add their own domains through Cloudflare until both are.`);
+  }
+  const caddy = caddyOnDemandTls(env);
+  if (caddy === null) {
+    warnings.push(`CADDY_ON_DEMAND_TLS is ignored: it takes true or false, so partners ${customDomainIssuer(env) ? "add their own domains through Cloudflare for SaaS" : "can't add their own domains"}.`);
+  } else if (caddy && hasCloudflareForSaas(env)) {
+    warnings.push("CADDY_ON_DEMAND_TLS is ignored: Cloudflare for SaaS is set up too, and it issues partners' certificates instead.");
   }
   const products = partnerTierProducts(env);
   if (products.length > 0 && !hasEveryTierProduct(env)) {

@@ -14,6 +14,7 @@ export * from "./brand";
 export * from "./hosts";
 export * from "./partnerFeatures";
 export * from "./partners";
+export * from "./partnerDomains";
 export * from "./partnerStripe";
 export * from "./businessSetup";
 export { isCertificationMode, assertCertificationRecipient, assertCertificationOperationAllowed, assertCertificationCalendar, assertCertificationBillingSandbox } from "./certification";

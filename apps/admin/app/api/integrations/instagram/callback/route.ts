@@ -5,13 +5,17 @@ import { SecretBox } from "@lobbystack/providers";
 import { asApiResponse, jsonError, requireApiSession } from "@/lib/api-helpers";
 import { createDomainContext } from "@/lib/domain-context";
 import { consumeInstagramOAuthState, enforceInstagramOAuthRateLimits, instagramProvider, verifyInstagramOAuthState } from "@/lib/instagram-oauth";
+import { routeOAuthCallback } from "@/lib/oauth-callback-host";
+import { partnerRequestOrigin } from "@/lib/request-brand";
 import { trustedClientIp } from "@/lib/trusted-client-ip";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  const destination = (status: "success" | "error" | "in_use" | "missing_permission") => NextResponse.redirect(new URL(`/integrations?instagram=${status}`, process.env.APP_BASE_URL ?? request.url));
+  // A connection started on a partner's host finishes there, and lands on that host's integrations page.
+  const origin = partnerRequestOrigin(request.headers) ?? process.env.APP_BASE_URL ?? request.url;
+  const destination = (status: "success" | "error" | "in_use" | "missing_permission") => NextResponse.redirect(new URL(`/integrations?instagram=${status}`, origin));
   try {
     const url = new URL(request.url);
     const code = url.searchParams.get("code");
@@ -21,6 +25,13 @@ export async function GET(request: Request) {
     if (!state) return jsonError("Instagram OAuth state is required.", 400);
     const verified = verifyInstagramOAuthState(state);
     if (!verified) return jsonError("Instagram OAuth state is invalid or expired.", 400);
+    // Instagram returns to the host's domain. A connection started on a
+    // partner's host goes back there before anything is used up, since the
+    // person's session lives on that host.
+    const route = await routeOAuthCallback(request, verified.origin ?? null).catch((error: unknown) => asApiResponse(error));
+    if (route instanceof Response) return route;
+    if (route.kind === "handoff") return NextResponse.redirect(route.url);
+    if (route.kind === "refused") return jsonError("Instagram OAuth state belongs to another domain.", 400);
     const session = await requireApiSession(request);
     if (session.user.id !== verified.userId) return jsonError("Instagram OAuth state belongs to another user.", 403);
     const identityRate = await enforceInstagramOAuthRateLimits({ operation: "callback", userId: verified.userId, businessId: verified.businessId });

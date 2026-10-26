@@ -61,3 +61,5 @@ The Instagram card appears only when your server has a Meta app. Create one with
 | `INSTAGRAM_WEBHOOK_VERIFY_TOKEN` | A random string you also enter in the app's webhook settings. The admin only. |
 
 In the Meta app, set the webhook callback URL to `APP_BASE_URL` followed by `/api/webhooks/instagram`, and subscribe to the `messages` field. Before businesses other than your own can connect, Meta has to approve the app's `instagram_business_manage_messages` permission through App Review.
+
+Your partners' businesses connect Instagram on the partner's domain with the same `INSTAGRAM_REDIRECT_URI`. Instagram sends the person back to `APP_BASE_URL`, which passes them on to the partner's domain to finish.

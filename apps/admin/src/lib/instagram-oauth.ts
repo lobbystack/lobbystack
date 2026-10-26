@@ -8,9 +8,10 @@ import { InstagramProvider } from "@lobbystack/providers";
 
 import { getAuthDatabase } from "./auth";
 import { enforceFixedWindow, fixedWindowLimit, type FixedWindowLimit } from "./fixed-window-limit";
-import { oauthStateDigest, oauthPayloadCurrent, signOAuthPayload, verifyOAuthPayload } from "./signed-oauth-state";
+import { oauthStartOriginValid, oauthStateDigest, oauthPayloadCurrent, signOAuthPayload, verifyOAuthPayload } from "./signed-oauth-state";
 
-type InstagramOAuthState = { userId: string; businessId: string; issuedAt: number; nonce: string };
+/** `origin` names the partner's host the connection started on, and is absent on the host's domain. */
+type InstagramOAuthState = { userId: string; businessId: string; origin?: string; issuedAt: number; nonce: string };
 
 const STATE_LIFETIME_MS = 10 * 60_000;
 const hour = 60 * 60;
@@ -30,13 +31,15 @@ export function instagramConfigured(): boolean {
 
 const UNCONFIGURED = "Instagram OAuth signing is not configured.";
 
-export function createInstagramOAuthState(input: { userId: string; businessId: string }): string {
-  return signOAuthPayload("instagram:state", { ...input, issuedAt: Date.now(), nonce: randomUUID() }, UNCONFIGURED);
+/** A state for a connection started on the host's domain, or on the partner's host `origin` names, where its callback finishes. */
+export function createInstagramOAuthState(input: { userId: string; businessId: string; origin?: string | null }): string {
+  const { origin, ...rest } = input;
+  return signOAuthPayload("instagram:state", { ...rest, ...(origin ? { origin } : {}), issuedAt: Date.now(), nonce: randomUUID() }, UNCONFIGURED);
 }
 
 export function verifyInstagramOAuthState(value: string): InstagramOAuthState | null {
   const state = verifyOAuthPayload("instagram:state", value);
-  if (!state || typeof state.userId !== "string" || !state.userId || typeof state.businessId !== "string" || !state.businessId || !oauthPayloadCurrent(state, STATE_LIFETIME_MS)) return null;
+  if (!state || typeof state.userId !== "string" || !state.userId || typeof state.businessId !== "string" || !state.businessId || !oauthStartOriginValid(state.origin) || !oauthPayloadCurrent(state, STATE_LIFETIME_MS)) return null;
   return state as InstagramOAuthState;
 }
 
