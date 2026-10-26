@@ -43,7 +43,7 @@
     "test:scripts": "vitest run --passWithNoTests --config scripts/vitest.config.ts",
     "test:build-config": "node --test .github/build/*.test.mjs",
     "e2e:local": "bash scripts/e2e-local.sh",
-    "test:reliability": "node -e \"if (!process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL) throw new Error('Set LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL to a dedicated local test database')\" && pnpm --filter @lobbystack/domain exec vitest run integration webhooks.telemetry && pnpm --filter @lobbystack/admin exec vitest run src/lib/mcp/handler.integration.test.ts src/lib/oauth.integration.test.ts src/lib/session-revocation.integration.test.ts src/lib/partner-host-auth.integration.test.ts src/lib/public-api/onboard.integration.test.ts",
+    "test:reliability": "node -e \"if (!process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL) throw new Error('Set LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL to a dedicated local test database')\" && pnpm --filter @lobbystack/domain exec vitest run integration webhooks.telemetry && pnpm --filter @lobbystack/admin exec vitest run src/lib/mcp/handler.integration.test.ts src/lib/oauth.integration.test.ts src/lib/session-revocation.integration.test.ts src/lib/partner-host-auth.integration.test.ts src/lib/public-api/onboard.integration.test.ts app/api/webhooks/openai/live/route.integration.test.ts",
     "release:check": "tsx --tsconfig scripts/tsconfig.json scripts/release-readiness.ts",
     "release:dokploy": "tsx --tsconfig scripts/tsconfig.json scripts/dokploy-release.ts",
     "release:seed-e2e": "tsx --tsconfig scripts/tsconfig.json scripts/seed-release-e2e.ts",

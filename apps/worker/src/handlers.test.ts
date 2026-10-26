@@ -8,7 +8,7 @@ import { billingCheckoutLeaseEndsAt, claimBillingCheckoutRequest, countPublishab
 import { queueDailyOperatorSummaries, queueOnboardingFollowupEmail } from "@lobbystack/domain";
 import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning, numberProvisioningLeaseEndsAt } from "@lobbystack/domain";
 import { brandForEmail, businessExists, businessGetsHostEmails, forgetCachedBrands, loadNumberReleaseEmail, type Brand } from "@lobbystack/domain";
-import { claimPartnerCheckoutRequest, loadPartnerCheckoutRequest, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerCheckoutLeaseEndsAt, reconcilePartnerTier, settlePartnerNumberCharges } from "@lobbystack/domain";
+import { advancePartnerLifecycles, claimPartnerCheckoutRequest, loadPartnerCheckoutRequest, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerCheckoutLeaseEndsAt, PartnerLifecycleError, reconcilePartnerTier, settlePartnerNumberCharges } from "@lobbystack/domain";
 import { SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
 
 vi.mock("@lobbystack/domain", async (importOriginal) => {
@@ -24,6 +24,7 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
     partnerCheckoutLeaseEndsAt: vi.fn(),
     reconcilePartnerTier: vi.fn(),
     settlePartnerNumberCharges: vi.fn(),
+    advancePartnerLifecycles: vi.fn(),
     deliverOutbound: vi.fn(),
     expireProspectDemos: vi.fn(),
     generateAffiliatePayoutRun: vi.fn(),
@@ -807,6 +808,30 @@ describe("worker handlers", () => {
       vi.mocked(settlePartnerNumberCharges).mockResolvedValue({ settled: 2, charged: 0 });
       await expect(handleJob(job, { domain })).resolves.toEqual({ status: "completed", entityId: "2:0" });
       expect(settlePartnerNumberCharges).toHaveBeenCalledWith(domain, expect.objectContaining({ tierBilling: false }));
+    });
+  });
+
+  describe("a partner's lifecycle", () => {
+    const job: JobEnvelope = { jobId: randomUUID(), type: "partnerLifecycle.advance", queue: "maintenance", businessId: null, payload: {}, trace: {}, idempotencyKey: "partner-lifecycle", scheduled: true, recurring: true };
+
+    it("sends every partner the clock with no business in its context, and says how many moved and how many businesses it deleted", async () => {
+      const domain = { db: undefined as never };
+      vi.mocked(advancePartnerLifecycles)
+        .mockResolvedValueOnce({ moved: 2, deleted: 0, waiting: 0 })
+        .mockResolvedValueOnce({ moved: 0, deleted: 3, waiting: 1 })
+        .mockResolvedValueOnce({ moved: 0, deleted: 0, waiting: 1 });
+      await expect(handleJob(job, { domain })).resolves.toEqual({ status: "completed", entityId: "2:0" });
+      await expect(handleJob(job, { domain })).resolves.toEqual({ status: "completed", entityId: "0:3" });
+      // A business whose number is still being bought waits for the next run.
+      await expect(handleJob(job, { domain })).resolves.toEqual({ status: "skipped", entityId: "0:0" });
+      expect(advancePartnerLifecycles).toHaveBeenCalledWith(domain);
+    });
+
+    it("fails the run when a partner couldn't move or a business couldn't be deleted, so the queue shows it", async () => {
+      vi.mocked(advancePartnerLifecycles).mockRejectedValueOnce(new PartnerLifecycleError([{ partnerId: randomUUID(), error: new Error("connection reset") }]));
+      await expect(handleJob(job, { domain: { db: undefined as never } })).rejects.toThrow("Couldn't move 1 partner through the lifecycle");
+      vi.mocked(advancePartnerLifecycles).mockRejectedValueOnce(new PartnerLifecycleError([{ partnerId: randomUUID(), businessId: randomUUID(), error: new Error("connection reset") }, { partnerId: randomUUID(), businessId: randomUUID(), error: new Error("connection reset") }]));
+      await expect(handleJob(job, { domain: { db: undefined as never } })).rejects.toThrow("Couldn't delete 2 businesses of partners that reached deletion");
     });
   });
 

@@ -42,6 +42,8 @@ The **Billing** page shows these prices from `partnerTierCatalog` in `packages/s
 
 A partner's Polar customer has the external ID `partner:<partner ID>`, never a business's. The webhook route stores its events with the partner, and the worker sets the partner's tier, subscription state, pool and included numbers from them. Keep "Allow multiple subscriptions" off, so a partner holds one tier at a time.
 
+When a partner's paid tier ends or a payment fails, its businesses keep answering for 30 days, and the partner can release them. Then the hourly `partnerLifecycle.advance` job pauses them, and their calls forward until the partner pays for a tier again. Ninety days after the tier ended, the job deletes them, and the worker releases their phone numbers. The console's **Businesses** page shows the partner's owners and admins both dates. [The partner architecture](../architecture/partners.md#partner-lifecycle) lists each step.
+
 ## Charge partners for extra numbers
 
 Each tier includes some phone numbers. A partner on a paid tier can hold more. Each number past the included ones costs the partner what Twilio charges you for it each month. Your deployment counts and charges partners' numbers only while all six tier products are set. The worker records that when it starts, so restart it after you change them. Set up Polar to bill those charges:
@@ -176,6 +178,7 @@ Run these checks in the Polar sandbox before enabling production billing:
 - Confirm only business administrators can start checkout or open the portal.
 - Confirm only a partner's owners can start a tier checkout or open its portal, and that the partner's tier and pool follow each subscription change.
 - Give a partner on a paid tier one number more than its tier includes, and confirm Polar charges the partner that number's monthly price within the hour.
+- Revoke a partner's tier, and confirm its businesses still answer calls and chats, and that the console's **Businesses** page shows when they pause and when they're deleted.
 - Complete monthly and annual checkout for Starter and Pro.
 - Confirm invalid webhook signatures receive an unauthorized response.
 - Confirm duplicate webhook deliveries create one provider event.

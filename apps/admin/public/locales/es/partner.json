@@ -616,6 +616,38 @@
       "portalFailed": "No pudimos abrir su suscripción. Inténtelo de nuevo."
     }
   },
+  "lifecycle": {
+    "past_due": {
+      "title": "Falló el último pago de su nivel",
+      "description": "Sus negocios atienden llamadas y chats hasta el {{pausesAt}}. Después se pausan hasta que pague, y los eliminamos 90 días después de que termine su nivel.",
+      "owner": "Actualice su tarjeta en Gestionar suscripción, en la página Facturación, para que sigan atendiendo, o ceda cada negocio a su propietario.",
+      "admin": "Pida a un propietario que actualice la tarjeta de su nivel, o ceda cada negocio a su propietario."
+    },
+    "ending": {
+      "title": "Su nivel terminó el {{tierEndedAt}}",
+      "description": "Sus negocios atienden llamadas y chats hasta el {{pausesAt}}. Después se pausan, y el {{deletesAt}} los eliminamos.",
+      "owner": "Elija un nivel en la página Facturación para que sigan atendiendo, o ceda cada negocio a su propietario.",
+      "admin": "Pida a un propietario que elija un nivel, o ceda cada negocio a su propietario."
+    },
+    "paused": {
+      "title": "Sus negocios dejaron de atender el {{pausesAt}}",
+      "description": "Su nivel terminó el {{tierEndedAt}}. Las llamadas van al número de transferencia de cada negocio o al teléfono de su propietario, y el chat del sitio web no puede responder. El {{deletesAt}} los eliminamos.",
+      "owner": "Elija un nivel en la página Facturación para que vuelvan a atender, o ceda cada negocio a su propietario.",
+      "admin": "Pida a un propietario que elija un nivel, o ceda cada negocio a su propietario."
+    },
+    "paused_past_due": {
+      "title": "Sus negocios dejaron de atender el {{pausesAt}}",
+      "description": "Falló el último pago de su nivel. Las llamadas van al número de transferencia de cada negocio o al teléfono de su propietario, y el chat del sitio web no puede responder. Los eliminamos 90 días después de que termine su nivel.",
+      "owner": "Actualice su tarjeta en Gestionar suscripción, en la página Facturación, para que vuelvan a atender, o ceda cada negocio a su propietario.",
+      "admin": "Pida a un propietario que actualice la tarjeta de su nivel, o ceda cada negocio a su propietario."
+    },
+    "deleted": {
+      "title": "Eliminamos sus negocios el {{deletesAt}}",
+      "description": "Fue 90 días después de que terminó su nivel. Ahora está en Gratis, y los negocios que agregue funcionan como en Gratis.",
+      "owner": "Para volver a pagar un nivel, elija uno en la página Facturación.",
+      "admin": "Pida a un propietario un nivel de pago si lo vuelve a necesitar."
+    }
+  },
   "signup": {
     "title": "Regístrese como socio",
     "description": "Revenda {{appName}} a los negocios que atiende, con su propia marca.",

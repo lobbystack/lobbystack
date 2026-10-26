@@ -616,6 +616,38 @@
       "portalFailed": "Impossible d'ouvrir votre abonnement. Réessayez."
     }
   },
+  "lifecycle": {
+    "past_due": {
+      "title": "Le dernier paiement de votre palier a échoué",
+      "description": "Vos entreprises répondent aux appels et aux clavardages jusqu'au {{pausesAt}}. Ensuite, elles se mettent en pause jusqu'à ce que vous payiez, et nous les supprimons 90 jours après la fin de votre palier.",
+      "owner": "Mettez à jour votre carte dans Gérer l'abonnement, sur la page Facturation, pour qu'elles continuent de répondre, ou cédez chaque entreprise à son propriétaire.",
+      "admin": "Demandez à un propriétaire de mettre à jour la carte de votre palier, ou cédez chaque entreprise à son propriétaire."
+    },
+    "ending": {
+      "title": "Votre palier a pris fin le {{tierEndedAt}}",
+      "description": "Vos entreprises répondent aux appels et aux clavardages jusqu'au {{pausesAt}}. Ensuite, elles se mettent en pause, et le {{deletesAt}}, nous les supprimons.",
+      "owner": "Choisissez un palier sur la page Facturation pour qu'elles continuent de répondre, ou cédez chaque entreprise à son propriétaire.",
+      "admin": "Demandez à un propriétaire de choisir un palier, ou cédez chaque entreprise à son propriétaire."
+    },
+    "paused": {
+      "title": "Vos entreprises ne répondent plus depuis le {{pausesAt}}",
+      "description": "Votre palier a pris fin le {{tierEndedAt}}. Les appels vont au numéro de transfert de chaque entreprise ou au téléphone de son propriétaire, et le clavardage du site Web ne peut pas répondre. Le {{deletesAt}}, nous les supprimons.",
+      "owner": "Choisissez un palier sur la page Facturation pour qu'elles répondent de nouveau, ou cédez chaque entreprise à son propriétaire.",
+      "admin": "Demandez à un propriétaire de choisir un palier, ou cédez chaque entreprise à son propriétaire."
+    },
+    "paused_past_due": {
+      "title": "Vos entreprises ne répondent plus depuis le {{pausesAt}}",
+      "description": "Le dernier paiement de votre palier a échoué. Les appels vont au numéro de transfert de chaque entreprise ou au téléphone de son propriétaire, et le clavardage du site Web ne peut pas répondre. Nous les supprimons 90 jours après la fin de votre palier.",
+      "owner": "Mettez à jour votre carte dans Gérer l'abonnement, sur la page Facturation, pour qu'elles répondent de nouveau, ou cédez chaque entreprise à son propriétaire.",
+      "admin": "Demandez à un propriétaire de mettre à jour la carte de votre palier, ou cédez chaque entreprise à son propriétaire."
+    },
+    "deleted": {
+      "title": "Nous avons supprimé vos entreprises le {{deletesAt}}",
+      "description": "C'était 90 jours après la fin de votre palier. Vous êtes maintenant sur Gratuit, et les entreprises que vous ajoutez fonctionnent comme sur Gratuit.",
+      "owner": "Pour payer de nouveau un palier, choisissez-en un sur la page Facturation.",
+      "admin": "Demandez à un propriétaire si vous avez de nouveau besoin d'un palier payant."
+    }
+  },
   "signup": {
     "title": "Devenir partenaire",
     "description": "Revendez {{appName}} aux entreprises que vous servez, sous votre propre marque.",

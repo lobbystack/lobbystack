@@ -604,6 +604,38 @@
       "portalFailed": "We couldn't open your subscription. Try again."
     }
   },
+  "lifecycle": {
+    "past_due": {
+      "title": "Your last tier payment failed",
+      "description": "Your businesses keep answering calls and chats until {{pausesAt}}. Then they pause until you pay, and we delete them 90 days after your tier ends.",
+      "owner": "Update your card from Manage subscription on the Billing page to keep them running, or release each business to its owner.",
+      "admin": "Ask an owner to update the card for your tier, or release each business to its owner."
+    },
+    "ending": {
+      "title": "Your tier ended on {{tierEndedAt}}",
+      "description": "Your businesses keep answering calls and chats until {{pausesAt}}. Then they pause, and on {{deletesAt}} we delete them.",
+      "owner": "Choose a tier on the Billing page to keep them running, or release each business to its owner.",
+      "admin": "Ask an owner to choose a tier, or release each business to its owner."
+    },
+    "paused": {
+      "title": "Your businesses stopped answering on {{pausesAt}}",
+      "description": "Your tier ended on {{tierEndedAt}}. Calls forward to each business's transfer number or its owner's phone, and website chat can't reply. On {{deletesAt}} we delete them.",
+      "owner": "Choose a tier on the Billing page to bring them back, or release each business to its owner.",
+      "admin": "Ask an owner to choose a tier, or release each business to its owner."
+    },
+    "paused_past_due": {
+      "title": "Your businesses stopped answering on {{pausesAt}}",
+      "description": "Your last tier payment failed. Calls forward to each business's transfer number or its owner's phone, and website chat can't reply. We delete them 90 days after your tier ends.",
+      "owner": "Update your card from Manage subscription on the Billing page to bring them back, or release each business to its owner.",
+      "admin": "Ask an owner to update the card for your tier, or release each business to its owner."
+    },
+    "deleted": {
+      "title": "We deleted your businesses on {{deletesAt}}",
+      "description": "That was 90 days after your tier ended. You're on Free now, and businesses you add work as they do on Free.",
+      "owner": "To pay for a tier again, choose one on the Billing page.",
+      "admin": "Ask an owner if you need a paid tier again."
+    }
+  },
   "signup": {
     "title": "Sign up as a partner",
     "description": "Resell {{appName}} to the businesses you serve, under your own brand.",

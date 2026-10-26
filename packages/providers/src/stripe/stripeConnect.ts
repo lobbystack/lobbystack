@@ -119,6 +119,8 @@ export interface StripeConnectProvider {
   createPortal(accountId: string, customerId: string, returnUrl: string): Promise<{ url: string }>;
   /** The subscription as Stripe describes it now. */
   retrieveSubscription(accountId: string, subscriptionId: string): Promise<StripeConnectSubscription>;
+  /** Ends a subscription now, so its customer pays nothing more, and returns it as it ended. One that already ended stays as it is. */
+  cancelSubscription(accountId: string, subscriptionId: string): Promise<StripeConnectSubscription>;
   /** The event a Connect webhook delivery carries, or a thrown error when its signature doesn't check out. */
   verifyWebhook(body: string, signature: string): StripeConnectEvent;
 }
@@ -296,6 +298,14 @@ export class StripeConnectAdapter implements StripeConnectProvider {
 
   async retrieveSubscription(accountId: string, subscriptionId: string): Promise<StripeConnectSubscription> {
     return subscriptionFromStripe(await this.stripe.subscriptions.retrieve(subscriptionId, {}, { stripeAccount: accountId }));
+  }
+
+  async cancelSubscription(accountId: string, subscriptionId: string): Promise<StripeConnectSubscription> {
+    const onAccount = { stripeAccount: accountId };
+    // Stripe refuses to cancel a subscription that already ended, so a retry reads it first.
+    const current = await this.stripe.subscriptions.retrieve(subscriptionId, {}, onAccount);
+    if (current.status === "canceled" || current.status === "incomplete_expired") return subscriptionFromStripe(current);
+    return subscriptionFromStripe(await this.stripe.subscriptions.cancel(subscriptionId, {}, onAccount));
   }
 
   verifyWebhook(body: string, signature: string): StripeConnectEvent {

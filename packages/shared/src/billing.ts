@@ -157,13 +157,17 @@ export function packageEntitlement(partnerId: string, terms: PackageEntitlementT
  * The entitlement of a partner's business billed outside LobbyStack: the
  * partner bills it however it likes, so the host sets it no allowance, no
  * overage and no number limit, and it's live. Its usage still draws on the
- * partner's pool, which nothing limits until tiers do.
+ * partner's pool, which nothing limits until tiers do. It isn't live while
+ * its partner's businesses are paused, and then gets nothing, so calls
+ * forward and chat shows its message.
  */
-export function billedOutsideEntitlement(partnerId: string): Entitlement {
+export function billedOutsideEntitlement(partnerId: string, account: { live: boolean } = { live: true }): Entitlement {
   return {
-    live: true,
+    live: account.live,
     source: "billed_outside",
-    allowance: { voiceSeconds: null, chats: null, alertSms: null, outboundAttempts: null },
+    allowance: account.live
+      ? { voiceSeconds: null, chats: null, alertSms: null, outboundAttempts: null }
+      : { voiceSeconds: 0, chats: 0, alertSms: 0, outboundAttempts: 0 },
     overage: { enabled: false, currency: "USD", rates: { voiceMinute: 0, chat: 0, alertSms: 0, outboundAttempt: 0 }, capMinor: null },
     poolPartnerId: partnerId,
     includedNumbers: null,

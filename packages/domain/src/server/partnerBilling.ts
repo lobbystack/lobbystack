@@ -15,6 +15,7 @@ import {
 
 import { AuthorizationError } from "../authz";
 import type { DomainContext } from "./context";
+import { advancePartnerInTransaction, partnerTierEventKind } from "./partnerLifecycle";
 import { loadPartnerNumberStanding } from "./partnerNumbers";
 import type { PartnerActor, PartnerMemberActor } from "./partners";
 
@@ -346,10 +347,12 @@ function date(source: Record<string, unknown>, ...keys: string[]): Date | undefi
 /**
  * Applies one of Polar's events for the partner's customer to its billing
  * account: the tier Polar sold, its interval and subscription state, and the
- * terms of the tier in force, which is Free unless a paid tier is live. An
- * event older than one already applied leaves the subscription as it is, so
- * a late retry can't roll it back. Returns false when the event isn't the
- * partner's.
+ * terms of the tier in force, which is Free unless a paid tier is live. The
+ * change then moves the partner through its lifecycle: a failed payment or a
+ * tier that ended starts the 30 days its businesses keep answering, and a
+ * tier paid for again makes it active. An event older than one already
+ * applied leaves the subscription as it is, so a late retry can't roll it
+ * back. Returns false when the event isn't the partner's.
  */
 export async function reconcilePartnerTier(context: DomainContext, input: { partnerId: string; providerEventId: string }): Promise<boolean> {
   return await withBusinessTransaction(context.db, { actorType: "worker" }, async (tx) => {
@@ -413,6 +416,13 @@ export async function reconcilePartnerTier(context: DomainContext, input: { part
       includedNumbers: terms.includedNumbers,
       ...fields,
     }).onConflictDoUpdate({ target: partnerBillingAccounts.partnerId, set: fields });
+    // The change moves the partner through its lifecycle, at the time Polar gives it: when the subscription ended, or when it changed.
+    const kind = stale ? null : partnerTierEventKind(existing, next);
+    if (kind) {
+      const now = new Date();
+      const reported = (kind === "tier_cancelled" ? date(subscription, "ended_at", "endedAt") : undefined) ?? (modifiedAt ? new Date(modifiedAt) : undefined);
+      await advancePartnerInTransaction(tx, input.partnerId, { kind, at: reported && reported < now ? reported : now });
+    }
     await tx.update(providerEvents).set({ status: "processed", updatedAt: new Date() }).where(eq(providerEvents.id, event.id));
     return true;
   });

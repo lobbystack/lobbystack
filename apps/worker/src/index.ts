@@ -18,6 +18,7 @@ import { DelayedError, Worker } from "bullmq";
 import { and, eq, isNull } from "drizzle-orm";
 import OpenAI from "openai";
 
+import { createWorkerDomainContext } from "./domainContext";
 import { handleJob, type WorkerDependencies } from "./handlers";
 import { startHealthServer } from "./health";
 import { createLiveCallHandler, liveDrainTimeoutMs } from "./liveCalls";
@@ -158,7 +159,8 @@ async function main(): Promise<void> {
   };
   const state = { ready: false, redis: false, database: false, storage: false, activeJobs: 0, draining: false };
   const embeddings = createEmbeddingProvider();
-  const liveCalls = createLiveCallHandler({ domain: { db: database.db, snapshotCache: getWorkerSnapshotCache(), ...(embeddings ? { embeddings } : {}) }, attachLock: realtime });
+  const domain = createWorkerDomainContext({ db: database.db, snapshotCache: getWorkerSnapshotCache(), ...(embeddings ? { embeddings } : {}) });
+  const liveCalls = createLiveCallHandler({ domain, attachLock: realtime });
   const health = startHealthServer(workerPort, state, liveCalls.handle);
   const email = createEmailProvider();
   const onboardingFollowupSender = createOnboardingFollowupSender();
@@ -177,7 +179,7 @@ async function main(): Promise<void> {
   // The recording copy schedules its own retries, so the client doesn't retry a 409.
   const openai = process.env.OPENAI_API_KEY ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, maxRetries: 0 }) : undefined;
   const dependencies: WorkerDependencies = {
-    domain: { db: database.db, snapshotCache: getWorkerSnapshotCache(), ...(embeddings ? { embeddings } : {}) },
+    domain,
     realtime,
     ...(calendar ? { calendar } : {}),
     ...(instagram ? { instagram } : {}),

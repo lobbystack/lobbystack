@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { billingUsageEvents, businesses, businessMemberships, createDatabaseClient, outboxMessages, platformKeyBusinesses, prospectDemos, receptionistProfiles, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { billingUsageEvents, businesses, businessMemberships, createDatabaseClient, outboxMessages, phoneNumbers, platformKeyBusinesses, prospectDemos, receptionistProfiles, storageObjects, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { PROSPECT_DEMO_WIDGET_ID } from "@lobbystack/shared";
 
 import { forgetCachedBrands } from "./brands";
@@ -329,10 +329,23 @@ describe.skipIf(!client)("a partner's prospect demos against PostgreSQL", () => 
       // A claimed demo is one of the partner's businesses, which the Businesses page deletes.
       expect(await refusal(deletePartnerDemo(bright.context, bright.ownerActor, { demoId: claimed.demoId }))).toMatchObject({ status: 409, code: "demo_claimed" });
 
+      // The demo's number and stored file go as a deleted business's do.
+      const line = { e164: `+1416${String(Math.floor(Math.random() * 10_000_000)).padStart(7, "0")}`, providerPhoneId: `PN${randomUUID().replaceAll("-", "")}` };
+      const objectKey = `${closed.businessId}/knowledge/${randomUUID()}/menu.pdf`;
+      const [number] = await asMigrator(tx, async () => {
+        await tx.insert(storageObjects).values({ businessId: closed.businessId, objectKey, purpose: "knowledge", fileName: "menu.pdf", contentType: "application/pdf", status: "ready" });
+        return await tx.insert(phoneNumbers).values({ businessId: closed.businessId, ...line, status: "active" }).returning({ id: phoneNumbers.id });
+      });
+
       await deletePartnerDemo(bright.context, bright.ownerActor, { demoId: closed.demoId });
       expect((await listPartnerDemos(bright.context, bright.ownerActor)).map((row) => row.demoId).sort()).toEqual([open.demoId, claimed.demoId].sort());
       const gone = async (businessId: string) => (await asMigrator(tx, async () => await tx.select({ id: businesses.id }).from(businesses).where(eq(businesses.id, businessId)))).length === 0;
       expect(await gone(closed.businessId)).toBe(true);
+      const queued = await asMigrator(tx, async () => ({
+        released: await tx.select({ businessId: outboxMessages.businessId, payload: outboxMessages.payload }).from(outboxMessages).where(and(eq(outboxMessages.topic, "phoneNumber.releaseDeleted"), eq(outboxMessages.aggregateId, number!.id))),
+        stored: await tx.select({ businessId: outboxMessages.businessId, payload: outboxMessages.payload }).from(outboxMessages).where(and(eq(outboxMessages.topic, "privacy.deleteStoredObjects"), eq(outboxMessages.aggregateId, closed.businessId))),
+      }));
+      expect(queued).toEqual({ released: [{ businessId: null, payload: line }], stored: [{ businessId: null, payload: { objectKeys: [objectKey] } }] });
 
       // One past its expiry is closed too, before the hourly sweep turns it off.
       await asMigrator(tx, async () => await tx.update(prospectDemos).set({ expiresAt: new Date(Date.now() - 60_000) }).where(eq(prospectDemos.id, open.demoId)));

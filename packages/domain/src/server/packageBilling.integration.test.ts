@@ -558,7 +558,8 @@ describe.skipIf(!client)("a partner's business's billing page", () => {
       expect(await refusal(getPackageBilling(seller.context, { userId: viewer!.userId, businessId: sold.businessId }))).toMatchObject({ status: 403 });
       expect(await refusal(openPackagePortal(seller.context, { userId: viewer!.userId, businessId: sold.businessId, returnUrl: "https://acme.portal.example.test/settings/subscription" }))).toMatchObject({ status: 403 });
 
-      const { businessId: direct } = await createBusiness(seller.context, { userId: directOwner!.userId, name: "Corner Shop", timezone: "UTC", businessType: "test" });
+      // A name of its own: soldBusiness made a Harbor Dental first, and another suite makes a Corner Shop before its Harbor Dental, so a shared slug would deadlock the two.
+      const { businessId: direct } = await createBusiness(seller.context, { userId: directOwner!.userId, name: `Corner Shop ${randomUUID().slice(0, 8)}`, timezone: "UTC", businessType: "test" });
       expect(await refusal(getPackageBilling(seller.context, { userId: directOwner!.userId, businessId: direct }))).toMatchObject({ status: 404, code: "business_not_found" });
     });
   });

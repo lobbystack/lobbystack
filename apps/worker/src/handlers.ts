@@ -13,7 +13,7 @@ import { claimNumberProvisioning, completeNumberProvisioning, desiredNumberRouti
 import { createWebhookSender, processWebhookDelivery, pruneApiHistory, type WebhookSender } from "@lobbystack/domain";
 import { LIVE_RECORDING_ATTEMPTS, listBusinessesWithOpenLiveCalls, listOpenLiveCalls, liveCallHasRecording, persistCallRecording, retryLiveCallRecording, type OpenLiveCall } from "@lobbystack/domain";
 import { expireTeamRequest } from "@lobbystack/domain";
-import { claimPartnerCheckoutRequest, loadPartnerCheckoutRequest, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerBillingKey, partnerCheckoutLeaseEndsAt, reconcilePartnerTier, settlePartnerNumberCharges } from "@lobbystack/domain";
+import { advancePartnerLifecycles, claimPartnerCheckoutRequest, loadPartnerCheckoutRequest, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerBillingKey, partnerCheckoutLeaseEndsAt, reconcilePartnerTier, settlePartnerNumberCharges } from "@lobbystack/domain";
 import { brandForEmail, businessExists, businessGetsHostEmails, hostBrandFromEnvironment, isHostOnlyEmailTemplate } from "@lobbystack/domain";
 import type { DomainContext } from "@lobbystack/domain";
 import { numberReleaseEmailSubject, numberTrialEmailSubject, type SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
@@ -699,6 +699,11 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         },
       });
       return { status: result.settled > 0 ? "completed" : "skipped", entityId: `${result.settled}:${result.charged}` };
+    }
+    case "partnerLifecycle.advance": {
+      // The clock moves each partner whose tier ended on: its businesses pause after 30 days, and at 90 the host deletes them.
+      const result = await advancePartnerLifecycles(dependencies.domain);
+      return { status: result.moved > 0 || result.deleted > 0 ? "completed" : "skipped", entityId: `${result.moved}:${result.deleted}` };
     }
     case "notification.dispatch": {
       const businessId = businessIdOrThrow(job);

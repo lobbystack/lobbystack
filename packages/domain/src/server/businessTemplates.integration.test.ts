@@ -393,6 +393,32 @@ describe.skipIf(!client)("business templates", () => {
     });
   });
 
+  it("queues the deletion of a document the template uploaded to a business it couldn't finish", async () => {
+    await rollbackTest(async (tx) => {
+      const acme = await partner(tx, "Acme Reception");
+      const { storage } = memoryStorage();
+      const setup = { worker: workerContext(tx), storage };
+      const harbor = await harborDental(tx, acme, setup);
+      const saved = await saveBusinessTemplate(acme.context, acme.adminActor, { businessId: harbor, name: "Dental" }, setup);
+      const pier = randomUUID();
+      // The new business reserves the upload, and then storage refuses its bytes.
+      const failing: TemplateStorage = {
+        ...storage,
+        async putObject(input) {
+          if (input.key.startsWith(`${pier}/`)) throw new Error("Storage is unavailable.");
+          await storage.putObject(input);
+        },
+      };
+
+      await expect(createPartnerBusiness(acme.context, acme.adminActor, { businessId: pier, name: "Pier Dental", timezone: "America/Toronto", businessType: "dental", accessLevel: "full", ownerEmail: "owner@pier.invalid", templateId: saved.templateId }, { worker: setup.worker, storage: failing })).rejects.toThrow("Storage is unavailable.");
+      const left = await asMigrator(tx, async () => ({
+        businesses: await tx.select({ id: businesses.id }).from(businesses).where(eq(businesses.id, pier)),
+        cleanup: await tx.select({ businessId: outboxMessages.businessId, payload: outboxMessages.payload }).from(outboxMessages).where(and(eq(outboxMessages.aggregateId, pier), eq(outboxMessages.topic, "privacy.deleteStoredObjects"))),
+      }));
+      expect(left).toEqual({ businesses: [], cleanup: [{ businessId: null, payload: { objectKeys: [expect.stringMatching(new RegExp(`^${pier}/knowledge/[^/]+/prices\\.txt$`))] } }] });
+    });
+  });
+
   it("sells a package and applies a template to one new business, drops both with a business the template couldn't set up, and applies none for a platform key", async () => {
     vi.stubEnv("STRIPE_CONNECT_SECRET_KEY", "sk_test_platform");
     vi.stubEnv("STRIPE_CONNECT_WEBHOOK_SECRET", "whsec_test_platform");

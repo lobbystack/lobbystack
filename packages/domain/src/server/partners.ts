@@ -35,7 +35,7 @@ import { announceBrandChange } from "./brands";
 import { applyStoredBusinessTemplate, loadBusinessTemplateInTransaction, type BusinessSetupDependencies } from "./businessTemplates";
 import type { DomainContext } from "./context";
 import { firstOnboardingStage } from "./onboarding";
-import { closeCheckoutQuietly, dropBusinessPackageInTransaction, listPartnerBusinessBillingIn, lockBusinessBillingAccount, setBusinessPackageInTransaction, type OpenCheckout, type PartnerBusinessBilling } from "./packageBilling";
+import { closeCheckoutQuietly, dropBusinessPackageInTransaction, endLifecycleBusinessBillingInTransaction, listPartnerBusinessBillingIn, lockBusinessBillingAccount, setBusinessPackageInTransaction, type OpenCheckout, type PartnerBusinessBilling } from "./packageBilling";
 import { lockBusinessNumberClaims } from "./phoneNumbers";
 import { lockActivePartnerPlatformKey } from "./publicApi/platformKeys";
 import { isSharedSmsSender } from "./smsSender";
@@ -758,7 +758,7 @@ export async function createPartnerBusiness(
     applied = true;
     const invitation = await withBusinessTransaction(context.db, { userId: member.userId, businessId, actorType: "system" }, async (tx) => {
       // Someone on the team may have deleted it while the template was applied.
-      await lockPartnerBusiness(tx, member, businessId, "no key update");
+      await lockPartnerBusiness(tx, member.partnerId, businessId, "no key update");
       return await invite(tx, template.templateId);
     });
     return { businessId, ...invitation };
@@ -790,7 +790,7 @@ function errorStatus(error: unknown): number {
  */
 async function removeUnfinishedBusiness(context: DomainContext, member: PartnerMemberActor, businessId: string): Promise<void> {
   try {
-    const closes = await withBusinessTransaction(context.db, { userId: member.userId, businessId, actorType: "system" }, async (tx) => await deletePartnerBusinessInTransaction(tx, member, businessId, { stripeConnect: Boolean(context.stripeConnect) }));
+    const closes = await withBusinessTransaction(context.db, { userId: member.userId, businessId, actorType: "system" }, async (tx) => (await deletePartnerBusinessInTransaction(tx, { businessId, partnerId: member.partnerId, stripeConnect: Boolean(context.stripeConnect), by: "partner" })).checkout);
     await closeCheckoutQuietly(context, closes);
   } catch (error) {
     if (errorStatus(error) === 404) return;
@@ -805,14 +805,15 @@ function businessNotFound(): Error {
 /**
  * Locks the business and checks it's one of the partner's, returning the
  * partner as the database spells it. Another partner's business, a direct
- * one, or one no longer active answers as one that doesn't exist. The
- * transaction must be the system actor's, scoped to the business. Take any
- * advisory lock first: the team's and the number claims' lock holders write
- * rows that point at the business, which waits on this row lock.
+ * one, or one no longer active answers as one that doesn't exist, unless
+ * `anyStatus` lets a suspended one through. The transaction must be the
+ * system actor's or the worker's, scoped to the business. Take any advisory
+ * lock first: the team's and the number claims' lock holders write rows that
+ * point at the business, which waits on this row lock.
  */
-async function lockPartnerBusiness(tx: DatabaseTransaction, member: PartnerMemberActor, businessId: string, strength: "update" | "no key update"): Promise<string> {
+async function lockPartnerBusiness(tx: DatabaseTransaction, partnerId: string, businessId: string, strength: "update" | "no key update", anyStatus = false): Promise<string> {
   const [business] = await tx.select({ partnerId: businesses.partnerId, status: businesses.status }).from(businesses).where(eq(businesses.id, businessId)).limit(1).for(strength);
-  if (business?.status !== "active" || !business.partnerId || business.partnerId !== member.partnerId.toLowerCase()) throw businessNotFound();
+  if (!business || (!anyStatus && business.status !== "active") || !business.partnerId || business.partnerId !== partnerId.toLowerCase()) throw businessNotFound();
   return business.partnerId;
 }
 
@@ -841,7 +842,7 @@ export async function releaseBusiness(context: DomainContext, actor: PartnerActo
     // The Connect webhook's writes take this before the business's row, so this does too.
     await lockBusinessBillingAccount(tx, input.businessId);
     // Clearing the partner changes no key, so joining the team, which checks the business's key, doesn't wait on this.
-    const partnerId = await lockPartnerBusiness(tx, member, input.businessId, "no key update");
+    const partnerId = await lockPartnerBusiness(tx, member.partnerId, input.businessId, "no key update");
     const [owner] = await tx.select({ userId: businessMemberships.userId }).from(businessMemberships)
       .where(and(eq(businessMemberships.businessId, input.businessId), eq(businessMemberships.role, "business_owner"), eq(businessMemberships.status, "active")))
       .orderBy(asc(businessMemberships.createdAt), asc(businessMemberships.id))
@@ -865,6 +866,80 @@ export async function releaseBusiness(context: DomainContext, actor: PartnerActo
 const STORED_OBJECTS_PER_JOB = 500;
 
 /**
+ * Who deletes a partner's business: the partner, from the console's
+ * Businesses or Demos page or when a template couldn't set up a business it
+ * was creating, or the host, 90 days after the partner's tier ended. The
+ * partner can't delete a business that's suspended, or one that still pays
+ * for its package while the deployment would hear the subscription end. The
+ * host deletes it whatever its status, once the worker cancelled the
+ * subscription that paid for its package, which it names.
+ */
+export type PartnerBusinessDeletion = { businessId: string; partnerId: string; stripeConnect: boolean } & ({ by: "partner" } | { by: "lifecycle"; cancelledSubscriptionId: string | null });
+
+/** What deleting a business leaves to do and to record: the checkout to close once it commits, and the numbers it sent back to the provider. */
+export type PartnerBusinessDeleted = { checkout: OpenCheckout | null; releasedNumbers: Array<{ id: string; e164: string }> };
+
+/**
+ * Deletes one of the partner's businesses with everything in it, its audit
+ * log included, and queues the release of each phone number it held and the
+ * deletion of the files it stored. Its emails and jobs that haven't gone out
+ * are dropped. While a number is still being bought for it, it's refused,
+ * since the purchase would finish for a business that's gone. Returns the
+ * checkout nobody should pay any more, for the caller to close once this
+ * commits, and the numbers it queued for release. The caller checks who may
+ * delete it first. The transaction is the system actor's or the worker's,
+ * scoped to the business, and holds no row lock on the business yet.
+ */
+export async function deletePartnerBusinessInTransaction(tx: DatabaseTransaction, input: PartnerBusinessDeletion): Promise<PartnerBusinessDeleted> {
+  const { businessId } = input;
+  // Number claims take this lock, so none starts buying a number while the business goes.
+  await lockBusinessNumberClaims(tx, businessId);
+  // The Connect webhook's writes take this before the business's row, so this does too.
+  await lockBusinessBillingAccount(tx, businessId);
+  const partnerId = await lockPartnerBusiness(tx, input.partnerId, businessId, "update", input.by === "lifecycle");
+  // Nobody should keep paying for a business that's gone: the partner cancels a live subscription first, and the host's worker cancels it for the partner.
+  const checkout = input.by === "partner"
+    ? await dropBusinessPackageInTransaction(tx, { businessId, partnerId, stripeConnect: input.stripeConnect })
+    : await endLifecycleBusinessBillingInTransaction(tx, { businessId, partnerId, stripeConnect: input.stripeConnect, cancelledSubscriptionId: input.cancelledSubscriptionId });
+  // RLS shows the partner's people none of the business's claims, so the database answers. A claim no worker will finish doesn't count.
+  const claiming = (await tx.execute<{ busy: boolean }>(sql`select app.business_number_claim_in_progress(${businessId}::uuid) as busy`)).rows[0]?.busy === true;
+  const [provisioning] = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "provisioning"))).limit(1);
+  if (claiming || provisioning) throw failure("The business's phone number is still being set up. Try again in a few minutes.", 409, "business_number_in_progress");
+  // A number being released already is released again, in case that release fails once the business is gone.
+  const held = await tx.select({ id: phoneNumbers.id, e164: phoneNumbers.e164, providerPhoneId: phoneNumbers.providerPhoneId }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), inArray(phoneNumbers.status, ["active", "reclaiming"])));
+  const stored = await tx.select({ objectKey: storageObjects.objectKey }).from(storageObjects).where(and(eq(storageObjects.businessId, businessId), ne(storageObjects.status, "deleted")));
+  // An invitation or alert sent after the business is gone would go out under the host's brand.
+  await tx.delete(outboxMessages).where(and(eq(outboxMessages.businessId, businessId), isNull(outboxMessages.publishedAt)));
+  // These jobs are queued in the business, which the worker's RLS needs, and deleting it leaves them belonging to none.
+  const releasedNumbers: PartnerBusinessDeleted["releasedNumbers"] = [];
+  for (const number of held) {
+    // The shared sender texts for every business, so it stays, as a reclaim leaves it.
+    if (!number.providerPhoneId || isSharedSmsSender(number.e164)) continue;
+    releasedNumbers.push({ id: number.id, e164: number.e164 });
+    await enqueueOutbox(tx, {
+      topic: "phoneNumber.releaseDeleted",
+      businessId,
+      aggregateType: "phone_number",
+      aggregateId: number.id,
+      dedupeKey: `phone-number:${number.id}:release-deleted`,
+      payload: { providerPhoneId: number.providerPhoneId, e164: number.e164 },
+    });
+  }
+  for (let start = 0; start < stored.length; start += STORED_OBJECTS_PER_JOB) {
+    await enqueueOutbox(tx, {
+      topic: "privacy.deleteStoredObjects",
+      businessId,
+      aggregateType: "business",
+      aggregateId: businessId,
+      dedupeKey: `business:${businessId}:delete-stored-objects:${start}`,
+      payload: { objectKeys: stored.slice(start, start + STORED_OBJECTS_PER_JOB).map((object) => object.objectKey) },
+    });
+  }
+  await tx.delete(businesses).where(eq(businesses.id, businessId));
+  return { checkout, releasedNumbers };
+}
+
+/**
  * Deletes one of the partner's businesses with everything in it: its team,
  * calls, chats, contacts, appointments, knowledge and settings, its audit log
  * included. The worker then releases the phone numbers it held and deletes
@@ -879,55 +954,7 @@ export async function deletePartnerBusiness(context: DomainContext, actor: Partn
   const member = businessesActor(actor);
   const closes = await withBusinessTransaction(context.db, { userId: member.userId, businessId: input.businessId, actorType: "system" }, async (tx) => {
     if (await currentRole(tx, member) === "member") throw new AuthorizationError("Only owners and admins can delete the partner's businesses.");
-    return await deletePartnerBusinessInTransaction(tx, member, input.businessId, { stripeConnect: Boolean(context.stripeConnect) });
+    return (await deletePartnerBusinessInTransaction(tx, { businessId: input.businessId, partnerId: member.partnerId, stripeConnect: Boolean(context.stripeConnect), by: "partner" })).checkout;
   });
   await closeCheckoutQuietly(context, closes);
-}
-
-/**
- * Deletes one of the partner's businesses as deletePartnerBusiness does, once
- * the caller has checked who may, and returns the package checkout to close
- * once the transaction commits. The transaction must be the system actor's,
- * scoped to the business, and hold no row lock on the business yet.
- */
-export async function deletePartnerBusinessInTransaction(tx: DatabaseTransaction, member: PartnerMemberActor, businessId: string, options: { stripeConnect: boolean }): Promise<OpenCheckout | null> {
-  // Number claims take this lock, so none starts buying a number while the business goes.
-  await lockBusinessNumberClaims(tx, businessId);
-  // The Connect webhook's writes take this before the business's row, so this does too.
-  await lockBusinessBillingAccount(tx, businessId);
-  const partnerId = await lockPartnerBusiness(tx, member, businessId, "update");
-  // Nobody should keep paying for a business that's gone.
-  const checkout = await dropBusinessPackageInTransaction(tx, { businessId, partnerId, stripeConnect: options.stripeConnect });
-  // RLS shows the partner's people none of the business's claims, so the database answers. A claim no worker will finish doesn't count.
-  const claiming = (await tx.execute<{ busy: boolean }>(sql`select app.business_number_claim_in_progress(${businessId}::uuid) as busy`)).rows[0]?.busy === true;
-  const [provisioning] = await tx.select({ id: phoneNumbers.id }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), eq(phoneNumbers.status, "provisioning"))).limit(1);
-  if (claiming || provisioning) throw failure("The business's phone number is still being set up. Try again in a few minutes.", 409, "business_number_in_progress");
-  // A number being released already is released again, in case that release fails once the business is gone.
-  const held = await tx.select({ id: phoneNumbers.id, e164: phoneNumbers.e164, providerPhoneId: phoneNumbers.providerPhoneId }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), inArray(phoneNumbers.status, ["active", "reclaiming"])));
-  const stored = await tx.select({ objectKey: storageObjects.objectKey }).from(storageObjects).where(and(eq(storageObjects.businessId, businessId), ne(storageObjects.status, "deleted")));
-  // An invitation or alert sent after the business is gone would go out under the host's brand.
-  await tx.delete(outboxMessages).where(and(eq(outboxMessages.businessId, businessId), isNull(outboxMessages.publishedAt)));
-  await tx.delete(businesses).where(eq(businesses.id, businessId));
-  // The business is gone, so these jobs belong to none.
-  for (const number of held) {
-    // The shared sender texts for every business, so it stays, as a reclaim leaves it.
-    if (!number.providerPhoneId || isSharedSmsSender(number.e164)) continue;
-    await enqueueOutbox(tx, {
-      topic: "phoneNumber.releaseDeleted",
-      aggregateType: "phone_number",
-      aggregateId: number.id,
-      dedupeKey: `phone-number:${number.id}:release-deleted`,
-      payload: { providerPhoneId: number.providerPhoneId, e164: number.e164 },
-    });
-  }
-  for (let start = 0; start < stored.length; start += STORED_OBJECTS_PER_JOB) {
-    await enqueueOutbox(tx, {
-      topic: "privacy.deleteStoredObjects",
-      aggregateType: "business",
-      aggregateId: businessId,
-      dedupeKey: `business:${businessId}:delete-stored-objects:${start}`,
-      payload: { objectKeys: stored.slice(start, start + STORED_OBJECTS_PER_JOB).map((object) => object.objectKey) },
-    });
-  }
-  return checkout;
 }

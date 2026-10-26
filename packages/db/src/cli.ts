@@ -202,6 +202,15 @@ async function main(): Promise<void> {
             ,('lobbystack_worker', 'partner_number_charges', 'SELECT')
             ,('lobbystack_worker', 'partner_number_charges', 'INSERT')
             ,('lobbystack_readonly', 'partner_number_charges', 'SELECT')
+            ,('lobbystack_app', 'partner_lifecycles', 'SELECT')
+            ,('lobbystack_worker', 'partner_lifecycles', 'SELECT')
+            ,('lobbystack_worker', 'partner_lifecycles', 'INSERT')
+            ,('lobbystack_readonly', 'partner_lifecycles', 'SELECT')
+            ,('lobbystack_app', 'partner_lifecycle_events', 'SELECT')
+            ,('lobbystack_worker', 'partner_lifecycle_events', 'SELECT')
+            ,('lobbystack_worker', 'partner_lifecycle_events', 'INSERT')
+            ,('lobbystack_readonly', 'partner_lifecycle_events', 'SELECT')
+            ,('lobbystack_worker', 'partner_stripe_accounts', 'SELECT')
             ,('lobbystack_worker', 'partner_tier_billing', 'SELECT')
             ,('lobbystack_worker', 'partner_tier_billing', 'INSERT')
             ,('lobbystack_worker', 'partner_tier_billing', 'UPDATE')
@@ -347,7 +356,10 @@ async function main(): Promise<void> {
             ('business_templates', 'partner_id', false),
             ('business_templates', 'manifest', false),
             ('business_template_files', 'partner_id', false),
-            ('business_template_files', 'object_key', false)
+            ('business_template_files', 'object_key', false),
+            ('partner_lifecycles', 'state', false),
+            ('partner_lifecycles', 'since', false),
+            ('partner_lifecycles', 'tier_ended_at', false)
           ) as expected(table_name, column_name, granted)
           where has_column_privilege('lobbystack_app', 'public.' || expected.table_name, expected.column_name, 'UPDATE') <> expected.granted
         `);
@@ -397,6 +409,38 @@ async function main(): Promise<void> {
         if (partnerNumberChargeGrantFailures.rows.length > 0) {
           throw new Error(`Partner number charge grant verification failed for: ${partnerNumberChargeGrantFailures.rows.map((row) => `${row.role_name}:${row.column_name}:${row.granted ? "missing" : "unexpected"}`).join(", ")}`);
         }
+        // The worker moves a partner through its lifecycle, and never moves the
+        // row to another partner.
+        const partnerLifecycleWorkerGrantFailures = await migrator.db.execute<{ column_name: string; granted: boolean }>(sql`
+          select expected.column_name, expected.granted
+          from (values
+            ('state', true),
+            ('since', true),
+            ('tier_ended_at', true),
+            ('updated_at', true),
+            ('partner_id', false),
+            ('created_at', false)
+          ) as expected(column_name, granted)
+          where has_column_privilege('lobbystack_worker', 'public.partner_lifecycles', expected.column_name, 'UPDATE') <> expected.granted
+        `);
+        if (partnerLifecycleWorkerGrantFailures.rows.length > 0) {
+          throw new Error(`Partner lifecycle worker grant verification failed for: ${partnerLifecycleWorkerGrantFailures.rows.map((row) => `${row.column_name}:${row.granted ? "missing" : "unexpected"}`).join(", ")}`);
+        }
+        // A partner's lifecycle record outlives its businesses, so nobody rewrites or removes it.
+        const partnerLifecycleEventGrantFailures = await migrator.db.execute<{ role_name: string; privilege_type: string }>(sql`
+          select expected.role_name, expected.privilege_type
+          from (values
+            ('lobbystack_app', 'INSERT'),
+            ('lobbystack_app', 'UPDATE'),
+            ('lobbystack_app', 'DELETE'),
+            ('lobbystack_worker', 'UPDATE'),
+            ('lobbystack_worker', 'DELETE')
+          ) as expected(role_name, privilege_type)
+          where has_table_privilege(expected.role_name, 'public.partner_lifecycle_events', expected.privilege_type)
+        `);
+        if (partnerLifecycleEventGrantFailures.rows.length > 0) {
+          throw new Error(`Partner lifecycle event grant verification failed for unexpected: ${partnerLifecycleEventGrantFailures.rows.map((row) => `${row.role_name}:${row.privilege_type}`).join(", ")}`);
+        }
         const demoResolverGrantFailures = await migrator.db.execute<{ role_name: string; function_name: string }>(sql`
           select role_name, function_name
           from (values
@@ -437,6 +481,7 @@ async function main(): Promise<void> {
             ('lobbystack_app', 'app.list_partner_business_usage(uuid, text)'),
             ('lobbystack_app', 'app.is_partner_member_email(uuid, text)'),
             ('lobbystack_app', 'app.business_number_claim_in_progress(uuid)'),
+            ('lobbystack_worker', 'app.business_number_claim_in_progress(uuid)'),
             ('lobbystack_worker', 'app.business_exists(uuid)'),
             ('lobbystack_app', 'app.list_partner_business_billing(uuid)'),
             ('lobbystack_app', 'app.partner_role(uuid)'),
@@ -458,6 +503,10 @@ async function main(): Promise<void> {
             ('lobbystack_app', 'app.partner_number_standing(uuid)'),
             ('lobbystack_worker', 'app.partner_number_standing(uuid)'),
             ('lobbystack_worker', 'app.due_partner_number_charges(timestamptz, integer, uuid[])'),
+            ('lobbystack_app', 'app.partner_business_answers(uuid)'),
+            ('lobbystack_worker', 'app.partner_business_answers(uuid)'),
+            ('lobbystack_worker', 'app.audit_partner_lifecycle_step(uuid, varchar, varchar, timestamptz, varchar)'),
+            ('lobbystack_worker', 'app.partner_businesses_due_for_deletion(integer, uuid[])'),
             ('lobbystack_app', 'app.can_save_initial_branding()'),
             ('lobbystack_app', 'app.save_initial_branding(text, bytea, text)'),
             ('lobbystack_app', 'app.finish_business_handover(uuid, uuid)'),

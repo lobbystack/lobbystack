@@ -151,6 +151,14 @@ export class FakeStripeConnect implements StripeConnectProvider {
     return { subscriptionId, customerId: subscription.customerId, status: subscription.status, currentPeriodEnd: subscription.currentPeriodEnd, metadata: { ...subscription.metadata } };
   }
 
+  async cancelSubscription(accountId: string, subscriptionId: string): Promise<StripeConnectSubscription> {
+    this.takeFailure();
+    const subscription = this.subscriptions.get(subscriptionId);
+    if (!subscription || subscription.accountId !== accountId) throw Object.assign(new Error(`No such subscription: ${subscriptionId}`), { statusCode: 404 });
+    const ended = subscription.status === "canceled" || subscription.status === "incomplete_expired" ? subscription : this.updateSubscription(subscriptionId, { status: "canceled" });
+    return { subscriptionId, customerId: ended.customerId, status: ended.status, currentPeriodEnd: ended.currentPeriodEnd, metadata: { ...ended.metadata } };
+  }
+
   /**
    * Pays an open checkout, as the business would: Stripe makes the customer,
    * unless the checkout named one, and the subscription, which carries the

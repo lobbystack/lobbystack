@@ -574,7 +574,7 @@ export async function deletePartnerDemo(context: DomainContext, actor: PartnerAc
     if (demo.status === "claimed") throw failure("A claimed demo is one of your businesses. Delete it from the Businesses page.", 409, "demo_claimed");
     if (demo.status !== "revoked" && demo.expiresAt.getTime() > Date.now()) throw failure("Turn the demo off before you delete it.", 409, "demo_open");
     // Nobody claimed it, so nobody pays for it, but a package someone gave it is dropped all the same.
-    return await deletePartnerBusinessInTransaction(tx, member, businessId, { stripeConnect: Boolean(context.stripeConnect) });
+    return (await deletePartnerBusinessInTransaction(tx, { businessId, partnerId: member.partnerId, stripeConnect: Boolean(context.stripeConnect), by: "partner" })).checkout;
   });
   await closeCheckoutQuietly(context, closes);
 }

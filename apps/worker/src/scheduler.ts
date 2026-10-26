@@ -40,6 +40,8 @@ export async function configureSchedulers(
     { queue: "maintenance", name: "affiliate-payout", type: "affiliate.generatePayoutRun", every: 24 * 60 * 60_000, businessId: null },
     // A number a partner's business buys is charged within the hour, and again each month it's held.
     { queue: "maintenance", name: "partner-number-charges", type: "billing.chargePartnerNumbers", every: 60 * 60_000, businessId: null },
+    // A partner's businesses pause within the hour once their 30 days after its tier ended are up, and the host deletes them within the hour at 90.
+    { queue: "maintenance", name: "partner-lifecycle", type: "partnerLifecycle.advance", every: 60 * 60_000, businessId: null },
     // A call whose worker died keeps talking with nobody answering, so look every minute.
     { queue: "critical", name: "live-orphan-recovery", type: "live.recoverOrphans", every: 60_000, businessId: null },
   ];

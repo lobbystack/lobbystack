@@ -1332,6 +1332,33 @@ export const partnerCheckoutRequests = pgTable(
   (table) => [index("partner_checkout_requests_partner_status_idx").on(table.partnerId, table.status, table.createdAt)],
 );
 
+// Where a partner stands after its paid tier ends, since when, and when the tier ended (migration 0150). A partner with no row is active.
+export const partnerLifecycles = pgTable(
+  "partner_lifecycles",
+  {
+    partnerId: uuid("partner_id").primaryKey().references(() => partners.id, { onDelete: "cascade" }),
+    state: varchar("state", { length: 16 }).$type<"active" | "past_due" | "ending" | "paused" | "deleted">().notNull(),
+    since: timestamp("since", { withTimezone: true }).notNull(),
+    tierEndedAt: timestamp("tier_ended_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (table) => [index("partner_lifecycles_state_since_idx").on(table.state, table.since).where(sql`${table.state} in ('past_due', 'ending', 'paused', 'deleted')`)],
+);
+
+// Every lifecycle step a partner took, and every business the host deleted at its end. It outlives the businesses (migration 0150).
+export const partnerLifecycleEvents = pgTable(
+  "partner_lifecycle_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    partnerId: uuid("partner_id").notNull().references(() => partners.id, { onDelete: "cascade" }),
+    eventType: varchar("event_type", { length: 64 }).$type<"partner.lifecycle_changed" | "partner.business_deleted">().notNull(),
+    businessId: uuid("business_id"),
+    payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index("partner_lifecycle_events_partner_idx").on(table.partnerId, table.createdAt)],
+);
+
 // Whether this deployment bills partners for tiers, as the worker last recorded it from the environment. At most one row (migration 0147).
 export const partnerTierBilling = pgTable("partner_tier_billing", {
   id: smallint("id").default(1).primaryKey(),
@@ -2171,6 +2198,8 @@ export const schema = {
   billingCheckoutRequests,
   partnerBillingAccounts,
   partnerCheckoutRequests,
+  partnerLifecycles,
+  partnerLifecycleEvents,
   partnerTierBilling,
   partnerNumberCharges,
   billingTransactions,

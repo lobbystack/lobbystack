@@ -212,6 +212,10 @@ describe("a partner business billed outside LobbyStack", () => {
       includedNumbers: null,
     });
   });
+
+  it("gets nothing while its partner's businesses are paused, so calls forward and chat shows its message", () => {
+    expect(billedOutsideEntitlement("partner-1", { live: false })).toMatchObject({ live: false, source: "billed_outside", allowance: { voiceSeconds: 0, chats: 0, alertSms: 0, outboundAttempts: 0 }, overage: { enabled: false }, poolPartnerId: "partner-1" });
+  });
 });
 
 describe("a partner business on a package", () => {

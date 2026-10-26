@@ -217,6 +217,8 @@ export const queueForJobType = {
   "billing.reconcilePartner": "default",
   // Each month of a number a partner holds past its tier's included ones, charged to the partner in Polar.
   "billing.chargePartnerNumbers": "maintenance",
+  // The hourly clock that pauses a partner's businesses 30 days after its tier ends, and deletes them at 90.
+  "partnerLifecycle.advance": "maintenance",
   "calendar.syncAppointment": "default",
   "calendar.reconcileBusiness": "default",
   "calendar.deleteEvent": "default",

@@ -147,6 +147,17 @@ describe("the partner console's Businesses page", () => {
     expect(await screen.findByText("businesses.empty.memberDescription")).toBeTruthy();
   });
 
+  it("tells owners and admins, above the businesses, that the partner's businesses are paused", async () => {
+    const lifecycle = { state: "paused", tierEndedAt: "2026-09-01T12:00:00.000Z", pausesAt: "2026-10-01T12:00:00.000Z", deletesAt: "2026-11-30T12:00:00.000Z" };
+    for (const role of ["owner", "admin"] as const) {
+      renderAs(role, (url) => url.startsWith("/api/partner/lifecycle") ? Response.json(lifecycle) : Response.json({ businesses: [harbor] }));
+      expect(await screen.findByText("lifecycle.paused.title")).toBeTruthy();
+      expect(screen.getByText(`lifecycle.paused.${role}`)).toBeTruthy();
+      expect(screen.getByText("Harbor Dental")).toBeTruthy();
+      cleanup();
+    }
+  });
+
   it("creates a business at the access level picked, invites its owner, and records web.partner.business_created", async () => {
     const businesses: unknown[] = [];
     const fetchMock = renderAs("admin", (_url, init) => {

@@ -18,7 +18,7 @@ describe("worker schedulers", () => {
 
     await configureSchedulers(queues, [{ id: "business-a", active: true }, { id: "business-b", active: true }]);
 
-    expect(upsertJobScheduler).toHaveBeenCalledTimes(26);
+    expect(upsertJobScheduler).toHaveBeenCalledTimes(27);
     const tenantCalls = upsertJobScheduler.mock.calls.filter((call) => call[2].data.businessId !== null);
     expect(tenantCalls).toHaveLength(22);
     expect(tenantCalls.filter((call) => call[2].data.type === "api.retention")).toHaveLength(2);
@@ -37,6 +37,10 @@ describe("worker schedulers", () => {
     // Partners' numbers are charged by one hourly job across every partner.
     expect(upsertJobScheduler.mock.calls.filter((call) => call[2].data.type === "billing.chargePartnerNumbers").map((call) => [call[0], call[1], call[2].data.queue, call[2].data.businessId])).toEqual([
       ["partner-number-charges", { every: 60 * 60_000 }, "maintenance", null],
+    ]);
+    // So are their lifecycles: one hourly job sends every partner the clock.
+    expect(upsertJobScheduler.mock.calls.filter((call) => call[2].data.type === "partnerLifecycle.advance").map((call) => [call[0], call[1], call[2].data.queue, call[2].data.businessId])).toEqual([
+      ["partner-lifecycle", { every: 60 * 60_000 }, "maintenance", null],
     ]);
   });
 
@@ -101,7 +105,7 @@ describe("worker schedulers", () => {
     upsertJobScheduler.mockClear();
 
     await configureSchedulers(queues, [], applied);
-    expect(upsertJobScheduler.mock.calls.map((call) => call[0])).toEqual(["prospect-demo-expiry", "affiliate-payout", "partner-number-charges", "live-orphan-recovery"]);
+    expect(upsertJobScheduler.mock.calls.map((call) => call[0])).toEqual(["prospect-demo-expiry", "affiliate-payout", "partner-number-charges", "partner-lifecycle", "live-orphan-recovery"]);
   });
 
   it("does not register tenant jobs when no businesses are available", async () => {
@@ -110,11 +114,12 @@ describe("worker schedulers", () => {
 
     await configureSchedulers(queues as never);
 
-    expect(upsertJobScheduler).toHaveBeenCalledTimes(3);
+    expect(upsertJobScheduler).toHaveBeenCalledTimes(4);
     expect(upsertJobScheduler.mock.calls.map((call) => call[2].data)).toEqual(expect.arrayContaining([
       expect.objectContaining({ type: "affiliate.generatePayoutRun", businessId: null }),
       expect.objectContaining({ type: "prospectDemo.expire", businessId: null }),
       expect.objectContaining({ type: "billing.chargePartnerNumbers", businessId: null }),
+      expect.objectContaining({ type: "partnerLifecycle.advance", businessId: null }),
     ]));
   });
 });

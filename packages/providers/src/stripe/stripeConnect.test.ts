@@ -186,6 +186,20 @@ describe("the Stripe Connect adapter", () => {
     expect(Object.fromEntries(sent[1]!.params)).toEqual({ customer: "cus_1", return_url: "https://acme.portal.test/settings/subscription" });
   });
 
+  it("cancels a subscription now on the partner's account, and leaves one that already ended as it is", async () => {
+    const live = { id: "sub_1", object: "subscription", status: "active", customer: "cus_1", metadata: { lobbystack_business_id: "b1" }, items: { object: "list", data: [{ id: "si_1", current_period_end: 1_795_000_000 }] } };
+    const { adapter, sent } = stripeAnswering((request) => request.method === "DELETE" ? { ...live, status: "canceled" } : live);
+    expect(await adapter.cancelSubscription("acct_partner", "sub_1")).toEqual({ subscriptionId: "sub_1", customerId: "cus_1", status: "canceled", currentPeriodEnd: new Date(1_795_000_000 * 1000), metadata: { lobbystack_business_id: "b1" } });
+    expect(sent.map((request) => [request.method, request.path, request.headers.get("stripe-account")])).toEqual([
+      ["GET", "/v1/subscriptions/sub_1", "acct_partner"],
+      ["DELETE", "/v1/subscriptions/sub_1", "acct_partner"],
+    ]);
+
+    const ended = stripeAnswering(() => ({ ...live, status: "canceled" }));
+    expect(await ended.adapter.cancelSubscription("acct_partner", "sub_1")).toMatchObject({ status: "canceled" });
+    expect(ended.sent.map((request) => request.method)).toEqual(["GET"]);
+  });
+
   it("names the subscription each billing event is about", () => {
     const { adapter } = stripeAnswering(() => ({}));
     const signed = (type: string, object: Record<string, unknown>) => {
@@ -255,6 +269,12 @@ describe("the fake Stripe", () => {
     const again = await stripe.createCheckout(accountId, { ...input, customerId: subscription.customerId, idempotencyKey: "second" });
     expect(stripe.completeCheckout(again.sessionId).customerId).toBe(subscription.customerId);
     await expect(stripe.retrieveSubscription("acct_other", subscription.subscriptionId)).rejects.toMatchObject({ statusCode: 404 });
+
+    // Cancelling ends it at once, and cancelling it again changes nothing.
+    await expect(stripe.cancelSubscription("acct_other", subscription.subscriptionId)).rejects.toMatchObject({ statusCode: 404 });
+    expect(await stripe.cancelSubscription(accountId, subscription.subscriptionId)).toMatchObject({ subscriptionId: subscription.subscriptionId, status: "canceled" });
+    expect(await stripe.cancelSubscription(accountId, subscription.subscriptionId)).toMatchObject({ status: "canceled" });
+    expect(await stripe.retrieveSubscription(accountId, subscription.subscriptionId)).toMatchObject({ status: "canceled" });
   });
 
   it("signs deliveries only its own verifier accepts", () => {

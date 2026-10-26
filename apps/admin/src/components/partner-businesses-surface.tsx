@@ -11,6 +11,7 @@ import { formatPriceAmount, type PackageSubscriptionStatus, type PartnerAccessLe
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { AccessLevelOptions } from "@/components/partner-access-level-options";
 import { PageHeader } from "@/components/page-header";
+import { PartnerLifecycleNotice } from "@/components/partner-lifecycle-notice";
 import { useConsolePartner } from "@/components/partner-shell";
 import { fetchPartnerTemplates, partnerTemplatesQueryKey, SaveTemplateDialog } from "@/components/partner-templates-surface";
 import { useTelemetry } from "@/components/product-analytics";
@@ -108,7 +109,8 @@ function BillingSelect({ id, value, onChange, packages, current, disabled }: { i
  * partner's domain. They can start it from one of the partner's templates.
  * They also see and change each business's package, save a business's setup
  * as a template, release a business to an owner who joined, or delete it.
- * The server enforces the same rules.
+ * Once the partner's paid tier ended, they also see when its businesses
+ * pause and when the host deletes them. The server enforces the same rules.
  */
 export function PartnerBusinessesSurface() {
   const { t, i18n } = useTranslation("partner");
@@ -301,6 +303,7 @@ export function PartnerBusinessesSurface() {
         <PageHeader actions={createDialog} title={t("businesses.title")} />
         <p className="text-sm text-muted-foreground">{t("businesses.description")}</p>
       </div>
+      <PartnerLifecycleNotice />
       {businesses.isLoading ? (
         <Surface className="flex flex-col gap-4 p-6"><Skeleton className="h-5 w-40" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></Surface>
       ) : businesses.isError ? (

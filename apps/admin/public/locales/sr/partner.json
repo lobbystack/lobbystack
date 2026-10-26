@@ -616,6 +616,38 @@
       "portalFailed": "Nismo uspeli da otvorimo vašu pretplatu. Pokušajte ponovo."
     }
   },
+  "lifecycle": {
+    "past_due": {
+      "title": "Poslednje plaćanje vašeg nivoa nije uspelo",
+      "description": "Do {{pausesAt}} vaše firme odgovaraju na pozive i četove. Zatim se pauziraju dok ne platite, a brišemo ih 90 dana nakon što vaš nivo istekne.",
+      "owner": "Ažurirajte karticu u Upravljaj pretplatom na stranici Naplata da bi firme nastavile da odgovaraju, ili predajte svaku firmu njenom vlasniku.",
+      "admin": "Zamolite vlasnika da ažurira karticu za vaš nivo, ili predajte svaku firmu njenom vlasniku."
+    },
+    "ending": {
+      "title": "Vaš nivo je istekao {{tierEndedAt}}",
+      "description": "Do {{pausesAt}} vaše firme odgovaraju na pozive i četove. Zatim se pauziraju, a {{deletesAt}} ih brišemo.",
+      "owner": "Izaberite nivo na stranici Naplata da bi firme nastavile da odgovaraju, ili predajte svaku firmu njenom vlasniku.",
+      "admin": "Zamolite vlasnika da izabere nivo, ili predajte svaku firmu njenom vlasniku."
+    },
+    "paused": {
+      "title": "Vaše firme ne odgovaraju od {{pausesAt}}",
+      "description": "Vaš nivo je istekao {{tierEndedAt}}, pa pozivi idu na broj za preusmeravanje svake firme ili na telefon njenog vlasnika, a čet na sajtu ne može da odgovori. Dana {{deletesAt}} ih brišemo.",
+      "owner": "Izaberite nivo na stranici Naplata da bi firme ponovo odgovarale, ili predajte svaku firmu njenom vlasniku.",
+      "admin": "Zamolite vlasnika da izabere nivo, ili predajte svaku firmu njenom vlasniku."
+    },
+    "paused_past_due": {
+      "title": "Vaše firme ne odgovaraju od {{pausesAt}}",
+      "description": "Poslednje plaćanje vašeg nivoa nije uspelo, pa pozivi idu na broj za preusmeravanje svake firme ili na telefon njenog vlasnika, a čet na sajtu ne može da odgovori. Brišemo ih 90 dana nakon što vaš nivo istekne.",
+      "owner": "Ažurirajte karticu u Upravljaj pretplatom na stranici Naplata da bi firme ponovo odgovarale, ili predajte svaku firmu njenom vlasniku.",
+      "admin": "Zamolite vlasnika da ažurira karticu za vaš nivo, ili predajte svaku firmu njenom vlasniku."
+    },
+    "deleted": {
+      "title": "Obrisali smo vaše firme {{deletesAt}}",
+      "description": "To je bilo 90 dana nakon što je vaš nivo istekao. Sada ste na nivou Besplatno, a firme koje dodate rade kao na tom nivou.",
+      "owner": "Da biste ponovo platili nivo, izaberite ga na stranici Naplata.",
+      "admin": "Zamolite vlasnika za plaćeni nivo ako vam ponovo zatreba."
+    }
+  },
   "signup": {
     "title": "Registrujte se kao partner",
     "description": "Preprodajte {{appName}} firmama sa kojima radite, pod svojim brendom.",

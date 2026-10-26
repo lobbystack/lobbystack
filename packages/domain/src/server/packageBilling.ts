@@ -130,6 +130,17 @@ function openCheckoutOf(account: AccountRow | null, partnerAccount: StripeAccoun
   return accountId ? { accountId, sessionId: account.stripeCheckoutSessionId } : null;
 }
 
+/**
+ * Whether a live subscription holds the business's package: it pays, on the
+ * partner's connected account, on a deployment that would hear it end. A
+ * live subscription on an account the partner disconnected, or on a
+ * deployment without Stripe Connect, holds nothing.
+ */
+function holdsPackage(account: AccountRow | null, partnerAccount: StripeAccountRow | null, stripeConnect: boolean): boolean {
+  if (!account?.packageId || !hasLivePackageSubscription(account.stripeSubscriptionState)) return false;
+  return stripeConnect && Boolean(partnerAccount && !partnerAccount.disconnectedAt && partnerAccount.stripeAccountId === account.stripeAccountId);
+}
+
 /** Closes a checkout nobody should pay any more. It may have closed already, which is just as good. */
 async function expireQuietly(stripe: StripeConnectProvider | null | undefined, checkout: OpenCheckout | null): Promise<void> {
   if (!stripe || !checkout) return;
@@ -166,11 +177,10 @@ export async function setBusinessPackageInTransaction(
     if (!pkg || pkg.archivedAt) throw packageNotFound();
     if (!partnerAccount || partnerAccount.disconnectedAt || partnerAccount.stripeAccountId !== pkg.stripeAccountId) throw failure("Connect your Stripe account before you sell packages.", 409, "stripe_not_connected");
   }
-  const live = hasLivePackageSubscription(account?.stripeSubscriptionState);
-  const reachable = input.stripeConnect && Boolean(partnerAccount && !partnerAccount.disconnectedAt && partnerAccount.stripeAccountId === account?.stripeAccountId);
-  if (account?.packageId && live && reachable) {
+  if (holdsPackage(account, partnerAccount, input.stripeConnect)) {
     throw failure("This business pays for its package through Stripe. Cancel its subscription in your Stripe Dashboard before you change how it's billed.", 409, "subscription_active");
   }
+  const live = hasLivePackageSubscription(account?.stripeSubscriptionState);
   const closes = openCheckoutOf(account, null);
   // A live subscription the change lets go of must not make the next package live.
   const forgets = live ? { stripeSubscriptionId: null, stripeSubscriptionState: null, stripeCurrentPeriodEnd: null } : {};
@@ -201,6 +211,45 @@ export async function dropBusinessPackageInTransaction(tx: DatabaseTransaction, 
 /** Closes, once its transaction committed, the checkout dropBusinessPackageInTransaction left nobody to pay. */
 export async function closeCheckoutQuietly(context: DomainContext, checkout: OpenCheckout | null): Promise<void> {
   await expireQuietly(context.stripeConnect, checkout);
+}
+
+/** A business's subscription to its package, on the partner's connected account. */
+export type PackageSubscription = { accountId: string; subscriptionId: string };
+
+/**
+ * What a business the host is about to delete still takes payments for: the
+ * subscription that holds its package, which the worker cancels before the
+ * business goes, and the checkout someone may still pay, which it closes.
+ * The transaction is the worker's, scoped to the business.
+ */
+export async function businessPaymentsToEndInTransaction(tx: DatabaseTransaction, input: { businessId: string; partnerId: string; stripeConnect: boolean }): Promise<{ subscription: PackageSubscription | null; checkout: OpenCheckout | null }> {
+  await lockBusinessBillingAccount(tx, input.businessId);
+  const account = await readAccount(tx, input.businessId);
+  const partnerAccount = await readPartnerAccount(tx, input.partnerId);
+  const subscription = holdsPackage(account, partnerAccount, input.stripeConnect) && account?.stripeAccountId && account.stripeSubscriptionId
+    ? { accountId: account.stripeAccountId, subscriptionId: account.stripeSubscriptionId }
+    : null;
+  return { subscription, checkout: openCheckoutOf(account, partnerAccount) };
+}
+
+/**
+ * Lets go of the billing of a business the host deletes at the end of its
+ * partner's lifecycle. Unlike dropBusinessPackageInTransaction, it writes
+ * nothing, since the billing account goes with the business, and it doesn't
+ * wait for the partner to cancel the subscription: the worker cancelled it
+ * already. A subscription that still holds the package must be that one, or
+ * it refuses with subscription_active, and the business waits for the next
+ * run to cancel it. Returns the checkout to close once this commits. The
+ * transaction is the worker's, scoped to the business.
+ */
+export async function endLifecycleBusinessBillingInTransaction(tx: DatabaseTransaction, input: { businessId: string; partnerId: string; stripeConnect: boolean; cancelledSubscriptionId: string | null }): Promise<OpenCheckout | null> {
+  await lockBusinessBillingAccount(tx, input.businessId);
+  const account = await readAccount(tx, input.businessId);
+  const partnerAccount = await readPartnerAccount(tx, input.partnerId);
+  if (holdsPackage(account, partnerAccount, input.stripeConnect) && account?.stripeSubscriptionId !== input.cancelledSubscriptionId) {
+    throw failure("This business pays for its package through a subscription the worker hasn't cancelled yet.", 409, "subscription_active");
+  }
+  return openCheckoutOf(account, partnerAccount);
 }
 
 /** The actor's role as the database has it now. */
