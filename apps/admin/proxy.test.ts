@@ -21,6 +21,17 @@ it("rejects cross-origin API mutations even when a dynamic identifier has an ext
   expect(response.headers.get("cache-control")).toBe("private, no-store");
 });
 
+it("guards the partner console's changes against other origins, and keeps its pages out of shared caches", () => {
+  for (const [path, method] of [["/api/partner/signup", "POST"], ["/api/partner/team", "POST"], ["/api/partner/team", "PATCH"], ["/api/partner/team", "DELETE"], ["/api/partner/team/accept", "POST"]] as const) {
+    expect(proxy(new NextRequest(`http://localhost:3210${path}`, { method, headers: { origin: "https://untrusted.invalid" } })).status, `${method} ${path}`).toBe(403);
+    expect(proxy(new NextRequest(`http://localhost:3210${path}`, { method })).status, `${method} ${path} without an origin`).toBe(403);
+    expect(proxy(new NextRequest(`http://localhost:3210${path}`, { method, headers: { origin: "http://localhost:3210" } })).status, `${method} ${path} from the dashboard`).toBe(200);
+  }
+  for (const path of ["/partner/signup?invitation=token", "/partner/accept-invite?token=token", "/partner/5b1f6c43-34a5-4a8e-9a43-6c1f8d5f1c11/team"]) {
+    expect(proxy(new NextRequest(`http://localhost:3210${path}`)).headers.get("cache-control"), path).toBe("private, no-store");
+  }
+});
+
 it("lets the logo route cache its versioned image and serves it without script", () => {
   const logo = proxy(new NextRequest("http://localhost:3210/api/branding/logo?v=abc"));
   expect(logo.headers.get("cache-control")).toBeNull();

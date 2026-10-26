@@ -88,6 +88,15 @@ Local storage fits a single-host deployment. Use S3 when the admin and worker ru
 
 Webhook deliveries refuse private, loopback, link-local and cloud metadata addresses on every deployment, including self-hosted ones. Point endpoints at a public HTTPS URL. Plain `http://` URLs work only when `NODE_ENV=development`.
 
+## Partners
+
+Partners resell your deployment to the businesses they serve, under their own brand. They sign up and run their team from the partner console at `/partner` on your dashboard. Set these on the admin and the worker.
+
+| Variable | Purpose |
+| --- | --- |
+| `PARTNER_SIGNUP` | Who can sign up as a partner at `/partner/signup`: `open` lets anyone signed in, and `invite` needs a signup link. `pnpm partner-invite:create --email owner@acme.example` writes a link that works once, for that verified email, for 7 days. Defaults to `invite` when `DEPLOYMENT_MODE` is `cloud`, and to `open` otherwise. |
+| `PARTNER_BASE_DOMAIN` | The domain your partners get subdomains of, such as `receptionistportal.com`. Signup reserves one for each new partner, such as `acme.receptionistportal.com`. A partner's own emails, such as invitations to its team, go out under its name from `no-reply@` that domain, so your email provider must accept that sender. Without it, they go out from the address in `EMAIL_FROM`. |
+
 ## Observability
 
 | Variable | Purpose |

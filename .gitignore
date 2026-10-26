@@ -18,6 +18,7 @@ node_modules
 .firecrawl/
 .prospect-demos/
 .platform-keys/
+.partner-invites/
 apps/landing/.astro
 apps/landing/.wrangler
 apps/landing/dist

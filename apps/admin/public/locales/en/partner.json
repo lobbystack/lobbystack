@@ -1,0 +1,116 @@
+{
+  "shell": {
+    "navigation": "Partner console",
+    "switchPartner": "Switch partner",
+    "signUpAnother": "Sign up another partner",
+    "userMenu": "Account menu for {{email}}"
+  },
+  "nav": {
+    "businesses": "Businesses",
+    "team": "Team"
+  },
+  "roles": {
+    "owner": "Owner",
+    "admin": "Admin",
+    "member": "Member"
+  },
+  "businesses": {
+    "title": "Businesses",
+    "empty": {
+      "title": "No businesses yet",
+      "description": "The businesses you set up will show here."
+    }
+  },
+  "team": {
+    "title": "Team",
+    "description": "People who can use this console.",
+    "loadFailed": "We couldn't load the team. Refresh to try again.",
+    "table": {
+      "person": "Person",
+      "role": "Role"
+    },
+    "joinedOn": "Joined {{date}}",
+    "invitedOn": "Invited {{date}}",
+    "status": {
+      "pending": "Pending",
+      "expired": "Expired"
+    },
+    "invite": {
+      "action": "Invite",
+      "title": "Invite someone to your team",
+      "description": "They get an email with a link to join {{partnerName}}.",
+      "emailLabel": "Email",
+      "emailPlaceholder": "name@company.com",
+      "roleLabel": "Role",
+      "submit": "Send invitation",
+      "sending": "Sending…",
+      "sent": "Invitation sent to {{email}}.",
+      "roles": {
+        "owner": "Runs everything, including billing, the Stripe connection and deleting the partner.",
+        "admin": "Manages businesses, packages, branding, domains, keys and the team.",
+        "member": "Works inside your businesses."
+      },
+      "errors": {
+        "failed": "We couldn't send the invitation. Try again.",
+        "invalidEmail": "Enter one valid email address.",
+        "rateLimited": "You sent too many invitations. Try again in an hour."
+      }
+    },
+    "actions": {
+      "moreOptions": "More options for {{email}}",
+      "makeOwner": "Make owner",
+      "makeAdmin": "Make admin",
+      "makeMember": "Make member",
+      "remove": "Remove from team",
+      "revoke": "Cancel invitation"
+    },
+    "errors": {
+      "changeFailed": "We couldn't change that role. Try again.",
+      "removeFailed": "We couldn't remove them. Try again.",
+      "revokeFailed": "We couldn't cancel that invitation. Try again.",
+      "finalOwner": "Your partner needs at least one owner."
+    }
+  },
+  "signup": {
+    "title": "Sign up as a partner",
+    "description": "Resell {{appName}} to the businesses you serve, under your own brand.",
+    "nameLabel": "Company name",
+    "namePlaceholder": "Acme Reception",
+    "subdomainLabel": "Dashboard address",
+    "subdomainHelp": "Use 3 to 40 lowercase letters, digits and hyphens.",
+    "noCard": "No card needed.",
+    "submit": "Create partner account",
+    "submitting": "Creating…",
+    "inviteOnly": "Partner signup needs an invitation for now. Ask {{appName}} for a link.",
+    "invitationInvalid": "This invitation link is invalid or expired.",
+    "invitationUsed": "Someone already used this invitation.",
+    "wrongAccount": "This invitation is for {{email}}. Sign in with that verified address to use it.",
+    "errors": {
+      "subdomainTaken": "Someone already has that address. Pick another.",
+      "invalidSubdomain": "Use 3 to 40 lowercase letters, digits and hyphens, and avoid names like www or app.",
+      "rateLimited": "You signed up too many partners today. Try again tomorrow.",
+      "failed": "We couldn't create the partner account. Try again."
+    }
+  },
+  "acceptInvite": {
+    "genericTitle": "Partner invitation",
+    "title": "Join {{partnerName}}",
+    "description": "This invitation is for {{email}}, with the {{role}} role.",
+    "submit": "Accept invitation",
+    "submitting": "Joining…",
+    "success": "You joined {{partnerName}}.",
+    "invalid": "This invitation link is invalid.",
+    "expired": "This invitation expired. Ask whoever sent it for a new one.",
+    "used": "Someone already used or cancelled this invitation.",
+    "stale": "This invitation no longer works. Ask whoever sent it for a new one.",
+    "wrongAccount": "This invitation is for {{email}}. Sign in with that verified address to accept it.",
+    "failed": "We couldn't accept the invitation. Try again."
+  },
+  "signedOut": {
+    "signup": "Sign in or create an account to sign up as a partner.",
+    "acceptInvite": "Sign in or create an account with {{email}} to join {{partnerName}}.",
+    "signIn": "Sign in",
+    "createAccount": "Create account",
+    "switchAccount": "Use another account"
+  }
+}

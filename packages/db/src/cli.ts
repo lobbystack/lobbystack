@@ -161,6 +161,18 @@ async function main(): Promise<void> {
             ,('lobbystack_worker', 'platform_key_businesses', 'INSERT')
             ,('lobbystack_worker', 'platform_key_businesses', 'DELETE')
             ,('lobbystack_app', 'platform_key_businesses', 'SELECT')
+            ,('lobbystack_app', 'partners', 'SELECT')
+            ,('lobbystack_app', 'partners', 'INSERT')
+            ,('lobbystack_app', 'partner_members', 'SELECT')
+            ,('lobbystack_app', 'partner_members', 'INSERT')
+            ,('lobbystack_app', 'partner_invitations', 'SELECT')
+            ,('lobbystack_app', 'partner_invitations', 'INSERT')
+            ,('lobbystack_app', 'partner_domains', 'SELECT')
+            ,('lobbystack_app', 'partner_domains', 'INSERT')
+            ,('lobbystack_app', 'partner_signup_invitations', 'SELECT')
+            ,('lobbystack_app', 'partner_signup_invitations', 'INSERT')
+            ,('lobbystack_readonly', 'partners', 'SELECT')
+            ,('lobbystack_readonly', 'partner_members', 'SELECT')
             ,('lobbystack_finance_export', 'businesses', 'SELECT')
             ,('lobbystack_finance_export', 'billing_accounts', 'SELECT')
             ,('lobbystack_finance_export', 'calls', 'SELECT')
@@ -180,6 +192,40 @@ async function main(): Promise<void> {
         `);
         if (affiliateUserGrantFailures.rows.length > 0) {
           throw new Error(`Affiliate worker user grant verification failed for: ${affiliateUserGrantFailures.rows.map((row) => row.column_name).join(", ")}`);
+        }
+        // The app role updates partner team rows only through the columns partner
+        // operations write, so no row moves to another partner, person, sender or role.
+        const partnerUpdateGrantFailures = await migrator.db.execute<{ table_name: string; column_name: string; granted: boolean }>(sql`
+          select expected.table_name, expected.column_name, expected.granted
+          from (values
+            ('partner_members', 'role', true),
+            ('partner_members', 'status', true),
+            ('partner_members', 'updated_at', true),
+            ('partner_members', 'partner_id', false),
+            ('partner_members', 'user_id', false),
+            ('partner_invitations', 'status', true),
+            ('partner_invitations', 'accepted_by_user_id', true),
+            ('partner_invitations', 'accepted_at', true),
+            ('partner_invitations', 'updated_at', true),
+            ('partner_invitations', 'partner_id', false),
+            ('partner_invitations', 'invited_by_user_id', false),
+            ('partner_invitations', 'role', false),
+            ('partner_invitations', 'token_hash', false),
+            ('partner_invitations', 'normalized_email', false),
+            ('partner_invitations', 'expires_at', false),
+            ('partner_signup_invitations', 'status', true),
+            ('partner_signup_invitations', 'accepted_by_user_id', true),
+            ('partner_signup_invitations', 'partner_id', true),
+            ('partner_signup_invitations', 'accepted_at', true),
+            ('partner_signup_invitations', 'updated_at', true),
+            ('partner_signup_invitations', 'token_hash', false),
+            ('partner_signup_invitations', 'normalized_email', false),
+            ('partner_signup_invitations', 'expires_at', false)
+          ) as expected(table_name, column_name, granted)
+          where has_column_privilege('lobbystack_app', 'public.' || expected.table_name, expected.column_name, 'UPDATE') <> expected.granted
+        `);
+        if (partnerUpdateGrantFailures.rows.length > 0) {
+          throw new Error(`Partner update grant verification failed for: ${partnerUpdateGrantFailures.rows.map((row) => `${row.table_name}.${row.column_name}:${row.granted ? "missing" : "unexpected"}`).join(", ")}`);
         }
         const demoResolverGrantFailures = await migrator.db.execute<{ role_name: string; function_name: string }>(sql`
           select role_name, function_name
@@ -216,6 +262,12 @@ async function main(): Promise<void> {
             ('lobbystack_app', 'app.list_oauth_grantors(uuid)'),
             ('lobbystack_app', 'app.list_business_members(uuid)'),
             ('lobbystack_app', 'app.count_owned_direct_businesses(uuid)'),
+            ('lobbystack_app', 'app.partner_role(uuid)'),
+            ('lobbystack_worker', 'app.partner_role(uuid)'),
+            ('lobbystack_readonly', 'app.partner_role(uuid)'),
+            ('lobbystack_app', 'app.list_partner_members(uuid)'),
+            ('lobbystack_app', 'app.partner_brand(uuid)'),
+            ('lobbystack_worker', 'app.partner_brand(uuid)'),
             ('lobbystack_app', 'app.can_save_initial_branding()'),
             ('lobbystack_app', 'app.save_initial_branding(text, bytea, text)'),
             ('lobbystack_app', 'app.finish_business_handover(uuid, uuid)'),
@@ -388,6 +440,16 @@ async function verifyRlsBehavior(client: ReturnType<typeof createDatabaseClient>
       values (${ids.business_a}::uuid, ${ids.user_id}::uuid, 'business_owner')
     `);
     await tx.execute(sql`
+      insert into public.partners (id, name, slug)
+      values
+        (${ids.business_a}::uuid, 'RLS Partner A', ${`rls-a-${ids.business_a.slice(0, 8)}`}),
+        (${ids.business_b}::uuid, 'RLS Partner B', ${`rls-b-${ids.business_b.slice(0, 8)}`})
+    `);
+    await tx.execute(sql`
+      insert into public.partner_members (partner_id, user_id, role)
+      values (${ids.business_a}::uuid, ${ids.user_id}::uuid, 'member')
+    `);
+    await tx.execute(sql`
       insert into public.services (business_id, name, slug, duration_minutes)
       values
         (${ids.business_a}::uuid, 'RLS Service A', ${`rls-service-a-${ids.business_a}`}, 30),
@@ -403,6 +465,11 @@ async function verifyRlsBehavior(client: ReturnType<typeof createDatabaseClient>
       const foreignServices = (await tx.execute<{ count: string }>(sql`select count(*)::text as count from public.services where business_id = ${ids.business_b}::uuid`)).rows[0]?.count;
       if (ownBusiness !== "1" || foreignServices !== "0") {
         throw new Error(`RLS visibility check failed for app role (own=${ownBusiness ?? "missing"}, foreign=${foreignServices ?? "missing"}).`);
+      }
+
+      const partners = (await tx.execute<{ id: string }>(sql`select id::text from public.partners where id in (${ids.business_a}::uuid, ${ids.business_b}::uuid)`)).rows.map((row) => row.id);
+      if (partners.length !== 1 || partners[0] !== ids.business_a) {
+        throw new Error(`RLS partner isolation check failed (visible=${partners.length}).`);
       }
 
       await tx.execute(sql`select set_config('app.business_id', ${ids.business_b}, true)`);
@@ -428,6 +495,7 @@ async function verifyRlsBehavior(client: ReturnType<typeof createDatabaseClient>
     } finally {
       await tx.execute(sql.raw("reset role"));
       await tx.execute(sql`delete from public.businesses where id in (${ids.business_a}::uuid, ${ids.business_b}::uuid)`);
+      await tx.execute(sql`delete from public.partners where id in (${ids.business_a}::uuid, ${ids.business_b}::uuid)`);
       await tx.execute(sql`delete from public.users where id = ${ids.user_id}::uuid`);
     }
   });

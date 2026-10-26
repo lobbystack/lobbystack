@@ -88,6 +88,15 @@ Le stockage local convient à un déploiement sur un seul hôte. Utilisez S3 qua
 
 Les livraisons de webhooks refusent les adresses privées, de bouclage, de liaison locale et de métadonnées cloud sur tous les déploiements, y compris les déploiements auto-hébergés. Faites pointer les points de terminaison vers une URL HTTPS publique. Les URL en `http://` simple fonctionnent seulement quand `NODE_ENV=development`.
 
+## Partenaires
+
+Les partenaires revendent votre déploiement aux entreprises qu'ils servent, sous leur propre marque. Ils s'inscrivent et gèrent leur équipe depuis la console partenaire, à `/partner` sur votre tableau de bord. Définissez ces variables sur l'admin et le worker.
+
+| Variable | Rôle |
+| --- | --- |
+| `PARTNER_SIGNUP` | Qui peut s'inscrire comme partenaire à `/partner/signup` : `open` laisse s'inscrire toute personne connectée, et `invite` exige un lien d'inscription. `pnpm partner-invite:create --email owner@acme.example` écrit un lien qui fonctionne une fois, pour ce courriel vérifié, pendant 7 jours. Vaut `invite` par défaut quand `DEPLOYMENT_MODE` est `cloud`, et `open` sinon. |
+| `PARTNER_BASE_DOMAIN` | Le domaine dont vos partenaires reçoivent des sous-domaines, comme `receptionistportal.com`. L'inscription en réserve un pour chaque nouveau partenaire, comme `acme.receptionistportal.com`. Les courriels propres à un partenaire, comme les invitations à son équipe, partent sous son nom depuis `no-reply@` ce domaine : votre fournisseur de courriel doit donc accepter cet expéditeur. Sans cette variable, ils partent de l'adresse de `EMAIL_FROM`. |
+
 ## Observabilité
 
 | Variable | Rôle |

@@ -9,9 +9,9 @@ vi.mock("./theme-provider", () => ({ useTheme: () => theme }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 beforeEach(() => { window.innerWidth = 1440; theme.resolvedTheme = "light"; vi.stubGlobal("matchMedia", vi.fn(query => ({ matches: false, media: query, addEventListener: vi.fn(), removeEventListener: vi.fn() }))); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.clearAllMocks(); });
-async function setup(upgrade = false) {
+async function setup(upgrade = false, partnerConsole = false) {
   const onUpgrade = vi.fn(); const onSignOut = vi.fn();
-  render(<SidebarProvider><NavUser user={{ email: "operator@example.invalid", name: "Operator" }} onSignOut={onSignOut} showUpgradeToPro={upgrade} onUpgradeToPro={onUpgrade} /></SidebarProvider>);
+  render(<SidebarProvider><NavUser user={{ email: "operator@example.invalid", name: "Operator" }} onSignOut={onSignOut} showPartnerConsole={partnerConsole} showUpgradeToPro={upgrade} onUpgradeToPro={onUpgrade} /></SidebarProvider>);
   await userEvent.click(screen.getByRole("button", { name: /operator@example.invalid/ }));
   await screen.findByRole("menu");
   return { onUpgrade, onSignOut };
@@ -26,6 +26,13 @@ describe("original account menu interactions", () => {
     await userEvent.click(screen.getByRole("menuitem", { name: "sidebar.toggleTheme" }));
     expect(theme.setTheme).toHaveBeenCalledWith(current === "dark" ? "light" : "dark");
     expect(screen.getByRole("menu")).toBeTruthy();
+  });
+  it("links to the partner console only for someone on a partner's team", async () => {
+    await setup();
+    expect(screen.queryByRole("menuitem", { name: "sidebar.partnerConsole" })).toBeNull();
+    cleanup();
+    await setup(false, true);
+    expect(screen.getByRole("menuitem", { name: "sidebar.partnerConsole" }).getAttribute("href")).toBe("/partner");
   });
   it("links to account settings and invokes sign-out", async () => {
     const { onSignOut } = await setup();

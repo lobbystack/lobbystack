@@ -1,0 +1,116 @@
+{
+  "shell": {
+    "navigation": "Console partenaire",
+    "switchPartner": "Changer de partenaire",
+    "signUpAnother": "Inscrire un autre partenaire",
+    "userMenu": "Menu du compte {{email}}"
+  },
+  "nav": {
+    "businesses": "Entreprises",
+    "team": "Équipe"
+  },
+  "roles": {
+    "owner": "Propriétaire",
+    "admin": "Administrateur",
+    "member": "Membre"
+  },
+  "businesses": {
+    "title": "Entreprises",
+    "empty": {
+      "title": "Aucune entreprise pour l'instant",
+      "description": "Les entreprises que vous configurez s'afficheront ici."
+    }
+  },
+  "team": {
+    "title": "Équipe",
+    "description": "Les personnes qui peuvent utiliser cette console.",
+    "loadFailed": "Impossible de charger l'équipe. Actualisez la page pour réessayer.",
+    "table": {
+      "person": "Personne",
+      "role": "Rôle"
+    },
+    "joinedOn": "Membre depuis le {{date}}",
+    "invitedOn": "Invitation envoyée le {{date}}",
+    "status": {
+      "pending": "En attente",
+      "expired": "Expirée"
+    },
+    "invite": {
+      "action": "Inviter",
+      "title": "Inviter quelqu'un dans votre équipe",
+      "description": "Cette personne reçoit un courriel avec un lien pour rejoindre {{partnerName}}.",
+      "emailLabel": "Courriel",
+      "emailPlaceholder": "nom@entreprise.com",
+      "roleLabel": "Rôle",
+      "submit": "Envoyer l'invitation",
+      "sending": "Envoi…",
+      "sent": "Invitation envoyée à {{email}}.",
+      "roles": {
+        "owner": "Gère tout, y compris la facturation, la connexion Stripe et la suppression du partenaire.",
+        "admin": "Gère les entreprises, les forfaits, l'image de marque, les domaines, les clés et l'équipe.",
+        "member": "Travaille dans vos entreprises."
+      },
+      "errors": {
+        "failed": "Impossible d'envoyer l'invitation. Réessayez.",
+        "invalidEmail": "Entrez une seule adresse courriel valide.",
+        "rateLimited": "Vous avez envoyé trop d'invitations. Réessayez dans une heure."
+      }
+    },
+    "actions": {
+      "moreOptions": "Plus d'options pour {{email}}",
+      "makeOwner": "Nommer propriétaire",
+      "makeAdmin": "Nommer administrateur",
+      "makeMember": "Nommer membre",
+      "remove": "Retirer de l'équipe",
+      "revoke": "Annuler l'invitation"
+    },
+    "errors": {
+      "changeFailed": "Impossible de changer ce rôle. Réessayez.",
+      "removeFailed": "Impossible de retirer cette personne. Réessayez.",
+      "revokeFailed": "Impossible d'annuler cette invitation. Réessayez.",
+      "finalOwner": "Votre partenaire doit garder au moins un propriétaire."
+    }
+  },
+  "signup": {
+    "title": "Devenir partenaire",
+    "description": "Revendez {{appName}} aux entreprises que vous servez, sous votre propre marque.",
+    "nameLabel": "Nom de l'entreprise",
+    "namePlaceholder": "Accueil Acme",
+    "subdomainLabel": "Adresse du tableau de bord",
+    "subdomainHelp": "Utilisez de 3 à 40 lettres minuscules, chiffres et traits d'union.",
+    "noCard": "Aucune carte requise.",
+    "submit": "Créer le compte partenaire",
+    "submitting": "Création…",
+    "inviteOnly": "L'inscription des partenaires se fait sur invitation pour l'instant. Demandez un lien à {{appName}}.",
+    "invitationInvalid": "Ce lien d'invitation est invalide ou expiré.",
+    "invitationUsed": "Quelqu'un a déjà utilisé cette invitation.",
+    "wrongAccount": "Cette invitation est destinée à {{email}}. Connectez-vous avec cette adresse vérifiée pour l'utiliser.",
+    "errors": {
+      "subdomainTaken": "Quelqu'un utilise déjà cette adresse. Choisissez-en une autre.",
+      "invalidSubdomain": "Utilisez de 3 à 40 lettres minuscules, chiffres et traits d'union, et évitez des noms comme www ou app.",
+      "rateLimited": "Vous avez inscrit trop de partenaires aujourd'hui. Réessayez demain.",
+      "failed": "Impossible de créer le compte partenaire. Réessayez."
+    }
+  },
+  "acceptInvite": {
+    "genericTitle": "Invitation partenaire",
+    "title": "Rejoindre {{partnerName}}",
+    "description": "Cette invitation est destinée à {{email}}, avec le rôle {{role}}.",
+    "submit": "Accepter l'invitation",
+    "submitting": "Acceptation…",
+    "success": "Vous avez rejoint {{partnerName}}.",
+    "invalid": "Ce lien d'invitation est invalide.",
+    "expired": "Cette invitation a expiré. Demandez-en une nouvelle à la personne qui l'a envoyée.",
+    "used": "Quelqu'un a déjà utilisé ou annulé cette invitation.",
+    "stale": "Cette invitation ne fonctionne plus. Demandez-en une nouvelle à la personne qui l'a envoyée.",
+    "wrongAccount": "Cette invitation est destinée à {{email}}. Connectez-vous avec cette adresse vérifiée pour l'accepter.",
+    "failed": "Impossible d'accepter l'invitation. Réessayez."
+  },
+  "signedOut": {
+    "signup": "Connectez-vous ou créez un compte pour devenir partenaire.",
+    "acceptInvite": "Connectez-vous ou créez un compte avec {{email}} pour rejoindre {{partnerName}}.",
+    "signIn": "Se connecter",
+    "createAccount": "Créer un compte",
+    "switchAccount": "Utiliser un autre compte"
+  }
+}

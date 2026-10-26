@@ -32,6 +32,7 @@
     "prospect-demo:publish": "tsx --tsconfig scripts/tsconfig.json scripts/prospect-demo.ts publish",
     "prospect-demo:revoke": "tsx --tsconfig scripts/tsconfig.json scripts/prospect-demo.ts revoke",
     "platform-key:create": "tsx --tsconfig scripts/tsconfig.json scripts/platform-key.ts",
+    "partner-invite:create": "tsx --tsconfig scripts/tsconfig.json scripts/partner-invite.ts",
     "lobbystack": "tsx --tsconfig packages/cli/tsconfig.json packages/cli/src/bin.ts",
     "build": "pnpm -r build && pnpm admin:prerender-check && node scripts/copy-widget-embed.mjs",
     "admin:prerender-check": "tsx --tsconfig scripts/tsconfig.json scripts/verify-admin-prerender.ts",

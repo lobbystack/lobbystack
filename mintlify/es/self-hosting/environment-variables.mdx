@@ -88,6 +88,15 @@ El almacenamiento local sirve para una implementación en un solo host. Use S3 c
 
 Las entregas de webhooks rechazan las direcciones privadas, de loopback, de enlace local y de metadatos de la nube en todas las implementaciones, incluidas las autoalojadas. Apunte los endpoints a una URL HTTPS pública. Las URL `http://` simples solo funcionan cuando `NODE_ENV=development`.
 
+## Socios
+
+Los socios revenden su despliegue a los negocios que atienden, con su propia marca. Se registran y gestionan su equipo desde la consola de socios, en `/partner` de su panel. Defina estas variables en el admin y en el worker.
+
+| Variable | Función |
+| --- | --- |
+| `PARTNER_SIGNUP` | Quién puede registrarse como socio en `/partner/signup`: `open` permite registrarse a cualquier persona con sesión iniciada, e `invite` exige un enlace de registro. `pnpm partner-invite:create --email owner@acme.example` escribe un enlace que funciona una vez, para ese correo verificado, durante 7 días. El valor predeterminado es `invite` cuando `DEPLOYMENT_MODE` es `cloud`, y `open` en los demás casos. |
+| `PARTNER_BASE_DOMAIN` | El dominio del que sus socios reciben subdominios, como `receptionistportal.com`. El registro reserva uno para cada socio nuevo, como `acme.receptionistportal.com`. Los correos propios de un socio, como las invitaciones a su equipo, salen con su nombre desde `no-reply@` ese dominio, así que su proveedor de correo debe aceptar ese remitente. Sin esta variable, salen desde la dirección de `EMAIL_FROM`. |
+
 ## Observabilidad
 
 | Variable | Función |

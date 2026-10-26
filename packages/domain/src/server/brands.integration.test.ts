@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 
 import { sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { businesses, createDatabaseClient, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { businesses, createDatabaseClient, partners, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
 import { brandForBusiness, brandForEmail, brandLogo, forgetCachedBrands, resolveHostBrand } from "./brands";
 
@@ -37,16 +37,18 @@ async function seed(tx: DatabaseTransaction, saved: { appName: string | null; lo
   }
   const directId = randomUUID();
   const partnerBusinessId = randomUUID();
+  const partnerId = randomUUID();
+  await tx.insert(partners).values({ id: partnerId, name: "Bright Desk", slug: `bright-${partnerId.slice(0, 8)}` });
   await tx.insert(businesses).values([
     { id: directId, slug: directId, name: "Direct shop", timezone: "UTC", businessType: "test", telemetryEnabled: false },
-    { id: partnerBusinessId, slug: partnerBusinessId, name: "Partner shop", timezone: "UTC", businessType: "test", telemetryEnabled: false, partnerId: randomUUID() },
+    { id: partnerBusinessId, slug: partnerBusinessId, name: "Partner shop", timezone: "UTC", businessType: "test", telemetryEnabled: false, partnerId },
   ]);
   const context = { db: tx as unknown as Database };
   const as = async (role: "lobbystack_app" | "lobbystack_worker") => {
     forgetCachedBrands();
     await tx.execute(sql.raw(`set local role ${role}`));
   };
-  return { context, as, directId, partnerBusinessId };
+  return { context, as, directId, partnerBusinessId, partnerId };
 }
 
 const savedBrand = {
@@ -92,7 +94,7 @@ describe.skipIf(!testUrl)("brands", () => {
     });
   });
 
-  it("sends emails under the host brand, with the host's sender and Reply-To", async () => {
+  it("sends a business's emails under the host brand, with the host's sender and Reply-To, and a partner's own under its name", async () => {
     await rollbackTest(async (tx) => {
       const fixture = await seed(tx, { appName: "Acme Desk", logo: null });
       await fixture.as("lobbystack_worker");
@@ -100,11 +102,12 @@ describe.skipIf(!testUrl)("brands", () => {
       forgetCachedBrands();
       const business = await brandForEmail(fixture.context, { kind: "business", businessId: fixture.partnerBusinessId });
       forgetCachedBrands();
-      const partner = await brandForEmail(fixture.context, { kind: "partner", partnerId: randomUUID() });
+      const partner = await brandForEmail(fixture.context, { kind: "partner", partnerId: fixture.partnerId });
       expect(business).not.toBe(host);
       expect(business).toEqual(host);
-      expect(partner).toEqual(host);
       expect(host).toMatchObject({ name: "Acme Desk", logoUrl: null, email: { fromName: "Acme Desk", fromAddress: "no-reply@desk.example.test", replyTo: "help@desk.example.test" } });
+      // A partner's own emails, such as invitations to its team, carry its name and link to the host's domain.
+      expect(partner).toMatchObject({ kind: "partner", partnerId: fixture.partnerId, name: "Bright Desk", logoUrl: null, origin: host.origin, email: { fromName: "Bright Desk", fromAddress: "no-reply@desk.example.test", replyTo: null } });
     });
   });
 

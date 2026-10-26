@@ -1,6 +1,6 @@
 export async function register(): Promise<void> {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
-  const { assertProductionSecrets, brandLinkEnvironment, invalidBrandLinkVariables } = await import("@lobbystack/shared");
+  const { assertProductionSecrets, brandLinkEnvironment, invalidBrandLinkVariables, partnerFeatureWarnings } = await import("@lobbystack/shared");
   assertProductionSecrets(process.env, [
     "BETTER_AUTH_SECRET",
     "INTERNAL_SERVICE_SECRET",
@@ -14,6 +14,7 @@ export async function register(): Promise<void> {
   if (invalidLinks.length) {
     console.warn(`[branding] Ignoring ${invalidLinks.join(", ")}: a site or page must be an http or https URL and the contact address a plain email address, so the app links to LobbyStack's instead.`);
   }
+  for (const warning of partnerFeatureWarnings(process.env)) console.warn(`[partners] ${warning}`);
   const { initializeTelemetry } = await import("@lobbystack/telemetry/node");
   await initializeTelemetry({ serviceName: "lobbystack-admin" });
   const { assertAdminDatabaseRoles } = await import("./src/lib/startup-role-assertion");

@@ -1225,6 +1225,36 @@
       "harness": "apps/admin/e2e/new-operator-visual.e2e.ts"
     },
     {
+      "path": "/partner",
+      "state": "redirect",
+      "fixtureState": "operator",
+      "comparison": "port-baseline"
+    },
+    {
+      "path": "/partner/signup",
+      "state": "default",
+      "fixtureState": "operator",
+      "comparison": "port-baseline"
+    },
+    {
+      "path": "/partner/accept-invite",
+      "state": "default",
+      "fixtureState": "operator",
+      "comparison": "port-baseline"
+    },
+    {
+      "path": "/partner/[partnerId]/businesses",
+      "state": "empty",
+      "fixtureState": "operator",
+      "comparison": "port-baseline"
+    },
+    {
+      "path": "/partner/[partnerId]/team",
+      "state": "default",
+      "fixtureState": "operator",
+      "comparison": "port-baseline"
+    },
+    {
       "path": "/",
       "state": "voice-follow-up-and-appointment",
       "snapshotId": "/home/follow-up",

@@ -1,0 +1,116 @@
+{
+  "shell": {
+    "navigation": "Consola de socios",
+    "switchPartner": "Cambiar de socio",
+    "signUpAnother": "Registrar otro socio",
+    "userMenu": "Menú de la cuenta {{email}}"
+  },
+  "nav": {
+    "businesses": "Negocios",
+    "team": "Equipo"
+  },
+  "roles": {
+    "owner": "Propietario",
+    "admin": "Administrador",
+    "member": "Miembro"
+  },
+  "businesses": {
+    "title": "Negocios",
+    "empty": {
+      "title": "Aún no hay negocios",
+      "description": "Aquí aparecerán los negocios que configure."
+    }
+  },
+  "team": {
+    "title": "Equipo",
+    "description": "Las personas que pueden usar esta consola.",
+    "loadFailed": "No pudimos cargar el equipo. Actualice la página para intentarlo de nuevo.",
+    "table": {
+      "person": "Persona",
+      "role": "Rol"
+    },
+    "joinedOn": "Se unió el {{date}}",
+    "invitedOn": "Invitación enviada el {{date}}",
+    "status": {
+      "pending": "Pendiente",
+      "expired": "Vencida"
+    },
+    "invite": {
+      "action": "Invitar",
+      "title": "Invite a alguien a su equipo",
+      "description": "Recibirá un correo con un enlace para unirse a {{partnerName}}.",
+      "emailLabel": "Correo electrónico",
+      "emailPlaceholder": "nombre@empresa.com",
+      "roleLabel": "Rol",
+      "submit": "Enviar invitación",
+      "sending": "Enviando…",
+      "sent": "Invitación enviada a {{email}}.",
+      "roles": {
+        "owner": "Gestiona todo, incluida la facturación, la conexión con Stripe y la eliminación del socio.",
+        "admin": "Gestiona los negocios, los paquetes, la marca, los dominios, las claves y el equipo.",
+        "member": "Trabaja dentro de sus negocios."
+      },
+      "errors": {
+        "failed": "No pudimos enviar la invitación. Inténtelo de nuevo.",
+        "invalidEmail": "Escriba una sola dirección de correo válida.",
+        "rateLimited": "Envió demasiadas invitaciones. Inténtelo de nuevo en una hora."
+      }
+    },
+    "actions": {
+      "moreOptions": "Más opciones para {{email}}",
+      "makeOwner": "Hacer propietario",
+      "makeAdmin": "Hacer administrador",
+      "makeMember": "Hacer miembro",
+      "remove": "Quitar del equipo",
+      "revoke": "Cancelar invitación"
+    },
+    "errors": {
+      "changeFailed": "No pudimos cambiar ese rol. Inténtelo de nuevo.",
+      "removeFailed": "No pudimos quitar a esa persona. Inténtelo de nuevo.",
+      "revokeFailed": "No pudimos cancelar esa invitación. Inténtelo de nuevo.",
+      "finalOwner": "Su cuenta de socio necesita al menos un propietario."
+    }
+  },
+  "signup": {
+    "title": "Regístrese como socio",
+    "description": "Revenda {{appName}} a los negocios que atiende, con su propia marca.",
+    "nameLabel": "Nombre de la empresa",
+    "namePlaceholder": "Recepción Acme",
+    "subdomainLabel": "Dirección del panel",
+    "subdomainHelp": "Use de 3 a 40 letras minúsculas, dígitos y guiones.",
+    "noCard": "No necesita tarjeta.",
+    "submit": "Crear cuenta de socio",
+    "submitting": "Creando…",
+    "inviteOnly": "Por ahora, el registro de socios requiere una invitación. Pida un enlace a {{appName}}.",
+    "invitationInvalid": "Este enlace de invitación no es válido o venció.",
+    "invitationUsed": "Alguien ya usó esta invitación.",
+    "wrongAccount": "Esta invitación es para {{email}}. Inicie sesión con esa dirección verificada para usarla.",
+    "errors": {
+      "subdomainTaken": "Alguien ya tiene esa dirección. Elija otra.",
+      "invalidSubdomain": "Use de 3 a 40 letras minúsculas, dígitos y guiones, y evite nombres como www o app.",
+      "rateLimited": "Registró demasiados socios hoy. Inténtelo de nuevo mañana.",
+      "failed": "No pudimos crear la cuenta de socio. Inténtelo de nuevo."
+    }
+  },
+  "acceptInvite": {
+    "genericTitle": "Invitación de socio",
+    "title": "Únase a {{partnerName}}",
+    "description": "Esta invitación es para {{email}}, con el rol {{role}}.",
+    "submit": "Aceptar invitación",
+    "submitting": "Uniéndose…",
+    "success": "Se unió a {{partnerName}}.",
+    "invalid": "Este enlace de invitación no es válido.",
+    "expired": "Esta invitación venció. Pida una nueva a quien se la envió.",
+    "used": "Alguien ya usó o canceló esta invitación.",
+    "stale": "Esta invitación ya no funciona. Pida una nueva a quien se la envió.",
+    "wrongAccount": "Esta invitación es para {{email}}. Inicie sesión con esa dirección verificada para aceptarla.",
+    "failed": "No pudimos aceptar la invitación. Inténtelo de nuevo."
+  },
+  "signedOut": {
+    "signup": "Inicie sesión o cree una cuenta para registrarse como socio.",
+    "acceptInvite": "Inicie sesión o cree una cuenta con {{email}} para unirse a {{partnerName}}.",
+    "signIn": "Iniciar sesión",
+    "createAccount": "Crear cuenta",
+    "switchAccount": "Usar otra cuenta"
+  }
+}

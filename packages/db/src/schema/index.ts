@@ -120,6 +120,21 @@ export const verifications = pgTable(
   (table) => [index("verifications_identifier_idx").on(table.identifier)],
 );
 
+// A company that resells LobbyStack under its own brand. Its slug is also its
+// subdomain's label under the partner base domain.
+export const partners = pgTable(
+  "partners",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    slug: varchar("slug", { length: 40 }).notNull(),
+    status: varchar("status", { length: 32 }).default("active").notNull(),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    ...timestamps,
+  },
+  (table) => [uniqueIndex("partners_slug_unique").on(table.slug)],
+);
+
 export const businesses = pgTable(
   "businesses",
   {
@@ -145,14 +160,15 @@ export const businesses = pgTable(
     hoursSource: varchar("hours_source", { length: 16 }).$type<"none" | "generated" | "operator">().default("none").notNull(),
     hoursFingerprint: varchar("hours_fingerprint", { length: 64 }),
     hoursGeneratedAt: timestamp("hours_generated_at", { withTimezone: true }),
-    // The partner that resells this business, or null for a direct business. Migration 0127 adds it without a foreign key until partners exist.
-    partnerId: uuid("partner_id"),
+    // The partner that resells this business, or null for a direct business. A direct business never gets one.
+    partnerId: uuid("partner_id").references(() => partners.id),
     ...legacyId,
     ...timestamps,
   },
   (table) => [
     uniqueIndex("businesses_slug_unique").on(table.slug),
     uniqueIndex("businesses_legacy_convex_id_unique").on(table.legacyConvexId),
+    index("businesses_partner_idx").on(table.partnerId).where(sql`${table.partnerId} is not null`),
   ],
 );
 
@@ -196,6 +212,79 @@ export const businessInvitations = pgTable(
     index("business_invitations_business_status_idx").on(table.businessId, table.status),
     index("business_invitations_email_idx").on(table.normalizedEmail),
   ],
+);
+
+export const partnerMembers = pgTable(
+  "partner_members",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    partnerId: uuid("partner_id").notNull().references(() => partners.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    role: varchar("role", { length: 16 }).$type<"owner" | "admin" | "member">().notNull(),
+    status: varchar("status", { length: 16 }).$type<"active" | "removed">().default("active").notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("partner_members_partner_user_unique").on(table.partnerId, table.userId),
+    index("partner_members_user_idx").on(table.userId).where(sql`${table.status} = 'active'`),
+  ],
+);
+
+export const partnerInvitations = pgTable(
+  "partner_invitations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    partnerId: uuid("partner_id").notNull().references(() => partners.id, { onDelete: "cascade" }),
+    invitedByUserId: uuid("invited_by_user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    email: text("email").notNull(),
+    normalizedEmail: text("normalized_email").notNull(),
+    role: varchar("role", { length: 16 }).$type<"owner" | "admin" | "member">().notNull(),
+    tokenHash: text("token_hash").notNull(),
+    status: varchar("status", { length: 16 }).$type<"pending" | "accepted" | "revoked">().default("pending").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    acceptedByUserId: uuid("accepted_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("partner_invitations_token_hash_unique").on(table.tokenHash),
+    index("partner_invitations_partner_status_idx").on(table.partnerId, table.status),
+  ],
+);
+
+// The hostnames a partner's brand answers on: its subdomain of the partner base domain, and later its own domains.
+export const partnerDomains = pgTable(
+  "partner_domains",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    partnerId: uuid("partner_id").notNull().references(() => partners.id, { onDelete: "cascade" }),
+    hostname: varchar("hostname", { length: 253 }).notNull(),
+    kind: varchar("kind", { length: 16 }).$type<"subdomain" | "custom">().notNull(),
+    verifiedAt: timestamp("verified_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("partner_domains_hostname_unique").on(table.hostname),
+    uniqueIndex("partner_domains_one_subdomain").on(table.partnerId).where(sql`${table.kind} = 'subdomain'`),
+  ],
+);
+
+// The host's invitations to sign up as a partner while signup is invite-only.
+export const partnerSignupInvitations = pgTable(
+  "partner_signup_invitations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    email: text("email").notNull(),
+    normalizedEmail: text("normalized_email").notNull(),
+    tokenHash: text("token_hash").notNull(),
+    status: varchar("status", { length: 16 }).$type<"pending" | "accepted" | "revoked">().default("pending").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    acceptedByUserId: uuid("accepted_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    partnerId: uuid("partner_id").references(() => partners.id, { onDelete: "set null" }),
+    acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (table) => [uniqueIndex("partner_signup_invitations_token_hash_unique").on(table.tokenHash)],
 );
 
 export const prospectDemos = pgTable(
@@ -1769,6 +1858,11 @@ export const schema = {
   accounts,
   sessions,
   verifications,
+  partners,
+  partnerMembers,
+  partnerInvitations,
+  partnerDomains,
+  partnerSignupInvitations,
   businesses,
   businessMemberships,
   businessInvitations,

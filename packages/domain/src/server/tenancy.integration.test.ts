@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it, vi } from "vitest";
-import { businesses, businessHours, businessInvitations, businessMemberships, createDatabaseClient, outboxMessages, receptionistProfiles, services, staff, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { businesses, businessHours, businessInvitations, businessMemberships, createDatabaseClient, outboxMessages, partners, receptionistProfiles, services, staff, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { defaultGreeting } from "@lobbystack/shared";
 import { findAvailability } from "./booking";
 import { acceptInvitation, createBusiness, createOwnerlessBusiness, insertOwnerlessBusinessInTransaction, inviteMember, listUserBusinesses, previewInvitation, removeMember, revokeInvitation, updateBusinessInTransaction } from "./tenancy";
@@ -135,9 +135,11 @@ describe.skipIf(!client)("createBusiness", () => {
       const email = `${userId}@example.invalid`;
       await tx.insert(users).values({ id: userId, email, normalizedEmail: email, name: "Sam Owner" });
       // The account already owns three businesses a partner resells.
+      const partnerId = randomUUID();
+      await tx.insert(partners).values({ id: partnerId, name: "Reseller", slug: `reseller-${partnerId.slice(0, 8)}` });
       for (let index = 0; index < 3; index++) {
         const businessId = randomUUID();
-        await tx.insert(businesses).values({ id: businessId, slug: `partner-${businessId}`, name: `Partner shop ${index}`, timezone: "UTC", businessType: "test", partnerId: randomUUID() });
+        await tx.insert(businesses).values({ id: businessId, slug: `partner-${businessId}`, name: `Partner shop ${index}`, timezone: "UTC", businessType: "test", partnerId });
         await tx.insert(businessMemberships).values({ businessId, userId, role: "business_owner", status: "active" });
       }
       await tx.execute(sql`set local role lobbystack_app`);
@@ -163,7 +165,9 @@ describe.skipIf(!client)("createBusiness", () => {
       // Not even the migrator can, while a partner's business can still leave its partner.
       await expect(tx.transaction(async (inner) => await inner.update(businesses).set({ partnerId: randomUUID() }).where(eq(businesses.id, businessId)))).rejects.toMatchObject({ cause: { code: "42501" } });
       const partnerBusinessId = randomUUID();
-      await tx.insert(businesses).values({ id: partnerBusinessId, slug: `partner-${partnerBusinessId}`, name: "Partner shop", timezone: "UTC", businessType: "test", partnerId: randomUUID() });
+      const partnerId = randomUUID();
+      await tx.insert(partners).values({ id: partnerId, name: "Reseller", slug: `reseller-${partnerId.slice(0, 8)}` });
+      await tx.insert(businesses).values({ id: partnerBusinessId, slug: `partner-${partnerBusinessId}`, name: "Partner shop", timezone: "UTC", businessType: "test", partnerId });
       await tx.update(businesses).set({ partnerId: null }).where(eq(businesses.id, partnerBusinessId));
       expect(await tx.select({ id: businesses.id }).from(businesses).where(and(eq(businesses.id, businessId), sql`${businesses.partnerId} is null`))).toHaveLength(1);
     });

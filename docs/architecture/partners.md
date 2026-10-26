@@ -155,7 +155,7 @@ type PartnerActor =
 - The console's routes live under `/api/partner/*` in the admin and call these functions directly, the way the dashboard's operator routes call domain functions today. The v1 public API's Platform endpoints call the same functions for keys that belong to a partner.
 - `createPartnerBusiness` creates a business with no owner, links it to the partner, optionally applies a template, and sends the owner an invitation under the partner's brand. It never counts toward the cap of 10 businesses per account.
 - `releaseBusiness` needs an owner who accepted the invitation. It makes that person the owner, removes the partner, and puts the business on the host's Free plan.
-- Each function checks the actor's role itself. A member can work inside businesses, an admin can also manage businesses, packages, branding, domains, keys, and the team, and only an owner can manage billing, Stripe, and deleting the partner.
+- Each function checks the actor's role itself. A member can work inside businesses, an admin can also manage businesses, packages, branding, domains, keys, and the team, and only an owner can manage billing, Stripe, owners, and deleting the partner. An admin can invite, change and remove admins and members, but only an owner can grant the owner role or change or remove an owner.
 
 ## Entitlement
 

@@ -16,6 +16,7 @@ Do not duplicate ownership between runtimes unless there is a specific analytics
 - `web.auth.login_succeeded`
 - `web.auth.signup_succeeded`
 - `web.workspace.business_switched`
+- `web.partner.signup_succeeded`: someone signed a company up as a partner at `/partner/signup`. It carries `partnerId`, `invited` (whether they used the host's signup invitation) and `subdomain` (whether signup reserved a subdomain of the partner base domain). Like every web event, the dashboard sends it only while the person's active business has telemetry on. A partner member with no business of their own sends nothing.
 - `web.page.home_viewed`
 - `web.page.calls_viewed`
 - `web.page.call_detail_viewed`

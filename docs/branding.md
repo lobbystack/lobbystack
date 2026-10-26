@@ -107,7 +107,7 @@ Next.js writes `NEXT_PUBLIC_` variables into the admin's build, both the browser
 - `packages/shared/src/brand.ts`: the `Brand` type, the host brand built from the name, logo, outside links, `APP_BASE_URL`, `EMAIL_FROM`, and `EMAIL_REPLY_TO`, and the brand reference queued emails carry.
 - `packages/db/migrations/0113_deployment_branding.sql`: the one-row table and the two functions. Every runtime role can read the table, but only `app.save_initial_branding()` writes to it. Row level security is forced on it.
 - `packages/domain/src/server/branding.ts`: reads and saves the branding, and resolves the name text messages use.
-- `packages/domain/src/server/brands.ts`: answers which brand a hostname (`resolveHostBrand`), a business (`brandForBusiness`), or a queued email (`brandForEmail`) shows, with a 30-second cache per process. Every hostname and every business gets the host brand. Text messages never ask it, so they keep the host's name.
+- `packages/domain/src/server/brands.ts`: answers which brand a hostname (`resolveHostBrand`), a business (`brandForBusiness`), or a queued email (`brandForEmail`) shows, with a 30-second cache of the host brand per process. Every hostname and every business gets the host brand. A partner's own emails get the partner's name, read through `app.partner_brand` (migration 0128). Text messages never ask it, so they keep the host's name.
 - `apps/admin/src/lib/branding.ts`: loads the brand of each request from its `Host` header, because the standalone server's request URL holds the address it listens on. A hostname no brand answers for gets a 404. If the database can't be read, pages fall back to the environment and the default, and the admin reports the error at most once a minute.
 - Routes:
   - `GET /api/branding` returns `{ appName, logoUrl }` for the request's hostname and is never cached.
@@ -119,9 +119,12 @@ Next.js writes `NEXT_PUBLIC_` variables into the admin's build, both the browser
 
 Each `email.send` payload names its brand in `brand` and its Reply-To in `replyTo`. The `brand` value is one of these:
 
-- `{ "kind": "business", "businessId": "…" }` for an email about a business, such as an invitation.
-- The brand of the request that sends the email, such as a sign-up code: `{ "kind": "partner", "partnerId": "…" }`, or `{ "kind": "host" }` until partners have domains.
+- `{ "kind": "business", "businessId": "…" }` for an email about a business, such as an invitation to its team.
+- `{ "kind": "partner", "partnerId": "…" }` for a partner's own emails, such as an invitation to its team.
+- The brand of the request that sends the email, such as a sign-up code. That's `{ "kind": "host" }` until partners have domains of their own.
 - `{ "kind": "host" }` for the host's own emails: dashboard feedback and the founder check-in.
+
+A partner's brand carries the partner's name, no logo yet, and the host's origin, because the partner console runs on the host's domain. It sends from `no-reply@` the domain in `PARTNER_BASE_DOMAIN`, or from the address in `EMAIL_FROM` when that's unset, with no Reply-To. The worker reads the partner through `app.partner_brand`, and keeps the email queued when it can't find the partner.
 
 The worker reads the brand when it sends, so a brand change reaches emails still in the queue. It sends a payload with no `brand` under the host brand. A payload whose `brand` it can't read stays in the queue. When the worker can't read the saved branding, it sends a host email under the environment's choice and holds an email under any other brand until the database answers.
 

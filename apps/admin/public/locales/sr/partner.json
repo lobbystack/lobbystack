@@ -1,0 +1,116 @@
+{
+  "shell": {
+    "navigation": "Partnerska konzola",
+    "switchPartner": "Promeni partnera",
+    "signUpAnother": "Registruj još jednog partnera",
+    "userMenu": "Meni naloga {{email}}"
+  },
+  "nav": {
+    "businesses": "Firme",
+    "team": "Tim"
+  },
+  "roles": {
+    "owner": "Vlasnik",
+    "admin": "Administrator",
+    "member": "Član"
+  },
+  "businesses": {
+    "title": "Firme",
+    "empty": {
+      "title": "Još nema firmi",
+      "description": "Ovde će se prikazati firme koje podesite."
+    }
+  },
+  "team": {
+    "title": "Tim",
+    "description": "Ljudi koji mogu da koriste ovu konzolu.",
+    "loadFailed": "Nismo uspeli da učitamo tim. Osvežite stranicu i pokušajte ponovo.",
+    "table": {
+      "person": "Osoba",
+      "role": "Uloga"
+    },
+    "joinedOn": "Član od {{date}}",
+    "invitedOn": "Poziv poslat {{date}}",
+    "status": {
+      "pending": "Na čekanju",
+      "expired": "Isteklo"
+    },
+    "invite": {
+      "action": "Pozovi",
+      "title": "Pozovite nekoga u svoj tim",
+      "description": "Dobiće imejl sa linkom da se pridruži timu {{partnerName}}.",
+      "emailLabel": "Imejl",
+      "emailPlaceholder": "ime@firma.com",
+      "roleLabel": "Uloga",
+      "submit": "Pošalji poziv",
+      "sending": "Slanje…",
+      "sent": "Poziv je poslat na {{email}}.",
+      "roles": {
+        "owner": "Upravlja svime, uključujući naplatu, Stripe vezu i brisanje partnera.",
+        "admin": "Upravlja firmama, paketima, brendom, domenima, ključevima i timom.",
+        "member": "Radi u vašim firmama."
+      },
+      "errors": {
+        "failed": "Nismo uspeli da pošaljemo poziv. Pokušajte ponovo.",
+        "invalidEmail": "Unesite jednu ispravnu imejl adresu.",
+        "rateLimited": "Poslali ste previše poziva. Pokušajte ponovo za sat vremena."
+      }
+    },
+    "actions": {
+      "moreOptions": "Još opcija za {{email}}",
+      "makeOwner": "Postavi za vlasnika",
+      "makeAdmin": "Postavi za administratora",
+      "makeMember": "Postavi za člana",
+      "remove": "Ukloni iz tima",
+      "revoke": "Otkaži poziv"
+    },
+    "errors": {
+      "changeFailed": "Nismo uspeli da promenimo tu ulogu. Pokušajte ponovo.",
+      "removeFailed": "Nismo uspeli da uklonimo tu osobu. Pokušajte ponovo.",
+      "revokeFailed": "Nismo uspeli da otkažemo taj poziv. Pokušajte ponovo.",
+      "finalOwner": "Partner mora da ima bar jednog vlasnika."
+    }
+  },
+  "signup": {
+    "title": "Registrujte se kao partner",
+    "description": "Preprodajte {{appName}} firmama sa kojima radite, pod svojim brendom.",
+    "nameLabel": "Naziv firme",
+    "namePlaceholder": "Acme Recepcija",
+    "subdomainLabel": "Adresa kontrolne table",
+    "subdomainHelp": "Koristite od 3 do 40 malih slova, cifara i crtica.",
+    "noCard": "Kartica nije potrebna.",
+    "submit": "Napravi partnerski nalog",
+    "submitting": "Pravljenje…",
+    "inviteOnly": "Za sada je za registraciju partnera potreban poziv. Zatražite link od {{appName}}.",
+    "invitationInvalid": "Ovaj link za poziv nije ispravan ili je istekao.",
+    "invitationUsed": "Neko je već iskoristio ovaj poziv.",
+    "wrongAccount": "Ovaj poziv je za {{email}}. Prijavite se tom potvrđenom adresom da biste ga iskoristili.",
+    "errors": {
+      "subdomainTaken": "Neko već ima tu adresu. Izaberite drugu.",
+      "invalidSubdomain": "Koristite od 3 do 40 malih slova, cifara i crtica, i izbegavajte nazive kao što su www ili app.",
+      "rateLimited": "Danas ste registrovali previše partnera. Pokušajte ponovo sutra.",
+      "failed": "Nismo uspeli da napravimo partnerski nalog. Pokušajte ponovo."
+    }
+  },
+  "acceptInvite": {
+    "genericTitle": "Partnerski poziv",
+    "title": "Pridružite se timu {{partnerName}}",
+    "description": "Ovaj poziv je za {{email}}, sa ulogom {{role}}.",
+    "submit": "Prihvati poziv",
+    "submitting": "Pridruživanje…",
+    "success": "Pridružili ste se timu {{partnerName}}.",
+    "invalid": "Ovaj link za poziv nije ispravan.",
+    "expired": "Ovaj poziv je istekao. Zatražite novi od osobe koja ga je poslala.",
+    "used": "Neko je već iskoristio ili otkazao ovaj poziv.",
+    "stale": "Ovaj poziv više ne važi. Zatražite novi od osobe koja ga je poslala.",
+    "wrongAccount": "Ovaj poziv je za {{email}}. Prijavite se tom potvrđenom adresom da biste ga prihvatili.",
+    "failed": "Nismo uspeli da prihvatimo poziv. Pokušajte ponovo."
+  },
+  "signedOut": {
+    "signup": "Prijavite se ili napravite nalog da biste se registrovali kao partner.",
+    "acceptInvite": "Prijavite se ili napravite nalog sa adresom {{email}} da biste se pridružili timu {{partnerName}}.",
+    "signIn": "Prijavi se",
+    "createAccount": "Napravi nalog",
+    "switchAccount": "Koristi drugi nalog"
+  }
+}

@@ -9,6 +9,7 @@ export const WEB_EVENT_NAMES = [
   "web.auth.login_succeeded",
   "web.auth.signup_succeeded",
   "web.workspace.business_switched",
+  "web.partner.signup_succeeded",
   "web.page.home_viewed",
   "web.page.calls_viewed",
   "web.page.call_detail_viewed",
@@ -234,6 +235,8 @@ export const TELEMETRY_REQUIRED_PROPERTIES_BY_EVENT = {
     "deploymentMode",
     "previousBusinessId",
   ],
+  // invited: signed up with the host's invitation. subdomain: signup reserved one.
+  "web.partner.signup_succeeded": ["deploymentMode", "partnerId", "pathname", "invited", "subdomain"],
   "web.page.home_viewed": ["businessId", "deploymentMode", "pathname"],
   "web.page.calls_viewed": ["businessId", "deploymentMode", "pathname"],
   "web.page.call_detail_viewed": ["businessId", "deploymentMode", "pathname"],

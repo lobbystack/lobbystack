@@ -1,14 +1,17 @@
-import { hostBrand, parseDeploymentMode, readBrandingEnvironment, type Brand, type BrandLogoContentType, type EmailBrandReference } from "@lobbystack/shared";
+import { sql } from "drizzle-orm";
+
+import { hostBrand, parseDeploymentMode, partnerFeatures, readBrandingEnvironment, type Brand, type BrandLogoContentType, type EmailBrandReference } from "@lobbystack/shared";
 
 import { getSavedBranding, getSavedBrandLogo } from "./branding";
 import type { DomainContext } from "./context";
 
 export type { Brand } from "@lobbystack/shared";
 
-// Brands decide which brand a request or a business shows. Every hostname and
-// every business gets the host brand until partners have brands of their own.
-// Texts always use the host brand, so the SMS code calls deploymentAppName()
-// and never this module.
+// Brands decide which brand a request, a business or an email shows. Every
+// hostname and every business gets the host brand until partners have domains
+// and businesses of their own; a partner's own emails, such as invitations to
+// its team, already go out under its name. Texts always use the host brand, so
+// the SMS code calls deploymentAppName() and never this module.
 
 // Long enough to spare the database a read on every page and email, short
 // enough that another process soon shows what onboarding saved.
@@ -85,11 +88,37 @@ export async function brandLogo(context: DomainContext, brand: Pick<Brand, "kind
 }
 
 /**
+ * A partner's brand in its emails: its name, sent from the partner base
+ * domain (or, without one, from the host's address), with the host's links,
+ * since the console is on the host's domain. Read when each email is sent.
+ * Rejects for a partner it can't find, so the email waits.
+ */
+async function partnerEmailBrand(context: DomainContext, partnerId: string): Promise<Brand> {
+  const host = await loadHostBrand(context);
+  // The worker has no person or business in its context, so it reads the partner through this function.
+  const partner = (await context.db.execute<{ name: string }>(sql`select name from app.partner_brand(${partnerId}::uuid)`)).rows[0];
+  if (!partner) throw new Error(`Partner ${partnerId} was not found for its email brand.`);
+  const { baseDomain } = partnerFeatures(process.env);
+  return {
+    kind: "partner",
+    partnerId,
+    name: partner.name,
+    logoUrl: null,
+    faviconUrl: null,
+    color: null,
+    origin: host.origin,
+    links: { website: null, terms: null, privacy: null, support: null },
+    email: { fromName: partner.name, fromAddress: baseDomain ? `no-reply@${baseDomain}` : host.email.fromAddress, replyTo: null },
+  };
+}
+
+/**
  * The brand a queued email goes out under, read when it's sent: a business's
- * brand for an email about a business, and otherwise the brand of the request
- * that queued it. No brand is a partner's yet, so every reference gets the
- * host brand. Rejects when the brand can't be read.
+ * brand for an email about a business, a partner's for the partner's own
+ * emails, and the host's otherwise. Rejects when the brand can't be read.
  */
 export async function brandForEmail(context: DomainContext, reference: EmailBrandReference): Promise<Brand> {
-  return reference.kind === "business" ? await brandForBusiness(context, reference.businessId) : await loadHostBrand(context);
+  if (reference.kind === "business") return await brandForBusiness(context, reference.businessId);
+  if (reference.kind === "partner") return await partnerEmailBrand(context, reference.partnerId);
+  return await loadHostBrand(context);
 }

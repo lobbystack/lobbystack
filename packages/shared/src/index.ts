@@ -11,6 +11,8 @@ export * from "./chatChannels";
 export * from "./branding";
 export * from "./brandLinks";
 export * from "./brand";
+export * from "./partnerFeatures";
+export * from "./partners";
 export { isCertificationMode, assertCertificationRecipient, assertCertificationOperationAllowed, assertCertificationCalendar, assertCertificationBillingSandbox } from "./certification";
 
 export type DeploymentMode = "cloud" | "self_hosted_standard" | "development";

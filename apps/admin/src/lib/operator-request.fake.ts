@@ -13,6 +13,9 @@ import type { OperatorRequest, SignedInRequest } from "./operator-request";
 
 const defaults = () => ({
   userId: "user",
+  /** The session's email and whether it's verified. */
+  email: "user@example.com" as string | null,
+  emailVerified: true,
   businessId: "business",
   domain: { db: "app" } as unknown as DomainContext,
   /** What transaction() hands its callback. */
@@ -32,10 +35,10 @@ export function resetFakeOperator(): void {
 
 async function operator(request: Request): Promise<OperatorRequest> {
   const text = await request.text();
-  const { userId, businessId, domain } = fakeOperator;
+  const { userId, businessId, domain, email, emailVerified } = fakeOperator;
   return {
     request,
-    session: { user: { id: userId }, session: { id: "session", userId, expiresAt: new Date(0) } },
+    session: { user: { id: userId, email, emailVerified }, session: { id: "session", userId, expiresAt: new Date(0) } },
     userId,
     businessId,
     body: text ? JSON.parse(text) as Record<string, unknown> : {},

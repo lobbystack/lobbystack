@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronsUpDown, Contrast, Crown, LogOut, User as UserIcon } from "lucide-react";
+import { ChevronsUpDown, Contrast, Crown, Handshake, LogOut, User as UserIcon } from "lucide-react";
 import { useTheme } from "./theme-provider";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -26,6 +26,8 @@ type User = { email: string; name: string };
 type NavUserProps = {
   onSignOut: () => void;
   onUpgradeToPro?: () => void;
+  /** Links to the partner console, for someone on a partner's team. */
+  showPartnerConsole?: boolean;
   showUpgradeToPro?: boolean;
   user: User;
 };
@@ -33,6 +35,7 @@ type NavUserProps = {
 export function NavUser({
   onSignOut,
   onUpgradeToPro,
+  showPartnerConsole = false,
   showUpgradeToPro = false,
   user,
 }: NavUserProps) {
@@ -96,6 +99,12 @@ export function NavUser({
                 <UserIcon />
                 {t("sidebar.account")}
               </DropdownMenuItem>
+              {showPartnerConsole ? (
+                <DropdownMenuItem render={<Link href="/partner" />}>
+                  <Handshake />
+                  {t("sidebar.partnerConsole")}
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuItem
                 closeOnClick={false}
                 onClick={toggleTheme}

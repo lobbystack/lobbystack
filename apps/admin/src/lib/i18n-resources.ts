@@ -15,6 +15,7 @@ import enKnowledge from "../../public/locales/en/knowledge.json";
 import enMessages from "../../public/locales/en/messages.json";
 import enNav from "../../public/locales/en/nav.json";
 import enOnboarding from "../../public/locales/en/onboarding.json";
+import enPartner from "../../public/locales/en/partner.json";
 import enSettings from "../../public/locales/en/settings.json";
 import enWidget from "../../public/locales/en/widget.json";
 import frAdmin from "../../public/locales/fr/admin.json";
@@ -32,6 +33,7 @@ import frKnowledge from "../../public/locales/fr/knowledge.json";
 import frMessages from "../../public/locales/fr/messages.json";
 import frNav from "../../public/locales/fr/nav.json";
 import frOnboarding from "../../public/locales/fr/onboarding.json";
+import frPartner from "../../public/locales/fr/partner.json";
 import frSettings from "../../public/locales/fr/settings.json";
 import frWidget from "../../public/locales/fr/widget.json";
 import esAdmin from "../../public/locales/es/admin.json";
@@ -49,6 +51,7 @@ import esKnowledge from "../../public/locales/es/knowledge.json";
 import esMessages from "../../public/locales/es/messages.json";
 import esNav from "../../public/locales/es/nav.json";
 import esOnboarding from "../../public/locales/es/onboarding.json";
+import esPartner from "../../public/locales/es/partner.json";
 import esSettings from "../../public/locales/es/settings.json";
 import esWidget from "../../public/locales/es/widget.json";
 import srAdmin from "../../public/locales/sr/admin.json";
@@ -66,6 +69,7 @@ import srKnowledge from "../../public/locales/sr/knowledge.json";
 import srMessages from "../../public/locales/sr/messages.json";
 import srNav from "../../public/locales/sr/nav.json";
 import srOnboarding from "../../public/locales/sr/onboarding.json";
+import srPartner from "../../public/locales/sr/partner.json";
 import srSettings from "../../public/locales/sr/settings.json";
 import srWidget from "../../public/locales/sr/widget.json";
 
@@ -90,6 +94,7 @@ export const localeResources: Record<SupportedLocale, Record<string, Record<stri
     messages: enMessages,
     nav: enNav,
     onboarding: enOnboarding,
+    partner: enPartner,
     settings: enSettings,
     widget: enWidget,
   },
@@ -109,6 +114,7 @@ export const localeResources: Record<SupportedLocale, Record<string, Record<stri
     messages: frMessages,
     nav: frNav,
     onboarding: frOnboarding,
+    partner: frPartner,
     settings: frSettings,
     widget: frWidget,
   },
@@ -128,6 +134,7 @@ export const localeResources: Record<SupportedLocale, Record<string, Record<stri
     messages: esMessages,
     nav: esNav,
     onboarding: esOnboarding,
+    partner: esPartner,
     settings: esSettings,
     widget: esWidget,
   },
@@ -147,6 +154,7 @@ export const localeResources: Record<SupportedLocale, Record<string, Record<stri
     messages: srMessages,
     nav: srNav,
     onboarding: srOnboarding,
+    partner: srPartner,
     settings: srSettings,
     widget: srWidget,
   },

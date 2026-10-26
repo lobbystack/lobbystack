@@ -55,6 +55,8 @@ type DashboardShellProps = {
   sidebarOpen?: boolean;
   /** Shows Messages and the website widget in the menu on every page (`WIDGET_KEY_ISSUANCE_ENABLED`). */
   widgetsEnabled?: boolean;
+  /** The person is on a partner's team, so the account menu links to the partner console. */
+  partnerConsole?: boolean;
   user: {
     email: string;
     name: string;
@@ -75,7 +77,7 @@ function getSidebarDefaultOpen(): boolean {
   return value?.split("=")[1] !== "false";
 }
 
-export function DashboardShell({ children, sidebarOpen, user, widgetsEnabled = false }: DashboardShellProps) {
+export function DashboardShell({ children, partnerConsole = false, sidebarOpen, user, widgetsEnabled = false }: DashboardShellProps) {
   const { t } = useTranslation("common");
   const pathname = usePathname();
   const contentScrollRef = useRef<HTMLElement>(null);
@@ -99,7 +101,7 @@ export function DashboardShell({ children, sidebarOpen, user, widgetsEnabled = f
         defaultOpen={sidebarOpen ?? getSidebarDefaultOpen()}
         style={{ "--sidebar-width": "16rem" } as React.CSSProperties}
       >
-        <ReplacementSidebar user={user} widgetsEnabled={widgetsEnabled} />
+        <ReplacementSidebar partnerConsole={partnerConsole} user={user} widgetsEnabled={widgetsEnabled} />
         <SidebarInset
           ref={contentScrollRef}
           className="@container/content min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain has-data-[layout=fixed]:h-full peer-data-[variant=inset]:has-data-[layout=fixed]:h-[calc(100%-(var(--spacing)*4))]"
@@ -128,7 +130,7 @@ function BillingBanner() {
   return <BillingPastDueBanner businessId={business.businessId} plan={billing.data.account.plan} subscriptionState={billing.data.account.subscriptionState} permissions={billing.data.permissions} />;
 }
 
-function ReplacementSidebar({ user, widgetsEnabled }: Pick<DashboardShellProps, "user" | "widgetsEnabled">) {
+function ReplacementSidebar({ partnerConsole = false, user, widgetsEnabled }: Pick<DashboardShellProps, "partnerConsole" | "user" | "widgetsEnabled">) {
   const pathname = usePathname();
   const showWidgets = widgetsEnabled || ["/messages", "/widget"].some(route => pathname === route || pathname.startsWith(`${route}/`));
   const { isMobile, setOpenMobile } = useSidebar();
@@ -168,7 +170,7 @@ function ReplacementSidebar({ user, widgetsEnabled }: Pick<DashboardShellProps, 
       </SidebarContent>
       <SidebarFooter>
         <DashboardSetupGuideCard onNavigate={() => { if (isMobile) setOpenMobile(false); }} />
-        <UserMenu user={user} />
+        <UserMenu partnerConsole={partnerConsole} user={user} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
@@ -230,11 +232,11 @@ function NavigationGroup({ items, pathname, title }: { items: NavigationItem[]; 
 }
 
 
-function UserMenu({ user }: Pick<DashboardShellProps, "user">) {
+function UserMenu({ partnerConsole = false, user }: Pick<DashboardShellProps, "partnerConsole" | "user">) {
   const openUpgradePlanDialog = useOpenUpgradePlanDialog();
   const signOut = useSignOut();
   const { business } = useActiveBusiness();
   const billing = useQuery({ queryKey: ["billing", business?.businessId], enabled: Boolean(business?.businessId), queryFn: () => requestJson<{ account: { plan: string | null } | null; permissions: BillingPermissions; availableCheckoutPlans: Array<"starter" | "pro">; availableCheckoutIntervals: Record<"starter" | "pro", string[]> }>(`/api/billing?businessId=${encodeURIComponent(business!.businessId)}`) });
   const showUpgradeToPro = billing.data?.permissions.hasCheckoutAccess === true && (billing.data.account?.plan ?? "free_cloud") === "free_cloud" && (billing.data.availableCheckoutPlans ?? []).some(plan => billing.data?.availableCheckoutIntervals[plan].length);
-  return <NavUser user={user} onSignOut={() => void signOut()} onUpgradeToPro={openUpgradePlanDialog} showUpgradeToPro={showUpgradeToPro} />;
+  return <NavUser user={user} onSignOut={() => void signOut()} onUpgradeToPro={openUpgradePlanDialog} showPartnerConsole={partnerConsole} showUpgradeToPro={showUpgradeToPro} />;
 }

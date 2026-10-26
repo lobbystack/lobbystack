@@ -173,6 +173,25 @@ describe("worker handlers", () => {
     expect(sendMail.mock.lastCall?.[0]).toMatchObject({ replyTo: "owner@example.test", text: "Hi" });
   });
 
+  it("sends a partner's team invitation under the partner's name, from the partner base domain, linking to the host's domain", async () => {
+    vi.stubEnv("APP_BASE_URL", "https://app.example.test");
+    vi.stubEnv("PARTNER_BASE_DOMAIN", "portal.example.test");
+    const partnerId = randomUUID();
+    const execute = vi.fn().mockResolvedValue({ rows: [{ name: "Bright Desk" }] });
+    const db = { select: () => ({ from: () => ({ limit: async () => [] }) }), execute } as never;
+    const sendMail = vi.fn().mockResolvedValue({ messageId: "provider-id" });
+    const email = new SmtpEmailProvider({ host: "localhost", port: 1025, secure: false, username: "", password: "", from: "LobbyStack <no-reply@example.test>" }, { sendMail } as never);
+    // The payload invitePartnerMember queues: no business, and the partner's brand.
+    await handleJob({ jobId: randomUUID(), businessId: null, type: "email.send", queue: "default", payload: { invitationId: randomUUID(), email: "teammate@example.test", template: "invitation", url: "https://app.example.test/partner/accept-invite?token=t", brand: { kind: "partner", partnerId }, replyTo: null }, trace: {}, idempotencyKey: randomUUID(), scheduled: false }, { domain: { db }, email });
+    expect(sendMail.mock.lastCall?.[0]).toMatchObject({
+      to: "teammate@example.test",
+      from: '"Bright Desk" <no-reply@portal.example.test>',
+      subject: "Bright Desk notification",
+      text: "You have been invited to join Bright Desk. Accept the invitation here: https://app.example.test/partner/accept-invite?token=t",
+    });
+    expect(sendMail.mock.lastCall?.[0].replyTo).toBeUndefined();
+  });
+
   it("refuses a brand reference it can't read rather than sending under the host brand", async () => {
     const sendTemplate = vi.fn().mockResolvedValue({ messageId: "provider-id" });
     const send = (brand: unknown) => handleJob({ jobId: randomUUID(), businessId: null, type: "email.send", queue: "default", payload: { template: "verify_email", to: "owner@example.test", variables: { code: "1" }, brand, replyTo: null }, trace: {}, idempotencyKey: randomUUID(), scheduled: false }, { domain: { db: savedBranding(null) }, email: { sendTemplate } });

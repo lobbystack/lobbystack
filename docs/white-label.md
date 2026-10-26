@@ -55,7 +55,7 @@ When the partner's pool runs out with overage off, or the partner reaches its ow
 ## Partners and their teams
 
 - Partners sign up themselves, without an application.
-- A partner's team has three roles. Owners manage Polar billing and the Stripe connection, and can delete the partner. Admins manage businesses, packages, branding, the domain, keys, and the team. Members work inside businesses.
+- A partner's team has three roles. Owners manage Polar billing and the Stripe connection, and can delete the partner. Admins manage businesses, packages, branding, the domain, keys, and the team's admins and members. Only owners can make someone an owner, change an owner's role, or remove an owner, and the partner always keeps one. Members work inside businesses.
 - The partner console is part of the same app. Staff open it from the partner's domain or the host's.
 - Partner members can open any of the partner's businesses with full access, without joining its team. Each time they open one, the business's audit log records who did it.
 
