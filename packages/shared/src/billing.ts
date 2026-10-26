@@ -371,7 +371,7 @@ export function isBillingInterval(value: unknown): value is BillingInterval {
 
 /**
  * LobbyStack's cloud tiers, from docs/white-label.md. Annual billing takes 20%
- * off, as on direct plans. Prices and rates are US cents; a chat rate can hold
+ * off, rounded down to whole dollars a month, so it saves a little more. Prices and rates are US cents; a chat rate can hold
  * half a cent, as Polar's metered prices can. Free includes no number of its
  * own, only one 14-day trial number per partner, ever.
  */
@@ -392,8 +392,8 @@ export const partnerTierCatalog = {
   starter: {
     paid: true,
     monthlyChargeCents: 4_900,
-    annualChargeCents: 47_040,
-    annualEffectiveMonthlyChargeCents: 3_920,
+    annualChargeCents: 46_800,
+    annualEffectiveMonthlyChargeCents: 3_900,
     poolVoiceSeconds: 15_000,
     poolChats: 1_000,
     includedNumbers: 2,
@@ -405,8 +405,8 @@ export const partnerTierCatalog = {
   growth: {
     paid: true,
     monthlyChargeCents: 19_900,
-    annualChargeCents: 191_040,
-    annualEffectiveMonthlyChargeCents: 15_920,
+    annualChargeCents: 190_800,
+    annualEffectiveMonthlyChargeCents: 15_900,
     poolVoiceSeconds: 78_000,
     poolChats: 5_000,
     includedNumbers: 10,
@@ -418,8 +418,8 @@ export const partnerTierCatalog = {
   scale: {
     paid: true,
     monthlyChargeCents: 49_900,
-    annualChargeCents: 479_040,
-    annualEffectiveMonthlyChargeCents: 39_920,
+    annualChargeCents: 478_800,
+    annualEffectiveMonthlyChargeCents: 39_900,
     poolVoiceSeconds: 240_000,
     poolChats: 10_000,
     includedNumbers: 25,

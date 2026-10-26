@@ -18,7 +18,7 @@ The code, the docs, and the dashboard all use these words:
 The host bills each partner through Polar ([ADR 0009](adr/0009-partners-bill-through-their-own-stripe.md)):
 
 - A tier has a monthly fee and a pool of voice minutes and chat conversations. A partner can have any number of businesses.
-- Annual billing takes 20% off, as it does on direct plans.
+- Annual billing takes 20% off, as it does on direct plans, rounded down to whole dollars a month.
 - Alert texts and transfer attempts don't use the pool, up to a fair-use cap.
 - The entry tier costs about what direct plans cost per minute, and higher tiers cost less per minute. A single business gains nothing by signing up as a partner.
 - Each tier includes some phone numbers. Extra numbers cost what the host pays for them.
@@ -29,12 +29,12 @@ The host bills each partner through Polar ([ADR 0009](adr/0009-partners-bill-thr
 
 LobbyStack's cloud sells these tiers:
 
-| Tier | Monthly price | Pool | Numbers | Minute overage | Chat overage |
-| --- | --- | --- | --- | --- | --- |
-| Free | $0 | 30 minutes, 50 chats | 1 trial number | Off | Off |
-| Starter | $49 | 250 minutes, 1,000 chats | 2 | $0.20 | $0.02 |
-| Growth | $199 | 1,300 minutes, 5,000 chats | 10 | $0.15 | $0.015 |
-| Scale | $499 | 4,000 minutes, 10,000 chats | 25 | $0.12 | $0.01 |
+| Tier | Monthly price | Annual price | Pool | Numbers | Minute overage | Chat overage |
+| --- | --- | --- | --- | --- | --- | --- |
+| Free | $0 | $0 | 30 minutes, 50 chats | 1 trial number | Off | Off |
+| Starter | $49 | $468 ($39 a month) | 250 minutes, 1,000 chats | 2 | $0.20 | $0.02 |
+| Growth | $199 | $1,908 ($159 a month) | 1,300 minutes, 5,000 chats | 10 | $0.15 | $0.015 |
+| Scale | $499 | $4,788 ($399 a month) | 4,000 minutes, 10,000 chats | 25 | $0.12 | $0.01 |
 
 ## What a business pays its partner
 

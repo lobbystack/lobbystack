@@ -52,12 +52,13 @@ describe("partner tiers", () => {
     expect([partnerTierCatalog.starter, partnerTierCatalog.growth, partnerTierCatalog.scale].map((tier) => [tier.voiceOverageRatePerMinuteCents, tier.chatOverageRatePerChatCents])).toEqual([[20, 2], [15, 1.5], [12, 1]]);
   });
 
-  it("takes 20% off each paid tier billed annually, as on direct plans", () => {
+  it("takes 20% off each paid tier billed annually, rounded down to whole dollars a month", () => {
     for (const tier of ["starter", "growth", "scale"] as const) {
       const terms = partnerTierCatalog[tier];
-      expect(terms.annualChargeCents).toBe(terms.monthlyChargeCents * 12 * 0.8);
-      expect(terms.annualEffectiveMonthlyChargeCents).toBe(terms.annualChargeCents / 12);
+      expect(terms.annualEffectiveMonthlyChargeCents).toBe(Math.floor((terms.monthlyChargeCents * 0.8) / 100) * 100);
+      expect(terms.annualChargeCents).toBe(terms.annualEffectiveMonthlyChargeCents * 12);
     }
+    expect([partnerTierCatalog.starter, partnerTierCatalog.growth, partnerTierCatalog.scale].map((tier) => tier.annualChargeCents)).toEqual([46_800, 190_800, 478_800]);
     expect(billingPlanCatalog.starter.annualChargeCents).toBe(billingPlanCatalog.starter.monthlyChargeCents * 12 * 0.8);
   });
 

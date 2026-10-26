@@ -32,11 +32,11 @@ Partners pay you for a tier from the console's **Billing** page. Create one recu
 | Product | Price | Environment variable |
 | --- | --- | --- |
 | Partner Starter monthly | $49 each month | `POLAR_PARTNER_STARTER_MONTHLY_PRODUCT_ID` |
-| Partner Starter annual | $470.40 each year | `POLAR_PARTNER_STARTER_ANNUAL_PRODUCT_ID` |
+| Partner Starter annual | $468 each year | `POLAR_PARTNER_STARTER_ANNUAL_PRODUCT_ID` |
 | Partner Growth monthly | $199 each month | `POLAR_PARTNER_GROWTH_MONTHLY_PRODUCT_ID` |
-| Partner Growth annual | $1,910.40 each year | `POLAR_PARTNER_GROWTH_ANNUAL_PRODUCT_ID` |
+| Partner Growth annual | $1,908 each year | `POLAR_PARTNER_GROWTH_ANNUAL_PRODUCT_ID` |
 | Partner Scale monthly | $499 each month | `POLAR_PARTNER_SCALE_MONTHLY_PRODUCT_ID` |
-| Partner Scale annual | $4,790.40 each year | `POLAR_PARTNER_SCALE_ANNUAL_PRODUCT_ID` |
+| Partner Scale annual | $4,788 each year | `POLAR_PARTNER_SCALE_ANNUAL_PRODUCT_ID` |
 
 The **Billing** page shows these prices from `partnerTierCatalog` in `packages/shared/src/billing.ts`, so give your products the same ones. A partner that pays for no tier is on Free, which needs no product.
 
