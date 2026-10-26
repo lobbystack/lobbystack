@@ -128,7 +128,7 @@ export function NavUser({
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
                   {partnerLinks.map((link) => (
-                    <DropdownMenuItem key={link.key} render={<a href={link.href} {...(link.href.startsWith("mailto:") ? {} : { rel: "noreferrer", target: "_blank" })} />}>
+                    <DropdownMenuItem key={link.key} render={<Link href={link.href} prefetch={false} {...(link.href.startsWith("mailto:") ? {} : { rel: "noreferrer", target: "_blank" })} />}>
                       <link.icon />
                       {link.label}
                     </DropdownMenuItem>

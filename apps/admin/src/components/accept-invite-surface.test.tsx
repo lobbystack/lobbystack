@@ -98,7 +98,7 @@ it("opens the package's checkout on the partner's account before the owner signs
   window.history.replaceState({}, "", "/accept-invite?token=fixture-token");
   // Stripe's checkout opens on another site; a hash on this page stands in for it, since jsdom only follows those.
   const checkoutUrl = `${window.location.href}#stripe-checkout`;
-  const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+  const fetchMock = vi.fn(async (url: string, _init?: RequestInit) => {
     if (url.includes("get-session")) return Response.json({});
     if (url === "/api/team/accept/checkout") return Response.json({ url: checkoutUrl });
     return Response.json({ invitation: { businessName: "Harbor Dental", email: "owner@example.invalid", expired: false, status: "pending", payment: frontDesk } });
