@@ -21,7 +21,7 @@ import { getWhiteLabelFaqs } from "@/marketing/lib/white-label-faqs"
 
 type SectionProps = { locale: Locale }
 
-const container = "mx-auto w-full max-w-[75.5rem] px-5 md:px-6"
+const container = "mx-auto w-full max-w-site px-6"
 
 /** Tiers whose card stands out, as the recommended choice. */
 const highlightedTier: PartnerTierSlug = "growth"
