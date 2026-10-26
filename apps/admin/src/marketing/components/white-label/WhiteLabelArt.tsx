@@ -1,5 +1,5 @@
 import { intlLocale } from "@lobbystack/shared"
-import { Bell, Building2, CreditCard, Palette, Tag } from "lucide-react"
+import { Bell, Building2, CreditCard, Palette, Server, Tag } from "lucide-react"
 import type { CSSProperties, ReactNode } from "react"
 
 import type { Locale } from "@/marketing/i18n"
@@ -219,6 +219,38 @@ export function OverageArt({ locale, copy }: { locale: Locale; copy: WhiteLabelC
           </span>
           {copy.alertSent}
         </span>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Self-hosting: a field of blank tiles on the plane, with one raised tile
+ * carrying a server, the way one machine in a rack is yours.
+ */
+export function SelfHostArt({ className }: { className?: string }) {
+  // An odd grid, so the raised tile sits in the middle cell at every width.
+  const size = 5
+  const middle = Math.floor((size * size) / 2)
+  return (
+    <div aria-hidden="true" className={cn("pointer-events-none absolute inset-0 overflow-hidden [perspective:1800px]", className)}>
+      <div className="absolute inset-0 flex items-center justify-center scale-[0.72] md:scale-100">
+        <div className="grid w-[82rem] shrink-0 grid-cols-5 gap-7" style={plane}>
+          {Array.from({ length: size * size }, (_, index) =>
+            index === middle ? (
+              <div key={index} className="flex h-44 items-center justify-center">
+                <Tile className="rounded-[2.25rem] p-3.5" innerClassName="flex size-32 items-center justify-center rounded-[1.6rem]">
+                  <Server className="size-12 text-foreground/85" strokeWidth={1.5} />
+                </Tile>
+              </div>
+            ) : (
+              <span
+                key={index}
+                className="block h-44 rounded-[2rem] border border-white/70 bg-[linear-gradient(180deg,oklch(0.985_0.002_70),oklch(0.955_0.004_70))] shadow-[inset_0_1px_0_white,0_10px_24px_-12px_oklch(0.3_0.02_60/16%)]"
+              />
+            )
+          )}
+        </div>
       </div>
     </div>
   )

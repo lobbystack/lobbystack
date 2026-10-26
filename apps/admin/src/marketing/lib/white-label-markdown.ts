@@ -57,6 +57,12 @@ ${copy.hero.subhead}
 - **${copy.console.title}.** ${copy.console.body}
 - **${copy.pool.title}.** ${copy.pool.body}
 
+## ${copy.selfHost.title}
+
+${copy.selfHost.body}
+
+- ${copy.selfHost.cta}: ${absoluteUrl(localizePath(locale, "/solutions/self-hosted-ai-receptionist/"))}
+
 ## ${copy.earn.titleLines.join(" ")}
 
 ${cards}

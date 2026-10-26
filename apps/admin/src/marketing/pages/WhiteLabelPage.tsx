@@ -2,7 +2,7 @@ import { Footer } from "@/marketing/components/Footer"
 import { Navbar } from "@/marketing/components/Navbar"
 import {
   WhiteLabelClosing,
-  WhiteLabelConsole,
+  WhiteLabelDashboard,
   WhiteLabelEarn,
   WhiteLabelFaq,
   WhiteLabelHero,
@@ -58,7 +58,7 @@ export function WhiteLabelPage({ locale }: { locale: Locale }) {
       <main id="main-content">
         <WhiteLabelHero locale={locale} />
         <WhiteLabelHowItWorks locale={locale} />
-        <WhiteLabelConsole locale={locale} />
+        <WhiteLabelDashboard locale={locale} />
         <WhiteLabelEarn locale={locale} />
         <WhiteLabelTiers locale={locale} />
         <WhiteLabelFaq locale={locale} />

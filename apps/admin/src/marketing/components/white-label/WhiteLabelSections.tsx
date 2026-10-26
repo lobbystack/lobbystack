@@ -8,9 +8,10 @@ import {
   OverageArt,
   PackagesArt,
   PlaneGrid,
+  SelfHostArt,
   SetupFeeArt,
 } from "@/marketing/components/white-label/WhiteLabelArt"
-import type { Locale } from "@/marketing/i18n"
+import { localizeHref, type Locale } from "@/marketing/i18n"
 import { appPartnerSignupUrl } from "@/marketing/lib/app-links"
 import { PillLink } from "@/marketing/components/white-label/PillLink"
 import { WhiteLabelTierCards, type WhiteLabelTierCard } from "@/marketing/components/white-label/WhiteLabelTierCards"
@@ -27,7 +28,7 @@ const highlightedTier: PartnerTierSlug = "growth"
 
 /** The product shots in public/screenshots, at their pixel sizes. */
 const dashboardShot = { src: "/screenshots/partner-business-dashboard.webp", width: 2880, height: 1880 }
-const consoleShot = { src: "/screenshots/partner-console.webp", width: 2880, height: 2000 }
+const consoleShot = { src: "/screenshots/partner-console.webp", width: 3200, height: 1972 }
 const signInShot = { src: "/screenshots/partner-signin.webp", width: 1600, height: 1000 }
 const brandingShot = { src: "/screenshots/partner-branding.webp", width: 2880, height: 1360 }
 
@@ -99,7 +100,7 @@ export function WhiteLabelHero({ locale }: SectionProps) {
       </div>
       <div className={cn(container, "mt-2 md:mt-12 lg:mt-6")}>
         <AppFrame>
-          <Shot shot={dashboardShot} alt={copy.shots.dashboardAlt} priority />
+          <Shot shot={consoleShot} alt={copy.shots.consoleAlt} priority />
         </AppFrame>
       </div>
     </section>
@@ -165,18 +166,40 @@ export function WhiteLabelHowItWorks({ locale }: SectionProps) {
             </article>
           ))}
         </div>
+
+        <div className="mt-6 grid overflow-hidden rounded-2xl border border-border/60 md:mt-12 md:grid-cols-[1.35fr_1fr]">
+          <div className="relative min-h-[18rem] bg-beige-strong/60 md:min-h-[24rem]">
+            <SelfHostArt />
+          </div>
+          <div className="flex flex-col justify-center bg-beige px-6 py-10 md:px-8">
+            <p className="eyebrow">{copy.selfHost.eyebrow}</p>
+            <h3 className="mt-2 font-heading text-[1.625rem] leading-[1.2] font-medium tracking-[-0.03em] md:text-[2rem]">
+              {copy.selfHost.title}
+            </h3>
+            <p className="mt-3 text-base leading-6 text-muted-foreground">{copy.selfHost.body}</p>
+            <div className="mt-10">
+              <PillLink
+                href={localizeHref(locale, "/solutions/self-hosted-ai-receptionist/")}
+                variant="primary"
+                section="white_label_self_host"
+              >
+                {copy.selfHost.cta}
+              </PillLink>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   )
 }
 
-export function WhiteLabelConsole({ locale }: SectionProps) {
+export function WhiteLabelDashboard({ locale }: SectionProps) {
   const t = getWhiteLabelCopy(locale).shots
   return (
     <section className="pt-20 md:pt-30">
       <div className={container}>
         <AppFrame>
-          <Shot shot={consoleShot} alt={t.consoleAlt} />
+          <Shot shot={dashboardShot} alt={t.dashboardAlt} />
         </AppFrame>
       </div>
     </section>

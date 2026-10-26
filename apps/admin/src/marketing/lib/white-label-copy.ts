@@ -29,6 +29,7 @@ export type WhiteLabelCopy = {
     card: WhiteLabelCard & { cta: string }
   }
   console: { title: string; body: string }
+  selfHost: { eyebrow: string; title: string; body: string; cta: string }
   pool: { title: string; body: string }
   heroArt: { brand: string; clients: string; prices: string }
   shots: {
@@ -113,6 +114,13 @@ const en: WhiteLabelCopy = {
     title: "Every client in one console",
     body:
       "Create a business, start it from one of your templates, and open any client's dashboard when they need help. That business's audit log records each visit.",
+  },
+  selfHost: {
+    eyebrow: "Self-hosted",
+    title: "Run the whole program on your own servers",
+    body:
+      "LobbyStack is open source under the MIT license, and every partner feature works when you host it yourself: your brand and domains, the console, packages on your Stripe and the shared pool. Your calls run on your own Twilio and OpenAI accounts, and their records stay in your database. LobbyStack charges no license fee.",
+    cta: "See how self-hosting works",
   },
   pool: {
     title: "One pool for all your clients",
@@ -239,6 +247,13 @@ const fr: WhiteLabelCopy = {
     body:
       "Créez une entreprise, partez de l'un de vos modèles et ouvrez le tableau de bord d'un client quand il a besoin d'aide. Le journal d'audit de l'entreprise garde une trace de chaque visite.",
   },
+  selfHost: {
+    eyebrow: "Auto-hébergé",
+    title: "Faites tourner tout le programme sur vos serveurs",
+    body:
+      "LobbyStack est open source sous licence MIT, et chaque fonction partenaire marche quand vous l'hébergez vous-même : votre marque et vos domaines, la console, les formules sur votre Stripe et la réserve commune. Vos appels passent par vos propres comptes Twilio et OpenAI, et leurs données restent dans votre base. LobbyStack ne facture aucune licence.",
+    cta: "Voir comment marche l'auto-hébergement",
+  },
   pool: {
     title: "Une seule réserve pour tous vos clients",
     body:
@@ -364,6 +379,13 @@ const es: WhiteLabelCopy = {
     body:
       "Cree un negocio, empiece desde una de sus plantillas y abra el panel de un cliente cuando necesite ayuda. El historial de auditoría del negocio registra cada visita.",
   },
+  selfHost: {
+    eyebrow: "Autoalojado",
+    title: "Ejecute todo el programa en sus propios servidores",
+    body:
+      "LobbyStack es de código abierto con licencia MIT, y cada función de socio funciona cuando lo aloja usted mismo: su marca y sus dominios, la consola, los paquetes en su Stripe y la bolsa compartida. Sus llamadas usan sus propias cuentas de Twilio y OpenAI, y sus registros se quedan en su base de datos. LobbyStack no cobra ninguna licencia.",
+    cta: "Ver cómo funciona el autoalojamiento",
+  },
   pool: {
     title: "Una sola bolsa para todos sus clientes",
     body:
@@ -488,6 +510,13 @@ const sr: WhiteLabelCopy = {
     title: "Svi klijenti u jednoj konzoli",
     body:
       "Napravite firmu, pokrenite je iz nekog svog šablona i otvorite kontrolnu tablu klijenta kad mu zatreba pomoć. Dnevnik revizije te firme beleži svaku posetu.",
+  },
+  selfHost: {
+    eyebrow: "Samostalno hostovanje",
+    title: "Pokrenite ceo program na svojim serverima",
+    body:
+      "LobbyStack je otvorenog koda pod MIT licencom, i svaka partnerska funkcija radi kada ga sami hostujete: vaš brend i domeni, konzola, ponude preko vašeg Stripe-a i zajednički fond. Pozivi idu preko vaših Twilio i OpenAI naloga, a podaci o njima ostaju u vašoj bazi. LobbyStack ne naplaćuje licencu.",
+    cta: "Pogledajte kako radi samostalno hostovanje",
   },
   pool: {
     title: "Jedan fond za sve klijente",
