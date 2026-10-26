@@ -97,6 +97,11 @@ export const fr = {
       description:
         "Recherchez dans les pages LobbyStack, les articles, les ressources produit, les tarifs et la documentation publique.",
     },
+    "/white-label/": {
+      title: "Réceptionniste IA en marque blanche pour agences | LobbyStack",
+      description:
+        "Revendez la réceptionniste IA de LobbyStack sous votre marque et votre domaine. Facturez vos clients sur votre Stripe et commencez sur un palier gratuit.",
+    },
     "/affiliate-program/": {
       title: "Programme d'affiliation LobbyStack | 20 % de commission",
       description:

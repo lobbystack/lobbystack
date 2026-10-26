@@ -1,13 +1,14 @@
 "use client"
 
-import { Button, buttonVariants } from "@/marketing/components/ui/button"
+import { BillingIntervalSwitch, type BillingInterval } from "@/marketing/components/BillingIntervalSwitch"
+import { buttonVariants } from "@/marketing/components/ui/button"
 import { appSignupUrl } from "@/marketing/lib/app-links"
 import type { Locale } from "@/marketing/i18n"
 import { cn } from "@/marketing/lib/utils"
 import { planCards } from "@lobbystack/shared/plan-cards"
 import { planComparison, type ComparisonValue } from "@lobbystack/shared/plan-comparison"
 import { Check, Minus, ArrowRight } from "lucide-react"
-import { Fragment, useLayoutEffect, useRef, useState } from "react"
+import { Fragment, useState } from "react"
 
 /* ─────────────────────────── Data ─────────────────────────── */
 
@@ -40,7 +41,6 @@ type Tier = {
   >
 }
 
-type BillingInterval = "monthly" | "annual"
 
 const enterpriseContactHref =
   "mailto:support@lobbystack.com?subject=LobbyStack%20enterprise%20inquiry"
@@ -199,30 +199,6 @@ const pricingSectionCopy = {
 export function PricingSection({ locale = "en" }: PricingSectionProps) {
   const [billingInterval, setBillingInterval] =
     useState<BillingInterval>("annual")
-  const tabRefs = useRef<Record<BillingInterval, HTMLButtonElement | null>>({
-    monthly: null,
-    annual: null,
-  })
-  // Measured position of the selected tab. Until hydration measures it, the
-  // selected tab paints its own background so the server HTML still shows state.
-  const [thumb, setThumb] = useState<{ x: number; width: number } | null>(
-    null
-  )
-
-  useLayoutEffect(() => {
-    const tab = tabRefs.current[billingInterval]
-    if (!tab) return
-
-    const measure = () =>
-      setThumb({ x: tab.offsetLeft, width: tab.offsetWidth })
-    measure()
-
-    // Watch every tab: a late font swap can resize the one before this tab
-    // and shift it without changing its own size.
-    const observer = new ResizeObserver(measure)
-    Object.values(tabRefs.current).forEach((node) => node && observer.observe(node))
-    return () => observer.disconnect()
-  }, [billingInterval])
   const copy = pricingSectionCopy[locale]
   const localizedTiers = tiersFor(locale)
   const localizedComparisonGroups = planComparison(locale)
@@ -244,49 +220,11 @@ export function PricingSection({ locale = "en" }: PricingSectionProps) {
       {/* ── Tier cards ── */}
       <section className="mx-auto max-w-7xl px-6 pt-8 pb-8 md:pt-10 md:pb-10 lg:pt-12 lg:pb-12">
         <div className="animate-fade-up mb-8 flex justify-center stagger-3">
-          <div
-            aria-label={copy.billingLabel}
-            className="relative inline-flex rounded-full border border-border bg-input/30 p-1"
-            role="tablist"
-          >
-            {thumb && (
-              <span
-                aria-hidden="true"
-                className="absolute top-1 bottom-1 left-0 rounded-full bg-background shadow-sm transition-[translate,width] duration-250 ease-(--ease-out) motion-reduce:transition-none"
-                style={{ translate: `${thumb.x}px 0`, width: thumb.width }}
-              />
-            )}
-            {(["monthly", "annual"] as const).map((interval) => (
-              <Button
-                aria-selected={billingInterval === interval}
-                className={cn(
-                  "relative h-9 rounded-full border-transparent bg-transparent px-4 hover:bg-transparent",
-                  billingInterval === interval
-                    ? cn(
-                        "text-foreground",
-                        !thumb && "bg-background shadow-sm hover:bg-background"
-                      )
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-                key={interval}
-                ref={(node) => {
-                  tabRefs.current[interval] = node
-                }}
-                onClick={() => setBillingInterval(interval)}
-                role="tab"
-                size="sm"
-                type="button"
-                variant="outline"
-              >
-                {interval === "monthly" ? copy.monthly : copy.annual}
-                {interval === "annual" ? (
-                  <span className="ml-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
-                    {copy.save}
-                  </span>
-                ) : null}
-              </Button>
-            ))}
-          </div>
+          <BillingIntervalSwitch
+            labels={copy}
+            onChange={setBillingInterval}
+            value={billingInterval}
+          />
         </div>
 
         <div className="animate-fade-up grid gap-6 stagger-3 md:grid-cols-2 xl:grid-cols-4">

@@ -1,0 +1,76 @@
+import { partnerTierCatalog } from "@lobbystack/shared"
+import { renderToStaticMarkup } from "react-dom/server"
+import { describe, expect, it } from "vitest"
+
+import { SUPPORTED_LOCALES, type Locale } from "@/marketing/i18n"
+import { markdownAlternatePath } from "@/marketing/lib/agent-discovery"
+import { getWhiteLabelCopy } from "@/marketing/lib/white-label-copy"
+import { getWhiteLabelFaqs } from "@/marketing/lib/white-label-faqs"
+import { whiteLabelMarkdown } from "@/marketing/lib/white-label-markdown"
+import { markdownTwin } from "@/marketing/markdown-twins"
+import { WhiteLabelPage, whiteLabelPageSeo } from "@/marketing/pages/WhiteLabelPage"
+
+const leafPaths = (value: unknown, prefix = ""): string[] => {
+  if (typeof value === "function") return [prefix]
+  if (!value || typeof value !== "object" || Array.isArray(value)) return [prefix]
+  return Object.entries(value).flatMap(([key, child]) => leafPaths(child, prefix ? `${prefix}.${key}` : key))
+}
+
+const render = (locale: Locale) => renderToStaticMarkup(<WhiteLabelPage locale={locale} />)
+
+describe("white-label page", () => {
+  it.each(SUPPORTED_LOCALES)("sends partner signups through the %s dashboard signup", (locale) => {
+    const html = render(locale)
+    const signup = `https://app.lobbystack.com/${locale}/signup?returnTo=%2Fpartner%2Fsignup`
+    const hrefs = [...html.matchAll(/href="([^"]+)"/g)].map(([, href]) => href?.replaceAll("&amp;", "&"))
+    // The hero, the four tier cards and the closing section.
+    expect(hrefs.filter((href) => href === signup)).toHaveLength(6)
+    expect(hrefs).toContain("#tiers")
+  })
+
+  it("shows each tier's price and pool from the partner tier catalog", () => {
+    const html = render("en")
+    // The cards open on annual billing, as the pricing page's do.
+    expect(html).toContain(">$39<")
+    expect(html).toContain(">$159<")
+    expect(html).toContain(">$399<")
+    expect(html).not.toContain("$39.20")
+    expect(html).toContain(`${(partnerTierCatalog.growth.poolVoiceSeconds / 60).toLocaleString("en-US")} voice minutes`)
+    expect(html).toContain("$0.015 a chat")
+    expect(html).toContain("Per month, billed annually")
+    expect(whiteLabelMarkdown("en")).toContain("| Starter | $49/mo | $39/mo |")
+  })
+
+  it.each(SUPPORTED_LOCALES)("never mentions a limit on simultaneous calls in %s", (locale) => {
+    const text = `${render(locale)} ${whiteLabelMarkdown(locale)}`.toLowerCase()
+    expect(text).not.toMatch(/simultaneous|concurrent|simultan|istovremen/)
+  })
+
+  it.each(SUPPORTED_LOCALES.filter((locale) => locale !== "en"))("translates every line into %s", (locale) => {
+    expect(leafPaths(getWhiteLabelCopy(locale)).sort()).toEqual(leafPaths(getWhiteLabelCopy("en")).sort())
+    expect(getWhiteLabelFaqs(locale)).toHaveLength(getWhiteLabelFaqs("en").length)
+    expect(getWhiteLabelCopy(locale).hero.subhead).not.toBe(getWhiteLabelCopy("en").hero.subhead)
+  })
+
+  it("writes Serbian copy in Latin script only", () => {
+    expect(JSON.stringify(getWhiteLabelCopy("sr")) + JSON.stringify(getWhiteLabelFaqs("sr"))).not.toMatch(/[\u0400-\u04FF]/)
+  })
+
+  it.each(SUPPORTED_LOCALES)("publishes %s metadata with its FAQ as structured data", (locale) => {
+    const seo = whiteLabelPageSeo(locale)
+    expect(seo.canonicalPath).toBe(locale === "en" ? "/white-label/" : `/${locale}/white-label/`)
+    expect(seo.title).toContain("LobbyStack")
+    expect(seo.description?.length).toBeLessThanOrEqual(160)
+    const faqPage = seo.jsonLd?.find((item) => item["@type"] === "FAQPage")
+    expect(faqPage?.mainEntity).toHaveLength(getWhiteLabelFaqs(locale).length)
+  })
+
+  it.each(SUPPORTED_LOCALES)("serves a %s Markdown twin that agents can find", async (locale) => {
+    const prefix = locale === "en" ? "" : `/${locale}`
+    expect(markdownAlternatePath(`${prefix}/white-label/`)).toBe(`${prefix}/white-label.md`)
+    const response = await markdownTwin(locale, "white-label")
+    const body = await response?.text()
+    expect(body).toContain(getWhiteLabelCopy(locale).tiers.title)
+    expect(body).toContain(getWhiteLabelFaqs(locale)[0]?.question)
+  })
+})

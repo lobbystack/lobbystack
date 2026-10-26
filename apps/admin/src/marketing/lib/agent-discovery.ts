@@ -27,6 +27,7 @@ export const markdownAlternatePath = (pathname: string) => {
     "/features/",
     "/pricing/",
     "/affiliate-program/",
+    "/white-label/",
     "/missed-call-revenue-calculator/",
     "/blog/",
     "/changelog/",
@@ -38,6 +39,7 @@ export const markdownAlternatePath = (pathname: string) => {
     "/features/": "/features.md",
     "/pricing/": "/pricing.md",
     "/affiliate-program/": "/affiliate-program.md",
+    "/white-label/": "/white-label.md",
     "/missed-call-revenue-calculator/":
       "/missed-call-revenue-calculator/index.md",
     "/blog/": "/blog.md",
@@ -121,6 +123,11 @@ export const apiCatalog = {
           href: absoluteUrl("/affiliate-program.md"),
           type: "text/markdown",
           title: "LobbyStack affiliate program markdown summary",
+        },
+        {
+          href: absoluteUrl("/white-label.md"),
+          type: "text/markdown",
+          title: "LobbyStack white-label partner program markdown summary",
         },
         {
           href: absoluteUrl("/missed-call-revenue-calculator/index.md"),
@@ -343,6 +350,23 @@ export const openApiDocument = {
         },
       },
     },
+    "/white-label.md": {
+      get: {
+        summary: "Get the white-label partner program markdown summary",
+        operationId: "getWhiteLabelMarkdown",
+        responses: {
+          "200": {
+            description:
+              "Markdown summary of the LobbyStack partner program: branding, the partner console, packages billed on the partner's Stripe, and partner tiers.",
+            content: {
+              "text/markdown": {
+                schema: { type: "string" },
+              },
+            },
+          },
+        },
+      },
+    },
     "/affiliate-program.md": {
       get: {
         summary: "Get the affiliate program markdown summary",
@@ -480,6 +504,11 @@ export const mcpServerCard = {
         mimeType: "text/markdown",
       },
       {
+        uri: absoluteUrl("/white-label.md"),
+        name: "LobbyStack white-label partner program markdown summary",
+        mimeType: "text/markdown",
+      },
+      {
         uri: absoluteUrl("/openapi.json"),
         name: "LobbyStack public OpenAPI description",
         mimeType: "application/vnd.oai.openapi+json",
@@ -508,6 +537,7 @@ Use this skill when an agent needs a concise, machine-readable orientation to Lo
 - Features markdown: ${absoluteUrl("/features.md")}
 - Pricing markdown: ${absoluteUrl("/pricing.md")}
 - Affiliate program markdown: ${absoluteUrl("/affiliate-program.md")}
+- White-label program markdown: ${absoluteUrl("/white-label.md")}
 - Calculator markdown: ${absoluteUrl("/missed-call-revenue-calculator/index.md")}
 - GitHub repository: https://github.com/lobbystack/lobbystack
 
@@ -560,10 +590,12 @@ ${DEFAULT_DESCRIPTION}
 - Features: ${absoluteUrl("/features/")}
 - Pricing: ${absoluteUrl("/pricing/")}
 - Affiliate program: ${absoluteUrl("/affiliate-program/")}
+- White-label partner program: ${absoluteUrl("/white-label/")}
 - Calculator: ${absoluteUrl("/missed-call-revenue-calculator/")}
 - Features markdown: ${absoluteUrl("/features.md")}
 - Pricing markdown: ${absoluteUrl("/pricing.md")}
 - Affiliate program markdown: ${absoluteUrl("/affiliate-program.md")}
+- White-label program markdown: ${absoluteUrl("/white-label.md")}
 - Calculator markdown: ${absoluteUrl("/missed-call-revenue-calculator/index.md")}
 - Documentation: https://docs.lobbystack.com/introduction
 - API catalog: ${absoluteUrl("/.well-known/api-catalog")}

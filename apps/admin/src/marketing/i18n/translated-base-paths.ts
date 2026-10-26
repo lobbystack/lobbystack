@@ -71,6 +71,7 @@ export const translatedBasePaths = [
   "/blog/how-to-build-an-ai-receptionist/",
   "/blog/openai-voices/",
   "/affiliate-program/",
+  "/white-label/",
   "/about/",
   "/docs/api/",
   "/privacy/",

@@ -35,3 +35,8 @@ export const appAffiliateLoginUrl = (locale: Locale) =>
 
 export const appAffiliateSignupUrl = (locale: Locale) =>
   appSignupUrl(locale, { returnTo: "/affiliate" })
+
+// Partner signup needs an account first, so it starts at the dashboard's
+// signup page and comes back to /partner/signup to name the partner.
+export const appPartnerSignupUrl = (locale: Locale) =>
+  appSignupUrl(locale, { returnTo: "/partner/signup" })

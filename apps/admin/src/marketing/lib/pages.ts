@@ -35,6 +35,13 @@ export const publicPages: PublicPage[] = [
     markdown: "/pricing.md",
   },
   {
+    path: "/white-label/",
+    title: "White-Label AI Receptionist for Agencies",
+    description:
+      "Resell LobbyStack's AI receptionist under your brand and domain. Bill clients on your own Stripe, share one pool of minutes, and start on a free tier.",
+    markdown: "/white-label.md",
+  },
+  {
     path: "/blog/",
     title: "AI Receptionist Blog and Product Updates",
     description:

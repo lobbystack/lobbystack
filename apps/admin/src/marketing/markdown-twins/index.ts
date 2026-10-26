@@ -13,6 +13,7 @@ import { GET as en_features } from "./en/features"
 import { GET as en_index } from "./en/index"
 import { GET as en_missed_call_revenue_calculator_index } from "./en/missed-call-revenue-calculator/index"
 import { GET as en_pricing } from "./en/pricing"
+import { GET as en_white_label } from "./en/white-label"
 import { GET as es_affiliate_program } from "./es/affiliate-program"
 import { GET as es_blog } from "./es/blog"
 import { GET as es_blog___slug__ } from "./es/blog/__slug__"
@@ -22,6 +23,7 @@ import { GET as es_features } from "./es/features"
 import { GET as es_index } from "./es/index"
 import { GET as es_missed_call_revenue_calculator_index } from "./es/missed-call-revenue-calculator/index"
 import { GET as es_pricing } from "./es/pricing"
+import { GET as es_white_label } from "./es/white-label"
 import { GET as fr_affiliate_program } from "./fr/affiliate-program"
 import { GET as fr_blog } from "./fr/blog"
 import { GET as fr_blog___slug__ } from "./fr/blog/__slug__"
@@ -31,6 +33,7 @@ import { GET as fr_features } from "./fr/features"
 import { GET as fr_index } from "./fr/index"
 import { GET as fr_missed_call_revenue_calculator_index } from "./fr/missed-call-revenue-calculator/index"
 import { GET as fr_pricing } from "./fr/pricing"
+import { GET as fr_white_label } from "./fr/white-label"
 import { GET as sr_affiliate_program } from "./sr/affiliate-program"
 import { GET as sr_blog } from "./sr/blog"
 import { GET as sr_blog___slug__ } from "./sr/blog/__slug__"
@@ -40,6 +43,7 @@ import { GET as sr_features } from "./sr/features"
 import { GET as sr_index } from "./sr/index"
 import { GET as sr_missed_call_revenue_calculator_index } from "./sr/missed-call-revenue-calculator/index"
 import { GET as sr_pricing } from "./sr/pricing"
+import { GET as sr_white_label } from "./sr/white-label"
 
 const pages: Record<Locale, Record<string, () => Response | Promise<Response>>> = {
   en: {
@@ -52,6 +56,7 @@ const pages: Record<Locale, Record<string, () => Response | Promise<Response>>> 
     "index": en_index,
     "missed-call-revenue-calculator/index": en_missed_call_revenue_calculator_index,
     "pricing": en_pricing,
+    "white-label": en_white_label,
   },
   fr: {
     "affiliate-program": fr_affiliate_program,
@@ -62,6 +67,7 @@ const pages: Record<Locale, Record<string, () => Response | Promise<Response>>> 
     "index": fr_index,
     "missed-call-revenue-calculator/index": fr_missed_call_revenue_calculator_index,
     "pricing": fr_pricing,
+    "white-label": fr_white_label,
   },
   es: {
     "affiliate-program": es_affiliate_program,
@@ -72,6 +78,7 @@ const pages: Record<Locale, Record<string, () => Response | Promise<Response>>> 
     "index": es_index,
     "missed-call-revenue-calculator/index": es_missed_call_revenue_calculator_index,
     "pricing": es_pricing,
+    "white-label": es_white_label,
   },
   sr: {
     "affiliate-program": sr_affiliate_program,
@@ -82,6 +89,7 @@ const pages: Record<Locale, Record<string, () => Response | Promise<Response>>> 
     "index": sr_index,
     "missed-call-revenue-calculator/index": sr_missed_call_revenue_calculator_index,
     "pricing": sr_pricing,
+    "white-label": sr_white_label,
   },
 }
 
