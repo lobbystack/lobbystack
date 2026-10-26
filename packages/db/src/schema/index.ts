@@ -1252,6 +1252,9 @@ export const operatorNotificationDeliveries = pgTable(
   (table) => [uniqueIndex("operator_notification_deliveries_event_channel_unique").on(table.eventKey, table.userId, table.channel), uniqueIndex("operator_notification_deliveries_legacy_convex_id_unique").on(table.legacyConvexId), index("operator_notification_deliveries_status_schedule_idx").on(table.status, table.scheduledFor), index("operator_notification_deliveries_business_user_idx").on(table.businessId, table.userId)],
 );
 
+/** The items of a business's package subscription that bill its overage, one per meter, and the subscription they're on. */
+export type StripeOverageItems = { subscriptionId: string; voice?: string; chat?: string };
+
 export const billingAccounts = pgTable(
   "billing_accounts",
   {
@@ -1283,6 +1286,20 @@ export const billingAccounts = pgTable(
     stripeCheckoutSessionId: varchar("stripe_checkout_session_id", { length: 255 }),
     stripeCheckoutUrl: text("stripe_checkout_url"),
     stripeCheckoutExpiresAt: timestamp("stripe_checkout_expires_at", { withTimezone: true }),
+    // A partner's business's overage on its package (migration 0155): whether
+    // it keeps answering past the package's allowance, what each minute and
+    // chat past it costs, and the monthly cap on that, or null for none, in
+    // the minor unit of overageCurrency, the package's currency when the
+    // partner set them. Only the system actor writes these.
+    overageEnabled: boolean("overage_enabled").default(false).notNull(),
+    overageCurrency: varchar("overage_currency", { length: 3 }),
+    overageVoiceMinuteRateMinor: integer("overage_voice_minute_rate_minor").default(0).notNull(),
+    overageChatRateMinor: integer("overage_chat_rate_minor").default(0).notNull(),
+    overageCapMinor: integer("overage_cap_minor"),
+    // The subscription items that bill the business's overage on its
+    // partner's Stripe, one per meter, for the subscription they name
+    // (migration 0156). Only the worker and the system actor write them.
+    stripeOverageItems: jsonb("stripe_overage_items").$type<StripeOverageItems>(),
     ...legacyId,
     ...timestamps,
   },
@@ -1474,6 +1491,15 @@ export const billingUsageEvents = pgTable(
     poolPartnerId: uuid("pool_partner_id"),
     poolOverageQuantity: doublePrecision("pool_overage_quantity"),
     poolOverageCents: doublePrecision("pool_overage_cents"),
+    // Once final, what a package business's usage put past its own allowance, and what that costs it in the package's minor unit (migration 0155).
+    businessOverageQuantity: doublePrecision("business_overage_quantity"),
+    businessOverageMinor: doublePrecision("business_overage_minor"),
+    // That overage's report to the partner's Stripe, apart from syncStatus's to Polar (migration 0156):
+    // null with nothing to send, then pending, synced or skipped, and what Stripe has been sent, is being sent, and how many reports went.
+    stripeSyncStatus: varchar("stripe_sync_status", { length: 32 }),
+    stripeOverageReportedMinor: doublePrecision("stripe_overage_reported_minor").default(0).notNull(),
+    stripeOverageSendingMinor: doublePrecision("stripe_overage_sending_minor"),
+    stripeOverageReports: integer("stripe_overage_reports").default(0).notNull(),
     isFinal: boolean("is_final").default(true).notNull(),
     ...legacyId,
     syncStatus: varchar("sync_status", { length: 32 }).default("pending").notNull(),
@@ -1498,6 +1524,8 @@ export const billingUsageMonths = pgTable(
     outboundCallAttemptsBlocked: boolean("outbound_call_attempts_blocked").default(false).notNull(),
     chatAiBlocked: boolean("chat_ai_tokens_blocked").default(false).notNull(),
     overageSpendCents: integer("overage_spend_cents").default(0).notNull(),
+    // The allowance alerts the month sent a business on a package, by key, such as minutes:80:600 (migration 0156).
+    alertsSent: jsonb("alerts_sent").$type<Record<string, string>>().default({}).notNull(),
     lastRecordedAt: timestamp("last_recorded_at", { withTimezone: true }).defaultNow().notNull(),
     ...timestamps,
   },

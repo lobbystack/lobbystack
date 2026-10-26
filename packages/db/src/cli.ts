@@ -498,6 +498,9 @@ async function main(): Promise<void> {
             ('lobbystack_app', 'app.claim_partner_pool_alerts(uuid, text, text[])', false),
             ('lobbystack_app', 'app.partner_pool_alert_recipients(uuid, text)', false),
             ('lobbystack_app', 'app.count_partner_open_calls(uuid, text, timestamptz, uuid)', false),
+            -- A business's allowance alerts: only the worker, metering usage inside the business, reads who gets them.
+            ('lobbystack_worker', 'app.business_allowance_alert_recipients(uuid)', true),
+            ('lobbystack_app', 'app.business_allowance_alert_recipients(uuid)', false),
             -- A partner's trial number: only the worker finds the business that holds it, to convert it when the partner pays.
             ('lobbystack_worker', 'app.partner_number_trial_business(uuid)', true),
             ('lobbystack_app', 'app.partner_number_trial_business(uuid)', false),

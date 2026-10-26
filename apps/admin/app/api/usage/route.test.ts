@@ -7,7 +7,7 @@ vi.mock("@lobbystack/domain", () => ({ readAllowanceUsageInTransaction: fixture.
 import { fakeOperator, resetFakeOperator } from "@/lib/operator-request.fake";
 import { GET } from "./route";
 
-const usage = { periodKey: "2026-10", resetsAt: "2026-11-01T00:00:00.000Z", voiceSeconds: { used: 750, included: null, blocked: false }, chats: { used: 2, included: null, blocked: false } };
+const usage = { periodKey: "2026-10", resetsAt: "2026-11-01T00:00:00.000Z", voiceSeconds: { used: 750, included: null, blocked: false }, chats: { used: 2, included: null, blocked: false }, overage: null };
 
 beforeEach(() => {
   vi.clearAllMocks();

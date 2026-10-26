@@ -88,7 +88,8 @@ export async function getWidgetChatAllowance(
     const status = await readUsageStatusInTransaction(tx, { businessId: input.businessId });
     const { allowance, overage, poolPartnerId } = await loadEntitlement(tx, input.businessId);
     const refused = { allowed: false, errorCode: billingErrorCodes.chatAiLimitReached, plan: status.plan };
-    if (allowance.chats !== null && !overage.enabled && (status.chatAiBlocked || Math.max(0, allowance.chats - status.chatAiTokensUsed) < 1)) return refused;
+    // Past its allowance, a chat needs overage, and room under the cap when a package prices it.
+    if (allowance.chats !== null && (status.chatAiBlocked || (!overage.enabled && Math.max(0, allowance.chats - status.chatAiTokensUsed) < 1))) return refused;
     // A partner's business also needs a chat left in its partner's pool, which only tier billing limits.
     if (poolPartnerId && partnerFeatures(process.env).tierBilling && poolLeft(await readPartnerPoolInTransaction(tx, { partnerId: poolPartnerId, periodKey: periodKeyFor() }), "chat_ai_tokens") < 1) return refused;
     return { allowed: true, errorCode: null, plan: status.plan };

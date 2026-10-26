@@ -238,7 +238,10 @@
       },
       "unavailable": "Les données d’utilisation sont indisponibles.",
       "customAllowance": "{{used}} {{unit}} utilisés · Volume sur mesure",
-      "noLimit": "Utilisation : {{used}} {{unit}} · Sans limite"
+      "noLimit": "Utilisation : {{used}} {{unit}} · Sans limite",
+      "extraTitle": "Utilisation supplémentaire",
+      "extraOnDescription": "Votre réceptionniste continue de répondre au-delà de votre volume inclus, et {{appName}} vous facture les minutes et discussions supplémentaires.",
+      "extraOffDescription": "L'utilisation supplémentaire est désactivée. {{appName}} vous facture les minutes et discussions supplémentaires que vous avez utilisées avant sa désactivation."
     },
     "spendingCap": {
       "title": "Plafond mensuel de dépenses",

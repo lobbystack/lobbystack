@@ -160,6 +160,34 @@
         "notConfigured": "Ce tableau de bord ne peut pas encore vendre de formules.",
         "failed": "Impossible de modifier la facturation de l'entreprise. Réessayez."
       }
+    },
+    "overage": {
+      "change": "Modifier",
+      "changeFor": "Modifier le dépassement de {{name}}",
+      "summary": {
+        "off": "Aucun dépassement",
+        "noCap": "Dépassement sans plafond",
+        "cap": "Dépassement jusqu'à {{cap}} par mois"
+      },
+      "title": "Dépassement de {{name}}",
+      "description": "Choisissez si l'entreprise continue de répondre au-delà de ce que comprend {{packageName}}, et ce que vous lui facturez pour les minutes et les conversations en plus.",
+      "toggle": "Autoriser le dépassement",
+      "onHint": "Au-delà de sa formule, l'entreprise continue de répondre jusqu'à ce que son dépassement atteigne votre plafond. Les appels sont alors transférés et le clavardage du site cesse de répondre. Ses factures Stripe indiquent le coût sous « Call overage » et « Chat overage », avec le montant comme quantité, à 1,00 l'unité.",
+      "offHint": "L'entreprise s'arrête aux minutes et aux conversations de sa formule. Les appels vont alors à son numéro de transfert ou au téléphone de son propriétaire, et le clavardage du site cesse de répondre.",
+      "minuteRateLabel": "Chaque minute en plus",
+      "chatRateLabel": "Chaque conversation en plus",
+      "capLabel": "Plafond mensuel",
+      "capPlaceholder": "Aucun plafond",
+      "capHint": "Le plafond repart à zéro le 1er de chaque mois (UTC) : une facture qui couvre deux mois peut donc inclure jusqu'à deux plafonds. Laissez vide pour n'avoir aucun plafond.",
+      "submit": "Enregistrer",
+      "saving": "Enregistrement…",
+      "saved": "Vous avez enregistré le dépassement de {{name}}.",
+      "errors": {
+        "invalidRate": "Entrez chaque tarif comme un montant dans la devise de la formule.",
+        "invalidCap": "Entrez le plafond comme un montant dans la devise de la formule, ou laissez-le vide.",
+        "billedOutside": "Vous facturez cette entreprise vous-même, elle n'a donc pas de dépassement.",
+        "failed": "Impossible d'enregistrer le dépassement. Réessayez."
+      }
     }
   },
   "packages": {

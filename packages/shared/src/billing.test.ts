@@ -15,6 +15,7 @@ import {
   isPaidPartnerTierSlug,
   isPartnerTierSlug,
   packageEntitlement,
+  packageOverageIn,
   partnerTierCatalog,
   partnerTierInForce,
   planEntitlement,
@@ -234,6 +235,26 @@ describe("a partner business on a package", () => {
 
   it("gets nothing once its subscription isn't live, so calls forward and chat shows its message", () => {
     expect(packageEntitlement("partner-1", frontDesk, { live: false })).toMatchObject({ live: false, source: "package", allowance: { voiceSeconds: 0, chats: 0, alertSms: 0, outboundAttempts: 0 }, poolPartnerId: "partner-1" });
+  });
+
+  const overage = { enabled: true, currency: "CAD", voiceMinuteRateMinor: 25, chatRateMinor: 5, capMinor: 5_000 };
+
+  it("goes past its allowance at the rates and up to the cap its partner set, in the package's currency", () => {
+    expect(packageEntitlement("partner-1", frontDesk, { live: true, overage })).toMatchObject({
+      allowance: { voiceSeconds: 18_000, chats: 1000 },
+      overage: { enabled: true, currency: "CAD", rates: { voiceMinute: 25, chat: 5, alertSms: 0, outboundAttempt: 0 }, capMinor: 5_000 },
+    });
+    // Overage the partner turned off, or a business that doesn't pay, gets the package's allowance alone.
+    for (const account of [{ live: true, overage: { ...overage, enabled: false } }, { live: false, overage }]) {
+      expect(packageEntitlement("partner-1", frontDesk, account).overage).toEqual({ enabled: false, currency: "CAD", rates: { voiceMinute: 0, chat: 0, alertSms: 0, outboundAttempt: 0 }, capMinor: null });
+    }
+  });
+
+  it("holds overage set in another currency than the package's as off", () => {
+    expect(packageOverageIn("cad", overage)).toEqual(overage);
+    expect(packageOverageIn("EUR", overage)).toEqual({ enabled: false, currency: "EUR", voiceMinuteRateMinor: 0, chatRateMinor: 0, capMinor: null });
+    expect(packageOverageIn("CAD", null)).toEqual({ enabled: false, currency: "CAD", voiceMinuteRateMinor: 0, chatRateMinor: 0, capMinor: null });
+    expect(packageEntitlement("partner-1", { ...frontDesk, currency: "EUR" }, { live: true, overage }).overage).toMatchObject({ enabled: false, currency: "EUR" });
   });
 
   it("counts a subscription live as a plan's is, past_due included", () => {

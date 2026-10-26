@@ -7,7 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
-import { formatPriceAmount, type PackageSubscriptionStatus, type PartnerAccessLevel } from "@lobbystack/shared";
+import { formatPriceAmount, type PackageOverage, type PackageSubscriptionStatus, type PartnerAccessLevel } from "@lobbystack/shared";
 import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { AccessLevelOptions } from "@/components/partner-access-level-options";
 import { PageHeader } from "@/components/page-header";
@@ -20,18 +20,22 @@ import { Button } from "@/components/ui/button";
 import { Combobox, ComboboxCollection, ComboboxContent, ComboboxEmpty, ComboboxGroup, ComboboxInput, ComboboxItem, ComboboxLabel, ComboboxList, ComboboxTrigger, ComboboxValue } from "@/components/ui/combobox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldContent, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@/components/ui/input-group";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Surface } from "@/components/ui/surface";
+import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { intlLocale } from "@/lib/locale";
+import { parsePriceInput, priceInputValue } from "@/lib/price-input";
 import { requestJson } from "@/lib/request-json";
 import { availableTimeZones, groupTimeZones, isTimeZoneRegion, type TimeZoneOption } from "@/lib/time-zones";
 
-/** What a business is sold, which only owners and admins see. */
-type BusinessBilling = { kind: "outside" } | { kind: "package"; packageId: string; packageName: string; status: PackageSubscriptionStatus };
+/** What a business is sold, with its overage in the package's currency, which only owners and admins see. */
+type PackageBilling = { kind: "package"; packageId: string; packageName: string; status: PackageSubscriptionStatus; overage: PackageOverage };
+type BusinessBilling = { kind: "outside" } | PackageBilling;
 
 type PartnerBusiness = {
   businessId: string;
@@ -99,6 +103,110 @@ function BillingSelect({ id, value, onChange, packages, current, disabled }: { i
   );
 }
 
+const OVERAGE_ERRORS: Record<string, string> = {
+  invalid_overage_rate: "businesses.overage.errors.invalidRate",
+  invalid_overage_cap: "businesses.overage.errors.invalidCap",
+  billed_outside: "businesses.overage.errors.billedOutside",
+  stripe_not_configured: "businesses.billing.errors.notConfigured",
+};
+
+/** A business's overage in a few words, for its row on the Businesses page. */
+function OverageSummary({ overage }: { overage: PackageOverage }) {
+  const { t, i18n } = useTranslation("partner");
+  const text = !overage.enabled
+    ? t("businesses.overage.summary.off")
+    : overage.capMinor === null
+      ? t("businesses.overage.summary.noCap")
+      : t("businesses.overage.summary.cap", { cap: formatPriceAmount(overage.capMinor, overage.currency, intlLocale(i18n.language)) });
+  return <p className="text-sm text-muted-foreground">{text}</p>;
+}
+
+/**
+ * A business's overage on its package, for owners and admins: on or off,
+ * what each minute and chat past the package's allowance costs, and the
+ * monthly cap on what that comes to, in the package's currency. Turning
+ * overage off keeps the rates and the cap, so turning it on again restores
+ * them. The server checks the role and the values again.
+ */
+function OverageDialog({ partnerId, business, billing, onClose }: { partnerId: string; business: PartnerBusiness; billing: PackageBilling; onClose: () => void }) {
+  const { t, i18n } = useTranslation("partner");
+  const queryClient = useQueryClient();
+  const { overage } = billing;
+  const { currency } = overage;
+  // A business whose overage was never set starts with empty rates rather than zeros.
+  const set = overage.enabled || overage.voiceMinuteRateMinor > 0 || overage.chatRateMinor > 0 || overage.capMinor !== null;
+  const [enabled, setEnabled] = useState(overage.enabled);
+  const [minuteRate, setMinuteRate] = useState(() => set ? priceInputValue(overage.voiceMinuteRateMinor, currency, i18n.language) : "");
+  const [chatRate, setChatRate] = useState(() => set ? priceInputValue(overage.chatRateMinor, currency, i18n.language) : "");
+  const [cap, setCap] = useState(() => priceInputValue(overage.capMinor, currency, i18n.language));
+  const [error, setError] = useState<string | null>(null);
+
+  const save = useMutation({
+    mutationFn: async () => {
+      const terms = enabled
+        ? { voiceMinuteRateMinor: parsePriceInput(minuteRate, currency, i18n.language), chatRateMinor: parsePriceInput(chatRate, currency, i18n.language), capMinor: parsePriceInput(cap, currency, i18n.language) }
+        : { voiceMinuteRateMinor: overage.voiceMinuteRateMinor, chatRateMinor: overage.chatRateMinor, capMinor: overage.capMinor };
+      if (terms.voiceMinuteRateMinor === null || terms.voiceMinuteRateMinor === undefined || terms.chatRateMinor === null || terms.chatRateMinor === undefined) throw Object.assign(new Error("invalid rate"), { code: "invalid_overage_rate" });
+      if (terms.capMinor === undefined) throw Object.assign(new Error("invalid cap"), { code: "invalid_overage_cap" });
+      return await requestJson<{ billing: BusinessBilling }>("/api/partner/businesses/overage", { method: "PUT", body: JSON.stringify({ partnerId, businessId: business.businessId, enabled, ...terms }) });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["partner-businesses", partnerId] });
+      toast.success(t("businesses.overage.saved", { name: business.name }));
+      onClose();
+    },
+    onError: (cause: Error & { code?: string }) => setError(t(OVERAGE_ERRORS[cause.code ?? ""] ?? "businesses.overage.errors.failed")),
+  });
+
+  const amount = (id: string, label: string, value: string, onChange: (next: string) => void, placeholder?: string) => (
+    <Field>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <InputGroup>
+        <InputGroupInput className="tabular-nums" disabled={save.isPending} id={id} inputMode="decimal" onChange={(event) => onChange(event.target.value)} placeholder={placeholder} value={value} />
+        <InputGroupAddon align="inline-end"><InputGroupText>{currency}</InputGroupText></InputGroupAddon>
+      </InputGroup>
+    </Field>
+  );
+
+  return (
+    <Dialog onOpenChange={(next) => { if (!next) onClose(); }} open>
+      <DialogContent>
+        <form className="flex flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); if (!save.isPending) { setError(null); save.mutate(); } }}>
+          <DialogHeader>
+            <DialogTitle>{t("businesses.overage.title", { name: business.name })}</DialogTitle>
+            <DialogDescription>{t("businesses.overage.description", { packageName: billing.packageName })}</DialogDescription>
+          </DialogHeader>
+          <FieldGroup>
+            <Field orientation="horizontal">
+              <FieldContent>
+                <FieldLabel htmlFor="partner-business-overage">{t("businesses.overage.toggle")}</FieldLabel>
+                <FieldDescription>{t(enabled ? "businesses.overage.onHint" : "businesses.overage.offHint")}</FieldDescription>
+              </FieldContent>
+              <Switch checked={enabled} disabled={save.isPending} id="partner-business-overage" onCheckedChange={setEnabled} />
+            </Field>
+            {enabled ? (
+              <>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {amount("partner-business-overage-minute", t("businesses.overage.minuteRateLabel"), minuteRate, setMinuteRate)}
+                  {amount("partner-business-overage-chat", t("businesses.overage.chatRateLabel"), chatRate, setChatRate)}
+                </div>
+                <div className="flex flex-col gap-2">
+                  {amount("partner-business-overage-cap", t("businesses.overage.capLabel"), cap, setCap, t("businesses.overage.capPlaceholder"))}
+                  <FieldDescription>{t("businesses.overage.capHint")}</FieldDescription>
+                </div>
+              </>
+            ) : null}
+          </FieldGroup>
+          {error ? <p className="text-sm text-destructive" role="alert">{error}</p> : null}
+          <DialogFooter>
+            <Button disabled={save.isPending} loading={save.isPending} loadingLabel={t("businesses.overage.saving")} type="submit">{t("businesses.overage.submit")}</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 /**
  * The console's Businesses page. Everyone on the team sees the partner's
  * businesses with their owners and their minutes and chats this month, and
@@ -107,8 +215,9 @@ function BillingSelect({ id, value, onChange, packages, current, disabled }: { i
  * level its own operators get and the package it pays for, or bill it
  * outside LobbyStack, and invite its owner, who pays and signs in on the
  * partner's domain. They can start it from one of the partner's templates.
- * They also see and change each business's package, save a business's setup
- * as a template, release a business to an owner who joined, or delete it.
+ * They also see and change each business's package and its overage, save a
+ * business's setup as a template, release a business to an owner who
+ * joined, or delete it.
  * Once the partner's paid tier ended, they also see when its businesses
  * pause and when the host deletes them. The server enforces the same rules.
  */
@@ -131,6 +240,8 @@ export function PartnerBusinessesSurface() {
   const [changing, setChanging] = useState<PartnerBusiness | null>(null);
   const [newBilling, setNewBilling] = useState(BILLED_OUTSIDE);
   const [billingError, setBillingError] = useState<string | null>(null);
+  // The business whose overage the dialog sets.
+  const [overageFor, setOverageFor] = useState<{ business: PartnerBusiness; billing: PackageBilling } | null>(null);
   const [name, setName] = useState("");
   const [ownerEmail, setOwnerEmail] = useState("");
   const [timezone, setTimezone] = useState(browserTimeZone);
@@ -353,12 +464,20 @@ export function PartnerBusinessesSurface() {
                     <TableCell className="px-6 py-5"><Badge variant="secondary">{t(`businesses.access.${business.accessLevel}`)}</Badge></TableCell>
                     {canCreate ? (
                       <TableCell className="px-6 py-5 whitespace-normal [overflow-wrap:anywhere]">
-                        <div className="flex flex-wrap items-center gap-2">
-                          {business.billing?.kind === "package" ? <>
-                            <p className="text-sm">{business.billing.packageName}</p>
-                            <Badge className={STATUS_BADGE[business.billing.status]} variant={business.billing.status === "active" ? "secondary" : "outline"}>{t(`businesses.billing.status.${business.billing.status}`)}</Badge>
-                          </> : <p className="text-sm text-muted-foreground">{t("businesses.billing.outside")}</p>}
-                          {sellsPackages ? <Button aria-label={t("businesses.billing.changeFor", { name: business.name })} onClick={() => { setChanging(business); setNewBilling(billingValue(business)); setBillingError(null); }} size="sm" variant="ghost">{t("businesses.billing.change")}</Button> : null}
+                        <div className="flex flex-col gap-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            {business.billing?.kind === "package" ? <>
+                              <p className="text-sm">{business.billing.packageName}</p>
+                              <Badge className={STATUS_BADGE[business.billing.status]} variant={business.billing.status === "active" ? "secondary" : "outline"}>{t(`businesses.billing.status.${business.billing.status}`)}</Badge>
+                            </> : <p className="text-sm text-muted-foreground">{t("businesses.billing.outside")}</p>}
+                            {sellsPackages ? <Button aria-label={t("businesses.billing.changeFor", { name: business.name })} onClick={() => { setChanging(business); setNewBilling(billingValue(business)); setBillingError(null); }} size="sm" variant="ghost">{t("businesses.billing.change")}</Button> : null}
+                          </div>
+                          {business.billing?.kind === "package" ? (
+                            <div className="flex flex-wrap items-center gap-2">
+                              <OverageSummary overage={business.billing.overage} />
+                              {sellsPackages ? <Button aria-label={t("businesses.overage.changeFor", { name: business.name })} onClick={() => { if (business.billing?.kind === "package") setOverageFor({ business, billing: business.billing }); }} size="sm" variant="ghost">{t("businesses.overage.change")}</Button> : null}
+                            </div>
+                          ) : null}
                         </div>
                       </TableCell>
                     ) : null}
@@ -412,6 +531,7 @@ export function PartnerBusinessesSurface() {
           title={t(`businesses.${confirming.action}.title`, { name: confirming.business.name })}
         />
       ) : null}
+      {overageFor ? <OverageDialog billing={overageFor.billing} business={overageFor.business} onClose={() => setOverageFor(null)} partnerId={partner.partnerId} /> : null}
       <Dialog onOpenChange={(next) => { if (!next) setChanging(null); }} open={changing !== null}>
         <DialogContent>
           <form className="flex flex-col gap-6" onSubmit={(event) => { event.preventDefault(); if (changing && !changeBilling.isPending) { setBillingError(null); changeBilling.mutate(changing); } }}>

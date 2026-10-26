@@ -160,6 +160,34 @@
         "notConfigured": "This dashboard can't sell packages yet.",
         "failed": "We couldn't change how the business is billed. Try again."
       }
+    },
+    "overage": {
+      "change": "Change",
+      "changeFor": "Change overage for {{name}}",
+      "summary": {
+        "off": "No overage",
+        "noCap": "Overage, no cap",
+        "cap": "Overage up to {{cap}} a month"
+      },
+      "title": "Overage for {{name}}",
+      "description": "Choose whether the business keeps answering past what {{packageName}} includes, and what you charge it for the extra minutes and chats.",
+      "toggle": "Allow overage",
+      "onHint": "Past its package, the business keeps answering until its overage reaches your cap. Then calls forward and website chat stops replying. Its Stripe invoices show the cost as Call overage and Chat overage, with the amount as the quantity at 1.00 each.",
+      "offHint": "The business stops at its package's minutes and chats. Calls then forward to its transfer number or its owner's phone, and website chat stops replying.",
+      "minuteRateLabel": "Each extra minute",
+      "chatRateLabel": "Each extra chat",
+      "capLabel": "Monthly cap",
+      "capPlaceholder": "No cap",
+      "capHint": "The cap resets on the 1st of each month, UTC, so an invoice that spans two months can bill up to two caps. Leave it empty for no cap.",
+      "submit": "Save",
+      "saving": "Saving…",
+      "saved": "You saved the overage for {{name}}.",
+      "errors": {
+        "invalidRate": "Enter each rate as an amount in the package's currency.",
+        "invalidCap": "Enter the cap as an amount in the package's currency, or leave it empty.",
+        "billedOutside": "You bill this business yourself, so it has no overage.",
+        "failed": "We couldn't save the overage. Try again."
+      }
     }
   },
   "packages": {

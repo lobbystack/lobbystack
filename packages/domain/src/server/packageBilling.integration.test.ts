@@ -189,7 +189,8 @@ describe.skipIf(!client)("choosing how a partner's business is billed", () => {
 
       const listed = new Map((await listPartnerBusinesses(seller.context, seller.owner)).map((business) => [business.businessId, business.billing]));
       expect(listed.get(outside.businessId)).toEqual({ kind: "outside" });
-      expect(listed.get(onPackage.businessId)).toEqual({ kind: "package", packageId: seller.frontDesk.packageId, packageName: "Front desk", status: "awaiting_payment" });
+      // Its overage stays off until an owner or admin turns it on, in the package's currency.
+      expect(listed.get(onPackage.businessId)).toEqual({ kind: "package", packageId: seller.frontDesk.packageId, packageName: "Front desk", status: "awaiting_payment", overage: { enabled: false, currency: "CAD", voiceMinuteRateMinor: 0, chatRateMinor: 0, capMinor: null } });
       // Members never see what a business pays.
       expect((await listPartnerBusinesses(seller.context, seller.member)).every((business) => business.billing === null)).toBe(true);
 

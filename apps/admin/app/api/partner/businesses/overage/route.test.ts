@@ -1,0 +1,49 @@
+import { beforeEach, expect, it, vi } from "vitest";
+
+const fixture = vi.hoisted(() => ({ resolve: vi.fn(), set: vi.fn() }));
+vi.mock("@/lib/operator-request", () => import("@/lib/operator-request.fake"));
+vi.mock("@/lib/stripe-connect", () => ({ withStripeConnect: (context: object) => ({ ...context, stripeConnect: "stripe" }) }));
+vi.mock("@lobbystack/domain", () => ({ resolvePartnerActor: fixture.resolve, setPartnerBusinessOverage: fixture.set }));
+
+import { resetFakeOperator } from "@/lib/operator-request.fake";
+import { PUT } from "./route";
+
+const partnerId = "5b1f6c43-34a5-4a8e-9a43-6c1f8d5f1c11";
+const businessId = "7e7f2d1a-49c4-4c55-8a8a-0b3a1d2c4e5f";
+const packageId = "0c6d6c9e-3f0a-4a51-9a3b-2a4a3c7b9d10";
+const actor = { kind: "member", partnerId, userId: "user", role: "admin" };
+const put = (body: unknown) => PUT(new Request(`http://localhost:3000/api/partner/businesses/overage?partnerId=${partnerId}`, { method: "PUT", body: JSON.stringify(body) }));
+const overage = { enabled: true, currency: "CAD", voiceMinuteRateMinor: 25, chatRateMinor: 5, capMinor: 5_000 };
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  resetFakeOperator();
+  fixture.resolve.mockResolvedValue(actor);
+  fixture.set.mockResolvedValue({ kind: "package", packageId, packageName: "Front desk", status: "active", overage });
+});
+
+it("sets a business's overage through the partner operation, with Stripe Connect, and answers its billing", async () => {
+  const response = await put({ businessId, enabled: true, voiceMinuteRateMinor: 25, chatRateMinor: 5, capMinor: 5_000 });
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({ billing: { kind: "package", packageId, packageName: "Front desk", status: "active", overage } });
+  expect(fixture.set).toHaveBeenCalledWith({ db: "app", stripeConnect: "stripe" }, actor, { businessId, enabled: true, voiceMinuteRateMinor: 25, chatRateMinor: 5, capMinor: 5_000 });
+});
+
+it("passes no cap on as null, and leaves the values for the partner operation to check", async () => {
+  await put({ businessId, enabled: false, voiceMinuteRateMinor: "25", chatRateMinor: 5 });
+  expect(fixture.set).toHaveBeenLastCalledWith(expect.anything(), actor, { businessId, enabled: false, voiceMinuteRateMinor: "25", chatRateMinor: 5, capMinor: null });
+});
+
+it("answers a missing business with 400 before changing anything", async () => {
+  const response = await put({ businessId: "harbor", enabled: true, voiceMinuteRateMinor: 25, chatRateMinor: 5, capMinor: null });
+  expect(response.status).toBe(400);
+  expect(await response.json()).toMatchObject({ code: "invalid_request" });
+  expect(fixture.set).not.toHaveBeenCalled();
+});
+
+it("passes a refusal on, such as a business billed outside LobbyStack", async () => {
+  fixture.set.mockRejectedValue(Object.assign(new Error("This business is billed outside LobbyStack."), { status: 409, code: "billed_outside" }));
+  const response = await put({ businessId, enabled: true, voiceMinuteRateMinor: 25, chatRateMinor: 5, capMinor: null });
+  expect(response.status).toBe(409);
+  expect(await response.json()).toMatchObject({ code: "billed_outside" });
+});

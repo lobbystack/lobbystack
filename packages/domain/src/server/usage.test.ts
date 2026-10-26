@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { planEntitlement, type BillingPlanSlug } from "@lobbystack/shared";
+import { packageEntitlement, planEntitlement, type BillingPlanSlug } from "@lobbystack/shared";
 
 import { reserveWebVoiceUsageInTransaction } from "./billing";
 import { effectiveBillingPlan } from "./entitlement";
-import { billableQuantityForEvent, estimateSmsSegments, periodKeyFor, replayEvents, reserveUsageInTransaction, voiceSecondsLeft } from "./usage";
+import { billableQuantityForEvent, businessOverageFor, estimateSmsSegments, periodKeyFor, replayEvents, reserveUsageInTransaction, voiceSecondsLeft } from "./usage";
 
 const event = (sourceKey: string, usageKind: string, quantity: number, isFinal: boolean, minute: number, billingInterval = "annual") => ({ sourceKey, usageKind, quantity, isFinal, planAtRecordTime: "starter", billingIntervalAtRecordTime: billingInterval, createdAt: new Date(Date.UTC(2026, 8, 1, 0, minute)) });
 
@@ -97,6 +97,47 @@ describe("voice seconds left", () => {
     expect(voiceSecondsLeft(planEntitlement("enterprise", { live: true, capMinor: 1_000 }), replay)).toBe(Number.POSITIVE_INFINITY);
     expect(voiceSecondsLeft(planEntitlement("self_host"), replay)).toBe(Number.POSITIVE_INFINITY);
     expect(voiceSecondsLeft(planEntitlement("pro", { live: true, capMinor: null }), replay)).toBe(Number.POSITIVE_INFINITY);
+  });
+});
+
+describe("a business's overage on its package", () => {
+  // Front desk: 10 minutes and 3 chats, then 30 cents a minute and 10 a chat, up to $4.
+  const frontDesk = packageEntitlement("partner-1", { currency: "CAD", voiceMinutes: 10, chats: 3 }, { live: true, overage: { enabled: true, currency: "CAD", voiceMinuteRateMinor: 30, chatRateMinor: 10, capMinor: 400 } });
+  const onPackage = { plan: "self_host" as const, entitlement: frontDesk };
+  const usage = (sourceKey: string, usageKind: string, quantity: number, isFinal: boolean, minute: number) => ({ ...event(sourceKey, usageKind, quantity, isFinal, minute, "monthly"), planAtRecordTime: "self_host" });
+
+  it("goes to the usage that ended past the allowance, never to a call still open", () => {
+    const ended = usage("voice:ended", "voice_seconds", 500, true, 0);
+    const open = usage("voice:open", "voice_seconds", 300, false, 1);
+    // The call that ends now is past the 600 seconds by 200, whatever the open call holds.
+    expect(businessOverageFor([ended, open], { usageKind: "voice_seconds", quantity: 300 }, frontDesk, null)).toEqual({ quantity: 200, minor: 100 });
+    // Corrected again, it moves only by its own change.
+    expect(businessOverageFor([ended, open], { usageKind: "voice_seconds", quantity: 360 }, frontDesk, { quantity: 300, overageQuantity: 200 })).toEqual({ quantity: 260, minor: 130 });
+    const chats = [0, 1, 2].map((minute) => usage(`chat:${minute}`, "chat_ai_tokens", 1, true, minute));
+    expect(businessOverageFor(chats, { usageKind: "chat_ai_tokens", quantity: 1 }, frontDesk, null)).toEqual({ quantity: 1, minor: 10 });
+  });
+
+  it("prices nothing a package doesn't sell, and nothing past the allowance while overage is off", () => {
+    expect(businessOverageFor([], { usageKind: "alert_sms_segments", quantity: 5 }, frontDesk, null)).toBeNull();
+    expect(businessOverageFor([], { usageKind: "voice_seconds", quantity: 900 }, planEntitlement("starter", { live: true, capMinor: null }), null)).toBeNull();
+    const off = packageEntitlement("partner-1", { currency: "CAD", voiceMinutes: 10, chats: 3 }, { live: true });
+    expect(businessOverageFor([], { usageKind: "voice_seconds", quantity: 900 }, off, null)).toEqual({ quantity: 0, minor: 0 });
+  });
+
+  it("counts open calls against the cap, and prices each event by the terms it recorded", () => {
+    const ended = usage("voice:ended", "voice_seconds", 1_200, true, 0);
+    // 600 seconds past the allowance at half a cent each leave 100 cents of the cap, or 200 seconds.
+    expect(voiceSecondsLeft(frontDesk, replayEvents([ended], onPackage))).toBe(200);
+    expect(voiceSecondsLeft(frontDesk, replayEvents([ended, usage("voice:open", "voice_seconds", 100, false, 1)], onPackage))).toBe(100);
+    // An event recorded at 15 cents a minute keeps that price after the partner doubled it.
+    const cheaper = { ...ended, termsAtRecordTime: { source: "package", allowance: frontDesk.allowance, overage: { ...frontDesk.overage, rates: { ...frontDesk.overage.rates, voiceMinute: 15 } } } };
+    expect(replayEvents([cheaper], onPackage).rawSpendCents).toBe(150);
+    expect(replayEvents([ended], onPackage).rawSpendCents).toBe(300);
+  });
+
+  it("lets minutes that cost nothing past the allowance run whatever the cap", () => {
+    const free = packageEntitlement("partner-1", { currency: "CAD", voiceMinutes: 10, chats: 3 }, { live: true, overage: { enabled: true, currency: "CAD", voiceMinuteRateMinor: 0, chatRateMinor: 10, capMinor: 0 } });
+    expect(voiceSecondsLeft(free, replayEvents([usage("voice:ended", "voice_seconds", 1_200, true, 0)], { plan: "self_host", entitlement: free }))).toBe(Number.POSITIVE_INFINITY);
   });
 });
 

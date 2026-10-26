@@ -21,6 +21,7 @@ vi.mock("sonner", () => ({ toast: fixture.toast }));
 import { PartnerBusinessesSurface } from "./partner-businesses-surface";
 
 const harbor = { businessId: "harbor", name: "Harbor Dental", accessLevel: "full", onboardingStage: "website", createdAt: "2026-10-20T12:00:00.000Z", owner: { email: "owner@harbor.test", status: "joined" }, usage: { periodKey: "2026-10", voiceSeconds: 750, chats: 1234 } };
+const noOverage = { enabled: false, currency: "CAD", voiceMinuteRateMinor: 0, chatRateMinor: 0, capMinor: null };
 const pier = { businessId: "pier", name: "Pier Clinic", accessLevel: "activity", onboardingStage: "verify_phone", createdAt: "2026-10-21T12:00:00.000Z", owner: { email: "owner@pier.test", status: "invited", expiresAt: "2099-01-01T00:00:00.000Z" }, usage: { periodKey: "2026-10", voiceSeconds: 0, chats: 0 } };
 
 beforeEach(() => {
@@ -286,7 +287,7 @@ describe("the partner console's Businesses page", () => {
   });
 
   it("shows owners and admins what each business pays, and members nothing of it", async () => {
-    const billed = [{ ...harbor, billing: { kind: "package", packageId: "front-desk", packageName: "Front desk", status: "past_due" } }, { ...pier, billing: { kind: "outside" } }];
+    const billed = [{ ...harbor, billing: { kind: "package", packageId: "front-desk", packageName: "Front desk", status: "past_due", overage: noOverage } }, { ...pier, billing: { kind: "outside" } }];
     renderAs("owner", () => Response.json({ businesses: billed }));
     const rows = await screen.findAllByRole("row");
     expect(within(rows[0]!).getByText("businesses.table.billing")).toBeTruthy();
@@ -343,7 +344,7 @@ describe("the partner console's Businesses page", () => {
     fixture.packages = { stripe: { configured: true }, packages: [{ packageId: "front-desk", name: "Front desk", currency: "CAD", monthlyPriceMinor: 14900, onConnectedAccount: true }] };
     const fetchMock = renderAs("owner", (_url, init) => init?.method === "PUT"
       ? Response.json({ error: "This business pays for its package through Stripe.", code: "subscription_active" }, { status: 409 })
-      : Response.json({ businesses: [{ ...harbor, billing: { kind: "package", packageId: "front-desk", packageName: "Front desk", status: "active" } }] }));
+      : Response.json({ businesses: [{ ...harbor, billing: { kind: "package", packageId: "front-desk", packageName: "Front desk", status: "active", overage: noOverage } }] }));
     await userEvent.click(await screen.findByRole("button", { name: "businesses.billing.changeFor" }));
     await userEvent.click(await screen.findByLabelText("businesses.create.billingLabel"));
     await userEvent.click(await screen.findByRole("option", { name: "businesses.billing.outside" }));
@@ -352,5 +353,62 @@ describe("the partner console's Businesses page", () => {
     const put = fetchMock.mock.calls.find(([, init]) => init?.method === "PUT");
     expect(put?.[0]).toBe("/api/partner/businesses/billing");
     expect(JSON.parse(String(put?.[1]?.body))).toEqual({ partnerId: "partner", businessId: "harbor", packageId: null });
+  });
+
+  it("shows each package business's overage, and sets its rates and cap in the package's currency", async () => {
+    fixture.packages = { stripe: { configured: true }, packages: [{ packageId: "front-desk", name: "Front desk", currency: "CAD", monthlyPriceMinor: 14900, onConnectedAccount: true }] };
+    const capped = { enabled: true, currency: "CAD", voiceMinuteRateMinor: 25, chatRateMinor: 5, capMinor: 5_000 };
+    const billed = [{ ...harbor, billing: { kind: "package", packageId: "front-desk", packageName: "Front desk", status: "active", overage: noOverage } }, { ...pier, billing: { kind: "package", packageId: "front-desk", packageName: "Front desk", status: "active", overage: capped } }];
+    const fetchMock = renderAs("admin", (_url, init) => init?.method === "PUT" ? Response.json({ billing: { ...billed[0]!.billing, overage: capped } }) : Response.json({ businesses: billed }));
+    const rows = await screen.findAllByRole("row");
+    expect(within(rows[1]!).getByText("businesses.overage.summary.off")).toBeTruthy();
+    expect(within(rows[2]!).getByText("businesses.overage.summary.cap")).toBeTruthy();
+
+    // Harbor's overage was never set, so its rates start empty, and turning it on asks for them.
+    await userEvent.click(within(rows[1]!).getByRole("button", { name: "businesses.overage.changeFor" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).queryByLabelText("businesses.overage.minuteRateLabel")).toBeNull();
+    await userEvent.click(within(dialog).getByRole("switch", { name: "businesses.overage.toggle" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "businesses.overage.submit" }));
+    expect((await within(dialog).findByRole("alert")).textContent).toBe("businesses.overage.errors.invalidRate");
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === "PUT")).toBe(false);
+
+    await userEvent.type(within(dialog).getByLabelText("businesses.overage.minuteRateLabel"), "0.25");
+    await userEvent.type(within(dialog).getByLabelText("businesses.overage.chatRateLabel"), "0.05");
+    await userEvent.type(within(dialog).getByLabelText("businesses.overage.capLabel"), "50");
+    await userEvent.click(within(dialog).getByRole("button", { name: "businesses.overage.submit" }));
+    await waitFor(() => expect(fixture.toast.success).toHaveBeenCalledWith("businesses.overage.saved"));
+    const put = fetchMock.mock.calls.find(([, init]) => init?.method === "PUT");
+    expect(put?.[0]).toBe("/api/partner/businesses/overage");
+    expect(JSON.parse(String(put?.[1]?.body))).toEqual({ partnerId: "partner", businessId: "harbor", enabled: true, voiceMinuteRateMinor: 25, chatRateMinor: 5, capMinor: 5_000 });
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("turns a business's overage off and keeps its rates and cap, and says why the server refused", async () => {
+    fixture.packages = { stripe: { configured: true }, packages: [] };
+    const capped = { enabled: true, currency: "CAD", voiceMinuteRateMinor: 25, chatRateMinor: 5, capMinor: null };
+    const fetchMock = renderAs("owner", (_url, init) => init?.method === "PUT"
+      ? Response.json({ error: "This business is billed outside LobbyStack.", code: "billed_outside" }, { status: 409 })
+      : Response.json({ businesses: [{ ...harbor, billing: { kind: "package", packageId: "front-desk", packageName: "Front desk", status: "active", overage: capped } }] }));
+    expect(await screen.findByText("businesses.overage.summary.noCap")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "businesses.overage.changeFor" }));
+    const dialog = await screen.findByRole("dialog");
+    expect((within(dialog).getByLabelText("businesses.overage.minuteRateLabel") as HTMLInputElement).value).toBe("0.25");
+    await userEvent.click(within(dialog).getByRole("switch", { name: "businesses.overage.toggle" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "businesses.overage.submit" }));
+    expect((await within(dialog).findByRole("alert")).textContent).toBe("businesses.overage.errors.billedOutside");
+    const put = fetchMock.mock.calls.find(([, init]) => init?.method === "PUT");
+    expect(JSON.parse(String(put?.[1]?.body))).toEqual({ partnerId: "partner", businessId: "harbor", enabled: false, voiceMinuteRateMinor: 25, chatRateMinor: 5, capMinor: null });
+  });
+
+  it("shows no overage controls without Stripe Connect, and none to members", async () => {
+    renderAs("admin", () => Response.json({ businesses: [{ ...harbor, billing: { kind: "package", packageId: "front-desk", packageName: "Front desk", status: "active", overage: noOverage } }] }));
+    expect(await screen.findByText("businesses.overage.summary.off")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "businesses.overage.changeFor" })).toBeNull();
+    cleanup();
+
+    renderAs("member", () => Response.json({ businesses: [{ ...harbor, billing: null }] }));
+    await screen.findAllByRole("row");
+    expect(screen.queryByText("businesses.overage.summary.off")).toBeNull();
   });
 });

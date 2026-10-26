@@ -18,7 +18,8 @@ import { intlLocale } from "@/lib/locale";
 /**
  * Settings > Usage. A business with billing shows its plan's meters, as
  * before. A partner's business has no billing, so it shows its minutes and
- * chats this month against its allowance, without the host's plans or prices.
+ * chats this month against its allowance, without the host's plans or prices,
+ * and on a package, what it used past the allowance, which its partner bills.
  */
 export function LiveUsageSurface() {
   const can = useBusinessCan();
@@ -64,13 +65,24 @@ function AllowanceUsageSurface() {
   const usage = useQuery({ queryKey: ["usage", business?.businessId], queryFn: () => requestJson<AllowanceUsage>(`/api/usage?businessId=${encodeURIComponent(business!.businessId)}`), enabled: Boolean(business?.businessId) });
   if (businesses.isLoading || usage.isLoading) return <UsageSkeleton rows={2} />;
   if (businesses.isError || usage.isError || !usage.data) return <Surface className="flex flex-col items-start gap-4 p-6"><p role="alert">{t("billing.usage.unavailable")}</p><Button variant="outline" onClick={() => { if (businesses.isError || !business) void businesses.refetch(); else void usage.refetch(); }}>{t("billing.actions.retry")}</Button></Surface>;
-  const { voiceSeconds, chats, resetsAt } = usage.data;
+  const { voiceSeconds, chats, resetsAt, overage } = usage.data;
   // Periods run in UTC, so the reset day is read in UTC too.
   const description = t("billing.usage.description", { resetAt: new Intl.DateTimeFormat(intlLocale(i18n.language), { month: "long", day: "numeric", timeZone: "UTC" }).format(new Date(resetsAt)) });
+  // Usage past the allowance shows while overage is on, and after it went off if the month already had some.
+  const extra = overage && (overage.enabled || overage.voiceSeconds > 0 || overage.chats > 0) ? overage : null;
   return <div className="flex w-full flex-col gap-10"><SectionBlock description={description} title={t("billing.usage.allowanceTitle")}><Surface className="p-0"><>
     <UsageMeter blocked={voiceSeconds.blocked} included={voiceSeconds.included === null ? null : voiceSeconds.included / 60} label={t("billing.usage.voiceTitle")} noLimit unit={t("billing.usage.units.voice")} used={Math.round((voiceSeconds.used / 60) * 10) / 10} />
     <UsageMeter blocked={chats.blocked} included={chats.included} label={t("billing.usage.chatsTitle")} noLimit unit={t("billing.usage.units.chats")} used={chats.used} />
-  </></Surface></SectionBlock></div>;
+  </></Surface></SectionBlock>{extra ? <SectionBlock description={t(extra.enabled ? "billing.usage.extraOnDescription" : "billing.usage.extraOffDescription")} title={t("billing.usage.extraTitle")}><Surface className="p-0"><>
+    <ExtraUsageRow label={t("billing.usage.voiceTitle")} unit={t("billing.usage.units.voice")} used={Math.round((extra.voiceSeconds / 60) * 10) / 10} />
+    <ExtraUsageRow label={t("billing.usage.chatsTitle")} unit={t("billing.usage.units.chats")} used={extra.chats} />
+  </></Surface></SectionBlock> : null}</div>;
+}
+
+/** What a business used past its allowance this month, with no price: only its partner's invoices show those. */
+function ExtraUsageRow({ label, used, unit }: { label: string; used: number; unit: string }) {
+  const { i18n } = useTranslation("settings");
+  return <div className="border-b border-border px-6 py-5 last:border-b-0"><div className="flex items-center justify-between gap-4"><span className="text-[15px] font-medium leading-6">{label}</span><span className="text-[15px] leading-6 text-muted-foreground tabular-nums">{used.toLocaleString(intlLocale(i18n.language))} {unit}</span></div></div>;
 }
 
 function UsageMeter({ label, used, included, unit, blocked, showUsedUnit = false, noLimit = false }: { label: string; used: number; included: number | null; unit: string; blocked: boolean; showUsedUnit?: boolean; noLimit?: boolean }) {

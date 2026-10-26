@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isPackageAllowance, isPackageAmount, isStripeAccountCountry, normalizePackageName, packageSubscriptionStatus, partnerStripeStatus } from "./partnerStripe";
+import { isPackageAllowance, isPackageAmount, isPackageOverageAmount, isStripeAccountCountry, normalizePackageName, packageSubscriptionStatus, partnerStripeStatus } from "./partnerStripe";
 
 describe("a partner's Stripe status", () => {
   it("follows the account from no connection, through onboarding and review, to taking payments", () => {
@@ -38,6 +38,11 @@ describe("package terms", () => {
   it("takes allowances of 0 to 1,000,000 minutes or chats", () => {
     for (const allowance of [0, 250, 1_000_000]) expect(isPackageAllowance(allowance), String(allowance)).toBe(true);
     for (const allowance of [-1, 2.5, 1_000_001, "250"]) expect(isPackageAllowance(allowance), String(allowance)).toBe(false);
+  });
+
+  it("takes overage rates and caps of 0 to 99,999,999 in the currency's smallest unit", () => {
+    for (const amount of [0, 25, 99_999_999]) expect(isPackageOverageAmount(amount), String(amount)).toBe(true);
+    for (const amount of [-1, 2.5, 100_000_000, Number.NaN, "25", null]) expect(isPackageOverageAmount(amount), String(amount)).toBe(false);
   });
 });
 

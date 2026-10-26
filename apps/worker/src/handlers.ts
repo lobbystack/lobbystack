@@ -13,6 +13,7 @@ import { claimNumberProvisioning, completeNumberProvisioning, desiredNumberRouti
 import { createWebhookSender, processWebhookDelivery, pruneApiHistory, type WebhookSender } from "@lobbystack/domain";
 import { LIVE_RECORDING_ATTEMPTS, listBusinessesWithOpenLiveCalls, listOpenLiveCalls, liveCallHasRecording, persistCallRecording, retryLiveCallRecording, type OpenLiveCall } from "@lobbystack/domain";
 import { expireTeamRequest } from "@lobbystack/domain";
+import { syncBusinessOverage } from "@lobbystack/domain";
 import { advancePartnerLifecycles, claimPartnerCheckoutRequest, keepPartnerTrialNumber, loadPartnerCheckoutRequest, loadPoolUsageEvent, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerBillingKey, partnerCheckoutLeaseEndsAt, reconcilePartnerTier, settlePartnerNumberCharges } from "@lobbystack/domain";
 import { checkPartnerCustomDomains, provisionPartnerCustomDomain, removePartnerCustomHostname, type CustomDomainProviders } from "@lobbystack/domain";
 import { brandForEmail, businessExists, businessGetsHostEmails, hostBrandFromEnvironment, isHostOnlyEmailTemplate } from "@lobbystack/domain";
@@ -188,7 +189,7 @@ async function recordWorkflowEvent(
 
 async function recordBillingUsageSyncFailed(
   dependencies: WorkerDependencies,
-  input: { businessId: string },
+  input: { businessId: string; provider?: "polar" | "stripe" },
 ): Promise<void> {
   try {
     await recordProductEvent(dependencies.domain, {
@@ -196,7 +197,8 @@ async function recordBillingUsageSyncFailed(
       businessId: input.businessId,
       distinctId: getPostHogDistinctIdForBusinessSystem(input.businessId),
       actorType: "worker",
-      properties: { provider: "polar" },
+      // Polar for what the host bills, Stripe for a business's overage on its partner's account.
+      properties: { provider: input.provider ?? "polar" },
     });
   } catch {
     // Billing sync telemetry is best-effort and must not mask the provider error.
@@ -234,6 +236,72 @@ async function syncPoolOverage(
   }
   await markBillingUsageSynced(dependencies.domain, { businessId: event.businessId, usageEventId: event.id });
   return { status: "completed", entityId: event.id };
+}
+
+/**
+ * Sends Polar what a usage event owes the host: a direct business's billable
+ * usage on Starter or Pro, or for usage on a partner's pool, only what it put
+ * past the pool, to the partner's Polar customer.
+ */
+async function syncPolarUsage(
+  dependencies: WorkerDependencies,
+  polar: NonNullable<WorkerDependencies["polar"]>,
+  input: { businessId: string; usageEventId: string },
+): Promise<JobResult> {
+  const pooled = await loadPoolUsageEvent(dependencies.domain, input);
+  if (pooled) return await syncPoolOverage(dependencies, pooled, polar);
+  const event = await loadBillingUsageEvent(dependencies.domain, input);
+  if (!event) return { status: "skipped", entityId: input.usageEventId };
+  if (event.syncStatus === "synced" || event.syncStatus === "succeeded") return { status: "completed", entityId: event.id };
+  if (event.syncStatus === "skipped" || !event.customerId || !event.isFinal) return { status: "skipped", entityId: event.id };
+  if (event.plan !== "starter" && event.plan !== "pro") return { status: "skipped", entityId: event.id };
+  const knownUsageKinds: BillingUsageKind[] = ["voice_seconds", "alert_sms_segments", "outbound_call_attempts"];
+  const usageKind = knownUsageKinds.includes(event.usageKind as BillingUsageKind) ? event.usageKind as BillingUsageKind : undefined;
+  if (!usageKind) return { status: "skipped", entityId: event.id };
+  const quantity = event.billableQuantity ?? event.quantity;
+  const metered = getPolarMeteredUsagePayload(usageKind, quantity);
+  try {
+    await polar.recordUsage({
+      eventName: metered.eventName,
+      externalCustomerId: event.billingKey,
+      quantity: metered.quantity,
+      timestamp: event.createdAt.toISOString(),
+      idempotencyKey: event.sourceKey,
+      businessId: event.businessId,
+      usageKind,
+    });
+  } catch (error) {
+    // `ops.billing.usage_sync_recovered` is intentionally not emitted here.
+    // `billing_usage_events.sync_status` only models pending/skipped/synced
+    // (plus a legacy "succeeded" read), and `markBillingUsageSynced`
+    // transitions only from "pending", so there is no durable failure state
+    // to recover from. Emitting a recovery event would require a persisted
+    // failed marker (schema/state change), which is out of scope for this
+    // phase and must not be fabricated.
+    await recordBillingUsageSyncFailed(dependencies, { businessId: event.businessId });
+    throw error;
+  }
+  await markBillingUsageSynced(dependencies.domain, { businessId: event.businessId, usageEventId: event.id });
+  return { status: "completed", entityId: event.id };
+}
+
+/**
+ * Sends a partner's Stripe what a usage event of one of its businesses on a
+ * package put past the business's allowance, as a meter event on the
+ * partner's account. Null when the deployment has no Stripe Connect or the
+ * event has no such overage, so the Polar sync decides the job's result.
+ */
+async function syncStripeOverage(dependencies: WorkerDependencies, input: { businessId: string; usageEventId: string }): Promise<JobResult | null> {
+  if (!dependencies.domain.stripeConnect) return null;
+  let outcome: Awaited<ReturnType<typeof syncBusinessOverage>>;
+  try {
+    outcome = await syncBusinessOverage(dependencies.domain, input);
+  } catch (error) {
+    await recordBillingUsageSyncFailed(dependencies, { businessId: input.businessId, provider: "stripe" });
+    throw error;
+  }
+  if (outcome === "none") return null;
+  return { status: outcome === "synced" ? "completed" : "skipped", entityId: input.usageEventId };
 }
 
 /**
@@ -446,7 +514,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         return { status: "skipped" };
       }
       {
-        const template = job.payload.template === "existing_account" || job.payload.template === "account_setup" || job.payload.template === "verify_email" || job.payload.template === "password_reset" || job.payload.template === "invitation" || job.payload.template === "operator_alert" || job.payload.template === "feedback_submission" || job.payload.template === "onboarding_followup" || job.payload.template === "partner_pool_alert"
+        const template = job.payload.template === "existing_account" || job.payload.template === "account_setup" || job.payload.template === "verify_email" || job.payload.template === "password_reset" || job.payload.template === "invitation" || job.payload.template === "operator_alert" || job.payload.template === "feedback_submission" || job.payload.template === "onboarding_followup" || job.payload.template === "partner_pool_alert" || job.payload.template === "business_allowance_alert" || job.payload.template === "partner_business_allowance_alert"
           ? job.payload.template
           : "operator_alert";
         const variables = typeof job.payload.variables === "object" && job.payload.variables !== null
@@ -589,47 +657,26 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       return { status: acted > 0 ? "completed" : "skipped", entityId: String(acted) };
     }
     case "billing.syncUsage": {
-      if (!dependencies.polar) {
-        return { status: "skipped", entityId: String(job.payload.usageEventId ?? "") };
-      }
       const usageEventId = String(job.payload.usageEventId ?? "");
-      if (!usageEventId) return { status: "skipped" };
-      // Usage on a partner's pool reports only what it put past the pool, to the partner's Polar customer.
-      const pooled = await loadPoolUsageEvent(dependencies.domain, { businessId: businessIdOrThrow(job), usageEventId });
-      if (pooled) return await syncPoolOverage(dependencies, pooled, dependencies.polar);
-      const event = await loadBillingUsageEvent(dependencies.domain, { businessId: businessIdOrThrow(job), usageEventId });
-      if (!event) return { status: "skipped", entityId: usageEventId };
-      if (event.syncStatus === "synced" || event.syncStatus === "succeeded") return { status: "completed", entityId: event.id };
-      if (event.syncStatus === "skipped" || !event.customerId || !event.isFinal) return { status: "skipped", entityId: event.id };
-      if (event.plan !== "starter" && event.plan !== "pro") return { status: "skipped", entityId: event.id };
-      const knownUsageKinds: BillingUsageKind[] = ["voice_seconds", "alert_sms_segments", "outbound_call_attempts"];
-      const usageKind = knownUsageKinds.includes(event.usageKind as BillingUsageKind) ? event.usageKind as BillingUsageKind : undefined;
-      if (!usageKind) return { status: "skipped", entityId: event.id };
-      const quantity = event.billableQuantity ?? event.quantity;
-      const metered = getPolarMeteredUsagePayload(usageKind, quantity);
-      try {
-        await dependencies.polar.recordUsage({
-          eventName: metered.eventName,
-          externalCustomerId: event.billingKey,
-          quantity: metered.quantity,
-          timestamp: event.createdAt.toISOString(),
-          idempotencyKey: event.sourceKey,
-          businessId: event.businessId,
-          usageKind,
-        });
-      } catch (error) {
-        // `ops.billing.usage_sync_recovered` is intentionally not emitted here.
-        // `billing_usage_events.sync_status` only models pending/skipped/synced
-        // (plus a legacy "succeeded" read), and `markBillingUsageSynced`
-        // transitions only from "pending", so there is no durable failure state
-        // to recover from. Emitting a recovery event would require a persisted
-        // failed marker (schema/state change), which is out of scope for this
-        // phase and must not be fabricated.
-        await recordBillingUsageSyncFailed(dependencies, { businessId: event.businessId });
-        throw error;
-      }
-      await markBillingUsageSynced(dependencies.domain, { businessId: event.businessId, usageEventId: event.id });
-      return { status: "completed", entityId: event.id };
+      const businessId = usageEventId ? businessIdOrThrow(job) : null;
+      const polarClient = dependencies.polar;
+      // A business on a package owes its partner's Stripe for its own overage, whatever the event owes Polar.
+      // Each half runs whatever happens to the other, so a partner's Stripe that keeps failing never holds
+      // back the host's own Polar bill. The job then fails, and its retry sends only what's still pending.
+      const failures: unknown[] = [];
+      const attempt = async (half: () => Promise<JobResult | null>): Promise<JobResult | null> => {
+        try {
+          return await half();
+        } catch (error) {
+          failures.push(error);
+          return null;
+        }
+      };
+      const stripe = businessId ? await attempt(async () => await syncStripeOverage(dependencies, { businessId, usageEventId })) : null;
+      const polar = businessId && polarClient ? await attempt(async () => await syncPolarUsage(dependencies, polarClient, { businessId, usageEventId })) : null;
+      if (failures.length) throw failures[0];
+      if (stripe?.status === "completed") return stripe;
+      return polar ?? stripe ?? (polarClient ? { status: "skipped" } : { status: "skipped", entityId: usageEventId });
     }
     case "billing.reconcile": {
       const providerEventId = String(job.payload.providerEventId ?? "");

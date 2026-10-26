@@ -1,17 +1,22 @@
 import { createHash, randomBytes } from "node:crypto";
 
-import { eventSubscriptionId, type OnboardingLinkInput, type PackageCheckout, type PackageCheckoutInput, type PackagePrices, type PackageTerms, type StripeConnectAccount, type StripeConnectEvent, type StripeConnectProvider, type StripeConnectSubscription } from "./stripeConnect";
+import { currencyFractionDigits } from "@lobbystack/shared";
+
+import { eventSubscriptionId, OVERAGE_METERS, overageMeterValue, overagePriceLookupKey, overageUnitAmount, type OnboardingLinkInput, type OverageMeter, type OverageReport, type PackageCheckout, type PackageCheckoutInput, type PackagePrices, type PackageTerms, type StripeConnectAccount, type StripeConnectEvent, type StripeConnectProvider, type StripeConnectSubscription } from "./stripeConnect";
 
 // A Stripe that lives in memory, for tests of everything behind the
 // StripeConnectProvider interface. It keeps accounts, products, prices,
-// checkouts and subscriptions per connected account, honours idempotency keys
-// the way Stripe does, and signs webhook deliveries that only its own
-// verifyWebhook accepts.
+// checkouts, subscriptions, meters and their events per connected account,
+// honours idempotency keys and meter event identifiers the way Stripe does,
+// and signs webhook deliveries that only its own verifyWebhook accepts.
 
 type FakeProduct = { accountId: string; name: string; active: boolean };
-type FakePrice = { accountId: string; productId: string; currency: string; unitAmountMinor: number; recurring: boolean; active: boolean };
+type FakePrice = { accountId: string; productId: string; currency: string; unitAmountMinor: number; recurring: boolean; active: boolean; meterId?: string; lookupKey?: string };
 type FakeCheckout = PackageCheckout & { accountId: string; input: PackageCheckoutInput; status: "open" | "complete" | "expired"; subscriptionId: string | null };
-type FakeSubscription = StripeConnectSubscription & { accountId: string };
+type FakeSubscription = StripeConnectSubscription & { accountId: string; currency: string; items: Array<{ id: string; priceId: string }> };
+type FakeMeter = { accountId: string; eventName: string; active: boolean };
+/** A meter event as Stripe counted it, with its value as the adapter would send it. */
+type FakeMeterEvent = { accountId: string; eventName: string; identifier: string; customerId: string; value: string };
 
 function id(prefix: string): string {
   return `${prefix}_${randomBytes(8).toString("hex")}`;
@@ -27,6 +32,9 @@ export class FakeStripeConnect implements StripeConnectProvider {
   readonly prices = new Map<string, FakePrice>();
   readonly checkouts = new Map<string, FakeCheckout>();
   readonly subscriptions = new Map<string, FakeSubscription>();
+  readonly meters = new Map<string, FakeMeter>();
+  /** Every meter event Stripe counted, in order. A second one under the same identifier on an account isn't counted. */
+  readonly meterEvents: FakeMeterEvent[] = [];
   /** Every onboarding link asked for, in order. */
   readonly onboardingLinks: OnboardingLinkInput[] = [];
   /** Every customer portal link asked for, in order. */
@@ -159,6 +167,64 @@ export class FakeStripeConnect implements StripeConnectProvider {
     return { subscriptionId, customerId: ended.customerId, status: ended.status, currentPeriodEnd: ended.currentPeriodEnd, metadata: { ...ended.metadata } };
   }
 
+  async addOverageToSubscription(accountId: string, input: { subscriptionId: string; meter: OverageMeter; currency: string }): Promise<{ subscriptionItemId: string }> {
+    this.takeFailure();
+    const subscription = this.subscriptions.get(input.subscriptionId);
+    if (!subscription || subscription.accountId !== accountId) throw Object.assign(new Error(`No such subscription: ${input.subscriptionId}`), { statusCode: 404 });
+    if (subscription.currency !== input.currency) throw Object.assign(new Error(`The subscription is in ${subscription.currency}, not ${input.currency}.`), { status: 409, code: "currency_mismatch" });
+    const { eventName, productName } = OVERAGE_METERS[input.meter];
+    let meterId = [...this.meters].find(([, meter]) => meter.accountId === accountId && meter.eventName === eventName)?.[0];
+    if (!meterId) meterId = id("mtr");
+    // A meter the partner deactivated counts again.
+    this.meters.set(meterId, { accountId, eventName, active: true });
+    const existing = subscription.items.find((item) => this.prices.get(item.priceId)?.meterId === meterId);
+    if (existing) return { subscriptionItemId: existing.id };
+    const lookupKey = overagePriceLookupKey(input.meter, input.currency);
+    // A lookup key names one price, archived or not, and a price the partner archived goes back on sale with its product.
+    let priceId = [...this.prices].find(([, price]) => price.accountId === accountId && price.lookupKey === lookupKey)?.[0];
+    const found = priceId ? this.prices.get(priceId) : undefined;
+    if (priceId && found) {
+      this.prices.set(priceId, { ...found, active: true });
+      const product = this.products.get(found.productId);
+      if (product) this.products.set(found.productId, { ...product, active: true });
+    }
+    if (!priceId) {
+      const productId = id("prod");
+      this.products.set(productId, { accountId, name: productName, active: true });
+      priceId = id("price");
+      this.prices.set(priceId, { accountId, productId, currency: input.currency, unitAmountMinor: overageUnitAmount(input.currency), recurring: true, active: true, meterId, lookupKey });
+    }
+    const item = { id: id("si"), priceId };
+    this.subscriptions.set(input.subscriptionId, { ...subscription, items: [...subscription.items, item] });
+    return { subscriptionItemId: item.id };
+  }
+
+  async reportOverage(accountId: string, report: OverageReport): Promise<void> {
+    this.takeFailure();
+    const { eventName } = OVERAGE_METERS[report.meter];
+    if (![...this.meters.values()].some((meter) => meter.accountId === accountId && meter.eventName === eventName)) throw Object.assign(new Error(`No meter for ${eventName}.`), { statusCode: 400 });
+    if (this.meterEvents.some((event) => event.accountId === accountId && event.identifier === report.identifier)) return;
+    this.meterEvents.push({ accountId, eventName, identifier: report.identifier, customerId: report.customerId, value: overageMeterValue(report.amountMinor, report.currency) });
+  }
+
+  /**
+   * What a customer's next invoice charges for a kind of overage, in the
+   * smallest unit of its currency: what its meter counted, at one major unit
+   * each, as Stripe's invoice rounds it. Zero without a subscription item on
+   * the meter, since nothing would bill it.
+   */
+  overageBilled(accountId: string, customerId: string, meter: OverageMeter): number {
+    const { eventName } = OVERAGE_METERS[meter];
+    const subscription = [...this.subscriptions.values()].find((candidate) => candidate.accountId === accountId && candidate.customerId === customerId && candidate.items.some((item) => {
+      const meterId = this.prices.get(item.priceId)?.meterId;
+      return meterId !== undefined && this.meters.get(meterId)?.eventName === eventName;
+    }));
+    if (!subscription) return 0;
+    const digits = currencyFractionDigits(subscription.currency);
+    const counted = this.meterEvents.filter((event) => event.accountId === accountId && event.customerId === customerId && event.eventName === eventName).reduce((sum, event) => sum + Number(event.value), 0);
+    return Math.round(counted * 10 ** digits);
+  }
+
   /**
    * Pays an open checkout, as the business would: Stripe makes the customer,
    * unless the checkout named one, and the subscription, which carries the
@@ -170,6 +236,8 @@ export class FakeStripeConnect implements StripeConnectProvider {
     const subscriptionId = id("sub");
     const subscription: FakeSubscription = {
       accountId: checkout.accountId,
+      currency: this.prices.get(checkout.input.priceId)?.currency ?? "USD",
+      items: [{ id: id("si"), priceId: checkout.input.priceId }],
       subscriptionId,
       customerId: checkout.input.customerId ?? id("cus"),
       status: options.status ?? "active",

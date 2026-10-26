@@ -182,6 +182,8 @@ The worker tries each `billing.syncUsage` job 12 times. It waits 5 seconds befor
 
 Fix the provider error before you requeue `billing.syncUsage`. Keep the usage row and source key to prevent duplicate ingestion.
 
+The same job reports a partner's business's overage to the partner's Stripe. It sends the Polar report even when the Stripe report fails, and then fails so its retry sends the Stripe report again. For those reports, check `stripe_sync_status`, `stripe_overage_reported_minor`, `stripe_overage_sending_minor` and `stripe_overage_reports`: a report still out has a sending amount. Stripe counts a report's identifier once for at least 24 hours, so after a day, look for the report in the partner's meter events before you requeue the job.
+
 ## Recover missing orders
 
 Replay a signed Polar webhook when Polar contains an order missing from `billing_transactions`.

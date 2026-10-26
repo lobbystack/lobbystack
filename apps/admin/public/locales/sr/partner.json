@@ -160,6 +160,34 @@
         "notConfigured": "Ova kontrolna tabla još ne može da prodaje ponude.",
         "failed": "Nismo mogli da promenimo naplatu firme. Pokušajte ponovo."
       }
+    },
+    "overage": {
+      "change": "Promeni",
+      "changeFor": "Promenite prekoračenje za firmu {{name}}",
+      "summary": {
+        "off": "Bez prekoračenja",
+        "noCap": "Prekoračenje bez limita",
+        "cap": "Prekoračenje do {{cap}} mesečno"
+      },
+      "title": "Prekoračenje za firmu {{name}}",
+      "description": "Izaberite da li firma nastavlja da odgovara posle onoga što ponuda {{packageName}} uključuje, i koliko joj naplaćujete dodatne minute i četove.",
+      "toggle": "Dozvoli prekoračenje",
+      "onHint": "Posle svoje ponude, firma nastavlja da odgovara dok njeno prekoračenje ne dostigne vaš limit. Tada se pozivi prosleđuju, a čet na sajtu prestaje da odgovara. Njeni Stripe računi prikazuju trošak kao „Call overage“ i „Chat overage“, sa iznosom kao količinom, po 1,00 za jedinicu.",
+      "offHint": "Firma staje na minutima i četovima svoje ponude. Pozivi tada idu na njen broj za prebacivanje ili na telefon njenog vlasnika, a čet na sajtu prestaje da odgovara.",
+      "minuteRateLabel": "Svaki dodatni minut",
+      "chatRateLabel": "Svaki dodatni čet",
+      "capLabel": "Mesečni limit",
+      "capPlaceholder": "Bez limita",
+      "capHint": "Limit kreće ispočetka 1. u mesecu (UTC), pa račun koji obuhvata dva meseca može da naplati do dva limita. Ostavite prazno ako ne želite limit.",
+      "submit": "Sačuvaj",
+      "saving": "Čuvamo…",
+      "saved": "Sačuvali ste prekoračenje za firmu {{name}}.",
+      "errors": {
+        "invalidRate": "Unesite svaku cenu kao iznos u valuti ponude.",
+        "invalidCap": "Unesite limit kao iznos u valuti ponude ili ga ostavite praznim.",
+        "billedOutside": "Ovu firmu sami naplaćujete, pa nema prekoračenje.",
+        "failed": "Nismo mogli da sačuvamo prekoračenje. Pokušajte ponovo."
+      }
     }
   },
   "packages": {

@@ -103,6 +103,22 @@ export type OnboardingLinkInput = {
   metadata: Record<string, string>;
 };
 
+/** The kinds of overage a business pays its partner for, each on its own meter, so its invoices show calls and chats apart. */
+export type OverageMeter = "voice" | "chat";
+
+/** One report of a business's overage to its partner's account. */
+export type OverageReport = {
+  /** Names the report on the account, so Stripe charges it once however often it's sent. */
+  identifier: string;
+  /** The business's customer on the partner's account. */
+  customerId: string;
+  meter: OverageMeter;
+  /** What the overage costs, in the smallest unit of `currency`, as LobbyStack stores amounts, fractions included. Below 0 when a correction lowered it. */
+  amountMinor: number;
+  /** ISO 4217, uppercase: the currency of the business's subscription. */
+  currency: string;
+};
+
 /** Everything the deployment asks of Stripe for partners, so tests can pass a fake. */
 export interface StripeConnectProvider {
   /** A link to Stripe's hosted onboarding for the partner's account, creating the account first when it has none. */
@@ -121,6 +137,15 @@ export interface StripeConnectProvider {
   retrieveSubscription(accountId: string, subscriptionId: string): Promise<StripeConnectSubscription>;
   /** Ends a subscription now, so its customer pays nothing more, and returns it as it ended. One that already ended stays as it is. */
   cancelSubscription(accountId: string, subscriptionId: string): Promise<StripeConnectSubscription>;
+  /**
+   * Makes a subscription bill one kind of overage: the account's meter for it
+   * and the meter's price in the subscription's currency, made the first time
+   * any business of the partner needs them, and an item for that price on the
+   * subscription. Returns the item, which an earlier call may have added.
+   */
+  addOverageToSubscription(accountId: string, input: { subscriptionId: string; meter: OverageMeter; currency: string }): Promise<{ subscriptionItemId: string }>;
+  /** Sends a report of overage to its meter, which adds it to the customer's next invoice. A report already sent under its identifier changes nothing. */
+  reportOverage(accountId: string, report: OverageReport): Promise<void>;
   /** The event a Connect webhook delivery carries, or a thrown error when its signature doesn't check out. */
   verifyWebhook(body: string, signature: string): StripeConnectEvent;
 }
@@ -146,6 +171,36 @@ export function stripeUnitAmount(amountMinor: number, currency: string): number 
   const amount = amountMinor * 10 ** (stripe - ours);
   if (!Number.isInteger(amount)) throw Object.assign(new Error(`Stripe takes ${currency} amounts in whole units.`), { status: 400, code: "invalid_amount" });
   return amount;
+}
+
+/**
+ * The meter each kind of overage goes to on a partner's account, and the
+ * product its price sells, whose name the business's invoices show. A meter
+ * sums what the overage costs in the currency's major unit, and its price
+ * charges one major unit for each, so an invoice charges what LobbyStack
+ * priced at the rates each usage event recorded, whatever the partner's
+ * rates are now. Partners can rename the products in their Stripe Dashboard.
+ */
+export const OVERAGE_METERS: Record<OverageMeter, { eventName: string; productName: string }> = {
+  voice: { eventName: "lobbystack_call_overage", productName: "Call overage" },
+  chat: { eventName: "lobbystack_chat_overage", productName: "Chat overage" },
+};
+
+/** The lookup key of a meter's price in a currency, which finds the price again on the account. */
+export function overagePriceLookupKey(meter: OverageMeter, currency: string): string {
+  return `lobbystack_${meter}_overage_${currency.toLowerCase()}`;
+}
+
+/** An overage's cost as its meter counts it: in the currency's major unit, as a decimal, to a ten-thousandth of the smallest unit. */
+export function overageMeterValue(amountMinor: number, currency: string): string {
+  const digits = currencyFractionDigits(currency);
+  const value = (amountMinor / 10 ** digits).toFixed(digits + 4).replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
+  return value === "-0" ? "0" : value;
+}
+
+/** What one major unit of a currency costs as Stripe's API takes it: the unit amount of every overage price. */
+export function overageUnitAmount(currency: string): number {
+  return stripeUnitAmount(10 ** currencyFractionDigits(currency), currency);
 }
 
 function objectId(value: unknown): string | null {
@@ -306,6 +361,86 @@ export class StripeConnectAdapter implements StripeConnectProvider {
     const current = await this.stripe.subscriptions.retrieve(subscriptionId, {}, onAccount);
     if (current.status === "canceled" || current.status === "incomplete_expired") return subscriptionFromStripe(current);
     return subscriptionFromStripe(await this.stripe.subscriptions.cancel(subscriptionId, {}, onAccount));
+  }
+
+  async addOverageToSubscription(accountId: string, input: { subscriptionId: string; meter: OverageMeter; currency: string }): Promise<{ subscriptionItemId: string }> {
+    const onAccount = { stripeAccount: accountId };
+    const subscription = await this.stripe.subscriptions.retrieve(input.subscriptionId, {}, onAccount);
+    if (subscription.currency.toUpperCase() !== input.currency) {
+      throw Object.assign(new Error(`The subscription is in ${subscription.currency.toUpperCase()}, not ${input.currency}.`), { status: 409, code: "currency_mismatch" });
+    }
+    const meterId = await this.overageMeter(accountId, input.meter);
+    // A second item on the same meter would bill the same usage twice.
+    const existing = subscription.items.data.find((item) => item.price.recurring?.meter === meterId);
+    if (existing) return { subscriptionItemId: existing.id };
+    const priceId = await this.overagePrice(accountId, input.meter, meterId, input.currency);
+    // A metered item charges nothing until the meter counts usage, so adding one mid-period prorates nothing.
+    const item = await this.stripe.subscriptionItems.create({ subscription: input.subscriptionId, price: priceId, proration_behavior: "none" }, { ...onAccount, idempotencyKey: `overage-item:${input.subscriptionId}:${input.meter}` });
+    return { subscriptionItemId: item.id };
+  }
+
+  /** The account's meter for a kind of overage, made the first time. A meter the partner deactivated in its Dashboard counts again. */
+  private async overageMeter(accountId: string, meter: OverageMeter): Promise<string> {
+    const onAccount = { stripeAccount: accountId };
+    const { eventName, productName } = OVERAGE_METERS[meter];
+    for await (const found of this.stripe.billing.meters.list({ limit: 100 }, onAccount)) {
+      if (found.event_name !== eventName) continue;
+      if (found.status !== "active") await this.stripe.billing.meters.reactivate(found.id, {}, onAccount);
+      return found.id;
+    }
+    const created = await this.stripe.billing.meters.create({
+      display_name: productName,
+      event_name: eventName,
+      default_aggregation: { formula: "sum" },
+      customer_mapping: { type: "by_id", event_payload_key: "stripe_customer_id" },
+      value_settings: { event_payload_key: "value" },
+    }, { ...onAccount, idempotencyKey: `overage-meter:${meter}` });
+    return created.id;
+  }
+
+  /**
+   * The meter's monthly price in the currency, which charges one major unit
+   * for each one the meter counts, with its product, made the first time. A
+   * lookup key names one price at a time, archived or not, so a price or
+   * product the partner archived in its Dashboard goes back on sale: a new
+   * price couldn't take the key, and the next business couldn't bill its
+   * overage.
+   */
+  private async overagePrice(accountId: string, meter: OverageMeter, meterId: string, currency: string): Promise<string> {
+    const onAccount = { stripeAccount: accountId };
+    const lookupKey = overagePriceLookupKey(meter, currency);
+    const [found] = (await this.stripe.prices.list({ lookup_keys: [lookupKey], limit: 1, expand: ["data.product"] }, onAccount)).data;
+    if (found) {
+      const product = found.product;
+      if (typeof product === "object" && product.deleted !== true && !product.active) await this.stripe.products.update(product.id, { active: true }, onAccount);
+      if (!found.active) await this.stripe.prices.update(found.id, { active: true }, onAccount);
+      return found.id;
+    }
+    const metadata = { lobbystack_overage: meter };
+    const price = await this.stripe.prices.create({
+      currency: currency.toLowerCase(),
+      unit_amount: overageUnitAmount(currency),
+      recurring: { interval: "month", usage_type: "metered", meter: meterId },
+      product_data: { name: OVERAGE_METERS[meter].productName, metadata },
+      lookup_key: lookupKey,
+      metadata,
+    }, { ...onAccount, idempotencyKey: `overage-price:${meter}:${currency}` });
+    return price.id;
+  }
+
+  async reportOverage(accountId: string, report: OverageReport): Promise<void> {
+    try {
+      // The idempotency key makes a retry get the first answer back; the identifier makes Stripe count the event once.
+      await this.stripe.billing.meterEvents.create({
+        event_name: OVERAGE_METERS[report.meter].eventName,
+        identifier: report.identifier,
+        payload: { stripe_customer_id: report.customerId, value: overageMeterValue(report.amountMinor, report.currency) },
+      }, { stripeAccount: accountId, idempotencyKey: `overage-report:${report.identifier}` });
+    } catch (error) {
+      // Stripe already counted an event under this identifier, as an earlier attempt sent it.
+      if ((error as { code?: unknown } | null)?.code === "duplicate_meter_event") return;
+      throw error;
+    }
   }
 
   verifyWebhook(body: string, signature: string): StripeConnectEvent {

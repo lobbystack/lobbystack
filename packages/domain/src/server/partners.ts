@@ -827,8 +827,22 @@ async function lockPartnerBusiness(tx: DatabaseTransaction, partnerId: string, b
   return business.partnerId;
 }
 
-/** The host's Free plan, as a billing account holds it: no paid plan, subscription or spending cap. */
-const FREE_PLAN_ACCOUNT = { plan: "free_cloud", subscriptionState: null, subscriptionId: null, billingInterval: null, currentPeriodStart: null, currentPeriodEnd: null, overageSpendingCapCents: null };
+/** The host's Free plan, as a billing account holds it: no paid plan, subscription or spending cap, and none of the partner's overage or the items that billed it. */
+const FREE_PLAN_ACCOUNT = {
+  plan: "free_cloud",
+  subscriptionState: null,
+  subscriptionId: null,
+  billingInterval: null,
+  currentPeriodStart: null,
+  currentPeriodEnd: null,
+  overageSpendingCapCents: null,
+  overageEnabled: false,
+  overageCurrency: null,
+  overageVoiceMinuteRateMinor: 0,
+  overageChatRateMinor: 0,
+  overageCapMinor: null,
+  stripeOverageItems: null,
+};
 
 /**
  * Releases one of the partner's businesses to its owner, who keeps it as a

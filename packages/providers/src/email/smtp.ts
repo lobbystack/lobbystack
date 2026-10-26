@@ -12,7 +12,7 @@ export type SmtpConfig = {
   from: string;
 };
 
-type TemplateName = "existing_account" | "account_setup" | "verify_email" | "password_reset" | "invitation" | "operator_alert" | "feedback_submission" | "onboarding_followup" | "number_trial" | "number_release" | "partner_pool_alert";
+type TemplateName = "existing_account" | "account_setup" | "verify_email" | "password_reset" | "invitation" | "operator_alert" | "feedback_submission" | "onboarding_followup" | "number_trial" | "number_release" | "partner_pool_alert" | "business_allowance_alert" | "partner_business_allowance_alert";
 
 export class SmtpEmailProvider {
   private readonly transporter: Transporter;
@@ -118,6 +118,10 @@ function templateSubject(template: TemplateName, variables: Record<string, strin
       return numberReleaseEmailSubject(variables);
     case "partner_pool_alert":
       return partnerPoolAlertCopy(variables).subject;
+    case "business_allowance_alert":
+      return businessAllowanceAlertCopy(variables, name).subject;
+    case "partner_business_allowance_alert":
+      return partnerBusinessAllowanceAlertCopy(variables).subject;
     default:
       return `${name} notification`;
   }
@@ -180,6 +184,10 @@ function templateBody(template: TemplateName, variables: Record<string, string>,
       return numberReleaseBody(variables);
     case "partner_pool_alert":
       return partnerPoolAlertBody(variables, brand);
+    case "business_allowance_alert":
+      return businessAllowanceAlertBody(variables, brand);
+    case "partner_business_allowance_alert":
+      return partnerBusinessAllowanceAlertBody(variables, brand);
   }
 }
 
@@ -265,6 +273,149 @@ function partnerPoolAlertCopy(v: Record<string, string>): PoolAlertCopy {
 
 function partnerPoolAlertBody(variables: Record<string, string>, brand: EmailBrand): string {
   const copy = partnerPoolAlertCopy(variables);
+  const greet = TRIAL_GREETINGS[variables.locale ?? "en"] ?? TRIAL_GREETINGS.en!;
+  return [greet(variables.firstName ?? ""), "", ...copy.lines.flatMap((line) => [line, ""]), `${copy.action}: ${variables.url ?? ""}`, "", brand.name].join("\n");
+}
+
+/**
+ * A partner's alert to a business's owners and admins at 80% or 100% of its
+ * package's minutes or chats, under the partner's brand, so `partner` is the
+ * brand's name. What happens past the allowance depends on `overage`: on,
+ * up to a monthly limit when `capped`, or off. Like the business's
+ * dashboard, it names no prices. The domain formats the counts and month in
+ * the reader's language.
+ */
+function businessAllowanceAlertCopy(v: Record<string, string>, partner: string): PoolAlertCopy {
+  const full = v.threshold === "100";
+  const minutes = v.kind !== "chats";
+  const on = v.overage === "on";
+  const capped = on && v.capped === "yes";
+  const business = v.businessName ?? "";
+  const used = v.used ?? "";
+  const included = v.included ?? "";
+  const month = v.month ?? "";
+  if (v.locale === "fr") {
+    const noun = minutes ? "minutes" : "clavardages";
+    const limit = capped ? " jusqu'à une limite mensuelle" : "";
+    const past = minutes
+      ? on ? `${full ? "Votre" : "Au-delà, votre"} réceptionniste continue de répondre aux appels${limit}, et ${partner} vous facture chaque minute supplémentaire.` : full ? "Jusqu'au mois prochain, les appels vont à votre numéro de transfert ou au téléphone du propriétaire." : "Une fois les minutes épuisées, les appels iront à votre numéro de transfert ou au téléphone du propriétaire jusqu'au mois prochain."
+      : on ? `${full ? "Le" : "Au-delà, le"} clavardage de votre site continue de répondre${limit}, et ${partner} vous facture chaque clavardage supplémentaire.` : full ? "Jusqu'au mois prochain, le clavardage de votre site ne répond plus." : "Une fois les clavardages épuisés, le clavardage de votre site cessera de répondre jusqu'au mois prochain.";
+    return {
+      subject: full ? `${business} a utilisé ${minutes ? "toutes ses minutes" : "tous ses clavardages"} du mois` : `${business} a utilisé 80 % de ses ${noun} du mois`,
+      lines: [full ? `${business} a utilisé les ${included} ${noun} ${minutes ? "incluses" : "inclus"} en ${month}.` : `${business} a utilisé ${used} des ${included} ${noun} ${minutes ? "incluses" : "inclus"} en ${month}.`, past],
+      action: "Voir votre utilisation",
+    };
+  }
+  if (v.locale === "es") {
+    const noun = minutes ? "minutos" : "chats";
+    const limit = capped ? " hasta un tope mensual" : "";
+    const past = minutes
+      ? on ? `${full ? "Su" : "Después, su"} recepcionista sigue contestando llamadas${limit}, y ${partner} le cobra cada minuto adicional.` : full ? "Hasta el próximo mes, las llamadas se desvían a su número de transferencia o al teléfono del propietario." : "Cuando se agoten, las llamadas se desviarán a su número de transferencia o al teléfono del propietario hasta el próximo mes."
+      : on ? `${full ? "El" : "Después, el"} chat de su sitio sigue respondiendo${limit}, y ${partner} le cobra cada chat adicional.` : full ? "Hasta el próximo mes, el chat de su sitio deja de responder." : "Cuando se agoten, el chat de su sitio dejará de responder hasta el próximo mes.";
+    return {
+      subject: full ? `${business} usó todos sus ${noun} del mes` : `${business} usó el 80 % de sus ${noun} del mes`,
+      lines: [full ? `${business} usó los ${included} ${noun} incluidos en ${month}.` : `${business} usó ${used} de los ${included} ${noun} incluidos en ${month}.`, past],
+      action: "Vea su uso",
+    };
+  }
+  if (v.locale === "sr") {
+    const noun = minutes ? "minuta" : "četova";
+    const limit = capped ? " do mesečnog limita" : "";
+    const past = minutes
+      ? on ? full ? `Vaš recepcioner nastavlja da odgovara na pozive${limit}, a ${partner} Vam naplaćuje svaki dodatni minut.` : `Kada ih potroši, Vaš recepcioner će nastaviti da odgovara na pozive${limit}, a ${partner} će Vam naplatiti svaki dodatni minut.` : full ? "Do sledećeg meseca, pozivi idu na Vaš broj za prebacivanje ili na telefon vlasnika." : "Kada ih potroši, pozivi će ići na Vaš broj za prebacivanje ili na telefon vlasnika do sledećeg meseca."
+      : on ? full ? `Čet na Vašem sajtu nastavlja da odgovara${limit}, a ${partner} Vam naplaćuje svaki dodatni čet.` : `Kada ih potroši, čet na Vašem sajtu će nastaviti da odgovara${limit}, a ${partner} će Vam naplatiti svaki dodatni čet.` : full ? "Do sledećeg meseca, čet na Vašem sajtu ne odgovara." : "Kada ih potroši, čet na Vašem sajtu će prestati da odgovara do sledećeg meseca.";
+    return {
+      subject: full ? `Firma ${business} je potrošila sve ${minutes ? "minute" : "četove"} ovog meseca` : `Firma ${business} je potrošila 80% ${noun} ovog meseca`,
+      lines: [full ? `Firma ${business} je potrošila svih ${included} uključenih ${noun} za ${month}.` : `Firma ${business} je potrošila ${used} od ${included} uključenih ${noun} za ${month}.`, past],
+      action: "Pogledajte potrošnju",
+    };
+  }
+  const noun = minutes ? "minutes" : "website chats";
+  const limit = capped ? ", up to a monthly limit" : "";
+  const past = minutes
+    ? on ? `${full ? "Your" : "Past them, your"} receptionist keeps answering calls${limit}, and ${partner} bills you for each extra minute.` : full ? "Until next month, calls forward to your transfer number or the owner's phone." : "Once they run out, calls forward to your transfer number or the owner's phone until next month."
+    : on ? `${full ? "Your" : "Past them, your"} website chat keeps replying${limit}, and ${partner} bills you for each extra chat.` : full ? "Until next month, your website chat stops replying." : "Once they run out, your website chat stops replying until next month.";
+  return {
+    subject: full ? `${business} used all of this month's ${noun}` : `${business} used 80% of this month's ${noun}`,
+    lines: [full ? `${business} used all ${included} of its ${noun} for ${month}.` : `${business} used ${used} of its ${included} ${noun} for ${month}.`, past],
+    action: "See your usage",
+  };
+}
+
+function businessAllowanceAlertBody(variables: Record<string, string>, brand: EmailBrand): string {
+  const copy = businessAllowanceAlertCopy(variables, brand.name);
+  const greet = TRIAL_GREETINGS[variables.locale ?? "en"] ?? TRIAL_GREETINGS.en!;
+  return [greet(variables.firstName ?? ""), "", ...copy.lines.flatMap((line) => [line, ""]), `${copy.action}: ${dashboardLink(variables.url, brand) ?? ""}`, "", brand.name].join("\n");
+}
+
+/**
+ * The host's alert to a partner's owners and admins at 80% or 100% of one
+ * business's package minutes or chats, under the host's brand, since the
+ * partner is the host's customer. What happens past the package depends on
+ * the business's `overage`: on, up to the partner's monthly cap when
+ * `capped`, or off. It names no prices. The domain formats the counts and
+ * month in the reader's language.
+ */
+function partnerBusinessAllowanceAlertCopy(v: Record<string, string>): PoolAlertCopy {
+  const full = v.threshold === "100";
+  const minutes = v.kind !== "chats";
+  const on = v.overage === "on";
+  const capped = on && v.capped === "yes";
+  const business = v.businessName ?? "";
+  const used = v.used ?? "";
+  const included = v.included ?? "";
+  const month = v.month ?? "";
+  if (v.locale === "fr") {
+    const noun = minutes ? "minutes" : "clavardages";
+    const limit = capped ? " jusqu'au plafond mensuel que vous avez fixé" : "";
+    const past = minutes
+      ? on ? `${full ? "L'entreprise" : "Au-delà, l'entreprise"} continue de répondre aux appels${limit}, et vous lui facturez chaque minute supplémentaire.` : full ? "Son dépassement est désactivé : jusqu'au mois prochain, les appels vont à son numéro de transfert ou au téléphone du propriétaire." : "Son dépassement est désactivé : une fois les minutes épuisées, les appels iront à son numéro de transfert ou au téléphone du propriétaire jusqu'au mois prochain."
+      : on ? `${full ? "Le" : "Au-delà, le"} clavardage de son site continue de répondre${limit}, et vous lui facturez chaque clavardage supplémentaire.` : full ? "Son dépassement est désactivé : jusqu'au mois prochain, le clavardage de son site ne répond plus." : "Son dépassement est désactivé : une fois les clavardages épuisés, le clavardage de son site cessera de répondre jusqu'au mois prochain.";
+    const all = minutes ? "toutes les" : "tous les";
+    return {
+      subject: full ? `${business} a utilisé ${all} ${noun} de sa formule` : `${business} a utilisé 80 % des ${noun} de sa formule`,
+      lines: [full ? `${business} a utilisé ${all} ${included} ${noun} de sa formule en ${month}.` : `${business} a utilisé ${used} des ${included} ${noun} de sa formule en ${month}.`, past],
+      action: on ? "Modifiez son dépassement sur la page Entreprises" : "Activez son dépassement sur la page Entreprises",
+    };
+  }
+  if (v.locale === "es") {
+    const noun = minutes ? "minutos" : "chats";
+    const limit = capped ? " hasta el límite mensual que usted fijó" : "";
+    const past = minutes
+      ? on ? `${full ? "El negocio" : "Después, el negocio"} sigue contestando llamadas${limit}, y usted le cobra cada minuto adicional.` : full ? "Su excedente está desactivado: hasta el próximo mes, las llamadas se desvían a su número de transferencia o al teléfono del propietario." : "Su excedente está desactivado: cuando se agoten, las llamadas se desviarán a su número de transferencia o al teléfono del propietario hasta el próximo mes."
+      : on ? `${full ? "El" : "Después, el"} chat de su sitio sigue respondiendo${limit}, y usted le cobra cada chat adicional.` : full ? "Su excedente está desactivado: hasta el próximo mes, el chat de su sitio deja de responder." : "Su excedente está desactivado: cuando se agoten, el chat de su sitio dejará de responder hasta el próximo mes.";
+    return {
+      subject: full ? `${business} usó todos los ${noun} de su paquete` : `${business} usó el 80 % de los ${noun} de su paquete`,
+      lines: [full ? `${business} usó los ${included} ${noun} de su paquete en ${month}.` : `${business} usó ${used} de los ${included} ${noun} de su paquete en ${month}.`, past],
+      action: on ? "Cambie su excedente en la página Negocios" : "Active su excedente en la página Negocios",
+    };
+  }
+  if (v.locale === "sr") {
+    const noun = minutes ? "minuta" : "četova";
+    const limit = capped ? " do mesečnog limita koji ste postavili" : "";
+    const past = minutes
+      ? on ? full ? `Firma nastavlja da odgovara na pozive${limit}, a Vi joj naplaćujete svaki dodatni minut.` : `Kada ih potroši, firma će nastaviti da odgovara na pozive${limit}, a Vi ćete joj naplatiti svaki dodatni minut.` : full ? "Prekoračenje je isključeno, pa do sledećeg meseca pozivi idu na njen broj za prebacivanje ili na telefon vlasnika." : "Prekoračenje je isključeno, pa kada ih potroši, pozivi će ići na njen broj za prebacivanje ili na telefon vlasnika do sledećeg meseca."
+      : on ? full ? `Čet na sajtu firme nastavlja da odgovara${limit}, a Vi joj naplaćujete svaki dodatni čet.` : `Kada ih potroši, čet na sajtu firme će nastaviti da odgovara${limit}, a Vi ćete joj naplatiti svaki dodatni čet.` : full ? "Prekoračenje je isključeno, pa do sledećeg meseca čet na sajtu firme ne odgovara." : "Prekoračenje je isključeno, pa kada ih potroši, čet na sajtu firme će prestati da odgovara do sledećeg meseca.";
+    return {
+      subject: full ? `Firma ${business} je potrošila sve ${minutes ? "minute" : "četove"} iz svoje ponude` : `Firma ${business} je potrošila 80% ${noun} iz svoje ponude`,
+      lines: [full ? `Firma ${business} je potrošila svih ${included} ${noun} iz svoje ponude za ${month}.` : `Firma ${business} je potrošila ${used} od ${included} ${noun} iz svoje ponude za ${month}.`, past],
+      action: on ? "Promenite prekoračenje na stranici Firme" : "Uključite prekoračenje na stranici Firme",
+    };
+  }
+  const noun = minutes ? "minutes" : "website chats";
+  const limit = capped ? " until its overage reaches the monthly cap you set" : "";
+  const past = minutes
+    ? on ? `${full ? "Its" : "Past them, its"} receptionist keeps answering calls${limit}, and you bill the business for each extra minute.` : full ? "Its overage is off, so calls forward to its transfer number or the owner's phone until next month." : "Its overage is off, so once they run out, calls forward to its transfer number or the owner's phone until next month."
+    : on ? `${full ? "Its" : "Past them, its"} website chat keeps replying${limit}, and you bill the business for each extra chat.` : full ? "Its overage is off, so its website chat stops replying until next month." : "Its overage is off, so once they run out, its website chat stops replying until next month.";
+  return {
+    subject: full ? `${business} used all of its package's ${noun}` : `${business} used 80% of its package's ${noun}`,
+    lines: [full ? `${business} used all ${included} ${noun} in its package for ${month}.` : `${business} used ${used} of the ${included} ${noun} in its package for ${month}.`, past],
+    action: on ? "Change its overage on the Businesses page" : "Turn on its overage on the Businesses page",
+  };
+}
+
+function partnerBusinessAllowanceAlertBody(variables: Record<string, string>, brand: EmailBrand): string {
+  const copy = partnerBusinessAllowanceAlertCopy(variables);
   const greet = TRIAL_GREETINGS[variables.locale ?? "en"] ?? TRIAL_GREETINGS.en!;
   return [greet(variables.firstName ?? ""), "", ...copy.lines.flatMap((line) => [line, ""]), `${copy.action}: ${variables.url ?? ""}`, "", brand.name].join("\n");
 }

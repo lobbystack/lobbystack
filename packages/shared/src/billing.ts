@@ -133,21 +133,53 @@ export function hasLivePackageSubscription(state: string | null | undefined): bo
 export type PackageEntitlementTerms = { currency: string; voiceMinutes: number; chats: number };
 
 /**
+ * A partner's business's overage on its package, as the partner set it:
+ * whether the business keeps answering past the package's allowance, what
+ * each minute and chat past it costs, and the monthly cap on what that comes
+ * to, or null for none. Amounts are whole numbers of the minor unit of
+ * `currency`, the package's currency when the partner set them.
+ */
+export type PackageOverageTerms = { enabled: boolean; currency: string | null; voiceMinuteRateMinor: number; chatRateMinor: number; capMinor: number | null };
+
+/** A business's overage in its package's currency, as the console shows it. */
+export type PackageOverage = { enabled: boolean; currency: string; voiceMinuteRateMinor: number; chatRateMinor: number; capMinor: number | null };
+
+/**
+ * The overage that holds for a business on a package in this currency: the
+ * terms the partner set when they're in it, and off otherwise, as for a
+ * business that moved to a package in another currency.
+ */
+export function packageOverageIn(currency: string, terms: PackageOverageTerms | null | undefined): PackageOverage {
+  const code = currency.toUpperCase();
+  if (!terms?.currency || terms.currency.toUpperCase() !== code) return { enabled: false, currency: code, voiceMinuteRateMinor: 0, chatRateMinor: 0, capMinor: null };
+  return { enabled: terms.enabled, currency: code, voiceMinuteRateMinor: terms.voiceMinuteRateMinor, chatRateMinor: terms.chatRateMinor, capMinor: terms.capMinor };
+}
+
+/**
  * The entitlement of a partner's business on a package: the package's
  * allowance of minutes and chats while its Stripe subscription is live, and
  * nothing once it isn't, so calls forward and chat shows its message. Alert
  * texts and transfer attempts, which a package doesn't sell, have no limit of
- * their own. Overage stays off, and amounts are in the package's currency.
- * Its usage also draws on the partner's pool.
+ * their own. While it's live and the partner turned its overage on, it keeps
+ * answering past the allowance at the partner's minute and chat rates, until
+ * what that costs reaches the monthly cap. Amounts are in the package's
+ * currency. Its usage also draws on the partner's pool.
  */
-export function packageEntitlement(partnerId: string, terms: PackageEntitlementTerms, account: { live: boolean }): Entitlement {
+export function packageEntitlement(partnerId: string, terms: PackageEntitlementTerms, account: { live: boolean; overage?: PackageOverageTerms | null | undefined }): Entitlement {
+  const overage = packageOverageIn(terms.currency, account.overage);
+  const billed = account.live && overage.enabled;
   return {
     live: account.live,
     source: "package",
     allowance: account.live
       ? { voiceSeconds: terms.voiceMinutes * 60, chats: terms.chats, alertSms: null, outboundAttempts: null }
       : { voiceSeconds: 0, chats: 0, alertSms: 0, outboundAttempts: 0 },
-    overage: { enabled: false, currency: terms.currency, rates: { voiceMinute: 0, chat: 0, alertSms: 0, outboundAttempt: 0 }, capMinor: null },
+    overage: {
+      enabled: billed,
+      currency: overage.currency,
+      rates: { voiceMinute: billed ? overage.voiceMinuteRateMinor : 0, chat: billed ? overage.chatRateMinor : 0, alertSms: 0, outboundAttempt: 0 },
+      capMinor: billed ? overage.capMinor : null,
+    },
     poolPartnerId: partnerId,
     includedNumbers: null,
   };

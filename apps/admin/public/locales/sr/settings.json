@@ -238,7 +238,10 @@
       },
       "unavailable": "Podaci o potrošnji nisu dostupni.",
       "customAllowance": "Iskorišćeno: {{used}} {{unit}} · Prilagođeni iznos",
-      "noLimit": "Iskorišćeno: {{used}} {{unit}} · Bez ograničenja"
+      "noLimit": "Iskorišćeno: {{used}} {{unit}} · Bez ograničenja",
+      "extraTitle": "Dodatna potrošnja",
+      "extraOnDescription": "Vaš recepcioner nastavlja da odgovara i posle uključenog iznosa, a {{appName}} Vam naplaćuje dodatne minute i četove.",
+      "extraOffDescription": "Dodatna potrošnja je isključena. {{appName}} Vam naplaćuje dodatne minute i četove koje ste potrošili pre nego što je isključena."
     },
     "spendingCap": {
       "title": "Mesečni limit potrošnje",

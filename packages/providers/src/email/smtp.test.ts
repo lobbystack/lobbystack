@@ -230,6 +230,103 @@ describe("SMTP delivery", () => {
   });
 });
 
+describe("a business's allowance alert", () => {
+  const url = "https://app.example.test/settings/usage";
+  const alert = (variables: Record<string, string>) => ({ template: "business_allowance_alert" as const, to: "owner@harbor.example.test", variables: { firstName: "Mia", businessName: "Harbor Dental", month: "October", url, capped: "", ...variables } });
+
+  it("tells a business's owner what happens past its allowance, under its partner's name and on its partner's domain, with no prices", async () => {
+    const { provider, sent } = capture();
+    await send(provider, alert({ locale: "en", kind: "minutes", threshold: "80", used: "8", included: "10", overage: "off" }), partner);
+    await send(provider, alert({ locale: "en", kind: "minutes", threshold: "100", used: "10", included: "10", overage: "off" }), partner);
+    await send(provider, alert({ locale: "en", kind: "chats", threshold: "80", used: "40", included: "50", overage: "on", capped: "yes" }), partner);
+    await send(provider, alert({ locale: "en", kind: "chats", threshold: "100", used: "50", included: "50", overage: "on" }), partner);
+    expect(sent(0)).toMatchObject({ from: "\"Bright Desk\" <no-reply@bright.example.test>", replyTo: "help@bright.example.test", subject: "Harbor Dental used 80% of this month's minutes" });
+    expect(sent(0).text).toBe(["Hi Mia,", "", "Harbor Dental used 8 of its 10 minutes for October.", "", "Once they run out, calls forward to your transfer number or the owner's phone until next month.", "", "See your usage: https://bright.example.test/settings/usage", "", "Bright Desk"].join("\n"));
+    expect(sent(1).subject).toBe("Harbor Dental used all of this month's minutes");
+    expect(sent(1).text).toContain("Harbor Dental used all 10 of its minutes for October.\n\nUntil next month, calls forward to your transfer number or the owner's phone.");
+    expect(sent(2).subject).toBe("Harbor Dental used 80% of this month's website chats");
+    expect(sent(2).text).toContain("Past them, your website chat keeps replying, up to a monthly limit, and Bright Desk bills you for each extra chat.");
+    expect(sent(3).text).toContain("Your website chat keeps replying, and Bright Desk bills you for each extra chat.");
+    for (let index = 0; index < 4; index++) {
+      expect(sent(index).text).not.toMatch(/LobbyStack|\$|app\.example\.test/);
+    }
+  });
+
+  it("writes every alert in the reader's language", async () => {
+    const { provider, sent } = capture();
+    const cases = [["minutes", "80", "off"], ["minutes", "100", "on"], ["chats", "80", "on"], ["chats", "100", "off"]] as const;
+    const locales = ["en", "fr", "es", "sr"];
+    for (const locale of locales) {
+      for (const [kind, threshold, overage] of cases) await send(provider, alert({ locale, kind, threshold, used: "4", included: "5", overage, capped: "yes" }), partner);
+    }
+    const emails = Array.from({ length: locales.length * cases.length }, (_, index) => sent(index));
+    expect(new Set(emails.map((email) => email.subject)).size).toBe(emails.length);
+    expect(emails.map((email) => email.subject).slice(cases.length * 3)).toEqual([
+      "Firma Harbor Dental je potrošila 80% minuta ovog meseca",
+      "Firma Harbor Dental je potrošila sve minute ovog meseca",
+      "Firma Harbor Dental je potrošila 80% četova ovog meseca",
+      "Firma Harbor Dental je potrošila sve četove ovog meseca",
+    ]);
+    expect(emails[cases.length]!.text).toContain("Harbor Dental a utilisé 4 des 5 minutes incluses en October.");
+    expect(emails[cases.length * 2 + 1]!.text).toContain("Su recepcionista sigue contestando llamadas hasta un tope mensual, y Bright Desk le cobra cada minuto adicional.");
+    for (const [index, email] of emails.entries()) {
+      const locale = locales[Math.floor(index / cases.length)]!;
+      expect(email.text.startsWith({ en: "Hi Mia,", fr: "Bonjour Mia,", es: "Hola, Mia:", sr: "Zdravo, Mia," }[locale]!)).toBe(true);
+      expect(email.text).toContain("https://bright.example.test/settings/usage");
+      expect(email.text.trimEnd().endsWith("Bright Desk")).toBe(true);
+      expect(email.text).not.toMatch(/undefined|—/);
+    }
+  });
+});
+
+describe("a partner's alert about one business's allowance", () => {
+  const url = "https://app.example.test/partner/p-1/businesses";
+  const alert = (variables: Record<string, string>) => ({ template: "partner_business_allowance_alert" as const, to: "owner@acme.example.test", variables: { firstName: "Ana", businessName: "Harbor Dental", month: "October", url, capped: "", ...variables } });
+
+  it("tells a partner's owner what happens past the business's package, under the host's name, with no prices", async () => {
+    const { provider, sent } = capture();
+    const under = host({ BRAND_APP_NAME: "Front Desk" });
+    await send(provider, alert({ locale: "en", kind: "minutes", threshold: "80", used: "8", included: "10", overage: "off" }), under);
+    await send(provider, alert({ locale: "en", kind: "minutes", threshold: "100", used: "10", included: "10", overage: "on", capped: "yes" }), under);
+    await send(provider, alert({ locale: "en", kind: "chats", threshold: "80", used: "40", included: "50", overage: "on" }), under);
+    await send(provider, alert({ locale: "en", kind: "chats", threshold: "100", used: "50", included: "50", overage: "off" }), under);
+    expect(sent(0)).toMatchObject({ subject: "Harbor Dental used 80% of its package's minutes", replyTo: "support@example.test" });
+    expect(sent(0).text).toBe(["Hi Ana,", "", "Harbor Dental used 8 of the 10 minutes in its package for October.", "", "Its overage is off, so once they run out, calls forward to its transfer number or the owner's phone until next month.", "", `Turn on its overage on the Businesses page: ${url}`, "", "LobbyStack"].join("\n"));
+    expect(sent(1).subject).toBe("Harbor Dental used all of its package's minutes");
+    expect(sent(1).text).toContain("Harbor Dental used all 10 minutes in its package for October.\n\nIts receptionist keeps answering calls until its overage reaches the monthly cap you set, and you bill the business for each extra minute.");
+    expect(sent(1).text).toContain(`Change its overage on the Businesses page: ${url}`);
+    expect(sent(2).subject).toBe("Harbor Dental used 80% of its package's website chats");
+    expect(sent(2).text).toContain("Past them, its website chat keeps replying, and you bill the business for each extra chat.");
+    expect(sent(3).text).toContain("Its overage is off, so its website chat stops replying until next month.");
+    for (let index = 0; index < 4; index++) expect(sent(index).text).not.toMatch(/Front Desk|\$/);
+  });
+
+  it("writes every alert in the reader's language", async () => {
+    const { provider, sent } = capture();
+    const cases = [["minutes", "80", "off"], ["minutes", "100", "on"], ["chats", "80", "on"], ["chats", "100", "off"]] as const;
+    const locales = ["en", "fr", "es", "sr"];
+    for (const locale of locales) {
+      for (const [kind, threshold, overage] of cases) await send(provider, alert({ locale, kind, threshold, used: "4", included: "5", overage, capped: "yes" }));
+    }
+    const emails = Array.from({ length: locales.length * cases.length }, (_, index) => sent(index));
+    expect(new Set(emails.map((email) => email.subject)).size).toBe(emails.length);
+    expect(emails.map((email) => email.subject).slice(cases.length, cases.length * 2)).toEqual([
+      "Harbor Dental a utilisé 80 % des minutes de sa formule",
+      "Harbor Dental a utilisé toutes les minutes de sa formule",
+      "Harbor Dental a utilisé 80 % des clavardages de sa formule",
+      "Harbor Dental a utilisé tous les clavardages de sa formule",
+    ]);
+    expect(emails[cases.length * 2 + 1]!.text).toContain("El negocio sigue contestando llamadas hasta el límite mensual que usted fijó, y usted le cobra cada minuto adicional.");
+    expect(emails[cases.length * 3 + 2]!.text).toContain("Kada ih potroši, čet na sajtu firme će nastaviti da odgovara do mesečnog limita koji ste postavili, a Vi ćete joj naplatiti svaki dodatni čet.");
+    for (const [index, email] of emails.entries()) {
+      const locale = locales[Math.floor(index / cases.length)]!;
+      expect(email.text.startsWith({ en: "Hi Ana,", fr: "Bonjour Ana,", es: "Hola, Ana:", sr: "Zdravo, Ana," }[locale]!)).toBe(true);
+      expect(email.text).toContain(url);
+      expect(email.text).not.toMatch(/undefined|—/);
+    }
+  });
+});
+
 describe("a partner's pool alert", () => {
   const url = "https://app.example.test/partner/p-1/billing";
   const alert = (variables: Record<string, string>) => ({ template: "partner_pool_alert" as const, to: "owner@acme.example.test", variables: { firstName: "Ana", partnerName: "Acme Reception", month: "October", url, ...variables } });

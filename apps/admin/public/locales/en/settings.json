@@ -238,7 +238,10 @@
       },
       "unavailable": "Usage data is unavailable.",
       "customAllowance": "{{used}} {{unit}} used · Custom allowance",
-      "noLimit": "{{used}} {{unit}} used · No limit"
+      "noLimit": "{{used}} {{unit}} used · No limit",
+      "extraTitle": "Extra usage",
+      "extraOnDescription": "Your receptionist keeps answering past your allowance, and {{appName}} bills you for the extra minutes and chats.",
+      "extraOffDescription": "Extra usage is off. {{appName}} bills you for the extra minutes and chats you used before it went off."
     },
     "spendingCap": {
       "title": "Monthly spending cap",

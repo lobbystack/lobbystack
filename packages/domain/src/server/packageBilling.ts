@@ -1,10 +1,10 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import { and, eq, sql } from "drizzle-orm";
 
 import { auditLogs, billingAccounts, businesses, businessInvitations, enqueueOutbox, partnerMembers, partnerPackages, partnerStripeAccounts, providerEvents, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import type { StripeConnectEvent, StripeConnectProvider, StripeConnectSubscription } from "@lobbystack/providers";
-import { hasLivePackageSubscription, isUuid, packageSubscriptionStatus, type PackageSubscriptionStatus, type PartnerRole } from "@lobbystack/shared";
+import { hasLivePackageSubscription, isPackageOverageAmount, isUuid, packageOverageIn, packageSubscriptionStatus, type PackageOverage, type PackageSubscriptionStatus, type PartnerRole } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
 import { AuthorizationError, requireTeamMembership } from "../authz";
@@ -22,10 +22,14 @@ import { recordProductEventInTransaction } from "./productEvents";
 // Stripe Connect, context.stripeConnect is absent and every partner business
 // is billed outside LobbyStack.
 
-/** What a partner's business is sold, as the console's Businesses page shows owners and admins. */
+/**
+ * What a partner's business is sold, as the console's Businesses page shows
+ * owners and admins: its package, whether it pays, and its overage, in the
+ * package's currency.
+ */
 export type PartnerBusinessBilling =
   | { kind: "outside" }
-  | { kind: "package"; packageId: string; packageName: string; status: PackageSubscriptionStatus };
+  | { kind: "package"; packageId: string; packageName: string; status: PackageSubscriptionStatus; overage: PackageOverage };
 
 /**
  * A package as the business paying for it sees it: what it includes each
@@ -281,6 +285,64 @@ export async function setPartnerBusinessBilling(context: DomainContext, actor: P
   return billing ?? { kind: "outside" };
 }
 
+/** What setPartnerBusinessOverage takes, as the console sends it: the values are checked here. */
+export type PartnerBusinessOverageInput = { businessId: string; enabled: unknown; voiceMinuteRateMinor: unknown; chatRateMinor: unknown; capMinor: unknown };
+
+/**
+ * Sets one of the partner's businesses' overage on its package: on or off,
+ * what each minute and chat past the package's allowance costs, and the
+ * monthly cap on what that comes to, or null for none, each a whole number
+ * of the package currency's smallest unit. With overage on, the business
+ * keeps answering past its allowance while its overage stays under the cap
+ * and the partner's pool has room. With it off or at the cap, calls forward
+ * and chat shows its "can't reply" message, as when the pool runs out. Rates
+ * and the cap stay when overage goes off, so turning it on again restores
+ * them. A business billed outside LobbyStack has no overage, since nothing
+ * bills it there. Owners and admins can, and the business's audit log
+ * records each change.
+ */
+export async function setPartnerBusinessOverage(context: DomainContext, actor: PartnerActor, input: PartnerBusinessOverageInput): Promise<PartnerBusinessBilling> {
+  if (actor.kind !== "member") throw new AuthorizationError("Platform keys can't change a business's overage.");
+  if (typeof input.enabled !== "boolean") throw failure("enabled must be true or false.", 400, "invalid_overage");
+  if (!isPackageOverageAmount(input.voiceMinuteRateMinor) || !isPackageOverageAmount(input.chatRateMinor)) {
+    throw failure("Enter each rate as a whole number of the currency's smallest unit, from 0 to 99,999,999.", 400, "invalid_overage_rate");
+  }
+  if (input.capMinor !== null && !isPackageOverageAmount(input.capMinor)) {
+    throw failure("Enter the cap as a whole number of the currency's smallest unit, up to 99,999,999, or null for no cap.", 400, "invalid_overage_cap");
+  }
+  if (!context.stripeConnect) throw notConfigured();
+  const terms = { enabled: input.enabled, voiceMinuteRateMinor: input.voiceMinuteRateMinor, chatRateMinor: input.chatRateMinor, capMinor: input.capMinor };
+  await withBusinessTransaction(context.db, { userId: actor.userId, actorType: "operator" }, async (tx) => {
+    if (await readRole(tx, actor) === "member") throw new AuthorizationError("Only owners and admins can change a business's overage.");
+    if (await businessPartner(tx, input.businessId) !== actor.partnerId.toLowerCase()) throw businessNotFound();
+  });
+  await withBusinessTransaction(context.db, { userId: actor.userId, businessId: input.businessId, actorType: "system" }, async (tx) => {
+    // Releasing the business and changing its package take this lock too, so neither moves under the change.
+    await lockBusinessBillingAccount(tx, input.businessId);
+    if (await businessPartner(tx, input.businessId) !== actor.partnerId.toLowerCase()) throw businessNotFound();
+    const account = await readAccount(tx, input.businessId);
+    const [pkg] = account?.packageId ? await tx.select({ currency: partnerPackages.currency }).from(partnerPackages).where(eq(partnerPackages.id, account.packageId)).limit(1) : [];
+    if (!account || !pkg) throw billedOutside();
+    const currency = pkg.currency.toUpperCase();
+    const before = packageOverageIn(currency, { enabled: account.overageEnabled, currency: account.overageCurrency, voiceMinuteRateMinor: account.overageVoiceMinuteRateMinor, chatRateMinor: account.overageChatRateMinor, capMinor: account.overageCapMinor });
+    const changed = before.enabled !== terms.enabled || before.voiceMinuteRateMinor !== terms.voiceMinuteRateMinor || before.chatRateMinor !== terms.chatRateMinor || before.capMinor !== terms.capMinor || account.overageCurrency !== currency;
+    if (!changed) return;
+    await tx.update(billingAccounts).set({
+      overageEnabled: terms.enabled,
+      overageCurrency: currency,
+      overageVoiceMinuteRateMinor: terms.voiceMinuteRateMinor,
+      overageChatRateMinor: terms.chatRateMinor,
+      overageCapMinor: terms.capMinor,
+      updatedAt: new Date(),
+    }).where(eq(billingAccounts.businessId, input.businessId));
+    await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: actor.userId, eventType: "partner.business_overage_changed", entityType: "business", entityId: input.businessId, payload: { partnerId: actor.partnerId, currency, ...terms } });
+    // The business's usage page shows whether it can still answer, which this changes.
+    await enqueueOutbox(tx, { topic: "realtime.publish", businessId: input.businessId, aggregateType: "billing_account", aggregateId: input.businessId, dedupeKey: `billing:${input.businessId}:overage:${randomUUID()}`, payload: { type: "billing.updated", entityId: input.businessId } });
+  });
+  const billing = (await withBusinessTransaction(context.db, { userId: actor.userId, actorType: "operator" }, async (tx) => await listPartnerBusinessBillingIn(tx, actor.partnerId))).get(input.businessId);
+  return billing ?? { kind: "outside" };
+}
+
 /**
  * What each of the partner's businesses is sold, and whether it pays, by
  * business. Only an owner or admin acting as themselves gets any; members
@@ -288,11 +350,28 @@ export async function setPartnerBusinessBilling(context: DomainContext, actor: P
  * outside LobbyStack, which the caller shows when it has no client.
  */
 export async function listPartnerBusinessBillingIn(tx: DatabaseTransaction, partnerId: string): Promise<Map<string, PartnerBusinessBilling>> {
-  const rows = await tx.execute<{ businessId: string; packageId: string | null; packageName: string | null; subscriptionState: string | null }>(
-    sql`select business_id as "businessId", package_id as "packageId", package_name as "packageName", subscription_state as "subscriptionState" from app.list_partner_business_billing(${partnerId}::uuid)`,
-  );
-  return new Map(rows.rows.map((row) => [row.businessId, row.packageId && row.packageName
-    ? { kind: "package", packageId: row.packageId, packageName: row.packageName, status: packageSubscriptionStatus(row.subscriptionState) }
+  const rows = await tx.execute<{
+    businessId: string;
+    packageId: string | null;
+    packageName: string | null;
+    packageCurrency: string | null;
+    subscriptionState: string | null;
+    overageEnabled: boolean | null;
+    overageCurrency: string | null;
+    voiceMinuteRateMinor: number | null;
+    chatRateMinor: number | null;
+    capMinor: number | null;
+  }>(sql`select business_id as "businessId", package_id as "packageId", package_name as "packageName", package_currency as "packageCurrency", subscription_state as "subscriptionState",
+    overage_enabled as "overageEnabled", overage_currency as "overageCurrency", overage_voice_minute_rate_minor as "voiceMinuteRateMinor", overage_chat_rate_minor as "chatRateMinor", overage_cap_minor as "capMinor"
+    from app.list_partner_business_billing(${partnerId}::uuid)`);
+  return new Map(rows.rows.map((row) => [row.businessId, row.packageId && row.packageName && row.packageCurrency
+    ? {
+      kind: "package",
+      packageId: row.packageId,
+      packageName: row.packageName,
+      status: packageSubscriptionStatus(row.subscriptionState),
+      overage: packageOverageIn(row.packageCurrency, { enabled: row.overageEnabled === true, currency: row.overageCurrency, voiceMinuteRateMinor: Number(row.voiceMinuteRateMinor ?? 0), chatRateMinor: Number(row.chatRateMinor ?? 0), capMinor: row.capMinor === null ? null : Number(row.capMinor) }),
+    }
     : { kind: "outside" }]));
 }
 

@@ -9,8 +9,9 @@ import { queueDailyOperatorSummaries, queueOnboardingFollowupEmail } from "@lobb
 import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning, numberProvisioningLeaseEndsAt } from "@lobbystack/domain";
 import { brandForEmail, businessExists, businessGetsHostEmails, forgetCachedBrands, loadNumberReleaseEmail, type Brand } from "@lobbystack/domain";
 import { advancePartnerLifecycles, claimPartnerCheckoutRequest, keepPartnerTrialNumber, loadPartnerCheckoutRequest, loadPoolUsageEvent, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerCheckoutLeaseEndsAt, PartnerLifecycleError, reconcilePartnerTier, settlePartnerNumberCharges } from "@lobbystack/domain";
-import { checkPartnerCustomDomains, provisionPartnerCustomDomain, removePartnerCustomHostname } from "@lobbystack/domain";
+import { checkPartnerCustomDomains, provisionPartnerCustomDomain, removePartnerCustomHostname, syncBusinessOverage } from "@lobbystack/domain";
 import { FakeCustomHostnames, FakeTxtRecords } from "@lobbystack/providers/customHostnames/fakeCustomHostnames";
+import { FakeStripeConnect } from "@lobbystack/providers/stripe/fakeStripeConnect";
 import { SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
 
 vi.mock("@lobbystack/domain", async (importOriginal) => {
@@ -38,6 +39,8 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
     loadBillingUsageEvent: vi.fn(),
     // Usage draws on no partner's pool unless a test says otherwise.
     loadPoolUsageEvent: vi.fn(async () => null),
+    // Nor owes a partner's Stripe for a business's overage.
+    syncBusinessOverage: vi.fn(async () => "none"),
     loadPendingProductEvents: vi.fn(),
     markBillingUsageSynced: vi.fn(),
     markBillingCheckoutCreated: vi.fn(),
@@ -73,6 +76,7 @@ afterEach(() => {
   // Back to the real brand lookup, with nothing cached, for the next test.
   vi.mocked(brandForEmail).mockReset();
   vi.mocked(loadPoolUsageEvent).mockResolvedValue(null);
+  vi.mocked(syncBusinessOverage).mockResolvedValue("none");
   forgetCachedBrands();
 });
 
@@ -294,6 +298,30 @@ describe("worker handlers", () => {
     await send({ template: "operator_alert", to: "owner@example.test", subject: "Missed call", variables: { message: "Call back +14165550100." }, brand: { kind: "business", businessId }, replyTo: null });
     expect(sendTemplate).toHaveBeenCalledWith(expect.objectContaining({ template: "operator_alert", to: "owner@example.test" }));
   });
+  it("sends a business's allowance alert to its owner under its partner's name, on its partner's domain, and none once the business is gone", async () => {
+    const businessId = randomUUID();
+    vi.mocked(brandForEmail).mockResolvedValue({ kind: "partner", partnerId: "partner-1", name: "Bright Desk", logoUrl: null, faviconUrl: null, color: null, origin: "https://bright.example.test", links: { website: null, terms: null, privacy: null, support: null }, email: { fromName: "Bright Desk", fromAddress: "no-reply@bright.example.test", replyTo: "help@bright.example.test" } });
+    const sendMail = vi.fn().mockResolvedValue({ messageId: "provider-id" });
+    const email = new SmtpEmailProvider({ host: "localhost", port: 1025, secure: false, username: "", password: "", from: "LobbyStack <no-reply@example.test>" }, { sendMail } as never);
+    // The payload queueBusinessAllowanceAlertsInTransaction queues when a call takes the business to 80% of its minutes.
+    const variables = { locale: "en", firstName: "Mia", businessName: "Cedar Clinic", kind: "minutes", threshold: "80", used: "8", included: "10", overage: "on", capped: "", month: "October", url: "https://app.example.test/settings/usage" };
+    const send = () => handleJob({ jobId: randomUUID(), businessId, type: "email.send", queue: "default", payload: { template: "business_allowance_alert", to: "mia@cedar.example.test", variables, brand: { kind: "business", businessId }, replyTo: null }, trace: {}, idempotencyKey: randomUUID(), scheduled: false }, { domain: { db: undefined as never }, email });
+    await expect(send()).resolves.toEqual({ status: "completed" });
+    expect(brandForEmail).toHaveBeenCalledWith(expect.anything(), { kind: "business", businessId });
+    expect(sendMail.mock.lastCall?.[0]).toMatchObject({
+      to: "mia@cedar.example.test",
+      from: '"Bright Desk" <no-reply@bright.example.test>',
+      replyTo: "help@bright.example.test",
+      subject: "Cedar Clinic used 80% of this month's minutes",
+      text: ["Hi Mia,", "", "Cedar Clinic used 8 of its 10 minutes for October.", "", "Past them, your receptionist keeps answering calls, and Bright Desk bills you for each extra minute.", "", "See your usage: https://bright.example.test/settings/usage", "", "Bright Desk"].join("\n"),
+    });
+
+    // A business deleted after it queued the alert has nobody left to tell.
+    vi.mocked(businessExists).mockResolvedValueOnce(false);
+    sendMail.mockClear();
+    await expect(send()).resolves.toEqual({ status: "skipped", entityId: businessId });
+    expect(sendMail).not.toHaveBeenCalled();
+  });
   it("sends a partner's pool alert to its owner under the host's name, though a partner's business queued it, even one deleted since", async () => {
     vi.stubEnv("APP_BASE_URL", "https://app.example.test");
     vi.stubEnv("EMAIL_REPLY_TO", "support@example.test");
@@ -321,6 +349,33 @@ describe("worker handlers", () => {
       "LobbyStack",
     ].join("\n"));
     expect(businessExists).not.toHaveBeenCalled();
+    vi.mocked(businessGetsHostEmails).mockResolvedValue(true);
+  });
+  it("sends a partner's owner one business's allowance alert under the host's name, on the host's domain, and none once the business is gone", async () => {
+    vi.stubEnv("APP_BASE_URL", "https://app.example.test");
+    vi.stubEnv("EMAIL_REPLY_TO", "support@example.test");
+    const businessId = randomUUID();
+    const partnerId = randomUUID();
+    vi.mocked(businessGetsHostEmails).mockResolvedValue(false);
+    const sendMail = vi.fn().mockResolvedValue({ messageId: "provider-id" });
+    const email = new SmtpEmailProvider({ host: "localhost", port: 1025, secure: false, username: "", password: "", from: "LobbyStack <no-reply@example.test>" }, { sendMail } as never);
+    // The payload queueBusinessAllowanceAlertsInTransaction queues for the partner when a call takes Cedar to all its minutes.
+    const variables = { locale: "en", firstName: "Ana", businessName: "Cedar Clinic", kind: "minutes", threshold: "100", used: "10", included: "10", overage: "on", capped: "yes", month: "October", url: `https://app.example.test/partner/${partnerId}/businesses` };
+    const send = () => handleJob({ jobId: randomUUID(), businessId, type: "email.send", queue: "default", payload: { template: "partner_business_allowance_alert", to: "ana@acme.example.test", variables, brand: { kind: "host" }, replyTo: null }, trace: {}, idempotencyKey: randomUUID(), scheduled: false }, { domain: { db: savedBranding("Saved Desk") }, email });
+    await expect(send()).resolves.toEqual({ status: "completed" });
+    expect(sendMail.mock.lastCall?.[0]).toMatchObject({
+      to: "ana@acme.example.test",
+      from: "LobbyStack <no-reply@example.test>",
+      replyTo: "support@example.test",
+      subject: "Cedar Clinic used all of its package's minutes",
+      text: ["Hi Ana,", "", "Cedar Clinic used all 10 minutes in its package for October.", "", "Its receptionist keeps answering calls until its overage reaches the monthly cap you set, and you bill the business for each extra minute.", "", `Change its overage on the Businesses page: https://app.example.test/partner/${partnerId}/businesses`, "", "LobbyStack"].join("\n"),
+    });
+
+    // The alert is about the business, so once the business is deleted there's nothing left to tell its partner.
+    vi.mocked(businessExists).mockResolvedValueOnce(false);
+    sendMail.mockClear();
+    await expect(send()).resolves.toEqual({ status: "skipped", entityId: businessId });
+    expect(sendMail).not.toHaveBeenCalled();
     vi.mocked(businessGetsHostEmails).mockResolvedValue(true);
   });
   it("reconciles an owned Twilio number and puts it on the SIP trunk", async () => {
@@ -1286,6 +1341,72 @@ describe("worker handlers", () => {
     }, { domain });
 
     expect(recordProductEvent).not.toHaveBeenCalled();
+  });
+
+  it("reports a business's overage to its partner's Stripe beside what the event owes Polar, and without Polar at all", async () => {
+    const job = billingJob({ usageEventId: randomUUID() });
+    const domain = { db: undefined as never, stripeConnect: new FakeStripeConnect() };
+    vi.mocked(syncBusinessOverage).mockResolvedValue("synced");
+
+    // A deployment with Stripe Connect and no Polar still reports it.
+    expect(await handleJob(job, { domain })).toEqual({ status: "completed", entityId: job.payload.usageEventId });
+    expect(syncBusinessOverage).toHaveBeenCalledWith(domain, { businessId: job.businessId, usageEventId: job.payload.usageEventId });
+
+    // The same call can owe the partner's pool overage to Polar, which goes out in the same job.
+    const partnerId = randomUUID();
+    vi.mocked(loadPoolUsageEvent).mockResolvedValue({ id: String(job.payload.usageEventId), businessId: job.businessId!, usageKind: "voice_seconds", isFinal: true, syncStatus: "pending", createdAt: new Date("2026-10-20T15:00:00.000Z"), partnerId, overageQuantity: 600, overageCents: 200, customerId: "polar-partner-customer" });
+    vi.mocked(markBillingUsageSynced).mockResolvedValue(true);
+    const recordUsage = vi.fn().mockResolvedValue(undefined);
+    expect(await handleJob(job, { domain, polar: { recordUsage } })).toEqual({ status: "completed", entityId: job.payload.usageEventId });
+    expect(recordUsage).toHaveBeenCalledWith(expect.objectContaining({ eventName: "billing.partner_pool_voice_overage", externalCustomerId: `partner:${partnerId}`, quantity: 200 }));
+
+    // Without Stripe Connect there's no Stripe half at all.
+    vi.mocked(syncBusinessOverage).mockClear();
+    vi.mocked(loadPoolUsageEvent).mockResolvedValue(null);
+    vi.mocked(loadBillingUsageEvent).mockResolvedValue(null);
+    expect(await handleJob(job, { domain: { db: undefined as never }, polar: { recordUsage } })).toEqual({ status: "skipped", entityId: job.payload.usageEventId });
+    expect(syncBusinessOverage).not.toHaveBeenCalled();
+
+    // Overage no subscription can bill is skipped.
+    vi.mocked(syncBusinessOverage).mockResolvedValue("skipped");
+    expect(await handleJob(job, { domain })).toEqual({ status: "skipped", entityId: job.payload.usageEventId });
+  });
+
+  it("emits ops.billing.usage_sync_failed for Stripe when the partner's Stripe refuses a business's overage, and fails for a retry", async () => {
+    const job = billingJob({ usageEventId: randomUUID() });
+    const domain = { db: undefined as never, stripeConnect: new FakeStripeConnect() };
+    const error = Object.assign(new Error("Stripe is unavailable."), { type: "StripeConnectionError" });
+    vi.mocked(syncBusinessOverage).mockRejectedValue(error);
+    // The same call also put usage past the partner's pool, which the host bills through Polar.
+    const partnerId = randomUUID();
+    vi.mocked(loadPoolUsageEvent).mockResolvedValue({ id: String(job.payload.usageEventId), businessId: job.businessId!, usageKind: "voice_seconds", isFinal: true, syncStatus: "pending", createdAt: new Date("2026-10-20T15:00:00.000Z"), partnerId, overageQuantity: 600, overageCents: 200, customerId: "polar-partner-customer" });
+    vi.mocked(markBillingUsageSynced).mockResolvedValue(true);
+    const recordUsage = vi.fn().mockResolvedValue(undefined);
+
+    await expect(handleJob(job, { domain, polar: { recordUsage } })).rejects.toThrow(error);
+    expect(recordProductEvent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      name: "ops.billing.usage_sync_failed",
+      businessId: job.businessId,
+      properties: { provider: "stripe" },
+    }));
+    // Polar's half still goes out, so a Stripe that keeps failing never holds back the host's own bill.
+    expect(recordUsage).toHaveBeenCalledWith(expect.objectContaining({ eventName: "billing.partner_pool_voice_overage", externalCustomerId: `partner:${partnerId}`, quantity: 200, idempotencyKey: `partner-pool:${job.payload.usageEventId}` }));
+    expect(markBillingUsageSynced).toHaveBeenCalledWith(expect.anything(), { businessId: job.businessId, usageEventId: job.payload.usageEventId });
+    expect(recordProductEvent).not.toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ name: "ops.billing.usage_sync_failed", properties: { provider: "polar" } }));
+  });
+
+  it("still fails for a retry when Polar refuses a usage event the partner's Stripe took, and tries Stripe whatever Polar does", async () => {
+    const job = billingJob({ usageEventId: randomUUID() });
+    const domain = { db: undefined as never, stripeConnect: new FakeStripeConnect() };
+    vi.mocked(syncBusinessOverage).mockResolvedValue("synced");
+    const partnerId = randomUUID();
+    vi.mocked(loadPoolUsageEvent).mockResolvedValue({ id: String(job.payload.usageEventId), businessId: job.businessId!, usageKind: "chat_ai_tokens", isFinal: true, syncStatus: "pending", createdAt: new Date("2026-10-20T15:00:00.000Z"), partnerId, overageQuantity: 1, overageCents: 2, customerId: "polar-partner-customer" });
+    const error = new Error("Polar is unavailable.");
+    const recordUsage = vi.fn().mockRejectedValue(error);
+
+    await expect(handleJob(job, { domain, polar: { recordUsage } })).rejects.toThrow(error);
+    expect(syncBusinessOverage).toHaveBeenCalledWith(domain, { businessId: job.businessId, usageEventId: job.payload.usageEventId });
+    expect(recordProductEvent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ name: "ops.billing.usage_sync_failed", properties: { provider: "polar" } }));
   });
 
   it("emits ops.billing.usage_sync_failed without fabricating a recovery event", async () => {

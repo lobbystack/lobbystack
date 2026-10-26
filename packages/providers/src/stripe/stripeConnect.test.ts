@@ -2,7 +2,7 @@ import Stripe from "stripe";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { FakeStripeConnect } from "./fakeStripeConnect";
-import { createStripeConnectProvider, StripeConnectAdapter, stripeUnitAmount } from "./stripeConnect";
+import { createStripeConnectProvider, overageMeterValue, overageUnitAmount, StripeConnectAdapter, stripeUnitAmount } from "./stripeConnect";
 
 // The adapter talks to Stripe through a fetch that answers here, so these
 // tests see each request it sends, headers included, and never reach Stripe.
@@ -213,6 +213,124 @@ describe("the Stripe Connect adapter", () => {
     expect(signed("account.updated", stripeAccount).subscriptionId).toBeNull();
   });
 
+  it("bills a business's overage on its subscription: the account's meter and price, made the first time, and an item for the price", async () => {
+    const { adapter, sent } = stripeAnswering((request) => {
+      if (request.path === "/v1/subscriptions/sub_1") return { id: "sub_1", object: "subscription", currency: "cad", items: { object: "list", data: [{ id: "si_monthly", price: { id: "price_monthly", recurring: { interval: "month", meter: null } } }], has_more: false } };
+      if (request.path === "/v1/billing/meters" && request.method === "GET") return { object: "list", data: [{ id: "mtr_partner", object: "billing.meter", event_name: "partner_own_meter", status: "active" }], has_more: false, url: "/v1/billing/meters" };
+      if (request.path === "/v1/billing/meters") return { id: "mtr_calls", object: "billing.meter", event_name: "lobbystack_call_overage", status: "active" };
+      if (request.path === "/v1/prices" && request.method === "GET") return { object: "list", data: [], has_more: false, url: "/v1/prices" };
+      if (request.path === "/v1/prices") return { id: "price_calls", object: "price" };
+      return { id: "si_calls", object: "subscription_item" };
+    });
+
+    expect(await adapter.addOverageToSubscription("acct_partner", { subscriptionId: "sub_1", meter: "voice", currency: "CAD" })).toEqual({ subscriptionItemId: "si_calls" });
+    // Everything happens on the partner's own account.
+    expect(sent.map((request) => [request.method, request.path, request.headers.get("stripe-account"), request.headers.get("idempotency-key")])).toEqual([
+      ["GET", "/v1/subscriptions/sub_1", "acct_partner", null],
+      ["GET", "/v1/billing/meters", "acct_partner", null],
+      ["POST", "/v1/billing/meters", "acct_partner", "overage-meter:voice"],
+      ["GET", "/v1/prices", "acct_partner", null],
+      ["POST", "/v1/prices", "acct_partner", "overage-price:voice:CAD"],
+      ["POST", "/v1/subscription_items", "acct_partner", "overage-item:sub_1:voice"],
+    ]);
+    // The meter sums what the overage costs, by the customer each event names.
+    expect(Object.fromEntries(sent[2]!.params)).toEqual({
+      display_name: "Call overage",
+      event_name: "lobbystack_call_overage",
+      "default_aggregation[formula]": "sum",
+      "customer_mapping[type]": "by_id",
+      "customer_mapping[event_payload_key]": "stripe_customer_id",
+      "value_settings[event_payload_key]": "value",
+    });
+    // The lookup key finds the price whether or not the partner archived it.
+    expect(Object.fromEntries(sent[3]!.params)).toEqual({ "lookup_keys[0]": "lobbystack_voice_overage_cad", limit: "1", "expand[0]": "data.product" });
+    // Its price charges one dollar for each dollar the meter counts, each month.
+    expect(Object.fromEntries(sent[4]!.params)).toEqual({
+      currency: "cad",
+      unit_amount: "100",
+      "recurring[interval]": "month",
+      "recurring[usage_type]": "metered",
+      "recurring[meter]": "mtr_calls",
+      "product_data[name]": "Call overage",
+      "product_data[metadata][lobbystack_overage]": "voice",
+      lookup_key: "lobbystack_voice_overage_cad",
+      "metadata[lobbystack_overage]": "voice",
+    });
+    expect(Object.fromEntries(sent[5]!.params)).toEqual({ subscription: "sub_1", price: "price_calls", proration_behavior: "none" });
+  });
+
+  it("finds the meter, price and item it made before, and counts a meter the partner deactivated again", async () => {
+    const meters = { object: "list", data: [{ id: "mtr_chats", object: "billing.meter", event_name: "lobbystack_chat_overage", status: "inactive" }], has_more: false, url: "/v1/billing/meters" };
+    const billed = stripeAnswering((request) => request.path === "/v1/subscriptions/sub_1"
+      ? { id: "sub_1", object: "subscription", currency: "jpy", items: { object: "list", data: [{ id: "si_chats", price: { id: "price_chats", recurring: { interval: "month", meter: "mtr_chats" } } }], has_more: false } }
+      : request.path === "/v1/billing/meters" ? meters : { id: "mtr_chats", object: "billing.meter", status: "active" });
+    expect(await billed.adapter.addOverageToSubscription("acct_partner", { subscriptionId: "sub_1", meter: "chat", currency: "JPY" })).toEqual({ subscriptionItemId: "si_chats" });
+    expect(billed.sent.map((request) => [request.method, request.path])).toEqual([["GET", "/v1/subscriptions/sub_1"], ["GET", "/v1/billing/meters"], ["POST", "/v1/billing/meters/mtr_chats/reactivate"]]);
+
+    // Another subscription on the same account gets the price the first one made.
+    const another = stripeAnswering((request) => {
+      if (request.path === "/v1/subscriptions/sub_2") return { id: "sub_2", object: "subscription", currency: "jpy", items: { object: "list", data: [], has_more: false } };
+      if (request.path === "/v1/billing/meters") return { ...meters, data: [{ ...meters.data[0], status: "active" }] };
+      if (request.path === "/v1/prices") return { object: "list", data: [{ id: "price_chats", object: "price", active: true, product: { id: "prod_chats", object: "product", active: true } }], has_more: false, url: "/v1/prices" };
+      return { id: "si_new", object: "subscription_item" };
+    });
+    expect(await another.adapter.addOverageToSubscription("acct_partner", { subscriptionId: "sub_2", meter: "chat", currency: "JPY" })).toEqual({ subscriptionItemId: "si_new" });
+    expect(another.sent.map((request) => [request.method, request.path])).toEqual([["GET", "/v1/subscriptions/sub_2"], ["GET", "/v1/billing/meters"], ["GET", "/v1/prices"], ["POST", "/v1/subscription_items"]]);
+    expect(Object.fromEntries(another.sent[3]!.params)).toEqual({ subscription: "sub_2", price: "price_chats", proration_behavior: "none" });
+  });
+
+  it("puts a price and product the partner archived back on sale, rather than make a price its lookup key can't name", async () => {
+    const { adapter, sent } = stripeAnswering((request) => {
+      if (request.path === "/v1/subscriptions/sub_3") return { id: "sub_3", object: "subscription", currency: "cad", items: { object: "list", data: [], has_more: false } };
+      if (request.path === "/v1/billing/meters") return { object: "list", data: [{ id: "mtr_calls", object: "billing.meter", event_name: "lobbystack_call_overage", status: "active" }], has_more: false, url: "/v1/billing/meters" };
+      if (request.path === "/v1/prices" && request.method === "GET") return { object: "list", data: [{ id: "price_calls", object: "price", active: false, product: { id: "prod_calls", object: "product", active: false } }], has_more: false, url: "/v1/prices" };
+      if (request.path === "/v1/products/prod_calls") return { id: "prod_calls", object: "product", active: true };
+      if (request.path === "/v1/prices/price_calls") return { id: "price_calls", object: "price", active: true };
+      return { id: "si_calls", object: "subscription_item" };
+    });
+    expect(await adapter.addOverageToSubscription("acct_partner", { subscriptionId: "sub_3", meter: "voice", currency: "CAD" })).toEqual({ subscriptionItemId: "si_calls" });
+    expect(sent.map((request) => [request.method, request.path, request.headers.get("stripe-account")])).toEqual([
+      ["GET", "/v1/subscriptions/sub_3", "acct_partner"],
+      ["GET", "/v1/billing/meters", "acct_partner"],
+      ["GET", "/v1/prices", "acct_partner"],
+      ["POST", "/v1/products/prod_calls", "acct_partner"],
+      ["POST", "/v1/prices/price_calls", "acct_partner"],
+      ["POST", "/v1/subscription_items", "acct_partner"],
+    ]);
+    expect(Object.fromEntries(sent[3]!.params)).toEqual({ active: "true" });
+    expect(Object.fromEntries(sent[4]!.params)).toEqual({ active: "true" });
+    expect(Object.fromEntries(sent[5]!.params)).toEqual({ subscription: "sub_3", price: "price_calls", proration_behavior: "none" });
+  });
+
+  it("refuses to bill overage in another currency than the subscription's", async () => {
+    const { adapter, sent } = stripeAnswering(() => ({ id: "sub_1", object: "subscription", currency: "usd", items: { object: "list", data: [], has_more: false } }));
+    await expect(adapter.addOverageToSubscription("acct_partner", { subscriptionId: "sub_1", meter: "voice", currency: "CAD" })).rejects.toMatchObject({ code: "currency_mismatch" });
+    expect(sent).toHaveLength(1);
+  });
+
+  it("reports overage as a meter event on the partner's account, under its identifier, in the currency's major unit", async () => {
+    const { adapter, sent } = stripeAnswering(() => ({ object: "billing.meter_event", identifier: "voice:call-1" }));
+    await adapter.reportOverage("acct_partner", { identifier: "voice:call-1", customerId: "cus_1", meter: "voice", amountMinor: 1_237.5, currency: "CAD" });
+    const [request] = sent;
+    expect(request).toMatchObject({ method: "POST", path: "/v1/billing/meter_events" });
+    expect(request!.headers.get("stripe-account")).toBe("acct_partner");
+    expect(request!.headers.get("idempotency-key")).toBe("overage-report:voice:call-1");
+    expect(Object.fromEntries(request!.params)).toEqual({ event_name: "lobbystack_call_overage", identifier: "voice:call-1", "payload[stripe_customer_id]": "cus_1", "payload[value]": "12.375" });
+
+    await adapter.reportOverage("acct_partner", { identifier: "chat:conversation-1", customerId: "cus_1", meter: "chat", amountMinor: 20, currency: "JPY" });
+    expect(Object.fromEntries(sent[1]!.params)).toMatchObject({ event_name: "lobbystack_chat_overage", "payload[value]": "20" });
+  });
+
+  it("takes a report Stripe already counted as sent, and lets any other refusal through for a retry", async () => {
+    const refusing = (code: string) => {
+      const fetchFn = vi.fn(async () => Response.json({ error: { type: "invalid_request_error", code, message: "A meter event with this identifier was already submitted." } }, { status: 400 }));
+      return new StripeConnectAdapter({ secretKey: "sk_test_platform", webhookSecret, httpClient: Stripe.createFetchHttpClient(fetchFn as typeof fetch) });
+    };
+    const report = { identifier: "voice:call-1", customerId: "cus_1", meter: "voice" as const, amountMinor: 100, currency: "USD" };
+    await expect(refusing("duplicate_meter_event").reportOverage("acct_partner", report)).resolves.toBeUndefined();
+    await expect(refusing("resource_missing").reportOverage("acct_partner", report)).rejects.toMatchObject({ code: "resource_missing" });
+  });
+
   it("refuses a live key in a certification run", () => {
     vi.stubEnv("LOBBYSTACK_CERTIFICATION_MODE", "true");
     expect(() => new StripeConnectAdapter({ secretKey: "sk_live_platform", webhookSecret })).toThrow("CERTIFICATION_REQUIRES_BILLING_SANDBOX");
@@ -241,6 +359,18 @@ describe("Stripe amounts", () => {
     expect(stripeUnitAmount(5000, "UGX")).toBe(500_000);
     expect(stripeUnitAmount(500_000, "MGA")).toBe(5000);
     expect(() => stripeUnitAmount(500_050, "MGA")).toThrow(/whole units/);
+  });
+
+  it("counts overage in the currency's major unit, whose price is one major unit", () => {
+    expect(overageMeterValue(1_237.5, "USD")).toBe("12.375");
+    expect(overageMeterValue(1_200, "USD")).toBe("12");
+    expect(overageMeterValue(-50, "EUR")).toBe("-0.5");
+    expect(overageMeterValue(250, "JPY")).toBe("250");
+    expect(overageMeterValue(1_234, "KWD")).toBe("1.234");
+    // A third of a cent keeps four places past the cent.
+    expect(overageMeterValue(1 / 3, "USD")).toBe("0.003333");
+    expect(overageMeterValue(1e-9, "USD")).toBe("0");
+    expect([overageUnitAmount("USD"), overageUnitAmount("JPY"), overageUnitAmount("KWD"), overageUnitAmount("ISK"), overageUnitAmount("MGA")]).toEqual([100, 1, 1_000, 100, 1]);
   });
 });
 
@@ -275,6 +405,40 @@ describe("the fake Stripe", () => {
     expect(await stripe.cancelSubscription(accountId, subscription.subscriptionId)).toMatchObject({ subscriptionId: subscription.subscriptionId, status: "canceled" });
     expect(await stripe.cancelSubscription(accountId, subscription.subscriptionId)).toMatchObject({ status: "canceled" });
     expect(await stripe.retrieveSubscription(accountId, subscription.subscriptionId)).toMatchObject({ status: "canceled" });
+  });
+
+  it("bills overage a subscription has an item for, and counts each identifier once", async () => {
+    const stripe = new FakeStripeConnect();
+    const { accountId } = await stripe.createOnboardingLink({ accountId: null, country: "US", idempotencyKey: "key", returnUrl: "https://desk.test/r", refreshUrl: "https://desk.test/f", metadata: {} });
+    const prices = await stripe.upsertPackagePrice(accountId, { packageId: "pkg1", name: "Front desk", currency: "USD", monthlyPriceMinor: 4900, setupFeeMinor: null, active: true, prices: null });
+    const checkout = await stripe.createCheckout(accountId, { priceId: prices.priceId, setupPriceId: null, customerId: null, customerEmail: null, successUrl: "https://a.test/s", cancelUrl: "https://a.test/c", idempotencyKey: "first", clientReferenceId: "b1", metadata: {} });
+    const subscription = stripe.completeCheckout(checkout.sessionId);
+    const report = { identifier: "voice:call-1", customerId: subscription.customerId, meter: "voice" as const, amountMinor: 1_237.5, currency: "USD" };
+
+    // No meter yet, so no report lands.
+    await expect(stripe.reportOverage(accountId, report)).rejects.toMatchObject({ statusCode: 400 });
+    await expect(stripe.addOverageToSubscription(accountId, { subscriptionId: subscription.subscriptionId, meter: "voice", currency: "EUR" })).rejects.toMatchObject({ code: "currency_mismatch" });
+    const item = await stripe.addOverageToSubscription(accountId, { subscriptionId: subscription.subscriptionId, meter: "voice", currency: "USD" });
+    expect(await stripe.addOverageToSubscription(accountId, { subscriptionId: subscription.subscriptionId, meter: "voice", currency: "USD" })).toEqual(item);
+
+    await stripe.reportOverage(accountId, report);
+    await stripe.reportOverage(accountId, report);
+    await stripe.reportOverage(accountId, { ...report, identifier: "voice:call-1:2", amountMinor: -37.5 });
+    expect(stripe.meterEvents.map((event) => [event.identifier, event.value])).toEqual([["voice:call-1", "12.375"], ["voice:call-1:2", "-0.375"]]);
+    expect(stripe.overageBilled(accountId, subscription.customerId, "voice")).toBe(1_200);
+    // Chats have no item on the subscription, so nothing bills them.
+    expect(stripe.overageBilled(accountId, subscription.customerId, "chat")).toBe(0);
+
+    // The partner archives the call overage price in its Dashboard: the next subscription puts it back on sale, and makes no second one.
+    const [priceId, price] = [...stripe.prices].find(([, candidate]) => candidate.meterId !== undefined)!;
+    stripe.prices.set(priceId, { ...price, active: false });
+    stripe.products.set(price.productId, { ...stripe.products.get(price.productId)!, active: false });
+    const again = await stripe.createCheckout(accountId, { priceId: prices.priceId, setupPriceId: null, customerId: null, customerEmail: null, successUrl: "https://a.test/s", cancelUrl: "https://a.test/c", idempotencyKey: "second", clientReferenceId: "b2", metadata: {} });
+    const second = stripe.completeCheckout(again.sessionId);
+    await stripe.addOverageToSubscription(accountId, { subscriptionId: second.subscriptionId, meter: "voice", currency: "USD" });
+    expect([...stripe.prices.values()].filter((candidate) => candidate.meterId !== undefined)).toEqual([{ ...price, active: true }]);
+    expect(stripe.products.get(price.productId)).toMatchObject({ active: true });
+    expect(stripe.subscriptions.get(second.subscriptionId)!.items.map((entry) => entry.priceId)).toContain(priceId);
   });
 
   it("signs deliveries only its own verifier accepts", () => {

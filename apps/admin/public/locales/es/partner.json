@@ -160,6 +160,34 @@
         "notConfigured": "Este panel todavía no puede vender paquetes.",
         "failed": "No pudimos cambiar la facturación del negocio. Inténtelo de nuevo."
       }
+    },
+    "overage": {
+      "change": "Cambiar",
+      "changeFor": "Cambiar el excedente de {{name}}",
+      "summary": {
+        "off": "Sin excedente",
+        "noCap": "Excedente sin límite",
+        "cap": "Excedente de hasta {{cap}} al mes"
+      },
+      "title": "Excedente de {{name}}",
+      "description": "Elija si el negocio sigue respondiendo pasado lo que incluye {{packageName}}, y lo que le cobra por los minutos y chats de más.",
+      "toggle": "Permitir excedente",
+      "onHint": "Pasado su paquete, el negocio sigue respondiendo hasta que su excedente llega a su límite. Entonces las llamadas se desvían y el chat del sitio deja de responder. Sus facturas de Stripe muestran el costo como «Call overage» y «Chat overage», con el importe como cantidad, a 1,00 la unidad.",
+      "offHint": "El negocio se detiene en los minutos y chats de su paquete. Entonces las llamadas se desvían a su número de transferencia o al teléfono de su propietario, y el chat del sitio deja de responder.",
+      "minuteRateLabel": "Cada minuto de más",
+      "chatRateLabel": "Cada chat de más",
+      "capLabel": "Límite mensual",
+      "capPlaceholder": "Sin límite",
+      "capHint": "El límite se reinicia el día 1 de cada mes (UTC), así que una factura que abarca dos meses puede cobrar hasta dos límites. Déjelo vacío para no tener límite.",
+      "submit": "Guardar",
+      "saving": "Guardando…",
+      "saved": "Guardó el excedente de {{name}}.",
+      "errors": {
+        "invalidRate": "Escriba cada tarifa como un importe en la moneda del paquete.",
+        "invalidCap": "Escriba el límite como un importe en la moneda del paquete, o déjelo vacío.",
+        "billedOutside": "Usted factura este negocio, así que no tiene excedente.",
+        "failed": "No pudimos guardar el excedente. Inténtelo de nuevo."
+      }
     }
   },
   "packages": {

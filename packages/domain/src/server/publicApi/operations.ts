@@ -356,7 +356,8 @@ async function loadBilling(tx: DatabaseTransaction, businessId: string): Promise
   const [account] = await tx.select({ source: billingAccounts.source, subscriptionState: billingAccounts.subscriptionState, billingInterval: billingAccounts.billingInterval, currentPeriodEnd: billingAccounts.currentPeriodEnd }).from(billingAccounts).where(eq(billingAccounts.businessId, businessId)).limit(1);
   const periodKey = new Date().toISOString().slice(0, 7);
   const [month] = await tx.select({ overageSpendCents: billingUsageMonths.overageSpendCents }).from(billingUsageMonths).where(and(eq(billingUsageMonths.businessId, businessId), eq(billingUsageMonths.periodKey, periodKey))).limit(1);
-  const spend = month?.overageSpendCents ?? 0;
+  // A partner's business pays its partner for overage, in its package's currency, so the host's billing shows none.
+  const spend = entitlement.source === "package" || entitlement.source === "billed_outside" ? 0 : month?.overageSpendCents ?? 0;
   // Interval, period and cap belong to a Starter or Pro subscription; an older one's values don't carry over.
   const paid = plan === "starter" || plan === "pro";
   const cap = paid ? entitlement.overage.capMinor : null;

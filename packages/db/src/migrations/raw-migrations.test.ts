@@ -52,6 +52,21 @@ describe("raw migration manifest", () => {
     expect(SCHEMA_MIGRATIONS.indexOf("0119_messages_sent_by_user_index.sql")).toBeLessThan(SCHEMA_MIGRATIONS.indexOf("0120_validate_messages_sent_by_user.sql"));
   });
 
+  it("adds the business overage checks without reading every billing account or usage event under a lock, then validates them", () => {
+    const overage = readFileSync(`${migrationsDirectory}/0155_business_overage.sql`, "utf8");
+    const stripe = readFileSync(`${migrationsDirectory}/0156_business_overage_stripe.sql`, "utf8");
+    const validate = readFileSync(`${migrationsDirectory}/0157_validate_business_overage.sql`, "utf8");
+    // A check written inline on ADD COLUMN reads the whole table under the lock that blocks it.
+    for (const file of [overage, stripe]) expect(file).not.toMatch(/ADD COLUMN[^\n]*CHECK/);
+    for (const name of ["billing_accounts_overage_rates_check", "billing_accounts_overage_currency_check"]) {
+      expect(overage).toMatch(new RegExp(`ADD CONSTRAINT ${name} CHECK [^\n]* NOT VALID;`));
+      expect(validate).toContain(`VALIDATE CONSTRAINT ${name};`);
+    }
+    expect(stripe).toMatch(/ADD CONSTRAINT billing_usage_events_stripe_overage_reports_check CHECK [^\n]* NOT VALID;/);
+    expect(validate).toContain("VALIDATE CONSTRAINT billing_usage_events_stripe_overage_reports_check;");
+    expect(SCHEMA_MIGRATIONS.indexOf("0156_business_overage_stripe.sql")).toBeLessThan(SCHEMA_MIGRATIONS.indexOf("0157_validate_business_overage.sql"));
+  });
+
   it("recognizes only validated concurrent-index migration directives", () => {
     expect(concurrentIndexName("-- lobbystack:concurrent-index product_events_business_sent_idx\nCREATE INDEX CONCURRENTLY ..."))
       .toBe("product_events_business_sent_idx");

@@ -74,6 +74,15 @@ export function isPackageAmount(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= PARTNER_PACKAGE_AMOUNT_MAX_MINOR;
 }
 
+/**
+ * Whether a value is an overage rate or a monthly overage cap a business can
+ * have: a whole number of the currency's smallest unit, from 0 to
+ * 99,999,999. A rate of 0 makes usage past the allowance cost nothing.
+ */
+export function isPackageOverageAmount(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= PARTNER_PACKAGE_AMOUNT_MAX_MINOR;
+}
+
 /** Whether a value is a monthly allowance of minutes or chats: a whole number from 0 to 1,000,000. */
 export function isPackageAllowance(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= PARTNER_PACKAGE_ALLOWANCE_MAX;

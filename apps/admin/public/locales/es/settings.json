@@ -238,7 +238,10 @@
       },
       "unavailable": "Los datos de uso no están disponibles.",
       "customAllowance": "{{used}} {{unit}} usados · Volumen personalizado",
-      "noLimit": "{{used}} {{unit}} usados · Sin límite"
+      "noLimit": "{{used}} {{unit}} usados · Sin límite",
+      "extraTitle": "Uso adicional",
+      "extraOnDescription": "Su recepcionista sigue contestando después de su volumen incluido, y {{appName}} le cobra los minutos y chats adicionales.",
+      "extraOffDescription": "El uso adicional está desactivado. {{appName}} le cobra los minutos y chats adicionales que usó antes de que se desactivara."
     },
     "spendingCap": {
       "title": "Límite de gasto mensual",

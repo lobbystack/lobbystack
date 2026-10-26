@@ -185,7 +185,8 @@ describe.skipIf(!client)("usage in the console and in the business", () => {
       // The business's dashboard shows its usage against loadEntitlement's allowance: none while it's billed outside LobbyStack.
       const dashboard = (userId: string, businessId: string) => asOperator(tx, { userId, businessId }, async (inner) => await readAllowanceUsageInTransaction(inner, { businessId, now }));
       const resetsAt = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toISOString();
-      expect(await dashboard(harborOwner!.userId, harbor)).toEqual({ periodKey, resetsAt, voiceSeconds: { used: 750, included: null, blocked: false }, chats: { used: 2, included: null, blocked: false } });
+      // Billed outside LobbyStack, Harbor has no package, so no overage either.
+      expect(await dashboard(harborOwner!.userId, harbor)).toEqual({ periodKey, resetsAt, voiceSeconds: { used: 750, included: null, blocked: false }, chats: { used: 2, included: null, blocked: false }, overage: null });
       // Row-level security shows the partner's member none of it before an open, and all of it after.
       expect((await dashboard(acme.member.userId, harbor)).voiceSeconds.used).toBe(0);
       await openPartnerBusiness(acme.context, { userId: acme.member.userId, businessId: harbor });
