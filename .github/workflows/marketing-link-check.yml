@@ -46,6 +46,8 @@ jobs:
           done
           echo "Marketing snapshot server failed to start"
           exit 1
+      # airagent.fr/tarifs/ has returned 404 since October 2026, though AirAgent's own homepage
+      # still links to it. Remove its exclusion once the page is back or the blog post links elsewhere.
       - uses: lycheeverse/lychee-action@v2
         with:
           args: >-
@@ -76,6 +78,7 @@ jobs:
             --exclude '^https://www\.bloomberg\.com/'
             --exclude '^https://www\.twilio\.com/'
             --exclude '^https://www\.ftc\.gov/'
+            --exclude '^https://airagent\.fr/tarifs/$'
             './apps/admin/src/marketing/**/*.tsx'
             './apps/admin/content/**/*.md'
             './apps/admin/content/llms.txt'
