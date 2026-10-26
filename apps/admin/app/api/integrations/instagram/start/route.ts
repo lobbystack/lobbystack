@@ -15,5 +15,6 @@ export const GET = operatorRoute(async ({ request, userId, businessId, transacti
   if (!rate.allowed) return jsonError("Too many Instagram authorization attempts. Please try again later.", rate.status, "instagram_oauth_rate_limited");
   const state = createInstagramOAuthState({ userId, businessId });
   await storeInstagramOAuthState(state);
-  return NextResponse.json({ url: instagramProvider().buildAuthorizationUrl({ state }) });
+  const forceReauth = new URL(request.url).searchParams.get("switch") === "1";
+  return NextResponse.json({ url: instagramProvider().buildAuthorizationUrl({ state, forceReauth }) });
 });

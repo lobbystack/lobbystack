@@ -15,6 +15,12 @@ describe("Instagram provider", () => {
     expect(url.searchParams.get("scope")).toBe("instagram_business_basic,instagram_business_manage_messages");
     expect(url.searchParams.get("state")).toBe("state-1");
     expect(url.searchParams.get("response_type")).toBe("code");
+    expect(url.searchParams.has("force_reauth")).toBe(false);
+  });
+
+  it("asks Instagram to log in again when switching accounts", () => {
+    const url = new URL(provider.buildAuthorizationUrl({ state: "state-1", forceReauth: true }));
+    expect(url.searchParams.get("force_reauth")).toBe("true");
   });
 
   it("exchanges the code for a long-lived token", async () => {

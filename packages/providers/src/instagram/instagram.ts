@@ -83,13 +83,15 @@ export function verifyInstagramWebhookSignature(rawBody: string, signatureHeader
 export class InstagramProvider {
   constructor(private readonly config: InstagramConfig) {}
 
-  buildAuthorizationUrl(input: { state: string }): string {
+  buildAuthorizationUrl(input: { state: string; forceReauth?: boolean }): string {
     const url = new URL("https://www.instagram.com/oauth/authorize");
     url.searchParams.set("client_id", this.config.appId);
     url.searchParams.set("redirect_uri", this.config.redirectUri);
     url.searchParams.set("response_type", "code");
     url.searchParams.set("scope", INSTAGRAM_SCOPES.join(","));
     url.searchParams.set("enable_fb_login", "false");
+    // Asks for a login again instead of reusing the Instagram account signed in to the browser.
+    if (input.forceReauth) url.searchParams.set("force_reauth", "true");
     url.searchParams.set("state", input.state);
     return url.toString();
   }
