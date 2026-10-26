@@ -2,21 +2,23 @@ import { createHash, randomUUID } from "node:crypto";
 
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { auditLogs, billingAccounts, businesses, businessTemplates, calls, createDatabaseClient, onboardingNumberClaimEvents, outboxMessages, partnerLifecycleEvents, partnerLifecycles, partnerPackages, partnerStripeAccounts, phoneNumbers, prospectDemos, receptionistProfiles, storageObjects, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { auditLogs, billingAccounts, businesses, businessTemplates, calls, createDatabaseClient, onboardingNumberClaimEvents, outboxMessages, partnerLifecycleEvents, partnerLifecycles, partnerPackages, partnerStripeAccounts, partnerUsageMonths, phoneNumbers, prospectDemos, receptionistProfiles, storageObjects, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { PROSPECT_DEMO_WIDGET_ID } from "@lobbystack/shared";
 import { FakeStripeConnect } from "@lobbystack/providers/stripe/fakeStripeConnect";
 
-import { getWidgetChatAllowance, reserveWidgetChatUsageInTransaction } from "./billing";
+import { getWebVoiceBillingAllowance, getWidgetChatAllowance, reserveWebVoiceUsageInTransaction, reserveWidgetChatUsageInTransaction } from "./billing";
 import { forgetCachedBrands } from "./brands";
 import type { DomainContext } from "./context";
 import { createPartnerDemo } from "./demos";
 import { loadEntitlement } from "./entitlement";
-import { startLivePhoneCall } from "./liveCalls";
+import { startLivePhoneCall, startLiveWebCall } from "./liveCalls";
 import { resolveNumberFallback } from "./numberTrials";
 import { reconcilePartnerTier, recordPartnerPolarEvent } from "./partnerBilling";
 import { advancePartnerLifecycles, getPartnerLifecycle, loadPartnerLifecycleInTransaction, PartnerLifecycleError, type PartnerStanding } from "./partnerLifecycle";
 import { acceptPartnerInvitation, createPartnerBusiness, deletePartnerBusiness, hashPartnerToken, invitePartnerMember, listPartnerBusinesses, releaseBusiness, signUpPartner, type PartnerMemberActor } from "./partners";
 import { acceptInvitation } from "./tenancy";
-import { reserveUsageInTransaction } from "./usage";
+import { POOL_ALERT_AGGREGATE } from "./partnerPoolAlerts";
+import { correctUsageInTransaction, periodKeyFor, reserveUsageInTransaction } from "./usage";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
 const testUrl = process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL;
@@ -507,6 +509,79 @@ describe.skipIf(!client)("a paused partner's businesses", () => {
         widget: expect.objectContaining({ allowed: false, errorCode: "chat_ai_limit_reached" }),
         sqlLive: false,
       });
+    });
+  });
+});
+
+describe.skipIf(!client)("a paused partner's pool", () => {
+  // The Polar products a host sells tiers with. With all six set, the deployment bills tiers and the partner's pool has limits.
+  const sellTiers = () => {
+    for (const tier of ["STARTER", "GROWTH", "SCALE"]) for (const interval of ["MONTHLY", "ANNUAL"]) vi.stubEnv(`POLAR_PARTNER_${tier}_${interval}_PRODUCT_ID`, `prod_${tier.toLowerCase()}_${interval.toLowerCase()}`);
+  };
+
+  /** The pool's counts this month, read as the migrator. */
+  const poolMonth = async (tx: DatabaseTransaction, partnerId: string) => (await asMigrator(tx, async () => await tx.select({ voiceSecondsUsed: partnerUsageMonths.voiceSecondsUsed, voiceSecondsFinal: partnerUsageMonths.voiceSecondsFinal, chatsUsed: partnerUsageMonths.chatsUsed, alertsSent: partnerUsageMonths.alertsSent }).from(partnerUsageMonths).where(and(eq(partnerUsageMonths.partnerId, partnerId), eq(partnerUsageMonths.periodKey, periodKeyFor())))))[0];
+
+  /** The pool alerts queued for the partner's people, whichever business's outbox carries them. */
+  const poolAlerts = async (tx: DatabaseTransaction, partnerId: string) => await asMigrator(tx, async () => await tx.select({ businessId: outboxMessages.businessId, payload: outboxMessages.payload }).from(outboxMessages).where(and(eq(outboxMessages.aggregateType, POOL_ALERT_AGGREGATE), eq(outboxMessages.aggregateId, partnerId), eq(outboxMessages.topic, "email.send"))));
+
+  it("stops its businesses' calls, browser calls and chats whatever the pool has left, and takes nothing from it", async () => {
+    await rollbackTest(async (tx) => {
+      sellTiers();
+      const acme = await partner(tx, "Acme Reception");
+      const harbor = await business(tx, acme, "Harbor Dental");
+      const demo = await createPartnerDemo(acme.context, acme.memberActor, { name: `Pier Dental ${randomUUID().slice(0, 8)}`, websiteUrl: "https://example.com" });
+      const worker = { db: tx as unknown as Database };
+      const demoCall = async () => await asWorker(tx, async () => await startLiveWebCall(worker, { businessId: demo.businessId, sessionId: `live_${randomUUID()}`, widgetId: PROSPECT_DEMO_WIDGET_ID, billable: true, maxDurationMs: 120_000, sessionPurpose: "prospect_demo", prospectDemoId: demo.demoId }));
+      const failed = ago(2);
+      await deliver(tx, acme.partnerId, "subscription.active", { status: "active", modifiedAt: ago(40) });
+      await deliver(tx, acme.partnerId, "subscription.past_due", { status: "past_due", modifiedAt: failed });
+
+      // While the businesses answer, their calls and chats draw on Growth's pool, demo calls included.
+      expect(await answers(tx, harbor.businessId)).toMatchObject({ call: { allowed: true, quantity: 300 }, chat: { allowed: true } });
+      expect(await demoCall()).toMatchObject({ maxDurationMs: 120_000 });
+      const before = await poolMonth(tx, acme.partnerId);
+      expect(before).toMatchObject({ voiceSecondsUsed: 420, chatsUsed: 1 });
+
+      // 30 days after the failed payment they pause. Polar still retries, so Growth stays in force: its pool keeps nearly all of its 1,300 minutes, with overage on and no cap.
+      expect(await clock(tx, after(failed, 30))).toBe(1);
+      expect(await answers(tx, harbor.businessId)).toMatchObject({
+        entitlement: { live: false, allowance: { voiceSeconds: 0, chats: 0 } },
+        call: { allowed: false, errorCode: "voice_limit_reached" },
+        chat: { allowed: false, errorCode: "chat_ai_limit_reached" },
+        widget: { allowed: false, errorCode: "chat_ai_limit_reached" },
+        sqlLive: false,
+      });
+      // A browser call gets nothing either: the widget offers none, and one that starts anyway reserves none.
+      expect(await asWorker(tx, async () => await getWebVoiceBillingAllowance(worker, { businessId: harbor.businessId }))).toMatchObject({ allowed: false, errorCode: "voice_limit_reached" });
+      expect(await asWorker(tx, async () => await withBusinessTransaction(worker.db, { businessId: harbor.businessId, actorType: "worker" }, async (inner) => await reserveWebVoiceUsageInTransaction(inner, { businessId: harbor.businessId, callId: randomUUID() })))).toMatchObject({ allowed: false, errorCode: "voice_limit_reached" });
+      // The demo's billable call is refused like any of the partner's businesses' calls.
+      expect(await refusal(demoCall())).toMatchObject({ status: 402, code: "voice_limit_reached" });
+      // None of them moved the pool.
+      expect(await poolMonth(tx, acme.partnerId)).toEqual(before);
+    });
+  });
+
+  it("keeps the month's counts with the partner when the host deletes its businesses, and the alerts their usage queued", async () => {
+    await rollbackTest(async (tx) => {
+      sellTiers();
+      const acme = await partner(tx, "Acme Reception");
+      const harbor = await business(tx, acme, "Harbor Dental");
+      const ended = ago(1);
+      await endTier(tx, acme.partnerId, ended);
+
+      // On Free's pool of 1,800 seconds, a 1,500-second call crosses 80% of its minutes, which queues an email to the partner's owner in Harbor's outbox.
+      await asWorker(tx, async () => await withBusinessTransaction(tx as unknown as Database, { businessId: harbor.businessId, actorType: "worker" }, async (inner) => await correctUsageInTransaction(inner, { businessId: harbor.businessId, sourceKey: `voice:${randomUUID()}`, usageKind: "voice_seconds", quantity: 1_500 })));
+      expect(await poolAlerts(tx, acme.partnerId)).toEqual([{ businessId: harbor.businessId, payload: expect.objectContaining({ template: "partner_pool_alert", to: acme.owner.email }) }]);
+
+      expect(await hour(tx, after(ended, 30))).toEqual({ moved: 1, deleted: 0, waiting: 0 });
+      expect(await hour(tx, after(ended, 90))).toEqual({ moved: 1, deleted: 1, waiting: 0 });
+      expect(await existing(tx, [harbor.businessId])).toEqual([]);
+
+      // The pool's month is the partner's, so it keeps what Harbor used and the alert it sent.
+      expect(await poolMonth(tx, acme.partnerId)).toMatchObject({ voiceSecondsUsed: 1_500, voiceSecondsFinal: 1_500, alertsSent: { "minutes:80:1800": expect.any(String) } });
+      // The alert's email is for the partner's people, so it stays queued with no business, and the worker sends it as it sends any pool alert.
+      expect(await poolAlerts(tx, acme.partnerId)).toEqual([{ businessId: null, payload: expect.objectContaining({ template: "partner_pool_alert", to: acme.owner.email }) }]);
     });
   });
 });

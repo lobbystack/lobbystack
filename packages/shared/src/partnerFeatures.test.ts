@@ -8,7 +8,7 @@ const tierProducts = Object.fromEntries(["STARTER", "GROWTH", "SCALE"].flatMap((
 
 describe("partner features", () => {
   it("turns nothing on but signup when nothing is configured", () => {
-    expect(partnerFeatures({})).toEqual({ enabled: true, signup: "open", baseDomain: null, stripeConnect: false, tierBilling: false, customDomains: null });
+    expect(partnerFeatures({})).toEqual({ enabled: true, signup: "open", baseDomain: null, stripeConnect: false, tierBilling: false, customDomains: null, maxSimultaneousCalls: 30 });
   });
 
   it("keeps signup on invitations on the cloud and open elsewhere, unless PARTNER_SIGNUP says otherwise", () => {

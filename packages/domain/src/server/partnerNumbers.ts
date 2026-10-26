@@ -1,8 +1,9 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, ne, sql } from "drizzle-orm";
 
-import { businesses, partnerNumberCharges, partnerTierBilling, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { businesses, partnerNumberCharges, partnerTierBilling, prospectDemos, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 
 import type { DomainContext } from "./context";
+import { loadEntitlement } from "./entitlement";
 
 // A partner's tier sets how many phone numbers its businesses hold between
 // them. While the deployment bills tiers, on the cloud or self-hosted, the
@@ -27,6 +28,8 @@ export type PartnerNumberStanding = {
   paidTier: boolean;
   /** Whether this deployment counts the partner's numbers against its tier at all, which it does only while it bills tiers. */
   counted: boolean;
+  /** Whether the partner still has its one 14-day trial number: on Free, with no trial yet, ever. */
+  trialAvailable: boolean;
 };
 
 /**
@@ -35,9 +38,9 @@ export type PartnerNumberStanding = {
  * operator on the partner's team.
  */
 export async function loadPartnerNumberStanding(tx: DatabaseTransaction, partnerId: string): Promise<PartnerNumberStanding> {
-  const [row] = (await tx.execute<{ held: number; included: number; paid_tier: boolean; counted: boolean }>(sql`select held, included, paid_tier, counted from app.partner_number_standing(${partnerId}::uuid)`)).rows;
+  const [row] = (await tx.execute<{ held: number; included: number; paid_tier: boolean; counted: boolean; trial_available: boolean }>(sql`select held, included, paid_tier, counted, trial_available from app.partner_number_standing(${partnerId}::uuid)`)).rows;
   if (!row) throw new Error("The partner's numbers can't be read from this transaction.");
-  return { held: Number(row.held), included: Number(row.included), paidTier: row.paid_tier, counted: row.counted };
+  return { held: Number(row.held), included: Number(row.included), paidTier: row.paid_tier, counted: row.counted, trialAvailable: row.trial_available };
 }
 
 /**
@@ -52,16 +55,41 @@ export function newPartnerNumberRefusal(standing: PartnerNumberStanding, deploym
 }
 
 /**
+ * Whether a partner's business on this deployment gets its partner's one
+ * 14-day trial number instead of the new number its tier doesn't include: a
+ * partner on Free that hasn't had its trial, on the cloud while the
+ * deployment bills tiers, as the claim check in migration 0154 decides.
+ */
+export function partnerTrialOffered(standing: PartnerNumberStanding, deploymentMode: string): boolean {
+  return standing.counted && deploymentMode === "cloud" && !standing.paidTier && standing.trialAvailable && newPartnerNumberRefusal(standing, deploymentMode) === "partner_number_limit_reached";
+}
+
+/**
+ * Whether the business is a partner's demo nobody claimed yet. Such a demo
+ * expires, so the partner's one trial number never goes to it: the trial
+ * would be spent on a business nobody keeps. The claim check in migration
+ * 0154 refuses the same.
+ */
+export async function unclaimedPartnerDemoInTransaction(tx: DatabaseTransaction, businessId: string): Promise<boolean> {
+  const [demo] = await tx.select({ id: prospectDemos.id }).from(prospectDemos).where(and(eq(prospectDemos.businessId, businessId), ne(prospectDemos.status, "claimed"))).limit(1);
+  return Boolean(demo);
+}
+
+/**
  * Whether a partner's business can get a new number now, for the dashboard's
  * phone settings, which a partner's business reaches without the billing
- * capability. Null for a direct business, whose plan decides. The number
- * search and the claim check the same.
+ * capability, and whether that number is its partner's trial. The trial goes
+ * only to a business that's live, so never to one paused with its partner's
+ * other businesses, and never to a demo nobody claimed. Null for a direct
+ * business, whose plan decides. The number search and the claim check the
+ * same.
  */
-export async function partnerNumberAvailabilityInTransaction(tx: DatabaseTransaction, businessId: string): Promise<{ available: boolean } | null> {
+export async function partnerNumberAvailabilityInTransaction(tx: DatabaseTransaction, businessId: string): Promise<{ available: boolean; trial: boolean } | null> {
   const [business] = await tx.select({ partnerId: businesses.partnerId, deploymentMode: businesses.deploymentMode }).from(businesses).where(eq(businesses.id, businessId)).limit(1);
   if (!business?.partnerId) return null;
   const standing = await loadPartnerNumberStanding(tx, business.partnerId);
-  return { available: newPartnerNumberRefusal(standing, business.deploymentMode) === null };
+  const trial = partnerTrialOffered(standing, business.deploymentMode) && (await loadEntitlement(tx, businessId)).live && !await unclaimedPartnerDemoInTransaction(tx, businessId);
+  return { available: trial || newPartnerNumberRefusal(standing, business.deploymentMode) === null, trial };
 }
 
 /**

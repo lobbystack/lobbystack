@@ -630,6 +630,7 @@
       "numbers_many": "{{count}} numéros de téléphone",
       "numbers_other": "{{count}} numéros de téléphone",
       "noNumbers": "Aucun numéro de téléphone",
+      "trialNumber": "1 numéro d'essai pendant 14 jours",
       "extraNumbers": "Numéros supplémentaires au prix coûtant",
       "overage": "Chaque minute supplémentaire coûte {{minute}}, et chaque clavardage supplémentaire {{chat}}",
       "noOverage": "Aucune minute ni aucun clavardage au-delà"
@@ -645,6 +646,39 @@
       "extra_one": "Numéros de téléphone utilisés : {{held}}. Vous payez {{count}} numéro supplémentaire au prix coûtant chaque mois.",
       "extra_many": "Numéros de téléphone utilisés : {{held}}. Vous payez {{count}} numéros supplémentaires au prix coûtant chaque mois.",
       "extra_other": "Numéros de téléphone utilisés : {{held}}. Vous payez {{count}} numéros supplémentaires au prix coûtant chaque mois."
+    },
+    "trial": {
+      "available": "Le propriétaire d'une de vos entreprises peut demander votre numéro d'essai de 14 jours dans les paramètres de numéro de téléphone de cette entreprise, une fois son mobile vérifié.",
+      "used": "Vous avez utilisé votre numéro d'essai de 14 jours."
+    },
+    "pool": {
+      "title": "Ce mois-ci",
+      "description": "Les minutes et les clavardages que vos entreprises ont pris dans votre réserve commune. Votre réserve repart à zéro le {{resetsAt}}.",
+      "minutes": "Minutes",
+      "chats": "Clavardages"
+    },
+    "overage": {
+      "title": "Dépassement",
+      "description": "Au-delà de votre réserve, vos entreprises continuent de répondre aux tarifs de dépassement de votre palier. Si le dépassement est désactivé ou atteint votre plafond, les appels vont au numéro de transfert de chaque entreprise ou au téléphone de son propriétaire, et le clavardage du site cesse de répondre.",
+      "toggle": "Autoriser le dépassement",
+      "free": "Le palier Gratuit n'a pas de dépassement. Vos entreprises s'arrêtent à la réserve jusqu'à ce que vous choisissiez un palier payant.",
+      "off": "Le dépassement est désactivé. Vos entreprises s'arrêtent à la réserve chaque mois.",
+      "noCap": "Aucun plafond",
+      "spend": "Dépassement ce mois-ci",
+      "spendNoCap": "{{spend}} ce mois-ci",
+      "spendOfCap": "{{spend}} sur {{cap}}",
+      "capReached": "Vous avez atteint votre plafond. Les appels sont transférés et le clavardage ne répond plus jusqu'au mois prochain ou jusqu'à ce que vous releviez le plafond.",
+      "capLabel": "Plafond mensuel",
+      "capPlaceholder": "50,00",
+      "saveCap": "Fixer le plafond",
+      "updateCap": "Modifier le plafond",
+      "removeCap": "Retirer le plafond",
+      "capSaved": "Plafond enregistré.",
+      "capRemoved": "Plafond retiré.",
+      "turnedOn": "Dépassement activé.",
+      "turnedOff": "Dépassement désactivé.",
+      "saveFailed": "Impossible d'enregistrer. Réessayez.",
+      "invalidAmount": "Saisissez un montant en dollars, comme 50 ou 50,00."
     },
     "choose": {
       "title": "Choisir un palier",

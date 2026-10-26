@@ -8,7 +8,7 @@ import { billingCheckoutLeaseEndsAt, claimBillingCheckoutRequest, countPublishab
 import { queueDailyOperatorSummaries, queueOnboardingFollowupEmail } from "@lobbystack/domain";
 import { claimNumberProvisioning, completeNumberProvisioning, failNumberProvisioning, numberProvisioningLeaseEndsAt } from "@lobbystack/domain";
 import { brandForEmail, businessExists, businessGetsHostEmails, forgetCachedBrands, loadNumberReleaseEmail, type Brand } from "@lobbystack/domain";
-import { advancePartnerLifecycles, claimPartnerCheckoutRequest, loadPartnerCheckoutRequest, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerCheckoutLeaseEndsAt, PartnerLifecycleError, reconcilePartnerTier, settlePartnerNumberCharges } from "@lobbystack/domain";
+import { advancePartnerLifecycles, claimPartnerCheckoutRequest, keepPartnerTrialNumber, loadPartnerCheckoutRequest, loadPoolUsageEvent, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerCheckoutLeaseEndsAt, PartnerLifecycleError, reconcilePartnerTier, settlePartnerNumberCharges } from "@lobbystack/domain";
 import { checkPartnerCustomDomains, provisionPartnerCustomDomain, removePartnerCustomHostname } from "@lobbystack/domain";
 import { FakeCustomHostnames, FakeTxtRecords } from "@lobbystack/providers/customHostnames/fakeCustomHostnames";
 import { SmtpEmailProvider } from "@lobbystack/providers/email/smtp";
@@ -25,6 +25,7 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
     markPartnerCheckoutFailed: vi.fn(),
     partnerCheckoutLeaseEndsAt: vi.fn(),
     reconcilePartnerTier: vi.fn(),
+    keepPartnerTrialNumber: vi.fn(async () => false),
     settlePartnerNumberCharges: vi.fn(),
     advancePartnerLifecycles: vi.fn(),
     provisionPartnerCustomDomain: vi.fn(),
@@ -35,6 +36,8 @@ vi.mock("@lobbystack/domain", async (importOriginal) => {
     generateAffiliatePayoutRun: vi.fn(),
     loadBillingCheckoutRequest: vi.fn(),
     loadBillingUsageEvent: vi.fn(),
+    // Usage draws on no partner's pool unless a test says otherwise.
+    loadPoolUsageEvent: vi.fn(async () => null),
     loadPendingProductEvents: vi.fn(),
     markBillingUsageSynced: vi.fn(),
     markBillingCheckoutCreated: vi.fn(),
@@ -69,6 +72,7 @@ afterEach(() => {
   vi.unstubAllEnvs();
   // Back to the real brand lookup, with nothing cached, for the next test.
   vi.mocked(brandForEmail).mockReset();
+  vi.mocked(loadPoolUsageEvent).mockResolvedValue(null);
   forgetCachedBrands();
 });
 
@@ -289,6 +293,35 @@ describe("worker handlers", () => {
     expect(sendTemplate).not.toHaveBeenCalled();
     await send({ template: "operator_alert", to: "owner@example.test", subject: "Missed call", variables: { message: "Call back +14165550100." }, brand: { kind: "business", businessId }, replyTo: null });
     expect(sendTemplate).toHaveBeenCalledWith(expect.objectContaining({ template: "operator_alert", to: "owner@example.test" }));
+  });
+  it("sends a partner's pool alert to its owner under the host's name, though a partner's business queued it, even one deleted since", async () => {
+    vi.stubEnv("APP_BASE_URL", "https://app.example.test");
+    vi.stubEnv("EMAIL_REPLY_TO", "support@example.test");
+    const businessId = randomUUID();
+    const partnerId = randomUUID();
+    vi.mocked(businessGetsHostEmails).mockResolvedValue(false);
+    const sendMail = vi.fn().mockResolvedValue({ messageId: "provider-id" });
+    const email = new SmtpEmailProvider({ host: "localhost", port: 1025, secure: false, username: "", password: "", from: "LobbyStack <no-reply@example.test>" }, { sendMail } as never);
+    // The payload queuePartnerPoolAlertsInTransaction queues inside the business whose call crossed 80% of the pool.
+    const variables = { locale: "en", firstName: "Ana", partnerName: "Acme Reception", kind: "minutes", threshold: "80", used: "200", included: "250", overage: "on", cap: "$50.00", month: "October", url: `https://app.example.test/partner/${partnerId}/billing` };
+    // The alert is for the partner's people, so it never asks whether the business that queued it is still there.
+    vi.mocked(businessExists).mockClear();
+    await expect(handleJob({ jobId: randomUUID(), businessId, type: "email.send", queue: "default", payload: { template: "partner_pool_alert", to: "ana@acme.example.test", variables, brand: { kind: "host" }, replyTo: null }, trace: {}, idempotencyKey: randomUUID(), scheduled: false }, { domain: { db: savedBranding("Saved Desk") }, email })).resolves.toEqual({ status: "completed" });
+    const sent = sendMail.mock.lastCall?.[0];
+    expect(sent).toMatchObject({ to: "ana@acme.example.test", from: "LobbyStack <no-reply@example.test>", replyTo: "support@example.test", subject: "Your businesses used 80% of this month's minutes" });
+    expect(sent.text).toBe([
+      "Hi Ana,",
+      "",
+      "Acme Reception's businesses used 200 of the 250 minutes in your pool for October.",
+      "",
+      "Past the pool, they keep answering calls, and you pay your tier's overage rate for each extra minute, up to your $50.00 cap.",
+      "",
+      `Raise your cap or pick a bigger tier on the Billing page: https://app.example.test/partner/${partnerId}/billing`,
+      "",
+      "LobbyStack",
+    ].join("\n"));
+    expect(businessExists).not.toHaveBeenCalled();
+    vi.mocked(businessGetsHostEmails).mockResolvedValue(true);
   });
   it("reconciles an owned Twilio number and puts it on the SIP trunk", async () => {
     const businessId = randomUUID(); const claimId = randomUUID(); const phoneNumberId = randomUUID(); const domain = { db: undefined as never };
@@ -761,14 +794,18 @@ describe("worker handlers", () => {
       expect(checkouts).toEqual([]);
     });
 
-    it("reconciles a stored Polar event for the partner with no business in its context", async () => {
+    it("reconciles a stored Polar event for the partner with no business in its context, then keeps a trial number the tier now pays for", async () => {
       const providerEventId = randomUUID();
       const domain = { db: undefined as never };
       vi.mocked(reconcilePartnerTier).mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+      vi.mocked(keepPartnerTrialNumber).mockClear();
       const job: JobEnvelope = { jobId: randomUUID(), type: "billing.reconcilePartner", queue: "default", businessId: null, payload: { partnerId, providerEventId }, trace: {}, idempotencyKey: `test:${randomUUID()}`, scheduled: false };
       await expect(handleJob(job, { domain })).resolves.toEqual({ status: "completed", entityId: providerEventId });
+      expect(keepPartnerTrialNumber).toHaveBeenCalledWith(domain, { partnerId });
+      // An event that isn't the partner's changes nothing to keep.
       await expect(handleJob(job, { domain })).resolves.toEqual({ status: "skipped", entityId: providerEventId });
       expect(reconcilePartnerTier).toHaveBeenCalledWith(domain, { partnerId, providerEventId });
+      expect(keepPartnerTrialNumber).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -1003,6 +1040,61 @@ describe("worker handlers", () => {
       expect((await handleJob(job, { domain, polar: { recordUsage } })).status).toBe("skipped");
       expect(recordUsage).not.toHaveBeenCalled();
     }
+  });
+
+  it("reports only what a partner's business put past the pool, priced at the tier's rate, to the partner's Polar customer", async () => {
+    const job = billingJob({ usageEventId: randomUUID() });
+    const domain = { db: undefined as never };
+    const partnerId = randomUUID();
+    const pooled = {
+      id: String(job.payload.usageEventId),
+      businessId: job.businessId!,
+      usageKind: "voice_seconds",
+      isFinal: true,
+      syncStatus: "pending",
+      createdAt: new Date("2026-10-20T15:00:00.000Z"),
+      partnerId,
+      overageQuantity: 600,
+      overageCents: 200,
+      customerId: "polar-partner-customer",
+    };
+    vi.mocked(loadPoolUsageEvent).mockResolvedValue(pooled);
+    vi.mocked(markBillingUsageSynced).mockResolvedValue(true);
+    const recordUsage = vi.fn().mockResolvedValue(undefined);
+
+    expect(await handleJob(job, { domain, polar: { recordUsage } })).toEqual({ status: "completed", entityId: pooled.id });
+    expect(recordUsage).toHaveBeenCalledWith({
+      eventName: "billing.partner_pool_voice_overage",
+      externalCustomerId: `partner:${partnerId}`,
+      quantity: 200,
+      timestamp: "2026-10-20T15:00:00.000Z",
+      idempotencyKey: `partner-pool:${pooled.id}`,
+      businessId: job.businessId,
+      usageKind: "voice_seconds",
+    });
+    expect(markBillingUsageSynced).toHaveBeenCalledWith(domain, { businessId: job.businessId, usageEventId: pooled.id });
+    // The business's own sync never runs: it pays the host nothing.
+    expect(loadBillingUsageEvent).not.toHaveBeenCalled();
+
+    vi.mocked(loadPoolUsageEvent).mockResolvedValue({ ...pooled, usageKind: "chat_ai_tokens", overageQuantity: 1, overageCents: 1.5 });
+    await handleJob(job, { domain, polar: { recordUsage } });
+    expect(recordUsage).toHaveBeenLastCalledWith(expect.objectContaining({ eventName: "billing.partner_pool_chat_overage", quantity: 1.5, externalCustomerId: `partner:${partnerId}` }));
+
+    // Usage within the pool, a call still open, a partner Polar never billed, or an event already reported sends nothing.
+    for (const change of [{ overageCents: 0, overageQuantity: 0, syncStatus: "skipped" }, { isFinal: false }, { customerId: null }, { syncStatus: "synced" }]) {
+      recordUsage.mockClear();
+      vi.mocked(loadPoolUsageEvent).mockResolvedValue({ ...pooled, ...change });
+      expect((await handleJob(job, { domain, polar: { recordUsage } })).status).toBe(change.syncStatus === "synced" ? "completed" : "skipped");
+      expect(recordUsage).not.toHaveBeenCalled();
+    }
+
+    // When Polar refuses it, the job fails for a retry, records the failure, and leaves the event pending.
+    vi.mocked(loadPoolUsageEvent).mockResolvedValue(pooled);
+    vi.mocked(markBillingUsageSynced).mockClear();
+    const error = new Error("polar unavailable");
+    await expect(handleJob(job, { domain, polar: { recordUsage: vi.fn().mockRejectedValue(error) } })).rejects.toThrow(error);
+    expect(recordProductEvent).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ name: "ops.billing.usage_sync_failed", businessId: job.businessId, properties: { provider: "polar" } }));
+    expect(markBillingUsageSynced).not.toHaveBeenCalled();
   });
 
   it("records complete Twilio SMS pricing only for terminal messages", async () => {

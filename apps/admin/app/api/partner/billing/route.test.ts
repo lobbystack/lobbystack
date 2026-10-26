@@ -1,8 +1,8 @@
 import { beforeEach, expect, it, vi } from "vitest";
 
-const fixture = vi.hoisted(() => ({ resolve: vi.fn(), billing: vi.fn(), create: vi.fn(), read: vi.fn(), customer: vi.fn(), portal: vi.fn(), providers: [] as unknown[] }));
+const fixture = vi.hoisted(() => ({ resolve: vi.fn(), billing: vi.fn(), create: vi.fn(), read: vi.fn(), customer: vi.fn(), portal: vi.fn(), overage: vi.fn(), providers: [] as unknown[] }));
 vi.mock("@/lib/operator-request", () => import("@/lib/operator-request.fake"));
-vi.mock("@lobbystack/domain", () => ({ resolvePartnerActor: fixture.resolve, getPartnerBilling: fixture.billing, createPartnerTierCheckout: fixture.create, getPartnerTierCheckout: fixture.read, partnerBillingPortalCustomer: fixture.customer }));
+vi.mock("@lobbystack/domain", () => ({ resolvePartnerActor: fixture.resolve, getPartnerBilling: fixture.billing, createPartnerTierCheckout: fixture.create, getPartnerTierCheckout: fixture.read, partnerBillingPortalCustomer: fixture.customer, setPartnerPoolOverage: fixture.overage }));
 // Polar's customer portal, as the route calls it: it records the provider's settings and each session it opens.
 vi.mock("@lobbystack/providers", () => ({
   PolarBillingProvider: class {
@@ -14,6 +14,7 @@ vi.mock("@lobbystack/providers", () => ({
 import { resetFakeOperator } from "@/lib/operator-request.fake";
 import { GET as getBilling } from "./route";
 import { GET as getCheckout, POST as startCheckout } from "./checkout/route";
+import { POST as setOverage } from "./overage/route";
 import { POST as openPortal } from "./portal/route";
 
 const partnerId = "5b1f6c43-34a5-4a8e-9a43-6c1f8d5f1c11";
@@ -96,4 +97,20 @@ it("opens no portal when Polar isn't configured or the owner has nothing to mana
   const response = await call(openPortal, "/api/partner/billing/portal", { method: "POST", body: {} });
   expect(response.status).toBe(409);
   expect(fixture.portal).not.toHaveBeenCalled();
+});
+
+it("sets the pool's overage and cap for the person, whose role and values the partner operation checks", async () => {
+  fixture.overage.mockResolvedValue({ enabled: true, capCents: 5_000, billed: true });
+  const response = await call(setOverage, "/api/partner/billing/overage", { method: "POST", body: { enabled: true, capCents: 5_000 } });
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({ enabled: true, capCents: 5_000, billed: true });
+  expect(fixture.overage).toHaveBeenLastCalledWith(expect.anything(), actor, { enabled: true, capCents: 5_000 });
+  // No cap in the body clears it.
+  await call(setOverage, "/api/partner/billing/overage", { method: "POST", body: { enabled: false } });
+  expect(fixture.overage).toHaveBeenLastCalledWith(expect.anything(), actor, { enabled: false, capCents: null });
+
+  fixture.overage.mockRejectedValue(Object.assign(new Error("Only owners manage the partner's billing."), { status: 403, code: "owner_only" }));
+  const refused = await call(setOverage, "/api/partner/billing/overage", { method: "POST", body: { enabled: false, capCents: null } });
+  expect(refused.status).toBe(403);
+  expect(await refused.json()).toMatchObject({ code: "owner_only" });
 });

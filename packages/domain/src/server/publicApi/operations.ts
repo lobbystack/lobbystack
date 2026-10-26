@@ -507,6 +507,7 @@ const numberRefusalMessages: Record<string, string> = {
   monthly_claim_quota_reached: "Too many numbers were claimed in the last 30 days. Try again later.",
   partner_numbers_unavailable: "A partner's business can't get a phone number on this server yet.",
   partner_number_limit_reached: "This business's partner needs a paid tier for more phone numbers. Its owners choose one on the console's Billing page.",
+  partner_trial_used: "This business's partner already used its free trial number. Its owners choose a paid tier on the console's Billing page.",
 };
 
 // The claim limits know only that a window is full, so Retry-After is its length, at most a day.

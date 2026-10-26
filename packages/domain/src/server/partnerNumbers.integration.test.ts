@@ -2,13 +2,16 @@ import { createHash, randomUUID } from "node:crypto";
 
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { billingAccounts, businesses, createDatabaseClient, onboardingNumberClaimEvents, outboxMessages, partnerBillingAccounts, partnerNumberCharges, partners, partnerTierBilling, phoneNumbers, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { billingAccounts, businesses, createDatabaseClient, numberTrials, onboardingNumberClaimEvents, onboardingPhoneVerifications, outboxMessages, partnerBillingAccounts, partnerLifecycles, partnerNumberCharges, partners, partnerTierBilling, phoneNumbers, prospectDemos, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 
+import { openPartnerBusiness } from "./businessAccess";
 import { forgetCachedBrands } from "./brands";
+import { claimProspectDemo, createPartnerDemo } from "./demos";
 import { getPartnerBilling, reconcilePartnerTier, recordPartnerPolarEvent } from "./partnerBilling";
 import { loadPartnerNumberStanding, partnerNumberAvailabilityInTransaction, recordPartnerNumberCostInTransaction, recordPartnerTierBilling, settlePartnerNumberCharges, type PartnerNumberCharge } from "./partnerNumbers";
 import { acceptPartnerInvitation, createPartnerBusiness, hashPartnerToken, invitePartnerMember, signUpPartner, type PartnerMemberActor } from "./partners";
-import { claimNumberProvisioning, completeNumberProvisioning, searchBusinessNumberInventory } from "./phoneNumbers";
+import { keepPartnerTrialNumber } from "./numberTrials";
+import { claimNumberProvisioning, completeNumberProvisioning, reserveOnboardingNumberClaim, searchBusinessNumberInventory } from "./phoneNumbers";
 import { setManagedPlanForApi, type PlatformKeyCaller } from "./publicApi/operations";
 import { acceptInvitation, createBusiness } from "./tenancy";
 
@@ -217,10 +220,11 @@ describe.skipIf(!client)("phone numbers across a partner's businesses", () => {
       const acme = await partner(tx, "Acme Reception");
       const [harbor, cedar, maple, birch] = [await business(tx, acme, "Harbor Dental"), await business(tx, acme, "Cedar Clinic"), await business(tx, acme, "Maple Vet"), await business(tx, acme, "Birch Spa")];
 
-      // On Free the tier includes no number, so the search refuses before it offers one, the dashboard offers none, and every claim refuses.
-      expect(await withBusinessTransaction(acme.context.db, { userId: harbor!.owner.userId, businessId: harbor!.businessId, actorType: "operator" }, async (inner) => await partnerNumberAvailabilityInTransaction(inner, harbor!.businessId))).toEqual({ available: false });
+      // On Free the tier includes no number. The dashboard offers the partner's trial number instead, which needs the owner's verified
+      // mobile, so the search refuses before it offers one, and every claim for a number of the business's own refuses.
+      expect(await withBusinessTransaction(acme.context.db, { userId: harbor!.owner.userId, businessId: harbor!.businessId, actorType: "operator" }, async (inner) => await partnerNumberAvailabilityInTransaction(inner, harbor!.businessId))).toEqual({ available: true, trial: true });
       const search = inventory();
-      expect(await refusal(searchBusinessNumberInventory(acme.context, { userId: harbor!.owner.userId, businessId: harbor!.businessId, claimTokenSecret: "test-secret" }, search))).toMatchObject({ status: 409, code: "partner_number_limit_reached" });
+      expect(await refusal(searchBusinessNumberInventory(acme.context, { userId: harbor!.owner.userId, businessId: harbor!.businessId, claimTokenSecret: "test-secret" }, search))).toMatchObject({ status: 409, code: "phone_verification_required" });
       expect(search.listAvailablePhoneNumbers).not.toHaveBeenCalled();
       expect(await refusal(claim(tx, harbor!))).toMatchObject({ code: "P0001", message: "partner_number_limit_reached" });
       expect(await refusal(apiClaim(tx, harbor!))).toMatchObject({ code: "P0001", message: "partner_number_limit_reached" });
@@ -237,13 +241,13 @@ describe.skipIf(!client)("phone numbers across a partner's businesses", () => {
       expect(await numbersHeld(acme)).toBe(2);
 
       // Past the included numbers, a paid tier still gets a number, which costs the partner extra.
-      expect(await withBusinessTransaction(acme.context.db, { userId: birch!.owner.userId, businessId: birch!.businessId, actorType: "operator" }, async (inner) => await partnerNumberAvailabilityInTransaction(inner, birch!.businessId))).toEqual({ available: true });
+      expect(await withBusinessTransaction(acme.context.db, { userId: birch!.owner.userId, businessId: birch!.businessId, actorType: "operator" }, async (inner) => await partnerNumberAvailabilityInTransaction(inner, birch!.businessId))).toEqual({ available: true, trial: false });
       const offered = inventory();
       expect((await searchBusinessNumberInventory(acme.context, { userId: birch!.owner.userId, businessId: birch!.businessId, claimTokenSecret: "test-secret" }, offered)).numbers).toHaveLength(1);
       await expect(claim(tx, birch!)).resolves.toEqual(expect.any(String));
       expect(await numbersHeld(acme)).toBe(3);
       // Inside a business, the partner's own count is what the claim checks, though RLS hides the partner's other businesses.
-      expect(await withBusinessTransaction(acme.context.db, { userId: birch!.owner.userId, businessId: birch!.businessId, actorType: "operator" }, async (inner) => await loadPartnerNumberStanding(inner, acme.partnerId))).toEqual({ held: 3, included: 2, paidTier: true, counted: true });
+      expect(await withBusinessTransaction(acme.context.db, { userId: birch!.owner.userId, businessId: birch!.businessId, actorType: "operator" }, async (inner) => await loadPartnerNumberStanding(inner, acme.partnerId))).toEqual({ held: 3, included: 2, paidTier: true, counted: true, trialAvailable: false });
 
       // Once the tier ends, the partner is on Free again and gets no number past the included ones.
       await tier(tx, acme.partnerId, { tier: "starter", status: "revoked", modifiedAt: "2026-10-02T00:00:01.000Z" });
@@ -259,7 +263,7 @@ describe.skipIf(!client)("phone numbers across a partner's businesses", () => {
       const harbor = await business(tx, acme, "Harbor Dental");
       const elsewhere = await business(tx, other, "Corner Shop");
       await billTiers(tx, true);
-      await expect(withBusinessTransaction(acme.context.db, { userId: acme.owner.userId, actorType: "operator" }, async (inner) => await loadPartnerNumberStanding(inner, acme.partnerId))).resolves.toEqual({ held: 0, included: 0, paidTier: false, counted: true });
+      await expect(withBusinessTransaction(acme.context.db, { userId: acme.owner.userId, actorType: "operator" }, async (inner) => await loadPartnerNumberStanding(inner, acme.partnerId))).resolves.toEqual({ held: 0, included: 0, paidTier: false, counted: true, trialAvailable: true });
       await expect(withBusinessTransaction(acme.context.db, { userId: harbor.owner.userId, businessId: harbor.businessId, actorType: "operator" }, async (inner) => await loadPartnerNumberStanding(inner, acme.partnerId))).resolves.toMatchObject({ held: 0 });
       // Another partner's owner, or a business of another partner, reads nothing.
       await expect(withBusinessTransaction(acme.context.db, { userId: other.owner.userId, actorType: "operator" }, async (inner) => await loadPartnerNumberStanding(inner, acme.partnerId))).rejects.toThrow("can't be read");
@@ -325,7 +329,7 @@ describe.skipIf(!client)("phone numbers across a partner's businesses", () => {
       const [harbor, cedar] = [await business(tx, acme, "Harbor Dental"), await business(tx, acme, "Cedar Clinic")];
       const inHarbor = <T>(run: (inner: DatabaseTransaction) => Promise<T>) => withBusinessTransaction(acme.context.db, { userId: harbor!.owner.userId, businessId: harbor!.businessId, actorType: "operator" }, run);
       expect(await inHarbor(async (inner) => await loadPartnerNumberStanding(inner, acme.partnerId))).toMatchObject({ counted: false });
-      expect(await inHarbor(async (inner) => await partnerNumberAvailabilityInTransaction(inner, harbor!.businessId))).toEqual({ available: false });
+      expect(await inHarbor(async (inner) => await partnerNumberAvailabilityInTransaction(inner, harbor!.businessId))).toEqual({ available: false, trial: false });
       const search = inventory();
       expect(await refusal(searchBusinessNumberInventory(acme.context, { userId: harbor!.owner.userId, businessId: harbor!.businessId, claimTokenSecret: "test-secret" }, search))).toMatchObject({ status: 409, code: "partner_numbers_unavailable" });
       expect(search.listAvailablePhoneNumbers).not.toHaveBeenCalled();
@@ -354,7 +358,7 @@ describe.skipIf(!client)("phone numbers across a partner's businesses", () => {
       // The partner is on Free, which would include no number on a deployment that billed tiers.
       const search = inventory();
       expect((await searchBusinessNumberInventory(acme.context, { userId: owned[0]!.owner.userId, businessId: owned[0]!.businessId, claimTokenSecret: "test-secret" }, search)).numbers).toHaveLength(1);
-      expect(await withBusinessTransaction(acme.context.db, { userId: owned[0]!.owner.userId, businessId: owned[0]!.businessId, actorType: "operator" }, async (inner) => await partnerNumberAvailabilityInTransaction(inner, owned[0]!.businessId))).toEqual({ available: true });
+      expect(await withBusinessTransaction(acme.context.db, { userId: owned[0]!.owner.userId, businessId: owned[0]!.businessId, actorType: "operator" }, async (inner) => await partnerNumberAvailabilityInTransaction(inner, owned[0]!.businessId))).toEqual({ available: true, trial: false });
       await expect(claim(tx, owned[0]!)).resolves.toEqual(expect.any(String));
       await apiClaim(tx, owned[1]!);
       // The two numbers these claims are buying fill the partner's day.
@@ -575,6 +579,226 @@ describe.skipIf(!client)("what a partner pays for its numbers", () => {
       // Tiers billed again later charge from the next month on, never the months already settled.
       expect(await asWorker(tx, async () => await settlePartnerNumberCharges(acme.context, { tierBilling: true, report, now: new Date(start + 60_000) }))).toEqual({ settled: 0, charged: 0 });
       expect(report).not.toHaveBeenCalled();
+    });
+  });
+});
+
+describe.skipIf(!client)("a partner's trial number", () => {
+  const claimTokenSecret = "partner-trial-secret";
+
+  /** The business's owner verified a Canadian mobile in the business, as onboarding has them do. Resolves to the mobile. */
+  async function verifyOwner(tx: DatabaseTransaction, input: { businessId: string; owner: Person }): Promise<string> {
+    const phone = testNumber();
+    await asMigrator(tx, async () => {
+      await tx.update(users).set({ phone, phoneVerifiedAt: new Date() }).where(eq(users.id, input.owner.userId));
+      await tx.insert(onboardingPhoneVerifications).values({ businessId: input.businessId, userId: input.owner.userId, phoneE164: phone, countryCode: "CA", status: "approved", approvedAt: new Date(), expiresAt: new Date(Date.now() + 600_000), requestFingerprint: randomUUID() });
+    });
+    return phone;
+  }
+
+  /** The owner searches the dashboard for a number and claims the first offer. Resolves to the search and the claim's id. */
+  async function claimFromDashboard(tx: DatabaseTransaction, acme: Awaited<ReturnType<typeof partner>>, input: { businessId: string; owner: Person }) {
+    const search = await searchBusinessNumberInventory(acme.context, { userId: input.owner.userId, businessId: input.businessId, claimTokenSecret }, inventory());
+    const claimId = await asAppSession(tx, async () => await reserveOnboardingNumberClaim(acme.context, { userId: input.owner.userId, businessId: input.businessId, claimToken: search.numbers[0]!.claimToken, claimTokenSecret, idempotencyKey: randomUUID(), ipHash: randomUUID() }));
+    return { search, claimId };
+  }
+
+  /** The worker buys the claim's number. Resolves to the number's id. */
+  async function provision(tx: DatabaseTransaction, acme: Awaited<ReturnType<typeof partner>>, input: { businessId: string; claimId: string }): Promise<string> {
+    return await asWorker(tx, async () => {
+      expect(await claimNumberProvisioning(acme.context, input)).toMatchObject({ countsForPartner: true });
+      return await completeNumberProvisioning(acme.context, { ...input, e164: testNumber(), providerPhoneId: `PN${randomUUID().replaceAll("-", "")}`, voiceUrl: "sip-trunk:TK-test", smsUrl: "https://example.invalid/sms", monthlyCostCents: 115 });
+    });
+  }
+
+  /** A trial claim made straight against the database, for a business the dashboard wouldn't offer one. */
+  function trialClaim(tx: DatabaseTransaction, input: { businessId: string; owner: Person; phone: string }): Promise<unknown> {
+    const db = tx as unknown as Database;
+    const selection = JSON.stringify({ countryCode: "CA", kind: "local", trial: true, verifiedPhone: input.phone });
+    return asAppSession(tx, async () => await withBusinessTransaction(db, { userId: input.owner.userId, businessId: input.businessId, actorType: "operator" }, async (inner) => await inner.execute(sql`select app.reserve_trial_number_claim(${input.businessId}::uuid, ${input.owner.userId}::uuid, ${testNumber()}, ${selection}::jsonb, ${randomUUID()}, ${randomUUID()}, ${randomUUID()})`)));
+  }
+
+  const availability = (acme: Awaited<ReturnType<typeof partner>>, input: { businessId: string; owner: Person }) => withBusinessTransaction(acme.context.db, { userId: input.owner.userId, businessId: input.businessId, actorType: "operator" }, async (inner) => await partnerNumberAvailabilityInTransaction(inner, input.businessId));
+
+  it("gives a partner on Free one 14-day trial number for one of its businesses, ever, even after that business is deleted", async () => {
+    await rollbackTest(async (tx) => {
+      await billTiers(tx, true);
+      const acme = await partner(tx, "Acme Reception");
+      const [harbor, cedar] = [await business(tx, acme, "Harbor Dental"), await business(tx, acme, "Cedar Clinic")];
+      const [, cedarPhone] = [await verifyOwner(tx, harbor), await verifyOwner(tx, cedar)];
+      expect(await getPartnerBilling(acme.context, acme.ownerActor)).toMatchObject({ tier: "free", trialNumber: "available" });
+      expect(await availability(acme, harbor)).toEqual({ available: true, trial: true });
+
+      // Harbor's owner picks a number from the dashboard, and it's the partner's trial.
+      const { search, claimId } = await claimFromDashboard(tx, acme, harbor);
+      expect(search.trial).toBe(true);
+      expect(await asMigrator(tx, async () => await tx.select({ partnerId: numberTrials.partnerId, status: numberTrials.status }).from(numberTrials).where(eq(numberTrials.businessId, harbor.businessId)))).toEqual([{ partnerId: acme.partnerId, status: "reserved" }]);
+
+      // While Harbor's number is still being bought, the partner's other businesses get no trial of their own.
+      expect(await availability(acme, cedar)).toEqual({ available: false, trial: false });
+      expect(await refusal(searchBusinessNumberInventory(acme.context, { userId: cedar.owner.userId, businessId: cedar.businessId, claimTokenSecret }, inventory()))).toMatchObject({ status: 409, code: "partner_number_limit_reached" });
+      expect(await refusal(trialClaim(tx, { ...cedar, phone: cedarPhone }))).toMatchObject({ code: "P0001", message: "partner_trial_used" });
+
+      // The worker buys it: the trial runs 14 days, its number goes when its month at the carrier runs out, and calls transfer only to the owner's mobile.
+      const phoneNumberId = await provision(tx, acme, { businessId: harbor.businessId, claimId });
+      const [trial] = await asMigrator(tx, async () => await tx.select({ status: numberTrials.status, startedAt: numberTrials.startedAt, endsAt: numberTrials.endsAt }).from(numberTrials).where(eq(numberTrials.businessId, harbor.businessId)));
+      expect(trial).toMatchObject({ status: "active" });
+      expect(trial!.endsAt!.getTime() - trial!.startedAt!.getTime()).toBeGreaterThan(13 * DAY);
+      expect(await asMigrator(tx, async () => (await tx.select({ reason: phoneNumbers.reclaimReason }).from(phoneNumbers).where(eq(phoneNumbers.id, phoneNumberId)))[0])).toEqual({ reason: "trial" });
+      expect(await getPartnerBilling(acme.context, acme.ownerActor)).toMatchObject({ trialNumber: "used", numbersHeld: 0 });
+
+      // Deleting the business deletes its trial, and the partner still had its one.
+      await asMigrator(tx, async () => await tx.delete(businesses).where(eq(businesses.id, harbor.businessId)));
+      expect(await availability(acme, cedar)).toEqual({ available: false, trial: false });
+      expect(await refusal(trialClaim(tx, { ...cedar, phone: cedarPhone }))).toMatchObject({ code: "P0001", message: "partner_trial_used" });
+      expect(await getPartnerBilling(acme.context, acme.ownerActor)).toMatchObject({ trialNumber: "used" });
+    });
+  });
+
+  it("frees the partner's trial from a claim that stalled in another of its businesses", async () => {
+    await rollbackTest(async (tx) => {
+      await billTiers(tx, true);
+      const acme = await partner(tx, "Acme Reception");
+      const [harbor, cedar] = [await business(tx, acme, "Harbor Dental"), await business(tx, acme, "Cedar Clinic")];
+      await verifyOwner(tx, harbor);
+      await verifyOwner(tx, cedar);
+      const stalled = await claimFromDashboard(tx, acme, harbor);
+      expect(await availability(acme, cedar)).toEqual({ available: false, trial: false });
+
+      // Nobody bought Harbor's number in the 15 minutes its reservation lasts, so the partner can use its trial elsewhere.
+      await asMigrator(tx, async () => await tx.update(onboardingNumberClaimEvents).set({ reservedAt: new Date(Date.now() - 16 * 60_000) }).where(eq(onboardingNumberClaimEvents.id, stalled.claimId)));
+      expect(await availability(acme, cedar)).toEqual({ available: true, trial: true });
+      expect(await getPartnerBilling(acme.context, acme.ownerActor)).toMatchObject({ trialNumber: "available" });
+
+      // Cedar's owner claims it, which expires Harbor's claim and its trial.
+      const { search, claimId } = await claimFromDashboard(tx, acme, cedar);
+      expect(search.trial).toBe(true);
+      expect(await asMigrator(tx, async () => (await tx.select({ status: onboardingNumberClaimEvents.status }).from(onboardingNumberClaimEvents).where(eq(onboardingNumberClaimEvents.id, stalled.claimId)))[0])).toEqual({ status: "failed" });
+      const trials = await asMigrator(tx, async () => await tx.select({ businessId: numberTrials.businessId, status: numberTrials.status }).from(numberTrials).where(eq(numberTrials.partnerId, acme.partnerId)));
+      expect(trials).toHaveLength(2);
+      expect(trials).toEqual(expect.arrayContaining([{ businessId: harbor.businessId, status: "failed" }, { businessId: cedar.businessId, status: "reserved" }]));
+      await provision(tx, acme, { businessId: cedar.businessId, claimId });
+      expect(await getPartnerBilling(acme.context, acme.ownerActor)).toMatchObject({ trialNumber: "used" });
+    });
+  });
+
+  it("keeps a trial on its partner, until the partner itself is deleted after releasing the business that holds it", async () => {
+    await rollbackTest(async (tx) => {
+      await billTiers(tx, true);
+      const acme = await partner(tx, "Acme Reception");
+      const harbor = await business(tx, acme, "Harbor Dental");
+      await verifyOwner(tx, harbor);
+      const { claimId } = await claimFromDashboard(tx, acme, harbor);
+      await provision(tx, acme, { businessId: harbor.businessId, claimId });
+      const trialPartner = async () => await asMigrator(tx, async () => (await tx.select({ partnerId: numberTrials.partnerId, status: numberTrials.status }).from(numberTrials).where(eq(numberTrials.businessId, harbor.businessId)))[0]);
+      // No update moves the trial off its partner.
+      await asMigrator(tx, async () => await tx.update(numberTrials).set({ partnerId: null }).where(eq(numberTrials.businessId, harbor.businessId)));
+      expect(await trialPartner()).toEqual({ partnerId: acme.partnerId, status: "active" });
+      // The partner releases the business, which keeps its trial, and is then deleted. That clears the trial's partner, and the trial keeps running.
+      await asMigrator(tx, async () => await tx.update(businesses).set({ partnerId: null }).where(eq(businesses.id, harbor.businessId)));
+      expect(await trialPartner()).toEqual({ partnerId: acme.partnerId, status: "active" });
+      await asMigrator(tx, async () => await tx.delete(partners).where(eq(partners.id, acme.partnerId)));
+      expect(await trialPartner()).toEqual({ partnerId: null, status: "active" });
+    });
+  });
+
+  it("makes the trial number one of the partner's numbers when it pays for a tier, and offers no trial to a paid tier", async () => {
+    await rollbackTest(async (tx) => {
+      await billTiers(tx, true);
+      const acme = await partner(tx, "Acme Reception");
+      const [harbor, cedar] = [await business(tx, acme, "Harbor Dental"), await business(tx, acme, "Cedar Clinic")];
+      await verifyOwner(tx, harbor);
+      const cedarPhone = await verifyOwner(tx, cedar);
+      const { claimId } = await claimFromDashboard(tx, acme, harbor);
+      const phoneNumberId = await provision(tx, acme, { businessId: harbor.businessId, claimId });
+      // On Free nothing pays for the number, so reconciling keeps the trial as it is.
+      expect(await asWorker(tx, async () => await keepPartnerTrialNumber(acme.context, { partnerId: acme.partnerId }))).toBe(false);
+
+      // The partner buys Starter, and the worker keeps the number once it reconciles the tier.
+      await tier(tx, acme.partnerId, { tier: "starter", status: "active", modifiedAt: "2026-10-01T00:00:01.000Z" });
+      expect(await asWorker(tx, async () => await keepPartnerTrialNumber(acme.context, { partnerId: acme.partnerId }))).toBe(true);
+      expect(await asMigrator(tx, async () => (await tx.select({ status: numberTrials.status }).from(numberTrials).where(eq(numberTrials.businessId, harbor.businessId)))[0])).toEqual({ status: "converted" });
+      expect(await asMigrator(tx, async () => (await tx.select({ reason: phoneNumbers.reclaimReason, at: phoneNumbers.reclaimScheduledAt }).from(phoneNumbers).where(eq(phoneNumbers.id, phoneNumberId)))[0])).toEqual({ reason: null, at: null });
+      expect(await asMigrator(tx, async () => await tx.select({ topic: outboxMessages.topic, payload: outboxMessages.payload }).from(outboxMessages).where(and(eq(outboxMessages.aggregateId, phoneNumberId), eq(outboxMessages.topic, "phoneNumber.route"))))).toEqual([{ topic: "phoneNumber.route", payload: { phoneNumberId, mode: "receptionist" } }]);
+      // It now counts as one of Starter's two included numbers.
+      expect(await getPartnerBilling(acme.context, acme.ownerActor)).toMatchObject({ tier: "starter", numbersHeld: 1, trialNumber: null });
+      expect(await asWorker(tx, async () => await keepPartnerTrialNumber(acme.context, { partnerId: acme.partnerId }))).toBe(false);
+
+      // A paid tier includes numbers, so it gets no trial.
+      expect(await availability(acme, cedar)).toEqual({ available: true, trial: false });
+      expect((await searchBusinessNumberInventory(acme.context, { userId: cedar.owner.userId, businessId: cedar.businessId, claimTokenSecret }, inventory())).trial).toBe(false);
+      expect(await refusal(trialClaim(tx, { ...cedar, phone: cedarPhone }))).toMatchObject({ code: "P0001", message: "trial_not_needed" });
+    });
+  });
+
+  it("keeps a trial number the partner paid for while the worker was still buying it", async () => {
+    await rollbackTest(async (tx) => {
+      await billTiers(tx, true);
+      const acme = await partner(tx, "Acme Reception");
+      const harbor = await business(tx, acme, "Harbor Dental");
+      await verifyOwner(tx, harbor);
+      const { claimId } = await claimFromDashboard(tx, acme, harbor);
+      await tier(tx, acme.partnerId, { tier: "growth", status: "active", modifiedAt: "2026-10-01T00:00:01.000Z" });
+      const phoneNumberId = await provision(tx, acme, { businessId: harbor.businessId, claimId });
+      expect(await asMigrator(tx, async () => (await tx.select({ status: numberTrials.status }).from(numberTrials).where(eq(numberTrials.businessId, harbor.businessId)))[0])).toEqual({ status: "converted" });
+      expect(await asMigrator(tx, async () => (await tx.select({ reason: phoneNumbers.reclaimReason }).from(phoneNumbers).where(eq(phoneNumbers.id, phoneNumberId)))[0])).toEqual({ reason: null });
+    });
+  });
+
+  it("offers no trial to a business paused with its partner's others, nor to a demo nobody claimed yet", async () => {
+    await rollbackTest(async (tx) => {
+      await billTiers(tx, true);
+      const acme = await partner(tx, "Acme Reception");
+      const harbor = await business(tx, acme, "Harbor Dental");
+      const harborPhone = await verifyOwner(tx, harbor);
+      expect(await availability(acme, harbor)).toEqual({ available: true, trial: true });
+
+      // The partner's tier ended a month ago, so its businesses are paused: none of them is live, and none gets the trial.
+      await asMigrator(tx, async () => await tx.insert(partnerLifecycles).values({ partnerId: acme.partnerId, state: "paused", since: new Date(Date.now() - DAY), tierEndedAt: new Date(Date.now() - 31 * DAY) }));
+      expect(await availability(acme, harbor)).toEqual({ available: false, trial: false });
+      expect(await refusal(searchBusinessNumberInventory(acme.context, { userId: harbor.owner.userId, businessId: harbor.businessId, claimTokenSecret }, inventory()))).toMatchObject({ status: 409, code: "partner_numbers_unavailable" });
+      expect(await refusal(trialClaim(tx, { ...harbor, phone: harborPhone }))).toMatchObject({ code: "P0001", message: "partner_numbers_unavailable" });
+      // The partner still has its trial for when its businesses answer again.
+      await asMigrator(tx, async () => await tx.update(partnerLifecycles).set({ state: "active", since: new Date(), tierEndedAt: null }).where(eq(partnerLifecycles.partnerId, acme.partnerId)));
+      expect(await availability(acme, harbor)).toEqual({ available: true, trial: true });
+
+      // A demo is one of the partner's businesses with no owner. The partner's owner opens it and verified a mobile there, but it expires, so it gets no trial.
+      const demo = await createPartnerDemo(acme.context, acme.ownerActor, { name: `Pier Dental ${randomUUID().slice(0, 8)}`, websiteUrl: "https://example.com" });
+      await openPartnerBusiness(acme.context, { userId: acme.owner.userId, businessId: demo.businessId });
+      await asMigrator(tx, async () => await tx.update(businesses).set({ onboardingStage: "complete" }).where(eq(businesses.id, demo.businessId)));
+      const inDemo = { businessId: demo.businessId, owner: acme.owner };
+      const demoPhone = await verifyOwner(tx, inDemo);
+      expect(await availability(acme, inDemo)).toEqual({ available: false, trial: false });
+      expect(await refusal(searchBusinessNumberInventory(acme.context, { userId: acme.owner.userId, businessId: demo.businessId, claimTokenSecret }, inventory()))).toMatchObject({ status: 409, code: "partner_numbers_unavailable" });
+      expect(await refusal(trialClaim(tx, { ...inDemo, phone: demoPhone }))).toMatchObject({ code: "P0001", message: "partner_numbers_unavailable" });
+
+      // Once a prospect claims it, it's a business someone keeps, and its owner can get the partner's trial.
+      const [prospect] = await people(tx, 1);
+      await asMigrator(tx, async () => await tx.update(prospectDemos).set({ status: "active", publishedAt: new Date() }).where(eq(prospectDemos.id, demo.demoId)));
+      await claimProspectDemo(acme.context, { userId: prospect!.userId, token: demo.token, brand: { kind: "partner", partnerId: acme.partnerId } });
+      await asMigrator(tx, async () => await tx.update(businesses).set({ onboardingStage: "complete" }).where(eq(businesses.id, demo.businessId)));
+      const claimed = { businessId: demo.businessId, owner: prospect! };
+      await verifyOwner(tx, claimed);
+      expect(await availability(acme, claimed)).toEqual({ available: true, trial: true });
+    });
+  });
+
+  it("offers no trial without tier billing, or on a self-hosted server", async () => {
+    await rollbackTest(async (tx) => {
+      await billTiers(tx, false);
+      const acme = await partner(tx, "Acme Reception");
+      const harbor = await business(tx, acme, "Harbor Dental");
+      const phone = await verifyOwner(tx, harbor);
+      // Without tier billing, the cloud buys a partner's business no number, trial included.
+      expect(await availability(acme, harbor)).toEqual({ available: false, trial: false });
+      expect(await getPartnerBilling(acme.context, acme.ownerActor)).toMatchObject({ trialNumber: null });
+      expect(await refusal(trialClaim(tx, { ...harbor, phone }))).toMatchObject({ code: "P0001", message: "partner_numbers_unavailable" });
+
+      // A self-hosted server's businesses get no trial numbers, as direct ones get none there.
+      await billTiers(tx, true);
+      await asMigrator(tx, async () => await tx.update(businesses).set({ deploymentMode: "self_hosted_standard" }).where(eq(businesses.id, harbor.businessId)));
+      expect(await availability(acme, harbor)).toEqual({ available: false, trial: false });
+      expect(await refusal(trialClaim(tx, { ...harbor, phone }))).toMatchObject({ code: "P0001", message: "trial_not_available" });
     });
   });
 });

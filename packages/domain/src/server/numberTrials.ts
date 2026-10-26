@@ -8,8 +8,9 @@ import { hasMinimumRole, requireBusinessAdmin, requireBusinessMembership } from 
 import type { DomainContext } from "./context";
 import { loadEntitlement } from "./entitlement";
 import { businessGetsHostEmails } from "./hostEmails";
+import { loadPartnerNumberStanding } from "./partnerNumbers";
 import { sharedSmsSender } from "./smsSender";
-import { getVoiceSecondsLeftInTransaction } from "./usage";
+import { getVoiceSecondsLeftInTransaction, readEndedVoiceSecondsLeftInTransaction } from "./usage";
 
 export type NumberCountry = "US" | "CA" | "GB" | "AU" | "NZ";
 
@@ -134,6 +135,35 @@ export async function convertNumberTrialInTransaction(tx: DatabaseTransaction, i
   return true;
 }
 
+/**
+ * Whether someone pays for the trial's number now, so it stays the
+ * business's: a direct business's live plan, or for a partner's business,
+ * its partner's paid tier. A partner's business pays its partner, which
+ * doesn't keep the partner's trial number.
+ */
+export async function trialNumberPaidForInTransaction(tx: DatabaseTransaction, businessId: string): Promise<boolean> {
+  const business = (await tx.select({ partnerId: businesses.partnerId }).from(businesses).where(eq(businesses.id, businessId)).limit(1))[0];
+  if (business?.partnerId) return (await loadPartnerNumberStanding(tx, business.partnerId)).paidTier;
+  return (await loadEntitlement(tx, businessId)).live;
+}
+
+/**
+ * The partner paid for a tier: its trial number, if one of its businesses
+ * still holds it, becomes one of the partner's numbers, as a direct
+ * business's trial number does when it pays. The worker runs this after it
+ * reconciles the partner's tier. A business the partner released keeps its
+ * trial as the host's. Returns whether a trial converted.
+ */
+export async function keepPartnerTrialNumber(context: DomainContext, input: { partnerId: string; now?: Date }): Promise<boolean> {
+  const businessId = await withBusinessTransaction(context.db, { actorType: "worker" }, async (tx) => (await tx.execute<{ business_id: string | null }>(sql`select app.partner_number_trial_business(${input.partnerId}::uuid) as business_id`)).rows[0]?.business_id ?? null);
+  if (!businessId) return false;
+  return await withBusinessTransaction(context.db, { businessId, actorType: "worker" }, async (tx) => {
+    const business = (await tx.select({ partnerId: businesses.partnerId }).from(businesses).where(eq(businesses.id, businessId)).limit(1))[0];
+    if (business?.partnerId !== input.partnerId || !await trialNumberPaidForInTransaction(tx, businessId)) return false;
+    return await convertNumberTrialInTransaction(tx, { businessId, ...(input.now ? { now: input.now } : {}) });
+  });
+}
+
 /** A paid plan is live: a trial number becomes the business's number, and a release scheduled when an earlier plan ended is called off. */
 export async function keepBusinessNumbersInTransaction(tx: DatabaseTransaction, input: { businessId: string; now?: Date }): Promise<void> {
   const now = input.now ?? new Date();
@@ -238,10 +268,17 @@ export async function enqueueNumberRouting(tx: DatabaseTransaction, input: { bus
 /**
  * The trial ran out of minutes. Calls ring the owner's phone from now on, and
  * the owner gets one email about it. Returns false when that already happened.
+ * A partner's trial draws on the pool its partner's other businesses share, so
+ * a refused call ends it only when the calls that ended used the minutes up.
+ * Calls still open elsewhere refuse its calls only until they end.
  */
 export async function markNumberTrialMinutesExhausted(context: DomainContext, input: { businessId: string; now?: Date }): Promise<boolean> {
   const now = input.now ?? new Date();
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const running = (await tx.select({ id: numberTrials.id }).from(numberTrials).where(and(eq(numberTrials.businessId, input.businessId), eq(numberTrials.status, "active"), isNull(numberTrials.minutesExhaustedAt))).limit(1))[0];
+    if (!running) return false;
+    const ended = await readEndedVoiceSecondsLeftInTransaction(tx, { businessId: input.businessId });
+    if (ended.pooled && ended.seconds >= 60) return false;
     const [trial] = await tx.update(numberTrials)
       .set({ minutesExhaustedAt: now, updatedAt: now })
       .where(and(eq(numberTrials.businessId, input.businessId), eq(numberTrials.status, "active"), isNull(numberTrials.minutesExhaustedAt)))
@@ -255,12 +292,16 @@ export async function markNumberTrialMinutesExhausted(context: DomainContext, in
 
 /**
  * After each call: a trial with less than a minute left starts forwarding now,
- * so the next caller reaches the owner instead of a busy signal.
+ * so the next caller reaches the owner instead of a busy signal. A partner's
+ * trial counts the calls that ended, so seconds its partner's other
+ * businesses hold for calls still open don't end it.
  */
 export async function checkNumberTrialMinutes(context: DomainContext, input: { businessId: string }): Promise<boolean> {
   const seconds = await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     const trial = (await tx.select({ id: numberTrials.id }).from(numberTrials).where(and(eq(numberTrials.businessId, input.businessId), eq(numberTrials.status, "active"), isNull(numberTrials.minutesExhaustedAt))).limit(1))[0];
-    return trial ? (await getVoiceSecondsLeftInTransaction(tx, { businessId: input.businessId })).seconds : null;
+    if (!trial) return null;
+    const ended = await readEndedVoiceSecondsLeftInTransaction(tx, { businessId: input.businessId });
+    return ended.pooled ? ended.seconds : (await getVoiceSecondsLeftInTransaction(tx, { businessId: input.businessId })).seconds;
   });
   return seconds !== null && seconds < 60 ? await markNumberTrialMinutesExhausted(context, input) : false;
 }

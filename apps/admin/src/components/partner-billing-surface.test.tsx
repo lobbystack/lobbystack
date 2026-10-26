@@ -22,8 +22,11 @@ vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 import { toast } from "sonner";
 import { PartnerBillingSurface } from "./partner-billing-surface";
 
-const free = { billed: true, tier: "free", billingInterval: null, subscriptionState: null, pool: { voiceSeconds: 1_800, chats: 50 }, includedNumbers: 0, trialNumbers: 1, currentPeriodEnd: null, endsAt: null, hasCustomerPortal: false, numbersHeld: 0, numbersCounted: true };
-const growth = { ...free, tier: "growth", billingInterval: "monthly", subscriptionState: "active", pool: { voiceSeconds: 78_000, chats: 5_000 }, includedNumbers: 10, trialNumbers: 0, currentPeriodEnd: "2026-11-01T00:00:00.000Z", hasCustomerPortal: true };
+const free = {
+  billed: true, tier: "free", billingInterval: null, subscriptionState: null, pool: { voiceSeconds: 1_800, chats: 50 }, includedNumbers: 0, trialNumbers: 1, currentPeriodEnd: null, endsAt: null, hasCustomerPortal: false, numbersHeld: 0, numbersCounted: true,
+  poolUsage: { periodKey: "2026-10", voiceSecondsUsed: 0, chatsUsed: 0, overageSpendCents: 0 }, poolOverage: { enabled: true, capCents: null, billed: false }, trialNumber: "available",
+};
+const growth = { ...free, tier: "growth", billingInterval: "monthly", subscriptionState: "active", pool: { voiceSeconds: 78_000, chats: 5_000 }, includedNumbers: 10, trialNumbers: 0, currentPeriodEnd: "2026-11-01T00:00:00.000Z", hasCustomerPortal: true, poolOverage: { enabled: true, capCents: null, billed: true }, trialNumber: null };
 
 type Route = (url: string, init?: RequestInit) => unknown;
 function renderWith(routes: Record<string, Route>) {
@@ -56,7 +59,7 @@ describe("the partner console's Billing page", () => {
   });
 
   it("says the businesses have no usage limit when the dashboard sells no tier", async () => {
-    renderWith({ "GET /api/partner/billing": () => ({ ...free, billed: false, pool: null }) });
+    renderWith({ "GET /api/partner/billing": () => ({ ...free, billed: false, pool: null, poolUsage: null }) });
     expect(await screen.findByText("billing.unavailable")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /billing\.choose\.action/ })).toBeNull();
   });
@@ -71,12 +74,23 @@ describe("the partner console's Billing page", () => {
       "GET /api/partner/billing/checkout": () => ({ requestId: "request-1", tier: "growth", status: "ready", checkoutUrl: "https://polar.example.test/co_1", synced: false }),
     });
     expect(await screen.findByText("billing.current.free")).toBeTruthy();
-    // Free's trial number isn't on offer yet, so Free lists no number.
-    expect(screen.getAllByText("billing.terms.noNumbers")).toHaveLength(1);
+    // Free lists its one 14-day trial number, which one of the partner's businesses can still get.
+    expect(screen.getByText("billing.terms.trialNumber")).toBeTruthy();
+    expect(screen.getByText("billing.trial.available")).toBeTruthy();
+    expect(screen.queryByText("billing.terms.noNumbers")).toBeNull();
     await userEvent.click(screen.getByRole("tab", { name: "billing.intervals.monthly" }));
     await userEvent.click(screen.getByRole("button", { name: "billing.choose.action:billing.tiers.growth" }));
     await waitFor(() => expect(assign).toHaveBeenCalledWith("https://polar.example.test/co_1"));
     expect(started).toEqual([{ partnerId: "partner", tier: "growth", billingInterval: "monthly" }]);
+  });
+
+  it("says when the partner used its trial number, and says nothing of one where the deployment offers none", async () => {
+    renderWith({ "GET /api/partner/billing": () => ({ ...free, trialNumber: "used" }) });
+    expect(await screen.findByText("billing.trial.used")).toBeTruthy();
+    cleanup();
+    renderWith({ "GET /api/partner/billing": () => ({ ...free, trialNumber: null }) });
+    expect(await screen.findByText("billing.terms.noNumbers")).toBeTruthy();
+    expect(screen.queryByText(/billing\.trial\./)).toBeNull();
   });
 
   it("explains a refused checkout", async () => {
@@ -139,5 +153,60 @@ describe("the partner console's Billing page", () => {
     expect(fixture.replace).toHaveBeenCalledWith("/partner/partner/billing");
     fixture.telemetry!.expectEvent("web.partner.tier_started", { partnerId: "partner", tier: "growth", billingInterval: "monthly", pathname: "/partner/partner/billing" });
     expect(fixture.telemetry!.events.filter((event) => event.name === "web.partner.tier_started")).toHaveLength(1);
+  });
+
+  it("shows this month's pool use against the pool, rounding a started minute up", async () => {
+    renderWith({ "GET /api/partner/billing": () => ({ ...growth, poolUsage: { periodKey: "2026-10", voiceSecondsUsed: 12_030, chatsUsed: 4_100, overageSpendCents: 0 } }) });
+    const pool = await screen.findByRole("region", { name: "billing.pool.title" });
+    expect(pool.textContent).toContain("201 / 1,300");
+    expect(pool.textContent).toContain("4,100 / 5,000");
+  });
+
+  it("explains that Free has no overage, with nothing to change", async () => {
+    renderWith({ "GET /api/partner/billing": () => free });
+    expect(await screen.findByText("billing.overage.free")).toBeTruthy();
+    // What overage does past the pool would contradict that.
+    expect(screen.queryByText("billing.overage.description")).toBeNull();
+    expect(screen.queryByRole("switch")).toBeNull();
+    expect(screen.queryByLabelText("billing.overage.capLabel")).toBeNull();
+  });
+
+  it("lets the owner cap a paid tier's overage, remove the cap, and turn overage off", async () => {
+    let overage = { enabled: true, capCents: null as number | null, billed: true };
+    const saved: unknown[] = [];
+    renderWith({
+      "GET /api/partner/billing": () => ({ ...growth, poolUsage: { ...growth.poolUsage, overageSpendCents: 1_250 }, poolOverage: overage }),
+      "POST /api/partner/billing/overage": (_url, init) => {
+        const body = JSON.parse(String(init?.body)) as { enabled: boolean; capCents: number | null };
+        saved.push(body);
+        overage = { ...overage, enabled: body.enabled, capCents: body.capCents };
+        return overage;
+      },
+    });
+    expect(await screen.findByText("billing.overage.noCap")).toBeTruthy();
+    expect(screen.getByText("billing.overage.description")).toBeTruthy();
+    await userEvent.type(screen.getByLabelText("billing.overage.capLabel"), "abc");
+    await userEvent.click(screen.getByRole("button", { name: "billing.overage.saveCap" }));
+    expect(toast.error).toHaveBeenCalledWith("billing.overage.invalidAmount");
+    await userEvent.clear(screen.getByLabelText("billing.overage.capLabel"));
+    await userEvent.type(screen.getByLabelText("billing.overage.capLabel"), "50.00");
+    await userEvent.click(screen.getByRole("button", { name: "billing.overage.saveCap" }));
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("billing.overage.capSaved"));
+    expect(await screen.findByText("billing.overage.spendOfCap")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "billing.overage.removeCap" }));
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("billing.overage.capRemoved"));
+    await userEvent.click(await screen.findByRole("switch", { name: "billing.overage.toggle" }));
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("billing.overage.turnedOff"));
+    expect(await screen.findByText("billing.overage.off")).toBeTruthy();
+    expect(saved).toEqual([
+      { partnerId: "partner", enabled: true, capCents: 5_000 },
+      { partnerId: "partner", enabled: true, capCents: null },
+      { partnerId: "partner", enabled: false, capCents: null },
+    ]);
+  });
+
+  it("says when overage reached the cap", async () => {
+    renderWith({ "GET /api/partner/billing": () => ({ ...growth, poolUsage: { ...growth.poolUsage, overageSpendCents: 5_000 }, poolOverage: { enabled: true, capCents: 5_000, billed: true } }) });
+    expect(await screen.findByText("billing.overage.capReached")).toBeTruthy();
   });
 });

@@ -59,6 +59,22 @@ The worker reads a number's monthly price from Twilio's Pricing API before it bu
 
 A partner on Free gets no number past its included ones, and Free includes none. Without the meter and its prices, Polar ingests the events and charges nothing for them. When Polar refuses a partner's event, the job retries that partner's charges on its next run and still settles everyone else's.
 
+## Charge partners for pool overage
+
+A partner's tier includes a pool of minutes and chats that its businesses share each month. Past the pool, the businesses keep answering, and the partner pays its tier's overage rates, up to the monthly cap an owner sets on the console's **Billing** page. Owners can turn overage off there too. Free has no overage. Set up Polar to bill it:
+
+1. Create a meter that counts the `billing.partner_pool_voice_overage` event and sums its `quantity` metadata.
+2. Create a second meter for the `billing.partner_pool_chat_overage` event, summed the same way.
+3. Add a metered price for each meter to each of the six partner tier products, at $0.01 a unit.
+
+The worker sends Polar one event for each call or chat that ends past the pool, under the partner's customer:
+
+- **Quantity**: the overage's price at the tier's rate when the usage happened, in US cents. A call that ends 10 minutes past a Starter pool sends 200.
+- **`external_id`**: `partner-pool:` and the usage event's ID, so Polar charges each event once.
+- **What it skips**: usage within the pool, and usage past it while the partner pays for no overage.
+
+Every tier uses the same $0.01 price, because each event's quantity already carries its tier's rate. Without the meters and their prices, Polar ingests the events and charges nothing for them.
+
 ## Configure usage event ingestion
 
 The worker sends finalized paid-plan usage from `billing_usage_events` to Polar.
@@ -123,6 +139,7 @@ The Next.js app exposes these billing entry points:
 | `POST /api/billing/cancel` | Cancel an active Starter or Pro subscription at the end of its billing period. |
 | `POST /api/partner/billing/checkout` | Queue a partner tier checkout for one of the partner's owners. Returns HTTP 409 while the partner's tier is live, while another owner's checkout from the last 30 minutes is open, or when the tier products aren't all set. |
 | `POST /api/partner/billing/portal` | Create a customer portal session for a partner's owner, to change or cancel the tier and update the card. |
+| `POST /api/partner/billing/overage` | Turn a partner's pool overage on or off, and set or clear its monthly cap in US cents, for one of the partner's owners. Returns HTTP 409 when the tier products aren't all set. |
 | `POST /api/webhooks/polar` | Verify and store Polar events for worker reconciliation. |
 
 Grant your token `subscriptions:write` access for the cancel route, which calls `PATCH /v1/subscriptions/{id}`.
@@ -179,6 +196,8 @@ Run these checks in the Polar sandbox before enabling production billing:
 - Confirm only a partner's owners can start a tier checkout or open its portal, and that the partner's tier and pool follow each subscription change.
 - Give a partner on a paid tier one number more than its tier includes, and confirm Polar charges the partner that number's monthly price within the hour.
 - Revoke a partner's tier, and confirm its businesses still answer calls and chats, and that the console's **Businesses** page shows when they pause and when they're deleted.
+- Use a paid tier's pool up, then finish a call past it, and confirm Polar charges the partner the overage alone at the tier's minute rate. Set a cap the overage reaches, and confirm the next call forwards.
+- Confirm the partner's owners and admins get one email at 80% of the pool's minutes, one at 100%, and one at 80% and 100% of the cap.
 - Complete monthly and annual checkout for Starter and Pro.
 - Confirm invalid webhook signatures receive an unauthorized response.
 - Confirm duplicate webhook deliveries create one provider event.

@@ -156,6 +156,8 @@ export const SCHEMA_MIGRATIONS = [
   "0150_partner_lifecycle.sql",
   "0151_partner_lifecycle_deletion.sql",
   "0152_partner_custom_domains.sql",
+  "0153_partner_pool.sql",
+  "0154_partner_number_trial.sql",
 ] as const;
 
 const CONCURRENT_INDEX_DIRECTIVE = /^-- lobbystack:concurrent-index ([a-z][a-z0-9_]*)$/m;

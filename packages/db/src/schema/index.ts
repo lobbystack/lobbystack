@@ -143,6 +143,8 @@ export const partners = pgTable(
     privacyUrl: text("privacy_url"),
     supportUrl: text("support_url"),
     supportEmail: varchar("support_email", { length: 254 }),
+    // When the partner's one 14-day trial number started, kept after the business that held it is deleted (migration 0154).
+    numberTrialStartedAt: timestamp("number_trial_started_at", { withTimezone: true }),
     ...timestamps,
   },
   (table) => [uniqueIndex("partners_slug_unique").on(table.slug)],
@@ -635,9 +637,12 @@ export const numberTrials = pgTable("number_trials", {
   endsAt: timestamp("ends_at", { withTimezone: true }),
   minutesExhaustedAt: timestamp("minutes_exhausted_at", { withTimezone: true }),
   emailsSent: jsonb("emails_sent").$type<Record<string, string>>().default({}).notNull(),
+  // The partner whose one trial this is, set from the business as it's reserved (migration 0154).
+  partnerId: uuid("partner_id").references(() => partners.id, { onDelete: "set null" }),
   ...timestamps,
 }, (table) => [
   uniqueIndex("number_trials_business_unique").on(table.businessId).where(sql`${table.status} <> 'failed'`),
+  uniqueIndex("number_trials_partner_unique").on(table.partnerId).where(sql`${table.partnerId} is not null and ${table.status} <> 'failed'`),
   index("number_trials_phone_idx").on(table.verifiedPhone),
   index("number_trials_user_idx").on(table.userId),
   index("number_trials_ip_created_idx").on(table.ipHash, table.createdAt),
@@ -1321,9 +1326,34 @@ export const partnerBillingAccounts = pgTable(
     poolVoiceSeconds: integer("pool_voice_seconds").notNull(),
     poolChats: integer("pool_chats").notNull(),
     includedNumbers: integer("included_numbers").notNull(),
+    // Pool overage, on unless an owner turns it off, and its monthly cap in US cents. Null means no cap (migration 0153).
+    poolOverageEnabled: boolean("pool_overage_enabled").default(true).notNull(),
+    poolOverageCapCents: integer("pool_overage_cap_cents"),
     ...timestamps,
   },
   (table) => [uniqueIndex("partner_billing_accounts_partner_unique").on(table.partnerId), uniqueIndex("partner_billing_accounts_billing_key_unique").on(table.billingKey)],
+);
+
+// What a partner's businesses used each month, as its pool counts it (migration 0153). Only SECURITY DEFINER functions read and write it.
+export const partnerUsageMonths = pgTable(
+  "partner_usage_months",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    partnerId: uuid("partner_id").notNull().references(() => partners.id, { onDelete: "cascade" }),
+    periodKey: varchar("period_key", { length: 16 }).notNull(),
+    // Open reservations included.
+    voiceSecondsUsed: doublePrecision("voice_seconds_used").default(0).notNull(),
+    voiceSecondsFinal: doublePrecision("voice_seconds_final").default(0).notNull(),
+    chatsUsed: doublePrecision("chats_used").default(0).notNull(),
+    // Final usage past the pool while the partner paid for overage, and its cost at the tier's rates in US cents.
+    overageVoiceSeconds: doublePrecision("overage_voice_seconds").default(0).notNull(),
+    overageChats: doublePrecision("overage_chats").default(0).notNull(),
+    overageSpendCents: doublePrecision("overage_spend_cents").default(0).notNull(),
+    // The month's alerts already sent the partner's owners and admins, by alert, with when each was queued.
+    alertsSent: jsonb("alerts_sent").$type<Record<string, string>>().default({}).notNull(),
+    ...timestamps,
+  },
+  (table) => [uniqueIndex("partner_usage_months_partner_period_unique").on(table.partnerId, table.periodKey)],
 );
 
 // An owner's request for a Polar checkout of a tier, which the worker turns into a checkout page.
@@ -1438,6 +1468,12 @@ export const billingUsageEvents = pgTable(
     billableQuantity: doublePrecision("billable_quantity"),
     planAtRecordTime: varchar("plan_at_record_time", { length: 32 }),
     billingIntervalAtRecordTime: varchar("billing_interval_at_record_time", { length: 16 }),
+    // The allowance, overage and pool terms in force when the usage happened (migration 0153).
+    termsAtRecordTime: jsonb("terms_at_record_time").$type<Record<string, unknown>>(),
+    // The partner whose pool the usage drew on, and once final, what it put past the pool and what that costs the partner in US cents.
+    poolPartnerId: uuid("pool_partner_id"),
+    poolOverageQuantity: doublePrecision("pool_overage_quantity"),
+    poolOverageCents: doublePrecision("pool_overage_cents"),
     isFinal: boolean("is_final").default(true).notNull(),
     ...legacyId,
     syncStatus: varchar("sync_status", { length: 32 }).default("pending").notNull(),

@@ -630,6 +630,7 @@
       "numbers_few": "{{count}} broja telefona",
       "numbers_other": "{{count}} brojeva telefona",
       "noNumbers": "Bez brojeva telefona",
+      "trialNumber": "1 probni broj na 14 dana",
       "extraNumbers": "Dodatni brojevi po našoj ceni koštanja",
       "overage": "Svaki dodatni minut košta {{minute}}, a svaki dodatni čet {{chat}}",
       "noOverage": "Bez dodatnih minuta i četova preko ovih"
@@ -645,6 +646,39 @@
       "extra_one": "Brojeva telefona u upotrebi: {{held}}. Svakog meseca plaćate {{count}} dodatni broj po našoj ceni koštanja.",
       "extra_few": "Brojeva telefona u upotrebi: {{held}}. Svakog meseca plaćate {{count}} dodatna broja po našoj ceni koštanja.",
       "extra_other": "Brojeva telefona u upotrebi: {{held}}. Svakog meseca plaćate {{count}} dodatnih brojeva po našoj ceni koštanja."
+    },
+    "trial": {
+      "available": "Vlasnik jedne od vaših firmi može da preuzme vaš probni broj na 14 dana u podešavanjima broja telefona te firme, kada potvrdi svoj mobilni.",
+      "used": "Iskoristili ste probni broj na 14 dana."
+    },
+    "pool": {
+      "title": "Ovog meseca",
+      "description": "Minuti i četovi koje su vaše firme iskoristile iz zajedničkog fonda. Fond počinje ispočetka {{resetsAt}}.",
+      "minutes": "Minuti",
+      "chats": "Četovi"
+    },
+    "overage": {
+      "title": "Prekoračenje",
+      "description": "Kada potroše fond, vaše firme nastavljaju da odgovaraju po cenama prekoračenja vašeg nivoa. Kada je prekoračenje isključeno ili dostigne vaš limit, pozivi idu na broj za prebacivanje svake firme ili na telefon njenog vlasnika, a čet na sajtu prestaje da odgovara.",
+      "toggle": "Dozvoli prekoračenje",
+      "free": "Nivo Besplatno nema prekoračenje. Vaše firme staju kada potroše fond, dok ne izaberete plaćeni nivo.",
+      "off": "Prekoračenje je isključeno. Vaše firme staju kada potroše fond svakog meseca.",
+      "noCap": "Bez limita",
+      "spend": "Prekoračenje ovog meseca",
+      "spendNoCap": "{{spend}} ovog meseca",
+      "spendOfCap": "{{spend}} od {{cap}}",
+      "capReached": "Dostigli ste limit. Pozivi se prosleđuju, a čet ne odgovara do sledećeg meseca ili dok ne povećate limit.",
+      "capLabel": "Mesečni limit",
+      "capPlaceholder": "50,00",
+      "saveCap": "Postavi limit",
+      "updateCap": "Ažuriraj limit",
+      "removeCap": "Ukloni limit",
+      "capSaved": "Limit je sačuvan.",
+      "capRemoved": "Limit je uklonjen.",
+      "turnedOn": "Prekoračenje je uključeno.",
+      "turnedOff": "Prekoračenje je isključeno.",
+      "saveFailed": "Nismo uspeli da sačuvamo. Pokušajte ponovo.",
+      "invalidAmount": "Unesite iznos u dolarima, na primer 50 ili 50,00."
     },
     "choose": {
       "title": "Izaberite nivo",

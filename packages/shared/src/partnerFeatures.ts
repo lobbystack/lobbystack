@@ -28,7 +28,22 @@ export type PartnerFeatures = {
    * can't add one.
    */
   customDomains: "cloudflare" | "caddy" | null;
+  /**
+   * An abuse guard, not a feature: the most calls a partner's businesses
+   * hold open at once. A call past it is refused as a pool out of minutes
+   * is, so it forwards the same way. PARTNER_MAX_SIMULTANEOUS_CALLS, a whole
+   * number above 0, overrides PARTNER_MAX_SIMULTANEOUS_CALLS_DEFAULT. Code
+   * only: no docs, dashboard, email or error text names it.
+   */
+  maxSimultaneousCalls: number;
 };
+
+export const PARTNER_MAX_SIMULTANEOUS_CALLS_DEFAULT = 30;
+
+function maxSimultaneousCalls(env: Record<string, string | undefined>): number {
+  const value = Number(env.PARTNER_MAX_SIMULTANEOUS_CALLS?.trim() || Number.NaN);
+  return Number.isSafeInteger(value) && value > 0 ? value : PARTNER_MAX_SIMULTANEOUS_CALLS_DEFAULT;
+}
 
 function isSet(value: string | undefined): boolean {
   return Boolean(value?.trim());
@@ -108,6 +123,7 @@ export function partnerFeatures(env: Record<string, string | undefined>): Partne
     stripeConnect: isSet(env.STRIPE_CONNECT_SECRET_KEY) && isSet(env.STRIPE_CONNECT_WEBHOOK_SECRET),
     tierBilling: hasEveryTierProduct(env),
     customDomains: customDomainIssuer(env),
+    maxSimultaneousCalls: maxSimultaneousCalls(env),
   };
 }
 

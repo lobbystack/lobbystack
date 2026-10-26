@@ -199,6 +199,10 @@ export const billingMeterEventNames = {
   chatAiTokens: "billing.chat_ai_tokens",
   /** A month of a number a partner holds past its tier's included ones. The quantity is what the host pays for it, in US cents. */
   partnerExtraNumbers: "billing.partner_extra_numbers",
+  /** Voice minutes a partner's businesses used past its pool, priced at its tier's minute rate. The quantity is that price, in US cents. */
+  partnerPoolVoiceOverage: "billing.partner_pool_voice_overage",
+  /** Website chats a partner's businesses used past its pool, priced at its tier's chat rate. The quantity is that price, in US cents. */
+  partnerPoolChatOverage: "billing.partner_pool_chat_overage",
 } as const;
 
 export const billingPlanCatalog = {

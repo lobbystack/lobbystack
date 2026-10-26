@@ -17,6 +17,7 @@ import {
   partnerCheckoutLeaseEndsAt,
   reconcilePartnerTier,
   recordPartnerPolarEvent,
+  setPartnerPoolOverage,
 } from "./partnerBilling";
 import { recordPartnerTierBilling } from "./partnerNumbers";
 import { acceptPartnerInvitation, hashPartnerToken, invitePartnerMember, signUpPartner, type PartnerMemberActor } from "./partners";
@@ -71,6 +72,9 @@ async function rollbackTest(run: (tx: DatabaseTransaction) => Promise<void>) {
 }
 
 type Person = { userId: string; email: string };
+
+/** This month's usage period, as usage metering keys it. */
+const thisMonth = () => new Date().toISOString().slice(0, 7);
 
 /** Accounts made as the migrator; every call after this runs as the app role. */
 async function people(tx: DatabaseTransaction, count: number): Promise<Person[]> {
@@ -170,15 +174,17 @@ describe.skipIf(!client)("a partner's tier", () => {
   it("puts a partner Polar never billed on Free when the host sells tiers, and gives it no pool limit when the host doesn't", async () => {
     await rollbackTest(async (tx) => {
       const acme = await partner(tx, "Acme Reception");
-      const free = { tier: "free", billingInterval: null, subscriptionState: null, includedNumbers: 0, trialNumbers: 1, currentPeriodEnd: null, endsAt: null, hasCustomerPortal: false, numbersHeld: 0 };
+      // Pool overage starts on with no cap, which Free never bills.
+      const free = { tier: "free", billingInterval: null, subscriptionState: null, includedNumbers: 0, trialNumbers: 1, currentPeriodEnd: null, endsAt: null, hasCustomerPortal: false, numbersHeld: 0, poolOverage: { enabled: true, capCents: null, billed: false } };
       // Without tier products, the host bills no tier and nothing limits the pool.
-      expect(await getPartnerBilling(acme.context, acme.ownerActor)).toEqual({ ...free, billed: false, pool: null, numbersCounted: false });
+      expect(await getPartnerBilling(acme.context, acme.ownerActor)).toEqual({ ...free, billed: false, pool: null, poolUsage: null, numbersCounted: false, trialNumber: null });
       expect(await refusal(createPartnerTierCheckout(acme.context, acme.ownerActor, { tier: "starter", billingInterval: "monthly", returnOrigin: CONSOLE }))).toMatchObject({ status: 409, code: "tier_billing_unavailable" });
 
       sellTiers();
       // The worker records that the deployment bills tiers when it starts, and the Billing page then counts the partner's numbers.
       await asWorker(tx, async () => await recordPartnerTierBilling(acme.context, { enabled: true }));
-      expect(await getPartnerBilling(acme.context, acme.ownerActor)).toEqual({ ...free, billed: true, pool: { voiceSeconds: 1_800, chats: 50 }, numbersCounted: true });
+      // Free's one trial number is still there for one of its businesses to get.
+      expect(await getPartnerBilling(acme.context, acme.ownerActor)).toEqual({ ...free, billed: true, pool: { voiceSeconds: 1_800, chats: 50 }, poolUsage: { periodKey: thisMonth(), voiceSecondsUsed: 0, chatsUsed: 0, overageSpendCents: 0 }, numbersCounted: true, trialNumber: "available" });
       // The worker reads the same tier for usage and numbers, with no business in its context.
       expect(await asWorker(tx, async () => await withBusinessTransaction(acme.context.db, { actorType: "worker" }, async (inner) => await loadPartnerTierInTransaction(inner, acme.partnerId)))).toMatchObject({ billed: true, tier: "free", pool: { voiceSeconds: 1_800, chats: 50 } });
     });
@@ -256,6 +262,8 @@ describe.skipIf(!client)("a partner's tier", () => {
       sellTiers();
       const acme = await partner(tx, "Acme Reception");
       const { requestId } = await createPartnerTierCheckout(acme.context, acme.ownerActor, { tier: "growth", billingInterval: "monthly", returnOrigin: CONSOLE });
+      // The owner caps the pool's overage before Polar's events arrive, and reconciling them keeps the cap.
+      await setPartnerPoolOverage(acme.context, acme.ownerActor, { enabled: true, capCents: 10_000 });
       const payload = subscriptionEvent(acme.partnerId, { status: "active", tier: "growth", modifiedAt: "2026-10-01T00:00:01.000Z" });
       const { deliveryId, storedId: providerEventId } = await deliver(tx, acme.partnerId, "subscription.active", payload);
 
@@ -282,6 +290,9 @@ describe.skipIf(!client)("a partner's tier", () => {
         hasCustomerPortal: true,
         numbersHeld: 0,
         numbersCounted: false,
+        poolUsage: { periodKey: thisMonth(), voiceSecondsUsed: 0, chatsUsed: 0, overageSpendCents: 0 },
+        poolOverage: { enabled: true, capCents: 10_000, billed: true },
+        trialNumber: null,
       });
       expect(await asMigrator(tx, async () => await tx.select({ billingKey: partnerBillingAccounts.billingKey, customerId: partnerBillingAccounts.customerId, subscriptionId: partnerBillingAccounts.subscriptionId }).from(partnerBillingAccounts).where(eq(partnerBillingAccounts.partnerId, acme.partnerId)))).toEqual([{ billingKey: `partner:${acme.partnerId}`, customerId: "cus_1", subscriptionId: "sub_1" }]);
       expect(await getPartnerTierCheckout(acme.context, acme.ownerActor, { requestId })).toMatchObject({ synced: true });

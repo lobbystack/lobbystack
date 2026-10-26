@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { billingUsageEvents, businesses, businessMemberships, createDatabaseClient, outboxMessages, phoneNumbers, platformKeyBusinesses, prospectDemos, receptionistProfiles, storageObjects, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { billingUsageEvents, businesses, businessMemberships, createDatabaseClient, outboxMessages, partnerUsageMonths, phoneNumbers, platformKeyBusinesses, prospectDemos, receptionistProfiles, storageObjects, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { PROSPECT_DEMO_WIDGET_ID } from "@lobbystack/shared";
 
 import { forgetCachedBrands } from "./brands";
@@ -14,6 +14,7 @@ import { finishLiveCall, startLiveWebCall } from "./liveCalls";
 import { getActiveOnboardingState } from "./onboarding";
 import { acceptPartnerInvitation, hashPartnerToken, invitePartnerMember, listPartnerBusinesses, releaseBusiness, signUpPartner, type PartnerMemberActor } from "./partners";
 import { listUserBusinesses, NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS, readActiveBusinessId } from "./tenancy";
+import { periodKeyFor } from "./usage";
 
 // Explicit opt-in only; never fall back to DATABASE_URL or load an env file.
 const testUrl = process.env.LOBBYSTACK_RELIABILITY_TEST_DATABASE_URL;
@@ -294,6 +295,44 @@ describe.skipIf(!client)("a partner's prospect demos against PostgreSQL", () => 
       const events = await asMigrator(tx, async () => await tx.select({ quantity: billingUsageEvents.quantity }).from(billingUsageEvents).where(eq(billingUsageEvents.businessId, demo.businessId)));
       expect(events).toEqual([{ quantity: 90 }]);
       expect((await listPartnerDemos(bright.context, bright.memberActor)).map((row) => [row.demoId, row.usage.voiceSeconds, row.usage.chats])).toEqual([[demo.demoId, 90, 0]]);
+    });
+  });
+
+  it("draws a demo's calls on the partner's pool, and holds them to the calls the partner's businesses may have open at once", async () => {
+    await rollbackTest(async (tx) => {
+      await tx.execute(sql`set local role lobbystack_app`);
+      // With all six tier products set, the deployment bills tiers, and a partner on Free shares 1,800 seconds a month between its businesses.
+      for (const tier of ["STARTER", "GROWTH", "SCALE"]) for (const interval of ["MONTHLY", "ANNUAL"]) vi.stubEnv(`POLAR_PARTNER_${tier}_${interval}_PRODUCT_ID`, `prod_${tier.toLowerCase()}_${interval.toLowerCase()}`);
+      // A name of its own, so its slug never waits on another suite's partner.
+      const cove = await partner(tx, `Cove Desk ${randomUUID().slice(0, 8)}`);
+      const harbor = await createPartnerDemo(cove.context, cove.memberActor, demoInput("Harbor Dental"));
+      const pier = await createPartnerDemo(cove.context, cove.memberActor, demoInput("Pier Dental"));
+      await publish(tx, harbor.demoId);
+      await publish(tx, pier.demoId);
+      type Demo = typeof harbor;
+      // The call route starts a partner's demo call as billable.
+      const call = async (demo: Demo, maxDurationMs: number) => await asWorker(tx, async (context) => await startLiveWebCall(context, { businessId: demo.businessId, sessionId: `live_${randomUUID()}`, widgetId: PROSPECT_DEMO_WIDGET_ID, billable: true, maxDurationMs, sessionPurpose: "prospect_demo", prospectDemoId: demo.demoId }));
+      const finish = async (demo: Demo, callId: string, seconds: number) => await asWorker(tx, async (context) => await finishLiveCall(context, { businessId: demo.businessId, callId, seconds, end: "caller_finished", channel: "web_voice" }));
+      const pool = async () => (await asMigrator(tx, async () => await tx.select({ voiceSecondsUsed: partnerUsageMonths.voiceSecondsUsed, voiceSecondsFinal: partnerUsageMonths.voiceSecondsFinal }).from(partnerUsageMonths).where(and(eq(partnerUsageMonths.partnerId, cove.partnerId), eq(partnerUsageMonths.periodKey, periodKeyFor())))))[0];
+
+      // A demo call holds its two minutes of the pool while it runs, and counts the seconds it used once it ends.
+      const first = await call(harbor, 120_000);
+      expect(await pool()).toEqual({ voiceSecondsUsed: 120, voiceSecondsFinal: 0 });
+      await finish(harbor, first.callId, 90);
+      expect(await pool()).toEqual({ voiceSecondsUsed: 90, voiceSecondsFinal: 90 });
+      // Pier's demo asks for the longest call and gets what the pool has left, which leaves Harbor's none while it runs.
+      const long = await call(pier, 1_800_000);
+      expect(long.maxDurationMs).toBe(1_710_000);
+      expect(await refusal(call(harbor, 120_000))).toMatchObject({ status: 402, code: "voice_limit_reached" });
+      await finish(pier, long.callId, 60);
+      expect(await pool()).toEqual({ voiceSecondsUsed: 150, voiceSecondsFinal: 150 });
+
+      // With room for one open call across the partner's businesses, Pier's open demo call keeps Harbor's from starting, though the pool has minutes left.
+      vi.stubEnv("PARTNER_MAX_SIMULTANEOUS_CALLS", "1");
+      const open = await call(pier, 120_000);
+      expect(await refusal(call(harbor, 120_000))).toMatchObject({ status: 402, code: "voice_limit_reached" });
+      await finish(pier, open.callId, 30);
+      expect(await call(harbor, 120_000)).toMatchObject({ maxDurationMs: 120_000 });
     });
   });
 

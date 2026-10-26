@@ -36,6 +36,14 @@ describe("a partner's business on the phone number settings", () => {
     expect(paths).not.toContain("/api/billing");
   });
 
+  it("offers its partner's 14-day trial number through the same chooser, without the host's plans", async () => {
+    const paths = renderWith({ partnerNumbers: { available: true, trial: true } });
+    expect(await screen.findByText("phoneNumber.freeTrial.description")).toBeTruthy();
+    await waitFor(() => expect(screen.getByRole("button", { name: "phoneNumber.actions.getNumber" }).hasAttribute("disabled")).toBe(false));
+    expect(screen.queryByRole("button", { name: "phoneNumber.requiresPaidPlan.upgradeCta" })).toBeNull();
+    expect(paths).not.toContain("/api/number-trial");
+  });
+
   it("says its partner needs a paid tier when the tier allows no more, and offers no plan of its own", async () => {
     renderWith({ partnerNumbers: { available: false } });
     expect(await screen.findByText("phoneNumber.partnerTierRequired.description")).toBeTruthy();

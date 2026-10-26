@@ -1,7 +1,7 @@
-import { and, desc, eq, gt, inArray, like, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNotNull, like, lt, or, sql } from "drizzle-orm";
 
-import { billingAccounts, billingCheckoutRequests, billingTransactions, billingUsageEvents, businesses, enqueueOutbox, providerEvents, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
-import { billingErrorCodes, DEFAULT_WEB_CALL_MAX_DURATION_MS, hasLiveEntitlement, liveSubscriptionStates, MAX_WEB_CALL_MAX_DURATION_MS, type BillingPlanSlug } from "@lobbystack/shared";
+import { billingAccounts, billingCheckoutRequests, billingTransactions, billingUsageEvents, businesses, enqueueOutbox, partnerBillingAccounts, providerEvents, users, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { billingErrorCodes, DEFAULT_WEB_CALL_MAX_DURATION_MS, hasLiveEntitlement, liveSubscriptionStates, MAX_WEB_CALL_MAX_DURATION_MS, partnerFeatures, type BillingPlanSlug } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem } from "@lobbystack/telemetry";
 
 import type { DomainContext } from "./context";
@@ -9,9 +9,10 @@ import { recordAffiliateCommissionInTransaction } from "./affiliates";
 import { requireBusinessCapability } from "./businessAccess";
 import { loadEntitlement } from "./entitlement";
 import { keepBusinessNumbersInTransaction, queuePlanCancelNoticeInTransaction, scheduleNumberReleaseInTransaction } from "./numberTrials";
+import { poolLeft, readPartnerPoolInTransaction } from "./partnerPool";
 import { recordProductEventInTransaction } from "./productEvents";
 import { requireBusinessAdmin } from "../authz";
-import { correctUsageInTransaction, enqueueUsageSyncInTransaction, getUsageStatusInTransaction, getVoiceSecondsLeftInTransaction, loadBillingContext, readUsageStatusInTransaction, readVoiceSecondsLeftInTransaction, reserveUsageInTransaction } from "./usage";
+import { correctUsageInTransaction, enqueueUsageSyncInTransaction, getUsageStatusInTransaction, getVoiceSecondsLeftInTransaction, loadBillingContext, periodKeyFor, readUsageStatusInTransaction, readVoiceSecondsLeftInTransaction, reserveUsageInTransaction } from "./usage";
 
 export type BillingCheckoutTarget = "starter" | "pro";
 export type BillingInterval = "monthly" | "annual";
@@ -85,13 +86,11 @@ export async function getWidgetChatAllowance(
   return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
     // Decides whether to offer the chat without writing; each chat's reservation counts again.
     const status = await readUsageStatusInTransaction(tx, { businessId: input.businessId });
-    const { allowance, overage } = await loadEntitlement(tx, input.businessId);
-    if (allowance.chats === null || overage.enabled) {
-      return { allowed: true, errorCode: null, plan: status.plan };
-    }
-    if (status.chatAiBlocked || Math.max(0, allowance.chats - status.chatAiTokensUsed) < 1) {
-      return { allowed: false, errorCode: billingErrorCodes.chatAiLimitReached, plan: status.plan };
-    }
+    const { allowance, overage, poolPartnerId } = await loadEntitlement(tx, input.businessId);
+    const refused = { allowed: false, errorCode: billingErrorCodes.chatAiLimitReached, plan: status.plan };
+    if (allowance.chats !== null && !overage.enabled && (status.chatAiBlocked || Math.max(0, allowance.chats - status.chatAiTokensUsed) < 1)) return refused;
+    // A partner's business also needs a chat left in its partner's pool, which only tier billing limits.
+    if (poolPartnerId && partnerFeatures(process.env).tierBilling && poolLeft(await readPartnerPoolInTransaction(tx, { partnerId: poolPartnerId, periodKey: periodKeyFor() }), "chat_ai_tokens") < 1) return refused;
     return { allowed: true, errorCode: null, plan: status.plan };
   });
 }
@@ -105,6 +104,8 @@ export async function reserveWidgetChatUsageInTransaction(
   if (entitlement.allowance.chats !== null || entitlement.poolPartnerId !== null) {
     const reservation = await reserveUsageInTransaction(tx, { businessId: input.businessId, usageKind: "chat_ai_tokens", sourceKey: `chat:${input.conversationId}`, quantity: 1 });
     if (!reservation.allowed) return { allowed: false, errorCode: billingErrorCodes.chatAiLimitReached, plan };
+    // A chat past the partner's pool is overage the partner pays for, which syncs to Polar.
+    if (entitlement.poolPartnerId !== null && reservation.syncNeeded && reservation.usageEventId) await enqueueUsageSyncInTransaction(tx, { businessId: input.businessId, usageEventId: reservation.usageEventId });
   }
   return { allowed: true, errorCode: null, plan };
 }
@@ -465,6 +466,50 @@ export async function loadBillingUsageEvent(
       ))
       .limit(1))[0];
     return row ?? null;
+  });
+}
+
+/**
+ * A usage event that drew on a partner's pool, as the worker reports its
+ * overage to Polar: what the event put past the pool and what that costs at
+ * the tier's rates, under the partner's customer. The business pays the host
+ * nothing, so the event syncs nothing else. Null for usage on no pool.
+ */
+export async function loadPoolUsageEvent(
+  context: DomainContext,
+  input: { businessId: string; usageEventId: string },
+): Promise<{
+  id: string;
+  businessId: string;
+  usageKind: string;
+  isFinal: boolean;
+  syncStatus: string;
+  createdAt: Date;
+  partnerId: string;
+  overageQuantity: number;
+  overageCents: number;
+  /** The partner's Polar customer, or null when Polar never billed it. */
+  customerId: string | null;
+} | null> {
+  return await withBusinessTransaction(context.db, { businessId: input.businessId, actorType: "worker" }, async (tx) => {
+    const [row] = await tx.select({
+      id: billingUsageEvents.id,
+      businessId: billingUsageEvents.businessId,
+      usageKind: billingUsageEvents.usageKind,
+      isFinal: billingUsageEvents.isFinal,
+      syncStatus: billingUsageEvents.syncStatus,
+      createdAt: billingUsageEvents.createdAt,
+      partnerId: billingUsageEvents.poolPartnerId,
+      overageQuantity: billingUsageEvents.poolOverageQuantity,
+      overageCents: billingUsageEvents.poolOverageCents,
+      customerId: partnerBillingAccounts.customerId,
+    })
+      .from(billingUsageEvents)
+      .leftJoin(partnerBillingAccounts, eq(partnerBillingAccounts.partnerId, billingUsageEvents.poolPartnerId))
+      .where(and(eq(billingUsageEvents.id, input.usageEventId), eq(billingUsageEvents.businessId, input.businessId), isNotNull(billingUsageEvents.poolPartnerId)))
+      .limit(1);
+    if (!row?.partnerId) return null;
+    return { ...row, partnerId: row.partnerId, overageQuantity: row.overageQuantity ?? 0, overageCents: row.overageCents ?? 0 };
   });
 }
 

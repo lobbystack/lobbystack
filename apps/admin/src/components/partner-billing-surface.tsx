@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { paidPartnerTierSlugs, partnerTierCatalog, type BillingInterval, type PaidPartnerTierSlug, type PartnerTierSlug } from "@lobbystack/shared";
 import { formatMoney } from "@/components/billing-spending-cap";
 import { PageHeader } from "@/components/page-header";
+import { PoolOverageSection, PoolUsageSection, type PoolOverage, type PoolUsage } from "@/components/partner-pool-surface";
 import { useConsolePartner } from "@/components/partner-shell";
 import { useTelemetry } from "@/components/product-analytics";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -34,6 +35,9 @@ type Billing = {
   hasCustomerPortal: boolean;
   numbersHeld: number;
   numbersCounted: boolean;
+  poolUsage: PoolUsage | null;
+  poolOverage: PoolOverage;
+  trialNumber: "available" | "used" | null;
 };
 type Checkout = { requestId: string; tier: PaidPartnerTierSlug; billingInterval: BillingInterval; status: string; checkoutUrl: string | null; synced: boolean };
 
@@ -45,10 +49,10 @@ function formatRate(cents: number, locale: string): string {
 /**
  * What a tier gives the partner's businesses between them, from the catalog.
  * `numbers` says whether the deployment counts phone numbers against the tier;
- * without it, the page says nothing about them. Free's trial number waits for
- * the per-partner trial, so Free shows no number yet.
+ * without it, the page says nothing about them. `trial` says whether it
+ * offers Free's one 14-day trial number.
  */
-function TierTerms({ tier, numbers }: { tier: PartnerTierSlug; numbers: boolean }) {
+function TierTerms({ tier, numbers, trial = false }: { tier: PartnerTierSlug; numbers: boolean; trial?: boolean }) {
   const { t, i18n } = useTranslation("partner");
   const terms = partnerTierCatalog[tier];
   const count = (value: number) => new Intl.NumberFormat(intlLocale(i18n.language)).format(value);
@@ -56,7 +60,7 @@ function TierTerms({ tier, numbers }: { tier: PartnerTierSlug; numbers: boolean 
     t("billing.terms.minutes", { count: terms.poolVoiceSeconds / 60, formatted: count(terms.poolVoiceSeconds / 60) }),
     t("billing.terms.chats", { count: terms.poolChats, formatted: count(terms.poolChats) }),
     ...(numbers ? [
-      terms.includedNumbers > 0 ? t("billing.terms.numbers", { count: terms.includedNumbers }) : t("billing.terms.noNumbers"),
+      terms.includedNumbers > 0 ? t("billing.terms.numbers", { count: terms.includedNumbers }) : trial && terms.trialNumbers > 0 ? t("billing.terms.trialNumber") : t("billing.terms.noNumbers"),
       // A paid tier can hold numbers past the ones it includes, at what the host pays for them.
       ...(terms.paid ? [t("billing.terms.extraNumbers")] : []),
     ] : []),
@@ -116,7 +120,8 @@ const CHECKOUT_ERRORS: Record<string, string> = {
  * host for, and the minutes, chats and numbers it gives the partner's
  * businesses between them. A partner on Free picks a paid tier and pays at a
  * Polar checkout; a paying partner manages its tier in Polar's customer
- * portal. The server enforces the same rules.
+ * portal. Owners see the pool's use this month and set its overage and cap.
+ * The server enforces the same rules.
  */
 export function PartnerBillingSurface() {
   const { t, i18n } = useTranslation("partner");
@@ -234,8 +239,9 @@ export function PartnerBillingSurface() {
               {current.billingInterval ? <Badge variant="secondary">{t(`billing.intervals.${current.billingInterval}`)}</Badge> : null}
             </div>
             {current.tier === "free" ? <p className="text-sm text-muted-foreground">{t("billing.current.free")}</p> : <TierPrice interval={current.billingInterval ?? "monthly"} tier={current.tier} />}
-            <TierTerms numbers={current.numbersCounted} tier={current.tier} />
+            <TierTerms numbers={current.numbersCounted} tier={current.tier} trial={Boolean(current.trialNumber)} />
             {current.tier === "free" || !current.numbersCounted ? null : <NumbersInUse held={current.numbersHeld} included={current.includedNumbers} />}
+            {current.trialNumber ? <p className="text-sm text-muted-foreground">{t(current.trialNumber === "available" ? "billing.trial.available" : "billing.trial.used")}</p> : null}
             {current.endsAt ? <p className="text-sm text-muted-foreground">{t("billing.current.endsOn", { date: date(current.endsAt) })}</p> : current.currentPeriodEnd ? <p className="text-sm text-muted-foreground">{t("billing.current.renewsOn", { date: date(current.currentPeriodEnd) })}</p> : null}
           </div>
           {current.hasCustomerPortal ? (
@@ -243,6 +249,9 @@ export function PartnerBillingSurface() {
           ) : null}
         </Surface>
       </section>
+
+      {current.poolUsage && current.pool ? <PoolUsageSection pool={current.pool} usage={current.poolUsage} /> : null}
+      <PoolOverageSection overage={current.poolOverage} partnerId={partner.partnerId} spendCents={current.poolUsage?.overageSpendCents ?? 0} />
 
       {current.tier === "free" ? (
         <section aria-labelledby="partner-billing-tiers" className="flex flex-col gap-4">

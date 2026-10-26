@@ -229,3 +229,54 @@ describe("SMTP delivery", () => {
     expect(first).not.toContain("recipient");
   });
 });
+
+describe("a partner's pool alert", () => {
+  const url = "https://app.example.test/partner/p-1/billing";
+  const alert = (variables: Record<string, string>) => ({ template: "partner_pool_alert" as const, to: "owner@acme.example.test", variables: { firstName: "Ana", partnerName: "Acme Reception", month: "October", url, ...variables } });
+
+  it("tells an owner what happens past the pool, by whether overage bills, under the host's name whatever the deployment's branding", async () => {
+    const { provider, sent } = capture();
+    const under = host({ BRAND_APP_NAME: "Front Desk" });
+    await send(provider, alert({ locale: "en", kind: "minutes", threshold: "80", used: "200", included: "250", overage: "off", cap: "" }), under);
+    await send(provider, alert({ locale: "en", kind: "chats", threshold: "100", used: "1,000", included: "1,000", overage: "on", cap: "" }), under);
+    await send(provider, alert({ locale: "en", kind: "minutes", threshold: "100", used: "30", included: "30", overage: "none", cap: "" }), under);
+    await send(provider, alert({ locale: "en", kind: "cap", threshold: "100", used: "$50.00", included: "$50.00", overage: "on", cap: "$50.00" }), under);
+    expect(sent(0)).toMatchObject({ subject: "Your businesses used 80% of this month's minutes", replyTo: "support@example.test" });
+    expect(sent(0).text).toBe(["Hi Ana,", "", "Acme Reception's businesses used 200 of the 250 minutes in your pool for October.", "", "Once the pool runs out, calls will forward to each business's transfer number or its owner's phone until next month.", "", `Turn on overage or pick a bigger tier on the Billing page: ${url}`, "", "LobbyStack"].join("\n"));
+    expect(sent(1).subject).toBe("Your businesses used all of this month's chats");
+    expect(sent(1).text).toContain("They keep replying on their websites, and you pay your tier's overage rate for each extra chat.");
+    expect(sent(1).text).toContain(`Pick a bigger tier on the Billing page: ${url}`);
+    expect(sent(2).text).toContain("Until next month, calls forward to each business's transfer number or its owner's phone.");
+    expect(sent(2).text).toContain(`Pick a paid tier, with a bigger pool, on the Billing page: ${url}`);
+    expect(sent(3)).toMatchObject({ subject: "You reached your overage cap" });
+    expect(sent(3).text).toContain("Your pool's overage for October reached your $50.00 cap.");
+    expect(sent(3).text).toContain(`Raise your cap or pick a bigger tier on the Billing page: ${url}`);
+    for (let index = 0; index < 4; index++) expect(sent(index).text).not.toContain("Front Desk");
+  });
+
+  it("writes every alert in the owner's language", async () => {
+    const { provider, sent } = capture();
+    const kinds = [["minutes", "80"], ["minutes", "100"], ["chats", "80"], ["chats", "100"], ["cap", "80"], ["cap", "100"]] as const;
+    const locales = ["en", "fr", "es", "sr"];
+    for (const locale of locales) {
+      for (const [kind, threshold] of kinds) await send(provider, alert({ locale, kind, threshold, used: "4", included: "5", overage: "on", cap: "5" }));
+    }
+    const emails = Array.from({ length: locales.length * kinds.length }, (_, index) => sent(index));
+    // Each language and alert gets its own subject.
+    expect(new Set(emails.map((email) => email.subject)).size).toBe(emails.length);
+    expect(emails.map((email) => email.subject).slice(kinds.length, kinds.length * 2)).toEqual([
+      "Vos entreprises ont utilisé 80 % des minutes du mois",
+      "Vos entreprises ont utilisé toutes les minutes du mois",
+      "Vos entreprises ont utilisé 80 % des clavardages du mois",
+      "Vos entreprises ont utilisé tous les clavardages du mois",
+      "Vous avez utilisé 80 % de votre plafond de dépassement",
+      "Vous avez atteint votre plafond de dépassement",
+    ]);
+    for (const [index, email] of emails.entries()) {
+      const locale = locales[Math.floor(index / kinds.length)]!;
+      expect(email.text.startsWith({ en: "Hi Ana,", fr: "Bonjour Ana,", es: "Hola, Ana:", sr: "Zdravo, Ana," }[locale]!)).toBe(true);
+      expect(email.text).toContain(url);
+      expect(email.text).not.toMatch(/undefined|—/);
+    }
+  });
+});

@@ -5,6 +5,7 @@ import {
   billingErrorCodes,
   isBillingInterval,
   isPaidPartnerTierSlug,
+  parseDeploymentMode,
   partnerFeatures,
   partnerTierCatalog,
   partnerTierInForce,
@@ -17,7 +18,9 @@ import { AuthorizationError } from "../authz";
 import type { DomainContext } from "./context";
 import { advancePartnerInTransaction, partnerTierEventKind } from "./partnerLifecycle";
 import { loadPartnerNumberStanding } from "./partnerNumbers";
+import { poolSpendCents, readPartnerPoolInTransaction, setPartnerPoolOverageInTransaction } from "./partnerPool";
 import type { PartnerActor, PartnerMemberActor } from "./partners";
+import { periodKeyFor } from "./usage";
 
 // A partner's tier: what it buys from the host through Polar. Only the
 // partner's owners start a checkout. The worker creates the checkout with
@@ -59,6 +62,8 @@ const accountColumns = {
   poolVoiceSeconds: partnerBillingAccounts.poolVoiceSeconds,
   poolChats: partnerBillingAccounts.poolChats,
   includedNumbers: partnerBillingAccounts.includedNumbers,
+  poolOverageEnabled: partnerBillingAccounts.poolOverageEnabled,
+  poolOverageCapCents: partnerBillingAccounts.poolOverageCapCents,
 };
 
 async function readAccount(tx: DatabaseTransaction, partnerId: string) {
@@ -123,7 +128,33 @@ export type PartnerBilling = PartnerTier & {
   numbersHeld: number;
   /** Whether the deployment counts those numbers against the tier and charges for extra ones, as it does while it bills tiers. */
   numbersCounted: boolean;
+  /**
+   * What the businesses used of the pool this month, and what its overage
+   * costs so far in US cents, or null while the deployment bills no tiers.
+   * Minutes count the calls that ended, as the pool's alerts do: what open
+   * calls hold comes back when they end.
+   */
+  poolUsage: { periodKey: string; voiceSecondsUsed: number; chatsUsed: number; overageSpendCents: number } | null;
+  /**
+   * Pool overage: on unless an owner turned it off, with its monthly cap in
+   * US cents or none. Only a paid tier bills it, which `billed` says, so
+   * Free stops at its pool whatever the switch says.
+   */
+  poolOverage: PoolOverage;
+  /**
+   * Free's one 14-day trial number, ever: whether one of the partner's
+   * businesses can still get it, or used it. Null on a paid tier, or where
+   * the deployment offers no trial: without tier billing, or on a
+   * self-hosted server, whose businesses get no trial numbers.
+   */
+  trialNumber: "available" | "used" | null;
 };
+
+export type PoolOverage = { enabled: boolean; capCents: number | null; billed: boolean };
+
+function poolOverageOf(account: Awaited<ReturnType<typeof readAccount>>, tier: PartnerTier): PoolOverage {
+  return { enabled: account?.poolOverageEnabled ?? true, capCents: account?.poolOverageCapCents ?? null, billed: tier.billed && partnerTierCatalog[tier.tier].overagesBillable };
+}
 
 export async function getPartnerBilling(context: DomainContext, actor: PartnerActor): Promise<PartnerBilling> {
   const member = billingActor(actor);
@@ -132,6 +163,8 @@ export async function getPartnerBilling(context: DomainContext, actor: PartnerAc
     const account = await readAccount(tx, member.partnerId);
     const tier = tierOf(account);
     const numbers = await loadPartnerNumberStanding(tx, member.partnerId);
+    const periodKey = periodKeyFor();
+    const pool = tier.billed ? await readPartnerPoolInTransaction(tx, { partnerId: member.partnerId, periodKey }) : null;
     return {
       ...tier,
       currentPeriodEnd: tier.tier === "free" ? null : account?.currentPeriodEnd?.toISOString() ?? null,
@@ -139,7 +172,41 @@ export async function getPartnerBilling(context: DomainContext, actor: PartnerAc
       hasCustomerPortal: Boolean(account?.customerId && account.subscriptionId),
       numbersHeld: numbers.held,
       numbersCounted: numbers.counted,
+      poolUsage: pool ? { periodKey, voiceSecondsUsed: pool.month.voiceSecondsFinal, chatsUsed: pool.month.chatsUsed, overageSpendCents: Math.max(0, Math.ceil(poolSpendCents(pool) - 1e-9)) } : null,
+      poolOverage: poolOverageOf(account, tier),
+      trialNumber: tier.tier === "free" && numbers.counted && trialsOffered() ? (numbers.trialAvailable ? "available" : "used") : null,
     };
+  });
+}
+
+/** Whether the partner's businesses can get trial numbers: they're made as cloud businesses unless the server is self-hosted, as tenancy makes them. */
+function trialsOffered(): boolean {
+  return parseDeploymentMode(process.env.DEPLOYMENT_MODE) !== "self_hosted_standard";
+}
+
+// The cap column is a Postgres integer.
+const MAX_CAP_CENTS = 2_147_483_647;
+
+/**
+ * Turns the partner's pool overage on or off, and sets its monthly cap in US
+ * cents or clears it. Past the pool, the partner's businesses keep answering
+ * while overage is on and under the cap. With it off or at the cap, calls
+ * forward and chat shows its "can't reply" message. Only owners change it.
+ */
+export async function setPartnerPoolOverage(context: DomainContext, actor: PartnerActor, input: { enabled: unknown; capCents: unknown }): Promise<PoolOverage> {
+  const member = billingActor(actor);
+  const { enabled, capCents } = input;
+  if (typeof enabled !== "boolean") throw failure("enabled must be true or false.", 400, "invalid_pool_overage");
+  if (capCents !== null && (typeof capCents !== "number" || !Number.isSafeInteger(capCents) || capCents < 0 || capCents > MAX_CAP_CENTS)) {
+    throw failure("capCents must be a whole number of cents, or null for no cap.", 400, "invalid_pool_overage");
+  }
+  if (!partnerFeatures(process.env).tierBilling) throw failure("This deployment doesn't bill partners for tiers.", 409, "tier_billing_unavailable");
+  return await withBusinessTransaction(context.db, { userId: member.userId, actorType: "operator" }, async (tx) => {
+    await lockPartnerBilling(tx, member.partnerId);
+    await requireOwner(tx, member);
+    await setPartnerPoolOverageInTransaction(tx, { partnerId: member.partnerId, enabled, capCents });
+    const account = await readAccount(tx, member.partnerId);
+    return poolOverageOf(account, tierOf(account));
   });
 }
 

@@ -24,7 +24,6 @@ The host bills each partner through Polar ([ADR 0009](adr/0009-partners-bill-thr
 - Each tier includes some phone numbers. Extra numbers cost what the host pays for them.
 - Overage costs less per minute and per chat on higher tiers.
 - Pool overage is on by default and bills pay as you go, up to a monthly cap the partner sets. The partner can turn overage off.
-- Tiers don't limit simultaneous calls, because a cap on an inbound receptionist sends callers to a busy signal.
 - The free tier needs no card. It includes one 14-day number trial per partner, ever, with the same 30 minutes and rules as direct Free.
 
 LobbyStack's cloud sells these tiers:

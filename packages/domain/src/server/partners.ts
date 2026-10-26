@@ -40,6 +40,7 @@ import { lockBusinessNumberClaims } from "./phoneNumbers";
 import { lockActivePartnerPlatformKey } from "./publicApi/platformKeys";
 import { isSharedSmsSender } from "./smsSender";
 import { ianaTimeZone, insertInvitationInTransaction, insertOwnerlessBusinessInTransaction, isPartnerMemberEmail, isSingleEmailAddress, lockBusinessTeam } from "./tenancy";
+import { POOL_ALERT_AGGREGATE } from "./partnerPoolAlerts";
 import { periodKeyFor } from "./usage";
 
 // Partner operations: what the partner console and a partner's platform
@@ -918,7 +919,8 @@ export async function deletePartnerBusinessInTransaction(tx: DatabaseTransaction
   const held = await tx.select({ id: phoneNumbers.id, e164: phoneNumbers.e164, providerPhoneId: phoneNumbers.providerPhoneId }).from(phoneNumbers).where(and(eq(phoneNumbers.businessId, businessId), inArray(phoneNumbers.status, ["active", "reclaiming"])));
   const stored = await tx.select({ objectKey: storageObjects.objectKey }).from(storageObjects).where(and(eq(storageObjects.businessId, businessId), ne(storageObjects.status, "deleted")));
   // An invitation or alert sent after the business is gone would go out under the host's brand.
-  await tx.delete(outboxMessages).where(and(eq(outboxMessages.businessId, businessId), isNull(outboxMessages.publishedAt)));
+  // The pool's alerts to the partner's owners and admins only went out through this business, and still go, since the pool's month counts them sent.
+  await tx.delete(outboxMessages).where(and(eq(outboxMessages.businessId, businessId), isNull(outboxMessages.publishedAt), ne(outboxMessages.aggregateType, POOL_ALERT_AGGREGATE)));
   // These jobs are queued in the business, which the worker's RLS needs, and deleting it leaves them belonging to none.
   const releasedNumbers: PartnerBusinessDeleted["releasedNumbers"] = [];
   for (const number of held) {

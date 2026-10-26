@@ -22,8 +22,8 @@ type NumbersResponse = {
   phoneNumbers: PhoneNumberViewModel[];
   activeClaim?: { id: string; status: string } | null;
   replacement: { usedAt: string | null; activeClaim?: { id: string; status: string } | null };
-  /** For a partner's business, whether its partner's tier lets it get a new number now; null for a direct business. */
-  partnerNumbers?: { available: boolean } | null;
+  /** For a partner's business, whether its partner's tier lets it get a new number now, and whether that number is its partner's 14-day trial; null for a direct business. */
+  partnerNumbers?: { available: boolean; trial?: boolean } | null;
 };
 function getSettingsPhoneNumberErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message.trim().length > 0) {
@@ -130,7 +130,7 @@ export function LivePhoneNumberSettingsSurface() {
                 <p className="text-[15px] leading-6 text-foreground">{displayPhoneNumber}</p>
               ) : (
                 <p className="text-[15px] leading-6 text-muted-foreground">
-                  {offersFreeTrial
+                  {offersFreeTrial || partnerNumbers?.trial
                     ? t("phoneNumber.freeTrial.description")
                     : partnerTierRequired
                     ? t("phoneNumber.partnerTierRequired.description")

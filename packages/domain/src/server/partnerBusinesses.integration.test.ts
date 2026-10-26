@@ -416,8 +416,8 @@ describe.skipIf(!client)("phone numbers for a partner's business", () => {
       });
       const inventory = { listAvailablePhoneNumbers: vi.fn(async () => [{ phoneE164: testNumber(), countryCode: "CA", capabilities: { sms: true, voice: true } }]) };
 
-      // The search refuses before it offers a number.
-      expect(await refusal(searchBusinessNumberInventory(context, { userId: owner!.userId, businessId, claimTokenSecret: "test-secret" }, inventory))).toMatchObject({ status: 409, code: "partner_number_limit_reached" });
+      // The search offers only the partner's trial number, which needs the owner's verified mobile, so it refuses before it offers one.
+      expect(await refusal(searchBusinessNumberInventory(context, { userId: owner!.userId, businessId, claimTokenSecret: "test-secret" }, inventory))).toMatchObject({ status: 409, code: "phone_verification_required" });
       expect(inventory.listAvailablePhoneNumbers).not.toHaveBeenCalled();
 
       // Its partner is on Free, which includes no number. A claim refuses whichever way it comes, while a direct business on Starter still gets its number.
@@ -426,9 +426,9 @@ describe.skipIf(!client)("phone numbers for a partner's business", () => {
       await expect(claim(direct)).resolves.toEqual(expect.any(String));
       const apiClaim = asWorker(tx, async () => await withBusinessTransaction(context.db, { businessId, actorType: "worker" }, async (inner) => await inner.execute(sql`select app.reserve_api_number_claim(${businessId}::uuid, ${owner!.userId}::uuid, 'onboarding', null, ${testNumber()}, '{}'::jsonb, ${randomUUID()}, ${randomUUID()}, null, true)`)));
       expect(await refusal(apiClaim)).toMatchObject({ code: "P0001", message: "partner_number_limit_reached" });
-      // Its entitlement is live, so it has no free trial to claim either.
+      // The partner's trial number needs the owner's verified mobile too, whatever the business's own entitlement.
       const trialClaim = asAppSession(tx, async () => await withBusinessTransaction(context.db, { userId: owner!.userId, businessId, actorType: "operator" }, async (inner) => await inner.execute(sql`select app.reserve_trial_number_claim(${businessId}::uuid, ${owner!.userId}::uuid, ${testNumber()}, '{}'::jsonb, ${randomUUID()}, ${randomUUID()}, null)`)));
-      expect(await refusal(trialClaim)).toMatchObject({ code: "P0001", message: "trial_not_needed" });
+      expect(await refusal(trialClaim)).toMatchObject({ code: "P0001", message: "phone_verification_required" });
     });
   });
 });

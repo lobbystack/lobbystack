@@ -217,6 +217,7 @@ async function main(): Promise<void> {
             ,('lobbystack_worker', 'partner_tier_billing', 'INSERT')
             ,('lobbystack_worker', 'partner_tier_billing', 'UPDATE')
             ,('lobbystack_readonly', 'partner_tier_billing', 'SELECT')
+            ,('lobbystack_readonly', 'partner_usage_months', 'SELECT')
             ,('lobbystack_worker', 'provider_events', 'SELECT')
             ,('lobbystack_worker', 'provider_events', 'UPDATE')
             ,('lobbystack_app', 'business_templates', 'SELECT')
@@ -360,6 +361,8 @@ async function main(): Promise<void> {
             ('partner_billing_accounts', 'subscription_state', false),
             ('partner_billing_accounts', 'pool_voice_seconds', false),
             ('partner_billing_accounts', 'included_numbers', false),
+            ('partner_billing_accounts', 'pool_overage_enabled', false),
+            ('partner_billing_accounts', 'pool_overage_cap_cents', false),
             ('business_templates', 'partner_id', false),
             ('business_templates', 'manifest', false),
             ('business_template_files', 'partner_id', false),
@@ -471,6 +474,44 @@ async function main(): Promise<void> {
         `);
         if (partnerLifecycleEventGrantFailures.rows.length > 0) {
           throw new Error(`Partner lifecycle event grant verification failed for unexpected: ${partnerLifecycleEventGrantFailures.rows.map((row) => `${row.role_name}:${row.privilege_type}`).join(", ")}`);
+        }
+        // A partner's pool counts move only through its functions: the worker
+        // reserves and records usage inside one of the partner's businesses,
+        // and an owner's overage settings go through their own function. No
+        // runtime role reads or writes the counts directly.
+        const partnerPoolGrantFailures = await migrator.db.execute<{ role_name: string; object_name: string; granted: boolean }>(sql`
+          select expected.role_name, expected.object_name, expected.granted
+          from (values
+            ('lobbystack_worker', 'app.lock_partner_pool(uuid, text)', true),
+            ('lobbystack_worker', 'app.record_partner_pool_usage(uuid, text, double precision, double precision, double precision, double precision, double precision, double precision)', true),
+            ('lobbystack_worker', 'app.partner_pool_month(uuid, text)', true),
+            ('lobbystack_app', 'app.partner_pool_month(uuid, text)', true),
+            ('lobbystack_app', 'app.set_partner_pool_overage(uuid, boolean, integer)', true),
+            ('lobbystack_app', 'app.lock_partner_pool(uuid, text)', false),
+            ('lobbystack_app', 'app.record_partner_pool_usage(uuid, text, double precision, double precision, double precision, double precision, double precision, double precision)', false),
+            ('lobbystack_worker', 'app.set_partner_pool_overage(uuid, boolean, integer)', false),
+            ('lobbystack_app', 'app.can_use_partner_pool(uuid, text)', false),
+            ('lobbystack_worker', 'app.can_use_partner_pool(uuid, text)', false),
+            ('lobbystack_worker', 'app.claim_partner_pool_alerts(uuid, text, text[])', true),
+            ('lobbystack_worker', 'app.partner_pool_alert_recipients(uuid, text)', true),
+            ('lobbystack_worker', 'app.count_partner_open_calls(uuid, text, timestamptz, uuid)', true),
+            ('lobbystack_app', 'app.claim_partner_pool_alerts(uuid, text, text[])', false),
+            ('lobbystack_app', 'app.partner_pool_alert_recipients(uuid, text)', false),
+            ('lobbystack_app', 'app.count_partner_open_calls(uuid, text, timestamptz, uuid)', false),
+            -- A partner's trial number: only the worker finds the business that holds it, to convert it when the partner pays.
+            ('lobbystack_worker', 'app.partner_number_trial_business(uuid)', true),
+            ('lobbystack_app', 'app.partner_number_trial_business(uuid)', false),
+            ('lobbystack_app', 'app.partner_number_trial_used(uuid)', false),
+            ('lobbystack_worker', 'app.partner_number_trial_used(uuid)', false)
+          ) as expected(role_name, object_name, granted)
+          where has_function_privilege(expected.role_name, expected.object_name, 'EXECUTE') <> expected.granted
+          union all
+          select expected.role_name, 'public.partner_usage_months:' || expected.privilege_type, false
+          from (values ('lobbystack_app', 'SELECT'), ('lobbystack_app', 'INSERT'), ('lobbystack_app', 'UPDATE'), ('lobbystack_worker', 'SELECT'), ('lobbystack_worker', 'INSERT'), ('lobbystack_worker', 'UPDATE')) as expected(role_name, privilege_type)
+          where has_table_privilege(expected.role_name, 'public.partner_usage_months', expected.privilege_type)
+        `);
+        if (partnerPoolGrantFailures.rows.length > 0) {
+          throw new Error(`Partner pool grant verification failed for: ${partnerPoolGrantFailures.rows.map((row) => `${row.role_name}:${row.object_name}:${row.granted ? "missing" : "unexpected"}`).join(", ")}`);
         }
         const demoResolverGrantFailures = await migrator.db.execute<{ role_name: string; function_name: string }>(sql`
           select role_name, function_name

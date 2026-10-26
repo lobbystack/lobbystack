@@ -13,7 +13,7 @@ import { claimNumberProvisioning, completeNumberProvisioning, desiredNumberRouti
 import { createWebhookSender, processWebhookDelivery, pruneApiHistory, type WebhookSender } from "@lobbystack/domain";
 import { LIVE_RECORDING_ATTEMPTS, listBusinessesWithOpenLiveCalls, listOpenLiveCalls, liveCallHasRecording, persistCallRecording, retryLiveCallRecording, type OpenLiveCall } from "@lobbystack/domain";
 import { expireTeamRequest } from "@lobbystack/domain";
-import { advancePartnerLifecycles, claimPartnerCheckoutRequest, loadPartnerCheckoutRequest, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerBillingKey, partnerCheckoutLeaseEndsAt, reconcilePartnerTier, settlePartnerNumberCharges } from "@lobbystack/domain";
+import { advancePartnerLifecycles, claimPartnerCheckoutRequest, keepPartnerTrialNumber, loadPartnerCheckoutRequest, loadPoolUsageEvent, markPartnerCheckoutCreated, markPartnerCheckoutFailed, partnerBillingKey, partnerCheckoutLeaseEndsAt, reconcilePartnerTier, settlePartnerNumberCharges } from "@lobbystack/domain";
 import { checkPartnerCustomDomains, provisionPartnerCustomDomain, removePartnerCustomHostname, type CustomDomainProviders } from "@lobbystack/domain";
 import { brandForEmail, businessExists, businessGetsHostEmails, hostBrandFromEnvironment, isHostOnlyEmailTemplate } from "@lobbystack/domain";
 import type { DomainContext } from "@lobbystack/domain";
@@ -201,6 +201,39 @@ async function recordBillingUsageSyncFailed(
   } catch {
     // Billing sync telemetry is best-effort and must not mask the provider error.
   }
+}
+
+/**
+ * Sends Polar the overage one usage event put past its partner's pool, priced
+ * at the tier's rate when the event was recorded: a meter event whose
+ * quantity is that price in US cents, under the partner's customer. Polar
+ * charges each event once, by its id. Usage within the pool, and usage past
+ * it while the partner paid for no overage, sends nothing.
+ */
+async function syncPoolOverage(
+  dependencies: WorkerDependencies,
+  event: NonNullable<Awaited<ReturnType<typeof loadPoolUsageEvent>>>,
+  polar: NonNullable<WorkerDependencies["polar"]>,
+): Promise<JobResult> {
+  if (event.syncStatus === "synced") return { status: "completed", entityId: event.id };
+  if (event.syncStatus !== "pending" || !event.isFinal || event.overageCents <= 0 || !event.customerId) return { status: "skipped", entityId: event.id };
+  if (event.usageKind !== "voice_seconds" && event.usageKind !== "chat_ai_tokens") return { status: "skipped", entityId: event.id };
+  try {
+    await polar.recordUsage({
+      eventName: event.usageKind === "voice_seconds" ? billingMeterEventNames.partnerPoolVoiceOverage : billingMeterEventNames.partnerPoolChatOverage,
+      externalCustomerId: partnerBillingKey(event.partnerId),
+      quantity: event.overageCents,
+      timestamp: event.createdAt.toISOString(),
+      idempotencyKey: `partner-pool:${event.id}`,
+      businessId: event.businessId,
+      usageKind: event.usageKind,
+    });
+  } catch (error) {
+    await recordBillingUsageSyncFailed(dependencies, { businessId: event.businessId });
+    throw error;
+  }
+  await markBillingUsageSynced(dependencies.domain, { businessId: event.businessId, usageEventId: event.id });
+  return { status: "completed", entityId: event.id };
 }
 
 /**
@@ -413,7 +446,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         return { status: "skipped" };
       }
       {
-        const template = job.payload.template === "existing_account" || job.payload.template === "account_setup" || job.payload.template === "verify_email" || job.payload.template === "password_reset" || job.payload.template === "invitation" || job.payload.template === "operator_alert" || job.payload.template === "feedback_submission" || job.payload.template === "onboarding_followup"
+        const template = job.payload.template === "existing_account" || job.payload.template === "account_setup" || job.payload.template === "verify_email" || job.payload.template === "password_reset" || job.payload.template === "invitation" || job.payload.template === "operator_alert" || job.payload.template === "feedback_submission" || job.payload.template === "onboarding_followup" || job.payload.template === "partner_pool_alert"
           ? job.payload.template
           : "operator_alert";
         const variables = typeof job.payload.variables === "object" && job.payload.variables !== null
@@ -426,7 +459,8 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
           // An email queued before payloads carried a brand goes out under the host's.
           const reference = parseEmailBrandReference(job.payload.brand);
           // A business deleted after it queued this email has no one left to write to, and its brand went with it.
-          const about = reference.kind === "business" ? reference.businessId : businessId;
+          // A pool alert only rode in the business's outbox: it's for the partner's owners and admins, who are still there.
+          const about = reference.kind === "business" ? reference.businessId : template === "partner_pool_alert" ? null : businessId;
           if (about && !await businessExists(dependencies.domain.db, about)) return { status: "skipped", entityId: about };
           const brand = await emailBrand(dependencies.domain, reference);
           const sent = await dependencies.email.sendTemplate({
@@ -560,6 +594,9 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       }
       const usageEventId = String(job.payload.usageEventId ?? "");
       if (!usageEventId) return { status: "skipped" };
+      // Usage on a partner's pool reports only what it put past the pool, to the partner's Polar customer.
+      const pooled = await loadPoolUsageEvent(dependencies.domain, { businessId: businessIdOrThrow(job), usageEventId });
+      if (pooled) return await syncPoolOverage(dependencies, pooled, dependencies.polar);
       const event = await loadBillingUsageEvent(dependencies.domain, { businessId: businessIdOrThrow(job), usageEventId });
       if (!event) return { status: "skipped", entityId: usageEventId };
       if (event.syncStatus === "synced" || event.syncStatus === "succeeded") return { status: "completed", entityId: event.id };
@@ -678,6 +715,8 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
       const providerEventId = String(job.payload.providerEventId ?? "");
       if (!isUuid(partnerId) || !isUuid(providerEventId)) return { status: "skipped", entityId: providerEventId };
       const reconciled = await reconcilePartnerTier(dependencies.domain, { partnerId, providerEventId });
+      // A tier the partner now pays for keeps its trial number. A retry converts it if this run died first.
+      if (reconciled) await keepPartnerTrialNumber(dependencies.domain, { partnerId });
       return { status: reconciled ? "completed" : "skipped", entityId: providerEventId };
     }
     case "billing.chargePartnerNumbers": {

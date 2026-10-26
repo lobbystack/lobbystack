@@ -7,9 +7,9 @@ import { businesses, enqueueOutbox, numberTrials, onboardingNumberClaimEvents, p
 import { requireBusinessAdmin } from "../authz";
 import type { DomainContext } from "./context";
 import { loadEntitlement } from "./entitlement";
-import { activateNumberTrialInTransaction, failNumberTrialInTransaction, isNumberCountry, keepBusinessNumbersInTransaction, trialCountries, verifiedPhone, type NumberCountry } from "./numberTrials";
+import { activateNumberTrialInTransaction, failNumberTrialInTransaction, isNumberCountry, keepBusinessNumbersInTransaction, trialCountries, trialNumberPaidForInTransaction, verifiedPhone, type NumberCountry } from "./numberTrials";
 import { normalizeOnboardingStage } from "./onboarding";
-import { loadPartnerNumberStanding, newPartnerNumberRefusal, numberCountsForPartnerInTransaction, recordPartnerNumberCostInTransaction } from "./partnerNumbers";
+import { loadPartnerNumberStanding, newPartnerNumberRefusal, numberCountsForPartnerInTransaction, partnerTrialOffered, recordPartnerNumberCostInTransaction, unclaimedPartnerDemoInTransaction } from "./partnerNumbers";
 import { resolveBusinessNumberMarket, type BusinessNumberMarket } from "./phoneNumberMarket";
 
 export type NumberSelection = {
@@ -70,9 +70,10 @@ const claimRefusals: Record<string, [status: number, message: string]> = {
   trial_ip_limited: [429, "A free trial already started from this network in the last 30 days. Choose a plan to get a number."],
   trial_not_needed: [409, "Your plan already includes a number. Search again to pick one."],
   trial_not_available: [409, "A free trial number isn't available for this workspace. Choose a plan to get a number."],
-  // The partner check on onboarding_number_claim_events (migration 0147), which also counts the daily and 30-day quotas above across a partner's businesses.
+  // The partner check on onboarding_number_claim_events (migrations 0147 and 0154), which also counts the daily and 30-day quotas above across a partner's businesses.
   partner_numbers_unavailable: [409, "Phone numbers aren't available for this business yet."],
   partner_number_limit_reached: [409, "This business's partner needs a paid tier for more phone numbers."],
+  partner_trial_used: [409, "This business's partner already used its free trial number. A paid tier includes numbers."],
 };
 
 function refused(reason: string): Error {
@@ -114,12 +115,16 @@ export async function numberEligibilityInTransaction(tx: DatabaseTransaction, in
   if (!business) throw numberClaimError(404, "not_found", "Workspace not found.");
   // While the deployment bills tiers, a partner's tier sets how many numbers
   // its businesses hold between them. A paid tier pays for each one past those
-  // it includes, and any other tier gets none past them. Without tier billing,
-  // the cloud buys a partner's business no new number. The claim checks the
-  // same, under the partner's lock.
+  // it includes, and Free gets none past them, apart from the partner's one
+  // trial number, which the dashboard offers on the cloud. Without tier
+  // billing, the cloud buys a partner's business no new number. The claim
+  // checks the same, under the partner's lock.
+  let partnerTrial = false;
   if (entitlement.poolPartnerId && purpose === "onboarding") {
-    const refusal = newPartnerNumberRefusal(await loadPartnerNumberStanding(tx, entitlement.poolPartnerId), business.deploymentMode);
-    if (refusal) throw refused(refusal);
+    const standing = await loadPartnerNumberStanding(tx, entitlement.poolPartnerId);
+    partnerTrial = input.via === "dashboard" && partnerTrialOffered(standing, business.deploymentMode);
+    const refusal = newPartnerNumberRefusal(standing, business.deploymentMode);
+    if (refusal && !partnerTrial) throw refused(refusal);
   }
   const onboardingStage = normalizeOnboardingStage(business.stage);
   if (input.via === "dashboard" && purpose === "onboarding" && !["phone_number", "attribution", "complete"].includes(onboardingStage)) throw refused("invalid_onboarding_stage");
@@ -133,7 +138,18 @@ export async function numberEligibilityInTransaction(tx: DatabaseTransaction, in
   const requested = (verified?.countryCode ?? input.selection?.countryCode)?.trim().toUpperCase();
   if (requested && !isNumberCountry(requested)) throw numberClaimError(400, "unsupported_country", "Phone numbers aren't available in this country yet.");
   let trial: { verifiedPhone: string } | undefined;
-  if (business.deploymentMode === "cloud" && !entitlement.live) {
+  if (partnerTrial) {
+    // The partner's trial runs by the host's trial rules: a live business,
+    // the verified mobile of the person claiming, in a trial country, once.
+    // A business paused with its partner's other businesses isn't live, and
+    // a demo nobody claimed would spend the partner's one trial and expire.
+    if (!entitlement.live || await unclaimedPartnerDemoInTransaction(tx, input.businessId)) throw refused("partner_numbers_unavailable");
+    if (!verified) throw refused("phone_verification_required");
+    if (!(trialCountries() as string[]).includes(verified.countryCode)) throw refused("partner_number_limit_reached");
+    const used = await tx.select({ id: numberTrials.id }).from(numberTrials).where(and(eq(numberTrials.businessId, input.businessId), ne(numberTrials.status, "failed"))).limit(1);
+    if (used.length) throw refused("trial_already_used");
+    trial = { verifiedPhone: verified.phone };
+  } else if (business.deploymentMode === "cloud" && !entitlement.live) {
     // A partner's business that isn't live, such as one whose package isn't
     // paid, pays its partner, so the host's plans and free trial aren't for it.
     if (entitlement.poolPartnerId) throw refused("partner_numbers_unavailable");
@@ -321,8 +337,8 @@ export async function completeNumberProvisioning(context: DomainContext, input: 
     } else {
       await tx.update(businesses).set({ onboardingStage: sql`CASE WHEN ${businesses.onboardingStage} = 'complete' THEN 'complete' ELSE 'attribution' END`, updatedAt: new Date() }).where(eq(businesses.id, input.businessId));
       const activated = await activateNumberTrialInTransaction(tx, { businessId: input.businessId, claimId: input.claimId, phoneNumberId: number.id });
-      // The owner may have paid while we bought the number: that payment found no trial to convert, so convert it now.
-      if (activated && (await loadEntitlement(tx, input.businessId)).live) await keepBusinessNumbersInTransaction(tx, { businessId: input.businessId });
+      // The owner, or for a partner's trial the partner, may have paid while we bought the number: that payment found no trial to convert, so convert it now.
+      if (activated && await trialNumberPaidForInTransaction(tx, input.businessId)) await keepBusinessNumbersInTransaction(tx, { businessId: input.businessId });
     }
     return number.id;
   });

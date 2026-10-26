@@ -630,6 +630,7 @@
       "numbers_many": "{{count}} números de teléfono",
       "numbers_other": "{{count}} números de teléfono",
       "noNumbers": "Ningún número de teléfono",
+      "trialNumber": "1 número de prueba durante 14 días",
       "extraNumbers": "Números adicionales a precio de costo",
       "overage": "Cada minuto adicional cuesta {{minute}}, y cada chat adicional {{chat}}",
       "noOverage": "Sin minutos ni chats adicionales más allá de estos"
@@ -645,6 +646,39 @@
       "extra_one": "Números de teléfono en uso: {{held}}. Paga {{count}} número adicional a precio de costo cada mes.",
       "extra_many": "Números de teléfono en uso: {{held}}. Paga {{count}} números adicionales a precio de costo cada mes.",
       "extra_other": "Números de teléfono en uso: {{held}}. Paga {{count}} números adicionales a precio de costo cada mes."
+    },
+    "trial": {
+      "available": "El propietario de uno de sus negocios puede solicitar su número de prueba de 14 días en la configuración de número de teléfono de ese negocio, una vez que verifique su móvil.",
+      "used": "Ya usó su número de prueba de 14 días."
+    },
+    "pool": {
+      "title": "Este mes",
+      "description": "Los minutos y los chats que sus negocios usaron de su bolsa compartida. Su bolsa se reinicia el {{resetsAt}}.",
+      "minutes": "Minutos",
+      "chats": "Chats"
+    },
+    "overage": {
+      "title": "Excedente",
+      "description": "Pasada su bolsa, sus negocios siguen respondiendo con las tarifas de excedente de su nivel. Con el excedente desactivado o al llegar a su límite, las llamadas se desvían al número de transferencia de cada negocio o al teléfono de su propietario, y el chat del sitio deja de responder.",
+      "toggle": "Permitir excedente",
+      "free": "El nivel Gratis no tiene excedente. Sus negocios se detienen en la bolsa hasta que elija un nivel de pago.",
+      "off": "El excedente está desactivado. Sus negocios se detienen en la bolsa cada mes.",
+      "noCap": "Sin límite",
+      "spend": "Excedente este mes",
+      "spendNoCap": "{{spend}} este mes",
+      "spendOfCap": "{{spend}} de {{cap}}",
+      "capReached": "Llegó a su límite. Las llamadas se desvían y el chat deja de responder hasta el próximo mes o hasta que suba el límite.",
+      "capLabel": "Límite mensual",
+      "capPlaceholder": "50,00",
+      "saveCap": "Fijar límite",
+      "updateCap": "Actualizar límite",
+      "removeCap": "Quitar límite",
+      "capSaved": "Límite guardado.",
+      "capRemoved": "Límite quitado.",
+      "turnedOn": "Excedente activado.",
+      "turnedOff": "Excedente desactivado.",
+      "saveFailed": "No pudimos guardarlo. Inténtelo de nuevo.",
+      "invalidAmount": "Escriba un monto en dólares, como 50 o 50,00."
     },
     "choose": {
       "title": "Elija un nivel",
