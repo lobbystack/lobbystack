@@ -208,6 +208,7 @@ The product decisions are settled in "How partners resell LobbyStack", the billi
 
 - Annual billing is 20% off, as on direct plans.
 - Extra numbers cost what the host pays for them.
+- Tiers don't limit simultaneous calls.
 
 **Lifecycle.** When a tier is cancelled or a payment fails, the partner's businesses answer for 30 days, then pause, with calls forwarding and chat showing its message. The host deletes them 90 days after the tier ended. An hourly job moves partners through these states.
 
@@ -272,6 +273,7 @@ The program won't do these at all:
 - Move a business that pays the host directly under a partner
 - Neutral Google and Meta apps (Calendar and Instagram connect through the host's apps, so their consent screens name the host)
 - A dedicated text sender per business (texts stay on the host's verified number)
+- Concurrent-call limits sold by tier
 - Branded mobile or desktop apps, a website builder for partners, white-labeled help docs, MCP or API keys for operators at partner businesses, and an AI disclosure or call recording notice
 
 ## Further Notes
