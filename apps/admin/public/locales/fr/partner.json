@@ -625,7 +625,8 @@
       "webhooks_manage": "Créer et supprimer des points de terminaison webhook",
       "businesses_create": "Créer des entreprises et inviter leurs propriétaires",
       "users_create": "Inviter des propriétaires à créer un compte"
-    }
+    },
+    "emptyDescription": "Créez-en une pour configurer vos entreprises depuis votre propre code."
   },
   "secretReveal": {
     "copy": "Copier",

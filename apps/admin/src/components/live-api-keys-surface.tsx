@@ -126,7 +126,13 @@ export function ApiKeysSurface({ namespace, layout, loading, canManage, scopes: 
       >
         <Surface>
           {keys.isLoading ? <div className="p-6"><Skeleton className="h-24 w-full rounded-xl" /></div> : rows.length === 0 ? (
-            <p className="type-body-muted p-6 text-center">{t("apiKeys.empty")}</p>
+            layout === "page" ? (
+            <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
+              <span className="flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground"><KeyRound className="size-5" /></span>
+              <h2 className="text-base font-medium">{t("apiKeys.empty")}</h2>
+              <p className="max-w-sm text-sm leading-6 text-muted-foreground">{t("apiKeys.emptyDescription")}</p>
+            </div>
+          ) : <p className="type-body-muted p-6 text-center">{t("apiKeys.empty")}</p>
           ) : (
             <div className="overflow-x-auto">
               <Table>

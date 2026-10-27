@@ -625,7 +625,8 @@
       "webhooks_manage": "Crear y eliminar endpoints de webhook",
       "businesses_create": "Crear negocios e invitar a sus propietarios",
       "users_create": "Invitar a propietarios a crear una cuenta"
-    }
+    },
+    "emptyDescription": "Cree una para configurar sus negocios desde su propio código."
   },
   "secretReveal": {
     "copy": "Copiar",

@@ -97,7 +97,7 @@
     },
     "partner": {
       "prepareDescription": "Nous lisons le site du prospect pour créer la démo. Publiez-la dès qu'elle est prête.",
-      "empty": "Aucune démo pour l'instant. Entrez le site Web d'un prospect pour en créer une.",
+      "empty": "Entrez le site web d'un prospect pour en créer une.",
       "accessLabel": "Accès une fois que le prospect l'a réclamée",
       "usage": "Minutes ce mois-ci : {{minutes}} · Discussions ce mois-ci : {{chats}}",
       "open": "Ouvrir",
@@ -111,7 +111,8 @@
         "rateLimited": "Trop de nouvelles démos en une heure. Réessayez plus tard.",
         "open": "Impossible d'ouvrir la démo. Réessayez.",
         "delete": "Impossible de supprimer la démo. Réessayez."
-      }
+      },
+      "emptyTitle": "Aucune démo pour l'instant"
     },
     "promptsHint": "Ajoutez-en au moins deux, une par ligne.",
     "ingestionUnavailable": "Ce tableau de bord ne peut pas lire les sites Web : la démo répond donc à partir de son message d'accueil et de ses questions.",

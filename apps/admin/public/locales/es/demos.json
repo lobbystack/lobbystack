@@ -97,7 +97,7 @@
     },
     "partner": {
       "prepareDescription": "Leemos el sitio web del prospecto para crear la demo. Publíquela cuando esté lista.",
-      "empty": "Aún no hay demos. Escriba el sitio web de un cliente potencial para crear una.",
+      "empty": "Introduzca el sitio web de un prospecto para crear una.",
       "accessLabel": "Acceso cuando el cliente potencial la reclame",
       "usage": "Minutos este mes: {{minutes}} · Chats este mes: {{chats}}",
       "open": "Abrir",
@@ -111,7 +111,8 @@
         "rateLimited": "Demasiadas demos nuevas en la última hora. Inténtelo de nuevo más tarde.",
         "open": "No pudimos abrir la demo. Inténtelo de nuevo.",
         "delete": "No pudimos eliminar la demo. Inténtelo de nuevo."
-      }
+      },
+      "emptyTitle": "Aún no hay demos"
     },
     "promptsHint": "Añada al menos dos, una por línea.",
     "ingestionUnavailable": "Este panel no puede leer sitios web, así que la demo responde con su saludo y las preguntas sugeridas.",

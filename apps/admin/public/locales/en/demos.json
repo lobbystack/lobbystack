@@ -96,7 +96,7 @@
     },
     "partner": {
       "prepareDescription": "We read the prospect's website to build the demo. Publish it once it's ready.",
-      "empty": "No demos yet. Enter a prospect's website to make one.",
+      "empty": "Enter a prospect's website to make one.",
       "accessLabel": "Access once the prospect claims it",
       "usage": "Minutes this month: {{minutes}} · Chats this month: {{chats}}",
       "open": "Open",
@@ -110,7 +110,8 @@
         "rateLimited": "Too many new demos this hour. Try again later.",
         "open": "We couldn't open the demo. Try again.",
         "delete": "We couldn't delete the demo. Try again."
-      }
+      },
+      "emptyTitle": "No demos yet"
     },
     "promptsHint": "Add at least two, one per line.",
     "ingestionUnavailable": "This dashboard can't read websites, so the demo answers from its greeting and prompts.",

@@ -625,7 +625,8 @@
       "webhooks_manage": "Kreiranje i brisanje webhook endpointa",
       "businesses_create": "Kreiranje firmi i pozivanje njihovih vlasnika",
       "users_create": "Pozivanje vlasnika da otvore nalog"
-    }
+    },
+    "emptyDescription": "Napravite ključ da biste podešavali firme iz svog koda."
   },
   "secretReveal": {
     "copy": "Kopiraj",

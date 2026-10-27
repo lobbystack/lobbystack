@@ -97,7 +97,7 @@
     },
     "partner": {
       "prepareDescription": "Čitamo veb-sajt potencijalnog klijenta da bismo napravili demo. Objavite ga kada bude spreman.",
-      "empty": "Još nema demoa. Unesite sajt potencijalnog klijenta da napravite jedan.",
+      "empty": "Unesite veb-sajt potencijalnog klijenta da napravite demo.",
       "accessLabel": "Pristup kada ga potencijalni klijent preuzme",
       "usage": "Minuti ovog meseca: {{minutes}} · Četovi ovog meseca: {{chats}}",
       "open": "Otvori",
@@ -111,7 +111,8 @@
         "rateLimited": "Napravili ste previše demoa u ovom satu. Pokušajte ponovo kasnije.",
         "open": "Nismo uspeli da otvorimo demo. Pokušajte ponovo.",
         "delete": "Nismo uspeli da obrišemo demo. Pokušajte ponovo."
-      }
+      },
+      "emptyTitle": "Još nema demoa"
     },
     "promptsHint": "Dodajte bar dva, jedno po redu.",
     "ingestionUnavailable": "Ova kontrolna tabla ne može da čita veb-sajtove, pa demo odgovara na osnovu pozdrava i predloženih pitanja.",
