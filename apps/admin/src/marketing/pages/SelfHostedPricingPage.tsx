@@ -103,7 +103,6 @@ export function SelfHostedPricingPage({ locale }: { locale: Locale }) {
               </a>
             </PlanViewPrompt>
           </div>
-          <p className="fine-print mx-auto mt-6 max-w-[44rem] text-center">{copy.labels.footnote}</p>
         </section>
 
         <section className="mx-auto max-w-3xl px-6 pt-10 pb-14 md:pt-12 md:pb-16 lg:pt-14 lg:pb-20">

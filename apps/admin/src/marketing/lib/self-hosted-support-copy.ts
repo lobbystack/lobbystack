@@ -37,7 +37,6 @@ export type SelfHostedSupportCopy = {
     feature: string
     included: string
     notIncluded: string
-    footnote: string
   }
   pricing: {
     breadcrumb: string
@@ -81,7 +80,6 @@ const en: SelfHostedSupportCopy = {
     feature: "Feature",
     included: "Included",
     notIncluded: "Not included",
-    footnote: "Prices in US dollars. Polar handles checkout, taxes and invoices.",
   },
   pricing: {
     breadcrumb: "Self-hosted",
@@ -264,7 +262,6 @@ const fr: SelfHostedSupportCopy = {
     feature: "Fonctionnalité",
     included: "Inclus",
     notIncluded: "Non inclus",
-    footnote: "Prix en dollars américains. Polar gère le paiement, les taxes et les factures.",
   },
   pricing: {
     breadcrumb: "Auto-hébergé",
@@ -447,7 +444,6 @@ const es: SelfHostedSupportCopy = {
     feature: "Función",
     included: "Incluido",
     notIncluded: "No incluido",
-    footnote: "Precios en dólares estadounidenses. Polar gestiona el pago, los impuestos y las facturas.",
   },
   pricing: {
     breadcrumb: "Autoalojado",
@@ -630,7 +626,6 @@ const sr: SelfHostedSupportCopy = {
     feature: "Funkcija",
     included: "Uključeno",
     notIncluded: "Nije uključeno",
-    footnote: "Cene su u američkim dolarima. Polar vodi plaćanje, poreze i račune.",
   },
   pricing: {
     breadcrumb: "Samostalno hostovanje",

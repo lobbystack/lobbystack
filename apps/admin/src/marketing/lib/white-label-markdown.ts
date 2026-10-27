@@ -92,8 +92,6 @@ ${support.whiteLabel.intro}
 
 ${supportPlansTable(locale, "white_label")}
 
-${support.labels.footnote}
-
 ## ${copy.faqTitle}
 
 ${faqs}

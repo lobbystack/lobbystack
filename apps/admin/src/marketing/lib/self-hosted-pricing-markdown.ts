@@ -50,8 +50,6 @@ ${t.intro}
 
 ${supportPlansTable(locale, "business")}
 
-${copy.labels.footnote}
-
 - [${t.cloudLink}](${absoluteUrl(localizePath(locale, "/pricing/"))})
 - [${t.clientsLink}](${absoluteUrl(localizePath(locale, "/white-label/"))}#self-hosted-tiers)
 - [${t.questionsLink}](mailto:support@lobbystack.com)

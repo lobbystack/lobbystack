@@ -356,7 +356,6 @@ export function WhiteLabelTiers({ locale }: SectionProps) {
                     section="white_label_self_hosted"
                   />
                 </div>
-                <p className="fine-print mx-auto mt-6 max-w-[44rem] text-center">{support.labels.footnote}</p>
               </>
             ),
           }}
