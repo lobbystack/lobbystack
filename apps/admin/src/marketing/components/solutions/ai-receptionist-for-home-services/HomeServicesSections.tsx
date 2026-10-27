@@ -142,7 +142,7 @@ export function HomeServicesSections() {
       <IconGrid
         id="trade-calls"
         title="Set up your AI receptionist for home services"
-        intro="Add these four things before you forward your first call."
+        intro="Setup takes about 10 minutes. Add these four things before you forward your first call."
         cards={[
           {
             icon: MapPin,

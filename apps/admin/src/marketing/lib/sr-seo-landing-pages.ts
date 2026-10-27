@@ -209,6 +209,11 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
           "Da. LobbyStack je napravljen za radnje koje vode vlasnici, majstore, klinike i salone kojima telefon zvoni dok su svi zauzeti. Besplatan paket uključuje 30 minuta razgovora. Starter košta $30 mesečno za 150 minuta, a Pro $100 mesečno za 500, i nijedan paket nema naknadu za aktivaciju.",
       },
       {
+        question: "Koliko traje podešavanje?",
+        answer:
+          "Oko 10 minuta. Dodajte radno vreme, usluge i pravila za hitne pozive, obavite probni poziv iz pregledača, pa preusmerite svoj broj kada odgovara onako kako želite.",
+      },
+      {
         question: "Mogu li da zadržim svoj poslovni broj?",
         answer:
           "Da. Prosledite postojeći broj na LobbyStack preko svog telefonskog operatera, a pozivaoci zovu broj koji već znaju. Starter i Pro uključuju i jedan Vaš broj u SAD, Kanadi, Velikoj Britaniji, Australiji ili na Novom Zelandu.",

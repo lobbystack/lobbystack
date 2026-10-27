@@ -12,6 +12,11 @@ export const aiPhoneAnsweringFaqs: FaqItem[] = [
       "Yes. LobbyStack is made for owner-run shops, trades, clinics and salons whose phone rings while everyone is busy. The free plan includes 30 voice minutes. Starter costs $30 a month for 150 minutes and Pro costs $100 a month for 500, with no setup fee on any plan.",
   },
   {
+    question: "How long does setup take?",
+    answer:
+      "About 10 minutes. Add your hours, services and the rules for urgent calls, place a test call from your browser, then forward your number when it answers the way you want.",
+  },
+  {
     question: "Can I keep my business phone number?",
     answer:
       "Yes. Forward your existing number to LobbyStack through your phone carrier, and callers dial the number they already know. Starter and Pro also include one number of your own in the US, Canada, the UK, Australia or New Zealand.",

@@ -1911,6 +1911,11 @@ const bespokeSolutionPagesEs: Record<string, SeoLandingPage> = {
           "Sí. LobbyStack está hecho para negocios atendidos por sus dueños, oficios, clínicas y salones cuyo teléfono suena mientras todos están ocupados. El plan gratuito incluye 30 minutos de voz. Starter cuesta $30 al mes por 150 minutos y Pro, $100 al mes por 500, y ningún plan tiene tarifa de configuración.",
       },
       {
+        question: "¿Cuánto tarda la configuración?",
+        answer:
+          "Unos 10 minutos. Agregue su horario, sus servicios y las reglas para las llamadas urgentes, haga una llamada de prueba desde su navegador y desvíe su número cuando conteste como usted quiere.",
+      },
+      {
         question: "¿Puedo conservar el número de mi negocio?",
         answer:
           "Sí. Desvíe su número actual a LobbyStack a través de su operador telefónico, y sus clientes marcan el número que ya conocen. Starter y Pro también incluyen un número propio en Estados Unidos, Canadá, Reino Unido, Australia o Nueva Zelanda.",

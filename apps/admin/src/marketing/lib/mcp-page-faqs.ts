@@ -16,6 +16,11 @@ const EN_FAQS: FaqItem[] = [
       "Claude (the web and Desktop connectors, Claude Code and the Claude API), ChatGPT in developer mode, the OpenAI Responses API, Codex, Cursor and VS Code. Any client that supports Streamable HTTP can connect. Clients that only offer the older HTTP+SSE transport can't.",
   },
   {
+    question: "Is the MCP server included in my plan?",
+    answer:
+      "Yes. Every LobbyStack plan includes the MCP server, the Free plan too, at no extra cost.",
+  },
+  {
     question: "Do I need a developer to set it up?",
     answer:
       "Not for Claude or ChatGPT. You paste the server URL, sign in to LobbyStack and allow access. ChatGPT needs developer mode, which OpenAI offers on Plus, Pro, Business, Enterprise and Education accounts on the web. Cursor, VS Code and scripts take an API key in a config file.",
@@ -61,6 +66,11 @@ const FR_FAQS: FaqItem[] = [
     question: "Quels assistants IA fonctionnent avec lui?",
     answer:
       "Claude (les connecteurs web et Desktop, Claude Code et l'API Claude), ChatGPT en mode développeur, l'API Responses d'OpenAI, Codex, Cursor et VS Code. Tout client qui prend en charge Streamable HTTP peut se connecter. Les clients qui n'offrent que l'ancien transport HTTP+SSE ne le peuvent pas.",
+  },
+  {
+    question: "Le serveur MCP est-il inclus dans mon forfait?",
+    answer:
+      "Oui. Chaque forfait LobbyStack inclut le serveur MCP, le forfait gratuit aussi, sans frais supplémentaires.",
   },
   {
     question: "Faut-il un développeur pour le configurer?",
@@ -110,6 +120,11 @@ const ES_FAQS: FaqItem[] = [
       "Claude (los conectores web y de Desktop, Claude Code y la API de Claude), ChatGPT en modo de desarrollador, la API Responses de OpenAI, Codex, Cursor y VS Code. Cualquier cliente compatible con Streamable HTTP puede conectarse. Los clientes que solo ofrecen el antiguo transporte HTTP+SSE no pueden.",
   },
   {
+    question: "¿El servidor MCP está incluido en mi plan?",
+    answer:
+      "Sí. Todos los planes de LobbyStack incluyen el servidor MCP, también el plan gratuito, sin costo adicional.",
+  },
+  {
     question: "¿Necesito un desarrollador para configurarlo?",
     answer:
       "No para Claude ni ChatGPT. Usted pega la URL del servidor, inicia sesión en LobbyStack y permite el acceso. ChatGPT necesita el modo de desarrollador, que OpenAI ofrece en la web para cuentas Plus, Pro, Business, Enterprise y Education. Cursor, VS Code y los scripts usan una clave de API en un archivo de configuración.",
@@ -155,6 +170,11 @@ const SR_FAQS: FaqItem[] = [
     question: "Koji AI asistenti rade sa njim?",
     answer:
       "Claude (konektori za veb i Desktop, Claude Code i Claude API), ChatGPT u režimu za programere, OpenAI Responses API, Codex, Cursor i VS Code. Može da se poveže svaki klijent koji podržava Streamable HTTP. Klijenti koji nude samo stariji HTTP+SSE transport ne mogu.",
+  },
+  {
+    question: "Da li je MCP server uključen u moj paket?",
+    answer:
+      "Da. Svaki LobbyStack paket uključuje MCP server, i besplatni, bez doplate.",
   },
   {
     question: "Da li mi treba programer za podešavanje?",

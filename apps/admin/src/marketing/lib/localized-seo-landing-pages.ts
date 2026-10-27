@@ -106,6 +106,11 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
           "Oui. LobbyStack est fait pour les commerces tenus par leur propriétaire, les gens de métier, les cliniques et les salons dont le téléphone sonne pendant que tout le monde est occupé. Le forfait gratuit inclut 30 minutes vocales. Starter coûte 30 $ par mois pour 150 minutes et Pro, 100 $ par mois pour 500, sans frais de mise en service.",
       },
       {
+        question: "Combien de temps faut-il pour la configuration ?",
+        answer:
+          "Environ 10 minutes. Ajoutez vos heures, vos services et les règles pour les appels urgents, faites un appel test depuis votre navigateur, puis transférez votre numéro quand la réponse vous convient.",
+      },
+      {
         question: "Puis-je garder mon numéro d’entreprise ?",
         answer:
           "Oui. Renvoyez votre numéro actuel vers LobbyStack chez votre opérateur, et les appelants composent le numéro qu’ils connaissent déjà. Starter et Pro incluent aussi un numéro à vous aux États-Unis, au Canada, au Royaume-Uni, en Australie ou en Nouvelle-Zélande.",

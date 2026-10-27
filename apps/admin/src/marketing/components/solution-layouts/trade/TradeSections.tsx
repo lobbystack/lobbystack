@@ -256,7 +256,7 @@ export function TradeSetup({ details }: SectionProps) {
   return (
     <section className={sectionSpacing} id="setup">
       <div className={container}>
-        <SectionTitle eyebrow="Setup" intro="Test every rule on the Free plan before a customer calls." className="max-w-3xl">
+        <SectionTitle eyebrow="Setup" intro="Setup takes about 10 minutes. Test every rule on the Free plan before a customer calls." className="max-w-3xl">
           Three steps before the first real call
         </SectionTitle>
         <ol className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-border/70 bg-border/70 md:grid-cols-3">

@@ -91,7 +91,7 @@ export function PhoneAnsweringSections() {
       <IconGrid
         id="setup"
         title="Set up AI phone answering on your own number"
-        intro="You can hear it answer in your browser before a single customer calls."
+        intro="Setup takes about 10 minutes, and you can hear it answer in your browser before a single customer calls."
         cards={[
           {
             icon: PhoneForwarded,
