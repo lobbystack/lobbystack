@@ -113,14 +113,18 @@ describe.skipIf(!testUrl)("checkout guard against dedicated PostgreSQL roles", (
 });
 
 describe.skipIf(!testUrl)("scheduled plan end against PostgreSQL", () => {
-  it("reads the newest Polar snapshot by modification time, not arrival", async () => {
+  it("reads the newest Polar snapshot of the plan's own subscription by modification time, not arrival", async () => {
     await rollbackTest(async tx => {
       const { businessId, scheduledEnd } = await workspace(tx);
-      const snapshot =(eventType: string, modifiedAt: string, payload: Record<string, unknown>) => ({ provider: "polar", providerEventId: randomUUID(), eventType, businessId, status: "processed", payload: { status: "active", subscriptionModifiedAt: modifiedAt, ...payload } });
+      await tx.insert(billingAccounts).values({ businessId, billingKey: `business:${businessId}`, subscriptionId: "sub_plan" })
+        .onConflictDoUpdate({ target: billingAccounts.businessId, set: { subscriptionId: "sub_plan" } });
+      const snapshot = (eventType: string, modifiedAt: string, payload: Record<string, unknown>, subscriptionId = "sub_plan") => ({ provider: "polar", providerEventId: randomUUID(), eventType, businessId, status: "processed", payload: { status: "active", subscriptionId, subscriptionModifiedAt: modifiedAt, ...payload } });
       await tx.insert(providerEvents).values([
         snapshot("subscription.canceled", "2026-10-02T00:00:00.000Z", { cancel_at_period_end: true, ends_at: "2026-11-12T00:00:00Z" }),
         // A retry of an older snapshot that arrives last.
         snapshot("subscription.active", "2026-10-01T00:00:00.000Z", { cancel_at_period_end: false }),
+        // The customer's other subscription is newer, but says nothing about this plan.
+        snapshot("subscription.active", "2026-10-02T12:00:00.000Z", { cancel_at_period_end: false }, "sub_other"),
         { provider: "polar", providerEventId: randomUUID(), eventType: "order.paid", businessId, status: "processed", payload: { status: "paid" } },
       ]);
       expect(await scheduledEnd()).toBe("2026-11-12T00:00:00Z");

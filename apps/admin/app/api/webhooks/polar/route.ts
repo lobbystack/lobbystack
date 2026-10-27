@@ -4,9 +4,10 @@ import { eq } from "drizzle-orm";
 import { polarWebhookSchema } from "@lobbystack/contracts";
 import { businesses, enqueueOutbox, providerEvents, withBusinessTransaction, withDispatcherTransaction } from "@lobbystack/db";
 import { recordPartnerPolarEvent } from "@lobbystack/domain";
+import type { SelfHostedSupportProduct } from "@lobbystack/shared";
 import { verifyPolarWebhookSignature } from "@lobbystack/providers";
 import { getAppDatabase, getDispatcherDatabase, getWorkerDatabase } from "@/lib/api-helpers";
-import { normalizePolarEvent, sellsSelfHostedSupport } from "@/lib/polar-event";
+import { normalizePolarEvent } from "@/lib/polar-event";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,6 +43,21 @@ function recordUnresolvedWebhook(
   }));
 }
 
+// A self-hosted support plan sells to whoever pays at its checkout link, so
+// no account learns of the sale. This line is how the team hears of one, once
+// per subscription, to welcome the buyer and set up their support.
+function recordSupportPlanPurchase(input: { plan: SelfHostedSupportProduct; subscriptionId?: unknown; customerId?: unknown }): void {
+  console.info(JSON.stringify({
+    event: "ops.billing.support_plan_purchased",
+    provider: "polar",
+    audience: input.plan.audience,
+    tier: input.plan.tier,
+    billingInterval: input.plan.billingInterval,
+    ...(typeof input.subscriptionId === "string" ? { subscriptionId: input.subscriptionId } : {}),
+    ...(typeof input.customerId === "string" ? { customerId: input.customerId } : {}),
+  }));
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.text();
@@ -56,15 +72,20 @@ export async function POST(request: Request) {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) return NextResponse.json({ error: "Invalid webhook." }, { status: 400 });
     const event = polarWebhookSchema.safeParse({ ...raw, id: request.headers.get("webhook-id") ?? raw.id });
     if (!event.success) return NextResponse.json({ error: "Invalid webhook." }, { status: 400 });
-    // Self-hosted support has nothing to store, and logging it as unresolved
-    // would bury the hosted billing events that really went missing.
-    if (sellsSelfHostedSupport(event.data.type, event.data.data)) return NextResponse.json({ accepted: true, ignored: true });
     const normalized = normalizePolarEvent(event.data.type, event.data.data);
+    const { supportPlan } = normalized;
+    if (supportPlan && event.data.type === "subscription.created") {
+      recordSupportPlanPurchase({ plan: supportPlan, subscriptionId: normalized.payload.subscriptionId, customerId: normalized.payload.customerId });
+    }
+    // A support plan still routes to the account its customer names: the
+    // account's own subscription may have moved to it in the portal, and
+    // reconcile ends the hosted plan or tier then. A support plan that names no
+    // account is an ordinary sale, so it isn't logged as unresolved.
     // A partner's tier: its events belong to no business, so they're stored for the partner.
     if (normalized.partnerId) {
       const outcome = await recordPartnerPolarEvent({ db: getAppDatabase().db }, { partnerId: normalized.partnerId, providerEventId: event.data.id, eventType: event.data.type, payload: normalized.payload });
       if (outcome === "unknown_partner") {
-        recordUnresolvedWebhook({ eventType: event.data.type, reason: "unknown_partner", reference: `partner:${normalized.partnerId}` });
+        if (!supportPlan) recordUnresolvedWebhook({ eventType: event.data.type, reason: "unknown_partner", reference: `partner:${normalized.partnerId}` });
         return NextResponse.json({ accepted: true, ignored: true });
       }
       return NextResponse.json({ accepted: true, duplicate: outcome === "duplicate", eventId: event.data.id });
@@ -79,7 +100,7 @@ export async function POST(request: Request) {
         ? eq(businesses.legacyConvexId, normalized.businessReference)
         : undefined;
     if (!condition) {
-      recordUnresolvedWebhook({
+      if (!supportPlan) recordUnresolvedWebhook({
         eventType: event.data.type,
         reason: "no_reference",
         ...(normalized.businessReference ? { reference: normalized.businessReference } : {}),
@@ -90,7 +111,7 @@ export async function POST(request: Request) {
       return (await tx.select({ id: businesses.id }).from(businesses).where(condition).limit(1))[0]?.id;
     });
     if (!businessId) {
-      recordUnresolvedWebhook({
+      if (!supportPlan) recordUnresolvedWebhook({
         eventType: event.data.type,
         reason: "unknown_business",
         ...(normalized.businessReference ? { reference: normalized.businessReference } : {}),

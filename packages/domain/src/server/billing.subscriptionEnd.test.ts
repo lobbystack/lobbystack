@@ -4,15 +4,16 @@ import type { DatabaseTransaction } from "@lobbystack/db";
 
 import { scheduledSubscriptionEndInTransaction } from "./billing";
 
-/** A transaction whose only select returns the newest Polar subscription snapshot, if any. */
-function newestSnapshot(payload?: Record<string, unknown>): DatabaseTransaction {
+/** A transaction whose selects return the account's subscription, then that subscription's newest Polar snapshot, if any. */
+function newestSnapshot(payload?: Record<string, unknown>, subscriptionId: string | null = "sub_plan"): DatabaseTransaction {
   const chain = (rows: unknown[]): unknown => new Proxy(function () {}, {
     get(_target, property) {
       if (property === "then") return (resolve: (value: unknown) => unknown) => resolve(rows);
       return () => chain(rows);
     },
   });
-  return { select: () => chain(payload ? [{ payload }] : []) } as unknown as DatabaseTransaction;
+  const selects: unknown[][] = [[{ subscriptionId }], payload ? [{ payload }] : []];
+  return { select: () => chain(selects.shift() ?? []) } as unknown as DatabaseTransaction;
 }
 
 describe("scheduledSubscriptionEndInTransaction", () => {
@@ -30,5 +31,9 @@ describe("scheduledSubscriptionEndInTransaction", () => {
     ["no Polar snapshot", undefined],
   ])("has no end date for %s", async (_label, payload) => {
     await expect(scheduledSubscriptionEndInTransaction(newestSnapshot(payload), "business")).resolves.toBeNull();
+  });
+
+  it("has no end date when the account follows no subscription, whatever the customer's other subscriptions say", async () => {
+    await expect(scheduledSubscriptionEndInTransaction(newestSnapshot({ status: "active", cancel_at_period_end: true, ends_at: "2026-11-12T00:00:00Z" }, null), "business")).resolves.toBeNull();
   });
 });

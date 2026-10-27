@@ -20,6 +20,8 @@ import {
   setPartnerHostPool,
   setPartnerPoolOverage,
 } from "./partnerBilling";
+import { selfHostedSupportCatalog } from "@lobbystack/shared";
+
 import { recordPartnerTierBilling } from "./partnerNumbers";
 import { acceptPartnerInvitation, hashPartnerToken, invitePartnerMember, signUpPartner, type PartnerMemberActor } from "./partners";
 
@@ -160,14 +162,14 @@ function subscriptionEvent(partnerId: string, input: Subscription): Record<strin
 }
 
 /** Stores a Polar event as the webhook route does, then reconciles it as the worker does. Returns Polar's id for the delivery and the stored event's. */
-async function deliver(tx: DatabaseTransaction, partnerId: string, eventType: string, payload: Record<string, unknown>): Promise<{ deliveryId: string; storedId: string }> {
+async function deliver(tx: DatabaseTransaction, partnerId: string, eventType: string, payload: Record<string, unknown>, applies = true): Promise<{ deliveryId: string; storedId: string }> {
   const context = { db: tx as unknown as Database };
   const providerEventId = `evt_${randomUUID()}`;
   expect(await recordPartnerPolarEvent(context, { partnerId, providerEventId, eventType, payload })).toBe("stored");
   const [message] = await asMigrator(tx, async () => await tx.select({ payload: outboxMessages.payload, businessId: outboxMessages.businessId }).from(outboxMessages).where(eq(outboxMessages.dedupeKey, `provider-event:${providerEventId}:partner-billing`)));
   expect(message).toMatchObject({ businessId: null, payload: { partnerId } });
   const storedId = String(message!.payload.providerEventId);
-  expect(await asWorker(tx, async () => await reconcilePartnerTier(context, { partnerId, providerEventId: storedId }))).toBe(true);
+  expect(await asWorker(tx, async () => await reconcilePartnerTier(context, { partnerId, providerEventId: storedId }))).toBe(applies);
   return { deliveryId: providerEventId, storedId };
 }
 
@@ -348,6 +350,29 @@ describe.skipIf(!client)("a partner's tier", () => {
       expect(await asMigrator(tx, async () => await tx.select({ tier: partnerBillingAccounts.tier, poolVoiceSeconds: partnerBillingAccounts.poolVoiceSeconds, includedNumbers: partnerBillingAccounts.includedNumbers }).from(partnerBillingAccounts).where(eq(partnerBillingAccounts.partnerId, acme.partnerId)))).toEqual([{ tier: "scale", poolVoiceSeconds: 1_800, includedNumbers: 0 }]);
       // A partner back on Free can buy a tier again.
       expect(await createPartnerTierCheckout(acme.context, acme.ownerActor, { tier: "starter", billingInterval: "monthly", returnOrigin: CONSOLE })).toEqual({ requestId: expect.any(String) });
+    });
+  });
+
+  it("ends the tier when its own subscription moves to a support plan, and ignores a support plan bought beside it", async () => {
+    await rollbackTest(async (tx) => {
+      sellTiers();
+      const acme = await partner(tx, "Acme Reception");
+      await deliver(tx, acme.partnerId, "subscription.active", subscriptionEvent(acme.partnerId, { status: "active", tier: "growth", modifiedAt: "2026-10-01T00:00:01.000Z" }));
+      // With multiple subscriptions on, the partner's customer can also hold a white-label support plan.
+      const support = (subscriptionId: string, status: string, modifiedAt: string) => ({
+        ...subscriptionEvent(acme.partnerId, { status, modifiedAt }),
+        id: subscriptionId,
+        subscriptionId,
+        product_id: selfHostedSupportCatalog.white_label.premium.productIds.monthly,
+        selfHostedSupport: true,
+      });
+      await deliver(tx, acme.partnerId, "subscription.active", support("sub_support", "active", "2026-10-02T00:00:00.000Z"), false);
+      await deliver(tx, acme.partnerId, "subscription.revoked", support("sub_support", "canceled", "2026-10-03T00:00:00.000Z"), false);
+      expect(await getPartnerBilling(acme.context, acme.ownerActor)).toMatchObject({ tier: "growth", subscriptionState: "active" });
+
+      // Switching the tier's own subscription to the support product in Polar's portal ends the tier.
+      await deliver(tx, acme.partnerId, "subscription.updated", support("sub_1", "active", "2026-10-04T00:00:00.000Z"));
+      expect(await getPartnerBilling(acme.context, acme.ownerActor)).toMatchObject({ tier: "free", subscriptionState: "canceled" });
     });
   });
 

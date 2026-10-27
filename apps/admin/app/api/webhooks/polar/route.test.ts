@@ -67,15 +67,55 @@ it("ignores unknown businesses without persisting or enqueueing", async () => {
   expect(unresolvedLogs()).toEqual([{ event: "ops.billing.webhook_unresolved", provider: "polar", eventType: "subscription.active", reason: "unknown_business", businessReference: businessId }]);
 });
 
+const premiumMonthly = selfHostedSupportCatalog.business.premium.productIds.monthly;
+
 it.each([
-  ["subscription.active", { id: "sub-9", status: "active", product_id: selfHostedSupportCatalog.business.premium.productIds.monthly, customer: { id: "cust-9" } }],
-  ["order.paid", { id: "order-9", product_id: selfHostedSupportCatalog.white_label.enterprise.productIds.annual, customer: { id: "cust-9" } }],
+  ["subscription.created", { id: "sub-9", status: "incomplete", product_id: premiumMonthly, customer: { id: "cust-9" } }],
+  ["order.paid", { id: "order-9", subscription_id: "sub-9", product_id: selfHostedSupportCatalog.white_label.enterprise.productIds.annual, customer: { id: "cust-9" } }],
   ["checkout.updated", { id: "checkout-9", product: { id: selfHostedSupportCatalog.business.enterprise.productIds.annual } }],
-])("drops a self-hosted support %s without a lookup or an unresolved log", async (type, data) => {
+])("accepts a self-hosted support %s that names no account without logging it as unresolved", async (type, data) => {
   const body = JSON.stringify({ type, data });
   expect(await (await POST(request(businessId, { body }))).json()).toEqual({ accepted: true, ignored: true });
   expect(mocks.lookup).not.toHaveBeenCalled();
   expect(mocks.recordPartner).not.toHaveBeenCalled();
+  expect(mocks.insert).not.toHaveBeenCalled();
+  expect(unresolvedLogs()).toEqual([]);
+});
+
+it("logs ops.billing.support_plan_purchased once, when Polar creates a support subscription", async () => {
+  const info = vi.spyOn(console, "info").mockImplementation(() => undefined);
+  const purchases = () => info.mock.calls.map(([line]) => JSON.parse(String(line)) as Record<string, unknown>);
+  const created = JSON.stringify({ type: "subscription.created", data: { id: "sub-9", status: "incomplete", product_id: premiumMonthly, customer: { id: "cust-9" } } });
+  const active = JSON.stringify({ type: "subscription.active", data: { id: "sub-9", status: "active", product_id: premiumMonthly, customer: { id: "cust-9" } } });
+  await POST(request(businessId, { body: created }));
+  await POST(request(businessId, { id: "delivery-2", body: active }));
+  expect(purchases()).toEqual([{ event: "ops.billing.support_plan_purchased", provider: "polar", audience: "business", tier: "premium", billingInterval: "monthly", subscriptionId: "sub-9", customerId: "cust-9" }]);
+});
+
+it("routes a support subscription to the business its customer names, so reconcile can end that business's plan", async () => {
+  // A hosted customer can switch its plan's subscription to a support product in Polar's portal.
+  const body = JSON.stringify({ type: "subscription.updated", data: { id: "sub-1", status: "active", product_id: premiumMonthly, customer: { external_id: `business:${businessId}` } } });
+  expect(await (await POST(request(businessId, { body }))).json()).toEqual({ accepted: true, duplicate: false, eventId: "delivery-1" });
+  expect(mocks.insert).toHaveBeenCalledWith(expect.objectContaining({ businessId, payload: expect.objectContaining({ subscriptionId: "sub-1", selfHostedSupport: true }) }));
+  expect(mocks.insert.mock.calls[0]![0].payload).not.toHaveProperty("plan");
+  expect(mocks.enqueue).toHaveBeenCalledTimes(1);
+});
+
+it("routes a support subscription to the partner its customer names, and drops an unknown one quietly", async () => {
+  const partnerId = "5b1f6c43-34a5-4a8e-9a43-6c1f8d5f1c11";
+  const body = JSON.stringify({ type: "subscription.updated", data: { id: "sub-1", status: "active", product_id: selfHostedSupportCatalog.white_label.premium.productIds.monthly, customer: { id: "cust-1", external_id: `partner:${partnerId}` } } });
+  mocks.recordPartner.mockResolvedValueOnce("stored").mockResolvedValueOnce("unknown_partner");
+  expect(await (await POST(request(businessId, { body }))).json()).toEqual({ accepted: true, duplicate: false, eventId: "delivery-1" });
+  expect(mocks.recordPartner).toHaveBeenCalledWith({ db: "app" }, expect.objectContaining({ partnerId, payload: expect.objectContaining({ selfHostedSupport: true }) }));
+  expect(mocks.recordPartner.mock.calls[0]![1].payload).not.toHaveProperty("partnerTier");
+  expect(await (await POST(request(businessId, { body }))).json()).toEqual({ accepted: true, ignored: true });
+  expect(unresolvedLogs()).toEqual([]);
+});
+
+it("drops a support subscription for an unknown business without logging it as unresolved", async () => {
+  mocks.lookup.mockResolvedValue([]);
+  const body = JSON.stringify({ type: "subscription.active", data: { id: "sub-9", status: "active", product_id: premiumMonthly, customer: { external_id: `business:${businessId}` } } });
+  expect(await (await POST(request(businessId, { body }))).json()).toEqual({ accepted: true, ignored: true });
   expect(mocks.insert).not.toHaveBeenCalled();
   expect(unresolvedLogs()).toEqual([]);
 });

@@ -40,9 +40,30 @@ Partners pay you for a tier from the console's **Billing** page. Create one recu
 
 The **Billing** page shows these prices from `partnerTierCatalog` in `packages/shared/src/billing.ts`, so give your products the same ones. A partner that pays for no tier is on Free, which needs no product.
 
-A partner's Polar customer has the external ID `partner:<partner ID>`, never a business's. The webhook route stores its events with the partner, and the worker sets the partner's tier, subscription state, pool and included numbers from them. Keep "Allow multiple subscriptions" off, so a partner holds one tier at a time.
+A partner's Polar customer has the external ID `partner:<partner ID>`, never a business's. The webhook route stores its events with the partner, and the worker sets the partner's tier, subscription state, pool and included numbers from them.
 
 When a partner's paid tier ends or a payment fails, its businesses keep answering for 30 days, and the partner can release them. Then the hourly `partnerLifecycle.advance` job pauses them, and their calls forward until the partner pays for a tier again. Ninety days after the tier ended, the job deletes them, and the worker releases their phone numbers. The console's **Businesses** page shows the partner's owners and admins both dates. [The partner architecture](../architecture/partners.md#partner-lifecycle) lists each step.
+
+## Sell self-hosted support
+
+LobbyStack Cloud sells Premium support and Enterprise support to people who run LobbyStack on their own servers. Buyers pay through Polar checkout links and need no LobbyStack account. `selfHostedSupportCatalog` in `packages/shared/src/selfHostedSupport.ts` holds the eight products' IDs, prices and checkout links. The marketing site's `/pricing/self-hosted/` and `/white-label/` pages link to them, so change the catalog when you change one of these products in Polar.
+
+| Plan | Price | Sold to |
+| --- | --- | --- |
+| Premium support | $25 per business each month, or $240 each year | A business that runs its own install |
+| Enterprise support | $100 per business each month, or $960 each year | A business that runs its own install |
+| Premium support | $199 each month, or $1,908 each year | An agency that runs the partner program on its own servers |
+| Enterprise support | $499 each month, or $4,788 each year | An agency that runs the partner program on its own servers |
+
+Turn on **Allow multiple subscriptions** in your Polar organization's settings. A hosted business or a partner can then buy support with the same email, and the support plan is a second subscription on the same Polar customer.
+
+The worker matches every event to a billing account by subscription ID, never by customer. A business's or partner's account follows the subscription it stores, so:
+
+- An event about another of the customer's subscriptions leaves the plan or tier alone, unless it starts a live plan or tier that replaces the stored one. The worker still records its orders.
+- A support subscription changes a plan or tier only when it's the stored subscription, after the customer switched it to a support product in Polar's portal. The hosted plan or tier then ends.
+- A support plan's orders are no hosted payment, so they earn no affiliate commission.
+
+A support purchase names no account, so nothing in the dashboard shows it. The webhook route logs `ops.billing.support_plan_purchased` when Polar creates a support subscription, with the plan, interval, subscription ID and customer ID. It doesn't log support events as `ops.billing.webhook_unresolved`. Each support product carries a benefit with a note on how to reach support, which Polar shows the buyer after checkout.
 
 ## Charge partners for extra numbers
 

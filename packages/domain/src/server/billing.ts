@@ -10,6 +10,7 @@ import { requireBusinessCapability } from "./businessAccess";
 import { loadEntitlement } from "./entitlement";
 import { keepBusinessNumbersInTransaction, queuePlanCancelNoticeInTransaction, scheduleNumberReleaseInTransaction } from "./numberTrials";
 import { poolLeft, readPartnerPoolInTransaction } from "./partnerPool";
+import { subscriptionEventEffect } from "./polarSubscriptions";
 import { recordProductEventInTransaction } from "./productEvents";
 import { requireBusinessAdmin } from "../authz";
 import { correctUsageInTransaction, enqueueUsageSyncInTransaction, getUsageStatusInTransaction, getVoiceSecondsLeftInTransaction, loadBillingContext, periodKeyFor, readUsageStatusInTransaction, readVoiceSecondsLeftInTransaction, reserveUsageInTransaction } from "./usage";
@@ -576,8 +577,11 @@ function dateField(source: Record<string, unknown>, ...keys: string[]): Date | u
  * subscription active until then, so only its newest snapshot says so.
  */
 export async function scheduledSubscriptionEndInTransaction(tx: DatabaseTransaction, businessId: string): Promise<string | null> {
+  // The customer may hold other subscriptions, so only the plan's own subscription says when the plan ends.
+  const subscriptionId = (await tx.select({ subscriptionId: billingAccounts.subscriptionId }).from(billingAccounts).where(eq(billingAccounts.businessId, businessId)).limit(1))[0]?.subscriptionId;
+  if (!subscriptionId) return null;
   const latest = (await tx.select({ payload: providerEvents.payload }).from(providerEvents)
-    .where(and(eq(providerEvents.businessId, businessId), eq(providerEvents.provider, "polar"), like(providerEvents.eventType, "subscription.%"), eq(providerEvents.status, "processed")))
+    .where(and(eq(providerEvents.businessId, businessId), eq(providerEvents.provider, "polar"), like(providerEvents.eventType, "subscription.%"), eq(providerEvents.status, "processed"), sql`${providerEvents.payload}->>'subscriptionId' = ${subscriptionId}`))
     .orderBy(sql`${providerEvents.payload}->>'subscriptionModifiedAt' desc nulls last`, desc(providerEvents.createdAt))
     .limit(1))[0]?.payload;
   if (latest?.cancel_at_period_end !== true || !["active", "trialing"].includes(String(latest.status))) return null;
@@ -634,7 +638,9 @@ export async function reconcileBillingProviderEvent(
     const billingKey = stringField(transactionPayload, "billingKey", "externalCustomerId", "customerId") ?? stringField(payload, "billingKey", "externalCustomerId", "customerId") ?? stringField(customer, "id", "externalId") ?? existing?.billingKey;
     if (billingKey) {
       const customerId = stringField(transactionPayload, "customerId", "externalCustomerId") ?? stringField(payload, "customerId", "externalCustomerId") ?? stringField(customer, "id", "externalId") ?? existing?.customerId;
-      const subscriptionId = stringField(transactionPayload, "subscriptionId", "subscription_id") ?? stringField(payload, "subscriptionId", "subscription_id") ?? stringField(subscription, "id") ?? existing?.subscriptionId;
+      // The subscription this event is about, if it names one. The account's own stays in existing.
+      const eventSubscriptionId = stringField(transactionPayload, "subscriptionId", "subscription_id") ?? stringField(payload, "subscriptionId", "subscription_id") ?? stringField(subscription, "id");
+      const subscriptionId = eventSubscriptionId ?? existing?.subscriptionId;
       // An unmapped product (a retired or legacy product id) keeps the stored plan rather than a display name.
       const plan = stringField(transactionPayload, "plan") ?? stringField(payload, "plan");
       const billingInterval = stringField(transactionPayload, "billingInterval", "billing_interval", "interval") ?? stringField(payload, "billingInterval", "billing_interval", "interval") ?? stringField(subscription, "billingInterval", "billing_interval", "interval");
@@ -643,11 +649,38 @@ export async function reconcileBillingProviderEvent(
       const subscriptionState = stringField(transactionPayload, "subscriptionState") ?? stringField(payload, "subscriptionState") ?? (event.eventType.startsWith("subscription.") ? stringField(payload, "status") ?? event.eventType.slice("subscription.".length) : undefined);
       const currentPeriodStart = dateField(transactionPayload, "currentPeriodStart", "current_period_start") ?? dateField(payload, "currentPeriodStart", "current_period_start") ?? dateField(subscription, "currentPeriodStart", "current_period_start");
       const currentPeriodEnd = dateField(transactionPayload, "currentPeriodEnd", "current_period_end") ?? dateField(payload, "currentPeriodEnd", "current_period_end") ?? dateField(subscription, "currentPeriodEnd", "current_period_end");
+      // One Polar customer can hold several subscriptions, so the event changes the plan only
+      // when it's about the subscription the account stores, or a live plan that replaces it.
+      const selfHostedSupport = payload.selfHostedSupport === true;
+      const effect = subscriptionEventEffect({
+        storedSubscriptionId: existing?.subscriptionId,
+        eventSubscriptionId,
+        selfHostedSupport,
+        startsLivePlan: (plan === "starter" || plan === "pro") && isLiveSubscriptionState(subscriptionState),
+      });
+      // A support plan this account doesn't follow is someone's purchase of support, not a payment for the business.
+      if (selfHostedSupport && effect === "ignore") {
+        await tx.update(providerEvents).set({ status: "ignored", updatedAt: new Date() }).where(eq(providerEvents.id, event.id));
+        return { reconciled: false, started: null };
+      }
+      // The plan's own subscription now sells support, so the hosted plan ends with it.
+      const ends = effect === "end";
+      const appliedPlan = ends ? undefined : plan;
+      const appliedInterval = ends ? undefined : billingInterval;
+      const appliedState = ends ? "canceled" : subscriptionState;
+      const appliedPeriodStart = ends ? undefined : currentPeriodStart;
+      const appliedPeriodEnd = ends ? undefined : currentPeriodEnd;
       // A Polar retry or replay can arrive after a newer snapshot of the subscription was applied.
+      // Only the same subscription's snapshots count: another of the customer's subscriptions is no newer copy of this one.
       // Both sides are normalized ISO strings (polar-event.ts), so text order is time order.
       const modifiedAt = stringField(payload, "subscriptionModifiedAt");
       const stale = modifiedAt !== undefined && (await tx.select({ id: providerEvents.id }).from(providerEvents)
-        .where(and(eq(providerEvents.businessId, input.businessId), eq(providerEvents.status, "processed"), sql`${providerEvents.payload}->>'subscriptionModifiedAt' > ${modifiedAt}`))
+        .where(and(
+          eq(providerEvents.businessId, input.businessId),
+          eq(providerEvents.status, "processed"),
+          sql`${providerEvents.payload}->>'subscriptionModifiedAt' > ${modifiedAt}`,
+          ...(eventSubscriptionId ? [sql`${providerEvents.payload}->>'subscriptionId' = ${eventSubscriptionId}`] : []),
+        ))
         .limit(1)).length > 0;
       // An account whose plan the operator managed, now or before, changes only when the business
       // starts a live Starter or Pro subscription in Polar, which then takes over. Every other event,
@@ -655,22 +688,24 @@ export async function reconcileBillingProviderEvent(
       // map to a plan, leaves the account as the operator set it: a live managed plan stays live,
       // and an ended one keeps its enterprise plan from turning live again without a price.
       const managedSource = existing?.source === MANAGED_BILLING_SOURCE;
-      const takesOver = managedSource && (plan === "starter" || plan === "pro") && isLiveSubscriptionState(subscriptionState);
+      const takesOver = managedSource && (appliedPlan === "starter" || appliedPlan === "pro") && isLiveSubscriptionState(appliedState);
       const keepsManagedPlan = managedSource && !takesOver;
-      const subscriptionFields = stale || keepsManagedPlan ? {} : {
+      // Another of the customer's subscriptions leaves the plan as it is; its orders are still recorded below.
+      const leavesPlan = stale || keepsManagedPlan || effect === "ignore";
+      const subscriptionFields = leavesPlan ? {} : {
         ...(takesOver ? { source: "polar" } : {}),
         ...(subscriptionId ? { subscriptionId } : {}),
-        ...(plan ? { plan } : {}),
-        ...(billingInterval ? { billingInterval } : {}),
-        ...(subscriptionState ? { subscriptionState } : {}),
-        ...(currentPeriodStart ? { currentPeriodStart } : {}),
-        ...(currentPeriodEnd ? { currentPeriodEnd } : {}),
+        ...(appliedPlan ? { plan: appliedPlan } : {}),
+        ...(appliedInterval ? { billingInterval: appliedInterval } : {}),
+        ...(appliedState ? { subscriptionState: appliedState } : {}),
+        ...(appliedPeriodStart ? { currentPeriodStart: appliedPeriodStart } : {}),
+        ...(appliedPeriodEnd ? { currentPeriodEnd: appliedPeriodEnd } : {}),
       };
       // A takeover starts a Polar subscription even though the managed plan already counted as paid.
-      startedSubscription = stale || keepsManagedPlan ? null : detectSubscriptionStart(takesOver ? { plan: existing?.plan ?? null, subscriptionState: null } : existing, {
-        plan: plan ?? existing?.plan ?? null,
-        subscriptionState: subscriptionState ?? existing?.subscriptionState ?? null,
-        billingInterval: billingInterval ?? existing?.billingInterval ?? null,
+      startedSubscription = leavesPlan ? null : detectSubscriptionStart(takesOver ? { plan: existing?.plan ?? null, subscriptionState: null } : existing, {
+        plan: appliedPlan ?? existing?.plan ?? null,
+        subscriptionState: appliedState ?? existing?.subscriptionState ?? null,
+        billingInterval: appliedInterval ?? existing?.billingInterval ?? null,
       });
       await tx.insert(billingAccounts).values({
         businessId: input.businessId,
@@ -687,20 +722,21 @@ export async function reconcileBillingProviderEvent(
         },
       });
       // A managed plan the event left alone keeps its numbers as they are.
-      if (!stale && !keepsManagedPlan) {
+      if (!leavesPlan) {
         // A live paid plan keeps the business's numbers, including a trial number.
         // When a paid plan ends, the numbers stay 30 more days, then go.
         const wasPaid = hasLiveEntitlement(existing);
-        const isPaid = hasLiveEntitlement({ plan: plan ?? existing?.plan ?? null, subscriptionState: subscriptionState ?? existing?.subscriptionState ?? null });
+        const isPaid = hasLiveEntitlement({ plan: appliedPlan ?? existing?.plan ?? null, subscriptionState: appliedState ?? existing?.subscriptionState ?? null });
         if (isPaid) await keepBusinessNumbersInTransaction(tx, { businessId: input.businessId });
         else if (wasPaid) await scheduleNumberReleaseInTransaction(tx, { businessId: input.businessId });
         // Polar sends subscription.canceled when the owner cancels at the end of the period, while the plan is still live.
-        if (isPaid && event.eventType === "subscription.canceled" && currentPeriodEnd) await queuePlanCancelNoticeInTransaction(tx, { businessId: input.businessId, periodEnd: currentPeriodEnd });
+        if (isPaid && event.eventType === "subscription.canceled" && appliedPeriodEnd) await queuePlanCancelNoticeInTransaction(tx, { businessId: input.businessId, periodEnd: appliedPeriodEnd });
       }
     }
 
     // Refunds arrive as order.refunded (refund.* payloads name no business, so the webhook route drops them).
-    const transactionKind = event.eventType.startsWith("order.") ? "order" : undefined;
+    // A support plan's orders pay for support, so they're no hosted payment and earn no commission.
+    const transactionKind = event.eventType.startsWith("order.") && payload.selfHostedSupport !== true ? "order" : undefined;
     const sourceId = stringField(transactionPayload, "id", "orderId") ?? stringField(payload, "id", "orderId") ?? event.providerEventId;
     const amountCents = numberField(transactionPayload, "totalAmount", "total_amount", "amountCents", "amount") ?? numberField(payload, "totalAmount", "total_amount", "amountCents", "amount");
     const currency = stringField(transactionPayload, "currency") ?? stringField(payload, "currency");

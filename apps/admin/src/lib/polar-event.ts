@@ -1,4 +1,4 @@
-import { isSelfHostedSupportProduct, isUuid, partnerTierForProduct } from "@lobbystack/shared";
+import { isUuid, partnerTierForProduct, selfHostedSupportProduct } from "@lobbystack/shared";
 
 type RecordValue = Record<string, unknown>;
 const record = (value: unknown): RecordValue => value && typeof value === "object" && !Array.isArray(value) ? value as RecordValue : {};
@@ -38,6 +38,9 @@ export function normalizePolarEvent(type: string, data: RecordValue, env: Record
   const match = partnerId ? undefined : (["starter", "pro"] as const).flatMap(plan => (["monthly", "annual"] as const).map(interval => ({ plan, interval, id: env[`POLAR_${plan.toUpperCase()}_${interval.toUpperCase()}_PRODUCT_ID`] }))).find(product => product.id && product.id === productId);
   // A partner's subscription sells a tier, never a plan.
   const tier = partnerId ? partnerTierForProduct(env, productId) : null;
+  // A self-hosted support product sells no plan or tier, but a hosted customer can buy one, and can
+  // even switch its plan's subscription to one in the portal. Reconcile reads the flag to decide.
+  const supportPlan = [productId, text(data.product_id), text(record(data.product).id)].map(selfHostedSupportProduct).find(plan => plan !== null) ?? null;
   const subscriptionId = text(subscription.id) ?? text(data.subscription_id);
   const customerId = text(customer.id) ?? text(data.customer_id);
   const subscriptionState = text(subscription.status);
@@ -48,6 +51,7 @@ export function normalizePolarEvent(type: string, data: RecordValue, env: Record
     businessId,
     businessReference: partnerId ? undefined : candidate,
     partnerId,
+    supportPlan,
     payload: {
       ...data,
       ...(externalId ? { billingKey: externalId } : {}),
@@ -57,15 +61,8 @@ export function normalizePolarEvent(type: string, data: RecordValue, env: Record
       ...(tier ? { partnerTier: tier.tier, billingInterval: tier.billingInterval } : {}),
       ...(subscriptionState ? { subscriptionState } : {}),
       ...(subscriptionModifiedAt ? { subscriptionModifiedAt } : {}),
+      ...(supportPlan ? { selfHostedSupport: true } : {}),
     },
   };
 }
 
-/**
- * Whether an event is about a self-hosted support plan. Those sell through
- * checkout links to whoever pays, so no business or partner owns them.
- */
-export function sellsSelfHostedSupport(type: string, data: RecordValue): boolean {
-  const subscription = type.startsWith("subscription.") ? data : record(data.subscription);
-  return [text(subscription.product_id), text(data.product_id), text(record(data.product).id)].some(isSelfHostedSupportProduct);
-}

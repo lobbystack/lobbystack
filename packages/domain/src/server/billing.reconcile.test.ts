@@ -13,7 +13,7 @@ vi.mock("@lobbystack/db", async (original) => ({
 vi.mock("./affiliates", () => ({ recordAffiliateCommissionInTransaction: mocks.recordAffiliateCommissionInTransaction }));
 vi.mock("./productEvents", () => ({ recordProductEventInTransaction: vi.fn() }));
 
-import { billingAccounts, billingTransactions } from "@lobbystack/db";
+import { billingAccounts, billingTransactions, providerEvents } from "@lobbystack/db";
 
 import { createBillingCheckoutRequestInTransaction, endManagedPlanInTransaction, orderRefundedCents, reconcileBillingProviderEvent, setManagedPlanInTransaction } from "./billing";
 import { recordProductEventInTransaction } from "./productEvents";
@@ -31,6 +31,7 @@ async function reconcile(eventType: string, payload: Record<string, unknown>, ex
       return (argument: Record<string, unknown>) => {
         if (write && property === "values") write.values = argument;
         if (write && property === "onConflictDoUpdate") write.set = argument.set as Record<string, unknown>;
+        if (write && property === "set") write.set = argument;
         return chain(resolved, write);
       };
     },
@@ -39,11 +40,15 @@ async function reconcile(eventType: string, payload: Record<string, unknown>, ex
     execute: () => chain([]),
     select: () => chain(selects.shift() ?? []),
     insert: (table: unknown) => { const write: Write = { table }; writes.push(write); return chain([{ id: "txn_1" }], write); },
-    update: () => chain([]),
+    update: (table: unknown) => { const write: Write = { table }; writes.push(write); return chain([], write); },
   };
   mocks.withBusinessTransaction.mockImplementation(async (_db: unknown, _input: unknown, run: (tx: unknown) => Promise<unknown>) => await run(tx));
   await reconcileBillingProviderEvent({ db: {} as never }, { businessId: "biz_1", providerEventId: "evt_1" });
-  return { account: writes.find(write => write.table === billingAccounts), transaction: writes.find(write => write.table === billingTransactions) };
+  return {
+    account: writes.find(write => write.table === billingAccounts),
+    transaction: writes.find(write => write.table === billingTransactions),
+    eventStatus: writes.find(write => write.table === providerEvents)?.set?.status,
+  };
 }
 
 beforeEach(() => {
@@ -196,5 +201,67 @@ describe("managed plan writes", () => {
     const { tx, writes } = transaction([{ source: "managed", subscriptionState: "active" }]);
     await expect(createBillingCheckoutRequestInTransaction(tx, { userId: "user_1", businessId: "biz_1", target: "pro", billingInterval: "monthly" })).rejects.toMatchObject({ status: 409 });
     expect(writes).toEqual([]);
+  });
+});
+
+describe("reconciling a customer's other Polar subscriptions", () => {
+  // With multiple subscriptions on, one Polar customer can hold a hosted plan and a support plan.
+  const pro = { billingKey: "business:biz_1", customerId: "cust_1", subscriptionId: "sub_plan", plan: "pro", subscriptionState: "active", billingInterval: "monthly", source: "polar" };
+  const support = { billingKey: "business:biz_1", customerId: "cust_1", selfHostedSupport: true, product_id: "prod_support" };
+
+  it("ends the hosted plan when its own subscription moves to a support product in the portal", async () => {
+    const { account, eventStatus } = await reconcile("subscription.updated", { ...support, subscriptionId: "sub_plan", status: "active" }, pro);
+
+    expect(account?.set).toMatchObject({ subscriptionId: "sub_plan", subscriptionState: "canceled" });
+    expect(account?.set).not.toHaveProperty("plan");
+    expect(eventStatus).toBe("processed");
+  });
+
+  it("keeps the plan ended when that subscription's later support events arrive", async () => {
+    const { account } = await reconcile("subscription.active", { ...support, subscriptionId: "sub_plan", status: "active" }, { ...pro, subscriptionState: "canceled" });
+
+    expect(account?.set).toMatchObject({ subscriptionState: "canceled" });
+    expect(recordProductEventInTransaction).not.toHaveBeenCalled();
+  });
+
+  it("leaves a lapsed Pro plan ended when the same customer buys support", async () => {
+    const { account, eventStatus } = await reconcile("subscription.active", { ...support, subscriptionId: "sub_support", status: "active" }, { ...pro, subscriptionState: "canceled" });
+
+    expect(account).toBeUndefined();
+    expect(eventStatus).toBe("ignored");
+    expect(recordProductEventInTransaction).not.toHaveBeenCalled();
+  });
+
+  it("keeps Pro live when the customer's separate support plan is cancelled", async () => {
+    const { account, eventStatus } = await reconcile("subscription.revoked", { ...support, subscriptionId: "sub_support", status: "revoked" }, pro);
+
+    expect(account).toBeUndefined();
+    expect(eventStatus).toBe("ignored");
+  });
+
+  it("records no hosted payment or commission for a support plan's order", async () => {
+    const { transaction } = await reconcile("order.paid", { ...support, id: "order_9", subscriptionId: "sub_support", total_amount: 2_500, currency: "usd", status: "paid" }, pro);
+
+    expect(transaction).toBeUndefined();
+    expect(mocks.recordAffiliateCommissionInTransaction).not.toHaveBeenCalled();
+  });
+
+  it("ignores a late cancellation of the plan's old subscription after a new one replaced it", async () => {
+    const { account } = await reconcile("subscription.revoked", { billingKey: "business:biz_1", subscriptionId: "sub_old", plan: "starter", status: "revoked" }, pro);
+
+    for (const field of ["plan", "subscriptionState", "subscriptionId"]) expect(account?.set).not.toHaveProperty(field);
+  });
+
+  it("lets a live plan on a new subscription replace a lapsed one", async () => {
+    const { account } = await reconcile("subscription.active", { billingKey: "business:biz_1", subscriptionId: "sub_new", plan: "pro", status: "active", billingInterval: "annual" }, { ...pro, plan: "starter", subscriptionState: "canceled", subscriptionId: "sub_old" });
+
+    expect(account?.set).toMatchObject({ subscriptionId: "sub_new", plan: "pro", subscriptionState: "active", billingInterval: "annual" });
+  });
+
+  it("still records an order from the customer's older hosted subscription", async () => {
+    const { account, transaction } = await reconcile("order.refunded", { billingKey: "business:biz_1", id: "order_old", subscriptionId: "sub_old", subscriptionState: "canceled", total_amount: 3_000, currency: "usd", status: "refunded", refunded_amount: 3_000 }, pro);
+
+    expect(account?.set).not.toHaveProperty("subscriptionState");
+    expect(transaction?.values).toMatchObject({ sourceId: "order_old", subscriptionId: "sub_old", refundedAmountCents: 3_000 });
   });
 });

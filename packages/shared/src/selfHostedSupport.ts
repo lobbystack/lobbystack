@@ -1,8 +1,9 @@
 /**
  * Paid support for people who run LobbyStack on their own servers. The
  * software is the same MIT-licensed release either way; these plans sell help.
- * Buyers pay through Polar checkout links, with no LobbyStack account, so no
- * business or partner ever owns these subscriptions.
+ * Buyers pay through Polar checkout links, with no LobbyStack account. A hosted
+ * customer can buy one too, so a support subscription may share a Polar
+ * customer with a hosted plan or a partner tier, but it never sells either.
  */
 
 export const selfHostedSupportAudiences = ["business", "white_label"] as const;
@@ -23,6 +24,10 @@ export type SelfHostedSupportPlan = {
   checkoutUrls: { monthly: string; annual: string };
 };
 
+// The product IDs and links are facts about the production Polar catalog, not
+// settings: the marketing site is prerendered, and every deployment's site links
+// to these same checkouts, so they live here instead of in environment variables.
+// Change them here when the Polar products change.
 export const selfHostedSupportCatalog = {
   business: {
     premium: {
@@ -86,13 +91,29 @@ export const selfHostedSupportCatalog = {
   },
 } as const satisfies Record<SelfHostedSupportAudience, Record<SelfHostedSupportTier, SelfHostedSupportPlan>>;
 
-const supportProductIds = new Set<string>(
+export type SelfHostedSupportProduct = {
+  audience: SelfHostedSupportAudience;
+  tier: SelfHostedSupportTier;
+  billingInterval: "monthly" | "annual";
+};
+
+const supportProducts = new Map<string, SelfHostedSupportProduct>(
   selfHostedSupportAudiences.flatMap((audience) =>
-    selfHostedSupportTiers.flatMap((tier) => Object.values(selfHostedSupportCatalog[audience][tier].productIds)),
+    selfHostedSupportTiers.flatMap((tier) =>
+      (["monthly", "annual"] as const).map((billingInterval) => [
+        selfHostedSupportCatalog[audience][tier].productIds[billingInterval],
+        { audience, tier, billingInterval },
+      ] as const),
+    ),
   ),
 );
 
-/** Whether a Polar product sells self-hosted support, which no business or partner owns. */
+/** The support plan a Polar product sells, or null for any other product. */
+export function selfHostedSupportProduct(productId: string | undefined | null): SelfHostedSupportProduct | null {
+  return (productId && supportProducts.get(productId)) || null;
+}
+
+/** Whether a Polar product sells self-hosted support rather than a hosted plan or tier. */
 export function isSelfHostedSupportProduct(productId: string | undefined | null): boolean {
-  return productId ? supportProductIds.has(productId) : false;
+  return selfHostedSupportProduct(productId) !== null;
 }

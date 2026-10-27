@@ -4,6 +4,7 @@ import {
   isSelfHostedSupportProduct,
   selfHostedSupportAudiences,
   selfHostedSupportCatalog,
+  selfHostedSupportProduct,
   selfHostedSupportTiers,
 } from "./selfHostedSupport";
 
@@ -33,5 +34,10 @@ describe("self-hosted support catalog", () => {
     expect(isSelfHostedSupportProduct(selfHostedSupportCatalog.white_label.enterprise.productIds.annual)).toBe(true);
     expect(isSelfHostedSupportProduct("fc07b74d-3dc7-4efb-9270-be74de48e187")).toBe(false);
     expect(isSelfHostedSupportProduct(undefined)).toBe(false);
+  });
+
+  it("names the plan and interval a product sells", () => {
+    expect(selfHostedSupportProduct(selfHostedSupportCatalog.business.enterprise.productIds.monthly)).toEqual({ audience: "business", tier: "enterprise", billingInterval: "monthly" });
+    expect(selfHostedSupportProduct("prod_pro_monthly")).toBeNull();
   });
 });

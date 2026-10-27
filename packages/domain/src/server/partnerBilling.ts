@@ -20,6 +20,7 @@ import type { DomainContext } from "./context";
 import { advancePartnerInTransaction, partnerTierEventKind } from "./partnerLifecycle";
 import { loadPartnerNumberStanding } from "./partnerNumbers";
 import { poolSpendCents, readPartnerPoolInTransaction, setPartnerPoolOverageInTransaction } from "./partnerPool";
+import { isLivePolarSubscriptionState, subscriptionEventEffect } from "./polarSubscriptions";
 import type { PartnerActor, PartnerMemberActor } from "./partners";
 import { periodKeyFor } from "./usage";
 
@@ -521,7 +522,8 @@ function date(source: Record<string, unknown>, ...keys: string[]): Date | undefi
  * tier that ended starts the 30 days its businesses keep answering, and a
  * tier paid for again makes it active. An event older than one already
  * applied leaves the subscription as it is, so a late retry can't roll it
- * back. Returns false when the event isn't the partner's.
+ * back. Returns false when the event isn't the partner's, or is a support
+ * plan the partner's account doesn't follow.
  */
 export async function reconcilePartnerTier(context: DomainContext, input: { partnerId: string; providerEventId: string }): Promise<boolean> {
   return await withBusinessTransaction(context.db, { actorType: "worker" }, async (tx) => {
@@ -544,26 +546,51 @@ export async function reconcilePartnerTier(context: DomainContext, input: { part
     const tier = isPaidPartnerTierSlug(payload.partnerTier) ? payload.partnerTier : undefined;
     const billingInterval = tier && isBillingInterval(payload.billingInterval) ? payload.billingInterval : undefined;
     const subscriptionState = text(payload, "subscriptionState") ?? (isSubscription ? text(payload, "status") ?? event.eventType.slice("subscription.".length) : undefined);
+    const eventSubscriptionId = text(payload, "subscriptionId") ?? text(subscription, "id");
+    // One Polar customer can hold several subscriptions, so the event changes the tier only when
+    // it's about the subscription the account stores, or a live tier that replaces it.
+    const selfHostedSupport = payload.selfHostedSupport === true;
+    const effect = subscriptionEventEffect({
+      storedSubscriptionId: existing?.subscriptionId,
+      eventSubscriptionId,
+      selfHostedSupport,
+      startsLivePlan: tier !== undefined && isLivePolarSubscriptionState(subscriptionState),
+    });
+    // A support plan the account doesn't follow is the partner's purchase of support, not a tier.
+    if (selfHostedSupport && effect === "ignore") {
+      await tx.update(providerEvents).set({ status: "ignored", updatedAt: new Date() }).where(eq(providerEvents.id, event.id));
+      return false;
+    }
     // Both sides are ISO strings polar-event.ts normalized, so text order is time order.
+    // Only the same subscription's snapshots count: another of the customer's subscriptions is no newer copy of this one.
     const modifiedAt = text(payload, "subscriptionModifiedAt");
     const stale = modifiedAt !== undefined && (await tx.select({ id: providerEvents.id }).from(providerEvents)
-      .where(and(eq(providerEvents.partnerId, input.partnerId), eq(providerEvents.status, "processed"), sql`${providerEvents.payload}->>'subscriptionModifiedAt' > ${modifiedAt}`))
+      .where(and(
+        eq(providerEvents.partnerId, input.partnerId),
+        eq(providerEvents.status, "processed"),
+        sql`${providerEvents.payload}->>'subscriptionModifiedAt' > ${modifiedAt}`,
+        ...(eventSubscriptionId ? [sql`${providerEvents.payload}->>'subscriptionId' = ${eventSubscriptionId}`] : []),
+      ))
       .limit(1)).length > 0;
+    // Another of the customer's subscriptions leaves the tier as it is.
+    const skip = stale || effect === "ignore";
+    // The tier's own subscription now sells support, so the tier ends with it.
+    const ends = effect === "end";
 
-    const next = stale ? existing : {
-      tier: tier ?? existing?.tier ?? "free",
-      billingInterval: billingInterval ?? existing?.billingInterval ?? null,
-      subscriptionState: subscriptionState ?? existing?.subscriptionState ?? null,
-      subscriptionId: text(payload, "subscriptionId") ?? existing?.subscriptionId ?? null,
-      currentPeriodStart: date(subscription, "current_period_start", "currentPeriodStart") ?? existing?.currentPeriodStart ?? null,
-      currentPeriodEnd: date(subscription, "current_period_end", "currentPeriodEnd") ?? existing?.currentPeriodEnd ?? null,
+    const next = skip ? existing : {
+      tier: ends ? existing?.tier ?? "free" : tier ?? existing?.tier ?? "free",
+      billingInterval: ends ? existing?.billingInterval ?? null : billingInterval ?? existing?.billingInterval ?? null,
+      subscriptionState: ends ? "canceled" : subscriptionState ?? existing?.subscriptionState ?? null,
+      subscriptionId: eventSubscriptionId ?? existing?.subscriptionId ?? null,
+      currentPeriodStart: (ends ? undefined : date(subscription, "current_period_start", "currentPeriodStart")) ?? existing?.currentPeriodStart ?? null,
+      currentPeriodEnd: (ends ? undefined : date(subscription, "current_period_end", "currentPeriodEnd")) ?? existing?.currentPeriodEnd ?? null,
     };
     const inForce = partnerTierInForce(next ?? null);
     const terms = partnerTierCatalog[inForce];
     // A snapshot of the subscription says whether it runs to the end of its period; an event without one leaves that as it was.
     const snapshot = typeof subscription.cancel_at_period_end === "boolean";
-    const endsAt = !snapshot || stale ? existing?.endsAt ?? null : subscription.cancel_at_period_end === true && inForce !== "free" ? date(subscription, "ends_at", "current_period_end") ?? null : null;
-    const fields = stale && existing ? { customerId, updatedAt: new Date() } : {
+    const endsAt = !snapshot || skip ? existing?.endsAt ?? null : subscription.cancel_at_period_end === true && inForce !== "free" ? date(subscription, "ends_at", "current_period_end") ?? null : null;
+    const fields = skip && existing ? { customerId, updatedAt: new Date() } : {
       customerId,
       tier: next?.tier ?? "free",
       billingInterval: next?.billingInterval ?? null,
@@ -586,7 +613,7 @@ export async function reconcilePartnerTier(context: DomainContext, input: { part
       ...fields,
     }).onConflictDoUpdate({ target: partnerBillingAccounts.partnerId, set: fields });
     // The change moves the partner through its lifecycle, at the time Polar gives it: when the subscription ended, or when it changed.
-    const kind = stale ? null : partnerTierEventKind(existing, next);
+    const kind = skip ? null : partnerTierEventKind(existing, next);
     if (kind) {
       const now = new Date();
       const reported = (kind === "tier_cancelled" ? date(subscription, "ended_at", "endedAt") : undefined) ?? (modifiedAt ? new Date(modifiedAt) : undefined);
