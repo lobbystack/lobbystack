@@ -1,4 +1,3 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/marketing/components/ui/card"
 import type { Locale } from "@/marketing/i18n"
 
 const copy = {
@@ -111,20 +110,14 @@ export function MissedRevenueCards({ locale = "en" }: { locale?: Locale }) {
   const t = copy[locale]
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-3xl font-semibold tracking-tight text-foreground">
-        {t.heading}
-      </h2>
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+    <div>
+      <h2 className="feature-heading">{t.heading}</h2>
+      <div className="mt-8 grid gap-6 sm:grid-cols-2">
         {t.reasons.map((reason) => (
-          <Card key={reason.title}>
-            <CardHeader>
-              <CardTitle>{reason.title}</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm leading-relaxed text-muted-foreground">
-              {reason.description}
-            </CardContent>
-          </Card>
+          <article key={reason.title} className="rounded-2xl border border-border/60 bg-beige p-6">
+            <h3 className="card-heading">{reason.title}</h3>
+            <p className="mt-3 text-base leading-6 text-muted-foreground">{reason.description}</p>
+          </article>
         ))}
       </div>
     </div>

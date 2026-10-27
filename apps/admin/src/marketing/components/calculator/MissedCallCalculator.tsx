@@ -2,8 +2,7 @@
 
 import { useState, type ChangeEvent, type ReactNode } from "react"
 import { appSignupUrl } from "@/marketing/lib/app-links"
-import { buttonVariants } from "@/marketing/components/ui/button"
-import { Card } from "@/marketing/components/ui/card"
+import { ButtonLink } from "@/marketing/components/system/ButtonLink"
 import { Input } from "@/marketing/components/ui/input"
 import { Slider } from "@/marketing/components/ui/slider"
 import {
@@ -212,8 +211,8 @@ export function MissedCallCalculator({ locale = "en" }: { locale?: Locale }) {
     }
 
   return (
-    <div className="mt-12 grid grid-cols-1 items-start gap-8 lg:grid-cols-12 lg:gap-12">
-      <div className="lg:col-span-7">
+    <div className="mt-12 grid overflow-hidden rounded-2xl border border-border/60 lg:grid-cols-12">
+      <div className="bg-background p-6 md:p-8 lg:col-span-7">
         <div
           className="flex flex-col gap-6"
           role="group"
@@ -332,41 +331,29 @@ export function MissedCallCalculator({ locale = "en" }: { locale?: Locale }) {
         </div>
       </div>
 
-      <div className="relative lg:col-span-5 lg:self-center">
-        <Card className="sticky top-24 flex flex-col gap-4 bg-background p-6 sm:p-8">
-          <div className="flex flex-col gap-2" aria-live="polite">
-            <h3 className="text-sm font-medium text-muted-foreground">
-              {t.monthlyRevenue}
-            </h3>
-            <div className="ph-mask text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
-              {formatCurrency(revenueAtRiskMonthly)}
-            </div>
-            <p className="ph-mask pt-2 text-sm text-muted-foreground">
-              {t.yearlyResult(
-                formatCurrency(revenueAtRiskYearly),
-                new Intl.NumberFormat(numberFormatLocales[locale], {
-                  minimumFractionDigits: 1,
-                  maximumFractionDigits: 1,
-                }).format(jobsAtRisk)
-              )}
-            </p>
+      <div className="flex flex-col justify-center gap-6 bg-beige p-6 md:p-8 lg:col-span-5">
+        <div aria-live="polite">
+          <h3 className="eyebrow">{t.monthlyRevenue}</h3>
+          <div className="ph-mask mt-4 font-heading text-5xl font-medium tracking-[-0.05em] text-foreground tabular-nums md:text-6xl">
+            {formatCurrency(revenueAtRiskMonthly)}
           </div>
+          <p className="ph-mask mt-4 text-base leading-6 text-muted-foreground [&_strong]:font-medium [&_strong]:text-foreground">
+            {t.yearlyResult(
+              formatCurrency(revenueAtRiskYearly),
+              new Intl.NumberFormat(numberFormatLocales[locale], {
+                minimumFractionDigits: 1,
+                maximumFractionDigits: 1,
+              }).format(jobsAtRisk)
+            )}
+          </p>
+        </div>
 
-          <div className="pt-2">
-            <a
-              href={appSignupUrl(locale, { source: "calculator" })}
-              className={buttonVariants({
-                size: "lg",
-                className: "w-full text-base",
-              })}
-            >
-              {t.tryFree}
-            </a>
-            <p className="mt-3 text-center text-xs text-muted-foreground">
-              {t.estimateNote}
-            </p>
-          </div>
-        </Card>
+        <div>
+          <ButtonLink href={appSignupUrl(locale, { source: "calculator" })} className="w-full">
+            {t.tryFree}
+          </ButtonLink>
+          <p className="mt-3 text-center text-xs text-muted-foreground">{t.estimateNote}</p>
+        </div>
       </div>
     </div>
   )

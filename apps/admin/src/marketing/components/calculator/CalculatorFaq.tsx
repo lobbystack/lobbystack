@@ -1,4 +1,4 @@
-import { FaqAccordion } from "@/marketing/components/FaqAccordion"
+import { FaqSection } from "@/marketing/components/FaqSection"
 import { getCalculatorFaqs } from "@/marketing/lib/calculator-faqs"
 import type { Locale } from "@/marketing/i18n"
 
@@ -13,19 +13,12 @@ export function CalculatorFaq({ locale = "en" }: { locale?: Locale }) {
   const calculatorFaqs = getCalculatorFaqs(locale)
 
   return (
-    <div className="space-y-6">
-      <h2
-        id="faq"
-        className="text-3xl font-semibold tracking-tight text-foreground"
-      >
-        {headings[locale]}
-      </h2>
-      <FaqAccordion
-        faqs={calculatorFaqs.map((faq) => ({
-          question: faq.q,
-          answer: faq.a,
-        }))}
-      />
-    </div>
+    <FaqSection
+      heading={headings[locale]}
+      faqs={calculatorFaqs.map((faq) => ({
+        question: faq.q,
+        answer: faq.a,
+      }))}
+    />
   )
 }
