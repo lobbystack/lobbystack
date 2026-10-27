@@ -44,7 +44,6 @@ const heroScenes: Record<string, ProductSceneName> = {
   "/illustrations/call-booking-summary.webp": "summary",
   "/illustrations/missed-calls.webp": "answeredBooked",
   "/illustrations/missed-calls-v3.webp": "answeredBooked",
-  "/illustrations/missed-calls-booked-work.webp": "answeredBooked",
 }
 
 function CheckDot() {
