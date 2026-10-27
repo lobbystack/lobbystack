@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 
 import { CtaSection } from "@/marketing/components/CtaSection"
 import { HeroSection } from "@/marketing/components/HeroSection"
-import { LandingPageAdditions } from "@/marketing/components/LandingPageAdditions"
+import { KnowledgeSection, PricingPreviewSection } from "@/marketing/components/home/HomeSections"
 import { Navbar } from "@/marketing/components/Navbar"
 import { PricingSection } from "@/marketing/components/PricingSection"
 import type { Locale } from "@/marketing/i18n/config"
@@ -14,7 +14,8 @@ const pages = {
     <>
       <Navbar locale={locale} />
       <HeroSection locale={locale} />
-      <LandingPageAdditions locale={locale} />
+      <KnowledgeSection locale={locale} />
+      <PricingPreviewSection locale={locale} />
       <CtaSection locale={locale} />
     </>
   ),
