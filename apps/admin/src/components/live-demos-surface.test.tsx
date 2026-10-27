@@ -11,7 +11,7 @@ const demo = { demoId: "demo", businessName: "Clinic", websiteUrl: "https://exam
 async function fillForm() {
   await userEvent.type(screen.getByLabelText("operator.businessName"), "Clinic");
   await userEvent.type(screen.getByLabelText("operator.websiteUrl"), "https://example.invalid");
-  await userEvent.type(screen.getByLabelText("operator.suggestedPrompts"), "Hours?");
+  await userEvent.type(screen.getByLabelText("operator.suggestedPrompts"), "Hours?{enter}Prices?");
 }
 describe("prospect demo operator mutations", () => {
   it("resets the captured form after asynchronous creation and retains its new link", async () => {
@@ -28,7 +28,7 @@ describe("prospect demo operator mutations", () => {
     await screen.findByRole("button", { name: "operator.openLink" });
     expect((screen.getByLabelText("operator.businessName") as HTMLInputElement).value).toBe("");
     expect(screen.queryByRole("alert")).toBeNull();
-    expect(fetchMock).toHaveBeenCalledWith("/api/demos", expect.objectContaining({ body: JSON.stringify({ name: "Clinic", websiteUrl: "https://example.invalid", greeting: "", locale: "fr", suggestedPrompts: ["Hours?"] }) }));
+    expect(fetchMock).toHaveBeenCalledWith("/api/demos", expect.objectContaining({ body: JSON.stringify({ name: "Clinic", websiteUrl: "https://example.invalid", greeting: "", locale: "fr", suggestedPrompts: ["Hours?", "Prices?"] }) }));
     expect(screen.getByRole("button", { name: "operator.publish" }).hasAttribute("disabled")).toBe(false);
   });
   it("keeps form values and releases pending controls after a network failure", async () => {
@@ -65,5 +65,40 @@ describe("prospect demo operator mutations", () => {
     await userEvent.click(screen.getByRole("button", { name: `operator.${action}` }));
     expect((await screen.findByRole("alert")).textContent).toBe(`operator.errors.${action}`);
     expect(screen.getByRole("button", { name: "operator.rotate" }).hasAttribute("disabled")).toBe(false);
+  });
+  it("asks for two prompts before it creates a demo", async () => {
+    const fetchMock = vi.fn(async () => Response.json({ demos: [] }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(<LiveDemosSurface />);
+    await screen.findByText("operator.empty");
+    await userEvent.type(screen.getByLabelText("operator.businessName"), "Clinic");
+    await userEvent.type(screen.getByLabelText("operator.websiteUrl"), "https://example.invalid");
+    await userEvent.type(screen.getByLabelText("operator.suggestedPrompts"), "Hours?");
+    await userEvent.click(screen.getByRole("button", { name: "operator.create" }));
+    expect((await screen.findByRole("alert")).textContent).toBe("operator.errors.promptsRequired");
+    expect(fetchMock).not.toHaveBeenCalledWith("/api/demos", expect.objectContaining({ method: "POST" }));
+  });
+  it("publishes a demo whose website this dashboard can't read, and says why it has no website knowledge", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => init?.method === "POST" ? Response.json({ token: "fixture-token" }) : Response.json({ demos: [{ ...demo, websiteIngestionStatus: "unavailable", websiteIngestionError: "Website crawling is not configured." }] })));
+    render(<LiveDemosSurface />);
+    await screen.findByText("operator.ingestionUnavailable");
+    await userEvent.click(screen.getByRole("button", { name: "operator.rotate" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "operator.publish" }).hasAttribute("disabled")).toBe(false));
+  });
+  it("names why the server refused to publish", async () => {
+    let hasToken = false;
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method === "POST") {
+        if (!hasToken) { hasToken = true; return Response.json({ token: "fixture-token" }); }
+        return Response.json({ error: "Website ingestion must be completed before publish.", code: "demo_not_ready" }, { status: 409 });
+      }
+      return Response.json({ demos: [demo] });
+    }));
+    render(<LiveDemosSurface />);
+    await screen.findByText("Clinic");
+    await userEvent.click(screen.getByRole("button", { name: "operator.rotate" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "operator.publish" }).hasAttribute("disabled")).toBe(false));
+    await userEvent.click(screen.getByRole("button", { name: "operator.publish" }));
+    expect((await screen.findByRole("alert")).textContent).toBe("operator.errors.notReady");
   });
 });

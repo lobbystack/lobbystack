@@ -210,7 +210,8 @@
     "unavailable": "Ese número acaba de ser asignado. Elija otro de la lista actualizada.",
     "selectedTitle": "El número de teléfono de su IA",
     "selectedNumberLabel": "Número seleccionado",
-    "continue": "Continuar"
+    "continue": "Continuar",
+    "numbersUnavailable": "Los números de teléfono aún no están configurados en este panel. Pida a quien lo administra que conecte un proveedor de telefonía."
   },
   "attribution": {
     "title": "¿Cómo conoció {{appName}}?",

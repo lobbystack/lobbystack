@@ -31,6 +31,8 @@ describe("getSafeOnboardingErrorMessage", () => {
     expect(getSafeOnboardingErrorMessage(Object.assign(new Error("This business's partner needs a paid tier for more phone numbers."), { code: "partner_number_limit_reached" }), t, "number.searchFailed")).toBe("number.partnerTierRequired");
     // No paid tier helps where nobody bills the partner's numbers, so it isn't the paid-tier message.
     expect(getSafeOnboardingErrorMessage(Object.assign(new Error("Phone numbers aren't available for this business yet."), { code: "partner_numbers_unavailable" }), t, "number.searchFailed")).toBe("number.partnerNumbersUnavailable");
+    // A deployment without Twilio says so instead of "Request failed."
+    expect(getSafeOnboardingErrorMessage(Object.assign(new Error("Phone numbers aren't set up on this dashboard."), { code: "phone_numbers_unavailable" }), t, "number.searchFailed")).toBe("number.numbersUnavailable");
   });
 
   it("preserves actionable Twilio trial-account guidance", () => {

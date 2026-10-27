@@ -451,7 +451,8 @@
           "forbidden": "Samo vlasnici i administratori mogu da menjaju vaš domen.",
           "failed": "Nismo uspeli da sačuvamo vaš domen. Pokušajte ponovo.",
           "loadFailed": "Nismo uspeli da učitamo vaše adrese. Osvežite stranicu i pokušajte ponovo."
-        }
+        },
+        "unavailable": "Ova kontrolna tabla još ne može da poveže vaš domen. Vaše firme se prijavljuju na vašem poddomenu iznad. Zamolite {{appName}} da uključi sopstvene domene."
       }
     },
     "brand": {

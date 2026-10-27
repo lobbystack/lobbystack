@@ -156,7 +156,7 @@ describe("the partner console's Branding & domain page", () => {
     expect(await screen.findByLabelText("branding.domain.own.label")).toBeTruthy();
   });
 
-  it("tells a free tier's owner to choose a tier and its admins to ask an owner, and hides the domain where the deployment can't issue certificates", async () => {
+  it("tells a free tier's owner to choose a tier and its admins to ask an owner, and says the dashboard can't connect a domain where the deployment can't issue certificates", async () => {
     renderAs("owner", {}, { customDomains: "paid_tier_required" });
     expect(await screen.findByText("branding.domain.own.paidTier")).toBeTruthy();
     expect(screen.getByRole("link", { name: "branding.domain.own.chooseTier" }).getAttribute("href")).toBe("/partner/partner/billing");
@@ -168,7 +168,8 @@ describe("the partner console's Branding & domain page", () => {
     cleanup();
     renderAs("owner", {}, { customDomains: "unavailable" });
     await screen.findByText("bright.portal.example.test");
-    expect(screen.queryByText("branding.domain.own.title")).toBeNull();
+    expect(screen.getByText("branding.domain.own.unavailable")).toBeTruthy();
+    expect(screen.queryByLabelText("branding.domain.own.label")).toBeNull();
   });
 
   it("shows a member the partner's domain with no way to change it", async () => {

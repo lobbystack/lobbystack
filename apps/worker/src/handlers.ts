@@ -393,7 +393,8 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
 
       if (!url || !dependencies.crawler) {
         if (documentId) await markKnowledgeDocumentFailed(dependencies.domain, { businessId: businessIdOrThrow(job), documentId, ...(source ? { expectedRevision: source.revision } : {}), error: "Website crawling is not configured." });
-        if (websiteIngestionJobId && !documentId) await updateWebsiteIngestion(dependencies.domain.db, { businessId: businessIdOrThrow(job), websiteIngestionJobId, status: "failed", error: "Website crawling is not configured." });
+        // A demo's crawl that can't run here is unavailable rather than failed, so the demo can still publish without website knowledge.
+        if (websiteIngestionJobId && !documentId) await updateWebsiteIngestion(dependencies.domain.db, { businessId: businessIdOrThrow(job), websiteIngestionJobId, status: url ? "unavailable" : "failed", error: url ? "Website crawling is not configured." : "The website address is missing." });
         return { status: "skipped", entityId: String(job.payload.jobId ?? "") };
       }
       const progress = async (status: string, importedCount = 0, indexedCount = 0) => {

@@ -27,6 +27,7 @@ type Demo = {
   suggestedPrompts: string[];
   expiresAt: string;
   websiteIngestionStatus: string | null;
+  websiteIngestionError?: string | null;
   greetingReady: boolean;
   snapshotReady: boolean;
   promptsReady: boolean;
@@ -73,6 +74,7 @@ export function LiveDemosSurface({ partner }: { partner?: PartnerDemosOptions } 
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   // The closed demo the delete confirmation asks about.
   const [deleting, setDeleting] = useState<Demo | null>(null);
   const partnerId = partner?.partnerId;
@@ -107,10 +109,15 @@ export function LiveDemosSurface({ partner }: { partner?: PartnerDemosOptions } 
     event.preventDefault();
     const element = event.currentTarget;
     const form = new FormData(element);
+    const prompts = String(form.get("prompts") ?? "").split("\n");
+    if (prompts.filter((prompt) => prompt.trim()).length < 2) {
+      setError(t("operator.errors.promptsRequired"));
+      return;
+    }
     setBusy("create");
     setError(null);
     try {
-      const response = await fetch(createUrl, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...scope, name: form.get("name"), websiteUrl: form.get("websiteUrl"), greeting: form.get("greeting"), locale: i18n.language.startsWith("fr") ? "fr" : "en", suggestedPrompts: String(form.get("prompts") ?? "").split("\n"), ...(partnerId && canManage ? { accessLevel } : {}) }) });
+      const response = await fetch(createUrl, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...scope, name: form.get("name"), websiteUrl: form.get("websiteUrl"), greeting: form.get("greeting"), locale: i18n.language.startsWith("fr") ? "fr" : "en", suggestedPrompts: prompts, ...(partnerId && canManage ? { accessLevel } : {}) }) });
       const body = await response.json() as { demoId?: string; businessId?: string; token?: string; url?: string; accessLevel?: PartnerAccessLevel; code?: string };
       if (!response.ok || !body.demoId || !body.token) throw Object.assign(new Error("Demo creation failed"), { code: body.code });
       setLinks(current => ({ ...current, [body.demoId!]: { token: body.token!, url: body.url ?? hostDemoUrl(body.token!) } }));
@@ -129,16 +136,18 @@ export function LiveDemosSurface({ partner }: { partner?: PartnerDemosOptions } 
 
   const act = async (demo: Demo, action: "rotate" | "publish" | "revoke") => {
     setBusy(`${demo.demoId}:${action}`);
-    setError(null);
+    setActionError(null);
     try {
       const response = await fetch(actionUrl(demo.demoId), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...scope, action, token: links[demo.demoId]?.token, suggestedPrompts: demo.suggestedPrompts }) });
-      const body = await response.json() as { token?: string; url?: string };
-      if (!response.ok) throw new Error("Demo action failed");
+      const body = await response.json() as { token?: string; url?: string; code?: string };
+      if (!response.ok) throw Object.assign(new Error("Demo action failed"), { code: body.code });
       if (body.token) setLinks(current => ({ ...current, [demo.demoId]: { token: body.token!, url: body.url ?? hostDemoUrl(body.token!) } }));
       if (partnerId && action !== "rotate") onChange?.({ action: action === "publish" ? "published" : "revoked", demoId: demo.demoId, businessId: demo.businessId });
       await load();
-    } catch {
-      setError(t(`operator.errors.${action}`));
+    } catch (cause) {
+      const code = (cause as { code?: string }).code;
+      const actionErrors: Record<string, string> = { prompts_required: "operator.errors.promptsRequired", demo_not_ready: "operator.errors.notReady" };
+      setActionError(t(code && actionErrors[code] ? actionErrors[code] : `operator.errors.${action}`));
     } finally {
       setBusy(null);
     }
@@ -148,14 +157,14 @@ export function LiveDemosSurface({ partner }: { partner?: PartnerDemosOptions } 
   const remove = async (demo: Demo) => {
     if (!partnerId) return;
     setBusy(`${demo.demoId}:delete`);
-    setError(null);
+    setActionError(null);
     try {
       const response = await fetch(actionUrl(demo.demoId), { method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify(scope) });
       if (!response.ok) throw new Error("Demo delete failed");
       onChange?.({ action: "deleted", demoId: demo.demoId, businessId: demo.businessId });
       await load();
     } catch {
-      setError(t("operator.partner.errors.delete"));
+      setActionError(t("operator.partner.errors.delete"));
     } finally {
       setBusy(null);
     }
@@ -165,7 +174,7 @@ export function LiveDemosSurface({ partner }: { partner?: PartnerDemosOptions } 
   const open = async (demo: Demo) => {
     if (!partnerId) return;
     setBusy(`${demo.demoId}:open`);
-    setError(null);
+    setActionError(null);
     try {
       const response = await fetch("/api/partner/businesses/open", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ partnerId, businessId: demo.businessId }) });
       const body = await response.json() as { url?: string };
@@ -173,7 +182,7 @@ export function LiveDemosSurface({ partner }: { partner?: PartnerDemosOptions } 
       onChange?.({ action: "opened", demoId: demo.demoId, businessId: demo.businessId });
       window.location.assign(body.url);
     } catch {
-      setError(t("operator.partner.errors.open"));
+      setActionError(t("operator.partner.errors.open"));
       setBusy(null);
     }
   };
@@ -182,18 +191,20 @@ export function LiveDemosSurface({ partner }: { partner?: PartnerDemosOptions } 
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
       <div className="space-y-4">
         <div className="flex items-center justify-between"><p className="text-sm text-muted-foreground">{t("operator.count", { count: demos.length })}</p><Button variant="ghost" onClick={() => void load()} disabled={loading}><RefreshCw className="size-4" />{t("operator.refresh")}</Button></div>
+        {actionError ? <p role="alert" className="text-sm text-destructive">{actionError}</p> : null}
         {loading ? <Card><CardContent className="py-16 text-center text-sm text-muted-foreground">{t("operator.loading")}</CardContent></Card> : null}
         {!loading && demos.length === 0 ? <Card><CardContent className="py-16 text-center text-sm text-muted-foreground">{t(partnerId ? "operator.partner.empty" : "operator.empty")}</CardContent></Card> : null}
         {demos.map((demo) => {
-          const ready = demo.websiteIngestionStatus === "completed" && demo.snapshotReady && demo.greetingReady && demo.promptsReady;
+          const ingestionReady = demo.websiteIngestionStatus === "completed" || demo.websiteIngestionStatus === "unavailable";
+          const ready = ingestionReady && demo.snapshotReady && demo.greetingReady && demo.promptsReady;
           const link = links[demo.demoId];
           const closed = demo.status === "claimed" || demo.status === "revoked";
           // A claimed demo is one of the partner's businesses, which the Businesses page deletes.
           const deletable = Boolean(partnerId) && canManage && (demo.status === "revoked" || (demo.status !== "claimed" && Date.parse(demo.expiresAt) <= Date.now()));
-          return <Card key={demo.demoId}><CardHeader><div className="flex flex-wrap items-start justify-between gap-3"><div><CardTitle>{demo.businessName}</CardTitle><CardDescription>{demo.websiteUrl}</CardDescription></div><div className="flex flex-wrap items-center gap-2">{demo.accessLevel ? <Badge variant="secondary">{t(`partner:businesses.access.${demo.accessLevel}`)}</Badge> : null}<span className="rounded-full bg-muted px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t(`operator.statuses.${demo.status}`, { defaultValue: demo.status })}</span></div></div></CardHeader><CardContent className="space-y-4"><div className="grid gap-2 text-sm sm:grid-cols-3"><span>{t("operator.ingestion")} <strong>{t(`operator.statuses.${demo.websiteIngestionStatus ?? "pending"}`, { defaultValue: demo.websiteIngestionStatus ?? "pending" })}</strong></span><span>{t("operator.snapshot")} <strong>{t(demo.snapshotReady ? "operator.statuses.ready" : "operator.statuses.pending")}</strong></span><span>{t("operator.prompts")} <strong>{t(demo.promptsReady ? "operator.statuses.ready" : "operator.statuses.missing")}</strong></span></div>{demo.usage ? <p className="text-sm text-muted-foreground">{t("operator.partner.usage", { minutes: formatMinutes(demo.usage.voiceSeconds), chats: formatCount(demo.usage.chats) })}</p> : null}<div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => void act(demo, "rotate")} disabled={busy !== null || closed}><KeyRound className="size-4" />{t("operator.rotate")}</Button><Button onClick={() => void act(demo, "publish")} disabled={busy !== null || !ready || !link || demo.status === "active"}><Rocket className="size-4" />{t("operator.publish")}</Button><Button variant="destructive" onClick={() => void act(demo, "revoke")} disabled={busy !== null || closed}><ShieldX className="size-4" />{t("operator.revoke")}</Button>{link ? <Button variant="ghost" onClick={() => window.open(link.url, "_blank", "noopener,noreferrer")}><ExternalLink className="size-4" />{t("operator.openLink")}</Button> : null}{partnerId && !closed ? <Button variant="ghost" onClick={() => void open(demo)} disabled={busy !== null}><LogIn className="size-4" />{t("operator.partner.open")}</Button> : null}{deletable ? <Button variant="ghost" onClick={() => setDeleting(demo)} disabled={busy !== null}><Trash2 className="size-4" />{t("operator.partner.delete")}</Button> : null}</div>{!link && !closed ? <p className="text-xs text-muted-foreground">{t("operator.tokenHint")}</p> : null}</CardContent></Card>;
+          return <Card key={demo.demoId}><CardHeader><div className="flex flex-wrap items-start justify-between gap-3"><div><CardTitle>{demo.businessName}</CardTitle><CardDescription>{demo.websiteUrl}</CardDescription></div><div className="flex flex-wrap items-center gap-2">{demo.accessLevel ? <Badge variant="secondary">{t(`partner:businesses.access.${demo.accessLevel}`)}</Badge> : null}<span className="rounded-full bg-muted px-3 py-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t(`operator.statuses.${demo.status}`, { defaultValue: demo.status })}</span></div></div></CardHeader><CardContent className="space-y-4"><div className="grid gap-2 text-sm sm:grid-cols-3"><span>{t("operator.ingestion")} <strong>{t(`operator.statuses.${demo.websiteIngestionStatus ?? "pending"}`, { defaultValue: demo.websiteIngestionStatus ?? "pending" })}</strong></span><span>{t("operator.snapshot")} <strong>{t(demo.snapshotReady ? "operator.statuses.ready" : "operator.statuses.pending")}</strong></span><span>{t("operator.prompts")} <strong>{t(demo.promptsReady ? "operator.statuses.ready" : "operator.statuses.missing")}</strong></span></div>{demo.websiteIngestionStatus === "unavailable" ? <p className="text-sm text-muted-foreground">{t("operator.ingestionUnavailable")}</p> : demo.websiteIngestionStatus === "failed" && demo.websiteIngestionError ? <p className="text-sm text-muted-foreground">{t("operator.ingestionFailed", { error: demo.websiteIngestionError })}</p> : null}{demo.usage ? <p className="text-sm text-muted-foreground">{t("operator.partner.usage", { minutes: formatMinutes(demo.usage.voiceSeconds), chats: formatCount(demo.usage.chats) })}</p> : null}<div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => void act(demo, "rotate")} disabled={busy !== null || closed}><KeyRound className="size-4" />{t("operator.rotate")}</Button><Button onClick={() => void act(demo, "publish")} disabled={busy !== null || !ready || !link || demo.status === "active"}><Rocket className="size-4" />{t("operator.publish")}</Button><Button variant="destructive" onClick={() => void act(demo, "revoke")} disabled={busy !== null || closed}><ShieldX className="size-4" />{t("operator.revoke")}</Button>{link ? <Button variant="ghost" onClick={() => window.open(link.url, "_blank", "noopener,noreferrer")}><ExternalLink className="size-4" />{t("operator.openLink")}</Button> : null}{partnerId && !closed ? <Button variant="ghost" onClick={() => void open(demo)} disabled={busy !== null}><LogIn className="size-4" />{t("operator.partner.open")}</Button> : null}{deletable ? <Button variant="ghost" onClick={() => setDeleting(demo)} disabled={busy !== null}><Trash2 className="size-4" />{t("operator.partner.delete")}</Button> : null}</div>{!link && !closed ? <p className="text-xs text-muted-foreground">{t("operator.tokenHint")}</p> : null}</CardContent></Card>;
         })}
       </div>
-      <Card className="h-fit xl:sticky xl:top-6"><CardHeader><CardTitle>{t("operator.prepare")}</CardTitle><CardDescription>{t(partnerId ? "operator.partner.prepareDescription" : "operator.prepareDescription")}</CardDescription></CardHeader><CardContent><form className="space-y-4" onSubmit={(event) => void create(event)}><label className="block space-y-2 text-sm font-medium">{t("operator.businessName")}<Input name="name" required className="font-normal" /></label><label className="block space-y-2 text-sm font-medium">{t("operator.websiteUrl")}<Input name="websiteUrl" type="url" required placeholder="https://example.com" className="font-normal" /></label><label className="block space-y-2 text-sm font-medium">{t("operator.greeting")}<Input name="greeting" className="font-normal" /></label><label className="block space-y-2 text-sm font-medium">{t("operator.suggestedPrompts")}<Textarea name="prompts" required rows={5} placeholder={t("operator.promptsPlaceholder")} className="resize-y font-normal" /></label>{partnerId && canManage ? <div className="space-y-2"><p className="text-sm font-medium">{t("operator.partner.accessLabel")}</p><AccessLevelOptions onChange={setAccessLevel} value={accessLevel} /></div> : null}<Button type="submit" className="w-full" disabled={busy !== null}><Plus className="size-4" />{t("operator.create")}</Button>{error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}</form></CardContent></Card>
+      <Card className="h-fit xl:sticky xl:top-6"><CardHeader><CardTitle>{t("operator.prepare")}</CardTitle><CardDescription>{t(partnerId ? "operator.partner.prepareDescription" : "operator.prepareDescription")}</CardDescription></CardHeader><CardContent><form className="space-y-4" onSubmit={(event) => void create(event)}><label className="block space-y-2 text-sm font-medium">{t("operator.businessName")}<Input name="name" required className="font-normal" /></label><label className="block space-y-2 text-sm font-medium">{t("operator.websiteUrl")}<Input name="websiteUrl" type="url" required placeholder="https://example.com" className="font-normal" /></label><label className="block space-y-2 text-sm font-medium">{t("operator.greeting")}<Input name="greeting" className="font-normal" /></label><label className="block space-y-2 text-sm font-medium">{t("operator.suggestedPrompts")}<Textarea aria-describedby="demo-prompts-hint" name="prompts" required rows={5} placeholder={t("operator.promptsPlaceholder")} className="resize-y font-normal" /></label><p id="demo-prompts-hint" className="-mt-2 text-xs text-muted-foreground">{t("operator.promptsHint")}</p>{partnerId && canManage ? <div className="space-y-2"><p className="text-sm font-medium">{t("operator.partner.accessLabel")}</p><AccessLevelOptions onChange={setAccessLevel} value={accessLevel} /></div> : null}<Button type="submit" className="w-full" disabled={busy !== null}><Plus className="size-4" />{t("operator.create")}</Button>{error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}</form></CardContent></Card>
     </div>
   );
   // The partner console's pages say what each is for under the title.

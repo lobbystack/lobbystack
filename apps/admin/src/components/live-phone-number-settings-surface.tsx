@@ -214,6 +214,7 @@ export function LivePhoneNumberSettingsSurface() {
                             const code = (error as { code?: string } | null)?.code;
                             if (code === "partner_number_limit_reached") return t("phoneNumber.partnerTierRequired.description");
                             if (code === "partner_numbers_unavailable") return t("phoneNumber.partnerNumbersUnavailable.description");
+                            if (code === "phone_numbers_unavailable") return t("phoneNumber.numbersUnavailable");
                             return getSettingsPhoneNumberErrorMessage(error, fallback);
                           }}
                           getInitialNumberSuggestion={numberApi.getInitialNumberSuggestion}

@@ -104,7 +104,7 @@ describe("the partner console's Demos page", () => {
     await screen.findByText("operator.partner.empty");
     await userEvent.type(screen.getByLabelText("operator.businessName"), "Harbor Dental");
     await userEvent.type(screen.getByLabelText("operator.websiteUrl"), "https://harbor.example");
-    await userEvent.type(screen.getByLabelText("operator.suggestedPrompts"), "Hours?");
+    await userEvent.type(screen.getByLabelText("operator.suggestedPrompts"), "Hours?{enter}Prices?");
     await userEvent.click(screen.getByRole("button", { name: "operator.create" }));
     expect((await screen.findByRole("alert")).textContent).toBe("operator.partner.errors.domainRequired");
     expect(fixture.telemetry!.events).toEqual([]);

@@ -210,7 +210,8 @@
     "unavailable": "Neko je upravo uzeo taj broj. Izaberite drugi sa osvežene liste.",
     "selectedTitle": "Broj telefona AI recepcionera",
     "selectedNumberLabel": "Izabrani broj",
-    "continue": "Nastavi"
+    "continue": "Nastavi",
+    "numbersUnavailable": "Brojevi telefona još nisu podešeni na ovoj kontrolnoj tabli. Zamolite osobu koja njome upravlja da poveže telefonskog provajdera."
   },
   "attribution": {
     "title": "Kako ste čuli za {{appName}}?",

@@ -485,7 +485,8 @@
     "toast": {
       "changed": "Broj telefona je promenjen. Prethodni broj ostaje aktivan još 30 dana.",
       "added": "Broj telefona je dodat."
-    }
+    },
+    "numbersUnavailable": "Brojevi telefona još nisu podešeni na ovoj kontrolnoj tabli. Zamolite osobu koja njome upravlja da poveže telefonskog provajdera."
   },
   "appearance": {
     "title": "Postavke",

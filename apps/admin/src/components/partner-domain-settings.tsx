@@ -171,7 +171,7 @@ export function PartnerDomainSettings() {
   const role = data.role ?? partner.role;
   const canEdit = role === "owner" || role === "admin";
   const custom = data.custom;
-  const showsOwnDomain = Boolean(custom) || (data.customDomains !== undefined && data.customDomains !== "unavailable");
+  const showsOwnDomain = Boolean(custom) || data.customDomains !== undefined;
   const field = `${id}-hostname`;
 
   return (
@@ -235,6 +235,8 @@ export function PartnerDomainSettings() {
                     </div>
                   ) : null}
                 </div>
+              ) : data.customDomains === "unavailable" ? (
+                <p className="text-sm text-muted-foreground">{t("branding.domain.own.unavailable", { appName })}</p>
               ) : data.customDomains === "paid_tier_required" ? (
                 <div className="flex flex-wrap items-center gap-3">
                   <p className="text-sm text-muted-foreground">{t(role === "owner" ? "branding.domain.own.paidTier" : "branding.domain.own.paidTierAskOwner")}</p>

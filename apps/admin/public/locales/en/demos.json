@@ -82,14 +82,17 @@
       "active": "active",
       "claimed": "claimed",
       "revoked": "revoked",
-      "expired": "expired"
+      "expired": "expired",
+      "unavailable": "not set up"
     },
     "errors": {
       "load": "Unable to load prospect demos. Try refreshing.",
       "create": "Unable to create the demo. Your entries have been kept; please try again.",
       "rotate": "Unable to rotate the demo link. Please try again.",
       "publish": "Unable to publish the demo. Please try again.",
-      "revoke": "Unable to revoke the demo. Please try again."
+      "revoke": "Unable to revoke the demo. Please try again.",
+      "promptsRequired": "Add at least two suggested prompts, one per line.",
+      "notReady": "The demo isn't ready to publish yet. Wait for the website to finish, then try again."
     },
     "partner": {
       "description": "Show a prospect their own receptionist before they buy. Each demo opens on your domain under your brand.",
@@ -109,6 +112,9 @@
         "open": "We couldn't open the demo. Try again.",
         "delete": "We couldn't delete the demo. Try again."
       }
-    }
+    },
+    "promptsHint": "Add at least two, one per line.",
+    "ingestionUnavailable": "This dashboard can't read websites, so the demo answers from its greeting, services and suggested prompts.",
+    "ingestionFailed": "We couldn't read the website: {{error}}"
   }
 }

@@ -485,7 +485,8 @@
     "toast": {
       "changed": "Numéro de téléphone modifié. Votre ancien numéro restera actif pendant 30 jours.",
       "added": "Numéro de téléphone ajouté."
-    }
+    },
+    "numbersUnavailable": "Les numéros de téléphone ne sont pas encore configurés sur ce tableau de bord. Demandez à la personne qui le gère de connecter un fournisseur de téléphonie."
   },
   "appearance": {
     "title": "Préférences",

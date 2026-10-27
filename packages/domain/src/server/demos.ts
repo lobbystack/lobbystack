@@ -56,6 +56,8 @@ export type ProspectDemoStatus = {
   expiresAt: Date;
   publishedAt: Date | null;
   websiteIngestionStatus: string | null;
+  /** Why the website crawl failed or can't run, for the demo's card. */
+  websiteIngestionError: string | null;
   greetingReady: boolean;
   snapshotReady: boolean;
   promptsReady: boolean;
@@ -315,7 +317,7 @@ export async function createProspectDemo(
 /** The demo's status in a system transaction scoped to its business, or a 404 when the manager can't act on it. */
 async function readDemoStatus(context: DomainContext, manager: DemoManager, input: { demoId: string; businessId: string }): Promise<ProspectDemoStatus & { accessLevel: PartnerAccessLevel }> {
   return await withBusinessTransaction(context.db, { userId: manager.userId, businessId: input.businessId, actorType: "system" }, async (tx) => {
-    const row = (await tx.select({ demo: prospectDemos, slug: businesses.slug, accessLevel: businesses.partnerAccessLevel, ingestionStatus: websiteIngestionJobs.status, greeting: receptionistProfiles.greeting })
+    const row = (await tx.select({ demo: prospectDemos, slug: businesses.slug, accessLevel: businesses.partnerAccessLevel, ingestionStatus: websiteIngestionJobs.status, ingestionError: websiteIngestionJobs.lastError, greeting: receptionistProfiles.greeting })
       .from(prospectDemos)
       .innerJoin(businesses, eq(businesses.id, prospectDemos.businessId))
       .leftJoin(websiteIngestionJobs, eq(websiteIngestionJobs.id, prospectDemos.websiteIngestionJobId))
@@ -323,7 +325,7 @@ async function readDemoStatus(context: DomainContext, manager: DemoManager, inpu
       .where(and(eq(prospectDemos.id, input.demoId), managedBy(manager))).limit(1))[0];
     if (!row) throw demoNotFound();
     const snapshot = (await tx.select({ id: businessContextSnapshots.id }).from(businessContextSnapshots).where(eq(businessContextSnapshots.businessId, row.demo.businessId)).orderBy(desc(businessContextSnapshots.generatedAt)).limit(1))[0];
-    return { demoId: row.demo.id, businessId: row.demo.businessId, businessName: row.demo.businessName, businessSlug: row.slug, websiteUrl: row.demo.websiteUrl, status: row.demo.status, locale: row.demo.locale, suggestedPrompts: row.demo.suggestedPrompts, expiresAt: row.demo.expiresAt, publishedAt: row.demo.publishedAt, websiteIngestionStatus: row.ingestionStatus, greetingReady: Boolean(row.greeting?.trim()), snapshotReady: Boolean(snapshot), promptsReady: row.demo.suggestedPrompts.length >= 2, accessLevel: row.accessLevel };
+    return { demoId: row.demo.id, businessId: row.demo.businessId, businessName: row.demo.businessName, businessSlug: row.slug, websiteUrl: row.demo.websiteUrl, status: row.demo.status, locale: row.demo.locale, suggestedPrompts: row.demo.suggestedPrompts, expiresAt: row.demo.expiresAt, publishedAt: row.demo.publishedAt, websiteIngestionStatus: row.ingestionStatus, websiteIngestionError: row.ingestionError ?? null, greetingReady: Boolean(row.greeting?.trim()), snapshotReady: Boolean(snapshot), promptsReady: row.demo.suggestedPrompts.length >= 2, accessLevel: row.accessLevel };
   });
 }
 
@@ -369,7 +371,9 @@ async function publishDemo(context: DomainContext, manager: DemoManager, input: 
     const profile = await tx.select({ greeting: receptionistProfiles.greeting }).from(receptionistProfiles).where(eq(receptionistProfiles.businessId, demo.businessId)).limit(1);
     const snapshot = await tx.select({ id: businessContextSnapshots.id }).from(businessContextSnapshots).where(eq(businessContextSnapshots.businessId, demo.businessId)).limit(1);
     const indexedDocument = await tx.select({ id: knowledgeDocuments.id }).from(knowledgeDocuments).where(and(eq(knowledgeDocuments.businessId, demo.businessId), eq(knowledgeDocuments.status, "indexed"))).limit(1);
-    if (ingestion[0]?.status !== "completed" || !indexedDocument[0]) throw failure("Website ingestion must be completed before publish.", 409, "demo_not_ready");
+    // Without a website crawler the demo answers from its greeting, services and prompts alone.
+    const ingestionReady = ingestion[0]?.status === "unavailable" || (ingestion[0]?.status === "completed" && Boolean(indexedDocument[0]));
+    if (!ingestionReady) throw failure("Website ingestion must be completed before publish.", 409, "demo_not_ready");
     if (!profile[0]?.greeting.trim()) throw failure("Greeting must be set before publish.", 409, "demo_not_ready");
     if (!snapshot[0]) throw failure("Business context snapshot must be ready before publish.", 409, "demo_not_ready");
     await tx.update(prospectDemos).set({ status: "active", suggestedPrompts: prompts, publishedAt: new Date(), updatedAt: new Date() }).where(eq(prospectDemos.id, demo.id));

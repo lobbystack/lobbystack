@@ -451,7 +451,8 @@
           "forbidden": "Seuls les propriétaires et les administrateurs peuvent modifier votre domaine.",
           "failed": "Nous n'avons pas pu enregistrer votre domaine. Réessayez.",
           "loadFailed": "Nous n'avons pas pu charger vos adresses. Actualisez la page pour réessayer."
-        }
+        },
+        "unavailable": "Ce tableau de bord ne peut pas encore connecter votre propre domaine. Vos entreprises se connectent à votre sous-domaine ci-dessus. Demandez à {{appName}} d'activer les domaines personnalisés."
       }
     },
     "brand": {

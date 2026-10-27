@@ -451,7 +451,8 @@
           "forbidden": "Solo los propietarios y administradores pueden cambiar su dominio.",
           "failed": "No pudimos guardar su dominio. Inténtelo de nuevo.",
           "loadFailed": "No pudimos cargar sus direcciones. Actualice la página para intentarlo de nuevo."
-        }
+        },
+        "unavailable": "Este panel todavía no puede conectar su propio dominio. Sus negocios inician sesión en su subdominio de arriba. Pida a {{appName}} que active los dominios propios."
       }
     },
     "brand": {

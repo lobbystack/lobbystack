@@ -61,6 +61,11 @@ export function getSafeOnboardingErrorMessage(
     return t("number.partnerTierRequired");
   }
 
+  // The deployment has no Twilio account, so no business here can get a number.
+  if (code === "phone_numbers_unavailable") {
+    return t("number.numbersUnavailable");
+  }
+
   // No tier the partner could pay for would help, as on the cloud without tier billing.
   if (code === "partner_numbers_unavailable") {
     return t("number.partnerNumbersUnavailable");

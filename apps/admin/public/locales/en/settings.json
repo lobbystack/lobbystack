@@ -478,7 +478,8 @@
     "toast": {
       "changed": "Phone number changed. Your previous number will stay active for 30 days.",
       "added": "Phone number added."
-    }
+    },
+    "numbersUnavailable": "Phone numbers aren't set up on this dashboard yet. Ask whoever runs it to connect a phone provider."
   },
   "appearance": {
     "title": "Preferences",

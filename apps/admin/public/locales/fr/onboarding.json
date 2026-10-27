@@ -210,7 +210,8 @@
     "unavailable": "Ce numéro vient d'être pris. Choisissez-en un autre.",
     "selectedTitle": "Le numéro de votre IA",
     "selectedNumberLabel": "Numéro sélectionné",
-    "continue": "Continuer"
+    "continue": "Continuer",
+    "numbersUnavailable": "Les numéros de téléphone ne sont pas encore configurés sur ce tableau de bord. Demandez à la personne qui le gère de connecter un fournisseur de téléphonie."
   },
   "attribution": {
     "title": "Comment avez-vous connu {{appName}} ?",

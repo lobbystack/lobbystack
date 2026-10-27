@@ -74,4 +74,12 @@ describe("knowledge.crawlWebsite", () => {
     await expect(handleJob(job, dependencies, { isFinalAttempt: true })).resolves.toMatchObject({ status: "completed" });
     expect(markKnowledgeDocumentFailed).toHaveBeenCalledWith(dependencies.domain, expect.objectContaining({ documentId, error: "We couldn't index any page of this website." }));
   });
+
+  it("marks a demo's crawl unavailable when this deployment has no crawler, so the demo can publish without it", async () => {
+    const { job, dependencies } = crawl();
+    const { documentId: _documentId, revision: _revision, ...payload } = job.payload;
+
+    await expect(handleJob({ ...job, payload }, { ...dependencies, crawler: undefined } as never, { isFinalAttempt: true })).resolves.toMatchObject({ status: "skipped" });
+    expect(mocks.updates.find((update) => update.table === websiteIngestionJobs)?.set).toMatchObject({ status: "unavailable", lastError: "Website crawling is not configured." });
+  });
 });

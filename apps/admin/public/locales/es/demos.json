@@ -83,14 +83,17 @@
       "active": "activa",
       "claimed": "reclamada",
       "revoked": "revocada",
-      "expired": "caducada"
+      "expired": "caducada",
+      "unavailable": "no configurada"
     },
     "errors": {
       "load": "No se pudieron cargar las demos. Intente actualizar la página.",
       "create": "No se pudo crear la demo. Sus datos se han conservado; inténtelo de nuevo.",
       "rotate": "No se pudo renovar el enlace de la demo. Inténtelo de nuevo.",
       "publish": "No se pudo publicar la demo. Inténtelo de nuevo.",
-      "revoke": "No se pudo revocar la demo. Inténtelo de nuevo."
+      "revoke": "No se pudo revocar la demo. Inténtelo de nuevo.",
+      "promptsRequired": "Añada al menos dos preguntas sugeridas, una por línea.",
+      "notReady": "La demo aún no está lista. Espere a que termine la lectura del sitio y vuelva a intentarlo."
     },
     "partner": {
       "description": "Muestre a un cliente potencial su propia recepcionista antes de que compre. Cada demo se abre en su dominio, con su marca.",
@@ -110,6 +113,9 @@
         "open": "No pudimos abrir la demo. Inténtelo de nuevo.",
         "delete": "No pudimos eliminar la demo. Inténtelo de nuevo."
       }
-    }
+    },
+    "promptsHint": "Añada al menos dos, una por línea.",
+    "ingestionUnavailable": "Este panel no puede leer sitios web, así que la demo responde con su saludo, sus servicios y las preguntas sugeridas.",
+    "ingestionFailed": "No pudimos leer el sitio web: {{error}}"
   }
 }

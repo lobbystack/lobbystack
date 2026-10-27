@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { billingUsageEvents, businesses, businessMemberships, createDatabaseClient, outboxMessages, partnerUsageMonths, phoneNumbers, platformKeyBusinesses, prospectDemos, receptionistProfiles, storageObjects, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { billingUsageEvents, businesses, businessMemberships, createDatabaseClient, outboxMessages, partnerUsageMonths, phoneNumbers, platformKeyBusinesses, prospectDemos, receptionistProfiles, storageObjects, users, websiteIngestionJobs, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { PROSPECT_DEMO_WIDGET_ID } from "@lobbystack/shared";
 
 import { forgetCachedBrands } from "./brands";
@@ -11,6 +11,7 @@ import { exportBusinessTemplate } from "./businessTemplates";
 import { claimProspectDemo, createPartnerDemo, createProspectDemo, deletePartnerDemo, getProspectDemoStatus, listPartnerDemos, listProspectDemos, previewProspectDemo, publishPartnerDemo, revokePartnerDemo, rotatePartnerDemoToken } from "./demos";
 import { loadEntitlement } from "./entitlement";
 import { finishLiveCall, startLiveWebCall } from "./liveCalls";
+import { refreshBusinessSnapshot } from "./knowledge";
 import { getActiveOnboardingState } from "./onboarding";
 import { acceptPartnerInvitation, hashPartnerToken, invitePartnerMember, listPartnerBusinesses, releaseBusiness, signUpPartner, type PartnerMemberActor } from "./partners";
 import { listUserBusinesses, NEW_BUSINESS_RECEPTIONIST_INSTRUCTIONS, readActiveBusinessId } from "./tenancy";
@@ -207,6 +208,12 @@ describe.skipIf(!client)("a partner's prospect demos against PostgreSQL", () => 
       expect(await refusal(publishPartnerDemo(bright.context, bright.memberActor, { demoId: demo.demoId, token: demo.token }))).toMatchObject({ status: 409, code: "demo_token_mismatch" });
       // The website hasn't been read yet.
       expect(await refusal(publishPartnerDemo(bright.context, bright.memberActor, { demoId: demo.demoId, token: rotated.token }))).toMatchObject({ status: 409, code: "demo_not_ready" });
+
+      // A deployment with no website crawler marks the crawl unavailable, and the demo publishes from its greeting, services and prompts.
+      await asMigrator(tx, async () => await refreshBusinessSnapshot(bright.context, { businessId: demo.businessId }));
+      await asMigrator(tx, async () => await tx.update(websiteIngestionJobs).set({ status: "unavailable", lastError: "Website crawling is not configured." }).where(eq(websiteIngestionJobs.businessId, demo.businessId)));
+      expect((await listPartnerDemos(bright.context, bright.ownerActor))[0]).toMatchObject({ websiteIngestionStatus: "unavailable", websiteIngestionError: "Website crawling is not configured." });
+      expect(await publishPartnerDemo(bright.context, bright.memberActor, { demoId: demo.demoId, token: rotated.token })).toMatchObject({ status: "active" });
 
       await revokePartnerDemo(bright.context, bright.memberActor, { demoId: demo.demoId });
       expect(await previewProspectDemo(bright.context, rotated.token, bright.brand)).toMatchObject({ state: "revoked" });

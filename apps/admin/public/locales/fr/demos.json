@@ -83,14 +83,17 @@
       "active": "actif",
       "claimed": "réclamé",
       "revoked": "révoqué",
-      "expired": "expiré"
+      "expired": "expiré",
+      "unavailable": "non configurée"
     },
     "errors": {
       "load": "Impossible de charger les démos de prospection. Essayez d’actualiser la page.",
       "create": "Impossible de créer la démo. Vos saisies sont conservées ; veuillez réessayer.",
       "rotate": "Impossible de renouveler le lien de la démo. Veuillez réessayer.",
       "publish": "Impossible de publier la démo. Veuillez réessayer.",
-      "revoke": "Impossible de révoquer la démo. Veuillez réessayer."
+      "revoke": "Impossible de révoquer la démo. Veuillez réessayer.",
+      "promptsRequired": "Ajoutez au moins deux questions suggérées, une par ligne.",
+      "notReady": "La démo n'est pas encore prête. Attendez la fin de la lecture du site, puis réessayez."
     },
     "partner": {
       "description": "Montrez à un prospect sa propre réceptionniste avant qu'il achète. Chaque démo s'ouvre sur votre domaine, sous votre marque.",
@@ -110,6 +113,9 @@
         "open": "Impossible d'ouvrir la démo. Réessayez.",
         "delete": "Impossible de supprimer la démo. Réessayez."
       }
-    }
+    },
+    "promptsHint": "Ajoutez-en au moins deux, une par ligne.",
+    "ingestionUnavailable": "Ce tableau de bord ne peut pas lire les sites web : la démo répond à partir de son message d'accueil, de ses services et des questions suggérées.",
+    "ingestionFailed": "Nous n'avons pas pu lire le site web : {{error}}"
   }
 }

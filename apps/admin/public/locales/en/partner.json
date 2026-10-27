@@ -443,7 +443,8 @@
           "forbidden": "Only owners and admins can change your domain.",
           "failed": "We couldn't save your domain. Try again.",
           "loadFailed": "We couldn't load your addresses. Refresh to try again."
-        }
+        },
+        "unavailable": "This dashboard can't connect your own domain yet. Your businesses sign in at your subdomain above. Ask {{appName}} to turn on custom domains."
       }
     },
     "brand": {
