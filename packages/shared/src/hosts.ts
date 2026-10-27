@@ -65,10 +65,16 @@ export function hostDomainHostnames(env: Readonly<Record<string, string | undefi
   return names;
 }
 
+/** The part of a host-and-path string before its first slash. A regex here backtracks on long runs of slashes. */
+export function beforePath(value: string): string {
+  const slash = value.indexOf("/");
+  return slash === -1 ? value : value.slice(0, slash);
+}
+
 function matchesDevOrigin(hostname: string, entry: string): boolean {
   const pattern = entry.toLowerCase();
   if (pattern.startsWith("*.")) return hostname.endsWith(pattern.slice(1));
-  return normalizeHostname(pattern.replace(/^https?:\/\//, "").replace(/\/.*$/, "")) === hostname;
+  return normalizeHostname(beforePath(pattern.replace(/^https?:\/\//, ""))) === hostname;
 }
 
 /**

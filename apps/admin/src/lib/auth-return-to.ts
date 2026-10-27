@@ -16,7 +16,11 @@ export function getSafeReturnTo(value: string | null | undefined): string | null
  */
 export function buildPartnerAuthPath(path: "/login" | "/signup", value: string | null | undefined): string {
   const returnTo = getSafeReturnTo(value);
-  if (path === "/signup" && returnTo && /^\/partner\/signup(?:\?|$)/.test(returnTo)) return returnTo;
+  if (path === "/signup" && returnTo && /^\/partner\/signup(?:\?|$)/.test(returnTo)) {
+    // Rebuilt from its invitation alone, so nothing else from the address reaches the link.
+    const invitation = new URLSearchParams(returnTo.slice("/partner/signup".length)).get("invitation");
+    return invitation ? `/partner/signup?invitation=${encodeURIComponent(invitation)}` : "/partner/signup";
+  }
   return returnTo ? `/partner${path}?returnTo=${encodeURIComponent(returnTo)}` : `/partner${path}`;
 }
 

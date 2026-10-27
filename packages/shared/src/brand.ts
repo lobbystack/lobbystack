@@ -84,8 +84,15 @@ const DEFAULT_ORIGIN = "http://localhost:3000";
 
 /** The display name and address of a sender such as `LobbyStack <no-reply@example.com>`, or of a bare address. */
 export function parseEmailSender(value: string): { name: string; address: string } {
-  const match = /^\s*"?([^"<]*?)"?\s*<([^<>\s]+)>\s*$/.exec(value);
-  return match ? { name: match[1]!.trim(), address: match[2]! } : { name: "", address: value.trim() };
+  // Split on the angle brackets instead of one regex, which backtracks on long runs of spaces.
+  const trimmed = value.trim();
+  const open = trimmed.lastIndexOf("<");
+  if (open === -1 || !trimmed.endsWith(">")) return { name: "", address: trimmed };
+  const address = trimmed.slice(open + 1, -1);
+  if (!address || /[<>\s]/.test(address)) return { name: "", address: trimmed };
+  const name = trimmed.slice(0, open).trim();
+  if (name.includes("<")) return { name: "", address: trimmed };
+  return { name: name.replace(/^"/, "").replace(/"$/, "").trim(), address };
 }
 
 /**

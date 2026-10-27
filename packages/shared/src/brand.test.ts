@@ -38,6 +38,12 @@ describe("the host brand", () => {
     expect(parseEmailSender("LobbyStack <no-reply@localhost>")).toEqual({ name: "LobbyStack", address: "no-reply@localhost" });
     expect(parseEmailSender('"Acme, Inc." <a@example.test>')).toEqual({ name: "Acme, Inc.", address: "a@example.test" });
     expect(parseEmailSender(" a@example.test ")).toEqual({ name: "", address: "a@example.test" });
+    expect(parseEmailSender("<a@example.test>")).toEqual({ name: "", address: "a@example.test" });
+    expect(parseEmailSender("Acme <a b@example.test>")).toEqual({ name: "", address: "Acme <a b@example.test>" });
+    // Long runs of spaces parse at once, with no regex backtracking.
+    const started = performance.now();
+    expect(parseEmailSender(`Acme${" ".repeat(50_000)}x`).name).toBe("");
+    expect(performance.now() - started).toBeLessThan(100);
     expect(hostBrand({ environment: { EMAIL_FROM: "a@example.test", BRAND_APP_NAME: "Acme" }, saved: null, links: resolveBrandLinks({}) }).email.fromName).toBe("Acme");
   });
 });

@@ -1,7 +1,7 @@
 // A partner's own domain, such as app.acmeagency.com: what the console's
 // Branding & domain page sends, and what it shows while the domain is set up.
 
-import { normalizeHostname } from "./hosts";
+import { beforePath, normalizeHostname } from "./hosts";
 
 /** Where a partner's own domain stands: waiting for its DNS records, serving the partner's dashboard, or given up on by the provider. */
 export type CustomDomainStatus = "pending" | "active" | "failed";
@@ -37,7 +37,7 @@ export function customDomainVerificationName(hostname: string): string {
  */
 export function normalizeCustomDomain(value: unknown): string | null {
   if (typeof value !== "string") return null;
-  const trimmed = value.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+  const trimmed = beforePath(value.trim().toLowerCase().replace(/^https?:\/\//, ""));
   if (!trimmed || trimmed.length > CUSTOM_DOMAIN_MAX_LENGTH + 1 || /:\d*$/.test(trimmed)) return null;
   const hostname = normalizeHostname(trimmed);
   if (!hostname || hostname.startsWith("[")) return null;

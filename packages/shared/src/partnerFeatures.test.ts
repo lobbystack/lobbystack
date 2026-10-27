@@ -59,6 +59,7 @@ describe("a partner's own domain", () => {
   it("takes a subdomain of the partner's domain, lowercased, without a scheme, path or trailing dot", () => {
     expect(normalizeCustomDomain("app.acmeagency.com")).toBe("app.acmeagency.com");
     expect(normalizeCustomDomain(" https://App.AcmeAgency.com/login ")).toBe("app.acmeagency.com");
+    expect(normalizeCustomDomain(`app.acmeagency.com${"/".repeat(50_000)}`)).toBe("app.acmeagency.com");
     expect(normalizeCustomDomain("portal.acme.co.uk.")).toBe("portal.acme.co.uk");
     expect(normalizeCustomDomain("app.xn--mnchen-3ya.de")).toBe("app.xn--mnchen-3ya.de");
   });

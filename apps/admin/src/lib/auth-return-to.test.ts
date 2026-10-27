@@ -31,6 +31,9 @@ describe("auth-return-to", () => {
     expect(buildPartnerAuthPath("/login", "/partner/signup?invitation=tok")).toBe("/partner/login?returnTo=%2Fpartner%2Fsignup%3Finvitation%3Dtok");
     // Back from sign-in, sign-up opens the signup link itself, so the page still sees its invitation.
     expect(buildPartnerAuthPath("/signup", "/partner/signup?invitation=tok")).toBe("/partner/signup?invitation=tok");
+    // Only the invitation comes along; anything else in the address is dropped.
+    expect(buildPartnerAuthPath("/signup", "/partner/signup?invitation=a%20b&next=//evil.example")).toBe("/partner/signup?invitation=a%20b");
+    expect(buildPartnerAuthPath("/signup", "/partner/signup")).toBe("/partner/signup");
     expect(buildPartnerAuthPath("/signup", "/partner/accept-invite?token=tok")).toBe("/partner/signup?returnTo=%2Fpartner%2Faccept-invite%3Ftoken%3Dtok");
     expect(buildPartnerAuthPath("/login", "//evil.example")).toBe("/partner/login");
   });
