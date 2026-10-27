@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { auditLogs, billingAccounts, billingUsageEvents, businesses, businessInvitations, businessMemberships, createDatabaseClient, onboardingNumberClaimEvents, outboxMessages, partnerBusinessOpens, phoneNumbers, services, storageObjects, userActiveBusinesses, users, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
+import { auditLogs, billingAccounts, billingUsageEvents, businesses, businessInvitations, businessMemberships, createDatabaseClient, onboardingNumberClaimEvents, outboxMessages, partnerBusinessOpens, partnerPlatformKeys, phoneNumbers, services, storageObjects, userActiveBusinesses, users, webhookEndpoints, withBusinessTransaction, type Database, type DatabaseTransaction } from "@lobbystack/db";
 import { planEntitlement, type PartnerAccessLevel } from "@lobbystack/shared";
 
 import { reserveWidgetChatUsageInTransaction } from "./billing";
@@ -277,6 +277,42 @@ describe.skipIf(!client)("releasing a business", () => {
       // A released business is no longer the partner's to release or delete.
       expect(await refusal(releaseBusiness(acme.context, acme.ownerActor, { businessId: harbor }))).toMatchObject(notFound);
       expect(await refusal(deletePartnerBusiness(acme.context, acme.ownerActor, { businessId: harbor }))).toMatchObject(notFound);
+    });
+  });
+
+  it("turns off the webhooks platform keys and the partner's people set up, and revokes the invitations its keys sent", async () => {
+    await rollbackTest(async (tx) => {
+      const acme = await partner(tx, "Acme Reception");
+      const [client] = await people(tx, 1);
+      const harbor = await ownedPartnerBusiness(tx, { actor: acme.ownerActor, owner: client!, name: "Harbor Dental" });
+      const hostKeyId = randomUUID();
+      const { endpoints, keySent } = await asMigrator(tx, async () => {
+        const [key] = await tx.insert(partnerPlatformKeys).values({ partnerId: acme.partnerId, name: "Acme CLI", prefix: `lsp_${randomUUID().slice(0, 8)}`, keyHash: hash(randomUUID()), scopes: ["webhooks:manage"] }).returning({ id: partnerPlatformKeys.id });
+        const endpoint = (creator: { createdByPlatformKeyId?: string; createdByUserId?: string }) => ({ businessId: harbor, url: "https://hooks.example.test/in", events: ["call.completed"], encryptedSecret: "secret", ...creator });
+        const made = await tx.insert(webhookEndpoints).values([
+          endpoint({ createdByPlatformKeyId: key!.id }),
+          endpoint({ createdByUserId: acme.member.userId }),
+          endpoint({ createdByUserId: client!.userId }),
+          endpoint({ createdByPlatformKeyId: hostKeyId }),
+        ]).returning({ id: webhookEndpoints.id });
+        // A partner's key invites as the partner, so the invitation names no inviter.
+        const [invitation] = await tx.insert(businessInvitations).values({ businessId: harbor, invitedByUserId: null, invitedByPlatformKeyId: key!.id, email: "new@example.invalid", normalizedEmail: "new@example.invalid", role: "business_admin", tokenHash: hash(randomUUID()), expiresAt: new Date(Date.now() + 86_400_000) }).returning({ id: businessInvitations.id });
+        return { endpoints: made.map((row) => row.id), keySent: invitation!.id };
+      });
+      await releaseBusiness(acme.context, acme.adminActor, { businessId: harbor });
+      const after = await asMigrator(tx, async () => ({
+        endpoints: await tx.select({ id: webhookEndpoints.id, status: webhookEndpoints.status }).from(webhookEndpoints).where(inArray(webhookEndpoints.id, endpoints)),
+        invitation: (await tx.select({ status: businessInvitations.status }).from(businessInvitations).where(eq(businessInvitations.id, keySent)))[0],
+        audited: await tx.select({ entityId: auditLogs.entityId, payload: auditLogs.payload }).from(auditLogs).where(and(eq(auditLogs.businessId, harbor), eq(auditLogs.eventType, "webhook_endpoint.disabled"))),
+      }));
+      const status = (id: string) => after.endpoints.find((row) => row.id === id)?.status;
+      // The partner's key and its team member lose the business, so their webhooks stop. As with a claim link, so do other platform keys'.
+      expect([status(endpoints[0]!), status(endpoints[1]!), status(endpoints[3]!)]).toEqual(["disabled", "disabled", "disabled"]);
+      // The owner's own webhook keeps sending.
+      expect(status(endpoints[2]!)).toBe("enabled");
+      expect(after.invitation?.status).toBe("revoked");
+      expect(after.audited.map((row) => row.entityId).sort()).toEqual([endpoints[0]!, endpoints[1]!, endpoints[3]!].sort());
+      expect(after.audited[0]?.payload).toMatchObject({ reason: "business_released", partnerId: acme.partnerId });
     });
   });
 });

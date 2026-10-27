@@ -2,7 +2,7 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 
 import { and, asc, eq, inArray, isNotNull, isNull, ne, notInArray, or, sql } from "drizzle-orm";
 
-import { auditLogs, billingAccounts, businesses, businessInvitations, businessMemberships, enqueueOutbox, outboxMessages, partnerDomains, partnerInvitations, partnerMembers, partners, partnerSignupInvitations, phoneNumbers, storageObjects, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { auditLogs, billingAccounts, businesses, businessInvitations, businessMemberships, enqueueOutbox, outboxMessages, partnerDomains, partnerInvitations, partnerMembers, partners, partnerSignupInvitations, phoneNumbers, storageObjects, webhookEndpoints, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import {
   brandLogoContentType,
   currentPartnerSubdomain,
@@ -917,8 +917,9 @@ async function partnerBusinessOwnerEmails(tx: DatabaseTransaction, businessId: s
  * and the partner's domains. The partner's people lose it at once: the
  * database forgets their opens of it, and the invitations to its team that
  * anyone off the team sent, such as the partner's people, stop working. None
- * of them is on its team, since they can't join it. Its audit log records who
- * released it. A business on one of the partner's packages leaves it, which
+ * of them is on its team, since they can't join it. The webhooks the
+ * partner's keys or people set up stop sending. Its audit log records who
+ * released it and each webhook it turned off. A business on one of the partner's packages leaves it, which
  * waits while its subscription is live and the deployment would hear it end:
  * the partner cancels it in Stripe first. Only owners and admins can.
  */
@@ -945,7 +946,18 @@ export async function releaseBusiness(context: DomainContext, actor: PartnerActo
     // A direct business ignores the access level; it goes back to the default.
     await tx.update(businesses).set({ partnerId: null, partnerAccessLevel: "full", updatedAt: new Date() }).where(eq(businesses.id, input.businessId));
     const team = tx.select({ userId: businessMemberships.userId }).from(businessMemberships).where(and(eq(businessMemberships.businessId, input.businessId), eq(businessMemberships.status, "active")));
-    await tx.update(businessInvitations).set({ status: "revoked", updatedAt: new Date() }).where(and(eq(businessInvitations.businessId, input.businessId), eq(businessInvitations.status, "pending"), notInArray(businessInvitations.invitedByUserId, team)));
+    // An invitation a key sent names no inviter, and NOT IN never matches a null, so it's revoked on its own.
+    await tx.update(businessInvitations).set({ status: "revoked", updatedAt: new Date() }).where(and(eq(businessInvitations.businessId, input.businessId), eq(businessInvitations.status, "pending"), or(isNull(businessInvitations.invitedByUserId), notInArray(businessInvitations.invitedByUserId, team))));
+    // The partner's keys and people lose the business, so the webhooks they set up stop sending its calls, contacts and messages.
+    // As a claim link's hand-over does, this turns off every platform key's, since only the partner's keys reach a partner's business.
+    const partnerPeople = tx.select({ userId: partnerMembers.userId }).from(partnerMembers).where(eq(partnerMembers.partnerId, partnerId));
+    const now = new Date();
+    const silenced = await tx.update(webhookEndpoints).set({ status: "disabled", disabledReason: "manual", disabledAt: now, updatedAt: now })
+      .where(and(eq(webhookEndpoints.businessId, input.businessId), eq(webhookEndpoints.status, "enabled"), or(isNotNull(webhookEndpoints.createdByPlatformKeyId), inArray(webhookEndpoints.createdByUserId, partnerPeople))))
+      .returning({ id: webhookEndpoints.id });
+    if (silenced.length) {
+      await tx.insert(auditLogs).values(silenced.map((endpoint) => ({ businessId: input.businessId, actorUserId: member.userId, eventType: "webhook_endpoint.disabled", entityType: "webhook_endpoint", entityId: endpoint.id, payload: { reason: "business_released", partnerId } })));
+    }
     await tx.insert(billingAccounts).values({ businessId: input.businessId, billingKey: `business:${input.businessId}`, ...FREE_PLAN_ACCOUNT }).onConflictDoUpdate({ target: billingAccounts.businessId, set: { ...FREE_PLAN_ACCOUNT, updatedAt: new Date() } });
     await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: member.userId, eventType: "partner.business_released", entityType: "business", entityId: input.businessId, payload: { partnerId, ownerUserId: owner.userId } });
     // The owner signs in on the host's domain from now on, so the email under the host's brand says where.
