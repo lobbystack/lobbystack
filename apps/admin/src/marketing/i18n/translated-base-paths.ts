@@ -3,6 +3,7 @@
 export const translatedBasePaths = [
   "/",
   "/features/",
+  "/features/mcp/",
   "/pricing/",
   "/pricing/self-hosted/",
   "/solutions/",

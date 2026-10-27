@@ -1,7 +1,7 @@
 import { Footer } from "@/marketing/components/Footer"
 import { Navbar } from "@/marketing/components/Navbar"
 import { GeneralLayout } from "@/marketing/components/solution-layouts/GeneralLayout"
-import type { SeoLandingPageProps } from "@/marketing/components/solution-layouts/LegacySolutionBody"
+import type { SeoLandingPageProps } from "@/marketing/components/solution-layouts/types"
 import { OpenSourceLayout } from "@/marketing/components/solution-layouts/OpenSourceLayout"
 import { SelfHostedLayout } from "@/marketing/components/solution-layouts/SelfHostedLayout"
 import { TimelineLayout } from "@/marketing/components/solution-layouts/TimelineLayout"

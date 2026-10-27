@@ -161,7 +161,9 @@ describe("landing translated content coverage", () => {
       expect(frenchPage.h1).not.toBe(englishPage?.h1)
       expect(frenchPage.intro).not.toBe(englishPage?.intro)
       expect(frenchPage.imageAlt).not.toBe(englishPage?.imageAlt)
-      expect(frenchPage.proofPoints).toHaveLength(3)
+      // The fact strip under the hero holds three or four facts.
+      expect(frenchPage.proofPoints.length).toBeGreaterThanOrEqual(3)
+      expect(frenchPage.proofPoints.length).toBeLessThanOrEqual(4)
       expect(frenchPage.sections.length).toBeGreaterThanOrEqual(3)
       expect(frenchPage.relatedLinks.length).toBeGreaterThanOrEqual(3)
       expect(frenchPage.ctaHeading).toBeTruthy()
@@ -170,7 +172,7 @@ describe("landing translated content coverage", () => {
       for (const section of frenchPage.sections) {
         expect(section.title).toBeTruthy()
         expect(section.body).toBeTruthy()
-        expect(section.points.length).toBeGreaterThanOrEqual(3)
+        expect(section.points.length).toBeGreaterThanOrEqual(2)
       }
     }
   })

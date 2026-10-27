@@ -2,43 +2,53 @@ import type { FaqItem } from "@/marketing/lib/seo"
 
 export const appointmentSchedulerFaqs: FaqItem[] = [
   {
-    question: "What is an AI appointment scheduler?",
-    answer: "An AI appointment scheduler helps callers book appointments through a conversation. It can answer the call, collect details, check availability, schedule the appointment, and send confirmation details based on your rules."
+    question: "What is an AI appointment setter?",
+    answer:
+      "An AI appointment setter is a voice AI that books appointments over the phone. LobbyStack answers your inbound calls, asks what the caller needs, offers open times from your Google Calendar and books the one they choose. It doesn't make outbound sales calls.",
   },
   {
-    question: "Can LobbyStack schedule appointments from phone calls?",
-    answer: "Yes. LobbyStack can answer booking calls, ask the required questions, offer available times, book the appointment, and send the caller a confirmation text."
+    question: "What's the difference between an AI appointment setter and an AI appointment scheduler?",
+    answer:
+      "An AI appointment setter often means outbound calls that book sales meetings, while an AI appointment scheduler books the calls that come to you. People use both names. LobbyStack is the second kind: it books, moves and cancels appointments while the caller is on the line.",
   },
   {
-    question: "Can it work with my existing business number?",
-    answer: "Yes. You can use a dedicated LobbyStack number or forward calls from the business number your customers already call."
+    question: "Which calendar does it book into?",
+    answer:
+      "Google Calendar. You connect a Google account and pick the calendar that receives bookings. LobbyStack reads busy time from it, so it won't offer a slot that's already taken.",
   },
   {
-    question: "Can it schedule appointments after hours?",
-    answer: "Yes. LobbyStack can answer and schedule calls after hours, on weekends, during holidays, or whenever your team is unavailable."
+    question: "Can I choose which questions it asks before booking?",
+    answer:
+      "Yes. Add your services with a duration and a description, and write rules for what to collect, such as the address, the problem or the caller's insurance. The answers appear in the call's summary and transcript.",
   },
   {
-    question: "Can I control what questions it asks before booking?",
-    answer: "Yes. You can define the questions LobbyStack should ask, such as service type, location, urgency, preferred time, budget, or any details your team needs before the appointment."
+    question: "Can callers reschedule or cancel by phone?",
+    answer:
+      "Yes, once you turn on appointment changes. By default the caller must call from the number they booked with and name the appointment's time or service. You can also require a texted one-time code or a keypad PIN. The receptionist confirms before it changes anything.",
   },
   {
-    question: "What happens if a caller needs help before booking?",
-    answer: "You can define handoff rules. LobbyStack can answer routine questions, take a message, or transfer the caller to your team when the call needs a person."
+    question: "Does it send confirmations and reminders?",
+    answer:
+      "Yes, when the caller agrees on the call. LobbyStack texts a booking confirmation, a reminder 24 hours before the appointment and a cancellation confirmation. On LobbyStack Cloud, texts reach US and Canadian numbers.",
   },
   {
-    question: "Can it handle rescheduling?",
-    answer: "Yes. LobbyStack can help with simple rescheduling when your rules allow it. More complex scheduling changes can be routed to your team."
+    question: "Can it book appointments after hours?",
+    answer:
+      "Yes. It answers the calls you forward to it at night, on weekends and on holidays, and offers times inside your opening hours, so a caller at 9 p.m. can book for the next morning.",
   },
   {
-    question: "Will my team know what was booked?",
-    answer: "Yes. LobbyStack can send appointment details, caller information, call summaries, transcripts, and next steps to your team after the call."
+    question: "What if I want to approve each booking myself?",
+    answer:
+      "Set it to save the caller's preferred time as a request for your team, or to take a message. Your team confirms the visit and the caller hears back from you.",
   },
   {
-    question: "Is this better than using an online booking form?",
-    answer: "It depends on how your customers prefer to book. Online forms work when people are willing to fill them out. LobbyStack is better for callers who want to talk, ask questions, and book during the same phone call."
+    question: "Can it book with a specific employee?",
+    answer:
+      "Yes. Add employees with the services they do, their working hours and their time off. Callers can ask for someone by name. If they have no preference, the receptionist books the first employee free for that service.",
   },
   {
-    question: "How much does AI appointment scheduling cost?",
-    answer: "LobbyStack has a free plan with included voice minutes and paid plans for higher usage. See the pricing page for current limits, included minutes, and usage rates."
-  }
+    question: "How much does an AI appointment scheduler cost?",
+    answer:
+      "Free includes 30 voice minutes a month. Starter is $30 a month for 150 minutes, then $0.20 a minute. Pro is $100 a month for 500 minutes, then $0.18 a minute. Annual billing costs 20% less, and no plan has a setup fee.",
+  },
 ]

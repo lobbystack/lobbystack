@@ -2,53 +2,53 @@ import type { FaqItem } from "@/marketing/lib/seo"
 
 export const salonsSpasFaqs: FaqItem[] = [
   {
-    question: "What is an AI answering service for salons and spas?",
+    question: "What does an AI receptionist for a salon do?",
     answer:
-      "An AI answering service for salons and spas answers booking calls, schedules appointments, handles reschedules, answers service questions, and sends confirmations. It works when your front desk is busy, closed, or when clients call outside business hours.",
+      "It answers your salon's phone when nobody at the desk can. LobbyStack books appointments into Google Calendar, moves and cancels them, answers questions from your service menu and policies, and transfers callers to a person when they ask or your rules say so. Each call shows up in your dashboard with a summary and a transcript.",
   },
   {
-    question: "Can it book appointments while stylists are with clients?",
+    question: "Can clients book a specific stylist?",
     answer:
-      "Yes. When your team is cutting, coloring, or in a treatment room, LobbyStack answers the phone, checks availability, offers open slots, and books the appointment. The client gets a confirmation text immediately.",
+      "Yes. Add your stylists on the Employees page with the services they do, their hours and their time off. LobbyStack asks whether the client wants someone in particular, offers that person's open times and tells the client who the appointment is with. With no preference, it books the first person free who does the service.",
   },
   {
-    question: "Does it handle cancellations and reschedules?",
+    question: "Does it work with my salon booking software?",
     answer:
-      "Yes. LobbyStack can process simple cancellations and reschedules based on your rules. Complex requests or same-day changes can be routed to your front desk with the client's details already attached.",
+      "Not directly. LobbyStack books into Google Calendar and doesn't connect to salon booking platforms. If your salon books in another app, set LobbyStack to take booking requests: it collects the service, stylist and time the client wants, and your team confirms the appointment. Webhooks and the LobbyStack API can send each request on to your other tools.",
   },
   {
-    question: "Can it answer questions about services and pricing?",
+    question: "Can clients cancel or reschedule by phone?",
     answer:
-      "Yes. Add your service menu, pricing, duration, and package details to LobbyStack's knowledge base. It answers routine questions about cuts, colors, massages, facials, and specials without interrupting your team.",
+      "Yes, when you turn on appointment changes. LobbyStack matches the booking to the caller's phone number, name and appointment time, reads the change back, then updates your calendar. You can also require a texted code or a keypad PIN. When it can't match the booking, it passes the request to your team.",
   },
   {
-    question: "Will it work with my online booking system?",
+    question: "Does it send appointment reminders?",
     answer:
-      "LobbyStack books appointments into Google Calendar. It doesn't connect to salon booking platforms, so many salons use LobbyStack for phone bookings and keep their online system for self-service clients.",
+      "Yes. Clients who agree to texts during the call get a booking confirmation, a reminder 24 hours before the appointment and a confirmation if they cancel. On LobbyStack Cloud, these texts reach US and Canadian numbers only, and you can't change their timing or wording.",
   },
   {
-    question: "Can it send appointment reminders?",
+    question: "Can it answer questions about prices and services?",
     answer:
-      "Yes, on paid plans. LobbyStack texts the client a confirmation after booking and, if the client agrees, one reminder 24 hours before the appointment. You can't change the timing or wording.",
+      "Yes. It quotes the price you set for each service, whether that's a fixed price, a starting price, a range or priced in person. It answers other questions, such as patch tests or parking, from your website, documents and notes. When you leave a price blank, it doesn't make one up.",
   },
   {
-    question: "What about walk-in clients?",
+    question: "Does it work for spas, barbershops and nail studios?",
     answer:
-      "LobbyStack can explain your walk-in policy and check availability for a same-day appointment.",
+      "Yes. A barbershop, a day spa, a med spa, a nail studio and a massage practice all set it up the same way: add your own services, people, hours and rules.",
   },
   {
-    question: "Can it handle gift card and package inquiries?",
+    question: "What happens when a client wants to talk to a person?",
     answer:
-      "Yes. You can add your gift card policies, package details, and redemption rules to LobbyStack. It answers questions from those details and takes a message for your team when a client wants to buy one.",
+      "LobbyStack transfers the call. A client who asks for a stylist by name goes to that stylist's phone, if you added one, and everyone else goes to your default transfer number. You can also write rules for when it should take a message instead.",
   },
   {
-    question: "Does it work for med spas and barbershops too?",
+    question: "Can I keep my salon's phone number?",
     answer:
-      "Yes. LobbyStack works for hair salons, nail studios, massage practices, med spas, barbershops, and wellness centers. You customize the services, questions, and booking rules for your specific business.",
+      "Yes. Forward your current number to LobbyStack, either every call or only the calls you miss. Clients keep dialing the number they know.",
   },
   {
-    question: "How much does it cost for a salon or spa?",
+    question: "How much does an AI receptionist for a salon cost?",
     answer:
-      "LobbyStack has a free plan with included voice minutes and paid plans for higher call volume. Most small salons start free and upgrade as they grow. See the pricing page for current rates and included features.",
+      "You can start free. The Free plan includes 30 voice minutes and a US or Canadian number for 14 days, with no card. Starter is $30 a month for 150 minutes, then $0.20 a minute, and Pro is $100 a month for 500 minutes, then $0.18 a minute. Annual billing costs 20% less. Calls under 10 seconds and calls ended as spam don't count.",
   },
 ]

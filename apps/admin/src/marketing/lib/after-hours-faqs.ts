@@ -2,53 +2,48 @@ import type { FaqItem } from "@/marketing/lib/seo"
 
 export const afterHoursFaqs: FaqItem[] = [
   {
-    question: "What is an AI after-hours answering service?",
+    question: "What is an after-hours answering service?",
     answer:
-      "An AI after-hours answering service picks up business calls outside your normal operating hours, answers questions, books appointments, captures caller details, and transfers urgent calls to your on-call number. It works nights, weekends, holidays, and any time your team is unavailable.",
+      "It answers your business phone when you're closed: nights, weekends and holidays. A live service has a person take a message. LobbyStack is an AI after-hours answering service, so it also answers questions from your details, books appointments into Google Calendar and transfers emergencies to your on-call number during the call.",
   },
   {
-    question: "Can it actually book appointments after hours?",
+    question: "Can it book appointments after hours?",
     answer:
-      "Yes. LobbyStack checks your calendar availability, offers open time slots to the caller, books the appointment, and sends a confirmation text. Your team sees the booking details the next morning.",
+      "Yes. LobbyStack offers open times from your Google Calendar inside your opening hours, books the one the caller picks and, if they agree, texts a confirmation. You see the booking on your calendar in the morning.",
   },
   {
-    question: "How does it know what counts as urgent?",
+    question: "How does it decide what's an emergency?",
     answer:
-      "You define the rules. LobbyStack can ask about the caller's situation, check keywords like emergency, urgent, or broken, and transfer the call to your on-call person. Everything else gets summarized for morning review.",
+      "You write the rules, such as \"No heat when it's below 40°F\" or \"Water that won't stop.\" LobbyStack asks the questions each rule needs and transfers the calls that match. Everything else gets booked, answered or written up for the morning.",
   },
   {
-    question: "Will it wake up my on-call staff?",
+    question: "Will it wake up my on-call staff for small things?",
     answer:
-      "Only when you want it to. You set the criteria for transfers and alerts. Routine messages, quote requests, and appointment bookings are summarized for morning. Calls that match your emergency rules get transferred during the call.",
+      "No. Only calls that match your transfer rules ring your on-call number. You choose when it transfers: for urgent calls, when the caller asks, always, only during business hours, or never. Quote requests and routine visits wait for the morning.",
   },
   {
-    question: "Can it work with my existing business phone number?",
+    question: "Can I keep my business phone number?",
     answer:
-      "Yes. Forward calls from your current business number to LobbyStack after hours, or use a dedicated line. Callers never know the difference. They just reach someone who can help.",
+      "Yes. Turn on call forwarding with your carrier when you close, or forward busy and unanswered calls during the day as well. Starter and Pro also include a number of your own in the US, Canada, the UK, Australia or New Zealand.",
   },
   {
-    question: "What industries benefit most from after-hours answering?",
+    question: "What do I see the next morning?",
     answer:
-      "Any business that receives calls outside standard hours: home services, dental practices, medical clinics, salons, repair shops, property managers, law firms, and professional offices. If your customers call evenings and weekends, after-hours coverage prevents lost opportunities.",
+      "Each call appears in the dashboard with a one-line summary, the transcript, the recording, the caller's number and the name they gave. When the receptionist takes a message, your team gets an email alert, or a text alert if you turn those on.",
   },
   {
-    question: "How is this different from a voicemail?",
+    question: "Which businesses use an after-hours answering service?",
     answer:
-      "Voicemail asks callers to leave a message and wait. Most people hang up. LobbyStack answers the call, asks questions, captures details, and books appointments. The caller gets help immediately, and your team finds a summary and transcript in the dashboard.",
+      "Any business that gets calls after it closes. Plumbers, HVAC companies, restoration crews, locksmiths and property managers get emergencies at night. Dental offices and salons get booking calls in the evening and on weekends.",
   },
   {
-    question: "Is it cheaper than a human answering service?",
+    question: "How much does an after-hours answering service cost?",
     answer:
-      "The total depends on call volume, handling time, setup, and the amount of human service included. Compare LobbyStack's published voice-minute pricing with each answering service's per-call, per-minute, staffing, and overage charges.",
+      "LobbyStack's Free plan includes 30 voice minutes. Starter costs $30 a month for 150 minutes, then $0.20 a minute, and Pro costs $100 a month for 500 minutes, then $0.18 a minute. Nights and holidays cost the same as any other minute, and spam calls and calls under 10 seconds don't count.",
   },
   {
-    question: "Can I review what happened on after-hours calls?",
+    question: "How is it different from voicemail?",
     answer:
-      "Yes. Every call generates a summary, transcript, recording, and booking details. You review them in the LobbyStack dashboard, and your team gets an email or text alert when the receptionist takes a message. Nothing gets lost overnight.",
-  },
-  {
-    question: "How much does after-hours answering cost?",
-    answer:
-      "LobbyStack's free plan includes voice minutes to test after-hours coverage. Paid plans scale with usage. See the pricing page for current minute allowances, SMS rates, and overage costs.",
+      "Voicemail records a message and leaves the caller waiting. LobbyStack talks with the caller, books what can be booked and transfers what can't wait. The caller ends the call with an answer, a booking or a message for your team.",
   },
 ]

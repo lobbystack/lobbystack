@@ -2,53 +2,58 @@ import type { FaqItem } from "@/marketing/lib/seo"
 
 export const aiPhoneAnsweringFaqs: FaqItem[] = [
   {
-    question: "What is AI phone answering?",
+    question: "What is an AI phone answering service?",
     answer:
-      "AI phone answering uses a conversational AI receptionist to pick up business calls, speak with callers, answer questions, collect details, and take the next step based on your rules.",
+      "An AI phone answering service picks up your business calls with a voice AI instead of a person. LobbyStack talks with the caller, answers questions from the details you add, books appointments into Google Calendar, takes messages and transfers urgent calls to your team, following the rules you write.",
   },
   {
-    question: "Can LobbyStack answer calls from my existing business number?",
+    question: "Is it a good AI answering service for a small business?",
     answer:
-      "Yes. You can use a dedicated LobbyStack number or forward calls from the business number customers already call.",
+      "Yes. LobbyStack is made for owner-run shops, trades, clinics and salons whose phone rings while everyone is busy. The free plan includes 30 voice minutes. Starter costs $30 a month for 150 minutes and Pro costs $100 a month for 500, with no setup fee on any plan.",
   },
   {
-    question: "Can it answer only when we are closed or busy?",
+    question: "How long does setup take?",
     answer:
-      "Yes. LobbyStack can answer every call, only after hours, only when your team is unavailable, or for specific lines and workflows.",
+      "About 10 minutes. Add your hours, services and the rules for urgent calls, place a test call from your browser, then forward your number when it answers the way you want.",
   },
   {
-    question: "Can it book appointments?",
+    question: "Can I keep my business phone number?",
     answer:
-      "Yes. LobbyStack can check availability, offer times, book appointments, and send confirmation details to the caller.",
+      "Yes. Forward your existing number to LobbyStack through your phone carrier, and callers dial the number they already know. Starter and Pro also include one number of your own in the US, Canada, the UK, Australia or New Zealand.",
   },
   {
-    question: "What happens if a caller needs a real person?",
+    question: "Can it answer only when we're busy or closed?",
     answer:
-      "You define the handoff rules. LobbyStack can transfer urgent calls, high-value leads, upset customers, or special cases to the number you set, or take a message.",
+      "Yes. Your carrier's forwarding settings decide which calls reach LobbyStack: calls when the line is busy, calls nobody answers, calls after you close, or every call. You can change the setting whenever you like, for a holiday or a slow week.",
   },
   {
-    question: "Can I control what the AI says?",
+    question: "Can it book appointments during the call?",
     answer:
-      "Yes. You can provide your services, FAQs, pricing guidance, policies, tone, greeting, fallback rules, and instructions for different types of calls.",
+      "Yes. Connect Google Calendar and add your services. LobbyStack offers open times within your opening hours, books the one the caller picks and, if the caller agrees, texts a confirmation and a reminder 24 hours before. Texts go to US and Canadian numbers on LobbyStack Cloud.",
   },
   {
-    question: "Is this better than a traditional answering service?",
+    question: "What happens when a caller needs a real person?",
     answer:
-      "It depends on the call. LobbyStack is a strong fit for routine questions, booking, intake, lead qualification, and call summaries. Calls that need human judgment can still be transferred to your team.",
+      "It transfers the call. You choose when: for urgent calls, when the caller asks, always, or only during business hours. The call goes to your default transfer number, or to the employee the caller asks for by name. If nobody picks up, the receptionist tells the caller and offers to take a message.",
   },
   {
-    question: "Can it handle multiple calls at the same time?",
+    question: "How do I control what it says?",
     answer:
-      "Yes. LobbyStack can help multiple callers at once, so customers are not stuck waiting for a single receptionist to become available.",
+      "You set the greeting, add your business knowledge and write rules in plain sentences, such as \"If pricing depends on the job, offer a callback with a quote.\" The receptionist reads your rules in the order you put them, so the most important ones go first.",
   },
   {
-    question: "Will I be able to review what happened on each call?",
+    question: "What do I see after each call?",
     answer:
-      "Yes. You can review summaries, caller details, transcripts, recordings, outcomes, and next steps after calls.",
+      "The dashboard shows each call with a one-line summary, the transcript, the recording when one is saved, the caller's number and the name they gave, and what happened: a booking, a message, a transfer or an answered question.",
+  },
+  {
+    question: "Does it pick up spam calls?",
+    answer:
+      "It answers them, then hangs up on robocalls and sales pitches. Calls the receptionist ends as spam don't count toward your minutes, and neither do calls under 10 seconds.",
   },
   {
     question: "How much does AI phone answering cost?",
     answer:
-      "LobbyStack has a free plan with included voice minutes and paid plans for higher usage. See the pricing page for current limits, included minutes, and usage rates.",
+      "Free includes 30 voice minutes a month. Starter costs $30 a month with 150 minutes, then $0.20 a minute. Pro costs $100 a month with 500 minutes, then $0.18 a minute. Annual billing costs 20% less. You can set a monthly cap on overage from your billing settings.",
   },
 ]

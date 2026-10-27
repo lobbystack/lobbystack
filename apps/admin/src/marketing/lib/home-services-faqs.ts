@@ -4,51 +4,46 @@ export const homeServicesFaqs: FaqItem[] = [
   {
     question: "What is an AI receptionist for home services?",
     answer:
-      "An AI receptionist for home services answers business calls from homeowners and tenants, collects job details, books appointments, and routes emergencies to your team. It works for HVAC, plumbing, electrical, roofing, landscaping, and other trades that depend on phone calls for new work.",
+      "It's a voice AI that answers the phone for a plumbing, HVAC, electrical, roofing or other trade business. LobbyStack picks up when your crew can't, collects the address and the problem, books visits into Google Calendar, answers questions from your details and transfers emergencies to your on-call number.",
   },
   {
-    question: "Can it handle emergency calls after hours?",
+    question: "How is it different from a home services answering service?",
     answer:
-      "Yes. LobbyStack can answer emergency calls at night, on weekends, and during holidays. You define what counts as urgent, and it can transfer the caller to your on-call technician.",
+      "LobbyStack books the visit during the call, where a live answering service has a person read your script and take a message. It also transfers emergencies while the caller is on the line and saves a summary, transcript and recording of each call. You pay for the minutes you use, and a call at night costs the same as one at noon.",
   },
   {
-    question: "Will it book appointments while I am on a job site?",
+    question: "Can it handle emergency calls at night?",
     answer:
-      "Yes. If your team is on a roof, under a sink, or driving between jobs, LobbyStack can answer the call, check your calendar, offer open slots, and book the appointment before the caller hangs up.",
+      "Yes. You write what counts as an emergency, such as no heat, an active leak or a sewer backup. LobbyStack asks the questions your rule needs, then transfers the call to your on-call number. If the transfer doesn't connect, it offers to take a message and your team can get an alert.",
   },
   {
-    question: "Can I control what questions it asks callers?",
+    question: "Will it book jobs while I'm on a job site?",
     answer:
-      "Yes. You set the questions: service type, location, urgency, budget range, property type, or anything else your team needs before showing up. LobbyStack saves the answers in the call's transcript.",
+      "Yes. It offers open times from your Google Calendar inside your opening hours, books the one the caller picks and, if they agree, texts a confirmation and a reminder the day before.",
   },
   {
-    question: "What happens when a caller asks for a quote?",
+    question: "What does it say when a caller asks for a price?",
     answer:
-      "LobbyStack can collect the details you need for a quote, schedule an estimate visit, or route high-value jobs to your sales team. It does not guess prices. It captures the scope and next step.",
+      "It quotes the prices you add to your services. When the price depends on the job, it says a technician needs to see it first and books an estimate visit or takes a message, depending on your rules.",
   },
   {
-    question: "Does it work with my existing business phone number?",
+    question: "Can I choose what it asks callers?",
     answer:
-      "Yes. Forward calls from the number your customers already know, or use a dedicated LobbyStack line for overflow and after-hours coverage.",
+      "Yes. Write rules for what to collect, such as the address, the equipment's age, whether water is still running or how to reach the property. The answers appear in the call's summary and transcript.",
   },
   {
-    question: "Can it handle warranty or parts questions?",
+    question: "Does it work with my existing business number?",
     answer:
-      "Yes. You can add your warranty policies, parts availability, return procedures, and service history to LobbyStack's knowledge base so routine questions get answered without pulling a technician off a job.",
+      "Yes. Forward the number your customers already call. Choose busy and unanswered calls for overflow, calls after close for nights and weekends, or every call. Starter and Pro also include a number of your own.",
   },
   {
-    question: "Will my team see what was booked or discussed?",
+    question: "Will my team see what was booked?",
     answer:
-      "Yes. LobbyStack saves a summary, transcript, and recording of every call in your dashboard, along with any booking it made. When it takes a message, your team gets an email alert, or a text alert if you turn those on.",
-  },
-  {
-    question: "Is this better than a human answering service?",
-    answer:
-      "It depends on the calls and service level you need. Compare booking accuracy, escalation quality, coverage hours, setup, staffing, per-call or per-minute pricing, and overages using your real call volume.",
+      "Yes. Bookings appear in your Google Calendar and in the dashboard, next to each call's summary, transcript and recording. When the receptionist takes a message, your team gets an email alert, or a text alert if you turn those on.",
   },
   {
     question: "How much does it cost for a home services business?",
     answer:
-      "LobbyStack has a free plan with included voice minutes and paid plans for higher call volume. Most small home service shops start on the free plan and upgrade as call volume grows. See the pricing page for current rates.",
+      "Free includes 30 voice minutes to test it. Starter costs $30 a month for 150 minutes, then $0.20 a minute. Pro costs $100 a month for 500 minutes, then $0.18 a minute. Spam calls and calls under 10 seconds don't count.",
   },
 ]

@@ -1,81 +1,75 @@
-import { ArrowUpRight } from "lucide-react"
+import { CodeBlock, CopyCommandButtons, externalLink } from "@/marketing/components/solution-layouts/self-hosting/parts"
+import { ButtonLink } from "@/marketing/components/system/ButtonLink"
+import { FactStrip } from "@/marketing/components/system/FactStrip"
+import { SectionTitle } from "@/marketing/components/system/SectionTitle"
 
 // Steps and requirements match mintlify/self-hosting/docker-compose.mdx.
-const steps: Array<{ title: string; body?: string; command?: string }> = [
+const steps: Array<{ title: string; body: string; code: string }> = [
   {
     title: "Clone the repository",
-    command: "git clone https://github.com/lobbystack/lobbystack.git && cd lobbystack",
+    body: "Get the code from GitHub and open its folder.",
+    code: "git clone https://github.com/lobbystack/lobbystack.git\ncd lobbystack",
   },
   {
-    title: "Generate secrets",
-    body: "The script creates .env and fills every database password and internal secret with a random value.",
-    command: "node scripts/generate-env.mjs",
+    title: "Generate the secrets",
+    body: "The script creates .env and fills each database password and internal secret with a random value.",
+    code: "node scripts/generate-env.mjs",
   },
   {
     title: "Add your provider keys",
-    body: "Open .env and set APP_BASE_URL, OPENAI_API_KEY, and your Twilio credentials.",
+    body: "Open .env and set your dashboard's address, your OpenAI key and your Twilio credentials.",
+    code: "APP_BASE_URL=https://your_domain\nOPENAI_API_KEY=\nTWILIO_ACCOUNT_SID=\nTWILIO_AUTH_TOKEN=",
   },
   {
     title: "Start the stack",
-    body: "Migrations run before the dashboard and worker start.",
-    command: "docker compose --env-file .env up -d --build",
+    body: "The migrator updates the database, then the dashboard and worker start.",
+    code: "docker compose --env-file .env up -d --build\ndocker compose ps",
   },
 ]
 
 const requirements = [
   "Docker Engine 24 or later with Compose v2",
   "Node.js 22 or later, to generate secrets",
-  "A server with 2 vCPU, 4 GB of RAM, and persistent disk",
+  "2 vCPU, 4 GB of RAM and persistent disk",
   "A domain with HTTPS for the dashboard",
-  "Twilio and OpenAI accounts, with a Twilio SIP trunk for phone calls",
 ]
 
+const guideUrl = "https://docs.lobbystack.com/self-hosting/docker-compose"
+
+/** The Docker Compose install, step by step, with commands you can copy. */
 export function WhatYouRun() {
   return (
-    <section className="section-spacing" id="deploy">
-      <div className="mx-auto grid max-w-site gap-12 px-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)] lg:gap-16">
-        <div>
-          <h2 className="section-heading">Deploy with Docker Compose</h2>
-          <p className="section-intro">
-            The official setup runs on one server. On Railway, you can deploy the
-            LobbyStack template instead, and it generates the secrets for you.
-          </p>
-          <ol className="mt-10 border-t border-border/70">
-            {steps.map((step, index) => (
-              <li key={step.title} className="grid grid-cols-[2rem_minmax(0,1fr)] gap-x-3 border-b border-border/70 py-6">
-                <span className="text-sm font-medium text-muted-foreground tabular-nums">{index + 1}</span>
-                <div className="min-w-0">
-                  <h3 className="font-medium text-foreground">{step.title}</h3>
-                  {step.body && <p className="body-copy mt-1 text-base">{step.body}</p>}
-                  {step.command && (
-                    <code className="mt-3 block overflow-x-auto rounded-lg bg-beige-strong/60 px-3 py-2 font-mono text-[13px] whitespace-nowrap text-foreground [font-variant-ligatures:none]">
-                      {step.command}
-                    </code>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ol>
-          <a
-            href="https://docs.lobbystack.com/self-hosting/docker-compose"
-            className="mt-6 inline-flex items-center gap-1 text-sm font-medium text-foreground underline decoration-border underline-offset-4 transition-colors hover:decoration-foreground"
-          >
+    <section className="pt-20 md:pt-30" id="install">
+      <div className="mx-auto w-full max-w-site px-6">
+        <SectionTitle
+          centered
+          eyebrow="Install"
+          intro="The official setup runs on one server. Check that you have these four things, then run the steps below."
+          className="max-w-3xl"
+        >
+          Install with Docker Compose
+        </SectionTitle>
+        <FactStrip className="mt-12" facts={requirements} />
+        <ol className="mt-6 grid gap-px overflow-hidden rounded-2xl border border-border/70 bg-border/70 md:grid-cols-2">
+          {steps.map((step, index) => (
+            <li key={step.title} className="flex min-w-0 flex-col bg-background p-6">
+              <span className="eyebrow">{String(index + 1).padStart(2, "0")}</span>
+              <h3 className="card-heading mt-6">{step.title}</h3>
+              <p className="mt-3 mb-5 text-base leading-6 text-pretty text-muted-foreground">{step.body}</p>
+              <CodeBlock className="mt-auto" code={step.code} copyLabel={`Copy step ${index + 1}`} />
+            </li>
+          ))}
+        </ol>
+        <CopyCommandButtons />
+        <div className="mt-8 flex flex-col items-center gap-4 text-center">
+          <ButtonLink href={guideUrl} variant="secondary" {...externalLink(guideUrl, "self_hosted_install", "read_compose_guide")}>
             Read the full Docker Compose guide
-            <ArrowUpRight className="size-3.5" aria-hidden="true" />
-          </a>
+          </ButtonLink>
+          <p className="fine-print max-w-[40rem]">
+            Browser test calls work as soon as the stack is up. Phone calls also need a Twilio Elastic SIP trunk and an OpenAI
+            webhook, which the guide sets up.
+          </p>
         </div>
-
-        <aside className="lg:pt-2">
-          <h3 className="text-sm font-medium text-foreground">You&apos;ll need</h3>
-          <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
-            {requirements.map((item) => (
-              <li key={item} className="flex gap-2.5">
-                <span className="mt-2 size-1 shrink-0 rounded-full bg-foreground/60" aria-hidden="true" />
-                {item}
-              </li>
-            ))}
-          </ul>
-        </aside>
       </div>
     </section>
   )

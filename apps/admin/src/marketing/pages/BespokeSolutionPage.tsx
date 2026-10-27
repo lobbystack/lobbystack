@@ -1,49 +1,8 @@
-import { FaqSection } from "@/marketing/components/FaqSection"
 import { Footer } from "@/marketing/components/Footer"
 import { Navbar } from "@/marketing/components/Navbar"
-import {
-  Comparison as SchedulerComparison,
-  Hero as SchedulerHero,
-  HowItWorks as SchedulerHowItWorks,
-  Problem as SchedulerProblem,
-  Solution as SchedulerSolution,
-  UseCases as SchedulerUseCases,
-} from "@/marketing/components/solutions/ai-appointment-scheduler/SectionsPart1"
-import {
-  BusinessFit as SchedulerBusinessFit,
-  Capabilities as SchedulerCapabilities,
-  OpenSource as SchedulerOpenSource,
-  RevenueTieIn as SchedulerRevenueTieIn,
-} from "@/marketing/components/solutions/ai-appointment-scheduler/SectionsPart2"
-import {
-  Comparison as PhoneComparison,
-  Hero as PhoneHero,
-  HowItWorks as PhoneHowItWorks,
-  Problem as PhoneProblem,
-  Solution as PhoneSolution,
-  UseCases as PhoneUseCases,
-} from "@/marketing/components/solutions/ai-phone-answering/SectionsPart1"
-import {
-  BusinessFit as PhoneBusinessFit,
-  Capabilities as PhoneCapabilities,
-  OpenSource as PhoneOpenSource,
-  RevenueTieIn as PhoneRevenueTieIn,
-} from "@/marketing/components/solutions/ai-phone-answering/SectionsPart2"
-import {
-  Comparison as HomeComparison,
-  Hero as HomeHero,
-  HowItWorks as HomeHowItWorks,
-  Problem as HomeProblem,
-  Solution as HomeSolution,
-  UseCases as HomeUseCases,
-} from "@/marketing/components/solutions/ai-receptionist-for-home-services/SectionsPart1"
-import {
-  BusinessFit as HomeBusinessFit,
-  Capabilities as HomeCapabilities,
-  OpenSource as HomeOpenSource,
-  RevenueTieIn as HomeRevenueTieIn,
-} from "@/marketing/components/solutions/ai-receptionist-for-home-services/SectionsPart2"
-import { SolutionCta } from "@/marketing/components/solutions/SolutionCta"
+import { SchedulerSections } from "@/marketing/components/solutions/ai-appointment-scheduler/SchedulerSections"
+import { PhoneAnsweringSections } from "@/marketing/components/solutions/ai-phone-answering/PhoneAnsweringSections"
+import { HomeServicesSections } from "@/marketing/components/solutions/ai-receptionist-for-home-services/HomeServicesSections"
 import { localeTag, localizePath, type Locale } from "@/marketing/i18n"
 import { appointmentSchedulerFaqs } from "@/marketing/lib/appointment-scheduler-faqs"
 import { homeServicesFaqs } from "@/marketing/lib/home-services-faqs"
@@ -67,7 +26,7 @@ export const bespokeSolutionVariants = {
   phone: {
     path: "/solutions/ai-phone-answering/",
     image: "/illustrations/call-capture.webp",
-    imageAlt: "LobbyStack AI phone answering service capturing caller details",
+    imageAlt: "LobbyStack's AI phone answering service picking up a call while the team is busy",
     breadcrumb: {
       en: "AI Phone Answering",
       fr: "Réponse téléphonique IA",
@@ -75,18 +34,11 @@ export const bespokeSolutionVariants = {
       sr: "AI odgovaranje na pozive",
     },
     faqs: aiPhoneAnsweringFaqs,
-    faqHeading: "Questions about AI phone answering",
-    cta: {
-      heading: "Start answering every call without hiring another receptionist",
-      intro:
-        "Try LobbyStack with included voice minutes, set your answering rules, and see how many calls it can turn into clear next steps.",
-      footnote: "No credit card required. Cancel anytime.",
-    },
     seo: {
       en: {
         title: "AI Phone Answering Service for Small Businesses | LobbyStack",
         description:
-          "LobbyStack answers business calls 24/7, books appointments, captures caller details, and routes urgent calls to your team.",
+          "LobbyStack's AI phone answering service picks up your business calls, books appointments into Google Calendar and transfers urgent calls. Try it free.",
       },
       fr: {
         title: "Réponse téléphonique IA pour petites entreprises",
@@ -108,26 +60,19 @@ export const bespokeSolutionVariants = {
   scheduler: {
     path: "/solutions/ai-appointment-scheduler/",
     image: "/illustrations/booking-flow.webp",
-    imageAlt: "LobbyStack AI appointment scheduler booking a caller",
+    imageAlt: "LobbyStack's AI appointment setter booking a caller into an open slot",
     breadcrumb: {
-      en: "AI Appointment Scheduler",
+      en: "AI Appointment Setter",
       fr: "Planification IA",
       es: "Programación de citas con IA",
       sr: "AI zakazivanje termina",
     },
     faqs: appointmentSchedulerFaqs,
-    faqHeading: "Questions about AI appointment scheduling",
-    cta: {
-      heading: "Book more appointments from the calls you already get",
-      intro:
-        "Try LobbyStack with included voice minutes, set your scheduling rules, and let callers book while they are ready to act.",
-      footnote: "No credit card required. Cancel anytime.",
-    },
     seo: {
       en: {
-        title: "AI Appointment Scheduler and Answering Service | LobbyStack",
+        title: "AI Appointment Setter for Inbound Calls | LobbyStack",
         description:
-          "LobbyStack is an answering service with appointment scheduling built in. It books appointments during calls, captures caller details, sends confirmations, and routes urgent requests.",
+          "An AI appointment setter and scheduler for inbound calls. LobbyStack offers open times from Google Calendar, books the visit and texts a confirmation.",
       },
       fr: {
         title: "Planificateur de rendez‑vous IA pour petites entreprises",
@@ -149,26 +94,19 @@ export const bespokeSolutionVariants = {
   homeServices: {
     path: "/solutions/ai-receptionist-for-home-services/",
     image: "/illustrations/industry-bookings.webp",
-    imageAlt: "LobbyStack AI receptionist booking home services jobs from phone calls",
+    imageAlt: "LobbyStack's AI receptionist for home services booking a job from a phone call",
     breadcrumb: {
-      en: "Home Services Answering Service",
+      en: "AI Receptionist for Home Services",
       fr: "Services à domicile",
       es: "Servicios para el hogar",
       sr: "Kućne usluge",
     },
     faqs: homeServicesFaqs,
-    faqHeading: "Questions about AI receptionists for home services",
-    cta: {
-      heading: "Answer the next job call, even when your crew is already working",
-      intro:
-        "Try LobbyStack with included voice minutes, set your trade-specific intake rules, and turn more phone calls into booked jobs.",
-      footnote: "No credit card required. Works with your existing business number.",
-    },
     seo: {
       en: {
-        title: "Home Services Answering Service with AI | LobbyStack",
+        title: "AI Receptionist for Home Services Businesses | LobbyStack",
         description:
-          "LobbyStack is an AI answering service for home services teams. It answers HVAC, plumbing, electrical, roofing, and landscaping calls while crews are on the job.",
+          "An AI receptionist for home services that answers while your crew works, books jobs into Google Calendar and transfers emergencies to your on-call tech.",
       },
       fr: {
         title: "Réceptionniste IA pour services à domicile | LobbyStack",
@@ -195,8 +133,6 @@ export const bespokeSolutionVariants = {
     imageAlt: string
     breadcrumb: Record<Locale, string>
     faqs: FaqItem[]
-    faqHeading: string
-    cta: { heading: string; intro: string; footnote: string }
     seo: Record<Locale, LocalizedSeo>
   }
 >
@@ -252,57 +188,15 @@ export function bespokeSolutionPageSeo(locale: Locale, kind: BespokeSolutionKind
 
 export function BespokeSolutionPage({ locale, kind }: { locale: Locale; kind: BespokeSolutionKind }) {
   const seo = bespokeSolutionPageSeo(locale, kind)
-  const variant = bespokeSolutionVariants[kind]
   return (
     <>
       <PageJsonLd seo={seo} />
       <Navbar locale={locale} />
 
       <main id="main-content">
-        {kind === "phone" && (
-          <>
-            <PhoneHero />
-            <PhoneProblem />
-            <PhoneSolution />
-            <PhoneUseCases />
-            <PhoneHowItWorks />
-            <PhoneComparison />
-            <PhoneBusinessFit />
-            <PhoneCapabilities />
-            <PhoneRevenueTieIn />
-            <PhoneOpenSource />
-          </>
-        )}
-        {kind === "scheduler" && (
-          <>
-            <SchedulerHero />
-            <SchedulerProblem />
-            <SchedulerSolution />
-            <SchedulerUseCases />
-            <SchedulerHowItWorks />
-            <SchedulerComparison />
-            <SchedulerBusinessFit />
-            <SchedulerCapabilities />
-            <SchedulerRevenueTieIn />
-            <SchedulerOpenSource />
-          </>
-        )}
-        {kind === "homeServices" && (
-          <>
-            <HomeHero />
-            <HomeProblem />
-            <HomeSolution />
-            <HomeUseCases />
-            <HomeHowItWorks />
-            <HomeComparison />
-            <HomeBusinessFit />
-            <HomeCapabilities />
-            <HomeRevenueTieIn />
-            <HomeOpenSource />
-          </>
-        )}
-        <FaqSection heading={variant.faqHeading} faqs={variant.faqs} />
-        <SolutionCta {...variant.cta} />
+        {kind === "phone" && <PhoneAnsweringSections />}
+        {kind === "scheduler" && <SchedulerSections />}
+        {kind === "homeServices" && <HomeServicesSections />}
       </main>
 
       <Footer locale={locale} path={seo.canonicalPath} />
