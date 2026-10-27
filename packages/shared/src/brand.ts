@@ -14,6 +14,8 @@ export type Brand = {
   name: string;
   /** The logo's URL, which may be a path on the brand's origin, or null for none of its own. */
   logoUrl: string | null;
+  /** The logo emails show, when it differs from logoUrl: null for an SVG logo, which Gmail and Outlook don't show. */
+  emailLogoUrl?: string | null;
   faviconUrl: string | null;
   color: string | null;
   /** Where the brand's dashboard lives, without a trailing slash. */
@@ -23,7 +25,7 @@ export type Brand = {
 };
 
 /** The parts of a brand an email's text, layout and links use. */
-export type EmailBrand = Pick<Brand, "kind" | "name" | "logoUrl" | "origin">;
+export type EmailBrand = Pick<Brand, "kind" | "name" | "logoUrl" | "emailLogoUrl" | "origin">;
 
 /**
  * Which brand a queued email goes out under. The payload carries this
@@ -126,6 +128,8 @@ export type PartnerBrandRecord = {
   customDomain?: string | null;
   /** A digest of each saved image, so its URL changes whenever the image does, or null for none saved. */
   logoVersion: string | null;
+  /** The saved logo's media type, such as image/svg+xml, when known. */
+  logoContentType?: string | null;
   faviconVersion: string | null;
   color: string | null;
   termsUrl: string | null;
@@ -215,6 +219,7 @@ export function partnerBrand(input: { environment: Record<string, string | undef
     partnerId: partner.partnerId,
     name: partner.name,
     logoUrl,
+    ...(partner.logoContentType === "image/svg+xml" ? { emailLogoUrl: null } : {}),
     faviconUrl: partner.faviconVersion ? partnerBrandImageUrl(partner.partnerId, "favicon", partner.faviconVersion) : logoUrl,
     color: partner.color,
     origin: partnerBrandOrigin(partner, environment),

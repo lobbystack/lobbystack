@@ -271,6 +271,8 @@
   "noBusinesses": {
     "title": "Ovde još nemate firmu",
     "description": "{{appName}} još nije dodao {{email}} u firmu. Zamolite ih da Vas pozovu, pa otvorite link iz njihovog imejla.",
-    "switchAccount": "Prijavite se drugim nalogom"
+    "switchAccount": "Prijavite se drugim nalogom",
+    "released": "{{email}} više nema firmu na ovoj kontrolnoj tabli. Firma koju posedujete prešla je na vaš nalog, pa otvorite svoju kontrolnu tablu da biste njome upravljali.",
+    "openDashboard": "Otvorite kontrolnu tablu"
   }
 }

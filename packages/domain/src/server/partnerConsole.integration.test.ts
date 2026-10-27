@@ -255,6 +255,7 @@ describe.skipIf(!client)("releasing a business", () => {
         invitations: await tx.select({ email: businessInvitations.email, status: businessInvitations.status }).from(businessInvitations).where(and(eq(businessInvitations.businessId, harbor), inArray(businessInvitations.role, ["business_admin", "viewer"]))),
         released: await tx.select({ actorUserId: auditLogs.actorUserId, payload: auditLogs.payload }).from(auditLogs).where(and(eq(auditLogs.businessId, harbor), eq(auditLogs.eventType, "partner.business_released"))),
         opened: await tx.select({ id: auditLogs.id }).from(auditLogs).where(and(eq(auditLogs.businessId, harbor), eq(auditLogs.eventType, "partner.business_opened"))),
+        notice: await tx.select({ payload: outboxMessages.payload }).from(outboxMessages).where(eq(outboxMessages.dedupeKey, `partner-business-released:${harbor}:${client!.email}`)),
       }));
       expect(kept.opens).toEqual([]);
       expect(kept.remembered).toEqual([]);
@@ -266,6 +267,8 @@ describe.skipIf(!client)("releasing a business", () => {
       // The audit log records who released it, and keeps who opened it.
       expect(kept.released).toEqual([{ actorUserId: acme.adminActor.userId, payload: { partnerId: acme.partnerId, ownerUserId: client!.userId } }]);
       expect(kept.opened).toHaveLength(1);
+      // The owner hears where to sign in now, under the host's brand.
+      expect(kept.notice).toEqual([{ payload: expect.objectContaining({ email: client!.email, template: "business_released", brand: { kind: "host" }, variables: expect.objectContaining({ businessName: "Harbor Dental", partnerName: "Acme Reception", url: expect.stringMatching(/\/login$/) }) }) }]);
 
       // A released business is no longer the partner's to release or delete.
       expect(await refusal(releaseBusiness(acme.context, acme.ownerActor, { businessId: harbor }))).toMatchObject(notFound);
@@ -292,6 +295,9 @@ describe.skipIf(!client)("deleting a business", () => {
       // A purchase no worker will finish stops holding it up.
       await asMigrator(tx, async () => await tx.update(onboardingNumberClaimEvents).set({ updatedAt: sql`now() - interval '31 minutes'` }).where(eq(onboardingNumberClaimEvents.id, claim!.id)));
       await expect(deletePartnerBusiness(acme.context, acme.ownerActor, { businessId: harbor })).resolves.toBeUndefined();
+      // Its owner hears it's gone, from the partner.
+      const notices = await asMigrator(tx, async () => await tx.select({ businessId: outboxMessages.businessId, payload: outboxMessages.payload }).from(outboxMessages).where(eq(outboxMessages.dedupeKey, `partner-business-deleted:${harbor}:${client!.email}`)));
+      expect(notices).toEqual([{ businessId: null, payload: expect.objectContaining({ email: client!.email, template: "business_deleted", brand: { kind: "partner", partnerId: acme.partnerId }, variables: { businessName: "Harbor Dental" } }) }]);
     });
   });
 

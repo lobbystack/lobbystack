@@ -1164,7 +1164,6 @@
     "input": {
       "template": "invitation",
       "to": "teammate@example.test",
-      "subject": "LobbyStack notification",
       "variables": {
         "message": "",
         "url": "https://app.example.test/accept-invite?token=abc"
@@ -1175,8 +1174,9 @@
       "from": "LobbyStack <no-reply@example.test>",
       "replyTo": "support@example.test",
       "to": "teammate@example.test",
-      "subject": "LobbyStack notification",
-      "text": "You have been invited to join LobbyStack. Accept the invitation here: https://app.example.test/accept-invite?token=abc",
+      "subject": "Join the LobbyStack team",
+      "text": "You've been invited to join the LobbyStack team.\n\nThe link works for 7 days.\n\nAccept the invitation: https://app.example.test/accept-invite?token=abc\n\nLobbyStack",
+      "html": "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"utf-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n    <meta name=\"color-scheme\" content=\"light\" />\n    <meta name=\"supported-color-schemes\" content=\"light\" />\n    <title>Join the LobbyStack team</title>\n    <style>\n      :root { color-scheme: light; }\n      @media only screen and (max-width: 620px) {\n        .email-container { width: 100% !important; padding: 24px 16px !important; }\n      }\n    </style>\n  </head>\n  <body style=\"margin:0;padding:0;background-color:#F3F4F6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;\">\n    <table role=\"presentation\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"100%\">\n      <tr>\n        <td align=\"center\" style=\"padding:48px 16px;\">\n          <table role=\"presentation\" class=\"email-container\" border=\"0\" cellspacing=\"0\" cellpadding=\"0\" width=\"600\" style=\"width:600px;max-width:600px;background-color:#FFFFFF;border-radius:24px;padding:48px;\">\n            <tr>\n              <td align=\"center\" style=\"padding-bottom:32px;\">\n                <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"48\" height=\"48\" viewBox=\"-30 -30 278 291\" role=\"img\" aria-label=\"LobbyStack\"><g transform=\"translate(0.000000,231.000000) scale(0.100000,-0.100000)\" fill=\"#0B0B0D\" stroke=\"none\"><path d=\"M968 2280 c-42 -16 -195 -79 -340 -141 -144 -62 -317 -133 -383 -159 -90 -36 -130 -58 -162 -88 -85 -82 -78 2 -81 -976 -3 -968 -6 -916 63 -916 19 0 54 9 77 20 24 10 147 62 273 114 338 138 342 140 365 178 20 32 20 48 20 763 0 702 1 731 19 761 12 19 34 37 54 43 33 11 54 4 398 -133 267 -107 370 -152 387 -171 26 -31 23 42 25 -725 l2 -673 c0 -50 8 -86 19 -86 11 -12 31 -21 47 -21 24 0 296 106 358 140 11 5 30 27 43 47 l23 38 l0 654 0 836 -27 46 c-48 81 -77 98 -404 233 -170 71 -371 155 -447 187 -165 71 -208 75 -329 29z\"/></g></svg>\n              </td>\n            </tr>\n            <tr>\n              <td>\n                <h1 style=\"margin:0 0 24px;font-size:28px;font-weight:600;line-height:1.25;color:#0B0B0D;text-align:center;\">Join the LobbyStack team</h1><p style=\"margin:0 0 16px;font-size:16px;line-height:1.6;color:#3D3D3D;text-align:center;\">You&#39;ve been invited to join the LobbyStack team.</p><p style=\"margin:0 0 16px;font-size:16px;line-height:1.6;color:#3D3D3D;text-align:center;\">The link works for 7 days.</p><p style=\"margin:24px 0 0;text-align:center;\"><a href=\"https://app.example.test/accept-invite?token=abc\" style=\"display:inline-block;padding:12px 24px;background-color:#0B0B0D;border-radius:9999px;color:#FFFFFF;font-size:16px;font-weight:600;text-decoration:none;\">Accept the invitation</a></p>\n              </td>\n            </tr>\n          </table>\n        </td>\n      </tr>\n    </table>\n  </body>\n</html>",
       "messageId": "<1af8bd6e10e45eba10f5685bf73955849635fcb851f542157d20edd8bb36a8c6@mail.lobbystack.internal>"
     }
   },

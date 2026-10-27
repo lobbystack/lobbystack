@@ -128,6 +128,11 @@ describe("a partner's brand", () => {
     const bare = partnerBrand({ environment, partner: { ...record, logoVersion: null, color: null, termsUrl: null, supportEmail: null } });
     expect(bare).toMatchObject({ logoUrl: null, faviconUrl: null, color: null, links: { website: null, terms: null, privacy: null, support: null }, email: { replyTo: null } });
     expect(partnerBrand({ environment, partner: { ...record, supportUrl: "https://help.bright.example.test/" } }).links.support).toBe("https://help.bright.example.test/");
+    // Mail clients don't show an SVG logo, so emails head with the name instead; pages still show it.
+    const svg = partnerBrand({ environment, partner: { ...record, logoContentType: "image/svg+xml" } });
+    expect(svg.logoUrl).toBeTruthy();
+    expect(svg.emailLogoUrl).toBeNull();
+    expect(partnerBrand({ environment, partner: { ...record, logoContentType: "image/png" } })).not.toHaveProperty("emailLogoUrl");
   });
 
   it("takes APP_BASE_URL's scheme and port, and the host's origin and sender without a current subdomain", () => {

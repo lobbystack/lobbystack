@@ -11,7 +11,8 @@ import { opensPartnerConsole, readResolvedBrand, requestBrandScope } from "@/lib
  * On a partner's host, the page for a signed-in person with no business
  * there, in place of the host's onboarding. Anyone it doesn't fit goes on:
  * to their business, to the partner's console, or on the host's own domain
- * to its onboarding.
+ * to its onboarding. Someone whose business their partner released finds it
+ * on the host's domain now, so the page links there.
  */
 export default async function NoBusinessesPage() {
   const requestHeaders = await headers();
@@ -20,11 +21,13 @@ export default async function NoBusinessesPage() {
   const resolved = readResolvedBrand(requestHeaders);
   if (resolved?.kind !== "partner") redirect("/");
   const db = getAppDatabase().db;
-  const [state, partners] = await Promise.all([
+  const [state, partners, direct] = await Promise.all([
     getActiveOnboardingState(db, session.user.id, requestBrandScope(requestHeaders)),
     listUserPartners({ db }, session.user.id),
+    getActiveOnboardingState(db, session.user.id, { kind: "host" }),
   ]);
   if (state.businessId) redirect("/");
   if (partners.some(({ partnerId }) => opensPartnerConsole(resolved, partnerId))) redirect("/partner");
-  return <NoBusinessesSurface email={session.user.email ?? ""} />;
+  const hostUrl = direct.businessId ? process.env.APP_BASE_URL?.trim().replace(/\/$/, "") || null : null;
+  return <NoBusinessesSurface email={session.user.email ?? ""} hostUrl={hostUrl} />;
 }

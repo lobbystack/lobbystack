@@ -6,6 +6,7 @@ import { auditLogs, billingAccounts, businesses, businessInvitations, businessMe
 import {
   brandLogoContentType,
   currentPartnerSubdomain,
+  HOST_EMAIL_BRAND,
   hostDomainHostnames,
   isPartnerAccessLevel,
   isPartnerRole,
@@ -303,7 +304,7 @@ export async function invitePartnerMember(context: DomainContext, actor: Partner
       aggregateId: invitationId,
       dedupeKey: `partner-invitation:${invitationId}:send`,
       // The worker writes the email under the partner's brand when it sends.
-      payload: { invitationId, email: normalizedEmail, template: "invitation", url: partnerInvitationUrl(token), brand: { kind: "partner", partnerId: member.partnerId } satisfies EmailBrandReference, replyTo: null },
+      payload: { invitationId, email: normalizedEmail, template: "invitation", url: partnerInvitationUrl(token), variables: { url: partnerInvitationUrl(token) }, brand: { kind: "partner", partnerId: member.partnerId } satisfies EmailBrandReference, replyTo: null },
     });
     return { invitationId, expiresAt };
   });
@@ -902,6 +903,12 @@ const FREE_PLAN_ACCOUNT = {
  * waits while its subscription is live and the deployment would hear it end:
  * the partner cancels it in Stripe first. Only owners and admins can.
  */
+/** The owners of one of the partner's businesses, whose own rows in users only they can read. */
+async function partnerBusinessOwnerEmails(tx: DatabaseTransaction, partnerId: string, businessId: string): Promise<string[]> {
+  const rows = await tx.execute<{ email: string }>(sql`select email from app.partner_business_owner_emails(${partnerId}::uuid, ${businessId}::uuid)`);
+  return rows.rows.map((row) => row.email);
+}
+
 export async function releaseBusiness(context: DomainContext, actor: PartnerActor, input: { businessId: string }): Promise<{ ownerUserId: string }> {
   const member = businessesActor(actor);
   // The business's own rows show only to the system actor, since the partner's people aren't on its team.
@@ -918,6 +925,8 @@ export async function releaseBusiness(context: DomainContext, actor: PartnerActo
       .orderBy(asc(businessMemberships.createdAt), asc(businessMemberships.id))
       .limit(1);
     if (!owner) throw failure("The business's owner has to accept their invitation before you can release it.", 409, "owner_required");
+    // Read who to tell while the business is still the partner's.
+    const ownerEmails = await partnerBusinessOwnerEmails(tx, partnerId, input.businessId);
     // A direct business pays the host, so it keeps none of its partner's packages.
     const closes = await dropBusinessPackageInTransaction(tx, { businessId: input.businessId, partnerId, stripeConnect: Boolean(context.stripeConnect) });
     // A direct business ignores the access level; it goes back to the default.
@@ -926,6 +935,18 @@ export async function releaseBusiness(context: DomainContext, actor: PartnerActo
     await tx.update(businessInvitations).set({ status: "revoked", updatedAt: new Date() }).where(and(eq(businessInvitations.businessId, input.businessId), eq(businessInvitations.status, "pending"), notInArray(businessInvitations.invitedByUserId, team)));
     await tx.insert(billingAccounts).values({ businessId: input.businessId, billingKey: `business:${input.businessId}`, ...FREE_PLAN_ACCOUNT }).onConflictDoUpdate({ target: billingAccounts.businessId, set: { ...FREE_PLAN_ACCOUNT, updatedAt: new Date() } });
     await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: member.userId, eventType: "partner.business_released", entityType: "business", entityId: input.businessId, payload: { partnerId, ownerUserId: owner.userId } });
+    // The owner signs in on the host's domain from now on, so the email under the host's brand says where.
+    const [about] = await tx.select({ businessName: businesses.name, partnerName: partners.name }).from(businesses).innerJoin(partners, eq(partners.id, partnerId)).where(eq(businesses.id, input.businessId)).limit(1);
+    for (const email of ownerEmails) {
+      await enqueueOutbox(tx, {
+        topic: "email.send",
+        businessId: input.businessId,
+        aggregateType: "business",
+        aggregateId: input.businessId,
+        dedupeKey: `partner-business-released:${input.businessId}:${email}`,
+        payload: { email, template: "business_released", variables: { url: `${appOrigin()}/login`, businessName: about?.businessName ?? "", partnerName: about?.partnerName ?? "" }, brand: HOST_EMAIL_BRAND, replyTo: null },
+      });
+    }
     return { ownerUserId: owner.userId, closes };
   });
   await closeCheckoutQuietly(context, released.closes);
@@ -1025,7 +1046,21 @@ export async function deletePartnerBusiness(context: DomainContext, actor: Partn
   const member = businessesActor(actor);
   const closes = await withBusinessTransaction(context.db, { userId: member.userId, businessId: input.businessId, actorType: "system" }, async (tx) => {
     if (await currentRole(tx, member) === "member") throw new AuthorizationError("Only owners and admins can delete the partner's businesses.");
-    return (await deletePartnerBusinessInTransaction(tx, { businessId: input.businessId, partnerId: member.partnerId, stripeConnect: Boolean(context.stripeConnect), by: "partner" })).checkout;
+    // Read who to tell before the business and its team go.
+    const ownerEmails = await partnerBusinessOwnerEmails(tx, member.partnerId, input.businessId);
+    const [about] = await tx.select({ businessName: businesses.name }).from(businesses).where(and(eq(businesses.id, input.businessId), eq(businesses.partnerId, member.partnerId))).limit(1);
+    const { checkout } = await deletePartnerBusinessInTransaction(tx, { businessId: input.businessId, partnerId: member.partnerId, stripeConnect: Boolean(context.stripeConnect), by: "partner" });
+    // The business is gone, so the note rides in no business's outbox, under the partner's brand.
+    for (const email of ownerEmails) {
+      await enqueueOutbox(tx, {
+        topic: "email.send",
+        aggregateType: "partner",
+        aggregateId: member.partnerId,
+        dedupeKey: `partner-business-deleted:${input.businessId}:${email}`,
+        payload: { email, template: "business_deleted", variables: { businessName: about?.businessName ?? "" }, brand: { kind: "partner", partnerId: member.partnerId } satisfies EmailBrandReference, replyTo: null },
+      });
+    }
+    return checkout;
   });
   await closeCheckoutQuietly(context, closes);
 }

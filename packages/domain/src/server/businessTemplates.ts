@@ -383,14 +383,24 @@ export function inProcessSetupPort(dependencies: BusinessSetupDependencies, call
   };
 }
 
+/** The receptionist's own words, with the business the template was saved from renamed to the one it sets up. */
+function renameReceptionist(receptionist: BusinessTemplate["receptionist"], from: string, to: string): BusinessTemplate["receptionist"] {
+  if (!receptionist || !from.trim() || from === to) return receptionist;
+  return Object.fromEntries(Object.entries(receptionist).map(([key, value]) => [key, typeof value === "string" ? value.replaceAll(from, to) : value])) as BusinessTemplate["receptionist"];
+}
+
 /**
  * Applies a stored template to one of the partner's businesses that the
  * caller has checked is the partner's, as the partner member. The business's
- * name and time zone stay as given: they're its own, not the template's.
+ * name and time zone stay as given: they're its own, not the template's. A
+ * greeting or instructions that name the business the template was saved from
+ * name the new business instead, so callers don't hear the wrong one.
  */
 export async function applyStoredBusinessTemplate(dependencies: BusinessSetupDependencies, input: { partnerId: string; userId: string; businessId: string; template: StoredBusinessTemplate; keep: { name: string; timezone: string } }): Promise<ApplyResult> {
   const caller: PartnerMemberCaller = { businessId: input.businessId, partnerId: input.partnerId, userId: input.userId, actor: "partner_member" };
-  const template: BusinessTemplate = { ...input.template.template, business: { ...input.template.template.business, ...input.keep } };
+  const saved = input.template.template;
+  const receptionist = renameReceptionist(saved.receptionist, saved.business.name, input.keep.name);
+  const template: BusinessTemplate = { ...saved, business: { ...saved.business, ...input.keep }, ...(receptionist ? { receptionist } : {}) };
   // Only documents the template lists and holds a copy of are uploaded.
   const held = new Set(input.template.files.map((file) => file.path));
   const listed = setupFiles(template.knowledge).filter((file) => held.has(file.path));

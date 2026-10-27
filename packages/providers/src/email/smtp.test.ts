@@ -73,7 +73,7 @@ describe("emails under the host brand", () => {
     const moved = host({ APP_BASE_URL: "https://desk.example.test/" });
     await send(provider, { template: "invitation", to: "teammate@example.test", variables: { url: "http://localhost/accept-invite?token=a%2Fb" } }, moved);
     await send(provider, { template: "existing_account", to: "owner@example.test", variables: { locale: "en", signInUrl: "https://app.example.test/en/login", resetUrl: "https://app.example.test/en/forgot-password" } }, moved);
-    expect(sent(0).text).toBe("You have been invited to join LobbyStack. Accept the invitation here: http://localhost/accept-invite?token=a%2Fb");
+    expect(sent(0).text).toContain("Accept the invitation: http://localhost/accept-invite?token=a%2Fb");
     expect(sent(1).text).toContain("Sign in to continue: https://app.example.test/en/login. Forgot your password? https://app.example.test/en/forgot-password.");
   });
 });
@@ -94,9 +94,30 @@ describe("emails under a partner's brand", () => {
     expect(sent()).toMatchObject({
       from: '"Bright Desk" <no-reply@bright.example.test>',
       replyTo: "help@bright.example.test",
-      subject: "Bright Desk notification",
-      text: "You have been invited to join Bright Desk. Accept the invitation here: https://bright.example.test/accept-invite?token=t",
+      subject: "Join the Bright Desk team",
+      text: "You've been invited to join the Bright Desk team.\n\nThe link works for 7 days.\n\nAccept the invitation: https://bright.example.test/accept-invite?token=t\n\nBright Desk",
     });
+    expect(sent().html).toContain('href="https://bright.example.test/accept-invite?token=t"');
+  });
+
+  it("names the business in an invitation to it, and tells its owner when the partner releases or deletes it", async () => {
+    const { provider, sent } = capture();
+    await send(provider, { template: "invitation", to: "owner@example.test", variables: { url: "https://app.example.test/accept-invite?token=t", businessName: "Harbor Dental" } }, partner);
+    await send(provider, { template: "business_deleted", to: "owner@example.test", variables: { businessName: "Harbor Dental" } }, partner);
+    await send(provider, { template: "business_released", to: "owner@example.test", variables: { url: "https://app.example.test/login", businessName: "Harbor Dental", partnerName: "Bright Desk" } });
+    expect(sent(0)).toMatchObject({ subject: "Join Harbor Dental on Bright Desk", text: expect.stringContaining("You've been invited to join Harbor Dental on Bright Desk.") });
+    expect(sent(1)).toMatchObject({ subject: "Bright Desk deleted Harbor Dental", text: expect.stringContaining("Bright Desk deleted Harbor Dental") });
+    expect(sent(1).text).not.toContain("http");
+    // A released business runs under the host now, so the note goes out under the host's brand and links to its sign-in.
+    expect(sent(2)).toMatchObject({ subject: "Harbor Dental is yours to run on LobbyStack", text: expect.stringContaining("Bright Desk handed Harbor Dental over to you.") });
+    expect(sent(2).text).toContain("Sign in to LobbyStack: https://app.example.test/login");
+  });
+
+  it("heads an email with the partner's name when its logo is an SVG, which mail clients don't show", async () => {
+    const { provider, sent } = capture();
+    await send(provider, { template: "verify_email", to: "owner@example.test", variables: { code: "123456" } }, { ...partner, logoUrl: "/api/branding/logo?partner=p&v=1", emailLogoUrl: null });
+    expect(sent().html).not.toContain("<img");
+    expect(sent().html).toContain(">Bright Desk</p>");
   });
 
   it("writes the partner's name into every language's account emails", async () => {

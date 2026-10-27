@@ -270,6 +270,8 @@
   "noBusinesses": {
     "title": "No business here yet",
     "description": "{{appName}} hasn't added {{email}} to a business. Ask them to invite you, then open the link in their email.",
-    "switchAccount": "Sign in with another account"
+    "switchAccount": "Sign in with another account",
+    "released": "{{email}} has no business on this dashboard any more. A business you own moved to your own account, so open your dashboard to run it.",
+    "openDashboard": "Open your dashboard"
   }
 }

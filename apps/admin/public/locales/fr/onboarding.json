@@ -271,6 +271,8 @@
   "noBusinesses": {
     "title": "Aucune entreprise ici pour l'instant",
     "description": "{{appName}} n'a pas encore ajouté {{email}} à une entreprise. Demandez-lui de vous inviter, puis ouvrez le lien de son courriel.",
-    "switchAccount": "Se connecter avec un autre compte"
+    "switchAccount": "Se connecter avec un autre compte",
+    "released": "{{email}} n'a plus d'entreprise sur ce tableau de bord. Une entreprise qui vous appartient est passée à votre propre compte : ouvrez votre tableau de bord pour la gérer.",
+    "openDashboard": "Ouvrir votre tableau de bord"
   }
 }

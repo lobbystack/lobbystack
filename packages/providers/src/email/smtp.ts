@@ -12,7 +12,7 @@ export type SmtpConfig = {
   from: string;
 };
 
-type TemplateName = "existing_account" | "account_setup" | "verify_email" | "password_reset" | "invitation" | "operator_alert" | "feedback_submission" | "onboarding_followup" | "number_trial" | "number_release" | "partner_pool_alert" | "business_allowance_alert" | "partner_business_allowance_alert";
+type TemplateName = "existing_account" | "account_setup" | "verify_email" | "password_reset" | "invitation" | "operator_alert" | "feedback_submission" | "onboarding_followup" | "number_trial" | "number_release" | "partner_pool_alert" | "business_allowance_alert" | "partner_business_allowance_alert" | "business_released" | "business_deleted";
 
 export class SmtpEmailProvider {
   private readonly transporter: Transporter;
@@ -122,6 +122,12 @@ function templateSubject(template: TemplateName, variables: Record<string, strin
       return businessAllowanceAlertCopy(variables, name).subject;
     case "partner_business_allowance_alert":
       return partnerBusinessAllowanceAlertCopy(variables).subject;
+    case "invitation":
+      return variables.businessName ? `Join ${variables.businessName} on ${name}` : `Join the ${name} team`;
+    case "business_released":
+      return `${variables.businessName ?? "Your business"} is yours to run on ${name}`;
+    case "business_deleted":
+      return `${name} deleted ${variables.businessName ?? "your business"}`;
     default:
       return `${name} notification`;
   }
@@ -130,6 +136,9 @@ function templateSubject(template: TemplateName, variables: Record<string, strin
 function renderTemplate(template: TemplateName, subject: string, variables: Record<string, string>, brand: EmailBrand): { text: string; html?: string } {
   const text = templateBody(template, variables, brand);
 
+  if (template === "invitation" || template === "business_released" || template === "business_deleted") {
+    return { text, html: renderNoticeHtml(brand, subject, noticeCopy(template, variables, brand), dashboardLink(variables.url, brand)) };
+  }
   if (template !== "verify_email" || !variables.code) {
     return { text };
   }
@@ -171,7 +180,11 @@ function templateBody(template: TemplateName, variables: Record<string, string>,
         ? `Your ${name} password reset code is: ${variables.code}. It expires in 10 minutes.`
         : `Reset your ${name} password using this link: ${url}`;
     case "invitation":
-      return `You have been invited to join ${name}. Accept the invitation here: ${url}`;
+    case "business_released":
+    case "business_deleted": {
+      const copy = noticeCopy(template, variables, brand);
+      return [...copy.lines.flatMap((line) => [line, ""]), ...(copy.action && url ? [`${copy.action}: ${url}`, ""] : []), name].join("\n");
+    }
     case "operator_alert":
       return variables.message ?? `${name} operator notification`;
     case "feedback_submission":
@@ -640,17 +653,54 @@ function onboardingFollowupBody(variables: Record<string, string>): string {
   ].join("\n");
 }
 
+type NoticeCopy = { heading: string; lines: string[]; action: string | null };
+
+/**
+ * An invitation, or the note to a business's owner that its partner released
+ * or deleted it. An invitation to a business names the business; one without
+ * a business is to the brand's own team. A released business now runs under
+ * the host, whose brand the email goes out under, and `partnerName` names who
+ * released it. A deleted business is gone, so its note has no link.
+ */
+function noticeCopy(template: "invitation" | "business_released" | "business_deleted", v: Record<string, string>, brand: EmailBrand): NoticeCopy {
+  const name = brand.name;
+  const business = v.businessName ?? "";
+  if (template === "invitation") {
+    return business
+      ? { heading: `Join ${business}`, lines: [`You've been invited to join ${business} on ${name}.`, "The link works for 7 days."], action: "Accept the invitation" }
+      : { heading: `Join the ${name} team`, lines: [`You've been invited to join the ${name} team.`, "The link works for 7 days."], action: "Accept the invitation" };
+  }
+  if (template === "business_released") {
+    const partner = v.partnerName ?? "Your partner";
+    return { heading: `${business} is yours to run`, lines: [`${partner} handed ${business} over to you. Its receptionist, calls and settings stay as they were, and it's on ${name}'s Free plan now.`, `Sign in to ${name} with this email address to run it and choose a plan.`], action: `Sign in to ${name}` };
+  }
+  return { heading: `${business} was deleted`, lines: [`${name} deleted ${business}, with its calls, chats, contacts, appointments and settings. Its receptionist no longer answers.`, `If you didn't expect this, contact ${name}.`], action: null };
+}
+
+function renderNoticeHtml(brand: EmailBrand, subject: string, copy: NoticeCopy, url: string | undefined): string {
+  return renderEmailLayout({
+    brand,
+    previewText: subject,
+    content: [
+      `<h1 style="margin:0 0 24px;font-size:28px;font-weight:600;line-height:1.25;color:#0B0B0D;text-align:center;">${escapeHtml(copy.heading)}</h1>`,
+      ...copy.lines.map((line) => `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#3D3D3D;text-align:center;">${escapeHtml(line)}</p>`),
+      ...(copy.action && url ? [`<p style="margin:24px 0 0;text-align:center;"><a href="${escapeHtml(url)}" style="display:inline-block;padding:12px 24px;background-color:#0B0B0D;border-radius:9999px;color:#FFFFFF;font-size:16px;font-weight:600;text-decoration:none;">${escapeHtml(copy.action)}</a></p>`] : []),
+    ].join(""),
+  });
+}
+
 // LobbyStack's mark, which only LobbyStack's own name gets (the dashboard's rule too).
 const LOBBYSTACK_MARK = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="-30 -30 278 291" role="img" aria-label="LobbyStack"><g transform="translate(0.000000,231.000000) scale(0.100000,-0.100000)" fill="#0B0B0D" stroke="none"><path d="M968 2280 c-42 -16 -195 -79 -340 -141 -144 -62 -317 -133 -383 -159 -90 -36 -130 -58 -162 -88 -85 -82 -78 2 -81 -976 -3 -968 -6 -916 63 -916 19 0 54 9 77 20 24 10 147 62 273 114 338 138 342 140 365 178 20 32 20 48 20 763 0 702 1 731 19 761 12 19 34 37 54 43 33 11 54 4 398 -133 267 -107 370 -152 387 -171 26 -31 23 42 25 -725 l2 -673 c0 -50 8 -86 19 -86 11 -12 31 -21 47 -21 24 0 296 106 358 140 11 5 30 27 43 47 l23 38 l0 654 0 836 -27 46 c-48 81 -77 98 -404 233 -170 71 -371 155 -447 187 -165 71 -208 75 -329 29z"/></g></svg>`;
 
 /**
- * What heads an email: the brand's logo, LobbyStack's mark while the name is
- * LobbyStack, or else the name on its own. A logo saved as a path on the
+ * What heads an email: the brand's logo unless mail clients can't show it,
+ * LobbyStack's mark while the name is LobbyStack, or else the name on its own. A logo saved as a path on the
  * dashboard gets the brand's origin, since a mail client has no page to resolve it against.
  */
 function emailHeader(brand: EmailBrand): string {
-  if (brand.logoUrl) {
-    const src = brand.logoUrl.startsWith("/") ? `${brand.origin}${brand.logoUrl}` : brand.logoUrl;
+  const logoUrl = brand.emailLogoUrl === undefined ? brand.logoUrl : brand.emailLogoUrl;
+  if (logoUrl) {
+    const src = logoUrl.startsWith("/") ? `${brand.origin}${logoUrl}` : logoUrl;
     return `<img src="${escapeHtml(src)}" alt="${escapeHtml(brand.name)}" height="48" style="height:48px;width:auto;max-width:240px;border:0;" />`;
   }
   if (brand.name === DEFAULT_APP_NAME) return LOBBYSTACK_MARK;

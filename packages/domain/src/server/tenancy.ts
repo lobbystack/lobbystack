@@ -408,6 +408,7 @@ export async function insertInvitationInTransaction(
   const tokenHash = createHash("sha256").update(token).digest("hex");
   const invitationId = randomUUID();
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  const [business] = await tx.select({ name: businesses.name }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1);
   await tx.insert(businessInvitations).values({
     id: invitationId,
     businessId: input.businessId,
@@ -428,7 +429,8 @@ export async function insertInvitationInTransaction(
     dedupeKey: `invitation:${invitationId}:send`,
     // The worker writes the email under the business's brand when it sends,
     // and puts the link on that brand's origin.
-    payload: { invitationId, email: input.normalizedEmail, token, template: "invitation", url: invitationUrl(token), brand: { kind: "business", businessId: input.businessId } satisfies EmailBrandReference, replyTo: null },
+    // The email names the business, so an owner its partner set up sees whose dashboard it is.
+    payload: { invitationId, email: input.normalizedEmail, token, template: "invitation", url: invitationUrl(token), variables: { url: invitationUrl(token), businessName: business?.name ?? "" }, brand: { kind: "business", businessId: input.businessId } satisfies EmailBrandReference, replyTo: null },
   });
   return { invitationId, token, expiresAt };
 }

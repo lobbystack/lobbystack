@@ -114,6 +114,7 @@ type PartnerBrandRow = {
   support_url: string | null;
   support_email: string | null;
   custom_domain?: string | null;
+  logo_content_type?: string | null;
 };
 
 // Visitors and the worker have no partner membership, so they read the partner through this function.
@@ -126,6 +127,7 @@ async function readPartnerBrand(context: DomainContext, partnerId: string): Prom
     subdomain: row.subdomain ?? null,
     customDomain: row.custom_domain ?? null,
     logoVersion: row.logo_version ?? null,
+    logoContentType: row.logo_content_type ?? null,
     faviconVersion: row.favicon_version ?? null,
     color: row.brand_color ?? null,
     termsUrl: row.terms_url ?? null,

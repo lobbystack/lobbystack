@@ -271,6 +271,8 @@
   "noBusinesses": {
     "title": "Todavía no hay ningún negocio aquí",
     "description": "{{appName}} aún no agregó {{email}} a un negocio. Pídale que lo invite y abra el enlace de su correo.",
-    "switchAccount": "Iniciar sesión con otra cuenta"
+    "switchAccount": "Iniciar sesión con otra cuenta",
+    "released": "{{email}} ya no tiene ningún negocio en este panel. Un negocio suyo pasó a su propia cuenta, así que abra su panel para administrarlo.",
+    "openDashboard": "Abrir su panel"
   }
 }
