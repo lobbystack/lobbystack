@@ -4,14 +4,25 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Building2, Check, ChevronsUpDown, Contrast, CreditCard, KeyRound, LayoutTemplate, LogOut, Package, Palette, Plus, Presentation, Receipt, Settings, Users } from "lucide-react";
+import { Check, ChevronsUpDown, Contrast, LogOut, Plus } from "lucide-react";
 
 import type { PartnerRole } from "@lobbystack/shared";
+import { AnimatedNavigationIcon } from "@/components/animated-navigation-icon";
 import { useBranding } from "@/components/branding-provider";
 import { Main } from "@/components/layout/main";
 import { SiteHeader } from "@/components/site-header";
 import { useTheme } from "@/components/theme-provider";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { BoxIcon } from "@/components/ui/box";
+import { BriefcaseBusinessIcon } from "@/components/ui/briefcase-business";
+import { CreditCardIcon } from "@/components/ui/credit-card";
+import { KeyIcon } from "@/components/ui/key";
+import { LayoutPanelTopIcon } from "@/components/ui/layout-panel-top";
+import { PaletteIcon } from "@/components/ui/palette";
+import { ProjectorIcon } from "@/components/ui/projector";
+import { ReceiptIcon } from "@/components/ui/receipt";
+import { SettingsIcon } from "@/components/ui/settings";
+import { UsersIcon } from "@/components/ui/users";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Item, ItemActions, ItemContent, ItemMedia, ItemTitle } from "@/components/ui/item";
 import {
@@ -106,18 +117,19 @@ function PartnerNavigation({ billingPage, partnerId, role }: { billingPage: bool
   const pathname = usePathname();
   const router = useRouter();
   const { isMobile, setOpenMobile } = useSidebar();
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   // Members don't see prices or the Stripe connection, and only owners manage Stripe and see Billing: the partner's tier while the deployment bills tiers, or the pool the host set. The server refuses the same.
   const items = [
-    { href: `/partner/${partnerId}/businesses`, label: t("nav.businesses"), icon: Building2 },
-    { href: `/partner/${partnerId}/templates`, label: t("nav.templates"), icon: LayoutTemplate },
-    { href: `/partner/${partnerId}/demos`, label: t("nav.demos"), icon: Presentation },
-    ...(role === "member" ? [] : [{ href: `/partner/${partnerId}/packages`, label: t("nav.packages"), icon: Package }]),
-    { href: `/partner/${partnerId}/branding`, label: t("nav.branding"), icon: Palette },
-    { href: `/partner/${partnerId}/team`, label: t("nav.team"), icon: Users },
-    { href: `/partner/${partnerId}/api-keys`, label: t("nav.apiKeys"), icon: KeyRound },
-    ...(role === "owner" ? [{ href: `/partner/${partnerId}/payments`, label: t("nav.stripe"), icon: CreditCard }] : []),
-    ...(billingPage && role === "owner" ? [{ href: `/partner/${partnerId}/billing`, label: t("nav.billing"), icon: Receipt }] : []),
-    { href: `/partner/${partnerId}/settings`, label: t("nav.settings"), icon: Settings },
+    { href: `/partner/${partnerId}/businesses`, label: t("nav.businesses"), icon: BriefcaseBusinessIcon },
+    { href: `/partner/${partnerId}/templates`, label: t("nav.templates"), icon: LayoutPanelTopIcon },
+    { href: `/partner/${partnerId}/demos`, label: t("nav.demos"), icon: ProjectorIcon },
+    ...(role === "member" ? [] : [{ href: `/partner/${partnerId}/packages`, label: t("nav.packages"), icon: BoxIcon }]),
+    { href: `/partner/${partnerId}/branding`, label: t("nav.branding"), icon: PaletteIcon },
+    { href: `/partner/${partnerId}/team`, label: t("nav.team"), icon: UsersIcon },
+    { href: `/partner/${partnerId}/api-keys`, label: t("nav.apiKeys"), icon: KeyIcon },
+    ...(role === "owner" ? [{ href: `/partner/${partnerId}/payments`, label: t("nav.stripe"), icon: CreditCardIcon }] : []),
+    ...(billingPage && role === "owner" ? [{ href: `/partner/${partnerId}/billing`, label: t("nav.billing"), icon: ReceiptIcon }] : []),
+    { href: `/partner/${partnerId}/settings`, label: t("nav.settings"), icon: SettingsIcon },
   ];
   return (
     <SidebarGroup>
@@ -126,11 +138,15 @@ function PartnerNavigation({ billingPage, partnerId, role }: { billingPage: bool
           <SidebarMenuItem key={item.href}>
             <SidebarMenuButton
               isActive={pathname === item.href}
+              onMouseEnter={() => setHoveredItem(item.href)}
+              onMouseLeave={() => setHoveredItem(null)}
+              onFocus={() => setHoveredItem(item.href)}
+              onBlur={() => setHoveredItem(null)}
               {...(!isMobile ? { render: <Link href={item.href} /> } : {})}
               tooltip={item.label}
               onClick={() => { if (isMobile) { router.push(item.href); setOpenMobile(false); } }}
             >
-              <item.icon />
+              <AnimatedNavigationIcon icon={item.icon} hovered={hoveredItem === item.href} />
               <span>{item.label}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>

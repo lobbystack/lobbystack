@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
+import { AnimatedNavigationIcon } from "@/components/animated-navigation-icon";
 import { AppWindowIcon } from "@/components/ui/app-window";
 import { BookTextIcon } from "@/components/ui/book-text";
 import { BlocksIcon } from "@/components/ui/blocks";
@@ -203,18 +204,6 @@ function ReplacementSidebar({ partnerConsole = false, user, widgetsEnabled }: Pi
       <SidebarRail />
     </Sidebar>
   );
-}
-
-function AnimatedNavigationIcon({ icon: Icon, hovered }: { icon: typeof HomeIcon; hovered: boolean }) {
-  const iconRef = useRef<{ startAnimation: () => void; stopAnimation: () => void } | null>(null);
-  const wasHovered = useRef(false);
-  useEffect(() => {
-    if (hovered) iconRef.current?.startAnimation();
-    // An icon that never animated is already at rest, and has no opacity yet to animate back from.
-    else if (wasHovered.current) iconRef.current?.stopAnimation();
-    wasHovered.current = hovered;
-  }, [hovered]);
-  return <Icon ref={iconRef} className="size-4 shrink-0 [&_svg]:size-4" size={16} />;
 }
 
 function NavigationGroup({ items, pathname, title }: { items: NavigationItem[]; pathname: string; title: string }) {
