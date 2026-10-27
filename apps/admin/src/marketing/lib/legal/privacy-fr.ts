@@ -3,7 +3,7 @@ import type { LegalDocument } from "./types"
 const support = `<a href="mailto:support@lobbystack.com">support@lobbystack.com</a>`
 
 export const privacyFr: LegalDocument = {
-  updated: "Dernière mise à jour : 8 octobre 2026",
+  updated: "Dernière mise à jour : 26 octobre 2026",
   h1: "Politique de confidentialité",
   intro: `La présente Politique de confidentialité explique comment Lobbystack Inc. (« LobbyStack », « nous », « notre » ou « nos ») recueille, utilise, communique et protège les renseignements personnels lorsque vous visitez nos sites Web, utilisez le service hébergé LobbyStack, appelez une entreprise qui utilise LobbyStack ou clavardez avec elle, recevez un SMS envoyé au moyen de LobbyStack ou communiquez avec nous.`,
   sections: [
@@ -296,7 +296,7 @@ export const privacyFr: LegalDocument = {
       nav: "Auto-hébergement",
       title: "20. LobbyStack auto-hébergé",
       blocks: [
-        `Le code source de LobbyStack est ouvert. Lorsqu’une organisation exécute LobbyStack sur ses propres serveurs, nous ne recevons, ne consultons ni ne traitons aucune donnée de ce déploiement. L’organisation qui l’exécute est responsable de ses pratiques en matière de confidentialité. Adressez vos questions à cette organisation.`,
+        `Le code source de LobbyStack est ouvert. Lorsqu’une organisation exécute LobbyStack sur ses propres serveurs, nous ne recevons, ne consultons ni ne traitons aucune donnée de ce déploiement, sauf les journaux, captures d’écran ou autres données que l’organisation nous envoie pour obtenir de l’aide dans le cadre d’un forfait de support auto-hébergé. Nous traitons ces données comme le décrit l’article 18.10 de nos Conditions d’utilisation. L’organisation qui l’exécute est responsable de ses pratiques en matière de confidentialité. Adressez vos questions à cette organisation.`,
       ],
     },
     {

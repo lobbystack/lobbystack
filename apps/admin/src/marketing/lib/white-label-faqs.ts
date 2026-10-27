@@ -43,6 +43,16 @@ const EN_FAQS: FaqItem[] = [
       "Yes. LobbyStack is MIT licensed, and every partner feature works on a self-hosted deployment. Each part turns on when you configure it: Stripe Connect for packages, Polar for tiers, a base domain for partner subdomains, and on-demand TLS for custom domains.",
   },
   {
+    question: "What does self-hosted support cost an agency?",
+    answer:
+      "One monthly price covers your agency and every client business on your install, so adding clients doesn't raise it. Premium support adds email answers within 1 business day. Enterprise support adds replies within 4 business hours, a named engineer on Slack and help moving clients off the hosted program. Open the self-hosted plans under the partner tiers to see the prices.",
+  },
+  {
+    question: "Who do my clients contact for help?",
+    answer:
+      "You. Your clients see your brand and reach your team. With a support plan, your team brings us the questions it can't answer.",
+  },
+  {
     question: "Do I need a card to start?",
     answer:
       "No. The free tier needs no card and includes 30 voice minutes, 50 chats and one 14-day trial number, so you can set up your brand and show a prospect a real call.",
@@ -89,6 +99,16 @@ const FR_FAQS: FaqItem[] = [
     question: "Puis-je faire tourner le programme partenaire sur mon propre serveur ?",
     answer:
       "Oui. LobbyStack est sous licence MIT, et chaque fonction partenaire marche sur un déploiement auto-hébergé. Chaque partie s'active quand vous la configurez : Stripe Connect pour les formules, Polar pour les paliers, un domaine de base pour les sous-domaines des partenaires et le TLS à la demande pour les domaines personnalisés.",
+  },
+  {
+    question: "Combien coûte le support auto-hébergé pour une agence ?",
+    answer:
+      "Un seul prix mensuel couvre votre agence et chaque entreprise cliente de votre installation, donc ajouter des clients ne le fait pas monter. Le Support Premium ajoute des réponses par courriel en 1 jour ouvrable. Le Support Enterprise ajoute des réponses en 4 heures ouvrables, un ingénieur attitré sur Slack et de l'aide pour sortir vos clients du programme hébergé. Ouvrez les forfaits auto-hébergés sous les paliers partenaires pour voir les prix.",
+  },
+  {
+    question: "Qui mes clients contactent-ils pour obtenir de l'aide ?",
+    answer:
+      "Vous. Vos clients voient votre marque et joignent votre équipe. Avec un forfait de support, votre équipe nous apporte les questions auxquelles elle ne sait pas répondre.",
   },
   {
     question: "Ai-je besoin d'une carte pour commencer ?",
@@ -139,6 +159,16 @@ const ES_FAQS: FaqItem[] = [
       "Sí. LobbyStack tiene licencia MIT, y cada función de socio funciona en una instalación autoalojada. Cada parte se activa cuando la configura: Stripe Connect para los paquetes, Polar para los niveles, un dominio base para los subdominios de socios y TLS bajo demanda para los dominios propios.",
   },
   {
+    question: "¿Cuánto cuesta el soporte autoalojado para una agencia?",
+    answer:
+      "Un solo precio mensual cubre su agencia y cada negocio cliente de su instalación, así que sumar clientes no lo sube. El Soporte Premium añade respuestas por correo en 1 día hábil. El Soporte Enterprise añade respuestas en 4 horas hábiles, un ingeniero asignado en Slack y ayuda para sacar a sus clientes del programa alojado. Abra los planes autoalojados bajo los niveles de socio para ver los precios.",
+  },
+  {
+    question: "¿A quién contactan mis clientes cuando necesitan ayuda?",
+    answer:
+      "A usted. Sus clientes ven su marca y contactan a su equipo. Con un plan de soporte, su equipo nos trae las preguntas que no puede responder.",
+  },
+  {
     question: "¿Necesito una tarjeta para empezar?",
     answer:
       "No. El nivel gratuito no pide tarjeta e incluye 30 minutos de voz, 50 chats y un número de prueba de 14 días, para que configure su marca y muestre a un prospecto una llamada real.",
@@ -185,6 +215,16 @@ const SR_FAQS: FaqItem[] = [
     question: "Mogu li da pokrenem partnerski program na svom serveru?",
     answer:
       "Da. LobbyStack je pod MIT licencom i svaka partnerska funkcija radi i kada ga sami hostujete. Svaki deo se uključuje kada ga podesite: Stripe Connect za ponude, Polar za nivoe, osnovni domen za partnerske poddomene i TLS na zahtev za sopstvene domene.",
+  },
+  {
+    question: "Koliko košta podrška za samostalno hostovanje za agenciju?",
+    answer:
+      "Jedna mesečna cena pokriva Vašu agenciju i svaku firmu klijenta na Vašoj instalaciji, pa se ne povećava kada dodate klijente. Premium podrška donosi odgovore putem e-pošte za 1 radni dan. Enterprise podrška donosi odgovore za 4 radna sata, zaduženog inženjera na Slacku i pomoć pri prelasku klijenata iz hostovanog programa. Otvorite pakete za samostalno hostovanje ispod partnerskih nivoa da vidite cene.",
+  },
+  {
+    question: "Kome se moji klijenti obraćaju za pomoć?",
+    answer:
+      "Vama. Vaši klijenti vide Vaš brend i javljaju se Vašem timu. Uz paket podrške, Vaš tim nama donosi pitanja na koja ne zna odgovor.",
   },
   {
     question: "Da li mi treba kartica za početak?",

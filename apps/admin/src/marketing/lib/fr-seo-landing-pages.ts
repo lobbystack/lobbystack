@@ -653,6 +653,11 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
           answer:
             "Oui. La licence MIT permet aux agences de modifier et de distribuer LobbyStack pour leurs clients. Le programme partenaire en marque blanche marche aussi sur un déploiement auto-hébergé, avec votre marque, une console pour tous vos clients et la facturation sur votre propre compte Stripe. Le nom, les logos et l’image de marque LobbyStack restent soumis à des droits de marque distincts.",
         },
+        {
+          question: "Offrez-vous du support pour les installations auto-hébergées ?",
+          answer:
+            "Oui. La communauté vous aide gratuitement sur Discord et dans les issues GitHub. Pour obtenir l’aide de notre équipe, achetez un forfait Support Premium ou Support Enterprise. Les deux ajoutent un support par courriel avec des délais de réponse cibles, ainsi que de l’aide pour installer et mettre à niveau votre déploiement. Enterprise vous donne aussi un canal Slack privé et un ingénieur attitré. La page des tarifs de l’auto-hébergement indique les prix et le contenu de chaque forfait.",
+        },
         ...standardFaqs,
       ],
       faqHeading: "Questions sur l’auto-hébergement de LobbyStack",
@@ -662,6 +667,10 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
           href: "https://github.com/lobbystack/lobbystack",
         },
         { label: "Documentation publique", href: "/docs/api/" },
+        {
+          label: "Tarifs de l’auto-hébergement",
+          href: "/pricing/self-hosted/",
+        },
         {
           label: "Réceptionniste IA open source",
           href: "/solutions/open-source-ai-receptionist/",

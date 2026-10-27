@@ -418,6 +418,7 @@ export const solutionPages: SeoLandingPage[] = [
         points: [
           "Twilio and OpenAI bill you directly",
           "No per-seat or per-minute fee from LobbyStack",
+          "Paid support plans are optional and priced per business",
           "Cloud plans start free if you'd rather not run servers",
         ],
       },
@@ -427,7 +428,7 @@ export const solutionPages: SeoLandingPage[] = [
     relatedLinks: [
       { label: "GitHub", href: "https://github.com/lobbystack/lobbystack" },
       { label: "API docs", href: "/docs/api/" },
-      { label: "Pricing", href: "/pricing/" },
+      { label: "Self-hosted pricing", href: "/pricing/self-hosted/" },
       { label: "White-label partner program", href: "/white-label/" },
     ],
     ctaHeading: "Deploy LobbyStack on your own servers",

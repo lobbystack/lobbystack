@@ -2,6 +2,8 @@ import { intlLocale, partnerTierCatalog, partnerTierSlugs } from "@lobbystack/sh
 
 import { localizePath, type Locale } from "@/marketing/i18n"
 import { appPartnerSignupUrl } from "@/marketing/lib/app-links"
+import { supportPlansTable } from "@/marketing/lib/self-hosted-pricing-markdown"
+import { getSelfHostedSupportCopy } from "@/marketing/lib/self-hosted-support-copy"
 import { absoluteUrl } from "@/marketing/lib/seo"
 import { getWhiteLabelCopy } from "@/marketing/lib/white-label-copy"
 import { getWhiteLabelFaqs } from "@/marketing/lib/white-label-faqs"
@@ -25,6 +27,7 @@ const usd = (locale: Locale, cents: number) =>
 /** The white-label page as Markdown, for agents and the /white-label.md twin. */
 export function whiteLabelMarkdown(locale: Locale) {
   const copy = getWhiteLabelCopy(locale)
+  const support = getSelfHostedSupportCopy(locale)
   const number = (value: number) => new Intl.NumberFormat(intlLocale(locale)).format(value)
   const tiers = partnerTierSlugs.map((slug) => {
     const tier = partnerTierCatalog[slug]
@@ -82,6 +85,14 @@ ${copy.tiers.intro}
 ${tiers.join("\n")}
 
 ${copy.tiers.footnote}
+
+## ${support.whiteLabel.title}
+
+${support.whiteLabel.intro}
+
+${supportPlansTable(locale, "white_label")}
+
+${support.labels.footnote}
 
 ## ${copy.faqTitle}
 

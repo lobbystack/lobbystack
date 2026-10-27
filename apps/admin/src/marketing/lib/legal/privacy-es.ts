@@ -3,7 +3,7 @@ import type { LegalDocument } from "./types"
 const support = `<a href="mailto:support@lobbystack.com">support@lobbystack.com</a>`
 
 export const privacyEs: LegalDocument = {
-  updated: "Última actualización: 8 de octubre de 2026",
+  updated: "Última actualización: 26 de octubre de 2026",
   h1: "Política de privacidad",
   intro: `La presente Política de privacidad explica cómo Lobbystack Inc. (“LobbyStack”, “nosotros”, “nuestro” o “nos”) recopila, utiliza, comparte y protege los datos personales cuando usted visita nuestros sitios web, utiliza el servicio alojado de LobbyStack, llama o chatea con un negocio que utiliza LobbyStack, recibe un mensaje de texto enviado a través de LobbyStack o se comunica con nosotros.`,
   sections: [
@@ -296,7 +296,7 @@ export const privacyEs: LegalDocument = {
       nav: "Autoalojamiento",
       title: "20. LobbyStack autoalojado",
       blocks: [
-        `El código fuente de LobbyStack es de código abierto. Cuando una organización ejecuta LobbyStack en sus propios servidores, no recibimos, no accedemos ni tratamos ningún dato de esa implementación. La organización que la ejecuta es responsable de sus prácticas de privacidad. Dirija cualquier pregunta a esa organización.`,
+        `El código fuente de LobbyStack es de código abierto. Cuando una organización ejecuta LobbyStack en sus propios servidores, no recibimos, no accedemos ni tratamos ningún dato de esa implementación, salvo los registros, capturas de pantalla u otros datos que la organización nos envíe para obtener ayuda con un plan de soporte autoalojado. Tratamos esos datos como describe la sección 18.10 de nuestros Términos del servicio. La organización que la ejecuta es responsable de sus prácticas de privacidad. Dirija cualquier pregunta a esa organización.`,
       ],
     },
     {

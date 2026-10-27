@@ -35,6 +35,13 @@ export const publicPages: PublicPage[] = [
     markdown: "/pricing.md",
   },
   {
+    path: "/pricing/self-hosted/",
+    title: "Self-Hosted AI Receptionist Pricing and Support",
+    description:
+      "Self-host LobbyStack's AI receptionist free with every feature, or add Premium or Enterprise support for email or Slack help, faster replies and upgrades.",
+    markdown: "/pricing/self-hosted.md",
+  },
+  {
     path: "/white-label/",
     title: "Open-source white-label AI receptionist",
     description:

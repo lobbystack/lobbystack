@@ -13,10 +13,14 @@ import {
 } from "@/marketing/components/white-label/WhiteLabelArt"
 import { localizeHref, type Locale } from "@/marketing/i18n"
 import { appPartnerSignupUrl } from "@/marketing/lib/app-links"
+import { SupportPlans } from "@/marketing/components/pricing/SupportPlans"
 import { PillLink } from "@/marketing/components/white-label/PillLink"
+import { TierViewSwitch } from "@/marketing/components/white-label/TierViewSwitch"
 import { WhiteLabelTierCards, type WhiteLabelTierCard } from "@/marketing/components/white-label/WhiteLabelTierCards"
 import { cn } from "@/marketing/lib/utils"
 import { getWhiteLabelCopy, type WhiteLabelCard } from "@/marketing/lib/white-label-copy"
+import { getSelfHostedSupportCopy } from "@/marketing/lib/self-hosted-support-copy"
+import { supportComparisonGroups, supportPlanCards } from "@/marketing/lib/self-hosted-support-plans"
 import { getWhiteLabelFaqs } from "@/marketing/lib/white-label-faqs"
 
 type SectionProps = { locale: Locale }
@@ -318,20 +322,53 @@ export function WhiteLabelTiers({ locale }: SectionProps) {
     }
   })
 
+  const support = getSelfHostedSupportCopy(locale)
+  const header = (eyebrow: string, title: string, intro: string) => (
+    <div className="mx-auto max-w-[44rem]">
+      <SectionTitle centered eyebrow={eyebrow} lines={[title]} />
+      <p className="mt-4 text-center text-lg leading-[1.6] text-muted-foreground">{intro}</p>
+    </div>
+  )
+
   return (
     <section className="scroll-mt-20 pt-20 md:pt-30" id="tiers">
       <div className={container}>
-        <div className="mx-auto max-w-[44rem]">
-          <SectionTitle centered eyebrow={t.eyebrow} lines={[t.title]} />
-          <p className="mt-4 text-center text-lg leading-[1.6] text-muted-foreground">{t.intro}</p>
-        </div>
-
-        <WhiteLabelTierCards
-          cards={cards}
-          labels={{ monthly: t.monthly, annual: t.annual, save: t.save, billingLabel: t.billingLabel }}
-          signup={signup}
+        <TierViewSwitch
+          hosted={{
+            header: header(t.eyebrow, t.title, t.intro),
+            prompt: support.whiteLabel.prompt,
+            link: support.whiteLabel.link,
+            body: (
+              <>
+                <WhiteLabelTierCards
+                  cards={cards}
+                  labels={{ monthly: t.monthly, annual: t.annual, save: t.save, billingLabel: t.billingLabel }}
+                  signup={signup}
+                />
+                <p className="fine-print mx-auto mt-6 max-w-[44rem] text-center">{t.footnote}</p>
+              </>
+            ),
+          }}
+          selfHosted={{
+            header: header(getWhiteLabelCopy(locale).selfHost.eyebrow, support.whiteLabel.title, support.whiteLabel.intro),
+            prompt: support.whiteLabel.backPrompt,
+            link: support.whiteLabel.backLink,
+            body: (
+              <>
+                <div className="mt-8">
+                  <SupportPlans
+                    cards={supportPlanCards(locale, "white_label")}
+                    groups={supportComparisonGroups(locale, "white_label")}
+                    labels={support.labels}
+                    tone="beige"
+                    section="white_label_self_hosted"
+                  />
+                </div>
+                <p className="fine-print mx-auto mt-6 max-w-[44rem] text-center">{support.labels.footnote}</p>
+              </>
+            ),
+          }}
         />
-        <p className="fine-print mx-auto mt-6 max-w-[44rem] text-center">{t.footnote}</p>
       </div>
     </section>
   )

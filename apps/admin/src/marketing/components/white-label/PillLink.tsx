@@ -10,12 +10,15 @@ export function PillLink({
   className,
   children,
   section,
+  analytics,
 }: {
   href: string
   variant: "primary" | "secondary"
   className?: string
   children: ReactNode
   section: string
+  /** PostHog capture attributes for links that aren't signups, without the data-ph-capture-attribute- prefix. */
+  analytics?: Record<string, string>
 }) {
   const signup = href.includes("/signup")
   return (
@@ -35,7 +38,9 @@ export function PillLink({
             "data-ph-capture-attribute-action": "partner_signup",
             "data-ph-capture-attribute-destination": href,
           }
-        : {})}
+        : Object.fromEntries(
+            Object.entries(analytics ?? {}).map(([key, value]) => [`data-ph-capture-attribute-${key}`, value])
+          ))}
     >
       {children}
       {variant === "primary" && (

@@ -1,9 +1,10 @@
-import { partnerTierCatalog, partnerTierSlugs } from "@lobbystack/shared"
+import { partnerTierCatalog, partnerTierSlugs, selfHostedSupportCatalog } from "@lobbystack/shared"
 import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it } from "vitest"
 
 import { SUPPORTED_LOCALES, type Locale } from "@/marketing/i18n"
 import { markdownAlternatePath } from "@/marketing/lib/agent-discovery"
+import { getSelfHostedSupportCopy } from "@/marketing/lib/self-hosted-support-copy"
 import { getWhiteLabelCopy } from "@/marketing/lib/white-label-copy"
 import { getWhiteLabelFaqs } from "@/marketing/lib/white-label-faqs"
 import { whiteLabelMarkdown } from "@/marketing/lib/white-label-markdown"
@@ -39,6 +40,28 @@ describe("white-label page", () => {
     expect(html).toContain("$0.015 a chat")
     expect(html).toContain("Per month, billed annually")
     expect(whiteLabelMarkdown("en")).toContain("| Starter | $49/mo | $39/mo |")
+  })
+
+  it.each(SUPPORTED_LOCALES)("puts the agency's self-hosted plans behind a switch in %s", (locale) => {
+    const html = render(locale)
+    const support = getSelfHostedSupportCopy(locale)
+    const hrefs = [...html.matchAll(/href="([^"]+)"/g)].map(([, href]) => href)
+    // Server HTML shows the hosted tiers; the self-hosted view is there but hidden.
+    expect(html).toContain(`<div hidden="">`)
+    expect(html).toContain(support.whiteLabel.link)
+    expect(html).toContain(support.whiteLabel.title)
+    expect(hrefs).toContain(selfHostedSupportCatalog.white_label.premium.checkoutUrls.annual)
+    expect(hrefs).toContain(selfHostedSupportCatalog.white_label.enterprise.checkoutUrls.annual)
+    expect(hrefs).not.toContain(selfHostedSupportCatalog.business.premium.checkoutUrls.annual)
+  })
+
+  it("prices agency support as one flat fee, not per business", () => {
+    const html = render("en")
+    const selfHostedView = html.slice(html.indexOf(getSelfHostedSupportCopy("en").whiteLabel.title))
+    expect(selfHostedView).toContain(">$159<")
+    expect(selfHostedView).toContain(">$399<")
+    expect(html).not.toContain("/business/mo")
+    expect(whiteLabelMarkdown("en")).toContain("| Enterprise support | $499/mo | $399/mo |")
   })
 
   it.each(SUPPORTED_LOCALES)("never mentions a limit on simultaneous calls in %s", (locale) => {

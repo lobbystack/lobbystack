@@ -1,13 +1,15 @@
 "use client"
 
 import { BillingIntervalSwitch, type BillingInterval } from "@/marketing/components/BillingIntervalSwitch"
+import { PlanViewPrompt, planViewLinkClass } from "@/marketing/components/pricing/PlanViewPrompt"
 import { buttonVariants } from "@/marketing/components/ui/button"
 import { appSignupUrl } from "@/marketing/lib/app-links"
 import type { Locale } from "@/marketing/i18n"
+import { localizePath } from "@/marketing/i18n/routes"
 import { cn } from "@/marketing/lib/utils"
 import { planCards } from "@lobbystack/shared/plan-cards"
 import { planComparison, type ComparisonValue } from "@lobbystack/shared/plan-comparison"
-import { Check, Minus, ArrowRight } from "lucide-react"
+import { Check, Minus, ArrowRight, Server } from "lucide-react"
 import { Fragment, useState } from "react"
 
 /* ─────────────────────────── Data ─────────────────────────── */
@@ -67,7 +69,7 @@ function tiersFor(locale: Locale): Tier[] {
 
 /* ─────────────────────────── Components ─────────────────────────── */
 
-function ComparisonCell({
+export function ComparisonCell({
   includedLabel,
   notIncludedLabel,
   value,
@@ -137,6 +139,8 @@ const pricingSectionCopy = {
     tableLabel: "Plan comparison table",
     caption:
       "Feature comparison across Free, Starter, Pro, and Enterprise plans.",
+    selfHostedPrompt: "Looking for self-hosted plans?",
+    selfHostedLink: "See self-hosted pricing",
     feature: "Feature",
     included: "Included",
     notIncluded: "Not included",
@@ -155,6 +159,8 @@ const pricingSectionCopy = {
     tableLabel: "Tableau de comparaison des forfaits",
     caption:
       "Comparaison des fonctionnalités entre les forfaits Free, Starter, Pro et Enterprise.",
+    selfHostedPrompt: "Vous cherchez les forfaits auto-hébergés ?",
+    selfHostedLink: "Voir les tarifs auto-hébergés",
     feature: "Fonctionnalité",
     included: "Inclus",
     notIncluded: "Non inclus",
@@ -173,6 +179,8 @@ const pricingSectionCopy = {
     tableLabel: "Tabla comparativa de planes",
     caption:
       "Comparación de funciones entre los planes Free, Starter, Pro y Enterprise.",
+    selfHostedPrompt: "¿Busca planes autoalojados?",
+    selfHostedLink: "Ver precios autoalojados",
     feature: "Función",
     included: "Incluido",
     notIncluded: "No incluido",
@@ -190,6 +198,8 @@ const pricingSectionCopy = {
     billingLabel: "Period naplate",
     tableLabel: "Tabela poređenja paketa",
     caption: "Poređenje funkcija paketa Free, Starter, Pro i Enterprise.",
+    selfHostedPrompt: "Tražite pakete za samostalno hostovanje?",
+    selfHostedLink: "Pogledajte cene za samostalno hostovanje",
     feature: "Funkcija",
     included: "Uključeno",
     notIncluded: "Nije uključeno",
@@ -214,6 +224,14 @@ export function PricingSection({ locale = "en" }: PricingSectionProps) {
           <p className="animate-fade-up body-copy mx-auto mt-5 max-w-[60ch] stagger-2 md:text-lg">
             {copy.intro}
           </p>
+          <div className="animate-fade-up mt-6 stagger-2">
+            <PlanViewPrompt icon={Server} prompt={copy.selfHostedPrompt}>
+              <a href={localizePath(locale, "/pricing/self-hosted/")} className={planViewLinkClass}>
+                {copy.selfHostedLink}
+                <ArrowRight className="size-3.5" aria-hidden="true" />
+              </a>
+            </PlanViewPrompt>
+          </div>
         </div>
       </section>
 

@@ -3,7 +3,7 @@ import type { LegalDocument } from "./types"
 const support = `<a href="mailto:support@lobbystack.com">support@lobbystack.com</a>`
 
 export const termsEn: LegalDocument = {
-  updated: "Last updated: October 14, 2026",
+  updated: "Last updated: October 26, 2026",
   h1: "Terms of Service",
   intro: `These Terms of Service ("Terms") govern your use of LobbyStack's hosted service, websites, and support. Please read them before you use LobbyStack. They limit our liability, make you responsible for call recording consent and text message compliance, and set out how we handle disputes.`,
   sections: [
@@ -228,9 +228,16 @@ export const termsEn: LegalDocument = {
       nav: "Self-hosting",
       title: "18. Self-hosted deployments",
       blocks: [
-        `18.1 If you run LobbyStack on your own infrastructure, you do so under the MIT License, not these Terms. We have no access to your deployment or its data, we do not process that data, and we are not responsible for it.`,
+        `18.1 If you run LobbyStack on your own infrastructure, you do so under the MIT License, not these Terms. We have no access to your deployment or its data, we do not process that data except as section 18.10 describes, and we are not responsible for it.`,
         `18.2 You are responsible for your servers, security, backups, updates, provider accounts, phone numbers, carrier registrations, notices, consents, and legal compliance. Your use of OpenAI, Twilio, and other providers is between you and them.`,
-        `18.3 We provide no support, warranty, or service commitment for self-hosted deployments unless we agree to one in a signed writing.`,
+        `18.3 We provide no support or service commitment for self-hosted deployments unless you buy a self-hosted support plan under section 18.4 or we agree to one in a signed writing. We give no warranty for self-hosted software unless a signed writing says so, and a support plan does not add one.`,
+        `18.4 <strong>Self-hosted support plans.</strong> We sell Premium support and Enterprise support plans for self-hosted deployments, both for businesses that run their own deployment and for partners that run the partner program on their own servers. The <a href="/pricing/self-hosted/">self-hosted pricing page</a> and the <a href="/white-label/">white-label page</a> list the prices and what each plan includes. These Terms apply to your support plan. The MIT License still governs the software you run.`,
+        `18.5 <strong>What support covers.</strong> Support covers questions about installing, configuring, and upgrading the LobbyStack releases we publish, bugs you find in them, and the other help your plan's page lists. It does not cover your servers, network, security, or backups; outages at OpenAI, Twilio, or other providers, or problems with your accounts there; code you changed or added; or recovering your data. We do not log in to your servers. On calls, you run the commands and we guide you.`,
+        `18.6 <strong>Support hours and reply times.</strong> We answer Monday to Friday, 9:00 to 17:00 Eastern Time, except public holidays in Quebec. The reply times on the plan pages are targets. If we miss one, you have no right to a credit, refund, or damages.`,
+        `18.7 <strong>Business count.</strong> A plan priced per business covers the number of businesses you buy. Keep that number equal to the number of businesses your deployment runs, and change it in the Polar customer portal when you add or remove one. We may ask you to confirm the count. A white-label plan covers one partner and every business it runs on its deployment.`,
+        `18.8 <strong>Feature requests.</strong> Premium support gives your feature requests priority, and Enterprise support gives them our highest priority. We decide what we build and when we release it.`,
+        `18.9 <strong>Billing.</strong> Polar sells support plans as our reseller and merchant of record. Sections 12.3 and 12.8 apply: plans renew until you cancel, cancellation takes effect at the end of the current term, and fees are non-refundable. You can cancel in the Polar customer portal.`,
+        `18.10 <strong>Data you share.</strong> If you send us logs, screenshots, or other data to get help, we treat it as Customer Data under section 14 and use it only to help you.`,
       ],
     },
     {

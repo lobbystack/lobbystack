@@ -3,7 +3,7 @@ import type { LegalDocument } from "./types"
 const support = `<a href="mailto:support@lobbystack.com">support@lobbystack.com</a>`
 
 export const termsEs: LegalDocument = {
-  updated: "Última actualización: 14 de octubre de 2026",
+  updated: "Última actualización: 26 de octubre de 2026",
   h1: "Términos del servicio",
   intro: `Estos Términos del servicio (los “Términos”) rigen el uso que usted hace del servicio alojado, los sitios web y el soporte de LobbyStack. Le rogamos que los lea antes de utilizar LobbyStack. Limitan nuestra responsabilidad, le atribuyen a usted la responsabilidad por el consentimiento para la grabación de llamadas y por el cumplimiento normativo de los mensajes de texto, y establecen cómo resolvemos las controversias.`,
   sections: [
@@ -228,9 +228,16 @@ export const termsEs: LegalDocument = {
       nav: "Autoalojamiento",
       title: "18. Implementaciones autoalojadas",
       blocks: [
-        `18.1 Si usted ejecuta LobbyStack en su propia infraestructura, lo hace conforme a la Licencia MIT, no conforme a estos Términos. No tenemos acceso a su implementación ni a sus datos, no tratamos esos datos y no somos responsables de ellos.`,
+        `18.1 Si usted ejecuta LobbyStack en su propia infraestructura, lo hace conforme a la Licencia MIT, no conforme a estos Términos. No tenemos acceso a su implementación ni a sus datos, no tratamos esos datos salvo según lo previsto en la sección 18.10 y no somos responsables de ellos.`,
         `18.2 Usted es responsable de sus servidores, la seguridad, las copias de seguridad, las actualizaciones, las cuentas con proveedores, los números de teléfono, los registros ante los operadores, los avisos, los consentimientos y el cumplimiento legal. Su uso de OpenAI, Twilio y otros proveedores es un asunto entre usted y ellos.`,
-        `18.3 No ofrecemos soporte, garantía ni compromiso de servicio para las implementaciones autoalojadas, salvo que aceptemos uno mediante un documento escrito y firmado.`,
+        `18.3 No ofrecemos soporte ni compromiso de servicio para las implementaciones autoalojadas, salvo que usted contrate un plan de soporte autoalojado conforme a la sección 18.4 o que lo aceptemos mediante un documento escrito y firmado. No otorgamos ninguna garantía sobre el software autoalojado salvo mediante un documento escrito y firmado, y un plan de soporte no añade ninguna.`,
+        `18.4 <strong>Planes de soporte autoalojado.</strong> Vendemos los planes Soporte Premium y Soporte Enterprise para implementaciones autoalojadas, tanto para negocios que ejecutan su propia implementación como para socios que ejecutan el programa de socios en sus propios servidores. La <a href="/es/pricing/self-hosted/">página de precios del autoalojamiento</a> y la <a href="/es/white-label/">página de marca blanca</a> indican los precios y lo que incluye cada plan. Estos Términos se aplican a su plan de soporte. La Licencia MIT sigue rigiendo el software que usted ejecuta.`,
+        `18.5 <strong>Qué cubre el soporte.</strong> El soporte cubre las preguntas sobre la instalación, la configuración y la actualización de las versiones de LobbyStack que publicamos, los errores que usted encuentre en ellas y la demás ayuda que indique la página de su plan. No cubre sus servidores, su red, su seguridad ni sus copias de seguridad; las interrupciones de OpenAI, Twilio u otros proveedores, ni los problemas con sus cuentas en ellos; el código que usted modificó o añadió; ni la recuperación de sus datos. No iniciamos sesión en sus servidores. En las llamadas, usted ejecuta los comandos y nosotros lo guiamos.`,
+        `18.6 <strong>Horario de soporte y tiempos de respuesta.</strong> Respondemos de lunes a viernes, de 9:00 a 17:00, hora del Este, excepto los días festivos en Quebec. Los tiempos de respuesta que indican las páginas de los planes son objetivos. Si no cumplimos alguno, usted no tiene derecho a ningún crédito, reembolso ni indemnización por daños y perjuicios.`,
+        `18.7 <strong>Número de negocios.</strong> Un plan con precio por negocio cubre el número de negocios que usted compra. Mantenga ese número igual al de negocios que ejecuta su implementación, y cámbielo en el portal de clientes de Polar cuando agregue o quite uno. Podemos pedirle que confirme el número. Un plan de marca blanca cubre a un socio y a todos los negocios que este ejecuta en su implementación.`,
+        `18.8 <strong>Solicitudes de funciones.</strong> Soporte Premium da prioridad a sus solicitudes de funciones, y Soporte Enterprise les da nuestra máxima prioridad. Nosotros decidimos qué desarrollamos y cuándo lo publicamos.`,
+        `18.9 <strong>Facturación.</strong> Polar vende los planes de soporte como nuestro revendedor y comerciante registrado (merchant of record). Se aplican las secciones 12.3 y 12.8: los planes se renuevan hasta que usted los cancele, la cancelación surte efecto al final del periodo en curso y las tarifas no son reembolsables. Puede cancelar en el portal de clientes de Polar.`,
+        `18.10 <strong>Datos que comparte.</strong> Si nos envía registros, capturas de pantalla u otros datos para obtener ayuda, los tratamos como Datos del Cliente conforme a la sección 14 y los usamos solo para ayudarle.`,
       ],
     },
     {

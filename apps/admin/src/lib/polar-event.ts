@@ -1,4 +1,4 @@
-import { isUuid, partnerTierForProduct } from "@lobbystack/shared";
+import { isSelfHostedSupportProduct, isUuid, partnerTierForProduct } from "@lobbystack/shared";
 
 type RecordValue = Record<string, unknown>;
 const record = (value: unknown): RecordValue => value && typeof value === "object" && !Array.isArray(value) ? value as RecordValue : {};
@@ -59,4 +59,13 @@ export function normalizePolarEvent(type: string, data: RecordValue, env: Record
       ...(subscriptionModifiedAt ? { subscriptionModifiedAt } : {}),
     },
   };
+}
+
+/**
+ * Whether an event is about a self-hosted support plan. Those sell through
+ * checkout links to whoever pays, so no business or partner owns them.
+ */
+export function sellsSelfHostedSupport(type: string, data: RecordValue): boolean {
+  const subscription = type.startsWith("subscription.") ? data : record(data.subscription);
+  return [text(subscription.product_id), text(data.product_id), text(record(data.product).id)].some(isSelfHostedSupportProduct);
 }

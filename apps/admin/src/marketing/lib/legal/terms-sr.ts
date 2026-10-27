@@ -3,7 +3,7 @@ import type { LegalDocument } from "./types"
 const support = `<a href="mailto:support@lobbystack.com">support@lobbystack.com</a>`
 
 export const termsSr: LegalDocument = {
-  updated: "Poslednje ažuriranje: 14. oktobar 2026.",
+  updated: "Poslednje ažuriranje: 26. oktobar 2026.",
   h1: "Uslovi korišćenja",
   intro: `Ovi Uslovi korišćenja („Uslovi“) uređuju Vaše korišćenje hostovane usluge, sajtova i podrške kompanije LobbyStack. Pročitajte ih pre nego što počnete da koristite LobbyStack. Oni ograničavaju našu odgovornost, čine Vas odgovornim za pristanak na snimanje poziva i za usklađenost SMS poruka sa propisima i utvrđuju način na koji rešavamo sporove.`,
   sections: [
@@ -228,9 +228,16 @@ export const termsSr: LegalDocument = {
       nav: "Samostalno hostovanje",
       title: "18. Samostalno hostovane instalacije",
       blocks: [
-        `18.1 Ako LobbyStack pokrećete na sopstvenoj infrastrukturi, to činite na osnovu licence MIT, a ne ovih Uslova. Nemamo pristup Vašoj instalaciji ni njenim podacima, ne obrađujemo te podatke i nismo odgovorni za njih.`,
+        `18.1 Ako LobbyStack pokrećete na sopstvenoj infrastrukturi, to činite na osnovu licence MIT, a ne ovih Uslova. Nemamo pristup Vašoj instalaciji ni njenim podacima, ne obrađujemo te podatke osim kako je opisano u odeljku 18.10 i nismo odgovorni za njih.`,
         `18.2 Odgovorni ste za svoje servere, bezbednost, rezervne kopije, ažuriranja, naloge kod pružalaca usluga, brojeve telefona, registracije kod operatera, obaveštenja, pristanke i usklađenost sa propisima. Vaše korišćenje usluga OpenAI, Twilio i drugih pružalaca usluga predmet je odnosa između Vas i njih.`,
-        `18.3 Za samostalno hostovane instalacije ne pružamo podršku, garanciju niti obavezu u pogledu usluge, osim ako se na to ne saglasimo u potpisanoj pisanoj formi.`,
+        `18.3 Za samostalno hostovane instalacije ne pružamo podršku niti obavezu u pogledu usluge, osim ako kupite paket podrške za samostalno hostovanje iz odeljka 18.4 ili se na to saglasimo u potpisanoj pisanoj formi. Za samostalno hostovani softver ne dajemo garanciju, osim u potpisanoj pisanoj formi, a paket podrške ne dodaje garanciju.`,
+        `18.4 <strong>Paketi podrške za samostalno hostovanje.</strong> Prodajemo pakete Premium podrška i Enterprise podrška za samostalno hostovane instalacije, kako firmama koje pokreću sopstvenu instalaciju, tako i partnerima koji partnerski program vode na sopstvenim serverima. <a href="/sr/pricing/self-hosted/">Stranica sa cenama za samostalno hostovanje</a> i <a href="/sr/white-label/">stranica o programu pod belom etiketom</a> navode cene i ono što svaki paket obuhvata. Ovi Uslovi se primenjuju na Vaš paket podrške. Licenca MIT i dalje uređuje softver koji pokrećete.`,
+        `18.5 <strong>Šta podrška obuhvata.</strong> Podrška obuhvata pitanja o instaliranju, konfigurisanju i nadogradnji verzija softvera LobbyStack koje objavljujemo, greške koje u njima pronađete i ostalu pomoć koju navodi stranica Vašeg paketa. Ne obuhvata Vaše servere, mrežu, bezbednost ni rezervne kopije; prekide rada kod kompanija OpenAI, Twilio ili drugih pružalaca usluga, niti probleme sa Vašim nalozima kod njih; kod koji ste izmenili ili dodali; niti vraćanje Vaših podataka. Ne prijavljujemo se na Vaše servere. Tokom poziva Vi pokrećete komande, a mi Vas vodimo.`,
+        `18.6 <strong>Radno vreme podrške i vreme odgovora.</strong> Odgovaramo od ponedeljka do petka, od 9:00 do 17:00 po istočnom vremenu (Eastern Time), osim tokom zvaničnih praznika u Kvebeku. Vremena odgovora navedena na stranicama paketa su ciljevi. Ako neki od njih ne ispunimo, nemate pravo na dobropis, povraćaj novca niti naknadu štete.`,
+        `18.7 <strong>Broj firmi.</strong> Paket koji se naplaćuje po firmi obuhvata broj firmi koji kupite. Održavajte taj broj jednakim broju firmi koje Vaša instalacija pokreće i menjajte ga na korisničkom portalu kompanije Polar kada dodate ili uklonite neku firmu. Možemo Vas zamoliti da potvrdite taj broj. Paket za partnere pod belom etiketom obuhvata jednog partnera i sve firme koje on vodi na svojoj instalaciji.`,
+        `18.8 <strong>Zahtevi za funkcije.</strong> Premium podrška daje prioritet Vašim zahtevima za nove funkcije, a Enterprise podrška im daje naš najviši prioritet. Mi odlučujemo šta razvijamo i kada to objavljujemo.`,
+        `18.9 <strong>Naplata.</strong> Polar prodaje pakete podrške kao naš preprodavac i zvanični prodavac (merchant of record). Primenjuju se odeljci 12.3 i 12.8: paketi se obnavljaju dok ih ne otkažete, otkazivanje proizvodi dejstvo na kraju tekućeg perioda, a naknade se ne vraćaju. Otkazati možete na korisničkom portalu kompanije Polar.`,
+        `18.10 <strong>Podaci koje delite.</strong> Ako nam pošaljete logove, snimke ekrana ili druge podatke da biste dobili pomoć, smatramo ih Podacima Klijenta iz odeljka 14 i koristimo ih samo da bismo Vam pomogli.`,
       ],
     },
     {

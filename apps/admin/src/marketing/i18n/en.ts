@@ -36,6 +36,11 @@ export const en = {
       description:
         "Compare LobbyStack AI receptionist pricing for Free, Starter, Pro, and Enterprise plans, including voice minutes, annual billing, SMS alerts, and overage rates.",
     },
+    "/pricing/self-hosted/": {
+      title: "Self-Hosted AI Receptionist Pricing and Support | LobbyStack",
+      description:
+        "Self-host LobbyStack's AI receptionist free with every feature, or add Premium or Enterprise support for email or Slack help, faster replies and upgrades.",
+    },
     "/solutions/": {
       title: "AI Receptionist Solutions | LobbyStack",
       description:

@@ -3,7 +3,7 @@ import type { LegalDocument } from "./types"
 const support = `<a href="mailto:support@lobbystack.com">support@lobbystack.com</a>`
 
 export const privacyEn: LegalDocument = {
-  updated: "Last updated: October 8, 2026",
+  updated: "Last updated: October 26, 2026",
   h1: "Privacy Policy",
   intro: `This Privacy Policy explains how Lobbystack Inc. ("LobbyStack," "we," "our," or "us") collects, uses, shares, and protects personal information when you visit our websites, use the hosted LobbyStack service, call or chat with a business that uses LobbyStack, receive a text sent through LobbyStack, or contact us.`,
   sections: [
@@ -296,7 +296,7 @@ export const privacyEn: LegalDocument = {
       nav: "Self-hosting",
       title: "20. Self-hosted LobbyStack",
       blocks: [
-        `LobbyStack's source code is open source. When an organization runs LobbyStack on its own servers, we do not receive, access, or process any data from that deployment. The organization that runs it is responsible for its privacy practices. Contact that organization with any questions.`,
+        `LobbyStack's source code is open source. When an organization runs LobbyStack on its own servers, we do not receive, access, or process any data from that deployment, except logs, screenshots, or other data the organization sends us to get help under a self-hosted support plan. We handle that data as section 18.10 of our Terms of Service describes. The organization that runs it is responsible for its privacy practices. Contact that organization with any questions.`,
       ],
     },
     {

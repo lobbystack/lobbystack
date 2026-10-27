@@ -15,7 +15,7 @@ import {
 } from "@/marketing/lib/seo"
 import { PageJsonLd, type MarketingPageSeo } from "@/marketing/seo/page-seo"
 
-const breadcrumbNames: Record<Locale, string> = {
+export const pricingBreadcrumbNames: Record<Locale, string> = {
   en: "Pricing",
   fr: "Tarifs",
   es: "Precios",
@@ -43,7 +43,7 @@ export function pricingPageSeo(locale: Locale): MarketingPageSeo {
       softwareApplicationJsonLd({ locale }),
       breadcrumbJsonLd([
         { name: copy.common.home, path: localizePath(locale, "/") },
-        { name: breadcrumbNames[locale], path: canonicalPath },
+        { name: pricingBreadcrumbNames[locale], path: canonicalPath },
       ]),
       {
         "@context": "https://schema.org",

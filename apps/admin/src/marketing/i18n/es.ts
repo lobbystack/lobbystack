@@ -37,6 +37,11 @@ export const es = {
       description:
         "Compare los planes Free, Starter, Pro y Enterprise de LobbyStack: minutos de voz, facturación anual, alertas por SMS y tarifas por uso adicional.",
     },
+    "/pricing/self-hosted/": {
+      title: "Precios de la recepcionista con IA autoalojada | LobbyStack",
+      description:
+        "Aloje gratis la recepcionista con IA de LobbyStack con todas sus funciones, o añada Soporte Premium o Enterprise por correo o Slack y ayuda al actualizar.",
+    },
     "/solutions/": {
       title: "Soluciones de recepcionista con IA | LobbyStack",
       description:

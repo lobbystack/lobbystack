@@ -686,6 +686,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
           points: [
             "Twilio y OpenAI le facturan directamente",
             "LobbyStack no cobra por usuario ni por minuto",
+            "Los planes de soporte de pago son opcionales y se cobran por negocio",
             "Los planes de Cloud empiezan gratis si prefiere no administrar servidores",
           ],
         },
@@ -731,7 +732,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "¿Ofrecen soporte para instalaciones autoalojadas?",
           answer:
-            "Empiece por la documentación del repositorio y el registro público de incidencias en GitHub. Para preguntas que no corresponden a una incidencia pública, contacte al equipo de LobbyStack en la dirección de soporte que aparece en el sitio.",
+            "Sí. La comunidad ayuda gratis en Discord y en las incidencias de GitHub. Si quiere ayuda de nuestro equipo, contrate un plan Soporte Premium o Soporte Enterprise. Ambos añaden soporte por correo electrónico con tiempos de respuesta objetivo, además de ayuda para instalar y actualizar su despliegue. Enterprise también le da un canal privado de Slack y un ingeniero asignado. La página de precios del autoalojamiento indica los precios y lo que incluye cada plan.",
         },
         {
           question:
@@ -749,7 +750,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
       relatedLinks: [
         { label: "GitHub", href: "https://github.com/lobbystack/lobbystack" },
         { label: "Documentación de la API", href: "/docs/api/" },
-        pricingLink,
+        { label: "Precios del autoalojamiento", href: "/pricing/self-hosted/" },
         whiteLabelLink,
       ],
       ctaHeading: "Despliegue LobbyStack en sus propios servidores",

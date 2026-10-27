@@ -856,6 +856,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
           points: [
             "Twilio i OpenAI Vam naplaćuju direktno",
             "LobbyStack ne naplaćuje po korisniku ni po minutu",
+            "Plaćeni paketi podrške su opcioni i naplaćuju se po firmi",
             "Cloud paketi počinju besplatno ako ne želite da održavate servere",
           ],
         },
@@ -900,7 +901,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Da li pružate podršku za samostalne instalacije?",
           answer:
-            "Počnite od dokumentacije u repozitorijumu i javnog GitHub issue trackera. Za pitanja koja ne pripadaju javnom issue-u, kontaktirajte LobbyStack tim preko adrese za podršku navedene na sajtu.",
+            "Da. Zajednica pomaže besplatno na Discordu i u GitHub issue-ima. Za pomoć našeg tima kupite paket Premium podrška ili Enterprise podrška. Oba paketa dodaju podršku putem imejla sa ciljanim vremenom odgovora, kao i pomoć pri postavljanju i nadogradnji Vaše instalacije. Enterprise Vam daje i privatni Slack kanal i dodeljenog inženjera. Stranica sa cenama za samostalno hostovanje navodi cene i šta svaki paket obuhvata.",
         },
         {
           question: "Mogu li da prilagodim glas, promptove i ponašanje?",
@@ -917,7 +918,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
       relatedLinks: [
         { label: "GitHub", href: "https://github.com/lobbystack/lobbystack" },
         { label: "API dokumentacija", href: "/docs/api/" },
-        pricingLink,
+        { label: "Cene za samostalno hostovanje", href: "/pricing/self-hosted/" },
         whiteLabelLink,
       ],
       ctaHeading: "Postavite LobbyStack na svoje servere",

@@ -3,7 +3,7 @@ import type { LegalDocument } from "./types"
 const support = `<a href="mailto:support@lobbystack.com">support@lobbystack.com</a>`
 
 export const termsFr: LegalDocument = {
-  updated: "Dernière mise à jour : 14 octobre 2026",
+  updated: "Dernière mise à jour : 26 octobre 2026",
   h1: "Conditions d’utilisation",
   intro: `Les présentes conditions d’utilisation (les « Conditions ») régissent votre utilisation du service hébergé, des sites Web et du support de LobbyStack. Lisez-les avant d’utiliser LobbyStack. Elles limitent notre responsabilité, vous rendent responsable du consentement à l’enregistrement des appels et de la conformité des SMS, et précisent comment nous réglons les litiges.`,
   sections: [
@@ -228,9 +228,16 @@ export const termsFr: LegalDocument = {
       nav: "Auto-hébergement",
       title: "18. Déploiements auto-hébergés",
       blocks: [
-        `18.1 Si vous exécutez LobbyStack sur votre propre infrastructure, vous le faites en vertu de la licence MIT, et non des présentes Conditions. Nous n’avons pas accès à votre déploiement ni à ses données, nous ne traitons pas ces données, et nous n’en sommes pas responsables.`,
+        `18.1 Si vous exécutez LobbyStack sur votre propre infrastructure, vous le faites en vertu de la licence MIT, et non des présentes Conditions. Nous n’avons pas accès à votre déploiement ni à ses données, nous ne traitons pas ces données, sauf dans la mesure prévue à la section 18.10, et nous n’en sommes pas responsables.`,
         `18.2 Vous êtes responsable de vos serveurs, de la sécurité, des sauvegardes, des mises à jour, des comptes auprès des fournisseurs, des numéros de téléphone, des inscriptions auprès des opérateurs, des avis, des consentements et de la conformité légale. Votre utilisation d’OpenAI, de Twilio et des autres fournisseurs relève de vous et de ces fournisseurs.`,
-        `18.3 Nous n’offrons aucun support, aucune garantie ni aucun engagement de service pour les déploiements auto-hébergés, sauf si nous en convenons dans un écrit signé.`,
+        `18.3 Nous n’offrons aucun support ni aucun engagement de service pour les déploiements auto-hébergés, sauf si vous achetez un forfait de support auto-hébergé selon la section 18.4 ou si nous en convenons dans un écrit signé. Nous ne donnons aucune garantie sur le logiciel auto-hébergé, sauf dans un écrit signé, et un forfait de support n’en ajoute aucune.`,
+        `18.4 <strong>Forfaits de support auto-hébergé.</strong> Nous vendons des forfaits Support Premium et Support Enterprise pour les déploiements auto-hébergés, tant aux entreprises qui gèrent leur propre déploiement qu’aux partenaires qui exploitent le programme partenaire sur leurs propres serveurs. La <a href="/fr/pricing/self-hosted/">page des tarifs de l’auto-hébergement</a> et la <a href="/fr/white-label/">page sur la marque blanche</a> indiquent les prix et le contenu de chaque forfait. Les présentes Conditions s’appliquent à votre forfait de support. La licence MIT continue de régir le logiciel que vous exécutez.`,
+        `18.5 <strong>Ce que couvre le support.</strong> Le support couvre les questions sur l’installation, la configuration et la mise à niveau des versions de LobbyStack que nous publions, les bogues que vous y trouvez et les autres formes d’aide qu’indique la page de votre forfait. Il ne couvre pas vos serveurs, votre réseau, votre sécurité ni vos sauvegardes; les pannes chez OpenAI, Twilio ou d’autres fournisseurs, ni les problèmes liés à vos comptes chez eux; le code que vous avez modifié ou ajouté; ni la récupération de vos données. Nous ne nous connectons pas à vos serveurs. Lors des appels, vous exécutez les commandes et nous vous guidons.`,
+        `18.6 <strong>Heures de support et délais de réponse.</strong> Nous répondons du lundi au vendredi, de 9 h à 17 h, heure de l’Est, sauf les jours fériés au Québec. Les délais de réponse indiqués sur les pages des forfaits sont des cibles. Si nous ne respectons pas l’un d’eux, vous n’avez droit à aucun crédit ni remboursement, ni à des dommages-intérêts.`,
+        `18.7 <strong>Nombre d’entreprises.</strong> Un forfait facturé par entreprise couvre le nombre d’entreprises que vous achetez. Gardez ce nombre égal au nombre d’entreprises que votre déploiement exploite, et modifiez-le dans le portail client de Polar lorsque vous en ajoutez ou en retirez une. Nous pouvons vous demander de confirmer ce nombre. Un forfait marque blanche couvre un partenaire et toutes les entreprises qu’il exploite sur son déploiement.`,
+        `18.8 <strong>Demandes de fonctionnalités.</strong> Le Support Premium donne la priorité à vos demandes de fonctionnalités, et le Support Enterprise leur accorde notre plus haute priorité. Nous décidons de ce que nous développons et du moment où nous le publions.`,
+        `18.9 <strong>Facturation.</strong> Polar vend les forfaits de support en tant que notre revendeur et marchand officiel (merchant of record). Les sections 12.3 et 12.8 s’appliquent : les forfaits se renouvellent jusqu’à ce que vous annuliez, l’annulation prend effet à la fin de la période en cours et les frais ne sont pas remboursables. Vous pouvez annuler dans le portail client de Polar.`,
+        `18.10 <strong>Données que vous nous transmettez.</strong> Si vous nous envoyez des journaux, des captures d’écran ou d’autres données pour obtenir de l’aide, nous les traitons comme des Données du client selon la section 14 et nous les utilisons seulement pour vous aider.`,
       ],
     },
     {

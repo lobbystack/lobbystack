@@ -37,6 +37,11 @@ export const sr = {
       description:
         "Uporedite LobbyStack pakete Free, Starter, Pro i Enterprise: minuti razgovora, godišnja naplata, SMS obaveštenja i cene dodatne potrošnje.",
     },
+    "/pricing/self-hosted/": {
+      title: "Cene AI recepcionera za samostalno hostovanje | LobbyStack",
+      description:
+        "Hostujte LobbyStack AI recepcionera sami i besplatno, sa svim funkcijama, ili dodajte Premium ili Enterprise podršku putem e-pošte ili Slacka.",
+    },
     "/solutions/": {
       title: "Rešenja sa AI recepcionerom | LobbyStack",
       description:

@@ -37,6 +37,11 @@ export const fr = {
       description:
         "Comparez les forfaits Free, Starter, Pro et Enterprise de LobbyStack, avec minutes vocales, facturation annuelle, SMS et dépassements transparents.",
     },
+    "/pricing/self-hosted/": {
+      title: "Tarifs de la réceptionniste IA auto-hébergée | LobbyStack",
+      description:
+        "Auto-hébergez gratuitement la réceptionniste IA de LobbyStack avec toutes ses fonctions, ou ajoutez le Support Premium ou Enterprise par courriel ou Slack.",
+    },
     "/solutions/": {
       title: "Solutions de réceptionniste IA | LobbyStack",
       description:

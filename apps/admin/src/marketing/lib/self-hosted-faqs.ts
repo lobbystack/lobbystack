@@ -39,7 +39,7 @@ export const selfHostedFaqs: FaqItem[] = [
   {
     question: "Do you offer support for self-hosted installations?",
     answer:
-      "Start with the repository documentation and public GitHub issue tracker. For questions that do not belong in a public issue, contact the LobbyStack team through the support address listed on the site.",
+      "Yes. The community helps for free on Discord and in GitHub issues. For help from our team, buy a Premium support or Enterprise support plan. Both add email support with reply-time targets, plus help setting up and upgrading your install. Enterprise also gives you a private Slack channel and a named engineer. The self-hosted pricing page lists the prices and what each plan includes.",
   },
   {
     question: "Can I customize the voice, prompts, and behavior?",

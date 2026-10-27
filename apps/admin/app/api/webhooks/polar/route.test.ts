@@ -16,6 +16,7 @@ vi.mock("@lobbystack/db", async importOriginal => ({
   enqueueOutbox: mocks.enqueue,
 }));
 
+import { selfHostedSupportCatalog } from "@lobbystack/shared";
 import { POST } from "./route";
 const businessId = "ed4f1b6f-a237-4c09-8e26-68c3b976b110";
 const secret = Buffer.from("polar-route-test-secret").toString("base64");
@@ -64,6 +65,19 @@ it("ignores unknown businesses without persisting or enqueueing", async () => {
   expect(mocks.insert).not.toHaveBeenCalled();
   expect(mocks.enqueue).not.toHaveBeenCalled();
   expect(unresolvedLogs()).toEqual([{ event: "ops.billing.webhook_unresolved", provider: "polar", eventType: "subscription.active", reason: "unknown_business", businessReference: businessId }]);
+});
+
+it.each([
+  ["subscription.active", { id: "sub-9", status: "active", product_id: selfHostedSupportCatalog.business.premium.productIds.monthly, customer: { id: "cust-9" } }],
+  ["order.paid", { id: "order-9", product_id: selfHostedSupportCatalog.white_label.enterprise.productIds.annual, customer: { id: "cust-9" } }],
+  ["checkout.updated", { id: "checkout-9", product: { id: selfHostedSupportCatalog.business.enterprise.productIds.annual } }],
+])("drops a self-hosted support %s without a lookup or an unresolved log", async (type, data) => {
+  const body = JSON.stringify({ type, data });
+  expect(await (await POST(request(businessId, { body }))).json()).toEqual({ accepted: true, ignored: true });
+  expect(mocks.lookup).not.toHaveBeenCalled();
+  expect(mocks.recordPartner).not.toHaveBeenCalled();
+  expect(mocks.insert).not.toHaveBeenCalled();
+  expect(unresolvedLogs()).toEqual([]);
 });
 
 it("logs ops.billing.webhook_unresolved when no field identifies a business", async () => {

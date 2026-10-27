@@ -3,7 +3,7 @@ import type { LegalDocument } from "./types"
 const support = `<a href="mailto:support@lobbystack.com">support@lobbystack.com</a>`
 
 export const privacySr: LegalDocument = {
-  updated: "Poslednje ažuriranje: 8. oktobar 2026.",
+  updated: "Poslednje ažuriranje: 26. oktobar 2026.",
   h1: "Politika privatnosti",
   intro: `Ova Politika privatnosti objašnjava kako Lobbystack Inc. („LobbyStack“, „mi“, „naš“ ili „nas“) prikuplja, koristi, deli i štiti podatke o ličnosti kada posećujete naše sajtove, koristite hostovanu uslugu LobbyStack, pozovete firmu koja koristi LobbyStack ili se s njom dopisujete putem četa, primite SMS poruku poslatu putem usluge LobbyStack ili nas kontaktirate.`,
   sections: [
@@ -296,7 +296,7 @@ export const privacySr: LegalDocument = {
       nav: "Samostalno hostovanje",
       title: "20. Samostalno hostovan LobbyStack",
       blocks: [
-        `Izvorni kod softvera LobbyStack je otvoren (open source). Kada neka organizacija pokreće LobbyStack na sopstvenim serverima, ne primamo, ne pristupamo niti obrađujemo bilo kakve podatke iz te instalacije. Organizacija koja je pokreće odgovorna je za svoju praksu zaštite privatnosti. Sa svim pitanjima obratite se toj organizaciji.`,
+        `Izvorni kod softvera LobbyStack je otvoren (open source). Kada neka organizacija pokreće LobbyStack na sopstvenim serverima, ne primamo, ne pristupamo niti obrađujemo bilo kakve podatke iz te instalacije, osim logova, snimaka ekrana ili drugih podataka koje nam organizacija pošalje da bi dobila pomoć u okviru paketa podrške za samostalno hostovanje. Te podatke obrađujemo kako je opisano u odeljku 18.10 naših Uslova korišćenja. Organizacija koja je pokreće odgovorna je za svoju praksu zaštite privatnosti. Sa svim pitanjima obratite se toj organizaciji.`,
       ],
     },
     {

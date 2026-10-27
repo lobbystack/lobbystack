@@ -6,7 +6,7 @@ import { businesses, enqueueOutbox, providerEvents, withBusinessTransaction, wit
 import { recordPartnerPolarEvent } from "@lobbystack/domain";
 import { verifyPolarWebhookSignature } from "@lobbystack/providers";
 import { getAppDatabase, getDispatcherDatabase, getWorkerDatabase } from "@/lib/api-helpers";
-import { normalizePolarEvent } from "@/lib/polar-event";
+import { normalizePolarEvent, sellsSelfHostedSupport } from "@/lib/polar-event";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -56,6 +56,9 @@ export async function POST(request: Request) {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) return NextResponse.json({ error: "Invalid webhook." }, { status: 400 });
     const event = polarWebhookSchema.safeParse({ ...raw, id: request.headers.get("webhook-id") ?? raw.id });
     if (!event.success) return NextResponse.json({ error: "Invalid webhook." }, { status: 400 });
+    // Self-hosted support has nothing to store, and logging it as unresolved
+    // would bury the hosted billing events that really went missing.
+    if (sellsSelfHostedSupport(event.data.type, event.data.data)) return NextResponse.json({ accepted: true, ignored: true });
     const normalized = normalizePolarEvent(event.data.type, event.data.data);
     // A partner's tier: its events belong to no business, so they're stored for the partner.
     if (normalized.partnerId) {
