@@ -116,6 +116,7 @@ Les erreurs ont toutes la même forme :
 | 422 | `idempotency_key_reused` | La `Idempotency-Key` a déjà servi avec un corps différent. |
 | 429 | `rate_limited` | La clé a fait trop de requêtes. Attendez le nombre de secondes indiqué par `Retry-After`. |
 | 503 | `rate_limit_unavailable` | LobbyStack ne peut pas vérifier la limite de débit pour le moment. Réessayez dans un instant. |
+| 503 | `phone_numbers_unavailable` | Le déploiement n'a pas de fournisseur de téléphonie : il ne peut ni chercher ni acheter de numéros. |
 | 500 | `internal_error` | Une erreur s'est produite du côté de LobbyStack. Le message contient une référence à transmettre au soutien. |
 
 ## Réserver par l'API

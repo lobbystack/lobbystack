@@ -45,6 +45,7 @@ export const apiErrorCodes = [
   "business_required",
   "key_owner_inactive",
   "plan_limit_reached",
+  "phone_numbers_unavailable",
 ] as const;
 export type ApiErrorCode = (typeof apiErrorCodes)[number];
 

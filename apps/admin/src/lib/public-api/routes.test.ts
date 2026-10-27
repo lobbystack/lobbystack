@@ -95,6 +95,7 @@ const domain = vi.hoisted(() => ({
   runIdempotent: vi.fn(async (context: unknown, _scope: unknown, _hash: string, run: (transactional: unknown) => Promise<{ status: number; body: unknown }>) => ({ replayed: false, response: await run(context) })),
 }));
 const numbers = vi.hoisted(() => ({
+  twilio: true,
   provider: { listAvailablePhoneNumbers: vi.fn() },
   searchLimit: vi.fn(async (): Promise<{ allowed: true } | { allowed: false; status: 429 | 503; reason: string }> => ({ allowed: true })),
 }));
@@ -107,7 +108,7 @@ vi.mock("../error-reporting", () => ({ reportServerError: vi.fn() }));
 vi.mock("../storage", () => ({ getStorageProvider: () => storageProvider }));
 // CI runs these tests with a real Redis, where every file's requests share one key's per-minute budget; the limiter has its own tests.
 vi.mock("./rate-limit", async (importOriginal) => ({ ...(await importOriginal<typeof import("./rate-limit")>()), enforceApiRateLimit: vi.fn(async () => ({ allowed: true, limit: 120, remaining: 119, resetAt: Math.ceil(Date.now() / 60_000) * 60 })) }));
-vi.mock("../twilio-provider", () => ({ getTwilioProvider: () => numbers.provider, getNumberClaimTokenSecret: () => "number-claim-secret" }));
+vi.mock("../twilio-provider", () => ({ getTwilioProvider: () => numbers.provider, getNumberClaimTokenSecret: () => "number-claim-secret", twilioConfigured: () => numbers.twilio }));
 vi.mock("../phone-number-search-limit", () => ({ checkPhoneNumberSearchLimit: numbers.searchLimit }));
 const phones = vi.hoisted(() => ({ verified: vi.fn(async (_userId: string) => true) }));
 vi.mock("../verified-phone", () => ({ hasVerifiedPhone: phones.verified }));
@@ -641,6 +642,18 @@ describe("phone numbers", () => {
     expect(unavailable.status).toBe(503);
     expect(unavailable.headers.get("retry-after")).toBe("5");
     expect(asked).toHaveBeenCalledTimes(1);
+  });
+
+  it("answers 503 phone_numbers_unavailable without Twilio, before the search counts against the limit", async () => {
+    numbers.twilio = false;
+    try {
+      const response = await search({ country: "US" });
+      expect(response.status).toBe(503);
+      expect(await response.json()).toMatchObject({ error: { code: "phone_numbers_unavailable" } });
+      expect(numbers.searchLimit).not.toHaveBeenCalled();
+    } finally {
+      numbers.twilio = true;
+    }
   });
 
   it("checks the search before it counts against the limit", async () => {

@@ -116,6 +116,7 @@ Errors use one shape:
 | 422 | `idempotency_key_reused` | The `Idempotency-Key` was used with a different body. |
 | 429 | `rate_limited` | The key made too many requests. Wait for `Retry-After` seconds. |
 | 503 | `rate_limit_unavailable` | LobbyStack can't check the rate limit right now. Retry shortly. |
+| 503 | `phone_numbers_unavailable` | The deployment has no phone provider, so it can't search for or buy numbers. |
 | 500 | `internal_error` | Something failed on LobbyStack's side. The message includes a reference to share with support. |
 
 ## Booking through the API

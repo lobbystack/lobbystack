@@ -26,8 +26,13 @@ export function getTwilioProvider(): TwilioProvider {
  * explains, instead of an alertable 500.
  */
 export function requireTwilioProvider(): TwilioProvider {
-  if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) throw jsonError("Phone numbers aren't set up on this dashboard.", 503, "phone_numbers_unavailable");
+  if (!twilioConfigured()) throw jsonError("Phone numbers aren't set up on this dashboard.", 503, "phone_numbers_unavailable");
   return getTwilioProvider();
+}
+
+/** Whether the deployment has a Twilio account to search and buy numbers with. Checked before a search counts against the rate limit. */
+export function twilioConfigured(): boolean {
+  return Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN);
 }
 
 export function getNumberClaimTokenSecret(): string {
