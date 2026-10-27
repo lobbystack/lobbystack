@@ -150,7 +150,7 @@ describe.skipIf(!setup.testUrl)("auth on a partner's subdomain", () => {
     expect(notice).toMatchObject({ template: "existing_account", brand: { kind: "partner", partnerId }, variables: { signInUrl: `${acme}/en/login`, resetUrl: `${acme}/en/forgot-password` } });
   });
 
-  it("resets a password with a code and with a link that leads back to the partner's subdomain", async () => {
+  it("resets a password with a code, and refuses the link reset", async () => {
     const { email } = await userWithPassword();
     expect((await auth("/email-otp/request-password-reset", { method: "POST", body: { email } })).status).toBe(200);
     const [code] = await queuedFor(email);
@@ -159,17 +159,8 @@ describe.skipIf(!setup.testUrl)("auth on a partner's subdomain", () => {
     expect((await auth("/email-otp/reset-password", { method: "POST", body: { email, otp: code!.variables.code, password: byCode } })).status).toBe(200);
     await signIn(email, byCode);
 
-    expect((await auth("/request-password-reset", { method: "POST", body: { email, redirectTo: "/en/reset-password" } })).status).toBe(200);
-    const link = (await queuedFor(email)).at(-1)!;
-    expect(link).toMatchObject({ template: "password_reset", brand: { kind: "partner", partnerId } });
-    expect(urlOf(link).startsWith(`${acme}/api/auth/reset-password/`)).toBe(true);
-    const followed = await auth(urlOf(link));
-    expect(followed.status).toBe(302);
-    const resetPage = new URL(followed.headers.get("location")!);
-    expect(resetPage.origin).toBe(acme);
-    const byLink = password();
-    expect((await auth("/reset-password", { method: "POST", body: { token: resetPage.searchParams.get("token"), newPassword: byLink } })).status).toBe(200);
-    await signIn(email, byLink);
+    // Resets go by emailed code only, so no reset token ever goes to the host that asked for it.
+    expect((await auth("/request-password-reset", { method: "POST", body: { email, redirectTo: "/en/reset-password" } })).status).toBe(404);
     expect(linksIn(await queuedFor(email)).every((url) => url.startsWith(`${acme}/`))).toBe(true);
   });
 

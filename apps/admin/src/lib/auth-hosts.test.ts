@@ -80,36 +80,28 @@ it("trusts nothing on a request the proxy resolved no brand for", async () => {
   expect(response.status).toBe(403);
 });
 
-it("builds Better Auth's reset links on the partner's subdomain, and on APP_BASE_URL on the host's domain", async () => {
+it("answers the link reset with a 404 on every host, since resets go by emailed code", async () => {
   const now = new Date();
   store.tables.user!.push({ id: "owner", name: "Owner", email: "owner@example.invalid", emailVerified: true, normalizedEmail: "owner@example.invalid", preferredLocale: "en", createdAt: now, updatedAt: now });
-  expect((await post("/request-password-reset", acmeBrand, acme, { email: "owner@example.invalid", redirectTo: "/en/reset-password" })).status).toBe(200);
-  // Another hostname of the host's domain still gets APP_BASE_URL.
-  expect((await post("/request-password-reset", { ...hostBrand, host: "127.0.0.1:3000" }, base, { email: "owner@example.invalid", redirectTo: "/en/reset-password" })).status).toBe(200);
-  const [partnerLink, hostLink] = store.queued.map(payload => (payload.variables as { url: string }).url);
-  expect(partnerLink).toMatch(new RegExp(`^${acme}/api/auth/reset-password/[^/?]+\\?callbackURL=%2Fen%2Freset-password$`));
-  expect(hostLink).toMatch(new RegExp(`^${base}/api/auth/reset-password/`));
-  // Following the link lands back on the partner's host.
-  const followed = await (await auth()).handler(new Request(partnerLink!, { headers: acmeBrand }));
-  expect(followed.status).toBe(302);
-  expect(followed.headers.get("location")).toMatch(new RegExp(`^${acme}/en/reset-password\\?token=`));
+  for (const [brand, origin] of [[acmeBrand, acme], [{ ...hostBrand, host: "127.0.0.1:3000" }, base]] as const) {
+    expect((await post("/request-password-reset", brand, origin, { email: "owner@example.invalid", redirectTo: "/en/reset-password" })).status).toBe(404);
+    expect((await post("/reset-password", brand, origin, { token: "t", newPassword: "StrongPassword123!" })).status).toBe(404);
+  }
+  expect(store.queued).toEqual([]);
 });
 
-it("builds links on a partner's own domain once the proxy resolved it there, and with only Caddy's on-demand TLS turned on", async () => {
+it("accepts requests on a partner's own domain once the proxy resolved it there, and with only Caddy's on-demand TLS turned on", async () => {
   const own = "http://app.acme.example:3000";
   const ownBrand = { host: "app.acme.example:3000", "x-lobbystack-brand": `partner:${partnerId}`, "x-lobbystack-brand-origin": own };
-  const now = new Date();
-  store.tables.user!.push({ id: "owner", name: "Owner", email: "owner@example.invalid", emailVerified: true, normalizedEmail: "owner@example.invalid", preferredLocale: "en", createdAt: now, updatedAt: now });
+  const signIn = { email: "nobody@example.invalid", password: "StrongPassword123!" };
   for (const baseDomain of ["partners.localhost", ""]) {
     vi.resetModules();
     vi.stubEnv("PARTNER_BASE_DOMAIN", baseDomain);
     vi.stubEnv("CADDY_ON_DEMAND_TLS", "true");
-    store.queued = [];
-    expect((await post("/request-password-reset", ownBrand, own, { email: "owner@example.invalid", redirectTo: "/en/reset-password" })).status, baseDomain).toBe(200);
-    const [link] = store.queued.map(payload => (payload.variables as { url: string }).url);
-    expect(link, baseDomain).toMatch(new RegExp(`^${own}/api/auth/reset-password/[^/?]+\\?callbackURL=%2Fen%2Freset-password$`));
+    // The origin check passes, so the unknown account is what Better Auth refuses.
+    expect((await post("/sign-in/email", ownBrand, own, signIn)).status, baseDomain).toBe(401);
     // The domain trusts only its own origin, as a subdomain does.
-    expect((await post("/sign-in/email", ownBrand, acme, { email: "nobody@example.invalid", password: "StrongPassword123!" })).status, baseDomain).toBe(403);
+    expect((await post("/sign-in/email", ownBrand, acme, signIn)).status, baseDomain).toBe(403);
   }
 });
 

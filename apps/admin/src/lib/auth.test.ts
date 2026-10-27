@@ -9,6 +9,10 @@ describe("auth email endpoint policy", () => {
     expect(isDisabledAuthEmailEndpoint("/sign-in/email-otp")).toBe(true);
   });
 
+  it("blocks the link reset, so a reset token never goes to the host that asked for it", () => {
+    for (const path of ["/request-password-reset", "/forget-password", "/reset-password", "/reset-password/abc123"]) expect(isDisabledAuthEmailEndpoint(path), path).toBe(true);
+  });
+
   it("allows only the required public OTP endpoints", () => {
     expect(isDisabledAuthEmailEndpoint("/email-otp/verify-email")).toBe(false);
     expect(isDisabledAuthEmailEndpoint("/email-otp/request-password-reset")).toBe(false);

@@ -109,14 +109,14 @@ it("queues every auth email under the request's brand, for the worker to write i
   mocks.select.mockResolvedValue([{ id: "user-1", preferredLocale: "sr" }]);
   await mocks.config.emailAndPassword.onExistingUserSignUp({ user: { id: "user-1", email: "owner@example.invalid", emailVerified: true } });
   await mocks.config.plugins.find((plugin: { id?: string }) => plugin.id === "email-otp").options.sendVerificationOTP({ email: "owner@example.invalid", otp: "654321", type: "forget-password" });
-  await mocks.config.emailAndPassword.sendResetPassword({ user: { id: "user-1", email: "owner@example.invalid" }, url: "https://desk.example.test/reset-password?token=t" });
+  // Resets go by code only: Better Auth has no link reset to send.
+  expect(mocks.config.emailAndPassword.sendResetPassword).toBeUndefined();
   await mocks.config.user.changeEmail.sendChangeEmailConfirmation({ user: { id: "user-1", email: "owner@example.invalid" }, newEmail: "new@example.invalid", url: "https://desk.example.test/api/auth/verify-email?token=t" });
   const payloads = mocks.enqueue.mock.calls.map((call) => call[1].payload);
   expect(payloads.map((payload) => [payload.template, payload.variables])).toEqual([
     ["verify_email", { code: expect.any(String) }],
     ["existing_account", { locale: "sr", signInUrl: "https://desk.example.test/sr/login", resetUrl: "https://desk.example.test/sr/forgot-password" }],
     ["password_reset", { code: "654321" }],
-    ["password_reset", { url: "https://desk.example.test/reset-password?token=t" }],
     ["verify_email", { url: "https://desk.example.test/api/auth/verify-email?token=t", purpose: "email_change" }],
   ]);
   for (const payload of payloads) {
@@ -278,7 +278,6 @@ it("re-checks the database role assertion after a transient failure instead of c
 it("declares explicit per-path recovery rules that preserve plugin semantics", async () => {
   const { getAuth } = await import("./auth"); getAuth();
   expect(mocks.config.rateLimit.customRules).toMatchObject({
-    "/request-password-reset": { window: 60, max: 5 },
     "/email-otp/request-password-reset": { window: 60, max: 3 },
     "/email-otp/reset-password": { window: 60, max: 3 },
     "/email-otp/verify-email": { window: 60, max: 3 },
@@ -297,7 +296,6 @@ it("caps reset sends per recipient and answers a capped request as if it were se
   for (let n = 0; n < 3; n++) await expect(request("/email-otp/request-password-reset")).resolves.toBeUndefined();
   // A returned body short-circuits Better Auth, so the 4th request creates no code.
   await expect(request("/email-otp/request-password-reset")).resolves.toEqual({ success: true });
-  await expect(request("/request-password-reset")).resolves.toMatchObject({ status: true });
   expect(mocks.allowed).toHaveBeenCalledWith({ email: "owner@example.invalid", remoteIp: "203.0.113.10", scope: "password-reset" });
   mocks.allowed.mockRejectedValueOnce(new Error("offline"));
   await expect(request("/email-otp/request-password-reset")).rejects.toThrow("offline");

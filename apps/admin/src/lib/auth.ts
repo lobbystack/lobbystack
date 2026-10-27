@@ -48,9 +48,15 @@ const enabledEmailOtpPaths = new Set([
   "/email-otp/verify-email",
 ]);
 
+// Password resets go by emailed code only. Better Auth's link reset would
+// email a token for any account to whatever host asked for it, which on a
+// partner's own domain is a host the partner controls.
+const disabledResetLinkPaths = new Set(["/request-password-reset", "/forget-password", "/reset-password"]);
+
 export function isDisabledAuthEmailEndpoint(path?: string): boolean {
   if (!path) return false;
   if (path === "/send-verification-email") return true;
+  if (disabledResetLinkPaths.has(path) || path.startsWith("/reset-password/")) return true;
   return (path.startsWith("/email-otp/") || path.endsWith("/email-otp")) && !enabledEmailOtpPaths.has(path);
 }
 
@@ -243,7 +249,7 @@ async function enqueueAuthEmailOutbox(input: { userId: string; dedupeKey: string
 }
 
 async function enqueueAuthEmail(input: {
-  purpose: "verification" | "password_reset" | "email_change";
+  purpose: "verification" | "email_change";
   userId: string;
   email: string;
   url: string;
@@ -253,7 +259,7 @@ async function enqueueAuthEmail(input: {
     userId: input.userId,
     dedupeKey: `auth-email:${input.purpose}:${input.userId}:${urlHash}`,
     payload: {
-      template: input.purpose === "verification" ? "verify_email" : input.purpose === "password_reset" ? "password_reset" : "verify_email",
+      template: "verify_email",
       to: input.email,
       // An email change shares the verification template; its subject says what it confirms.
       variables: input.purpose === "email_change" ? { url: input.url, purpose: "email_change" } : { url: input.url },
@@ -425,9 +431,6 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
         verify: async ({ hash, password }: { hash: string; password: string }) => await verifyLegacyPassword(hash, password),
       },
       revokeSessionsOnPasswordReset: true,
-      sendResetPassword: async ({ user, url }: { user: { id: string; email: string }; url: string }) => {
-        await enqueueAuthEmail({ purpose: "password_reset", userId: user.id, email: user.email, url });
-      },
     },
     emailVerification: {
       sendOnSignUp: true,
@@ -488,7 +491,6 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
       customRules: {
         "/sign-in/email": { window: 60, max: 5 },
         "/sign-up/email": { window: 60, max: 3 },
-        "/request-password-reset": { window: 60, max: 5 },
         "/email-otp/request-password-reset": { window: 60, max: 3 },
         "/email-otp/reset-password": { window: 60, max: 3 },
         "/email-otp/verify-email": { window: 60, max: 3 },
@@ -511,7 +513,7 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
         if (needsMcpResource(ctx.path)) await ensureMcpResource(database.db);
         const registration = registrationWithApplicationType(ctx.path, ctx.body);
         if (registration) return { context: { body: registration } };
-        const resetRequestPaths = ["/request-password-reset", "/email-otp/request-password-reset"];
+        const resetRequestPaths = ["/email-otp/request-password-reset"];
         const recoveryPaths = [...resetRequestPaths, "/email-otp/reset-password"];
         if (recoveryPaths.includes(ctx.path) && !z.email().safeParse(ctx.body?.email).success) {
           throw new APIError("BAD_REQUEST", { message: "Invalid email address." });
@@ -525,13 +527,11 @@ function createAuth(adapterDatabase?: Parameters<typeof drizzleAdapter>[0]) {
             await assertEmailVerificationSendAllowed({ email: ctx.body.email, scope: "password-reset", ...(remoteIp ? { remoteIp } : {}) });
           } catch (error) {
             if (!(error instanceof EmailVerificationRateLimitError)) throw error;
-            // Answer as if sent, matching each endpoint's own success body.
-            return ctx.json(ctx.path === "/request-password-reset"
-              ? { status: true, message: "If this email exists in our system, check your email for the reset link" }
-              : { success: true });
+            // Answer as if sent, matching the endpoint's own success body.
+            return ctx.json({ success: true });
           }
         }
-        if (["/sign-up/email", "/email-otp/reset-password", "/reset-password", "/change-password"].includes(ctx.path)) {
+        if (["/sign-up/email", "/email-otp/reset-password", "/change-password"].includes(ctx.path)) {
           const password = ctx.body?.newPassword ?? ctx.body?.password;
           if (typeof password !== "string" || !meetsPasswordRequirements(password)) {
             throw new APIError("BAD_REQUEST", { code: "INVALID_PASSWORD", message: "Invalid password" });
