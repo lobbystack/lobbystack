@@ -167,7 +167,7 @@ test("operator authentication, workspace access, isolation, and revocation", asy
   await page.goto("/demos");
   await expect(page.getByRole("heading", { name: "Prospect demos", exact: true })).toBeVisible();
   await expect(page.getByText("Prepare a demo", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Create isolated demo", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Create demo", exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: `${prefix}-owner-a@example.invalid` }).click();
   await page.getByRole("menuitem", { name: "Sign out" }).click();
