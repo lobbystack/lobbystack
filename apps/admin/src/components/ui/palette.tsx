@@ -17,7 +17,6 @@ interface PaletteIconProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 const DASH_LENGTH = 70;
-const DRAW_DURATION = 0.45;
 const DOT_STAGGER = 0.08;
 
 const DOTS = [
@@ -31,12 +30,9 @@ const OUTLINE_VARIANTS: Variants = {
   normal: {
     strokeDashoffset: 0,
   },
+  // The outline stays drawn; only the paint dots pulse.
   animate: {
-    strokeDashoffset: [DASH_LENGTH, 0],
-    transition: {
-      duration: DRAW_DURATION,
-      ease: [0.65, 0, 0.35, 1],
-    },
+    strokeDashoffset: 0,
   },
 };
 
@@ -44,7 +40,7 @@ const DOTS_GROUP_VARIANTS: Variants = {
   normal: {},
   animate: {
     transition: {
-      delayChildren: DRAW_DURATION,
+      delayChildren: 0,
       staggerChildren: DOT_STAGGER,
     },
   },
@@ -56,16 +52,8 @@ const DOT_VARIANTS: Variants = {
     transition: { duration: 0.2 },
   },
   animate: {
-    // Two keyframes only: motion rejects 3+ keyframes on a spring.
-    // Lower damping (10) = weaker restoring force = bigger, slower overshoot
-    // before it settles — closer to the ~1.25 peak / softer landing we wanted,
-    // versus damping 14 which snapped back to 1 too quickly.
-    scale: [0, 1],
-    transition: {
-      damping: 10,
-      stiffness: 300,
-      type: "spring",
-    },
+    scale: [1, 1.6, 1],
+    transition: { duration: 0.35, ease: "easeInOut" },
   },
 };
 

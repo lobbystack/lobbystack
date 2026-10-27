@@ -14,47 +14,19 @@ interface ReceiptIconProps extends HTMLAttributes<HTMLDivElement> {
   size?: number;
 }
 
+// The dollar sign hops instead of redrawing, so the icon never goes blank.
 const DOLLAR_MAIN_VARIANTS: Variants = {
   normal: {
-    opacity: 1,
-    pathLength: 1,
-    transition: {
-      duration: 0.4,
-      opacity: { duration: 0.1 },
-    },
+    y: 0,
+    transition: { duration: 0.2 },
   },
   animate: {
-    opacity: [0, 1],
-    pathLength: [0, 1],
-    transition: {
-      duration: 0.6,
-      opacity: { duration: 0.1 },
-    },
+    y: [0, -2, 0],
+    transition: { duration: 0.4, ease: "easeInOut" },
   },
 };
 
-const DOLLAR_SECONDARY_VARIANTS: Variants = {
-  normal: {
-    opacity: 1,
-    pathLength: 1,
-    pathOffset: 0,
-    transition: {
-      delay: 0.3,
-      duration: 0.3,
-      opacity: { duration: 0.1, delay: 0.3 },
-    },
-  },
-  animate: {
-    opacity: [0, 1],
-    pathLength: [0, 1],
-    pathOffset: [1, 0],
-    transition: {
-      delay: 0.5,
-      duration: 0.4,
-      opacity: { duration: 0.1, delay: 0.5 },
-    },
-  },
-};
+const DOLLAR_SECONDARY_VARIANTS = DOLLAR_MAIN_VARIANTS;
 
 const ReceiptIcon = forwardRef<ReceiptIconHandle, ReceiptIconProps>(
   ({ onMouseEnter, onMouseLeave, className, size = 28, ...props }, ref) => {

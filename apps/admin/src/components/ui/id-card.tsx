@@ -22,8 +22,8 @@ const PERSON_VARIANTS: Variants = {
 };
 
 const LINE_VARIANTS: Variants = {
-  normal: { pathLength: 1, opacity: 1, transition: { duration: 0.2 } },
-  animate: (index: number) => ({ pathLength: [0, 1], opacity: [0, 1], transition: { delay: 0.1 + index * 0.12, duration: 0.3, ease: "easeOut" } }),
+  normal: { x: 0, transition: { duration: 0.2 } },
+  animate: (index: number) => ({ x: [0, 1.5, 0], transition: { delay: 0.1 + index * 0.12, duration: 0.3, ease: "easeOut" } }),
 };
 
 const IdCardIcon = forwardRef<IdCardIconHandle, IdCardIconProps>(

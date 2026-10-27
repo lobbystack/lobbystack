@@ -77,14 +77,10 @@ const LayoutPanelTopIcon = forwardRef<
           initial="normal"
           rx="1"
           variants={{
-            normal: { opacity: 1, translateY: 0 },
+            normal: { translateY: 0 },
             animate: {
-              opacity: [0, 1],
-              translateY: [-5, 0],
-              transition: {
-                opacity: { duration: 0.5, times: [0.2, 1] },
-                duration: 0.5,
-              },
+              translateY: [0, -2, 0],
+              transition: { duration: 0.4, ease: "easeInOut" },
             },
           }}
           width="18"
@@ -97,15 +93,10 @@ const LayoutPanelTopIcon = forwardRef<
           initial="normal"
           rx="1"
           variants={{
-            normal: { opacity: 1, translateX: 0 },
+            normal: { translateX: 0 },
             animate: {
-              opacity: [0, 1],
-              translateX: [-10, 0],
-              transition: {
-                opacity: { duration: 0.7, times: [0.5, 1] },
-                translateX: { delay: 0.3 },
-                duration: 0.5,
-              },
+              translateX: [0, -2, 0],
+              transition: { delay: 0.15, duration: 0.4, ease: "easeInOut" },
             },
           }}
           width="7"
@@ -118,15 +109,10 @@ const LayoutPanelTopIcon = forwardRef<
           initial="normal"
           rx="1"
           variants={{
-            normal: { opacity: 1, translateX: 0 },
+            normal: { translateX: 0 },
             animate: {
-              opacity: [0, 1],
-              translateX: [10, 0],
-              transition: {
-                opacity: { duration: 0.8, times: [0.5, 1] },
-                translateX: { delay: 0.4 },
-                duration: 0.5,
-              },
+              translateX: [0, 2, 0],
+              transition: { delay: 0.15, duration: 0.4, ease: "easeInOut" },
             },
           }}
           width="7"

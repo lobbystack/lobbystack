@@ -16,22 +16,15 @@ interface BoxIconProps extends HTMLAttributes<HTMLDivElement> {
   size?: number;
 }
 
+// The box hops instead of redrawing, so it never leaves the sidebar empty.
 const PATH_VARIANTS: Variants = {
   normal: {
-    opacity: 1,
-    pathLength: 1,
-    transition: {
-      duration: 0.3,
-      opacity: { duration: 0.1 },
-    },
+    y: 0,
+    transition: { duration: 0.2 },
   },
   animate: {
-    opacity: [0, 1],
-    pathLength: [0, 1],
-    transition: {
-      duration: 0.4,
-      opacity: { duration: 0.1 },
-    },
+    y: [0, -2.5, 0],
+    transition: { duration: 0.4, ease: "easeInOut" },
   },
 };
 
