@@ -596,11 +596,11 @@ details[open] > .mobile-menu-sheet {
 }
 
 .changelog-copy h2 {
-  @apply mt-12 font-heading text-2xl leading-tight font-semibold tracking-tight text-foreground md:text-3xl;
+  @apply mt-12 font-heading text-2xl leading-[1.2] font-medium tracking-[-0.03em] text-foreground md:text-[1.75rem];
 }
 
 .changelog-copy h3 {
-  @apply mt-10 font-heading text-xl leading-tight font-semibold tracking-tight text-foreground md:text-2xl;
+  @apply mt-10 font-heading text-xl leading-[1.3] font-medium tracking-[-0.02em] text-foreground md:text-2xl;
 }
 
 .changelog-copy p {
@@ -608,7 +608,7 @@ details[open] > .mobile-menu-sheet {
 }
 
 .changelog-copy a {
-  @apply font-medium text-foreground underline underline-offset-4 transition-colors hover:text-primary;
+  @apply font-medium text-foreground underline decoration-foreground/30 underline-offset-4 transition-colors hover:decoration-foreground;
 }
 
 .changelog-copy strong {
@@ -633,11 +633,11 @@ details[open] > .mobile-menu-sheet {
 }
 
 .changelog-copy blockquote {
-  @apply max-w-3xl rounded-2xl border border-border/70 bg-muted/30 px-6 py-5 text-xl leading-9 font-medium text-foreground italic;
+  @apply max-w-3xl rounded-2xl bg-beige px-6 py-5 text-xl leading-9 font-medium text-foreground italic;
 }
 
 .changelog-copy hr {
-  @apply my-12 border-border;
+  @apply my-12 border-border/60;
 }
 
 /* Voice demo particle animations */
