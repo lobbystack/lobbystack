@@ -31,11 +31,13 @@ type PlanCardsProps = {
   cards: PlanCard[]
   labels: { monthly: string; annual: string; save: string; billingLabel: string }
   defaultInterval?: BillingInterval
+  /** h2 when the cards sit right under the page's h1, as on the pricing page. */
+  headingLevel?: "h2" | "h3"
   className?: string
 }
 
 /** Plan cards under a Monthly / Annual switch, as on the pricing page. */
-export function PlanCards({ cards, labels, defaultInterval = "annual", className }: PlanCardsProps) {
+export function PlanCards({ cards, labels, defaultInterval = "annual", headingLevel: Heading = "h3", className }: PlanCardsProps) {
   const [interval, setInterval] = useState<BillingInterval>(defaultInterval)
   const withDescriptions = cards.some((card) => card.description)
   return (
@@ -54,7 +56,7 @@ export function PlanCards({ cards, labels, defaultInterval = "annual", className
                 card.highlighted ? "border-primary bg-background ring-1 ring-primary" : "border-border/60 bg-beige"
               )}
             >
-              <h3 className="text-xl font-medium tracking-[-0.02em]">{card.name}</h3>
+              <Heading className="text-xl font-medium tracking-[-0.02em]">{card.name}</Heading>
               {withDescriptions && (
                 <p className="mt-3 text-base leading-6 text-muted-foreground md:min-h-[4.5rem]">{card.description}</p>
               )}

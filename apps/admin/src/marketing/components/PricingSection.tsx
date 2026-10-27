@@ -60,7 +60,12 @@ export function PricingSection({ locale = "en" }: { locale?: Locale }) {
           <SectionTitle as="h1" centered eyebrow={eyebrow(locale, "pricing.hero")} intro={copy.intro} className="max-w-[44rem]">
             {copy.heading}
           </SectionTitle>
-          <PlanCards className="mt-8" cards={pricingPlanCards(locale, "pricing_plan")} labels={billingSwitchLabels(locale)} />
+          <PlanCards
+            className="mt-8"
+            headingLevel="h2"
+            cards={pricingPlanCards(locale, "pricing_plan")}
+            labels={billingSwitchLabels(locale)}
+          />
         </div>
       </section>
 
