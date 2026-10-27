@@ -85,7 +85,7 @@ const en: SelfHostedSupportCopy = {
     breadcrumb: "Self-hosted",
     heading: "Every feature, on your own servers",
     intro:
-      "The Complete edition is free under the MIT license and includes everything LobbyStack does. Premium and Enterprise support add answers from our team by email or Slack, help with each upgrade, and priority for your feature requests.",
+      "Deploy LobbyStack on your own infrastructure. Keep your calls and customer data under your control, with every feature free and support when you need it.",
     cloudPrompt: "Looking for cloud plans?",
     cloudLink: "See cloud pricing",
     clientsPrompt: "Running LobbyStack for clients?",
@@ -267,7 +267,7 @@ const fr: SelfHostedSupportCopy = {
     breadcrumb: "Auto-hébergé",
     heading: "Toutes les fonctionnalités, sur vos propres serveurs",
     intro:
-      "L'Édition complète est gratuite sous licence MIT et fait tout ce que fait LobbyStack. Avec le Support Premium ou le Support Enterprise, notre équipe vous répond par courriel ou sur Slack, vous aide à chaque mise à jour et traite vos demandes de fonctionnalités en priorité.",
+      "Déployez LobbyStack sur votre propre infrastructure. Gardez le contrôle de vos appels et des données de vos clients, avec toutes les fonctionnalités gratuites et de l'aide quand vous en avez besoin.",
     cloudPrompt: "Vous cherchez les forfaits LobbyStack Cloud ?",
     cloudLink: "Voir les tarifs Cloud",
     clientsPrompt: "Vous faites tourner LobbyStack pour des clients ?",
@@ -449,7 +449,7 @@ const es: SelfHostedSupportCopy = {
     breadcrumb: "Autoalojado",
     heading: "Todas las funciones, en sus propios servidores",
     intro:
-      "La Edición completa es gratuita con licencia MIT y hace todo lo que hace LobbyStack. Con el Soporte Premium o el Soporte Enterprise, nuestro equipo le responde por correo o Slack, le ayuda en cada actualización y da prioridad a sus solicitudes de funciones.",
+      "Implemente LobbyStack en su propia infraestructura. Mantenga el control de sus llamadas y de los datos de sus clientes, con todas las funciones gratis y ayuda cuando la necesite.",
     cloudPrompt: "¿Busca planes en la nube?",
     cloudLink: "Ver precios en la nube",
     clientsPrompt: "¿Ejecuta LobbyStack para sus clientes?",
@@ -631,7 +631,7 @@ const sr: SelfHostedSupportCopy = {
     breadcrumb: "Samostalno hostovanje",
     heading: "Sve funkcije, na Vašim serverima",
     intro:
-      "Kompletno izdanje je besplatno pod MIT licencom i radi sve što radi LobbyStack. Uz Premium ili Enterprise podršku, naš tim Vam odgovara putem e-pošte ili na Slacku, pomaže pri svakom ažuriranju i daje prioritet Vašim zahtevima za nove funkcije.",
+      "Postavite LobbyStack na sopstvenu infrastrukturu. Zadržite kontrolu nad pozivima i podacima svojih klijenata, uz sve funkcije besplatno i podršku kada Vam zatreba.",
     cloudPrompt: "Tražite cloud pakete?",
     cloudLink: "Pogledajte cloud cene",
     clientsPrompt: "Pokrećete LobbyStack za klijente?",
