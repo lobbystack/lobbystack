@@ -1,7 +1,7 @@
 import { and, asc, count, desc, eq, gt, ilike, inArray, isNull, ne, or, type SQL } from "drizzle-orm";
 import { DateTime } from "luxon";
 
-import { businesses, businessHours, closures, enqueueOutbox, services, staff, staffServiceAssignments, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { businesses, businessHours, closures, enqueueOutbox, inOrder, services, staff, staffServiceAssignments, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import type { HoursWindow } from "@lobbystack/shared";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
@@ -112,9 +112,9 @@ async function businessTimezone(tx: DatabaseTransaction, businessId: string): Pr
 
 /** Each staff member's own hours, when they have them, and the time off that hasn't ended, in day order. */
 export async function loadStaffSchedules(tx: DatabaseTransaction, input: { businessId: string; staffIds: string[]; timezone: string; now?: Date }) {
-  const [hourRows, timeOffRows] = input.staffIds.length ? await Promise.all([
-    tx.select().from(businessHours).where(and(eq(businessHours.businessId, input.businessId), inArray(businessHours.staffId, input.staffIds))).orderBy(asc(businessHours.dayOfWeek), asc(businessHours.openMinutes)),
-    tx.select().from(closures).where(and(eq(closures.businessId, input.businessId), inArray(closures.staffId, input.staffIds), gt(closures.endsAt, input.now ?? new Date()))).orderBy(asc(closures.startsAt)),
+  const [hourRows, timeOffRows] = input.staffIds.length ? await inOrder([
+    () => tx.select().from(businessHours).where(and(eq(businessHours.businessId, input.businessId), inArray(businessHours.staffId, input.staffIds))).orderBy(asc(businessHours.dayOfWeek), asc(businessHours.openMinutes)),
+    () => tx.select().from(closures).where(and(eq(closures.businessId, input.businessId), inArray(closures.staffId, input.staffIds), gt(closures.endsAt, input.now ?? new Date()))).orderBy(asc(closures.startsAt)),
   ]) : [[], []];
   return new Map(input.staffIds.map((staffId) => {
     const hours = hourRows.filter((row) => row.staffId === staffId).map((row) => ({ dayOfWeek: row.dayOfWeek, openMinutes: row.openMinutes, closeMinutes: row.closeMinutes }));
@@ -132,19 +132,19 @@ export async function listEmployees(
     const offset = Math.max(Math.trunc(input.offset ?? 0), 0);
     const search = input.search?.trim();
     const filter = activeEmployees(input.businessId, ...(search ? [or(ilike(staff.name, `%${search}%`), ilike(staff.transferNumber, `%${search.replace(/[\s()-]/g, "")}%`))!] : []));
-    const [rows, total, serviceRows, timezone] = await Promise.all([
-      tx.select(employeeColumns)
+    const [rows, total, serviceRows, timezone] = await inOrder([
+      () => tx.select(employeeColumns)
         .from(staff).where(filter).orderBy(desc(staff.createdAt), asc(staff.id)).limit(limit + 1).offset(offset),
-      tx.select({ count: count() }).from(staff).where(filter),
-      tx.select({ id: services.id, name: services.name }).from(services).where(and(eq(services.businessId, input.businessId), isNull(services.deletedAt))).orderBy(asc(services.name), asc(services.id)),
-      businessTimezone(tx, input.businessId),
+      () => tx.select({ count: count() }).from(staff).where(filter),
+      () => tx.select({ id: services.id, name: services.name }).from(services).where(and(eq(services.businessId, input.businessId), isNull(services.deletedAt))).orderBy(asc(services.name), asc(services.id)),
+      () => businessTimezone(tx, input.businessId),
     ]);
     const today = businessToday(timezone);
     const page = rows.slice(0, limit);
     const ids = page.map((row) => row.id);
-    const [assignments, schedules] = await Promise.all([
-      ids.length ? tx.select({ staffId: staffServiceAssignments.staffId, serviceId: staffServiceAssignments.serviceId }).from(staffServiceAssignments).where(and(eq(staffServiceAssignments.businessId, input.businessId), inArray(staffServiceAssignments.staffId, ids))) : [],
-      loadStaffSchedules(tx, { businessId: input.businessId, staffIds: ids, timezone }),
+    const [assignments, schedules] = await inOrder([
+      () => ids.length ? tx.select({ staffId: staffServiceAssignments.staffId, serviceId: staffServiceAssignments.serviceId }).from(staffServiceAssignments).where(and(eq(staffServiceAssignments.businessId, input.businessId), inArray(staffServiceAssignments.staffId, ids))) : [],
+      () => loadStaffSchedules(tx, { businessId: input.businessId, staffIds: ids, timezone }),
     ]);
     const order = new Map(serviceRows.map((service, index) => [service.id, index]));
     const employees = page.map((row) => {
@@ -240,13 +240,13 @@ export async function resolveEmployee(context: DomainContext, input: { businessI
     const matches = exact.length || !wanted ? exact : rows.filter((row) => row.name.toLowerCase().includes(wanted));
     if (matches.length !== 1) return { ok: false as const, employees: rows.map((row) => row.name) };
     const match = matches[0]!;
-    const [assigned, timezone, trialPhone] = await Promise.all([
-      tx.select({ name: services.name }).from(staffServiceAssignments)
+    const [assigned, timezone, trialPhone] = await inOrder([
+      () => tx.select({ name: services.name }).from(staffServiceAssignments)
         .innerJoin(services, eq(services.id, staffServiceAssignments.serviceId))
         .where(and(eq(staffServiceAssignments.businessId, input.businessId), eq(staffServiceAssignments.staffId, match.staffId), eq(services.active, true), isNull(services.deletedAt)))
         .orderBy(asc(services.name)),
-      businessTimezone(tx, input.businessId),
-      trialTransferNumberInTransaction(tx, { businessId: input.businessId }),
+      () => businessTimezone(tx, input.businessId),
+      () => trialTransferNumberInTransaction(tx, { businessId: input.businessId }),
     ]);
     const { timeOff } = (await loadStaffSchedules(tx, { businessId: input.businessId, staffIds: [match.staffId], timezone })).get(match.staffId)!;
     const phone = trialPhone && match.phone !== trialPhone ? null : match.phone;

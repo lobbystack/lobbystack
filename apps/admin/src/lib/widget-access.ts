@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
-import { businesses, widgetKeys, withBusinessTransaction } from "@lobbystack/db";
+import { businesses, inOrder, widgetKeys, withBusinessTransaction } from "@lobbystack/db";
 import { bearerToken } from "@lobbystack/domain";
 import { normalizeRuntimeLocale, type RuntimeLocale, type WidgetConfig, type WidgetKeyConfig } from "@lobbystack/shared";
 
@@ -27,9 +27,9 @@ export type WidgetAccessResult = WidgetAccessSuccess | WidgetAccessFailure;
 
 async function loadWidgetSession(businessId: string, widgetKeyId: string) {
   return await withBusinessTransaction(getWorkerDatabase().db, { businessId, actorType: "worker" }, async (tx) => {
-    const [keyRow, business] = await Promise.all([
-      tx.select().from(widgetKeys).where(and(eq(widgetKeys.id, widgetKeyId), eq(widgetKeys.businessId, businessId))).limit(1).then((rows) => rows[0]),
-      tx.select({ name: businesses.name, slug: businesses.slug, defaultLocale: businesses.defaultLocale }).from(businesses).where(eq(businesses.id, businessId)).limit(1).then((rows) => rows[0]),
+    const [keyRow, business] = await inOrder([
+      () => tx.select().from(widgetKeys).where(and(eq(widgetKeys.id, widgetKeyId), eq(widgetKeys.businessId, businessId))).limit(1).then((rows) => rows[0]),
+      () => tx.select({ name: businesses.name, slug: businesses.slug, defaultLocale: businesses.defaultLocale }).from(businesses).where(eq(businesses.id, businessId)).limit(1).then((rows) => rows[0]),
     ]);
     if (!keyRow) return null;
     const key = serializeWidgetKeyConfig(keyRow as unknown as Parameters<typeof serializeWidgetKeyConfig>[0]);

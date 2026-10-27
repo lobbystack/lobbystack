@@ -1,6 +1,6 @@
 import { and, asc, count, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm";
 
-import { appointments, calls, contacts, conversations, enqueueOutbox, messages, services, staff, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { appointments, calls, contacts, conversations, enqueueOutbox, inOrder, messages, services, staff, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
 import { contactPasscodeStatusInTransaction } from "./contactPasscodes";
@@ -66,8 +66,8 @@ export async function listContacts(
       (select max("activity_messages"."created_at") from "messages" as "activity_messages" where "activity_messages"."business_id" = ${input.businessId} and "activity_messages"."conversation_id" in ${contactConversationIds}),
       (select max("activity_appointments"."starts_at") from "appointments" as "activity_appointments" where "activity_appointments"."contact_id" = "contacts"."id" and "activity_appointments"."business_id" = ${input.businessId} and "activity_appointments"."starts_at" <= now())
     )`;
-    const [rows, total] = await Promise.all([
-      tx.select({
+    const [rows, total] = await inOrder([
+      () => tx.select({
         id: contacts.id,
         name: contacts.name,
         phone: contacts.phone,
@@ -86,7 +86,7 @@ export async function listContacts(
         appointmentCount: sql<number>`(select count(*) from "appointments" as "contact_appointments" where "contact_appointments"."contact_id" = "contacts"."id" and "contact_appointments"."business_id" = ${input.businessId})`,
         channels: contactChannelsSql(input.businessId),
       }).from(contacts).where(filter).orderBy(desc(lastInteractionAt), asc(contacts.id)).limit(limit + 1).offset(offset),
-      tx.select({ count: count() }).from(contacts).where(filter),
+      () => tx.select({ count: count() }).from(contacts).where(filter),
     ]);
     return { contacts: rows.slice(0, limit), pagination: { limit, offset, total: Number(total[0]?.count ?? 0), hasNext: rows.length > limit } };
   });
@@ -103,16 +103,16 @@ export async function getContactDetail(
     const { contact, channels } = found;
     const contactConversationIds = contactConversationIdsSql(input.businessId, sql`${input.contactId}::uuid`);
     const contactMessages = and(eq(messages.businessId, input.businessId), sql`${messages.conversationId} in ${contactConversationIds}`);
-    const [recentCalls, recentMessages, recentAppointments, callCount, messageCount, appointmentCount, conversationCount, passcode] = await Promise.all([
-      tx.select({ id: calls.id, status: calls.status, disposition: calls.disposition, transport: calls.transport, startedAt: calls.startedAt, endedAt: calls.endedAt, providerDurationSeconds: calls.providerDurationSeconds }).from(calls).where(and(eq(calls.businessId, input.businessId), eq(calls.contactId, input.contactId))).orderBy(desc(calls.startedAt)).limit(25),
-      tx.select({ id: messages.id, conversationId: messages.conversationId, direction: messages.direction, channel: messages.channel, body: messages.body, status: messages.status, createdAt: messages.createdAt }).from(messages).where(contactMessages).orderBy(desc(messages.createdAt)).limit(50),
-      tx.select({ id: appointments.id, startsAt: appointments.startsAt, endsAt: appointments.endsAt, timezone: appointments.timezone, status: appointments.status, sourceChannel: appointments.sourceChannel, calendarSyncState: appointments.calendarSyncState, serviceName: services.name, staffName: staff.name }).from(appointments).innerJoin(services, and(eq(services.id, appointments.serviceId), eq(services.businessId, input.businessId))).innerJoin(staff, and(eq(staff.id, appointments.staffId), eq(staff.businessId, input.businessId))).where(and(eq(appointments.businessId, input.businessId), eq(appointments.contactId, input.contactId))).orderBy(desc(appointments.startsAt)).limit(25),
-      tx.select({ count: count() }).from(calls).where(and(eq(calls.businessId, input.businessId), eq(calls.contactId, input.contactId))),
-      tx.select({ count: count() }).from(messages).where(contactMessages),
-      tx.select({ count: count() }).from(appointments).where(and(eq(appointments.businessId, input.businessId), eq(appointments.contactId, input.contactId))),
-      tx.select({ count: count() }).from(conversations).where(and(eq(conversations.businessId, input.businessId), sql`${conversations.id} in ${contactConversationIds}`)),
+    const [recentCalls, recentMessages, recentAppointments, callCount, messageCount, appointmentCount, conversationCount, passcode] = await inOrder([
+      () => tx.select({ id: calls.id, status: calls.status, disposition: calls.disposition, transport: calls.transport, startedAt: calls.startedAt, endedAt: calls.endedAt, providerDurationSeconds: calls.providerDurationSeconds }).from(calls).where(and(eq(calls.businessId, input.businessId), eq(calls.contactId, input.contactId))).orderBy(desc(calls.startedAt)).limit(25),
+      () => tx.select({ id: messages.id, conversationId: messages.conversationId, direction: messages.direction, channel: messages.channel, body: messages.body, status: messages.status, createdAt: messages.createdAt }).from(messages).where(contactMessages).orderBy(desc(messages.createdAt)).limit(50),
+      () => tx.select({ id: appointments.id, startsAt: appointments.startsAt, endsAt: appointments.endsAt, timezone: appointments.timezone, status: appointments.status, sourceChannel: appointments.sourceChannel, calendarSyncState: appointments.calendarSyncState, serviceName: services.name, staffName: staff.name }).from(appointments).innerJoin(services, and(eq(services.id, appointments.serviceId), eq(services.businessId, input.businessId))).innerJoin(staff, and(eq(staff.id, appointments.staffId), eq(staff.businessId, input.businessId))).where(and(eq(appointments.businessId, input.businessId), eq(appointments.contactId, input.contactId))).orderBy(desc(appointments.startsAt)).limit(25),
+      () => tx.select({ count: count() }).from(calls).where(and(eq(calls.businessId, input.businessId), eq(calls.contactId, input.contactId))),
+      () => tx.select({ count: count() }).from(messages).where(contactMessages),
+      () => tx.select({ count: count() }).from(appointments).where(and(eq(appointments.businessId, input.businessId), eq(appointments.contactId, input.contactId))),
+      () => tx.select({ count: count() }).from(conversations).where(and(eq(conversations.businessId, input.businessId), sql`${conversations.id} in ${contactConversationIds}`)),
       // Whether the contact has a keypad PIN, never the PIN or its hash.
-      contactPasscodeStatusInTransaction(tx, { businessId: input.businessId, contactId: input.contactId }),
+      () => contactPasscodeStatusInTransaction(tx, { businessId: input.businessId, contactId: input.contactId }),
     ]);
     return { contact, channels, passcode, calls: recentCalls, messages: recentMessages, appointments: recentAppointments, activityCounts: { calls: Number(callCount[0]?.count ?? 0), messages: Number(messageCount[0]?.count ?? 0), appointments: Number(appointmentCount[0]?.count ?? 0), conversations: Number(conversationCount[0]?.count ?? 0) } };
   });
@@ -127,12 +127,12 @@ export async function deleteContact(
     await requireBusinessAdmin(tx, input);
     const contact = (await tx.select({ id: contacts.id }).from(contacts).where(and(eq(contacts.id, input.contactId), eq(contacts.businessId, input.businessId))).limit(1).for("update"))[0];
     if (!contact) return false;
-    const [linkedCalls, linkedConversations, linkedAppointments] = await Promise.all([
-      tx.select({ id: calls.id }).from(calls).where(and(eq(calls.businessId, input.businessId), eq(calls.contactId, input.contactId))).limit(1),
+    const [linkedCalls, linkedConversations, linkedAppointments] = await inOrder([
+      () => tx.select({ id: calls.id }).from(calls).where(and(eq(calls.businessId, input.businessId), eq(calls.contactId, input.contactId))).limit(1),
       // Also count chats from the contact's widget visitors, so a chat that is not
       // attributed yet keeps the contact, and its visitor link, in place.
-      tx.select({ id: conversations.id }).from(conversations).where(and(eq(conversations.businessId, input.businessId), or(eq(conversations.contactId, input.contactId), sql`${conversations.widgetVisitorId} in (select "linked_visitors"."id" from "widget_visitors" as "linked_visitors" where "linked_visitors"."business_id" = ${input.businessId} and "linked_visitors"."contact_id" = ${input.contactId})`))).limit(1),
-      tx.select({ id: appointments.id }).from(appointments).where(and(eq(appointments.businessId, input.businessId), eq(appointments.contactId, input.contactId))).limit(1),
+      () => tx.select({ id: conversations.id }).from(conversations).where(and(eq(conversations.businessId, input.businessId), or(eq(conversations.contactId, input.contactId), sql`${conversations.widgetVisitorId} in (select "linked_visitors"."id" from "widget_visitors" as "linked_visitors" where "linked_visitors"."business_id" = ${input.businessId} and "linked_visitors"."contact_id" = ${input.contactId})`))).limit(1),
+      () => tx.select({ id: appointments.id }).from(appointments).where(and(eq(appointments.businessId, input.businessId), eq(appointments.contactId, input.contactId))).limit(1),
     ]);
     if (linkedCalls.length || linkedConversations.length || linkedAppointments.length) {
       throw Object.assign(new Error("This contact can't be deleted because it still has linked conversations or appointments."), { status: 409 });

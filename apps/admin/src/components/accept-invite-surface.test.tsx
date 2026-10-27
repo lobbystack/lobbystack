@@ -52,7 +52,9 @@ it("settles a failed preview into the original invalid-link state", async () => 
   }));
   render(<AcceptInviteSurface />);
   await screen.findByText("acceptInvite.invalidLink");
-  expect((await screen.findByRole("button", { name: "acceptInvite.submit" })).hasAttribute("disabled")).toBe(true);
+  // A link that can't be accepted offers no button, only the way back.
+  expect(screen.queryByRole("button", { name: "acceptInvite.submit" })).toBeNull();
+  expect(screen.getByRole("link", { name: "acceptInvite.backToSettings" })).toBeTruthy();
 });
 
 it("explains a 403 and lets the user sign in with the invited account", async () => {

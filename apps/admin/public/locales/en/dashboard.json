@@ -123,7 +123,7 @@
       "titleWithContact": "{{message}} for {{name}}",
       "urgent": "Urgent",
       "emptyTitle": "No action required",
-      "emptyDescription": "Things that require manuel action will appear here.",
+      "emptyDescription": "Things that need your action will appear here.",
       "fields": {
         "callback": "Callback",
         "callbackWindow": "Preferred callback"

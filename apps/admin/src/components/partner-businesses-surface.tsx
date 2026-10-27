@@ -335,7 +335,8 @@ export function PartnerBusinessesSurface() {
   const createDialog = canCreate ? (
     <Dialog onOpenChange={(next) => { setOpen(next); if (!next) reset(); }} open={open}>
       <DialogTrigger render={<Button disabled={businesses.isLoading} size="sm" />}>{t("businesses.create.action")}</DialogTrigger>
-      <DialogContent>
+      {/* With templates and packages the form runs taller than a laptop screen, so it scrolls inside the window. */}
+      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto">
         <form className="flex flex-col gap-6" onSubmit={(event) => { event.preventDefault(); if (!create.isPending && name.trim() && ownerEmail.trim()) { setError(null); create.mutate(); } }}>
           <DialogHeader>
             <DialogTitle>{t("businesses.create.title")}</DialogTitle>
@@ -463,7 +464,8 @@ export function PartnerBusinessesSurface() {
                     </TableCell>
                     <TableCell className="px-6 py-5"><Badge variant="secondary">{t(`businesses.access.${business.accessLevel}`)}</Badge></TableCell>
                     {canCreate ? (
-                      <TableCell className="px-6 py-5 whitespace-normal [overflow-wrap:anywhere]">
+                      // Words wrap whole here: breaking anywhere split "yourself" across lines on a narrow table.
+                      <TableCell className="min-w-40 px-6 py-5 whitespace-normal break-words">
                         <div className="flex flex-col gap-1">
                           <div className="flex flex-wrap items-center gap-2">
                             {business.billing?.kind === "package" ? <>

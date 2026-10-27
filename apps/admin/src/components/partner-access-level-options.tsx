@@ -15,11 +15,11 @@ const ACCESS_LEVELS: PartnerAccessLevel[] = ["full", "activity"];
 export function AccessLevelOptions({ value, onChange }: { value: PartnerAccessLevel; onChange: (level: PartnerAccessLevel) => void }) {
   const { t } = useTranslation("partner");
   return (
-    <div className="flex flex-col gap-3" role="radiogroup">
+    <div aria-label={t("businesses.create.accessLabel")} className="flex flex-col gap-3" role="radiogroup">
       {ACCESS_LEVELS.map((level) => {
         const selected = value === level;
         return (
-          <button aria-checked={selected} className="flex w-full items-start gap-3 py-1 text-left" key={level} onClick={() => onChange(level)} role="radio" type="button">
+          <button aria-checked={selected} aria-label={t(`businesses.access.${level}`)} className="flex w-full items-start gap-3 py-1 text-left" key={level} onClick={() => onChange(level)} role="radio" type="button">
             <span className={cn("mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border", selected ? "border-foreground" : "border-muted-foreground")}>{selected ? <span className="size-2 rounded-full bg-foreground" /> : null}</span>
             <span className="flex min-w-0 flex-col gap-1">
               <span className="text-sm font-medium">{t(`businesses.access.${level}`)}</span>

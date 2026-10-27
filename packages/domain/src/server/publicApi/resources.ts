@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, ne, not, notInArray, or, sql, type SQL } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 
-import { agentRules, appointments, businessHours, businesses, calls, contactPasscodes, contacts, conversations, conversationSessions, inboxItems, knowledgeDocuments, knowledgeSnippets, onboardingNumberClaimEvents, phoneNumbers, receptionistProfiles, services, staff, staffServiceAssignments, storageObjects, transcripts, webhookEndpoints, websiteIngestionJobs, type DatabaseTransaction } from "@lobbystack/db";
+import { agentRules, appointments, businesses, businessHours, calls, contactPasscodes, contacts, conversations, conversationSessions, inboxItems, inOrder, knowledgeDocuments, knowledgeSnippets, onboardingNumberClaimEvents, phoneNumbers, receptionistProfiles, services, staff, staffServiceAssignments, storageObjects, transcripts, webhookEndpoints, websiteIngestionJobs, type DatabaseTransaction } from "@lobbystack/db";
 import {
   PUBLIC_API_DEFAULT_PAGE_SIZE,
   PUBLIC_API_MAX_PAGE_SIZE,
@@ -165,10 +165,10 @@ export async function loadServiceResource(tx: DatabaseTransaction, businessId: s
 // assignments as open only to them.
 
 export async function listStaffResources(tx: DatabaseTransaction, businessId: string): Promise<ApiStaff[]> {
-  const [members, activeServices, assignments] = await Promise.all([
-    tx.select().from(staff).where(eq(staff.businessId, businessId)).orderBy(asc(staff.name), asc(staff.id)),
-    tx.select({ id: services.id }).from(services).where(and(eq(services.businessId, businessId), eq(services.active, true))).orderBy(asc(services.name), asc(services.id)),
-    tx.select({ staffId: staffServiceAssignments.staffId, serviceId: staffServiceAssignments.serviceId }).from(staffServiceAssignments).where(eq(staffServiceAssignments.businessId, businessId)),
+  const [members, activeServices, assignments] = await inOrder([
+    () => tx.select().from(staff).where(eq(staff.businessId, businessId)).orderBy(asc(staff.name), asc(staff.id)),
+    () => tx.select({ id: services.id }).from(services).where(and(eq(services.businessId, businessId), eq(services.active, true))).orderBy(asc(services.name), asc(services.id)),
+    () => tx.select({ staffId: staffServiceAssignments.staffId, serviceId: staffServiceAssignments.serviceId }).from(staffServiceAssignments).where(eq(staffServiceAssignments.businessId, businessId)),
   ]);
   const assigned = new Map<string, Set<string>>();
   for (const row of assignments) {

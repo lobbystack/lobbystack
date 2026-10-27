@@ -1,6 +1,6 @@
 import { and, count, asc, desc, eq, ilike, isNull, or, sql } from "drizzle-orm";
 
-import { appointments, billingUsageEvents, calls, contacts, conversations, conversationSessions, enqueueOutbox, inboxItems, services, staff, storageObjects, transcripts, withBusinessTransaction, type DatabaseTransaction, type NewOutboxMessage } from "@lobbystack/db";
+import { appointments, billingUsageEvents, calls, contacts, conversations, conversationSessions, enqueueOutbox, inboxItems, inOrder, services, staff, storageObjects, transcripts, withBusinessTransaction, type DatabaseTransaction, type NewOutboxMessage } from "@lobbystack/db";
 import { billableVoiceSeconds, isNonBillableCallDisposition } from "@lobbystack/shared";
 import { getPostHogDistinctIdForBusinessSystem, type TelemetryEventName, type TelemetryProperties } from "@lobbystack/telemetry";
 
@@ -547,12 +547,12 @@ export async function getCallDetail(
       .limit(1))[0];
     if (!row) return null;
 
-    const [transcript, appointmentRows, followUpTasks] = await Promise.all([
-      tx.select({ id: transcripts.id, sequence: transcripts.sequence, speaker: transcripts.speaker, text: transcripts.text, confidence: transcripts.confidence, final: transcripts.final, createdAt: transcripts.createdAt }).from(transcripts).where(and(eq(transcripts.callId, input.callId), eq(transcripts.businessId, input.businessId))).orderBy(asc(transcripts.sequence)),
-      row.contactId
+    const [transcript, appointmentRows, followUpTasks] = await inOrder([
+      () => tx.select({ id: transcripts.id, sequence: transcripts.sequence, speaker: transcripts.speaker, text: transcripts.text, confidence: transcripts.confidence, final: transcripts.final, createdAt: transcripts.createdAt }).from(transcripts).where(and(eq(transcripts.callId, input.callId), eq(transcripts.businessId, input.businessId))).orderBy(asc(transcripts.sequence)),
+      () => row.contactId
         ? tx.select({ id: appointments.id, startsAt: appointments.startsAt, endsAt: appointments.endsAt, timezone: appointments.timezone, status: appointments.status, serviceName: services.name, staffName: staff.name }).from(appointments).innerJoin(services, eq(appointments.serviceId, services.id)).innerJoin(staff, eq(appointments.staffId, staff.id)).where(and(eq(appointments.businessId, input.businessId), eq(appointments.contactId, row.contactId))).orderBy(asc(appointments.startsAt))
         : Promise.resolve([]),
-      tx.select({ id: inboxItems.id, title: visibleFollowUpTitle, body: visibleFollowUpBody, status: inboxItems.status, request: followUpRequest, createdAt: inboxItems.createdAt, updatedAt: inboxItems.updatedAt })
+      () => tx.select({ id: inboxItems.id, title: visibleFollowUpTitle, body: visibleFollowUpBody, status: inboxItems.status, request: followUpRequest, createdAt: inboxItems.createdAt, updatedAt: inboxItems.updatedAt })
         .from(inboxItems)
         .where(and(eq(inboxItems.businessId, input.businessId), eq(inboxItems.relatedCallId, input.callId), eq(inboxItems.kind, "voice_message")))
         .orderBy(desc(inboxItems.createdAt)),

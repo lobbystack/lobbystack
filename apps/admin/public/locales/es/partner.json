@@ -83,7 +83,7 @@
     "empty": {
       "title": "Aún no hay negocios",
       "description": "Cree un negocio e invite a su propietario.",
-      "memberDescription": "Los propietarios y administradores de su socio crean los negocios aquí."
+      "memberDescription": "Los propietarios y administradores de su equipo crean los negocios aquí."
     },
     "create": {
       "action": "Crear negocio",
@@ -196,7 +196,7 @@
     "description": "Lo que vende a sus negocios: un precio mensual, una cuota de alta opcional y los minutos y chats que incluye cada mes.",
     "loadFailed": "No pudimos cargar sus paquetes. Actualice para intentarlo de nuevo.",
     "managersOnly": "Solo los propietarios y los administradores pueden ver los paquetes.",
-    "notConfigured": "Este panel todavía no puede conectar una cuenta de Stripe. Mientras tanto, usted factura a sus negocios por su cuenta.",
+    "notConfigured": "Este panel no está configurado para conectar cuentas de Stripe. Hasta que la empresa que lo administra active Stripe, usted factura a sus negocios por su cuenta.",
     "connectFirst": {
       "owner": "Conecte su cuenta de Stripe para vender paquetes.",
       "admin": "Pida a un propietario que conecte su cuenta de Stripe para vender paquetes."
@@ -226,7 +226,8 @@
     },
     "empty": {
       "title": "Todavía no hay paquetes",
-      "description": "Cree un paquete para que sus negocios lo compren."
+      "description": "Cree un paquete para que sus negocios lo compren.",
+      "noStripe": "Los paquetes se cobran con Stripe. Cuando este panel pueda conectar una cuenta de Stripe, los creará aquí."
     },
     "create": {
       "action": "Crear paquete",
@@ -307,7 +308,7 @@
     "empty": {
       "title": "Aún no hay plantillas",
       "description": "Guarde como plantilla un negocio que ya configuró y elíjala cuando cree el siguiente.",
-      "memberDescription": "Los propietarios y administradores de su socio guardan las plantillas aquí."
+      "memberDescription": "Los propietarios y administradores de su equipo guardan las plantillas aquí."
     },
     "save": {
       "action": "Guardar una plantilla",
@@ -389,6 +390,15 @@
       "removeFailed": "No pudimos quitar a esa persona. Inténtelo de nuevo.",
       "revokeFailed": "No pudimos cancelar esa invitación. Inténtelo de nuevo.",
       "finalOwner": "Su cuenta de socio necesita al menos un propietario."
+    },
+    "confirm": {
+      "cancel": "Cancelar",
+      "ownerTitle": "¿Hacer propietario a {{email}}?",
+      "ownerDescription": "Los propietarios pueden hacer de todo en la consola de {{partnerName}}, incluida la facturación, la conexión con Stripe, cambiar a otros propietarios y eliminar al socio.",
+      "ownerAction": "Hacer propietario",
+      "removeTitle": "¿Quitar a {{email}}?",
+      "removeDescription": "Pierde el acceso a la consola de {{partnerName}} y a cada negocio que tenía abierto.",
+      "removeAction": "Quitar del equipo"
     }
   },
   "branding": {
@@ -452,7 +462,7 @@
           "failed": "No pudimos guardar su dominio. Inténtelo de nuevo.",
           "loadFailed": "No pudimos cargar sus direcciones. Actualice la página para intentarlo de nuevo."
         },
-        "unavailable": "Este panel todavía no puede conectar su propio dominio. Sus negocios inician sesión en su subdominio de arriba. Pida a {{appName}} que active los dominios propios."
+        "unavailable": "Este panel todavía no puede conectar su propio dominio, así que sus negocios inician sesión en su subdominio de arriba. Pida a la empresa que administra este panel que active los dominios propios."
       }
     },
     "brand": {
@@ -506,8 +516,8 @@
     "ownersOnly": "Solo los propietarios pueden gestionar la conexión con Stripe.",
     "opening": "Abriendo Stripe…",
     "notConfigured": {
-      "title": "Todavía no hay pagos con Stripe",
-      "description": "Este panel todavía no puede conectar una cuenta de Stripe. Mientras tanto, usted factura a sus negocios por su cuenta."
+      "title": "Stripe no está configurado aquí",
+      "description": "Este panel no está configurado para conectar cuentas de Stripe. Hasta que la empresa que lo administra active Stripe, usted factura a sus negocios por su cuenta."
     },
     "status": {
       "notConnected": "Sin conectar",
@@ -690,7 +700,7 @@
     },
     "hostPool": {
       "description": "Nosotros fijamos los minutos y los chats que sus negocios comparten cada mes.",
-      "limit": "Cuando se agota la bolsa, las llamadas se desvían al número de transferencia de cada negocio o al teléfono de su propietario, y el chat del sitio deja de responder hasta que su bolsa se reinicie. Para cambiar su bolsa, contáctenos."
+      "limit": "Cuando se agota la bolsa, las llamadas se desvían al número de transferencia de cada negocio o al teléfono de su propietario, y el chat del sitio deja de responder hasta que su bolsa se reinicie. Para cambiar su bolsa, consulte a la empresa que administra este panel."
     },
     "overage": {
       "title": "Excedente",
@@ -736,7 +746,8 @@
       "checkoutInProgress": "Otro propietario tiene un pago abierto. Inténtelo de nuevo en 30 minutos.",
       "unavailable": "No puede comprar un nivel en este panel.",
       "portalFailed": "No pudimos abrir su suscripción. Inténtelo de nuevo."
-    }
+    },
+    "unbilledDescription": "Lo que sus negocios pueden usar cada mes."
   },
   "lifecycle": {
     "past_due": {

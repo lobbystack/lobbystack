@@ -1,6 +1,6 @@
 import { and, asc, count, eq, ilike, inArray, isNull } from "drizzle-orm";
 
-import { enqueueOutbox, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
+import { enqueueOutbox, inOrder, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
 import { agentRules, businesses, businessHours, closures, phoneNumbers, receptionistProfiles, services, staff, staffServiceAssignments } from "@lobbystack/db";
 
 import { requireBusinessAdmin, requireBusinessMembership } from "../authz";
@@ -15,14 +15,14 @@ export async function listCatalog(
 ) {
   return await withBusinessTransaction(context.db, { ...input, actorType: "operator" }, async (tx) => {
     await requireBusinessMembership(tx, input);
-    const [staffRows, serviceRows, hoursRows, closureRows, numberRows, profileRows, ruleRows] = await Promise.all([
-      tx.select().from(staff).where(eq(staff.businessId, input.businessId)).orderBy(asc(staff.name)),
-      tx.select().from(services).where(and(eq(services.businessId, input.businessId), isNull(services.deletedAt), ...(input.search?.trim() ? [ilike(services.name, `%${input.search.trim()}%`)] : []))).orderBy(asc(services.name)).limit(Math.min(Math.max(Math.trunc(input.limit ?? 100), 1), 100) + 1).offset(Math.max(Math.trunc(input.offset ?? 0), 0)),
-      tx.select().from(businessHours).where(and(eq(businessHours.businessId, input.businessId), isNull(businessHours.staffId))).orderBy(asc(businessHours.dayOfWeek), asc(businessHours.openMinutes)),
-      tx.select().from(closures).where(and(eq(closures.businessId, input.businessId), isNull(closures.staffId))).orderBy(asc(closures.startsAt)),
-      tx.select().from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"))).orderBy(asc(phoneNumbers.e164)),
-      tx.select().from(receptionistProfiles).where(eq(receptionistProfiles.businessId, input.businessId)).limit(1),
-      tx.select().from(agentRules).where(eq(agentRules.businessId, input.businessId)).orderBy(asc(agentRules.sortOrder), asc(agentRules.createdAt), asc(agentRules.id)),
+    const [staffRows, serviceRows, hoursRows, closureRows, numberRows, profileRows, ruleRows] = await inOrder([
+      () => tx.select().from(staff).where(eq(staff.businessId, input.businessId)).orderBy(asc(staff.name)),
+      () => tx.select().from(services).where(and(eq(services.businessId, input.businessId), isNull(services.deletedAt), ...(input.search?.trim() ? [ilike(services.name, `%${input.search.trim()}%`)] : []))).orderBy(asc(services.name)).limit(Math.min(Math.max(Math.trunc(input.limit ?? 100), 1), 100) + 1).offset(Math.max(Math.trunc(input.offset ?? 0), 0)),
+      () => tx.select().from(businessHours).where(and(eq(businessHours.businessId, input.businessId), isNull(businessHours.staffId))).orderBy(asc(businessHours.dayOfWeek), asc(businessHours.openMinutes)),
+      () => tx.select().from(closures).where(and(eq(closures.businessId, input.businessId), isNull(closures.staffId))).orderBy(asc(closures.startsAt)),
+      () => tx.select().from(phoneNumbers).where(and(eq(phoneNumbers.businessId, input.businessId), eq(phoneNumbers.status, "active"))).orderBy(asc(phoneNumbers.e164)),
+      () => tx.select().from(receptionistProfiles).where(eq(receptionistProfiles.businessId, input.businessId)).limit(1),
+      () => tx.select().from(agentRules).where(eq(agentRules.businessId, input.businessId)).orderBy(asc(agentRules.sortOrder), asc(agentRules.createdAt), asc(agentRules.id)),
     ]);
     const limit = Math.min(Math.max(Math.trunc(input.limit ?? 100), 1), 100);
     const offset = Math.max(Math.trunc(input.offset ?? 0), 0);

@@ -83,7 +83,7 @@
     "empty": {
       "title": "No businesses yet",
       "description": "Create a business and invite its owner.",
-      "memberDescription": "Your partner's owners and admins create businesses here."
+      "memberDescription": "Your team's owners and admins create businesses here."
     },
     "create": {
       "action": "Create business",
@@ -196,7 +196,7 @@
     "description": "What you sell your businesses: a monthly price, an optional setup fee, and the minutes and chats each month includes.",
     "loadFailed": "We couldn't load your packages. Refresh to try again.",
     "managersOnly": "Only owners and admins can see packages.",
-    "notConfigured": "This dashboard can't connect a Stripe account yet. Until it can, you bill your businesses yourself.",
+    "notConfigured": "This dashboard isn't set up to connect Stripe accounts. Until the company that runs it turns Stripe on, you bill your businesses yourself.",
     "connectFirst": {
       "owner": "Connect your Stripe account to sell packages.",
       "admin": "Ask an owner to connect your Stripe account so you can sell packages."
@@ -224,7 +224,8 @@
     },
     "empty": {
       "title": "No packages yet",
-      "description": "Create a package for your businesses to buy."
+      "description": "Create a package for your businesses to buy.",
+      "noStripe": "Packages bill through Stripe. Once this dashboard can connect a Stripe account, you'll make them here."
     },
     "create": {
       "action": "Create package",
@@ -299,7 +300,7 @@
     "empty": {
       "title": "No templates yet",
       "description": "Save a business you've set up as a template, then pick it when you create the next business.",
-      "memberDescription": "Your partner's owners and admins save templates here."
+      "memberDescription": "Your team's owners and admins save templates here."
     },
     "save": {
       "action": "Save a template",
@@ -381,6 +382,15 @@
       "removeFailed": "We couldn't remove them. Try again.",
       "revokeFailed": "We couldn't cancel that invitation. Try again.",
       "finalOwner": "Your partner needs at least one owner."
+    },
+    "confirm": {
+      "cancel": "Cancel",
+      "ownerTitle": "Make {{email}} an owner?",
+      "ownerDescription": "Owners can do everything in {{partnerName}}'s console, including billing, the Stripe connection, changing other owners and deleting the partner.",
+      "ownerAction": "Make owner",
+      "removeTitle": "Remove {{email}}?",
+      "removeDescription": "They lose access to {{partnerName}}'s console and to every business they had open.",
+      "removeAction": "Remove from team"
     }
   },
   "branding": {
@@ -444,7 +454,7 @@
           "failed": "We couldn't save your domain. Try again.",
           "loadFailed": "We couldn't load your addresses. Refresh to try again."
         },
-        "unavailable": "This dashboard can't connect your own domain yet. Your businesses sign in at your subdomain above. Ask {{appName}} to turn on custom domains."
+        "unavailable": "This dashboard can't connect your own domain yet, so your businesses sign in at your subdomain above. Ask the company that runs this dashboard to turn on custom domains."
       }
     },
     "brand": {
@@ -498,8 +508,8 @@
     "ownersOnly": "Only owners can manage the Stripe connection.",
     "opening": "Opening Stripe…",
     "notConfigured": {
-      "title": "No Stripe payments yet",
-      "description": "This dashboard can't connect a Stripe account yet. Until it can, you bill your businesses yourself."
+      "title": "Stripe isn't set up here",
+      "description": "This dashboard isn't set up to connect Stripe accounts. Until the company that runs it turns Stripe on, you bill your businesses yourself."
     },
     "status": {
       "notConnected": "Not connected",
@@ -678,7 +688,7 @@
     },
     "hostPool": {
       "description": "We set the minutes and chats your businesses share each month.",
-      "limit": "At the pool, calls forward to each business's transfer number or its owner's phone, and website chat stops replying until your pool starts over. To change your pool, contact us."
+      "limit": "At the pool, calls forward to each business's transfer number or its owner's phone, and website chat stops replying until your pool starts over. To change your pool, ask the company that runs this dashboard."
     },
     "overage": {
       "title": "Overage",
@@ -724,7 +734,8 @@
       "checkoutInProgress": "Another owner has a checkout open. Try again in 30 minutes.",
       "unavailable": "You can't buy a tier on this dashboard.",
       "portalFailed": "We couldn't open your subscription. Try again."
-    }
+    },
+    "unbilledDescription": "What your businesses can use each month."
   },
   "lifecycle": {
     "past_due": {

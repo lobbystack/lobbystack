@@ -64,6 +64,17 @@ describe("the partner console's Team page", () => {
     expect(await screen.findByRole("radio", { name: /roles\.owner/ })).toBeTruthy();
   });
 
+  it("asks before it makes someone an owner", async () => {
+    const fetchMock = renderAs("owner");
+    await screen.findByText("max@example.test");
+    await userEvent.click(screen.getAllByRole("button", { name: "team.actions.moreOptions" })[1]!);
+    await userEvent.click(await screen.findByRole("menuitem", { name: "team.actions.makeOwner" }));
+    expect(await screen.findByText("team.confirm.ownerTitle")).toBeTruthy();
+    expect(fetchMock).not.toHaveBeenCalledWith("/api/partner/team", expect.objectContaining({ method: "PATCH" }));
+    await userEvent.click(screen.getByRole("button", { name: "team.confirm.ownerAction" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/partner/team", expect.objectContaining({ method: "PATCH", body: JSON.stringify({ partnerId: "partner", memberId: "member-row", role: "owner" }) })));
+  });
+
   it("sends an invitation for the partner the console is open on", async () => {
     const fetchMock = renderAs("admin");
     await screen.findByText("max@example.test");

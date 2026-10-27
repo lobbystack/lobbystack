@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Turnstile } from "@/components/turnstile";
 import { recordAuthSuccess } from "@/lib/auth-success-analytics";
+import { takeInvitedEmail } from "@/lib/invited-email";
 import { resolveLocale } from "@/lib/locale";
 import { localizePublicPath } from "@/lib/locale-path";
 import { useBrandLinks } from "@/hooks/use-brand-links";
@@ -83,6 +84,12 @@ export function AuthCard({ mode, google = false }: { mode: "login" | "signup"; g
     void continueWithGoogle();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once on arrival
   }, [google]);
+
+  // An invitation's accept page leaves the address it was sent to.
+  useEffect(() => {
+    const invited = takeInvitedEmail();
+    if (invited) setEmail((current) => current || invited);
+  }, []);
 
   useEffect(() => {
     if (mode !== "login") return;

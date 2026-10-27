@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@/components/ui/input-group";
 import { useSignOut } from "@/hooks/use-sign-out";
 import { buildAuthPathWithReturnTo } from "@/lib/auth-return-to";
+import { rememberInvitedEmail } from "@/lib/invited-email";
 import { resolveLocale } from "@/lib/locale";
 import { recordPendingPartnerSignup } from "@/lib/partner-analytics";
 import { requestJson } from "@/lib/request-json";
@@ -31,8 +32,8 @@ export function PartnerSignedOutSurface({ page, returnTo, values = {} }: { page:
   return (
     <ReplacementOnboardingShell description={t(`signedOut.${page}`, values)} progress={null} title={t(`${page}.title`, values)} width="sm">
       <div className="flex flex-col gap-3">
-        <Button className="h-11 w-full" nativeButton={false} render={<Link href={buildAuthPathWithReturnTo("/login", returnTo, locale)} />} role="link">{t("signedOut.signIn")}</Button>
-        <Button className="h-11 w-full" nativeButton={false} render={<Link href={buildAuthPathWithReturnTo("/signup", returnTo, locale)} />} role="link" variant="outline">{t("signedOut.createAccount")}</Button>
+        <Button className="h-11 w-full" nativeButton={false} onClick={() => rememberInvitedEmail(values.email)} render={<Link href={buildAuthPathWithReturnTo("/login", returnTo, locale)} />} role="link">{t("signedOut.signIn")}</Button>
+        <Button className="h-11 w-full" nativeButton={false} onClick={() => rememberInvitedEmail(values.email)} render={<Link href={buildAuthPathWithReturnTo("/signup", returnTo, locale)} />} role="link" variant="outline">{t("signedOut.createAccount")}</Button>
       </div>
     </ReplacementOnboardingShell>
   );

@@ -197,6 +197,7 @@ export function ApiKeysSurface({ namespace, layout, loading, canManage, scopes: 
                   {offeredScopes.map((scope) => (
                     <div className="flex items-start gap-3 text-sm" key={scope}>
                       <Checkbox
+                        aria-label={scope}
                         checked={scopes.includes(scope)}
                         id={`api-key-scope-${scopeKey(scope)}`}
                         onCheckedChange={(checked) => setScopes((current) => checked ? [...new Set([...current, scope])] : current.filter((value) => value !== scope))}

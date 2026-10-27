@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 
-import { billingAccounts, businesses, partnerPackages, type DatabaseTransaction } from "@lobbystack/db";
+import { billingAccounts, businesses, inOrder, partnerPackages, type DatabaseTransaction } from "@lobbystack/db";
 import { billedOutsideEntitlement, hasLiveEntitlement, hasLivePackageSubscription, isBillingPlanSlug, liveSubscriptionStates, packageEntitlement, partnerFeatures, planEntitlement, type BillingPlanSlug, type Entitlement } from "@lobbystack/shared";
 
 import { partnerBusinessAnswersInTransaction } from "./partnerLifecycle";
@@ -61,9 +61,9 @@ async function partnerBusinessEntitlement(tx: DatabaseTransaction, businessId: s
  * paused.
  */
 export async function loadBusinessBilling(tx: DatabaseTransaction, businessId: string): Promise<BusinessBilling> {
-  const [business, account] = await Promise.all([
-    tx.select({ deploymentMode: businesses.deploymentMode, partnerId: businesses.partnerId }).from(businesses).where(eq(businesses.id, businessId)).limit(1).then((rows) => rows[0]),
-    tx.select({ plan: billingAccounts.plan, subscriptionState: billingAccounts.subscriptionState, overageSpendingCapCents: billingAccounts.overageSpendingCapCents, billingInterval: billingAccounts.billingInterval, packageId: billingAccounts.packageId, stripeSubscriptionState: billingAccounts.stripeSubscriptionState, overageEnabled: billingAccounts.overageEnabled, overageCurrency: billingAccounts.overageCurrency, overageVoiceMinuteRateMinor: billingAccounts.overageVoiceMinuteRateMinor, overageChatRateMinor: billingAccounts.overageChatRateMinor, overageCapMinor: billingAccounts.overageCapMinor }).from(billingAccounts).where(eq(billingAccounts.businessId, businessId)).limit(1).then((rows) => rows[0]),
+  const [business, account] = await inOrder([
+    () => tx.select({ deploymentMode: businesses.deploymentMode, partnerId: businesses.partnerId }).from(businesses).where(eq(businesses.id, businessId)).limit(1).then((rows) => rows[0]),
+    () => tx.select({ plan: billingAccounts.plan, subscriptionState: billingAccounts.subscriptionState, overageSpendingCapCents: billingAccounts.overageSpendingCapCents, billingInterval: billingAccounts.billingInterval, packageId: billingAccounts.packageId, stripeSubscriptionState: billingAccounts.stripeSubscriptionState, overageEnabled: billingAccounts.overageEnabled, overageCurrency: billingAccounts.overageCurrency, overageVoiceMinuteRateMinor: billingAccounts.overageVoiceMinuteRateMinor, overageChatRateMinor: billingAccounts.overageChatRateMinor, overageCapMinor: billingAccounts.overageCapMinor }).from(billingAccounts).where(eq(billingAccounts.businessId, businessId)).limit(1).then((rows) => rows[0]),
   ]);
   if (business?.partnerId) return { plan: "self_host", billingInterval: null, entitlement: await partnerBusinessEntitlement(tx, businessId, business.partnerId, account) };
   const plan = effectiveBillingPlan({ deploymentMode: business?.deploymentMode ?? "cloud", accountPlan: account?.plan ?? null, subscriptionState: account?.subscriptionState ?? null });

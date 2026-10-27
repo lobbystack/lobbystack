@@ -83,7 +83,7 @@
     "empty": {
       "title": "Još nema firmi",
       "description": "Napravite firmu i pozovite njenog vlasnika.",
-      "memberDescription": "Vlasnici i administratori vašeg partnera ovde prave firme."
+      "memberDescription": "Vlasnici i administratori vašeg tima ovde prave firme."
     },
     "create": {
       "action": "Napravi firmu",
@@ -196,7 +196,7 @@
     "description": "Ono što prodajete svojim firmama: mesečna cena, opciona naknada za aktivaciju i minuti i četovi koje svaki mesec uključuje.",
     "loadFailed": "Nismo uspeli da učitamo vaše ponude. Osvežite stranicu i pokušajte ponovo.",
     "managersOnly": "Samo vlasnici i administratori mogu da vide ponude.",
-    "notConfigured": "Ova kontrolna tabla još ne može da poveže Stripe nalog. Do tada sami naplaćujete svojim firmama.",
+    "notConfigured": "Ova kontrolna tabla nije podešena za povezivanje Stripe naloga. Dok firma koja njome upravlja ne uključi Stripe, sami naplaćujete svojim firmama.",
     "connectFirst": {
       "owner": "Povežite svoj Stripe nalog da biste prodavali ponude.",
       "admin": "Zamolite vlasnika da poveže vaš Stripe nalog kako biste prodavali ponude."
@@ -226,7 +226,8 @@
     },
     "empty": {
       "title": "Još nema ponuda",
-      "description": "Napravite ponudu koju vaše firme mogu da kupe."
+      "description": "Napravite ponudu koju vaše firme mogu da kupe.",
+      "noStripe": "Ponude se naplaćuju preko Stripe-a. Kada ova kontrolna tabla bude mogla da poveže Stripe nalog, pravićete ih ovde."
     },
     "create": {
       "action": "Napravi ponudu",
@@ -307,7 +308,7 @@
     "empty": {
       "title": "Još nema šablona",
       "description": "Sačuvajte kao šablon firmu koju ste podesili, pa ga izaberite kada pravite sledeću.",
-      "memberDescription": "Vlasnici i administratori vašeg partnera ovde čuvaju šablone."
+      "memberDescription": "Vlasnici i administratori vašeg tima ovde čuvaju šablone."
     },
     "save": {
       "action": "Sačuvaj šablon",
@@ -389,6 +390,15 @@
       "removeFailed": "Nismo uspeli da uklonimo tu osobu. Pokušajte ponovo.",
       "revokeFailed": "Nismo uspeli da otkažemo taj poziv. Pokušajte ponovo.",
       "finalOwner": "Partner mora da ima bar jednog vlasnika."
+    },
+    "confirm": {
+      "cancel": "Otkaži",
+      "ownerTitle": "Da li da {{email}} postane vlasnik?",
+      "ownerDescription": "Vlasnici mogu sve u konzoli partnera {{partnerName}}, uključujući naplatu, Stripe vezu, menjanje drugih vlasnika i brisanje partnera.",
+      "ownerAction": "Postavi za vlasnika",
+      "removeTitle": "Ukloniti {{email}}?",
+      "removeDescription": "Ova osoba gubi pristup konzoli partnera {{partnerName}} i svakoj firmi koju je imala otvorenu.",
+      "removeAction": "Ukloni iz tima"
     }
   },
   "branding": {
@@ -452,7 +462,7 @@
           "failed": "Nismo uspeli da sačuvamo vaš domen. Pokušajte ponovo.",
           "loadFailed": "Nismo uspeli da učitamo vaše adrese. Osvežite stranicu i pokušajte ponovo."
         },
-        "unavailable": "Ova kontrolna tabla još ne može da poveže vaš domen. Vaše firme se prijavljuju na vašem poddomenu iznad. Zamolite {{appName}} da uključi sopstvene domene."
+        "unavailable": "Ova kontrolna tabla još ne može da poveže vaš domen, pa se vaše firme prijavljuju na vašem poddomenu iznad. Zamolite firmu koja upravlja ovom kontrolnom tablom da uključi sopstvene domene."
       }
     },
     "brand": {
@@ -506,8 +516,8 @@
     "ownersOnly": "Samo vlasnici mogu da upravljaju Stripe vezom.",
     "opening": "Otvaramo Stripe…",
     "notConfigured": {
-      "title": "Stripe uplate još nisu dostupne",
-      "description": "Ova kontrolna tabla još ne može da poveže Stripe nalog. Do tada sami naplaćujete svojim firmama."
+      "title": "Stripe ovde nije podešen",
+      "description": "Ova kontrolna tabla nije podešena za povezivanje Stripe naloga. Dok firma koja njome upravlja ne uključi Stripe, sami naplaćujete svojim firmama."
     },
     "status": {
       "notConnected": "Nije povezan",
@@ -690,7 +700,7 @@
     },
     "hostPool": {
       "description": "Mi određujemo minute i četove koje vaše firme dele svakog meseca.",
-      "limit": "Kada potroše fond, pozivi idu na broj za prebacivanje svake firme ili na telefon njenog vlasnika, a čet na sajtu ne odgovara dok fond ne počne ispočetka. Da biste promenili fond, javite nam se."
+      "limit": "Kada potroše fond, pozivi idu na broj za prebacivanje svake firme ili na telefon njenog vlasnika, a čet na sajtu ne odgovara dok fond ne počne ispočetka. Da biste promenili fond, obratite se firmi koja upravlja ovom kontrolnom tablom."
     },
     "overage": {
       "title": "Prekoračenje",
@@ -736,7 +746,8 @@
       "checkoutInProgress": "Drugi vlasnik ima otvoreno plaćanje. Pokušajte ponovo za 30 minuta.",
       "unavailable": "Na ovoj kontrolnoj tabli ne možete da kupite nivo.",
       "portalFailed": "Nismo uspeli da otvorimo vašu pretplatu. Pokušajte ponovo."
-    }
+    },
+    "unbilledDescription": "Šta vaše firme mogu da koriste svakog meseca."
   },
   "lifecycle": {
     "past_due": {

@@ -83,7 +83,7 @@
     "empty": {
       "title": "Aucune entreprise pour l'instant",
       "description": "Créez une entreprise et invitez son propriétaire.",
-      "memberDescription": "Les propriétaires et administrateurs de votre partenaire créent les entreprises ici."
+      "memberDescription": "Les propriétaires et administrateurs de votre équipe créent les entreprises ici."
     },
     "create": {
       "action": "Créer une entreprise",
@@ -196,7 +196,7 @@
     "description": "Ce que vous vendez à vos entreprises : un prix mensuel, des frais d'installation facultatifs, et les minutes et clavardages compris chaque mois.",
     "loadFailed": "Impossible de charger vos formules. Actualisez pour réessayer.",
     "managersOnly": "Seuls les propriétaires et les administrateurs peuvent voir les formules.",
-    "notConfigured": "Ce tableau de bord ne peut pas encore connecter de compte Stripe. D'ici là, vous facturez vos entreprises vous-même.",
+    "notConfigured": "Ce tableau de bord n'est pas configuré pour connecter des comptes Stripe. Tant que l'entreprise qui le gère n'active pas Stripe, vous facturez vos entreprises vous-même.",
     "connectFirst": {
       "owner": "Connectez votre compte Stripe pour vendre des formules.",
       "admin": "Demandez à un propriétaire de connecter votre compte Stripe pour vendre des formules."
@@ -226,7 +226,8 @@
     },
     "empty": {
       "title": "Aucune formule pour l'instant",
-      "description": "Créez une formule que vos entreprises pourront acheter."
+      "description": "Créez une formule que vos entreprises pourront acheter.",
+      "noStripe": "Les formules sont facturées par Stripe. Dès que ce tableau de bord pourra connecter un compte Stripe, vous les créerez ici."
     },
     "create": {
       "action": "Créer une formule",
@@ -307,7 +308,7 @@
     "empty": {
       "title": "Aucun modèle pour l'instant",
       "description": "Enregistrez comme modèle une entreprise que vous avez configurée, puis choisissez-le quand vous créez la suivante.",
-      "memberDescription": "Les propriétaires et administrateurs de votre partenaire enregistrent les modèles ici."
+      "memberDescription": "Les propriétaires et administrateurs de votre équipe enregistrent les modèles ici."
     },
     "save": {
       "action": "Enregistrer un modèle",
@@ -389,6 +390,15 @@
       "removeFailed": "Impossible de retirer cette personne. Réessayez.",
       "revokeFailed": "Impossible d'annuler cette invitation. Réessayez.",
       "finalOwner": "Votre partenaire doit garder au moins un propriétaire."
+    },
+    "confirm": {
+      "cancel": "Annuler",
+      "ownerTitle": "Faire de {{email}} un propriétaire ?",
+      "ownerDescription": "Les propriétaires peuvent tout faire dans la console de {{partnerName}}, y compris la facturation, la connexion Stripe, la modification des autres propriétaires et la suppression du partenaire.",
+      "ownerAction": "Nommer propriétaire",
+      "removeTitle": "Retirer {{email}} ?",
+      "removeDescription": "Cette personne perd l'accès à la console de {{partnerName}} et à chaque entreprise qu'elle avait ouverte.",
+      "removeAction": "Retirer de l'équipe"
     }
   },
   "branding": {
@@ -452,7 +462,7 @@
           "failed": "Nous n'avons pas pu enregistrer votre domaine. Réessayez.",
           "loadFailed": "Nous n'avons pas pu charger vos adresses. Actualisez la page pour réessayer."
         },
-        "unavailable": "Ce tableau de bord ne peut pas encore connecter votre propre domaine. Vos entreprises se connectent à votre sous-domaine ci-dessus. Demandez à {{appName}} d'activer les domaines personnalisés."
+        "unavailable": "Ce tableau de bord ne peut pas encore connecter votre propre domaine : vos entreprises se connectent donc à votre sous-domaine ci-dessus. Demandez à l'entreprise qui gère ce tableau de bord d'activer les domaines personnalisés."
       }
     },
     "brand": {
@@ -506,8 +516,8 @@
     "ownersOnly": "Seuls les propriétaires peuvent gérer la connexion Stripe.",
     "opening": "Ouverture de Stripe…",
     "notConfigured": {
-      "title": "Pas encore de paiements Stripe",
-      "description": "Ce tableau de bord ne peut pas encore connecter de compte Stripe. D'ici là, vous facturez vos entreprises vous-même."
+      "title": "Stripe n'est pas configuré ici",
+      "description": "Ce tableau de bord n'est pas configuré pour connecter des comptes Stripe. Tant que l'entreprise qui le gère n'active pas Stripe, vous facturez vos entreprises vous-même."
     },
     "status": {
       "notConnected": "Non connecté",
@@ -690,7 +700,7 @@
     },
     "hostPool": {
       "description": "Nous fixons les minutes et les clavardages que vos entreprises partagent chaque mois.",
-      "limit": "Une fois la réserve épuisée, les appels vont au numéro de transfert de chaque entreprise ou au téléphone de son propriétaire, et le clavardage du site ne répond plus jusqu'à ce que votre réserve reparte à zéro. Pour modifier votre réserve, contactez-nous."
+      "limit": "Une fois la réserve épuisée, les appels vont au numéro de transfert de chaque entreprise ou au téléphone de son propriétaire, et le clavardage du site ne répond plus jusqu'à ce que votre réserve reparte à zéro. Pour modifier votre réserve, adressez-vous à l'entreprise qui gère ce tableau de bord."
     },
     "overage": {
       "title": "Dépassement",
@@ -736,7 +746,8 @@
       "checkoutInProgress": "Un autre propriétaire a un paiement en cours. Réessayez dans 30 minutes.",
       "unavailable": "Vous ne pouvez pas acheter de palier sur ce tableau de bord.",
       "portalFailed": "Impossible d'ouvrir votre abonnement. Réessayez."
-    }
+    },
+    "unbilledDescription": "Ce que vos entreprises peuvent utiliser chaque mois."
   },
   "lifecycle": {
     "past_due": {
