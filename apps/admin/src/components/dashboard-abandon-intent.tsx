@@ -132,7 +132,7 @@ export function DashboardAbandonIntent({ businessId }: { businessId: string | un
 
   return (
     <Dialog onOpenChange={close} open={open}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent >
         {sent ? (
           <>
             <DialogHeader>

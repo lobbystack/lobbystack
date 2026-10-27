@@ -359,7 +359,7 @@ function EmployeeDialog({ businessId, employee, open, onOpenChange, services, to
   const editTimeOff = (next: Array<{ key: number; value: TimeOff | null }>) => { setTimeOff(next); setTimeOffInvalid(false); };
 
   return <Dialog onOpenChange={onOpenChange} open={open}>
-    <DialogContent className="max-h-[calc(100svh-2rem)] grid-rows-[auto_minmax(0,1fr)] sm:max-w-md">
+    <DialogContent className="max-h-[calc(100svh-2rem)] grid-rows-[auto_minmax(0,1fr)]">
       <DialogHeader><DialogTitle>{t(employee ? "edit.title" : "add.title")}</DialogTitle><DialogDescription>{t(employee ? "edit.description" : "add.description")}</DialogDescription></DialogHeader>
       <form className="flex min-h-0 flex-col gap-6" noValidate onSubmit={(event) => { event.preventDefault(); setSubmitted(true); if (!save.isPending && name.trim() && !phoneIncomplete && knownServiceIds.length && !hoursProblem && !timeOffMissing) save.mutate(); }}>
         <div className="-m-1 min-h-0 overflow-x-hidden overflow-y-auto p-1">

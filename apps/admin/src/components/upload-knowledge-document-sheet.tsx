@@ -172,7 +172,7 @@ export function UploadKnowledgeDocumentSheet({
       }}
       open={open}
     >
-      <DialogContent className="sm:max-w-md">
+      <DialogContent >
         <DialogHeader>
           <DialogTitle>{t("sections.knowledge.uploadDocument")}</DialogTitle>
           <DialogDescription>

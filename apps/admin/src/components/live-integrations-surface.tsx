@@ -92,7 +92,7 @@ export function LiveIntegrationsSurface() {
         <div className="flex flex-col gap-1"><h2 className="type-section-title text-lg">{t("integrations.cards.zapier.title")}</h2><p className="type-body-muted line-clamp-2">{t("integrations.cards.zapier.description")}</p></div>
       </li></ul>
     </div>
-    <Dialog onOpenChange={setDialogOpen} open={dialogOpen}><DialogContent className="w-full gap-0 p-0 sm:max-w-md">
+    <Dialog onOpenChange={setDialogOpen} open={dialogOpen}><DialogContent className="w-full gap-0 p-0">
       <DialogHeader className="flex-row items-center gap-3 p-6 pb-4"><GoogleCalendarLogo /><div className="flex flex-col gap-1"><DialogTitle>{t("integrations.google.sheetTitle")}</DialogTitle><DialogDescription>{t("integrations.google.sheetDescription")}</DialogDescription></div></DialogHeader>
       <div className="flex flex-col gap-4 px-6 pb-6">
         {google && needsAttention ? <Alert variant="destructive"><AlertTitle>{connected || syncing ? t("integrations.google.syncNeedsAttention") : t("integrations.status.reconnectRequired")}</AlertTitle><AlertDescription className="flex flex-col gap-3"><span>{t("integrations.google.discoveryFailed")}</span>{connected ? <Button className="w-fit" disabled={!canManage || update.isPending || syncing} onClick={() => update.mutate({ method: "POST" })} size="sm" variant="outline"><RefreshCcw data-icon="inline-start" />{t("integrations.google.refreshCalendars")}</Button> : null}</AlertDescription></Alert> : null}

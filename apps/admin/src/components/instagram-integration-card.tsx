@@ -78,7 +78,7 @@ export function InstagramIntegrationCard({ businessId, canManage }: { businessId
           : t("integrations.cards.instagram.description")
       }</p>
     </div>
-    <Dialog onOpenChange={setDialogOpen} open={dialogOpen && Boolean(account)}><DialogContent className="w-full gap-0 p-0 sm:max-w-md">
+    <Dialog onOpenChange={setDialogOpen} open={dialogOpen && Boolean(account)}><DialogContent className="w-full gap-0 p-0">
       <DialogHeader className="flex-row items-center gap-3 p-6 pb-4"><InstagramLogo /><div className="flex flex-col gap-1"><DialogTitle>{t("integrations.cards.instagram.title")}</DialogTitle><DialogDescription>{t("integrations.instagram.dialogDescription")}</DialogDescription></div></DialogHeader>
       <div className="flex flex-col gap-4 px-6 pb-6">
         {account && !connected ? <Alert variant="destructive"><AlertTitle>{t("integrations.status.reconnectRequired")}</AlertTitle><AlertDescription>{t("integrations.instagram.reconnectDescription")}</AlertDescription></Alert> : null}
