@@ -395,7 +395,7 @@ details[open] > .mobile-menu-sheet {
 }
 
 .legal-copy table {
-  @apply w-full min-w-[760px] border-separate border-spacing-0 overflow-hidden rounded-xl border border-border/70 text-left text-sm;
+  @apply w-full min-w-[760px] border-separate border-spacing-0 overflow-hidden rounded-2xl border border-border/60 text-left text-sm;
 }
 
 .legal-copy th,
@@ -404,7 +404,7 @@ details[open] > .mobile-menu-sheet {
 }
 
 .legal-copy th {
-  @apply bg-muted/50 font-semibold text-foreground;
+  @apply bg-beige font-medium text-foreground;
 }
 
 .legal-copy tbody tr:last-child td {
@@ -445,7 +445,7 @@ details[open] > .mobile-menu-sheet {
 }
 
 .blog-copy a {
-  @apply font-medium text-foreground underline underline-offset-4 transition-colors hover:text-primary;
+  @apply font-medium text-foreground underline decoration-foreground/30 underline-offset-4 transition-colors hover:decoration-foreground;
 }
 
 .blog-copy strong {
@@ -470,17 +470,25 @@ details[open] > .mobile-menu-sheet {
 }
 
 .blog-copy blockquote {
-  @apply max-w-3xl rounded-2xl border border-border/70 bg-muted/30 px-6 py-5 text-xl leading-9 font-medium text-foreground italic;
+  @apply max-w-3xl rounded-2xl bg-beige px-6 py-5 text-xl leading-9 font-medium text-foreground italic;
+}
+
+.blog-copy pre {
+  @apply max-w-full overflow-x-auto rounded-2xl bg-beige px-5 py-4 font-mono text-sm leading-6 text-foreground/80;
+}
+
+.blog-copy :not(pre) > code {
+  @apply rounded-md bg-beige px-1.5 py-0.5 font-mono text-[0.875em];
 }
 
 .blog-copy table {
-  @apply my-10 block w-full max-w-4xl overflow-x-auto rounded-xl border border-border/70 text-left text-sm leading-6 md:text-base;
+  @apply my-10 block w-full max-w-4xl overflow-x-auto rounded-2xl border border-border/60 text-left text-sm leading-6 md:text-base;
   border-collapse: separate;
   border-spacing: 0;
 }
 
 .blog-copy thead {
-  @apply bg-muted/50 text-foreground;
+  @apply bg-beige text-foreground;
 }
 
 .blog-copy th,
@@ -489,7 +497,7 @@ details[open] > .mobile-menu-sheet {
 }
 
 .blog-copy th {
-  @apply font-semibold;
+  @apply font-medium;
 }
 
 .blog-copy td {
@@ -502,7 +510,7 @@ details[open] > .mobile-menu-sheet {
 }
 
 .blog-copy tbody tr:nth-child(even) {
-  @apply bg-muted/20;
+  @apply bg-beige/40;
 }
 
 /* Reduced motion keeps feedback but drops travel: reveals become short

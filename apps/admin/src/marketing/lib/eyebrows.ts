@@ -34,7 +34,6 @@ const eyebrows = {
   "affiliate.guidelines": ["Guidelines", "Règles", "Normas", "Pravila"],
   "calculator.hero": ["Calculator", "Calculateur", "Calculadora", "Kalkulator"],
   "blog.hero": ["Blog", "Blogue", "Blog", "Blog"],
-  "blog.featured": ["Latest", "À la une", "Lo último", "Najnovije"],
   "blog.topics": ["Topics", "Sujets", "Temas", "Teme"],
   "changelog.hero": ["Changelog", "Journal des changements", "Registro de cambios", "Dnevnik izmena"],
   "docs.hero": ["Developers", "Développeurs", "Desarrolladores", "Programeri"],

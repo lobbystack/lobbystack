@@ -1,6 +1,7 @@
 import { FeaturesCtaSection } from "@/marketing/components/features/FeaturesCtaSection"
 import { Footer } from "@/marketing/components/Footer"
 import { Navbar } from "@/marketing/components/Navbar"
+import { ButtonLink } from "@/marketing/components/system/ButtonLink"
 import {
   blogCanonicalSlug,
   blogPath,
@@ -15,6 +16,7 @@ import {
   type Locale,
 } from "@/marketing/i18n"
 import { faqsFromMarkdown } from "@/marketing/lib/blog-faqs"
+import { eyebrow } from "@/marketing/lib/eyebrows"
 import { nextInRotation } from "@/marketing/lib/related-posts"
 import {
   blogJsonLd,
@@ -274,33 +276,22 @@ export async function BlogPostPage({
         id="main-content"
         className="min-h-screen bg-background pb-24 text-foreground"
       >
-        <div className="mx-auto max-w-[760px] px-6 pt-24">
+        <div className="mx-auto max-w-[760px] px-6 pt-10 md:pt-11">
           <header className="mb-10">
-            <h1 className="display-heading mb-6 text-foreground">
-              {entry.data.title}
-            </h1>
+            <p className="eyebrow">{entry.data.category ?? eyebrow(locale, "blog.hero")}</p>
+            <h1 className="display-heading mt-4 text-foreground">{entry.data.title}</h1>
 
-            <div className="flex items-center gap-4">
-              {entry.data.category && (
-                <span className="rounded-md border border-border/60 px-2.5 py-1 font-mono text-[0.6875rem] text-muted-foreground">
-                  {entry.data.category}
-                </span>
-              )}
-              <time
-                className="text-xs font-medium text-muted-foreground"
-                dateTime={modifiedTime}
-              >
-                {displayedDateLabel}
-              </time>
-              <span className="text-xs font-medium text-muted-foreground">
-                {pageCopy[locale].by}
-                {entry.data.author}
+            <p className="mt-6 flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
+              <time dateTime={modifiedTime}>{displayedDateLabel}</time>
+              <span aria-hidden="true">·</span>
+              <span>
+                {pageCopy[locale].by} {entry.data.author}
               </span>
-            </div>
+            </p>
           </header>
 
           {entry.data.coverImage && (
-            <div className="mb-12 aspect-[16/9] overflow-hidden rounded-2xl border border-border/30 bg-muted shadow-sm">
+            <div className="mb-12 aspect-[16/9] overflow-hidden rounded-2xl border border-border/60 bg-beige-strong/60">
               <img
                 src={entry.data.coverImage}
                 alt={coverImageAlt}
@@ -319,32 +310,26 @@ export async function BlogPostPage({
             dangerouslySetInnerHTML={{ __html: content }}
           />
 
-          <aside className="mt-16 border-t border-border/50 pt-10">
-            <h2 className="text-2xl font-semibold">{pageCopy[locale].related}</h2>
+          <aside className="mt-16 border-t border-border/60 pt-10">
+            <h2 className="text-2xl font-medium tracking-[-0.02em]">{pageCopy[locale].related}</h2>
             <div className="mt-6 grid gap-4 sm:grid-cols-3">
               {displayedRelatedPosts.map((post) => (
                 <a
                   key={blogCanonicalSlug(post)}
                   href={blogPath(post, locale)}
-                  className="rounded-xl border border-border/60 p-4 text-sm font-medium transition-colors hover:border-primary/50"
+                  className="rounded-xl border border-border/60 bg-beige p-4 text-base leading-6 font-medium transition-colors hover:bg-beige-strong/60"
                 >
                   {post.data.title}
                 </a>
               ))}
             </div>
 
-            <h2 className="mt-10 text-xl font-semibold">
-              {pageCopy[locale].product}
-            </h2>
-            <div className="mt-4 flex flex-wrap gap-3">
+            <h2 className="mt-10 text-xl font-medium tracking-[-0.02em]">{pageCopy[locale].product}</h2>
+            <div className="mt-4 flex flex-wrap gap-2.5">
               {productResources.map((resource) => (
-                <a
-                  key={resource.href}
-                  href={localizeHref(locale, resource.href)}
-                  className="rounded-full border border-border/60 px-4 py-2 text-sm font-medium transition-colors hover:border-primary/50"
-                >
+                <ButtonLink key={resource.href} href={localizeHref(locale, resource.href)} variant="secondary" size="sm">
                   {resource.label}
-                </a>
+                </ButtonLink>
               ))}
             </div>
           </aside>
