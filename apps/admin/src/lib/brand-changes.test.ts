@@ -48,6 +48,8 @@ describe("brand changes over Redis", () => {
 
   // brands.integration.test.ts covers what each message clears.
   it("listens once per process copy of the cache, on a connection of its own", async () => {
+    // CI runs with a Redis service, so start from no REDIS_URL whatever the environment has.
+    vi.stubEnv("REDIS_URL", "");
     listenForBrandChangesOnce();
     expect(mocks.subscribers).toEqual([]);
     vi.stubEnv("REDIS_URL", "redis://127.0.0.1:6379");

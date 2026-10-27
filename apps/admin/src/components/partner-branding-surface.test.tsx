@@ -67,7 +67,8 @@ describe("the partner console's Branding & domain page", () => {
     expect(await screen.findByText("bright.portal.example.test")).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledWith("/api/partner/branding?partnerId=partner", expect.anything());
     expect(screen.getByRole("link", { name: "branding.domain.open" }).getAttribute("href")).toBe("https://bright.portal.example.test");
-    expect((screen.getByLabelText("branding.nameLabel") as HTMLInputElement).value).toBe("Bright Desk");
+    // The brand loads apart from the domain, so wait for its form too.
+    expect((await screen.findByLabelText("branding.nameLabel") as HTMLInputElement).value).toBe("Bright Desk");
     expect((screen.getByLabelText("branding.links.supportEmail") as HTMLInputElement).value).toBe("help@bright.example.test");
   });
 
@@ -86,7 +87,7 @@ describe("the partner console's Branding & domain page", () => {
   it("shows a member the brand with no way to change it", async () => {
     renderAs("member");
     await screen.findByText("bright.portal.example.test");
-    expect((screen.getByLabelText("branding.nameLabel") as HTMLInputElement).disabled).toBe(true);
+    expect((await screen.findByLabelText("branding.nameLabel") as HTMLInputElement).disabled).toBe(true);
     expect(screen.queryByRole("button", { name: "branding.save" })).toBeNull();
     expect(screen.queryByRole("button", { name: "branding.logoRemove" })).toBeNull();
     expect(screen.getByText("branding.membersCantEdit")).toBeTruthy();
