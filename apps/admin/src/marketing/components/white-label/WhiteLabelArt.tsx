@@ -1,70 +1,12 @@
 import { intlLocale } from "@lobbystack/shared"
-import { Bell, Building2, CreditCard, Palette, Server, Tag } from "lucide-react"
-import type { CSSProperties, ReactNode } from "react"
+import { Bell, Building2, CreditCard, Palette, Tag } from "lucide-react"
 
+import { Badge, Footprint, GuideLines, plane, Tile } from "@/marketing/components/system/art"
 import type { Locale } from "@/marketing/i18n"
 import { cn } from "@/marketing/lib/utils"
 import type { WhiteLabelCopy } from "@/marketing/lib/white-label-copy"
 
-// Illustrations drawn from the site's tokens: white tiles laid on a tilted
-// plane, each inside a pale halo, over dashed guide lines and soft strokes.
-// They stay sharp at any zoom and carry translated text.
-
-// One isometric plane for every tile, so the hero and the cards read as one set.
-const plane: CSSProperties = { transform: "rotateX(42deg) rotateY(-16deg) rotateZ(20deg)", transformStyle: "preserve-3d" }
-
-const tileShadow =
-  "shadow-[0_1px_1px_oklch(0_0_0/4%),0_10px_20px_-6px_oklch(0.3_0.02_60/14%),0_30px_60px_-20px_oklch(0.3_0.02_60/22%)]"
-
-/** A white tile inside a pale halo, the way the hero's cards sit on the page. */
-function Tile({
-  className,
-  innerClassName,
-  accent,
-  children,
-}: {
-  className?: string
-  innerClassName?: string
-  accent?: boolean | undefined
-  children: ReactNode
-}) {
-  return (
-    <div
-      className={cn(
-        "rounded-[1.75rem] bg-white/60 p-2 ring-1 ring-black/[0.04] backdrop-blur-[2px]",
-        tileShadow,
-        className
-      )}
-    >
-      <div
-        className={cn(
-          "rounded-[1.25rem] border",
-          accent
-            ? "border-[oklch(0.8_0.04_65)] bg-[linear-gradient(135deg,oklch(0.99_0.008_75),oklch(0.9_0.03_65))] shadow-[inset_0_1px_0_white,0_0_0_5px_oklch(0.9_0.03_65/40%),0_12px_32px_-8px_oklch(0.75_0.06_60/45%)]"
-            : "border-black/[0.06] bg-[linear-gradient(180deg,white,oklch(0.985_0.002_70))] shadow-[inset_0_1px_0_white]",
-          innerClassName
-        )}
-      >
-        {children}
-      </div>
-    </div>
-  )
-}
-
-/** Parallel dashed lines running along the tiles' plane. */
-function GuideLines({ count, gap, className }: { count: number; gap: number; className?: string }) {
-  return (
-    <div aria-hidden="true" className={cn("pointer-events-none absolute inset-0", className)}>
-      {Array.from({ length: count }, (_, index) => (
-        <span
-          key={index}
-          className="absolute left-[-20%] block h-0 w-[140%] border-t border-dashed border-beige-line/80"
-          style={{ top: `${index * gap}px` }}
-        />
-      ))}
-    </div>
-  )
-}
+// The white-label page's scenes, built from the site's illustration kit.
 
 function money(locale: Locale, amount: number) {
   // The made-up packages bill in the currency a partner in that market would
@@ -121,25 +63,6 @@ export function HeroIllustration({ copy, className }: { copy: WhiteLabelCopy["he
 
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-background to-transparent" />
     </div>
-  )
-}
-
-/** A dashed outline under a tile, a sheet's footprint on the plane. */
-function Footprint({ className }: { className?: string }) {
-  return <span aria-hidden="true" className={cn("absolute rounded-[2rem] border border-dashed border-beige-line", className)} />
-}
-
-function Badge({ children, className }: { children: ReactNode; className?: string }) {
-  return (
-    <span
-      className={cn(
-        "flex size-11 items-center justify-center rounded-full bg-primary text-primary-foreground ring-[6px] ring-white/70",
-        tileShadow,
-        className
-      )}
-    >
-      {children}
-    </span>
   )
 }
 
@@ -224,67 +147,3 @@ export function OverageArt({ locale, copy }: { locale: Locale; copy: WhiteLabelC
   )
 }
 
-/**
- * Self-hosting: a field of blank tiles on the plane, with one raised tile
- * carrying a server, the way one machine in a rack is yours.
- */
-export function SelfHostArt({ className }: { className?: string }) {
-  // An odd grid, so the raised tile sits in the middle cell at every width.
-  const size = 5
-  const middle = Math.floor((size * size) / 2)
-  return (
-    <div aria-hidden="true" className={cn("pointer-events-none absolute inset-0 overflow-hidden [perspective:1800px]", className)}>
-      <div className="absolute inset-0 flex items-center justify-center scale-[0.72] md:scale-100">
-        <div className="grid w-[82rem] shrink-0 grid-cols-5 gap-7" style={plane}>
-          {Array.from({ length: size * size }, (_, index) =>
-            index === middle ? (
-              <div key={index} className="flex h-44 items-center justify-center">
-                <Tile className="rounded-[2.25rem] p-3.5" innerClassName="flex size-32 items-center justify-center rounded-[1.6rem]">
-                  <Server className="size-12 text-foreground/85" strokeWidth={1.5} />
-                </Tile>
-              </div>
-            ) : (
-              <span
-                key={index}
-                className="block h-44 rounded-[2rem] border border-white/70 bg-[linear-gradient(180deg,oklch(0.985_0.002_70),oklch(0.955_0.004_70))] shadow-[inset_0_1px_0_white,0_10px_24px_-12px_oklch(0.3_0.02_60/16%)]"
-              />
-            )
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/** A product screenshot in a soft window frame with pale window controls. */
-export function AppFrame({ className, children }: { className?: string; children: ReactNode }) {
-  return (
-    <div
-      className={cn(
-        "rounded-[1.25rem] bg-[oklch(0.965_0.003_60)] p-2 ring-1 ring-black/[0.04] md:rounded-[1.75rem] md:p-3",
-        "shadow-[0_2px_4px_oklch(0_0_0/3%),0_24px_64px_-24px_oklch(0.3_0.02_60/22%)]",
-        className
-      )}
-    >
-      <div className="flex gap-2 px-2 pt-1 pb-2.5 md:px-3 md:pt-1.5 md:pb-3" aria-hidden="true">
-        <span className="size-2.5 rounded-full bg-[oklch(0.78_0.08_25)] md:size-3" />
-        <span className="size-2.5 rounded-full bg-[oklch(0.88_0.08_85)] md:size-3" />
-        <span className="size-2.5 rounded-full bg-[oklch(0.82_0.08_150)] md:size-3" />
-      </div>
-      <div className="overflow-hidden rounded-[0.875rem] bg-background ring-1 ring-black/[0.06] md:rounded-[1.125rem]">{children}</div>
-    </div>
-  )
-}
-
-/** The dashed plane on its own, faint behind the closing call to action. */
-export function PlaneGrid({ className }: { className?: string }) {
-  return (
-    <div aria-hidden="true" className={cn("pointer-events-none absolute inset-0 [perspective:1800px]", className)}>
-      <div className="absolute inset-0 [mask-image:radial-gradient(50%_60%_at_50%_50%,black,transparent)]">
-        <div className="absolute top-[-30%] left-[10%] h-[160%] w-[80%]" style={plane}>
-          <GuideLines count={16} gap={56} />
-        </div>
-      </div>
-    </div>
-  )
-}

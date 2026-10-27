@@ -289,10 +289,7 @@ export function LobbyStackAuraVoiceDemo({
             </p>
             <a
               href={appSignupUrl(locale)}
-              className={cn(
-                buttonVariants({ size: "sm" }),
-                "rounded-full px-5"
-              )}
+              className={buttonVariants({ size: "sm" })}
               data-ph-signup-cta
               data-ph-capture-attribute-section="voice_demo_ended"
               data-ph-capture-attribute-action="try_for_free"

@@ -540,7 +540,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
           </a>
           <a
             href={appSignupUrl(locale)}
-            className={cn(buttonVariants(), "ml-2 rounded-full px-5")}
+            className={cn(buttonVariants(), "ml-2")}
             data-ph-signup-cta
             data-ph-capture-attribute-section="navbar"
             data-ph-capture-attribute-action="try_for_free"
@@ -692,7 +692,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
               </a>
               <a
                 href={appSignupUrl(locale)}
-                className={cn(buttonVariants(), "rounded-full")}
+                className={buttonVariants()}
                 data-ph-signup-cta
                 data-ph-capture-attribute-section="mobile_navbar"
                 data-ph-capture-attribute-action="try_for_free"
