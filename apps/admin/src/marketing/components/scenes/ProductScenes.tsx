@@ -232,7 +232,7 @@ function HandoffScene({ locale }: SceneProps) {
 function AnsweredBookedScene({ locale }: SceneProps) {
   const t = getProductScenesCopy(locale)
   return (
-    <Scene width={600} height={220} tilt="flat">
+    <Scene width={600} height={124} tilt="flat">
       <Place x={0} y={20}>
         <Tile className="w-60" innerClassName="p-4">
           <Row icon={<IconDot icon={PhoneCall} />} title={t.callAnswered} detail="(555) 014-2290 · 2:14" />
