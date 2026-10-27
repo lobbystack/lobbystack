@@ -1,7 +1,8 @@
 import { Ban, CalendarCheck, MessageSquareText, PhoneForwarded, Repeat } from "lucide-react"
 
-import { Badge, Chip, Footprint, Initials, plane, Tile } from "@/marketing/components/system/art"
+import { Badge, Chip, Footprint, Initials, planes, Tile, type Tilt } from "@/marketing/components/system/art"
 import type { CallOutcome } from "@/marketing/lib/solution-details"
+import { cn } from "@/marketing/lib/utils"
 
 const icons = {
   booked: CalendarCheck,
@@ -12,12 +13,15 @@ const icons = {
   message: MessageSquareText,
 } satisfies Record<CallOutcome["kind"], unknown>
 
-/** What LobbyStack did on one call, drawn as a tile on the site's plane. */
-export function CallOutcomeArt({ outcome }: { outcome: CallOutcome }) {
+/**
+ * What LobbyStack did on one call, drawn as a tile on the site's plane. It
+ * fills its container, which gives it the beige panel.
+ */
+export function CallOutcomeArt({ outcome, tilt = "right", className }: { outcome: CallOutcome; tilt?: Tilt; className?: string }) {
   const Icon = icons[outcome.kind]
   return (
-    <div aria-hidden="true" className="relative aspect-[3/2] w-full overflow-hidden rounded-xl bg-beige-strong/60 [perspective:1200px]">
-      <div className="absolute top-1/2 left-1/2 w-[15rem] -translate-x-1/2 -translate-y-1/2" style={plane}>
+    <div aria-hidden="true" className={cn("absolute inset-0 overflow-hidden [perspective:1200px]", className)}>
+      <div className="absolute top-1/2 left-1/2 w-[15rem] -translate-x-1/2 -translate-y-1/2" style={planes[tilt]}>
         <Footprint className="-inset-5" />
         <Tile className="relative" innerClassName="space-y-3 p-4">
           {outcome.kind === "answered" ? (
