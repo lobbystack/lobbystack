@@ -49,7 +49,7 @@ export function HeroSection({ children, locale = "en" }: HeroSectionProps) {
       className="relative overflow-x-clip"
       id="hero"
     >
-      <div className="mx-auto w-full max-w-site px-6 pt-10 pb-10 md:pt-11 md:pb-16">
+      <div className="mx-auto w-full max-w-site px-6 pt-10 pb-8 md:pt-11 md:pb-10">
         <div className="grid min-w-0 items-center gap-6 md:gap-12 xl:grid-cols-2 xl:gap-16">
           <div className="max-w-3xl min-w-0 text-left">
             <h1 className="animate-fade-up display-heading">
@@ -87,7 +87,7 @@ export function HeroSection({ children, locale = "en" }: HeroSectionProps) {
             </p>
           </div>
 
-          <div className="animate-fade-up mx-auto flex w-full max-w-[22rem] min-w-0 justify-center stagger-5 md:max-w-[30rem] xl:max-w-none xl:justify-end">
+          <div className="animate-fade-up mx-auto flex w-full max-w-[22rem] min-w-0 justify-center stagger-5 md:max-w-[30rem] xl:mr-0 xl:max-w-[28rem]">
             {children}
           </div>
         </div>

@@ -135,6 +135,17 @@ export function HowItWorksSection({ locale }: LocalizedProps) {
   )
 }
 
+/** The dashboard right under the hero, its top showing above the fold. */
+export function DashboardPreview({ locale }: LocalizedProps) {
+  return (
+    <div className={container}>
+      <AppFrame>
+        <Screenshot shot={dashboardShot(locale)} alt={homeSectionsCopy[locale].control.imageAlt} priority />
+      </AppFrame>
+    </div>
+  )
+}
+
 export function ControlSection({ locale }: LocalizedProps) {
   const copy = homeSectionsCopy[locale].control
   return (
@@ -143,11 +154,8 @@ export function ControlSection({ locale }: LocalizedProps) {
         <SectionTitle centered eyebrow={eyebrow(locale, "home.control")} intro={copy.body} className="max-w-3xl">
           {copy.heading}
         </SectionTitle>
-        <AppFrame className="mt-12">
-          <Screenshot shot={dashboardShot(locale)} alt={copy.imageAlt} />
-        </AppFrame>
         <IconCards
-          className="mt-6 md:mt-12"
+          className="mt-12"
           cards={copy.cards.map((card) => ({ icon: card.icon, title: card.title, body: card.description }))}
         />
       </div>

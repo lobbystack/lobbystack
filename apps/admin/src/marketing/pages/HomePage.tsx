@@ -5,6 +5,7 @@ import { Footer } from "@/marketing/components/Footer"
 import { HeroSection } from "@/marketing/components/HeroSection"
 import {
   ControlSection,
+  DashboardPreview,
   HowItWorksSection,
   KnowledgeSection,
   MissedCallsSection,
@@ -63,6 +64,7 @@ export function HomePage({ locale }: { locale: Locale }) {
         <HeroSection locale={locale}>
           <LobbyStackHeroVoiceDemo locale={locale} />
         </HeroSection>
+        <DashboardPreview locale={locale} />
         <MissedCallsSection locale={locale} />
         <FeatureGrid locale={locale} />
         <KnowledgeSection locale={locale} />
