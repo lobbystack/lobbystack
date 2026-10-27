@@ -383,10 +383,34 @@ export function inProcessSetupPort(dependencies: BusinessSetupDependencies, call
   };
 }
 
-/** The receptionist's own words, with the business the template was saved from renamed to the one it sets up. */
-function renameReceptionist(receptionist: BusinessTemplate["receptionist"], from: string, to: string): BusinessTemplate["receptionist"] {
-  if (!receptionist || !from.trim() || from === to) return receptionist;
-  return Object.fromEntries(Object.entries(receptionist).map(([key, value]) => [key, typeof value === "string" ? value.replaceAll(from, to) : value])) as BusinessTemplate["receptionist"];
+// The receptionist's settings that take one of a few values rather than words.
+const RECEPTIONIST_CHOICES = new Set(["transfer_mode", "booking_mode", "appointment_change_policy"]);
+
+/**
+ * The template's own words, with the business it was saved from renamed to
+ * the one it sets up: the receptionist's text, and each service's, rule's,
+ * FAQ's and text's. Only the whole name counts, so Harbor doesn't touch
+ * Harborview, and the new name goes in as written, whatever it holds.
+ */
+function renameBusinessIn(template: BusinessTemplate, from: string, to: string): BusinessTemplate {
+  const name = from.trim();
+  if (!name || name === to) return template;
+  const pattern = new RegExp(`(?<![\\p{L}\\p{N}])${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\p{L}\\p{N}])`, "gu");
+  const rename = (value: string) => value.replace(pattern, () => to);
+  const receptionist = template.receptionist
+    ? Object.fromEntries(Object.entries(template.receptionist).map(([key, value]) => [key, typeof value === "string" && !RECEPTIONIST_CHOICES.has(key) ? rename(value) : value])) as BusinessTemplate["receptionist"]
+    : undefined;
+  return {
+    ...template,
+    ...(receptionist ? { receptionist } : {}),
+    ...(template.services ? { services: template.services.map((service) => ({ ...service, name: rename(service.name), ...(service.description ? { description: rename(service.description) } : {}) })) } : {}),
+    ...(template.rules ? { rules: template.rules.map((rule) => ({ ...rule, title: rename(rule.title), content: rename(rule.content) })) } : {}),
+    ...(template.knowledge ? { knowledge: {
+      ...template.knowledge,
+      ...(template.knowledge.faqs ? { faqs: template.knowledge.faqs.map((faq) => ({ question: rename(faq.question), answer: rename(faq.answer) })) } : {}),
+      ...(template.knowledge.texts ? { texts: template.knowledge.texts.map((text) => ({ title: rename(text.title), content: rename(text.content) })) } : {}),
+    } } : {}),
+  };
 }
 
 /**
@@ -394,13 +418,13 @@ function renameReceptionist(receptionist: BusinessTemplate["receptionist"], from
  * caller has checked is the partner's, as the partner member. The business's
  * name and time zone stay as given: they're its own, not the template's. A
  * greeting or instructions that name the business the template was saved from
- * name the new business instead, so callers don't hear the wrong one.
+ * name the new business instead, and so do its services, rules, FAQs and
+ * texts, so callers don't hear the wrong one.
  */
 export async function applyStoredBusinessTemplate(dependencies: BusinessSetupDependencies, input: { partnerId: string; userId: string; businessId: string; template: StoredBusinessTemplate; keep: { name: string; timezone: string } }): Promise<ApplyResult> {
   const caller: PartnerMemberCaller = { businessId: input.businessId, partnerId: input.partnerId, userId: input.userId, actor: "partner_member" };
-  const saved = input.template.template;
-  const receptionist = renameReceptionist(saved.receptionist, saved.business.name, input.keep.name);
-  const template: BusinessTemplate = { ...saved, business: { ...saved.business, ...input.keep }, ...(receptionist ? { receptionist } : {}) };
+  const saved = renameBusinessIn(input.template.template, input.template.template.business.name, input.keep.name);
+  const template: BusinessTemplate = { ...saved, business: { ...saved.business, ...input.keep } };
   // Only documents the template lists and holds a copy of are uploaded.
   const held = new Set(input.template.files.map((file) => file.path));
   const listed = setupFiles(template.knowledge).filter((file) => held.has(file.path));

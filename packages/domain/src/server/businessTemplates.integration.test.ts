@@ -287,16 +287,25 @@ describe.skipIf(!client)("business templates", () => {
     });
   });
 
-  it("names the new business where the saved greeting and instructions named the one it came from", async () => {
+  it("names the new business wherever the saved receptionist, services, rules and knowledge named the one it came from, by the whole name", async () => {
     await rollbackTest(async (tx) => {
       const acme = await partner(tx, "Acme Reception");
       const setup = { worker: workerContext(tx), storage: memoryStorage().storage };
       const { businessId } = await createPartnerBusiness(acme.context, acme.adminActor, { name: "Harbor Dental", timezone: "America/Toronto", businessType: "dental", accessLevel: "full", ownerEmail: "owner@harbor.invalid" });
       const caller: PartnerMemberCaller = { businessId, partnerId: acme.partnerId, userId: acme.admin.userId, actor: "partner_member" };
-      await updateReceptionistForApi(setup.worker, caller, { greeting: "Thanks for calling Harbor Dental. How can we help?", voice_instructions: "Say Harbor Dental opens at 8." });
+      // Harbor Dentalview is another name, which stays.
+      await updateReceptionistForApi(setup.worker, caller, { greeting: "Thanks for calling Harbor Dental. How can we help?", voice_instructions: "Say Harbor Dental opens at 8, next to Harbor Dentalview." });
+      await createServiceForApi(setup.worker, caller, { name: "Harbor Dental checkup", description: "A Harbor Dental cleaning.", duration_minutes: 30 });
+      await createRuleForApi(setup.worker, caller, { title: "Harbor Dental hours", content: "Harbor Dental closes on Sundays." });
+      await createKnowledgeEntryForApi(setup.worker, caller, { type: "faq", question: "Where is Harbor Dental?", answer: "Harbor Dental is on Main Street." });
       const saved = await saveBusinessTemplate(acme.context, acme.adminActor, { businessId, name: "Dental" }, setup);
-      const { businessId: pier } = await createPartnerBusiness(acme.context, acme.adminActor, { name: "Pier Dental", timezone: "America/Vancouver", businessType: "service_company", accessLevel: "full", ownerEmail: "owner@pier.invalid", templateId: saved.templateId }, setup);
-      expect(await getReceptionistForApi(setup.worker, { ...caller, businessId: pier })).toMatchObject({ greeting: "Thanks for calling Pier Dental. How can we help?", voice_instructions: "Say Pier Dental opens at 8." });
+      // A name with $& in it goes in as written.
+      const { businessId: pier } = await createPartnerBusiness(acme.context, acme.adminActor, { name: "Pier $& Dental", timezone: "America/Vancouver", businessType: "service_company", accessLevel: "full", ownerEmail: "owner@pier.invalid", templateId: saved.templateId }, setup);
+      const at = { ...caller, businessId: pier };
+      expect(await getReceptionistForApi(setup.worker, at)).toMatchObject({ greeting: "Thanks for calling Pier $& Dental. How can we help?", voice_instructions: "Say Pier $& Dental opens at 8, next to Harbor Dentalview." });
+      expect((await listServicesForApi(setup.worker, at, { includeInactive: true })).map((service) => [service.name, service.description])).toEqual([["Pier $& Dental checkup", "A Pier $& Dental cleaning."]]);
+      expect((await listRulesForApi(setup.worker, at)).map((rule) => [rule.title, rule.content])).toEqual([["Pier $& Dental hours", "Pier $& Dental closes on Sundays."]]);
+      expect((await listKnowledgeEntriesForApi(setup.worker, at, {})).data.map((entry) => [entry.title, entry.content])).toEqual([["Where is Pier $& Dental?", "Pier $& Dental is on Main Street."]]);
     });
   });
 
