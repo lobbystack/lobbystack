@@ -299,6 +299,27 @@ describe.skipIf(!client)("opening a partner's business", () => {
       expect(await listUserBusinesses(acme.context.db, acme.member.userId, acme.brand)).toEqual([]);
     });
   });
+
+  it("stops the invitations a member sent through an open from working once they leave the partner's team", async () => {
+    await rollbackTest(async (tx) => {
+      const acme = await partner(tx, "Acme Reception");
+      const [client, kept, dropped] = await people(tx, 3);
+      const businessId = await ownedPartnerBusiness(tx, { actor: acme.ownerActor, owner: client!, name: "Harbor Dental" });
+      const member = { userId: acme.member.userId, businessId };
+      await openPartnerBusiness(acme.context, member);
+      const first = await inviteMember(acme.context, { ...member, email: kept!.email, role: "viewer" });
+      const second = await inviteMember(acme.context, { ...member, email: dropped!.email, role: "business_admin" });
+      // While the member is on the partner's team, what they sent works.
+      await acceptInvitation(acme.context, { userId: kept!.userId, tokenHash: hash(await linkToken(tx, first.invitationId)), email: kept!.email, emailVerified: true });
+
+      const [{ memberId }] = await asMigrator(tx, async () => await tx.select({ memberId: partnerMembers.id }).from(partnerMembers).where(and(eq(partnerMembers.partnerId, acme.partnerId), eq(partnerMembers.userId, acme.member.userId)))) as [{ memberId: string }];
+      await removePartnerMember(acme.context, acme.ownerActor, { memberId });
+      // Once they're off it, an invitation they sent can't put someone on the team, such as an address of their own.
+      expect(await refusal(acceptInvitation(acme.context, { userId: dropped!.userId, tokenHash: hash(await linkToken(tx, second.invitationId)), email: dropped!.email, emailVerified: true }))).toMatchObject({ status: 409 });
+      const team = await asMigrator(tx, async () => await tx.select({ userId: businessMemberships.userId }).from(businessMemberships).where(and(eq(businessMemberships.businessId, businessId), eq(businessMemberships.status, "active"))));
+      expect(team.map((row) => row.userId).sort()).toEqual([client!.userId, kept!.userId].sort());
+    });
+  });
 });
 
 describe.skipIf(!client)("the business's own team", () => {

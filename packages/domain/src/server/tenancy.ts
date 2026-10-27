@@ -510,6 +510,13 @@ export async function acceptInvitation(
     const senderUserId = invitation.invitedByUserId;
     const staleClaimLink = () => Object.assign(new Error("This claim link no longer works. Ask whoever sent it for a new one."), { status: 409 });
     if (invitation.transfersOwnership && senderUserId === null) throw staleClaimLink();
+    // Someone on the partner's team can invite people while they have the business open. Once
+    // they leave that team, what they sent stops working, so the invitation can't outlast them.
+    if (partnerId && senderUserId !== null && !invitation.transfersOwnership) {
+      const [onTeam] = await tx.select({ id: businessMemberships.id }).from(businessMemberships).where(and(eq(businessMemberships.businessId, invitation.businessId), eq(businessMemberships.userId, senderUserId), eq(businessMemberships.status, "active"))).limit(1);
+      const [onPartner] = onTeam ? [onTeam] : await tx.select({ id: partnerMembers.id }).from(partnerMembers).where(and(eq(partnerMembers.partnerId, partnerId), eq(partnerMembers.userId, senderUserId), eq(partnerMembers.status, "active"))).limit(1);
+      if (!onPartner) throw Object.assign(new Error("Invitation is invalid or expired."), { status: 409 });
+    }
     if (invitation.transfersOwnership && senderUserId !== null && senderUserId !== input.userId) {
       const [sender] = await tx.select({ role: businessMemberships.role }).from(businessMemberships).where(and(eq(businessMemberships.businessId, invitation.businessId), eq(businessMemberships.userId, senderUserId), eq(businessMemberships.status, "active"))).limit(1);
       if (sender?.role !== "business_owner") throw staleClaimLink();
