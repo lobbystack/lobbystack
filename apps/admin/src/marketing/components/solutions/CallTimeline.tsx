@@ -1,5 +1,6 @@
 import { ArrowLeft, ArrowRight } from "lucide-react"
 
+import { CallOutcomeArt } from "@/marketing/components/solutions/CallOutcomeArt"
 import { CallTimelineControls } from "@/marketing/components/solutions/CallTimelineControls"
 import type { TimelineCall } from "@/marketing/lib/solution-details"
 import { cn } from "@/marketing/lib/utils"
@@ -38,22 +39,15 @@ export function CallTimeline({ title, calls }: CallTimelineProps) {
                   "relative inline-flex h-8 w-fit items-center rounded-full border px-3.5 text-sm font-medium whitespace-nowrap tabular-nums",
                   urgent
                     ? "border-foreground bg-foreground text-background"
-                    : // #FAF8F6 matches the background of the homepage illustrations
-                      "border-[#E4DCD1] bg-[#FAF8F6] text-foreground"
+                    : "border-beige-line/60 bg-beige text-foreground"
                 )}
               >
                 {call.at}
               </span>
               <p className="mt-5 min-h-[2.75rem] text-base leading-snug font-medium text-foreground">{call.reason}</p>
-              <img
-                src={call.image}
-                alt={call.imageAlt}
-                width="900"
-                height="600"
-                className="mt-4 aspect-[3/2] w-full rounded-xl bg-[#FAF8F6] object-cover"
-                loading="lazy"
-                decoding="async"
-              />
+              <div className="mt-4" role="img" aria-label={call.imageAlt}>
+                <CallOutcomeArt outcome={call.outcome} />
+              </div>
             </li>
           )
         })}
@@ -62,7 +56,7 @@ export function CallTimeline({ title, calls }: CallTimelineProps) {
       <div className="mt-6 flex gap-3">
         <button
           type="button"
-          className="flex size-10 cursor-pointer items-center justify-center rounded-full border border-border/70 bg-background text-foreground shadow-sm transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-default disabled:opacity-40"
+          className="flex size-10 cursor-pointer items-center justify-center rounded-full bg-beige-strong text-foreground transition-colors hover:bg-beige-strong/70 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-default disabled:opacity-40"
           aria-label="Earlier calls"
           data-call-timeline-prev
         >
@@ -70,7 +64,7 @@ export function CallTimeline({ title, calls }: CallTimelineProps) {
         </button>
         <button
           type="button"
-          className="flex size-10 cursor-pointer items-center justify-center rounded-full border border-border/70 bg-background text-foreground shadow-sm transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-default disabled:opacity-40"
+          className="flex size-10 cursor-pointer items-center justify-center rounded-full bg-beige-strong text-foreground transition-colors hover:bg-beige-strong/70 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:cursor-default disabled:opacity-40"
           aria-label="Later calls"
           data-call-timeline-next
         >

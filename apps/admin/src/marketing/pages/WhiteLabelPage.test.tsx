@@ -102,9 +102,18 @@ describe("white-label page", () => {
     sr: "white-label ai recepcioner",
   }
 
-  it.each(SUPPORTED_LOCALES)("puts the %s target term in the H1, the description and the first FAQ", (locale) => {
+  // The title tag words the term around "open source", so it carries the term's core.
+  const titleTerms: Record<Locale, string> = {
+    en: "white-label ai receptionist",
+    fr: "marque blanche",
+    es: "marca blanca",
+    sr: "white-label ai recepcioner",
+  }
+
+  // The H1 is the headline the page leads with; the target term goes in the title tag instead.
+  it.each(SUPPORTED_LOCALES)("puts the %s target term in the title, the description and the first FAQ", (locale) => {
     const term = targetTerms[locale]
-    expect(getWhiteLabelCopy(locale).hero.titleLines.join(" ").toLowerCase()).toContain(term)
+    expect(whiteLabelPageSeo(locale).title?.toLowerCase()).toContain(titleTerms[locale])
     expect(whiteLabelPageSeo(locale).description?.toLowerCase()).toContain(term)
     expect(getWhiteLabelFaqs(locale)[0]?.question.toLowerCase()).toContain(term)
   })

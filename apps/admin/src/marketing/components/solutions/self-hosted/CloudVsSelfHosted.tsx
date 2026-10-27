@@ -40,7 +40,7 @@ const rows = [
 
 export function CloudVsSelfHosted() {
   return (
-    <section className="border-t border-border/40 py-20 md:py-28" id="cloud-vs-self-hosted">
+    <section className="section-spacing" id="cloud-vs-self-hosted">
       <div className="mx-auto max-w-site px-6">
         <div className="max-w-3xl">
           <h2 className="section-heading">LobbyStack Cloud or self-hosted</h2>
@@ -50,9 +50,9 @@ export function CloudVsSelfHosted() {
           </p>
         </div>
 
-        <div className="mt-12 overflow-x-auto rounded-[1.35rem] border border-border/70">
+        <div className="relative mt-12 overflow-x-auto rounded-2xl border border-border/60">
           <table className="w-full min-w-[640px] border-collapse text-left text-sm">
-            <thead className="bg-muted/50">
+            <thead className="bg-beige">
               <tr>
                 <th scope="col" className="w-[24%] px-6 py-4 font-medium text-foreground">
                   <span className="sr-only">Topic</span>

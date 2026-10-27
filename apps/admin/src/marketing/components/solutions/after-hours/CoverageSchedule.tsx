@@ -39,7 +39,7 @@ const modes = [
 
 export function CoverageSchedule() {
   return (
-    <section className="border-t border-border/40 py-20 md:py-28" id="coverage">
+    <section className="section-spacing" id="coverage">
       <div className="mx-auto max-w-site px-6">
         <div className="max-w-3xl">
           <h2 className="section-heading">Choose when LobbyStack answers</h2>
@@ -51,7 +51,7 @@ export function CoverageSchedule() {
 
         <ul className="mt-12 grid gap-6 md:grid-cols-3">
           {modes.map((mode) => (
-            <li key={mode.title} className="flex flex-col rounded-[1.35rem] border border-border/70 bg-background p-6 md:p-7">
+            <li key={mode.title} className="flex flex-col rounded-2xl border border-border/60 bg-background p-6 md:p-7">
               <h3 className="card-heading text-xl md:text-2xl">{mode.title}</h3>
               <p className="body-copy mt-2 text-base">{mode.body}</p>
 
@@ -64,8 +64,8 @@ export function CoverageSchedule() {
                         "rounded-full border px-4 py-2 text-sm font-medium",
                         step.lobbystack
                           ? "border-foreground bg-foreground text-background"
-                          : // #FAF8F6 matches the homepage illustrations
-                            "border-[#E4DCD1] bg-[#FAF8F6] text-foreground"
+                          : // var(--beige) matches the homepage illustrations
+                            "border-[var(--beige-line)] bg-[var(--beige)] text-foreground"
                       )}
                     >
                       {step.text}

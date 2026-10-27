@@ -1,7 +1,9 @@
 import { Footer } from "@/marketing/components/Footer"
 import { Navbar } from "@/marketing/components/Navbar"
 import { PagefindSearch } from "@/marketing/components/PagefindSearch"
+import { SectionTitle } from "@/marketing/components/system/SectionTitle"
 import { getCopy, getRouteSeo, localizePath, type Locale } from "@/marketing/i18n"
+import { eyebrow } from "@/marketing/lib/eyebrows"
 import { breadcrumbJsonLd, organizationJsonLd, webSiteJsonLd } from "@/marketing/lib/seo"
 import { PageJsonLd, type MarketingPageSeo } from "@/marketing/seo/page-seo"
 
@@ -56,10 +58,10 @@ export function SearchPage({ locale }: { locale: Locale }) {
         className="min-h-screen bg-background text-foreground"
         data-pagefind-ignore=""
       >
-        <section className="mx-auto max-w-4xl px-6 py-20 sm:py-24">
-          <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
+        <section className="mx-auto max-w-4xl px-6 pt-10 pb-24 md:pt-11 md:pb-30">
+          <SectionTitle as="h1" eyebrow={eyebrow(locale, "search.hero")}>
             {pageCopy[locale].h1}
-          </h1>
+          </SectionTitle>
           <div className="mt-8">
             <PagefindSearch
               className="lobbystack-search"

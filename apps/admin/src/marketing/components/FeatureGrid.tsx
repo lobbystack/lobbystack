@@ -4,7 +4,11 @@ import {
   ClipboardList,
   Phone,
 } from "lucide-react"
+import { ProductScene } from "@/marketing/components/scenes/ProductScenes"
+import { IconTile } from "@/marketing/components/system/IconCards"
+import { SectionTitle } from "@/marketing/components/system/SectionTitle"
 import type { Locale } from "@/marketing/i18n"
+import { eyebrow } from "@/marketing/lib/eyebrows"
 
 const featureGridCopy = {
   en: {
@@ -165,70 +169,30 @@ type FeatureGridProps = {
 export function FeatureGrid({ locale = "en" }: FeatureGridProps) {
   const copy = featureGridCopy[locale]
 
+  const feature = (f: (typeof copy.features)[number]) => (
+    <div key={f.title}>
+      <IconTile icon={f.icon} />
+      <h3 className="card-heading mt-5">{f.title}</h3>
+      <p className="mt-3 text-base leading-6 text-muted-foreground">{f.description}</p>
+    </div>
+  )
+
   return (
     <section className="section-spacing" id="features">
       <div className="mx-auto max-w-site px-6">
-        {/* Section heading, centered */}
-        <div className="mx-auto mb-10 max-w-2xl text-center md:mb-12">
-          <h2 className="section-heading">
-            {copy.headingStart}{" "}
-            <span className="underline decoration-2 underline-offset-4">
-              {copy.headingEmphasis}
-            </span>
-          </h2>
-          <p className="section-intro mx-auto">{copy.intro}</p>
-        </div>
+        <SectionTitle centered eyebrow={eyebrow(locale, "home.features")} intro={copy.intro} className="max-w-2xl">
+          {copy.headingStart} {copy.headingEmphasis}
+        </SectionTitle>
 
-        {/* Bento layout: 4 features around a central image */}
-        <div className="grid grid-cols-1 gap-y-10 md:grid-cols-[minmax(220px,0.95fr)_minmax(0,2.05fr)_minmax(220px,0.95fr)] md:gap-x-10 lg:gap-x-12">
-          {/* ── Left column: features 1 & 2 ── */}
-          <div className="flex flex-col gap-12 md:gap-16 md:self-stretch md:py-6">
-            {copy.features.slice(0, 2).map((f) => (
-              <div key={f.title}>
-                <div className="flex items-center gap-2">
-                  <f.icon className="size-[18px] shrink-0 text-foreground/80" />
-                  <h3 className="font-heading text-lg font-medium tracking-tight text-foreground">
-                    {f.title}
-                  </h3>
-                </div>
-                <p className="mt-3 text-base leading-relaxed text-muted-foreground">
-                  {f.description}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          {/* ── Center: illustration ── */}
+        {/* Four features around the summary scene */}
+        <div className="mt-12 grid grid-cols-1 gap-y-10 md:grid-cols-[minmax(220px,0.95fr)_minmax(0,2.05fr)_minmax(220px,0.95fr)] md:gap-x-10 lg:gap-x-12">
+          <div className="flex flex-col gap-12 md:gap-16 md:self-stretch md:py-6">{copy.features.slice(0, 2).map(feature)}</div>
           <div className="flex items-center justify-center">
-            <div className="w-full max-w-[480px] overflow-hidden rounded-[1.35rem] bg-[#F4F4F2]">
-              <img
-                src="/illustrations/capabilities-receptionist.webp"
-                alt={copy.imageAlt}
-                width={1024}
-                height={1024}
-                className="aspect-square w-full"
-                loading="lazy"
-                decoding="async"
-              />
+            <div className="relative aspect-square w-full max-w-[480px] overflow-hidden rounded-2xl border border-border/60 bg-beige-strong/60" role="img" aria-label={copy.imageAlt}>
+              <ProductScene name="summary" locale={locale} fit="square" />
             </div>
           </div>
-
-          {/* ── Right column: features 3 & 4 ── */}
-          <div className="flex flex-col gap-12 md:gap-16 md:self-stretch md:py-6">
-            {copy.features.slice(2, 4).map((f) => (
-              <div key={f.title}>
-                <div className="flex items-center gap-2">
-                  <f.icon className="size-[18px] shrink-0 text-foreground/80" />
-                  <h3 className="font-heading text-lg font-medium tracking-tight text-foreground">
-                    {f.title}
-                  </h3>
-                </div>
-                <p className="mt-3 text-base leading-relaxed text-muted-foreground">
-                  {f.description}
-                </p>
-              </div>
-            ))}
-          </div>
+          <div className="flex flex-col gap-12 md:gap-16 md:self-stretch md:py-6">{copy.features.slice(2, 4).map(feature)}</div>
         </div>
       </div>
     </section>

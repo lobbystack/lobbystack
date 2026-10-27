@@ -1,3 +1,4 @@
+import { eyebrow } from "@/marketing/lib/eyebrows"
 import { absoluteUrl, breadcrumbJsonLd, organizationJsonLd } from "@/marketing/lib/seo"
 import type { MarketingPageSeo } from "@/marketing/seo/page-seo"
 
@@ -89,16 +90,17 @@ export function cookiePolicySeoEs(): MarketingPageSeo {
 export function CookiePolicyMainEs() {
   return (
     <main id="main-content" tabIndex={-1} className="bg-background text-foreground">
-      <section className="border-b border-border/60">
-        <div className="mx-auto max-w-4xl px-6 py-16 md:py-20">
-          <p className="text-sm font-medium text-muted-foreground">
-            Última actualización: {updatedAt}
-          </p>
-          <h1 className="mt-4 text-4xl font-semibold tracking-tight md:text-5xl">
+      <section>
+        <div className="mx-auto max-w-6xl px-6 pt-10 pb-4 md:pt-11 md:pb-6">
+          <p className="eyebrow">{eyebrow("es", "legal.hero")}</p>
+          <h1 className="display-heading mt-4">
             Política de cookies
           </h1>
+          <p className="mt-4 text-sm text-muted-foreground">
+            Última actualización: {updatedAt}
+          </p>
           <p
-            className="mt-6 max-w-3xl text-base leading-7 text-muted-foreground md:text-lg"
+            className="mt-6 max-w-3xl text-lg leading-[1.6] text-muted-foreground"
           >
             La presente Política de cookies explica cómo Lobbystack Inc.
             (“LobbyStack”, “nosotros”, “nuestro” o “nos”) utiliza las cookies y
@@ -114,7 +116,7 @@ export function CookiePolicyMainEs() {
       </section>
 
       <section
-        className="mx-auto grid max-w-6xl gap-10 px-6 py-12 md:grid-cols-[220px_1fr] md:py-16"
+        className="mx-auto grid max-w-6xl gap-10 px-6 pt-8 pb-20 md:grid-cols-[220px_1fr] md:pt-12 md:pb-30"
       >
         <aside className="hidden md:block">
           <nav className="sticky top-24 space-y-2 text-sm text-muted-foreground">
@@ -130,7 +132,7 @@ export function CookiePolicyMainEs() {
           </nav>
         </aside>
 
-        <article className="legal-copy max-w-none">
+        <article className="legal-copy min-w-0 max-w-none">
           <section id="overview">
             <h2>1. Descripción general</h2>
             <p>
@@ -174,7 +176,7 @@ export function CookiePolicyMainEs() {
               variar según su navegador, su región, sus opciones de privacidad y
               las páginas o funciones que utilice.
             </p>
-            <div className="mt-6 overflow-x-auto">
+            <div className="relative mt-6 overflow-x-auto">
               <table>
                 <thead>
                   <tr>

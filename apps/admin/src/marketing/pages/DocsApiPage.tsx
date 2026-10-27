@@ -1,6 +1,10 @@
+import { CircleCheck } from "lucide-react"
+
 import { Footer } from "@/marketing/components/Footer"
 import { Navbar } from "@/marketing/components/Navbar"
+import { SectionTitle } from "@/marketing/components/system/SectionTitle"
 import { getCopy, getRouteSeo, localizePath, type Locale } from "@/marketing/i18n"
+import { eyebrow } from "@/marketing/lib/eyebrows"
 import { absoluteUrl, breadcrumbJsonLd, organizationJsonLd, webSiteJsonLd } from "@/marketing/lib/seo"
 import { PageJsonLd, type MarketingPageSeo } from "@/marketing/seo/page-seo"
 
@@ -537,61 +541,55 @@ export function DocsApiPage({ locale }: { locale: Locale }) {
       <PageJsonLd seo={seo} />
       <Navbar locale={locale} />
       <main id="main-content" className="bg-background text-foreground">
-        <section className="mx-auto max-w-5xl px-6 py-20 sm:py-24">
-          <div className="max-w-3xl">
-            <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
-              {t.h1}
-            </h1>
-            <p className="mt-5 text-lg leading-8 text-muted-foreground">
-              {t.intro}
-            </p>
-            <p className="mt-4 leading-7 text-muted-foreground">
-              {t.note}
-            </p>
-          </div>
+        <section className="mx-auto max-w-5xl px-6 pt-10 pb-24 md:pt-11 md:pb-30">
+          <SectionTitle as="h1" eyebrow={eyebrow(locale, "docs.hero")} intro={t.intro} className="max-w-3xl">
+            {t.h1}
+          </SectionTitle>
+          <p className="mt-4 max-w-3xl text-base leading-7 text-muted-foreground">{t.note}</p>
 
           <div className="mt-12 grid gap-6 md:grid-cols-3">
             {t.cards.map((card) => (
               <a
                 key={card.href}
                 href={card.href}
-                className="rounded-lg border bg-card p-5 transition hover:border-primary/50"
+                className="rounded-2xl border border-border/60 bg-beige p-6 transition-colors hover:bg-beige-strong/60"
               >
-                <h2 className="text-base font-semibold">{card.title}</h2>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  {card.body}
-                </p>
+                <h2 className="card-heading">{card.title}</h2>
+                <p className="mt-3 text-base leading-6 text-muted-foreground">{card.body}</p>
               </a>
             ))}
           </div>
 
-          <section className="mt-16 grid gap-8 md:grid-cols-2">
+          <section className="mt-20 grid gap-8 md:grid-cols-2">
             <div>
-              <h2 className="text-2xl font-semibold">{t.audienceHeading}</h2>
-              <p className="mt-4 leading-7 text-muted-foreground">
-                {t.audienceBody}
-              </p>
+              <h2 className="text-2xl font-medium tracking-[-0.02em]">{t.audienceHeading}</h2>
+              <p className="mt-4 text-base leading-7 text-muted-foreground">{t.audienceBody}</p>
             </div>
             <div>
-              <h2 className="text-2xl font-semibold">{t.behaviorHeading}</h2>
-              <ul className="mt-4 space-y-3 text-sm leading-6 text-muted-foreground">
-                {t.behaviorItems.map((item) => <li key={item}>• {item}</li>)}
+              <h2 className="text-2xl font-medium tracking-[-0.02em]">{t.behaviorHeading}</h2>
+              <ul className="mt-4 space-y-3 text-base leading-6 text-muted-foreground">
+                {t.behaviorItems.map((item) => (
+                  <li key={item} className="flex gap-3">
+                    <CircleCheck className="mt-1 size-4 shrink-0 text-beige-foreground" aria-hidden="true" />
+                    <span>{item}</span>
+                  </li>
+                ))}
               </ul>
             </div>
           </section>
 
-          <section className="mt-16">
-            <h2 className="text-2xl font-semibold">{t.endpoints}</h2>
-            <div className="mt-6 overflow-x-auto rounded-lg border">
+          <section className="mt-20">
+            <h2 className="text-2xl font-medium tracking-[-0.02em]">{t.endpoints}</h2>
+            <div className="relative mt-6 overflow-x-auto rounded-2xl border border-border/60">
               <table className="w-full border-collapse text-left text-sm">
-                <thead className="bg-muted/70 text-muted-foreground">
+                <thead className="bg-beige text-foreground">
                   <tr>
                     {t.tableHeaders.map((header) => (
                       <th key={header} className="px-4 py-3 font-medium">{header}</th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y">
+                <tbody className="divide-y divide-border/60">
                   {t.rows.map((row) => (
                     <tr key={row[0]}>
                       <td className="px-4 py-3 font-mono text-xs">{row[0]}</td>
@@ -604,35 +602,33 @@ export function DocsApiPage({ locale }: { locale: Locale }) {
             </div>
           </section>
 
-          <section className="mt-16">
-            <h2 className="text-2xl font-semibold">{t.requestExamples}</h2>
+          <section className="mt-20">
+            <h2 className="text-2xl font-medium tracking-[-0.02em]">{t.requestExamples}</h2>
             <div className="mt-6 grid gap-6 lg:grid-cols-2">
-              <div className="rounded-lg border bg-card p-5">
-                <h3 className="text-base font-semibold">{t.examples[0]}</h3>
-                <pre className="mt-4 overflow-x-auto rounded-md bg-muted p-4 text-xs leading-6"><code>{`curl ${absoluteUrl(localizePath(locale, "/"))} \\
+              <div className="min-w-0 rounded-2xl border border-border/60 p-6">
+                <h3 className="card-heading">{t.examples[0]}</h3>
+                <pre className="mt-4 overflow-x-auto rounded-xl bg-beige p-4 font-mono text-xs leading-6 text-foreground/80"><code>{`curl ${absoluteUrl(localizePath(locale, "/"))} \\
   -H "Accept: text/markdown"`}</code></pre>
               </div>
-              <div className="rounded-lg border bg-card p-5">
-                <h3 className="text-base font-semibold">{t.examples[1]}</h3>
-                <pre className="mt-4 overflow-x-auto rounded-md bg-muted p-4 text-xs leading-6"><code>{`curl ${absoluteUrl("/.well-known/api-catalog")} \\
+              <div className="min-w-0 rounded-2xl border border-border/60 p-6">
+                <h3 className="card-heading">{t.examples[1]}</h3>
+                <pre className="mt-4 overflow-x-auto rounded-xl bg-beige p-4 font-mono text-xs leading-6 text-foreground/80"><code>{`curl ${absoluteUrl("/.well-known/api-catalog")} \\
   -H "Accept: application/linkset+json"`}</code></pre>
               </div>
             </div>
           </section>
 
-          <section className="mt-16">
-            <h2 className="text-2xl font-semibold">{t.relatedHeading}</h2>
+          <section className="mt-20">
+            <h2 className="text-2xl font-medium tracking-[-0.02em]">{t.relatedHeading}</h2>
             <div className="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
               {t.related.map((item) => (
                 <a
                   key={item.href}
                   href={item.href}
-                  className="rounded-lg border bg-card p-5 transition hover:border-primary/50"
+                  className="rounded-2xl border border-border/60 bg-background p-6 transition-colors hover:bg-beige"
                 >
-                  <h3 className="text-base font-semibold">{item.title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                    {item.body}
-                  </p>
+                  <h3 className="card-heading">{item.title}</h3>
+                  <p className="mt-3 text-base leading-6 text-muted-foreground">{item.body}</p>
                 </a>
               ))}
             </div>

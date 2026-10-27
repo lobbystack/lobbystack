@@ -1,27 +1,26 @@
 import { intlLocale, partnerTierCatalog, partnerTierSlugs, type PartnerTierSlug } from "@lobbystack/shared"
-import { ChevronRight, Layers, LayoutGrid } from "lucide-react"
-import type { ReactNode } from "react"
+import { Layers, LayoutGrid } from "lucide-react"
 
-import {
-  AppFrame,
-  HeroIllustration,
-  OverageArt,
-  PackagesArt,
-  PlaneGrid,
-  SelfHostArt,
-  SetupFeeArt,
-} from "@/marketing/components/white-label/WhiteLabelArt"
+import { FaqSection } from "@/marketing/components/FaqSection"
+import { SupportPlans } from "@/marketing/components/pricing/SupportPlans"
+import { AppFrame, Screenshot, type ScreenshotSource } from "@/marketing/components/system/AppFrame"
+import { TileFieldArt } from "@/marketing/components/system/art"
+import { ClosingCta } from "@/marketing/components/system/ClosingCta"
+import { IconCards } from "@/marketing/components/system/IconCards"
+import { MediaCard } from "@/marketing/components/system/MediaCard"
+import { PlanCards, type PlanCard } from "@/marketing/components/system/PlanCards"
+import { SectionTitle } from "@/marketing/components/system/SectionTitle"
+import { SplitCard } from "@/marketing/components/system/SplitCard"
+import { partnerSignupAttributes, PillLink } from "@/marketing/components/white-label/PillLink"
+import { TierViewSwitch } from "@/marketing/components/white-label/TierViewSwitch"
+import { HeroIllustration, OverageArt, PackagesArt, SetupFeeArt } from "@/marketing/components/white-label/WhiteLabelArt"
 import { localizeHref, type Locale } from "@/marketing/i18n"
 import { appPartnerSignupUrl } from "@/marketing/lib/app-links"
-import { SupportPlans } from "@/marketing/components/pricing/SupportPlans"
-import { PillLink } from "@/marketing/components/white-label/PillLink"
-import { TierViewSwitch } from "@/marketing/components/white-label/TierViewSwitch"
-import { WhiteLabelTierCards, type WhiteLabelTierCard } from "@/marketing/components/white-label/WhiteLabelTierCards"
 import { wholeUsd } from "@/marketing/lib/money"
-import { cn } from "@/marketing/lib/utils"
-import { getWhiteLabelCopy, type WhiteLabelCard } from "@/marketing/lib/white-label-copy"
 import { getSelfHostedSupportCopy } from "@/marketing/lib/self-hosted-support-copy"
 import { supportComparisonGroups, supportPlanCards } from "@/marketing/lib/self-hosted-support-plans"
+import { cn } from "@/marketing/lib/utils"
+import { getWhiteLabelCopy } from "@/marketing/lib/white-label-copy"
 import { getWhiteLabelFaqs } from "@/marketing/lib/white-label-faqs"
 
 type SectionProps = { locale: Locale }
@@ -31,11 +30,9 @@ const container = "mx-auto w-full max-w-site px-6"
 /** Tiers whose card stands out, as the recommended choice. */
 const highlightedTier: PartnerTierSlug = "growth"
 
-type ShotImage = { src: string; width: number; height: number; srcSet?: string; sizes?: string }
-
 /** The product shots in public/screenshots, at their pixel sizes. */
-const dashboardShot: ShotImage = { src: "/screenshots/partner-business-dashboard.webp", width: 2880, height: 1880 }
-const consoleShot: ShotImage = {
+const dashboardShot = { src: "/screenshots/partner-business-dashboard.webp", width: 2880, height: 1880 }
+const consoleShot: ScreenshotSource = {
   src: "/screenshots/partner-console.webp",
   width: 3200,
   height: 1972,
@@ -46,51 +43,8 @@ const consoleShot: ShotImage = {
     .join(", "),
   sizes: "(min-width: 72rem) 68rem, calc(100vw - 3rem)",
 }
-const signInShot: ShotImage = { src: "/screenshots/partner-signin.webp", width: 1600, height: 1000 }
-const brandingShot: ShotImage = { src: "/screenshots/partner-branding.webp", width: 2880, height: 1360 }
-
-function Shot({ shot, alt, priority, className }: { shot: ShotImage; alt: string; priority?: boolean; className?: string }) {
-  return (
-    <img
-      src={shot.src}
-      srcSet={shot.srcSet}
-      sizes={shot.sizes}
-      alt={alt}
-      width={shot.width}
-      height={shot.height}
-      className={cn("block w-full", className)}
-      loading={priority ? "eager" : "lazy"}
-      fetchPriority={priority ? "high" : undefined}
-      decoding="async"
-    />
-  )
-}
-
-function SectionTitle({
-  eyebrow,
-  lines,
-  centered,
-  as: Heading = "h2",
-}: {
-  eyebrow: string
-  lines: readonly string[]
-  centered?: boolean
-  as?: "h1" | "h2"
-}) {
-  return (
-    <div className={cn(centered && "text-center")}>
-      <p className="eyebrow">{eyebrow}</p>
-      <Heading className={cn("mt-4", Heading === "h1" ? "program-display" : "program-heading")}>
-        {lines.map((line, index) => (
-          <span key={line}>
-            {index > 0 && " "}
-            <span className="md:block">{line}</span>
-          </span>
-        ))}
-      </Heading>
-    </div>
-  )
-}
+const signInShot = { src: "/screenshots/partner-signin.webp", width: 1600, height: 1000 }
+const brandingShot = { src: "/screenshots/partner-branding.webp", width: 2880, height: 1360 }
 
 export function WhiteLabelHero({ locale }: SectionProps) {
   const copy = getWhiteLabelCopy(locale)
@@ -120,94 +74,69 @@ export function WhiteLabelHero({ locale }: SectionProps) {
       </div>
       <div className={cn(container, "mt-2 md:mt-12 lg:mt-6")}>
         <AppFrame>
-          <Shot shot={consoleShot} alt={copy.shots.consoleAlt} priority />
+          <Screenshot shot={consoleShot} alt={copy.shots.consoleAlt} priority />
         </AppFrame>
       </div>
     </section>
   )
 }
 
-function IconTile({ children }: { children: ReactNode }) {
-  return (
-    <span className="flex size-11 items-center justify-center rounded-lg border border-border/80 bg-background shadow-[0_1px_2px_oklch(0_0_0/6%)]">
-      {children}
-    </span>
-  )
-}
-
 export function WhiteLabelHowItWorks({ locale }: SectionProps) {
   const copy = getWhiteLabelCopy(locale)
   const t = copy.brand
-  const smallCards = [
-    { ...copy.console, icon: LayoutGrid },
-    { ...copy.pool, icon: Layers },
-  ]
   return (
     <section className="pt-20 md:pt-30" id="how-it-works">
       <div className={container}>
         <SectionTitle eyebrow={t.eyebrow} lines={t.titleLines} />
 
-        <div className="mt-12 grid overflow-hidden rounded-2xl border border-border/60 md:grid-cols-2">
-          <div className="relative min-h-[22rem] overflow-hidden bg-beige-strong/60 md:min-h-[30rem]">
-            <AppFrame className="absolute top-8 left-6 w-[78%] md:top-12 md:left-10 md:w-[70%]">
-              <Shot shot={signInShot} alt={copy.shots.signInAlt} />
-            </AppFrame>
-            <AppFrame className="absolute top-[48%] left-[22%] w-[110%] md:top-[46%] md:left-[26%] md:w-[100%]">
-              <Shot shot={brandingShot} alt={copy.shots.brandingAlt} />
-            </AppFrame>
-          </div>
-          <div className="flex flex-col justify-center bg-beige px-6 py-10 md:px-8 lg:pr-8 lg:pl-8">
-            <p className="eyebrow">{t.card.eyebrow}</p>
-            <h3 className="mt-2 font-heading text-[1.625rem] leading-[1.2] font-medium tracking-[-0.03em] md:text-[2rem]">
-              {t.card.title}
-            </h3>
-            <p className="mt-3 text-base leading-6 text-muted-foreground">{t.card.body}</p>
-            <div className="mt-10">
-              <PillLink href="#tiers" variant="primary" section="white_label_brand">
-                {t.card.cta}
-              </PillLink>
-            </div>
-          </div>
-        </div>
+        <SplitCard
+          className="mt-12"
+          mediaClassName="min-h-[22rem] md:min-h-[30rem]"
+          media={
+            <>
+              <AppFrame className="absolute top-8 left-6 w-[78%] md:top-12 md:left-10 md:w-[70%]">
+                <Screenshot shot={signInShot} alt={copy.shots.signInAlt} />
+              </AppFrame>
+              <AppFrame className="absolute top-[48%] left-[22%] w-[110%] md:top-[46%] md:left-[26%] md:w-[100%]">
+                <Screenshot shot={brandingShot} alt={copy.shots.brandingAlt} />
+              </AppFrame>
+            </>
+          }
+          eyebrow={t.card.eyebrow}
+          title={t.card.title}
+          body={t.card.body}
+          action={
+            <PillLink href="#tiers" variant="primary" section="white_label_brand">
+              {t.card.cta}
+            </PillLink>
+          }
+        />
 
-        <div className="mt-6 grid divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/70 md:mt-12 md:grid-cols-2 md:divide-x md:divide-y-0">
-          {smallCards.map(({ icon: Icon, title, body }) => (
-            <article
-              key={title}
-              className="bg-background p-6"
+        <IconCards
+          className="mt-6 md:mt-12"
+          cards={[
+            { ...copy.console, icon: LayoutGrid },
+            { ...copy.pool, icon: Layers },
+          ]}
+        />
+
+        <SplitCard
+          className="mt-6 md:mt-12"
+          columns="md:grid-cols-[1.35fr_1fr]"
+          media={<TileFieldArt />}
+          eyebrow={copy.selfHost.eyebrow}
+          title={copy.selfHost.title}
+          body={copy.selfHost.body}
+          action={
+            <PillLink
+              href={localizeHref(locale, "/solutions/self-hosted-ai-receptionist/")}
+              variant="primary"
+              section="white_label_self_host"
             >
-              <IconTile>
-                <Icon className="size-5 text-foreground/80" aria-hidden="true" />
-              </IconTile>
-              <div className="mt-8">
-                <h3 className="text-xl leading-[1.3] font-medium tracking-[-0.02em]">{title}</h3>
-                <p className="mt-3 text-base leading-6 text-muted-foreground">{body}</p>
-              </div>
-            </article>
-          ))}
-        </div>
-
-        <div className="mt-6 grid overflow-hidden rounded-2xl border border-border/60 md:mt-12 md:grid-cols-[1.35fr_1fr]">
-          <div className="relative min-h-[18rem] bg-beige-strong/60 md:min-h-[24rem]">
-            <SelfHostArt />
-          </div>
-          <div className="flex flex-col justify-center bg-beige px-6 py-10 md:px-8">
-            <p className="eyebrow">{copy.selfHost.eyebrow}</p>
-            <h3 className="mt-2 font-heading text-[1.625rem] leading-[1.2] font-medium tracking-[-0.03em] md:text-[2rem]">
-              {copy.selfHost.title}
-            </h3>
-            <p className="mt-3 text-base leading-6 text-muted-foreground">{copy.selfHost.body}</p>
-            <div className="mt-10">
-              <PillLink
-                href={localizeHref(locale, "/solutions/self-hosted-ai-receptionist/")}
-                variant="primary"
-                section="white_label_self_host"
-              >
-                {copy.selfHost.cta}
-              </PillLink>
-            </div>
-          </div>
-        </div>
+              {copy.selfHost.cta}
+            </PillLink>
+          }
+        />
       </div>
     </section>
   )
@@ -219,60 +148,42 @@ export function WhiteLabelDashboard({ locale }: SectionProps) {
   return (
     <section className="pt-20 md:pt-30" id="receptionist">
       <div className={container}>
-        <div className="max-w-[44rem]">
-          <SectionTitle eyebrow={t.eyebrow} lines={[t.title]} />
-          <p className="mt-4 text-lg leading-[1.6] text-muted-foreground">{t.body}</p>
-          <div className="mt-8">
-            <PillLink href={localizeHref(locale, "/features/")} variant="secondary" section="white_label_receptionist">
-              {t.cta}
-            </PillLink>
-          </div>
+        <SectionTitle eyebrow={t.eyebrow} lines={[t.title]} intro={t.body} className="max-w-[44rem]" />
+        <div className="mt-8">
+          <PillLink href={localizeHref(locale, "/features/")} variant="secondary" section="white_label_receptionist">
+            {t.cta}
+          </PillLink>
         </div>
         <AppFrame className="mt-12">
-          <Shot shot={dashboardShot} alt={copy.shots.dashboardAlt} />
+          <Screenshot shot={dashboardShot} alt={copy.shots.dashboardAlt} />
         </AppFrame>
       </div>
     </section>
   )
 }
 
-function EarnCard({ card, children }: { card: WhiteLabelCard; children: ReactNode }) {
-  return (
-    <article className="flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-beige">
-      <div className="relative h-80 overflow-hidden bg-beige-strong/60">{children}</div>
-      <div className="p-6">
-        <p className="eyebrow">{card.eyebrow}</p>
-        <h3 className="mt-2 text-xl leading-[1.3] font-medium tracking-[-0.02em]">{card.title}</h3>
-        <p className="mt-3 text-base leading-6 text-muted-foreground">{card.body}</p>
-      </div>
-    </article>
-  )
-}
-
 export function WhiteLabelEarn({ locale }: SectionProps) {
   const copy = getWhiteLabelCopy(locale)
   const t = copy.earn
+  const cards = [
+    { card: t.packages, art: <PackagesArt locale={locale} copy={copy.earnArt} /> },
+    { card: t.setupFees, art: <SetupFeeArt locale={locale} copy={copy.earnArt} /> },
+    { card: t.overage, art: <OverageArt locale={locale} copy={copy.earnArt} /> },
+  ]
   return (
     <section className="pt-20 md:pt-30" id="earn">
       <div className={container}>
         <SectionTitle eyebrow={t.eyebrow} lines={t.titleLines} />
         <div className="mt-12 grid gap-6 lg:grid-cols-3">
-          <EarnCard card={t.packages}>
-            <PackagesArt locale={locale} copy={copy.earnArt} />
-          </EarnCard>
-          <EarnCard card={t.setupFees}>
-            <SetupFeeArt locale={locale} copy={copy.earnArt} />
-          </EarnCard>
-          <EarnCard card={t.overage}>
-            <OverageArt locale={locale} copy={copy.earnArt} />
-          </EarnCard>
+          {cards.map(({ card, art }) => (
+            <MediaCard key={card.title} media={art} eyebrow={card.eyebrow} title={card.title} body={card.body} />
+          ))}
         </div>
       </div>
     </section>
   )
 }
 
-/** A tier price in whole dollars, as the pricing page shows plan prices. */
 function usd(locale: Locale, cents: number) {
   const dollars = cents / 100
   return new Intl.NumberFormat(intlLocale(locale), {
@@ -288,12 +199,13 @@ export function WhiteLabelTiers({ locale }: SectionProps) {
   const t = getWhiteLabelCopy(locale).tiers
   const signup = appPartnerSignupUrl(locale)
   const number = (value: number) => new Intl.NumberFormat(intlLocale(locale)).format(value)
-  const cards: WhiteLabelTierCard[] = partnerTierSlugs.map((slug) => {
+  const cards: PlanCard[] = partnerTierSlugs.map((slug) => {
     const tier = partnerTierCatalog[slug]
     const annual = tier.annualEffectiveMonthlyChargeCents
     return {
-      slug,
-      ...t[slug],
+      key: slug,
+      name: t[slug].name,
+      description: t[slug].description,
       highlighted: slug === highlightedTier,
       period: tier.paid ? t.perMonth : null,
       price: {
@@ -303,6 +215,7 @@ export function WhiteLabelTiers({ locale }: SectionProps) {
           note: tier.paid ? t.billedAnnually : null,
         },
       },
+      cta: { label: t[slug].cta, href: signup, attributes: partnerSignupAttributes(signup, `white_label_tier_${slug}`) },
       features: [
         t.pool(number(tier.poolVoiceSeconds / 60), number(tier.poolChats)),
         tier.trialNumbers > 0 ? t.trialNumber : t.numbers(number(tier.includedNumbers)),
@@ -314,12 +227,10 @@ export function WhiteLabelTiers({ locale }: SectionProps) {
     }
   })
 
+  // The section switches between the partner tiers and the self-hosted support plans.
   const support = getSelfHostedSupportCopy(locale)
   const header = (eyebrow: string, title: string, intro: string) => (
-    <div className="mx-auto max-w-[44rem]">
-      <SectionTitle centered eyebrow={eyebrow} lines={[title]} />
-      <p className="mt-4 text-center text-lg leading-[1.6] text-muted-foreground">{intro}</p>
-    </div>
+    <SectionTitle centered eyebrow={eyebrow} lines={[title]} intro={intro} className="max-w-[44rem]" />
   )
 
   return (
@@ -332,10 +243,10 @@ export function WhiteLabelTiers({ locale }: SectionProps) {
             link: support.whiteLabel.link,
             body: (
               <>
-                <WhiteLabelTierCards
+                <PlanCards
+                  className="mt-8"
                   cards={cards}
                   labels={{ monthly: t.monthly, annual: t.annual, save: t.save, billingLabel: t.billingLabel }}
-                  signup={signup}
                 />
                 <p className="fine-print mx-auto mt-6 max-w-[44rem] text-center">{t.footnote}</p>
               </>
@@ -346,17 +257,15 @@ export function WhiteLabelTiers({ locale }: SectionProps) {
             prompt: support.whiteLabel.backPrompt,
             link: support.whiteLabel.backLink,
             body: (
-              <>
-                <div className="mt-8">
-                  <SupportPlans
-                    cards={supportPlanCards(locale, "white_label")}
-                    groups={supportComparisonGroups(locale, "white_label")}
-                    labels={support.labels}
-                    tone="beige"
-                    section="white_label_self_hosted"
-                  />
-                </div>
-              </>
+              <div className="mt-8">
+                <SupportPlans
+                  cards={supportPlanCards(locale, "white_label")}
+                  groups={supportComparisonGroups(locale, "white_label")}
+                  labels={support.labels}
+                  tone="beige"
+                  section="white_label_self_hosted"
+                />
+              </div>
             ),
           }}
         />
@@ -366,55 +275,18 @@ export function WhiteLabelTiers({ locale }: SectionProps) {
 }
 
 export function WhiteLabelFaq({ locale }: SectionProps) {
-  const copy = getWhiteLabelCopy(locale)
-  const faqs = getWhiteLabelFaqs(locale)
-  return (
-    <section className="pt-20 md:pt-30" id="faq">
-      <div className="mx-auto w-full max-w-[51.25rem] px-5 md:px-6">
-        <h2 className="text-center text-2xl font-medium tracking-[-0.02em]">{copy.faqTitle}</h2>
-        <div className="mt-8 overflow-hidden rounded-xl border border-border/80">
-          {faqs.map((faq) => (
-            <details key={faq.question} className="disclosure group border-b border-border/80 last:border-b-0">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-6 px-4 py-[0.9375rem] text-left text-base text-foreground/80 transition-colors duration-150 hover:bg-beige focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset [&::-webkit-details-marker]:hidden">
-                <h3 className="font-normal">{faq.question}</h3>
-                <ChevronRight
-                  className="size-4 shrink-0 text-foreground/70 transition-transform duration-200 ease-(--ease-out) group-open:rotate-90"
-                  aria-hidden="true"
-                />
-              </summary>
-              <p className="px-4 pb-4 text-base leading-6 text-muted-foreground">{faq.answer}</p>
-            </details>
-          ))}
-        </div>
-      </div>
-    </section>
-  )
+  return <FaqSection className="pt-20 md:pt-30" heading={getWhiteLabelCopy(locale).faqTitle} faqs={getWhiteLabelFaqs(locale)} />
 }
 
 export function WhiteLabelClosing({ locale }: SectionProps) {
   const t = getWhiteLabelCopy(locale).closing
+  const signup = appPartnerSignupUrl(locale)
   return (
-    <section className="relative mt-24 overflow-hidden bg-beige md:mt-24">
-      <PlaneGrid />
-      <div className="relative mx-auto max-w-3xl px-5 py-28 text-center md:px-6 md:py-44">
-        <h2 className="program-display">
-          {t.titleLines.map((line, index) => (
-            <span key={line}>
-              {index > 0 && " "}
-              <span className="md:block">{line}</span>
-            </span>
-          ))}
-        </h2>
-        <p className="mx-auto mt-6 max-w-[40rem] text-base leading-6 text-muted-foreground">{t.body}</p>
-        <div className="mt-6 flex flex-wrap justify-center gap-2.5">
-          <PillLink href={appPartnerSignupUrl(locale)} variant="primary" section="white_label_closing">
-            {t.primaryCta}
-          </PillLink>
-          <PillLink href="#tiers" variant="secondary" section="white_label_closing">
-            {t.secondaryCta}
-          </PillLink>
-        </div>
-      </div>
-    </section>
+    <ClosingCta
+      titleLines={t.titleLines}
+      body={t.body}
+      primary={{ label: t.primaryCta, href: signup, attributes: partnerSignupAttributes(signup, "white_label_closing") }}
+      secondary={{ label: t.secondaryCta, href: "#tiers" }}
+    />
   )
 }

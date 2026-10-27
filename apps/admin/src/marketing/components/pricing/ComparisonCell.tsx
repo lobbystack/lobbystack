@@ -20,7 +20,7 @@ export function ComparisonCell({
     return value ? (
       <span className="relative inline-flex items-center justify-center">
         <Check
-          className="mx-auto size-4 text-foreground/60"
+          className="mx-auto size-4 text-beige-foreground"
           aria-hidden="true"
         />
         <span className="sr-only">{includedLabel}</span>

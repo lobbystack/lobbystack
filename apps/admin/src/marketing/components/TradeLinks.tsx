@@ -15,7 +15,8 @@ import {
 } from "lucide-react"
 
 import { localizeHref, type Locale } from "@/marketing/i18n"
-import { cn } from "@/marketing/lib/utils"
+import { SectionTitle } from "@/marketing/components/system/SectionTitle"
+import { eyebrow } from "@/marketing/lib/eyebrows"
 
 // Titles name the search each page targets, so the homepage passes that
 // context to the trade pages. Icons match the navbar's trade menu.
@@ -228,22 +229,21 @@ const copyByLocale = {
 export function TradeLinks({ locale = "en" }: { locale?: Locale }) {
   const copy = copyByLocale[locale]
   return (
-    <section className="border-t border-border/40 py-20 md:py-28" id="by-trade">
+    <section className="section-spacing" id="by-trade">
       <div className="mx-auto max-w-site px-6">
-        <div className="max-w-3xl">
-          <h2 className="section-heading">{copy.heading}</h2>
-          <p className="section-intro">{copy.intro}</p>
-        </div>
+        <SectionTitle eyebrow={eyebrow(locale, "home.byTrade")} intro={copy.intro} className="max-w-3xl">
+          {copy.heading}
+        </SectionTitle>
 
-        <ul className="mt-12 grid border-t border-border/70 lg:grid-cols-2 lg:gap-x-12 lg:border-t-0">
-          {trades.map((trade, index) => {
+        <ul className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-border/70 bg-border/70 lg:grid-cols-2">
+          {trades.map((trade) => {
             const [title, detail] = trade[locale]
             const Icon = trade.icon
             return (
-              <li key={trade.href} className={cn("border-b border-border/70", index < 2 && "lg:border-t")}>
+              <li key={trade.href} className="bg-background">
                 <a
                   href={localizeHref(locale, trade.href)}
-                  className="group grid grid-cols-[1.25rem_minmax(0,1fr)_1rem] items-start gap-x-3 rounded-xl px-2 py-5 transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none md:px-3"
+                  className="group grid h-full grid-cols-[1.25rem_minmax(0,1fr)_1rem] items-start gap-x-3 px-5 py-5 transition-colors hover:bg-beige focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset md:px-6"
                 >
                   <Icon
                     className="mt-1 size-[18px] text-muted-foreground transition-colors group-hover:text-foreground md:mt-[5px]"

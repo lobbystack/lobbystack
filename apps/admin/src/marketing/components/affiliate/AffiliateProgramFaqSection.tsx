@@ -30,15 +30,11 @@ export function AffiliateProgramFaqSection({ locale }: AffiliateProgramFaqSectio
   const { title, description } = faqSectionCopy[locale]
 
   return (
-    <section className="border-t border-border/60 bg-muted/20 py-16 md:py-24">
-      <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-        <div className="text-center">
-          <h2 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
-            {title}
-          </h2>
-          <p className="mt-4 text-base text-muted-foreground md:text-lg">{description}</p>
-        </div>
-        <div className="mt-10">
+    <section className="section-spacing" id="faq">
+      <div className="mx-auto w-full max-w-[51.25rem] px-6">
+        <h2 className="text-center text-2xl font-medium tracking-[-0.02em]">{title}</h2>
+        <p className="mt-3 text-center text-base text-muted-foreground">{description}</p>
+        <div className="mt-8">
           <FaqAccordion faqs={faqs} />
         </div>
       </div>

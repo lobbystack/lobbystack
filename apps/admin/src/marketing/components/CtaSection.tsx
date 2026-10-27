@@ -1,8 +1,6 @@
-import { buttonVariants } from "@/marketing/components/ui/button"
+import { ClosingCta } from "@/marketing/components/system/ClosingCta"
 import { appSignupUrl } from "@/marketing/lib/app-links"
-import { cn } from "@/marketing/lib/utils"
 import { getCopy, type Locale } from "@/marketing/i18n"
-import { ArrowRight } from "lucide-react"
 
 type CtaSectionProps = {
   locale?: Locale
@@ -38,40 +36,22 @@ const ctaCopy = {
 export function CtaSection({ locale = "en" }: CtaSectionProps) {
   const copy = getCopy(locale)
   const localCopy = ctaCopy[locale]
-
+  const signup = appSignupUrl(locale)
   return (
-    <section className="flex min-h-[360px] items-center bg-background py-16 md:min-h-[440px] md:py-20 lg:min-h-[500px]">
-      <div className="mx-auto max-w-3xl px-6 text-center">
-        <h2 className="section-heading">
-          {localCopy.headingStart}{" "}
-          <span className="whitespace-nowrap">{localCopy.headingMiddle}</span>{" "}
-          {localCopy.headingEnd && (
-            <span className="underline decoration-2 underline-offset-4">
-              {localCopy.headingEnd}
-            </span>
-          )}
-        </h2>
-        <p className="section-intro mx-auto max-w-[56ch]">{localCopy.body}</p>
-        <div className="mt-8">
-          <a
-            href={appSignupUrl(locale)}
-            className={cn(
-              buttonVariants({ size: "lg" }),
-              "h-11 rounded-full px-7 text-sm"
-            )}
-            data-ph-signup-cta
-            data-ph-capture-attribute-section="final_cta"
-            data-ph-capture-attribute-action="try_for_free"
-            data-ph-capture-attribute-destination={appSignupUrl(locale)}
-          >
-            {copy.common.tryFree}
-            <ArrowRight className="ml-1 size-4 transition-transform duration-200 ease-(--ease-out) group-hover/button:translate-x-0.5" />
-          </a>
-        </div>
-        <p className="fine-print mt-3">
-          {copy.common.noCreditCardCancelAnytime}
-        </p>
-      </div>
-    </section>
+    <ClosingCta
+      titleLines={[localCopy.headingStart, [localCopy.headingMiddle, localCopy.headingEnd].filter(Boolean).join(" ")]}
+      body={localCopy.body}
+      primary={{
+        label: copy.common.tryFree,
+        href: signup,
+        attributes: {
+          "data-ph-signup-cta": true,
+          "data-ph-capture-attribute-section": "final_cta",
+          "data-ph-capture-attribute-action": "try_for_free",
+          "data-ph-capture-attribute-destination": signup,
+        },
+      }}
+      footnote={copy.common.noCreditCardCancelAnytime}
+    />
   )
 }

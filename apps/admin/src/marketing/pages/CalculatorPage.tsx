@@ -1,6 +1,10 @@
+import { CircleCheck } from "lucide-react"
+
 import { CtaSection } from "@/marketing/components/CtaSection"
 import { Footer } from "@/marketing/components/Footer"
 import { Navbar } from "@/marketing/components/Navbar"
+import { ButtonLink } from "@/marketing/components/system/ButtonLink"
+import { SectionTitle } from "@/marketing/components/system/SectionTitle"
 import { CalculatorFaq } from "@/marketing/components/calculator/CalculatorFaq"
 import { MissedCallCalculator } from "@/marketing/components/calculator/MissedCallCalculator"
 import { MissedRevenueCards } from "@/marketing/components/calculator/MissedRevenueCards"
@@ -14,6 +18,7 @@ import {
 } from "@/marketing/i18n"
 import { appSignupUrl } from "@/marketing/lib/app-links"
 import { getCalculatorFaqs } from "@/marketing/lib/calculator-faqs"
+import { eyebrow } from "@/marketing/lib/eyebrows"
 import {
   absoluteUrl,
   breadcrumbJsonLd,
@@ -449,151 +454,110 @@ export function CalculatorPage({ locale }: { locale: Locale }) {
       <Navbar locale={locale} />
 
       <main id="main-content">
-        <section className="mx-auto max-w-site px-4 pt-24 pb-8 sm:pt-32 sm:pb-12">
-          <div className="max-w-3xl">
-            <h1 className="mb-6 text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
+        <section className="pt-10 md:pt-11">
+          <div className="mx-auto max-w-site px-6">
+            <SectionTitle as="h1" eyebrow={eyebrow(locale, "calculator.hero")} intro={t.intro} className="max-w-3xl">
               {t.h1}
-            </h1>
-            <p className="text-xl leading-relaxed text-muted-foreground">{t.intro}</p>
-            <p className="mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground">
-              {t.body}
-            </p>
-          </div>
+            </SectionTitle>
+            <p className="mt-4 max-w-2xl text-base leading-6 text-pretty text-muted-foreground">{t.body}</p>
 
-          <MissedCallCalculator locale={locale} />
+            <MissedCallCalculator locale={locale} />
+          </div>
         </section>
 
-        <section className="pt-12 pb-16 sm:pt-16 sm:pb-24" id="how-it-works">
-          <div className="mx-auto max-w-4xl px-4">
-            <div className="flex flex-col gap-16">
-              <div className="flex flex-col gap-6">
-                <h2 className="text-3xl font-semibold tracking-tight text-foreground">
-                  {t.measurementHeading}
-                </h2>
-                <p className="leading-relaxed text-muted-foreground">
-                  {t.measurementIntro}
-                </p>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <section className="section-spacing" id="how-it-works">
+          <div className="mx-auto max-w-4xl px-6">
+            <div className="flex flex-col gap-16 md:gap-20">
+              <div>
+                <h2 className="feature-heading">{t.measurementHeading}</h2>
+                <p className="mt-4 text-base leading-6 text-muted-foreground">{t.measurementIntro}</p>
+                <div className="mt-8 grid gap-px overflow-hidden rounded-2xl border border-border/70 bg-border/70 sm:grid-cols-2">
                   {t.measurementItems.map((item) => (
-                    <article
-                      key={item.term}
-                      className="rounded-2xl border border-border/70 bg-background p-6"
-                    >
-                      <h3 className="text-base font-semibold text-foreground">
-                        {item.term}
-                      </h3>
-                      <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                        {item.description}
-                      </p>
+                    <article key={item.term} className="bg-background p-6">
+                      <h3 className="card-heading">{item.term}</h3>
+                      <p className="mt-3 text-base leading-6 text-muted-foreground">{item.description}</p>
                     </article>
                   ))}
                 </div>
               </div>
 
-              <div className="flex flex-col gap-6">
-                <h2
-                  id="how-the-math-works"
-                  className="text-3xl font-semibold tracking-tight text-foreground"
-                >
+              <div>
+                <h2 id="how-the-math-works" className="feature-heading">
                   {t.mathHeading}
                 </h2>
-                <p className="leading-relaxed text-muted-foreground">{t.mathIntro}</p>
-                <div className="overflow-x-auto rounded-2xl border border-border/70 bg-background p-6 font-mono text-sm sm:text-base">
+                <p className="mt-4 text-base leading-6 text-muted-foreground">{t.mathIntro}</p>
+                <div className="mt-6 overflow-x-auto rounded-2xl bg-beige p-6 font-mono text-sm leading-6 text-foreground/80 sm:text-base">
                   {t.formula}
                 </div>
-                <p className="leading-relaxed text-muted-foreground">{t.mathBody}</p>
+                <p className="mt-6 text-base leading-6 text-muted-foreground">{t.mathBody}</p>
               </div>
 
               <MissedRevenueCards locale={locale} />
 
-              <div className="flex flex-col gap-6">
-                <h2 className="text-3xl font-semibold tracking-tight text-foreground">
-                  {t.whyHeading}
-                </h2>
+              <div>
+                <h2 className="feature-heading">{t.whyHeading}</h2>
                 {t.whyParagraphs.map((paragraph) => (
-                  <p key={paragraph} className="leading-relaxed text-muted-foreground">
+                  <p key={paragraph} className="mt-4 text-base leading-6 text-muted-foreground">
                     {paragraph}
                   </p>
                 ))}
               </div>
 
-              <div className="flex flex-col gap-6">
-                <h2 className="text-3xl font-semibold tracking-tight text-foreground">
-                  {t.inputsHeading}
-                </h2>
-                <p className="leading-relaxed text-muted-foreground">{t.inputsIntro}</p>
-                <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <h2 className="feature-heading">{t.inputsHeading}</h2>
+                <p className="mt-4 text-base leading-6 text-muted-foreground">{t.inputsIntro}</p>
+                <ul className="mt-8 grid gap-px overflow-hidden rounded-2xl border border-border/70 bg-border/70 sm:grid-cols-2">
                   {t.inputTips.map((tip) => (
-                    <li
-                      key={tip}
-                      className="rounded-2xl border border-border/70 bg-background p-5 text-sm leading-relaxed text-muted-foreground"
-                    >
-                      {tip}
+                    <li key={tip} className="flex gap-3 bg-background p-6 text-base leading-6 text-muted-foreground">
+                      <CircleCheck className="mt-1 size-4 shrink-0 text-beige-foreground" aria-hidden="true" />
+                      <span>{tip}</span>
                     </li>
                   ))}
                 </ul>
               </div>
 
-              <div className="flex flex-col gap-6">
-                <h2 className="text-3xl font-semibold tracking-tight text-foreground">
-                  {t.tradeHeading}
-                </h2>
-                <p className="leading-relaxed text-muted-foreground">{t.tradeIntro}</p>
-                <div className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/70 bg-background">
+              <div>
+                <h2 className="feature-heading">{t.tradeHeading}</h2>
+                <p className="mt-4 text-base leading-6 text-muted-foreground">{t.tradeIntro}</p>
+                <div className="mt-8 divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/70">
                   {t.tradeNotes.map((item) => (
-                    <article
-                      key={item.trade}
-                      className="grid gap-3 p-6 sm:grid-cols-[9rem_1fr] sm:gap-6"
-                    >
-                      <h3 className="font-semibold text-foreground">{item.trade}</h3>
-                      <p className="text-sm leading-relaxed text-muted-foreground">
-                        {item.note}
-                      </p>
+                    <article key={item.trade} className="grid gap-3 p-6 sm:grid-cols-[10rem_1fr] sm:gap-6">
+                      <h3 className="card-heading">{item.trade}</h3>
+                      <p className="text-base leading-6 text-muted-foreground">{item.note}</p>
                     </article>
                   ))}
                 </div>
               </div>
 
-              <div className="flex flex-col gap-6 pt-8">
-                <h2
-                  id="what-to-do-next"
-                  className="text-3xl font-semibold tracking-tight text-foreground"
-                >
+              <div className="rounded-2xl bg-beige p-6 md:p-10">
+                <h2 id="what-to-do-next" className="feature-heading">
                   {t.nextHeading}
                 </h2>
                 {t.nextParagraphs.map((paragraph) => (
-                  <p key={paragraph} className="leading-relaxed text-muted-foreground">
+                  <p key={paragraph} className="mt-4 text-base leading-6 text-muted-foreground">
                     {paragraph}
                   </p>
                 ))}
-                <ul className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <ul className="mt-8 grid gap-3 sm:grid-cols-2">
                   {t.nextItems.map((item) => (
-                    <li key={item} className="flex items-start gap-3">
-                      <div className="mt-2 size-2 shrink-0 rounded-full bg-primary" />
-                      <span className="text-muted-foreground">{item}</span>
+                    <li key={item} className="flex gap-3 text-base leading-6 text-muted-foreground">
+                      <CircleCheck className="mt-1 size-4 shrink-0 text-beige-foreground" aria-hidden="true" />
+                      <span>{item}</span>
                     </li>
                   ))}
                 </ul>
-                <div className="mt-8 flex flex-wrap items-center gap-4">
-                  <a
-                    href={appSignupUrl(locale, { source: "calculator" })}
-                    className="inline-flex h-12 items-center justify-center rounded-full bg-foreground px-8 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
-                  >
-                    {common.tryFree}
-                  </a>
-                  <a
-                    href={localizeHref(locale, "/pricing/")}
-                    className="inline-flex h-12 items-center justify-center rounded-full border border-border px-8 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-                  >
+                <div className="mt-10 flex flex-wrap gap-2.5">
+                  <ButtonLink href={appSignupUrl(locale, { source: "calculator" })}>{common.tryFree}</ButtonLink>
+                  <ButtonLink href={localizeHref(locale, "/pricing/")} variant="secondary">
                     {common.seePricing}
-                  </a>
+                  </ButtonLink>
                 </div>
               </div>
-
-              <CalculatorFaq locale={locale} />
             </div>
           </div>
         </section>
+
+        <CalculatorFaq locale={locale} />
 
         <CtaSection locale={locale} />
       </main>

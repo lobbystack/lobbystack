@@ -4,9 +4,15 @@ import { FeatureGrid } from "@/marketing/components/FeatureGrid"
 import { Footer } from "@/marketing/components/Footer"
 import { HeroSection } from "@/marketing/components/HeroSection"
 import {
-  LandingPageAdditions,
-  ProductExtensionSection,
-} from "@/marketing/components/LandingPageAdditions"
+  ControlSection,
+  DashboardPreview,
+  HowItWorksSection,
+  KnowledgeSection,
+  MissedCallsSection,
+  OpenSourceSection,
+  PhoneToolsSection,
+  PricingPreviewSection,
+} from "@/marketing/components/home/HomeSections"
 import { Navbar } from "@/marketing/components/Navbar"
 import { TradeLinks } from "@/marketing/components/TradeLinks"
 import { LobbyStackHeroVoiceDemo } from "@/marketing/components/web-voice/LobbyStackWebVoiceWidget"
@@ -58,9 +64,15 @@ export function HomePage({ locale }: { locale: Locale }) {
         <HeroSection locale={locale}>
           <LobbyStackHeroVoiceDemo locale={locale} />
         </HeroSection>
-        <ProductExtensionSection locale={locale} />
+        <DashboardPreview locale={locale} />
+        <MissedCallsSection locale={locale} />
         <FeatureGrid locale={locale} />
-        <LandingPageAdditions locale={locale} />
+        <KnowledgeSection locale={locale} />
+        <PhoneToolsSection locale={locale} />
+        <HowItWorksSection locale={locale} />
+        <ControlSection locale={locale} />
+        <PricingPreviewSection locale={locale} />
+        <OpenSourceSection locale={locale} />
         <TradeLinks locale={locale} />
         <FaqSection heading={getCopy(locale).common.commonQuestions} faqs={getHomeFaqs(locale)} />
         <CtaSection locale={locale} />

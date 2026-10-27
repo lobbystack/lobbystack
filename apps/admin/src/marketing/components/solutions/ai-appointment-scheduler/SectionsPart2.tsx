@@ -1,3 +1,7 @@
+import { TileFieldArt } from "@/marketing/components/system/art"
+import { ButtonLink } from "@/marketing/components/system/ButtonLink"
+import { SplitCard } from "@/marketing/components/system/SplitCard"
+import { bespokeEyebrows } from "@/marketing/lib/eyebrows"
 import { buttonVariants } from "@/marketing/components/ui/button"
 import { cn } from "@/marketing/lib/utils"
 import {
@@ -115,7 +119,7 @@ export function Capabilities() {
   ]
 
   return (
-    <section className="section-spacing bg-muted/30" id="capabilities">
+    <section className="section-spacing" id="capabilities">
       <div className="mx-auto max-w-site px-6">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="section-heading">
@@ -151,13 +155,13 @@ export function RevenueTieIn() {
   return (
     <section className="section-spacing" id="revenue">
       <div className="mx-auto max-w-4xl px-6">
-        <div className="overflow-hidden rounded-[1.35rem] border border-border/70 bg-background">
+        <div className="overflow-hidden rounded-2xl border border-border/60 bg-beige">
           <div className="grid gap-8 p-8 md:grid-cols-2 md:p-12 lg:gap-12 lg:p-16">
             <div className="flex flex-col justify-center">
-              <div className="mb-6 inline-flex size-12 items-center justify-center rounded-2xl bg-muted">
+              <div className="mb-6 inline-flex size-11 items-center justify-center rounded-lg border border-border/80 bg-background shadow-[0_1px_2px_oklch(0_0_0/6%)]">
                 <Calculator className="size-6 text-foreground" />
               </div>
-              <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+              <h2 className="feature-heading">
                 See how many bookings missed calls may be costing you
               </h2>
               <p className="mt-4 leading-relaxed text-muted-foreground">
@@ -166,16 +170,13 @@ export function RevenueTieIn() {
               <div className="mt-8">
                 <a
                   href="/missed-call-revenue-calculator/"
-                  className={cn(
-                    buttonVariants({ variant: "default" }),
-                    "rounded-full"
-                  )}
+                  className={buttonVariants({ variant: "default" })}
                 >
                   Calculate missed-call revenue
                 </a>
               </div>
             </div>
-            <div className="flex flex-col justify-center rounded-2xl bg-muted p-8">
+            <div className="flex flex-col justify-center rounded-2xl bg-beige-strong/60 p-8">
               <p className="text-sm leading-relaxed font-medium text-muted-foreground">
                 The calculator uses your missed calls, booking rate, opportunity rate, and average job value to estimate weekly, monthly, and annual revenue at risk.
               </p>
@@ -193,60 +194,53 @@ export function RevenueTieIn() {
 
 export function OpenSource() {
   return (
-    <section
-      className="section-spacing bg-foreground text-background"
-      id="open-source"
-    >
-      <div className="mx-auto max-w-site px-6 py-8">
-        <div className="grid gap-12 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
-          <div>
-            <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-              Scheduling automation you can inspect and control
-            </h2>
-            <p className="mt-6 text-lg leading-relaxed text-background/80">
-              LobbyStack is built for teams that want practical automation without giving up control. You can define how calls are handled, what questions are asked, when appointments can be booked, and when a person should step in.
-            </p>
-            <div className="mt-10 grid gap-6 sm:grid-cols-2">
-              <div className="flex gap-3">
-                <div className="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full bg-background/20">
-                  <Check className="size-3 text-background" />
-                </div>
-                <span className="text-sm text-background/80">
-                  Use the hosted product to start quickly
-                </span>
-              </div>
-              <div className="flex gap-3">
-                <div className="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full bg-background/20">
-                  <Check className="size-3 text-background" />
-                </div>
-                <span className="text-sm text-background/80">
-                  Control booking rules and fallback behavior
-                </span>
-              </div>
-              <div className="flex gap-3">
-                <div className="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full bg-background/20">
-                  <Check className="size-3 text-background" />
-                </div>
-                <span className="text-sm text-background/80">
-                  Review summaries, transcripts, and outcomes
-                </span>
-              </div>
-              <div className="flex gap-3">
-                <div className="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full bg-background/20">
-                  <Check className="size-3 text-background" />
-                </div>
-                <span className="text-sm text-background/80">
-                  Talk to us about enterprise or self-hosting needs
-                </span>
-              </div>
-            </div>
-          </div>
-          <div className="flex justify-center lg:justify-end">
-            <div className="inline-flex size-32 items-center justify-center rounded-full bg-background/10">
-              <Code2 className="size-16 text-background" />
-            </div>
-          </div>
-        </div>
+    <section className="section-spacing" id="open-source">
+      <div className="mx-auto max-w-site px-6">
+        <SplitCard
+          media={<TileFieldArt />}
+          columns="md:grid-cols-[1.35fr_1fr]"
+          eyebrow={bespokeEyebrows.openSource}
+          headingLevel="h2"
+          title="Scheduling automation you can inspect and control"
+          body="LobbyStack is built for teams that want practical automation without giving up control. You can define how calls are handled, what questions are asked, when appointments can be booked, and when a person should step in."
+          action={
+            <>
+              <ButtonLink href="https://github.com/lobbystack/lobbystack" target="_blank" rel="noopener noreferrer">
+                View on GitHub
+              </ButtonLink>
+              <ButtonLink href="/solutions/self-hosted-ai-receptionist/" variant="secondary">
+                Self-hosting overview
+              </ButtonLink>
+            </>
+          }
+        >
+          <ul className="mt-6 space-y-3">
+            <li className="flex gap-3 text-base text-foreground/80">
+              <span className="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full bg-beige-strong">
+                <Check className="size-3 text-foreground/80" strokeWidth={2.5} />
+              </span>
+              Use the hosted product to start quickly
+            </li>
+            <li className="flex gap-3 text-base text-foreground/80">
+              <span className="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full bg-beige-strong">
+                <Check className="size-3 text-foreground/80" strokeWidth={2.5} />
+              </span>
+              Control booking rules and fallback behavior
+            </li>
+            <li className="flex gap-3 text-base text-foreground/80">
+              <span className="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full bg-beige-strong">
+                <Check className="size-3 text-foreground/80" strokeWidth={2.5} />
+              </span>
+              Review summaries, transcripts, and outcomes
+            </li>
+            <li className="flex gap-3 text-base text-foreground/80">
+              <span className="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full bg-beige-strong">
+                <Check className="size-3 text-foreground/80" strokeWidth={2.5} />
+              </span>
+              Talk to us about enterprise or self-hosting needs
+            </li>
+          </ul>
+        </SplitCard>
       </div>
     </section>
   )

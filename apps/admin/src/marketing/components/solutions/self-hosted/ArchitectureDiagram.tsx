@@ -38,7 +38,7 @@ export function ArchitectureDiagram() {
         </div>
 
         {/* Your server */}
-        <div className="rounded-[1.35rem] border border-dashed border-foreground/35 bg-muted/30 p-4 md:p-5 lg:w-[50%] lg:shrink-0">
+        <div className="rounded-2xl border border-dashed border-foreground/35 bg-beige p-4 md:p-5 lg:w-[50%] lg:shrink-0">
           <p className="flex items-baseline justify-between gap-4 px-1">
             <span className="text-sm font-semibold text-foreground">Your server</span>
             <span className="font-mono text-xs text-muted-foreground">docker compose</span>

@@ -1,7 +1,11 @@
+import { ArrowRight } from "lucide-react"
+
 import { Footer } from "@/marketing/components/Footer"
 import { Navbar } from "@/marketing/components/Navbar"
+import { SectionTitle } from "@/marketing/components/system/SectionTitle"
 import { blogCanonicalSlug, blogPath, getBlogPosts } from "@/marketing/content/blog"
 import { getCopy, getRouteSeo, localizePath, type Locale } from "@/marketing/i18n"
+import { eyebrow } from "@/marketing/lib/eyebrows"
 import {
   blogJsonLd,
   breadcrumbJsonLd,
@@ -271,66 +275,62 @@ export async function BlogIndexPage({ locale }: { locale: Locale }) {
       )
     : allPosts
   const dateLocale = dateLocales[locale]
+  const formatDate = (date: Date) =>
+    date.toLocaleDateString(dateLocale, { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" })
 
   return (
     <>
       <PageJsonLd seo={seo} />
       <Navbar locale={locale} />
 
-      <main
-        id="main-content"
-        className="min-h-screen bg-background pb-24 text-foreground"
-      >
-        <header className="px-6 pt-24 pb-16 text-center">
-          <div className="mx-auto max-w-site">
-            <h1 className="display-heading">{pageCopy[locale].h1}</h1>
-            <p className="body-copy mx-auto mt-6 max-w-[65ch] md:text-lg">
-              {pageCopy[locale].intro}
-            </p>
-          </div>
+      <main id="main-content" className="min-h-screen bg-background text-foreground">
+        <header className="px-6 pt-10 pb-12 md:pt-11 md:pb-15">
+          <SectionTitle
+            as="h1"
+            centered
+            eyebrow={eyebrow(locale, "blog.hero")}
+            intro={pageCopy[locale].intro}
+            className="max-w-[48rem]"
+          >
+            {pageCopy[locale].h1}
+          </SectionTitle>
         </header>
 
         <div className="mx-auto max-w-site px-6">
           {featuredPost && (
-            <section className="mb-16">
-              <a href={blogPath(featuredPost, locale)} className="group block">
-                <div className="flex flex-col gap-8 rounded-2xl border border-border/50 bg-card p-4 md:p-6 lg:flex-row lg:gap-12 lg:p-8">
-                  <div className="order-2 flex flex-1 flex-col py-4 lg:order-1 lg:py-8">
-                    <time
-                      className="mb-4 block text-xs font-medium text-muted-foreground"
-                      dateTime={featuredPost.data.pubDate.toISOString()}
-                    >
-                      {featuredPost.data.pubDate.toLocaleDateString(dateLocale, {
-                        timeZone: "UTC",
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </time>
-                    <h2 className="section-heading mb-4 transition-colors group-hover:text-primary">
-                      {featuredPost.data.title}
-                    </h2>
-                    <p className="body-copy mb-8 flex-1 md:text-lg">
-                      {featuredPost.data.description}
-                    </p>
-                  </div>
+            <section className="mb-6">
+              <a
+                href={blogPath(featuredPost, locale)}
+                className="group grid overflow-hidden rounded-2xl border border-border/60 bg-beige lg:grid-cols-[1fr_1.4fr]"
+              >
+                <div className="order-2 flex flex-col p-6 md:p-8 lg:order-1 lg:p-10">
+                  <p className="eyebrow">{copy.common.featured}</p>
+                  <h2 className="feature-heading mt-4 transition-colors group-hover:text-foreground/70">
+                    {featuredPost.data.title}
+                  </h2>
+                  <p className="mt-4 text-base leading-6 text-pretty text-muted-foreground md:text-lg md:leading-[1.6]">
+                    {featuredPost.data.description}
+                  </p>
+                  <time
+                    className="mt-8 block text-sm text-muted-foreground lg:mt-auto lg:pt-8"
+                    dateTime={featuredPost.data.pubDate.toISOString()}
+                  >
+                    {formatDate(featuredPost.data.pubDate)}
+                  </time>
+                </div>
 
-                  <div className="relative order-1 aspect-[16/9] w-full overflow-hidden rounded-xl border border-border/30 bg-muted shadow-sm lg:order-2 lg:aspect-auto lg:w-[60%]">
-                    {featuredPost.data.coverImage && (
-                      <img
-                        src={featuredPost.data.coverImage}
-                        alt={featuredPost.data.title}
-                        width="1672"
-                        height="941"
-                        className="h-full w-full object-cover"
-                        decoding="async"
-                        fetchPriority="high"
-                      />
-                    )}
-                    <div className="absolute top-4 right-4 rounded-full border border-border bg-background/95 px-3 py-1 text-xs font-medium text-foreground backdrop-blur-sm">
-                      {copy.common.featured}
-                    </div>
-                  </div>
+                <div className="relative order-1 aspect-[16/9] w-full overflow-hidden bg-beige-strong/60 lg:order-2 lg:aspect-auto">
+                  {featuredPost.data.coverImage && (
+                    <img
+                      src={featuredPost.data.coverImage}
+                      alt={featuredPost.data.title}
+                      width="1672"
+                      height="941"
+                      className="h-full w-full object-cover"
+                      decoding="async"
+                      fetchPriority="high"
+                    />
+                  )}
                 </div>
               </a>
             </section>
@@ -339,44 +339,34 @@ export async function BlogIndexPage({ locale }: { locale: Locale }) {
           <section>
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {regularPosts.map((post) => (
-                <a key={blogCanonicalSlug(post)} href={blogPath(post, locale)} className="group block">
-                  <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-border/50 bg-card">
-                    <div className="aspect-[16/9] w-full overflow-hidden border-b border-border/30 bg-muted shadow-sm">
-                      {post.data.coverImage ? (
-                        <img
-                          src={post.data.coverImage}
-                          alt={post.data.title}
-                          width="1672"
-                          height="941"
-                          className="h-full w-full object-cover"
-                          loading="lazy"
-                          decoding="async"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-muted">
-                          <span className="font-heading text-4xl text-muted-foreground/30">
-                            LobbyStack
-                          </span>
-                        </div>
-                      )}
-                    </div>
+                <a
+                  key={blogCanonicalSlug(post)}
+                  href={blogPath(post, locale)}
+                  className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border/60 bg-beige"
+                >
+                  <div className="aspect-[16/9] w-full overflow-hidden bg-beige-strong/60">
+                    {post.data.coverImage ? (
+                      <img
+                        src={post.data.coverImage}
+                        alt={post.data.title}
+                        width="1672"
+                        height="941"
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center">
+                        <span className="font-heading text-4xl text-muted-foreground/30">LobbyStack</span>
+                      </div>
+                    )}
+                  </div>
 
-                    <div className="flex flex-1 flex-col p-6">
-                      <time
-                        className="mb-3 block text-xs font-medium text-muted-foreground"
-                        dateTime={post.data.pubDate.toISOString()}
-                      >
-                        {post.data.pubDate.toLocaleDateString(dateLocale, {
-                          timeZone: "UTC",
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </time>
-                      <h3 className="mb-4 font-heading text-xl leading-tight font-medium tracking-[-0.03em] transition-colors group-hover:text-primary">
-                        {post.data.title}
-                      </h3>
-                    </div>
+                  <div className="flex flex-1 flex-col p-6">
+                    <h3 className="card-heading transition-colors group-hover:text-foreground/70">{post.data.title}</h3>
+                    <time className="mt-auto block pt-6 text-sm text-muted-foreground" dateTime={post.data.pubDate.toISOString()}>
+                      {formatDate(post.data.pubDate)}
+                    </time>
                   </div>
                 </a>
               ))}
@@ -384,19 +374,23 @@ export async function BlogIndexPage({ locale }: { locale: Locale }) {
           </section>
         </div>
 
-        <section className="mx-auto max-w-site px-6 pb-24">
-          <h2 className="section-heading">{pageCopy[locale].topicsHeading}</h2>
-          <div className="mt-8 grid gap-6 md:grid-cols-2">
+        <section className="section-spacing mx-auto max-w-site px-6">
+          <SectionTitle eyebrow={eyebrow(locale, "blog.topics")}>{pageCopy[locale].topicsHeading}</SectionTitle>
+          <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {pageCopy[locale].topics.map((topic) => (
               <a
                 key={topic.href}
                 href={topic.href}
-                className="group block rounded-2xl border border-border/50 bg-card p-6 transition-colors hover:border-primary/40"
+                className="group flex flex-col rounded-2xl border border-border/60 bg-background p-6 transition-colors hover:bg-beige"
               >
-                <h3 className="font-heading text-xl font-medium tracking-[-0.03em] transition-colors group-hover:text-primary">
-                  {topic.title}
-                </h3>
-                <p className="body-copy mt-3 text-muted-foreground">{topic.body}</p>
+                <h3 className="card-heading">{topic.title}</h3>
+                <p className="mt-3 text-base leading-6 text-muted-foreground">{topic.body}</p>
+                <span className="mt-auto pt-6">
+                  <ArrowRight
+                    className="size-4 text-foreground/60 transition-transform duration-200 ease-(--ease-out) group-hover:translate-x-0.5"
+                    aria-hidden="true"
+                  />
+                </span>
               </a>
             ))}
           </div>

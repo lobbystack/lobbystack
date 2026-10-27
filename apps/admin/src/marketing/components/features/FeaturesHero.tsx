@@ -1,8 +1,7 @@
-import { buttonVariants } from "@/marketing/components/ui/button"
+import { ButtonLink } from "@/marketing/components/system/ButtonLink"
 import { appSignupUrl } from "@/marketing/lib/app-links"
-import { cn } from "@/marketing/lib/utils"
+import { eyebrow } from "@/marketing/lib/eyebrows"
 import { getCopy, localizeHref, type Locale } from "@/marketing/i18n"
-import { ArrowRight } from "lucide-react"
 
 type FeaturesHeroProps = {
   locale?: Locale
@@ -105,62 +104,53 @@ export function FeaturesHero({ locale = "en" }: FeaturesHeroProps) {
 
   return (
     <section className="relative overflow-hidden" id="features-hero">
-      <div className="mx-auto max-w-site px-6 pt-16 md:pt-20 lg:pt-24">
+      <div className="mx-auto max-w-site px-6 pt-10 md:pt-11">
         {/* Hero copy */}
         <div className="mx-auto max-w-4xl text-center">
-          <h1 className="animate-fade-up display-heading stagger-1">
-            {copy.h1Start}{" "}
-            <span className="underline decoration-2 underline-offset-4">
-              {copy.h1Emphasis}
-            </span>
+          <p className="animate-fade-up eyebrow">{eyebrow(locale, "features.hero")}</p>
+          <h1 className="animate-fade-up display-heading mt-4 stagger-1">
+            {copy.h1Start} {copy.h1Emphasis}
           </h1>
 
-          <p className="animate-fade-up body-copy mx-auto mt-6 max-w-[65ch] stagger-2 md:text-lg">
+          <p className="animate-fade-up mx-auto mt-4 max-w-[40rem] text-lg leading-[1.6] text-muted-foreground stagger-2">
             {copy.body}
           </p>
 
           {/* CTAs */}
-          <div className="animate-fade-up mt-8 flex items-center justify-center gap-4 stagger-3">
-            <a
+          <div className="animate-fade-up mt-8 flex flex-wrap items-center justify-center gap-2.5 stagger-3">
+            <ButtonLink
               href={appSignupUrl(locale)}
-              className={cn(
-                buttonVariants({ size: "lg" }),
-                "h-11 rounded-full px-7 text-sm"
-              )}
               data-ph-signup-cta
               data-ph-capture-attribute-section="features_hero"
               data-ph-capture-attribute-action="try_for_free"
               data-ph-capture-attribute-destination={appSignupUrl(locale)}
             >
               {common.tryFree}
-              <ArrowRight className="ml-1 size-4" />
-            </a>
-            <a
+            </ButtonLink>
+            <ButtonLink
               href={localizeHref(locale, "/pricing/")}
+              variant="secondary"
               data-ph-capture-attribute-section="features_hero"
               data-ph-capture-attribute-action="view_pricing"
               data-ph-capture-attribute-destination="/pricing/"
-              className="inline-flex h-11 items-center justify-center rounded-full border border-border/70 bg-background px-7 text-sm font-medium text-foreground transition-colors hover:bg-muted"
             >
               {common.viewPricing}
-            </a>
+            </ButtonLink>
           </div>
         </div>
 
         {/* Three product panels */}
-        <div className="animate-fade-up mx-auto mt-16 max-w-5xl stagger-5 md:mt-20">
-          <div className="grid gap-4 md:grid-cols-3">
+        <div className="mx-auto mt-12 max-w-5xl">
+          <div className="grid gap-6 md:grid-cols-3">
             {/* Panel 1: Plain-language workflow */}
-            <div className="flex flex-col rounded-2xl border border-border/70 bg-background p-6">
+            <div className="flex flex-col rounded-2xl border border-border/60 bg-beige p-6">
               <div className="mb-4 flex items-center gap-2">
-                <span className="flex size-7 items-center justify-center rounded-lg bg-muted text-xs font-semibold text-muted-foreground">
-                  1
-                </span>
-                <p className="text-xs font-medium tracking-wide text-muted-foreground">
+                <span className="eyebrow">01</span>
+                <p className="text-sm font-medium text-foreground">
                   {copy.workflowLabel}
                 </p>
               </div>
-              <div className="flex-1 rounded-xl bg-muted/60 p-4">
+              <div className="flex-1 rounded-xl bg-beige-strong/60 p-4">
                 <p className="font-mono text-xs leading-relaxed text-foreground/80">
                   {copy.workflowText}
                 </p>
@@ -168,12 +158,10 @@ export function FeaturesHero({ locale = "en" }: FeaturesHeroProps) {
             </div>
 
             {/* Panel 2: Call summary */}
-            <div className="flex flex-col rounded-2xl border border-border/70 bg-background p-6">
+            <div className="flex flex-col rounded-2xl border border-border/60 bg-beige p-6">
               <div className="mb-4 flex items-center gap-2">
-                <span className="flex size-7 items-center justify-center rounded-lg bg-muted text-xs font-semibold text-muted-foreground">
-                  2
-                </span>
-                <p className="text-xs font-medium tracking-wide text-muted-foreground">
+                <span className="eyebrow">02</span>
+                <p className="text-sm font-medium text-foreground">
                   {copy.callLabel}
                 </p>
               </div>
@@ -183,23 +171,23 @@ export function FeaturesHero({ locale = "en" }: FeaturesHeroProps) {
                 </h2>
                 <ul className="space-y-1.5 text-[13px] text-muted-foreground">
                   <li className="flex items-center gap-2">
-                    <span className="size-1 rounded-full bg-foreground/30" />
+                    <span className="size-1 rounded-full bg-beige-foreground/60" />
                     {copy.service}
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="size-1 rounded-full bg-foreground/30" />
+                    <span className="size-1 rounded-full bg-beige-foreground/60" />
                     {copy.budget}
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="size-1 rounded-full bg-foreground/30" />
+                    <span className="size-1 rounded-full bg-beige-foreground/60" />
                     {copy.timeline}
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="size-1 rounded-full bg-foreground/30" />
+                    <span className="size-1 rounded-full bg-beige-foreground/60" />
                     {copy.priceRange}
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="size-1 rounded-full bg-foreground/30" />
+                    <span className="size-1 rounded-full bg-beige-foreground/60" />
                     {copy.callbackNeeded}
                   </li>
                 </ul>
@@ -207,12 +195,10 @@ export function FeaturesHero({ locale = "en" }: FeaturesHeroProps) {
             </div>
 
             {/* Panel 3: Callback booked */}
-            <div className="flex flex-col rounded-2xl border border-border/70 bg-background p-6">
+            <div className="flex flex-col rounded-2xl border border-border/60 bg-beige p-6">
               <div className="mb-4 flex items-center gap-2">
-                <span className="flex size-7 items-center justify-center rounded-lg bg-muted text-xs font-semibold text-muted-foreground">
-                  3
-                </span>
-                <p className="text-xs font-medium tracking-wide text-muted-foreground">
+                <span className="eyebrow">03</span>
+                <p className="text-sm font-medium text-foreground">
                   {copy.outcomeLabel}
                 </p>
               </div>
@@ -225,19 +211,19 @@ export function FeaturesHero({ locale = "en" }: FeaturesHeroProps) {
                 </p>
                 <ul className="space-y-1.5 text-[13px] text-muted-foreground">
                   <li className="flex items-center gap-2">
-                    <span className="size-1.5 rounded-full bg-emerald-500" />
+                    <span className="size-1.5 rounded-full bg-beige-foreground" />
                     {copy.assigned}
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="size-1.5 rounded-full bg-emerald-500" />
+                    <span className="size-1.5 rounded-full bg-beige-foreground" />
                     {copy.confirmation}
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="size-1.5 rounded-full bg-emerald-500" />
+                    <span className="size-1.5 rounded-full bg-beige-foreground" />
                     {copy.notification}
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="size-1.5 rounded-full bg-emerald-500" />
+                    <span className="size-1.5 rounded-full bg-beige-foreground" />
                     {copy.summary}
                   </li>
                 </ul>

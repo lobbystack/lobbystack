@@ -1,9 +1,7 @@
 import { GoogleIcon } from "@/marketing/components/GoogleIcon"
-import { buttonVariants } from "@/marketing/components/ui/button"
+import { ButtonLink } from "@/marketing/components/system/ButtonLink"
 import { appSignupUrl } from "@/marketing/lib/app-links"
-import { cn } from "@/marketing/lib/utils"
 import { getCopy, type Locale } from "@/marketing/i18n"
-import { ArrowRight } from "lucide-react"
 import type { ReactNode } from "react"
 
 type HeroSectionProps = {
@@ -48,45 +46,33 @@ export function HeroSection({ children, locale = "en" }: HeroSectionProps) {
 
   return (
     <section
-      className="relative grid min-h-[calc(100svh-4rem)] items-center overflow-hidden"
+      className="relative overflow-x-clip"
       id="hero"
     >
-      <div className="mx-auto w-full max-w-site px-6 pt-14 pb-10 md:pt-10 md:pb-20 lg:pt-12 lg:pb-24">
+      <div className="mx-auto w-full max-w-site px-6 pt-10 pb-8 md:pt-11 md:pb-10">
         <div className="grid min-w-0 items-center gap-6 md:gap-12 xl:grid-cols-2 xl:gap-16">
           <div className="max-w-3xl min-w-0 text-left">
             <h1 className="animate-fade-up display-heading">
-              {localCopy.h1Start}{" "}
-              <span className="underline decoration-2 underline-offset-4">
-                {localCopy.h1Emphasis}
-              </span>{" "}
-              {localCopy.h1End}
+              {localCopy.h1Start} {localCopy.h1Emphasis} {localCopy.h1End}
             </h1>
 
-            <p className="animate-fade-up body-copy mt-6 max-w-[65ch] stagger-2 md:text-lg">
+            <p className="animate-fade-up mt-4 max-w-[34.5rem] text-lg leading-[1.6] text-muted-foreground stagger-2">
               {localCopy.body}
             </p>
 
-            <div className="animate-fade-up mt-8 flex w-full max-w-80 flex-col gap-3 stagger-3 md:w-96 md:max-w-none">
-              <a
+            <div className="animate-fade-up mt-8 flex flex-wrap gap-2.5 stagger-3">
+              <ButtonLink
                 href={appSignupUrl(locale)}
-                className={cn(
-                  buttonVariants({ size: "lg" }),
-                  "h-11 w-full rounded-full px-16 text-sm"
-                )}
                 data-ph-signup-cta
                 data-ph-capture-attribute-section="hero"
                 data-ph-capture-attribute-action="try_for_free"
                 data-ph-capture-attribute-destination={appSignupUrl(locale)}
               >
                 {copy.common.tryFree}
-                <ArrowRight className="ml-1 size-4 transition-transform duration-200 ease-(--ease-out) group-hover/button:translate-x-0.5" />
-              </a>
-              <a
+              </ButtonLink>
+              <ButtonLink
                 href={appSignupUrl(locale, { google: true })}
-                className={cn(
-                  buttonVariants({ size: "lg", variant: "outline" }),
-                  "h-11 w-full gap-2 rounded-full px-16 text-sm"
-                )}
+                variant="secondary"
                 data-ph-signup-cta
                 data-ph-capture-attribute-section="hero"
                 data-ph-capture-attribute-action="sign_up_google"
@@ -94,15 +80,14 @@ export function HeroSection({ children, locale = "en" }: HeroSectionProps) {
               >
                 <GoogleIcon className="size-4" />
                 {localCopy.googleSignup}
-              </a>
+              </ButtonLink>
             </div>
-
             <p className="animate-fade-up fine-print mt-5 stagger-4">
               {copy.common.noCreditCard}
             </p>
           </div>
 
-          <div className="animate-fade-up mx-auto flex w-full max-w-[22rem] min-w-0 justify-center stagger-5 md:max-w-[30rem] xl:max-w-none xl:justify-end">
+          <div className="animate-fade-up mx-auto flex w-full max-w-[22rem] min-w-0 justify-center stagger-5 md:max-w-[30rem] xl:mr-0 xl:max-w-[28rem]">
             {children}
           </div>
         </div>

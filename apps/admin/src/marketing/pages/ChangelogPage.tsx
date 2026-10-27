@@ -1,5 +1,6 @@
 import { Footer } from "@/marketing/components/Footer"
 import { Navbar } from "@/marketing/components/Navbar"
+import { SectionTitle } from "@/marketing/components/system/SectionTitle"
 import {
   changelogAnchorId,
   changelogPath,
@@ -14,6 +15,7 @@ import {
   localizePath,
   type Locale,
 } from "@/marketing/i18n"
+import { eyebrow } from "@/marketing/lib/eyebrows"
 import {
   absoluteUrl,
   breadcrumbJsonLd,
@@ -140,18 +142,19 @@ export async function ChangelogPage({ locale }: { locale: Locale }) {
       <Navbar locale={locale} />
 
       <main id="main-content" className="min-h-screen bg-background text-foreground">
-        <header className="bg-muted/20 px-6 pt-20 pb-16 text-center md:pt-28 md:pb-20">
-          <div className="mx-auto max-w-site">
-            <h1 className="display-heading mx-auto max-w-[15ch]">
-              {pageCopy[locale].h1}
-            </h1>
-            <p className="body-copy mx-auto mt-6 max-w-[60ch] md:text-lg">
-              {pageCopy[locale].intro}
-            </p>
-          </div>
+        <header className="px-6 pt-10 pb-12 md:pt-11 md:pb-15">
+          <SectionTitle
+            as="h1"
+            centered
+            eyebrow={eyebrow(locale, "changelog.hero")}
+            intro={pageCopy[locale].intro}
+            className="max-w-[44rem]"
+          >
+            {pageCopy[locale].h1}
+          </SectionTitle>
         </header>
 
-        <section className="mx-auto max-w-site px-6 pt-16 pb-24 md:pt-20 md:pb-32">
+        <section className="mx-auto max-w-site px-6 pt-10 pb-24 md:pt-15 md:pb-32">
           <div className="space-y-20 md:space-y-24">
             {renderedEntries.map(({ entry, content }, index) => {
               const anchorId = changelogAnchorId(entry)
@@ -175,7 +178,7 @@ export async function ChangelogPage({ locale }: { locale: Locale }) {
                   <div className="md:pt-1 md:text-right">
                     <a
                       href={`#${anchorId}`}
-                      className="inline-flex rounded-xl bg-muted px-4 py-2 font-mono text-xs font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                      className="inline-flex rounded-full bg-beige px-3.5 py-1.5 font-mono text-xs font-medium text-beige-foreground transition-colors hover:bg-beige-strong hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                     >
                       <time dateTime={entry.data.pubDate.toISOString()}>
                         {formattedDate}
@@ -188,23 +191,17 @@ export async function ChangelogPage({ locale }: { locale: Locale }) {
                     aria-hidden="true"
                   >
                     <div
-                      className={`absolute top-0 bottom-0 w-px bg-border ${isLast ? "h-8" : ""}`}
+                      className={`absolute top-0 bottom-0 w-px bg-border/70 ${isLast ? "h-8" : ""}`}
                     />
-                    <div className="relative z-10 size-8 rounded-full border border-border bg-background shadow-sm" />
+                    <div className="relative z-10 flex size-8 items-center justify-center rounded-full border border-border/60 bg-beige">
+                      <div className="size-2 rounded-full bg-beige-foreground/70" />
+                    </div>
                   </div>
 
                   <div className="min-w-0 pb-2 md:pb-16">
-                    <div className="mb-6 flex flex-wrap items-center gap-3">
-                      {entry.data.category && (
-                        <span className="rounded-md border border-border/70 px-2.5 py-1 font-mono text-xs font-medium text-muted-foreground">
-                          {entry.data.category}
-                        </span>
-                      )}
-                    </div>
-                    <h2 className="font-heading text-3xl leading-tight font-semibold tracking-tight text-foreground md:text-4xl">
-                      {entry.data.title}
-                    </h2>
-                    <p className="mt-4 max-w-3xl text-base leading-7 text-foreground md:text-lg md:leading-8">
+                    {entry.data.category && <p className="eyebrow mb-4">{entry.data.category}</p>}
+                    <h2 className="feature-heading">{entry.data.title}</h2>
+                    <p className="mt-4 max-w-3xl text-base leading-7 text-muted-foreground md:text-lg md:leading-8">
                       {entry.data.description}
                     </p>
                     <div

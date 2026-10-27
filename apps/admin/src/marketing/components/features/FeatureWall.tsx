@@ -1,4 +1,7 @@
 import type React from "react"
+import { IconTile } from "@/marketing/components/system/IconCards"
+import { SectionTitle } from "@/marketing/components/system/SectionTitle"
+import { eyebrow } from "@/marketing/lib/eyebrows"
 import type { LucideIcon } from "lucide-react"
 import type { Locale } from "@/marketing/i18n"
 import {
@@ -1140,7 +1143,7 @@ function WorkflowVisual({ locale }: VisualProps) {
   const text = featureWallCopy[locale].visuals.workflow
 
   return (
-    <div className="rounded-xl bg-muted/60 p-4">
+    <div className="rounded-xl bg-beige-strong/60 p-4">
       <p className="font-mono text-[12px] leading-relaxed text-foreground/70">
         {text}
       </p>
@@ -1158,7 +1161,7 @@ function CalendarVisual({ locale }: VisualProps) {
           key={item}
           className="flex items-center gap-2 text-[13px] text-muted-foreground"
         >
-          <span className="size-1.5 rounded-full bg-emerald-500" />
+          <span className="size-1.5 rounded-full bg-beige-foreground" />
           {item}
         </div>
       ))}
@@ -1182,7 +1185,7 @@ function QuoteVisual({ locale }: VisualProps) {
       ))}
       <div className="mt-2 border-t border-border/50 pt-2 text-[13px]">
         <div className="flex items-center gap-2 text-muted-foreground">
-          <span className="size-1.5 rounded-full bg-emerald-500" />
+          <span className="size-1.5 rounded-full bg-beige-foreground" />
           {quote.outcome}
         </div>
       </div>
@@ -1224,8 +1227,8 @@ function UsageVisual({ locale }: VisualProps) {
             <span
               className={`rounded-md px-2 py-0.5 text-xs font-medium ${
                 item.counted
-                  ? "bg-emerald-500/10 text-emerald-600"
-                  : "bg-muted text-muted-foreground"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-beige-strong text-muted-foreground"
               }`}
             >
               {item.counted ? usage.counted : usage.excluded}
@@ -1261,22 +1264,20 @@ function LargeFeatureCard({
 
   return (
     <article
-      className={`flex flex-col rounded-2xl border border-border/70 bg-background p-6 transition-colors hover:border-border md:p-8 ${
+      className={`flex flex-col rounded-2xl border border-border/60 bg-beige p-6 md:p-8 ${
         fullWidth ? "md:col-span-2" : ""
       }`}
     >
       {/* Header row */}
       <div className="mb-1 flex items-start justify-between">
-        <div className="flex size-10 items-center justify-center rounded-xl bg-muted">
-          <Icon className="size-[18px] text-foreground/70" />
-        </div>
+        <IconTile icon={Icon} />
       </div>
 
       {/* Copy */}
-      <h3 className="mt-4 font-heading text-lg leading-snug font-medium tracking-tight">
+      <h3 className="card-heading mt-6">
         {card.title}
       </h3>
-      <p className="mt-2 text-[13.5px] leading-relaxed text-muted-foreground md:min-h-[4.5rem]">
+      <p className="mt-3 text-base leading-6 text-muted-foreground md:min-h-[4.5rem]">
         {card.description}
       </p>
 
@@ -1294,24 +1295,22 @@ function MediumFeatureCard({ card }: { card: FeatureCard }) {
   const Icon = card.icon
 
   return (
-    <article className="group flex flex-col rounded-2xl border border-border/70 bg-background p-6 transition-colors hover:border-border">
+    <article className="group flex flex-col bg-background p-6">
       {/* Icon + tag row */}
       <div className="flex items-start justify-between">
-        <div className="flex size-10 items-center justify-center rounded-xl bg-muted">
-          <Icon className="size-[18px] text-foreground/70" />
-        </div>
+        <IconTile icon={Icon} />
         {card.tag && (
-          <span className="rounded-md bg-muted px-2.5 py-1 text-[11px] font-medium tracking-wide text-muted-foreground">
+          <span className="rounded-full bg-beige-strong px-2.5 py-0.5 text-xs font-medium text-foreground/80">
             {card.tag}
           </span>
         )}
       </div>
 
       {/* Copy */}
-      <h3 className="mt-4 font-heading text-[15px] leading-snug font-medium tracking-tight">
+      <h3 className="mt-6 font-heading text-base leading-snug font-medium tracking-[-0.01em]">
         {card.title}
       </h3>
-      <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
+      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
         {card.description}
       </p>
     </article>
@@ -1324,15 +1323,15 @@ function FullWidthCallout({ locale }: { locale: Locale }) {
   const copy = featureWallCopy[locale]
 
   return (
-    <article className="col-span-full rounded-2xl border border-border/70 bg-background p-8 md:p-10">
+    <article className="col-span-full rounded-2xl border border-border/60 bg-beige p-8 md:p-10">
       <div className="mx-auto max-w-3xl">
-        <h3 className="font-heading text-2xl leading-tight font-medium tracking-tight md:text-[1.7rem]">
+        <h3 className="feature-heading">
           {copy.calloutTitle}
         </h3>
         <p className="mt-3 text-base leading-relaxed text-muted-foreground">
           {copy.calloutBody}
         </p>
-        <div className="mt-6 rounded-xl bg-muted/60 p-5">
+        <div className="mt-6 rounded-xl bg-beige-strong/60 p-5">
           <p className="font-mono text-[13px] leading-relaxed text-foreground/70">
             {copy.calloutExample}
           </p>
@@ -1357,13 +1356,12 @@ export function FeatureWall({ locale = "en" }: FeatureWallProps) {
     <section className="section-spacing" id="feature-wall">
       <div className="mx-auto max-w-site px-6">
         {/* Section intro */}
-        <div className="mb-12 max-w-3xl md:mb-16">
-          <h2 className="section-heading">{copy.heading}</h2>
-          <p className="section-intro">{copy.intro}</p>
-        </div>
+        <SectionTitle eyebrow={eyebrow(locale, "features.wall")} intro={copy.intro} className="max-w-3xl">
+          {copy.heading}
+        </SectionTitle>
 
         {/* Large cards, 2-column grid */}
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="mt-12 grid gap-6 md:grid-cols-2">
           {localizedLargeCards.map((card, index) => (
             <LargeFeatureCard
               key={card.title}
@@ -1378,12 +1376,12 @@ export function FeatureWall({ locale = "en" }: FeatureWallProps) {
         </div>
 
         {/* Full-width callout */}
-        <div className="mt-4">
+        <div className="mt-6">
           <FullWidthCallout locale={locale} />
         </div>
 
         {/* Medium cards, 3-to-4-column grid */}
-        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="mt-6 grid gap-px overflow-hidden rounded-2xl border border-border/70 bg-border/70 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {localizedMediumCards.map((card) => (
             <MediumFeatureCard key={card.title} card={card} />
           ))}

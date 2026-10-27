@@ -1,3 +1,4 @@
+import { eyebrow } from "@/marketing/lib/eyebrows"
 import { absoluteUrl, breadcrumbJsonLd, organizationJsonLd } from "@/marketing/lib/seo"
 import type { MarketingPageSeo } from "@/marketing/seo/page-seo"
 
@@ -89,16 +90,17 @@ export function cookiePolicySeoSr(): MarketingPageSeo {
 export function CookiePolicyMainSr() {
   return (
     <main id="main-content" tabIndex={-1} className="bg-background text-foreground">
-      <section className="border-b border-border/60">
-        <div className="mx-auto max-w-4xl px-6 py-16 md:py-20">
-          <p className="text-sm font-medium text-muted-foreground">
-            Poslednje ažuriranje: {updatedAt}
-          </p>
-          <h1 className="mt-4 text-4xl font-semibold tracking-tight md:text-5xl">
+      <section>
+        <div className="mx-auto max-w-6xl px-6 pt-10 pb-4 md:pt-11 md:pb-6">
+          <p className="eyebrow">{eyebrow("sr", "legal.hero")}</p>
+          <h1 className="display-heading mt-4">
             Politika kolačića
           </h1>
+          <p className="mt-4 text-sm text-muted-foreground">
+            Poslednje ažuriranje: {updatedAt}
+          </p>
           <p
-            className="mt-6 max-w-3xl text-base leading-7 text-muted-foreground md:text-lg"
+            className="mt-6 max-w-3xl text-lg leading-[1.6] text-muted-foreground"
           >
             Ova Politika kolačića objašnjava kako Lobbystack Inc. („LobbyStack“,
             „mi“, „naš“ ili „nas“) koristi kolačiće i slične tehnologije kada
@@ -113,7 +115,7 @@ export function CookiePolicyMainSr() {
       </section>
 
       <section
-        className="mx-auto grid max-w-6xl gap-10 px-6 py-12 md:grid-cols-[220px_1fr] md:py-16"
+        className="mx-auto grid max-w-6xl gap-10 px-6 pt-8 pb-20 md:grid-cols-[220px_1fr] md:pt-12 md:pb-30"
       >
         <aside className="hidden md:block">
           <nav className="sticky top-24 space-y-2 text-sm text-muted-foreground">
@@ -129,7 +131,7 @@ export function CookiePolicyMainSr() {
           </nav>
         </aside>
 
-        <article className="legal-copy max-w-none">
+        <article className="legal-copy min-w-0 max-w-none">
           <section id="overview">
             <h2>1. Pregled</h2>
             <p>
@@ -172,7 +174,7 @@ export function CookiePolicyMainSr() {
               razlikovati u zavisnosti od Vašeg pregledača, regiona, izbora u vezi
               sa privatnošću i stranica ili funkcija koje koristite.
             </p>
-            <div className="mt-6 overflow-x-auto">
+            <div className="relative mt-6 overflow-x-auto">
               <table>
                 <thead>
                   <tr>

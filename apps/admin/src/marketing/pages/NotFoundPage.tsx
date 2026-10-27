@@ -1,7 +1,10 @@
 import { Footer } from "@/marketing/components/Footer"
 import { FuzzyRedirect } from "@/marketing/components/FuzzyRedirect"
 import { Navbar } from "@/marketing/components/Navbar"
+import { ButtonLink } from "@/marketing/components/system/ButtonLink"
+import { SectionTitle } from "@/marketing/components/system/SectionTitle"
 import { getRouteSeo, localizeHref, type Locale } from "@/marketing/i18n"
+import { eyebrow } from "@/marketing/lib/eyebrows"
 import { PageJsonLd, type MarketingPageSeo } from "@/marketing/seo/page-seo"
 
 const copy = {
@@ -48,27 +51,18 @@ export function NotFoundPage({ locale }: { locale: Locale }) {
       <PageJsonLd seo={seo} />
       <Navbar locale={locale} />
       <main id="main-content" className="min-h-screen bg-background text-foreground">
-        <section className="mx-auto flex max-w-3xl flex-col items-center px-6 py-24 text-center">
-          <h1 className="display-heading-compact">{copy[locale].h1}</h1>
-          <p className="body-copy mt-5 max-w-[60ch] md:text-lg">
-            {copy[locale].body}
-          </p>
+        <section className="mx-auto flex max-w-3xl flex-col items-center px-6 pt-20 pb-24 text-center md:pt-30 md:pb-30">
+          <SectionTitle as="h1" centered eyebrow={eyebrow(locale, "notFound.hero")} intro={copy[locale].body}>
+            {copy[locale].h1}
+          </SectionTitle>
           <div className="mt-8 text-base font-medium text-foreground">
             <FuzzyRedirect />
           </div>
-          <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-            <a
-              href={localizeHref(locale, "/")}
-              className="inline-flex h-11 items-center justify-center rounded-full bg-foreground px-6 text-sm font-medium text-background"
-            >
-              {copy[locale].home}
-            </a>
-            <a
-              href={localizeHref(locale, "/search/")}
-              className="inline-flex h-11 items-center justify-center rounded-full border border-border/70 px-6 text-sm font-medium"
-            >
+          <div className="mt-10 flex flex-wrap justify-center gap-2.5">
+            <ButtonLink href={localizeHref(locale, "/")}>{copy[locale].home}</ButtonLink>
+            <ButtonLink href={localizeHref(locale, "/search/")} variant="secondary">
               {copy[locale].search}
-            </a>
+            </ButtonLink>
           </div>
         </section>
       </main>

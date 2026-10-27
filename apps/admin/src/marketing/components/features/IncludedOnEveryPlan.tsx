@@ -1,4 +1,7 @@
 import { Check } from "lucide-react"
+import { ButtonLink } from "@/marketing/components/system/ButtonLink"
+import { SectionTitle } from "@/marketing/components/system/SectionTitle"
+import { eyebrow } from "@/marketing/lib/eyebrows"
 import { getCopy, localizeHref, type Locale } from "@/marketing/i18n"
 
 const includedCopy = {
@@ -119,19 +122,13 @@ export function IncludedOnEveryPlan({
     <section className="section-spacing" id="included">
       <div className="mx-auto max-w-site px-6">
         {/* Section intro */}
-        <div className="mb-12 max-w-3xl md:mb-16">
-          <h2 className="section-heading">
-            {copy.headingStart}{" "}
-            <span className="underline decoration-2 underline-offset-4">
-              {copy.headingEmphasis}
-            </span>
-          </h2>
-          <p className="section-intro">{copy.intro}</p>
-        </div>
+        <SectionTitle eyebrow={eyebrow(locale, "features.everyPlan")} intro={copy.intro} className="max-w-3xl">
+          {copy.headingStart} {copy.headingEmphasis}
+        </SectionTitle>
 
         {/* Checkmark card */}
-        <div className="rounded-2xl border border-border/70 bg-background p-8 md:p-10">
-          <p className="mb-6 text-xs font-medium tracking-wide text-muted-foreground">
+        <div className="mt-12 rounded-2xl border border-border/60 bg-beige p-8 md:p-10">
+          <p className="eyebrow mb-6">
             {copy.label}
           </p>
 
@@ -139,9 +136,9 @@ export function IncludedOnEveryPlan({
             {copy.features.map((feature) => (
               <div
                 key={feature}
-                className="flex items-center gap-2.5 text-sm text-foreground"
+                className="flex items-center gap-2.5 text-base text-foreground/80"
               >
-                <Check className="size-4 shrink-0 text-foreground/50" />
+                <Check className="size-4 shrink-0 text-beige-foreground" />
                 {feature}
               </div>
             ))}
@@ -150,15 +147,15 @@ export function IncludedOnEveryPlan({
 
         {/* CTA */}
         <div className="mt-8">
-          <a
+          <ButtonLink
             href={localizeHref(locale, "/pricing/")}
+            variant="secondary"
             data-ph-capture-attribute-section="included_every_plan"
             data-ph-capture-attribute-action="view_pricing"
             data-ph-capture-attribute-destination="/pricing/"
-            className="inline-flex h-11 items-center justify-center rounded-full border border-border/70 bg-background px-7 text-sm font-medium text-foreground transition-colors hover:bg-muted"
           >
             {common.viewPricing}
-          </a>
+          </ButtonLink>
         </div>
       </div>
     </section>
