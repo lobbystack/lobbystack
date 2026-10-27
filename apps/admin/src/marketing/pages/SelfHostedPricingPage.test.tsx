@@ -53,10 +53,13 @@ describe("self-hosted pricing page", () => {
     expect(html).toContain("/business/mo")
     expect(html).toContain("Compare all features")
     expect(html).toMatch(/aria-expanded="false"/)
-    // The table is in the HTML for crawlers, behind the button.
-    expect(html).toMatch(/<div id="[^"]+" hidden="" class="mx-auto mt-8 max-w-5xl">/)
-    expect(html).toContain("Same business day")
-    expect(selfHostedPricingMarkdown("en")).toContain("| Premium support | $25/business/mo | $20/business/mo |")
+    // The table is in the HTML for crawlers, closed behind the button, and open without JavaScript.
+    expect(html).toMatch(/<div id="[^"]+" class="mx-auto mt-8 max-w-5xl hidden noscript:block">/)
+    expect(html).toContain("4 business hours")
+    expect(html).not.toMatch(/production is down|same business day/i)
+    const markdown = selfHostedPricingMarkdown("en")
+    expect(markdown).toContain("| Premium support | $25/business/mo | $20/business/mo |")
+    expect(markdown).toContain(`[Monthly](${selfHostedSupportCatalog.business.premium.checkoutUrls.monthly}), [Annual](${selfHostedSupportCatalog.business.premium.checkoutUrls.annual})`)
   })
 
   it.each(SUPPORTED_LOCALES)("links the %s cloud pricing hero to the self-hosted plans", (locale) => {
@@ -91,6 +94,8 @@ describe("self-hosted pricing page", () => {
     expect(seo.description?.length).toBeLessThanOrEqual(160)
     const faqPage = seo.jsonLd?.find((item) => item["@type"] === "FAQPage")
     expect(faqPage?.mainEntity).toHaveLength(getSelfHostedPricingFaqs(locale).length)
+    // The cloud app's offers are no price for self-hosted support.
+    expect(seo.jsonLd?.some((item) => item["@type"] === "SoftwareApplication")).toBe(false)
   })
 
   it.each(SUPPORTED_LOCALES)("serves a %s Markdown twin that agents can find", async (locale) => {

@@ -35,7 +35,6 @@ type Copy = {
   freeForDays: string;
   dedicated: string;
   managedCloud: string;
-  cloudOrSelfHosted: string;
   support: { community: string; email: string; priority: string; dedicated: string };
 };
 
@@ -60,7 +59,7 @@ const copy: Record<PlanCardLocale, Copy> = {
     days: (count) => `${count} days`,
     unlimited: { f: "Unlimited", m: "Unlimited" },
     custom: "Custom", multiple: "Multiple", trialDays: "For 14 days", freeForDays: "Free for 14 days", dedicated: "1 dedicated",
-    managedCloud: "Managed cloud", cloudOrSelfHosted: "Cloud or self-hosted",
+    managedCloud: "Managed cloud",
     support: { community: "Community", email: "Email", priority: "Priority email", dedicated: "Dedicated implementation" },
   },
   fr: {
@@ -81,7 +80,7 @@ const copy: Record<PlanCardLocale, Copy> = {
     days: (count) => `${count} jours`,
     unlimited: { f: "Illimitée", m: "Illimités" },
     custom: "Sur mesure", multiple: "Plusieurs", trialDays: "Pendant 14 jours", freeForDays: "Gratuit 14 jours", dedicated: "1 dédié",
-    managedCloud: "Cloud géré", cloudOrSelfHosted: "Cloud ou auto-hébergé",
+    managedCloud: "Cloud géré",
     support: { community: "Communauté", email: "Courriel", priority: "Courriel prioritaire", dedicated: "Implémentation dédiée" },
   },
   es: {
@@ -102,7 +101,7 @@ const copy: Record<PlanCardLocale, Copy> = {
     days: (count) => `${count} días`,
     unlimited: { f: "Ilimitada", m: "Ilimitados" },
     custom: "A medida", multiple: "Varios", trialDays: "Durante 14 días", freeForDays: "Gratis 14 días", dedicated: "1 dedicado",
-    managedCloud: "Nube gestionada", cloudOrSelfHosted: "Nube o autoalojamiento",
+    managedCloud: "Nube gestionada",
     support: { community: "Comunidad", email: "Correo electrónico", priority: "Correo prioritario", dedicated: "Implementación dedicada" },
   },
   sr: {
@@ -123,7 +122,7 @@ const copy: Record<PlanCardLocale, Copy> = {
     days: (count) => `${count} dana`,
     unlimited: { f: "Neograničeno", m: "Neograničeno" },
     custom: "Po dogovoru", multiple: "Više", trialDays: "Tokom 14 dana", freeForDays: "Besplatno 14 dana", dedicated: "1 namenski",
-    managedCloud: "Upravljani cloud", cloudOrSelfHosted: "Cloud ili samostalno hostovanje",
+    managedCloud: "Upravljani cloud",
     support: { community: "Zajednica", email: "E-pošta", priority: "Prioritetna e-pošta", dedicated: "Posvećena implementacija" },
   },
 };
@@ -179,7 +178,7 @@ export function planComparison(locale: string): ComparisonGroup[] {
       row("websiteImport", true, true),
     ] },
     { category: c.groups[6], rows: [
-      row("hosting", c.managedCloud, c.managedCloud, c.cloudOrSelfHosted),
+      row("hosting", c.managedCloud, c.managedCloud, c.managedCloud),
       row("usageBilling", false, true),
       row("support", c.support.community, { starter: c.support.email, pro: c.support.priority }, c.support.dedicated),
     ] },

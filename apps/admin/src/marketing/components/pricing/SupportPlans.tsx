@@ -4,7 +4,7 @@ import { ArrowRight, Check, ChevronDown, Minus } from "lucide-react"
 import { Fragment, useId, useState } from "react"
 
 import { BillingIntervalSwitch, type BillingInterval } from "@/marketing/components/BillingIntervalSwitch"
-import { ComparisonCell } from "@/marketing/components/PricingSection"
+import { ComparisonCell } from "@/marketing/components/pricing/ComparisonCell"
 import { buttonVariants } from "@/marketing/components/ui/button"
 import { PillLink } from "@/marketing/components/white-label/PillLink"
 import type { SelfHostedSupportCopy, SupportAudienceCopy } from "@/marketing/lib/self-hosted-support-copy"
@@ -34,7 +34,7 @@ export function SupportPlans({ cards, groups, labels, tone, section }: SupportPl
         <BillingIntervalSwitch labels={labels} onChange={setInterval} value={interval} />
       </div>
 
-      <div className="mx-auto mt-8 grid max-w-6xl gap-6 md:grid-cols-3">
+      <div className="mx-auto mt-8 grid max-w-xl gap-6 lg:max-w-6xl lg:grid-cols-3">
         {cards.map((card) => {
           const price = card.price[interval]
           const href = card.href[interval]
@@ -77,7 +77,7 @@ export function SupportPlans({ cards, groups, labels, tone, section }: SupportPl
                   href={href}
                   className={cn(
                     buttonVariants({ variant: card.highlighted ? "default" : "outline" }),
-                    "mt-5 h-11 w-full min-w-0 rounded-full px-4 text-[0.8125rem] sm:text-sm"
+                    "mt-5 h-auto min-h-11 w-full min-w-0 rounded-full px-4 py-2 text-center text-[0.8125rem] whitespace-normal sm:text-sm"
                   )}
                   {...Object.fromEntries(Object.entries(analytics).map(([key, value]) => [`data-ph-capture-attribute-${key}`, value]))}
                 >
@@ -88,7 +88,7 @@ export function SupportPlans({ cards, groups, labels, tone, section }: SupportPl
                 <PillLink
                   href={href}
                   variant={card.highlighted ? "primary" : "secondary"}
-                  className="mt-5 w-full"
+                  className="mt-5 h-auto min-h-[2.375rem] w-full py-1.5 text-center whitespace-normal"
                   section={section}
                   analytics={analytics}
                 >
@@ -119,7 +119,8 @@ export function SupportPlans({ cards, groups, labels, tone, section }: SupportPl
         })}
       </div>
 
-      <div className="mt-8 flex justify-center">
+      {/* Without JavaScript the table below is open, so the button has nothing to do. */}
+      <div className="mt-8 flex justify-center noscript:hidden">
         <button
           type="button"
           aria-controls={tableId}
@@ -135,8 +136,8 @@ export function SupportPlans({ cards, groups, labels, tone, section }: SupportPl
         </button>
       </div>
 
-      {/* Rendered while hidden, so the comparison is in the page's HTML. */}
-      <div id={tableId} hidden={!comparing} className="mx-auto mt-8 max-w-5xl">
+      {/* Rendered while closed, so the comparison is in the page's HTML and open without JavaScript. */}
+      <div id={tableId} className={cn("mx-auto mt-8 max-w-5xl", !comparing && "hidden noscript:block")}>
         <div className="overflow-x-auto" role="region" aria-label={labels.tableLabel} tabIndex={0}>
           <table className="w-full min-w-[720px] text-sm">
             <caption className="sr-only">{labels.caption}</caption>

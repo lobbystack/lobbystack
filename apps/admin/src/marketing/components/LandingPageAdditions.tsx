@@ -156,7 +156,7 @@ const homeSectionsCopy = {
           name: "Enterprise",
           price: "Custom",
           description:
-            "Higher volume, multiple numbers, and self-hosting implementation support.",
+            "Higher volume, multiple numbers, and dedicated implementation support.",
         },
       ],
     },
@@ -321,7 +321,7 @@ const homeSectionsCopy = {
           name: "Enterprise",
           price: "Sur mesure",
           description:
-            "Volume supérieur, plusieurs numéros et accompagnement pour l’auto-hébergement.",
+            "Volume supérieur, plusieurs numéros et accompagnement dédié à l’implémentation.",
         },
       ],
     },
@@ -485,7 +485,7 @@ const homeSectionsCopy = {
           name: "Enterprise",
           price: "A medida",
           description:
-            "Mayor volumen, varios números y apoyo para implementar el autoalojamiento.",
+            "Mayor volumen, varios números y soporte dedicado para la implementación.",
         },
       ],
     },
@@ -648,7 +648,7 @@ const homeSectionsCopy = {
           name: "Enterprise",
           price: "Po dogovoru",
           description:
-            "Veći obim, više brojeva i podrška pri uvođenju samostalnog hostovanja.",
+            "Veći obim, više brojeva i posvećena podrška pri implementaciji.",
         },
       ],
     },

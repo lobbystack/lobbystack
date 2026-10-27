@@ -16,11 +16,14 @@ const tableHeadings = {
 
 /** The self-hosted plans for one audience as a Markdown table, for twins and agents. */
 export function supportPlansTable(locale: Locale, audience: SelfHostedSupportAudience) {
+  const { labels } = getSelfHostedSupportCopy(locale)
   const rows = supportPlanCards(locale, audience).map((card) => {
     const price = (interval: "monthly" | "annual") =>
       card.slug === "complete" ? card.price[interval].note : `${card.price[interval].amount}${card.period}`
     const includes = card.lines.filter((line) => line.included).map((line) => line.label).join("; ")
-    const link = card.href.monthly === card.href.annual ? card.href.monthly : `${card.href.monthly} / ${card.href.annual}`
+    const link = card.href.monthly === card.href.annual
+      ? card.href.monthly
+      : `[${labels.monthly}](${card.href.monthly}), [${labels.annual}](${card.href.annual})`
     return `| ${card.name} | ${price("monthly")} | ${price("annual")} | ${includes} | ${link} |`
   })
   return `| ${tableHeadings[locale].join(" | ")} |\n| --- | --- | --- | --- | --- |\n${rows.join("\n")}`
@@ -49,9 +52,9 @@ ${supportPlansTable(locale, "business")}
 
 ${copy.labels.footnote}
 
-- ${t.cloudPrompt} ${t.cloudLink}: ${absoluteUrl(localizePath(locale, "/pricing/"))}
-- ${t.clientsPrompt} ${t.clientsLink}: ${absoluteUrl(localizePath(locale, "/white-label/"))}#self-hosted-tiers
-- ${t.questionsPrompt} support@lobbystack.com
+- [${t.cloudLink}](${absoluteUrl(localizePath(locale, "/pricing/"))})
+- [${t.clientsLink}](${absoluteUrl(localizePath(locale, "/white-label/"))}#self-hosted-tiers)
+- [${t.questionsLink}](mailto:support@lobbystack.com)
 
 ## ${t.faqHeading}
 

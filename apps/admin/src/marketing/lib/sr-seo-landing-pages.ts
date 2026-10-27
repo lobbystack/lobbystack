@@ -339,7 +339,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
     proofPoints: [
       "AI recepcioner otvorenog koda za male firme",
       "Javljanje na pozive, zakazivanje, preusmeravanje i rezimei poziva na jednom mestu",
-      "Za upravljani cloud ili samostalno hostovanje uz pomoć pri postavljanju",
+      "Radi na LobbyStack Cloud-u ili na Vašim serverima, uz plaćenu podršku za samostalno hostovanje",
     ],
     sections: [
       {

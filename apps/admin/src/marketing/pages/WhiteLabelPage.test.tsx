@@ -9,6 +9,7 @@ import { getWhiteLabelCopy } from "@/marketing/lib/white-label-copy"
 import { getWhiteLabelFaqs } from "@/marketing/lib/white-label-faqs"
 import { whiteLabelMarkdown } from "@/marketing/lib/white-label-markdown"
 import { markdownTwin } from "@/marketing/markdown-twins"
+import { viewForHash } from "@/marketing/components/white-label/TierViewSwitch"
 import { WhiteLabelPage, whiteLabelPageSeo } from "@/marketing/pages/WhiteLabelPage"
 
 const leafPaths = (value: unknown, prefix = ""): string[] => {
@@ -46,13 +47,19 @@ describe("white-label page", () => {
     const html = render(locale)
     const support = getSelfHostedSupportCopy(locale)
     const hrefs = [...html.matchAll(/href="([^"]+)"/g)].map(([, href]) => href)
-    // Server HTML shows the hosted tiers; the self-hosted view is there but hidden.
-    expect(html).toContain(`<div hidden="">`)
+    // Server HTML shows the hosted tiers; the self-hosted view is there, hidden only while JavaScript runs.
+    expect(html).toContain(`<div class="hidden noscript:block noscript:mt-20">`)
     expect(html).toContain(support.whiteLabel.link)
     expect(html).toContain(support.whiteLabel.title)
     expect(hrefs).toContain(selfHostedSupportCatalog.white_label.premium.checkoutUrls.annual)
     expect(hrefs).toContain(selfHostedSupportCatalog.white_label.enterprise.checkoutUrls.annual)
     expect(hrefs).not.toContain(selfHostedSupportCatalog.business.premium.checkoutUrls.annual)
+  })
+
+  it("switches the tiers to the view a link names, both ways", () => {
+    expect(viewForHash("#self-hosted-tiers")).toBe("self-hosted")
+    expect(viewForHash("#tiers")).toBe("hosted")
+    expect(viewForHash("#faq")).toBeNull()
   })
 
   it("prices agency support as one flat fee, not per business", () => {

@@ -1,7 +1,8 @@
-import { intlLocale, selfHostedSupportCatalog, type SelfHostedSupportAudience } from "@lobbystack/shared"
+import { selfHostedSupportCatalog, type SelfHostedSupportAudience } from "@lobbystack/shared"
 
 import type { BillingInterval } from "@/marketing/components/BillingIntervalSwitch"
 import type { Locale } from "@/marketing/i18n"
+import { wholeUsd } from "@/marketing/lib/money"
 import { getSelfHostedSupportCopy, supportPlanSlugs, type SupportAudienceCopy, type SupportPlanSlug } from "@/marketing/lib/self-hosted-support-copy"
 
 export type SupportPlanCard = {
@@ -24,14 +25,6 @@ export const selfHostingGuideUrl = (locale: Locale) =>
   `https://docs.lobbystack.com/${docsLocales.has(locale) ? `${locale}/` : ""}self-hosting/overview`
 
 export const selfHostedSupportEmail = "mailto:support@lobbystack.com?subject=Self-hosted%20support"
-
-const wholeUsd = (locale: Locale, cents: number) =>
-  new Intl.NumberFormat(intlLocale(locale), {
-    style: "currency",
-    currency: "USD",
-    currencyDisplay: "narrowSymbol",
-    maximumFractionDigits: 0,
-  }).format(Math.round(cents / 100))
 
 const audienceCopy = (locale: Locale, audience: SelfHostedSupportAudience): SupportAudienceCopy => {
   const copy = getSelfHostedSupportCopy(locale)

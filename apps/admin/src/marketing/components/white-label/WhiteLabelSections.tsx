@@ -17,6 +17,7 @@ import { SupportPlans } from "@/marketing/components/pricing/SupportPlans"
 import { PillLink } from "@/marketing/components/white-label/PillLink"
 import { TierViewSwitch } from "@/marketing/components/white-label/TierViewSwitch"
 import { WhiteLabelTierCards, type WhiteLabelTierCard } from "@/marketing/components/white-label/WhiteLabelTierCards"
+import { wholeUsd } from "@/marketing/lib/money"
 import { cn } from "@/marketing/lib/utils"
 import { getWhiteLabelCopy, type WhiteLabelCard } from "@/marketing/lib/white-label-copy"
 import { getSelfHostedSupportCopy } from "@/marketing/lib/self-hosted-support-copy"
@@ -272,15 +273,6 @@ export function WhiteLabelEarn({ locale }: SectionProps) {
 }
 
 /** A tier price in whole dollars, as the pricing page shows plan prices. */
-function wholeUsd(locale: Locale, cents: number) {
-  return new Intl.NumberFormat(intlLocale(locale), {
-    style: "currency",
-    currency: "USD",
-    currencyDisplay: "narrowSymbol",
-    maximumFractionDigits: 0,
-  }).format(Math.round(cents / 100))
-}
-
 function usd(locale: Locale, cents: number) {
   const dollars = cents / 100
   return new Intl.NumberFormat(intlLocale(locale), {

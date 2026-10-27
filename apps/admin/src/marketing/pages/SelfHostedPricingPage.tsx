@@ -16,7 +16,6 @@ import {
   faqPageJsonLd,
   ogImagePath,
   organizationJsonLd,
-  softwareApplicationJsonLd,
   webSiteJsonLd,
 } from "@/marketing/lib/seo"
 import { pricingBreadcrumbNames } from "@/marketing/pages/PricingPage"
@@ -34,7 +33,7 @@ export function selfHostedPricingPageSeo(locale: Locale): MarketingPageSeo {
     jsonLd: [
       organizationJsonLd(),
       webSiteJsonLd({ locale }),
-      softwareApplicationJsonLd({ locale }),
+      // No SoftwareApplication here: its offers are the cloud plans, which this page doesn't sell.
       breadcrumbJsonLd([
         { name: copy.common.home, path: localizePath(locale, "/") },
         { name: pricingBreadcrumbNames[locale], path: localizePath(locale, "/pricing/") },

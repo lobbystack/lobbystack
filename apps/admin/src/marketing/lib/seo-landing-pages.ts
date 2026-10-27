@@ -70,7 +70,7 @@ export const companyPages: SeoLandingPage[] = [
     proofPoints: [
       "Open-source AI receptionist for small businesses",
       "Built around call answering, booking, transfers, and call summaries",
-      "Designed for managed cloud use and self-hosted implementation support",
+      "Runs on LobbyStack Cloud or on your own servers, with paid support for self-hosting",
     ],
     sections: [
       {
