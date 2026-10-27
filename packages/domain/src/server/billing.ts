@@ -651,15 +651,16 @@ export async function reconcileBillingProviderEvent(
       const currentPeriodEnd = dateField(transactionPayload, "currentPeriodEnd", "current_period_end") ?? dateField(payload, "currentPeriodEnd", "current_period_end") ?? dateField(subscription, "currentPeriodEnd", "current_period_end");
       // One Polar customer can hold several subscriptions, so the event changes the plan only
       // when it's about the subscription the account stores, or a live plan that replaces it.
-      const selfHostedSupport = payload.selfHostedSupport === true;
+      // A support plan, or a product from the other catalog, sells this account nothing.
+      const sellsNothing = payload.selfHostedSupport === true || payload.foreignProduct === true;
       const effect = subscriptionEventEffect({
         storedSubscriptionId: existing?.subscriptionId,
         eventSubscriptionId,
-        selfHostedSupport,
+        sellsNothing,
         startsLivePlan: (plan === "starter" || plan === "pro") && isLiveSubscriptionState(subscriptionState),
       });
       // A support plan this account doesn't follow is someone's purchase of support, not a payment for the business.
-      if (selfHostedSupport && effect === "ignore") {
+      if (sellsNothing && effect === "ignore") {
         await tx.update(providerEvents).set({ status: "ignored", updatedAt: new Date() }).where(eq(providerEvents.id, event.id));
         return { reconciled: false, started: null };
       }

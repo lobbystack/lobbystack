@@ -61,6 +61,7 @@ The worker matches every event to a billing account by subscription ID, never by
 
 - An event about another of the customer's subscriptions leaves the plan or tier alone, unless it starts a live plan or tier that replaces the stored one. The worker still records its orders.
 - A support subscription changes a plan or tier only when it's the stored subscription, after the customer switched it to a support product in Polar's portal. The hosted plan or tier then ends.
+- A product from the other catalog works the same way: if a partner switches its tier's subscription to a business's plan in the portal, or a business switches its plan's subscription to a partner's tier, the tier or plan ends instead of staying as it was. A product no catalog names, such as a retired one, leaves it as it was.
 - A support plan's orders are no hosted payment, so they earn no affiliate commission.
 
 A support purchase names no account, so nothing in the dashboard shows it. The webhook route logs `ops.billing.support_plan_purchased` when Polar creates a support subscription, with the plan, interval, subscription ID and customer ID. It doesn't log support events as `ops.billing.webhook_unresolved`. Each support product carries a benefit with a note on how to reach support, which Polar shows the buyer after checkout.

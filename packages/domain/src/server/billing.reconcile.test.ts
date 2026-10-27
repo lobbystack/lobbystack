@@ -232,6 +232,14 @@ describe("reconciling a customer's other Polar subscriptions", () => {
     expect(recordProductEventInTransaction).not.toHaveBeenCalled();
   });
 
+  it("ends the hosted plan when its own subscription moves to a partner's tier in the portal", async () => {
+    const { account, eventStatus } = await reconcile("subscription.updated", { billingKey: "business:biz_1", customerId: "cust_1", foreignProduct: true, product_id: "prod_partner_growth", subscriptionId: "sub_plan", status: "active" }, pro);
+
+    expect(account?.set).toMatchObject({ subscriptionId: "sub_plan", subscriptionState: "canceled" });
+    expect(account?.set).not.toHaveProperty("plan");
+    expect(eventStatus).toBe("processed");
+  });
+
   it("keeps Pro live when the customer's separate support plan is cancelled", async () => {
     const { account, eventStatus } = await reconcile("subscription.revoked", { ...support, subscriptionId: "sub_support", status: "revoked" }, pro);
 

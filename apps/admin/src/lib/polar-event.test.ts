@@ -76,4 +76,24 @@ describe("Polar payload normalization", () => {
     expect(result.payload).not.toHaveProperty("plan");
     expect(result.payload).not.toHaveProperty("billingInterval");
   });
+
+  it("flags the other catalog's product, which sells the customer nothing, and leaves an unknown one alone", () => {
+    const env = { POLAR_STARTER_MONTHLY_PRODUCT_ID: "starter_month", POLAR_PARTNER_GROWTH_MONTHLY_PRODUCT_ID: "growth_month" };
+    const partnerId = "3c2b1a09-8f7e-4d6c-9b5a-4f3e2d1c0b9a";
+    const businessId = "0b7c1d2e-3f40-4a51-8b62-7c83d94ea5b6";
+    const event = (productId: string, externalId: string) => normalizePolarEvent("subscription.updated", { id: "sub_1", status: "active", product_id: productId, customer: { id: "cust_1", external_id: externalId } }, env);
+    // A partner whose tier's subscription moves to a business's plan.
+    const partnerOnPlan = event("starter_month", `partner:${partnerId}`);
+    expect(partnerOnPlan.payload).toMatchObject({ foreignProduct: true });
+    expect(partnerOnPlan.payload).not.toHaveProperty("plan");
+    expect(partnerOnPlan.payload).not.toHaveProperty("partnerTier");
+    // A business whose plan's subscription moves to a partner's tier.
+    const businessOnTier = event("growth_month", `business:${businessId}`);
+    expect(businessOnTier.payload).toMatchObject({ foreignProduct: true });
+    expect(businessOnTier.payload).not.toHaveProperty("partnerTier");
+    // Each customer's own catalog, and a product no catalog names, aren't foreign.
+    expect(event("growth_month", `partner:${partnerId}`).payload).not.toHaveProperty("foreignProduct");
+    expect(event("starter_month", `business:${businessId}`).payload).not.toHaveProperty("foreignProduct");
+    expect(event("retired_product", `business:${businessId}`).payload).not.toHaveProperty("foreignProduct");
+  });
 });

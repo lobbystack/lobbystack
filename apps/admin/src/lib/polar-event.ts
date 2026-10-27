@@ -35,9 +35,15 @@ export function normalizePolarEvent(type: string, data: RecordValue, env: Record
   const candidate = businessId ?? references[0];
   // Only a subscription sets the plan; a checkout or one-off order with a product_id must not.
   const productId = text(subscription.product_id);
-  const match = partnerId ? undefined : (["starter", "pro"] as const).flatMap(plan => (["monthly", "annual"] as const).map(interval => ({ plan, interval, id: env[`POLAR_${plan.toUpperCase()}_${interval.toUpperCase()}_PRODUCT_ID`] }))).find(product => product.id && product.id === productId);
+  const directPlan = (["starter", "pro"] as const).flatMap(plan => (["monthly", "annual"] as const).map(interval => ({ plan, interval, id: env[`POLAR_${plan.toUpperCase()}_${interval.toUpperCase()}_PRODUCT_ID`] }))).find(product => product.id && product.id === productId);
+  const match = partnerId ? undefined : directPlan;
   // A partner's subscription sells a tier, never a plan.
   const tier = partnerId ? partnerTierForProduct(env, productId) : null;
+  // A product from the other catalog sells this customer nothing: a partner whose tier's
+  // subscription moves to a business's plan in Polar's portal, or a business whose plan's moves
+  // to a partner's tier. Reconcile ends what the subscription sold instead of keeping it. A
+  // product no catalog names, such as a retired one, still keeps it.
+  const foreignProduct = productId !== undefined && (partnerId ? directPlan !== undefined : partnerTierForProduct(env, productId) !== null);
   // A self-hosted support product sells no plan or tier, but a hosted customer can buy one, and can
   // even switch its plan's subscription to one in the portal. Reconcile reads the flag to decide.
   const supportPlan = [productId, text(data.product_id), text(record(data.product).id)].map(selfHostedSupportProduct).find(plan => plan !== null) ?? null;
@@ -62,6 +68,7 @@ export function normalizePolarEvent(type: string, data: RecordValue, env: Record
       ...(subscriptionState ? { subscriptionState } : {}),
       ...(subscriptionModifiedAt ? { subscriptionModifiedAt } : {}),
       ...(supportPlan ? { selfHostedSupport: true } : {}),
+      ...(foreignProduct ? { foreignProduct: true } : {}),
     },
   };
 }

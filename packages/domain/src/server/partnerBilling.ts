@@ -549,15 +549,16 @@ export async function reconcilePartnerTier(context: DomainContext, input: { part
     const eventSubscriptionId = text(payload, "subscriptionId") ?? text(subscription, "id");
     // One Polar customer can hold several subscriptions, so the event changes the tier only when
     // it's about the subscription the account stores, or a live tier that replaces it.
-    const selfHostedSupport = payload.selfHostedSupport === true;
+    // A support plan, or a product from the other catalog, sells this account nothing.
+    const sellsNothing = payload.selfHostedSupport === true || payload.foreignProduct === true;
     const effect = subscriptionEventEffect({
       storedSubscriptionId: existing?.subscriptionId,
       eventSubscriptionId,
-      selfHostedSupport,
+      sellsNothing,
       startsLivePlan: tier !== undefined && isLivePolarSubscriptionState(subscriptionState),
     });
     // A support plan the account doesn't follow is the partner's purchase of support, not a tier.
-    if (selfHostedSupport && effect === "ignore") {
+    if (sellsNothing && effect === "ignore") {
       await tx.update(providerEvents).set({ status: "ignored", updatedAt: new Date() }).where(eq(providerEvents.id, event.id));
       return false;
     }

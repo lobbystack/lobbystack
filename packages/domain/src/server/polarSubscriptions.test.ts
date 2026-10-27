@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { subscriptionEventEffect } from "./polarSubscriptions";
 
 const effect = (input: Partial<Parameters<typeof subscriptionEventEffect>[0]>) =>
-  subscriptionEventEffect({ storedSubscriptionId: "sub_plan", eventSubscriptionId: "sub_plan", selfHostedSupport: false, startsLivePlan: false, ...input });
+  subscriptionEventEffect({ storedSubscriptionId: "sub_plan", eventSubscriptionId: "sub_plan", sellsNothing: false, startsLivePlan: false, ...input });
 
 describe("subscriptionEventEffect", () => {
   it("applies events about the subscription the account stores", () => {
@@ -21,13 +21,13 @@ describe("subscriptionEventEffect", () => {
     expect(effect({ eventSubscriptionId: "sub_old" })).toBe("ignore");
   });
 
-  it("ends the hosted plan when its own subscription moves to a support product", () => {
-    expect(effect({ selfHostedSupport: true })).toBe("end");
+  it("ends the hosted plan when its own subscription moves to a support product or the other catalog's", () => {
+    expect(effect({ sellsNothing: true })).toBe("end");
   });
 
   it("ignores a support subscription the account doesn't store, whatever its state", () => {
-    expect(effect({ selfHostedSupport: true, eventSubscriptionId: "sub_support" })).toBe("ignore");
-    expect(effect({ selfHostedSupport: true, storedSubscriptionId: null, eventSubscriptionId: "sub_support" })).toBe("ignore");
-    expect(effect({ selfHostedSupport: true, eventSubscriptionId: undefined })).toBe("ignore");
+    expect(effect({ sellsNothing: true, eventSubscriptionId: "sub_support" })).toBe("ignore");
+    expect(effect({ sellsNothing: true, storedSubscriptionId: null, eventSubscriptionId: "sub_support" })).toBe("ignore");
+    expect(effect({ sellsNothing: true, eventSubscriptionId: undefined })).toBe("ignore");
   });
 });

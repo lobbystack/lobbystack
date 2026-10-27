@@ -376,6 +376,18 @@ describe.skipIf(!client)("a partner's tier", () => {
     });
   });
 
+  it("ends the tier when its own subscription moves to a business's plan in Polar's portal", async () => {
+    await rollbackTest(async (tx) => {
+      sellTiers();
+      const acme = await partner(tx, "Acme Reception");
+      await deliver(tx, acme.partnerId, "subscription.active", subscriptionEvent(acme.partnerId, { status: "active", tier: "scale", modifiedAt: "2026-10-01T00:00:01.000Z" }));
+      expect(await getPartnerBilling(acme.context, acme.ownerActor)).toMatchObject({ tier: "scale" });
+      // A business's Starter plan sells a partner no tier, so the partner doesn't keep Scale's pool and numbers at Starter's price.
+      await deliver(tx, acme.partnerId, "subscription.updated", { ...subscriptionEvent(acme.partnerId, { status: "active", modifiedAt: "2026-10-02T00:00:00.000Z" }), product_id: "prod_starter_month", foreignProduct: true });
+      expect(await getPartnerBilling(acme.context, acme.ownerActor)).toMatchObject({ tier: "free", subscriptionState: "canceled" });
+    });
+  });
+
   it("keeps each partner's billing to its own team, and lets only the worker write it", async () => {
     await rollbackTest(async (tx) => {
       sellTiers();
