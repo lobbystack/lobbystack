@@ -181,6 +181,35 @@ const sr: ProductScenesCopy = {
 
 const COPY_BY_LOCALE = { en, fr, es, sr } satisfies Record<Locale, ProductScenesCopy>
 
-export function getProductScenesCopy(locale: Locale): ProductScenesCopy {
-  return COPY_BY_LOCALE[locale]
+/** Lines that fit any trade, for scenes on pages that aren't about plumbing. */
+const neutralLines: Record<Locale, Pick<ProductScenesCopy, "urgentQuote" | "summaryService" | "summaryNote" | "jobName">> = {
+  en: {
+    urgentQuote: "This can't wait until Monday. Can someone come out today?",
+    summaryService: "Service visit",
+    summaryNote: "First-time caller, wants someone this week",
+    jobName: "Repair visit",
+  },
+  fr: {
+    urgentQuote: "Ça ne peut pas attendre lundi. Quelqu'un peut venir aujourd'hui?",
+    summaryService: "Visite de service",
+    summaryNote: "Nouveau client, veut quelqu'un cette semaine",
+    jobName: "Visite de réparation",
+  },
+  es: {
+    urgentQuote: "Esto no puede esperar al lunes. ¿Puede venir alguien hoy?",
+    summaryService: "Visita de servicio",
+    summaryNote: "Cliente nuevo, quiere a alguien esta semana",
+    jobName: "Visita de reparación",
+  },
+  sr: {
+    urgentQuote: "Ovo ne može da čeka ponedeljak. Može li neko da dođe danas?",
+    summaryService: "Servisna poseta",
+    summaryNote: "Novi klijent, želi nekoga ove nedelje",
+    jobName: "Poseta za popravku",
+  },
+}
+
+export function getProductScenesCopy(locale: Locale, neutral = false): ProductScenesCopy {
+  const copy = COPY_BY_LOCALE[locale]
+  return neutral ? { ...copy, ...neutralLines[locale] } : copy
 }

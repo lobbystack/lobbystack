@@ -39,7 +39,7 @@ export type ProductSceneName =
   | "jobBooked"
   | "guardrails"
 
-type SceneProps = { locale: Locale }
+type SceneProps = { locale: Locale; neutral?: boolean | undefined }
 
 // A fixed Tuesday, so every scene shows the same appointment.
 const tuesday = (hour: number, minute = 0) => new Date(Date.UTC(2026, 10, 3, hour, minute))
@@ -102,8 +102,8 @@ function Waveform({ className }: { className?: string }) {
   )
 }
 
-function CallCaptureScene({ locale }: SceneProps) {
-  const t = getProductScenesCopy(locale)
+function CallCaptureScene({ locale, neutral }: SceneProps) {
+  const t = getProductScenesCopy(locale, neutral)
   return (
     <Scene width={540} height={380} tilt="left">
       <Ripples x={200} y={170} sizes={[340, 252, 170]} />
@@ -130,8 +130,8 @@ function CallCaptureScene({ locale }: SceneProps) {
   )
 }
 
-function BookingScene({ locale }: SceneProps) {
-  const t = getProductScenesCopy(locale)
+function BookingScene({ locale, neutral }: SceneProps) {
+  const t = getProductScenesCopy(locale, neutral)
   const days = [2, 3, 4, 5, 6].map((day) =>
     new Intl.DateTimeFormat(intlLocale(locale), { weekday: "short", timeZone: "UTC" }).format(new Date(Date.UTC(2026, 10, day)))
   )
@@ -197,8 +197,8 @@ function BookingScene({ locale }: SceneProps) {
   )
 }
 
-function HandoffScene({ locale }: SceneProps) {
-  const t = getProductScenesCopy(locale)
+function HandoffScene({ locale, neutral }: SceneProps) {
+  const t = getProductScenesCopy(locale, neutral)
   const person = t.team[1] ?? { name: "Sarah Lopez", role: "Customer success" }
   // The urgent message overlaps the phone it was transferred to, like a notification.
   return (
@@ -229,8 +229,8 @@ function HandoffScene({ locale }: SceneProps) {
   )
 }
 
-function AnsweredBookedScene({ locale }: SceneProps) {
-  const t = getProductScenesCopy(locale)
+function AnsweredBookedScene({ locale, neutral }: SceneProps) {
+  const t = getProductScenesCopy(locale, neutral)
   return (
     <Scene width={600} height={124} tilt="flat">
       <Place x={0} y={20}>
@@ -253,8 +253,8 @@ function AnsweredBookedScene({ locale }: SceneProps) {
   )
 }
 
-function RoutingScene({ locale }: SceneProps) {
-  const t = getProductScenesCopy(locale)
+function RoutingScene({ locale, neutral }: SceneProps) {
+  const t = getProductScenesCopy(locale, neutral)
   return (
     <Scene width={600} height={260} tilt="left">
       <Place x={0} y={88}>
@@ -278,8 +278,8 @@ function RoutingScene({ locale }: SceneProps) {
   )
 }
 
-function KnowledgeScene({ locale }: SceneProps) {
-  const t = getProductScenesCopy(locale)
+function KnowledgeScene({ locale, neutral }: SceneProps) {
+  const t = getProductScenesCopy(locale, neutral)
   const icons = [Globe, Tag, Clock, FileText]
   return (
     <Scene width={560} height={340} tilt="left">
@@ -310,8 +310,8 @@ function KnowledgeScene({ locale }: SceneProps) {
   )
 }
 
-function SummaryScene({ locale }: SceneProps) {
-  const t = getProductScenesCopy(locale)
+function SummaryScene({ locale, neutral }: SceneProps) {
+  const t = getProductScenesCopy(locale, neutral)
   return (
     <Scene width={460} height={360}>
       <Place x={0} y={0}>
@@ -339,8 +339,8 @@ function SummaryScene({ locale }: SceneProps) {
   )
 }
 
-function JobBookedScene({ locale }: SceneProps) {
-  const t = getProductScenesCopy(locale)
+function JobBookedScene({ locale, neutral }: SceneProps) {
+  const t = getProductScenesCopy(locale, neutral)
   return (
     <Scene width={560} height={340} tilt="left">
       <Place x={0} y={30}>
@@ -371,8 +371,8 @@ function JobBookedScene({ locale }: SceneProps) {
   )
 }
 
-function GuardrailsScene({ locale }: SceneProps) {
-  const t = getProductScenesCopy(locale)
+function GuardrailsScene({ locale, neutral }: SceneProps) {
+  const t = getProductScenesCopy(locale, neutral)
   return (
     <Scene width={580} height={360}>
       <Place x={0} y={0}>
@@ -443,12 +443,25 @@ const fits = {
 
 export type SceneFit = keyof typeof fits
 
-/** One of the product scenes, filling its container. */
-export function ProductScene({ name, locale, fit = "panel" }: { name: ProductSceneName; locale: Locale; fit?: SceneFit }) {
+/**
+ * One of the product scenes, filling its container. `neutral` swaps the
+ * plumbing examples for lines that fit any trade.
+ */
+export function ProductScene({
+  name,
+  locale,
+  fit = "panel",
+  neutral,
+}: {
+  name: ProductSceneName
+  locale: Locale
+  fit?: SceneFit
+  neutral?: boolean | undefined
+}) {
   const Component = scenes[name]
   return (
     <div className={`absolute inset-0 ${fits[fit]}`}>
-      <Component locale={locale} />
+      <Component locale={locale} neutral={neutral} />
     </div>
   )
 }
