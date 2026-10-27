@@ -41,9 +41,9 @@ describe("dashboard auth links", () => {
     )
   })
 
-  it("sends partners back to partner signup in their language", () => {
+  it("sends partners to White Label signup in their language", () => {
     expect(appPartnerSignupUrl("fr")).toBe(
-      "https://app.lobbystack.com/fr/signup?returnTo=%2Fpartner%2Fsignup"
+      "https://app.lobbystack.com/partner/signup?lng=fr"
     )
   })
 })

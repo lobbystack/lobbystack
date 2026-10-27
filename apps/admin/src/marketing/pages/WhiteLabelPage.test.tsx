@@ -21,9 +21,9 @@ const leafPaths = (value: unknown, prefix = ""): string[] => {
 const render = (locale: Locale) => renderToStaticMarkup(<WhiteLabelPage locale={locale} />)
 
 describe("white-label page", () => {
-  it.each(SUPPORTED_LOCALES)("sends partner signups through the %s dashboard signup", (locale) => {
+  it.each(SUPPORTED_LOCALES)("sends partner signups to White Label signup in %s", (locale) => {
     const html = render(locale)
-    const signup = `https://app.lobbystack.com/${locale}/signup?returnTo=%2Fpartner%2Fsignup`
+    const signup = `https://app.lobbystack.com/partner/signup?lng=${locale}`
     const hrefs = [...html.matchAll(/href="([^"]+)"/g)].map(([, href]) => href?.replaceAll("&amp;", "&"))
     // The hero, the four tier cards and the closing section.
     expect(hrefs.filter((href) => href === signup)).toHaveLength(6)

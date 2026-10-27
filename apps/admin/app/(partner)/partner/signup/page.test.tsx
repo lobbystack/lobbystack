@@ -10,15 +10,17 @@ vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 vi.mock("@lobbystack/domain", () => ({ hashPartnerToken: (token: string) => `hash:${token}`, previewPartnerSignupInvitation: vi.fn(async () => fixture.preview) }));
 vi.mock("@/lib/auth", () => ({ getSession: async () => fixture.session }));
 vi.mock("@/lib/api-helpers", () => ({ getAppDatabase: () => ({ db: {} }) }));
-vi.mock("@/components/partner-signup-surface", () => ({ PartnerSignedOutSurface: () => null, PartnerSignupSurface: () => null }));
+vi.mock("@/components/partner-signup-surface", () => ({ PartnerSignupSurface: () => null }));
+vi.mock("@/components/guest-auth-card", () => ({ GuestAuthCard: () => null }));
 
 import { previewPartnerSignupInvitation } from "@lobbystack/domain";
-import { PartnerSignedOutSurface, PartnerSignupSurface } from "@/components/partner-signup-surface";
+import { GuestAuthCard } from "@/components/guest-auth-card";
+import { PartnerSignupSurface } from "@/components/partner-signup-surface";
 import PartnerSignupPage from "./page";
 
 type SignupProps = { baseDomain: string | null; blocked: string | null; invitation: string | null; invitedEmail: string | null; returnTo: string };
 const signedIn = (email: string | null, emailVerified = true) => ({ user: { id: "user", email, emailVerified } });
-const page = async (invitation?: string) => await PartnerSignupPage({ searchParams: Promise.resolve(invitation === undefined ? {} : { invitation }) }) as ReactElement<SignupProps>;
+const page = async (invitation?: string, extra: Record<string, string> = {}) => await PartnerSignupPage({ searchParams: Promise.resolve({ ...(invitation === undefined ? {} : { invitation }), ...extra }) }) as ReactElement<SignupProps>;
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -66,12 +68,12 @@ describe("partner signup while signup is invite-only", () => {
     expect((await page("token")).props).toEqual({ baseDomain: "portal.example.test", blocked: null, invitation: "token", invitedEmail: "owner@acme.example", returnTo: "/partner/signup?invitation=token" });
   });
 
-  it("asks a signed-out visitor with a valid invitation to sign in and come back to the same link", async () => {
+  it("has a signed-out visitor with a valid invitation make their account here, then come back to the same link", async () => {
     fixture.preview = { email: "owner@acme.example", status: "pending", expired: false };
     fixture.session = null;
-    const signedOut = await page("token") as unknown as ReactElement<{ page: string; returnTo: string }>;
-    expect(signedOut.type).toBe(PartnerSignedOutSurface);
-    expect(signedOut.props).toEqual({ page: "signup", returnTo: "/partner/signup?invitation=token" });
+    const signedOut = await page("token") as unknown as ReactElement<{ mode: string; partner: { returnTo: string } }>;
+    expect(signedOut.type).toBe(GuestAuthCard);
+    expect(signedOut.props).toEqual({ mode: "signup", partner: { returnTo: "/partner/signup?invitation=token" } });
   });
 });
 
@@ -83,8 +85,13 @@ describe("partner signup while signup is open", () => {
     expect(previewPartnerSignupInvitation).not.toHaveBeenCalled();
   });
 
-  it("asks a signed-out visitor to sign in first", async () => {
+  it("has a signed-out visitor make their account first", async () => {
     fixture.session = null;
-    expect((await page()).type).toBe(PartnerSignedOutSurface);
+    expect((await page()).type).toBe(GuestAuthCard);
+  });
+
+  it("lets the sign-up card record a Google sign-in before it shows the form", async () => {
+    expect((await page(undefined, { google: "signup" })).type).toBe(GuestAuthCard);
+    expect((await page()).type).toBe(PartnerSignupSurface);
   });
 });

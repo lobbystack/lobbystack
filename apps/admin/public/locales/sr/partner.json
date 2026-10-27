@@ -818,7 +818,6 @@
     "failed": "Nismo uspeli da prihvatimo poziv. Pokušajte ponovo."
   },
   "signedOut": {
-    "signup": "Prijavite se ili napravite nalog da biste postali partner.",
     "acceptInvite": "Prijavite se ili napravite nalog sa adresom {{email}} da biste se pridružili timu {{partnerName}}.",
     "signIn": "Prijavi se",
     "createAccount": "Napravi nalog",

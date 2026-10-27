@@ -36,9 +36,9 @@ it("sends someone on no partner's team to partner signup", async () => {
   await expect(PartnerConsoleHome()).rejects.toMatchObject({ to: "/partner/signup" });
 });
 
-it("sends a signed-out visitor to sign in, then back to the console", async () => {
+it("sends a signed-out visitor to White Label sign-in, then back to the console", async () => {
   fixture.session = null;
-  await expect(PartnerConsoleHome()).rejects.toMatchObject({ to: "/en/login?returnTo=%2Fpartner" });
+  await expect(PartnerConsoleHome()).rejects.toMatchObject({ to: "/partner/login?returnTo=%2Fpartner" });
   expect(listUserPartners).not.toHaveBeenCalled();
 });
 

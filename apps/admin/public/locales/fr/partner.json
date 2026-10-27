@@ -818,7 +818,6 @@
     "failed": "Impossible d'accepter l'invitation. Réessayez."
   },
   "signedOut": {
-    "signup": "Connectez-vous ou créez un compte pour devenir partenaire.",
     "acceptInvite": "Connectez-vous ou créez un compte avec {{email}} pour rejoindre {{partnerName}}.",
     "signIn": "Se connecter",
     "createAccount": "Créer un compte",

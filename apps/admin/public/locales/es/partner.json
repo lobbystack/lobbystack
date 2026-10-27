@@ -818,7 +818,6 @@
     "failed": "No pudimos aceptar la invitación. Inténtelo de nuevo."
   },
   "signedOut": {
-    "signup": "Inicie sesión o cree una cuenta para hacerse socio.",
     "acceptInvite": "Inicie sesión o cree una cuenta con {{email}} para unirse a {{partnerName}}.",
     "signIn": "Iniciar sesión",
     "createAccount": "Crear cuenta",

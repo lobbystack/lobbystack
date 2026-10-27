@@ -28,7 +28,10 @@ function GoogleLogo() {
   return <Icon aria-hidden="true" icon={googleIcon} id="google-logo" ssr />;
 }
 
-export function AuthCard({ mode, google = false }: { mode: "login" | "signup"; google?: boolean }) {
+/** White Label's own sign-in and sign-up: they link to each other and land back in the partner console. */
+export type PartnerAuth = { returnTo: string };
+
+export function AuthCard({ mode, google = false, partner }: { mode: "login" | "signup"; google?: boolean; partner?: PartnerAuth }) {
   const router = useRouter();
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
   const { t, i18n } = useTranslation("auth");
@@ -40,13 +43,17 @@ export function AuthCard({ mode, google = false }: { mode: "login" | "signup"; g
   const [googleLoading, setGoogleLoading] = useState(false);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    setReturnTo(getSafeReturnTo(params.get("returnTo")));
+    setReturnTo(getSafeReturnTo(params.get("returnTo")) ?? partner?.returnTo ?? null);
     setSignupSource(params.get("source") === "calculator" ? "calculator" : null);
     // Better Auth sends a failed Google sign-in back here with ?error=.
     const googleFailure = params.get("error");
     if (googleFailure) setGoogleError(googleFailure === "account_not_linked" ? "errors.googleAccountNotLinked" : "errors.googleFailed");
-  }, []);
+  }, [partner?.returnTo]);
   function authPath(path: "/login" | "/signup") {
+    if (partner) {
+      const safe = getSafeReturnTo(returnTo);
+      return `/partner${path}${safe ? `?returnTo=${encodeURIComponent(safe)}` : ""}`;
+    }
     const target = buildAuthPathWithReturnTo(path, returnTo, authLocale);
     return signupSource ? `${target}${target.includes("?") ? "&" : "?"}source=${signupSource}` : target;
   }
@@ -193,7 +200,7 @@ export function AuthCard({ mode, google = false }: { mode: "login" | "signup"; g
   function finishAuthentication() {
     const event = login ? "web.auth.login_succeeded" : "web.auth.signup_succeeded";
     recordAuthSuccess(event, { method: "email", ...(signupSource ? { source: signupSource } : {}) });
-    const safeReturnTo = getSafeReturnTo(new URLSearchParams(window.location.search).get("returnTo")) ?? "/";
+    const safeReturnTo = getSafeReturnTo(new URLSearchParams(window.location.search).get("returnTo")) ?? partner?.returnTo ?? "/";
     const target = new URL(safeReturnTo, window.location.origin);
     window.location.assign(target.origin === window.location.origin ? `${target.pathname}${target.search}${target.hash}` : "/");
   }
@@ -343,7 +350,7 @@ export function AuthCard({ mode, google = false }: { mode: "login" | "signup"; g
     </p>
   ) : undefined;
   return (
-    <ReplacementOnboardingShell legalFooter={legalFooter} progress={login ? null : { current: 1, total: 9 }} title={login ? t("login.title") : t("signup.title")} width="sm">
+    <ReplacementOnboardingShell eyebrow={partner ? t("partner.eyebrow") : undefined} legalFooter={legalFooter} progress={login || partner ? null : { current: 1, total: 9 }} title={login ? t("login.title") : t("signup.title")} width="sm">
       <div className="flex w-full flex-col gap-6">
         {google ? <>
           <div className="flex flex-col gap-2">

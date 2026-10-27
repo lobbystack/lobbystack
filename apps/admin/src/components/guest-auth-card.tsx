@@ -4,13 +4,13 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LoaderCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { AuthCard } from "./auth-card";
+import { AuthCard, type PartnerAuth } from "./auth-card";
 import { getSafeReturnTo } from "@/lib/auth-return-to";
 import { recordAuthSuccess } from "@/lib/auth-success-analytics";
 import { stripLocalePrefix } from "@/lib/locale-path";
 import { rememberPlanFromUrl } from "@/lib/remembered-plan";
 
-export function GuestAuthCard({ mode }: { mode: "login" | "signup" }) {
+export function GuestAuthCard({ mode, partner }: { mode: "login" | "signup"; partner?: PartnerAuth }) {
   const router = useRouter();
   const { t } = useTranslation("auth");
   const [checking, setChecking] = useState(true);
@@ -40,9 +40,9 @@ export function GuestAuthCard({ mode }: { mode: "login" | "signup" }) {
           // AuthCard's Google callback URLs add this marker; router.replace below drops it from history, so it counts once.
           const googleEvent = params.get("google");
           if (googleEvent === "login" || googleEvent === "signup") recordAuthSuccess(`web.auth.${googleEvent}_succeeded`, { method: "google", ...(params.get("source") === "calculator" ? { source: "calculator" } : {}) });
-          const returnTo = getSafeReturnTo(params.get("returnTo")) ?? "/";
+          const returnTo = getSafeReturnTo(params.get("returnTo")) ?? partner?.returnTo ?? "/";
           const path = stripLocalePrefix(new URL(returnTo, window.location.origin).pathname).replace(/\/$/, "");
-          router.replace(path === "/login" || path === "/signup" ? "/" : returnTo);
+          router.replace(path === "/login" || path === "/signup" ? "/" : path === "/partner/login" ? "/partner" : returnTo);
           return;
         }
       } catch {
@@ -53,8 +53,8 @@ export function GuestAuthCard({ mode }: { mode: "login" | "signup" }) {
       if (active) setChecking(false);
     })();
     return () => { active = false; clearTimeout(timeout); controller.abort(); };
-  }, [router]);
+  }, [router, partner?.returnTo]);
 
   if (checking) return <div className="flex min-h-svh items-center justify-center" role="status"><LoaderCircle className="size-5 animate-spin" aria-hidden="true" /><span className="sr-only">{t("checkingSession")}</span></div>;
-  return <AuthCard google={google} mode={mode} />;
+  return <AuthCard google={google} mode={mode} partner={partner} />;
 }

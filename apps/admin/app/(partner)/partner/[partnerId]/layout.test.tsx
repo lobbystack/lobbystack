@@ -56,9 +56,15 @@ it("sends anyone off the partner's team back to /partner, whether the id is some
   await expect(open("businesses")).rejects.toMatchObject({ to: "/partner" });
 });
 
-it("sends a signed-out visitor to sign in, then back to the page they asked for", async () => {
+it("sends a signed-out visitor to White Label sign-in, then back to the page they asked for", async () => {
   fixture.session = null;
   expect(PATHNAME_HEADER).toBe("x-lobbystack-pathname");
+  await expect(open(PARTNER)).rejects.toMatchObject({ to: `/partner/login?returnTo=${encodeURIComponent(`/partner/${PARTNER}/team`)}` });
+});
+
+it("sends a signed-out visitor on a partner's host to that partner's sign-in", async () => {
+  fixture.session = null;
+  fixture.headers = new Headers({ "x-lobbystack-brand": `partner:${PARTNER}`, "x-lobbystack-brand-origin": "https://bright.portal.example.test", "x-lobbystack-pathname": `/partner/${PARTNER}/team` });
   await expect(open(PARTNER)).rejects.toMatchObject({ to: `/en/login?returnTo=${encodeURIComponent(`/partner/${PARTNER}/team`)}` });
 });
 

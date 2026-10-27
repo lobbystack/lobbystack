@@ -16,7 +16,7 @@ export const DASHBOARD_NAMESPACES = ["common", "nav", "settings", "agent", "dash
  * its signup and invitation pages share with onboarding, and the demo page's
  * its Demos page shares with the host's.
  */
-export const PARTNER_NAMESPACES = ["common", "nav", "onboarding", "partner", "demos"];
+export const PARTNER_NAMESPACES = ["common", "nav", "onboarding", "partner", "demos", "auth"];
 
 export function routeNamespaces(pathname: string): string[] {
   const section = stripLocalePrefix(pathname).split("/")[1] ?? "";

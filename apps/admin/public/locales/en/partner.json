@@ -806,7 +806,6 @@
     "failed": "We couldn't accept the invitation. Try again."
   },
   "signedOut": {
-    "signup": "Sign in or create an account to become a partner.",
     "acceptInvite": "Sign in or create an account with {{email}} to join {{partnerName}}.",
     "signIn": "Sign in",
     "createAccount": "Create account",

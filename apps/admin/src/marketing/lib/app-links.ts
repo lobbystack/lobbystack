@@ -39,7 +39,10 @@ export const appAffiliateLoginUrl = (locale: Locale) =>
 export const appAffiliateSignupUrl = (locale: Locale) =>
   appSignupUrl(locale, { returnTo: "/affiliate" })
 
-// Partner signup needs an account first, so it starts at the dashboard's
-// signup page and comes back to /partner/signup to name the partner.
-export const appPartnerSignupUrl = (locale: Locale) =>
-  appSignupUrl(locale, { returnTo: "/partner/signup" })
+// White Label has its own signup page, which makes the account and then names
+// the partner. It isn't under a locale prefix, so `lng` carries the language.
+export const appPartnerSignupUrl = (locale: Locale) => {
+  const url = new URL("/partner/signup", APP_ORIGIN)
+  url.searchParams.set("lng", locale)
+  return url.toString()
+}

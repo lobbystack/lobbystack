@@ -15,6 +15,25 @@ vi.mock("@/components/turnstile", () => ({ Turnstile: ({ siteKey, onTokenChange 
 vi.mock("@/lib/affiliate-referral", () => ({ captureAffiliateReferralFromUrl: () => null, getAffiliateVisitorId: () => "fixture" }));
 beforeEach(() => { vi.stubEnv("NEXT_PUBLIC_TURNSTILE_SITE_KEY", ""); window.history.replaceState(null, "", "/"); Object.defineProperty(document, "elementFromPoint", { configurable: true, value: () => null }); vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} unobserve() {} }); vi.stubGlobal("fetch", vi.fn(async () => Response.json({ code: "INVALID_CREDENTIALS" }, { status: 401 }))); });
 afterEach(async () => { cleanup(); sessionStorage.clear(); await new Promise(resolve => setTimeout(resolve, 60)); vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.clearAllMocks(); });
+describe("White Label sign-in and sign-up", () => {
+  it("links between White Label's own pages and shows no business onboarding steps", () => {
+    window.history.replaceState(null, "", "/partner/signup?invitation=token");
+    render(<AuthCard mode="signup" partner={{ returnTo: "/partner/signup?invitation=token" }} />);
+    expect(screen.getByText("partner.eyebrow")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "signup.signIn" }).getAttribute("href")).toBe("/partner/login?returnTo=%2Fpartner%2Fsignup%3Finvitation%3Dtoken");
+  });
+  it("opens the partner console after signing in", async () => {
+    window.history.replaceState(null, "", "/partner/login");
+    const assign = vi.fn();
+    vi.stubGlobal("location", { ...window.location, assign, search: "", origin: window.location.origin });
+    vi.mocked(fetch).mockResolvedValueOnce(Response.json({ token: "session", user: { id: "partner" } }));
+    render(<AuthCard mode="login" partner={{ returnTo: "/partner" }} />);
+    await userEvent.type(screen.getByLabelText("login.email"), "owner@example.invalid");
+    await userEvent.type(screen.getByLabelText("login.password"), "Valid-Password-123!");
+    await userEvent.click(screen.getByRole("button", { name: "login.submit" }));
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("/partner"));
+  });
+});
 describe("original login and signup behavior", () => {
   it("preserves calculator attribution and a safe return path when switching to login", () => {
     window.history.replaceState(null, "", "/en/signup?source=calculator&returnTo=%2Fagent");

@@ -9,6 +9,12 @@ export function getSafeReturnTo(value: string | null | undefined): string | null
   return value;
 }
 
+/** White Label's sign-in, which brings the person back to `value` in the partner console. */
+export function buildPartnerLoginPath(value: string | null | undefined): string {
+  const returnTo = getSafeReturnTo(value);
+  return returnTo ? `/partner/login?returnTo=${encodeURIComponent(returnTo)}` : "/partner/login";
+}
+
 export function buildAuthPathWithReturnTo(
   path: "/login" | "/signup",
   value: string | null | undefined,

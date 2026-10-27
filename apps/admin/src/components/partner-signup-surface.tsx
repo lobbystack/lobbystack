@@ -23,10 +23,10 @@ import { requestJson } from "@/lib/request-json";
 export type PartnerSignupBlock = "inviteOnly" | "invitationInvalid" | "invitationUsed" | "wrongAccount";
 
 /**
- * What a signed-out visitor sees on the signup and invitation pages: a way to
- * sign in or make an account that brings them back to the same link.
+ * What a signed-out visitor sees on a team invitation: a way to sign in or
+ * make an account that brings them back to the same link.
  */
-export function PartnerSignedOutSurface({ page, returnTo, values = {} }: { page: "signup" | "acceptInvite"; returnTo: string; values?: Record<string, string> }) {
+export function PartnerSignedOutSurface({ page, returnTo, values = {} }: { page: "acceptInvite"; returnTo: string; values?: Record<string, string> }) {
   const { t, i18n } = useTranslation("partner");
   const locale = resolveLocale(i18n.resolvedLanguage, i18n.language);
   return (
