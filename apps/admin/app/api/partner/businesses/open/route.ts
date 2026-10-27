@@ -16,8 +16,8 @@ export const dynamic = "force-dynamic";
 // again.
 export const POST = partnerRoute(async ({ actor, userId, businessId, request, session, domain }) => {
   if (!businessId) return jsonError("businessId is required.", 400, "business_required");
-  // The audit log names who opened it, as the business's owners see it.
-  const openedBy = { name: session.user.name?.trim() || null, email: session.user.email ?? null };
+  // The audit log names who opened it, as the business's owners see it: their name, never their email.
+  const openedBy = { name: session.user.name?.trim() || null };
   const { expiresAt } = await openPartnerBusiness(domain, { userId, businessId, partnerId: actor.partnerId, openedBy });
   const origin = partnerRequestOrigin(request.headers) ?? (await loadPartnerBrand(actor.partnerId))?.origin;
   if (!origin) return jsonError("Partner not found.", 404, "partner_not_found");

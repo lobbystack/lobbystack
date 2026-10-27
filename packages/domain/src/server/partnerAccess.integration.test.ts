@@ -6,7 +6,7 @@ import { auditLogs, businesses, businessInvitations, businessMemberships, create
 import type { PartnerAccessLevel } from "@lobbystack/shared";
 
 import { forgetCachedBrands } from "./brands";
-import { capabilityNames, HOST_BRAND_SCOPE, leavePartnerBusiness, listPartnerAccess, openPartnerBusiness, PARTNER_OPEN_LIFETIME_MS, requireBusinessAccess, type BrandScope, type Capability } from "./businessAccess";
+import { capabilityNames, currentPartnerOpen, HOST_BRAND_SCOPE, leavePartnerBusiness, listPartnerAccess, openPartnerBusiness, PARTNER_OPEN_LIFETIME_MS, requireBusinessAccess, type BrandScope, type Capability } from "./businessAccess";
 import { getActiveOnboardingState } from "./onboarding";
 import { acceptPartnerInvitation, createPartnerBusiness, hashPartnerToken, invitePartnerMember, removePartnerMember, signUpPartner, type PartnerMemberActor } from "./partners";
 import { startOnboardingPhoneVerification, startOperatorPhoneVerification } from "./phoneVerification";
@@ -172,7 +172,7 @@ describe.skipIf(!client)("opening a partner's business", () => {
       expect(expiresAt.getTime()).toBeGreaterThanOrEqual(before + PARTNER_OPEN_LIFETIME_MS);
       expect(expiresAt.getTime()).toBeLessThanOrEqual(Date.now() + PARTNER_OPEN_LIFETIME_MS);
       const opens = async () => await asMigrator(tx, async () => await tx.select({ actorUserId: auditLogs.actorUserId, entityType: auditLogs.entityType, entityId: auditLogs.entityId, payload: auditLogs.payload, createdAt: auditLogs.createdAt }).from(auditLogs).where(and(eq(auditLogs.businessId, businessId), eq(auditLogs.eventType, "partner.business_opened"))));
-      expect(await opens()).toEqual([{ actorUserId: acme.member.userId, entityType: "business", entityId: businessId, payload: { partnerId: acme.partnerId, partnerRole: "member", openedAt: expect.stringMatching(/Z$/), expiresAt: expiresAt.toISOString() }, createdAt: expect.any(Date) }]);
+      expect(await opens()).toEqual([{ actorUserId: acme.member.userId, entityType: "business", entityId: businessId, payload: { partnerId: acme.partnerId, partnerRole: "member", openedAt: expect.stringMatching(/Z$/), expiresAt: expiresAt.toISOString(), partnerName: expect.any(String) }, createdAt: expect.any(Date) }]);
       // The business's own owner reads who opened it in its audit log.
       expect(await asOperator(tx, { userId: client!.userId, businessId }, async (inner) => await inner.select({ actorUserId: auditLogs.actorUserId }).from(auditLogs).where(eq(auditLogs.eventType, "partner.business_opened")))).toEqual([{ actorUserId: acme.member.userId }]);
 
@@ -192,14 +192,23 @@ describe.skipIf(!client)("opening a partner's business", () => {
       expect((await opens()).map((row) => String(row.payload?.expiresAt)).sort()).toEqual([expiresAt.toISOString(), again.expiresAt.toISOString()]);
       expect(await asMigrator(tx, async () => await tx.select({ expiresAt: partnerBusinessOpens.expiresAt }).from(partnerBusinessOpens).where(eq(partnerBusinessOpens.businessId, businessId)))).toEqual([{ expiresAt: again.expiresAt }]);
 
-      // Going back to the console ends the open at once, and the owner sees who came and went.
-      await openPartnerBusiness(acme.context, { ...member, openedBy: { name: "Mia", email: "mia@acme.example" } });
-      expect(await leavePartnerBusiness(acme.context, member)).toEqual({ left: true });
+      // Going back to the console ends the open at once, but only the open the tab saw begin: a newer one stays.
+      await openPartnerBusiness(acme.context, { ...member, openedBy: { name: "Mia" } });
+      const seen = (await currentPartnerOpen(acme.context, member))!;
+      await asMigrator(tx, async () => await tx.update(partnerBusinessOpens).set({ openedAt: new Date(seen.openedAt.getTime() + 1000) }).where(and(eq(partnerBusinessOpens.businessId, businessId), eq(partnerBusinessOpens.userId, member.userId))));
+      expect(await leavePartnerBusiness(acme.context, { ...member, openedAt: seen.openedAt })).toEqual({ left: false });
+      expect(await access(tx, { ...member, brand: acme.brand })).toMatchObject({ via: "partner" });
+      const newer = (await currentPartnerOpen(acme.context, member))!;
+      expect(await leavePartnerBusiness(acme.context, { ...member, openedAt: newer.openedAt })).toEqual({ left: true });
       await expect(access(tx, { ...member, brand: acme.brand })).rejects.toMatchObject(notHere);
+      expect(await currentPartnerOpen(acme.context, member)).toBeNull();
       expect(await leavePartnerBusiness(acme.context, member)).toEqual({ left: false });
+      // The owner sees who came and went by name and the partner, never their email or role.
       const visits = await asOperator(tx, { userId: client!.userId, businessId }, async (inner) => await listPartnerAccess(inner, { businessId }));
       expect(visits.map((visit) => visit.kind).sort()).toEqual(["left", "opened", "opened", "opened"]);
-      expect(visits.filter((visit) => visit.email === "mia@acme.example").map((visit) => visit.kind).sort()).toEqual(["left", "opened"]);
+      expect(visits.filter((visit) => visit.name === "Mia").map((visit) => visit.kind).sort()).toEqual(["left", "opened"]);
+      for (const visit of visits) expect(Object.keys(visit).sort()).toEqual(["at", "id", "kind", "name", "partnerName"]);
+      expect(visits.every((visit) => visit.partnerName === "Acme Reception")).toBe(true);
 
       // Once it runs out, nothing reaches the business again.
       await openPartnerBusiness(acme.context, member);

@@ -18,13 +18,12 @@ function renderWith(response: Response) {
 
 it("lists who on the partner's team opened the business and when they left", async () => {
   renderWith(Response.json({ events: [
-    { id: "left", kind: "left", at: "2026-10-26T21:00:00.000Z", name: "Mia", email: "mia@acme.example", partnerRole: "member", expiresAt: null },
-    { id: "opened", kind: "opened", at: "2026-10-26T20:00:00.000Z", name: null, email: null, partnerRole: "member", expiresAt: "2026-10-27T04:00:00.000Z" },
+    { id: "left", kind: "left", at: "2026-10-26T21:00:00.000Z", name: "Mia", partnerName: "Acme Reception" },
+    { id: "opened", kind: "opened", at: "2026-10-26T20:00:00.000Z", name: null, partnerName: "Acme Reception" },
   ] }));
   expect(await screen.findByText("Mia")).toBeTruthy();
-  expect(screen.getByText("mia@acme.example")).toBeTruthy();
   expect(screen.getByText("partnerAccess.left")).toBeTruthy();
-  // An open recorded before the log kept names still shows, as the partner's team.
+  // Someone with no name shows as the partner's team.
   expect(screen.getByText("partnerAccess.someone")).toBeTruthy();
 });
 

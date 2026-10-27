@@ -31,7 +31,7 @@ it("opens the business for anyone on the partner's team and sends them to its da
   expect(await response.json()).toEqual({ expiresAt: "2026-10-26T20:00:00.000Z", url: "https://acme.portal.example.test/" });
   expect(fixture.resolve).toHaveBeenCalledWith(expect.anything(), { userId: "user", partnerId });
   // The open is limited to the console's own partner.
-  expect(fixture.open).toHaveBeenCalledWith(expect.anything(), { userId: "user", businessId, partnerId, openedBy: { name: null, email: expect.any(String) } });
+  expect(fixture.open).toHaveBeenCalledWith(expect.anything(), { userId: "user", businessId, partnerId, openedBy: { name: null } });
   expect(fixture.brand).toHaveBeenCalledWith(partnerId);
 });
 

@@ -1178,11 +1178,11 @@
   },
   "partnerAccess": {
     "title": "Pristup partnera",
-    "description": "Svaki put kada je neko iz tima {{appName}} otvorio vašu kontrolnu tablu da vam pomogne, i kada ju je napustio.",
-    "empty": "Niko iz tima {{appName}} još nije otvorio vašu kontrolnu tablu.",
+    "description": "Svaki put kada je neko iz tima vašeg partnera otvorio vašu kontrolnu tablu da vam pomogne, i kada ju je napustio.",
+    "empty": "Niko iz tima vašeg partnera još nije otvorio vašu kontrolnu tablu.",
     "adminsOnly": "Samo vlasnici i administratori vide ko je otvorio kontrolnu tablu.",
     "loadFailed": "Nismo uspeli da učitamo ovaj spisak. Pokušajte ponovo.",
-    "someone": "Neko iz tima {{appName}}",
+    "someone": "Član tima {{partnerName}}",
     "opened": "Otvaranje vaše kontrolne table",
     "left": "Izlazak",
     "columns": {

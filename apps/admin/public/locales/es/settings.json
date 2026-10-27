@@ -1178,11 +1178,11 @@
   },
   "partnerAccess": {
     "title": "Acceso del socio",
-    "description": "Cada vez que alguien del equipo de {{appName}} abrió su panel para ayudarle, y cuándo salió.",
-    "empty": "Nadie del equipo de {{appName}} ha abierto su panel todavía.",
+    "description": "Cada vez que alguien del equipo de su socio abrió su panel para ayudarle, y cuándo salió.",
+    "empty": "Nadie del equipo de su socio ha abierto su panel todavía.",
     "adminsOnly": "Solo los propietarios y administradores ven quién abrió el panel.",
     "loadFailed": "No pudimos cargar esta lista. Inténtelo de nuevo.",
-    "someone": "Alguien del equipo de {{appName}}",
+    "someone": "Un miembro del equipo de {{partnerName}}",
     "opened": "Abrió su panel",
     "left": "Salió",
     "columns": {

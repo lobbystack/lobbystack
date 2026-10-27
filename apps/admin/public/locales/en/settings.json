@@ -1171,11 +1171,11 @@
   },
   "partnerAccess": {
     "title": "Partner access",
-    "description": "Each time someone on {{appName}}'s team opened your dashboard to help you, and when they left.",
-    "empty": "No one on {{appName}}'s team has opened your dashboard yet.",
+    "description": "Each time someone on your partner's team opened your dashboard to help you, and when they left.",
+    "empty": "No one on your partner's team has opened your dashboard yet.",
     "adminsOnly": "Only owners and admins can see who opened the dashboard.",
     "loadFailed": "We couldn't load this list. Try again.",
-    "someone": "Someone on {{appName}}'s team",
+    "someone": "A member of {{partnerName}}'s team",
     "opened": "Opened your dashboard",
     "left": "Left",
     "columns": {

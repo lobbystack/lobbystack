@@ -270,7 +270,14 @@ function UserMenu({ partnerConsole = false, user }: Pick<DashboardShellProps, "p
   const can = useBusinessCan();
   const billing = useQuery({ queryKey: ["billing", business?.businessId], enabled: Boolean(business?.businessId) && can("billing"), queryFn: () => requestJson<{ account: { plan: string | null } | null; permissions: BillingPermissions; availableCheckoutPlans: Array<"starter" | "pro">; availableCheckoutIntervals: Record<"starter" | "pro", string[]> }>(`/api/billing?businessId=${encodeURIComponent(business!.businessId)}`) });
   const showUpgradeToPro = can("billing") && billing.data?.permissions.hasCheckoutAccess === true && (billing.data.account?.plan ?? "free_cloud") === "free_cloud" && (billing.data.availableCheckoutPlans ?? []).some(plan => billing.data?.availableCheckoutIntervals[plan].length);
-  // Someone working in a partner's business through an open ends it as they go back to the console, and the business's audit log records it.
-  const leaveBusiness = business?.via === "partner" ? () => { void fetch("/api/partner/businesses/leave", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ businessId: business.businessId }), keepalive: true }).catch(() => undefined); } : undefined;
-  return <NavUser user={user} onLeaveBusiness={leaveBusiness} onSignOut={() => void signOut()} onUpgradeToPro={openUpgradePlanDialog} showPartnerConsole={partnerConsole} showUpgradeToPro={showUpgradeToPro} />;
+  // Someone working in a partner's business through an open ends it as they go back to the console or sign out,
+  // and the business's audit log records it. The tab reads when its open began once, as it loads, so leaving here
+  // doesn't end a newer open another tab started. A tab closed without either leaves the open to expire.
+  const visiting = business?.via === "partner" ? business.businessId : null;
+  const visit = useQuery({ queryKey: ["partner-visit", visiting], enabled: Boolean(visiting), staleTime: Infinity, gcTime: Infinity, refetchOnWindowFocus: false, refetchOnReconnect: false, queryFn: () => requestJson<{ openedAt: string | null }>(`/api/partner/businesses/leave?businessId=${encodeURIComponent(visiting!)}`) });
+  const leave = async () => {
+    if (!visiting || !visit.data?.openedAt) return;
+    await fetch("/api/partner/businesses/leave", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ businessId: visiting, openedAt: visit.data.openedAt }), keepalive: true }).catch(() => undefined);
+  };
+  return <NavUser user={user} onLeaveBusiness={visiting ? () => void leave() : undefined} onSignOut={() => void leave().then(() => signOut())} onUpgradeToPro={openUpgradePlanDialog} showPartnerConsole={partnerConsole} showUpgradeToPro={showUpgradeToPro} />;
 }
