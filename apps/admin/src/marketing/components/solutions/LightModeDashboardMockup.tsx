@@ -30,7 +30,7 @@ function AfterHoursSchematic() {
         {/* Middle ring */}
         <div className="absolute size-40 rounded-full border border-border/30" />
         {/* Inner ring */}
-        <div className="absolute size-24 rounded-full border border-foreground/10 bg-muted/30" />
+        <div className="absolute size-24 rounded-full border border-foreground/10 bg-beige" />
 
         {/* Center phone indicator */}
         <div className="relative flex flex-col items-center gap-1">
@@ -111,12 +111,12 @@ function DentalSchematic() {
             </div>
             <div className="space-y-1">
               {/* Empty slot */}
-              <div className="h-6 rounded border border-border/30 bg-muted/20" />
+              <div className="h-6 rounded border border-border/30 bg-beige" />
               {/* Filled slot */}
               <div className="h-6 rounded border border-foreground/10 bg-foreground/[0.04]" />
               {/* AI booked slot */}
               <div
-                className={`h-6 rounded border ${day === "Tue" ? "border-foreground/20 bg-foreground/[0.06]" : "border-border/30 bg-muted/20"}`}
+                className={`h-6 rounded border ${day === "Tue" ? "border-foreground/20 bg-foreground/[0.06]" : "border-border/30 bg-beige"}`}
               />
             </div>
           </div>
@@ -280,7 +280,7 @@ function SelfHostedSchematic() {
               Runs in infrastructure you control
             </div>
           </div>
-          <span className="rounded-full bg-foreground/5 px-2 py-1 text-[10px] font-medium text-foreground/70">
+          <span className="rounded-full bg-beige-strong px-2 py-1 text-[10px] font-medium text-foreground/70">
             Self-hosted
           </span>
         </div>

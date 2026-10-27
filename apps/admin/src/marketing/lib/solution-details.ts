@@ -41,12 +41,28 @@ export const afterHoursRouting: Pick<TradeDetails, "noun" | "routing"> = {
   ],
 }
 
+/** What LobbyStack did on a call, drawn as a tile next to the call. */
+export type CallOutcome = {
+  kind: "booked" | "moved" | "answered" | "ended" | "transferred" | "message"
+  title?: string
+  detail?: string
+  chip?: string
+  /** Who took a transferred call. */
+  person?: string
+  /** A moved appointment's old and new times. */
+  from?: string
+  to?: string
+  /** An answered question, and LobbyStack's reply. */
+  question?: string
+  answer?: string
+}
+
 export type TimelineCall = {
   at: string
   reason: string
   action: CallAction
-  // The image shows what LobbyStack did, and the alt text describes it.
-  image: string
+  // The tile shows what LobbyStack did, and the alt text describes it.
+  outcome: CallOutcome
   imageAlt: string
 }
 
@@ -55,14 +71,14 @@ export const nightCalls: TimelineCall[] = [
     at: "6:12 p.m.",
     reason: "Furnace tune-up",
     action: "Books",
-    image: "/illustrations/after-hours/furnace.webp",
+    outcome: { kind: "booked", title: "Appointment booked", detail: "Furnace tune-up", chip: "Thu 9:00 AM" },
     imageAlt: "Appointment booked: furnace tune-up, Thursday at 9:00 AM",
   },
   {
     at: "8:25 p.m.",
     reason: "Do you come to Brookline?",
     action: "Answers",
-    image: "/illustrations/after-hours/service-area.webp",
+    outcome: { kind: "answered", question: "Do you come to Brookline?", answer: "Yes, Brookline is in our service area." },
     imageAlt:
       "A caller asks if the business comes to Brookline, and LobbyStack replies that it does",
   },
@@ -70,14 +86,14 @@ export const nightCalls: TimelineCall[] = [
     at: "10:40 p.m.",
     reason: "Spam call",
     action: "Ends the call",
-    image: "/illustrations/after-hours/spam.webp",
+    outcome: { kind: "ended", title: "Spam call ended", detail: "No minutes used" },
     imageAlt: "Spam call ended with no minutes used",
   },
   {
     at: "1:18 a.m.",
     reason: "No heat, baby in the house",
     action: "Transfers",
-    image: "/illustrations/after-hours/no-heat.webp",
+    outcome: { kind: "transferred", title: "Transferred to Marco", detail: "On-call technician", person: "Marco Rossi", chip: "Connected" },
     imageAlt:
       "An emergency no-heat call transferred to Marco, the on-call technician",
   },
@@ -85,14 +101,14 @@ export const nightCalls: TimelineCall[] = [
     at: "4:05 a.m.",
     reason: "Toilet running all night",
     action: "Books",
-    image: "/illustrations/after-hours/running-toilet.webp",
+    outcome: { kind: "booked", title: "Appointment booked", detail: "Toilet repair", chip: "Today 10:00 AM" },
     imageAlt: "Appointment booked: toilet repair, today at 10:00 AM",
   },
   {
     at: "7:30 a.m.",
     reason: "Question about an invoice",
     action: "Takes a message",
-    image: "/illustrations/after-hours/invoice.webp",
+    outcome: { kind: "message", title: "Message for the office", detail: "Invoice question", chip: "Callback requested" },
     imageAlt: "A message for the office about an invoice question",
   },
 ]
@@ -145,14 +161,14 @@ export const dentalCalls: TimelineCall[] = [
     at: "7:10 a.m.",
     reason: "Cracked a tooth last night",
     action: "Books",
-    image: "/illustrations/dental/cracked-tooth.webp",
+    outcome: { kind: "booked", title: "Emergency visit booked", detail: "Cracked tooth", chip: "Today 8:30 AM" },
     imageAlt: "Emergency visit booked for a cracked tooth today at 8:30",
   },
   {
     at: "9:45 a.m.",
     reason: "Is my insurance accepted?",
     action: "Answers",
-    image: "/illustrations/dental/insurance.webp",
+    outcome: { kind: "answered", question: "Is my insurance accepted?", answer: "Yes, your plan is in network." },
     imageAlt:
       "A patient asks about insurance, and LobbyStack replies that the plan is in network",
   },
@@ -160,21 +176,21 @@ export const dentalCalls: TimelineCall[] = [
     at: "12:20 p.m.",
     reason: "New patient, needs a cleaning",
     action: "Books",
-    image: "/illustrations/dental/new-patient.webp",
+    outcome: { kind: "booked", title: "New patient booked", detail: "Exam and cleaning", chip: "Tue 10:00 AM" },
     imageAlt: "New patient exam and cleaning booked for Tuesday at 10:00",
   },
   {
     at: "3:05 p.m.",
     reason: "Needs to move an appointment",
     action: "Books",
-    image: "/illustrations/dental/reschedule.webp",
+    outcome: { kind: "moved", title: "Cleaning moved", from: "Wed 9:00", to: "Fri 2:00" },
     imageAlt: "A cleaning moved from Wednesday at 9:00 to Friday at 2:00",
   },
   {
     at: "6:40 p.m.",
     reason: "Swelling after an extraction",
     action: "Transfers",
-    image: "/illustrations/dental/after-extraction.webp",
+    outcome: { kind: "transferred", title: "Transferred to Dr. Patel", detail: "On-call dentist", person: "Anika Patel", chip: "Connected" },
     imageAlt:
       "An after-hours call about swelling transferred to Dr. Patel, the on-call dentist",
   },
@@ -182,7 +198,7 @@ export const dentalCalls: TimelineCall[] = [
     at: "9:15 p.m.",
     reason: "Question about a bill",
     action: "Takes a message",
-    image: "/illustrations/dental/billing.webp",
+    outcome: { kind: "message", title: "Message for the front desk", detail: "Billing question", chip: "Callback requested" },
     imageAlt: "A message for the front desk about a billing question",
   },
 ]

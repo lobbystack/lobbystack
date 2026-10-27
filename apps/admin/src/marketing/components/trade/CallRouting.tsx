@@ -30,19 +30,19 @@ export function CallRouting({ details, ...props }: CallRoutingProps) {
   } = props
 
   return (
-    <section className="mx-auto max-w-site px-6 py-20 md:py-28" id="call-handling">
+    <section className="mx-auto max-w-site px-6 section-spacing" id="call-handling">
       <div className="max-w-3xl">
         <h2 className="section-heading">What happens to each {details.noun} call</h2>
         <p className="section-intro">{intro}</p>
       </div>
 
       <div
-        className="mt-12 overflow-hidden rounded-[1.35rem] border border-border/70"
+        className="mt-12 overflow-hidden rounded-2xl border border-border/60"
         role="region"
         aria-label={`How LobbyStack handles ${details.noun} calls`}
       >
         <table className="w-full border-collapse text-left text-sm">
-          <thead className="hidden bg-muted/50 md:table-header-group">
+          <thead className="hidden bg-beige md:table-header-group">
             <tr>
               <th scope="col" className="w-[34%] px-6 py-4 font-medium text-foreground">
                 {callHeading}

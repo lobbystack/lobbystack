@@ -1,3 +1,4 @@
+import { bespokeEyebrows } from "@/marketing/lib/eyebrows"
 import { buttonVariants } from "@/marketing/components/ui/button"
 import { appSignupUrl } from "@/marketing/lib/app-links"
 import { cn } from "@/marketing/lib/utils"
@@ -17,16 +18,15 @@ import {
 export function Hero() {
   return (
     <section className="relative overflow-hidden" id="hero">
-      <div className="mx-auto max-w-site px-6 pt-16 pb-8 md:pt-20 md:pb-10 lg:pt-24 lg:pb-12">
+      <div className="mx-auto max-w-site px-6 pt-10 pb-8 md:pt-11 md:pb-10">
         <div className="mx-auto max-w-4xl text-center">
-          <h1 className="animate-fade-up display-heading stagger-1">
+          <p className="animate-fade-up eyebrow">{bespokeEyebrows.hero}</p>
+          <h1 className="animate-fade-up display-heading mt-4 stagger-1">
             AI appointment scheduling for callers{" "}
-            <span className="underline decoration-2 underline-offset-4">
-              ready to book
-            </span>
+            ready to book
           </h1>
 
-          <p className="animate-fade-up body-copy mx-auto mt-6 max-w-[65ch] stagger-2 md:text-lg">
+          <p className="animate-fade-up mx-auto mt-4 max-w-[40rem] text-lg leading-[1.6] text-muted-foreground stagger-2">
             LobbyStack answers calls, collects the details your team needs,
             offers available times, books appointments, and sends confirmations
             before the caller moves on.
@@ -35,17 +35,14 @@ export function Hero() {
           <div className="animate-fade-up mt-8 flex items-center justify-center gap-4 stagger-3">
             <a
               href={appSignupUrl("en")}
-              className={cn(
-                buttonVariants({ size: "lg" }),
-                "h-11 rounded-full px-7 text-sm"
-              )}
+              className={buttonVariants({ size: "lg" })}
             >
               Try for free
               <ArrowRight className="ml-1 size-4" />
             </a>
             <a
               href="/pricing/"
-              className="inline-flex h-11 items-center justify-center rounded-full border border-border/70 bg-background px-7 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+              className={buttonVariants({ variant: "secondary" })}
             >
               See pricing
             </a>
@@ -58,19 +55,19 @@ export function Hero() {
 
           <div className="animate-fade-up mt-12 flex flex-wrap items-center justify-center gap-x-8 gap-y-4 text-sm font-medium text-muted-foreground stagger-5">
             <div className="flex items-center gap-2">
-              <Check className="size-4 text-primary" />
+              <Check className="size-4 text-beige-foreground" />
               <span>Books appointments by phone</span>
             </div>
             <div className="flex items-center gap-2">
-              <Check className="size-4 text-primary" />
+              <Check className="size-4 text-beige-foreground" />
               <span>Sends confirmation texts</span>
             </div>
             <div className="flex items-center gap-2">
-              <Check className="size-4 text-primary" />
+              <Check className="size-4 text-beige-foreground" />
               <span>Captures caller details</span>
             </div>
             <div className="flex items-center gap-2">
-              <Check className="size-4 text-primary" />
+              <Check className="size-4 text-beige-foreground" />
               <span>Routes urgent requests</span>
             </div>
           </div>
@@ -86,7 +83,7 @@ export function Hero() {
 
 export function Problem() {
   return (
-    <section className="section-spacing bg-muted/30" id="problem">
+    <section className="section-spacing" id="problem">
       <div className="mx-auto max-w-site px-6">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="section-heading">
@@ -101,11 +98,11 @@ export function Problem() {
         </div>
 
         <div className="mt-16 grid gap-6 md:grid-cols-3">
-          <article className="rounded-[1.35rem] border border-border/70 bg-background p-8">
-            <div className="mb-6 inline-flex size-12 items-center justify-center rounded-2xl bg-muted">
+          <article className="rounded-2xl border border-border/60 bg-beige p-8">
+            <div className="mb-6 inline-flex size-11 items-center justify-center rounded-lg border border-border/80 bg-background shadow-[0_1px_2px_oklch(0_0_0/6%)]">
               <CalendarX className="size-6 text-foreground" />
             </div>
-            <h3 className="font-heading text-xl font-medium tracking-[-0.03em]">
+            <h3 className="card-heading">
               Missed calls become missed appointments
             </h3>
             <p className="body-copy mt-4">
@@ -115,11 +112,11 @@ export function Problem() {
             </p>
           </article>
 
-          <article className="rounded-[1.35rem] border border-border/70 bg-background p-8">
-            <div className="mb-6 inline-flex size-12 items-center justify-center rounded-2xl bg-muted">
+          <article className="rounded-2xl border border-border/60 bg-beige p-8">
+            <div className="mb-6 inline-flex size-11 items-center justify-center rounded-lg border border-border/80 bg-background shadow-[0_1px_2px_oklch(0_0_0/6%)]">
               <UserX className="size-6 text-foreground" />
             </div>
-            <h3 className="font-heading text-xl font-medium tracking-[-0.03em]">
+            <h3 className="card-heading">
               Manual scheduling slows down your team
             </h3>
             <p className="body-copy mt-4">
@@ -129,11 +126,11 @@ export function Problem() {
             </p>
           </article>
 
-          <article className="rounded-[1.35rem] border border-border/70 bg-background p-8">
-            <div className="mb-6 inline-flex size-12 items-center justify-center rounded-2xl bg-muted">
+          <article className="rounded-2xl border border-border/60 bg-beige p-8">
+            <div className="mb-6 inline-flex size-11 items-center justify-center rounded-lg border border-border/80 bg-background shadow-[0_1px_2px_oklch(0_0_0/6%)]">
               <Clock className="size-6 text-foreground" />
             </div>
-            <h3 className="font-heading text-xl font-medium tracking-[-0.03em]">
+            <h3 className="card-heading">
               Back-and-forth costs momentum
             </h3>
             <p className="body-copy mt-4">
@@ -189,7 +186,7 @@ export function Solution() {
               ))}
             </ul>
           </div>
-          <div className="overflow-hidden rounded-[1.35rem] border border-border/70 bg-muted">
+          <div className="overflow-hidden rounded-2xl border border-border/70 bg-muted">
             <div className="flex h-[400px] items-center justify-center bg-background/50 p-8">
               <div className="w-full max-w-sm space-y-4 rounded-2xl border border-border bg-background p-6 shadow-sm">
                 <div className="flex items-center justify-between border-b pb-4">
@@ -204,7 +201,7 @@ export function Solution() {
                       </p>
                     </div>
                   </div>
-                  <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] font-medium text-emerald-700">
+                  <span className="rounded-full bg-beige-foreground/10 px-2.5 py-1 text-[10px] font-medium text-beige-foreground">
                     Active
                   </span>
                 </div>
@@ -280,7 +277,7 @@ export function UseCases() {
           {cases.map((c, i) => (
             <div
               key={i}
-              className="flex flex-col rounded-2xl border border-border/70 bg-muted/30 p-6 transition-colors hover:bg-muted/50"
+              className="flex flex-col rounded-2xl border border-border/70 bg-muted/30 p-6 transition-colors hover:bg-beige"
             >
               <h3 className="text-lg font-medium tracking-tight text-foreground">
                 {c.title}
@@ -415,7 +412,7 @@ export function Comparison() {
   ]
 
   return (
-    <section className="section-spacing bg-muted/30" id="comparison">
+    <section className="section-spacing" id="comparison">
       <div className="mx-auto max-w-site px-6">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="section-heading">
@@ -429,7 +426,7 @@ export function Comparison() {
 
         <div className="mt-16 overflow-x-auto pb-4">
           <div className="min-w-[800px] overflow-hidden rounded-2xl border border-border/70 bg-background shadow-sm">
-            <div className="grid grid-cols-4 border-b border-border/70 bg-muted/50 p-4 text-sm font-medium text-foreground">
+            <div className="grid grid-cols-4 border-b border-border/70 bg-beige p-4 text-sm font-medium text-foreground">
               <div>Option</div>
               <div>What happens</div>
               <div>Best for</div>

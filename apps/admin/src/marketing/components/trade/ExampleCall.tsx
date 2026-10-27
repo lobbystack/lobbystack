@@ -12,7 +12,7 @@ export function ExampleCall({ details }: ExampleCallProps) {
 
   return (
     <figure
-      className="overflow-hidden rounded-[1.35rem] border border-border/70 bg-background text-left shadow-[0_1px_3px_oklch(0_0_0/4%),0_8px_32px_oklch(0_0_0/6%),0_24px_60px_oklch(0_0_0/4%)]"
+      className="overflow-hidden rounded-2xl border border-border/60 bg-background text-left shadow-[0_1px_3px_oklch(0_0_0/4%),0_8px_32px_oklch(0_0_0/6%),0_24px_60px_oklch(0_0_0/4%)]"
       aria-labelledby="example-call-title"
     >
       <header className="flex items-start gap-3 border-b border-border/60 px-5 py-4 md:px-6">
@@ -48,7 +48,7 @@ export function ExampleCall({ details }: ExampleCallProps) {
                 {line.text}
               </p>
               {line.note && (
-                <p className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-border/70 bg-muted/60 px-2 py-1 text-xs font-medium text-foreground">
+                <p className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-border/70 bg-beige-strong/60 px-2 py-1 text-xs font-medium text-foreground">
                   <CornerDownRight className="size-3.5 text-muted-foreground" aria-hidden="true" />
                   {line.note}
                 </p>
@@ -58,7 +58,7 @@ export function ExampleCall({ details }: ExampleCallProps) {
         ))}
       </ol>
 
-      <figcaption className="border-t border-border/60 bg-muted/40 px-5 py-4 text-sm text-foreground md:px-6">
+      <figcaption className="border-t border-border/60 bg-beige px-5 py-4 text-sm text-foreground md:px-6">
         {details.outcome}
         <span className="mt-1 block text-xs text-muted-foreground">
           An example of how {article} {details.noun} business can set up its rules. The business and caller are fictional.

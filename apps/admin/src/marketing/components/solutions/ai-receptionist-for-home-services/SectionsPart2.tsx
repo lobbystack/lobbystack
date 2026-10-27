@@ -1,3 +1,7 @@
+import { TileFieldArt } from "@/marketing/components/system/art"
+import { ButtonLink } from "@/marketing/components/system/ButtonLink"
+import { SplitCard } from "@/marketing/components/system/SplitCard"
+import { bespokeEyebrows } from "@/marketing/lib/eyebrows"
 import {
   ArrowRight,
   MapPin,
@@ -42,7 +46,7 @@ export function BusinessFit() {
           {trades.map((t) => (
             <div
               key={t.name}
-              className="rounded-[1.35rem] border border-border/70 bg-background p-8"
+              className="rounded-2xl border border-border/60 bg-beige p-8"
             >
               <h3 className="text-xl font-medium tracking-tight">{t.name}</h3>
               <p className="mt-4 leading-relaxed text-muted-foreground">
@@ -81,7 +85,7 @@ export function Capabilities() {
   ]
 
   return (
-    <section className="section-spacing bg-muted/30" id="capabilities">
+    <section className="section-spacing" id="capabilities">
       <div className="mx-auto max-w-site px-6">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="section-heading">
@@ -92,9 +96,9 @@ export function Capabilities() {
           {caps.map((c) => (
             <div
               key={c.title}
-              className="rounded-[1.35rem] border border-border/70 bg-background p-8"
+              className="rounded-2xl border border-border/60 bg-beige p-8"
             >
-              <div className="mb-6 inline-flex size-12 items-center justify-center rounded-2xl bg-muted">
+              <div className="mb-6 inline-flex size-11 items-center justify-center rounded-lg border border-border/80 bg-background shadow-[0_1px_2px_oklch(0_0_0/6%)]">
                 <c.icon className="size-6 text-foreground" />
               </div>
               <h3 className="text-xl font-medium tracking-tight">{c.title}</h3>
@@ -143,34 +147,26 @@ export function RevenueTieIn() {
 
 export function OpenSource() {
   return (
-    <section className="section-spacing bg-muted/30" id="open-source">
+    <section className="section-spacing" id="open-source">
       <div className="mx-auto max-w-site px-6">
-        <div className="mx-auto max-w-3xl text-center">
-          <h2 className="section-heading">Open source and self-hosted ready</h2>
-          <p className="section-intro">
-            LobbyStack is open source. You can self-host on your own
-            infrastructure for full data control, custom deployments, and
-            white-label options.
-          </p>
-          <div className="mt-8 flex items-center justify-center gap-6">
-            <a
-              href="https://github.com/lobbystack/lobbystack"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-sm font-medium text-foreground underline decoration-1 underline-offset-4 transition-colors hover:text-foreground/80"
-            >
-              View on GitHub
-              <ArrowRight className="size-3.5" />
-            </a>
-            <a
-              href="/solutions/self-hosted-ai-receptionist/"
-              className="inline-flex items-center gap-2 text-sm font-medium text-foreground underline decoration-1 underline-offset-4 transition-colors hover:text-foreground/80"
-            >
-              Self-hosted AI receptionist
-              <ArrowRight className="size-3.5" />
-            </a>
-          </div>
-        </div>
+        <SplitCard
+          media={<TileFieldArt />}
+          columns="md:grid-cols-[1.35fr_1fr]"
+          eyebrow={bespokeEyebrows.openSource}
+          headingLevel="h2"
+          title="Open source and self-hosted ready"
+          body="LobbyStack is open source. You can self-host on your own infrastructure for full data control, custom deployments, and white-label options."
+          action={
+            <>
+              <ButtonLink href="https://github.com/lobbystack/lobbystack" target="_blank" rel="noopener noreferrer">
+                View on GitHub
+              </ButtonLink>
+              <ButtonLink href="/solutions/self-hosted-ai-receptionist/" variant="secondary">
+                Self-hosting overview
+              </ButtonLink>
+            </>
+          }
+        />
       </div>
     </section>
   )

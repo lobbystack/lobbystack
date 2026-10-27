@@ -18,7 +18,7 @@ const plans = [
 
 export function AfterHoursCost() {
   return (
-    <section className="border-t border-border/40 py-20 md:py-28" id="cost">
+    <section className="section-spacing" id="cost">
       <div className="mx-auto grid max-w-site gap-12 px-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-16">
         <div>
           <h2 className="section-heading">What an after-hours answering service costs</h2>
@@ -28,7 +28,7 @@ export function AfterHoursCost() {
             minutes included, and nights, weekends, and holidays cost the same as
             any other hour.
           </p>
-          <div className="mt-8 rounded-xl border border-border/70 bg-muted/40 p-5">
+          <div className="mt-8 rounded-xl border border-border/70 bg-beige p-5">
             <p className="text-sm font-medium text-foreground">Example</p>
             <p className="body-copy mt-2 text-base">
               You get 40 after-hours calls a month and each one lasts about 3
@@ -53,10 +53,10 @@ export function AfterHoursCost() {
           </div>
         </div>
 
-        <div className="self-center overflow-x-auto rounded-[1.35rem] border border-border/70">
+        <div className="relative self-center overflow-x-auto rounded-2xl border border-border/60">
           <table className="w-full min-w-[480px] border-collapse text-left text-sm">
             <caption className="sr-only">LobbyStack plans for after-hours answering</caption>
-            <thead className="bg-muted/50">
+            <thead className="bg-beige">
               <tr>
                 <th scope="col" className="px-6 py-4 font-medium text-foreground">
                   Plan

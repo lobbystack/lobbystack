@@ -4,7 +4,7 @@ import { afterHoursIndustries } from "@/marketing/lib/solution-details"
 
 export function AfterHoursIndustries() {
   return (
-    <section className="border-t border-border/40 py-20 md:py-28" id="industries">
+    <section className="section-spacing" id="industries">
       <div className="mx-auto max-w-site px-6">
         <div className="max-w-3xl">
           <h2 className="section-heading">After-hours answering by industry</h2>
@@ -15,7 +15,7 @@ export function AfterHoursIndustries() {
             <li key={industry.href} className="border-b border-border/70">
               <a
                 href={industry.href}
-                className="group flex items-start justify-between gap-3 rounded-xl px-2 py-5 transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                className="group flex items-start justify-between gap-3 rounded-xl px-2 py-5 transition-colors hover:bg-beige-strong/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
               >
                 <span className="min-w-0">
                   <span className="block font-medium text-foreground">{industry.title}</span>

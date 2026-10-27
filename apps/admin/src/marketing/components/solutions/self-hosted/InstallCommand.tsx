@@ -6,7 +6,7 @@ const command = "git clone https://github.com/lobbystack/lobbystack.git"
 
 export function InstallCommand() {
   return (
-    <div className="flex h-11 max-w-full items-center gap-2 rounded-full border border-border/70 bg-muted/40 pr-1.5 pl-4 font-mono text-xs [font-variant-ligatures:none]">
+    <div className="flex h-11 max-w-full items-center gap-2 rounded-full border border-border/70 bg-beige pr-1.5 pl-4 font-mono text-xs [font-variant-ligatures:none]">
       <span className="text-muted-foreground select-none" aria-hidden="true">
         $
       </span>

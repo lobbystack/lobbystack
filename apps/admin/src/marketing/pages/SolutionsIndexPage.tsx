@@ -1,3 +1,9 @@
+import { ProductScene } from "@/marketing/components/scenes/ProductScenes"
+import { ButtonLink } from "@/marketing/components/system/ButtonLink"
+import { ClosingCta } from "@/marketing/components/system/ClosingCta"
+import { SectionTitle } from "@/marketing/components/system/SectionTitle"
+import { SplitCard } from "@/marketing/components/system/SplitCard"
+import { eyebrow } from "@/marketing/lib/eyebrows"
 import { ArrowRight } from "lucide-react"
 
 import { Footer } from "@/marketing/components/Footer"
@@ -570,28 +576,27 @@ export function SolutionsIndexPage({ locale }: { locale: Locale }) {
       <PageJsonLd seo={seo} />
       <Navbar locale={locale} />
       <main id="main-content" tabIndex={-1} className="min-h-screen bg-background text-foreground">
-        <section className="mx-auto max-w-site px-6 py-20 md:py-28">
-          <div className="mx-auto max-w-3xl text-center">
-            <h1 className="display-heading">{pageCopy.h1}</h1>
-            <p className="body-copy mx-auto mt-6 max-w-[65ch] md:text-lg">{pageCopy.intro}</p>
-            <p className="mx-auto mt-4 max-w-[58ch] text-sm leading-relaxed text-muted-foreground">
-              {pageCopy.capabilityPrefix}{" "}
-              <a href={localizeHref(locale, "/features/")} className="font-medium text-foreground underline underline-offset-4">
-                {pageCopy.featuresPage}
-              </a>
-              {pageCopy.capabilitySuffix}
-            </p>
-          </div>
+        <section className="mx-auto max-w-site px-6 pt-10 md:pt-11">
+          <SectionTitle as="h1" centered eyebrow={eyebrow(locale, "solutions.hero")} intro={pageCopy.intro} className="max-w-3xl">
+            {pageCopy.h1}
+          </SectionTitle>
+          <p className="mx-auto mt-4 max-w-[58ch] text-center text-sm leading-relaxed text-muted-foreground">
+            {pageCopy.capabilityPrefix}{" "}
+            <a href={localizeHref(locale, "/features/")} className="font-medium text-foreground underline underline-offset-4">
+              {pageCopy.featuresPage}
+            </a>
+            {pageCopy.capabilitySuffix}
+          </p>
 
-          <div className="mt-16 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-border/70 bg-border/70 md:grid-cols-2 lg:grid-cols-3">
             {pageCopy.solutions.map((solution) => (
               <a
                 key={solution.href}
                 href={localizeHref(locale, solution.href)}
-                className="group flex min-h-56 flex-col rounded-2xl border border-border/70 bg-background p-6 shadow-[0_10px_30px_rgba(0,0,0,0.02)] transition-colors hover:bg-muted/40"
+                className="group flex min-h-56 flex-col bg-background p-6 transition-colors hover:bg-beige"
               >
-                <h2 className="text-xl font-medium tracking-tight text-foreground">{solution.title}</h2>
-                <p className="mt-4 text-sm leading-relaxed text-muted-foreground">{solution.description}</p>
+                <h2 className="card-heading">{solution.title}</h2>
+                <p className="mt-3 text-base leading-6 text-muted-foreground">{solution.description}</p>
                 <span className="mt-auto inline-flex items-center gap-1 pt-6 text-sm font-medium text-foreground">
                   {common.viewSolution}
                   <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-1" />
@@ -601,43 +606,38 @@ export function SolutionsIndexPage({ locale }: { locale: Locale }) {
           </div>
         </section>
 
-        <section className="border-t border-border/40 bg-muted/15 py-20 md:py-24">
+        <section className="section-spacing">
           <div className="mx-auto max-w-site px-6">
-            <h2 className="section-heading text-center">{pageCopy.tradeHeading}</h2>
-            <p className="body-copy mx-auto mt-6 max-w-[58ch] text-center">{pageCopy.tradeIntro}</p>
-            <div className="mt-12 flex flex-wrap justify-center gap-3">
+            <SectionTitle centered eyebrow={eyebrow(locale, "solutions.trades")} intro={pageCopy.tradeIntro} className="max-w-3xl">
+              {pageCopy.tradeHeading}
+            </SectionTitle>
+            <div className="mt-12 flex flex-wrap justify-center gap-2.5">
               {pageCopy.trades.map((trade) => (
-                <a
-                  key={trade.href}
-                  href={localizeHref(locale, trade.href)}
-                  className="inline-flex h-10 items-center rounded-full border border-border/70 bg-background px-5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-                >
+                <ButtonLink key={trade.href} href={localizeHref(locale, trade.href)} variant="secondary">
                   {trade.title}
-                </a>
+                </ButtonLink>
               ))}
-              <a
-                href={localizeHref(locale, "/solutions/after-hours-answering-service-for-contractors/")}
-                className="inline-flex h-10 items-center rounded-full border border-border/70 bg-background px-5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-              >
+              <ButtonLink href={localizeHref(locale, "/solutions/after-hours-answering-service-for-contractors/")} variant="secondary">
                 {pageCopy.contractorAfterHours}
-              </a>
+              </ButtonLink>
             </div>
           </div>
         </section>
 
-        <section className="py-20 md:py-24">
+        <section className="section-spacing">
           <div className="mx-auto max-w-site px-6">
-            <h2 className="section-heading text-center">{pageCopy.comparisonsHeading}</h2>
-            <p className="body-copy mx-auto mt-6 max-w-[58ch] text-center">{pageCopy.comparisonsIntro}</p>
-            <div className="mx-auto mt-12 grid max-w-3xl gap-6">
+            <SectionTitle centered eyebrow={eyebrow(locale, "solutions.comparisons")} intro={pageCopy.comparisonsIntro} className="max-w-3xl">
+              {pageCopy.comparisonsHeading}
+            </SectionTitle>
+            <div className="mx-auto mt-12 grid max-w-3xl gap-px overflow-hidden rounded-2xl border border-border/70 bg-border/70">
               {pageCopy.comparisons.map((comparison) => (
                 <a
                   key={comparison.href}
                   href={localizeHref(locale, comparison.href)}
-                  className="group flex flex-col rounded-2xl border border-border/70 bg-background p-6 shadow-[0_10px_30px_rgba(0,0,0,0.02)] transition-colors hover:bg-muted/40"
+                  className="group flex flex-col bg-background p-6 transition-colors hover:bg-beige"
                 >
-                  <h3 className="text-lg font-medium tracking-tight text-foreground">{comparison.title}</h3>
-                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{comparison.description}</p>
+                  <h3 className="card-heading">{comparison.title}</h3>
+                  <p className="mt-3 text-base leading-6 text-muted-foreground">{comparison.description}</p>
                   <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-foreground">
                     {common.readComparison}
                     <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-1" />
@@ -648,47 +648,40 @@ export function SolutionsIndexPage({ locale }: { locale: Locale }) {
           </div>
         </section>
 
-        <section className="border-t border-border/40 bg-muted/15 py-20 md:py-24">
-          <div className="mx-auto grid max-w-site gap-10 px-6 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
-            <div>
-              <h2 className="section-heading text-left">{pageCopy.workflowHeading}</h2>
-              <p className="body-copy mt-5 max-w-[58ch]">{pageCopy.workflowBody}</p>
-              <a
-                href={localizeHref(locale, "/features/")}
-                className="mt-6 inline-flex text-sm font-medium text-foreground underline underline-offset-4"
-              >
-                {common.seeFullFeatureList}
-              </a>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="rounded-2xl border border-border/70 bg-background p-6">
-                <h3 className="font-medium tracking-tight">{pageCopy.serviceTeams}</h3>
-                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{pageCopy.serviceTeamsBody}</p>
+        <section className="section-spacing">
+          <div className="mx-auto max-w-site px-6">
+            <SplitCard
+              media={<ProductScene name="summary" locale={locale} fit="panel" />}
+              eyebrow={eyebrow(locale, "solutions.workflow")}
+              headingLevel="h2"
+              title={pageCopy.workflowHeading}
+              body={pageCopy.workflowBody}
+              action={
+                <ButtonLink href={localizeHref(locale, "/features/")} variant="secondary">
+                  {common.seeFullFeatureList}
+                </ButtonLink>
+              }
+            >
+              <div className="mt-8 grid gap-6 sm:grid-cols-2">
+                <div>
+                  <h3 className="text-base font-medium">{pageCopy.serviceTeams}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{pageCopy.serviceTeamsBody}</p>
+                </div>
+                <div>
+                  <h3 className="text-base font-medium">{pageCopy.appointmentBusinesses}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{pageCopy.appointmentBusinessesBody}</p>
+                </div>
               </div>
-              <div className="rounded-2xl border border-border/70 bg-background p-6">
-                <h3 className="font-medium tracking-tight">{pageCopy.appointmentBusinesses}</h3>
-                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{pageCopy.appointmentBusinessesBody}</p>
-              </div>
-            </div>
+            </SplitCard>
           </div>
         </section>
 
-        <section className="mx-auto max-w-3xl px-6 py-20 text-center md:py-24">
-          <h2 className="section-heading">{pageCopy.ctaHeading}</h2>
-          <p className="section-intro mx-auto mt-5 max-w-[58ch]">{pageCopy.ctaBody}</p>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-            <a href={localizeHref(locale, "/pricing/")} className={cn(buttonVariants({ size: "lg" }), "rounded-full px-7")}>
-              {common.seePricing}
-              <ArrowRight className="ml-1 size-4" />
-            </a>
-            <a
-              href={localizeHref(locale, "/features/")}
-              className="inline-flex h-11 items-center justify-center rounded-full border border-border/70 bg-background px-7 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-            >
-              {pageCopy.viewFeatures}
-            </a>
-          </div>
-        </section>
+        <ClosingCta
+          titleLines={[pageCopy.ctaHeading]}
+          body={pageCopy.ctaBody}
+          primary={{ label: common.seePricing, href: localizeHref(locale, "/pricing/") }}
+          secondary={{ label: pageCopy.viewFeatures, href: localizeHref(locale, "/features/") }}
+        />
       </main>
       <Footer locale={locale} path={seo.canonicalPath} />
     </>

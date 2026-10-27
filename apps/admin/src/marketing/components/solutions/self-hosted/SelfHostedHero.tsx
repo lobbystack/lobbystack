@@ -33,14 +33,15 @@ export function SelfHostedHero({ h1, intro, guideHref }: SelfHostedHeroProps) {
   return (
     <div className="grid items-center gap-16 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] lg:gap-8">
       <div className="min-w-0">
-        <h1 className="display-heading">{h1}</h1>
+        <p className="eyebrow">Self-hosted</p>
+        <h1 className="display-heading mt-4">{h1}</h1>
         <div className="mt-8 flex flex-wrap items-center gap-3">
           <InstallCommand />
-          <a href={guideHref} className={cn(buttonVariants({ size: "lg" }), "h-11 rounded-full px-6 text-sm font-medium")}>
+          <a href={guideHref} className={buttonVariants({ variant: "secondary" })}>
             Read the guide
           </a>
         </div>
-        <p className="body-copy mt-6 max-w-[52ch] md:text-lg">{intro}</p>
+        <p className="mt-6 max-w-[52ch] text-lg leading-[1.6] text-muted-foreground">{intro}</p>
       </div>
 
       <div className="relative mx-auto hidden h-[380px] w-full max-w-[560px] sm:block" aria-hidden="true">

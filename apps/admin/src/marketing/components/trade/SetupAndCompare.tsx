@@ -58,7 +58,7 @@ export function SetupAndCompare({ details }: SetupAndCompareProps) {
 
   return (
     <>
-      <section className="mx-auto max-w-site px-6 py-20 md:py-28" id="setup">
+      <section className="mx-auto max-w-site px-6 section-spacing" id="setup">
         <h2 className="section-heading max-w-3xl">Set up LobbyStack in three steps</h2>
         <ol className="mt-12 grid gap-10 md:grid-cols-3 md:gap-8">
           {steps.map((step, index) => (
@@ -71,7 +71,7 @@ export function SetupAndCompare({ details }: SetupAndCompareProps) {
         </ol>
       </section>
 
-      <section className="border-t border-border/40 py-20 md:py-28" id="ai-vs-live-answering">
+      <section className="section-spacing" id="ai-vs-live-answering">
         <div className="mx-auto max-w-site px-6">
           <div className="max-w-3xl">
             <h2 className="section-heading">AI and live {details.noun} answering services compared</h2>
@@ -81,9 +81,9 @@ export function SetupAndCompare({ details }: SetupAndCompareProps) {
             </p>
           </div>
 
-          <div className="mt-12 overflow-x-auto rounded-[1.35rem] border border-border/70">
+          <div className="relative mt-12 overflow-x-auto rounded-2xl border border-border/60">
             <table className="w-full min-w-[640px] border-collapse text-left text-sm">
-              <thead className="bg-muted/50">
+              <thead className="bg-beige">
                 <tr>
                   <th scope="col" className="w-[24%] px-6 py-4 font-medium text-foreground">
                     <span className="sr-only">Topic</span>

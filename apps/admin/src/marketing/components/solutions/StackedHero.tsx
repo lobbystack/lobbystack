@@ -4,9 +4,9 @@
 import { ArrowRight } from "lucide-react"
 
 import { buttonVariants } from "@/marketing/components/ui/button"
-import { cn } from "@/marketing/lib/utils"
 
 type StackedHeroProps = {
+  eyebrow?: string
   h1: string
   intro: string
   primary: { href: string; label: string }
@@ -15,31 +15,32 @@ type StackedHeroProps = {
   children: React.ReactNode
 }
 
-export function StackedHero({ h1, intro, primary, secondary, reassurance, children }: StackedHeroProps) {
+export function StackedHero({ eyebrow, h1, intro, primary, secondary, reassurance, children }: StackedHeroProps) {
   return (
     <>
       <div className="grid gap-8 lg:grid-cols-12 lg:items-center lg:gap-12">
         <div className="min-w-0 lg:col-span-7">
-          <h1 className="display-heading">{h1}</h1>
+          {eyebrow && <p className="eyebrow">{eyebrow}</p>}
+          <h1 className={eyebrow ? "display-heading mt-4" : "display-heading"}>{h1}</h1>
         </div>
         <div className="min-w-0 lg:col-span-5">
-          <p className="body-copy max-w-[60ch] md:text-lg">{intro}</p>
-          <div className="mt-8 flex flex-wrap items-center gap-3">
+          <p className="max-w-[60ch] text-lg leading-[1.6] text-muted-foreground">{intro}</p>
+          <div className="mt-8 flex flex-wrap items-center gap-2.5">
             <a
               href={primary.href}
-              className={cn(buttonVariants({ size: "lg" }), "h-11 w-full rounded-full px-8 text-sm font-medium sm:w-auto")}
+              className={buttonVariants()}
             >
               {primary.label}
-              <ArrowRight className="ml-1 size-4" />
+              <ArrowRight className="size-4" />
             </a>
             <a
               href={secondary.href}
-              className="inline-flex h-11 w-full items-center justify-center rounded-full border border-border/70 bg-background px-7 text-sm font-medium text-foreground transition-colors hover:bg-muted sm:w-auto"
+              className={buttonVariants({ variant: "secondary" })}
             >
               {secondary.label}
             </a>
           </div>
-          <p className="mt-4 text-xs text-muted-foreground">{reassurance}</p>
+          <p className="fine-print mt-4">{reassurance}</p>
         </div>
       </div>
 

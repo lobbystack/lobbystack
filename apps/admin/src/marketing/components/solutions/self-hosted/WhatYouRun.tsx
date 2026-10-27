@@ -32,7 +32,7 @@ const requirements = [
 
 export function WhatYouRun() {
   return (
-    <section className="border-t border-border/40 py-20 md:py-28" id="deploy">
+    <section className="section-spacing" id="deploy">
       <div className="mx-auto grid max-w-site gap-12 px-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.7fr)] lg:gap-16">
         <div>
           <h2 className="section-heading">Deploy with Docker Compose</h2>
@@ -48,7 +48,7 @@ export function WhatYouRun() {
                   <h3 className="font-medium text-foreground">{step.title}</h3>
                   {step.body && <p className="body-copy mt-1 text-base">{step.body}</p>}
                   {step.command && (
-                    <code className="mt-3 block overflow-x-auto rounded-lg bg-muted/60 px-3 py-2 font-mono text-[13px] whitespace-nowrap text-foreground [font-variant-ligatures:none]">
+                    <code className="mt-3 block overflow-x-auto rounded-lg bg-beige-strong/60 px-3 py-2 font-mono text-[13px] whitespace-nowrap text-foreground [font-variant-ligatures:none]">
                       {step.command}
                     </code>
                   )}

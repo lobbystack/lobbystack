@@ -1,6 +1,6 @@
-import { ArrowRight, Check } from "lucide-react"
+import { Check } from "lucide-react"
 
-import { FaqAccordion } from "@/marketing/components/FaqAccordion"
+import { FaqSection } from "@/marketing/components/FaqSection"
 import { Footer } from "@/marketing/components/Footer"
 import { Navbar } from "@/marketing/components/Navbar"
 import { AfterHoursCost } from "@/marketing/components/solutions/after-hours/AfterHoursCost"
@@ -17,15 +17,43 @@ import { AfterTheCall } from "@/marketing/components/trade/AfterTheCall"
 import { CallRouting } from "@/marketing/components/trade/CallRouting"
 import { ExampleCall } from "@/marketing/components/trade/ExampleCall"
 import { SetupAndCompare } from "@/marketing/components/trade/SetupAndCompare"
-import { buttonVariants } from "@/marketing/components/ui/button"
+import { ProductScene, type ProductSceneName } from "@/marketing/components/scenes/ProductScenes"
+import { AppFrame, Screenshot } from "@/marketing/components/system/AppFrame"
+import { ButtonLink } from "@/marketing/components/system/ButtonLink"
+import { ClosingCta } from "@/marketing/components/system/ClosingCta"
+import { SectionTitle } from "@/marketing/components/system/SectionTitle"
 import { getCopy, localizeHref, localizePath, type Locale } from "@/marketing/i18n"
 import { appSignupUrl } from "@/marketing/lib/app-links"
 import { breadcrumbJsonLd, faqPageJsonLd, organizationJsonLd, webSiteJsonLd } from "@/marketing/lib/seo"
 import { afterHoursRouting, dentalCalls, dentalDetails, nightCalls } from "@/marketing/lib/solution-details"
 import { seoLandingPages, type SeoLandingPage as SeoLandingPageData } from "@/marketing/lib/seo-landing-pages"
+import { dashboardShot } from "@/marketing/lib/screenshots"
 import { tradeDetails, tradeDetailsFor } from "@/marketing/lib/trade-details"
 import { cn } from "@/marketing/lib/utils"
 import { PageJsonLd, type MarketingPageSeo } from "@/marketing/seo/page-seo"
+
+// The scenes that replace the raster heroes, which carried English text.
+const heroScenes: Record<string, ProductSceneName> = {
+  "/illustrations/call-capture.webp": "callCapture",
+  "/illustrations/booking-flow.webp": "booking",
+  "/illustrations/industry-bookings.webp": "jobBooked",
+  "/illustrations/business-knowledge.webp": "knowledge",
+  "/illustrations/trust-controls.webp": "guardrails",
+  "/illustrations/human-handoff.webp": "handoff",
+  "/illustrations/call-routing-team.webp": "routing",
+  "/illustrations/call-booking-summary.webp": "summary",
+  "/illustrations/missed-calls.webp": "answeredBooked",
+  "/illustrations/missed-calls-v3.webp": "answeredBooked",
+  "/illustrations/missed-calls-booked-work.webp": "answeredBooked",
+}
+
+function CheckDot() {
+  return (
+    <span className="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full bg-beige-strong">
+      <Check className="size-3 text-foreground/80" strokeWidth={2.5} />
+    </span>
+  )
+}
 
 type SeoLandingPageProps = {
   page: SeoLandingPageData
@@ -159,12 +187,13 @@ export function SeoLandingPage({ page, locale }: SeoLandingPageProps) {
       <Navbar locale={locale} />
       <main id="main-content" className="min-h-screen bg-background text-foreground">
         {/* Hero Section */}
-        <section className="mx-auto max-w-site px-6 pt-16 pb-0 md:pt-20 lg:pt-24">
+        <section className="mx-auto max-w-site px-6 pt-10 pb-0 md:pt-11">
           {isSelfHosted && (
             <SelfHostedHero h1={page.h1} intro={page.intro} guideHref={page.ctaPrimaryHref ?? "/docs/"} />
           )}
           {stackedHero && (
             <StackedHero
+              eyebrow={page.eyebrow}
               h1={page.h1}
               intro={page.intro}
               primary={{
@@ -196,32 +225,19 @@ export function SeoLandingPage({ page, locale }: SeoLandingPageProps) {
               )}
             >
               <div>
-                <h1 className="display-heading">{page.h1}</h1>
-                <p className={cn("body-copy mt-6 max-w-[65ch] md:text-lg", (isTradePage || isAboutPage) && "mx-auto")}>
+                <p className="eyebrow">{page.eyebrow}</p>
+                <h1 className="display-heading mt-4">{page.h1}</h1>
+                <p className={cn("mt-4 max-w-[40rem] text-lg leading-[1.6] text-muted-foreground", (isTradePage || isAboutPage) && "mx-auto")}>
                   {page.intro}
                 </p>
 
-                <div
-                  className={cn("mt-8 flex flex-wrap items-center gap-4", (isTradePage || isAboutPage) && "justify-center")}
-                >
-                  <a
-                    href={primaryCtaHref}
-                    className={cn(
-                      buttonVariants({ size: "lg" }),
-                      "h-11 w-full max-w-80 rounded-full px-16 text-sm font-medium md:w-auto md:max-w-none"
-                    )}
-                  >
-                    {page.ctaPrimaryLabel ?? copy.common.tryFree}
-                    <ArrowRight className="ml-1 size-4" />
-                  </a>
-                  <a
-                    href={localizeHref(locale, page.ctaSecondaryHref ?? "/pricing/")}
-                    className="inline-flex h-11 w-full max-w-80 items-center justify-center rounded-full border border-border/70 bg-background px-7 text-sm font-medium text-foreground transition-colors hover:bg-muted md:w-auto md:max-w-none"
-                  >
+                <div className={cn("mt-8 flex flex-wrap items-center gap-2.5", (isTradePage || isAboutPage) && "justify-center")}>
+                  <ButtonLink href={primaryCtaHref}>{page.ctaPrimaryLabel ?? copy.common.tryFree}</ButtonLink>
+                  <ButtonLink href={localizeHref(locale, page.ctaSecondaryHref ?? "/pricing/")} variant="secondary">
                     {page.ctaSecondaryLabel ?? copy.common.seePricing}
-                  </a>
+                  </ButtonLink>
                 </div>
-                <p className="mt-4 text-xs text-muted-foreground">{reassurance}</p>
+                <p className="fine-print mt-4">{reassurance}</p>
               </div>
 
               {details && <ExampleCall details={details} />}
@@ -241,16 +257,24 @@ export function SeoLandingPage({ page, locale }: SeoLandingPageProps) {
                   ].includes(page.slug) ? (
                     <LightModeDashboardMockup slug={page.slug} />
                   ) : (
-                    <div className="h-full w-full overflow-hidden rounded-2xl border border-border/70 bg-muted shadow-[0_20px_50px_rgba(0,0,0,0.05)]">
-                      <img
-                        src={page.image}
-                        alt={page.imageAlt}
-                        width="1200"
-                        height="800"
-                        className="aspect-[4/3] h-full w-full object-cover lg:aspect-[1.15/1]"
-                        decoding="async"
-                        fetchPriority="high"
-                      />
+                    <div
+                      className="relative h-full min-h-[300px] w-full overflow-hidden rounded-2xl border border-border/60 bg-beige-strong/60 sm:min-h-[380px] lg:min-h-[440px]"
+                      role="img"
+                      aria-label={page.imageAlt}
+                    >
+                      {heroScenes[page.image] ? (
+                        <ProductScene name={heroScenes[page.image] ?? "callCapture"} locale={locale} fit="panel" />
+                      ) : (
+                        <img
+                          src={page.image}
+                          alt=""
+                          width="1200"
+                          height="800"
+                          className="absolute inset-0 h-full w-full object-cover"
+                          decoding="async"
+                          fetchPriority="high"
+                        />
+                      )}
                     </div>
                   )}
                 </div>
@@ -259,31 +283,21 @@ export function SeoLandingPage({ page, locale }: SeoLandingPageProps) {
           )}
 
           {/* Proof Points / Benefits */}
-          <div className="mt-16 grid divide-y divide-border/60 border-y border-border/60 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          <div className="mt-16 grid gap-px overflow-hidden rounded-2xl border border-border/70 bg-border/70 sm:grid-cols-3">
             {page.proofPoints.map((point, index) => (
-              <div key={index} className="flex items-center justify-center gap-3 px-6 py-6 text-center">
-                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-foreground/5">
-                  <Check className="size-3.5 text-foreground/80" strokeWidth={2.5} />
-                </span>
-                <p className="text-sm leading-relaxed font-medium text-muted-foreground">{point}</p>
+              <div key={index} className="flex items-center justify-center gap-3 bg-background px-6 py-6 text-center">
+                <CheckDot />
+                <p className="text-base leading-6 text-muted-foreground">{point}</p>
               </div>
             ))}
           </div>
 
           {isTradePage && (
-            <figure className="mx-auto mb-16 max-w-5xl overflow-hidden rounded-2xl border border-border/60 bg-muted shadow-sm">
-              <img
-                src="/screenshots/dashboard-home.webp"
-                alt={t.dashboardAlt}
-                width="2560"
-                height="1920"
-                className="h-auto w-full"
-                loading="lazy"
-                decoding="async"
-              />
-              <figcaption className="border-t border-border/50 px-5 py-4 text-sm text-muted-foreground">
-                {t.dashboardCaption}
-              </figcaption>
+            <figure className="mx-auto mt-16 max-w-5xl">
+              <AppFrame>
+                <Screenshot shot={dashboardShot(locale)} alt={t.dashboardAlt} />
+              </AppFrame>
+              <figcaption className="mt-4 text-center text-sm text-muted-foreground">{t.dashboardCaption}</figcaption>
             </figure>
           )}
         </section>
@@ -302,15 +316,15 @@ export function SeoLandingPage({ page, locale }: SeoLandingPageProps) {
         )}
         {isSelfHosted && (
           <>
-            <section className="border-t border-border/40 py-20 md:py-28" id="architecture">
+            <section className="section-spacing" id="architecture">
               <div className="mx-auto max-w-site px-6">
-                <div className="max-w-3xl">
-                  <h2 className="section-heading">How a call moves through your server</h2>
-                  <p className="section-intro">
-                    Everything inside the dashed line runs on your server. Twilio
-                    and OpenAI run on your own accounts.
-                  </p>
-                </div>
+                <SectionTitle
+                  eyebrow="Architecture"
+                  intro="Everything inside the dashed line runs on your server. Twilio and OpenAI run on your own accounts."
+                  className="max-w-3xl"
+                >
+                  How a call moves through your server
+                </SectionTitle>
                 <div className="mt-12">
                   <ArchitectureDiagram />
                 </div>
@@ -322,21 +336,19 @@ export function SeoLandingPage({ page, locale }: SeoLandingPageProps) {
 
         {/* Alternating Solution Tour Sections */}
         {richLayout && (
-          <section className="border-t border-border/40 py-20 md:py-28">
+          <section className="section-spacing">
             <div className="mx-auto max-w-site divide-y divide-border/60 px-6">
               {page.sections.map((section, index) => (
                 <div key={index} className="grid gap-6 py-12 first:pt-0 last:pb-0 lg:grid-cols-12 lg:gap-12">
-                  <h2 className="font-heading text-2xl leading-[1.15] font-medium tracking-[-0.04em] md:text-3xl lg:col-span-5">
+                  <h2 className="feature-heading lg:col-span-5">
                     {section.title}
                   </h2>
                   <div className="lg:col-span-7">
-                    <p className="body-copy max-w-[65ch] md:text-lg">{section.body}</p>
+                    <p className="max-w-[65ch] text-lg leading-[1.6] text-muted-foreground">{section.body}</p>
                     <ul className="mt-6 space-y-3">
                       {section.points.map((point, pointIndex) => (
-                        <li key={pointIndex} className="flex items-start gap-3 text-sm font-medium text-foreground md:text-base">
-                          <span className="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full bg-foreground/5">
-                            <Check className="size-3.5 text-foreground/80" strokeWidth={2.5} />
-                          </span>
+                        <li key={pointIndex} className="flex items-start gap-3 text-base text-foreground">
+                          <CheckDot />
                           {point}
                         </li>
                       ))}
@@ -348,25 +360,23 @@ export function SeoLandingPage({ page, locale }: SeoLandingPageProps) {
           </section>
         )}
         {!richLayout && (
-          <section className="border-t border-border/40 bg-muted/15 py-20 md:py-28">
-            <div className="mx-auto max-w-site space-y-20 px-6 md:space-y-32">
+          <section className="section-spacing">
+            <div className="mx-auto max-w-site space-y-16 px-6 md:space-y-24">
               {page.sections.map((section, index) => {
                 const isEven = index % 2 === 0
                 return (
                   <div key={index} className="grid gap-12 lg:grid-cols-12 lg:items-center">
                     <div className={cn("space-y-5 lg:col-span-6", isEven ? "lg:order-first" : "lg:order-last")}>
-                      <h2 className="section-heading text-left leading-[1.1]">{section.title}</h2>
-                      <p className="body-copy max-w-[55ch] text-base md:text-lg">{section.body}</p>
+                      <h2 className="feature-heading">{section.title}</h2>
+                      <p className="max-w-[55ch] text-lg leading-[1.6] text-muted-foreground">{section.body}</p>
                     </div>
                     <div className="lg:col-span-6">
-                      <div className="rounded-2xl border border-border/60 bg-background p-8 shadow-[0_10px_30px_rgba(0,0,0,0.02)] md:p-10">
+                      <div className="rounded-2xl border border-border/60 bg-beige p-8 md:p-10">
                         <ul className="space-y-4">
                           {section.points.map((point, pointIndex) => (
                             <li key={pointIndex} className="flex items-start gap-3.5">
-                              <div className="mt-1 flex size-5 shrink-0 items-center justify-center rounded-full bg-foreground/5">
-                                <Check className="size-3.5 text-foreground/80" strokeWidth={2.5} />
-                              </div>
-                              <span className="text-sm font-medium text-muted-foreground md:text-base">{point}</span>
+                              <CheckDot />
+                              <span className="text-base text-muted-foreground">{point}</span>
                             </li>
                           ))}
                         </ul>
@@ -401,53 +411,29 @@ export function SeoLandingPage({ page, locale }: SeoLandingPageProps) {
         )}
 
         {/* FAQ Section */}
-        {page.faqs.length > 0 && (
-          <section
-            className="relative mx-auto max-w-4xl px-6 py-20 before:absolute before:top-0 before:left-1/2 before:h-px before:w-screen before:-translate-x-1/2 before:bg-border/40 md:py-28"
-            id="faq"
-          >
-            <h2 className="section-heading mb-12 text-center">{page.faqHeading ?? t.faqHeading}</h2>
-            <FaqAccordion faqs={page.faqs} />
-          </section>
-        )}
+        {page.faqs.length > 0 && <FaqSection heading={page.faqHeading ?? t.faqHeading} faqs={page.faqs} />}
 
-        {/* Final CTA Section */}
-        <section className="border-t border-border/40 bg-muted/10 py-20 md:py-28">
-          <div className="mx-auto max-w-3xl space-y-6 px-6 text-center">
-            <h2 className="section-heading mx-auto max-w-[24ch]">{page.ctaHeading ?? t.ctaHeading}</h2>
-            <p className="section-intro mx-auto max-w-lg">{page.ctaBody ?? t.ctaBody}</p>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-              <a
-                href={primaryCtaHref}
-                className={cn(
-                  buttonVariants({ size: "lg" }),
-                  "h-11 w-full max-w-80 rounded-full px-16 text-sm font-medium md:w-auto md:max-w-none"
-                )}
-              >
-                {page.ctaPrimaryLabel ?? copy.common.tryFree}
-                <ArrowRight className="ml-1 size-4" />
-              </a>
-              <a
-                href={localizeHref(locale, page.ctaSecondaryHref ?? "/pricing/")}
-                className="inline-flex h-11 w-full max-w-80 items-center justify-center rounded-full border border-border/70 bg-background px-7 text-sm font-medium text-foreground transition-colors hover:bg-muted md:w-auto md:max-w-none"
-              >
-                {page.ctaSecondaryLabel ?? copy.common.viewPricing}
-              </a>
-            </div>
-            <p className="text-xs text-muted-foreground">{copy.common.noCreditCardCancelAnytime}</p>
-          </div>
-        </section>
+        <ClosingCta
+          titleLines={[page.ctaHeading ?? t.ctaHeading]}
+          body={page.ctaBody ?? t.ctaBody}
+          primary={{ label: page.ctaPrimaryLabel ?? copy.common.tryFree, href: primaryCtaHref }}
+          secondary={{
+            label: page.ctaSecondaryLabel ?? copy.common.viewPricing,
+            href: localizeHref(locale, page.ctaSecondaryHref ?? "/pricing/"),
+          }}
+          footnote={copy.common.noCreditCardCancelAnytime}
+        />
 
         {otherTrades.length > 0 && (
-          <section className="border-t border-border/40 py-16">
+          <section className="section-spacing">
             <div className="mx-auto max-w-site px-6">
               <h2 className="card-heading">Answering services for other trades</h2>
-              <ul className="mt-6 grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+              <ul className="mt-6 grid gap-px overflow-hidden rounded-2xl border border-border/70 bg-border/70 sm:grid-cols-2 lg:grid-cols-3">
                 {otherTrades.map((trade) => (
-                  <li key={trade.path}>
+                  <li key={trade.path} className="bg-background">
                     <a
                       href={localizeHref(locale, trade.path)}
-                      className="text-base font-medium text-foreground underline decoration-border underline-offset-4 transition-colors hover:decoration-foreground"
+                      className="block px-5 py-4 text-base font-medium text-foreground transition-colors hover:bg-beige"
                     >
                       {trade.eyebrow}
                     </a>
@@ -459,18 +445,14 @@ export function SeoLandingPage({ page, locale }: SeoLandingPageProps) {
         )}
 
         {/* Related Resources Footer */}
-        <section className="relative mx-auto max-w-site px-6 py-12 before:absolute before:top-0 before:left-1/2 before:h-px before:w-screen before:-translate-x-1/2 before:bg-border/40">
+        <section className="mx-auto max-w-site px-6 py-12">
           <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
-            <h3 className="text-xs font-semibold tracking-wider text-muted-foreground">{copy.common.relatedResources}</h3>
-            <div className="flex flex-wrap gap-3">
+            <h3 className="eyebrow">{copy.common.relatedResources}</h3>
+            <div className="flex flex-wrap gap-2.5">
               {page.relatedLinks.map((link, index) => (
-                <a
-                  key={index}
-                  href={localizeHref(locale, link.href)}
-                  className="inline-flex h-9 items-center rounded-full border border-border/70 bg-background px-4 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
-                >
+                <ButtonLink key={index} href={localizeHref(locale, link.href)} variant="secondary" size="sm">
                   {link.label}
-                </a>
+                </ButtonLink>
               ))}
             </div>
           </div>
