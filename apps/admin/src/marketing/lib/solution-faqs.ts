@@ -9,7 +9,7 @@ export const aiPhoneAnsweringFaqs: FaqItem[] = [
   {
     question: "Is it a good AI answering service for a small business?",
     answer:
-      "It's built for one: owner-run shops, trades, clinics and salons whose phone rings while everyone is busy. Plans start with a free tier of 30 voice minutes, then $30 a month for 150 minutes on Starter or $100 a month for 500 minutes on Pro. There's no setup fee on any plan.",
+      "Yes. LobbyStack is made for owner-run shops, trades, clinics and salons whose phone rings while everyone is busy. The free plan includes 30 voice minutes. Starter costs $30 a month for 150 minutes and Pro costs $100 a month for 500, with no setup fee on any plan.",
   },
   {
     question: "Can I keep my business phone number?",
@@ -29,7 +29,7 @@ export const aiPhoneAnsweringFaqs: FaqItem[] = [
   {
     question: "What happens when a caller needs a real person?",
     answer:
-      "You choose when it transfers: for urgent calls, when the caller asks, always, only during business hours, or never. It transfers to your default transfer number, or to an employee the caller asks for by name. If nobody picks up, the receptionist tells the caller and offers to take a message.",
+      "It transfers the call. You choose when: for urgent calls, when the caller asks, always, or only during business hours. The call goes to your default transfer number, or to the employee the caller asks for by name. If nobody picks up, the receptionist tells the caller and offers to take a message.",
   },
   {
     question: "How do I control what it says?",

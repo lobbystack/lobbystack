@@ -73,7 +73,7 @@ export function HomeServicesSections() {
       <SolutionHero
         eyebrow="Home services"
         title="An AI receptionist for home services that books jobs while you work"
-        intro="You can't answer from under a sink or on a roof. LobbyStack picks up, collects the address and the problem, books the visit into Google Calendar and transfers real emergencies to your on-call phone."
+        intro="You can't answer from under a sink or on a roof. LobbyStack picks up, collects the address and the problem, books the visit into Google Calendar and transfers the emergencies you define to your on-call phone."
         primary={signupLink("Try for free", signup, "home_services_hero")}
         secondary={{ label: "View pricing", href: "/pricing/" }}
         footnote="Free plan with 30 voice minutes. Works with your existing business number."
@@ -82,7 +82,7 @@ export function HomeServicesSections() {
 
       <SolutionFacts
         facts={[
-          "Answers while your crew is on a job",
+          "Answers on the number customers already call",
           "Transfers emergencies to your on-call phone",
           "Books estimates and service visits",
           "Hangs up on spam, which uses no minutes",
@@ -91,7 +91,7 @@ export function HomeServicesSections() {
 
       <MediaPair
         id="calls"
-        title="What a home services answering service should do with each call"
+        title="Our home services answering service separates emergencies from routine work"
         intro="You decide which calls are emergencies. Everything else gets booked or written up for you."
         cards={[
           {
@@ -157,7 +157,7 @@ export function HomeServicesSections() {
           {
             icon: ShieldAlert,
             title: "Your emergency rules",
-            body: "Name the problems that justify a call at night. Everything else gets booked or written up for the morning.",
+            body: "Name the problems worth a call at night, like no heat or a sewer backup. Those are the calls that ring your on-call phone.",
           },
           {
             icon: ShieldOff,
@@ -189,7 +189,7 @@ export function HomeServicesSections() {
       />
 
       <SolutionClosing
-        title="Answer the next job call from the job you're on"
+        title="Book the next job without leaving this one"
         body="Add your services, emergency rules and service area, forward your number and call it to test. The free plan includes 30 voice minutes."
         primary={signupLink("Try for free", signup, "home_services_closing")}
         secondary={{ label: "View pricing", href: "/pricing/" }}

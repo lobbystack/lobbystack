@@ -117,9 +117,9 @@ const en: McpCopy = {
   breadcrumb: { features: "Features", page: "MCP server" },
   hero: {
     eyebrow: "MCP server",
-    title: "The AI receptionist MCP server that works in Claude and ChatGPT",
+    title: "Book appointments from Claude or ChatGPT with the AI receptionist MCP server",
     intro:
-      "Add one URL to Claude or ChatGPT, sign in, and ask in plain words. The assistant can tell you who called yesterday, book an open time or change your hours. It gets only the permissions you approve.",
+      "Ask who called yesterday and didn't book, then have the assistant book them an open time without opening your dashboard. Add one server URL, sign in to LobbyStack and approve what it can do.",
     primaryCta: "Try for free",
     secondaryCta: "Read the setup guide",
     urlLabel: "Server URL",
@@ -127,34 +127,34 @@ const en: McpCopy = {
   facts: [
     "Works in Claude, ChatGPT, Cursor and VS Code",
     "Sign in with LobbyStack or use an API key",
-    "Works on one business, with the access you pick",
+    "One business per connection, with the permissions you approve",
     "Every change it makes goes in your audit log",
   ],
   ask: {
     eyebrow: "What it does",
-    titleLines: ["What your assistant does with", "the AI receptionist MCP server"],
+    titleLines: ["Catch up on calls and book customers", "through the AI receptionist MCP server"],
     intro:
-      "Each tool runs the same operation as LobbyStack's REST API, under the same permission. Your assistant sees the calls, contacts and appointments your dashboard shows.",
+      "Ask in plain words. Your assistant answers from the same calls, contacts and appointments your dashboard shows.",
     calls: {
       eyebrow: "Calls and messages",
       title: "Ask who called and what they needed",
-      body: "Ask about yesterday and the assistant lists each call with its outcome, such as a message taken or a booking left unfinished. It opens a transcript when you want the details and lists the callbacks your team still owes.",
+      body: "Ask about yesterday and the assistant lists each call with its outcome, such as a message taken or a booking left unfinished. It opens a transcript when you want the details and shows the callbacks your team still owes.",
     },
     booking: {
       eyebrow: "Appointments",
       title: "Book an open time from the chat",
-      body: "Name the service and the day. The assistant checks open times, offers a few, and books the one you pick. It cancels and reschedules too. If your receptionist takes booking requests instead, it tells you so and books nothing.",
+      body: "Name the customer, the service and the day. The assistant checks open times, offers a few, and books the one you pick. It cancels and reschedules too. If your receptionist takes booking requests instead, it tells you so and books nothing.",
     },
     madeUp: "The people and the business in these pictures are made up.",
   },
   consent: {
     eyebrow: "Sign-in and consent",
     title: "You decide what the assistant can do",
-    body: "When you connect, LobbyStack opens its own sign-in page. You pick the business, uncheck any permission you'd rather keep, and click Allow access. The assistant then works on that business and no other.",
+    body: "When you connect, you sign in on LobbyStack's own page, so the assistant never sees your password. You pick the business, uncheck anything it shouldn't do and click Allow access. The assistant then works on that business and no other.",
     points: [
       "Only owners and admins of a business can connect an assistant to it",
       "The connection ends after 30 days without use, or when you disconnect it",
-      "Scripts and code editors can use an API key with the scopes you choose",
+      "With an API key, the key's scopes set what the assistant can do",
     ],
   },
   control: {
@@ -201,7 +201,7 @@ const en: McpCopy = {
       "Sign in to LobbyStack, pick the business and click Allow access.",
       "Ask the assistant to call `get_business`. It answers with your business name, time zone and booking mode.",
     ],
-    guides: { claude: "Claude guide", chatgpt: "ChatGPT guide", other: "Other clients" },
+    guides: { claude: "Claude guide", chatgpt: "ChatGPT guide", other: "Cursor and VS Code guide" },
   },
   faqTitle: "Questions about the MCP server",
   closing: {
@@ -241,9 +241,9 @@ const fr: McpCopy = {
   breadcrumb: { features: "Fonctionnalités", page: "Serveur MCP" },
   hero: {
     eyebrow: "Serveur MCP",
-    title: "Le serveur MCP de réceptionniste IA qui fonctionne dans Claude et ChatGPT",
+    title: "Réservez des rendez-vous depuis Claude ou ChatGPT avec le serveur MCP de réceptionniste IA",
     intro:
-      "Ajoutez une URL à Claude ou à ChatGPT, connectez-vous et posez vos questions en langage courant. L'assistant peut vous dire qui a appelé hier, réserver une plage libre ou changer vos heures d'ouverture. Il n'obtient que les autorisations que vous approuvez.",
+      "Demandez qui a appelé hier sans prendre rendez-vous, puis laissez l'assistant lui réserver une plage libre sans ouvrir votre tableau de bord. Ajoutez l'URL du serveur, connectez-vous à LobbyStack et approuvez ce que l'assistant peut faire.",
     primaryCta: "Essayer gratuitement",
     secondaryCta: "Lire le guide de configuration",
     urlLabel: "URL du serveur",
@@ -251,34 +251,34 @@ const fr: McpCopy = {
   facts: [
     "Fonctionne dans Claude, ChatGPT, Cursor et VS Code",
     "Connexion avec LobbyStack ou par clé API",
-    "Une seule entreprise, avec l'accès que vous choisissez",
+    "Une entreprise par connexion, avec les autorisations que vous approuvez",
     "Chaque modification est inscrite au journal d'audit",
   ],
   ask: {
     eyebrow: "Ce qu'il fait",
-    titleLines: ["Ce que votre assistant fait avec", "le serveur MCP de réceptionniste IA"],
+    titleLines: ["Suivez vos appels et réservez vos clients", "avec le serveur MCP de réceptionniste IA"],
     intro:
-      "Chaque outil exécute la même opération que l'API REST de LobbyStack, avec la même autorisation. Votre assistant voit les appels, les contacts et les rendez-vous de votre tableau de bord.",
+      "Posez vos questions en langage courant. Votre assistant répond à partir des mêmes appels, contacts et rendez-vous que votre tableau de bord.",
     calls: {
       eyebrow: "Appels et messages",
       title: "Demandez qui a appelé et pourquoi",
-      body: "Demandez les appels d'hier et l'assistant les liste avec leur résultat, comme un message pris ou une réservation inachevée. Il ouvre la transcription quand vous voulez les détails et liste les rappels que votre équipe doit encore faire.",
+      body: "Demandez les appels d'hier et l'assistant les liste avec leur résultat, comme un message pris ou une réservation inachevée. Il ouvre la transcription quand vous voulez les détails et vous montre les rappels que votre équipe doit encore faire.",
     },
     booking: {
       eyebrow: "Rendez-vous",
       title: "Réservez une plage libre depuis la conversation",
-      body: "Nommez le service et le jour. L'assistant vérifie les plages libres, vous en propose quelques-unes et réserve celle que vous choisissez. Il annule et déplace aussi des rendez-vous. Si votre réceptionniste prend plutôt des demandes de réservation, l'assistant vous le dit et ne réserve rien.",
+      body: "Nommez le client, le service et le jour. L'assistant vérifie les plages libres, vous en propose quelques-unes et réserve celle que vous choisissez. Il annule et déplace aussi des rendez-vous. Si votre réceptionniste prend plutôt des demandes de réservation, l'assistant vous le dit et ne réserve rien.",
     },
     madeUp: "Les personnes et l'entreprise de ces illustrations sont fictives.",
   },
   consent: {
     eyebrow: "Connexion et consentement",
     title: "Vous décidez de ce que l'assistant peut faire",
-    body: "À la connexion, LobbyStack ouvre sa propre page de connexion. Vous choisissez l'entreprise, décochez les autorisations que vous préférez garder et cliquez sur Autoriser l'accès. L'assistant travaille ensuite sur cette entreprise, et sur aucune autre.",
+    body: "Quand vous branchez l'assistant, vous vous identifiez sur la page de LobbyStack, donc il ne voit jamais votre mot de passe. Vous choisissez l'entreprise, décochez ce qu'il ne doit pas faire et cliquez sur Autoriser l'accès. L'assistant travaille ensuite sur cette entreprise, et sur aucune autre.",
     points: [
       "Seuls les propriétaires et les administrateurs d'une entreprise peuvent y connecter un assistant",
       "La connexion prend fin après 30 jours sans utilisation, ou quand vous la coupez",
-      "Les scripts et les éditeurs de code peuvent utiliser une clé API avec les portées de votre choix",
+      "Avec une clé API, ce sont les portées de la clé qui fixent ce que l'assistant peut faire",
     ],
   },
   control: {
@@ -325,7 +325,7 @@ const fr: McpCopy = {
       "Connectez-vous à LobbyStack, choisissez l'entreprise et cliquez sur Autoriser l'accès.",
       "Demandez à l'assistant d'appeler `get_business`. Il répond avec le nom de votre entreprise, son fuseau horaire et son mode de réservation.",
     ],
-    guides: { claude: "Guide Claude", chatgpt: "Guide ChatGPT", other: "Autres clients" },
+    guides: { claude: "Guide Claude", chatgpt: "Guide ChatGPT", other: "Guide Cursor et VS Code" },
   },
   faqTitle: "Questions sur le serveur MCP",
   closing: {
@@ -365,9 +365,9 @@ const es: McpCopy = {
   breadcrumb: { features: "Funciones", page: "Servidor MCP" },
   hero: {
     eyebrow: "Servidor MCP",
-    title: "El servidor MCP de recepcionista con IA que funciona en Claude y ChatGPT",
+    title: "Reserve citas desde Claude o ChatGPT con el servidor MCP de recepcionista con IA",
     intro:
-      "Agregue una URL a Claude o ChatGPT, inicie sesión y pregunte con sus propias palabras. El asistente puede decirle quién llamó ayer, reservar un horario libre o cambiar su horario de atención. Solo obtiene los permisos que usted aprueba.",
+      "Pregunte quién llamó ayer y no reservó, y deje que el asistente le reserve un horario libre sin abrir su panel. Agregue la URL del servidor, inicie sesión en LobbyStack y apruebe lo que el asistente puede hacer.",
     primaryCta: "Pruébelo gratis",
     secondaryCta: "Leer la guía de configuración",
     urlLabel: "URL del servidor",
@@ -375,34 +375,34 @@ const es: McpCopy = {
   facts: [
     "Funciona en Claude, ChatGPT, Cursor y VS Code",
     "Inicio de sesión con LobbyStack o clave de API",
-    "Un solo negocio, con el acceso que usted elija",
+    "Un negocio por conexión, con los permisos que usted aprueba",
     "Cada cambio queda en su registro de auditoría",
   ],
   ask: {
     eyebrow: "Lo que hace",
-    titleLines: ["Lo que su asistente hace con", "el servidor MCP de recepcionista con IA"],
+    titleLines: ["Revise sus llamadas y reserve a sus clientes", "con el servidor MCP de recepcionista con IA"],
     intro:
-      "Cada herramienta ejecuta la misma operación que la API REST de LobbyStack, con el mismo permiso. Su asistente ve las llamadas, los contactos y las citas de su panel.",
+      "Pregunte con sus propias palabras. Su asistente responde con las mismas llamadas, contactos y citas que muestra su panel.",
     calls: {
       eyebrow: "Llamadas y mensajes",
       title: "Pregunte quién llamó y qué necesitaba",
-      body: "Pregunte por las llamadas de ayer y el asistente las enumera con su resultado, como un mensaje tomado o una reserva sin terminar. Abre la transcripción cuando usted quiere los detalles y enumera las llamadas que su equipo aún debe devolver.",
+      body: "Pregunte por las llamadas de ayer y el asistente las enumera con su resultado, como un mensaje tomado o una reserva sin terminar. Abre la transcripción cuando usted quiere los detalles y le muestra las llamadas que su equipo aún debe devolver.",
     },
     booking: {
       eyebrow: "Citas",
       title: "Reserve un horario libre desde el chat",
-      body: "Indique el servicio y el día. El asistente revisa los horarios libres, le ofrece algunos y reserva el que usted elija. También cancela y reprograma citas. Si su recepcionista toma solicitudes de reserva, se lo dice y no reserva nada.",
+      body: "Indique el cliente, el servicio y el día. El asistente revisa los horarios libres, le ofrece algunos y reserva el que usted elija. También cancela y reprograma citas. Si su recepcionista toma solicitudes de reserva, se lo dice y no reserva nada.",
     },
     madeUp: "Las personas y el negocio de estas ilustraciones son ficticios.",
   },
   consent: {
     eyebrow: "Inicio de sesión y permisos",
     title: "Usted decide lo que puede hacer el asistente",
-    body: "Al conectarlo, LobbyStack abre su propia página de inicio de sesión. Usted elige el negocio, desmarca los permisos que prefiere no dar y hace clic en Permitir acceso. Desde entonces, el asistente trabaja solo en ese negocio.",
+    body: "Al conectarlo, usted inicia sesión en la página de LobbyStack, así que el asistente nunca ve su contraseña. Elige el negocio, desmarca lo que no debe hacer y hace clic en Permitir acceso. Desde entonces, el asistente trabaja solo en ese negocio.",
     points: [
       "Solo los propietarios y administradores de un negocio pueden conectarle un asistente",
       "La conexión termina tras 30 días sin uso, o cuando usted la desconecta",
-      "Los scripts y editores de código pueden usar una clave de API con los permisos que usted elija",
+      "Con una clave de API, los permisos de la clave fijan lo que puede hacer el asistente",
     ],
   },
   control: {
@@ -449,7 +449,7 @@ const es: McpCopy = {
       "Inicie sesión en LobbyStack, elija el negocio y haga clic en Permitir acceso.",
       "Pídale al asistente que llame a `get_business`. Responde con el nombre de su negocio, su zona horaria y su modo de reserva.",
     ],
-    guides: { claude: "Guía de Claude", chatgpt: "Guía de ChatGPT", other: "Otros clientes" },
+    guides: { claude: "Guía de Claude", chatgpt: "Guía de ChatGPT", other: "Guía de Cursor y VS Code" },
   },
   faqTitle: "Preguntas sobre el servidor MCP",
   closing: {
@@ -489,9 +489,9 @@ const sr: McpCopy = {
   breadcrumb: { features: "Funkcije", page: "MCP server" },
   hero: {
     eyebrow: "MCP server",
-    title: "MCP server za AI recepcionera koji radi u Claude-u i ChatGPT-ju",
+    title: "Zakazujte termine iz Claude-a ili ChatGPT-ja uz MCP server za AI recepcionera",
     intro:
-      "Dodajte jedan URL u Claude ili ChatGPT, prijavite se i pitajte običnim rečima. Asistent može da Vam kaže ko je juče zvao, zakaže slobodan termin ili promeni radno vreme. Dobija samo dozvole koje Vi odobrite.",
+      "Pitajte ko je juče zvao, a nije zakazao, pa neka mu asistent zakaže slobodan termin bez otvaranja kontrolne table. Dodajte URL servera, prijavite se na LobbyStack i odobrite šta asistent sme da radi.",
     primaryCta: "Isprobajte besplatno",
     secondaryCta: "Pročitajte uputstvo za podešavanje",
     urlLabel: "URL servera",
@@ -499,34 +499,34 @@ const sr: McpCopy = {
   facts: [
     "Radi u Claude-u, ChatGPT-ju, Cursor-u i VS Code-u",
     "Prijava preko LobbyStack-a ili API ključem",
-    "Jedna firma, sa pristupom koji Vi izaberete",
+    "Jedna firma po vezi, sa dozvolama koje Vi odobrite",
     "Svaka izmena se upisuje u dnevnik revizije",
   ],
   ask: {
     eyebrow: "Šta radi",
-    titleLines: ["Šta Vaš asistent radi sa", "MCP serverom za AI recepcionera"],
+    titleLines: ["Pratite pozive i zakazujte termine klijentima", "uz MCP server za AI recepcionera"],
     intro:
-      "Svaki alat izvršava istu operaciju kao LobbyStack REST API, uz istu dozvolu. Asistent vidi pozive, kontakte i termine koje prikazuje Vaša kontrolna tabla.",
+      "Pitajte običnim rečima. Asistent odgovara na osnovu istih poziva, kontakata i termina koje prikazuje Vaša kontrolna tabla.",
     calls: {
       eyebrow: "Pozivi i poruke",
       title: "Pitajte ko je zvao i šta mu je trebalo",
-      body: "Pitajte za jučerašnje pozive i asistent ih navodi sa ishodom, na primer primljena poruka ili nedovršeno zakazivanje. Otvara transkript kada želite detalje i navodi povratne pozive koje Vaš tim još duguje.",
+      body: "Pitajte za jučerašnje pozive i asistent ih navodi sa ishodom, na primer primljena poruka ili nedovršeno zakazivanje. Otvara transkript kada želite detalje i prikazuje povratne pozive koje Vaš tim još duguje.",
     },
     booking: {
       eyebrow: "Termini",
       title: "Zakažite slobodan termin iz četa",
-      body: "Navedite uslugu i dan. Asistent proverava slobodne termine, nudi Vam nekoliko i zakazuje onaj koji izaberete. Može i da otkaže ili pomeri termin. Ako Vaš recepcioner prima zahteve za zakazivanje, asistent Vam to kaže i ništa ne zakazuje.",
+      body: "Navedite klijenta, uslugu i dan. Asistent proverava slobodne termine, nudi Vam nekoliko i zakazuje onaj koji izaberete. Može i da otkaže ili pomeri termin. Ako Vaš recepcioner prima zahteve za zakazivanje, asistent Vam to kaže i ništa ne zakazuje.",
     },
     madeUp: "Osobe i firma na ovim ilustracijama su izmišljene.",
   },
   consent: {
     eyebrow: "Prijava i saglasnost",
     title: "Vi odlučujete šta asistent sme da radi",
-    body: "Kada se povezujete, LobbyStack otvara svoju stranicu za prijavu. Izaberete firmu, isključite dozvole koje ne želite da date i kliknete na Dozvoli pristup. Asistent zatim radi samo za tu firmu.",
+    body: "Prilikom povezivanja prijavljujete se na stranici LobbyStack-a, pa asistent nikada ne vidi Vašu lozinku. Izaberete firmu, isključite ono što ne sme da radi i kliknete na Dozvoli pristup. Asistent zatim radi samo za tu firmu.",
     points: [
       "Samo vlasnici i administratori firme mogu da povežu asistenta sa njom",
       "Veza prestaje posle 30 dana bez korišćenja ili kada je Vi prekinete",
-      "Skripte i uređivači koda mogu da koriste API ključ sa ovlašćenjima koja izaberete",
+      "Sa API ključem, ovlašćenja ključa određuju šta asistent sme da radi",
     ],
   },
   control: {
@@ -573,7 +573,7 @@ const sr: McpCopy = {
       "Prijavite se na LobbyStack, izaberite firmu i kliknite na Dozvoli pristup.",
       "Zamolite asistenta da pozove `get_business`. Odgovoriće nazivom Vaše firme, vremenskom zonom i načinom zakazivanja.",
     ],
-    guides: { claude: "Uputstvo za Claude", chatgpt: "Uputstvo za ChatGPT", other: "Drugi klijenti" },
+    guides: { claude: "Uputstvo za Claude", chatgpt: "Uputstvo za ChatGPT", other: "Uputstvo za Cursor i VS Code" },
   },
   faqTitle: "Pitanja o MCP serveru",
   closing: {

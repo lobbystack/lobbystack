@@ -4,7 +4,7 @@ export const selfHostedFaqs: FaqItem[] = [
   {
     question: "What is a self-hosted AI receptionist?",
     answer:
-      "It's an AI receptionist that runs on a server you control instead of on the vendor's. It still answers your calls, books appointments and takes messages, but the dashboard, the database and the recordings live on your machine. LobbyStack is open source under the MIT License, so you can install it yourself.",
+      "A self-hosted AI receptionist runs on a server you control instead of the vendor's. It still answers your calls, books appointments and takes messages, but the dashboard, the database and the recordings live on your machine. LobbyStack is open source under the MIT License, so you can install it yourself.",
   },
   {
     question: "Is LobbyStack open source?",
@@ -19,7 +19,7 @@ export const selfHostedFaqs: FaqItem[] = [
   {
     question: "Can I use my own LLM or API key?",
     answer:
-      "You always use your own keys. Voice calls run on OpenAI GPT-Live with your OpenAI account. Website chat and knowledge embeddings accept any OpenAI-compatible endpoint, so you can point them at another provider or a model you host. The model needs tool calls, and the embedding model must return 1,536 dimensions.",
+      "Yes. A self-hosted install runs on your own keys. Website chat and knowledge embeddings accept any OpenAI-compatible endpoint, so you can point them at another provider or a model you host, as long as it supports tool calls and the embedding model returns 1,536 dimensions. Voice calls run on OpenAI GPT-Live with your own OpenAI account.",
   },
   {
     question: "What does self-hosting cost?",

@@ -14,7 +14,7 @@ export const plumberFaqs: FaqItem[] = [
   {
     question: "What happens if a caller smells gas?",
     answer:
-      "You write the policy. A common one tells callers to leave the building and call the gas utility's emergency line. LobbyStack reads your script to the caller, then transfers the call or takes a message under your rules.",
+      "LobbyStack reads the gas script you write, then transfers the call or takes a message under your rules. Your script might tell callers to leave the building and call the gas utility's emergency line.",
   },
   {
     question: "Can it quote drain cleaning or a service call fee?",
@@ -24,7 +24,7 @@ export const plumberFaqs: FaqItem[] = [
   {
     question: "What happens if my on-call plumber doesn't pick up?",
     answer:
-      "LobbyStack hands the call to your on-call number and leaves the line once that phone rings. If nobody answers, the caller reaches that phone's voicemail, if it has one. If the transfer can't go through, LobbyStack tells the caller and offers to take a message, and your team can get a \"Live call transfer failed\" alert.",
+      "The caller reaches your plumber's voicemail, if that phone has one. LobbyStack hands the call to your on-call number and leaves the line once it rings. If the transfer can't go through, LobbyStack tells the caller and offers to take a message, and your team can get a \"Live call transfer failed\" alert.",
   },
   {
     question: "Does it work with my existing business number?",
@@ -62,7 +62,7 @@ export const hvacFaqs: FaqItem[] = [
   {
     question: "What happens if my on-call tech doesn't pick up?",
     answer:
-      "Transfers are blind: LobbyStack hands the call to your on-call number without briefing your tech, then leaves the line. If your tech doesn't pick up, the caller reaches that phone's voicemail, if it has one. If the transfer can't go through, LobbyStack tells the caller and offers to take a message, which reaches your inbox with an email alert, and your team can get a \"Live call transfer failed\" alert. If your plan can't cover another transfer attempt, it takes a message instead.",
+      "The caller reaches your tech's voicemail, if that phone has one. LobbyStack hands the call to your on-call number without briefing your tech, then leaves the line. If the transfer can't go through, LobbyStack tells the caller and offers to take a message, which reaches your inbox with an email alert, and your team can get a \"Live call transfer failed\" alert. If your plan can't cover another transfer attempt, it takes a message instead.",
   },
   {
     question: "Can an AI receptionist for HVAC answer callers who speak Spanish?",
@@ -87,7 +87,7 @@ export const hvacFaqs: FaqItem[] = [
   {
     question: "Should I use an AI receptionist or a live HVAC answering service?",
     answer:
-      "People handle unusual calls better. At MAP Communications, a live answering service, agents follow the on-call roster you send and can schedule appointments. Its Pay As You Go plan costs $49 a month plus $1.37 a minute (checked October 9, 2026). LobbyStack's extra minutes cost $0.20 on Starter and $0.18 on Pro, but it transfers to one number. Choose a live service if you want a person on every call or a rotating on-call list.",
+      "Choose a live service if you want a person on every call or a rotating on-call list, since LobbyStack transfers to one number. People also handle unusual calls better. At MAP Communications, a live answering service, agents follow the on-call roster you send and can schedule appointments. Its Pay As You Go plan costs $49 a month plus $1.37 a minute (checked October 9, 2026). LobbyStack's extra minutes cost $0.20 on Starter and $0.18 on Pro.",
   },
   {
     question: "Can I try it before I forward my line?",
@@ -120,7 +120,7 @@ export const electricianFaqs: FaqItem[] = [
   {
     question: "What does it ask about panel upgrades and EV chargers?",
     answer:
-      "You choose the questions. Electricians often ask for the panel amperage, the home's age, the charger or generator the caller wants, and whether they own the home. LobbyStack saves the answers with the call.",
+      "Whatever questions you choose, such as the panel amperage, the home's age, the charger or generator the caller wants, and whether they own the home. LobbyStack saves the answers with the call.",
   },
   {
     question: "How is an AI receptionist different from an electrician virtual receptionist?",
@@ -153,7 +153,7 @@ export const garageDoorFaqs: FaqItem[] = [
   {
     question: "What does it tell a caller with a broken spring?",
     answer:
-      "The safety guidance you write. A common line tells the caller not to lift the door by hand, since the spring carries most of its weight. Then LobbyStack books the repair into your next open slot.",
+      "The safety guidance you write, such as not lifting the door by hand, since the spring carries most of its weight. Then LobbyStack books the repair into your next open slot.",
   },
   {
     question: "Can it handle garage door calls after hours?",
@@ -206,7 +206,7 @@ export const applianceRepairFaqs: FaqItem[] = [
   {
     question: "Can it handle urgent calls, like a leaking washer?",
     answer:
-      "It follows your rules. A common setup reads your shutoff advice to the caller and books the first open slot. If you add an on-call number, LobbyStack can transfer the calls your rules mark urgent.",
+      "Yes, under your rules. LobbyStack can read your shutoff advice to the caller and book the first open slot. If you add an on-call number, it can transfer the calls your rules mark urgent.",
   },
   {
     question: "Does it work as an appliance repair answering service on my current number?",
@@ -234,7 +234,7 @@ export const restorationFaqs: FaqItem[] = [
   {
     question: "What does it collect for insurance claims?",
     answer:
-      "Whatever you ask for. Restoration companies often ask for the carrier, the claim number if there is one, and whether the caller plans to file. When an adjuster calls, LobbyStack takes a message with the claim number and contact details.",
+      "Whatever you ask for, such as the carrier, the claim number if there is one, and whether the caller plans to file. When an adjuster calls, LobbyStack takes a message with the claim number and contact details.",
   },
   {
     question: "Will it book mold inspections and estimates?",
@@ -244,7 +244,7 @@ export const restorationFaqs: FaqItem[] = [
   {
     question: "What happens if my on-call crew doesn't pick up?",
     answer:
-      "LobbyStack hands the call to your on-call number and leaves the line once that phone rings. If nobody answers, the caller reaches that phone's voicemail, if it has one. If the transfer can't go through, LobbyStack offers to take a message, and your team can get a \"Live call transfer failed\" alert.",
+      "The caller reaches that phone's voicemail, if it has one. LobbyStack hands the call to your on-call number and leaves the line once it rings. If the transfer can't go through, LobbyStack offers to take a message, and your team can get a \"Live call transfer failed\" alert.",
   },
   {
     question: "Will I see what was said on each call?",
@@ -272,12 +272,12 @@ export const locksmithFaqs: FaqItem[] = [
   {
     question: "What if a child or pet is locked in a car?",
     answer:
-      "You write that rule. A common one tells the caller to call 911 right away, then transfers the call to your on-call locksmith. LobbyStack asks whether anyone is inside before anything else.",
+      "LobbyStack asks whether anyone is inside before anything else, then follows the rule you write. That rule might tell the caller to call 911 right away, then transfer the call to your on-call locksmith.",
   },
   {
     question: "What does it ask before it transfers a lockout?",
     answer:
-      "You choose the questions. Locksmiths often ask whether anyone is locked inside, the exact location, and the make, model, and year of the car. LobbyStack saves the answers with the call.",
+      "The questions you choose, such as whether anyone is locked inside, the exact location, and the make, model, and year of the car. LobbyStack saves the answers with the call.",
   },
   {
     question: "Will an AI receptionist for locksmith services book daytime jobs?",
@@ -343,7 +343,7 @@ export const roofingFaqs: FaqItem[] = [
   {
     question: "What does it do with an active leak?",
     answer:
-      "It follows your rules. A common setup asks for the address and what's leaking, transfers active leaks to your on-call crew, and books everything else for inspection.",
+      "It rings your on-call crew if your rules say so. LobbyStack can ask for the address and what's leaking first, then book everything without a leak for inspection.",
   },
   {
     question: "Can it answer insurance claim questions?",

@@ -27,7 +27,7 @@ export function PhoneAnsweringSections() {
       <SolutionHero
         eyebrow="AI phone answering"
         title="An AI phone answering service for the calls you can't take"
-        intro="LobbyStack answers your business line when you're on a job, with a customer or closed for the day. It answers questions from the details you give it, books appointments into Google Calendar and sends urgent calls to your phone."
+        intro="When you're on a job or with a customer, the caller you can't answer dials the next business on their list. LobbyStack picks up on your number, books the visit into Google Calendar and rings your phone when a call is urgent."
         primary={signupLink("Try for free", signup, "phone_answering_hero")}
         secondary={{ label: "View pricing", href: "/pricing/" }}
         footnote="Free plan with 30 voice minutes. No credit card required."
@@ -39,19 +39,19 @@ export function PhoneAnsweringSections() {
           "Works on the business number you already have",
           "Books into Google Calendar during the call",
           "Transfers urgent calls to the number you set",
-          "Spam and calls under 10 seconds use no minutes",
+          "Spam calls and calls under 10 seconds use no minutes",
         ]}
       />
 
       <MediaPair
         id="on-a-call"
-        title="What our AI phone answering service does on a call"
+        title="Our AI phone answering service replies from your details and books the visit"
         intro="Callers talk the way they would to your front desk. LobbyStack answers what it knows, books what it can and passes the rest to you."
         cards={[
           {
             eyebrow: "Questions",
             title: "Answers from your own details",
-            body: "Add your services, prices, hours, service area and policies as text, PDFs or pages from your website. LobbyStack answers callers from that. Add a rule, and it takes a message whenever it isn't sure.",
+            body: "A caller asks whether you cover their town or what a first visit costs. LobbyStack answers from the services, prices, hours and policies you added. Add a rule, and it takes a message whenever it isn't sure.",
             media: <SceneArt scene={{ product: "knowledge" }} locale={locale} fit="card" />,
           },
           {
@@ -79,8 +79,8 @@ export function PhoneAnsweringSections() {
         id="after-the-call"
         reverse
         eyebrow="After the call"
-        title="Every call is written up in your dashboard"
-        body="Each call gets a one-line summary, a transcript and a recording, next to the caller's name and number. You can read what someone needed before you call them back."
+        title="Know what each caller wanted before you call back"
+        body="The dashboard lists each call with a one-line summary, the transcript and the recording, next to the caller's name and number."
         points={[
           "Messages and follow-ups wait in one list for your team",
           "A text or email alert when the receptionist takes a message",
@@ -175,7 +175,7 @@ export function PhoneAnsweringSections() {
       />
 
       <SolutionClosing
-        title="Let LobbyStack answer your next call"
+        title="Let LobbyStack answer the next call you can't take"
         body="Add your details, forward your number and call it yourself. The free plan includes 30 voice minutes."
         primary={signupLink("Try for free", signup, "phone_answering_closing")}
         secondary={{ label: "View pricing", href: "/pricing/" }}

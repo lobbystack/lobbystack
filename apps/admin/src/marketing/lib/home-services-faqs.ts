@@ -9,7 +9,7 @@ export const homeServicesFaqs: FaqItem[] = [
   {
     question: "How is it different from a home services answering service?",
     answer:
-      "A live answering service has a person read your script and take a message. LobbyStack books the visit itself, transfers emergencies during the call and saves a summary, transcript and recording for each call. You pay for the minutes you use, and a call at night costs the same as one at noon.",
+      "LobbyStack books the visit during the call, where a live answering service has a person read your script and take a message. It also transfers emergencies while the caller is on the line and saves a summary, transcript and recording of each call. You pay for the minutes you use, and a call at night costs the same as one at noon.",
   },
   {
     question: "Can it handle emergency calls at night?",

@@ -14,7 +14,7 @@ export const salonsSpasFaqs: FaqItem[] = [
   {
     question: "Does it work with my salon booking software?",
     answer:
-      "LobbyStack books into Google Calendar and doesn't connect to salon booking platforms. If your salon books in another app, set LobbyStack to take booking requests instead: it collects the service, stylist and time the client wants, and your team confirms the appointment.",
+      "Not directly. LobbyStack books into Google Calendar and doesn't connect to salon booking platforms. If your salon books in another app, set LobbyStack to take booking requests: it collects the service, stylist and time the client wants, and your team confirms the appointment. Webhooks and the LobbyStack API can send each request on to your other tools.",
   },
   {
     question: "Can clients cancel or reschedule by phone?",
@@ -34,7 +34,7 @@ export const salonsSpasFaqs: FaqItem[] = [
   {
     question: "Does it work for spas, barbershops and nail studios?",
     answer:
-      "Yes. You set up the services, people, hours and rules for your own business, whether that's a barbershop, a day spa, a med spa, a nail studio or a massage practice.",
+      "Yes. A barbershop, a day spa, a med spa, a nail studio and a massage practice all set it up the same way: add your own services, people, hours and rules.",
   },
   {
     question: "What happens when a client wants to talk to a person?",
@@ -49,6 +49,6 @@ export const salonsSpasFaqs: FaqItem[] = [
   {
     question: "How much does an AI receptionist for a salon cost?",
     answer:
-      "The Free plan includes 30 voice minutes and a phone number free for 14 days. Starter is $30 a month for 150 minutes, and Pro is $100 a month for 500 minutes. Spam calls and calls under 10 seconds don't count. The pricing page lists overage rates.",
+      "You can start free. The Free plan includes 30 voice minutes and a US or Canadian number for 14 days, with no card. Starter is $30 a month for 150 minutes, then $0.20 a minute, and Pro is $100 a month for 500 minutes, then $0.18 a minute. Annual billing costs 20% less. Calls under 10 seconds and calls ended as spam don't count.",
   },
 ]

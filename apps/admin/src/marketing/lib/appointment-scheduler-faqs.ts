@@ -9,7 +9,7 @@ export const appointmentSchedulerFaqs: FaqItem[] = [
   {
     question: "What's the difference between an AI appointment setter and an AI appointment scheduler?",
     answer:
-      "People use both names. An appointment setter often means outbound calling to book sales meetings. LobbyStack works as an AI appointment scheduler for the calls that come to you: it books, moves and cancels appointments while the caller is on the line.",
+      "An AI appointment setter often means outbound calls that book sales meetings, while an AI appointment scheduler books the calls that come to you. People use both names. LobbyStack is the second kind: it books, moves and cancels appointments while the caller is on the line.",
   },
   {
     question: "Which calendar does it book into?",

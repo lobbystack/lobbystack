@@ -28,6 +28,8 @@ export type SeoLandingPage = {
   eyebrow: string
   h1: string
   intro: string
+  /** Small print under the hero buttons, when the layout's default doesn't fit the page. */
+  heroFootnote?: string
   image: string
   imageAlt: string
   proofPoints: string[]
@@ -60,11 +62,11 @@ export const companyPages: SeoLandingPage[] = [
     path: "/about/",
     title: "About LobbyStack | Open-Source AI Receptionist",
     description:
-      "LobbyStack is an open-source AI receptionist for small businesses. It answers calls, books appointments and hands calls to your team, on our cloud or your server.",
+      "An open-source AI receptionist for small businesses. LobbyStack answers your calls, books appointments and transfers callers, on our cloud or your server.",
     eyebrow: "About",
     h1: "LobbyStack is an open-source AI receptionist for small businesses",
     intro:
-      "It answers your phone, books appointments and passes calls to your team when a caller needs a person. The code is public under the MIT License, so you can use our cloud or run it on your own server.",
+      "We built LobbyStack for owners who miss calls while they're with a customer. It answers your phone, books appointments into Google Calendar and passes callers to your team when they need a person. The code is public under the MIT License, so you can use our cloud or run it on your own server.",
     image: "/illustrations/value-network.webp",
     imageAlt: "The LobbyStack code on GitHub, running on LobbyStack Cloud or on your own server",
     proofPoints: [
@@ -74,17 +76,17 @@ export const companyPages: SeoLandingPage[] = [
     ],
     sections: [
       {
-        title: "Why LobbyStack exists",
-        body: "A small business loses callers when the phone rings during a haircut, a cleaning or a job across town. Voicemail books nobody. We built LobbyStack to answer those calls, book what it can and send you the rest with the details written down.",
+        title: "We built it for the calls you can't pick up",
+        body: "The phone rings during a haircut, a cleaning or a job across town. Voicemail books nobody, so the caller tries the next business on the list. We built LobbyStack to answer those calls, book what it can and send you the rest with the details written down.",
         points: [
-          "Answers while your team is busy, closed or out on a job",
-          "Books into Google Calendar and texts the client a confirmation",
-          "Transfers urgent calls and takes messages for the others",
+          "Answers while you're with a customer, closed or out on a job",
+          "Books into Google Calendar and texts a confirmation to clients who agree",
+          "Transfers urgent calls by your rules and takes a message on the rest",
         ],
       },
       {
-        title: "Why the code is open source",
-        body: "Your receptionist talks to your customers, reads your calendar and decides when to wake you up. You should be able to see how it makes those choices. The whole product sits on GitHub under the MIT License, for anyone to read, run or change.",
+        title: "You can read how it decides what to do on a call",
+        body: "Your receptionist talks to your customers, reads your calendar and decides when to wake you up. You should be able to check how it makes those choices. All of LobbyStack is on GitHub under the MIT License, for anyone to read, run or change.",
         points: [
           "Read the prompts, tools and call handling yourself",
           "Start on LobbyStack Cloud and move to your own server later",
@@ -92,21 +94,21 @@ export const companyPages: SeoLandingPage[] = [
         ],
       },
       {
-        title: "Who LobbyStack is for",
-        body: "We build for owners and small teams who depend on inbound calls: salons and spas, dental offices, plumbers and other trades, property managers. Agencies can also sell LobbyStack to their clients under their own brand.",
+        title: "Built for businesses that book by phone",
+        body: "We build for owners and small teams who get their work by phone: salons and spas, dental offices, plumbers and other trades, property managers. Agencies can also resell LobbyStack to their clients under their own brand.",
         points: [
-          "Teams who miss calls during appointments or on job sites",
-          "Businesses that want phone booking without building a phone tree",
-          "Agencies that want to offer an AI receptionist to their clients",
+          "Owners who miss calls during appointments or on job sites",
+          "Businesses that want callers booked during the call, without a phone menu",
+          "Agencies that want to offer an AI receptionist under their own brand",
         ],
       },
       {
-        title: "How support and control work",
-        body: "On LobbyStack Cloud, we run the hosting, monitoring and updates. On your own server, you run the same code. Either way, you decide what the receptionist can say, book and transfer, with rules you write in plain language.",
+        title: "You decide what it says, books and transfers",
+        body: "You write the rules in plain words: what the receptionist can tell callers, what it can book and when it puts a call through to you. On LobbyStack Cloud, we run the hosting, monitoring and updates. On your own server, you run the same code.",
         points: [
           "Add your website, documents, services and hours as its knowledge",
           "Review each call's summary, transcript and outcome in the dashboard",
-          "Read the docs or email support@lobbystack.com for help",
+          "Read the docs or email support@lobbystack.com when you need help",
         ],
       },
     ],
@@ -117,7 +119,9 @@ export const companyPages: SeoLandingPage[] = [
       { label: "GitHub", href: "https://github.com/lobbystack/lobbystack" },
     ],
     ctaHeading: "Try LobbyStack on your own calls",
-    ctaBody: "Start on the free plan with 30 voice minutes, or read the code on GitHub first.",
+    ctaBody: "Start on the free plan with 30 voice minutes and no card, or read the code on GitHub first.",
+    ctaSecondaryLabel: "Read the code on GitHub",
+    ctaSecondaryHref: "https://github.com/lobbystack/lobbystack",
   },
 ]
 
@@ -128,11 +132,11 @@ export const solutionPages: SeoLandingPage[] = [
     path: "/solutions/after-hours-answering-service/",
     title: "AI After-Hours Answering Service | LobbyStack",
     description:
-      "An after-hours answering service that books routine calls into Google Calendar and transfers emergencies to your on-call phone. Free plan, then $30 a month.",
+      "An after-hours answering service that books routine calls into Google Calendar and rings your on-call phone for emergencies. Free plan, then $30 a month.",
     eyebrow: "After-hours answering",
-    h1: "An AI after-hours answering service for nights, weekends and holidays",
+    h1: "An AI after-hours answering service that only wakes you for emergencies",
     intro:
-      "When you close, LobbyStack answers your business number. It books routine calls into Google Calendar, transfers the emergencies your rules define to your on-call phone and writes up every call for the morning.",
+      "At 1 a.m., a caller with no heat dials whoever picks up first. LobbyStack answers your business number on nights, weekends and holidays. It rings your on-call phone for the emergencies your rules name and books routine calls into Google Calendar.",
     image: "/illustrations/calls-need-person.webp",
     imageAlt:
       "LobbyStack answering after-hours calls and transferring an emergency to the on-call phone",
@@ -159,8 +163,8 @@ export const solutionPages: SeoLandingPage[] = [
         ],
       },
       {
-        title: "Every overnight call is written up by morning",
-        body: "Each call gets a one-line summary, a transcript and a recording in the dashboard. You can see who called and what they need before you return a single call.",
+        title: "Start the morning knowing who called overnight",
+        body: "The dashboard holds a one-line summary, a transcript and a recording for each call. You see who called and what they need before you return a single call.",
         points: [
           "The caller's name, number and reason for calling",
           "Spam calls and calls under 10 seconds use no minutes",
@@ -206,11 +210,11 @@ export const solutionPages: SeoLandingPage[] = [
     path: "/solutions/ai-receptionist-for-dental-offices/",
     title: "Dental AI Receptionist and Answering Service | LobbyStack",
     description:
-      "LobbyStack is a dental AI receptionist that answers when your front desk is busy or closed, books patients into Google Calendar and transfers emergencies. From $30 a month.",
+      "A dental AI receptionist that answers when your front desk is busy or closed, books patients in Google Calendar and transfers emergencies. From $30/month.",
     eyebrow: "Dental offices",
     h1: "A dental AI receptionist that books patients while your front desk is busy",
     intro:
-      "LobbyStack answers your practice's phone during check-in, at lunch and after close. It books new patients and cleanings into Google Calendar, answers insurance and parking questions from what you enter, and transfers dental emergencies to your on-call number. Paid plans start at $30 a month, with no setup fee.",
+      "Patients call during check-in, at lunch and after you close, and those calls go to voicemail. LobbyStack answers your practice's line, books new patients and cleanings into Google Calendar and transfers dental emergencies to your on-call number. Paid plans start at $30 a month.",
     image: "/illustrations/call-booking-summary.webp",
     imageAlt:
       "LobbyStack booking a new patient's exam and texting a confirmation",
@@ -296,7 +300,7 @@ export const solutionPages: SeoLandingPage[] = [
       },
       { label: "Pricing", href: "/pricing/" },
     ],
-    ctaHeading: "Answer the patients who call during lunch",
+    ctaHeading: "Book the patients who call during lunch",
     ctaBody:
       "Add your accepted plans, hours and emergency rules, then call your number to test it. The free plan includes 30 minutes.",
     ctaPrimaryLabel: "Try for free",
@@ -308,22 +312,22 @@ export const solutionPages: SeoLandingPage[] = [
     path: "/solutions/ai-receptionist-for-salons-and-spas/",
     title: "AI Receptionist for Salons and Spas | LobbyStack",
     description:
-      "LobbyStack is an AI receptionist for salons and spas. It answers your calls, books the stylist each client asks for and answers from your service menu.",
+      "An AI receptionist for salons and spas that answers mid-color, books the stylist each client asks for and quotes prices from your service menu.",
     eyebrow: "Salons and spas",
     h1: "An AI receptionist for salons that books while your hands are busy",
     intro:
-      "When you're mid-color or mid-massage, LobbyStack picks up. It books the stylist the client asks for, moves appointments by your rules and answers from your service menu.",
+      "The phone rings while you're mid-color or mid-massage, and LobbyStack picks up. It books the stylist the client asks for into Google Calendar and answers from your service menu, so the call ends with an appointment on your books.",
     image: "/illustrations/booking-flow.webp",
     imageAlt: "A stylist's day in LobbyStack, with a balayage booked by phone into an open slot",
     proofPoints: [
       "Books into Google Calendar by service length and stylist hours",
       "Texts a confirmation and a 24-hour reminder to clients who agree",
-      "Cancels and reschedules once it has matched the booking",
+      "Moves and cancels appointments after it finds the client's booking",
     ],
     sections: [
       {
         title: "Book the stylist your client asks for",
-        body: "Add each stylist, colorist and therapist with the services they do and the hours they work. A client who asks for someone by name hears that person's open times. If that person is off, LobbyStack says when they're back and offers someone free sooner.",
+        body: "Add each stylist, colorist and therapist with the services they do and the hours they work. A client who asks for someone by name hears that person's open times. If that person is off, LobbyStack says when they're back and offers another day or another stylist.",
         points: [
           "Finds a gap long enough for the service, so a 150-minute balayage gets 150 minutes",
           "Skips days off and hours outside each person's schedule",
@@ -332,28 +336,26 @@ export const solutionPages: SeoLandingPage[] = [
       },
       {
         title: "Move and cancel appointments on the call",
-        body: "A client calls to push Saturday's cut to Thursday. LobbyStack finds the booking from their phone number, name and appointment time, reads the change back and updates your calendar. You can also ask for a texted code or a keypad PIN first.",
+        body: "A client calls to push Saturday's cut to Thursday. LobbyStack finds the booking from their phone number, name and appointment time, reads the change back and updates your calendar once the client confirms. You can also require a texted code or a keypad PIN first.",
         points: [
-          "Explains your cancellation policy before it makes a change",
+          "Tells clients your cancellation policy when you add it to your notes",
           "Passes the request to your team when it can't match the booking",
           "Texts a cancellation confirmation to clients who agreed to texts",
         ],
       },
       {
         title: "A salon answering service that knows your menu",
-        body: "Give each service a length and a price: fixed, a starting price, a range or priced in person. LobbyStack quotes what you entered and won't guess a price you left blank. Add your website and policy PDFs too, and it can answer about patch tests, parking or gift cards.",
+        body: "Give each service a length and a price: fixed, a starting price, a range or priced in person. LobbyStack quotes what you entered and won't guess a price you left blank. Add your website and policy PDFs too, and it answers questions about patch tests, parking or gift cards.",
         points: [
           "Gives the same answers on calls, in your website chat and in Instagram messages",
           "Takes a message for your team when your notes don't cover a question",
-          "Quotes prices in the currency you pick in your settings",
         ],
       },
       {
         title: "Book the clients who call after you close",
-        body: "Plenty of clients think about their next appointment at 9 p.m. LobbyStack answers then the way it answers at noon and books into the times you've opened. You'll find each call in your dashboard the next morning, with a summary, a transcript and what happened.",
+        body: "A client remembers at 9 p.m. that her roots need doing. LobbyStack answers then the way it answers at noon and books into the times you've opened. You'll find each call in your dashboard the next morning, with a summary, a transcript and what happened.",
         points: [
-          "Email or text alerts for the calls your team should return",
-          "Spam calls and calls under 10 seconds don't count toward your minutes",
+          "Sends you an email or text alert for the calls your team should return",
           "Switches to the caller's language, from more than 70",
         ],
       },
@@ -380,33 +382,33 @@ export const solutionPages: SeoLandingPage[] = [
     path: "/solutions/self-hosted-ai-receptionist/",
     title: "Self-Hosted AI Receptionist, Open Source | LobbyStack",
     description:
-      "Run LobbyStack, an open-source, self-hosted AI receptionist, on your own server with Docker Compose or Railway. Calls use your own Twilio and OpenAI accounts.",
+      "Run LobbyStack, an open-source self-hosted AI receptionist, on your server with Docker Compose or Railway. Call recordings and transcripts stay with you.",
     eyebrow: "Self-hosted",
-    h1: "A self-hosted AI receptionist that runs on your own server",
+    h1: "A self-hosted AI receptionist that keeps call records on your server",
     intro:
-      "LobbyStack answers your calls, books appointments and takes messages from a server you control. Calls go through your own Twilio and OpenAI accounts. Recordings, transcripts and contacts stay in your PostgreSQL database.",
+      "A hosted AI receptionist keeps your callers' recordings on someone else's servers. LobbyStack answers your calls, books appointments and takes messages from a server you run, and saves every recording, transcript and contact there.",
     image: "/illustrations/trust-controls.webp",
     imageAlt:
       "LobbyStack running as a self-hosted AI receptionist on your own server",
     proofPoints: [
-      "MIT License, with no license fee",
+      "Runs on one server with 2 vCPU and 4 GB of RAM",
       "Docker Compose or the Railway template",
       "Your own Twilio and OpenAI accounts",
     ],
     sections: [
       {
         title: "Docker Compose on one server",
-        body: "The official setup runs the dashboard, the worker, PostgreSQL, Redis and Caddy on one machine. A script fills in each password and secret, and the migrations run before the app starts.",
+        body: "One docker-compose.yml runs the dashboard, the worker, PostgreSQL, Redis and Caddy on a single machine. A script fills in every password and secret, so you add only your domain, OpenAI key and Twilio credentials.",
         points: [],
       },
       {
         title: "The Railway template",
-        body: "Railway creates the services, the databases and a storage bucket, and generates the secrets. You paste in your OpenAI key and Twilio credentials, then sign up on your new dashboard.",
+        body: "Railway creates the services, the databases and a storage bucket, and generates every secret. You paste in your OpenAI key and Twilio credentials. Browser test calls work as soon as the deploy finishes.",
         points: [],
       },
       {
         title: "Your call records stay on your server",
-        body: "Recordings, transcripts, contacts and settings sit in the PostgreSQL database and storage you run. You decide how long to keep them and how to back them up. Twilio and OpenAI still process the live call audio under your accounts, so read their terms for your use.",
+        body: "Recordings, transcripts, contacts and settings sit in the PostgreSQL database and storage you run, and you choose how to back them up. Twilio and OpenAI still process the live call audio under your accounts, so check their terms for your use.",
         points: [
           "Separate database roles and row-level security for each service",
           "Recordings on a local volume or any S3-compatible bucket",
@@ -415,11 +417,10 @@ export const solutionPages: SeoLandingPage[] = [
       },
       {
         title: "Change the code to fit your calls",
-        body: "You get the TypeScript monorepo that runs LobbyStack Cloud. Edit the instructions and tools in packages/agent-core, or connect the receptionist to systems your team already uses.",
+        body: "You get the same TypeScript monorepo that runs LobbyStack Cloud. Edit the receptionist's instructions in packages/agent-core, or add a tool that connects it to software your team already uses.",
         points: [
           "Point chat and embeddings at any OpenAI-compatible endpoint",
           "Voice calls run on OpenAI GPT-Live with your key",
-          "Pin a release and upgrade once you've tested it",
         ],
       },
     ],
@@ -450,9 +451,9 @@ export const solutionPages: SeoLandingPage[] = [
     description:
       "An AI plumbing answering service that reads callers your shutoff steps, books drain jobs, and transfers burst pipes to your on-call plumber. Free plan.",
     eyebrow: "Plumbers",
-    h1: "Plumbing answering service for the burst pipe at midnight",
+    h1: "Plumbing answering service that wakes you only for the burst pipe",
     intro:
-      "A caller with water coming through the ceiling needs the shutoff location and a plumber on the way. LobbyStack reads them your shutoff steps, takes the address, and rings your on-call plumber. Drain and water heater calls get booked into your calendar.",
+      "A caller with water coming through the ceiling won't wait until morning for a callback. LobbyStack reads them your shutoff steps and rings your on-call plumber, and it books drain and water heater jobs into Google Calendar.",
     image: "/illustrations/missed-calls-v3.webp",
     imageAlt:
       "A burst-pipe call transferred by LobbyStack to a plumbing company's on-call plumber",
@@ -464,11 +465,11 @@ export const solutionPages: SeoLandingPage[] = [
     sections: [
       {
         title: "Books drain jobs while you're under a sink",
-        body: "LobbyStack offers the open slots in your Google Calendar, books the one the caller picks, and texts a confirmation if they agree. Water heater replacements and repipes get an estimate visit instead of a guessed price.",
+        body: "LobbyStack offers the open slots in your Google Calendar, books the one the caller picks, and texts a confirmation if they agree. For water heater replacements and repipes, it books an estimate visit instead of guessing a price.",
         points: [],
       },
       {
-        title: "Answers from your services and prices",
+        title: "Tells callers your service area, hours, and starting prices",
         body: "Add your service area, hours, services, and starting prices once. LobbyStack answers callers from them and quotes only the prices you list.",
         points: [],
       },
@@ -503,22 +504,22 @@ export const solutionPages: SeoLandingPage[] = [
     path: "/solutions/ai-receptionist-for-hvac/",
     title: "HVAC Answering Service & AI Receptionist, 24/7 | LobbyStack",
     description:
-      "An HVAC answering service that transfers no-heat and no-AC emergencies to your on-call tech and books tune-ups during the call. From $30 a month, no setup fee.",
+      "An HVAC answering service that sends no-heat and no-AC emergencies to your on-call tech and books tune-ups during the call. Free plan, then $30 a month.",
     eyebrow: "HVAC",
-    h1: "HVAC answering service for the furnace that quits overnight",
+    h1: "HVAC answering service that puts no-heat calls through to your on-call tech",
     intro:
-      "LobbyStack answers the calls your office misses. It transfers no-heat and no-AC emergencies to your on-call tech under rules you write, and books tune-ups and replacement estimates into Google Calendar during the call. Starter costs $30 a month for 150 voice minutes.",
+      "In a cold snap, a family with no heat calls the next company when your line is busy. LobbyStack sends urgent no-heat and no-AC calls to your on-call tech under rules you write, and books tune-ups and estimates into Google Calendar during the call.",
     image: "/illustrations/human-handoff.webp",
     imageAlt:
       "A no-heat call transferred by LobbyStack to an HVAC company's on-call tech",
     proofPoints: [
       "Transfers no-heat, no-AC, and gas-smell calls to your on-call tech",
       "Books tune-ups and replacement estimates into Google Calendar",
-      "Switches to the caller's language, with more than 70 on GPT-Live",
+      "Switches to the caller's language, including Spanish",
     ],
     sections: [
       {
-        title: "Books tune-ups and replacement estimates",
+        title: "Asks the system questions, then books the visit",
         body: "LobbyStack asks for the system type, its age, and the home's size, then books the visit into Google Calendar while the caller is on the phone. If you'd rather approve each visit, request mode saves the caller's preferred time for your team to confirm.",
         points: [],
       },
@@ -564,9 +565,9 @@ export const solutionPages: SeoLandingPage[] = [
     description:
       "An AI electrician answering service that reads your safety script for sparks and burning smells, then books panel upgrade and EV charger estimates.",
     eyebrow: "Electricians",
-    h1: "Electrician answering service for hot outlets and panel upgrades",
+    h1: "Electrician answering service that books panel upgrades and rings you for hazards",
     intro:
-      "One caller smells burning at an outlet and needs your safety script now. The next wants an EV charger quote. LobbyStack reads the script and rings your on-call electrician for the first, and books an estimate visit for the second.",
+      "One caller smells burning at an outlet. The next wants an EV charger quote, and you're in an attic for both. LobbyStack reads the first caller your safety script and rings your on-call electrician, and it books the second an estimate visit.",
     image: "/illustrations/call-routing-team.webp",
     imageAlt:
       "A hazard call transferred by LobbyStack to an electrical contractor's on-call electrician",
@@ -577,7 +578,7 @@ export const solutionPages: SeoLandingPage[] = [
     ],
     sections: [
       {
-        title: "Books panel and EV charger estimates",
+        title: "Books estimates with the panel amperage on file",
         body: "LobbyStack asks for the panel amperage, the home's age, and the charger or generator the caller wants, then books the estimate visit into Google Calendar during the call.",
         points: [],
       },
@@ -613,11 +614,11 @@ export const solutionPages: SeoLandingPage[] = [
     path: "/solutions/ai-receptionist-for-garage-door-repair/",
     title: "AI Receptionist for Garage Door Companies, 24/7 | LobbyStack",
     description:
-      "An AI receptionist for garage door companies. LobbyStack books broken-spring repairs into your calendar and sends doors stuck open at night to your on-call tech.",
+      "An AI receptionist for garage door companies that books broken-spring repairs into your calendar and sends doors stuck open at night to your on-call tech.",
     eyebrow: "Garage door repair",
     h1: "AI receptionist for garage door companies that books the broken spring",
     intro:
-      "A homeowner hears a bang, and the car is stuck inside. LobbyStack tells them not to lift the door, takes the address and door size, and books your first open slot. A door that won't close at night rings your on-call tech.",
+      "A homeowner hears a bang with the car stuck inside, and they'll book whichever company picks up. LobbyStack tells them not to lift the door, takes the address and door size, and books your first open slot. A door that won't close at night rings your on-call tech.",
     image: "/illustrations/missed-calls.webp",
     imageAlt:
       "A broken-spring call booked by LobbyStack into a garage door company's first open slot",
@@ -679,7 +680,7 @@ export const solutionPages: SeoLandingPage[] = [
     ],
     sections: [
       {
-        title: "Books the visit with the model number on it",
+        title: "Books the repair while the caller is on the phone",
         body: "LobbyStack asks for the appliance, brand, model, and symptoms, then books a slot in Google Calendar. Your tech can read the answers in the call summary before the visit.",
         points: [],
       },
@@ -717,9 +718,9 @@ export const solutionPages: SeoLandingPage[] = [
     description:
       "An AI receptionist for restoration companies that sends active flooding to your on-call crew, saves claim details, and books mold inspections.",
     eyebrow: "Restoration",
-    h1: "AI receptionist for restoration companies that answers the 1 a.m. flood call",
+    h1: "AI receptionist for restoration companies that gets the 1 a.m. flood call to your crew",
     intro:
-      "Storm water is coming into a basement, and the family is upstairs. LobbyStack reads your safety script, asks where the water is coming from and whether they'll file a claim, and rings your on-call crew. Old stains and mold checks get a daytime slot.",
+      "Storm water is coming into a basement, and the family is upstairs. LobbyStack reads your safety script, asks where the water is coming from and whether they'll file a claim, and rings your on-call crew. It books old stains and mold checks into a daytime slot.",
     image: "/illustrations/calls-need-person.webp",
     imageAlt:
       "A basement flooding call transferred by LobbyStack to a restoration company's on-call crew",
@@ -730,8 +731,8 @@ export const solutionPages: SeoLandingPage[] = [
     ],
     sections: [
       {
-        title: "Books mold inspections and moisture checks",
-        body: "Calls about old stains and musty smells get a daytime slot. LobbyStack asks about recent water events and books the inspection into your Google Calendar.",
+        title: "Books mold checks for business hours",
+        body: "A caller with an old stain or a musty smell can wait for business hours. LobbyStack asks about recent water events and books the inspection into your Google Calendar.",
         points: [],
       },
       {
@@ -768,9 +769,9 @@ export const solutionPages: SeoLandingPage[] = [
     description:
       "An AI locksmith answering service. LobbyStack quotes your lockout fee, takes the car and location, and transfers lockouts to your on-call locksmith.",
     eyebrow: "Locksmiths",
-    h1: "Locksmith answering service for the 11 p.m. lockout",
+    h1: "Locksmith answering service that quotes your lockout fee and puts the caller through",
     intro:
-      "A driver is stuck in a parking lot with the keys inside. LobbyStack checks that nobody is locked in, takes the car and the location, quotes your after-hours fee, and rings your on-call locksmith. Rekeys and key fobs get booked for the daytime.",
+      "A driver is stuck in a parking lot at 11 p.m. with the keys inside. LobbyStack checks that nobody is locked in, takes the car and the location, quotes your after-hours fee, and rings your on-call locksmith. It books rekeys and key fobs for the daytime.",
     image: "/illustrations/missed-calls.webp",
     imageAlt:
       "A car lockout call transferred by LobbyStack to a locksmith's on-call tech",
@@ -781,7 +782,7 @@ export const solutionPages: SeoLandingPage[] = [
     ],
     sections: [
       {
-        title: "Books rekeys, fobs, and lock installs",
+        title: "Books the jobs that can wait until morning",
         body: "LobbyStack asks for the make, model, and year for car keys, or the number of doors for an install, then books a daytime visit into your Google Calendar.",
         points: [],
       },
@@ -821,9 +822,9 @@ export const solutionPages: SeoLandingPage[] = [
     description:
       "An after-hours contractor answering service that matches callers to their project, transfers job-site emergencies, and books consultations.",
     eyebrow: "Contractor after-hours",
-    h1: "Contractor answering service for nights, weekends, and job-site leaks",
+    h1: "Contractor answering service that covers your line after the crew goes home",
     intro:
-      "A client in the middle of a remodel calls at 9 p.m. about water in the kitchen. LobbyStack has them shut off the main, asks which project it is, and rings your on-call manager. New leads get a consultation on the calendar.",
+      "A client in the middle of a remodel calls at 9 p.m. about water in the kitchen. LobbyStack has them shut off the main, asks which project it is, and rings your on-call manager. When a new lead calls, it books a consultation.",
     image: "/illustrations/calls-need-person.webp",
     imageAlt:
       "A job-site leak call transferred by LobbyStack to a contractor's on-call project manager",
@@ -834,7 +835,7 @@ export const solutionPages: SeoLandingPage[] = [
     ],
     sections: [
       {
-        title: "Books consultations for new projects",
+        title: "Asks new leads about scope and budget, then books",
         body: "A new lead calling at 9 p.m. gets the questions you'd ask about scope, budget, and timeline. LobbyStack books the consultation into your Google Calendar before they call the next contractor.",
         points: [],
       },
@@ -878,9 +879,9 @@ export const solutionPages: SeoLandingPage[] = [
     path: "/solutions/property-management-answering-service/",
     title: "Property Management Answering Service with AI | LobbyStack",
     description:
-      "An AI property management answering service. LobbyStack sends after-hours leaks and lockouts to your on-call tech, logs routine repairs, and books showings.",
+      "An AI property management answering service that sends after-hours leaks and lockouts to your on-call tech, logs routine repairs, and books showings.",
     eyebrow: "Property management",
-    h1: "Property management answering service for 2 a.m. maintenance calls",
+    h1: "Property management answering service that sorts 2 a.m. emergencies from routine repairs",
     intro:
       "Tenants call at 2 a.m. about a leak, a lockout, or no heat. Prospects call at lunch about pets and parking. LobbyStack sends the emergencies on your list to your on-call maintenance tech, logs the rest for the morning, and books showings for your leasing agent.",
     image: "/illustrations/business-knowledge.webp",
@@ -935,9 +936,9 @@ export const solutionPages: SeoLandingPage[] = [
     description:
       "An AI roofing answering service that books storm inspections before the adjuster visit, answers insurance questions, and transfers active leaks.",
     eyebrow: "Roofing",
-    h1: "Roofing answering service for the morning after a hailstorm",
+    h1: "Roofing answering service that books storm inspections before the adjuster comes",
     intro:
-      "After a storm, homeowners want someone on the roof before the adjuster shows up. LobbyStack checks for a leak, asks for the roof's age and claim status, and books the inspection into your calendar. Active leaks ring your on-call crew.",
+      "The morning after a hailstorm, your phone rings faster than your crew can climb ladders. LobbyStack checks each caller for a leak, asks for the roof's age and claim status, and books the inspection into Google Calendar. Active leaks ring your on-call crew.",
     image: "/illustrations/call-capture.webp",
     imageAlt:
       "A hail damage call booked by LobbyStack into a roofer's next open inspection slot",
@@ -953,7 +954,7 @@ export const solutionPages: SeoLandingPage[] = [
         points: [],
       },
       {
-        title: "Answers insurance questions from your script",
+        title: "Gives each caller the insurance answers you wrote",
         body: "Write your answers about adjusters, insurers, and inspection fees once. LobbyStack gives them on each call and takes a message for anything outside your script.",
         points: [],
       },
@@ -984,16 +985,16 @@ export const solutionPages: SeoLandingPage[] = [
     path: "/solutions/open-source-ai-receptionist/",
     title: "Open-Source AI Receptionist, MIT Licensed | LobbyStack",
     description:
-      "LobbyStack is an open-source AI receptionist under the MIT License. Read how it handles calls, change its prompts and rules, and host it yourself or on LobbyStack Cloud.",
+      "LobbyStack is an open-source AI receptionist under the MIT License. Read how it handles a call, change it, and host it yourself or on LobbyStack Cloud.",
     eyebrow: "Open source",
     h1: "An open-source AI receptionist you can audit, change and host yourself",
     intro:
-      "LobbyStack answers your calls, books appointments and transfers callers to your team. Its full code is on GitHub under the MIT License, so you can check what it does on a call before you give it your phone number.",
+      "Before an AI answers your phone, you'll want to know what it tells callers and where their recordings go. LobbyStack answers calls, books appointments and transfers callers to your team, and its full code is on GitHub under the MIT License for you to check.",
     image: "/illustrations/trust-controls.webp",
     imageAlt:
       "The LobbyStack repository on GitHub under the MIT License",
     proofPoints: [
-      "MIT License, with the full code on GitHub",
+      "Full TypeScript source on GitHub",
       "Host it yourself or on LobbyStack Cloud",
       "Self-hosted calls use your Twilio and OpenAI accounts",
     ],
@@ -1002,26 +1003,25 @@ export const solutionPages: SeoLandingPage[] = [
         title: "Read how it handles a call",
         body: "The receptionist's instructions and tools sit in packages/agent-core. Open them on GitHub to see how it finds openings, books an appointment, takes a message and decides to transfer a caller.",
         points: [
-          "The instructions and tools in packages/agent-core",
-          "The code that runs on LobbyStack Cloud",
-          "Each change in the public Git history",
+          "Which caller details it saves",
+          "Where recordings and transcripts are stored",
+          "Every change, in the public Git history",
         ],
       },
       {
         title: "Change the prompts and rules",
-        body: "Fork the repository and edit the greeting, the intake questions or the transfer rules. Deploy your version once it passes your tests. The MIT License lets you keep your changes private or share them.",
+        body: "Fork the repository and edit the greeting, the intake questions or the transfer rules. The MIT License lets you keep your changes private or share them.",
         points: [
-          "Greeting, intake questions and transfer rules",
-          "Keep your fork private or share it",
-          "Deploy your version when you're ready",
+          "Add a tool that reaches your own software",
+          "Deploy your fork once it passes your tests",
         ],
       },
       {
         title: "Run it on your own server",
-        body: "The Docker Compose setup runs the dashboard, the worker, PostgreSQL and Redis on one machine. Calls go through your own Twilio and OpenAI accounts, and recordings, transcripts and contacts stay in your database.",
+        body: "The Docker Compose setup runs the dashboard, the worker, PostgreSQL and Redis on one machine. Calls go through your own Twilio and OpenAI accounts, and recordings, transcripts and contacts stay on your server.",
         points: [
           "Docker Compose on one server, or the Railway template",
-          "Any OpenAI-compatible endpoint for chat and embeddings",
+          "Starts at 2 vCPU and 4 GB of RAM",
           "You choose when to upgrade",
         ],
       },
@@ -1029,9 +1029,9 @@ export const solutionPages: SeoLandingPage[] = [
         title: "Or let LobbyStack host it",
         body: "LobbyStack Cloud runs the same open-source code for you, with voice minutes in each plan. Start on the free plan and test the receptionist in your browser before you forward a number.",
         points: [
-          "Free plan with 30 voice minutes",
+          "Free plan with 30 voice minutes and a 14-day trial number",
           "Hosting, updates and backups handled for you",
-          "The code you can read on GitHub",
+          "Starter at $30 a month with 150 minutes",
         ],
       },
     ],
@@ -1049,7 +1049,7 @@ export const solutionPages: SeoLandingPage[] = [
     ctaHeading: "Read the code, then pick where it runs",
     ctaBody:
       "Start with the repository on GitHub. Host LobbyStack on your own server, or try it free on LobbyStack Cloud.",
-    ctaPrimaryLabel: "View on GitHub",
+    ctaPrimaryLabel: "View the code on GitHub",
     ctaPrimaryHref: "https://github.com/lobbystack/lobbystack",
     ctaSecondaryLabel: "Read the self-hosting guide",
     ctaSecondaryHref: "https://docs.lobbystack.com/self-hosting/overview",

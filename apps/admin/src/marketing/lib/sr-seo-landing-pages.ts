@@ -64,6 +64,10 @@ const tradeRelatedLinks = [
   pricingLink,
 ]
 
+// The plans answer the trade pages share: prices, no setup fee, and what doesn't count.
+const tradePlansAnswer =
+  "Paket Free uključuje 30 minuta razgovora. Starter košta $30 mesečno za 150 minuta, a Pro $100 mesečno za 500 minuta, uz dodatne minute po $0.20 i $0.18. Nijedan paket nema naknadu za aktivaciju. Pozivi kraći od 10 sekundi i pozivi koje recepcioner prekine kao neželjene ne računaju se u Vaše minute."
+
 const tradePage = ({
   path,
   title,
@@ -73,14 +77,7 @@ const tradePage = ({
   intro,
   imageAlt,
   proofPoints,
-  emergencyTitle,
-  emergencyBody,
-  emergencyTransferPoint,
-  bookingTitle,
-  bookingBody,
-  bookingPoint,
-  intakeTitle,
-  intakeBody,
+  sections,
   faqs,
   faqHeading,
   ctaHeading,
@@ -94,14 +91,7 @@ const tradePage = ({
   intro: string
   imageAlt: string
   proofPoints: string[]
-  emergencyTitle: string
-  emergencyBody: string
-  emergencyTransferPoint: string
-  bookingTitle: string
-  bookingBody: string
-  bookingPoint: string
-  intakeTitle: string
-  intakeBody: string
+  sections: SeoLandingPage["sections"]
   faqs: FaqItem[]
   faqHeading: string
   ctaHeading: string
@@ -115,35 +105,7 @@ const tradePage = ({
     intro,
     imageAlt,
     proofPoints,
-    sections: [
-      {
-        title: emergencyTitle,
-        body: emergencyBody,
-        points: [
-          "Razlikuje hitne pozive od redovnih zahteva",
-          emergencyTransferPoint,
-          "Redovne zahteve šalje na jutarnji pregled",
-        ],
-      },
-      {
-        title: bookingTitle,
-        body: bookingBody,
-        points: [
-          "Proverava slobodne termine u kalendaru u realnom vremenu",
-          bookingPoint,
-          "Pozivaocu šalje potvrdu SMS-om i dodaje posetu u Vaš kalendar",
-        ],
-      },
-      {
-        title: intakeTitle,
-        body: intakeBody,
-        points: [
-          "Postavlja Vaša uvodna pitanja u svakom pozivu",
-          "Odgovore čuva u transkriptu poziva",
-          "Čuva transkript i snimak na kontrolnoj tabli",
-        ],
-      },
-    ],
+    sections,
     faqs,
     faqHeading,
     relatedLinks: tradeRelatedLinks,
@@ -177,11 +139,11 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
     path: "/solutions/ai-phone-answering/",
     title: "AI služba za odgovaranje na pozive za male firme | LobbyStack",
     description:
-      "LobbyStack, AI služba za odgovaranje na pozive, javlja se na Vaše poslovne pozive, zakazuje termine u Google Calendar i preusmerava hitne pozive. Isprobajte besplatno.",
+      "LobbyStack, AI služba za odgovaranje na pozive, javlja se umesto Vas, zakazuje termine u Google Calendar i preusmerava hitne pozive. Isprobajte besplatno.",
     eyebrow: "AI odgovaranje na pozive",
     h1: "AI služba za odgovaranje na pozive na koje Vi ne stižete da se javite",
     intro:
-      "LobbyStack se javlja na Vaš poslovni broj kada ste na poslu, sa klijentom ili kada ste zatvorili za taj dan. Odgovara na pitanja na osnovu podataka koje mu date, zakazuje termine u Google Calendar i hitne pozive šalje na Vaš telefon.",
+      "Kada ste na poslu ili sa klijentom, pozivalac kome se niko ne javi zove sledeću firmu sa svog spiska. LobbyStack se javlja na Vaš broj, zakazuje posetu u Google Calendar i zvoni na Vaš telefon kada je poziv hitan.",
     image: "/illustrations/call-capture.webp",
     imageAlt:
       "AI služba za odgovaranje na pozive LobbyStack se javlja na poziv dok je tim zauzet",
@@ -193,7 +155,7 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
     ],
     sections: [
       {
-        title: "Šta naša AI služba za odgovaranje na pozive radi tokom poziva",
+        title: "Naša AI služba za odgovaranje na pozive koristi Vaše podatke i zakazuje posetu",
         body: "Pozivaoci razgovaraju kao što bi razgovarali sa Vašom recepcijom. LobbyStack odgovara na pitanja na osnovu usluga, cena, radnog vremena i pravila koje dodate i zakazuje posetu pre nego što pozivalac spusti slušalicu.",
         points: [
           "Odgovara na osnovu teksta, PDF dokumenata ili stranica sa Vašeg sajta",
@@ -209,8 +171,8 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
         ],
       },
       {
-        title: "Kontrolna tabla čuva zapis svakog poziva",
-        body: "Svaki poziv dobija rezime od jedne rečenice, transkript i snimak, pored imena i broja pozivaoca. Pre nego što uzvratite poziv, možete da pročitate šta je pozivaocu trebalo.",
+        title: "Znajte šta je pozivalac želeo pre nego što mu uzvratite poziv",
+        body: "Kontrolna tabla prikazuje svaki poziv sa rezimeom od jedne rečenice, transkriptom i snimkom, pored imena i broja pozivaoca.",
         points: [
           "Poruke i povratni pozivi čekaju Vaš tim na jednom spisku",
           "Obaveštenje SMS-om ili e-poštom kada recepcioner primi poruku",
@@ -244,7 +206,7 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
       {
         question: "Da li je to dobra AI služba za odgovaranje na pozive za malu firmu?",
         answer:
-          "Napravljena je za male firme: radnje koje vode vlasnici, majstore, klinike i salone kojima telefon zvoni dok su svi zauzeti. Paketi počinju besplatnim nivoom sa 30 minuta razgovora, zatim Starter za $30 mesečno sa 150 minuta ili Pro za $100 mesečno sa 500 minuta. Nijedan paket nema naknadu za aktivaciju.",
+          "Da. LobbyStack je napravljen za radnje koje vode vlasnici, majstore, klinike i salone kojima telefon zvoni dok su svi zauzeti. Besplatan paket uključuje 30 minuta razgovora. Starter košta $30 mesečno za 150 minuta, a Pro $100 mesečno za 500, i nijedan paket nema naknadu za aktivaciju.",
       },
       {
         question: "Mogu li da zadržim svoj poslovni broj?",
@@ -264,7 +226,7 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
       {
         question: "Šta se dešava kada pozivaocu treba prava osoba?",
         answer:
-          "Vi birate kada preusmerava: za hitne pozive, kada pozivalac to zatraži, uvek, samo tokom radnog vremena ili nikada. Preusmerava na Vaš podrazumevani broj za preusmeravanje ili na zaposlenog kog pozivalac traži po imenu. Ako se niko ne javi, recepcioner to kaže pozivaocu i ponudi da primi poruku.",
+          "Preusmerava poziv. Vi birate kada: za hitne pozive, kada pozivalac to zatraži, uvek ili samo tokom radnog vremena. Poziv ide na Vaš podrazumevani broj za preusmeravanje ili na zaposlenog kog pozivalac traži po imenu. Ako se niko ne javi, recepcioner to kaže pozivaocu i ponudi da primi poruku.",
       },
       {
         question: "Kako da odredim šta govori?",
@@ -307,7 +269,7 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
       },
       pricingLink,
     ],
-    ctaHeading: "Neka LobbyStack preuzme Vaš sledeći poziv",
+    ctaHeading: "Neka LobbyStack preuzme sledeći poziv na koji ne stižete da se javite",
     ctaBody:
       "Unesite svoje podatke, prosledite broj i sami ga pozovite. Besplatan paket uključuje 30 minuta razgovora.",
     ctaPrimaryLabel: "Isprobajte besplatno",
@@ -323,7 +285,7 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
     eyebrow: "AI zakazivanje termina",
     h1: "AI zakazivanje termina koje zakaže pozivaoca pre nego što spusti slušalicu",
     intro:
-      "Kada neko pozove da zakaže, LobbyStack se javlja, nudi slobodne termine iz Vašeg Google Calendar-a, zakazuje onaj koji pozivalac izabere i šalje mu potvrdu SMS-om. Vaš tim posetu nalazi u kalendaru.",
+      "Kada pozivalac dobije govornu poštu, sledeća firma koju pozove može da ga zakaže pre nego što mu uzvratite poziv. LobbyStack se javlja, nudi slobodne termine iz Vašeg Google Calendar-a, zakazuje onaj koji pozivalac izabere i šalje mu potvrdu SMS-om.",
     image: "/illustrations/booking-flow.webp",
     imageAlt:
       "LobbyStack AI zakazivanje termina upisuje pozivaoca u slobodan termin",
@@ -336,7 +298,7 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
     sections: [
       {
         title: "Kako AI zakazivanje termina radi tokom poziva",
-        body: "Saznaje koja usluga treba pozivaocu, pronalazi termin dovoljno dug za nju i nudi nekoliko opcija. Pozivalac bira jednu, a termin se pojavljuje u Vašem kalendaru.",
+        body: "Saznaje koja usluga treba pozivaocu, pronalazi termine dovoljno duge za taj posao i daje mu da bira. Pozivalac izabere jedan, a termin se pojavljuje u Vašem Google Calendar-u.",
         points: [
           "Ako pozivalac pristane, odmah mu šalje potvrdu SMS-om, a podsetnik 24 sata ranije",
           "Na LobbyStack Cloud-u SMS poruke stižu na američke i kanadske brojeve",
@@ -344,7 +306,7 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
       },
       {
         title: "Pozivaoci sami pomeraju ili otkazuju termine",
-        body: "Uključite izmene termina i pozivalac može da pronađe svoj termin, izabere novo vreme ili otkaže. Recepcioner potvrđuje izmenu pre nego što bilo šta promeni u Vašem kalendaru. Za dodatnu sigurnost, prvo tražite jednokratni kod poslat SMS-om ili PIN sa tastature telefona.",
+        body: "Uključite izmene termina i pozivalac može da pronađe svoj termin, izabere novo vreme ili otkaže. Recepcioner potvrđuje izmenu pre nego što bilo šta promeni u Vašem kalendaru. Da niko drugi ne bi mogao da promeni termin, prvo tražite jednokratni kod poslat SMS-om ili PIN sa tastature telefona.",
         points: [
           "Izmene su isključene dok ih ne uključite",
           "Kada ne može da potvrdi termin, zahtev predaje Vašem timu",
@@ -355,12 +317,12 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
         body: "Dodajte osobe koje primaju termine, sa uslugama koje rade, radnim vremenom i odsustvima. Pozivalac može da traži nekoga po imenu. Ako nema želju, recepcioner zakazuje kod prve osobe slobodne za tu uslugu.",
         points: [
           "Recepcioner nikome ne zakazuje termin dok je ta osoba na odsustvu",
-          "Pozivaoce koji traže nekoga može da prebaci na telefon te osobe",
+          "Može i da prebaci pozivaoca na osobu koju traži",
         ],
       },
       {
-        title: "Šta proverava pre nego što ponudi termin",
-        body: "Recepcioner nudi termin samo kada je slobodan prema svakoj od ovih stavki.",
+        title: "Četiri provere pre nego što ponudi termin",
+        body: "Recepcioner nudi termin samo kada je slobodan prema sve četiri.",
         points: [
           "Usluga i njeno trajanje",
           "Vaše radno vreme i radno vreme svakog zaposlenog",
@@ -370,7 +332,7 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
       },
       {
         title: "Za koje pozive služi LobbyStack AI zakazivanje termina",
-        body: "LobbyStack zakazuje pozive koji stižu do Vas. Ne zove spiskove potencijalnih klijenata i ne prati hladne kontakte. Jedini odlazni pozivi koje upućuje su preusmeravanja.",
+        body: "LobbyStack obavlja AI zakazivanje termina za pozive koji stižu do Vas. Ne zove spiskove potencijalnih klijenata i ne prati hladne kontakte. Jedini odlazni pozivi koje upućuje su preusmeravanja.",
         points: [
           "Novi klijenti, stalni klijenti i oni koji zovu van radnog vremena mogu da zakažu već u prvom pozivu",
           "Želite sami da odobrite svaku posetu? Podesite ga da željeno vreme pozivaoca sačuva kao zahtev za Vaš tim",
@@ -388,7 +350,7 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
         question:
           "Da li je AI zakazivanje termina isto što i AI ugovaranje sastanaka?",
         answer:
-          "Ljudi koriste oba naziva. Ugovaranje sastanaka često znači odlazne pozive kojima se zakazuju prodajni sastanci. LobbyStack zakazuje termine za pozive koji stižu do Vas: zakazuje, pomera i otkazuje ih dok je pozivalac na vezi.",
+          "Ne sasvim. Ugovaranje sastanaka često znači odlazne pozive kojima se zakazuju prodajni sastanci, a AI zakazivanje termina obrađuje pozive koji stižu do Vas. Ljudi koriste oba naziva. LobbyStack radi ovo drugo: zakazuje, pomera i otkazuje termine dok je pozivalac na vezi.",
       },
       {
         question: "U koji kalendar zakazuje?",
@@ -463,16 +425,16 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
     path: "/solutions/ai-receptionist-for-home-services/",
     title: "AI recepcioner za kućne usluge i majstore | LobbyStack",
     description:
-      "AI recepcioner za kućne usluge koji se javlja dok Vaša ekipa radi. LobbyStack zakazuje poslove u Google Calendar i hitne slučajeve preusmerava na Vašeg dežurnog majstora.",
+      "AI recepcioner za kućne usluge koji se javlja dok Vaša ekipa radi, zakazuje poslove u Google Calendar i hitne slučajeve preusmerava dežurnom majstoru.",
     eyebrow: "Kućne usluge",
     h1: "AI recepcioner za kućne usluge koji zakazuje poslove dok Vi radite",
     intro:
-      "Ne možete da se javite ispod sudopere ili sa krova. LobbyStack se javlja, beleži adresu i problem, zakazuje posetu u Google Calendar i prave hitne slučajeve preusmerava na Vaš dežurni telefon.",
+      "Ne možete da se javite ispod sudopere ili sa krova. LobbyStack se javlja, beleži adresu i problem, zakazuje posetu u Google Calendar i hitne slučajeve koje ste definisali preusmerava na Vaš dežurni telefon.",
     image: "/illustrations/industry-bookings.webp",
     imageAlt:
       "LobbyStack AI recepcioner za kućne usluge zakazuje posao iz telefonskog poziva",
     proofPoints: [
-      "Javlja se dok je Vaša ekipa na poslu",
+      "Javlja se na broj koji Vaši klijenti već zovu",
       "Hitne slučajeve preusmerava na Vaš dežurni telefon",
       "Zakazuje procene i servisne posete",
       "Prekida neželjene pozive, koji ne troše minute",
@@ -480,7 +442,7 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
     sections: [
       {
         title:
-          "Šta služba za odgovaranje na pozive za kućne usluge treba da uradi sa svakim pozivom",
+          "Naša služba za odgovaranje na pozive za kućne usluge odvaja hitne slučajeve od redovnih poslova",
         body: "Vi odlučujete koji pozivi su hitni. Sve ostalo LobbyStack zakazuje ili zapisuje za Vas.",
         points: [
           "Hitni slučajevi, kao što su pukla cev ili kvar grejanja zimi, idu Vašem dežurnom majstoru, sa adresom i opisom problema u transkriptu",
@@ -509,7 +471,7 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
         points: [
           "Područje rada, da bi mogao da odgovori na „Da li dolazite u Brookline?“",
           "Usluge i cene, da bi zakazao procenu kada posao prvo treba pogledati",
-          "Pravila za hitne slučajeve, sa problemima zbog kojih je opravdan poziv noću",
+          "Pravila za hitne slučajeve, sa problemima zbog kojih vredi zvati noću, kao što su kvar grejanja ili izlivanje kanalizacije",
           "Ograničenja kao što je „Nikad ne obećavaj posetu istog dana“, napisana kao pravila",
         ],
       },
@@ -524,7 +486,7 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
         question:
           "Po čemu se razlikuje od službe za odgovaranje na pozive za kućne usluge?",
         answer:
-          "Kod službe sa živim operaterima osoba čita Vaš scenario i prima poruku. LobbyStack sam zakazuje posetu, preusmerava hitne slučajeve tokom poziva i čuva rezime, transkript i snimak svakog poziva. Plaćate minute koje potrošite, a poziv noću košta isto kao poziv u podne.",
+          "LobbyStack zakazuje posetu tokom poziva, dok kod službe sa živim operaterima osoba čita Vaš scenario i prima poruku. Hitne slučajeve preusmerava dok je pozivalac još na vezi i čuva rezime, transkript i snimak svakog poziva. Plaćate minute koje potrošite, a poziv noću košta isto kao poziv u podne.",
       },
       {
         question: "Može li da obradi hitne pozive noću?",
@@ -582,7 +544,7 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
       },
       pricingLink,
     ],
-    ctaHeading: "Javite se na sledeći poziv za posao dok ste na trenutnom",
+    ctaHeading: "Zakažite sledeći posao bez napuštanja ovog",
     ctaBody:
       "Dodajte usluge, pravila za hitne slučajeve i područje rada, prosledite broj i pozovite ga da testirate. Besplatan paket uključuje 30 minuta razgovora.",
     ctaPrimaryLabel: "Isprobajte besplatno",
@@ -598,7 +560,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
     eyebrow: "O nama",
     h1: "LobbyStack je AI recepcioner otvorenog koda za male firme",
     intro:
-      "Javlja se na Vaš telefon, zakazuje termine i prosleđuje poziv Vašem timu kada pozivaocu treba čovek. Kod je javan pod MIT licencom, pa možete da koristite LobbyStack Cloud ili da ga pokrenete na svom serveru.",
+      "Napravili smo LobbyStack za vlasnike koji propuštaju pozive dok rade sa klijentom. Javlja se na Vaš telefon, zakazuje termine u Google Calendar i prosleđuje poziv Vašem timu kada pozivaocu treba čovek. Kod je javan pod MIT licencom, pa možete da koristite LobbyStack Cloud ili da ga pokrenete na svom serveru.",
     imageAlt:
       "LobbyStack kod na GitHub-u, pokrenut na LobbyStack Cloud-u ili na Vašem serveru",
     proofPoints: [
@@ -608,17 +570,17 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
     ],
     sections: [
       {
-        title: "Zašto LobbyStack postoji",
-        body: "Mala firma gubi pozivaoce kada telefon zazvoni usred šišanja, čišćenja zuba ili posla na drugom kraju grada. Govorna pošta ne zakazuje nikoga. Napravili smo LobbyStack da se javi na te pozive, zakaže šta može i ostatak Vam pošalje sa zapisanim detaljima.",
+        title: "Napravili smo ga za pozive na koje ne možete da se javite",
+        body: "Telefon zazvoni usred šišanja, čišćenja zuba ili posla na drugom kraju grada. Govorna pošta ne zakazuje nikoga, pa pozivalac zove sledeću firmu. Napravili smo LobbyStack da se javi na te pozive, zakaže šta može i ostatak Vam pošalje sa zapisanim detaljima.",
         points: [
-          "Javlja se dok je Vaš tim zauzet, van radnog vremena ili na terenu",
-          "Zakazuje u Google Calendar i potvrđuje termin SMS-om",
-          "Prosleđuje hitne pozive, a za ostale prima poruku",
+          "Javlja se dok radite sa klijentom, posle zatvaranja ili dok ste na terenu",
+          "Zakazuje u Google Calendar i šalje SMS potvrdu klijentima koji pristanu",
+          "Prosleđuje hitne pozive po Vašim pravilima, a za ostale prima poruku",
         ],
       },
       {
-        title: "Zašto je kod otvoren",
-        body: "Vaš recepcioner razgovara sa Vašim klijentima, čita Vaš kalendar i odlučuje kada da Vas probudi. Treba da možete da vidite kako donosi te odluke. Ceo proizvod je na GitHub-u pod MIT licencom, i svako može da ga čita, pokreće ili menja.",
+        title: "Možete da pročitate kako odlučuje šta da uradi u pozivu",
+        body: "Vaš recepcioner razgovara sa Vašim klijentima, čita Vaš kalendar i odlučuje kada da Vas probudi. Treba da možete da proverite kako donosi te odluke. Ceo LobbyStack je na GitHub-u pod MIT licencom, i svako može da ga čita, pokreće ili menja.",
         points: [
           "Sami pročitajte promptove, alate i obradu poziva",
           "Počnite na LobbyStack Cloud-u i kasnije pređite na svoj server",
@@ -626,21 +588,21 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         ],
       },
       {
-        title: "Za koga je LobbyStack",
-        body: "Pravimo LobbyStack za vlasnike i male timove koji žive od dolaznih poziva: salone i spa centre, stomatološke ordinacije, vodoinstalatere i druge majstore, upravnike nekretnina. Agencije mogu i da ga prodaju svojim klijentima pod sopstvenim brendom.",
+        title: "Napravljen za firme koje zakazuju telefonom",
+        body: "Pravimo LobbyStack za vlasnike i male timove kojima posao stiže telefonom: salone i spa centre, stomatološke ordinacije, vodoinstalatere i druge majstore, upravnike nekretnina. Agencije mogu i da ga preprodaju svojim klijentima pod sopstvenim brendom.",
         points: [
-          "Timovi koji propuštaju pozive tokom termina ili na terenu",
-          "Firme koje žele zakazivanje telefonom bez pravljenja glasovnog menija",
-          "Agencije koje žele da svojim klijentima ponude AI recepcionera",
+          "Vlasnici koji propuštaju pozive tokom termina ili na terenu",
+          "Firme koje žele da pozivalac završi razgovor sa zakazanim terminom, bez glasovnog menija",
+          "Agencije koje žele da ponude AI recepcionera pod sopstvenim brendom",
         ],
       },
       {
-        title: "Kako funkcionišu podrška i kontrola",
-        body: "Na LobbyStack Cloud-u mi vodimo hostovanje, nadzor i ažuriranja. Na svom serveru Vi pokrećete isti kod. U oba slučaja Vi odlučujete šta recepcioner sme da kaže, zakaže i prosledi, kroz pravila napisana običnim jezikom.",
+        title: "Vi odlučujete šta govori, zakazuje i prosleđuje",
+        body: "Pravila pišete običnim jezikom: šta recepcioner sme da kaže pozivaocima, šta sme da zakaže i kada Vam prosleđuje poziv. Na LobbyStack Cloud-u mi vodimo hostovanje, nadzor i ažuriranja. Na svom serveru Vi pokrećete isti kod.",
         points: [
           "Dodajte svoj sajt, dokumente, usluge i radno vreme kao njegovo znanje",
           "Pregledajte rezime, transkript i ishod svakog poziva na kontrolnoj tabli",
-          "Pročitajte dokumentaciju ili pišite na support@lobbystack.com",
+          "Pročitajte dokumentaciju ili pišite na support@lobbystack.com kada Vam treba pomoć",
         ],
       },
     ],
@@ -652,7 +614,9 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
     ],
     ctaHeading: "Isprobajte LobbyStack na svojim pozivima",
     ctaBody:
-      "Počnite sa besplatnim paketom i 30 minuta razgovora ili prvo pročitajte kod na GitHub-u.",
+      "Počnite sa besplatnim paketom i 30 minuta razgovora, bez kartice, ili prvo pročitajte kod na GitHub-u.",
+    ctaSecondaryLabel: "Pročitajte kod na GitHub-u",
+    ctaSecondaryHref: "https://github.com/lobbystack/lobbystack",
   }),
 
   "/solutions/after-hours-answering-service/": serbianPage(
@@ -660,11 +624,11 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
     {
       title: "AI služba za odgovaranje na pozive van radnog vremena | LobbyStack",
       description:
-        "Služba za odgovaranje na pozive van radnog vremena koja redovne pozive zakazuje u Google Calendar, a hitne slučajeve preusmerava na Vaš dežurni telefon. Besplatan paket, zatim $30 mesečno.",
+        "Služba za odgovaranje na pozive van radnog vremena: redovne pozive zakazuje u Google Calendar, a hitne preusmerava na dežurni telefon. Od $30 mesečno.",
       eyebrow: "Javljanje van radnog vremena",
-      h1: "AI služba za odgovaranje na pozive van radnog vremena, noću, vikendom i praznicima",
+      h1: "AI služba za odgovaranje na pozive van radnog vremena koja Vas budi samo zbog hitnih slučajeva",
       intro:
-        "Kada zatvorite, LobbyStack se javlja na Vaš poslovni broj. Redovne pozive zakazuje u Google Calendar, hitne slučajeve koje određuju Vaša pravila preusmerava na Vaš dežurni telefon i do jutra zapisuje svaki poziv.",
+        "U jedan posle ponoći, pozivalac bez grejanja zove onoga ko se prvi javi. LobbyStack se javlja na Vaš poslovni broj noću, vikendom i praznicima. Za hitne slučajeve koje određuju Vaša pravila zvoni na Vaš dežurni telefon, a redovne pozive zakazuje u Google Calendar.",
       imageAlt:
         "LobbyStack se javlja na pozive van radnog vremena i hitan slučaj preusmerava na dežurni telefon",
       proofPoints: [
@@ -690,8 +654,8 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
           ],
         },
         {
-          title: "Ujutru Vas čeka zapis svakog noćnog poziva",
-          body: "Svaki poziv dobija rezime od jedne rečenice, transkript i snimak na kontrolnoj tabli. Vidite ko je zvao i šta mu treba pre nego što uzvratite ijedan poziv.",
+          title: "Ujutru znate ko je zvao tokom noći",
+          body: "Kontrolna tabla čuva rezime od jedne rečenice, transkript i snimak svakog poziva. Vidite ko je zvao i šta mu treba pre nego što uzvratite ijedan poziv.",
           points: [
             "Ime i broj pozivaoca i razlog poziva",
             "Neželjeni pozivi i pozivi kraći od 10 sekundi ne troše minute",
@@ -726,7 +690,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Da li će buditi moje dežurno osoblje zbog sitnica?",
           answer:
-            "Na Vaš dežurni broj zvone samo pozivi koji odgovaraju Vašim pravilima za preusmeravanje. Vi birate kada preusmerava: za hitne pozive, kada pozivalac to zatraži, uvek, samo tokom radnog vremena ili nikada. Zahtevi za ponudu i redovne posete čekaju jutro.",
+            "Neće. Na Vaš dežurni broj zvone samo pozivi koji odgovaraju Vašim pravilima za preusmeravanje. Vi birate kada preusmerava: za hitne pozive, kada pozivalac to zatraži, uvek, samo tokom radnog vremena ili nikada. Zahtevi za ponudu i redovne posete čekaju jutro.",
         },
         {
           question: "Mogu li da zadržim svoj poslovni broj?",
@@ -789,11 +753,11 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
       title:
         "AI recepcioner za stomatološke ordinacije i služba za pozive | LobbyStack",
       description:
-        "LobbyStack je AI recepcioner za stomatološke ordinacije koji se javlja kada je recepcija zauzeta ili zatvorena, zakazuje pacijente u Google Calendar i preusmerava hitne slučajeve. Od $30 mesečno.",
+        "AI recepcioner za stomatološke ordinacije: javlja se kada je recepcija zauzeta ili zatvorena, zakazuje u Google Calendar i preusmerava hitne slučajeve.",
       eyebrow: "Stomatološke ordinacije",
       h1: "AI recepcioner za stomatološke ordinacije koji zakazuje pacijente dok je recepcija zauzeta",
       intro:
-        "LobbyStack se javlja na telefon Vaše ordinacije tokom prijema pacijenata, za vreme pauze za ručak i posle zatvaranja. Nove pacijente i uklanjanje kamenca zakazuje u Google Calendar, odgovara na pitanja o osiguranju i parkingu na osnovu onoga što unesete i hitne stomatološke slučajeve preusmerava na Vaš dežurni broj. Plaćeni paketi počinju od $30 mesečno, bez naknade za aktivaciju.",
+        "Pacijenti zovu tokom prijema, za vreme pauze za ručak i posle zatvaranja, a ti pozivi završavaju u govornoj pošti. LobbyStack se javlja na liniju Vaše ordinacije, nove pacijente i uklanjanje kamenca zakazuje u Google Calendar, a hitne stomatološke slučajeve preusmerava na Vaš dežurni broj. Plaćeni paketi počinju od $30 mesečno.",
       imageAlt:
         "LobbyStack zakazuje pregled za novog pacijenta i šalje potvrdu SMS-om",
       proofPoints: [
@@ -935,7 +899,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         },
         pricingLink,
       ],
-      ctaHeading: "Javite se pacijentima koji zovu za vreme pauze",
+      ctaHeading: "Zakažite pacijente koji zovu za vreme pauze",
       ctaBody:
         "Unesite prihvaćena osiguranja, radno vreme i pravila za hitne slučajeve, pa pozovite svoj broj da ga testirate. Besplatan paket uključuje 30 minuta.",
       ...ctaLabels,
@@ -947,22 +911,22 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
     {
       title: "AI recepcioner za salone i spa centre | LobbyStack",
       description:
-        "LobbyStack je AI recepcioner za salone i spa centre. Javlja se na pozive, zakazuje kod osobe koju klijent traži i odgovara iz Vašeg cenovnika usluga.",
+        "AI recepcioner za salone i spa centre koji se javlja dok farbate, zakazuje kod osobe koju klijent traži i navodi cene iz Vašeg cenovnika usluga.",
       eyebrow: "Saloni i spa centri",
-      h1: "AI recepcioner za salone koji zakazuje dok Vi radite",
+      h1: "AI recepcioner za salone koji zakazuje dok su Vam ruke zauzete",
       intro:
-        "Usred farbanja ili masaže ne možete da se javite. LobbyStack se javlja, zakazuje kod osobe koju klijent traži, pomera termine po Vašim pravilima i odgovara iz Vašeg cenovnika usluga.",
+        "Telefon zazvoni usred farbanja ili masaže, a LobbyStack se javi. Zakazuje u Google Calendar kod osobe koju klijent traži i odgovara iz Vašeg cenovnika usluga, pa se poziv završava terminom u kalendaru.",
       imageAlt:
         "Dan jedne frizerke u LobbyStack-u, sa balayage tretmanom zakazanim telefonom u slobodnom terminu",
       proofPoints: [
         "Zakazuje u Google Calendar prema trajanju usluge i radnom vremenu svakog frizera",
         "Šalje SMS potvrdu i podsetnik 24 sata ranije klijentima koji pristanu",
-        "Otkazuje i pomera termine kada pronađe rezervaciju",
+        "Pomera i otkazuje termine kada pronađe klijentovu rezervaciju",
       ],
       sections: [
         {
           title: "Zakažite kod osobe koju klijent traži",
-          body: "Dodajte svakog frizera, koloristu i masera sa uslugama koje radi i radnim vremenom. Klijent koji traži nekoga po imenu čuje slobodne termine te osobe. Ako je ta osoba odsutna, LobbyStack kaže kada se vraća i nudi nekoga ko je slobodan ranije.",
+          body: "Dodajte svakog frizera, koloristu i masera sa uslugama koje radi i radnim vremenom. Klijent koji traži nekoga po imenu čuje slobodne termine te osobe. Ako je ta osoba odsutna, LobbyStack kaže kada se vraća i nudi drugi dan ili drugu osobu.",
           points: [
             "Pronalazi termin dovoljno dug za uslugu, pa balayage od 150 minuta dobija 150 minuta",
             "Preskače slobodne dane i sate van rasporeda svake osobe",
@@ -971,28 +935,26 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         },
         {
           title: "Pomerajte i otkazujte termine tokom poziva",
-          body: "Klijentkinja zove da pomeri šišanje sa subote na četvrtak. LobbyStack pronalazi termin po njenom broju, imenu i vremenu termina, ponavlja joj izmenu i ažurira Vaš kalendar. Pre izmene možete da tražite i SMS kod ili PIN na tastaturi.",
+          body: "Klijentkinja zove da pomeri šišanje sa subote na četvrtak. LobbyStack pronalazi termin po njenom broju, imenu i vremenu termina, ponavlja joj izmenu i ažurira Vaš kalendar kada ona potvrdi. Pre izmene možete da zahtevate i SMS kod ili PIN na tastaturi.",
           points: [
-            "Objašnjava Vaša pravila otkazivanja pre nego što napravi izmenu",
+            "Navodi Vaša pravila otkazivanja kada ih dodate u beleške",
             "Prosleđuje zahtev Vašem timu kada ne pronađe termin",
             "Šalje SMS potvrdu otkazivanja klijentima koji su pristali na poruke",
           ],
         },
         {
           title: "Telefonska služba za salone koja zna Vaš cenovnik",
-          body: "Svakoj usluzi dodelite trajanje i cenu: fiksnu, početnu, raspon ili cenu koja se određuje na licu mesta. LobbyStack navodi cenu koju ste uneli i ne izmišlja cenu koju ste ostavili praznu. Dodajte i svoj sajt i pravila u PDF-u, pa može da odgovori o testu na alergiju, parkingu ili poklon-karticama.",
+          body: "Svakoj usluzi dodelite trajanje i cenu: fiksnu, početnu, raspon ili cenu koja se određuje na licu mesta. LobbyStack navodi cenu koju ste uneli i ne izmišlja cenu koju ste ostavili praznu. Dodajte i svoj sajt i pravila u PDF-u, pa odgovara na pitanja o testu na alergiju, parkingu ili poklon-karticama.",
           points: [
             "Daje iste odgovore telefonom, u četu na Vašem sajtu i u Instagram porukama",
             "Prima poruku za Vaš tim kada Vaše beleške ne pokrivaju pitanje",
-            "Navodi cene u valuti koju izaberete u podešavanjima",
           ],
         },
         {
           title: "Zakažite klijente koji zovu posle zatvaranja",
-          body: "Mnogi klijenti se sete sledećeg termina u 21 čas. LobbyStack se tada javlja isto kao u podne i zakazuje u terminima koje ste otvorili. Sledećeg jutra na kontrolnoj tabli nalazite svaki poziv sa rezimeom, transkriptom i ishodom.",
+          body: "U 21 čas klijentkinja primeti da joj je potreban izrastak. LobbyStack se tada javlja isto kao u podne i zakazuje u terminima koje ste otvorili. Sledećeg jutra na kontrolnoj tabli nalazite svaki poziv sa rezimeom, transkriptom i ishodom.",
           points: [
-            "Obaveštenja imejlom ili SMS-om za pozive na koje Vaš tim treba da odgovori",
-            "Neželjeni pozivi i pozivi kraći od 10 sekundi se ne računaju u Vaše minute",
+            "Šalje Vam obaveštenje imejlom ili SMS-om za pozive na koje Vaš tim treba da odgovori",
             "Prelazi na jezik pozivaoca, od više od 70 jezika",
           ],
         },
@@ -1011,7 +973,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Da li radi sa mojim softverom za zakazivanje u salonu?",
           answer:
-            "LobbyStack zakazuje u Google Calendar i ne povezuje se sa platformama za zakazivanje u salonima. Ako Vaš salon zakazuje u drugoj aplikaciji, podesite LobbyStack da prima zahteve: beleži uslugu, osobu i vreme koje klijent želi, a Vaš tim potvrđuje termin.",
+            "Ne direktno. LobbyStack zakazuje u Google Calendar i ne povezuje se sa platformama za zakazivanje u salonima. Ako Vaš salon zakazuje u drugoj aplikaciji, podesite LobbyStack da prima zahteve: beleži uslugu, osobu i vreme koje klijent želi, a Vaš tim potvrđuje termin. Webhookovi i LobbyStack API mogu da proslede svaki zahtev Vašim drugim alatima.",
         },
         {
           question: "Mogu li klijenti da otkažu ili pomere termin telefonom?",
@@ -1031,7 +993,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Da li radi za spa centre, berbernice i salone za nokte?",
           answer:
-            "Da. Usluge, ljude, radno vreme i pravila podešavate za svoju firmu, bilo da je to berbernica, spa centar, medicinski spa, salon za nokte ili masažni salon.",
+            "Da. Berbernica, spa centar, medicinski spa, salon za nokte i masažni salon podešavaju ga na isti način: dodate svoje usluge, ljude, radno vreme i pravila.",
         },
         {
           question: "Šta se dešava kada klijent želi da razgovara sa osobom?",
@@ -1046,7 +1008,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Koliko košta AI recepcioner za salon?",
           answer:
-            "Paket Free uključuje 30 minuta razgovora i besplatan broj telefona na 14 dana. Starter košta $30 mesečno za 150 minuta, a Pro $100 mesečno za 500 minuta. Neželjeni pozivi i pozivi kraći od 10 sekundi se ne računaju. Cene dodatnih minuta su na stranici sa cenama.",
+            "Možete da počnete besplatno. Paket Free uključuje 30 minuta razgovora i broj iz SAD ili Kanade na 14 dana, bez kartice. Starter košta $30 mesečno za 150 minuta, zatim $0.20 po minutu, a Pro $100 mesečno za 500 minuta, zatim $0.18 po minutu. Uz godišnje plaćanje cena je 20% niža. Pozivi kraći od 10 sekundi i pozivi završeni kao neželjeni se ne računaju.",
         },
       ],
       faqHeading: "Pitanja o AI recepcionerima za salone i spa centre",
@@ -1073,39 +1035,41 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
     {
       title: "Samostalno hostovan AI recepcioner otvorenog koda | LobbyStack",
       description:
-        "Pokrenite LobbyStack, samostalno hostovan AI recepcioner otvorenog koda, na svom serveru uz Docker Compose ili Railway. Pozivi idu preko Vaših Twilio i OpenAI naloga.",
+        "Pokrenite LobbyStack, samostalno hostovan AI recepcioner otvorenog koda, na svom serveru uz Docker Compose ili Railway. Snimci ostaju kod Vas.",
       eyebrow: "Samostalno hostovanje",
-      h1: "Samostalno hostovan AI recepcioner koji radi na Vašem serveru",
+      h1: "Samostalno hostovan AI recepcioner koji čuva zapise o pozivima na Vašem serveru",
       intro:
-        "LobbyStack odgovara na Vaše pozive, zakazuje termine i prima poruke sa servera koji Vi kontrolišete. Pozivi idu preko Vaših Twilio i OpenAI naloga. Snimci, transkripti i kontakti ostaju u Vašoj PostgreSQL bazi.",
+        "AI recepcioner koji hostuje dobavljač čuva snimke Vaših klijenata na tuđim serverima. LobbyStack odgovara na Vaše pozive, zakazuje termine i prima poruke sa servera kojim Vi upravljate i tamo čuva svaki snimak, transkript i kontakt.",
+      heroFootnote:
+        "Samostalno hostovanje je besplatno pod MIT licencom. Hosting, Twilio i OpenAI plaćate direktno.",
       imageAlt: "LobbyStack kao samostalno hostovan AI recepcioner na Vašem serveru",
       proofPoints: [
-        "MIT licenca, bez naknade za licencu",
+        "Jedan server sa 2 vCPU i 4 GB RAM-a",
         "Docker Compose ili Railway šablon",
         "Vaši Twilio i OpenAI nalozi",
       ],
       sections: [
         {
           title: "Docker Compose na jednom serveru",
-          body: "Zvanična instalacija pokreće kontrolnu tablu, worker, PostgreSQL, Redis i Caddy na jednoj mašini. Skripta popunjava svaku lozinku i tajni ključ, a migracije se izvršavaju pre nego što se aplikacija pokrene.",
+          body: "Jedan docker-compose.yml fajl pokreće kontrolnu tablu, worker, PostgreSQL, Redis i Caddy na jednoj mašini. Skripta popunjava svaku lozinku i tajni ključ, pa Vi dodajete samo domen, OpenAI ključ i Twilio podatke za prijavu.",
           points: [
             "Docker Engine 24 ili noviji, sa Compose v2",
-            "2 vCPU, 4 GB RAM-a i trajni disk",
+            "Node.js 22 ili noviji za generisanje tajnih ključeva",
             "Domen sa HTTPS-om za kontrolnu tablu",
           ],
         },
         {
           title: "Railway šablon",
-          body: "Railway pravi servise, baze podataka i bucket za skladište, a zatim generiše tajne ključeve. Vi unesete svoj OpenAI ključ i Twilio podatke za prijavu, pa otvorite nalog na novoj kontrolnoj tabli.",
+          body: "Railway pravi servise, baze podataka i bucket za skladište i generiše sve tajne ključeve. Vi unesete svoj OpenAI ključ i Twilio podatke za prijavu. Probni pozivi u pregledaču rade čim se postavljanje završi.",
           points: [
             "Lozinke i tajne ključeve generiše Railway",
-            "Probni pozivi u pregledaču čim se postavljanje završi",
+            "Vaš nalog na novoj kontrolnoj tabli",
             "E-pošta, telefonski pozivi i Google Calendar se podešavaju posle",
           ],
         },
         {
           title: "Zapisi o pozivima ostaju na Vašem serveru",
-          body: "Snimci, transkripti, kontakti i podešavanja čuvaju se u PostgreSQL bazi i skladištu kojima Vi upravljate. Vi odlučujete koliko dugo ih čuvate i kako pravite rezervne kopije. Twilio i OpenAI i dalje obrađuju zvuk poziva uživo preko Vaših naloga, pa pročitajte njihove uslove za svoj slučaj.",
+          body: "Snimci, transkripti, kontakti i podešavanja čuvaju se u PostgreSQL bazi i skladištu kojima Vi upravljate, a Vi birate kako pravite rezervne kopije. Twilio i OpenAI i dalje obrađuju zvuk poziva uživo preko Vaših naloga, pa proverite njihove uslove za svoj slučaj.",
           points: [
             "Posebne uloge u bazi i bezbednost na nivou redova za svaki servis",
             "Snimci na lokalnom volumenu ili u bilo kom S3 kompatibilnom bucket-u",
@@ -1114,11 +1078,10 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         },
         {
           title: "Prilagodite kod svojim pozivima",
-          body: "Dobijate TypeScript monorepo na kome radi LobbyStack Cloud. Menjajte uputstva i alate u packages/agent-core ili povežite recepcionera sa sistemima koje Vaš tim već koristi.",
+          body: "Dobijate isti TypeScript monorepo na kome radi LobbyStack Cloud. Menjajte uputstva recepcionera u packages/agent-core ili dodajte alat koji ga povezuje sa softverom koji Vaš tim već koristi.",
           points: [
             "Čet i embeddingi ka bilo kom endpointu kompatibilnom sa OpenAI-jem",
             "Glasovni pozivi na OpenAI GPT-Live sa Vašim ključem",
-            "Zaključajte verziju i nadogradite je kada je testirate",
           ],
         },
       ],
@@ -1126,7 +1089,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Šta je samostalno hostovan AI recepcioner?",
           answer:
-            "To je AI recepcioner koji radi na serveru koji Vi kontrolišete, a ne kod dobavljača. I dalje odgovara na Vaše pozive, zakazuje termine i prima poruke, ali kontrolna tabla, baza podataka i snimci ostaju na Vašoj mašini. LobbyStack je otvorenog koda pod MIT licencom, pa ga možete sami instalirati.",
+            "Samostalno hostovan AI recepcioner radi na serveru koji Vi kontrolišete, a ne kod dobavljača. I dalje odgovara na Vaše pozive, zakazuje termine i prima poruke, ali kontrolna tabla, baza podataka i snimci ostaju na Vašoj mašini. LobbyStack je otvorenog koda pod MIT licencom, pa ga možete sami instalirati.",
         },
         {
           question: "Da li je LobbyStack otvorenog koda?",
@@ -1141,7 +1104,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Mogu li da koristim svoj LLM ili API ključ?",
           answer:
-            "Uvek koristite sopstvene ključeve. Glasovni pozivi rade na OpenAI GPT-Live preko Vašeg OpenAI naloga. Čet na sajtu i embeddingi za znanje prihvataju bilo koji endpoint kompatibilan sa OpenAI-jem, pa ih možete usmeriti ka drugom provajderu ili modelu koji sami hostujete. Model mora da podržava pozive alata, a model za embeddinge mora da vraća 1536 dimenzija.",
+            "Da. Samostalna instalacija radi sa Vašim sopstvenim ključevima. Čet na sajtu i embeddingi za znanje prihvataju bilo koji endpoint kompatibilan sa OpenAI-jem, pa ih možete usmeriti ka drugom provajderu ili modelu koji sami hostujete, ako podržava pozive alata i ako model za embeddinge vraća 1536 dimenzija. Glasovni pozivi rade na OpenAI GPT-Live preko Vašeg OpenAI naloga.",
         },
         {
           question: "Koliko košta samostalno hostovanje?",
@@ -1197,90 +1160,90 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
     {
       title: "AI telefonska služba za vodoinstalatere 24/7 | LobbyStack",
       description:
-        "LobbyStack je AI telefonska služba za vodoinstalatere. Može da objasni pozivaocima kako da zatvore vodu, navodi Vaše cene i pukle cevi prosleđuje dežurnom majstoru.",
+        "LobbyStack je AI telefonska služba za vodoinstalatere. Pozivaocu čita Vaše korake za zatvaranje vode, a puklu cev preusmerava dežurnom majstoru.",
       eyebrow: "Vodoinstalateri",
-      h1: "Telefonska služba za vodoinstalatere koja rešava i ponoćnu puklu cev",
+      h1: "Telefonska služba za vodoinstalatere koja se javlja kada cev pukne u ponoć",
       intro:
-        "Pozivaocu kome voda curi kroz plafon trebaju dve stvari: neko da mu kaže gde je glavni ventil i vodoinstalater na putu. LobbyStack može da prenese korake za zatvaranje vode koje napišete i preusmerava poziv dežurnom vodoinstalateru. Odgušenja i radove na bojlerima zakazuje u Vaš kalendar.",
+        "Pozivaocu kome voda curi kroz plafon treba glavni ventil i vodoinstalater na putu. LobbyStack mu čita Vaše korake za zatvaranje vode, uzima adresu i preusmerava poziv dežurnom vodoinstalateru, a odgušenja i bojlere zakazuje u Vaš kalendar.",
       imageAlt:
-        "Dijagram propuštenog vodoinstalaterskog poziva koji preko LobbyStack-a postaje zakazan termin",
+        "Poziv zbog pukle cevi koji LobbyStack preusmerava dežurnom vodoinstalateru",
       proofPoints: [
-        "Može da prenese Vaša uputstva za zatvaranje vode pozivaocima sa aktivnim curenjem",
-        "Navodi cene koje postavite za odgušenje, izlazak i intervencije van radnog vremena",
-        "Pukle cevi i izlivanje kanalizacije prosleđuje dežurnom vodoinstalateru",
+        "Čita Vaše korake za zatvaranje vode pozivaocu kome curi voda",
+        "Pukle cevi i izlivanje kanalizacije preusmerava dežurnom vodoinstalateru",
+        "Navodi cene odgušenja i izlaska koje unesete",
       ],
       sections: [
         {
           title:
-            "Dajte uspaničenom pozivaocu nešto da uradi dok pomoć stiže",
-          body: "U LobbyStack unosite svoja uputstva: gde je glavni ventil, kada isključiti bojler i šta raditi ako se oseti miris gasa. Asistent može da prenese te korake pozivaocu. Beleži adresu i preusmerava poziv na Vaš dežurni broj. Obavite probni poziv da čujete kako to radi.",
+            "Pozivalac sa hitnim curenjem čuje Vaše korake za zatvaranje vode",
+          body: "U bazu znanja upišite gde je glavni ventil, kada treba isključiti bojler i šta raditi ako se oseti miris gasa. LobbyStack te korake čita pozivaocu, uzima adresu i preusmerava poziv na Vaš dežurni broj.",
           points: [
-            "Koristi bezbednosne korake koje odobrite",
-            "Adresu i opis problema čuva u transkriptu, pa preusmerava poziv",
+            "Pita da li voda još curi i da li je čista ili iz kanalizacije",
+            "Slavinu koja kaplje zakazuje u prvi slobodan termin",
+            "Obavite probni poziv da čujete kako koraci zvuče",
+          ],
+        },
+        {
+          title: "Zakazuje odgušenja dok ste ispod sudopere",
+          body: "LobbyStack nudi slobodne termine iz Vašeg Google Calendar-a, zakazuje onaj koji pozivalac izabere i šalje mu SMS potvrdu ako pristane. Za zamenu bojlera ili instalacija zakazuje izlazak na procenu umesto da nagađa cenu.",
+          points: [
+            "Zakazuje u Google Calendar dok je pozivalac na vezi",
+            "Ako želite sami da odobrite posao, beleži željeni termin kao zahtev",
           ],
         },
         {
           title:
-            "Odgovorite na pitanje o ceni pre nego što pozivalac spusti slušalicu",
-          body: "Mnogi pozivaoci žele da čuju cifru pre zakazivanja. Unesite svoje cene, na primer početnu cenu odgušenja ili fiksnu naknadu za izlazak van radnog vremena, i LobbyStack će ih navesti. Za zamenu instalacija, kanalizacione priključke i zamenu bojlera zakazuje izlazak na procenu umesto da nagađa.",
+            "Telefonska služba za vodoinstalatere koja odgovara na pitanje o ceni",
+          body: "Upišite početnu cenu odgušenja, cenu izlaska i doplatu za intervenciju van radnog vremena. LobbyStack navodi samo cene koje ste uneli, kao tačan iznos, početnu cenu ili raspon.",
           points: [
-            "Navodi tačne cene, početne cene ili raspone koje postavite",
-            "Zakazuje izlazak na procenu za veće poslove",
+            "Za uslugu bez upisane cene zakazuje izlazak na procenu",
+            "Iste cene navodi i u četu na Vašem sajtu",
           ],
-        },
-        {
-          title: "Razlikujte izlivanje kanalizacije od slavine koja kaplje",
-          body: "Vi određujete koji problemi su hitni: aktivno curenje, kanalizacija, potpuni nestanak vode. LobbyStack postavlja dodatna pitanja kao dispečer. Da li voda još curi? Da li je čista ili iz kanalizacije? Na kom spratu? Hitni pozivi zvone na dežurni telefon, a slavina dobija prvi slobodan termin u utorak.",
-          points: [
-            "Pita da li voda još curi i da li je čista ili iz kanalizacije",
-            "Hitne pozive šalje na dežurni telefon",
-            "Redovne popravke zakazuje u prvi slobodan termin",
-          ],
-        },
-        {
-          title: "Koliko košta pokrivenost van radnog vremena",
-          body: "Uz 3 minuta po pozivu, 30 minuta razgovora iz paketa Free pokriva oko 10 poziva, dovoljno da testirate LobbyStack na liniji van radnog vremena. Starter pokriva oko 50 poziva za $30 mesečno. Preko toga Starter naplaćuje $0.20 po dodatnom minutu, pa još jedan poziv od 3 minuta košta $0.60.",
-          points: [spamPoint, "Promenite paket kako se menja broj poziva"],
         },
       ],
       faqs: [
         {
+          question: "Šta radi telefonska služba za vodoinstalatere?",
+          answer:
+            "Javlja se na pozive koje ne stignete da primite i po Vašim pravilima odlučuje šta dalje. LobbyStack pukle cevi i izlivanje kanalizacije preusmerava dežurnom vodoinstalateru, odgušenja i bojlere zakazuje u Google Calendar, a za svaki poziv čuva rezime, transkript i snimak.",
+        },
+        {
           question: "Može li pozivaocu da objasni kako da zatvori vodu?",
           answer:
-            "Da. Dodajte uputstva za zatvaranje vode u bazu znanja, i LobbyStack može da ih prenese kada pozivalac prijavi aktivno curenje. Poziv preusmerava ili zakazuje izlazak prema Vašim pravilima. Obavite probni poziv da čujete kako to radi.",
+            "Da. Dodajte korake za zatvaranje vode u bazu znanja i LobbyStack će ih pročitati pozivaocu koji prijavi curenje. Zatim preusmerava poziv ili zakazuje izlazak, po Vašim pravilima. Obavite probni poziv da čujete kako zvuči.",
         },
         {
           question: "Šta se dešava ako pozivalac oseti miris gasa?",
           answer:
-            "Vi pišete pravilo. Uobičajeno je da se pozivaocu kaže da napusti objekat i pozove dežurnu službu distributera gasa. LobbyStack može da prenese Vaš scenario pozivaocu, a poziv preusmerava ili prima poruku prema Vašim pravilima.",
+            "Pozivalac čuje pravilo koje Vi napišete. Uobičajeno je da napusti objekat i pozove hitnu službu distributera gasa. LobbyStack čita taj scenario, a zatim preusmerava poziv ili prima poruku, po Vašim pravilima.",
         },
         {
           question: "Može li da navede cenu odgušenja ili izlaska?",
           answer:
-            "Da, ako mu date cifre. LobbyStack može da navede tačnu cenu, početnu cenu ili raspon. Vi birate za koje usluge navodi cenu, a za koje je potreban izlazak na procenu.",
+            "Da, ako mu date iznose. LobbyStack navodi tačnu cenu, početnu cenu ili raspon. Vi birate koje usluge dobijaju cenu, a za koje, kao što su zamena bojlera i instalacija, zakazuje izlazak na procenu.",
         },
         {
-          question: "Da li zakazuje zamenu bojlera?",
+          question: "Šta ako se dežurni vodoinstalater ne javi?",
           answer:
-            "Zakazuje procenu ili izlazak na teren. Vi odlučujete da li navodi početnu cenu za ugradnju ili pozivaoca upućuje Vašoj kancelariji.",
+            "Pozivalac dobija govornu poštu tog telefona, ako je ima. LobbyStack predaje poziv Vašem dežurnom broju i izlazi iz razgovora čim telefon zazvoni. Ako preusmeravanje ne uspe, kaže to pozivaocu i nudi da primi poruku, a Vaš tim može da dobije obaveštenje „Preusmeravanje poziva nije uspelo“.",
         },
         {
           question: "Da li radi sa mojim postojećim poslovnim brojem?",
           answer:
-            "Da. Preusmerite postojeći broj na LobbyStack ili mu dajte posebnu liniju za pozive van radnog vremena i višak poziva.",
+            "Da. Podesite kod operatera da se Vaš postojeći broj prosleđuje na LobbyStack, za sve pozive ili samo za propuštene i one van radnog vremena.",
         },
         {
           question:
-            "Po čemu se AI služba razlikuje od službe sa živim operaterima?",
+            "Po čemu se razlikuje od službe sa živim operaterima?",
           answer:
-            "Kod klasične službe na liniji je operater koji obično čita scenario i prima poruku. LobbyStack se javlja uz pomoć AI-ja, pa prima više poziva istovremeno, zakazuje poslove u Vaš kalendar tokom poziva i navodi cene koje postavite. Svaki poziv i dalje možete preusmeriti nekome iz tima.",
+            "LobbyStack zakazuje posao tokom poziva, a operater u klasičnoj službi obično čita Vaš scenario i prima poruku. LobbyStack navodi i cene koje unesete. Neobične pozive čovek bolje rešava, pa ih LobbyStack preusmerava Vašem timu ili prima poruku.",
         },
         {
-          question: "Koliko košta za vodoinstalatersku firmu?",
-          answer: paidPlansAnswer,
+          question: "Koliko košta telefonska služba za vodoinstalatere?",
+          answer: tradePlansAnswer,
         },
       ],
-      faqHeading: "Pitanja o AI recepcionerima za vodoinstalatere",
+      faqHeading: "Pitanja o telefonskoj službi za vodoinstalatere",
       relatedLinks: [
         {
           label: "Uporedite usluge odgovaranja na pozive za vodoinstalatere",
@@ -1296,9 +1259,9 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         },
         pricingLink,
       ],
-      ctaHeading: "Pokrijte večerašnje dežurstvo",
+      ctaHeading: "Neka LobbyStack preuzme večerašnje dežurstvo",
       ctaBody:
-        "Počnite na paketu Free, unesite uputstva za zatvaranje vode i preusmerite liniju van radnog vremena kada budete spremni.",
+        "Počnite na paketu Free, upišite korake za zatvaranje vode i prosledite liniju van radnog vremena kada probni pozivi prođu kako želite.",
       ...ctaLabels,
     }
   ),
@@ -1308,83 +1271,64 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
     {
       title: "AI recepcioner za grejanje i klimatizaciju | LobbyStack",
       description:
-        "AI recepcioner za grejanje i klimatizaciju od $30 mesečno, bez naknade za aktivaciju. Hitne pozive preusmerava dežurnom tehničaru i zakazuje servise.",
+        "AI recepcioner za grejanje i klimatizaciju. Kvarove grejanja i klime preusmerava dežurnom tehničaru, a servise zakazuje tokom poziva. Od $30 mesečno.",
       eyebrow: "Grejanje i klimatizacija",
-      h1: "AI recepcioner i telefonska služba za grejanje i klimatizaciju",
+      h1: "AI recepcioner za grejanje i klimatizaciju za kotao koji stane noću",
       intro:
-        "AI recepcioner za grejanje i klimatizaciju javlja se na pozive koje Vaša kancelarija propusti. Kada ne radi grejanje ili klima, LobbyStack hitne pozive preusmerava dežurnom tehničaru prema pravilima koja napišete, a redovne servise i izlaske na procenu zakazuje u Google Calendar tokom poziva. Starter košta $30 mesečno za 150 minuta razgovora. Nijedan paket nema naknadu za aktivaciju.",
+        "Kada kotao stane u ponoć, a niko se ne javi, porodica zove sledeću firmu sa spiska. LobbyStack takav poziv preusmerava Vašem dežurnom tehničaru po pravilima koja napišete, a redovne servise i procene za zamenu sistema zakazuje u Google Calendar dok je pozivalac na vezi.",
       imageAlt:
         "Hitan poziv zbog kvara grejanja preusmeren dežurnom tehničaru firme za grejanje i klimatizaciju",
       proofPoints: [
-        "Javlja se na pozive koje Vaš operater prosledi: kada je zauzeto, kada se niko ne javi, van radnog vremena ili na sve",
-        "Pozive zbog kvara grejanja, klime ili mirisa gasa preusmerava dežurnom tehničaru prema Vašim pravilima",
-        "Pozivaocima odgovara na njihovom jeziku, na više od 70 jezika uz GPT-Live",
+        "Kvarove grejanja i klime i miris gasa preusmerava dežurnom tehničaru",
+        "Zakazuje servise i procene za zamenu sistema u Google Calendar",
+        "Prelazi na jezik pozivaoca, a GPT-Live podržava više od 70 jezika",
       ],
       sections: [
         {
-          title: "Šta AI recepcioner radi tokom toplotnog talasa?",
-          body: "Telefoni utihnu u aprilu, a zatim zvone bez prestanka prve vrele nedelje u junu, kada se sve klime u gradu pokvare u isto vreme. Recite operateru da prosleđuje pozive kada je linija zauzeta ili se niko ne javi, ili da prosleđuje sve pozive. LobbyStack se javlja na sve što stigne na njegov broj. Paketi ne ograničavaju koliko poziva prima istovremeno, a ti pozivi troše isti fond minuta. Svakog pozivaoca pita za vrstu sistema, simptome i adresu, a zatim zakazuje prvi slobodan termin ili prima poruku za Vašu kancelariju.",
+          title: "Javlja se na višak poziva tokom toplotnog talasa",
+          body: "Telefoni utihnu u aprilu, a prve vrele nedelje u junu zvone ceo dan. Podesite kod operatera da se pozivi prosleđuju na LobbyStack kada je linija zauzeta ili se niko ne javi, ili prosledite sve. LobbyStack svakog pozivaoca pita za vrstu sistema, simptome i adresu, pa zakazuje prvi slobodan termin ili ostavlja poruku Vašoj kancelariji.",
           points: [
-            "Javlja se na pozive koje šalje Vaše pravilo prosleđivanja: kada je zauzeto, kada se niko ne javi ili na sve",
-            "Paketi ne ograničavaju koliko poziva prima istovremeno",
-            "Zakazuje prvi slobodan termin ili Vašoj kancelariji ostavlja poruku sa podacima pozivaoca",
+            "Vi birate kada operater prosleđuje: kad je zauzeto, kad se niko ne javi ili uvek",
+            "Poruka stiže sa imenom pozivaoca, brojem za povratni poziv i hitnošću",
           ],
         },
         {
-          title: "Kako razlikuje hitan kvar grejanja od pitanja o termostatu?",
-          body: "Pravila hitnosti pišete običnim jezikom, prema simptomima, unutrašnjoj temperaturi i tome ko živi u kući. Ako se u januaru pokvari kotao, a u kući je beba, poziv ide dežurnom tehničaru. Ako je termostat podešen na hlađenje, pozivalac dobija brz odgovor iz koraka za otklanjanje kvara koje odobrite, kao što je provera osigurača ili filtera. Za miris gasa ili alarm za ugljen-monoksid Vi pišete bezbednosna uputstva, na primer da ukućani izađu iz kuće i pozovu hitnu liniju distributera gasa ili hitne službe. Recepcioner može da ih prenese pozivaocu pre nego što preusmeri poziv. Obavite probni poziv da čujete kako to radi. Preusmeravanje ide na jedan broj. Ako niste uneli broj za preusmeravanje, recepcioner prima poruku. Ako preusmeravanje ne uspe, recepcioner o tome obavesti pozivaoca i ponudi da primi poruku, a Vaš tim može da dobije obaveštenje „Preusmeravanje poziva nije uspelo“. Čim telefon Vašeg tehničara počne da zvoni, recepcioner izlazi iz poziva. Ako se tehničar ne javi, pozivalac dobija govornu poštu tog telefona, ako je ima.",
+          title: "Hitan kvar grejanja zvoni dežurnom tehničaru",
+          body: "Pravila hitnosti pišete običnim rečima, prema simptomima, temperaturi u kući i tome ko u njoj živi. Ako u januaru stane kotao, a u kući je beba, poziv ide dežurnom tehničaru. Ako je termostat podešen na hlađenje, pozivalac čuje korake za proveru koje ste odobrili. Za miris gasa ili alarm za ugljen-monoksid LobbyStack prvo čita Vaša bezbednosna uputstva, pa preusmerava poziv.",
           points: [
-            "Procenjuje hitnost prema simptomima, unutrašnjoj temperaturi i ukućanima",
-            "Miris gasa i alarm za ugljen-monoksid tretira kao hitne slučajeve i odmah preusmerava poziv",
-            "Nudi da primi poruku ako preusmeravanje ne uspe",
+            "Pita koliko je stepeni u kući i ko u njoj živi",
+            "Ako se tehničar ne javi, pozivalac dobija govornu poštu tog telefona",
+            "Kada preusmeravanje ne uspe, nudi da primi poruku",
           ],
         },
         {
-          title:
-            "Može li da zakaže procenu za zamenu sistema pre nego što kupac ode drugome?",
-          body: "Da. Vlasnik kuće koji traži cenu novog sistema sačekaće dan na Vaš povratni poziv. Posle dve nedelje glavne sezone Vaši povratni pozivi kasne duže od toga, pa on potpiše sa nekim drugim. LobbyStack pita za veličinu kuće, starost sistema i vrstu energenta, a zatim zakazuje izlazak na procenu prema Vašem radnom vremenu dok je pozivalac na vezi. Kada povežete Google Calendar, izbegava Vaše zauzete termine i dodaje posetu kao događaj. Ako pozivalac pristane, LobbyStack šalje SMS potvrdu i podsetnik 24 sata pre posete, samo na američke i kanadske brojeve. Ako želite sami da odobrite svaku posetu, uključite režim zahteva: recepcioner beleži termin koji pozivalac želi, a Vaš tim ga potvrđuje.",
+          title: "Zakazuje procenu za novi sistem dok kupac još zove",
+          body: "Vlasnik kuće koji traži cenu novog sistema neće dugo čekati povratni poziv. LobbyStack pita za veličinu kuće, starost sistema i vrstu energenta, pa zakazuje izlazak na procenu u Google Calendar dok je pozivalac na vezi. Ako želite sami da odobrite svaku posetu, režim zahteva beleži termin koji pozivalac želi, a Vaš tim ga potvrđuje.",
           points: [
-            "Beleži veličinu kuće, starost sistema i vrstu energenta",
-            "Zakazuje izlaske na procenu u Google Calendar dok je pozivalac na vezi",
-            "Šalje SMS potvrdu i podsetnik 24 sata unapred kada pozivalac pristane",
+            "Izbegava termine koji su već zauzeti u Vašem kalendaru",
+            "Pozivaocu koji pristane šalje SMS potvrdu i podsetnik 24 sata pre posete, na brojeve iz SAD i Kanade",
           ],
         },
         {
-          title: "Koliko košta AI recepcioner za grejanje i klimatizaciju?",
-          body: "Cene iz oktobra 2026: Starter košta $30 mesečno za 150 minuta razgovora, a Pro $100 mesečno za 500. Ako Vaš prosečan poziv traje 3 minuta (naša pretpostavka), Starter pokriva oko 50 poziva, a Pro oko 165. Uzmimo sada užurban jul sa 300 poziva, što je takođe naša pretpostavka. To je 900 minuta. Pro košta $100 plus 400 dodatnih minuta po $0.18, ukupno $172. Starter košta $30 plus 750 dodatnih minuta po $0.20, ukupno $180. Na 500 minuta oba paketa koštaju isto, a iznad toga je Pro jeftiniji. LobbyStack meri potrošnju u sekundama, pa poziv od 90 sekundi troši 1.5 minuta. Uz godišnju naplatu Starter košta $288 godišnje ($24 mesečno), a Pro $960 ($80 mesečno).",
+          title: "Razgovara sa pozivaocem na njegovom jeziku",
+          body: "Svaki poziv počinje na Vašem podrazumevanom jeziku. Kada pozivalac zatraži drugi jezik ili progovori na njemu, LobbyStack prelazi na taj jezik i zadržava Vaša pravila hitnosti i zakazivanja. Radi na OpenAI GPT-Live modelu, koji podržava više od 70 jezika.",
           points: [
-            "Nijedan paket nema naknadu za aktivaciju",
-            "Pozivi kraći od 10 sekundi i pozivi koje recepcioner prekine kao neželjene ne računaju se u Vaše minute",
-            "Vlasnici i administratori mogu da postave mesečno ograničenje prekoračenja u Podešavanja > Paket. Podrazumevano ga nema, a kada ga dostignete, novi pozivi dobijaju signal zauzeća",
-          ],
-        },
-        {
-          title:
-            "Može li da razgovara sa pozivaocima na srpskom, španskom ili drugom jeziku?",
-          body: "Da. Svaki poziv počinje na Vašem podrazumevanom jeziku: engleskom, francuskom, španskom, srpskom, nemačkom, brazilskom portugalskom, italijanskom ili holandskom. Ako pozivalac zatraži drugi jezik ili govori nekim drugim jezikom, recepcioner odgovara na tom jeziku. Radi na OpenAI GPT-Live modelu, koji podržava više od 70 jezika, uključujući srpski i španski. LobbyStack šalje SMS potvrde i podsetnike na Vašem podrazumevanom jeziku. Ako preko API-ja kontaktu sačuvate srpski ili španski kao jezik, taj kontakt ih dobija na tom jeziku. Stranica sa cenama ne navodi doplatu za jezike.",
-          points: [
-            "Počinje na jednom od 8 jezika po izboru, a zatim prati jezik pozivaoca",
-            "Više od 70 jezika uz GPT-Live, uključujući srpski i španski",
-            "Vaša pravila hitnosti i podešavanja zakazivanja ista su na svakom jeziku",
-          ],
-        },
-        {
-          title:
-            "Da li radi sa ServiceTitan-om, Housecall Pro-om ili Jobber-om?",
-          body: "Ne direktno. LobbyStack nema integraciju sa ServiceTitan-om, Housecall Pro-om ni Jobber-om, a Google Calendar je jedini kalendar sa kojim se povezuje. Šalje potpisane webhook-ove za šest događaja: završen poziv, zakazan termin, pomeren termin, otkazan termin, primljena poruka i kreiran kontakt. Ima i REST API sa ključevima ograničenih ovlašćenja, a Zapier se povezuje preko webhook-ova i API-ja. MCP server omogućava da Claude ili ChatGPT čitaju Vaše pozive i zakazuju termine. Ako firmu već vodite u Jobber-u ili Housecall Pro-u, njihovi ugrađeni recepcioneri zakazuju poslove direktno u tom softveru. LobbyStack to ne može. Jobber Receptionist košta $29 mesečno za 30 razgovora ($0.79 za svaki sledeći), uz Jobber paket. Housecall Pro prodaje CSR AI kao plaćeni dodatak bez objavljene cene. Oba smo proverili 9. oktobra 2026.",
-          points: [
-            "Zakazuje u Google Calendar",
-            "Šalje podatke o pozivima i terminima preko webhook-ova i REST API-ja",
-            "Povezuje Zapier preko webhook-ova i API-ja",
+            "Podrazumevani jezik birate između 8, među kojima su srpski, engleski i španski",
+            "Cene paketa iste su na svakom jeziku",
           ],
         },
       ],
       faqs: [
         {
+          question: "Šta radi AI recepcioner za grejanje i klimatizaciju?",
+          answer:
+            "Javlja se na pozive koje Vaša kancelarija propusti i po Vašim pravilima odlučuje šta dalje. LobbyStack pozive zbog kvara grejanja, klime ili mirisa gasa preusmerava dežurnom tehničaru, servise i procene zakazuje u Google Calendar, a za svaki poziv čuva rezime, transkript i snimak.",
+        },
+        {
           question:
             "Može li da se javlja samo kada je kancelarija preopterećena?",
           answer:
-            "Da, preko prosleđivanja poziva kod Vašeg operatera. Prosleđujte pozive kada je linija zauzeta ili se niko ne javi da pokrijete višak poziva, posle zatvaranja za pozive van radnog vremena, ili prosleđujte sve pozive. LobbyStack se javlja na sve što stigne na njegov broj. U sezoni, na primer, možete prosleđivati višak poziva, a noću sve pozive.",
+            "Da, preko prosleđivanja poziva kod Vašeg operatera. Prosleđujte pozive kada je linija zauzeta ili se niko ne javi, posle zatvaranja ili uvek. LobbyStack se javlja na sve što stigne na njegov broj, pa u sezoni možete da prosleđujete višak poziva, a noću sve.",
         },
         {
           question:
@@ -1395,7 +1339,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Šta se dešava ako se dežurni tehničar ne javi?",
           answer:
-            "Preusmeravanje je direktno: recepcioner prebacuje poziv na Vaš dežurni broj bez najave tehničaru, a zatim izlazi iz poziva. Ako se tehničar ne javi, pozivalac dobija govornu poštu tog telefona, ako je ima. Ako preusmeravanje ne uspe, recepcioner obavesti pozivaoca i ponudi da primi poruku, koja stiže u Vaše prijemno sanduče uz obaveštenje e-poštom. Vaš tim može da dobije i obaveštenje „Preusmeravanje poziva nije uspelo“. Ako Vaš paket ne pokriva još jedan pokušaj preusmeravanja, recepcioner umesto toga prima poruku.",
+            "Pozivalac dobija govornu poštu tog telefona, ako je ima. Recepcioner predaje poziv Vašem dežurnom broju bez najave tehničaru, a zatim izlazi iz poziva. Ako preusmeravanje ne uspe, recepcioner obavesti pozivaoca i ponudi da primi poruku, koja stiže u Vaše prijemno sanduče uz obaveštenje e-poštom. Vaš tim može da dobije i obaveštenje „Preusmeravanje poziva nije uspelo“. Ako Vaš paket ne pokriva još jedan pokušaj preusmeravanja, recepcioner umesto toga prima poruku.",
         },
         {
           question: "Koje podatke o sistemu može da prikupi?",
@@ -1405,7 +1349,13 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Može li da navede cenu redovnog servisa ili dijagnostike?",
           answer:
-            "Da, ako mu date cifre. LobbyStack može da navede tačnu cenu, početnu cenu ili raspon. Za zamenu celog sistema umesto toga zakazuje izlazak na procenu.",
+            "Da, ako mu date iznose. LobbyStack navodi tačnu cenu, početnu cenu ili raspon. Za zamenu celog sistema zakazuje izlazak na procenu.",
+        },
+        {
+          question:
+            "Da li radi sa ServiceTitan-om, Housecall Pro-om ili Jobber-om?",
+          answer:
+            "Ne direktno. Google Calendar je jedini kalendar sa kojim se LobbyStack povezuje. Šalje potpisane webhook-ove kada se poziv završi, kada se termin zakaže, pomeri ili otkaže, kada primi poruku ili napravi kontakt, a ima i REST API sa ključevima ograničenih ovlašćenja. Zapier se povezuje preko oba. Ako firmu vodite u Jobber-u ili Housecall Pro-u, njihovi recepcioneri zakazuju poslove direktno u tom softveru, a LobbyStack to ne može.",
         },
         {
           question: "Da li radi sa mojim postojećim poslovnim brojem?",
@@ -1419,20 +1369,14 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
             "Ljudi bolje rešavaju neobične pozive. U MAP Communications-u, službi sa živim operaterima, agenti rade po spisku dežurnih koji im pošaljete i mogu da zakazuju termine. Njen paket Pay As You Go košta $49 mesečno plus $1.37 po minutu (provereno 9. oktobra 2026.). Dodatni minuti u LobbyStack-u koštaju $0.20 na paketu Starter i $0.18 na paketu Pro. LobbyStack ipak preusmerava samo na jedan broj. Izaberite službu uživo ako želite osobu na svakom pozivu ili spisak dežurnih koji se smenjuju.",
         },
         {
-          question:
-            "Da li se AI recepcioner isplati firmi za grejanje i klimatizaciju?",
-          answer:
-            "Vredi ga isprobati ako Vaši pozivaoci u sezoni ili noću završavaju na govornoj pošti. Unesite propuštene pozive nedeljno i prosečnu vrednost posla u kalkulator prihoda od propuštenih poziva da procenite ugroženi prihod. Zatim isprobajte recepcionera na paketu Free pre nego što prosledite liniju.",
-        },
-        {
           question: "Mogu li da ga isprobam pre nego što prosledim liniju?",
           answer:
             "Da. Paket Free Vam daje 30 minuta razgovora mesečno i broj iz SAD ili Kanade besplatno 14 dana, bez kartice. Tokom tih 14 dana broj odgovara na prave pozive, a preusmeravanja idu samo na mobilni broj koji ste potvrdili. Izaberite Starter ili Pro da biste zadržali broj.",
         },
         {
-          question: "Koliko košta za firmu za grejanje i klimatizaciju?",
+          question: "Koliko košta AI recepcioner za grejanje i klimatizaciju?",
           answer:
-            "Cene iz oktobra 2026: paket Free uključuje 30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana. Starter košta $30 mesečno za 150 minuta, a Pro $100 mesečno za 500 minuta, uz dodatne minute po $0.20 i $0.18. Nijedan paket nema naknadu za aktivaciju. Pozivi kraći od 10 sekundi i pozivi koje recepcioner prekine kao neželjene ne računaju se u potrošnju.",
+            "Cene iz oktobra 2026: paket Free uključuje 30 minuta razgovora. Starter košta $30 mesečno za 150 minuta, a Pro $100 mesečno za 500 minuta, uz dodatne minute po $0.20 i $0.18. Uz godišnju naplatu Starter košta $288 godišnje, a Pro $960. Nijedan paket nema naknadu za aktivaciju, a pozivi kraći od 10 sekundi i pozivi koje recepcioner prekine kao neželjene ne računaju se u Vaše minute.",
         },
       ],
       faqHeading: "Pitanja o AI recepcionerima za grejanje i klimatizaciju",
@@ -1456,9 +1400,9 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
           href: "/solutions/ai-receptionist-for-home-services/",
         },
       ],
-      ctaHeading: "Spremite se za prve hladne dane",
+      ctaHeading: "Napišite pravilo za kvar grejanja pre prvih hladnih dana",
       ctaBody:
-        "Počnite na paketu Free, napišite pravila za kvarove grejanja i prosledite liniju za višak poziva kada budete spremni.",
+        "Počnite na paketu Free, isprobajte poziv zbog kvara grejanja i jedan za redovni servis, pa prosledite liniju za višak poziva.",
       ...ctaLabels,
     }
   ),
@@ -1468,66 +1412,72 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
     {
       title: "AI telefonska služba za električare | LobbyStack",
       description:
-        "LobbyStack je AI telefonska služba za električare. Može da prenese Vaša bezbednosna uputstva za varnice i miris paljevine, a zakazuje i procene za razvodne table, punjače i agregate.",
+        "LobbyStack je AI telefonska služba za električare. Čita Vaša bezbednosna uputstva za varnice i dim i zakazuje procene za razvodne table i punjače.",
       eyebrow: "Električari",
-      h1: "Telefonska služba za električare koja prepoznaje opasnost i zakazuje procene",
+      h1: "Telefonska služba za električare koja opasne pozive šalje dežurnom, a procene zakazuje",
       intro:
-        "Vaši pozivi su dve vrste. Jedan pozivalac ima utičnicu koja varniči i odmah mu trebaju bezbednosna uputstva. Sledeći želi novu razvodnu tablu, punjač za električno vozilo ili rezervni agregat i treba mu izlazak na procenu. LobbyStack obrađuje oba dok ste Vi na poslu.",
-      imageAlt: "Dolazni poziv električaru pored tri člana tima",
+        "Jedan pozivalac oseća miris paljevine iz utičnice, a sledeći traži ponudu za punjač električnog vozila. LobbyStack prvom čita Vaš bezbednosni scenario i preusmerava ga dežurnom električaru, a drugom zakazuje izlazak na procenu.",
+      imageAlt:
+        "Poziv zbog opasnosti koji LobbyStack preusmerava dežurnom električaru",
       proofPoints: [
-        "Može da prenese Vaš bezbednosni scenario za varnice, dim i miris paljevine",
-        "Zakazuje procene za razvodne table, punjače za električna vozila i agregate",
-        "Opasne situacije preusmerava dežurnom električaru",
+        "Čita Vaš bezbednosni scenario za varnice, dim i miris paljevine",
+        "Opasne pozive preusmerava dežurnom električaru",
+        "Zakazuje procene za razvodne table, punjače i agregate",
       ],
       sections: [
         {
-          title: "Napišite bezbednosna uputstva koja pozivaoci čuju",
-          body: "Kada neko prijavi dim ili miris paljevine, LobbyStack može da prenese uputstva koja ste napisali: isključite osigurač ako je bezbedno prići, napustite kuću, pozovite hitne službe ako ima vatre. Pita za adresu i ono što je pozivalac video, pa poziv preusmerava dežurnom električaru. Obavite probni poziv da čujete kako to radi.",
+          title: "Bezbednosna uputstva za hitne pozive, Vašim rečima",
+          body: "Kada neko prijavi dim ili miris paljevine, LobbyStack čita uputstva koja ste napisali: isključite osigurač ako mu se bezbedno prilazi, izađite iz kuće i pozovite hitne službe ako ima vatre. Zatim pita za adresu i šta je pozivalac video, pa preusmerava poziv dežurnom električaru.",
           points: [
-            "Koristi Vaše reči za opasne situacije",
-            "Opasne situacije preusmerava dežurnom električaru",
-            "Beleži svaki takav poziv na kontrolnoj tabli radi praćenja",
+            "Obavite probni poziv da čujete kako scenario zvuči",
+            "Svaki takav poziv ostaje na kontrolnoj tabli sa transkriptom i snimkom",
           ],
         },
         {
-          title: "Proverite da li je kvar na mreži pre izlaska na teren",
-          body: "Pozivalac bez struje možda ima izbačen glavni osigurač, a možda je jedan od 400 domova na pokidanom vodu. LobbyStack može da pita da li komšije imaju struju i da li je elektrodistribucija objavila nestanak. Problemi na mreži se upućuju elektrodistribuciji. Problemi u kući dobijaju termin.",
+          title: "Pre izlaska proverava da li je nestanak struje na mreži",
+          body: "Pozivalac bez struje možda ima izbačen glavni osigurač, a možda je ceo kraj bez struje. LobbyStack postavlja Vaša pitanja: da li komšije imaju struju i da li je elektrodistribucija objavila nestanak. Kvar na mreži upućuje elektrodistribuciji, a kvar u kućnoj instalaciji dobija termin.",
           points: [
-            "Pita da li komšije imaju struju",
-            "Zakazuje izlazak za kvarove u kućnoj instalaciji",
+            "Vi odlučujete koji odgovori vode do termina",
+            "Odgovori pozivaoca ostaju uz poziv",
           ],
         },
         {
           title:
-            "Pozive za punjače i razvodne table pretvorite u zakazane procene",
-          body: "Nove razvodne table, punjači za električna vozila i rezervni agregati su Vaši veći poslovi, a pozivaoci upoređuju ponude. LobbyStack beleži jačinu priključka, starost kuće, punjač ili agregat koji žele i da li su vlasnici kuće. Zakazuje izlazak na procenu pre nego što pozivalac pozove sledećeg električara.",
+            "Telefonska služba za električare koja zakazuje procene za table i punjače",
+          body: "Nove razvodne table, punjači za električna vozila i rezervni agregati su veći poslovi, a pozivaoci skupljaju više ponuda. LobbyStack beleži jačinu priključka, starost kuće, opremu koju pozivalac želi i da li je vlasnik kuće, pa zakazuje izlazak na procenu u Google Calendar.",
           points: [
-            "Beleži jačinu priključka, starost kuće i podatke o opremi",
-            "Zakazuje izlazak na procenu tokom poziva",
+            "Odgovori ostaju uz poziv, pa ih vidite pre izlaska",
+            "Pozivaocu koji pristane šalje SMS potvrdu",
           ],
-        },
-        {
-          title: "Koliko košta mnogo poziva za procene",
-          body: "Pozivi za procene traju duže zbog dodatnih pitanja. Uz 5 minuta po pozivu, Pro sa 500 minuta razgovora pokriva oko 100 poziva za $100 mesečno, a Starter sa 150 minuta oko 30 poziva za $30. Iskoristite 30 minuta iz paketa Free da testirate bezbednosni scenario pre nego što preusmerite prave pozive.",
-          points: ["Pro naplaćuje $0.18 po dodatnom minutu", spamPoint],
         },
       ],
       faqs: [
         {
+          question: "Šta telefonska služba za električare treba da obradi?",
+          answer:
+            "Dve vrste poziva: opasne situacije kojima trebaju bezbednosna uputstva i brzo preusmeravanje, i zahteve za procenu kojima trebaju prava pitanja. LobbyStack obe vrste obrađuje po pravilima koja napišete i zakazuje procene u Google Calendar tokom poziva.",
+        },
+        {
           question: "Šta kaže nekome ko prijavi varnice ili dim?",
           answer:
-            "Može da prenese bezbednosni scenario koji napišete, na primer da isključi osigurač ako je bezbedno prići, napusti kuću i pozove hitne službe ako ima vatre. Poziv preusmerava dežurnom električaru.",
+            "Čita bezbednosni scenario koji napišete, na primer da isključi osigurač ako mu se bezbedno prilazi, napusti kuću i pozove hitne službe ako ima vatre. Zatim preusmerava poziv dežurnom električaru.",
         },
         {
           question:
             "Može li da razlikuje nestanak struje na mreži od kvara u kući?",
           answer:
-            "Postavlja pitanja koja biste i Vi postavili: da li komšije imaju struju, da li je elektrodistribucija objavila nestanak, da li je izbacio osigurač. Vi odlučujete koji odgovori vode do zakazivanja, a koji pozivaoca upućuju elektrodistribuciji.",
+            "Da, uz pitanja koja biste i Vi postavili: da li komšije imaju struju, da li je elektrodistribucija objavila nestanak i da li je izbacio osigurač. Vi odlučujete koji odgovori vode do termina, a koji pozivaoca upućuju elektrodistribuciji.",
         },
         {
           question: "Šta pita o novim razvodnim tablama i punjačima?",
           answer:
-            "Vi birate pitanja. Uobičajena su jačina priključka, starost kuće, punjač ili agregat koji pozivalac želi i da li je vlasnik kuće. LobbyStack odgovore čuva u transkriptu poziva.",
+            "Ono što izaberete. Električari često pitaju za jačinu priključka, starost kuće, punjač ili agregat koji pozivalac želi i da li je vlasnik kuće. LobbyStack odgovore čuva uz poziv.",
+        },
+        {
+          question:
+            "Po čemu se AI recepcioner razlikuje od virtuelnog recepcionera za električare?",
+          answer:
+            "Virtuelni recepcioner je obično osoba koja se sa udaljenosti javlja u dogovoreno radno vreme. LobbyStack se javlja kad god Vaš operater prosledi poziv, prati pravila koja napišete i preusmerava poziv dežurnom električaru kada je potreban čovek.",
         },
         {
           question: "Može li drugačije da usmerava poslovne i stambene pozive?",
@@ -1537,19 +1487,14 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Da li radi sa mojim postojećim poslovnim brojem?",
           answer:
-            "Da. Preusmerite postojeći broj na LobbyStack ili koristite posebnu liniju za pozive van radnog vremena i višak poziva.",
+            "Da. Podesite kod operatera da se Vaš postojeći broj prosleđuje na LobbyStack, za sve pozive ili samo za propuštene i one van radnog vremena.",
         },
         {
-          question: "Šta telefonska služba za električare treba da obradi?",
-          answer:
-            "Dve vrste poziva: opasne situacije kojima trebaju bezbednosna uputstva i brzo preusmeravanje, i zahteve za procenu kojima trebaju prava uvodna pitanja. LobbyStack obrađuje obe vrste prema pravilima koja napišete i zakazuje procene u Vaš kalendar tokom poziva.",
-        },
-        {
-          question: "Koliko košta za elektroinstalatersku firmu?",
-          answer: paidPlansAnswer,
+          question: "Koliko košta telefonska služba za električare?",
+          answer: `${tradePlansAnswer} Pozivi za procene traju duže zbog dodatnih pitanja, pa pogledajte potrošnju za mesec dana pre nego što izaberete paket.`,
         },
       ],
-      faqHeading: "Pitanja o AI recepcionerima za električare",
+      faqHeading: "Pitanja o telefonskoj službi za električare",
       relatedLinks: [
         {
           label: "Majstori i servisi za dom",
@@ -1561,9 +1506,9 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         },
         pricingLink,
       ],
-      ctaHeading: "Zakažite više procena za razvodne table i punjače",
+      ctaHeading: "Neka sledeću procenu za tablu zakaže LobbyStack dok ste na poslu",
       ctaBody:
-        "Napišite bezbednosni scenario, podesite pitanja za procene i preusmerite liniju kada budete spremni.",
+        "Na paketu Free napišite bezbednosni scenario i pitanja za procene, pa prosledite liniju.",
       ...ctaLabels,
     }
   ),
@@ -1572,246 +1517,320 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
     path: "/solutions/ai-receptionist-for-garage-door-repair/",
     title: "AI recepcioner za popravku garažnih vrata | LobbyStack",
     description:
-      "LobbyStack se javlja na pozive za garažna vrata, beleži podatke o opremi, zakazuje popravke i hitne slučajeve zaglavljenih vrata ili puknutih opruga prosleđuje tehničaru.",
+      "AI recepcioner za popravku garažnih vrata. LobbyStack zakazuje popravku puknute opruge, a vrata koja noću ne mogu da se zatvore šalje dežurnom tehničaru.",
     eyebrow: "Popravka garažnih vrata",
-    h1: "AI recepcioner za popravku garažnih vrata koji prima svaki poziv",
+    h1: "AI recepcioner za popravku garažnih vrata koji zakazuje popravku puknute opruge",
     intro:
-      "LobbyStack se javlja na pozive za garažna vrata dok menjate opruge, ugrađujete motore ili ne radite. Beleži detalje kvara, zakazuje termine i hitne slučajeve preusmerava na Vaš dežurni broj.",
+      "Vlasnik kuće čuje prasak, a automobil ostaje zarobljen u garaži. LobbyStack mu kaže da ne podiže vrata rukom, uzima adresu i veličinu vrata i zakazuje prvi slobodan termin, a vrata koja noću ne mogu da se zatvore preusmerava Vašem dežurnom tehničaru.",
     imageAlt:
-      "LobbyStack se javlja na poziv za popravku garažnih vrata i zakazuje izlazak",
+      "Poziv zbog puknute opruge koji LobbyStack zakazuje u prvi slobodan termin",
     proofPoints: [
-      "Javlja se na hitne i redovne pozive za garažna vrata 24/7",
-      "Beleži vrstu vrata, marku motora i simptome kvara",
-      "Zaglavljena vrata i puknute opruge prosleđuje dežurnom tehničaru",
+      "Zakazuje popravke za isti dan u Google Calendar",
+      "Čita Vaša bezbednosna uputstva za puknute opruge i sajle",
+      "Vrata koja noću ostanu otvorena preusmerava dežurnom tehničaru",
     ],
-    emergencyTitle: "Ne propustite nijedan hitan poziv zbog zaglavljenih vrata",
-    emergencyBody:
-      "Kada vlasnik kuće zove jer mu je automobil zarobljen u garaži ili su vrata noću ostala otvorena, pomoć mu treba odmah. LobbyStack se javlja na prvo zvono, prati Vaša pravila eskalacije i preusmerava pozivaoca dežurnom tehničaru.",
-    emergencyTransferPoint:
-      "Pita za vrstu vrata i bezbednost, pa preusmerava hitne pozive",
-    bookingTitle: "Zakazujte termine dok ste na poslu",
-    bookingBody:
-      "Ne možete da se javite na telefon dok radite na torzionoj opruzi ili ugrađujete motor. LobbyStack proverava Vaš kalendar, nudi slobodne termine i zakazuje pre nego što pozivalac pozove nekog drugog.",
-    bookingPoint: "Direktno zakazuje popravke i ugradnje",
-    intakeTitle: "Prikupite podatke koji su timu potrebni pre izlaska",
-    intakeBody:
-      "Pozivi za garažna vrata zahtevaju kontekst: vrstu vrata, marku motora, vrstu opruge i opis kvara. LobbyStack postavlja pitanja koja izaberete, pa Vaš tim stiže sa pravim delovima.",
+    sections: [
+      {
+        title: "Vrata koja noću ne mogu da se zatvore idu dežurnom tehničaru",
+        body: "Otvorena garaža noću ostavlja kuću nezaštićenom. LobbyStack pita šta se desilo i da li su vrata otvorena ili zatvorena, pa preusmerava poziv po Vašim pravilima. Automobil zarobljen u garaži može da dobije prvi jutarnji termin.",
+        points: [
+          "Vi pišete koja stanja vrata su hitna",
+          "Odgovori pozivaoca ostaju uz poziv na kontrolnoj tabli",
+        ],
+      },
+      {
+        title: "Zakazuje ponude za nova vrata i popravke motora",
+        body: "LobbyStack pita za veličinu i vrstu vrata i marku motora, nudi Vaše slobodne termine i zakazuje izlazak dok je pozivalac na vezi. Pozivalac dobija SMS potvrdu ako pristane.",
+        points: [
+          "Tehničar vidi podatke o vratima pre izlaska",
+          "Pita i za šifru kapije, ako je potrebna",
+        ],
+      },
+      {
+        title: "Vodi pozivaoca kroz uputstva koja odobrite",
+        body: "Kada daljinski ne radi ili motor ne reaguje, LobbyStack čita korake za resetovanje koje ste napisali. Ako ne pomognu, zakazuje izlazak.",
+        points: [
+          "Čita samo korake koje ste odobrili",
+          "Uputstva menjate u bazi znanja kad god želite",
+        ],
+      },
+    ],
     faqs: [
       {
         question: "Šta je AI recepcioner za popravku garažnih vrata?",
         answer:
-          "AI recepcioner za popravku garažnih vrata se javlja na dolazne pozive, beleži detalje kvara, zakazuje servisne termine i hitne pozive, kao što su zaglavljena vrata ili puknute opruge, prosleđuje dežurnom tehničaru.",
+          "To je recepcioner koji se javlja na Vaše pozive dok ste na poslu ili ne radite. LobbyStack pita šta se desilo sa vratima, zakazuje popravke i procene u Google Calendar, a pozive koje Vaša pravila označe kao hitne, na primer vrata koja noću ne mogu da se zatvore, preusmerava dežurnom tehničaru.",
       },
       {
-        question: "Može li da obradi hitne pozive van radnog vremena?",
+        question: "Šta kaže pozivaocu sa puknutom oprugom?",
         answer:
-          "Da. LobbyStack se javlja na pozive van radnog vremena i prati Vaša pravila eskalacije. Ako pozivalac prijavi da je automobil zarobljen u garaži ili da su vrata noću ostala otvorena, preusmerava ga dežurnom tehničaru.",
+          "Ono što napišete u bezbednosnim uputstvima. Uobičajeno je da pozivaocu kaže da ne podiže vrata rukom, jer opruga nosi veći deo njihove težine. Zatim LobbyStack zakazuje popravku u prvi slobodan termin.",
       },
       {
-        question: "Da li zakazuje termine dok sam na poslu?",
+        question: "Može li da prima pozive za garažna vrata van radnog vremena?",
         answer:
-          "Da. Dok menjate opruge ili ugrađujete motore, LobbyStack proverava Vaš kalendar, nudi slobodne termine i zakazuje pre nego što pozivalac spusti slušalicu.",
+          "Da. LobbyStack i noću prati Vaša pravila. Automobil zarobljen u garaži može da dobije prvi jutarnji termin, a vrata koja ne mogu da se zatvore idu dežurnom tehničaru. Odgovori pozivaoca ostaju uz poziv na kontrolnoj tabli.",
       },
       {
-        question: "Koja uvodna pitanja može da postavi?",
+        question: "Šta može da pita pozivaoce?",
         answer:
-          "Vi birate pitanja: vrsta vrata, marka motora, simptomi kvara, dimenzije vrata, vrsta opruge i sve drugo što timu treba pre izlaska. LobbyStack odgovore čuva u transkriptu poziva.",
+          "Ono što izaberete: šta se desilo, da li su vrata otvorena ili zatvorena, da li su za jedan ili dva automobila, marku motora i šifru kapije. LobbyStack odgovore čuva uz poziv.",
       },
-      existingNumberFaq,
+      {
+        question: "Mogu li da ga koristim samo za višak poziva?",
+        answer:
+          "Da. Podesite kod operatera da prosleđuje pozive kada je linija zauzeta ili se niko ne javi, a ostale pozive primajte sami. Van radnog vremena možete da prosleđujete sve pozive.",
+      },
       callReviewFaq("opisom kvara"),
-      freePlanPricingFaq(
-        "Koliko košta za servis garažnih vrata?",
-        "servisa za garažna vrata"
-      ),
+      {
+        question: "Koliko košta za firmu za garažna vrata?",
+        answer: tradePlansAnswer,
+      },
     ],
     faqHeading: "Pitanja o AI recepcionerima za popravku garažnih vrata",
-    ctaHeading: "Ne gubite više pozive za garažna vrata na govornoj pošti",
+    ctaHeading: "Neka sledeću puknutu oprugu zakaže LobbyStack dok ste na merdevinama",
     ctaBody:
-      "LobbyStack se javlja na hitne i redovne pozive za garažna vrata, zakazuje termine i zaglavljena vrata preusmerava dežurnom tehničaru.",
+      "Na paketu Free upišite bezbednosna uputstva i radno vreme, obavite probni poziv, pa prosledite liniju.",
   }),
 
   "/solutions/ai-receptionist-for-appliance-repair/": tradePage({
     path: "/solutions/ai-receptionist-for-appliance-repair/",
     title: "AI recepcioner za popravku kućnih aparata | LobbyStack",
     description:
-      "LobbyStack se javlja na pozive za popravku aparata, beleži vrstu aparata, marku, model i simptome, a zatim zakazuje odgovarajući servisni izlazak.",
+      "AI recepcioner za popravku kućnih aparata. LobbyStack pita za marku, model i kvar, navodi cenu dijagnostike i zakazuje izlazak tokom poziva.",
     eyebrow: "Popravka kućnih aparata",
-    h1: "AI recepcioner za popravku kućnih aparata koji prima svaki poziv",
+    h1: "AI recepcioner za popravku kućnih aparata koji zakazuje izlazak sa brojem modela",
     intro:
-      "LobbyStack se javlja na pozive dok dijagnostikujete mašinu za sudove ili menjate kompresor. Beleži marku i model, zakazuje termine i hitne slučajeve preusmerava na Vaš dežurni broj.",
+      "Serviser mora da zna marku, model i kvar pre nego što krene na teren. LobbyStack to pita, proverava da li servisirate tu marku, navodi Vašu cenu dijagnostike i zakazuje termin dok ste na drugoj popravci.",
     imageAlt:
-      "LobbyStack se javlja na poziv za popravku aparata i zakazuje izlazak",
+      "Poziv za popravku frižidera koji LobbyStack zakazuje sa markom i modelom",
     proofPoints: [
-      "Javlja se na hitne i redovne pozive za kućne aparate 24/7",
-      "Beleži vrstu aparata, marku, broj modela i simptome",
-      "Kvarove frižidera i poplave od mašina prosleđuje dežurnom tehničaru",
+      "Pita za aparat, marku, model i simptome",
+      "Navodi cenu dijagnostike koju unesete",
+      "Zakazuje izlazak u Google Calendar tokom poziva",
     ],
-    emergencyTitle: "Ne propustite nijedan hitan kvar aparata",
-    emergencyBody:
-      "Kada vlasnik kuće zove jer mu je frižider prestao da radi ili mu veš mašina pušta vodu, neće čekati govornu poštu. LobbyStack se javlja na prvo zvono, prati Vaša pravila eskalacije i preusmerava pozivaoca dežurnom tehničaru.",
-    emergencyTransferPoint:
-      "Pita za marku i model, pa preusmerava hitne pozive",
-    bookingTitle: "Zakazujte termine dok radite na popravci",
-    bookingBody:
-      "Ne možete da se javite na telefon dok menjate kompresor ili dijagnostikujete upravljačku ploču. LobbyStack proverava Vaš kalendar, nudi slobodne termine i zakazuje pre nego što pozivalac pozove nekog drugog.",
-    bookingPoint: "Direktno zakazuje popravke i održavanje",
-    intakeTitle: "Prikupite marku i model pre izlaska",
-    intakeBody:
-      "Pozivi za popravku aparata zahtevaju konkretne podatke: vrstu aparata, marku, broj modela, starost i opis kvara. LobbyStack postavlja pitanja koja izaberete, pa Vaš tim stiže sa pravim delovima.",
+    sections: [
+      {
+        title: "Zakazuje servisni izlazak dok ste na drugoj popravci",
+        body: "LobbyStack pita za aparat, marku, model i simptome, pa zakazuje termin u Vaš Google Calendar. Serviser čita odgovore u rezimeu poziva pre izlaska.",
+        points: [
+          "Može da pita i za šifru greške, starost aparata i garanciju",
+          "Pozivaocu koji pristane šalje SMS potvrdu",
+        ],
+      },
+      {
+        title: "Odgovara na pitanja o markama i ceni dijagnostike",
+        body: "Pozivaoci prvo pitaju da li popravljate njihovu marku i koliko košta dijagnostika. LobbyStack odgovara na osnovu maraka i cena koje unesete, pa pozivalac sa markom koju ne servisirate to čuje pre nego što iko zakaže izlazak.",
+        points: [
+          "Navodi tačnu cenu, početnu cenu ili raspon",
+          "Kaže kako se cena dijagnostike računa u popravku, ako to upišete",
+        ],
+      },
+      {
+        title: "Veš mašina koja pušta vodu prati Vaše hitno pravilo",
+        body: "Uobičajeno podešavanje čita pozivaocu Vaš savet za zatvaranje vode i zakazuje prvi slobodan termin. Ako dodate dežurni broj, LobbyStack preusmerava pozive koje Vaša pravila označe kao hitne.",
+        points: [
+          "Pozivalac čuje savet za zatvaranje vode pre zakazivanja",
+          "Dežurni broj dodajete samo ako ga želite",
+        ],
+      },
+    ],
     faqs: [
       {
         question: "Šta je AI recepcioner za popravku kućnih aparata?",
         answer:
-          "AI recepcioner za popravku aparata se javlja na dolazne pozive, beleži marku i model, zakazuje servisne termine i hitne pozive, kao što su kvarovi frižidera, prosleđuje dežurnom tehničaru.",
+          "To je recepcioner koji se javlja na pozive Vaše radnje dok su serviseri na popravkama. LobbyStack pita za aparat, marku, model i simptome, navodi cene koje unesete i zakazuje izlazak u Google Calendar tokom poziva.",
       },
       {
-        question: "Može li da obradi hitne pozive van radnog vremena?",
+        question: "Može li da proveri koje marke servisiram?",
         answer:
-          "Da. LobbyStack se javlja na pozive van radnog vremena i prati Vaša pravila eskalacije. Ako pozivalac prijavi da je frižider prestao da radi ili da veš mašina pušta vodu, preusmerava ga dežurnom tehničaru.",
+          "Da. Upišite marke koje popravljate i LobbyStack kaže pozivaocu da li servisirate njegovu. Pozivalac sa drugom markom to čuje pre nego što iko zakaže izlazak.",
       },
       {
-        question: "Da li zakazuje termine dok radim na popravci?",
+        question: "Može li da navede cenu dijagnostike?",
         answer:
-          "Da. Dok dijagnostikujete mašinu za sudove ili menjate kompresor, LobbyStack proverava Vaš kalendar, nudi slobodne termine i zakazuje pre nego što pozivalac spusti slušalicu.",
+          "Da, ako mu date iznos. LobbyStack navodi tačnu cenu, početnu cenu ili raspon i kaže kako se cena dijagnostike računa u popravku.",
       },
       {
-        question: "Koja uvodna pitanja može da postavi?",
+        question: "Šta može da pita pozivaoce?",
         answer:
-          "Vi birate pitanja: vrsta aparata, marka, broj modela, simptomi kvara, starost aparata i sve drugo što timu treba pre zakazivanja izlaska. LobbyStack odgovore čuva u transkriptu poziva.",
+          "Ono što izaberete: vrstu aparata, marku, broj modela, simptome, šifru greške, starost, garanciju i da li aparat radi na struju ili gas. LobbyStack odgovore čuva uz poziv, pa ih serviser čita pre izlaska.",
+      },
+      {
+        question: "Može li da obradi hitne pozive, kao što je veš mašina koja pušta vodu?",
+        answer:
+          "Da, po Vašim pravilima. Uobičajeno podešavanje čita pozivaocu Vaš savet za zatvaranje vode i zakazuje prvi slobodan termin. Ako dodate dežurni broj, LobbyStack preusmerava pozive koje pravila označe kao hitne.",
       },
       existingNumberFaq,
-      callReviewFaq("opisom aparata"),
-      freePlanPricingFaq(
-        "Koliko košta za servis kućnih aparata?",
-        "servisa za kućne aparate"
-      ),
+      {
+        question: "Koliko košta za servis kućnih aparata?",
+        answer: tradePlansAnswer,
+      },
     ],
     faqHeading: "Pitanja o AI recepcionerima za popravku kućnih aparata",
-    ctaHeading: "Ne gubite više pozive za popravke na govornoj pošti",
+    ctaHeading: "Neka LobbyStack zakazuje sutrašnje popravke dok ste na današnjoj",
     ctaBody:
-      "LobbyStack se javlja na hitne i redovne pozive za kućne aparate, zakazuje termine i hitne kvarove preusmerava dežurnom tehničaru.",
+      "Na paketu Free upišite marke koje servisirate i cenu dijagnostike, obavite probni poziv, pa prosledite liniju.",
   }),
 
   "/solutions/ai-receptionist-for-restoration-companies/": tradePage({
     path: "/solutions/ai-receptionist-for-restoration-companies/",
     title: "AI recepcioner za sanaciju šteta od vode i požara | LobbyStack",
     description:
-      "LobbyStack proverava pozive zbog šteta od vode, požara i buđi, zakazuje procene za sanaciju i hitne zahteve prosleđuje Vašem dežurnom timu.",
+      "AI recepcioner za firme za sanaciju. Poplavu, izlivanje kanalizacije i požar šalje dežurnoj ekipi, beleži podatke o osiguranju i zakazuje preglede na buđ.",
     eyebrow: "Sanacija šteta",
-    h1: "AI recepcioner za firme za sanaciju koji prima svaki hitan poziv",
+    h1: "AI recepcioner za firme za sanaciju koji prima poziv zbog poplave u 1 ujutru",
     intro:
-      "LobbyStack se javlja na pozive dok je Vaša ekipa na terenu ili ne radi. Beleži detalje štete, zakazuje procene i hitne slučajeve preusmerava na Vaš dežurni broj.",
-    imageAlt: "LobbyStack se javlja na hitan poziv zbog štete i prosleđuje ga",
+      "Voda posle oluje ulazi u podrum, a porodica je na spratu. LobbyStack čita Vaš bezbednosni scenario, pita odakle voda dolazi i da li će prijaviti štetu osiguranju, pa preusmerava poziv Vašoj dežurnoj ekipi. Stare mrlje i buđ dobijaju dnevni termin.",
+    imageAlt:
+      "Poziv zbog poplavljenog podruma koji LobbyStack preusmerava dežurnoj ekipi firme za sanaciju",
     proofPoints: [
-      "Javlja se na hitne pozive zbog štete od vode i požara 24/7",
-      "Beleži vrstu štete, pogođenu površinu, izvor vode i status osiguranja",
-      "Hitne zahteve za sanaciju prosleđuje Vašem dežurnom timu",
+      "Poplavu, kanalizaciju i štetu od požara preusmerava dežurnoj ekipi",
+      "Uz svaki poziv čuva izvor vode, dubinu i podatke o osiguranju",
+      "Zakazuje preglede na buđ i merenja vlage u Vaš kalendar",
     ],
-    emergencyTitle: "Ne propustite nijedan hitan slučaj zbog vode ili požara",
-    emergencyBody:
-      "Kada vlasnik objekta zove u 3 ujutru zbog poplave ili štete od dima, sanacija mu treba odmah. LobbyStack se javlja na prvo zvono, prati Vaša pravila eskalacije i preusmerava pozivaoca Vašem dežurnom timu.",
-    emergencyTransferPoint:
-      "Pita za vrstu štete, površinu i izvor, pa preusmerava hitne pozive",
-    bookingTitle: "Zakazujte procene dok je ekipa na terenu",
-    bookingBody:
-      "Ne možete da se javite na telefon dok izvlačite vodu ili zatvarate otvore na objektu. LobbyStack proverava Vaš kalendar, nudi slobodne termine i zakazuje procenu pre nego što pozivalac pozove nekog drugog.",
-    bookingPoint: "Direktno zakazuje procene i konsultacije",
-    intakeTitle: "Prikupite podatke koji su timu potrebni pre izlaska",
-    intakeBody:
-      "Pozivi za sanaciju zahtevaju kontekst: vrstu štete, veličinu pogođene površine, izvor vode, vremenski tok i status osiguranja. LobbyStack postavlja pitanja koja izaberete, pa Vaš tim stiže spreman i sa pravom opremom.",
+    sections: [
+      {
+        title: "Zakazuje provere buđi i merenja vlage",
+        body: "Pozivi zbog starih mrlja i mirisa buđi dobijaju dnevni termin. LobbyStack pita da li je skoro bilo curenja ili poplave i zakazuje proveru u Vaš Google Calendar.",
+        points: [
+          "Nudi slobodne termine i zakazuje onaj koji pozivalac izabere",
+          "Pozivaocu koji pristane šalje SMS potvrdu",
+        ],
+      },
+      {
+        title: "Podaci o osiguranju ostaju uz poziv",
+        body: "LobbyStack pita za osiguravajuću kuću i broj odštetnog zahteva, kada postoji, i odgovara na pitanja o naplati iz podataka koje unesete. Kada pozove procenitelj, prima poruku sa brojem zahteva i kontakt podacima.",
+        points: [
+          "Pita i da li pozivalac planira da prijavi štetu",
+          "Broj zahteva vidite u rezimeu poziva",
+        ],
+      },
+      {
+        title: "Hitni pozivi zbog vode, kanalizacije i požara zvone na dežurni telefon",
+        body: "Vi pišete pravilo hitnosti. LobbyStack čita bezbednosni scenario, pita odakle voda dolazi, da li još ulazi i koliko je duboka, pa preusmerava poziv na Vaš dežurni broj.",
+        points: [
+          "Ako se ekipa ne javi, pozivalac dobija govornu poštu tog telefona",
+          "Kada preusmeravanje ne uspe, nudi da primi poruku",
+        ],
+      },
+    ],
     faqs: [
       {
         question: "Šta je AI recepcioner za firme za sanaciju šteta?",
         answer:
-          "AI recepcioner za firme za sanaciju se javlja na dolazne pozive, beleži detalje i hitnost štete, zakazuje procene i hitne pozive, kao što su poplava ili požar, prosleđuje Vašem dežurnom timu.",
+          "To je recepcioner koji se javlja na Vaše pozive dok je ekipa na terenu ili spava. LobbyStack poplavu, izlivanje kanalizacije i štetu od požara preusmerava dežurnoj ekipi, preglede na buđ i merenja vlage zakazuje u Google Calendar, a uz svaki poziv čuva izvor vode i podatke o osiguranju.",
       },
       {
-        question: "Može li da obradi hitne pozive van radnog vremena?",
+        question: "Može li noću da prima pozive zbog štete od vode?",
         answer:
-          "Da. LobbyStack se javlja na pozive van radnog vremena i prati Vaša pravila eskalacije. Ako pozivalac prijavi štetu od vode, dima ili buđ, preusmerava ga dežurnom timu. Redovni zahtevi za procenu idu na jutarnji pregled.",
+          "Da. Prosledite liniju van radnog vremena ili sve pozive. LobbyStack čita Vaš bezbednosni scenario, pita odakle voda dolazi i da li još ulazi, a dežurnu ekipu zove kada poziv odgovara Vašem pravilu hitnosti.",
       },
       {
-        question: "Da li zakazuje procene dok je moj tim na terenu?",
+        question: "Šta beleži za odštetne zahteve?",
         answer:
-          "Da. Dok Vaša ekipa sanira štetu ili radi obnovu, LobbyStack proverava Vaš kalendar, nudi slobodne termine i zakazuje procenu pre nego što pozivalac spusti slušalicu.",
+          "Ono što tražite. Firme za sanaciju često pitaju za osiguravajuću kuću, broj odštetnog zahteva, ako postoji, i da li pozivalac planira da prijavi štetu. Kada pozove procenitelj, LobbyStack prima poruku sa brojem zahteva i kontakt podacima.",
       },
       {
-        question: "Koja uvodna pitanja može da postavi?",
+        question: "Da li zakazuje preglede na buđ i procene?",
         answer:
-          "Vi birate pitanja: vrsta štete, veličina pogođene površine, izvor vode, vremenski tok, status osiguranja i sve drugo što timu treba pre izlaska. LobbyStack odgovore čuva u transkriptu poziva.",
+          "Da. LobbyStack pita za skorašnja curenja ili poplave, nudi Vaše slobodne termine i zakazuje pregled dok je pozivalac na vezi. Pozivaocu koji pristane šalje SMS potvrdu.",
       },
-      existingNumberFaq,
+      {
+        question: "Šta ako se dežurna ekipa ne javi?",
+        answer:
+          "Pozivalac dobija govornu poštu tog telefona, ako je ima. LobbyStack predaje poziv Vašem dežurnom broju i izlazi iz razgovora čim telefon zazvoni. Ako preusmeravanje ne uspe, nudi da primi poruku, a Vaš tim može da dobije obaveštenje „Preusmeravanje poziva nije uspelo“.",
+      },
       callReviewFaq("opisom štete"),
-      freePlanPricingFaq(
-        "Koliko košta za firmu za sanaciju?",
-        "firmi za sanaciju"
-      ),
+      {
+        question: "Koliko košta za firmu za sanaciju?",
+        answer: tradePlansAnswer,
+      },
     ],
     faqHeading: "Pitanja o AI recepcionerima za firme za sanaciju šteta",
-    ctaHeading: "Ne gubite više hitne pozive za sanaciju na govornoj pošti",
+    ctaHeading: "Neka sledeći poziv zbog poplave stigne do Vaše ekipe",
     ctaBody:
-      "LobbyStack se javlja na hitne i redovne pozive za sanaciju, zakazuje procene i hitne zahteve preusmerava dežurnom timu.",
+      "Na paketu Free napišite pravilo hitnosti i bezbednosni scenario, isprobajte poziv zbog poplave, pa prosledite liniju van radnog vremena.",
   }),
 
   "/solutions/ai-receptionist-for-locksmiths/": tradePage({
     path: "/solutions/ai-receptionist-for-locksmiths/",
     title: "AI recepcioner za bravare | LobbyStack",
     description:
-      "AI recepcioner za bravare koji se javlja na hitne pozive kada je neko zaključan napolju, zakazuje servisne termine i hitne pozive prosleđuje dežurnom bravaru.",
+      "AI recepcioner za bravare. LobbyStack navodi Vašu cenu otvaranja, uzima podatke o automobilu i lokaciju i preusmerava poziv dežurnom bravaru.",
     eyebrow: "Bravari",
-    h1: "AI recepcioner za bravare koji prima svaki hitan poziv",
+    h1: "AI recepcioner za bravare koji noćna zaključavanja šalje dežurnom bravaru",
     intro:
-      "LobbyStack se javlja na pozive dok menjate uloške, ugrađujete okove ili ne radite. Beleži detalje, zakazuje termine i hitne slučajeve preusmerava na Vaš dežurni broj.",
-    imageAlt: "LobbyStack se javlja na poziv za bravara i zakazuje izlazak",
+      "Vozač stoji na parkingu u 11 uveče, a ključevi su u automobilu. LobbyStack proverava da niko nije zaključan unutra, uzima podatke o automobilu i lokaciju, navodi Vašu cenu intervencije van radnog vremena i preusmerava poziv dežurnom bravaru.",
+    imageAlt:
+      "Poziv zbog zaključanog automobila koji LobbyStack preusmerava dežurnom bravaru",
     proofPoints: [
-      "Javlja se na hitne i redovne pozive 24/7",
-      "Beleži vrstu problema, lokaciju i podatke o vozilu ili objektu",
-      "Hitne pozive prosleđuje Vašem dežurnom bravaru",
+      "Navodi cenu otvaranja pre nego što preusmeri poziv",
+      "Zaključane kuće i automobile preusmerava dežurnom bravaru",
+      "Zakazuje zamenu uložaka, daljinske ključeve i ugradnju brava",
     ],
-    emergencyTitle: "Ne propustite nijedan poziv nekoga ko je zaključan napolju",
-    emergencyBody:
-      "Kada neko ne može da uđe u kuću ili automobil, pomoć mu treba odmah. Neće ostaviti poruku i čekati. LobbyStack se javlja na prvo zvono, prati Vaša pravila eskalacije i preusmerava pozivaoca dežurnom bravaru.",
-    emergencyTransferPoint:
-      "Pita za lokaciju i vrstu problema, pa preusmerava hitne pozive",
-    bookingTitle: "Zakazujte termine dok ste na poslu",
-    bookingBody:
-      "Ne možete da se javite na telefon dok menjate uloške ili ugrađujete okove. LobbyStack proverava Vaš kalendar, nudi slobodne termine i zakazuje pre nego što pozivalac pozove nekog drugog.",
-    bookingPoint: "Direktno zakazuje zamenu uložaka, ugradnje i servise",
-    intakeTitle: "Prikupite podatke koji su timu potrebni pre izlaska",
-    intakeBody:
-      "Pozivi za bravare zahtevaju kontekst: vrstu problema, lokaciju, vrstu vozila ili objekta, stanje ključeva i hitnost. LobbyStack postavlja pitanja koja izaberete, pa Vaš tim stiže spreman.",
+    sections: [
+      {
+        title: "Hitna otvaranja idu dežurnom bravaru",
+        body: "Kada neko ne može da uđe u kuću ili automobil, ne ostavlja poruku. LobbyStack prvo pita da li je neko zaključan unutra, zatim uzima tačnu lokaciju i marku, model i godište automobila, pa preusmerava poziv na Vaš dežurni broj.",
+        points: [
+          "Za dete ili ljubimca zaključanog u automobilu čita Vaše pravilo, na primer da pozivalac pozove hitne službe",
+          "Odgovori ostaju uz poziv na kontrolnoj tabli",
+        ],
+      },
+      {
+        title: "Zakazuje zamenu uložaka, daljinske ključeve i ugradnju brava",
+        body: "Za ključeve automobila LobbyStack pita za marku, model i godište, a za ugradnju broj vrata. Zatim zakazuje dnevni izlazak u Vaš Google Calendar.",
+        points: [
+          "Nudi slobodne termine i zakazuje onaj koji pozivalac izabere",
+          "Pozivaocu koji pristane šalje SMS potvrdu",
+        ],
+      },
+      {
+        title: "Odgovara na pitanje o ceni pre svega ostalog",
+        body: "Pozivaoci prvo pitaju koliko košta otvaranje ili zamena uloška. LobbyStack navodi cene koje unesete i kaže koji dokument treba da pripreme.",
+        points: [
+          "Navodi tačnu cenu, početnu cenu ili raspon",
+          "Traži ličnu kartu ili dokaz o vlasništvu, po Vašem pravilu",
+        ],
+      },
+    ],
     faqs: [
       {
-        question: "Šta je AI recepcioner za bravare?",
+        question: "Šta radi AI recepcioner za bravare?",
         answer:
-          "AI recepcioner za bravare se javlja na dolazne pozive, beleži detalje i lokaciju, zakazuje servisne termine i hitne pozive ljudi zaključanih napolju prosleđuje dežurnom bravaru.",
+          "Javlja se na Vaše pozive dok ste na poslu ili ne radite. LobbyStack navodi Vašu cenu otvaranja, uzima podatke o automobilu ili adresu i preusmerava zaključavanja dežurnom bravaru. Zamenu uložaka, daljinske ključeve i ugradnje zakazuje u Google Calendar.",
       },
       {
-        question: "Može li da obradi hitne pozive van radnog vremena?",
+        question: "Može li da navede moju cenu otvaranja?",
         answer:
-          "Da. LobbyStack se javlja na pozive van radnog vremena i prati Vaša pravila eskalacije. Ako pozivalac ne može da uđe u kuću ili automobil, preusmerava ga dežurnom bravaru.",
+          "Da, ako mu date iznos. LobbyStack navodi tačnu cenu, početnu cenu ili raspon i kaže pozivaocu koji dokument ili dokaz o vlasništvu treba da pripremi.",
       },
       {
-        question: "Da li zakazuje termine dok sam na poslu?",
+        question: "Šta ako je dete ili ljubimac zaključan u automobilu?",
         answer:
-          "Da. Dok menjate uloške ili ugrađujete okove, LobbyStack proverava Vaš kalendar, nudi slobodne termine i zakazuje pre nego što pozivalac spusti slušalicu.",
+          "Pozivalac čuje pravilo koje Vi napišete. Uobičajeno je da odmah pozove hitne službe, a LobbyStack zatim preusmerava poziv dežurnom bravaru. Pre svega ostalog pita da li je neko unutra.",
       },
       {
-        question: "Koja uvodna pitanja može da postavi?",
+        question: "Šta pita pre nego što preusmeri poziv?",
         answer:
-          "Vi birate pitanja: vrsta problema, lokacija, vrsta vozila ili objekta, stanje ključeva, hitnost i sve drugo što timu treba pre izlaska. LobbyStack odgovore čuva u transkriptu poziva.",
+          "Ono što izaberete. Bravari često pitaju da li je neko zaključan unutra, za tačnu lokaciju i za marku, model i godište automobila. LobbyStack odgovore čuva uz poziv.",
+      },
+      {
+        question: "Da li zakazuje dnevne poslove?",
+        answer:
+          "Da. LobbyStack nudi Vaše slobodne termine za zamenu uložaka, izradu ključeva i ugradnju brava, zakazuje onaj koji pozivalac izabere i šalje SMS potvrdu ako pristane.",
       },
       existingNumberFaq,
-      callReviewFaq("opisom problema"),
-      freePlanPricingFaq(
-        "Koliko košta za bravarsku radnju?",
-        "bravarskih radnji"
-      ),
+      {
+        question: "Koliko košta AI recepcioner za bravare?",
+        answer: tradePlansAnswer,
+      },
     ],
     faqHeading: "Pitanja o AI recepcionerima za bravare",
-    ctaHeading: "Ne gubite više hitne pozive na govornoj pošti",
+    ctaHeading: "Pošaljite večerašnja zaključavanja dežurnom bravaru",
     ctaBody:
-      "LobbyStack se javlja na hitne i redovne pozive za bravare, zakazuje termine i hitne slučajeve preusmerava na Vaš dežurni broj.",
+      "Na paketu Free upišite cenu otvaranja i pravila za dokumenta, isprobajte poziv zbog zaključavanja, pa prosledite liniju.",
   }),
 
   "/solutions/after-hours-answering-service-for-contractors/": serbianPage(
@@ -1819,89 +1838,81 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
     {
       title: "Služba za pozive van radnog vremena za izvođače | LobbyStack",
       description:
-        "LobbyStack je telefonska služba za izvođače radova van radnog vremena. Prepoznaje hitne slučajeve, zakazuje izlaske za sledeći dan i hitne poslove prosleđuje dežurnima.",
+        "Telefonska služba za izvođače radova van radnog vremena. Povezuje klijente sa projektom, hitne slučajeve preusmerava dežurnom i zakazuje konsultacije.",
       eyebrow: "Izvođači van radnog vremena",
-      h1: "Telefonska služba za hitne poslove izvođača van radnog vremena",
+      h1: "Telefonska služba za izvođače radova za noći, vikende i curenja na gradilištu",
       intro:
-        "LobbyStack se javlja na pozive noću, vikendom i praznicima. Prepoznaje hitne slučajeve, zakazuje termine za sledeći dan i hitne zahteve preusmerava na Vaš dežurni broj.",
+        "Klijent usred renoviranja zove u 9 uveče jer ima vodu u kuhinji. LobbyStack mu kaže da zatvori glavni ventil, pita o kom projektu je reč i preusmerava poziv Vašem dežurnom rukovodiocu, a novim klijentima zakazuje konsultacije.",
       imageAlt:
-        "LobbyStack obrađuje pozive izvođačima van radnog vremena i prosleđuje hitne slučajeve",
+        "Poziv zbog curenja na gradilištu koji LobbyStack preusmerava dežurnom rukovodiocu projekta",
       proofPoints: [
-        "Javlja se van radnog vremena i prepoznaje hitne slučajeve",
-        "Zakazuje termine za sledeći dan direktno u Vaš kalendar",
-        "Hitne pozive preusmerava na Vaš dežurni broj",
+        "Povezuje postojeće klijente sa njihovim projektom",
+        "Hitne slučajeve sa gradilišta preusmerava dežurnom rukovodiocu",
+        "Zakazuje konsultacije za nove poslove u Vaš kalendar",
       ],
       sections: [
         {
-          title: "Ne gubite hitne poslove na govornoj pošti",
-          body: "Kada vlasnik kuće zove u 10 uveče sa hitnim problemom, neće ostaviti poruku. Pozvaće sledećeg izvođača sa spiska. LobbyStack se javlja na prvo zvono, prati Vaša pravila eskalacije i preusmerava pozivaoca dežurnoj osobi.",
+          title: "Zakazuje konsultacije za nove projekte",
+          body: "Novi klijent koji zove u 9 uveče čuje pitanja koja biste i Vi postavili, o obimu posla, budžetu i rokovima. LobbyStack zakazuje konsultacije u Vaš Google Calendar pre nego što pozove sledećeg izvođača.",
           points: [
-            "Razlikuje hitne pozive od redovnih zahteva za ponudu",
-            "Beleži opis problema, lokaciju i kontakt podatke, pa preusmerava hitne pozive",
-            "Redovne zahteve šalje na jutarnji pregled",
+            "Za ponudu beleži obim posla, lokaciju i kontakt",
+            "Navodi samo cene koje mu date",
           ],
         },
         {
-          title: "Automatski zakazujte termine za sledeći dan",
-          body: "Pozivaoci van radnog vremena često žele da zakažu izlazak za sledeći radni dan. LobbyStack proverava Vaš kalendar, nudi slobodne termine i zakazuje. Vaš tim počinje dan sa poslovima koji su već u kalendaru.",
+          title: "Pitanja klijenata čekaju jutro kao poruke",
+          body: "LobbyStack pitanja postojećih klijenata o rasporedu i pozive podizvođača i dobavljača beleži kao poruke, sa imenom pozivaoca i onim što traži. Vaši rukovodioci ih čitaju ujutru umesto za večerom.",
           points: [
-            "Proverava slobodne termine za sledeći dan u realnom vremenu",
-            "Zakazuje termine direktno u Vaš kalendar",
-            "Pozivaocu šalje potvrdu SMS-om i dodaje posetu u Vaš kalendar",
+            "Robopozive i prodajne pozive može da prekine, a pozivi koje prekine kao neželjene ne troše minute",
+            "Rezime svakog poziva čeka na kontrolnoj tabli",
           ],
         },
         {
-          title: "Filtrirajte spam, neka Vas budi samo pravi poziv",
-          body: "Nije svaki poziv van radnog vremena vredan prekidanja Vaše večeri. LobbyStack odbacuje automatske pozive, telemarketing i spam. Do dežurnog osoblja stižu samo pravi hitni slučajevi.",
+          title: "Hitan slučaj na gradilištu zvoni dežurnom",
+          body: "Pravilo hitnosti pišete običnim rečima, na primer aktivno curenje, bezbednosni rizik ili kvar grejanja zimi. LobbyStack pita da li pozivalac ima projekat sa Vama i koji, postavlja pitanja koja Vaše pravilo traži i odgovarajuće pozive preusmerava na dežurni broj.",
           points: [
-            "Automatski filtrira pozivaoce koji nisu ljudi",
-            "Čuva rezime svakog poziva za jutarnji pregled",
-            "Čuva Vaše slobodno vreme, a telefon ostaje pokriven",
-          ],
-        },
-        {
-          title: "Pratite svoj stvarni proces dežurstva",
-          body: "Svaki izvođač drugačije definiše hitno. LobbyStack postavlja kvalifikaciona pitanja koja izaberete: aktivno curenje vode, bezbednosni rizik, kvar grejanja, rizik po konstrukciju. Vaš dežurni broj zvoni samo kada poziv odgovara Vašim pravilima.",
-          points: [
-            "Koristi Vaša pravila eskalacije u svakom pozivu",
-            "Beleži simptome, lokaciju i vreme pre preusmeravanja",
-            "Redovne pozive ostavlja u jutarnjem redu",
+            "Postojeći klijenti prolaze kroz Vaša pravila za projekte",
+            "Ostali pozivi čekaju jutro u redu poruka",
           ],
         },
       ],
       faqs: [
         {
-          question: "Šta je telefonska služba za izvođače van radnog vremena?",
+          question: "Šta je telefonska služba za izvođače radova?",
           answer:
-            "To je služba koja se javlja na pozive kada Vaš tim ne radi, vozi se ili je zauzet na drugom poslu. Beleži podatke pozivaoca, prepoznaje hitne slučajeve, zakazuje termine i hitne zahteve prosleđuje dežurnom osoblju.",
+            "To je služba koja se javlja na Vašu liniju kada ekipa ne radi ili je na drugom poslu. LobbyStack povezuje pozivaoce sa njihovim projektom, hitne slučajeve sa gradilišta preusmerava dežurnom rukovodiocu, zakazuje konsultacije za nove poslove, a sve ostalo čuva kao poruke za jutro.",
         },
         {
-          question: "Kako odlučuje koji pozivi su hitni?",
+          question: "Kako odlučuje koji pozivi van radnog vremena su hitni?",
           answer:
-            "Vi određujete pravila. LobbyStack postavlja kvalifikaciona pitanja koja izaberete, na primer da li voda aktivno curi, da li postoji bezbednosni rizik ili kvar grejanja zimi. Pozivi koji odgovaraju Vašim kriterijumima preusmeravaju se dežurnoj osobi. Sve ostalo ide na jutarnji pregled.",
+            "Po pravilu koje napišete običnim rečima, na primer aktivno curenje, bezbednosni rizik ili kvar grejanja zimi. LobbyStack postavlja pitanja koja Vaše pravilo traži i odgovarajuće pozive preusmerava na dežurni broj. Ostali čekaju jutro.",
         },
         {
-          question: "Može li da zakazuje termine za sledeći radni dan?",
+          question: "Može li da razlikuje postojeće klijente od novih?",
           answer:
-            "Da. LobbyStack proverava slobodne termine u Vašem kalendaru i direktno zakazuje standardne termine. Kada se Vaš tim prijavi sledećeg jutra, novi termini su već u rasporedu.",
+            "Da. LobbyStack može da pita da li pozivalac ima projekat sa Vama i koji. Postojeći klijenti prolaze kroz Vaša pravila za projekte, a novi dobijaju pitanja o obimu posla, budžetu i rokovima.",
         },
         {
-          question: "Da li radi sa mojim postojećim poslovnim brojem?",
+          question: "Može li da zakaže konsultacije za sledeći radni dan?",
           answer:
-            "Da. Preusmerite pozive sa broja koji Vaši klijenti već znaju ili koristite poseban LobbyStack broj samo za pozive van radnog vremena.",
+            "Da. LobbyStack nudi slobodne termine iz Vašeg Google Calendar-a i zakazuje konsultacije tokom poziva, pa su novi poslovi u rasporedu kada tim počne dan.",
         },
         {
           question: "Šta se dešava kada pozivalac van radnog vremena traži ponudu?",
           answer:
-            "LobbyStack beleži obim posla, lokaciju i kontakt podatke. Može da zakaže izlazak na procenu ili da zahtev ujutru prosledi Vašem prodajnom timu. Ne nagađa cene.",
+            "LobbyStack pita za obim posla, lokaciju i kontakt podatke, pa zakazuje izlazak na procenu ili prima poruku za Vašu kancelariju. Navodi samo cene koje mu date.",
         },
-        callReviewFaq("opisom problema"),
-        freePlanPricingFaq(
-          "Koliko košta za firmu izvođača radova?",
-          "izvođača radova"
-        ),
+        {
+          question: "Da li služba za pozive van radnog vremena filtrira neželjene pozive?",
+          answer:
+            "Da. LobbyStack može da prekine robopozive i prodajne pozive, a pozivi koje prekine kao neželjene ne računaju se u Vaše minute. Dežurni telefon zvoni samo za pozive koje Vaša pravila pošalju na njega.",
+        },
+        {
+          question: "Koliko košta za izvođača radova?",
+          answer: tradePlansAnswer,
+        },
       ],
-      faqHeading: "Pitanja o javljanju na pozive van radnog vremena za izvođače",
+      faqHeading: "Pitanja o telefonskoj službi za izvođače radova",
       relatedLinks: [
         {
           label: "Javljanje van radnog vremena",
@@ -1926,9 +1937,9 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         },
         pricingLink,
       ],
-      ctaHeading: "Ne gubite više pozive van radnog vremena na govornoj pošti",
+      ctaHeading: "Pokrijte liniju van radnog vremena već ovog vikenda",
       ctaBody:
-        "LobbyStack se javlja na pozive van radnog vremena, prepoznaje hitne slučajeve, zakazuje termine za sledeći dan i hitne poslove preusmerava na Vaš dežurni broj.",
+        "Na paketu Free napišite pravilo za hitne slučajeve na gradilištu, isprobajte poziv postojećeg i novog klijenta, pa prosledite liniju.",
       ...ctaLabels,
     }
   ),
@@ -1938,76 +1949,80 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
     {
       title: "AI telefonska služba za upravljanje nekretninama | LobbyStack",
       description:
-        "LobbyStack je AI telefonska služba za upravnike nekretnina. Razvrstava hitne kvarove van radnog vremena, odgovara na pitanja o zakupu i zakazuje razgledanja.",
+        "AI telefonska služba za upravljanje nekretninama. Hitne kvarove šalje dežurnom tehničaru, redovne beleži za jutro i zakazuje razgledanja stanova.",
       eyebrow: "Upravljanje nekretninama",
-      h1: "Telefonska služba za upravnike nekretnina i hitne kvarove van radnog vremena",
+      h1: "Telefonska služba za upravljanje nekretninama i kvarove u 2 ujutru",
       intro:
-        "Stanari zovu u 2 ujutru zbog curenja, zaključanih vrata ili nestanka grejanja. Zainteresovani zakupci zovu u podne i pitaju za ljubimce i parking. LobbyStack se javlja svima, prave hitne slučajeve šalje dežurnom tehničaru za održavanje i zakazuje razgledanja za Vaš tim za izdavanje.",
+        "Stanari zovu u 2 ujutru zbog curenja, zaključanih vrata ili hladnih radijatora, a zainteresovani zakupci u podne pitaju za ljubimce i parking. LobbyStack hitne slučajeve sa Vaše liste šalje dežurnom tehničaru, ostalo beleži za jutro i zakazuje razgledanja Vašem agentu za izdavanje.",
       imageAlt:
-        "LobbyStack izvori znanja, uključujući česta pitanja, pravila i radno vreme, spremni za pozive stanara",
+        "Poziv stanara zbog curenja koji LobbyStack preusmerava dežurnom tehničaru za održavanje",
       proofPoints: [
-        "Razdvaja hitne kvarove od zahteva koji mogu da sačekaju jutro",
-        "Odgovara na pitanja o zakupu na osnovu pravila koja unesete",
-        "Curenja, poplave i miris gasa prosleđuje dežurnom tehničaru",
+        "Hitne slučajeve sa Vaše liste preusmerava dežurnom tehničaru",
+        "Redovne zahteve za popravke beleži za jutro",
+        "Odgovara na pitanja o zakupu i zakazuje razgledanja",
       ],
       sections: [
         {
           title:
             "Razvrstajte pozive za održavanje po svojoj listi hitnih slučajeva",
-          body: "Verovatno već imate zapisanu listu: poplava, nema grejanja zimi, miris gasa, zaključana vrata, zapušena kanalizacija. Unesite je u LobbyStack. On pita stanara za broj stana i šta vidi, hitne slučajeve preusmerava dežurnom tehničaru, a slavinu koja kaplje beleži za jutro.",
+          body: "Upišite listu koju već koristite, na primer poplava, nema grejanja zimi, miris gasa, zaključana vrata i zapušena kanalizacija. LobbyStack pita stanara za broj stana i šta vidi, hitne slučajeve preusmerava dežurnom tehničaru, a slavinu koja kaplje beleži za jutro.",
           points: [
-            "Beleži broj stana, broj za povratni poziv i opis problema",
-            "Hitne slučajeve preusmerava dežurnom tehničaru za održavanje",
-            "Redovne zahteve beleži u jutarnji red",
+            "Uz svaki zahtev beleži broj stana i broj za povratni poziv",
+            "Redovni zahtevi čekaju jutro u redu poruka",
           ],
         },
         {
-          title: "Odgovarajte na pitanja o zakupu i zakazujte razgledanja",
-          body: "Zainteresovani pitaju za kiriju, depozit, pravila za ljubimce, parking i slobodne stanove. Dodajte te podatke u bazu znanja i LobbyStack će odgovarati na osnovu njih. Kada neko želi da vidi stan, zakazuje razgledanje u kalendar Vašeg agenta i šalje potvrdu SMS-om.",
+          title: "Zakazuje razgledanja za Vašeg agenta za izdavanje",
+          body: "Kada neko želi da vidi stan, LobbyStack proverava Google Calendar Vašeg agenta, nudi slobodne termine i zakazuje razgledanje. Pozivaocu koji pristane šalje SMS potvrdu.",
           points: [
-            "Odgovara na osnovu podataka o nekretninama koje unesete",
-            "Zakazuje razgledanja i šalje potvrde SMS-om",
+            "Agent vidi razgledanje u svom Google Calendar-u",
+            "Na pitanja o stanu pre razgledanja odgovara iz Vaših podataka",
           ],
         },
         {
-          title: "Rutinska pitanja ne stižu na dežurni telefon",
-          body: "Stanar koji u 11 uveče pita kada se plaća kirija ne treba da probudi Vašeg tehničara. LobbyStack odgovara na pitanja o kiriji, radnom vremenu kancelarije i portalu na osnovu Vaših pravila i čuva rezime poziva, pa dežurni telefon zvoni samo za hitne slučajeve sa Vaše liste.",
+          title: "Odgovara na pitanja o kiriji i zakupu",
+          body: "Upišite kiriju, depozit, pravila za ljubimce, parking i slobodne stanove. LobbyStack odgovara iz tih podataka, pa stanar koji u 11 uveče pita kada se plaća kirija ne budi Vašeg tehničara.",
           points: [
-            "Odgovara na pitanja o kiriji, radnom vremenu kancelarije i portalu",
-            "Čuva rezime i transkript svakog poziva na kontrolnoj tabli",
+            "Za pitanje bez odgovora u Vašim podacima prima poruku za kancelariju",
+            "Rezime i transkript svakog poziva čekaju na kontrolnoj tabli",
           ],
-        },
-        {
-          title: "Koliko košta pokrivenost van radnog vremena",
-          body: "Recimo da Vaše nekretnine imaju 60 poziva van radnog vremena mesečno, po 3 minuta. To je 180 minuta. Starter uključuje 150 minuta za $30 mesečno, a preostalih 30 minuta košta po $0.20, pa plaćate oko $36. Pro uključuje 500 minuta za $100 ako Vam portfolio poraste.",
-          points: [spamPoint, freePlanPoint],
         },
       ],
       faqs: [
         {
+          question: "Šta radi telefonska služba za upravljanje nekretninama?",
+          answer:
+            "Javlja se na pozive stanara i zainteresovanih zakupaca kada kancelarija ne može. LobbyStack hitne slučajeve sa Vaše liste preusmerava dežurnom tehničaru, redovne popravke beleži za jutro, odgovara na pitanja o zakupu i zakazuje razgledanja.",
+        },
+        {
           question: "Može li da razlikuje hitan kvar od redovnog zahteva?",
           answer:
-            "Da. Listu hitnih slučajeva zadajete običnim jezikom, na primer poplava, nema grejanja ispod zadate temperature, miris gasa ili zaključana vrata. LobbyStack postavlja dodatna pitanja, odgovarajuće pozive preusmerava dežurnom tehničaru, a ostatak šalje u jutarnji red.",
+            "Da. Listu hitnih slučajeva zadajete običnim rečima, na primer poplava, nema grejanja ispod zadate temperature, miris gasa ili zaključana vrata. LobbyStack postavlja dodatna pitanja, odgovarajuće pozive preusmerava dežurnom tehničaru, a ostalo beleži za jutro.",
         },
         {
           question: "Može li da odgovara na pitanja o mojim nekretninama?",
           answer:
-            "Da. U bazu znanja dodajte podatke kao što su kirija, depozit, pravila za ljubimce, parking i slobodni stanovi. LobbyStack odgovara na osnovu njih, a ono na šta ne može da odgovori označava za Vašu kancelariju.",
+            "Da. U bazu znanja dodajte kiriju, depozit, pravila za ljubimce, parking i slobodne stanove. LobbyStack odgovara na osnovu tih podataka, a za pitanje na koje ne zna odgovor prima poruku.",
         },
         {
           question: "Može li da zakazuje razgledanja?",
           answer:
-            "Da. LobbyStack proverava kalendar Vašeg agenta za izdavanje, nudi slobodne termine, zakazuje razgledanje i šalje potvrdu SMS-om.",
+            "Da. LobbyStack proverava Google Calendar Vašeg agenta za izdavanje, nudi slobodne termine, zakazuje razgledanje i šalje SMS potvrdu ako zainteresovani pristane.",
+        },
+        {
+          question: "Da li odgovara stanodavcima sa nekoliko stanova?",
+          answer:
+            "Da. Plaćate minute, pa mali portfolio može da ostane na paketu Starter. Uzmimo, kao primer, 60 poziva van radnog vremena mesečno po 3 minuta. To je 180 minuta: Starter za $30 pokriva 150, a preostalih 30 košta po $0.20, ukupno oko $36.",
         },
         {
           question: "Da li radi sa postojećim brojem kancelarije?",
           answer:
-            "Da. Preusmerite liniju kancelarije na LobbyStack van radnog vremena ili tokom celog dana, a stanari nastavljaju da zovu broj koji znaju.",
+            "Da. Prosledite liniju kancelarije na LobbyStack van radnog vremena ili tokom celog dana, a stanari nastavljaju da zovu broj koji znaju.",
         },
         {
           question:
             "Koliko košta telefonska služba za upravljanje nekretninama?",
-          answer: paidPlansAnswer,
+          answer: tradePlansAnswer,
         },
       ],
       faqHeading: "Pitanja o telefonskoj službi za upravljanje nekretninama",
@@ -2027,9 +2042,9 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         },
         pricingLink,
       ],
-      ctaHeading: "Odgovarajte stanarima i van radnog vremena",
+      ctaHeading: "Neka dežurni telefon zvoni samo za prave hitne slučajeve",
       ctaBody:
-        "Unesite listu hitnih slučajeva, preusmerite liniju van radnog vremena i testirajte LobbyStack na paketu Free.",
+        "Na paketu Free upišite listu hitnih slučajeva, isprobajte poziv zbog curenja i zahtev za razgledanje, pa prosledite liniju van radnog vremena.",
       ...ctaLabels,
     }
   ),
@@ -2039,55 +2054,50 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
     {
       title: "AI telefonska služba za krovopokrivače | LobbyStack",
       description:
-        "LobbyStack je AI telefonska služba za krovopokrivače. Prima talas poziva posle oluje, aktivna curenja šalje dežurnoj ekipi i zakazuje preglede i procene.",
+        "AI telefonska služba za krovopokrivače. Posle oluje zakazuje preglede pre dolaska procenitelja, odgovara o osiguranju i curenja šalje dežurnoj ekipi.",
       eyebrow: "Krovopokrivači",
-      h1: "Telefonska služba za krovopokrivače koja izdrži talas poziva posle oluje",
+      h1: "Telefonska služba za krovopokrivače za jutro posle grada",
       intro:
-        "Posle grada vlasnici kuća zovu ceo dan jer žele pregled krova pre dolaska procenitelja osiguranja. LobbyStack se javlja na sve te pozive istovremeno, zakazuje preglede u Vaš kalendar i aktivna curenja šalje Vašoj ekipi.",
+        "Posle oluje vlasnici kuća žele nekoga na krovu pre nego što dođe procenitelj osiguranja. LobbyStack proverava da li krov curi, pita za starost krova i odštetni zahtev i zakazuje pregled u Vaš kalendar, a aktivna curenja preusmerava dežurnoj ekipi.",
       imageAlt:
-        "Usmeravanje poziva koje prvo zvoni Vašem timu, a poziv predaje LobbyStack-u kada niko nije slobodan",
+        "Poziv zbog štete od grada koji LobbyStack zakazuje u prvi slobodan termin za pregled krova",
       proofPoints: [
-        "Paketi ne ograničavaju koliko poziva posle oluje prima istovremeno",
-        "Zakazuje preglede i procene u Vaš kalendar",
-        "Aktivna curenja prosleđuje dežurnoj ekipi",
+        "Zakazuje preglede posle oluje u Google Calendar",
+        "Odgovara na pitanja o osiguranju i proceniteljima po Vašem scenariju",
+        "Aktivna curenja preusmerava dežurnoj ekipi",
       ],
       sections: [
         {
-          title: "Izdržite nedelju posle oluje",
-          body: "Grad i vetar mogu za dva dana doneti pozive za ceo mesec. Paketi ne ograničavaju koliko poziva LobbyStack prima istovremeno, a novi pozivi dobijaju signal zauzeća samo ako postavite mesečno ograničenje prekoračenja i dostignete ga. LobbyStack beleži adresu, starost krova i štetu koju vlasnik vidi i zakazuje prvi slobodan termin za pregled. Vaša kancelarija počinje dan sa spiskom zakazanih pregleda.",
+          title:
+            "Telefonska služba za krovopokrivače koja zakazuje preglede posle oluje",
+          body: "Grad i vetar za nekoliko dana donesu pozive za više nedelja. LobbyStack uzima adresu, starost krova i štetu koju vlasnik vidi, pa zakazuje prvi slobodan pregled.",
           points: [
-            "Javlja se na istovremene pozive",
-            "Beleži adresu, starost krova i vidljivu štetu",
-            "Zakazuje preglede u slobodne termine",
+            "Kancelarija ujutru zatiče zakazane preglede u kalendaru",
+            "Pozivaocu koji pristane šalje SMS potvrdu",
           ],
         },
         {
-          title: "Aktivna curenja šaljite ekipi",
-          body: "Voda koja curi kroz plafon zahteva ceradu još večeras. Vi određujete šta je hitno, a LobbyStack pita za adresu i ono što vlasnik vidi, pa te pozive preusmerava dežurnoj ekipi. Nekoliko otpalih šindri bez curenja dobija termin za pregled.",
+          title: "Odgovara na pitanja o osiguranju po Vašem scenariju",
+          body: "Vlasnici pitaju da li radite sa njihovim osiguranjem, da li ćete se sastati sa proceniteljem i koliko košta pregled. Odgovore napišete jednom, a LobbyStack ih daje u svakom pozivu.",
           points: [
-            "Pita za adresu, pa aktivna curenja preusmerava Vašoj ekipi",
-            "Zakazuje pregled za štete koje nisu hitne",
+            "Za pitanje van scenarija prima poruku za povratni poziv",
+            "Iste odgovore daje i u četu na Vašem sajtu",
           ],
         },
         {
-          title: "Odgovarajte na pitanja o osiguranju po svom scenariju",
-          body: "Vlasnici pitaju da li radite sa njihovim osiguranjem, da li ćete se sastati sa proceniteljem i koliko košta pregled. Odgovore napišite jednom. LobbyStack ih daje tokom poziva, a sve van scenarija označava da Vaša kancelarija uzvrati poziv.",
+          title: "Aktivno curenje ide dežurnoj ekipi",
+          body: "Voda koja curi kroz plafon traži ceradu još večeras. Vi određujete šta je hitno, a LobbyStack pita za adresu i šta curi, pa takve pozive preusmerava dežurnoj ekipi. Nekoliko otpalih šindri bez curenja dobija termin za pregled.",
           points: [
-            "Odgovara na pitanja o osiguranju i pregledima koja odobrite",
-            "Neobična pitanja označava za povratni poziv",
+            "Pita za adresu pre nego što preusmeri poziv",
+            "Ako se ekipa ne javi, pozivalac dobija govornu poštu tog telefona",
           ],
-        },
-        {
-          title: "Koliko košta sezona oluja",
-          body: "Recimo da poziv sa uvodnim pitanjima traje 4 minuta. Posle velike oluje, 200 poziva mesečno daje 800 minuta. Pro uključuje 500 minuta za $100, a preostalih 300 košta po $0.18, pa taj mesec iznosi $154. Miran mesec ostaje $100.",
-          points: [spamPoint, freePlanPoint],
         },
       ],
       faqs: [
         {
-          question: "Može li da izdrži talas poziva posle oluje?",
+          question: "Šta radi telefonska služba za krovopokrivače posle oluje?",
           answer:
-            "Da. Paketi ne ograničavaju koliko poziva LobbyStack prima istovremeno. Novi pozivi dobijaju signal zauzeća samo ako vlasnik ili administrator postavi mesečno ograničenje prekoračenja i Vi ga dostignete. Zakazuje preglede u Vaše slobodne termine, a ostalo stavlja u red za Vašu kancelariju.",
+            "Javlja se na pozive koje Vaš operater prosledi, pita za adresu, starost krova i štetu koju vlasnik vidi i zakazuje preglede u Vaše slobodne termine. Aktivna curenja idu dežurnoj ekipi, a za pitanja Vašoj kancelariji prima poruku.",
         },
         {
           question: "Šta radi kada krov aktivno curi?",
@@ -2095,9 +2105,9 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
             "Prati Vaša pravila. Uobičajeno podešavanje pita za adresu i šta curi, aktivna curenja preusmerava dežurnoj ekipi, a sve ostalo zakazuje za pregled.",
         },
         {
-          question: "Može li da odgovara na pitanja o odšteti iz osiguranja?",
+          question: "Može li da odgovara na pitanja o odštetnim zahtevima?",
           answer:
-            "Da, na osnovu odgovora koje napišete, na primer da li se sastajete sa proceniteljima i sa kojim osiguravajućim kućama radite. LobbyStack sve van scenarija označava za povratni poziv.",
+            "Da, iz odgovora koje napišete, na primer da li se sastajete sa proceniteljima i sa kojim osiguravajućim kućama radite. Za sve van scenarija LobbyStack prima poruku za povratni poziv.",
         },
         {
           question: "Da li navodi cene popravke ili zamene krova?",
@@ -2105,13 +2115,19 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
             "Zakazuje pregled ili izlazak na procenu. Vi odlučujete da li navodi cenu pregleda ili početnu cenu za uobičajene popravke.",
         },
         {
+          question:
+            "Po čemu se AI recepcioner za krovopokrivače razlikuje od službe sa živim operaterima?",
+          answer:
+            "LobbyStack zakazuje pregled u Vaš kalendar tokom poziva i odgovara na pitanja o osiguranju iz Vašeg scenarija, a operater obično primi poruku. Neobične pozive čovek bolje rešava, pa LobbyStack za sve van scenarija prima poruku.",
+        },
+        {
           question: "Da li radi sa mojim postojećim poslovnim brojem?",
           answer:
-            "Da. Preusmerite postojeći broj na LobbyStack ili mu šaljite samo višak poziva i pozive van radnog vremena.",
+            "Da. Prosledite postojeći broj na LobbyStack ili mu šaljite samo propuštene pozive i one van radnog vremena.",
         },
         {
           question: "Koliko košta telefonska služba za krovopokrivače?",
-          answer: paidPlansWithOverageAnswer,
+          answer: `${tradePlansAnswer} Uzmimo, kao primer, a ne prognozu, mesec posle oluje sa 200 poziva po 4 minuta. To je 800 minuta, pa Pro iznosi $100 plus 300 dodatnih minuta po $0.18, ukupno $154.`,
         },
       ],
       faqHeading: "Pitanja o telefonskoj službi za krovopokrivače",
@@ -2126,9 +2142,9 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         },
         pricingLink,
       ],
-      ctaHeading: "Budite spremni za sledeću oluju",
+      ctaHeading: "Podesite pozive za oluju pre sledećeg grada",
       ctaBody:
-        "Podesite LobbyStack pre sezone oluja da preuzme višak poziva kada se linije popune.",
+        "Na paketu Free napišite pravilo za curenja i odgovore o osiguranju, isprobajte poziv za pregled, pa prosledite liniju za višak poziva.",
       ...ctaLabels,
     }
   ),
@@ -2138,15 +2154,15 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
     {
       title: "AI recepcioner otvorenog koda pod MIT licencom | LobbyStack",
       description:
-        "LobbyStack je AI recepcioner otvorenog koda pod MIT licencom. Pročitajte kako obrađuje pozive, menjajte promptove i pravila i hostujte ga sami ili na LobbyStack Cloud-u.",
+        "LobbyStack je AI recepcioner otvorenog koda pod MIT licencom. Pročitajte njegov kod, izmenite ga i hostujte na svom serveru ili na LobbyStack Cloud-u.",
       eyebrow: "Otvoren kod",
       h1: "AI recepcioner otvorenog koda koji možete proveriti, menjati i sami hostovati",
       intro:
-        "LobbyStack odgovara na Vaše pozive, zakazuje termine i prosleđuje pozivaoce Vašem timu. Ceo njegov kod je na GitHub-u pod MIT licencom, pa možete proveriti šta radi tokom poziva pre nego što mu poverite svoj broj telefona.",
+        "Pre nego što AI počne da se javlja na Vaš telefon, želećete da znate šta govori pozivaocima i gde završavaju njihovi snimci. LobbyStack odgovara na pozive, zakazuje termine i prosleđuje pozivaoce Vašem timu, a ceo njegov kod je na GitHub-u pod MIT licencom da biste ga proverili.",
       imageAlt:
         "LobbyStack repozitorijum na GitHub-u pod MIT licencom",
       proofPoints: [
-        "MIT licenca i ceo kod na GitHub-u",
+        "Ceo TypeScript kod na GitHub-u",
         "Hostujte ga sami ili na LobbyStack Cloud-u",
         "Samostalno hostovani pozivi idu preko Vaših Twilio i OpenAI naloga",
       ],
@@ -2155,26 +2171,25 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
           title: "Pročitajte kako obrađuje poziv",
           body: "Uputstva i alati recepcionera nalaze se u packages/agent-core. Otvorite ih na GitHub-u i videćete kako pronalazi slobodne termine, zakazuje, prima poruku i odlučuje da prosledi pozivaoca.",
           points: [
-            "Uputstva i alati u packages/agent-core",
-            "Kod koji radi na LobbyStack Cloud-u",
-            "Svaka izmena u javnoj Git istoriji",
+            "Koje podatke čuva o svakom pozivaocu",
+            "Gde se čuvaju snimci i transkripti",
+            "Svaka izmena, u javnoj Git istoriji",
           ],
         },
         {
           title: "Menjajte promptove i pravila",
-          body: "Forkujte repozitorijum i izmenite pozdrav, uvodna pitanja ili pravila prosleđivanja. Postavite svoju verziju kada prođe Vaše testove. MIT licenca Vam dozvoljava da izmene zadržite za sebe ili ih podelite.",
+          body: "Forkujte repozitorijum i izmenite pozdrav, uvodna pitanja ili pravila prosleđivanja. MIT licenca Vam dozvoljava da izmene zadržite za sebe ili ih podelite.",
           points: [
-            "Pozdrav, uvodna pitanja i pravila prosleđivanja",
-            "Privatan ili javan fork, po Vašem izboru",
-            "Vaša verzija ide uživo kada ste spremni",
+            "Dodajte alat koji pristupa Vašem softveru",
+            "Postavite svoj fork kada prođe Vaše testove",
           ],
         },
         {
           title: "Pokrenite ga na svom serveru",
-          body: "Docker Compose instalacija pokreće kontrolnu tablu, worker, PostgreSQL i Redis na jednoj mašini. Pozivi idu preko Vaših Twilio i OpenAI naloga, a snimci, transkripti i kontakti ostaju u Vašoj bazi podataka.",
+          body: "Docker Compose instalacija pokreće kontrolnu tablu, worker, PostgreSQL i Redis na jednoj mašini. Pozivi idu preko Vaših Twilio i OpenAI naloga, a snimci, transkripti i kontakti ostaju na Vašem serveru.",
           points: [
             "Docker Compose na jednom serveru ili Railway šablon",
-            "Bilo koji endpoint kompatibilan sa OpenAI-jem za čet i embeddinge",
+            "Od 2 vCPU i 4 GB RAM-a",
             "Vi birate kada ćete nadograditi",
           ],
         },
@@ -2182,9 +2197,9 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
           title: "Ili neka ga LobbyStack hostuje",
           body: "LobbyStack Cloud pokreće isti otvoreni kod umesto Vas, sa minutima razgovora u svakom paketu. Počnite sa besplatnim paketom i isprobajte recepcionera u pregledaču pre nego što preusmerite broj.",
           points: [
-            "Besplatan paket sa 30 minuta razgovora",
+            "Besplatan paket sa 30 minuta razgovora i probnim brojem na 14 dana",
             "Hosting, ažuriranja i rezervne kopije preuzima LobbyStack",
-            "Kod koji možete čitati na GitHub-u",
+            "Starter za 30 USD mesečno sa 150 minuta",
           ],
         },
       ],
@@ -2192,7 +2207,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Šta je AI recepcioner otvorenog koda?",
           answer:
-            "AI recepcioner odgovara na pozive Vaše firme. Odgovara na pitanja, zakazuje termine, prima poruke i prosleđuje pozivaoce osobi. Recepcioner otvorenog koda objavljuje svoj kod, pa svako može da ga čita, menja i pokrene na svom serveru. LobbyStack je AI recepcioner otvorenog koda pod MIT licencom.",
+            "AI recepcioner otvorenog koda odgovara na pozive Vaše firme i objavljuje svoj kod, pa svako može da ga čita, menja i pokrene na svom serveru. LobbyStack je jedan od njih, pod MIT licencom. Odgovara na pitanja, zakazuje termine, prima poruke i prosleđuje pozivaoce osobi.",
         },
         {
           question: "Zašto je otvoren kod važan za AI recepcionera?",
@@ -2218,7 +2233,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
           question:
             "Da li su moji podaci o pozivima bezbedni u projektu otvorenog koda?",
           answer:
-            "Kada sami hostujete, snimci, transkripti i kontakti ostaju u Vašoj PostgreSQL bazi i skladištu, a Vi određujete rezervne kopije i rokove čuvanja. Twilio i OpenAI i dalje obrađuju zvuk poziva uživo preko Vaših naloga. Na LobbyStack Cloud-u te podatke čuva LobbyStack. U oba slučaja možete čitati kod i videti šta se čuva.",
+            "Vaši podaci o pozivima ostaju tamo gde pokrećete LobbyStack. Kada sami hostujete, snimci, transkripti i kontakti ostaju u Vašoj PostgreSQL bazi i skladištu, a Vi određujete rezervne kopije i rokove čuvanja. Twilio i OpenAI i dalje obrađuju zvuk poziva uživo preko Vaših naloga. Na LobbyStack Cloud-u te podatke čuva LobbyStack. U oba slučaja možete čitati kod i videti šta se čuva.",
         },
         {
           question: "Po čemu se razlikuje od AI recepcionera zatvorenog koda?",
@@ -2247,7 +2262,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
       ctaHeading: "Pročitajte kod, pa izaberite gde će raditi",
       ctaBody:
         "Počnite od repozitorijuma na GitHub-u. Hostujte LobbyStack na svom serveru ili ga besplatno isprobajte na LobbyStack Cloud-u.",
-      ctaPrimaryLabel: "Pogledajte na GitHub-u",
+      ctaPrimaryLabel: "Pogledajte kod na GitHub-u",
       ctaPrimaryHref: "https://github.com/lobbystack/lobbystack",
       ctaSecondaryLabel: "Pročitajte vodič za hostovanje",
       ctaSecondaryHref: "https://docs.lobbystack.com/self-hosting/overview",

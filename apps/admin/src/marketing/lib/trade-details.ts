@@ -151,17 +151,17 @@ export const tradeDetails: Record<string, TradeDetails> = {
       kind: "transfer",
     },
     pitch: {
-      title: "A plumbing answering service that knows a burst pipe from a drip",
+      title: "A plumbing answering service that gets the water shut off before you pick up",
       intro:
-        "You decide which calls ring your phone tonight and which ones get the next open slot. Read one call to a fictional plumbing company, from the greeting to the transfer.",
+        "A homeowner with water on the kitchen floor needs the shutoff valve before they need you. Read one call to a fictional plumbing company, from the greeting to the transfer.",
     },
     callCard: {
       title: "A burst pipe, on your plumber's phone in 47 seconds",
       body: "The caller shut off the main and gave the address before LobbyStack rang the on-call plumber. The address and every answer stay with the call in your dashboard.",
     },
     rules: {
-      title: "What happens to each plumbing call",
-      intro: "You write the rules in plain words. Many plumbing companies start with a setup like this one.",
+      title: "Your rules decide where each plumbing call goes",
+      intro: "You write each rule in plain words. This is one example setup for a plumbing company.",
     },
     features: {
       title: "An answering service for plumbers that books the routine work",
@@ -175,8 +175,8 @@ export const tradeDetails: Record<string, TradeDetails> = {
       source: "From your services list",
     },
     intakeCopy: {
-      title: "What it asks plumbing callers",
-      body: "You choose the questions. Plumbers usually start with these, and the answers land in the call summary.",
+      title: "Know what's leaking before you get there",
+      body: "You choose what LobbyStack asks. Each answer goes into the call summary, next to the transcript and recording.",
     },
     summary: [
       { label: "Problem", value: "Burst pipe, kitchen ceiling" },
@@ -293,7 +293,7 @@ export const tradeDetails: Record<string, TradeDetails> = {
       kind: "transfer",
     },
     pitch: {
-      title: "An HVAC answering service that applies your no-heat rule",
+      title: "An HVAC answering service that asks who's home before it transfers",
       intro:
         "Your rule can depend on the indoor temperature and who lives in the home. Read one call to a fictional HVAC company where both mattered.",
     },
@@ -302,8 +302,8 @@ export const tradeDetails: Record<string, TradeDetails> = {
       body: "LobbyStack asked who lives in the house, ran the thermostat and breaker checks you approved, then rang the on-call tech.",
     },
     rules: {
-      title: "What happens to each HVAC call",
-      intro: "You write the rules in plain words. Many HVAC companies start with a setup like this one.",
+      title: "Your rules decide where each HVAC call goes",
+      intro: "You write each rule in plain words. This is one example setup for an HVAC company.",
     },
     features: {
       title: "An AI receptionist for HVAC that books tune-ups and estimates",
@@ -317,8 +317,8 @@ export const tradeDetails: Record<string, TradeDetails> = {
       source: "Switched to Spanish",
     },
     intakeCopy: {
-      title: "What it asks HVAC callers",
-      body: "You choose the questions. HVAC companies usually start with these, and the answers land in the call summary.",
+      title: "Know the system and the indoor temperature before you roll a truck",
+      body: "You choose what LobbyStack asks. Each answer goes into the call summary, next to the transcript and recording.",
     },
     summary: [
       { label: "System", value: "Gas furnace" },
@@ -425,17 +425,17 @@ export const tradeDetails: Record<string, TradeDetails> = {
       kind: "transfer",
     },
     pitch: {
-      title: "An electrician answering service that sorts hazards from estimates",
+      title: "An electrician answering service that reads your safety script first",
       intro:
-        "Some callers need your safety script right now. Others want a panel quote next week. Read one hazard call to a fictional electrical contractor.",
+        "A caller with a hot outlet needs to hear your safety script before anything else. Read one hazard call to a fictional electrical contractor, from the burning smell to the transfer.",
     },
     callCard: {
       title: "A hot outlet, breaker off, electrician on the line in 40 seconds",
       body: "LobbyStack read the safety script, confirmed the breaker was off, took the address and the home's age, then rang the on-call electrician.",
     },
     rules: {
-      title: "What happens to each electrical call",
-      intro: "You write the rules in plain words. Many electrical contractors start with a setup like this one.",
+      title: "Your rules decide where each electrical call goes",
+      intro: "You write each rule in plain words. This is one example setup for an electrical contractor.",
     },
     features: {
       title: "An AI receptionist for electricians that fills your estimate calendar",
@@ -449,8 +449,8 @@ export const tradeDetails: Record<string, TradeDetails> = {
       source: "From your outage questions",
     },
     intakeCopy: {
-      title: "What it asks electrical callers",
-      body: "You choose the questions. Electricians usually start with these, and the answers land in the call summary.",
+      title: "Know the panel size and the home's age before the estimate",
+      body: "You choose what LobbyStack asks. Each answer goes into the call summary, next to the transcript and recording.",
     },
     summary: [
       { label: "Problem", value: "Hot outlet, burning smell" },
@@ -559,7 +559,7 @@ export const tradeDetails: Record<string, TradeDetails> = {
       kind: "booking",
     },
     pitch: {
-      title: "An AI receptionist for garage door companies that books same-day repairs",
+      title: "What an AI receptionist for garage door companies says about a broken spring",
       intro:
         "A stuck door with the car inside can't wait for a callback. Read one call to a fictional garage door company, from the bang to the booking.",
     },
@@ -568,8 +568,8 @@ export const tradeDetails: Record<string, TradeDetails> = {
       body: "LobbyStack told the caller not to lift the door, took the address and door size, and booked the first open slot. The caller got a confirmation text.",
     },
     rules: {
-      title: "What happens to each garage door call",
-      intro: "You write the rules in plain words. Many garage door companies start with a setup like this one.",
+      title: "Your rules decide where each garage door call goes",
+      intro: "You write each rule in plain words. This is one example setup for a garage door company.",
     },
     features: {
       title: "A garage door answering service for the routine calls too",
@@ -583,8 +583,8 @@ export const tradeDetails: Record<string, TradeDetails> = {
       source: "From your reset steps",
     },
     intakeCopy: {
-      title: "What it asks garage door callers",
-      body: "You choose the questions. Garage door companies usually start with these, and the answers land in the call summary.",
+      title: "Know the door size and opener brand before you arrive",
+      body: "You choose what LobbyStack asks. Each answer goes into the call summary, next to the transcript and recording.",
     },
     summary: [
       { label: "Problem", value: "Broken spring" },
@@ -697,20 +697,20 @@ export const tradeDetails: Record<string, TradeDetails> = {
       kind: "booking",
     },
     pitch: {
-      title: "An AI receptionist for appliance repair that gets the model number first",
+      title: "An AI receptionist for appliance repair that checks the brand before it books",
       intro:
         "Your tech needs the brand and model before the visit. Read one call to a fictional appliance repair shop, from the symptom to the booking.",
     },
     callCard: {
-      title: "A warm fridge, booked for tomorrow with the model number on file",
+      title: "A warm fridge, booked for 10 a.m. tomorrow",
       body: "LobbyStack took the brand and model, checked that the shop services Samsung, quoted the diagnostic fee, and booked the visit.",
     },
     rules: {
-      title: "What happens to each appliance repair call",
-      intro: "You write the rules in plain words. Many appliance repair shops start with a setup like this one.",
+      title: "Your rules decide where each appliance repair call goes",
+      intro: "You write each rule in plain words. This is one example setup for an appliance repair shop.",
     },
     features: {
-      title: "An appliance repair answering service that answers the fee question",
+      title: "An appliance repair answering service that books while you're on a repair",
       intro:
         "Callers want to know what the visit costs and whether you fix their brand. LobbyStack answers both from your details, then books.",
     },
@@ -721,8 +721,8 @@ export const tradeDetails: Record<string, TradeDetails> = {
       source: "From your brands and fees",
     },
     intakeCopy: {
-      title: "What it asks appliance repair callers",
-      body: "You choose the questions. Appliance repair shops usually start with these, and the answers land in the call summary.",
+      title: "Know the brand, model, and error code before the visit",
+      body: "You choose what LobbyStack asks. Each answer goes into the call summary, next to the transcript and recording.",
     },
     summary: [
       { label: "Appliance", value: "Samsung fridge, RF28" },
@@ -834,7 +834,7 @@ export const tradeDetails: Record<string, TradeDetails> = {
       kind: "transfer",
     },
     pitch: {
-      title: "An AI receptionist for restoration that gets your crew on the line",
+      title: "An AI receptionist for restoration that takes the claim details before it transfers",
       intro:
         "Active water can't wait until morning. An old stain can. Read one flood call to a fictional restoration company.",
     },
@@ -843,8 +843,8 @@ export const tradeDetails: Record<string, TradeDetails> = {
       body: "LobbyStack told the family to stay out of the basement, asked for the water source and insurance status, then rang the on-call crew.",
     },
     rules: {
-      title: "What happens to each restoration call",
-      intro: "You write the rules in plain words. Many restoration companies start with a setup like this one.",
+      title: "Your rules decide where each restoration call goes",
+      intro: "You write each rule in plain words. This is one example setup for a restoration company.",
     },
     features: {
       title: "A restoration answering service that books the inspections",
@@ -858,8 +858,8 @@ export const tradeDetails: Record<string, TradeDetails> = {
       source: "From your billing details",
     },
     intakeCopy: {
-      title: "What it asks restoration callers",
-      body: "You choose the questions. Restoration companies usually start with these, and the answers land in the call summary.",
+      title: "Know the water source and the claim number before your crew rolls",
+      body: "You choose what LobbyStack asks. Each answer goes into the call summary, next to the transcript and recording.",
     },
     summary: [
       { label: "Water source", value: "Storm" },
@@ -967,7 +967,7 @@ export const tradeDetails: Record<string, TradeDetails> = {
       kind: "transfer",
     },
     pitch: {
-      title: "A locksmith answering service that quotes the fee before it transfers",
+      title: "A locksmith answering service that checks nobody is locked inside first",
       intro:
         "Lockout callers want a price and someone on the way. Read one call to a fictional locksmith, from the parking lot to the transfer.",
     },
@@ -976,13 +976,13 @@ export const tradeDetails: Record<string, TradeDetails> = {
       body: "LobbyStack checked that nobody was locked inside, took the car and the location, quoted the after-hours fee, and rang the on-call locksmith.",
     },
     rules: {
-      title: "What happens to each locksmith call",
-      intro: "You write the rules in plain words. Many locksmiths start with a setup like this one.",
+      title: "Your rules decide where each locksmith call goes",
+      intro: "You write each rule in plain words. This is one example setup for a locksmith.",
     },
     features: {
-      title: "An AI receptionist for locksmith services that books the daytime jobs",
+      title: "An AI receptionist for locksmith services that books rekeys and key fobs",
       intro:
-        "Rekeys, key fobs, and lock installs can wait for a slot. LobbyStack books them and quotes the prices you set.",
+        "Callers ask the price first, then want a time. LobbyStack quotes the prices you set and books the visit during the call.",
     },
     booking: { job: "Rekey after a move", hours: [9, 12, 16], picked: 0 },
     answer: {
@@ -991,8 +991,8 @@ export const tradeDetails: Record<string, TradeDetails> = {
       source: "From your price list",
     },
     intakeCopy: {
-      title: "What it asks locksmith callers",
-      body: "You choose the questions. Locksmiths usually start with these, and the answers land in the call summary.",
+      title: "Know the car and the exact spot before you drive out",
+      body: "You choose what LobbyStack asks. Each answer goes into the call summary, next to the transcript and recording.",
     },
     summary: [
       { label: "Lockout", value: "Car, keys inside" },
@@ -1104,8 +1104,8 @@ export const tradeDetails: Record<string, TradeDetails> = {
       body: "LobbyStack had the client shut off the main, asked which project and manager, then rang the on-call project manager.",
     },
     rules: {
-      title: "What happens to each contractor call after hours",
-      intro: "You write the rules in plain words. Many contractors start with a setup like this one.",
+      title: "Your rules decide where each after-hours call goes",
+      intro: "You write each rule in plain words. This is one example setup for a remodeling contractor.",
     },
     features: {
       title: "An after-hours answering service for contractors that books new work",
@@ -1119,8 +1119,8 @@ export const tradeDetails: Record<string, TradeDetails> = {
       source: "Saved for the morning list",
     },
     intakeCopy: {
-      title: "What it asks contractor callers",
-      body: "You choose the questions. Contractors usually start with these, and the answers land in the call summary.",
+      title: "Know which project called and what went wrong",
+      body: "You choose what LobbyStack asks. Each answer goes into the call summary, next to the transcript and recording.",
     },
     summary: [
       { label: "Project", value: "Henderson, Cedar Drive" },
@@ -1224,17 +1224,17 @@ export const tradeDetails: Record<string, TradeDetails> = {
       kind: "booking",
     },
     pitch: {
-      title: "A roofing answering service that books inspections before the adjuster comes",
+      title: "A roofing answering service that checks for leaks before it books",
       intro:
-        "After a storm, most callers want the same thing: someone on the roof before the insurance visit. Read one of those calls to a fictional roofer.",
+        "Read one call to a fictional roofer the morning after a hailstorm, from the dented gutters to the booked inspection.",
     },
     callCard: {
       title: "Hail damage, inspection booked for Thursday at 1 p.m.",
       body: "LobbyStack checked for a leak, asked for the roof's age and claim status, answered the adjuster question from the script, and booked the inspection.",
     },
     rules: {
-      title: "What happens to each roofing call",
-      intro: "You write the rules in plain words. Many roofers start with a setup like this one.",
+      title: "Your rules decide where each roofing call goes",
+      intro: "You write each rule in plain words. This is one example setup for a roofing company.",
     },
     features: {
       title: "An AI receptionist for roofers that answers the insurance questions",
@@ -1248,8 +1248,8 @@ export const tradeDetails: Record<string, TradeDetails> = {
       source: "From your insurance script",
     },
     intakeCopy: {
-      title: "What it asks roofing callers",
-      body: "You choose the questions. Roofers usually start with these, and the answers land in the call summary.",
+      title: "Know the roof's age and the claim status before you climb",
+      body: "You choose what LobbyStack asks. Each answer goes into the call summary, next to the transcript and recording.",
     },
     summary: [
       { label: "Damage", value: "Gutters and shingles" },
@@ -1353,17 +1353,17 @@ export const tradeDetails: Record<string, TradeDetails> = {
       kind: "transfer",
     },
     pitch: {
-      title: "A property management answering service that works from your emergency list",
+      title: "A 2 a.m. leak call to a property management answering service",
       intro:
-        "Tenants and prospects call the same number at all hours. Read one 2 a.m. maintenance call to a fictional property manager.",
+        "Tenants and prospects call the same number at all hours. Read one call to a fictional property manager, from the greeting to the transfer.",
     },
     callCard: {
       title: "A ceiling leak in unit 4B, transferred in 34 seconds",
       body: "LobbyStack confirmed the caller lives there, asked how fast the water was coming, told them to switch off the light, and rang on-call maintenance.",
     },
     rules: {
-      title: "What happens to each tenant and prospect call",
-      intro: "You write the rules in plain words. Many property managers start with a setup like this one.",
+      title: "Your rules decide where each tenant and prospect call goes",
+      intro: "You write each rule in plain words. This is one example setup for a property manager.",
     },
     features: {
       title: "An answering service for landlords that books showings too",
@@ -1377,8 +1377,8 @@ export const tradeDetails: Record<string, TradeDetails> = {
       source: "From your listing details",
     },
     intakeCopy: {
-      title: "What it asks tenants and prospects",
-      body: "You choose the questions. Property managers usually start with these, and the answers land in the call summary.",
+      title: "Know the unit and the problem before anyone calls back",
+      body: "You choose what LobbyStack asks. Each answer goes into the call summary, next to the transcript and recording.",
     },
     summary: [
       { label: "Caller", value: "Resident, unit 4B" },

@@ -68,7 +68,7 @@ export function GeneralLayout({ page, locale }: SeoLandingPageProps) {
             </ButtonLink>
           </>
         }
-        footnote={t.reassurance}
+        footnote={page.heroFootnote ?? t.reassurance}
         art={heroScene && <SceneArt scene={heroScene} locale={locale} hero neutral={neutral} />}
       />
 

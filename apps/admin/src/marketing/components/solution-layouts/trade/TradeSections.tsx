@@ -241,22 +241,22 @@ export function TradeDashboard({ locale }: SectionProps) {
 export function TradeSetup({ details }: SectionProps) {
   const steps = [
     {
-      title: "Forward your number",
-      body: "Keep the number your customers know. Your carrier can forward every call, or only the ones you miss and the ones after hours.",
-    },
-    {
       title: "Write your rules",
       body: `Say in plain words what counts as ${tradeArticle(details.noun)} ${details.noun} emergency, which jobs to book, and which prices callers can hear. Then add the number urgent calls ring.`,
     },
     {
       title: "Call it yourself",
-      body: "Call your line with a made-up emergency and a routine job. Change the rules until both calls go the way you want.",
+      body: "Call your LobbyStack number with a made-up emergency, then with a routine job. Change the rules until both calls go the way you want.",
+    },
+    {
+      title: "Forward your number",
+      body: "Keep the number your customers know. Your carrier can forward every call, or only the ones you miss and the ones after hours.",
     },
   ]
   return (
     <section className={sectionSpacing} id="setup">
       <div className={container}>
-        <SectionTitle eyebrow="Setup" intro="You can test everything on the Free plan before a customer ever calls." className="max-w-3xl">
+        <SectionTitle eyebrow="Setup" intro="Test every rule on the Free plan before a customer calls." className="max-w-3xl">
           Three steps before the first real call
         </SectionTitle>
         <ol className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-border/70 bg-border/70 md:grid-cols-3">

@@ -72,7 +72,7 @@ export const bespokeSolutionVariants = {
       en: {
         title: "AI Appointment Setter for Inbound Calls | LobbyStack",
         description:
-          "LobbyStack is an AI appointment setter and scheduler for the calls you get. It offers open times from Google Calendar, books the visit and texts a confirmation.",
+          "An AI appointment setter and scheduler for inbound calls. LobbyStack offers open times from Google Calendar, books the visit and texts a confirmation.",
       },
       fr: {
         title: "Planificateur de rendez‑vous IA pour petites entreprises",
@@ -106,7 +106,7 @@ export const bespokeSolutionVariants = {
       en: {
         title: "AI Receptionist for Home Services Businesses | LobbyStack",
         description:
-          "An AI receptionist for home services that answers while your crew works. LobbyStack books jobs into Google Calendar and transfers emergencies to your on-call tech.",
+          "An AI receptionist for home services that answers while your crew works, books jobs into Google Calendar and transfers emergencies to your on-call tech.",
       },
       fr: {
         title: "Réceptionniste IA pour services à domicile | LobbyStack",

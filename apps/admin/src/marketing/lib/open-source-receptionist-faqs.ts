@@ -4,7 +4,7 @@ export const openSourceReceptionistFaqs: FaqItem[] = [
   {
     question: "What is an open-source AI receptionist?",
     answer:
-      "An AI receptionist answers your business's phone calls. It answers questions, books appointments, takes messages and transfers callers to a person. An open-source one publishes its code, so anyone can read it, change it and run it on their own server. LobbyStack is an open-source AI receptionist under the MIT License.",
+      "An open-source AI receptionist answers your business's phone calls and publishes its code, so anyone can read it, change it and run it on their own server. LobbyStack is one, under the MIT License. It answers questions, books appointments, takes messages and transfers callers to a person.",
   },
   {
     question: "Why does open source matter for an AI receptionist?",
@@ -29,7 +29,7 @@ export const openSourceReceptionistFaqs: FaqItem[] = [
   {
     question: "Is my call data safe in an open-source project?",
     answer:
-      "When you self-host, recordings, transcripts and contacts stay in your own PostgreSQL database and storage, and you set the backups and retention. Twilio and OpenAI still process the live call audio under your accounts. On LobbyStack Cloud, LobbyStack stores that data for you. In both cases you can read the code to see what it saves.",
+      "Your call data stays wherever you run LobbyStack. When you self-host, recordings, transcripts and contacts stay in your own PostgreSQL database and storage, and you set the backups and retention. Twilio and OpenAI still process the live call audio under your accounts. On LobbyStack Cloud, LobbyStack stores that data for you. In both cases you can read the code to see what it saves.",
   },
   {
     question: "How is it different from a closed-source AI receptionist?",

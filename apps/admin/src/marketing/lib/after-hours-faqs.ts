@@ -19,7 +19,7 @@ export const afterHoursFaqs: FaqItem[] = [
   {
     question: "Will it wake up my on-call staff for small things?",
     answer:
-      "Only calls that match your transfer rules ring your on-call number. You choose when it transfers: for urgent calls, when the caller asks, always, only during business hours, or never. Quote requests and routine visits wait for the morning.",
+      "No. Only calls that match your transfer rules ring your on-call number. You choose when it transfers: for urgent calls, when the caller asks, always, only during business hours, or never. Quote requests and routine visits wait for the morning.",
   },
   {
     question: "Can I keep my business phone number?",

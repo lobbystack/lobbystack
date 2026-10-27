@@ -8,7 +8,7 @@ import type { FaqItem } from "@/marketing/lib/seo"
 const EN_FAQS: FaqItem[] = [
   {
     question: "What is the LobbyStack MCP server?",
-    answer: `A Model Context Protocol server at ${MCP_SERVER_URL}. AI assistants connect to it to read a business's calls, messages, contacts and appointments, book and change appointments, update opening hours and add FAQs. It speaks Streamable HTTP, and assistants sign in with OAuth or send an API key.`,
+    answer: `It connects Claude, ChatGPT and other AI assistants to your LobbyStack AI receptionist. The Model Context Protocol server lives at ${MCP_SERVER_URL}. Through it, an assistant reads a business's calls, messages, contacts and appointments, books and changes appointments, updates opening hours and adds FAQs. It speaks Streamable HTTP, and assistants sign in with OAuth or send an API key.`,
   },
   {
     question: "Which AI assistants work with it?",
@@ -48,14 +48,14 @@ const EN_FAQS: FaqItem[] = [
   {
     question: "Is there a rate limit?",
     answer:
-      "Each tool call counts toward 120 requests per minute. An API key shares that limit with its REST requests, and each OAuth connection has its own. Past the limit, the tool tells the assistant how many seconds to wait.",
+      "Yes, 120 requests per minute. Each tool call counts, and listing the tools doesn't. An API key shares that limit with its REST requests, and each OAuth connection has its own. Past the limit, the tool tells the assistant how many seconds to wait.",
   },
 ]
 
 const FR_FAQS: FaqItem[] = [
   {
     question: "Qu'est-ce que le serveur MCP de LobbyStack?",
-    answer: `Un serveur Model Context Protocol à l'adresse ${MCP_SERVER_URL}. Les assistants IA s'y connectent pour lire les appels, les messages, les contacts et les rendez-vous d'une entreprise, réserver et modifier des rendez-vous, mettre à jour les heures d'ouverture et ajouter des FAQ. Il utilise Streamable HTTP, et les assistants se connectent avec OAuth ou envoient une clé API.`,
+    answer: `Il relie Claude, ChatGPT et d'autres assistants IA à votre réceptionniste IA LobbyStack. Ce serveur Model Context Protocol se trouve à l'adresse ${MCP_SERVER_URL}. Par lui, un assistant lit les appels, les messages, les contacts et les rendez-vous d'une entreprise, réserve et modifie des rendez-vous, met à jour les heures d'ouverture et ajoute des FAQ. Il utilise Streamable HTTP, et les assistants se connectent avec OAuth ou envoient une clé API.`,
   },
   {
     question: "Quels assistants IA fonctionnent avec lui?",
@@ -95,14 +95,14 @@ const FR_FAQS: FaqItem[] = [
   {
     question: "Y a-t-il une limite de requêtes?",
     answer:
-      "Chaque appel d'outil compte dans une limite de 120 requêtes par minute. Une clé API partage cette limite avec ses requêtes REST, et chaque connexion OAuth a la sienne. Au-delà, l'outil indique à l'assistant combien de secondes attendre.",
+      "Oui, 120 requêtes par minute. Chaque appel d'outil compte, mais pas la liste des outils. Une clé API partage cette limite avec ses requêtes REST, et chaque connexion OAuth a la sienne. Au-delà, l'outil indique à l'assistant combien de secondes attendre.",
   },
 ]
 
 const ES_FAQS: FaqItem[] = [
   {
     question: "¿Qué es el servidor MCP de LobbyStack?",
-    answer: `Un servidor Model Context Protocol en ${MCP_SERVER_URL}. Los asistentes de IA se conectan a él para leer las llamadas, los mensajes, los contactos y las citas de un negocio, reservar y cambiar citas, actualizar el horario de atención y agregar preguntas frecuentes. Usa Streamable HTTP, y los asistentes inician sesión con OAuth o envían una clave de API.`,
+    answer: `Conecta Claude, ChatGPT y otros asistentes de IA con su recepcionista con IA de LobbyStack. Este servidor Model Context Protocol está en ${MCP_SERVER_URL}. A través de él, un asistente lee las llamadas, los mensajes, los contactos y las citas de un negocio, reserva y cambia citas, actualiza el horario de atención y agrega preguntas frecuentes. Usa Streamable HTTP, y los asistentes inician sesión con OAuth o envían una clave de API.`,
   },
   {
     question: "¿Qué asistentes de IA funcionan con él?",
@@ -142,14 +142,14 @@ const ES_FAQS: FaqItem[] = [
   {
     question: "¿Hay un límite de solicitudes?",
     answer:
-      "Cada llamada a una herramienta cuenta para un límite de 120 solicitudes por minuto. Una clave de API comparte ese límite con sus solicitudes REST, y cada conexión OAuth tiene el suyo. Al pasar el límite, la herramienta le dice al asistente cuántos segundos esperar.",
+      "Sí, 120 solicitudes por minuto. Cada llamada a una herramienta cuenta; consultar la lista de herramientas no. Una clave de API comparte ese límite con sus solicitudes REST, y cada conexión OAuth tiene el suyo. Al pasar el límite, la herramienta le dice al asistente cuántos segundos esperar.",
   },
 ]
 
 const SR_FAQS: FaqItem[] = [
   {
     question: "Šta je LobbyStack MCP server?",
-    answer: `Model Context Protocol server na adresi ${MCP_SERVER_URL}. AI asistenti se povezuju sa njim da bi čitali pozive, poruke, kontakte i termine firme, zakazivali i menjali termine, menjali radno vreme i dodavali česta pitanja. Koristi Streamable HTTP, a asistenti se prijavljuju preko OAuth-a ili šalju API ključ.`,
+    answer: `On povezuje Claude, ChatGPT i druge AI asistente sa Vašim LobbyStack AI recepcionerom. Ovaj Model Context Protocol server nalazi se na adresi ${MCP_SERVER_URL}. Preko njega asistent čita pozive, poruke, kontakte i termine firme, zakazuje i menja termine, menja radno vreme i dodaje česta pitanja. Koristi Streamable HTTP, a asistenti se prijavljuju preko OAuth-a ili šalju API ključ.`,
   },
   {
     question: "Koji AI asistenti rade sa njim?",
@@ -189,7 +189,7 @@ const SR_FAQS: FaqItem[] = [
   {
     question: "Postoji li ograničenje broja zahteva?",
     answer:
-      "Svaki poziv alata se računa u ograničenje od 120 zahteva u minuti. API ključ deli to ograničenje sa svojim REST zahtevima, a svaka OAuth veza ima svoje. Preko ograničenja, alat kaže asistentu koliko sekundi da sačeka.",
+      "Da, 120 zahteva u minuti. Svaki poziv alata se računa, a pregled liste alata ne. API ključ deli to ograničenje sa svojim REST zahtevima, a svaka OAuth veza ima svoje. Preko ograničenja, alat kaže asistentu koliko sekundi da sačeka.",
   },
 ]
 

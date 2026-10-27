@@ -2,7 +2,7 @@
 // landing page data. Facts come from mintlify/self-hosting/.
 
 export const selfHostedLayoutCopy = {
-  heroFootnote: "MIT License. LobbyStack charges no license fee to self-host.",
+  heroFootnote: "Free to self-host under the MIT License. You pay your host, Twilio and OpenAI directly.",
   deploy: {
     eyebrow: "Deploy",
     title: "Two ways to run a self-hosted AI receptionist",
@@ -11,11 +11,11 @@ export const selfHostedLayoutCopy = {
     composeCta: "Read the Docker Compose guide",
     railwayCta: "Deploy on Railway",
   },
-  architecture: { eyebrow: "Architecture", cta: "Read the self-hosting overview" },
+  architecture: { eyebrow: "Your data", cta: "Read the self-hosting overview" },
   code: { eyebrow: "Open source", cta: "View the code on GitHub" },
   run: {
     eyebrow: "What you run",
-    title: "What your team takes on",
+    title: "Four jobs your team takes on",
     intro: "Self-hosting moves these jobs from LobbyStack to you. The production checklist in the Docker Compose guide covers each one.",
     cards: [
       {
