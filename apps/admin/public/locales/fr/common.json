@@ -175,9 +175,6 @@
       "dayEmpty": "Aucun rendez-vous ce jour-là.",
       "with": "avec {{name}}"
     },
-    "summary_one": "{{name}} · {{count}} rendez-vous à venir",
-    "summary_many": "{{name}} · {{count}} rendez-vous à venir",
-    "summary_other": "{{name}} · {{count}} rendez-vous à venir",
     "chooseWorkspace": "Choisissez un espace pour consulter les rendez-vous.",
     "time": "Heure",
     "customer": "Client",

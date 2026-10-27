@@ -169,9 +169,6 @@
       "dayEmpty": "No hay citas este día.",
       "with": "con {{name}}"
     },
-    "summary_one": "{{name}} · {{count}} cita próxima",
-    "summary_many": "{{name}} · {{count}} citas próximas",
-    "summary_other": "{{name}} · {{count}} citas próximas",
     "chooseWorkspace": "Elija un espacio de trabajo para ver las citas.",
     "time": "Hora",
     "customer": "Cliente",

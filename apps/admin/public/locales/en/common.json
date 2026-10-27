@@ -167,8 +167,6 @@
       "dayEmpty": "No appointments on this day.",
       "with": "with {{name}}"
     },
-    "summary_one": "{{name}} · {{count}} upcoming appointment",
-    "summary_other": "{{name}} · {{count}} upcoming appointments",
     "chooseWorkspace": "Choose a workspace to view appointments.",
     "time": "Time",
     "customer": "Customer",

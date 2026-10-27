@@ -76,8 +76,8 @@ export function LiveAppointmentsSurface() {
   const details = detailsId ? rows.find((appointment) => appointment.id === detailsId) : undefined;
 
   return <PageSurface title={t("appointments.title")}><div className="flex w-full flex-col gap-6">
-    <div className="flex flex-wrap items-center justify-between gap-4">
-      <p className="type-section-description">{business ? t("appointments.summary", { name: business.name, count: rows.filter((appointment) => !hasEnded(appointment)).length }) : t("appointments.chooseWorkspace")}</p>
+    <div className={cn("flex flex-wrap items-center gap-4", business ? "justify-end" : "justify-between")}>
+      {business ? null : <p className="type-section-description">{t("appointments.chooseWorkspace")}</p>}
       <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
         {staff.length > 1 ? <Select items={[{ value: ALL_EMPLOYEES, label: t("appointments.filter.all") }, ...staff.map(([value, label]) => ({ value, label }))]} onValueChange={(value) => setParam("employee", value ?? ALL_EMPLOYEES, ALL_EMPLOYEES)} value={employee}>
           <SelectTrigger aria-label={t("appointments.filter.label")} className="w-full sm:w-44"><SelectValue /></SelectTrigger>

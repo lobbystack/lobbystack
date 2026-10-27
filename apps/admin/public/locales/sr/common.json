@@ -175,9 +175,6 @@
       "dayEmpty": "Nema termina za ovaj dan.",
       "with": "Zaposleni: {{name}}"
     },
-    "summary_one": "{{name}} · {{count}} predstojeći termin",
-    "summary_few": "{{name}} · {{count}} predstojeća termina",
-    "summary_other": "{{name}} · {{count}} predstojećih termina",
     "chooseWorkspace": "Izaberite radni prostor da biste videli termine.",
     "time": "Vreme",
     "customer": "Klijent",

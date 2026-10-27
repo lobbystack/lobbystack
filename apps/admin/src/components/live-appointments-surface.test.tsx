@@ -40,7 +40,6 @@ describe("new appointments locale baseline", () => {
     expect(screen.getByText("Confirmé")).toBeTruthy();
     expect(screen.getByText("Synchronisé")).toBeTruthy();
     expect(screen.getByText("Contact inconnu")).toBeTruthy();
-    expect(screen.getByText("Clinic · 1 rendez-vous à venir")).toBeTruthy();
   });
   it("lets schedulers cancel each appointment, and hides the action from viewers", async () => {
     await setup("en", true, "scheduler");
@@ -109,7 +108,7 @@ describe("new appointments locale baseline", () => {
     expect(within(sheet).getByRole("link", { name: "rosa@example.invalid" }).getAttribute("href")).toBe("mailto:rosa@example.invalid");
     expect(within(sheet).getByRole("link", { name: /555/ }).getAttribute("href")).toBe("tel:+14155550100");
   });
-  it("lists ended appointments under Past, without a Cancel button, and out of the upcoming count", async () => {
+  it("lists ended appointments under Past, without a Cancel button", async () => {
     vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-09-06T13:00:00Z") });
     const booking = { timezone: "UTC", status: "confirmed", sourceChannel: "voice", calendarSyncState: "synced", contactName: "Rosa", serviceName: "Haircut", staffName: "Ana" };
     const bookings = [
@@ -121,7 +120,8 @@ describe("new appointments locale baseline", () => {
 
     expect(within(await screen.findByRole("row", { name: /3:00 PM/ })).getByRole("button", { name: /Cancel appointment/ })).toBeTruthy();
     expect(screen.queryByRole("row", { name: /12:00 PM/ })).toBeNull();
-    expect(screen.getByText("Clinic · 1 upcoming appointment")).toBeTruthy();
+    // The page names no business or count under its title.
+    expect(screen.queryByText(/upcoming appointment/)).toBeNull();
     await userEvent.click(screen.getByRole("tab", { name: en.appointments.when.past }));
     expect(route.replace).toHaveBeenLastCalledWith("/appointments?when=past", { scroll: false });
 
