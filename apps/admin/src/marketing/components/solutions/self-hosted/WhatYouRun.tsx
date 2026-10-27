@@ -8,7 +8,8 @@ const steps: Array<{ title: string; body: string; code: string }> = [
   {
     title: "Clone the repository",
     body: "Get the code from GitHub and open its folder.",
-    code: "git clone https://github.com/lobbystack/lobbystack.git\ncd lobbystack",
+    // Joined at render time, so link checkers don't read the newline as part of the URL.
+    code: ["git clone https://github.com/lobbystack/lobbystack.git", "cd lobbystack"].join("\n"),
   },
   {
     title: "Generate the secrets",
@@ -18,7 +19,7 @@ const steps: Array<{ title: string; body: string; code: string }> = [
   {
     title: "Add your provider keys",
     body: "Open .env and set your dashboard's address, your OpenAI key and your Twilio credentials.",
-    code: "APP_BASE_URL=https://your_domain\nOPENAI_API_KEY=\nTWILIO_ACCOUNT_SID=\nTWILIO_AUTH_TOKEN=",
+    code: ["APP_BASE_URL=https://your_domain", "OPENAI_API_KEY=", "TWILIO_ACCOUNT_SID=", "TWILIO_AUTH_TOKEN="].join("\n"),
   },
   {
     title: "Start the stack",
