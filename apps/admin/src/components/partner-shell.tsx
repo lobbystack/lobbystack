@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createContext, useContext, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, ChevronsUpDown, Contrast, LogOut, Plus } from "lucide-react";
+import { Check, ChevronsUpDown, Contrast, LayoutDashboard, LogOut, Plus } from "lucide-react";
 
 import type { PartnerRole } from "@lobbystack/shared";
 import { AnimatedNavigationIcon } from "@/components/animated-navigation-icon";
@@ -62,11 +62,13 @@ type PartnerShellProps = {
   sidebarOpen: boolean;
   /** Whether owners get the Billing page: while the deployment bills partners for tiers, or once the host set the partner's pool. */
   billingPage?: boolean;
+  /** Whether the account menu links to the business dashboard: the person is on a business's team on this domain. */
+  businessDashboard?: boolean;
   user: { email: string };
 };
 
 /** The partner console's frame: the partner switcher, its pages for the person's role, and the account menu. */
-export function PartnerShell({ billingPage = false, children, partner, partners, sidebarOpen, user }: PartnerShellProps) {
+export function PartnerShell({ billingPage = false, businessDashboard = false, children, partner, partners, sidebarOpen, user }: PartnerShellProps) {
   const { t } = useTranslation(["partner", "common"]);
   const pathname = usePathname();
   const contentScrollRef = useRef<HTMLElement>(null);
@@ -94,7 +96,7 @@ export function PartnerShell({ billingPage = false, children, partner, partners,
               <PartnerNavigation billingPage={billingPage} partnerId={partner.partnerId} role={partner.role} />
             </SidebarContent>
             <SidebarFooter>
-              <PartnerUserMenu email={user.email} />
+              <PartnerUserMenu businessDashboard={businessDashboard} email={user.email} />
             </SidebarFooter>
             <SidebarRail />
           </Sidebar>
@@ -213,7 +215,7 @@ function PartnerSwitcher({ partner, partners }: { partner: ConsolePartner; partn
   );
 }
 
-function PartnerUserMenu({ email }: { email: string }) {
+function PartnerUserMenu({ businessDashboard, email }: { businessDashboard: boolean; email: string }) {
   const { t } = useTranslation(["partner", "nav"]);
   const [open, setOpen] = useState(false);
   const { isMobile } = useSidebar();
@@ -237,6 +239,13 @@ function PartnerUserMenu({ email }: { email: string }) {
             <ChevronsUpDown className="ms-auto size-4" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-56 rounded-xl" side={isMobile ? "bottom" : "right"} sideOffset={4}>
+            {/* The way back from the console, as the dashboard's Partner console item comes here. */}
+            {businessDashboard ? (
+              <DropdownMenuItem render={<Link href="/" />}>
+                <LayoutDashboard />
+                {t("partner:shell.businessDashboard")}
+              </DropdownMenuItem>
+            ) : null}
             <DropdownMenuItem closeOnClick={false} onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}>
               <Contrast />
               {t("nav:sidebar.toggleTheme")}

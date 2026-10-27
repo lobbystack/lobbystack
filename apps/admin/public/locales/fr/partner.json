@@ -2,7 +2,8 @@
   "shell": {
     "switchPartner": "Changer de partenaire",
     "signUpAnother": "Inscrire un autre partenaire",
-    "userMenu": "Menu du compte {{email}}"
+    "userMenu": "Menu du compte {{email}}",
+    "businessDashboard": "Tableau de bord"
   },
   "nav": {
     "businesses": "Entreprises",

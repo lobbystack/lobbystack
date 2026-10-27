@@ -1,14 +1,14 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { listUserPartners, partnerHasBillingPage } from "@lobbystack/domain";
+import { listUserBusinesses, listUserPartners, partnerHasBillingPage } from "@lobbystack/domain";
 import { isUuid } from "@lobbystack/shared";
 import { PartnerShell } from "@/components/partner-shell";
 import { getAppDatabase } from "@/lib/api-helpers";
 import { getSession } from "@/lib/auth";
 import { buildPartnerConsoleLoginPath } from "@/lib/auth-return-to";
 import { localeFromRequestHeaders, PATHNAME_HEADER } from "@/lib/locale-request";
-import { opensPartnerConsole, readResolvedBrand } from "@/lib/request-brand";
+import { opensPartnerConsole, readResolvedBrand, requestBrandScope } from "@/lib/request-brand";
 
 /**
  * The console of one partner the signed-in person is on the team of. Anyone
@@ -28,10 +28,16 @@ export default async function PartnerConsoleLayout({ children, params }: { child
   const partner = partners.find((candidate) => candidate.partnerId === partnerId.toLowerCase());
   if (!partner) redirect("/partner");
   const sidebarOpen = (await cookies()).get("sidebar_state")?.value !== "false";
-  // Only owners see Billing: while the deployment bills tiers, or once the host set the partner's pool.
-  const billingPage = partner.role === "owner" && await partnerHasBillingPage({ db: getAppDatabase().db }, { userId: session.user.id, partnerId: partner.partnerId });
+  const [billingPage, businesses] = await Promise.all([
+    // Only owners see Billing: while the deployment bills tiers, or once the host set the partner's pool.
+    partner.role === "owner" ? partnerHasBillingPage({ db: getAppDatabase().db }, { userId: session.user.id, partnerId: partner.partnerId }) : false,
+    listUserBusinesses(getAppDatabase().db, session.user.id, requestBrandScope(requestHeaders)),
+  ]);
+  // The account menu links back to the business dashboard for someone on a business's own team here. A business
+  // their partner opened for them doesn't count: they get back to that one from Businesses.
+  const businessDashboard = businesses.some(({ via }) => via === "membership");
   return (
-    <PartnerShell billingPage={billingPage} partner={partner} partners={partners} sidebarOpen={sidebarOpen} user={{ email: session.user.email ?? "" }}>
+    <PartnerShell billingPage={billingPage} businessDashboard={businessDashboard} partner={partner} partners={partners} sidebarOpen={sidebarOpen} user={{ email: session.user.email ?? "" }}>
       {children}
     </PartnerShell>
   );

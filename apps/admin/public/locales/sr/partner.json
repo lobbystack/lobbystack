@@ -2,7 +2,8 @@
   "shell": {
     "switchPartner": "Promeni partnera",
     "signUpAnother": "Registruj još jednog partnera",
-    "userMenu": "Meni naloga {{email}}"
+    "userMenu": "Meni naloga {{email}}",
+    "businessDashboard": "Kontrolna tabla firme"
   },
   "nav": {
     "businesses": "Firme",

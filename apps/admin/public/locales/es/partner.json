@@ -2,7 +2,8 @@
   "shell": {
     "switchPartner": "Cambiar de socio",
     "signUpAnother": "Registrar otro socio",
-    "userMenu": "Menú de la cuenta {{email}}"
+    "userMenu": "Menú de la cuenta {{email}}",
+    "businessDashboard": "Panel del negocio"
   },
   "nav": {
     "businesses": "Negocios",

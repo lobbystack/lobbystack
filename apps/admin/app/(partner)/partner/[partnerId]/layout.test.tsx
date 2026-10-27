@@ -6,11 +6,12 @@ const fixture = vi.hoisted(() => ({
   session: { user: { id: "user", email: "owner@example.test" } } as { user: { id: string; email: string } } | null,
   partners: [] as Array<{ partnerId: string; name: string; slug: string; role: "owner" | "admin" | "member"; subdomain: string | null }>,
   billingPage: vi.fn(async (_context: unknown, _input: { userId: string; partnerId: string }) => false),
+  businesses: [] as Array<{ businessId: string; via: "membership" | "partner" }>,
 }));
 vi.mock("next/headers", () => ({ cookies: async () => ({ get: () => undefined }), headers: async () => fixture.headers }));
 // Next's redirect throws, so nothing after it runs.
 vi.mock("next/navigation", () => ({ redirect: vi.fn((to: string) => { throw Object.assign(new Error("NEXT_REDIRECT"), { to }); }) }));
-vi.mock("@lobbystack/domain", () => ({ listUserPartners: async () => fixture.partners, partnerHasBillingPage: fixture.billingPage }));
+vi.mock("@lobbystack/domain", () => ({ listUserBusinesses: async () => fixture.businesses, listUserPartners: async () => fixture.partners, partnerHasBillingPage: fixture.billingPage }));
 vi.mock("@/lib/auth", () => ({ getSession: async () => fixture.session }));
 vi.mock("@/lib/api-helpers", () => ({ getAppDatabase: () => ({ db: {} }) }));
 vi.mock("@/components/partner-shell", () => ({ PartnerShell: () => null }));
@@ -26,6 +27,7 @@ beforeEach(() => {
   fixture.billingPage.mockClear();
   fixture.headers = new Headers({ "x-lobbystack-brand": "host", "x-lobbystack-pathname": `/partner/${PARTNER}/team` });
   fixture.session = { user: { id: "user", email: "owner@example.test" } };
+  fixture.businesses = [];
   fixture.partners = [
     { partnerId: PARTNER, name: "Bright Desk", slug: "bright-desk", role: "admin", subdomain: null },
     { partnerId: OTHER, name: "Second Shop", slug: "second-shop", role: "member", subdomain: null },
@@ -75,4 +77,14 @@ it("opens only the host's partner on a partner's host, with no other partner in 
   expect(shell.props.partners).toEqual([{ partnerId: PARTNER, name: "Bright Desk", role: "admin" }]);
   // The person's other partner opens only on the host's domain or its own host.
   await expect(open(OTHER)).rejects.toMatchObject({ to: "/partner" });
+});
+
+it("links back to the business dashboard only for someone on a business's own team", async () => {
+  const shell = async () => (await open(PARTNER) as ReactElement<{ businessDashboard: boolean }>).props.businessDashboard;
+  expect(await shell()).toBe(false);
+  // A business the partner opened for them doesn't count; Businesses opens that one.
+  fixture.businesses = [{ businessId: "client", via: "partner" }];
+  expect(await shell()).toBe(false);
+  fixture.businesses = [{ businessId: "client", via: "partner" }, { businessId: "own", via: "membership" }];
+  expect(await shell()).toBe(true);
 });

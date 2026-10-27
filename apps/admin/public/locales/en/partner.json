@@ -2,7 +2,8 @@
   "shell": {
     "switchPartner": "Switch partner",
     "signUpAnother": "Sign up another partner",
-    "userMenu": "Account menu for {{email}}"
+    "userMenu": "Account menu for {{email}}",
+    "businessDashboard": "Business dashboard"
   },
   "nav": {
     "businesses": "Businesses",

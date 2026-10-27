@@ -105,3 +105,20 @@ it("gives owners a Billing page when the deployment sells tiers or the host set 
   expect(navigation({ ...bright, role: "admin" }, true)).toBeNull();
   expect(navigation({ ...bright, role: "member" }, true)).toBeNull();
 });
+
+it("links the account menu back to the business dashboard only when the person has a business there", async () => {
+  const openMenu = async (businessDashboard: boolean) => {
+    render(
+      <BrandingProvider i18n={{ options: {} } as unknown as I18nextInstance} initial={{ appName: "LobbyStack", logoUrl: null, final: true }}>
+        <PartnerShell businessDashboard={businessDashboard} partner={bright} partners={[bright]} sidebarOpen user={{ email: "owner@example.test" }}><div /></PartnerShell>
+      </BrandingProvider>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "partner:shell.userMenu" }));
+    await screen.findByRole("menu");
+  };
+  await openMenu(true);
+  expect(screen.getByRole("menuitem", { name: "partner:shell.businessDashboard" }).getAttribute("href")).toBe("/");
+  cleanup();
+  await openMenu(false);
+  expect(screen.queryByRole("menuitem", { name: "partner:shell.businessDashboard" })).toBeNull();
+});
