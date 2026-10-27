@@ -11,7 +11,6 @@ import {
 
 import { Button, buttonVariants } from "@/marketing/components/ui/button"
 import { appSignupUrl } from "@/marketing/lib/app-links"
-import { cn } from "@/marketing/lib/utils"
 import type { Locale } from "@/marketing/i18n"
 
 type LobbyStackAuraVoiceDemoProps = {

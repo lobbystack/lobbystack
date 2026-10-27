@@ -1,5 +1,4 @@
 import { DEFAULT_LOCALE, type Locale } from "@/marketing/i18n/config"
-import type { FaqItem } from "@/marketing/lib/seo"
 import { spanishSeoPages } from "@/marketing/lib/es-seo-landing-pages"
 import { restoredFrenchSeoPages } from "@/marketing/lib/fr-seo-landing-pages"
 import { serbianSeoPages } from "@/marketing/lib/sr-seo-landing-pages"
@@ -8,24 +7,6 @@ import {
   seoLandingPages,
   type SeoLandingPage,
 } from "@/marketing/lib/seo-landing-pages"
-
-const commonFaqsFr: FaqItem[] = [
-  {
-    question: "Puis-je personnaliser l’accueil et le ton ?",
-    answer:
-      "Oui. Vous définissez les consignes, les services, les règles d’escalade, les réponses autorisées et les situations qui doivent revenir à une personne.",
-  },
-  {
-    question: "Que se passe-t-il si l’appel dépasse ce que l’IA sait faire ?",
-    answer:
-      "LobbyStack peut poser des questions de clarification, prendre un message ou transférer l’appel selon vos règles.",
-  },
-  {
-    question: "Puis-je commencer gratuitement ?",
-    answer:
-      "Oui. Le forfait gratuit inclut 30 minutes vocales pour tester votre accueil dans le navigateur avant de passer à un forfait payant.",
-  },
-]
 
 const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
   "/solutions/ai-phone-answering/": {

@@ -27,29 +27,6 @@ const ctaLabels = {
 const pricingLink = { label: "Precios", href: "/pricing/" }
 const whiteLabelLink = { label: "Marca blanca", href: "/white-label/" }
 
-const existingNumberFaq: FaqItem = {
-  question: "¿Funciona con mi número actual del negocio?",
-  answer:
-    "Sí. Desvíe las llamadas del número que sus clientes ya conocen o use una línea dedicada de LobbyStack para el desbordamiento y la atención fuera de horario.",
-}
-
-const planPricingAnswer =
-  "El plan Free incluye 30 minutos de voz. Starter cuesta $30 al mes por 150 minutos y Pro cuesta $100 al mes por 500 minutos. Las llamadas de spam y las de menos de 10 segundos no cuentan para el uso."
-
-const spamPoint =
-  "Las llamadas de spam y las de menos de 10 segundos no cuentan para el uso"
-const freePlanPoint = "El plan Free incluye 30 minutos de voz para pruebas"
-
-const callSummaryFaq = (detail: string): FaqItem => ({
-  question: "¿Podré ver lo que se habló en cada llamada?",
-  answer: `Sí. LobbyStack guarda en el panel un resumen, la transcripción y la grabación de cada llamada, donde encontrará ${detail}. Cuando toma un mensaje, su equipo recibe una alerta por correo electrónico, o por SMS si activa esas alertas.`,
-})
-
-const volumePricingFaq = (business: string, shops: string): FaqItem => ({
-  question: `¿Cuánto cuesta para ${business}?`,
-  answer: `LobbyStack tiene un plan gratuito con minutos de voz incluidos y planes de pago para un mayor volumen de llamadas. La mayoría de ${shops} empiezan con el plan gratuito y cambian de plan a medida que crece el volumen. Consulte la página de precios para ver las tarifas actuales.`,
-})
-
 // The trade pages' own answers to the questions every trade asks.
 const tradeNumberFaq: FaqItem = {
   question: "¿Funciona con mi número actual del negocio?",
@@ -1816,24 +1793,6 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
     }
   ),
 }
-
-const commonFaqs: FaqItem[] = [
-  {
-    question: "¿Puedo personalizar el saludo y el tono?",
-    answer:
-      "Sí. Usted define las instrucciones, los servicios, las reglas de escalamiento, las respuestas permitidas y las situaciones que deben pasar a una persona.",
-  },
-  {
-    question: "¿Qué pasa si la llamada supera lo que la IA puede resolver?",
-    answer:
-      "LobbyStack puede hacer preguntas para aclarar, tomar un mensaje o transferir la llamada según sus reglas.",
-  },
-  {
-    question: "¿Puedo empezar gratis?",
-    answer:
-      "Sí. El plan gratuito incluye 30 minutos de voz para probar su recepcionista en el navegador antes de pasar a un plan de pago.",
-  },
-]
 
 const bespokeSolutionPagesEs: Record<string, SeoLandingPage> = {
   "/solutions/ai-phone-answering/": {

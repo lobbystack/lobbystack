@@ -27,16 +27,6 @@ const ctaLabels = {
 const pricingLink = { label: "Cene", href: "/pricing/" }
 const whiteLabelLink = { label: "Bela etiketa", href: "/white-label/" }
 
-const spamPoint =
-  "Neželjeni pozivi i pozivi kraći od 10 sekundi se ne računaju u potrošnju"
-const freePlanPoint = "Paket Free uključuje 30 minuta razgovora za testiranje"
-
-const paidPlansAnswer =
-  "Paket Free uključuje 30 minuta razgovora. Starter košta $30 mesečno za 150 minuta, a Pro $100 mesečno za 500 minuta. Neželjeni pozivi i pozivi kraći od 10 sekundi se ne računaju u potrošnju."
-
-const paidPlansWithOverageAnswer =
-  "Paket Free uključuje 30 minuta razgovora. Starter košta $30 mesečno za 150 minuta, a Pro $100 mesečno za 500 minuta, uz dodatne minute po $0.20 i $0.18. Neželjeni pozivi i pozivi kraći od 10 sekundi se ne računaju u potrošnju."
-
 const existingNumberFaq: FaqItem = {
   question: "Da li radi sa mojim postojećim poslovnim brojem?",
   answer:
@@ -46,11 +36,6 @@ const existingNumberFaq: FaqItem = {
 const callReviewFaq = (details: string): FaqItem => ({
   question: "Da li ću videti o čemu se razgovaralo u svakom pozivu?",
   answer: `Da. LobbyStack na kontrolnoj tabli čuva rezime, transkript i snimak svakog poziva, zajedno sa ${details}. Kada primi poruku, Vaš tim dobija obaveštenje e-poštom, ili SMS-om ako ga uključite.`,
-})
-
-const freePlanPricingFaq = (question: string, who: string): FaqItem => ({
-  question,
-  answer: `LobbyStack ima besplatan paket sa uključenim minutima razgovora i plaćene pakete za veći broj poziva. Većina ${who} počinje na besplatnom paketu i prelazi na veći kako raste broj poziva. Aktuelne cene su na stranici sa cenama.`,
 })
 
 const tradeRelatedLinks = [
@@ -114,24 +99,6 @@ const tradePage = ({
     ctaBody,
     ...ctaLabels,
   })
-
-const commonFaqs: FaqItem[] = [
-  {
-    question: "Mogu li da odredim šta AI govori?",
-    answer:
-      "Da. Unesite svoje usluge, česta pitanja, smernice za cene, pravila, ton, pozdrav i uputstva za različite vrste poziva.",
-  },
-  {
-    question: "Šta ako pozivaocu treba prava osoba?",
-    answer:
-      "Vi određujete pravila za predaju poziva. LobbyStack može da preusmeri hitne pozive, važne potencijalne klijente, nezadovoljne kupce ili posebne slučajeve na broj koji izaberete, ili da primi poruku.",
-  },
-  {
-    question: "Mogu li da počnem besplatno?",
-    answer:
-      "Da. Paket Free uključuje 30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana, pa svog recepcionera možete da testirate na pravim pozivima pre prelaska na plaćeni paket.",
-  },
-]
 
 const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
   "/solutions/ai-phone-answering/": {

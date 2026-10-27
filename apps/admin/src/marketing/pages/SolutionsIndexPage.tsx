@@ -8,10 +8,8 @@ import { ArrowRight } from "lucide-react"
 
 import { Footer } from "@/marketing/components/Footer"
 import { Navbar } from "@/marketing/components/Navbar"
-import { buttonVariants } from "@/marketing/components/ui/button"
 import { getCopy, getRouteSeo, localeTag, localizeHref, localizePath, type Locale } from "@/marketing/i18n"
 import { absoluteUrl, breadcrumbJsonLd, organizationJsonLd, webSiteJsonLd } from "@/marketing/lib/seo"
-import { cn } from "@/marketing/lib/utils"
 import { PageJsonLd, type MarketingPageSeo } from "@/marketing/seo/page-seo"
 
 const copyByLocale = {
