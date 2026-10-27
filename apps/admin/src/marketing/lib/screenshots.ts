@@ -8,6 +8,6 @@ export function dashboardShot(locale: Locale): ScreenshotSource {
   return {
     src: locale === "en" ? "/screenshots/dashboard-home.webp" : `/screenshots/dashboard-home-${locale}.webp`,
     width: 2880,
-    height: 1560,
+    height: 1760,
   }
 }
