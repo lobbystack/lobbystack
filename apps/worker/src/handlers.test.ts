@@ -171,7 +171,7 @@ describe("worker handlers", () => {
     const [code, , invitation, , change, , followup] = sent;
     expect(code).toMatchObject({ from: "LobbyStack <no-reply@example.test>", replyTo: "support@example.test", subject: "Your LobbyStack verification code", text: "Your LobbyStack email verification code is: 123456. It expires in 10 minutes." });
     expect(code.html).toContain('aria-label="LobbyStack"');
-    expect(invitation).toMatchObject({ to: "teammate@example.test", subject: "LobbyStack notification", text: "You have been invited to join LobbyStack. Accept the invitation here: https://app.example.test/accept-invite?token=t" });
+    expect(invitation).toMatchObject({ to: "teammate@example.test", subject: "Join the LobbyStack team", text: expect.stringContaining("Accept the invitation: https://app.example.test/accept-invite?token=t") });
     expect(change.subject).toBe("Confirm your LobbyStack email change");
     // Replies to the founder check-in reach the founder, not the shared inbox.
     expect(followup.from).toBe("Raphael <raphael@lobbystack.com>");
@@ -193,8 +193,8 @@ describe("worker handlers", () => {
     expect(sendMail.mock.lastCall?.[0]).toMatchObject({
       from: '"Bright Desk" <no-reply@bright.example.test>',
       replyTo: "help@bright.example.test",
-      subject: "Bright Desk notification",
-      text: "You have been invited to join Bright Desk. Accept the invitation here: https://bright.example.test/accept-invite?token=t",
+      subject: "Join the Bright Desk team",
+      text: expect.stringContaining("Accept the invitation: https://bright.example.test/accept-invite?token=t"),
     });
     await send({ template: "operator_alert", to: "operator@example.test", subject: "Alert", variables: { message: "Hi" }, brand: { kind: "business", businessId }, replyTo: "owner@example.test" });
     expect(sendMail.mock.lastCall?.[0]).toMatchObject({ replyTo: "owner@example.test", text: "Hi" });
@@ -216,14 +216,14 @@ describe("worker handlers", () => {
       to: "teammate@example.test",
       from: '"Bright Desk" <no-reply@portal.example.test>',
       replyTo: "help@bright.example.test",
-      subject: "Bright Desk notification",
-      text: "You have been invited to join Bright Desk. Accept the invitation here: https://bright.portal.example.test/partner/accept-invite?token=t",
+      subject: "Join the Bright Desk team",
+      text: expect.stringContaining("Accept the invitation: https://bright.portal.example.test/partner/accept-invite?token=t"),
     });
     // A partner with no subdomain yet keeps the host's domain, and no Reply-To without a support email.
     forgetCachedBrands();
     execute.mockResolvedValue({ rows: [{ ...row, subdomain: null, support_email: null }] });
     await send();
-    expect(sendMail.mock.lastCall?.[0].text).toBe("You have been invited to join Bright Desk. Accept the invitation here: https://app.example.test/partner/accept-invite?token=t");
+    expect(sendMail.mock.lastCall?.[0].text).toContain("Accept the invitation: https://app.example.test/partner/accept-invite?token=t");
     expect(sendMail.mock.lastCall?.[0].replyTo).toBeUndefined();
   });
 

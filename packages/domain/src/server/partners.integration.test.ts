@@ -211,7 +211,7 @@ describe.skipIf(!client)("partner team", () => {
       expect(message).toEqual({
         topic: "email.send",
         businessId: null,
-        payload: { invitationId, email: "new.person@example.invalid", template: "invitation", url: expect.stringMatching(/^https:\/\/desk\.example\.test\/partner\/accept-invite\?token=[\w-]{43}$/), brand: { kind: "partner", partnerId }, replyTo: null },
+        payload: { invitationId, email: "new.person@example.invalid", template: "invitation", url: expect.stringMatching(/^https:\/\/desk\.example\.test\/partner\/accept-invite\?token=[\w-]{43}$/), variables: { url: expect.stringMatching(/\/partner\/accept-invite\?token=/) }, brand: { kind: "partner", partnerId }, replyTo: null },
       });
       const token = await invitationToken(tx, invitationId);
       expect(await previewPartnerInvitation(context, { tokenHash: hashPartnerToken(token) })).toEqual({ partnerName: expect.stringMatching(/^Partner /), email: "new.person@example.invalid", role: "admin", status: "pending", expired: false });
