@@ -1,11 +1,11 @@
 ---
 title: "Resell a white-label AI receptionist"
-description: "Sell LobbyStack's AI receptionist to your clients under your own brand, run every client from the partner console, and bill them through your own Stripe account."
+description: "Sell LobbyStack's AI receptionist to your clients under your own brand, run every client from the partner console, and bill them through your own payment account."
 sidebarTitle: "White label overview"
 contentType: "Conceptual"
 ---
 
-White label lets you sell LobbyStack's AI receptionist to the businesses you serve, under your company's name. Your clients sign in at your address, see your logo, get emails from you and pay your Stripe account. You set up and support each client from the partner console, and you pay LobbyStack one monthly tier for the minutes and chats your clients share.
+White label lets you sell LobbyStack's AI receptionist to the businesses you serve, under your company's name. Your clients sign in at your address, see your logo, get emails from you and pay you directly. You set up and support each client from the partner console, and you pay LobbyStack one monthly tier for the minutes and chats your clients share.
 
 These pages use four words for the people involved:
 
@@ -26,7 +26,7 @@ Each business you set up sees your brand, from its first email to its invoices:
 - your name, logo, favicon and brand color on the sign-in pages, the dashboard and the browser tab
 - emails under your name, with replies going to your support email
 - your terms, privacy and support links below the sign-in form and in the dashboard's account menu
-- a Stripe checkout, invoices and receipts in your company's name
+- a checkout, invoices and receipts in your company's name
 - the website chat widget, loaded from your address
 
 The receptionist answers callers and website visitors in the business's name.
@@ -44,7 +44,7 @@ The partner console is where you and your team run every business. Open it at `h
 | **Branding & domain** | Set your name, logo, color and links, and connect your own domain | Everyone sees it. Owners and admins change it. |
 | **Team** | Invite people and choose their roles | Everyone sees it. Owners and admins invite and remove people. |
 | **API keys** | Make platform keys for the API and the `lobbystack` command | Owners and admins |
-| **Stripe** | Connect your Stripe account | Owners |
+| **Payments** | Connect the account your businesses pay into | Owners |
 | **Billing** | Choose your tier, follow your pool, and set its overage | Owners |
 | **Settings** | Turn the console's telemetry on or off | Everyone sees it. Owners and admins change it. |
 
@@ -60,11 +60,11 @@ Your businesses pay you, and you pay LobbyStack, on two separate bills:
 
 ```mermaid
 flowchart TD
-  business["Each business"] -- "Package, setup fee and overage, through your Stripe account" --> partner["You, the partner"]
+  business["Each business"] -- "Package, setup fee and overage, through your payment account" --> partner["You, the partner"]
   partner -- "Tier, pool overage and extra numbers, through Polar" --> host["LobbyStack"]
 ```
 
-You set your own prices. A [package](/white-label/packages) is a monthly price, an optional setup fee and the minutes and chats each month includes. Each business pays for its package at a Stripe checkout on your account, and Stripe pays you out. LobbyStack takes no share of those payments. You can also bill a business yourself, outside LobbyStack.
+You set your own prices. A [package](/white-label/packages) is a monthly price, an optional setup fee and the minutes and chats each month includes. Each business pays for its package at a checkout in your company's name, and the money goes to your payment account. LobbyStack takes no share of those payments. You can also bill a business yourself, outside LobbyStack.
 
 You pay LobbyStack for a [tier](/white-label/tiers). Each tier has a monthly price and a pool of minutes and chats that all your businesses share. Past the pool, your businesses keep answering and you pay your tier's overage rates, up to a monthly cap you choose. Free costs nothing and needs no card.
 
@@ -83,7 +83,7 @@ LobbyStack doesn't contact your businesses, and never sends them its marketing, 
 
 ## Start reselling
 
-Setting up takes five steps, and you can bill your first business yourself before you connect Stripe:
+Setting up takes five steps, and you can bill your first business yourself before you connect payments:
 
 <Steps>
   <Step title="Sign up as a partner">
@@ -92,8 +92,8 @@ Setting up takes five steps, and you can bill your first business yourself befor
   <Step title="Add your brand">
     Upload your logo and set your name, color and links. See [Brand your dashboard and connect your domain](/white-label/branding).
   </Step>
-  <Step title="Connect Stripe and create a package">
-    Connect your Stripe account and define what businesses pay you. See [Bill your businesses with Stripe and packages](/white-label/packages).
+  <Step title="Connect payments and create a package">
+    Connect your payment account and define what businesses pay you. See [Bill your businesses with packages](/white-label/packages).
   </Step>
   <Step title="Create a business">
     Create your first business and invite its owner. See [Create and run your clients' businesses](/white-label/businesses).

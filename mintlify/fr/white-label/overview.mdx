@@ -1,11 +1,11 @@
 ---
 title: "Revendre une réceptionniste IA en marque blanche"
-description: "Vendez la réceptionniste IA de LobbyStack à vos clients sous votre propre marque, gérez chaque client depuis la console partenaire et facturez-les par votre propre compte Stripe."
+description: "Vendez la réceptionniste IA de LobbyStack à vos clients sous votre propre marque, gérez chaque client depuis la console partenaire et facturez-les par votre propre compte de paiement."
 sidebarTitle: "Vue d'ensemble de la marque blanche"
 contentType: "Conceptual"
 ---
 
-La marque blanche vous permet de vendre la réceptionniste IA de LobbyStack aux entreprises que vous servez, sous le nom de votre société. Vos clients se connectent à votre adresse, voient votre logo, reçoivent vos courriels et paient votre compte Stripe. Vous configurez et accompagnez chaque client depuis la console partenaire, et vous payez à LobbyStack un palier mensuel pour les minutes et les clavardages que vos clients partagent.
+La marque blanche vous permet de vendre la réceptionniste IA de LobbyStack aux entreprises que vous servez, sous le nom de votre société. Vos clients se connectent à votre adresse, voient votre logo, reçoivent vos courriels et vous paient directement. Vous configurez et accompagnez chaque client depuis la console partenaire, et vous payez à LobbyStack un palier mensuel pour les minutes et les clavardages que vos clients partagent.
 
 Ces pages désignent les parties en jeu par quatre termes :
 
@@ -26,7 +26,7 @@ Chaque entreprise que vous configurez voit votre marque, de son premier courriel
 - votre nom, votre logo, votre favicon et la couleur de votre marque sur les pages de connexion, le tableau de bord et l'onglet du navigateur
 - des courriels à votre nom, dont les réponses arrivent à votre courriel d'assistance
 - vos liens vers vos conditions, votre politique de confidentialité et votre assistance, sous le formulaire de connexion et dans le menu du compte du tableau de bord
-- une page de paiement Stripe, des factures et des reçus au nom de votre société
+- une page de paiement, des factures et des reçus au nom de votre société
 - le widget de clavardage du site Web, chargé depuis votre adresse
 
 La réceptionniste répond aux appelants et aux visiteurs du site Web au nom de l'entreprise.
@@ -44,7 +44,7 @@ La console partenaire est l'endroit où votre équipe et vous gérez chaque entr
 | **Image de marque et domaine** | Définir votre nom, votre logo, votre couleur et vos liens, et connecter votre propre domaine | Tout le monde la voit. Les propriétaires et les administrateurs la modifient. |
 | **Équipe** | Inviter des personnes et choisir leur rôle | Tout le monde la voit. Les propriétaires et les administrateurs invitent et retirent des personnes. |
 | **Clés API** | Créer des clés de plateforme pour l'API et la commande `lobbystack` | Propriétaires et administrateurs |
-| **Stripe** | Connecter votre compte Stripe | Propriétaires |
+| **Paiements** | Connecter le compte sur lequel vos entreprises vous paient | Propriétaires |
 | **Facturation** | Choisir votre palier, suivre votre réserve et régler son dépassement | Propriétaires |
 | **Réglages** | Activer ou désactiver la télémétrie de la console | Tout le monde la voit. Les propriétaires et les administrateurs la modifient. |
 
@@ -60,11 +60,11 @@ Vos entreprises vous paient, et vous payez LobbyStack, sur deux factures distinc
 
 ```mermaid
 flowchart TD
-  business["Chaque entreprise"] -- "Formule, frais d'installation et dépassement, par votre compte Stripe" --> partner["Vous, le partenaire"]
+  business["Chaque entreprise"] -- "Formule, frais d'installation et dépassement, par votre compte de paiement" --> partner["Vous, le partenaire"]
   partner -- "Palier, dépassement de la réserve et numéros supplémentaires, par Polar" --> host["LobbyStack"]
 ```
 
-Vous fixez vos propres prix. Une [formule](/fr/white-label/packages) comprend un prix mensuel, des frais d'installation facultatifs, et les minutes et les clavardages inclus chaque mois. Chaque entreprise paie sa formule sur une page de paiement Stripe de votre compte, et Stripe vous verse l'argent. LobbyStack ne prend aucune part de ces paiements. Vous pouvez aussi facturer une entreprise vous-même, en dehors de LobbyStack.
+Vous fixez vos propres prix. Une [formule](/fr/white-label/packages) comprend un prix mensuel, des frais d'installation facultatifs, et les minutes et les clavardages inclus chaque mois. Chaque entreprise paie sa formule sur une page de paiement au nom de votre société, et l'argent arrive sur votre compte de paiement. LobbyStack ne prend aucune part de ces paiements. Vous pouvez aussi facturer une entreprise vous-même, en dehors de LobbyStack.
 
 Vous payez à LobbyStack un [palier](/fr/white-label/tiers). Chaque palier a un prix mensuel et une réserve de minutes et de clavardages que toutes vos entreprises partagent. Au-delà de la réserve, vos entreprises continuent de répondre et vous payez les tarifs de dépassement de votre palier, jusqu'à un plafond mensuel que vous choisissez. Le palier Gratuit ne coûte rien et ne demande aucune carte.
 
@@ -83,7 +83,7 @@ LobbyStack ne contacte pas vos entreprises et ne leur envoie jamais ses courriel
 
 ## Commencer à revendre
 
-La configuration se fait en cinq étapes, et vous pouvez facturer vous-même votre première entreprise avant de connecter Stripe :
+La configuration se fait en cinq étapes, et vous pouvez facturer vous-même votre première entreprise avant de connecter les paiements :
 
 <Steps>
   <Step title="S'inscrire comme partenaire">
@@ -92,8 +92,8 @@ La configuration se fait en cinq étapes, et vous pouvez facturer vous-même vot
   <Step title="Ajouter votre marque">
     Téléversez votre logo et définissez votre nom, votre couleur et vos liens. Consultez [Personnaliser votre tableau de bord et connecter votre domaine](/fr/white-label/branding).
   </Step>
-  <Step title="Connecter Stripe et créer une formule">
-    Connectez votre compte Stripe et définissez ce que les entreprises vous paient. Consultez [Facturer vos entreprises avec Stripe et des formules](/fr/white-label/packages).
+  <Step title="Connecter les paiements et créer une formule">
+    Connectez votre compte de paiement et définissez ce que les entreprises vous paient. Consultez [Facturer vos entreprises avec des formules](/fr/white-label/packages).
   </Step>
   <Step title="Créer une entreprise">
     Créez votre première entreprise et invitez son propriétaire. Consultez [Créer et gérer les entreprises de vos clients](/fr/white-label/businesses).

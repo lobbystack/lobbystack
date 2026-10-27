@@ -1,11 +1,11 @@
 ---
 title: "Revenda una recepcionista con IA de marca blanca"
-description: "Venda la recepcionista con IA de LobbyStack a sus clientes con su propia marca, gestione a cada cliente desde la consola de socios y cóbreles a través de su propia cuenta de Stripe."
+description: "Venda la recepcionista con IA de LobbyStack a sus clientes con su propia marca, gestione a cada cliente desde la consola de socios y cóbreles a través de su propia cuenta de pagos."
 sidebarTitle: "Resumen de la marca blanca"
 contentType: "Conceptual"
 ---
 
-La marca blanca le permite vender la recepcionista con IA de LobbyStack a los negocios que atiende, con el nombre de su empresa. Sus clientes inician sesión en su dirección, ven su logotipo, reciben correos de usted y le pagan a su cuenta de Stripe. Usted configura y da soporte a cada cliente desde la consola de socios, y le paga a LobbyStack un nivel mensual por los minutos y chats que comparten sus clientes.
+La marca blanca le permite vender la recepcionista con IA de LobbyStack a los negocios que atiende, con el nombre de su empresa. Sus clientes inician sesión en su dirección, ven su logotipo, reciben correos de usted y le pagan directamente. Usted configura y da soporte a cada cliente desde la consola de socios, y le paga a LobbyStack un nivel mensual por los minutos y chats que comparten sus clientes.
 
 Estas páginas usan cuatro términos para las partes implicadas:
 
@@ -26,7 +26,7 @@ Cada negocio que usted configura ve su marca, desde su primer correo hasta sus f
 - su nombre, logotipo, favicon y color de marca en las páginas de inicio de sesión, en el panel y en la pestaña del navegador
 - correos con su nombre, cuyas respuestas llegan a su correo de soporte
 - sus enlaces de términos, privacidad y soporte debajo del formulario de inicio de sesión y en el menú de la cuenta del panel
-- una página de pago de Stripe, facturas y recibos a nombre de su empresa
+- una página de pago, facturas y recibos a nombre de su empresa
 - el widget de chat del sitio web, cargado desde su dirección
 
 La recepcionista atiende a quienes llaman y a los visitantes del sitio web en nombre del negocio.
@@ -44,7 +44,7 @@ En la consola de socios, usted y su equipo gestionan todos sus negocios. Ábrala
 | **Marca y dominio** | Definir su nombre, logotipo, color y enlaces, y conectar su propio dominio | Todos la ven. Los propietarios y administradores la cambian. |
 | **Equipo** | Invitar a personas y elegir sus roles | Todos la ven. Los propietarios y administradores invitan y quitan personas. |
 | **Claves de API** | Crear claves de plataforma para la API y el comando `lobbystack` | Propietarios y administradores |
-| **Stripe** | Conectar su cuenta de Stripe | Propietarios |
+| **Pagos** | Conectar la cuenta en la que le pagan sus negocios | Propietarios |
 | **Facturación** | Elegir su nivel, seguir su bolsa y configurar su excedente | Propietarios |
 | **Configuración** | Activar o desactivar la telemetría de la consola | Todos la ven. Los propietarios y administradores la cambian. |
 
@@ -60,11 +60,11 @@ Sus negocios le pagan a usted, y usted le paga a LobbyStack, en dos facturas sep
 
 ```mermaid
 flowchart TD
-  business["Cada negocio"] -- "Paquete, cuota de alta y excedente, en su cuenta de Stripe" --> partner["Usted, el socio"]
+  business["Cada negocio"] -- "Paquete, cuota de alta y excedente, en su cuenta de pagos" --> partner["Usted, el socio"]
   partner -- "Nivel, excedente de la bolsa y números adicionales, con Polar" --> host["LobbyStack"]
 ```
 
-Usted fija sus propios precios. Un [paquete](/es/white-label/packages) es un precio mensual, una cuota de alta opcional y los minutos y chats que incluye cada mes. Cada negocio paga su paquete en una página de pago de Stripe de su cuenta, y Stripe le transfiere el dinero. LobbyStack no se queda con ninguna parte de esos pagos. También puede facturar usted mismo a un negocio, fuera de LobbyStack.
+Usted fija sus propios precios. Un [paquete](/es/white-label/packages) es un precio mensual, una cuota de alta opcional y los minutos y chats que incluye cada mes. Cada negocio paga su paquete en una página de pago a nombre de su empresa, y el dinero llega a su cuenta de pagos. LobbyStack no se queda con ninguna parte de esos pagos. También puede facturar usted mismo a un negocio, fuera de LobbyStack.
 
 Usted le paga a LobbyStack un [nivel](/es/white-label/tiers). Cada nivel tiene un precio mensual y una bolsa de minutos y chats que comparten todos sus negocios. Pasada la bolsa, sus negocios siguen respondiendo y usted paga las tarifas de excedente de su nivel, hasta un límite mensual que usted elige. Gratis no cuesta nada y no necesita tarjeta.
 
@@ -83,7 +83,7 @@ LobbyStack no contacta a sus negocios y nunca les envía sus correos de marketin
 
 ## Empiece a revender
 
-La configuración lleva cinco pasos, y puede facturar usted mismo a su primer negocio antes de conectar Stripe:
+La configuración lleva cinco pasos, y puede facturar usted mismo a su primer negocio antes de conectar los pagos:
 
 <Steps>
   <Step title="Regístrese como socio">
@@ -92,8 +92,8 @@ La configuración lleva cinco pasos, y puede facturar usted mismo a su primer ne
   <Step title="Agregue su marca">
     Suba su logotipo y defina su nombre, color y enlaces. Consulte [Ponga su marca en su panel y conecte su dominio](/es/white-label/branding).
   </Step>
-  <Step title="Conecte Stripe y cree un paquete">
-    Conecte su cuenta de Stripe y defina lo que le pagan los negocios. Consulte [Facture a sus negocios con Stripe y paquetes](/es/white-label/packages).
+  <Step title="Conecte los pagos y cree un paquete">
+    Conecte su cuenta de pagos y defina lo que le pagan los negocios. Consulte [Facture a sus negocios con paquetes](/es/white-label/packages).
   </Step>
   <Step title="Cree un negocio">
     Cree su primer negocio e invite a su propietario. Consulte [Cree y gestione los negocios de sus clientes](/es/white-label/businesses).

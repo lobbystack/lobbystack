@@ -19,9 +19,9 @@ Your deployment can host partners who resell it under their own brands, as [the 
 
 ## Choose who can sign up as a partner
 
-Partners sign up at `/partner/signup` on your dashboard's domain, from an account on your deployment. `PARTNER_SIGNUP` decides who can:
+Partners sign up at `/partner/signup` on your dashboard's domain. The page creates the person's account first if they're signed out, then the partner. Partners sign in at `/partner/login`. `PARTNER_SIGNUP` decides who can sign up:
 
-- `open`, the default on a self-hosted deployment, lets anyone who's signed in sign up
+- `open`, the default on a self-hosted deployment, lets anyone sign up
 - `invite` needs a signup link that you create for each partner
 
 To invite a partner, run this from a checkout of the repository, with `DATABASE_URL` and `APP_BASE_URL` pointing at your deployment:
@@ -125,11 +125,11 @@ Stripe Connect lets each partner connect its own Stripe account and sell package
     Create an endpoint at your `APP_BASE_URL` followed by `/api/webhooks/stripe`, for events on connected accounts, with the events that [`STRIPE_CONNECT_WEBHOOK_SECRET`](/self-hosting/environment-variables#partners) lists. Set its signing secret as `STRIPE_CONNECT_WEBHOOK_SECRET`.
   </Step>
   <Step title="Restart">
-    Restart the admin and the worker. Each partner's owner can then connect a Stripe account on the console's **Stripe** page.
+    Restart the admin and the worker. Each partner's owner can then connect a Stripe account on the console's **Payments** page.
   </Step>
 </Steps>
 
-Without both variables, the **Stripe** page tells partners the dashboard can't connect Stripe yet, and they bill every business themselves.
+Without both variables, the **Payments** page tells partners **Payments aren't set up here**, and they bill every business themselves.
 
 ## Sell partners tiers with Polar
 

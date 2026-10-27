@@ -1,29 +1,29 @@
 ---
-title: "Facturer vos entreprises avec Stripe et des formules"
-description: "Connectez votre compte Stripe, créez des formules avec un prix mensuel et des frais d'installation facultatifs, fixez le dépassement et le plafond de chaque entreprise, ou facturez une entreprise vous-même."
-sidebarTitle: "Formules et Stripe"
+title: "Facturer vos entreprises avec des formules"
+description: "Connectez un compte de paiement, créez des formules avec un prix mensuel et des frais d'installation facultatifs, fixez le dépassement et le plafond de chaque entreprise, ou facturez une entreprise vous-même."
+sidebarTitle: "Formules et paiements"
 contentType: "How-to"
 ---
 
-Vos entreprises vous paient par votre propre compte Stripe. Un propriétaire le connecte sur la page **Stripe**, puis les propriétaires et les administrateurs créent des formules sur la page **Formules** et choisissent la formule de chaque entreprise sur **Entreprises**. Stripe facture chaque entreprise au nom de votre société, lui envoie ses factures et ses reçus, et vous verse l'argent. LobbyStack ne prend aucune part de ces paiements.
+Vos entreprises vous paient par votre propre compte de paiement, qui fonctionne avec Stripe. Un propriétaire le connecte sur la page **Paiements**, puis les propriétaires et les administrateurs créent des formules sur la page **Formules** et choisissent la formule de chaque entreprise sur **Entreprises**. Chaque entreprise paie au nom de votre société, reçoit ses factures et ses reçus de votre part, et c'est vous qui recevez les versements. LobbyStack ne prend aucune part de ces paiements.
 
 <Note>
-  Si la page **Stripe** indique **Pas encore de paiements Stripe**, le déploiement que vous utilisez ne peut pas connecter de comptes Stripe. Facturez chaque entreprise vous-même, comme l'explique [Facturer une entreprise vous-même](#facturer-une-entreprise-vous-même).
+  Si la page **Paiements** indique **Les paiements ne sont pas configurés ici**, le déploiement que vous utilisez ne peut pas encaisser de paiements pour vous. Facturez chaque entreprise vous-même, comme l'explique [Facturer une entreprise vous-même](#facturer-une-entreprise-vous-même).
 </Note>
 
-## Connecter votre compte Stripe
+## Connecter un compte de paiement
 
-Seuls les propriétaires voient la page **Stripe**. La connexion crée un compte Stripe pour votre partenaire, ou termine celui que vous avez commencé :
+Seuls les propriétaires voient la page **Paiements**. La connexion crée un compte Stripe pour votre partenaire, ou termine celui que vous avez commencé :
 
 <Steps>
   <Step title="Choisir votre pays">
-    Sur **Stripe**, choisissez le pays sous **Pays de votre entreprise**. Stripe fixe le pays de votre compte à sa création, et vous ne pourrez plus le changer.
+    Sur **Paiements**, choisissez le pays sous **Pays de votre entreprise**. Vous ne pourrez plus le changer.
   </Step>
   <Step title="Ouvrir Stripe">
-    Cliquez sur **Connecter Stripe**. Stripe demande les renseignements de votre société et votre compte bancaire.
+    Cliquez sur **Connecter avec Stripe**. Stripe demande les renseignements de votre société et votre compte bancaire.
   </Step>
   <Step title="Revenir à la console">
-    Quand Stripe vous renvoie à la console, la page affiche l'état de votre compte. Si Stripe a besoin de plus, cliquez sur **Continuer sur Stripe** ou **Ouvrir la configuration Stripe**.
+    Quand Stripe vous renvoie à la console, la page affiche l'état de votre compte. Si Stripe a besoin de plus de renseignements, cliquez sur **Continuer sur Stripe** ou **Terminer sur Stripe**.
   </Step>
 </Steps>
 
@@ -39,11 +39,11 @@ Le badge à côté de votre compte indique son état :
 
 Une fois le compte connecté, cliquez sur **Ouvrir le tableau de bord Stripe** pour voir les paiements et les versements. Dans votre tableau de bord Stripe, vous gérez les remboursements, les litiges et les paiements échoués, et vous choisissez ce que les entreprises peuvent faire dans votre portail client Stripe.
 
-Si vous déconnectez votre compte dans Stripe, vous ne pouvez plus vendre vos formules. Cliquez sur **Reconnecter Stripe** pour connecter un nouveau compte. Les formules créées sur l'ancien compte restent listées sous **Compte déconnecté**.
+Si vous déconnectez votre compte dans Stripe, vous ne pouvez plus vendre vos formules. Cliquez sur **Reconnecter** pour connecter un nouveau compte. Les formules créées sur l'ancien compte restent listées sous **Compte déconnecté**.
 
 ## Créer une formule
 
-Une formule est ce qu'une entreprise vous achète : un prix mensuel, des frais d'installation facultatifs, et les minutes et les clavardages inclus chaque mois. Les prix sont dans la devise de votre compte Stripe. Vous pouvez créer des formules avant que Stripe accepte les paiements, et les entreprises peuvent les acheter dès qu'il les accepte.
+Une formule est ce qu'une entreprise vous achète : un prix mensuel, des frais d'installation facultatifs, et les minutes et les clavardages inclus chaque mois. Les prix sont dans la devise de votre compte de paiement. Vous pouvez créer des formules avant que votre compte accepte les paiements, et les entreprises peuvent les acheter dès qu'il les accepte.
 
 <Steps>
   <Step title="Ouvrir le formulaire">
@@ -62,18 +62,18 @@ Une formule est ce qu'une entreprise vous achète : un prix mensuel, des frais 
 
 Vous ne pouvez plus changer le prix, les frais d'installation, les minutes ni les clavardages d'une formule, car des entreprises les paient peut-être déjà. Pour vendre d'autres conditions, créez une nouvelle formule. Depuis le menu d'une formule, vous pouvez :
 
-- **Renommer** la formule : Stripe affiche le nouveau nom sur les factures de vos entreprises
+- **Renommer** la formule : les factures de vos entreprises affichent le nouveau nom
 - **Arrêter la vente** de la formule : les nouvelles entreprises ne peuvent plus la choisir, et celles qui l'ont déjà la gardent
 
 ## Comment une entreprise paie sa formule
 
-Une entreprise sur une formule paie sur une page de paiement Stripe de votre compte, depuis l'invitation de son propriétaire ou plus tard depuis **Réglages** > **Facturation** dans son tableau de bord. Ses propriétaires et ses administrateurs y cliquent sur **Gérer la facturation** pour ouvrir votre portail client Stripe, où ils mettent à jour leur carte, téléchargent leurs factures ou annulent.
+Une entreprise sur une formule paie sur une page de paiement au nom de votre société, depuis l'invitation de son propriétaire ou plus tard depuis **Réglages** > **Facturation** dans son tableau de bord. Ses propriétaires et ses administrateurs y cliquent sur **Gérer la facturation** pour ouvrir votre portail client, où ils mettent à jour leur carte, téléchargent leurs factures ou annulent.
 
 Chaque formule se renouvelle le 1er du mois, en UTC. La première facture porte sur le reste du mois en cours, plus la totalité des frais d'installation. L'entreprise reçoit quand même toutes les minutes et tous les clavardages de la formule pour ce mois. Chaque facture suivante couvre un mois civil.
 
-Tant que l'entreprise paie, elle répond aux appels et aux clavardages jusqu'à l'utilisation incluse dans sa formule. Stripe tente de nouveau un paiement échoué, et l'entreprise continue de répondre pendant ces tentatives. Une fois l'abonnement terminé, l'entreprise cesse de répondre jusqu'à ce que son propriétaire s'abonne de nouveau.
+Tant que l'entreprise paie, elle répond aux appels et aux clavardages jusqu'à l'utilisation incluse dans sa formule. Un paiement échoué est retenté, et l'entreprise continue de répondre pendant ces tentatives. Une fois l'abonnement terminé, l'entreprise cesse de répondre jusqu'à ce que son propriétaire s'abonne de nouveau.
 
-Les prix n'apparaissent que sur la page de paiement et les factures de Stripe. Le tableau de bord de l'entreprise affiche ses minutes et ses clavardages par rapport à l'utilisation incluse. À 80 % et à 100 % de ses minutes ou de ses clavardages, les propriétaires et les administrateurs de l'entreprise reçoivent un courriel sous votre marque. Vos propriétaires et vos administrateurs en reçoivent un aussi.
+Les prix n'apparaissent que sur la page de paiement et les factures. Le tableau de bord de l'entreprise affiche ses minutes et ses clavardages par rapport à l'utilisation incluse. À 80 % et à 100 % de ses minutes ou de ses clavardages, les propriétaires et les administrateurs de l'entreprise reçoivent un courriel sous votre marque. Vos propriétaires et vos administrateurs en reçoivent un aussi.
 
 ## Configurer le dépassement pour une entreprise
 
@@ -86,16 +86,16 @@ Le dépassement permet à une entreprise de continuer à répondre au-delà de s
 
 Au-delà de sa formule, l'entreprise continue de répondre jusqu'à ce que son dépassement atteigne votre plafond. Ses appels vont alors à son numéro de transfert ou au téléphone de son propriétaire, et le clavardage de son site Web cesse de répondre. Avec le dépassement désactivé, l'entreprise s'arrête de la même façon aux minutes et aux clavardages de sa formule. Quand vous désactivez le dépassement, la console garde les tarifs et le plafond, et les rétablit quand vous le réactivez.
 
-Le dépassement figure sur la prochaine facture Stripe de l'entreprise sous **Call overage** et **Chat overage**, avec le montant comme quantité, à 1,00 l'unité. Le plafond repart à zéro le 1er de chaque mois, en UTC : une facture qui couvre deux mois peut donc facturer jusqu'à deux plafonds.
+Le dépassement figure sur la prochaine facture de l'entreprise sous **Call overage** et **Chat overage**, avec le montant comme quantité, à 1,00 l'unité. Le plafond repart à zéro le 1er de chaque mois, en UTC : une facture qui couvre deux mois peut donc facturer jusqu'à deux plafonds.
 
 Votre réserve limite aussi chaque entreprise. Une entreprise cesse aussi de répondre quand votre [réserve est épuisée](/fr/white-label/tiers#ce-que-couvre-votre-réserve) et que le dépassement de la réserve est désactivé ou a atteint son plafond.
 
 ## Facturer une entreprise vous-même
 
-Choisissez **Vous la facturez vous-même** pour un client que vous facturez autrement, comme un client à qui vous ne faites rien payer ou un client sous contrat annuel. L'entreprise ne paie rien par Stripe, et aucune formule ne limite ses minutes ni ses clavardages. Son utilisation est quand même prise sur votre réserve. Elle n'a pas de dépassement, et sa page de facturation invite ses propriétaires à vous poser leurs questions sur leur facture.
+Choisissez **Vous la facturez vous-même** pour un client que vous facturez autrement, comme un client à qui vous ne faites rien payer ou un client sous contrat annuel. L'entreprise ne paie rien par votre compte de paiement, et aucune formule ne limite ses minutes ni ses clavardages. Son utilisation est quand même prise sur votre réserve. Elle n'a pas de dépassement, et sa page de facturation invite ses propriétaires à vous poser leurs questions sur leur facture.
 
 ## Changer la formule que paie une entreprise
 
 Sur **Entreprises**, cliquez sur **Modifier** à côté de la formule de l'entreprise, choisissez une autre formule ou **Vous la facturez vous-même**, puis cliquez sur **Enregistrer**. Vous pouvez la changer à tout moment tant que l'entreprise n'a pas payé.
 
-Une fois que l'entreprise paie sa formule, annulez d'abord son abonnement dans votre tableau de bord Stripe. Sinon, la console indique **Cette entreprise paie sa formule avec Stripe. Annulez d'abord son abonnement dans votre tableau de bord Stripe.** Après le changement, le propriétaire paie la nouvelle formule depuis **Réglages** > **Facturation**. Une entreprise garde une formule que vous ne vendez plus jusqu'à ce que vous la changiez.
+Une fois que l'entreprise paie sa formule, annulez d'abord son abonnement dans votre tableau de bord Stripe. Sinon, la console indique **Cette entreprise a un abonnement actif. Annulez-le d'abord dans votre tableau de bord Stripe.** Après le changement, le propriétaire paie la nouvelle formule depuis **Réglages** > **Facturation**. Une entreprise garde une formule que vous ne vendez plus jusqu'à ce que vous la changiez.

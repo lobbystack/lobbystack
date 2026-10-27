@@ -19,9 +19,9 @@ Votre déploiement peut héberger des partenaires qui le revendent sous leur pro
 
 ## Choisir qui peut s'inscrire comme partenaire
 
-Les partenaires s'inscrivent à `/partner/signup` sur le domaine de votre tableau de bord, depuis un compte de votre déploiement. `PARTNER_SIGNUP` détermine qui peut le faire :
+Les partenaires s'inscrivent à `/partner/signup` sur le domaine de votre tableau de bord. La page crée d'abord le compte de la personne si elle n'est pas connectée, puis le partenaire. Les partenaires se connectent à `/partner/login`. `PARTNER_SIGNUP` détermine qui peut s'inscrire :
 
-- `open`, la valeur par défaut sur un déploiement auto-hébergé, laisse s'inscrire toute personne connectée
+- `open`, la valeur par défaut sur un déploiement auto-hébergé, laisse s'inscrire tout le monde
 - `invite` exige un lien d'inscription que vous créez pour chaque partenaire
 
 Pour inviter un partenaire, lancez cette commande depuis une copie du dépôt, avec `DATABASE_URL` et `APP_BASE_URL` qui pointent vers votre déploiement :
@@ -125,11 +125,11 @@ Stripe Connect permet à chaque partenaire de connecter son propre compte Stripe
     Créez un point de terminaison à votre `APP_BASE_URL` suivie de `/api/webhooks/stripe`, pour les événements des comptes connectés, avec les événements que liste [`STRIPE_CONNECT_WEBHOOK_SECRET`](/fr/self-hosting/environment-variables#partenaires). Définissez son secret de signature dans `STRIPE_CONNECT_WEBHOOK_SECRET`.
   </Step>
   <Step title="Redémarrer">
-    Redémarrez l'admin et le worker. Le propriétaire de chaque partenaire peut alors connecter un compte Stripe sur la page **Stripe** de la console.
+    Redémarrez l'admin et le worker. Le propriétaire de chaque partenaire peut alors connecter un compte Stripe sur la page **Paiements** de la console.
   </Step>
 </Steps>
 
-Sans ces deux variables, la page **Stripe** indique aux partenaires que le tableau de bord ne peut pas encore connecter Stripe, et ils facturent eux-mêmes chaque entreprise.
+Sans ces deux variables, la page **Paiements** indique aux partenaires **Les paiements ne sont pas configurés ici**, et ils facturent eux-mêmes chaque entreprise.
 
 ## Vendre des paliers aux partenaires avec Polar
 

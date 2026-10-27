@@ -19,9 +19,9 @@ Su despliegue puede alojar socios que lo revenden con sus propias marcas, como d
 
 ## Elija quién puede registrarse como socio
 
-Los socios se registran en `/partner/signup` en el dominio de su panel, desde una cuenta de su despliegue. `PARTNER_SIGNUP` decide quién puede hacerlo:
+Los socios se registran en `/partner/signup` en el dominio de su panel. Si la persona no ha iniciado sesión, la página crea primero su cuenta y luego el socio. Los socios inician sesión en `/partner/login`. `PARTNER_SIGNUP` decide quién puede registrarse:
 
-- `open`, el valor predeterminado en un despliegue autoalojado, permite registrarse a cualquier persona con sesión iniciada
+- `open`, el valor predeterminado en un despliegue autoalojado, permite registrarse a cualquier persona
 - `invite` exige un enlace de registro que usted crea para cada socio
 
 Para invitar a un socio, ejecute esto desde una copia del repositorio, con `DATABASE_URL` y `APP_BASE_URL` apuntando a su despliegue:
@@ -125,11 +125,11 @@ Stripe Connect permite que cada socio conecte su propia cuenta de Stripe y venda
     Cree un endpoint en su `APP_BASE_URL` seguido de `/api/webhooks/stripe`, para los eventos de las cuentas conectadas, con los eventos que indica [`STRIPE_CONNECT_WEBHOOK_SECRET`](/es/self-hosting/environment-variables#socios). Defina su secreto de firma como `STRIPE_CONNECT_WEBHOOK_SECRET`.
   </Step>
   <Step title="Reinicie">
-    Reinicie el admin y el worker. El propietario de cada socio puede entonces conectar una cuenta de Stripe en la página **Stripe** de la consola.
+    Reinicie el admin y el worker. El propietario de cada socio puede entonces conectar una cuenta de Stripe en la página **Pagos** de la consola.
   </Step>
 </Steps>
 
-Sin ambas variables, la página **Stripe** indica a los socios que el panel todavía no puede conectar Stripe, y ellos facturan por su cuenta a todos sus negocios.
+Sin ambas variables, la página **Pagos** indica a los socios **Los pagos no están configurados aquí**, y ellos facturan por su cuenta a todos sus negocios.
 
 ## Venda niveles a los socios con Polar
 
