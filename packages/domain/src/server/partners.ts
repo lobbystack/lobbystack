@@ -943,7 +943,7 @@ export async function releaseBusiness(context: DomainContext, actor: PartnerActo
     const [about] = await tx.select({ businessName: businesses.name, partnerName: partners.name }).from(businesses).innerJoin(partners, eq(partners.id, partnerId)).where(eq(businesses.id, input.businessId)).limit(1);
     for (const email of ownerEmails) {
       await enqueueOutbox(tx, {
-        topic: "email.send",
+        topic: "email.sendNotice",
         businessId: input.businessId,
         aggregateType: "business",
         aggregateId: input.businessId,
@@ -1037,7 +1037,7 @@ export async function deletePartnerBusinessInTransaction(tx: DatabaseTransaction
   // Queued in the business like the jobs above, so the worker may queue it too; the business's delete leaves it belonging to none, and it goes out under the partner's brand.
   for (const email of ownerEmails) {
     await enqueueOutbox(tx, {
-      topic: "email.send",
+      topic: "email.sendNotice",
       businessId,
       aggregateType: "business",
       aggregateId: businessId,

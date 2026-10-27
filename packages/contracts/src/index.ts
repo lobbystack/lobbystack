@@ -198,6 +198,10 @@ export type JobQueue = (typeof jobQueues)[number];
 
 export const queueForJobType = {
   "email.send": "default",
+  // An email in a template workers before it didn't know, such as the notes that a partner released or
+  // deleted a business. A worker on the previous release has no queue for it, so its dispatcher retries
+  // the message until a worker that knows the template sends it, instead of sending it blank.
+  "email.sendNotice": "default",
   "sms.send": "critical",
   "appointment.sendChangeOtp": "critical",
   "sms.syncPrice": "critical",

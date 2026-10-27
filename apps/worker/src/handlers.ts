@@ -508,6 +508,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
     case "calendar.deleteEvent":
       return await deleteReleasedCalendarEvent(dependencies, { businessId: businessIdOrThrow(job), appointmentId: String(job.payload.appointmentId ?? ""), connectionId: String(job.payload.connectionId ?? ""), calendarId: String(job.payload.calendarId ?? ""), eventId: String(job.payload.eventId ?? "") });
     case "email.send":
+    case "email.sendNotice":
       if (!dependencies.email) {
         if (["verify_email", "password_reset", "existing_account", "account_setup"].includes(String(job.payload.template))) {
           throw new Error("Authentication email delivery requires SMTP configuration.");
@@ -515,7 +516,7 @@ async function dispatchJob(job: JobEnvelope, dependencies: WorkerDependencies, e
         return { status: "skipped" };
       }
       {
-        const template = job.payload.template === "existing_account" || job.payload.template === "account_setup" || job.payload.template === "verify_email" || job.payload.template === "password_reset" || job.payload.template === "invitation" || job.payload.template === "operator_alert" || job.payload.template === "feedback_submission" || job.payload.template === "onboarding_followup" || job.payload.template === "partner_pool_alert" || job.payload.template === "business_allowance_alert" || job.payload.template === "partner_business_allowance_alert" || job.payload.template === "business_released" || job.payload.template === "business_deleted"
+        const template = job.payload.template === "existing_account" || job.payload.template === "account_setup" || job.payload.template === "verify_email" || job.payload.template === "password_reset" || job.payload.template === "invitation" || job.payload.template === "operator_alert" || job.payload.template === "feedback_submission" || job.payload.template === "onboarding_followup" || job.payload.template === "partner_pool_alert" || job.payload.template === "business_allowance_alert" || job.payload.template === "partner_business_allowance_alert" || (job.type === "email.sendNotice" && (job.payload.template === "business_released" || job.payload.template === "business_deleted"))
           ? job.payload.template
           : "operator_alert";
         const variables = typeof job.payload.variables === "object" && job.payload.variables !== null

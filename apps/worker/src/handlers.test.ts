@@ -86,6 +86,7 @@ function savedBranding(appName: string | null) {
   return { select: () => ({ from: () => ({ limit: async () => (appName ? [{ appName, logoVersion: "abc" }] : []) }) }), execute: async () => ({ rows: [{ partner_id: null }] }) } as never;
 }
 
+import { queueForJobType } from "@lobbystack/contracts";
 import { handleJob } from "./handlers";
 
 function billingJob(payload: Record<string, unknown>): JobEnvelope {
@@ -179,6 +180,17 @@ describe("worker handlers", () => {
     // The saved branding was read, and the deployment's own name stays out of the host's emails.
     for (const message of sent) expect(JSON.stringify(message)).not.toContain("Saved Desk");
     expect(warn).not.toHaveBeenCalled();
+  });
+
+  it("sends the release and delete notes only on email.sendNotice, which a worker before them doesn't route", async () => {
+    const partner: Brand = { kind: "partner", partnerId: "partner-1", name: "Bright Desk", logoUrl: null, faviconUrl: null, color: null, origin: "https://bright.example.test", links: { website: null, terms: null, privacy: null, support: null }, email: { fromName: "Bright Desk", fromAddress: "no-reply@bright.example.test", replyTo: "help@bright.example.test" } };
+    vi.mocked(brandForEmail).mockResolvedValue(partner);
+    const sendMail = vi.fn().mockResolvedValue({ messageId: "provider-id" });
+    const email = new SmtpEmailProvider({ host: "localhost", port: 1025, secure: false, username: "", password: "", from: "LobbyStack <no-reply@example.test>" }, { sendMail } as never);
+    const payload = { email: "owner@example.test", template: "business_deleted", variables: { businessName: "Harbor Dental" }, brand: { kind: "partner", partnerId: "partner-1" }, replyTo: null };
+    await handleJob({ jobId: randomUUID(), businessId: null, type: "email.sendNotice", queue: "default", payload, trace: {}, idempotencyKey: randomUUID(), scheduled: false }, { domain: { db: undefined as never }, email });
+    expect(sendMail.mock.lastCall?.[0]).toMatchObject({ to: "owner@example.test", subject: "Bright Desk deleted Harbor Dental" });
+    expect(queueForJobType["email.sendNotice"]).toBe("default");
   });
 
   it("writes an email under the brand it reads when it sends: name, links, sender and Reply-To", async () => {

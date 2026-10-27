@@ -351,7 +351,7 @@ describe.skipIf(!client)("deleting a business", () => {
         remembered: [],
         stored: [],
         // Only the cleanup of the file it still kept, and the note to its owner that it's gone, which belong to no business now.
-        queued: expect.arrayContaining([{ topic: "privacy.deleteStoredObjects", businessId: null, payload: { objectKeys: [objectKey] } }, { topic: "email.send", businessId: null, payload: expect.objectContaining({ template: "business_deleted" }) }]),
+        queued: expect.arrayContaining([{ topic: "privacy.deleteStoredObjects", businessId: null, payload: { objectKeys: [objectKey] } }, { topic: "email.sendNotice", businessId: null, payload: expect.objectContaining({ template: "business_deleted" }) }]),
         numbers: [],
         // The active number, and the one a reclaim was releasing in case that release fails now the business is gone.
         released: expect.arrayContaining(numbers.slice(0, 2).map((number) => ({ topic: "phoneNumber.releaseDeleted", businessId: null, payload: { providerPhoneId: number.providerPhoneId, e164: number.e164 } }))),
