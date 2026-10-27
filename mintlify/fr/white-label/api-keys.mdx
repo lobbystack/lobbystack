@@ -1,0 +1,78 @@
+---
+title: "Automatiser la configuration avec des clés de plateforme et la ligne de commande"
+description: "Créez une clé de plateforme dans la console partenaire, créez et configurez vos entreprises par l'API, et intégrez une entreprise à partir d'un seul fichier avec lobbystack onboard."
+sidebarTitle: "Clés API et ligne de commande"
+contentType: "How-to"
+---
+
+Une clé de plateforme permet à votre propre code de créer des entreprises et de les configurer par l'[API](/fr/api/overview) de LobbyStack. Elle permet aussi à la commande `lobbystack onboard` de créer une entreprise à partir d'un seul fichier. Les propriétaires et les administrateurs créent les clés sur la page **Clés API** de la console. Une clé agit au nom de votre partenaire et n'atteint que vos entreprises.
+
+## Créer une clé de plateforme
+
+Donnez à chaque outil sa propre clé, pour pouvoir en révoquer une sans briser les autres :
+
+<Steps>
+  <Step title="Ouvrir le formulaire">
+    Sur **Clés API**, cliquez sur **Créer une clé de plateforme**.
+  </Step>
+  <Step title="Nommer la clé et choisir son accès">
+    Entrez un **Nom** que vous reconnaîtrez, comme `Intégration des clients`. Sous **Accès**, sélectionnez seulement ce dont l'outil a besoin. Pour créer des entreprises, sélectionnez **Créer des entreprises et inviter leurs propriétaires**.
+  </Step>
+  <Step title="Copier la clé">
+    Cliquez sur **Créer la clé**, puis copiez la clé et conservez-la dans un gestionnaire de mots de passe ou dans les réglages de votre outil. La console ne l'affiche qu'une fois.
+  </Step>
+</Steps>
+
+La page liste chaque clé avec son préfixe, son accès, la personne qui l'a créée et la date de sa dernière utilisation. Les membres voient la page, mais ne peuvent ni créer ni révoquer de clés.
+
+## Ce que peut faire la clé d'un partenaire
+
+La clé d'un partenaire agit au nom de votre partenaire plutôt qu'au nom d'une personne : elle continue donc de fonctionner quand le collègue qui l'a créée quitte l'équipe. Elle atteint vos entreprises actives, y compris celles créées depuis la console, et aucune autre :
+
+- `POST /businesses` crée une entreprise encore sans propriétaire. Indiquez le propriétaire dans `owner_email`, et LobbyStack lui envoie votre invitation par courriel. `access_level` accepte `full`, la valeur par défaut, ou `activity`.
+- Toutes les autres requêtes nomment leur entreprise dans l'en-tête `LobbyStack-Business`.
+- Les liens que l'API renvoie, comme la balise de script d'un widget ou un lien de connexion d'agenda, mènent à votre adresse.
+
+Vos clés peuvent créer 30 entreprises par heure au total. Une clé ne peut pas appliquer de modèle, changer la formule ou le dépassement d'une entreprise, rechercher ou réserver de numéros de téléphone, ni modifier les préférences d'alertes : faites-le dans la console.
+
+[Clés de plateforme](/fr/api/authentication#clés-de-plateforme) liste les portées, les en-têtes et les réponses.
+
+## Intégrer une entreprise à partir d'un fichier
+
+`lobbystack onboard` lit un fichier YAML ou JSON qui décrit une entreprise, crée l'entreprise et la configure. Connectez-vous d'abord avec la clé de votre partenaire. Sur la version hébergée de LobbyStack, utilisez `https://app.lobbystack.com` :
+
+```bash
+lobbystack login --url https://app.lobbystack.com --key-stdin < key.txt
+```
+
+La clé a besoin de `businesses:create`, `business:read`, `business:write`, `knowledge:read`, `knowledge:write` et `team:manage`. Le manifeste d'une clé de partenaire nomme le propriétaire, qui reçoit votre invitation quand la commande crée l'entreprise :
+
+```yaml harbor-dental.yaml
+business:
+  name: Harbor Dental
+  timezone: America/Toronto
+  access_level: activity
+knowledge:
+  websites: [https://harbordental.example]
+receptionist:
+  greeting: Merci d'avoir appelé Harbor Dental, comment puis-je vous aider ?
+owner:
+  email: owner@harbordental.example
+```
+
+Laissez `plan` et `phone_number` hors du manifeste : vos entreprises n'achètent pas les forfaits de LobbyStack, et une clé ne peut pas réserver de numéros. Prévisualisez l'exécution avec `--plan`, puis lancez-la :
+
+```bash
+lobbystack onboard harbor-dental.yaml --plan
+lobbystack onboard harbor-dental.yaml
+```
+
+Relancez la commande chaque fois que le fichier change : elle ne change que ce qui diffère. Votre clé continue d'atteindre l'entreprise après l'arrivée de son propriétaire. [Intégrer une entreprise en ligne de commande](/fr/api/cli) couvre chaque section du fichier.
+
+## Révoquer une clé
+
+Cliquez sur **Révoquer** à côté de la clé, puis sur **Révoquer la clé**. Tout ce qui l'utilise cesse immédiatement de fonctionner, et vous ne pouvez pas annuler l'opération :
+
+- les points de terminaison webhook que la clé a créés se désactivent, sur toutes les entreprises
+- personne ne peut accepter les invitations d'équipe qu'elle a envoyées
+- les propriétaires qu'elle a invités en créant leur entreprise peuvent toujours rejoindre leur entreprise

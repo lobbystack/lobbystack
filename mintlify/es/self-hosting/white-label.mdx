@@ -1,0 +1,178 @@
+---
+title: "Aloje la marca blanca en sus propios servidores"
+description: "Active la marca blanca en un LobbyStack autoalojado: subdominios de socios y DNS comodín, dominios propios de los socios con Caddy, Traefik o Cloudflare for SaaS, Stripe Connect, niveles de Polar, registro de socios y Turnstile."
+sidebarTitle: "Marca blanca"
+contentType: "How-to"
+---
+
+import PartnerTiers from "/snippets/es/partner-tiers.mdx";
+
+Su despliegue puede alojar socios que lo revenden con sus propias marcas, como describe [el resumen de la marca blanca](/es/white-label/overview). Cada pieza se activa cuando usted configura lo que necesita, así que puede empezar con el registro y los subdominios y agregar la facturación más tarde. Esta página configura cada pieza, y las [variables de socios](/es/self-hosting/environment-variables#socios) describen cada ajuste que nombra. Defina cada variable tanto en el admin como en el worker.
+
+| Función | Lo que la activa | Sin ella |
+| --- | --- | --- |
+| Registro de socios | Siempre activo. `PARTNER_SIGNUP` elige quién puede registrarse. | No corresponde |
+| Subdominios de socios | `PARTNER_BASE_DOMAIN` y un registro DNS comodín | Un socio necesita su propio dominio antes de poder crear un negocio |
+| Dominios propios de los socios | El TLS bajo demanda de Caddy, o Cloudflare for SaaS | Los socios solo usan sus subdominios |
+| Paquetes en las cuentas de Stripe de los socios | `STRIPE_CONNECT_SECRET_KEY` y `STRIPE_CONNECT_WEBHOOK_SECRET` | Los socios facturan por su cuenta a todos sus negocios |
+| Niveles de socio | Los seis productos `POLAR_PARTNER_*_PRODUCT_ID` | Los socios no le pagan ningún nivel, y sus bolsas no tienen límite salvo que usted fije uno |
+
+## Elija quién puede registrarse como socio
+
+Los socios se registran en `/partner/signup` en el dominio de su panel, desde una cuenta de su despliegue. `PARTNER_SIGNUP` decide quién puede hacerlo:
+
+- `open`, el valor predeterminado en un despliegue autoalojado, permite registrarse a cualquier persona con sesión iniciada
+- `invite` exige un enlace de registro que usted crea para cada socio
+
+Para invitar a un socio, ejecute esto desde una copia del repositorio, con `DATABASE_URL` y `APP_BASE_URL` apuntando a su despliegue:
+
+```bash
+pnpm partner-invite:create --email owner@acme.example
+```
+
+El comando escribe el enlace en un archivo JSON de `.partner-invites/`, con el nombre de la invitación, que solo su usuario puede leer. El enlace funciona una vez, para esa dirección de correo después de que su titular la verifique, durante 7 días. Envíelo al socio y luego elimine el archivo.
+
+## Dé subdominios a los socios
+
+`PARTNER_BASE_DOMAIN` es el dominio del que sus socios reciben subdominios, como `partners.example.com`. Elija un dominio neutro, porque los clientes de sus socios lo ven en la barra de direcciones y en sus correos:
+
+<Steps>
+  <Step title="Apunte un registro comodín a su servidor">
+    En su proveedor de DNS, agregue un registro para `*.partners.example.com` que apunte al servidor que ejecuta el admin.
+  </Step>
+  <Step title="Defina el dominio base">
+    Defina `PARTNER_BASE_DOMAIN=partners.example.com` y reinicie el admin y el worker. Cada socio nuevo reserva entonces un subdominio al registrarse, y los socios que se registraron antes reciben uno cuando se inicia el admin.
+  </Step>
+  <Step title="Permita que su proveedor de correo envíe desde él">
+    Los correos de los socios salen desde `no-reply@partners.example.com`, con el nombre de cada socio. Verifique ese remitente con su proveedor de correo, o los correos fallarán.
+  </Step>
+  <Step title="Sirva HTTPS para los subdominios">
+    Con el TLS bajo demanda de Caddy, Caddy obtiene un certificado para el subdominio de cada socio en su primera visita. Con otro proxy, dele un certificado comodín para `*.partners.example.com`.
+  </Step>
+</Steps>
+
+Sin `PARTNER_BASE_DOMAIN`, los socios no reciben subdominio y sus correos salen desde `EMAIL_FROM`. Un socio necesita entonces un dominio propio verificado antes de poder crear un negocio o una demo.
+
+## Sirva los dominios propios de los socios
+
+Un socio con un nivel de pago puede conectar un subdominio de su propio sitio web, como `app.acmeagency.com`, y cualquier socio puede hacerlo si usted no vende niveles. El socio agrega dos registros que muestra la consola: un CNAME que apunta a `PARTNER_DOMAIN_CNAME_TARGET` y un registro TXT que demuestra que controla el dominio. El worker los comprueba, y el dominio se activa cuando ambos son correctos. Elija una forma de emitir los certificados.
+
+### Caddy con Docker Compose
+
+El Caddy de Compose emite el certificado de cada dominio la primera vez que alguien lo visita, después de que el admin aprueba el nombre de host en `/api/tls/ask`. Defina estos valores en `.env`, abra los puertos TCP 80 y 443 y el puerto UDP 443, y reinicie la pila:
+
+```dotenv
+COMPOSE_FILE=docker-compose.yml:docker-compose.tls.yml
+HTTP_BIND_ADDRESS=0.0.0.0
+CADDY_ON_DEMAND_TLS=true
+```
+
+Luego, los socios apuntan su CNAME al nombre de host de `APP_BASE_URL`, salvo que usted defina `PARTNER_DOMAIN_CNAME_TARGET`. [Sirva HTTPS desde Caddy](/es/self-hosting/docker-compose#sirva-https-desde-caddy) explica qué nombres de host aprueba Caddy.
+
+### Cloudflare for SaaS
+
+Cuando el DNS de `PARTNER_BASE_DOMAIN` está en Cloudflare, Cloudflare puede emitir en su lugar los certificados de los socios. En la zona, active Cloudflare for SaaS en **SSL/TLS** > **Custom Hostnames**. Agregue un registro con proxy, como `host.partners.example.com`, como origen de respaldo, y configure el modo de cifrado de la zona en **Full**. Luego defina `CLOUDFLARE_SAAS_API_TOKEN` con un token que tenga el permiso **Zone** > **SSL and Certificates** > **Edit**, y `CLOUDFLARE_SAAS_ZONE_ID` con el ID de la zona.
+
+Los socios apuntan su CNAME al origen de respaldo. Si define tanto Cloudflare for SaaS como `CADDY_ON_DEMAND_TLS`, el despliegue usa Cloudflare for SaaS. Los [pasos de Cloudflare for SaaS](/es/self-hosting/docker-compose) de la guía de Docker Compose cubren cada ajuste.
+
+### Traefik
+
+Traefik solo enruta los nombres de host para los que tiene un router, así que los nombres de host de los socios necesitan un router más que capture todos los demás. Traefik no emite certificados para nombres de host que no ha visto, así que combínelo con Cloudflare for SaaS, que sirve los certificados de los socios delante de él. Así funciona la nube de LobbyStack en Dokploy. Agregue un archivo de configuración dinámica, como `partner-hosts.yml`, en el directorio que vigila Traefik:
+
+```yaml partner-hosts.yml
+http:
+  routers:
+    partner-hosts:
+      rule: "PathPrefix(`/`)"
+      priority: 1
+      entryPoints: [websecure]
+      tls: {}
+      service: partner-hosts
+    partner-hosts-http:
+      rule: "PathPrefix(`/`)"
+      priority: 1
+      entryPoints: [web]
+      middlewares: [partner-hosts-https]
+      service: partner-hosts
+  middlewares:
+    partner-hosts-https:
+      redirectScheme:
+        scheme: https
+        permanent: true
+  services:
+    partner-hosts:
+      loadBalancer:
+        servers:
+          - url: http://your_admin_service:3000
+```
+
+La prioridad `1` coloca estos routers por debajo de todas las demás rutas, así que su panel conserva la suya. El segundo router redirige las solicitudes HTTP simples a HTTPS. Reemplace `your_admin_service` por el nombre del servicio del admin en la red de Traefik. El admin responde al nombre de host de cada socio con la marca de ese socio, y a cualquier otro nombre de host con un 404.
+
+Traefik responde a los nombres de host de los socios con su certificado predeterminado, que no los incluye. Mantenga el modo de cifrado de la zona de Cloudflare en **Full**, no en **Full (strict)**, para que Cloudflare lo acepte. Para los subdominios de los socios, pase también el registro comodín por el proxy de Cloudflare.
+
+## Permita que los socios facturen a sus negocios con Stripe Connect
+
+Stripe Connect permite que cada socio conecte su propia cuenta de Stripe y venda paquetes en ella. Configúrelo una vez en su cuenta de plataforma de Stripe:
+
+<Steps>
+  <Step title="Active Connect">
+    En su cuenta de Stripe, active Connect.
+  </Step>
+  <Step title="Cree la clave">
+    Cree una clave secreta o una clave restringida con el acceso de escritura que indica [`STRIPE_CONNECT_SECRET_KEY`](/es/self-hosting/environment-variables#socios), y defínala como `STRIPE_CONNECT_SECRET_KEY`.
+  </Step>
+  <Step title="Cree el endpoint de webhook">
+    Cree un endpoint en su `APP_BASE_URL` seguido de `/api/webhooks/stripe`, para los eventos de las cuentas conectadas, con los eventos que indica [`STRIPE_CONNECT_WEBHOOK_SECRET`](/es/self-hosting/environment-variables#socios). Defina su secreto de firma como `STRIPE_CONNECT_WEBHOOK_SECRET`.
+  </Step>
+  <Step title="Reinicie">
+    Reinicie el admin y el worker. El propietario de cada socio puede entonces conectar una cuenta de Stripe en la página **Stripe** de la consola.
+  </Step>
+</Steps>
+
+Sin ambas variables, la página **Stripe** indica a los socios que el panel todavía no puede conectar Stripe, y ellos facturan por su cuenta a todos sus negocios.
+
+## Venda niveles a los socios con Polar
+
+Los socios compran niveles desde la página **Facturación** de la consola y le pagan a usted con Polar. Cree un producto recurrente para cada nivel de pago y cada periodo, con los precios de esta tabla:
+
+<PartnerTiers />
+
+La página **Facturación** muestra estos precios desde el código, así que dé a sus productos los mismos. Luego configure la facturación:
+
+1. Defina los seis ID de producto: `POLAR_PARTNER_STARTER_MONTHLY_PRODUCT_ID`, `POLAR_PARTNER_STARTER_ANNUAL_PRODUCT_ID`, y el mismo par para `GROWTH` y `SCALE`. Cada uno debe ser un producto distinto.
+2. Mantenga definidos `POLAR_ACCESS_TOKEN`, `POLAR_ORGANIZATION_ID` y `POLAR_WEBHOOK_SECRET`, porque sus propios planes los usan.
+3. Agregue los medidores y los precios medidos que facturan el excedente de la bolsa y los números de teléfono adicionales, como describe la [guía de facturación de Polar](https://github.com/lobbystack/lobbystack/blob/main/docs/providers/polar.md#create-the-partner-tier-products).
+4. Reinicie el admin y el worker. El worker registra al iniciarse si usted vende niveles.
+
+La facturación de niveles solo se activa cuando los seis productos están definidos. Entonces los socios necesitan un nivel de pago para conectar su propio dominio, y el nivel de cada socio fija su bolsa y sus números de teléfono.
+
+### Gestione socios sin niveles
+
+Deje vacíos los productos `POLAR_PARTNER_*`, y los socios no le pagan nada a través de LobbyStack. Sus consolas no muestran la página **Facturación**, y nada limita los minutos, los chats ni los números de teléfono de sus negocios.
+
+Para limitar lo que comparten cada mes los negocios de un socio, fije su bolsa desde una copia del repositorio, con `DATABASE_URL` apuntando a su base de datos:
+
+```bash
+pnpm partner-pool:set --partner acme --minutes 500 --chats 2000
+```
+
+Esa bolsa es un límite estricto, sin excedente. Al llegar a la bolsa, los negocios del socio desvían sus llamadas y el chat de su sitio web deja de responder hasta que empieza el mes siguiente. Los propietarios del socio ven la bolsa en una página **Facturación**, y sus propietarios y administradores reciben correos al 80 % y al 100 %. Las [opciones de `pnpm partner-pool:set`](/es/self-hosting/environment-variables#socios) están con las variables de socios.
+
+## Incluya los nombres de host de los socios en Turnstile
+
+Si usa Cloudflare Turnstile en el registro, con `NEXT_PUBLIC_TURNSTILE_SITE_KEY` y `TURNSTILE_SECRET_KEY`, su widget solo se muestra en los nombres de host que usted le indica. Además, el admin solo acepta un token del nombre de host en el que el visitante lo resolvió. Agregue estos nombres de host al widget en Cloudflare:
+
+- `PARTNER_BASE_DOMAIN`, como `partners.example.com`, que cubre el subdominio de cada socio
+- el dominio propio de cada socio, una vez activo, si las personas también deben registrarse en él
+
+Las invitaciones y los demás enlaces de los correos se abren en los subdominios de los socios, así que las personas se registran allí incluso después de que un socio conecte su propio dominio. Sin `PARTNER_BASE_DOMAIN`, las invitaciones se abren en el dominio propio de cada socio, así que agregue cada uno. En el plan Free de Cloudflare, un widget admite hasta 10 nombres de host.
+
+## Compruebe la configuración
+
+Haga pruebas con un socio propio antes de invitar a otros:
+
+1. Regístrese como socio en `/partner/signup` y abra su subdominio desde **Marca y dominio**. Debería ver la página de inicio de sesión con la marca del socio.
+2. Cree un negocio y compruebe que la invitación del propietario llega con el nombre del socio.
+3. Conecte un subdominio de un dominio que controle, agregue sus dos registros DNS y espere a que aparezca **Activo**.
+4. Con Stripe Connect, conecte una cuenta de Stripe de prueba, cree un paquete y páguelo desde la invitación de un negocio.
+5. Con niveles, compre uno en la página **Facturación** y compruebe que la bolsa y los números de teléfono lo siguen.

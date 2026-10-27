@@ -1,0 +1,112 @@
+---
+title: "Create and run your clients' businesses"
+description: "Create a business for each client, choose its access level, invite its owner, open it to support it, and release or delete it from the partner console."
+sidebarTitle: "Businesses"
+contentType: "How-to"
+---
+
+Each client is a business on the **Businesses** page, with its own receptionist, phone number, team and dashboard on your address. Owners and admins create businesses and invite their owners. Everyone on your team can open a business to set it up or support it, and the business's audit log records each time they do.
+
+## Create a business
+
+You need your dashboard address before you create a business, because the business opens only on your addresses. Signup gives you one, as [Sign up as a partner](/white-label/sign-up) describes.
+
+<Steps>
+  <Step title="Open the form">
+    On **Businesses**, click **Create business**.
+  </Step>
+  <Step title="Describe the business">
+    Enter the **Business name**, the **Owner's email** and the **Time zone**. The time zone starts at your browser's, so change it when your client is elsewhere.
+  </Step>
+  <Step title="Choose what its team can use">
+    Under **What its team can use**, pick **Full access** or **Activity only**. See [Choose an access level](#choose-an-access-level).
+  </Step>
+  <Step title="Choose how it pays you">
+    Under **Billing**, pick one of your packages, or **You bill it yourself**. The field appears once LobbyStack can connect your Stripe account. See [Bill your businesses with Stripe and packages](/white-label/packages).
+  </Step>
+  <Step title="Start from a template (optional)">
+    Under **Template**, pick a saved setup, or leave **No template**. The field appears once you've saved a template. See [Reuse a business setup with templates](/white-label/templates).
+  </Step>
+  <Step title="Create it">
+    Click **Create and invite**. The business appears on the page, and its owner gets an email from you with a link to sign in.
+  </Step>
+</Steps>
+
+The owner's email must belong to your client: someone on your team can't own a business. A business that already pays LobbyStack directly can't move under your partner, so create a new business for that client.
+
+## Choose an access level
+
+The access level sets what the business's own team can use in its dashboard. You choose it when you create the business, and you can't change it later in the console:
+
+| Access level | What the business's team can use |
+| --- | --- |
+| **Full access** | The receptionist, its knowledge, hours, services and team members, plus everything **Activity only** includes. They don't see billing, API keys or [MCP](/ai/mcp). |
+| **Activity only** | Calls, chats, appointments, contacts and messages. You set up the receptionist for them. |
+
+At either level, the business's team sees its usage this month, and its owners and admins pay you from **Settings** > **Billing**.
+
+## Invite the owner
+
+The invitation email goes out under your name and links to your subdomain. The link works for 7 days. Until the owner accepts, the **Owner** column shows **Invited**, then **Invitation expired** after the 7 days.
+
+What the owner sees next depends on the business's billing:
+
+- **On a package**: the link names the package and its minutes and chats, and opens a Stripe checkout on your account. After paying, the owner signs in or creates an account. If your Stripe account can't take payments yet, the owner signs in first and pays later from **Settings** > **Billing**.
+- **You bill it yourself**: the link goes straight to sign-in.
+
+Onboarding then asks the owner to verify their phone. Calls forward to that phone when the business has no transfer number and runs out of minutes. Share [Use the receptionist a partner set up for you](/white-label/business-owners) with your clients.
+
+## Open a business to support it
+
+Click **Open** on a business's row to work inside its dashboard, on your address. Opening a business from `app.lobbystack.com` takes you to your address, where you sign in again.
+
+Inside the business, you get full access whatever its access level: the receptionist, knowledge, team, phone number and integrations. Billing, API keys and MCP stay closed to your team. You can open a business before its owner accepts the invitation, so you can set up the receptionist first.
+
+Your access to a business you opened lasts 8 hours, and opening it again starts the 8 hours over. Opening a business doesn't add you to its team, so its team list shows only the business's own people.
+
+### What the audit trail records
+
+Each time someone on your team opens a business, its audit log gets an entry. The entry names who opened it and their role, with when the access started and ends. The audit log also records when your team creates the business, saves its setup as a template, changes its package or overage, or releases it.
+
+Removing someone from your team ends their access to every business at once. Releasing a business ends your whole team's access to it.
+
+## Give the business a phone number
+
+A business gets its phone number in its own dashboard, under **Settings** > **Phone Number**. Its owners and admins can claim one at **Full access**, and so can anyone on your team who opens the business.
+
+The owner has to finish onboarding first. Until then, the page says **Phone numbers aren't available for this business yet.** Your tier sets how many numbers your businesses hold between them. On Free, a business can claim your one trial number. See [Phone numbers on each tier](/white-label/tiers#phone-numbers-on-each-tier).
+
+## Follow each business's usage
+
+The **Minutes this month** and **Chats this month** columns show what each business used since the 1st of the month. Owners and admins also see a **Billing** column with each business's package and payment status:
+
+| Status | What it means |
+| --- | --- |
+| **Awaiting payment** | The owner hasn't paid for the package yet |
+| **Paying** | The subscription is active |
+| **Payment failed** | Stripe is retrying a failed payment |
+| **Not paying** | The subscription ended |
+
+Under the package, the column sums up the business's overage, such as **No overage** or **Overage, no cap**. To change a business's package or overage, click **Change** beside it. See [Change the package a business pays for](/white-label/packages#change-the-package-a-business-pays-for) and [Set overage for a business](/white-label/packages#set-overage-for-a-business).
+
+## Release a business to its owner
+
+Releasing hands the business to its owner, who keeps the receptionist on LobbyStack's Free plan and pays LobbyStack from then on. The business leaves your console and your addresses, and the owner signs in at `app.lobbystack.com`. A released business can't come back under your partner.
+
+1. Open the business's **More actions** menu and choose **Release to owner**.
+2. Click **Release business** to confirm.
+
+The owner must have accepted their invitation first. If the business pays for a package through Stripe, cancel its subscription in your Stripe Dashboard before you release it.
+
+## Delete a business
+
+Deleting erases the business with its calls, chats, contacts, appointments and settings, and gives up its phone number. Its owner and team lose access, and you can't undo it.
+
+1. Open the business's **More actions** menu and choose **Delete**.
+2. Click **Delete business** to confirm.
+
+If the business pays for a package through Stripe, cancel its subscription in your Stripe Dashboard first. While a phone number is still being set up for the business, you can't delete it. Try again in a few minutes.
+
+## When your tier ends
+
+If your paid tier ends or a tier payment fails, owners and admins see a notice at the top of **Businesses**. It gives the dates your businesses pause and LobbyStack deletes them. You can release businesses to their owners in the meantime. See [What happens when a tier ends](/white-label/tiers#what-happens-when-a-tier-ends).

@@ -1,0 +1,78 @@
+---
+title: "Automate setup with platform keys and the command line"
+description: "Make a platform key in the partner console, create and set up your businesses through the API, and onboard a business from one file with lobbystack onboard."
+sidebarTitle: "API keys and CLI"
+contentType: "How-to"
+---
+
+A platform key lets your own code create businesses and set them up through LobbyStack's [API](/api/overview). It also lets the `lobbystack onboard` command build a business from one file. Owners and admins make keys on the console's **API keys** page. A key acts as your partner and reaches only your businesses.
+
+## Create a platform key
+
+Give each tool its own key, so you can revoke one without breaking the others:
+
+<Steps>
+  <Step title="Open the form">
+    On **API keys**, click **Create platform key**.
+  </Step>
+  <Step title="Name the key and pick its access">
+    Enter a **Name** you'll recognize, such as `Client onboarding`. Under **Access**, select only what the tool needs. To create businesses, select **Create businesses and invite their owners**.
+  </Step>
+  <Step title="Copy the key">
+    Click **Create key**, then copy the key and store it in a password manager or your tool's settings. The console shows it once.
+  </Step>
+</Steps>
+
+The page lists each key with its prefix, its access, who created it and when it was last used. Members see the page but can't make or revoke keys.
+
+## What a partner's key can do
+
+A partner's key acts as your partner rather than as a person, so it keeps working when the teammate who made it leaves. It reaches your active businesses, including the ones the console created, and no others:
+
+- `POST /businesses` creates a business with no owner yet. Name the owner in `owner_email`, and LobbyStack emails them your invitation. `access_level` takes `full`, the default, or `activity`.
+- Every other request names its business in the `LobbyStack-Business` header.
+- Links the API returns, such as a widget's script tag or a calendar connect link, point at your address.
+
+Your keys can create 30 businesses an hour between them. A key can't apply a template, change a business's package or overage, search for or claim phone numbers, or change alert preferences, so do those in the console.
+
+[Platform keys](/api/authentication#platform-keys) lists the scopes, headers and responses.
+
+## Onboard a business from a file
+
+`lobbystack onboard` reads a YAML or JSON file that describes a business, creates the business and sets it up. Sign in with your partner's key first. On LobbyStack's cloud, use `https://app.lobbystack.com`:
+
+```bash
+lobbystack login --url https://app.lobbystack.com --key-stdin < key.txt
+```
+
+The key needs `businesses:create`, `business:read`, `business:write`, `knowledge:read`, `knowledge:write` and `team:manage`. A manifest for a partner's key names the owner, who gets your invitation when the command creates the business:
+
+```yaml harbor-dental.yaml
+business:
+  name: Harbor Dental
+  timezone: America/Toronto
+  access_level: activity
+knowledge:
+  websites: [https://harbordental.example]
+receptionist:
+  greeting: Thanks for calling Harbor Dental, how can I help?
+owner:
+  email: owner@harbordental.example
+```
+
+Leave `plan` and `phone_number` out: your businesses don't buy LobbyStack's plans, and a key can't claim numbers. Preview the run with `--plan`, then run it:
+
+```bash
+lobbystack onboard harbor-dental.yaml --plan
+lobbystack onboard harbor-dental.yaml
+```
+
+Run the command again whenever the file changes, and it changes only what differs. Your key keeps reaching the business after its owner joins. [Onboard a business from the command line](/api/cli) covers every section of the file.
+
+## Revoke a key
+
+Click **Revoke** beside the key, then **Revoke key**. Anything that uses it stops working right away, and you can't undo it:
+
+- the webhook endpoints the key created turn off, on every business
+- nobody can accept the team invitations it sent
+- owners it invited when it created their business can still join

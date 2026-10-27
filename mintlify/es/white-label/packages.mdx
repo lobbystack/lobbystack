@@ -1,0 +1,101 @@
+---
+title: "Facture a sus negocios con Stripe y paquetes"
+description: "Conecte su cuenta de Stripe, cree paquetes con un precio mensual y una cuota de alta opcional, configure el excedente y el límite de cada negocio, o facture usted mismo a un negocio."
+sidebarTitle: "Paquetes y Stripe"
+contentType: "How-to"
+---
+
+Sus negocios le pagan a través de su propia cuenta de Stripe. Un propietario la conecta en la página **Stripe**, y luego los propietarios y administradores crean paquetes en la página **Paquetes** y eligen el paquete de cada negocio en **Negocios**. Stripe cobra a cada negocio a nombre de su empresa, le envía sus facturas y recibos, y le transfiere el dinero a usted. LobbyStack no se queda con ninguna parte de estos pagos.
+
+<Note>
+  Si la página **Stripe** dice **Todavía no hay pagos con Stripe**, el despliegue en el que está no puede conectar cuentas de Stripe. Facture usted mismo a todos sus negocios, como explica [Facture usted mismo a un negocio](#facture-usted-mismo-a-un-negocio).
+</Note>
+
+## Conecte su cuenta de Stripe
+
+Solo los propietarios ven la página **Stripe**. La conexión crea una cuenta de Stripe para su cuenta de socio, o termina la que usted empezó:
+
+<Steps>
+  <Step title="Elija su país">
+    En **Stripe**, elija el **País de su empresa**. Stripe fija el país de su cuenta al crearla, y después no podrá cambiarlo.
+  </Step>
+  <Step title="Abra Stripe">
+    Haga clic en **Conectar Stripe**. Stripe le pide los datos de su empresa y de su cuenta bancaria.
+  </Step>
+  <Step title="Vuelva a la consola">
+    Cuando Stripe lo devuelve a la consola, la página muestra el estado de su cuenta. Si Stripe necesita más datos, haga clic en **Continuar en Stripe** o en **Abrir la configuración de Stripe**.
+  </Step>
+</Steps>
+
+La etiqueta junto a su cuenta muestra su estado:
+
+| Estado | Qué significa |
+| --- | --- |
+| **Sin conectar** | Todavía no ha empezado |
+| **Configuración pendiente** | Stripe necesita más datos antes de que su cuenta pueda aceptar pagos |
+| **Pagos desactivados** | Stripe está revisando sus datos o necesita más |
+| **Conectada** | Sus negocios pueden pagarle, en la moneda que muestra la página |
+| **Desconectada** | Usted desconectó la cuenta desde Stripe |
+
+Una vez conectada, haga clic en **Abrir el panel de Stripe** para ver los pagos y las transferencias. En su panel de Stripe, usted gestiona los reembolsos, las disputas y los pagos fallidos, y elige lo que los negocios pueden hacer en su portal de clientes de Stripe.
+
+Si desconecta su cuenta en Stripe, sus paquetes ya no se pueden vender. Haga clic en **Volver a conectar Stripe** para conectar una cuenta nueva. Los paquetes que creó en la cuenta anterior siguen en la lista, en **Cuenta desconectada**.
+
+## Cree un paquete
+
+Un paquete es lo que un negocio le compra: un precio mensual, una cuota de alta opcional y los minutos y chats que incluye cada mes. Los precios usan la moneda de su cuenta de Stripe. Puede crear paquetes antes de que Stripe acepte pagos, y los negocios pueden comprarlos cuando empiece a aceptarlos.
+
+<Steps>
+  <Step title="Abra el formulario">
+    En **Paquetes**, haga clic en **Crear paquete**.
+  </Step>
+  <Step title="Póngale nombre y precio">
+    Escriba un **Nombre** de hasta 80 caracteres y un **Precio mensual**. Agregue una **Cuota de alta** si la cobra.
+  </Step>
+  <Step title="Defina lo que incluye">
+    Escriba los **Minutos al mes** y los **Chats al mes**, como números enteros de 0 a 1,000,000.
+  </Step>
+  <Step title="Créelo">
+    Haga clic en **Crear paquete**.
+  </Step>
+</Steps>
+
+Después no puede cambiar el precio, la cuota de alta, los minutos ni los chats de un paquete, porque puede que algunos negocios ya los paguen. Para vender otras condiciones, cree un paquete nuevo. Desde el menú de un paquete, puede usar:
+
+- **Cambiar nombre**: Stripe muestra el nuevo nombre en las facturas de sus negocios
+- **Dejar de vender**: los negocios nuevos no pueden elegirlo, y los que ya lo tienen lo conservan
+
+## Cómo paga un negocio su paquete
+
+Un negocio con un paquete paga en una página de pago de Stripe de su cuenta, desde la invitación de su propietario o más tarde desde **Configuración** > **Facturación** en su panel. Allí, sus propietarios y administradores hacen clic en **Administrar facturación** para abrir su portal de clientes de Stripe, donde actualizan su tarjeta, descargan facturas o cancelan.
+
+Todos los paquetes se renuevan el día 1 de cada mes, en UTC. La primera factura cobra el resto del mes en curso más la cuota de alta completa. Aun así, el negocio recibe todos los minutos y chats del paquete durante ese mes. Cada factura siguiente cubre un mes calendario.
+
+Mientras el negocio paga, atiende llamadas y chats hasta lo que incluye su paquete. Stripe reintenta un pago fallido, y el negocio sigue atendiendo durante los reintentos. Cuando la suscripción termina, el negocio deja de atender hasta que su propietario se suscriba de nuevo.
+
+Los precios solo aparecen en la página de pago y en las facturas de Stripe. El panel del negocio muestra sus minutos y chats frente a lo que incluye el paquete. Al 80 % y al 100 % de sus minutos o de sus chats, los propietarios y administradores del negocio reciben un correo con su marca. Sus propietarios y administradores también reciben uno.
+
+## Configure el excedente de un negocio
+
+El excedente permite que un negocio siga atendiendo pasado su paquete, con las tarifas que usted fija, hasta un límite mensual. Cada negocio empieza con el excedente desactivado. Para configurarlo, busque el negocio en **Negocios** y haga clic en **Cambiar** junto a su excedente, debajo del paquete en la columna **Facturación**:
+
+1. Active **Permitir excedente**.
+2. Escriba lo que cobra por **Cada minuto de más** y **Cada chat de más**, en la moneda del paquete.
+3. Escriba un **Límite mensual**, o déjelo vacío para no tener límite.
+4. Haga clic en **Guardar**.
+
+Pasado su paquete, el negocio sigue atendiendo hasta que su excedente llega a su límite. Entonces sus llamadas se desvían a su número de transferencia o al teléfono de su propietario, y el chat de su sitio web deja de responder. Con el excedente desactivado, el negocio se detiene de la misma forma en los minutos y chats de su paquete. Si desactiva el excedente, la consola conserva las tarifas y el límite, y los restaura cuando lo vuelve a activar.
+
+El excedente aparece en la siguiente factura de Stripe del negocio como **Call overage** y **Chat overage**, con el importe como cantidad, a 1.00 la unidad. El límite se reinicia el día 1 de cada mes, en UTC, así que una factura que abarca dos meses puede cobrar hasta dos límites.
+
+Su bolsa también limita a cada negocio: un negocio deja de atender cuando [se agota su bolsa](/es/white-label/tiers#qué-cubre-su-bolsa) y el excedente de la bolsa está desactivado o llegó a su límite.
+
+## Facture usted mismo a un negocio
+
+Elija **Lo factura usted** para un cliente al que factura de otra forma, como un cliente al que no cobra o uno con un contrato anual. El negocio no paga nada con Stripe, y ningún paquete limita sus minutos ni sus chats. Su uso sigue descontándose de su bolsa. No tiene excedente, y su página de facturación les indica a sus propietarios que le consulten a usted sobre su factura.
+
+## Cambie el paquete que paga un negocio
+
+En **Negocios**, haga clic en **Cambiar** junto al paquete del negocio, elija otro paquete o **Lo factura usted**, y haga clic en **Guardar**. Puede cambiarlo en cualquier momento hasta que el negocio pague.
+
+Cuando el negocio ya paga su paquete, cancele primero su suscripción en su panel de Stripe. Si no, la consola dice **Este negocio paga su paquete con Stripe. Primero cancele su suscripción en su panel de Stripe.** Después del cambio, el propietario paga el paquete nuevo desde **Configuración** > **Facturación**. Un negocio conserva un paquete que usted dejó de vender hasta que usted lo cambie.

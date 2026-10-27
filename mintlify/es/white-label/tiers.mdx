@@ -1,0 +1,108 @@
+---
+title: "Elija un nivel y gestione lo que paga a LobbyStack"
+description: "Compare los niveles Gratis, Starter, Growth y Scale, vea cómo funcionan la bolsa compartida y el límite de su excedente, y sepa qué pasa con sus negocios cuando termina un nivel."
+sidebarTitle: "Niveles y facturación"
+contentType: "Reference"
+---
+
+import PartnerTiers from "/snippets/es/partner-tiers.mdx";
+
+Usted le paga a LobbyStack un nivel. Un nivel fija su precio, la bolsa de minutos y chats que comparten todos sus negocios cada mes, y cuántos números de teléfono tienen. Los propietarios eligen el nivel en la página **Facturación** de la consola y pagan con Polar. Gratis no necesita tarjeta, y un socio que no paga ningún nivel está en Gratis.
+
+## Compare los niveles
+
+Los precios están en dólares estadounidenses. La facturación anual descuenta un 20 % del precio mensual, redondeado hacia abajo a dólares enteros al mes:
+
+<PartnerTiers />
+
+Puede tener tantos negocios como quiera en cualquier nivel, porque un nivel solo limita los minutos, los chats y los números de teléfono que comparten. Un nivel de pago también le permite [conectar su propio dominio](/es/white-label/branding#conecte-su-propio-dominio).
+
+## Qué cubre su bolsa
+
+Su bolsa son los minutos y chats que comparten todos sus negocios cada mes. Cuenta:
+
+- los minutos de voz de cada llamada que atienden sus negocios: llamadas telefónicas, llamadas de prueba desde el navegador, llamadas desde el widget del sitio web y llamadas a sus demos para clientes potenciales
+- cada conversación del chat del sitio web
+- tanto los negocios con un paquete como los negocios que usted factura
+
+Los SMS de alerta y el tramo telefónico adicional de una transferencia de llamada no usan la bolsa. La bolsa se reinicia el día 1 de cada mes, en UTC. En **Este mes**, la página **Facturación** muestra los minutos y chats usados hasta ahora, con los minutos de las llamadas que terminaron redondeados hacia arriba.
+
+Cada negocio con un paquete tiene además sus propios minutos y chats incluidos. Una llamada o un chat se descuenta de ambos, así que un negocio deja de atender en el primer límite al que llegue. Consulte [Configure el excedente de un negocio](/es/white-label/packages#configure-el-excedente-de-un-negocio).
+
+## Excedente de la bolsa y su límite
+
+En un nivel de pago, sus negocios siguen atendiendo pasada la bolsa, y usted paga la tarifa de su nivel por cada minuto y cada chat de más. El excedente está activado de forma predeterminada. Polar lo agrega a la factura de su nivel.
+
+Los propietarios controlan el excedente en la sección **Excedente** de **Facturación**:
+
+- **Permitir excedente** lo activa o lo desactiva. Desactivado, sus negocios se detienen en la bolsa cada mes.
+- **Límite mensual** limita lo que puede costar el excedente cada mes, en dólares estadounidenses. Haga clic en **Fijar límite**, **Actualizar límite** o **Quitar límite**.
+- **Excedente este mes** muestra lo que costó el excedente hasta ahora, frente al límite si fijó uno.
+
+Cuando sus negocios llegan a la bolsa con el excedente desactivado, o llegan a su límite, sus llamadas se desvían al número de transferencia de cada negocio o al teléfono de su propietario. El chat de su sitio web deja de responder, y los visitantes ven **No podemos responder aquí en este momento. Llámenos o inténtelo más tarde.** Sus negocios vuelven a atender el día 1, o en cuanto usted sube el límite o activa el excedente.
+
+Gratis no tiene excedente. En Gratis, sus negocios se detienen en la bolsa hasta que elija un nivel de pago.
+
+## Alertas de uso por correo
+
+Sus propietarios y administradores reciben un correo de LobbyStack al 80 % y al 100 % de los minutos de la bolsa, de sus chats y de su límite de excedente. Cada alerta sale una vez al mes, y un nivel o un límite nuevo las vuelve a enviar. Los miembros no reciben alertas.
+
+## Números de teléfono en cada nivel
+
+Su nivel fija cuántos números de teléfono tienen sus negocios en total, como indica la tabla de niveles. En un nivel de pago, sus negocios pueden tener más números que los incluidos. Cada número adicional se cobra cada mes a precio de costo, en su factura de Polar, y sus números más antiguos cuentan como los incluidos. La página **Facturación** muestra cuántos números tienen sus negocios.
+
+Gratis no incluye números propios. En su lugar, usted recibe un número de prueba de 14 días, una sola vez:
+
+- El propietario o un administrador del negocio, o alguien de su equipo que abrió el negocio, lo solicita en **Configuración** > **Número de teléfono** en ese negocio.
+- La persona que lo solicita verifica primero su propio móvil, y las llamadas de la prueba van solo a ese móvil.
+- Las llamadas de la prueba usan los minutos de su bolsa.
+- Si paga un nivel, el número de prueba pasa a ser uno de sus números.
+
+En Gratis, después de la prueba, la configuración del teléfono de un negocio dice **El socio de este negocio necesita pagar un nivel para agregar números de teléfono.**
+
+Sus negocios también comparten límites sobre cuántos números nuevos compran. Cada día pueden comprar hasta 2 números o los números incluidos en su nivel, lo que sea mayor. En 30 días pueden comprar hasta 5 números o el doble de sus números incluidos, lo que sea mayor. Además, cada negocio puede hacer 3 reservas por hora. Reemplazar un número que un negocio ya tiene no cuenta como un número nuevo.
+
+<Note>
+  En la nube de LobbyStack, sus negocios reciben números de teléfono cuando LobbyStack empiece a vender niveles de socio. Hasta entonces, su configuración del teléfono dice **Los números de teléfono todavía no están disponibles para este negocio.**
+</Note>
+
+## Elija o cambie su nivel
+
+Solo los propietarios ven la página **Facturación**. En Gratis, la página ofrece los niveles de pago en **Elija un nivel**:
+
+<Steps>
+  <Step title="Elija un periodo">
+    Elija **Mensual** o **Anual**. Anual muestra **Ahorre un 20 %**.
+  </Step>
+  <Step title="Elija un nivel">
+    Haga clic en **Elegir Starter**, **Elegir Growth** o **Elegir Scale**. Se abre la página de pago de Polar.
+  </Step>
+  <Step title="Pague">
+    Pague en la página de pago. Polar lo devuelve a **Facturación**, que confirma el pago y luego muestra su nuevo nivel.
+  </Step>
+</Steps>
+
+En un nivel de pago, haga clic en **Gestionar suscripción** para abrir el portal de clientes de Polar. Allí puede cambiar o cancelar su nivel, o actualizar su tarjeta. En **Nivel actual**, la página muestra cuándo se renueva el nivel, o cuándo termina si lo canceló.
+
+Solo puede haber un pago abierto a la vez. Si otro propietario inició uno en los últimos 30 minutos, la página dice **Otro propietario tiene un pago abierto. Inténtelo de nuevo en 30 minutos.**
+
+## Qué pasa cuando termina un nivel
+
+Cuando termina un nivel de pago, ya sea porque lo canceló o porque un pago falló de forma definitiva, sus negocios siguen atendiendo durante 30 días. Después se pausan, y 90 días después de que terminó el nivel, LobbyStack los elimina:
+
+| Cuándo | Qué pasa |
+| --- | --- |
+| Falla un pago del nivel | Su nivel sigue vigente mientras Polar reintenta el pago. Actualice su tarjeta desde **Gestionar suscripción** para conservarlo. |
+| El nivel termina | Usted pasa a Gratis, así que sus negocios comparten la bolsa de Gratis y no tienen excedente. Siguen atendiendo. |
+| 30 días después del pago fallido o del final del nivel, lo que ocurra primero | Sus negocios se pausan. Sus llamadas se desvían al número de transferencia de cada negocio o al teléfono de su propietario, el chat de su sitio web no puede responder y no pueden obtener números nuevos. |
+| 90 días después de que terminó el nivel | LobbyStack elimina sus negocios, incluidas las demos para clientes potenciales, y libera sus números de teléfono. Antes cancela la suscripción al paquete de cada negocio, para que su propietario no pague nada más. |
+
+Hasta la eliminación, puede ceder cada negocio a su propietario, que lo conserva en el plan Free de LobbyStack. Si vuelve a pagar un nivel, los negocios pausados se reactivan. Los propietarios y administradores ven estas fechas en un aviso arriba en **Negocios**.
+
+Después de la eliminación, usted sigue en Gratis con su equipo, su marca y sus plantillas. Los negocios que cree a partir de entonces funcionan como en Gratis.
+
+## Facturación en un despliegue sin niveles
+
+Puede que un despliegue autoalojado no venda niveles. Entonces su consola no tiene página **Facturación**, y nada limita los minutos, los chats ni los números de teléfono de sus negocios. Entre todos, pueden comprar hasta 2 números nuevos al día y 5 en 30 días.
+
+El anfitrión puede fijarle una bolsa de todos modos. Sus propietarios ven entonces la página **Facturación** con el uso de esa bolsa en el mes, sin niveles, precios ni excedente. Al llegar a la bolsa, las llamadas se desvían y el chat del sitio web deja de responder hasta que empieza el mes siguiente. Para cambiar la bolsa, contacte al anfitrión.

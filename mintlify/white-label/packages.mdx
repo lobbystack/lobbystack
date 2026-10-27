@@ -1,0 +1,101 @@
+---
+title: "Bill your businesses with Stripe and packages"
+description: "Connect your Stripe account, create packages with a monthly price and an optional setup fee, set each business's overage and cap, or bill a business yourself."
+sidebarTitle: "Packages and Stripe"
+contentType: "How-to"
+---
+
+Your businesses pay you through your own Stripe account. An owner connects it on the **Stripe** page, then owners and admins create packages on the **Packages** page and choose each business's package on **Businesses**. Stripe charges each business in your company's name, sends its invoices and receipts, and pays you out. LobbyStack takes no share of these payments.
+
+<Note>
+  If the **Stripe** page says **No Stripe payments yet**, the deployment you're on can't connect Stripe accounts. Bill every business yourself, as [Bill a business yourself](#bill-a-business-yourself) describes.
+</Note>
+
+## Connect your Stripe account
+
+Only owners see the **Stripe** page. Connecting creates a Stripe account for your partner, or finishes one you started:
+
+<Steps>
+  <Step title="Choose your country">
+    On **Stripe**, pick the **Country of your business**. Stripe sets your account's country when it creates the account, and you can't change it later.
+  </Step>
+  <Step title="Open Stripe">
+    Click **Connect Stripe**. Stripe asks for your company's details and bank account.
+  </Step>
+  <Step title="Come back to the console">
+    When Stripe sends you back, the page shows your account's status. If Stripe needs more, click **Continue on Stripe** or **Open Stripe setup**.
+  </Step>
+</Steps>
+
+The badge beside your account shows its status:
+
+| Status | What it means |
+| --- | --- |
+| **Not connected** | You haven't started |
+| **Setup unfinished** | Stripe needs more details before your account can take payments |
+| **Payments off** | Stripe is checking your details, or needs more of them |
+| **Connected** | Your businesses can pay you, in the currency the page shows |
+| **Disconnected** | You disconnected the account from Stripe's side |
+
+Once connected, click **Open Stripe Dashboard** to see payments and payouts. In your Stripe Dashboard, you handle refunds, disputes and failed payments, and you choose what businesses can do in your Stripe customer portal.
+
+If you disconnect your account in Stripe, your packages can't sell any more. Click **Connect Stripe again** to connect a new account. Packages you made on the old account stay listed under **Disconnected account**.
+
+## Create a package
+
+A package is what a business buys from you: a monthly price, an optional setup fee and the minutes and chats each month includes. Prices use your Stripe account's currency. You can create packages before Stripe takes payments, and businesses can buy them once it does.
+
+<Steps>
+  <Step title="Open the form">
+    On **Packages**, click **Create package**.
+  </Step>
+  <Step title="Name and price it">
+    Enter a **Name** of up to 80 characters and a **Monthly price**. Add a **Setup fee** if you charge one.
+  </Step>
+  <Step title="Set the allowance">
+    Enter the **Minutes each month** and **Chats each month**, as whole numbers from 0 to 1,000,000.
+  </Step>
+  <Step title="Create it">
+    Click **Create package**.
+  </Step>
+</Steps>
+
+You can't change a package's price, setup fee, minutes or chats later, because businesses may already pay for them. To sell different terms, create a new package. From a package's menu you can:
+
+- **Rename** it: Stripe shows the new name on your businesses' invoices
+- **Stop selling** it: new businesses can't pick it, and businesses already on it keep it
+
+## How a business pays for its package
+
+A business on a package pays at a Stripe checkout on your account, from its owner's invitation or later from **Settings** > **Billing** in its dashboard. Its owners and admins click **Manage billing** there to open your Stripe customer portal, where they update their card, download invoices or cancel.
+
+Every package renews on the 1st of the month, in UTC. The first invoice charges the rest of the current month plus the full setup fee. The business still gets the package's full minutes and chats for that month. Each later invoice covers one calendar month.
+
+While the business pays, it answers calls and chats up to its package's allowance. Stripe retries a failed payment, and the business keeps answering during the retries. Once the subscription ends, the business stops answering until its owner subscribes again.
+
+Prices show only in Stripe's checkout and invoices. The business's dashboard shows its minutes and chats against the allowance. At 80% and at 100% of its minutes or its chats, the business's owners and admins get an email under your brand. Your owners and admins get one too.
+
+## Set overage for a business
+
+Overage lets a business keep answering past its package, at rates you set, up to a monthly cap. Each business starts with overage off. To set it, find the business on **Businesses** and click **Change** beside its overage, under the package in the **Billing** column:
+
+1. Turn on **Allow overage**.
+2. Enter what you charge for **Each extra minute** and **Each extra chat**, in the package's currency.
+3. Enter a **Monthly cap**, or leave it empty for no cap.
+4. Click **Save**.
+
+Past its package, the business keeps answering until its overage reaches your cap. Then its calls forward to its transfer number or its owner's phone, and its website chat stops replying. With overage off, the business stops at its package's minutes and chats the same way. Turning overage off keeps the rates and the cap, so turning it on again restores them.
+
+The overage shows on the business's next Stripe invoice as **Call overage** and **Chat overage**, with the amount as the quantity at 1.00 each. The cap starts over on the 1st of each month, in UTC, so an invoice that spans two months can bill up to two caps.
+
+Your pool limits each business too. A business also stops answering when your [pool runs out](/white-label/tiers#what-your-pool-covers) with pool overage off or at its cap.
+
+## Bill a business yourself
+
+Choose **You bill it yourself** for a client you bill another way, such as a client you don't charge or one on an annual contract. The business pays nothing through Stripe, and no package limits its minutes or chats. Its usage still comes out of your pool. It has no overage, and its billing page tells its owners to ask you about their bill.
+
+## Change the package a business pays for
+
+On **Businesses**, click **Change** beside the business's package, pick another package or **You bill it yourself**, and click **Save**. You can change it at any time until the business pays.
+
+Once the business pays for its package, cancel its subscription in your Stripe Dashboard first. Otherwise the console says **This business pays for its package through Stripe. Cancel its subscription in your Stripe Dashboard first.** After the change, the owner pays for the new package from **Settings** > **Billing**. A business keeps a package you stopped selling until you change it.

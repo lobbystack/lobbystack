@@ -1,0 +1,112 @@
+---
+title: "Créer et gérer les entreprises de vos clients"
+description: "Créez une entreprise pour chaque client, choisissez son niveau d'accès, invitez son propriétaire, ouvrez-la pour offrir du soutien, et cédez-la ou supprimez-la depuis la console partenaire."
+sidebarTitle: "Entreprises"
+contentType: "How-to"
+---
+
+Chaque client est une entreprise sur la page **Entreprises**, avec sa propre réceptionniste, son numéro de téléphone, son équipe et son tableau de bord sur votre adresse. Les propriétaires et les administrateurs créent les entreprises et invitent leurs propriétaires. Toute votre équipe peut ouvrir une entreprise pour la configurer ou lui offrir du soutien, et le journal d'audit de l'entreprise consigne chaque ouverture.
+
+## Créer une entreprise
+
+Il vous faut l'adresse de votre tableau de bord avant de créer une entreprise, parce que l'entreprise s'ouvre seulement sur vos adresses. L'inscription vous en donne une, comme l'explique [S'inscrire comme partenaire](/fr/white-label/sign-up).
+
+<Steps>
+  <Step title="Ouvrir le formulaire">
+    Sur **Entreprises**, cliquez sur **Créer une entreprise**.
+  </Step>
+  <Step title="Décrire l'entreprise">
+    Entrez le **Nom de l'entreprise**, le **Courriel du propriétaire** et le **Fuseau horaire**. Le fuseau horaire part de celui de votre navigateur : changez-le si votre client se trouve ailleurs.
+  </Step>
+  <Step title="Choisir ce que son équipe peut utiliser">
+    Sous **Ce que son équipe peut utiliser**, choisissez **Accès complet** ou **Activité seulement**. Consultez [Choisir un accès](#choisir-un-accès).
+  </Step>
+  <Step title="Choisir comment elle vous paie">
+    Sous **Facturation**, choisissez l'une de vos formules, ou **Vous la facturez vous-même**. Le champ apparaît dès que LobbyStack peut connecter votre compte Stripe. Consultez [Facturer vos entreprises avec Stripe et des formules](/fr/white-label/packages).
+  </Step>
+  <Step title="Partir d'un modèle (facultatif)">
+    Sous **Modèle**, choisissez une configuration enregistrée, ou laissez **Aucun modèle**. Le champ apparaît dès que vous avez enregistré un modèle. Consultez [Réutiliser la configuration d'une entreprise avec des modèles](/fr/white-label/templates).
+  </Step>
+  <Step title="La créer">
+    Cliquez sur **Créer et inviter**. L'entreprise apparaît sur la page, et son propriétaire reçoit de votre part un courriel avec un lien pour se connecter.
+  </Step>
+</Steps>
+
+Le courriel du propriétaire doit appartenir à votre client : une personne de votre équipe ne peut pas être propriétaire d'une entreprise. Une entreprise qui paie déjà LobbyStack directement ne peut pas passer sous votre partenaire : créez donc une nouvelle entreprise pour ce client.
+
+## Choisir un accès
+
+Le niveau d'accès définit ce que l'équipe propre de l'entreprise peut utiliser dans son tableau de bord. Vous le choisissez quand vous créez l'entreprise, et vous ne pouvez plus le changer ensuite dans la console :
+
+| Niveau d'accès | Ce que l'équipe de l'entreprise peut utiliser |
+| --- | --- |
+| **Accès complet** | La réceptionniste, ses connaissances, ses heures, ses services et les membres de l'équipe, plus tout ce que comprend **Activité seulement**. L'équipe ne voit ni la facturation, ni les clés API, ni [MCP](/fr/ai/mcp). |
+| **Activité seulement** | Les appels, les clavardages, les rendez-vous, les contacts et les messages. Vous configurez la réceptionniste pour elle. |
+
+Aux deux niveaux, l'équipe de l'entreprise voit son utilisation du mois, et ses propriétaires et ses administrateurs vous paient depuis **Réglages** > **Facturation**.
+
+## Inviter le propriétaire
+
+Le courriel d'invitation part sous votre nom et mène à votre sous-domaine. Le lien fonctionne pendant 7 jours. Tant que le propriétaire n'a pas accepté, la colonne **Propriétaire** affiche **Invitation envoyée**, puis **Invitation expirée** après les 7 jours.
+
+Ce que le propriétaire voit ensuite dépend de la facturation de l'entreprise :
+
+- **Sur une formule** : le lien nomme la formule, avec ses minutes et ses clavardages, et ouvre une page de paiement Stripe sur votre compte. Après avoir payé, le propriétaire se connecte ou crée un compte. Si votre compte Stripe ne peut pas encore accepter de paiements, le propriétaire se connecte d'abord et paie plus tard depuis **Réglages** > **Facturation**.
+- **Vous la facturez vous-même** : le lien mène directement à la connexion.
+
+L'intégration demande ensuite au propriétaire de vérifier son téléphone. Les appels vont à ce téléphone quand l'entreprise n'a pas de numéro de transfert et qu'elle a épuisé ses minutes. Transmettez [Utiliser la réceptionniste qu'un partenaire a configurée pour vous](/fr/white-label/business-owners) à vos clients.
+
+## Ouvrir une entreprise pour offrir du soutien
+
+Cliquez sur **Ouvrir** dans la ligne d'une entreprise pour travailler dans son tableau de bord, sur votre adresse. Si vous ouvrez une entreprise depuis `app.lobbystack.com`, vous arrivez sur votre adresse, où vous vous connectez de nouveau.
+
+Dans l'entreprise, vous avez un accès complet, quel que soit son niveau d'accès : la réceptionniste, les connaissances, l'équipe, le numéro de téléphone et les intégrations. La facturation, les clés API et MCP restent fermés à votre équipe. Vous pouvez ouvrir une entreprise avant que son propriétaire accepte l'invitation, pour configurer d'abord la réceptionniste.
+
+Votre accès à une entreprise que vous avez ouverte dure 8 heures, et une nouvelle ouverture relance les 8 heures. Ouvrir une entreprise ne vous ajoute pas à son équipe : sa liste d'équipe n'affiche donc que les personnes de l'entreprise.
+
+### Ce que consigne le journal d'audit
+
+Chaque fois qu'une personne de votre équipe ouvre une entreprise, son journal d'audit reçoit une entrée. L'entrée nomme la personne qui l'a ouverte et son rôle, avec le début et la fin de l'accès. Le journal d'audit consigne aussi quand votre équipe crée l'entreprise, enregistre sa configuration comme modèle, change sa formule ou son dépassement, ou la cède.
+
+Retirer quelqu'un de votre équipe met fin d'un coup à son accès à toutes les entreprises. Céder une entreprise met fin à l'accès de toute votre équipe à cette entreprise.
+
+## Donner un numéro de téléphone à l'entreprise
+
+Une entreprise obtient son numéro de téléphone dans son propre tableau de bord, sous **Réglages** > **Numéro de téléphone**. Avec **Accès complet**, ses propriétaires et ses administrateurs peuvent en obtenir un, tout comme toute personne de votre équipe qui ouvre l'entreprise.
+
+Le propriétaire doit d'abord terminer l'intégration. D'ici là, la page indique **Les numéros de téléphone ne sont pas encore disponibles pour cette entreprise.** Votre palier fixe le nombre de numéros que vos entreprises détiennent au total. Sur Gratuit, une entreprise peut obtenir votre unique numéro d'essai. Consultez [Numéros de téléphone par palier](/fr/white-label/tiers#numéros-de-téléphone-par-palier).
+
+## Suivre l'utilisation de chaque entreprise
+
+Les colonnes **Minutes ce mois-ci** et **Discussions ce mois-ci** indiquent ce que chaque entreprise a utilisé depuis le 1er du mois. Les propriétaires et les administrateurs voient aussi une colonne **Facturation** avec la formule et l'état du paiement de chaque entreprise :
+
+| État | Ce qu'il signifie |
+| --- | --- |
+| **Paiement en attente** | Le propriétaire n'a pas encore payé la formule |
+| **Payant** | L'abonnement est actif |
+| **Paiement échoué** | Stripe tente de nouveau un paiement qui a échoué |
+| **Non payant** | L'abonnement a pris fin |
+
+Sous la formule, la colonne résume le dépassement de l'entreprise, par exemple **Aucun dépassement** ou **Dépassement sans plafond**. Pour changer la formule ou le dépassement d'une entreprise, cliquez sur **Modifier** à côté. Consultez [Changer la formule que paie une entreprise](/fr/white-label/packages#changer-la-formule-que-paie-une-entreprise) et [Configurer le dépassement pour une entreprise](/fr/white-label/packages#configurer-le-dépassement-pour-une-entreprise).
+
+## Céder une entreprise à son propriétaire
+
+Céder une entreprise la remet à son propriétaire, qui garde la réceptionniste sur le forfait Free de LobbyStack et paie LobbyStack à partir de ce moment. L'entreprise quitte votre console et vos adresses, et le propriétaire se connecte à `app.lobbystack.com`. Une entreprise cédée ne peut pas revenir sous votre partenaire.
+
+1. Ouvrez le menu **Plus d'actions** de l'entreprise et choisissez **Céder au propriétaire**.
+2. Cliquez sur **Céder l'entreprise** pour confirmer.
+
+Le propriétaire doit d'abord avoir accepté son invitation. Si l'entreprise paie une formule par Stripe, annulez son abonnement dans votre tableau de bord Stripe avant de la céder.
+
+## Supprimer une entreprise
+
+La suppression efface l'entreprise avec ses appels, ses clavardages, ses contacts, ses rendez-vous et ses réglages, et renonce à son numéro de téléphone. Son propriétaire et son équipe perdent l'accès, et vous ne pouvez pas annuler l'opération.
+
+1. Ouvrez le menu **Plus d'actions** de l'entreprise et choisissez **Supprimer**.
+2. Cliquez sur **Supprimer l'entreprise** pour confirmer.
+
+Si l'entreprise paie une formule par Stripe, annulez d'abord son abonnement dans votre tableau de bord Stripe. Tant que LobbyStack configure encore un numéro de téléphone pour l'entreprise, vous ne pouvez pas la supprimer. Réessayez dans quelques minutes.
+
+## Quand votre palier prend fin
+
+Si votre palier payant prend fin ou qu'un paiement de palier échoue, les propriétaires et les administrateurs voient un avis en haut de la page **Entreprises**. Il donne les dates où vos entreprises se mettent en pause et où LobbyStack les supprime. D'ici là, vous pouvez céder les entreprises à leurs propriétaires. Consultez [Ce qui se passe quand un palier prend fin](/fr/white-label/tiers#ce-qui-se-passe-quand-un-palier-prend-fin).

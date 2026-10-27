@@ -1,0 +1,88 @@
+---
+title: "Personnaliser votre tableau de bord et connecter votre domaine"
+description: "Définissez le nom, le logo, le favicon, la couleur et les liens que voient vos entreprises, et connectez un sous-domaine de votre propre site Web avec ses enregistrements DNS."
+sidebarTitle: "Image de marque et domaine"
+contentType: "How-to"
+---
+
+La page **Image de marque et domaine** définit ce que voient vos entreprises : votre nom, votre logo, votre couleur et vos liens, ainsi que les adresses où elles ouvrent votre tableau de bord. Chaque partenaire reçoit un sous-domaine de `receptionistportal.com`, et un palier payant ajoute un sous-domaine de votre propre site Web. Les propriétaires et les administrateurs modifient cette page, et les membres peuvent la consulter.
+
+## Définir votre nom, votre logo et votre couleur
+
+La section **Marque** définit ce qui apparaît dans l'onglet du navigateur, au-dessus de la connexion et dans vos courriels. Remplissez ces champs, vérifiez l'aperçu, puis cliquez sur **Enregistrer la marque** :
+
+| Champ | Ce qu'il change | Valeurs acceptées |
+| --- | --- | --- |
+| **Nom** | L'onglet du navigateur, le titre au-dessus de la connexion, le texte du tableau de bord et le nom d'expéditeur de vos courriels | Jusqu'à 80 caractères |
+| **Logo** | L'image au-dessus de la connexion et dans vos courriels | PNG, JPEG, WebP ou SVG, jusqu'à 256&nbsp;Ko |
+| **Favicon** | L'icône de l'onglet du navigateur. Sans favicon, l'onglet affiche votre logo. | PNG, JPEG, WebP ou SVG, jusqu'à 256&nbsp;Ko |
+| **Couleur de la marque** | La couleur principale du tableau de bord, avec un texte clair ou foncé par-dessus, selon ce qui se lit le mieux | Un code hexadécimal, comme `#0f766e` |
+
+Vos pages affichent les changements enregistrés en moins d'une minute, et chaque courriel envoyé après l'enregistrement les utilise.
+
+## Ajouter vos liens vers les conditions, la confidentialité et l'assistance
+
+Dans la section **Liens**, choisissez où vos entreprises trouvent vos politiques et de l'aide. Les pages de connexion, d'inscription et d'intégration affichent ces liens sous le formulaire, et le menu du compte du tableau de bord les affiche aussi :
+
+- **Conditions d'utilisation** et **Politique de confidentialité** : la page d'inscription n'affiche sa ligne d'acceptation que si vous définissez les deux
+- **Page d'assistance** : la destination du lien d'assistance
+- **Courriel d'assistance** : les réponses à vos courriels arrivent ici, et le lien d'assistance l'ouvre quand vous n'avez pas de page d'assistance
+
+Entrez chaque lien sous forme d'adresse Web complète, comme `https://acmeagency.com/terms`. Laissez un champ vide pour masquer son lien. Votre tableau de bord n'affiche jamais les liens de LobbyStack à leur place, et il n'inclut pas le centre d'aide de LobbyStack.
+
+## Où votre marque apparaît
+
+Votre marque remplace celle de LobbyStack sur tout ce qu'une entreprise ouvre sur vos adresses :
+
+- la connexion, l'inscription, la réinitialisation du mot de passe et l'intégration
+- le tableau de bord et l'onglet du navigateur
+- le cadre du widget de clavardage du site Web
+- vos démos pour prospects
+
+Les courriels à vos entreprises, comme les invitations et les alertes d'utilisation, partent sous votre nom et votre logo depuis `no-reply@receptionistportal.com`, avec votre courriel d'assistance comme adresse de réponse. Il en va de même pour les invitations à votre propre équipe. Les alertes sur votre réserve et sur l'utilisation de vos entreprises parviennent à vos propriétaires et à vos administrateurs de la part de LobbyStack, puisque vous êtes client de LobbyStack.
+
+## Trouver l'adresse de votre tableau de bord
+
+La section **Adresse du tableau de bord** affiche **Votre sous-domaine**, comme `acme.receptionistportal.com`, que vous avez choisi à l'inscription. Cliquez sur **Ouvrir** pour le visiter. Les invitations et tous les autres liens de vos courriels pointent vers ce sous-domaine, même après que vous avez connecté votre propre domaine : les personnes que vous invitez y créent donc leur compte.
+
+## Connecter votre propre domaine
+
+Votre propre domaine place votre tableau de bord sur un sous-domaine de votre site Web, comme `app.acmeagency.com`, à côté de votre sous-domaine `receptionistportal.com`. Avant de commencer, vérifiez ces conditions :
+
+- Vous êtes sur un palier payant. Sur Gratuit, la page affiche **Votre propre domaine est inclus avec un niveau payant**, avec un lien **Choisir un niveau** pour les propriétaires.
+- Le domaine est un sous-domaine, comme `app.acmeagency.com`. Un domaine racine, comme `acmeagency.com`, ne peut pas recevoir l'enregistrement CNAME dont il a besoin.
+- Vous pouvez ajouter des enregistrements DNS chez le fournisseur DNS du domaine.
+
+<Steps>
+  <Step title="Entrer le domaine">
+    Sous **Votre propre domaine**, tapez le sous-domaine dans **Domaine** et cliquez sur **Connecter le domaine**. La page affiche ses enregistrements DNS en moins d'une minute.
+  </Step>
+  <Step title="Ajouter les enregistrements DNS">
+    Chez votre fournisseur DNS, ajoutez chaque enregistrement que la page liste. Utilisez les boutons de copie à côté de chaque nom et de chaque valeur.
+  </Step>
+  <Step title="Attendre que le domaine soit actif">
+    L'état indique **En attente du DNS** jusqu'à ce que chaque enregistrement affiche **Trouvé**. Il passe ensuite à **Actif**, et votre tableau de bord et vos pages de connexion fonctionnent sur le domaine en HTTPS.
+  </Step>
+</Steps>
+
+Sur la version hébergée de LobbyStack, la page liste deux enregistrements comme ceux-ci :
+
+| Type | Nom | Valeur |
+| --- | --- | --- |
+| `CNAME` | `app.acmeagency.com` | `host.receptionistportal.com` |
+| `TXT` | `_domain-verification.app.acmeagency.com` | `your_verification_value` |
+
+L'enregistrement CNAME fait pointer votre domaine vers LobbyStack. L'enregistrement TXT prouve que vous contrôlez le domaine, pour que personne d'autre ne puisse le connecter. Si la page liste un troisième enregistrement, ajoutez-le aussi.
+
+LobbyStack vérifie vos enregistrements chaque minute pendant la première heure du domaine, puis moins souvent. Une modification DNS peut prendre quelques heures à parvenir à LobbyStack. Votre domaine obtient son certificat HTTPS sans aucune action de votre part.
+
+### Corriger un domaine en échec
+
+Quand l'état indique **Échec**, la page en explique la raison :
+
+- Si la page indique **Nous n'avons pas pu configurer ce domaine**, retirez le domaine, vérifiez ses enregistrements DNS, puis connectez-le de nouveau. La raison du fournisseur apparaît sous **Votre fournisseur de certificats indique :**.
+- Si la page indique **Un autre tableau de bord a connecté ce domaine en premier**, un autre partenaire a prouvé qu'il contrôlait le domaine avant vous. Retirez-le, puis connectez un autre domaine.
+
+### Retirer votre domaine
+
+Cliquez sur **Retirer le domaine** et confirmez. Personne ne peut plus ouvrir votre tableau de bord sur ce domaine, et votre sous-domaine continue de fonctionner. Vous n'avez qu'un seul domaine à vous à la fois : retirez donc le domaine actuel avant d'en connecter un autre.

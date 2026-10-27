@@ -1,0 +1,78 @@
+---
+title: "Automatice la configuración con claves de plataforma y la línea de comandos"
+description: "Cree una clave de plataforma en la consola de socios, cree y configure sus negocios a través de la API, e incorpore un negocio desde un archivo con lobbystack onboard."
+sidebarTitle: "Claves de API y CLI"
+contentType: "How-to"
+---
+
+Una clave de plataforma permite que su propio código cree negocios y los configure a través de la [API](/es/api/overview) de LobbyStack. También permite que el comando `lobbystack onboard` cree un negocio a partir de un archivo. Los propietarios y administradores crean las claves en la página **Claves de API** de la consola. Una clave actúa en nombre de su cuenta de socio y solo llega a sus negocios.
+
+## Cree una clave de plataforma
+
+Dé a cada herramienta su propia clave, para poder revocar una sin afectar a las demás:
+
+<Steps>
+  <Step title="Abra el formulario">
+    En **Claves de API**, haga clic en **Crear clave de plataforma**.
+  </Step>
+  <Step title="Ponga nombre a la clave y elija su acceso">
+    Escriba un **Nombre** que pueda reconocer, como `Alta de clientes`. En **Acceso**, seleccione solo lo que necesita la herramienta. Para crear negocios, seleccione **Crear negocios e invitar a sus propietarios**.
+  </Step>
+  <Step title="Copie la clave">
+    Haga clic en **Crear clave**, y luego copie la clave y guárdela en un gestor de contraseñas o en la configuración de su herramienta. La consola la muestra una sola vez.
+  </Step>
+</Steps>
+
+La página muestra cada clave con su prefijo, su acceso, quién la creó y cuándo se usó por última vez. Los miembros ven la página, pero no pueden crear ni revocar claves.
+
+## Lo que puede hacer la clave de un socio
+
+La clave de un socio actúa en nombre de su cuenta de socio y no de una persona, así que sigue funcionando cuando el compañero que la creó se va. Llega a sus negocios activos, incluidos los que creó la consola, y a ningún otro:
+
+- `POST /businesses` crea un negocio todavía sin propietario. Indique el propietario en `owner_email`, y LobbyStack le envía por correo su invitación. `access_level` acepta `full`, el valor predeterminado, o `activity`.
+- Todas las demás solicitudes indican su negocio en el encabezado `LobbyStack-Business`.
+- Los enlaces que devuelve la API, como la etiqueta de script de un widget o un enlace para conectar un calendario, apuntan a su dirección.
+
+Entre todas, sus claves pueden crear 30 negocios por hora. Una clave no puede aplicar una plantilla, cambiar el paquete o el excedente de un negocio, buscar ni reservar números de teléfono, ni cambiar las preferencias de alertas, así que haga esas tareas en la consola.
+
+[Claves de plataforma](/es/api/authentication#claves-de-plataforma) enumera los permisos, los encabezados y las respuestas.
+
+## Incorpore un negocio desde un archivo
+
+`lobbystack onboard` lee un archivo YAML o JSON que describe un negocio, crea el negocio y lo configura. Primero inicie sesión con la clave de su cuenta de socio. En la nube de LobbyStack, use `https://app.lobbystack.com`:
+
+```bash
+lobbystack login --url https://app.lobbystack.com --key-stdin < key.txt
+```
+
+La clave necesita `businesses:create`, `business:read`, `business:write`, `knowledge:read`, `knowledge:write` y `team:manage`. Un manifiesto para la clave de un socio indica el propietario, que recibe su invitación cuando el comando crea el negocio:
+
+```yaml harbor-dental.yaml
+business:
+  name: Harbor Dental
+  timezone: America/Toronto
+  access_level: activity
+knowledge:
+  websites: [https://harbordental.example]
+receptionist:
+  greeting: Gracias por llamar a Harbor Dental, ¿en qué puedo ayudarle?
+owner:
+  email: owner@harbordental.example
+```
+
+Deje `plan` y `phone_number` fuera: sus negocios no compran los planes de LobbyStack, y una clave no puede reservar números. Revise la ejecución con `--plan` y luego ejecútela:
+
+```bash
+lobbystack onboard harbor-dental.yaml --plan
+lobbystack onboard harbor-dental.yaml
+```
+
+Ejecute el comando de nuevo cada vez que cambie el archivo, y solo cambia lo que difiere. Su clave sigue llegando al negocio después de que su propietario se une. [Incorpore un negocio desde la línea de comandos](/es/api/cli) cubre cada sección del archivo.
+
+## Revoque una clave
+
+Haga clic en **Revocar** junto a la clave, y luego en **Revocar clave**. Todo lo que la usa deja de funcionar de inmediato, y no puede deshacerlo:
+
+- los endpoints de webhook que creó la clave se desactivan, en todos los negocios
+- nadie puede aceptar las invitaciones de equipo que envió
+- los propietarios a los que invitó al crear su negocio aún pueden unirse

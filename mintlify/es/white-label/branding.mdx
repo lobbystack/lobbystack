@@ -1,0 +1,88 @@
+---
+title: "Ponga su marca en su panel y conecte su dominio"
+description: "Defina el nombre, el logotipo, el favicon, el color y los enlaces que ven sus negocios, y conecte un subdominio de su propio sitio web con sus registros DNS."
+sidebarTitle: "Marca y dominio"
+contentType: "How-to"
+---
+
+La página **Marca y dominio** define lo que ven sus negocios: su nombre, logotipo, color y enlaces, y las direcciones en las que abren su panel. Cada socio recibe un subdominio de `receptionistportal.com`, y un nivel de pago agrega un subdominio de su propio sitio web. Los propietarios y administradores cambian esta página, y los miembros pueden verla.
+
+## Defina su nombre, logotipo y color
+
+La sección **Marca** define lo que aparece en la pestaña del navegador, sobre el inicio de sesión y en sus correos. Complete estos campos, revise la vista previa y haga clic en **Guardar marca**:
+
+| Campo | Lo que cambia | Valores aceptados |
+| --- | --- | --- |
+| **Nombre** | La pestaña del navegador, el título sobre el inicio de sesión, el texto del panel y el nombre del remitente de sus correos | Hasta 80 caracteres |
+| **Logotipo** | La imagen sobre el inicio de sesión y en sus correos | PNG, JPEG, WebP o SVG, de hasta 256&nbsp;KB |
+| **Favicon** | El icono de la pestaña del navegador. Sin favicon, la pestaña muestra su logotipo. | PNG, JPEG, WebP o SVG, de hasta 256&nbsp;KB |
+| **Color de la marca** | El color principal del panel, con texto claro u oscuro encima, el que se lea mejor | Un código hexadecimal, como `#0f766e` |
+
+Sus páginas muestran los cambios guardados en menos de un minuto, y todos los correos que salen después de guardar los usan.
+
+## Agregue sus enlaces de términos, privacidad y soporte
+
+En la sección **Enlaces**, elija adónde van sus negocios para consultar sus políticas y pedir ayuda. El inicio de sesión, el registro y la configuración inicial muestran estos enlaces debajo del formulario, y el menú de la cuenta del panel también los muestra:
+
+- **Términos del servicio** y **Política de privacidad**: el registro muestra su línea de aceptación solo cuando usted define ambos
+- **Página de soporte**: adonde lleva el enlace de soporte
+- **Correo de soporte**: las respuestas a sus correos llegan aquí, y el enlace de soporte abre esta dirección cuando no tiene página de soporte
+
+Escriba cada enlace como una dirección web completa, como `https://acmeagency.com/terms`. Deje un campo vacío para ocultar su enlace. Su panel nunca muestra los enlaces de LobbyStack en su lugar, y omite el Centro de ayuda de LobbyStack.
+
+## Dónde aparece su marca
+
+Su marca sustituye a la de LobbyStack en todo lo que un negocio abre en sus direcciones:
+
+- el inicio de sesión, el registro, el restablecimiento de contraseña y la configuración inicial
+- el panel y la pestaña del navegador
+- el marco del widget de chat del sitio web
+- sus demos para clientes potenciales
+
+Los correos a sus negocios, como las invitaciones y las alertas de uso, salen con su nombre y su logotipo desde `no-reply@receptionistportal.com`, con su correo de soporte como dirección de respuesta. Lo mismo ocurre con las invitaciones a su propio equipo. Las alertas sobre su bolsa y sobre el uso de sus negocios llegan a sus propietarios y administradores de parte de LobbyStack, porque usted es cliente de LobbyStack.
+
+## Encuentre la dirección de su panel
+
+La sección **Dirección del panel** muestra **Su subdominio**, como `acme.receptionistportal.com`, que usted eligió al registrarse. Haga clic en **Abrir** para visitarlo. Las invitaciones y todos los demás enlaces de sus correos apuntan a este subdominio, incluso después de que conecte su propio dominio, así que las personas que invite crean sus cuentas allí.
+
+## Conecte su propio dominio
+
+Su propio dominio pone su panel en un subdominio de su sitio web, como `app.acmeagency.com`, junto a su subdominio de `receptionistportal.com`. Antes de empezar, compruebe estas condiciones:
+
+- Está en un nivel de pago. En Gratis, la página muestra **Su propio dominio viene con un nivel de pago**, con un enlace **Elegir un nivel** para los propietarios.
+- El dominio es un subdominio, como `app.acmeagency.com`. Un dominio raíz, como `acmeagency.com`, no puede tener el registro CNAME que necesita.
+- Puede agregar registros DNS en el proveedor de DNS del dominio.
+
+<Steps>
+  <Step title="Escriba el dominio">
+    En **Su propio dominio**, escriba el subdominio en **Dominio** y haga clic en **Conectar dominio**. La página muestra sus registros DNS en menos de un minuto.
+  </Step>
+  <Step title="Agregue los registros DNS">
+    En su proveedor de DNS, agregue cada registro que muestra la página. Use los botones de copiar junto a cada nombre y valor.
+  </Step>
+  <Step title="Espere a que el dominio se active">
+    El estado indica **Esperando el DNS** hasta que cada registro muestra **Encontrado**. Luego cambia a **Activo**, y su panel y sus páginas de inicio de sesión funcionan en el dominio por HTTPS.
+  </Step>
+</Steps>
+
+En la nube de LobbyStack, la página muestra dos registros como estos:
+
+| Tipo | Nombre | Valor |
+| --- | --- | --- |
+| `CNAME` | `app.acmeagency.com` | `host.receptionistportal.com` |
+| `TXT` | `_domain-verification.app.acmeagency.com` | `your_verification_value` |
+
+El registro CNAME apunta su dominio a LobbyStack. El registro TXT demuestra que usted controla el dominio, para que nadie más pueda conectarlo. Si la página muestra un tercer registro, agréguelo también.
+
+LobbyStack comprueba sus registros cada minuto durante la primera hora del dominio, y luego con menos frecuencia. Un cambio de DNS puede tardar unas horas en llegar a LobbyStack. Su dominio obtiene su certificado HTTPS sin que usted tenga que hacer nada.
+
+### Corrija un dominio que falló
+
+Cuando el estado indica **Falló**, la página explica el motivo:
+
+- Si la página dice **No pudimos configurar este dominio**, quite el dominio, revise sus registros DNS y vuelva a conectarlo. El motivo que da el proveedor aparece en **Su proveedor de certificados informa:**.
+- Si la página dice **Otro panel conectó este dominio primero**, otro socio demostró que controla el dominio antes que usted. Quítelo y conecte otro dominio.
+
+### Quite su dominio
+
+Haga clic en **Quitar dominio** y confirme. Nadie podrá volver a abrir su panel en ese dominio, y su subdominio sigue funcionando. Solo puede tener un dominio propio a la vez, así que quite el actual antes de conectar otro.

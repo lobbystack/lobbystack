@@ -1,0 +1,112 @@
+---
+title: "Cree y gestione los negocios de sus clientes"
+description: "Cree un negocio para cada cliente, elija su nivel de acceso, invite a su propietario, ábralo para darle soporte, y cédalo o elimínelo desde la consola de socios."
+sidebarTitle: "Negocios"
+contentType: "How-to"
+---
+
+Cada cliente es un negocio en la página **Negocios**, con su propia recepcionista, su número de teléfono, su equipo y su panel en su dirección. Los propietarios y administradores crean los negocios e invitan a sus propietarios. Todas las personas de su equipo pueden abrir un negocio para configurarlo o darle soporte, y el registro de auditoría del negocio anota cada vez que lo hacen.
+
+## Cree un negocio
+
+Necesita la dirección de su panel antes de crear un negocio, porque el negocio solo se abre en sus direcciones. El registro le da una, como explica [Regístrese como socio](/es/white-label/sign-up).
+
+<Steps>
+  <Step title="Abra el formulario">
+    En **Negocios**, haga clic en **Crear negocio**.
+  </Step>
+  <Step title="Describa el negocio">
+    Escriba el **Nombre del negocio**, el **Correo del propietario** y la **Zona horaria**. La zona horaria empieza con la de su navegador, así que cámbiela si su cliente está en otro lugar.
+  </Step>
+  <Step title="Elija lo que puede usar su equipo">
+    En **Lo que puede usar su equipo**, elija **Acceso completo** o **Solo actividad**. Consulte [Elija un nivel de acceso](#elija-un-nivel-de-acceso).
+  </Step>
+  <Step title="Elija cómo le paga">
+    En **Facturación**, elija uno de sus paquetes o **Lo factura usted**. El campo aparece cuando LobbyStack puede conectar su cuenta de Stripe. Consulte [Facture a sus negocios con Stripe y paquetes](/es/white-label/packages).
+  </Step>
+  <Step title="Empiece desde una plantilla (opcional)">
+    En **Plantilla**, elija una configuración guardada o deje **Sin plantilla**. El campo aparece cuando ha guardado una plantilla. Consulte [Reutilice la configuración de un negocio con plantillas](/es/white-label/templates).
+  </Step>
+  <Step title="Créelo">
+    Haga clic en **Crear e invitar**. El negocio aparece en la página, y su propietario recibe de usted un correo con un enlace para iniciar sesión.
+  </Step>
+</Steps>
+
+El correo del propietario debe pertenecer a su cliente: una persona de su equipo no puede ser propietaria de un negocio. Un negocio que ya le paga directamente a LobbyStack no puede pasar a su cuenta de socio, así que cree un negocio nuevo para ese cliente.
+
+## Elija un nivel de acceso
+
+El nivel de acceso define lo que el equipo propio del negocio puede usar en su panel. Usted lo elige al crear el negocio, y después no puede cambiarlo en la consola:
+
+| Nivel de acceso | Lo que puede usar el equipo del negocio |
+| --- | --- |
+| **Acceso completo** | La recepcionista, su conocimiento, sus horarios, sus servicios y los miembros del equipo, además de todo lo que incluye **Solo actividad**. No ven la facturación, las claves de API ni [MCP](/es/ai/mcp). |
+| **Solo actividad** | Las llamadas, los chats, las citas, los contactos y los mensajes. Usted configura la recepcionista por ellos. |
+
+En cualquiera de los dos niveles, el equipo del negocio ve su uso del mes, y sus propietarios y administradores le pagan desde **Configuración** > **Facturación**.
+
+## Invite al propietario
+
+El correo de invitación sale con su nombre y enlaza a su subdominio. El enlace funciona durante 7 días. Hasta que el propietario acepta, la columna **Propietario** muestra **Invitación enviada**, y luego **Invitación vencida** pasados los 7 días.
+
+Lo que ve después el propietario depende de la facturación del negocio:
+
+- **Con un paquete**: el enlace nombra el paquete con sus minutos y chats, y abre una página de pago de Stripe en su cuenta. Después de pagar, el propietario inicia sesión o crea una cuenta. Si su cuenta de Stripe todavía no puede aceptar pagos, el propietario inicia sesión primero y paga más tarde desde **Configuración** > **Facturación**.
+- **Lo factura usted**: el enlace lleva directamente al inicio de sesión.
+
+Luego, la configuración inicial le pide al propietario que verifique su teléfono. Las llamadas se desvían a ese teléfono cuando el negocio no tiene número de transferencia y se queda sin minutos. Comparta [Use la recepcionista que un socio configuró para usted](/es/white-label/business-owners) con sus clientes.
+
+## Abra un negocio para darle soporte
+
+Haga clic en **Abrir** en la fila de un negocio para trabajar dentro de su panel, en su dirección. Si abre un negocio desde `app.lobbystack.com`, llega a su dirección, donde vuelve a iniciar sesión.
+
+Dentro del negocio, usted tiene acceso completo, sea cual sea su nivel de acceso: la recepcionista, el conocimiento, el equipo, el número de teléfono y las integraciones. La facturación, las claves de API y MCP siguen cerradas para su equipo. Puede abrir un negocio antes de que su propietario acepte la invitación, para configurar primero la recepcionista.
+
+Su acceso a un negocio que abrió dura 8 horas, y si lo vuelve a abrir, las 8 horas empiezan de nuevo. Abrir un negocio no lo agrega a su equipo, así que su lista de equipo muestra solo a las personas del propio negocio.
+
+### Lo que anota el registro de auditoría
+
+Cada vez que alguien de su equipo abre un negocio, su registro de auditoría recibe una entrada. La entrada indica quién lo abrió y con qué rol, y cuándo empezó y cuándo termina el acceso. El registro de auditoría también anota cuándo su equipo crea el negocio, guarda su configuración como plantilla, cambia su paquete o su excedente, o lo cede.
+
+Quitar a alguien de su equipo termina de inmediato su acceso a todos los negocios. Ceder un negocio termina el acceso de todo su equipo a ese negocio.
+
+## Dé un número de teléfono al negocio
+
+Un negocio obtiene su número de teléfono en su propio panel, en **Configuración** > **Número de teléfono**. Sus propietarios y administradores pueden reservar uno con **Acceso completo**, y también cualquier persona de su equipo que abra el negocio.
+
+Primero, el propietario tiene que terminar la configuración inicial. Hasta entonces, la página dice **Los números de teléfono todavía no están disponibles para este negocio.** Su nivel fija cuántos números tienen sus negocios en total. En Gratis, un negocio puede solicitar el único número de prueba que usted tiene. Consulte [Números de teléfono en cada nivel](/es/white-label/tiers#números-de-teléfono-en-cada-nivel).
+
+## Siga el uso de cada negocio
+
+Las columnas **Minutos este mes** y **Chats este mes** muestran lo que usó cada negocio desde el día 1 del mes. Los propietarios y administradores también ven una columna **Facturación** con el paquete y el estado de pago de cada negocio:
+
+| Estado | Qué significa |
+| --- | --- |
+| **Pago pendiente** | El propietario todavía no ha pagado el paquete |
+| **Pagando** | La suscripción está activa |
+| **Pago fallido** | Stripe está reintentando un pago fallido |
+| **Sin pagar** | La suscripción terminó |
+
+Debajo del paquete, la columna resume el excedente del negocio, como **Sin excedente** o **Excedente sin límite**. Para cambiar el paquete o el excedente de un negocio, haga clic en **Cambiar** junto a él. Consulte [Cambie el paquete que paga un negocio](/es/white-label/packages#cambie-el-paquete-que-paga-un-negocio) y [Configure el excedente de un negocio](/es/white-label/packages#configure-el-excedente-de-un-negocio).
+
+## Ceda un negocio a su propietario
+
+Al ceder un negocio, usted se lo entrega a su propietario, que conserva la recepcionista en el plan Free de LobbyStack y le paga a LobbyStack desde entonces. El negocio sale de su consola y de sus direcciones, y el propietario inicia sesión en `app.lobbystack.com`. Un negocio cedido no puede volver a su cuenta de socio.
+
+1. Abra el menú **Más acciones** del negocio y elija **Ceder al propietario**.
+2. Haga clic en **Ceder negocio** para confirmar.
+
+Antes, el propietario debe haber aceptado su invitación. Si el negocio paga un paquete con Stripe, cancele su suscripción en su panel de Stripe antes de cederlo.
+
+## Elimine un negocio
+
+Si elimina un negocio, borra sus llamadas, chats, contactos, citas y ajustes, y renuncia a su número de teléfono. Su propietario y su equipo pierden el acceso, y no puede deshacerlo.
+
+1. Abra el menú **Más acciones** del negocio y elija **Eliminar**.
+2. Haga clic en **Eliminar negocio** para confirmar.
+
+Si el negocio paga un paquete con Stripe, cancele primero su suscripción en su panel de Stripe. Mientras LobbyStack todavía configura un número de teléfono para el negocio, no puede eliminarlo. Inténtelo de nuevo en unos minutos.
+
+## Cuando termina su nivel
+
+Si su nivel de pago termina o falla un pago del nivel, los propietarios y administradores ven un aviso arriba en **Negocios**. El aviso indica las fechas en que sus negocios se pausan y en que LobbyStack los elimina. Mientras tanto, puede ceder los negocios a sus propietarios. Consulte [Qué pasa cuando termina un nivel](/es/white-label/tiers#qué-pasa-cuando-termina-un-nivel).

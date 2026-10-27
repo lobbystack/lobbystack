@@ -1,0 +1,178 @@
+---
+title: "Run white label on your own servers"
+description: "Turn on white label on a self-hosted LobbyStack: partner subdomains and wildcard DNS, partners' own domains through Caddy, Traefik or Cloudflare for SaaS, Stripe Connect, Polar tiers, partner signup and Turnstile."
+sidebarTitle: "White label"
+contentType: "How-to"
+---
+
+import PartnerTiers from "/snippets/partner-tiers.mdx";
+
+Your deployment can host partners who resell it under their own brands, as [the white label overview](/white-label/overview) describes. Each piece turns on once you configure what it needs, so you can start with signup and subdomains and add billing later. This page sets up each piece, and the [partner variables](/self-hosting/environment-variables#partners) describe every setting it names. Set each variable on both the admin and the worker.
+
+| Feature | What turns it on | Without it |
+| --- | --- | --- |
+| Partner signup | Always on. `PARTNER_SIGNUP` chooses who can sign up. | Not applicable |
+| Partner subdomains | `PARTNER_BASE_DOMAIN` and a wildcard DNS record | A partner needs its own domain before it can create a business |
+| Partners' own domains | Caddy's on-demand TLS, or Cloudflare for SaaS | Partners use their subdomains only |
+| Packages on partners' Stripe accounts | `STRIPE_CONNECT_SECRET_KEY` and `STRIPE_CONNECT_WEBHOOK_SECRET` | Partners bill every business themselves |
+| Partner tiers | The six `POLAR_PARTNER_*_PRODUCT_ID` products | Partners pay you no tier, and their pools have no limit unless you set one |
+
+## Choose who can sign up as a partner
+
+Partners sign up at `/partner/signup` on your dashboard's domain, from an account on your deployment. `PARTNER_SIGNUP` decides who can:
+
+- `open`, the default on a self-hosted deployment, lets anyone who's signed in sign up
+- `invite` needs a signup link that you create for each partner
+
+To invite a partner, run this from a checkout of the repository, with `DATABASE_URL` and `APP_BASE_URL` pointing at your deployment:
+
+```bash
+pnpm partner-invite:create --email owner@acme.example
+```
+
+The command writes the link to a JSON file in `.partner-invites/`, named after the invitation, which only your user can read. The link works once, for that email address after its owner verifies it, for 7 days. Send it to the partner, then delete the file.
+
+## Give partners subdomains
+
+`PARTNER_BASE_DOMAIN` is the domain your partners get subdomains of, such as `partners.example.com`. Pick a neutral domain, because your partners' clients see it in their address bar and in their emails:
+
+<Steps>
+  <Step title="Point a wildcard record at your server">
+    At your DNS provider, add a record for `*.partners.example.com` that points at the server that runs the admin.
+  </Step>
+  <Step title="Set the base domain">
+    Set `PARTNER_BASE_DOMAIN=partners.example.com` and restart the admin and the worker. Each new partner then reserves a subdomain at signup, and partners who signed up earlier get one when the admin starts.
+  </Step>
+  <Step title="Let your email provider send from it">
+    Partners' emails go out from `no-reply@partners.example.com`, under each partner's name. Verify that sender with your email provider, or the emails fail.
+  </Step>
+  <Step title="Serve HTTPS for the subdomains">
+    With Caddy's on-demand TLS, Caddy gets a certificate for each partner's subdomain on its first visit. With another proxy, give it a wildcard certificate for `*.partners.example.com`.
+  </Step>
+</Steps>
+
+Without `PARTNER_BASE_DOMAIN`, partners get no subdomain and their emails go out from `EMAIL_FROM`. A partner then needs a verified domain of its own before it can create a business or a demo.
+
+## Serve partners' own domains
+
+A partner on a paid tier can connect a subdomain of its own website, such as `app.acmeagency.com`, or any partner can when you sell no tiers. The partner adds two records that the console shows: a CNAME that points at `PARTNER_DOMAIN_CNAME_TARGET`, and a TXT record that proves it controls the domain. The worker checks them, and the domain goes live once both check out. Pick one way to issue the certificates.
+
+### Caddy on Docker Compose
+
+Compose's Caddy issues each domain's certificate the first time someone visits it, after the admin approves the hostname at `/api/tls/ask`. Set these in `.env`, open TCP ports 80 and 443 and UDP port 443, and restart the stack:
+
+```dotenv
+COMPOSE_FILE=docker-compose.yml:docker-compose.tls.yml
+HTTP_BIND_ADDRESS=0.0.0.0
+CADDY_ON_DEMAND_TLS=true
+```
+
+Partners then point their CNAME at the hostname in `APP_BASE_URL`, unless you set `PARTNER_DOMAIN_CNAME_TARGET`. [Serve HTTPS from Caddy](/self-hosting/docker-compose#serve-https-from-caddy) explains which hostnames Caddy approves.
+
+### Cloudflare for SaaS
+
+When the DNS of `PARTNER_BASE_DOMAIN` is on Cloudflare, Cloudflare can issue partners' certificates instead. In the zone, enable Cloudflare for SaaS under **SSL/TLS** > **Custom Hostnames**. Add a proxied record such as `host.partners.example.com` as the fallback origin, and set the zone's encryption mode to **Full**. Then set `CLOUDFLARE_SAAS_API_TOKEN` to a token with the **Zone** > **SSL and Certificates** > **Edit** permission, and `CLOUDFLARE_SAAS_ZONE_ID` to the zone's ID.
+
+Partners point their CNAME at the fallback origin. With both Cloudflare for SaaS and `CADDY_ON_DEMAND_TLS` set, the deployment uses Cloudflare for SaaS. The [Cloudflare for SaaS steps](/self-hosting/docker-compose) in the Docker Compose guide cover each setting.
+
+### Traefik
+
+Traefik routes only the hostnames it has a router for, so partners' hostnames need one more router that catches every other hostname. Traefik doesn't issue certificates for hostnames it hasn't seen, so pair it with Cloudflare for SaaS, which serves partners' certificates in front of it. This is how LobbyStack's cloud runs on Dokploy. Add a dynamic configuration file, such as `partner-hosts.yml` in Traefik's watched directory:
+
+```yaml partner-hosts.yml
+http:
+  routers:
+    partner-hosts:
+      rule: "PathPrefix(`/`)"
+      priority: 1
+      entryPoints: [websecure]
+      tls: {}
+      service: partner-hosts
+    partner-hosts-http:
+      rule: "PathPrefix(`/`)"
+      priority: 1
+      entryPoints: [web]
+      middlewares: [partner-hosts-https]
+      service: partner-hosts
+  middlewares:
+    partner-hosts-https:
+      redirectScheme:
+        scheme: https
+        permanent: true
+  services:
+    partner-hosts:
+      loadBalancer:
+        servers:
+          - url: http://your_admin_service:3000
+```
+
+Priority `1` ranks these routers below every other route, so your dashboard keeps its own. The second router moves plain HTTP requests to HTTPS. Replace `your_admin_service` with the admin's service name on Traefik's network. The admin answers each partner's hostname with that partner's brand, and any other hostname with a 404.
+
+Traefik answers partners' hostnames with its default certificate, which doesn't name them. Keep the Cloudflare zone's encryption mode at **Full**, not **Full (strict)**, so Cloudflare accepts it. For partners' subdomains, proxy the wildcard record through Cloudflare too.
+
+## Let partners bill their businesses through Stripe Connect
+
+Stripe Connect lets each partner connect its own Stripe account and sell packages on it. Set it up once in your Stripe platform account:
+
+<Steps>
+  <Step title="Turn on Connect">
+    In your Stripe account, turn on Connect.
+  </Step>
+  <Step title="Create the key">
+    Create a secret key or a restricted key with the write access that [`STRIPE_CONNECT_SECRET_KEY`](/self-hosting/environment-variables#partners) lists, and set it as `STRIPE_CONNECT_SECRET_KEY`.
+  </Step>
+  <Step title="Create the webhook endpoint">
+    Create an endpoint at your `APP_BASE_URL` followed by `/api/webhooks/stripe`, for events on connected accounts, with the events that [`STRIPE_CONNECT_WEBHOOK_SECRET`](/self-hosting/environment-variables#partners) lists. Set its signing secret as `STRIPE_CONNECT_WEBHOOK_SECRET`.
+  </Step>
+  <Step title="Restart">
+    Restart the admin and the worker. Each partner's owner can then connect a Stripe account on the console's **Stripe** page.
+  </Step>
+</Steps>
+
+Without both variables, the **Stripe** page tells partners the dashboard can't connect Stripe yet, and they bill every business themselves.
+
+## Sell partners tiers with Polar
+
+Partners buy tiers from the console's **Billing** page and pay you through Polar. Create one recurring product for each paid tier and interval, with the prices in this table:
+
+<PartnerTiers />
+
+The **Billing** page shows these prices from the code, so give your products the same ones. Then set up billing:
+
+1. Set the six product IDs: `POLAR_PARTNER_STARTER_MONTHLY_PRODUCT_ID`, `POLAR_PARTNER_STARTER_ANNUAL_PRODUCT_ID`, and the same pair for `GROWTH` and `SCALE`. Each must be its own product.
+2. Keep `POLAR_ACCESS_TOKEN`, `POLAR_ORGANIZATION_ID` and `POLAR_WEBHOOK_SECRET` set, as your own plans use them.
+3. Add the meters and metered prices that bill pool overage and extra phone numbers, as the [Polar billing guide](https://github.com/lobbystack/lobbystack/blob/main/docs/providers/polar.md#create-the-partner-tier-products) describes.
+4. Restart the admin and the worker. The worker records whether you sell tiers when it starts.
+
+Tier billing turns on only when all six products are set. Partners then need a paid tier to connect their own domain, and each partner's tier sets its pool and phone numbers.
+
+### Run partners without tiers
+
+Leave the `POLAR_PARTNER_*` products empty, and partners pay you nothing through LobbyStack. Their consoles show no **Billing** page, and nothing limits their businesses' minutes, chats or phone numbers.
+
+To limit what one partner's businesses share each month, set its pool from a checkout of the repository, with `DATABASE_URL` pointing at your database:
+
+```bash
+pnpm partner-pool:set --partner acme --minutes 500 --chats 2000
+```
+
+That pool is a hard limit, with no overage. At the pool, the partner's businesses forward their calls and their website chat stops replying until the month starts over. The partner's owners see the pool on a **Billing** page, and its owners and admins get emails at 80% and 100%. The [`pnpm partner-pool:set` options](/self-hosting/environment-variables#partners) are under the partner variables.
+
+## List partner hostnames in Turnstile
+
+If you use Cloudflare Turnstile on sign-up, with `NEXT_PUBLIC_TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY`, its widget renders only on the hostnames you list for it. The admin also accepts a token only from the hostname the visitor solved it on. Add these hostnames to the widget in Cloudflare:
+
+- `PARTNER_BASE_DOMAIN`, such as `partners.example.com`, which covers every partner's subdomain
+- each partner's own domain, once it's live, if people should sign up on it too
+
+Invitations and other email links open on partners' subdomains, so people sign up there even after a partner connects its own domain. Without `PARTNER_BASE_DOMAIN`, invitations open on each partner's own domain, so list each one. On Cloudflare's Free plan, a widget lists up to 10 hostnames.
+
+## Check the setup
+
+Test with a partner of your own before you invite others:
+
+1. Sign up as a partner at `/partner/signup`, and open your subdomain from **Branding & domain**. You should see the sign-in page under the partner's brand.
+2. Create a business, and check that the owner's invitation arrives from the partner's name.
+3. Connect a subdomain of a domain you control, add its two DNS records, and wait for **Active**.
+4. With Stripe Connect, connect a test Stripe account, create a package and pay for it from a business's invitation.
+5. With tiers, buy one on the **Billing** page and check that the pool and phone numbers follow it.

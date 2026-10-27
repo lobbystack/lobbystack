@@ -140,6 +140,23 @@
             ]
           },
           {
+            "group": "White label",
+            "pages": [
+              "white-label/overview",
+              "white-label/sign-up",
+              "white-label/branding",
+              "white-label/team",
+              "white-label/businesses",
+              "white-label/templates",
+              "white-label/demos",
+              "white-label/packages",
+              "white-label/tiers",
+              "white-label/api-keys",
+              "white-label/settings",
+              "white-label/business-owners"
+            ]
+          },
+          {
             "group": "API",
             "pages": [
               "api/overview",
@@ -169,7 +186,8 @@
               "self-hosting/overview",
               "self-hosting/docker-compose",
               "self-hosting/environment-variables",
-              "self-hosting/providers"
+              "self-hosting/providers",
+              "self-hosting/white-label"
             ]
           }
         ]
@@ -269,6 +287,23 @@
             ]
           },
           {
+            "group": "Marque blanche",
+            "pages": [
+              "fr/white-label/overview",
+              "fr/white-label/sign-up",
+              "fr/white-label/branding",
+              "fr/white-label/team",
+              "fr/white-label/businesses",
+              "fr/white-label/templates",
+              "fr/white-label/demos",
+              "fr/white-label/packages",
+              "fr/white-label/tiers",
+              "fr/white-label/api-keys",
+              "fr/white-label/settings",
+              "fr/white-label/business-owners"
+            ]
+          },
+          {
             "group": "API",
             "pages": [
               "fr/api/overview",
@@ -301,7 +336,8 @@
               "fr/self-hosting/overview",
               "fr/self-hosting/docker-compose",
               "fr/self-hosting/environment-variables",
-              "fr/self-hosting/providers"
+              "fr/self-hosting/providers",
+              "fr/self-hosting/white-label"
             ]
           }
         ]
@@ -401,6 +437,23 @@
             ]
           },
           {
+            "group": "Marca blanca",
+            "pages": [
+              "es/white-label/overview",
+              "es/white-label/sign-up",
+              "es/white-label/branding",
+              "es/white-label/team",
+              "es/white-label/businesses",
+              "es/white-label/templates",
+              "es/white-label/demos",
+              "es/white-label/packages",
+              "es/white-label/tiers",
+              "es/white-label/api-keys",
+              "es/white-label/settings",
+              "es/white-label/business-owners"
+            ]
+          },
+          {
             "group": "API",
             "pages": [
               "es/api/overview",
@@ -433,7 +486,8 @@
               "es/self-hosting/overview",
               "es/self-hosting/docker-compose",
               "es/self-hosting/environment-variables",
-              "es/self-hosting/providers"
+              "es/self-hosting/providers",
+              "es/self-hosting/white-label"
             ]
           }
         ]

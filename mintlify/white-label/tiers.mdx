@@ -1,0 +1,108 @@
+---
+title: "Choose a tier and manage what you pay LobbyStack"
+description: "Compare the Free, Starter, Growth and Scale tiers, see how the shared pool and its overage cap work, and learn what happens to your businesses when a tier ends."
+sidebarTitle: "Tiers and billing"
+contentType: "Reference"
+---
+
+import PartnerTiers from "/snippets/partner-tiers.mdx";
+
+You pay LobbyStack for a tier. A tier sets your price, the pool of minutes and chats all your businesses share each month, and how many phone numbers they hold. Owners choose the tier on the console's **Billing** page and pay through Polar. Free needs no card, and a partner that pays for no tier is on Free.
+
+## Compare the tiers
+
+Prices are in US dollars. Annual billing takes 20% off the monthly price, rounded down to whole dollars a month:
+
+<PartnerTiers />
+
+You can have as many businesses as you like on any tier, since a tier limits only the minutes, chats and phone numbers they share. A paid tier also lets you [connect your own domain](/white-label/branding#connect-your-own-domain).
+
+## What your pool covers
+
+Your pool is the minutes and chats that all your businesses share each month. It counts:
+
+- the voice minutes of every call your businesses answer: phone calls, browser test calls, calls from the website widget and calls to your prospect demos
+- every website chat conversation
+- businesses on a package and businesses you bill yourself alike
+
+Alert texts and the extra phone leg of a call transfer don't use the pool. The pool starts over on the 1st of each month, in UTC. Under **This month**, the **Billing** page shows the minutes and chats used so far, with minutes rounded up from the calls that ended.
+
+Each business on a package also has its own allowance. A call or chat counts against both, so a business stops answering at whichever limit it reaches first. See [Set overage for a business](/white-label/packages#set-overage-for-a-business).
+
+## Pool overage and its cap
+
+On a paid tier, your businesses keep answering past the pool, and you pay your tier's rate for each extra minute and each extra chat. Overage is on by default. Polar adds it to your tier's bill.
+
+Owners control overage in the **Overage** section of **Billing**:
+
+- **Allow overage** turns it on or off. With it off, your businesses stop at the pool each month.
+- **Monthly cap** limits what overage can cost each month, in US dollars. Click **Set cap**, **Update cap** or **Remove cap**.
+- **Overage this month** shows what overage cost so far, against the cap when you set one.
+
+When your businesses reach the pool with overage off, or reach your cap, their calls forward to each business's transfer number or its owner's phone. Their website chat stops replying, and visitors see **We can't reply here right now. Please call us or try again later.** Your businesses answer again on the 1st, or as soon as you raise the cap or turn overage on.
+
+Free has no overage. On Free, your businesses stop at the pool until you choose a paid tier.
+
+## Usage alerts by email
+
+Your owners and admins get an email from LobbyStack at 80% and at 100% of the pool's minutes, of its chats and of your overage cap. Each alert goes out once a month, and a new tier or cap sends them again. Members get no alerts.
+
+## Phone numbers on each tier
+
+Your tier sets how many phone numbers your businesses hold between them, as the tier table lists. On a paid tier, your businesses can hold more than the included numbers. Each extra number is billed each month at cost, on your Polar bill, and your oldest numbers count as the included ones. The **Billing** page shows how many numbers your businesses hold.
+
+Free includes no numbers of its own. Instead, you get one 14-day trial number, once:
+
+- The business's owner or admin, or someone on your team who opened the business, claims it under **Settings** > **Phone Number** in that business.
+- The person who claims it verifies their own mobile first, and the trial's calls go to that mobile only.
+- The trial's calls use your pool's minutes.
+- If you pay for a tier, the trial number becomes one of your numbers.
+
+On Free, past the trial, a business's phone settings say **This business's partner needs a paid tier to add phone numbers.**
+
+Your businesses also share limits on how many new numbers they buy. Each day they can buy up to 2 numbers or your tier's included numbers, whichever is more. In 30 days they can buy up to 5 numbers or twice your included numbers, whichever is more. Each business can also make 3 claims an hour. Replacing a number a business already holds doesn't count as a new number.
+
+<Note>
+  On LobbyStack's cloud, your businesses get phone numbers once LobbyStack sells partner tiers. Until then, their phone settings say **Phone numbers aren't available for this business yet.**
+</Note>
+
+## Choose or change your tier
+
+Only owners see the **Billing** page. On Free, it offers the paid tiers under **Choose a tier**:
+
+<Steps>
+  <Step title="Pick an interval">
+    Choose **Monthly** or **Annual**. Annual shows **Save 20%**.
+  </Step>
+  <Step title="Pick a tier">
+    Click **Choose Starter**, **Choose Growth** or **Choose Scale**. Polar's checkout opens.
+  </Step>
+  <Step title="Pay">
+    Pay at the checkout. Polar sends you back to **Billing**, which confirms the payment and then shows your new tier.
+  </Step>
+</Steps>
+
+On a paid tier, click **Manage subscription** to open Polar's customer portal. Change or cancel your tier there, or update your card. Under **Current tier**, the page shows when the tier renews, or when it ends after you cancel.
+
+Only one checkout can be open at a time. If another owner started one in the last 30 minutes, the page says **Another owner has a checkout open. Try again in 30 minutes.**
+
+## What happens when a tier ends
+
+When a paid tier ends, whether you cancelled it or a payment failed for good, your businesses keep answering for 30 days. Then they pause, and 90 days after the tier ended, LobbyStack deletes them:
+
+| When | What happens |
+| --- | --- |
+| A tier payment fails | Your tier stays in force while Polar retries the payment. Update your card from **Manage subscription** to keep it. |
+| The tier ends | You're on Free, so your businesses share Free's pool and have no overage. They keep answering. |
+| 30 days after the failed payment or the tier's end, whichever came first | Your businesses pause. Their calls forward to each business's transfer number or its owner's phone, their website chat can't reply, and they can't get new numbers. |
+| 90 days after the tier ended | LobbyStack deletes your businesses, prospect demos included, and releases their phone numbers. It first cancels each business's package subscription, so its owner pays nothing more. |
+
+Until the deletion, you can release each business to its owner, who keeps it on LobbyStack's Free plan. Paying for a tier again brings paused businesses back. Owners and admins see these dates in a notice at the top of **Businesses**.
+
+After the deletion, you stay on Free with your team, brand and templates. Businesses you create from then on work as they do on Free.
+
+## Billing on a deployment without tiers
+
+A self-hosted deployment may sell no tiers. Your console then has no **Billing** page, and nothing limits your businesses' minutes, chats or phone numbers. They can buy up to 2 new numbers a day and 5 in 30 days between them.
+
+The host can still set a pool for you. Your owners then see the **Billing** page with this month's use of that pool, without tiers, prices or overage. At the pool, calls forward and website chat stops replying until the month starts over. To change the pool, contact the host.

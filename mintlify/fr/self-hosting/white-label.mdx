@@ -1,0 +1,178 @@
+---
+title: "Héberger la marque blanche sur vos propres serveurs"
+description: "Activez la marque blanche sur un LobbyStack auto-hébergé : sous-domaines des partenaires et DNS générique, domaines propres des partenaires avec Caddy, Traefik ou Cloudflare for SaaS, Stripe Connect, paliers Polar, inscription des partenaires et Turnstile."
+sidebarTitle: "Marque blanche"
+contentType: "How-to"
+---
+
+import PartnerTiers from "/snippets/fr/partner-tiers.mdx";
+
+Votre déploiement peut héberger des partenaires qui le revendent sous leur propre marque, comme l'explique [la vue d'ensemble de la marque blanche](/fr/white-label/overview). Chaque élément s'active dès que vous configurez ce dont il a besoin : vous pouvez donc commencer par l'inscription et les sous-domaines, et ajouter la facturation plus tard. Cette page explique comment configurer chaque élément, et les [variables des partenaires](/fr/self-hosting/environment-variables#partenaires) décrivent chaque réglage qu'elle nomme. Définissez chaque variable sur l'admin et sur le worker.
+
+| Fonctionnalité | Ce qui l'active | Sans elle |
+| --- | --- | --- |
+| Inscription des partenaires | Toujours active. `PARTNER_SIGNUP` choisit qui peut s'inscrire. | Sans objet |
+| Sous-domaines des partenaires | `PARTNER_BASE_DOMAIN` et un enregistrement DNS générique | Un partenaire a besoin de son propre domaine avant de pouvoir créer une entreprise |
+| Domaines propres des partenaires | Le TLS à la demande de Caddy, ou Cloudflare for SaaS | Les partenaires utilisent seulement leurs sous-domaines |
+| Formules sur les comptes Stripe des partenaires | `STRIPE_CONNECT_SECRET_KEY` et `STRIPE_CONNECT_WEBHOOK_SECRET` | Les partenaires facturent eux-mêmes chaque entreprise |
+| Paliers partenaires | Les six produits `POLAR_PARTNER_*_PRODUCT_ID` | Les partenaires ne vous paient aucun palier, et leurs réserves n'ont pas de limite sauf si vous en fixez une |
+
+## Choisir qui peut s'inscrire comme partenaire
+
+Les partenaires s'inscrivent à `/partner/signup` sur le domaine de votre tableau de bord, depuis un compte de votre déploiement. `PARTNER_SIGNUP` détermine qui peut le faire :
+
+- `open`, la valeur par défaut sur un déploiement auto-hébergé, laisse s'inscrire toute personne connectée
+- `invite` exige un lien d'inscription que vous créez pour chaque partenaire
+
+Pour inviter un partenaire, lancez cette commande depuis une copie du dépôt, avec `DATABASE_URL` et `APP_BASE_URL` qui pointent vers votre déploiement :
+
+```bash
+pnpm partner-invite:create --email owner@acme.example
+```
+
+La commande écrit le lien dans un fichier JSON de `.partner-invites/`, nommé d'après l'invitation, que seul votre utilisateur peut lire. Le lien fonctionne une seule fois, pour cette adresse courriel une fois que son titulaire l'a vérifiée, pendant 7 jours. Envoyez-le au partenaire, puis supprimez le fichier.
+
+## Donner des sous-domaines aux partenaires
+
+`PARTNER_BASE_DOMAIN` est le domaine dont vos partenaires reçoivent des sous-domaines, comme `partners.example.com`. Choisissez un domaine neutre, parce que les clients de vos partenaires le voient dans leur barre d'adresse et dans leurs courriels :
+
+<Steps>
+  <Step title="Faire pointer un enregistrement générique vers votre serveur">
+    Chez votre fournisseur DNS, ajoutez pour `*.partners.example.com` un enregistrement qui pointe vers le serveur qui exécute l'admin.
+  </Step>
+  <Step title="Définir le domaine de base">
+    Définissez `PARTNER_BASE_DOMAIN=partners.example.com` et redémarrez l'admin et le worker. Chaque nouveau partenaire réserve alors un sous-domaine à l'inscription, et les partenaires inscrits plus tôt en reçoivent un au démarrage de l'admin.
+  </Step>
+  <Step title="Autoriser votre fournisseur de courriel à envoyer depuis ce domaine">
+    Les courriels des partenaires partent de `no-reply@partners.example.com`, sous le nom de chaque partenaire. Vérifiez cet expéditeur auprès de votre fournisseur de courriel, sinon les courriels échouent.
+  </Step>
+  <Step title="Servir le HTTPS pour les sous-domaines">
+    Avec le TLS à la demande de Caddy, Caddy obtient un certificat pour le sous-domaine de chaque partenaire à sa première visite. Avec un autre proxy, donnez-lui un certificat générique pour `*.partners.example.com`.
+  </Step>
+</Steps>
+
+Sans `PARTNER_BASE_DOMAIN`, les partenaires ne reçoivent aucun sous-domaine, et leurs courriels partent de `EMAIL_FROM`. Un partenaire a alors besoin de son propre domaine vérifié avant de pouvoir créer une entreprise ou une démo.
+
+## Servir les domaines propres des partenaires
+
+Un partenaire sur un palier payant peut connecter un sous-domaine de son propre site Web, comme `app.acmeagency.com`, et tout partenaire le peut si vous ne vendez aucun palier. Le partenaire ajoute deux enregistrements que la console affiche : un CNAME qui pointe vers `PARTNER_DOMAIN_CNAME_TARGET`, et un enregistrement TXT qui prouve qu'il contrôle le domaine. Le worker les vérifie, et le domaine devient actif dès que les deux sont valides. Choisissez une façon d'émettre les certificats.
+
+### Caddy sur Docker Compose
+
+Le Caddy de Compose émet le certificat de chaque domaine à la première visite, après que l'admin a approuvé le nom d'hôte à `/api/tls/ask`. Définissez ces valeurs dans `.env`, ouvrez les ports TCP 80 et 443 et le port UDP 443, puis redémarrez la pile :
+
+```dotenv
+COMPOSE_FILE=docker-compose.yml:docker-compose.tls.yml
+HTTP_BIND_ADDRESS=0.0.0.0
+CADDY_ON_DEMAND_TLS=true
+```
+
+Les partenaires font ensuite pointer leur CNAME vers le nom d'hôte de `APP_BASE_URL`, sauf si vous définissez `PARTNER_DOMAIN_CNAME_TARGET`. [Servir le HTTPS depuis Caddy](/fr/self-hosting/docker-compose#servir-le-https-depuis-caddy) explique quels noms d'hôte Caddy approuve.
+
+### Cloudflare for SaaS
+
+Quand le DNS de `PARTNER_BASE_DOMAIN` est chez Cloudflare, Cloudflare peut plutôt émettre les certificats des partenaires. Dans la zone, activez Cloudflare for SaaS sous **SSL/TLS** > **Custom Hostnames**. Ajoutez un enregistrement proxifié comme `host.partners.example.com` comme origine de repli, et réglez le mode de chiffrement de la zone sur **Full**. Définissez ensuite `CLOUDFLARE_SAAS_API_TOKEN` avec un jeton qui a l'autorisation **Zone** > **SSL and Certificates** > **Edit**, et `CLOUDFLARE_SAAS_ZONE_ID` avec l'ID de la zone.
+
+Les partenaires font pointer leur CNAME vers l'origine de repli. Si Cloudflare for SaaS et `CADDY_ON_DEMAND_TLS` sont tous deux définis, le déploiement utilise Cloudflare for SaaS. Les [étapes de Cloudflare for SaaS](/fr/self-hosting/docker-compose) du guide Docker Compose couvrent chaque réglage.
+
+### Traefik
+
+Traefik n'achemine que les noms d'hôte pour lesquels il a un routeur : les noms d'hôte des partenaires ont donc besoin d'un routeur de plus, qui attrape tous les autres noms d'hôte. Traefik n'émet pas de certificats pour les noms d'hôte qu'il n'a pas vus : associez-le donc à Cloudflare for SaaS, qui sert les certificats des partenaires devant lui. C'est ainsi que la version hébergée de LobbyStack fonctionne sur Dokploy. Ajoutez un fichier de configuration dynamique, comme `partner-hosts.yml`, dans le dossier que Traefik surveille :
+
+```yaml partner-hosts.yml
+http:
+  routers:
+    partner-hosts:
+      rule: "PathPrefix(`/`)"
+      priority: 1
+      entryPoints: [websecure]
+      tls: {}
+      service: partner-hosts
+    partner-hosts-http:
+      rule: "PathPrefix(`/`)"
+      priority: 1
+      entryPoints: [web]
+      middlewares: [partner-hosts-https]
+      service: partner-hosts
+  middlewares:
+    partner-hosts-https:
+      redirectScheme:
+        scheme: https
+        permanent: true
+  services:
+    partner-hosts:
+      loadBalancer:
+        servers:
+          - url: http://your_admin_service:3000
+```
+
+La priorité `1` place ces routeurs sous toutes les autres routes : votre tableau de bord garde donc la sienne. Le second routeur redirige les requêtes HTTP simples vers HTTPS. Remplacez `your_admin_service` par le nom du service de l'admin sur le réseau de Traefik. L'admin répond au nom d'hôte de chaque partenaire avec la marque de ce partenaire, et à tout autre nom d'hôte avec une erreur 404.
+
+Traefik répond aux noms d'hôte des partenaires avec son certificat par défaut, qui ne les nomme pas. Gardez le mode de chiffrement de la zone Cloudflare sur **Full**, et non **Full (strict)**, pour que Cloudflare l'accepte. Pour les sous-domaines des partenaires, faites aussi passer l'enregistrement générique par le proxy de Cloudflare.
+
+## Permettre aux partenaires de facturer leurs entreprises avec Stripe Connect
+
+Stripe Connect permet à chaque partenaire de connecter son propre compte Stripe et d'y vendre des formules. Configurez-le une fois dans votre compte plateforme Stripe :
+
+<Steps>
+  <Step title="Activer Connect">
+    Dans votre compte Stripe, activez Connect.
+  </Step>
+  <Step title="Créer la clé">
+    Créez une clé secrète ou une clé restreinte avec l'accès en écriture que liste [`STRIPE_CONNECT_SECRET_KEY`](/fr/self-hosting/environment-variables#partenaires), et définissez-la dans `STRIPE_CONNECT_SECRET_KEY`.
+  </Step>
+  <Step title="Créer le point de terminaison webhook">
+    Créez un point de terminaison à votre `APP_BASE_URL` suivie de `/api/webhooks/stripe`, pour les événements des comptes connectés, avec les événements que liste [`STRIPE_CONNECT_WEBHOOK_SECRET`](/fr/self-hosting/environment-variables#partenaires). Définissez son secret de signature dans `STRIPE_CONNECT_WEBHOOK_SECRET`.
+  </Step>
+  <Step title="Redémarrer">
+    Redémarrez l'admin et le worker. Le propriétaire de chaque partenaire peut alors connecter un compte Stripe sur la page **Stripe** de la console.
+  </Step>
+</Steps>
+
+Sans ces deux variables, la page **Stripe** indique aux partenaires que le tableau de bord ne peut pas encore connecter Stripe, et ils facturent eux-mêmes chaque entreprise.
+
+## Vendre des paliers aux partenaires avec Polar
+
+Les partenaires achètent des paliers depuis la page **Facturation** de la console et vous paient par Polar. Créez un produit récurrent pour chaque palier payant et chaque période, avec les prix de ce tableau :
+
+<PartnerTiers />
+
+La page **Facturation** affiche ces prix à partir du code : donnez donc les mêmes à vos produits. Configurez ensuite la facturation :
+
+1. Définissez les six ID de produit : `POLAR_PARTNER_STARTER_MONTHLY_PRODUCT_ID`, `POLAR_PARTNER_STARTER_ANNUAL_PRODUCT_ID`, et la même paire pour `GROWTH` et `SCALE`. Chacun doit être un produit distinct.
+2. Gardez `POLAR_ACCESS_TOKEN`, `POLAR_ORGANIZATION_ID` et `POLAR_WEBHOOK_SECRET` définis, car vos propres forfaits les utilisent.
+3. Ajoutez les compteurs et les prix à l'usage qui facturent le dépassement de la réserve et les numéros de téléphone supplémentaires, comme l'explique le [guide de facturation Polar](https://github.com/lobbystack/lobbystack/blob/main/docs/providers/polar.md#create-the-partner-tier-products).
+4. Redémarrez l'admin et le worker. Au démarrage, le worker enregistre si vous vendez des paliers.
+
+La facturation des paliers ne s'active que lorsque les six produits sont définis. Les partenaires ont alors besoin d'un palier payant pour connecter leur propre domaine, et le palier de chaque partenaire fixe sa réserve et ses numéros de téléphone.
+
+### Exploiter des partenaires sans paliers
+
+Laissez les produits `POLAR_PARTNER_*` vides, et les partenaires ne vous paient rien par LobbyStack. Leurs consoles n'affichent pas de page **Facturation**, et rien ne limite les minutes, les clavardages ni les numéros de téléphone de leurs entreprises.
+
+Pour limiter ce que les entreprises d'un partenaire partagent chaque mois, fixez sa réserve depuis une copie du dépôt, avec `DATABASE_URL` qui pointe vers votre base de données :
+
+```bash
+pnpm partner-pool:set --partner acme --minutes 500 --chats 2000
+```
+
+Cette réserve est une limite stricte, sans dépassement. Une fois la réserve atteinte, les entreprises du partenaire transfèrent leurs appels et le clavardage de leur site Web cesse de répondre jusqu'au début du mois suivant. Les propriétaires du partenaire voient la réserve sur une page **Facturation**, et ses propriétaires et ses administrateurs reçoivent des courriels à 80 % et à 100 %. Les [options de `pnpm partner-pool:set`](/fr/self-hosting/environment-variables#partenaires) figurent sous les variables des partenaires.
+
+## Lister les noms d'hôte des partenaires dans Turnstile
+
+Si vous utilisez Cloudflare Turnstile à l'inscription, avec `NEXT_PUBLIC_TURNSTILE_SITE_KEY` et `TURNSTILE_SECRET_KEY`, son widget ne s'affiche que sur les noms d'hôte que vous lui listez. L'admin n'accepte aussi un jeton que s'il vient du nom d'hôte sur lequel le visiteur l'a résolu. Ajoutez ces noms d'hôte au widget dans Cloudflare :
+
+- `PARTNER_BASE_DOMAIN`, comme `partners.example.com`, qui couvre le sous-domaine de chaque partenaire
+- le propre domaine de chaque partenaire, une fois actif, si les gens doivent aussi pouvoir s'y inscrire
+
+Les invitations et les autres liens des courriels s'ouvrent sur les sous-domaines des partenaires : les gens s'y inscrivent donc même après qu'un partenaire a connecté son propre domaine. Sans `PARTNER_BASE_DOMAIN`, les invitations s'ouvrent sur le propre domaine de chaque partenaire : listez donc chacun d'eux. Avec le forfait Free de Cloudflare, un widget accepte jusqu'à 10 noms d'hôte.
+
+## Vérifier la configuration
+
+Faites un test avec votre propre partenaire avant d'en inviter d'autres :
+
+1. Inscrivez-vous comme partenaire à `/partner/signup`, et ouvrez votre sous-domaine depuis **Image de marque et domaine**. Vous devriez voir la page de connexion sous la marque du partenaire.
+2. Créez une entreprise, et vérifiez que l'invitation du propriétaire arrive au nom du partenaire.
+3. Connectez un sous-domaine d'un domaine que vous contrôlez, ajoutez ses deux enregistrements DNS et attendez **Actif**.
+4. Avec Stripe Connect, connectez un compte Stripe de test, créez une formule et payez-la depuis l'invitation d'une entreprise.
+5. Avec les paliers, achetez-en un sur la page **Facturation** et vérifiez que la réserve et les numéros de téléphone suivent ce palier.

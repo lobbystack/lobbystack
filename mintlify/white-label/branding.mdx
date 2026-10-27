@@ -1,0 +1,88 @@
+---
+title: "Brand your dashboard and connect your domain"
+description: "Set the name, logo, favicon, color and links your businesses see, and connect a subdomain of your own website with its DNS records."
+sidebarTitle: "Branding & domain"
+contentType: "How-to"
+---
+
+The **Branding & domain** page sets what your businesses see: your name, logo, color and links, and the addresses they open your dashboard at. Every partner gets a subdomain of `receptionistportal.com`, and a paid tier adds a subdomain of your own website. Owners and admins change this page, and members can view it.
+
+## Set your name, logo and color
+
+The **Brand** section sets what appears in the browser tab, above sign-in and in your emails. Fill in these fields, check the preview, then click **Save brand**:
+
+| Field | What it changes | Accepted values |
+| --- | --- | --- |
+| **Name** | The browser tab, the heading above sign-in, the dashboard's text and the sender name of your emails | Up to 80 characters |
+| **Logo** | The image above sign-in and in your emails | PNG, JPEG, WebP or SVG, up to 256&nbsp;KB |
+| **Favicon** | The icon in the browser tab. Without one, the tab shows your logo. | PNG, JPEG, WebP or SVG, up to 256&nbsp;KB |
+| **Brand color** | The dashboard's main color, with light or dark text on it, whichever reads better | A hex code, such as `#0f766e` |
+
+Your pages show saved changes within a minute, and every email sent after you save uses them.
+
+## Add your terms, privacy and support links
+
+In the **Links** section, choose where your businesses go for your policies and for help. Sign-in, sign-up and onboarding list these links below the form, and the dashboard's account menu lists them too:
+
+- **Terms of service** and **Privacy policy**: sign-up shows its agreement line only when you set both
+- **Support page**: where the support link goes
+- **Support email**: replies to your emails go here, and the support link opens it when you have no support page
+
+Enter each link as a full web address, such as `https://acmeagency.com/terms`. Leave a field empty to hide its link. Your dashboard never shows LobbyStack's links in their place, and it leaves out LobbyStack's Help Center.
+
+## Where your brand appears
+
+Your brand replaces LobbyStack's on everything a business opens on your addresses:
+
+- sign-in, sign-up, password reset and onboarding
+- the dashboard and the browser tab
+- the frame of the website chat widget
+- your prospect demos
+
+Emails to your businesses, such as invitations and usage alerts, go out under your name and logo from `no-reply@receptionistportal.com`, with your support email as the reply address. So do invitations to your own team. Alerts about your pool and your businesses' usage reach your owners and admins from LobbyStack, since you're LobbyStack's customer.
+
+## Find your dashboard address
+
+The **Dashboard address** section shows **Your subdomain**, such as `acme.receptionistportal.com`, which you picked at signup. Click **Open** to visit it. Invitations and every other link in your emails point at this subdomain, even after you connect your own domain, so people you invite create their accounts there.
+
+## Connect your own domain
+
+Your own domain puts your dashboard on a subdomain of your website, such as `app.acmeagency.com`, beside your `receptionistportal.com` subdomain. Before you start, check these conditions:
+
+- You're on a paid tier. On Free, the page shows **Your own domain comes with a paid tier**, with a **Choose a tier** link for owners.
+- The domain is a subdomain, such as `app.acmeagency.com`. A bare domain, such as `acmeagency.com`, can't hold the CNAME record it needs.
+- You can add DNS records at the domain's DNS provider.
+
+<Steps>
+  <Step title="Enter the domain">
+    Under **Your own domain**, type the subdomain in **Domain** and click **Connect domain**. The page shows its DNS records within a minute.
+  </Step>
+  <Step title="Add the DNS records">
+    At your DNS provider, add each record the page lists. Use the copy buttons beside each name and value.
+  </Step>
+  <Step title="Wait for the domain to go live">
+    The status reads **Waiting for DNS** until every record shows **Found**. It then changes to **Active**, and your dashboard and sign-in pages work on the domain over HTTPS.
+  </Step>
+</Steps>
+
+On LobbyStack's cloud, the page lists two records like these:
+
+| Type | Name | Value |
+| --- | --- | --- |
+| `CNAME` | `app.acmeagency.com` | `host.receptionistportal.com` |
+| `TXT` | `_domain-verification.app.acmeagency.com` | `your_verification_value` |
+
+The CNAME record points your domain at LobbyStack. The TXT record proves you control the domain, so nobody else can connect it. If the page lists a third record, add it too.
+
+LobbyStack checks your records every minute during the domain's first hour, then less often. A DNS change can take a few hours to reach LobbyStack. Your domain gets its HTTPS certificate without any step from you.
+
+### Fix a domain that failed
+
+When the status reads **Failed**, the page explains why:
+
+- If the page says **We couldn't set up this domain**, remove the domain, check its DNS records, then connect it again. The provider's own reason appears under **Your certificate provider reports:**.
+- If the page says **Another dashboard connected this domain first**, another partner proved control of the domain before you did. Remove it, then connect a different domain.
+
+### Remove your domain
+
+Click **Remove domain** and confirm. People can no longer open your dashboard on that domain, and your subdomain keeps working. You have one domain of your own at a time, so remove the current one before you connect another.
