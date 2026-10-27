@@ -16,4 +16,9 @@ describe("pnpm docs:partner-tiers", () => {
     expect(rows[0]).toContain(`${partnerTierCatalog.free.trialNumbers} trial number for 14 days | No overage | No overage |`);
     expect(rows[2]).toContain(`| \\$${partnerTierCatalog.growth.chatOverageRatePerChatCents / 100} |`);
   });
+
+  it("uses one kind of no-break space whatever the ICU version, and a plural for more than one trial number", () => {
+    for (const locale of docsLocales) expect(partnerTiersSnippet(locale)).not.toContain("\u202f");
+    expect(partnerTiersSnippet("fr")).toMatch(/numéros? d'essai/);
+  });
 });

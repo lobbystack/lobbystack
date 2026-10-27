@@ -20,7 +20,8 @@ type TableCopy = {
   perMonth: (amount: string) => string;
   perYear: (amount: string, monthly: string) => string;
   pool: (minutes: string, chats: string) => string;
-  trial: (count: string) => string;
+  /** The trial numbers line, with the count as a number for its plural and formatted for display. */
+  trial: (count: number, formatted: string) => string;
   noOverage: string;
 };
 
@@ -32,7 +33,7 @@ const copy: Record<DocsLocale, TableCopy> = {
     perMonth: (amount) => `${amount} a month`,
     perYear: (amount, monthly) => `${amount} a year (${monthly} a month)`,
     pool: (minutes, chats) => `${minutes} minutes, ${chats} chats`,
-    trial: (count) => `${count} trial number for 14 days`,
+    trial: (count, formatted) => `${formatted} trial ${count === 1 ? "number" : "numbers"} for 14 days`,
     noOverage: "No overage",
   },
   fr: {
@@ -42,7 +43,7 @@ const copy: Record<DocsLocale, TableCopy> = {
     perMonth: (amount) => `${amount} par mois`,
     perYear: (amount, monthly) => `${amount} par année (${monthly} par mois)`,
     pool: (minutes, chats) => `${minutes} minutes, ${chats} clavardages`,
-    trial: (count) => `${count} numéro d'essai pendant 14 jours`,
+    trial: (count, formatted) => `${formatted} ${count === 1 ? "numéro" : "numéros"} d'essai pendant 14 jours`,
     noOverage: "Aucun dépassement",
   },
   es: {
@@ -52,10 +53,19 @@ const copy: Record<DocsLocale, TableCopy> = {
     perMonth: (amount) => `${amount} al mes`,
     perYear: (amount, monthly) => `${amount} al año (${monthly} al mes)`,
     pool: (minutes, chats) => `${minutes} minutos, ${chats} chats`,
-    trial: (count) => `${count} número de prueba durante 14 días`,
+    trial: (count, formatted) => `${formatted} ${count === 1 ? "número" : "números"} de prueba durante 14 días`,
     noOverage: "Sin excedente",
   },
 };
+
+/**
+ * Intl output with one kind of no-break space. ICU releases have moved French
+ * grouping and currency spacing between U+00A0 and U+202F, so a Node upgrade
+ * would otherwise rewrite the tables with no catalog change.
+ */
+function stable(formatted: string): string {
+  return formatted.replaceAll("\u202f", "\u00a0");
+}
 
 /**
  * US cents as dollars, keeping a rate's third decimal such as $0.015, and
@@ -63,25 +73,25 @@ const copy: Record<DocsLocale, TableCopy> = {
  * in one line as LaTeX, so each one is escaped.
  */
 function money(intl: string, cents: number): string {
-  return new Intl.NumberFormat(intl, {
+  return stable(new Intl.NumberFormat(intl, {
     style: "currency",
     currency: "USD",
     currencyDisplay: "narrowSymbol",
     minimumFractionDigits: Number.isInteger(cents / 100) ? 0 : 2,
     maximumFractionDigits: 3,
-  }).format(cents / 100).replaceAll("$", "\\$");
+  }).format(cents / 100)).replaceAll("$", "\\$");
 }
 
 /** The tier table for one language, as the MDX snippet the docs pages import. */
 export function partnerTiersSnippet(locale: DocsLocale): string {
   const t = copy[locale];
-  const count = (value: number) => new Intl.NumberFormat(t.intl).format(value);
+  const count = (value: number) => stable(new Intl.NumberFormat(t.intl).format(value));
   const rows = partnerTierSlugs.map((slug) => {
     const tier = partnerTierCatalog[slug];
     const annual = tier.annualChargeCents === null || tier.annualEffectiveMonthlyChargeCents === null
       ? money(t.intl, 0)
       : t.perYear(money(t.intl, tier.annualChargeCents), money(t.intl, tier.annualEffectiveMonthlyChargeCents));
-    const numbers = tier.includedNumbers > 0 ? count(tier.includedNumbers) : t.trial(count(tier.trialNumbers));
+    const numbers = tier.includedNumbers > 0 ? count(tier.includedNumbers) : t.trial(tier.trialNumbers, count(tier.trialNumbers));
     const minute = tier.voiceOverageRatePerMinuteCents === null ? t.noOverage : money(t.intl, tier.voiceOverageRatePerMinuteCents);
     const chat = tier.chatOverageRatePerChatCents === null ? t.noOverage : money(t.intl, tier.chatOverageRatePerChatCents);
     const cells = [t.tiers[slug], t.perMonth(money(t.intl, tier.monthlyChargeCents)), annual, t.pool(count(tier.poolVoiceSeconds / 60), count(tier.poolChats)), numbers, minute, chat];

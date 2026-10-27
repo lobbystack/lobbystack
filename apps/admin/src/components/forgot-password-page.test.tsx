@@ -51,4 +51,18 @@ describe("password recovery", () => {
     expect(JSON.parse(fetcher.mock.calls[2]?.[1].body)).toEqual({ email: "person@example.test", otp: "123456", password: "Password-123!" });
     expect(fetcher.mock.calls[3]?.[0]).toBe("/api/auth/sign-in/email");
   });
+
+  it("sends a White Label visitor back to the partner console, and back to White Label's sign-in", async () => {
+    window.history.replaceState(null, "", "/en/forgot-password?returnTo=%2Fpartner%2Fid%2Fteam");
+    const fetcher = vi.fn().mockResolvedValue(Response.json({ success: true }));
+    vi.stubGlobal("fetch", fetcher);
+    render(<ForgotPasswordPage />);
+    await waitFor(() => expect(screen.getByRole("link", { name: "forgotPassword.backToLogin" }).getAttribute("href")).toBe("/partner/login?returnTo=%2Fpartner%2Fid%2Fteam"));
+    await requestCode();
+    await userEvent.type(screen.getByLabelText("forgotPassword.code"), "123456");
+    await userEvent.type(screen.getByLabelText("forgotPassword.newPassword"), "Password-123!");
+    await userEvent.click(screen.getByRole("button", { name: "forgotPassword.verifySubmit" }));
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/partner/id/team"));
+    window.history.replaceState(null, "", "/");
+  });
 });

@@ -53,9 +53,7 @@ export function PartnerSettingsSurface() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <PageHeader title={t("settings.title")} />
-      </div>
+      <PageHeader title={t("settings.title")} />
       {settings.isError ? (
         <p className="text-sm text-muted-foreground" role="alert">{t("settings.loadFailed")}</p>
       ) : (

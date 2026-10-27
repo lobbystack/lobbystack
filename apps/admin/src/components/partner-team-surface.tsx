@@ -157,9 +157,7 @@ export function PartnerTeamSurface() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <PageHeader actions={inviteDialog} title={t("team.title")} />
-      </div>
+      <PageHeader actions={inviteDialog} title={t("team.title")} />
       <Surface className="overflow-hidden p-0">
         {team.isLoading ? (
           <div className="flex flex-col gap-4 p-6"><Skeleton className="h-5 w-40" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div>

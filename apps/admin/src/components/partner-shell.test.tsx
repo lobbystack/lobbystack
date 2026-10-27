@@ -12,7 +12,8 @@ import { PartnerShell, type ConsolePartner } from "./partner-shell";
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en" }, t: (key: string) => key }) }));
 vi.mock("next/navigation", () => ({ usePathname: () => "/partner/bright/businesses", useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("./theme-provider", () => ({ useTheme: () => ({ resolvedTheme: "light", setTheme: vi.fn() }) }));
-vi.mock("@/hooks/use-sign-out", () => ({ useSignOut: () => vi.fn() }));
+const signOut = vi.hoisted(() => vi.fn());
+vi.mock("@/hooks/use-sign-out", () => ({ useSignOut: () => signOut }));
 vi.mock("@/components/site-header", () => ({ SiteHeader: () => null }));
 
 beforeEach(() => {
@@ -43,6 +44,25 @@ it("masks partner names in the switcher for session replay", async () => {
 it("offers partner signup on the host's domain", async () => {
   await openSwitcher({ appName: "LobbyStack", logoUrl: null, final: true });
   expect(screen.getByRole("menuitem", { name: "shell.signUpAnother" }).getAttribute("href")).toBe("/partner/signup");
+});
+
+it("signs out to White Label's sign-in on the host's domain, and to the dashboard's on a partner's host", async () => {
+  const renderShell = (branding: BrandingSnapshot) => render(
+    <BrandingProvider i18n={{ options: {} } as unknown as I18nextInstance} initial={branding}>
+      <PartnerShell partner={bright} partners={[bright]} sidebarOpen user={{ email: "owner@example.test" }}><div /></PartnerShell>
+    </BrandingProvider>,
+  );
+  const signOutFrom = async () => {
+    await userEvent.click(screen.getByRole("button", { name: "partner:shell.userMenu" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "nav:sidebar.signOut" }));
+  };
+  renderShell({ appName: "LobbyStack", logoUrl: null, final: true });
+  await signOutFrom();
+  expect(signOut).toHaveBeenLastCalledWith("/partner/login?returnTo=%2Fpartner");
+  cleanup();
+  renderShell({ appName: "Bright Desk", logoUrl: null, final: true, partner: { faviconUrl: null, color: null, links: { terms: null, privacy: null, support: null } } });
+  await signOutFrom();
+  expect(signOut).toHaveBeenLastCalledWith(undefined);
 });
 
 it("leaves partner signup out on a partner's host, which answers it with a 404", async () => {

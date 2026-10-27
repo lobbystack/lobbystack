@@ -7,13 +7,14 @@ import { useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 
 import { partnerSlugFromName } from "@lobbystack/shared";
+import { useBranding } from "@/components/branding-provider";
 import { ReplacementOnboardingShell } from "@/components/replacement-onboarding-shell";
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@/components/ui/input-group";
 import { useSignOut } from "@/hooks/use-sign-out";
-import { buildAuthPathWithReturnTo } from "@/lib/auth-return-to";
+import { buildAuthPathWithReturnTo, buildPartnerAuthPath, buildPartnerConsoleLoginPath, buildPartnerLoginPath } from "@/lib/auth-return-to";
 import { rememberInvitedEmail } from "@/lib/invited-email";
 import { resolveLocale } from "@/lib/locale";
 import { recordPendingPartnerSignup } from "@/lib/partner-analytics";
@@ -29,11 +30,15 @@ export type PartnerSignupBlock = "inviteOnly" | "invitationInvalid" | "invitatio
 export function PartnerSignedOutSurface({ page, returnTo, values = {} }: { page: "acceptInvite"; returnTo: string; values?: Record<string, string> }) {
   const { t, i18n } = useTranslation("partner");
   const locale = resolveLocale(i18n.resolvedLanguage, i18n.language);
+  // White Label's own pages on the host's domain; a partner's host has only the dashboard's.
+  const onPartnerHost = useBranding().partner !== null;
+  const signIn = buildPartnerConsoleLoginPath(onPartnerHost, returnTo, locale);
+  const signUp = onPartnerHost ? buildAuthPathWithReturnTo("/signup", returnTo, locale) : buildPartnerAuthPath("/signup", returnTo);
   return (
     <ReplacementOnboardingShell description={t(`signedOut.${page}`, values)} progress={null} title={t(`${page}.title`, values)} width="sm">
       <div className="flex flex-col gap-3">
-        <Button className="h-11 w-full" nativeButton={false} onClick={() => rememberInvitedEmail(values.email)} render={<Link href={buildAuthPathWithReturnTo("/login", returnTo, locale)} />} role="link">{t("signedOut.signIn")}</Button>
-        <Button className="h-11 w-full" nativeButton={false} onClick={() => rememberInvitedEmail(values.email)} render={<Link href={buildAuthPathWithReturnTo("/signup", returnTo, locale)} />} role="link" variant="outline">{t("signedOut.createAccount")}</Button>
+        <Button className="h-11 w-full" nativeButton={false} onClick={() => rememberInvitedEmail(values.email)} render={<Link href={signIn} />} role="link">{t("signedOut.signIn")}</Button>
+        <Button className="h-11 w-full" nativeButton={false} onClick={() => rememberInvitedEmail(values.email)} render={<Link href={signUp} />} role="link" variant="outline">{t("signedOut.createAccount")}</Button>
       </div>
     </ReplacementOnboardingShell>
   );
@@ -44,7 +49,8 @@ export function SwitchAccountButton({ returnTo }: { returnTo: string }) {
   const { t, i18n } = useTranslation("partner");
   const signOut = useSignOut();
   const locale = resolveLocale(i18n.resolvedLanguage, i18n.language);
-  return <Button className="h-11 w-full" onClick={() => void signOut(buildAuthPathWithReturnTo("/login", returnTo, locale))}>{t("signedOut.switchAccount")}</Button>;
+  const onPartnerHost = useBranding().partner !== null;
+  return <Button className="h-11 w-full" onClick={() => void signOut(buildPartnerConsoleLoginPath(onPartnerHost, returnTo, locale))}>{t("signedOut.switchAccount")}</Button>;
 }
 
 const SIGNUP_ERRORS: Record<string, string> = {
@@ -60,7 +66,7 @@ const SIGNUP_ERRORS: Record<string, string> = {
  * address when the deployment has a partner base domain. It lands in the new
  * partner's console.
  */
-export function PartnerSignupSurface({ baseDomain, blocked, invitation, invitedEmail, returnTo }: { baseDomain: string | null; blocked: PartnerSignupBlock | null; invitation: string | null; invitedEmail: string | null; returnTo: string }) {
+export function PartnerSignupSurface({ baseDomain, blocked, invitation, invitedEmail, returnTo, signedIn = true }: { baseDomain: string | null; blocked: PartnerSignupBlock | null; invitation: string | null; invitedEmail: string | null; returnTo: string; signedIn?: boolean }) {
   const { t } = useTranslation("partner");
   const router = useRouter();
   const pathname = usePathname();
@@ -91,7 +97,8 @@ export function PartnerSignupSurface({ baseDomain, blocked, invitation, invitedE
   if (blocked) {
     return (
       <ReplacementOnboardingShell description={t(`signup.${blocked}`, { email: invitedEmail ?? "" })} progress={null} title={t("signup.title")} width="sm">
-        {blocked === "wrongAccount" ? <SwitchAccountButton returnTo={returnTo} /> : <span />}
+        {/* Someone signed out who can't sign up here may already be a partner, so sign-in stays one click away. */}
+        {blocked === "wrongAccount" ? <SwitchAccountButton returnTo={returnTo} /> : !signedIn ? <Button className="h-11 w-full" nativeButton={false} render={<Link href={buildPartnerLoginPath("/partner")} />} role="link" variant="outline">{t("signedOut.signIn")}</Button> : <span />}
       </ReplacementOnboardingShell>
     );
   }

@@ -9,10 +9,29 @@ export function getSafeReturnTo(value: string | null | undefined): string | null
   return value;
 }
 
+/**
+ * White Label's sign-in or sign-up, on the host's domain, which brings the
+ * person back to `value`. Sign-up goes straight back to a partner signup link
+ * instead, so the link's invitation stays at the top of the address.
+ */
+export function buildPartnerAuthPath(path: "/login" | "/signup", value: string | null | undefined): string {
+  const returnTo = getSafeReturnTo(value);
+  if (path === "/signup" && returnTo && /^\/partner\/signup(?:\?|$)/.test(returnTo)) return returnTo;
+  return returnTo ? `/partner${path}?returnTo=${encodeURIComponent(returnTo)}` : `/partner${path}`;
+}
+
 /** White Label's sign-in, which brings the person back to `value` in the partner console. */
 export function buildPartnerLoginPath(value: string | null | undefined): string {
-  const returnTo = getSafeReturnTo(value);
-  return returnTo ? `/partner/login?returnTo=${encodeURIComponent(returnTo)}` : "/partner/login";
+  return buildPartnerAuthPath("/login", value);
+}
+
+/**
+ * Where someone signs in to the partner console: White Label's sign-in on the
+ * host's domain, or the dashboard's sign-in on a partner's host, which answers
+ * White Label's pages with a 404.
+ */
+export function buildPartnerConsoleLoginPath(onPartnerHost: boolean, value: string | null | undefined, locale?: SupportedLocale): string {
+  return onPartnerHost ? buildAuthPathWithReturnTo("/login", value, locale) : buildPartnerLoginPath(value);
 }
 
 export function buildAuthPathWithReturnTo(

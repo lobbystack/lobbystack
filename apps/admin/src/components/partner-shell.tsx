@@ -40,6 +40,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useSignOut } from "@/hooks/use-sign-out";
+import { buildPartnerLoginPath } from "@/lib/auth-return-to";
 
 /** A partner as the console shows it. */
 export type ConsolePartner = { partnerId: string; name: string; role: PartnerRole };
@@ -218,6 +219,8 @@ function PartnerUserMenu({ email }: { email: string }) {
   const { isMobile } = useSidebar();
   const { resolvedTheme, setTheme } = useTheme();
   const signOut = useSignOut();
+  // Signing out on the host's domain lands on White Label's sign-in; a partner's host keeps the dashboard's.
+  const onPartnerHost = useBranding().partner !== null;
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -239,7 +242,7 @@ function PartnerUserMenu({ email }: { email: string }) {
               {t("nav:sidebar.toggleTheme")}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => void signOut()} variant="destructive">
+            <DropdownMenuItem onClick={() => void signOut(onPartnerHost ? undefined : buildPartnerLoginPath("/partner"))} variant="destructive">
               <LogOut />
               {t("nav:sidebar.signOut")}
             </DropdownMenuItem>

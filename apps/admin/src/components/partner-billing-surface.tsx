@@ -209,9 +209,7 @@ export function PartnerBillingSurface() {
   }
 
   const header = (
-    <div className="flex flex-col gap-1">
-      <PageHeader title={t("billing.title")} />
-    </div>
+    <PageHeader title={t("billing.title")} />
   );
   if (!isOwner) return <div className="flex flex-col gap-6">{header}<Surface className="px-6 py-8"><p className="text-sm text-muted-foreground">{t("billing.ownersOnly")}</p></Surface></div>;
   if (billing.isLoading) return <div className="flex flex-col gap-6">{header}<Surface className="flex flex-col gap-4 p-6"><Skeleton className="h-6 w-32" /><Skeleton className="h-10 w-48" /><Skeleton className="h-24 w-full" /></Surface></div>;

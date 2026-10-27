@@ -65,7 +65,7 @@ describe("partner signup while signup is invite-only", () => {
     vi.stubEnv("PARTNER_BASE_DOMAIN", "portal.example.test");
     fixture.preview = { email: "owner@acme.example", status: "pending", expired: false };
     fixture.session = signedIn(" Owner@Acme.Example ");
-    expect((await page("token")).props).toEqual({ baseDomain: "portal.example.test", blocked: null, invitation: "token", invitedEmail: "owner@acme.example", returnTo: "/partner/signup?invitation=token" });
+    expect((await page("token")).props).toEqual({ baseDomain: "portal.example.test", blocked: null, invitation: "token", invitedEmail: "owner@acme.example", returnTo: "/partner/signup?invitation=token", signedIn: true });
   });
 
   it("has a signed-out visitor with a valid invitation make their account here, then come back to the same link", async () => {
@@ -74,6 +74,32 @@ describe("partner signup while signup is invite-only", () => {
     const signedOut = await page("token") as unknown as ReactElement<{ mode: string; partner: { returnTo: string } }>;
     expect(signedOut.type).toBe(GuestAuthCard);
     expect(signedOut.props).toEqual({ mode: "signup", partner: { returnTo: "/partner/signup?invitation=token" } });
+  });
+});
+
+describe("partner signup links that stopped working", () => {
+  beforeEach(() => { vi.stubEnv("DEPLOYMENT_MODE", "cloud"); vi.stubEnv("PARTNER_SIGNUP", ""); });
+
+  it("tells a signed-out visitor so, with a way to sign in", async () => {
+    fixture.session = null;
+    expect((await page()).props).toMatchObject({ blocked: "inviteOnly", signedIn: false });
+  });
+
+  it("still lets the sign-up card record a Google sign-up that came back after the invitation was used", async () => {
+    fixture.preview = { email: "owner@acme.example", status: "accepted", expired: false };
+    const card = await page("token", { google: "signup" }) as unknown as ReactElement<{ mode: string; partner: { returnTo: string } }>;
+    expect(card.type).toBe(GuestAuthCard);
+    // The card then reloads the link without the marker, which says the invitation was used.
+    expect(card.props.partner.returnTo).toBe("/partner/signup?invitation=token");
+  });
+
+  it("lets someone joining a partner's team make their account here, then go back to the team invitation", async () => {
+    fixture.session = null;
+    const card = await page(undefined, { returnTo: "/partner/accept-invite?token=team" }) as unknown as ReactElement<{ mode: string; partner: { returnTo: string } }>;
+    expect(card.type).toBe(GuestAuthCard);
+    expect(card.props).toEqual({ mode: "signup", partner: { returnTo: "/partner/accept-invite?token=team" } });
+    // Any other place to go back to still needs a signup invitation.
+    expect((await page(undefined, { returnTo: "/partner/id/team" })).props).toMatchObject({ blocked: "inviteOnly" });
   });
 });
 

@@ -10,7 +10,7 @@ import { recordAuthSuccess } from "@/lib/auth-success-analytics";
 import { stripLocalePrefix } from "@/lib/locale-path";
 import { rememberPlanFromUrl } from "@/lib/remembered-plan";
 
-export function GuestAuthCard({ mode, partner }: { mode: "login" | "signup"; partner?: PartnerAuth }) {
+export function GuestAuthCard({ mode, partner }: { mode: "login" | "signup"; partner?: PartnerAuth | undefined }) {
   const router = useRouter();
   const { t } = useTranslation("auth");
   const [checking, setChecking] = useState(true);

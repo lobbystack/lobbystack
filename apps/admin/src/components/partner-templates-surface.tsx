@@ -182,9 +182,7 @@ export function PartnerTemplatesSurface() {
   const rows = templates.data ?? [];
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <PageHeader actions={canManage ? <Button disabled={templates.isLoading} onClick={() => setSaving(true)} size="sm">{t("templates.save.action")}</Button> : undefined} title={t("templates.title")} />
-      </div>
+      <PageHeader actions={canManage ? <Button disabled={templates.isLoading} onClick={() => setSaving(true)} size="sm">{t("templates.save.action")}</Button> : undefined} title={t("templates.title")} />
       {templates.isLoading ? (
         <Surface className="flex flex-col gap-4 p-6"><Skeleton className="h-5 w-40" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></Surface>
       ) : templates.isError ? (

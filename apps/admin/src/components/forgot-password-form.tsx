@@ -29,6 +29,8 @@ type ForgotPasswordFormProps = {
   onNewPasswordChange: (value: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onBackToRequest: () => void;
+  /** Where "Back to sign in" goes. The dashboard's sign-in by default. */
+  loginPath?: string | undefined;
 };
 
 export function ForgotPasswordForm({
@@ -44,9 +46,10 @@ export function ForgotPasswordForm({
   onNewPasswordChange,
   onSubmit,
   onBackToRequest,
+  loginPath: givenLoginPath,
 }: ForgotPasswordFormProps) {
   const { t, i18n } = useTranslation("auth");
-  const loginPath = localizePublicPath("/login", resolveLocale(i18n?.resolvedLanguage, i18n?.language));
+  const loginPath = givenLoginPath ?? localizePublicPath("/login", resolveLocale(i18n?.resolvedLanguage, i18n?.language));
   const isVerifyStep = step === "verify";
 
   return (

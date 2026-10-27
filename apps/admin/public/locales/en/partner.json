@@ -557,7 +557,6 @@
   },
   "apiKeys": {
     "title": "API keys",
-    "description": "Create and set up your businesses from your own code.",
     "empty": "No platform keys yet.",
     "neverUsed": "Never",
     "createdBy": "{{date}} by {{name}}",

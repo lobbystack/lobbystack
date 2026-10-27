@@ -109,9 +109,7 @@ export function PartnerStripeSurface() {
   }, [connection.isSuccess, partner.partnerId, pathname, refresh, router]);
 
   const header = (
-    <div className="flex flex-col gap-1">
-      <PageHeader title={t("stripe.title")} />
-    </div>
+    <PageHeader title={t("stripe.title")} />
   );
   const message = (text: string) => <Surface className="px-6 py-8"><p className="text-sm text-muted-foreground" role="alert">{text}</p></Surface>;
   if (!isOwner) return <div className="flex flex-col gap-6">{header}{message(t("stripe.ownersOnly"))}</div>;

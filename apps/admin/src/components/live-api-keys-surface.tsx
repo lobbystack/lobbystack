@@ -62,13 +62,12 @@ type ApiKeysSurfaceProps = {
   source: ApiKeysSource;
 };
 
-function ApiKeysFrame({ layout, title, description, action, children }: { layout: ApiKeysSurfaceProps["layout"]; title: string; description: string; action: ReactNode; children: ReactNode }) {
+/** The page layout has a title only; Settings' section keeps its description. */
+function ApiKeysFrame({ layout, title, description, action, children }: { layout: ApiKeysSurfaceProps["layout"]; title: string; description: ReactNode; action: ReactNode; children: ReactNode }) {
   if (layout === "section") return <SectionBlock action={action} description={description} title={title}>{children}</SectionBlock>;
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <PageHeader actions={action} title={title} />
-      </div>
+      <PageHeader actions={action} title={title} />
       {children}
     </div>
   );
@@ -120,7 +119,7 @@ export function ApiKeysSurface({ namespace, layout, loading, canManage, scopes: 
     <>
       <ApiKeysFrame
         action={<Button onClick={() => setCreateOpen(true)} size="sm"><KeyRound data-icon="inline-start" />{t("apiKeys.create.action")}</Button>}
-        description={t("apiKeys.description")}
+        description={layout === "section" ? t("apiKeys.description") : null}
         layout={layout}
         title={t("apiKeys.title")}
       >

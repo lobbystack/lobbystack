@@ -6,7 +6,7 @@ import { isUuid } from "@lobbystack/shared";
 import { PartnerShell } from "@/components/partner-shell";
 import { getAppDatabase } from "@/lib/api-helpers";
 import { getSession } from "@/lib/auth";
-import { buildAuthPathWithReturnTo, buildPartnerLoginPath } from "@/lib/auth-return-to";
+import { buildPartnerConsoleLoginPath } from "@/lib/auth-return-to";
 import { localeFromRequestHeaders, PATHNAME_HEADER } from "@/lib/locale-request";
 import { opensPartnerConsole, readResolvedBrand } from "@/lib/request-brand";
 
@@ -20,10 +20,7 @@ export default async function PartnerConsoleLayout({ children, params }: { child
   const { partnerId } = await params;
   const session = await getSession(new Headers(requestHeaders));
   const resolved = readResolvedBrand(requestHeaders);
-  if (!session) {
-    const returnTo = requestHeaders.get(PATHNAME_HEADER) ?? "/partner";
-    redirect(resolved?.kind === "partner" ? buildAuthPathWithReturnTo("/login", returnTo, localeFromRequestHeaders(requestHeaders).locale) : buildPartnerLoginPath(returnTo));
-  }
+  if (!session) redirect(buildPartnerConsoleLoginPath(resolved?.kind === "partner", requestHeaders.get(PATHNAME_HEADER) ?? "/partner", localeFromRequestHeaders(requestHeaders).locale));
   if (!isUuid(partnerId)) redirect("/partner");
   const partners = (await listUserPartners({ db: getAppDatabase().db }, session.user.id))
     .filter(({ partnerId }) => opensPartnerConsole(resolved, partnerId))

@@ -13,8 +13,10 @@ export const DASHBOARD_NAMESPACES = ["common", "nav", "settings", "agent", "dash
 
 /**
  * The partner console's namespaces: its own, the account menu's, the shell
- * its signup and invitation pages share with onboarding, and the demo page's
- * its Demos page shares with the host's.
+ * its signup and invitation pages share with onboarding, the demo page's
+ * its Demos page shares with the host's, and the account form White Label's
+ * sign-in and sign-up show. The console ships them all, so opening signup
+ * from the switcher never waits on a translation request.
  */
 export const PARTNER_NAMESPACES = ["common", "nav", "onboarding", "partner", "demos", "auth"];
 

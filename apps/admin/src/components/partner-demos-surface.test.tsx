@@ -85,6 +85,25 @@ describe("the partner console's Demos page", () => {
     expect(open).toHaveBeenCalledWith(url, "_blank", "noopener,noreferrer");
   });
 
+  it("says the list didn't load on the page itself, not only inside the closed dialog", async () => {
+    renderWith(() => Response.json({ error: "down" }, { status: 500 }));
+    expect(await screen.findByRole("alert")).toHaveProperty("textContent", "operator.errors.load");
+    expect(screen.queryByText("operator.partner.empty")).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("starts each new demo at full access, even after an admin picked another level and closed the dialog", async () => {
+    fixture.partner = { ...fixture.partner, role: "admin" };
+    renderWith(() => Response.json({ demos: [] }));
+    await screen.findByText("operator.partner.empty");
+    await userEvent.click(screen.getByRole("button", { name: "operator.create" }));
+    await userEvent.click(await screen.findByRole("radio", { name: /businesses\.access\.activity/ }));
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await userEvent.click(screen.getByRole("button", { name: "operator.create" }));
+    expect((await screen.findByRole("radio", { name: /businesses\.access\.full/ })).getAttribute("aria-checked")).toBe("true");
+  });
+
   it("makes a member's demo at full access, with no access level to pick", async () => {
     let made = false;
     const fetchMock = renderWith((_input, init) => {

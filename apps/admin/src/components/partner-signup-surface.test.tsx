@@ -53,6 +53,14 @@ describe("partner signup", () => {
     expect(consumePendingPartnerSignup("partner")).toEqual({ partnerId: "partner", pathname: "/partner/signup", invited: false, subdomain: false });
   });
 
+  it("offers a signed-out visitor who can't sign up here White Label's sign-in", () => {
+    renderSignup({ blocked: "inviteOnly", signedIn: false }, () => Response.json({}));
+    expect(screen.getByRole("link", { name: "signedOut.signIn" }).getAttribute("href")).toBe("/partner/login?returnTo=%2Fpartner");
+    cleanup();
+    renderSignup({ blocked: "inviteOnly", signedIn: true }, () => Response.json({}));
+    expect(screen.queryByRole("link", { name: "signedOut.signIn" })).toBeNull();
+  });
+
   it("queues nothing when signup is refused, and says why", async () => {
     renderSignup({ baseDomain: "portal.example.test" }, () => Response.json({ error: "That subdomain is taken.", code: "subdomain_taken" }, { status: 409 }));
     await userEvent.type(screen.getByLabelText("signup.nameLabel"), "Bright Desk");

@@ -14,7 +14,7 @@ it("ships every console page's translations, so client navigation never requests
   const document = await PartnerLayout({ children: null }) as ReactElement<{ namespaces: readonly string[] }>;
   for (const locale of ["en", "fr", "es", "sr"] as const) {
     const i18n = createI18nInstance({ locale, resources: resourcesForRoute(locale, document.props.namespaces) });
-    for (const path of ["/partner/signup", "/partner/accept-invite", "/partner/id/businesses", "/partner/id/team"]) {
+    for (const path of ["/partner/login", "/partner/signup", "/partner/accept-invite", "/partner/id/businesses", "/partner/id/team"]) {
       expect(missingNamespaces(i18n, locale, routeNamespaces(path)), `${locale} ${path}`).toEqual([]);
     }
   }

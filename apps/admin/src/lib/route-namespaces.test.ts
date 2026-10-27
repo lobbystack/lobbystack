@@ -17,8 +17,8 @@ it("gives every dashboard route all dashboard namespaces, so a language change l
   }
   expect(DASHBOARD_NAMESPACES).toEqual(expect.arrayContaining(["dashboard", "calls", "knowledge", "affiliate"]));
 });
-it("gives the partner console its own copy and its Demos page's, without the rest of the business dashboard's", () => {
-  for (const path of ["/partner", "/partner/signup", "/partner/accept-invite", "/partner/id/businesses", "/partner/id/team", "/partner/id/demos"]) {
-    expect(routeNamespaces(path)).toEqual(["common", "nav", "onboarding", "partner", "demos"]);
+it("gives the partner console its own copy, its Demos page's and the account form's, without the rest of the business dashboard's", () => {
+  for (const path of ["/partner", "/partner/login", "/partner/signup", "/partner/accept-invite", "/partner/id/businesses", "/partner/id/team", "/partner/id/demos"]) {
+    expect(routeNamespaces(path)).toEqual(["common", "nav", "onboarding", "partner", "demos", "auth"]);
   }
 });

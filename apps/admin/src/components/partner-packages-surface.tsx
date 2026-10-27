@@ -136,9 +136,7 @@ export function PartnerPackagesSurface() {
   });
 
   const header = (actions?: React.ReactNode) => (
-    <div className="flex flex-col gap-1">
-      <PageHeader actions={actions} title={t("packages.title")} />
-    </div>
+    <PageHeader actions={actions} title={t("packages.title")} />
   );
   const message = (text: string) => <Surface className="px-6 py-8"><p className="text-sm text-muted-foreground" role="alert">{text}</p></Surface>;
   if (!canManage) return <div className="flex flex-col gap-6">{header()}{message(t("packages.managersOnly"))}</div>;

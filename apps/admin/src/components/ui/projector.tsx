@@ -15,22 +15,17 @@ interface ProjectorIconProps extends HTMLAttributes<HTMLDivElement> {
   size?: number;
 }
 
+// The rays lift with the projector instead of redrawing, so they never blink out.
 const RAY_LINE_VARIANTS: Variants = {
-  hidden: {
-    pathLength: 0,
-    opacity: 0,
-  },
   animate: {
-    pathLength: 1,
-    opacity: 1,
+    y: [0, -1.5, 0],
     transition: {
-      duration: 0.4,
-      ease: "easeOut",
+      duration: 0.8,
+      ease: "easeInOut",
     },
   },
   visible: {
-    pathLength: 1,
-    opacity: 1,
+    y: 0,
   },
 };
 
@@ -59,7 +54,6 @@ const ProjectorIcon = forwardRef<ProjectorIconHandle, ProjectorIconProps>(
       bodyControls.start("animate").catch(() => {
         // ignore when interrupted by a new animation
       });
-      await pathControls.start("hidden");
       await pathControls.start("animate");
     }, [bodyControls, pathControls]);
 

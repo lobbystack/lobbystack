@@ -33,6 +33,11 @@ describe("White Label sign-in and sign-up", () => {
     await userEvent.click(screen.getByRole("button", { name: "login.submit" }));
     await waitFor(() => expect(assign).toHaveBeenCalledWith("/partner"));
   });
+  it("sends a forgotten password back to the partner console", () => {
+    window.history.replaceState(null, "", "/partner/login?returnTo=%2Fpartner%2Fid%2Fteam");
+    render(<AuthCard mode="login" partner={{ returnTo: "/partner" }} />);
+    expect(screen.getByRole("link", { name: "login.forgotPassword" }).getAttribute("href")).toBe("/en/forgot-password?returnTo=%2Fpartner%2Fid%2Fteam");
+  });
 });
 describe("original login and signup behavior", () => {
   it("preserves calculator attribution and a safe return path when switching to login", () => {

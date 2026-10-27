@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 
+import { useBranding } from "@/components/branding-provider";
 import { ForgotPasswordForm } from "@/components/forgot-password-form";
 import { ReplacementOnboardingShell } from "@/components/replacement-onboarding-shell";
 import { resolveLocale } from "@/lib/locale";
 import { localizePublicPath } from "@/lib/locale-path";
+import { buildPartnerLoginPath, getSafeReturnTo } from "@/lib/auth-return-to";
 
 export default function ForgotPasswordPage() {
   const { t, i18n } = useTranslation("auth");
@@ -18,6 +20,14 @@ export default function ForgotPasswordPage() {
   const [newPassword, setNewPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // White Label's sign-in links here with the console page to come back to. A partner's host has no White Label pages.
+  const onPartnerHost = useBranding().partner !== null;
+  const [partnerReturnTo, setPartnerReturnTo] = useState<string | null>(null);
+  useEffect(() => {
+    const returnTo = getSafeReturnTo(new URLSearchParams(window.location.search).get("returnTo"));
+    setPartnerReturnTo(!onPartnerHost && returnTo && /^\/partner(?:[/?]|$)/.test(returnTo) ? returnTo : null);
+  }, [onPartnerHost]);
+  const loginPath = partnerReturnTo ? buildPartnerLoginPath(partnerReturnTo) : localizePublicPath("/login", resolveLocale(i18n?.resolvedLanguage, i18n?.language));
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -44,7 +54,7 @@ export default function ForgotPasswordPage() {
       });
       // The password has changed even if a transient login/rate-limit error occurs.
       signingIn = true;
-      router.replace(login.ok ? "/" : localizePublicPath("/login", resolveLocale(i18n?.resolvedLanguage, i18n?.language)));
+      router.replace(login.ok ? partnerReturnTo ?? "/" : loginPath);
       router.refresh();
     } catch (cause) {
       setErrorMessage(cause instanceof Error ? cause.message : t("errors.passwordResetFailed"));
@@ -52,6 +62,6 @@ export default function ForgotPasswordPage() {
   }
 
   return <ReplacementOnboardingShell description={step === "verify" ? t("forgotPassword.verifySubtitle", { email }) : t("forgotPassword.subtitle")} progress={null} title={step === "verify" ? t("forgotPassword.verifyTitle") : t("forgotPassword.title")} width="sm">
-    <ForgotPasswordForm step={step} email={email} code={code} newPassword={newPassword} isSubmitting={isSubmitting} errorMessage={errorMessage} onEmailChange={setEmail} onCodeChange={setCode} onNewPasswordChange={setNewPassword} onSubmit={submit} onBackToRequest={() => { setStep("request"); setCode(""); setNewPassword(""); setErrorMessage(null); }} />
+    <ForgotPasswordForm loginPath={loginPath} step={step} email={email} code={code} newPassword={newPassword} isSubmitting={isSubmitting} errorMessage={errorMessage} onEmailChange={setEmail} onCodeChange={setCode} onNewPasswordChange={setNewPassword} onSubmit={submit} onBackToRequest={() => { setStep("request"); setCode(""); setNewPassword(""); setErrorMessage(null); }} />
   </ReplacementOnboardingShell>;
 }

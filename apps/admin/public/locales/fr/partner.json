@@ -565,7 +565,6 @@
   },
   "apiKeys": {
     "title": "Clés API",
-    "description": "Créez et configurez vos entreprises depuis votre propre code.",
     "empty": "Aucune clé de plateforme pour l'instant.",
     "neverUsed": "Jamais",
     "createdBy": "{{date}} par {{name}}",

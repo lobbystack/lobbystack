@@ -76,7 +76,9 @@ export function LiveDemosSurface({ partner }: { partner?: PartnerDemosOptions } 
   const [accessLevel, setAccessLevel] = useState<PartnerAccessLevel>("full");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
+  // The form's own error, shown inside it, apart from a list that didn't load.
   const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   // The closed demo the delete confirmation asks about.
   const [deleting, setDeleting] = useState<Demo | null>(null);
@@ -97,14 +99,14 @@ export function LiveDemosSurface({ partner }: { partner?: PartnerDemosOptions } 
     setLoading(true);
     // A refresh starts over, so an earlier action's error goes.
     setActionError(null);
-    setError(null);
+    setLoadError(null);
     try {
       const response = await fetch(listUrl);
       const body = await response.json() as { demos?: Demo[] };
       if (!response.ok) throw new Error("Demo list unavailable");
       setDemos(body.demos ?? []);
     } catch {
-      setError(t("operator.errors.load"));
+      setLoadError(t("operator.errors.load"));
     } finally {
       setLoading(false);
     }
@@ -198,8 +200,9 @@ export function LiveDemosSurface({ partner }: { partner?: PartnerDemosOptions } 
   const list = (
     <>
         {actionError ? <p role="alert" className="text-sm text-destructive">{actionError}</p> : null}
+        {loadError ? <p role="alert" className="text-sm text-destructive">{loadError}</p> : null}
         {loading ? <Card><CardContent className="py-16 text-center text-sm text-muted-foreground">{t("operator.loading")}</CardContent></Card> : null}
-        {!loading && demos.length === 0 ? partnerId ? (
+        {!loading && !loadError && demos.length === 0 ? partnerId ? (
           <Surface className="flex flex-col items-center gap-3 px-6 py-16 text-center">
             <h2 className="text-base font-medium">{t("operator.partner.emptyTitle")}</h2>
             <p className="max-w-sm text-sm leading-6 text-muted-foreground">{t("operator.partner.empty")}</p>
@@ -244,7 +247,7 @@ export function LiveDemosSurface({ partner }: { partner?: PartnerDemosOptions } 
         actions={
           <div className="flex items-center gap-2">
             <Button aria-label={t("operator.refresh")} disabled={loading} onClick={() => void load()} size="sm" variant="ghost"><RefreshCw className="size-4" /></Button>
-            <Dialog onOpenChange={(next) => { setCreateOpen(next); if (!next) setError(null); }} open={createOpen}>
+            <Dialog onOpenChange={(next) => { setCreateOpen(next); if (!next) { setError(null); setAccessLevel("full"); } }} open={createOpen}>
               <DialogTrigger render={<Button size="sm" />}>{t("operator.create")}</DialogTrigger>
               {/* The form runs taller than a laptop screen with the access levels, so it scrolls inside the window. */}
               <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto">

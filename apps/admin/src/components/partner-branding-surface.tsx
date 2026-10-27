@@ -204,9 +204,7 @@ export function PartnerBrandingSurface() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <PageHeader title={t("branding.title")} />
-      </div>
+      <PageHeader title={t("branding.title")} />
       {/* Its own form and requests, beside the brand's. */}
       <PartnerDomainSettings />
       {!data || !draft ? (

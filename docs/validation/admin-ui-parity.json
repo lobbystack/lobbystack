@@ -1231,6 +1231,12 @@
       "comparison": "port-baseline"
     },
     {
+      "path": "/partner/login",
+      "state": "default",
+      "fixtureState": "operator",
+      "comparison": "port-baseline"
+    },
+    {
       "path": "/partner/signup",
       "state": "default",
       "fixtureState": "operator",
@@ -1303,13 +1309,31 @@
       "comparison": "port-baseline"
     },
     {
-      "path": "/partner/[partnerId]/stripe",
+      "path": "/partner/[partnerId]/payments",
       "state": "default",
       "fixtureState": "operator",
       "comparison": "port-baseline"
     },
     {
       "path": "/partner/[partnerId]/billing",
+      "state": "default",
+      "fixtureState": "operator",
+      "comparison": "port-baseline"
+    },
+    {
+      "path": "/partner/[partnerId]/api-keys",
+      "state": "default",
+      "fixtureState": "operator",
+      "comparison": "port-baseline"
+    },
+    {
+      "path": "/partner/[partnerId]/settings",
+      "state": "default",
+      "fixtureState": "operator",
+      "comparison": "port-baseline"
+    },
+    {
+      "path": "/settings/partner-access",
       "state": "default",
       "fixtureState": "operator",
       "comparison": "port-baseline"

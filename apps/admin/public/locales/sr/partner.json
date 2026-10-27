@@ -565,7 +565,6 @@
   },
   "apiKeys": {
     "title": "API ključevi",
-    "description": "Kreirajte i podešavajte svoje firme iz sopstvenog koda.",
     "empty": "Još nema ključeva platforme.",
     "neverUsed": "Nikad",
     "createdBy": "{{date}}, korisnik {{name}}",
