@@ -1,7 +1,12 @@
 import type { ComparisonValue } from "@lobbystack/shared/plan-comparison"
 import { Check, Minus } from "lucide-react"
 
-/** One cell of a plan comparison table: a check, a dash, or the plan's words. */
+/**
+ * One cell of a plan comparison table: a check, a dash, or the plan's words.
+ * The check's label for screen readers is absolutely positioned, so its span
+ * is relative: otherwise the label escapes the table's scroll box and widens
+ * the page on a narrow screen.
+ */
 export function ComparisonCell({
   includedLabel,
   notIncludedLabel,
@@ -13,7 +18,7 @@ export function ComparisonCell({
 }) {
   if (typeof value === "boolean") {
     return value ? (
-      <span className="inline-flex items-center justify-center">
+      <span className="relative inline-flex items-center justify-center">
         <Check
           className="mx-auto size-4 text-foreground/60"
           aria-hidden="true"
@@ -21,7 +26,7 @@ export function ComparisonCell({
         <span className="sr-only">{includedLabel}</span>
       </span>
     ) : (
-      <span className="inline-flex items-center justify-center">
+      <span className="relative inline-flex items-center justify-center">
         <Minus
           className="mx-auto size-4 text-muted-foreground/30"
           aria-hidden="true"

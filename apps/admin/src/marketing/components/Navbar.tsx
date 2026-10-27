@@ -394,7 +394,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
         {/* Logo */}
         <a
           href={localizePath(locale, "/")}
-          className="flex items-center focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          className="flex shrink-0 items-center focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
           <img
             src="/lobbystack-logo.svg"
@@ -406,8 +406,8 @@ export function Navbar({ locale = "en" }: NavbarProps) {
           />
         </a>
 
-        {/* Desktop Nav */}
-        <nav className="hidden items-center gap-1 md:flex">
+        {/* Desktop Nav. French, Spanish and Serbian labels need about 850px beside the logo and buttons, so tablets get the menu. */}
+        <nav className="hidden items-center gap-1 lg:flex">
           {navLinks(locale).map((link) => (
             <div key={link.label} className="group relative">
               {link.type === "group" ? (
@@ -518,7 +518,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
         </nav>
 
         {/* Desktop CTAs */}
-        <div className="hidden items-center gap-1 md:flex">
+        <div className="hidden items-center gap-1 lg:flex">
           <a
             href="https://github.com/lobbystack/lobbystack"
             target="_blank"
@@ -550,7 +550,7 @@ export function Navbar({ locale = "en" }: NavbarProps) {
           </a>
         </div>
 
-        <details className="group/mobile-menu md:hidden">
+        <details className="group/mobile-menu lg:hidden">
           <summary
             className="inline-flex size-9 cursor-pointer list-none items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none [&::-webkit-details-marker]:hidden"
             aria-controls={mobileMenuId}
