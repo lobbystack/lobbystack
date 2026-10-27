@@ -1,7 +1,7 @@
 import { intlLocale } from "@lobbystack/shared"
 import { Bell, Building2, CreditCard, Palette, Tag } from "lucide-react"
 
-import { Badge, Footprint, GuideLines, plane, Tile } from "@/marketing/components/system/art"
+import { Badge, Footprint, GuideLines, plane, planes, Tile } from "@/marketing/components/system/art"
 import type { Locale } from "@/marketing/i18n"
 import { cn } from "@/marketing/lib/utils"
 import type { WhiteLabelCopy } from "@/marketing/lib/white-label-copy"
@@ -97,7 +97,7 @@ export function PackagesArt({ locale, copy }: { locale: Locale; copy: WhiteLabel
 export function SetupFeeArt({ locale, copy }: { locale: Locale; copy: WhiteLabelCopy["earnArt"] }) {
   return (
     <div aria-hidden="true" className="relative h-full w-full scale-[1.18] [perspective:1400px] md:scale-[1.22]">
-      <div className="absolute top-[4.5rem] left-1/2 h-[11rem] w-[14rem] -translate-x-1/2" style={plane}>
+      <div className="absolute top-[4.5rem] left-1/2 h-[11rem] w-[14rem] -translate-x-1/2" style={planes.flat}>
         <Footprint className="-inset-6" />
         <Tile className="absolute inset-0" innerClassName="flex h-full flex-col justify-between p-5">
           <span className="font-mono text-[0.6875rem] text-beige-foreground uppercase">{copy.oneTime}</span>
@@ -122,7 +122,7 @@ export function OverageArt({ locale, copy }: { locale: Locale; copy: WhiteLabelC
   const number = (value: number) => new Intl.NumberFormat(intlLocale(locale)).format(value)
   return (
     <div aria-hidden="true" className="relative h-full w-full scale-[1.18] [perspective:1400px] md:scale-[1.22]">
-      <div className="absolute top-[4.5rem] left-1/2 h-[10.5rem] w-[15rem] -translate-x-1/2" style={plane}>
+      <div className="absolute top-[4.5rem] left-1/2 h-[10.5rem] w-[15rem] -translate-x-[67%]" style={planes.left}>
         <Footprint className="-inset-6" />
         <Tile className="absolute inset-0" innerClassName="flex h-full flex-col justify-between p-5">
           <span className="text-sm font-medium">{copy.minutes}</span>

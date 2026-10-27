@@ -105,23 +105,23 @@ function Waveform({ className }: { className?: string }) {
 function CallCaptureScene({ locale }: SceneProps) {
   const t = getProductScenesCopy(locale)
   return (
-    <Scene width={540} height={380}>
-      <Ripples x={160} y={170} sizes={[340, 252, 170]} />
-      <Place x={160} y={170} className="-translate-x-1/2 -translate-y-1/2">
+    <Scene width={540} height={380} tilt="left">
+      <Ripples x={200} y={170} sizes={[340, 252, 170]} />
+      <Place x={200} y={170} className="-translate-x-1/2 -translate-y-1/2">
         <Badge className="size-24 ring-[10px]">
           <PhoneIncoming className="size-9" strokeWidth={1.5} />
         </Badge>
       </Place>
-      <Place x={160} y={250} className="-translate-x-1/2">
+      <Place x={200} y={250} className="-translate-x-1/2">
         <Chip className="bg-white px-3 py-1 text-[0.8125rem] shadow-[0_1px_2px_oklch(0_0_0/8%)]">
           {t.incomingCall} · (555) 014-2290
         </Chip>
       </Place>
-      <Place x={20} y={0}>
+      <Place x={90} y={10}>
         <Chip className="bg-white/80">{t.teamUnavailable}</Chip>
       </Place>
-      <Place x={280} y={150}>
-        <Tile accent className="w-[14.5rem]" innerClassName="space-y-3 p-4">
+      <Place x={292} y={150}>
+        <Tile accent className="w-[13.5rem]" innerClassName="space-y-3 p-4">
           <Row icon={<IconDot icon={AudioLines} />} title={t.lobbystackAnswers} detail={t.booksOrMessages} />
           <Waveform />
         </Tile>
@@ -201,7 +201,7 @@ function HandoffScene({ locale }: SceneProps) {
   const t = getProductScenesCopy(locale)
   const person = t.team[1] ?? { name: "Sarah Lopez", role: "Customer success" }
   return (
-    <Scene width={500} height={400}>
+    <Scene width={500} height={400} tilt="flat">
       <Place x={0} y={80}>
         <Tile className="w-60" innerClassName="space-y-3 p-4">
           <Chip strong>{t.urgent}</Chip>
@@ -232,7 +232,7 @@ function HandoffScene({ locale }: SceneProps) {
 function AnsweredBookedScene({ locale }: SceneProps) {
   const t = getProductScenesCopy(locale)
   return (
-    <Scene width={600} height={220}>
+    <Scene width={600} height={220} tilt="flat">
       <Place x={0} y={20}>
         <Tile className="w-60" innerClassName="p-4">
           <Row icon={<IconDot icon={PhoneCall} />} title={t.callAnswered} detail="(555) 014-2290 · 2:14" />
@@ -256,7 +256,7 @@ function AnsweredBookedScene({ locale }: SceneProps) {
 function RoutingScene({ locale }: SceneProps) {
   const t = getProductScenesCopy(locale)
   return (
-    <Scene width={600} height={260}>
+    <Scene width={600} height={260} tilt="left">
       <Place x={0} y={88}>
         <Tile accent className="w-56" innerClassName="p-4">
           <Row icon={<IconDot icon={PhoneIncoming} />} title={t.incomingCall} detail="(555) 014-2290" />
@@ -282,7 +282,7 @@ function KnowledgeScene({ locale }: SceneProps) {
   const t = getProductScenesCopy(locale)
   const icons = [Globe, Tag, Clock, FileText]
   return (
-    <Scene width={560} height={340}>
+    <Scene width={560} height={340} tilt="left">
       <Place x={0} y={0}>
         <Tile className="w-64" innerClassName="space-y-2.5 p-4">
           <span className="block text-xs font-medium text-muted-foreground">{t.knowledgeSources}</span>
@@ -342,7 +342,7 @@ function SummaryScene({ locale }: SceneProps) {
 function JobBookedScene({ locale }: SceneProps) {
   const t = getProductScenesCopy(locale)
   return (
-    <Scene width={560} height={340}>
+    <Scene width={560} height={340} tilt="left">
       <Place x={0} y={30}>
         <Tile className="w-52 rounded-[1.4rem] p-1.5" innerClassName="rounded-[1rem] px-3 py-2.5">
           <Row icon={<IconDot icon={PhoneIncoming} />} title={t.serviceRequest} />

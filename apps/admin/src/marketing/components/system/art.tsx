@@ -7,8 +7,21 @@ import { cn } from "@/marketing/lib/utils"
 // pale halo, over dashed guide lines. Scenes built from it stay sharp at any
 // zoom and carry translated text.
 
-/** One isometric plane for every tile, so every scene on the site reads as one set. */
-export const plane: CSSProperties = { transform: "rotateX(42deg) rotateY(-16deg) rotateZ(20deg)", transformStyle: "preserve-3d" }
+/**
+ * The plane a scene lies on. Tilted scenes share one angle, leaning right or
+ * mirrored to the left, so the set reads as one; flat scenes face the reader.
+ * Neighbouring scenes should use different tilts.
+ */
+export type Tilt = "right" | "left" | "flat"
+
+export const planes: Record<Tilt, CSSProperties> = {
+  right: { transform: "rotateX(42deg) rotateY(-16deg) rotateZ(20deg)", transformStyle: "preserve-3d" },
+  left: { transform: "rotateX(42deg) rotateY(16deg) rotateZ(-20deg)", transformStyle: "preserve-3d" },
+  flat: {},
+}
+
+/** The right-leaning plane, the default. */
+export const plane = planes.right
 
 export const tileShadow =
   "shadow-[0_1px_1px_oklch(0_0_0/4%),0_10px_20px_-6px_oklch(0.3_0.02_60/14%),0_30px_60px_-20px_oklch(0.3_0.02_60/22%)]"
@@ -171,12 +184,14 @@ export function TileFieldArt({ icon: Icon = Server, className }: { icon?: Lucide
 export function Scene({
   width,
   height,
+  tilt = "right",
   className,
   planeClassName,
   children,
 }: {
   width: number
   height: number
+  tilt?: Tilt
   className?: string
   planeClassName?: string
   children: ReactNode
@@ -184,14 +199,14 @@ export function Scene({
   return (
     <div aria-hidden="true" className={cn("relative h-full w-full overflow-hidden [perspective:1600px]", className)}>
       <div className="absolute inset-0 [mask-image:radial-gradient(75%_75%_at_50%_50%,black,transparent)]">
-        <div className="absolute top-[-15%] left-[-5%] h-[130%] w-[110%]" style={plane}>
+        <div className="absolute top-[-15%] left-[-5%] h-[130%] w-[110%]" style={planes[tilt]}>
           <GuideLines count={14} gap={56} />
         </div>
       </div>
       <div className="absolute inset-0 flex items-center justify-center">
         <div
           className={cn("relative shrink-0 [scale:var(--scene-scale,1)]", planeClassName)}
-          style={{ ...plane, width, height }}
+          style={{ ...planes[tilt], width, height }}
         >
           {children}
         </div>
