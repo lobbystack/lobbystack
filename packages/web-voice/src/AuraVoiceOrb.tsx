@@ -33,21 +33,23 @@ function classNames(...classes: Array<string | false | null | undefined>) {
 
 export type AuraTone = "light" | "dark";
 
+// Light waves are a warm tan, which reads as the site's beige at their low opacity.
 const WAVE_RGB: Record<AuraTone, string> = {
-  light: "0,0,0",
+  light: "143,104,70",
   dark: "255,255,255",
 };
 
 const AURA_WAVE_STYLE = {
+  // About 1.8 times the old black values, so the tan waves keep the same weight.
   light: {
     fillStops: [0.3, 0.8, 0.5] as const,
-    baseOpacity: { active: 0.11, idle: 0.1 },
-    layerDecay: { active: 0.014, idle: 0.012 },
-    stroke: { active: 0.07, idle: 0.06 },
-    strokePulse: { breathe: 0.025, voice: 0.025 },
-    glow: 0.05,
-    pulseBoost: 0.03,
-    voiceBoost: 0.045,
+    baseOpacity: { active: 0.2, idle: 0.18 },
+    layerDecay: { active: 0.025, idle: 0.022 },
+    stroke: { active: 0.13, idle: 0.11 },
+    strokePulse: { breathe: 0.045, voice: 0.045 },
+    glow: 0.09,
+    pulseBoost: 0.055,
+    voiceBoost: 0.08,
   },
   dark: {
     fillStops: [0.5, 1, 0.75] as const,
