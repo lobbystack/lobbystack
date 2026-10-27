@@ -1,6 +1,6 @@
 # How partners resell LobbyStack
 
-A partner resells LobbyStack to businesses under its own brand, domain, and bills. This page records what v1 of the partner program does, as decided on 2026-10-24. Nothing is built yet. [`GLOSSARY.md`](../GLOSSARY.md) defines the terms, and [the white-label research](../research/white-label-reseller-programs.md) compares 30 competitors. [Build the partner program](white-label-build-plan.md) lays out the work in phases, and [the partner architecture](architecture/partners.md) defines its modules.
+A partner resells LobbyStack to businesses under its own brand, domain, and bills. This page records what v1 of the partner program does, as decided on 2026-10-24. The code builds it, except where a line below says otherwise, and the Help Center's [white label pages](../mintlify/white-label/overview.mdx) describe it for partners. [`GLOSSARY.md`](../GLOSSARY.md) defines the terms, and [the white-label research](../research/white-label-reseller-programs.md) compares 30 competitors. [Build the partner program](white-label-build-plan.md) lays out the work in phases, and [the partner architecture](architecture/partners.md) defines its modules.
 
 ## Terms
 
@@ -19,15 +19,15 @@ The host bills each partner through Polar ([ADR 0009](adr/0009-partners-bill-thr
 
 - A tier has a monthly fee and a pool of voice minutes and chat conversations. A partner can have any number of businesses.
 - Annual billing takes 20% off, as it does on direct plans, rounded down to whole dollars a month.
-- Alert texts and transfer attempts don't use the pool, up to a fair-use cap.
+- Alert texts and transfer attempts don't use the pool. The fair-use cap planned for them isn't built, so nothing limits them yet.
 - The entry tier costs about what direct plans cost per minute, and higher tiers cost less per minute. A single business gains nothing by signing up as a partner.
-- Each tier includes some phone numbers. Extra numbers cost what the host pays for them.
+- Each paid tier includes some phone numbers. Free includes none, only the trial number below. Extra numbers cost what the host pays for them.
 - Overage costs less per minute and per chat on higher tiers.
 - Pool overage is on by default and bills pay as you go, up to a monthly cap the partner sets. The partner can turn overage off.
 - Tiers don't limit simultaneous calls, because a cap on an inbound receptionist sends callers to a busy signal.
-- The free tier needs no card. It includes one 14-day number trial per partner, ever, with the same 30 minutes and rules as direct Free. The business's owner or a partner member working in the business can claim it after verifying their own mobile, and the trial's calls transfer to that mobile.
+- The free tier needs no card. It includes one 14-day number trial per partner, ever, with the same 30 minutes and rules as direct Free. The business's owner or admin, or a partner member working in the business, can claim it after verifying their own mobile, and the trial's calls transfer to that mobile.
 
-LobbyStack's cloud sells these tiers:
+LobbyStack's cloud sells these tiers. The code reads them from `partnerTierCatalog` in `packages/shared/src/billing.ts`, and `pnpm docs:partner-tiers` writes the Help Center's tier table from it:
 
 | Tier | Monthly price | Annual price | Pool | Numbers | Minute overage | Chat overage |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -43,20 +43,20 @@ A partner bills its businesses through its own Stripe account, connected with St
 - A package has a name, a monthly price, an optional one-time setup fee, and an allowance. It uses the currency of the partner's Stripe account.
 - Every package renews on the 1st of the month, in UTC. The first invoice charges the rest of that month, so each invoice covers the month the allowance and the overage cap count.
 - For each business, the partner turns overage on or off and sets the overage rate and a monthly cap in money.
-- A partner can mark a business "billed outside LobbyStack". Its usage still draws on the pool, and Stripe charges it nothing.
+- A partner can mark a business "billed outside LobbyStack", which the console calls "You bill it yourself". Its usage still draws on the pool, and Stripe charges it nothing.
 
 When a business runs out of allowance with overage off, or reaches its cap:
 
 - Calls forward to the business's transfer number or the owner's verified phone. With neither, the caller hears a busy signal.
-- Chat shows "We can't reply here right now."
+- Chat shows "We can't reply here right now. Please call us or try again later."
 - The partner and the business get alerts at 80% and 100%.
 
 When the partner's pool runs out with overage off, or the partner reaches its own cap, all its businesses fall back the same way.
 
 ## Partners and their teams
 
-- Partners sign up themselves, without an application.
-- A partner's team has three roles. Owners manage Polar billing and the Stripe connection, and can delete the partner. Admins manage businesses, packages, branding, the domain, keys, the console's settings, and the team's admins and members. Only owners can make someone an owner, change an owner's role, or remove an owner, and the partner always keeps one. Members work inside businesses.
+- Partners sign up themselves, without an application. On the cloud, signup needs the host's invitation link until tier billing is on.
+- A partner's team has three roles. Owners manage Polar billing and the Stripe connection. Deleting the partner is planned as an owner's action, but nothing builds it yet. Admins manage businesses, packages, branding, the domain, keys, the console's settings, and the team's admins and members. Only owners can make someone an owner, change an owner's role, or remove an owner, and the partner always keeps one. Members work inside businesses.
 - The partner console is part of the same app. Staff open it from the partner's domain or the host's.
 - Partner members can open any of the partner's businesses with full access, without joining its team. Each time they open one, the business's audit log records who did it. The business's owners and admins see each visit by name on the Partner access tab in Settings.
 - Phone numbers that partner members claim inside a business count only against the partner's claim quotas.
@@ -110,7 +110,7 @@ A deployment has two layers of branding:
 A partner sets these in v1:
 
 - Name, logo, favicon, and brand color
-- A custom subdomain with automatic TLS on paid tiers, or a subdomain of the host's neutral domain on the free tier
+- A subdomain of the host's neutral domain on every tier, and on paid tiers a subdomain of the partner's own domain, with automatic TLS
 - Branded sign-in and dashboard, with the partner's terms, privacy, and support links
 - Emails under the partner's name, sent from the neutral domain
 - The website widget's script, served from the partner's domain
@@ -128,10 +128,10 @@ A partner's businesses never get the host's marketing, onboarding, or founder em
 Every business, direct or partner, texts from the host's verified toll-free number. Carriers expect that number's verified brand in the first text and in HELP and STOP replies. [The research's SMS section](../research/white-label-reseller-programs.md#sms-sender-rules) has the sources.
 
 - The first text to each customer of each business confirms the opt-in and names the host and the business.
-- HELP and STOP replies name the host and the business.
+- HELP and START replies name the host and the business. STOP gets Twilio's own reply, because Twilio blocks every text to a phone once it sends STOP.
 - Every other text names only the business.
 
-Direct businesses already work this way, except STOP, which still gets Twilio's default reply.
+Direct businesses work the same way.
 
 ## Compliance
 
@@ -144,7 +144,7 @@ Every partner feature works on any deployment. Each piece turns on when the host
 - **Stripe Connect**: packages bill on partners' Stripe accounts. Without it, every partner business is billed outside LobbyStack.
 - **Tier products in Polar**: partners pay for tiers. Without them, a partner's pool has no limit unless the host sets one with `pnpm partner-pool:set`. Nothing prices overage then, so the pool is the limit: no overage and no cap. At the pool, the partner's businesses fall back as an exhausted pool does. The partner's owners and admins get alerts at 80% and 100%.
 - **A partner base domain**: partners get default subdomains, and their emails go out from it. Without it, each partner needs a custom domain.
-- **On-demand TLS in the proxy**: partners' custom domains get certificates. Self-hosted Compose already runs Caddy, which can issue them.
+- **On-demand TLS in the proxy, or Cloudflare for SaaS**: partners' custom domains get certificates. Self-hosted Compose already runs Caddy, which can issue them.
 
 On LobbyStack's cloud:
 
