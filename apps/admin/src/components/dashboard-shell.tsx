@@ -270,5 +270,7 @@ function UserMenu({ partnerConsole = false, user }: Pick<DashboardShellProps, "p
   const can = useBusinessCan();
   const billing = useQuery({ queryKey: ["billing", business?.businessId], enabled: Boolean(business?.businessId) && can("billing"), queryFn: () => requestJson<{ account: { plan: string | null } | null; permissions: BillingPermissions; availableCheckoutPlans: Array<"starter" | "pro">; availableCheckoutIntervals: Record<"starter" | "pro", string[]> }>(`/api/billing?businessId=${encodeURIComponent(business!.businessId)}`) });
   const showUpgradeToPro = can("billing") && billing.data?.permissions.hasCheckoutAccess === true && (billing.data.account?.plan ?? "free_cloud") === "free_cloud" && (billing.data.availableCheckoutPlans ?? []).some(plan => billing.data?.availableCheckoutIntervals[plan].length);
-  return <NavUser user={user} onSignOut={() => void signOut()} onUpgradeToPro={openUpgradePlanDialog} showPartnerConsole={partnerConsole} showUpgradeToPro={showUpgradeToPro} />;
+  // Someone working in a partner's business through an open ends it as they go back to the console, and the business's audit log records it.
+  const leaveBusiness = business?.via === "partner" ? () => { void fetch("/api/partner/businesses/leave", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ businessId: business.businessId }), keepalive: true }).catch(() => undefined); } : undefined;
+  return <NavUser user={user} onLeaveBusiness={leaveBusiness} onSignOut={() => void signOut()} onUpgradeToPro={openUpgradePlanDialog} showPartnerConsole={partnerConsole} showUpgradeToPro={showUpgradeToPro} />;
 }

@@ -48,12 +48,15 @@ describe("original settings route shell", () => {
       view.unmount();
       return paths;
     };
-    expect(tabs("business_owner", "activity")).toEqual(["/settings/usage", "/settings/subscription", "/settings/appearance", "/settings/notifications"]);
-    expect(tabs("business_admin", "full")).toEqual(["/settings/usage", "/settings/subscription", "/settings/team", "/settings/phone-number", "/settings/appearance", "/settings/notifications"]);
+    // They also see who on the partner's team opened the business.
+    expect(tabs("business_owner", "activity")).toEqual(["/settings/usage", "/settings/subscription", "/settings/appearance", "/settings/notifications", "/settings/partner-access"]);
+    expect(tabs("business_admin", "full")).toEqual(["/settings/usage", "/settings/subscription", "/settings/team", "/settings/phone-number", "/settings/appearance", "/settings/notifications", "/settings/partner-access"]);
     expect(tabs("viewer", "full")).not.toContain("/settings/subscription");
     // Someone from the partner who opened the business acts as an admin there, but it isn't theirs to pay.
     expect(tabs("business_admin", "full", "partner")).not.toContain("/settings/subscription");
+    expect(tabs("business_admin", "full", "partner")).not.toContain("/settings/partner-access");
     // A direct business pays the host on its plan tab.
     expect(tabs("business_owner", null)).not.toContain("/settings/subscription");
+    expect(tabs("business_owner", null)).not.toContain("/settings/partner-access");
   });
 });

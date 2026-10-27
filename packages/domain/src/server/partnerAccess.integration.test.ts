@@ -6,7 +6,7 @@ import { auditLogs, businesses, businessInvitations, businessMemberships, create
 import type { PartnerAccessLevel } from "@lobbystack/shared";
 
 import { forgetCachedBrands } from "./brands";
-import { capabilityNames, HOST_BRAND_SCOPE, openPartnerBusiness, PARTNER_OPEN_LIFETIME_MS, requireBusinessAccess, type BrandScope, type Capability } from "./businessAccess";
+import { capabilityNames, HOST_BRAND_SCOPE, leavePartnerBusiness, listPartnerAccess, openPartnerBusiness, PARTNER_OPEN_LIFETIME_MS, requireBusinessAccess, type BrandScope, type Capability } from "./businessAccess";
 import { getActiveOnboardingState } from "./onboarding";
 import { acceptPartnerInvitation, createPartnerBusiness, hashPartnerToken, invitePartnerMember, removePartnerMember, signUpPartner, type PartnerMemberActor } from "./partners";
 import { startOnboardingPhoneVerification, startOperatorPhoneVerification } from "./phoneVerification";
@@ -192,7 +192,17 @@ describe.skipIf(!client)("opening a partner's business", () => {
       expect((await opens()).map((row) => String(row.payload?.expiresAt)).sort()).toEqual([expiresAt.toISOString(), again.expiresAt.toISOString()]);
       expect(await asMigrator(tx, async () => await tx.select({ expiresAt: partnerBusinessOpens.expiresAt }).from(partnerBusinessOpens).where(eq(partnerBusinessOpens.businessId, businessId)))).toEqual([{ expiresAt: again.expiresAt }]);
 
+      // Going back to the console ends the open at once, and the owner sees who came and went.
+      await openPartnerBusiness(acme.context, { ...member, openedBy: { name: "Mia", email: "mia@acme.example" } });
+      expect(await leavePartnerBusiness(acme.context, member)).toEqual({ left: true });
+      await expect(access(tx, { ...member, brand: acme.brand })).rejects.toMatchObject(notHere);
+      expect(await leavePartnerBusiness(acme.context, member)).toEqual({ left: false });
+      const visits = await asOperator(tx, { userId: client!.userId, businessId }, async (inner) => await listPartnerAccess(inner, { businessId }));
+      expect(visits.map((visit) => visit.kind).sort()).toEqual(["left", "opened", "opened", "opened"]);
+      expect(visits.filter((visit) => visit.email === "mia@acme.example").map((visit) => visit.kind).sort()).toEqual(["left", "opened"]);
+
       // Once it runs out, nothing reaches the business again.
+      await openPartnerBusiness(acme.context, member);
       await expireOpen(tx, member);
       await expect(access(tx, { ...member, brand: acme.brand })).rejects.toMatchObject(notHere);
       expect(await visibleRows(tx, member)).toEqual({ businesses: 0, services: 0, auditLogs: 0 });

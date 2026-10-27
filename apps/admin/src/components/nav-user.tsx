@@ -25,6 +25,8 @@ import {
 type User = { email: string; name: string };
 
 type NavUserProps = {
+  /** Ends the person's open of the business they work in as the partner's staff, as they go back to the console. */
+  onLeaveBusiness?: (() => void) | undefined;
   onSignOut: () => void;
   onUpgradeToPro?: () => void;
   /** Links to the partner console, for someone on a partner's team. */
@@ -34,6 +36,7 @@ type NavUserProps = {
 };
 
 export function NavUser({
+  onLeaveBusiness,
   onSignOut,
   onUpgradeToPro,
   showPartnerConsole = false,
@@ -114,7 +117,7 @@ export function NavUser({
                 {t("sidebar.account")}
               </DropdownMenuItem>
               {showPartnerConsole ? (
-                <DropdownMenuItem render={<Link href="/partner" />}>
+                <DropdownMenuItem onClick={onLeaveBusiness} render={<Link href="/partner" />}>
                   <Handshake />
                   {t("sidebar.partnerConsole")}
                 </DropdownMenuItem>

@@ -32,6 +32,8 @@ const pageCapabilities: ReadonlyArray<readonly [prefix: string, capability: Capa
   ["/settings/plan", "billing"],
   // A partner's business's billing page, where its owner pays the partner. The Settings menu shows it only on a partner's business.
   ["/settings/subscription", "activity"],
+  // Who on the partner's team opened the business, from its audit log. The Settings menu shows it only on a partner's business, and only its owners and admins can read it.
+  ["/settings/partner-access", "activity"],
   ["/settings/api-keys", "api_keys"],
   ["/settings/connected-apps", "mcp"],
 ];

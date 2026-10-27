@@ -20,7 +20,8 @@
     "notifications": "Notifications",
     "widget": "Widget de site web",
     "apiKeys": "Clés API",
-    "connectedApps": "Applications connectées"
+    "connectedApps": "Applications connectées",
+    "partnerAccess": "Accès du partenaire"
   },
   "widget": {
     "title": "Widget de site web",
@@ -1173,6 +1174,21 @@
       "appointments_write": "Réserver, annuler et déplacer des rendez-vous",
       "messages_read": "Lire les messages pris par la réceptionniste",
       "knowledge_write": "Ajouter des entrées de connaissances et des FAQ"
+    }
+  },
+  "partnerAccess": {
+    "title": "Accès du partenaire",
+    "description": "Chaque fois qu'une personne de l'équipe de {{appName}} a ouvert votre tableau de bord pour vous aider, et quand elle l'a quitté.",
+    "empty": "Personne de l'équipe de {{appName}} n'a encore ouvert votre tableau de bord.",
+    "adminsOnly": "Seuls les propriétaires et les administrateurs voient qui a ouvert le tableau de bord.",
+    "loadFailed": "Nous n'avons pas pu charger cette liste. Réessayez.",
+    "someone": "Une personne de l'équipe de {{appName}}",
+    "opened": "Ouverture de votre tableau de bord",
+    "left": "Départ",
+    "columns": {
+      "who": "Qui",
+      "what": "Quoi",
+      "when": "Quand"
     }
   }
 }

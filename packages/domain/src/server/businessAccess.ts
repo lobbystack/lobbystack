@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, sql } from "drizzle-orm";
 
 import type { AuthzRole } from "@lobbystack/contracts";
 import { auditLogs, businesses, businessMemberships, partnerBusinessOpens, partnerMembers, userActiveBusinesses, withBusinessTransaction, type DatabaseTransaction } from "@lobbystack/db";
@@ -163,7 +163,7 @@ function businessNotFound(): Error {
  * one that's no longer active answers as one that doesn't exist. When the
  * console names its partner, a business of any other partner is refused too.
  */
-export async function openPartnerBusiness(context: DomainContext, input: { userId: string; businessId: string; partnerId?: string | undefined }): Promise<{ expiresAt: Date }> {
+export async function openPartnerBusiness(context: DomainContext, input: { userId: string; businessId: string; partnerId?: string | undefined; openedBy?: { name: string | null; email: string | null } | undefined }): Promise<{ expiresAt: Date }> {
   // The person isn't on the business's team, so its rows show only to the system actor until the open exists.
   return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "system" }, async (tx) => {
     const [business] = await tx.select({ partnerId: businesses.partnerId, status: businesses.status }).from(businesses).where(eq(businesses.id, input.businessId)).limit(1);
@@ -177,12 +177,80 @@ export async function openPartnerBusiness(context: DomainContext, input: { userI
       target: [partnerBusinessOpens.businessId, partnerBusinessOpens.userId],
       set: { openedAt, expiresAt },
     });
-    await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: input.userId, eventType: "partner.business_opened", entityType: "business", entityId: input.businessId, payload: { partnerId, partnerRole: member.role, openedAt: openedAt.toISOString(), expiresAt: expiresAt.toISOString() } });
+    await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: input.userId, eventType: "partner.business_opened", entityType: "business", entityId: input.businessId, payload: { partnerId, partnerRole: member.role, openedAt: openedAt.toISOString(), expiresAt: expiresAt.toISOString(), ...(input.openedBy ? { openedBy: input.openedBy } : {}) } });
     // The partner's domain opens the dashboard on it.
     await tx.insert(userActiveBusinesses).values({ userId: input.userId, partnerId, businessId: input.businessId }).onConflictDoUpdate({
       target: [userActiveBusinesses.userId, userActiveBusinesses.partnerId],
       set: { businessId: input.businessId, updatedAt: new Date() },
     });
     return { expiresAt };
+  });
+}
+
+/**
+ * Ends the person's open of a partner's business when they go back to the
+ * console, so it doesn't run out its PARTNER_OPEN_LIFETIME_MS. The business's
+ * audit log records when they left. Without an open still running, it does
+ * nothing.
+ */
+export async function leavePartnerBusiness(context: DomainContext, input: { userId: string; businessId: string }): Promise<{ left: boolean }> {
+  return await withBusinessTransaction(context.db, { userId: input.userId, businessId: input.businessId, actorType: "system" }, async (tx) => {
+    // The open checks expires_at against the transaction's now(), so the leave sets that. The row
+    // needs expires_at past opened_at, which the app's clock wrote, so opened_at moves back if it must;
+    // the audit log keeps when they opened it.
+    const [ended] = await tx.update(partnerBusinessOpens).set({ expiresAt: sql`now()`, openedAt: sql`least(${partnerBusinessOpens.openedAt}, now() - interval '1 millisecond')` })
+      .where(and(eq(partnerBusinessOpens.businessId, input.businessId), eq(partnerBusinessOpens.userId, input.userId), gt(partnerBusinessOpens.expiresAt, sql`now()`)))
+      .returning({ partnerId: partnerBusinessOpens.partnerId, leftAt: partnerBusinessOpens.expiresAt });
+    if (!ended) return { left: false };
+    // The leave names who left as their last open did.
+    const [opened] = await tx.select({ payload: auditLogs.payload }).from(auditLogs)
+      .where(and(eq(auditLogs.businessId, input.businessId), eq(auditLogs.actorUserId, input.userId), eq(auditLogs.eventType, "partner.business_opened")))
+      // Opens in one transaction share created_at; the time each recorded tells them apart.
+      .orderBy(desc(auditLogs.createdAt), desc(sql`${auditLogs.payload}->>'openedAt'`)).limit(1);
+    const { openedBy, partnerRole } = (opened?.payload ?? {}) as Record<string, unknown>;
+    await tx.insert(auditLogs).values({ businessId: input.businessId, actorUserId: input.userId, eventType: "partner.business_left", entityType: "business", entityId: input.businessId, payload: { partnerId: ended.partnerId, leftAt: ended.leftAt.toISOString(), ...(partnerRole ? { partnerRole } : {}), ...(openedBy ? { openedBy } : {}) } });
+    return { left: true };
+  });
+}
+
+/** One time someone on the business's partner's team opened it or left it, as its audit log has it. */
+export type PartnerAccessEvent = {
+  id: string;
+  kind: "opened" | "left";
+  at: Date;
+  /** Who, as they were when they opened it; null for an open recorded before the log kept names. */
+  name: string | null;
+  email: string | null;
+  partnerRole: string | null;
+  /** When an open would end by itself. */
+  expiresAt: Date | null;
+};
+
+const PARTNER_ACCESS_EVENTS = ["partner.business_opened", "partner.business_left"] as const;
+
+/**
+ * The business's partner's visits, newest first, for its owners and admins.
+ * The transaction is the operator's, scoped to the business.
+ */
+export async function listPartnerAccess(tx: DatabaseTransaction, input: { businessId: string; limit?: number }): Promise<PartnerAccessEvent[]> {
+  const rows = await tx.select({ id: auditLogs.id, eventType: auditLogs.eventType, actorUserId: auditLogs.actorUserId, payload: auditLogs.payload, createdAt: auditLogs.createdAt })
+    .from(auditLogs)
+    .where(and(eq(auditLogs.businessId, input.businessId), inArray(auditLogs.eventType, [...PARTNER_ACCESS_EVENTS])))
+    .orderBy(desc(auditLogs.createdAt), desc(auditLogs.id))
+    .limit(Math.min(Math.max(input.limit ?? 100, 1), 500));
+  const text = (value: unknown) => typeof value === "string" && value.trim() ? value : null;
+  return rows.map((row) => {
+    const payload = (row.payload ?? {}) as Record<string, unknown>;
+    const opener = typeof payload.openedBy === "object" && payload.openedBy !== null ? payload.openedBy as Record<string, unknown> : null;
+    const opened = row.eventType === "partner.business_opened";
+    return {
+      id: row.id,
+      kind: opened ? "opened" : "left",
+      at: row.createdAt,
+      name: text(opener?.name),
+      email: text(opener?.email),
+      partnerRole: text(payload.partnerRole),
+      expiresAt: opened && text(payload.expiresAt) ? new Date(String(payload.expiresAt)) : null,
+    };
   });
 }

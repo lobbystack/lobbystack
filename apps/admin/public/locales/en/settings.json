@@ -20,7 +20,8 @@
     "notifications": "Notifications",
     "widget": "Website widget",
     "apiKeys": "API keys",
-    "connectedApps": "Connected apps"
+    "connectedApps": "Connected apps",
+    "partnerAccess": "Partner access"
   },
   "widget": {
     "title": "Website widget",
@@ -1166,6 +1167,21 @@
       "appointments_write": "Book, cancel and reschedule appointments",
       "messages_read": "Read messages the receptionist took",
       "knowledge_write": "Add knowledge entries and FAQs"
+    }
+  },
+  "partnerAccess": {
+    "title": "Partner access",
+    "description": "Each time someone on {{appName}}'s team opened your dashboard to help you, and when they left.",
+    "empty": "No one on {{appName}}'s team has opened your dashboard yet.",
+    "adminsOnly": "Only owners and admins can see who opened the dashboard.",
+    "loadFailed": "We couldn't load this list. Try again.",
+    "someone": "Someone on {{appName}}'s team",
+    "opened": "Opened your dashboard",
+    "left": "Left",
+    "columns": {
+      "who": "Who",
+      "what": "What",
+      "when": "When"
     }
   }
 }

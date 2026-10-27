@@ -20,7 +20,8 @@
     "notifications": "Obaveštenja",
     "widget": "Vidžet za sajt",
     "apiKeys": "API ključevi",
-    "connectedApps": "Povezane aplikacije"
+    "connectedApps": "Povezane aplikacije",
+    "partnerAccess": "Pristup partnera"
   },
   "widget": {
     "title": "Vidžet za sajt",
@@ -1173,6 +1174,21 @@
       "appointments_write": "Zakazivanje, otkazivanje i pomeranje termina",
       "messages_read": "Čitanje poruka koje je primio recepcioner",
       "knowledge_write": "Dodavanje unosa u znanje i čestih pitanja"
+    }
+  },
+  "partnerAccess": {
+    "title": "Pristup partnera",
+    "description": "Svaki put kada je neko iz tima {{appName}} otvorio vašu kontrolnu tablu da vam pomogne, i kada ju je napustio.",
+    "empty": "Niko iz tima {{appName}} još nije otvorio vašu kontrolnu tablu.",
+    "adminsOnly": "Samo vlasnici i administratori vide ko je otvorio kontrolnu tablu.",
+    "loadFailed": "Nismo uspeli da učitamo ovaj spisak. Pokušajte ponovo.",
+    "someone": "Neko iz tima {{appName}}",
+    "opened": "Otvaranje vaše kontrolne table",
+    "left": "Izlazak",
+    "columns": {
+      "who": "Ko",
+      "what": "Šta",
+      "when": "Kada"
     }
   }
 }
