@@ -200,29 +200,29 @@ function BookingScene({ locale }: SceneProps) {
 function HandoffScene({ locale }: SceneProps) {
   const t = getProductScenesCopy(locale)
   const person = t.team[1] ?? { name: "Sarah Lopez", role: "Customer success" }
+  // The urgent message overlaps the phone it was transferred to, like a notification.
   return (
-    <Scene width={500} height={400} tilt="flat">
-      <Place x={0} y={80}>
-        <Tile className="w-60" innerClassName="space-y-3 p-4">
-          <Chip strong>{t.urgent}</Chip>
-          <span className="block rounded-2xl rounded-bl-sm bg-beige-strong px-3 py-2 text-sm leading-snug">{t.urgentQuote}</span>
-        </Tile>
-      </Place>
-      <Connector x={246} y={170} length={44} />
-      <Place x={290} y={0}>
-        <Tile className="w-[12.5rem] rounded-[2.75rem] p-2.5" innerClassName="flex h-[24rem] flex-col items-center rounded-[2.1rem] px-4 pt-3 pb-5 text-center">
-          <span className="h-1.5 w-12 rounded-full bg-black/10" />
-          <Chip className="mt-6 px-2.5 text-[0.6875rem]">{t.transferredTo(person.name.split(" ")[0] ?? person.name)}</Chip>
-          <Initials name={person.name} className="mt-6 size-16 text-lg" />
+    <Scene width={400} height={320} tilt="flat">
+      <Place x={204} y={0}>
+        <Tile className="w-[11.5rem] rounded-[2.5rem] p-2" innerClassName="flex h-[19rem] flex-col items-center rounded-[2rem] px-4 pt-3 pb-4 text-center">
+          <span className="h-1.5 w-10 rounded-full bg-black/10" />
+          <Initials name={person.name} className="mt-9 size-14 text-base" />
           <span className="mt-3 block text-[0.9375rem] font-medium">{person.name}</span>
           <span className="block text-xs text-muted-foreground">{person.role}</span>
+          <Chip className="mt-3 px-2.5 text-[0.6875rem]">{t.transferredTo(person.name.split(" ")[0] ?? person.name)}</Chip>
           <span className="mt-auto flex items-center gap-1.5 text-left text-[0.6875rem] leading-snug text-muted-foreground">
             <Paperclip className="size-3.5 shrink-0" />
             {t.contextAttached}
           </span>
-          <Badge className="mt-4 size-12 ring-4">
+          <Badge className="mt-3 size-11 ring-4">
             <PhoneCall className="size-5" strokeWidth={1.75} />
           </Badge>
+        </Tile>
+      </Place>
+      <Place x={0} y={96}>
+        <Tile accent className="w-[13.75rem]" innerClassName="space-y-2.5 p-3.5">
+          <Chip strong>{t.urgent}</Chip>
+          <span className="block text-sm leading-snug">{t.urgentQuote}</span>
         </Tile>
       </Place>
     </Scene>
