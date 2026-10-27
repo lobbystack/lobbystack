@@ -19,6 +19,7 @@
     "docs:dev:no-open": "pnpm --filter @lobbystack/docs dev:no-open",
     "docs:validate": "pnpm --filter @lobbystack/docs validate",
     "docs:broken-links": "pnpm --filter @lobbystack/docs broken-links",
+    "docs:partner-tiers": "tsx --tsconfig scripts/tsconfig.json scripts/write-partner-tiers.ts",
     "dev:onboarding:website": "tsx --tsconfig scripts/tsconfig.json scripts/prepare-onboarding-website.ts",
     "prospect-demo": "tsx --tsconfig scripts/tsconfig.json scripts/prospect-demo.ts",
     "widget:embed:build": "pnpm --filter @lobbystack/embed build && node scripts/copy-widget-embed.mjs",
