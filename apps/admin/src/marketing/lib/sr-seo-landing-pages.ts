@@ -310,6 +310,8 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
     ctaHeading: "Neka LobbyStack preuzme Vaš sledeći poziv",
     ctaBody:
       "Unesite svoje podatke, prosledite broj i sami ga pozovite. Besplatan paket uključuje 30 minuta razgovora.",
+    ctaPrimaryLabel: "Isprobajte besplatno",
+    ctaSecondaryLabel: "Pogledajte cene",
   },
   "/solutions/ai-appointment-scheduler/": {
     group: "solution",
@@ -452,6 +454,8 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
     ctaHeading: "Zakažite sledećeg pozivaoca dok je još na vezi",
     ctaBody:
       "Dodajte svoje usluge, povežite Google Calendar i pozovite svoj broj da zakažete probni termin. Besplatan paket uključuje 30 minuta razgovora.",
+    ctaPrimaryLabel: "Isprobajte besplatno",
+    ctaSecondaryLabel: "Pogledajte cene",
   },
   "/solutions/ai-receptionist-for-home-services/": {
     group: "solution",
@@ -581,6 +585,8 @@ const bespokeSolutionPagesSr: Record<string, SeoLandingPage> = {
     ctaHeading: "Javite se na sledeći poziv za posao dok ste na trenutnom",
     ctaBody:
       "Dodajte usluge, pravila za hitne slučajeve i područje rada, prosledite broj i pozovite ga da testirate. Besplatan paket uključuje 30 minuta razgovora.",
+    ctaPrimaryLabel: "Isprobajte besplatno",
+    ctaSecondaryLabel: "Pogledajte cene",
   },
 }
 
@@ -830,7 +836,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         },
         {
           title: "Koliko košta AI recepcioner za stomatološke ordinacije",
-          body: "Nijedan paket nema naknadu za aktivaciju, a cene su u američkim dolarima. LobbyStack meri potrošnju u sekundama, a pozivi kraći od 10 sekundi ili prekinuti kao neželjeni se ne računaju. Godišnja naplata je 20% jeftinija, pa Starter izlazi $24 mesečno, a Pro $80. AI recepcioneri specijalizovani za stomatologiju koji objavljuju cene koštali su od $299 do $1,199 mesečno kada smo 9. oktobra 2026. proverili njihove sajtove.",
+          body: "Nijedan paket nema naknadu za aktivaciju, a cene su u američkim dolarima. LobbyStack meri potrošnju u sekundama, a pozivi kraći od 10 sekundi ili prekinuti kao neželjeni se ne računaju. Godišnja naplata je 20% jeftinija, pa Starter izlazi $24 mesečno, a Pro $80. AI recepcioneri specijalizovani za stomatologiju koji objavljuju cene koštali su od $299 do $1,199 mesečno kada smo 27. oktobra 2026. proverili njihove sajtove.",
           points: [
             "Free: 30 minuta razgovora i broj iz SAD ili Kanade besplatno 14 dana, bez kartice",
             "Starter: $30 mesečno za 150 minuta i jedan broj, zatim $0.20 po minutu",
@@ -839,11 +845,11 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         },
         {
           title: "Kada je bolji recepcioner specijalizovan za stomatologiju",
-          body: "LobbyStack zakazuje samo u Google Calendar, pa Vaš tim nove termine prepisuje u Dentrix, Open Dental ili Eaglesoft. LobbyStack ne tvrdi da je usklađen sa HIPAA, ne proverava pravo na pokriće kod osiguravača i ne vodi kampanje za pozivanje pacijenata na kontrolu. Ako Vam treba nešto od toga, izaberite stomatološkog dobavljača. Svaku tvrdnju ispod pročitali smo na sajtu dobavljača 9. oktobra 2026.",
+          body: "LobbyStack zakazuje samo u Google Calendar, pa Vaš tim nove termine prepisuje u Dentrix, Open Dental ili Eaglesoft. LobbyStack ne tvrdi da je usklađen sa HIPAA, ne proverava pravo na pokriće kod osiguravača i ne vodi kampanje za pozivanje pacijenata na kontrolu. Ako Vam treba nešto od toga, izaberite stomatološkog dobavljača. Svaku tvrdnju ispod pročitali smo na sajtu dobavljača 27. oktobra 2026.",
           points: [
             "Upis termina u softver ordinacije: Dentina navodi 11 sistema u koje upisuje termine",
             "Recepcioner povezan sa softverom ordinacije: Peerlogic navodi 8 sistema sa kojima se povezuje",
-            "Automatsko pozivanje na kontrolu: Dentina prodaje odlazne kampanje za pozivanje pacijenata, a Viva AI uključuje pozivanje na kontrolu od paketa Platinum za $899",
+            "Automatsko pozivanje na kontrolu: Dentina prodaje odlazne kampanje za pozivanje pacijenata, a Viva AI uključuje pozivanje na kontrolu i ponovno aktiviranje pacijenata u svojim paketima",
           ],
         },
       ],
@@ -856,7 +862,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Koliko košta AI recepcioner za stomatološke ordinacije?",
           answer:
-            "LobbyStack košta $30 mesečno na paketu Starter ili $100 mesečno na paketu Pro, bez naknade za aktivaciju. Starter uključuje 150 minuta, zatim $0.20 po minutu. Pro uključuje 500 minuta, zatim $0.18 po minutu, pa 1,000 minuta mesečno na paketu Pro košta $190. Pozivi kraći od 10 sekundi i pozivi prekinuti kao neželjeni se ne računaju. AI recepcioneri specijalizovani za stomatologiju koji objavljuju cene koštali su od $299 mesečno po lokaciji uz godišnju naplatu (Dentina) do $1,199 mesečno (Viva AI) kada smo ih proverili 9. oktobra 2026.",
+            "LobbyStack košta $30 mesečno na paketu Starter ili $100 mesečno na paketu Pro, bez naknade za aktivaciju. Starter uključuje 150 minuta, zatim $0.20 po minutu. Pro uključuje 500 minuta, zatim $0.18 po minutu, pa 1,000 minuta mesečno na paketu Pro košta $190. Pozivi kraći od 10 sekundi i pozivi prekinuti kao neželjeni se ne računaju. AI recepcioneri specijalizovani za stomatologiju koji objavljuju cene koštali su od $299 mesečno po lokaciji uz godišnju naplatu (Dentina) do $1,199 mesečno (Viva AI) kada smo ih proverili 27. oktobra 2026.",
         },
         {
           question: "Da li je LobbyStack usklađen sa HIPAA?",
@@ -866,7 +872,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Može li da zakazuje direktno u Dentrix ili Open Dental?",
           answer:
-            "Ne. LobbyStack zakazuje u Google Calendar i ne povezuje se sa Dentrix-om, Open Dental-om, Eaglesoft-om ni drugim softverom za vođenje ordinacije, pa Vaš tim nove termine prepisuje. Potpisani webhook-ovi i REST API mogu da šalju podatke o terminima i pozivima u Zapier ili Vaše alate. Ako Vam treba upis termina u softver ordinacije, Dentina navodi 11 sistema u koje upisuje termine, a Peerlogic navodi 8 sa kojima se povezuje (provereno 9. oktobra 2026.).",
+            "Ne. LobbyStack zakazuje u Google Calendar i ne povezuje se sa Dentrix-om, Open Dental-om, Eaglesoft-om ni drugim softverom za vođenje ordinacije, pa Vaš tim nove termine prepisuje. Potpisani webhook-ovi i REST API mogu da šalju podatke o terminima i pozivima u Zapier ili Vaše alate. Ako Vam treba upis termina u softver ordinacije, Dentina navodi 11 sistema u koje upisuje termine, a Peerlogic navodi 8 sa kojima se povezuje (provereno 27. oktobra 2026.).",
         },
         {
           question: "Kako postupa sa hitnim stomatološkim pozivom?",

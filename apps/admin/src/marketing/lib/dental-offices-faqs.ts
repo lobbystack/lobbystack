@@ -9,7 +9,7 @@ export const dentalOfficesFaqs: FaqItem[] = [
   {
     question: "How much does an AI dental receptionist cost?",
     answer:
-      "LobbyStack costs $30 a month on Starter or $100 a month on Pro, with no setup fee. Starter includes 150 minutes, then $0.20 a minute. Pro includes 500 minutes, then $0.18 a minute, so 1,000 minutes a month on Pro costs $190. Calls under 10 seconds and calls ended as spam don't count. Dental-specific receptionists that published prices ran from $299 a month per location, billed annually (Dentina), to $1,199 a month (Viva AI) when we checked on October 9, 2026.",
+      "LobbyStack costs $30 a month on Starter or $100 a month on Pro, with no setup fee. Starter includes 150 minutes, then $0.20 a minute. Pro includes 500 minutes, then $0.18 a minute, so 1,000 minutes a month on Pro costs $190. Calls under 10 seconds and calls ended as spam don't count. Dental-specific receptionists that published prices ran from $299 a month per location, billed annually (Dentina), to $1,199 a month (Viva AI) when we checked on October 27, 2026.",
   },
   {
     question: "Is LobbyStack HIPAA compliant?",
@@ -19,7 +19,7 @@ export const dentalOfficesFaqs: FaqItem[] = [
   {
     question: "Can it book directly into Dentrix or Open Dental?",
     answer:
-      "No. LobbyStack books into Google Calendar and doesn't connect to Dentrix, Open Dental, Eaglesoft or other practice management software, so your team copies new bookings over. Signed webhooks and the REST API can send booking and call data to Zapier or your own tools. If you need bookings written into your PMS, Dentina names 11 systems it writes bookings back to, and Peerlogic names 8 it integrates with (checked October 9, 2026).",
+      "No. LobbyStack books into Google Calendar and doesn't connect to Dentrix, Open Dental, Eaglesoft or other practice management software, so your team copies new bookings over. Signed webhooks and the REST API can send booking and call data to Zapier or your own tools. If you need bookings written into your PMS, Dentina names 11 systems it writes bookings back to, and Peerlogic names 8 it integrates with (checked October 27, 2026).",
   },
   {
     question: "How does it handle a dental emergency call?",

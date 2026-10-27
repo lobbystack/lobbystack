@@ -211,7 +211,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
       description:
         "Un service de réponse téléphonique hors heures qui réserve les appels courants dans Google Calendar et transfère les urgences à votre téléphone de garde. Forfait gratuit, puis 30 $ par mois.",
       eyebrow: "Réponse hors heures",
-      h1: "Un service de réponse téléphonique hors heures par IA pour la nuit, les fins de semaine et les jours fériés",
+      h1: "Un service de réponse hors heures par IA, la nuit et les fins de semaine",
       intro:
         "Quand vous fermez, LobbyStack répond à votre numéro d’entreprise. Il réserve les appels courants dans Google Calendar, transfère à votre téléphone de garde les urgences que vos règles définissent et résume chaque appel pour le matin.",
       imageAlt:
@@ -388,7 +388,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
         },
         {
           title: "Ce que coûte un réceptionniste dentaire IA",
-          body: "Aucun forfait n’a de frais de mise en service, et les prix sont en dollars américains. LobbyStack compte l’utilisation à la seconde, et les appels de moins de 10 secondes ou terminés comme indésirables ne comptent pas. La facturation annuelle coûte 20 % de moins, ce qui ramène Starter à 24 $ par mois et Pro à 80 $. Les réceptionnistes spécialisés en dentaire qui publient leurs prix allaient de 299 $ à 1 199 $ par mois quand nous avons consulté leurs sites le 9 octobre 2026.",
+          body: "Aucun forfait n’a de frais de mise en service, et les prix sont en dollars américains. LobbyStack compte l’utilisation à la seconde, et les appels de moins de 10 secondes ou terminés comme indésirables ne comptent pas. La facturation annuelle coûte 20 % de moins, ce qui ramène Starter à 24 $ par mois et Pro à 80 $. Les réceptionnistes spécialisés en dentaire qui publient leurs prix allaient de 299 $ à 1 199 $ par mois quand nous avons consulté leurs sites le 27 octobre 2026.",
           points: [
             "Gratuit : 30 minutes vocales et un numéro américain ou canadien pendant 14 jours, sans carte",
             "Starter : 30 $ par mois pour 150 minutes et un numéro, puis 0,20 $ la minute",
@@ -398,11 +398,11 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
         {
           title:
             "Quand un réceptionniste spécialisé en dentaire convient mieux",
-          body: "LobbyStack réserve seulement dans Google Calendar, donc votre équipe recopie les nouveaux rendez-vous dans Dentrix, Open Dental ou Eaglesoft. Il ne revendique aucune conformité HIPAA, ne vérifie pas l’admissibilité à l’assurance et ne mène aucune campagne de relance. Si vous avez besoin de l’une de ces fonctions, choisissez un fournisseur dentaire. Nous avons lu chaque affirmation ci-dessous sur le site du fournisseur le 9 octobre 2026.",
+          body: "LobbyStack réserve seulement dans Google Calendar, donc votre équipe recopie les nouveaux rendez-vous dans Dentrix, Open Dental ou Eaglesoft. Il ne revendique aucune conformité HIPAA, ne vérifie pas l’admissibilité à l’assurance et ne mène aucune campagne de relance. Si vous avez besoin de l’une de ces fonctions, choisissez un fournisseur dentaire. Nous avons lu chaque affirmation ci-dessous sur le site du fournisseur le 27 octobre 2026.",
           points: [
             "Des rendez-vous inscrits dans votre logiciel de gestion : Dentina cite 11 logiciels dans lesquels il inscrit les rendez-vous",
             "Un réceptionniste relié à votre logiciel de gestion : Peerlogic cite 8 logiciels avec lesquels il s’intègre",
-            "Des relances automatiques : Dentina vend des campagnes de relance sortantes, et Viva AI inclut la relance des patients à partir de son forfait Platinum à 899 $",
+            "Des relances automatiques : Dentina vend des campagnes de relance sortantes, et Viva AI inclut la relance et la réactivation des patients dans ses forfaits",
           ],
         },
       ],
@@ -415,7 +415,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "Combien coûte un réceptionniste dentaire IA ?",
           answer:
-            "LobbyStack coûte 30 $ par mois avec Starter ou 100 $ par mois avec Pro, sans frais de mise en service. Starter inclut 150 minutes, puis 0,20 $ la minute. Pro inclut 500 minutes, puis 0,18 $ la minute, donc 1 000 minutes par mois avec Pro coûtent 190 $. Les appels de moins de 10 secondes et ceux terminés comme indésirables ne comptent pas. Les réceptionnistes spécialisés en dentaire qui publiaient leurs prix allaient de 299 $ par mois et par établissement, facturé à l’année (Dentina), à 1 199 $ par mois (Viva AI) lors de notre vérification du 9 octobre 2026.",
+            "LobbyStack coûte 30 $ par mois avec Starter ou 100 $ par mois avec Pro, sans frais de mise en service. Starter inclut 150 minutes, puis 0,20 $ la minute. Pro inclut 500 minutes, puis 0,18 $ la minute, donc 1 000 minutes par mois avec Pro coûtent 190 $. Les appels de moins de 10 secondes et ceux terminés comme indésirables ne comptent pas. Les réceptionnistes spécialisés en dentaire qui publiaient leurs prix allaient de 299 $ par mois et par établissement, facturé à l’année (Dentina), à 1 199 $ par mois (Viva AI) lors de notre vérification du 27 octobre 2026.",
         },
         {
           question: "LobbyStack est-il conforme à HIPAA ?",
@@ -426,7 +426,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
           question:
             "Peut-il réserver directement dans Dentrix ou Open Dental ?",
           answer:
-            "Non. LobbyStack réserve dans Google Calendar et ne se connecte pas à Dentrix, Open Dental, Eaglesoft ni à d’autres logiciels de gestion de cabinet, donc votre équipe recopie les nouveaux rendez-vous. Les webhooks signés et l’API REST peuvent envoyer les données de réservation et d’appel vers Zapier ou vos propres outils. Si vous avez besoin que les rendez-vous s’inscrivent dans votre logiciel de gestion, Dentina cite 11 logiciels dans lesquels il les inscrit, et Peerlogic en cite 8 avec lesquels il s’intègre (vérifié le 9 octobre 2026).",
+            "Non. LobbyStack réserve dans Google Calendar et ne se connecte pas à Dentrix, Open Dental, Eaglesoft ni à d’autres logiciels de gestion de cabinet, donc votre équipe recopie les nouveaux rendez-vous. Les webhooks signés et l’API REST peuvent envoyer les données de réservation et d’appel vers Zapier ou vos propres outils. Si vous avez besoin que les rendez-vous s’inscrivent dans votre logiciel de gestion, Dentina cite 11 logiciels dans lesquels il les inscrit, et Peerlogic en cite 8 avec lesquels il s’intègre (vérifié le 27 octobre 2026).",
         },
         {
           question: "Comment traite-t-il un appel pour une urgence dentaire ?",

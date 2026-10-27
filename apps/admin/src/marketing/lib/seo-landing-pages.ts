@@ -254,7 +254,7 @@ export const solutionPages: SeoLandingPage[] = [
       },
       {
         title: "What a dental AI receptionist costs",
-        body: "No plan has a setup fee, and prices are in US dollars. LobbyStack counts usage by the second, and calls under 10 seconds or ended as spam don't count. Annual billing costs 20% less, which brings Starter to $24 a month and Pro to $80. Dental-specific receptionists that publish prices ran from $299 to $1,199 a month when we checked their websites on October 9, 2026.",
+        body: "No plan has a setup fee, and prices are in US dollars. LobbyStack counts usage by the second, and calls under 10 seconds or ended as spam don't count. Annual billing costs 20% less, which brings Starter to $24 a month and Pro to $80. Dental-specific receptionists that publish prices ran from $299 to $1,199 a month when we checked their websites on October 27, 2026.",
         points: [
           "Free: 30 voice minutes and a US or Canadian number for 14 days, without a card",
           "Starter: $30 a month for 150 minutes and one number, then $0.20 a minute",
@@ -263,11 +263,11 @@ export const solutionPages: SeoLandingPage[] = [
       },
       {
         title: "When a dental-specific receptionist fits better",
-        body: "LobbyStack books into Google Calendar only, so your team copies new bookings into Dentrix, Open Dental or Eaglesoft. It makes no HIPAA claim, doesn't verify insurance eligibility and runs no recall campaigns. If you need any of those, pick a dental vendor. We read each claim below on the vendor's own website on October 9, 2026.",
+        body: "LobbyStack books into Google Calendar only, so your team copies new bookings into Dentrix, Open Dental or Eaglesoft. It makes no HIPAA claim, doesn't verify insurance eligibility and runs no recall campaigns. If you need any of those, pick a dental vendor. We read each claim below on the vendor's own website on October 27, 2026.",
         points: [
           "Bookings written into your practice software: Dentina names 11 systems it writes bookings back to",
           "A receptionist tied to your practice software: Peerlogic names 8 systems it integrates with",
-          "Automated recalls: Dentina sells outbound recall campaigns, and Viva AI includes recall outreach from its $899 Platinum plan",
+          "Automated recalls: Dentina sells outbound recall campaigns, and Viva AI includes recall and reactivation outreach in its plans",
         ],
       },
     ],
@@ -1063,13 +1063,8 @@ export const seoLandingPageByPath = (path: string) => {
   return seoLandingPages.find((page) => page.path === normalized)
 }
 
-export const landingPageMarkdown = (page: SeoLandingPage) => `---
-title: ${page.title}
-description: ${page.description}
-url: ${absoluteUrl(page.path)}
----
-
-# ${page.h1}
+// markdownResponse writes the front matter, so the body starts at the heading.
+export const landingPageMarkdown = (page: SeoLandingPage) => `# ${page.h1}
 
 ${page.intro}
 

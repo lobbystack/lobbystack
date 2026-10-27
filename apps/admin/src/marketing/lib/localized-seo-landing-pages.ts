@@ -171,6 +171,8 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
     ctaHeading: "Laissez LobbyStack répondre à votre prochain appel",
     ctaBody:
       "Ajoutez vos renseignements, renvoyez votre numéro et appelez-le vous-même. Le forfait gratuit inclut 30 minutes vocales.",
+    ctaPrimaryLabel: "Essayer gratuitement",
+    ctaSecondaryLabel: "Voir les tarifs",
   },
   "/solutions/ai-appointment-scheduler/": {
     group: "solution",
@@ -316,6 +318,8 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
       "Réservez votre prochain appelant pendant qu’il est encore en ligne",
     ctaBody:
       "Ajoutez vos services, connectez Google Calendar et appelez votre numéro pour réserver un rendez-vous test. Le forfait gratuit inclut 30 minutes vocales.",
+    ctaPrimaryLabel: "Essayer gratuitement",
+    ctaSecondaryLabel: "Voir les tarifs",
   },
   "/solutions/ai-receptionist-for-home-services/": {
     group: "solution",
@@ -449,6 +453,8 @@ const bespokeSolutionPagesFr: Record<string, SeoLandingPage> = {
       "Répondez au prochain appel de service depuis le chantier où vous êtes",
     ctaBody:
       "Ajoutez vos services, vos règles d’urgence et votre zone desservie, renvoyez votre numéro et appelez-le pour tester. Le forfait gratuit inclut 30 minutes vocales.",
+    ctaPrimaryLabel: "Essayer gratuitement",
+    ctaSecondaryLabel: "Voir les tarifs",
   },
 }
 

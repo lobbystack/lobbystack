@@ -395,7 +395,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         },
         {
           title: "Lo que cuesta una recepcionista dental con IA",
-          body: "Ningún plan tiene tarifa de configuración, y los precios están en dólares estadounidenses. LobbyStack cuenta el uso por segundo, y las llamadas de menos de 10 segundos o terminadas como spam no cuentan. La facturación anual cuesta un 20% menos, así que Starter queda en $24 al mes y Pro en $80. Las recepcionistas especializadas en odontología que publican precios iban de $299 a $1,199 al mes cuando revisamos sus sitios web el 9 de octubre de 2026.",
+          body: "Ningún plan tiene tarifa de configuración, y los precios están en dólares estadounidenses. LobbyStack cuenta el uso por segundo, y las llamadas de menos de 10 segundos o terminadas como spam no cuentan. La facturación anual cuesta un 20% menos, así que Starter queda en $24 al mes y Pro en $80. Las recepcionistas especializadas en odontología que publican precios iban de $299 a $1,199 al mes cuando revisamos sus sitios web el 27 de octubre de 2026.",
           points: [
             "Free: 30 minutos de voz y un número de EE. UU. o Canadá gratis durante 14 días, sin tarjeta",
             "Starter: $30 al mes por 150 minutos y un número, y después $0.20 por minuto",
@@ -405,11 +405,11 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         {
           title:
             "Cuándo conviene más una recepcionista especializada en odontología",
-          body: "LobbyStack solo reserva en Google Calendar, así que su equipo copia las citas nuevas en Dentrix, Open Dental o Eaglesoft. No afirma cumplir con HIPAA, no verifica la elegibilidad del seguro y no hace campañas de reactivación de pacientes. Si necesita algo de eso, elija un proveedor dental. Leímos cada dato de la lista en el sitio web del propio proveedor el 9 de octubre de 2026.",
+          body: "LobbyStack solo reserva en Google Calendar, así que su equipo copia las citas nuevas en Dentrix, Open Dental o Eaglesoft. No afirma cumplir con HIPAA, no verifica la elegibilidad del seguro y no hace campañas de reactivación de pacientes. Si necesita algo de eso, elija un proveedor dental. Leímos cada dato de la lista en el sitio web del propio proveedor el 27 de octubre de 2026.",
           points: [
             "Citas escritas en su software de gestión: Dentina menciona 11 sistemas en los que escribe las reservas",
             "Una recepcionista conectada a su software de gestión: Peerlogic menciona 8 sistemas con los que se integra",
-            "Reactivación automática de pacientes: Dentina vende campañas salientes de reactivación, y Viva AI incluye contacto de reactivación desde su plan Platinum de $899",
+            "Reactivación automática de pacientes: Dentina vende campañas salientes de reactivación, y Viva AI incluye el contacto de reactivación en sus planes",
           ],
         },
       ],
@@ -422,7 +422,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "¿Cuánto cuesta una recepcionista dental con IA?",
           answer:
-            "LobbyStack cuesta $30 al mes en Starter o $100 al mes en Pro, sin tarifa de configuración. Starter incluye 150 minutos y después cobra $0.20 por minuto. Pro incluye 500 minutos y después cobra $0.18 por minuto, así que 1,000 minutos al mes en Pro cuestan $190. Las llamadas de menos de 10 segundos y las que se terminan como spam no cuentan. Las recepcionistas especializadas en odontología que publicaban precios iban de $299 al mes por sede, con facturación anual (Dentina), a $1,199 al mes (Viva AI) cuando las revisamos el 9 de octubre de 2026.",
+            "LobbyStack cuesta $30 al mes en Starter o $100 al mes en Pro, sin tarifa de configuración. Starter incluye 150 minutos y después cobra $0.20 por minuto. Pro incluye 500 minutos y después cobra $0.18 por minuto, así que 1,000 minutos al mes en Pro cuestan $190. Las llamadas de menos de 10 segundos y las que se terminan como spam no cuentan. Las recepcionistas especializadas en odontología que publicaban precios iban de $299 al mes por sede, con facturación anual (Dentina), a $1,199 al mes (Viva AI) cuando las revisamos el 27 de octubre de 2026.",
         },
         {
           question: "¿LobbyStack cumple con HIPAA?",
@@ -432,7 +432,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "¿Puede reservar directamente en Dentrix u Open Dental?",
           answer:
-            "No. LobbyStack reserva en Google Calendar y no se conecta con Dentrix, Open Dental, Eaglesoft ni otro software de gestión de clínicas, así que su equipo copia las citas nuevas en su sistema. Los webhooks firmados y la API REST pueden enviar los datos de reservas y llamadas a Zapier o a sus propias herramientas. Si necesita que las citas se escriban en su software de gestión, Dentina menciona 11 sistemas en los que escribe las reservas, y Peerlogic menciona 8 con los que se integra (revisado el 9 de octubre de 2026).",
+            "No. LobbyStack reserva en Google Calendar y no se conecta con Dentrix, Open Dental, Eaglesoft ni otro software de gestión de clínicas, así que su equipo copia las citas nuevas en su sistema. Los webhooks firmados y la API REST pueden enviar los datos de reservas y llamadas a Zapier o a sus propias herramientas. Si necesita que las citas se escriban en su software de gestión, Dentina menciona 11 sistemas en los que escribe las reservas, y Peerlogic menciona 8 con los que se integra (revisado el 27 de octubre de 2026).",
         },
         {
           question: "¿Cómo atiende una llamada por una urgencia dental?",
@@ -2014,6 +2014,8 @@ const bespokeSolutionPagesEs: Record<string, SeoLandingPage> = {
     ctaHeading: "Deje que LobbyStack conteste su próxima llamada",
     ctaBody:
       "Agregue sus datos, desvíe su número y llámelo usted mismo. El plan gratuito incluye 30 minutos de voz.",
+    ctaPrimaryLabel: "Pruébelo gratis",
+    ctaSecondaryLabel: "Ver precios",
   },
   "/solutions/ai-appointment-scheduler/": {
     group: "solution",
@@ -2157,6 +2159,8 @@ const bespokeSolutionPagesEs: Record<string, SeoLandingPage> = {
     ctaHeading: "Reserve a quien llama mientras sigue en la línea",
     ctaBody:
       "Agregue sus servicios, conecte Google Calendar y llame a su número para reservar una cita de prueba. El plan gratuito incluye 30 minutos de voz.",
+    ctaPrimaryLabel: "Pruébelo gratis",
+    ctaSecondaryLabel: "Ver precios",
   },
   "/solutions/ai-receptionist-for-home-services/": {
     group: "solution",
@@ -2288,6 +2292,8 @@ const bespokeSolutionPagesEs: Record<string, SeoLandingPage> = {
     ctaHeading: "Conteste la próxima llamada de trabajo desde la obra en la que está",
     ctaBody:
       "Agregue sus servicios, sus reglas de urgencia y su zona de servicio, desvíe su número y llámelo para probarlo. El plan gratuito incluye 30 minutos de voz.",
+    ctaPrimaryLabel: "Pruébelo gratis",
+    ctaSecondaryLabel: "Ver precios",
   },
 }
 
