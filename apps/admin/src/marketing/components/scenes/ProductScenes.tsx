@@ -15,11 +15,10 @@ import {
   ShieldCheck,
   Sparkles,
   Tag,
-  Users,
   Wrench,
   type LucideIcon,
 } from "lucide-react"
-import type { ReactNode } from "react"
+import { Fragment, type ReactNode } from "react"
 
 import { Badge, Chip, Connector, Initials, Place, Scene, Tile } from "@/marketing/components/system/art"
 import type { Locale } from "@/marketing/i18n"
@@ -75,31 +74,56 @@ function Row({ icon, title, detail, end }: { icon: ReactNode; title: string; det
   )
 }
 
+/** Rings spreading out on the plane from a point, like a phone ringing. */
+function Ripples({ x, y, sizes }: { x: number; y: number; sizes: number[] }) {
+  return (
+    <>
+      {sizes.map((size, index) => (
+        <span
+          key={size}
+          aria-hidden="true"
+          className="absolute rounded-full border border-beige-line/80 bg-white/25"
+          style={{ left: x - size / 2, top: y - size / 2, width: size, height: size, opacity: 1 - index * 0.22 }}
+        />
+      ))}
+    </>
+  )
+}
+
+/** A voice waveform: bars of set heights, the same on every render. */
+function Waveform({ className }: { className?: string }) {
+  const bars = [8, 14, 22, 12, 26, 18, 10, 20, 28, 16, 9, 18, 24, 12, 7]
+  return (
+    <span aria-hidden="true" className={`flex h-7 items-center gap-[3px] ${className ?? ""}`}>
+      {bars.map((height, index) => (
+        <span key={index} className="w-[3px] rounded-full bg-foreground/70" style={{ height }} />
+      ))}
+    </span>
+  )
+}
+
 function CallCaptureScene({ locale }: SceneProps) {
   const t = getProductScenesCopy(locale)
   return (
     <Scene width={540} height={380}>
-      <Place x={150} y={0}>
-        <Tile className="w-60" innerClassName="p-4">
-          <Row icon={<IconDot icon={PhoneIncoming} />} title={t.incomingCall} detail="(555) 014-2290" />
-        </Tile>
+      <Ripples x={160} y={170} sizes={[340, 252, 170]} />
+      <Place x={160} y={170} className="-translate-x-1/2 -translate-y-1/2">
+        <Badge className="size-24 ring-[10px]">
+          <PhoneIncoming className="size-9" strokeWidth={1.5} />
+        </Badge>
       </Place>
-      <Connector x={270} y={88} length={44} vertical />
-      <Place x={270} y={132} className="-translate-x-1/2">
-        <Chip>{t.teamUnavailable}</Chip>
+      <Place x={160} y={250} className="-translate-x-1/2">
+        <Chip className="bg-white px-3 py-1 text-[0.8125rem] shadow-[0_1px_2px_oklch(0_0_0/8%)]">
+          {t.incomingCall} · (555) 014-2290
+        </Chip>
       </Place>
-      <Connector x={270} y={160} length={40} vertical />
-      <Connector x={60} y={200} length={420} />
-      <Connector x={60} y={200} length={40} vertical />
-      <Connector x={480} y={200} length={40} vertical />
-      <Place x={0} y={240}>
-        <Tile className="w-56" innerClassName="p-4">
-          <Row icon={<IconDot icon={Users} />} title={t.ringTeam} detail={t.ringFor} />
-        </Tile>
+      <Place x={20} y={0}>
+        <Chip className="bg-white/80">{t.teamUnavailable}</Chip>
       </Place>
-      <Place x={300} y={240}>
-        <Tile accent className="w-60" innerClassName="p-4">
+      <Place x={280} y={150}>
+        <Tile accent className="w-[14.5rem]" innerClassName="space-y-3 p-4">
           <Row icon={<IconDot icon={AudioLines} />} title={t.lobbystackAnswers} detail={t.booksOrMessages} />
+          <Waveform />
         </Tile>
       </Place>
     </Scene>
@@ -108,36 +132,66 @@ function CallCaptureScene({ locale }: SceneProps) {
 
 function BookingScene({ locale }: SceneProps) {
   const t = getProductScenesCopy(locale)
-  const slots = [slot(locale, 9), slot(locale, 13, 30), slot(locale, 15)]
+  const days = [2, 3, 4, 5, 6].map((day) =>
+    new Intl.DateTimeFormat(intlLocale(locale), { weekday: "short", timeZone: "UTC" }).format(new Date(Date.UTC(2026, 10, day)))
+  )
+  const hours = [9, 11, 13, 15].map((hour) =>
+    new Intl.DateTimeFormat(intlLocale(locale), { hour: "numeric", timeZone: "UTC" }).format(tuesday(hour))
+  )
+  // Day by hour: taken slots in beige, the booked one in black.
+  const busy = new Set(["0-0", "2-1", "3-2", "0-2", "4-0", "2-3", "4-3"])
+  const booked = "1-3"
   return (
-    <Scene width={520} height={380}>
-      <Place x={0} y={0}>
-        <Tile className="w-72" innerClassName="space-y-3 p-4">
-          <Row icon={<IconDot icon={CalendarDays} />} title={t.scheduleVisit} />
-          <span className="flex flex-wrap gap-1.5">
-            {slots.map((time, index) => (
-              <Chip key={time} strong={index === slots.length - 1}>
-                {time}
-              </Chip>
-            ))}
-          </span>
-        </Tile>
-      </Place>
-      <Connector x={140} y={150} length={70} vertical />
-      <Connector x={140} y={220} length={90} />
-      <Place x={230} y={170}>
+    <Scene width={520} height={400}>
+      <Place x={40} y={0}>
         <div className="relative">
-          <Tile accent className="w-[17rem]" innerClassName="space-y-3 p-4">
-            <Row icon={<IconDot icon={CalendarCheck} />} title={t.appointmentBooked} detail={slots[2]} />
-            <span className="flex items-center gap-2 text-xs text-muted-foreground">
-              <MessageSquareText className="size-3.5" />
-              {t.confirmationTexted}
-            </span>
+          <Tile className="w-[24rem]" innerClassName="space-y-4 p-4">
+            <Row icon={<IconDot icon={CalendarDays} />} title={t.scheduleVisit} />
+            <div className="grid grid-cols-[2.75rem_repeat(5,1fr)] gap-1.5 text-[0.6875rem]">
+              <span />
+              {days.map((day) => (
+                <span key={day} className="text-center font-medium text-muted-foreground">
+                  {day}
+                </span>
+              ))}
+              {hours.map((hour, row) => (
+                <Fragment key={hour}>
+                  <span className="flex h-9 items-center text-muted-foreground tabular-nums">{hour}</span>
+                  {days.map((day, column) => {
+                    const key = `${column}-${row}`
+                    return (
+                      <span
+                        key={day}
+                        className={
+                          key === booked
+                            ? "flex h-9 items-center justify-center rounded-lg bg-primary text-[0.625rem] font-medium text-primary-foreground"
+                            : busy.has(key)
+                              ? "h-9 rounded-lg bg-beige-strong"
+                              : "h-9 rounded-lg border border-dashed border-beige-line/80"
+                        }
+                      >
+                        {key === booked && <CalendarCheck className="size-3.5" />}
+                      </span>
+                    )
+                  })}
+                </Fragment>
+              ))}
+            </div>
           </Tile>
-          <Badge className="absolute -top-4 -right-4 size-9">
-            <CalendarCheck className="size-4" strokeWidth={1.75} />
-          </Badge>
         </div>
+      </Place>
+      <Connector x={120} y={300} length={36} vertical />
+      <Place x={80} y={336}>
+        <span className="flex flex-col items-start gap-1.5">
+          <Chip strong className="px-3 py-1 text-[0.8125rem]">
+            <CalendarCheck className="size-3.5" />
+            {t.appointmentBooked} · {slot(locale, 15)}
+          </Chip>
+          <Chip className="bg-white px-3 py-1 text-[0.8125rem]">
+            <MessageSquareText className="size-3.5" />
+            {t.confirmationTexted}
+          </Chip>
+        </span>
       </Place>
     </Scene>
   )
@@ -145,24 +199,30 @@ function BookingScene({ locale }: SceneProps) {
 
 function HandoffScene({ locale }: SceneProps) {
   const t = getProductScenesCopy(locale)
-  const sarah = t.team[1]?.name ?? "Sarah Lopez"
+  const person = t.team[1] ?? { name: "Sarah Lopez", role: "Customer success" }
   return (
-    <Scene width={520} height={380}>
-      <Place x={0} y={0}>
-        <Tile className="w-[19rem]" innerClassName="space-y-3 p-4">
+    <Scene width={500} height={400}>
+      <Place x={0} y={80}>
+        <Tile className="w-60" innerClassName="space-y-3 p-4">
           <Chip strong>{t.urgent}</Chip>
           <span className="block rounded-2xl rounded-bl-sm bg-beige-strong px-3 py-2 text-sm leading-snug">{t.urgentQuote}</span>
         </Tile>
       </Place>
-      <Connector x={150} y={160} length={60} vertical />
-      <Connector x={150} y={220} length={60} />
-      <Place x={210} y={180}>
-        <Tile accent className="w-[18rem]" innerClassName="space-y-2.5 p-4">
-          <Row icon={<Initials name={sarah} />} title={t.transferredTo(sarah.split(" ")[0] ?? sarah)} />
-          <span className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Paperclip className="size-3.5" />
+      <Connector x={246} y={170} length={44} />
+      <Place x={290} y={0}>
+        <Tile className="w-[12.5rem] rounded-[2.75rem] p-2.5" innerClassName="flex h-[24rem] flex-col items-center rounded-[2.1rem] px-4 pt-3 pb-5 text-center">
+          <span className="h-1.5 w-12 rounded-full bg-black/10" />
+          <Chip className="mt-6 px-2.5 text-[0.6875rem]">{t.transferredTo(person.name.split(" ")[0] ?? person.name)}</Chip>
+          <Initials name={person.name} className="mt-6 size-16 text-lg" />
+          <span className="mt-3 block text-[0.9375rem] font-medium">{person.name}</span>
+          <span className="block text-xs text-muted-foreground">{person.role}</span>
+          <span className="mt-auto flex items-center gap-1.5 text-left text-[0.6875rem] leading-snug text-muted-foreground">
+            <Paperclip className="size-3.5 shrink-0" />
             {t.contextAttached}
           </span>
+          <Badge className="mt-4 size-12 ring-4">
+            <PhoneCall className="size-5" strokeWidth={1.75} />
+          </Badge>
         </Tile>
       </Place>
     </Scene>

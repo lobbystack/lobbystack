@@ -1,7 +1,6 @@
 import { GoogleIcon } from "@/marketing/components/GoogleIcon"
 import { ButtonLink } from "@/marketing/components/system/ButtonLink"
 import { appSignupUrl } from "@/marketing/lib/app-links"
-import { eyebrow } from "@/marketing/lib/eyebrows"
 import { getCopy, type Locale } from "@/marketing/i18n"
 import type { ReactNode } from "react"
 
@@ -53,8 +52,7 @@ export function HeroSection({ children, locale = "en" }: HeroSectionProps) {
       <div className="mx-auto w-full max-w-site px-6 pt-10 pb-10 md:pt-11 md:pb-16">
         <div className="grid min-w-0 items-center gap-6 md:gap-12 xl:grid-cols-2 xl:gap-16">
           <div className="max-w-3xl min-w-0 text-left">
-            <p className="animate-fade-up eyebrow">{eyebrow(locale, "home.hero")}</p>
-            <h1 className="animate-fade-up display-heading mt-4">
+            <h1 className="animate-fade-up display-heading">
               {localCopy.h1Start} {localCopy.h1Emphasis} {localCopy.h1End}
             </h1>
 

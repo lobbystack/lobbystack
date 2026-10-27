@@ -4,7 +4,6 @@ import type { Locale } from "@/marketing/i18n"
 // pages are English only, so their labels have no translations.
 
 const eyebrows = {
-  "home.hero": ["AI receptionist", "Réceptionniste IA", "Recepcionista con IA", "AI recepcioner"],
   "home.missedCalls": ["Missed calls", "Appels manqués", "Llamadas perdidas", "Propušteni pozivi"],
   "home.features": ["What it does", "Ce qu'il fait", "Lo que hace", "Šta radi"],
   "home.knowledge": ["Knowledge", "Connaissances", "Conocimiento", "Znanje"],

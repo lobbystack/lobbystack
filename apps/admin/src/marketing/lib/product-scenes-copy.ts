@@ -6,8 +6,6 @@ import type { Locale } from "@/marketing/i18n"
 export type ProductScenesCopy = {
   incomingCall: string
   teamUnavailable: string
-  ringTeam: string
-  ringFor: string
   lobbystackAnswers: string
   booksOrMessages: string
   scheduleVisit: string
@@ -40,8 +38,6 @@ export type ProductScenesCopy = {
 const en: ProductScenesCopy = {
   incomingCall: "Incoming call",
   teamUnavailable: "Team unavailable",
-  ringTeam: "Ring your team",
-  ringFor: "For 30 seconds",
   lobbystackAnswers: "LobbyStack answers",
   booksOrMessages: "Books or takes a message",
   scheduleVisit: "Schedule a visit",
@@ -78,8 +74,6 @@ const en: ProductScenesCopy = {
 const fr: ProductScenesCopy = {
   incomingCall: "Appel entrant",
   teamUnavailable: "Équipe indisponible",
-  ringTeam: "Sonner votre équipe",
-  ringFor: "Pendant 30 secondes",
   lobbystackAnswers: "LobbyStack répond",
   booksOrMessages: "Réserve ou prend un message",
   scheduleVisit: "Planifier une visite",
@@ -116,8 +110,6 @@ const fr: ProductScenesCopy = {
 const es: ProductScenesCopy = {
   incomingCall: "Llamada entrante",
   teamUnavailable: "Equipo no disponible",
-  ringTeam: "Llamar a su equipo",
-  ringFor: "Durante 30 segundos",
   lobbystackAnswers: "LobbyStack contesta",
   booksOrMessages: "Reserva o toma un mensaje",
   scheduleVisit: "Programar una visita",
@@ -154,8 +146,6 @@ const es: ProductScenesCopy = {
 const sr: ProductScenesCopy = {
   incomingCall: "Dolazni poziv",
   teamUnavailable: "Tim nije dostupan",
-  ringTeam: "Pozovi tim",
-  ringFor: "Tokom 30 sekundi",
   lobbystackAnswers: "LobbyStack odgovara",
   booksOrMessages: "Zakazuje ili prima poruku",
   scheduleVisit: "Zakaži posetu",
