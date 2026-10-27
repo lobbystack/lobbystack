@@ -92,7 +92,7 @@ export type WhiteLabelCopy = {
 const en: WhiteLabelCopy = {
   hero: {
     eyebrow: "White label",
-    titleLines: ["Resell an AI receptionist", "under your own brand"],
+    titleLines: ["Sell an AI receptionist", "under your own brand"],
     subhead:
       "Give your clients a receptionist that answers their calls and website chats on your domain, with your logo. You set the prices, bill on your own Stripe account and run every business from one console.",
     primaryCta: "Become a partner",
@@ -224,7 +224,7 @@ const en: WhiteLabelCopy = {
 const fr: WhiteLabelCopy = {
   hero: {
     eyebrow: "Marque blanche",
-    titleLines: ["Revendez une réceptionniste IA", "sous votre propre marque"],
+    titleLines: ["Vendez une réceptionniste IA", "sous votre propre marque"],
     subhead:
       "Offrez à vos clients une réceptionniste qui répond à leurs appels et aux clavardages de leur site, sur votre domaine et avec votre logo. Vous fixez les prix, facturez avec votre propre compte Stripe et gérez chaque entreprise depuis une seule console.",
     primaryCta: "Devenir partenaire",
@@ -356,7 +356,7 @@ const fr: WhiteLabelCopy = {
 const es: WhiteLabelCopy = {
   hero: {
     eyebrow: "Marca blanca",
-    titleLines: ["Revenda una recepcionista con IA", "con su propia marca"],
+    titleLines: ["Venda una recepcionista con IA", "con su propia marca"],
     subhead:
       "Ofrezca a sus clientes una recepcionista que atiende sus llamadas y los chats de su sitio web, en su dominio y con su logotipo. Usted pone los precios, cobra con su propia cuenta de Stripe y gestiona cada negocio desde una sola consola.",
     primaryCta: "Hágase socio",
