@@ -3,7 +3,7 @@ title: "My AI Front Desk alternative"
 seoTitle: "My AI Front Desk alternative: Frontdesk vs LobbyStack"
 description: "Compare Frontdesk, formerly My AI Front Desk, with LobbyStack on voice, CRM tools, booking, pricing, open-source access, and self-hosted control."
 pubDate: 2026-07-30T11:40:00-04:00
-updatedDate: 2026-10-10T09:00:00-04:00
+updatedDate: 2026-10-26T10:00:00-04:00
 author: "LobbyStack Team"
 category: "Comparisons"
 featured: false
@@ -91,7 +91,7 @@ An agency builds websites and paid search campaigns for ten home-service clients
 
 Frontdesk gives the agency a hosted omnichannel product and white-label partner plans from $500 a month. That can shorten launch time when the agency wants the vendor to own the platform.
 
-LobbyStack gives the agency a lower-cost receptionist product, code it can inspect, and a stack it can deploy. The agency can control provider accounts, infrastructure, retention, and client-specific call logic instead of building those services around a closed platform.
+LobbyStack gives the agency a lower-cost receptionist product, code it can inspect, and a stack it can deploy. The agency can control provider accounts, infrastructure, retention, and client-specific call logic instead of building those services around a closed platform. If the agency doesn't want to run servers, it can resell LobbyStack through the [white-label partner program](/white-label/). Its clients see the agency's brand on their dashboard, and the agency bills them on its own Stripe account.
 
 The agency should test tenant separation, client access, provider billing, call review, calendar failures, and export before choosing. A white-label logo alone does not settle those operational questions.
 

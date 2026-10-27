@@ -3,6 +3,7 @@ title: "LobbyStack Is Now MIT: Build and Sell Your Own"
 seoTitle: "LobbyStack Is Now MIT: Build and Sell Your Own"
 description: "LobbyStack now uses the MIT License, giving agencies room to modify, host, sublicense, and sell AI receptionist products built from our open-source code."
 pubDate: 2026-09-04T10:00:00-04:00
+updatedDate: 2026-10-26T10:00:00-04:00
 author: "LobbyStack Team"
 category: "Product updates"
 featured: false
@@ -54,7 +55,7 @@ Clients rarely share the same booking, routing, or escalation rules. A clinic an
 
 ### Operate your own hosted product
 
-The MIT License permits a company to run a separate hosted derivative and sell access under its own terms. LobbyStack does not include a one-click reseller portal, so your team still owns packaging, customer support, provider billing, security, and operations. The code supplies the receptionist product base, and your team supplies the commercial service around it.
+The MIT License permits a company to run a separate hosted derivative and sell access under its own terms. On that route, your team owns packaging, customer support, provider billing, security, and operations. The code supplies the receptionist product base, and your team supplies the commercial service around it. To resell without running your own servers, join the [white-label partner program](/white-label/). Your clients see your brand on their dashboard, and you bill them on your own Stripe account.
 
 ## You can build your brand on the code
 

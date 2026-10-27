@@ -3,6 +3,7 @@ title: "LobbyStack passe sous MIT : créez et vendez votre offre"
 seoTitle: "LobbyStack sous MIT : créez et vendez votre offre"
 description: "LobbyStack adopte la licence MIT : les agences peuvent modifier, héberger, vendre et octroyer des sous-licences pour notre code source de réceptionniste IA."
 pubDate: 2026-09-04T10:00:00-04:00
+updatedDate: 2026-10-26T10:00:00-04:00
 author: "Équipe LobbyStack"
 category: "Mises à jour produit"
 featured: false
@@ -54,7 +55,7 @@ Les clients partagent rarement les mêmes règles de réservation, de routage ou
 
 ### Exploiter votre propre produit hébergé
 
-La licence MIT permet à une entreprise d'exploiter une version hébergée distincte et d'en vendre l'accès selon ses conditions. LobbyStack ne comprend pas de portail revendeur prêt en un clic. Votre équipe reste responsable de l'offre, du soutien client, de la facturation des fournisseurs, de la sécurité et de l'exploitation. Le code fournit le produit de réception, et votre équipe fournit le service commercial qui l'entoure.
+La licence MIT permet à une entreprise d'exploiter une version hébergée distincte et d'en vendre l'accès selon ses conditions. Dans ce cas, votre équipe reste responsable de l'offre, du soutien client, de la facturation des fournisseurs, de la sécurité et de l'exploitation. Le code fournit le produit de réception, et votre équipe fournit le service commercial qui l'entoure. Pour revendre sans gérer vos propres serveurs, rejoignez le [programme partenaire en marque blanche](/fr/white-label/). Vos clients voient votre marque sur leur tableau de bord, et vous les facturez sur votre propre compte Stripe.
 
 ## Vous pouvez bâtir votre marque sur le code
 

@@ -3,7 +3,7 @@ import { Footer } from "@/marketing/components/Footer"
 import { Navbar } from "@/marketing/components/Navbar"
 import { PricingSection } from "@/marketing/components/PricingSection"
 import { PricingFaqSection } from "@/marketing/components/pricing/PricingFaqSection"
-import { getCopy, getRouteSeo, localeTag, localizePath, type Locale } from "@/marketing/i18n"
+import { getCopy, getRouteSeo, localeTag, localizeHref, localizePath, type Locale } from "@/marketing/i18n"
 import { getPricingFaqs } from "@/marketing/lib/pricing-faqs"
 import {
   absoluteUrl,
@@ -20,6 +20,13 @@ const breadcrumbNames: Record<Locale, string> = {
   fr: "Tarifs",
   es: "Precios",
   sr: "Cene",
+}
+
+const partnerNote: Record<Locale, { prefix: string; link: string; suffix: string }> = {
+  en: { prefix: "Reselling to your own clients? Compare the ", link: "white-label partner tiers", suffix: "." },
+  fr: { prefix: "Vous revendez à vos propres clients ? Comparez les ", link: "paliers partenaires en marque blanche", suffix: "." },
+  es: { prefix: "¿Revende a sus propios clientes? Compare los ", link: "niveles de socio de marca blanca", suffix: "." },
+  sr: { prefix: "Prodajete svojim klijentima? Uporedite ", link: "white-label partnerske nivoe", suffix: "." },
 }
 
 export function pricingPageSeo(locale: Locale): MarketingPageSeo {
@@ -67,6 +74,16 @@ export function PricingPage({ locale }: { locale: Locale }) {
       <Navbar locale={locale} />
       <main id="main-content" tabIndex={-1}>
         <PricingSection locale={locale} />
+        <p className="mx-auto max-w-3xl px-6 text-center text-sm leading-relaxed text-muted-foreground">
+          {partnerNote[locale].prefix}
+          <a
+            href={localizeHref(locale, "/white-label/")}
+            className="font-medium text-foreground underline underline-offset-4"
+          >
+            {partnerNote[locale].link}
+          </a>
+          {partnerNote[locale].suffix}
+        </p>
         <PricingFaqSection locale={locale} />
         <CtaSection locale={locale} />
       </main>

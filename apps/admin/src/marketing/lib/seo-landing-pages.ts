@@ -428,6 +428,7 @@ export const solutionPages: SeoLandingPage[] = [
       { label: "GitHub", href: "https://github.com/lobbystack/lobbystack" },
       { label: "API docs", href: "/docs/api/" },
       { label: "Pricing", href: "/pricing/" },
+      { label: "White-label partner program", href: "/white-label/" },
     ],
     ctaHeading: "Deploy LobbyStack on your own servers",
     ctaBody:
@@ -1242,7 +1243,7 @@ export const solutionPages: SeoLandingPage[] = [
         body: "When your call workflow changes, you should not have to file a support ticket and wait. Because the code is open source, you can modify greeting scripts, intake questions, booking logic, and escalation paths yourself.",
         points: [
           "Change prompts and call flows on your schedule",
-          "Fork the codebase for agency or multi-tenant deployments",
+          "Resell it under your brand through the white-label partner program",
         ],
       },
       {
@@ -1274,6 +1275,7 @@ export const solutionPages: SeoLandingPage[] = [
       { label: "GitHub", href: "https://github.com/lobbystack/lobbystack" },
       { label: "API docs", href: "/docs/api/" },
       { label: "Pricing", href: "/pricing/" },
+      { label: "White-label partner program", href: "/white-label/" },
     ],
     ctaHeading:
       "Inspect, customize, and deploy an AI receptionist you can verify",

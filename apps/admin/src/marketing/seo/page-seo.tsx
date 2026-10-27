@@ -26,6 +26,8 @@ import {
 export type MarketingPageSeo = PageSeo & {
   canonicalPath: string
   locale: Locale
+  /** The @id of the JSON-LD node the page is about, for WebPage.about. */
+  about?: string | undefined
 }
 
 const collectionPaths = new Set(["/blog/", "/changelog/", "/solutions/"])
@@ -105,6 +107,7 @@ export function PageJsonLd({ seo }: { seo: MarketingPageSeo }) {
       image: page.image,
       locale: seo.locale,
       type: collectionPaths.has(page.indexingPath) ? "CollectionPage" : "WebPage",
+      about: seo.about,
     }),
     imageObjectJsonLd({
       path: seo.canonicalPath,

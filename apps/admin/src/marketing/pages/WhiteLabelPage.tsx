@@ -1,5 +1,6 @@
 import { Footer } from "@/marketing/components/Footer"
 import { Navbar } from "@/marketing/components/Navbar"
+import { WhiteLabelRelated } from "@/marketing/components/white-label/WhiteLabelRelated"
 import {
   WhiteLabelClosing,
   WhiteLabelDashboard,
@@ -13,20 +14,23 @@ import { getCopy, getRouteSeo, localizePath, type Locale } from "@/marketing/i18
 import {
   breadcrumbJsonLd,
   faqPageJsonLd,
-  ogImagePath,
   organizationJsonLd,
-  softwareApplicationJsonLd,
   webSiteJsonLd,
 } from "@/marketing/lib/seo"
+import { getWhiteLabelCopy } from "@/marketing/lib/white-label-copy"
 import { getWhiteLabelFaqs } from "@/marketing/lib/white-label-faqs"
+import { whiteLabelServiceId, whiteLabelServiceJsonLd } from "@/marketing/lib/white-label-jsonld"
 import { PageJsonLd, type MarketingPageSeo } from "@/marketing/seo/page-seo"
 
 const pageTitles: Record<Locale, string> = {
-  en: "White label",
+  en: "White-label",
   fr: "Marque blanche",
   es: "Marca blanca",
-  sr: "Bela etiketa",
+  sr: "White-label",
 }
+
+/** A crop of the partner console, made from public/screenshots/partner-console.webp. */
+const socialImage = "/screenshots/partner-console-social.jpg"
 
 export function whiteLabelPageSeo(locale: Locale): MarketingPageSeo {
   const copy = getCopy(locale)
@@ -35,11 +39,13 @@ export function whiteLabelPageSeo(locale: Locale): MarketingPageSeo {
     ...getRouteSeo({ locale, path: "/white-label/" }),
     canonicalPath,
     locale,
-    image: ogImagePath("/white-label/"),
+    image: socialImage,
+    imageAlt: getWhiteLabelCopy(locale).shots.consoleAlt,
+    about: whiteLabelServiceId(locale),
     jsonLd: [
       organizationJsonLd(),
       webSiteJsonLd({ locale }),
-      softwareApplicationJsonLd({ locale }),
+      whiteLabelServiceJsonLd(locale),
       breadcrumbJsonLd([
         { name: copy.common.home, path: localizePath(locale, "/") },
         { name: pageTitles[locale], path: canonicalPath },
@@ -63,6 +69,7 @@ export function WhiteLabelPage({ locale }: { locale: Locale }) {
         <WhiteLabelTiers locale={locale} />
         <WhiteLabelFaq locale={locale} />
         <WhiteLabelClosing locale={locale} />
+        <WhiteLabelRelated locale={locale} />
       </main>
       <Footer locale={locale} path={seo.canonicalPath} />
     </>

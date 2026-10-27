@@ -3,6 +3,7 @@ title: "LobbyStack ahora usa MIT: cree y venda su propia oferta"
 seoTitle: "LobbyStack ahora usa MIT: cree y venda su propia oferta"
 description: "LobbyStack ahora usa la licencia MIT, que permite a las agencias modificar, alojar, sublicenciar y vender recepcionistas con IA creadas con nuestro código abierto."
 pubDate: 2026-09-04T10:00:00-04:00
+updatedDate: 2026-10-26T10:00:00-04:00
 author: "Equipo de LobbyStack"
 category: "Novedades del producto"
 featured: false
@@ -54,7 +55,7 @@ Los clientes rara vez comparten las mismas reglas de reserva, enrutamiento o esc
 
 ### Opere su propio producto alojado
 
-La licencia MIT permite a una empresa operar un derivado alojado independiente y vender el acceso con sus propias condiciones. LobbyStack no incluye un portal de reventa listo para usar, así que su equipo sigue a cargo del empaquetado, la atención al cliente, la facturación de proveedores, la seguridad y la operación. El código aporta la base del producto de recepción, y su equipo aporta el servicio comercial que lo rodea.
+La licencia MIT permite a una empresa operar un derivado alojado independiente y vender el acceso con sus propias condiciones. En ese caso, su equipo sigue a cargo del empaquetado, la atención al cliente, la facturación de proveedores, la seguridad y la operación. El código aporta la base del producto de recepción, y su equipo aporta el servicio comercial que lo rodea. Para revender sin administrar sus propios servidores, únase al [programa de socios de marca blanca](/es/white-label/). Sus clientes ven su marca en el panel, y usted les cobra en su propia cuenta de Stripe.
 
 ## Puede construir su marca sobre el código
 

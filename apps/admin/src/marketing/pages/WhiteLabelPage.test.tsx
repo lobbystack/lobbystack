@@ -1,4 +1,4 @@
-import { partnerTierCatalog } from "@lobbystack/shared"
+import { partnerTierCatalog, partnerTierSlugs } from "@lobbystack/shared"
 import { renderToStaticMarkup } from "react-dom/server"
 import { describe, expect, it } from "vitest"
 
@@ -63,6 +63,40 @@ describe("white-label page", () => {
     expect(seo.description?.length).toBeLessThanOrEqual(160)
     const faqPage = seo.jsonLd?.find((item) => item["@type"] === "FAQPage")
     expect(faqPage?.mainEntity).toHaveLength(getWhiteLabelFaqs(locale).length)
+  })
+
+  const targetTerms: Record<Locale, string> = {
+    en: "white-label ai receptionist",
+    fr: "réceptionniste ia en marque blanche",
+    es: "recepcionista con ia de marca blanca",
+    sr: "white-label ai recepcioner",
+  }
+
+  it.each(SUPPORTED_LOCALES)("puts the %s target term in the H1, the description and the first FAQ", (locale) => {
+    const term = targetTerms[locale]
+    expect(getWhiteLabelCopy(locale).hero.titleLines.join(" ").toLowerCase()).toContain(term)
+    expect(whiteLabelPageSeo(locale).description?.toLowerCase()).toContain(term)
+    expect(getWhiteLabelFaqs(locale)[0]?.question.toLowerCase()).toContain(term)
+  })
+
+  it.each(SUPPORTED_LOCALES)("describes the %s page as the partner program's Service, priced from the tier catalog", (locale) => {
+    const html = render(locale)
+    const script = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)?.[1]
+    const graph = JSON.parse(script ?? "{}")["@graph"] as Array<Record<string, unknown>>
+    const service = graph.find((item) => item["@type"] === "Service")
+    const offers = service?.offers as Array<{ price: string }>
+    expect(offers.map((offer) => offer.price)).toEqual(
+      partnerTierSlugs.map((slug) => String(partnerTierCatalog[slug].monthlyChargeCents / 100))
+    )
+    expect(graph.some((item) => item["@type"] === "SoftwareApplication")).toBe(false)
+    const webPage = graph.find((item) => item["@type"] === "WebPage")
+    expect(webPage?.about).toEqual({ "@id": service?.["@id"] })
+  })
+
+  it("serves the hero shot at phone sizes with high fetch priority", () => {
+    const html = render("en")
+    expect(html).toContain("/screenshots/partner-console-800.webp 800w")
+    expect(html).toContain('fetchPriority="high"')
   })
 
   it.each(SUPPORTED_LOCALES)("serves a %s Markdown twin that agents can find", async (locale) => {

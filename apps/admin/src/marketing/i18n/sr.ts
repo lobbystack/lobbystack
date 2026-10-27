@@ -98,9 +98,9 @@ export const sr = {
         "Pretražite LobbyStack stranice, članke sa bloga, resurse o proizvodu, cene i javnu dokumentaciju za AI agente.",
     },
     "/white-label/": {
-      title: "AI recepcioner pod belom etiketom za agencije | LobbyStack",
+      title: "White-label AI recepcioner otvorenog koda | LobbyStack",
       description:
-        "Prodajte LobbyStack AI recepcionera pod svojim brendom i domenom. Naplaćujte klijentima preko svog Stripe-a i počnite na besplatnom nivou.",
+        "Prodajte white-label AI recepcionera pod brendom i domenom svoje agencije. Naplaćujte klijentima preko svog Stripe-a i počnite besplatno.",
     },
     "/affiliate-program/": {
       title: "LobbyStack program preporuka | 20% provizije",

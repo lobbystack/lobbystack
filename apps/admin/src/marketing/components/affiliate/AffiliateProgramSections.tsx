@@ -90,6 +90,11 @@ const copy = {
             local business growth, or missed-call recovery
           </>,
         ],
+        whiteLabel: {
+          prefix: "To sell LobbyStack under your own brand, see the ",
+          link: "white-label partner program",
+          suffix: ".",
+        },
       },
     },
     guidelines: {
@@ -196,6 +201,11 @@ const copy = {
             d'appels manqués
           </>,
         ],
+        whiteLabel: {
+          prefix: "Pour vendre LobbyStack sous votre propre marque, consultez le ",
+          link: "programme partenaire en marque blanche",
+          suffix: ".",
+        },
       },
     },
     guidelines: {
@@ -302,6 +312,11 @@ const copy = {
             de llamadas perdidas
           </>,
         ],
+        whiteLabel: {
+          prefix: "Para vender LobbyStack con su propia marca, consulte el ",
+          link: "programa de socios de marca blanca",
+          suffix: ".",
+        },
       },
     },
     guidelines: {
@@ -409,6 +424,11 @@ const copy = {
             alatima, rastu lokalnih firmi ili vraćanju propuštenih poziva
           </>,
         ],
+        whiteLabel: {
+          prefix: "Da biste prodavali LobbyStack pod svojim brendom, pogledajte ",
+          link: "white-label partnerski program",
+          suffix: ".",
+        },
       },
     },
     guidelines: {
@@ -474,6 +494,7 @@ const copy = {
       whoShouldApply: {
         heading: string
         items: Array<React.ReactNode>
+        whiteLabel: { prefix: string; link: string; suffix: string }
       }
     }
     guidelines: {
@@ -616,6 +637,16 @@ export function AffiliateProgramDetails({
                 <CheckListItem key={index}>{item}</CheckListItem>
               ))}
             </ul>
+            <p className="mt-6 text-base leading-relaxed text-muted-foreground">
+              {t.whoShouldApply.whiteLabel.prefix}
+              <a
+                href={localizeHref(locale, "/white-label/")}
+                className="font-medium text-foreground underline underline-offset-4"
+              >
+                {t.whoShouldApply.whiteLabel.link}
+              </a>
+              {t.whoShouldApply.whiteLabel.suffix}
+            </p>
           </div>
         </div>
       </div>

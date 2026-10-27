@@ -3,7 +3,7 @@ title: "Alternativa a My AI Front Desk"
 seoTitle: "Alternativa a My AI Front Desk: Frontdesk vs LobbyStack"
 description: "Compare Frontdesk, antes My AI Front Desk, con LobbyStack en voz, herramientas de CRM, reservas, precios, acceso al código y control con autoalojamiento."
 pubDate: 2026-07-30T11:40:00-04:00
-updatedDate: 2026-10-10T09:00:00-04:00
+updatedDate: 2026-10-26T10:00:00-04:00
 author: "Equipo de LobbyStack"
 category: "Comparativas"
 featured: false
@@ -91,7 +91,7 @@ Una agencia crea sitios web y campañas de búsqueda de pago para diez clientes 
 
 Frontdesk le da a la agencia un producto omnicanal alojado y planes de socio de marca blanca desde $500 al mes. Eso puede acortar el lanzamiento cuando la agencia quiere que el proveedor se encargue de la plataforma.
 
-LobbyStack le da a la agencia un producto de recepción más barato, código que puede revisar y una plataforma que puede implementar. La agencia puede controlar las cuentas de proveedores, la infraestructura, la retención y la lógica de llamadas de cada cliente en lugar de construir esos servicios alrededor de una plataforma cerrada.
+LobbyStack le da a la agencia un producto de recepción más barato, código que puede revisar y una plataforma que puede implementar. La agencia puede controlar las cuentas de proveedores, la infraestructura, la retención y la lógica de llamadas de cada cliente en lugar de construir esos servicios alrededor de una plataforma cerrada. Si la agencia no quiere administrar servidores, puede revender LobbyStack con el [programa de socios de marca blanca](/es/white-label/). Sus clientes ven la marca de la agencia en su panel, y la agencia les cobra en su propia cuenta de Stripe.
 
 La agencia debería probar la separación entre clientes, el acceso de cada cliente, la facturación de proveedores, la revisión de llamadas, los fallos del calendario y la exportación antes de decidir. Un logotipo de marca blanca no resuelve por sí solo esas cuestiones operativas.
 

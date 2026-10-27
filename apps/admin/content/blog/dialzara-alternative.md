@@ -3,7 +3,7 @@ title: "Dialzara alternative: Plans, add-ons, and control"
 seoTitle: "Dialzara alternative: LobbyStack vs Dialzara"
 description: "Compare LobbyStack and Dialzara on minute pricing, booking, transfers, SMS, agency options, API access, open-source code, and self-hosted control."
 pubDate: 2026-07-30T10:50:00-04:00
-updatedDate: 2026-07-30T10:50:00-04:00
+updatedDate: 2026-10-26T10:00:00-04:00
 author: "LobbyStack Team"
 category: "Comparisons"
 featured: false
@@ -26,7 +26,7 @@ LobbyStack also includes booking, human handoff, SMS alerts, transcripts, summar
 | Mid-tier plan | $99 for 220 minutes | $100 for 500 minutes |
 | Booking and warm transfer | Starts on the $99 plan | Supported receptionist workflows |
 | SMS | Separate $19 monthly add-on plus usage | Alert SMS included on Starter and Pro |
-| Agency options | Agency and white-label offers | Open code, affiliate program, self-hosting |
+| Agency options | Agency and white-label offers | [White-label partner program](/white-label/), open code, affiliate program |
 | API | Higher tiers | Source code |
 | Deployment | Hosted | Managed cloud or self-hosted |
 

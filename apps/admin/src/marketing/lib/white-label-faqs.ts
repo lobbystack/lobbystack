@@ -3,6 +3,11 @@ import type { FaqItem } from "@/marketing/lib/seo"
 
 const EN_FAQS: FaqItem[] = [
   {
+    question: "What is a white-label AI receptionist?",
+    answer:
+      "It's an AI receptionist you sell to your clients under your own name. It answers their calls and website chats, books appointments and transfers urgent calls to their team. Your clients sign in at your address, see your logo and pay the prices you set. Some agencies call it a white-label AI voice agent.",
+  },
+  {
     question: "Who is the partner program for?",
     answer:
       "Agencies, consultants, IT providers and phone companies that set up software for small businesses and want to sell a receptionist under their own name. You keep the client relationship, the billing and the front-line support.",
@@ -45,6 +50,11 @@ const EN_FAQS: FaqItem[] = [
 ]
 
 const FR_FAQS: FaqItem[] = [
+  {
+    question: "Qu'est-ce qu'une réceptionniste IA en marque blanche ?",
+    answer:
+      "C'est une réceptionniste IA que vous vendez à vos clients sous votre propre nom. Elle répond à leurs appels et aux clavardages de leur site, prend des rendez-vous et transfère les appels urgents à leur équipe. Vos clients se connectent à votre adresse, voient votre logo et paient les prix que vous fixez. Certaines agences parlent d'agent vocal IA en marque blanche.",
+  },
   {
     question: "À qui s'adresse le programme partenaire ?",
     answer:
@@ -89,6 +99,11 @@ const FR_FAQS: FaqItem[] = [
 
 const ES_FAQS: FaqItem[] = [
   {
+    question: "¿Qué es una recepcionista con IA de marca blanca?",
+    answer:
+      "Es una recepcionista con IA que usted vende a sus clientes con su propio nombre. Atiende sus llamadas y los chats de su sitio web, reserva citas y transfiere las llamadas urgentes a su equipo. Sus clientes inician sesión en su dirección, ven su logotipo y pagan los precios que usted fija. Algunas agencias la llaman agente de voz con IA de marca blanca.",
+  },
+  {
     question: "¿Para quién es el programa de socios?",
     answer:
       "Para agencias, consultores, proveedores de TI y compañías telefónicas que configuran software para pequeños negocios y quieren vender una recepcionista con su propio nombre. Usted conserva la relación con el cliente, la facturación y el soporte de primera línea.",
@@ -131,6 +146,11 @@ const ES_FAQS: FaqItem[] = [
 ]
 
 const SR_FAQS: FaqItem[] = [
+  {
+    question: "Šta je white-label AI recepcioner?",
+    answer:
+      "To je AI recepcioner kog prodajete klijentima pod svojim imenom. Odgovara na njihove pozive i četove sa sajta, zakazuje termine i prebacuje hitne pozive njihovom timu. Klijenti se prijavljuju na vašoj adresi, vide vaš logo i plaćaju cene koje vi odredite. Neke agencije ga zovu white-label AI glasovnim agentom.",
+  },
   {
     question: "Kome je namenjen partnerski program?",
     answer:

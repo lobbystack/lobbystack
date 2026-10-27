@@ -90,6 +90,12 @@ const copyByLocale = {
         description:
           "Audit the call handling logic, customize prompts and routing, and deploy on your own infrastructure.",
       },
+      {
+        title: "White-label AI receptionist",
+        href: "/white-label/",
+        description:
+          "Resell LobbyStack to your clients under your own brand and domain, and bill them on your own Stripe account.",
+      },
     ],
     trades: [
       { title: "Plumbers", href: "/solutions/ai-receptionist-for-plumbers/" },
@@ -215,6 +221,12 @@ const copyByLocale = {
         href: "/solutions/open-source-ai-receptionist/",
         description:
           "Auditez la logique d’appel, personnalisez les consignes et le routage, puis déployez sur votre infrastructure.",
+      },
+      {
+        title: "Réceptionniste IA en marque blanche",
+        href: "/white-label/",
+        description:
+          "Revendez LobbyStack à vos clients sous votre marque et votre domaine, et facturez-les sur votre propre compte Stripe.",
       },
     ],
     trades: [
@@ -342,6 +354,12 @@ const copyByLocale = {
         description:
           "Audite la lógica de atención de llamadas, personalice las instrucciones y el enrutamiento, e impleméntela en su propia infraestructura.",
       },
+      {
+        title: "Recepcionista con IA de marca blanca",
+        href: "/white-label/",
+        description:
+          "Revenda LobbyStack a sus clientes con su propia marca y dominio, y cóbreles en su propia cuenta de Stripe.",
+      },
     ],
     trades: [
       { title: "Plomeros", href: "/solutions/ai-receptionist-for-plumbers/" },
@@ -467,6 +485,12 @@ const copyByLocale = {
         href: "/solutions/open-source-ai-receptionist/",
         description:
           "Proverite logiku obrade poziva, prilagodite uputstva i preusmeravanje i pokrenite sve na sopstvenoj infrastrukturi.",
+      },
+      {
+        title: "White-label AI recepcioner",
+        href: "/white-label/",
+        description:
+          "Prodajte LobbyStack klijentima pod svojim brendom i domenom i naplaćujte im preko svog Stripe naloga.",
       },
     ],
     trades: [

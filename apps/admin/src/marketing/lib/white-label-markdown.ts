@@ -63,6 +63,12 @@ ${copy.selfHost.body}
 
 - ${copy.selfHost.cta}: ${absoluteUrl(localizePath(locale, "/solutions/self-hosted-ai-receptionist/"))}
 
+## ${copy.receptionist.title}
+
+${copy.receptionist.body}
+
+- ${copy.receptionist.cta}: ${absoluteUrl(localizePath(locale, "/features/"))}
+
 ## ${copy.earn.titleLines.join(" ")}
 
 ${cards}

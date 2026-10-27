@@ -149,8 +149,14 @@ export function OpenSource() {
           <h2 className="section-heading">Open source and self-hosted ready</h2>
           <p className="section-intro">
             LobbyStack is open source. You can self-host on your own
-            infrastructure for full data control, custom deployments, and
-            white-label options.
+            infrastructure for full data control, custom deployments, and{" "}
+            <a
+              href="/white-label/"
+              className="font-medium text-foreground underline underline-offset-4"
+            >
+              white-label options
+            </a>
+            .
           </p>
           <div className="mt-8 flex items-center justify-center gap-6">
             <a

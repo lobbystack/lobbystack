@@ -26,21 +26,36 @@ const container = "mx-auto w-full max-w-site px-6"
 /** Tiers whose card stands out, as the recommended choice. */
 const highlightedTier: PartnerTierSlug = "growth"
 
-/** The product shots in public/screenshots, at their pixel sizes. */
-const dashboardShot = { src: "/screenshots/partner-business-dashboard.webp", width: 2880, height: 1880 }
-const consoleShot = { src: "/screenshots/partner-console.webp", width: 3200, height: 1972 }
-const signInShot = { src: "/screenshots/partner-signin.webp", width: 1600, height: 1000 }
-const brandingShot = { src: "/screenshots/partner-branding.webp", width: 2880, height: 1360 }
+type ShotImage = { src: string; width: number; height: number; srcSet?: string; sizes?: string }
 
-function Shot({ shot, alt, priority, className }: { shot: typeof consoleShot; alt: string; priority?: boolean; className?: string }) {
+/** The product shots in public/screenshots, at their pixel sizes. */
+const dashboardShot: ShotImage = { src: "/screenshots/partner-business-dashboard.webp", width: 2880, height: 1880 }
+const consoleShot: ShotImage = {
+  src: "/screenshots/partner-console.webp",
+  width: 3200,
+  height: 1972,
+  // Smaller copies so phones don't download the full shot for the hero.
+  srcSet: [800, 1200, 1600, 2400]
+    .map((width) => `/screenshots/partner-console-${width}.webp ${width}w`)
+    .concat("/screenshots/partner-console.webp 3200w")
+    .join(", "),
+  sizes: "(min-width: 72rem) 68rem, calc(100vw - 3rem)",
+}
+const signInShot: ShotImage = { src: "/screenshots/partner-signin.webp", width: 1600, height: 1000 }
+const brandingShot: ShotImage = { src: "/screenshots/partner-branding.webp", width: 2880, height: 1360 }
+
+function Shot({ shot, alt, priority, className }: { shot: ShotImage; alt: string; priority?: boolean; className?: string }) {
   return (
     <img
       src={shot.src}
+      srcSet={shot.srcSet}
+      sizes={shot.sizes}
       alt={alt}
       width={shot.width}
       height={shot.height}
       className={cn("block w-full", className)}
       loading={priority ? "eager" : "lazy"}
+      fetchPriority={priority ? "high" : undefined}
       decoding="async"
     />
   )
@@ -194,12 +209,22 @@ export function WhiteLabelHowItWorks({ locale }: SectionProps) {
 }
 
 export function WhiteLabelDashboard({ locale }: SectionProps) {
-  const t = getWhiteLabelCopy(locale).shots
+  const copy = getWhiteLabelCopy(locale)
+  const t = copy.receptionist
   return (
-    <section className="pt-20 md:pt-30">
+    <section className="pt-20 md:pt-30" id="receptionist">
       <div className={container}>
-        <AppFrame>
-          <Shot shot={dashboardShot} alt={t.dashboardAlt} />
+        <div className="max-w-[44rem]">
+          <SectionTitle eyebrow={t.eyebrow} lines={[t.title]} />
+          <p className="mt-4 text-lg leading-[1.6] text-muted-foreground">{t.body}</p>
+          <div className="mt-8">
+            <PillLink href={localizeHref(locale, "/features/")} variant="secondary" section="white_label_receptionist">
+              {t.cta}
+            </PillLink>
+          </div>
+        </div>
+        <AppFrame className="mt-12">
+          <Shot shot={dashboardShot} alt={copy.shots.dashboardAlt} />
         </AppFrame>
       </div>
     </section>

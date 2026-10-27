@@ -18,6 +18,11 @@ const frenchPage = (path: string, copy: FrenchPageCopy): SeoLandingPage => {
   }
 }
 
+const whiteLabelLink = {
+  label: "Programme partenaire en marque blanche",
+  href: "/white-label/",
+}
+
 const standardFaqs = [
   {
     question: "Puis-je définir les réponses et les règles de transfert ?",
@@ -643,6 +648,11 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
           answer:
             "Dans un déploiement auto-hébergé, votre équipe choisit l’infrastructure, les accès, les fournisseurs et les politiques de conservation.",
         },
+        {
+          question: "L’auto-hébergement convient-il aux agences et aux revendeurs ?",
+          answer:
+            "Oui. La licence MIT permet aux agences de modifier et de distribuer LobbyStack pour leurs clients. Le programme partenaire en marque blanche marche aussi sur un déploiement auto-hébergé, avec votre marque, une console pour tous vos clients et la facturation sur votre propre compte Stripe. Le nom, les logos et l’image de marque LobbyStack restent soumis à des droits de marque distincts.",
+        },
         ...standardFaqs,
       ],
       faqHeading: "Questions sur l’auto-hébergement de LobbyStack",
@@ -656,6 +666,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
           label: "Réceptionniste IA open source",
           href: "/solutions/open-source-ai-receptionist/",
         },
+        whiteLabelLink,
       ],
       ctaHeading: "Évaluez LobbyStack sur votre infrastructure",
       ctaBody:
@@ -1352,6 +1363,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
             "Démarrage rapide avec le service géré",
             "Parcours auto-hébergé pour les équipes techniques",
             "Même identité produit et documentation publique",
+            "Revente sous votre marque avec le programme partenaire en marque blanche",
           ],
         },
       ],
@@ -1388,6 +1400,7 @@ export const restoredFrenchSeoPages: Record<string, SeoLandingPage> = {
           href: "/blog/best-open-source-ai-phone-answering-services/",
         },
         { label: "Documentation publique", href: "/docs/api/" },
+        whiteLabelLink,
       ],
       ctaHeading: "Examinez le code avant de confier vos appels au système",
       ctaBody:

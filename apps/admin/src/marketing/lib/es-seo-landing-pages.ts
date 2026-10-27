@@ -25,6 +25,7 @@ const ctaLabels = {
 }
 
 const pricingLink = { label: "Precios", href: "/pricing/" }
+const whiteLabelLink = { label: "Programa de socios de marca blanca", href: "/white-label/" }
 
 const existingNumberFaq: FaqItem = {
   question: "¿Funciona con mi número actual del negocio?",
@@ -713,7 +714,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         {
           question: "¿El autoalojamiento sirve para agencias y revendedores?",
           answer:
-            "Sí. La licencia MIT permite que las agencias modifiquen y distribuyan LobbyStack para trabajos con clientes. El nombre, los logotipos y la marca LobbyStack siguen sujetos a derechos de marca independientes.",
+            "Sí. La licencia MIT permite que las agencias modifiquen y distribuyan LobbyStack para trabajos con clientes. El programa de socios de marca blanca también funciona en una instalación autoalojada, con su marca, una consola para todos sus clientes y el cobro en su propia cuenta de Stripe. El nombre, los logotipos y la marca LobbyStack siguen sujetos a derechos de marca independientes.",
         },
         {
           question:
@@ -749,6 +750,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         { label: "GitHub", href: "https://github.com/lobbystack/lobbystack" },
         { label: "Documentación de la API", href: "/docs/api/" },
         pricingLink,
+        whiteLabelLink,
       ],
       ctaHeading: "Despliegue LobbyStack en sus propios servidores",
       ctaBody:
@@ -1769,7 +1771,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
           body: "Cuando cambia su forma de gestionar las llamadas, no debería tener que abrir un ticket de soporte y esperar. Como el código es abierto, usted mismo puede modificar los saludos, las preguntas iniciales, la lógica de reservas y las rutas de escalamiento.",
           points: [
             "Cambie prompts y flujos de llamada a su propio ritmo",
-            "Haga un fork del código para agencias o despliegues con varios clientes",
+            "Revéndala con su marca a través del programa de socios de marca blanca",
           ],
         },
         {
@@ -1845,6 +1847,7 @@ export const restoredSpanishSeoPages: Record<string, SeoLandingPage> = {
         { label: "GitHub", href: "https://github.com/lobbystack/lobbystack" },
         { label: "Documentación de la API", href: "/docs/api/" },
         pricingLink,
+        whiteLabelLink,
       ],
       ctaHeading:
         "Revise, personalice y despliegue una recepcionista con IA que puede verificar",

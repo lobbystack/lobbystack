@@ -97,9 +97,9 @@ export const en = {
         "Search LobbyStack pages, blog posts, product resources, pricing details, and public agent-discovery documentation.",
     },
     "/white-label/": {
-      title: "White-Label AI Receptionist for Agencies | LobbyStack",
+      title: "Open-source white-label AI receptionist | LobbyStack",
       description:
-        "Resell LobbyStack's AI receptionist under your brand and domain. Bill clients on your own Stripe, share one pool of minutes, and start on a free tier.",
+        "Resell a white-label AI receptionist under your agency's brand and domain. Bill clients on your own Stripe, share one pool of minutes, and start free.",
     },
     "/affiliate-program/": {
       title: "LobbyStack Affiliate Program | Earn 20% Commission",

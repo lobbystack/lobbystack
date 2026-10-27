@@ -3,7 +3,7 @@ title: "Alternative à My AI Front Desk"
 seoTitle: "Alternative à My AI Front Desk : Frontdesk ou LobbyStack"
 description: "Comparez Frontdesk, anciennement My AI Front Desk, et LobbyStack sur la voix, le CRM, la réservation, le prix, le code et l'auto-hébergement."
 pubDate: 2026-07-30T11:40:00-04:00
-updatedDate: 2026-10-10T09:00:00-04:00
+updatedDate: 2026-10-26T10:00:00-04:00
 author: "Équipe LobbyStack"
 category: "Comparaisons"
 featured: false
@@ -82,7 +82,7 @@ Une agence crée des sites et des campagnes publicitaires pour dix entreprises d
 
 Frontdesk offre un produit multicanal hébergé et des forfaits partenaires en marque blanche à partir de 500 $ par mois. Cela peut réduire le délai de lancement.
 
-LobbyStack donne à l'agence un réceptionniste moins cher, du code qu'elle peut examiner et une pile qu'elle peut déployer. L'agence contrôle les fournisseurs, l'infrastructure, la conservation et la logique d'appel propre à chaque client.
+LobbyStack donne à l'agence un réceptionniste moins cher, du code qu'elle peut examiner et une pile qu'elle peut déployer. L'agence contrôle les fournisseurs, l'infrastructure, la conservation et la logique d'appel propre à chaque client. Si elle ne veut pas gérer de serveurs, l'agence peut revendre LobbyStack par le [programme partenaire en marque blanche](/fr/white-label/). Ses clients voient alors sa marque sur leur tableau de bord, et elle les facture sur son propre compte Stripe.
 
 L'agence doit tester la séparation des clients, la facturation des fournisseurs, l'accès aux appels, les pannes de calendrier et les exports.
 

@@ -26,7 +26,7 @@ LobbyStack es una recepcionista con IA de código abierto para pequeñas empresa
 - Funciones: ${absoluteUrl("/es/features/")}
 - Precios: ${absoluteUrl("/es/pricing/")}
 - Programa de afiliados: ${absoluteUrl("/es/affiliate-program/")}
-- Marca blanca: ${absoluteUrl("/es/white-label/")}
+- Recepcionista con IA de marca blanca: ${absoluteUrl("/es/white-label/")}
 - Calculadora: ${absoluteUrl("/es/missed-call-revenue-calculator/")}
 - Blog: ${absoluteUrl("/es/blog/")}
 - GitHub: https://github.com/lobbystack/lobbystack

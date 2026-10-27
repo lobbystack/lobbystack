@@ -31,6 +31,9 @@ export type WhiteLabelCopy = {
   console: { title: string; body: string }
   selfHost: { eyebrow: string; title: string; body: string; cta: string }
   pool: { title: string; body: string }
+  receptionist: { eyebrow: string; title: string; body: string; cta: string }
+  related: { features: string; pricing: string; affiliate: string; selfHosted: string; mitPost: string }
+  seo: { serviceName: string; serviceType: string; serviceDescription: string; audience: string }
   heroArt: { brand: string; clients: string; prices: string }
   shots: {
     consoleAlt: string
@@ -91,8 +94,8 @@ export type WhiteLabelCopy = {
 
 const en: WhiteLabelCopy = {
   hero: {
-    eyebrow: "White label",
-    titleLines: ["Resell an AI receptionist", "under your own brand"],
+    eyebrow: "Partner program",
+    titleLines: ["Resell a white-label", "AI receptionist"],
     subhead:
       "Give your clients a receptionist that answers their calls and website chats on your domain, with your logo. You set the prices, bill on your own Stripe account and run every business from one console.",
     primaryCta: "Become a partner",
@@ -126,6 +129,27 @@ const en: WhiteLabelCopy = {
     title: "One pool for all your clients",
     body:
       "Every business you add draws on your tier's minutes and chats, so a quiet client covers a busy one. There's no fee per business.",
+  },
+  receptionist: {
+    eyebrow: "For your clients",
+    title: "What your clients' receptionist does",
+    body:
+      "Each business you add gets the same receptionist as LobbyStack's direct customers. It answers calls and website chats, books appointments in Google Calendar, texts confirmations and transfers urgent calls to the owner or staff.",
+    cta: "See the receptionist's features",
+  },
+  related: {
+    features: "Receptionist features",
+    pricing: "Business plans",
+    affiliate: "Affiliate program",
+    selfHosted: "Self-hosted deployment",
+    mitPost: "MIT license for resellers",
+  },
+  seo: {
+    serviceName: "LobbyStack white-label partner program",
+    serviceType: "White-label AI receptionist",
+    serviceDescription:
+      "Agencies, consultants and IT providers resell LobbyStack's AI receptionist under their own brand and domain, bill clients on their own Stripe account and share one pool of minutes and chats across their businesses.",
+    audience: "Agencies, consultants, IT providers and phone companies",
   },
   shots: {
     consoleAlt:
@@ -223,8 +247,8 @@ const en: WhiteLabelCopy = {
 
 const fr: WhiteLabelCopy = {
   hero: {
-    eyebrow: "Marque blanche",
-    titleLines: ["Revendez une réceptionniste IA", "sous votre propre marque"],
+    eyebrow: "Programme partenaire",
+    titleLines: ["Revendez une réceptionniste IA", "en marque blanche"],
     subhead:
       "Offrez à vos clients une réceptionniste qui répond à leurs appels et aux clavardages de leur site, sur votre domaine et avec votre logo. Vous fixez les prix, facturez avec votre propre compte Stripe et gérez chaque entreprise depuis une seule console.",
     primaryCta: "Devenir partenaire",
@@ -258,6 +282,27 @@ const fr: WhiteLabelCopy = {
     title: "Une seule réserve pour tous vos clients",
     body:
       "Toutes les entreprises que vous ajoutez puisent dans les minutes et les clavardages de votre palier : un client tranquille compense un client très occupé. Aucuns frais par entreprise.",
+  },
+  receptionist: {
+    eyebrow: "Pour vos clients",
+    title: "Ce que fait la réceptionniste de vos clients",
+    body:
+      "Chaque entreprise que vous ajoutez reçoit la même réceptionniste que les clients directs de LobbyStack. Elle répond aux appels et aux clavardages du site, prend les rendez-vous dans Google Agenda, envoie les confirmations par texto et transfère les appels urgents au propriétaire ou à l'équipe.",
+    cta: "Voir les fonctionnalités de la réceptionniste",
+  },
+  related: {
+    features: "Fonctionnalités de la réceptionniste",
+    pricing: "Forfaits pour entreprises",
+    affiliate: "Programme d'affiliation",
+    selfHosted: "Déploiement auto-hébergé",
+    mitPost: "La licence MIT pour les revendeurs",
+  },
+  seo: {
+    serviceName: "Programme partenaire LobbyStack en marque blanche",
+    serviceType: "Réceptionniste IA en marque blanche",
+    serviceDescription:
+      "Les agences, consultants et fournisseurs informatiques revendent la réceptionniste IA de LobbyStack sous leur marque et leur domaine, facturent leurs clients sur leur propre compte Stripe et partagent une réserve de minutes et de clavardages entre leurs entreprises.",
+    audience: "Agences, consultants, fournisseurs informatiques et compagnies de téléphone",
   },
   shots: {
     consoleAlt:
@@ -355,8 +400,8 @@ const fr: WhiteLabelCopy = {
 
 const es: WhiteLabelCopy = {
   hero: {
-    eyebrow: "Marca blanca",
-    titleLines: ["Revenda una recepcionista con IA", "con su propia marca"],
+    eyebrow: "Programa de socios",
+    titleLines: ["Revenda una recepcionista con IA", "de marca blanca"],
     subhead:
       "Ofrezca a sus clientes una recepcionista que atiende sus llamadas y los chats de su sitio web, en su dominio y con su logotipo. Usted pone los precios, cobra con su propia cuenta de Stripe y gestiona cada negocio desde una sola consola.",
     primaryCta: "Hágase socio",
@@ -390,6 +435,27 @@ const es: WhiteLabelCopy = {
     title: "Una sola bolsa para todos sus clientes",
     body:
       "Todos los negocios que añada usan los minutos y chats de su nivel, así que un cliente tranquilo compensa a uno con mucho trabajo. No hay cuota por negocio.",
+  },
+  receptionist: {
+    eyebrow: "Para sus clientes",
+    title: "Qué hace la recepcionista de sus clientes",
+    body:
+      "Cada negocio que añade recibe la misma recepcionista que los clientes directos de LobbyStack. Atiende llamadas y chats del sitio web, reserva citas en Google Calendar, envía confirmaciones por SMS y transfiere las llamadas urgentes al propietario o al personal.",
+    cta: "Ver las funciones de la recepcionista",
+  },
+  related: {
+    features: "Funciones de la recepcionista",
+    pricing: "Planes para negocios",
+    affiliate: "Programa de afiliados",
+    selfHosted: "Despliegue autoalojado",
+    mitPost: "La licencia MIT para revendedores",
+  },
+  seo: {
+    serviceName: "Programa de socios de marca blanca de LobbyStack",
+    serviceType: "Recepcionista con IA de marca blanca",
+    serviceDescription:
+      "Agencias, consultores y proveedores de TI revenden la recepcionista con IA de LobbyStack con su propia marca y dominio, cobran a sus clientes en su propia cuenta de Stripe y comparten una bolsa de minutos y chats entre sus negocios.",
+    audience: "Agencias, consultores, proveedores de TI y compañías telefónicas",
   },
   shots: {
     consoleAlt:
@@ -487,8 +553,8 @@ const es: WhiteLabelCopy = {
 
 const sr: WhiteLabelCopy = {
   hero: {
-    eyebrow: "Bela etiketa",
-    titleLines: ["Prodajte AI recepcionera", "pod sopstvenim brendom"],
+    eyebrow: "Partnerski program",
+    titleLines: ["Prodajte white-label", "AI recepcionera"],
     subhead:
       "Dajte klijentima recepcionera koji odgovara na njihove pozive i četove sa sajta, na vašem domenu i sa vašim logom. Vi određujete cene, naplaćujete preko svog Stripe naloga i vodite sve firme iz jedne konzole.",
     primaryCta: "Postanite partner",
@@ -522,6 +588,27 @@ const sr: WhiteLabelCopy = {
     title: "Jedan fond za sve klijente",
     body:
       "Sve firme koje dodate troše minute i četove vašeg nivoa, pa klijent sa malo poziva pokriva onog sa mnogo. Nema naknade po firmi.",
+  },
+  receptionist: {
+    eyebrow: "Za vaše klijente",
+    title: "Šta radi recepcioner vaših klijenata",
+    body:
+      "Svaka firma koju dodate dobija istog recepcionera kao direktni korisnici LobbyStack-a. Odgovara na pozive i četove sa sajta, zakazuje termine u Google Calendar-u, šalje potvrde SMS-om i prebacuje hitne pozive vlasniku ili zaposlenima.",
+    cta: "Pogledajte funkcije recepcionera",
+  },
+  related: {
+    features: "Funkcije recepcionera",
+    pricing: "Paketi za firme",
+    affiliate: "Program preporuka",
+    selfHosted: "Samostalno hostovanje",
+    mitPost: "MIT licenca za preprodavce",
+  },
+  seo: {
+    serviceName: "LobbyStack white-label partnerski program",
+    serviceType: "White-label AI recepcioner",
+    serviceDescription:
+      "Agencije, konsultanti i IT firme prodaju LobbyStack AI recepcionera pod svojim brendom i domenom, naplaćuju klijentima preko svog Stripe naloga i dele jedan fond minuta i četova između svojih firmi.",
+    audience: "Agencije, konsultanti, IT firme i telefonske kompanije",
   },
   shots: {
     consoleAlt:

@@ -3,6 +3,7 @@ title: "LobbyStack je sada pod MIT licencom: napravite i prodajte svoj proizvod"
 seoTitle: "LobbyStack je pod MIT licencom: gradite i prodajte"
 description: "LobbyStack sada koristi MIT licencu, pa agencije mogu da menjaju, hostuju, podlicenciraju i prodaju proizvode za AI recepciju izgrađene na našem otvorenom kodu."
 pubDate: 2026-09-04T10:00:00-04:00
+updatedDate: 2026-10-26T10:00:00-04:00
 author: "LobbyStack tim"
 category: "Novosti o proizvodu"
 featured: false
@@ -54,7 +55,7 @@ Klijenti retko imaju ista pravila zakazivanja, usmeravanja ili eskalacije. Ordin
 
 ### Vodite sopstveni hostovani proizvod
 
-MIT licenca dozvoljava firmi da vodi posebnu hostovanu izvedenu verziju i prodaje pristup pod sopstvenim uslovima. LobbyStack ne uključuje portal za preprodavce koji radi jednim klikom, pa je Vaš tim i dalje odgovoran za pakovanje ponude, podršku klijentima, naplatu provajdera, bezbednost i rad sistema. Kod daje osnovu proizvoda za recepciju, a Vaš tim daje komercijalnu uslugu oko nje.
+MIT licenca dozvoljava firmi da vodi posebnu hostovanu izvedenu verziju i prodaje pristup pod sopstvenim uslovima. Na tom putu je Vaš tim odgovoran za pakovanje ponude, podršku klijentima, naplatu provajdera, bezbednost i rad sistema. Kod daje osnovu proizvoda za recepciju, a Vaš tim daje komercijalnu uslugu oko nje. Da biste preprodavali bez sopstvenih servera, pridružite se [white-label partnerskom programu](/sr/white-label/). Vaši klijenti vide Vaš brend na svojoj kontrolnoj tabli, a Vi im naplaćujete preko svog Stripe naloga.
 
 ## Na kodu možete da izgradite svoj brend
 

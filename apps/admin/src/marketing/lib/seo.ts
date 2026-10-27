@@ -187,6 +187,7 @@ export const webPageJsonLd = ({
   image = ogImagePath(path),
   type = "WebPage",
   locale = "en",
+  about,
 }: {
   title: string
   description: string
@@ -194,6 +195,8 @@ export const webPageJsonLd = ({
   image?: string | undefined
   type?: "WebPage" | "CollectionPage"
   locale?: Locale | undefined
+  /** The @id of the thing the page is about, when it isn't LobbyStack itself. */
+  about?: string | undefined
 }): JsonLd => {
   const url = absoluteUrl(normalizedPath(path))
 
@@ -213,7 +216,9 @@ export const webPageJsonLd = ({
             "@id": absoluteUrl("/#product"),
           },
         }
-      : {}),
+      : about
+        ? { about: { "@id": about } }
+        : {}),
     isPartOf: {
       "@id": absoluteUrl("/#website"),
     },

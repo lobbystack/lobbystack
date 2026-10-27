@@ -13,7 +13,7 @@ The product combines AI voice, appointment scheduling, business knowledge, and h
 - [Help Center](https://docs.lobbystack.com/introduction): Primary setup, support, and product documentation resource for configuring and using LobbyStack.
 - [Pricing](https://lobbystack.com/pricing/): Free, Starter, Pro, and Enterprise pricing for AI receptionist coverage, voice minutes, annual billing, SMS alerts, knowledge base, and support.
 - [Affiliate Program](https://lobbystack.com/affiliate-program/): Refer businesses to hosted LobbyStack plans and earn 20% of their payments for 12 months. Referrals save 5% at signup.
-- [White-Label Partner Program](https://lobbystack.com/white-label/): Resell LobbyStack's AI receptionist under your own brand and domain, bill clients on your own Stripe, and share one pool of minutes and chats across every business.
+- [White-label partner program](https://lobbystack.com/white-label/): Resell LobbyStack's AI receptionist under your own brand and domain, bill clients on your own Stripe, and share one pool of minutes and chats across every business.
 - [Missed Call Revenue Calculator](https://lobbystack.com/missed-call-revenue-calculator/): Interactive calculator for estimating revenue at risk from unanswered contractor calls.
 - [Features markdown](https://lobbystack.com/features.md): AI-readable markdown summary of LobbyStack features.
 - [Pricing markdown](https://lobbystack.com/pricing.md): AI-readable markdown summary of plans, included limits, plan features, and overage rates.
@@ -46,6 +46,10 @@ LobbyStack is an open-source AI receptionist for small businesses. It answers ph
 
 LobbyStack is for phone-driven SMBs and local service businesses, including home services, salons, clinics, dental offices, repair shops, restaurants, property managers, law firms, and professional offices.
 
+### Can agencies resell LobbyStack?
+
+Yes. Through the white-label partner program, agencies, consultants and IT providers sell LobbyStack's receptionist under their own brand and domain. They bill clients on their own Stripe account and manage every client from one console. The program also runs on a self-hosted deployment. Details and partner tiers: https://lobbystack.com/white-label/
+
 ### How does LobbyStack work?
 
 A business on a paid plan gets a local or toll-free number (or forwards its existing number), adds hours, FAQs, services, calendar rules, and escalation preferences, then LobbyStack answers calls, books appointments, handles common questions, and routes sensitive or urgent calls to a human.
@@ -67,6 +71,7 @@ LobbyStack is useful for:
 - Property managers.
 - Law firms and professional service firms.
 - Local businesses that receive repetitive phone calls or appointment requests.
+- Agencies, consultants and IT providers that resell a receptionist to their clients through the white-label partner program.
 
 ## Main features
 
@@ -119,6 +124,8 @@ Users looking for LobbyStack may search for:
 - AI receptionist for restaurants
 - automated appointment scheduling by phone
 - self-hosted AI receptionist
+- white-label AI receptionist
+- white-label AI voice agent
 - open-source alternative to My AI Front Desk
 - open-source alternative to Smith.ai
 - open-source alternative to AI phone receptionist tools

@@ -198,7 +198,7 @@ const solutionLabelMap = {
     dental: "Stomatološke ordinacije",
     salons: "Saloni i spa centri",
     selfHosted: "Samostalno hostovan AI recepcioner",
-    whiteLabel: "AI recepcioner pod belom etiketom",
+    whiteLabel: "White-label AI recepcioner",
     trades: "Po zanatu",
     plumbers: "Vodoinstalateri",
     hvac: "Grejanje i klimatizacija",

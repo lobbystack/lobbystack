@@ -545,7 +545,7 @@ Use this skill when an agent needs a concise, machine-readable orientation to Lo
 
 1. Start with ${absoluteUrl("/llms.txt")} for a compact product overview.
 2. Use ${absoluteUrl("/.well-known/api-catalog")} to discover public machine-readable resources.
-3. Use ${absoluteUrl("/features.md")}, ${absoluteUrl("/pricing.md")}, and ${absoluteUrl("/affiliate-program.md")} for clean markdown summaries of the public site.
+3. Use ${absoluteUrl("/features.md")}, ${absoluteUrl("/pricing.md")}, ${absoluteUrl("/affiliate-program.md")}, and ${absoluteUrl("/white-label.md")} for clean markdown summaries of the public site.
 4. Use https://docs.lobbystack.com/introduction for product setup and self-hosting documentation.
 5. Use ${absoluteUrl("/pricing/")} for canonical pricing details and ${absoluteUrl("/features/")} for canonical capability descriptions.
 `

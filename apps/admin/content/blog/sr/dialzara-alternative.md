@@ -3,7 +3,7 @@ title: "Alternativa za Dialzara: paketi, dodaci i kontrola"
 seoTitle: "Alternativa za Dialzara: LobbyStack ili Dialzara"
 description: "Uporedite LobbyStack i Dialzara po ceni minuta, zakazivanju, preusmeravanju, SMS-u, opcijama za agencije, API pristupu, otvorenom kodu i samostalnom hostovanju."
 pubDate: 2026-07-30T10:50:00-04:00
-updatedDate: 2026-07-30T10:50:00-04:00
+updatedDate: 2026-10-26T10:00:00-04:00
 author: "LobbyStack tim"
 category: "Poređenja"
 featured: false
@@ -26,7 +26,7 @@ LobbyStack uključuje i zakazivanje, predaju razgovora čoveku, SMS obaveštenja
 | Srednji paket | $99 za 220 minuta | $100 za 500 minuta |
 | Zakazivanje i preusmeravanje uz najavu | Od paketa od $99 | Podržani tokovi rada recepcije |
 | SMS | Poseban dodatak od $19 mesečno plus potrošnja | SMS obaveštenja uključena u Starter i Pro |
-| Opcije za agencije | Ponude za agencije i white-label | Otvoreni kod, program preporuka, samostalno hostovanje |
+| Opcije za agencije | Ponude za agencije i white-label | [White-label partnerski program](/sr/white-label/), otvoreni kod, program preporuka |
 | API | Viši paketi | Izvorni kod |
 | Primena | Hostovano | Upravljani cloud ili samostalno hostovanje |
 

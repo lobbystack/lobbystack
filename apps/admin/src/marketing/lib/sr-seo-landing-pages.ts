@@ -25,6 +25,7 @@ const ctaLabels = {
 }
 
 const pricingLink = { label: "Cene", href: "/pricing/" }
+const whiteLabelLink = { label: "White-label partnerski program", href: "/white-label/" }
 
 const spamPoint =
   "Neželjeni pozivi i pozivi kraći od 10 sekundi se ne računaju u potrošnju"
@@ -884,7 +885,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
           question:
             "Da li je samostalno hostovanje pogodno za agencije i preprodavce?",
           answer:
-            "Da. MIT licenca dozvoljava agencijama da menjaju i distribuiraju LobbyStack za rad sa klijentima. Naziv LobbyStack, logotipi i brending podležu posebnim pravima na žig.",
+            "Da. MIT licenca dozvoljava agencijama da menjaju i distribuiraju LobbyStack za rad sa klijentima. White-label partnerski program radi i na samostalno hostovanoj instalaciji, sa Vašim brendom, jednom konzolom za sve klijente i naplatom preko Vašeg Stripe naloga. Naziv LobbyStack, logotipi i brending podležu posebnim pravima na žig.",
         },
         {
           question: "Kako funkcionišu ažuriranja kod samostalnog hostovanja?",
@@ -917,6 +918,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         { label: "GitHub", href: "https://github.com/lobbystack/lobbystack" },
         { label: "API dokumentacija", href: "/docs/api/" },
         pricingLink,
+        whiteLabelLink,
       ],
       ctaHeading: "Postavite LobbyStack na svoje servere",
       ctaBody:
@@ -1901,7 +1903,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
           body: "Kada se Vaš način obrade poziva promeni, ne bi trebalo da otvarate tiket za podršku i čekate. Pošto je kod otvoren, pozdrave, uvodna pitanja, logiku zakazivanja i puteve eskalacije možete menjati sami.",
           points: [
             "Menjajte promptove i tokove poziva kada Vama odgovara",
-            "Forkujte kod za agencijske ili višekorisničke instalacije",
+            "Prodajte ga pod svojim brendom kroz white-label partnerski program",
           ],
         },
         {
@@ -1975,6 +1977,7 @@ const restoredSerbianSeoPages: Record<string, SeoLandingPage> = {
         { label: "GitHub", href: "https://github.com/lobbystack/lobbystack" },
         { label: "API dokumentacija", href: "/docs/api/" },
         pricingLink,
+        whiteLabelLink,
       ],
       ctaHeading: "Proverite, prilagodite i postavite AI recepcionera",
       ctaBody:

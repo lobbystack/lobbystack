@@ -3,7 +3,7 @@ title: "Alternativa za My AI Front Desk"
 seoTitle: "Alternativa za My AI Front Desk: Frontdesk ili LobbyStack"
 description: "Uporedite Frontdesk, ranije My AI Front Desk, i LobbyStack po glasu, CRM alatima, zakazivanju, cenama, otvorenom kodu i samostalnom hostovanju."
 pubDate: 2026-07-30T11:40:00-04:00
-updatedDate: 2026-10-10T09:00:00-04:00
+updatedDate: 2026-10-26T10:00:00-04:00
 author: "LobbyStack tim"
 category: "Poređenja"
 featured: false
@@ -91,7 +91,7 @@ Agencija pravi sajtove i plaćene kampanje na pretraživačima za deset klijenat
 
 Frontdesk agenciji daje hostovani višekanalni proizvod i white-label partnerske pakete od $500 mesečno. To može skratiti vreme do pokretanja kada agencija želi da platformu vodi dobavljač.
 
-LobbyStack agenciji daje jeftiniji proizvod za recepciju, kod koji može da pregleda i stek koji može sama da postavi. Agencija može da kontroliše naloge kod provajdera, infrastrukturu, čuvanje podataka i logiku poziva za svakog klijenta, umesto da te usluge gradi oko zatvorene platforme.
+LobbyStack agenciji daje jeftiniji proizvod za recepciju, kod koji može da pregleda i stek koji može sama da postavi. Agencija može da kontroliše naloge kod provajdera, infrastrukturu, čuvanje podataka i logiku poziva za svakog klijenta, umesto da te usluge gradi oko zatvorene platforme. Ako agencija ne želi da vodi servere, može da preprodaje LobbyStack kroz [white-label partnerski program](/sr/white-label/). Klijenti tada vide brend agencije na svojoj kontrolnoj tabli, a agencija im naplaćuje preko svog Stripe naloga.
 
 Pre izbora, agencija treba da testira razdvajanje klijenata, pristup za klijente, naplatu provajdera, pregled poziva, greške kalendara i izvoz. Sam white-label logo ne rešava ta operativna pitanja.
 

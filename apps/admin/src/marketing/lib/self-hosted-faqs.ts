@@ -24,7 +24,7 @@ export const selfHostedFaqs: FaqItem[] = [
   {
     question: "Is self-hosting suitable for agencies and resellers?",
     answer:
-      "Yes. The MIT License permits agencies to modify and distribute LobbyStack for client work. The LobbyStack name, logos, and branding remain subject to separate trademark rights.",
+      "Yes. The MIT License permits agencies to modify and distribute LobbyStack for client work. The white-label partner program also runs on a self-hosted deployment, with your brand, one console for all your clients and billing on your own Stripe account. The LobbyStack name, logos, and branding remain subject to separate trademark rights.",
   },
   {
     question: "How do updates work for self-hosted deployments?",

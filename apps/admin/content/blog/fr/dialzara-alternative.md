@@ -3,7 +3,7 @@ title: "Alternative à Dialzara : forfaits et contrôle"
 seoTitle: "Alternative à Dialzara : LobbyStack ou Dialzara"
 description: "Comparez LobbyStack et Dialzara : prix à la minute, réservation, transferts, SMS, options agence, marque blanche, API, code ouvert et auto-hébergement."
 pubDate: 2026-07-30T10:50:00-04:00
-updatedDate: 2026-07-30T10:50:00-04:00
+updatedDate: 2026-10-26T10:00:00-04:00
 author: "Équipe LobbyStack"
 category: "Comparaisons"
 featured: false
@@ -26,7 +26,7 @@ LobbyStack inclut aussi réservation, relais humain, alertes SMS, transcriptions
 | Niveau intermédiaire | 99 $ pour 220 minutes | 100 $ pour 500 minutes |
 | Réservation et transfert | À partir de 99 $ | Workflows pris en charge |
 | SMS | Option à 19 $ plus usage | Segments d'alerte inclus sur Starter et Pro |
-| Agences | Offres agence et marque blanche | Code ouvert, affiliation, auto-hébergement |
+| Agences | Offres agence et marque blanche | [Programme partenaire en marque blanche](/fr/white-label/), code ouvert, affiliation |
 | Déploiement | Hébergé | Cloud géré ou auto-hébergement |
 
 Prix et fonctions vérifiés le 30 juillet 2026.

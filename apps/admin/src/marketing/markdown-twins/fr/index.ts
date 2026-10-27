@@ -22,6 +22,8 @@ LobbyStack est un réceptionniste IA open source pour les petites entreprises qu
 
 - Fonctionnalités : ${absoluteUrl("/fr/features/")}
 - Tarifs : ${absoluteUrl("/fr/pricing/")}
+- Programme d’affiliation : ${absoluteUrl("/fr/affiliate-program/")}
+- Réceptionniste IA en marque blanche : ${absoluteUrl("/fr/white-label/")}
 - Solutions : ${absoluteUrl("/fr/solutions/")}
 - Calculateur : ${absoluteUrl("/fr/missed-call-revenue-calculator/")}
 - Blog : ${absoluteUrl("/fr/blog/")}
