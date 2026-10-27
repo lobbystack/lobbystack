@@ -412,17 +412,6 @@ export function SeoLandingPage({ page, locale }: SeoLandingPageProps) {
         {/* FAQ Section */}
         {page.faqs.length > 0 && <FaqSection heading={page.faqHeading ?? t.faqHeading} faqs={page.faqs} />}
 
-        <ClosingCta
-          titleLines={[page.ctaHeading ?? t.ctaHeading]}
-          body={page.ctaBody ?? t.ctaBody}
-          primary={{ label: page.ctaPrimaryLabel ?? copy.common.tryFree, href: primaryCtaHref }}
-          secondary={{
-            label: page.ctaSecondaryLabel ?? copy.common.viewPricing,
-            href: localizeHref(locale, page.ctaSecondaryHref ?? "/pricing/"),
-          }}
-          footnote={copy.common.noCreditCardCancelAnytime}
-        />
-
         {otherTrades.length > 0 && (
           <section className="section-spacing">
             <div className="mx-auto max-w-site px-6">
@@ -444,7 +433,7 @@ export function SeoLandingPage({ page, locale }: SeoLandingPageProps) {
         )}
 
         {/* Related Resources Footer */}
-        <section className="mx-auto max-w-site px-6 py-12">
+        <section className="mx-auto max-w-site px-6 pt-12">
           <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
             <h3 className="eyebrow">{copy.common.relatedResources}</h3>
             <div className="flex flex-wrap gap-2.5">
@@ -456,6 +445,17 @@ export function SeoLandingPage({ page, locale }: SeoLandingPageProps) {
             </div>
           </div>
         </section>
+
+        <ClosingCta
+          titleLines={[page.ctaHeading ?? t.ctaHeading]}
+          body={page.ctaBody ?? t.ctaBody}
+          primary={{ label: page.ctaPrimaryLabel ?? copy.common.tryFree, href: primaryCtaHref }}
+          secondary={{
+            label: page.ctaSecondaryLabel ?? copy.common.viewPricing,
+            href: localizeHref(locale, page.ctaSecondaryHref ?? "/pricing/"),
+          }}
+          footnote={copy.common.noCreditCardCancelAnytime}
+        />
       </main>
       <Footer locale={locale} path={seo.canonicalPath} />
     </>
