@@ -374,7 +374,7 @@
       "awaiting_payment": "Your receptionist starts answering calls and chats once you pay.",
       "active": "Your subscription is active.",
       "renews": "Your subscription renews on {{date}}.",
-      "past_due": "Your last payment failed, and Stripe will try again. Update your card to keep your receptionist answering.",
+      "past_due": "Your last payment failed, and we'll try again. Update your card to keep your receptionist answering.",
       "inactive": "Your subscription ended, so your receptionist doesn't answer calls or chats. Subscribe again to turn it back on."
     },
     "badge": {
@@ -386,7 +386,7 @@
     "subscribe": "Subscribe",
     "manage": "Manage billing",
     "opening": "Opening…",
-    "manageHint": "Update your card, download invoices or cancel in Stripe's billing portal.",
+    "manageHint": "Update your card, download invoices or cancel your subscription.",
     "paid": "Payment received. Your receptionist starts answering in a moment.",
     "errors": {
       "portal": "The billing portal isn't available right now. Ask {{appName}} about it.",

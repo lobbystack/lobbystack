@@ -13,7 +13,7 @@ const fixture = vi.hoisted(() => ({
   replace: vi.fn(),
 }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ i18n: { language: "en" }, t: (key: string) => key }) }));
-vi.mock("next/navigation", () => ({ usePathname: () => "/partner/partner/stripe", useRouter: () => ({ replace: fixture.replace }), useSearchParams: () => fixture.search }));
+vi.mock("next/navigation", () => ({ usePathname: () => "/partner/partner/payments", useRouter: () => ({ replace: fixture.replace }), useSearchParams: () => fixture.search }));
 vi.mock("@/components/partner-shell", () => ({ useConsolePartner: () => fixture.partner }));
 vi.mock("@/components/product-analytics", () => ({ useTelemetry: () => fixture.telemetry!.telemetry }));
 
@@ -52,7 +52,7 @@ describe("the partner console's Stripe page", () => {
     const [url, init] = posts(fetchMock)[0]!;
     expect(url).toBe("/api/partner/stripe/onboarding");
     expect(JSON.parse(String((init as RequestInit).body))).toEqual({ partnerId: "partner", country: "CA" });
-    fixture.telemetry!.expectEvent("web.partner.stripe_onboarding_started", { partnerId: "partner", resumed: false, pathname: "/partner/partner/stripe" });
+    fixture.telemetry!.expectEvent("web.partner.stripe_onboarding_started", { partnerId: "partner", resumed: false, pathname: "/partner/partner/payments" });
   });
 
   it("continues onboarding an account that has one, without asking for a country", async () => {
@@ -61,7 +61,7 @@ describe("the partner console's Stripe page", () => {
     await waitFor(() => expect(assign).toHaveBeenCalledWith("https://connect.stripe.com/setup/s/again"));
     expect(screen.queryByLabelText("stripe.connect.countryLabel")).toBeNull();
     expect(JSON.parse(String((posts(fetchMock)[0]![1] as RequestInit).body))).toEqual({ partnerId: "partner" });
-    fixture.telemetry!.expectEvent("web.partner.stripe_onboarding_started", { partnerId: "partner", resumed: true, pathname: "/partner/partner/stripe" });
+    fixture.telemetry!.expectEvent("web.partner.stripe_onboarding_started", { partnerId: "partner", resumed: true, pathname: "/partner/partner/payments" });
   });
 
   it("asks Stripe for the account when the owner comes back, then drops the query from the address", async () => {
@@ -69,7 +69,7 @@ describe("the partner console's Stripe page", () => {
     const fetchMock = renderWith(() => Response.json(active));
     expect(await screen.findByText("stripe.active.title")).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledWith("/api/partner/stripe?partnerId=partner&refresh=1", expect.anything());
-    await waitFor(() => expect(fixture.replace).toHaveBeenCalledWith("/partner/partner/stripe"));
+    await waitFor(() => expect(fixture.replace).toHaveBeenCalledWith("/partner/partner/payments"));
     expect(screen.getByText("acct_bright")).toBeTruthy();
     expect(screen.getByText("CAD")).toBeTruthy();
     expect(screen.getByRole("link", { name: "stripe.active.dashboard" }).getAttribute("href")).toBe("https://dashboard.stripe.com/");

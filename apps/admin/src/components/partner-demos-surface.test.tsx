@@ -70,8 +70,11 @@ describe("the partner console's Demos page", () => {
       return Response.json({ demos: made ? [harbor] : [] });
     });
     await screen.findByText("operator.partner.empty");
-    await userEvent.type(screen.getByLabelText("operator.businessName"), "Harbor Dental");
-    await userEvent.type(screen.getByLabelText("operator.websiteUrl"), "https://harbor.example");
+    // The Create demo button opens the form in a dialog.
+    await userEvent.click(screen.getByRole("button", { name: "operator.create" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    await userEvent.type(dialog.getByLabelText("operator.businessName"), "Harbor Dental");
+    await userEvent.type(dialog.getByLabelText("operator.websiteUrl"), "https://harbor.example");
     await userEvent.type(screen.getByLabelText("operator.suggestedPrompts"), "Hours?{enter}Prices?");
     await userEvent.click(screen.getByRole("radio", { name: /businesses\.access\.activity/ }));
     await userEvent.click(screen.getByRole("button", { name: "operator.create" }));
@@ -90,10 +93,13 @@ describe("the partner console's Demos page", () => {
     });
     await screen.findByText("operator.partner.empty");
     expect(screen.queryByRole("radio")).toBeNull();
-    await userEvent.type(screen.getByLabelText("operator.businessName"), "Harbor Dental");
-    await userEvent.type(screen.getByLabelText("operator.websiteUrl"), "https://harbor.example");
-    await userEvent.type(screen.getByLabelText("operator.suggestedPrompts"), "Hours?{enter}Prices?");
+    // The Create demo button opens the form in a dialog.
     await userEvent.click(screen.getByRole("button", { name: "operator.create" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    await userEvent.type(dialog.getByLabelText("operator.businessName"), "Harbor Dental");
+    await userEvent.type(dialog.getByLabelText("operator.websiteUrl"), "https://harbor.example");
+    await userEvent.type(dialog.getByLabelText("operator.suggestedPrompts"), "Hours?{enter}Prices?");
+    await userEvent.click(dialog.getByRole("button", { name: "operator.create" }));
 
     await waitFor(() => fixture.telemetry!.expectEvent("web.partner.demo_created", { partnerId: "partner", prospectDemoId: "demo", businessId: "harbor", accessLevel: "full", pathname: "/partner/partner/demos" }));
     expect(posted(fetchMock, "/api/partner/demos")[0]).not.toHaveProperty("accessLevel");
@@ -102,10 +108,13 @@ describe("the partner console's Demos page", () => {
   it("says when the partner needs a domain first, and records nothing", async () => {
     renderWith((_input, init) => init?.method === "POST" ? Response.json({ error: "You need your own domain before you can make a demo.", code: "partner_domain_required" }, { status: 409 }) : Response.json({ demos: [] }));
     await screen.findByText("operator.partner.empty");
-    await userEvent.type(screen.getByLabelText("operator.businessName"), "Harbor Dental");
-    await userEvent.type(screen.getByLabelText("operator.websiteUrl"), "https://harbor.example");
-    await userEvent.type(screen.getByLabelText("operator.suggestedPrompts"), "Hours?{enter}Prices?");
+    // The Create demo button opens the form in a dialog.
     await userEvent.click(screen.getByRole("button", { name: "operator.create" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    await userEvent.type(dialog.getByLabelText("operator.businessName"), "Harbor Dental");
+    await userEvent.type(dialog.getByLabelText("operator.websiteUrl"), "https://harbor.example");
+    await userEvent.type(dialog.getByLabelText("operator.suggestedPrompts"), "Hours?{enter}Prices?");
+    await userEvent.click(dialog.getByRole("button", { name: "operator.create" }));
     expect((await screen.findByRole("alert")).textContent).toBe("operator.partner.errors.domainRequired");
     expect(fixture.telemetry!.events).toEqual([]);
   });

@@ -413,7 +413,6 @@ export function PartnerBusinessesSurface() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
         <PageHeader actions={createDialog} title={t("businesses.title")} />
-        <p className="text-sm text-muted-foreground">{t("businesses.description")}</p>
       </div>
       <PartnerLifecycleNotice />
       {businesses.isLoading ? (

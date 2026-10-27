@@ -170,7 +170,8 @@ describe("the partner console's Billing page", () => {
     expect(pool.textContent).toContain("201 / 500");
     expect(pool.textContent).toContain("billing.pool.noLimit");
     expect(pool.querySelectorAll(".bg-secondary")).toHaveLength(1);
-    expect(screen.getByText("billing.hostPool.description")).toBeTruthy();
+    // The page has no subtitle under its title.
+    expect(screen.queryByText("billing.hostPool.description")).toBeNull();
     expect(screen.getByText("billing.hostPool.limit")).toBeTruthy();
     for (const hidden of ["billing.description", "billing.unavailable", "billing.current.title", "billing.current.free", "billing.overage.title", "billing.choose.title"]) expect(screen.queryByText(hidden)).toBeNull();
     expect(screen.queryByRole("button")).toBeNull();

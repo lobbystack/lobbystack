@@ -1,47 +1,47 @@
 {
   "loading": {
-    "label": "Loading..."
+    "label": "Loading…"
   },
   "active": {
     "title": "Demo for {{businessName}}",
     "startHint": "Tap the button to start a live voice call.",
     "promptsTitle": "Try asking:",
-    "intakeNotice": "This is a limited demo. Live calls work, but booking and other full receptionist features aren't enabled.",
+    "intakeNotice": "This is a demo. Calls work, but booking and other features are off.",
     "claimCta": "Claim this receptionist"
   },
   "states": {
     "invalid": {
       "title": "This demo link isn't valid",
-      "description": "The link may be mistyped or the demo was never created. Ask for a fresh link to try again."
+      "description": "Check the link, or ask for a new one."
     },
     "preparing": {
       "title": "Your demo is being prepared",
       "titleWithBusiness": "The demo for {{businessName}} is being prepared",
-      "description": "We're still learning from the website. This usually takes a few minutes, so check back shortly."
+      "description": "We're still reading the website. Check back in a few minutes."
     },
     "expired": {
       "title": "This demo has expired",
       "titleWithBusiness": "The demo for {{businessName}} has expired",
-      "description": "Demo links are available for a limited time. Reach out to get a new one."
+      "description": "Demo links expire. Ask for a new one."
     },
     "revoked": {
       "title": "This demo is no longer available",
       "titleWithBusiness": "The demo for {{businessName}} is no longer available",
-      "description": "This demo link has been turned off."
+      "description": "This demo link was turned off."
     },
     "claimed": {
       "title": "This demo has already been claimed",
       "titleWithBusiness": "The demo for {{businessName}} has already been claimed",
-      "description": "This receptionist is now owned by a {{appName}} account."
+      "description": "Someone already claimed this receptionist."
     }
   },
   "claim": {
     "loadingTitle": "Setting up your workspace",
-    "loadingDescription": "Claiming your receptionist and getting your workspace ready...",
+    "loadingDescription": "Claiming your receptionist…",
     "errorTitle": "We couldn't claim this demo",
-    "errorDescription": "Something went wrong while claiming this demo. Please try again.",
+    "errorDescription": "Something went wrong. Try again.",
     "unavailableTitle": "This demo link is unavailable",
-    "unavailableDescription": "The demo link is missing or no longer valid.",
+    "unavailableDescription": "The link is missing or no longer works.",
     "retry": "Try again"
   },
   "operator": {
@@ -50,20 +50,20 @@
     "count_one": "{{count}} demo",
     "count_other": "{{count}} demos",
     "refresh": "Refresh",
-    "loading": "Loading demos...",
-    "empty": "No prospect demos have been prepared yet.",
+    "loading": "Loading demos…",
+    "empty": "No prospect demos yet.",
     "rotate": "Rotate link",
     "publish": "Publish",
     "revoke": "Revoke",
     "openLink": "Open secure link",
-    "tokenHint": "Rotate the link in this session before publishing or sharing it. Raw tokens are never stored.",
+    "tokenHint": "Rotate the link to see it, then share it. We don't store links.",
     "prepare": "Prepare a demo",
     "prepareDescription": "The workspace starts private while its public website is indexed.",
     "businessName": "Business name",
     "websiteUrl": "Website URL",
     "greeting": "Greeting",
     "suggestedPrompts": "Suggested prompts",
-    "create": "Create isolated demo",
+    "create": "Create demo",
     "ingestion": "Ingestion:",
     "snapshot": "Snapshot:",
     "prompts": "Prompts:",
@@ -86,35 +86,34 @@
       "unavailable": "not set up"
     },
     "errors": {
-      "load": "Unable to load prospect demos. Try refreshing.",
-      "create": "Unable to create the demo. Your entries have been kept; please try again.",
-      "rotate": "Unable to rotate the demo link. Please try again.",
-      "publish": "Unable to publish the demo. Please try again.",
-      "revoke": "Unable to revoke the demo. Please try again.",
-      "promptsRequired": "Add at least two suggested prompts, one per line.",
-      "notReady": "The demo isn't ready to publish yet. Wait for the website to finish, then try again."
+      "load": "We couldn't load your demos. Refresh to try again.",
+      "create": "We couldn't create the demo. Your entries are still here, so try again.",
+      "rotate": "We couldn't rotate the link. Try again.",
+      "publish": "We couldn't publish the demo. Try again.",
+      "revoke": "We couldn't revoke the demo. Try again.",
+      "promptsRequired": "Add at least two prompts, one per line.",
+      "notReady": "The demo isn't ready yet. Wait until we've read the website, then try again."
     },
     "partner": {
-      "description": "Show a prospect their own receptionist before they buy. Each demo opens on your domain under your brand.",
-      "prepareDescription": "The demo stays private while we read the prospect's website.",
+      "prepareDescription": "We read the prospect's website to build the demo. Publish it once it's ready.",
       "empty": "No demos yet. Enter a prospect's website to make one.",
       "accessLabel": "Access once the prospect claims it",
       "usage": "Minutes this month: {{minutes}} · Chats this month: {{chats}}",
       "open": "Open",
       "delete": "Delete",
       "deleteTitle": "Delete the {{name}} demo?",
-      "deleteDescription": "You'll erase the demo and its calls and chats. You can't undo it.",
+      "deleteDescription": "This erases the demo and its calls and chats. You can't undo it.",
       "deleteConfirm": "Delete demo",
       "cancel": "Cancel",
       "errors": {
-        "domainRequired": "You need a dashboard address before you can make a demo. Ask {{appName}} to set one up.",
-        "rateLimited": "You made too many demos. Try again in an hour.",
+        "domainRequired": "You need a dashboard address first. Ask {{appName}} to set one up.",
+        "rateLimited": "Too many new demos this hour. Try again later.",
         "open": "We couldn't open the demo. Try again.",
         "delete": "We couldn't delete the demo. Try again."
       }
     },
     "promptsHint": "Add at least two, one per line.",
-    "ingestionUnavailable": "This dashboard can't read websites, so the demo answers from its greeting, services and suggested prompts.",
+    "ingestionUnavailable": "This dashboard can't read websites, so the demo answers from its greeting and prompts.",
     "ingestionFailed": "We couldn't read the website. Make a new demo to try again."
   }
 }

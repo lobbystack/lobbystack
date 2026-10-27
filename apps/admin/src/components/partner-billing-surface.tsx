@@ -211,7 +211,6 @@ export function PartnerBillingSurface() {
   const header = (
     <div className="flex flex-col gap-1">
       <PageHeader title={t("billing.title")} />
-      <p className="text-sm text-muted-foreground">{t(billing.data && !billing.data.billed ? billing.data.pool ? "billing.hostPool.description" : "billing.unbilledDescription" : "billing.description")}</p>
     </div>
   );
   if (!isOwner) return <div className="flex flex-col gap-6">{header}<Surface className="px-6 py-8"><p className="text-sm text-muted-foreground">{t("billing.ownersOnly")}</p></Surface></div>;

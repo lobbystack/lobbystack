@@ -1,6 +1,5 @@
 {
   "shell": {
-    "navigation": "Partnerska konzola",
     "switchPartner": "Promeni partnera",
     "signUpAnother": "Registruj još jednog partnera",
     "userMenu": "Meni naloga {{email}}"
@@ -12,7 +11,7 @@
     "packages": "Ponude",
     "branding": "Brend i domen",
     "team": "Tim",
-    "stripe": "Stripe",
+    "stripe": "Plaćanja",
     "apiKeys": "API ključevi",
     "billing": "Naplata",
     "settings": "Podešavanja"
@@ -24,8 +23,7 @@
   },
   "businesses": {
     "title": "Firme",
-    "description": "Firme kojima preprodajete uslugu, sa njihovim minutima i četovima ovog meseca. Njihovi vlasnici se prijavljuju na adresi vaše kontrolne table. Dnevnik revizije svake firme beleži ko iz vašeg tima je otvara.",
-    "loadFailed": "Nismo uspeli da učitamo vaše firme. Osvežite stranicu i pokušajte ponovo.",
+    "loadFailed": "Nismo uspeli da učitamo Vaše firme. Osvežite stranicu i pokušajte ponovo.",
     "createdOn": "Napravljena {{date}}",
     "table": {
       "business": "Firma",
@@ -48,7 +46,7 @@
     "open": {
       "action": "Otvori",
       "label": "Otvori {{name}}",
-      "opening": "Otvaranje",
+      "opening": "Otvaranje…",
       "failed": "Nismo uspeli da otvorimo {{name}}. Pokušajte ponovo."
     },
     "actions": {
@@ -61,18 +59,18 @@
     "release": {
       "action": "Predaj vlasniku",
       "title": "Predati {{name}}?",
-      "description": "{{email}} zadržava {{name}} i njenu recepcionerku na Free paketu i preuzima njeno plaćanje. Firma napušta vašu konzolu i vaš tim više ne može da je otvori.",
+      "description": "{{email}} preuzima {{name}} na Free paketu i od sada plaća njene račune. Firma napušta Vašu konzolu.",
       "confirm": "Predaj firmu",
       "released": "Predali ste {{name}} vlasniku {{email}}.",
       "errors": {
-        "ownerRequired": "{{name}} još nema vlasnika. Vlasnik prvo mora da prihvati poziv.",
+        "ownerRequired": "{{name}} još nema vlasnika. Vlasnik prvo treba da prihvati poziv.",
         "failed": "Nismo uspeli da predamo {{name}}. Pokušajte ponovo."
       }
     },
     "delete": {
       "action": "Obriši",
       "title": "Obrisati {{name}}?",
-      "description": "Obrisaćete {{name}} sa pozivima, četovima, kontaktima, terminima i podešavanjima i odreći se njenog broja telefona. Vlasnik i tim gube pristup, a ovo ne možete da poništite.",
+      "description": "Brišete {{name}} sa svim podacima i oslobađate njen broj telefona. Ovo ne možete da poništite.",
       "confirm": "Obriši firmu",
       "deleted": "Obrisali ste {{name}}.",
       "errors": {
@@ -83,7 +81,7 @@
     "empty": {
       "title": "Još nema firmi",
       "description": "Napravite firmu i pozovite njenog vlasnika.",
-      "memberDescription": "Vlasnici i administratori vašeg tima ovde prave firme."
+      "memberDescription": "Vlasnici i administratori Vašeg tima ovde prave firme."
     },
     "create": {
       "action": "Napravi firmu",
@@ -108,31 +106,31 @@
         "indian": "Indijski okean",
         "pacific": "Pacifik"
       },
-      "accessLabel": "Šta njen tim može da koristi",
+      "accessLabel": "Šta tim firme može da koristi",
       "access": {
-        "full": "Njen tim upravlja recepcionerom: znanjem, radnim vremenom, uslugama i članovima tima. Ne vidi naplatu, API ključeve ni MCP.",
-        "activity": "Njen tim vidi pozive, četove, termine, kontakte i poruke. Vi podešavate recepcionera."
+        "full": "Tim firme podešava recepcionera. Naplata i API ključevi ostaju kod Vas.",
+        "activity": "Tim firme vidi pozive, četove i termine. Vi podešavate recepcionera."
       },
       "billingLabel": "Naplata",
       "billing": {
-        "outside": "Ovoj firmi sami naplaćujete, a vlasnik se prijavljuje preko pozivnice.",
-        "package": "Vlasnik plaća ovu ponudu preko pozivnice, pa se prijavljuje."
+        "outside": "Ovoj firmi sami naplaćujete.",
+        "package": "Vlasnik plaća ovu ponudu kada prihvati pozivnicu."
       },
       "templateLabel": "Šablon",
       "noTemplate": "Bez šablona",
-      "templateHelp": "Firma dobija podešavanja šablona, sa nazivom i vremenskom zonom koje ovde unesete. Čitamo deo svakog sajta iz šablona. Otvorite firmu da pročitate ostatak.",
+      "templateHelp": "Firma počinje sa podešavanjima šablona. Čitamo deo svakog sajta iz šablona, a ostatak kada otvorite firmu.",
       "submit": "Napravi i pozovi",
       "submitting": "Pravljenje…",
       "created": "Napravili ste firmu {{name}} i pozvali {{email}}.",
       "errors": {
         "invalidName": "Unesite naziv firme, do 120 znakova.",
-        "invalidEmail": "Unesite jednu ispravnu imejl adresu vlasnika.",
+        "invalidEmail": "Unesite imejl adresu vlasnika.",
         "invalidTimezone": "Izaberite vremensku zonu.",
-        "domainRequired": "Potrebna vam je adresa kontrolne table pre nego što napravite firmu. Zatražite od servisa {{appName}} da je podesi.",
-        "rateLimited": "Napravili ste previše firmi. Pokušajte ponovo za sat vremena.",
-        "ownerOnTeam": "Neko iz vašeg tima ne može da bude vlasnik firme. Unesite imejl klijenta čija je firma.",
+        "domainRequired": "Prvo Vam treba adresa kontrolne table. Zatražite od servisa {{appName}} da je podesi.",
+        "rateLimited": "Napravili ste previše firmi u ovom satu. Pokušajte ponovo kasnije.",
+        "ownerOnTeam": "Neko iz Vašeg tima ne može da bude vlasnik firme. Unesite imejl svog klijenta.",
         "failed": "Nismo uspeli da napravimo firmu. Pokušajte ponovo.",
-        "templateFailed": "Nismo uspeli da podesimo firmu iz tog šablona, pa je nismo napravili. Pokušajte ponovo ili izaberite drugi šablon.",
+        "templateFailed": "Nismo uspeli da napravimo firmu iz tog šablona. Pokušajte ponovo ili izaberite drugi.",
         "templateNotFound": "Neko je obrisao taj šablon. Izaberite drugi."
       }
     },
@@ -148,16 +146,16 @@
       "change": "Promeni",
       "changeFor": "Promenite naplatu za firmu {{name}}",
       "title": "Naplata za firmu {{name}}",
-      "description": "Izaberite ponudu koju Vam ova firma plaća ili joj sami naplaćujte.",
-      "outsideHint": "Firma ništa ne plaća preko Stripe-a, a nijedna ponuda ne ograničava njene minute i četove.",
-      "packageHint": "Vlasnik plaća ponudu na stranici za naplatu firme, ili preko pozivnice ako se još nije pridružio.",
+      "description": "Izaberite ponudu koju ova firma plaća ili joj sami naplaćujte.",
+      "outsideHint": "Nijedna ponuda ne ograničava njene minute ni četove.",
+      "packageHint": "Vlasnik plaća na stranici za naplatu firme.",
       "submit": "Sačuvaj",
       "saving": "Čuvamo…",
       "saved": "Promenili ste naplatu za firmu {{name}}.",
       "errors": {
-        "subscriptionActive": "Ova firma plaća ponudu preko Stripe-a. Prvo otkažite njenu pretplatu u Stripe kontrolnoj tabli.",
+        "subscriptionActive": "Ova firma ima aktivnu pretplatu. Prvo je otkažite u svojoj Stripe kontrolnoj tabli.",
         "packageGone": "Ta ponuda se više ne prodaje. Izaberite drugu.",
-        "notConnected": "Povežite Stripe nalog pre nego što počnete da prodajete ponude.",
+        "notConnected": "Povežite nalog za plaćanje pre nego što počnete da prodajete ponude.",
         "notConfigured": "Ova kontrolna tabla još ne može da prodaje ponude.",
         "failed": "Nismo mogli da promenimo naplatu firme. Pokušajte ponovo."
       }
@@ -171,21 +169,21 @@
         "cap": "Prekoračenje do {{cap}} mesečno"
       },
       "title": "Prekoračenje za firmu {{name}}",
-      "description": "Izaberite da li firma nastavlja da odgovara posle onoga što ponuda {{packageName}} uključuje, i koliko joj naplaćujete dodatne minute i četove.",
+      "description": "Dozvolite firmi da nastavi da odgovara i kada potroši ponudu {{packageName}}, po cenama koje odredite.",
       "toggle": "Dozvoli prekoračenje",
-      "onHint": "Posle svoje ponude, firma nastavlja da odgovara dok njeno prekoračenje ne dostigne vaš limit. Tada se pozivi prosleđuju, a čet na sajtu prestaje da odgovara. Njeni Stripe računi prikazuju trošak kao „Call overage“ i „Chat overage“, sa iznosom kao količinom, po 1,00 za jedinicu.",
-      "offHint": "Firma staje na minutima i četovima svoje ponude. Pozivi tada idu na njen broj za prebacivanje ili na telefon njenog vlasnika, a čet na sajtu prestaje da odgovara.",
+      "onHint": "Kada potroši ponudu, firma nastavlja da odgovara dok ne dostigne limit. Prekoračenje ide na njen sledeći račun.",
+      "offHint": "Kada firma potroši ponudu, pozivi se prosleđuju, a čet na sajtu prestaje da odgovara.",
       "minuteRateLabel": "Svaki dodatni minut",
       "chatRateLabel": "Svaki dodatni čet",
       "capLabel": "Mesečni limit",
       "capPlaceholder": "Bez limita",
-      "capHint": "Limit kreće ispočetka 1. u mesecu (UTC), pa račun koji obuhvata dva meseca može da naplati do dva limita. Ostavite prazno ako ne želite limit.",
+      "capHint": "Limit kreće ispočetka 1. u mesecu. Ostavite prazno ako ne želite limit.",
       "submit": "Sačuvaj",
       "saving": "Čuvamo…",
       "saved": "Sačuvali ste prekoračenje za firmu {{name}}.",
       "errors": {
         "invalidRate": "Unesite svaku cenu kao iznos u valuti ponude.",
-        "invalidCap": "Unesite limit kao iznos u valuti ponude ili ga ostavite praznim.",
+        "invalidCap": "Unesite iznos u valuti ponude ili ostavite polje prazno.",
         "billedOutside": "Ovu firmu sami naplaćujete, pa nema prekoračenje.",
         "failed": "Nismo mogli da sačuvamo prekoračenje. Pokušajte ponovo."
       }
@@ -193,20 +191,19 @@
   },
   "packages": {
     "title": "Ponude",
-    "description": "Ono što prodajete svojim firmama: mesečna cena, opciona naknada za aktivaciju i minuti i četovi koje svaki mesec uključuje.",
-    "loadFailed": "Nismo uspeli da učitamo vaše ponude. Osvežite stranicu i pokušajte ponovo.",
+    "loadFailed": "Nismo uspeli da učitamo Vaše ponude. Osvežite stranicu i pokušajte ponovo.",
     "managersOnly": "Samo vlasnici i administratori mogu da vide ponude.",
-    "notConfigured": "Ova kontrolna tabla nije podešena za povezivanje Stripe naloga. Dok firma koja njome upravlja ne uključi Stripe, sami naplaćujete svojim firmama.",
+    "notConfigured": "Plaćanja nisu uključena na ovoj kontrolnoj tabli, pa sami naplaćujete svojim firmama.",
     "connectFirst": {
-      "owner": "Povežite svoj Stripe nalog da biste prodavali ponude.",
-      "admin": "Zamolite vlasnika da poveže vaš Stripe nalog kako biste prodavali ponude."
+      "owner": "Povežite nalog za plaćanje da biste prodavali ponude.",
+      "admin": "Zamolite vlasnika da poveže nalog za plaćanje kako biste prodavali ponude."
     },
-    "notReady": "Stripe još ne može da prima uplate na vaš nalog. Ponude možete da napravite sada, a firme će moći da ih kupe kada Stripe uključi uplate.",
+    "notReady": "Vaš nalog za plaćanje još ne prima uplate. Kada počne, firme će moći da kupuju ponude.",
     "disconnected": {
-      "owner": "Prekinuli ste vezu sa svojim Stripe nalogom, pa se njegove ponude više ne mogu prodavati. Ponovo povežite nalog da biste napravili nove.",
-      "admin": "Veza sa vašim Stripe nalogom je prekinuta, pa se njegove ponude više ne mogu prodavati. Zamolite vlasnika da ponovo poveže nalog."
+      "owner": "Vaš nalog za plaćanje više nije povezan. Povežite nalog da biste ponovo prodavali ponude.",
+      "admin": "Vaš nalog za plaćanje više nije povezan. Zamolite vlasnika da poveže nalog."
     },
-    "openStripe": "Otvori Stripe stranicu",
+    "openStripe": "Podesi plaćanja",
     "oldAccount": "Nalog bez veze",
     "createdOn": "Napravljen {{date}}",
     "perMonth": "{{amount}} mesečno",
@@ -222,17 +219,17 @@
     "table": {
       "package": "Ponuda",
       "price": "Cena",
-      "allowance": "Svakog meseca"
+      "allowance": "Uključeno svakog meseca"
     },
     "empty": {
       "title": "Još nema ponuda",
-      "description": "Napravite ponudu koju vaše firme mogu da kupe.",
-      "noStripe": "Ponude se naplaćuju preko Stripe-a. Kada ova kontrolna tabla bude mogla da poveže Stripe nalog, pravićete ih ovde."
+      "description": "Napravite ponudu koju Vaši klijenti mogu da kupe.",
+      "noStripe": "Za ponude su potrebna plaćanja, a ova kontrolna tabla ih još ne nudi."
     },
     "create": {
       "action": "Napravi ponudu",
       "title": "Napravite ponudu",
-      "description": "Firme sa ovom ponudom vam plaćaju ovaj iznos svakog meseca, u valuti {{currency}}, i dobijaju ove minute i četove.",
+      "description": "Firme sa ovom ponudom plaćaju ovaj iznos svakog meseca, u valuti {{currency}}.",
       "nameLabel": "Naziv",
       "namePlaceholder": "Recepcija",
       "priceLabel": "Mesečna cena",
@@ -240,7 +237,7 @@
       "optional": "Opciono",
       "minutesLabel": "Minuti mesečno",
       "chatsLabel": "Četovi mesečno",
-      "fixedTerms": "Kasnije ne možete da promenite cenu ni minute i četove, jer ih firme možda već plaćaju. Naziv ponude možete da promenite.",
+      "fixedTerms": "Kasnije možete da promenite naziv ponude, ali ne i cenu, minute ili četove.",
       "submit": "Napravi ponudu",
       "submitting": "Pravimo…",
       "created": "Napravili ste {{name}}.",
@@ -248,19 +245,19 @@
         "invalidName": "Unesite naziv do 80 znakova.",
         "invalidPrice": "Unesite mesečnu cenu veću od nule.",
         "invalidSetupFee": "Unesite naknadu za aktivaciju veću od nule ili ostavite polje prazno.",
-        "invalidAllowance": "Unesite minute i četove kao cele brojeve od 0 do 1.000.000.",
-        "notConnected": "Povežite svoj Stripe nalog pre nego što napravite ponude.",
+        "invalidAllowance": "Unesite cele brojeve od 0 do 1.000.000.",
+        "notConnected": "Povežite nalog za plaćanje pre nego što napravite ponude.",
         "failed": "Nismo uspeli da napravimo ponudu. Pokušajte ponovo."
       }
     },
     "rename": {
       "action": "Preimenuj",
       "title": "Preimenujte ponudu",
-      "description": "Stripe prikazuje novi naziv na računima vaših firmi.",
+      "description": "Vaši klijenti vide novi naziv na svojim računima.",
       "submit": "Sačuvaj naziv",
       "saving": "Čuvamo…",
       "saved": "Ponuda je preimenovana.",
-      "notConnected": "Možete da preimenujete samo ponude na povezanom Stripe nalogu.",
+      "notConnected": "Možete da preimenujete samo ponude na povezanom nalogu za plaćanje.",
       "failed": "Nismo uspeli da preimenujemo ponudu. Pokušajte ponovo."
     },
     "archive": {
@@ -275,8 +272,7 @@
   },
   "templates": {
     "title": "Šabloni",
-    "description": "Šablon kopira podešavanja recepcionera, radno vreme, usluge, pravila, znanje i dokumente firme. Njen naziv, sajt, brojevi telefona, paket i vlasnik ostaju uz firmu. Izaberite šablon kada pravite firmu da bi počela sa tim podešavanjima.",
-    "loadFailed": "Nismo uspeli da učitamo vaše šablone. Osvežite stranicu i pokušajte ponovo.",
+    "loadFailed": "Nismo uspeli da učitamo Vaše šablone. Osvežite stranicu i pokušajte ponovo.",
     "savedOn": "Sačuvan {{date}}",
     "table": {
       "template": "Šablon",
@@ -307,13 +303,13 @@
     },
     "empty": {
       "title": "Još nema šablona",
-      "description": "Sačuvajte kao šablon firmu koju ste podesili, pa ga izaberite kada pravite sledeću.",
-      "memberDescription": "Vlasnici i administratori vašeg tima ovde čuvaju šablone."
+      "description": "Sačuvajte firmu kao šablon, pa ga iskoristite za sledeću.",
+      "memberDescription": "Vlasnici i administratori Vašeg tima ovde čuvaju šablone."
     },
     "save": {
       "action": "Sačuvaj šablon",
       "title": "Sačuvajte šablon",
-      "description": "Čuvate kopiju podešavanja i dokumenata firme. Ako kasnije promenite firmu, šablon ostaje isti.",
+      "description": "Čuvate kopiju podešavanja ove firme. Kasnije izmene firme ne menjaju šablon.",
       "businessLabel": "Firma",
       "businessPlaceholder": "Izaberite firmu",
       "noBusinesses": "Prvo napravite firmu, pa ovde sačuvajte njena podešavanja.",
@@ -324,8 +320,8 @@
       "saved": "Sačuvali ste šablon {{name}}.",
       "errors": {
         "invalidName": "Unesite naziv šablona, do 120 znakova.",
-        "invalid": "Ova firma ima podešavanje koje šablon ne može da sačuva, na primer pravilo duže od 4.000 znakova. Skratite ga u firmi, pa sačuvajte ponovo.",
-        "fileMismatch": "Jedan dokument ove firme se ne poklapa sa sačuvanom kopijom. Ponovo ga otpremite u firmu, pa sačuvajte ponovo.",
+        "invalid": "Jedno podešavanje je predugo za šablon, na primer pravilo duže od 4.000 znakova. Skratite ga i pokušajte ponovo.",
+        "fileMismatch": "Jedan dokument se ne poklapa sa sačuvanom kopijom. Ponovo ga otpremite, pa sačuvajte.",
         "rateLimited": "Sačuvali ste previše šablona. Pokušajte ponovo za sat vremena.",
         "failed": "Nismo uspeli da sačuvamo šablon. Pokušajte ponovo."
       }
@@ -336,7 +332,7 @@
     "delete": {
       "action": "Obriši",
       "title": "Obrisati {{name}}?",
-      "description": "Više nećete moći da pravite firme iz šablona {{name}}. Firme koje ste napravili iz njega zadržavaju svoja podešavanja.",
+      "description": "Više nećete moći da pravite nove firme iz šablona {{name}}. Firme napravljene iz njega zadržavaju svoja podešavanja.",
       "confirm": "Obriši šablon",
       "deleted": "Obrisali ste {{name}}.",
       "failed": "Nismo uspeli da obrišemo {{name}}. Pokušajte ponovo."
@@ -344,7 +340,6 @@
   },
   "team": {
     "title": "Tim",
-    "description": "Ljudi koji mogu da koriste ovu konzolu.",
     "loadFailed": "Nismo uspeli da učitamo tim. Osvežite stranicu i pokušajte ponovo.",
     "table": {
       "person": "Osoba",
@@ -367,9 +362,9 @@
       "sending": "Slanje…",
       "sent": "Poziv je poslat na {{email}}.",
       "roles": {
-        "owner": "Upravlja svime, uključujući naplatu, Stripe vezu i brisanje partnera.",
-        "admin": "Upravlja firmama, paketima, brendom, domenima, ključevima i timom.",
-        "member": "Radi u vašim firmama."
+        "owner": "Sve, uključujući naplatu i plaćanja.",
+        "admin": "Sve osim naplate, plaćanja i vlasnika.",
+        "member": "Otvara Vaše firme i radi u njima."
       },
       "errors": {
         "failed": "Nismo uspeli da pošaljemo poziv. Pokušajte ponovo.",
@@ -394,26 +389,25 @@
     "confirm": {
       "cancel": "Otkaži",
       "ownerTitle": "Da li da {{email}} postane vlasnik?",
-      "ownerDescription": "Vlasnici mogu sve u konzoli partnera {{partnerName}}, uključujući naplatu, Stripe vezu, menjanje drugih vlasnika i brisanje partnera.",
+      "ownerDescription": "Vlasnici mogu sve, uključujući naplatu, plaćanja i upravljanje drugim vlasnicima.",
       "ownerAction": "Postavi za vlasnika",
       "removeTitle": "Ukloniti {{email}}?",
-      "removeDescription": "Ova osoba gubi pristup konzoli partnera {{partnerName}} i svakoj firmi koju je imala otvorenu.",
+      "removeDescription": "Ova osoba gubi pristup konzoli partnera {{partnerName}} i njegovim firmama.",
       "removeAction": "Ukloni iz tima"
     }
   },
   "branding": {
     "title": "Brend i domen",
-    "description": "Ono što vaše firme vide na adresi vaše kontrolne table, na kartici pregledača i u vašim imejlovima.",
-    "loadFailed": "Nismo uspeli da učitamo vaš brend. Osvežite stranicu i pokušajte ponovo.",
+    "loadFailed": "Nismo uspeli da učitamo Vaš brend. Osvežite stranicu i pokušajte ponovo.",
     "membersCantEdit": "Samo vlasnici i administratori mogu da menjaju brend.",
     "domain": {
       "title": "Adresa kontrolne table",
       "open": "Otvori",
-      "none": "Još nemate poddomen. Zatražite od servisa {{appName}} da ga podesi.",
+      "none": "Još nemate poddomen. Zatražite ga od servisa {{appName}}.",
       "subdomainLabel": "Vaš poddomen",
       "own": {
         "title": "Vaš sopstveni domen",
-        "description": "Postavite kontrolnu tablu na poddomen svog sajta, na primer app.vasafirma.com. Vaš poddomen i dalje radi pored njega.",
+        "description": "Koristite sopstveni poddomen, na primer app.vasafirma.com. Vaša trenutna adresa i dalje radi.",
         "label": "Domen",
         "placeholder": "app.vasafirma.com",
         "help": "Zatim ćete dodati dva DNS zapisa kod svog DNS dobavljača.",
@@ -421,7 +415,7 @@
         "connecting": "Povezujemo…",
         "added": "Domen je povezan. Sada dodajte njegove DNS zapise.",
         "paidTier": "Sopstveni domen dolazi uz plaćeni nivo.",
-        "paidTierAskOwner": "Sopstveni domen dolazi uz plaćeni nivo. Vlasnik ga može izabrati na stranici Naplata.",
+        "paidTierAskOwner": "Sopstveni domen dolazi uz plaćeni nivo. Zamolite vlasnika da ga izabere.",
         "chooseTier": "Izaberite nivo",
         "membersCantEdit": "Samo vlasnici i administratori mogu da povežu domen.",
         "status": {
@@ -429,11 +423,11 @@
           "active": "Aktivan",
           "failed": "Neuspešno"
         },
-        "settingUp": "Podešavamo vaš domen. Njegovi DNS zapisi pojaviće se ovde za minut.",
-        "pendingHelp": "Dodajte ove zapise kod svog DNS dobavljača. Proveravamo ih na svakih nekoliko minuta, a izmeni DNS-a može trebati nekoliko sati da stigne do nas.",
+        "settingUp": "Podešavamo Vaš domen. Njegovi DNS zapisi će se uskoro pojaviti ovde.",
+        "pendingHelp": "Dodajte ove zapise kod svog DNS dobavljača. Izmene mogu da potraju nekoliko sati.",
         "activeHelp": "Vaša kontrolna tabla i stranice za prijavu sada rade na ovom domenu.",
-        "failedHelp": "Nismo uspeli da podesimo ovaj domen. Uklonite ga, proverite njegove DNS zapise, pa ga ponovo povežite.",
-        "takenHelp": "Druga kontrolna tabla je prva povezala ovaj domen. Uklonite ga ovde da biste povezali neki drugi.",
+        "failedHelp": "Nismo uspeli da podesimo ovaj domen. Uklonite ga, proverite njegove DNS zapise i pokušajte ponovo.",
+        "takenHelp": "Druga kontrolna tabla već koristi ovaj domen. Uklonite ga da biste dodali drugi.",
         "records": {
           "type": "Tip",
           "name": "Naziv",
@@ -448,33 +442,33 @@
         "checkedAt": "Poslednja provera: {{time}}.",
         "remove": "Ukloni domen",
         "removeTitle": "Ukloniti {{hostname}}?",
-        "removeDescription": "Niko više neće moći da otvori vašu kontrolnu tablu na ovom domenu. Kasnije ga možete ponovo povezati.",
+        "removeDescription": "Vaša kontrolna tabla prestaje da radi na ovom domenu. Kasnije ga možete ponovo dodati.",
         "removed": "Domen je uklonjen.",
         "cancel": "Otkaži",
         "errors": {
           "invalid": "Unesite poddomen svog sajta, na primer app.vasafirma.com.",
-          "reserved": "Taj domen pripada servisu {{appName}}. Unesite poddomen svog sajta.",
+          "reserved": "Taj domen pripada servisu {{appName}}. Koristite poddomen svog sajta.",
           "taken": "Druga kontrolna tabla već koristi taj domen.",
           "exists": "Uklonite trenutni domen pre nego što povežete drugi.",
           "paidTier": "Sopstveni domen dolazi uz plaćeni nivo.",
-          "unavailable": "{{appName}} ne može da poveže vaš sopstveni domen.",
-          "forbidden": "Samo vlasnici i administratori mogu da menjaju vaš domen.",
-          "failed": "Nismo uspeli da sačuvamo vaš domen. Pokušajte ponovo.",
-          "loadFailed": "Nismo uspeli da učitamo vaše adrese. Osvežite stranicu i pokušajte ponovo."
+          "unavailable": "{{appName}} ne može da poveže Vaš sopstveni domen.",
+          "forbidden": "Samo vlasnici i administratori mogu da menjaju Vaš domen.",
+          "failed": "Nismo uspeli da sačuvamo Vaš domen. Pokušajte ponovo.",
+          "loadFailed": "Nismo uspeli da učitamo Vaše adrese. Osvežite stranicu i pokušajte ponovo."
         },
-        "unavailable": "Ova kontrolna tabla još ne može da poveže vaš domen, pa se vaše firme prijavljuju na vašem poddomenu iznad. Zamolite firmu koja upravlja ovom kontrolnom tablom da uključi sopstvene domene.",
-        "unavailableNoSubdomain": "Ova kontrolna tabla još ne može da poveže vaš domen. Zamolite firmu koja upravlja ovom kontrolnom tablom da uključi sopstvene domene."
+        "unavailable": "Sopstveni domeni još nisu uključeni na ovoj kontrolnoj tabli. Vaši klijenti se prijavljuju na Vašem poddomenu.",
+        "unavailableNoSubdomain": "Sopstveni domeni još nisu uključeni na ovoj kontrolnoj tabli."
       }
     },
     "brand": {
       "title": "Brend"
     },
     "nameLabel": "Naziv",
-    "nameHelp": "Vaše firme ga vide na kartici pregledača, iznad prijave i kao pošiljaoca vaših imejlova.",
+    "nameHelp": "Prikazuje se na kartici pregledača, na prijavi i kao pošiljalac Vaših imejlova.",
     "logoLabel": "Logo",
-    "logoHelp": "Prikazuje se iznad prijave i u vašim imejlovima. PNG, JPEG, WebP ili SVG, do 256 KB.",
+    "logoHelp": "Prikazuje se na prijavi i u imejlovima. PNG, JPEG, WebP ili SVG, do 256 KB.",
     "faviconLabel": "Favikon",
-    "faviconHelp": "Ikonica na kartici pregledača. Bez nje, kartica prikazuje vaš logo.",
+    "faviconHelp": "Ikonica na kartici pregledača. Bez nje se prikazuje Vaš logo.",
     "imageChoose": "Izaberite sliku",
     "imageChange": "Promenite sliku",
     "logoRemove": "Ukloni logo",
@@ -484,7 +478,7 @@
     "colorHelp": "Heksadecimalni kod, na primer #0f766e.",
     "links": {
       "title": "Linkovi",
-      "description": "Vaša stranica za prijavu i kontrolna tabla vode na ove stranice. Ostavite polje prazno da sakrijete njegov link.",
+      "description": "Linkovi na Vašoj stranici za prijavu i kontrolnoj tabli. Ostavite polje prazno da sakrijete link.",
       "termsUrl": "Uslovi korišćenja",
       "termsUrlPlaceholder": "https://firma.com/uslovi",
       "privacyUrl": "Politika privatnosti",
@@ -493,17 +487,17 @@
       "supportUrlPlaceholder": "https://firma.com/podrska",
       "supportEmail": "Imejl podrške",
       "supportEmailPlaceholder": "podrska@firma.com",
-      "supportEmailHelp": "Odgovori na vaše imejlove stižu ovde. Bez stranice podrške, vaš link podrške otvara ovu adresu."
+      "supportEmailHelp": "Odgovori na Vaše imejlove stižu ovde. Ako nemate stranicu podrške, link podrške vodi na ovu adresu."
     },
     "preview": "Pregled",
     "save": "Sačuvaj brend",
     "saving": "Čuvanje…",
     "saved": "Brend je sačuvan.",
     "errors": {
-      "failed": "Nismo uspeli da sačuvamo vaš brend. Pokušajte ponovo.",
+      "failed": "Nismo uspeli da sačuvamo Vaš brend. Pokušajte ponovo.",
       "name": "Unesite naziv do 80 znakova.",
       "color": "Unesite boju kao heksadecimalni kod, na primer #0f766e.",
-      "link": "Unesite svaki link kao punu veb adresu koja počinje sa https://.",
+      "link": "Unesite pune veb adrese koje počinju sa https://.",
       "supportEmail": "Unesite jednu ispravnu imejl adresu.",
       "imageType": "Otpremite PNG, JPEG, WebP ili SVG sliku.",
       "imageSize": "Otpremite sliku od 256 KB ili manje.",
@@ -511,14 +505,13 @@
     }
   },
   "stripe": {
-    "title": "Stripe",
-    "description": "Vaše firme vam plaćaju preko vašeg Stripe naloga. Stripe im šalje račune i potvrde u vaše ime.",
-    "loadFailed": "Nismo uspeli da učitamo vašu Stripe vezu. Osvežite stranicu i pokušajte ponovo.",
-    "ownersOnly": "Samo vlasnici mogu da upravljaju Stripe vezom.",
+    "title": "Plaćanja",
+    "loadFailed": "Nismo uspeli da učitamo Vaša podešavanja plaćanja. Osvežite stranicu i pokušajte ponovo.",
+    "ownersOnly": "Samo vlasnici mogu da upravljaju plaćanjima.",
     "opening": "Otvaramo Stripe…",
     "notConfigured": {
-      "title": "Stripe ovde nije podešen",
-      "description": "Ova kontrolna tabla nije podešena za povezivanje Stripe naloga. Dok firma koja njome upravlja ne uključi Stripe, sami naplaćujete svojim firmama."
+      "title": "Plaćanja ovde nisu podešena",
+      "description": "Plaćanja nisu uključena na ovoj kontrolnoj tabli, pa sami naplaćujete svojim firmama."
     },
     "status": {
       "notConnected": "Nije povezan",
@@ -528,32 +521,32 @@
       "disconnected": "Veza prekinuta"
     },
     "connect": {
-      "title": "Povežite svoj Stripe nalog",
-      "description": "Stripe naplaćuje vašim firmama u vaše ime i isplaćuje vam novac. Povraćaje i sporove rešavate u svojoj Stripe kontrolnoj tabli.",
-      "countryLabel": "Zemlja vaše firme",
+      "title": "Povežite nalog za plaćanje",
+      "description": "Preko Stripe-a naplaćujemo Vašim klijentima u Vaše ime i isplaćujemo Vam novac.",
+      "countryLabel": "Zemlja Vaše firme",
       "countryPlaceholder": "Izaberite zemlju",
-      "countryHelp": "Stripe određuje zemlju naloga kada ga napravi i kasnije je ne možete promeniti.",
-      "action": "Poveži Stripe"
+      "countryHelp": "Ovo kasnije ne možete da promenite.",
+      "action": "Poveži preko Stripe-a"
     },
     "onboarding": {
-      "title": "Završite podešavanje Stripe naloga",
-      "description": "Stripe-u treba još nekoliko podataka pre nego što vaš nalog može da prima uplate.",
+      "title": "Završite podešavanje plaćanja",
+      "description": "Stripe-u treba još nekoliko podataka pre nego što počnete da primate uplate.",
       "action": "Nastavi na Stripe-u"
     },
     "restricted": {
-      "title": "Stripe još ne može da prima uplate",
-      "description": "Stripe proverava vaše podatke ili traži još neke. Otvorite Stripe da vidite šta je preostalo.",
-      "action": "Otvori Stripe podešavanje"
+      "title": "Još ne možete da primate uplate",
+      "description": "Stripe-u treba još podataka. Završite na Stripe-u da biste počeli da primate uplate.",
+      "action": "Završi na Stripe-u"
     },
     "active": {
-      "title": "Vaš Stripe nalog je povezan",
-      "description": "Vaše firme vam plaćaju u valuti {{currency}}. Povraćaje i sporove rešavate u svojoj Stripe kontrolnoj tabli.",
+      "title": "Plaćanja su povezana",
+      "description": "Vaši klijenti Vam plaćaju u valuti {{currency}}. Povraćaje i sporove rešavajte u svojoj Stripe kontrolnoj tabli.",
       "dashboard": "Otvori Stripe kontrolnu tablu"
     },
     "disconnected": {
-      "title": "Prekinuli ste vezu sa Stripe-om",
-      "description": "Prekinuli ste vezu sa svojim nalogom na Stripe-u {{date}}. Vaše firme ne mogu da kupuju ponude dok ponovo ne povežete nalog.",
-      "action": "Ponovo poveži Stripe"
+      "title": "Plaćanja više nisu povezana",
+      "description": "Dana {{date}} ste prekinuli vezu sa svojim nalogom za plaćanje. Povežite nalog da biste ponovo prodavali ponude.",
+      "action": "Poveži ponovo"
     },
     "details": {
       "account": "Nalog",
@@ -565,21 +558,21 @@
     },
     "errors": {
       "failed": "Nismo uspeli da otvorimo Stripe. Pokušajte ponovo.",
-      "invalidCountry": "Izaberite zemlju u kojoj je vaša firma.",
-      "notConfigured": "Ova kontrolna tabla još ne može da poveže Stripe nalog.",
-      "changed": "Neko drugi je promenio Stripe vezu. Osvežite stranicu i pokušajte ponovo."
+      "invalidCountry": "Izaberite zemlju u kojoj je Vaša firma.",
+      "notConfigured": "Ova kontrolna tabla još ne može da prima uplate.",
+      "changed": "Neko drugi je promenio podešavanja plaćanja. Osvežite stranicu i pokušajte ponovo."
     }
   },
   "apiKeys": {
     "title": "API ključevi",
-    "description": "Vaš kod koristi ključ platforme da kreira Vaše firme i podesi ih preko API-ja. Ključ radi na Vašim firmama i ni na jednoj drugoj.",
+    "description": "Kreirajte i podešavajte svoje firme iz sopstvenog koda.",
     "empty": "Još nema ključeva platforme.",
     "neverUsed": "Nikad",
     "createdBy": "{{date}}, korisnik {{name}}",
     "revoked": "Opozvan {{date}}",
     "restricted": {
       "title": "Samo vlasnici i administratori mogu da upravljaju ključevima platforme",
-      "description": "Zamolite vlasnika ili administratora iz Vašeg tima da kreira ključ za Vas."
+      "description": "Zamolite vlasnika ili administratora da kreira ključ za Vas."
     },
     "columns": {
       "name": "Naziv",
@@ -592,7 +585,7 @@
     "create": {
       "action": "Kreiraj ključ platforme",
       "title": "Kreirajte ključ platforme",
-      "description": "Dajte ključu naziv koji ćete prepoznati i dozvolite samo pristup koji mu je potreban.",
+      "description": "Dajte ključu naziv koji ćete prepoznati i samo onaj pristup koji mu treba.",
       "nameLabel": "Naziv",
       "namePlaceholder": "Uvođenje klijenata",
       "scopesLabel": "Pristup",
@@ -602,22 +595,22 @@
     },
     "created": {
       "title": "Ključ {{name}} je spreman",
-      "description": "Kopirajte ključ i sačuvajte ga u menadžeru lozinki ili u podešavanjima svog alata.",
-      "warning": "Ovaj ključ više nećete videti. Ako ga izgubite, opozovite ga i kreirajte novi.",
+      "description": "Kopirajte ga na sigurno mesto, na primer u menadžer lozinki.",
+      "warning": "Ovaj ključ više nećete videti. Ako ga izgubite, kreirajte novi.",
       "done": "Gotovo"
     },
     "revoke": {
       "action": "Opozovi",
       "title": "Opozvati ovaj ključ platforme?",
-      "description": "Sve što koristi {{name}} odmah prestaje da radi. Njegovi webhookovi se isključuju, i niko više ne može da prihvati pozive u tim koje je poslao. Vlasnici koje je pozvao i dalje mogu da se pridruže svojim firmama. Ovo ne može da se poništi.",
+      "description": "Sve što koristi {{name}} prestaje da radi, a njegovi webhookovi se isključuju. Ovo ne možete da poništite.",
       "confirm": "Opozovi ključ",
       "cancel": "Otkaži",
       "done": "Ključ platforme je opozvan",
       "failed": "Nismo uspeli da opozovemo ključ. Pokušajte ponovo."
     },
     "scopes": {
-      "business_read": "Čitanje podataka o firmi, radnog vremena, usluga, kao i podešavanja i pravila recepcionera",
-      "business_write": "Izmena podataka o firmi, radnog vremena, usluga, kao i podešavanja i pravila recepcionera, uključujući broj na koji se pozivi prebacuju",
+      "business_read": "Čitanje podataka o firmi, radnog vremena, usluga i recepcionera",
+      "business_write": "Izmena podataka o firmi, radnog vremena, usluga i recepcionera, uključujući prebacivanje poziva",
       "calls_read": "Čitanje poziva, rezimea i transkripata",
       "contacts_read": "Čitanje kontakata",
       "contacts_write": "Kreiranje i izmena kontakata",
@@ -640,11 +633,10 @@
   },
   "billing": {
     "title": "Naplata",
-    "description": "Vaš nivo određuje minute i četove koje vaše firme dele svakog meseca, i koliko brojeva telefona dobijaju.",
     "loadFailed": "Nismo uspeli da učitamo naplatu. Osvežite stranicu i pokušajte ponovo.",
-    "ownersOnly": "Samo vlasnici upravljaju naplatom. Zamolite nekog od vlasnika vašeg partnera da promeni nivo.",
-    "unavailable": "Na ovoj kontrolnoj tabli ne plaćate nivo, pa ništa ne ograničava minute, četove ni brojeve telefona vaših firmi.",
-    "pastDue": "Vaše poslednje plaćanje nije uspelo. Ažurirajte karticu u Upravljaj pretplatom da biste zadržali nivo.",
+    "ownersOnly": "Samo vlasnici upravljaju naplatom. Zamolite nekog od njih da promeni nivo.",
+    "unavailable": "Ova kontrolna tabla ne naplaćuje nivoe, pa ništa ne ograničava Vaše firme.",
+    "pastDue": "Vaše poslednje plaćanje nije uspelo. Ažurirajte karticu u Upravljaj pretplatom.",
     "tiers": {
       "free": "Besplatno",
       "starter": "Starter",
@@ -672,48 +664,47 @@
       "numbers_other": "{{count}} brojeva telefona",
       "noNumbers": "Bez brojeva telefona",
       "trialNumber": "1 probni broj na 14 dana",
-      "extraNumbers": "Dodatni brojevi po našoj ceni koštanja",
-      "overage": "Svaki dodatni minut košta {{minute}}, a svaki dodatni čet {{chat}}",
-      "noOverage": "Bez dodatnih minuta i četova preko ovih"
+      "extraNumbers": "Dodatni brojevi se naplaćuju mesečno",
+      "overage": "Prekoračenje: {{minute}} po minutu, {{chat}} po četu",
+      "noOverage": "Bez prekoračenja"
     },
     "current": {
       "title": "Trenutni nivo",
-      "free": "Kartica nije potrebna.",
+      "free": "0 $ mesečno",
       "renewsOn": "Obnavlja se {{date}}.",
       "endsOn": "Ističe {{date}}. Do tada zadržavate nivo."
     },
     "numbers": {
-      "used": "Brojeva telefona u upotrebi: {{held}} od {{included}} uključenih.",
-      "extra_one": "Brojeva telefona u upotrebi: {{held}}. Svakog meseca plaćate {{count}} dodatni broj po našoj ceni koštanja.",
-      "extra_few": "Brojeva telefona u upotrebi: {{held}}. Svakog meseca plaćate {{count}} dodatna broja po našoj ceni koštanja.",
-      "extra_other": "Brojeva telefona u upotrebi: {{held}}. Svakog meseca plaćate {{count}} dodatnih brojeva po našoj ceni koštanja."
+      "used": "Brojeva telefona u upotrebi: {{held}} od {{included}}.",
+      "extra_one": "Brojeva telefona u upotrebi: {{held}}. Svakog meseca plaćate {{count}} dodatni broj.",
+      "extra_few": "Brojeva telefona u upotrebi: {{held}}. Svakog meseca plaćate {{count}} dodatna broja.",
+      "extra_other": "Brojeva telefona u upotrebi: {{held}}. Svakog meseca plaćate {{count}} dodatnih brojeva."
     },
     "trial": {
-      "available": "Vaš tim ili vlasnik jedne od vaših firmi može da preuzme vaš probni broj na 14 dana u podešavanjima broja telefona te firme. Osoba koja ga preuzme prvo potvrdi svoj mobilni, a pozivi tokom probe idu na taj mobilni.",
+      "available": "Preuzmite probni broj na 14 dana u podešavanjima telefona bilo koje firme. Pozivi na taj broj idu na mobilni osobe koja ga preuzme.",
       "used": "Iskoristili ste probni broj na 14 dana."
     },
     "pool": {
       "title": "Ovog meseca",
-      "description": "Minuti i četovi koje su vaše firme iskoristile iz zajedničkog fonda. Fond počinje ispočetka {{resetsAt}}.",
+      "description": "Potrošnja Vaših firmi ovog meseca. Fond počinje ispočetka {{resetsAt}}.",
       "minutes": "Minuti",
       "chats": "Četovi",
       "noLimit": "{{used}}, bez ograničenja"
     },
     "hostPool": {
-      "description": "Mi određujemo minute i četove koje vaše firme dele svakog meseca.",
-      "limit": "Kada potroše fond, pozivi idu na broj za prebacivanje svake firme ili na telefon njenog vlasnika, a čet na sajtu ne odgovara dok fond ne počne ispočetka. Da biste promenili fond, obratite se firmi koja upravlja ovom kontrolnom tablom."
+      "limit": "Kada firme potroše fond, pozivi se prosleđuju, a čet na sajtu ne odgovara dok fond ne počne ispočetka. Da biste ga promenili, obratite se firmi koja upravlja ovom kontrolnom tablom."
     },
     "overage": {
       "title": "Prekoračenje",
-      "description": "Kada potroše fond, vaše firme nastavljaju da odgovaraju po cenama prekoračenja vašeg nivoa. Kada je prekoračenje isključeno ili dostigne vaš limit, pozivi idu na broj za prebacivanje svake firme ili na telefon njenog vlasnika, a čet na sajtu prestaje da odgovara.",
+      "description": "Kada potroše fond, Vaše firme nastavljaju da odgovaraju po cenama prekoračenja Vašeg nivoa, do Vašeg limita.",
       "toggle": "Dozvoli prekoračenje",
-      "free": "Nivo Besplatno nema prekoračenje. Vaše firme staju kada potroše fond, dok ne izaberete plaćeni nivo.",
+      "free": "Nivo Besplatno nema prekoračenje. Vaše firme staju kada potroše fond.",
       "off": "Prekoračenje je isključeno. Vaše firme staju kada potroše fond svakog meseca.",
       "noCap": "Bez limita",
       "spend": "Prekoračenje ovog meseca",
       "spendNoCap": "{{spend}} ovog meseca",
       "spendOfCap": "{{spend}} od {{cap}}",
-      "capReached": "Dostigli ste limit. Pozivi se prosleđuju, a čet ne odgovara do sledećeg meseca ili dok ne povećate limit.",
+      "capReached": "Dostigli ste limit. Pozivi se prosleđuju, a čet staje do sledećeg meseca ili dok ne povećate limit.",
       "capLabel": "Mesečni limit",
       "capPlaceholder": "50,00",
       "saveCap": "Postavi limit",
@@ -738,79 +729,75 @@
       "opening": "Otvaranje…"
     },
     "checkout": {
-      "confirming": "Plaćanje je primljeno. Ova stranica se osvežava kada vaš nivo bude spreman.",
+      "confirming": "Plaćanje je primljeno. Ova stranica se osvežava kada Vaš nivo bude spreman.",
       "done": "Sada imate nivo {{tier}}."
     },
     "errors": {
       "checkoutFailed": "Nismo uspeli da otvorimo plaćanje. Pokušajte ponovo.",
-      "subscriptionActive": "Već plaćate nivo. Promenite ga u Upravljaj pretplatom.",
+      "subscriptionActive": "Već imate nivo. Promenite ga u Upravljaj pretplatom.",
       "checkoutInProgress": "Drugi vlasnik ima otvoreno plaćanje. Pokušajte ponovo za 30 minuta.",
       "unavailable": "Na ovoj kontrolnoj tabli ne možete da kupite nivo.",
-      "portalFailed": "Nismo uspeli da otvorimo vašu pretplatu. Pokušajte ponovo."
-    },
-    "unbilledDescription": "Šta vaše firme mogu da koriste svakog meseca."
+      "portalFailed": "Nismo uspeli da otvorimo Vašu pretplatu. Pokušajte ponovo."
+    }
   },
   "lifecycle": {
     "past_due": {
-      "title": "Poslednje plaćanje vašeg nivoa nije uspelo",
-      "description": "Do {{pausesAt}} vaše firme odgovaraju na pozive i četove. Zatim se pauziraju dok ne platite, a brišemo ih 90 dana nakon što vaš nivo istekne.",
-      "owner": "Ažurirajte karticu u Upravljaj pretplatom na stranici Naplata da bi firme nastavile da odgovaraju, ili predajte svaku firmu njenom vlasniku.",
-      "admin": "Zamolite vlasnika da ažurira karticu za vaš nivo, ili predajte svaku firmu njenom vlasniku."
+      "title": "Poslednje plaćanje Vašeg nivoa nije uspelo",
+      "description": "Vaše firme odgovaraju do {{pausesAt}}, a zatim se pauziraju dok ne platite. Brišemo ih 90 dana nakon što Vaš nivo istekne.",
+      "owner": "Ažurirajte karticu u Upravljaj pretplatom, ili predajte svaku firmu njenom vlasniku.",
+      "admin": "Zamolite vlasnika da ažurira karticu, ili predajte svaku firmu njenom vlasniku."
     },
     "ending": {
       "title": "Vaš nivo je istekao {{tierEndedAt}}",
-      "description": "Do {{pausesAt}} vaše firme odgovaraju na pozive i četove. Zatim se pauziraju, a {{deletesAt}} ih brišemo.",
-      "owner": "Izaberite nivo na stranici Naplata da bi firme nastavile da odgovaraju, ili predajte svaku firmu njenom vlasniku.",
+      "description": "Vaše firme odgovaraju do {{pausesAt}}, a zatim se pauziraju. Dana {{deletesAt}} ih brišemo.",
+      "owner": "Izaberite nivo da bi firme nastavile da odgovaraju, ili predajte svaku firmu njenom vlasniku.",
       "admin": "Zamolite vlasnika da izabere nivo, ili predajte svaku firmu njenom vlasniku."
     },
     "paused": {
       "title": "Vaše firme ne odgovaraju od {{pausesAt}}",
-      "description": "Vaš nivo je istekao {{tierEndedAt}}, pa pozivi idu na broj za preusmeravanje svake firme ili na telefon njenog vlasnika, a čet na sajtu ne može da odgovori. Dana {{deletesAt}} ih brišemo.",
-      "owner": "Izaberite nivo na stranici Naplata da bi firme ponovo odgovarale, ili predajte svaku firmu njenom vlasniku.",
+      "description": "Vaš nivo je istekao {{tierEndedAt}}. Pozivi se prosleđuju, a čet je isključen. Dana {{deletesAt}} brišemo Vaše firme.",
+      "owner": "Izaberite nivo da bi firme ponovo odgovarale, ili predajte svaku firmu njenom vlasniku.",
       "admin": "Zamolite vlasnika da izabere nivo, ili predajte svaku firmu njenom vlasniku."
     },
     "paused_past_due": {
       "title": "Vaše firme ne odgovaraju od {{pausesAt}}",
-      "description": "Poslednje plaćanje vašeg nivoa nije uspelo, pa pozivi idu na broj za preusmeravanje svake firme ili na telefon njenog vlasnika, a čet na sajtu ne može da odgovori. Brišemo ih 90 dana nakon što vaš nivo istekne.",
-      "owner": "Ažurirajte karticu u Upravljaj pretplatom na stranici Naplata da bi firme ponovo odgovarale, ili predajte svaku firmu njenom vlasniku.",
-      "admin": "Zamolite vlasnika da ažurira karticu za vaš nivo, ili predajte svaku firmu njenom vlasniku."
+      "description": "Vaše poslednje plaćanje nije uspelo. Pozivi se prosleđuju, a čet je isključen. Brišemo Vaše firme 90 dana nakon što Vaš nivo istekne.",
+      "owner": "Ažurirajte karticu u Upravljaj pretplatom da bi firme ponovo odgovarale, ili predajte svaku firmu njenom vlasniku.",
+      "admin": "Zamolite vlasnika da ažurira karticu, ili predajte svaku firmu njenom vlasniku."
     },
     "deleted": {
-      "title": "Obrisali smo vaše firme {{deletesAt}}",
-      "description": "To je bilo 90 dana nakon što je vaš nivo istekao. Sada ste na nivou Besplatno, a firme koje dodate rade kao na tom nivou.",
-      "owner": "Da biste ponovo platili nivo, izaberite ga na stranici Naplata.",
-      "admin": "Zamolite vlasnika za plaćeni nivo ako vam ponovo zatreba."
+      "title": "Obrisali smo Vaše firme {{deletesAt}}",
+      "description": "Obrisali smo ih 90 dana nakon što je Vaš nivo istekao. Sada ste na nivou Besplatno.",
+      "owner": "Izaberite nivo na stranici Naplata da biste počeli ponovo.",
+      "admin": "Zamolite vlasnika za plaćeni nivo ako Vam ponovo zatreba."
     }
   },
   "settings": {
     "title": "Podešavanja",
-    "description": "Podešavanja koja važe za ceo vaš tim.",
-    "loadFailed": "Nismo uspeli da učitamo vaša podešavanja. Osvežite stranicu i pokušajte ponovo.",
+    "loadFailed": "Nismo uspeli da učitamo Vaša podešavanja. Osvežite stranicu i pokušajte ponovo.",
     "saved": "Podešavanja su sačuvana.",
     "membersCantEdit": "Samo vlasnici i administratori mogu da menjaju ova podešavanja.",
     "telemetry": {
-      "label": "Deli podatke telemetrije",
-      "description": "Delite anonimizovane podatke o korišćenju i greškama iz rada vašeg tima u konzoli, da biste pomogli da se ona poboljša. Kontrolna tabla svake firme prati sopstveno podešavanje.",
+      "label": "Deli podatke o korišćenju",
+      "description": "Delite anonimne podatke o korišćenju i greškama iz konzole da biste nam pomogli da je poboljšamo.",
       "saveFailed": "Nismo uspeli da sačuvamo podešavanje telemetrije. Pokušajte ponovo."
     }
   },
   "signup": {
-    "title": "Registrujte se kao partner",
-    "description": "Preprodajte {{appName}} firmama sa kojima radite, pod svojim brendom.",
+    "title": "Postanite partner",
     "nameLabel": "Naziv firme",
     "namePlaceholder": "Acme Recepcija",
     "subdomainLabel": "Adresa kontrolne table",
     "subdomainHelp": "Koristite od 3 do 40 malih slova, cifara i crtica.",
-    "noCard": "Kartica nije potrebna.",
     "submit": "Napravi partnerski nalog",
     "submitting": "Pravljenje…",
-    "inviteOnly": "Za sada je za registraciju partnera potreban poziv. Zatražite link od {{appName}}.",
+    "inviteOnly": "Za sada se partneri registruju samo uz poziv. Zatražite link od servisa {{appName}}.",
     "invitationInvalid": "Ovaj link za poziv nije ispravan ili je istekao.",
     "invitationUsed": "Neko je već iskoristio ovaj poziv.",
     "wrongAccount": "Ovaj poziv je za {{email}}. Prijavite se tom potvrđenom adresom da biste ga iskoristili.",
     "errors": {
-      "subdomainTaken": "Neko već ima tu adresu. Izaberite drugu.",
-      "invalidSubdomain": "Koristite od 3 do 40 malih slova, cifara i crtica, i izbegavajte nazive kao što su www ili app.",
+      "subdomainTaken": "Ta adresa je zauzeta. Izaberite drugu.",
+      "invalidSubdomain": "Koristite od 3 do 40 malih slova, cifara i crtica. Nazivi kao što su www ili app su zauzeti.",
       "rateLimited": "Danas ste registrovali previše partnera. Pokušajte ponovo sutra.",
       "failed": "Nismo uspeli da napravimo partnerski nalog. Pokušajte ponovo."
     }
@@ -818,7 +805,7 @@
   "acceptInvite": {
     "genericTitle": "Partnerski poziv",
     "title": "Pridružite se timu {{partnerName}}",
-    "description": "Ovaj poziv je za {{email}}, sa ulogom {{role}}.",
+    "description": "Pridružite se kao {{email}}, sa ulogom {{role}}.",
     "submit": "Prihvati poziv",
     "submitting": "Pridruživanje…",
     "success": "Pridružili ste se timu {{partnerName}}.",
@@ -830,7 +817,7 @@
     "failed": "Nismo uspeli da prihvatimo poziv. Pokušajte ponovo."
   },
   "signedOut": {
-    "signup": "Prijavite se ili napravite nalog da biste se registrovali kao partner.",
+    "signup": "Prijavite se ili napravite nalog da biste postali partner.",
     "acceptInvite": "Prijavite se ili napravite nalog sa adresom {{email}} da biste se pridružili timu {{partnerName}}.",
     "signIn": "Prijavi se",
     "createAccount": "Napravi nalog",

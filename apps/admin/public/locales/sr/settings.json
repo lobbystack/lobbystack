@@ -380,7 +380,7 @@
       "awaiting_payment": "Vaš recepcioner počinje da odgovara na pozive i četove čim platite.",
       "active": "Vaša pretplata je aktivna.",
       "renews": "Vaša pretplata se obnavlja {{date}}.",
-      "past_due": "Poslednja uplata nije prošla, a Stripe će pokušati ponovo. Ažurirajte karticu da bi recepcioner nastavio da odgovara.",
+      "past_due": "Poslednja uplata nije prošla, a pokušaćemo ponovo. Ažurirajte karticu da bi recepcioner nastavio da odgovara.",
       "inactive": "Vaša pretplata je istekla, pa recepcioner ne odgovara na pozive i četove. Ponovo se pretplatite da biste ga uključili."
     },
     "badge": {
@@ -392,7 +392,7 @@
     "subscribe": "Pretplatite se",
     "manage": "Upravljajte naplatom",
     "opening": "Otvaramo…",
-    "manageHint": "Ažurirajte karticu, preuzmite račune ili otkažite pretplatu na Stripe portalu za naplatu.",
+    "manageHint": "Ažurirajte karticu, preuzmite račune ili otkažite pretplatu.",
     "paid": "Uplata je primljena. Recepcioner počinje da odgovara za trenutak.",
     "errors": {
       "portal": "Portal za naplatu trenutno nije dostupan. Obratite se firmi {{appName}}.",

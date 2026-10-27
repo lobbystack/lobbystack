@@ -1,6 +1,5 @@
 {
   "shell": {
-    "navigation": "Console partenaire",
     "switchPartner": "Changer de partenaire",
     "signUpAnother": "Inscrire un autre partenaire",
     "userMenu": "Menu du compte {{email}}"
@@ -12,7 +11,7 @@
     "packages": "Formules",
     "branding": "Image de marque et domaine",
     "team": "Équipe",
-    "stripe": "Stripe",
+    "stripe": "Paiements",
     "apiKeys": "Clés API",
     "billing": "Facturation",
     "settings": "Réglages"
@@ -24,7 +23,6 @@
   },
   "businesses": {
     "title": "Entreprises",
-    "description": "Les entreprises que vous revendez, avec leurs minutes et leurs discussions du mois. Leurs propriétaires se connectent à l'adresse de votre tableau de bord. Le journal d'audit de chaque entreprise indique qui, dans votre équipe, l'ouvre.",
     "loadFailed": "Impossible de charger vos entreprises. Actualisez la page pour réessayer.",
     "createdOn": "Créée le {{date}}",
     "table": {
@@ -48,7 +46,7 @@
     "open": {
       "action": "Ouvrir",
       "label": "Ouvrir {{name}}",
-      "opening": "Ouverture",
+      "opening": "Ouverture…",
       "failed": "Impossible d'ouvrir {{name}}. Réessayez."
     },
     "actions": {
@@ -61,18 +59,18 @@
     "release": {
       "action": "Céder au propriétaire",
       "title": "Céder {{name}} ?",
-      "description": "{{email}} garde {{name}} et sa réceptionniste sur le forfait gratuit, et s'occupe de sa facturation. L'entreprise quitte votre console, et votre équipe ne peut plus l'ouvrir.",
+      "description": "{{email}} reprend {{name}} sur le forfait gratuit et en assume désormais les frais. L'entreprise quitte votre console.",
       "confirm": "Céder l'entreprise",
       "released": "Vous avez cédé {{name}} à {{email}}.",
       "errors": {
-        "ownerRequired": "{{name}} n'a pas encore de propriétaire. Son propriétaire doit d'abord accepter son invitation.",
+        "ownerRequired": "{{name}} n'a pas encore de propriétaire. La personne invitée doit d'abord accepter l'invitation.",
         "failed": "Impossible de céder {{name}}. Réessayez."
       }
     },
     "delete": {
       "action": "Supprimer",
       "title": "Supprimer {{name}} ?",
-      "description": "Vous allez effacer {{name}} avec ses appels, discussions, contacts, rendez-vous et réglages, et renoncer à son numéro de téléphone. Son propriétaire et son équipe perdent l'accès, et vous ne pourrez pas annuler.",
+      "description": "Vous allez effacer {{name}} et tout son contenu, et libérer son numéro de téléphone. Cette action est définitive.",
       "confirm": "Supprimer l'entreprise",
       "deleted": "Vous avez supprimé {{name}}.",
       "errors": {
@@ -88,7 +86,7 @@
     "create": {
       "action": "Créer une entreprise",
       "title": "Créer une entreprise",
-      "description": "Son propriétaire reçoit un courriel de {{partnerName}} avec un lien pour se connecter.",
+      "description": "{{partnerName}} envoie au propriétaire un lien de connexion par courriel.",
       "nameLabel": "Nom de l'entreprise",
       "namePlaceholder": "Clinique dentaire du Port",
       "ownerLabel": "Courriel du propriétaire",
@@ -110,29 +108,29 @@
       },
       "accessLabel": "Ce que son équipe peut utiliser",
       "access": {
-        "full": "Son équipe gère la réceptionniste : connaissances, heures, services et membres de l'équipe. Elle ne voit ni la facturation, ni les clés d'API, ni MCP.",
-        "activity": "Son équipe voit les appels, les clavardages, les rendez-vous, les contacts et les messages. Vous configurez la réceptionniste."
+        "full": "Son équipe configure la réceptionniste. Vous gardez la facturation et les clés API.",
+        "activity": "Son équipe voit les appels, les clavardages et les rendez-vous. Vous configurez la réceptionniste."
       },
       "billingLabel": "Facturation",
       "billing": {
-        "outside": "Vous facturez cette entreprise vous-même, et son propriétaire se connecte depuis l'invitation.",
-        "package": "Son propriétaire paie cette formule depuis l'invitation, puis se connecte."
+        "outside": "Vous facturez cette entreprise vous-même.",
+        "package": "Le propriétaire paie cette formule en acceptant l'invitation."
       },
       "templateLabel": "Modèle",
       "noTemplate": "Aucun modèle",
-      "templateHelp": "L'entreprise reçoit les réglages du modèle, avec le nom et le fuseau horaire que vous entrez ici. Nous lisons un échantillon de chaque site Web du modèle. Ouvrez l'entreprise pour lire le reste.",
+      "templateHelp": "L'entreprise démarre avec les réglages du modèle. Nous lisons une partie de chaque site Web qu'il contient, et le reste quand vous ouvrez l'entreprise.",
       "submit": "Créer et inviter",
       "submitting": "Création…",
       "created": "Vous avez créé {{name}} et invité {{email}}.",
       "errors": {
         "invalidName": "Entrez le nom de l'entreprise, jusqu'à 120 caractères.",
-        "invalidEmail": "Entrez une seule adresse courriel valide pour le propriétaire.",
+        "invalidEmail": "Entrez l'adresse courriel du propriétaire.",
         "invalidTimezone": "Choisissez un fuseau horaire.",
-        "domainRequired": "Il vous faut une adresse de tableau de bord avant de créer une entreprise. Demandez à {{appName}} d'en configurer une.",
-        "rateLimited": "Vous avez créé trop d'entreprises. Réessayez dans une heure.",
-        "ownerOnTeam": "Une personne de votre équipe ne peut pas être propriétaire d'une entreprise. Entrez le courriel du client à qui elle appartient.",
+        "domainRequired": "Il vous faut d'abord une adresse de tableau de bord. Demandez à {{appName}} d'en configurer une.",
+        "rateLimited": "Trop de nouvelles entreprises en une heure. Réessayez plus tard.",
+        "ownerOnTeam": "Une personne de votre équipe ne peut pas être propriétaire d'une entreprise. Entrez le courriel de votre client.",
         "failed": "Impossible de créer l'entreprise. Réessayez.",
-        "templateFailed": "Impossible de configurer l'entreprise avec ce modèle, alors nous ne l'avons pas créée. Réessayez ou choisissez un autre modèle.",
+        "templateFailed": "Impossible de créer l'entreprise à partir de ce modèle. Réessayez ou choisissez-en un autre.",
         "templateNotFound": "Quelqu'un a supprimé ce modèle. Choisissez-en un autre."
       }
     },
@@ -148,16 +146,16 @@
       "change": "Modifier",
       "changeFor": "Modifier la facturation de {{name}}",
       "title": "Facturation de {{name}}",
-      "description": "Choisissez la formule que cette entreprise vous paie, ou facturez-la vous-même.",
-      "outsideHint": "L'entreprise ne paie rien avec Stripe, et aucune formule ne limite ses minutes ni ses clavardages.",
-      "packageHint": "Son propriétaire paie la formule sur la page de facturation de l'entreprise, ou depuis l'invitation s'il ne l'a pas encore acceptée.",
+      "description": "Choisissez la formule que paie cette entreprise, ou facturez-la vous-même.",
+      "outsideHint": "Aucune formule ne limite ses minutes ni ses clavardages.",
+      "packageHint": "Le propriétaire paie sur la page de facturation de l'entreprise.",
       "submit": "Enregistrer",
       "saving": "Enregistrement…",
       "saved": "Vous avez modifié la facturation de {{name}}.",
       "errors": {
-        "subscriptionActive": "Cette entreprise paie sa formule avec Stripe. Annulez d'abord son abonnement dans votre tableau de bord Stripe.",
+        "subscriptionActive": "Cette entreprise a un abonnement actif. Annulez-le d'abord dans votre tableau de bord Stripe.",
         "packageGone": "Cette formule n'est plus en vente. Choisissez-en une autre.",
-        "notConnected": "Connectez votre compte Stripe avant de vendre des formules.",
+        "notConnected": "Connectez un compte de paiement avant de vendre des formules.",
         "notConfigured": "Ce tableau de bord ne peut pas encore vendre de formules.",
         "failed": "Impossible de modifier la facturation de l'entreprise. Réessayez."
       }
@@ -171,21 +169,21 @@
         "cap": "Dépassement jusqu'à {{cap}} par mois"
       },
       "title": "Dépassement de {{name}}",
-      "description": "Choisissez si l'entreprise continue de répondre au-delà de ce que comprend {{packageName}}, et ce que vous lui facturez pour les minutes et les conversations en plus.",
+      "description": "Laissez l'entreprise continuer de répondre au-delà de {{packageName}}, aux tarifs que vous fixez.",
       "toggle": "Autoriser le dépassement",
-      "onHint": "Au-delà de sa formule, l'entreprise continue de répondre jusqu'à ce que son dépassement atteigne votre plafond. Les appels sont alors transférés et le clavardage du site cesse de répondre. Ses factures Stripe indiquent le coût sous « Call overage » et « Chat overage », avec le montant comme quantité, à 1,00 l'unité.",
-      "offHint": "L'entreprise s'arrête aux minutes et aux conversations de sa formule. Les appels vont alors à son numéro de transfert ou au téléphone de son propriétaire, et le clavardage du site cesse de répondre.",
+      "onHint": "Au-delà de sa formule, l'entreprise continue de répondre jusqu'au plafond. Le dépassement figure sur sa prochaine facture.",
+      "offHint": "À la limite de sa formule, les appels sont transférés et le clavardage du site cesse de répondre.",
       "minuteRateLabel": "Chaque minute en plus",
       "chatRateLabel": "Chaque conversation en plus",
       "capLabel": "Plafond mensuel",
       "capPlaceholder": "Aucun plafond",
-      "capHint": "Le plafond repart à zéro le 1er de chaque mois (UTC) : une facture qui couvre deux mois peut donc inclure jusqu'à deux plafonds. Laissez vide pour n'avoir aucun plafond.",
+      "capHint": "Le plafond repart à zéro le 1er de chaque mois. Laissez le champ vide pour n'en fixer aucun.",
       "submit": "Enregistrer",
       "saving": "Enregistrement…",
       "saved": "Vous avez enregistré le dépassement de {{name}}.",
       "errors": {
         "invalidRate": "Entrez chaque tarif comme un montant dans la devise de la formule.",
-        "invalidCap": "Entrez le plafond comme un montant dans la devise de la formule, ou laissez-le vide.",
+        "invalidCap": "Entrez un montant dans la devise de la formule, ou laissez le champ vide.",
         "billedOutside": "Vous facturez cette entreprise vous-même, elle n'a donc pas de dépassement.",
         "failed": "Impossible d'enregistrer le dépassement. Réessayez."
       }
@@ -193,20 +191,19 @@
   },
   "packages": {
     "title": "Formules",
-    "description": "Ce que vous vendez à vos entreprises : un prix mensuel, des frais d'installation facultatifs, et les minutes et clavardages compris chaque mois.",
     "loadFailed": "Impossible de charger vos formules. Actualisez pour réessayer.",
     "managersOnly": "Seuls les propriétaires et les administrateurs peuvent voir les formules.",
-    "notConfigured": "Ce tableau de bord n'est pas configuré pour connecter des comptes Stripe. Tant que l'entreprise qui le gère n'active pas Stripe, vous facturez vos entreprises vous-même.",
+    "notConfigured": "Les paiements ne sont pas activés sur ce tableau de bord : vous facturez donc vos entreprises vous-même.",
     "connectFirst": {
-      "owner": "Connectez votre compte Stripe pour vendre des formules.",
-      "admin": "Demandez à un propriétaire de connecter votre compte Stripe pour vendre des formules."
+      "owner": "Connectez un compte de paiement pour vendre des formules.",
+      "admin": "Demandez à un propriétaire de connecter un compte de paiement pour vendre des formules."
     },
-    "notReady": "Stripe ne peut pas encore accepter de paiements sur votre compte. Vous pouvez créer des formules maintenant, et vos entreprises pourront les acheter dès que Stripe activera les paiements.",
+    "notReady": "Votre compte de paiement n'accepte pas encore de paiements. Vos entreprises pourront acheter des formules dès que ce sera le cas.",
     "disconnected": {
-      "owner": "Vous avez déconnecté votre compte Stripe : ses formules ne peuvent plus être vendues. Connectez un compte de nouveau pour en créer d'autres.",
-      "admin": "Votre compte Stripe est déconnecté : ses formules ne peuvent plus être vendues. Demandez à un propriétaire de connecter un compte de nouveau."
+      "owner": "Votre compte de paiement est déconnecté. Connectez-en un pour vendre de nouveau des formules.",
+      "admin": "Votre compte de paiement est déconnecté. Demandez à un propriétaire d'en connecter un."
     },
-    "openStripe": "Ouvrir la page Stripe",
+    "openStripe": "Configurer les paiements",
     "oldAccount": "Compte déconnecté",
     "createdOn": "Créé le {{date}}",
     "perMonth": "{{amount}} par mois",
@@ -222,17 +219,17 @@
     "table": {
       "package": "Formule",
       "price": "Prix",
-      "allowance": "Chaque mois"
+      "allowance": "Inclus chaque mois"
     },
     "empty": {
       "title": "Aucune formule pour l'instant",
-      "description": "Créez une formule que vos entreprises pourront acheter.",
-      "noStripe": "Les formules sont facturées par Stripe. Dès que ce tableau de bord pourra connecter un compte Stripe, vous les créerez ici."
+      "description": "Créez une formule que vos clients pourront acheter.",
+      "noStripe": "Les formules ont besoin des paiements, que ce tableau de bord n'offre pas encore."
     },
     "create": {
       "action": "Créer une formule",
       "title": "Créer une formule",
-      "description": "Les entreprises sur cette formule vous paient ce montant chaque mois, en {{currency}}, et reçoivent ces minutes et clavardages.",
+      "description": "Les entreprises sur cette formule paient ce montant chaque mois, en {{currency}}.",
       "nameLabel": "Nom",
       "namePlaceholder": "Accueil",
       "priceLabel": "Prix mensuel",
@@ -240,7 +237,7 @@
       "optional": "Facultatif",
       "minutesLabel": "Minutes par mois",
       "chatsLabel": "Clavardages par mois",
-      "fixedTerms": "Vous ne pourrez plus changer le prix ni les minutes et clavardages, car des entreprises les paient peut-être déjà. Vous pourrez renommer la formule.",
+      "fixedTerms": "Vous pourrez la renommer plus tard, mais pas changer son prix, ses minutes ni ses clavardages.",
       "submit": "Créer la formule",
       "submitting": "Création…",
       "created": "Vous avez créé {{name}}.",
@@ -248,19 +245,19 @@
         "invalidName": "Entrez un nom de 80 caractères au maximum.",
         "invalidPrice": "Entrez un prix mensuel supérieur à zéro.",
         "invalidSetupFee": "Entrez des frais d'installation supérieurs à zéro, ou laissez le champ vide.",
-        "invalidAllowance": "Entrez les minutes et les clavardages en nombres entiers de 0 à 1 000 000.",
-        "notConnected": "Connectez votre compte Stripe avant de créer des formules.",
+        "invalidAllowance": "Entrez des nombres entiers de 0 à 1 000 000.",
+        "notConnected": "Connectez un compte de paiement avant de créer des formules.",
         "failed": "Impossible de créer la formule. Réessayez."
       }
     },
     "rename": {
       "action": "Renommer",
       "title": "Renommer la formule",
-      "description": "Stripe affiche le nouveau nom sur les factures de vos entreprises.",
+      "description": "Vos clients voient le nouveau nom sur leurs factures.",
       "submit": "Enregistrer le nom",
       "saving": "Enregistrement…",
       "saved": "Formule renommée.",
-      "notConnected": "Vous ne pouvez renommer que les formules de votre compte Stripe connecté.",
+      "notConnected": "Vous ne pouvez renommer que les formules de votre compte de paiement connecté.",
       "failed": "Impossible de renommer la formule. Réessayez."
     },
     "archive": {
@@ -275,7 +272,6 @@
   },
   "templates": {
     "title": "Modèles",
-    "description": "Un modèle copie les réglages de la réceptionniste, les heures, les services, les règles, les connaissances et les documents d'une entreprise. Son nom, son site Web, ses numéros de téléphone, son forfait et son propriétaire restent avec l'entreprise. Choisissez un modèle quand vous créez une entreprise pour qu'elle démarre avec ces réglages.",
     "loadFailed": "Impossible de charger vos modèles. Actualisez la page pour réessayer.",
     "savedOn": "Enregistré le {{date}}",
     "table": {
@@ -307,13 +303,13 @@
     },
     "empty": {
       "title": "Aucun modèle pour l'instant",
-      "description": "Enregistrez comme modèle une entreprise que vous avez configurée, puis choisissez-le quand vous créez la suivante.",
+      "description": "Enregistrez une entreprise comme modèle, puis utilisez-le pour la suivante.",
       "memberDescription": "Les propriétaires et administrateurs de votre équipe enregistrent les modèles ici."
     },
     "save": {
       "action": "Enregistrer un modèle",
       "title": "Enregistrer un modèle",
-      "description": "Vous gardez une copie des réglages et des documents de l'entreprise. Si vous modifiez l'entreprise plus tard, le modèle reste tel quel.",
+      "description": "Enregistre une copie des réglages de cette entreprise. Si vous modifiez l'entreprise ensuite, le modèle ne change pas.",
       "businessLabel": "Entreprise",
       "businessPlaceholder": "Choisissez une entreprise",
       "noBusinesses": "Créez d'abord une entreprise, puis enregistrez ses réglages ici.",
@@ -324,8 +320,8 @@
       "saved": "Vous avez enregistré {{name}}.",
       "errors": {
         "invalidName": "Entrez le nom du modèle, jusqu'à 120 caractères.",
-        "invalid": "Cette entreprise a un réglage qu'un modèle ne peut pas contenir, comme une règle de plus de 4 000 caractères. Raccourcissez-le dans l'entreprise, puis réessayez.",
-        "fileMismatch": "Un document de cette entreprise ne correspond pas à sa copie enregistrée. Téléversez-le de nouveau dans l'entreprise, puis réessayez.",
+        "invalid": "Un réglage est trop long pour un modèle, comme une règle de plus de 4 000 caractères. Raccourcissez-le, puis réessayez.",
+        "fileMismatch": "Un document ne correspond pas à sa copie enregistrée. Téléversez-le de nouveau, puis enregistrez.",
         "rateLimited": "Vous avez enregistré trop de modèles. Réessayez dans une heure.",
         "failed": "Impossible d'enregistrer le modèle. Réessayez."
       }
@@ -336,7 +332,7 @@
     "delete": {
       "action": "Supprimer",
       "title": "Supprimer {{name}} ?",
-      "description": "Vous ne pourrez plus créer d'entreprises à partir de {{name}}. Les entreprises que vous avez créées avec ce modèle gardent leurs réglages.",
+      "description": "Vous ne pourrez plus créer d'entreprises à partir de {{name}}. Les entreprises créées avec ce modèle gardent leurs réglages.",
       "confirm": "Supprimer le modèle",
       "deleted": "Vous avez supprimé {{name}}.",
       "failed": "Impossible de supprimer {{name}}. Réessayez."
@@ -344,7 +340,6 @@
   },
   "team": {
     "title": "Équipe",
-    "description": "Les personnes qui peuvent utiliser cette console.",
     "loadFailed": "Impossible de charger l'équipe. Actualisez la page pour réessayer.",
     "table": {
       "person": "Personne",
@@ -367,9 +362,9 @@
       "sending": "Envoi…",
       "sent": "Invitation envoyée à {{email}}.",
       "roles": {
-        "owner": "Gère tout, y compris la facturation, la connexion Stripe et la suppression du partenaire.",
-        "admin": "Gère les entreprises, les forfaits, l'image de marque, les domaines, les clés et l'équipe.",
-        "member": "Travaille dans vos entreprises."
+        "owner": "Tout, y compris la facturation et les paiements.",
+        "admin": "Tout, sauf la facturation, les paiements et les propriétaires.",
+        "member": "Ouvre vos entreprises et y travaille."
       },
       "errors": {
         "failed": "Impossible d'envoyer l'invitation. Réessayez.",
@@ -394,46 +389,45 @@
     "confirm": {
       "cancel": "Annuler",
       "ownerTitle": "Faire de {{email}} un propriétaire ?",
-      "ownerDescription": "Les propriétaires peuvent tout faire dans la console de {{partnerName}}, y compris la facturation, la connexion Stripe, la modification des autres propriétaires et la suppression du partenaire.",
+      "ownerDescription": "Les propriétaires peuvent tout faire, y compris la facturation, les paiements et la gestion des autres propriétaires.",
       "ownerAction": "Nommer propriétaire",
       "removeTitle": "Retirer {{email}} ?",
-      "removeDescription": "Cette personne perd l'accès à la console de {{partnerName}} et à chaque entreprise qu'elle avait ouverte.",
+      "removeDescription": "Cette personne perd l'accès à la console de {{partnerName}} et à ses entreprises.",
       "removeAction": "Retirer de l'équipe"
     }
   },
   "branding": {
     "title": "Image de marque et domaine",
-    "description": "Ce que vos entreprises voient à l'adresse de votre tableau de bord, dans l'onglet du navigateur et dans vos courriels.",
     "loadFailed": "Impossible de charger votre image de marque. Actualisez la page pour réessayer.",
     "membersCantEdit": "Seuls les propriétaires et les administrateurs peuvent modifier l'image de marque.",
     "domain": {
       "title": "Adresse du tableau de bord",
       "open": "Ouvrir",
-      "none": "Vous n'avez pas encore de sous-domaine. Demandez à {{appName}} d'en configurer un.",
+      "none": "Vous n'avez pas encore de sous-domaine. Demandez-en un à {{appName}}.",
       "subdomainLabel": "Votre sous-domaine",
       "own": {
         "title": "Votre propre domaine",
-        "description": "Placez votre tableau de bord sur un sous-domaine de votre site, comme app.votreentreprise.com. Votre sous-domaine continue de fonctionner à côté.",
+        "description": "Utilisez votre propre sous-domaine, comme app.votreentreprise.com. Votre adresse actuelle continue de fonctionner.",
         "label": "Domaine",
         "placeholder": "app.votreentreprise.com",
         "help": "Vous ajouterez ensuite deux enregistrements DNS chez votre fournisseur DNS.",
         "connect": "Connecter le domaine",
         "connecting": "Connexion…",
         "added": "Domaine connecté. Ajoutez maintenant ses enregistrements DNS.",
-        "paidTier": "Votre propre domaine est inclus avec un niveau payant.",
-        "paidTierAskOwner": "Votre propre domaine est inclus avec un niveau payant. Un propriétaire peut en choisir un sur la page Facturation.",
-        "chooseTier": "Choisir un niveau",
+        "paidTier": "Votre propre domaine est inclus avec un palier payant.",
+        "paidTierAskOwner": "Votre propre domaine est inclus avec un palier payant. Demandez à un propriétaire d'en choisir un.",
+        "chooseTier": "Choisir un palier",
         "membersCantEdit": "Seuls les propriétaires et les administrateurs peuvent connecter un domaine.",
         "status": {
           "pending": "En attente du DNS",
           "active": "Actif",
           "failed": "Échec"
         },
-        "settingUp": "Nous configurons votre domaine. Ses enregistrements DNS s'affichent ici d'ici une minute.",
-        "pendingHelp": "Ajoutez ces enregistrements chez votre fournisseur DNS. Nous les vérifions toutes les quelques minutes, et une modification DNS peut prendre quelques heures à nous parvenir.",
+        "settingUp": "Nous configurons votre domaine. Ses enregistrements DNS s'afficheront ici sous peu.",
+        "pendingHelp": "Ajoutez ces enregistrements chez votre fournisseur DNS. Les modifications peuvent prendre quelques heures.",
         "activeHelp": "Votre tableau de bord et vos pages de connexion fonctionnent maintenant sur ce domaine.",
-        "failedHelp": "Nous n'avons pas pu configurer ce domaine. Retirez-le, vérifiez ses enregistrements DNS, puis connectez-le de nouveau.",
-        "takenHelp": "Un autre tableau de bord a connecté ce domaine en premier. Retirez-le ici pour en connecter un autre.",
+        "failedHelp": "Nous n'avons pas pu configurer ce domaine. Retirez-le, vérifiez ses enregistrements DNS et réessayez.",
+        "takenHelp": "Un autre tableau de bord utilise déjà ce domaine. Retirez-le pour en ajouter un autre.",
         "records": {
           "type": "Type",
           "name": "Nom",
@@ -448,33 +442,33 @@
         "checkedAt": "Dernière vérification : {{time}}.",
         "remove": "Retirer le domaine",
         "removeTitle": "Retirer {{hostname}} ?",
-        "removeDescription": "Personne ne pourra plus ouvrir votre tableau de bord sur ce domaine. Vous pourrez le connecter de nouveau plus tard.",
+        "removeDescription": "Votre tableau de bord ne fonctionnera plus sur ce domaine. Vous pourrez l'ajouter de nouveau plus tard.",
         "removed": "Domaine retiré.",
         "cancel": "Annuler",
         "errors": {
           "invalid": "Entrez un sous-domaine de votre site, comme app.votreentreprise.com.",
-          "reserved": "Ce domaine appartient à {{appName}}. Entrez un sous-domaine de votre propre site.",
+          "reserved": "Ce domaine appartient à {{appName}}. Utilisez un sous-domaine de votre propre site.",
           "taken": "Un autre tableau de bord utilise déjà ce domaine.",
           "exists": "Retirez votre domaine actuel avant d'en connecter un autre.",
-          "paidTier": "Votre propre domaine est inclus avec un niveau payant.",
+          "paidTier": "Votre propre domaine est inclus avec un palier payant.",
           "unavailable": "{{appName}} ne peut pas connecter votre propre domaine.",
           "forbidden": "Seuls les propriétaires et les administrateurs peuvent modifier votre domaine.",
           "failed": "Nous n'avons pas pu enregistrer votre domaine. Réessayez.",
           "loadFailed": "Nous n'avons pas pu charger vos adresses. Actualisez la page pour réessayer."
         },
-        "unavailable": "Ce tableau de bord ne peut pas encore connecter votre propre domaine : vos entreprises se connectent donc à votre sous-domaine ci-dessus. Demandez à l'entreprise qui gère ce tableau de bord d'activer les domaines personnalisés.",
-        "unavailableNoSubdomain": "Ce tableau de bord ne peut pas encore connecter votre propre domaine. Demandez à l'entreprise qui gère ce tableau de bord d'activer les domaines personnalisés."
+        "unavailable": "Les domaines personnalisés ne sont pas encore activés sur ce tableau de bord. Vos clients se connectent à votre sous-domaine.",
+        "unavailableNoSubdomain": "Les domaines personnalisés ne sont pas encore activés sur ce tableau de bord."
       }
     },
     "brand": {
       "title": "Marque"
     },
     "nameLabel": "Nom",
-    "nameHelp": "Vos entreprises le voient dans l'onglet du navigateur, au-dessus de la connexion et comme expéditeur de vos courriels.",
+    "nameHelp": "Affiché dans l'onglet du navigateur, sur la page de connexion et comme expéditeur de vos courriels.",
     "logoLabel": "Logo",
-    "logoHelp": "Affiché au-dessus de la connexion et dans vos courriels. PNG, JPEG, WebP ou SVG, jusqu'à 256 Ko.",
+    "logoHelp": "Affiché sur la page de connexion et dans vos courriels. PNG, JPEG, WebP ou SVG, jusqu'à 256 Ko.",
     "faviconLabel": "Favicon",
-    "faviconHelp": "L'icône de l'onglet du navigateur. Sans favicon, l'onglet affiche votre logo.",
+    "faviconHelp": "L'icône de l'onglet du navigateur. Par défaut, votre logo.",
     "imageChoose": "Choisir une image",
     "imageChange": "Changer l'image",
     "logoRemove": "Retirer le logo",
@@ -484,7 +478,7 @@
     "colorHelp": "Un code hexadécimal, comme #0f766e.",
     "links": {
       "title": "Liens",
-      "description": "Votre page de connexion et votre tableau de bord pointent vers ces liens. Laissez un champ vide pour masquer son lien.",
+      "description": "Ces liens figurent sur votre page de connexion et votre tableau de bord. Laissez un champ vide pour masquer le lien.",
       "termsUrl": "Conditions d'utilisation",
       "termsUrlPlaceholder": "https://entreprise.com/conditions",
       "privacyUrl": "Politique de confidentialité",
@@ -493,7 +487,7 @@
       "supportUrlPlaceholder": "https://entreprise.com/assistance",
       "supportEmail": "Courriel d'assistance",
       "supportEmailPlaceholder": "assistance@entreprise.com",
-      "supportEmailHelp": "Les réponses à vos courriels arrivent à cette adresse. Sans page d'assistance, votre lien d'assistance ouvre cette adresse."
+      "supportEmailHelp": "Les réponses à vos courriels arrivent à cette adresse. Elle sert aussi de lien d'assistance si vous n'avez pas de page d'assistance."
     },
     "preview": "Aperçu",
     "save": "Enregistrer la marque",
@@ -503,7 +497,7 @@
       "failed": "Impossible d'enregistrer votre marque. Réessayez.",
       "name": "Entrez un nom de 80 caractères au maximum.",
       "color": "Entrez la couleur sous forme de code hexadécimal, comme #0f766e.",
-      "link": "Entrez chaque lien sous forme d'adresse web complète commençant par https://.",
+      "link": "Entrez des adresses web complètes qui commencent par https://.",
       "supportEmail": "Entrez une seule adresse courriel valide.",
       "imageType": "Téléversez une image PNG, JPEG, WebP ou SVG.",
       "imageSize": "Téléversez une image de 256 Ko ou moins.",
@@ -511,14 +505,13 @@
     }
   },
   "stripe": {
-    "title": "Stripe",
-    "description": "Vos entreprises vous paient par votre propre compte Stripe. Stripe leur envoie les factures et les reçus à votre nom.",
-    "loadFailed": "Impossible de charger votre connexion Stripe. Actualisez pour réessayer.",
-    "ownersOnly": "Seuls les propriétaires peuvent gérer la connexion Stripe.",
+    "title": "Paiements",
+    "loadFailed": "Impossible de charger vos réglages de paiement. Actualisez pour réessayer.",
+    "ownersOnly": "Seuls les propriétaires peuvent gérer les paiements.",
     "opening": "Ouverture de Stripe…",
     "notConfigured": {
-      "title": "Stripe n'est pas configuré ici",
-      "description": "Ce tableau de bord n'est pas configuré pour connecter des comptes Stripe. Tant que l'entreprise qui le gère n'active pas Stripe, vous facturez vos entreprises vous-même."
+      "title": "Les paiements ne sont pas configurés ici",
+      "description": "Les paiements ne sont pas activés sur ce tableau de bord : vous facturez donc vos entreprises vous-même."
     },
     "status": {
       "notConnected": "Non connecté",
@@ -528,32 +521,32 @@
       "disconnected": "Déconnecté"
     },
     "connect": {
-      "title": "Connectez votre compte Stripe",
-      "description": "Stripe facture vos entreprises à votre nom et vous verse l'argent. Vous gérez les remboursements et les litiges dans votre tableau de bord Stripe.",
+      "title": "Connectez un compte de paiement",
+      "description": "Nous utilisons Stripe pour facturer vos clients à votre nom et vous verser l'argent.",
       "countryLabel": "Pays de votre entreprise",
       "countryPlaceholder": "Choisissez un pays",
-      "countryHelp": "Stripe fixe le pays de votre compte à sa création, et vous ne pourrez plus le changer.",
-      "action": "Connecter Stripe"
+      "countryHelp": "Vous ne pourrez pas le changer plus tard.",
+      "action": "Connecter avec Stripe"
     },
     "onboarding": {
-      "title": "Terminez la configuration de Stripe",
-      "description": "Stripe a besoin de quelques détails de plus avant que votre compte puisse accepter des paiements.",
+      "title": "Terminez la configuration des paiements",
+      "description": "Stripe a besoin de quelques renseignements de plus pour que vous puissiez accepter des paiements.",
       "action": "Continuer sur Stripe"
     },
     "restricted": {
-      "title": "Stripe ne peut pas encore accepter de paiements",
-      "description": "Stripe vérifie vos renseignements ou en demande d'autres. Ouvrez Stripe pour voir ce qu'il reste à faire.",
-      "action": "Ouvrir la configuration Stripe"
+      "title": "Vous ne pouvez pas encore accepter de paiements",
+      "description": "Stripe a besoin d'autres renseignements. Terminez sur Stripe pour commencer à accepter des paiements.",
+      "action": "Terminer sur Stripe"
     },
     "active": {
-      "title": "Votre compte Stripe est connecté",
-      "description": "Vos entreprises vous paient en {{currency}}. Vous gérez les remboursements et les litiges dans votre tableau de bord Stripe.",
+      "title": "Votre compte de paiement est connecté",
+      "description": "Vos clients vous paient en {{currency}}. Gérez les remboursements et les litiges dans votre tableau de bord Stripe.",
       "dashboard": "Ouvrir le tableau de bord Stripe"
     },
     "disconnected": {
-      "title": "Vous avez déconnecté Stripe",
-      "description": "Vous avez déconnecté votre compte dans Stripe le {{date}}. Vos entreprises ne pourront pas acheter de formules tant que vous ne connecterez pas un compte de nouveau.",
-      "action": "Reconnecter Stripe"
+      "title": "Votre compte de paiement est déconnecté",
+      "description": "Vous avez déconnecté votre compte de paiement le {{date}}. Connectez-en un pour vendre de nouveau des formules.",
+      "action": "Reconnecter"
     },
     "details": {
       "account": "Compte",
@@ -566,20 +559,20 @@
     "errors": {
       "failed": "Impossible d'ouvrir Stripe. Réessayez.",
       "invalidCountry": "Choisissez le pays de votre entreprise.",
-      "notConfigured": "Ce tableau de bord ne peut pas encore connecter de compte Stripe.",
-      "changed": "Quelqu'un d'autre a modifié la connexion Stripe. Actualisez et réessayez."
+      "notConfigured": "Ce tableau de bord ne peut pas encore accepter de paiements.",
+      "changed": "Quelqu'un d'autre a modifié les réglages de paiement. Actualisez et réessayez."
     }
   },
   "apiKeys": {
     "title": "Clés API",
-    "description": "Votre code utilise une clé de plateforme pour créer vos entreprises et les configurer par l'API. Une clé fonctionne sur vos entreprises et aucune autre.",
+    "description": "Créez et configurez vos entreprises depuis votre propre code.",
     "empty": "Aucune clé de plateforme pour l'instant.",
     "neverUsed": "Jamais",
     "createdBy": "{{date}} par {{name}}",
     "revoked": "Révoquée le {{date}}",
     "restricted": {
       "title": "Seuls les propriétaires et les administrateurs gèrent les clés de plateforme",
-      "description": "Demandez à un propriétaire ou à un administrateur de votre équipe de créer une clé pour vous."
+      "description": "Demandez à un propriétaire ou à un administrateur de créer une clé pour vous."
     },
     "columns": {
       "name": "Nom",
@@ -592,7 +585,7 @@
     "create": {
       "action": "Créer une clé de plateforme",
       "title": "Créer une clé de plateforme",
-      "description": "Donnez à la clé un nom que vous reconnaîtrez et n'autorisez que l'accès dont elle a besoin.",
+      "description": "Donnez-lui un nom facile à reconnaître, et seulement l'accès dont elle a besoin.",
       "nameLabel": "Nom",
       "namePlaceholder": "Intégration des clients",
       "scopesLabel": "Accès",
@@ -602,22 +595,22 @@
     },
     "created": {
       "title": "{{name}} est prête",
-      "description": "Copiez la clé et conservez-la dans un gestionnaire de mots de passe ou dans les réglages de votre outil.",
-      "warning": "Vous ne reverrez plus cette clé. Si vous la perdez, révoquez-la et créez-en une autre.",
+      "description": "Copiez-la en lieu sûr, comme un gestionnaire de mots de passe.",
+      "warning": "Vous ne reverrez plus cette clé. Si vous la perdez, créez-en une autre.",
       "done": "Terminé"
     },
     "revoke": {
       "action": "Révoquer",
-      "title": "Révoquer cette clé de plateforme?",
-      "description": "Tout ce qui utilise {{name}} cesse de fonctionner immédiatement. Ses webhooks se désactivent, et personne ne peut plus accepter les invitations d'équipe qu'elle a envoyées. Les propriétaires qu'elle a invités peuvent toujours rejoindre leur entreprise. Cette action est définitive.",
+      "title": "Révoquer cette clé de plateforme ?",
+      "description": "Tout ce qui utilise {{name}} cesse de fonctionner, et ses webhooks se désactivent. Cette action est définitive.",
       "confirm": "Révoquer la clé",
       "cancel": "Annuler",
       "done": "Clé de plateforme révoquée",
       "failed": "Impossible de révoquer la clé. Réessayez."
     },
     "scopes": {
-      "business_read": "Lire les informations, les heures, les services, ainsi que les réglages et les règles de la réceptionniste de l'entreprise",
-      "business_write": "Modifier les informations, les heures, les services, ainsi que les réglages et les règles de la réceptionniste de l'entreprise, y compris le numéro de transfert des appels",
+      "business_read": "Lire les informations de l'entreprise, ses heures, ses services et sa réceptionniste",
+      "business_write": "Modifier les informations de l'entreprise, ses heures, ses services et sa réceptionniste, y compris les transferts d'appels",
       "calls_read": "Lire les appels, les résumés et les transcriptions",
       "contacts_read": "Lire les contacts",
       "contacts_write": "Créer et modifier des contacts",
@@ -640,11 +633,10 @@
   },
   "billing": {
     "title": "Facturation",
-    "description": "Votre palier fixe les minutes et les clavardages que vos entreprises partagent chaque mois, et le nombre de numéros de téléphone qu'elles obtiennent.",
     "loadFailed": "Impossible de charger votre facturation. Actualisez la page pour réessayer.",
-    "ownersOnly": "Seuls les propriétaires gèrent la facturation. Demandez à l'un des propriétaires de votre partenaire de changer de palier.",
-    "unavailable": "Vous ne payez aucun palier sur ce tableau de bord : rien ne limite les minutes, les clavardages ni les numéros de téléphone de vos entreprises.",
-    "pastDue": "Votre dernier paiement a échoué. Mettez à jour votre carte dans Gérer l'abonnement pour garder votre palier.",
+    "ownersOnly": "Seuls les propriétaires gèrent la facturation. Demandez à l'un d'eux de changer de palier.",
+    "unavailable": "Ce tableau de bord ne facture pas de paliers : rien ne limite donc vos entreprises.",
+    "pastDue": "Votre dernier paiement a échoué. Mettez à jour votre carte dans Gérer l'abonnement.",
     "tiers": {
       "free": "Gratuit",
       "starter": "Starter",
@@ -672,48 +664,47 @@
       "numbers_other": "{{count}} numéros de téléphone",
       "noNumbers": "Aucun numéro de téléphone",
       "trialNumber": "1 numéro d'essai pendant 14 jours",
-      "extraNumbers": "Numéros supplémentaires au prix coûtant",
-      "overage": "Chaque minute supplémentaire coûte {{minute}}, et chaque clavardage supplémentaire {{chat}}",
-      "noOverage": "Aucune minute ni aucun clavardage au-delà"
+      "extraNumbers": "Numéros supplémentaires facturés chaque mois",
+      "overage": "Dépassement : {{minute}} la minute, {{chat}} le clavardage",
+      "noOverage": "Aucun dépassement"
     },
     "current": {
       "title": "Palier actuel",
-      "free": "Aucune carte requise.",
+      "free": "0 $ par mois",
       "renewsOn": "Se renouvelle le {{date}}.",
       "endsOn": "Prend fin le {{date}}. Vous gardez votre palier d'ici là."
     },
     "numbers": {
-      "used": "Numéros de téléphone utilisés : {{held}} sur {{included}} inclus.",
-      "extra_one": "Numéros de téléphone utilisés : {{held}}. Vous payez {{count}} numéro supplémentaire au prix coûtant chaque mois.",
-      "extra_many": "Numéros de téléphone utilisés : {{held}}. Vous payez {{count}} numéros supplémentaires au prix coûtant chaque mois.",
-      "extra_other": "Numéros de téléphone utilisés : {{held}}. Vous payez {{count}} numéros supplémentaires au prix coûtant chaque mois."
+      "used": "{{held}} sur {{included}} numéros de téléphone utilisés.",
+      "extra_one": "Numéros de téléphone utilisés : {{held}}. Vous payez {{count}} numéro supplémentaire chaque mois.",
+      "extra_many": "Numéros de téléphone utilisés : {{held}}. Vous payez {{count}} numéros supplémentaires chaque mois.",
+      "extra_other": "Numéros de téléphone utilisés : {{held}}. Vous payez {{count}} numéros supplémentaires chaque mois."
     },
     "trial": {
-      "available": "Votre équipe ou le propriétaire d'une de vos entreprises peut demander votre numéro d'essai de 14 jours dans les paramètres de numéro de téléphone de cette entreprise. La personne qui le demande vérifie d'abord son mobile, et les appels de l'essai sont transférés vers ce mobile.",
+      "available": "Demandez votre numéro d'essai de 14 jours dans les réglages téléphoniques de n'importe quelle entreprise. Ses appels vont au mobile de la personne qui le demande.",
       "used": "Vous avez utilisé votre numéro d'essai de 14 jours."
     },
     "pool": {
       "title": "Ce mois-ci",
-      "description": "Les minutes et les clavardages que vos entreprises ont pris dans votre réserve commune. Votre réserve repart à zéro le {{resetsAt}}.",
+      "description": "Ce que vos entreprises ont utilisé ce mois-ci. La réserve repart à zéro le {{resetsAt}}.",
       "minutes": "Minutes",
       "chats": "Clavardages",
       "noLimit": "{{used}}, sans limite"
     },
     "hostPool": {
-      "description": "Nous fixons les minutes et les clavardages que vos entreprises partagent chaque mois.",
-      "limit": "Une fois la réserve épuisée, les appels vont au numéro de transfert de chaque entreprise ou au téléphone de son propriétaire, et le clavardage du site ne répond plus jusqu'à ce que votre réserve reparte à zéro. Pour modifier votre réserve, adressez-vous à l'entreprise qui gère ce tableau de bord."
+      "limit": "Une fois la réserve épuisée, les appels sont transférés et le clavardage du site cesse de répondre jusqu'à ce qu'elle reparte à zéro. Pour la modifier, adressez-vous à l'entreprise qui gère ce tableau de bord."
     },
     "overage": {
       "title": "Dépassement",
-      "description": "Au-delà de votre réserve, vos entreprises continuent de répondre aux tarifs de dépassement de votre palier. Si le dépassement est désactivé ou atteint votre plafond, les appels vont au numéro de transfert de chaque entreprise ou au téléphone de son propriétaire, et le clavardage du site cesse de répondre.",
+      "description": "Au-delà de votre réserve, vos entreprises continuent de répondre aux tarifs de dépassement de votre palier, jusqu'à votre plafond.",
       "toggle": "Autoriser le dépassement",
-      "free": "Le palier Gratuit n'a pas de dépassement. Vos entreprises s'arrêtent à la réserve jusqu'à ce que vous choisissiez un palier payant.",
+      "free": "Le palier Gratuit n'a pas de dépassement. Vos entreprises s'arrêtent à la réserve.",
       "off": "Le dépassement est désactivé. Vos entreprises s'arrêtent à la réserve chaque mois.",
       "noCap": "Aucun plafond",
       "spend": "Dépassement ce mois-ci",
       "spendNoCap": "{{spend}} ce mois-ci",
       "spendOfCap": "{{spend}} sur {{cap}}",
-      "capReached": "Vous avez atteint votre plafond. Les appels sont transférés et le clavardage ne répond plus jusqu'au mois prochain ou jusqu'à ce que vous releviez le plafond.",
+      "capReached": "Vous avez atteint votre plafond. Les appels sont transférés et le clavardage est en pause jusqu'au mois prochain, ou jusqu'à ce que vous releviez le plafond.",
       "capLabel": "Plafond mensuel",
       "capPlaceholder": "50,00",
       "saveCap": "Fixer le plafond",
@@ -743,65 +734,61 @@
     },
     "errors": {
       "checkoutFailed": "Impossible d'ouvrir le paiement. Réessayez.",
-      "subscriptionActive": "Vous payez déjà un palier. Changez-le dans Gérer l'abonnement.",
+      "subscriptionActive": "Vous avez déjà un palier. Changez-le dans Gérer l'abonnement.",
       "checkoutInProgress": "Un autre propriétaire a un paiement en cours. Réessayez dans 30 minutes.",
       "unavailable": "Vous ne pouvez pas acheter de palier sur ce tableau de bord.",
       "portalFailed": "Impossible d'ouvrir votre abonnement. Réessayez."
-    },
-    "unbilledDescription": "Ce que vos entreprises peuvent utiliser chaque mois."
+    }
   },
   "lifecycle": {
     "past_due": {
       "title": "Le dernier paiement de votre palier a échoué",
-      "description": "Vos entreprises répondent aux appels et aux clavardages jusqu'au {{pausesAt}}. Ensuite, elles se mettent en pause jusqu'à ce que vous payiez, et nous les supprimons 90 jours après la fin de votre palier.",
-      "owner": "Mettez à jour votre carte dans Gérer l'abonnement, sur la page Facturation, pour qu'elles continuent de répondre, ou cédez chaque entreprise à son propriétaire.",
-      "admin": "Demandez à un propriétaire de mettre à jour la carte de votre palier, ou cédez chaque entreprise à son propriétaire."
+      "description": "Vos entreprises répondent jusqu'au {{pausesAt}}, puis se mettent en pause jusqu'à ce que vous payiez. Nous les supprimons 90 jours après la fin de votre palier.",
+      "owner": "Mettez à jour votre carte dans Gérer l'abonnement, ou cédez chaque entreprise à son propriétaire.",
+      "admin": "Demandez à un propriétaire de mettre à jour la carte, ou cédez chaque entreprise à son propriétaire."
     },
     "ending": {
       "title": "Votre palier a pris fin le {{tierEndedAt}}",
-      "description": "Vos entreprises répondent aux appels et aux clavardages jusqu'au {{pausesAt}}. Ensuite, elles se mettent en pause, et le {{deletesAt}}, nous les supprimons.",
-      "owner": "Choisissez un palier sur la page Facturation pour qu'elles continuent de répondre, ou cédez chaque entreprise à son propriétaire.",
+      "description": "Vos entreprises répondent jusqu'au {{pausesAt}}, puis se mettent en pause. Nous les supprimons le {{deletesAt}}.",
+      "owner": "Choisissez un palier pour qu'elles continuent de répondre, ou cédez chaque entreprise à son propriétaire.",
       "admin": "Demandez à un propriétaire de choisir un palier, ou cédez chaque entreprise à son propriétaire."
     },
     "paused": {
       "title": "Vos entreprises ne répondent plus depuis le {{pausesAt}}",
-      "description": "Votre palier a pris fin le {{tierEndedAt}}. Les appels vont au numéro de transfert de chaque entreprise ou au téléphone de son propriétaire, et le clavardage du site Web ne peut pas répondre. Le {{deletesAt}}, nous les supprimons.",
-      "owner": "Choisissez un palier sur la page Facturation pour qu'elles répondent de nouveau, ou cédez chaque entreprise à son propriétaire.",
+      "description": "Votre palier a pris fin le {{tierEndedAt}}. Les appels sont transférés et le clavardage est désactivé. Nous supprimons vos entreprises le {{deletesAt}}.",
+      "owner": "Choisissez un palier pour qu'elles répondent de nouveau, ou cédez chaque entreprise à son propriétaire.",
       "admin": "Demandez à un propriétaire de choisir un palier, ou cédez chaque entreprise à son propriétaire."
     },
     "paused_past_due": {
       "title": "Vos entreprises ne répondent plus depuis le {{pausesAt}}",
-      "description": "Le dernier paiement de votre palier a échoué. Les appels vont au numéro de transfert de chaque entreprise ou au téléphone de son propriétaire, et le clavardage du site Web ne peut pas répondre. Nous les supprimons 90 jours après la fin de votre palier.",
-      "owner": "Mettez à jour votre carte dans Gérer l'abonnement, sur la page Facturation, pour qu'elles répondent de nouveau, ou cédez chaque entreprise à son propriétaire.",
-      "admin": "Demandez à un propriétaire de mettre à jour la carte de votre palier, ou cédez chaque entreprise à son propriétaire."
+      "description": "Votre dernier paiement a échoué. Les appels sont transférés et le clavardage est désactivé. Nous supprimons vos entreprises 90 jours après la fin de votre palier.",
+      "owner": "Mettez à jour votre carte dans Gérer l'abonnement pour qu'elles répondent de nouveau, ou cédez chaque entreprise à son propriétaire.",
+      "admin": "Demandez à un propriétaire de mettre à jour la carte, ou cédez chaque entreprise à son propriétaire."
     },
     "deleted": {
       "title": "Nous avons supprimé vos entreprises le {{deletesAt}}",
-      "description": "C'était 90 jours après la fin de votre palier. Vous êtes maintenant sur Gratuit, et les entreprises que vous ajoutez fonctionnent comme sur Gratuit.",
-      "owner": "Pour payer de nouveau un palier, choisissez-en un sur la page Facturation.",
+      "description": "Nous les avons supprimées 90 jours après la fin de votre palier. Vous êtes maintenant sur le palier Gratuit.",
+      "owner": "Choisissez un palier sur la page Facturation pour reprendre.",
       "admin": "Demandez à un propriétaire si vous avez de nouveau besoin d'un palier payant."
     }
   },
   "settings": {
     "title": "Réglages",
-    "description": "Les réglages qui s'appliquent à toute votre équipe.",
     "loadFailed": "Impossible de charger vos réglages. Actualisez la page pour réessayer.",
     "saved": "Réglages enregistrés.",
     "membersCantEdit": "Seuls les propriétaires et les administrateurs peuvent modifier ces réglages.",
     "telemetry": {
-      "label": "Partager les données de télémétrie",
-      "description": "Partagez des données d'utilisation et d'erreurs anonymisées sur l'utilisation de la console par votre équipe, pour aider à l'améliorer. Le tableau de bord de chaque entreprise suit son propre réglage.",
+      "label": "Partager les données d'utilisation",
+      "description": "Partagez des données anonymes d'utilisation et d'erreurs de la console pour nous aider à l'améliorer.",
       "saveFailed": "Impossible d'enregistrer votre préférence de télémétrie. Réessayez."
     }
   },
   "signup": {
     "title": "Devenir partenaire",
-    "description": "Revendez {{appName}} aux entreprises que vous servez, sous votre propre marque.",
     "nameLabel": "Nom de l'entreprise",
     "namePlaceholder": "Accueil Acme",
     "subdomainLabel": "Adresse du tableau de bord",
     "subdomainHelp": "Utilisez de 3 à 40 lettres minuscules, chiffres et traits d'union.",
-    "noCard": "Aucune carte requise.",
     "submit": "Créer le compte partenaire",
     "submitting": "Création…",
     "inviteOnly": "L'inscription des partenaires se fait sur invitation pour l'instant. Demandez un lien à {{appName}}.",
@@ -809,8 +796,8 @@
     "invitationUsed": "Quelqu'un a déjà utilisé cette invitation.",
     "wrongAccount": "Cette invitation est destinée à {{email}}. Connectez-vous avec cette adresse vérifiée pour l'utiliser.",
     "errors": {
-      "subdomainTaken": "Quelqu'un utilise déjà cette adresse. Choisissez-en une autre.",
-      "invalidSubdomain": "Utilisez de 3 à 40 lettres minuscules, chiffres et traits d'union, et évitez des noms comme www ou app.",
+      "subdomainTaken": "Cette adresse est déjà prise. Choisissez-en une autre.",
+      "invalidSubdomain": "Utilisez de 3 à 40 lettres minuscules, chiffres et traits d'union. Les noms comme www ou app sont réservés.",
       "rateLimited": "Vous avez inscrit trop de partenaires aujourd'hui. Réessayez demain.",
       "failed": "Impossible de créer le compte partenaire. Réessayez."
     }
@@ -818,7 +805,7 @@
   "acceptInvite": {
     "genericTitle": "Invitation partenaire",
     "title": "Rejoindre {{partnerName}}",
-    "description": "Cette invitation est destinée à {{email}}, avec le rôle {{role}}.",
+    "description": "Rejoignez l'équipe en tant que {{role}}, avec l'adresse {{email}}.",
     "submit": "Accepter l'invitation",
     "submitting": "Acceptation…",
     "success": "Vous avez rejoint {{partnerName}}.",

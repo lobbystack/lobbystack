@@ -77,7 +77,7 @@ function serve(partnerTelemetry: boolean) {
 function Page() {
   return mocks.pathname === "/partner/signup"
     ? <PartnerSignupSurface baseDomain={null} blocked={null} invitation="token" invitedEmail={null} returnTo="/partner/signup" />
-    : mocks.pathname.endsWith("/stripe") ? <PartnerStripeSurface /> : null;
+    : mocks.pathname.endsWith("/payments") ? <PartnerStripeSurface /> : null;
 }
 
 function renderApp() {
@@ -124,7 +124,7 @@ describe("web.partner.signup_succeeded", () => {
 describe("a console page's event", () => {
   /** Picks a country and connects, once the console has the partner's answer. */
   async function startOnboarding(fetchMock: ReturnType<typeof serve>, consented: boolean) {
-    mocks.pathname = `/partner/${partnerId}/stripe`;
+    mocks.pathname = `/partner/${partnerId}/payments`;
     renderApp();
     await userEvent.selectOptions(await screen.findByLabelText("stripe.connect.countryLabel"), "CA");
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith(`/api/partner/settings?partnerId=${partnerId}`, expect.anything()));
@@ -137,7 +137,7 @@ describe("a console page's event", () => {
   it("reaches PostHog from the Stripe page for a partner member with no business consent to lean on", async () => {
     await startOnboarding(serve(true), true);
     expect(mocks.posthog.opt_in_capturing).toHaveBeenCalled();
-    expect(mocks.posthog.capture).toHaveBeenCalledWith("web.partner.stripe_onboarding_started", { partnerId, resumed: false, pathname: `/partner/${partnerId}/stripe`, deploymentMode: "cloud" });
+    expect(mocks.posthog.capture).toHaveBeenCalledWith("web.partner.stripe_onboarding_started", { partnerId, resumed: false, pathname: `/partner/${partnerId}/payments`, deploymentMode: "cloud" });
   });
 
   it("stays in the browser when the partner's setting is off, even with the person's business on", async () => {

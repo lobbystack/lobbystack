@@ -104,7 +104,7 @@ describe("the partner console's Packages page", () => {
   it("asks an owner to connect Stripe first, and an admin to ask an owner, with nothing to create", async () => {
     renderAs("owner", () => Response.json(listing([], { configured: true, status: "not_connected", currency: null }, "owner")));
     expect(await screen.findByText("packages.connectFirst.owner")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "packages.openStripe" }).getAttribute("href")).toBe("/partner/partner/stripe");
+    expect(screen.getByRole("link", { name: "packages.openStripe" }).getAttribute("href")).toBe("/partner/partner/payments");
     expect(screen.queryByRole("button", { name: "packages.create.action" })).toBeNull();
     cleanup();
 

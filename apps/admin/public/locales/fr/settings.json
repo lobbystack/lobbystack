@@ -380,7 +380,7 @@
       "awaiting_payment": "Votre réceptionniste répond aux appels et aux clavardages dès que vous payez.",
       "active": "Votre abonnement est actif.",
       "renews": "Votre abonnement se renouvelle le {{date}}.",
-      "past_due": "Votre dernier paiement a échoué, et Stripe va réessayer. Mettez à jour votre carte pour que votre réceptionniste continue de répondre.",
+      "past_due": "Votre dernier paiement a échoué, et nous allons réessayer. Mettez à jour votre carte pour que votre réceptionniste continue de répondre.",
       "inactive": "Votre abonnement a pris fin, donc votre réceptionniste ne répond plus aux appels ni aux clavardages. Abonnez-vous de nouveau pour le réactiver."
     },
     "badge": {
@@ -392,7 +392,7 @@
     "subscribe": "S'abonner",
     "manage": "Gérer la facturation",
     "opening": "Ouverture…",
-    "manageHint": "Mettez à jour votre carte, téléchargez vos factures ou annulez dans le portail de facturation de Stripe.",
+    "manageHint": "Mettez à jour votre carte, téléchargez vos factures ou annulez votre abonnement.",
     "paid": "Paiement reçu. Votre réceptionniste commence à répondre dans un instant.",
     "errors": {
       "portal": "Le portail de facturation n'est pas disponible pour le moment. Contactez {{appName}}.",

@@ -19,7 +19,6 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
@@ -116,13 +115,12 @@ function PartnerNavigation({ billingPage, partnerId, role }: { billingPage: bool
     { href: `/partner/${partnerId}/branding`, label: t("nav.branding"), icon: Palette },
     { href: `/partner/${partnerId}/team`, label: t("nav.team"), icon: Users },
     { href: `/partner/${partnerId}/api-keys`, label: t("nav.apiKeys"), icon: KeyRound },
-    ...(role === "owner" ? [{ href: `/partner/${partnerId}/stripe`, label: t("nav.stripe"), icon: CreditCard }] : []),
+    ...(role === "owner" ? [{ href: `/partner/${partnerId}/payments`, label: t("nav.stripe"), icon: CreditCard }] : []),
     ...(billingPage && role === "owner" ? [{ href: `/partner/${partnerId}/billing`, label: t("nav.billing"), icon: Receipt }] : []),
     { href: `/partner/${partnerId}/settings`, label: t("nav.settings"), icon: Settings },
   ];
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>{t("shell.navigation")}</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => (
           <SidebarMenuItem key={item.href}>

@@ -42,8 +42,8 @@ it("sends Stripe back to the Stripe page on the host's domain", async () => {
   expect(await response.json()).toEqual({ url: "https://connect.stripe.com/setup/s/abc" });
   expect(fixture.start).toHaveBeenCalledWith(expect.objectContaining({ stripeConnect: fixture.stripe }), actor, {
     country: "CA",
-    returnUrl: `https://desk.example.test/partner/${partnerId}/stripe?onboarding=return`,
-    refreshUrl: `https://desk.example.test/partner/${partnerId}/stripe?onboarding=refresh`,
+    returnUrl: `https://desk.example.test/partner/${partnerId}/payments?onboarding=return`,
+    refreshUrl: `https://desk.example.test/partner/${partnerId}/payments?onboarding=refresh`,
   });
 });
 
@@ -51,8 +51,8 @@ it("sends Stripe back to the partner's own host when the console was opened ther
   await POST(new Request("http://localhost:3000/api/partner/stripe/onboarding", { method: "POST", headers: partnerHost, body: JSON.stringify({ partnerId: partnerId.toUpperCase() }) }));
   expect(fixture.start).toHaveBeenCalledWith(expect.anything(), actor, {
     country: null,
-    returnUrl: `https://bright.portal.example.test/partner/${partnerId}/stripe?onboarding=return`,
-    refreshUrl: `https://bright.portal.example.test/partner/${partnerId}/stripe?onboarding=refresh`,
+    returnUrl: `https://bright.portal.example.test/partner/${partnerId}/payments?onboarding=return`,
+    refreshUrl: `https://bright.portal.example.test/partner/${partnerId}/payments?onboarding=refresh`,
   });
 });
 

@@ -68,7 +68,6 @@ function ApiKeysFrame({ layout, title, description, action, children }: { layout
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
         <PageHeader actions={action} title={title} />
-        <p className="text-sm text-muted-foreground">{description}</p>
       </div>
       {children}
     </div>

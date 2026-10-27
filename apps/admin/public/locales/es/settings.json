@@ -380,7 +380,7 @@
       "awaiting_payment": "Su recepcionista empieza a atender llamadas y chats en cuanto pague.",
       "active": "Su suscripción está activa.",
       "renews": "Su suscripción se renueva el {{date}}.",
-      "past_due": "Su último pago falló y Stripe lo volverá a intentar. Actualice su tarjeta para que su recepcionista siga atendiendo.",
+      "past_due": "Su último pago falló y lo volveremos a intentar. Actualice su tarjeta para que su recepcionista siga atendiendo.",
       "inactive": "Su suscripción terminó, así que su recepcionista no atiende llamadas ni chats. Suscríbase de nuevo para reactivarla."
     },
     "badge": {
@@ -392,7 +392,7 @@
     "subscribe": "Suscribirse",
     "manage": "Administrar facturación",
     "opening": "Abriendo…",
-    "manageHint": "Actualice su tarjeta, descargue facturas o cancele en el portal de facturación de Stripe.",
+    "manageHint": "Actualice su tarjeta, descargue facturas o cancele su suscripción.",
     "paid": "Recibimos su pago. Su recepcionista empieza a atender en un momento.",
     "errors": {
       "portal": "El portal de facturación no está disponible en este momento. Consulte a {{appName}}.",

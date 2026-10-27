@@ -97,7 +97,7 @@ export function PartnerSignupSurface({ baseDomain, blocked, invitation, invitedE
   }
 
   return (
-    <ReplacementOnboardingShell description={t("signup.description")} progress={null} title={t("signup.title")} width="md">
+    <ReplacementOnboardingShell progress={null} title={t("signup.title")} width="md">
       <form className="flex flex-col gap-6" onSubmit={submit}>
         <FieldGroup>
           <Field>
@@ -118,7 +118,6 @@ export function PartnerSignupSurface({ baseDomain, blocked, invitation, invitedE
         {error ? <p className="text-center text-sm text-destructive" role="alert">{error}</p> : null}
         <div className="flex flex-col gap-3">
           <Button className="h-11 w-full" disabled={!name.trim() || (baseDomain !== null && !shownSubdomain)} loading={signup.isPending} loadingLabel={t("signup.submitting")} type="submit">{t("signup.submit")}</Button>
-          <p className="text-center text-sm text-muted-foreground">{t("signup.noCard")}</p>
         </div>
       </form>
     </ReplacementOnboardingShell>

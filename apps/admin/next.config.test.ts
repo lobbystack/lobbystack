@@ -114,4 +114,9 @@ describe("moved routes", () => {
     const config = await loadConfig({}) as NextConfig;
     expect(await config.redirects?.()).toContainEqual({ source: "/settings/widget", destination: "/widget", permanent: true });
   });
+
+  it("sends the partner console's old Stripe page to Payments", async () => {
+    const config = await loadConfig({}) as NextConfig;
+    expect(await config.redirects?.()).toContainEqual({ source: "/partner/:partnerId/stripe", destination: "/partner/:partnerId/payments", permanent: true });
+  });
 });

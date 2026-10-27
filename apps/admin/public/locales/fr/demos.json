@@ -1,28 +1,28 @@
 {
   "loading": {
-    "label": "Chargement..."
+    "label": "Chargement…"
   },
   "active": {
     "title": "Démo pour {{businessName}}",
     "startHint": "Appuyez sur le bouton pour démarrer un appel vocal en direct.",
     "promptsTitle": "Essayez de demander :",
-    "intakeNotice": "Ceci est une démo à capacités limitées. Les appels en direct fonctionnent, mais la prise de rendez-vous et les autres fonctionnalités complètes ne sont pas activées.",
+    "intakeNotice": "Ceci est une démo. Les appels fonctionnent, mais la prise de rendez-vous et les autres fonctionnalités sont désactivées.",
     "claimCta": "Réclamer cette réceptionniste"
   },
   "states": {
     "invalid": {
       "title": "Ce lien de démo n'est pas valide",
-      "description": "Le lien est peut-être mal saisi ou la démo n'a jamais été créée. Demandez un nouveau lien pour réessayer."
+      "description": "Vérifiez le lien ou demandez-en un nouveau."
     },
     "preparing": {
       "title": "Votre démo est en cours de préparation",
       "titleWithBusiness": "La démo pour {{businessName}} est en cours de préparation",
-      "description": "Nous apprenons encore à partir du site web. Cela prend habituellement quelques minutes, revenez sous peu."
+      "description": "Nous lisons encore le site Web. Revenez dans quelques minutes."
     },
     "expired": {
       "title": "Cette démo a expiré",
       "titleWithBusiness": "La démo pour {{businessName}} a expiré",
-      "description": "Les liens de démo sont disponibles pour une durée limitée. Contactez-nous pour en obtenir un nouveau."
+      "description": "Les liens de démo expirent. Demandez-en un nouveau."
     },
     "revoked": {
       "title": "Cette démo n'est plus disponible",
@@ -32,16 +32,16 @@
     "claimed": {
       "title": "Cette démo a déjà été réclamée",
       "titleWithBusiness": "La démo pour {{businessName}} a déjà été réclamée",
-      "description": "Cette réceptionniste appartient désormais à un compte {{appName}}."
+      "description": "Quelqu'un a déjà réclamé cette réceptionniste."
     }
   },
   "claim": {
     "loadingTitle": "Configuration de votre espace de travail",
-    "loadingDescription": "Réclamation de votre réceptionniste et préparation de votre espace de travail...",
+    "loadingDescription": "Réclamation de votre réceptionniste…",
     "errorTitle": "Nous n'avons pas pu réclamer cette démo",
-    "errorDescription": "Une erreur s'est produite lors de la réclamation de cette démo. Veuillez réessayer.",
+    "errorDescription": "Une erreur s'est produite. Réessayez.",
     "unavailableTitle": "Ce lien de démo est indisponible",
-    "unavailableDescription": "Le lien de démo est manquant ou n'est plus valide.",
+    "unavailableDescription": "Le lien est manquant ou ne fonctionne plus.",
     "retry": "Réessayer"
   },
   "operator": {
@@ -51,20 +51,20 @@
     "count_many": "{{count}} démos",
     "count_other": "{{count}} démos",
     "refresh": "Actualiser",
-    "loading": "Chargement des démos...",
-    "empty": "Aucune démo de prospection n’a encore été préparée.",
+    "loading": "Chargement des démos…",
+    "empty": "Aucune démo de prospection pour l'instant.",
     "rotate": "Renouveler le lien",
     "publish": "Publier",
     "revoke": "Révoquer",
     "openLink": "Ouvrir le lien sécurisé",
-    "tokenHint": "Renouvelez le lien dans cette session avant de publier ou de partager la démo. Les jetons bruts ne sont jamais stockés.",
+    "tokenHint": "Renouvelez le lien pour le voir, puis partagez-le. Nous ne conservons pas les liens.",
     "prepare": "Préparer une démo",
     "prepareDescription": "L’espace reste privé pendant l’indexation de son site Web public.",
     "businessName": "Nom de l’entreprise",
     "websiteUrl": "URL du site Web",
     "greeting": "Message d’accueil",
     "suggestedPrompts": "Questions suggérées",
-    "create": "Créer une démo isolée",
+    "create": "Créer la démo",
     "ingestion": "Importation :",
     "snapshot": "Configuration :",
     "prompts": "Questions :",
@@ -87,35 +87,34 @@
       "unavailable": "non configurée"
     },
     "errors": {
-      "load": "Impossible de charger les démos de prospection. Essayez d’actualiser la page.",
-      "create": "Impossible de créer la démo. Vos saisies sont conservées ; veuillez réessayer.",
-      "rotate": "Impossible de renouveler le lien de la démo. Veuillez réessayer.",
-      "publish": "Impossible de publier la démo. Veuillez réessayer.",
-      "revoke": "Impossible de révoquer la démo. Veuillez réessayer.",
-      "promptsRequired": "Ajoutez au moins deux questions suggérées, une par ligne.",
-      "notReady": "La démo n'est pas encore prête. Attendez la fin de la lecture du site, puis réessayez."
+      "load": "Impossible de charger vos démos. Actualisez la page pour réessayer.",
+      "create": "Impossible de créer la démo. Vos saisies sont conservées. Réessayez.",
+      "rotate": "Impossible de renouveler le lien. Réessayez.",
+      "publish": "Impossible de publier la démo. Réessayez.",
+      "revoke": "Impossible de révoquer la démo. Réessayez.",
+      "promptsRequired": "Ajoutez au moins deux questions, une par ligne.",
+      "notReady": "La démo n'est pas encore prête. Attendez que nous ayons lu le site Web, puis réessayez."
     },
     "partner": {
-      "description": "Montrez à un prospect sa propre réceptionniste avant qu'il achète. Chaque démo s'ouvre sur votre domaine, sous votre marque.",
-      "prepareDescription": "La démo reste privée pendant que nous lisons le site Web du prospect.",
+      "prepareDescription": "Nous lisons le site du prospect pour créer la démo. Publiez-la dès qu'elle est prête.",
       "empty": "Aucune démo pour l'instant. Entrez le site Web d'un prospect pour en créer une.",
       "accessLabel": "Accès une fois que le prospect l'a réclamée",
       "usage": "Minutes ce mois-ci : {{minutes}} · Discussions ce mois-ci : {{chats}}",
       "open": "Ouvrir",
       "delete": "Supprimer",
       "deleteTitle": "Supprimer la démo de {{name}} ?",
-      "deleteDescription": "Vous allez effacer la démo avec ses appels et ses discussions. Vous ne pourrez pas annuler.",
+      "deleteDescription": "Vous allez effacer la démo, ses appels et ses discussions. Cette action est définitive.",
       "deleteConfirm": "Supprimer la démo",
       "cancel": "Annuler",
       "errors": {
-        "domainRequired": "Il vous faut une adresse de tableau de bord avant de créer une démo. Demandez à {{appName}} d'en configurer une.",
-        "rateLimited": "Vous avez créé trop de démos. Réessayez dans une heure.",
+        "domainRequired": "Il vous faut d'abord une adresse de tableau de bord. Demandez à {{appName}} d'en configurer une.",
+        "rateLimited": "Trop de nouvelles démos en une heure. Réessayez plus tard.",
         "open": "Impossible d'ouvrir la démo. Réessayez.",
         "delete": "Impossible de supprimer la démo. Réessayez."
       }
     },
     "promptsHint": "Ajoutez-en au moins deux, une par ligne.",
-    "ingestionUnavailable": "Ce tableau de bord ne peut pas lire les sites web : la démo répond à partir de son message d'accueil, de ses services et des questions suggérées.",
+    "ingestionUnavailable": "Ce tableau de bord ne peut pas lire les sites Web : la démo répond donc à partir de son message d'accueil et de ses questions.",
     "ingestionFailed": "Nous n'avons pas pu lire le site web. Créez une nouvelle démo pour réessayer."
   }
 }

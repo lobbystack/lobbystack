@@ -138,7 +138,6 @@ export function PartnerPackagesSurface() {
   const header = (actions?: React.ReactNode) => (
     <div className="flex flex-col gap-1">
       <PageHeader actions={actions} title={t("packages.title")} />
-      <p className="text-sm text-muted-foreground">{t("packages.description")}</p>
     </div>
   );
   const message = (text: string) => <Surface className="px-6 py-8"><p className="text-sm text-muted-foreground" role="alert">{text}</p></Surface>;
@@ -154,7 +153,7 @@ export function PartnerPackagesSurface() {
   }
 
   const isOwner = data.role === "owner";
-  const stripePage = `/partner/${partner.partnerId}/stripe`;
+  const stripePage = `/partner/${partner.partnerId}/payments`;
   const notice = !data.stripe.configured
     ? { text: t("packages.notConfigured"), link: false }
     : data.stripe.status === "disconnected"

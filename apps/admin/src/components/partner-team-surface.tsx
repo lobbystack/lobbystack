@@ -159,7 +159,6 @@ export function PartnerTeamSurface() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
         <PageHeader actions={inviteDialog} title={t("team.title")} />
-        <p className="text-sm text-muted-foreground">{t("team.description")}</p>
       </div>
       <Surface className="overflow-hidden p-0">
         {team.isLoading ? (

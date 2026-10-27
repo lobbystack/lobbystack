@@ -1,6 +1,5 @@
 {
   "shell": {
-    "navigation": "Partner console",
     "switchPartner": "Switch partner",
     "signUpAnother": "Sign up another partner",
     "userMenu": "Account menu for {{email}}"
@@ -12,7 +11,7 @@
     "packages": "Packages",
     "branding": "Branding & domain",
     "team": "Team",
-    "stripe": "Stripe",
+    "stripe": "Payments",
     "apiKeys": "API keys",
     "billing": "Billing",
     "settings": "Settings"
@@ -24,7 +23,6 @@
   },
   "businesses": {
     "title": "Businesses",
-    "description": "The businesses you resell, with their minutes and chats this month. Their owners sign in at your dashboard address. Each business's audit log records who on your team opens it.",
     "loadFailed": "We couldn't load your businesses. Refresh to try again.",
     "createdOn": "Created {{date}}",
     "table": {
@@ -48,7 +46,7 @@
     "open": {
       "action": "Open",
       "label": "Open {{name}}",
-      "opening": "Opening",
+      "opening": "Opening…",
       "failed": "We couldn't open {{name}}. Try again."
     },
     "actions": {
@@ -61,18 +59,18 @@
     "release": {
       "action": "Release to owner",
       "title": "Release {{name}}?",
-      "description": "{{email}} keeps {{name}} and its receptionist on the Free plan and takes over its billing. It leaves your console, and your team can't open it anymore.",
+      "description": "{{email}} takes over {{name}} on the Free plan and pays for it from now on. It leaves your console.",
       "confirm": "Release business",
       "released": "You released {{name}} to {{email}}.",
       "errors": {
-        "ownerRequired": "{{name}} has no owner yet. Its owner has to accept their invitation first.",
+        "ownerRequired": "{{name}} has no owner yet. They need to accept their invitation first.",
         "failed": "We couldn't release {{name}}. Try again."
       }
     },
     "delete": {
       "action": "Delete",
       "title": "Delete {{name}}?",
-      "description": "You'll erase {{name}} with its calls, chats, contacts, appointments and settings, and give up its phone number. Its owner and team lose access, and you can't undo it.",
+      "description": "This erases {{name}} and everything in it, and releases its phone number. You can't undo it.",
       "confirm": "Delete business",
       "deleted": "You deleted {{name}}.",
       "errors": {
@@ -88,7 +86,7 @@
     "create": {
       "action": "Create business",
       "title": "Create a business",
-      "description": "Its owner gets an email from {{partnerName}} with a link to sign in.",
+      "description": "The owner gets a sign-in link by email from {{partnerName}}.",
       "nameLabel": "Business name",
       "namePlaceholder": "Harbor Dental",
       "ownerLabel": "Owner's email",
@@ -108,31 +106,31 @@
         "indian": "Indian Ocean",
         "pacific": "Pacific"
       },
-      "accessLabel": "What its team can use",
+      "accessLabel": "What their team can use",
       "access": {
-        "full": "Its team runs the receptionist: knowledge, hours, services and team members. They don't see billing, API keys or MCP.",
-        "activity": "Its team sees calls, chats, appointments, contacts and messages. You set up the receptionist."
+        "full": "Their team sets up the receptionist. Billing and API keys stay with you.",
+        "activity": "Their team sees calls, chats and appointments. You set up the receptionist."
       },
       "billingLabel": "Billing",
       "billing": {
-        "outside": "You bill this business yourself, and its owner signs in from the invitation.",
-        "package": "Its owner pays for this package from the invitation, then signs in."
+        "outside": "You bill this business yourself.",
+        "package": "The owner pays for this package when they accept the invitation."
       },
       "templateLabel": "Template",
       "noTemplate": "No template",
-      "templateHelp": "The business gets the template's setup, with the name and time zone you enter here. We read a sample of each website the template lists. Open the business to read the rest.",
+      "templateHelp": "The business starts with the template's setup. We read part of each website it lists, and the rest once you open the business.",
       "submit": "Create and invite",
       "submitting": "Creating…",
       "created": "You created {{name}} and invited {{email}}.",
       "errors": {
         "invalidName": "Enter the business's name, up to 120 characters.",
-        "invalidEmail": "Enter one valid email address for the owner.",
+        "invalidEmail": "Enter the owner's email address.",
         "invalidTimezone": "Pick a time zone.",
-        "domainRequired": "You need a dashboard address before you can create a business. Ask {{appName}} to set one up.",
-        "rateLimited": "You created too many businesses. Try again in an hour.",
-        "ownerOnTeam": "Someone on your team can't own a business. Enter the email of the client who owns it.",
+        "domainRequired": "You need a dashboard address first. Ask {{appName}} to set one up.",
+        "rateLimited": "Too many new businesses this hour. Try again later.",
+        "ownerOnTeam": "Someone on your team can't own a business. Enter your client's email.",
         "failed": "We couldn't create the business. Try again.",
-        "templateFailed": "We couldn't set the business up from that template, so we didn't create it. Try again, or pick another template.",
+        "templateFailed": "We couldn't create the business from that template. Try again or pick another one.",
         "templateNotFound": "Someone deleted that template. Pick another one."
       }
     },
@@ -148,16 +146,16 @@
       "change": "Change",
       "changeFor": "Change how {{name}} is billed",
       "title": "Billing for {{name}}",
-      "description": "Pick the package this business pays you for, or bill it yourself.",
-      "outsideHint": "The business pays nothing through Stripe, and no package limits its minutes or chats.",
-      "packageHint": "Its owner pays for the package on the business's billing page, or from the invitation if they haven't joined yet.",
+      "description": "Pick the package this business pays for, or bill it yourself.",
+      "outsideHint": "No package limits its minutes or chats.",
+      "packageHint": "The owner pays on the business's billing page.",
       "submit": "Save",
       "saving": "Saving…",
       "saved": "You changed how {{name}} is billed.",
       "errors": {
-        "subscriptionActive": "This business pays for its package through Stripe. Cancel its subscription in your Stripe Dashboard first.",
+        "subscriptionActive": "This business has an active subscription. Cancel it in your Stripe Dashboard first.",
         "packageGone": "That package isn't for sale anymore. Pick another.",
-        "notConnected": "Connect your Stripe account before you sell packages.",
+        "notConnected": "Connect payments before you sell packages.",
         "notConfigured": "This dashboard can't sell packages yet.",
         "failed": "We couldn't change how the business is billed. Try again."
       }
@@ -171,21 +169,21 @@
         "cap": "Overage up to {{cap}} a month"
       },
       "title": "Overage for {{name}}",
-      "description": "Choose whether the business keeps answering past what {{packageName}} includes, and what you charge it for the extra minutes and chats.",
+      "description": "Let the business keep answering past {{packageName}}, at rates you set.",
       "toggle": "Allow overage",
-      "onHint": "Past its package, the business keeps answering until its overage reaches your cap. Then calls forward and website chat stops replying. Its Stripe invoices show the cost as Call overage and Chat overage, with the amount as the quantity at 1.00 each.",
-      "offHint": "The business stops at its package's minutes and chats. Calls then forward to its transfer number or its owner's phone, and website chat stops replying.",
+      "onHint": "Past its package, the business keeps answering until it reaches the cap. Overage shows on its next invoice.",
+      "offHint": "At its package's limit, calls forward and website chat stops replying.",
       "minuteRateLabel": "Each extra minute",
       "chatRateLabel": "Each extra chat",
       "capLabel": "Monthly cap",
       "capPlaceholder": "No cap",
-      "capHint": "The cap resets on the 1st of each month, UTC, so an invoice that spans two months can bill up to two caps. Leave it empty for no cap.",
+      "capHint": "Resets on the 1st of each month. Leave it empty for no cap.",
       "submit": "Save",
       "saving": "Saving…",
       "saved": "You saved the overage for {{name}}.",
       "errors": {
         "invalidRate": "Enter each rate as an amount in the package's currency.",
-        "invalidCap": "Enter the cap as an amount in the package's currency, or leave it empty.",
+        "invalidCap": "Enter an amount in the package's currency, or leave it empty.",
         "billedOutside": "You bill this business yourself, so it has no overage.",
         "failed": "We couldn't save the overage. Try again."
       }
@@ -193,20 +191,19 @@
   },
   "packages": {
     "title": "Packages",
-    "description": "What you sell your businesses: a monthly price, an optional setup fee, and the minutes and chats each month includes.",
     "loadFailed": "We couldn't load your packages. Refresh to try again.",
     "managersOnly": "Only owners and admins can see packages.",
-    "notConfigured": "This dashboard isn't set up to connect Stripe accounts. Until the company that runs it turns Stripe on, you bill your businesses yourself.",
+    "notConfigured": "Payments aren't turned on for this dashboard, so you bill your businesses yourself.",
     "connectFirst": {
-      "owner": "Connect your Stripe account to sell packages.",
-      "admin": "Ask an owner to connect your Stripe account so you can sell packages."
+      "owner": "Connect payments to sell packages.",
+      "admin": "Ask an owner to connect payments so you can sell packages."
     },
-    "notReady": "Stripe can't take payments on your account yet. You can create packages now, and businesses can buy them once Stripe turns payments on.",
+    "notReady": "Your payment account can't take payments yet. Businesses can buy packages once it can.",
     "disconnected": {
-      "owner": "You disconnected your Stripe account, so its packages can't sell. Connect an account again to create new ones.",
-      "admin": "Your Stripe account is disconnected, so its packages can't sell. Ask an owner to connect an account again."
+      "owner": "Your payment account is disconnected. Connect one to sell packages again.",
+      "admin": "Your payment account is disconnected. Ask an owner to connect one."
     },
-    "openStripe": "Open Stripe page",
+    "openStripe": "Set up payments",
     "oldAccount": "Disconnected account",
     "createdOn": "Created {{date}}",
     "perMonth": "{{amount}} a month",
@@ -220,17 +217,17 @@
     "table": {
       "package": "Package",
       "price": "Price",
-      "allowance": "Each month"
+      "allowance": "Included each month"
     },
     "empty": {
       "title": "No packages yet",
-      "description": "Create a package for your businesses to buy.",
-      "noStripe": "Packages bill through Stripe. Once this dashboard can connect a Stripe account, you'll make them here."
+      "description": "Create a package your clients can buy.",
+      "noStripe": "Packages need payments, which this dashboard doesn't offer yet."
     },
     "create": {
       "action": "Create package",
       "title": "Create a package",
-      "description": "Businesses on this package pay you this much each month, in {{currency}}, and get these minutes and chats.",
+      "description": "Businesses on this package pay this each month, in {{currency}}.",
       "nameLabel": "Name",
       "namePlaceholder": "Front desk",
       "priceLabel": "Monthly price",
@@ -238,7 +235,7 @@
       "optional": "Optional",
       "minutesLabel": "Minutes each month",
       "chatsLabel": "Chats each month",
-      "fixedTerms": "You can't change the price or the minutes and chats later, because businesses may already pay for them. You can rename the package.",
+      "fixedTerms": "You can rename it later, but not change its price, minutes or chats.",
       "submit": "Create package",
       "submitting": "Creating…",
       "created": "You created {{name}}.",
@@ -246,19 +243,19 @@
         "invalidName": "Enter a name of up to 80 characters.",
         "invalidPrice": "Enter a monthly price above zero.",
         "invalidSetupFee": "Enter a setup fee above zero, or leave it empty.",
-        "invalidAllowance": "Enter minutes and chats as whole numbers from 0 to 1,000,000.",
-        "notConnected": "Connect your Stripe account before you create packages.",
+        "invalidAllowance": "Enter whole numbers from 0 to 1,000,000.",
+        "notConnected": "Connect payments before you create packages.",
         "failed": "We couldn't create the package. Try again."
       }
     },
     "rename": {
       "action": "Rename",
       "title": "Rename package",
-      "description": "Stripe shows the new name on your businesses' invoices.",
+      "description": "Your clients see the new name on their invoices.",
       "submit": "Save name",
       "saving": "Saving…",
       "saved": "Package renamed.",
-      "notConnected": "You can only rename packages on your connected Stripe account.",
+      "notConnected": "You can only rename packages on your connected payment account.",
       "failed": "We couldn't rename the package. Try again."
     },
     "archive": {
@@ -267,13 +264,12 @@
       "description": "New businesses can't buy it. Businesses already on it keep it.",
       "confirm": "Stop selling",
       "cancel": "Cancel",
-      "done": "{{name}} is off sale.",
+      "done": "{{name}} is no longer for sale.",
       "failed": "We couldn't take the package off sale. Try again."
     }
   },
   "templates": {
     "title": "Templates",
-    "description": "A template copies a business's receptionist settings, hours, services, rules, knowledge and documents. Its name, website, phone numbers, plan and owner stay with the business. Pick a template when you create a business to start it with that setup.",
     "loadFailed": "We couldn't load your templates. Refresh to try again.",
     "savedOn": "Saved {{date}}",
     "table": {
@@ -299,13 +295,13 @@
     },
     "empty": {
       "title": "No templates yet",
-      "description": "Save a business you've set up as a template, then pick it when you create the next business.",
+      "description": "Save a business as a template, then use it for the next one.",
       "memberDescription": "Your team's owners and admins save templates here."
     },
     "save": {
       "action": "Save a template",
       "title": "Save a template",
-      "description": "You keep a copy of the business's setup and documents. Changing the business later leaves the template as it is.",
+      "description": "Saves a copy of this business's setup. Later changes to the business don't touch it.",
       "businessLabel": "Business",
       "businessPlaceholder": "Choose a business",
       "noBusinesses": "Create a business first, then save its setup here.",
@@ -316,8 +312,8 @@
       "saved": "You saved {{name}}.",
       "errors": {
         "invalidName": "Enter the template's name, up to 120 characters.",
-        "invalid": "This business has a setting a template can't hold, such as a rule longer than 4,000 characters. Shorten it in the business, then save again.",
-        "fileMismatch": "A document in this business doesn't match its stored copy. Upload it to the business again, then save again.",
+        "invalid": "A setting is too long for a template, such as a rule over 4,000 characters. Shorten it and try again.",
+        "fileMismatch": "A document doesn't match its stored copy. Upload it again, then save.",
         "rateLimited": "You saved too many templates. Try again in an hour.",
         "failed": "We couldn't save the template. Try again."
       }
@@ -328,7 +324,7 @@
     "delete": {
       "action": "Delete",
       "title": "Delete {{name}}?",
-      "description": "You can't start businesses from {{name}} anymore. Businesses you created from it keep their setup.",
+      "description": "You can't start new businesses from {{name}}. Businesses made from it keep their setup.",
       "confirm": "Delete template",
       "deleted": "You deleted {{name}}.",
       "failed": "We couldn't delete {{name}}. Try again."
@@ -336,7 +332,6 @@
   },
   "team": {
     "title": "Team",
-    "description": "People who can use this console.",
     "loadFailed": "We couldn't load the team. Refresh to try again.",
     "table": {
       "person": "Person",
@@ -359,9 +354,9 @@
       "sending": "Sending…",
       "sent": "Invitation sent to {{email}}.",
       "roles": {
-        "owner": "Runs everything, including billing, the Stripe connection and deleting the partner.",
-        "admin": "Manages businesses, packages, branding, domains, keys and the team.",
-        "member": "Works inside your businesses."
+        "owner": "Everything, including billing and payments.",
+        "admin": "Everything except billing, payments and owners.",
+        "member": "Opens and works in your businesses."
       },
       "errors": {
         "failed": "We couldn't send the invitation. Try again.",
@@ -386,26 +381,25 @@
     "confirm": {
       "cancel": "Cancel",
       "ownerTitle": "Make {{email}} an owner?",
-      "ownerDescription": "Owners can do everything in {{partnerName}}'s console, including billing, the Stripe connection, changing other owners and deleting the partner.",
+      "ownerDescription": "Owners can do everything, including billing, payments and managing other owners.",
       "ownerAction": "Make owner",
       "removeTitle": "Remove {{email}}?",
-      "removeDescription": "They lose access to {{partnerName}}'s console and to every business they had open.",
+      "removeDescription": "They lose access to {{partnerName}}'s console and its businesses.",
       "removeAction": "Remove from team"
     }
   },
   "branding": {
     "title": "Branding & domain",
-    "description": "What your businesses see on your dashboard address, in the browser tab and in your emails.",
     "loadFailed": "We couldn't load your brand. Refresh to try again.",
     "membersCantEdit": "Only owners and admins can change the brand.",
     "domain": {
       "title": "Dashboard address",
       "open": "Open",
-      "none": "You don't have a subdomain yet. Ask {{appName}} to set one up.",
+      "none": "You don't have a subdomain yet. Ask {{appName}} for one.",
       "subdomainLabel": "Your subdomain",
       "own": {
         "title": "Your own domain",
-        "description": "Put your dashboard on a subdomain of your website, such as app.yourcompany.com. Your subdomain keeps working beside it.",
+        "description": "Use your own subdomain, like app.yourcompany.com. Your current address keeps working.",
         "label": "Domain",
         "placeholder": "app.yourcompany.com",
         "help": "You'll add two DNS records at your DNS provider next.",
@@ -413,7 +407,7 @@
         "connecting": "Connecting…",
         "added": "Domain connected. Add its DNS records next.",
         "paidTier": "Your own domain comes with a paid tier.",
-        "paidTierAskOwner": "Your own domain comes with a paid tier. An owner can choose one on the Billing page.",
+        "paidTierAskOwner": "Your own domain comes with a paid tier. Ask an owner to choose one.",
         "chooseTier": "Choose a tier",
         "membersCantEdit": "Only owners and admins can connect a domain.",
         "status": {
@@ -421,11 +415,11 @@
           "active": "Active",
           "failed": "Failed"
         },
-        "settingUp": "We're setting up your domain. Its DNS records show here within a minute.",
-        "pendingHelp": "Add these records at your DNS provider. We check for them every few minutes, and a DNS change can take a few hours to reach us.",
+        "settingUp": "We're setting up your domain. Its DNS records appear here shortly.",
+        "pendingHelp": "Add these records at your DNS provider. Changes can take a few hours.",
         "activeHelp": "Your dashboard and sign-in pages work on this domain now.",
-        "failedHelp": "We couldn't set up this domain. Remove it, check its DNS records, then connect it again.",
-        "takenHelp": "Another dashboard connected this domain first. Remove it here to connect a different one.",
+        "failedHelp": "We couldn't set up this domain. Remove it, check its DNS records and try again.",
+        "takenHelp": "Another dashboard already uses this domain. Remove it to add a different one.",
         "records": {
           "type": "Type",
           "name": "Name",
@@ -440,12 +434,12 @@
         "checkedAt": "Last checked {{time}}.",
         "remove": "Remove domain",
         "removeTitle": "Remove {{hostname}}?",
-        "removeDescription": "People can no longer open your dashboard on this domain. You can connect it again later.",
+        "removeDescription": "Your dashboard stops working on this domain. You can add it again later.",
         "removed": "Domain removed.",
         "cancel": "Cancel",
         "errors": {
           "invalid": "Enter a subdomain of your website, such as app.yourcompany.com.",
-          "reserved": "That domain belongs to {{appName}}. Enter a subdomain of your own website.",
+          "reserved": "That domain belongs to {{appName}}. Use a subdomain of your own website.",
           "taken": "Another dashboard already uses that domain.",
           "exists": "Remove your current domain before you connect another.",
           "paidTier": "Your own domain comes with a paid tier.",
@@ -454,19 +448,19 @@
           "failed": "We couldn't save your domain. Try again.",
           "loadFailed": "We couldn't load your addresses. Refresh to try again."
         },
-        "unavailable": "This dashboard can't connect your own domain yet, so your businesses sign in at your subdomain above. Ask the company that runs this dashboard to turn on custom domains.",
-        "unavailableNoSubdomain": "This dashboard can't connect your own domain yet. Ask the company that runs this dashboard to turn on custom domains."
+        "unavailable": "Custom domains aren't turned on for this dashboard yet. Your clients sign in at your subdomain.",
+        "unavailableNoSubdomain": "Custom domains aren't turned on for this dashboard yet."
       }
     },
     "brand": {
       "title": "Brand"
     },
     "nameLabel": "Name",
-    "nameHelp": "Your businesses see it in the browser tab, above sign-in and as the sender of your emails.",
+    "nameHelp": "Shown in the browser tab, on sign-in and as your email sender.",
     "logoLabel": "Logo",
-    "logoHelp": "Shown above sign-in and in your emails. PNG, JPEG, WebP or SVG, up to 256 KB.",
+    "logoHelp": "Shown on sign-in and in emails. PNG, JPEG, WebP or SVG, up to 256 KB.",
     "faviconLabel": "Favicon",
-    "faviconHelp": "The icon in the browser tab. Without one, the tab shows your logo.",
+    "faviconHelp": "The browser tab icon. Defaults to your logo.",
     "imageChoose": "Choose an image",
     "imageChange": "Change image",
     "logoRemove": "Remove logo",
@@ -476,7 +470,7 @@
     "colorHelp": "A hex code, such as #0f766e.",
     "links": {
       "title": "Links",
-      "description": "Your sign-in page and dashboard link to these. Leave a field empty to hide its link.",
+      "description": "Linked from your sign-in page and dashboard. Leave a field empty to hide it.",
       "termsUrl": "Terms of service",
       "termsUrlPlaceholder": "https://company.com/terms",
       "privacyUrl": "Privacy policy",
@@ -485,7 +479,7 @@
       "supportUrlPlaceholder": "https://company.com/support",
       "supportEmail": "Support email",
       "supportEmailPlaceholder": "support@company.com",
-      "supportEmailHelp": "Replies to your emails go here. Without a support page, your support link opens this address."
+      "supportEmailHelp": "Replies to your emails go here. It's also your support link when you have no support page."
     },
     "preview": "Preview",
     "save": "Save brand",
@@ -495,7 +489,7 @@
       "failed": "We couldn't save your brand. Try again.",
       "name": "Enter a name of up to 80 characters.",
       "color": "Enter the color as a hex code, such as #0f766e.",
-      "link": "Enter each link as a full web address that starts with https://.",
+      "link": "Enter full web addresses that start with https://.",
       "supportEmail": "Enter one valid email address.",
       "imageType": "Upload a PNG, JPEG, WebP or SVG image.",
       "imageSize": "Upload an image of 256 KB or smaller.",
@@ -503,14 +497,13 @@
     }
   },
   "stripe": {
-    "title": "Stripe",
-    "description": "Your businesses pay you through your own Stripe account. Stripe sends their invoices and receipts in your name.",
-    "loadFailed": "We couldn't load your Stripe connection. Refresh to try again.",
-    "ownersOnly": "Only owners can manage the Stripe connection.",
+    "title": "Payments",
+    "loadFailed": "We couldn't load your payment settings. Refresh to try again.",
+    "ownersOnly": "Only owners can manage payments.",
     "opening": "Opening Stripe…",
     "notConfigured": {
-      "title": "Stripe isn't set up here",
-      "description": "This dashboard isn't set up to connect Stripe accounts. Until the company that runs it turns Stripe on, you bill your businesses yourself."
+      "title": "Payments aren't set up here",
+      "description": "Payments aren't turned on for this dashboard, so you bill your businesses yourself."
     },
     "status": {
       "notConnected": "Not connected",
@@ -520,32 +513,32 @@
       "disconnected": "Disconnected"
     },
     "connect": {
-      "title": "Connect your Stripe account",
-      "description": "Stripe charges your businesses in your name and pays you out. You handle refunds and disputes in your Stripe Dashboard.",
+      "title": "Connect a payment account",
+      "description": "We use Stripe to charge your clients in your name and pay you out.",
       "countryLabel": "Country of your business",
       "countryPlaceholder": "Choose a country",
-      "countryHelp": "Stripe sets your account's country when it creates the account, and you can't change it later.",
-      "action": "Connect Stripe"
+      "countryHelp": "You can't change this later.",
+      "action": "Connect with Stripe"
     },
     "onboarding": {
-      "title": "Finish setting up Stripe",
-      "description": "Stripe needs a few more details before your account can take payments.",
+      "title": "Finish setting up payments",
+      "description": "Stripe needs a few more details before you can take payments.",
       "action": "Continue on Stripe"
     },
     "restricted": {
-      "title": "Stripe can't take payments yet",
-      "description": "Stripe is checking your details or needs more of them. Open Stripe to see what's left.",
-      "action": "Open Stripe setup"
+      "title": "You can't take payments yet",
+      "description": "Stripe needs more details. Finish there to start taking payments.",
+      "action": "Finish on Stripe"
     },
     "active": {
-      "title": "Your Stripe account is connected",
-      "description": "Your businesses pay you in {{currency}}. You handle refunds and disputes in your Stripe Dashboard.",
+      "title": "Payments are connected",
+      "description": "Your clients pay you in {{currency}}. Handle refunds and disputes in your Stripe Dashboard.",
       "dashboard": "Open Stripe Dashboard"
     },
     "disconnected": {
-      "title": "You disconnected Stripe",
-      "description": "You disconnected your account in Stripe on {{date}}. Your businesses can't buy packages until you connect an account again.",
-      "action": "Connect Stripe again"
+      "title": "Payments are disconnected",
+      "description": "You disconnected your payment account on {{date}}. Connect one to sell packages again.",
+      "action": "Reconnect"
     },
     "details": {
       "account": "Account",
@@ -558,20 +551,20 @@
     "errors": {
       "failed": "We couldn't open Stripe. Try again.",
       "invalidCountry": "Choose the country your business is in.",
-      "notConfigured": "This dashboard can't connect a Stripe account yet.",
-      "changed": "Someone else changed the Stripe connection. Refresh and try again."
+      "notConfigured": "This dashboard can't take payments yet.",
+      "changed": "Someone else changed the payment settings. Refresh and try again."
     }
   },
   "apiKeys": {
     "title": "API keys",
-    "description": "Your code uses a platform key to create your businesses and set them up through the API. A key works on your businesses and no others.",
+    "description": "Create and set up your businesses from your own code.",
     "empty": "No platform keys yet.",
     "neverUsed": "Never",
     "createdBy": "{{date}} by {{name}}",
     "revoked": "Revoked {{date}}",
     "restricted": {
       "title": "Only owners and admins can manage platform keys",
-      "description": "Ask an owner or admin on your team to create a key for you."
+      "description": "Ask an owner or admin to create a key for you."
     },
     "columns": {
       "name": "Name",
@@ -584,7 +577,7 @@
     "create": {
       "action": "Create platform key",
       "title": "Create a platform key",
-      "description": "Give the key a name you'll recognize and allow only the access it needs.",
+      "description": "Name it so you'll recognize it, and give it only the access it needs.",
       "nameLabel": "Name",
       "namePlaceholder": "Client onboarding",
       "scopesLabel": "Access",
@@ -594,22 +587,22 @@
     },
     "created": {
       "title": "{{name}} is ready",
-      "description": "Copy the key and store it in a password manager or your tool's settings.",
-      "warning": "You won't see this key again. If you lose it, revoke it and create a new one.",
+      "description": "Copy it somewhere safe, like a password manager.",
+      "warning": "You won't see this key again. If you lose it, create a new one.",
       "done": "Done"
     },
     "revoke": {
       "action": "Revoke",
       "title": "Revoke this platform key?",
-      "description": "Anything that uses {{name}} stops working right away. Its webhooks turn off, and nobody can accept the team invitations it sent. Owners it invited can still join their businesses. You can't undo this.",
+      "description": "Anything using {{name}} stops working, and its webhooks turn off. You can't undo this.",
       "confirm": "Revoke key",
       "cancel": "Cancel",
       "done": "Platform key revoked",
       "failed": "We couldn't revoke the key. Try again."
     },
     "scopes": {
-      "business_read": "Read business details, hours, services, and receptionist settings and rules",
-      "business_write": "Update business details, hours, services, and receptionist settings and rules, including where calls are transferred",
+      "business_read": "Read the business, its hours, services and receptionist",
+      "business_write": "Update the business, its hours, services and receptionist, including call transfers",
       "calls_read": "Read calls, summaries and transcripts",
       "contacts_read": "Read contacts",
       "contacts_write": "Create and update contacts",
@@ -623,7 +616,7 @@
       "team_manage": "Invite and remove team members and change roles",
       "webhooks_manage": "Create and delete webhook endpoints",
       "businesses_create": "Create businesses and invite their owners",
-      "users_create": "Invite owners to make an account"
+      "users_create": "Invite owners to create an account"
     }
   },
   "secretReveal": {
@@ -632,11 +625,10 @@
   },
   "billing": {
     "title": "Billing",
-    "description": "Your tier sets the minutes and chats your businesses share each month, and how many phone numbers they get.",
     "loadFailed": "We couldn't load your billing. Refresh to try again.",
-    "ownersOnly": "Only owners manage billing. Ask one of your partner's owners to change your tier.",
-    "unavailable": "You don't pay for a tier on this dashboard, so nothing limits your businesses' minutes, chats or phone numbers.",
-    "pastDue": "Your last payment failed. Update your card from Manage subscription to keep your tier.",
+    "ownersOnly": "Only owners manage billing. Ask one to change your tier.",
+    "unavailable": "This dashboard doesn't bill tiers, so nothing limits your businesses.",
+    "pastDue": "Your last payment failed. Update your card in Manage subscription.",
     "tiers": {
       "free": "Free",
       "starter": "Starter",
@@ -661,47 +653,46 @@
       "numbers_other": "{{count}} phone numbers",
       "noNumbers": "No phone numbers",
       "trialNumber": "1 trial phone number for 14 days",
-      "extraNumbers": "Extra numbers at our cost",
-      "overage": "Extra minutes cost {{minute}} each, and extra chats {{chat}}",
-      "noOverage": "No extra minutes or chats past these"
+      "extraNumbers": "Extra numbers billed monthly",
+      "overage": "Overage: {{minute}} a minute, {{chat}} a chat",
+      "noOverage": "No overage"
     },
     "current": {
       "title": "Current tier",
-      "free": "No card needed.",
+      "free": "$0 a month",
       "renewsOn": "Renews on {{date}}.",
       "endsOn": "Ends on {{date}}. You keep your tier until then."
     },
     "numbers": {
-      "used": "Phone numbers in use: {{held}} of {{included}} included.",
-      "extra_one": "Phone numbers in use: {{held}}. You pay for {{count}} extra number at our cost each month.",
-      "extra_other": "Phone numbers in use: {{held}}. You pay for {{count}} extra numbers at our cost each month."
+      "used": "{{held}} of {{included}} phone numbers in use.",
+      "extra_one": "Phone numbers in use: {{held}}. You pay for {{count}} extra number each month.",
+      "extra_other": "Phone numbers in use: {{held}}. You pay for {{count}} extra numbers each month."
     },
     "trial": {
-      "available": "Your team or the owner of one of your businesses can claim your 14-day trial number in that business's phone number settings. The person who claims it verifies their mobile first, and the trial's calls go to that mobile.",
+      "available": "Claim your 14-day trial number in any business's phone settings. Its calls go to the mobile of whoever claims it.",
       "used": "You've used your 14-day trial number."
     },
     "pool": {
       "title": "This month",
-      "description": "Minutes and chats your businesses used from your pool. Your pool starts over on {{resetsAt}}.",
+      "description": "What your businesses used this month. Resets on {{resetsAt}}.",
       "minutes": "Minutes",
       "chats": "Chats",
       "noLimit": "{{used}}, no limit"
     },
     "hostPool": {
-      "description": "We set the minutes and chats your businesses share each month.",
-      "limit": "At the pool, calls forward to each business's transfer number or its owner's phone, and website chat stops replying until your pool starts over. To change your pool, ask the company that runs this dashboard."
+      "limit": "At the limit, calls forward and website chat stops replying until the pool resets. To change it, ask the company that runs this dashboard."
     },
     "overage": {
       "title": "Overage",
-      "description": "Past your pool, your businesses keep answering at your tier's overage rates. With overage off or at your cap, calls forward to each business's transfer number or its owner's phone, and website chat stops replying.",
+      "description": "Past your pool, your businesses keep answering at your tier's overage rates, up to your cap.",
       "toggle": "Allow overage",
-      "free": "Free has no overage. Your businesses stop at the pool until you choose a paid tier.",
+      "free": "Free has no overage. Your businesses stop at the pool.",
       "off": "Overage is off. Your businesses stop at the pool each month.",
       "noCap": "No cap",
       "spend": "Overage this month",
       "spendNoCap": "{{spend}} this month",
       "spendOfCap": "{{spend}} of {{cap}}",
-      "capReached": "You reached your cap. Calls forward and chat stops replying until next month or until you raise the cap.",
+      "capReached": "You hit your cap. Calls forward and chat pauses until next month, or until you raise it.",
       "capLabel": "Monthly cap",
       "capPlaceholder": "50.00",
       "saveCap": "Set cap",
@@ -731,74 +722,70 @@
     },
     "errors": {
       "checkoutFailed": "We couldn't open checkout. Try again.",
-      "subscriptionActive": "You already pay for a tier. Change it from Manage subscription.",
+      "subscriptionActive": "You already have a tier. Change it in Manage subscription.",
       "checkoutInProgress": "Another owner has a checkout open. Try again in 30 minutes.",
       "unavailable": "You can't buy a tier on this dashboard.",
       "portalFailed": "We couldn't open your subscription. Try again."
-    },
-    "unbilledDescription": "What your businesses can use each month."
+    }
   },
   "lifecycle": {
     "past_due": {
       "title": "Your last tier payment failed",
-      "description": "Your businesses keep answering calls and chats until {{pausesAt}}. Then they pause until you pay, and we delete them 90 days after your tier ends.",
-      "owner": "Update your card from Manage subscription on the Billing page to keep them running, or release each business to its owner.",
-      "admin": "Ask an owner to update the card for your tier, or release each business to its owner."
+      "description": "Your businesses keep answering until {{pausesAt}}, then pause until you pay. We delete them 90 days after your tier ends.",
+      "owner": "Update your card in Manage subscription, or release each business to its owner.",
+      "admin": "Ask an owner to update the card, or release each business to its owner."
     },
     "ending": {
       "title": "Your tier ended on {{tierEndedAt}}",
-      "description": "Your businesses keep answering calls and chats until {{pausesAt}}. Then they pause, and on {{deletesAt}} we delete them.",
-      "owner": "Choose a tier on the Billing page to keep them running, or release each business to its owner.",
+      "description": "Your businesses keep answering until {{pausesAt}}, then pause. We delete them on {{deletesAt}}.",
+      "owner": "Choose a tier to keep them running, or release each business to its owner.",
       "admin": "Ask an owner to choose a tier, or release each business to its owner."
     },
     "paused": {
       "title": "Your businesses stopped answering on {{pausesAt}}",
-      "description": "Your tier ended on {{tierEndedAt}}. Calls forward to each business's transfer number or its owner's phone, and website chat can't reply. On {{deletesAt}} we delete them.",
-      "owner": "Choose a tier on the Billing page to bring them back, or release each business to its owner.",
+      "description": "Your tier ended on {{tierEndedAt}}. Calls forward and chat is off. We delete your businesses on {{deletesAt}}.",
+      "owner": "Choose a tier to bring them back, or release each business to its owner.",
       "admin": "Ask an owner to choose a tier, or release each business to its owner."
     },
     "paused_past_due": {
       "title": "Your businesses stopped answering on {{pausesAt}}",
-      "description": "Your last tier payment failed. Calls forward to each business's transfer number or its owner's phone, and website chat can't reply. We delete them 90 days after your tier ends.",
-      "owner": "Update your card from Manage subscription on the Billing page to bring them back, or release each business to its owner.",
-      "admin": "Ask an owner to update the card for your tier, or release each business to its owner."
+      "description": "Your last payment failed. Calls forward and chat is off. We delete your businesses 90 days after your tier ends.",
+      "owner": "Update your card in Manage subscription to bring them back, or release each business to its owner.",
+      "admin": "Ask an owner to update the card, or release each business to its owner."
     },
     "deleted": {
       "title": "We deleted your businesses on {{deletesAt}}",
-      "description": "That was 90 days after your tier ended. You're on Free now, and businesses you add work as they do on Free.",
-      "owner": "To pay for a tier again, choose one on the Billing page.",
+      "description": "We deleted them 90 days after your tier ended. You're on Free now.",
+      "owner": "Choose a tier on the Billing page to start again.",
       "admin": "Ask an owner if you need a paid tier again."
     }
   },
   "settings": {
     "title": "Settings",
-    "description": "Settings that apply to everyone on your team.",
     "loadFailed": "We couldn't load your settings. Refresh to try again.",
     "saved": "Settings saved.",
     "membersCantEdit": "Only owners and admins can change these settings.",
     "telemetry": {
-      "label": "Share telemetry data",
-      "description": "Share anonymized usage and error data from your team's use of the console to help improve it. Each business's dashboard follows its own setting.",
+      "label": "Share usage data",
+      "description": "Share anonymous usage and error data from the console to help us improve it.",
       "saveFailed": "We couldn't save your telemetry setting. Try again."
     }
   },
   "signup": {
-    "title": "Sign up as a partner",
-    "description": "Resell {{appName}} to the businesses you serve, under your own brand.",
+    "title": "Become a partner",
     "nameLabel": "Company name",
     "namePlaceholder": "Acme Reception",
     "subdomainLabel": "Dashboard address",
     "subdomainHelp": "Use 3 to 40 lowercase letters, digits and hyphens.",
-    "noCard": "No card needed.",
     "submit": "Create partner account",
     "submitting": "Creating…",
-    "inviteOnly": "Partner signup needs an invitation for now. Ask {{appName}} for a link.",
+    "inviteOnly": "Partner signup is invite-only for now. Ask {{appName}} for a link.",
     "invitationInvalid": "This invitation link is invalid or expired.",
     "invitationUsed": "Someone already used this invitation.",
     "wrongAccount": "This invitation is for {{email}}. Sign in with that verified address to use it.",
     "errors": {
-      "subdomainTaken": "Someone already has that address. Pick another.",
-      "invalidSubdomain": "Use 3 to 40 lowercase letters, digits and hyphens, and avoid names like www or app.",
+      "subdomainTaken": "That address is taken. Pick another.",
+      "invalidSubdomain": "Use 3 to 40 lowercase letters, digits and hyphens. Names like www or app are taken.",
       "rateLimited": "You signed up too many partners today. Try again tomorrow.",
       "failed": "We couldn't create the partner account. Try again."
     }
@@ -806,7 +793,7 @@
   "acceptInvite": {
     "genericTitle": "Partner invitation",
     "title": "Join {{partnerName}}",
-    "description": "This invitation is for {{email}}, with the {{role}} role.",
+    "description": "Join as {{role}} with {{email}}.",
     "submit": "Accept invitation",
     "submitting": "Joining…",
     "success": "You joined {{partnerName}}.",
@@ -818,7 +805,7 @@
     "failed": "We couldn't accept the invitation. Try again."
   },
   "signedOut": {
-    "signup": "Sign in or create an account to sign up as a partner.",
+    "signup": "Sign in or create an account to become a partner.",
     "acceptInvite": "Sign in or create an account with {{email}} to join {{partnerName}}.",
     "signIn": "Sign in",
     "createAccount": "Create account",

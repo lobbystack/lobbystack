@@ -206,7 +206,6 @@ export function PartnerBrandingSurface() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
         <PageHeader title={t("branding.title")} />
-        <p className="text-sm text-muted-foreground">{t("branding.description")}</p>
       </div>
       {/* Its own form and requests, beside the brand's. */}
       <PartnerDomainSettings />

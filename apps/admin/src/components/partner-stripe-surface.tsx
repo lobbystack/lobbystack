@@ -105,13 +105,12 @@ export function PartnerStripeSurface() {
     start.mutate();
   }, [connection.data?.configured, needsCountry, onboarding, start, status]);
   useEffect(() => {
-    if (refresh && connection.isSuccess) router.replace(pathname ?? `/partner/${partner.partnerId}/stripe`);
+    if (refresh && connection.isSuccess) router.replace(pathname ?? `/partner/${partner.partnerId}/payments`);
   }, [connection.isSuccess, partner.partnerId, pathname, refresh, router]);
 
   const header = (
     <div className="flex flex-col gap-1">
       <PageHeader title={t("stripe.title")} />
-      <p className="text-sm text-muted-foreground">{t("stripe.description")}</p>
     </div>
   );
   const message = (text: string) => <Surface className="px-6 py-8"><p className="text-sm text-muted-foreground" role="alert">{text}</p></Surface>;

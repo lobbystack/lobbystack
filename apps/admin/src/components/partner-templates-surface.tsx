@@ -184,7 +184,6 @@ export function PartnerTemplatesSurface() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
         <PageHeader actions={canManage ? <Button disabled={templates.isLoading} onClick={() => setSaving(true)} size="sm">{t("templates.save.action")}</Button> : undefined} title={t("templates.title")} />
-        <p className="text-sm text-muted-foreground">{t("templates.description")}</p>
       </div>
       {templates.isLoading ? (
         <Surface className="flex flex-col gap-4 p-6"><Skeleton className="h-5 w-40" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></Surface>

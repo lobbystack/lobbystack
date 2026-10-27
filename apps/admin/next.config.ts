@@ -122,7 +122,11 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     // The widget page moved out of Settings; keep old bookmarks and alert links working.
-    return [{ source: "/settings/widget", destination: "/widget", permanent: true }];
+    // The partner console's Stripe page is Payments now; Stripe's onboarding links may still return to the old address.
+    return [
+      { source: "/settings/widget", destination: "/widget", permanent: true },
+      { source: "/partner/:partnerId/stripe", destination: "/partner/:partnerId/payments", permanent: true },
+    ];
   },
 };
 

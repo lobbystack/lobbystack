@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
  */
 export const POST = partnerRoute(async ({ actor, body, domain, partnerId, request }) => {
   if (body.country !== undefined && body.country !== null && typeof body.country !== "string") return jsonError("country must be a string.", 400, "invalid_country");
-  const page = `${consoleOrigin(request.headers)}/partner/${partnerId.toLowerCase()}/stripe`;
+  const page = `${consoleOrigin(request.headers)}/partner/${partnerId.toLowerCase()}/payments`;
   const { url } = await startPartnerStripeOnboarding(withStripeConnect(domain), actor, {
     country: typeof body.country === "string" ? body.country : null,
     returnUrl: `${page}?onboarding=return`,
