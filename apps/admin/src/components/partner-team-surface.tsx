@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { MoreHorizontal, ShieldCheck, Trash2, UserRound } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
@@ -34,16 +34,17 @@ const ROLE_ORDER: PartnerRole[] = ["owner", "admin", "member"];
 
 function RoleOptions({ roles, value, onChange }: { roles: PartnerRole[]; value: PartnerRole; onChange: (role: PartnerRole) => void }) {
   const { t } = useTranslation("partner");
+  const id = useId();
   return (
     <div aria-label={t("team.invite.roleLabel")} className="flex flex-col gap-3" role="radiogroup">
       {roles.map((role) => {
         const selected = value === role;
         return (
-          <button aria-checked={selected} aria-label={t(`roles.${role}`)} className="flex w-full items-start gap-3 py-1 text-left" key={role} onClick={() => onChange(role)} role="radio" type="button">
+          <button aria-checked={selected} aria-describedby={`${id}-${role}-help`} aria-labelledby={`${id}-${role}`} className="flex w-full items-start gap-3 py-1 text-left" key={role} onClick={() => onChange(role)} role="radio" type="button">
             <span className={cn("mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border", selected ? "border-foreground" : "border-muted-foreground")}>{selected ? <span className="size-2 rounded-full bg-foreground" /> : null}</span>
             <span className="flex min-w-0 flex-col gap-1">
-              <span className="text-sm font-medium">{t(`roles.${role}`)}</span>
-              <span className="text-sm leading-6 text-muted-foreground">{t(`team.invite.roles.${role}`)}</span>
+              <span className="text-sm font-medium" id={`${id}-${role}`}>{t(`roles.${role}`)}</span>
+              <span className="text-sm leading-6 text-muted-foreground" id={`${id}-${role}-help`}>{t(`team.invite.roles.${role}`)}</span>
             </span>
           </button>
         );
@@ -104,7 +105,10 @@ export function PartnerTeamSurface() {
   });
   const busy = changeRole.isPending || remove.isPending;
   // Making someone an owner, or removing someone, asks first: an owner can then do everything, deleting the partner included.
-  const [confirming, setConfirming] = useState<{ kind: "owner" | "remove"; memberId: string; email: string } | null>(null);
+  // The dialog keeps what it asked while it closes, rather than flashing an empty name.
+  const [shown, setShown] = useState<{ kind: "owner" | "remove"; memberId: string; email: string } | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const confirm = (next: { kind: "owner" | "remove"; memberId: string; email: string }) => { setShown(next); setConfirmOpen(true); };
 
   const inviteDialog = canManage ? (
     <Dialog onOpenChange={(open) => { setInviteOpen(open); setInviteError(null); }} open={inviteOpen}>
@@ -145,9 +149,9 @@ export function PartnerTeamSurface() {
     const roles = ROLE_ORDER.filter((option) => option !== row.role && (isOwner || option !== "owner"));
     const labels: Record<PartnerRole, string> = { owner: t("team.actions.makeOwner"), admin: t("team.actions.makeAdmin"), member: t("team.actions.makeMember") };
     return [
-      ...roles.map((option) => <DropdownMenuItem key={option} onClick={() => option === "owner" ? setConfirming({ kind: "owner", memberId: row.memberId, email: row.email }) : changeRole.mutate({ memberId: row.memberId, role: option })}>{option === "member" ? <UserRound /> : <ShieldCheck />}{labels[option]}</DropdownMenuItem>),
+      ...roles.map((option) => <DropdownMenuItem key={option} onClick={() => option === "owner" ? confirm({ kind: "owner", memberId: row.memberId, email: row.email }) : changeRole.mutate({ memberId: row.memberId, role: option })}>{option === "member" ? <UserRound /> : <ShieldCheck />}{labels[option]}</DropdownMenuItem>),
       <DropdownMenuSeparator key="separator" />,
-      <DropdownMenuItem key="remove" onClick={() => setConfirming({ kind: "remove", memberId: row.memberId, email: row.email })} variant="destructive"><Trash2 />{t("team.actions.remove")}</DropdownMenuItem>,
+      <DropdownMenuItem key="remove" onClick={() => confirm({ kind: "remove", memberId: row.memberId, email: row.email })} variant="destructive"><Trash2 />{t("team.actions.remove")}</DropdownMenuItem>,
     ];
   }
 
@@ -206,19 +210,19 @@ export function PartnerTeamSurface() {
       </Surface>
       <ConfirmActionDialog
         cancelLabel={t("team.confirm.cancel")}
-        confirmLabel={t(confirming?.kind === "remove" ? "team.confirm.removeAction" : "team.confirm.ownerAction")}
-        confirmVariant={confirming?.kind === "remove" ? "destructive" : "default"}
-        description={t(confirming?.kind === "remove" ? "team.confirm.removeDescription" : "team.confirm.ownerDescription", { email: confirming?.email ?? "", partnerName: partner.name })}
+        confirmLabel={t(shown?.kind === "remove" ? "team.confirm.removeAction" : "team.confirm.ownerAction")}
+        confirmVariant={shown?.kind === "remove" ? "destructive" : "default"}
+        description={t(shown?.kind === "remove" ? "team.confirm.removeDescription" : "team.confirm.ownerDescription", { email: shown?.email ?? "", partnerName: partner.name })}
         onConfirm={() => {
-          if (!confirming) return;
-          if (confirming.kind === "remove") remove.mutate({ memberId: confirming.memberId });
-          else changeRole.mutate({ memberId: confirming.memberId, role: "owner" });
-          setConfirming(null);
+          if (!shown) return;
+          if (shown.kind === "remove") remove.mutate({ memberId: shown.memberId });
+          else changeRole.mutate({ memberId: shown.memberId, role: "owner" });
+          setConfirmOpen(false);
         }}
-        onOpenChange={(open) => { if (!open) setConfirming(null); }}
-        open={confirming !== null}
+        onOpenChange={setConfirmOpen}
+        open={confirmOpen}
         pending={busy}
-        title={t(confirming?.kind === "remove" ? "team.confirm.removeTitle" : "team.confirm.ownerTitle", { email: confirming?.email ?? "" })}
+        title={t(shown?.kind === "remove" ? "team.confirm.removeTitle" : "team.confirm.ownerTitle", { email: shown?.email ?? "" })}
       />
     </div>
   );

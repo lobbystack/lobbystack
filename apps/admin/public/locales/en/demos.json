@@ -115,6 +115,6 @@
     },
     "promptsHint": "Add at least two, one per line.",
     "ingestionUnavailable": "This dashboard can't read websites, so the demo answers from its greeting, services and suggested prompts.",
-    "ingestionFailed": "We couldn't read the website: {{error}}"
+    "ingestionFailed": "We couldn't read the website. Make a new demo to try again."
   }
 }

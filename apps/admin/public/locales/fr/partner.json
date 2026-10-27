@@ -462,7 +462,8 @@
           "failed": "Nous n'avons pas pu enregistrer votre domaine. Réessayez.",
           "loadFailed": "Nous n'avons pas pu charger vos adresses. Actualisez la page pour réessayer."
         },
-        "unavailable": "Ce tableau de bord ne peut pas encore connecter votre propre domaine : vos entreprises se connectent donc à votre sous-domaine ci-dessus. Demandez à l'entreprise qui gère ce tableau de bord d'activer les domaines personnalisés."
+        "unavailable": "Ce tableau de bord ne peut pas encore connecter votre propre domaine : vos entreprises se connectent donc à votre sous-domaine ci-dessus. Demandez à l'entreprise qui gère ce tableau de bord d'activer les domaines personnalisés.",
+        "unavailableNoSubdomain": "Ce tableau de bord ne peut pas encore connecter votre propre domaine. Demandez à l'entreprise qui gère ce tableau de bord d'activer les domaines personnalisés."
       }
     },
     "brand": {

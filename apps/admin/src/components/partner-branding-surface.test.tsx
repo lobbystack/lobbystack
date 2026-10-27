@@ -77,6 +77,12 @@ describe("the partner console's Branding & domain page", () => {
     expect(screen.queryByRole("link", { name: "branding.domain.open" })).toBeNull();
   });
 
+  it("doesn't point to a subdomain above when custom domains are off and the partner has none", async () => {
+    renderAs("owner", { subdomain: null, subdomainUrl: null }, { customDomains: "unavailable" });
+    expect(await screen.findByText("branding.domain.own.unavailableNoSubdomain")).toBeTruthy();
+    expect(screen.queryByText("branding.domain.own.unavailable")).toBeNull();
+  });
+
   it("shows a member the brand with no way to change it", async () => {
     renderAs("member");
     await screen.findByText("bright.portal.example.test");

@@ -96,7 +96,8 @@ describe("partner feature warnings", () => {
   it("has nothing to say about settings that are unset or valid", () => {
     expect(partnerFeatureWarnings({})).toEqual([]);
     expect(partnerFeatureWarnings({ PARTNER_BASE_DOMAIN: " ", PARTNER_SIGNUP: "" })).toEqual([]);
-    expect(partnerFeatureWarnings({ PARTNER_BASE_DOMAIN: "Portal.Example.Test.", PARTNER_SIGNUP: " Invite ", CADDY_ON_DEMAND_TLS: "true" })).toEqual([]);
+    // Subdomains without custom domains are a setup of their own, so they warn of nothing; the console says custom domains are off.
+    expect(partnerFeatureWarnings({ PARTNER_BASE_DOMAIN: "Portal.Example.Test.", PARTNER_SIGNUP: " Invite " })).toEqual([]);
   });
 
   it("names a partner base domain or signup setting that partnerFeatures ignores", () => {
@@ -104,11 +105,6 @@ describe("partner feature warnings", () => {
     expect(domain).toMatch(/^PARTNER_BASE_DOMAIN is ignored: "https:\/\/receptionistportal\.com"/);
     expect(partnerFeatureWarnings({ PARTNER_BASE_DOMAIN: "*.receptionistportal.com" })).toHaveLength(1);
     expect(partnerFeatureWarnings({ DEPLOYMENT_MODE: "cloud", PARTNER_SIGNUP: "anyone" })).toEqual(["PARTNER_SIGNUP is ignored: it takes open or invite, so signup stays invite."]);
-  });
-
-  it("says partners can't add their own domains when subdomains are on and nothing issues certificates", () => {
-    expect(partnerFeatureWarnings({ PARTNER_BASE_DOMAIN: "portal.example.test" })).toEqual(["Partners can't add their own domains: set CLOUDFLARE_SAAS_API_TOKEN and CLOUDFLARE_SAAS_ZONE_ID, or CADDY_ON_DEMAND_TLS=true behind Caddy. Until then each partner uses its subdomain of portal.example.test."]);
-    expect(partnerFeatureWarnings({ PARTNER_BASE_DOMAIN: "portal.example.test", CLOUDFLARE_SAAS_API_TOKEN: "token", CLOUDFLARE_SAAS_ZONE_ID: "zone" })).toEqual([]);
   });
 
   it("says which custom domain setting is missing, unreadable or overruled", () => {

@@ -153,10 +153,6 @@ export function partnerFeatureWarnings(env: Record<string, string | undefined>):
   } else if (caddy && hasCloudflareForSaas(env)) {
     warnings.push("CADDY_ON_DEMAND_TLS is ignored: Cloudflare for SaaS is set up too, and it issues partners' certificates instead.");
   }
-  // With partner subdomains on but no certificate issuer, the console's domain settings say only that this dashboard can't connect a domain.
-  if (domain && partnerBaseDomain(domain) && caddy === false && !isSet(env.CLOUDFLARE_SAAS_API_TOKEN) && !isSet(env.CLOUDFLARE_SAAS_ZONE_ID)) {
-    warnings.push(`Partners can't add their own domains: set CLOUDFLARE_SAAS_API_TOKEN and CLOUDFLARE_SAAS_ZONE_ID, or CADDY_ON_DEMAND_TLS=true behind Caddy. Until then each partner uses its subdomain of ${partnerBaseDomain(domain)}.`);
-  }
   const products = partnerTierProducts(env);
   if (products.length > 0 && !hasEveryTierProduct(env)) {
     const missing = paidPartnerTierSlugs.flatMap((tier) => billingIntervals.filter((interval) => !products.some((product) => product.tier === tier && product.billingInterval === interval)).map((interval) => `POLAR_PARTNER_${tier.toUpperCase()}_${interval.toUpperCase()}_PRODUCT_ID`));

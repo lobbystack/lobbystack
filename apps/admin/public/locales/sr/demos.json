@@ -116,6 +116,6 @@
     },
     "promptsHint": "Dodajte bar dva, jedno po redu.",
     "ingestionUnavailable": "Ova kontrolna tabla ne može da čita veb-sajtove, pa demo odgovara na osnovu pozdrava, usluga i predloženih pitanja.",
-    "ingestionFailed": "Nismo uspeli da pročitamo veb-sajt: {{error}}"
+    "ingestionFailed": "Nismo uspeli da pročitamo veb-sajt. Napravite novi demo da biste pokušali ponovo."
   }
 }

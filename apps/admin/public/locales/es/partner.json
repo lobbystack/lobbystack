@@ -462,7 +462,8 @@
           "failed": "No pudimos guardar su dominio. Inténtelo de nuevo.",
           "loadFailed": "No pudimos cargar sus direcciones. Actualice la página para intentarlo de nuevo."
         },
-        "unavailable": "Este panel todavía no puede conectar su propio dominio, así que sus negocios inician sesión en su subdominio de arriba. Pida a la empresa que administra este panel que active los dominios propios."
+        "unavailable": "Este panel todavía no puede conectar su propio dominio, así que sus negocios inician sesión en su subdominio de arriba. Pida a la empresa que administra este panel que active los dominios propios.",
+        "unavailableNoSubdomain": "Este panel todavía no puede conectar su propio dominio. Pida a la empresa que administra este panel que active los dominios propios."
       }
     },
     "brand": {

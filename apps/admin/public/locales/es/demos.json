@@ -116,6 +116,6 @@
     },
     "promptsHint": "Añada al menos dos, una por línea.",
     "ingestionUnavailable": "Este panel no puede leer sitios web, así que la demo responde con su saludo, sus servicios y las preguntas sugeridas.",
-    "ingestionFailed": "No pudimos leer el sitio web: {{error}}"
+    "ingestionFailed": "No pudimos leer el sitio web. Cree una nueva demo para volver a intentarlo."
   }
 }

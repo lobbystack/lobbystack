@@ -236,7 +236,7 @@ export function PartnerDomainSettings() {
                   ) : null}
                 </div>
               ) : data.customDomains === "unavailable" ? (
-                <p className="text-sm text-muted-foreground">{t("branding.domain.own.unavailable", { appName })}</p>
+                <p className="text-sm text-muted-foreground">{t(data.subdomain ? "branding.domain.own.unavailable" : "branding.domain.own.unavailableNoSubdomain")}</p>
               ) : data.customDomains === "paid_tier_required" ? (
                 <div className="flex flex-wrap items-center gap-3">
                   <p className="text-sm text-muted-foreground">{t(role === "owner" ? "branding.domain.own.paidTier" : "branding.domain.own.paidTierAskOwner")}</p>

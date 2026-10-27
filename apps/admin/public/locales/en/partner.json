@@ -454,7 +454,8 @@
           "failed": "We couldn't save your domain. Try again.",
           "loadFailed": "We couldn't load your addresses. Refresh to try again."
         },
-        "unavailable": "This dashboard can't connect your own domain yet, so your businesses sign in at your subdomain above. Ask the company that runs this dashboard to turn on custom domains."
+        "unavailable": "This dashboard can't connect your own domain yet, so your businesses sign in at your subdomain above. Ask the company that runs this dashboard to turn on custom domains.",
+        "unavailableNoSubdomain": "This dashboard can't connect your own domain yet. Ask the company that runs this dashboard to turn on custom domains."
       }
     },
     "brand": {

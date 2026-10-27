@@ -116,6 +116,6 @@
     },
     "promptsHint": "Ajoutez-en au moins deux, une par ligne.",
     "ingestionUnavailable": "Ce tableau de bord ne peut pas lire les sites web : la démo répond à partir de son message d'accueil, de ses services et des questions suggérées.",
-    "ingestionFailed": "Nous n'avons pas pu lire le site web : {{error}}"
+    "ingestionFailed": "Nous n'avons pas pu lire le site web. Créez une nouvelle démo pour réessayer."
   }
 }

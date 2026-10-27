@@ -462,7 +462,8 @@
           "failed": "Nismo uspeli da sačuvamo vaš domen. Pokušajte ponovo.",
           "loadFailed": "Nismo uspeli da učitamo vaše adrese. Osvežite stranicu i pokušajte ponovo."
         },
-        "unavailable": "Ova kontrolna tabla još ne može da poveže vaš domen, pa se vaše firme prijavljuju na vašem poddomenu iznad. Zamolite firmu koja upravlja ovom kontrolnom tablom da uključi sopstvene domene."
+        "unavailable": "Ova kontrolna tabla još ne može da poveže vaš domen, pa se vaše firme prijavljuju na vašem poddomenu iznad. Zamolite firmu koja upravlja ovom kontrolnom tablom da uključi sopstvene domene.",
+        "unavailableNoSubdomain": "Ova kontrolna tabla još ne može da poveže vaš domen. Zamolite firmu koja upravlja ovom kontrolnom tablom da uključi sopstvene domene."
       }
     },
     "brand": {
