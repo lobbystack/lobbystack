@@ -9,7 +9,7 @@ import { reserveWidgetChatUsageInTransaction } from "./billing";
 import { forgetCachedBrands } from "./brands";
 import { capabilityNames, HOST_BRAND_SCOPE, openPartnerBusiness, requireBusinessAccess, type BrandScope } from "./businessAccess";
 import { loadEntitlement } from "./entitlement";
-import { acceptPartnerInvitation, createPartnerBusiness, deletePartnerBusiness, hashPartnerToken, invitePartnerMember, listPartnerBusinesses, releaseBusiness, signUpPartner, type PartnerMemberActor } from "./partners";
+import { acceptPartnerInvitation, createPartnerBusiness, deletePartnerBusiness, hashPartnerToken, invitePartnerMember, listPartnerBusinesses, partnerReleasedBusinessTo, releaseBusiness, signUpPartner, type PartnerMemberActor } from "./partners";
 import { acceptInvitation, inviteMember, listUserBusinesses, readActiveBusinessId } from "./tenancy";
 import { correctUsageInTransaction, readAllowanceUsageInTransaction } from "./usage";
 
@@ -267,6 +267,10 @@ describe.skipIf(!client)("releasing a business", () => {
       // The audit log records who released it, and keeps who opened it.
       expect(kept.released).toEqual([{ actorUserId: acme.adminActor.userId, payload: { partnerId: acme.partnerId, ownerUserId: client!.userId } }]);
       expect(kept.opened).toHaveLength(1);
+      // The partner's domain knows to send them on, and only them, and only for this partner.
+      expect(await partnerReleasedBusinessTo(acme.context, { userId: client!.userId, partnerId: acme.partnerId })).toBe(true);
+      expect(await partnerReleasedBusinessTo(acme.context, { userId: acme.member.userId, partnerId: acme.partnerId })).toBe(false);
+      expect(await partnerReleasedBusinessTo(acme.context, { userId: client!.userId, partnerId: randomUUID() })).toBe(false);
       // The owner hears where to sign in now, under the host's brand.
       expect(kept.notice).toEqual([{ payload: expect.objectContaining({ email: client!.email, template: "business_released", brand: { kind: "host" }, variables: expect.objectContaining({ businessName: "Harbor Dental", partnerName: "Acme Reception", url: expect.stringMatching(/\/login$/) }) }) }]);
 

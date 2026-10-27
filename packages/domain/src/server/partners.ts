@@ -161,6 +161,15 @@ function memberActor(actor: PartnerActor): PartnerMemberActor {
 }
 
 /** The partners whose team the person is on, by name. A person can be on several. */
+/**
+ * Whether the partner released a business the person still owns, which runs
+ * on the host's dashboard now. A direct customer who signs in on a partner's
+ * domain has no such business, so the partner's domain doesn't send them on.
+ */
+export async function partnerReleasedBusinessTo(context: DomainContext, input: { userId: string; partnerId: string }): Promise<boolean> {
+  return await withBusinessTransaction(context.db, { userId: input.userId, actorType: "operator" }, async (tx) => (await tx.execute<{ released: boolean }>(sql`select app.partner_released_business_to_me(${input.partnerId}::uuid) as released`)).rows[0]?.released === true);
+}
+
 export async function listUserPartners(context: DomainContext, userId: string): Promise<PartnerSummary[]> {
   return await withBusinessTransaction(context.db, { userId, actorType: "operator" }, async (tx) => await tx
     .select({ partnerId: partners.id, name: partners.name, slug: partners.slug, role: partnerMembers.role, subdomain: partnerDomains.hostname })

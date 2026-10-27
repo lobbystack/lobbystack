@@ -65,3 +65,31 @@ AS $$
 $$;
 REVOKE ALL ON FUNCTION app.partner_business_owner_emails(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION app.partner_business_owner_emails(uuid) TO lobbystack_app, lobbystack_worker;
+
+-- Whether the partner released a business the signed-in person still owns,
+-- so the partner's domain can send them to the host's dashboard, where it
+-- runs now. The release's audit log row lives in that business, which RLS
+-- shows only in its own transaction, so this reads past that for the
+-- person's own releases and answers nothing else.
+CREATE OR REPLACE FUNCTION app.partner_released_business_to_me(p_partner_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_catalog
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.audit_logs entry
+    JOIN public.business_memberships membership
+      ON membership.business_id = entry.business_id
+      AND membership.user_id = NULLIF(current_setting('app.user_id', true), '')::uuid
+      AND membership.role = 'business_owner'
+      AND membership.status = 'active'
+    JOIN public.businesses business ON business.id = entry.business_id AND business.partner_id IS NULL
+    WHERE entry.event_type = 'partner.business_released'
+      AND entry.payload->>'partnerId' = p_partner_id::text
+  )
+$$;
+REVOKE ALL ON FUNCTION app.partner_released_business_to_me(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION app.partner_released_business_to_me(uuid) TO lobbystack_app;
