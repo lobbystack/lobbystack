@@ -6,7 +6,7 @@ import type { Locale } from "@/marketing/i18n"
 /** A direct business's dashboard home, Northside Plumbing, in the page's language. */
 export function dashboardShot(locale: Locale): ScreenshotSource {
   return {
-    src: locale === "en" ? "/screenshots/dashboard-home.webp" : `/screenshots/dashboard-home-${locale}.webp`,
+    src: locale === "en" ? "/screenshots/dashboard-window.webp" : `/screenshots/dashboard-window-${locale}.webp`,
     width: 2880,
     height: 1760,
   }
