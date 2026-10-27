@@ -4,7 +4,7 @@ import type { SQL } from "drizzle-orm";
 
 const mocks = vi.hoisted(() => ({ transaction: vi.fn() }));
 vi.mock("@lobbystack/db", async () => ({
-  ...(await import("../packages/db/src/schema/index")), withBusinessTransaction: mocks.transaction,
+  ...(await import("../packages/db/src/schema/index")), ...(await import("../packages/db/src/in-order")), withBusinessTransaction: mocks.transaction,
   createDatabaseClient: vi.fn(),
 }));
 import { billingAccounts, messages, storageObjects, transcripts } from "@lobbystack/db";
